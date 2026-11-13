@@ -854,7 +854,9 @@ func run() -> void:
 	var gold_snapshot: Dictionary = hud.hud_snapshot()
 	if not check(gold_snapshot.trade_gold_local == 12500 and gold_snapshot.trade_gold_remote == 3420 and gold_snapshot.inventory_gold == 6820, "gold reply updates both visible totals"): return
 	if not await capture("hud-trade-gold-reply"): return
-	if not check(hud.apply_trade_cancel(), "close gold input trade fixture"): return
+	if not check(not hud.apply_trade_cancel() and hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_gold == 6820, "await reconciled balance after gold cancellation"): return
+	if not check(hud.apply_trade_cancel(19320) and not hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_gold == 19320, "cancel restores authoritative balance"): return
+	if not await capture("hud-trade-gold-refund"): return
 	var exit_requests: Array[int] = []
 	hud.exit_confirmed.disconnect(hud.handle_exit_confirmation)
 	hud.exit_confirmed.connect(func(id: int): exit_requests.append(id))

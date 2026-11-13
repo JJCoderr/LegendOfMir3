@@ -94,7 +94,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_trade_gold_reply","identifier","amount","low_word","high_word"),&Mir3HudView::apply_trade_gold_reply,DEFVAL(0),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("set_trade_gold","local","remote"),&Mir3HudView::set_trade_gold);
     ClassDB::bind_method(D_METHOD("apply_trade_complete","balance"),&Mir3HudView::apply_trade_complete);
-    ClassDB::bind_method(D_METHOD("apply_trade_cancel"),&Mir3HudView::apply_trade_cancel);
+    ClassDB::bind_method(D_METHOD("apply_trade_cancel","balance"),&Mir3HudView::apply_trade_cancel,DEFVAL(-1));
     ClassDB::bind_method(D_METHOD("open_trade","partner"),&Mir3HudView::open_trade);
     ADD_SIGNAL(MethodInfo("trade_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("exit_confirmed",PropertyInfo(Variant::INT,"dialog_id")));
@@ -2183,6 +2183,7 @@ bool Mir3HudView::apply_trade_gold_reply(int identifier,int64_t amount,int low_w
         trade_gold[0]=static_cast<std::uint32_t>(amount);
         inventory_gold=std::uint32_t(low_word) | (std::uint32_t(high_word)<<16);
         trade_gold_pending=false;
+        trade_gold_debited=amount>0;
     } else if (identifier==686) {
         trade_gold[1]=static_cast<std::uint32_t>(amount);
     } else return false;
@@ -2211,8 +2212,11 @@ bool Mir3HudView::apply_trade_complete(int64_t balance) {
     return open_trade(String());
 }
 
-bool Mir3HudView::apply_trade_cancel() {
-    if (!trade.visible) return false;
+bool Mir3HudView::apply_trade_cancel(int64_t balance) {
+    if (!trade.visible || balance< -1 || balance>UINT32_MAX) return false;
+    // 687 has no balance in its handler. Reconcile reserved gold with a
+    // session balance instead of adding an offer to a possibly newer total.
+    if (balance<0 && trade_gold_debited) return false;
     // Apply the 687 return and close together. If the inventory snapshot is
     // full, leave the offer intact so the session can reconcile and retry.
     auto restored=bag;
@@ -2226,6 +2230,7 @@ bool Mir3HudView::apply_trade_cancel() {
         trade_pending_slot=-1;
     }
     bag=std::move(restored);
+    if (balance>=0) inventory_gold=static_cast<std::uint32_t>(balance);
     trade_items={};
     return open_trade(String());
 }
@@ -2237,6 +2242,8 @@ bool Mir3HudView::open_trade(String partner) {
         trade_confirm_pressed=false;
         trade_confirmed=false;
         trade_gold_pending=false;
+        trade_gold_debited=false;
+        trade_gold={};
         trade_return_slot=-1;
         trade_return_pending=false;
         trade_scroll.captured=-1;
