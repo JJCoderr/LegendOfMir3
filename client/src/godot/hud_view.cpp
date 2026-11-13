@@ -3735,7 +3735,7 @@ bool Mir3HudView::open_trade(String partner) {
         if (trade_pending_slot>=0) apply_trade_offer_reply(676);
         if (trade.visible) trade.toggle();
         trade_confirm_pressed=false;
-        if (group_request==1307) finish_group_dialog(false);
+        if (group_request==1307 || group_request==1029) finish_group_dialog(false);
         trade_offer_count=0;
         trade_confirmed=false;
         trade_gold_pending=false;

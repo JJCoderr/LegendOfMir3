@@ -1742,6 +1742,14 @@ func run() -> void:
 	if not check(hud.open_trade("比奇旅人"), "open trade for gold input"): return
 	click_at(Vector2(81, 288), true)
 	click_at(Vector2(81, 288), false)
+	if not check(hud.hud_snapshot().group_request == 1029, "gold prompt opens before cancellation"): return
+	key(0, "9".unicode_at(0))
+	if not check(hud.apply_trade_cancel() and hud.hud_snapshot().group_request == 0, "trade cancellation closes gold prompt"): return
+	if not check(gold_requests.is_empty() and not input.has_focus() and input.text.is_empty(), "cancelled gold input releases and clears chat field"): return
+	if not await capture("hud-trade-gold-prompt-cancelled"): return
+	if not check(hud.open_trade("比奇旅人"), "reopen trade for fresh gold input"): return
+	click_at(Vector2(81, 288), true)
+	click_at(Vector2(81, 288), false)
 	if not check(hud.hud_snapshot().group_request == 1029, "open trade gold dialog"): return
 	for digit in "12500": key(0, digit.unicode_at(0))
 	if not await capture("hud-trade-gold-input"): return
