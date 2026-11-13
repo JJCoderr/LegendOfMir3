@@ -435,7 +435,10 @@ func run() -> void:
 		var prices := PackedInt32Array([20])
 		var ids := PackedInt64Array([10001])
 		if not check(not hud.apply_shop_offers(2, 8, names, icons, prices, ids), "ignore stale goods details"): return
-		if not check(hud.apply_shop_offers(2, 9, names, icons, prices, ids), "apply decoded 652 offer"): return
+		var offer_packet := "cL@<<>=@<?H<<<<<PBEMT@M?KRiULbAgQqlxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lzX?pxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK@=JR?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lk".to_ascii_buffer()
+		var offer_key := PackedByteArray([17, 34, 51, 68])
+		if not check(not hud.apply_npc_message(offer_packet.slice(0, -2), offer_key), "reject truncated encoded 652 offer"): return
+		if not check(hud.apply_npc_message(offer_packet, offer_key), "decode nested 652 offer from wire packet"): return
 		if not await capture("bichon-merchant-offers"): return
 		click_at(Vector2(427, 399), true)
 		if not await capture("bichon-merchant-offers-next-page"): return

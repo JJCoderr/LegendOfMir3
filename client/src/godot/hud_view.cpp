@@ -507,6 +507,33 @@ bool Mir3HudView::apply_npc_message(PackedByteArray encoded,PackedByteArray key)
     const int opcode=(b(0)^key[0])|((b(4)^key[1])<<8);
     const auto actor=(b(5)^key[3])|((b(7)^key[2])<<8)|(b(9)<<16)|(b(11)<<24);
     const int first_parameter=b(1)|(b(6)<<8);
+    if (opcode==652) {
+        // 0x42A8B6 / 0x4796A0: count and offset precede a nested six-bit item list.
+        const int offset=b(2)|(b(8)<<8);
+        if (first_parameter>255 || shop_selected<0) return false;
+        const auto list=decode_npc_six_bit(encoded.ptr()+header_size,encoded.size()-header_size);
+        if (!list || list->size()>8196) return false;
+        std::string_view remaining=*list;
+        PackedStringArray names;
+        PackedInt32Array icons, prices;
+        PackedInt64Array identifiers;
+        for (int i=0;i<first_parameter;++i) {
+            const auto delimiter=remaining.find('/');
+            if (delimiter==remaining.npos) return false;
+            const auto item=decode_npc_six_bit(reinterpret_cast<const std::uint8_t*>(remaining.data()),delimiter);
+            if (!item || item->size()!=100) return false;
+            const auto byte=[&](int position) { return std::uint32_t(std::uint8_t((*item)[position])); };
+            const auto end=item->find(char(0));
+            if (end==0 || end>=30) return false;
+            names.push_back(String::utf8(mir3::ansi_to_utf8(std::string_view(*item).substr(0,end)).c_str()));
+            icons.push_back(byte(40)|(byte(41)<<8));
+            prices.push_back(0);
+            identifiers.push_back(byte(66)|(byte(67)<<8)|(byte(68)<<16)|(byte(69)<<24));
+            remaining.remove_prefix(delimiter+1);
+        }
+        if (!remaining.empty()) return false;
+        return apply_shop_offers(shop_actor,shop_selected,names,icons,prices,identifiers,offset);
+    }
     if (opcode==650 || opcode==651)
         return encoded.size()==header_size && apply_shop_purchase_reply(opcode,first_parameter);
     if (actor>INT_MAX) return false;
