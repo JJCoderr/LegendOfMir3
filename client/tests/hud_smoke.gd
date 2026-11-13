@@ -81,14 +81,21 @@ func run() -> void:
 	while hud.hud_snapshot().target_portrait != -1 and Time.get_ticks_msec() < portrait_deadline:
 		await process_frame
 	if not check(hud.hud_snapshot().target_portrait == -1, "portrait expires"): return
+	var portrait_queries: Array = []
+	hud.target_portrait_requested.connect(func(opcode: int, actor: int, name: String):
+		portrait_queries.append([opcode, actor, name]))
 	hud.set_hovered_human(2, 1, 2)
+	hud.set_hovered_human(2, 1, 2, "比奇旅人")
+	hud.set_hovered_human(2, 1, 2, "比奇旅人")
+	if not check(portrait_queries == [[1152, 2, "比奇旅人"]], "query on name availability once per displayed target"): return
 	if not check(hud.hud_snapshot().target_portrait == 655 and hud.hud_snapshot().target_hp_width == 0, "human profession portrait without monster HP"): return
 	if not await capture("hud-target-human"): return
 	var jpeg := portrait_image.save_jpg_to_buffer()
 	if not check(not hud.apply_target_portrait(3, jpeg) and hud.apply_target_portrait(2, jpeg), "custom portrait reply requires displayed actor"): return
 	if not check(hud.hud_snapshot().target_custom_portrait, "remote custom portrait"): return
 	if not await capture("hud-target-human-custom"): return
-	hud.set_hovered_human(3, 0, 0)
+	hud.set_hovered_human(3, 0, 0, "盟重旅人")
+	if not check(portrait_queries == [[1152, 2, "比奇旅人"], [1152, 3, "盟重旅人"]], "new target requests its own portrait"): return
 	if not check(not hud.apply_target_portrait(2, jpeg) and not hud.hud_snapshot().target_custom_portrait and hud.hud_snapshot().target_portrait == 650, "changing target clears previous custom portrait"): return
 	hud.set_hovered_target(1, 3, 20, false, 0, 5, 10, 50)
 	if not check(not hud.apply_target_portrait(1, jpeg) and hud.hud_snapshot().target_hp_width == 41, "monster rejects human portrait reply"): return

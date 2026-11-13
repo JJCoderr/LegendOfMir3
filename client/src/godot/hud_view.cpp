@@ -65,8 +65,10 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
     ClassDB::bind_method(D_METHOD("set_minimap_markers","type_five","nearby_green","nearby_orange"),&Mir3HudView::set_minimap_markers);
     ClassDB::bind_method(D_METHOD("set_hovered_target","actor","type","shape","excluded","state","hp","max_hp","percent"),&Mir3HudView::set_hovered_target);
-    ClassDB::bind_method(D_METHOD("set_hovered_human","actor","type","profession"),&Mir3HudView::set_hovered_human);
+    ClassDB::bind_method(D_METHOD("set_hovered_human","actor","type","profession","name"),&Mir3HudView::set_hovered_human,DEFVAL(String()));
     ClassDB::bind_method(D_METHOD("apply_target_portrait","actor","jpeg"),&Mir3HudView::apply_target_portrait);
+    ADD_SIGNAL(MethodInfo("target_portrait_requested",PropertyInfo(Variant::INT,"identifier"),
+        PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("portrait_list_requested"));
     ADD_SIGNAL(MethodInfo("portrait_upload_requested",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"jpeg")));
     ClassDB::bind_method(D_METHOD("load_portrait_cache","server","character"),&Mir3HudView::load_portrait_cache);
@@ -304,20 +306,28 @@ void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool
     queue_redraw();
 }
 
-void Mir3HudView::set_hovered_human(std::uint32_t actor,int type,int profession) {
+void Mir3HudView::set_hovered_human(std::uint32_t actor,int type,int profession,String name) {
     if (!actor || type<0 || type>1 || profession<0 || profession>255) return;
-    if (!target_is_human || target_focus.displayed()!=actor) target_custom_portrait.unref();
+    if (!target_is_human || target_focus.displayed()!=actor) {
+        target_custom_portrait.unref();
+        target_portrait_query_name=String();
+    }
     hovered_target=actor;
     target_focus.update(actor,static_cast<std::uint32_t>(ticks_msec()));
     target_is_human=true;
     target_badge=-1;
     target_frame=mir3::TargetPortrait::human_frame(static_cast<std::uint8_t>(profession),static_cast<std::uint8_t>(type));
     target_portrait=portrait_texture(portraits,portrait_frames,target_frame);
+    if (!name.is_empty() && target_portrait_query_name!=name) {
+        target_portrait_query_name=name;
+        // 0x47D3A0 queries the character name. The actor is local reply context.
+        emit_signal("target_portrait_requested",1152,actor,name);
+    }
     queue_redraw();
 }
 
 bool Mir3HudView::apply_target_portrait(std::uint32_t actor,PackedByteArray jpeg) {
-    if (!actor || !target_is_human || target_focus.displayed()!=actor) return false;
+    if (!actor || !target_is_human || target_focus.displayed()!=actor || jpeg.size()>4096) return false;
     if (jpeg.is_empty()) {
         target_custom_portrait.unref();
     } else {
