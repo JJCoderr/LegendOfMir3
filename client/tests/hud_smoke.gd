@@ -399,6 +399,11 @@ func run() -> void:
 		if not check(not hud.apply_npc_body(645, 2, 2, "!!!!".to_ascii_buffer()), "reject invalid six-bit alphabet"): return
 		if not check(hud.apply_npc_body(645, 2, 1, "PrieWBl\\TbykVnxlGoDqGoLkHo<pGo<kHNx".to_ascii_buffer()), "decode shop profession requirement"): return
 		if not await capture("bichon-merchant-profession-requirement"): return
+		if not check(hud.apply_npc_body(645, 2, 1, "QCE]VRueWbX\\VSMaWNxmGoDqGoLkHo<mGo<kHO<k".to_ascii_buffer()), "decode shop level requirement"): return
+		if not await capture("bichon-merchant-level-requirement-unmet"): return
+		if not check(hud.set_character_progress(10, 0, 0, 0, 0), "reach required shop level"): return
+		if not await capture("bichon-merchant-level-requirement-met"): return
+		if not check(hud.set_character_progress(1, 0, 0, 0, 0), "restore level after shop requirement check"): return
 		var stock_list := ""
 		for i in 10: stock_list += "Potion %d/1/20/5/" % i
 		if not check(hud.apply_shop_goods(2, 10, stock_list), "shop list exceeds one screen"): return

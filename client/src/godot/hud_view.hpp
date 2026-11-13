@@ -291,7 +291,7 @@ private:
     void close_npc_dialogue();
     bool apply_shop_purchase_reply(int identifier,int64_t value);
     bool apply_shop_goods(int actor,int count,godot::String body,bool wire_format=false);
-    struct ShopGood { std::string name; int variants, price, stock, icon=-1, requirement=0; };
+    struct ShopGood { std::string name; int variants, price, stock, icon=-1, requirement_type=0, requirement=0; };
     std::vector<ShopGood> shop_goods;
     int shop_actor=0, shop_pressed=-1, shop_first=0, shop_category_first=0;
     int shop_offer_index=-1;

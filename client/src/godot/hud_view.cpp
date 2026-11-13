@@ -740,8 +740,7 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body,bool wire_for
             remaining.remove_prefix(slash+1);
         }
         ShopGood good{std::string(fields[0]),0,0,0};
-        int requirement_type=0;
-        const std::array values{&good.variants,&good.price,&good.stock,&good.icon,&requirement_type,&good.requirement};
+        const std::array values{&good.variants,&good.price,&good.stock,&good.icon,&good.requirement_type,&good.requirement};
         for (int j=0;j<field_count-1;++j) {
             const auto field=fields[j+1];
             const auto end=field.data()+field.size();
@@ -853,7 +852,8 @@ void Mir3HudView::draw_shop() {
         if (selected || good.variants)
             draw_rect(icon_cell,selected?selected_border:Color(180.f/255,180.f/255,180.f/255),false);
         // 0x477160 places the localized price two pixels after the measured name.
-        const int label_y=y+(good.icon==304?2:13);
+        const bool has_requirement=good.variants && good.requirement>0;
+        const int label_y=y+(good.icon==304 || has_requirement?2:13);
         const int name_width=mir3::raster_text(good.name,1,1,false,mir3::TextFont::normal).text_width;
         auto price=message(2300);
         const auto marker=price.find("%d");
@@ -869,6 +869,12 @@ void Mir3HudView::draw_shop() {
         if (good.icon==304 && good.requirement<=2)
             text(message(5170+good.requirement),{66,label_y+20,184,16},
                 model.profession==good.requirement?13172680:1974015,mir3::TextFont::normal,false);
+        else if (good.icon!=304 && has_requirement && good.requirement_type==0) {
+            // 0x4782E0 case 0 compares the character level with the requirement.
+            const auto label=message(5140)+" "+std::to_string(good.requirement);
+            text(label,{66,label_y+20,184,16},model.level>=good.requirement?16773360:1974015,
+                mir3::TextFont::normal,false);
+        }
     }
 }
 
