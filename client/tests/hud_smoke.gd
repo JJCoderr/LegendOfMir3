@@ -283,6 +283,16 @@ func run() -> void:
 		for i in range(2, 26):
 			scroll_script += separator + ("药店说明 %02d" % i if i < 25 else "<最后一项/@last>")
 		if not check(hud.apply_npc_dialogue(643, 2, scroll_script), "open scrollable NPC dialogue"): return
+		if OS.get_cmdline_user_args().has("--screenshots"):
+			if not await capture("bichon-merchant-dialogue-first-row"): return
+			var up_rect := Rect2i(183, 416, 21, 18)
+			var up_idle := root.get_texture().get_image().get_region(up_rect).get_data()
+			click_at(Vector2(188, 420), true)
+			await process_frame
+			await RenderingServer.frame_post_draw
+			var up_at_start := root.get_texture().get_image().get_region(up_rect).get_data()
+			click_at(Vector2(188, 420), false)
+			if not check(up_idle == up_at_start, "NPC up arrow stays idle at first row"): return
 		var npc_wheel := InputEventMouseButton.new()
 		npc_wheel.position = Vector2(50, 45)
 		npc_wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN

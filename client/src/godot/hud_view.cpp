@@ -863,7 +863,8 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
         return true;
     }
     if (npc_dialogue_scroll_enabled) {
-        const bool up=hit_button(1357,183,bottom-48);
+        // 0x461016 keeps the up arrow visible but skips its press handler at row zero.
+        const bool up=npc_dialogue_first>0 && hit_button(1357,183,bottom-48);
         const bool down=npc_dialogue_first<npc_dialogue_scroll_limit && hit_button(1355,183,bottom-30);
         const int arrow=up?-1:down?1:0;
         if (arrow || npc_dialogue_arrow_pressed) {
