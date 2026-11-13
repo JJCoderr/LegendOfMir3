@@ -1460,8 +1460,9 @@ bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
         const int left=std::min(int(point.x),x+w-160);
         const int top=point.y+160>x+w?y+h-120:int(point.y);
         skill_key_menu=Rect2(left,top+40,160,120);
-        skill_menu_target=pos.id;
-        skills.selected[skills.tab]=index;
+        // 0x450BD0 opens over a learned slot without changing selection.
+        const int selected=skills.selected[skills.tab];
+        skill_menu_target=selected>=0 && selected<int(positions.size())?positions[selected].id:0;
         raise_panel(Panel::skills);
         skills.end_drag();
         skills.pressed=-1;

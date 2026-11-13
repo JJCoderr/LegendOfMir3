@@ -447,6 +447,15 @@ func run() -> void:
 	click_at(Vector2(435, 202), true)
 	click_at(Vector2(435, 202), false)
 	if not check(skill_requests.back() == Vector2i(5, 50), "shortcut menu binds F2"): return
+	click_at(Vector2(700, 470), true)
+	click_at(Vector2(700, 470), false)
+	var other_popup := popup_event.duplicate() as InputEventMouseButton
+	other_popup.position = Vector2(385, 86)
+	Input.parse_input_event(other_popup)
+	click_at(Vector2(390, 130), true)
+	click_at(Vector2(390, 130), false)
+	if not check(skill_requests.back() == Vector2i(5, 49), "double click opens popup without replacing selected skill"): return
+	if not await capture("magic-popup-preserved-selection"): return
 	click_at(Vector2(636, 32), true)
 	click_at(Vector2(636, 32), false)
 	if not check(hud.hud_snapshot().skill_tab == 7, "magic category selection"): return
@@ -473,6 +482,8 @@ func run() -> void:
 	refreshed_popup.position = Vector2(385, 86)
 	refreshed_popup.pressed = true
 	refreshed_popup.double_click = true
+	click_at(Vector2(385, 86), true)
+	click_at(Vector2(385, 86), false)
 	Input.parse_input_event(refreshed_popup)
 	if not await capture("magic-refreshed-key-menu"): return
 	if OS.get_cmdline_user_args().has("--screenshots"):
