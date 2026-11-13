@@ -1096,9 +1096,11 @@ func run() -> void:
 		"711 clears the pending open before a subsequent map reply"): return
 	if not await capture("hud-minimap-unavailable"): return
 	await create_timer(1.01).timeout
+	click_at(Vector2(540, 570), true)
 	click_at(Vector2(550, 510), false)
 	if not check(hud.hud_snapshot().portrait_map_mode and not hud.hud_snapshot().portrait_map_visible
-		and map_requests.size() == 5, "portrait click requests a map and waits for 710"): return
+		and not hud.hud_snapshot().portrait_visible and map_requests.size() == 5,
+		"release over the portrait falls through from the upload button to the map request"): return
 	if not check(hud.apply_minimap_reply(1001) and hud.hud_snapshot().portrait_map_visible
 		and not hud.hud_snapshot().minimap_visible, "710 shows the portrait map independently"): return
 	hud.set_minimap_markers(PackedVector2Array(), PackedVector2Array([Vector2(350, 284)]),
