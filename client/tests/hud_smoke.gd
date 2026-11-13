@@ -796,7 +796,7 @@ func run() -> void:
 	if not await capture("hud-trade-offers"): return
 	var offers: Array[Array] = []
 	hud.trade_offer_requested.connect(func(id: int, item: int, label: String, count: int): offers.append([id, item, label, count]))
-	if not check(hud.add_inventory_item(301, 1, hud.hud_snapshot().inventory_row * 6 + 4, 98765, "Trade potion"), "create trade pickup fixture"): return
+	if not check(hud.add_inventory_item(301, 1, hud.hud_snapshot().inventory_row * 6 + 4, 98765, "Trade potion", 20), "create trade pickup fixture"): return
 	var trade_pickup: Vector2 = Vector2(hud.hud_snapshot().inventory_position) + Vector2(185, 76)
 	click_at(trade_pickup, true)
 	click_at(trade_pickup, false)
@@ -809,6 +809,13 @@ func run() -> void:
 	click_at(Vector2(70, 75), true)
 	click_at(Vector2(70, 75), false)
 	if not check(offers == [[1026, 98765, "Trade potion", 1]] and hud.hud_snapshot().held_inventory_icon == 301, "offer waits for server reply"): return
+	key(KEY_Q)
+	var trade_status_origin: Vector2 = Vector2(hud.hud_snapshot().status_position)
+	click_at(trade_status_origin + Vector2(185, 100), true)
+	click_at(trade_status_origin + Vector2(185, 100), false)
+	if not check(hud.hud_snapshot().held_inventory_icon == 301 and not hud.hud_snapshot().equipment_pending, "pending trade locks held item across windows"): return
+	if not await capture("hud-trade-pending-equipment"): return
+	key(KEY_Q)
 	if not check(hud.apply_trade_offer_reply(675) and hud.hud_snapshot().held_inventory_icon == -1, "offer reply transfers item into local trade grid"): return
 	if not await capture("hud-trade-offer-accepted"): return
 	click_at(Vector2(70, 75), true)

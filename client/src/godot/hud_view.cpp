@@ -988,7 +988,8 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
         captured=status.end_drag() || status_close_pressed;
         status_close_pressed=false;
         if (activate) toggle_status();
-        if (!captured && slot>=0 && (!bag.held || bag.held.make_index)) {
+        if (!captured && slot>=0 && trade_pending_slot<0 && trade_return_slot<0 &&
+            (!bag.held || bag.held.make_index)) {
             const auto now=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
             const bool was_pending=equipment.pending;
             equipment.release_action(slot,bag,static_cast<std::uint32_t>(now));
@@ -2161,7 +2162,8 @@ bool Mir3HudView::apply_trade_offer_reply(int identifier,int accepted_count) {
     }
     if (trade_pending_slot<0 || (identifier!=675 && identifier!=676)) return false;
     if (identifier==675) {
-        if (!trade_offer_count || accepted_count<0 || accepted_count>trade_offer_count) return false;
+        if (!bag.held || !trade_offer_count || accepted_count<0 ||
+            accepted_count>trade_offer_count || trade_offer_count>bag.held.count) return false;
         const int count=accepted_count?accepted_count:trade_offer_count;
         auto offered=bag.held;
         offered.count=count;
