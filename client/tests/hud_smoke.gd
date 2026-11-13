@@ -795,7 +795,7 @@ func run() -> void:
 	if not check(not hud.set_trade_item(2, 0, 301, 1) and not hud.set_trade_item(0, 200, 301, 1), "reject invalid trade slot"): return
 	if not await capture("hud-trade-offers"): return
 	var offers: Array[Array] = []
-	hud.trade_offer_requested.connect(func(id: int, item: int, label: String): offers.append([id, item, label]))
+	hud.trade_offer_requested.connect(func(id: int, item: int, label: String, count: int): offers.append([id, item, label, count]))
 	if not check(hud.add_inventory_item(301, 1, hud.hud_snapshot().inventory_row * 6 + 4, 98765, "Trade potion"), "create trade pickup fixture"): return
 	var trade_pickup: Vector2 = Vector2(hud.hud_snapshot().inventory_position) + Vector2(185, 76)
 	click_at(trade_pickup, true)
@@ -808,16 +808,28 @@ func run() -> void:
 	if not await capture("hud-trade-occupied"): return
 	click_at(Vector2(70, 75), true)
 	click_at(Vector2(70, 75), false)
-	if not check(offers == [[1026, 98765, "Trade potion"]] and hud.hud_snapshot().held_inventory_icon == 301, "offer waits for server reply"): return
+	if not check(offers == [[1026, 98765, "Trade potion", 1]] and hud.hud_snapshot().held_inventory_icon == 301, "offer waits for server reply"): return
 	if not check(hud.apply_trade_offer_reply(675) and hud.hud_snapshot().held_inventory_icon == -1, "offer reply transfers item into local trade grid"): return
 	if not await capture("hud-trade-offer-accepted"): return
 	click_at(Vector2(70, 75), true)
 	click_at(Vector2(70, 75), false)
 	click_at(trade_pickup, true)
 	click_at(trade_pickup, false)
-	if not check(offers[-1] == [1027, 98765, "Trade potion"], "placing selected offer in bag sends return request"): return
+	if not check(offers[-1] == [1027, 98765, "Trade potion", 1], "placing selected offer in bag sends return request"): return
 	if not check(hud.apply_trade_offer_reply(677) and not hud.apply_trade_offer_reply(677), "return acknowledgement applies once"): return
 	if not await capture("hud-trade-item-returned"): return
+	if not check(hud.add_inventory_item(301, 5, hud.hud_snapshot().inventory_row * 6 + 4, 98766, "Trade stack", 0, 3), "add stack for splitting"): return
+	click_at(trade_pickup, true)
+	click_at(trade_pickup, false)
+	click_at(Vector2(70, 75), true)
+	click_at(Vector2(70, 75), false)
+	if not check(hud.hud_snapshot().group_request == 1307, "stack opens quantity dialog"): return
+	key(0, 50)
+	if not await capture("hud-trade-stack-quantity"): return
+	key(KEY_ENTER)
+	if not check(offers[-1] == [1026, 98766, "Trade stack", 2] and not hud.apply_trade_offer_reply(675, 3), "send selected quantity and reject excess acknowledgement"): return
+	if not check(hud.apply_trade_offer_reply(675, 2) and hud.hud_snapshot().held_inventory_icon == -1, "split offer restores remainder"): return
+	if not await capture("hud-trade-stack-split"): return
 	if not check(hud.set_trade_item(0, 30, 301, 3), "apply trade item below first page"): return
 	click_at(Vector2(211, 170), true)
 	click_at(Vector2(211, 170), false)

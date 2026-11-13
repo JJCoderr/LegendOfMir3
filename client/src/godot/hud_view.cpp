@@ -88,8 +88,8 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_trade_context","direction","cell","actor_type","dead","name"),&Mir3HudView::set_trade_context);
     ADD_SIGNAL(MethodInfo("trade_gold_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"amount")));
     ADD_SIGNAL(MethodInfo("trade_offer_requested",PropertyInfo(Variant::INT,"identifier"),
-        PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::STRING,"name")));
-    ClassDB::bind_method(D_METHOD("apply_trade_offer_reply","identifier"),&Mir3HudView::apply_trade_offer_reply);
+        PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::STRING,"name"),PropertyInfo(Variant::INT,"count")));
+    ClassDB::bind_method(D_METHOD("apply_trade_offer_reply","identifier","accepted_count"),&Mir3HudView::apply_trade_offer_reply,DEFVAL(0));
     ClassDB::bind_method(D_METHOD("set_trade_item","side","slot","icon","count","make_index","name","std_mode","stack_mode"),&Mir3HudView::set_trade_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_trade_gold_reply","identifier","amount","low_word","high_word"),&Mir3HudView::apply_trade_gold_reply,DEFVAL(0),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("set_trade_gold","local","remote"),&Mir3HudView::set_trade_gold);
@@ -700,7 +700,7 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
                 if (!trade_return_pending) {
                     const auto& item=trade_items[0][trade_return_slot];
                     trade_return_pending=true;
-                    emit_signal("trade_offer_requested",1027,int64_t(item.make_index),String::utf8(item.name.c_str()));
+                    emit_signal("trade_offer_requested",1027,int64_t(item.make_index),String::utf8(item.name.c_str()),item.count);
                 }
             } else if (consumed && !equipment.pending && bag.held_equipment_slot>=0) {
                 if (equipment.takeoff(bag)) emit_equipment_request();
@@ -1469,6 +1469,18 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
         chat_input->layout(model.layout.expanded);
     }
     queue_redraw();
+    if (request==1307) {
+        const auto input=name.utf8();
+        const std::string_view digits(input.get_data());
+        int count=0;
+        const auto end=digits.data()+digits.size();
+        const auto parsed=std::from_chars(digits.data(),end,count);
+        if (confirm && trade.visible && trade_pending_slot>=0 && bag.held &&
+            parsed.ec==std::errc{} && parsed.ptr==end && count>0 && count<=bag.held.count)
+            send_trade_offer(count);
+        else trade_pending_slot=-1;
+        return;
+    }
     if (!confirm) return;
     if (request==101 || request==109) {
         emit_signal("exit_confirmed",request);
@@ -1506,7 +1518,7 @@ void Mir3HudView::draw_group_dialog() {
         return;
     }
     const auto prompt=group_request==1039?"'"+std::string(guild_name.utf8().get_data())+"' "+message(4001):
-        message(group_request==1029?1304:group_request==1045?4002:group_request==1022?1606:1605);
+        message(group_request==1307?1307:group_request==1029?1304:group_request==1045?4002:group_request==1022?1606:1605);
     if (dialog_has_input()) text(prompt,{x+43,y+84,278,75},0xc8faff,mir3::TextFont::dialog);
     else text(message(group_request==109?2636:1065),{x+23,y+84,308,95},0xc8faff,mir3::TextFont::dialog);
     for (const int index:{0,2}) {
@@ -2126,7 +2138,12 @@ bool Mir3HudView::apply_minimap_reply(int map_number) {
     return true;
 }
 
-bool Mir3HudView::apply_trade_offer_reply(int identifier) {
+void Mir3HudView::send_trade_offer(int count) {
+    trade_offer_count=count;
+    emit_signal("trade_offer_requested",1026,int64_t(bag.held.make_index),String::utf8(bag.held.name.c_str()),count);
+}
+
+bool Mir3HudView::apply_trade_offer_reply(int identifier,int accepted_count) {
     if (identifier==677 || identifier==678) {
         if (!trade_return_pending) return false;
         auto& item=trade_items[0][trade_return_slot];
@@ -2144,14 +2161,22 @@ bool Mir3HudView::apply_trade_offer_reply(int identifier) {
     }
     if (trade_pending_slot<0 || (identifier!=675 && identifier!=676)) return false;
     if (identifier==675) {
-        trade_items[0][trade_pending_slot]=bag.held;
-        bag.held={};
-        bag.held_slot=-1;
+        if (!trade_offer_count || accepted_count<0 || accepted_count>trade_offer_count) return false;
+        const int count=accepted_count?accepted_count:trade_offer_count;
+        auto offered=bag.held;
+        offered.count=count;
+        trade_items[0][trade_pending_slot]=std::move(offered);
+        bag.held.count-=count;
+        if (bag.held.count==0 || bag.insert(bag.held)) {
+            bag.held={};
+            bag.held_slot=-1;
+        }
     } else if (bag.insert(bag.held)) {
         bag.held={};
         bag.held_slot=-1;
     }
     trade_pending_slot=-1;
+    trade_offer_count=0;
     queue_redraw();
     return true;
 }
@@ -2243,6 +2268,8 @@ bool Mir3HudView::open_trade(String partner) {
         if (trade_pending_slot>=0) apply_trade_offer_reply(676);
         if (trade.visible) trade.toggle();
         trade_confirm_pressed=false;
+        if (group_request==1307) finish_group_dialog(false);
+        trade_offer_count=0;
         trade_confirmed=false;
         trade_gold_pending=false;
         trade_gold_debited=false;
@@ -2353,7 +2380,6 @@ bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
         }
         if (!captured && !trade_confirmed && trade_pending_slot<0 && trade_return_slot<0 && bag.held &&
             bag.held.make_index && bag.held_equipment_slot<0 && !bag.pending_use && !equipment.pending &&
-            (bag.held.stack_mode<2 || bag.held.count==1) &&
             Rect2(x+14,y+56,190,190).has_point(position)) {
             const int column=(int(position.x)-x-14)/38;
             const int row=trade_scroll.first[0]+(int(position.y)-y-56)/38;
@@ -2370,7 +2396,8 @@ bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
             }
             if (fits) {
                 trade_pending_slot=slot;
-                emit_signal("trade_offer_requested",1026,int64_t(held.make_index),String::utf8(held.name.c_str()));
+                if (held.stack_mode>=2 && held.count>1) open_group_dialog(1307);
+                else send_trade_offer(std::max(1,held.count));
             } else if (occupied) {
                 post_chat(String::utf8(message(1306).c_str()),0xffff32,0);
             }

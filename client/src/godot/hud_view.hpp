@@ -51,7 +51,7 @@ public:
     bool apply_mount_reply(int identifier,int64_t recognition);
     bool apply_minimap_reply(int map_number);
     void handle_exit_confirmation(int dialog_id);
-    bool apply_trade_offer_reply(int identifier);
+    bool apply_trade_offer_reply(int identifier,int accepted_count=0);
     bool set_trade_item(int side,int slot,int icon,int count,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     bool apply_trade_gold_reply(int identifier,int64_t amount,int low_word,int high_word);
     bool set_trade_gold(int64_t local,int64_t remote);
@@ -91,6 +91,8 @@ private:
     bool trade_gold_pending=false,trade_gold_debited=false;
     std::array<std::uint32_t,2> trade_gold{};
     std::array<std::array<mir3::BagItem,200>,2> trade_items;
+    void send_trade_offer(int count);
+    int trade_offer_count=0;
     int trade_pending_slot=-1, trade_return_slot=-1;
     bool trade_return_pending=false;
     bool trade_confirm_pressed=false,trade_confirmed=false;
