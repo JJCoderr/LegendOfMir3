@@ -1415,7 +1415,7 @@ void Mir3HudView::bind_skill(int id,int key) {
         skill.key=0;
         emit_signal("skill_key_requested",skill.id,0);
     }
-    for (auto& skill:skills.learned[skills.tab]) {
+    for (auto& skill:skills.learned[mir3::SkillLayout::category(id)]) {
         if (!skill.id || skill.id!=id) continue;
         if (skill.key && skills.bindings[skill.key]==skill.id) skills.bindings[skill.key]=0;
         skill.key=key;
@@ -1434,9 +1434,10 @@ bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
             if (kind==2) {
                 const Vector2 local=point-skill_key_menu.position;
                 const int key=int(local.y)/40*4+int(local.x)/40+1;
-                const int selected=skills.selected[skills.tab];
-                if (selected>=0 && selected<15)
-                    bind_skill(mir3::SkillLayout::positions[skills.tab][selected].id,key);
+                const auto& learned=skills.learned[mir3::SkillLayout::category(skill_menu_target)];
+                if (std::any_of(learned.begin(),learned.end(),[this](const auto& skill) {
+                    return skill.id==skill_menu_target;
+                })) bind_skill(skill_menu_target,key);
             }
             get_viewport()->set_input_as_handled();
             return true;
@@ -1459,6 +1460,7 @@ bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
         const int left=std::min(int(point.x),x+w-160);
         const int top=point.y+160>x+w?y+h-120:int(point.y);
         skill_key_menu=Rect2(left,top+40,160,120);
+        skill_menu_target=pos.id;
         skills.selected[skills.tab]=index;
         raise_panel(Panel::skills);
         skills.end_drag();

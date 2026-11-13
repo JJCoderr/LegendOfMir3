@@ -210,6 +210,7 @@ private:
     mir3::SkillDescriptions skill_descriptions;
     std::map<int,std::vector<mir3::DescriptionRow>> description_rows;
     godot::Rect2 skill_key_menu;
+    int skill_menu_target=0;
     void bind_skill(int id,int key);
     void draw_skill_key_menu();
     bool skill_menu_input(int kind,godot::Vector2 point,bool double_click);

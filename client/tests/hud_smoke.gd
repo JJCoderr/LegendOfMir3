@@ -474,6 +474,12 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--screenshots"):
 		var popup_image := root.get_texture().get_image()
 		if not check(popup_image.get_pixel(485, 226) != popup_image.get_pixel(445, 226), "popup displays retained shortcut icon"): return
+	var binds_before_removal := skill_requests.size()
+	if not check(hud.apply_skill_removal(39) and hud.hud_snapshot().skill_tab == 0, "removing popup target changes category"): return
+	click_at(Vector2(390, 130), true)
+	click_at(Vector2(390, 130), false)
+	if not check(skill_requests.size() == binds_before_removal, "stale popup cannot change bindings"): return
+	if not await capture("magic-removed-popup-target"): return
 	click_at(Vector2(636, 32), true)
 	click_at(Vector2(636, 32), false)
 	var skill_wheel := InputEventMouseButton.new()
