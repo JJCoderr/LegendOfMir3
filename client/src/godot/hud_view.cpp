@@ -482,7 +482,7 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
         const auto slash=script.find('/');
         if (slash==script.npos) return false;
         script.remove_prefix(slash+1);
-        npc_dialogue_rows.clear();
+        std::vector<NpcDialogueRow> rows;
         for (int line=0;line<7 && !script.empty();++line) {
             const auto end=script.find(char(92));
             auto row=script.substr(0,end);
@@ -490,7 +490,7 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
             const auto append=[&](std::string_view label,std::string_view command={}) {
                 if (label.empty() || x>=358) return;
                 const int width=mir3::raster_text(label,1,1,false,mir3::TextFont::normal).text_width;
-                npc_dialogue_rows.push_back({std::string(label),std::string(command),{x,25+18*line,std::min(width,358-x),18}});
+                rows.push_back({std::string(label),std::string(command),{x,25+18*line,std::min(width,358-x),18}});
                 x+=width;
             };
             while (!row.empty()) {
@@ -507,6 +507,8 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
             if (end==script.npos) break;
             script.remove_prefix(end+1);
         }
+        if (npc_dialogue_actor && npc_dialogue_actor!=actor) close_npc_dialogue();
+        npc_dialogue_rows=std::move(rows);
         npc_dialogue_actor=actor;
         npc_dialogue_origin=player_cell;
     }
@@ -539,7 +541,7 @@ bool Mir3HudView::apply_shop_purchase_reply(int identifier,int64_t value) {
 
 bool Mir3HudView::apply_shop_goods(int actor,int count,String body) {
     const auto utf8=body.utf8();
-    if (actor<=0 || count<0 || count>255 || utf8.length()>10240) return false;
+    if (actor<=0 || actor!=npc_dialogue_actor || count<0 || count>255 || utf8.length()>10240) return false;
     std::string_view remaining(utf8.get_data(),utf8.length());
     std::vector<ShopGood> goods;
     for (int i=0;i<count;++i) {
@@ -1236,7 +1238,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { map_pointer_button=0;merchant_click_captured=false;minimap.dragging=false;minimap.release_captured=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;guild_editor.end_drag();guild_edit_pressed=-1;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { map_pointer_button=0;merchant_click_captured=false;shop_pressed=npc_dialogue_pressed=-1;minimap.dragging=false;minimap.release_captured=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;guild_editor.end_drag();guild_edit_pressed=-1;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
