@@ -1118,7 +1118,22 @@ func run() -> void:
 			"portrait map markers use original half-scale coordinates and colors"): return
 	key(KEY_J)
 	if not check(hud.hud_snapshot().portrait_map_mode, "J respects the 710 cooldown"): return
-	await create_timer(1.01).timeout
+	var portrait_map_deadline := Time.get_ticks_msec() + 1010
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var marker_pixel := Vector2i(572, 532)
+		var green := Color8(100, 250, 100)
+		var blink_deadline := Time.get_ticks_msec() + 1500
+		while root.get_texture().get_image().get_pixelv(marker_pixel) == green and Time.get_ticks_msec() < blink_deadline:
+			await RenderingServer.frame_post_draw
+		if not check(root.get_texture().get_image().get_pixelv(marker_pixel) != green,
+			"portrait map player marker enters the hidden phase"): return
+		if not await capture("hud-portrait-map-marker-hidden"): return
+		while root.get_texture().get_image().get_pixelv(marker_pixel) != green and Time.get_ticks_msec() < blink_deadline:
+			await RenderingServer.frame_post_draw
+		if not check(root.get_texture().get_image().get_pixelv(marker_pixel) == green,
+			"portrait map player marker returns after the hidden phase"): return
+	while Time.get_ticks_msec() < portrait_map_deadline:
+		await process_frame
 	key(KEY_J)
 	if not check(not hud.hud_snapshot().portrait_map_mode and not hud.hud_snapshot().portrait_map_visible,
 		"J returns from the portrait map"): return
