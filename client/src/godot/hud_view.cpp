@@ -1,3 +1,6 @@
+#include "hud/sound_position.hpp"
+#include <godot_cpp/classes/audio_server.hpp>
+#include <godot_cpp/classes/audio_effect_panner.hpp>
 #include <godot_cpp/classes/font.hpp>
 #include <godot_cpp/classes/audio_stream_wav.hpp>
 #include <godot_cpp/classes/audio_stream_mp3.hpp>
@@ -291,6 +294,15 @@ void Mir3HudView::_ready() {
             footstep_sound->set_name("FootstepSound");
             footstep_sound->set_stream(footstep);
             add_child(footstep_sound);
+            auto* audio=AudioServer::get_singleton();
+            const int bus=audio->get_bus_count();
+            footstep_bus=String("Mir3Footsteps")+String::num_uint64(get_instance_id());
+            audio->add_bus(bus);
+            audio->set_bus_name(bus,footstep_bus);
+            Ref<AudioEffectPanner> panner;
+            panner.instantiate();
+            audio->add_bus_effect(bus,panner);
+            footstep_sound->set_bus(footstep_bus);
             sync_hud_sound();
         }
         const Vector2i spawn=get_meta("map_spawn_cell",player_cell);
@@ -326,6 +338,14 @@ void Mir3HudView::_ready() {
     }
     UtilityFunctions::print("HUD ready: 800x600; original WIL resources; C++ MVC.");
     queue_redraw();
+}
+void Mir3HudView::_exit_tree() {
+    if (footstep_bus==StringName()) return;
+    footstep_sound->stop();
+    auto* audio=AudioServer::get_singleton();
+    const int bus=audio->get_bus_index(footstep_bus);
+    if (bus>=0) audio->remove_bus(bus);
+    footstep_bus=StringName();
 }
 Ref<ImageTexture> Mir3HudView::frame(int id) {
     if (const auto found=frames.find(id);found!=frames.end()) return found->second;
@@ -1346,8 +1366,22 @@ void Mir3HudView::advance_map_step(double delta) {
     movement_ms=0;
     ++walk_frame;
     // 0x410DF0 plays sample 1 on frames 1 and 4 for walking and running.
-    if ((walk_frame==1 || walk_frame==4) && footstep_sound && audio_options.effects_enabled)
-        footstep_sound->play();
+    if ((walk_frame==1 || walk_frame==4) && footstep_sound && audio_options.effects_enabled) {
+        const auto camera=map_camera();
+        const auto mix=mir3::SoundPosition::from_view(player_cell.x*48-camera.x,player_cell.y*32-camera.y);
+        const int volume=mix.volume+mir3::AudioOptions::volume(audio_options.effects_level);
+        if (volume>-10000) {
+            auto* audio=AudioServer::get_singleton();
+            const int bus=audio->get_bus_index(footstep_bus);
+            if (bus>=0) {
+                const Ref<AudioEffectPanner> panner=audio->get_bus_effect(bus,0);
+                const float magnitude=1.f-std::pow(10.f,-std::abs(mix.pan)/2000.f);
+                panner->set_pan((mix.pan<0?-1.f:1.f)*(audio_options.reverse_pan?-1.f:1.f)*magnitude);
+            }
+            footstep_sound->set_volume_db(volume/100.f);
+            footstep_sound->play();
+        }
+    }
     if (walk_frame==(player_facing==7?4:1)) {
         player_cell=step_destination;
         const auto distance=player_cell-npc_dialogue_origin;
@@ -3446,10 +3480,7 @@ void Mir3HudView::save_options() {
 }
 
 void Mir3HudView::sync_hud_sound() {
-    if (footstep_sound) {
-        footstep_sound->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
-        if (!audio_options.effects_enabled) footstep_sound->stop();
-    }
+    if (footstep_sound && !audio_options.effects_enabled) footstep_sound->stop();
     if (hud_sound) {
         hud_sound->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
         if (!audio_options.effects_enabled) hud_sound->stop();

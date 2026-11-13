@@ -109,6 +109,26 @@ func run() -> void:
 			heard_step = heard_step or footstep.playing
 		if not check(footstep.stream != null and heard_step, "walking plays original footstep sample"): return
 		if not check(hud.hud_snapshot().walk_frame == -1 and hud.hud_snapshot().player_cell == Vector2i(476, 360), "walk finishes in destination cell"): return
+		var footstep_bus := AudioServer.get_bus_index(footstep.bus)
+		var footstep_panner := AudioServer.get_bus_effect(footstep_bus, 0) as AudioEffectPanner
+		hud.set_meta("map_camera_cell", Vector2i(470, 353))
+		if not check(hud.walk_to_map_cell(Vector2i(476, 361)), "step with an off-center camera"): return
+		await create_timer(0.25).timeout
+		var normal_pan := footstep_panner.pan
+		if not check(absf(normal_pan) > 0.01, "off-center footsteps have a stereo position"): return
+		await create_timer(0.45).timeout
+		key(KEY_N)
+		click_at(Vector2(580, 240), false)
+		key(KEY_N)
+		if not check(hud.walk_to_map_cell(Vector2i(476, 360)), "step with reversed stereo"): return
+		await create_timer(0.25).timeout
+		if not check(is_equal_approx(footstep_panner.pan, -normal_pan), "reverse pan flips footstep stereo position"): return
+		if not await capture("bichon-reversed-footsteps"): return
+		await create_timer(0.45).timeout
+		key(KEY_N)
+		click_at(Vector2(580, 240), false)
+		key(KEY_N)
+		hud.remove_meta("map_camera_cell")
 		if not await capture("bichon-step-camera"): return
 		if not check(hud.walk_to_map_cell(Vector2i(476, 362)), "plan route across Bichon cells"): return
 		var route_deadline := Time.get_ticks_msec() + 3000

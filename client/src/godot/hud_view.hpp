@@ -33,6 +33,7 @@ class Mir3HudView : public godot::Node2D {
     GDCLASS(Mir3HudView,godot::Node2D)
 public:
     void _ready() override;
+    void _exit_tree() override;
     void _draw() override;
     void _process(double delta) override;
     void _input(const godot::Ref<godot::InputEvent>& event) override;
@@ -161,6 +162,7 @@ private:
     void sync_hud_sound();
     godot::AudioStreamPlayer* map_music=nullptr;
     godot::AudioStreamPlayer* footstep_sound=nullptr;
+    godot::StringName footstep_bus;
     godot::String audio_root,music_file;
     godot::PackedByteArray music_table;
     godot::String options_path;
