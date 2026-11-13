@@ -47,6 +47,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_group_roster","player","members"),&Mir3HudView::set_group_roster);
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines","editable"),&Mir3HudView::set_guild_overview,DEFVAL(PackedStringArray()));
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
+    ClassDB::bind_method(D_METHOD("set_character_combat","attack","magic","spirit","defence","magic_defence"),&Mir3HudView::set_character_combat);
     ClassDB::bind_method(D_METHOD("set_character_progress","level","profession","appearance","experience","next_experience"),&Mir3HudView::set_character_progress);
     ClassDB::bind_method(D_METHOD("set_character_vitals","hp","max_hp","mp","max_mp","weight","max_weight"),&Mir3HudView::set_character_vitals);
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
@@ -108,6 +109,10 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["hovered"]=model.hovered;
     result["primary_defence"]=model.primary_stat[0];
     result["primary_attack"]=model.primary_stat[1];
+    const auto [defence_frame,defence_min,defence_max]=model.stat(0);
+    const auto [attack_frame,attack_min,attack_max]=model.stat(1);
+    result["hud_defence"]=Vector2i(defence_min,defence_max);
+    result["hud_attack"]=Vector2i(attack_min,attack_max);
     result["chat_compact_count"]=int(chat_history.lines(false).size());
     result["chat_expanded_count"]=int(chat_history.lines(true).size());
     result["chat_compact_first"]=chat_history.first(false);
@@ -2129,6 +2134,19 @@ void Mir3HudView::load_status_body() {
         status_body=texture(body->pixels.rgba,body->width,body->height);
         status_body_offset=Vector2(body->offset_x,body->offset_y);
     }
+}
+
+bool Mir3HudView::set_character_combat(Vector2i attack,Vector2i magic,Vector2i spirit,
+        Vector2i defence,Vector2i magic_defence) {
+    for (const auto range:{attack,magic,spirit,defence,magic_defence})
+        if (range.x<0 || range.y<range.x || range.y>UINT16_MAX) return false;
+    model.attack={attack.x,attack.y};
+    model.magic_attack={magic.x,magic.y};
+    model.spirit_attack={spirit.x,spirit.y};
+    model.defence={defence.x,defence.y};
+    model.magic_defence={magic_defence.x,magic_defence.y};
+    queue_redraw();
+    return true;
 }
 
 bool Mir3HudView::set_character_progress(int level,int profession,int appearance,int64_t experience,int64_t next_experience) {

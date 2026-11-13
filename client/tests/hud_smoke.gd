@@ -233,6 +233,16 @@ func run() -> void:
 	var progress: Dictionary = hud.hud_snapshot()
 	if not check(progress.character_level == 24 and progress.character_portrait == 651 and not progress.character_shared_hp, "level switches orbs and appearance selects portrait"): return
 	if not await capture("character-status-progress"): return
+	if not check(hud.set_character_combat(Vector2i(12, 31), Vector2i(2, 8), Vector2i(4, 16), Vector2i(5, 12), Vector2i(3, 7)), "apply combat ranges"): return
+	if not check(not hud.set_character_combat(Vector2i(31, 12), Vector2i.ZERO, Vector2i.ZERO, Vector2i.ZERO, Vector2i.ZERO), "reject reversed combat range"): return
+	var combat: Dictionary = hud.hud_snapshot()
+	if not check(combat.hud_attack == Vector2i(12, 31) and combat.hud_defence == Vector2i(3, 7), "combat data drives HUD ranges"): return
+	if not await capture("character-status-combat"): return
+	click_at(Vector2(640, 580), true)
+	click_at(Vector2(640, 580), false)
+	if not check(hud.hud_snapshot().hud_defence == Vector2i(5, 12), "HUD toggles to physical defence"): return
+	click_at(Vector2(640, 580), true)
+	click_at(Vector2(640, 580), false)
 	if not check(hud.set_character_progress(1, 0, 0, 0, 0), "restore default character progress"): return
 	if not check(hud.set_character_vitals(0, 0, 0, 0, 0, 0), "restore empty character vitals"): return
 	status_hover = InputEventMouseMotion.new()
