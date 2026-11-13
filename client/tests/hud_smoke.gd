@@ -102,6 +102,12 @@ func run_scene_actor_removal() -> void:
 				if not await capture("bichon-human-dyes"): return
 
 		if not await capture("bichon-human-clothing"): return
+	if OS.get_cmdline_user_args().has("--scene-human-mount"):
+		if not check(hud.set_player_mount(1) and hud.set_scene_human_mount(5, 2), "load male and female mounted actors"): return
+		if not check(not hud.set_player_mount(4) and not hud.set_scene_human_mount(5, -1)
+			and hud.hud_snapshot().player_mount == 1 and hud.hud_snapshot().scene_human_mounts[5] == 2,
+			"invalid horse shape preserves mounted appearance"): return
+		if not await capture("bichon-mounted-standing"): return
 	if not await capture("bichon-removal-before"): return
 	if OS.get_cmdline_user_args().has("--scene-human-step"):
 		var origin: Vector2i = hud.hud_snapshot().scene_human_cells[5]
@@ -123,12 +129,12 @@ func run_scene_actor_removal() -> void:
 		for direction in [7, 3, 5, 1, 0, 2, 4, 6]:
 			var deltas := [Vector2i.UP, Vector2i(1, -1), Vector2i.RIGHT, Vector2i(1, 1),
 				Vector2i.DOWN, Vector2i(-1, 1), Vector2i.LEFT, Vector2i(-1, -1)]
-			destination = run_origin + deltas[direction] * 2
+			destination = run_origin + deltas[direction] * (3 if OS.get_cmdline_user_args().has("--scene-human-mount") else 2)
 			if hud.apply_scene_human_step(5, 13, destination, direction):
 				run_loaded = true
 				break
 		if not check(run_loaded and hud.hud_snapshot().scene_human_cells[5] == run_origin,
-			"remote running starts two cells behind the reported destination"): return
+			"remote running starts at the expected distance behind the destination"): return
 		if OS.get_cmdline_user_args().has("--scene-human-body"):
 			var running_cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
 			if not check(hud.set_scene_human_body(5, 0, 2)
@@ -170,6 +176,11 @@ func run_scene_actor_removal() -> void:
 				and hud.hud_snapshot().scene_human_attachments[5] == Vector2i.ZERO,
 				"removed attachment state is cleared"): return
 			if not await capture("bichon-human-attachments-removed"): return
+		if OS.get_cmdline_user_args().has("--scene-human-mount"):
+			if not check(hud.hud_snapshot().player_mount == 1
+				and hud.hud_snapshot().scene_human_mounts[5] == 2, "mount survives clothing and sex changes"): return
+			if not check(hud.set_player_mount(0) and hud.set_scene_human_mount(5, 0), "dismount both actors"): return
+			if not await capture("bichon-mounted-dismount"): return
 		print("SCENE_HUMAN_STEP_OK")
 		quit()
 		return

@@ -75,6 +75,8 @@ public:
     bool set_scene_chicken(int actor,godot::Vector2i cell);
     bool set_scene_human(int actor,godot::Vector2i cell,int facing,int profession,godot::String name);
     bool set_scene_human_body(int actor,int type,int clothing);
+    bool set_player_mount(int shape);
+    bool set_scene_human_mount(int actor,int shape);
     bool set_player_dyes(int clothing,int hair);
     bool set_scene_human_dyes(int actor,int clothing,int hair);
     bool set_player_attachments(int hair,int weapon);
@@ -279,12 +281,16 @@ private:
     std::array<mir3::WilArchive,75> terrain_archives;
     bool animated_map_objects=false;
     struct MapActorFrame { godot::Ref<godot::ImageTexture> image; godot::Vector2 offset; std::vector<std::uint8_t> regions; };
-    mir3::WilArchive map_human, map_female, map_npc;
+    mir3::WilArchive map_human, map_female, map_npc, map_horse;
+    std::map<int,MapActorFrame> horse_frames;
+    const MapActorFrame* horse_frame(int shape,int motion_frame);
     struct HumanBody {
         std::array<MapActorFrame,80> standing, walking, running;
     };
     std::map<std::pair<int,int>,HumanBody> human_bodies;
-    const HumanBody* human_body(int type,int clothing);
+    std::map<std::pair<int,int>,HumanBody> riding_bodies;
+    const HumanBody* human_body(int type,int clothing,bool riding=false);
+    int player_mount=0;
     int player_type=0, player_clothing=0, player_hair=0, player_weapon=0;
     int player_clothing_dye=65535, player_hair_dye=65535;
     std::map<std::tuple<std::uint64_t,int,int>,godot::Ref<godot::ImageTexture>> dyed_frames;
@@ -294,7 +300,7 @@ private:
     std::map<std::string,mir3::WilArchive> attachment_archives;
     std::map<std::pair<std::string,int>,MapActorFrame> attachment_frames;
     const MapActorFrame* attachment_frame(int type,int shape,bool weapon,int motion_frame);
-    void draw_human_layers(const MapActorFrame& body,godot::Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye);
+    void draw_human_layers(const MapActorFrame& body,godot::Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape=0);
     std::array<MapActorFrame,80> map_human_frames, map_walk_frames, map_run_frames;
     struct SceneActor {
         godot::Vector2i cell;
@@ -305,7 +311,7 @@ private:
     std::map<int,SceneActor> scene_chickens;
     struct SceneHuman : SceneActor {
         int profession=0, type=0, clothing=0, hair=0, weapon=0;
-        int clothing_dye=65535, hair_dye=65535;
+        int clothing_dye=65535, hair_dye=65535, mount_shape=0;
         godot::String name;
         int facing=0, movement_frame=-1, step_distance=0;
         mir3::HumanIdleClock idle;
