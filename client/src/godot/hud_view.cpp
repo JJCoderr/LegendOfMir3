@@ -3047,6 +3047,8 @@ bool Mir3HudView::guild_pointer(int kind,Vector2 point) {
         } else if (kind==2) {
             captured=guild.end_drag() || guild_layout.pressed>=0;
             if (guild_layout.release(hit)) {
+                // 0x433420 enables the 0x41FCD0 release sound for guild buttons.
+                if (hud_sound && audio_options.effects_enabled) hud_sound->play();
                 if (hit==0) guild.toggle();
                 if (hit>=1 && hit<=3) guild_first=0;
                 if (hit==1) emit_signal("guild_overview_requested");

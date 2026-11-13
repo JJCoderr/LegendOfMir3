@@ -1208,8 +1208,13 @@ func run() -> void:
 	Input.parse_input_event(guild_hover)
 	for i in 30: await process_frame
 	if not await capture("guild-button-hint"): return
+	var guild_sound: AudioStreamPlayer = hud.get_node("HudClickSound")
+	guild_sound.stop()
 	click_at(Vector2(196, 410), true)
+	if not check(not guild_sound.playing, "guild tab press stays silent"): return
+	if not await capture("guild-member-tab-pressed"): return
 	click_at(Vector2(196, 410), false)
+	if not check(guild_sound.playing, "guild tab release plays original click"): return
 	if not check(hud.hud_snapshot().guild_tab == 1, "guild members tab"): return
 	var member_body := "#1/*Leader/Bichon/#2/*Member/Ginkgo/Incomplete".to_ascii_buffer()
 	if not check(hud.apply_guild_members_reply(756, member_body), "756 parses guild member ranks"): return
