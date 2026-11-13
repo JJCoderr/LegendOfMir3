@@ -518,6 +518,16 @@ func run() -> void:
 	if not check(guild_queries == [true] and not hud.hud_snapshot().guild_visible, "guild overview requested from HUD"): return
 	hud.set_guild_overview("比奇行会", PackedStringArray(["欢迎加入比奇行会", "今晚集合练级"]), PackedStringArray(["今晚集合练级"]))
 	if not await capture("guild-overview"): return
+	if not check(not hud.apply_guild_overview_reply(773, "lo\r".to_ascii_buffer()), "continuation requires initial overview"): return
+	if not check(hud.apply_guild_overview_reply(753, "Bichon\r\r0\r<Notice>\rHel".to_ascii_buffer()), "initial overview retains partial line"): return
+	if not check(hud.apply_guild_overview_reply(773, "lo\rIgnored".to_ascii_buffer()), "773 completes initial partial line"): return
+	click_at(Vector2(196, 410), true)
+	click_at(Vector2(196, 410), false)
+	if not check(hud.apply_guild_overview_reply(774, "Next\r".to_ascii_buffer()) and hud.hud_snapshot().guild_tab == 1, "774 updates overview without changing active tab"): return
+	click_at(Vector2(145, 410), true)
+	click_at(Vector2(145, 410), false)
+	if not await capture("guild-overview-continuation"): return
+	hud.set_guild_overview("比奇行会", PackedStringArray(["欢迎加入比奇行会", "今晚集合练级"]), PackedStringArray(["今晚集合练级"]))
 	var guild_hover := InputEventMouseMotion.new()
 	guild_hover.position = Vector2(196, 410)
 	Input.parse_input_event(guild_hover)

@@ -12,6 +12,7 @@
 #include "status/equipment.hpp"
 #include "status/element_attributes.hpp"
 #include "guild/guild_layout.hpp"
+#include "guild/guild_overview.hpp"
 #include "magic/skill_panel.hpp"
 #include "resources/wil_archive.hpp"
 #include "resources/messages.hpp"
@@ -74,6 +75,7 @@ public:
     void set_guild_members(godot::PackedStringArray lines,godot::PackedStringArray editable);
     void post_system_notice(godot::String value,int64_t foreground,int64_t background);
     void set_guild_notices(godot::PackedStringArray lines);
+    bool apply_guild_overview_reply(int identifier,godot::PackedByteArray body);
     void set_guild_overview(godot::String name,godot::PackedStringArray lines,godot::PackedStringArray editable);
     void set_group_roster(godot::String player,godot::PackedStringArray members);
     bool set_learned_skill(int id,int level,int key,int experience,int required,godot::String name);
@@ -160,6 +162,8 @@ private:
     mir3::DraggablePanel guild{{102,22,594,444}};
     mir3::GuildLayout guild_layout;
     mir3::GuildScroll guild_scroll;
+    mir3::GuildOverview guild_overview;
+    bool guild_overview_started=false;
     int guild_first=0;
     bool guild_manager=false;
     godot::String guild_name;

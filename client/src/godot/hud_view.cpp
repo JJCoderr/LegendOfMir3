@@ -46,6 +46,7 @@ void Mir3HudView::_bind_methods() {
         PropertyInfo(Variant::INT,"skill_id"),PropertyInfo(Variant::VECTOR2,"pointer")));
     ADD_SIGNAL(MethodInfo("skill_key_requested",PropertyInfo(Variant::INT,"id"),PropertyInfo(Variant::INT,"legacy_key")));
     ClassDB::bind_method(D_METHOD("set_group_roster","player","members"),&Mir3HudView::set_group_roster);
+    ClassDB::bind_method(D_METHOD("apply_guild_overview_reply","identifier","body"),&Mir3HudView::apply_guild_overview_reply);
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines","editable"),&Mir3HudView::set_guild_overview,DEFVAL(PackedStringArray()));
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
     ClassDB::bind_method(D_METHOD("set_character_identity","name","secondary","tertiary","badge"),&Mir3HudView::set_character_identity);
@@ -1695,7 +1696,32 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
     return true;
 }
 
+bool Mir3HudView::apply_guild_overview_reply(int identifier,PackedByteArray body) {
+    if (body.is_empty() || body.size()>8191) return false;
+    const mir3::GuildReply reply{identifier,std::string(reinterpret_cast<const char*>(body.ptr()),body.size())};
+    const bool initial=identifier==753;
+    if (initial ? !guild_overview.receive(reply) :
+        !guild_overview_started || !guild_overview.receive_continuation(reply)) return false;
+
+    PackedStringArray lines,editable;
+    for (const auto& row:guild_overview.overview)
+        lines.append(String::utf8((row.message?message(row.message):mir3::ansi_to_utf8(row.ansi)).c_str()));
+    for (const auto& row:guild_overview.editable)
+        editable.append(String::utf8(mir3::ansi_to_utf8(row).c_str()));
+    if (initial) {
+        set_guild_overview(String::utf8(mir3::ansi_to_utf8(guild_overview.name).c_str()),lines,editable);
+        guild_overview_started=true;
+        guild_manager=guild_overview.manager;
+    } else {
+        guild_pages[0]=lines;
+        guild_editable[0]=editable;
+        queue_redraw();
+    }
+    return true;
+}
+
 void Mir3HudView::set_guild_overview(String name,PackedStringArray lines,PackedStringArray editable) {
+    guild_overview_started=false;
     guild_editable[0]=editable;
     guild_name=name;
     guild_pages[0]=lines;
