@@ -336,21 +336,54 @@ void Mir3HudView::tooltip(int kind) {
     draw_rect(rect(bounds),borders[kind],false);
 }
 void Mir3HudView::button_hint() {
-    if (model.hovered<0) return;
-    const int hint=chat_input && (model.hovered==18 || model.hovered==19)?chat_input->mode.tooltip(model.hovered):
-        model.hovered>=20 && model.hovered<=22?reception_buttons.hints[model.hovered-20]:2600+model.hovered;
+    if (group_request || (guild_editor.visible && rect(guild_editor.rect).has_point(inventory_cursor))) return;
+    int hint=-1;
+    Vector2 anchor;
+    bool panel_hit=false;
+    for (auto it=panel_order.rbegin();it!=panel_order.rend();++it) {
+        const auto& panel=panel_state(*it);
+        if (!panel.visible || !rect(panel.rect).has_point(inventory_cursor)) continue;
+        panel_hit=true;
+        const auto resolve=[&](const auto& spec,int message_id) {
+            if (message_id<0) return;
+            const auto icon=frame(spec[0]);
+            if (icon.is_null()) return;
+            const Rect2 hit(Vector2(panel.rect[0]+spec[1],panel.rect[1]+spec[2]),icon->get_size());
+            if (!hit.has_point(inventory_cursor)) return;
+            hint=message_id;
+            anchor=hit.get_end();
+        };
+        if (*it==Panel::guild) {
+            for (int i=0;i<9;++i) resolve(mir3::GuildLayout::buttons[i],guild_layout.tooltip(i));
+        } else if (*it==Panel::skills) {
+            for (int i=0;i<9;++i)
+                if (skills.pressed!=i) resolve(mir3::SkillPanel::button(i),i==0?1052:5049+i);
+        } else if (*it==Panel::portrait) {
+            constexpr std::array messages{1052,4700,4701};
+            for (int i=0;i<3;++i)
+                if (portrait_pressed!=i) resolve(mir3::PortraitPicker::buttons[i],messages[i]);
+        }
+        break;
+    }
+    if (!panel_hit && model.hovered>=0 && model.hovered!=model.pressed) {
+        hint=chat_input && (model.hovered==18 || model.hovered==19)?chat_input->mode.tooltip(model.hovered):
+            model.hovered>=20 && model.hovered<=22?reception_buttons.hints[model.hovered-20]:2600+model.hovered;
+        const auto hit=model.button_rect(model.hovered);
+        anchor=Vector2(hit[0]+hit[2],hit[1]+hit[3]);
+    }
+    if (hint<0) return;
     const auto caption=message(hint);
     if (caption.empty()) return;
     const auto measured=mir3::raster_text(caption,800,24,false,mir3::TextFont::normal);
-    const auto hit=model.button_rect(model.hovered);
-    const auto bounds=button_tooltip.draw(caption,{measured.text_width,measured.text_height},{hit[0]+hit[2],hit[1]+hit[3]});
+    const auto bounds=button_tooltip.draw(caption,{measured.text_width,measured.text_height},{int(anchor.x),int(anchor.y)});
+
     draw_rect(rect(bounds),Color(0,0,0));
     if (bounds[2]>2 && bounds[3]>2) draw_rect(rect(bounds).grow(-1),Color(1,1,150.f/255));
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double) {
     // Original button tooltip grows once per draw, not once per mouse event.
-    if (model.hovered>=0) queue_redraw();
+    if (model.hovered>=0 || (button_tooltip.expanding && !button_tooltip.previous.empty())) queue_redraw();
 }
 void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     const auto a=bounds.position,b=bounds.get_end();

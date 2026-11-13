@@ -302,6 +302,11 @@ func run() -> void:
 	if not check(guild_queries == [true] and not hud.hud_snapshot().guild_visible, "guild overview requested from HUD"): return
 	hud.set_guild_overview("比奇行会", PackedStringArray(["欢迎加入比奇行会", "今晚集合练级"]))
 	if not await capture("guild-overview"): return
+	var guild_hover := InputEventMouseMotion.new()
+	guild_hover.position = Vector2(196, 410)
+	Input.parse_input_event(guild_hover)
+	for i in 30: await process_frame
+	if not await capture("guild-button-hint"): return
 	click_at(Vector2(196, 410), true)
 	click_at(Vector2(196, 410), false)
 	if not check(hud.hud_snapshot().guild_tab == 1, "guild members tab"): return
