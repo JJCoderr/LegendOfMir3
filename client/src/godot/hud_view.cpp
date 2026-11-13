@@ -203,6 +203,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["portrait_selected"]=portrait_picker.selected;
     result["options_visible"]=options.visible;
     result["music_enabled"]=audio_options.music_enabled;
+    result["reverse_pan"]=audio_options.reverse_pan;
+    result["magic_light"]=magic_light;
+    result["damage_numbers"]=damage_numbers;
     result["music_level"]=audio_options.music_level;
     result["guild_visible"]=guild.visible;
     result["guild_first"]=guild_first;

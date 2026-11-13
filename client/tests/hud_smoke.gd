@@ -1573,6 +1573,14 @@ func run() -> void:
 	click_at(Vector2(580, 180), false)
 	if not check(not click_sound.playing, "effects switch stops click sound"): return
 	if not await capture("system-options"): return
+	var display_options: Dictionary = hud.hud_snapshot()
+	for position in [Vector2(335, 149), Vector2(335, 179), Vector2(580, 240)]:
+		click_at(position, true)
+		click_at(position, false)
+	var changed_options: Dictionary = hud.hud_snapshot()
+	for option in ["magic_light", "damage_numbers", "reverse_pan"]:
+		if not check(changed_options[option] != display_options[option], "toggle system option " + option): return
+	if not await capture("system-options-display-toggles"): return
 	click_at(Vector2(595, 447), false)
 	if not check(not hud.hud_snapshot().options_visible, "options close"): return
 	var reloaded: Node = load("res://main.tscn").instantiate()
@@ -1582,6 +1590,8 @@ func run() -> void:
 	reloaded.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(options_file))
 	if not check(not persisted.music_enabled and persisted.music_level == -5, "system options reload from original INI keys"): return
+	for option in ["magic_light", "damage_numbers", "reverse_pan"]:
+		if not check(persisted[option] == changed_options[option], "reload system option " + option): return
 	click_at(Vector2(540, 570), false)
 	if not check(hud.hud_snapshot().portrait_visible, "portrait HUD entry"): return
 	click_at(Vector2(40, 32), true)
