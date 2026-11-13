@@ -205,22 +205,26 @@ func run() -> void:
 		hud.npc_dialogue_action.connect(func(actor: int, command: String): dialogue_actions.append([actor, command]))
 		var script := "老黄/要买点什么？" + char(92) + "<购买药品/@buy>" + char(92) + "<离开/@exit>"
 		if not check(hud.apply_npc_message("`\\<<<>=B<?H<<<<<lHzwm^{NfhGniZKFhhJpdwyXKGbvlkGNfXVsGp=^YS`zS?o<vwzfGp=aZBapK\\".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "decode merchant dialogue reply"): return
+		if not await capture("bichon-merchant-dialogue"): return
+		click_at(Vector2(350, 186), true)
+		click_at(Vector2(350, 186), false)
+		if not check(hud.hud_snapshot().npc_dialogue_actor == 0, "NPC footer button closes locally"): return
 		var long_script := script + char(92).repeat(8) + "比".repeat(2800)
 		if not check(hud.apply_npc_dialogue(643, 2, long_script), "dialogue limit counts ANSI bytes"): return
 		if not check(not hud.apply_npc_dialogue(643, 2, long_script + "比".repeat(1400)), "reject dialogue above ANSI byte limit"): return
-		if not await capture("bichon-merchant-dialogue"): return
+		if not check(hud.apply_npc_dialogue(643, 2, script), "restore short NPC dialogue"): return
 		var option_before: Image
 		if OS.get_cmdline_user_args().has("--screenshots"):
-			option_before = root.get_texture().get_image().get_region(Rect2i(28, 43, 48, 18))
+			option_before = root.get_texture().get_image().get_region(Rect2i(35, 57, 48, 24))
 		var option_hover := InputEventMouseMotion.new()
-		option_hover.position = Vector2(45, 48)
+		option_hover.position = Vector2(45, 63)
 		root.push_input(option_hover, true)
 		if not await capture("bichon-merchant-option-hover"): return
 		if option_before != null:
-			var focused := root.get_texture().get_image().get_region(Rect2i(28, 43, 48, 18))
+			var focused := root.get_texture().get_image().get_region(Rect2i(35, 57, 48, 24))
 			if not check(option_before.get_data() != focused.get_data(), "focused NPC link changes GDI glyph pixels"): return
 		var option := InputEventMouseButton.new()
-		option.position = Vector2(45, 48)
+		option.position = Vector2(45, 63)
 		option.button_index = MOUSE_BUTTON_LEFT
 		option.pressed = true
 		root.push_input(option, true)
@@ -232,17 +236,17 @@ func run() -> void:
 		if not check(npc_packets == ["#1<\\<<<KD?<<<<<<<<!", "#2<\\<<<KH?<<<<<<<<LBEqZL!"], "NPC requests match encoded header and body"): return
 		if not check(hud.apply_npc_dialogue(643, 2, "Merchant/AA <Buy/@buy> <Exit/@exit>"), "inline NPC options"): return
 		if not await capture("bichon-merchant-inline"): return
-		click_at(Vector2(32, 32), true)
-		click_at(Vector2(32, 32), false)
-		click_at(Vector2(55, 32), true)
-		click_at(Vector2(55, 32), false)
-		click_at(Vector2(75, 32), true)
-		click_at(Vector2(75, 32), false)
+		click_at(Vector2(39, 45), true)
+		click_at(Vector2(39, 45), false)
+		click_at(Vector2(58, 45), true)
+		click_at(Vector2(58, 45), false)
+		click_at(Vector2(78, 45), true)
+		click_at(Vector2(78, 45), false)
 		if not check(dialogue_actions == [[2, "@buy"], [2, "@buy"], [2, "@exit"]], "only inline labels dispatch their own commands"): return
-		if not check(hud.apply_npc_dialogue(643, 2, "Merchant/" + "比".repeat(30) + "<Buy/@wrapped>"), "wrap long NPC line"): return
+		if not check(hud.apply_npc_dialogue(643, 2, "Merchant/<" + "比".repeat(30) + "/@wrapped>"), "wrap long NPC line"): return
 		if not await capture("bichon-merchant-wrapped-line"): return
-		click_at(Vector2(68, 48), true)
-		click_at(Vector2(68, 48), false)
+		click_at(Vector2(48, 63), true)
+		click_at(Vector2(48, 63), false)
 		if not check(dialogue_actions.back() == [2, "@wrapped"], "wrapped option retains command"): return
 		var goods_requests: Array = []
 		hud.shop_good_requested.connect(func(actor: int, index: int, name: String): goods_requests.append([actor, index, name]))

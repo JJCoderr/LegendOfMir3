@@ -268,9 +268,13 @@ private:
     bool apply_npc_message(godot::PackedByteArray encoded,godot::PackedByteArray key);
     bool apply_npc_body(int opcode,int actor,int count,godot::PackedByteArray encoded);
     bool apply_npc_dialogue(int opcode,int actor,godot::String body);
-    struct NpcDialogueRow { std::string text, command; mir3::HudLayout::Rect bounds; };
+    struct NpcDialogueRow { std::string text, command; mir3::HudLayout::Rect bounds; unsigned color; };
     std::vector<NpcDialogueRow> npc_dialogue_rows;
     int npc_dialogue_actor=0, npc_dialogue_pressed=-1;
+    int npc_dialogue_extra_rows=0, npc_dialogue_first=0, npc_dialogue_scroll_limit=0;
+    bool npc_dialogue_can_close=true, npc_dialogue_close_pressed=false;
+    mir3::HudLayout::Rect npc_dialogue_bounds() const { return {0,0,386,204+20*std::max(1,npc_dialogue_extra_rows)}; }
+    mir3::HudLayout::Rect npc_dialogue_text_bounds(const NpcDialogueRow& row) const;
     godot::Vector2i npc_dialogue_origin;
     unsigned npc_sequence=0;
     void emit_npc_packet(int identifier,int actor,const godot::String& body);

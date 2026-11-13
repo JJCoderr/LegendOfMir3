@@ -540,48 +540,74 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
         if (slash==script.npos) return false;
         script.remove_prefix(slash+1);
         std::vector<NpcDialogueRow> rows;
+        constexpr std::array<unsigned,17> colors{0,0xff,0x8000,0x8080,0x808080,0x80,0x808000,0x800000,
+            0xc0c0c0,0x800080,0xff00,0xff0000,0xffffff,0xff00ff,0xffff00,0xffff,0x10101};
+        unsigned color=0xffffff;
+        bool can_close=true;
         int line=0;
-        while (line<7 && !script.empty()) {
+        int estimated_lines=0;
+        while (!script.empty()) {
             const auto end=script.find(char(92));
             auto row=script.substr(0,end);
-            int x=28;
+            int x=0, ansi_length=0;
             const auto append=[&](std::string_view label,std::string_view command={}) {
-                while (!label.empty() && line<7) {
+                ansi_length+=int(mir3::utf8_to_ansi(label).size());
+                while (!label.empty()) {
                     std::size_t length=0;
-                    int width=0;
+                    int width=0, height=0;
+                    const int limit=command.empty() && line<7?198:305;
+                    const auto whole=label.size()<=1024?mir3::raster_text(label,1,1,false,mir3::TextFont::normal):mir3::NativeText{};
+                    const bool fits=x+whole.text_width<=limit && whole.text_height>0;
+                    if (fits) { length=label.size(); width=whole.text_width; height=whole.text_height; }
                     while (length<label.size()) {
                         auto next=length+1;
                         while (next<label.size() && (static_cast<unsigned char>(label[next])&0xc0)==0x80) ++next;
-                        const int measured=mir3::raster_text(label.substr(0,next),1,1,false,mir3::TextFont::normal).text_width;
-                        if (x+measured>358 && (length || x!=28)) break;
+                        const auto measured=mir3::raster_text(label.substr(0,next),1,1,false,mir3::TextFont::normal);
                         length=next;
-                        width=measured;
+                        width=measured.text_width;
+                        height=measured.text_height;
+                        if (x+width>=305) break;
                     }
-                    if (length) {
-                        rows.push_back({std::string(label.substr(0,length)),std::string(command),{x,25+18*line,std::min(width,358-x),18}});
-                        label.remove_prefix(length);
-                        x+=width;
-                    }
-                    if (!label.empty()) { ++line; x=28; }
+                    rows.push_back({std::string(label.substr(0,length)),std::string(command),{35+x,line,width,height},color});
+                    label.remove_prefix(length);
+                    if (!fits && x+width>=305) { ++line; x=0; }
+                    else x+=width;
                 }
             };
             while (!row.empty()) {
-                const auto open=row.find('<');
-                const auto close=open==row.npos?row.npos:row.find('>',open+1);
-                if (close==row.npos) { append(row); break; }
+                const auto open=row.find_first_of("<{");
+                if (open==row.npos) { append(row); break; }
                 append(row.substr(0,open));
+                const bool option=row[open]=='<';
+                const auto close=row.find(option?'>':'}',open+1);
+                if (close==row.npos) break;
                 const auto tag=row.substr(open+1,close-open-1);
-                const auto split=tag.find("/@");
-                if (split!=tag.npos && split>0 && split+2<tag.size()) append(tag.substr(0,split),tag.substr(split+1));
-                else append(row.substr(open,close-open+1));
+                const auto split=tag.find('/');
+                if (split!=tag.npos) {
+                    const auto name=tag.substr(0,split);
+                    const auto value=tag.substr(split+1);
+                    if (option) append(name,value);
+                    else if (name=="NOTCLOSE") can_close=false;
+                    else if (name=="FCOLOR") {
+                        int index=0;
+                        const auto parsed=std::from_chars(value.data(),value.data()+value.size(),index);
+                        if (parsed.ec==std::errc{} && index>=0 && index<int(colors.size())) color=colors[index];
+                    }
+                }
                 row.remove_prefix(close+1);
             }
+            estimated_lines+=std::max(1,(ansi_length+49)/50);
             if (end==script.npos) break;
             script.remove_prefix(end+1);
             ++line;
         }
         if (npc_dialogue_actor && npc_dialogue_actor!=actor) close_npc_dialogue();
         npc_dialogue_rows=std::move(rows);
+        npc_dialogue_extra_rows=std::clamp(estimated_lines-9,0,13);
+        npc_dialogue_first=0;
+        npc_dialogue_scroll_limit=estimated_lines>22?std::max(0,line-21):0;
+        npc_dialogue_can_close=can_close;
+        npc_dialogue_close_pressed=false;
         npc_dialogue_actor=actor;
         npc_dialogue_origin=player_cell;
     }
@@ -639,6 +665,7 @@ void Mir3HudView::close_npc_dialogue() {
     npc_dialogue_actor=0;
     npc_dialogue_rows.clear();
     npc_dialogue_pressed=-1;
+    npc_dialogue_close_pressed=false;
     queue_redraw();
 }
 
@@ -767,22 +794,58 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
 
 void Mir3HudView::draw_npc_dialogue() {
     if (!npc_dialogue_actor) return;
-    sprite(1350,{0,0});
+    // 0x460150: normal header, at least one 20px strip, then the footer.
+    sprite(1353,{0,0});
+    for (int i=0;i<std::max(1,npc_dialogue_extra_rows);++i) sprite(1351,{0,160+20*i});
+    sprite(1352,{0,160+20*std::max(1,npc_dialogue_extra_rows)});
+    const int bottom=npc_dialogue_bounds()[3];
+    if (npc_dialogue_can_close) sprite(npc_dialogue_close_pressed?1222:1221,{346,bottom-42});
+    if (npc_dialogue_scroll_limit) {
+        sprite(1357,{183,bottom-48});
+        if (npc_dialogue_first<npc_dialogue_scroll_limit) sprite(1355,{183,bottom-30});
+    }
     for (int i=0;i<int(npc_dialogue_rows.size());++i) {
         const auto& row=npc_dialogue_rows[i];
+        if (row.bounds[1]<npc_dialogue_first || row.bounds[1]>npc_dialogue_first+21) continue;
         const bool clickable=!row.command.empty();
-        const auto color=!clickable?0xfafafa:npc_dialogue_pressed==i?0x0000ff:0x00ffff;
-        const bool focused=clickable && rect(row.bounds).has_point(inventory_cursor) &&
+        const auto color=!clickable?row.color:npc_dialogue_pressed==i?0x0000ff:0x00ffff;
+        const auto bounds=npc_dialogue_text_bounds(row);
+        const bool focused=clickable && rect(bounds).has_point(inventory_cursor) &&
             !(shop_actor && Rect2(0,0,292,224).has_point(inventory_cursor));
-        text(row.text,row.bounds,color,focused?mir3::TextFont::npc_link:mir3::TextFont::normal,false);
+        text(row.text,bounds,color,focused?mir3::TextFont::npc_link:mir3::TextFont::normal,false);
     }
+}
+
+mir3::HudLayout::Rect Mir3HudView::npc_dialogue_text_bounds(const NpcDialogueRow& row) const {
+    auto bounds=row.bounds;
+    bounds[1]=40+(bounds[3]+5)*(bounds[1]-npc_dialogue_first);
+    return bounds;
 }
 
 bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
     if (!npc_dialogue_actor) return false;
-    const bool inside=Rect2(0,0,386,160).has_point(pointer);
+    const bool inside=rect(npc_dialogue_bounds()).has_point(pointer);
+    const int bottom=npc_dialogue_bounds()[3];
+    const auto hit_button=[&](int id,int x,int y) {
+        const auto image=frame(id);
+        return image.is_valid() && Rect2(x,y,image->get_width(),image->get_height()).has_point(pointer);
+    };
+    const bool close_hit=npc_dialogue_can_close && hit_button(1221,346,bottom-42);
+    if (close_hit || npc_dialogue_close_pressed) {
+        const bool close=kind==2 && close_hit && npc_dialogue_close_pressed;
+        npc_dialogue_close_pressed=kind==0 && close_hit;
+        if (close) close_npc_dialogue();
+        get_viewport()->set_input_as_handled();
+        queue_redraw();
+        return true;
+    }
+    if (npc_dialogue_scroll_limit && kind==2) {
+        const int delta=hit_button(1357,183,bottom-48)?-1:hit_button(1355,183,bottom-30)?1:0;
+        npc_dialogue_first=std::clamp(npc_dialogue_first+delta,0,npc_dialogue_scroll_limit);
+    }
     const auto item=std::find_if(npc_dialogue_rows.begin(),npc_dialogue_rows.end(),[&](const auto& span) {
-        return !span.command.empty() && rect(span.bounds).has_point(pointer);
+        return !span.command.empty() && span.bounds[1]>=npc_dialogue_first && span.bounds[1]<=npc_dialogue_first+21 &&
+            rect(npc_dialogue_text_bounds(span)).has_point(pointer);
     });
     const bool action=item!=npc_dialogue_rows.end();
     const int row=action?int(item-npc_dialogue_rows.begin()):-1;
@@ -2131,7 +2194,7 @@ bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
 bool Mir3HudView::spell_pointer_available() const {
     using Layout=mir3::HudLayout;
     const auto pointer=inventory_cursor;
-    if (minimap.visible || group_request || (shop_actor && Rect2(0,0,292,224).has_point(pointer)) || (npc_dialogue_actor && Rect2(0,0,386,160).has_point(pointer)) || !Rect2(0,0,800,Layout::origin[1]).has_point(pointer) ||
+    if (minimap.visible || group_request || (shop_actor && Rect2(0,0,292,224).has_point(pointer)) || (npc_dialogue_actor && rect(npc_dialogue_bounds()).has_point(pointer)) || !Rect2(0,0,800,Layout::origin[1]).has_point(pointer) ||
         rect(Layout::chat_frame(model.layout.expanded)).has_point(pointer)) return false;
     if (guild_editor.visible && rect(guild_editor.rect).has_point(pointer)) return false;
     for (const auto panel:panel_order) {
