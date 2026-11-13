@@ -48,6 +48,7 @@ public:
     bool set_character_load_bonuses(godot::Vector2i wear,godot::Vector2i hand,godot::Vector2i bonuses);
     bool set_character_vitals(int hp,int max_hp,int mp,int max_mp,int weight,int max_weight);
     bool set_music_map(godot::String map);
+    bool fail_quest_detail_request(int index);
     bool set_quest_details(int index,godot::PackedStringArray lines);
     bool set_quest_entries(godot::PackedStringArray titles,godot::PackedInt32Array completed);
     bool apply_mount_reply(int identifier,int64_t recognition);

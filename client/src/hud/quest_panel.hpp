@@ -15,7 +15,8 @@ struct QuestPanel : DraggablePanel {
         std::string title;
         bool completed=false;
         std::vector<std::string> details;
-        bool detail_requested=false;
+        enum class Detail { idle, pending, received };
+        Detail detail=Detail::idle;
     };
     std::vector<Entry> entries;
     int pressed=-1, selected=-1, expanded=-1, first=0;

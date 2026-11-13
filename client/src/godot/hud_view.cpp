@@ -59,6 +59,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_character_vitals","hp","max_hp","mp","max_mp","weight","max_weight"),&Mir3HudView::set_character_vitals);
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
     ClassDB::bind_method(D_METHOD("set_quest_entries","titles","completed"),&Mir3HudView::set_quest_entries);
+    ClassDB::bind_method(D_METHOD("fail_quest_detail_request","index"),&Mir3HudView::fail_quest_detail_request);
     ClassDB::bind_method(D_METHOD("set_quest_details","index","lines"),&Mir3HudView::set_quest_details);
     ADD_SIGNAL(MethodInfo("quest_detail_requested",PropertyInfo(Variant::INT,"index")));
     ClassDB::bind_method(D_METHOD("apply_mount_reply","identifier","recognition"),&Mir3HudView::apply_mount_reply);
@@ -2181,7 +2182,7 @@ bool Mir3HudView::set_quest_entries(PackedStringArray titles,PackedInt32Array co
 bool Mir3HudView::set_quest_details(int index,PackedStringArray lines) {
     if (index<0 || index>=int(quest.entries.size()) || lines.size()>INT_MAX-int(quest.entries.size())) return false;
     auto& entry=quest.entries[index];
-    entry.detail_requested=true;
+    entry.detail=mir3::QuestPanel::Entry::Detail::received;
     auto& details=entry.details;
     details.clear();
     details.reserve(lines.size());
@@ -2200,6 +2201,15 @@ bool Mir3HudView::set_quest_details(int index,PackedStringArray lines) {
     }
     quest.scroll(0);
     queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::fail_quest_detail_request(int index) {
+    if (index<0 || index>=int(quest.entries.size())) return false;
+    auto& detail=quest.entries[index].detail;
+    using Detail=mir3::QuestPanel::Entry::Detail;
+    if (detail!=Detail::pending) return false;
+    detail=Detail::idle;
     return true;
 }
 
@@ -2284,8 +2294,9 @@ bool Mir3HudView::quest_pointer(int kind,Vector2 position) {
                 quest.expanded=quest.selected;
                 quest.scroll(0);
                 auto& entry=quest.entries[quest.selected];
-                if (!entry.detail_requested) {
-                    entry.detail_requested=true;
+                using Detail=mir3::QuestPanel::Entry::Detail;
+                if (entry.detail==Detail::idle) {
+                    entry.detail=Detail::pending;
                     emit_signal("quest_detail_requested",quest.selected);
                 }
             }
