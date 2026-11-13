@@ -3850,7 +3850,8 @@ void Mir3HudView::draw_portrait_map() {
     paint_canvas->draw_texture_rect_region(minimap_image,Rect2(origin,source.size*scale),source,Color(light,light,light));
     constexpr float gray=100.f/255;
     const Color green(gray,250.f/255,gray);
-    paint_canvas->draw_rect(bounds,Color(gray,gray,gray),false);
+    // 0x48C359 mode 1 uses GDI FrameRect, whose one-pixel stroke is inside the RECT.
+    paint_canvas->draw_rect(bounds.grow(-0.5),Color(gray,gray,gray),false);
     const auto marker=[&](mir3::HudLayout::Point cell,bool player) {
         return point(mir3::Minimap::portrait_marker(cell,{int(source.position.x),int(source.position.y)},
             {int(origin.x),int(origin.y)},portrait_map_full_archive,player));
@@ -3867,7 +3868,7 @@ void Mir3HudView::draw_portrait_map() {
     draw_nearby(minimap.nearby_green,green);
     draw_nearby(minimap.nearby_orange,Color(250.f/255,150.f/255,50.f/255));
     if (portrait_map_blink_ms>0 && portrait_map_blink_ms<500)
-        paint_canvas->draw_rect(Rect2(player,Vector2(4,4)),green,false);
+        paint_canvas->draw_rect(Rect2(player,Vector2(4,4)).grow(-0.5),green,false);
 }
 
 void Mir3HudView::send_trade_offer(int count) {

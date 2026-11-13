@@ -1106,6 +1106,13 @@ func run() -> void:
 	if not await capture("hud-portrait-map-markers"): return
 	if OS.get_cmdline_user_args().has("--screenshots"):
 		var portrait_map_image := root.get_texture().get_image()
+		var player_outline := Color8(100, 250, 100)
+		for y in range(531, 537):
+			for x in range(571, 577):
+				var on_outline := x >= 572 and x <= 575 and y >= 532 and y <= 535 and (
+					x == 572 or x == 575 or y == 532 or y == 535)
+				if not check((portrait_map_image.get_pixel(x, y) == player_outline) == on_outline,
+					"portrait map player stroke stays inside the original 4x4 rectangle"): return
 		if not check(portrait_map_image.get_pixel(583, 542) == Color8(100, 250, 100)
 			and portrait_map_image.get_pixel(591, 538) == Color8(250, 150, 50),
 			"portrait map markers use original half-scale coordinates and colors"): return
