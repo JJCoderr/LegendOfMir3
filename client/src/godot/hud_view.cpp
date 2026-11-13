@@ -621,7 +621,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;minimap.button_captured=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
@@ -2451,6 +2451,7 @@ void Mir3HudView::set_map_location(String name,int x,int y) {
     minimap.visible=false;
     minimap.pending=refresh;
     minimap.dragging=false;
+    minimap.button_captured=false;
     minimap.reply_time=0;
     minimap.width=0;
     minimap.height=0;
@@ -2525,13 +2526,17 @@ bool Mir3HudView::minimap_pointer(int kind,Vector2 position,bool ctrl) {
     if (!minimap.visible) return false;
     const auto bounds=rect(minimap.bounds());
     const auto end=bounds.get_end();
-    if (kind==0 && ctrl && bounds.has_point(position)) {
+    if (kind==2 && minimap.button_captured) {
+        minimap.button_captured=false;
+    } else if (kind==0 && ctrl && bounds.has_point(position)) {
         minimap.drag_offset={int(position.x)-minimap.position[0],int(position.y)-minimap.position[1]};
         minimap.dragging=true;
     } else if (kind==0 && Rect2(end-Vector2(38,19),Vector2(19,19)).has_point(position)) {
         minimap.translucent=!minimap.translucent;
+        minimap.button_captured=true;
     } else if (kind==0 && Rect2(end-Vector2(19,19),Vector2(19,19)).has_point(position)) {
         minimap.resize();
+        minimap.button_captured=true;
     } else if (kind==1 && minimap.dragging && ctrl && bounds.has_point(position)) {
         minimap.position={int(position.x)-minimap.drag_offset[0],int(position.y)-minimap.drag_offset[1]};
     } else if (kind==2 && minimap.dragging) {

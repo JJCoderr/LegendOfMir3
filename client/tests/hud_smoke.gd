@@ -154,6 +154,14 @@ func run() -> void:
 	key(KEY_Y)
 	if not check(hud.hud_snapshot().minimap_translucent, "minimap transparency shortcut"): return
 	if not await capture("hud-minimap-expanded"): return
+	var overlap_origin: Vector2 = Vector2(hud.hud_snapshot().inventory_position)
+	var overlap_cell := overlap_origin + Vector2(36, 79)
+	if not check(hud.add_inventory_item(301, 1, 0, 45678, "Minimap test potion", 0, 3), "add item under expanded minimap"): return
+	click_at(Vector2(792, 249), true)
+	click_at(overlap_cell, false)
+	if not check(hud.hud_snapshot().held_inventory_icon == -1 and hud.hud_snapshot().minimap_bounds == Rect2(672, 0, 128, 128), "minimap resize owns release over inventory"): return
+	if not await capture("hud-minimap-resize-over-inventory"): return
+	key(KEY_T)
 	key(KEY_T)
 	if not check(hud.hud_snapshot().minimap_bounds == Rect2(672, 0, 128, 128), "minimap size shortcut"): return
 	var map_drag := InputEventMouseButton.new()
@@ -191,6 +199,11 @@ func run() -> void:
 	if not check(not hud.hud_snapshot().minimap_visible, "close refreshed minimap"): return
 	hud.set_map_location("比奇省", 337, 267)
 	if not check(hud.hud_snapshot().inventory_visible and hud.hud_snapshot().inventory_position == Vector2i(518, 0), "inventory origin"): return
+	click_at(overlap_cell, true)
+	click_at(overlap_cell, false)
+	click_at(overlap_cell, true)
+	click_at(overlap_cell, false)
+	if not check(hud.apply_inventory_use_reply(635, 0), "remove minimap test item"): return
 	if not await capture("inventory-empty"): return
 	if not check(hud.add_inventory_item(5, 3, 0) and hud.add_inventory_item(1043, 1, 14) and hud.add_inventory_item(15, 1, 54), "inventory fixtures"): return
 	if not await capture("inventory-items"): return

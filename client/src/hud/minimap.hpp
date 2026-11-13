@@ -6,7 +6,7 @@
 
 namespace mir3 {
 struct Minimap {
-    bool visible=false, pending=false, translucent=false, large=false, dragging=false;
+    bool visible=false, pending=false, translucent=false, large=false, dragging=false, button_captured=false;
     HudLayout::Point position{672,0}, drag_offset{};
     int width=0, height=0, player_x=0, player_y=0;
     std::uint64_t reply_time=0;
@@ -40,6 +40,7 @@ struct Minimap {
         if (visible) {
             visible=false;
             dragging=false;
+            button_captured=false;
             return false;
         }
         pending=true;
