@@ -28,6 +28,7 @@ public:
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
+    void set_guild_manager(bool allowed);
     void set_guild_members(godot::PackedStringArray lines);
     void set_guild_notices(godot::PackedStringArray lines);
     void set_guild_overview(godot::String name,godot::PackedStringArray lines);
@@ -45,6 +46,7 @@ private:
     mir3::GuildLayout guild_layout;
     mir3::GuildScroll guild_scroll;
     int guild_first=0;
+    bool guild_manager=false;
     godot::String guild_name;
     std::array<godot::PackedStringArray,3> guild_pages;
     void draw_guild();

@@ -279,6 +279,21 @@ func run() -> void:
 	Input.parse_input_event(guild_wheel)
 	if not check(hud.hud_snapshot().guild_first == 1, "guild notices wheel"): return
 	if not await capture("guild-notices"): return
+	click_at(Vector2(450, 415), true)
+	click_at(Vector2(450, 415), false)
+	if not check(hud.hud_snapshot().group_request == 4000, "guild permission dialog"): return
+	if not await capture("guild-denied"): return
+	key(KEY_ENTER)
+	hud.set_guild_manager(true)
+	var removals: Array[String] = []
+	hud.guild_member_removal_requested.connect(func(name: String): removals.append(name))
+	click_at(Vector2(450, 415), true)
+	click_at(Vector2(450, 415), false)
+	if not check(hud.hud_snapshot().group_request == 1039, "guild removal dialog"): return
+	for ch in "银杏剑客": key(0, ch.unicode_at(0))
+	if not await capture("guild-remove"): return
+	key(KEY_ENTER)
+	if not check(removals == ["银杏剑客"], "guild removal request"): return
 	key(KEY_ESCAPE)
 	if not check(not hud.hud_snapshot().guild_visible, "guild escape closes"): return
 	var input: LineEdit = hud.get_node("ChatInput")
