@@ -483,6 +483,15 @@ func run() -> void:
 		click_at(Vector2(378, 399), false)
 		if not check(purchases == [[1014, 2, "Red potion"]], "purchase uses NPC and item name"): return
 		if not check(npc_packets.back().substr(2, 16) == "<\\<<<KT?@NX<<<<<", "purchase header contains selected instance identifier"): return
+		var offer_double_click := InputEventMouseButton.new()
+		offer_double_click.button_index = MOUSE_BUTTON_LEFT
+		offer_double_click.position = Vector2(330, 280)
+		offer_double_click.pressed = true
+		offer_double_click.double_click = true
+		root.push_input(offer_double_click, true)
+		click_at(Vector2(330, 280), false)
+		if not check(purchases.size() == 2 and npc_packets.back().substr(2, 16) == "<\\<<<KT?@NX<<<<<", "double-click buys exactly once using the clicked instance"): return
+		if not await capture("bichon-merchant-offer-double-click"): return
 		if not check(hud.apply_npc_message("bsp<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().inventory_gold == 125, "650 applies server gold balance"): return
 		if not check(not hud.apply_inventory_add(650, 301, 1, 10001, "Red potion", 0, 3), "gold reply is not an item addition"): return
 		if not check(hud.apply_inventory_add(200, 301, 1, 10001, "Red potion", 0, 3), "200 places purchased item in bag"): return

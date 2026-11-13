@@ -919,7 +919,16 @@ void Mir3HudView::draw_shop_requirement(const ShopGood& good,int x,int y,int wid
     }
 }
 
-bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
+void Mir3HudView::buy_shop_offer(int index) {
+    const auto& offer=shop_offers[index];
+    const auto name=String::utf8(offer.name.c_str());
+    const auto instance=offer.id;
+    const int actor=shop_actor;
+    emit_signal("shop_purchase_requested",1014,actor,name);
+    emit_npc_packet(1014,actor,name,instance);
+}
+
+bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
     if (!shop_actor) return false;
     if (shop_scroll_input(kind,pointer)) return true;
     const bool inside=Rect2(0,shop_top,shop_width(),224).has_point(pointer);
@@ -984,11 +993,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
             emit_signal("npc_request",1015,actor,name);
             emit_npc_packet(1015,actor,name);
         } else if (activate==confirm_button && details && shop_offer_index>=0 && shop_offer_index<int(shop_offers.size())) {
-            const auto name=String::utf8(shop_offers[shop_offer_index].name.c_str());
-            const auto instance=shop_offers[shop_offer_index].id;
-            const int actor=shop_actor;
-            emit_signal("shop_purchase_requested",1014,actor,name);
-            emit_npc_packet(1014,actor,name,instance);
+            buy_shop_offer(shop_offer_index);
         } else if ((activate==-3 || activate==-4) && shop_selected>=0 && !shop_offer_loading) {
             // 0x478850 requests a server page with a ten-item offset.
             const int page=std::clamp(shop_offer_page+(activate==-3?-1:1),0,65535/10);
@@ -1025,7 +1030,12 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     const int hit_id=offer_cell?256+row:row;
     const int pressed=shop_pressed;
     shop_pressed=kind==0 && hit?hit_id:-1;
-    if (kind==2 && hit && pressed==hit_id) {
+    if (kind==0 && double_click && offer_cell && hit) {
+        // 0x479100 buys the item under the pointer on a double-click.
+        shop_pressed=-1;
+        shop_offer_index=row;
+        buy_shop_offer(row);
+    } else if (kind==2 && hit && pressed==hit_id) {
         if (offer_cell) {
             shop_offer_index=row;
             emit_signal("shop_offer_selected",shop_actor,int64_t(shop_offers[row].id));
@@ -1757,7 +1767,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         inventory_cursor=p;
         const int kind=button->is_pressed()?0:2;
         if (kind==2 && chat_history.scroll(model.layout.expanded).captured() && scroll_input(kind,p)) return;
-        if (shop_input(kind,p) || npc_dialogue_input(kind,p) || skill_menu_input(kind,p,button->is_double_click())) return;
+        if (shop_input(kind,p,button->is_double_click()) || npc_dialogue_input(kind,p) || skill_menu_input(kind,p,button->is_double_click())) return;
         if (minimap_pointer(kind,p,button->is_ctrl_pressed()) || panel_pointer(kind,p) || scroll_input(kind,p)) return;
         const auto entry=frame(2096);
         const auto anchor=mir3::HudLayout::portrait_entry_position;
