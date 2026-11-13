@@ -2820,6 +2820,7 @@ void Mir3HudView::open_group_dialog(int action) {
     const auto skin=frame(1240);
     if (skin.is_null() || !chat_input) return;
     if (group_request) finish_group_dialog(false);
+    map_pointer_button=0;
     const int w=skin->get_width(),h=skin->get_height();
     group_dialog={400-w/2,246-h/2,w,h};
     group_request=action<=3?1019+action:action;

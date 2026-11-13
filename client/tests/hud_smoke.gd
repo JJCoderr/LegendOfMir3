@@ -178,6 +178,24 @@ func run() -> void:
 			if index == 0 and first_visit and not await capture("bichon-right-run"): return
 			await process_frame
 		if not check(seen_frames.size() == 6 and hud.hud_snapshot().player_cell == run_start + Vector2i(0, -2), "run renders six frames and release stops after two cells"): return
+		var modal_walk := held_walk.duplicate() as InputEventMouseButton
+		modal_walk.pressed = true
+		root.push_input(modal_walk, true)
+		if not check(hud.hud_snapshot().walk_frame == 0, "start held walk before modal"): return
+		key(KEY_Q, 0, true)
+		if not check(hud.hud_snapshot().group_request == 109, "open exit confirmation during held walk"): return
+		if not await capture("bichon-exit-during-walk"): return
+		await create_timer(0.85).timeout
+		var modal_stop_cell: Vector2i = hud.hud_snapshot().player_cell
+		if not check(hud.hud_snapshot().walk_frame == -1, "current step finishes behind modal"): return
+		key(KEY_TAB)
+		key(KEY_ENTER)
+		await create_timer(0.75).timeout
+		if not check(hud.hud_snapshot().group_request == 0 and hud.hud_snapshot().player_cell == modal_stop_cell
+			and hud.hud_snapshot().walk_frame == -1, "closing modal does not resume held walk"): return
+		modal_walk = modal_walk.duplicate()
+		modal_walk.pressed = false
+		root.push_input(modal_walk, true)
 		hud.set_meta("map_camera_cell", Vector2i(404, 402))
 		hud.queue_redraw()
 		if not await capture("bichon-merchant"): return
