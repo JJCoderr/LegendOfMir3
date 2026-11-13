@@ -794,6 +794,17 @@ func run() -> void:
 	if not check(hud.set_trade_item(0, 0, 301, 2) and hud.set_trade_item(1, 6, 5, 1), "apply both sides of trade offer"): return
 	if not check(not hud.set_trade_item(2, 0, 301, 1) and not hud.set_trade_item(0, 200, 301, 1), "reject invalid trade slot"): return
 	if not await capture("hud-trade-offers"): return
+	if not check(hud.set_trade_item(0, 30, 301, 3), "apply trade item below first page"): return
+	click_at(Vector2(211, 170), true)
+	click_at(Vector2(211, 170), false)
+	if not check(hud.hud_snapshot().trade_scroll == Vector2i(6, 0), "trade track scrolls local side only"): return
+	if not await capture("hud-trade-scroll"): return
+	click_at(Vector2(462, 63), true)
+	var trade_drag := InputEventMouseMotion.new()
+	trade_drag.position = Vector2(462, 250)
+	Input.parse_input_event(trade_drag)
+	click_at(trade_drag.position, false)
+	if not check(hud.hud_snapshot().trade_scroll == Vector2i(6, 33), "trade drag scrolls remote side independently"): return
 	if not check(hud.set_trade_gold(12500, 3420), "apply trade gold totals"): return
 	click_at(Vector2(238, 285), true)
 	click_at(Vector2(238, 285), false)

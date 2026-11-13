@@ -108,6 +108,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["expanded"]=model.layout.expanded;
     result["quest_first"]=quest.first;
     result["quest_selected"]=quest.selected;
+    result["trade_scroll"]=Vector2i(trade_scroll.first[0],trade_scroll.first[1]);
     result["trade_confirmed"]=trade_confirmed;
     result["trade_visible"]=trade.visible;
     result["quest_visible"]=quest.visible;
@@ -603,7 +604,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;trade.end_drag();trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
@@ -985,7 +986,7 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
 }
 
 bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
-    if (trade.dragging || trade_confirm_pressed) return trade_pointer(kind,position);
+    if (trade.dragging || trade_confirm_pressed || trade_scroll.captured>=0) return trade_pointer(kind,position);
     if (quest.dragging || quest.pressed>=0 || quest.scroll_captured) return quest_pointer(kind,position);
     if (mount.dragging || mount.pressed>=0) return mount_pointer(kind,position);
     if (portrait_picker.scrolling || portrait_pressed>=0) return portrait_input(kind,position);
@@ -2124,6 +2125,7 @@ bool Mir3HudView::open_trade(String partner) {
         if (trade.visible) trade.toggle();
         trade_confirm_pressed=false;
         trade_confirmed=false;
+        trade_scroll.captured=-1;
         queue_redraw();
         return true;
     }
@@ -2132,6 +2134,7 @@ bool Mir3HudView::open_trade(String partner) {
     trade_partner=partner;
     trade_gold={};
     trade_items={};
+    trade_scroll={};
     trade_confirmed=false;
     trade.toggle();
     raise_panel(Panel::trade);
@@ -2154,17 +2157,19 @@ void Mir3HudView::draw_trade() {
         // 0x41D870: five columns, 38 px per cell, separate origins.
         const int left=x+(side==0?14:264);
         const Rect2 clip(left,y+56,190,190);
-        for (int slot=0;slot<25;++slot) {
+        const int first=trade_scroll.first[side];
+        sprite(1225,{x+mir3::TradeScroll::x[side],y+mir3::TradeScroll::top+trade_scroll.offset(side)});
+        for (int slot=5*std::max(0,first-5);slot<5*(first+5);++slot) {
             const auto& item=trade_items[side][slot];
             if (!item) continue;
             const auto icon=item_frame(item.icon);
             if (icon.is_null()) continue;
-            const Vector2 cell(left+38*(slot%5),y+56+38*(slot/5));
+            const Vector2 cell(left+38*(slot%5),y+56+38*(slot/5-first));
             const Vector2 padding((38*item.width-icon->get_width())/2,(38*item.height-icon->get_height())/2);
             const Rect2 target(cell+padding,icon->get_size());
             const Rect2 visible=target.intersection(clip);
             if (visible.has_area()) draw_texture_rect_region(icon,visible,Rect2(visible.position-target.position,visible.size));
-            if (item.count>1)
+            if (item.count>1 && slot/5>=first)
                 text(std::to_string(item.count),{int(cell.x)+22,int(cell.y)+23,16,15},0xffffff,mir3::TextFont::normal,false);
         }
         auto amount=std::to_string(trade_gold[side]);
@@ -2175,6 +2180,14 @@ void Mir3HudView::draw_trade() {
 }
 
 bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
+    const auto thumb=frame(1225);
+    if (thumb.is_valid() && trade_scroll.pointer(kind,int(position.x)-trade.rect[0],int(position.y)-trade.rect[1],
+            thumb->get_width(),thumb->get_height())) {
+        controller.cancel();
+        get_viewport()->set_input_as_handled();
+        queue_redraw();
+        return true;
+    }
     const bool inside=rect(trade.rect).has_point(position);
     const auto confirm=frame(1394);
     const bool on_confirm=confirm.is_valid() &&

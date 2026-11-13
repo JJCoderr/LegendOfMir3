@@ -3,6 +3,7 @@
 #include "hud/minimap.hpp"
 #include "hud/mount_panel.hpp"
 #include "hud/quest_panel.hpp"
+#include "hud/trade_scroll.hpp"
 #include "hud/audio_options.hpp"
 #include "hud/portrait_picker.hpp"
 #include "inventory/inventory_panel.hpp"
@@ -81,6 +82,7 @@ private:
     bool request_trade();
     mir3::DraggablePanel trade{{0,0,494,330}};
     godot::String trade_partner;
+    mir3::TradeScroll trade_scroll;
     std::array<std::uint32_t,2> trade_gold{};
     std::array<std::array<mir3::BagItem,200>,2> trade_items;
     bool trade_confirm_pressed=false,trade_confirmed=false;
