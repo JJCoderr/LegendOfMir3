@@ -1426,7 +1426,7 @@ void Mir3HudView::bind_skill(int id,int key) {
 }
 
 bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
-    if (!skills.visible) return false;
+    if (!skills.visible || panel_covered(Panel::skills,point)) return false;
     if (skill_key_menu.has_area()) {
         if (skill_key_menu.has_point(point)) {
             if (kind==2) {
@@ -1446,7 +1446,6 @@ bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
         }
     }
     if (kind!=0 || !double_click || !rect(skills.rect).has_point(point)) return false;
-    if (panel_covered(Panel::skills,point)) return false;
     const auto [x,y,w,h]=skills.rect;
     const auto& positions=mir3::SkillLayout::positions[skills.tab];
     const auto& learned=skills.learned[skills.tab];

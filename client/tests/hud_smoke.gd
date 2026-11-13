@@ -444,6 +444,14 @@ func run() -> void:
 	magic_hover.position = Vector2(435, 202)
 	Input.parse_input_event(magic_hover)
 	if not await capture("magic-key-menu"): return
+	var binding_count := skill_requests.size()
+	key(KEY_N)
+	if not check(hud.hud_snapshot().options_visible, "options above skill popup"): return
+	click_at(Vector2(435, 202), true)
+	click_at(Vector2(435, 202), false)
+	if not check(skill_requests.size() == binding_count, "covered popup does not bind"): return
+	if not await capture("magic-popup-covered"): return
+	key(KEY_N)
 	click_at(Vector2(435, 202), true)
 	click_at(Vector2(435, 202), false)
 	if not check(skill_requests.back() == Vector2i(5, 50), "shortcut menu binds F2"): return
