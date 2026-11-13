@@ -662,6 +662,7 @@ void Mir3HudView::emit_npc_packet(int identifier,int actor,const String& body,st
 }
 
 void Mir3HudView::close_shop() {
+    shop_scroll_dragging=false;
     shop_actor=0;
     shop_goods.clear();
     shop_selected=-1;
@@ -720,6 +721,7 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body) {
         goods.push_back(std::move(good));
     }
     shop_goods=std::move(goods);
+    shop_scroll_dragging=false;
     shop_highlighted=shop_goods.empty()?-1:0;
     shop_actor=actor;
     shop_selected=-1;
@@ -764,6 +766,10 @@ void Mir3HudView::draw_shop() {
     const auto skin=frame(shop_show_offers?1261:1260);
     if (skin.is_valid())
         draw_texture(skin,Vector2((shop_width()-skin->get_width())/2,shop_top+(224-skin->get_height())/2));
+    const int goods_first=shop_show_offers?shop_category_first:shop_first;
+    const int last=std::max(0,int(shop_goods.size())-1);
+    // 0x47776B draws frame 1225 at (260,32), with 85 pixels of travel.
+    if (last>0) sprite(1225,{260,shop_top+32+int(std::lround(85.0*goods_first/last))});
     if (shop_pressed==-5) sprite(1222,shop_show_offers?mir3::HudLayout::Point{459,shop_top+159}:mir3::HudLayout::Point{262,shop_top+183});
     if (!shop_show_offers && shop_pressed==-2) sprite(1264,{112,shop_top+186});
     if (shop_show_offers) {
@@ -794,6 +800,7 @@ void Mir3HudView::draw_shop() {
 
 bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     if (!shop_actor) return false;
+    if (shop_scroll_input(kind,pointer)) return true;
     const bool inside=Rect2(0,shop_top,shop_width(),224).has_point(pointer);
     const bool details=shop_show_offers;
     constexpr int confirm_button=-2;
@@ -877,6 +884,28 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
         }
     }
     if (!inside && pressed<0) return false;
+    get_viewport()->set_input_as_handled();
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::shop_scroll_input(int kind,Vector2 pointer) {
+    if (!shop_actor || shop_goods.size()<2) return false;
+    const auto thumb=frame(1225);
+    if (thumb.is_null()) return false;
+    constexpr int x=260, top=shop_top+32, travel=85;
+    const int last=int(shop_goods.size())-1;
+    auto& first=shop_show_offers?shop_category_first:shop_first;
+    const int y=top+int(std::lround(double(travel)*first/last));
+    if (kind==0 && Rect2(x,top,thumb->get_width(),travel+thumb->get_height()).has_point(pointer)) {
+        shop_scroll_dragging=Rect2(x,y,thumb->get_width(),thumb->get_height()).has_point(pointer);
+        if (!shop_scroll_dragging) first=std::clamp(first+(pointer.y<y?-5:5),0,last);
+    } else if (kind==1 && shop_scroll_dragging) {
+        const double ratio=std::clamp((pointer.y-top)/double(travel+thumb->get_height()),0.0,1.0);
+        first=int(std::lround(last*ratio));
+    } else if (kind==2 && shop_scroll_dragging) shop_scroll_dragging=false;
+    else return false;
+    shop_pressed=-1;
     get_viewport()->set_input_as_handled();
     queue_redraw();
     return true;
@@ -1466,6 +1495,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     if (motion.is_valid()) {
         const auto p=motion->get_position();
         inventory_cursor=p;
+        if (shop_scroll_dragging && shop_scroll_input(1,p)) return;
         if (chat_history.scroll(model.layout.expanded).captured() && scroll_input(1,p)) return;
         if (minimap_pointer(1,p,motion->is_ctrl_pressed()) || panel_pointer(1,p)) return;
         controller.motion(int(p.x),int(p.y));
@@ -1643,6 +1673,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
 void Mir3HudView::_notification(int what) {
     if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) {
         npc_dialogue_close_pressed=false;
+        shop_scroll_dragging=false;
         npc_dialogue_arrow_pressed=0;
     }
     if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { map_pointer_button=0;merchant_click_captured=false;shop_pressed=npc_dialogue_pressed=-1;minimap.dragging=false;minimap.release_captured=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;guild_editor.end_drag();guild_edit_pressed=-1;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }

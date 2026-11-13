@@ -301,6 +301,8 @@ private:
     std::vector<ShopOffer> shop_offers;
     int shop_selected=-1;
     int shop_highlighted=-1;
+    bool shop_scroll_dragging=false;
+    bool shop_scroll_input(int kind,godot::Vector2 pointer);
     bool apply_shop_offers(int actor,int index,godot::PackedStringArray names,godot::PackedInt32Array icons,
         godot::PackedInt32Array prices,godot::PackedInt64Array identifiers,int offset=-1);
     void draw_shop();
