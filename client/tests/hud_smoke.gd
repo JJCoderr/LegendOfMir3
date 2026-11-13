@@ -1026,6 +1026,38 @@ func run() -> void:
 	Input.parse_input_event(map_wheel)
 	if not check(hud.hud_snapshot().chat_compact_first == chat_before_map_wheel, "minimap blocks wheel over chat"): return
 	if not await capture("hud-minimap-over-chat"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var target_bar := Rect2i(534, 584, 41, 5)
+		var unobstructed_bar := Image.load_from_file(ProjectSettings.globalize_path(
+			"res://../build/screenshots/hud-target-portrait.png")).get_region(target_bar)
+		var map_bounds: Rect2 = hud.hud_snapshot().minimap_bounds
+		map_drag = map_drag.duplicate()
+		map_drag.position = map_bounds.get_center()
+		map_drag.pressed = true
+		Input.parse_input_event(map_drag)
+		for step in range(1, 3):
+			map_motion = map_motion.duplicate()
+			map_motion.position = map_drag.position + Vector2(30, 38) * step
+			Input.parse_input_event(map_motion)
+		map_drag = map_drag.duplicate()
+		map_drag.position = map_motion.position
+		map_drag.pressed = false
+		Input.parse_input_event(map_drag)
+		if not check(hud.hud_snapshot().minimap_bounds.encloses(Rect2(target_bar)), "minimap covers the target HP bar"): return
+		await process_frame
+		await RenderingServer.frame_post_draw
+		var map_only := root.get_texture().get_image().get_region(target_bar)
+		hud.set_hovered_target(1, 3, 20, false, 1, 5, 10, 50)
+		if not await capture("hud-minimap-target-vitals"): return
+		var map_with_bar := root.get_texture().get_image().get_region(target_bar)
+		var visible_bar_pixels := 0
+		for y in target_bar.size.y:
+			for x in target_bar.size.x:
+				var bar_pixel := unobstructed_bar.get_pixel(x, y)
+				if bar_pixel == map_with_bar.get_pixel(x, y) and bar_pixel != map_only.get_pixel(x, y):
+					visible_bar_pixels += 1
+		if not check(visible_bar_pixels > 40, "target HP bar draws above overlapping minimap"): return
+		hud.set_hovered_target(0, 0, 0, false, 0, 0, 0, 0)
 	await create_timer(1.01).timeout
 	key(KEY_V)
 	if not check(not hud.hud_snapshot().minimap_visible, "minimap closes with V"): return

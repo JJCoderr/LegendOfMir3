@@ -1546,7 +1546,6 @@ void Mir3HudView::draw_hud_tail() {
     // 0x43877F..0x4387B6 draws the upload entry in the HUD pass.
     if (!model.layout.expanded && rect(Layout::portrait_hover).has_point(inventory_cursor))
         sprite(Layout::portrait_entry_frame(portrait_entry_pressed),Layout::portrait_entry_position);
-    draw_target_vitals();
     for (const auto panel:panel_order) {
         if (!panel_state(panel).visible) continue;
         switch (panel) {
@@ -1563,6 +1562,8 @@ void Mir3HudView::draw_hud_tail() {
         }
     }
     draw_minimap();
+    // 0x4387E5 draws the minimap before the target HP text and bar.
+    draw_target_vitals();
     draw_skill_shortcuts();
     draw_npc_dialogue();
     draw_shop();
