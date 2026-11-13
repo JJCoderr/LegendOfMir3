@@ -442,8 +442,8 @@ void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool
         target_vitals={static_cast<std::uint8_t>(percent),static_cast<std::uint16_t>(max_hp),static_cast<std::uint16_t>(hp)};
         // 0x4248F7 / 0x47BEC0 requests missing attributes on a focus change.
         if (changed && cell.x>=0 && cell.x<=65535 && cell.y>=0 && cell.y<=65535) {
-            const auto attributes=target_attributes_by_actor.find(actor);
-            if (attributes==target_attributes_by_actor.end() || attributes->second.icon==-1)
+            const auto& attributes=target_attributes_by_actor.try_emplace(actor).first->second;
+            if (attributes.icon==-1)
                 emit_signal("target_attributes_requested",1047,actor,cell);
         }
     }
@@ -451,7 +451,8 @@ void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool
 }
 
 bool Mir3HudView::apply_target_attributes(std::uint32_t actor,int category,int state,PackedByteArray body) {
-    if (!actor || actor!=target_focus.displayed() || target_is_human || body.size()!=10 ||
+    const bool displayed_monster=actor==target_focus.displayed() && !target_is_human;
+    if (!actor || (!displayed_monster && !target_attributes_by_actor.contains(actor)) || body.size()!=10 ||
         category<0 || category>65535 || state<0 || state>65535) return false;
     // Decoded 1304 body at actor+0x61D18. The second byte is unused here.
     auto& target_attributes=target_attributes_by_actor[actor];

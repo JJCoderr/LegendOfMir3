@@ -859,8 +859,13 @@ func run() -> void:
 	if not await capture("hud-target-portrait"): return
 	var target_attributes := PackedByteArray([1, 0, 2, 0, 18, 236, 5, 0, 0, 253])
 	if not check(not hud.apply_target_attributes(2, 0, 1, target_attributes)
-		and not hud.apply_target_attributes(1, 0, 1, target_attributes.slice(0, 9))
-		and hud.apply_target_attributes(1, 0, 1, target_attributes), "1304 attributes require the matching target and 10-byte body"): return
+		and not hud.apply_target_attributes(1, 0, 1, target_attributes.slice(0, 9)),
+		"1304 attributes require a known target and 10-byte body"): return
+	hud.set_hovered_target(2, 3, 530, false, 1, 5, 10, 50)
+	if not check(hud.apply_target_attributes(1, 0, 1, target_attributes)
+		and hud.hud_snapshot().target_portrait != 20, "late 1304 is stored without changing the displayed target"): return
+	hud.set_hovered_target(1, 3, 20, false, 1, 5, 10, 50, Vector2i(338, 267))
+	if not check(attribute_requests.size() == 1, "late attributes suppress another 1047 request"): return
 	if not await capture("hud-target-attributes"): return
 	if OS.get_cmdline_user_args().has("--screenshots"):
 		var ordinary_frame := root.get_texture().get_image()
