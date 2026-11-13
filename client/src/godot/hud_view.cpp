@@ -7,6 +7,7 @@
 #include <godot_cpp/classes/shader.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <chrono>
+#include "status/status_layout.hpp"
 #include <godot_cpp/classes/input_event_key.hpp>
 #include <cstdio>
 #include <iterator>
@@ -45,6 +46,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_expanded_count"]=int(chat_history.lines(true).size());
     result["chat_compact_first"]=chat_history.first(false);
     result["chat_expanded_first"]=chat_history.first(true);
+    result["status_visible"]=status.visible;
+    result["status_position"]=Vector2i(status.rect[0],status.rect[1]);
     result["inventory_visible"]=inventory.visible;
     result["inventory_position"]=Vector2i(inventory.rect[0],inventory.rect[1]);
     result["inventory_use_pending"]=bag.pending_use;
@@ -68,6 +71,10 @@ void Mir3HudView::_ready() {
     }
     const auto resource_root=std::filesystem::u8path(root.utf8().get_data());
     if (!portraits.open(resource_root/"Data"/"ProgUse")) UtilityFunctions::push_error("Cannot read ProgUse portraits.");
+    if (const auto body=portraits.frame(model.appearance)) {
+        status_body=texture(body->pixels.rgba,body->width,body->height);
+        status_body_offset=Vector2(body->offset_x,body->offset_y);
+    }
     item_archive.open(resource_root/"Data"/"Inventory");
     std::ifstream message_file(resource_root/"CmList.dat",std::ios::binary);
     std::vector<std::uint8_t> message_bytes{std::istreambuf_iterator<char>(message_file),{}};
@@ -177,7 +184,9 @@ void Mir3HudView::_draw() {
     buttons();
     sprite(mir3::ChatScrollLayout::frame,{mir3::ChatScrollLayout::x,mir3::chat_thumb_y(chat_history.first(model.layout.expanded),int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded)});
     buttons();
+    if (status.visible && !status_on_top) draw_status();
     if (inventory.visible) draw_inventory();
+    if (status.visible && status_on_top) draw_status();
     button_hint();
     if (bag.held) {
         const auto icon=item_frame(bag.held.icon);
@@ -265,7 +274,7 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
     Ref<InputEventMouseMotion> motion=event;
-    if (motion.is_valid()) { auto p=motion->get_position();inventory_cursor=p;if (inventory_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
+    if (motion.is_valid()) { auto p=motion->get_position();inventory_cursor=p;if (panel_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
     Ref<InputEventMouseButton> button=event;
     if (button.is_valid() && button->is_pressed() && (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) && rect(mir3::HudLayout::chat_frame(model.layout.expanded)).has_point(button->get_position())) {
         chat_history.scroll(model.layout.expanded).wheel(button->get_button_index()==MOUSE_BUTTON_WHEEL_UP?1:-1,int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded);
@@ -274,7 +283,8 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     if (button.is_valid() && button->get_button_index()==MOUSE_BUTTON_LEFT) {
         auto p=button->get_position();
         inventory_cursor=p;
-        if (inventory_pointer(button->is_pressed()?0:2,p) || scroll_input(button->is_pressed()?0:2,p)) return;
+        const int kind=button->is_pressed()?0:2;
+        if (panel_pointer(kind,p) || scroll_input(kind,p)) return;
         const bool captured=model.pressed>=0 || controller.hit(int(p.x),int(p.y))>=0;
         int action=controller.pointer(int(p.x),int(p.y),button->is_pressed());
         if (chat_input) {
@@ -290,13 +300,14 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             chat_requested(String::utf8(message(id).c_str()));
         }
         if (action==12) toggle_inventory();
+        if (action==13) toggle_status();
         if (action>=0) emit_signal("hud_action",action);
         if (captured) get_viewport()->set_input_as_handled();
         queue_redraw();
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
@@ -345,6 +356,7 @@ void Mir3HudView::draw_inventory() {
 void Mir3HudView::toggle_inventory() {
     if (frame(1220).is_null()) return;
     inventory.toggle();
+    if (inventory.visible) status_on_top=false;
     inventory.close_pressed=false;
     inventory.scroll.captured=false;
     controller.cancel();
@@ -363,6 +375,7 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
     bool consumed=thumb.is_valid() && inventory.scroll.input(kind,int(position.x),int(position.y),x,y,
         thumb->get_width(),thumb->get_height(),static_cast<std::uint32_t>(now),inventory.row);
     if (!consumed && kind==0 && inside) {
+        status_on_top=false;
         inventory.close_pressed=on_close;
         inventory.begin_drag(int(position.x),int(position.y),on_close || Rect2(x+17,y+60,228,304).has_point(position) || Rect2(x+15,y+390,42,27).has_point(position));
     } else if (!consumed && kind==1) {
@@ -395,6 +408,11 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
     Ref<InputEventKey> key=event;
     if (key.is_null() || !key->is_pressed() || key->is_echo()) return;
     const auto code=key->get_physical_keycode();
+    if (code==KEY_Q || (code==KEY_ESCAPE && status.visible && (status_on_top || !inventory.visible))) {
+        toggle_status();
+        get_viewport()->set_input_as_handled();
+        return;
+    }
     if (code==KEY_W || (code==KEY_ESCAPE && inventory.visible)) {
         toggle_inventory();
         get_viewport()->set_input_as_handled();
@@ -426,4 +444,86 @@ bool Mir3HudView::apply_inventory_use_reply(int identifier,int remaining) {
                              int(inventory_cursor.x),int(inventory_cursor.y))) return false;
     queue_redraw();
     return true;
+}
+
+void Mir3HudView::draw_status() {
+    using Layout=mir3::StatusLayout;
+    const auto [x,y,w,h]=status.rect;
+    const auto skin=frame(1280);
+    if (skin.is_valid()) sprite(1280,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
+    sprite(status_close_pressed?1222:1221,{x+Layout::close[0],y+Layout::close[1]});
+    if (status_body.is_valid())
+        draw_texture(status_body,Vector2(x+Layout::body[0],y+Layout::body[1])+status_body_offset);
+    const auto label=[&](Layout::Rect r,const std::string& value,unsigned color=0xfafafa,bool centered=true) {
+        r[0]+=x;r[1]+=y;
+        text(value,r,color,mir3::TextFont::normal,centered);
+    };
+    label(Layout::value(0),std::to_string(model.level));
+    char experience[32]{};
+    std::snprintf(experience,sizeof(experience),"%.2f%%",model.next_experience?100.0*model.experience/model.next_experience:0.0);
+    label(Layout::value(1),experience,0x0000ff);
+    const std::array<std::array<unsigned,2>,5> vitals{{
+        {model.hp,model.max_hp},{model.mp,model.max_mp},{model.weight,model.max_weight},{0,0},{0,0}}};
+    for (int i=0;i<5;++i) {
+        label(Layout::value(i+2,0),std::to_string(vitals[i][0]));
+        label(Layout::value(i+2,1),std::to_string(vitals[i][1]));
+        label(Layout::value(i+2,2),"/",0xfafafa,false);
+    }
+    const std::array ranges{model.attack,model.magic_attack,model.spirit_attack,model.defence,model.magic_defence};
+    for (int i=0;i<5;++i) {
+        label(Layout::combat_labels[i],message(Layout::combat_messages[i]));
+        label(Layout::combat_values[i],std::to_string(ranges[i][0])+"-"+std::to_string(ranges[i][1]));
+    }
+    for (int i=7;i<9;++i) label(Layout::value(i),"+0%");
+    for (int row=0;row<3;++row) {
+        label(Layout::element_labels[row],message(Layout::element_messages[row]));
+        for (int column=6;column>=0;--column) {
+            const auto r=Layout::element_rect(row,column,0);
+            sprite(Layout::element_frame(row,column),{x+r[0],y+r[1]});
+            label(Layout::element_rect(row,column,1),"0");
+        }
+    }
+}
+
+void Mir3HudView::toggle_status() {
+    if (frame(1280).is_null()) return;
+    status.toggle();
+    status_close_pressed=false;
+    if (status.visible) status_on_top=true;
+    controller.cancel();
+    queue_redraw();
+}
+
+bool Mir3HudView::status_pointer(int kind,Vector2 position) {
+    if (!status.visible) return false;
+    const auto [x,y,w,h]=status.rect;
+    const bool inside=Rect2(x,y,w,h).has_point(position);
+    const auto close=frame(1221);
+    const auto anchor=mir3::StatusLayout::close;
+    const bool on_close=close.is_valid() && Rect2(x+anchor[0],y+anchor[1],close->get_width(),close->get_height()).has_point(position);
+    bool captured=false;
+    if (kind==0 && inside) {
+        status_close_pressed=on_close;
+        if (status.begin_drag(int(position.x),int(position.y),on_close)) status_on_top=true;
+    } else if (kind==1) {
+        captured=status.move_drag(int(position.x),int(position.y));
+    } else if (kind==2) {
+        const bool activate=status_close_pressed && on_close;
+        captured=status.end_drag() || status_close_pressed;
+        status_close_pressed=false;
+        if (activate) toggle_status();
+    }
+    if (!inside && !captured) return false;
+    controller.cancel();
+    get_viewport()->set_input_as_handled();
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
+    if (status.dragging || status_close_pressed) return status_pointer(kind,position);
+    if (inventory.dragging || inventory.close_pressed || inventory.scroll.captured)
+        return inventory_pointer(kind,position);
+    if (status_on_top) return status_pointer(kind,position) || inventory_pointer(kind,position);
+    return inventory_pointer(kind,position) || status_pointer(kind,position);
 }

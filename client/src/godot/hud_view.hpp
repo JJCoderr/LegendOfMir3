@@ -32,6 +32,15 @@ protected:
 private:
     mir3::HudModel model;
     mir3::InventoryPanel inventory;
+    mir3::DraggablePanel status{{0,0,328,466}};
+    bool status_close_pressed=false;
+    bool status_on_top=false;
+    godot::Ref<godot::ImageTexture> status_body;
+    godot::Vector2 status_body_offset;
+    void draw_status();
+    void toggle_status();
+    bool panel_pointer(int kind,godot::Vector2 position);
+    bool status_pointer(int kind,godot::Vector2 position);
     mir3::InventoryGrid bag;
     mir3::WilArchive item_archive;
     std::map<int,godot::Ref<godot::ImageTexture>> item_frames;

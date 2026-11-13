@@ -142,6 +142,24 @@ func run() -> void:
 	key(KEY_ESCAPE)
 	await process_frame
 	if not check(not hud.hud_snapshot().inventory_visible, "inventory escape"): return
+	click_at(Vector2(720, 510), false)
+	await process_frame
+	if not check(hud.hud_snapshot().status_visible and hud.hud_snapshot().status_position == Vector2i.ZERO, "status HUD entry and origin"): return
+	if not await capture("character-status"): return
+	key(KEY_W)
+	await process_frame
+	if not check(hud.hud_snapshot().inventory_visible and hud.hud_snapshot().status_visible, "inventory and status coexist"): return
+	key(KEY_ESCAPE)
+	key(KEY_ESCAPE)
+	await process_frame
+	if not check(not hud.hud_snapshot().status_visible and not hud.hud_snapshot().inventory_visible, "escape closes the top panel first"): return
+	key(KEY_Q)
+	await process_frame
+	if not check(hud.hud_snapshot().status_visible, "status Q shortcut"): return
+	click_at(Vector2(291, 16), true)
+	click_at(Vector2(291, 16), false)
+	await process_frame
+	if not check(not hud.hud_snapshot().status_visible, "status close button"): return
 	var input: LineEdit = hud.get_node("ChatInput")
 	if not check(input.position == Vector2(185, 575) and input.size == Vector2(344, 15), "compact input bounds"): return
 	key(KEY_ENTER)
