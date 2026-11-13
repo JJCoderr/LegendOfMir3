@@ -15,8 +15,29 @@ struct QuestPanel : DraggablePanel {
     std::vector<Entry> entries;
     int pressed=-1, selected=-1, first=0;
 
+    static constexpr int scroll_x=272, scroll_top=160, scroll_travel=182;
+    bool scroll_captured=false;
+
+    int last_row() const { return std::max(0,int(entries.size())-1); }
+    int thumb_y() const {
+        return rect[1]+scroll_top+(last_row()?int(std::int64_t(scroll_travel)*first/last_row()):0);
+    }
     void scroll(int delta) {
-        first=std::clamp(first+delta,0,std::max(0,int(entries.size())-visible_rows));
+        first=int(std::clamp<std::int64_t>(std::int64_t(first)+delta,0,last_row()));
+    }
+    bool scroll_pointer(int kind,int x,int y,int width,int height) {
+        if (kind==2) return std::exchange(scroll_captured,false);
+        const int top=rect[1]+scroll_top;
+        if (kind==1 && scroll_captured) {
+            const int offset=std::clamp(y-top,0,scroll_travel+height);
+            first=int(std::int64_t(last_row())*offset/(scroll_travel+height));
+            return true;
+        }
+        if (kind!=0 || x<rect[0]+scroll_x || x>=rect[0]+scroll_x+width ||
+            y<top || y>=top+scroll_travel+height) return false;
+        if (y>=thumb_y() && y<thumb_y()+height) scroll_captured=true;
+        else scroll(y<thumb_y()+7?-5:5);
+        return true;
     }
     std::uint32_t title_color(int index) const {
         if (index==selected) return entries[index].completed?0x191a32:0x1919c8;

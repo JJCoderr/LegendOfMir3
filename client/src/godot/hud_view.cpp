@@ -562,7 +562,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
@@ -912,7 +912,7 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
 }
 
 bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
-    if (quest.dragging || quest.pressed>=0) return quest_pointer(kind,position);
+    if (quest.dragging || quest.pressed>=0 || quest.scroll_captured) return quest_pointer(kind,position);
     if (mount.dragging || mount.pressed>=0) return mount_pointer(kind,position);
     if (portrait_picker.scrolling || portrait_pressed>=0) return portrait_input(kind,position);
     if (options.dragging || audio_drag>=0) return options_pointer(kind,position);
@@ -1780,12 +1780,14 @@ bool Mir3HudView::set_quest_entries(PackedStringArray titles,PackedInt32Array co
         quest.entries.push_back({titles[i].utf8().get_data(),completed[i]!=0});
     quest.selected=-1;
     quest.first=0;
+    quest.scroll_captured=false;
     queue_redraw();
     return true;
 }
 
 void Mir3HudView::toggle_quest() {
     quest.toggle();
+    quest.scroll_captured=false;
     quest.pressed=-1;
     if (quest.visible) raise_panel(Panel::quest);
     queue_redraw();
@@ -1799,7 +1801,7 @@ void Mir3HudView::draw_quest() {
         draw_texture(skin,anchor,Color(1,1,1,220.f/255));
     }
     const int count=int(quest.entries.size());
-    sprite(1225,{x+272,y+160+(count>1?int(182LL*quest.first/(count-1)):0)});
+    sprite(1225,{x+quest.scroll_x,quest.thumb_y()});
     for (int row=0;row<quest.visible_rows && quest.first+row<count;++row) {
         const int index=quest.first+row;
         text(quest.entries[index].title,{x+65,y+90+15*row,200,15},
@@ -1813,6 +1815,14 @@ void Mir3HudView::draw_quest() {
 
 bool Mir3HudView::quest_pointer(int kind,Vector2 position) {
     if (!quest.visible) return false;
+    const auto thumb=frame(1225);
+    if (thumb.is_valid() && quest.scroll_pointer(kind,int(position.x),int(position.y),thumb->get_width(),thumb->get_height())) {
+        if (kind==0) raise_panel(Panel::quest);
+        controller.cancel();
+        get_viewport()->set_input_as_handled();
+        queue_redraw();
+        return true;
+    }
     const auto [x,y,w,h]=quest.rect;
     const bool inside=rect(quest.rect).has_point(position);
     int hit=-1;

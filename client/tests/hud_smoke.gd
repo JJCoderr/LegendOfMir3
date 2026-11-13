@@ -628,6 +628,26 @@ func run() -> void:
 	click_at(Vector2(280, 90), false)
 	if not check(quest_details == [1], "quest detail button uses selected entry"): return
 	if not await capture("hud-quest-list"): return
+	quest_names.clear()
+	var quest_flags := PackedInt32Array()
+	for i in 25:
+		quest_names.append("比奇省委托 %02d" % i)
+		quest_flags.append(i % 2)
+	if not check(hud.set_quest_entries(quest_names, quest_flags), "apply long quest list"): return
+	click_at(Vector2(278, 310), true)
+	click_at(Vector2(278, 310), false)
+	if not check(hud.hud_snapshot().quest_first == 5, "quest scrollbar page step"): return
+	click_at(Vector2(278, 202), true)
+	var quest_drag := InputEventMouseMotion.new()
+	quest_drag.position = Vector2(278, 390)
+	Input.parse_input_event(quest_drag)
+	click_at(quest_drag.position, false)
+	if not check(hud.hud_snapshot().quest_first == 24, "quest scrollbar drags to last row"): return
+	if not await capture("hud-quest-scroll-end"): return
+	quest_drag = quest_drag.duplicate()
+	quest_drag.position = Vector2(278, 160)
+	Input.parse_input_event(quest_drag)
+	if not check(hud.hud_snapshot().quest_first == 24, "released quest scrollbar ignores movement"): return
 	click_at(Vector2(275, 115), true)
 	click_at(Vector2(275, 115), false)
 	if not check(not hud.hud_snapshot().quest_visible, "quest close button"): return
