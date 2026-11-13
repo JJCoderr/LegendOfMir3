@@ -44,6 +44,12 @@ private:
     godot::PackedStringArray group_members;
     void toggle_group();
     void draw_group();
+    mir3::HudLayout::Rect group_dialog{};
+    int group_request=0,group_selected=0,group_dialog_pressed=-1;
+    void open_group_dialog(int action);
+    void finish_group_dialog(bool confirm);
+    void draw_group_dialog();
+    bool group_dialog_input(const godot::Ref<godot::InputEvent>& event);
     bool group_pointer(int kind,godot::Vector2 point);
     int group_button_at(godot::Vector2 point);
     mir3::SkillPanel skills;

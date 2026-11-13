@@ -29,6 +29,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_inventory_use_reply","identifier","remaining"),&Mir3HudView::apply_inventory_use_reply);
     ADD_SIGNAL(MethodInfo("skill_key_requested",PropertyInfo(Variant::INT,"id"),PropertyInfo(Variant::INT,"legacy_key")));
     ClassDB::bind_method(D_METHOD("set_group_roster","player","members"),&Mir3HudView::set_group_roster);
+    ADD_SIGNAL(MethodInfo("group_member_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("group_allow_requested",PropertyInfo(Variant::BOOL,"allowed")));
     ClassDB::bind_method(D_METHOD("set_learned_skill","id","level","key","experience","required","name"),&Mir3HudView::set_learned_skill,DEFVAL(0),DEFVAL(0),DEFVAL(String()));
     ClassDB::bind_method(D_METHOD("apply_equipment_reply","identifier"),&Mir3HudView::apply_equipment_reply);
@@ -52,6 +53,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_expanded_count"]=int(chat_history.lines(true).size());
     result["chat_compact_first"]=chat_history.first(false);
     result["chat_expanded_first"]=chat_history.first(true);
+    result["group_request"]=group_request;
     result["group_visible"]=group.visible;
     result["group_allow"]=group_allow;
     result["skills_visible"]=skills.visible;
@@ -210,6 +212,7 @@ void Mir3HudView::_draw() {
     if (group.visible && group_on_top) draw_group();
     draw_skill_key_menu();
     draw_skill_description();
+    if (group_request) draw_group_dialog();
     button_hint();
     if (bag.held) {
         const auto icon=item_frame(bag.held.icon);
@@ -296,6 +299,7 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     draw_polygon(vertices,colors,uv);
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
+    if (group_request && group_dialog_input(event)) return;
     Ref<InputEventMouseMotion> motion=event;
     if (motion.is_valid()) { auto p=motion->get_position();inventory_cursor=p;if (panel_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
     Ref<InputEventMouseButton> button=event;
@@ -1001,6 +1005,7 @@ bool Mir3HudView::group_pointer(int kind,Vector2 point) {
         captured=group.end_drag() || group_pressed>=0;
         group_pressed=-1;
         if (clicked && button==0) toggle_group();
+        if (clicked && button>=1 && button<=3) open_group_dialog(button);
         if (clicked && button==4) {
             group_allow=!group_allow;
             emit_signal("group_allow_requested",group_allow);
@@ -1017,4 +1022,72 @@ void Mir3HudView::set_group_roster(String player,PackedStringArray members) {
     group_player=player;
     group_members=members;
     queue_redraw();
+}
+
+void Mir3HudView::open_group_dialog(int action) {
+    const auto skin=frame(1240);
+    if (skin.is_null() || !chat_input) return;
+    const int w=skin->get_width(),h=skin->get_height();
+    group_dialog={400-w/2,246-h/2,w,h};
+    group_request=1019+action;
+    group_selected=0;
+    group_dialog_pressed=-1;
+    chat_input->set_position(Vector2(group_dialog[0]+24,group_dialog[1]+228));
+    chat_input->set_size(Vector2(309,15));
+    chat_input->focus_chat("",true);
+}
+
+void Mir3HudView::finish_group_dialog(bool confirm) {
+    const int request=group_request;
+    const String name=chat_input->get_text();
+    group_request=0;
+    group_dialog_pressed=-1;
+    chat_input->focus_chat("",true);
+    chat_input->release_focus();
+    chat_input->layout(model.layout.expanded);
+    queue_redraw();
+    if (confirm && !name.is_empty()) emit_signal("group_member_requested",request,name);
+}
+
+void Mir3HudView::draw_group_dialog() {
+    const int x=group_dialog[0],y=group_dialog[1];
+    sprite(1240,{x,y});
+    text(message(group_request==1022?1606:1605),{x+43,y+84,278,75},0xc8faff,mir3::TextFont::dialog);
+    sprite(1241+(group_dialog_pressed==0),{x+41,y+188});
+    sprite(1245+(group_dialog_pressed==2),{x+234,y+188});
+}
+
+bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
+    Ref<InputEventKey> key=event;
+    if (key.is_valid()) {
+        const auto code=key->get_keycode();
+        if (code!=KEY_TAB && code!=KEY_ESCAPE && code!=KEY_ENTER && code!=KEY_KP_ENTER) return false;
+        if (key->is_pressed() && !key->is_echo()) {
+            if (code==KEY_TAB) group_selected=group_selected==0?2:0;
+            if (code==KEY_ENTER || code==KEY_KP_ENTER) finish_group_dialog(group_selected==0);
+        }
+        get_viewport()->set_input_as_handled();
+        return true;
+    }
+    Ref<InputEventMouseButton> mouse=event;
+    if (mouse.is_valid()) {
+        if (chat_input->get_rect().has_point(mouse->get_position())) return false;
+        if (mouse->get_button_index()==MOUSE_BUTTON_LEFT) {
+            int hit=-1;
+            for (const int index:{0,2}) {
+                const auto icon=frame(index==0?1241:1245);
+                const Vector2 pos(group_dialog[0]+(index==0?41:234),group_dialog[1]+188);
+                if (icon.is_valid() && Rect2(pos,icon->get_size()).has_point(mouse->get_position())) hit=index;
+            }
+            if (mouse->is_pressed()) group_dialog_pressed=hit;
+            else {
+                const bool clicked=hit>=0 && hit==group_dialog_pressed;
+                group_dialog_pressed=-1;
+                if (clicked) finish_group_dialog(hit==0);
+            }
+            queue_redraw();
+        }
+    }
+    get_viewport()->set_input_as_handled();
+    return true;
 }

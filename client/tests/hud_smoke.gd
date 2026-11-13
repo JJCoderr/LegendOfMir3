@@ -239,6 +239,21 @@ func run() -> void:
 	click_at(Vector2(300, 174), false)
 	if not check(hud.hud_snapshot().group_allow and allowance_requests == [true], "group allowance request"): return
 	if not await capture("group-members"): return
+	var member_requests: Array = []
+	hud.group_member_requested.connect(func(id: int, name: String): member_requests.append([id, name]))
+	click_at(Vector2(375, 322), true)
+	click_at(Vector2(375, 322), false)
+	if not check(hud.hud_snapshot().group_request == 1021, "open add member dialog"): return
+	for ch in "银杏剑客": key(0, ch.unicode_at(0))
+	if not await capture("group-member-dialog"): return
+	key(KEY_ENTER)
+	if not check(member_requests == [[1021, "银杏剑客"]], "submit member request"): return
+	click_at(Vector2(435, 322), true)
+	click_at(Vector2(435, 322), false)
+	if not check(hud.hud_snapshot().group_request == 1022, "open remove member dialog"): return
+	key(KEY_TAB)
+	key(KEY_ENTER)
+	if not check(hud.hud_snapshot().group_request == 0 and member_requests.size() == 1, "cancel member request"): return
 	key(KEY_ESCAPE)
 	await process_frame
 	if not check(not hud.hud_snapshot().group_visible, "group escape closes"): return
