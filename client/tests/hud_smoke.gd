@@ -691,13 +691,17 @@ func run() -> void:
 		if not check(hud.hud_snapshot().group_request == 0 and npc_input.text.is_empty() and not npc_input.has_focus() and purchases.size() == before_bulk_cancel, "server close clears pending bulk quantity"): return
 		if not await capture("bichon-merchant-bulk-server-closed"): return
 		if not check(not hud.apply_shop_goods(2, 10, stock_list), "late goods reply cannot reopen closed merchant"): return
-		if not check(hud.apply_npc_dialogue(643, 2, script) and hud.walk_to_map_cell(Vector2i(419, 410)), "walk away from reopened NPC dialogue"): return
+		if not check(hud.apply_npc_dialogue(643, 2, script) and hud.apply_shop_goods(2, 10, stock_list),
+			"reopen merchant dialogue and shop before walking away"): return
+		if not await capture("bichon-merchant-before-walk-away"): return
+		if not check(hud.walk_to_map_cell(Vector2i(419, 410)), "walk away from open merchant shop"): return
 		var leave_deadline := Time.get_ticks_msec() + 6000
 		while hud.hud_snapshot().player_cell.x < 419 and Time.get_ticks_msec() < leave_deadline:
 			await process_frame
 			if hud.hud_snapshot().player_cell.x <= 418:
 				if not check(hud.hud_snapshot().npc_dialogue_actor == 2, "dialogue stays visible within five cells"): return
 		if not check(hud.hud_snapshot().player_cell == Vector2i(419, 410) and hud.hud_snapshot().npc_dialogue_actor == 0, "dialogue closes on the sixth cell"): return
+		if not check(not hud.apply_shop_goods(2, 10, stock_list), "shop refresh cannot reopen the merchant after walking away"): return
 		if not await capture("bichon-merchant-walk-away"): return
 		quit()
 		return
