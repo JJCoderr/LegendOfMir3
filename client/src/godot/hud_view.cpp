@@ -307,7 +307,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
@@ -454,6 +454,11 @@ void Mir3HudView::draw_status() {
     sprite(status_close_pressed?1222:1221,{x+Layout::close[0],y+Layout::close[1]});
     if (status_body.is_valid())
         draw_texture(status_body,Vector2(x+Layout::body[0],y+Layout::body[1])+status_body_offset);
+    const auto [bag_x,bag_y,bag_width,bag_height]=inventory.rect;
+    const bool obscured=inventory.visible && !status_on_top &&
+        Rect2(bag_x,bag_y,bag_width,bag_height).has_point(inventory_cursor);
+    const int local_x=int(inventory_cursor.x)-x,local_y=int(inventory_cursor.y)-y;
+    const int hovered_element=obscured?-1:Layout::element_at(local_x,local_y);
     const auto label=[&](Layout::Rect r,const std::string& value,unsigned color=0xfafafa,bool centered=true) {
         r[0]+=x;r[1]+=y;
         text(value,r,color,mir3::TextFont::normal,centered);
@@ -475,14 +480,30 @@ void Mir3HudView::draw_status() {
         label(Layout::combat_values[i],std::to_string(ranges[i][0])+"-"+std::to_string(ranges[i][1]));
     }
     for (int i=7;i<9;++i) label(Layout::value(i),"+0%");
+    const auto hint=[&](Layout::Rect r,const std::string& caption) {
+        if (caption.empty() || r[2]<=0) return;
+        const Rect2 bounds(x+r[0],y+r[1],r[2],r[3]);
+        legacy_rect(bounds,Color(80.f/255,60.f/255,40.f/255,150.f/255));
+        label(r,caption,0xffffff);
+        draw_rect(bounds,Color("644b32"),false);
+    };
     for (int row=0;row<3;++row) {
         label(Layout::element_labels[row],message(Layout::element_messages[row]));
         for (int column=6;column>=0;--column) {
             const auto r=Layout::element_rect(row,column,0);
             sprite(Layout::element_frame(row,column),{x+r[0],y+r[1]});
             label(Layout::element_rect(row,column,1),"0");
+            if (hovered_element==row*7+column) hint(Layout::element_rect(row,column,3),message(5161+column));
         }
     }
+    const int row=obscured?-1:Layout::tooltip_at(local_x,local_y);
+    if (row>=0) {
+        const auto caption=row==2?"HP":row==3?"MP":message(Layout::tooltip_messages[row]);
+        const auto measured=mir3::raster_text(caption,800,24,false,mir3::TextFont::normal);
+        const auto hit=Layout::tooltip(row);
+        hint({hit[0]-10,hit[1]-15,measured.text_width,hit[3]},caption);
+    }
+
 }
 
 void Mir3HudView::toggle_status() {

@@ -146,6 +146,14 @@ func run() -> void:
 	await process_frame
 	if not check(hud.hud_snapshot().status_visible and hud.hud_snapshot().status_position == Vector2i.ZERO, "status HUD entry and origin"): return
 	if not await capture("character-status"): return
+	var status_hover := InputEventMouseMotion.new()
+	status_hover.position = Vector2(227, 137)
+	Input.parse_input_event(status_hover)
+	if not await capture("character-status-hp"): return
+	status_hover = InputEventMouseMotion.new()
+	status_hover.position = Vector2(72, 388)
+	Input.parse_input_event(status_hover)
+	if not await capture("character-status-element"): return
 	key(KEY_W)
 	await process_frame
 	if not check(hud.hud_snapshot().inventory_visible and hud.hud_snapshot().status_visible, "inventory and status coexist"): return
