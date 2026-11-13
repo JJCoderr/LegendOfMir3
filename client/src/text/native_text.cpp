@@ -80,6 +80,33 @@ std::string ansi_to_utf8(std::string_view text)
     return encode(wide.data(), count, CP_UTF8);
 }
 
+std::vector<std::string> wrap_quest_detail(std::string_view utf8) {
+    if (utf8.empty()) return {std::string()};
+    const auto ansi=utf8_to_ansi(utf8);
+    if (ansi.empty()) return {};
+
+    Surface surface;
+    if (!surface.dc) return {};
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    surface.font=CreateFontA(-MulDiv(9,GetDeviceCaps(surface.dc,LOGPIXELSY),72),
+        0,0,0,400,0,0,0,DEFAULT_CHARSET,0,0,0,0,face);
+    if (!surface.font) return {};
+    surface.old_font=SelectObject(surface.dc,surface.font);
+    std::vector<std::string> rows;
+    std::size_t start=0,end=0;
+    while (end<ansi.size()) {
+        end+=end+1<ansi.size() && IsDBCSLeadByteEx(CP_ACP,static_cast<BYTE>(ansi[end]))?2:1;
+        SIZE extent{};
+        GetTextExtentPoint32A(surface.dc,ansi.data()+start,int(end-start),&extent);
+        // 0x46C3C7 keeps the character that meets or crosses 170 pixels.
+        if (extent.cx>=170 || end==ansi.size()) {
+            rows.push_back(ansi_to_utf8(std::string_view(ansi).substr(start,end-start)));
+            start=end;
+        }
+    }
+    return rows;
+}
+
 NativeText raster_text(std::string_view utf8, int width, int height, bool centered,
     TextFont font, std::string_view localized_face, bool inverted_vertical)
 {

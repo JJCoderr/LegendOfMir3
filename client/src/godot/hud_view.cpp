@@ -2186,18 +2186,10 @@ bool Mir3HudView::set_quest_details(int index,PackedStringArray lines) {
     auto& details=entry.details;
     details.clear();
     details.reserve(lines.size());
-    constexpr int wrap_threshold=170; // 0x46C3C7 measures each character prefix.
     for (int64_t i=0;i<lines.size();++i) {
-        const String paragraph=lines[i];
-        String row;
-        for (int64_t offset=0;offset<paragraph.length();++offset) {
-            row+=paragraph.substr(offset,1);
-            const auto utf8=row.utf8();
-            if (mir3::raster_text(utf8.get_data(),1,1,false,mir3::TextFont::normal).text_width<wrap_threshold) continue;
-            details.emplace_back(utf8.get_data());
-            row=String();
-        }
-        if (!row.is_empty() || paragraph.is_empty()) details.emplace_back(row.utf8().get_data());
+        const auto utf8=lines[i].utf8();
+        auto rows=mir3::wrap_quest_detail({utf8.get_data(),static_cast<std::size_t>(utf8.length())});
+        for (auto& row:rows) details.push_back(std::move(row));
     }
     quest.scroll(0);
     queue_redraw();
