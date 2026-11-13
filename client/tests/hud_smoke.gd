@@ -862,6 +862,10 @@ func run() -> void:
 	click_at(Vector2(450, 155), false)
 	await process_frame
 	if not check(hud.hud_snapshot().inventory_position == Vector2i(438, 99), "inventory drag and bottom clamp"): return
+	var close_hover := InputEventMouseMotion.new()
+	close_hover.position = Vector2(681, 523)
+	Input.parse_input_event(close_hover)
+	if not await capture("inventory-close-hint"): return
 	var inventory_sound: AudioStreamPlayer = hud.get_node("HudClickSound")
 	inventory_sound.stop()
 	click_at(Vector2(681, 523), true)
@@ -950,6 +954,10 @@ func run() -> void:
 	key(KEY_Q)
 	await process_frame
 	if not check(hud.hud_snapshot().status_visible, "status Q shortcut"): return
+	close_hover = InputEventMouseMotion.new()
+	close_hover.position = Vector2(291, 16)
+	Input.parse_input_event(close_hover)
+	if not await capture("character-status-close-hint"): return
 	var status_sound: AudioStreamPlayer = hud.get_node("HudClickSound")
 	status_sound.stop()
 	click_at(Vector2(291, 16), true)

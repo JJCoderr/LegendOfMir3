@@ -1608,6 +1608,11 @@ void Mir3HudView::button_hint() {
         } else if (*it==Panel::quest) {
             if (quest.pressed!=0) resolve(quest.buttons[0],2200);
             if (quest.pressed!=1) resolve(quest.buttons[1],1052);
+        } else if (*it==Panel::inventory) {
+            if (!inventory.close_pressed) resolve(std::array{1221,242,423},1052);
+        } else if (*it==Panel::status) {
+            const auto [left,top]=mir3::StatusLayout::close;
+            if (!status_close_pressed) resolve(std::array{1221,left,top},1052);
         } else if (*it==Panel::group) {
             // 0x431B80 assigns captions to the close and roster buttons.
             for (int i=0;i<int(group_button_frames.size());++i) {
