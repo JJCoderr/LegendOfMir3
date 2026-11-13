@@ -1049,8 +1049,13 @@ func run() -> void:
 	click_at(Vector2(390, 130), false)
 	if not check(skill_requests.back() == Vector2i(5, 49), "double click opens popup without replacing selected skill"): return
 	if not await capture("magic-popup-preserved-selection"): return
+	var magic_sound: AudioStreamPlayer = hud.get_node("HudClickSound")
+	magic_sound.stop()
 	click_at(Vector2(636, 32), true)
+	if not check(not magic_sound.playing, "magic category press stays silent"): return
 	click_at(Vector2(636, 32), false)
+	if not check(magic_sound.playing, "magic category release plays original click"): return
+	if not await capture("magic-category-selected"): return
 	if not check(hud.hud_snapshot().skill_tab == 7, "magic category selection"): return
 	OS.delay_msec(20)
 	click_at(Vector2(671, 160), true)

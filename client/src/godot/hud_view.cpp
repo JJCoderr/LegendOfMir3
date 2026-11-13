@@ -2427,7 +2427,11 @@ bool Mir3HudView::skill_pointer(int kind,Vector2 position) {
     } else if (kind==2 && !consumed) {
         const int button=skill_button_at(position);
         consumed=skills.end_drag() || skills.pressed>=0;
-        if (skills.release_button(button) && button==0) toggle_skills();
+        if (skills.release_button(button)) {
+            // 0x450860 enables release sound on close and all eight tabs.
+            if (hud_sound && audio_options.effects_enabled) hud_sound->play();
+            if (button==0) toggle_skills();
+        }
     }
     if (!inside && !consumed) return false;
     controller.cancel();
