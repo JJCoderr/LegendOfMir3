@@ -3156,7 +3156,9 @@ void Mir3HudView::draw_guild_editor() {
     const auto label=[&](int id,int left,int top,unsigned color) {
         text(message(id),{x+left,y+top,420,16},color,mir3::TextFont::normal,false);
     };
-    label(guild_edit_announcement?1903:1900,70,20,0x96c8ff);
+    // 0x45EF10 selects a 9-point regular font from CMList 1074 for the title.
+    text(message(guild_edit_announcement?1903:1900),{x+70,y+20,420,16},
+        0x96c8ff,mir3::TextFont::localized_normal,false);
     if (guild_edit_announcement) {
         label(1904,154,21,0x323232);
         label(1904,154,22,0x96c8ff);

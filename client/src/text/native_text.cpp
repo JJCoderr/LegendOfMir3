@@ -119,12 +119,13 @@ NativeText raster_text(std::string_view utf8, int width, int height, bool center
     // Preserve bytes passed to CreateFontA, including the special level face.
     const char normal_face[] = {char(0xcb), char(0xce), char(0xcc), char(0xe5), 0};
     const char level_face[] = {char(0xb1), char(0xbc), char(0xb8), char(0xb2), 0};
-    const std::string gold_face(localized_face);
-    if (font == TextFont::gold && gold_face.empty()) return result;
+    const std::string caption_face(localized_face);
+    const bool use_caption_face = font == TextFont::gold || font == TextFont::localized_normal;
+    if (font == TextFont::gold && caption_face.empty()) return result;
     const int points = (font == TextFont::gold || font == TextFont::skill_title) ? 10 : ((font == TextFont::level || font == TextFont::skill_level) ? 8 : 9);
     surface.font = CreateFontA(-MulDiv(points, result.dpi, 72), 0, 0, 0,
-        (font == TextFont::normal || font == TextFont::dialog || font == TextFont::skill_level || font == TextFont::npc_link) ? 400 : 700, 0, font == TextFont::npc_link, 0, DEFAULT_CHARSET, 0, 0, 0, 0,
-        font == TextFont::gold ? gold_face.c_str() :
+        (font == TextFont::normal || font == TextFont::dialog || font == TextFont::skill_level || font == TextFont::npc_link || font == TextFont::localized_normal) ? 400 : 700, 0, font == TextFont::npc_link, 0, DEFAULT_CHARSET, 0, 0, 0, 0,
+        use_caption_face ? caption_face.c_str() :
         (font == TextFont::level || font == TextFont::skill_level || font == TextFont::skill_title || font == TextFont::character_name ? level_face : normal_face));
     if (!surface.font) return result;
     surface.old_font = SelectObject(surface.dc, surface.font);
