@@ -491,10 +491,11 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     draw_polygon(vertices,colors,uv);
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
-    if (minimap.button_captured) {
+    if (minimap.release_captured) {
         const Ref<InputEventMouseButton> release=event;
         if (release.is_valid() && release->get_button_index()==MOUSE_BUTTON_LEFT && !release->is_pressed()) {
-            minimap.button_captured=false;
+            minimap.release_captured=false;
+            minimap.dragging=false;
             get_viewport()->set_input_as_handled();
             return;
         }
@@ -629,7 +630,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;minimap.button_captured=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;minimap.release_captured=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
@@ -2536,16 +2537,15 @@ bool Mir3HudView::minimap_pointer(int kind,Vector2 position,bool ctrl) {
     if (kind==0 && ctrl && bounds.has_point(position)) {
         minimap.drag_offset={int(position.x)-minimap.position[0],int(position.y)-minimap.position[1]};
         minimap.dragging=true;
+        minimap.release_captured=true;
     } else if (kind==0 && Rect2(end-Vector2(38,19),Vector2(19,19)).has_point(position)) {
         minimap.translucent=!minimap.translucent;
-        minimap.button_captured=true;
+        minimap.release_captured=true;
     } else if (kind==0 && Rect2(end-Vector2(19,19),Vector2(19,19)).has_point(position)) {
         minimap.resize();
-        minimap.button_captured=true;
+        minimap.release_captured=true;
     } else if (kind==1 && minimap.dragging && ctrl && bounds.has_point(position)) {
         minimap.position={int(position.x)-minimap.drag_offset[0],int(position.y)-minimap.drag_offset[1]};
-    } else if (kind==2 && minimap.dragging) {
-        minimap.dragging=false;
     } else {
         return false;
     }

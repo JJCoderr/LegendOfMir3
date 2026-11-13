@@ -185,14 +185,16 @@ func run() -> void:
 	click_at(Vector2(643, 513), true)
 	click_at(Vector2(643, 513), false)
 	if not check(map_requests == [1033, 1033] and hud.apply_minimap_reply(1), "HUD button requests original Mmap"): return
-	click_at(Vector2(792, 120), true)
+	map_drag = map_drag.duplicate()
+	map_drag.position = Vector2(730, 64)
+	map_drag.pressed = true
+	Input.parse_input_event(map_drag)
 	hud.set_map_location("盟重省", 220, 240)
 	click_at(overlap_cell, false)
-	if not check(hud.hud_snapshot().held_inventory_icon == -1, "map transition preserves ownership of button release"): return
+	if not check(hud.hud_snapshot().held_inventory_icon == -1, "map transition preserves ownership of Ctrl drag release"): return
 	if not check(map_requests == [1033, 1033, 1033] and not hud.hud_snapshot().minimap_visible, "map transition clears old frame and requests refresh"): return
 	if not check(not hud.apply_minimap_reply(0) and not hud.hud_snapshot().minimap_visible, "invalid reply keeps previous map hidden"): return
 	if not check(hud.apply_minimap_reply(1002) and hud.hud_snapshot().minimap_visible, "new map reply restores open minimap"): return
-	key(KEY_T)
 	hud.set_map_location("盟重省", 221, 241)
 	if not check(map_requests.size() == 3 and hud.hud_snapshot().minimap_visible, "movement in same map does not re-request"): return
 	if not await capture("hud-minimap-transition-release"): return
