@@ -6,6 +6,7 @@
 #include <godot_cpp/classes/viewport.hpp>
 #include <godot_cpp/classes/shader.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
+#include <chrono>
 #include <cstdio>
 #include <iterator>
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -23,6 +24,7 @@ Vector2 point(mir3::HudLayout::Point p) { return Vector2(p[0],p[1]); }
 }
 void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("hud_snapshot"),&Mir3HudView::hud_snapshot);
+    ClassDB::bind_method(D_METHOD("post_chat","value","foreground","background"),&Mir3HudView::post_chat);
     ADD_SIGNAL(MethodInfo("hud_action",PropertyInfo(Variant::INT,"button")));
 }
 Dictionary Mir3HudView::hud_snapshot() const {
@@ -33,6 +35,10 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["hovered"]=model.hovered;
     result["primary_defence"]=model.primary_stat[0];
     result["primary_attack"]=model.primary_stat[1];
+    result["chat_compact_count"]=int(chat_history.lines(false).size());
+    result["chat_expanded_count"]=int(chat_history.lines(true).size());
+    result["chat_compact_first"]=chat_history.first(false);
+    result["chat_expanded_first"]=chat_history.first(true);
     return result;
 }
 void Mir3HudView::_ready() {
@@ -71,13 +77,13 @@ void Mir3HudView::sprite(int id,mir3::HudLayout::Point position) {
     auto image=frame(id);
     if (image.is_valid()) draw_texture(image,point(position));
 }
-void Mir3HudView::text(const std::string& value,mir3::HudLayout::Rect r,unsigned color,mir3::TextFont font) {
+void Mir3HudView::text(const std::string& value,mir3::HudLayout::Rect r,unsigned color,mir3::TextFont font,bool centered) {
     if (value.empty()) return;
-    const auto key=std::to_string(r[2])+":"+std::to_string(r[3])+":"+std::to_string(int(font))+":"+value;
+    const auto key=std::to_string(r[2])+":"+std::to_string(r[3])+":"+std::to_string(int(font))+":"+std::to_string(centered)+":"+value;
     auto found=text_cache.find(key);
     if (found==text_cache.end()) {
         if (text_cache.size()>=256) text_cache.clear();
-        const auto bitmap=mir3::raster_text(value,r[2],r[3],true,font);
+        const auto bitmap=mir3::raster_text(value,r[2],r[3],centered,font);
         found=text_cache.emplace(key,texture(bitmap.rgba,r[2],r[3])).first;
     }
     if (found->second.is_valid()) draw_texture(found->second,Vector2(r[0],r[1]),Color(float(color&255)/255,float((color>>8)&255)/255,float((color>>16)&255)/255));
@@ -108,6 +114,7 @@ void Mir3HudView::_draw() {
     sprite(1160,Layout::origin);
     auto chat=Layout::chat_frame(model.layout.expanded);
     sprite(model.layout.expanded?1162:1161,{chat[0],chat[1]});
+    chat_lines();
     sprite(Layout::level_emblem_frame(model.emblem_selector,model.emblem_references,model.experience),Layout::level_emblem_position(model.layout.expanded));
     auto left=frame(1163),right=frame(model.orb_frame(1));
     if (left.is_valid() && right.is_valid()) {
@@ -139,9 +146,38 @@ void Mir3HudView::_draw() {
         text(std::to_string(values[1])+"-"+std::to_string(values[2]),Layout::stat(side),Layout::text_color(2+side));
     }
     buttons();
-    sprite(1207,{619,model.layout.expanded?342:507});
+    sprite(mir3::ChatScrollLayout::frame,{mir3::ChatScrollLayout::x,mir3::chat_thumb_y(chat_history.first(model.layout.expanded),int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded)});
     buttons();
     button_hint();
+}
+void Mir3HudView::post_chat(String value,int64_t foreground,int64_t background) {
+    const auto utf8=value.utf8();
+    chat_history.post({utf8.get_data(),static_cast<std::size_t>(utf8.length())},static_cast<unsigned>(foreground),static_cast<unsigned>(background));
+    queue_redraw();
+}
+void Mir3HudView::chat_lines() {
+    const bool expanded=model.layout.expanded;
+    const auto& lines=chat_history.lines(expanded);
+    const int first=chat_history.first(expanded);
+    auto bounds=mir3::HudLayout::chat_line(expanded);
+    for (int i=first;i<std::min(int(lines.size()),first+mir3::HudLayout::chat_rows(expanded));++i) {
+        const auto& line=lines[i];
+        if (line.background) {
+            const auto measured=mir3::raster_text(line.text,800,24,false,mir3::TextFont::normal);
+            const auto c=line.background;
+            draw_rect(Rect2(bounds[0],bounds[1],measured.text_width,measured.text_height),Color(float(c&255)/255,float((c>>8)&255)/255,float((c>>16)&255)/255));
+        }
+        text(line.text,bounds,line.foreground,mir3::TextFont::normal,false);
+        bounds[1]+=bounds[3];
+    }
+}
+bool Mir3HudView::scroll_input(int kind,Vector2 position) {
+    const auto thumb=frame(mir3::ChatScrollLayout::frame);
+    if (thumb.is_null()) return false;
+    const auto now=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    const bool consumed=chat_history.input(kind,int(position.x),int(position.y),model.layout.expanded,thumb->get_width(),thumb->get_height(),static_cast<std::uint32_t>(now));
+    if (consumed) { get_viewport()->set_input_as_handled();queue_redraw(); }
+    return consumed;
 }
 std::string Mir3HudView::message(int id) const { return mir3::ansi_to_utf8(messages.get(id)); }
 void Mir3HudView::tooltip(int kind) {
@@ -185,10 +221,15 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
     Ref<InputEventMouseMotion> motion=event;
-    if (motion.is_valid()) { auto p=motion->get_position();controller.motion(int(p.x),int(p.y));queue_redraw(); }
+    if (motion.is_valid()) { auto p=motion->get_position();controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
     Ref<InputEventMouseButton> button=event;
+    if (button.is_valid() && button->is_pressed() && (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) && rect(mir3::HudLayout::chat_frame(model.layout.expanded)).has_point(button->get_position())) {
+        chat_history.scroll(model.layout.expanded).wheel(button->get_button_index()==MOUSE_BUTTON_WHEEL_UP?1:-1,int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded);
+        get_viewport()->set_input_as_handled();queue_redraw();return;
+    }
     if (button.is_valid() && button->get_button_index()==MOUSE_BUTTON_LEFT) {
         auto p=button->get_position();
+        if (scroll_input(button->is_pressed()?0:2,p)) return;
         const bool captured=model.pressed>=0 || controller.hit(int(p.x),int(p.y))>=0;
         int action=controller.pointer(int(p.x),int(p.y),button->is_pressed());
         if (action>=0) emit_signal("hud_action",action);
@@ -197,5 +238,5 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
