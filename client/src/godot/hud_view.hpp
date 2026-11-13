@@ -35,6 +35,7 @@ public:
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     bool set_music_map(godot::String map);
     bool apply_portrait_reply(godot::PackedByteArray jpeg);
+    bool load_portrait_cache(godot::String server,godot::String character);
     void set_portrait_names(godot::PackedStringArray names);
     void set_guild_manager(bool allowed);
     void set_guild_members(godot::PackedStringArray lines);
@@ -58,7 +59,8 @@ private:
     void request_portrait_change(int button,std::uint32_t tick);
     godot::Ref<godot::FileAccess> open_selected_portrait() const;
     godot::Ref<godot::ImageTexture> active_portrait;
-    godot::String portrait_directory;
+    godot::String portrait_directory,portrait_cache_path;
+    bool display_portrait(godot::PackedByteArray jpeg);
     godot::Ref<godot::ImageTexture> portrait_preview;
     int portrait_button_at(godot::Vector2 point);
     bool portrait_input(int kind,godot::Vector2 point);

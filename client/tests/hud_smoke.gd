@@ -356,13 +356,16 @@ func run() -> void:
 	click_at(Vector2(40, 32), false)
 	if not check(hud.hud_snapshot().portrait_selected == 0 and hud.hud_snapshot().portrait_count == 1 and hud.hud_snapshot().portrait_preview, "portrait row selection"): return
 	if not await capture("portrait-preview"): return
+	var portrait_server := "smoke-%d" % OS.get_process_id()
+	hud.load_portrait_cache(portrait_server, "player")
 	var portrait_uploads: Array[PackedByteArray] = []
 	hud.portrait_upload_requested.connect(func(jpeg: PackedByteArray): portrait_uploads.append(jpeg))
 	click_at(Vector2(70, 350), true)
 	click_at(Vector2(70, 350), false)
 	if not check(portrait_uploads.size() == 1 and not portrait_uploads[0].is_empty(), "portrait upload reads actual file"): return
 	if not check(not hud.hud_snapshot().custom_portrait and hud.apply_portrait_reply(portrait_uploads[0]), "portrait applies on reply"): return
-	if not await capture("portrait-uploaded"): return
+	if not check(hud.load_portrait_cache(portrait_server, "player") and hud.hud_snapshot().custom_portrait, "portrait reloads from FAC"): return
+	if not await capture("portrait-cached"): return
 	click_at(Vector2(185, 350), true)
 	click_at(Vector2(185, 350), false)
 	if not check(portrait_uploads.size() == 2 and portrait_uploads[1].is_empty() and hud.apply_portrait_reply(portrait_uploads[1]), "reset portrait reply"): return
@@ -377,6 +380,8 @@ func run() -> void:
 	Input.parse_input_event(portrait_wheel)
 	if not check(hud.hud_snapshot().portrait_first == 1, "portrait wheel advances one row"): return
 	if not await capture("portrait-scrolled"): return
+	if not check(hud.load_portrait_cache(portrait_server, "player") and not hud.hud_snapshot().custom_portrait, "FAC preserves default portrait"): return
+	DirAccess.remove_absolute("user://%s_player.fac" % portrait_server)
 	DirAccess.remove_absolute(portrait_dir.path_join("sample.JPG"))
 	DirAccess.remove_absolute(portrait_dir)
 	key(KEY_ESCAPE)

@@ -3,6 +3,7 @@
 #include <godot_cpp/classes/audio_stream_mp3.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include "hud_view.hpp"
+#include "hud/portrait_fac.hpp"
 #include <godot_cpp/classes/config_file.hpp>
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/input_event_mouse_button.hpp>
@@ -42,6 +43,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
     ADD_SIGNAL(MethodInfo("portrait_list_requested"));
     ADD_SIGNAL(MethodInfo("portrait_upload_requested",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"jpeg")));
+    ClassDB::bind_method(D_METHOD("load_portrait_cache","server","character"),&Mir3HudView::load_portrait_cache);
     ClassDB::bind_method(D_METHOD("apply_portrait_reply","jpeg"),&Mir3HudView::apply_portrait_reply);
     ClassDB::bind_method(D_METHOD("set_portrait_names","names"),&Mir3HudView::set_portrait_names);
     ADD_SIGNAL(MethodInfo("guild_members_requested"));
@@ -1728,7 +1730,7 @@ void Mir3HudView::request_portrait_change(int button,std::uint32_t tick) {
     if (portrait_picker.accept_upload_tick(tick)) emit_signal("portrait_upload_requested",bytes);
 }
 
-bool Mir3HudView::apply_portrait_reply(PackedByteArray jpeg) {
+bool Mir3HudView::display_portrait(PackedByteArray jpeg) {
     if (jpeg.is_empty()) {
         active_portrait.unref();
     } else {
@@ -1739,5 +1741,55 @@ bool Mir3HudView::apply_portrait_reply(PackedByteArray jpeg) {
         active_portrait=ImageTexture::create_from_image(image);
     }
     queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::load_portrait_cache(String server,String character) {
+    const auto valid=[](const String& name) {
+        return !name.is_empty() && name.validate_filename()==name && name!="." && name!="..";
+    };
+    if (!valid(server) || !valid(character)) return false;
+    portrait_cache_path="user://"+server+"_"+character+".fac";
+    display_portrait({});
+    const auto file=FileAccess::open(portrait_cache_path,FileAccess::READ);
+    if (file.is_null() || file->get_length()>8+mir3::PortraitFac::max_payload) return false;
+    const auto bytes=file->get_buffer(file->get_length());
+    if (bytes.size()<8) return false;
+    const auto decoded=mir3::PortraitFac::decode({reinterpret_cast<const char*>(bytes.ptr()),static_cast<std::size_t>(bytes.size())});
+    if (!decoded) return false;
+    PackedByteArray jpeg;
+    jpeg.resize(decoded->size());
+    if (!decoded->empty()) std::copy(decoded->begin(),decoded->end(),jpeg.ptrw());
+    return display_portrait(jpeg);
+}
+
+bool Mir3HudView::apply_portrait_reply(PackedByteArray jpeg) {
+    if (!display_portrait(jpeg)) return false;
+    if (portrait_cache_path.is_empty()) return true;
+    const auto payload=jpeg.is_empty()?std::string_view{}:
+        std::string_view(reinterpret_cast<const char*>(jpeg.ptr()),static_cast<std::size_t>(jpeg.size()));
+    const auto encoded=mir3::PortraitFac::encode(payload);
+    if (!encoded) return false;
+    const auto path=ProjectSettings::get_singleton()->globalize_path(portrait_cache_path);
+    const auto temporary=path+String(".tmp");
+    auto file=FileAccess::open(temporary,FileAccess::WRITE);
+    bool saved=false;
+    if (file.is_valid()) {
+        const auto* bytes=reinterpret_cast<const std::uint8_t*>(encoded->data());
+        PackedByteArray buffer;
+        buffer.resize(encoded->size());
+        std::copy(bytes,bytes+encoded->size(),buffer.ptrw());
+        saved=file->store_buffer(buffer);
+        file->flush();
+        saved=saved && file->get_error()==OK;
+        file.unref();
+    }
+    const auto target=path.utf16(),source=temporary.utf16();
+    const auto* source_path=reinterpret_cast<const wchar_t*>(source.get_data());
+    if (!saved || !MoveFileExW(source_path,reinterpret_cast<const wchar_t*>(target.get_data()),
+                              MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+        DeleteFileW(source_path);
+        UtilityFunctions::push_warning("Could not save portrait cache");
+    }
     return true;
 }
