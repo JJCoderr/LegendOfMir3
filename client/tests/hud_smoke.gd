@@ -54,6 +54,13 @@ func run() -> void:
 	Input.use_accumulated_input = false
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()
 	hud.set_meta("options_path", options_file)
+	var portrait_dir := "user://smoke-portraits-%d" % OS.get_process_id()
+	DirAccess.make_dir_recursive_absolute(portrait_dir)
+	var portrait_image := Image.create_empty(82, 94, false, Image.FORMAT_RGB8)
+	portrait_image.fill(Color("304c64"))
+	portrait_image.fill_rect(Rect2i(16, 20, 50, 54), Color("cc9b60"))
+	if not check(portrait_image.save_jpg(portrait_dir.path_join("sample.JPG")) == OK, "write portrait fixture"): return
+	hud.set_meta("portrait_directory", portrait_dir)
 	root.add_child(hud)
 	hud.hud_action.connect(func(button: int): actions.append(button))
 	hud.chat_requested.connect(func(value: String): requests.append(value))
@@ -343,13 +350,14 @@ func run() -> void:
 	reloaded.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(options_file))
 	if not check(not persisted.music_enabled and persisted.music_level == -5, "system options reload from original INI keys"): return
-	hud.portrait_list_requested.connect(func(): hud.set_portrait_names(PackedStringArray(["sample.jpg", "portrait.jpg"])))
 	click_at(Vector2(540, 570), false)
 	if not check(hud.hud_snapshot().portrait_visible, "portrait HUD entry"): return
 	click_at(Vector2(40, 32), true)
 	click_at(Vector2(40, 32), false)
-	if not check(hud.hud_snapshot().portrait_selected == 0, "portrait row selection"): return
-	if not await capture("portrait-picker"): return
+	if not check(hud.hud_snapshot().portrait_selected == 0 and hud.hud_snapshot().portrait_count == 1 and hud.hud_snapshot().portrait_preview, "portrait row selection"): return
+	if not await capture("portrait-preview"): return
+	DirAccess.remove_absolute(portrait_dir.path_join("sample.JPG"))
+	DirAccess.remove_absolute(portrait_dir)
 	key(KEY_ESCAPE)
 	if not check(not hud.hud_snapshot().portrait_visible, "portrait escape"): return
 	var input: LineEdit = hud.get_node("ChatInput")

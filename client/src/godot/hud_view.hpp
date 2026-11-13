@@ -51,6 +51,10 @@ private:
     bool portrait_visible=false,portrait_entry_pressed=false;
     int portrait_pressed=-1;
     void draw_portrait_picker();
+    void enumerate_portraits();
+    void load_portrait_preview();
+    godot::String portrait_directory;
+    godot::Ref<godot::ImageTexture> portrait_preview;
     bool portrait_input(int kind,godot::Vector2 point);
     void close_portrait_picker();
     mir3::DraggablePanel options{{145,30,510,468}};

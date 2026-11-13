@@ -74,6 +74,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_compact_first"]=chat_history.first(false);
     result["chat_expanded_first"]=chat_history.first(true);
     result["portrait_visible"]=portrait_visible;
+    result["portrait_preview"]=portrait_preview.is_valid();
+    result["portrait_count"]=int64_t(portrait_picker.names.size());
     result["portrait_selected"]=portrait_picker.selected;
     result["options_visible"]=options.visible;
     result["music_enabled"]=audio_options.music_enabled;
@@ -127,6 +129,7 @@ void Mir3HudView::_ready() {
         add_child(hud_sound);
         sync_hud_sound();
     }
+    portrait_directory=ProjectSettings::get_singleton()->globalize_path(String(get_meta("portrait_directory",root)));
     const auto resource_root=std::filesystem::u8path(root.utf8().get_data());
     if (!portraits.open(resource_root/"Data"/"ProgUse")) UtilityFunctions::push_error("Cannot read ProgUse portraits.");
     if (const auto body=portraits.frame(model.appearance)) {
@@ -386,6 +389,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
                 if (portrait_visible) close_portrait_picker();
                 else {
                     portrait_visible=true;
+                    enumerate_portraits();
                     emit_signal("portrait_list_requested");
                 }
                 if (hud_sound && audio_options.effects_enabled) hud_sound->play();
@@ -1578,6 +1582,7 @@ bool Mir3HudView::set_music_map(String map) {
 }
 
 void Mir3HudView::set_portrait_names(PackedStringArray names) {
+    portrait_preview.unref();
     portrait_picker.close();
     for (int i=0;i<names.size();++i) portrait_picker.names.emplace_back(names[i].utf8().get_data());
     queue_redraw();
@@ -1586,6 +1591,7 @@ void Mir3HudView::set_portrait_names(PackedStringArray names) {
 void Mir3HudView::close_portrait_picker() {
     portrait_visible=false;
     portrait_pressed=-1;
+    portrait_preview.unref();
     portrait_picker.close();
     queue_redraw();
 }
@@ -1604,6 +1610,7 @@ void Mir3HudView::draw_portrait_picker() {
         const auto at=Picker::instruction(i);
         text(message(Picker::instruction_message(i)),{at[0],at[1],260,15},0xfafafa,mir3::TextFont::normal,false);
     }
+    if (portrait_preview.is_valid()) draw_texture_rect(portrait_preview,rect(Picker::preview),false);
     sprite(Picker::scroll[0],{Picker::scroll[1],portrait_picker.thumb_y()});
     for (int i=0;i<3;++i) {
         const auto spec=Picker::buttons[i];
@@ -1629,7 +1636,7 @@ bool Mir3HudView::portrait_input(int kind,Vector2 point) {
         if (kind==1) portrait_picker.move(int(point.x),int(point.y));
         if (kind==0) {
             portrait_pressed=hit;
-            if (hit<0) portrait_picker.select(int(point.x),int(point.y));
+            if (hit<0 && portrait_picker.select(int(point.x),int(point.y))) load_portrait_preview();
         }
         if (kind==2) {
             if (hit>=0 && hit==portrait_pressed) {
@@ -1643,4 +1650,35 @@ bool Mir3HudView::portrait_input(int kind,Vector2 point) {
     get_viewport()->set_input_as_handled();
     queue_redraw();
     return true;
+}
+
+void Mir3HudView::enumerate_portraits() {
+    portrait_preview.unref();
+    portrait_picker.close();
+    std::error_code error;
+    const auto directory=std::filesystem::u8path(portrait_directory.utf8().get_data());
+    for (std::filesystem::directory_iterator it(directory,error),end;!error && it!=end;it.increment(error)) {
+        std::error_code entry_error;
+        if (!it->is_regular_file(entry_error) || it->is_symlink(entry_error)) continue;
+        auto extension=it->path().extension().u8string();
+        for (auto& ch:extension) if (ch>=u8'A' && ch<=u8'Z') ch+=32;
+        if (extension!=u8".jpg") continue;
+        const auto size=it->file_size(entry_error);
+        if (entry_error || !mir3::PortraitPicker::accepts_size(size)) continue;
+        const auto name=it->path().filename().u8string();
+        portrait_picker.names.emplace_back(reinterpret_cast<const char*>(name.data()),name.size());
+    }
+}
+
+void Mir3HudView::load_portrait_preview() {
+    portrait_preview.unref();
+    if (portrait_picker.selected<0 || portrait_picker.selected>=int(portrait_picker.names.size())) return;
+    const String name=String::utf8(portrait_picker.names[portrait_picker.selected].c_str());
+    if (name.get_file()!=name || name.contains(":") || name.get_extension().to_lower()!="jpg") return;
+    const auto file=FileAccess::open(portrait_directory.path_join(name),FileAccess::READ);
+    if (file.is_null() || !mir3::PortraitPicker::accepts_size(file->get_length())) return;
+    Ref<Image> image;
+    image.instantiate();
+    if (image->load_jpg_from_buffer(file->get_buffer(file->get_length()))==OK)
+        portrait_preview=ImageTexture::create_from_image(image);
 }
