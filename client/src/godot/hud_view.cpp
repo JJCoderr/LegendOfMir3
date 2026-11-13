@@ -24,7 +24,9 @@ Rect2 rect(mir3::HudLayout::Rect r) { return Rect2(r[0],r[1],r[2],r[3]); }
 Vector2 point(mir3::HudLayout::Point p) { return Vector2(p[0],p[1]); }
 }
 void Mir3HudView::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("add_inventory_item","icon","count","slot"),&Mir3HudView::add_inventory_item);
+    ClassDB::bind_method(D_METHOD("add_inventory_item","icon","count","slot","make_index","name","std_mode","stack_mode"),&Mir3HudView::add_inventory_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
+    ClassDB::bind_method(D_METHOD("apply_inventory_use_reply","identifier","remaining"),&Mir3HudView::apply_inventory_use_reply);
+    ADD_SIGNAL(MethodInfo("inventory_use_requested",PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::INT,"tick"),PropertyInfo(Variant::STRING,"name")));
     ClassDB::bind_method(D_METHOD("hud_snapshot"),&Mir3HudView::hud_snapshot);
     ClassDB::bind_method(D_METHOD("post_chat","value","foreground","background"),&Mir3HudView::post_chat);
     ClassDB::bind_method(D_METHOD("update_chat_rejection","channel","rejected"),&Mir3HudView::update_chat_rejection);
@@ -45,6 +47,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_expanded_first"]=chat_history.first(true);
     result["inventory_visible"]=inventory.visible;
     result["inventory_position"]=Vector2i(inventory.rect[0],inventory.rect[1]);
+    result["inventory_use_pending"]=bag.pending_use;
     result["held_inventory_icon"]=bag.held.icon;
     result["inventory_row"]=inventory.row;
     result["chat_mode"]=chat_input?chat_input->mode.mode:0;
@@ -368,7 +371,13 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
         const bool close_window=inventory.close_pressed && on_close;
         if (!consumed && !inventory.dragging && !inventory.close_pressed) {
             bag.scroll_row=inventory.row;
-            consumed=bag.release(int(position.x),int(position.y),x,y);
+            consumed=bag.slot_at(int(position.x),int(position.y),x,y)>=0;
+            if (consumed) {
+                const auto tick=static_cast<std::uint32_t>(now);
+                const int action=bag.release_action(int(position.x),int(position.y),x,y,tick);
+                if (action==1) emit_signal("inventory_use_requested",int64_t(bag.held.make_index),int64_t(tick),String::utf8(bag.held.name.c_str()));
+                if (action==2) post_chat(String::utf8(message(1051).c_str()),11861940,0);
+            }
         }
         consumed=inventory.end_drag() || inventory.close_pressed || consumed;
         inventory.close_pressed=false;
@@ -399,13 +408,22 @@ Ref<ImageTexture> Mir3HudView::item_frame(int id) {
     return item_frames.emplace(id,texture(decoded->pixels.rgba,decoded->width,decoded->height)).first->second;
 }
 
-bool Mir3HudView::add_inventory_item(int icon,int count,int slot) {
+bool Mir3HudView::add_inventory_item(int icon,int count,int slot,int64_t make_index,String name,int std_mode,int stack_mode) {
+    if (make_index<0 || make_index>0xffffffffLL || (make_index && name.is_empty())) return false;
     if (count<0 || slot < -1 || slot>=mir3::InventoryGrid::columns*mir3::InventoryGrid::rows) return false;
     const auto sprite=item_frame(icon);
     if (sprite.is_null()) return false;
     const auto [width,height]=mir3::InventoryGrid::dimensions(sprite->get_width(),sprite->get_height());
     const int x=17+38*(slot%6)+20,y=60+38*(slot/6)+20;
-    const bool inserted=bag.insert({-1,icon,count,width,height},slot,x,y);
+    const bool inserted=bag.insert({-1,icon,count,width,height,std_mode,static_cast<std::uint32_t>(make_index),name.utf8().get_data(),stack_mode},slot,x,y);
     if (inserted) queue_redraw();
     return inserted;
+}
+
+bool Mir3HudView::apply_inventory_use_reply(int identifier,int remaining) {
+    if (remaining<0 || remaining>65535) return false;
+    if (!bag.apply_use_reply(identifier,remaining,inventory.rect[0],inventory.rect[1],
+                             int(inventory_cursor.x),int(inventory_cursor.y))) return false;
+    queue_redraw();
+    return true;
 }

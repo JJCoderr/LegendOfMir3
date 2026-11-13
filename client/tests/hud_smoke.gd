@@ -112,6 +112,19 @@ func run() -> void:
 	await process_frame
 	if not check(hud.hud_snapshot().inventory_row == 8, "inventory track pages eight rows"): return
 	if not await capture("inventory-scrolled"): return
+	var use_requests: Array[int] = []
+	hud.inventory_use_requested.connect(func(id: int, _tick: int, _name: String): use_requests.append(id))
+	if not check(hud.add_inventory_item(5, 3, 51, 12345, "Test potion", 40, 3), "usable stack fixture"): return
+	click_at(Vector2(665, 75), false)
+	click_at(Vector2(665, 75), false)
+	if not check(use_requests == [12345] and hud.hud_snapshot().inventory_use_pending, "rapid release requests use"): return
+	click_at(Vector2(665, 75), false)
+	if not check(use_requests.size() == 1 and not hud.apply_inventory_use_reply(634, 2), "pending use and invalid reply"): return
+	if not check(hud.apply_inventory_use_reply(635, 2) and not hud.hud_snapshot().inventory_use_pending, "accepted stack returns to bag"): return
+	if not await capture("inventory-use-reply"): return
+	click_at(Vector2(665, 75), false)
+	click_at(Vector2(665, 75), false)
+	if not check(use_requests.size() == 2 and hud.apply_inventory_use_reply(636, 0), "failed use restores item"): return
 	click_at(Vector2(530, 25), true)
 	var drag := InputEventMouseMotion.new()
 	drag.position = Vector2(450, 155)

@@ -24,7 +24,8 @@ public:
     void _notification(int what);
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
-    bool add_inventory_item(int icon,int count,int slot);
+    bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
+    bool apply_inventory_use_reply(int identifier,int remaining);
     bool update_chat_rejection(int channel,bool rejected);
 protected:
     static void _bind_methods();

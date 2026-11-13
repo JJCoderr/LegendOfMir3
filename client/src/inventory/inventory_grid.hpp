@@ -1,9 +1,15 @@
 #pragma once
 #include <array>
 #include <utility>
+#include <cstdint>
+#include <string>
 namespace mir3 {
 struct BagItem {
     int kind = -1, icon = -1, count = 0, width = 1, height = 1;
+    int std_mode=40;
+    std::uint32_t make_index=0;
+    std::string name;
+    int stack_mode=0;
     explicit operator bool() const { return icon >= 0; }
 };
 class InventoryGrid {
@@ -14,6 +20,8 @@ public:
     std::array<short, columns * rows> cells{};
     BagItem held;
     int held_slot = -1;
+    bool pending_use=false;
+    std::uint32_t last_release=0,last_use=0;
     int scroll_row = 0;
     InventoryGrid() { cells.fill(-1); anchors.fill(-1); }
     // 0x440130: half-open 38px cells, eight visible rows, +88 scroll row.
@@ -87,6 +95,54 @@ public:
             if (insert(held,slot,mouse_x,mouse_y,origin_x,origin_y)) { held = previous; held_slot = slot; }
             else if (previous) insert(previous,slot,mouse_x,mouse_y,origin_x,origin_y);
         }
+        return true;
+    }
+    // 0x441310, normal bag source only. 1=request ready, 2=cooldown notice,
+    // 0=ordinary release. A denied rapid click still follows the placement path.
+    int release_action(int x, int y, int ox, int oy, std::uint32_t now) {
+        if (pending_use) { last_release = now; return 0; }
+        int result = 0;
+        if (held && held.make_index && now-last_release < 300) {
+            const auto elapsed = now-last_use;
+            const bool medicine = held.std_mode == 0 || held.std_mode == 3;
+            const bool allowed = !medicine || elapsed > 2000 ||
+                (held.std_mode == 0 && elapsed > 1000 && (held.icon == 20 || held.icon == 21 || held.icon == 70));
+            if (allowed) {
+                last_release = now;
+                if (medicine) last_use = now;
+                // 0x4418D0: if another item is under the pointer, exchange first.
+                const int slot = slot_at(x,y,ox,oy);
+                if (item_at(slot) >= 0) release(x,y,ox,oy);
+                if (held && held.make_index) { pending_use = true; return 1; }
+                return 0;
+            }
+            result = 2;
+        }
+        last_release = now;
+        release(x,y,ox,oy);
+        return result;
+    }
+    // 0x4282C0, normal bag source. No client decrement: the reply supplies the
+    // remaining quantity for mode3. Ordinary items are removed as a whole.
+    bool apply_use_reply(int identifier, int remaining, int ox, int oy, int mouse_x = 0, int mouse_y = 0) {
+        if (!pending_use || !held || (identifier != 635 && identifier != 636)) return false;
+        bool restore = !(identifier == 635);
+        if ((identifier == 635) && held.stack_mode == 3) {
+            if (held.count <= 1) {
+                // 0x440C00 removes first record matching makeIndex AND name.
+                for (int i=0;i<capacity;++i) if (items[i] && items[i].make_index == held.make_index && items[i].name == held.name) {
+                    take(i); break;
+                }
+            } else {
+                // 0x441DD0 updates bag copies by makeIndex before restoring held.
+                for (auto& item : items) if (item && item.make_index == held.make_index) item.count = remaining;
+                held.count = remaining;
+                restore = true;
+            }
+        }
+        pending_use = false;
+        if (restore && held && !insert(held,held_slot,mouse_x,mouse_y,ox,oy)) return true;
+        held = {};
         return true;
     }
 };
