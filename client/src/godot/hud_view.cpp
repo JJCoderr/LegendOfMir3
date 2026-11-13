@@ -1503,6 +1503,8 @@ void Mir3HudView::_draw() {
     }
     text(std::to_string(model.level),Layout::level(model.layout.expanded),Layout::text_color(1),mir3::TextFont::level);
     if (!model.map_name.empty()) {
+        // 0x4390E0 composites this backing before the four text shadows.
+        legacy_rect(rect(Layout::coordinates),Color(100.f/255,75.f/255,50.f/255,100.f/255));
         const auto label=model.map_name+" : ["+std::to_string(model.map_x)+","+std::to_string(model.map_y)+"]";
         for (auto offset:Layout::coordinate_shadows) { auto r=Layout::coordinates;r[0]+=offset[0];r[1]+=offset[1];text(label,r,Layout::coordinate_shadow_color); }
         text(label,Layout::coordinates,Layout::text_color(0));
