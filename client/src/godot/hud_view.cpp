@@ -70,6 +70,8 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_shop_purchase_reply","identifier","value"),&Mir3HudView::apply_shop_purchase_reply);
     ClassDB::bind_method(D_METHOD("apply_shop_goods","actor","count","body"),&Mir3HudView::apply_shop_goods);
     ClassDB::bind_method(D_METHOD("apply_shop_offers","actor","index","names","icons","prices","identifiers"),&Mir3HudView::apply_shop_offers);
+    ADD_SIGNAL(MethodInfo("shop_purchase_requested",PropertyInfo(Variant::INT,"identifier"),
+        PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("shop_offer_selected",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::INT,"identifier")));
     ADD_SIGNAL(MethodInfo("shop_good_requested",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::INT,"index"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("npc_dialogue_action",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::STRING,"command")));
@@ -622,8 +624,14 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     const int pressed=shop_pressed;
     shop_pressed=kind==0 && hit?row:-1;
     if (kind==2 && hit && pressed==row) {
-        if (details) emit_signal("shop_offer_selected",shop_actor,int64_t(shop_offers[row].id));
-        else {
+        if (details) {
+            const int actor=shop_actor;
+            const auto id=shop_offers[row].id;
+            const auto name=String::utf8(shop_offers[row].name.c_str());
+            // CClientSocket::SendBuyItem sends NPC recognition and the item name.
+            emit_signal("shop_offer_selected",actor,int64_t(id));
+            emit_signal("shop_purchase_requested",1014,actor,name);
+        } else {
             shop_selected=row;
             emit_signal("shop_good_requested",shop_actor,row,String::utf8(shop_goods[row].name.c_str()));
         }

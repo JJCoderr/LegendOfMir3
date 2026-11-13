@@ -245,6 +245,8 @@ func run() -> void:
 		click_at(Vector2(45, 171), false)
 		if not check(goods_requests.back() == [2, 9, "Potion 9"], "scroll preserves original goods index"): return
 		var offer_selections: Array = []
+		var purchases: Array = []
+		hud.shop_purchase_requested.connect(func(opcode: int, actor: int, name: String): purchases.append([opcode, actor, name]))
 		hud.shop_offer_selected.connect(func(actor: int, identifier: int): offer_selections.append([actor, identifier]))
 		var names := PackedStringArray(["Red potion"])
 		var icons := PackedInt32Array([301])
@@ -256,6 +258,7 @@ func run() -> void:
 		click_at(Vector2(60, 40), true)
 		click_at(Vector2(60, 40), false)
 		if not check(offer_selections == [[2, 10001]], "select offer by its instance identifier"): return
+		if not check(purchases == [[1014, 2, "Red potion"]], "purchase uses NPC and item name"): return
 		if not check(hud.apply_shop_purchase_reply(650, 125) and hud.hud_snapshot().inventory_gold == 125, "650 applies server gold balance"): return
 		if not check(not hud.apply_inventory_add(650, 301, 1, 10001, "Red potion", 0, 3), "gold reply is not an item addition"): return
 		if not check(hud.apply_inventory_add(200, 301, 1, 10001, "Red potion", 0, 3), "200 places purchased item in bag"): return
