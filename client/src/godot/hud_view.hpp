@@ -3,6 +3,7 @@
 #include "inventory/inventory_panel.hpp"
 #include "inventory/inventory_grid.hpp"
 #include "status/equipment.hpp"
+#include "magic/skill_panel.hpp"
 #include "resources/wil_archive.hpp"
 #include "resources/messages.hpp"
 #include "text/native_text.hpp"
@@ -34,6 +35,12 @@ protected:
 private:
     mir3::HudModel model;
     mir3::InventoryPanel inventory;
+    mir3::SkillPanel skills;
+    bool skills_on_top=false;
+    void toggle_skills();
+    void draw_skills();
+    bool skill_pointer(int kind,godot::Vector2 position);
+    int skill_button_at(godot::Vector2 position);
     mir3::DraggablePanel status{{0,0,328,466}};
     bool status_close_pressed=false;
     bool status_on_top=false;

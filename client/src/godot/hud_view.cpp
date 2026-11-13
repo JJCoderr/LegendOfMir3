@@ -48,6 +48,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_expanded_count"]=int(chat_history.lines(true).size());
     result["chat_compact_first"]=chat_history.first(false);
     result["chat_expanded_first"]=chat_history.first(true);
+    result["skills_visible"]=skills.visible;
+    result["skill_tab"]=skills.tab;
+    result["skill_scroll"]=skills.scroll;
     result["status_visible"]=status.visible;
     result["status_position"]=Vector2i(status.rect[0],status.rect[1]);
     result["inventory_visible"]=inventory.visible;
@@ -188,9 +191,11 @@ void Mir3HudView::_draw() {
     buttons();
     sprite(mir3::ChatScrollLayout::frame,{mir3::ChatScrollLayout::x,mir3::chat_thumb_y(chat_history.first(model.layout.expanded),int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded)});
     buttons();
+    if (skills.visible && !skills_on_top) draw_skills();
     if (status.visible && !status_on_top) draw_status();
     if (inventory.visible) draw_inventory();
     if (status.visible && status_on_top) draw_status();
+    if (skills.visible && skills_on_top) draw_skills();
     button_hint();
     if (bag.held) {
         const auto icon=item_frame(bag.held.icon);
@@ -303,6 +308,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             const int id=reception_buttons.press(action,rejected_chat[action-20]);
             chat_requested(String::utf8(message(id).c_str()));
         }
+        if (action==7) toggle_skills();
         if (action==12) toggle_inventory();
         if (action==13) toggle_status();
         if (action>=0) emit_signal("hud_action",action);
@@ -311,7 +317,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
@@ -360,6 +366,7 @@ void Mir3HudView::draw_inventory() {
 void Mir3HudView::toggle_inventory() {
     if (frame(1220).is_null()) return;
     inventory.toggle();
+    if (inventory.visible) skills_on_top=false;
     if (inventory.visible) status_on_top=false;
     inventory.close_pressed=false;
     inventory.scroll.captured=false;
@@ -379,6 +386,7 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
     bool consumed=thumb.is_valid() && inventory.scroll.input(kind,int(position.x),int(position.y),x,y,
         thumb->get_width(),thumb->get_height(),static_cast<std::uint32_t>(now),inventory.row);
     if (!consumed && kind==0 && inside) {
+        skills_on_top=false;
         status_on_top=false;
         inventory.close_pressed=on_close;
         inventory.begin_drag(int(position.x),int(position.y),on_close || Rect2(x+17,y+60,228,304).has_point(position) || Rect2(x+15,y+390,42,27).has_point(position));
@@ -414,6 +422,11 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
     Ref<InputEventKey> key=event;
     if (key.is_null() || !key->is_pressed() || key->is_echo()) return;
     const auto code=key->get_physical_keycode();
+    if (code==KEY_E || (code==KEY_ESCAPE && skills.visible && (skills_on_top || (!status.visible && !inventory.visible)))) {
+        toggle_skills();
+        get_viewport()->set_input_as_handled();
+        return;
+    }
     if (code==KEY_Q || (code==KEY_ESCAPE && status.visible && (status_on_top || !inventory.visible))) {
         toggle_status();
         get_viewport()->set_input_as_handled();
@@ -557,6 +570,7 @@ void Mir3HudView::draw_status() {
 void Mir3HudView::toggle_status() {
     if (frame(1280).is_null()) return;
     status.toggle();
+    if (status.visible) skills_on_top=false;
     status_close_pressed=false;
     if (status.visible) status_on_top=true;
     controller.cancel();
@@ -573,6 +587,7 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
     const int slot=mir3::EquipmentState::hit(int(position.x),int(position.y),x,y);
     bool captured=false;
     if (kind==0 && inside) {
+        skills_on_top=false;
         status_close_pressed=on_close;
         if (status.begin_drag(int(position.x),int(position.y),on_close || slot>=0)) status_on_top=true;
     } else if (kind==1) {
@@ -604,8 +619,78 @@ bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
     if (status.dragging || status_close_pressed) return status_pointer(kind,position);
     if (inventory.dragging || inventory.close_pressed || inventory.scroll.captured)
         return inventory_pointer(kind,position);
-    if (status_on_top) return status_pointer(kind,position) || inventory_pointer(kind,position);
-    return inventory_pointer(kind,position) || status_pointer(kind,position);
+    if (skills.dragging || skills.pressed>=0 || skills.scroll_captured) return skill_pointer(kind,position);
+    if (skills_on_top && skill_pointer(kind,position)) return true;
+    const bool handled=status_on_top ? status_pointer(kind,position) || inventory_pointer(kind,position)
+                                     : inventory_pointer(kind,position) || status_pointer(kind,position);
+    return handled || (!skills_on_top && skill_pointer(kind,position));
+}
+
+void Mir3HudView::toggle_skills() {
+    if (frame(1620).is_null()) return;
+    skills.toggle();
+    skills.pressed=-1;
+    skills.scroll_captured=false;
+    if (skills.visible) skills_on_top=true;
+    controller.cancel();
+    queue_redraw();
+}
+
+void Mir3HudView::draw_skills() {
+    const auto [x,y,w,h]=skills.rect;
+    const auto skin=frame(1620);
+    if (skin.is_valid()) sprite(1620,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
+    const auto tree=frame(skills.tree_frame());
+    if (tree.is_valid()) {
+        const Rect2 crop(0,skills.scroll,tree->get_width(),mir3::SkillPanel::tree_height);
+        const auto origin=mir3::SkillPanel::tree_origin;
+        draw_texture_rect_region(tree,Rect2(Vector2(x+origin[0],y+origin[1]),crop.size),crop);
+    }
+    sprite(1672,{x+322,y+skills.thumb_y()});
+    for (const int index:{0,8,7,6,5,4,3,2,1}) {
+        const auto [base,left,top]=mir3::SkillPanel::button(index);
+        if (index==0 || skills.pressed==index)
+            sprite(base+(index==0 && skills.pressed==0),{x+left,y+top});
+        if (index>0 && skills.tab==index-1) sprite(base+1,{x+left,y+top});
+    }
+}
+
+int Mir3HudView::skill_button_at(Vector2 position) {
+    for (int index=0;index<=8;++index) {
+        const auto [base,x,y]=mir3::SkillPanel::button(index);
+        const auto icon=frame(base);
+        if (icon.is_valid() && Rect2(Vector2(skills.rect[0]+x,skills.rect[1]+y),icon->get_size()).has_point(position))
+            return index;
+    }
+    return -1;
+}
+
+bool Mir3HudView::skill_pointer(int kind,Vector2 position) {
+    if (!skills.visible) return false;
+    const auto [x,y,w,h]=skills.rect;
+    const bool inside=Rect2(x,y,w,h).has_point(position);
+    const auto thumb=frame(1672);
+    const auto now=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    bool consumed=thumb.is_valid() && skills.scroll_input(kind,int(position.x)-x,int(position.y)-y,
+        thumb->get_width(),thumb->get_height(),static_cast<std::uint32_t>(now));
+    if (kind==0 && inside) {
+        skills_on_top=true;
+        if (!consumed) {
+            skills.pressed=skill_button_at(position);
+            skills.begin_drag(int(position.x),int(position.y),skills.pressed>=0);
+        }
+    } else if (kind==1 && !consumed) {
+        consumed=skills.move_drag(int(position.x),int(position.y));
+    } else if (kind==2 && !consumed) {
+        const int button=skill_button_at(position);
+        consumed=skills.end_drag() || skills.pressed>=0;
+        if (skills.release_button(button) && button==0) toggle_skills();
+    }
+    if (!inside && !consumed) return false;
+    controller.cancel();
+    get_viewport()->set_input_as_handled();
+    queue_redraw();
+    return true;
 }
 
 void Mir3HudView::emit_equipment_request() {

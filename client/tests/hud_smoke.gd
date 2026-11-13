@@ -186,6 +186,21 @@ func run() -> void:
 	click_at(Vector2(291, 16), false)
 	await process_frame
 	if not check(not hud.hud_snapshot().status_visible, "status close button"): return
+	key(KEY_E)
+	await process_frame
+	if not check(hud.hud_snapshot().skills_visible and hud.hud_snapshot().skill_tab == 0, "magic opens on first tab"): return
+	if not await capture("magic-tree"): return
+	click_at(Vector2(636, 32), true)
+	click_at(Vector2(636, 32), false)
+	if not check(hud.hud_snapshot().skill_tab == 7, "magic category selection"): return
+	OS.delay_msec(20)
+	click_at(Vector2(671, 160), true)
+	click_at(Vector2(671, 160), false)
+	if not check(hud.hud_snapshot().skill_scroll == 6, "magic scroll step"): return
+	if not await capture("magic-tree-scrolled"): return
+	key(KEY_ESCAPE)
+	await process_frame
+	if not check(not hud.hud_snapshot().skills_visible, "magic escape"): return
 	var input: LineEdit = hud.get_node("ChatInput")
 	if not check(input.position == Vector2(185, 575) and input.size == Vector2(344, 15), "compact input bounds"): return
 	key(KEY_ENTER)
