@@ -42,6 +42,7 @@ public:
     bool set_character_combat(godot::Vector2i attack,godot::Vector2i magic,godot::Vector2i spirit,
         godot::Vector2i defence,godot::Vector2i magic_defence);
     bool set_character_progress(int level,int profession,int appearance,int64_t experience,int64_t next_experience);
+    bool set_character_load_bonuses(godot::Vector2i wear,godot::Vector2i hand,godot::Vector2i bonuses);
     bool set_character_vitals(int hp,int max_hp,int mp,int max_mp,int weight,int max_weight);
     bool set_music_map(godot::String map);
     bool set_quest_details(int index,godot::PackedStringArray lines);

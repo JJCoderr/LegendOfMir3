@@ -228,6 +228,11 @@ func run() -> void:
 	var vitals: Dictionary = hud.hud_snapshot()
 	if not check(vitals.character_hp == Vector2i(36, 60) and vitals.character_mp == Vector2i(12, 40) and vitals.character_weight == Vector2i(25, 80), "character vitals update together"): return
 	if not await capture("character-status-vitals"): return
+	if not check(hud.set_character_load_bonuses(Vector2i(9, 28), Vector2i(7, 15), Vector2i(6, 12)), "apply wear and hand weights and bonuses"): return
+	if not check(not hud.set_character_load_bonuses(Vector2i.ZERO, Vector2i.ZERO, Vector2i(256, 0)), "reject invalid bonus byte"): return
+	var load_stats: Dictionary = hud.hud_snapshot()
+	if not check(load_stats.character_wear_weight == Vector2i(9, 28) and load_stats.character_hand_weight == Vector2i(7, 15) and load_stats.character_bonuses == Vector2i(6, 12), "keep weights and bonuses after invalid update"): return
+	if not await capture("character-status-load-bonuses"): return
 	if not check(hud.set_character_progress(24, 0, 1, 350, 1000), "apply character progress"): return
 	if not check(not hud.set_character_progress(24, 3, 0, 0, 0), "reject unknown character profession"): return
 	var progress: Dictionary = hud.hud_snapshot()

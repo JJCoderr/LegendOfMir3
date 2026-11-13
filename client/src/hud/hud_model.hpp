@@ -11,6 +11,7 @@ struct HudModel {
     int map_x=0, map_y=0, level=1, profession=0, appearance=0;
     std::uint16_t hp=0, max_hp=0, mp=0, max_mp=0;
     unsigned experience=0, next_experience=0, weight=0, max_weight=0;
+    std::array<unsigned,2> wear_weight{}, hand_weight{}, status_bonus_percent{};
     std::array<int,2> defence{}, attack{}, magic_defence{}, magic_attack{}, spirit_attack{};
     std::array<bool,2> primary_stat{true,true};
     HudLayout::Point pointer{-1,-1};

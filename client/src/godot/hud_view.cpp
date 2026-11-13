@@ -51,6 +51,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_character_elements","attack","strength","weakness"),&Mir3HudView::set_character_elements);
     ClassDB::bind_method(D_METHOD("set_character_combat","attack","magic","spirit","defence","magic_defence"),&Mir3HudView::set_character_combat);
     ClassDB::bind_method(D_METHOD("set_character_progress","level","profession","appearance","experience","next_experience"),&Mir3HudView::set_character_progress);
+    ClassDB::bind_method(D_METHOD("set_character_load_bonuses","wear","hand","bonuses"),&Mir3HudView::set_character_load_bonuses);
     ClassDB::bind_method(D_METHOD("set_character_vitals","hp","max_hp","mp","max_mp","weight","max_weight"),&Mir3HudView::set_character_vitals);
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
     ClassDB::bind_method(D_METHOD("set_quest_entries","titles","completed"),&Mir3HudView::set_quest_entries);
@@ -95,6 +96,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["character_hp"]=Vector2i(model.hp,model.max_hp);
     result["character_mp"]=Vector2i(model.mp,model.max_mp);
     result["character_weight"]=Vector2i(model.weight,model.max_weight);
+    result["character_wear_weight"]=Vector2i(model.wear_weight[0],model.wear_weight[1]);
+    result["character_hand_weight"]=Vector2i(model.hand_weight[0],model.hand_weight[1]);
+    result["character_bonuses"]=Vector2i(model.status_bonus_percent[0],model.status_bonus_percent[1]);
     result["expanded"]=model.layout.expanded;
     result["quest_first"]=quest.first;
     result["quest_selected"]=quest.selected;
@@ -855,7 +859,7 @@ void Mir3HudView::draw_status() {
     std::snprintf(experience,sizeof(experience),"%.2f%%",model.next_experience?100.0*model.experience/model.next_experience:0.0);
     label(Layout::value(1),experience,0x0000ff);
     const std::array<std::array<unsigned,2>,5> vitals{{
-        {model.hp,model.max_hp},{model.mp,model.max_mp},{model.weight,model.max_weight},{0,0},{0,0}}};
+        {model.hp,model.max_hp},{model.mp,model.max_mp},{model.weight,model.max_weight},model.wear_weight,model.hand_weight}};
     for (int i=0;i<5;++i) {
         label(Layout::value(i+2,0),std::to_string(vitals[i][0]));
         label(Layout::value(i+2,1),std::to_string(vitals[i][1]));
@@ -866,7 +870,7 @@ void Mir3HudView::draw_status() {
         label(Layout::combat_labels[i],message(Layout::combat_messages[i]));
         label(Layout::combat_values[i],std::to_string(ranges[i][0])+"-"+std::to_string(ranges[i][1]));
     }
-    for (int i=7;i<9;++i) label(Layout::value(i),"+0%");
+    for (int i=0;i<2;++i) label(Layout::value(i+7),"+"+std::to_string(model.status_bonus_percent[i])+"%");
     const auto hint=[&](Layout::Rect r,const std::string& caption) {
         if (caption.empty() || r[2]<=0) return;
         const Rect2 bounds(x+r[0],y+r[1],r[2],r[3]);
@@ -2192,6 +2196,16 @@ bool Mir3HudView::set_character_progress(int level,int profession,int appearance
     model.experience=static_cast<std::uint32_t>(experience);
     model.next_experience=static_cast<std::uint32_t>(next_experience);
     if (appearance_changed && loaded) load_status_body();
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::set_character_load_bonuses(Vector2i wear,Vector2i hand,Vector2i bonuses) {
+    for (const auto pair:{wear,hand,bonuses})
+        if (pair.x<0 || pair.x>UINT8_MAX || pair.y<0 || pair.y>UINT8_MAX) return false;
+    model.wear_weight={unsigned(wear.x),unsigned(wear.y)};
+    model.hand_weight={unsigned(hand.x),unsigned(hand.y)};
+    model.status_bonus_percent={unsigned(bonuses.x),unsigned(bonuses.y)};
     queue_redraw();
     return true;
 }
