@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include "inventory/inventory_panel.hpp"
 namespace mir3 {
 struct SkillPosition { int id,x,y; };
@@ -36,11 +37,14 @@ struct SkillLayout {
 };
 struct SkillDisplay {
     int id=0,level=0,key=0;
+    int experience=0,required=0;
+    std::string name;
 };
 
 struct SkillPanel : DraggablePanel {
     SkillPanel() : DraggablePanel({348,0,360,488}) {}
     std::array<std::array<SkillDisplay,15>,8> learned{};
+    std::array<int,8> selected{-1,-1,-1,-1,-1,-1,-1,-1};
     int tab=0,scroll=0,pressed=-1;
     int thumb_y() const { return 100+static_cast<int>(238.0*static_cast<float>(double(scroll)/189.0)); }
     bool scroll_captured=false;

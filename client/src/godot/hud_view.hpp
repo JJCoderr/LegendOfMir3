@@ -27,7 +27,7 @@ public:
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
-    bool set_learned_skill(int id,int level,int key);
+    bool set_learned_skill(int id,int level,int key,int experience,int required,godot::String name);
     bool apply_equipment_reply(int identifier);
     bool apply_inventory_use_reply(int identifier,int remaining);
     bool update_chat_rejection(int channel,bool rejected);
@@ -85,7 +85,7 @@ private:
     std::map<std::string,godot::Ref<godot::ImageTexture>> text_cache;
     godot::Ref<godot::ImageTexture> frame(int id);
     void sprite(int id,mir3::HudLayout::Point position);
-    void text(const std::string& value,mir3::HudLayout::Rect rect,unsigned color,mir3::TextFont font=mir3::TextFont::normal,bool centered=true);
+    void text(const std::string& value,mir3::HudLayout::Rect rect,unsigned color,mir3::TextFont font=mir3::TextFont::normal,bool centered=true,bool inverted=false);
     void chat_lines();
     bool scroll_input(int kind,godot::Vector2 position);
     void buttons();

@@ -28,7 +28,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add_inventory_item","icon","count","slot","make_index","name","std_mode","stack_mode"),&Mir3HudView::add_inventory_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_inventory_use_reply","identifier","remaining"),&Mir3HudView::apply_inventory_use_reply);
     ADD_SIGNAL(MethodInfo("skill_key_requested",PropertyInfo(Variant::INT,"id"),PropertyInfo(Variant::INT,"legacy_key")));
-    ClassDB::bind_method(D_METHOD("set_learned_skill","id","level","key"),&Mir3HudView::set_learned_skill);
+    ClassDB::bind_method(D_METHOD("set_learned_skill","id","level","key","experience","required","name"),&Mir3HudView::set_learned_skill,DEFVAL(0),DEFVAL(0),DEFVAL(String()));
     ClassDB::bind_method(D_METHOD("apply_equipment_reply","identifier"),&Mir3HudView::apply_equipment_reply);
     ADD_SIGNAL(MethodInfo("equipment_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"slot"),PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("inventory_use_requested",PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::INT,"tick"),PropertyInfo(Variant::STRING,"name")));
@@ -117,13 +117,13 @@ void Mir3HudView::sprite(int id,mir3::HudLayout::Point position) {
     auto image=frame(id);
     if (image.is_valid()) draw_texture(image,point(position));
 }
-void Mir3HudView::text(const std::string& value,mir3::HudLayout::Rect r,unsigned color,mir3::TextFont font,bool centered) {
+void Mir3HudView::text(const std::string& value,mir3::HudLayout::Rect r,unsigned color,mir3::TextFont font,bool centered,bool inverted) {
     if (value.empty()) return;
-    const auto key=std::to_string(r[2])+":"+std::to_string(r[3])+":"+std::to_string(int(font))+":"+std::to_string(centered)+":"+value;
+    const auto key=std::to_string(r[2])+":"+std::to_string(r[3])+":"+std::to_string(int(font))+":"+std::to_string(centered)+":"+value+(inverted?"|inv":"|normal");
     auto found=text_cache.find(key);
     if (found==text_cache.end()) {
         if (text_cache.size()>=256) text_cache.clear();
-        const auto bitmap=mir3::raster_text(value,r[2],r[3],centered,font,messages.get(1074));
+        const auto bitmap=mir3::raster_text(value,r[2],r[3],centered,font,messages.get(1074),inverted);
         found=text_cache.emplace(key,texture(bitmap.rgba,r[2],r[3])).first;
     }
     if (found->second.is_valid()) draw_texture(found->second,Vector2(r[0],r[1]),Color(float(color&255)/255,float((color>>8)&255)/255,float((color>>16)&255)/255));
@@ -666,6 +666,22 @@ void Mir3HudView::draw_skills() {
         const auto pos=slot>=0?mir3::SkillLayout::positions[skills.tab][slot]:
             mir3::SkillPosition{skill.id,i<6?55:0,i<6?27+46*i:0};
         const int top=pos.y-(slot>=0?skills.scroll:0);
+        if (skills.selected[skills.tab]==(slot<0?15:slot)) {
+            if (top-1>62 && top-1<352) {
+                const int left=x+pos.x-1,upper=y+top-1;
+                const Color edge("c8c800");
+                draw_rect(Rect2(left,upper,42,1),edge);
+                draw_rect(Rect2(left,upper+41,42,1),edge);
+                draw_rect(Rect2(left,upper,1,42),edge);
+                draw_rect(Rect2(left+41,upper,1,42),edge);
+            }
+            text(skill.name,{x+20,y+387,80,61},0xfafafa,mir3::TextFont::normal,true,true);
+            const auto level=skill.level>=3?std::string("Level : Max"):"Level : "+std::to_string(skill.level);
+            text(level,{x+20,y+403,80,62},0xfafafa,mir3::TextFont::normal,true,true);
+            if (skill.level<3)
+                text("Exp : "+std::to_string(skill.experience)+"/"+std::to_string(skill.required),
+                     {x+100,y+403,80,62},0xfafafa,mir3::TextFont::normal,true,true);
+        }
         const int id=2*skill.id-2;
         if (!skill_frames.contains(id)) {
             const auto decoded=magic_icons.frame(id);
@@ -715,6 +731,14 @@ bool Mir3HudView::skill_pointer(int kind,Vector2 position) {
         skills_on_top=true;
         if (!consumed) {
             skills.pressed=skill_button_at(position);
+            if (skills.pressed<0) {
+                const auto& positions=mir3::SkillLayout::positions[skills.tab];
+                for (int i=0;i<int(positions.size());++i) {
+                    const auto pos=positions[i];
+                    if (Rect2(x+pos.x,y+pos.y-skills.scroll,40,40).has_point(position))
+                        skills.selected[skills.tab]=i;
+                }
+            }
             skills.begin_drag(int(position.x),int(position.y),skills.pressed>=0);
         }
     } else if (kind==1 && !consumed) {
@@ -742,14 +766,14 @@ bool Mir3HudView::apply_equipment_reply(int identifier) {
     return true;
 }
 
-bool Mir3HudView::set_learned_skill(int id,int level,int key) {
+bool Mir3HudView::set_learned_skill(int id,int level,int key,int experience,int required,String name) {
     if (id<1 || id>65535 || level<0 || level>255 || key<0 || key>12) return false;
     auto& learned=skills.learned[mir3::SkillLayout::category(id)];
     auto found=std::find_if(learned.begin(),learned.end(),[id](const auto& skill) { return skill.id==id; });
     if (found==learned.end())
         found=std::find_if(learned.begin(),learned.end(),[](const auto& skill) { return skill.id==0; });
     if (found==learned.end()) return false;
-    *found={id,level,key};
+    *found={id,level,key,experience,required,name.utf8().get_data()};
     queue_redraw();
     return true;
 }
@@ -818,4 +842,12 @@ void Mir3HudView::draw_skill_description() {
              row.title?mir3::TextFont::skill_title:mir3::TextFont::normal,false);
         if (row.title) y+=15;
     }
+    for (const auto& skill:skills.learned[skills.tab]) {
+        if (skill.id!=id) continue;
+        const auto progress=skill.level>=3?std::string("Level : Max"):
+            std::to_string(skill.experience)+"/"+std::to_string(skill.required);
+        text(progress,{x,y,skill.level>=3?80:50,15},0x1414fa);
+        break;
+    }
+
 }
