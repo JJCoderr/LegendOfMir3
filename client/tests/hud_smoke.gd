@@ -93,6 +93,14 @@ func run() -> void:
 	if not await capture("inventory-items"): return
 	click_at(Vector2(550, 75), false)
 	if not check(hud.hud_snapshot().held_inventory_icon == 5, "inventory pickup"): return
+	var preview_motion := InputEventMouseMotion.new()
+	preview_motion.position = Vector2(590, 75)
+	Input.parse_input_event(preview_motion)
+	if not await capture("inventory-placement"): return
+	preview_motion = InputEventMouseMotion.new()
+	preview_motion.position = Vector2(628, 152)
+	Input.parse_input_event(preview_motion)
+	if not await capture("inventory-occupied-placement"): return
 	click_at(Vector2(590, 75), false)
 	if not check(hud.hud_snapshot().held_inventory_icon == -1, "inventory placement"): return
 	click_at(Vector2(590, 75), false)

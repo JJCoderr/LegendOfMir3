@@ -309,6 +309,18 @@ void Mir3HudView::draw_inventory() {
     sprite(1225,{x+250,mir3::InventoryScroll::thumb_y(inventory.row,y)});
     text("0",{x+72,y+402,77,17},0x64C8F8,mir3::TextFont::gold);
     const Rect2 clip(x+17,y+60,228,304);
+    // 0x440280 shares placement between the held-item preview and release.
+    if (bag.held && clip.has_point(inventory_cursor)) {
+        const int mouse_x=int(inventory_cursor.x),mouse_y=int(inventory_cursor.y);
+        const int slot=bag.slot_at(mouse_x,mouse_y,x,y);
+        const auto [column,row,width,height]=mir3::InventoryGrid::placement(bag.held,slot,mouse_x,mouse_y,x,y);
+        const Rect2 footprint(x+17+column*38,y+60+(row-inventory.row)*38,width*38,height*38);
+        const Rect2 visible=clip.intersection(footprint);
+        const bool fits=bag.fits(column,row,bag.held);
+        if (visible.has_area())
+            legacy_rect(visible,fits?Color(50.f/255,100.f/255,50.f/255,1.f/255):
+                                     Color(100.f/255,50.f/255,50.f/255,1.f/255));
+    }
     for (int id=0;id<mir3::InventoryGrid::capacity;++id) {
         const auto& item=bag.items[id];
         if (!item) continue;
@@ -344,6 +356,7 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
     const bool inside=Rect2(x,y,w,h).has_point(position);
     const auto thumb=frame(1225);
     const auto now=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    bag.scroll_row=inventory.row;
     bool consumed=thumb.is_valid() && inventory.scroll.input(kind,int(position.x),int(position.y),x,y,
         thumb->get_width(),thumb->get_height(),static_cast<std::uint32_t>(now),inventory.row);
     if (!consumed && kind==0 && inside) {
@@ -361,6 +374,7 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
         inventory.close_pressed=false;
         if (close_window) toggle_inventory();
     }
+    bag.scroll_row=inventory.row;
     if (!inside && !consumed) return false;
     controller.cancel();
     get_viewport()->set_input_as_handled();
