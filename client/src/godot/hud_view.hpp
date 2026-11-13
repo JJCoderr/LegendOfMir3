@@ -270,6 +270,8 @@ private:
     std::vector<NpcDialogueRow> npc_dialogue_rows;
     int npc_dialogue_actor=0, npc_dialogue_pressed=-1;
     godot::Vector2i npc_dialogue_origin;
+    unsigned npc_sequence=0;
+    void emit_npc_packet(int identifier,int actor,const godot::String& body);
     void close_shop();
     void close_npc_dialogue();
     bool apply_shop_purchase_reply(int identifier,int64_t value);

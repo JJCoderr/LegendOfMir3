@@ -66,6 +66,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_mount_reply","identifier","recognition"),&Mir3HudView::apply_mount_reply);
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
     ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
+    ADD_SIGNAL(MethodInfo("npc_packet_ready",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"packet")));
     ADD_SIGNAL(MethodInfo("npc_request",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"actor"),
         PropertyInfo(Variant::STRING,"body")));
     ADD_SIGNAL(MethodInfo("npc_dialogue_requested",PropertyInfo(Variant::INT,"actor")));
@@ -519,6 +520,39 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
     return true;
 }
 
+void Mir3HudView::emit_npc_packet(int identifier,int actor,const String& body) {
+    const auto utf8=body.utf8();
+    const auto ansi=mir3::utf8_to_ansi({utf8.get_data(),static_cast<std::size_t>(utf8.length())});
+    // The recovered 0x47C730 framing encodes the header and body separately.
+    std::array<std::uint8_t,12> header{};
+    for (unsigned i=0;i<4;++i) header[i]=std::uint32_t(actor)>>(8*i);
+    header[4]=identifier&255;
+    header[5]=(identifier>>8)&255;
+    npc_sequence=npc_sequence%9+1;
+    std::string packet{"#"};
+    packet+=char('0'+npc_sequence);
+    const auto encode=[&](std::string_view bytes) {
+        unsigned accumulator=0;
+        int bits=0;
+        for (unsigned char byte:bytes) {
+            accumulator=(accumulator<<8)|byte;
+            bits+=8;
+            while (bits>=6) {
+                bits-=6;
+                packet+=char(60+((accumulator>>bits)&63));
+            }
+        }
+        if (bits) packet+=char(60+((accumulator<<(6-bits))&63));
+    };
+    encode({reinterpret_cast<const char*>(header.data()),header.size()});
+    encode(std::string_view(ansi).substr(0,ansi.find(char(0))));
+    packet+='!';
+    PackedByteArray bytes;
+    bytes.resize(packet.size());
+    std::copy(packet.begin(),packet.end(),bytes.ptrw());
+    emit_signal("npc_packet_ready",bytes);
+}
+
 void Mir3HudView::close_shop() {
     shop_actor=0;
     shop_goods.clear();
@@ -642,6 +676,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
             // CClientSocket::SendBuyItem sends NPC recognition and the item name.
             emit_signal("shop_offer_selected",actor,int64_t(id));
             emit_signal("shop_purchase_requested",1014,actor,name);
+            emit_npc_packet(1014,actor,name);
         } else {
             shop_selected=row;
             const int actor=shop_actor;
@@ -649,6 +684,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
             // StoreWnd passes zero as the detail request parameter. Row is local reply context.
             emit_signal("shop_good_requested",actor,row,name);
             emit_signal("npc_request",1015,actor,name);
+            emit_npc_packet(1015,actor,name);
         }
     }
     if (!inside && pressed<0) return false;
@@ -682,6 +718,7 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
         const int actor=npc_dialogue_actor;
         emit_signal("npc_dialogue_action",actor,command);
         emit_signal("npc_request",1011,actor,command);
+        emit_npc_packet(1011,actor,command);
     }
     if (!inside && pressed<0) return false;
     get_viewport()->set_input_as_handled();
@@ -704,6 +741,7 @@ bool Mir3HudView::merchant_pointer(Vector2 pointer) {
         if (std::max(std::abs(delta.x),std::abs(delta.y))<=2) {
             emit_signal("npc_dialogue_requested",2);
             emit_signal("npc_request",1010,2,String());
+            emit_npc_packet(1010,2,String());
         }
     }
     return true;

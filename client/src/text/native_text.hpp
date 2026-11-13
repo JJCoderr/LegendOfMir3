@@ -21,5 +21,6 @@ std::vector<DescriptionRow> wrap_skill_description(const std::vector<std::string
 enum class TextFont { normal, level, gold, character_name, dialog, skill_level, skill_title };
 NativeText raster_text(std::string_view utf8, int width, int height, bool centered,
     TextFont font, std::string_view localized_face = {}, bool inverted_vertical = false);
+std::string utf8_to_ansi(std::string_view text);
 std::string ansi_to_utf8(std::string_view text);
 }
