@@ -55,6 +55,7 @@ func run() -> void:
 	Input.use_accumulated_input = false
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()
 	hud.set_meta("options_path", options_file)
+	hud.set_meta("show_terrain", OS.get_cmdline_user_args().has("--terrain"))
 	var portrait_dir := "user://smoke-portraits-%d" % OS.get_process_id()
 	DirAccess.make_dir_recursive_absolute(portrait_dir)
 	var portrait_image := Image.create_empty(82, 94, false, Image.FORMAT_RGB8)
@@ -67,6 +68,14 @@ func run() -> void:
 	hud.chat_requested.connect(func(value: String): requests.append(value))
 	await process_frame
 	if not check(hud.hud_snapshot().ready, "original resource loading"): return
+	if OS.get_cmdline_user_args().has("--terrain"):
+		if not check(hud.hud_snapshot().terrain_ready, "Bichon terrain loaded"): return
+		if not await capture("bichon-terrain-hud"): return
+		if OS.get_cmdline_user_args().has("--screenshots"):
+			var frame := root.get_texture().get_image()
+			if not check(frame.get_pixel(100, 100) != frame.get_pixel(200, 200), "Bichon terrain pixels"): return
+		quit()
+		return
 	for i in 20:
 		hud.post_chat("[测试 %02d] 比奇省：聊天文字与滚动验证。" % i, 0xffffff if i % 2 == 0 else 0x96ffff, 0)
 	await process_frame

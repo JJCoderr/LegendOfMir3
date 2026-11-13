@@ -6,6 +6,7 @@
 #include "hud/trade_scroll.hpp"
 #include "hud/audio_options.hpp"
 #include "hud/portrait_picker.hpp"
+#include "resources/map_terrain.hpp"
 #include "hud/target_portrait.hpp"
 #include "inventory/inventory_panel.hpp"
 #include "inventory/inventory_grid.hpp"
@@ -246,6 +247,11 @@ private:
     bool inventory_pointer(int kind,godot::Vector2 position);
     mir3::HudController controller{model};
     mir3::WilArchive archive;
+    mir3::MapTerrain terrain;
+    std::array<mir3::WilArchive,3> terrain_archives;
+    std::map<std::pair<int,int>,godot::Ref<godot::ImageTexture>> terrain_frames;
+    bool terrain_ready=false;
+    void draw_terrain();
     mir3::WilArchive portraits, monster_portraits;
     mir3::PortraitFocus target_focus;
     mir3::TargetPortraitVitals target_vitals;

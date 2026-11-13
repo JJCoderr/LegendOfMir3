@@ -120,6 +120,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary result;
     result["ready"]=loaded;
     result["character_level"]=model.level;
+    result["terrain_ready"]=terrain_ready;
     result["character_portrait"]=model.portrait_frame();
     result["target_portrait"]=model.layout.expanded || !target_focus.displayed() || target_portrait.is_null()?-1:target_frame;
     result["target_hp_width"]=!model.layout.expanded && target_focus.displayed() && !target_is_human && target_portrait.is_valid()?target_vitals.bar_width():0;
@@ -226,6 +227,11 @@ void Mir3HudView::_ready() {
     }
     portrait_directory=ProjectSettings::get_singleton()->globalize_path(String(get_meta("portrait_directory",root)));
     const auto resource_root=std::filesystem::u8path(root.utf8().get_data());
+    if (bool(get_meta("show_terrain",true)) && terrain.open(resource_root/"Map"/"0.map")) {
+        constexpr std::array names{"Tilesc","Tiles30c","Tiles5c"};
+        for (std::size_t i=0;i<names.size();++i)
+            if (terrain_archives[i].open(resource_root/"Data"/names[i])) terrain_ready=true;
+    }
     if (!portraits.open(resource_root/"Data"/"ProgUse")) UtilityFunctions::push_error("Cannot read ProgUse portraits.");
     if (!monster_portraits.open(resource_root/"Data"/"MonImg")) UtilityFunctions::push_error("Cannot read MonImg portraits.");
     load_status_body();
@@ -368,9 +374,27 @@ void Mir3HudView::draw_target_vitals() {
     }
 }
 
+void Mir3HudView::draw_terrain() {
+    if (!terrain_ready) return;
+    // The old offline Bichon session begins near cell (475,360).
+    constexpr int start_x=466,start_y=352;
+    for (int row=0;row<10;++row) for (int column=0;column<9;++column) {
+        const auto key=terrain.tile(start_x+2*column,start_y+2*row);
+        const auto [package,id]=key;
+        if (package>=int(terrain_archives.size()) || id==65535) continue;
+        if (!terrain_frames.contains(key)) {
+            const auto decoded=terrain_archives[package].frame(id);
+            terrain_frames[key]=decoded?texture(decoded->pixels.rgba,decoded->width,decoded->height):Ref<ImageTexture>{};
+        }
+        if (const auto& image=terrain_frames.at(key);image.is_valid())
+            draw_texture(image,Vector2(96*column,64*row));
+    }
+}
+
 void Mir3HudView::_draw() {
     using Layout=mir3::HudLayout;
     if (!loaded) return;
+    draw_terrain();
     if (!model.layout.expanded) {
         sprite(1490,Layout::image_position(Layout::Image::portrait));
         const auto origin=point(Layout::image_position(Layout::Image::portrait));
