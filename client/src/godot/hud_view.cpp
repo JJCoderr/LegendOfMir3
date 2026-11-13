@@ -1255,8 +1255,14 @@ void Mir3HudView::draw_group_dialog() {
     const auto prompt=group_request==1039?"'"+std::string(guild_name.utf8().get_data())+"' "+message(4001):
         message(group_request==1045?4002:group_request==1022?1606:1605);
     text(prompt,{x+43,y+84,278,75},0xc8faff,mir3::TextFont::dialog);
-    sprite(1241+(group_dialog_pressed==0),{x+41,y+188});
-    sprite(1245+(group_dialog_pressed==2),{x+234,y+188});
+    for (const int index:{0,2}) {
+        const int base=index==0?1241:1245;
+        const auto position=mir3::HudLayout::Point{x+(index==0?41:234),y+188};
+        const bool pressed=group_dialog_pressed==index;
+        sprite(base+pressed,position);
+        // 0x420840 redraws the selected button's normal frame unless pressed.
+        if (group_selected==index && !pressed) sprite(base,position);
+    }
 }
 
 bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
@@ -1271,23 +1277,33 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
         }
         if (code!=KEY_TAB && code!=KEY_ESCAPE && code!=KEY_ENTER && code!=KEY_KP_ENTER) return false;
         if (key->is_pressed() && !key->is_echo()) {
-            if (code==KEY_TAB) group_selected=group_selected==0?2:0;
+            if (code==KEY_TAB) { group_selected=group_selected==0?2:0;queue_redraw(); }
             if (code==KEY_ENTER || code==KEY_KP_ENTER) finish_group_dialog(group_selected==0);
         }
         get_viewport()->set_input_as_handled();
         return true;
     }
+    const bool alert=group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
+    const auto hit_button=[&](Vector2 point) {
+        for (const int index:{0,2}) {
+            if (alert && index==2) continue;
+            const auto icon=frame(alert?1243:index==0?1241:1245);
+            const Vector2 pos(group_dialog[0]+(alert?137:index==0?41:234),group_dialog[1]+188);
+            if (icon.is_valid() && Rect2(pos,icon->get_size()).has_point(point)) return index;
+        }
+        return -1;
+    };
+    Ref<InputEventMouseMotion> motion=event;
+    if (motion.is_valid() && group_dialog_pressed>=0 &&
+        hit_button(motion->get_position())!=group_dialog_pressed) {
+        group_dialog_pressed=-1;
+        queue_redraw();
+    }
     Ref<InputEventMouseButton> mouse=event;
     if (mouse.is_valid()) {
-        if (group_request!=4000 && group_request!=4017 && group_request!=4714 && group_request!=4716 && chat_input->get_rect().has_point(mouse->get_position())) return false;
+        if (!alert && group_dialog_pressed<0 && chat_input->get_rect().has_point(mouse->get_position())) return false;
         if (mouse->get_button_index()==MOUSE_BUTTON_LEFT) {
-            int hit=-1;
-            for (const int index:{0,2}) {
-                if ((group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716) && index==2) continue;
-                const auto icon=frame((group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716)?1243:index==0?1241:1245);
-                const Vector2 pos(group_dialog[0]+((group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716)?137:index==0?41:234),group_dialog[1]+188);
-                if (icon.is_valid() && Rect2(pos,icon->get_size()).has_point(mouse->get_position())) hit=index;
-            }
+            const int hit=hit_button(mouse->get_position());
             if (mouse->is_pressed()) group_dialog_pressed=hit;
             else {
                 const bool clicked=hit>=0 && hit==group_dialog_pressed;

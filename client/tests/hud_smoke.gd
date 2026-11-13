@@ -277,6 +277,14 @@ func run() -> void:
 	click_at(Vector2(435, 322), true)
 	click_at(Vector2(435, 322), false)
 	if not check(hud.hud_snapshot().group_request == 1022, "open remove member dialog"): return
+	click_at(Vector2(490, 316), true)
+	var modal_drag := InputEventMouseMotion.new()
+	modal_drag.position = Vector2(280, 348)
+	Input.parse_input_event(modal_drag)
+	click_at(Vector2(280, 348), false)
+	click_at(Vector2(490, 316), false)
+	if not check(hud.hud_snapshot().group_request == 1022, "release over edit clears modal button press"): return
+	if not await capture("group-dialog-release"): return
 	key(KEY_TAB)
 	key(KEY_ENTER)
 	if not check(hud.hud_snapshot().group_request == 0 and member_requests.size() == 1, "cancel member request"): return
