@@ -801,6 +801,11 @@ func run() -> void:
 	click_at(trade_pickup, true)
 	click_at(trade_pickup, false)
 	if not check(hud.hud_snapshot().held_inventory_icon == 301, "pick up trade item"): return
+	var trade_chat_before: int = hud.hud_snapshot().chat_compact_count
+	click_at(Vector2(27, 75), true)
+	click_at(Vector2(27, 75), false)
+	if not check(offers.is_empty() and hud.hud_snapshot().held_inventory_icon == 301 and hud.hud_snapshot().chat_compact_count > trade_chat_before, "occupied trade cell keeps held item and reports rejection"): return
+	if not await capture("hud-trade-occupied"): return
 	click_at(Vector2(70, 75), true)
 	click_at(Vector2(70, 75), false)
 	if not check(offers == [[1026, 98765, "Trade potion"]] and hud.hud_snapshot().held_inventory_icon == 301, "offer waits for server reply"): return

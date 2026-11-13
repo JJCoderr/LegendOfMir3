@@ -2360,15 +2360,19 @@ bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
             const int slot=row*5+column;
             const auto& held=bag.held;
             bool fits=column+held.width<=5 && row+held.height<=40;
-            for (int index=0;fits && index<200;++index) {
+            bool occupied=false;
+            for (int index=0;index<200;++index) {
                 const auto& item=trade_items[0][index];
                 if (!item) continue;
-                fits=!Rect2(column,row,held.width,held.height).intersects(
-                    Rect2(index%5,index/5,item.width,item.height));
+                const Rect2 existing(index%5,index/5,item.width,item.height);
+                if (existing.has_point(Vector2(column,row))) occupied=true;
+                if (Rect2(column,row,held.width,held.height).intersects(existing)) fits=false;
             }
             if (fits) {
                 trade_pending_slot=slot;
                 emit_signal("trade_offer_requested",1026,int64_t(held.make_index),String::utf8(held.name.c_str()));
+            } else if (occupied) {
+                post_chat(String::utf8(message(1306).c_str()),0xffff32,0);
             }
         }
     }
