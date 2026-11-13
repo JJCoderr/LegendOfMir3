@@ -2966,7 +2966,11 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
             else {
                 const bool clicked=hit>=0 && hit==group_dialog_pressed;
                 group_dialog_pressed=-1;
-                if (clicked) finish_group_dialog(hit==0);
+                if (clicked) {
+                    // 0x420BB0 enables sound for mouse releases. 0x420A10 handles keys separately.
+                    if (hud_sound && audio_options.effects_enabled) hud_sound->play();
+                    finish_group_dialog(hit==0);
+                }
             }
             queue_redraw();
         }

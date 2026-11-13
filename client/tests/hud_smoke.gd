@@ -1190,10 +1190,13 @@ func run() -> void:
 	hud.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
 	click_at(Vector2(490, 316), false)
 	if not check(hud.hud_snapshot().group_request == 1022, "focus loss cancels modal button press"): return
-	if not await capture("group-dialog-focus-loss"): return
-	key(KEY_TAB)
-	key(KEY_ENTER)
-	if not check(hud.hud_snapshot().group_request == 0 and member_requests.size() == 1, "cancel member request"): return
+	group_sound.stop()
+	click_at(Vector2(490, 316), true)
+	if not check(not group_sound.playing, "modal cancel press stays silent"): return
+	if not await capture("group-dialog-cancel-pressed"): return
+	click_at(Vector2(490, 316), false)
+	if not check(group_sound.playing and hud.hud_snapshot().group_request == 0 and member_requests.size() == 1,
+		"modal cancel release plays original click without submitting"): return
 	key(KEY_ESCAPE)
 	await process_frame
 	if not check(not hud.hud_snapshot().group_visible, "group escape closes"): return
