@@ -416,6 +416,14 @@ func run() -> void:
 		if not check(not hud.apply_shop_offers(2, 8, names, icons, prices, ids), "ignore stale goods details"): return
 		if not check(hud.apply_shop_offers(2, 9, names, icons, prices, ids), "apply decoded 652 offer"): return
 		if not await capture("bichon-merchant-offers"): return
+		click_at(Vector2(427, 399), true)
+		if not await capture("bichon-merchant-offers-next-page"): return
+		click_at(Vector2(427, 399), false)
+		if not check(npc_packets.back().substr(2, 16) == "<\\<<<KX?>\\<<<<<<", "next offer page requests offset ten"): return
+		if not check(hud.apply_shop_offers(2, 9, names, icons, prices, ids), "apply next offer page reply"): return
+		click_at(Vector2(334, 399), true)
+		click_at(Vector2(334, 399), false)
+		if not check(npc_packets.back().substr(2, 16) == "<\\<<<KX?<<<<<<<<", "previous offer page requests offset zero"): return
 		click_at(Vector2(330, 280), true)
 		click_at(Vector2(330, 280), false)
 		if not check(offer_selections == [[2, 10001]], "select offer by its instance identifier"): return

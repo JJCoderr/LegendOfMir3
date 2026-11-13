@@ -743,7 +743,10 @@ bool Mir3HudView::apply_shop_offers(int actor,int index,PackedStringArray names,
     }
     shop_offers=std::move(offers);
     shop_offer_index=shop_offers.empty()?-1:0;
-    if (!shop_show_offers) shop_category_first=shop_first;
+    if (!shop_show_offers) {
+        shop_offer_page=0;
+        shop_category_first=shop_first;
+    }
     shop_show_offers=true;
     shop_first=0;
     shop_pressed=-1;
@@ -759,6 +762,8 @@ void Mir3HudView::draw_shop() {
         draw_texture(skin,Vector2((shop_width()-skin->get_width())/2,shop_top+(224-skin->get_height())/2));
     if (shop_show_offers) {
         if (shop_pressed==-2) sprite(1266,{368,shop_top+163});
+        if (shop_pressed==-3) sprite(1269,{326,shop_top+163});
+        if (shop_pressed==-4) sprite(1271,{416,shop_top+163});
         for (int row=0;row<std::min(12,int(shop_offers.size())-shop_first);++row) {
             const auto& offer=shop_offers[shop_first+row];
             const auto cell=rect(shop_offer_cell(row));
@@ -784,18 +789,33 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     const bool inside=Rect2(0,shop_top,shop_width(),224).has_point(pointer);
     const bool details=shop_show_offers;
     constexpr int confirm_button=-2;
-    const auto confirm=details?frame(1265):Ref<ImageTexture>{};
-    const bool confirm_hit=confirm.is_valid() &&
-        Rect2(Vector2(368,shop_top+163),confirm->get_size()).has_point(pointer);
-    if (confirm_hit || shop_pressed==confirm_button) {
-        const bool activate=kind==2 && confirm_hit && shop_pressed==confirm_button;
-        shop_pressed=kind==0?confirm_button:-1;
-        if (activate && shop_offer_index>=0 && shop_offer_index<int(shop_offers.size())) {
+    int control=0;
+    if (details) {
+        for (const auto& spec:std::array{std::array{confirm_button,1265,368},std::array{-3,1268,326},std::array{-4,1270,416}}) {
+            const auto image=frame(spec[1]);
+            if (image.is_valid() && Rect2(Vector2(spec[2],shop_top+163),image->get_size()).has_point(pointer)) {
+                control=spec[0];
+                break;
+            }
+        }
+    }
+    if (control || shop_pressed<=confirm_button) {
+        const int activate=kind==2 && control==shop_pressed?control:0;
+        shop_pressed=kind==0 && control?control:-1;
+        if (activate==confirm_button && shop_offer_index>=0 && shop_offer_index<int(shop_offers.size())) {
             const auto name=String::utf8(shop_offers[shop_offer_index].name.c_str());
             const auto instance=shop_offers[shop_offer_index].id;
             const int actor=shop_actor;
             emit_signal("shop_purchase_requested",1014,actor,name);
             emit_npc_packet(1014,actor,name,instance);
+        } else if (activate<=-3 && shop_selected>=0) {
+            // 0x478850 requests a server page with a ten-item offset.
+            const int page=std::max(0,shop_offer_page+(activate==-3?-1:1));
+            if (page!=shop_offer_page) {
+                shop_offer_page=page;
+                const auto name=String::utf8(shop_goods[shop_selected].name.c_str());
+                emit_npc_packet(1015,shop_actor,name,std::uint32_t(10*page));
+            }
         }
         get_viewport()->set_input_as_handled();
         queue_redraw();
@@ -1440,7 +1460,11 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         Rect2(0,shop_top,shop_width(),224).has_point(button->get_position())) {
         // 0x43D310 / 0x43D490 dispatch by the window under the pointer, including its frame.
         const int direction=button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN?1:-1;
-        shop_first=std::clamp(shop_first+direction,0,std::max(0,int(shop_show_offers?shop_offers.size():shop_goods.size())-1));
+        if (shop_show_offers) {
+            shop_category_first=std::clamp(shop_category_first+direction,0,std::max(0,int(shop_goods.size())-1));
+        } else {
+            shop_first=std::clamp(shop_first+direction,0,std::max(0,int(shop_goods.size())-1));
+        }
         shop_pressed=-1;
         get_viewport()->set_input_as_handled();
         queue_redraw();
