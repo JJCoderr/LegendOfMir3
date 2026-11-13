@@ -388,7 +388,9 @@ func run() -> void:
 		click_at(Vector2(45, 285), false)
 		click_at(Vector2(135, 420), true)
 		click_at(Vector2(135, 420), false)
-		if not check(goods_requests.is_empty(), "goods without variants do not request details"): return
+		if not check(goods_requests == [[2, 1, "Blue potion"]], "mode zero goods also request details"): return
+		if not await capture("bichon-merchant-mode-zero-request"): return
+		goods_requests.clear()
 		click_at(Vector2(45, 265), true)
 		click_at(Vector2(45, 265), false)
 		if not check(goods_requests.is_empty(), "selecting a category does not request details"): return

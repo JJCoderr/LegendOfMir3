@@ -932,7 +932,8 @@ void Mir3HudView::buy_shop_offer(int index) {
 }
 
 void Mir3HudView::open_shop_category() {
-    if (shop_highlighted<0 || shop_goods[shop_highlighted].variants==0) return;
+    // 0x478850 only branches on mode 2; mode 0 also requests details.
+    if (shop_highlighted<0) return;
     if (shop_goods[shop_highlighted].variants==2) {
         shop_bulk_index=shop_highlighted;
         if (shop_show_offers) shop_first=shop_category_first;
@@ -1013,7 +1014,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
         if (activate==-7) close_shop();
         else if (activate==-8) open_group_dialog(110);
         else if (activate==-5) close_shop_offers();
-        else if (activate==category_button && shop_highlighted>=0 && shop_goods[shop_highlighted].variants>0) {
+        else if (activate==category_button) {
             open_shop_category();
         } else if (activate==confirm_button && details && shop_offer_index>=0 && shop_offer_index<int(shop_offers.size())) {
             buy_shop_offer(shop_offer_index);
