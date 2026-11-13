@@ -760,6 +760,7 @@ void Mir3HudView::draw_shop() {
     const auto skin=frame(shop_show_offers?1261:1260);
     if (skin.is_valid())
         draw_texture(skin,Vector2((shop_width()-skin->get_width())/2,shop_top+(224-skin->get_height())/2));
+    if (shop_pressed==-5) sprite(1222,shop_show_offers?mir3::HudLayout::Point{459,shop_top+159}:mir3::HudLayout::Point{262,shop_top+183});
     if (shop_show_offers) {
         if (shop_pressed==-2) sprite(1266,{368,shop_top+163});
         if (shop_pressed==-3) sprite(1269,{326,shop_top+163});
@@ -790,7 +791,11 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     const bool details=shop_show_offers;
     constexpr int confirm_button=-2;
     int control=0;
-    if (details) {
+    const auto close_icon=frame(1221);
+    if (close_icon.is_valid() &&
+        Rect2(details?Vector2(459,shop_top+159):Vector2(262,shop_top+183),close_icon->get_size()).has_point(pointer))
+        control=-5;
+    if (details && !control) {
         for (const auto& spec:std::array{std::array{confirm_button,1265,368},std::array{-3,1268,326},std::array{-4,1270,416}}) {
             const auto image=frame(spec[1]);
             if (image.is_valid() && Rect2(Vector2(spec[2],shop_top+163),image->get_size()).has_point(pointer)) {
@@ -802,7 +807,10 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     if (control || shop_pressed<=confirm_button) {
         const int activate=kind==2 && control==shop_pressed?control:0;
         shop_pressed=kind==0 && control?control:-1;
-        if (activate==confirm_button && shop_offer_index>=0 && shop_offer_index<int(shop_offers.size())) {
+        if (activate==-5) {
+            if (details) close_shop_offers();
+            else close_shop();
+        } else if (activate==confirm_button && shop_offer_index>=0 && shop_offer_index<int(shop_offers.size())) {
             const auto name=String::utf8(shop_offers[shop_offer_index].name.c_str());
             const auto instance=shop_offers[shop_offer_index].id;
             const int actor=shop_actor;
@@ -858,6 +866,14 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     get_viewport()->set_input_as_handled();
     queue_redraw();
     return true;
+}
+
+void Mir3HudView::close_shop_offers() {
+    shop_show_offers=false;
+    shop_selected=shop_pressed=shop_offer_index=-1;
+    shop_offers.clear();
+    shop_first=shop_category_first;
+    queue_redraw();
 }
 
 void Mir3HudView::draw_npc_dialogue() {
@@ -1778,12 +1794,8 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
     }
     if (code==KEY_ESCAPE) {
         if (shop_actor && shop_show_offers) {
-            shop_show_offers=false;
-            shop_selected=shop_pressed=-1;
-            shop_offers.clear();
-            shop_first=shop_category_first;
+            close_shop_offers();
             get_viewport()->set_input_as_handled();
-            queue_redraw();
             return;
         }
         if (shop_actor) {

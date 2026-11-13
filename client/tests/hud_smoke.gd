@@ -455,7 +455,9 @@ func run() -> void:
 		click_at(Vector2(330, 280), true)
 		click_at(Vector2(330, 280), false)
 		if not check(goods_requests.size() == 2, "empty details stay in detail view"): return
-		key(KEY_ESCAPE)
+		click_at(Vector2(465, 398), true)
+		if not await capture("bichon-merchant-offer-close-pressed"): return
+		click_at(Vector2(465, 398), false)
 		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "late detail cannot reopen dismissed page"): return
 		if not await capture("bichon-merchant-return-to-goods"): return
 		click_at(Vector2(80, 378), true)
@@ -466,7 +468,8 @@ func run() -> void:
 		click_at(Vector2(80, 378), false)
 		if not check(goods_requests.size() == 3, "focus loss cancels pressed goods row"): return
 		if not await capture("bichon-merchant-focus-reset"): return
-		key(KEY_ESCAPE)
+		click_at(Vector2(273, 421), true)
+		click_at(Vector2(273, 421), false)
 		if not check(hud.hud_snapshot().npc_dialogue_actor == 2, "closing shop keeps NPC dialogue"): return
 		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "closed shop ignores pending details"): return
 		if not await capture("bichon-merchant-shop-closed"): return

@@ -303,6 +303,7 @@ private:
     bool apply_shop_offers(int actor,int index,godot::PackedStringArray names,godot::PackedInt32Array icons,
         godot::PackedInt32Array prices,godot::PackedInt64Array identifiers);
     void draw_shop();
+    void close_shop_offers();
     static constexpr int shop_top=225;
     int shop_width() const { return shop_show_offers?488:292; }
     static mir3::HudLayout::Rect shop_offer_cell(int cell) {
