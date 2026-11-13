@@ -3667,6 +3667,10 @@ bool Mir3HudView::set_trade_item(int side,int slot,int icon,int count,int64_t ma
         item.width=width;
         item.height=height;
     }
+    if (side==0 && slot==trade_return_slot && !item) {
+        trade_return_slot=-1;
+        trade_return_pending=false;
+    }
     queue_redraw();
     return true;
 }

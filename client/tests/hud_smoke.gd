@@ -1685,6 +1685,18 @@ func run() -> void:
 	if not check(offers[-1] == [1027, 98765, "Trade potion", 1], "placing selected offer in bag sends return request"): return
 	if not check(hud.apply_trade_offer_reply(677) and not hud.apply_trade_offer_reply(677), "return acknowledgement applies once"): return
 	if not await capture("hud-trade-item-returned"): return
+	if not check(hud.set_trade_item(0, 1, 301, 1, 98767, "Removed offer"), "populate local offer for removal"): return
+	click_at(Vector2(70, 75), true)
+	click_at(Vector2(70, 75), false)
+	if not check(hud.hud_snapshot().trade_return_slot == 1, "select offer before removal"): return
+	if not check(hud.set_trade_item(0, 1, -1, 0) and hud.hud_snapshot().trade_return_slot == -1,
+		"removing selected offer clears the return preview"): return
+	var offers_before := offers.size()
+	var empty_bag_cell := trade_pickup + Vector2(0, 38)
+	click_at(empty_bag_cell, true)
+	click_at(empty_bag_cell, false)
+	if not check(offers.size() == offers_before, "removed offer cannot emit a return request"): return
+	if not await capture("hud-trade-selected-offer-removed"): return
 	if not check(hud.add_inventory_item(301, 5, hud.hud_snapshot().inventory_row * 6 + 5, 98766, "Trade stack", 0, 3), "add stack for splitting"): return
 	click_at(trade_pickup + Vector2(38, 0), true)
 	click_at(trade_pickup + Vector2(38, 0), false)
