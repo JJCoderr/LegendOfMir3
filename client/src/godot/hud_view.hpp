@@ -272,6 +272,7 @@ private:
     std::vector<NpcDialogueRow> npc_dialogue_rows;
     int npc_dialogue_actor=0, npc_dialogue_pressed=-1;
     int npc_dialogue_extra_rows=0, npc_dialogue_first=0, npc_dialogue_scroll_limit=0;
+    int npc_dialogue_arrow_pressed=0;
     bool npc_dialogue_can_close=true, npc_dialogue_close_pressed=false;
     mir3::HudLayout::Rect npc_dialogue_bounds() const { return {0,0,386,204+20*std::max(1,npc_dialogue_extra_rows)}; }
     mir3::HudLayout::Rect npc_dialogue_text_bounds(const NpcDialogueRow& row) const;

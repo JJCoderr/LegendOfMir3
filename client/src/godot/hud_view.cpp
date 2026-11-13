@@ -606,6 +606,7 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
         npc_dialogue_extra_rows=std::clamp(estimated_lines-9,0,13);
         npc_dialogue_first=0;
         npc_dialogue_scroll_limit=estimated_lines>22?std::max(0,line-21):0;
+        npc_dialogue_arrow_pressed=0;
         npc_dialogue_can_close=can_close;
         npc_dialogue_close_pressed=false;
         npc_dialogue_actor=actor;
@@ -666,6 +667,7 @@ void Mir3HudView::close_npc_dialogue() {
     npc_dialogue_rows.clear();
     npc_dialogue_pressed=-1;
     npc_dialogue_close_pressed=false;
+    npc_dialogue_arrow_pressed=0;
     queue_redraw();
 }
 
@@ -801,8 +803,9 @@ void Mir3HudView::draw_npc_dialogue() {
     const int bottom=npc_dialogue_bounds()[3];
     if (npc_dialogue_can_close) sprite(npc_dialogue_close_pressed?1222:1221,{346,bottom-42});
     if (npc_dialogue_scroll_limit) {
-        sprite(1357,{183,bottom-48});
-        if (npc_dialogue_first<npc_dialogue_scroll_limit) sprite(1355,{183,bottom-30});
+        sprite(npc_dialogue_arrow_pressed==-1?1358:1357,{183,bottom-48});
+        if (npc_dialogue_first<npc_dialogue_scroll_limit)
+            sprite(npc_dialogue_arrow_pressed==1?1356:1355,{183,bottom-30});
     }
     for (int i=0;i<int(npc_dialogue_rows.size());++i) {
         const auto& row=npc_dialogue_rows[i];
@@ -839,9 +842,19 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
         queue_redraw();
         return true;
     }
-    if (npc_dialogue_scroll_limit && kind==2) {
-        const int delta=hit_button(1357,183,bottom-48)?-1:hit_button(1355,183,bottom-30)?1:0;
-        npc_dialogue_first=std::clamp(npc_dialogue_first+delta,0,npc_dialogue_scroll_limit);
+    if (npc_dialogue_scroll_limit) {
+        const bool up=hit_button(1357,183,bottom-48);
+        const bool down=npc_dialogue_first<npc_dialogue_scroll_limit && hit_button(1355,183,bottom-30);
+        const int arrow=up?-1:down?1:0;
+        if (arrow || npc_dialogue_arrow_pressed) {
+            if (kind==2 && arrow==npc_dialogue_arrow_pressed)
+                npc_dialogue_first=std::clamp(npc_dialogue_first+arrow,0,npc_dialogue_scroll_limit);
+            npc_dialogue_arrow_pressed=kind==0?arrow:0;
+            npc_dialogue_pressed=-1;
+            get_viewport()->set_input_as_handled();
+            queue_redraw();
+            return true;
+        }
     }
     const auto item=std::find_if(npc_dialogue_rows.begin(),npc_dialogue_rows.end(),[&](const auto& span) {
         return !span.command.empty() && span.bounds[1]>=npc_dialogue_first && span.bounds[1]<=npc_dialogue_first+21 &&
@@ -1307,6 +1320,21 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         queue_redraw();
         return;
     }
+    // 0x43D310 / 0x43D490 route the wheel to the NPC panel under the cursor.
+    if (npc_dialogue_actor && button.is_valid() && button->is_pressed() &&
+        rect(npc_dialogue_bounds()).has_point(button->get_position()) &&
+        !(shop_actor && Rect2(0,0,292,224).has_point(button->get_position()))) {
+        const auto index=button->get_button_index();
+        if (index==MOUSE_BUTTON_WHEEL_UP || index==MOUSE_BUTTON_WHEEL_DOWN) {
+            const int delta=index==MOUSE_BUTTON_WHEEL_UP?-1:1;
+            npc_dialogue_first=std::clamp(npc_dialogue_first+delta,0,npc_dialogue_scroll_limit);
+            npc_dialogue_pressed=-1;
+            npc_dialogue_arrow_pressed=0;
+            get_viewport()->set_input_as_handled();
+            queue_redraw();
+            return;
+        }
+    }
     if (covers_wheel(quest) && !panel_covered(Panel::quest,button->get_position()) && button->is_pressed()) {
         const auto index=button->get_button_index();
         if (index==MOUSE_BUTTON_WHEEL_UP || index==MOUSE_BUTTON_WHEEL_DOWN) {
@@ -1432,6 +1460,10 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) {
+        npc_dialogue_close_pressed=false;
+        npc_dialogue_arrow_pressed=0;
+    }
     if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { map_pointer_button=0;merchant_click_captured=false;shop_pressed=npc_dialogue_pressed=-1;minimap.dragging=false;minimap.release_captured=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;guild_editor.end_drag();guild_edit_pressed=-1;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 

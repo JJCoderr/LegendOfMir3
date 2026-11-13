@@ -248,6 +248,25 @@ func run() -> void:
 		click_at(Vector2(48, 63), true)
 		click_at(Vector2(48, 63), false)
 		if not check(dialogue_actions.back() == [2, "@wrapped"], "wrapped option retains command"): return
+		var separator := char(92)
+		var scroll_script := "Merchant/<第一页/@first>" + separator + "<下一行/@second>"
+		for i in range(2, 26):
+			scroll_script += separator + "药店说明 %02d" % i
+		if not check(hud.apply_npc_dialogue(643, 2, scroll_script), "open scrollable NPC dialogue"): return
+		var npc_wheel := InputEventMouseButton.new()
+		npc_wheel.position = Vector2(50, 45)
+		npc_wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+		npc_wheel.pressed = true
+		root.push_input(npc_wheel, true)
+		if not await capture("bichon-merchant-dialogue-scrolled"): return
+		click_at(Vector2(50, 45), true)
+		click_at(Vector2(50, 45), false)
+		if not check(dialogue_actions.back() == [2, "@second"], "NPC wheel moves option hitboxes"): return
+		click_at(Vector2(188, 420), true)
+		click_at(Vector2(188, 420), false)
+		click_at(Vector2(50, 45), true)
+		click_at(Vector2(50, 45), false)
+		if not check(dialogue_actions.back() == [2, "@first"], "NPC up arrow restores first option"): return
 		var goods_requests: Array = []
 		hud.shop_good_requested.connect(func(actor: int, index: int, name: String): goods_requests.append([actor, index, name]))
 		if not check(hud.apply_npc_message("a<D<<>=B<?H<<<<<PbQ`DC=kYBakW^xmGoDlGoPkLbmqUN=lWsMeWrtkH>xnINxpGl".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "645 goods list"): return
