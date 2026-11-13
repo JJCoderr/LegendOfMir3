@@ -1556,8 +1556,18 @@ void Mir3HudView::button_hint() {
     if (group_request || (guild_editor.visible && rect(guild_editor.rect).has_point(inventory_cursor))) return;
     int hint=-1;
     Vector2 anchor;
-    bool panel_hit=false;
-    if (minimap.visible) {
+    bool panel_hit=shop_actor && Rect2(0,shop_top,shop_width(),224).has_point(inventory_cursor);
+    if (!panel_hit && npc_dialogue_actor && rect(npc_dialogue_bounds()).has_point(inventory_cursor)) {
+        panel_hit=true;
+        // 0x45FDD0 configures the close button with CMList 1052.
+        const auto icon=frame(1221);
+        const Rect2 hit(Vector2(346,npc_dialogue_bounds()[3]-42),icon.is_valid()?icon->get_size():Vector2());
+        if (!npc_dialogue_close_pressed && hit.has_point(inventory_cursor)) {
+            hint=1052;
+            anchor=hit.get_end();
+        }
+    }
+    if (!panel_hit && minimap.visible) {
         panel_hit=rect(minimap.bounds()).has_point(inventory_cursor);
         for (int index=1;index>=0;--index) {
             const auto icon=frame(index==0?(minimap.translucent?1482:1483):(minimap.large?1485:1484));
@@ -1603,17 +1613,6 @@ void Mir3HudView::button_hint() {
                 if (portrait_pressed!=i) resolve(mir3::PortraitPicker::buttons[i],messages[i]);
         }
         break;
-    }
-    if (!panel_hit && shop_actor && Rect2(0,shop_top,shop_width(),224).has_point(inventory_cursor)) panel_hit=true;
-    if (!panel_hit && npc_dialogue_actor && rect(npc_dialogue_bounds()).has_point(inventory_cursor)) {
-        panel_hit=true;
-        // 0x45FDD0 configures the close button with CMList 1052.
-        const auto icon=frame(1221);
-        const Rect2 hit(Vector2(346,npc_dialogue_bounds()[3]-42),icon.is_valid()?icon->get_size():Vector2());
-        if (!npc_dialogue_close_pressed && hit.has_point(inventory_cursor)) {
-            hint=1052;
-            anchor=hit.get_end();
-        }
     }
     if (!panel_hit && model.hovered>=0 && model.hovered!=model.pressed) {
         hint=chat_input && (model.hovered==18 || model.hovered==19)?chat_input->mode.tooltip(model.hovered):
@@ -1703,17 +1702,6 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         queue_redraw();
     }
     Ref<InputEventMouseButton> button=event;
-    if (portrait_panel.visible && button.is_valid() && button->is_pressed() &&
-        rect(portrait_panel.rect).has_point(button->get_position()) &&
-        !panel_covered(Panel::portrait,button->get_position())) {
-        const auto index=button->get_button_index();
-        if (index==MOUSE_BUTTON_WHEEL_UP || index==MOUSE_BUTTON_WHEEL_DOWN) {
-            portrait_picker.wheel(index==MOUSE_BUTTON_WHEEL_UP?1:-1);
-            get_viewport()->set_input_as_handled();
-            queue_redraw();
-            return;
-        }
-    }
     const auto covers_wheel=[&](const mir3::DraggablePanel& panel) {
         return button.is_valid() && panel.visible && rect(panel.rect).has_point(button->get_position());
     };
@@ -1741,6 +1729,17 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             npc_dialogue_first=std::clamp(npc_dialogue_first+delta,0,npc_dialogue_scroll_limit);
             npc_dialogue_pressed=-1;
             npc_dialogue_arrow_pressed=0;
+            get_viewport()->set_input_as_handled();
+            queue_redraw();
+            return;
+        }
+    }
+    if (portrait_panel.visible && button.is_valid() && button->is_pressed() &&
+        rect(portrait_panel.rect).has_point(button->get_position()) &&
+        !panel_covered(Panel::portrait,button->get_position())) {
+        const auto index=button->get_button_index();
+        if (index==MOUSE_BUTTON_WHEEL_UP || index==MOUSE_BUTTON_WHEEL_DOWN) {
+            portrait_picker.wheel(index==MOUSE_BUTTON_WHEEL_UP?1:-1);
             get_viewport()->set_input_as_handled();
             queue_redraw();
             return;

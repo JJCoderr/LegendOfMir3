@@ -306,11 +306,22 @@ func run() -> void:
 			var up_at_start := root.get_texture().get_image().get_region(up_rect).get_data()
 			click_at(Vector2(188, 420), false)
 			if not check(up_idle == up_at_start, "NPC up arrow stays idle at first row"): return
+		var portrait_names: Array[String] = []
+		for index in range(14): portrait_names.append("portrait-%02d.jpg" % index)
+		hud.set_portrait_names(portrait_names)
+		click_at(Vector2(540, 570), true)
+		click_at(Vector2(540, 570), false)
+		if not check(hud.hud_snapshot().portrait_visible, "portrait picker overlaps NPC dialogue"): return
 		var npc_wheel := InputEventMouseButton.new()
 		npc_wheel.position = Vector2(50, 45)
 		npc_wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
 		npc_wheel.pressed = true
 		root.push_input(npc_wheel, true)
+		if not check(hud.hud_snapshot().portrait_first == 0, "NPC wheel does not scroll the covered portrait picker"): return
+		if not await capture("bichon-merchant-over-portrait"): return
+		click_at(Vector2(544, 369), true)
+		click_at(Vector2(544, 369), false)
+		if not check(not hud.hud_snapshot().portrait_visible, "close the portrait picker outside the NPC dialogue"): return
 		if OS.get_cmdline_user_args().has("--screenshots"):
 			await RenderingServer.frame_post_draw
 			var arrow_rect := Rect2i(183, 434, 21, 18)
