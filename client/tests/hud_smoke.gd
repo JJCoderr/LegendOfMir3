@@ -1159,6 +1159,23 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--screenshots"):
 		if not check(root.get_texture().get_image().get_pixel(583, 542) == Color8(100, 250, 100),
 			"collapsed chat restores the rendered portrait map markers"): return
+		# 0x438222 draws the portrait map before the target portrait at 0x43830B.
+		var target_sample := Rect2i(549, 500, 24, 24)
+		var map_pixels := root.get_texture().get_image().get_region(target_sample).get_data()
+		hud.set_hovered_target(1, 3, 20, false, 1, 5, 10, 50)
+		if not await capture("hud-target-over-portrait-map"): return
+		var target_pixels := root.get_texture().get_image().get_region(target_sample).get_data()
+		if not check(target_pixels != map_pixels and hud.hud_snapshot().portrait_map_visible
+			and hud.hud_snapshot().target_hp_width == 41, "target portrait overlays the active portrait map"): return
+		hud.set_hovered_target(0, 0, 0, false, 0, 0, 0, 0)
+		var focus_deadline := Time.get_ticks_msec() + 1200
+		while hud.hud_snapshot().target_portrait != -1 and Time.get_ticks_msec() < focus_deadline:
+			await process_frame
+		if not check(hud.hud_snapshot().target_portrait == -1, "target focus expires over the portrait map"): return
+		await process_frame
+		await RenderingServer.frame_post_draw
+		if not check(root.get_texture().get_image().get_region(target_sample).get_data() == map_pixels,
+			"target expiration reveals the same portrait map without another request"): return
 	while Time.get_ticks_msec() < portrait_map_deadline:
 		await process_frame
 	key(KEY_V)
