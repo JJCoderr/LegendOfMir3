@@ -78,6 +78,7 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("shop_offer_selected",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::INT,"identifier")));
     ADD_SIGNAL(MethodInfo("shop_good_requested",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::INT,"index"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("npc_dialogue_action",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::STRING,"command")));
+    ClassDB::bind_method(D_METHOD("apply_npc_body","opcode","actor","count","encoded"),&Mir3HudView::apply_npc_body);
     ClassDB::bind_method(D_METHOD("apply_npc_dialogue","opcode","actor","body"),&Mir3HudView::apply_npc_dialogue);
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
@@ -471,6 +472,31 @@ bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
     const auto start=walk_frame>=0?step_destination:player_cell;
     map_route=terrain.route({start.x,start.y},{destination.x,destination.y},{413,409});
     return !map_route.empty();
+}
+
+bool Mir3HudView::apply_npc_body(int opcode,int actor,int count,PackedByteArray encoded) {
+    if (opcode==644) return encoded.is_empty() && apply_npc_dialogue(opcode,actor,String());
+    const int limit=opcode==643?8192:opcode==645?10240:0;
+    if (!limit || encoded.size()>(limit*4+2)/3 || encoded.size()%4==1) return false;
+
+    std::string ansi;
+    ansi.reserve(encoded.size()*3/4);
+    unsigned accumulator=0;
+    int bits=0;
+    for (int64_t i=0;i<encoded.size();++i) {
+        const auto byte=encoded[i];
+        if (byte<60 || byte>123) return false;
+        accumulator=(accumulator<<6)|(byte-60);
+        bits+=6;
+        if (bits>=8) {
+            bits-=8;
+            ansi+=char((accumulator>>bits)&255);
+        }
+    }
+    if (bits && (accumulator&((1u<<bits)-1))) return false;
+    const auto end=ansi.find(char(0));
+    const auto body=String::utf8(mir3::ansi_to_utf8(std::string_view(ansi).substr(0,end)).c_str());
+    return opcode==643?apply_npc_dialogue(opcode,actor,body):apply_shop_goods(actor,count,body);
 }
 
 bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {

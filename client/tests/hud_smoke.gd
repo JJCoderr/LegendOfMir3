@@ -204,7 +204,7 @@ func run() -> void:
 		var dialogue_actions: Array = []
 		hud.npc_dialogue_action.connect(func(actor: int, command: String): dialogue_actions.append([actor, command]))
 		var script := "老黄/要买点什么？" + char(92) + "<购买药品/@buy>" + char(92) + "<离开/@exit>"
-		if not check(hud.apply_npc_dialogue(643, 2, script), "apply merchant dialogue reply"): return
+		if not check(hud.apply_npc_body(643, 2, 0, "lHzwm^{NfhGniZKFhhJpdwyXKGbvlkGNfXVsGp=^YS`zS?o<vwzfGp=aZBapK\\".to_ascii_buffer()), "decode merchant dialogue reply"): return
 		if not await capture("bichon-merchant-dialogue"): return
 		var option := InputEventMouseButton.new()
 		option.position = Vector2(45, 48)
@@ -228,7 +228,7 @@ func run() -> void:
 		if not check(dialogue_actions == [[2, "@buy"], [2, "@buy"], [2, "@exit"]], "only inline labels dispatch their own commands"): return
 		var goods_requests: Array = []
 		hud.shop_good_requested.connect(func(actor: int, index: int, name: String): goods_requests.append([actor, index, name]))
-		if not check(hud.apply_shop_goods(2, 2, "Red potion/1/20/5/Blue potion/0/25/4/"), "645 goods list"): return
+		if not check(hud.apply_npc_body(645, 2, 2, "PbQ`DC=kYBakW^xmGoDlGoPkLbmqUN=lWsMeWrtkH>xnINxpGl".to_ascii_buffer()), "645 goods list"): return
 		if not check(not hud.apply_shop_goods(2, 1, "Broken/1/"), "reject truncated goods list"): return
 		if not await capture("bichon-merchant-goods"): return
 		click_at(Vector2(45, 60), true)
@@ -237,6 +237,7 @@ func run() -> void:
 		click_at(Vector2(45, 40), true)
 		click_at(Vector2(45, 40), false)
 		if not check(goods_requests == [[2, 0, "Red potion"]], "valid goods selection survives invalid reply"): return
+		if not check(not hud.apply_npc_body(645, 2, 2, "!!!!".to_ascii_buffer()), "reject invalid six-bit alphabet"): return
 		var stock_list := ""
 		for i in 10: stock_list += "Potion %d/1/20/5/" % i
 		if not check(hud.apply_shop_goods(2, 10, stock_list), "shop list exceeds one screen"): return
