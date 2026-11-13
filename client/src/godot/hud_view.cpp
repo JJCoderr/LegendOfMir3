@@ -99,6 +99,8 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_scene_chicken","actor","cell"),&Mir3HudView::set_scene_chicken);
     ClassDB::bind_method(D_METHOD("set_scene_human","actor","cell","facing","profession","name"),&Mir3HudView::set_scene_human);
     ClassDB::bind_method(D_METHOD("set_scene_human_body","actor","type","clothing"),&Mir3HudView::set_scene_human_body);
+    ClassDB::bind_method(D_METHOD("set_player_dyes","clothing","hair"),&Mir3HudView::set_player_dyes);
+    ClassDB::bind_method(D_METHOD("set_scene_human_dyes","actor","clothing","hair"),&Mir3HudView::set_scene_human_dyes);
     ClassDB::bind_method(D_METHOD("set_player_attachments","hair","weapon"),&Mir3HudView::set_player_attachments);
     ClassDB::bind_method(D_METHOD("set_scene_human_attachments","actor","hair","weapon"),&Mir3HudView::set_scene_human_attachments);
     ClassDB::bind_method(D_METHOD("set_player_body","type","clothing"),&Mir3HudView::set_player_body);
@@ -173,16 +175,20 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary human_facings;
     Dictionary human_appearances;
     Dictionary human_attachments;
+    Dictionary human_dyes;
     for (const auto& [actor,human]:scene_humans) human_bounds[actor]=human.bounds;
     for (const auto& [actor,human]:scene_humans) human_cells[actor]=human.cell;
     for (const auto& [actor,human]:scene_humans) {
         human_idle_frames[actor]=human.idle.frame();
         human_facings[actor]=human.facing;
+        human_dyes[actor]=Vector2i(human.clothing_dye,human.hair_dye);
         human_attachments[actor]=Vector2i(human.hair,human.weapon);
         human_appearances[actor]=Vector2i(human.type,human.clothing);
     }
     result["scene_human_bodies"]=human_appearances;
     result["scene_human_attachments"]=human_attachments;
+    result["scene_human_dyes"]=human_dyes;
+    result["player_dyes"]=Vector2i(player_clothing_dye,player_hair_dye);
     result["player_attachments"]=Vector2i(player_hair,player_weapon);
     result["player_body"]=Vector2i(player_type,player_clothing);
     result["scene_human_idle_frames"]=human_idle_frames;
@@ -328,7 +334,7 @@ void Mir3HudView::_ready() {
             if (library && !archive.open(resource_root/"Data"/library)) return;
             for (int i=0;i<int(frames.size());++i) {
                 if (const auto frame=archive.frame(first+i))
-                    frames[i]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y)};
+                    frames[i]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions};
             }
         };
         load_actor(map_human,map_human_frames,"M-Hum",0);
@@ -1401,7 +1407,7 @@ bool Mir3HudView::set_scene_npc(int actor,Vector2i cell,int first_frame) {
     npc.cell=cell;
     for (int i=0;i<int(npc.frames.size());++i) {
         if (const auto frame=map_npc.frame(first_frame+i))
-            npc.frames[i]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y)};
+            npc.frames[i]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions};
     }
     if (npc.frames.front().image.is_null()) return false;
     scene_npcs.insert_or_assign(actor,std::move(npc));
@@ -1423,7 +1429,7 @@ bool Mir3HudView::set_scene_chicken(int actor,Vector2i cell) {
     for (int i=0;i<4;++i) {
         const auto frame=map_chickens.frame(60+i);
         if (!frame) return false;
-        chicken.frames[i]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y)};
+        chicken.frames[i]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions};
     }
     scene_chickens.insert_or_assign(actor,std::move(chicken));
     queue_redraw();
@@ -1446,7 +1452,7 @@ const Mir3HudView::MapActorFrame* Mir3HudView::attachment_frame(int type,int sha
     }
     const auto source=archive->second.frame(index);
     MapActorFrame frame;
-    if (source) frame={texture(source->pixels.rgba,source->width,source->height),Vector2(source->offset_x,source->offset_y)};
+    if (source) frame={texture(source->pixels.rgba,source->width,source->height),Vector2(source->offset_x,source->offset_y),source->pixels.regions};
     return &attachment_frames.emplace(key,std::move(frame)).first->second;
 }
 
@@ -1469,17 +1475,45 @@ bool Mir3HudView::set_scene_human_attachments(int actor,int hair,int weapon) {
     return true;
 }
 
-void Mir3HudView::draw_human_layers(const MapActorFrame& body,Vector2 anchor,int type,int hair,int weapon,int motion_frame) {
+bool Mir3HudView::set_player_dyes(int clothing,int hair) {
+    if (!terrain_ready || clothing<0 || clothing>65535 || hair<0 || hair>65535) return false;
+    player_clothing_dye=clothing;
+    player_hair_dye=hair;
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::set_scene_human_dyes(int actor,int clothing,int hair) {
+    const auto found=scene_humans.find(actor);
+    if (found==scene_humans.end() || clothing<0 || clothing>65535 || hair<0 || hair>65535) return false;
+    found->second.clothing_dye=clothing;
+    found->second.hair_dye=hair;
+    queue_redraw();
+    return true;
+}
+
+Ref<ImageTexture> Mir3HudView::dyed_frame(const MapActorFrame& frame,int clothing,int hair) {
+    if ((clothing==65535 && hair==65535) || frame.regions.empty()) return frame.image;
+    const auto key=std::tuple{std::uint64_t(frame.image->get_instance_id()),clothing,hair};
+    if (const auto found=dyed_frames.find(key);found!=dyed_frames.end()) return found->second;
+    auto pixels=frame.image->get_image()->get_data();
+    mir3::tint_wil_pixels({pixels.ptrw(),static_cast<std::size_t>(pixels.size())},frame.regions,
+        static_cast<std::uint16_t>(clothing),static_cast<std::uint16_t>(hair));
+    const auto image=ImageTexture::create_from_image(Image::create_from_data(frame.image->get_width(),frame.image->get_height(),false,Image::FORMAT_RGBA8,pixels));
+    return dyed_frames.emplace(key,image).first->second;
+}
+
+void Mir3HudView::draw_human_layers(const MapActorFrame& body,Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye) {
     const auto* hair_frame=attachment_frame(type,hair,false,motion_frame);
     const auto* weapon_frame=attachment_frame(type,weapon,true,motion_frame);
-    const auto draw=[&](const MapActorFrame* frame) {
-        if (frame && frame->image.is_valid()) paint_canvas->draw_texture(frame->image,anchor+frame->offset);
+    const auto draw=[&](const MapActorFrame* frame,bool tint=false) {
+        if (frame && frame->image.is_valid()) paint_canvas->draw_texture(tint?dyed_frame(*frame,clothing_dye,hair_dye):frame->image,anchor+frame->offset);
     };
     // LegendOfMir3_Src Actor.cpp: weapon behind, body, hair, weapon in front.
     const bool behind=motion_frame>=0 && motion_frame<weapon_order.size() && weapon_order[motion_frame]!=0;
     if (behind) draw(weapon_frame);
-    draw(&body);
-    draw(hair_frame);
+    draw(&body,true);
+    draw(hair_frame,true);
     if (!behind) draw(weapon_frame);
 }
 
@@ -1496,7 +1530,7 @@ const Mir3HudView::HumanBody* Mir3HudView::human_body(int type,int clothing) {
             const int index=direction*10+relative;
             const auto frame=source.frame(clothing*3000+first+index);
             if (!frame) return false;
-            frames[index]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y)};
+            frames[index]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions};
         }
         return true;
     };
@@ -1785,7 +1819,7 @@ void Mir3HudView::draw_terrain() {
                 if (frame.image.is_null()) continue;
                 const auto position=Vector2(human.cell.x*48-camera.x,human.cell.y*32-camera.y)+frame.offset;
                 human.bounds=Rect2(position,frame.image->get_size());
-                draw_human_layers(frame,position-frame.offset,human.type,human.hair,human.weapon,human.facing*10+human.idle.frame());
+                draw_human_layers(frame,position-frame.offset,human.type,human.hair,human.weapon,human.facing*10+human.idle.frame(),human.clothing_dye,human.hair_dye);
                 animated_map_objects=true;
                 continue;
             }
@@ -1803,7 +1837,7 @@ void Mir3HudView::draw_terrain() {
             const auto position=Vector2(pixel-camera)+frame.offset;
             human.bounds=Rect2(position,frame.image->get_size());
             draw_human_layers(frame,position-frame.offset,human.type,human.hair,human.weapon,
-                (human.step_distance==2?1760:1680)+human.facing*10+human.movement_frame);
+                (human.step_distance==2?1760:1680)+human.facing*10+human.movement_frame,human.clothing_dye,human.hair_dye);
             animated_map_objects=true;
         }
         const auto pixel=player_pixel();
@@ -1815,7 +1849,7 @@ void Mir3HudView::draw_terrain() {
             if (actor.image.is_valid()) {
                 draw_human_layers(actor,Vector2(pixel-camera),player_type,player_hair,player_weapon,
                     (walk_frame>=0?(std::max(std::abs(step.x),std::abs(step.y))==2?1760:1680):0)+
-                    player_facing*10+(walk_frame>=0?walk_frame:player_idle.frame()));
+                    player_facing*10+(walk_frame>=0?walk_frame:player_idle.frame()),player_clothing_dye,player_hair_dye);
                 animated_map_objects=true;
             }
         }

@@ -93,6 +93,14 @@ func run_scene_actor_removal() -> void:
 				and hud.hud_snapshot().scene_human_attachments[5] == Vector2i(1, 1),
 				"invalid attachments preserve current equipment"): return
 			if not await capture("bichon-human-hair-weapons"): return
+			if OS.get_cmdline_user_args().has("--scene-human-dyes"):
+				if not check(hud.set_player_dyes(0xF800, 0xFFE0)
+					and hud.set_scene_human_dyes(5, 0x07E0, 0xF81F), "apply independent body and hair dyes"): return
+				if not check(not hud.set_player_dyes(-1, 0)
+					and not hud.set_scene_human_dyes(5, 0, 65536)
+					and hud.hud_snapshot().player_dyes == Vector2i(0xF800, 0xFFE0), "invalid dyes preserve appearance"): return
+				if not await capture("bichon-human-dyes"): return
+
 		if not await capture("bichon-human-clothing"): return
 	if not await capture("bichon-removal-before"): return
 	if OS.get_cmdline_user_args().has("--scene-human-step"):
@@ -149,6 +157,12 @@ func run_scene_actor_removal() -> void:
 			and hud.hud_snapshot().scene_human_facings[5] == 6,
 			"cancelled movement cannot overwrite standing state"): return
 		if not await capture("bichon-remote-human-standing"): return
+		if OS.get_cmdline_user_args().has("--scene-human-dyes"):
+			if not check(hud.hud_snapshot().scene_human_dyes[5] == Vector2i(0x07E0, 0xF81F)
+				and hud.hud_snapshot().player_dyes == Vector2i(0xF800, 0xFFE0), "dyes survive sex clothing and movement changes"): return
+			if not check(hud.set_player_dyes(65535, 65535) and hud.set_scene_human_dyes(5, 65535, 65535), "restore original colors"): return
+			if not await capture("bichon-human-dyes-reset"): return
+
 		if OS.get_cmdline_user_args().has("--scene-human-attachments"):
 			if not check(hud.set_scene_human_attachments(5, 0, 0)
 				and hud.set_player_attachments(0, 0), "remove both attachment layers"): return

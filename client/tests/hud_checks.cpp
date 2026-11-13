@@ -14,6 +14,16 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--actor-dyes") {
+            std::vector<std::uint8_t> rgba{248,252,248,0, 248,252,248,255, 248,252,248,255, 248,252,248,255};
+            const std::array<std::uint8_t,4> regions{0,1,2,3};
+            mir3::tint_wil_pixels(rgba,regions,0xF800,0x07E0);
+            check(rgba==std::vector<std::uint8_t>{248,252,248,0, 248,252,248,255, 248,0,0,255, 0,252,0,255},"C0/C1 preserved and C2/C3 independently tinted");
+            mir3::tint_wil_pixels(rgba,regions,0,0);
+            check(rgba[8]==0 && rgba[13]==0 && rgba[11]==255 && rgba[15]==255,"black dye preserves opacity");
+            std::cout << "ACTOR_DYES_OK\n";
+            return 0;
+        }
         mir3::WilArchive archive;
         const auto resource_root=std::filesystem::path(argv[1]);
         check(archive.open(std::filesystem::path(argv[1])/"Data"/"GameInter"),"archive open");

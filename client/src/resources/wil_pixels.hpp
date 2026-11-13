@@ -75,4 +75,17 @@ struct Rgb565 {
         return static_cast<std::uint16_t>(scale(source,alpha)+scale(destination,32-alpha));
     }
 };
+// Preserve C0 alpha and C1 pixels; C2/C3 select the two original RGB565 dyes.
+inline void tint_wil_pixels(std::span<std::uint8_t> rgba,std::span<const std::uint8_t> regions,
+                            std::uint16_t clothing,std::uint16_t hair) {
+    for (std::size_t i=0;i<regions.size() && i*4+3<rgba.size();++i) {
+        if (regions[i]!=2 && regions[i]!=3) continue;
+        const auto color=regions[i]==2?clothing:hair;
+        const auto rgb=Rgb565::tint(Rgb565::pack(rgba[i*4],rgba[i*4+1],rgba[i*4+2]),color);
+        rgba[i*4]=static_cast<std::uint8_t>((rgb>>8)&248);
+        rgba[i*4+1]=static_cast<std::uint8_t>((rgb>>3)&252);
+        rgba[i*4+2]=static_cast<std::uint8_t>((rgb<<3)&248);
+    }
+}
+
 }
