@@ -286,7 +286,7 @@ private:
     int npc_dialogue_option_at(godot::Vector2 pointer) const;
     godot::Vector2i npc_dialogue_origin;
     unsigned npc_sequence=0;
-    void emit_npc_packet(int identifier,int actor,const godot::String& body,std::uint32_t instance=0);
+    void emit_npc_packet(int identifier,int actor,const godot::String& body,std::uint32_t instance=0,std::uint16_t quantity=0);
     void close_shop();
     void close_npc_dialogue();
     bool apply_shop_purchase_reply(int identifier,int64_t value);
@@ -301,6 +301,7 @@ private:
     struct ShopOffer { std::string name; int icon, price; std::uint32_t id; };
     std::vector<ShopOffer> shop_offers;
     int shop_selected=-1;
+    int shop_bulk_index=-1;
     int shop_highlighted=-1;
     bool shop_scroll_dragging=false;
     bool shop_scroll_input(int kind,godot::Vector2 pointer);
@@ -309,7 +310,7 @@ private:
     void draw_shop();
     void close_shop_offers();
     static constexpr int shop_top=225;
-    int shop_width() const { return shop_show_offers?488:292; }
+    int shop_width() const { return shop_bulk_index>=0?516:shop_show_offers?488:292; }
     static mir3::HudLayout::Rect shop_offer_cell(int cell) {
         return {315+38*(cell%4),shop_top+42+38*(cell/4),35,35};
     }

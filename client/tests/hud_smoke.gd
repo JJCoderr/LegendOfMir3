@@ -549,6 +549,16 @@ func run() -> void:
 		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "closed shop ignores pending details"): return
 		if not check(not hud.apply_shop_offers(2, 8, names, icons, prices, ids), "list close dismisses the active detail grid"): return
 		if not await capture("bichon-merchant-shop-closed"): return
+		if not check(hud.apply_shop_goods(2, 1, "Bundle/2/20/5/301/0/0/", true), "open quantity-based goods"): return
+		click_at(Vector2(135, 420), true)
+		click_at(Vector2(135, 420), false)
+		click_at(Vector2(380, 296), true)
+		click_at(Vector2(380, 296), false)
+		if not check(hud.hud_snapshot().group_request == 110, "bulk purchase opens quantity input"): return
+		npc_input.text = "3"
+		if not await capture("bichon-merchant-bulk-quantity"): return
+		key(KEY_ENTER)
+		if not check(npc_packets.back().substr(2, 16) == "<\\<<<KT?=L<<<<H<", "bulk purchase includes item key and quantity"): return
 		if not check(hud.apply_npc_message("aL<<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
 		if not check(not hud.apply_shop_goods(2, 10, stock_list), "late goods reply cannot reopen closed merchant"): return
 		if not check(hud.apply_npc_dialogue(643, 2, script) and hud.walk_to_map_cell(Vector2i(419, 410)), "walk away from reopened NPC dialogue"): return

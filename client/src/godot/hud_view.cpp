@@ -655,7 +655,7 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
     return true;
 }
 
-void Mir3HudView::emit_npc_packet(int identifier,int actor,const String& body,std::uint32_t instance) {
+void Mir3HudView::emit_npc_packet(int identifier,int actor,const String& body,std::uint32_t instance,std::uint16_t quantity) {
     const auto utf8=body.utf8();
     const auto ansi=mir3::utf8_to_ansi({utf8.get_data(),static_cast<std::size_t>(utf8.length())});
     // The recovered 0x47C730 framing encodes the header and body separately.
@@ -664,6 +664,8 @@ void Mir3HudView::emit_npc_packet(int identifier,int actor,const String& body,st
     header[4]=identifier&255;
     header[5]=(identifier>>8)&255;
     for (unsigned i=0;i<4;++i) header[6+i]=instance>>(8*i);
+    header[10]=quantity&255;
+    header[11]=quantity>>8;
     npc_sequence=npc_sequence%9+1;
     std::string packet{"#"};
     packet+=char('0'+npc_sequence);
@@ -690,6 +692,7 @@ void Mir3HudView::emit_npc_packet(int identifier,int actor,const String& body,st
 }
 
 void Mir3HudView::close_shop() {
+    shop_bulk_index=-1;
     shop_scroll_dragging=false;
     shop_actor=0;
     shop_goods.clear();
@@ -752,6 +755,7 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body,bool wire_for
     }
     if (wire_format && !remaining.empty()) return false;
     shop_goods=std::move(goods);
+    shop_bulk_index=-1;
     shop_scroll_dragging=false;
     shop_highlighted=shop_goods.empty()?-1:0;
     shop_actor=actor;
@@ -779,6 +783,7 @@ bool Mir3HudView::apply_shop_offers(int actor,int index,PackedStringArray names,
         offers.push_back({names[i].utf8().get_data(),icons[i],prices[i],static_cast<std::uint32_t>(identifiers[i])});
     }
     shop_offers=std::move(offers);
+    shop_bulk_index=-1;
     shop_offer_index=shop_offers.empty()?-1:0;
     shop_offer_loading=false;
     if (!shop_show_offers) {
@@ -795,7 +800,7 @@ bool Mir3HudView::apply_shop_offers(int actor,int index,PackedStringArray names,
 void Mir3HudView::draw_shop() {
     if (!shop_actor) return;
     // 0x479410 positions the goods window below the NPC dialogue.
-    const auto skin=frame(shop_show_offers?1261:1260);
+    const auto skin=frame(shop_bulk_index>=0?1262:shop_show_offers?1261:1260);
     if (skin.is_valid())
         draw_texture(skin,Vector2((shop_width()-skin->get_width())/2,shop_top+(224-skin->get_height())/2));
     const int goods_first=shop_show_offers?shop_category_first:shop_first;
@@ -803,9 +808,17 @@ void Mir3HudView::draw_shop() {
     // 0x47776B draws frame 1225 at (260,32), with 85 pixels of travel.
     if (last>0) sprite(1225,{260,shop_top+32+int(std::lround(85.0*goods_first/last))});
     // 0x478000 repositions the controls after the shop changes modes.
-    if (shop_pressed==-5) sprite(1222,{449,shop_top+159});
+    if (shop_pressed==-5 && shop_show_offers) sprite(1222,{449,shop_top+159});
     if (shop_pressed==-7) sprite(1222,{258,shop_top+183});
     if (shop_pressed==-6) sprite(1264,{106,shop_top+186});
+    if (shop_bulk_index>=0) {
+        const auto& good=shop_goods[shop_bulk_index];
+        const auto icon=item_frame(good.icon);
+        if (icon.is_valid()) draw_texture(icon,Vector2(324-icon->get_width()/2,shop_top+36-icon->get_height()/2));
+        text(good.name,{357,shop_top+19,143,16},0xfafa,mir3::TextFont::normal,false);
+        if (shop_pressed==-8) sprite(1277,{367,shop_top+59});
+        if (shop_pressed==-5) sprite(1222,{475,shop_top+56});
+    }
     if (shop_show_offers) {
         // 0x477780: 652 acknowledges the page; the request path displays an ellipsis.
         text(shop_offer_loading?"...":std::to_string(shop_offer_page),
@@ -898,7 +911,9 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
         // 0x478850 checks the list close button even in mode 1 (detail grid).
         if (Rect2(Vector2(258,shop_top+183),close_icon->get_size()).has_point(pointer)) control=-7;
         else if (details && Rect2(Vector2(449,shop_top+159),close_icon->get_size()).has_point(pointer)) control=-5;
+        else if (shop_bulk_index>=0 && Rect2(Vector2(475,shop_top+56),close_icon->get_size()).has_point(pointer)) control=-5;
     }
+    if (shop_bulk_index>=0 && !control && Rect2(367,shop_top+59,65,28).has_point(pointer)) control=-8;
     if (details && !control) {
         for (const auto& spec:std::array{std::array{confirm_button,1265,358},std::array{-3,1268,316},std::array{-4,1270,406}}) {
             const auto image=frame(spec[1]);
@@ -917,8 +932,20 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
         const int activate=kind==2 && control==shop_pressed?control:0;
         shop_pressed=kind==0 && control?control:-1;
         if (activate==-7) close_shop();
+        else if (activate==-8) open_group_dialog(110);
         else if (activate==-5) close_shop_offers();
         else if (activate==category_button && shop_highlighted>=0 && shop_goods[shop_highlighted].variants>0) {
+            if (shop_goods[shop_highlighted].variants==2) {
+                shop_bulk_index=shop_highlighted;
+                if (details) shop_first=shop_category_first;
+                shop_show_offers=false;
+                shop_selected=-1;
+                shop_offers.clear();
+                get_viewport()->set_input_as_handled();
+                queue_redraw();
+                return true;
+            }
+            shop_bulk_index=-1;
             if (shop_selected!=shop_highlighted) {
                 shop_offers.clear();
                 shop_offer_index=-1;
@@ -1011,6 +1038,11 @@ bool Mir3HudView::shop_scroll_input(int kind,Vector2 pointer) {
 }
 
 void Mir3HudView::close_shop_offers() {
+    if (shop_bulk_index>=0) {
+        shop_bulk_index=-1;
+        queue_redraw();
+        return;
+    }
     shop_show_offers=false;
     shop_selected=shop_pressed=shop_offer_index=-1;
     shop_offers.clear();
@@ -1938,7 +1970,7 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         toggle_options();get_viewport()->set_input_as_handled();return;
     }
     if (code==KEY_ESCAPE) {
-        if (shop_actor && shop_show_offers) {
+        if (shop_actor && (shop_show_offers || shop_bulk_index>=0)) {
             close_shop_offers();
             get_viewport()->set_input_as_handled();
             return;
@@ -2730,6 +2762,22 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
         else trade_pending_slot=-1;
         return;
     }
+    if (request==110) {
+        if (!confirm || shop_bulk_index<0) return;
+        const auto utf8=name.utf8();
+        const std::string_view digits(utf8.get_data(),utf8.length());
+        unsigned quantity=1;
+        const auto end=digits.data()+digits.size();
+        if (!digits.empty()) {
+            const auto parsed=std::from_chars(digits.data(),end,quantity);
+            if (parsed.ec!=std::errc{} || parsed.ptr!=end || quantity==0 || quantity>65535) return;
+        }
+        const auto& good=shop_goods[shop_bulk_index];
+        const auto item=String::utf8(good.name.c_str());
+        emit_npc_packet(1014,shop_actor,item,good.stock,static_cast<std::uint16_t>(quantity));
+        emit_signal("shop_purchase_requested",1014,shop_actor,item);
+        return;
+    }
     if (!confirm) return;
     if (request==101 || request==109) {
         emit_signal("exit_confirmed",request);
@@ -2768,7 +2816,7 @@ void Mir3HudView::draw_group_dialog() {
     }
     const auto prompt=group_request==1011?npc_dialogue_prompt:
         group_request==1039?"'"+std::string(guild_name.utf8().get_data())+"' "+message(4001):
-        message(group_request==1307?1307:group_request==1029?1304:group_request==1045?4002:group_request==1022?1606:1605);
+        message(group_request==110?2302:group_request==1307?1307:group_request==1029?1304:group_request==1045?4002:group_request==1022?1606:1605);
     if (dialog_has_input()) text(prompt,{x+43,y+84,278,75},0xc8faff,mir3::TextFont::dialog);
     else text(message(group_request==109?2636:1065),{x+23,y+84,308,95},0xc8faff,mir3::TextFont::dialog);
     for (const int index:{0,2}) {
