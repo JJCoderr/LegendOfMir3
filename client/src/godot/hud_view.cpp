@@ -85,6 +85,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("update_chat_rejection","channel","rejected"),&Mir3HudView::update_chat_rejection);
     ClassDB::bind_method(D_METHOD("handle_exit_confirmation","dialog_id"),&Mir3HudView::handle_exit_confirmation);
     ClassDB::bind_method(D_METHOD("set_trade_context","direction","cell","actor_type","dead","name"),&Mir3HudView::set_trade_context);
+    ClassDB::bind_method(D_METHOD("set_trade_item","side","slot","icon","count"),&Mir3HudView::set_trade_item);
     ClassDB::bind_method(D_METHOD("set_trade_gold","local","remote"),&Mir3HudView::set_trade_gold);
     ClassDB::bind_method(D_METHOD("open_trade","partner"),&Mir3HudView::open_trade);
     ADD_SIGNAL(MethodInfo("trade_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
@@ -2092,6 +2093,25 @@ bool Mir3HudView::apply_minimap_reply(int map_number) {
     return true;
 }
 
+bool Mir3HudView::set_trade_item(int side,int slot,int icon,int count) {
+    if (!trade.visible || side<0 || side>=2 || slot<0 || slot>=200 || icon< -1 || count<0) return false;
+    auto& item=trade_items[side][slot];
+    if (icon<0) item={};
+    else {
+        const auto image=item_frame(icon);
+        if (image.is_null()) return false;
+        const auto [width,height]=mir3::InventoryGrid::dimensions(image->get_width(),image->get_height());
+        if (slot%5+width>5 || slot/5+height>40) return false;
+        item={};
+        item.icon=icon;
+        item.count=count;
+        item.width=width;
+        item.height=height;
+    }
+    queue_redraw();
+    return true;
+}
+
 bool Mir3HudView::set_trade_gold(int64_t local,int64_t remote) {
     if (!trade.visible || local<0 || local>UINT32_MAX || remote<0 || remote>UINT32_MAX) return false;
     trade_gold={static_cast<std::uint32_t>(local),static_cast<std::uint32_t>(remote)};
@@ -2111,6 +2131,7 @@ bool Mir3HudView::open_trade(String partner) {
     if (trade.visible) return true;
     trade_partner=partner;
     trade_gold={};
+    trade_items={};
     trade_confirmed=false;
     trade.toggle();
     raise_panel(Panel::trade);
@@ -2130,6 +2151,22 @@ void Mir3HudView::draw_trade() {
     text(character_name.utf8().get_data(),{x,y,228,30},0xfac8c8);
     text(trade_partner.utf8().get_data(),{x+247,y,120,30},0xfac8c8);
     for (int side=0;side<2;++side) {
+        // 0x41D870: five columns, 38 px per cell, separate origins.
+        const int left=x+(side==0?14:264);
+        const Rect2 clip(left,y+56,190,190);
+        for (int slot=0;slot<25;++slot) {
+            const auto& item=trade_items[side][slot];
+            if (!item) continue;
+            const auto icon=item_frame(item.icon);
+            if (icon.is_null()) continue;
+            const Vector2 cell(left+38*(slot%5),y+56+38*(slot/5));
+            const Vector2 padding((38*item.width-icon->get_width())/2,(38*item.height-icon->get_height())/2);
+            const Rect2 target(cell+padding,icon->get_size());
+            const Rect2 visible=target.intersection(clip);
+            if (visible.has_area()) draw_texture_rect_region(icon,visible,Rect2(visible.position-target.position,visible.size));
+            if (item.count>1)
+                text(std::to_string(item.count),{int(cell.x)+22,int(cell.y)+23,16,15},0xffffff,mir3::TextFont::normal,false);
+        }
         auto amount=std::to_string(trade_gold[side]);
         for (int i=int(amount.size())-3;i>0;i-=3) amount.insert(i,1,',');
         text(amount,{x+(side==0?70:350),y+289,side==0?113:85,25},0xfac8c8);

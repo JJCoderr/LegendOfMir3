@@ -50,6 +50,7 @@ public:
     bool apply_mount_reply(int identifier,int64_t recognition);
     bool apply_minimap_reply(int map_number);
     void handle_exit_confirmation(int dialog_id);
+    bool set_trade_item(int side,int slot,int icon,int count);
     bool set_trade_gold(int64_t local,int64_t remote);
     bool open_trade(godot::String partner);
     void set_trade_context(int direction,godot::Vector2i cell,int actor_type,bool dead,godot::String name);
@@ -81,6 +82,7 @@ private:
     mir3::DraggablePanel trade{{0,0,494,330}};
     godot::String trade_partner;
     std::array<std::uint32_t,2> trade_gold{};
+    std::array<std::array<mir3::BagItem,200>,2> trade_items;
     bool trade_confirm_pressed=false,trade_confirmed=false;
     void draw_trade();
     bool trade_pointer(int kind,godot::Vector2 position);
