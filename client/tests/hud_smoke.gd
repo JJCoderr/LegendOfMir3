@@ -394,15 +394,15 @@ func run() -> void:
 		var stock_list := ""
 		for i in 10: stock_list += "Potion %d/1/20/5/" % i
 		if not check(hud.apply_shop_goods(2, 10, stock_list), "shop list exceeds one screen"): return
-		for i in 2:
+		for i in 6:
 			var wheel_down := InputEventMouseButton.new()
 			wheel_down.button_index = MOUSE_BUTTON_WHEEL_DOWN
 			wheel_down.pressed = true
 			wheel_down.position = Vector2(12, 245)
 			root.push_input(wheel_down, true)
 		if not await capture("bichon-merchant-goods-scrolled"): return
-		click_at(Vector2(45, 396), true)
-		click_at(Vector2(45, 396), false)
+		click_at(Vector2(80, 378), true)
+		click_at(Vector2(80, 378), false)
 		if not check(goods_requests.back() == [2, 9, "Potion 9"], "wheel over shop frame scrolls goods and preserves their original index"): return
 		if not check(npc_protocol.back() == [1015, 2, "Potion 9"], "detail request uses NPC and item name"): return
 		var offer_selections: Array = []
@@ -445,12 +445,12 @@ func run() -> void:
 		key(KEY_ESCAPE)
 		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "late detail cannot reopen dismissed page"): return
 		if not await capture("bichon-merchant-return-to-goods"): return
-		click_at(Vector2(45, 396), true)
-		click_at(Vector2(45, 396), false)
+		click_at(Vector2(80, 378), true)
+		click_at(Vector2(80, 378), false)
 		if not check(goods_requests.size() == 3 and goods_requests.back() == [2, 9, "Potion 9"], "return restores category scroll"): return
-		click_at(Vector2(45, 396), true)
+		click_at(Vector2(80, 378), true)
 		hud.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
-		click_at(Vector2(45, 396), false)
+		click_at(Vector2(80, 378), false)
 		if not check(goods_requests.size() == 3, "focus loss cancels pressed goods row"): return
 		if not await capture("bichon-merchant-focus-reset"): return
 		key(KEY_ESCAPE)

@@ -766,19 +766,33 @@ void Mir3HudView::draw_shop() {
         }
         return;
     }
-    for (int i=0;i<std::min(8,int(shop_goods.size())-shop_first);++i) {
+    for (int i=0;i<std::min(shop_goods_rows,int(shop_goods.size())-shop_first);++i) {
         const auto& good=shop_goods[shop_first+i];
-        text(good.name,{22,shop_top+34+19*i,150,18},good.variants==0?0x00b4b4:shop_pressed==shop_first+i?0x0000ff:0x00ffff,mir3::TextFont::normal,false);
-        text(std::to_string(good.price),{174,shop_top+34+19*i,62,18},0xfafafa);
-        text(std::to_string(good.stock),{237,shop_top+34+19*i,32,18},0xfafafa);
+        const int y=shop_top+shop_goods_row_top+shop_goods_pitch*i;
+        text(good.name,{63,y+3,184,16},good.variants==0?0x00b4b4:shop_pressed==shop_first+i?0x0000ff:0x00ffff,mir3::TextFont::normal,false);
+        text(std::to_string(good.price),{63,y+19,140,16},0xfafafa,mir3::TextFont::normal,false);
+        text(std::to_string(good.stock),{205,y+19,44,16},0xfafafa,mir3::TextFont::normal,false);
     }
 }
 
 bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     if (!shop_actor) return false;
     const bool inside=Rect2(0,shop_top,292,224).has_point(pointer);
-    const int row=Rect2(22,shop_top+34,247,152).has_point(pointer)?shop_first+(int(pointer.y)-shop_top-34)/19:-1;
     const bool details=shop_show_offers;
+    int row=-1;
+    if (details) {
+        if (Rect2(22,shop_top+34,247,152).has_point(pointer))
+            row=shop_first+(int(pointer.y)-shop_top-34)/19;
+    } else {
+        // 0x4770B4 / 0x4785A0: icon and text are separate hit rectangles.
+        for (int i=0;i<shop_goods_rows;++i) {
+            const int y=shop_top+shop_goods_row_top+shop_goods_pitch*i;
+            if (Rect2(20,y,36,36).has_point(pointer) || Rect2(62,y,189,36).has_point(pointer)) {
+                row=shop_first+i;
+                break;
+            }
+        }
+    }
     const bool hit=row>=0 && (details?row<int(shop_offers.size()):
         row<int(shop_goods.size()) && shop_goods[row].variants>0);
     const int pressed=shop_pressed;
