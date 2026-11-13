@@ -266,6 +266,19 @@ func run() -> void:
 	click_at(Vector2(196, 410), true)
 	click_at(Vector2(196, 410), false)
 	if not check(hud.hud_snapshot().guild_tab == 1, "guild members tab"): return
+	hud.set_guild_members(PackedStringArray(["会长  比奇旅人", "会员  银杏剑客"]))
+	if not await capture("guild-members"): return
+	hud.set_guild_notices(PackedStringArray(["第一条行会通知", "第二条行会通知"]))
+	click_at(Vector2(246, 410), true)
+	click_at(Vector2(246, 410), false)
+	if not check(hud.hud_snapshot().guild_tab == 2, "guild notices tab"): return
+	var guild_wheel := InputEventMouseButton.new()
+	guild_wheel.position = Vector2(250, 180)
+	guild_wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	guild_wheel.pressed = true
+	Input.parse_input_event(guild_wheel)
+	if not check(hud.hud_snapshot().guild_first == 1, "guild notices wheel"): return
+	if not await capture("guild-notices"): return
 	key(KEY_ESCAPE)
 	if not check(not hud.hud_snapshot().guild_visible, "guild escape closes"): return
 	var input: LineEdit = hud.get_node("ChatInput")

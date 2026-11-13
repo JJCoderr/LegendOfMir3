@@ -28,6 +28,8 @@ public:
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
+    void set_guild_members(godot::PackedStringArray lines);
+    void set_guild_notices(godot::PackedStringArray lines);
     void set_guild_overview(godot::String name,godot::PackedStringArray lines);
     void set_group_roster(godot::String player,godot::PackedStringArray members);
     bool set_learned_skill(int id,int level,int key,int experience,int required,godot::String name);
@@ -44,7 +46,7 @@ private:
     mir3::GuildScroll guild_scroll;
     int guild_first=0;
     godot::String guild_name;
-    godot::PackedStringArray guild_lines;
+    std::array<godot::PackedStringArray,3> guild_pages;
     void draw_guild();
     bool guild_pointer(int kind,godot::Vector2 point);
     mir3::DraggablePanel group{{272,123,258,244}};

@@ -31,6 +31,9 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_group_roster","player","members"),&Mir3HudView::set_group_roster);
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines"),&Mir3HudView::set_guild_overview);
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
+    ADD_SIGNAL(MethodInfo("guild_members_requested"));
+    ClassDB::bind_method(D_METHOD("set_guild_members","lines"),&Mir3HudView::set_guild_members);
+    ClassDB::bind_method(D_METHOD("set_guild_notices","lines"),&Mir3HudView::set_guild_notices);
     ADD_SIGNAL(MethodInfo("group_member_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("group_allow_requested",PropertyInfo(Variant::BOOL,"allowed")));
     ClassDB::bind_method(D_METHOD("set_learned_skill","id","level","key","experience","required","name"),&Mir3HudView::set_learned_skill,DEFVAL(0),DEFVAL(0),DEFVAL(String()));
@@ -56,6 +59,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_compact_first"]=chat_history.first(false);
     result["chat_expanded_first"]=chat_history.first(true);
     result["guild_visible"]=guild.visible;
+    result["guild_first"]=guild_first;
     result["guild_tab"]=guild_layout.tab;
     result["group_request"]=group_request;
     result["group_visible"]=group.visible;
@@ -308,6 +312,18 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     Ref<InputEventMouseMotion> motion=event;
     if (motion.is_valid()) { auto p=motion->get_position();inventory_cursor=p;if (panel_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
     Ref<InputEventMouseButton> button=event;
+    if (guild.visible && button.is_valid() && button->is_pressed() &&
+        rect(guild.rect).has_point(button->get_position())) {
+        const auto index=button->get_button_index();
+        if (index==MOUSE_BUTTON_WHEEL_UP || index==MOUSE_BUTTON_WHEEL_DOWN) {
+            const int count=int(guild_pages[guild_layout.tab].size());
+            if (index==MOUSE_BUTTON_WHEEL_UP && guild_first>0) --guild_first;
+            if (index==MOUSE_BUTTON_WHEEL_DOWN && guild_first<count-1) ++guild_first;
+            get_viewport()->set_input_as_handled();
+            queue_redraw();
+            return;
+        }
+    }
     if (button.is_valid() && button->is_pressed() && (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) && rect(mir3::HudLayout::chat_frame(model.layout.expanded)).has_point(button->get_position())) {
         chat_history.scroll(model.layout.expanded).wheel(button->get_button_index()==MOUSE_BUTTON_WHEEL_UP?1:-1,int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded);
         get_viewport()->set_input_as_handled();queue_redraw();return;
@@ -1102,7 +1118,7 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
 
 void Mir3HudView::set_guild_overview(String name,PackedStringArray lines) {
     guild_name=name;
-    guild_lines=lines;
+    guild_pages[0]=lines;
     guild_layout.tab=0;
     guild_first=0;
     guild.visible=true;
@@ -1115,13 +1131,25 @@ void Mir3HudView::draw_guild() {
     if (skin.is_valid()) sprite(1300,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
     text(message(mir3::GuildLayout::title(guild_layout.tab)),{x+45,y+10,112,25},0x96c8ff);
     text(guild_name.utf8().get_data(),{x+340,y+10,213,24},0x96c8ff);
-    const int count=guild_layout.tab==0?int(guild_lines.size()):0;
+    const auto& lines=guild_pages[guild_layout.tab];
+    const int count=int(lines.size());
     const auto metrics=mir3::raster_text(guild_name.utf8().get_data(),300,24,false,mir3::TextFont::normal);
     for (int row=0;row<18 && guild_first+row<count;++row) {
         auto bounds=mir3::GuildLayout::notice_rect(row,metrics.text_height);
         bounds[0]+=x;
         bounds[1]+=y;
-        text(guild_lines[guild_first+row].utf8().get_data(),bounds,0xffffff,mir3::TextFont::normal,false);
+        const std::string value=lines[guild_first+row].utf8().get_data();
+        if (guild_layout.tab==2) {
+            auto shadow=bounds;
+            --shadow[0];
+            --shadow[1];
+            text(value,shadow,0x0a140a,mir3::TextFont::normal,false);
+            text(value,bounds,0x00ff00,mir3::TextFont::normal,false);
+        } else {
+            const bool heading=guild_layout.tab==1?value==message(4007):
+                value==message(4004) || value==message(4005) || value==message(4006);
+            text(value,bounds,heading?0x0097ff:0xffffff,mir3::TextFont::normal,false);
+        }
     }
     sprite(1225,{x+557,mir3::GuildScroll::thumb_y(guild_first,count,y)});
     for (int i=0;i<9;++i) {
@@ -1136,7 +1164,8 @@ bool Mir3HudView::guild_pointer(int kind,Vector2 point) {
     const bool inside=rect(guild.rect).has_point(point);
     const auto thumb=frame(1225);
     const auto tick=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-    const int count=guild_layout.tab==0?int(guild_lines.size()):0;
+    const auto& lines=guild_pages[guild_layout.tab];
+    const int count=int(lines.size());
     bool captured=thumb.is_valid() && guild_scroll.input(kind,int(point.x),int(point.y),x,y,
         thumb->get_width(),thumb->get_height(),count,guild_first,static_cast<std::uint32_t>(tick));
     if (!captured) {
@@ -1157,6 +1186,7 @@ bool Mir3HudView::guild_pointer(int kind,Vector2 point) {
                 if (hit==0) guild.toggle();
                 if (hit>=1 && hit<=3) guild_first=0;
                 if (hit==1) emit_signal("guild_overview_requested");
+                if (hit==2) emit_signal("guild_members_requested");
             }
         }
     }
@@ -1165,4 +1195,16 @@ bool Mir3HudView::guild_pointer(int kind,Vector2 point) {
     get_viewport()->set_input_as_handled();
     queue_redraw();
     return true;
+}
+
+void Mir3HudView::set_guild_members(PackedStringArray lines) {
+    guild_pages[1]=lines;
+    if (guild_layout.tab==1) guild_first=std::min(guild_first,std::max(0,int(lines.size())-1));
+    queue_redraw();
+}
+
+void Mir3HudView::set_guild_notices(PackedStringArray lines) {
+    guild_pages[2]=lines;
+    if (guild_layout.tab==2) guild_first=std::min(guild_first,std::max(0,int(lines.size())-1));
+    queue_redraw();
 }
