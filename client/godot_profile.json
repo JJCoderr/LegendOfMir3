@@ -1,1 +1,1 @@
-{"enabled_classes":["Node2D","InputEventMouseButton","InputEventMouseMotion","InputEventKey","Image","ImageTexture","ProjectSettings","ConfigFile","SceneTree","Viewport","OS"]}
+{"enabled_classes":["Node2D","InputEventMouseButton","InputEventMouseMotion","InputEventKey","Image","ImageTexture","ProjectSettings","ConfigFile","SceneTree","Viewport","OS","Shader","ShaderMaterial"]}

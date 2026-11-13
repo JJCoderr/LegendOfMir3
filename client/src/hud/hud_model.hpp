@@ -8,13 +8,29 @@ namespace mir3 {
 struct HudModel {
     HudLayout layout;
     std::string map_name;
-    int map_x=0, map_y=0, level=1, profession=0;
+    int map_x=0, map_y=0, level=1, profession=0, appearance=0;
     std::uint16_t hp=0, max_hp=0, mp=0, max_mp=0;
     unsigned experience=0, next_experience=0, weight=0, max_weight=0;
-    std::array<int,2> defence{}, attack{};
+    std::array<int,2> defence{}, attack{}, magic_defence{}, magic_attack{}, spirit_attack{};
+    std::array<bool,2> primary_stat{true,true};
+    HudLayout::Point pointer{-1,-1};
+    std::uint32_t emblem_selector=0;
+    std::array<std::uint32_t,4> emblem_references{};
     int hovered=-1, pressed=-1;
     std::array<HudLayout::Point,23> button_sizes{};
     bool shared_hp() const { return profession==0 && level<24; }
+    int portrait_frame() const { return profession>=0 && profession<=2?650+profession*2+(appearance!=0):-1; }
+    std::array<int,3> stat(int side) const {
+        const auto range=side==0?(primary_stat[0]?defence:magic_defence):
+            (primary_stat[1]?attack:profession==2?spirit_attack:magic_attack);
+        return {1500+side+(primary_stat[side]?0:2),range[0],range[1]};
+    }
+    bool press_stat(int x,int y) {
+        if (y<570 || y>=590) return false;
+        const int side=x>=634 && x<664?0:x>=717 && x<747?1:-1;
+        if (side<0) return false;
+        primary_stat[side]=!primary_stat[side];return true;
+    }
     int orb_frame(int side) const { return side==0?1163:shared_hp()?1165:1164; }
     HudLayout::Rect orb_crop(int side,HudLayout::Point left,HudLayout::Point right) const {
         const auto size=side==0 || shared_hp()?left:right;
@@ -46,17 +62,17 @@ public:
         }
         return -1;
     }
-    void motion(int x,int y) { model.hovered=hit(x,y); }
+    void motion(int x,int y) { model.pointer={x,y};model.hovered=hit(x,y); }
     int pointer(int x,int y,bool down) {
         motion(x,y);
-        if (down) { model.pressed=model.hovered; return -1; }
+        if (down) { model.pressed=model.press_stat(x,y)?-1:model.hovered; return -1; }
         model.pressed=-1;
         // 0x41FCD0 activates on release inside, even if pressed outside.
         const int action=model.hovered;
         if (action==14) { model.layout.toggle(); motion(x,y); }
         return action;
     }
-    void cancel() { model.pressed=model.hovered=-1; }
+    void cancel() { model.pressed=model.hovered=-1;model.pointer={-1,-1}; }
 private:
     HudModel& model;
 };

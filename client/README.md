@@ -10,7 +10,7 @@ cmake -S client -B client/build -G "Visual Studio 18 2026" -A x64 `
   -DMIR3_GODOT_CPP="G:/mir3/mir3_1.45/third_party/godot-cpp"
 cmake --build client/build --config Release --parallel
 ctest --test-dir client/build -C Release --output-on-failure
-Godot_v4.7.2-stable_win64_console.exe --headless --editor --path client/godot --import
+Godot_v4.7.2-stable_win64_console.exe --headless --editor --path client/godot --import --quit
 Godot_v4.7.2-stable_win64_console.exe --path client/godot
 ```
 
@@ -27,6 +27,8 @@ Godot_v4.7.2-stable_win64_console.exe --path client/godot
 - `tests`：原包、布局边界和行为验证。
 - `docs/evidence/hud`：旧项目的 HUD 取证材料；其中“已实现”描述指旧项目，不能当作本项目的完成记录。
 
-主界面正在迁移，当前只有底栏、血球/计量条绘制、属性文字、按钮状态及聊天区域展开收起。没有服务器数据时字段保持空值；灰色区域不是已实现的地图。其余按钮只发出 `hud_action` 信号，尚未接入对话框。字体、DirectDraw 混色和原版同状态画面尚未完成像素级比对，不能声称整个主界面一致。
+主界面正在迁移，当前包含底栏、血球/计量条绘制及提示、默认职业头像、等级底图、属性文字与切换、原包按钮提示、按钮状态及聊天区域展开收起。没有服务器数据时字段保持空值；灰色区域不是已实现的地图。其余按钮只发出 `hud_action` 信号，尚未接入对话框。等级底图选择字段沿用旧项目的全零初值，其生产路径仍未知。字体、DirectDraw 混色和原版同状态画面尚未完成像素级比对，不能声称整个主界面一致。
+
+若 CMake 找到 Godot，CTest 也会执行项目导入与无界面交互冒烟；可通过 `MIR3_GODOT_EXECUTABLE` 指定可执行文件。`tests/hud_smoke.gd` 仅是测试驱动，通过 Godot 输入分发检查 C++ 控制器，不含客户端游戏逻辑。
 
 后续按主界面、背包、人物、魔法、聊天、组队、行会及其余对话框分别提取模型、控制器、视图与证据，一项验证完成后再处理下一项。测试与验证使用命令行，不使用 Computer Use。

@@ -1,5 +1,7 @@
 #include "hud/hud_model.hpp"
 #include "resources/wil_archive.hpp"
+#include "resources/messages.hpp"
+#include <iterator>
 #include <iostream>
 #include <stdexcept>
 void check(bool value,const char* message) { if (!value) throw std::runtime_error(message); }
@@ -11,10 +13,20 @@ int main(int argc,char** argv) {
     try {
         check(argc==2,"resource root required");
         mir3::WilArchive archive;
+        const auto resource_root=std::filesystem::path(argv[1]);
         check(archive.open(std::filesystem::path(argv[1])/"Data"/"GameInter"),"archive open");
         const auto skin=archive.frame(1160);
         check(skin && skin->width==800 && skin->height==134,"original HUD frame dimensions");
         check(!archive.frame(-1) && !archive.frame(0x7fffffff),"invalid frame bounds");
+        mir3::WilArchive portraits;
+        check(portraits.open(resource_root/"Data"/"ProgUse"),"portrait archive");
+        for (int id=650;id<656;++id) check(portraits.frame(id).has_value(),"portrait frame");
+        std::ifstream file(resource_root/"CmList.dat",std::ios::binary);
+        std::vector<std::uint8_t> bytes{std::istreambuf_iterator<char>(file),{}};
+        mir3::Messages messages;
+        check(messages.load(bytes) && !messages.get(2612).empty() && !messages.get(2622).empty(),"HUD captions");
+        bytes.back()^=1;
+        check(!messages.load(bytes),"caption checksum validation");
         mir3::HudModel model;
         for (int i=0;i<23;++i) {
             auto frame=archive.frame(mir3::HudLayout::buttons[i][0]);
@@ -37,6 +49,15 @@ int main(int argc,char** argv) {
         check(model.orb_crop(1,{36,96},{35,80})==std::array{0,40,35,40},"independent mana crop");
         controller.pointer(685,510,true);controller.cancel();
         check(model.pressed==-1,"focus loss releases pressed state");
+        model.defence={1,2};model.magic_defence={3,4};
+        controller.pointer(634,570,true);
+        check(model.stat(0)==std::array{1502,3,4},"stat switch on press");
+        controller.pointer(634,570,false);
+        check(model.stat(0)==std::array{1502,3,4},"release does not switch stat twice");
+        check(!model.press_stat(664,570) && !model.press_stat(634,590),"stat half-open edges");
+        mir3::HudButtonTooltip hint;
+        check(hint.draw("inventory",{31,12},{790,540})==std::array{757,533,43,7},"tooltip right edge and first animation step");
+        check(hint.draw("changed",{31,12},{790,540})[3]==8,"tooltip caption change preserves animation");
         std::cout<<"HUD resources, hit regions, release behavior and crop precision passed\n";
     } catch (const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }
