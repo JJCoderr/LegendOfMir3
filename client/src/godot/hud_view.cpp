@@ -71,7 +71,7 @@ void Mir3HudView::_bind_methods() {
         PropertyInfo(Variant::STRING,"body")));
     ADD_SIGNAL(MethodInfo("npc_dialogue_requested",PropertyInfo(Variant::INT,"actor")));
     ClassDB::bind_method(D_METHOD("apply_shop_purchase_reply","identifier","value"),&Mir3HudView::apply_shop_purchase_reply);
-    ClassDB::bind_method(D_METHOD("apply_shop_goods","actor","count","body"),&Mir3HudView::apply_shop_goods);
+    ClassDB::bind_method(D_METHOD("apply_shop_goods","actor","count","body","wire_format"),&Mir3HudView::apply_shop_goods,DEFVAL(false));
     ClassDB::bind_method(D_METHOD("apply_shop_offers","actor","index","names","icons","prices","identifiers","offset"),&Mir3HudView::apply_shop_offers,DEFVAL(-1));
     ADD_SIGNAL(MethodInfo("shop_purchase_requested",PropertyInfo(Variant::INT,"identifier"),
         PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::STRING,"name")));
@@ -551,7 +551,7 @@ bool Mir3HudView::apply_npc_body(int opcode,int actor,int count,PackedByteArray 
     const auto& ansi=*decoded;
     const auto end=ansi.find(char(0));
     const auto body=String::utf8(mir3::ansi_to_utf8(std::string_view(ansi).substr(0,end)).c_str());
-    return opcode==643?apply_npc_dialogue(opcode,actor,body):apply_shop_goods(actor,count,body);
+    return opcode==643?apply_npc_dialogue(opcode,actor,body):apply_shop_goods(actor,count,body,true);
 }
 
 bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
@@ -723,7 +723,7 @@ bool Mir3HudView::apply_shop_purchase_reply(int identifier,int64_t value) {
     return true;
 }
 
-bool Mir3HudView::apply_shop_goods(int actor,int count,String body) {
+bool Mir3HudView::apply_shop_goods(int actor,int count,String body,bool wire_format) {
     const auto utf8=body.utf8();
     if (actor<=0 || actor!=npc_dialogue_actor || count<0 || count>255 || utf8.length()>10240*4) return false;
     const std::string_view message(utf8.get_data(),utf8.length());
@@ -731,23 +731,27 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body) {
     auto remaining=message.substr(0,message.find(char(0)));
     std::vector<ShopGood> goods;
     for (int i=0;i<count;++i) {
-        std::array<std::string_view,4> fields;
-        for (auto& field:fields) {
+        std::array<std::string_view,7> fields;
+        const int field_count=wire_format?7:4;
+        for (int j=0;j<field_count;++j) {
             const auto slash=remaining.find('/');
             if (slash==remaining.npos || slash==0) return false;
-            field=remaining.substr(0,slash);
+            fields[j]=remaining.substr(0,slash);
             remaining.remove_prefix(slash+1);
         }
         ShopGood good{std::string(fields[0]),0,0,0};
-        const std::array values{&good.variants,&good.price,&good.stock};
-        for (std::size_t j=0;j<values.size();++j) {
+        int extra[2]{};
+        const std::array values{&good.variants,&good.price,&good.stock,&good.icon,&extra[0],&extra[1]};
+        for (int j=0;j<field_count-1;++j) {
             const auto field=fields[j+1];
             const auto end=field.data()+field.size();
             const auto parsed=std::from_chars(field.data(),end,*values[j]);
             if (parsed.ec!=std::errc{} || parsed.ptr!=end || *values[j]<0) return false;
         }
+        if (good.icon>65535) return false;
         goods.push_back(std::move(good));
     }
+    if (wire_format && !remaining.empty()) return false;
     shop_goods=std::move(goods);
     shop_scroll_dragging=false;
     shop_highlighted=shop_goods.empty()?-1:0;
@@ -830,6 +834,10 @@ void Mir3HudView::draw_shop() {
     for (int i=0;i<std::min(shop_goods_rows,int(shop_goods.size())-(shop_show_offers?shop_category_first:shop_first));++i) {
         const auto& good=shop_goods[(shop_show_offers?shop_category_first:shop_first)+i];
         const int y=shop_top+shop_goods_row_top+shop_goods_pitch*i;
+        if (good.icon>=0) {
+            const auto icon=item_frame(good.icon);
+            if (icon.is_valid()) draw_texture(icon,Vector2(39-icon->get_width()/2,y+19-icon->get_height()/2));
+        }
         if ((shop_show_offers?shop_category_first:shop_first)+i==shop_highlighted)
             draw_rect(Rect2(62,y,189,36),Color(1,1,0),false);
         text(good.name,{63,y+3,184,16},good.variants==0?0x00b4b4:shop_pressed==shop_first+i?0x0000ff:0x00ffff,mir3::TextFont::normal,false);

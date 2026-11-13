@@ -381,7 +381,7 @@ func run() -> void:
 		if not check(hud.apply_npc_dialogue(643, 2, script), "reopen NPC dialogue for shop reply"): return
 		var goods_requests: Array = []
 		hud.shop_good_requested.connect(func(actor: int, index: int, name: String): goods_requests.append([actor, index, name]))
-		if not check(hud.apply_npc_message("a<D<<>=B<?H<<<<<PbQ`DC=kYBakW^xmGoDlGoPkLbmqUN=lWsMeWrtkH>xnINxpGl".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "645 goods list"): return
+		if not check(hud.apply_npc_message("a<D<<>=B<?H<<<<<PbQ`DC=kYBakW^xmGoDlGoPkHo<mGo<kH>y>WCQaDC=kYBakW^xlGoDqGoLkHo<nGo<kH>x".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "645 goods list with original icon fields"): return
 		if not check(not hud.apply_shop_goods(2, 1, "Broken/1/"), "reject truncated goods list"): return
 		if not await capture("bichon-merchant-goods"): return
 		click_at(Vector2(45, 285), true)
