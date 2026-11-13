@@ -831,16 +831,28 @@ void Mir3HudView::draw_shop() {
             }
         }
     }
-    for (int i=0;i<std::min(shop_goods_rows,int(shop_goods.size())-(shop_show_offers?shop_category_first:shop_first));++i) {
-        const auto& good=shop_goods[(shop_show_offers?shop_category_first:shop_first)+i];
+    for (int i=0;i<std::min(shop_goods_rows,int(shop_goods.size())-goods_first);++i) {
+        const int index=goods_first+i;
+        const auto& good=shop_goods[index];
         const int y=shop_top+shop_goods_row_top+shop_goods_pitch*i;
+        const Rect2 icon_cell(20,y,36,36), description_cell(62,y,189,36);
+        // 0x477160 highlights both rectangles and uses a separate tint for zero variants.
+        const bool selected=index==shop_highlighted;
+        const Color selected_border(250.f/255,200.f/255,150.f/255);
+        if (selected) {
+            const auto tint=good.variants?Color(40.f/255,120.f/255,120.f/255,1.f/255):
+                Color(80.f/255,80.f/255,160.f/255,1.f/255);
+            legacy_rect(icon_cell,tint);
+            legacy_rect(description_cell,tint);
+            draw_rect(description_cell,selected_border,false);
+        }
         if (good.icon>=0) {
             const auto icon=item_frame(good.icon);
             if (icon.is_valid()) draw_texture(icon,Vector2(39-icon->get_width()/2,y+19-icon->get_height()/2));
         }
-        if ((shop_show_offers?shop_category_first:shop_first)+i==shop_highlighted)
-            draw_rect(Rect2(62,y,189,36),Color(1,1,0),false);
-        text(good.name,{63,y+3,184,16},good.variants==0?0x00b4b4:shop_pressed==shop_first+i?0x0000ff:0x00ffff,mir3::TextFont::normal,false);
+        if (selected || good.variants)
+            draw_rect(icon_cell,selected?selected_border:Color(180.f/255,180.f/255,180.f/255),false);
+        text(good.name,{63,y+3,184,16},0xfafa,mir3::TextFont::normal,false);
         text(std::to_string(good.price),{63,y+19,140,16},0xfafafa,mir3::TextFont::normal,false);
         text(std::to_string(good.stock),{205,y+19,44,16},0xfafafa,mir3::TextFont::normal,false);
     }
