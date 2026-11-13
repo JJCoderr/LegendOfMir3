@@ -465,6 +465,15 @@ func run() -> void:
 	record[6] = 5
 	if not check(hud.apply_skill_records(210, 1, record) and hud.hud_snapshot().skill_tab == 1, "210 adds skill while retaining active category"): return
 	if not await capture("magic-list-reply"): return
+	var refreshed_popup := popup_event.duplicate() as InputEventMouseButton
+	refreshed_popup.position = Vector2(385, 86)
+	refreshed_popup.pressed = true
+	refreshed_popup.double_click = true
+	Input.parse_input_event(refreshed_popup)
+	if not await capture("magic-refreshed-key-menu"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var popup_image := root.get_texture().get_image()
+		if not check(popup_image.get_pixel(485, 226) != popup_image.get_pixel(445, 226), "popup displays retained shortcut icon"): return
 	click_at(Vector2(636, 32), true)
 	click_at(Vector2(636, 32), false)
 	var skill_wheel := InputEventMouseButton.new()

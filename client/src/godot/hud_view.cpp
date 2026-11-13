@@ -1511,15 +1511,14 @@ void Mir3HudView::draw_skill_key_menu() {
     legacy_rect(skill_key_menu,Color(100.f/255,100.f/255,50.f/255,150.f/255));
     for (int index=0;index<12;++index) {
         const Vector2 point=skill_key_menu.position+Vector2(40*(index%4),40*(index/4));
-        for (const auto& group:skills.learned) for (const auto& skill:group) {
-            if (skill.id && skill.key==index+1) {
-                const int frame_id=2*(skill.id&255)-2;
-                if (!skill_frames.contains(frame_id)) {
-                    const auto decoded=magic_icons.frame(frame_id);
-                    if (decoded) skill_frames.emplace(frame_id,texture(decoded->pixels.rgba,decoded->width,decoded->height));
-                }
-                if (const auto it=skill_frames.find(frame_id);it!=skill_frames.end()) draw_texture(it->second,point);
+        // The popup reads the shortcut table, including bindings kept by 211/212.
+        if (const int id=bound_skill(index+1)&255;id!=0) {
+            const int frame_id=2*id-2;
+            if (!skill_frames.contains(frame_id)) {
+                const auto decoded=magic_icons.frame(frame_id);
+                if (decoded) skill_frames.emplace(frame_id,texture(decoded->pixels.rgba,decoded->width,decoded->height));
             }
+            if (const auto it=skill_frames.find(frame_id);it!=skill_frames.end()) draw_texture(it->second,point);
         }
         sprite(1660+index,{int(point.x),int(point.y)});
     }
