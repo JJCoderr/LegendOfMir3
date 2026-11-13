@@ -257,6 +257,17 @@ func run() -> void:
 	key(KEY_ESCAPE)
 	await process_frame
 	if not check(not hud.hud_snapshot().group_visible, "group escape closes"): return
+	var guild_queries: Array[bool] = []
+	hud.guild_overview_requested.connect(func(): guild_queries.append(true))
+	click_at(Vector2(686, 485), false)
+	if not check(guild_queries == [true] and not hud.hud_snapshot().guild_visible, "guild overview requested from HUD"): return
+	hud.set_guild_overview("比奇行会", PackedStringArray(["欢迎加入比奇行会", "今晚集合练级"]))
+	if not await capture("guild-overview"): return
+	click_at(Vector2(196, 410), true)
+	click_at(Vector2(196, 410), false)
+	if not check(hud.hud_snapshot().guild_tab == 1, "guild members tab"): return
+	key(KEY_ESCAPE)
+	if not check(not hud.hud_snapshot().guild_visible, "guild escape closes"): return
 	var input: LineEdit = hud.get_node("ChatInput")
 	if not check(input.position == Vector2(185, 575) and input.size == Vector2(344, 15), "compact input bounds"): return
 	key(KEY_ENTER)

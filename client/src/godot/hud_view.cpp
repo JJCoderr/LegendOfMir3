@@ -29,6 +29,8 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_inventory_use_reply","identifier","remaining"),&Mir3HudView::apply_inventory_use_reply);
     ADD_SIGNAL(MethodInfo("skill_key_requested",PropertyInfo(Variant::INT,"id"),PropertyInfo(Variant::INT,"legacy_key")));
     ClassDB::bind_method(D_METHOD("set_group_roster","player","members"),&Mir3HudView::set_group_roster);
+    ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines"),&Mir3HudView::set_guild_overview);
+    ADD_SIGNAL(MethodInfo("guild_overview_requested"));
     ADD_SIGNAL(MethodInfo("group_member_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("group_allow_requested",PropertyInfo(Variant::BOOL,"allowed")));
     ClassDB::bind_method(D_METHOD("set_learned_skill","id","level","key","experience","required","name"),&Mir3HudView::set_learned_skill,DEFVAL(0),DEFVAL(0),DEFVAL(String()));
@@ -53,6 +55,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_expanded_count"]=int(chat_history.lines(true).size());
     result["chat_compact_first"]=chat_history.first(false);
     result["chat_expanded_first"]=chat_history.first(true);
+    result["guild_visible"]=guild.visible;
+    result["guild_tab"]=guild_layout.tab;
     result["group_request"]=group_request;
     result["group_visible"]=group.visible;
     result["group_allow"]=group_allow;
@@ -212,6 +216,7 @@ void Mir3HudView::_draw() {
     if (group.visible && group_on_top) draw_group();
     draw_skill_key_menu();
     draw_skill_description();
+    if (guild.visible) draw_guild();
     if (group_request) draw_group_dialog();
     button_hint();
     if (bag.held) {
@@ -327,6 +332,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             const int id=reception_buttons.press(action,rejected_chat[action-20]);
             chat_requested(String::utf8(message(id).c_str()));
         }
+        if (action==6) emit_signal("guild_overview_requested");
         if (action==5) toggle_group();
         if (action==7) toggle_skills();
         if (action==12) toggle_inventory();
@@ -337,7 +343,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
@@ -447,6 +453,7 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         get_viewport()->set_input_as_handled();
         return;
     }
+    if (code==KEY_ESCAPE && guild.visible) { guild.toggle();queue_redraw();get_viewport()->set_input_as_handled();return; }
     if (code==KEY_G || (code==KEY_ESCAPE && group.visible && (group_on_top || (!skills.visible && !status.visible && !inventory.visible)))) {
         toggle_group();
         get_viewport()->set_input_as_handled();
@@ -647,6 +654,7 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
 }
 
 bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
+    if (guild_pointer(kind,position)) return true;
     if (status.dragging || status_close_pressed) return status_pointer(kind,position);
     if (inventory.dragging || inventory.close_pressed || inventory.scroll.captured)
         return inventory_pointer(kind,position);
@@ -1089,5 +1097,72 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
         }
     }
     get_viewport()->set_input_as_handled();
+    return true;
+}
+
+void Mir3HudView::set_guild_overview(String name,PackedStringArray lines) {
+    guild_name=name;
+    guild_lines=lines;
+    guild_layout.tab=0;
+    guild_first=0;
+    guild.visible=true;
+    queue_redraw();
+}
+
+void Mir3HudView::draw_guild() {
+    const auto [x,y,w,h]=guild.rect;
+    const auto skin=frame(1300);
+    if (skin.is_valid()) sprite(1300,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
+    text(message(mir3::GuildLayout::title(guild_layout.tab)),{x+45,y+10,112,25},0x96c8ff);
+    text(guild_name.utf8().get_data(),{x+340,y+10,213,24},0x96c8ff);
+    const int count=guild_layout.tab==0?int(guild_lines.size()):0;
+    const auto metrics=mir3::raster_text(guild_name.utf8().get_data(),300,24,false,mir3::TextFont::normal);
+    for (int row=0;row<18 && guild_first+row<count;++row) {
+        auto bounds=mir3::GuildLayout::notice_rect(row,metrics.text_height);
+        bounds[0]+=x;
+        bounds[1]+=y;
+        text(guild_lines[guild_first+row].utf8().get_data(),bounds,0xffffff,mir3::TextFont::normal,false);
+    }
+    sprite(1225,{x+557,mir3::GuildScroll::thumb_y(guild_first,count,y)});
+    for (int i=0;i<9;++i) {
+        const auto spec=mir3::GuildLayout::buttons[i];
+        sprite(guild_layout.frames(i)[0],{x+spec[1],y+spec[2]});
+    }
+}
+
+bool Mir3HudView::guild_pointer(int kind,Vector2 point) {
+    if (!guild.visible) return false;
+    const auto [x,y,w,h]=guild.rect;
+    const bool inside=rect(guild.rect).has_point(point);
+    const auto thumb=frame(1225);
+    const auto tick=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    const int count=guild_layout.tab==0?int(guild_lines.size()):0;
+    bool captured=thumb.is_valid() && guild_scroll.input(kind,int(point.x),int(point.y),x,y,
+        thumb->get_width(),thumb->get_height(),count,guild_first,static_cast<std::uint32_t>(tick));
+    if (!captured) {
+        int hit=-1;
+        for (int i=0;i<9;++i) {
+            const auto spec=mir3::GuildLayout::buttons[i];
+            const auto icon=frame(spec[0]);
+            if (icon.is_valid() && Rect2(Vector2(x+spec[1],y+spec[2]),icon->get_size()).has_point(point)) { hit=i;break; }
+        }
+        if (kind==0 && inside) {
+            guild_layout.pressed=hit;
+            guild.begin_drag(int(point.x),int(point.y),hit>=0);
+        } else if (kind==1) {
+            captured=guild.move_drag(int(point.x),int(point.y));
+        } else if (kind==2) {
+            captured=guild.end_drag() || guild_layout.pressed>=0;
+            if (guild_layout.release(hit)) {
+                if (hit==0) guild.toggle();
+                if (hit>=1 && hit<=3) guild_first=0;
+                if (hit==1) emit_signal("guild_overview_requested");
+            }
+        }
+    }
+    if (!inside && !captured) return false;
+    controller.cancel();
+    get_viewport()->set_input_as_handled();
+    queue_redraw();
     return true;
 }

@@ -3,6 +3,7 @@
 #include "inventory/inventory_panel.hpp"
 #include "inventory/inventory_grid.hpp"
 #include "status/equipment.hpp"
+#include "guild/guild_layout.hpp"
 #include "magic/skill_panel.hpp"
 #include "resources/wil_archive.hpp"
 #include "resources/messages.hpp"
@@ -27,6 +28,7 @@ public:
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
+    void set_guild_overview(godot::String name,godot::PackedStringArray lines);
     void set_group_roster(godot::String player,godot::PackedStringArray members);
     bool set_learned_skill(int id,int level,int key,int experience,int required,godot::String name);
     bool apply_equipment_reply(int identifier);
@@ -37,6 +39,14 @@ protected:
 private:
     mir3::HudModel model;
     mir3::InventoryPanel inventory;
+    mir3::DraggablePanel guild{{102,22,594,444}};
+    mir3::GuildLayout guild_layout;
+    mir3::GuildScroll guild_scroll;
+    int guild_first=0;
+    godot::String guild_name;
+    godot::PackedStringArray guild_lines;
+    void draw_guild();
+    bool guild_pointer(int kind,godot::Vector2 point);
     mir3::DraggablePanel group{{272,123,258,244}};
     bool group_on_top=false,group_allow=false;
     int group_pressed=-1;
