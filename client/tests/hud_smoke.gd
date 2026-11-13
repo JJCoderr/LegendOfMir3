@@ -572,6 +572,13 @@ func run() -> void:
 		if not await capture("bichon-merchant-bulk-quantity"): return
 		key(KEY_ENTER)
 		if not check(npc_packets.back().substr(2, 16) == "<\\<<<KT?=L<<<<H<", "bulk purchase includes item key and quantity"): return
+		for position in [Vector2(320, 259), Vector2(395, 259)]:
+			var before_bulk_double := purchases.size()
+			offer_double_click.position = position
+			root.push_input(offer_double_click, true)
+			click_at(position, false)
+			if not check(hud.hud_snapshot().group_request == 0 and purchases.size() == before_bulk_double + 1 and npc_packets.back().substr(2, 16) == "<\\<<<KT?=L<<<<@<", "bulk preview double-click buys one without a prompt"): return
+		if not await capture("bichon-merchant-bulk-double-click"): return
 		if not check(hud.apply_npc_message("aL<<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
 		if not check(not hud.apply_shop_goods(2, 10, stock_list), "late goods reply cannot reopen closed merchant"): return
 		if not check(hud.apply_npc_dialogue(643, 2, script) and hud.walk_to_map_cell(Vector2i(419, 410)), "walk away from reopened NPC dialogue"): return

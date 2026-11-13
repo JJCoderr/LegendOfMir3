@@ -954,6 +954,14 @@ void Mir3HudView::open_shop_category() {
     emit_npc_packet(1015,actor,name);
 }
 
+void Mir3HudView::buy_shop_bulk(std::uint16_t quantity) {
+    const auto& good=shop_goods[shop_bulk_index];
+    const auto item=String::utf8(good.name.c_str());
+    const int actor=shop_actor;
+    emit_npc_packet(1014,actor,item,good.stock,quantity);
+    emit_signal("shop_purchase_requested",1014,actor,item);
+}
+
 bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
     if (!shop_actor) return false;
     if (shop_scroll_input(kind,pointer)) return true;
@@ -986,6 +994,15 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
         const auto confirm=frame(1263);
         if (confirm.is_valid() && Rect2(Vector2(106,shop_top+186),confirm->get_size()).has_point(pointer))
             control=category_button;
+    }
+    if (!control && kind==0 && double_click && shop_bulk_index>=0 &&
+        (Rect2(305,shop_top+17,36,36).has_point(pointer) || Rect2(352,shop_top+17,148,36).has_point(pointer))) {
+        // 0x479100 buys one item when either bulk preview cell is double-clicked.
+        shop_pressed=-1;
+        buy_shop_bulk(1);
+        get_viewport()->set_input_as_handled();
+        queue_redraw();
+        return true;
     }
     if (control || shop_pressed<=confirm_button) {
         const int activate=kind==2 && control==shop_pressed?control:0;
@@ -2814,10 +2831,7 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
             const auto parsed=std::from_chars(digits.data(),end,quantity);
             if (parsed.ec!=std::errc{} || parsed.ptr!=end || quantity==0 || quantity>65535) return;
         }
-        const auto& good=shop_goods[shop_bulk_index];
-        const auto item=String::utf8(good.name.c_str());
-        emit_npc_packet(1014,shop_actor,item,good.stock,static_cast<std::uint16_t>(quantity));
-        emit_signal("shop_purchase_requested",1014,shop_actor,item);
+        buy_shop_bulk(static_cast<std::uint16_t>(quantity));
         return;
     }
     if (!confirm) return;
