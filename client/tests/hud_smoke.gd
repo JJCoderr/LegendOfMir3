@@ -662,12 +662,17 @@ func run() -> void:
 		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "closed shop ignores pending details"): return
 		if not check(not hud.apply_shop_offers(2, 8, names, icons, prices, ids), "list close dismisses the active detail grid"): return
 		if not await capture("bichon-merchant-shop-closed"): return
-		if not check(hud.apply_shop_goods(2, 1, "Bundle/2/20/5/301/0/10/", true), "open quantity-based goods with level requirement"): return
+		if not check(hud.apply_shop_goods(2, 2, "Potion/1/20/5/301/0/0/Bundle/2/20/5/301/0/10/", true),
+			"open ordinary and bulk categories together"): return
+		click_at(Vector2(135, 420), true)
+		click_at(Vector2(135, 420), false)
+		if not check(goods_requests.back() == [2, 0, "Potion"], "request details before switching to bulk"): return
 		var requests_before_bulk := goods_requests.size()
-		offer_double_click.position = Vector2(80, 250)
+		offer_double_click.position = Vector2(80, 292)
 		root.push_input(offer_double_click, true)
-		click_at(Vector2(80, 250), false)
+		click_at(Vector2(80, 292), false)
 		if not check(goods_requests.size() == requests_before_bulk, "bulk double-click opens a local preview"): return
+		if not check(not hud.apply_npc_message(offer_packet, offer_key), "late detail packet cannot replace bulk preview"): return
 		if not await capture("bichon-merchant-bulk-preview"): return
 		click_at(Vector2(380, 296), true)
 		click_at(Vector2(380, 296), false)

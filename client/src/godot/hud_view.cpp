@@ -941,7 +941,9 @@ void Mir3HudView::open_shop_category() {
     if (shop_goods[shop_highlighted].variants==2) {
         shop_bulk_index=shop_highlighted;
         shop_show_offers=false;
-        shop_selected=-1;
+        shop_selected=shop_offer_index=-1;
+        shop_offer_page=0;
+        shop_offer_loading=false;
         shop_offers.clear();
         return;
     }
