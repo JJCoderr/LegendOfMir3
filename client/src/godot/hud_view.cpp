@@ -1658,6 +1658,7 @@ void Mir3HudView::_process(double delta) {
         }
         ++npc_dialogue_arrow_frame;
     }
+    if (chat_input && chat_input->has_focus()) map_pointer_button=0;
     const bool moving=walk_frame>=0;
     advance_map_step(delta);
     if (map_pointer_button==MOUSE_BUTTON_RIGHT && moving && walk_frame<0 && map_route.empty()) {

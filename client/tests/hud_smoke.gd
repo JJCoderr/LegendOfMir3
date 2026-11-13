@@ -196,6 +196,25 @@ func run() -> void:
 		modal_walk = modal_walk.duplicate()
 		modal_walk.pressed = false
 		root.push_input(modal_walk, true)
+		var chat_walk := modal_walk.duplicate() as InputEventMouseButton
+		chat_walk.pressed = true
+		root.push_input(chat_walk, true)
+		if not check(hud.hud_snapshot().walk_frame == 0, "start held walk before chat"): return
+		key(KEY_ENTER)
+		var terrain_chat: LineEdit = hud.get_node("ChatInput")
+		if not check(terrain_chat.has_focus(), "open chat during held walk"): return
+		key(0, 65)
+		if not await capture("bichon-chat-during-walk"): return
+		await create_timer(0.85).timeout
+		var chat_stop_cell: Vector2i = hud.hud_snapshot().player_cell
+		if not check(hud.hud_snapshot().walk_frame == -1, "current step finishes while chat is focused"): return
+		key(KEY_ESCAPE)
+		await create_timer(0.75).timeout
+		if not check(hud.hud_snapshot().player_cell == chat_stop_cell and hud.hud_snapshot().walk_frame == -1,
+			"closing chat does not resume held walk"): return
+		chat_walk = chat_walk.duplicate()
+		chat_walk.pressed = false
+		root.push_input(chat_walk, true)
 		hud.set_meta("map_camera_cell", Vector2i(404, 402))
 		hud.queue_redraw()
 		if not await capture("bichon-merchant"): return
