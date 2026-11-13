@@ -549,8 +549,6 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
         int estimated_lines=0;
         int option_id=0;
         while (!script.empty()) {
-            const auto end=script.find(char(92));
-            auto row=script.substr(0,end);
             int x=0, ansi_length=0;
             const auto append=[&](std::string_view label,std::string_view command={}) {
                 ansi_length+=int(mir3::utf8_to_ansi(label).size());
@@ -577,14 +575,17 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
                     else x+=width;
                 }
             };
-            while (!row.empty()) {
-                const auto open=row.find_first_of("<{");
-                if (open==row.npos) { append(row); break; }
-                append(row.substr(0,open));
-                const bool option=row[open]=='<';
-                const auto close=row.find(option?'>':'}',open+1);
-                if (close==row.npos) break;
-                const auto tag=row.substr(open+1,close-open-1);
+            // 0x45F5F0 scans for a line break only outside complete tags.
+            while (!script.empty()) {
+                const auto open=script.find_first_of("\\<{");
+                append(script.substr(0,open));
+                if (open==script.npos) { script={}; break; }
+                script.remove_prefix(open);
+                if (script.front()==char(92)) break;
+                const bool option=script.front()=='<';
+                const auto close=script.find(option?'>':'}',1);
+                if (close==script.npos) { script={}; break; }
+                const auto tag=script.substr(1,close-1);
                 const auto split=tag.find('/');
                 if (split!=tag.npos) {
                     const auto name=tag.substr(0,split);
@@ -597,11 +598,11 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
                         if (parsed.ec==std::errc{} && index>=0 && index<int(colors.size())) color=colors[index];
                     }
                 }
-                row.remove_prefix(close+1);
+                script.remove_prefix(close+1);
             }
-            estimated_lines+=std::max(1,(ansi_length+49)/50);
-            if (end==script.npos) break;
-            script.remove_prefix(end+1);
+            if (ansi_length || !script.empty()) estimated_lines+=std::max(1,(ansi_length+49)/50);
+            if (script.empty()) break;
+            script.remove_prefix(1);
             ++line;
         }
         if (npc_dialogue_actor && npc_dialogue_actor!=actor) close_npc_dialogue();

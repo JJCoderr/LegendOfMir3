@@ -255,6 +255,13 @@ func run() -> void:
 		click_at(Vector2(78, 45), true)
 		click_at(Vector2(78, 45), false)
 		if not check(dialogue_actions == [[2, "@buy"], [2, "@buy"], [2, "@exit"]], "only inline labels dispatch their own commands"): return
+		var tagged_command := "@route" + char(92) + "药店"
+		var tagged_script := "老黄/{FCOLOR/10}请选择 <前往/" + tagged_command + "> {FCOLOR/12}药店"
+		if not check(hud.apply_npc_dialogue(643, 2, tagged_script), "parse script delimiter inside option"): return
+		if not await capture("bichon-merchant-script-tags"): return
+		click_at(Vector2(82, 45), true)
+		click_at(Vector2(82, 45), false)
+		if not check(dialogue_actions.back() == [2, tagged_command], "line delimiter inside option stays in command"): return
 		if not check(hud.apply_npc_dialogue(643, 2, "Merchant/<" + "比".repeat(30) + "/@wrapped>"), "wrap long NPC line"): return
 		if not await capture("bichon-merchant-wrapped-line"): return
 		click_at(Vector2(48, 45), true)
