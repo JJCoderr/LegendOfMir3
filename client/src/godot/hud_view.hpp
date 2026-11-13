@@ -270,6 +270,7 @@ private:
     int npc_dialogue_actor=0, npc_dialogue_pressed=-1;
     godot::Vector2i npc_dialogue_origin;
     void close_npc_dialogue();
+    bool apply_shop_purchase_reply(int identifier,int64_t value);
     bool apply_shop_goods(int actor,int count,godot::String body);
     struct ShopGood { std::string name; int variants, price, stock; };
     std::vector<ShopGood> shop_goods;

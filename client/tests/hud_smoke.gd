@@ -256,6 +256,11 @@ func run() -> void:
 		click_at(Vector2(60, 40), true)
 		click_at(Vector2(60, 40), false)
 		if not check(offer_selections == [[2, 10001]], "select offer by its instance identifier"): return
+		if not check(hud.apply_shop_purchase_reply(650, 125) and hud.hud_snapshot().inventory_gold == 125, "650 applies server gold balance"): return
+		if not check(not hud.apply_shop_purchase_reply(651, 4) and hud.apply_shop_purchase_reply(651, 2), "651 maps known purchase failure"): return
+		if not check(hud.hud_snapshot().group_request == 1438 and hud.hud_snapshot().inventory_gold == 125, "failure opens original caption without changing gold"): return
+		if not await capture("bichon-merchant-purchase-failed"): return
+		key(KEY_ENTER)
 		if not check(hud.apply_shop_offers(2, 9, PackedStringArray(), PackedInt32Array(), PackedInt32Array(), PackedInt64Array()), "accept empty detail page"): return
 		click_at(Vector2(60, 40), true)
 		click_at(Vector2(60, 40), false)

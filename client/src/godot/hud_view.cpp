@@ -66,6 +66,7 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
     ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
     ADD_SIGNAL(MethodInfo("npc_dialogue_requested",PropertyInfo(Variant::INT,"actor")));
+    ClassDB::bind_method(D_METHOD("apply_shop_purchase_reply","identifier","value"),&Mir3HudView::apply_shop_purchase_reply);
     ClassDB::bind_method(D_METHOD("apply_shop_goods","actor","count","body"),&Mir3HudView::apply_shop_goods);
     ClassDB::bind_method(D_METHOD("apply_shop_offers","actor","index","names","icons","prices","identifiers"),&Mir3HudView::apply_shop_offers);
     ADD_SIGNAL(MethodInfo("shop_offer_selected",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::INT,"identifier")));
@@ -521,6 +522,16 @@ void Mir3HudView::close_npc_dialogue() {
     npc_dialogue_rows.clear();
     npc_dialogue_pressed=-1;
     queue_redraw();
+}
+
+bool Mir3HudView::apply_shop_purchase_reply(int identifier,int64_t value) {
+    if (identifier==650 && value>=0 && value<=UINT32_MAX) {
+        inventory_gold=static_cast<std::uint32_t>(value);
+    } else if (identifier==651 && value>=1 && value<=3) {
+        open_group_dialog(1436+static_cast<int>(value));
+    } else return false;
+    queue_redraw();
+    return true;
 }
 
 bool Mir3HudView::apply_shop_goods(int actor,int count,String body) {
@@ -2103,7 +2114,7 @@ void Mir3HudView::handle_exit_confirmation(int dialog_id) {
 }
 
 bool Mir3HudView::dialog_is_alert() const {
-    return group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
+    return (group_request>=1437 && group_request<=1439) || group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
 }
 
 bool Mir3HudView::dialog_has_input() const {
