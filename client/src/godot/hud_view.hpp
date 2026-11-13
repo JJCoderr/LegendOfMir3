@@ -268,6 +268,8 @@ private:
     struct NpcDialogueRow { std::string text, command; mir3::HudLayout::Rect bounds; };
     std::vector<NpcDialogueRow> npc_dialogue_rows;
     int npc_dialogue_actor=0, npc_dialogue_pressed=-1;
+    godot::Vector2i npc_dialogue_origin;
+    void close_npc_dialogue();
     void draw_npc_dialogue();
     bool npc_dialogue_input(int kind,godot::Vector2 pointer);
     std::uint64_t last_merchant_request=0;

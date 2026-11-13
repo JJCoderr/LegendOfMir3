@@ -464,8 +464,8 @@ bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
 
 bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
     if (opcode==644) {
-        npc_dialogue_actor=0;
-        npc_dialogue_rows.clear();
+        close_npc_dialogue();
+        return true;
     } else {
         if (opcode!=643 || actor<=0) return false;
         const auto utf8=body.utf8();
@@ -500,10 +500,18 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
             script.remove_prefix(end+1);
         }
         npc_dialogue_actor=actor;
+        npc_dialogue_origin=player_cell;
     }
     npc_dialogue_pressed=-1;
     queue_redraw();
     return true;
+}
+
+void Mir3HudView::close_npc_dialogue() {
+    npc_dialogue_actor=0;
+    npc_dialogue_rows.clear();
+    npc_dialogue_pressed=-1;
+    queue_redraw();
 }
 
 void Mir3HudView::draw_npc_dialogue() {
@@ -608,6 +616,9 @@ void Mir3HudView::advance_map_step(double delta) {
     ++walk_frame;
     if (walk_frame==(player_facing==7?4:1)) {
         player_cell=step_destination;
+        const auto distance=player_cell-npc_dialogue_origin;
+        if (npc_dialogue_actor && std::max(std::abs(distance.x),std::abs(distance.y))>5)
+            close_npc_dialogue();
         set_minimap_position(player_cell.x,player_cell.y);
     }
     if (walk_frame==6) walk_frame=-1;
@@ -3035,6 +3046,7 @@ void Mir3HudView::set_map_location(String name,int x,int y) {
     model.map_name=utf8.get_data();
     set_minimap_position(x,y);
     if (!changed) return;
+    close_npc_dialogue();
     trade_actor_name=String();
     hovered_target=0;
     target_focus.clear();

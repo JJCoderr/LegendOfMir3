@@ -221,6 +221,14 @@ func run() -> void:
 		click_at(Vector2(75, 32), false)
 		if not check(dialogue_actions == [[2, "@buy"], [2, "@buy"], [2, "@exit"]], "only inline labels dispatch their own commands"): return
 		if not check(hud.apply_npc_dialogue(644, 2, "") and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
+		if not check(hud.apply_npc_dialogue(643, 2, script) and hud.walk_to_map_cell(Vector2i(419, 410)), "walk away from reopened NPC dialogue"): return
+		var leave_deadline := Time.get_ticks_msec() + 6000
+		while hud.hud_snapshot().player_cell.x < 419 and Time.get_ticks_msec() < leave_deadline:
+			await process_frame
+			if hud.hud_snapshot().player_cell.x <= 418:
+				if not check(hud.hud_snapshot().npc_dialogue_actor == 2, "dialogue stays visible within five cells"): return
+		if not check(hud.hud_snapshot().player_cell == Vector2i(419, 410) and hud.hud_snapshot().npc_dialogue_actor == 0, "dialogue closes on the sixth cell"): return
+		if not await capture("bichon-merchant-walk-away"): return
 		quit()
 		return
 	for i in 20:
