@@ -200,6 +200,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_compact_count"]=int(chat_history.lines(false).size());
     result["chat_expanded_count"]=int(chat_history.lines(true).size());
     result["chat_compact_first"]=chat_history.first(false);
+    result["portrait_map_mode"]=portrait_map_mode;
+    result["portrait_map_visible"]=portrait_map_visible && !model.layout.expanded;
     result["chat_expanded_first"]=chat_history.first(true);
     result["portrait_visible"]=portrait_panel.visible;
     result["custom_portrait"]=active_portrait.is_valid();
@@ -1483,7 +1485,9 @@ void Mir3HudView::_draw() {
     if (!model.layout.expanded) {
         sprite(1490,Layout::image_position(Layout::Image::portrait));
         const auto origin=point(Layout::image_position(Layout::Image::portrait));
-        if (active_portrait.is_valid()) {
+        if (portrait_map_mode) {
+            draw_portrait_map();
+        } else if (active_portrait.is_valid()) {
             paint_canvas->draw_texture_rect(active_portrait,Rect2(point(Layout::image_position(Layout::Image::portrait)),Vector2(82,94)),false);
         } else if (const auto portrait=portrait_texture(portraits,portrait_frames,model.portrait_frame());portrait.is_valid()) {
             paint_canvas->draw_texture(portrait,origin);
@@ -1984,6 +1988,11 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         }
         if (action==0) request_trade();
         if (action==1) toggle_minimap(100);
+        if (!captured && kind==2 && !model.layout.expanded && rect(mir3::HudLayout::portrait_hover).has_point(p)) {
+            toggle_portrait_map();
+            get_viewport()->set_input_as_handled();
+            return;
+        }
         if (action==2) skill_shortcuts_visible=!skill_shortcuts_visible;
         if (action==3 || action==4) open_group_dialog(action==3?109:101);
         if (action==6) emit_signal("guild_overview_requested");
@@ -2201,7 +2210,8 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         get_viewport()->set_input_as_handled();
         return;
     }
-    if (code==KEY_V || (minimap.visible && (code==KEY_T || code==KEY_Y))) {
+    if (code==KEY_J || code==KEY_V || (minimap.visible && (code==KEY_T || code==KEY_Y))) {
+        if (code==KEY_J) toggle_portrait_map();
         if (code==KEY_V) toggle_minimap(1000);
         if (code==KEY_T) minimap.resize();
         if (code==KEY_Y) minimap.translucent=!minimap.translucent;
@@ -3541,6 +3551,8 @@ void Mir3HudView::load_options() {
     audio_options.effects_level=mir3::AudioOptions::normalized_level(read(L"EffectSoundLevel",0));
     magic_light=read(L"MagicLight",1)!=0;
     damage_numbers=read(L"BloodNum",1)!=0;
+    portrait_map_mode=read(L"InformationMode",0)!=0;
+    portrait_map_pending=portrait_map_mode;
 }
 
 void Mir3HudView::save_options() {
@@ -3789,6 +3801,9 @@ bool Mir3HudView::apply_minimap_reply(int map_number) {
     minimap_image=texture(decoded->pixels.rgba,decoded->width,decoded->height);
     if (minimap_image.is_null()) return false;
     minimap.receive(decoded->width,decoded->height,ticks_msec());
+    portrait_map_full_archive=id>=1000;
+    if (portrait_map_pending) portrait_map_visible=portrait_map_mode;
+    portrait_map_pending=false;
     queue_redraw();
     return true;
 }
@@ -3799,8 +3814,34 @@ void Mir3HudView::apply_minimap_unavailable() {
     minimap.visible=false;
     minimap.pending=false;
     minimap.dragging=false;
+    portrait_map_visible=portrait_map_pending=false;
     post_chat(String::utf8(message(1458).c_str()),0xffffff,0xff);
     queue_redraw();
+}
+
+void Mir3HudView::toggle_portrait_map() {
+    if (minimap.reply_time && ticks_msec()-minimap.reply_time<=1000) return;
+    portrait_map_mode=!portrait_map_mode;
+    portrait_map_pending=portrait_map_mode;
+    portrait_map_visible=false;
+    if (portrait_map_pending) emit_signal("minimap_requested",1033);
+    const auto path=options_path.utf16();
+    if (!WritePrivateProfileStringW(L"Options",L"InformationMode",portrait_map_mode?L"1":L"0",
+            reinterpret_cast<const wchar_t*>(path.get_data())))
+        UtilityFunctions::push_warning("Could not save InformationMode to ",options_path);
+    queue_redraw();
+}
+
+void Mir3HudView::draw_portrait_map() {
+    if (!portrait_map_visible || minimap_image.is_null()) return;
+    const auto source=rect(minimap.portrait_source(portrait_map_full_archive));
+    constexpr float light=150.f/255;
+    const Vector2 surface=portrait_map_full_archive?Vector2(256,256):Vector2(180,130);
+    const Vector2 origin=portrait_map_full_archive?
+        Vector2(source.size.x>=256?510:530,source.size.y>=256?470:485):Vector2(510,470);
+    const Vector2 scale=Vector2(128,128)/surface;
+    paint_canvas->draw_rect(Rect2(origin,Vector2(128,128)),Color(0,0,0));
+    paint_canvas->draw_texture_rect_region(minimap_image,Rect2(origin,source.size*scale),source,Color(light,light,light));
 }
 
 void Mir3HudView::send_trade_offer(int count) {
@@ -4130,7 +4171,9 @@ void Mir3HudView::set_map_location(String name,int x,int y) {
     minimap.nearby_green.clear();
     minimap.nearby_orange.clear();
     minimap_image.unref();
-    if (refresh) emit_signal("minimap_requested",1033);
+    portrait_map_visible=false;
+    portrait_map_pending=portrait_map_mode;
+    if (refresh || portrait_map_pending) emit_signal("minimap_requested",1033);
 }
 
 void Mir3HudView::set_minimap_position(int x,int y) {

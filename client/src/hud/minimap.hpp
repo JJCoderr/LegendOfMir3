@@ -35,6 +35,13 @@ struct Minimap {
         return {int(std::clamp<std::int64_t>(map_x-w/2,0,width-w)),
             int(std::clamp<std::int64_t>(std::int64_t(player_y)-h/2,0,height-h))};
     }
+    // 0x45E370 sets the staging surface size, 0x45CE80 centers its crop.
+    HudLayout::Rect portrait_source(bool full_archive) const {
+        const int w=full_archive?256:180, h=full_archive?256:130;
+        return {int(std::clamp<std::int64_t>(map_pixel_x(player_x)-std::min(w,width)/2,0,std::max(0,width-w))),
+            int(std::clamp<std::int64_t>(std::int64_t(player_y)-std::min(h,height)/2,0,std::max(0,height-h))),
+            std::min(w,width),std::min(h,height)};
+    }
     bool toggle(std::uint64_t now,std::uint64_t cooldown) {
         if (reply_time && now-reply_time<=cooldown) return false;
         if (visible) {

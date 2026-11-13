@@ -1095,8 +1095,19 @@ func run() -> void:
 	if not check(hud.apply_minimap_reply(1001) and not hud.hud_snapshot().minimap_visible,
 		"711 clears the pending open before a subsequent map reply"): return
 	if not await capture("hud-minimap-unavailable"): return
-	# The later spell test opens the minimap again with the 1000 ms V shortcut.
 	await create_timer(1.01).timeout
+	click_at(Vector2(550, 510), false)
+	if not check(hud.hud_snapshot().portrait_map_mode and not hud.hud_snapshot().portrait_map_visible
+		and map_requests.size() == 5, "portrait click requests a map and waits for 710"): return
+	if not check(hud.apply_minimap_reply(1001) and hud.hud_snapshot().portrait_map_visible
+		and not hud.hud_snapshot().minimap_visible, "710 shows the portrait map independently"): return
+	if not await capture("hud-portrait-map"): return
+	key(KEY_J)
+	if not check(hud.hud_snapshot().portrait_map_mode, "J respects the 710 cooldown"): return
+	await create_timer(1.01).timeout
+	key(KEY_J)
+	if not check(not hud.hud_snapshot().portrait_map_mode and not hud.hud_snapshot().portrait_map_visible,
+		"J returns from the portrait map"): return
 	if not check(hud.hud_snapshot().inventory_visible and hud.hud_snapshot().inventory_position == Vector2i(518, 0), "inventory origin"): return
 	click_at(overlap_cell, true)
 	click_at(overlap_cell, false)

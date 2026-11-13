@@ -121,6 +121,9 @@ private:
     mir3::ElementAttributes elements;
     godot::String character_name,character_secondary,character_tertiary,character_badge;
     mir3::Minimap minimap;
+    bool portrait_map_mode=false, portrait_map_pending=false, portrait_map_visible=false, portrait_map_full_archive=false;
+    void toggle_portrait_map();
+    void draw_portrait_map();
     bool skill_shortcuts_visible=false;
     void draw_skill_shortcuts();
     int bound_skill(int key) const;
