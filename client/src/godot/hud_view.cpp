@@ -869,10 +869,16 @@ void Mir3HudView::draw_shop() {
         if (good.icon==304 && good.requirement<=2)
             text(message(5170+good.requirement),{66,label_y+20,184,16},
                 model.profession==good.requirement?13172680:1974015,mir3::TextFont::normal,false);
-        else if (good.icon!=304 && has_requirement && good.requirement_type==0) {
-            // 0x4782E0 case 0 compares the character level with the requirement.
-            const auto label=message(5140)+" "+std::to_string(good.requirement);
-            text(label,{66,label_y+20,184,16},model.level>=good.requirement?16773360:1974015,
+        else if (good.icon!=304 && has_requirement && good.requirement_type<12) {
+            // 0x4782E0 compares level, maximum attack, or the minimum across the requested elements.
+            const auto& attack=elements.bytes[0];
+            const auto minimum=[&](int first,int last) {
+                return int(*std::min_element(attack.begin()+first,attack.begin()+last));
+            };
+            const std::array attributes{model.level,model.attack[1],minimum(0,4),minimum(4,7),minimum(0,7),
+                int(attack[0]),int(attack[1]),int(attack[2]),int(attack[3]),int(attack[4]),int(attack[5]),int(attack[6])};
+            const auto label=message(5140+good.requirement_type)+" "+std::to_string(good.requirement);
+            text(label,{66,label_y+20,184,16},attributes[good.requirement_type]>=good.requirement?16773360:1974015,
                 mir3::TextFont::normal,false);
         }
     }

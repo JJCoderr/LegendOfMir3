@@ -404,6 +404,13 @@ func run() -> void:
 		if not check(hud.set_character_progress(10, 0, 0, 0, 0), "reach required shop level"): return
 		if not await capture("bichon-merchant-level-requirement-met"): return
 		if not check(hud.set_character_progress(1, 0, 0, 0, 0), "restore level after shop requirement check"): return
+		if not check(hud.apply_npc_body(645, 2, 1, "MRmaWRQjY>=eYBQiGo@kH_PkI>xoH?@kH^xoGl".to_ascii_buffer()), "decode grouped element requirement"): return
+		var empty_elements := PackedByteArray([0, 0, 0, 0, 0, 0, 0])
+		if not check(hud.set_character_elements(PackedByteArray([3, 3, 3, 2, 0, 0, 0]), empty_elements, empty_elements), "set one element below requirement"): return
+		if not await capture("bichon-merchant-element-unmet"): return
+		if not check(hud.set_character_elements(PackedByteArray([3, 3, 3, 3, 0, 0, 0]), empty_elements, empty_elements), "meet all required elements"): return
+		if not await capture("bichon-merchant-element-met"): return
+		if not check(hud.set_character_elements(empty_elements, empty_elements, empty_elements), "restore character elements"): return
 		var stock_list := ""
 		for i in 10: stock_list += "Potion %d/1/20/5/" % i
 		if not check(hud.apply_shop_goods(2, 10, stock_list), "shop list exceeds one screen"): return
