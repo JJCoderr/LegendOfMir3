@@ -1154,6 +1154,11 @@ func run() -> void:
 	if not check(group_sound.playing, "group allowance release plays original click"): return
 	if not check(hud.hud_snapshot().group_allow and allowance_requests == [true], "group allowance request"): return
 	if not await capture("group-members"): return
+	var group_hover := InputEventMouseMotion.new()
+	group_hover.position = Vector2(375, 322)
+	Input.parse_input_event(group_hover)
+	for frame in range(30): await process_frame
+	if not await capture("group-add-member-hint"): return
 	var member_requests: Array = []
 	hud.group_member_requested.connect(func(id: int, name: String): member_requests.append([id, name]))
 	click_at(Vector2(375, 322), true)

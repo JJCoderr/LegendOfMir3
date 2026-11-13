@@ -28,6 +28,12 @@
 
 using namespace godot;
 namespace {
+constexpr std::array group_button_frames{1221,1362,1365,1368,1370};
+constexpr std::array<std::array<int,2>,5> group_button_offsets{{
+    {217,200},{38,192},{98,192},{158,192},{23,47}
+}};
+constexpr std::array group_button_hints{1052,1600,1601,1602,-1};
+
 Ref<ImageTexture> texture(const std::vector<std::uint8_t>& rgba,int width,int height) {
     if (rgba.empty()) return {};
     PackedByteArray bytes; bytes.resize(rgba.size());
@@ -1602,6 +1608,12 @@ void Mir3HudView::button_hint() {
         } else if (*it==Panel::quest) {
             if (quest.pressed!=0) resolve(quest.buttons[0],2200);
             if (quest.pressed!=1) resolve(quest.buttons[1],1052);
+        } else if (*it==Panel::group) {
+            // 0x431B80 assigns captions to the close and roster buttons.
+            for (int i=0;i<int(group_button_frames.size());++i) {
+                const auto [left,top]=group_button_offsets[i];
+                if (group_pressed!=i) resolve(std::array{group_button_frames[i],left,top},group_button_hints[i]);
+            }
         } else if (*it==Panel::guild) {
             for (int i=0;i<9;++i) resolve(mir3::GuildLayout::buttons[i],guild_layout.tooltip(i));
         } else if (*it==Panel::skills) {
@@ -2698,13 +2710,6 @@ void Mir3HudView::draw_skill_key_menu() {
         }
         sprite(1660+index,{int(point.x),int(point.y)});
     }
-}
-
-namespace {
-constexpr std::array group_button_frames{1221,1362,1365,1368,1370};
-constexpr std::array<std::array<int,2>,5> group_button_offsets{{
-    {217,200},{38,192},{98,192},{158,192},{23,47}
-}};
 }
 
 void Mir3HudView::toggle_group() {
