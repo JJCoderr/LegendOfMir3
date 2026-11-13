@@ -388,9 +388,17 @@ func run() -> void:
 	if not check(not hud.hud_snapshot().portrait_visible, "portrait escape"): return
 	var input: LineEdit = hud.get_node("ChatInput")
 	if not check(input.position == Vector2(185, 575) and input.size == Vector2(344, 15), "compact input bounds"): return
+	key(KEY_R)
+	if not check(hud.hud_snapshot().expanded and input.position == Vector2(185, 534), "R expands chat and moves input"): return
+	if not await capture("hud-chat-keyboard-expanded"): return
+	key(KEY_R)
+	if not check(not hud.hud_snapshot().expanded and input.position == Vector2(185, 575), "R restores compact chat"): return
 	key(KEY_ENTER)
 	await process_frame
 	if not check(input.has_focus(), "enter focuses input"): return
+	key(KEY_R, "r".unicode_at(0))
+	if not check(not hud.hud_snapshot().expanded and input.text == "r", "focused R types instead of toggling"): return
+	key(KEY_BACKSPACE)
 	for ch in "你好，比奇省": key(0, ch.unicode_at(0))
 	await process_frame
 	if not check(input.text == "你好，比奇省", "Unicode input events"): return

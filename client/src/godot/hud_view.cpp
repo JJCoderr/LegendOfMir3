@@ -554,6 +554,14 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         get_viewport()->set_input_as_handled();
         return;
     }
+    if (code==KEY_R) {
+        model.layout.toggle();
+        controller.cancel();
+        if (chat_input) chat_input->layout(model.layout.expanded);
+        queue_redraw();
+        get_viewport()->set_input_as_handled();
+        return;
+    }
     if (code==KEY_ESCAPE && portrait_visible) { close_portrait_picker();get_viewport()->set_input_as_handled();return; }
     if (code==KEY_N || (code==KEY_ESCAPE && options.visible)) {
         toggle_options();get_viewport()->set_input_as_handled();return;
