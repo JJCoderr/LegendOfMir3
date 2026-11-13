@@ -23,6 +23,26 @@ std::optional<std::string> decode_legacy_text(std::span<const std::uint8_t> file
             plain[i] = char(std::uint8_t(plain[i]) ^ std::uint8_t(file[j] + i));
     return plain;
 }
+bool SkillDescriptions::load(std::span<const std::uint8_t> file) {
+    auto decoded=decode_legacy_text(file);if (!decoded) return false;
+    plain=std::move(*decoded);return true;
+}
+std::vector<std::string> SkillDescriptions::section(int id) const {
+    std::vector<std::string> out;
+    if (id<0) return out;
+    bool active=false;std::size_t start=0;
+    while (start<plain.size()) {
+        const auto end=plain.find('\r',start);
+        if (end==std::string::npos || end+1>=plain.size() || plain[end+1]!='\n') break;
+        const auto line=plain.substr(start,end-start);start=end+2;
+        if (!line.empty() && line[0]==';') continue;
+        if (!line.empty() && line[0]=='#') {
+            if (std::strtol(line.c_str()+1,nullptr,10)==id) active=true;
+            else if (active) break;
+        } else if (active) out.push_back(line);
+    }
+    return out;
+}
 bool Messages::load(std::span<const std::uint8_t> file)
 {
     const auto decoded=decode_legacy_text(file);if (!decoded) return false;

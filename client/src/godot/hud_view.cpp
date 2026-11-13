@@ -85,6 +85,9 @@ void Mir3HudView::_ready() {
     }
     magic_icons.open(resource_root/"Data"/"MIcon");
     equipment_archive.open(resource_root/"Data"/"Equip");
+    std::ifstream descriptions(resource_root/"Magic.exp",std::ios::binary);
+    const std::vector<std::uint8_t> description_bytes{std::istreambuf_iterator<char>(descriptions),{}};
+    skill_descriptions.load(description_bytes);
     item_archive.open(resource_root/"Data"/"Inventory");
     std::ifstream message_file(resource_root/"CmList.dat",std::ios::binary);
     std::vector<std::uint8_t> message_bytes{std::istreambuf_iterator<char>(message_file),{}};
@@ -199,6 +202,7 @@ void Mir3HudView::_draw() {
     if (inventory.visible) draw_inventory();
     if (status.visible && status_on_top) draw_status();
     if (skills.visible && skills_on_top) draw_skills();
+    draw_skill_description();
     button_hint();
     if (bag.held) {
         const auto icon=item_frame(bag.held.icon);
@@ -778,4 +782,40 @@ bool Mir3HudView::bind_skill_at_cursor(int key) {
     }
     queue_redraw();
     return true;
+}
+
+void Mir3HudView::draw_skill_description() {
+    if (!skills.visible || skills.scroll_captured || !rect(skills.rect).has_point(inventory_cursor)) return;
+    if (!skills_on_top &&
+        ((status.visible && rect(status.rect).has_point(inventory_cursor)) ||
+         (inventory.visible && rect(inventory.rect).has_point(inventory_cursor)))) return;
+
+    int id=0;
+    for (const auto pos:mir3::SkillLayout::positions[skills.tab]) {
+        if (pos.id && Rect2(skills.rect[0]+pos.x,skills.rect[1]+pos.y-skills.scroll,40,40).has_point(inventory_cursor)) {
+            id=pos.id;
+            break;
+        }
+    }
+    if (!id) return;
+    if (!description_rows.contains(id))
+        description_rows.emplace(id,mir3::wrap_skill_description(skill_descriptions.section(id)));
+    const auto& rows=description_rows.at(id);
+    if (rows.empty()) return;
+    int width=0;
+    for (const auto& row:rows) if (row.width>width) width=row.width+7;
+    const int mouse_x=int(inventory_cursor.x);
+    const int x=mouse_x+190>800?630:mouse_x+20;
+    int y=int(inventory_cursor.y)+20;
+    legacy_rect(Rect2(x-2,y,width,int(rows.size())*15+30),Color(100.f/255,100.f/255,50.f/255,150.f/255));
+    for (const auto& row:rows) {
+        y+=15;
+        if (row.title) {
+            for (const auto shadow:mir3::HudLayout::coordinate_shadows)
+                text(row.text,{x+shadow[0],y+shadow[1],300,24},0x0a0a0a,mir3::TextFont::skill_title,false);
+        }
+        text(row.text,{x,y,300,24},row.title?0x96c8fa:0xfafafa,
+             row.title?mir3::TextFont::skill_title:mir3::TextFont::normal,false);
+        if (row.title) y+=15;
+    }
 }

@@ -200,6 +200,7 @@ func run() -> void:
 	key(KEY_F12)
 	if not check(skill_requests == [Vector2i(1, 0), Vector2i(5, 49), Vector2i(5, 67)], "magic shortcut conflict and F12 encoding"): return
 	if not await capture("magic-key-binding"): return
+	if not await capture("magic-description"): return
 	click_at(Vector2(636, 32), true)
 	click_at(Vector2(636, 32), false)
 	if not check(hud.hud_snapshot().skill_tab == 7, "magic category selection"): return

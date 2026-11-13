@@ -42,6 +42,9 @@ private:
     bool skills_on_top=false;
     void toggle_skills();
     void draw_skills();
+    void draw_skill_description();
+    mir3::SkillDescriptions skill_descriptions;
+    std::map<int,std::vector<mir3::DescriptionRow>> description_rows;
     bool bind_skill_at_cursor(int key);
     bool skill_pointer(int kind,godot::Vector2 position);
     int skill_button_at(godot::Vector2 position);
