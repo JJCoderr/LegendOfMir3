@@ -123,7 +123,7 @@ NativeText raster_text(std::string_view utf8, int width, int height, bool center
     if (font == TextFont::gold && gold_face.empty()) return result;
     const int points = (font == TextFont::gold || font == TextFont::skill_title) ? 10 : ((font == TextFont::level || font == TextFont::skill_level) ? 8 : 9);
     surface.font = CreateFontA(-MulDiv(points, result.dpi, 72), 0, 0, 0,
-        (font == TextFont::normal || font == TextFont::dialog || font == TextFont::skill_level) ? 400 : 700, 0, 0, 0, DEFAULT_CHARSET, 0, 0, 0, 0,
+        (font == TextFont::normal || font == TextFont::dialog || font == TextFont::skill_level || font == TextFont::npc_link) ? 400 : 700, 0, font == TextFont::npc_link, 0, DEFAULT_CHARSET, 0, 0, 0, 0,
         font == TextFont::gold ? gold_face.c_str() :
         (font == TextFont::level || font == TextFont::skill_level || font == TextFont::skill_title || font == TextFont::character_name ? level_face : normal_face));
     if (!surface.font) return result;

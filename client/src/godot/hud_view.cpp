@@ -756,12 +756,9 @@ void Mir3HudView::draw_npc_dialogue() {
         const auto& row=npc_dialogue_rows[i];
         const bool clickable=!row.command.empty();
         const auto color=!clickable?0xfafafa:npc_dialogue_pressed==i?0x0000ff:0x00ffff;
-        text(row.text,row.bounds,color,mir3::TextFont::normal,false);
-        if (clickable && rect(row.bounds).has_point(inventory_cursor) &&
-            !(shop_actor && Rect2(0,0,292,224).has_point(inventory_cursor))) {
-            const auto [x,y,width,height]=row.bounds;
-            draw_rect(Rect2(x,y+12,width,1),npc_dialogue_pressed==i?Color(1,0,0):Color(1,1,0));
-        }
+        const bool focused=clickable && rect(row.bounds).has_point(inventory_cursor) &&
+            !(shop_actor && Rect2(0,0,292,224).has_point(inventory_cursor));
+        text(row.text,row.bounds,color,focused?mir3::TextFont::npc_link:mir3::TextFont::normal,false);
     }
 }
 

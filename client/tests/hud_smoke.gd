@@ -209,12 +209,16 @@ func run() -> void:
 		if not check(hud.apply_npc_dialogue(643, 2, long_script), "dialogue limit counts ANSI bytes"): return
 		if not check(not hud.apply_npc_dialogue(643, 2, long_script + "比".repeat(1400)), "reject dialogue above ANSI byte limit"): return
 		if not await capture("bichon-merchant-dialogue"): return
+		var option_before: Image
+		if OS.get_cmdline_user_args().has("--screenshots"):
+			option_before = root.get_texture().get_image().get_region(Rect2i(28, 43, 48, 18))
 		var option_hover := InputEventMouseMotion.new()
 		option_hover.position = Vector2(45, 48)
 		root.push_input(option_hover, true)
 		if not await capture("bichon-merchant-option-hover"): return
-		if OS.get_cmdline_user_args().has("--screenshots"):
-			if not check(root.get_texture().get_image().get_pixel(45, 55) == Color.YELLOW, "focused NPC link underline"): return
+		if option_before != null:
+			var focused := root.get_texture().get_image().get_region(Rect2i(28, 43, 48, 18))
+			if not check(option_before.get_data() != focused.get_data(), "focused NPC link changes GDI glyph pixels"): return
 		var option := InputEventMouseButton.new()
 		option.position = Vector2(45, 48)
 		option.button_index = MOUSE_BUTTON_LEFT
