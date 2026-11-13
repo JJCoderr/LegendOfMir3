@@ -1274,6 +1274,17 @@ void Mir3HudView::button_hint() {
         }
         break;
     }
+    if (!panel_hit && shop_actor && Rect2(0,0,292,224).has_point(inventory_cursor)) panel_hit=true;
+    if (!panel_hit && npc_dialogue_actor && rect(npc_dialogue_bounds()).has_point(inventory_cursor)) {
+        panel_hit=true;
+        // 0x45FDD0 configures the close button with CMList 1052.
+        const auto icon=frame(1221);
+        const Rect2 hit(Vector2(346,npc_dialogue_bounds()[3]-42),icon.is_valid()?icon->get_size():Vector2());
+        if (!npc_dialogue_close_pressed && hit.has_point(inventory_cursor)) {
+            hint=1052;
+            anchor=hit.get_end();
+        }
+    }
     if (!panel_hit && model.hovered>=0 && model.hovered!=model.pressed) {
         hint=chat_input && (model.hovered==18 || model.hovered==19)?chat_input->mode.tooltip(model.hovered):
             model.hovered>=20 && model.hovered<=22?reception_buttons.hints[model.hovered-20]:2600+model.hovered;

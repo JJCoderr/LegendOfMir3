@@ -211,6 +211,19 @@ func run() -> void:
 		var script := "老黄/要买点什么？" + char(92) + "<购买药品/@buy>" + char(92) + "<离开/@exit>"
 		if not check(hud.apply_npc_message("`\\<<<>=B<?H<<<<<lHzwm^{NfhGniZKFhhJpdwyXKGbvlkGNfXVsGp=^YS`zS?o<vwzfGp=aZBapK\\".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "decode merchant dialogue reply"): return
 		if not await capture("bichon-merchant-dialogue"): return
+		var close_hover := InputEventMouseMotion.new()
+		close_hover.position = Vector2(350, 186)
+		root.push_input(close_hover, true)
+		for frame in range(8):
+			await process_frame
+		if not await capture("bichon-merchant-close-hint"): return
+		if OS.get_cmdline_user_args().has("--screenshots"):
+			var close_hint_image := root.get_texture().get_image()
+			var hint_visible := false
+			for y in range(200, 230):
+				for x in range(375, 440):
+					hint_visible = hint_visible or close_hint_image.get_pixel(x, y).is_equal_approx(Color8(255, 255, 150))
+			if not check(hint_visible, "NPC close tooltip background"): return
 		click_at(Vector2(350, 186), true)
 		click_at(Vector2(350, 186), false)
 		if not check(hud.hud_snapshot().npc_dialogue_actor == 0, "NPC footer button closes locally"): return
