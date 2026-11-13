@@ -22,11 +22,12 @@ func click_at(position: Vector2, pressed: bool) -> void:
 	event.pressed = pressed
 	Input.parse_input_event(event)
 
-func key(code: int, unicode_value: int = 0) -> void:
+func key(code: int, unicode_value: int = 0, alt: bool = false) -> void:
 	var event := InputEventKey.new()
 	event.keycode = code
 	event.physical_keycode = code
 	event.unicode = unicode_value
+	event.alt_pressed = alt
 	event.pressed = true
 	Input.parse_input_event(event)
 	event = event.duplicate()
@@ -612,5 +613,24 @@ func run() -> void:
 	if not check(hud.hud_snapshot().mount_bounds == Rect2(40, 30, 276, 322), "mount window dragging"): return
 	key(KEY_S)
 	if not check(not hud.hud_snapshot().mount_visible, "S closes mount window"): return
+	var exit_requests: Array[int] = []
+	hud.exit_confirmed.connect(func(id: int): exit_requests.append(id))
+	key(KEY_Q, 0, true)
+	if not check(hud.hud_snapshot().group_request == 109, "Alt+Q opens program exit confirmation"): return
+	if not await capture("hud-exit-program"): return
+	key(KEY_TAB)
+	key(KEY_SPACE)
+	if not check(hud.hud_snapshot().group_request == 0 and exit_requests.is_empty(), "cancel program exit"): return
+	key(KEY_X, 0, true)
+	if not check(hud.hud_snapshot().group_request == 101, "Alt+X opens game exit confirmation"): return
+	if not await capture("hud-exit-game"): return
+	key(KEY_ENTER)
+	if not check(exit_requests == [101] and hud.hud_snapshot().group_request == 0, "confirm game exit"): return
+	for point in [Vector2(15, 550), Vector2(115, 550)]:
+		click_at(point, true)
+		click_at(point, false)
+		if not check(hud.hud_snapshot().group_request in [101, 109], "HUD opens exit confirmation"): return
+		key(KEY_ENTER)
+	if not check(exit_requests == [101, 109, 101], "HUD exit requests"): return
 	print("HUD_SMOKE_OK: resources, expansion, collapse, stat switching, action dispatch")
 	quit(0)
