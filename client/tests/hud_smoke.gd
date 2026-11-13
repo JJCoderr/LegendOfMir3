@@ -538,6 +538,10 @@ func run() -> void:
 	guild_wheel.pressed = true
 	Input.parse_input_event(guild_wheel)
 	if not check(hud.hud_snapshot().guild_first == 1, "guild notices wheel"): return
+	hud.post_system_notice("系统公告：比奇省欢迎各位旅人。", 0x96ffff, 0)
+	if not check(hud.hud_snapshot().guild_notice_count == 3, "104 system text enters guild notices"): return
+	hud.post_system_notice("比奇".repeat(32), 0x96ffff, 0)
+	if not check(hud.hud_snapshot().guild_notice_count == 5, "system notice wraps at 514 pixels"): return
 	if not await capture("guild-notices"): return
 	click_at(Vector2(450, 415), true)
 	click_at(Vector2(450, 415), false)

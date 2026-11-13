@@ -79,6 +79,7 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("guild_member_removal_requested",PropertyInfo(Variant::STRING,"name")));
     ClassDB::bind_method(D_METHOD("set_guild_manager","allowed"),&Mir3HudView::set_guild_manager);
     ClassDB::bind_method(D_METHOD("set_guild_members","lines","editable"),&Mir3HudView::set_guild_members,DEFVAL(PackedStringArray()));
+    ClassDB::bind_method(D_METHOD("post_system_notice","text","foreground","background"),&Mir3HudView::post_system_notice);
     ClassDB::bind_method(D_METHOD("set_guild_notices","lines"),&Mir3HudView::set_guild_notices);
     ADD_SIGNAL(MethodInfo("group_member_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("group_allow_requested",PropertyInfo(Variant::BOOL,"allowed")));
@@ -165,6 +166,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["music_level"]=audio_options.music_level;
     result["guild_visible"]=guild.visible;
     result["guild_first"]=guild_first;
+    result["guild_notice_count"]=guild_pages[2].size();
     result["guild_tab"]=guild_layout.tab;
     result["group_request"]=group_request;
     result["group_visible"]=group.visible;
@@ -1785,6 +1787,20 @@ void Mir3HudView::set_guild_members(PackedStringArray lines,PackedStringArray ed
     guild_pages[1]=lines;
     if (guild_layout.tab==1) guild_first=std::min(guild_first,std::max(0,int(lines.size())-1));
     queue_redraw();
+}
+
+void Mir3HudView::post_system_notice(String value,int64_t foreground,int64_t background) {
+    post_chat(value,foreground,background);
+    auto& notices=guild_pages[2];
+    const auto utf8=value.utf8();
+    for (const auto& line:mir3::wrap_system_notice({utf8.get_data(),static_cast<std::size_t>(utf8.length())})) {
+        if (guild_layout.tab==2 && notices.size()-guild_first==18) ++guild_first;
+        notices.append(String::utf8(line.c_str()));
+    }
+    while (notices.size()>=80) {
+        notices.remove_at(0);
+        if (guild_layout.tab==2 && guild_first>0) --guild_first;
+    }
 }
 
 void Mir3HudView::set_guild_notices(PackedStringArray lines) {

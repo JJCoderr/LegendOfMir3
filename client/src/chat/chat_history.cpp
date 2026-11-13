@@ -96,6 +96,33 @@ std::vector<DescriptionRow> wrap_skill_description(const std::vector<std::string
     return out;
 }
 
+std::vector<std::string> wrap_system_notice(std::string_view utf8) {
+    if (utf8.empty() || utf8.size()>4096) return {};
+    const int length=MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,utf8.data(),int(utf8.size()),nullptr,0);
+    if (!length) return {};
+    std::wstring wide(length,L'\0');
+    MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,utf8.data(),int(utf8.size()),wide.data(),length);
+    auto ansi=encode(wide.data(),length,CP_ACP);
+    if (const auto end=ansi.find('\0');end!=ansi.npos) ansi.resize(end);
+    if (ansi.empty() || ansi.size()>1023) return {};
+
+    Surface surface;
+    if (!surface.dc) return {};
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    surface.font=CreateFontA(-MulDiv(9,GetDeviceCaps(surface.dc,LOGPIXELSY),72),
+        0,0,0,400,0,0,0,DEFAULT_CHARSET,0,0,0,0,face);
+    if (!surface.font) return {};
+    surface.old_font=SelectObject(surface.dc,surface.font);
+    int count=0;
+    const auto buffer=wrapped_ansi(surface.dc,ansi,514,count);
+    char rows[5][260]{};
+    std::sscanf(buffer.c_str(),"%259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c",
+        rows[0],rows[1],rows[2],rows[3],rows[4]);
+    std::vector<std::string> result;
+    for (int i=0;i<std::min(count,5);++i) result.push_back(ansi_to_utf8(rows[i]));
+    return result;
+}
+
 void ChatHistory::post(std::string_view utf8, std::uint32_t foreground, std::uint32_t background)
 {
     if (utf8.empty() || utf8.size() > 4096) return;

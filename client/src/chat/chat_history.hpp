@@ -4,7 +4,9 @@
 #include <deque>
 #include <string>
 #include <string_view>
+#include <vector>
 namespace mir3 {
+std::vector<std::string> wrap_system_notice(std::string_view utf8);
 // 0x4366D0 record: COLORREF +0/+4, ANSI text +8 (allocation 0x408).
 struct ChatLine {
     std::string text;

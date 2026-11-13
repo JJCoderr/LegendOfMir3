@@ -72,6 +72,7 @@ public:
     void set_portrait_names(godot::PackedStringArray names);
     void set_guild_manager(bool allowed);
     void set_guild_members(godot::PackedStringArray lines,godot::PackedStringArray editable);
+    void post_system_notice(godot::String value,int64_t foreground,int64_t background);
     void set_guild_notices(godot::PackedStringArray lines);
     void set_guild_overview(godot::String name,godot::PackedStringArray lines,godot::PackedStringArray editable);
     void set_group_roster(godot::String player,godot::PackedStringArray members);
