@@ -428,10 +428,14 @@ func run() -> void:
 		if not await capture("bichon-merchant-offers-next-page"): return
 		click_at(Vector2(427, 399), false)
 		if not check(npc_packets.back().substr(2, 16) == "<\\<<<KX?>\\<<<<<<", "next offer page requests offset ten"): return
-		if not check(hud.apply_shop_offers(2, 9, names, icons, prices, ids), "apply next offer page reply"): return
+		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids, 0), "ignore previous page reply while next page is requested"): return
+		if not check(hud.apply_shop_offers(2, 9, PackedStringArray(["Blue potion"]), icons, prices, ids, 10), "apply next offer page reply"): return
+		if not await capture("bichon-merchant-offers-page-reply"): return
 		click_at(Vector2(334, 399), true)
 		click_at(Vector2(334, 399), false)
 		if not check(npc_packets.back().substr(2, 16) == "<\\<<<KX?<<<<<<<<", "previous offer page requests offset zero"): return
+		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids, 10), "ignore delayed next page when returning to first page"): return
+		if not check(hud.apply_shop_offers(2, 9, names, icons, prices, ids, 0), "apply first page reply"): return
 		click_at(Vector2(330, 280), true)
 		click_at(Vector2(330, 280), false)
 		if not check(offer_selections == [[2, 10001]], "select offer by its instance identifier"): return

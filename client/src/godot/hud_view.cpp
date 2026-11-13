@@ -72,7 +72,7 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("npc_dialogue_requested",PropertyInfo(Variant::INT,"actor")));
     ClassDB::bind_method(D_METHOD("apply_shop_purchase_reply","identifier","value"),&Mir3HudView::apply_shop_purchase_reply);
     ClassDB::bind_method(D_METHOD("apply_shop_goods","actor","count","body"),&Mir3HudView::apply_shop_goods);
-    ClassDB::bind_method(D_METHOD("apply_shop_offers","actor","index","names","icons","prices","identifiers"),&Mir3HudView::apply_shop_offers);
+    ClassDB::bind_method(D_METHOD("apply_shop_offers","actor","index","names","icons","prices","identifiers","offset"),&Mir3HudView::apply_shop_offers,DEFVAL(-1));
     ADD_SIGNAL(MethodInfo("shop_purchase_requested",PropertyInfo(Variant::INT,"identifier"),
         PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("shop_offer_selected",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::INT,"identifier")));
@@ -724,6 +724,7 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body) {
     shop_actor=actor;
     shop_selected=-1;
     shop_offers.clear();
+    shop_offer_page=0;
     shop_first=0;
     shop_category_first=0;
     shop_show_offers=false;
@@ -733,8 +734,9 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body) {
 }
 
 bool Mir3HudView::apply_shop_offers(int actor,int index,PackedStringArray names,PackedInt32Array icons,
-        PackedInt32Array prices,PackedInt64Array identifiers) {
+        PackedInt32Array prices,PackedInt64Array identifiers,int offset) {
     if (!shop_actor || actor!=shop_actor || index<0 || index!=shop_selected ||
+        (offset!=-1 && offset!=10*shop_offer_page) ||
         names.size()!=icons.size() || names.size()!=prices.size() || names.size()!=identifiers.size() ||
         names.size()>255) return false;
     std::vector<ShopOffer> offers;
@@ -836,7 +838,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
             emit_npc_packet(1014,actor,name,instance);
         } else if (activate<=-3 && shop_selected>=0) {
             // 0x478850 requests a server page with a ten-item offset.
-            const int page=std::max(0,shop_offer_page+(activate==-3?-1:1));
+            const int page=std::clamp(shop_offer_page+(activate==-3?-1:1),0,65535/10);
             if (page!=shop_offer_page) {
                 shop_offer_page=page;
                 const auto name=String::utf8(shop_goods[shop_selected].name.c_str());
@@ -884,6 +886,7 @@ void Mir3HudView::close_shop_offers() {
     shop_show_offers=false;
     shop_selected=shop_pressed=shop_offer_index=-1;
     shop_offers.clear();
+    shop_offer_page=0;
     shop_first=shop_category_first;
     queue_redraw();
 }

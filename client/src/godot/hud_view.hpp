@@ -302,7 +302,7 @@ private:
     int shop_selected=-1;
     int shop_highlighted=-1;
     bool apply_shop_offers(int actor,int index,godot::PackedStringArray names,godot::PackedInt32Array icons,
-        godot::PackedInt32Array prices,godot::PackedInt64Array identifiers);
+        godot::PackedInt32Array prices,godot::PackedInt64Array identifiers,int offset=-1);
     void draw_shop();
     void close_shop_offers();
     static constexpr int shop_top=225;
