@@ -288,6 +288,16 @@ func run() -> void:
 		npc_wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
 		npc_wheel.pressed = true
 		root.push_input(npc_wheel, true)
+		if OS.get_cmdline_user_args().has("--screenshots"):
+			await RenderingServer.frame_post_draw
+			var arrow_rect := Rect2i(183, 434, 21, 18)
+			var arrow_before := root.get_texture().get_image().get_region(arrow_rect).get_data()
+			for frame in range(16):
+				await process_frame
+			await RenderingServer.frame_post_draw
+			var arrow_after := root.get_texture().get_image().get_region(arrow_rect).get_data()
+			if not check(arrow_before != arrow_after, "NPC down arrow blinks while more rows are available"): return
+			if not await capture("bichon-merchant-dialogue-arrow"): return
 		if not await capture("bichon-merchant-dialogue-scrolled"): return
 		await wait_for_npc_cooldown()
 		click_at(Vector2(50, 45), true)

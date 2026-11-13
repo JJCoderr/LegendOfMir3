@@ -613,6 +613,10 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
         npc_dialogue_scroll_enabled=estimated_lines>22;
         npc_dialogue_scroll_limit=npc_dialogue_scroll_enabled?std::max(0,line-21):0;
         npc_dialogue_arrow_pressed=0;
+        if (npc_dialogue_actor!=actor) {
+            npc_dialogue_arrow_frame=0;
+            npc_dialogue_down_lit=false;
+        }
         npc_dialogue_can_close=can_close;
         npc_dialogue_close_pressed=false;
         npc_dialogue_actor=actor;
@@ -811,7 +815,7 @@ void Mir3HudView::draw_npc_dialogue() {
     sprite(npc_dialogue_close_pressed?1222:1221,{346,bottom-42});
     if (npc_dialogue_scroll_enabled) {
         sprite(npc_dialogue_arrow_pressed==-1?1358:1357,{183,bottom-48});
-        if (npc_dialogue_first<npc_dialogue_scroll_limit)
+        if (npc_dialogue_first<npc_dialogue_scroll_limit && npc_dialogue_down_lit)
             sprite(npc_dialogue_arrow_pressed==1?1356:1355,{183,bottom-30});
     }
     const int focused=shop_actor && Rect2(0,0,292,224).has_point(inventory_cursor)?-1:npc_dialogue_option_at(inventory_cursor);
@@ -1252,6 +1256,15 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
+    if (npc_dialogue_actor && npc_dialogue_first<npc_dialogue_scroll_limit) {
+        // 0x460F43 alternates the down-arrow frame after 16 draw updates.
+        if (npc_dialogue_arrow_frame==16) {
+            npc_dialogue_arrow_frame=0;
+            npc_dialogue_down_lit=!npc_dialogue_down_lit;
+            queue_redraw();
+        }
+        ++npc_dialogue_arrow_frame;
+    }
     const bool moving=walk_frame>=0;
     advance_map_step(delta);
     if (map_pointer_button==MOUSE_BUTTON_RIGHT && moving && walk_frame<0 && map_route.empty()) {
