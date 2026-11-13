@@ -3326,21 +3326,22 @@ void Mir3HudView::toggle_options() {
 void Mir3HudView::draw_options() {
     const int x=options.rect[0],y=options.rect[1];
     sprite(1290,{x,y});
-    text(message(2104),{x+60,y+30,390,15},0xf8fafa);
-    for (int i=0;i<3;++i) {
-        const bool enabled=i==0?audio_options.music_enabled:i==1?audio_options.effects_enabled:audio_options.reverse_pan;
+    for (int i=0;i<2;++i) {
+        const bool enabled=i==0?audio_options.music_enabled:audio_options.effects_enabled;
+        const int level=i==0?audio_options.music_level:audio_options.effects_level;
         sprite(enabled?1293:1294,{x+430,y+85+60*i});
-        text(message(2100+i),{x+266,y+89+60*i,156,21},0x0096ff);
-        if (i<2) {
-            const int level=i==0?audio_options.music_level:audio_options.effects_level;
-            sprite(1291,{x+276+mir3::AudioOptions::knob_from_level(level),y+118+60*i});
-        }
+        sprite(1291,{x+276+mir3::AudioOptions::knob_from_level(level),y+118+60*i});
     }
-    sprite(magic_light?1293:1294,{x+186,y+115});
-    sprite(damage_numbers?1293:1294,{x+186,y+145});
-    text(message(2107),{x+20,y+122,155,15},0x0096ff);
-    text(message(2108),{x+20,y+152,155,15},0x0096ff);
+    sprite(audio_options.reverse_pan?1293:1294,{x+430,y+205});
     sprite(1221,{x+448,y+415});
+    // 0x462850 draws the audio captions after their controls.
+    text(message(2104),{x+60,y+30,390,15},0xf8fafa);
+    for (int i=0;i<3;++i)
+        text(message(2100+i),{x+266,y+89+60*i,156,21},0x0096ff);
+    sprite(damage_numbers?1293:1294,{x+186,y+145});
+    text(message(2108),{x+20,y+152,155,15},0x0096ff);
+    sprite(magic_light?1293:1294,{x+186,y+115});
+    text(message(2107),{x+20,y+122,155,15},0x0096ff);
 }
 
 bool Mir3HudView::options_pointer(int kind,Vector2 point) {
