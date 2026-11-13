@@ -47,6 +47,7 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
     ClassDB::bind_method(D_METHOD("set_quest_entries","titles","completed"),&Mir3HudView::set_quest_entries);
+    ClassDB::bind_method(D_METHOD("set_quest_details","index","lines"),&Mir3HudView::set_quest_details);
     ADD_SIGNAL(MethodInfo("quest_detail_requested",PropertyInfo(Variant::INT,"index")));
     ClassDB::bind_method(D_METHOD("apply_mount_reply","identifier","recognition"),&Mir3HudView::apply_mount_reply);
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
@@ -1779,8 +1780,20 @@ bool Mir3HudView::set_quest_entries(PackedStringArray titles,PackedInt32Array co
     for (int64_t i=0;i<titles.size();++i)
         quest.entries.push_back({titles[i].utf8().get_data(),completed[i]!=0});
     quest.selected=-1;
+    quest.expanded=-1;
     quest.first=0;
     quest.scroll_captured=false;
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::set_quest_details(int index,PackedStringArray lines) {
+    if (index<0 || index>=int(quest.entries.size()) || lines.size()>INT_MAX-int(quest.entries.size())) return false;
+    auto& details=quest.entries[index].details;
+    details.clear();
+    details.reserve(lines.size());
+    for (int64_t i=0;i<lines.size();++i) details.emplace_back(lines[i].utf8().get_data());
+    quest.scroll(0);
     queue_redraw();
     return true;
 }
@@ -1800,12 +1813,20 @@ void Mir3HudView::draw_quest() {
         const Vector2 anchor(x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2);
         draw_texture(skin,anchor,Color(1,1,1,220.f/255));
     }
-    const int count=int(quest.entries.size());
     sprite(1225,{x+quest.scroll_x,quest.thumb_y()});
-    for (int row=0;row<quest.visible_rows && quest.first+row<count;++row) {
-        const int index=quest.first+row;
-        text(quest.entries[index].title,{x+65,y+90+15*row,200,15},
-            quest.title_color(index),mir3::TextFont::normal,false);
+    if (!quest.entries.empty()) {
+        for (int row=0;row<quest.visible_rows && row<=quest.last_row()-quest.first;++row) {
+            const int line=quest.first+row;
+            const int index=quest.entry_at(line);
+            const int top=y+90+15*row;
+            if (index>=0) {
+                text(quest.entries[index].title,{x+65,top,200,15},
+                    quest.title_color(index),mir3::TextFont::normal,false);
+            } else {
+                const auto& detail=quest.entries[quest.expanded].details[line-quest.expanded-1];
+                text(detail,{x+75,top,170,15},quest.title_color(quest.expanded),mir3::TextFont::normal,false);
+            }
+        }
     }
     for (int index=0;index<int(quest.buttons.size());++index) {
         const auto [id,left,top]=quest.buttons[index];
@@ -1842,8 +1863,8 @@ bool Mir3HudView::quest_pointer(int kind,Vector2 position) {
         const bool in_list=Rect2(x+65,y+90,200,15*quest.visible_rows).has_point(position);
         quest.begin_drag(int(position.x),int(position.y),hit>=0 || in_list);
         if (in_list) {
-            const int index=quest.first+row;
-            quest.selected=index<int(quest.entries.size())?index:-1;
+            const int index=quest.entry_at(quest.first+row);
+            if (index>=0) quest.selected=index;
         }
     } else if (kind==1) {
         captured=quest.move_drag(int(position.x),int(position.y)) || quest.pressed>=0;
@@ -1854,7 +1875,12 @@ bool Mir3HudView::quest_pointer(int kind,Vector2 position) {
         if (activate) {
             if (hud_sound && audio_options.effects_enabled) hud_sound->play();
             if (hit==1) toggle_quest();
-            else if (quest.selected>=0) emit_signal("quest_detail_requested",quest.selected);
+            else if (quest.selected>=0) {
+                quest.expanded=quest.selected;
+                quest.scroll(0);
+                if (quest.entries[quest.selected].details.empty())
+                    emit_signal("quest_detail_requested",quest.selected);
+            }
         }
     }
     if (!inside && !captured) return false;

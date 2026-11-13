@@ -11,14 +11,22 @@ struct QuestPanel : DraggablePanel {
         {1422,267,75}, {1425,267,107}
     }};
     static constexpr int visible_rows=19;
-    struct Entry { std::string title; bool completed=false; };
+    struct Entry { std::string title; bool completed=false; std::vector<std::string> details; };
     std::vector<Entry> entries;
-    int pressed=-1, selected=-1, first=0;
+    int pressed=-1, selected=-1, expanded=-1, first=0;
 
     static constexpr int scroll_x=272, scroll_top=160, scroll_travel=182;
     bool scroll_captured=false;
 
-    int last_row() const { return std::max(0,int(entries.size())-1); }
+    int detail_rows() const { return expanded>=0?int(entries[expanded].details.size()):0; }
+    int last_row() const { return std::max(0,int(entries.size())-1)+detail_rows(); }
+    int entry_at(int row) const {
+        if (expanded>=0 && row>expanded) {
+            if (row<=expanded+detail_rows()) return -1;
+            row-=detail_rows();
+        }
+        return row>=0 && row<int(entries.size())?row:-1;
+    }
     int thumb_y() const {
         return rect[1]+scroll_top+(last_row()?int(std::int64_t(scroll_travel)*first/last_row()):0);
     }

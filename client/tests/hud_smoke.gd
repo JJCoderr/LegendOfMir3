@@ -628,6 +628,11 @@ func run() -> void:
 	click_at(Vector2(280, 90), false)
 	if not check(quest_details == [1], "quest detail button uses selected entry"): return
 	if not await capture("hud-quest-list"): return
+	if not check(hud.set_quest_details(1, PackedStringArray(["到比奇城药店交付书信。", "回报后领取奖励。"])), "apply quest detail response"): return
+	if not await capture("hud-quest-detail"): return
+	click_at(Vector2(83, 155), true)
+	click_at(Vector2(83, 155), false)
+	if not check(hud.hud_snapshot().quest_selected == 2, "inline detail shifts following quest hit box"): return
 	quest_names.clear()
 	var quest_flags := PackedInt32Array()
 	for i in 25:

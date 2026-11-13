@@ -37,6 +37,7 @@ public:
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     bool set_music_map(godot::String map);
+    bool set_quest_details(int index,godot::PackedStringArray lines);
     bool set_quest_entries(godot::PackedStringArray titles,godot::PackedInt32Array completed);
     bool apply_mount_reply(int identifier,int64_t recognition);
     bool apply_minimap_reply(int map_number);
