@@ -235,6 +235,18 @@ func run() -> void:
 	click_at(Vector2(671, 160), false)
 	if not check(hud.hud_snapshot().skill_scroll == 6, "magic scroll step"): return
 	if not await capture("magic-tree-scrolled"): return
+	var skill_wheel := InputEventMouseButton.new()
+	skill_wheel.position = Vector2(490, 210)
+	skill_wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	skill_wheel.pressed = true
+	Input.parse_input_event(skill_wheel)
+	if not check(hud.hud_snapshot().skill_scroll == 36, "magic wheel advances 30 pixels"): return
+	for i in 8: Input.parse_input_event(skill_wheel)
+	if not check(hud.hud_snapshot().skill_scroll == 190, "magic wheel stops at bottom"): return
+	if not await capture("magic-wheel-bottom"): return
+	skill_wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+	for i in 8: Input.parse_input_event(skill_wheel)
+	if not check(hud.hud_snapshot().skill_scroll == 0, "magic wheel stops at top"): return
 	key(KEY_ESCAPE)
 	await process_frame
 	if not check(not hud.hud_snapshot().skills_visible, "magic escape"): return

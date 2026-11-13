@@ -46,6 +46,7 @@ struct SkillPanel : DraggablePanel {
     std::array<std::array<SkillDisplay,15>,8> learned{};
     std::array<int,8> selected{-1,-1,-1,-1,-1,-1,-1,-1};
     int tab=0,scroll=0,pressed=-1;
+    void wheel(bool up) { scroll=std::clamp(scroll+(up?-30:30),0,190); }
     int thumb_y() const { return 100+static_cast<int>(238.0*static_cast<float>(double(scroll)/189.0)); }
     bool scroll_captured=false;
     std::uint32_t scroll_time=0;
