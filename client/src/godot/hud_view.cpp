@@ -98,6 +98,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
     ClassDB::bind_method(D_METHOD("set_minimap_markers","type_five","nearby_green","nearby_orange"),&Mir3HudView::set_minimap_markers);
     ClassDB::bind_method(D_METHOD("set_hovered_target","actor","type","shape","excluded","state","hp","max_hp","percent"),&Mir3HudView::set_hovered_target);
+    ClassDB::bind_method(D_METHOD("apply_target_attributes","actor","category","state","body"),&Mir3HudView::apply_target_attributes);
     ClassDB::bind_method(D_METHOD("set_hovered_human","actor","type","profession","name"),&Mir3HudView::set_hovered_human,DEFVAL(String()));
     ClassDB::bind_method(D_METHOD("apply_target_portrait","actor","jpeg"),&Mir3HudView::apply_target_portrait);
     ADD_SIGNAL(MethodInfo("target_portrait_requested",PropertyInfo(Variant::INT,"identifier"),
@@ -420,6 +421,7 @@ Ref<ImageTexture> Mir3HudView::portrait_texture(mir3::WilArchive& archive,
 }
 
 void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool excluded,int state,int hp,int max_hp,int percent) {
+    if (actor && (actor!=target_focus.displayed() || target_is_human)) target_attributes={};
     hovered_target=actor;
     target_focus.update(actor,static_cast<std::uint32_t>(ticks_msec()));
     if (actor) {
@@ -436,6 +438,19 @@ void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool
         target_vitals={static_cast<std::uint8_t>(percent),static_cast<std::uint16_t>(max_hp),static_cast<std::uint16_t>(hp)};
     }
     queue_redraw();
+}
+
+bool Mir3HudView::apply_target_attributes(std::uint32_t actor,int category,int state,PackedByteArray body) {
+    if (!actor || actor!=target_focus.displayed() || target_is_human || body.size()!=10 ||
+        category<0 || category>65535 || state<0 || state>65535) return false;
+    // Decoded 1304 body at actor+0x61D18. The second byte is unused here.
+    target_attributes.category=category;
+    target_attributes.state=state;
+    target_attributes.icon=static_cast<std::int8_t>(body[0]);
+    target_attributes.element=body[2];
+    for (int i=0;i<7;++i) target_attributes.modifiers[i]=static_cast<std::int8_t>(body[i+3]);
+    queue_redraw();
+    return true;
 }
 
 void Mir3HudView::set_hovered_human(std::uint32_t actor,int type,int profession,String name) {
@@ -1586,6 +1601,25 @@ void Mir3HudView::draw_hud_tail() {
         const Rect2 information(615,487,105,85);
         legacy_rect(information,Color(50.f/255,50.f/255,50.f/255,230.f/255));
         paint_canvas->draw_rect(information.grow(-0.5),Color(120.f/255,120.f/255,120.f/255),false);
+        if (target_attributes.visible()) {
+            const auto draw_icon=[&](int frame,Layout::Point at) {
+                const auto icon=portrait_texture(portraits,portrait_frames,frame);
+                if (icon.is_valid()) paint_canvas->draw_texture(icon,point(at));
+            };
+            draw_icon(target_attributes.category==0?632:631,{620,490});
+            if (target_attributes.element) draw_icon(599+target_attributes.element,{641,490});
+            draw_icon(620+target_attributes.icon,{target_attributes.element?662:641,490});
+            int slot=0;
+            for (int index:target_attributes.order()) {
+                const int value=target_attributes.modifiers[index];
+                if (!value) break;
+                const int x=620+32*(slot%3), y=510+20*(slot/3);
+                draw_icon(610+index,{x,y});
+                text((value>0?" +":" ")+std::to_string(value)+"%",{x+15,y+5,40,18},
+                    0xe6e6e6,mir3::TextFont::normal,false);
+                ++slot;
+            }
+        }
     }
     if (group_request) draw_group_dialog();
     button_hint();

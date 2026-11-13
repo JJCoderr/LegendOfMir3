@@ -73,6 +73,7 @@ public:
     void set_minimap_markers(godot::PackedVector2Array type_five,godot::PackedVector2Array nearby_green,
         godot::PackedVector2Array nearby_orange);
     void set_hovered_target(std::uint32_t actor,int type,int shape,bool excluded,int state,int hp,int max_hp,int percent);
+    bool apply_target_attributes(std::uint32_t actor,int category,int state,godot::PackedByteArray body);
     void set_hovered_human(std::uint32_t actor,int type,int profession,godot::String name);
     bool apply_target_portrait(std::uint32_t actor,godot::PackedByteArray jpeg);
     bool apply_portrait_reply(godot::PackedByteArray jpeg);
@@ -358,6 +359,7 @@ private:
     int target_frame=-1, target_badge=-1;
     bool target_is_human=false;
     bool target_special_shape=false;
+    mir3::TargetAttributes target_attributes;
     godot::String target_portrait_query_name;
     godot::Ref<godot::ImageTexture> target_custom_portrait;
     godot::Ref<godot::ImageTexture> target_portrait;

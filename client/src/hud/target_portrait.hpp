@@ -2,7 +2,29 @@
 #include <cstdint>
 #include <array>
 #include <string>
+#include <utility>
 namespace mir3 {
+struct TargetAttributes {
+    int category=-1, state=-1, icon=-1, element=0;
+    std::array<int,7> modifiers{};
+    bool visible() const { return category!=-1 && state!=-1 && icon!=-1; }
+    std::array<int,7> order() const {
+        std::array<int,7> indices{0,1,2,3,4,5,6};
+        for (int end=6;end>0;--end)
+            for (int i=end;i>0;--i)
+                if (modifiers[indices[i]]>modifiers[indices[i-1]])
+                    std::swap(indices[i],indices[i-1]);
+        for (int i=0;i<7;++i) {
+            if (modifiers[indices[i]]) continue;
+            for (int next=i+1;next<7;++next) {
+                if (!modifiers[indices[next]]) continue;
+                std::swap(indices[i],indices[next]);
+                break;
+            }
+        }
+        return indices;
+    }
+};
 // 0x438000 actor fields: +69 type, +71/+72 shape, +400432 exclusion.
 struct TargetPortrait {
     static bool special_shape(std::uint16_t shape) { return shape>=530 && shape<=533; }

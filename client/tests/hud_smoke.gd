@@ -851,8 +851,17 @@ func run() -> void:
 	hud.set_hovered_target(1, 3, 20, false, 1, 5, 10, 50)
 	if not check(hud.hud_snapshot().target_portrait == 20 and hud.hud_snapshot().target_hp_width == 41, "monster portrait and half HP"): return
 	if not await capture("hud-target-portrait"): return
+	var target_attributes := PackedByteArray([1, 0, 2, 0, 18, 236, 5, 0, 0, 253])
+	if not check(not hud.apply_target_attributes(2, 0, 1, target_attributes)
+		and not hud.apply_target_attributes(1, 0, 1, target_attributes.slice(0, 9))
+		and hud.apply_target_attributes(1, 0, 1, target_attributes), "1304 attributes require the matching target and 10-byte body"): return
+	if not await capture("hud-target-attributes"): return
 	if OS.get_cmdline_user_args().has("--screenshots"):
 		var ordinary_frame := root.get_texture().get_image()
+		var blank_frame := Image.load_from_file(ProjectSettings.globalize_path("res://../build/screenshots/hud-target-portrait.png"))
+		for area in [Rect2i(620, 490, 64, 19), Rect2i(620, 510, 96, 20), Rect2i(620, 530, 32, 20)]:
+			if not check(ordinary_frame.get_region(area).get_data() != blank_frame.get_region(area).get_data(),
+				"1304 renders header icons and both rows of nonzero modifiers"): return
 		if not check(ordinary_frame.get_pixel(615, 490) == Color8(120, 120, 120),
 			"ordinary monster draws the original information frame"): return
 		hud.set_hovered_target(2, 3, 530, false, 1, 5, 10, 50)
