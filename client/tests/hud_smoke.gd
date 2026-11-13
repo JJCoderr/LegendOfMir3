@@ -338,6 +338,26 @@ func run() -> void:
 	if not await capture("guild-remove"): return
 	key(KEY_ENTER)
 	if not check(removals == ["银杏剑客"], "guild removal request"): return
+	var alliance_events: Array[String] = []
+	var record_command := func(value: String): alliance_events.append(value)
+	var record_refresh := func(): alliance_events.append("refresh")
+	hud.chat_requested.connect(record_command)
+	hud.guild_overview_requested.connect(record_refresh)
+	click_at(Vector2(597, 414), true)
+	click_at(Vector2(597, 414), false)
+	if not check(hud.hud_snapshot().group_request == 1045, "open break alliance dialog"): return
+	for ch in "银杏行会": key(0, ch.unicode_at(0))
+	if not await capture("guild-break-alliance"): return
+	key(KEY_ENTER)
+	if not check(alliance_events == ["破坏结盟 银杏行会", "refresh"], "break alliance command then overview refresh"): return
+	requests.pop_back()
+	click_at(Vector2(597, 414), true)
+	click_at(Vector2(597, 414), false)
+	key(KEY_TAB)
+	key(KEY_ENTER)
+	if not check(hud.hud_snapshot().group_request == 0 and alliance_events.size() == 2, "cancel alliance change emits nothing"): return
+	hud.chat_requested.disconnect(record_command)
+	hud.guild_overview_requested.disconnect(record_refresh)
 	var guild_edits: Array = []
 	hud.guild_edit_requested.connect(func(id: int, body: String): guild_edits.append([id, body]))
 	click_at(Vector2(400, 415), true)
