@@ -1794,12 +1794,12 @@ void Mir3HudView::post_system_notice(String value,int64_t foreground,int64_t bac
     auto& notices=guild_pages[2];
     const auto utf8=value.utf8();
     for (const auto& line:mir3::wrap_system_notice({utf8.get_data(),static_cast<std::size_t>(utf8.length())})) {
-        if (guild_layout.tab==2 && notices.size()-guild_first==18) ++guild_first;
+        if (notices.size()-guild_first==18) ++guild_first;
         notices.append(String::utf8(line.c_str()));
     }
     while (notices.size()>=80) {
         notices.remove_at(0);
-        if (guild_layout.tab==2 && guild_first>0) --guild_first;
+        if (guild_first>0) --guild_first;
     }
 }
 

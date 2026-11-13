@@ -543,6 +543,20 @@ func run() -> void:
 	hud.post_system_notice("比奇".repeat(32), 0x96ffff, 0)
 	if not check(hud.hud_snapshot().guild_notice_count == 5, "system notice wraps at 514 pixels"): return
 	if not await capture("guild-notices"): return
+	click_at(Vector2(145, 410), true)
+	click_at(Vector2(145, 410), false)
+	if not check(hud.hud_snapshot().guild_tab == 0 and hud.hud_snapshot().guild_first == 0, "overview tab resets shared first row"): return
+	var notice_history := PackedStringArray()
+	for i in 79:
+		notice_history.append("历史公告 %02d" % i)
+	hud.set_guild_notices(notice_history)
+	Input.parse_input_event(guild_wheel.duplicate())
+	if not check(hud.hud_snapshot().guild_first == 1, "scroll guild overview before system notice"): return
+	hud.post_system_notice("系统公告：通知列表已滚动。", 0x96ffff, 0)
+	if not check(hud.hud_snapshot().guild_first == 0 and hud.hud_snapshot().guild_notice_count == 79, "trimming notices updates shared first row on overview tab"): return
+	click_at(Vector2(246, 410), true)
+	click_at(Vector2(246, 410), false)
+	if not await capture("guild-notice-history-trim"): return
 	click_at(Vector2(450, 415), true)
 	click_at(Vector2(450, 415), false)
 	if not check(hud.hud_snapshot().group_request == 4000, "guild permission dialog"): return
