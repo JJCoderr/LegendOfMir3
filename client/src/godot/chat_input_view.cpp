@@ -65,7 +65,7 @@ void Mir3ChatInput::_gui_input(const Ref<InputEvent>& event) {
 }
 void Mir3ChatInput::_unhandled_key_input(const Ref<InputEvent>& event) {
     Ref<InputEventKey> key=event;
-    if (key.is_null() || !key->is_pressed() || key->is_echo() || has_focus()) return;
+    if (key.is_null() || !key->is_pressed() || key->is_echo() || get_viewport()->gui_get_focus_owner()) return;
     const auto code=key->get_keycode();
     if (code!=KEY_ENTER && code!=KEY_KP_ENTER && code!=KEY_SPACE) return;
     focus_chat(String::utf8(mode.prefix().data(),mode.prefix().size()),mode.mode!=0);

@@ -1987,6 +1987,7 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
 void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
     Ref<InputEventKey> key=event;
     if (key.is_null() || !key->is_pressed() || key->is_echo()) return;
+    if (guild_edit && guild_edit->has_focus()) return;
     const auto code=key->get_physical_keycode();
     if (code>=KEY_F1 && code<=KEY_F12) {
         const int slot=code-KEY_F1+1;

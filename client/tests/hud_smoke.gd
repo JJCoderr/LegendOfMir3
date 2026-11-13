@@ -1290,6 +1290,12 @@ func run() -> void:
 	var editor: TextEdit = hud.get_node("GuildEdit")
 	if not check(editor.visible and editor.has_focus() and editor.size == Vector2(468, 170), "guild announcement editor layout"): return
 	if not check(editor.text == "今晚集合练级\n", "announcement prefill uses editable lines only"): return
+	var editor_shortcuts: Array[int] = []
+	var record_editor_shortcut := func(opcode: int): editor_shortcuts.append(opcode)
+	hud.minimap_requested.connect(record_editor_shortcut)
+	key(KEY_V)
+	if not check(editor_shortcuts.is_empty() and editor.has_focus(), "focused guild editor blocks HUD shortcut"): return
+	hud.minimap_requested.disconnect(record_editor_shortcut)
 	var editor_origin := editor.position
 	click_at(Vector2(150, 140), true)
 	hud.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
