@@ -98,6 +98,8 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_scene_npc","actor","cell","first_frame"),&Mir3HudView::set_scene_npc);
     ClassDB::bind_method(D_METHOD("set_scene_chicken","actor","cell"),&Mir3HudView::set_scene_chicken);
     ClassDB::bind_method(D_METHOD("set_scene_human","actor","cell","facing","profession","name"),&Mir3HudView::set_scene_human);
+    ClassDB::bind_method(D_METHOD("set_scene_human_body","actor","type","clothing"),&Mir3HudView::set_scene_human_body);
+    ClassDB::bind_method(D_METHOD("set_player_body","type","clothing"),&Mir3HudView::set_player_body);
     ClassDB::bind_method(D_METHOD("apply_scene_human_stand","actor","cell","facing"),&Mir3HudView::apply_scene_human_stand);
     ClassDB::bind_method(D_METHOD("apply_scene_human_step","actor","opcode","destination","facing"),&Mir3HudView::apply_scene_human_step);
     ClassDB::bind_method(D_METHOD("remove_scene_actor","actor"),&Mir3HudView::remove_scene_actor);
@@ -167,12 +169,16 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary human_cells;
     Dictionary human_idle_frames;
     Dictionary human_facings;
+    Dictionary human_appearances;
     for (const auto& [actor,human]:scene_humans) human_bounds[actor]=human.bounds;
     for (const auto& [actor,human]:scene_humans) human_cells[actor]=human.cell;
     for (const auto& [actor,human]:scene_humans) {
         human_idle_frames[actor]=human.idle.frame();
         human_facings[actor]=human.facing;
+        human_appearances[actor]=Vector2i(human.type,human.clothing);
     }
+    result["scene_human_bodies"]=human_appearances;
+    result["player_body"]=Vector2i(player_type,player_clothing);
     result["scene_human_idle_frames"]=human_idle_frames;
     result["scene_human_facings"]=human_facings;
     result["scene_human_bounds"]=human_bounds;
@@ -320,6 +326,8 @@ void Mir3HudView::_ready() {
         load_actor(map_human,map_human_frames,"M-Hum",0);
         load_actor(map_human,map_walk_frames,nullptr,1680);
         load_actor(map_human,map_run_frames,nullptr,1760);
+        map_female.open(resource_root/"Data"/"WM-Hum");
+        human_bodies.emplace(std::pair{0,0},HumanBody{map_human_frames,map_walk_frames,map_run_frames});
         map_npc.open(resource_root/"Data"/"NPC");
         map_chickens.open(resource_root/"Data"/"Mon-3");
         set_scene_npc(2,Vector2i(413,409),110);
@@ -1414,6 +1422,55 @@ bool Mir3HudView::set_scene_chicken(int actor,Vector2i cell) {
     return true;
 }
 
+const Mir3HudView::HumanBody* Mir3HudView::human_body(int type,int clothing) {
+    if (!terrain_ready || type<0 || type>1 || clothing<0 || clothing>=9) return nullptr;
+    const auto key=std::pair{type,clothing};
+    if (const auto found=human_bodies.find(key);found!=human_bodies.end()) return &found->second;
+    auto& source=type?map_female:map_human;
+    HumanBody body;
+    // mir3_1.45 ActorAppearance::body_action_frame; also Actor.cpp's
+    // bDress * _MAX_HERO_FRAME + direction * 10 in LegendOfMir3_Src.
+    const auto load=[&](auto& frames,int first,int count) {
+        for (int direction=0;direction<8;++direction) for (int relative=0;relative<count;++relative) {
+            const int index=direction*10+relative;
+            const auto frame=source.frame(clothing*3000+first+index);
+            if (!frame) return false;
+            frames[index]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y)};
+        }
+        return true;
+    };
+    if (!load(body.standing,0,4) || !load(body.walking,1680,6) || !load(body.running,1760,6)) return nullptr;
+    return &human_bodies.emplace(key,std::move(body)).first->second;
+}
+
+bool Mir3HudView::set_player_body(int type,int clothing) {
+    const auto* body=human_body(type,clothing);
+    if (!body) return false;
+    map_human_frames=body->standing;
+    map_walk_frames=body->walking;
+    map_run_frames=body->running;
+    player_type=type;
+    player_clothing=clothing;
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::set_scene_human_body(int actor,int type,int clothing) {
+    const auto found=scene_humans.find(actor);
+    if (found==scene_humans.end()) return false;
+    const auto* body=human_body(type,clothing);
+    if (!body) return false;
+    auto& human=found->second;
+    human.type=type;
+    human.clothing=clothing;
+    human.bounds=Rect2();
+    std::copy_n(body->standing.begin()+human.facing*10,human.frames.size(),human.frames.begin());
+    if (target_is_human && hovered_target==actor)
+        set_hovered_human(actor,type,human.profession,human.name);
+    queue_redraw();
+    return true;
+}
+
 bool Mir3HudView::set_scene_human(int actor,Vector2i cell,int facing,int profession,String name) {
     if (!terrain_ready || actor<=0 || facing<0 || facing>=8 || profession<0 || profession>2 ||
         scene_npcs.contains(actor) || scene_chickens.contains(actor) || !terrain.walkable(cell.x,cell.y)) return false;
@@ -1422,7 +1479,7 @@ bool Mir3HudView::set_scene_human(int actor,Vector2i cell,int facing,int profess
     human.facing=facing;
     human.profession=profession;
     human.name=std::move(name);
-    std::copy_n(map_human_frames.begin()+facing*10,human.frames.size(),human.frames.begin());
+    std::copy_n(human_body(human.type,human.clothing)->standing.begin()+facing*10,human.frames.size(),human.frames.begin());
     if (human.frames.front().image.is_null()) return false;
     scene_humans.insert_or_assign(actor,std::move(human));
     queue_redraw();
@@ -1441,7 +1498,7 @@ bool Mir3HudView::apply_scene_human_stand(int actor,Vector2i cell,int facing) {
     human.step_distance=0;
     human.idle.reset();
     human.bounds=Rect2();
-    std::copy_n(map_human_frames.begin()+facing*10,human.frames.size(),human.frames.begin());
+    std::copy_n(human_body(human.type,human.clothing)->standing.begin()+facing*10,human.frames.size(),human.frames.begin());
     queue_redraw();
     return true;
 }
@@ -1463,7 +1520,7 @@ bool Mir3HudView::apply_scene_human_step(int actor,int opcode,Vector2i destinati
     human.movement_ms=0;
     human.step_distance=distance;
     human.bounds=Rect2();
-    std::copy_n(map_human_frames.begin()+facing*10,human.frames.size(),human.frames.begin());
+    std::copy_n(human_body(human.type,human.clothing)->standing.begin()+facing*10,human.frames.size(),human.frames.begin());
     queue_redraw();
     return true;
 }
@@ -1491,7 +1548,7 @@ void Mir3HudView::update_scene_target(Vector2 pointer) {
         const auto chicken=pick(scene_chickens);
         const auto human=pick(scene_humans);
         if (human!=scene_humans.end() && (chicken==scene_chickens.end() || human->second.cell.y>=chicken->second.cell.y)) {
-            set_hovered_human(human->first,0,human->second.profession,human->second.name);
+            set_hovered_human(human->first,human->second.type,human->second.profession,human->second.name);
             return;
         }
         if (chicken!=scene_chickens.end()) {
@@ -1671,7 +1728,8 @@ void Mir3HudView::draw_terrain() {
                 animated_map_objects=true;
                 continue;
             }
-            const auto& frames=human.step_distance==2?map_run_frames:map_walk_frames;
+            const auto* body=human_body(human.type,human.clothing);
+            const auto& frames=human.step_distance==2?body->running:body->walking;
             const auto& frame=frames[human.facing*10+human.movement_frame];
             if (frame.image.is_null()) continue;
             const auto step=human.step_destination-human.step_origin;

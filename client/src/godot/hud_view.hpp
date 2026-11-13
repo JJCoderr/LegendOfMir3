@@ -73,6 +73,8 @@ public:
     bool set_scene_npc(int actor,godot::Vector2i cell,int first_frame);
     bool set_scene_chicken(int actor,godot::Vector2i cell);
     bool set_scene_human(int actor,godot::Vector2i cell,int facing,int profession,godot::String name);
+    bool set_scene_human_body(int actor,int type,int clothing);
+    bool set_player_body(int type,int clothing);
     bool apply_scene_human_stand(int actor,godot::Vector2i cell,int facing);
     bool apply_scene_human_step(int actor,int opcode,godot::Vector2i destination,int facing);
     bool remove_scene_actor(int actor);
@@ -272,7 +274,13 @@ private:
     std::array<mir3::WilArchive,75> terrain_archives;
     bool animated_map_objects=false;
     struct MapActorFrame { godot::Ref<godot::ImageTexture> image; godot::Vector2 offset; };
-    mir3::WilArchive map_human, map_npc;
+    mir3::WilArchive map_human, map_female, map_npc;
+    struct HumanBody {
+        std::array<MapActorFrame,80> standing, walking, running;
+    };
+    std::map<std::pair<int,int>,HumanBody> human_bodies;
+    const HumanBody* human_body(int type,int clothing);
+    int player_type=0, player_clothing=0;
     std::array<MapActorFrame,80> map_human_frames, map_walk_frames, map_run_frames;
     struct SceneActor {
         godot::Vector2i cell;
@@ -282,7 +290,7 @@ private:
     std::map<int,SceneActor> scene_npcs;
     std::map<int,SceneActor> scene_chickens;
     struct SceneHuman : SceneActor {
-        int profession=0;
+        int profession=0, type=0, clothing=0;
         godot::String name;
         int facing=0, movement_frame=-1, step_distance=0;
         mir3::HumanIdleClock idle;

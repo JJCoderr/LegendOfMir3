@@ -71,6 +71,19 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--scene-human-body"):
+		if not check(hud.set_player_body(0, 1) and hud.set_scene_human_body(5, 1, 1),
+			"load male and female clothing from the original archives"): return
+		if not check(hud.hud_snapshot().player_body == Vector2i(0, 1)
+			and hud.hud_snapshot().scene_human_bodies[5] == Vector2i(1, 1)
+			and hud.hud_snapshot().target_portrait == 653, "appearance and female profession portrait update together"): return
+		if not check(not hud.set_scene_human_body(5, 2, 1)
+			and not hud.set_scene_human_body(5, 0, 9)
+			and not hud.set_scene_human_body(9999, 0, 0)
+			and not hud.set_player_body(-1, 0)
+			and hud.hud_snapshot().scene_human_bodies[5] == Vector2i(1, 1),
+			"invalid appearance leaves the existing body intact"): return
+		if not await capture("bichon-human-clothing"): return
 	if not await capture("bichon-removal-before"): return
 	if OS.get_cmdline_user_args().has("--scene-human-step"):
 		var origin: Vector2i = hud.hud_snapshot().scene_human_cells[5]
@@ -98,6 +111,12 @@ func run_scene_actor_removal() -> void:
 				break
 		if not check(run_loaded and hud.hud_snapshot().scene_human_cells[5] == run_origin,
 			"remote running starts two cells behind the reported destination"): return
+		if OS.get_cmdline_user_args().has("--scene-human-body"):
+			var running_cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
+			if not check(hud.set_scene_human_body(5, 0, 2)
+				and hud.set_player_body(1, 2)
+				and hud.hud_snapshot().scene_human_cells[5] == running_cell,
+				"changing clothing during a run preserves movement"): return
 		if not await capture("bichon-remote-human-running"): return
 		await create_timer(0.95).timeout
 		if not check(hud.hud_snapshot().scene_human_cells[5] == destination
