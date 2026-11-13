@@ -162,9 +162,19 @@ func run() -> void:
 	click_at(Vector2(643, 513), true)
 	click_at(Vector2(643, 513), false)
 	if not check(map_requests == [1033, 1033] and hud.apply_minimap_reply(1), "HUD button requests original Mmap"): return
+	hud.set_map_location("盟重省", 220, 240)
+	if not check(map_requests == [1033, 1033, 1033] and not hud.hud_snapshot().minimap_visible, "map transition clears old frame and requests refresh"): return
+	if not check(not hud.apply_minimap_reply(0) and not hud.hud_snapshot().minimap_visible, "invalid reply keeps previous map hidden"): return
+	if not check(hud.apply_minimap_reply(1002) and hud.hud_snapshot().minimap_visible, "new map reply restores open minimap"): return
+	hud.set_map_location("盟重省", 221, 241)
+	if not check(map_requests.size() == 3 and hud.hud_snapshot().minimap_visible, "movement in same map does not re-request"): return
+	if not await capture("hud-minimap-map-transition"): return
 	key(KEY_Y)
-	await create_timer(1.01).timeout
-	key(KEY_V)
+	await create_timer(0.2).timeout
+	click_at(Vector2(643, 513), true)
+	click_at(Vector2(643, 513), false)
+	if not check(not hud.hud_snapshot().minimap_visible, "close refreshed minimap"): return
+	hud.set_map_location("比奇省", 337, 267)
 	if not check(hud.hud_snapshot().inventory_visible and hud.hud_snapshot().inventory_position == Vector2i(518, 0), "inventory origin"): return
 	if not await capture("inventory-empty"): return
 	if not check(hud.add_inventory_item(5, 3, 0) and hud.add_inventory_item(1043, 1, 14) and hud.add_inventory_item(15, 1, 54), "inventory fixtures"): return

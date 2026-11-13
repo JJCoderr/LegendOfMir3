@@ -2068,8 +2068,24 @@ bool Mir3HudView::apply_minimap_reply(int map_number) {
 }
 
 void Mir3HudView::set_map_location(String name,int x,int y) {
-    model.map_name=name.utf8().get_data();
+    const auto utf8=name.utf8();
+    const bool changed=model.map_name!=utf8.get_data();
+    model.map_name=utf8.get_data();
     set_minimap_position(x,y);
+    if (!changed) return;
+
+    const bool refresh=minimap.visible || minimap.pending;
+    minimap.visible=false;
+    minimap.pending=refresh;
+    minimap.dragging=false;
+    minimap.reply_time=0;
+    minimap.width=0;
+    minimap.height=0;
+    minimap.type_five_actors.clear();
+    minimap.nearby_green.clear();
+    minimap.nearby_orange.clear();
+    minimap_image.unref();
+    if (refresh) emit_signal("minimap_requested",1033);
 }
 
 void Mir3HudView::set_minimap_position(int x,int y) {
