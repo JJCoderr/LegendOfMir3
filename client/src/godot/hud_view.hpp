@@ -257,6 +257,8 @@ private:
     godot::Ref<godot::ImageTexture> terrain_texture(int package,int id);
     std::map<std::pair<int,int>,godot::Ref<godot::ImageTexture>> terrain_frames;
     bool terrain_ready=false;
+    godot::Vector2i player_cell{475,360};
+    godot::Vector2i map_camera() const;
     void draw_terrain();
     mir3::WilArchive portraits, monster_portraits;
     mir3::PortraitFocus target_focus;

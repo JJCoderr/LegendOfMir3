@@ -30,6 +30,11 @@ public:
         return {tiles[at],tiles[at+1]|(tiles[at+2]<<8)};
     }
 
+    bool walkable(int x,int y) const {
+        return x>=0 && y>=0 && x<width && y<height &&
+            (tiles[cell_start+(std::size_t(x)*height+y)*14]&1)!=0;
+    }
+
     struct Object { int package=255, frame=65535, animation=255; };
     Object object(int x,int y,int layer) const {
         if (x<0 || y<0 || x>=width || y>=height || layer<0 || layer>1) return {};

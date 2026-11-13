@@ -85,6 +85,18 @@ func run() -> void:
 		if OS.get_cmdline_user_args().has("--screenshots"):
 			var frame := root.get_texture().get_image()
 			if not check(frame.get_pixel(100, 100) != frame.get_pixel(200, 200), "Bichon terrain pixels"): return
+		for destination in [Vector2(350, 240), Vector2(445, 240)]:
+			var step := InputEventMouseButton.new()
+			step.position = destination
+			step.button_index = MOUSE_BUTTON_LEFT
+			step.pressed = true
+			root.push_input(step, true)
+			step = step.duplicate()
+			step.pressed = false
+			root.push_input(step, true)
+			var expected := Vector2i(475 if destination.x == 350 else 476, 360)
+			if not check(hud.hud_snapshot().player_cell == expected, "map walkability and movement"): return
+		if not await capture("bichon-step-camera"): return
 		hud.set_meta("map_camera_cell", Vector2i(404, 402))
 		hud.queue_redraw()
 		if not await capture("bichon-merchant"): return
