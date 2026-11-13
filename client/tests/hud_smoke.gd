@@ -85,7 +85,7 @@ func run() -> void:
 		if OS.get_cmdline_user_args().has("--screenshots"):
 			var frame := root.get_texture().get_image()
 			if not check(frame.get_pixel(100, 100) != frame.get_pixel(200, 200), "Bichon terrain pixels"): return
-		for destination in [Vector2(350, 240), Vector2(445, 240)]:
+		for destination in [Vector2(350, 240), Vector2(650, 240)]:
 			var step := InputEventMouseButton.new()
 			step.position = destination
 			step.button_index = MOUSE_BUTTON_LEFT
@@ -94,7 +94,7 @@ func run() -> void:
 			step = step.duplicate()
 			step.pressed = false
 			root.push_input(step, true)
-			if not check(hud.hud_snapshot().walk_frame == (-1 if destination.x == 350 else 0), "map walkability and walk start"): return
+			if not check(hud.hud_snapshot().walk_frame == (-1 if destination.x == 350 else 0), "map walkability and distant click heading"): return
 		if not await capture("bichon-walking"): return
 		var walk_deadline := Time.get_ticks_msec() + 2000
 		while hud.hud_snapshot().walk_frame >= 0 and Time.get_ticks_msec() < walk_deadline:

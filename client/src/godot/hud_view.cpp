@@ -893,10 +893,14 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         }
         if (!captured && kind==0 && terrain_ready && walk_frame<0 && !minimap.visible && p.y<mir3::HudLayout::origin[1]) {
             const auto camera=map_camera();
-            const Vector2i destination(int(p.x+camera.x)/48,int(p.y+camera.y)/32);
-            const auto delta=destination-player_cell;
-            if (std::max(std::abs(delta.x),std::abs(delta.y))==1 &&
-                destination!=Vector2i(413,409) && terrain.walkable(destination.x,destination.y)) {
+            const Vector2i target(int(p.x+camera.x)/48,int(p.y+camera.y)/32);
+            const auto delta=target-player_cell;
+            // 0x417E10 chooses one step along the cursor heading.
+            const int dx=std::abs(delta.y)>2 && std::abs(delta.x)<=1?0:(delta.x>0)-(delta.x<0);
+            const int dy=std::abs(delta.x)>2 && std::abs(delta.y)<=1?0:(delta.y>0)-(delta.y<0);
+            const auto destination=player_cell+Vector2i(dx,dy);
+            if (destination!=player_cell && destination!=Vector2i(413,409) &&
+                terrain.walkable(destination.x,destination.y)) {
                 map_route.clear();
                 start_map_step(destination);
                 get_viewport()->set_input_as_handled();
