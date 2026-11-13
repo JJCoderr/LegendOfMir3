@@ -575,5 +575,33 @@ func run() -> void:
 	await process_frame
 	if not check(hud.hud_snapshot().reception_frames == PackedInt32Array([-1, -1, -1]) and hud.hud_snapshot().reception_hints == PackedInt32Array([2637, 2639, 2643]), "allow skins from supplied state"): return
 	if not await capture("hud-chat-reception-allow"): return
+	var mount_button := Vector2(689, 542)
+	click_at(mount_button, true)
+	click_at(mount_button, false)
+	if not check(hud.hud_snapshot().mount_visible and hud.hud_snapshot().mount_bounds == Rect2(0, 0, 276, 322), "mount window HUD button and original bounds"): return
+	if not await capture("hud-mount-window"): return
+	var before_mount := requests.size()
+	for point in [Vector2(85, 240), Vector2(25, 240)]:
+		click_at(point, true)
+		click_at(point, false)
+	if not check(requests.slice(before_mount) == ["@骑马"], "ride allowed and dismount suppressed while on foot"): return
+	hud.set_mounted(true)
+	for point in [Vector2(25, 240), Vector2(85, 240), Vector2(140, 240), Vector2(200, 240)]:
+		click_at(point, true)
+		click_at(point, false)
+	if not check(requests.slice(before_mount) == ["@骑马", "@下马", "@包马", "@下马"], "original mounted and visibility commands"): return
+	click_at(Vector2(250, 288), true)
+	click_at(Vector2(250, 288), false)
+	if not check(not hud.hud_snapshot().mount_visible, "mount close button"): return
+	key(KEY_S)
+	if not check(hud.hud_snapshot().mount_visible, "original S shortcut"): return
+	click_at(Vector2(100, 20), true)
+	var mount_drag := InputEventMouseMotion.new()
+	mount_drag.position = Vector2(140, 50)
+	Input.parse_input_event(mount_drag)
+	click_at(mount_drag.position, false)
+	if not check(hud.hud_snapshot().mount_bounds == Rect2(40, 30, 276, 322), "mount window dragging"): return
+	key(KEY_S)
+	if not check(not hud.hud_snapshot().mount_visible, "S closes mount window"): return
 	print("HUD_SMOKE_OK: resources, expansion, collapse, stat switching, action dispatch")
 	quit(0)

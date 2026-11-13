@@ -45,6 +45,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines","editable"),&Mir3HudView::set_guild_overview,DEFVAL(PackedStringArray()));
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
+    ClassDB::bind_method(D_METHOD("set_mounted","mounted"),&Mir3HudView::set_mounted);
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
     ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
@@ -76,6 +77,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary result;
     result["ready"]=loaded;
     result["expanded"]=model.layout.expanded;
+    result["mount_visible"]=mount.visible;
+    result["mount_bounds"]=rect(mount.rect);
     result["minimap_visible"]=minimap.visible;
     result["minimap_bounds"]=rect(minimap.bounds());
     result["minimap_translucent"]=minimap.translucent;
@@ -281,6 +284,7 @@ void Mir3HudView::_draw() {
         case Panel::guild: draw_guild(); break;
         case Panel::options: draw_options(); break;
         case Panel::portrait: draw_portrait_picker(); break;
+        case Panel::mount: draw_mount(); break;
         }
     }
     draw_minimap();
@@ -381,7 +385,10 @@ void Mir3HudView::button_hint() {
             hint=message_id;
             anchor=hit.get_end();
         };
-        if (*it==Panel::guild) {
+        if (*it==Panel::mount) {
+            for (int index=1;index<int(mount.buttons.size());++index)
+                if (mount.pressed!=index) resolve(mount.buttons[index],mount.buttons[index][3]);
+        } else if (*it==Panel::guild) {
             for (int i=0;i<9;++i) resolve(mir3::GuildLayout::buttons[i],guild_layout.tooltip(i));
         } else if (*it==Panel::skills) {
             for (int i=0;i<9;++i)
@@ -470,7 +477,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
     if (button.is_valid() && button->is_pressed() && (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) && rect(mir3::HudLayout::chat_frame(model.layout.expanded)).has_point(button->get_position()) &&
         !covers_wheel(portrait_panel) && !covers_wheel(options) && !covers_wheel(guild) && !covers_wheel(group) && !covers_wheel(skills) &&
-        !covers_wheel(status) && !covers_wheel(inventory)) {
+        !covers_wheel(status) && !covers_wheel(inventory) && !covers_wheel(mount)) {
         chat_history.scroll(model.layout.expanded).wheel(button->get_button_index()==MOUSE_BUTTON_WHEEL_UP?1:-1,int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded);
         get_viewport()->set_input_as_handled();queue_redraw();return;
     }
@@ -519,6 +526,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         if (action==5) toggle_group();
         if (action==9) toggle_options();
         if (action==7) toggle_skills();
+        if (action==11) toggle_mount();
         if (action==12) toggle_inventory();
         if (action==13) toggle_status();
         if (action>=0) {
@@ -530,7 +538,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;mount.end_drag();mount.pressed=-1;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
@@ -652,6 +660,9 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         queue_redraw();
         return;
     }
+    if (code==KEY_S) {
+        toggle_mount();get_viewport()->set_input_as_handled();return;
+    }
     if (code==KEY_N) {
         toggle_options();get_viewport()->set_input_as_handled();return;
     }
@@ -666,6 +677,7 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
             case Panel::guild: guild.toggle();queue_redraw();break;
             case Panel::options: toggle_options();break;
             case Panel::portrait: close_portrait_picker();break;
+            case Panel::mount: toggle_mount();break;
             }
             get_viewport()->set_input_as_handled();
             return;
@@ -867,6 +879,7 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
 }
 
 bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
+    if (mount.dragging || mount.pressed>=0) return mount_pointer(kind,position);
     if (portrait_picker.scrolling || portrait_pressed>=0) return portrait_input(kind,position);
     if (options.dragging || audio_drag>=0) return options_pointer(kind,position);
     if (guild.dragging || guild_scroll.captured || guild_layout.pressed>=0) return guild_pointer(kind,position);
@@ -885,6 +898,7 @@ bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
         case Panel::guild: if (guild_pointer(kind,position)) return true; break;
         case Panel::options: if (options_pointer(kind,position)) return true; break;
         case Panel::portrait: if (portrait_input(kind,position)) return true; break;
+        case Panel::mount: if (mount_pointer(kind,position)) return true; break;
         }
     }
     return false;
@@ -1700,6 +1714,65 @@ void Mir3HudView::sync_hud_sound() {
     }
 }
 
+void Mir3HudView::set_mounted(bool mounted) { mount.mounted=mounted; }
+
+void Mir3HudView::toggle_mount() {
+    mount.toggle();
+    mount.pressed=-1;
+    if (mount.visible) raise_panel(Panel::mount);
+    queue_redraw();
+}
+
+void Mir3HudView::draw_mount() {
+    const auto [x,y,w,h]=mount.rect;
+    const auto skin=frame(mount.background);
+    if (skin.is_valid()) {
+        const Vector2 anchor(x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2);
+        draw_texture(skin,anchor,Color(1,1,1,220.f/255));
+    }
+    for (int index=0;index<int(mount.buttons.size());++index) {
+        const auto [id,left,top,hint]=mount.buttons[index];
+        sprite(id+(index==mount.pressed),{x+left,y+top});
+    }
+}
+
+bool Mir3HudView::mount_pointer(int kind,Vector2 position) {
+    if (!mount.visible) return false;
+    const bool inside=rect(mount.rect).has_point(position);
+    int hit=-1;
+    for (int index=0;index<int(mount.buttons.size());++index) {
+        const auto [id,x,y,hint]=mount.buttons[index];
+        const auto icon=frame(id);
+        if (icon.is_valid() && Rect2(Vector2(mount.rect[0]+x,mount.rect[1]+y),icon->get_size()).has_point(position)) {
+            hit=index;
+            break;
+        }
+    }
+    bool captured=false;
+    if (kind==0 && inside) {
+        raise_panel(Panel::mount);
+        mount.pressed=hit;
+        mount.begin_drag(int(position.x),int(position.y),hit>=0);
+    } else if (kind==1) {
+        captured=mount.move_drag(int(position.x),int(position.y)) || mount.pressed>=0;
+    } else if (kind==2) {
+        const bool activate=hit>=0 && hit==mount.pressed;
+        captured=mount.end_drag() || mount.pressed>=0;
+        mount.pressed=-1;
+        if (activate) {
+            if (hud_sound && audio_options.effects_enabled) hud_sound->play();
+            if (hit==0) toggle_mount();
+            else if (const int command=mount.command(hit);command!=0)
+                chat_requested(String::utf8(message(command).c_str()));
+        }
+    }
+    if (!inside && !captured) return false;
+    controller.cancel();
+    get_viewport()->set_input_as_handled();
+    queue_redraw();
+    return true;
+}
+
 void Mir3HudView::toggle_minimap(std::uint64_t cooldown) {
     if (minimap.toggle(ticks_msec(),cooldown)) emit_signal("minimap_requested",1033);
     queue_redraw();
@@ -2037,6 +2110,7 @@ const mir3::DraggablePanel& Mir3HudView::panel_state(Panel panel) const {
     case Panel::guild: return guild;
     case Panel::options: return options;
     case Panel::portrait: return portrait_panel;
+    case Panel::mount: return mount;
     }
     return inventory;
 }

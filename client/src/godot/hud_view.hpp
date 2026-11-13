@@ -1,6 +1,7 @@
 #pragma once
 #include "hud/hud_model.hpp"
 #include "hud/minimap.hpp"
+#include "hud/mount_panel.hpp"
 #include "hud/audio_options.hpp"
 #include "hud/portrait_picker.hpp"
 #include "inventory/inventory_panel.hpp"
@@ -35,6 +36,7 @@ public:
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     bool set_music_map(godot::String map);
+    void set_mounted(bool mounted);
     bool apply_minimap_reply(int map_number);
     void set_minimap_position(int x,int y);
     void set_minimap_markers(godot::PackedVector2Array type_five,godot::PackedVector2Array nearby_green,
@@ -56,6 +58,10 @@ protected:
 private:
     mir3::HudModel model;
     mir3::Minimap minimap;
+    mir3::MountPanel mount;
+    void toggle_mount();
+    void draw_mount();
+    bool mount_pointer(int kind,godot::Vector2 position);
     mir3::WilArchive minimap_archive, full_minimap_archive;
     godot::Ref<godot::ImageTexture> minimap_image;
     void toggle_minimap(std::uint64_t cooldown);
@@ -148,8 +154,8 @@ private:
     godot::Vector2 status_body_offset;
     void draw_status();
     void toggle_status();
-    enum class Panel { group, skills, status, inventory, guild, options, portrait };
-    std::array<Panel,7> panel_order{Panel::group,Panel::skills,Panel::status,Panel::inventory,Panel::guild,Panel::options,Panel::portrait};
+    enum class Panel { group, skills, status, inventory, guild, options, portrait, mount };
+    std::array<Panel,8> panel_order{Panel::group,Panel::skills,Panel::status,Panel::inventory,Panel::guild,Panel::options,Panel::portrait,Panel::mount};
     void raise_panel(Panel panel);
     const mir3::DraggablePanel& panel_state(Panel panel) const;
     bool panel_covered(Panel panel,godot::Vector2 point) const;
