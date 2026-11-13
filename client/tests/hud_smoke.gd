@@ -633,6 +633,15 @@ func run() -> void:
 	click_at(Vector2(83, 155), true)
 	click_at(Vector2(83, 155), false)
 	if not check(hud.hud_snapshot().quest_selected == 2, "inline detail shifts following quest hit box"): return
+	click_at(Vector2(83, 110), true)
+	click_at(Vector2(83, 110), false)
+	click_at(Vector2(280, 90), true)
+	click_at(Vector2(280, 90), false)
+	if not check(hud.set_quest_details(1, PackedStringArray(["请先前往比奇城药店交付书信，再回到城门处寻找委托人领取奖励。"])), "apply unwrapped quest detail"): return
+	if not await capture("hud-quest-detail-wrapped"): return
+	click_at(Vector2(83, 155), true)
+	click_at(Vector2(83, 155), false)
+	if not check(hud.hud_snapshot().quest_selected == 2, "wrapped quest detail occupies two rows"): return
 	quest_names.clear()
 	var quest_flags := PackedInt32Array()
 	for i in 25:

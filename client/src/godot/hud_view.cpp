@@ -1792,7 +1792,19 @@ bool Mir3HudView::set_quest_details(int index,PackedStringArray lines) {
     auto& details=quest.entries[index].details;
     details.clear();
     details.reserve(lines.size());
-    for (int64_t i=0;i<lines.size();++i) details.emplace_back(lines[i].utf8().get_data());
+    constexpr int wrap_threshold=170; // 0x46C3C7 measures each character prefix.
+    for (int64_t i=0;i<lines.size();++i) {
+        const String paragraph=lines[i];
+        String row;
+        for (int64_t offset=0;offset<paragraph.length();++offset) {
+            row+=paragraph.substr(offset,1);
+            const auto utf8=row.utf8();
+            if (mir3::raster_text(utf8.get_data(),1,1,false,mir3::TextFont::normal).text_width<wrap_threshold) continue;
+            details.emplace_back(utf8.get_data());
+            row=String();
+        }
+        if (!row.is_empty() || paragraph.is_empty()) details.emplace_back(row.utf8().get_data());
+    }
     quest.scroll(0);
     queue_redraw();
     return true;
@@ -1824,7 +1836,7 @@ void Mir3HudView::draw_quest() {
                     quest.title_color(index),mir3::TextFont::normal,false);
             } else {
                 const auto& detail=quest.entries[quest.expanded].details[line-quest.expanded-1];
-                text(detail,{x+75,top,170,15},quest.title_color(quest.expanded),mir3::TextFont::normal,false);
+                text(detail,{x+75,top,190,15},quest.title_color(quest.expanded),mir3::TextFont::normal,false);
             }
         }
     }
