@@ -493,8 +493,13 @@ func run() -> void:
 		click_at(pickup, true)
 		click_at(pickup, false)
 		if not check(hud.hud_snapshot().held_inventory_icon == 301, "purchased potion is in first available slot"): return
+		# An immediate second release invokes item use instead of putting the item back.
+		var put_back_at := Time.get_ticks_msec() + 310
+		while Time.get_ticks_msec() < put_back_at:
+			await process_frame
 		click_at(pickup, true)
 		click_at(pickup, false)
+		if not check(hud.hud_snapshot().held_inventory_icon != 301, "put purchased item back before continuing shop tests"): return
 		key(KEY_W)
 		if not check(not hud.apply_npc_message("b\\L<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.apply_npc_message("b\\D<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "651 maps known purchase failure"): return
 		if not check(hud.hud_snapshot().group_request == 1438 and hud.hud_snapshot().inventory_gold == 125, "failure opens original caption without changing gold"): return
