@@ -87,6 +87,25 @@ func run() -> void:
 	click_at(Vector2(685, 510), false)
 	await process_frame
 	if not check(actions == [14, 14, 12] and hud.hud_snapshot().pressed == -1, "inventory action dispatch"): return
+	if not check(hud.hud_snapshot().inventory_visible and hud.hud_snapshot().inventory_position == Vector2i(518, 0), "inventory origin"): return
+	if not await capture("inventory-empty"): return
+	click_at(Vector2(530, 25), true)
+	var drag := InputEventMouseMotion.new()
+	drag.position = Vector2(450, 155)
+	Input.parse_input_event(drag)
+	click_at(Vector2(450, 155), false)
+	await process_frame
+	if not check(hud.hud_snapshot().inventory_position == Vector2i(438, 99), "inventory drag and bottom clamp"): return
+	click_at(Vector2(681, 523), true)
+	click_at(Vector2(681, 523), false)
+	await process_frame
+	if not check(not hud.hud_snapshot().inventory_visible, "inventory close button"): return
+	key(KEY_W)
+	await process_frame
+	if not check(hud.hud_snapshot().inventory_visible, "inventory W shortcut"): return
+	key(KEY_ESCAPE)
+	await process_frame
+	if not check(not hud.hud_snapshot().inventory_visible, "inventory escape"): return
 	var input: LineEdit = hud.get_node("ChatInput")
 	if not check(input.position == Vector2(185, 575) and input.size == Vector2(344, 15), "compact input bounds"): return
 	key(KEY_ENTER)

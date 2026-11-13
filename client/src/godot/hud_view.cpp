@@ -7,6 +7,7 @@
 #include <godot_cpp/classes/shader.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <chrono>
+#include <godot_cpp/classes/input_event_key.hpp>
 #include <cstdio>
 #include <iterator>
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -41,6 +42,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_expanded_count"]=int(chat_history.lines(true).size());
     result["chat_compact_first"]=chat_history.first(false);
     result["chat_expanded_first"]=chat_history.first(true);
+    result["inventory_visible"]=inventory.visible;
+    result["inventory_position"]=Vector2i(inventory.rect[0],inventory.rect[1]);
+    result["inventory_row"]=inventory.row;
     result["chat_mode"]=chat_input?chat_input->mode.mode:0;
     PackedInt32Array frames,hints,rejected;
     for (int i=0;i<3;++i) { frames.push_back(reception_buttons.frames[i]);hints.push_back(reception_buttons.hints[i]);rejected.push_back(rejected_chat[i]); }
@@ -93,7 +97,7 @@ void Mir3HudView::text(const std::string& value,mir3::HudLayout::Rect r,unsigned
     auto found=text_cache.find(key);
     if (found==text_cache.end()) {
         if (text_cache.size()>=256) text_cache.clear();
-        const auto bitmap=mir3::raster_text(value,r[2],r[3],centered,font);
+        const auto bitmap=mir3::raster_text(value,r[2],r[3],centered,font,messages.get(1074));
         found=text_cache.emplace(key,texture(bitmap.rgba,r[2],r[3])).first;
     }
     if (found->second.is_valid()) draw_texture(found->second,Vector2(r[0],r[1]),Color(float(color&255)/255,float((color>>8)&255)/255,float((color>>16)&255)/255));
@@ -167,6 +171,7 @@ void Mir3HudView::_draw() {
     buttons();
     sprite(mir3::ChatScrollLayout::frame,{mir3::ChatScrollLayout::x,mir3::chat_thumb_y(chat_history.first(model.layout.expanded),int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded)});
     buttons();
+    if (inventory.visible) draw_inventory();
     button_hint();
 }
 void Mir3HudView::post_chat(String value,int64_t foreground,int64_t background) {
@@ -250,7 +255,7 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
     Ref<InputEventMouseMotion> motion=event;
-    if (motion.is_valid()) { auto p=motion->get_position();controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
+    if (motion.is_valid()) { auto p=motion->get_position();if (inventory_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
     Ref<InputEventMouseButton> button=event;
     if (button.is_valid() && button->is_pressed() && (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) && rect(mir3::HudLayout::chat_frame(model.layout.expanded)).has_point(button->get_position())) {
         chat_history.scroll(model.layout.expanded).wheel(button->get_button_index()==MOUSE_BUTTON_WHEEL_UP?1:-1,int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded);
@@ -258,7 +263,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
     if (button.is_valid() && button->get_button_index()==MOUSE_BUTTON_LEFT) {
         auto p=button->get_position();
-        if (scroll_input(button->is_pressed()?0:2,p)) return;
+        if (inventory_pointer(button->is_pressed()?0:2,p) || scroll_input(button->is_pressed()?0:2,p)) return;
         const bool captured=model.pressed>=0 || controller.hit(int(p.x),int(p.y))>=0;
         int action=controller.pointer(int(p.x),int(p.y),button->is_pressed());
         if (chat_input) {
@@ -273,11 +278,73 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             const int id=reception_buttons.press(action,rejected_chat[action-20]);
             chat_requested(String::utf8(message(id).c_str()));
         }
+        if (action==12) toggle_inventory();
         if (action>=0) emit_signal("hud_action",action);
         if (captured) get_viewport()->set_input_as_handled();
         queue_redraw();
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+}
+
+void Mir3HudView::draw_inventory() {
+    const auto [x,y,w,h]=inventory.rect;
+    const auto skin=frame(1220);
+    if (skin.is_valid())
+        sprite(1220,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
+    text(message(1701),{x+12,y+20,74,16},0xF8DCFA);
+    const auto weight=message(2501)+": "+std::to_string(model.weight)+" / "+std::to_string(model.max_weight);
+    text(weight,{x+95,y+21,126,16},0x0a0a0a);
+    text(weight,{x+94,y+20,126,16},0xF8C8C8);
+    sprite(inventory.close_pressed?1222:1221,{x+242,y+423});
+    sprite(1225,{x+250,mir3::InventoryScroll::thumb_y(inventory.row,y)});
+    text("0",{x+72,y+402,77,17},0x64C8F8,mir3::TextFont::gold);
+}
+
+void Mir3HudView::toggle_inventory() {
+    if (frame(1220).is_null()) return;
+    inventory.toggle();
+    inventory.close_pressed=false;
+    inventory.scroll.captured=false;
+    controller.cancel();
+    queue_redraw();
+}
+
+bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
+    if (!inventory.visible) return false;
+    const auto [x,y,w,h]=inventory.rect;
+    const auto close=frame(1221);
+    const bool on_close=close.is_valid() && Rect2(x+242,y+423,close->get_width(),close->get_height()).has_point(position);
+    const bool inside=Rect2(x,y,w,h).has_point(position);
+    const auto thumb=frame(1225);
+    const auto now=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    bool consumed=thumb.is_valid() && inventory.scroll.input(kind,int(position.x),int(position.y),x,y,
+        thumb->get_width(),thumb->get_height(),static_cast<std::uint32_t>(now),inventory.row);
+    if (!consumed && kind==0 && inside) {
+        inventory.close_pressed=on_close;
+        inventory.begin_drag(int(position.x),int(position.y),on_close || Rect2(x+17,y+60,228,304).has_point(position) || Rect2(x+15,y+390,42,27).has_point(position));
+    } else if (!consumed && kind==1) {
+        consumed=inventory.move_drag(int(position.x),int(position.y));
+    } else if (kind==2) {
+        const bool close_window=inventory.close_pressed && on_close;
+        consumed=inventory.end_drag() || inventory.close_pressed || consumed;
+        inventory.close_pressed=false;
+        if (close_window) toggle_inventory();
+    }
+    if (!inside && !consumed) return false;
+    controller.cancel();
+    get_viewport()->set_input_as_handled();
+    queue_redraw();
+    return true;
+}
+
+void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
+    Ref<InputEventKey> key=event;
+    if (key.is_null() || !key->is_pressed() || key->is_echo()) return;
+    const auto code=key->get_physical_keycode();
+    if (code==KEY_W || (code==KEY_ESCAPE && inventory.visible)) {
+        toggle_inventory();
+        get_viewport()->set_input_as_handled();
+    }
 }

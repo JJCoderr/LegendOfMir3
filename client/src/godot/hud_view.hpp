@@ -1,5 +1,6 @@
 #pragma once
 #include "hud/hud_model.hpp"
+#include "inventory/inventory_panel.hpp"
 #include "resources/wil_archive.hpp"
 #include "resources/messages.hpp"
 #include "text/native_text.hpp"
@@ -18,6 +19,7 @@ public:
     void _draw() override;
     void _process(double delta) override;
     void _input(const godot::Ref<godot::InputEvent>& event) override;
+    void _unhandled_key_input(const godot::Ref<godot::InputEvent>& event) override;
     void _notification(int what);
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
@@ -26,6 +28,10 @@ protected:
     static void _bind_methods();
 private:
     mir3::HudModel model;
+    mir3::InventoryPanel inventory;
+    void draw_inventory();
+    void toggle_inventory();
+    bool inventory_pointer(int kind,godot::Vector2 position);
     mir3::HudController controller{model};
     mir3::WilArchive archive;
     mir3::WilArchive portraits;
