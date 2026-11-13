@@ -40,7 +40,6 @@ struct Minimap {
         if (visible) {
             visible=false;
             dragging=false;
-            button_captured=false;
             return false;
         }
         pending=true;

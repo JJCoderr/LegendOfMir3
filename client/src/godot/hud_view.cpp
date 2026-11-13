@@ -491,6 +491,14 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     draw_polygon(vertices,colors,uv);
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
+    if (minimap.button_captured) {
+        const Ref<InputEventMouseButton> release=event;
+        if (release.is_valid() && release->get_button_index()==MOUSE_BUTTON_LEFT && !release->is_pressed()) {
+            minimap.button_captured=false;
+            get_viewport()->set_input_as_handled();
+            return;
+        }
+    }
     if (group_request && group_dialog_input(event)) return;
     if (guild_editor.visible && guild_editor_input(event)) return;
     Ref<InputEventMouseMotion> motion=event;
@@ -2451,7 +2459,6 @@ void Mir3HudView::set_map_location(String name,int x,int y) {
     minimap.visible=false;
     minimap.pending=refresh;
     minimap.dragging=false;
-    minimap.button_captured=false;
     minimap.reply_time=0;
     minimap.width=0;
     minimap.height=0;
@@ -2526,9 +2533,7 @@ bool Mir3HudView::minimap_pointer(int kind,Vector2 position,bool ctrl) {
     if (!minimap.visible) return false;
     const auto bounds=rect(minimap.bounds());
     const auto end=bounds.get_end();
-    if (kind==2 && minimap.button_captured) {
-        minimap.button_captured=false;
-    } else if (kind==0 && ctrl && bounds.has_point(position)) {
+    if (kind==0 && ctrl && bounds.has_point(position)) {
         minimap.drag_offset={int(position.x)-minimap.position[0],int(position.y)-minimap.position[1]};
         minimap.dragging=true;
     } else if (kind==0 && Rect2(end-Vector2(38,19),Vector2(19,19)).has_point(position)) {
