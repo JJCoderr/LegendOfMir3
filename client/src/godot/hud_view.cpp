@@ -2438,6 +2438,7 @@ bool Mir3HudView::dialog_has_input() const {
 void Mir3HudView::open_group_dialog(int action) {
     const auto skin=frame(1240);
     if (skin.is_null() || !chat_input) return;
+    if (group_request==1011 && action!=1011) finish_group_dialog(false);
     const int w=skin->get_width(),h=skin->get_height();
     group_dialog={400-w/2,246-h/2,w,h};
     group_request=action<=3?1019+action:action;
@@ -2551,6 +2552,7 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
         const bool activate=code==KEY_ENTER || code==KEY_KP_ENTER || (!dialog_has_input() && code==KEY_SPACE);
         if (code!=KEY_TAB && code!=KEY_ESCAPE && !activate && dialog_has_input()) return false;
         if (key->is_pressed() && !key->is_echo()) {
+            if (code==KEY_ESCAPE && group_request==1011) finish_group_dialog(false);
             if (code==KEY_TAB) { group_selected=group_selected==0?2:0;queue_redraw(); }
             if (activate) finish_group_dialog(group_selected==0);
         }

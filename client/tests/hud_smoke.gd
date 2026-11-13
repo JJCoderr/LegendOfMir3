@@ -348,6 +348,20 @@ func run() -> void:
 		if not await capture("bichon-merchant-masked-prompt"): return
 		key(KEY_ENTER)
 		if not check(not npc_input.secret and dialogue_actions.back() == [2, secret_command + "\r1234"], "NPC password byte limit and mask reset"): return
+		var confirmed_actions := dialogue_actions.size()
+		for server_close in [false, true]:
+			await wait_for_npc_cooldown()
+			if not check(hud.apply_npc_dialogue(643, 2, "老黄/<请输入仓库密码/" + secret_command + ">"), "reopen masked NPC prompt"): return
+			click_at(Vector2(50, 45), false)
+			if not check(npc_input.secret, "masked prompt opened again"): return
+			npc_input.text = "9999"
+			if server_close:
+				if not check(hud.apply_npc_dialogue(644, 2, ""), "server closes pending NPC prompt"): return
+			else:
+				key(KEY_ESCAPE)
+			if not check(not npc_input.secret and npc_input.text.is_empty() and not npc_input.has_focus() and dialogue_actions.size() == confirmed_actions, "dismissal clears masked input without sending"): return
+			if not server_close and not await capture("bichon-merchant-masked-prompt-cancelled"): return
+		if not check(hud.apply_npc_dialogue(643, 2, script), "reopen NPC dialogue for shop reply"): return
 		var goods_requests: Array = []
 		hud.shop_good_requested.connect(func(actor: int, index: int, name: String): goods_requests.append([actor, index, name]))
 		if not check(hud.apply_npc_message("a<D<<>=B<?H<<<<<PbQ`DC=kYBakW^xmGoDlGoPkLbmqUN=lWsMeWrtkH>xnINxpGl".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "645 goods list"): return
