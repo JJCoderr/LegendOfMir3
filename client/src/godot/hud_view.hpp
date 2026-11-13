@@ -2,6 +2,7 @@
 #include "hud/hud_model.hpp"
 #include "hud/minimap.hpp"
 #include "hud/mount_panel.hpp"
+#include "hud/quest_panel.hpp"
 #include "hud/audio_options.hpp"
 #include "hud/portrait_picker.hpp"
 #include "inventory/inventory_panel.hpp"
@@ -60,6 +61,10 @@ private:
     mir3::HudModel model;
     mir3::Minimap minimap;
     mir3::MountPanel mount;
+    mir3::QuestPanel quest;
+    void toggle_quest();
+    void draw_quest();
+    bool quest_pointer(int kind,godot::Vector2 position);
     void toggle_mount();
     void draw_mount();
     bool mount_pointer(int kind,godot::Vector2 position);
@@ -157,8 +162,8 @@ private:
     godot::Vector2 status_body_offset;
     void draw_status();
     void toggle_status();
-    enum class Panel { group, skills, status, inventory, guild, options, portrait, mount };
-    std::array<Panel,8> panel_order{Panel::group,Panel::skills,Panel::status,Panel::inventory,Panel::guild,Panel::options,Panel::portrait,Panel::mount};
+    enum class Panel { group, skills, status, inventory, guild, options, portrait, mount, quest };
+    std::array<Panel,9> panel_order{Panel::group,Panel::skills,Panel::status,Panel::inventory,Panel::guild,Panel::options,Panel::portrait,Panel::mount,Panel::quest};
     void raise_panel(Panel panel);
     const mir3::DraggablePanel& panel_state(Panel panel) const;
     bool panel_covered(Panel panel,godot::Vector2 point) const;

@@ -613,6 +613,17 @@ func run() -> void:
 	if not check(hud.hud_snapshot().mount_bounds == Rect2(40, 30, 276, 322), "mount window dragging"): return
 	key(KEY_S)
 	if not check(not hud.hud_snapshot().mount_visible, "S closes mount window"): return
+	click_at(Vector2(750, 490), true)
+	click_at(Vector2(750, 490), false)
+	if not check(hud.hud_snapshot().quest_visible and hud.hud_snapshot().quest_bounds == Rect2(0, 0, 340, 440), "quest HUD button and original bounds"): return
+	if not await capture("hud-quest-window"): return
+	click_at(Vector2(275, 115), true)
+	click_at(Vector2(275, 115), false)
+	if not check(not hud.hud_snapshot().quest_visible, "quest close button"): return
+	key(KEY_D)
+	if not check(hud.hud_snapshot().quest_visible, "quest D shortcut"): return
+	key(KEY_D)
+	if not check(not hud.hud_snapshot().quest_visible, "D closes quest window"): return
 	var exit_requests: Array[int] = []
 	hud.exit_confirmed.disconnect(hud.handle_exit_confirmation)
 	hud.exit_confirmed.connect(func(id: int): exit_requests.append(id))
