@@ -72,6 +72,24 @@ func run_scene_actor_removal() -> void:
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
 	if not await capture("bichon-removal-before"): return
+	if OS.get_cmdline_user_args().has("--scene-human-step"):
+		var origin: Vector2i = hud.hud_snapshot().scene_human_cells[5]
+		var destination := origin + Vector2i(1, 0)
+		var facing := 2
+		if not hud.apply_scene_human_step(5, 11, destination, facing):
+			destination = origin - Vector2i(1, 0)
+			facing = 6
+			if not check(hud.apply_scene_human_step(5, 11, destination, facing), "apply remote walk on a walkable cell"): return
+		if not check(hud.hud_snapshot().scene_human_cells[5] == origin
+			and not hud.hud_snapshot().scene_human_bounds[5].has_area(), "remote step invalidates old bounds before drawing"): return
+		if not await capture("bichon-remote-human-walking"): return
+		await create_timer(0.75).timeout
+		var moved: Rect2 = hud.hud_snapshot().scene_human_bounds[5]
+		if not check(hud.hud_snapshot().scene_human_cells[5] == destination and moved.has_area()
+			and moved.position.distance_to(bounds.position) > 20, "remote human settles on the server destination"): return
+		print("SCENE_HUMAN_STEP_OK")
+		quit()
+		return
 	if not check(hud.remove_scene_actor(5) and not hud.remove_scene_actor(5)
 		and not hud.hud_snapshot().scene_human_bounds.has(5) and hud.hud_snapshot().target_portrait == -1,
 		"removal clears the remote human bounds and portrait"): return
@@ -85,7 +103,7 @@ func run() -> void:
 	hud = load("res://main.tscn").instantiate()
 	root.size = Vector2i(800, 600)
 	Input.use_accumulated_input = false
-	if OS.get_cmdline_user_args().has("--scene-actor-removal"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()
