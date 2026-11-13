@@ -78,6 +78,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_portrait_names","names"),&Mir3HudView::set_portrait_names);
     ADD_SIGNAL(MethodInfo("guild_members_requested"));
     ADD_SIGNAL(MethodInfo("guild_edit_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"body")));
+    ADD_SIGNAL(MethodInfo("guild_edit_bytes_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::PACKED_BYTE_ARRAY,"body")));
     ADD_SIGNAL(MethodInfo("guild_member_removal_requested",PropertyInfo(Variant::STRING,"name")));
     ClassDB::bind_method(D_METHOD("set_guild_manager","allowed"),&Mir3HudView::set_guild_manager);
     ClassDB::bind_method(D_METHOD("apply_guild_members_reply","identifier","body"),&Mir3HudView::apply_guild_members_reply);
@@ -1958,8 +1959,14 @@ bool Mir3HudView::guild_editor_input(const Ref<InputEvent>& event) {
                         if (end==input.npos) break;
                         input.remove_prefix(end+1);
                     }
-                    if (!body.empty() && body.size()<=3999)
-                        emit_signal("guild_edit_requested",guild_edit_announcement?1040:1041,String::utf8(mir3::ansi_to_utf8(body).c_str()));
+                    if (!body.empty() && body.size()<=3999) {
+                        const int identifier=guild_edit_announcement?1040:1041;
+                        PackedByteArray bytes;
+                        bytes.resize(body.size());
+                        std::copy(body.begin(),body.end(),bytes.ptrw());
+                        emit_signal("guild_edit_bytes_requested",identifier,bytes);
+                        emit_signal("guild_edit_requested",identifier,String::utf8(mir3::ansi_to_utf8(body).c_str()));
+                    }
                 }
             }
             guild_edit_pressed=-1;

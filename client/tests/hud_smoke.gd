@@ -607,6 +607,8 @@ func run() -> void:
 	hud.chat_requested.disconnect(record_command)
 	hud.guild_overview_requested.disconnect(record_refresh)
 	var guild_edits: Array = []
+	var guild_wire_edits: Array = []
+	hud.guild_edit_bytes_requested.connect(func(id: int, body: PackedByteArray): guild_wire_edits.append([id, body]))
 	hud.guild_edit_requested.connect(func(id: int, body: String): guild_edits.append([id, body]))
 	click_at(Vector2(400, 415), true)
 	click_at(Vector2(400, 415), false)
@@ -618,6 +620,7 @@ func run() -> void:
 	click_at(Vector2(575, 130), true)
 	click_at(Vector2(575, 130), false)
 	if not check(not editor.visible and guild_edits == [[1040, "行会公告\r \r今晚集合"]], "guild announcement submit"): return
+	if not check(guild_wire_edits == [[1040, PackedByteArray([208, 208, 187, 225, 185, 171, 184, 230, 13, 32, 13, 189, 241, 205, 237, 188, 175, 186, 207])]], "announcement wire retains ANSI bytes and CR separators"): return
 	click_at(Vector2(550, 415), true)
 	click_at(Vector2(550, 415), false)
 	if not check(editor.visible and editor.text == "#1 <Leader>\nBichon \n#2 <Member>\n", "guild member editor uses rank source"): return
