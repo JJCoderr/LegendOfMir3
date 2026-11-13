@@ -740,8 +740,8 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body,bool wire_for
             remaining.remove_prefix(slash+1);
         }
         ShopGood good{std::string(fields[0]),0,0,0};
-        int extra[2]{};
-        const std::array values{&good.variants,&good.price,&good.stock,&good.icon,&extra[0],&extra[1]};
+        int requirement_type=0;
+        const std::array values{&good.variants,&good.price,&good.stock,&good.icon,&requirement_type,&good.requirement};
         for (int j=0;j<field_count-1;++j) {
             const auto field=fields[j+1];
             const auto end=field.data()+field.size();
@@ -865,6 +865,10 @@ void Mir3HudView::draw_shop() {
         }
         text(good.name,{66,label_y,184,16},0xfafa,mir3::TextFont::normal,false);
         text(price,{68+name_width,label_y,124,16},0x64b4fa,mir3::TextFont::normal,false);
+        // 0x478250: frame 304 displays a localized profession requirement.
+        if (good.icon==304 && good.requirement<=2)
+            text(message(5170+good.requirement),{66,label_y+20,184,16},
+                model.profession==good.requirement?13172680:1974015,mir3::TextFont::normal,false);
     }
 }
 

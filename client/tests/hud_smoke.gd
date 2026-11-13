@@ -397,6 +397,8 @@ func run() -> void:
 		click_at(Vector2(135, 420), false)
 		if not check(goods_requests == [[2, 0, "Red potion"]], "valid goods selection survives invalid reply"): return
 		if not check(not hud.apply_npc_body(645, 2, 2, "!!!!".to_ascii_buffer()), "reject invalid six-bit alphabet"): return
+		if not check(hud.apply_npc_body(645, 2, 1, "PrieWBl\\TbykVnxlGoDqGoLkHo<pGo<kHNx".to_ascii_buffer()), "decode shop profession requirement"): return
+		if not await capture("bichon-merchant-profession-requirement"): return
 		var stock_list := ""
 		for i in 10: stock_list += "Potion %d/1/20/5/" % i
 		if not check(hud.apply_shop_goods(2, 10, stock_list), "shop list exceeds one screen"): return
