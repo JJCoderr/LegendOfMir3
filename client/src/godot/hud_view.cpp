@@ -1178,7 +1178,7 @@ void Mir3HudView::draw_skills() {
     }
     sprite(1672,{x+322,y+skills.thumb_y()});
     const auto& learned=skills.learned[skills.tab];
-    for (int i=0;i<int(learned.size());++i) {
+    for (int i=0;i<std::min(int(learned.size()),mir3::SkillPanel::visible_skill_limit);++i) {
         const auto& skill=learned[i];
         if (!skill.id) continue;
         const int slot=mir3::SkillLayout::slot(skills.tab,skill.id);

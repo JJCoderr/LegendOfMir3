@@ -495,6 +495,22 @@ func run() -> void:
 	click_at(Vector2(390, 130), false)
 	if not check(skill_requests.size() == binds_before_removal, "stale popup cannot change bindings"): return
 	if not await capture("magic-removed-popup-target"): return
+	click_at(Vector2(700, 470), true)
+	click_at(Vector2(700, 470), false)
+	var crowded_records := PackedByteArray()
+	record[4] = 0
+	record[6] = 1
+	for i in 15: crowded_records.append_array(record)
+	record[6] = 5
+	crowded_records.append_array(record)
+	if not check(hud.apply_skill_records(211, 16, crowded_records) and hud.apply_skill_progress(5, 10, 1), "retain skills beyond display limit"): return
+	if not await capture("magic-visible-limit"): return
+	if not check(hud.apply_skill_removal(1), "remove one visible record"): return
+	if not await capture("magic-visible-after-removal"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var limited := Image.load_from_file(ProjectSettings.globalize_path("res://../build/screenshots/magic-visible-limit.png"))
+		var revealed := root.get_texture().get_image()
+		if not check(limited.get_region(Rect2i(378, 144, 40, 30)).get_data() != revealed.get_region(Rect2i(378, 144, 40, 30)).get_data(), "removal reveals skill previously past the display limit"): return
 	click_at(Vector2(636, 32), true)
 	click_at(Vector2(636, 32), false)
 	var skill_wheel := InputEventMouseButton.new()

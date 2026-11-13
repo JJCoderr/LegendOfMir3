@@ -109,6 +109,7 @@ struct SkillPanel : DraggablePanel {
     }
     static constexpr std::array<int,2> tree_origin{18,63}; //0x44EA70
     static constexpr int tree_height=331;
+    static constexpr int visible_skill_limit=15;
     bool release_button(int index) {
         const bool clicked=index==pressed && index>=0 && index<=8;
         pressed=-1;
