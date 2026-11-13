@@ -1,5 +1,6 @@
 #pragma once
 #include "hud/hud_model.hpp"
+#include "hud/human_idle.hpp"
 #include "hud/minimap.hpp"
 #include "hud/mount_panel.hpp"
 #include "hud/quest_panel.hpp"
@@ -274,6 +275,7 @@ private:
     bool terrain_ready=false;
     godot::Vector2i player_cell{475,360}, step_origin{}, step_destination{};
     int walk_frame=-1, player_facing=4;
+    mir3::HumanIdleClock player_idle;
     double movement_ms=0;
     int map_pointer_button=0;
     double map_pointer_seconds=0;

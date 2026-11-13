@@ -154,6 +154,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["ready"]=loaded;
     result["character_level"]=model.level;
     result["terrain_ready"]=terrain_ready;
+    result["player_idle_frame"]=player_idle.frame();
     result["npc_dialogue_actor"]=npc_dialogue_actor;
     result["player_cell"]=player_cell;
     result["walk_frame"]=walk_frame;
@@ -1503,7 +1504,7 @@ void Mir3HudView::draw_terrain() {
             const auto step=step_destination-step_origin;
             const auto& movement=std::max(std::abs(step.x),std::abs(step.y))==2?map_run_frames:map_walk_frames;
             const auto& actor=walk_frame>=0?movement[player_facing*10+walk_frame]:
-                map_human_frames[player_facing*10+tick/500%2];
+                map_human_frames[player_facing*10+player_idle.frame()];
             if (actor.image.is_valid()) {
                 paint_canvas->draw_texture(actor.image,Vector2(pixel-camera)+actor.offset);
                 animated_map_objects=true;
@@ -1829,6 +1830,10 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
+    if (terrain_ready) {
+        if (walk_frame>=0) player_idle.reset();
+        else player_idle.advance(delta*1000);
+    }
     if (portrait_map_visible && !model.layout.expanded) {
         portrait_map_blink_ms+=delta*1000;
         if (portrait_map_blink_ms>800) portrait_map_blink_ms=0;

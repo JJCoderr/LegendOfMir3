@@ -75,6 +75,13 @@ func run() -> void:
 	if not check(hud.hud_snapshot().ready, "original resource loading"): return
 	if OS.get_cmdline_user_args().has("--terrain"):
 		if not check(hud.hud_snapshot().terrain_ready, "Bichon terrain loaded"): return
+		var idle_frames := {}
+		var idle_deadline := Time.get_ticks_msec() + 1600
+		while idle_frames.size() < 4 and Time.get_ticks_msec() < idle_deadline:
+			idle_frames[hud.hud_snapshot().player_idle_frame] = true
+			await process_frame
+		if not check(idle_frames.has_all([0, 1, 2, 3]), "Bichon player cycles through all four standing frames"): return
+		if not await capture("bichon-player-and-npc"): return
 		hud.set_meta("show_map_objects", false)
 		hud.queue_redraw()
 		if not await capture("bichon-terrain-hud"): return
