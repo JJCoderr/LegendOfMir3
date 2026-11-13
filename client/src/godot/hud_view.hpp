@@ -54,6 +54,7 @@ public:
     bool apply_trade_offer_reply(int identifier);
     bool set_trade_item(int side,int slot,int icon,int count);
     bool set_trade_gold(int64_t local,int64_t remote);
+    bool apply_trade_cancel();
     bool open_trade(godot::String partner);
     void set_trade_context(int direction,godot::Vector2i cell,int actor_type,bool dead,godot::String name);
     void set_map_location(godot::String name,int x,int y);

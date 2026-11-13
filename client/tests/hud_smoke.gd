@@ -829,8 +829,9 @@ func run() -> void:
 	click_at(Vector2(238, 285), false)
 	if not check(hud.hud_snapshot().trade_confirmed and trades[-1] == [1030, ""], "confirm sends original trade request"): return
 	if not await capture("hud-trade-gold-confirm"): return
-	hud.open_trade("")
-	if not check(not hud.hud_snapshot().trade_visible, "trade session closes panel"): return
+	if not check(hud.apply_trade_cancel() and not hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_visible, "trade cancellation closes offer and preserves bag"): return
+	if not check(not hud.apply_trade_cancel(), "duplicate trade cancellation ignored"): return
+	if not await capture("hud-trade-cancelled"): return
 	var exit_requests: Array[int] = []
 	hud.exit_confirmed.disconnect(hud.handle_exit_confirmation)
 	hud.exit_confirmed.connect(func(id: int): exit_requests.append(id))

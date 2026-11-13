@@ -90,6 +90,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_trade_offer_reply","identifier"),&Mir3HudView::apply_trade_offer_reply);
     ClassDB::bind_method(D_METHOD("set_trade_item","side","slot","icon","count"),&Mir3HudView::set_trade_item);
     ClassDB::bind_method(D_METHOD("set_trade_gold","local","remote"),&Mir3HudView::set_trade_gold);
+    ClassDB::bind_method(D_METHOD("apply_trade_cancel"),&Mir3HudView::apply_trade_cancel);
     ClassDB::bind_method(D_METHOD("open_trade","partner"),&Mir3HudView::open_trade);
     ADD_SIGNAL(MethodInfo("trade_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("exit_confirmed",PropertyInfo(Variant::INT,"dialog_id")));
@@ -2157,6 +2158,25 @@ bool Mir3HudView::set_trade_gold(int64_t local,int64_t remote) {
     trade_gold={static_cast<std::uint32_t>(local),static_cast<std::uint32_t>(remote)};
     queue_redraw();
     return true;
+}
+
+bool Mir3HudView::apply_trade_cancel() {
+    if (!trade.visible) return false;
+    // Apply the 687 return and close together. If the inventory snapshot is
+    // full, leave the offer intact so the session can reconcile and retry.
+    auto restored=bag;
+    for (const auto& item:trade_items[0]) {
+        if (item && !restored.insert(item)) return false;
+    }
+    if (trade_pending_slot>=0) {
+        if (!restored.insert(restored.held)) return false;
+        restored.held={};
+        restored.held_slot=-1;
+        trade_pending_slot=-1;
+    }
+    bag=std::move(restored);
+    trade_items={};
+    return open_trade(String());
 }
 
 bool Mir3HudView::open_trade(String partner) {
