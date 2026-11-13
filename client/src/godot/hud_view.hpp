@@ -72,7 +72,8 @@ public:
     void set_minimap_position(int x,int y);
     void set_minimap_markers(godot::PackedVector2Array type_five,godot::PackedVector2Array nearby_green,
         godot::PackedVector2Array nearby_orange);
-    void set_hovered_target(std::uint32_t actor,int type,int shape,bool excluded,int state,int hp,int max_hp,int percent);
+    void set_hovered_target(std::uint32_t actor,int type,int shape,bool excluded,int state,int hp,int max_hp,int percent,
+        godot::Vector2i cell={-1,-1});
     bool apply_target_attributes(std::uint32_t actor,int category,int state,godot::PackedByteArray body);
     void set_hovered_human(std::uint32_t actor,int type,int profession,godot::String name);
     bool apply_target_portrait(std::uint32_t actor,godot::PackedByteArray jpeg);

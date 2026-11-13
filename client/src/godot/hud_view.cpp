@@ -97,7 +97,10 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
     ClassDB::bind_method(D_METHOD("set_minimap_markers","type_five","nearby_green","nearby_orange"),&Mir3HudView::set_minimap_markers);
-    ClassDB::bind_method(D_METHOD("set_hovered_target","actor","type","shape","excluded","state","hp","max_hp","percent"),&Mir3HudView::set_hovered_target);
+    ClassDB::bind_method(D_METHOD("set_hovered_target","actor","type","shape","excluded","state","hp","max_hp","percent","cell"),
+        &Mir3HudView::set_hovered_target,DEFVAL(Vector2i(-1,-1)));
+    ADD_SIGNAL(MethodInfo("target_attributes_requested",PropertyInfo(Variant::INT,"identifier"),
+        PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::VECTOR2I,"cell")));
     ClassDB::bind_method(D_METHOD("apply_target_attributes","actor","category","state","body"),&Mir3HudView::apply_target_attributes);
     ClassDB::bind_method(D_METHOD("set_hovered_human","actor","type","profession","name"),&Mir3HudView::set_hovered_human,DEFVAL(String()));
     ClassDB::bind_method(D_METHOD("apply_target_portrait","actor","jpeg"),&Mir3HudView::apply_target_portrait);
@@ -420,7 +423,9 @@ Ref<ImageTexture> Mir3HudView::portrait_texture(mir3::WilArchive& archive,
     return cache.emplace(id,decoded?texture(decoded->pixels.rgba,decoded->width,decoded->height):Ref<ImageTexture>{}).first->second;
 }
 
-void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool excluded,int state,int hp,int max_hp,int percent) {
+void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool excluded,int state,int hp,int max_hp,int percent,
+        Vector2i cell) {
+    const bool changed=target_focus.changes_to(actor);
     if (actor && (actor!=target_focus.displayed() || target_is_human)) target_attributes={};
     hovered_target=actor;
     target_focus.update(actor,static_cast<std::uint32_t>(ticks_msec()));
@@ -436,6 +441,9 @@ void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool
         target_badge=target_frame<0?-1:mir3::TargetPortrait::badge(static_cast<std::uint16_t>(shape),state);
         target_special_shape=mir3::TargetPortrait::special_shape(static_cast<std::uint16_t>(shape));
         target_vitals={static_cast<std::uint8_t>(percent),static_cast<std::uint16_t>(max_hp),static_cast<std::uint16_t>(hp)};
+        // 0x4248F7 / 0x47BEC0 requests missing attributes on a focus change.
+        if (changed && target_attributes.icon==-1 && cell.x>=0 && cell.x<=65535 && cell.y>=0 && cell.y<=65535)
+            emit_signal("target_attributes_requested",1047,actor,cell);
     }
     queue_redraw();
 }

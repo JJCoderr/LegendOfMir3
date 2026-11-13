@@ -79,6 +79,7 @@ public:
     }
     void clear() { shown = previous = changed_at = 0; }
     std::uint32_t displayed() const { return shown; }
+    bool changes_to(std::uint32_t actor) const { return actor && actor!=previous; }
 private:
     std::uint32_t shown = 0, previous = 0, changed_at = 0;
 };
