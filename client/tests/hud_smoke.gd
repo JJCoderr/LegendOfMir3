@@ -559,8 +559,11 @@ func run() -> void:
 		if not check(not hud.apply_shop_offers(2, 8, names, icons, prices, ids), "list close dismisses the active detail grid"): return
 		if not await capture("bichon-merchant-shop-closed"): return
 		if not check(hud.apply_shop_goods(2, 1, "Bundle/2/20/5/301/0/10/", true), "open quantity-based goods with level requirement"): return
-		click_at(Vector2(135, 420), true)
-		click_at(Vector2(135, 420), false)
+		var requests_before_bulk := goods_requests.size()
+		offer_double_click.position = Vector2(80, 250)
+		root.push_input(offer_double_click, true)
+		click_at(Vector2(80, 250), false)
+		if not check(goods_requests.size() == requests_before_bulk, "bulk double-click opens a local preview"): return
 		if not await capture("bichon-merchant-bulk-preview"): return
 		click_at(Vector2(380, 296), true)
 		click_at(Vector2(380, 296), false)

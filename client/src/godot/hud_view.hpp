@@ -318,6 +318,7 @@ private:
     static constexpr int shop_goods_rows=4, shop_goods_pitch=42, shop_goods_row_top=16;
     bool shop_input(int kind,godot::Vector2 pointer,bool double_click);
     void buy_shop_offer(int index);
+    void open_shop_category();
     void draw_npc_dialogue();
     bool npc_dialogue_input(int kind,godot::Vector2 pointer);
     std::uint64_t last_merchant_request=0;

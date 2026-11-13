@@ -928,6 +928,32 @@ void Mir3HudView::buy_shop_offer(int index) {
     emit_npc_packet(1014,actor,name,instance);
 }
 
+void Mir3HudView::open_shop_category() {
+    if (shop_highlighted<0 || shop_goods[shop_highlighted].variants==0) return;
+    if (shop_goods[shop_highlighted].variants==2) {
+        shop_bulk_index=shop_highlighted;
+        if (shop_show_offers) shop_first=shop_category_first;
+        shop_show_offers=false;
+        shop_selected=-1;
+        shop_offers.clear();
+        return;
+    }
+    shop_bulk_index=-1;
+    if (shop_selected!=shop_highlighted) {
+        shop_offers.clear();
+        shop_offer_index=-1;
+    }
+    shop_selected=shop_highlighted;
+    shop_offer_page=0;
+    if (shop_show_offers) shop_offer_loading=true;
+    const int actor=shop_actor;
+    const int index=shop_selected;
+    const auto name=String::utf8(shop_goods[index].name.c_str());
+    emit_signal("shop_good_requested",actor,index,name);
+    emit_signal("npc_request",1015,actor,name);
+    emit_npc_packet(1015,actor,name);
+}
+
 bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
     if (!shop_actor) return false;
     if (shop_scroll_input(kind,pointer)) return true;
@@ -968,30 +994,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
         else if (activate==-8) open_group_dialog(110);
         else if (activate==-5) close_shop_offers();
         else if (activate==category_button && shop_highlighted>=0 && shop_goods[shop_highlighted].variants>0) {
-            if (shop_goods[shop_highlighted].variants==2) {
-                shop_bulk_index=shop_highlighted;
-                if (details) shop_first=shop_category_first;
-                shop_show_offers=false;
-                shop_selected=-1;
-                shop_offers.clear();
-                get_viewport()->set_input_as_handled();
-                queue_redraw();
-                return true;
-            }
-            shop_bulk_index=-1;
-            if (shop_selected!=shop_highlighted) {
-                shop_offers.clear();
-                shop_offer_index=-1;
-            }
-            shop_selected=shop_highlighted;
-            shop_offer_page=0;
-            if (details) shop_offer_loading=true;
-            const int actor=shop_actor;
-            const int index=shop_selected;
-            const auto name=String::utf8(shop_goods[index].name.c_str());
-            emit_signal("shop_good_requested",actor,index,name);
-            emit_signal("npc_request",1015,actor,name);
-            emit_npc_packet(1015,actor,name);
+            open_shop_category();
         } else if (activate==confirm_button && details && shop_offer_index>=0 && shop_offer_index<int(shop_offers.size())) {
             buy_shop_offer(shop_offer_index);
         } else if ((activate==-3 || activate==-4) && shop_selected>=0 && !shop_offer_loading) {
@@ -1030,11 +1033,16 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
     const int hit_id=offer_cell?256+row:row;
     const int pressed=shop_pressed;
     shop_pressed=kind==0 && hit?hit_id:-1;
-    if (kind==0 && double_click && offer_cell && hit) {
+    if (kind==0 && double_click && hit) {
         // 0x479100 buys the item under the pointer on a double-click.
         shop_pressed=-1;
-        shop_offer_index=row;
-        buy_shop_offer(row);
+        if (offer_cell) {
+            shop_offer_index=row;
+            buy_shop_offer(row);
+        } else {
+            shop_highlighted=row;
+            open_shop_category();
+        }
     } else if (kind==2 && hit && pressed==hit_id) {
         if (offer_cell) {
             shop_offer_index=row;
