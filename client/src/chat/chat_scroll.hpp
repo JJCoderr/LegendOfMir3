@@ -19,6 +19,7 @@ public:
     int first(int count, bool expanded) const {
         return std::clamp(index, 0, std::max(0, count - 1));
     }
+    bool captured() const { return dragging; }
     int position() const { return index; }
     float fraction() const { return ratio; }
     void set_position(int value) { index = value; }

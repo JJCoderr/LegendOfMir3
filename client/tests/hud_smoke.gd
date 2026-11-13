@@ -90,6 +90,21 @@ func run() -> void:
 	if not check(hud.hud_snapshot().options_visible and hud.hud_snapshot().chat_expanded_first == 5, "options blocks wheel to underlying chat"): return
 	if not await capture("options-over-chat"): return
 	key(KEY_N)
+	await create_timer(0.05).timeout
+	click_at(Vector2(621, 397), true)
+	key(KEY_N)
+	var chat_drag := InputEventMouseMotion.new()
+	chat_drag.position = Vector2(400, 455)
+	Input.parse_input_event(chat_drag)
+	click_at(chat_drag.position, false)
+	var drag_first: int = hud.hud_snapshot().chat_expanded_first
+	if not check(drag_first > 5, "chat drag remains captured across overlapping options"): return
+	chat_drag = chat_drag.duplicate()
+	chat_drag.position = Vector2(621, 360)
+	Input.parse_input_event(chat_drag)
+	if not check(hud.hud_snapshot().chat_expanded_first == drag_first, "covered release ends chat drag"): return
+	if not await capture("hud-chat-scroll-overlap"): return
+	key(KEY_N)
 	click_at(Vector2(620, 306), true)
 	click_at(Vector2(620, 306), false)
 	await process_frame

@@ -468,7 +468,14 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     if (group_request && group_dialog_input(event)) return;
     if (guild_editor.visible && guild_editor_input(event)) return;
     Ref<InputEventMouseMotion> motion=event;
-    if (motion.is_valid()) { auto p=motion->get_position();inventory_cursor=p;if (minimap_pointer(1,p,motion->is_ctrl_pressed()) || panel_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
+    if (motion.is_valid()) {
+        const auto p=motion->get_position();
+        inventory_cursor=p;
+        if (chat_history.scroll(model.layout.expanded).captured() && scroll_input(1,p)) return;
+        if (minimap_pointer(1,p,motion->is_ctrl_pressed()) || panel_pointer(1,p)) return;
+        controller.motion(int(p.x),int(p.y));
+        queue_redraw();
+    }
     Ref<InputEventMouseButton> button=event;
     if (portrait_panel.visible && button.is_valid() && button->is_pressed() &&
         rect(portrait_panel.rect).has_point(button->get_position()) &&
@@ -530,6 +537,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         auto p=button->get_position();
         inventory_cursor=p;
         const int kind=button->is_pressed()?0:2;
+        if (kind==2 && chat_history.scroll(model.layout.expanded).captured() && scroll_input(kind,p)) return;
         if (skill_menu_input(kind,p,button->is_double_click())) return;
         if (minimap_pointer(kind,p,button->is_ctrl_pressed()) || panel_pointer(kind,p) || scroll_input(kind,p)) return;
         const auto entry=frame(2096);
@@ -698,6 +706,7 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         return;
     }
     if (code==KEY_R) {
+        scroll_input(2,inventory_cursor);
         model.layout.toggle();
         controller.cancel();
         if (chat_input) chat_input->layout(model.layout.expanded);
