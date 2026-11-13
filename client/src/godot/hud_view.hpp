@@ -48,6 +48,9 @@ private:
     bool magic_light=true,damage_numbers=true;
     int audio_drag=-1;
     void toggle_options();
+    void load_options();
+    void save_options();
+    godot::String options_path;
     void draw_options();
     bool options_pointer(int kind,godot::Vector2 point);
     mir3::InventoryPanel inventory;

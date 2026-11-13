@@ -8,6 +8,9 @@
 #include <godot_cpp/classes/shader.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <chrono>
+#include <godot_cpp/classes/project_settings.hpp>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #include <godot_cpp/classes/style_box_empty.hpp>
 #include "status/status_layout.hpp"
 #include <godot_cpp/classes/input_event_key.hpp>
@@ -90,6 +93,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     return result;
 }
 void Mir3HudView::_ready() {
+    const auto configured=get_meta("options_path",String("user://Config.ini"));
+    options_path=ProjectSettings::get_singleton()->globalize_path(String(configured));
+    load_options();
     Ref<ConfigFile> config; config.instantiate();
     if (config->load("res://resource_path.cfg")!=OK) {
         UtilityFunctions::push_error("Missing resource_path.cfg; configure the client with CMake."); return;
@@ -1407,9 +1413,10 @@ bool Mir3HudView::options_pointer(int kind,Vector2 point) {
         const auto image=frame(id);
         return image.is_valid() && Rect2(Vector2(x,y),image->get_size()).has_point(local);
     };
+    bool changed=false;
     if (audio_drag>=0) {
         if (kind==1) audio_options.drag_volume(audio_drag==0,int(local.x));
-        if (kind==2) audio_drag=-1;
+        if (kind==2) { audio_drag=-1;changed=true; }
     } else if (options.dragging && kind!=0) {
         if (kind==1) options.move_drag(int(point.x),int(point.y));
         if (kind==2) options.end_drag();
@@ -1422,7 +1429,7 @@ bool Mir3HudView::options_pointer(int kind,Vector2 point) {
         const auto toggle=[&](bool& value,int x,int y) {
             if (!hit(1292,x,y)) return;
             control=true;
-            if (kind==2) value=!value;
+            if (kind==2) { value=!value;changed=true; }
         };
         toggle(magic_light,186,115);
         toggle(damage_numbers,186,145);
@@ -1436,13 +1443,49 @@ bool Mir3HudView::options_pointer(int kind,Vector2 point) {
                 if (kind==0) audio_drag=i;
             } else if (local.x>266 && local.x<487 && local.y>116+60*i && local.y<136+60*i) {
                 control=true;
-                if (kind==2) level=mir3::AudioOptions::level_from_knob(mir3::AudioOptions::track_step(offset,int(local.x)));
+                if (kind==2) {
+                    level=mir3::AudioOptions::level_from_knob(mir3::AudioOptions::track_step(offset,int(local.x)));
+                    changed=true;
+                }
             }
         }
         if (!control && kind==0) options.begin_drag(int(point.x),int(point.y),false);
     }
+    if (changed) save_options();
     controller.cancel();
     get_viewport()->set_input_as_handled();
     queue_redraw();
     return true;
+}
+
+void Mir3HudView::load_options() {
+    const auto path=options_path.utf16();
+    const auto* filename=reinterpret_cast<const wchar_t*>(path.get_data());
+    const auto read=[filename](const wchar_t* key,int fallback) {
+        return static_cast<int>(GetPrivateProfileIntW(L"Options",key,fallback,filename));
+    };
+    audio_options.music_enabled=read(L"BGM",1)!=0;
+    audio_options.effects_enabled=read(L"EffectSound",1)!=0;
+    audio_options.reverse_pan=read(L"ReversePan",0)==1;
+    audio_options.music_level=mir3::AudioOptions::normalized_level(read(L"BGMLevel",0));
+    audio_options.effects_level=mir3::AudioOptions::normalized_level(read(L"EffectSoundLevel",0));
+    magic_light=read(L"MagicLight",1)!=0;
+    damage_numbers=read(L"BloodNum",1)!=0;
+}
+
+void Mir3HudView::save_options() {
+    const auto path=options_path.utf16();
+    const auto* filename=reinterpret_cast<const wchar_t*>(path.get_data());
+    const auto write=[filename](const wchar_t* key,int value) {
+        const auto text=std::to_wstring(value);
+        return WritePrivateProfileStringW(L"Options",key,text.c_str(),filename)!=0;
+    };
+    bool saved=write(L"BGM",audio_options.music_enabled);
+    saved=write(L"EffectSound",audio_options.effects_enabled) && saved;
+    saved=write(L"ReversePan",audio_options.reverse_pan) && saved;
+    saved=write(L"BGMLevel",audio_options.music_level) && saved;
+    saved=write(L"EffectSoundLevel",audio_options.effects_level) && saved;
+    saved=write(L"MagicLight",magic_light) && saved;
+    saved=write(L"BloodNum",damage_numbers) && saved;
+    if (!saved) UtilityFunctions::push_warning("Could not save system options to ",options_path);
 }

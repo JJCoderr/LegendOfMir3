@@ -52,6 +52,8 @@ func run() -> void:
 	hud = load("res://main.tscn").instantiate()
 	root.size = Vector2i(800, 600)
 	Input.use_accumulated_input = false
+	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()
+	hud.set_meta("options_path", options_file)
 	root.add_child(hud)
 	hud.hud_action.connect(func(button: int): actions.append(button))
 	hud.chat_requested.connect(func(value: String): requests.append(value))
@@ -323,6 +325,13 @@ func run() -> void:
 	if not await capture("system-options"): return
 	click_at(Vector2(595, 447), false)
 	if not check(not hud.hud_snapshot().options_visible, "options close"): return
+	var reloaded: Node = load("res://main.tscn").instantiate()
+	reloaded.set_meta("options_path", options_file)
+	root.add_child(reloaded)
+	var persisted: Dictionary = reloaded.hud_snapshot()
+	reloaded.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(options_file))
+	if not check(not persisted.music_enabled and persisted.music_level == -5, "system options reload from original INI keys"): return
 	var input: LineEdit = hud.get_node("ChatInput")
 	if not check(input.position == Vector2(185, 575) and input.size == Vector2(344, 15), "compact input bounds"): return
 	key(KEY_ENTER)
