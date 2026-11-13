@@ -227,7 +227,10 @@ func run() -> void:
 		if not await capture("bichon-merchant-goods"): return
 		click_at(Vector2(45, 60), true)
 		click_at(Vector2(45, 60), false)
-		if not check(goods_requests == [[2, 1, "Blue potion"]], "goods selection retains list after invalid reply"): return
+		if not check(goods_requests.is_empty(), "goods without variants do not request details"): return
+		click_at(Vector2(45, 40), true)
+		click_at(Vector2(45, 40), false)
+		if not check(goods_requests == [[2, 0, "Red potion"]], "valid goods selection survives invalid reply"): return
 		var stock_list := ""
 		for i in 10: stock_list += "Potion %d/1/20/5/" % i
 		if not check(hud.apply_shop_goods(2, 10, stock_list), "shop list exceeds one screen"): return

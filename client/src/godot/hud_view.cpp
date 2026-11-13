@@ -554,7 +554,7 @@ void Mir3HudView::draw_shop() {
     sprite(1260,{0,0});
     for (int i=0;i<std::min(8,int(shop_goods.size())-shop_first);++i) {
         const auto& good=shop_goods[shop_first+i];
-        text(good.name,{22,34+19*i,150,18},shop_pressed==shop_first+i?0x96ffff:0x64ffff,mir3::TextFont::normal,false);
+        text(good.name,{22,34+19*i,150,18},good.variants==0?0x00b4b4:shop_pressed==shop_first+i?0x0000ff:0x00ffff,mir3::TextFont::normal,false);
         text(std::to_string(good.price),{174,34+19*i,62,18},0xfafafa);
         text(std::to_string(good.stock),{237,34+19*i,32,18},0xfafafa);
     }
@@ -564,7 +564,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     if (!shop_actor) return false;
     const bool inside=Rect2(0,0,292,224).has_point(pointer);
     const int row=Rect2(22,34,247,152).has_point(pointer)?shop_first+(int(pointer.y)-34)/19:-1;
-    const bool hit=row>=0 && row<int(shop_goods.size());
+    const bool hit=row>=0 && row<int(shop_goods.size()) && shop_goods[row].variants>0;
     const int pressed=shop_pressed;
     shop_pressed=kind==0 && hit?row:-1;
     if (kind==2 && hit && pressed==row)
