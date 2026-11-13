@@ -286,7 +286,7 @@ private:
     int npc_dialogue_option_at(godot::Vector2 pointer) const;
     godot::Vector2i npc_dialogue_origin;
     unsigned npc_sequence=0;
-    void emit_npc_packet(int identifier,int actor,const godot::String& body);
+    void emit_npc_packet(int identifier,int actor,const godot::String& body,std::uint32_t instance=0);
     void close_shop();
     void close_npc_dialogue();
     bool apply_shop_purchase_reply(int identifier,int64_t value);
@@ -294,6 +294,7 @@ private:
     struct ShopGood { std::string name; int variants, price, stock; };
     std::vector<ShopGood> shop_goods;
     int shop_actor=0, shop_pressed=-1, shop_first=0, shop_category_first=0;
+    int shop_offer_index=-1;
     bool shop_show_offers=false;
     struct ShopOffer { std::string name; int icon, price; std::uint32_t id; };
     std::vector<ShopOffer> shop_offers;

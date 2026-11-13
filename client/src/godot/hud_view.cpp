@@ -627,7 +627,7 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
     return true;
 }
 
-void Mir3HudView::emit_npc_packet(int identifier,int actor,const String& body) {
+void Mir3HudView::emit_npc_packet(int identifier,int actor,const String& body,std::uint32_t instance) {
     const auto utf8=body.utf8();
     const auto ansi=mir3::utf8_to_ansi({utf8.get_data(),static_cast<std::size_t>(utf8.length())});
     // The recovered 0x47C730 framing encodes the header and body separately.
@@ -635,6 +635,7 @@ void Mir3HudView::emit_npc_packet(int identifier,int actor,const String& body) {
     for (unsigned i=0;i<4;++i) header[i]=std::uint32_t(actor)>>(8*i);
     header[4]=identifier&255;
     header[5]=(identifier>>8)&255;
+    for (unsigned i=0;i<4;++i) header[6+i]=instance>>(8*i);
     npc_sequence=npc_sequence%9+1;
     std::string packet{"#"};
     packet+=char('0'+npc_sequence);
@@ -741,6 +742,7 @@ bool Mir3HudView::apply_shop_offers(int actor,int index,PackedStringArray names,
         offers.push_back({names[i].utf8().get_data(),icons[i],prices[i],static_cast<std::uint32_t>(identifiers[i])});
     }
     shop_offers=std::move(offers);
+    shop_offer_index=shop_offers.empty()?-1:0;
     if (!shop_show_offers) shop_category_first=shop_first;
     shop_show_offers=true;
     shop_first=0;
@@ -756,11 +758,13 @@ void Mir3HudView::draw_shop() {
     if (skin.is_valid())
         draw_texture(skin,Vector2((shop_width()-skin->get_width())/2,shop_top+(224-skin->get_height())/2));
     if (shop_show_offers) {
+        if (shop_pressed==-2) sprite(1266,{368,shop_top+163});
         for (int row=0;row<std::min(12,int(shop_offers.size())-shop_first);++row) {
             const auto& offer=shop_offers[shop_first+row];
+            const auto cell=rect(shop_offer_cell(row));
+            if (shop_first+row==shop_offer_index) draw_rect(cell,Color(1,1,0),false);
             const auto icon=item_frame(offer.icon);
             if (icon.is_valid()) {
-                const auto cell=rect(shop_offer_cell(row));
                 const auto size=icon->get_size().min(cell.size);
                 draw_texture_rect(icon,Rect2(cell.get_center()-size/2,size),false);
             }
@@ -779,6 +783,24 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     if (!shop_actor) return false;
     const bool inside=Rect2(0,shop_top,shop_width(),224).has_point(pointer);
     const bool details=shop_show_offers;
+    constexpr int confirm_button=-2;
+    const auto confirm=details?frame(1265):Ref<ImageTexture>{};
+    const bool confirm_hit=confirm.is_valid() &&
+        Rect2(Vector2(368,shop_top+163),confirm->get_size()).has_point(pointer);
+    if (confirm_hit || shop_pressed==confirm_button) {
+        const bool activate=kind==2 && confirm_hit && shop_pressed==confirm_button;
+        shop_pressed=kind==0?confirm_button:-1;
+        if (activate && shop_offer_index>=0 && shop_offer_index<int(shop_offers.size())) {
+            const auto name=String::utf8(shop_offers[shop_offer_index].name.c_str());
+            const auto instance=shop_offers[shop_offer_index].id;
+            const int actor=shop_actor;
+            emit_signal("shop_purchase_requested",1014,actor,name);
+            emit_npc_packet(1014,actor,name,instance);
+        }
+        get_viewport()->set_input_as_handled();
+        queue_redraw();
+        return true;
+    }
     int row=-1;
     if (details) {
         for (int i=0;i<12;++i) {
@@ -800,13 +822,8 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     shop_pressed=kind==0 && hit?row:-1;
     if (kind==2 && hit && pressed==row) {
         if (details) {
-            const int actor=shop_actor;
-            const auto id=shop_offers[row].id;
-            const auto name=String::utf8(shop_offers[row].name.c_str());
-            // CClientSocket::SendBuyItem sends NPC recognition and the item name.
-            emit_signal("shop_offer_selected",actor,int64_t(id));
-            emit_signal("shop_purchase_requested",1014,actor,name);
-            emit_npc_packet(1014,actor,name);
+            shop_offer_index=row;
+            emit_signal("shop_offer_selected",shop_actor,int64_t(shop_offers[row].id));
         } else {
             shop_selected=row;
             const int actor=shop_actor;

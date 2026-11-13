@@ -419,7 +419,12 @@ func run() -> void:
 		click_at(Vector2(330, 280), true)
 		click_at(Vector2(330, 280), false)
 		if not check(offer_selections == [[2, 10001]], "select offer by its instance identifier"): return
+		if not check(purchases.is_empty(), "clicking a grid cell only selects the offer"): return
+		click_at(Vector2(378, 399), true)
+		if not await capture("bichon-merchant-offer-confirm"): return
+		click_at(Vector2(378, 399), false)
 		if not check(purchases == [[1014, 2, "Red potion"]], "purchase uses NPC and item name"): return
+		if not check(npc_packets.back().substr(2, 16) == "<\\<<<KT?@NX<<<<<", "purchase header contains selected instance identifier"): return
 		if not check(hud.apply_npc_message("bsp<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().inventory_gold == 125, "650 applies server gold balance"): return
 		if not check(not hud.apply_inventory_add(650, 301, 1, 10001, "Red potion", 0, 3), "gold reply is not an item addition"): return
 		if not check(hud.apply_inventory_add(200, 301, 1, 10001, "Red potion", 0, 3), "200 places purchased item in bag"): return
