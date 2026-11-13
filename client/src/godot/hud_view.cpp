@@ -60,6 +60,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_mount_reply","identifier","recognition"),&Mir3HudView::apply_mount_reply);
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
     ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
+    ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
     ClassDB::bind_method(D_METHOD("set_minimap_markers","type_five","nearby_green","nearby_orange"),&Mir3HudView::set_minimap_markers);
     ADD_SIGNAL(MethodInfo("portrait_list_requested"));
@@ -107,6 +108,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["mount_visible"]=mount.visible;
     result["mount_shape"]=mount.shape;
     result["mount_bounds"]=rect(mount.rect);
+    result["map_position"]=Vector2i(model.map_x,model.map_y);
     result["minimap_visible"]=minimap.visible;
     result["minimap_bounds"]=rect(minimap.bounds());
     result["minimap_translucent"]=minimap.translucent;
@@ -2065,7 +2067,14 @@ bool Mir3HudView::apply_minimap_reply(int map_number) {
     return true;
 }
 
+void Mir3HudView::set_map_location(String name,int x,int y) {
+    model.map_name=name.utf8().get_data();
+    set_minimap_position(x,y);
+}
+
 void Mir3HudView::set_minimap_position(int x,int y) {
+    model.map_x=x;
+    model.map_y=y;
     minimap.player_x=x;
     minimap.player_y=y;
     queue_redraw();

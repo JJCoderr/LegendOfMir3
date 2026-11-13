@@ -104,7 +104,7 @@ func run() -> void:
 	if not check(actions == [14, 14, 12] and hud.hud_snapshot().pressed == -1, "inventory action dispatch"): return
 	var map_requests: Array[int] = []
 	hud.minimap_requested.connect(func(identifier: int): map_requests.append(identifier))
-	hud.set_minimap_position(337, 267)
+	hud.set_map_location("比奇省", 337, 267)
 	key(KEY_V)
 	if not check(map_requests == [1033] and not hud.hud_snapshot().minimap_visible, "minimap waits for reply"): return
 	if not check(hud.apply_minimap_reply(1001), "read Bichon from original Fmmap"): return
@@ -121,6 +121,10 @@ func run() -> void:
 		if not check(rendered.get_pixel(755, 80).is_equal_approx(Color8(100, 250, 100)), "green minimap marker"): return
 		if not check(rendered.get_pixel(770, 72).is_equal_approx(Color8(250, 150, 50)), "orange minimap marker"): return
 		if not check(not rendered.get_pixel(799, 79).is_equal_approx(Color8(250, 150, 50)), "distant minimap marker clipped"): return
+	hud.set_minimap_position(350, 280)
+	if not check(hud.hud_snapshot().map_position == Vector2i(350, 280) and hud.hud_snapshot().minimap_source == Vector2(461, 216), "HUD and minimap follow the same movement"): return
+	if not await capture("hud-map-location"): return
+	hud.set_minimap_position(337, 267)
 	var map_hint_motion := InputEventMouseMotion.new()
 	map_hint_motion.position = Vector2(792, 120)
 	Input.parse_input_event(map_hint_motion)

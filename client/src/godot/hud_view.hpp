@@ -50,6 +50,7 @@ public:
     bool apply_mount_reply(int identifier,int64_t recognition);
     bool apply_minimap_reply(int map_number);
     void handle_exit_confirmation(int dialog_id);
+    void set_map_location(godot::String name,int x,int y);
     void set_minimap_position(int x,int y);
     void set_minimap_markers(godot::PackedVector2Array type_five,godot::PackedVector2Array nearby_green,
         godot::PackedVector2Array nearby_orange);
