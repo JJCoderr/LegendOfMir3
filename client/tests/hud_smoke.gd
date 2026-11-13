@@ -247,6 +247,7 @@ func run() -> void:
 		click_at(Vector2(45, 171), true)
 		click_at(Vector2(45, 171), false)
 		if not check(goods_requests.back() == [2, 9, "Potion 9"], "scroll preserves original goods index"): return
+		if not check(npc_protocol.back() == [1015, 2, "Potion 9"], "detail request uses NPC and item name"): return
 		var offer_selections: Array = []
 		var purchases: Array = []
 		hud.shop_purchase_requested.connect(func(opcode: int, actor: int, name: String): purchases.append([opcode, actor, name]))

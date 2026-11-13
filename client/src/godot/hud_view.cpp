@@ -644,7 +644,11 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
             emit_signal("shop_purchase_requested",1014,actor,name);
         } else {
             shop_selected=row;
-            emit_signal("shop_good_requested",shop_actor,row,String::utf8(shop_goods[row].name.c_str()));
+            const int actor=shop_actor;
+            const auto name=String::utf8(shop_goods[row].name.c_str());
+            // StoreWnd passes zero as the detail request parameter. Row is local reply context.
+            emit_signal("shop_good_requested",actor,row,name);
+            emit_signal("npc_request",1015,actor,name);
         }
     }
     if (!inside && pressed<0) return false;
