@@ -1559,6 +1559,7 @@ void Mir3HudView::tooltip(int kind) {
     draw_rect(rect(bounds),borders[kind],false);
 }
 void Mir3HudView::button_hint() {
+    button_hint_animating=false;
     if (group_request || (guild_editor.visible && rect(guild_editor.rect).has_point(inventory_cursor))) return;
     int hint=-1;
     Vector2 anchor;
@@ -1643,6 +1644,7 @@ void Mir3HudView::button_hint() {
     const auto measured=mir3::raster_text(caption,800,24,false,mir3::TextFont::normal);
     const auto bounds=button_tooltip.draw(caption,{measured.text_width,measured.text_height},{int(anchor.x),int(anchor.y)});
 
+    button_hint_animating=button_tooltip.expanding;
     draw_rect(rect(bounds),Color(0,0,0));
     if (bounds[2]>2 && bounds[3]>2) draw_rect(rect(bounds).grow(-1),Color(1,1,150.f/255));
     text(caption,bounds,0);
@@ -1670,7 +1672,7 @@ void Mir3HudView::_process(double delta) {
         if (!target_focus.displayed()) queue_redraw();
     }
     // Original button tooltip grows once per draw, not once per mouse event.
-    if (animated_map_objects || minimap.visible || model.hovered>=0 || (button_tooltip.expanding && !button_tooltip.previous.empty())) queue_redraw();
+    if (animated_map_objects || minimap.visible || model.hovered>=0 || button_hint_animating) queue_redraw();
 }
 void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     const auto a=bounds.position,b=bounds.get_end();

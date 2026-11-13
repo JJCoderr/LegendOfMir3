@@ -347,6 +347,7 @@ private:
     void draw_target_vitals();
     mir3::Messages messages;
     mir3::HudButtonTooltip button_tooltip;
+    bool button_hint_animating=false;
     mir3::ChatHistory chat_history;
     mir3::ChatReceptionButtons reception_buttons;
     std::array<bool,3> rejected_chat{};
