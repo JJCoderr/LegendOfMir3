@@ -65,6 +65,8 @@ public:
     void set_minimap_markers(godot::PackedVector2Array type_five,godot::PackedVector2Array nearby_green,
         godot::PackedVector2Array nearby_orange);
     void set_hovered_target(std::uint32_t actor,int type,int shape,bool excluded,int state,int hp,int max_hp,int percent);
+    void set_hovered_human(std::uint32_t actor,int type,int profession);
+    bool apply_target_portrait(std::uint32_t actor,godot::PackedByteArray jpeg);
     bool apply_portrait_reply(godot::PackedByteArray jpeg);
     bool load_portrait_cache(godot::String server,godot::String character);
     void set_portrait_names(godot::PackedStringArray names);
@@ -238,6 +240,8 @@ private:
     mir3::TargetPortraitVitals target_vitals;
     std::uint32_t hovered_target=0;
     int target_frame=-1, target_badge=-1;
+    bool target_is_human=false;
+    godot::Ref<godot::ImageTexture> target_custom_portrait;
     godot::Ref<godot::ImageTexture> target_portrait;
     std::map<int,godot::Ref<godot::ImageTexture>> monster_portrait_frames;
     godot::Ref<godot::ImageTexture> portrait_texture(mir3::WilArchive& archive,

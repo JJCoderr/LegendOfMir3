@@ -65,6 +65,8 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
     ClassDB::bind_method(D_METHOD("set_minimap_markers","type_five","nearby_green","nearby_orange"),&Mir3HudView::set_minimap_markers);
     ClassDB::bind_method(D_METHOD("set_hovered_target","actor","type","shape","excluded","state","hp","max_hp","percent"),&Mir3HudView::set_hovered_target);
+    ClassDB::bind_method(D_METHOD("set_hovered_human","actor","type","profession"),&Mir3HudView::set_hovered_human);
+    ClassDB::bind_method(D_METHOD("apply_target_portrait","actor","jpeg"),&Mir3HudView::apply_target_portrait);
     ADD_SIGNAL(MethodInfo("portrait_list_requested"));
     ADD_SIGNAL(MethodInfo("portrait_upload_requested",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"jpeg")));
     ClassDB::bind_method(D_METHOD("load_portrait_cache","server","character"),&Mir3HudView::load_portrait_cache);
@@ -108,7 +110,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["character_level"]=model.level;
     result["character_portrait"]=model.portrait_frame();
     result["target_portrait"]=model.layout.expanded || !target_focus.displayed() || target_portrait.is_null()?-1:target_frame;
-    result["target_hp_width"]=target_focus.displayed() && target_portrait.is_valid()?target_vitals.bar_width():0;
+    result["target_hp_width"]=!model.layout.expanded && target_focus.displayed() && !target_is_human && target_portrait.is_valid()?target_vitals.bar_width():0;
+    result["target_custom_portrait"]=!model.layout.expanded && target_focus.displayed() && target_custom_portrait.is_valid();
     result["character_shared_hp"]=model.shared_hp();
     result["character_hp"]=Vector2i(model.hp,model.max_hp);
     result["character_mp"]=Vector2i(model.mp,model.max_mp);
@@ -288,6 +291,8 @@ void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool
     hovered_target=actor;
     target_focus.update(actor,static_cast<std::uint32_t>(ticks_msec()));
     if (actor) {
+        target_is_human=false;
+        target_custom_portrait.unref();
         target_frame=mir3::TargetPortrait::monster_frame(static_cast<std::uint8_t>(type),
             static_cast<std::uint16_t>(shape),excluded);
         target_portrait=portrait_texture(monster_portraits,monster_portrait_frames,target_frame);
@@ -299,9 +304,35 @@ void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool
     queue_redraw();
 }
 
+void Mir3HudView::set_hovered_human(std::uint32_t actor,int type,int profession) {
+    if (!actor || type<0 || type>1 || profession<0 || profession>255) return;
+    if (!target_is_human || target_focus.displayed()!=actor) target_custom_portrait.unref();
+    hovered_target=actor;
+    target_focus.update(actor,static_cast<std::uint32_t>(ticks_msec()));
+    target_is_human=true;
+    target_badge=-1;
+    target_frame=mir3::TargetPortrait::human_frame(static_cast<std::uint8_t>(profession),static_cast<std::uint8_t>(type));
+    target_portrait=portrait_texture(portraits,portrait_frames,target_frame);
+    queue_redraw();
+}
+
+bool Mir3HudView::apply_target_portrait(std::uint32_t actor,PackedByteArray jpeg) {
+    if (!actor || !target_is_human || target_focus.displayed()!=actor) return false;
+    if (jpeg.is_empty()) {
+        target_custom_portrait.unref();
+    } else {
+        Ref<Image> image;
+        image.instantiate();
+        if (image->load_jpg_from_buffer(jpeg)!=OK) return false;
+        target_custom_portrait=ImageTexture::create_from_image(image);
+    }
+    queue_redraw();
+    return true;
+}
+
 void Mir3HudView::draw_target_vitals() {
     using Layout=mir3::HudLayout;
-    if (model.layout.expanded || !target_focus.displayed() || target_portrait.is_null()) return;
+    if (model.layout.expanded || !target_focus.displayed() || target_is_human || target_portrait.is_null()) return;
     for (int i=0;i<3;++i)
         text(target_vitals.text(i),mir3::TargetPortraitVitals::text_rect(i),0xe6e6e6);
     const auto border=portrait_texture(portraits,portrait_frames,660);
@@ -322,14 +353,18 @@ void Mir3HudView::_draw() {
     if (!model.layout.expanded) {
         sprite(1490,Layout::image_position(Layout::Image::portrait));
         const auto origin=point(Layout::image_position(Layout::Image::portrait));
-        if (target_focus.displayed() && target_portrait.is_valid()) {
-            draw_texture(target_portrait,origin);
-            const auto badge=portrait_texture(portraits,portrait_frames,target_badge);
-            if (badge.is_valid()) draw_texture(badge,point(Layout::image_position(Layout::Image::target_badge)));
-        } else if (active_portrait.is_valid()) {
+        if (active_portrait.is_valid()) {
             draw_texture_rect(active_portrait,Rect2(point(Layout::image_position(Layout::Image::portrait)),Vector2(82,94)),false);
         } else if (const auto portrait=portrait_texture(portraits,portrait_frames,model.portrait_frame());portrait.is_valid()) {
             draw_texture(portrait,origin);
+        }
+        if (target_focus.displayed()) {
+            if (target_custom_portrait.is_valid())
+                draw_texture_rect(target_custom_portrait,rect(Layout::custom_portrait_rect(true)),false);
+            else if (target_portrait.is_valid())
+                draw_texture(target_portrait,origin);
+            const auto badge=portrait_texture(portraits,portrait_frames,target_badge);
+            if (badge.is_valid()) draw_texture(badge,point(Layout::image_position(Layout::Image::target_badge)));
         }
     }
     // Preserve the recovered order from 0x438000 / 0x4390E0.
