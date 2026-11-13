@@ -426,6 +426,9 @@ func run() -> void:
 	click_at(Vector2(385, 152), true)
 	click_at(Vector2(385, 152), false)
 	if not await capture("magic-progress"): return
+	if not check(not hud.apply_skill_progress(65535, 215, 2) and not hud.apply_skill_progress(5, -1, 2), "skill progress rejects unknown skill and invalid experience"): return
+	if not check(hud.apply_skill_progress(5, 215, 2), "640 updates learned skill progress"): return
+	if not await capture("magic-progress-reply"): return
 	var popup_event := InputEventMouseButton.new()
 	popup_event.position = Vector2(385, 152)
 	popup_event.button_index = MOUSE_BUTTON_LEFT

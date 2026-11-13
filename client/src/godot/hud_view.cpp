@@ -87,6 +87,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_guild_notices","lines"),&Mir3HudView::set_guild_notices);
     ADD_SIGNAL(MethodInfo("group_member_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("group_allow_requested",PropertyInfo(Variant::BOOL,"allowed")));
+    ClassDB::bind_method(D_METHOD("apply_skill_progress","id","experience","level"),&Mir3HudView::apply_skill_progress);
     ClassDB::bind_method(D_METHOD("set_learned_skill","id","level","key","experience","required","name"),&Mir3HudView::set_learned_skill,DEFVAL(0),DEFVAL(0),DEFVAL(String()));
     ClassDB::bind_method(D_METHOD("apply_equipment_reply","identifier"),&Mir3HudView::apply_equipment_reply);
     ADD_SIGNAL(MethodInfo("equipment_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"slot"),PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::STRING,"name")));
@@ -1288,7 +1289,15 @@ bool Mir3HudView::set_learned_skill(int id,int level,int key,int experience,int 
     if (found==learned.end())
         found=std::find_if(learned.begin(),learned.end(),[](const auto& skill) { return skill.id==0; });
     if (found==learned.end()) return false;
-    *found={id,level,key,experience,required,name.utf8().get_data()};
+    *found={id,level,key,static_cast<std::uint32_t>(experience),required,name.utf8().get_data()};
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::apply_skill_progress(int id,int64_t experience,int level) {
+    // 0x44F870 (640): update the first matching learned record.
+    if (id<1 || id>65535 || level<0 || level>255 || experience<0 || experience>UINT32_MAX) return false;
+    if (!skills.update_progress(id,static_cast<std::uint32_t>(experience),level)) return false;
     queue_redraw();
     return true;
 }

@@ -37,7 +37,8 @@ struct SkillLayout {
 };
 struct SkillDisplay {
     int id=0,level=0,key=0;
-    int experience=0,required=0;
+    std::uint32_t experience=0;
+    int required=0;
     std::string name;
 };
 
@@ -46,6 +47,14 @@ struct SkillPanel : DraggablePanel {
     std::array<std::array<SkillDisplay,15>,8> learned{};
     std::array<int,8> selected{-1,-1,-1,-1,-1,-1,-1,-1};
     int tab=0,scroll=0,pressed=-1;
+    bool update_progress(int id,std::uint32_t experience,int level) {
+        auto& group=learned[SkillLayout::category(id)];
+        const auto skill=std::find_if(group.begin(),group.end(),[id](const auto& entry) { return entry.id==id; });
+        if (skill==group.end()) return false;
+        skill->experience=experience;
+        skill->level=level;
+        return true;
+    }
     void wheel(bool up) { scroll=std::clamp(scroll+(up?-30:30),0,190); }
     int thumb_y() const { return 100+static_cast<int>(238.0*static_cast<float>(double(scroll)/189.0)); }
     bool scroll_captured=false;

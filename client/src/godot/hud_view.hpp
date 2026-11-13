@@ -79,6 +79,7 @@ public:
     bool apply_guild_overview_reply(int identifier,godot::PackedByteArray body);
     void set_guild_overview(godot::String name,godot::PackedStringArray lines,godot::PackedStringArray editable);
     void set_group_roster(godot::String player,godot::PackedStringArray members);
+    bool apply_skill_progress(int id,int64_t experience,int level);
     bool set_learned_skill(int id,int level,int key,int experience,int required,godot::String name);
     bool apply_equipment_reply(int identifier);
     bool apply_inventory_use_reply(int identifier,int remaining);
