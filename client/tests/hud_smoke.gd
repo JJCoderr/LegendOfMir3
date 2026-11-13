@@ -804,6 +804,30 @@ func run() -> void:
 		if not await capture("hud-decoration-dyed"): return
 		var decorated := root.get_texture().get_image().get_region(decoration_area)
 		if not check(decorated.get_data() != undecorated.get_data(), "draw original HUD decoration"): return
+		var ornament: Sprite2D
+		for child in hud.get_children():
+			if child is Sprite2D:
+				ornament = child
+				break
+		if not check(ornament != null and ornament.position == Vector2(-10, 360), "original decoration anchor"): return
+		var source := ornament.texture.get_image()
+		var mask: Texture2D = ornament.material.get_shader_parameter("dye_regions")
+		var regions := mask.get_image()
+		var samples := 0
+		for y in range(mini(decoration_area.size.y, source.get_height())):
+			for x in range(mini(decoration_area.size.x, source.get_width() - 10)):
+				var region := regions.get_pixel(x + 10, y).r8
+				if region != 2: continue
+				var src := source.get_pixel(x + 10, y)
+				var dst := undecorated.get_pixel(x, y)
+				var r := ((src.r8 >> 3) * (237 >> 3) / 31 * 25 / 32 + (dst.r8 >> 3) * 7 / 32) << 3
+				var g := ((src.g8 >> 2) * (87 >> 2) / 63 * 25 / 32 + (dst.g8 >> 2) * 7 / 32) << 2
+				var b := ((src.b8 >> 3) * (149 >> 3) / 31 * 25 / 32 + (dst.b8 >> 3) * 7 / 32) << 3
+				var actual := decorated.get_pixel(x, y)
+				if not check(absi(actual.r8-r) <= 1 and absi(actual.g8-g) <= 1 and absi(actual.b8-b) <= 1,
+					"visible C2 decoration pixel matches RGB565 integer blending"): return
+				samples += 1
+		if not check(samples > 0, "original ornament has visible C2 pixels"): return
 		hud.set_hud_decoration(Vector4i(1, 20, 230, 40))
 		if not await capture("hud-decoration-recolored"): return
 		if not check(root.get_texture().get_image().get_region(decoration_area).get_data() != decorated.get_data(),
