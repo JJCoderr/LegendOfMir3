@@ -883,7 +883,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
             const int actor=shop_actor;
             emit_signal("shop_purchase_requested",1014,actor,name);
             emit_npc_packet(1014,actor,name,instance);
-        } else if (activate<=-3 && shop_selected>=0) {
+        } else if (activate<=-3 && shop_selected>=0 && !shop_offer_loading) {
             // 0x478850 requests a server page with a ten-item offset.
             const int page=std::clamp(shop_offer_page+(activate==-3?-1:1),0,65535/10);
             if (page!=shop_offer_page) {
