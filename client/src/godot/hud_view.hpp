@@ -36,6 +36,13 @@ protected:
 private:
     mir3::HudModel model;
     mir3::InventoryPanel inventory;
+    mir3::DraggablePanel group{{272,123,258,244}};
+    bool group_on_top=false,group_allow=false;
+    int group_pressed=-1;
+    void toggle_group();
+    void draw_group();
+    bool group_pointer(int kind,godot::Vector2 point);
+    int group_button_at(godot::Vector2 point);
     mir3::SkillPanel skills;
     mir3::WilArchive magic_icons;
     std::map<int,godot::Ref<godot::ImageTexture>> skill_frames;

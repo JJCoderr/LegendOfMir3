@@ -229,6 +229,16 @@ func run() -> void:
 	key(KEY_ESCAPE)
 	await process_frame
 	if not check(not hud.hud_snapshot().skills_visible, "magic escape"): return
+	key(KEY_G)
+	await process_frame
+	if not check(hud.hud_snapshot().group_visible, "group keyboard opens"): return
+	click_at(Vector2(300, 174), true)
+	click_at(Vector2(300, 174), false)
+	if not check(hud.hud_snapshot().group_allow, "group allowance changes"): return
+	if not await capture("group-panel"): return
+	key(KEY_ESCAPE)
+	await process_frame
+	if not check(not hud.hud_snapshot().group_visible, "group escape closes"): return
 	var input: LineEdit = hud.get_node("ChatInput")
 	if not check(input.position == Vector2(185, 575) and input.size == Vector2(344, 15), "compact input bounds"): return
 	key(KEY_ENTER)
