@@ -1796,6 +1796,13 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     paint_canvas->draw_polygon(vertices,colors,uv);
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
+    const Ref<InputEventMouseButton> button=event;
+    const bool left_released=button.is_valid() && button->get_button_index()==MOUSE_BUTTON_LEFT && !button->is_pressed();
+    const bool portrait_was_pressed=left_released && portrait_entry_pressed;
+    if (portrait_was_pressed) {
+        portrait_entry_pressed=false;
+        queue_redraw();
+    }
     if (merchant_click_captured) {
         const Ref<InputEventMouseButton> release=event;
         if (release.is_valid() && release->get_button_index()==MOUSE_BUTTON_LEFT && !release->is_pressed()) {
@@ -1833,7 +1840,6 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         controller.motion(int(p.x),int(p.y));
         queue_redraw();
     }
-    Ref<InputEventMouseButton> button=event;
     const auto covers_wheel=[&](const mir3::DraggablePanel& panel) {
         return button.is_valid() && panel.visible && rect(panel.rect).has_point(button->get_position());
     };
@@ -1945,7 +1951,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         const auto anchor=mir3::HudLayout::portrait_entry_position;
         const bool portrait_hit=!model.layout.expanded && entry.is_valid() &&
             Rect2(Vector2(anchor[0],anchor[1]),entry->get_size()).has_point(p) && rect(mir3::HudLayout::portrait_hover).has_point(p);
-        if (portrait_hit || portrait_entry_pressed) {
+        if (portrait_hit || portrait_was_pressed) {
             portrait_entry_pressed=kind==0 && portrait_hit;
             if (kind==2 && portrait_hit) {
                 if (portrait_panel.visible) close_portrait_picker();

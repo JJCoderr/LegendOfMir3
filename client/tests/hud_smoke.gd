@@ -1781,6 +1781,18 @@ func run() -> void:
 		if not check(pressed_entry != normal_entry, "portrait entry uses the pressed frame"): return
 		click_at(Vector2(540, 580), false)
 		if not check(not hud.hud_snapshot().portrait_visible, "release outside the portrait hover rectangle cancels activation"): return
+		key(KEY_W)
+		if not check(hud.hud_snapshot().inventory_visible, "open inventory to receive release"): return
+		click_at(Vector2(540, 570), true)
+		click_at(Vector2(580, 100), false)
+		portrait_hover = portrait_hover.duplicate()
+		portrait_hover.position = Vector2(540, 570)
+		Input.parse_input_event(portrait_hover)
+		if not await capture("hud-portrait-release-over-inventory"): return
+		var released_entry := root.get_texture().get_image().get_region(entry_region).get_data()
+		if not check(released_entry == normal_entry and not hud.hud_snapshot().portrait_visible,
+			"release over inventory clears the portrait pressed frame"): return
+		key(KEY_W)
 		portrait_hover = portrait_hover.duplicate()
 	portrait_hover.position = Vector2(540, 570)
 	Input.parse_input_event(portrait_hover)
