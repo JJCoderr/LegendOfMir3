@@ -264,6 +264,12 @@ private:
     double map_pointer_seconds=0;
     void step_toward_pointer(bool run=false);
     bool merchant_pointer(godot::Vector2 pointer);
+    bool apply_npc_dialogue(int opcode,int actor,godot::String body);
+    struct NpcDialogueRow { std::string text, command; };
+    std::vector<NpcDialogueRow> npc_dialogue_rows;
+    int npc_dialogue_actor=0, npc_dialogue_pressed=-1;
+    void draw_npc_dialogue();
+    bool npc_dialogue_input(int kind,godot::Vector2 pointer);
     std::uint64_t last_merchant_request=0;
     bool merchant_click_captured=false;
     void advance_map_step(double delta);

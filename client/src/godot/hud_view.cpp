@@ -66,6 +66,8 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
     ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
     ADD_SIGNAL(MethodInfo("npc_dialogue_requested",PropertyInfo(Variant::INT,"actor")));
+    ADD_SIGNAL(MethodInfo("npc_dialogue_action",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::STRING,"command")));
+    ClassDB::bind_method(D_METHOD("apply_npc_dialogue","opcode","actor","body"),&Mir3HudView::apply_npc_dialogue);
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
@@ -123,6 +125,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["ready"]=loaded;
     result["character_level"]=model.level;
     result["terrain_ready"]=terrain_ready;
+    result["npc_dialogue_actor"]=npc_dialogue_actor;
     result["player_cell"]=player_cell;
     result["walk_frame"]=walk_frame;
     result["map_camera_pixel"]=map_camera();
@@ -459,6 +462,63 @@ bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
     return !map_route.empty();
 }
 
+bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
+    if (opcode==644) {
+        npc_dialogue_actor=0;
+        npc_dialogue_rows.clear();
+    } else {
+        if (opcode!=643 || actor<=0) return false;
+        const auto utf8=body.utf8();
+        if (utf8.length()>8192) return false;
+        std::string_view script(utf8.get_data(),utf8.length());
+        const auto slash=script.find('/');
+        if (slash==script.npos) return false;
+        script.remove_prefix(slash+1);
+        npc_dialogue_rows.clear();
+        while (!script.empty() && npc_dialogue_rows.size()<7) {
+            const auto end=script.find(char(92));
+            const auto row=script.substr(0,end);
+            const auto split=row.find("/@");
+            if (row.starts_with('<') && row.ends_with('>') && split!=row.npos)
+                npc_dialogue_rows.push_back({std::string(row.substr(1,split-1)),std::string(row.substr(split+1,row.size()-split-2))});
+            else npc_dialogue_rows.push_back({std::string(row),{}});
+            if (end==script.npos) break;
+            script.remove_prefix(end+1);
+        }
+        npc_dialogue_actor=actor;
+    }
+    npc_dialogue_pressed=-1;
+    queue_redraw();
+    return true;
+}
+
+void Mir3HudView::draw_npc_dialogue() {
+    if (!npc_dialogue_actor) return;
+    sprite(1350,{0,0});
+    for (int i=0;i<int(npc_dialogue_rows.size());++i) {
+        const auto& row=npc_dialogue_rows[i];
+        const auto color=row.command.empty()?0xfafafa:npc_dialogue_pressed==i?0x96ffff:0x64ffff;
+        text(row.text,{28,25+18*i,330,18},color,mir3::TextFont::normal,false);
+    }
+}
+
+bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
+    if (!npc_dialogue_actor) return false;
+    const bool inside=Rect2(0,0,386,160).has_point(pointer);
+    const int row=Rect2(28,25,330,126).has_point(pointer)?(int(pointer.y)-25)/18:-1;
+    const bool action=row>=0 && row<int(npc_dialogue_rows.size()) && !npc_dialogue_rows[row].command.empty();
+    const int pressed=npc_dialogue_pressed;
+    npc_dialogue_pressed=kind==0 && action?row:-1;
+    if (kind==2 && action && pressed==row) {
+        const auto command=String::utf8(npc_dialogue_rows[row].command.c_str());
+        emit_signal("npc_dialogue_action",npc_dialogue_actor,command);
+    }
+    if (!inside && pressed<0) return false;
+    get_viewport()->set_input_as_handled();
+    queue_redraw();
+    return true;
+}
+
 bool Mir3HudView::merchant_pointer(Vector2 pointer) {
     const auto& frame=map_npc_frames[ticks_msec()/200%4];
     if (frame.image.is_null()) return false;
@@ -674,6 +734,7 @@ void Mir3HudView::_draw() {
     }
     draw_minimap();
     draw_skill_shortcuts();
+    draw_npc_dialogue();
     if (guild_editor.visible) draw_guild_editor();
     if (!model.layout.expanded && Rect2(535,486,81,94).has_point(inventory_cursor))
         sprite(mir3::HudLayout::portrait_entry_frame(portrait_entry_pressed),mir3::HudLayout::portrait_entry_position);
@@ -939,7 +1000,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         inventory_cursor=p;
         const int kind=button->is_pressed()?0:2;
         if (kind==2 && chat_history.scroll(model.layout.expanded).captured() && scroll_input(kind,p)) return;
-        if (skill_menu_input(kind,p,button->is_double_click())) return;
+        if (npc_dialogue_input(kind,p) || skill_menu_input(kind,p,button->is_double_click())) return;
         if (minimap_pointer(kind,p,button->is_ctrl_pressed()) || panel_pointer(kind,p) || scroll_input(kind,p)) return;
         const auto entry=frame(2096);
         const auto anchor=mir3::HudLayout::portrait_entry_position;
@@ -1749,7 +1810,7 @@ bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
 bool Mir3HudView::spell_pointer_available() const {
     using Layout=mir3::HudLayout;
     const auto pointer=inventory_cursor;
-    if (minimap.visible || group_request || !Rect2(0,0,800,Layout::origin[1]).has_point(pointer) ||
+    if (minimap.visible || group_request || (npc_dialogue_actor && Rect2(0,0,386,160).has_point(pointer)) || !Rect2(0,0,800,Layout::origin[1]).has_point(pointer) ||
         rect(Layout::chat_frame(model.layout.expanded)).has_point(pointer)) return false;
     if (guild_editor.visible && rect(guild_editor.rect).has_point(pointer)) return false;
     for (const auto panel:panel_order) {

@@ -197,6 +197,21 @@ func run() -> void:
 			root.push_input(talk, true)
 		if not check(merchant_requests == [2] and hud.hud_snapshot().walk_frame == -1, "merchant click requests dialogue once without moving"): return
 		if not await capture("bichon-merchant-interaction"): return
+		var dialogue_actions: Array = []
+		hud.npc_dialogue_action.connect(func(actor: int, command: String): dialogue_actions.append([actor, command]))
+		var script := "老黄/要买点什么？" + char(92) + "<购买药品/@buy>" + char(92) + "<离开/@exit>"
+		if not check(hud.apply_npc_dialogue(643, 2, script), "apply merchant dialogue reply"): return
+		if not await capture("bichon-merchant-dialogue"): return
+		var option := InputEventMouseButton.new()
+		option.position = Vector2(45, 48)
+		option.button_index = MOUSE_BUTTON_LEFT
+		option.pressed = true
+		root.push_input(option, true)
+		option = option.duplicate()
+		option.pressed = false
+		root.push_input(option, true)
+		if not check(dialogue_actions == [[2, "@buy"]], "merchant dialogue option emits command"): return
+		if not check(hud.apply_npc_dialogue(644, 2, "") and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
 		quit()
 		return
 	for i in 20:
