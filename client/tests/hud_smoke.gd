@@ -245,13 +245,13 @@ func run() -> void:
 		if not check(dialogue_actions == [[2, "@buy"], [2, "@buy"], [2, "@exit"]], "only inline labels dispatch their own commands"): return
 		if not check(hud.apply_npc_dialogue(643, 2, "Merchant/<" + "比".repeat(30) + "/@wrapped>"), "wrap long NPC line"): return
 		if not await capture("bichon-merchant-wrapped-line"): return
-		click_at(Vector2(48, 63), true)
+		click_at(Vector2(48, 45), true)
 		click_at(Vector2(48, 63), false)
-		if not check(dialogue_actions.back() == [2, "@wrapped"], "wrapped option retains command"): return
+		if not check(dialogue_actions.back() == [2, "@wrapped"], "wrapped option shares press and release across rows"): return
 		var separator := char(92)
 		var scroll_script := "Merchant/<第一页/@first>" + separator + "<下一行/@second>"
 		for i in range(2, 26):
-			scroll_script += separator + "药店说明 %02d" % i
+			scroll_script += separator + ("药店说明 %02d" % i if i < 25 else "<最后一项/@last>")
 		if not check(hud.apply_npc_dialogue(643, 2, scroll_script), "open scrollable NPC dialogue"): return
 		var npc_wheel := InputEventMouseButton.new()
 		npc_wheel.position = Vector2(50, 45)
@@ -267,6 +267,12 @@ func run() -> void:
 		click_at(Vector2(50, 45), true)
 		click_at(Vector2(50, 45), false)
 		if not check(dialogue_actions.back() == [2, "@first"], "NPC up arrow restores first option"): return
+		for i in range(8):
+			root.push_input(npc_wheel, true)
+		if not await capture("bichon-merchant-dialogue-last-row"): return
+		click_at(Vector2(50, 402), true)
+		click_at(Vector2(50, 402), false)
+		if not check(dialogue_actions.back() == [2, "@last"], "NPC scroll clamps with the last option on the final visible row"): return
 		var goods_requests: Array = []
 		hud.shop_good_requested.connect(func(actor: int, index: int, name: String): goods_requests.append([actor, index, name]))
 		if not check(hud.apply_npc_message("a<D<<>=B<?H<<<<<PbQ`DC=kYBakW^xmGoDlGoPkLbmqUN=lWsMeWrtkH>xnINxpGl".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "645 goods list"): return

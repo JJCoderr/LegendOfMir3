@@ -546,12 +546,14 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
         bool can_close=true;
         int line=0;
         int estimated_lines=0;
+        int option_id=0;
         while (!script.empty()) {
             const auto end=script.find(char(92));
             auto row=script.substr(0,end);
             int x=0, ansi_length=0;
             const auto append=[&](std::string_view label,std::string_view command={}) {
                 ansi_length+=int(mir3::utf8_to_ansi(label).size());
+                const int option=command.empty()?-1:option_id++;
                 while (!label.empty()) {
                     std::size_t length=0;
                     int width=0, height=0;
@@ -568,7 +570,7 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
                         height=measured.text_height;
                         if (x+width>=305) break;
                     }
-                    rows.push_back({std::string(label.substr(0,length)),std::string(command),{35+x,line,width,height},color});
+                    rows.push_back({std::string(label.substr(0,length)),std::string(command),{35+x,line,width,height},color,option});
                     label.remove_prefix(length);
                     if (!fits && x+width>=305) { ++line; x=0; }
                     else x+=width;
@@ -605,7 +607,9 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
         npc_dialogue_rows=std::move(rows);
         npc_dialogue_extra_rows=std::clamp(estimated_lines-9,0,13);
         npc_dialogue_first=0;
-        npc_dialogue_scroll_limit=estimated_lines>22?std::max(0,line-21):0;
+        // 0x461730 enables scrolling by ANSI line estimate; 0x460F01 records the actual last row.
+        npc_dialogue_scroll_enabled=estimated_lines>22;
+        npc_dialogue_scroll_limit=npc_dialogue_scroll_enabled?std::max(0,line-21):0;
         npc_dialogue_arrow_pressed=0;
         npc_dialogue_can_close=can_close;
         npc_dialogue_close_pressed=false;
@@ -802,20 +806,18 @@ void Mir3HudView::draw_npc_dialogue() {
     sprite(1352,{0,160+20*std::max(1,npc_dialogue_extra_rows)});
     const int bottom=npc_dialogue_bounds()[3];
     if (npc_dialogue_can_close) sprite(npc_dialogue_close_pressed?1222:1221,{346,bottom-42});
-    if (npc_dialogue_scroll_limit) {
+    if (npc_dialogue_scroll_enabled) {
         sprite(npc_dialogue_arrow_pressed==-1?1358:1357,{183,bottom-48});
         if (npc_dialogue_first<npc_dialogue_scroll_limit)
             sprite(npc_dialogue_arrow_pressed==1?1356:1355,{183,bottom-30});
     }
-    for (int i=0;i<int(npc_dialogue_rows.size());++i) {
-        const auto& row=npc_dialogue_rows[i];
+    const int focused=shop_actor && Rect2(0,0,292,224).has_point(inventory_cursor)?-1:npc_dialogue_option_at(inventory_cursor);
+    for (const auto& row:npc_dialogue_rows) {
         if (row.bounds[1]<npc_dialogue_first || row.bounds[1]>npc_dialogue_first+21) continue;
         const bool clickable=!row.command.empty();
-        const auto color=!clickable?row.color:npc_dialogue_pressed==i?0x0000ff:0x00ffff;
+        const auto color=!clickable?row.color:npc_dialogue_pressed==row.option?0x0000ff:0x00ffff;
         const auto bounds=npc_dialogue_text_bounds(row);
-        const bool focused=clickable && rect(bounds).has_point(inventory_cursor) &&
-            !(shop_actor && Rect2(0,0,292,224).has_point(inventory_cursor));
-        text(row.text,bounds,color,focused?mir3::TextFont::npc_link:mir3::TextFont::normal,false);
+        text(row.text,bounds,color,clickable && focused==row.option?mir3::TextFont::npc_link:mir3::TextFont::normal,false);
     }
 }
 
@@ -823,6 +825,17 @@ mir3::HudLayout::Rect Mir3HudView::npc_dialogue_text_bounds(const NpcDialogueRow
     auto bounds=row.bounds;
     bounds[1]=40+(bounds[3]+5)*(bounds[1]-npc_dialogue_first);
     return bounds;
+}
+
+int Mir3HudView::npc_dialogue_option_at(Vector2 pointer) const {
+    int option=-1, rectangles=0;
+    for (const auto& row:npc_dialogue_rows) {
+        if (row.option<0 || row.bounds[1]<npc_dialogue_first || row.bounds[1]>npc_dialogue_first+21) continue;
+        if (option!=row.option) { option=row.option; rectangles=0; }
+        // 0x461B70 stores up to five visible rectangles per script option.
+        if (++rectangles<=5 && rect(npc_dialogue_text_bounds(row)).has_point(pointer)) return option;
+    }
+    return -1;
 }
 
 bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
@@ -842,7 +855,7 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
         queue_redraw();
         return true;
     }
-    if (npc_dialogue_scroll_limit) {
+    if (npc_dialogue_scroll_enabled) {
         const bool up=hit_button(1357,183,bottom-48);
         const bool down=npc_dialogue_first<npc_dialogue_scroll_limit && hit_button(1355,183,bottom-30);
         const int arrow=up?-1:down?1:0;
@@ -856,16 +869,14 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
             return true;
         }
     }
-    const auto item=std::find_if(npc_dialogue_rows.begin(),npc_dialogue_rows.end(),[&](const auto& span) {
-        return !span.command.empty() && span.bounds[1]>=npc_dialogue_first && span.bounds[1]<=npc_dialogue_first+21 &&
-            rect(npc_dialogue_text_bounds(span)).has_point(pointer);
-    });
-    const bool action=item!=npc_dialogue_rows.end();
-    const int row=action?int(item-npc_dialogue_rows.begin()):-1;
+    const int option=npc_dialogue_option_at(pointer);
     const int pressed=npc_dialogue_pressed;
-    npc_dialogue_pressed=kind==0 && action?row:-1;
-    if (kind==2 && action && pressed==row) {
-        const auto command=String::utf8(npc_dialogue_rows[row].command.c_str());
+    npc_dialogue_pressed=kind==0?option:-1;
+    if (kind==2 && option>=0 && pressed==option) {
+        const auto item=std::find_if(npc_dialogue_rows.begin(),npc_dialogue_rows.end(),[option](const auto& row) {
+            return row.option==option;
+        });
+        const auto command=String::utf8(item->command.c_str());
         const int actor=npc_dialogue_actor;
         emit_signal("npc_dialogue_action",actor,command);
         emit_signal("npc_request",1011,actor,command);
