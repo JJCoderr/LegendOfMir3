@@ -458,6 +458,30 @@ void Mir3HudView::draw_status() {
     const auto skin=frame(1280);
     if (skin.is_valid()) sprite(1280,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
     sprite(status_close_pressed?1222:1221,{x+Layout::close[0],y+Layout::close[1]});
+    const auto [bag_x,bag_y,bag_width,bag_height]=inventory.rect;
+    const bool obscured=inventory.visible && !status_on_top &&
+        Rect2(bag_x,bag_y,bag_width,bag_height).has_point(inventory_cursor);
+    const int local_x=int(inventory_cursor.x)-x,local_y=int(inventory_cursor.y)-y;
+    if (bag.held && !obscured) {
+        using Equipment=mir3::EquipmentState;
+        const int slot=Equipment::hit(local_x,local_y,0,0);
+        const auto [frame_id,left,top]=Equipment::preview(bag.held.std_mode,slot);
+        if (frame_id>=0) {
+            const auto highlight=frame(frame_id);
+            if (highlight.is_valid()) {
+                const Vector2 start(x+left,y+top);
+                const Vector2 end=start+highlight->get_size();
+                PackedVector2Array vertices,uv;
+                for (const auto point:{start,Vector2(end.x,start.y),end,Vector2(start.x,end.y)})
+                    vertices.push_back(point);
+                for (const auto point:{Vector2(-2,-2),Vector2(-1,-2),Vector2(-1,-1),Vector2(-2,-1)})
+                    uv.push_back(point);
+                PackedColorArray colors;
+                colors.push_back(Color(1,1,1,20.f/255));
+                draw_polygon(vertices,colors,uv,highlight);
+            }
+        }
+    }
     if (status_body.is_valid())
         draw_texture(status_body,Vector2(x+Layout::body[0],y+Layout::body[1])+status_body_offset);
     for (int slot=0;slot<12;++slot) {
@@ -482,10 +506,6 @@ void Mir3HudView::draw_status() {
         const auto pos=mir3::EquipmentState::draw_position(slot,icon->get_width(),icon->get_height(),int(offset.x),int(offset.y));
         draw_texture(icon,Vector2(x+pos[0],y+pos[1]));
     }
-    const auto [bag_x,bag_y,bag_width,bag_height]=inventory.rect;
-    const bool obscured=inventory.visible && !status_on_top &&
-        Rect2(bag_x,bag_y,bag_width,bag_height).has_point(inventory_cursor);
-    const int local_x=int(inventory_cursor.x)-x,local_y=int(inventory_cursor.y)-y;
     const int hovered_element=obscured?-1:Layout::element_at(local_x,local_y);
     const auto label=[&](Layout::Rect r,const std::string& value,unsigned color=0xfafafa,bool centered=true) {
         r[0]+=x;r[1]+=y;

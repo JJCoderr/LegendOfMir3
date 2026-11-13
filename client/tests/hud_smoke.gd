@@ -161,6 +161,10 @@ func run() -> void:
 	hud.equipment_requested.connect(func(id: int, slot: int, _index: int, _name: String): equipment_requests.append(Vector2i(id, slot)))
 	if not check(hud.add_inventory_item(1520, 1, 48, 54321, "Test necklace", 20), "equipment fixture"): return
 	click_at(Vector2(465, 170), false)
+	var equip_hover := InputEventMouseMotion.new()
+	equip_hover.position = Vector2(180, 100)
+	Input.parse_input_event(equip_hover)
+	if not await capture("character-equipment-preview"): return
 	click_at(Vector2(180, 100), false)
 	if not check(equipment_requests == [Vector2i(1003, 3)] and hud.hud_snapshot().equipment_pending, "equip request"): return
 	if not check(not hud.apply_equipment_reply(619) and hud.apply_equipment_reply(615), "equip response"): return
