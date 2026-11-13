@@ -251,6 +251,11 @@ func run() -> void:
 	if not check(hud.set_character_elements(PackedByteArray([2, 0, 0, 4, 0, 0, 7]), PackedByteArray([1, 255, 0, 0, 2, 0, 0]), PackedByteArray([0, 0, 3, 0, 0, 0, 1])), "apply raw character elements"): return
 	if not check(not hud.set_character_elements(PackedByteArray(), PackedByteArray(), PackedByteArray()), "reject incomplete element rows"): return
 	if not await capture("character-status-element"): return
+	hud.set_character_identity("比奇旅人", "", "", "")
+	if not await capture("character-status-name"): return
+	hud.set_character_identity("比奇旅人", "比奇城", "守望者", "比奇")
+	if not await capture("character-status-identity"): return
+	hud.set_character_identity("", "", "", "")
 	key(KEY_W)
 	await process_frame
 	if not check(hud.hud_snapshot().inventory_visible and hud.hud_snapshot().status_visible, "inventory and status coexist"): return

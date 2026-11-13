@@ -37,6 +37,7 @@ public:
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
+    void set_character_identity(godot::String name,godot::String secondary,godot::String tertiary,godot::String badge);
     bool set_character_elements(godot::PackedByteArray attack,godot::PackedByteArray strength,godot::PackedByteArray weakness);
     bool set_character_combat(godot::Vector2i attack,godot::Vector2i magic,godot::Vector2i spirit,
         godot::Vector2i defence,godot::Vector2i magic_defence);
@@ -68,6 +69,7 @@ protected:
 private:
     mir3::HudModel model;
     mir3::ElementAttributes elements;
+    godot::String character_name,character_secondary,character_tertiary,character_badge;
     mir3::Minimap minimap;
     bool skill_shortcuts_visible=false;
     void draw_skill_shortcuts();

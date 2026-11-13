@@ -47,6 +47,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_group_roster","player","members"),&Mir3HudView::set_group_roster);
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines","editable"),&Mir3HudView::set_guild_overview,DEFVAL(PackedStringArray()));
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
+    ClassDB::bind_method(D_METHOD("set_character_identity","name","secondary","tertiary","badge"),&Mir3HudView::set_character_identity);
     ClassDB::bind_method(D_METHOD("set_character_elements","attack","strength","weakness"),&Mir3HudView::set_character_elements);
     ClassDB::bind_method(D_METHOD("set_character_combat","attack","magic","spirit","defence","magic_defence"),&Mir3HudView::set_character_combat);
     ClassDB::bind_method(D_METHOD("set_character_progress","level","profession","appearance","experience","next_experience"),&Mir3HudView::set_character_progress);
@@ -882,6 +883,19 @@ void Mir3HudView::draw_status() {
             label(Layout::element_rect(row,column,1),elements.text(row,column));
             if (hovered_element==row*7+column) hint(Layout::element_rect(row,column,3),message(5161+column));
         }
+    }
+    // 0x470E60 draws identity after the attributes and before the close button.
+    auto name_rect=Layout::name;
+    name_rect[0]+=x;
+    name_rect[1]+=y-(character_secondary.is_empty()?0:16);
+    text(character_name.utf8().get_data(),name_rect,0xdcffdc,mir3::TextFont::character_name);
+    if (!character_secondary.is_empty()) {
+        label({82,29,172,20},character_secondary.utf8().get_data(),0xb4faff);
+        label({82,43,172,20},character_tertiary.utf8().get_data(),0x96c8ff);
+    }
+    if (!character_badge.is_empty()) {
+        label({200,66,105,15},character_badge.utf8().get_data(),0xeb3ef4);
+        sprite(1298,{x+181,y+67});
     }
     const int row=obscured?-1:Layout::tooltip_at(local_x,local_y);
     if (row>=0) {
@@ -2136,6 +2150,14 @@ void Mir3HudView::load_status_body() {
         status_body=texture(body->pixels.rgba,body->width,body->height);
         status_body_offset=Vector2(body->offset_x,body->offset_y);
     }
+}
+
+void Mir3HudView::set_character_identity(String name,String secondary,String tertiary,String badge) {
+    character_name=name;
+    character_secondary=secondary;
+    character_tertiary=tertiary;
+    character_badge=badge;
+    queue_redraw();
 }
 
 bool Mir3HudView::set_character_elements(PackedByteArray attack,PackedByteArray strength,PackedByteArray weakness) {
