@@ -63,6 +63,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_expanded_count"]=int(chat_history.lines(true).size());
     result["chat_compact_first"]=chat_history.first(false);
     result["chat_expanded_first"]=chat_history.first(true);
+    result["options_visible"]=options.visible;
+    result["music_enabled"]=audio_options.music_enabled;
+    result["music_level"]=audio_options.music_level;
     result["guild_visible"]=guild.visible;
     result["guild_first"]=guild_first;
     result["guild_tab"]=guild_layout.tab;
@@ -226,6 +229,7 @@ void Mir3HudView::_draw() {
     draw_skill_key_menu();
     draw_skill_description();
     if (guild.visible) draw_guild();
+    if (options.visible) draw_options();
     if (guild_editor.visible) draw_guild_editor();
     if (group_request) draw_group_dialog();
     button_hint();
@@ -357,6 +361,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         }
         if (action==6) emit_signal("guild_overview_requested");
         if (action==5) toggle_group();
+        if (action==9) toggle_options();
         if (action==7) toggle_skills();
         if (action==12) toggle_inventory();
         if (action==13) toggle_status();
@@ -366,7 +371,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
@@ -475,6 +480,9 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
     if (code>=KEY_F1 && code<=KEY_F12 && bind_skill_at_cursor(code-KEY_F1+1)) {
         get_viewport()->set_input_as_handled();
         return;
+    }
+    if (code==KEY_N || (code==KEY_ESCAPE && options.visible)) {
+        toggle_options();get_viewport()->set_input_as_handled();return;
     }
     if (code==KEY_ESCAPE && guild.visible) { guild.toggle();queue_redraw();get_viewport()->set_input_as_handled();return; }
     if (code==KEY_G || (code==KEY_ESCAPE && group.visible && (group_on_top || (!skills.visible && !status.visible && !inventory.visible)))) {
@@ -677,6 +685,7 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
 }
 
 bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
+    if (options_pointer(kind,position)) return true;
     if (guild_pointer(kind,position)) return true;
     if (status.dragging || status_close_pressed) return status_pointer(kind,position);
     if (inventory.dragging || inventory.close_pressed || inventory.scroll.captured)
@@ -1357,5 +1366,83 @@ bool Mir3HudView::guild_editor_input(const Ref<InputEvent>& event) {
         queue_redraw();
     }
     get_viewport()->set_input_as_handled();
+    return true;
+}
+
+void Mir3HudView::toggle_options() {
+    if (frame(1290).is_null()) return;
+    options.toggle();
+    audio_drag=-1;
+    controller.cancel();
+    queue_redraw();
+}
+
+void Mir3HudView::draw_options() {
+    const int x=options.rect[0],y=options.rect[1];
+    sprite(1290,{x,y});
+    text(message(2104),{x+60,y+30,390,15},0xf8fafa);
+    for (int i=0;i<3;++i) {
+        const bool enabled=i==0?audio_options.music_enabled:i==1?audio_options.effects_enabled:audio_options.reverse_pan;
+        sprite(enabled?1293:1294,{x+430,y+85+60*i});
+        text(message(2100+i),{x+266,y+89+60*i,156,21},0x0096ff);
+        if (i<2) {
+            const int level=i==0?audio_options.music_level:audio_options.effects_level;
+            sprite(1291,{x+276+mir3::AudioOptions::knob_from_level(level),y+118+60*i});
+        }
+    }
+    sprite(magic_light?1293:1294,{x+186,y+115});
+    sprite(damage_numbers?1293:1294,{x+186,y+145});
+    text(message(2107),{x+20,y+122,155,15},0x0096ff);
+    text(message(2108),{x+20,y+152,155,15},0x0096ff);
+    sprite(1221,{x+448,y+415});
+}
+
+bool Mir3HudView::options_pointer(int kind,Vector2 point) {
+    if (!options.visible) return false;
+    const Vector2 local=point-Vector2(options.rect[0],options.rect[1]);
+    const bool inside=rect(options.rect).has_point(point);
+    const bool captured=options.dragging || audio_drag>=0;
+    if (!inside && !captured) return false;
+    const auto hit=[&](int id,int x,int y) {
+        const auto image=frame(id);
+        return image.is_valid() && Rect2(Vector2(x,y),image->get_size()).has_point(local);
+    };
+    if (audio_drag>=0) {
+        if (kind==1) audio_options.drag_volume(audio_drag==0,int(local.x));
+        if (kind==2) audio_drag=-1;
+    } else if (options.dragging && kind!=0) {
+        if (kind==1) options.move_drag(int(point.x),int(point.y));
+        if (kind==2) options.end_drag();
+    } else if (kind!=1) {
+        bool control=false;
+        if (hit(1221,448,415)) {
+            control=true;
+            if (kind==2) toggle_options();
+        }
+        const auto toggle=[&](bool& value,int x,int y) {
+            if (!hit(1292,x,y)) return;
+            control=true;
+            if (kind==2) value=!value;
+        };
+        toggle(magic_light,186,115);
+        toggle(damage_numbers,186,145);
+        toggle(audio_options.reverse_pan,430,205);
+        for (int i=0;i<2;++i) {
+            toggle(i==0?audio_options.music_enabled:audio_options.effects_enabled,430,85+60*i);
+            int& level=i==0?audio_options.music_level:audio_options.effects_level;
+            const int offset=mir3::AudioOptions::knob_from_level(level);
+            if (hit(1291,276+offset,118+60*i)) {
+                control=true;
+                if (kind==0) audio_drag=i;
+            } else if (local.x>266 && local.x<487 && local.y>116+60*i && local.y<136+60*i) {
+                control=true;
+                if (kind==2) level=mir3::AudioOptions::level_from_knob(mir3::AudioOptions::track_step(offset,int(local.x)));
+            }
+        }
+        if (!control && kind==0) options.begin_drag(int(point.x),int(point.y),false);
+    }
+    controller.cancel();
+    get_viewport()->set_input_as_handled();
+    queue_redraw();
     return true;
 }

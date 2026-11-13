@@ -1,5 +1,6 @@
 #pragma once
 #include "hud/hud_model.hpp"
+#include "hud/audio_options.hpp"
 #include "inventory/inventory_panel.hpp"
 #include "inventory/inventory_grid.hpp"
 #include "status/equipment.hpp"
@@ -42,6 +43,13 @@ protected:
     static void _bind_methods();
 private:
     mir3::HudModel model;
+    mir3::DraggablePanel options{{145,30,510,468}};
+    mir3::AudioOptions audio_options;
+    bool magic_light=true,damage_numbers=true;
+    int audio_drag=-1;
+    void toggle_options();
+    void draw_options();
+    bool options_pointer(int kind,godot::Vector2 point);
     mir3::InventoryPanel inventory;
     mir3::DraggablePanel guild{{102,22,594,444}};
     mir3::GuildLayout guild_layout;

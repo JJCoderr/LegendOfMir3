@@ -314,6 +314,15 @@ func run() -> void:
 	if not check(not editor.visible and guild_edits.size() == 1, "guild editor cancel"): return
 	key(KEY_ESCAPE)
 	if not check(not hud.hud_snapshot().guild_visible, "guild escape closes"): return
+	key(KEY_N)
+	if not check(hud.hud_snapshot().options_visible, "options keyboard entry"): return
+	click_at(Vector2(580, 120), false)
+	if not check(not hud.hud_snapshot().music_enabled, "music toggle"): return
+	click_at(Vector2(460, 154), false)
+	if not check(hud.hud_snapshot().music_level == -5, "music slider step"): return
+	if not await capture("system-options"): return
+	click_at(Vector2(595, 447), false)
+	if not check(not hud.hud_snapshot().options_visible, "options close"): return
 	var input: LineEdit = hud.get_node("ChatInput")
 	if not check(input.position == Vector2(185, 575) and input.size == Vector2(344, 15), "compact input bounds"): return
 	key(KEY_ENTER)
