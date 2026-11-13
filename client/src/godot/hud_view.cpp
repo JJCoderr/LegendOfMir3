@@ -1913,7 +1913,7 @@ void Mir3HudView::draw_inventory() {
     text(std::to_string(inventory_gold),{x+72,y+402,77,17},0x64C8F8,mir3::TextFont::gold);
     const Rect2 clip(x+17,y+60,228,304);
     // 0x440280 shares placement between the held-item preview and release.
-    if (bag.held && clip.has_point(inventory_cursor)) {
+    if (bag.held && clip.has_point(inventory_cursor) && !panel_covered(Panel::inventory,inventory_cursor)) {
         const int mouse_x=int(inventory_cursor.x),mouse_y=int(inventory_cursor.y);
         const int slot=bag.slot_at(mouse_x,mouse_y,x,y);
         const auto [column,row,width,height]=mir3::InventoryGrid::placement(bag.held,slot,mouse_x,mouse_y,x,y);
