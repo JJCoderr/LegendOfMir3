@@ -137,6 +137,31 @@ func run() -> void:
 			if hud.hud_snapshot().player_cell == Vector2i(476, 362) and hud.hud_snapshot().walk_frame == -1: break
 		if not check(hud.hud_snapshot().player_cell == Vector2i(476, 362), "route reaches destination"): return
 		if not await capture("bichon-route-arrival"): return
+		key(KEY_N)
+		click_at(Vector2(580, 180), false)
+		if not check(not footstep.playing, "turning effects off stops the footstep voice"): return
+		key(KEY_N)
+		if not check(hud.walk_to_map_cell(Vector2i(476, 361)), "walk with effects disabled"): return
+		var muted_deadline := Time.get_ticks_msec() + 2000
+		while Time.get_ticks_msec() < muted_deadline:
+			await process_frame
+			if not check(not footstep.playing, "muted movement never plays footsteps"): return
+			if hud.hud_snapshot().player_cell == Vector2i(476, 361) and hud.hud_snapshot().walk_frame == -1: break
+		if not check(hud.hud_snapshot().player_cell == Vector2i(476, 361) and hud.hud_snapshot().walk_frame == -1,
+			"muted step reaches its destination"): return
+		key(KEY_N)
+		if not await capture("bichon-footsteps-muted"): return
+		click_at(Vector2(580, 180), false)
+		key(KEY_N)
+		if not check(hud.walk_to_map_cell(Vector2i(476, 362)), "walk after re-enabling effects"): return
+		var resumed_deadline := Time.get_ticks_msec() + 2000
+		var resumed_sound := false
+		while Time.get_ticks_msec() < resumed_deadline:
+			await process_frame
+			resumed_sound = resumed_sound or footstep.playing
+			if hud.hud_snapshot().player_cell == Vector2i(476, 362) and hud.hud_snapshot().walk_frame == -1: break
+		if not check(resumed_sound and hud.hud_snapshot().player_cell == Vector2i(476, 362) and hud.hud_snapshot().walk_frame == -1,
+			"re-enabled effects restore footsteps"): return
 		var held_walk := InputEventMouseButton.new()
 		held_walk.position = Vector2(390, 100)
 		held_walk.button_index = MOUSE_BUTTON_LEFT
