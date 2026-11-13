@@ -37,10 +37,11 @@ struct ChatInputEdit {
 };
 class ChatInput {
 public:
+    int byte_limit = ChatInputSpec::limit;
     const std::string& set(std::string_view text);
     ChatInputEdit edit(std::string_view candidate, int caret);
 private:
     std::string value;
 };
-std::string limit_chat_input(std::string_view utf8);
+std::string limit_chat_input(std::string_view utf8, int byte_limit = ChatInputSpec::limit);
 }

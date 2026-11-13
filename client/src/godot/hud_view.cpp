@@ -890,7 +890,7 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
         const auto command=String::utf8(item->command.c_str());
         const int actor=npc_dialogue_actor;
         npc_dialogue_last_action=now;
-        if (item->command.starts_with("@@") && !item->command.starts_with("@@*")) {
+        if (item->command.starts_with("@@")) {
             // 0x4610D0 opens a text prompt; 0x4614D0 joins the answer with CR.
             npc_dialogue_prompt.clear();
             if (item->command=="@@buildguildnow") npc_dialogue_prompt=message(2000);
@@ -901,6 +901,25 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
             npc_dialogue_prompt_command=item->command;
             npc_dialogue_prompt_actor=actor;
             open_group_dialog(1011);
+            const std::string_view script_command=item->command;
+            if (script_command.starts_with("@@*") && group_request==1011) {
+                chat_input->set_secret_character("*");
+                chat_input->set_secret(true);
+                // 0x4612E7: storage-password commands optionally carry a byte limit before '_'.
+                if (script_command.find("enter_stgpasswd")!=script_command.npos ||
+                    script_command.find("Input_stgpasswd")!=script_command.npos ||
+                    script_command.find("Change_stgpasswd")!=script_command.npos ||
+                    script_command.find("confirm_passwd")!=script_command.npos) {
+                    const auto delimiter=script_command.find('_',3);
+                    int bytes=0;
+                    if (delimiter<10) {
+                        const auto end=script_command.data()+delimiter;
+                        const auto parsed=std::from_chars(script_command.data()+3,end,bytes);
+                        if (parsed.ec!=std::errc{} || parsed.ptr!=end) bytes=0;
+                    } else bytes=10;
+                    chat_input->set_byte_limit(bytes>0?bytes:mir3::ChatInputSpec::limit);
+                }
+            }
             queue_redraw();
         } else {
             emit_signal("npc_dialogue_action",actor,command);
@@ -2433,10 +2452,12 @@ void Mir3HudView::open_group_dialog(int action) {
 void Mir3HudView::finish_group_dialog(bool confirm) {
     const int request=group_request;
     const bool has_input=dialog_has_input();
-    const String name=has_input?chat_input->get_text():String();
+    const String name=has_input?(request==1011?chat_input->limited_text():chat_input->get_text()):String();
     group_request=0;
     group_dialog_pressed=-1;
     if (has_input) {
+        chat_input->set_secret(false);
+        chat_input->set_byte_limit(mir3::ChatInputSpec::limit);
         chat_input->focus_chat("",true);
         chat_input->release_focus();
         chat_input->layout(model.layout.expanded);

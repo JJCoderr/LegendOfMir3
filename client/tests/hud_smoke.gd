@@ -336,6 +336,18 @@ func run() -> void:
 		npc_input.text = "比奇"
 		key(KEY_ENTER)
 		if not check(dialogue_actions.size() == actions_before_prompt + 1 and dialogue_actions.back() == [2, "@@name\r比奇"], "NPC prompt joins command and answer with CR"): return
+		await wait_for_npc_cooldown()
+		var secret_command := "@@*4_enter_stgpasswd"
+		if not check(hud.apply_npc_dialogue(643, 2, "老黄/<请输入仓库密码/" + secret_command + ">"), "open masked NPC prompt"): return
+		click_at(Vector2(50, 45), false)
+		if not check(npc_input.secret and npc_input.secret_character == "*", "NPC password input uses asterisk mask"): return
+		npc_input.text = "123456"
+		npc_input.caret_column = 6
+		npc_input.text_changed.emit(npc_input.text)
+		if not check(npc_input.text == "1234", "NPC password limit applies during editing"): return
+		if not await capture("bichon-merchant-masked-prompt"): return
+		key(KEY_ENTER)
+		if not check(not npc_input.secret and dialogue_actions.back() == [2, secret_command + "\r1234"], "NPC password byte limit and mask reset"): return
 		var goods_requests: Array = []
 		hud.shop_good_requested.connect(func(actor: int, index: int, name: String): goods_requests.append([actor, index, name]))
 		if not check(hud.apply_npc_message("a<D<<>=B<?H<<<<<PbQ`DC=kYBakW^xmGoDlGoPkLbmqUN=lWsMeWrtkH>xnINxpGl".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "645 goods list"): return

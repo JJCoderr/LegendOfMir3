@@ -11,6 +11,8 @@ public:
     void configure(godot::String face);
     void layout(bool expanded);
     void focus_chat(godot::String prefix,bool replace);
+    void set_byte_limit(int bytes) { model.byte_limit=bytes; }
+    godot::String limited_text() const;
     mir3::ChatMode mode;
 protected:
     static void _bind_methods();

@@ -48,6 +48,11 @@ void Mir3ChatInput::changed(String) {
         if (edit.selection_from>=0 && edit.selection_to>edit.selection_from) select(edit.selection_from,edit.selection_to);
     }
 }
+String Mir3ChatInput::limited_text() const {
+    const auto utf8=get_text().utf8();
+    return String::utf8(mir3::limit_chat_input(
+        {utf8.get_data(),static_cast<std::size_t>(utf8.length())},model.byte_limit).c_str());
+}
 void Mir3ChatInput::submitted(String value) {
     const auto utf8=value.utf8();
     const auto accepted=model.set({utf8.get_data(),static_cast<std::size_t>(utf8.length())});

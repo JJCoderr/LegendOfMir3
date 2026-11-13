@@ -15,7 +15,7 @@ std::string encode(const wchar_t* text, int size, UINT page) {
 }
 }
 
-std::string limit_chat_input(std::string_view utf8)
+std::string limit_chat_input(std::string_view utf8, int byte_limit)
 {
     if (utf8.empty() || utf8.size() > 1024 * 1024) return {};
     const int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.data(),
@@ -28,7 +28,7 @@ std::string limit_chat_input(std::string_view utf8)
     std::size_t end = 0;
     while (end < ansi.size() && ansi[end]) {
         const std::size_t next = end + (IsDBCSLeadByteEx(CP_ACP, static_cast<BYTE>(ansi[end])) ? 2 : 1);
-        if (next > ansi.size() || next > ChatInputSpec::limit) break;
+        if (next > ansi.size() || next > static_cast<std::size_t>(byte_limit)) break;
         end = next;
     }
     return ansi_to_utf8(std::string_view(ansi).substr(0, end));
@@ -54,7 +54,7 @@ std::vector<std::string> ansi_characters(std::string_view utf8) {
 }
 
 const std::string& ChatInput::set(std::string_view text) {
-    value = limit_chat_input(text);
+    value = limit_chat_input(text, byte_limit);
     return value;
 }
 
@@ -75,7 +75,7 @@ ChatInputEdit ChatInput::edit(std::string_view candidate, int caret) {
     const auto end = next.size() - suffix;
     std::size_t accepted = prefix;
     // Limit the insertion, preserving the existing suffix and any selection deletion.
-    while (accepted < end && head.size() + tail.size() + next[accepted].size() <= ChatInputSpec::limit)
+    while (accepted < end && head.size() + tail.size() + next[accepted].size() <= static_cast<std::size_t>(byte_limit))
         head += next[accepted++];
     if (accepted == prefix && end > prefix) {
         // ANSI EDIT rejects the entire replacement if no inserted character fits.
