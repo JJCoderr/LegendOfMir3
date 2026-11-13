@@ -797,12 +797,13 @@ void Mir3HudView::draw_shop() {
     const int last=std::max(0,int(shop_goods.size())-1);
     // 0x47776B draws frame 1225 at (260,32), with 85 pixels of travel.
     if (last>0) sprite(1225,{260,shop_top+32+int(std::lround(85.0*goods_first/last))});
-    if (shop_pressed==-5) sprite(1222,shop_show_offers?mir3::HudLayout::Point{459,shop_top+159}:mir3::HudLayout::Point{262,shop_top+183});
-    if (!shop_show_offers && shop_pressed==-2) sprite(1264,{112,shop_top+186});
+    // 0x478000 repositions the controls after the shop changes modes.
+    if (shop_pressed==-5) sprite(1222,shop_show_offers?mir3::HudLayout::Point{449,shop_top+159}:mir3::HudLayout::Point{258,shop_top+183});
+    if (!shop_show_offers && shop_pressed==-2) sprite(1264,{106,shop_top+186});
     if (shop_show_offers) {
-        if (shop_pressed==-2) sprite(1266,{368,shop_top+163});
-        if (shop_pressed==-3) sprite(1269,{326,shop_top+163});
-        if (shop_pressed==-4) sprite(1271,{416,shop_top+163});
+        if (shop_pressed==-2) sprite(1266,{358,shop_top+163});
+        if (shop_pressed==-3) sprite(1269,{316,shop_top+163});
+        if (shop_pressed==-4) sprite(1271,{406,shop_top+163});
         for (int row=0;row<std::min(12,int(shop_offers.size())-shop_first);++row) {
             const auto& offer=shop_offers[shop_first+row];
             const auto cell=rect(shop_offer_cell(row));
@@ -834,10 +835,10 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     int control=0;
     const auto close_icon=frame(1221);
     if (close_icon.is_valid() &&
-        Rect2(details?Vector2(459,shop_top+159):Vector2(262,shop_top+183),close_icon->get_size()).has_point(pointer))
+        Rect2(details?Vector2(449,shop_top+159):Vector2(258,shop_top+183),close_icon->get_size()).has_point(pointer))
         control=-5;
     if (details && !control) {
-        for (const auto& spec:std::array{std::array{confirm_button,1265,368},std::array{-3,1268,326},std::array{-4,1270,416}}) {
+        for (const auto& spec:std::array{std::array{confirm_button,1265,358},std::array{-3,1268,316},std::array{-4,1270,406}}) {
             const auto image=frame(spec[1]);
             if (image.is_valid() && Rect2(Vector2(spec[2],shop_top+163),image->get_size()).has_point(pointer)) {
                 control=spec[0];
@@ -847,7 +848,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     }
     if (!details && !control) {
         const auto confirm=frame(1263);
-        if (confirm.is_valid() && Rect2(Vector2(112,shop_top+186),confirm->get_size()).has_point(pointer))
+        if (confirm.is_valid() && Rect2(Vector2(106,shop_top+186),confirm->get_size()).has_point(pointer))
             control=confirm_button;
     }
     if (control || shop_pressed<=confirm_button) {
