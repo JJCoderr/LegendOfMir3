@@ -84,6 +84,11 @@ func run() -> void:
 	Input.parse_input_event(wheel)
 	await process_frame
 	if not check(hud.hud_snapshot().chat_expanded_first == 5 and hud.hud_snapshot().chat_compact_first == 15, "independent wheel scroll"): return
+	key(KEY_N)
+	Input.parse_input_event(wheel)
+	if not check(hud.hud_snapshot().options_visible and hud.hud_snapshot().chat_expanded_first == 5, "options blocks wheel to underlying chat"): return
+	if not await capture("options-over-chat"): return
+	key(KEY_N)
 	click_at(Vector2(620, 306), true)
 	click_at(Vector2(620, 306), false)
 	await process_frame

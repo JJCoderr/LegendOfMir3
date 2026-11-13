@@ -374,6 +374,14 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             return;
         }
     }
+    const auto covers_wheel=[&](const mir3::DraggablePanel& panel) {
+        return button.is_valid() && panel.visible && rect(panel.rect).has_point(button->get_position());
+    };
+    if (covers_wheel(options) && button->is_pressed() &&
+        (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN)) {
+        get_viewport()->set_input_as_handled();
+        return;
+    }
     if (guild.visible && button.is_valid() && button->is_pressed() &&
         rect(guild.rect).has_point(button->get_position())) {
         const auto index=button->get_button_index();
@@ -402,7 +410,9 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             return;
         }
     }
-    if (button.is_valid() && button->is_pressed() && (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) && rect(mir3::HudLayout::chat_frame(model.layout.expanded)).has_point(button->get_position())) {
+    if (button.is_valid() && button->is_pressed() && (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) && rect(mir3::HudLayout::chat_frame(model.layout.expanded)).has_point(button->get_position()) &&
+        !covers_wheel(guild) && !covers_wheel(group) && !covers_wheel(skills) &&
+        !covers_wheel(status) && !covers_wheel(inventory)) {
         chat_history.scroll(model.layout.expanded).wheel(button->get_button_index()==MOUSE_BUTTON_WHEEL_UP?1:-1,int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded);
         get_viewport()->set_input_as_handled();queue_redraw();return;
     }
