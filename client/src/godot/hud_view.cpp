@@ -431,7 +431,7 @@ void Mir3HudView::_draw() {
         if (!panel_state(panel).visible) continue;
         switch (panel) {
         case Panel::group: draw_group(); break;
-        case Panel::skills: draw_skills(); break;
+        case Panel::skills: draw_skills(); draw_skill_key_menu(); draw_skill_description(); break;
         case Panel::status: draw_status(); break;
         case Panel::inventory: draw_inventory(); break;
         case Panel::guild: draw_guild(); break;
@@ -444,8 +444,6 @@ void Mir3HudView::_draw() {
     }
     draw_minimap();
     draw_skill_shortcuts();
-    draw_skill_key_menu();
-    draw_skill_description();
     if (guild_editor.visible) draw_guild_editor();
     if (!model.layout.expanded && Rect2(535,486,81,94).has_point(inventory_cursor))
         sprite(mir3::HudLayout::portrait_entry_frame(portrait_entry_pressed),mir3::HudLayout::portrait_entry_position);
