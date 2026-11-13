@@ -4300,7 +4300,9 @@ bool Mir3HudView::panel_covered(Panel panel,Vector2 point) const {
     const auto covers=[&](const mir3::DraggablePanel& state) {
         return state.visible && rect(state.rect).has_point(point);
     };
-    if (covers(guild_editor) || group_request)
+    if (covers(guild_editor) || group_request || (minimap.visible && rect(minimap.bounds()).has_point(point)) ||
+        (shop_actor && Rect2(0,shop_top,shop_width(),224).has_point(point)) ||
+        (npc_dialogue_actor && rect(npc_dialogue_bounds()).has_point(point)))
         return true;
     for (auto it=panel_order.rbegin();it!=panel_order.rend() && *it!=panel;++it)
         if (covers(panel_state(*it))) return true;

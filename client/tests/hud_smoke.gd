@@ -955,6 +955,11 @@ func run() -> void:
 	if not check(spell_requests.is_empty(), "skill tree binding does not cast"): return
 	if not check(skill_requests == [Vector2i(1, 0), Vector2i(5, 49), Vector2i(5, 67)], "magic shortcut conflict and F12 encoding"): return
 	if not await capture("magic-key-binding"): return
+	if not check(hud.apply_npc_dialogue(643, 2, "药店老板/<购买/@buy>"), "open NPC dialogue above magic tree"): return
+	key(KEY_F2)
+	if not check(skill_requests.size() == 3 and spell_requests.is_empty(), "covered magic slot cannot bind or cast"): return
+	if not await capture("magic-covered-by-npc"): return
+	if not check(hud.apply_npc_dialogue(644, 2, ""), "close NPC dialogue above magic tree"): return
 	key(KEY_B)
 	if not check(hud.hud_snapshot().skill_shortcuts_visible, "B opens magic shortcuts"): return
 	if not await capture("hud-magic-shortcuts"): return
