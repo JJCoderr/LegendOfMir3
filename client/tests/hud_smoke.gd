@@ -300,7 +300,7 @@ func run() -> void:
 	hud.guild_overview_requested.connect(func(): guild_queries.append(true))
 	click_at(Vector2(686, 485), false)
 	if not check(guild_queries == [true] and not hud.hud_snapshot().guild_visible, "guild overview requested from HUD"): return
-	hud.set_guild_overview("比奇行会", PackedStringArray(["欢迎加入比奇行会", "今晚集合练级"]))
+	hud.set_guild_overview("比奇行会", PackedStringArray(["欢迎加入比奇行会", "今晚集合练级"]), PackedStringArray(["今晚集合练级"]))
 	if not await capture("guild-overview"): return
 	var guild_hover := InputEventMouseMotion.new()
 	guild_hover.position = Vector2(196, 410)
@@ -310,7 +310,7 @@ func run() -> void:
 	click_at(Vector2(196, 410), true)
 	click_at(Vector2(196, 410), false)
 	if not check(hud.hud_snapshot().guild_tab == 1, "guild members tab"): return
-	hud.set_guild_members(PackedStringArray(["会长  比奇旅人", "会员  银杏剑客"]))
+	hud.set_guild_members(PackedStringArray(["会长  比奇旅人", "会员  银杏剑客"]), PackedStringArray(["#1 会长", "比奇旅人", "#2 会员", "银杏剑客"]))
 	if not await capture("guild-members"): return
 	hud.set_guild_notices(PackedStringArray(["第一条行会通知", "第二条行会通知"]))
 	click_at(Vector2(246, 410), true)
@@ -344,6 +344,7 @@ func run() -> void:
 	click_at(Vector2(400, 415), false)
 	var editor: TextEdit = hud.get_node("GuildEdit")
 	if not check(editor.visible and editor.has_focus() and editor.size == Vector2(468, 170), "guild announcement editor layout"): return
+	if not check(editor.text == "今晚集合练级\n", "announcement prefill uses editable lines only"): return
 	editor.text = "行会公告\n\n今晚集合"
 	if not await capture("guild-announcement-editor"): return
 	click_at(Vector2(575, 130), true)
@@ -351,7 +352,7 @@ func run() -> void:
 	if not check(not editor.visible and guild_edits == [[1040, "行会公告\r \r今晚集合"]], "guild announcement submit"): return
 	click_at(Vector2(550, 415), true)
 	click_at(Vector2(550, 415), false)
-	if not check(editor.visible, "guild member editor opens"): return
+	if not check(editor.visible and editor.text == "#1 会长\n比奇旅人\n#2 会员\n银杏剑客\n", "guild member editor uses rank source"): return
 	if not await capture("guild-member-editor"): return
 	click_at(Vector2(660, 328), true)
 	click_at(Vector2(660, 328), false)

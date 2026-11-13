@@ -38,7 +38,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_inventory_use_reply","identifier","remaining"),&Mir3HudView::apply_inventory_use_reply);
     ADD_SIGNAL(MethodInfo("skill_key_requested",PropertyInfo(Variant::INT,"id"),PropertyInfo(Variant::INT,"legacy_key")));
     ClassDB::bind_method(D_METHOD("set_group_roster","player","members"),&Mir3HudView::set_group_roster);
-    ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines"),&Mir3HudView::set_guild_overview);
+    ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines","editable"),&Mir3HudView::set_guild_overview,DEFVAL(PackedStringArray()));
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
     ADD_SIGNAL(MethodInfo("portrait_list_requested"));
@@ -50,7 +50,7 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("guild_edit_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"body")));
     ADD_SIGNAL(MethodInfo("guild_member_removal_requested",PropertyInfo(Variant::STRING,"name")));
     ClassDB::bind_method(D_METHOD("set_guild_manager","allowed"),&Mir3HudView::set_guild_manager);
-    ClassDB::bind_method(D_METHOD("set_guild_members","lines"),&Mir3HudView::set_guild_members);
+    ClassDB::bind_method(D_METHOD("set_guild_members","lines","editable"),&Mir3HudView::set_guild_members,DEFVAL(PackedStringArray()));
     ClassDB::bind_method(D_METHOD("set_guild_notices","lines"),&Mir3HudView::set_guild_notices);
     ADD_SIGNAL(MethodInfo("group_member_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("group_allow_requested",PropertyInfo(Variant::BOOL,"allowed")));
@@ -1301,7 +1301,8 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
     return true;
 }
 
-void Mir3HudView::set_guild_overview(String name,PackedStringArray lines) {
+void Mir3HudView::set_guild_overview(String name,PackedStringArray lines,PackedStringArray editable) {
+    guild_editable[0]=editable;
     guild_name=name;
     guild_pages[0]=lines;
     guild_layout.tab=0;
@@ -1387,7 +1388,8 @@ bool Mir3HudView::guild_pointer(int kind,Vector2 point) {
     return true;
 }
 
-void Mir3HudView::set_guild_members(PackedStringArray lines) {
+void Mir3HudView::set_guild_members(PackedStringArray lines,PackedStringArray editable) {
+    guild_editable[1]=editable;
     guild_pages[1]=lines;
     if (guild_layout.tab==1) guild_first=std::min(guild_first,std::max(0,int(lines.size())-1));
     queue_redraw();
@@ -1422,7 +1424,9 @@ void Mir3HudView::open_guild_editor(bool announcement) {
         guild_edit->connect("text_changed",callable_mp(this,&Mir3HudView::guild_editor_changed));
     }
     guild_edit_announcement=announcement;
-    const String initial=String("\n").join(guild_pages[announcement?0:1]);
+    const auto& editable=guild_editable[announcement?0:1];
+    String initial;
+    if (!editable.is_empty()) initial=String("\n").join(editable)+String("\n");
     guild_edit_ansi=mir3::edit_multiline_ansi("",initial.utf8().get_data());
     guild_edit->set_text(String::utf8(mir3::ansi_to_utf8(guild_edit_ansi).c_str()).replace("\r\n","\n"));
     guild_editor.visible=true;

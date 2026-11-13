@@ -38,9 +38,9 @@ public:
     bool load_portrait_cache(godot::String server,godot::String character);
     void set_portrait_names(godot::PackedStringArray names);
     void set_guild_manager(bool allowed);
-    void set_guild_members(godot::PackedStringArray lines);
+    void set_guild_members(godot::PackedStringArray lines,godot::PackedStringArray editable);
     void set_guild_notices(godot::PackedStringArray lines);
-    void set_guild_overview(godot::String name,godot::PackedStringArray lines);
+    void set_guild_overview(godot::String name,godot::PackedStringArray lines,godot::PackedStringArray editable);
     void set_group_roster(godot::String player,godot::PackedStringArray members);
     bool set_learned_skill(int id,int level,int key,int experience,int required,godot::String name);
     bool apply_equipment_reply(int identifier);
@@ -89,6 +89,7 @@ private:
     bool guild_manager=false;
     godot::String guild_name;
     std::array<godot::PackedStringArray,3> guild_pages;
+    std::array<godot::PackedStringArray,2> guild_editable;
     void draw_guild();
     void open_guild_editor(bool announcement);
     void draw_guild_editor();
