@@ -1767,6 +1767,11 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
+    if (portrait_map_visible && !model.layout.expanded) {
+        portrait_map_blink_ms+=delta*1000;
+        if (portrait_map_blink_ms>800) portrait_map_blink_ms=0;
+        queue_redraw();
+    }
     if (npc_dialogue_actor && npc_dialogue_first<npc_dialogue_scroll_limit) {
         // 0x460F43 alternates the down-arrow frame after 16 draw updates.
         if (npc_dialogue_arrow_frame==16) {
@@ -3840,8 +3845,29 @@ void Mir3HudView::draw_portrait_map() {
     const Vector2 origin=portrait_map_full_archive?
         Vector2(source.size.x>=256?510:530,source.size.y>=256?470:485):Vector2(510,470);
     const Vector2 scale=Vector2(128,128)/surface;
-    paint_canvas->draw_rect(Rect2(origin,Vector2(128,128)),Color(0,0,0));
+    const Rect2 bounds(origin,Vector2(128,128));
+    paint_canvas->draw_rect(bounds,Color(0,0,0));
     paint_canvas->draw_texture_rect_region(minimap_image,Rect2(origin,source.size*scale),source,Color(light,light,light));
+    constexpr float gray=100.f/255;
+    const Color green(gray,250.f/255,gray);
+    paint_canvas->draw_rect(bounds,Color(gray,gray,gray),false);
+    const auto marker=[&](mir3::HudLayout::Point cell,bool player) {
+        return point(mir3::Minimap::portrait_marker(cell,{int(source.position.x),int(source.position.y)},
+            {int(origin.x),int(origin.y)},portrait_map_full_archive,player));
+    };
+    const auto player=marker({minimap.player_x,minimap.player_y},true);
+    const auto draw_nearby=[&](const auto& cells,Color color) {
+        for (const auto& cell:cells) {
+            const auto at=marker(cell,false);
+            if (std::abs(at.x-player.x)>=surface.x/2 || std::abs(at.y-player.y)>=surface.y/2) continue;
+            const auto area=Rect2(at-Vector2(1,1),Vector2(3,3)).intersection(bounds);
+            if (area.has_area()) paint_canvas->draw_rect(area,color);
+        }
+    };
+    draw_nearby(minimap.nearby_green,green);
+    draw_nearby(minimap.nearby_orange,Color(250.f/255,150.f/255,50.f/255));
+    if (portrait_map_blink_ms>0 && portrait_map_blink_ms<500)
+        paint_canvas->draw_rect(Rect2(player,Vector2(4,4)),green,false);
 }
 
 void Mir3HudView::send_trade_offer(int count) {

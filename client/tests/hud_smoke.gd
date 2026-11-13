@@ -1101,7 +1101,14 @@ func run() -> void:
 		and map_requests.size() == 5, "portrait click requests a map and waits for 710"): return
 	if not check(hud.apply_minimap_reply(1001) and hud.hud_snapshot().portrait_map_visible
 		and not hud.hud_snapshot().minimap_visible, "710 shows the portrait map independently"): return
-	if not await capture("hud-portrait-map"): return
+	hud.set_minimap_markers(PackedVector2Array(), PackedVector2Array([Vector2(350, 284)]),
+		PackedVector2Array([Vector2(360, 276)]))
+	if not await capture("hud-portrait-map-markers"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var portrait_map_image := root.get_texture().get_image()
+		if not check(portrait_map_image.get_pixel(583, 542) == Color8(100, 250, 100)
+			and portrait_map_image.get_pixel(591, 538) == Color8(250, 150, 50),
+			"portrait map markers use original half-scale coordinates and colors"): return
 	key(KEY_J)
 	if not check(hud.hud_snapshot().portrait_map_mode, "J respects the 710 cooldown"): return
 	await create_timer(1.01).timeout

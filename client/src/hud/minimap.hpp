@@ -42,6 +42,14 @@ struct Minimap {
             int(std::clamp<std::int64_t>(std::int64_t(player_y)-std::min(h,height)/2,0,std::max(0,height-h))),
             std::min(w,width),std::min(h,height)};
     }
+    // 0x45DAD0 divides the cell and crop coordinates before applying the 1.5 X factor.
+    static HudLayout::Point portrait_marker(HudLayout::Point cell,HudLayout::Point crop,
+            HudLayout::Point origin,bool half_scale,bool player) {
+        const int divisor=half_scale?2:1;
+        const int inset=player?2:1;
+        const int x_twice=3*(cell[0]/divisor)+2*(origin[0]-crop[0]/divisor-inset);
+        return {x_twice/2,cell[1]/divisor+origin[1]-crop[1]/divisor-inset};
+    }
     bool toggle(std::uint64_t now,std::uint64_t cooldown) {
         if (reply_time && now-reply_time<=cooldown) return false;
         if (visible) {
