@@ -541,7 +541,7 @@ void Mir3HudView::button_hint() {
             anchor=hit.get_end();
         };
         if (*it==Panel::mount) {
-            for (int index=1;index<int(mount.buttons.size());++index)
+            for (int index=0;index<int(mount.buttons.size());++index)
                 if (mount.pressed!=index) resolve(mount.buttons[index],mount.buttons[index][3]);
         } else if (*it==Panel::trade) {
             if (!trade_confirm_pressed)

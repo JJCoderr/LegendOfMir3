@@ -862,6 +862,11 @@ func run() -> void:
 	click_at(mount_button, false)
 	if not check(hud.hud_snapshot().mount_visible and hud.hud_snapshot().mount_bounds == Rect2(0, 0, 276, 322), "mount window HUD button and original bounds"): return
 	if not await capture("hud-mount-window"): return
+	var mount_close_hover := InputEventMouseMotion.new()
+	mount_close_hover.position = Vector2(250, 288)
+	Input.parse_input_event(mount_close_hover)
+	for i in 30: await process_frame
+	if not await capture("hud-mount-close-hint"): return
 	var before_mount := requests.size()
 	for point in [Vector2(85, 240), Vector2(25, 240)]:
 		click_at(point, true)
