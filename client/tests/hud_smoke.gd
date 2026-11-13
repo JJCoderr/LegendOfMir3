@@ -120,6 +120,14 @@ func run() -> void:
 		if not check(rendered.get_pixel(755, 80).is_equal_approx(Color8(100, 250, 100)), "green minimap marker"): return
 		if not check(rendered.get_pixel(770, 72).is_equal_approx(Color8(250, 150, 50)), "orange minimap marker"): return
 		if not check(not rendered.get_pixel(799, 79).is_equal_approx(Color8(250, 150, 50)), "distant minimap marker clipped"): return
+	var map_hint_motion := InputEventMouseMotion.new()
+	map_hint_motion.position = Vector2(792, 120)
+	Input.parse_input_event(map_hint_motion)
+	await create_timer(0.3).timeout
+	if not await capture("hud-minimap-size-hint"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var rendered := root.get_texture().get_image()
+		if not check(rendered.get_pixel(797, 124).is_equal_approx(Color8(255, 255, 150)), "minimap size tooltip background"): return
 	click_at(Vector2(792, 120), true)
 	click_at(Vector2(792, 120), false)
 	if not check(hud.hud_snapshot().minimap_bounds == Rect2(544, 0, 256, 256), "minimap size button"): return

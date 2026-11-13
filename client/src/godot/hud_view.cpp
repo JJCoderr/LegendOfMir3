@@ -355,7 +355,20 @@ void Mir3HudView::button_hint() {
     int hint=-1;
     Vector2 anchor;
     bool panel_hit=false;
-    for (auto it=panel_order.rbegin();it!=panel_order.rend();++it) {
+    if (minimap.visible) {
+        panel_hit=rect(minimap.bounds()).has_point(inventory_cursor);
+        for (int index=1;index>=0;--index) {
+            const auto icon=frame(index==0?(minimap.translucent?1482:1483):(minimap.large?1485:1484));
+            if (icon.is_null()) continue;
+            const Rect2 hit(point(minimap.button_position(index)),icon->get_size());
+            if (!hit.has_point(inventory_cursor)) continue;
+            hint=minimap.button_hint(index);
+            anchor=hit.get_end();
+            panel_hit=true;
+            break;
+        }
+    }
+    for (auto it=panel_order.rbegin();!panel_hit && it!=panel_order.rend();++it) {
         const auto& panel=panel_state(*it);
         if (!panel.visible || !rect(panel.rect).has_point(inventory_cursor)) continue;
         panel_hit=true;
@@ -1758,8 +1771,8 @@ void Mir3HudView::draw_minimap() {
     sprite(1486,minimap.position);
     sprite(1487,{int(end.x)-32,int(bounds.position.y)});
     sprite(1488,{int(bounds.position.x),int(end.y)-35});
-    sprite(minimap.translucent?1482:1483,{int(end.x)-38,int(end.y)-19});
-    sprite(minimap.large?1485:1484,{int(end.x)-19,int(end.y)-19});
+    sprite(minimap.translucent?1482:1483,minimap.button_position(0));
+    sprite(minimap.large?1485:1484,minimap.button_position(1));
 }
 
 bool Mir3HudView::minimap_pointer(int kind,Vector2 position,bool ctrl) {

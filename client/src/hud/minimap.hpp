@@ -22,6 +22,13 @@ struct Minimap {
     HudLayout::Rect bounds() const {
         return {position[0],position[1],std::min(size(),width),std::min(size(),height)};
     }
+    HudLayout::Point button_position(int index) const {
+        const auto [x,y,w,h]=bounds();
+        return {x+w-38+19*index,y+h-19};
+    }
+    int button_hint(int index) const {
+        return index==0?(translucent?1802:1800):(large?1803:1801);
+    }
     HudLayout::Point source() const {
         const auto [x,y,w,h]=bounds();
         const auto map_x=map_pixel_x(player_x);
