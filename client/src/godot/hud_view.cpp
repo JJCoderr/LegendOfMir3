@@ -1676,6 +1676,19 @@ void Mir3HudView::button_hint() {
         }
         break;
     }
+    if (!panel_hit && !model.layout.expanded && Rect2(535,486,81,94).has_point(inventory_cursor)) {
+        const auto entry=frame(2096);
+        if (entry.is_valid()) {
+            const Rect2 hit(point(mir3::HudLayout::portrait_entry_position),entry->get_size());
+            if (hit.has_point(inventory_cursor)) {
+                panel_hit=true;
+                if (!portrait_entry_pressed) {
+                    hint=4715; // 0x4362CE.
+                    anchor=hit.get_end();
+                }
+            }
+        }
+    }
     if (!panel_hit && model.hovered>=0 && model.hovered!=model.pressed) {
         hint=chat_input && (model.hovered==18 || model.hovered==19)?chat_input->mode.tooltip(model.hovered):
             model.hovered>=20 && model.hovered<=22?reception_buttons.hints[model.hovered-20]:2600+model.hovered;

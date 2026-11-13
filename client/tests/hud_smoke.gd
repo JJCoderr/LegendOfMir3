@@ -1688,6 +1688,11 @@ func run() -> void:
 	if not check(not persisted.music_enabled and persisted.music_level == 0, "system options reload from original INI keys"): return
 	for option in ["magic_light", "damage_numbers", "reverse_pan"]:
 		if not check(persisted[option] == changed_options[option], "reload system option " + option): return
+	var portrait_hover := InputEventMouseMotion.new()
+	portrait_hover.position = Vector2(540, 570)
+	Input.parse_input_event(portrait_hover)
+	for frame in range(20): await process_frame
+	if not await capture("hud-portrait-entry-hint"): return
 	click_at(Vector2(540, 570), false)
 	if not check(hud.hud_snapshot().portrait_visible, "portrait HUD entry"): return
 	click_at(Vector2(40, 32), true)
