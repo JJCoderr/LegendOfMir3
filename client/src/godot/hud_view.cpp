@@ -648,6 +648,7 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
         npc_dialogue_scroll_limit=npc_dialogue_scroll_enabled?std::max(0,line-21):0;
         npc_dialogue_arrow_pressed=0;
         if (npc_dialogue_actor!=actor) {
+            map_pointer_button=0;
             npc_dialogue_arrow_frame=0;
             npc_dialogue_down_lit=false;
         }

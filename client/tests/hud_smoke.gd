@@ -215,6 +215,22 @@ func run() -> void:
 		chat_walk = chat_walk.duplicate()
 		chat_walk.pressed = false
 		root.push_input(chat_walk, true)
+		var npc_walk := chat_walk.duplicate() as InputEventMouseButton
+		npc_walk.pressed = true
+		root.push_input(npc_walk, true)
+		if not check(hud.hud_snapshot().walk_frame == 0, "start held walk before NPC dialogue"): return
+		if not check(hud.apply_npc_dialogue(643, 2, "老黄/<购买药品/@buy>"), "open NPC dialogue during held walk"): return
+		if not await capture("bichon-npc-during-walk"): return
+		await create_timer(0.85).timeout
+		var npc_stop_cell: Vector2i = hud.hud_snapshot().player_cell
+		if not check(hud.hud_snapshot().walk_frame == -1, "current step finishes while NPC dialogue is open"): return
+		hud.apply_npc_dialogue(644, 2, "")
+		await create_timer(0.75).timeout
+		if not check(hud.hud_snapshot().player_cell == npc_stop_cell and hud.hud_snapshot().walk_frame == -1,
+			"closing NPC dialogue does not resume held walk"): return
+		npc_walk = npc_walk.duplicate()
+		npc_walk.pressed = false
+		root.push_input(npc_walk, true)
 		hud.set_meta("map_camera_cell", Vector2i(404, 402))
 		hud.queue_redraw()
 		if not await capture("bichon-merchant"): return
