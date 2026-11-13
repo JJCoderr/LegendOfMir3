@@ -543,6 +543,7 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body) {
     }
     shop_goods=std::move(goods);
     shop_actor=actor;
+    shop_first=0;
     shop_pressed=-1;
     queue_redraw();
     return true;
@@ -551,9 +552,9 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body) {
 void Mir3HudView::draw_shop() {
     if (!shop_actor) return;
     sprite(1260,{0,0});
-    for (int i=0;i<std::min(8,int(shop_goods.size()));++i) {
-        const auto& good=shop_goods[i];
-        text(good.name,{22,34+19*i,150,18},shop_pressed==i?0x96ffff:0x64ffff,mir3::TextFont::normal,false);
+    for (int i=0;i<std::min(8,int(shop_goods.size())-shop_first);++i) {
+        const auto& good=shop_goods[shop_first+i];
+        text(good.name,{22,34+19*i,150,18},shop_pressed==shop_first+i?0x96ffff:0x64ffff,mir3::TextFont::normal,false);
         text(std::to_string(good.price),{174,34+19*i,62,18},0xfafafa);
         text(std::to_string(good.stock),{237,34+19*i,32,18},0xfafafa);
     }
@@ -562,7 +563,7 @@ void Mir3HudView::draw_shop() {
 bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     if (!shop_actor) return false;
     const bool inside=Rect2(0,0,292,224).has_point(pointer);
-    const int row=Rect2(22,34,247,152).has_point(pointer)?(int(pointer.y)-34)/19:-1;
+    const int row=Rect2(22,34,247,152).has_point(pointer)?shop_first+(int(pointer.y)-34)/19:-1;
     const bool hit=row>=0 && row<int(shop_goods.size());
     const int pressed=shop_pressed;
     shop_pressed=kind==0 && hit?row:-1;
@@ -1033,6 +1034,16 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     const auto covers_wheel=[&](const mir3::DraggablePanel& panel) {
         return button.is_valid() && panel.visible && rect(panel.rect).has_point(button->get_position());
     };
+    if (shop_actor && button.is_valid() && button->is_pressed() &&
+        (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) &&
+        Rect2(22,34,247,152).has_point(button->get_position())) {
+        const int direction=button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN?1:-1;
+        shop_first=std::clamp(shop_first+direction,0,std::max(0,int(shop_goods.size())-1));
+        shop_pressed=-1;
+        get_viewport()->set_input_as_handled();
+        queue_redraw();
+        return;
+    }
     if (covers_wheel(quest) && !panel_covered(Panel::quest,button->get_position()) && button->is_pressed()) {
         const auto index=button->get_button_index();
         if (index==MOUSE_BUTTON_WHEEL_UP || index==MOUSE_BUTTON_WHEEL_DOWN) {
@@ -1899,7 +1910,7 @@ bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
 bool Mir3HudView::spell_pointer_available() const {
     using Layout=mir3::HudLayout;
     const auto pointer=inventory_cursor;
-    if (minimap.visible || group_request || (npc_dialogue_actor && Rect2(0,0,386,160).has_point(pointer)) || !Rect2(0,0,800,Layout::origin[1]).has_point(pointer) ||
+    if (minimap.visible || group_request || (shop_actor && Rect2(0,0,292,224).has_point(pointer)) || (npc_dialogue_actor && Rect2(0,0,386,160).has_point(pointer)) || !Rect2(0,0,800,Layout::origin[1]).has_point(pointer) ||
         rect(Layout::chat_frame(model.layout.expanded)).has_point(pointer)) return false;
     if (guild_editor.visible && rect(guild_editor.rect).has_point(pointer)) return false;
     for (const auto panel:panel_order) {

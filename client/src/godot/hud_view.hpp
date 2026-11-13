@@ -273,7 +273,7 @@ private:
     bool apply_shop_goods(int actor,int count,godot::String body);
     struct ShopGood { std::string name; int variants, price, stock; };
     std::vector<ShopGood> shop_goods;
-    int shop_actor=0, shop_pressed=-1;
+    int shop_actor=0, shop_pressed=-1, shop_first=0;
     void draw_shop();
     bool shop_input(int kind,godot::Vector2 pointer);
     void draw_npc_dialogue();

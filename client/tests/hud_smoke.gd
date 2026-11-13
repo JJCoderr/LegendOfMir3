@@ -228,6 +228,19 @@ func run() -> void:
 		click_at(Vector2(45, 60), true)
 		click_at(Vector2(45, 60), false)
 		if not check(goods_requests == [[2, 1, "Blue potion"]], "goods selection retains list after invalid reply"): return
+		var stock_list := ""
+		for i in 10: stock_list += "Potion %d/1/20/5/" % i
+		if not check(hud.apply_shop_goods(2, 10, stock_list), "shop list exceeds one screen"): return
+		for i in 2:
+			var wheel_down := InputEventMouseButton.new()
+			wheel_down.button_index = MOUSE_BUTTON_WHEEL_DOWN
+			wheel_down.pressed = true
+			wheel_down.position = Vector2(45, 60)
+			root.push_input(wheel_down, true)
+		if not await capture("bichon-merchant-goods-scrolled"): return
+		click_at(Vector2(45, 171), true)
+		click_at(Vector2(45, 171), false)
+		if not check(goods_requests.back() == [2, 9, "Potion 9"], "scroll preserves original goods index"): return
 		if not check(hud.apply_npc_dialogue(644, 2, "") and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
 		if not check(hud.apply_npc_dialogue(643, 2, script) and hud.walk_to_map_cell(Vector2i(419, 410)), "walk away from reopened NPC dialogue"): return
 		var leave_deadline := Time.get_ticks_msec() + 6000
