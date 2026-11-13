@@ -1801,6 +1801,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         inventory_cursor=p;
         const int kind=button->is_pressed()?0:2;
         if (kind==2 && chat_history.scroll(model.layout.expanded).captured() && scroll_input(kind,p)) return;
+        if (kind==2 && panel_pointer(kind,p,true)) return;
         if (shop_input(kind,p,button->is_double_click()) || npc_dialogue_input(kind,p) || skill_menu_input(kind,p,button->is_double_click())) return;
         if (minimap_pointer(kind,p,button->is_ctrl_pressed()) || panel_pointer(kind,p) || scroll_input(kind,p)) return;
         const auto entry=frame(2096);
@@ -2283,7 +2284,7 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
     return true;
 }
 
-bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
+bool Mir3HudView::panel_pointer(int kind,Vector2 position,bool captured_only) {
     if (trade.dragging || trade_confirm_pressed || trade_scroll.captured>=0) return trade_pointer(kind,position);
     if (quest.dragging || quest.pressed>=0 || quest.scroll_captured) return quest_pointer(kind,position);
     if (mount.dragging || mount.pressed>=0) return mount_pointer(kind,position);
@@ -2295,6 +2296,7 @@ bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
         return inventory_pointer(kind,position);
     if (skills.dragging || skills.pressed>=0 || skills.scroll_captured) return skill_pointer(kind,position);
     if (group.dragging || group_pressed>=0) return group_pointer(kind,position);
+    if (captured_only) return false;
     const auto order=panel_order;
     for (auto it=order.rbegin();it!=order.rend();++it) {
         switch (*it) {

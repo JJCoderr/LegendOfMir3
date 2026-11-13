@@ -757,6 +757,13 @@ func run() -> void:
 	click_at(overlap_cell, true)
 	click_at(overlap_cell, false)
 	if not check(hud.hud_snapshot().held_inventory_icon == -1, "minimap surface blocks clicks on the covered bag slot"): return
+	click_at(overlap_origin + Vector2(12, 25), true)
+	click_at(overlap_cell, false)
+	var after_release := InputEventMouseMotion.new()
+	after_release.position = overlap_origin + Vector2(85, 200)
+	Input.parse_input_event(after_release)
+	if not check(Vector2(hud.hud_snapshot().inventory_position) == overlap_origin, "release over minimap ends the existing inventory drag"): return
+	if not check(hud.hud_snapshot().held_inventory_icon == -1, "ending inventory drag does not pick up an item"): return
 	if not await capture("hud-minimap-over-inventory"): return
 	click_at(Vector2(792, 249), true)
 	click_at(overlap_cell, false)
