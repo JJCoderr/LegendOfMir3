@@ -42,6 +42,7 @@ std::uint64_t ticks_msec() {
 }
 }
 void Mir3HudView::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("apply_inventory_add","identifier","icon","count","make_index","name","std_mode","stack_mode"),&Mir3HudView::apply_inventory_add);
     ClassDB::bind_method(D_METHOD("add_inventory_item","icon","count","slot","make_index","name","std_mode","stack_mode"),&Mir3HudView::add_inventory_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_inventory_use_reply","identifier","remaining"),&Mir3HudView::apply_inventory_use_reply);
     ADD_SIGNAL(MethodInfo("spell_key_requested",PropertyInfo(Variant::INT,"key"),
@@ -1443,6 +1444,13 @@ Ref<ImageTexture> Mir3HudView::item_frame(int id) {
     const auto decoded=item_archive.frame(id);
     if (!decoded) return {};
     return item_frames.emplace(id,texture(decoded->pixels.rgba,decoded->width,decoded->height)).first->second;
+}
+
+bool Mir3HudView::apply_inventory_add(int identifier,int icon,int count,int64_t make_index,String name,int std_mode,int stack_mode) {
+    // Message 200 inserts an already decoded item using the normal bag placement path.
+    if (identifier!=200 || count<0 || count>65535 || make_index<=0 ||
+        std_mode<0 || std_mode>255 || stack_mode<0 || stack_mode>255) return false;
+    return add_inventory_item(icon,count,-1,make_index,name,std_mode,stack_mode);
 }
 
 bool Mir3HudView::add_inventory_item(int icon,int count,int slot,int64_t make_index,String name,int std_mode,int stack_mode) {

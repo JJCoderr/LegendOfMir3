@@ -257,6 +257,18 @@ func run() -> void:
 		click_at(Vector2(60, 40), false)
 		if not check(offer_selections == [[2, 10001]], "select offer by its instance identifier"): return
 		if not check(hud.apply_shop_purchase_reply(650, 125) and hud.hud_snapshot().inventory_gold == 125, "650 applies server gold balance"): return
+		if not check(not hud.apply_inventory_add(650, 301, 1, 10001, "Red potion", 0, 3), "gold reply is not an item addition"): return
+		if not check(hud.apply_inventory_add(200, 301, 1, 10001, "Red potion", 0, 3), "200 places purchased item in bag"): return
+		key(KEY_W)
+		if not check(hud.hud_snapshot().inventory_visible, "open bag after purchase"): return
+		if not await capture("bichon-merchant-purchased-item"): return
+		var pickup := Vector2(hud.hud_snapshot().inventory_position) + Vector2(30, 75)
+		click_at(pickup, true)
+		click_at(pickup, false)
+		if not check(hud.hud_snapshot().held_inventory_icon == 301, "purchased potion is in first available slot"): return
+		click_at(pickup, true)
+		click_at(pickup, false)
+		key(KEY_W)
 		if not check(not hud.apply_shop_purchase_reply(651, 4) and hud.apply_shop_purchase_reply(651, 2), "651 maps known purchase failure"): return
 		if not check(hud.hud_snapshot().group_request == 1438 and hud.hud_snapshot().inventory_gold == 125, "failure opens original caption without changing gold"): return
 		if not await capture("bichon-merchant-purchase-failed"): return

@@ -40,6 +40,7 @@ public:
     void _notification(int what);
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
+    bool apply_inventory_add(int identifier,int icon,int count,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     void set_character_identity(godot::String name,godot::String secondary,godot::String tertiary,godot::String badge);
     bool set_character_elements(godot::PackedByteArray attack,godot::PackedByteArray strength,godot::PackedByteArray weakness);
