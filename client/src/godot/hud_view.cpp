@@ -1059,7 +1059,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
             }
         }
     }
-    const bool hit=row>=0 && (offer_cell?row<int(shop_offers.size()):
+    const bool hit=row>=0 && (offer_cell?!shop_offer_loading && row<int(shop_offers.size()):
         row<int(shop_goods.size()));
     const int hit_id=offer_cell?256+row:row;
     const int pressed=shop_pressed;
