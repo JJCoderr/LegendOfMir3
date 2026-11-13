@@ -829,6 +829,15 @@ func run() -> void:
 	click_at(Vector2(238, 285), false)
 	if not check(hud.hud_snapshot().trade_confirmed and trades[-1] == [1030, ""], "confirm sends original trade request"): return
 	if not await capture("hud-trade-gold-confirm"): return
+	var sent_trades := trades.size()
+	click_at(Vector2(238, 285), true)
+	click_at(Vector2(238, 285), false)
+	if not check(trades.size() == sent_trades and hud.hud_snapshot().trade_confirmed, "confirmed trade does not send twice"): return
+	var confirm_hover := InputEventMouseMotion.new()
+	confirm_hover.position = Vector2(238, 285)
+	Input.parse_input_event(confirm_hover)
+	await create_timer(0.3).timeout
+	if not await capture("hud-trade-confirmed-hint"): return
 	if not check(hud.apply_trade_cancel() and not hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_visible, "trade cancellation closes offer and preserves bag"): return
 	if not check(not hud.apply_trade_cancel(), "duplicate trade cancellation ignored"): return
 	if not await capture("hud-trade-cancelled"): return

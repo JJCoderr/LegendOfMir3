@@ -443,6 +443,9 @@ void Mir3HudView::button_hint() {
         if (*it==Panel::mount) {
             for (int index=1;index<int(mount.buttons.size());++index)
                 if (mount.pressed!=index) resolve(mount.buttons[index],mount.buttons[index][3]);
+        } else if (*it==Panel::trade) {
+            if (!trade_confirm_pressed)
+                resolve(std::array{1394,226,279},trade_confirmed?1303:1300);
         } else if (*it==Panel::quest) {
             if (quest.pressed!=0) resolve(quest.buttons[0],2200);
         } else if (*it==Panel::guild) {
@@ -2298,7 +2301,7 @@ void Mir3HudView::draw_trade() {
         for (int i=int(amount.size())-3;i>0;i-=3) amount.insert(i,1,',');
         text(amount,{x+(side==0?70:350),y+289,side==0?113:85,25},0xfac8c8);
     }
-    sprite(trade_confirm_pressed && !trade_confirmed?1396:1394,{x+226,y+279});
+    sprite(trade_confirmed?1394:trade_confirm_pressed?1396:1392,{x+226,y+279});
 }
 
 bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
