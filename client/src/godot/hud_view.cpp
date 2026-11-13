@@ -813,10 +813,26 @@ void Mir3HudView::draw_shop() {
     if (shop_pressed==-6) sprite(1264,{106,shop_top+186});
     if (shop_bulk_index>=0) {
         const auto& good=shop_goods[shop_bulk_index];
+        // 0x477127 / 0x477C80: the two preview cells use the same tint.
+        const Rect2 icon_cell(305,shop_top+17,36,36), description_cell(352,shop_top+17,148,36);
+        const Color tint(80.f/255,80.f/255,160.f/255,1.f/255);
+        legacy_rect(icon_cell,tint);
+        legacy_rect(description_cell,tint);
+        draw_rect(icon_cell,Color(180.f/255,180.f/255,180.f/255),false);
+        draw_rect(description_cell,Color(250.f/255,200.f/255,150.f/255),false);
         const auto icon=item_frame(good.icon);
         if (icon.is_valid()) draw_texture(icon,Vector2(324-icon->get_width()/2,shop_top+36-icon->get_height()/2));
-        text(good.name,{357,shop_top+19,143,16},0xfafa,mir3::TextFont::normal,false);
-        if (shop_pressed==-8) sprite(1277,{367,shop_top+59});
+        const int y=shop_top+(good.requirement?19:30);
+        auto price=message(2300);
+        const auto marker=price.find("%d");
+        if (marker!=price.npos) price.replace(marker,2,std::to_string(good.price));
+        else price=std::to_string(good.price);
+        const int name_width=mir3::raster_text(good.name,1,1,false,mir3::TextFont::normal).text_width;
+        text(good.name,{357,y-1,126,16},0x0a0a0a,mir3::TextFont::normal,false);
+        text(good.name,{358,y,126,16},0xfafa,mir3::TextFont::normal,false);
+        text(price,{359+name_width,y-1,140,16},0x0a0a0a,mir3::TextFont::normal,false);
+        text(price,{360+name_width,y,140,16},0x64b4fa,mir3::TextFont::normal,false);
+        if (shop_pressed==-8) sprite(1273,{367,shop_top+59});
         if (shop_pressed==-5) sprite(1222,{475,shop_top+56});
     }
     if (shop_show_offers) {
@@ -913,7 +929,10 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
         else if (details && Rect2(Vector2(449,shop_top+159),close_icon->get_size()).has_point(pointer)) control=-5;
         else if (shop_bulk_index>=0 && Rect2(Vector2(475,shop_top+56),close_icon->get_size()).has_point(pointer)) control=-5;
     }
-    if (shop_bulk_index>=0 && !control && Rect2(367,shop_top+59,65,28).has_point(pointer)) control=-8;
+    if (shop_bulk_index>=0 && !control) {
+        const auto confirm=frame(1272);
+        if (confirm.is_valid() && Rect2(Vector2(367,shop_top+59),confirm->get_size()).has_point(pointer)) control=-8;
+    }
     if (details && !control) {
         for (const auto& spec:std::array{std::array{confirm_button,1265,358},std::array{-3,1268,316},std::array{-4,1270,406}}) {
             const auto image=frame(spec[1]);

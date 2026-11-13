@@ -552,6 +552,7 @@ func run() -> void:
 		if not check(hud.apply_shop_goods(2, 1, "Bundle/2/20/5/301/0/0/", true), "open quantity-based goods"): return
 		click_at(Vector2(135, 420), true)
 		click_at(Vector2(135, 420), false)
+		if not await capture("bichon-merchant-bulk-preview"): return
 		click_at(Vector2(380, 296), true)
 		click_at(Vector2(380, 296), false)
 		if not check(hud.hud_snapshot().group_request == 110, "bulk purchase opens quantity input"): return
