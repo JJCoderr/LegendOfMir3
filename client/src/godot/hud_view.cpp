@@ -2932,7 +2932,7 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
             get_viewport()->set_input_as_handled();
             return true;
         }
-        const bool activate=code==KEY_ENTER || code==KEY_KP_ENTER || (!dialog_has_input() && code==KEY_SPACE);
+        const bool activate=code==KEY_ENTER || code==KEY_KP_ENTER || (code==KEY_SPACE && (!dialog_has_input() || !chat_input->has_focus()));
         if (code!=KEY_TAB && code!=KEY_ESCAPE && !activate && dialog_has_input()) return false;
         if (key->is_pressed() && !key->is_echo()) {
             if (code==KEY_TAB) { group_selected=group_selected==0?2:0;queue_redraw(); }

@@ -1174,8 +1174,14 @@ func run() -> void:
 	if not check(hud.hud_snapshot().group_request == 1021, "open add member dialog"): return
 	for ch in "银杏剑客": key(0, ch.unicode_at(0))
 	if not await capture("group-member-dialog"): return
-	key(KEY_ENTER)
-	if not check(member_requests == [[1021, "银杏剑客"]], "submit member request"): return
+	var member_input: LineEdit = hud.get_node("ChatInput")
+	key(KEY_SPACE, 32)
+	if not check(hud.hud_snapshot().group_request == 1021 and member_input.text == "银杏剑客 ", "space types into focused dialog edit"): return
+	key(KEY_BACKSPACE)
+	member_input.release_focus()
+	if not await capture("group-dialog-keyboard-activation"): return
+	key(KEY_SPACE)
+	if not check(member_requests == [[1021, "银杏剑客"]], "space activates dialog when edit is unfocused"): return
 	click_at(Vector2(435, 322), true)
 	click_at(Vector2(435, 322), false)
 	if not check(hud.hud_snapshot().group_request == 1022, "open remove member dialog"): return
