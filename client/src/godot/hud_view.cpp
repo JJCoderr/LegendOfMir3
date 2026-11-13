@@ -875,12 +875,15 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
     const int option=npc_dialogue_option_at(pointer);
     const int pressed=npc_dialogue_pressed;
     npc_dialogue_pressed=kind==0?option:-1;
-    if (kind==2 && option>=0 && pressed==option) {
+    // 0x4610D0 tests the release position and shares a one-second cooldown across options.
+    const auto now=ticks_msec();
+    if (kind==2 && option>=0 && (!npc_dialogue_last_action || now-npc_dialogue_last_action>1000)) {
         const auto item=std::find_if(npc_dialogue_rows.begin(),npc_dialogue_rows.end(),[option](const auto& row) {
             return row.option==option;
         });
         const auto command=String::utf8(item->command.c_str());
         const int actor=npc_dialogue_actor;
+        npc_dialogue_last_action=now;
         emit_signal("npc_dialogue_action",actor,command);
         emit_signal("npc_request",1011,actor,command);
         emit_npc_packet(1011,actor,command);

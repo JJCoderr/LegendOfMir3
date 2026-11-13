@@ -22,6 +22,11 @@ func click_at(position: Vector2, pressed: bool) -> void:
 	event.pressed = pressed
 	Input.parse_input_event(event)
 
+func wait_for_npc_cooldown() -> void:
+	var deadline := Time.get_ticks_msec() + 1010
+	while Time.get_ticks_msec() < deadline:
+		await process_frame
+
 func key(code: int, unicode_value: int = 0, alt: bool = false) -> void:
 	var event := InputEventKey.new()
 	event.keycode = code
@@ -248,22 +253,28 @@ func run() -> void:
 		if not check(npc_packets == ["#1<\\<<<KD?<<<<<<<<!", "#2<\\<<<KH?<<<<<<<<LBEqZL!"], "NPC requests match encoded header and body"): return
 		if not check(hud.apply_npc_dialogue(643, 2, "Merchant/AA <Buy/@buy> <Exit/@exit>"), "inline NPC options"): return
 		if not await capture("bichon-merchant-inline"): return
+		click_at(Vector2(78, 45), false)
+		if not check(dialogue_actions.size() == 1, "NPC cooldown survives a replacement reply"): return
+		await wait_for_npc_cooldown()
 		click_at(Vector2(39, 45), true)
 		click_at(Vector2(39, 45), false)
 		click_at(Vector2(58, 45), true)
 		click_at(Vector2(58, 45), false)
-		click_at(Vector2(78, 45), true)
+		await wait_for_npc_cooldown()
+		click_at(Vector2(39, 45), true)
 		click_at(Vector2(78, 45), false)
 		if not check(dialogue_actions == [[2, "@buy"], [2, "@buy"], [2, "@exit"]], "only inline labels dispatch their own commands"): return
 		var tagged_command := "@route" + char(92) + "药店"
 		var tagged_script := "老黄/{FCOLOR/10}请选择 <前往/" + tagged_command + "> {FCOLOR/12}药店"
 		if not check(hud.apply_npc_dialogue(643, 2, tagged_script), "parse script delimiter inside option"): return
 		if not await capture("bichon-merchant-script-tags"): return
+		await wait_for_npc_cooldown()
 		click_at(Vector2(82, 45), true)
 		click_at(Vector2(82, 45), false)
 		if not check(dialogue_actions.back() == [2, tagged_command], "line delimiter inside option stays in command"): return
 		if not check(hud.apply_npc_dialogue(643, 2, "Merchant/<" + "比".repeat(30) + "/@wrapped>"), "wrap long NPC line"): return
 		if not await capture("bichon-merchant-wrapped-line"): return
+		await wait_for_npc_cooldown()
 		click_at(Vector2(48, 45), true)
 		click_at(Vector2(48, 63), false)
 		if not check(dialogue_actions.back() == [2, "@wrapped"], "wrapped option shares press and release across rows"): return
@@ -278,17 +289,20 @@ func run() -> void:
 		npc_wheel.pressed = true
 		root.push_input(npc_wheel, true)
 		if not await capture("bichon-merchant-dialogue-scrolled"): return
+		await wait_for_npc_cooldown()
 		click_at(Vector2(50, 45), true)
 		click_at(Vector2(50, 45), false)
 		if not check(dialogue_actions.back() == [2, "@second"], "NPC wheel moves option hitboxes"): return
 		click_at(Vector2(188, 420), true)
 		click_at(Vector2(188, 420), false)
+		await wait_for_npc_cooldown()
 		click_at(Vector2(50, 45), true)
 		click_at(Vector2(50, 45), false)
 		if not check(dialogue_actions.back() == [2, "@first"], "NPC up arrow restores first option"): return
 		for i in range(8):
 			root.push_input(npc_wheel, true)
 		if not await capture("bichon-merchant-dialogue-last-row"): return
+		await wait_for_npc_cooldown()
 		click_at(Vector2(50, 402), true)
 		click_at(Vector2(50, 402), false)
 		if not check(dialogue_actions.back() == [2, "@last"], "NPC scroll clamps with the last option on the final visible row"): return
