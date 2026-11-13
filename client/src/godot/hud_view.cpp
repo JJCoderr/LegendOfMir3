@@ -85,6 +85,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("update_chat_rejection","channel","rejected"),&Mir3HudView::update_chat_rejection);
     ClassDB::bind_method(D_METHOD("handle_exit_confirmation","dialog_id"),&Mir3HudView::handle_exit_confirmation);
     ClassDB::bind_method(D_METHOD("set_trade_context","direction","cell","actor_type","dead","name"),&Mir3HudView::set_trade_context);
+    ClassDB::bind_method(D_METHOD("set_trade_gold","local","remote"),&Mir3HudView::set_trade_gold);
     ClassDB::bind_method(D_METHOD("open_trade","partner"),&Mir3HudView::open_trade);
     ADD_SIGNAL(MethodInfo("trade_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("exit_confirmed",PropertyInfo(Variant::INT,"dialog_id")));
@@ -106,6 +107,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["expanded"]=model.layout.expanded;
     result["quest_first"]=quest.first;
     result["quest_selected"]=quest.selected;
+    result["trade_confirmed"]=trade_confirmed;
     result["trade_visible"]=trade.visible;
     result["quest_visible"]=quest.visible;
     result["quest_bounds"]=rect(quest.rect);
@@ -600,7 +602,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;trade.end_drag();mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;trade.end_drag();trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
@@ -982,7 +984,7 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
 }
 
 bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
-    if (trade.dragging) return trade_pointer(kind,position);
+    if (trade.dragging || trade_confirm_pressed) return trade_pointer(kind,position);
     if (quest.dragging || quest.pressed>=0 || quest.scroll_captured) return quest_pointer(kind,position);
     if (mount.dragging || mount.pressed>=0) return mount_pointer(kind,position);
     if (portrait_picker.scrolling || portrait_pressed>=0) return portrait_input(kind,position);
@@ -2090,15 +2092,26 @@ bool Mir3HudView::apply_minimap_reply(int map_number) {
     return true;
 }
 
+bool Mir3HudView::set_trade_gold(int64_t local,int64_t remote) {
+    if (!trade.visible || local<0 || local>UINT32_MAX || remote<0 || remote>UINT32_MAX) return false;
+    trade_gold={static_cast<std::uint32_t>(local),static_cast<std::uint32_t>(remote)};
+    queue_redraw();
+    return true;
+}
+
 bool Mir3HudView::open_trade(String partner) {
     if (partner.is_empty()) {
         if (trade.visible) trade.toggle();
+        trade_confirm_pressed=false;
+        trade_confirmed=false;
         queue_redraw();
         return true;
     }
     if (frame(1390).is_null()) return false;
     if (trade.visible) return true;
     trade_partner=partner;
+    trade_gold={};
+    trade_confirmed=false;
     trade.toggle();
     raise_panel(Panel::trade);
     if (!inventory.visible) {
@@ -2116,16 +2129,34 @@ void Mir3HudView::draw_trade() {
     if (skin.is_valid()) sprite(1390,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
     text(character_name.utf8().get_data(),{x,y,228,30},0xfac8c8);
     text(trade_partner.utf8().get_data(),{x+247,y,120,30},0xfac8c8);
+    for (int side=0;side<2;++side) {
+        auto amount=std::to_string(trade_gold[side]);
+        for (int i=int(amount.size())-3;i>0;i-=3) amount.insert(i,1,',');
+        text(amount,{x+(side==0?70:350),y+289,side==0?113:85,25},0xfac8c8);
+    }
+    sprite(trade_confirm_pressed && !trade_confirmed?1396:1394,{x+226,y+279});
 }
 
 bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
     const bool inside=rect(trade.rect).has_point(position);
+    const auto confirm=frame(1394);
+    const bool on_confirm=confirm.is_valid() &&
+        Rect2(Vector2(trade.rect[0]+226,trade.rect[1]+279),confirm->get_size()).has_point(position);
     bool captured=false;
     if (kind==0 && inside) {
         raise_panel(Panel::trade);
-        trade.begin_drag(int(position.x),int(position.y),position.y>=trade.rect[1]+56);
-    } else if (kind==1) captured=trade.move_drag(int(position.x),int(position.y));
-    else if (kind==2) captured=trade.end_drag();
+        trade_confirm_pressed=on_confirm;
+        trade.begin_drag(int(position.x),int(position.y),on_confirm || position.y>=trade.rect[1]+56);
+    } else if (kind==1) captured=trade.move_drag(int(position.x),int(position.y)) || trade_confirm_pressed;
+    else if (kind==2) {
+        const bool activate=trade_confirm_pressed && on_confirm && !trade_confirmed;
+        captured=trade.end_drag() || trade_confirm_pressed;
+        trade_confirm_pressed=false;
+        if (activate) {
+            trade_confirmed=true;
+            emit_signal("trade_requested",1030,String());
+        }
+    }
     if (!inside && !captured) return false;
     controller.cancel();
     get_viewport()->set_input_as_handled();

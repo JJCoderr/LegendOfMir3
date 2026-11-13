@@ -791,6 +791,11 @@ func run() -> void:
 	hud.set_character_identity("比奇守卫", "", "", "")
 	if not check(hud.open_trade("比奇旅人") and hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_visible, "trade reply opens paired panel and inventory"): return
 	if not await capture("hud-trade-window"): return
+	if not check(hud.set_trade_gold(12500, 3420), "apply trade gold totals"): return
+	click_at(Vector2(238, 285), true)
+	click_at(Vector2(238, 285), false)
+	if not check(hud.hud_snapshot().trade_confirmed and trades[-1] == [1030, ""], "confirm sends original trade request"): return
+	if not await capture("hud-trade-gold-confirm"): return
 	hud.open_trade("")
 	if not check(not hud.hud_snapshot().trade_visible, "trade session closes panel"): return
 	var exit_requests: Array[int] = []
