@@ -261,6 +261,9 @@ private:
     int walk_frame=-1, player_facing=4;
     double movement_ms=0;
     void advance_map_step(double delta);
+    void start_map_step(godot::Vector2i destination);
+    std::deque<mir3::MapCell> map_route;
+    bool walk_to_map_cell(godot::Vector2i destination);
     godot::Vector2i player_pixel() const;
     godot::Vector2i map_camera() const;
     void draw_terrain();

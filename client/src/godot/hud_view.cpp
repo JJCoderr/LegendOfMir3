@@ -65,6 +65,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_mount_reply","identifier","recognition"),&Mir3HudView::apply_mount_reply);
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
     ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
+    ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
     ClassDB::bind_method(D_METHOD("set_minimap_markers","type_five","nearby_green","nearby_orange"),&Mir3HudView::set_minimap_markers);
@@ -432,7 +433,31 @@ Vector2i Mir3HudView::player_pixel() const {
     return pixel;
 }
 
+void Mir3HudView::start_map_step(Vector2i destination) {
+    const auto delta=destination-player_cell;
+    const mir3::MapCell direction{delta.x,delta.y};
+    player_facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),direction)-mir3::map_directions.begin());
+    step_origin=player_cell;
+    step_destination=destination;
+    walk_frame=0;
+    movement_ms=0;
+    queue_redraw();
+}
+
+bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
+    if (!terrain_ready) return false;
+    const auto start=walk_frame>=0?step_destination:player_cell;
+    map_route=terrain.route({start.x,start.y},{destination.x,destination.y},{413,409});
+    return !map_route.empty();
+}
+
 void Mir3HudView::advance_map_step(double delta) {
+    if (walk_frame<0 && !map_route.empty()) {
+        const auto [x,y]=map_route.front();
+        map_route.pop_front();
+        start_map_step({x,y});
+        return;
+    }
     if (walk_frame<0) return;
     movement_ms+=delta*1000;
     if (movement_ms<=95) return;
@@ -872,14 +897,8 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             const auto delta=destination-player_cell;
             if (std::max(std::abs(delta.x),std::abs(delta.y))==1 &&
                 destination!=Vector2i(413,409) && terrain.walkable(destination.x,destination.y)) {
-                const std::array<Vector2i,8> directions{{
-                    {0,-1},{1,-1},{1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1}
-                }};
-                player_facing=int(std::find(directions.begin(),directions.end(),delta)-directions.begin());
-                step_origin=player_cell;
-                step_destination=destination;
-                walk_frame=0;
-                movement_ms=0;
+                map_route.clear();
+                start_map_step(destination);
                 get_viewport()->set_input_as_handled();
             }
         }

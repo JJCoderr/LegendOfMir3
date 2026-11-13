@@ -101,6 +101,13 @@ func run() -> void:
 			await process_frame
 		if not check(hud.hud_snapshot().walk_frame == -1 and hud.hud_snapshot().player_cell == Vector2i(476, 360), "walk finishes in destination cell"): return
 		if not await capture("bichon-step-camera"): return
+		if not check(hud.walk_to_map_cell(Vector2i(476, 362)), "plan route across Bichon cells"): return
+		var route_deadline := Time.get_ticks_msec() + 3000
+		while Time.get_ticks_msec() < route_deadline:
+			await process_frame
+			if hud.hud_snapshot().player_cell == Vector2i(476, 362) and hud.hud_snapshot().walk_frame == -1: break
+		if not check(hud.hud_snapshot().player_cell == Vector2i(476, 362), "route reaches destination"): return
+		if not await capture("bichon-route-arrival"): return
 		hud.set_meta("map_camera_cell", Vector2i(404, 402))
 		hud.queue_redraw()
 		if not await capture("bichon-merchant"): return
