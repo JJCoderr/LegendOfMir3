@@ -274,6 +274,11 @@ private:
     struct ShopGood { std::string name; int variants, price, stock; };
     std::vector<ShopGood> shop_goods;
     int shop_actor=0, shop_pressed=-1, shop_first=0;
+    struct ShopOffer { std::string name; int icon, price; std::uint32_t id; };
+    std::vector<ShopOffer> shop_offers;
+    int shop_selected=-1;
+    bool apply_shop_offers(int actor,int index,godot::PackedStringArray names,godot::PackedInt32Array icons,
+        godot::PackedInt32Array prices,godot::PackedInt64Array identifiers);
     void draw_shop();
     bool shop_input(int kind,godot::Vector2 pointer);
     void draw_npc_dialogue();
