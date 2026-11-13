@@ -421,6 +421,10 @@ func run() -> void:
 	DirAccess.remove_absolute("user://%s_player.fac" % portrait_server)
 	DirAccess.remove_absolute(portrait_dir.path_join("sample.JPG"))
 	DirAccess.remove_absolute(portrait_dir)
+	key(KEY_Q)
+	if not await capture("portrait-behind-status"): return
+	key(KEY_ESCAPE)
+	if not check(not hud.hud_snapshot().status_visible and hud.hud_snapshot().portrait_visible, "status closes before underlying portrait picker"): return
 	key(KEY_ESCAPE)
 	if not check(not hud.hud_snapshot().portrait_visible, "portrait escape"): return
 	var input: LineEdit = hud.get_node("ChatInput")

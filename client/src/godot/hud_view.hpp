@@ -51,7 +51,8 @@ protected:
 private:
     mir3::HudModel model;
     mir3::PortraitPicker portrait_picker;
-    bool portrait_visible=false,portrait_entry_pressed=false;
+    mir3::DraggablePanel portrait_panel{mir3::PortraitPicker::initial};
+    bool portrait_entry_pressed=false;
     int portrait_pressed=-1;
     void draw_portrait_picker();
     void enumerate_portraits();
@@ -135,8 +136,8 @@ private:
     godot::Vector2 status_body_offset;
     void draw_status();
     void toggle_status();
-    enum class Panel { group, skills, status, inventory, guild, options };
-    std::array<Panel,6> panel_order{Panel::group,Panel::skills,Panel::status,Panel::inventory,Panel::guild,Panel::options};
+    enum class Panel { group, skills, status, inventory, guild, options, portrait };
+    std::array<Panel,7> panel_order{Panel::group,Panel::skills,Panel::status,Panel::inventory,Panel::guild,Panel::options,Panel::portrait};
     void raise_panel(Panel panel);
     const mir3::DraggablePanel& panel_state(Panel panel) const;
     bool panel_covered(Panel panel,godot::Vector2 point) const;

@@ -76,7 +76,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_expanded_count"]=int(chat_history.lines(true).size());
     result["chat_compact_first"]=chat_history.first(false);
     result["chat_expanded_first"]=chat_history.first(true);
-    result["portrait_visible"]=portrait_visible;
+    result["portrait_visible"]=portrait_panel.visible;
     result["custom_portrait"]=active_portrait.is_valid();
     result["portrait_preview"]=portrait_preview.is_valid();
     result["portrait_count"]=int64_t(portrait_picker.names.size());
@@ -266,6 +266,7 @@ void Mir3HudView::_draw() {
         case Panel::inventory: draw_inventory(); break;
         case Panel::guild: draw_guild(); break;
         case Panel::options: draw_options(); break;
+        case Panel::portrait: draw_portrait_picker(); break;
         }
     }
     draw_skill_key_menu();
@@ -273,7 +274,6 @@ void Mir3HudView::_draw() {
     if (guild_editor.visible) draw_guild_editor();
     if (!model.layout.expanded && Rect2(535,486,81,94).has_point(inventory_cursor))
         sprite(mir3::HudLayout::portrait_entry_frame(portrait_entry_pressed),mir3::HudLayout::portrait_entry_position);
-    if (portrait_visible) draw_portrait_picker();
     if (group_request) draw_group_dialog();
     button_hint();
     if (bag.held) {
@@ -364,10 +364,11 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     if (group_request && group_dialog_input(event)) return;
     if (guild_editor.visible && guild_editor_input(event)) return;
     Ref<InputEventMouseMotion> motion=event;
-    if (motion.is_valid()) { auto p=motion->get_position();inventory_cursor=p;if (portrait_input(1,p)) return;if (panel_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
+    if (motion.is_valid()) { auto p=motion->get_position();inventory_cursor=p;if (panel_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
     Ref<InputEventMouseButton> button=event;
-    if (portrait_visible && button.is_valid() && button->is_pressed() &&
-        rect(mir3::PortraitPicker::initial).has_point(button->get_position())) {
+    if (portrait_panel.visible && button.is_valid() && button->is_pressed() &&
+        rect(portrait_panel.rect).has_point(button->get_position()) &&
+        !panel_covered(Panel::portrait,button->get_position())) {
         const auto index=button->get_button_index();
         if (index==MOUSE_BUTTON_WHEEL_UP || index==MOUSE_BUTTON_WHEEL_DOWN) {
             portrait_picker.wheel(index==MOUSE_BUTTON_WHEEL_UP?1:-1);
@@ -407,7 +408,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         }
     }
     if (button.is_valid() && button->is_pressed() && (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) && rect(mir3::HudLayout::chat_frame(model.layout.expanded)).has_point(button->get_position()) &&
-        !covers_wheel(options) && !covers_wheel(guild) && !covers_wheel(group) && !covers_wheel(skills) &&
+        !covers_wheel(portrait_panel) && !covers_wheel(options) && !covers_wheel(guild) && !covers_wheel(group) && !covers_wheel(skills) &&
         !covers_wheel(status) && !covers_wheel(inventory)) {
         chat_history.scroll(model.layout.expanded).wheel(button->get_button_index()==MOUSE_BUTTON_WHEEL_UP?1:-1,int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded);
         get_viewport()->set_input_as_handled();queue_redraw();return;
@@ -417,7 +418,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         inventory_cursor=p;
         const int kind=button->is_pressed()?0:2;
         if (skill_menu_input(kind,p,button->is_double_click())) return;
-        if (portrait_input(kind,p) || panel_pointer(kind,p) || scroll_input(kind,p)) return;
+        if (panel_pointer(kind,p) || scroll_input(kind,p)) return;
         const auto entry=frame(2096);
         const auto anchor=mir3::HudLayout::portrait_entry_position;
         const bool portrait_hit=!model.layout.expanded && entry.is_valid() &&
@@ -425,9 +426,10 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         if (portrait_hit || portrait_entry_pressed) {
             portrait_entry_pressed=kind==0 && portrait_hit;
             if (kind==2 && portrait_hit) {
-                if (portrait_visible) close_portrait_picker();
+                if (portrait_panel.visible) close_portrait_picker();
                 else {
-                    portrait_visible=true;
+                    portrait_panel.visible=true;
+                    raise_panel(Panel::portrait);
                     enumerate_portraits();
                     emit_signal("portrait_list_requested");
                 }
@@ -580,7 +582,6 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         get_viewport()->set_input_as_handled();
         return;
     }
-    if (code==KEY_ESCAPE && portrait_visible) { close_portrait_picker();get_viewport()->set_input_as_handled();return; }
     if (code==KEY_N) {
         toggle_options();get_viewport()->set_input_as_handled();return;
     }
@@ -594,6 +595,7 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
             case Panel::inventory: toggle_inventory(); break;
             case Panel::guild: guild.toggle();queue_redraw();break;
             case Panel::options: toggle_options();break;
+            case Panel::portrait: close_portrait_picker();break;
             }
             get_viewport()->set_input_as_handled();
             return;
@@ -795,6 +797,7 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
 }
 
 bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
+    if (portrait_picker.scrolling || portrait_pressed>=0) return portrait_input(kind,position);
     if (options.dragging || audio_drag>=0) return options_pointer(kind,position);
     if (guild.dragging || guild_scroll.captured || guild_layout.pressed>=0) return guild_pointer(kind,position);
     if (status.dragging || status_close_pressed) return status_pointer(kind,position);
@@ -811,6 +814,7 @@ bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
         case Panel::inventory: if (inventory_pointer(kind,position)) return true; break;
         case Panel::guild: if (guild_pointer(kind,position)) return true; break;
         case Panel::options: if (options_pointer(kind,position)) return true; break;
+        case Panel::portrait: if (portrait_input(kind,position)) return true; break;
         }
     }
     return false;
@@ -1642,7 +1646,7 @@ void Mir3HudView::set_portrait_names(PackedStringArray names) {
 }
 
 void Mir3HudView::close_portrait_picker() {
-    portrait_visible=false;
+    portrait_panel.visible=false;
     portrait_pressed=-1;
     portrait_preview.unref();
     portrait_picker.close();
@@ -1686,7 +1690,7 @@ int Mir3HudView::portrait_button_at(Vector2 point) {
 }
 
 bool Mir3HudView::portrait_input(int kind,Vector2 point) {
-    if (!portrait_visible) return false;
+    if (!portrait_panel.visible) return false;
     using Picker=mir3::PortraitPicker;
     const auto thumb=frame(Picker::scroll[0]);
     const auto tick=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -1843,6 +1847,7 @@ const mir3::DraggablePanel& Mir3HudView::panel_state(Panel panel) const {
     case Panel::inventory: return inventory;
     case Panel::guild: return guild;
     case Panel::options: return options;
+    case Panel::portrait: return portrait_panel;
     }
     return inventory;
 }
@@ -1851,8 +1856,7 @@ bool Mir3HudView::panel_covered(Panel panel,Vector2 point) const {
     const auto covers=[&](const mir3::DraggablePanel& state) {
         return state.visible && rect(state.rect).has_point(point);
     };
-    if (covers(guild_editor) ||
-        (portrait_visible && rect(mir3::PortraitPicker::initial).has_point(point)) || group_request)
+    if (covers(guild_editor) || group_request)
         return true;
     for (auto it=panel_order.rbegin();it!=panel_order.rend() && *it!=panel;++it)
         if (covers(panel_state(*it))) return true;
