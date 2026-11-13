@@ -4,6 +4,7 @@
 #include <string_view>
 #include <vector>
 namespace mir3 {
+std::string multiline_to_ansi(std::string_view utf8);
 std::string edit_multiline_ansi(std::string_view previous_ansi,std::string_view proposed_utf8);
 struct NativeText {
     std::vector<std::uint8_t> rgba;

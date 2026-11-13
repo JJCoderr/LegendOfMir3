@@ -625,6 +625,15 @@ func run() -> void:
 	click_at(Vector2(660, 328), true)
 	click_at(Vector2(660, 328), false)
 	if not check(not editor.visible and guild_edits.size() == 1, "guild editor cancel"): return
+	hud.set_guild_overview("Bichon", PackedStringArray(), PackedStringArray(["A".repeat(4010)]))
+	click_at(Vector2(400, 415), true)
+	click_at(Vector2(400, 415), false)
+	if not check(editor.visible and editor.text.length() == 4011, "long prefill bypasses user edit limit"): return
+	editor.text = editor.text.left(4005)
+	if not await capture("guild-announcement-long-prefill"): return
+	click_at(Vector2(575, 130), true)
+	click_at(Vector2(575, 130), false)
+	if not check(guild_edits.size() == 2 and guild_edits[1] == [1040, "A".repeat(3999)], "long prefill submits at most 3999 bytes"): return
 	key(KEY_N)
 	key(KEY_E)
 	if not await capture("hud-six-panel-order"): return

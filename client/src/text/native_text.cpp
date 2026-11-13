@@ -42,14 +42,19 @@ std::string utf8_to_ansi(std::string_view text) {
     return encode(wide.data(),count,CP_ACP);
 }
 
-std::string edit_multiline_ansi(std::string_view previous_ansi,std::string_view proposed_utf8) {
-    previous_ansi=previous_ansi.substr(0,previous_ansi.find(char(0)));
+std::string multiline_to_ansi(std::string_view proposed_utf8) {
     const auto proposed=utf8_to_ansi(proposed_utf8);
     std::string next;
     for (std::size_t i=0;i<proposed.size() && proposed[i];++i) {
         if (proposed[i]=='\n' && (i==0 || proposed[i-1]!='\r')) next+='\r';
         next+=proposed[i];
     }
+    return next;
+}
+
+std::string edit_multiline_ansi(std::string_view previous_ansi,std::string_view proposed_utf8) {
+    previous_ansi=previous_ansi.substr(0,previous_ansi.find(char(0)));
+    const auto next=multiline_to_ansi(proposed_utf8);
     const auto boundary=[](std::string_view value,std::size_t index) {
         std::size_t i=0;
         while (i<index) i+=IsDBCSLeadByteEx(CP_ACP,static_cast<BYTE>(value[i])) && i+1<value.size()?2:1;

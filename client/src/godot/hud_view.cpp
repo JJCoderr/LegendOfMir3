@@ -1878,7 +1878,7 @@ void Mir3HudView::open_guild_editor(bool announcement) {
     const auto& editable=guild_editable[announcement?0:1];
     String initial;
     if (!editable.is_empty()) initial=String("\n").join(editable)+String("\n");
-    guild_edit_ansi=mir3::edit_multiline_ansi("",initial.utf8().get_data());
+    guild_edit_ansi=mir3::multiline_to_ansi(initial.utf8().get_data());
     guild_edit->set_text(String::utf8(mir3::ansi_to_utf8(guild_edit_ansi).c_str()).replace("\r\n","\n"));
     guild_editor.visible=true;
     guild_edit_pressed=-1;
