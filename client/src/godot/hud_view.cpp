@@ -549,6 +549,7 @@ void Mir3HudView::button_hint() {
                 resolve(std::array{1394,226,279},trade_confirmed?1303:1300);
         } else if (*it==Panel::quest) {
             if (quest.pressed!=0) resolve(quest.buttons[0],2200);
+            if (quest.pressed!=1) resolve(quest.buttons[1],1052);
         } else if (*it==Panel::guild) {
             for (int i=0;i<9;++i) resolve(mir3::GuildLayout::buttons[i],guild_layout.tooltip(i));
         } else if (*it==Panel::skills) {

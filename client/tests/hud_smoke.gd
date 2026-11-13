@@ -909,6 +909,11 @@ func run() -> void:
 	click_at(Vector2(750, 490), false)
 	if not check(hud.hud_snapshot().quest_visible and hud.hud_snapshot().quest_bounds == Rect2(0, 0, 340, 440), "quest HUD button and original bounds"): return
 	if not await capture("hud-quest-window"): return
+	var quest_close_hover := InputEventMouseMotion.new()
+	quest_close_hover.position = Vector2(280, 117)
+	Input.parse_input_event(quest_close_hover)
+	for i in 30: await process_frame
+	if not await capture("hud-quest-close-hint"): return
 	var quest_names := PackedStringArray(["比奇省的委托", "送信给药店老板", "寻找失踪的矿工"])
 	if not check(hud.set_quest_entries(quest_names, PackedInt32Array([0, 1, 0])), "apply quest list"): return
 	var quest_details: Array[int] = []
