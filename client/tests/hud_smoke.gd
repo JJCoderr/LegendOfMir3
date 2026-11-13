@@ -1159,9 +1159,26 @@ func run() -> void:
 			"collapsed chat restores the rendered portrait map markers"): return
 	while Time.get_ticks_msec() < portrait_map_deadline:
 		await process_frame
+	key(KEY_V)
+	if not check(map_requests.size() == 6 and hud.apply_minimap_reply(1001)
+		and hud.hud_snapshot().minimap_visible and hud.hud_snapshot().portrait_map_visible,
+		"both map views can display the same reply"): return
+	hud.set_map_location("盟重省", 220, 240)
+	if not check(map_requests.size() == 7 and hud.hud_snapshot().portrait_map_mode
+		and not hud.hud_snapshot().portrait_map_visible and not hud.hud_snapshot().minimap_visible,
+		"map change hides both old views and sends a single request"): return
+	if not check(hud.apply_minimap_reply(1002) and hud.hud_snapshot().portrait_map_visible
+		and hud.hud_snapshot().minimap_visible, "710 restores both views with the new map"): return
+	var close_maps_deadline := Time.get_ticks_msec() + 1010
+	if not await capture("hud-both-maps-after-transition"): return
+	while Time.get_ticks_msec() < close_maps_deadline:
+		await process_frame
+	key(KEY_V)
 	key(KEY_J)
 	if not check(not hud.hud_snapshot().portrait_map_mode and not hud.hud_snapshot().portrait_map_visible,
 		"J returns from the portrait map"): return
+	if not check(not hud.hud_snapshot().minimap_visible, "V closes the restored corner map"): return
+	hud.set_map_location("比奇省", 337, 267)
 	if not check(hud.hud_snapshot().inventory_visible and hud.hud_snapshot().inventory_position == Vector2i(518, 0), "inventory origin"): return
 	click_at(overlap_cell, true)
 	click_at(overlap_cell, false)
