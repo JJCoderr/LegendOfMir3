@@ -248,7 +248,9 @@ private:
     mir3::HudController controller{model};
     mir3::WilArchive archive;
     mir3::MapTerrain terrain;
-    std::array<mir3::WilArchive,3> terrain_archives;
+    std::array<mir3::WilArchive,75> terrain_archives;
+    bool animated_map_objects=false;
+    godot::Ref<godot::ImageTexture> terrain_texture(int package,int id);
     std::map<std::pair<int,int>,godot::Ref<godot::ImageTexture>> terrain_frames;
     bool terrain_ready=false;
     void draw_terrain();

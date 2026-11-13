@@ -228,9 +228,17 @@ void Mir3HudView::_ready() {
     portrait_directory=ProjectSettings::get_singleton()->globalize_path(String(get_meta("portrait_directory",root)));
     const auto resource_root=std::filesystem::u8path(root.utf8().get_data());
     if (bool(get_meta("show_terrain",true)) && terrain.open(resource_root/"Map"/"0.map")) {
-        constexpr std::array names{"Tilesc","Tiles30c","Tiles5c"};
-        for (std::size_t i=0;i<names.size();++i)
-            if (terrain_archives[i].open(resource_root/"Data"/names[i])) terrain_ready=true;
+        constexpr std::array names{"Tilesc","Tiles30c","Tiles5c","SmTilesc","Housesc","Cliffsc",
+            "Dungeonsc","Innersc","Furnituresc","Wallsc","SmObjectsc","Animationsc","Object1c","Object2c","Custom"};
+        constexpr std::array regions{"","Wood","Sand","Snow","Forest"};
+        for (std::size_t region=0;region<regions.size();++region) {
+            const auto directory=resource_root/"Data"/regions[region];
+            if (!std::filesystem::is_directory(directory)) continue;
+            for (std::size_t i=0;i<names.size();++i) {
+                const bool opened=terrain_archives[region*names.size()+i].open(directory/names[i]);
+                if (opened && i<3) terrain_ready=true;
+            }
+        }
     }
     if (!portraits.open(resource_root/"Data"/"ProgUse")) UtilityFunctions::push_error("Cannot read ProgUse portraits.");
     if (!monster_portraits.open(resource_root/"Data"/"MonImg")) UtilityFunctions::push_error("Cannot read MonImg portraits.");
@@ -374,21 +382,46 @@ void Mir3HudView::draw_target_vitals() {
     }
 }
 
+Ref<ImageTexture> Mir3HudView::terrain_texture(int package,int id) {
+    if (package>=int(terrain_archives.size()) || id>=65535) return {};
+    const auto key=std::pair{package,id};
+    if (const auto found=terrain_frames.find(key);found!=terrain_frames.end()) return found->second;
+    const auto decoded=terrain_archives[package].frame(id);
+    return terrain_frames.emplace(key,decoded?texture(decoded->pixels.rgba,decoded->width,decoded->height):Ref<ImageTexture>{}).first->second;
+}
+
 void Mir3HudView::draw_terrain() {
     if (!terrain_ready) return;
-    // The old offline Bichon session begins near cell (475,360).
     constexpr int start_x=466,start_y=352;
     for (int row=0;row<10;++row) for (int column=0;column<9;++column) {
-        const auto key=terrain.tile(start_x+2*column,start_y+2*row);
-        const auto [package,id]=key;
-        if (package>=int(terrain_archives.size()) || id==65535) continue;
-        if (!terrain_frames.contains(key)) {
-            const auto decoded=terrain_archives[package].frame(id);
-            terrain_frames[key]=decoded?texture(decoded->pixels.rgba,decoded->width,decoded->height):Ref<ImageTexture>{};
-        }
-        if (const auto& image=terrain_frames.at(key);image.is_valid())
+        const auto [package,id]=terrain.tile(start_x+2*column,start_y+2*row);
+        if (const auto image=terrain_texture(package,id);image.is_valid())
             draw_texture(image,Vector2(96*column,64*row));
     }
+    animated_map_objects=false;
+    if (!bool(get_meta("show_map_objects",true))) return;
+
+    struct Sprite { Ref<ImageTexture> image; Vector2 position; };
+    std::vector<Sprite> tall_objects;
+    constexpr std::array animation_ms{150,200,250,300,350,400,420,450};
+    const auto tick=ticks_msec();
+    for (int row=-4;row<31;++row) for (int column=-5;column<21;++column) {
+        const Vector2 pixel(48*column,32*row);
+        for (int layer=0;layer<2;++layer) {
+            const auto entry=terrain.object(start_x+column,start_y+row,layer);
+            if (entry.package>=75 || entry.package%15<3 || entry.frame==65535) continue;
+            const int count=entry.animation&15;
+            const bool animated=entry.package%15==11 && entry.animation!=255 && count>1;
+            animated_map_objects|=animated;
+            const int id=entry.frame+(animated?int(tick/animation_ms[(entry.animation>>4)&7]%count):0);
+            const auto image=terrain_texture(entry.package,id);
+            if (image.is_null()) continue;
+            const auto position=pixel+Vector2(0,32-image->get_height());
+            if (image->get_width()<=48 && image->get_height()<=32) draw_texture(image,position);
+            else tall_objects.push_back({image,position});
+        }
+    }
+    for (const auto& object:tall_objects) draw_texture(object.image,object.position);
 }
 
 void Mir3HudView::_draw() {
@@ -608,7 +641,7 @@ void Mir3HudView::_process(double) {
         if (!target_focus.displayed()) queue_redraw();
     }
     // Original button tooltip grows once per draw, not once per mouse event.
-    if (minimap.visible || model.hovered>=0 || (button_tooltip.expanding && !button_tooltip.previous.empty())) queue_redraw();
+    if (animated_map_objects || minimap.visible || model.hovered>=0 || (button_tooltip.expanding && !button_tooltip.previous.empty())) queue_redraw();
 }
 void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     const auto a=bounds.position,b=bounds.get_end();

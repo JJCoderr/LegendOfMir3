@@ -70,7 +70,18 @@ func run() -> void:
 	if not check(hud.hud_snapshot().ready, "original resource loading"): return
 	if OS.get_cmdline_user_args().has("--terrain"):
 		if not check(hud.hud_snapshot().terrain_ready, "Bichon terrain loaded"): return
+		hud.set_meta("show_map_objects", false)
+		hud.queue_redraw()
 		if not await capture("bichon-terrain-hud"): return
+		var ground: Image
+		if OS.get_cmdline_user_args().has("--screenshots"):
+			ground = root.get_texture().get_image()
+		hud.set_meta("show_map_objects", true)
+		hud.queue_redraw()
+		if not await capture("bichon-map-objects"): return
+		if ground != null:
+			var scene := root.get_texture().get_image()
+			if not check(ground.get_region(Rect2i(0, 0, 800, 450)).get_data() != scene.get_region(Rect2i(0, 0, 800, 450)).get_data(), "original map objects change scene pixels"): return
 		if OS.get_cmdline_user_args().has("--screenshots"):
 			var frame := root.get_texture().get_image()
 			if not check(frame.get_pixel(100, 100) != frame.get_pixel(200, 200), "Bichon terrain pixels"): return

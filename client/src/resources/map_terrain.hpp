@@ -17,7 +17,7 @@ public:
         if (w<2 || h<2 || w>8192 || h>8192 || w%2 || h%2) return false;
         const auto cells=std::size_t(w)*h;
         if (data.size()!=28+cells/4*3+cells*14) return false;
-        data.resize(28+cells/4*3);
+        cell_start=28+cells/4*3;
         tiles=std::move(data);
         width=w;
         height=h;
@@ -30,7 +30,16 @@ public:
         return {tiles[at],tiles[at+1]|(tiles[at+2]<<8)};
     }
 
+    struct Object { int package=255, frame=65535, animation=255; };
+    Object object(int x,int y,int layer) const {
+        if (x<0 || y<0 || x>=width || y>=height || layer<0 || layer>1) return {};
+        const auto at=cell_start+(std::size_t(x)*height+y)*14;
+        const auto frame=at+5+2*layer;
+        return {tiles[at+4-layer],tiles[frame]|(tiles[frame+1]<<8),tiles[at+1+layer]};
+    }
+
 private:
+    std::size_t cell_start=0;
     int width=0,height=0;
     std::vector<std::uint8_t> tiles;
 };
