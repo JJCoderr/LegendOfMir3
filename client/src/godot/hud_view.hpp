@@ -72,6 +72,7 @@ public:
     void set_map_location(godot::String name,int x,int y);
     bool set_scene_npc(int actor,godot::Vector2i cell,int first_frame);
     bool set_scene_chicken(int actor,godot::Vector2i cell);
+    bool set_scene_human(int actor,godot::Vector2i cell,int facing,int profession,godot::String name);
     void set_minimap_position(int x,int y);
     void set_minimap_markers(godot::PackedVector2Array type_five,godot::PackedVector2Array nearby_green,
         godot::PackedVector2Array nearby_orange);
@@ -277,6 +278,11 @@ private:
     };
     std::map<int,SceneActor> scene_npcs;
     std::map<int,SceneActor> scene_chickens;
+    struct SceneHuman : SceneActor {
+        int profession=0;
+        godot::String name;
+    };
+    std::map<int,SceneHuman> scene_humans;
     mir3::WilArchive map_chickens;
     void update_scene_target(godot::Vector2 pointer);
     bool scene_occupied(godot::Vector2i cell) const;

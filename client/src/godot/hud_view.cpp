@@ -97,6 +97,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
     ClassDB::bind_method(D_METHOD("set_scene_npc","actor","cell","first_frame"),&Mir3HudView::set_scene_npc);
     ClassDB::bind_method(D_METHOD("set_scene_chicken","actor","cell"),&Mir3HudView::set_scene_chicken);
+    ClassDB::bind_method(D_METHOD("set_scene_human","actor","cell","facing","profession","name"),&Mir3HudView::set_scene_human);
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
     ClassDB::bind_method(D_METHOD("set_minimap_markers","type_five","nearby_green","nearby_orange"),&Mir3HudView::set_minimap_markers);
     ClassDB::bind_method(D_METHOD("set_hovered_target","actor","type","shape","excluded","state","hp","max_hp","percent","cell"),
@@ -159,6 +160,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary chicken_bounds;
     for (const auto& [actor,chicken]:scene_chickens) chicken_bounds[actor]=chicken.bounds;
     result["scene_chicken_bounds"]=chicken_bounds;
+    Dictionary human_bounds;
+    for (const auto& [actor,human]:scene_humans) human_bounds[actor]=human.bounds;
+    result["scene_human_bounds"]=human_bounds;
     result["player_idle_frame"]=player_idle.frame();
     result["npc_dialogue_actor"]=npc_dialogue_actor;
     result["player_cell"]=player_cell;
@@ -1362,7 +1366,7 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
 }
 
 bool Mir3HudView::set_scene_npc(int actor,Vector2i cell,int first_frame) {
-    if (!terrain_ready || actor<=0 || scene_chickens.contains(actor) || first_frame<0 || first_frame>65532) return false;
+    if (!terrain_ready || actor<=0 || scene_chickens.contains(actor) || scene_humans.contains(actor) || first_frame<0 || first_frame>65532) return false;
     SceneActor npc{};
     npc.cell=cell;
     for (int i=0;i<int(npc.frames.size());++i) {
@@ -1377,11 +1381,12 @@ bool Mir3HudView::set_scene_npc(int actor,Vector2i cell,int first_frame) {
 
 bool Mir3HudView::scene_occupied(Vector2i cell) const {
     const auto occupies=[cell](const auto& actor) { return actor.second.cell==cell; };
-    return std::ranges::any_of(scene_npcs,occupies) || std::ranges::any_of(scene_chickens,occupies);
+    return std::ranges::any_of(scene_npcs,occupies) || std::ranges::any_of(scene_chickens,occupies) ||
+        std::ranges::any_of(scene_humans,occupies);
 }
 
 bool Mir3HudView::set_scene_chicken(int actor,Vector2i cell) {
-    if (!terrain_ready || actor<=0 || scene_npcs.contains(actor) || !terrain.walkable(cell.x,cell.y)) return false;
+    if (!terrain_ready || actor<=0 || scene_npcs.contains(actor) || scene_humans.contains(actor) || !terrain.walkable(cell.x,cell.y)) return false;
     SceneActor chicken{};
     chicken.cell=cell;
     // mir3_1.45 MockServer::sprite_frame uses the four west-facing Mon-3 frames.
@@ -1395,16 +1400,42 @@ bool Mir3HudView::set_scene_chicken(int actor,Vector2i cell) {
     return true;
 }
 
+bool Mir3HudView::set_scene_human(int actor,Vector2i cell,int facing,int profession,String name) {
+    if (!terrain_ready || actor<=0 || facing<0 || facing>=8 || profession<0 || profession>2 ||
+        scene_npcs.contains(actor) || scene_chickens.contains(actor) || !terrain.walkable(cell.x,cell.y)) return false;
+    SceneHuman human{};
+    human.cell=cell;
+    human.profession=profession;
+    human.name=std::move(name);
+    std::copy_n(map_human_frames.begin()+facing*10,human.frames.size(),human.frames.begin());
+    if (human.frames.front().image.is_null()) return false;
+    scene_humans.insert_or_assign(actor,std::move(human));
+    queue_redraw();
+    return true;
+}
+
 void Mir3HudView::update_scene_target(Vector2 pointer) {
-    if (scene_chickens.empty()) return;
-    auto hit=scene_chickens.end();
-    if (spell_pointer_available()) {
-        for (auto it=scene_chickens.begin();it!=scene_chickens.end();++it)
-            if (it->second.bounds.has_point(pointer) && (hit==scene_chickens.end() || it->second.cell.y>=hit->second.cell.y))
+    const auto pick=[pointer](const auto& actors) {
+        auto hit=actors.end();
+        for (auto it=actors.begin();it!=actors.end();++it)
+            if (it->second.bounds.has_point(pointer) && (hit==actors.end() || it->second.cell.y>=hit->second.cell.y))
                 hit=it;
+        return hit;
+    };
+    if (spell_pointer_available()) {
+        const auto chicken=pick(scene_chickens);
+        const auto human=pick(scene_humans);
+        if (human!=scene_humans.end() && (chicken==scene_chickens.end() || human->second.cell.y>=chicken->second.cell.y)) {
+            set_hovered_human(human->first,0,human->second.profession,human->second.name);
+            return;
+        }
+        if (chicken!=scene_chickens.end()) {
+            set_hovered_target(chicken->first,3,20,false,0,0,0,0,chicken->second.cell);
+            return;
+        }
     }
-    if (hit!=scene_chickens.end()) set_hovered_target(hit->first,3,20,false,0,0,0,0,hit->second.cell);
-    else if (scene_chickens.contains(int(hovered_target))) set_hovered_target(0,0,0,false,0,0,0,0);
+    if (scene_chickens.contains(int(hovered_target)) || scene_humans.contains(int(hovered_target)))
+        set_hovered_target(0,0,0,false,0,0,0,0);
 }
 
 bool Mir3HudView::merchant_pointer(Vector2 pointer) {
@@ -1522,6 +1553,7 @@ void Mir3HudView::draw_terrain() {
     animated_map_objects=false;
     for (auto& [actor,npc]:scene_npcs) npc.bounds=Rect2();
     for (auto& [actor,chicken]:scene_chickens) chicken.bounds=Rect2();
+    for (auto& [actor,human]:scene_humans) human.bounds=Rect2();
     if (!bool(get_meta("show_map_objects",true))) return;
 
     struct Sprite { Ref<ImageTexture> image; Vector2 position; int row; };
@@ -1563,6 +1595,8 @@ void Mir3HudView::draw_terrain() {
             if (start_y+row==npc.cell.y) draw_scene_actor(npc,200);
         for (auto& [actor,chicken]:scene_chickens)
             if (start_y+row==chicken.cell.y) draw_scene_actor(chicken,180);
+        for (auto& [actor,human]:scene_humans)
+            if (start_y+row==human.cell.y) draw_scene_actor(human,200);
         const auto pixel=player_pixel();
         if (start_y+row==int(std::round(pixel.y/32.0))) {
             const auto step=step_destination-step_origin;

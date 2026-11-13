@@ -821,6 +821,21 @@ func run() -> void:
 		root.push_input(chicken_hover, true)
 		if not check(hud.hud_snapshot().target_portrait == 20, "hovering the map chicken displays its original portrait"): return
 		if not await capture("bichon-chicken-target"): return
+		var human_loaded := false
+		for offset in [Vector2i(-2, 1), Vector2i(-3, 2), Vector2i(-3, -2)]:
+			if hud.set_scene_human(5, hud.hud_snapshot().player_cell + offset, 4, 1, "比奇旅人"):
+				human_loaded = true
+				break
+		if not check(human_loaded, "load a remote human on a walkable Bichon cell"): return
+		await process_frame
+		await process_frame
+		var human_bounds: Rect2 = hud.hud_snapshot().scene_human_bounds[5]
+		var human_hover := InputEventMouseMotion.new()
+		human_hover.position = human_bounds.get_center()
+		root.push_input(human_hover, true)
+		if not check(human_bounds.has_area() and hud.hud_snapshot().target_portrait == 652,
+			"hovering the remote human displays the matching profession portrait"): return
+		if not await capture("bichon-remote-human"): return
 		quit()
 		return
 	for i in 20:
