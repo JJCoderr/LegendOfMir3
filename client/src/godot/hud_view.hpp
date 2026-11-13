@@ -4,6 +4,7 @@
 #include "resources/messages.hpp"
 #include "text/native_text.hpp"
 #include "chat/chat_history.hpp"
+#include "chat_input_view.hpp"
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/image_texture.hpp>
 #include <godot_cpp/classes/input_event.hpp>
@@ -29,6 +30,8 @@ private:
     mir3::Messages messages;
     mir3::HudButtonTooltip button_tooltip;
     mir3::ChatHistory chat_history;
+    Mir3ChatInput* chat_input=nullptr;
+    void chat_requested(godot::String value);
     bool loaded=false;
     std::map<int,godot::Ref<godot::ImageTexture>> frames;
     std::map<int,godot::Ref<godot::ImageTexture>> portrait_frames;

@@ -1,5 +1,6 @@
 #include "text/native_text.hpp"
 #include "chat/chat_history.hpp"
+#include "chat/chat_input.hpp"
 #include <algorithm>
 #include <iostream>
 int main() {
@@ -41,5 +42,18 @@ int main() {
     if (!following.input(2,0,0,false,12,12,122) || following.input(1,620,520,false,12,12,123)) return 12;
     for (int i=0;i<101;++i) history.post(std::to_string(i));
     for (bool expanded:{false,true}) if (history.lines(expanded).size()!=79 || history.lines(expanded).front().text!="22" || history.lines(expanded).back().text!="100") return 13;
+    mir3::ChatInput input;
+    if (input.set(std::string(91,'A'))!=std::string(90,'A')) return 14;
+    std::string dbcs45;
+    for (int i=0;i<45;++i) dbcs45+="测";
+    if (input.set(dbcs45+"试")!=dbcs45 || input.set(std::string(89,'A')+"测")!=std::string(89,'A')) return 15;
+    input.set(std::string(90,'A'));
+    const auto rejected=input.edit(std::string(45,'A')+"B"+std::string(45,'A'),46);
+    if (rejected.text!=std::string(90,'A') || rejected.caret!=45) return 16;
+    input.set(std::string(88,'A')+"BC");
+    const auto replace=input.edit(std::string(88,'A')+"测",89);
+    if (replace.text!=std::string(88,'A')+"测" || replace.caret!=89) return 17;
+    mir3::ChatMode mode;
+    if (mode.toggle(18)!=2633 || mode.prefix()!="!!" || mode.toggle(19)!=2635 || mode.prefix()!="!~" || mode.toggle(19)!=2626 || !mode.prefix().empty()) return 18;
     std::cout<<"GDI font="<<normal.face<<" level="<<level.face<<" dpi="<<normal.dpi<<" ACP="<<normal.code_page<<'\n';
 }

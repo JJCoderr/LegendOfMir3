@@ -23,7 +23,7 @@ Godot_v4.7.2-stable_win64_console.exe --path client/godot
 - `src/hud`：主界面显示数据、原版布局和输入控制器，不依赖 Godot。
 - `src/resources`：原包读取和像素解码。
 - `src/text`：从旧实现单独提取的 Windows GDI 字体渲染。
-- `src/chat`：聊天双宽度历史、原版 ANSI/GDI 换行、滚动条状态；输入框和发送尚待接入。
+- `src/chat`：聊天双宽度历史、原版 ANSI/GDI 换行、滚动条、ANSI 输入编辑和小组/行会模式。
 - `src/godot`：C++ Godot 视图和扩展注册，无 GDScript 游戏逻辑。
 - `tests`：原包、布局边界和行为验证。
 - `docs/evidence/hud`：旧项目的 HUD 取证材料；其中“已实现”描述指旧项目，不能当作本项目的完成记录。
@@ -41,5 +41,9 @@ Godot_v4.7.2-stable_win64_console.exe --path client/godot --script ../tests/hud_
 截图保存于 `client/build/screenshots/hud-chat-compact.png` 和 `hud-chat-expanded.png`，尺寸 800×600，来自实际 Godot 视口。测试自动注入聊天数据，检查后退出；不使用 Computer Use，不拆包导出资源。截图展示的是已迁移模块，不能代替原版同状态画面对比。后续新增对话框时需加入对应测试状态和截图。
 
 聊天记录复用旧版 `native_text.cpp` 的 `0x4366D0/0x48C03A` 路径：普通/展开分别按 341/429 像素测量 ANSI 字节前缀，最多保留 79 行；原版跨列表索引更新和普通滚动条按下更新展开索引的行为均保留。绘制采用 TextOutA 顶端原点，不用居中 DrawText；滚动条使用帧 1207，普通/展开行程 43/203。
+
+聊天输入按 `0x47B880` 的 12px/400 字重、CMList1074 字体及 90 ANSI 字节限制；按 `0x43EF10` 布置为普通 `(185,575,344,15)` / 展开 `(185,534,432,15)`。中文输入和选区替换在 C++ 中限制，不以 Unicode 字符数替代字节数。Enter/空格聚焦，Escape 保留草稿并离开，Enter 提交后清空并离开。按钮 16/17 替换拒绝/喊话前缀，18/19 切换互斥的小组/行会模式，进入输入时填 `!!` / `!~`。
+
+输入通过 `chat_requested(text)` 发出待发送请求，尚未连接 3030 网络消息，不制造服务端回显。控件按旧项目使用 Godot LineEdit，已验证位置、尺寸和编辑边界，但光标、选区、IME 与字体像素不是原生 Win32 EDIT 的完整复现，仍需对齐。测试通过真实 Godot 输入事件覆盖中文输入、提交、Escape、ANSI 上限、小组前缀；新增截图 `hud-chat-input.png`、`hud-chat-group-input.png`。
 
 后续按主界面、背包、人物、魔法、聊天、组队、行会及其余对话框分别提取模型、控制器、视图与证据，一项验证完成后再处理下一项。测试与验证使用命令行，不使用 Computer Use。

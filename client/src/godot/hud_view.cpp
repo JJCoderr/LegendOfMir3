@@ -26,6 +26,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("hud_snapshot"),&Mir3HudView::hud_snapshot);
     ClassDB::bind_method(D_METHOD("post_chat","value","foreground","background"),&Mir3HudView::post_chat);
     ADD_SIGNAL(MethodInfo("hud_action",PropertyInfo(Variant::INT,"button")));
+    ADD_SIGNAL(MethodInfo("chat_requested",PropertyInfo(Variant::STRING,"text")));
 }
 Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary result;
@@ -39,6 +40,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_expanded_count"]=int(chat_history.lines(true).size());
     result["chat_compact_first"]=chat_history.first(false);
     result["chat_expanded_first"]=chat_history.first(true);
+    result["chat_mode"]=chat_input?chat_input->mode.mode:0;
     return result;
 }
 void Mir3HudView::_ready() {
@@ -56,6 +58,10 @@ void Mir3HudView::_ready() {
     std::ifstream message_file(resource_root/"CmList.dat",std::ios::binary);
     std::vector<std::uint8_t> message_bytes{std::istreambuf_iterator<char>(message_file),{}};
     if (!messages.load(message_bytes)) UtilityFunctions::push_error("Cannot read CmList.dat captions.");
+    chat_input=memnew(Mir3ChatInput);
+    add_child(chat_input);
+    chat_input->configure(String::utf8(message(mir3::ChatInputSpec::font_message).c_str()));
+    chat_input->connect("chat_requested",callable_mp(this,&Mir3HudView::chat_requested));
     // 0x47F3F0 mode 0: legacy rectangles use ONE / INVSRCALPHA.
     // Textures use premultiplied alpha. Alpha rectangles are submitted as polygons.
     Ref<Shader> shader;shader.instantiate();
@@ -91,7 +97,12 @@ void Mir3HudView::text(const std::string& value,mir3::HudLayout::Rect r,unsigned
 void Mir3HudView::buttons() {
     for (int i=mir3::HudLayout::count(model.layout.expanded)-1;i>=0;--i) {
         const auto button=mir3::HudLayout::button(i,model.layout.expanded);
-        for (auto id:mir3::main_button_frames(i,model.hovered==i,model.pressed==i))
+        auto layers=mir3::main_button_frames(i,model.hovered==i,model.pressed==i);
+        if (chat_input && chat_input->mode.changed && (i==18 || i==19)) {
+            const int id=chat_input->mode.frame(i);
+            layers=mir3::button_frames({id,id,id,false},model.pressed==i?2:model.hovered==i?1:0);
+        }
+        for (auto id:layers)
             if (id>=0) sprite(id,{button[1],button[2]});
     }
 }
@@ -180,6 +191,7 @@ bool Mir3HudView::scroll_input(int kind,Vector2 position) {
     return consumed;
 }
 std::string Mir3HudView::message(int id) const { return mir3::ansi_to_utf8(messages.get(id)); }
+void Mir3HudView::chat_requested(String value) { emit_signal("chat_requested",value); }
 void Mir3HudView::tooltip(int kind) {
     std::string caption;
     if (kind<=2) caption=message(kind==1?2623:2622)+std::to_string(kind==1?model.mp:model.hp)+"/"+std::to_string(kind==1?model.max_mp:model.max_hp);
@@ -198,7 +210,8 @@ void Mir3HudView::tooltip(int kind) {
 }
 void Mir3HudView::button_hint() {
     if (model.hovered<0) return;
-    const auto caption=message(model.hovered==22?2643:2600+model.hovered);
+    const int hint=chat_input && (model.hovered==18 || model.hovered==19)?chat_input->mode.tooltip(model.hovered):model.hovered==22?2643:2600+model.hovered;
+    const auto caption=message(hint);
     if (caption.empty()) return;
     const auto measured=mir3::raster_text(caption,800,24,false,mir3::TextFont::normal);
     const auto hit=model.button_rect(model.hovered);
@@ -232,6 +245,14 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         if (scroll_input(button->is_pressed()?0:2,p)) return;
         const bool captured=model.pressed>=0 || controller.hit(int(p.x),int(p.y))>=0;
         int action=controller.pointer(int(p.x),int(p.y),button->is_pressed());
+        if (chat_input) {
+            if (action==14) chat_input->layout(model.layout.expanded);
+            if (action==16 || action==17) chat_input->focus_chat(String::utf8(action==16?message(1072).c_str():"!"),true);
+            if (action==18 || action==19) {
+                const int id=chat_input->mode.toggle(action);
+                post_chat(String::utf8(message(id).c_str()),0xffffff,0);
+            }
+        }
         if (action>=0) emit_signal("hud_action",action);
         if (captured) get_viewport()->set_input_as_handled();
         queue_redraw();

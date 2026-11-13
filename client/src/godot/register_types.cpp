@@ -1,8 +1,12 @@
 #include "hud_view.hpp"
+#include "chat_input_view.hpp"
 #include <godot_cpp/godot.hpp>
 using namespace godot;
 void initialize_client(ModuleInitializationLevel level) {
-    if (level==MODULE_INITIALIZATION_LEVEL_SCENE) ClassDB::register_class<Mir3HudView>();
+    if (level==MODULE_INITIALIZATION_LEVEL_SCENE) {
+        ClassDB::register_class<Mir3ChatInput>();
+        ClassDB::register_class<Mir3HudView>();
+    }
 }
 void uninitialize_client(ModuleInitializationLevel) {}
 extern "C" GDExtensionBool GDE_EXPORT mir3_client_init(GDExtensionInterfaceGetProcAddress get_proc_address,GDExtensionClassLibraryPtr library,GDExtensionInitialization* initialization) {
