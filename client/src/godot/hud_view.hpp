@@ -8,6 +8,7 @@
 #include "inventory/inventory_panel.hpp"
 #include "inventory/inventory_grid.hpp"
 #include "status/equipment.hpp"
+#include "status/element_attributes.hpp"
 #include "guild/guild_layout.hpp"
 #include "magic/skill_panel.hpp"
 #include "resources/wil_archive.hpp"
@@ -36,6 +37,7 @@ public:
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
+    bool set_character_elements(godot::PackedByteArray attack,godot::PackedByteArray strength,godot::PackedByteArray weakness);
     bool set_character_combat(godot::Vector2i attack,godot::Vector2i magic,godot::Vector2i spirit,
         godot::Vector2i defence,godot::Vector2i magic_defence);
     bool set_character_progress(int level,int profession,int appearance,int64_t experience,int64_t next_experience);
@@ -65,6 +67,7 @@ protected:
     static void _bind_methods();
 private:
     mir3::HudModel model;
+    mir3::ElementAttributes elements;
     mir3::Minimap minimap;
     bool skill_shortcuts_visible=false;
     void draw_skill_shortcuts();

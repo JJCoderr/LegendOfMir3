@@ -248,6 +248,8 @@ func run() -> void:
 	status_hover = InputEventMouseMotion.new()
 	status_hover.position = Vector2(72, 388)
 	Input.parse_input_event(status_hover)
+	if not check(hud.set_character_elements(PackedByteArray([2, 0, 0, 4, 0, 0, 7]), PackedByteArray([1, 255, 0, 0, 2, 0, 0]), PackedByteArray([0, 0, 3, 0, 0, 0, 1])), "apply raw character elements"): return
+	if not check(not hud.set_character_elements(PackedByteArray(), PackedByteArray(), PackedByteArray()), "reject incomplete element rows"): return
 	if not await capture("character-status-element"): return
 	key(KEY_W)
 	await process_frame
