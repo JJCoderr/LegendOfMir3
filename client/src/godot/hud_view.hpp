@@ -53,6 +53,7 @@ public:
     void handle_exit_confirmation(int dialog_id);
     bool apply_trade_offer_reply(int identifier);
     bool set_trade_item(int side,int slot,int icon,int count,int64_t make_index,godot::String name,int std_mode,int stack_mode);
+    bool apply_trade_gold_reply(int identifier,int64_t amount,int low_word,int high_word);
     bool set_trade_gold(int64_t local,int64_t remote);
     bool apply_trade_cancel();
     bool apply_trade_complete(int64_t balance);
@@ -87,6 +88,7 @@ private:
     godot::String trade_partner;
     mir3::TradeScroll trade_scroll;
     std::uint32_t inventory_gold=0;
+    bool trade_gold_pending=false;
     std::array<std::uint32_t,2> trade_gold{};
     std::array<std::array<mir3::BagItem,200>,2> trade_items;
     int trade_pending_slot=-1, trade_return_slot=-1;

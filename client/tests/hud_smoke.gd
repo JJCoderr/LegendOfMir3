@@ -848,6 +848,12 @@ func run() -> void:
 	if not await capture("hud-trade-gold-input"): return
 	key(KEY_ENTER)
 	if not check(gold_requests == [Vector2i(1029, 12500)] and hud.hud_snapshot().inventory_gold == 19320, "gold offer waits for reply"): return
+	if not check(hud.hud_snapshot().trade_gold_pending, "gold offer is pending"): return
+	if not check(hud.apply_trade_gold_reply(686, 3420) and hud.hud_snapshot().trade_gold_pending and hud.hud_snapshot().inventory_gold == 19320, "partner gold does not acknowledge local offer"): return
+	if not check(hud.apply_trade_gold_reply(684, 12500, 6820, 0) and not hud.hud_snapshot().trade_gold_pending, "local gold reply clears pending offer"): return
+	var gold_snapshot: Dictionary = hud.hud_snapshot()
+	if not check(gold_snapshot.trade_gold_local == 12500 and gold_snapshot.trade_gold_remote == 3420 and gold_snapshot.inventory_gold == 6820, "gold reply updates both visible totals"): return
+	if not await capture("hud-trade-gold-reply"): return
 	if not check(hud.apply_trade_cancel(), "close gold input trade fixture"): return
 	var exit_requests: Array[int] = []
 	hud.exit_confirmed.disconnect(hud.handle_exit_confirmation)

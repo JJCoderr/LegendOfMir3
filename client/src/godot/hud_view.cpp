@@ -91,6 +91,7 @@ void Mir3HudView::_bind_methods() {
         PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::STRING,"name")));
     ClassDB::bind_method(D_METHOD("apply_trade_offer_reply","identifier"),&Mir3HudView::apply_trade_offer_reply);
     ClassDB::bind_method(D_METHOD("set_trade_item","side","slot","icon","count","make_index","name","std_mode","stack_mode"),&Mir3HudView::set_trade_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
+    ClassDB::bind_method(D_METHOD("apply_trade_gold_reply","identifier","amount","low_word","high_word"),&Mir3HudView::apply_trade_gold_reply,DEFVAL(0),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("set_trade_gold","local","remote"),&Mir3HudView::set_trade_gold);
     ClassDB::bind_method(D_METHOD("apply_trade_complete","balance"),&Mir3HudView::apply_trade_complete);
     ClassDB::bind_method(D_METHOD("apply_trade_cancel"),&Mir3HudView::apply_trade_cancel);
@@ -116,6 +117,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["quest_first"]=quest.first;
     result["quest_selected"]=quest.selected;
     result["trade_scroll"]=Vector2i(trade_scroll.first[0],trade_scroll.first[1]);
+    result["trade_gold_pending"]=trade_gold_pending;
+    result["trade_gold_local"]=int64_t(trade_gold[0]);
+    result["trade_gold_remote"]=int64_t(trade_gold[1]);
     result["inventory_gold"]=int64_t(inventory_gold);
     result["trade_confirmed"]=trade_confirmed;
     result["trade_visible"]=trade.visible;
@@ -1474,9 +1478,11 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
         std::uint32_t amount=0;
         const auto end=digits.data()+digits.size();
         const auto parsed=std::from_chars(digits.data(),end,amount);
-        if (trade.visible && !trade_confirmed && !trade_gold[0] &&
-            parsed.ec==std::errc{} && parsed.ptr==end && amount>0 && amount<=inventory_gold)
+        if (trade.visible && !trade_confirmed && !trade_gold_pending && !trade_gold[0] &&
+            parsed.ec==std::errc{} && parsed.ptr==end && amount>0 && amount<=inventory_gold) {
+            trade_gold_pending=true;
             emit_signal("trade_gold_requested",1029,int64_t(amount));
+        }
     } else if (request==1039) {
         emit_signal("guild_member_removal_requested",name);
         emit_signal("guild_members_requested");
@@ -2170,6 +2176,20 @@ bool Mir3HudView::set_trade_item(int side,int slot,int icon,int count,int64_t ma
     return true;
 }
 
+bool Mir3HudView::apply_trade_gold_reply(int identifier,int64_t amount,int low_word,int high_word) {
+    if (!trade.visible || amount<0 || amount>UINT32_MAX) return false;
+    if (identifier==684) {
+        if (low_word<0 || low_word>UINT16_MAX || high_word<0 || high_word>UINT16_MAX) return false;
+        trade_gold[0]=static_cast<std::uint32_t>(amount);
+        inventory_gold=std::uint32_t(low_word) | (std::uint32_t(high_word)<<16);
+        trade_gold_pending=false;
+    } else if (identifier==686) {
+        trade_gold[1]=static_cast<std::uint32_t>(amount);
+    } else return false;
+    queue_redraw();
+    return true;
+}
+
 bool Mir3HudView::set_trade_gold(int64_t local,int64_t remote) {
     if (!trade.visible || local<0 || local>UINT32_MAX || remote<0 || remote>UINT32_MAX) return false;
     trade_gold={static_cast<std::uint32_t>(local),static_cast<std::uint32_t>(remote)};
@@ -2216,6 +2236,7 @@ bool Mir3HudView::open_trade(String partner) {
         if (trade.visible) trade.toggle();
         trade_confirm_pressed=false;
         trade_confirmed=false;
+        trade_gold_pending=false;
         trade_return_slot=-1;
         trade_return_pending=false;
         trade_scroll.captured=-1;
@@ -2293,7 +2314,7 @@ bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
         trade.begin_drag(int(position.x),int(position.y),on_confirm || position.y>=trade.rect[1]+56);
     } else if (kind==1) captured=trade.move_drag(int(position.x),int(position.y)) || trade_confirm_pressed;
     else if (kind==2) {
-        const bool activate=trade_confirm_pressed && on_confirm && !trade_confirmed && trade_pending_slot<0 && trade_return_slot<0;
+        const bool activate=trade_confirm_pressed && on_confirm && !trade_confirmed && !trade_gold_pending && trade_pending_slot<0 && trade_return_slot<0;
         captured=trade.end_drag() || trade_confirm_pressed;
         trade_confirm_pressed=false;
         if (activate) {
@@ -2303,7 +2324,7 @@ bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
         const auto [x,y,w,h]=trade.rect;
         const Rect2 local_grid(x+14,y+56,190,190);
         if (!captured && !trade_confirmed && trade_pending_slot<0 && trade_return_slot<0 &&
-            !bag.held && !trade_gold[0] && inventory_gold &&
+            !bag.held && !trade_gold_pending && !trade_gold[0] && inventory_gold &&
             Rect2(x+34,y+270,122,34).has_point(position)) {
             open_group_dialog(1029);
         }
