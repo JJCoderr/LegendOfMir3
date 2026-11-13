@@ -27,6 +27,7 @@ public:
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
+    void set_group_roster(godot::String player,godot::PackedStringArray members);
     bool set_learned_skill(int id,int level,int key,int experience,int required,godot::String name);
     bool apply_equipment_reply(int identifier);
     bool apply_inventory_use_reply(int identifier,int remaining);
@@ -39,6 +40,8 @@ private:
     mir3::DraggablePanel group{{272,123,258,244}};
     bool group_on_top=false,group_allow=false;
     int group_pressed=-1;
+    godot::String group_player;
+    godot::PackedStringArray group_members;
     void toggle_group();
     void draw_group();
     bool group_pointer(int kind,godot::Vector2 point);

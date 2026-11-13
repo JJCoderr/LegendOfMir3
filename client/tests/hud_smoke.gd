@@ -229,13 +229,16 @@ func run() -> void:
 	key(KEY_ESCAPE)
 	await process_frame
 	if not check(not hud.hud_snapshot().skills_visible, "magic escape"): return
+	var allowance_requests: Array[bool] = []
+	hud.group_allow_requested.connect(func(allowed: bool): allowance_requests.append(allowed))
+	hud.set_group_roster("比奇旅人", PackedStringArray(["比奇旅人", "银杏剑客", "边境法师", "山谷道士"]))
 	key(KEY_G)
 	await process_frame
 	if not check(hud.hud_snapshot().group_visible, "group keyboard opens"): return
 	click_at(Vector2(300, 174), true)
 	click_at(Vector2(300, 174), false)
-	if not check(hud.hud_snapshot().group_allow, "group allowance changes"): return
-	if not await capture("group-panel"): return
+	if not check(hud.hud_snapshot().group_allow and allowance_requests == [true], "group allowance request"): return
+	if not await capture("group-members"): return
 	key(KEY_ESCAPE)
 	await process_frame
 	if not check(not hud.hud_snapshot().group_visible, "group escape closes"): return

@@ -28,6 +28,8 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add_inventory_item","icon","count","slot","make_index","name","std_mode","stack_mode"),&Mir3HudView::add_inventory_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_inventory_use_reply","identifier","remaining"),&Mir3HudView::apply_inventory_use_reply);
     ADD_SIGNAL(MethodInfo("skill_key_requested",PropertyInfo(Variant::INT,"id"),PropertyInfo(Variant::INT,"legacy_key")));
+    ClassDB::bind_method(D_METHOD("set_group_roster","player","members"),&Mir3HudView::set_group_roster);
+    ADD_SIGNAL(MethodInfo("group_allow_requested",PropertyInfo(Variant::BOOL,"allowed")));
     ClassDB::bind_method(D_METHOD("set_learned_skill","id","level","key","experience","required","name"),&Mir3HudView::set_learned_skill,DEFVAL(0),DEFVAL(0),DEFVAL(String()));
     ClassDB::bind_method(D_METHOD("apply_equipment_reply","identifier"),&Mir3HudView::apply_equipment_reply);
     ADD_SIGNAL(MethodInfo("equipment_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"slot"),PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::STRING,"name")));
@@ -968,6 +970,12 @@ void Mir3HudView::draw_group() {
     const auto [x,y,w,h]=group.rect;
     const auto skin=frame(1360);
     if (skin.is_valid()) sprite(1360,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
+    text(group_player.utf8().get_data(),{x+52,y+15,180,15},0xdce6c8,mir3::TextFont::normal,false);
+    for (int i=0;i<group_members.size();++i) {
+        const int row=90+20*(i/2);
+        if (row+15>192) break;
+        text(group_members[i].utf8().get_data(),{x+(i%2?45:145),y+row,100,15},0xffffff,mir3::TextFont::normal,false);
+    }
     text(message(group_allow?1603:1604),{x+110,y+52,140,15},0xdce6c8,mir3::TextFont::normal,false);
     for (int i=0;i<5;++i) {
         const auto [left,top]=group_button_offsets[i];
@@ -993,11 +1001,20 @@ bool Mir3HudView::group_pointer(int kind,Vector2 point) {
         captured=group.end_drag() || group_pressed>=0;
         group_pressed=-1;
         if (clicked && button==0) toggle_group();
-        if (clicked && button==4) group_allow=!group_allow;
+        if (clicked && button==4) {
+            group_allow=!group_allow;
+            emit_signal("group_allow_requested",group_allow);
+        }
     }
     if (!inside && !captured) return false;
     controller.cancel();
     get_viewport()->set_input_as_handled();
     queue_redraw();
     return true;
+}
+
+void Mir3HudView::set_group_roster(String player,PackedStringArray members) {
+    group_player=player;
+    group_members=members;
+    queue_redraw();
 }
