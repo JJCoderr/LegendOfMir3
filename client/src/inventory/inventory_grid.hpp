@@ -79,7 +79,7 @@ public:
         cells[anchors[id]] = static_cast<short>(1000+id); // anchor marker
         return true;
     }
-    bool restore_trade_item(const BagItem& returned) {
+    bool restore_trade_item(const BagItem& returned, int slot=-1, int mouse_x=0, int mouse_y=0) {
         if (returned.stack_mode>=2 && returned.make_index && returned.count>0) {
             for (auto& item:items) {
                 if (!item || item.make_index!=returned.make_index || item.name!=returned.name ||
@@ -89,7 +89,7 @@ public:
                 return true;
             }
         }
-        return insert(returned);
+        return insert(returned,slot,mouse_x,mouse_y);
     }
     BagItem take(int id) {
         if (id < 0 || id >= capacity || !items[id]) return {};

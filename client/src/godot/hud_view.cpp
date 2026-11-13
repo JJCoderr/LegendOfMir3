@@ -695,11 +695,14 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
         const bool close_window=inventory.close_pressed && on_close;
         if (!consumed && !inventory.dragging && !inventory.close_pressed && trade_pending_slot<0) {
             bag.scroll_row=inventory.row;
-            consumed=bag.slot_at(int(position.x),int(position.y),x,y)>=0;
+            const int slot=bag.slot_at(int(position.x),int(position.y),x,y);
+            consumed=slot>=0;
             if (consumed && trade_return_slot>=0) {
                 if (!trade_return_pending) {
                     const auto& item=trade_items[0][trade_return_slot];
                     trade_return_pending=true;
+                    trade_return_bag_slot=slot;
+                    trade_return_bag_pointer=Vector2i(int(position.x)-x,int(position.y)-y);
                     emit_signal("trade_offer_requested",1027,int64_t(item.make_index),String::utf8(item.name.c_str()),item.count);
                 }
             } else if (consumed && !equipment.pending && bag.held_equipment_slot>=0) {
@@ -2149,7 +2152,7 @@ bool Mir3HudView::apply_trade_offer_reply(int identifier,int accepted_count) {
         if (!trade_return_pending) return false;
         auto& item=trade_items[0][trade_return_slot];
         if (identifier==677) {
-            if (!bag.restore_trade_item(item)) {
+            if (!bag.restore_trade_item(item,trade_return_bag_slot,trade_return_bag_pointer.x,trade_return_bag_pointer.y)) {
                 bag.held=item;
                 bag.held_slot=-1;
             }

@@ -86,6 +86,9 @@ int main(int argc,char** argv) {
         returned.make_index++;
         check(trade_bag.restore_trade_item(returned) && trade_bag.items[1].count==2,
               "trade return keeps different item identity separate");
+        mir3::InventoryGrid trade_destination;
+        check(trade_destination.restore_trade_item(returned,10,185,76) &&
+              trade_destination.item_at(10)==0,"trade return uses requested bag slot");
         std::cout<<"HUD resources, hit regions, release behavior and crop precision passed\n";
     } catch (const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }

@@ -825,9 +825,9 @@ func run() -> void:
 	if not check(offers[-1] == [1027, 98765, "Trade potion", 1], "placing selected offer in bag sends return request"): return
 	if not check(hud.apply_trade_offer_reply(677) and not hud.apply_trade_offer_reply(677), "return acknowledgement applies once"): return
 	if not await capture("hud-trade-item-returned"): return
-	if not check(hud.add_inventory_item(301, 5, hud.hud_snapshot().inventory_row * 6 + 4, 98766, "Trade stack", 0, 3), "add stack for splitting"): return
-	click_at(trade_pickup, true)
-	click_at(trade_pickup, false)
+	if not check(hud.add_inventory_item(301, 5, hud.hud_snapshot().inventory_row * 6 + 5, 98766, "Trade stack", 0, 3), "add stack for splitting"): return
+	click_at(trade_pickup + Vector2(38, 0), true)
+	click_at(trade_pickup + Vector2(38, 0), false)
 	click_at(Vector2(70, 75), true)
 	click_at(Vector2(70, 75), false)
 	if not check(hud.hud_snapshot().group_request == 1307, "stack opens quantity dialog"): return

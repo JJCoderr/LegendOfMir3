@@ -95,6 +95,8 @@ private:
     int trade_offer_count=0;
     int trade_pending_slot=-1, trade_return_slot=-1;
     bool trade_return_pending=false;
+    int trade_return_bag_slot=-1;
+    godot::Vector2i trade_return_bag_pointer;
     bool trade_confirm_pressed=false,trade_confirmed=false;
     void draw_trade();
     bool trade_pointer(int kind,godot::Vector2 position);
