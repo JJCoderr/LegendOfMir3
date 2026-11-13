@@ -10,12 +10,19 @@ struct MountPanel : DraggablePanel {
         {1408,134,232,4102}, {1410,191,232,4103}
     }};
     int pressed=-1;
-    bool mounted=false;
+    std::uint8_t shape=0;
+
+    bool apply_reply(int identifier,std::uint32_t recognition) {
+        if (identifier!=1300) return false;
+        // 0x4282C0 case 1300 copies the low recognition byte into the rider state.
+        shape=static_cast<std::uint8_t>(recognition);
+        return true;
+    }
 
     int command(int button) const {
         switch (button) {
-        case 1: return mounted?0:4106;
-        case 2: return mounted?4105:0;
+        case 1: return shape?0:4106;
+        case 2: return shape?4105:0;
         case 3: return 4104;
         case 4: return 4105;
         default: return 0;

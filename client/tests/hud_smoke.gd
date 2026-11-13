@@ -585,11 +585,20 @@ func run() -> void:
 		click_at(point, true)
 		click_at(point, false)
 	if not check(requests.slice(before_mount) == ["@骑马"], "ride allowed and dismount suppressed while on foot"): return
-	hud.set_mounted(true)
+	if not check(hud.hud_snapshot().mount_shape == 0, "ride request waits for acknowledgement"): return
+	if not check(not hud.apply_mount_reply(1301, 2) and hud.hud_snapshot().mount_shape == 0, "unrelated reply keeps mount state"): return
+	if not check(hud.apply_mount_reply(1300, 0x12340002) and hud.hud_snapshot().mount_shape == 2, "mount reply uses low recognition byte"): return
+	var dismount_motion := InputEventMouseMotion.new()
+	dismount_motion.position = Vector2(85, 240)
+	Input.parse_input_event(dismount_motion)
+	await create_timer(0.3).timeout
+	if not await capture("hud-mount-dismount-hint"): return
 	for point in [Vector2(25, 240), Vector2(85, 240), Vector2(140, 240), Vector2(200, 240)]:
 		click_at(point, true)
 		click_at(point, false)
 	if not check(requests.slice(before_mount) == ["@骑马", "@下马", "@包马", "@下马"], "original mounted and visibility commands"): return
+	if not check(hud.hud_snapshot().mount_shape == 2, "dismount waits for acknowledgement"): return
+	if not check(hud.apply_mount_reply(1300, 0x12340000) and hud.hud_snapshot().mount_shape == 0, "dismount reply clears shape"): return
 	click_at(Vector2(250, 288), true)
 	click_at(Vector2(250, 288), false)
 	if not check(not hud.hud_snapshot().mount_visible, "mount close button"): return

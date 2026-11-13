@@ -45,7 +45,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines","editable"),&Mir3HudView::set_guild_overview,DEFVAL(PackedStringArray()));
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
-    ClassDB::bind_method(D_METHOD("set_mounted","mounted"),&Mir3HudView::set_mounted);
+    ClassDB::bind_method(D_METHOD("apply_mount_reply","identifier","recognition"),&Mir3HudView::apply_mount_reply);
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
     ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
@@ -78,6 +78,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["ready"]=loaded;
     result["expanded"]=model.layout.expanded;
     result["mount_visible"]=mount.visible;
+    result["mount_shape"]=mount.shape;
     result["mount_bounds"]=rect(mount.rect);
     result["minimap_visible"]=minimap.visible;
     result["minimap_bounds"]=rect(minimap.bounds());
@@ -1714,7 +1715,10 @@ void Mir3HudView::sync_hud_sound() {
     }
 }
 
-void Mir3HudView::set_mounted(bool mounted) { mount.mounted=mounted; }
+bool Mir3HudView::apply_mount_reply(int identifier,int64_t recognition) {
+    if (recognition<0 || recognition>UINT32_MAX) return false;
+    return mount.apply_reply(identifier,static_cast<std::uint32_t>(recognition));
+}
 
 void Mir3HudView::toggle_mount() {
     mount.toggle();
