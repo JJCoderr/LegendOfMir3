@@ -100,7 +100,7 @@ private:
     std::string guild_edit_ansi;
     bool guild_pointer(int kind,godot::Vector2 point);
     mir3::DraggablePanel group{{272,123,258,244}};
-    bool group_on_top=false,group_allow=false;
+    bool group_allow=false;
     int group_pressed=-1;
     godot::String group_player;
     godot::PackedStringArray group_members;
@@ -117,7 +117,6 @@ private:
     mir3::SkillPanel skills;
     mir3::WilArchive magic_icons;
     std::map<int,godot::Ref<godot::ImageTexture>> skill_frames;
-    bool skills_on_top=false;
     void toggle_skills();
     void draw_skills();
     void draw_skill_description();
@@ -132,11 +131,15 @@ private:
     int skill_button_at(godot::Vector2 position);
     mir3::DraggablePanel status{{0,0,328,466}};
     bool status_close_pressed=false;
-    bool status_on_top=false;
     godot::Ref<godot::ImageTexture> status_body;
     godot::Vector2 status_body_offset;
     void draw_status();
     void toggle_status();
+    enum class Panel { group, skills, status, inventory };
+    std::array<Panel,4> panel_order{Panel::group,Panel::skills,Panel::status,Panel::inventory};
+    void raise_panel(Panel panel);
+    const mir3::DraggablePanel& panel_state(Panel panel) const;
+    bool panel_covered(Panel panel,godot::Vector2 point) const;
     bool panel_pointer(int kind,godot::Vector2 position);
     bool status_pointer(int kind,godot::Vector2 position);
     mir3::InventoryGrid bag;

@@ -283,6 +283,19 @@ func run() -> void:
 	key(KEY_ESCAPE)
 	await process_frame
 	if not check(not hud.hud_snapshot().group_visible, "group escape closes"): return
+	key(KEY_E)
+	key(KEY_G)
+	key(KEY_W)
+	key(KEY_Q)
+	if not await capture("hud-panel-stack"): return
+	key(KEY_ESCAPE)
+	if not check(not hud.hud_snapshot().status_visible and hud.hud_snapshot().inventory_visible, "status closes first in four-panel stack"): return
+	key(KEY_ESCAPE)
+	if not check(not hud.hud_snapshot().inventory_visible and hud.hud_snapshot().group_visible, "inventory closes second"): return
+	key(KEY_ESCAPE)
+	if not check(not hud.hud_snapshot().group_visible and hud.hud_snapshot().skills_visible, "group closes third"): return
+	key(KEY_ESCAPE)
+	if not check(not hud.hud_snapshot().skills_visible, "magic closes last"): return
 	var guild_queries: Array[bool] = []
 	hud.guild_overview_requested.connect(func(): guild_queries.append(true))
 	click_at(Vector2(686, 485), false)
