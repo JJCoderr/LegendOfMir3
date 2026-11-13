@@ -176,6 +176,27 @@ func run() -> void:
 		hud.set_meta("map_camera_cell", Vector2i(404, 402))
 		hud.queue_redraw()
 		if not await capture("bichon-merchant"): return
+		var merchant_hud: Node = load("res://main.tscn").instantiate()
+		merchant_hud.set_meta("options_path", options_file)
+		merchant_hud.set_meta("map_spawn_cell", Vector2i(413, 410))
+		merchant_hud.set_meta("map_camera_cell", Vector2i(404, 402))
+		root.remove_child(hud)
+		hud.queue_free()
+		hud = merchant_hud
+		root.add_child(hud)
+		var merchant_requests: Array[int] = []
+		hud.npc_dialogue_requested.connect(func(actor: int): merchant_requests.append(actor))
+		for i in 2:
+			var talk := InputEventMouseButton.new()
+			talk.position = Vector2(457, 215)
+			talk.button_index = MOUSE_BUTTON_LEFT
+			talk.pressed = true
+			root.push_input(talk, true)
+			talk = talk.duplicate()
+			talk.pressed = false
+			root.push_input(talk, true)
+		if not check(merchant_requests == [2] and hud.hud_snapshot().walk_frame == -1, "merchant click requests dialogue once without moving"): return
+		if not await capture("bichon-merchant-interaction"): return
 		quit()
 		return
 	for i in 20:

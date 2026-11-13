@@ -263,6 +263,9 @@ private:
     int map_pointer_button=0;
     double map_pointer_seconds=0;
     void step_toward_pointer(bool run=false);
+    bool merchant_pointer(godot::Vector2 pointer);
+    std::uint64_t last_merchant_request=0;
+    bool merchant_click_captured=false;
     void advance_map_step(double delta);
     void start_map_step(godot::Vector2i destination);
     std::deque<mir3::MapCell> map_route;

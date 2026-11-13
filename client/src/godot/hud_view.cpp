@@ -65,6 +65,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_mount_reply","identifier","recognition"),&Mir3HudView::apply_mount_reply);
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
     ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
+    ADD_SIGNAL(MethodInfo("npc_dialogue_requested",PropertyInfo(Variant::INT,"actor")));
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
@@ -259,6 +260,8 @@ void Mir3HudView::_ready() {
         load_actor(map_human,map_walk_frames,nullptr,1680);
         load_actor(map_human,map_run_frames,nullptr,1760);
         load_actor(map_npc,map_npc_frames,"NPC",110);
+        const Vector2i spawn=get_meta("map_spawn_cell",player_cell);
+        if (spawn!=Vector2i(413,409) && terrain.walkable(spawn.x,spawn.y)) player_cell=spawn;
         set_map_location(String::utf8("\xe6\xaf\x94\xe5\xa5\x87\xe7\x9c\x81"),player_cell.x,player_cell.y);
     }
     if (!portraits.open(resource_root/"Data"/"ProgUse")) UtilityFunctions::push_error("Cannot read ProgUse portraits.");
@@ -454,6 +457,23 @@ bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
     const auto start=walk_frame>=0?step_destination:player_cell;
     map_route=terrain.route({start.x,start.y},{destination.x,destination.y},{413,409});
     return !map_route.empty();
+}
+
+bool Mir3HudView::merchant_pointer(Vector2 pointer) {
+    const auto& frame=map_npc_frames[ticks_msec()/200%4];
+    if (frame.image.is_null()) return false;
+    const Vector2i merchant{413,409};
+    const auto camera=map_camera();
+    const Vector2 origin(merchant.x*48-camera.x,merchant.y*32-camera.y);
+    if (!Rect2(origin+frame.offset,frame.image->get_size()).has_point(pointer)) return false;
+    map_route.clear();
+    const auto now=ticks_msec();
+    if (!last_merchant_request || now-last_merchant_request>1500) {
+        last_merchant_request=now;
+        const auto delta=player_cell-merchant;
+        if (std::max(std::abs(delta.x),std::abs(delta.y))<=2) emit_signal("npc_dialogue_requested",2);
+    }
+    return true;
 }
 
 void Mir3HudView::step_toward_pointer(bool run) {
@@ -812,6 +832,14 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     draw_polygon(vertices,colors,uv);
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
+    if (merchant_click_captured) {
+        const Ref<InputEventMouseButton> release=event;
+        if (release.is_valid() && release->get_button_index()==MOUSE_BUTTON_LEFT && !release->is_pressed()) {
+            merchant_click_captured=false;
+            get_viewport()->set_input_as_handled();
+            return;
+        }
+    }
     if (map_pointer_button) {
         const Ref<InputEventMouseButton> release=event;
         if (release.is_valid() && release->get_button_index()==map_pointer_button && !release->is_pressed()) {
@@ -964,6 +992,12 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             emit_signal("hud_action",action);
         }
         if (!captured && kind==0 && terrain_ready && spell_pointer_available()) {
+            if (merchant_pointer(p)) {
+                map_pointer_button=0;
+                merchant_click_captured=true;
+                get_viewport()->set_input_as_handled();
+                return;
+            }
             if (!map_pointer_button) map_pointer_button=MOUSE_BUTTON_LEFT;
             map_pointer_seconds=0;
             step_toward_pointer();
@@ -974,7 +1008,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { map_pointer_button=0;minimap.dragging=false;minimap.release_captured=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;guild_editor.end_drag();guild_edit_pressed=-1;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { map_pointer_button=0;merchant_click_captured=false;minimap.dragging=false;minimap.release_captured=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;guild_editor.end_drag();guild_edit_pressed=-1;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
