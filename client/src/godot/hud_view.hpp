@@ -36,6 +36,7 @@ public:
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
+    bool set_character_vitals(int hp,int max_hp,int mp,int max_mp,int weight,int max_weight);
     bool set_music_map(godot::String map);
     bool set_quest_details(int index,godot::PackedStringArray lines);
     bool set_quest_entries(godot::PackedStringArray titles,godot::PackedInt32Array completed);

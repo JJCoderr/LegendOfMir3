@@ -223,7 +223,12 @@ func run() -> void:
 	var status_hover := InputEventMouseMotion.new()
 	status_hover.position = Vector2(227, 137)
 	Input.parse_input_event(status_hover)
-	if not await capture("character-status-hp"): return
+	if not check(hud.set_character_vitals(36, 60, 12, 40, 25, 80), "apply character vitals"): return
+	if not check(not hud.set_character_vitals(1, 65536, 0, 0, 0, 0), "reject out-of-range character vitals"): return
+	var vitals: Dictionary = hud.hud_snapshot()
+	if not check(vitals.character_hp == Vector2i(36, 60) and vitals.character_mp == Vector2i(12, 40) and vitals.character_weight == Vector2i(25, 80), "character vitals update together"): return
+	if not await capture("character-status-vitals"): return
+	if not check(hud.set_character_vitals(0, 0, 0, 0, 0, 0), "restore empty character vitals"): return
 	status_hover = InputEventMouseMotion.new()
 	status_hover.position = Vector2(72, 388)
 	Input.parse_input_event(status_hover)

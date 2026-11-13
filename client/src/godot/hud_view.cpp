@@ -47,6 +47,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_group_roster","player","members"),&Mir3HudView::set_group_roster);
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines","editable"),&Mir3HudView::set_guild_overview,DEFVAL(PackedStringArray()));
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
+    ClassDB::bind_method(D_METHOD("set_character_vitals","hp","max_hp","mp","max_mp","weight","max_weight"),&Mir3HudView::set_character_vitals);
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
     ClassDB::bind_method(D_METHOD("set_quest_entries","titles","completed"),&Mir3HudView::set_quest_entries);
     ClassDB::bind_method(D_METHOD("set_quest_details","index","lines"),&Mir3HudView::set_quest_details);
@@ -84,6 +85,9 @@ void Mir3HudView::_bind_methods() {
 Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary result;
     result["ready"]=loaded;
+    result["character_hp"]=Vector2i(model.hp,model.max_hp);
+    result["character_mp"]=Vector2i(model.mp,model.max_mp);
+    result["character_weight"]=Vector2i(model.weight,model.max_weight);
     result["expanded"]=model.layout.expanded;
     result["quest_first"]=quest.first;
     result["quest_selected"]=quest.selected;
@@ -2113,6 +2117,20 @@ bool Mir3HudView::minimap_pointer(int kind,Vector2 position,bool ctrl) {
     }
     controller.cancel();
     get_viewport()->set_input_as_handled();
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::set_character_vitals(int hp,int max_hp,int mp,int max_mp,int weight,int max_weight) {
+    for (const int value:{hp,max_hp,mp,max_mp})
+        if (value<0 || value>UINT16_MAX) return false;
+    if (weight<0 || max_weight<0) return false;
+    model.hp=static_cast<std::uint16_t>(hp);
+    model.max_hp=static_cast<std::uint16_t>(max_hp);
+    model.mp=static_cast<std::uint16_t>(mp);
+    model.max_mp=static_cast<std::uint16_t>(max_mp);
+    model.weight=weight;
+    model.max_weight=max_weight;
     queue_redraw();
     return true;
 }
