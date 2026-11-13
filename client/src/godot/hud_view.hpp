@@ -304,6 +304,7 @@ private:
     int shop_bulk_index=-1;
     int shop_highlighted=-1;
     bool shop_scroll_dragging=false;
+    double shop_scroll_fraction=0;
     bool shop_scroll_input(int kind,godot::Vector2 pointer);
     bool apply_shop_offers(int actor,int index,godot::PackedStringArray names,godot::PackedInt32Array icons,
         godot::PackedInt32Array prices,godot::PackedInt64Array identifiers,int offset=-1);
