@@ -326,6 +326,16 @@ func run() -> void:
 		click_at(Vector2(50, 402), true)
 		click_at(Vector2(50, 402), false)
 		if not check(dialogue_actions.back() == [2, "@last"], "NPC scroll clamps with the last option on the final visible row"): return
+		if not check(hud.apply_npc_dialogue(643, 2, "老黄/<请输入名字/@@name>"), "open NPC script with text input option"): return
+		await wait_for_npc_cooldown()
+		var actions_before_prompt := dialogue_actions.size()
+		click_at(Vector2(50, 45), false)
+		if not await capture("bichon-merchant-text-prompt"): return
+		if not check(dialogue_actions.size() == actions_before_prompt, "NPC prompt waits for an answer"): return
+		var npc_input: LineEdit = hud.get_node("ChatInput")
+		npc_input.text = "比奇"
+		key(KEY_ENTER)
+		if not check(dialogue_actions.size() == actions_before_prompt + 1 and dialogue_actions.back() == [2, "@@name\r比奇"], "NPC prompt joins command and answer with CR"): return
 		var goods_requests: Array = []
 		hud.shop_good_requested.connect(func(actor: int, index: int, name: String): goods_requests.append([actor, index, name]))
 		if not check(hud.apply_npc_message("a<D<<>=B<?H<<<<<PbQ`DC=kYBakW^xmGoDlGoPkLbmqUN=lWsMeWrtkH>xnINxpGl".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "645 goods list"): return

@@ -672,6 +672,7 @@ void Mir3HudView::close_shop() {
 }
 
 void Mir3HudView::close_npc_dialogue() {
+    if (group_request==1011) finish_group_dialog(false);
     close_shop();
     npc_dialogue_actor=0;
     npc_dialogue_rows.clear();
@@ -889,9 +890,23 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
         const auto command=String::utf8(item->command.c_str());
         const int actor=npc_dialogue_actor;
         npc_dialogue_last_action=now;
-        emit_signal("npc_dialogue_action",actor,command);
-        emit_signal("npc_request",1011,actor,command);
-        emit_npc_packet(1011,actor,command);
+        if (item->command.starts_with("@@") && !item->command.starts_with("@@*")) {
+            // 0x4610D0 opens a text prompt; 0x4614D0 joins the answer with CR.
+            npc_dialogue_prompt.clear();
+            if (item->command=="@@buildguildnow") npc_dialogue_prompt=message(2000);
+            else {
+                for (auto part=item;part!=npc_dialogue_rows.end() && part->option==option;++part)
+                    npc_dialogue_prompt+=part->text;
+            }
+            npc_dialogue_prompt_command=item->command;
+            npc_dialogue_prompt_actor=actor;
+            open_group_dialog(1011);
+            queue_redraw();
+        } else {
+            emit_signal("npc_dialogue_action",actor,command);
+            emit_signal("npc_request",1011,actor,command);
+            emit_npc_packet(1011,actor,command);
+        }
     }
     if (!inside && pressed<0) return false;
     get_viewport()->set_input_as_handled();
@@ -2427,6 +2442,18 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
         chat_input->layout(model.layout.expanded);
     }
     queue_redraw();
+    if (request==1011) {
+        const auto command=String::utf8(npc_dialogue_prompt_command.c_str())+"\r"+name;
+        const int actor=std::exchange(npc_dialogue_prompt_actor,0);
+        npc_dialogue_prompt.clear();
+        npc_dialogue_prompt_command.clear();
+        if (confirm && actor && actor==npc_dialogue_actor) {
+            emit_signal("npc_dialogue_action",actor,command);
+            emit_signal("npc_request",1011,actor,command);
+            emit_npc_packet(1011,actor,command);
+        }
+        return;
+    }
     if (request==1307) {
         const auto input=name.utf8();
         const std::string_view digits(input.get_data());
@@ -2475,7 +2502,8 @@ void Mir3HudView::draw_group_dialog() {
         sprite(1243+(group_dialog_pressed==0),{x+137,y+188});
         return;
     }
-    const auto prompt=group_request==1039?"'"+std::string(guild_name.utf8().get_data())+"' "+message(4001):
+    const auto prompt=group_request==1011?npc_dialogue_prompt:
+        group_request==1039?"'"+std::string(guild_name.utf8().get_data())+"' "+message(4001):
         message(group_request==1307?1307:group_request==1029?1304:group_request==1045?4002:group_request==1022?1606:1605);
     if (dialog_has_input()) text(prompt,{x+43,y+84,278,75},0xc8faff,mir3::TextFont::dialog);
     else text(message(group_request==109?2636:1065),{x+23,y+84,308,95},0xc8faff,mir3::TextFont::dialog);
