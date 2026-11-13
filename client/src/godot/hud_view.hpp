@@ -160,6 +160,7 @@ private:
     godot::AudioStreamPlayer* hud_sound=nullptr;
     void sync_hud_sound();
     godot::AudioStreamPlayer* map_music=nullptr;
+    godot::AudioStreamPlayer* footstep_sound=nullptr;
     godot::String audio_root,music_file;
     godot::PackedByteArray music_table;
     godot::String options_path;

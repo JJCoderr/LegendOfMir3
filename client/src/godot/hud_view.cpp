@@ -285,6 +285,14 @@ void Mir3HudView::_ready() {
         load_actor(map_human,map_walk_frames,nullptr,1680);
         load_actor(map_human,map_run_frames,nullptr,1760);
         load_actor(map_npc,map_npc_frames,"NPC",110);
+        const auto footstep=AudioStreamWAV::load_from_file(audio_root.path_join("1.wav"));
+        if (footstep.is_valid()) {
+            footstep_sound=memnew(AudioStreamPlayer);
+            footstep_sound->set_name("FootstepSound");
+            footstep_sound->set_stream(footstep);
+            add_child(footstep_sound);
+            sync_hud_sound();
+        }
         const Vector2i spawn=get_meta("map_spawn_cell",player_cell);
         if (spawn!=Vector2i(413,409) && terrain.walkable(spawn.x,spawn.y)) player_cell=spawn;
         set_map_location(String::utf8("\xe6\xaf\x94\xe5\xa5\x87\xe7\x9c\x81"),player_cell.x,player_cell.y);
@@ -1337,6 +1345,9 @@ void Mir3HudView::advance_map_step(double delta) {
     if (movement_ms<=95) return;
     movement_ms=0;
     ++walk_frame;
+    // 0x410DF0 plays sample 1 on frames 1 and 4 for walking and running.
+    if ((walk_frame==1 || walk_frame==4) && footstep_sound && audio_options.effects_enabled)
+        footstep_sound->play();
     if (walk_frame==(player_facing==7?4:1)) {
         player_cell=step_destination;
         const auto distance=player_cell-npc_dialogue_origin;
@@ -3435,6 +3446,10 @@ void Mir3HudView::save_options() {
 }
 
 void Mir3HudView::sync_hud_sound() {
+    if (footstep_sound) {
+        footstep_sound->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
+        if (!audio_options.effects_enabled) footstep_sound->stop();
+    }
     if (hud_sound) {
         hud_sound->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
         if (!audio_options.effects_enabled) hud_sound->stop();

@@ -101,9 +101,13 @@ func run() -> void:
 			root.push_input(step, true)
 			if not check(hud.hud_snapshot().walk_frame == (-1 if destination.x == 390 else 0), "current cell and distant click heading"): return
 		if not await capture("bichon-walking"): return
+		var footstep: AudioStreamPlayer = hud.get_node("FootstepSound")
+		var heard_step := footstep.playing
 		var walk_deadline := Time.get_ticks_msec() + 2000
 		while hud.hud_snapshot().walk_frame >= 0 and Time.get_ticks_msec() < walk_deadline:
 			await process_frame
+			heard_step = heard_step or footstep.playing
+		if not check(footstep.stream != null and heard_step, "walking plays original footstep sample"): return
 		if not check(hud.hud_snapshot().walk_frame == -1 and hud.hud_snapshot().player_cell == Vector2i(476, 360), "walk finishes in destination cell"): return
 		if not await capture("bichon-step-camera"): return
 		if not check(hud.walk_to_map_cell(Vector2i(476, 362)), "plan route across Bichon cells"): return
