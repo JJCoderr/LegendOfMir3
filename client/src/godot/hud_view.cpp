@@ -2552,7 +2552,6 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
         const bool activate=code==KEY_ENTER || code==KEY_KP_ENTER || (!dialog_has_input() && code==KEY_SPACE);
         if (code!=KEY_TAB && code!=KEY_ESCAPE && !activate && dialog_has_input()) return false;
         if (key->is_pressed() && !key->is_echo()) {
-            if (code==KEY_ESCAPE && group_request==1011) finish_group_dialog(false);
             if (code==KEY_TAB) { group_selected=group_selected==0?2:0;queue_redraw(); }
             if (activate) finish_group_dialog(group_selected==0);
         }

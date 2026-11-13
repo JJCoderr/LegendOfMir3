@@ -359,6 +359,10 @@ func run() -> void:
 				if not check(hud.apply_npc_dialogue(644, 2, ""), "server closes pending NPC prompt"): return
 			else:
 				key(KEY_ESCAPE)
+				if not check(npc_input.secret and npc_input.text == "9999" and npc_input.has_focus(), "NPC prompt ignores Escape"): return
+				if not await capture("bichon-merchant-masked-prompt-after-escape"): return
+				click_at(Vector2(490, 316), true)
+				click_at(Vector2(490, 316), false)
 			if not check(not npc_input.secret and npc_input.text.is_empty() and not npc_input.has_focus() and dialogue_actions.size() == confirmed_actions, "dismissal clears masked input without sending"): return
 			if not server_close and not await capture("bichon-merchant-masked-prompt-cancelled"): return
 		if not check(hud.apply_npc_dialogue(643, 2, script), "reopen NPC dialogue for shop reply"): return
