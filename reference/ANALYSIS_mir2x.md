@@ -25,6 +25,27 @@
 `client/CMakeLists.txt` 的安装流程会处理资源。本项目要求原包就地读取、路径配置，因此不复用它的资源转换/安装流程。Godot 绑定和 1.45 特有规则继续从 G:/mir3/mir3_1.45 按功能提取；若需要其他 Godot 分支，先明确分支和提交后再分析。
 
 
+## 服务器、协议、数据与资源模块
+
+| 模块 | 源码入口 | 查询和复用边界 |
+| --- | --- | --- |
+| 服务器入口与消息调度 | [main.cpp](mir2x/server/src/main.cpp)、[server.cpp](mir2x/server/src/server.cpp)、[actorpod.cpp](mir2x/server/src/actorpod.cpp)、[dispatcher.cpp](mir2x/server/src/dispatcher.cpp) | actor 消息调度模型，不直接照搬到当前客户端 UI |
+| 玩家和规则 | [player.cpp](mir2x/server/src/player.cpp)、[playerop.cpp](mir2x/server/src/playerop.cpp)、[playernet.cpp](mir2x/server/src/playernet.cpp) | 状态操作、网络处理分文件 |
+| 怪物、NPC、任务 | [monster.cpp](mir2x/server/src/monster.cpp)、[npchar.cpp](mir2x/server/src/npchar.cpp)、[quest.cpp](mir2x/server/src/quest.cpp) | 玩法与脚本依赖按对象定位 |
+| 地图 | [servermap.cpp](mir2x/server/src/servermap.cpp)、[mir2xmapdata.hpp](mir2x/common/src/mir2xmapdata.hpp)、[maprecord.hpp](mir2x/common/src/maprecord.hpp) | 运行时地图与静态定义、格式分开 |
+| 网络/接入 | [netdriver.cpp](mir2x/server/src/netdriver.cpp)、[channel.cpp](mir2x/server/src/channel.cpp)、[clientmsg.hpp](mir2x/common/src/clientmsg.hpp)、[servermsg.hpp](mir2x/common/src/servermsg.hpp) | CMType/SM 消息与连接通道；并非传统三网关协议 |
+| 数据库与物品 | [playerdb.cpp](mir2x/server/src/playerdb.cpp)、[dbpod.hpp](mir2x/server/src/dbpod.hpp)、[itemrecord.hpp](mir2x/common/src/itemrecord.hpp)、[sditem.hpp](mir2x/common/src/sditem.hpp) | 持久化入口、物品定义和传输表示分别定位 |
+| 图像和资源库 | [wilimagepackage.cpp](mir2x/common/src/wilimagepackage.cpp)、[zsdb.cpp](mir2x/common/src/zsdb.cpp)、[installres](mir2x/tools/installres) | WIL 读取与转换安装工具不同，本项目只参考解析路径 |
+| 加密与压缩 | [aesf.hpp](mir2x/common/src/aesf.hpp)、[aesf.cpp](mir2x/common/src/aesf.cpp)、[zcompf.cpp](mir2x/common/src/zcompf.cpp) | AES 接口存在不代表整个链路使用它，先查调用者再下结论 |
+
+### 已核对与尚待追踪的边界
+
+clientmsg.hpp 的 CMType 使用 uint8_t 枚举，含 CM_LOGIN、CM_QUERYCHAR、CM_ACTION 等消息。这不等于原版 1.45 的消息号；移植功能时应以本工程目标协议建立明确适配。
+
+aesf.hpp 提供 AES::encrypt/decrypt 接口；zcompf.cpp 是另一压缩模块。尚未逐条追踪所有网络和资源调用点，不能声称全部包经过 AES 或同一种压缩。
+
+查物品问题先看 playernet/playerop/playerdb 和 itemrecord/sditem；查地图问题先看 servermap 与客户端 ProcessRun；查连接问题先看 netdriver/channel。tools 中 mapconverter、各类 wil2png 和 installres 是转换工具，不能作为本项目资源复制或解包的理由。
+
 ## 使用与验证边界
 
 本轮为源码导航与代表性路径分析，没有构建或运行该参考工程。表中入口已核对存在；不能据此宣称整套逻辑与 1.45 一致。读取目标函数及直接调用者后，再迁移到 `client` 的对应功能模块。只验证本次影响的显示和行为，相关功能成组完成后统一截图与提交。

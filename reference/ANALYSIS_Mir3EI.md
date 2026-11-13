@@ -32,6 +32,32 @@
 `copy_Actor.cpp` 与 `Actor.cpp` 同时存在；优先查工程文件的编译项，不默认 copy 文件有效。`DecodeMessage.cpp` 含 `sub_42F760`、`SetWord` 外部符号，必须一并确认依赖和协议版本。
 
 
+## 服务器、网关和资源模块
+
+| 模块 | 源码入口 | 查询和复用边界 |
+| --- | --- | --- |
+| 服务器入口 | [GameSvr.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/GameSvr.cpp)、[ObjectEngine.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/ObjectEngine.cpp) | 先定位主循环和对象处理；UI 线程与消息线程不能等同 |
+| 玩家、怪物、NPC | [ObjectPlayer.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/ObjectPlayer.cpp)、[ObjectMonster.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/ObjectMonster.cpp)、[ObjectNPC.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/ObjectNPC.cpp) | 属性与动作归服务器对象；客户端只表示已接收状态 |
+| 商店、脚本与事件 | [ObjectMerchant.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/ObjectMerchant.cpp)、[ObjectScripter.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/ObjectScripter.cpp)、[ProcessEvents.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/ProcessEvents.cpp) | NPC 对话命令继续追服务端条件、执行结果和回包 |
+| 消息处理 | [ProcessUserMsg.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/ProcessUserMsg.cpp)、[SockMsg_GateComm.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/SockMsg_GateComm.cpp)、[Protocol.h](legendOfMir2_src/Mir3EIServerDev/Mir3server/Def/Protocol.h) | 先找请求定义，再到分发和功能处理；分清外层网关头与游戏消息头 |
+| 登录与选角网关 | [ClientSockMsg.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/LoginGate/ClientSockMsg.cpp)、[ClientSockMsg.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/SelGate/ClientSockMsg.cpp)、[ServerListProc.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/LoginSvr/ServerListProc.cpp) | 连接接入与服务器列表；配置/端口以目标版本为准 |
+| 游戏网关 | [ClientSockMsg.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameGate/ClientSockMsg.cpp)、[ServerSockMsg.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameGate/ServerSockMsg.cpp)、[ThreadFuncForMsg.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameGate/ThreadFuncForMsg.cpp) | 会话映射、消息缓冲、客户端侧/服务器侧方向分开 |
+| 数据库 | [ProcessDBMsg.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/DBSvr/ProcessDBMsg.cpp)、[TableList.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/DBSvr/TableList.cpp)、[dbmgr.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/Def/dbmgr.cpp)、[SQL_Scripts](legendOfMir2_src/Mir3EIServerDev/SQL_Scripts) | SQL 初始化脚本与数据库操作一起核对，不能只复制物品表结构 |
+| 物品、魔法数据 | [Handler_Item.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/Handler_Item.cpp)、[Handler_Magic.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/Handler_Magic.cpp)、[Tables.h](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/Tables.h) | 加载定义、数据结构与运行时实例分开 |
+| 地图 | [Handler_Map.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/GameSvr/Handler_Map.cpp)、[MapHandler.cpp](legendOfMir2_src/Mir3EIClientDev/Mir3EIClient/GameProcess/MapHandler.cpp) | 服务端可通行/对象管理与客户端地图绘制分别检查 |
+| 图像资源 | [ImageHandler.cpp](legendOfMir2_src/Mir3EIClientDev/Mir3EIClient/Common/ImageHandler.cpp)、[WHWilImage.cpp](legendOfMir2_src/Mir3EIClientDev/WindHorn/WHWilImage.cpp) | 库名/编号映射、WIL/WIX 索引和图像解码；资源留在原目录 |
+| 编码/解码 | [EnDecode.cpp](legendOfMir2_src/Mir3EIServerDev/Mir3server/Def/EnDecode.cpp)、[EnDecode.h](legendOfMir2_src/Mir3EIServerDev/Mir3server/Def/EnDecode.h) | 6-bit 编码与真正加密不同；不要替换成标准 Base64 |
+
+### 已核对的消息边界
+
+`Def/EnDecode.cpp` 的 fnEncode6BitBufW 将六位值加 0x3c 输出；fnDecode6BitBufW 做对应还原。它是文本传输编码，不能单凭文件名叫作加密算法。迁移时需按 ANSI/Unicode 分支、字节长度与截断行为分别核对。
+
+`GameGate/ClientSockMsg.cpp` 的 ProcMakeSocketStr 从 _TMSGHEADER 取 wUserGateIndex，再在 g_UserInfoArray 查 CSessionInfo 并使用该会话 SendBuffer。网关会话索引不是角色 ID；重做网络接入时必须维持两者边界。
+
+### 具体任务的读取顺序
+
+背包动作：客户端 InventoryWnd/Item → GameProc 消息发送 → Protocol.h → ProcessUserMsg → ObjectPlayer/Handler_Item → 应答更新。NPC 动作：NPCWnd → 用户消息分发 → ObjectNPC/ObjectMerchant/ObjectScripter。地图切换：客户端 MapHandler 和服务端 Handler_Map 分开验证。以上是定向追踪入口，尚未证明每一个消息编号和字段都与宝藏 1.45 一致。
+
 ## 使用与验证边界
 
 本轮为源码导航与代表性路径分析，没有构建或运行该参考工程。表中入口已核对存在；不能据此宣称整套逻辑与 1.45 一致。读取目标函数及直接调用者后，再迁移到 `client` 的对应功能模块。只验证本次影响的显示和行为，相关功能成组完成后统一截图与提交。
