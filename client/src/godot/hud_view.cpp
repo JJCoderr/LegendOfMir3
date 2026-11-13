@@ -124,6 +124,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["terrain_ready"]=terrain_ready;
     result["player_cell"]=player_cell;
     result["walk_frame"]=walk_frame;
+    const auto movement=step_destination-step_origin;
+    result["map_running"]=walk_frame>=0 && std::max(std::abs(movement.x),std::abs(movement.y))==2;
     result["character_portrait"]=model.portrait_frame();
     result["target_portrait"]=model.layout.expanded || !target_focus.displayed() || target_portrait.is_null()?-1:target_frame;
     result["target_hp_width"]=!model.layout.expanded && target_focus.displayed() && !target_is_human && target_portrait.is_valid()?target_vitals.bar_width():0;
@@ -253,6 +255,7 @@ void Mir3HudView::_ready() {
         };
         load_actor(map_human,map_human_frames,"M-Hum",0);
         load_actor(map_human,map_walk_frames,nullptr,1680);
+        load_actor(map_human,map_run_frames,nullptr,1760);
         load_actor(map_npc,map_npc_frames,"NPC",110);
         set_map_location(String::utf8("\xe6\xaf\x94\xe5\xa5\x87\xe7\x9c\x81"),player_cell.x,player_cell.y);
     }
@@ -435,7 +438,7 @@ Vector2i Mir3HudView::player_pixel() const {
 
 void Mir3HudView::start_map_step(Vector2i destination) {
     const auto delta=destination-player_cell;
-    const mir3::MapCell direction{delta.x,delta.y};
+    const mir3::MapCell direction{(delta.x>0)-(delta.x<0),(delta.y>0)-(delta.y<0)};
     player_facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),direction)-mir3::map_directions.begin());
     step_origin=player_cell;
     step_destination=destination;
@@ -451,7 +454,7 @@ bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
     return !map_route.empty();
 }
 
-void Mir3HudView::step_toward_pointer() {
+void Mir3HudView::step_toward_pointer(bool run) {
     if (walk_frame>=0 || !spell_pointer_available()) return;
     const auto p=inventory_cursor;
     const auto camera=map_camera();
@@ -461,10 +464,18 @@ void Mir3HudView::step_toward_pointer() {
     const int dx=std::abs(delta.y)>2 && std::abs(delta.x)<=1?0:(delta.x>0)-(delta.x<0);
     const int dy=std::abs(delta.x)>2 && std::abs(delta.y)<=1?0:(delta.y>0)-(delta.y<0);
     if (target==player_cell) return;
+    if (map_pointer_button==MOUSE_BUTTON_RIGHT && std::max(std::abs(delta.x),std::abs(delta.y))==1) {
+        const mir3::MapCell heading{dx,dy};
+        player_facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),heading)-mir3::map_directions.begin());
+        queue_redraw();
+        return;
+    }
     const auto traversable=[this](Vector2i cell) {
         return cell!=Vector2i(413,409) && terrain.walkable(cell.x,cell.y);
     };
     auto destination=player_cell+Vector2i(dx,dy);
+    const auto second=destination+Vector2i(dx,dy);
+    if (run && traversable(destination) && traversable(second)) destination=second;
     if (!traversable(destination)) {
         destination=player_cell;
         int best_distance=100;
@@ -551,7 +562,9 @@ void Mir3HudView::draw_terrain() {
         if (start_y+row==409) draw_actor(map_npc_frames[tick/200%4],413,409);
         const auto pixel=player_pixel();
         if (start_y+row==int(std::round(pixel.y/32.0))) {
-            const auto& actor=walk_frame>=0?map_walk_frames[player_facing*10+walk_frame]:
+            const auto step=step_destination-step_origin;
+            const auto& movement=std::max(std::abs(step.x),std::abs(step.y))==2?map_run_frames:map_walk_frames;
+            const auto& actor=walk_frame>=0?movement[player_facing*10+walk_frame]:
                 map_human_frames[player_facing*10+tick/500%2];
             if (actor.image.is_valid()) {
                 draw_texture(actor.image,Vector2(pixel-camera)+actor.offset);
@@ -773,8 +786,11 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
+    const bool moving=walk_frame>=0;
     advance_map_step(delta);
-    if (map_pointer_held) {
+    if (map_pointer_button==MOUSE_BUTTON_RIGHT && moving && walk_frame<0 && map_route.empty()) {
+        step_toward_pointer(model.hp>=10);
+    } else if (map_pointer_button==MOUSE_BUTTON_LEFT) {
         map_pointer_seconds+=delta;
         if (map_pointer_seconds>0.3 && map_route.empty()) step_toward_pointer();
     }
@@ -794,10 +810,10 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     draw_polygon(vertices,colors,uv);
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
-    if (map_pointer_held) {
+    if (map_pointer_button) {
         const Ref<InputEventMouseButton> release=event;
-        if (release.is_valid() && release->get_button_index()==MOUSE_BUTTON_LEFT && !release->is_pressed()) {
-            map_pointer_held=false;
+        if (release.is_valid() && release->get_button_index()==map_pointer_button && !release->is_pressed()) {
+            map_pointer_button=0;
             get_viewport()->set_input_as_handled();
             return;
         }
@@ -879,6 +895,15 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         chat_history.scroll(model.layout.expanded).wheel(button->get_button_index()==MOUSE_BUTTON_WHEEL_UP?1:-1,int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded);
         get_viewport()->set_input_as_handled();queue_redraw();return;
     }
+    if (terrain_ready && button.is_valid() && button->get_button_index()==MOUSE_BUTTON_RIGHT && button->is_pressed()) {
+        inventory_cursor=button->get_position();
+        if (spell_pointer_available() && !map_pointer_button) {
+            map_pointer_button=MOUSE_BUTTON_RIGHT;
+            step_toward_pointer();
+            get_viewport()->set_input_as_handled();
+            return;
+        }
+    }
     if (button.is_valid() && button->get_button_index()==MOUSE_BUTTON_LEFT) {
         auto p=button->get_position();
         inventory_cursor=p;
@@ -937,7 +962,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             emit_signal("hud_action",action);
         }
         if (!captured && kind==0 && terrain_ready && spell_pointer_available()) {
-            map_pointer_held=true;
+            if (!map_pointer_button) map_pointer_button=MOUSE_BUTTON_LEFT;
             map_pointer_seconds=0;
             step_toward_pointer();
             get_viewport()->set_input_as_handled();
@@ -947,7 +972,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { map_pointer_held=false;minimap.dragging=false;minimap.release_captured=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;guild_editor.end_drag();guild_edit_pressed=-1;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { map_pointer_button=0;minimap.dragging=false;minimap.release_captured=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;guild_editor.end_drag();guild_edit_pressed=-1;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {

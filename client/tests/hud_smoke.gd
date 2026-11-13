@@ -142,6 +142,21 @@ func run() -> void:
 			await process_frame
 		if not check(hud.hud_snapshot().player_cell == Vector2i(475, 361) and hud.hud_snapshot().walk_frame == -1, "blocked heading takes last equally close traversable neighbor"): return
 		if not await capture("bichon-blocked-heading"): return
+		hud.set_character_vitals(30, 30, 20, 20, 0, 0)
+		var run := InputEventMouseButton.new()
+		run.position = Vector2(390, 100)
+		run.button_index = MOUSE_BUTTON_RIGHT
+		run.pressed = true
+		root.push_input(run, true)
+		if not check(hud.hud_snapshot().walk_frame == 0 and not hud.hud_snapshot().map_running, "right press starts with a walk"): return
+		var run_deadline := Time.get_ticks_msec() + 2500
+		while not hud.hud_snapshot().map_running and Time.get_ticks_msec() < run_deadline:
+			await process_frame
+		if not check(hud.hud_snapshot().map_running, "held right button starts running after first walk"): return
+		run = run.duplicate()
+		run.pressed = false
+		root.push_input(run, true)
+		if not await capture("bichon-right-run"): return
 		hud.set_meta("map_camera_cell", Vector2i(404, 402))
 		hud.queue_redraw()
 		if not await capture("bichon-merchant"): return

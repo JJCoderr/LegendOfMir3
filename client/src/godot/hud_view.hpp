@@ -252,7 +252,7 @@ private:
     bool animated_map_objects=false;
     struct MapActorFrame { godot::Ref<godot::ImageTexture> image; godot::Vector2 offset; };
     mir3::WilArchive map_human, map_npc;
-    std::array<MapActorFrame,80> map_human_frames, map_walk_frames;
+    std::array<MapActorFrame,80> map_human_frames, map_walk_frames, map_run_frames;
     std::array<MapActorFrame,4> map_npc_frames;
     godot::Ref<godot::ImageTexture> terrain_texture(int package,int id);
     std::map<std::pair<int,int>,godot::Ref<godot::ImageTexture>> terrain_frames;
@@ -260,9 +260,9 @@ private:
     godot::Vector2i player_cell{475,360}, step_origin{}, step_destination{};
     int walk_frame=-1, player_facing=4;
     double movement_ms=0;
-    bool map_pointer_held=false;
+    int map_pointer_button=0;
     double map_pointer_seconds=0;
-    void step_toward_pointer();
+    void step_toward_pointer(bool run=false);
     void advance_map_step(double delta);
     void start_map_step(godot::Vector2i destination);
     std::deque<mir3::MapCell> map_route;
