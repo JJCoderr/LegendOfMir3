@@ -20,6 +20,7 @@
 #include "status/status_layout.hpp"
 #include <godot_cpp/classes/input_event_key.hpp>
 #include <cstdio>
+#include <charconv>
 #include <iterator>
 #include <godot_cpp/variant/utility_functions.hpp>
 
@@ -85,6 +86,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("update_chat_rejection","channel","rejected"),&Mir3HudView::update_chat_rejection);
     ClassDB::bind_method(D_METHOD("handle_exit_confirmation","dialog_id"),&Mir3HudView::handle_exit_confirmation);
     ClassDB::bind_method(D_METHOD("set_trade_context","direction","cell","actor_type","dead","name"),&Mir3HudView::set_trade_context);
+    ADD_SIGNAL(MethodInfo("trade_gold_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"amount")));
     ADD_SIGNAL(MethodInfo("trade_offer_requested",PropertyInfo(Variant::INT,"identifier"),
         PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::STRING,"name")));
     ClassDB::bind_method(D_METHOD("apply_trade_offer_reply","identifier"),&Mir3HudView::apply_trade_offer_reply);
@@ -1466,7 +1468,16 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
         return;
     }
     if (!has_input || name.is_empty()) return;
-    if (request==1039) {
+    if (request==1029) {
+        const auto utf8=name.utf8();
+        const std::string_view digits(utf8.get_data());
+        std::uint32_t amount=0;
+        const auto end=digits.data()+digits.size();
+        const auto parsed=std::from_chars(digits.data(),end,amount);
+        if (trade.visible && !trade_confirmed && !trade_gold[0] &&
+            parsed.ec==std::errc{} && parsed.ptr==end && amount>0 && amount<=inventory_gold)
+            emit_signal("trade_gold_requested",1029,int64_t(amount));
+    } else if (request==1039) {
         emit_signal("guild_member_removal_requested",name);
         emit_signal("guild_members_requested");
     } else if (request==1045) {
@@ -1486,7 +1497,7 @@ void Mir3HudView::draw_group_dialog() {
         return;
     }
     const auto prompt=group_request==1039?"'"+std::string(guild_name.utf8().get_data())+"' "+message(4001):
-        message(group_request==1045?4002:group_request==1022?1606:1605);
+        message(group_request==1029?1304:group_request==1045?4002:group_request==1022?1606:1605);
     if (dialog_has_input()) text(prompt,{x+43,y+84,278,75},0xc8faff,mir3::TextFont::dialog);
     else text(message(group_request==109?2636:1065),{x+23,y+84,308,95},0xc8faff,mir3::TextFont::dialog);
     for (const int index:{0,2}) {
@@ -2291,6 +2302,11 @@ bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
         }
         const auto [x,y,w,h]=trade.rect;
         const Rect2 local_grid(x+14,y+56,190,190);
+        if (!captured && !trade_confirmed && trade_pending_slot<0 && trade_return_slot<0 &&
+            !bag.held && !trade_gold[0] && inventory_gold &&
+            Rect2(x+34,y+270,122,34).has_point(position)) {
+            open_group_dialog(1029);
+        }
         if (!captured && !trade_confirmed && trade_pending_slot<0 && !trade_return_pending &&
             !bag.held && local_grid.has_point(position)) {
             const int column=(int(position.x)-x-14)/38;

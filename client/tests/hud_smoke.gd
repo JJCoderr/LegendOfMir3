@@ -838,6 +838,17 @@ func run() -> void:
 	if not check(hud.apply_trade_complete(19320) and not hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_gold == 19320, "settle received item and authoritative balance"): return
 	if not check(not hud.apply_trade_complete(19320), "duplicate settlement ignored"): return
 	if not await capture("hud-trade-completed"): return
+	var gold_requests: Array[Vector2i] = []
+	hud.trade_gold_requested.connect(func(id: int, amount: int): gold_requests.append(Vector2i(id, amount)))
+	if not check(hud.open_trade("比奇旅人"), "open trade for gold input"): return
+	click_at(Vector2(81, 288), true)
+	click_at(Vector2(81, 288), false)
+	if not check(hud.hud_snapshot().group_request == 1029, "open trade gold dialog"): return
+	for digit in "12500": key(0, digit.unicode_at(0))
+	if not await capture("hud-trade-gold-input"): return
+	key(KEY_ENTER)
+	if not check(gold_requests == [Vector2i(1029, 12500)] and hud.hud_snapshot().inventory_gold == 19320, "gold offer waits for reply"): return
+	if not check(hud.apply_trade_cancel(), "close gold input trade fixture"): return
 	var exit_requests: Array[int] = []
 	hud.exit_confirmed.disconnect(hud.handle_exit_confirmation)
 	hud.exit_confirmed.connect(func(id: int): exit_requests.append(id))
