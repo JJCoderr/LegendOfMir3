@@ -2808,7 +2808,7 @@ bool Mir3HudView::dialog_has_input() const {
 void Mir3HudView::open_group_dialog(int action) {
     const auto skin=frame(1240);
     if (skin.is_null() || !chat_input) return;
-    if ((group_request==1011 || group_request==110) && action!=group_request) finish_group_dialog(false);
+    if (group_request) finish_group_dialog(false);
     const int w=skin->get_width(),h=skin->get_height();
     group_dialog={400-w/2,246-h/2,w,h};
     group_request=action<=3?1019+action:action;

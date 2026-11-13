@@ -1715,6 +1715,16 @@ func run() -> void:
 	if not check(not hud.apply_trade_offer_reply(676) and hud.hud_snapshot().held_inventory_icon == 301,
 		"rejection without an outstanding offer preserves the item and quantity input"): return
 	if not await capture("hud-trade-quantity-before-offer"): return
+	key(0, 57)
+	if not check(hud.apply_shop_purchase_reply(651, 1) and hud.hud_snapshot().group_request == 1437,
+		"purchase alert replaces trade quantity dialog"): return
+	if not check(not input.has_focus() and input.text.is_empty() and input.position == Vector2(185, 575),
+		"replacement alert restores chat input bounds and clears quantity"): return
+	if not await capture("hud-trade-quantity-replaced-by-alert"): return
+	key(KEY_ENTER)
+	click_at(Vector2(70, 75), true)
+	click_at(Vector2(70, 75), false)
+	if not check(hud.hud_snapshot().group_request == 1307, "trade quantity can reopen after replacement"): return
 	key(0, 50)
 	if not await capture("hud-trade-stack-quantity"): return
 	key(KEY_ENTER)
