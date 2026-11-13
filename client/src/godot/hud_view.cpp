@@ -47,6 +47,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_group_roster","player","members"),&Mir3HudView::set_group_roster);
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines","editable"),&Mir3HudView::set_guild_overview,DEFVAL(PackedStringArray()));
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
+    ClassDB::bind_method(D_METHOD("set_character_progress","level","profession","appearance","experience","next_experience"),&Mir3HudView::set_character_progress);
     ClassDB::bind_method(D_METHOD("set_character_vitals","hp","max_hp","mp","max_mp","weight","max_weight"),&Mir3HudView::set_character_vitals);
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
     ClassDB::bind_method(D_METHOD("set_quest_entries","titles","completed"),&Mir3HudView::set_quest_entries);
@@ -85,6 +86,9 @@ void Mir3HudView::_bind_methods() {
 Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary result;
     result["ready"]=loaded;
+    result["character_level"]=model.level;
+    result["character_portrait"]=model.portrait_frame();
+    result["character_shared_hp"]=model.shared_hp();
     result["character_hp"]=Vector2i(model.hp,model.max_hp);
     result["character_mp"]=Vector2i(model.mp,model.max_mp);
     result["character_weight"]=Vector2i(model.weight,model.max_weight);
@@ -170,10 +174,7 @@ void Mir3HudView::_ready() {
     portrait_directory=ProjectSettings::get_singleton()->globalize_path(String(get_meta("portrait_directory",root)));
     const auto resource_root=std::filesystem::u8path(root.utf8().get_data());
     if (!portraits.open(resource_root/"Data"/"ProgUse")) UtilityFunctions::push_error("Cannot read ProgUse portraits.");
-    if (const auto body=portraits.frame(model.appearance)) {
-        status_body=texture(body->pixels.rgba,body->width,body->height);
-        status_body_offset=Vector2(body->offset_x,body->offset_y);
-    }
+    load_status_body();
     minimap_archive.open(resource_root/"Data"/"Mmap");
     full_minimap_archive.open(resource_root/"Data"/"Fmmap");
     magic_icons.open(resource_root/"Data"/"MIcon");
@@ -2117,6 +2118,29 @@ bool Mir3HudView::minimap_pointer(int kind,Vector2 position,bool ctrl) {
     }
     controller.cancel();
     get_viewport()->set_input_as_handled();
+    queue_redraw();
+    return true;
+}
+
+void Mir3HudView::load_status_body() {
+    status_body.unref();
+    status_body_offset=Vector2();
+    if (const auto body=portraits.frame(model.appearance)) {
+        status_body=texture(body->pixels.rgba,body->width,body->height);
+        status_body_offset=Vector2(body->offset_x,body->offset_y);
+    }
+}
+
+bool Mir3HudView::set_character_progress(int level,int profession,int appearance,int64_t experience,int64_t next_experience) {
+    if (level<0 || level>255 || profession<0 || profession>2 || appearance<0 || appearance>1 ||
+        experience<0 || experience>UINT32_MAX || next_experience<0 || next_experience>UINT32_MAX) return false;
+    const bool appearance_changed=model.appearance!=appearance;
+    model.level=level;
+    model.profession=profession;
+    model.appearance=appearance;
+    model.experience=static_cast<std::uint32_t>(experience);
+    model.next_experience=static_cast<std::uint32_t>(next_experience);
+    if (appearance_changed && loaded) load_status_body();
     queue_redraw();
     return true;
 }

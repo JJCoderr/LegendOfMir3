@@ -36,6 +36,7 @@ public:
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
+    bool set_character_progress(int level,int profession,int appearance,int64_t experience,int64_t next_experience);
     bool set_character_vitals(int hp,int max_hp,int mp,int max_mp,int weight,int max_weight);
     bool set_music_map(godot::String map);
     bool set_quest_details(int index,godot::PackedStringArray lines);
@@ -165,6 +166,7 @@ private:
     int skill_button_at(godot::Vector2 position);
     mir3::DraggablePanel status{{0,0,328,466}};
     bool status_close_pressed=false;
+    void load_status_body();
     godot::Ref<godot::ImageTexture> status_body;
     godot::Vector2 status_body_offset;
     void draw_status();

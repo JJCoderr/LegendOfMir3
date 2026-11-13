@@ -228,6 +228,12 @@ func run() -> void:
 	var vitals: Dictionary = hud.hud_snapshot()
 	if not check(vitals.character_hp == Vector2i(36, 60) and vitals.character_mp == Vector2i(12, 40) and vitals.character_weight == Vector2i(25, 80), "character vitals update together"): return
 	if not await capture("character-status-vitals"): return
+	if not check(hud.set_character_progress(24, 0, 1, 350, 1000), "apply character progress"): return
+	if not check(not hud.set_character_progress(24, 3, 0, 0, 0), "reject unknown character profession"): return
+	var progress: Dictionary = hud.hud_snapshot()
+	if not check(progress.character_level == 24 and progress.character_portrait == 651 and not progress.character_shared_hp, "level switches orbs and appearance selects portrait"): return
+	if not await capture("character-status-progress"): return
+	if not check(hud.set_character_progress(1, 0, 0, 0, 0), "restore default character progress"): return
 	if not check(hud.set_character_vitals(0, 0, 0, 0, 0, 0), "restore empty character vitals"): return
 	status_hover = InputEventMouseMotion.new()
 	status_hover.position = Vector2(72, 388)
