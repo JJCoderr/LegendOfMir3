@@ -108,6 +108,21 @@ func run() -> void:
 			if hud.hud_snapshot().player_cell == Vector2i(476, 362) and hud.hud_snapshot().walk_frame == -1: break
 		if not check(hud.hud_snapshot().player_cell == Vector2i(476, 362), "route reaches destination"): return
 		if not await capture("bichon-route-arrival"): return
+		var held_walk := InputEventMouseButton.new()
+		held_walk.position = Vector2(390, 100)
+		held_walk.button_index = MOUSE_BUTTON_LEFT
+		held_walk.pressed = true
+		root.push_input(held_walk, true)
+		var held_deadline := Time.get_ticks_msec() + 3000
+		while hud.hud_snapshot().player_cell.y > 360 and Time.get_ticks_msec() < held_deadline:
+			await process_frame
+		held_walk = held_walk.duplicate()
+		held_walk.pressed = false
+		root.push_input(held_walk, true)
+		if not check(hud.hud_snapshot().player_cell == Vector2i(476, 360), "held pointer repeats walking"): return
+		if not await capture("bichon-held-walk"): return
+		await create_timer(0.8).timeout
+		if not check(hud.hud_snapshot().player_cell == Vector2i(476, 360) and hud.hud_snapshot().walk_frame == -1, "release ends repeated walking"): return
 		hud.set_meta("map_camera_cell", Vector2i(404, 402))
 		hud.queue_redraw()
 		if not await capture("bichon-merchant"): return

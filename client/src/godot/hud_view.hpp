@@ -260,6 +260,9 @@ private:
     godot::Vector2i player_cell{475,360}, step_origin{}, step_destination{};
     int walk_frame=-1, player_facing=4;
     double movement_ms=0;
+    bool map_pointer_held=false;
+    double map_pointer_seconds=0;
+    void step_toward_pointer();
     void advance_map_step(double delta);
     void start_map_step(godot::Vector2i destination);
     std::deque<mir3::MapCell> map_route;
