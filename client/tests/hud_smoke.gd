@@ -287,6 +287,28 @@ func run() -> void:
 	key(KEY_F12)
 	if not check(spell_requests == [[12, 5, Vector2(180, 160)]], "only bound shortcut dispatches spell"): return
 	if not await capture("hud-spell-key-dispatch"): return
+	for point in [Vector2(390, 30), Vector2(340, 480), Vector2(340, 550)]:
+		cast_pointer = cast_pointer.duplicate()
+		cast_pointer.position = point
+		Input.parse_input_event(cast_pointer)
+		key(KEY_F12)
+	if not check(spell_requests.size() == 1, "HUD regions block spell requests"): return
+	cast_pointer = cast_pointer.duplicate()
+	cast_pointer.position = Vector2(180, 160)
+	Input.parse_input_event(cast_pointer)
+	key(KEY_V)
+	if not check(hud.apply_minimap_reply(1001), "open minimap for shortcut gate"): return
+	key(KEY_F12)
+	if not check(spell_requests.size() == 1, "open minimap blocks scene spell request"): return
+	if not await capture("hud-spell-minimap-gate"): return
+	await create_timer(0.2).timeout
+	click_at(Vector2(643, 513), true)
+	click_at(Vector2(643, 513), false)
+	if not check(not hud.hud_snapshot().minimap_visible, "close minimap before resuming spells"): return
+	cast_pointer = cast_pointer.duplicate()
+	Input.parse_input_event(cast_pointer)
+	key(KEY_F12)
+	if not check(spell_requests.size() == 2, "spell request resumes after closing minimap"): return
 	magic_hover = magic_hover.duplicate()
 	Input.parse_input_event(magic_hover)
 	key(KEY_B)

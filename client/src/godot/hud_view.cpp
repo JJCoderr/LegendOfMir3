@@ -674,8 +674,7 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         const int slot=code-KEY_F1+1;
         if (!bind_skill_at_cursor(slot)) {
             const int id=bound_skill(slot);
-            if (!id) return;
-            emit_signal("spell_key_requested",slot,id,inventory_cursor);
+            if (id && spell_pointer_available()) emit_signal("spell_key_requested",slot,id,inventory_cursor);
         }
         get_viewport()->set_input_as_handled();
         return;
@@ -1212,6 +1211,19 @@ bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
         return true;
     }
     return false;
+}
+
+bool Mir3HudView::spell_pointer_available() const {
+    using Layout=mir3::HudLayout;
+    const auto pointer=inventory_cursor;
+    if (minimap.visible || group_request || !Rect2(0,0,800,Layout::origin[1]).has_point(pointer) ||
+        rect(Layout::chat_frame(model.layout.expanded)).has_point(pointer)) return false;
+    if (guild_editor.visible && rect(guild_editor.rect).has_point(pointer)) return false;
+    for (const auto panel:panel_order) {
+        const auto& state=panel_state(panel);
+        if (state.visible && rect(state.rect).has_point(pointer)) return false;
+    }
+    return true;
 }
 
 int Mir3HudView::bound_skill(int key) const {

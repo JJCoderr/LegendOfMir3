@@ -65,6 +65,7 @@ private:
     bool skill_shortcuts_visible=false;
     void draw_skill_shortcuts();
     int bound_skill(int key) const;
+    bool spell_pointer_available() const;
     mir3::MountPanel mount;
     mir3::QuestPanel quest;
     void toggle_quest();
