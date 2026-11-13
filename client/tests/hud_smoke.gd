@@ -1650,6 +1650,20 @@ func run() -> void:
 	hud.notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_OUT)
 	if not check(hud.hud_snapshot().music_level == -50, "focus loss retains last dragged music level"): return
 	if not await capture("system-options-volume-after-focus-loss"): return
+	var saved_during_drag: Node = load("res://main.tscn").instantiate()
+	saved_during_drag.set_meta("options_path", options_file)
+	root.add_child(saved_during_drag)
+	var saved_level: int = saved_during_drag.hud_snapshot().music_level
+	saved_during_drag.free()
+	if not check(saved_level == -50, "in-range drag survives reload"): return
+	# The old client allows an overshoot in the drag calculation, but reload validates [-100, 0].
+	click_at(Vector2(512, 152), true)
+	music_drag = music_drag.duplicate()
+	music_drag.position = Vector2(618, 152)
+	Input.parse_input_event(music_drag)
+	click_at(music_drag.position, false)
+	if not check(hud.hud_snapshot().music_level == 2, "music slider preserves the legacy right endpoint"): return
+	if not await capture("system-options-volume-right-end"): return
 	click_at(Vector2(595, 447), false)
 	if not check(not hud.hud_snapshot().options_visible, "options close"): return
 	var reloaded: Node = load("res://main.tscn").instantiate()
@@ -1658,7 +1672,7 @@ func run() -> void:
 	var persisted: Dictionary = reloaded.hud_snapshot()
 	reloaded.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(options_file))
-	if not check(not persisted.music_enabled and persisted.music_level == -50, "system options reload from original INI keys"): return
+	if not check(not persisted.music_enabled and persisted.music_level == 0, "system options reload from original INI keys"): return
 	for option in ["magic_light", "damage_numbers", "reverse_pan"]:
 		if not check(persisted[option] == changed_options[option], "reload system option " + option): return
 	click_at(Vector2(540, 570), false)
