@@ -1132,6 +1132,20 @@ func run() -> void:
 			await RenderingServer.frame_post_draw
 		if not check(root.get_texture().get_image().get_pixelv(marker_pixel) == green,
 			"portrait map player marker returns after the hidden phase"): return
+	key(KEY_R)
+	if not check(hud.hud_snapshot().expanded and hud.hud_snapshot().portrait_map_mode
+		and not hud.hud_snapshot().portrait_map_visible, "expanded chat hides the portrait map without clearing the mode"): return
+	if not await capture("hud-portrait-map-expanded-chat"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		if not check(root.get_texture().get_image().get_pixel(583, 542) != Color8(100, 250, 100),
+			"expanded chat suppresses the rendered portrait map markers"): return
+	key(KEY_R)
+	if not check(hud.hud_snapshot().portrait_map_visible and map_requests.size() == 5,
+		"collapsed chat restores the portrait map without a new request"): return
+	if not await capture("hud-portrait-map-restored"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		if not check(root.get_texture().get_image().get_pixel(583, 542) == Color8(100, 250, 100),
+			"collapsed chat restores the rendered portrait map markers"): return
 	while Time.get_ticks_msec() < portrait_map_deadline:
 		await process_frame
 	key(KEY_J)
