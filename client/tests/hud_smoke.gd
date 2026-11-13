@@ -1795,6 +1795,9 @@ func run() -> void:
 	key(KEY_Q, 0, true)
 	if not check(hud.hud_snapshot().group_request == 109, "Alt+Q opens program exit confirmation"): return
 	if not await capture("hud-exit-program"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var exit_frame := root.get_texture().get_image()
+		if not check(exit_frame.get_pixel(220, 126) != Color8(72, 72, 72), "keyboard exit dialog draws immediately"): return
 	key(KEY_TAB)
 	key(KEY_SPACE)
 	if not check(hud.hud_snapshot().group_request == 0 and exit_requests.is_empty(), "cancel program exit"): return

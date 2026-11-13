@@ -2814,6 +2814,7 @@ void Mir3HudView::open_group_dialog(int action) {
     group_request=action<=3?1019+action:action;
     group_selected=0;
     group_dialog_pressed=-1;
+    queue_redraw();
     if (!dialog_has_input()) { chat_input->release_focus();return; }
     chat_input->set_position(Vector2(group_dialog[0]+24,group_dialog[1]+228));
     chat_input->set_size(Vector2(309,15));
