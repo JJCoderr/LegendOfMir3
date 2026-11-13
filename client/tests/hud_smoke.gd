@@ -87,6 +87,39 @@ func run_scene_actor_removal() -> void:
 		var moved: Rect2 = hud.hud_snapshot().scene_human_bounds[5]
 		if not check(hud.hud_snapshot().scene_human_cells[5] == destination and moved.has_area()
 			and moved.position.distance_to(bounds.position) > 20, "remote human settles on the server destination"): return
+		var run_origin := destination
+		var run_loaded := false
+		for direction in [7, 3, 5, 1, 0, 2, 4, 6]:
+			var deltas := [Vector2i.UP, Vector2i(1, -1), Vector2i.RIGHT, Vector2i(1, 1),
+				Vector2i.DOWN, Vector2i(-1, 1), Vector2i.LEFT, Vector2i(-1, -1)]
+			destination = run_origin + deltas[direction] * 2
+			if hud.apply_scene_human_step(5, 13, destination, direction):
+				run_loaded = true
+				break
+		if not check(run_loaded and hud.hud_snapshot().scene_human_cells[5] == run_origin,
+			"remote running starts two cells behind the reported destination"): return
+		if not await capture("bichon-remote-human-running"): return
+		await create_timer(0.95).timeout
+		if not check(hud.hud_snapshot().scene_human_cells[5] == destination
+			and hud.hud_snapshot().scene_human_bounds[5].has_area(), "remote run reaches the reported destination"): return
+		if not check(hud.apply_scene_human_stand(5, destination, 4), "remote standing update turns the actor"): return
+		if not check(hud.hud_snapshot().scene_human_facings[5] == 4
+			and hud.hud_snapshot().scene_human_idle_frames[5] == 0,
+			"standing update resets the independent idle clock"): return
+		await create_timer(0.25).timeout
+		if not check(hud.hud_snapshot().scene_human_idle_frames[5] == 1,
+			"remote standing advances through its own frames"): return
+		if not check(not hud.apply_scene_human_stand(5, destination, 8)
+			and not hud.apply_scene_human_stand(9999, destination, 4)
+			and hud.hud_snapshot().scene_human_facings[5] == 4,
+			"invalid standing updates preserve the actor"): return
+		if not check(hud.apply_scene_human_step(5, 11, run_origin, 2)
+			and hud.apply_scene_human_stand(5, destination, 6), "standing update interrupts movement"): return
+		await create_timer(0.75).timeout
+		if not check(hud.hud_snapshot().scene_human_cells[5] == destination
+			and hud.hud_snapshot().scene_human_facings[5] == 6,
+			"cancelled movement cannot overwrite standing state"): return
+		if not await capture("bichon-remote-human-standing"): return
 		print("SCENE_HUMAN_STEP_OK")
 		quit()
 		return
