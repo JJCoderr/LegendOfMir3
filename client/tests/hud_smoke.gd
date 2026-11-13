@@ -396,6 +396,10 @@ func run() -> void:
 	key(KEY_F12)
 	if not check(spell_requests == [[12, 5, Vector2(180, 160)]], "only bound shortcut dispatches spell"): return
 	if not await capture("hud-spell-key-dispatch"): return
+	if not check(hud.set_learned_skill(261, 1, 11), "skill ID above one byte"): return
+	key(KEY_F11)
+	if not check(spell_requests.pop_back() == [11, 5, Vector2(180, 160)], "shortcut dispatch uses low byte of skill ID"): return
+	if not check(hud.apply_skill_removal(261), "remove high ID fixture before category tests"): return
 	for point in [Vector2(390, 30), Vector2(340, 480), Vector2(340, 550)]:
 		cast_pointer = cast_pointer.duplicate()
 		cast_pointer.position = point

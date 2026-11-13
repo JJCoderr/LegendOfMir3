@@ -49,7 +49,7 @@ struct SkillPanel : DraggablePanel {
     SkillPanel() : DraggablePanel({348,0,360,488}) {}
     std::array<std::vector<SkillDisplay>,8> learned{};
     std::array<int,8> selected{-1,-1,-1,-1,-1,-1,-1,-1};
-    std::array<int,13> bindings{};
+    std::array<int,13> bindings{}; // Original shortcut slots store the low byte of each skill ID.
     int tab=0,scroll=0,pressed=-1;
     bool remove(int id) {
         auto& group=learned[SkillLayout::category(id)];

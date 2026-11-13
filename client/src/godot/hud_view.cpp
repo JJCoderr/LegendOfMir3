@@ -1292,10 +1292,10 @@ bool Mir3HudView::set_learned_skill(int id,int level,int key,int experience,int 
     const mir3::SkillDisplay entry{id,level,key,static_cast<std::uint32_t>(experience),required,name.utf8().get_data(),{}};
     if (found==learned.end()) learned.push_back(entry);
     else {
-        if (found->key && skills.bindings[found->key]==id) skills.bindings[found->key]=0;
+        if (found->key && skills.bindings[found->key]==(id&255)) skills.bindings[found->key]=0;
         *found=entry;
     }
-    if (key) skills.bindings[key]=id;
+    if (key) skills.bindings[key]=id&255;
     queue_redraw();
     return true;
 }
@@ -1417,9 +1417,9 @@ void Mir3HudView::bind_skill(int id,int key) {
     }
     for (auto& skill:skills.learned[mir3::SkillLayout::category(id)]) {
         if (!skill.id || skill.id!=id) continue;
-        if (skill.key && skills.bindings[skill.key]==skill.id) skills.bindings[skill.key]=0;
+        if (skill.key && skills.bindings[skill.key]==(skill.id&255)) skills.bindings[skill.key]=0;
         skill.key=key;
-        skills.bindings[key]=skill.id;
+        skills.bindings[key]=skill.id&255;
         const int legacy_key=key<=9?'0'+key:'A'+key-10;
         emit_signal("skill_key_requested",skill.id,legacy_key);
         break;
