@@ -78,6 +78,7 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("shop_offer_selected",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::INT,"identifier")));
     ADD_SIGNAL(MethodInfo("shop_good_requested",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::INT,"index"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("npc_dialogue_action",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::STRING,"command")));
+    ClassDB::bind_method(D_METHOD("apply_npc_message","encoded","key"),&Mir3HudView::apply_npc_message);
     ClassDB::bind_method(D_METHOD("apply_npc_body","opcode","actor","count","encoded"),&Mir3HudView::apply_npc_body);
     ClassDB::bind_method(D_METHOD("apply_npc_dialogue","opcode","actor","body"),&Mir3HudView::apply_npc_dialogue);
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
@@ -474,26 +475,52 @@ bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
     return !map_route.empty();
 }
 
+namespace {
+std::optional<std::string> decode_npc_six_bit(const std::uint8_t* encoded,std::size_t size) {
+    if (size%4==1) return {};
+    std::string decoded;
+    decoded.reserve(size*3/4);
+    unsigned accumulator=0;
+    int bits=0;
+    for (std::size_t i=0;i<size;++i) {
+        const auto byte=encoded[i];
+        if (byte<60 || byte>123) return {};
+        accumulator=(accumulator<<6)|(byte-60);
+        bits+=6;
+        if (bits>=8) {
+            bits-=8;
+            decoded+=char((accumulator>>bits)&255);
+        }
+    }
+    if (bits && (accumulator&((1u<<bits)-1))) return {};
+    return decoded;
+}
+}
+
+bool Mir3HudView::apply_npc_message(PackedByteArray encoded,PackedByteArray key) {
+    constexpr int header_size=16;
+    if (key.size()!=4 || encoded.size()<header_size || encoded.size()>header_size+(10240*4+2)/3) return false;
+    const auto header=decode_npc_six_bit(encoded.ptr(),header_size);
+    if (!header) return false;
+    const auto b=[&](int index) { return std::uint32_t(std::uint8_t((*header)[index])); };
+    // 0x428308..0x428399 reconstructs these fields using the connection key.
+    const int opcode=(b(0)^key[0])|((b(4)^key[1])<<8);
+    const auto actor=(b(5)^key[3])|((b(7)^key[2])<<8)|(b(9)<<16)|(b(11)<<24);
+    const int first_parameter=b(1)|(b(6)<<8);
+    if (opcode==650 || opcode==651)
+        return encoded.size()==header_size && apply_shop_purchase_reply(opcode,first_parameter);
+    if (actor>INT_MAX) return false;
+    return apply_npc_body(opcode,static_cast<int>(actor),first_parameter,encoded.slice(header_size));
+}
+
 bool Mir3HudView::apply_npc_body(int opcode,int actor,int count,PackedByteArray encoded) {
     if (opcode==644) return encoded.is_empty() && apply_npc_dialogue(opcode,actor,String());
     const int limit=opcode==643?8192:opcode==645?10240:0;
     if (!limit || encoded.size()>(limit*4+2)/3 || encoded.size()%4==1) return false;
 
-    std::string ansi;
-    ansi.reserve(encoded.size()*3/4);
-    unsigned accumulator=0;
-    int bits=0;
-    for (int64_t i=0;i<encoded.size();++i) {
-        const auto byte=encoded[i];
-        if (byte<60 || byte>123) return false;
-        accumulator=(accumulator<<6)|(byte-60);
-        bits+=6;
-        if (bits>=8) {
-            bits-=8;
-            ansi+=char((accumulator>>bits)&255);
-        }
-    }
-    if (bits && (accumulator&((1u<<bits)-1))) return false;
+    const auto decoded=decode_npc_six_bit(encoded.ptr(),encoded.size());
+    if (!decoded) return false;
+    const auto& ansi=*decoded;
     const auto end=ansi.find(char(0));
     const auto body=String::utf8(mir3::ansi_to_utf8(std::string_view(ansi).substr(0,end)).c_str());
     return opcode==643?apply_npc_dialogue(opcode,actor,body):apply_shop_goods(actor,count,body);

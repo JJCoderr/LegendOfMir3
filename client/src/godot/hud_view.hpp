@@ -265,6 +265,7 @@ private:
     double map_pointer_seconds=0;
     void step_toward_pointer(bool run=false);
     bool merchant_pointer(godot::Vector2 pointer);
+    bool apply_npc_message(godot::PackedByteArray encoded,godot::PackedByteArray key);
     bool apply_npc_body(int opcode,int actor,int count,godot::PackedByteArray encoded);
     bool apply_npc_dialogue(int opcode,int actor,godot::String body);
     struct NpcDialogueRow { std::string text, command; mir3::HudLayout::Rect bounds; };

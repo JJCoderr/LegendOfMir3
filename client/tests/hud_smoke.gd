@@ -204,7 +204,7 @@ func run() -> void:
 		var dialogue_actions: Array = []
 		hud.npc_dialogue_action.connect(func(actor: int, command: String): dialogue_actions.append([actor, command]))
 		var script := "老黄/要买点什么？" + char(92) + "<购买药品/@buy>" + char(92) + "<离开/@exit>"
-		if not check(hud.apply_npc_body(643, 2, 0, "lHzwm^{NfhGniZKFhhJpdwyXKGbvlkGNfXVsGp=^YS`zS?o<vwzfGp=aZBapK\\".to_ascii_buffer()), "decode merchant dialogue reply"): return
+		if not check(hud.apply_npc_message("`\\<<<>=B<?H<<<<<lHzwm^{NfhGniZKFhhJpdwyXKGbvlkGNfXVsGp=^YS`zS?o<vwzfGp=aZBapK\\".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "decode merchant dialogue reply"): return
 		if not await capture("bichon-merchant-dialogue"): return
 		var option := InputEventMouseButton.new()
 		option.position = Vector2(45, 48)
