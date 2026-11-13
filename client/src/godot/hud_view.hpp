@@ -60,6 +60,7 @@ private:
     godot::Ref<godot::ImageTexture> active_portrait;
     godot::String portrait_directory;
     godot::Ref<godot::ImageTexture> portrait_preview;
+    int portrait_button_at(godot::Vector2 point);
     bool portrait_input(int kind,godot::Vector2 point);
     void close_portrait_picker();
     mir3::DraggablePanel options{{145,30,510,468}};

@@ -367,6 +367,16 @@ func run() -> void:
 	click_at(Vector2(185, 350), false)
 	if not check(portrait_uploads.size() == 2 and portrait_uploads[1].is_empty() and hud.apply_portrait_reply(portrait_uploads[1]), "reset portrait reply"): return
 	if not check(not hud.hud_snapshot().custom_portrait, "restore profession portrait"): return
+	var names := PackedStringArray()
+	for index in range(14): names.append("portrait-%02d.jpg" % index)
+	hud.set_portrait_names(names)
+	var portrait_wheel := InputEventMouseButton.new()
+	portrait_wheel.position = Vector2(48, 40)
+	portrait_wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	portrait_wheel.pressed = true
+	Input.parse_input_event(portrait_wheel)
+	if not check(hud.hud_snapshot().portrait_first == 1, "portrait wheel advances one row"): return
+	if not await capture("portrait-scrolled"): return
 	DirAccess.remove_absolute(portrait_dir.path_join("sample.JPG"))
 	DirAccess.remove_absolute(portrait_dir)
 	key(KEY_ESCAPE)
