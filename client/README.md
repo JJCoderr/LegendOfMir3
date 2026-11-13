@@ -46,4 +46,6 @@ Godot_v4.7.2-stable_win64_console.exe --path client/godot --script ../tests/hud_
 
 输入通过 `chat_requested(text)` 发出待发送请求，尚未连接 3030 网络消息，不制造服务端回显。控件按旧项目使用 Godot LineEdit，已验证位置、尺寸和编辑边界，但光标、选区、IME 与字体像素不是原生 Win32 EDIT 的完整复现，仍需对齐。测试通过真实 Godot 输入事件覆盖中文输入、提交、Escape、ANSI 上限、小组前缀；新增截图 `hud-chat-input.png`、`hud-chat-group-input.png`。
 
+三个拒绝按钮按旧分析 `0x43C130` case20..22，读取各自拒绝状态后设置预测图案/提示，通过同一 `chat_requested` 发送 CMList1070/1071/1073 原文（包括1073末尾空格）。初始提示2637/2639/2643，预测拒绝使用1338/1340/1342与2638/2640/2644，预测允许清除动态叠图。`update_chat_rejection(channel,rejected)` 仅是外部状态入口：原版字段写入/回包路径未知，点击不自行切换状态，也不在本地过滤消息。截图 `hud-chat-reception.png`、`hud-chat-reception-allow.png` 覆盖两组分支，测试注入状态不代表网络应答已完成。频道切换提示使用旧分析的白色文字、COLORREF 0x80FF 背景。
+
 后续按主界面、背包、人物、魔法、聊天、组队、行会及其余对话框分别提取模型、控制器、视图与证据，一项验证完成后再处理下一项。测试与验证使用命令行，不使用 Computer Use。

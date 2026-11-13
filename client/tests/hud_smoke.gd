@@ -117,5 +117,22 @@ func run() -> void:
 	for ch in "组队聊天测试": key(0, ch.unicode_at(0))
 	await process_frame
 	if not await capture("hud-chat-group-input"): return
+	key(KEY_ESCAPE)
+	await process_frame
+	if not check(hud.hud_snapshot().reception_hints == PackedInt32Array([2637, 2639, 2643]), "initial reception hints"): return
+	for x in [350, 390, 430]:
+		click_at(Vector2(x, 560), true)
+		click_at(Vector2(x, 560), false)
+	await process_frame
+	if not check(requests.slice(1) == ["@拒绝悄悄话", "@拒绝行会聊天", "@拒绝所有人聊天 "], "original command payloads"): return
+	if not check(hud.hud_snapshot().reception_frames == PackedInt32Array([1338, 1340, 1342]) and hud.hud_snapshot().rejected_chat == PackedInt32Array([0, 0, 0]), "predicted skins without fabricated acknowledgement"): return
+	if not await capture("hud-chat-reception"): return
+	for i in 3:
+		if not check(hud.update_chat_rejection(i, true), "external rejection state"): return
+	if not check(not hud.update_chat_rejection(3, true), "invalid rejection state channel"): return
+	for x in [350, 390, 430]: click_at(Vector2(x, 560), false)
+	await process_frame
+	if not check(hud.hud_snapshot().reception_frames == PackedInt32Array([-1, -1, -1]) and hud.hud_snapshot().reception_hints == PackedInt32Array([2637, 2639, 2643]), "allow skins from supplied state"): return
+	if not await capture("hud-chat-reception-allow"): return
 	print("HUD_SMOKE_OK: resources, expansion, collapse, stat switching, action dispatch")
 	quit(0)

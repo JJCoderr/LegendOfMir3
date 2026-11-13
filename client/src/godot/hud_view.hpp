@@ -4,6 +4,7 @@
 #include "resources/messages.hpp"
 #include "text/native_text.hpp"
 #include "chat/chat_history.hpp"
+#include "chat/chat_reception.hpp"
 #include "chat_input_view.hpp"
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/image_texture.hpp>
@@ -20,6 +21,7 @@ public:
     void _notification(int what);
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
+    bool update_chat_rejection(int channel,bool rejected);
 protected:
     static void _bind_methods();
 private:
@@ -30,6 +32,8 @@ private:
     mir3::Messages messages;
     mir3::HudButtonTooltip button_tooltip;
     mir3::ChatHistory chat_history;
+    mir3::ChatReceptionButtons reception_buttons;
+    std::array<bool,3> rejected_chat{};
     Mir3ChatInput* chat_input=nullptr;
     void chat_requested(godot::String value);
     bool loaded=false;

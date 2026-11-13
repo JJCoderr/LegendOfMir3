@@ -1,4 +1,5 @@
 #include "hud/hud_model.hpp"
+#include "chat/chat_reception.hpp"
 #include "resources/wil_archive.hpp"
 #include "resources/messages.hpp"
 #include <iterator>
@@ -58,6 +59,17 @@ int main(int argc,char** argv) {
         mir3::HudButtonTooltip hint;
         check(hint.draw("inventory",{31,12},{790,540})==std::array{757,533,43,7},"tooltip right edge and first animation step");
         check(hint.draw("changed",{31,12},{790,540})[3]==8,"tooltip caption change preserves animation");
+        mir3::ChatReceptionButtons reception;
+        check(reception.hints==std::array{2637,2639,2643},"initial reception hints");
+        const auto original=reception;
+        check(reception.press(19,false)==-1 && reception.press(23,true)==-1 && reception.hints==original.hints,"invalid reception button");
+        for (int i=0;i<3;++i) {
+            const int command=i==0?1070:i==1?1071:1073;
+            check(reception.press(20+i,false)==command && reception.frames[i]==1338+2*i && reception.hints[i]==original.hints[i]+1,"predict reject command");
+            check(reception.press(20+i,true)==command && reception.frames[i]==-1 && reception.hints[i]==original.hints[i],"predict allow command");
+            check(!messages.get(command).empty(),"reception command resource");
+        }
+        check(messages.get(1073).back()==' ',"preserve trailing space in original all-chat command");
         std::cout<<"HUD resources, hit regions, release behavior and crop precision passed\n";
     } catch (const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }

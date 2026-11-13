@@ -25,6 +25,7 @@ Vector2 point(mir3::HudLayout::Point p) { return Vector2(p[0],p[1]); }
 void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("hud_snapshot"),&Mir3HudView::hud_snapshot);
     ClassDB::bind_method(D_METHOD("post_chat","value","foreground","background"),&Mir3HudView::post_chat);
+    ClassDB::bind_method(D_METHOD("update_chat_rejection","channel","rejected"),&Mir3HudView::update_chat_rejection);
     ADD_SIGNAL(MethodInfo("hud_action",PropertyInfo(Variant::INT,"button")));
     ADD_SIGNAL(MethodInfo("chat_requested",PropertyInfo(Variant::STRING,"text")));
 }
@@ -41,6 +42,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_compact_first"]=chat_history.first(false);
     result["chat_expanded_first"]=chat_history.first(true);
     result["chat_mode"]=chat_input?chat_input->mode.mode:0;
+    PackedInt32Array frames,hints,rejected;
+    for (int i=0;i<3;++i) { frames.push_back(reception_buttons.frames[i]);hints.push_back(reception_buttons.hints[i]);rejected.push_back(rejected_chat[i]); }
+    result["reception_frames"]=frames;result["reception_hints"]=hints;result["rejected_chat"]=rejected;
     return result;
 }
 void Mir3HudView::_ready() {
@@ -100,6 +104,10 @@ void Mir3HudView::buttons() {
         auto layers=mir3::main_button_frames(i,model.hovered==i,model.pressed==i);
         if (chat_input && chat_input->mode.changed && (i==18 || i==19)) {
             const int id=chat_input->mode.frame(i);
+            layers=mir3::button_frames({id,id,id,false},model.pressed==i?2:model.hovered==i?1:0);
+        }
+        if (i>=20 && i<=22 && reception_buttons.changed[i-20]) {
+            const int id=reception_buttons.frames[i-20];
             layers=mir3::button_frames({id,id,id,false},model.pressed==i?2:model.hovered==i?1:0);
         }
         for (auto id:layers)
@@ -192,6 +200,13 @@ bool Mir3HudView::scroll_input(int kind,Vector2 position) {
 }
 std::string Mir3HudView::message(int id) const { return mir3::ansi_to_utf8(messages.get(id)); }
 void Mir3HudView::chat_requested(String value) { emit_signal("chat_requested",value); }
+bool Mir3HudView::update_chat_rejection(int channel,bool rejected) {
+    if (channel<0 || channel>=3) return false;
+    // State producer is external. The recovered click path reads these flags;
+    // it does not toggle them or infer an acknowledgement from the command.
+    rejected_chat[channel]=rejected;
+    return true;
+}
 void Mir3HudView::tooltip(int kind) {
     std::string caption;
     if (kind<=2) caption=message(kind==1?2623:2622)+std::to_string(kind==1?model.mp:model.hp)+"/"+std::to_string(kind==1?model.max_mp:model.max_hp);
@@ -210,7 +225,8 @@ void Mir3HudView::tooltip(int kind) {
 }
 void Mir3HudView::button_hint() {
     if (model.hovered<0) return;
-    const int hint=chat_input && (model.hovered==18 || model.hovered==19)?chat_input->mode.tooltip(model.hovered):model.hovered==22?2643:2600+model.hovered;
+    const int hint=chat_input && (model.hovered==18 || model.hovered==19)?chat_input->mode.tooltip(model.hovered):
+        model.hovered>=20 && model.hovered<=22?reception_buttons.hints[model.hovered-20]:2600+model.hovered;
     const auto caption=message(hint);
     if (caption.empty()) return;
     const auto measured=mir3::raster_text(caption,800,24,false,mir3::TextFont::normal);
@@ -250,8 +266,12 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             if (action==16 || action==17) chat_input->focus_chat(String::utf8(action==16?message(1072).c_str():"!"),true);
             if (action==18 || action==19) {
                 const int id=chat_input->mode.toggle(action);
-                post_chat(String::utf8(message(id).c_str()),0xffffff,0);
+                post_chat(String::utf8(message(id).c_str()),0xffffff,0x80ff);
             }
+        }
+        if (action>=20 && action<=22) {
+            const int id=reception_buttons.press(action,rejected_chat[action-20]);
+            chat_requested(String::utf8(message(id).c_str()));
         }
         if (action>=0) emit_signal("hud_action",action);
         if (captured) get_viewport()->set_input_as_handled();
