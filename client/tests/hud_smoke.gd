@@ -820,6 +820,11 @@ func run() -> void:
 	if not await capture("hud-trade-offer-accepted"): return
 	click_at(Vector2(70, 75), true)
 	click_at(Vector2(70, 75), false)
+	if not check(hud.hud_snapshot().trade_return_slot == 1 and hud.hud_snapshot().held_inventory_icon == -1, "select trade item without moving it into the bag"): return
+	var return_preview := InputEventMouseMotion.new()
+	return_preview.position = trade_pickup
+	Input.parse_input_event(return_preview)
+	if not await capture("hud-trade-return-preview"): return
 	click_at(trade_pickup, true)
 	click_at(trade_pickup, false)
 	if not check(offers[-1] == [1027, 98765, "Trade potion", 1], "placing selected offer in bag sends return request"): return

@@ -121,6 +121,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["trade_gold_local"]=int64_t(trade_gold[0]);
     result["trade_gold_remote"]=int64_t(trade_gold[1]);
     result["inventory_gold"]=int64_t(inventory_gold);
+    result["trade_return_slot"]=trade_return_slot;
     result["trade_confirmed"]=trade_confirmed;
     result["trade_visible"]=trade.visible;
     result["quest_visible"]=quest.visible;
@@ -350,8 +351,9 @@ void Mir3HudView::_draw() {
         sprite(mir3::HudLayout::portrait_entry_frame(portrait_entry_pressed),mir3::HudLayout::portrait_entry_position);
     if (group_request) draw_group_dialog();
     button_hint();
-    if (bag.held) {
-        const auto icon=item_frame(bag.held.icon);
+    const auto& held=trade.visible && trade_return_slot>=0?trade_items[0][trade_return_slot]:bag.held;
+    if (held && Rect2(0,0,800,600).has_point(inventory_cursor)) {
+        const auto icon=item_frame(held.icon);
         if (icon.is_valid()) draw_texture(icon,(inventory_cursor-icon->get_size()*0.5).floor());
     }
 }
