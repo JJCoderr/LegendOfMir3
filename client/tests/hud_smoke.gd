@@ -220,6 +220,14 @@ func run() -> void:
 		click_at(Vector2(75, 32), true)
 		click_at(Vector2(75, 32), false)
 		if not check(dialogue_actions == [[2, "@buy"], [2, "@buy"], [2, "@exit"]], "only inline labels dispatch their own commands"): return
+		var goods_requests: Array = []
+		hud.shop_good_requested.connect(func(actor: int, index: int, name: String): goods_requests.append([actor, index, name]))
+		if not check(hud.apply_shop_goods(2, 2, "Red potion/1/20/5/Blue potion/0/25/4/"), "645 goods list"): return
+		if not check(not hud.apply_shop_goods(2, 1, "Broken/1/"), "reject truncated goods list"): return
+		if not await capture("bichon-merchant-goods"): return
+		click_at(Vector2(45, 60), true)
+		click_at(Vector2(45, 60), false)
+		if not check(goods_requests == [[2, 1, "Blue potion"]], "goods selection retains list after invalid reply"): return
 		if not check(hud.apply_npc_dialogue(644, 2, "") and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
 		if not check(hud.apply_npc_dialogue(643, 2, script) and hud.walk_to_map_cell(Vector2i(419, 410)), "walk away from reopened NPC dialogue"): return
 		var leave_deadline := Time.get_ticks_msec() + 6000

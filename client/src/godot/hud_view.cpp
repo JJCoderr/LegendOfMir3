@@ -66,6 +66,8 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
     ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
     ADD_SIGNAL(MethodInfo("npc_dialogue_requested",PropertyInfo(Variant::INT,"actor")));
+    ClassDB::bind_method(D_METHOD("apply_shop_goods","actor","count","body"),&Mir3HudView::apply_shop_goods);
+    ADD_SIGNAL(MethodInfo("shop_good_requested",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::INT,"index"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("npc_dialogue_action",PropertyInfo(Variant::INT,"actor"),PropertyInfo(Variant::STRING,"command")));
     ClassDB::bind_method(D_METHOD("apply_npc_dialogue","opcode","actor","body"),&Mir3HudView::apply_npc_dialogue);
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
@@ -509,9 +511,67 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
 
 void Mir3HudView::close_npc_dialogue() {
     npc_dialogue_actor=0;
+    shop_actor=0;
+    shop_pressed=-1;
     npc_dialogue_rows.clear();
     npc_dialogue_pressed=-1;
     queue_redraw();
+}
+
+bool Mir3HudView::apply_shop_goods(int actor,int count,String body) {
+    const auto utf8=body.utf8();
+    if (actor<=0 || count<0 || count>255 || utf8.length()>10240) return false;
+    std::string_view remaining(utf8.get_data(),utf8.length());
+    std::vector<ShopGood> goods;
+    for (int i=0;i<count;++i) {
+        std::array<std::string_view,4> fields;
+        for (auto& field:fields) {
+            const auto slash=remaining.find('/');
+            if (slash==remaining.npos || slash==0) return false;
+            field=remaining.substr(0,slash);
+            remaining.remove_prefix(slash+1);
+        }
+        ShopGood good{std::string(fields[0]),0,0,0};
+        const std::array values{&good.variants,&good.price,&good.stock};
+        for (std::size_t j=0;j<values.size();++j) {
+            const auto field=fields[j+1];
+            const auto end=field.data()+field.size();
+            const auto parsed=std::from_chars(field.data(),end,*values[j]);
+            if (parsed.ec!=std::errc{} || parsed.ptr!=end || *values[j]<0) return false;
+        }
+        goods.push_back(std::move(good));
+    }
+    shop_goods=std::move(goods);
+    shop_actor=actor;
+    shop_pressed=-1;
+    queue_redraw();
+    return true;
+}
+
+void Mir3HudView::draw_shop() {
+    if (!shop_actor) return;
+    sprite(1260,{0,0});
+    for (int i=0;i<std::min(8,int(shop_goods.size()));++i) {
+        const auto& good=shop_goods[i];
+        text(good.name,{22,34+19*i,150,18},shop_pressed==i?0x96ffff:0x64ffff,mir3::TextFont::normal,false);
+        text(std::to_string(good.price),{174,34+19*i,62,18},0xfafafa);
+        text(std::to_string(good.stock),{237,34+19*i,32,18},0xfafafa);
+    }
+}
+
+bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
+    if (!shop_actor) return false;
+    const bool inside=Rect2(0,0,292,224).has_point(pointer);
+    const int row=Rect2(22,34,247,152).has_point(pointer)?(int(pointer.y)-34)/19:-1;
+    const bool hit=row>=0 && row<int(shop_goods.size());
+    const int pressed=shop_pressed;
+    shop_pressed=kind==0 && hit?row:-1;
+    if (kind==2 && hit && pressed==row)
+        emit_signal("shop_good_requested",shop_actor,row,String::utf8(shop_goods[row].name.c_str()));
+    if (!inside && pressed<0) return false;
+    get_viewport()->set_input_as_handled();
+    queue_redraw();
+    return true;
 }
 
 void Mir3HudView::draw_npc_dialogue() {
@@ -763,6 +823,7 @@ void Mir3HudView::_draw() {
     draw_minimap();
     draw_skill_shortcuts();
     draw_npc_dialogue();
+    draw_shop();
     if (guild_editor.visible) draw_guild_editor();
     if (!model.layout.expanded && Rect2(535,486,81,94).has_point(inventory_cursor))
         sprite(mir3::HudLayout::portrait_entry_frame(portrait_entry_pressed),mir3::HudLayout::portrait_entry_position);
@@ -1028,7 +1089,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         inventory_cursor=p;
         const int kind=button->is_pressed()?0:2;
         if (kind==2 && chat_history.scroll(model.layout.expanded).captured() && scroll_input(kind,p)) return;
-        if (npc_dialogue_input(kind,p) || skill_menu_input(kind,p,button->is_double_click())) return;
+        if (shop_input(kind,p) || npc_dialogue_input(kind,p) || skill_menu_input(kind,p,button->is_double_click())) return;
         if (minimap_pointer(kind,p,button->is_ctrl_pressed()) || panel_pointer(kind,p) || scroll_input(kind,p)) return;
         const auto entry=frame(2096);
         const auto anchor=mir3::HudLayout::portrait_entry_position;
