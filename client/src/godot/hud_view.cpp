@@ -807,10 +807,16 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
 
 void Mir3HudView::draw_npc_dialogue() {
     if (!npc_dialogue_actor) return;
-    // 0x460150: normal header, at least one 20px strip, then the footer.
-    sprite(1353,{0,0});
-    for (int i=0;i<std::max(1,npc_dialogue_extra_rows);++i) sprite(1351,{0,160+20*i});
-    sprite(1352,{0,160+20*std::max(1,npc_dialogue_extra_rows)});
+    // 0x45F9B0 / 0x45FD00: modulate the assembled background, then draw text and controls separately.
+    const Color background_modulation(180.f/255,180.f/255,180.f/255,220.f/255);
+    const auto draw_background=[&](int id,int y) {
+        const auto image=frame(id);
+        if (image.is_valid()) draw_texture(image,Vector2(0,y),background_modulation);
+    };
+    const int strips=std::max(1,npc_dialogue_extra_rows);
+    draw_background(1353,0);
+    for (int i=0;i<strips;++i) draw_background(1351,160+20*i);
+    draw_background(1352,160+20*strips);
     const int bottom=npc_dialogue_bounds()[3];
     // 0x460F07 draws the button even when NOTCLOSE disables dismissal.
     sprite(npc_dialogue_close_pressed?1222:1221,{346,bottom-42});
