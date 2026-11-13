@@ -316,12 +316,17 @@ func run() -> void:
 	if not check(not editor.visible and guild_edits.size() == 1, "guild editor cancel"): return
 	key(KEY_ESCAPE)
 	if not check(not hud.hud_snapshot().guild_visible, "guild escape closes"): return
+	if not check(hud.set_music_map("0"), "original map music lookup"): return
+	var music: AudioStreamPlayer = hud.get_node("MapMusic")
+	var original_track := music.stream
+	if not check(original_track != null and music.playing, "map music starts"): return
+	if not check(hud.set_music_map("D2011") and music.stream == original_track, "no music sentinel preserves track"): return
 	key(KEY_N)
 	if not check(hud.hud_snapshot().options_visible, "options keyboard entry"): return
 	click_at(Vector2(580, 120), false)
-	if not check(not hud.hud_snapshot().music_enabled, "music toggle"): return
+	if not check(not hud.hud_snapshot().music_enabled and not music.playing, "music toggle"): return
 	click_at(Vector2(460, 154), false)
-	if not check(hud.hud_snapshot().music_level == -5, "music slider step"): return
+	if not check(hud.hud_snapshot().music_level == -5 and is_equal_approx(music.volume_db, -2.0), "music slider step"): return
 	var click_sound: AudioStreamPlayer = hud.get_node("HudClickSound")
 	if not check(click_sound.stream != null, "original HUD click sample loads"): return
 	click_at(Vector2(460, 214), false)

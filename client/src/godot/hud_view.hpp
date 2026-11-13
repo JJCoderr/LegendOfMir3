@@ -31,6 +31,7 @@ public:
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
+    bool set_music_map(godot::String map);
     void set_guild_manager(bool allowed);
     void set_guild_members(godot::PackedStringArray lines);
     void set_guild_notices(godot::PackedStringArray lines);
@@ -53,6 +54,9 @@ private:
     void save_options();
     godot::AudioStreamPlayer* hud_sound=nullptr;
     void sync_hud_sound();
+    godot::AudioStreamPlayer* map_music=nullptr;
+    godot::String audio_root,music_file;
+    godot::PackedByteArray music_table;
     godot::String options_path;
     void draw_options();
     bool options_pointer(int kind,godot::Vector2 point);

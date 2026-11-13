@@ -1,5 +1,7 @@
 #include <godot_cpp/classes/font.hpp>
 #include <godot_cpp/classes/audio_stream_wav.hpp>
+#include <godot_cpp/classes/audio_stream_mp3.hpp>
+#include <godot_cpp/classes/file_access.hpp>
 #include "hud_view.hpp"
 #include <godot_cpp/classes/config_file.hpp>
 #include <godot_cpp/classes/image.hpp>
@@ -37,6 +39,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_group_roster","player","members"),&Mir3HudView::set_group_roster);
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines"),&Mir3HudView::set_guild_overview);
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
+    ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
     ADD_SIGNAL(MethodInfo("guild_members_requested"));
     ADD_SIGNAL(MethodInfo("guild_edit_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"body")));
     ADD_SIGNAL(MethodInfo("guild_member_removal_requested",PropertyInfo(Variant::STRING,"name")));
@@ -106,6 +109,11 @@ void Mir3HudView::_ready() {
     if (!loaded || frame(1160).is_null()) {
         loaded=false; UtilityFunctions::push_error("Cannot read original GameInter WIL/WIX resources."); return;
     }
+    audio_root=root.path_join("Sound");
+    music_table=FileAccess::get_file_as_bytes(root.path_join("BgmList.wwl"));
+    map_music=memnew(AudioStreamPlayer);
+    map_music->set_name("MapMusic");
+    add_child(map_music);
     const auto sample=AudioStreamWAV::load_from_file(root.path_join("Sound/105.wav"));
     if (sample.is_valid()) {
         hud_sound=memnew(AudioStreamPlayer);
@@ -1503,7 +1511,41 @@ void Mir3HudView::save_options() {
 }
 
 void Mir3HudView::sync_hud_sound() {
-    if (!hud_sound) return;
-    hud_sound->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
-    if (!audio_options.effects_enabled) hud_sound->stop();
+    if (hud_sound) {
+        hud_sound->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
+        if (!audio_options.effects_enabled) hud_sound->stop();
+    }
+    if (map_music) {
+        map_music->set_volume_db(mir3::AudioOptions::volume(audio_options.music_level)/100.f);
+        if (!audio_options.music_enabled) map_music->stop();
+        else if (map_music->get_stream().is_valid() && !map_music->is_playing()) map_music->play();
+    }
+}
+
+bool Mir3HudView::set_music_map(String map) {
+    constexpr int header=58,stride=24;
+    if (!map_music || music_table.size()<header) return false;
+    const auto count=music_table.decode_u32(54);
+    if (count>(music_table.size()-header)/stride) return false;
+    for (int64_t i=0;i<count;++i) {
+        const auto* record=music_table.ptr()+header+i*stride;
+        const auto field=[](const std::uint8_t* begin,int size) {
+            return String::utf8(reinterpret_cast<const char*>(begin),std::find(begin,begin+size,0)-begin);
+        };
+        if (field(record+1,9)!=map) continue;
+        const auto file=field(record+10,14);
+        if (file.is_empty()) continue;
+        if (file=="none" || file=="nobgm") return true;
+        if (file.get_file()!=file || file.contains(":")) return false;
+        if (file==music_file) return true;
+        const auto stream=AudioStreamMP3::load_from_file(audio_root.path_join(file));
+        if (stream.is_null()) return false;
+        stream->set_loop(true);
+        map_music->stop();
+        map_music->set_stream(stream);
+        music_file=file;
+        sync_hud_sound();
+        return true;
+    }
+    return false;
 }
