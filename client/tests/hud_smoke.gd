@@ -1635,6 +1635,19 @@ func run() -> void:
 	click_at(Vector2(580, 180), false)
 	if not check(not click_sound.playing, "effects switch stops click sound"): return
 	if not await capture("system-options"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var options_image := root.get_texture().get_image()
+		var caption_rects := [Rect2i(205, 60, 390, 15), Rect2i(411, 119, 156, 21),
+			Rect2i(411, 179, 156, 21), Rect2i(411, 239, 156, 21),
+			Rect2i(165, 152, 155, 15), Rect2i(165, 182, 155, 15)]
+		for index in range(caption_rects.size()):
+			var caption := options_image.get_region(caption_rects[index])
+			var expected := Color8(250, 250, 248) if index == 0 else Color8(255, 150, 0)
+			var glyph_pixels := 0
+			for y in range(caption.get_height()):
+				for x in range(caption.get_width()):
+					if caption.get_pixel(x, y).is_equal_approx(expected): glyph_pixels += 1
+			if not check(glyph_pixels > 20, "system options caption %d uses the original color and bounds" % index): return
 	var display_options: Dictionary = hud.hud_snapshot()
 	for position in [Vector2(335, 149), Vector2(335, 179), Vector2(580, 240)]:
 		click_at(position, true)
