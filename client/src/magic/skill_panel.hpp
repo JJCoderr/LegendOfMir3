@@ -46,7 +46,23 @@ struct SkillPanel : DraggablePanel {
     SkillPanel() : DraggablePanel({348,0,360,488}) {}
     std::array<std::array<SkillDisplay,15>,8> learned{};
     std::array<int,8> selected{-1,-1,-1,-1,-1,-1,-1,-1};
+    std::array<int,13> bindings{};
     int tab=0,scroll=0,pressed=-1;
+    bool remove(int id) {
+        auto& group=learned[SkillLayout::category(id)];
+        const auto skill=std::find_if(group.begin(),group.end(),[id](const auto& entry) { return entry.id==id; });
+        const bool removed=skill!=group.end();
+        if (removed) {
+            std::move(skill+1,group.end(),skill);
+            group.back()={};
+        }
+        if (!learned[tab].front().id) {
+            for (int i=0;i<int(learned.size());++i) {
+                if (learned[i].front().id) { tab=i;break; }
+            }
+        }
+        return removed;
+    }
     bool update_progress(int id,std::uint32_t experience,int level) {
         auto& group=learned[SkillLayout::category(id)];
         const auto skill=std::find_if(group.begin(),group.end(),[id](const auto& entry) { return entry.id==id; });

@@ -87,6 +87,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_guild_notices","lines"),&Mir3HudView::set_guild_notices);
     ADD_SIGNAL(MethodInfo("group_member_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("group_allow_requested",PropertyInfo(Variant::BOOL,"allowed")));
+    ClassDB::bind_method(D_METHOD("apply_skill_removal","id"),&Mir3HudView::apply_skill_removal);
     ClassDB::bind_method(D_METHOD("apply_skill_progress","id","experience","level"),&Mir3HudView::apply_skill_progress);
     ClassDB::bind_method(D_METHOD("set_learned_skill","id","level","key","experience","required","name"),&Mir3HudView::set_learned_skill,DEFVAL(0),DEFVAL(0),DEFVAL(String()));
     ClassDB::bind_method(D_METHOD("apply_equipment_reply","identifier"),&Mir3HudView::apply_equipment_reply);
@@ -1289,9 +1290,19 @@ bool Mir3HudView::set_learned_skill(int id,int level,int key,int experience,int 
     if (found==learned.end())
         found=std::find_if(learned.begin(),learned.end(),[](const auto& skill) { return skill.id==0; });
     if (found==learned.end()) return false;
+    if (found->key && skills.bindings[found->key]==id) skills.bindings[found->key]=0;
+    if (key) skills.bindings[key]=id;
     *found={id,level,key,static_cast<std::uint32_t>(experience),required,name.utf8().get_data()};
     queue_redraw();
     return true;
+}
+
+bool Mir3HudView::apply_skill_removal(int id) {
+    if (id<1 || id>65535) return false;
+    // 0x44F670 (212) removes the record but leaves the shortcut table intact.
+    const bool removed=skills.remove(id);
+    queue_redraw();
+    return removed;
 }
 
 bool Mir3HudView::apply_skill_progress(int id,int64_t experience,int level) {
@@ -1359,6 +1370,7 @@ void Mir3HudView::draw_skill_description() {
 }
 
 void Mir3HudView::bind_skill(int id,int key) {
+    skills.bindings[key]=0;
     for (auto& group:skills.learned) for (auto& skill:group) {
         if (!skill.id || skill.key!=key) continue;
         skill.key=0;
@@ -1366,7 +1378,9 @@ void Mir3HudView::bind_skill(int id,int key) {
     }
     for (auto& skill:skills.learned[skills.tab]) {
         if (!skill.id || skill.id!=id) continue;
+        if (skill.key && skills.bindings[skill.key]==skill.id) skills.bindings[skill.key]=0;
         skill.key=key;
+        skills.bindings[key]=skill.id;
         const int legacy_key=key<=9?'0'+key:'A'+key-10;
         emit_signal("skill_key_requested",skill.id,legacy_key);
         break;
@@ -1431,9 +1445,7 @@ bool Mir3HudView::spell_pointer_available() const {
 }
 
 int Mir3HudView::bound_skill(int key) const {
-    for (const auto& group:skills.learned) for (const auto& skill:group)
-        if (skill.id && skill.key==key) return skill.id;
-    return 0;
+    return skills.bindings[key];
 }
 
 void Mir3HudView::draw_skill_shortcuts() {

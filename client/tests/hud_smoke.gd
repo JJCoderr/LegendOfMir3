@@ -451,6 +451,11 @@ func run() -> void:
 	click_at(Vector2(671, 160), false)
 	if not check(hud.hud_snapshot().skill_scroll == 6, "magic scroll step"): return
 	if not await capture("magic-tree-scrolled"): return
+	if not check(hud.set_learned_skill(3, 1, 0) and hud.apply_skill_removal(3), "212 removes last skill in current category"): return
+	if not check(hud.hud_snapshot().skill_tab == 0 and hud.hud_snapshot().skill_scroll == 6, "212 selects first nonempty category and preserves scroll"): return
+	if not await capture("magic-removal-reply"): return
+	click_at(Vector2(636, 32), true)
+	click_at(Vector2(636, 32), false)
 	var skill_wheel := InputEventMouseButton.new()
 	skill_wheel.position = Vector2(490, 210)
 	skill_wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
