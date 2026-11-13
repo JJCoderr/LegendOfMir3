@@ -1691,6 +1691,9 @@ func run() -> void:
 	click_at(Vector2(70, 75), true)
 	click_at(Vector2(70, 75), false)
 	if not check(hud.hud_snapshot().group_request == 1307, "stack opens quantity dialog"): return
+	if not check(not hud.apply_trade_offer_reply(676) and hud.hud_snapshot().held_inventory_icon == 301,
+		"rejection without an outstanding offer preserves the item and quantity input"): return
+	if not await capture("hud-trade-quantity-before-offer"): return
 	key(0, 50)
 	if not await capture("hud-trade-stack-quantity"): return
 	key(KEY_ENTER)

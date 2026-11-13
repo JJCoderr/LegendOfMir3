@@ -3625,9 +3625,9 @@ bool Mir3HudView::apply_trade_offer_reply(int identifier,int accepted_count) {
         queue_redraw();
         return true;
     }
-    if (trade_pending_slot<0 || (identifier!=675 && identifier!=676)) return false;
+    if (trade_pending_slot<0 || !trade_offer_count || (identifier!=675 && identifier!=676)) return false;
     if (identifier==675) {
-        if (!bag.held || !trade_offer_count || accepted_count<0 ||
+        if (!bag.held || accepted_count<0 ||
             accepted_count>trade_offer_count || trade_offer_count>bag.held.count) return false;
         const int count=accepted_count?accepted_count:trade_offer_count;
         auto offered=bag.held;
@@ -3732,7 +3732,10 @@ bool Mir3HudView::apply_trade_cancel(int64_t balance) {
 
 bool Mir3HudView::open_trade(String partner) {
     if (partner.is_empty()) {
-        if (trade_pending_slot>=0) apply_trade_offer_reply(676);
+        if (trade_pending_slot>=0) {
+            if (trade_offer_count) apply_trade_offer_reply(676);
+            else trade_pending_slot=-1;
+        }
         if (trade.visible) trade.toggle();
         trade_confirm_pressed=false;
         if (group_request==1307 || group_request==1029) finish_group_dialog(false);
