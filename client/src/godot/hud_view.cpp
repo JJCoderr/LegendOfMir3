@@ -1378,7 +1378,7 @@ void Mir3HudView::advance_map_step(double delta) {
                 const float magnitude=1.f-std::pow(10.f,-std::abs(mix.pan)/2000.f);
                 panner->set_pan((mix.pan<0?-1.f:1.f)*(audio_options.reverse_pan?-1.f:1.f)*magnitude);
             }
-            footstep_sound->set_volume_db(volume/100.f);
+            footstep_sound->set_volume_db(mix.volume/100.f);
             footstep_sound->play();
         }
     }
@@ -3404,7 +3404,10 @@ bool Mir3HudView::options_pointer(int kind,Vector2 point) {
     };
     bool changed=false;
     if (audio_drag>=0) {
-        if (kind==1) audio_options.drag_volume(audio_drag==0,int(local.x));
+        if (kind==1) {
+            audio_options.drag_volume(audio_drag==0,int(local.x));
+            sync_hud_sound();
+        }
         if (kind==2) { audio_drag=-1;changed=true; }
     } else if (options.dragging && kind!=0) {
         if (kind==1) options.move_drag(int(point.x),int(point.y));
@@ -3480,7 +3483,12 @@ void Mir3HudView::save_options() {
 }
 
 void Mir3HudView::sync_hud_sound() {
-    if (footstep_sound && !audio_options.effects_enabled) footstep_sound->stop();
+    if (footstep_sound) {
+        auto* audio=AudioServer::get_singleton();
+        const int bus=audio->get_bus_index(footstep_bus);
+        if (bus>=0) audio->set_bus_volume_db(bus,mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
+        if (!audio_options.effects_enabled) footstep_sound->stop();
+    }
     if (hud_sound) {
         hud_sound->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
         if (!audio_options.effects_enabled) hud_sound->stop();

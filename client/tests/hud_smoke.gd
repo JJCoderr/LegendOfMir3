@@ -111,6 +111,19 @@ func run() -> void:
 		if not check(hud.hud_snapshot().walk_frame == -1 and hud.hud_snapshot().player_cell == Vector2i(476, 360), "walk finishes in destination cell"): return
 		var footstep_bus := AudioServer.get_bus_index(footstep.bus)
 		var footstep_panner := AudioServer.get_bus_effect(footstep_bus, 0) as AudioEffectPanner
+		key(KEY_N)
+		click_at(Vector2(602, 212), true)
+		var volume_motion := InputEventMouseMotion.new()
+		volume_motion.position = Vector2(523, 212)
+		root.push_input(volume_motion, true)
+		if not check(is_equal_approx(AudioServer.get_bus_volume_db(footstep_bus), -20.0),
+			"footstep volume follows effect slider before release"): return
+		if not await capture("bichon-footstep-volume-drag"): return
+		volume_motion = volume_motion.duplicate()
+		volume_motion.position = Vector2(613, 212)
+		root.push_input(volume_motion, true)
+		click_at(volume_motion.position, false)
+		key(KEY_N)
 		hud.set_meta("map_camera_cell", Vector2i(470, 353))
 		if not check(hud.walk_to_map_cell(Vector2i(476, 361)), "step with an off-center camera"): return
 		await create_timer(0.25).timeout
