@@ -95,6 +95,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_npc_dialogue","opcode","actor","body"),&Mir3HudView::apply_npc_dialogue);
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
+    ClassDB::bind_method(D_METHOD("set_scene_npc","actor","cell","first_frame"),&Mir3HudView::set_scene_npc);
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
     ClassDB::bind_method(D_METHOD("set_minimap_markers","type_five","nearby_green","nearby_orange"),&Mir3HudView::set_minimap_markers);
     ClassDB::bind_method(D_METHOD("set_hovered_target","actor","type","shape","excluded","state","hp","max_hp","percent","cell"),
@@ -297,7 +298,8 @@ void Mir3HudView::_ready() {
         load_actor(map_human,map_human_frames,"M-Hum",0);
         load_actor(map_human,map_walk_frames,nullptr,1680);
         load_actor(map_human,map_run_frames,nullptr,1760);
-        load_actor(map_npc,map_npc_frames,"NPC",110);
+        map_npc.open(resource_root/"Data"/"NPC");
+        set_scene_npc(2,Vector2i(413,409),110);
         const auto footstep=AudioStreamWAV::load_from_file(audio_root.path_join("1.wav"));
         if (footstep.is_valid()) {
             footstep_sound=memnew(AudioStreamPlayer);
@@ -316,7 +318,7 @@ void Mir3HudView::_ready() {
             sync_hud_sound();
         }
         const Vector2i spawn=get_meta("map_spawn_cell",player_cell);
-        if (spawn!=Vector2i(413,409) && terrain.walkable(spawn.x,spawn.y)) player_cell=spawn;
+        if (!npc_occupies(spawn) && terrain.walkable(spawn.x,spawn.y)) player_cell=spawn;
     }
     if (!portraits.open(resource_root/"Data"/"ProgUse")) UtilityFunctions::push_error("Cannot read ProgUse portraits.");
     if (!monster_portraits.open(resource_root/"Data"/"MonImg")) UtilityFunctions::push_error("Cannot read MonImg portraits.");
@@ -566,7 +568,8 @@ void Mir3HudView::start_map_step(Vector2i destination) {
 bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
     if (!terrain_ready) return false;
     const auto start=walk_frame>=0?step_destination:player_cell;
-    map_route=terrain.route({start.x,start.y},{destination.x,destination.y},{413,409});
+    map_route=terrain.route({start.x,start.y},{destination.x,destination.y},
+        [this](mir3::MapCell cell) { return npc_occupies(Vector2i(cell[0],cell[1])); });
     return !map_route.empty();
 }
 
@@ -1353,18 +1356,40 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
     return true;
 }
 
+bool Mir3HudView::set_scene_npc(int actor,Vector2i cell,int first_frame) {
+    if (!terrain_ready || actor<=0 || first_frame<0 || first_frame>65532) return false;
+    SceneNpc npc{};
+    npc.cell=cell;
+    for (int i=0;i<int(npc.frames.size());++i) {
+        if (const auto frame=map_npc.frame(first_frame+i))
+            npc.frames[i]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y)};
+    }
+    if (npc.frames.front().image.is_null()) return false;
+    scene_npcs.insert_or_assign(actor,std::move(npc));
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::npc_occupies(Vector2i cell) const {
+    return std::ranges::any_of(scene_npcs,[cell](const auto& npc) { return npc.second.cell==cell; });
+}
+
 bool Mir3HudView::merchant_pointer(Vector2 pointer) {
-    if (!merchant_draw_bounds.has_point(pointer)) return false;
-    const Vector2i merchant{413,409};
+    auto hit=scene_npcs.end();
+    for (auto it=scene_npcs.begin();it!=scene_npcs.end();++it)
+        if (it->second.bounds.has_point(pointer) && (hit==scene_npcs.end() || it->second.cell.y>=hit->second.cell.y))
+            hit=it;
+    if (hit==scene_npcs.end()) return false;
     map_route.clear();
     const auto now=ticks_msec();
     if (!last_merchant_request || now-last_merchant_request>1500) {
         last_merchant_request=now;
-        const auto delta=player_cell-merchant;
+        const auto delta=player_cell-hit->second.cell;
         if (std::max(std::abs(delta.x),std::abs(delta.y))<=2) {
-            emit_signal("npc_dialogue_requested",2);
-            emit_signal("npc_request",1010,2,String());
-            emit_npc_packet(1010,2,String());
+            const int actor=hit->first;
+            emit_signal("npc_dialogue_requested",actor);
+            emit_signal("npc_request",1010,actor,String());
+            emit_npc_packet(1010,actor,String());
         }
     }
     return true;
@@ -1387,7 +1412,7 @@ void Mir3HudView::step_toward_pointer(bool run) {
         return;
     }
     const auto traversable=[this](Vector2i cell) {
-        return cell!=Vector2i(413,409) && terrain.walkable(cell.x,cell.y);
+        return !npc_occupies(cell) && terrain.walkable(cell.x,cell.y);
     };
     auto destination=player_cell+Vector2i(dx,dy);
     const auto second=destination+Vector2i(dx,dy);
@@ -1462,7 +1487,7 @@ void Mir3HudView::draw_terrain() {
             paint_canvas->draw_texture(image,offset+Vector2(96*column,64*row));
     }
     animated_map_objects=false;
-    merchant_draw_bounds=Rect2();
+    for (auto& [actor,npc]:scene_npcs) npc.bounds=Rect2();
     if (!bool(get_meta("show_map_objects",true))) return;
 
     struct Sprite { Ref<ImageTexture> image; Vector2 position; int row; };
@@ -1485,10 +1510,11 @@ void Mir3HudView::draw_terrain() {
             else tall_objects.push_back({image,position,row});
         }
     }
-    const auto draw_actor=[&](const MapActorFrame& frame,int x,int y) {
-        if (frame.image.is_null() || x<start_x-5 || x>=start_x+21) return;
-        const auto position=Vector2(x*48-camera.x,y*32-camera.y)+frame.offset;
-        merchant_draw_bounds=Rect2(position,frame.image->get_size());
+    const auto draw_npc=[&](SceneNpc& npc) {
+        const auto& frame=npc.frames[tick/200%4].image.is_valid()?npc.frames[tick/200%4]:npc.frames.front();
+        if (npc.cell.x<start_x-5 || npc.cell.x>=start_x+21) return;
+        const auto position=Vector2(npc.cell.x*48-camera.x,npc.cell.y*32-camera.y)+frame.offset;
+        npc.bounds=Rect2(position,frame.image->get_size());
         paint_canvas->draw_texture(frame.image,position);
         animated_map_objects=true;
     };
@@ -1498,7 +1524,8 @@ void Mir3HudView::draw_terrain() {
             paint_canvas->draw_texture(object->image,object->position);
             ++object;
         }
-        if (start_y+row==409) draw_actor(map_npc_frames[tick/200%4],413,409);
+        for (auto& [actor,npc]:scene_npcs)
+            if (start_y+row==npc.cell.y) draw_npc(npc);
         const auto pixel=player_pixel();
         if (start_y+row==int(std::round(pixel.y/32.0))) {
             const auto step=step_destination-step_origin;

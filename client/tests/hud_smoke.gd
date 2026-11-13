@@ -797,6 +797,15 @@ func run() -> void:
 		if not check(hud.hud_snapshot().player_cell == Vector2i(419, 410) and hud.hud_snapshot().npc_dialogue_actor == 0, "dialogue closes on the sixth cell"): return
 		if not check(not hud.apply_shop_goods(2, 10, stock_list), "shop refresh cannot reopen the merchant after walking away"): return
 		if not await capture("bichon-merchant-walk-away"): return
+		var npc_cell: Vector2i = hud.hud_snapshot().player_cell + Vector2i(0, -1)
+		hud.set_meta("map_camera_cell", npc_cell - Vector2i(9, 7))
+		if not check(hud.set_scene_npc(3, npc_cell, 110), "load a second NPC from the original archive"): return
+		await wait_for_npc_cooldown()
+		await create_timer(0.55).timeout
+		click_at(Vector2(457, 215), true)
+		click_at(Vector2(457, 215), false)
+		if not check(merchant_requests.back() == 3, "clicking the loaded NPC dispatches its own actor ID"): return
+		if not await capture("bichon-second-npc"): return
 		quit()
 		return
 	for i in 20:

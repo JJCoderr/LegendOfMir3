@@ -45,12 +45,13 @@ public:
             (tiles[cell_start+(std::size_t(x)*height+y)*14]&1)!=0;
     }
 
-    std::deque<MapCell> route(MapCell start,MapCell target,MapCell occupied) const {
+    template<class Occupied>
+    std::deque<MapCell> route(MapCell start,MapCell target,Occupied occupied) const {
         const auto inside=[&](MapCell cell) {
             return cell[0]>=0 && cell[1]>=0 && cell[0]<width && cell[1]<height;
         };
         if (!inside(start) || !inside(target) || start==target) return {};
-        const auto traversable=[&](MapCell cell) { return cell!=occupied && walkable(cell[0],cell[1]); };
+        const auto traversable=[&](MapCell cell) { return walkable(cell[0],cell[1]) && !occupied(cell); };
         if (!traversable(target)) {
             for (const auto [dx,dy]:map_directions) {
                 const MapCell neighbor{target[0]+dx,target[1]+dy};
