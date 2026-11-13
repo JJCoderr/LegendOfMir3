@@ -1198,7 +1198,7 @@ void Mir3HudView::draw_skills() {
             const auto level=skill.level>=3?std::string("Level : Max"):"Level : "+std::to_string(skill.level);
             text(level,{x+20,y+403,80,62},0xfafafa,mir3::TextFont::normal,true,true);
             if (skill.level<3)
-                text("Exp : "+std::to_string(skill.experience)+"/"+std::to_string(skill.required),
+                text("Exp : "+skill.progress_text(),
                      {x+100,y+403,80,62},0xfafafa,mir3::TextFont::normal,true,true);
         }
         const int id=2*skill.id-2;
@@ -1401,7 +1401,7 @@ void Mir3HudView::draw_skill_description() {
     for (const auto& skill:skills.learned[skills.tab]) {
         if (skill.id!=id) continue;
         const auto progress=skill.level>=3?std::string("Level : Max"):
-            std::to_string(skill.experience)+"/"+std::to_string(skill.required);
+            skill.progress_text();
         text(progress,{x,y,skill.level>=3?80:50,15},0x1414fa);
         break;
     }

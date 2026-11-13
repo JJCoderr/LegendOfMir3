@@ -43,6 +43,9 @@ struct SkillDisplay {
     int required=0;
     std::string name;
     std::optional<std::array<int,3>> thresholds;
+    std::string progress_text() const {
+        return std::to_string(static_cast<std::int32_t>(experience))+"/"+std::to_string(required);
+    }
 };
 
 struct SkillPanel : DraggablePanel {

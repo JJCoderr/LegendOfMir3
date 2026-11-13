@@ -506,7 +506,11 @@ func run() -> void:
 	if not check(hud.apply_skill_records(211, 16, crowded_records) and hud.apply_skill_progress(5, 10, 1), "retain skills beyond display limit"): return
 	if not await capture("magic-visible-limit"): return
 	if not check(hud.apply_skill_removal(1), "remove one visible record"): return
+	if not check(hud.apply_skill_progress(5, 0xffffffff, 1), "accept full DWORD experience"): return
 	if not await capture("magic-visible-after-removal"): return
+	click_at(Vector2(385, 152), true)
+	click_at(Vector2(385, 152), false)
+	if not await capture("magic-signed-experience"): return
 	if OS.get_cmdline_user_args().has("--screenshots"):
 		var limited := Image.load_from_file(ProjectSettings.globalize_path("res://../build/screenshots/magic-visible-limit.png"))
 		var revealed := root.get_texture().get_image()
