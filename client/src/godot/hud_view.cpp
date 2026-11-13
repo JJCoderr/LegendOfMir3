@@ -3199,6 +3199,8 @@ bool Mir3HudView::guild_editor_input(const Ref<InputEvent>& event) {
         } else {
             guild_editor.end_drag();
             if (hit>=0 && hit==guild_edit_pressed) {
+                // 0x45F100 releases both buttons with sound enabled in 0x41FCD0.
+                if (hud_sound && audio_options.effects_enabled) hud_sound->play();
                 if (hit==1) guild_editor_changed();
                 guild_editor.visible=false;
                 guild_edit->hide();

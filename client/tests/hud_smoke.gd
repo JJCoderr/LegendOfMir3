@@ -1310,16 +1310,22 @@ func run() -> void:
 	if not check(editor.visible and guild_edits.is_empty(), "focus loss cancels pressed submit"): return
 	editor.text = "行会公告\n\n今晚集合"
 	if not await capture("guild-announcement-editor"): return
+	var editor_sound: AudioStreamPlayer = hud.get_node("HudClickSound")
+	editor_sound.stop()
 	click_at(Vector2(575, 130), true)
+	if not check(not editor_sound.playing, "guild submit press stays silent"): return
 	click_at(Vector2(575, 130), false)
+	if not check(editor_sound.playing, "guild submit release plays original click"): return
 	if not check(not editor.visible and guild_edits == [[1040, "行会公告\r \r今晚集合"]], "guild announcement submit"): return
 	if not check(guild_wire_edits == [[1040, PackedByteArray([208, 208, 187, 225, 185, 171, 184, 230, 13, 32, 13, 189, 241, 205, 237, 188, 175, 186, 207])]], "announcement wire retains ANSI bytes and CR separators"): return
 	click_at(Vector2(550, 415), true)
 	click_at(Vector2(550, 415), false)
 	if not check(editor.visible and editor.text == "#1 <Leader>\nBichon \n#2 <Member>\n", "guild member editor uses rank source"): return
 	if not await capture("guild-member-editor"): return
+	editor_sound.stop()
 	click_at(Vector2(660, 328), true)
 	click_at(Vector2(660, 328), false)
+	if not check(editor_sound.playing, "guild close release plays original click"): return
 	if not check(not editor.visible and guild_edits.size() == 1, "guild editor cancel"): return
 	hud.set_guild_overview("Bichon", PackedStringArray(), PackedStringArray(["A".repeat(4010)]))
 	click_at(Vector2(400, 415), true)
