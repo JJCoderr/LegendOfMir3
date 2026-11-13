@@ -45,6 +45,10 @@ private:
     void draw_skill_description();
     mir3::SkillDescriptions skill_descriptions;
     std::map<int,std::vector<mir3::DescriptionRow>> description_rows;
+    godot::Rect2 skill_key_menu;
+    void bind_skill(int id,int key);
+    void draw_skill_key_menu();
+    bool skill_menu_input(int kind,godot::Vector2 point,bool double_click);
     bool bind_skill_at_cursor(int key);
     bool skill_pointer(int kind,godot::Vector2 position);
     int skill_button_at(godot::Vector2 position);

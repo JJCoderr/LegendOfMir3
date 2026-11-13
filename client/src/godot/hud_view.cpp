@@ -202,6 +202,7 @@ void Mir3HudView::_draw() {
     if (inventory.visible) draw_inventory();
     if (status.visible && status_on_top) draw_status();
     if (skills.visible && skills_on_top) draw_skills();
+    draw_skill_key_menu();
     draw_skill_description();
     button_hint();
     if (bag.held) {
@@ -300,6 +301,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         auto p=button->get_position();
         inventory_cursor=p;
         const int kind=button->is_pressed()?0:2;
+        if (skill_menu_input(kind,p,button->is_double_click())) return;
         if (panel_pointer(kind,p) || scroll_input(kind,p)) return;
         const bool captured=model.pressed>=0 || controller.hit(int(p.x),int(p.y))>=0;
         int action=controller.pointer(int(p.x),int(p.y),button->is_pressed());
@@ -640,6 +642,7 @@ bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
 void Mir3HudView::toggle_skills() {
     if (frame(1620).is_null()) return;
     skills.toggle();
+    skill_key_menu={};
     skills.pressed=-1;
     skills.scroll_captured=false;
     if (skills.visible) skills_on_top=true;
@@ -791,18 +794,7 @@ bool Mir3HudView::bind_skill_at_cursor(int key) {
     for (const auto pos:mir3::SkillLayout::positions[skills.tab]) {
         const Rect2 hit(x+pos.x,y+pos.y-skills.scroll,40,40);
         if (!hit.has_point(inventory_cursor)) continue;
-        for (auto& group:skills.learned) for (auto& skill:group) {
-            if (!skill.id || skill.key!=key) continue;
-            skill.key=0;
-            emit_signal("skill_key_requested",skill.id,0);
-        }
-        for (auto& skill:skills.learned[skills.tab]) {
-            if (!skill.id || skill.id!=pos.id) continue;
-            skill.key=key;
-            const int legacy_key=key<=9?'0'+key:'A'+key-10;
-            emit_signal("skill_key_requested",skill.id,legacy_key);
-            break;
-        }
+        bind_skill(pos.id,key);
     }
     queue_redraw();
     return true;
@@ -850,4 +842,83 @@ void Mir3HudView::draw_skill_description() {
         break;
     }
 
+}
+
+void Mir3HudView::bind_skill(int id,int key) {
+    for (auto& group:skills.learned) for (auto& skill:group) {
+        if (!skill.id || skill.key!=key) continue;
+        skill.key=0;
+        emit_signal("skill_key_requested",skill.id,0);
+    }
+    for (auto& skill:skills.learned[skills.tab]) {
+        if (!skill.id || skill.id!=id) continue;
+        skill.key=key;
+        const int legacy_key=key<=9?'0'+key:'A'+key-10;
+        emit_signal("skill_key_requested",skill.id,legacy_key);
+        break;
+    }
+    queue_redraw();
+}
+
+bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
+    if (!skills.visible) return false;
+    if (skill_key_menu.has_area()) {
+        if (skill_key_menu.has_point(point)) {
+            if (kind==2) {
+                const Vector2 local=point-skill_key_menu.position;
+                const int key=int(local.y)/40*4+int(local.x)/40+1;
+                const int selected=skills.selected[skills.tab];
+                if (selected>=0 && selected<15)
+                    bind_skill(mir3::SkillLayout::positions[skills.tab][selected].id,key);
+            }
+            get_viewport()->set_input_as_handled();
+            return true;
+        }
+        if (kind==0) {
+            skill_key_menu={};
+            queue_redraw();
+        }
+    }
+    if (kind!=0 || !double_click || !rect(skills.rect).has_point(point)) return false;
+    if (!skills_on_top && ((status.visible && rect(status.rect).has_point(point)) ||
+                          (inventory.visible && rect(inventory.rect).has_point(point)))) return false;
+    const auto [x,y,w,h]=skills.rect;
+    const auto& positions=mir3::SkillLayout::positions[skills.tab];
+    const auto& learned=skills.learned[skills.tab];
+    // 0x450BD0 uses the first ten unscrolled positions and compares both axes against RECT.right.
+    for (int index=0;index<10;++index) {
+        const auto pos=positions[index];
+        if (!pos.id || !Rect2(x+pos.x,y+pos.y,40,40).has_point(point)) continue;
+        if (std::none_of(learned.begin(),learned.end(),[&](const auto& skill){return skill.id==pos.id;})) continue;
+        const int left=std::min(int(point.x),x+w-160);
+        const int top=point.y+160>x+w?y+h-120:int(point.y);
+        skill_key_menu=Rect2(left,top+40,160,120);
+        skills.selected[skills.tab]=index;
+        skills_on_top=true;
+        skills.end_drag();
+        skills.pressed=-1;
+        get_viewport()->set_input_as_handled();
+        queue_redraw();
+        return true;
+    }
+    return false;
+}
+
+void Mir3HudView::draw_skill_key_menu() {
+    if (!skills.visible || !skill_key_menu.has_area()) return;
+    legacy_rect(skill_key_menu,Color(100.f/255,100.f/255,50.f/255,150.f/255));
+    for (int index=0;index<12;++index) {
+        const Vector2 point=skill_key_menu.position+Vector2(40*(index%4),40*(index/4));
+        for (const auto& group:skills.learned) for (const auto& skill:group) {
+            if (skill.id && skill.key==index+1) {
+                const int frame_id=2*(skill.id&255)-2;
+                if (!skill_frames.contains(frame_id)) {
+                    const auto decoded=magic_icons.frame(frame_id);
+                    if (decoded) skill_frames.emplace(frame_id,texture(decoded->pixels.rgba,decoded->width,decoded->height));
+                }
+                if (const auto it=skill_frames.find(frame_id);it!=skill_frames.end()) draw_texture(it->second,point);
+            }
+        }
+        sprite(1660+index,{int(point.x),int(point.y)});
+    }
 }

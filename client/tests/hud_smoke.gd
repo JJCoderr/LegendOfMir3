@@ -204,6 +204,20 @@ func run() -> void:
 	click_at(Vector2(385, 152), true)
 	click_at(Vector2(385, 152), false)
 	if not await capture("magic-progress"): return
+	var popup_event := InputEventMouseButton.new()
+	popup_event.position = Vector2(385, 152)
+	popup_event.button_index = MOUSE_BUTTON_LEFT
+	popup_event.pressed = true
+	popup_event.double_click = true
+	Input.parse_input_event(popup_event)
+	click_at(Vector2(385, 152), false)
+	magic_hover = InputEventMouseMotion.new()
+	magic_hover.position = Vector2(435, 202)
+	Input.parse_input_event(magic_hover)
+	if not await capture("magic-key-menu"): return
+	click_at(Vector2(435, 202), true)
+	click_at(Vector2(435, 202), false)
+	if not check(skill_requests.back() == Vector2i(5, 50), "shortcut menu binds F2"): return
 	click_at(Vector2(636, 32), true)
 	click_at(Vector2(636, 32), false)
 	if not check(hud.hud_snapshot().skill_tab == 7, "magic category selection"): return
