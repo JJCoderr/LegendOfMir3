@@ -1211,10 +1211,20 @@ func run() -> void:
 	key(KEY_W)
 	key(KEY_Q)
 	if not await capture("hud-panel-stack"): return
+	var stacked_bag_origin := Vector2(hud.hud_snapshot().inventory_position)
+	var stacked_bag_grab := stacked_bag_origin + Vector2(12, 25)
+	click_at(stacked_bag_grab, true)
+	var stacked_bag_motion := InputEventMouseMotion.new()
+	stacked_bag_motion.position = stacked_bag_grab - Vector2(200, 0)
+	Input.parse_input_event(stacked_bag_motion)
+	click_at(stacked_bag_motion.position, false)
+	if not check(Vector2(hud.hud_snapshot().inventory_position) == stacked_bag_origin - Vector2(200, 0),
+		"dragging exposed bag border moves it over the status window"): return
+	if not await capture("hud-inventory-raised-over-status"): return
 	key(KEY_ESCAPE)
-	if not check(not hud.hud_snapshot().status_visible and hud.hud_snapshot().inventory_visible, "status closes first in four-panel stack"): return
+	if not check(not hud.hud_snapshot().inventory_visible and hud.hud_snapshot().status_visible, "drag raises inventory above status"): return
 	key(KEY_ESCAPE)
-	if not check(not hud.hud_snapshot().inventory_visible and hud.hud_snapshot().group_visible, "inventory closes second"): return
+	if not check(not hud.hud_snapshot().status_visible and hud.hud_snapshot().group_visible, "status closes second after inventory drag"): return
 	key(KEY_ESCAPE)
 	if not check(not hud.hud_snapshot().group_visible and hud.hud_snapshot().skills_visible, "group closes third"): return
 	key(KEY_ESCAPE)
