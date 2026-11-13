@@ -149,8 +149,8 @@ struct HudButtonTooltip {
         if (left + width > 800) left = 800 - width;
         // Caption changes do not reset an in-progress height counter.
         if (previous != caption) { previous = caption; expanding = true; }
-        const int drawn_height = expanding ? ++height : full_height;
-        if (expanding && height == full_height) { expanding = false; height = 6; }
+        const int drawn_height = expanding ? std::min(++height, full_height) : full_height;
+        if (expanding && height >= full_height) { expanding = false; height = 6; }
         return {left, anchor[1] - drawn_height, width, drawn_height};
     }
 };

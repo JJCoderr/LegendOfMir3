@@ -60,6 +60,8 @@ int main(int argc,char** argv) {
         mir3::HudButtonTooltip hint;
         check(hint.draw("inventory",{31,12},{790,540})==std::array{757,533,43,7},"tooltip right edge and first animation step");
         check(hint.draw("changed",{31,12},{790,540})[3]==8,"tooltip caption change preserves animation");
+        check(hint.draw("short",{31,3},{790,540})[3]==7 && !hint.expanding && hint.height==6,
+            "shorter tooltip finishes animation within measured height");
         mir3::ChatReceptionButtons reception;
         check(reception.hints==std::array{2637,2639,2643},"initial reception hints");
         const auto original=reception;
