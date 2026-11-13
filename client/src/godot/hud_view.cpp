@@ -818,8 +818,8 @@ void Mir3HudView::draw_shop() {
                     legacy_rect(cell,Color(50.f/255,150.f/255,150.f/255,1.f/255));
                     draw_rect(cell,Color(180.f/255,180.f/255,180.f/255),false);
                 }
-                const auto size=icon->get_size().min(cell.size);
-                draw_texture_rect(icon,Rect2(cell.get_center()-size/2,size),false);
+                // 0x442200 draws native-size icons around (19,19) in the 38px grid.
+                draw_texture(icon,cell.position+Vector2(19-icon->get_width()/2,19-icon->get_height()/2));
                 const auto price=std::to_string(offer.price);
                 const auto bounds=shop_offer_cell(row);
                 text(price,{bounds[0]-1,bounds[1]+20,35,15},0x0a0a0a,mir3::TextFont::skill_level);
