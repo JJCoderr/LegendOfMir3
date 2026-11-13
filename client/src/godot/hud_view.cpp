@@ -2990,8 +2990,10 @@ void Mir3HudView::draw_guild() {
     const auto [x,y,w,h]=guild.rect;
     const auto skin=frame(1300);
     if (skin.is_valid()) sprite(1300,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
-    text(message(mir3::GuildLayout::title(guild_layout.tab)),{x+45,y+10,112,25},0x96c8ff);
-    text(guild_name.utf8().get_data(),{x+340,y+10,213,24},0x96c8ff);
+    // 0x432A40 draws the guild name before dispatching the active tab header.
+    constexpr unsigned heading_color=0x96c8ff; // COLORREF, as expected by text().
+    text(guild_name.utf8().get_data(),{x+340,y+10,213,24},heading_color);
+    text(message(mir3::GuildLayout::title(guild_layout.tab)),{x+45,y+10,112,25},heading_color);
     const auto& lines=guild_pages[guild_layout.tab];
     const int count=int(lines.size());
     const auto metrics=mir3::raster_text(guild_name.utf8().get_data(),300,24,false,mir3::TextFont::normal);
@@ -3009,7 +3011,7 @@ void Mir3HudView::draw_guild() {
         } else {
             const bool heading=guild_layout.tab==1?value==message(4007):
                 value==message(4004) || value==message(4005) || value==message(4006);
-            text(value,bounds,heading?0x0097ff:0xffffff,mir3::TextFont::normal,false);
+            text(value,bounds,heading?38655:0xffffff,mir3::TextFont::normal,false);
         }
     }
     sprite(1225,{x+557,mir3::GuildScroll::thumb_y(guild_first,count,y)});

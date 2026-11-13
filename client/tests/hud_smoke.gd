@@ -1193,6 +1193,15 @@ func run() -> void:
 	click_at(Vector2(145, 410), true)
 	click_at(Vector2(145, 410), false)
 	if not await capture("guild-overview-continuation"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var heading_pixels := root.get_texture().get_image().get_region(Rect2i(137, 82, 514, 88))
+		var matches := false
+		for y in range(heading_pixels.get_height()):
+			for x in range(heading_pixels.get_width()):
+				var pixel := heading_pixels.get_pixel(x, y)
+				if pixel.r8 == 255 and absi(pixel.g8 - 151) <= 1 and pixel.b8 == 0:
+					matches = true
+		if not check(matches, "guild overview section heading uses original orange COLORREF"): return
 	hud.set_guild_overview("比奇行会", PackedStringArray(["欢迎加入比奇行会", "今晚集合练级"]), PackedStringArray(["今晚集合练级"]))
 	var guild_hover := InputEventMouseMotion.new()
 	guild_hover.position = Vector2(196, 410)
