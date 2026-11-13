@@ -752,22 +752,22 @@ bool Mir3HudView::apply_shop_offers(int actor,int index,PackedStringArray names,
 void Mir3HudView::draw_shop() {
     if (!shop_actor) return;
     // 0x479410 positions the goods window below the NPC dialogue.
-    const auto skin=frame(1260);
+    const auto skin=frame(shop_show_offers?1261:1260);
     if (skin.is_valid())
-        draw_texture(skin,Vector2((292-skin->get_width())/2,shop_top+(224-skin->get_height())/2));
+        draw_texture(skin,Vector2((shop_width()-skin->get_width())/2,shop_top+(224-skin->get_height())/2));
     if (shop_show_offers) {
-        for (int row=0;row<std::min(8,int(shop_offers.size())-shop_first);++row) {
+        for (int row=0;row<std::min(12,int(shop_offers.size())-shop_first);++row) {
             const auto& offer=shop_offers[shop_first+row];
-            const int y=shop_top+34+19*row;
             const auto icon=item_frame(offer.icon);
-            if (icon.is_valid()) draw_texture_rect(icon,Rect2(22,y,18,18),false);
-            text(offer.name,{44,y,128,18},0x00ffff,mir3::TextFont::normal,false);
-            text(std::to_string(offer.price),{174,y,62,18},0xfafafa);
+            if (icon.is_valid()) {
+                const auto cell=rect(shop_offer_cell(row));
+                const auto size=icon->get_size().min(cell.size);
+                draw_texture_rect(icon,Rect2(cell.get_center()-size/2,size),false);
+            }
         }
-        return;
     }
-    for (int i=0;i<std::min(shop_goods_rows,int(shop_goods.size())-shop_first);++i) {
-        const auto& good=shop_goods[shop_first+i];
+    for (int i=0;i<std::min(shop_goods_rows,int(shop_goods.size())-(shop_show_offers?shop_category_first:shop_first));++i) {
+        const auto& good=shop_goods[(shop_show_offers?shop_category_first:shop_first)+i];
         const int y=shop_top+shop_goods_row_top+shop_goods_pitch*i;
         text(good.name,{63,y+3,184,16},good.variants==0?0x00b4b4:shop_pressed==shop_first+i?0x0000ff:0x00ffff,mir3::TextFont::normal,false);
         text(std::to_string(good.price),{63,y+19,140,16},0xfafafa,mir3::TextFont::normal,false);
@@ -777,12 +777,13 @@ void Mir3HudView::draw_shop() {
 
 bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     if (!shop_actor) return false;
-    const bool inside=Rect2(0,shop_top,292,224).has_point(pointer);
+    const bool inside=Rect2(0,shop_top,shop_width(),224).has_point(pointer);
     const bool details=shop_show_offers;
     int row=-1;
     if (details) {
-        if (Rect2(22,shop_top+34,247,152).has_point(pointer))
-            row=shop_first+(int(pointer.y)-shop_top-34)/19;
+        for (int i=0;i<12;++i) {
+            if (rect(shop_offer_cell(i)).has_point(pointer)) { row=shop_first+i; break; }
+        }
     } else {
         // 0x4770B4 / 0x4785A0: icon and text are separate hit rectangles.
         for (int i=0;i<shop_goods_rows;++i) {
@@ -850,7 +851,7 @@ void Mir3HudView::draw_npc_dialogue() {
         if (npc_dialogue_first<npc_dialogue_scroll_limit && npc_dialogue_down_lit)
             sprite(npc_dialogue_arrow_pressed==1?1356:1355,{183,bottom-30});
     }
-    const int focused=shop_actor && Rect2(0,shop_top,292,224).has_point(inventory_cursor)?-1:npc_dialogue_option_at(inventory_cursor);
+    const int focused=shop_actor && Rect2(0,shop_top,shop_width(),224).has_point(inventory_cursor)?-1:npc_dialogue_option_at(inventory_cursor);
     for (const auto& row:npc_dialogue_rows) {
         if (row.bounds[1]<npc_dialogue_first || row.bounds[1]>npc_dialogue_first+21) continue;
         const bool clickable=!row.command.empty();
@@ -1305,7 +1306,7 @@ void Mir3HudView::button_hint() {
         }
         break;
     }
-    if (!panel_hit && shop_actor && Rect2(0,shop_top,292,224).has_point(inventory_cursor)) panel_hit=true;
+    if (!panel_hit && shop_actor && Rect2(0,shop_top,shop_width(),224).has_point(inventory_cursor)) panel_hit=true;
     if (!panel_hit && npc_dialogue_actor && rect(npc_dialogue_bounds()).has_point(inventory_cursor)) {
         panel_hit=true;
         // 0x45FDD0 configures the close button with CMList 1052.
@@ -1419,7 +1420,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     };
     if (shop_actor && button.is_valid() && button->is_pressed() &&
         (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) &&
-        Rect2(0,shop_top,292,224).has_point(button->get_position())) {
+        Rect2(0,shop_top,shop_width(),224).has_point(button->get_position())) {
         // 0x43D310 / 0x43D490 dispatch by the window under the pointer, including its frame.
         const int direction=button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN?1:-1;
         shop_first=std::clamp(shop_first+direction,0,std::max(0,int(shop_show_offers?shop_offers.size():shop_goods.size())-1));
@@ -1431,7 +1432,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     // 0x43D310 / 0x43D490 route the wheel to the NPC panel under the cursor.
     if (npc_dialogue_actor && button.is_valid() && button->is_pressed() &&
         rect(npc_dialogue_bounds()).has_point(button->get_position()) &&
-        !(shop_actor && Rect2(0,shop_top,292,224).has_point(button->get_position()))) {
+        !(shop_actor && Rect2(0,shop_top,shop_width(),224).has_point(button->get_position()))) {
         const auto index=button->get_button_index();
         if (index==MOUSE_BUTTON_WHEEL_UP || index==MOUSE_BUTTON_WHEEL_DOWN) {
             const int delta=index==MOUSE_BUTTON_WHEEL_UP?-1:1;
@@ -2334,7 +2335,7 @@ bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
 bool Mir3HudView::spell_pointer_available() const {
     using Layout=mir3::HudLayout;
     const auto pointer=inventory_cursor;
-    if (minimap.visible || group_request || (shop_actor && Rect2(0,shop_top,292,224).has_point(pointer)) || (npc_dialogue_actor && rect(npc_dialogue_bounds()).has_point(pointer)) || !Rect2(0,0,800,Layout::origin[1]).has_point(pointer) ||
+    if (minimap.visible || group_request || (shop_actor && Rect2(0,shop_top,shop_width(),224).has_point(pointer)) || (npc_dialogue_actor && rect(npc_dialogue_bounds()).has_point(pointer)) || !Rect2(0,0,800,Layout::origin[1]).has_point(pointer) ||
         rect(Layout::chat_frame(model.layout.expanded)).has_point(pointer)) return false;
     if (guild_editor.visible && rect(guild_editor.rect).has_point(pointer)) return false;
     for (const auto panel:panel_order) {

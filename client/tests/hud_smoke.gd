@@ -416,8 +416,8 @@ func run() -> void:
 		if not check(not hud.apply_shop_offers(2, 8, names, icons, prices, ids), "ignore stale goods details"): return
 		if not check(hud.apply_shop_offers(2, 9, names, icons, prices, ids), "apply decoded 652 offer"): return
 		if not await capture("bichon-merchant-offers"): return
-		click_at(Vector2(60, 265), true)
-		click_at(Vector2(60, 265), false)
+		click_at(Vector2(330, 280), true)
+		click_at(Vector2(330, 280), false)
 		if not check(offer_selections == [[2, 10001]], "select offer by its instance identifier"): return
 		if not check(purchases == [[1014, 2, "Red potion"]], "purchase uses NPC and item name"): return
 		if not check(hud.apply_npc_message("bsp<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().inventory_gold == 125, "650 applies server gold balance"): return
@@ -439,8 +439,8 @@ func run() -> void:
 		if not await capture("bichon-merchant-purchase-failed"): return
 		key(KEY_ENTER)
 		if not check(hud.apply_shop_offers(2, 9, PackedStringArray(), PackedInt32Array(), PackedInt32Array(), PackedInt64Array()), "accept empty detail page"): return
-		click_at(Vector2(60, 265), true)
-		click_at(Vector2(60, 265), false)
+		click_at(Vector2(330, 280), true)
+		click_at(Vector2(330, 280), false)
 		if not check(goods_requests.size() == 2, "empty details stay in detail view"): return
 		key(KEY_ESCAPE)
 		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "late detail cannot reopen dismissed page"): return

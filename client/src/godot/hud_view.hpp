@@ -302,6 +302,10 @@ private:
         godot::PackedInt32Array prices,godot::PackedInt64Array identifiers);
     void draw_shop();
     static constexpr int shop_top=225;
+    int shop_width() const { return shop_show_offers?488:292; }
+    static mir3::HudLayout::Rect shop_offer_cell(int cell) {
+        return {315+38*(cell%4),shop_top+42+38*(cell/4),35,35};
+    }
     static constexpr int shop_goods_rows=4, shop_goods_pitch=42, shop_goods_row_top=16;
     bool shop_input(int kind,godot::Vector2 pointer);
     void draw_npc_dialogue();
