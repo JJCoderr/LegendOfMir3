@@ -460,12 +460,28 @@ void Mir3HudView::step_toward_pointer() {
     // 0x417E10 chooses one step along the cursor heading.
     const int dx=std::abs(delta.y)>2 && std::abs(delta.x)<=1?0:(delta.x>0)-(delta.x<0);
     const int dy=std::abs(delta.x)>2 && std::abs(delta.y)<=1?0:(delta.y>0)-(delta.y<0);
-    const auto destination=player_cell+Vector2i(dx,dy);
-    if (destination!=player_cell && destination!=Vector2i(413,409) &&
-        terrain.walkable(destination.x,destination.y)) {
-        map_route.clear();
-        start_map_step(destination);
+    if (target==player_cell) return;
+    const auto traversable=[this](Vector2i cell) {
+        return cell!=Vector2i(413,409) && terrain.walkable(cell.x,cell.y);
+    };
+    auto destination=player_cell+Vector2i(dx,dy);
+    if (!traversable(destination)) {
+        destination=player_cell;
+        int best_distance=100;
+        for (const auto [x,y]:mir3::map_directions) {
+            const auto candidate=player_cell+Vector2i(x,y);
+            if (!traversable(candidate)) continue;
+            const auto offset=candidate-target;
+            const int distance=int(std::hypot(offset.x,offset.y));
+            if (distance<=best_distance) {
+                best_distance=distance;
+                destination=candidate;
+            }
+        }
     }
+    if (destination==player_cell) return;
+    map_route.clear();
+    start_map_step(destination);
 }
 
 void Mir3HudView::advance_map_step(double delta) {

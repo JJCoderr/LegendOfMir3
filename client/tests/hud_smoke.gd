@@ -85,7 +85,7 @@ func run() -> void:
 		if OS.get_cmdline_user_args().has("--screenshots"):
 			var frame := root.get_texture().get_image()
 			if not check(frame.get_pixel(100, 100) != frame.get_pixel(200, 200), "Bichon terrain pixels"): return
-		for destination in [Vector2(350, 240), Vector2(650, 240)]:
+		for destination in [Vector2(390, 240), Vector2(650, 240)]:
 			var step := InputEventMouseButton.new()
 			step.position = destination
 			step.button_index = MOUSE_BUTTON_LEFT
@@ -94,7 +94,7 @@ func run() -> void:
 			step = step.duplicate()
 			step.pressed = false
 			root.push_input(step, true)
-			if not check(hud.hud_snapshot().walk_frame == (-1 if destination.x == 350 else 0), "map walkability and distant click heading"): return
+			if not check(hud.hud_snapshot().walk_frame == (-1 if destination.x == 390 else 0), "current cell and distant click heading"): return
 		if not await capture("bichon-walking"): return
 		var walk_deadline := Time.get_ticks_msec() + 2000
 		while hud.hud_snapshot().walk_frame >= 0 and Time.get_ticks_msec() < walk_deadline:
@@ -123,6 +123,25 @@ func run() -> void:
 		if not await capture("bichon-held-walk"): return
 		await create_timer(0.8).timeout
 		if not check(hud.hud_snapshot().player_cell == Vector2i(476, 360) and hud.hud_snapshot().walk_frame == -1, "release ends repeated walking"): return
+		if not check(hud.walk_to_map_cell(Vector2i(475, 360)), "approach blocked western tile"): return
+		var approach_deadline := Time.get_ticks_msec() + 2000
+		while Time.get_ticks_msec() < approach_deadline:
+			await process_frame
+			if hud.hud_snapshot().player_cell == Vector2i(475, 360) and hud.hud_snapshot().walk_frame == -1: break
+		if not check(hud.hud_snapshot().player_cell == Vector2i(475, 360) and hud.hud_snapshot().walk_frame == -1, "arrive at obstacle fixture"): return
+		var blocked_step := InputEventMouseButton.new()
+		blocked_step.position = Vector2(350, 240)
+		blocked_step.button_index = MOUSE_BUTTON_LEFT
+		blocked_step.pressed = true
+		root.push_input(blocked_step, true)
+		blocked_step = blocked_step.duplicate()
+		blocked_step.pressed = false
+		root.push_input(blocked_step, true)
+		var detour_deadline := Time.get_ticks_msec() + 2000
+		while hud.hud_snapshot().walk_frame >= 0 and Time.get_ticks_msec() < detour_deadline:
+			await process_frame
+		if not check(hud.hud_snapshot().player_cell == Vector2i(475, 361) and hud.hud_snapshot().walk_frame == -1, "blocked heading takes last equally close traversable neighbor"): return
+		if not await capture("bichon-blocked-heading"): return
 		hud.set_meta("map_camera_cell", Vector2i(404, 402))
 		hud.queue_redraw()
 		if not await capture("bichon-merchant"): return
