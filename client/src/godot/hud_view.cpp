@@ -540,15 +540,30 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
         if (slash==script.npos) return false;
         script.remove_prefix(slash+1);
         std::vector<NpcDialogueRow> rows;
-        for (int line=0;line<7 && !script.empty();++line) {
+        int line=0;
+        while (line<7 && !script.empty()) {
             const auto end=script.find(char(92));
             auto row=script.substr(0,end);
             int x=28;
             const auto append=[&](std::string_view label,std::string_view command={}) {
-                if (label.empty() || x>=358) return;
-                const int width=mir3::raster_text(label,1,1,false,mir3::TextFont::normal).text_width;
-                rows.push_back({std::string(label),std::string(command),{x,25+18*line,std::min(width,358-x),18}});
-                x+=width;
+                while (!label.empty() && line<7) {
+                    std::size_t length=0;
+                    int width=0;
+                    while (length<label.size()) {
+                        auto next=length+1;
+                        while (next<label.size() && (static_cast<unsigned char>(label[next])&0xc0)==0x80) ++next;
+                        const int measured=mir3::raster_text(label.substr(0,next),1,1,false,mir3::TextFont::normal).text_width;
+                        if (x+measured>358 && (length || x!=28)) break;
+                        length=next;
+                        width=measured;
+                    }
+                    if (length) {
+                        rows.push_back({std::string(label.substr(0,length)),std::string(command),{x,25+18*line,std::min(width,358-x),18}});
+                        label.remove_prefix(length);
+                        x+=width;
+                    }
+                    if (!label.empty()) { ++line; x=28; }
+                }
             };
             while (!row.empty()) {
                 const auto open=row.find('<');
@@ -563,6 +578,7 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
             }
             if (end==script.npos) break;
             script.remove_prefix(end+1);
+            ++line;
         }
         if (npc_dialogue_actor && npc_dialogue_actor!=actor) close_npc_dialogue();
         npc_dialogue_rows=std::move(rows);

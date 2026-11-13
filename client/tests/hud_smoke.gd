@@ -239,6 +239,11 @@ func run() -> void:
 		click_at(Vector2(75, 32), true)
 		click_at(Vector2(75, 32), false)
 		if not check(dialogue_actions == [[2, "@buy"], [2, "@buy"], [2, "@exit"]], "only inline labels dispatch their own commands"): return
+		if not check(hud.apply_npc_dialogue(643, 2, "Merchant/" + "比".repeat(30) + "<Buy/@wrapped>"), "wrap long NPC line"): return
+		if not await capture("bichon-merchant-wrapped-line"): return
+		click_at(Vector2(68, 48), true)
+		click_at(Vector2(68, 48), false)
+		if not check(dialogue_actions.back() == [2, "@wrapped"], "wrapped option retains command"): return
 		var goods_requests: Array = []
 		hud.shop_good_requested.connect(func(actor: int, index: int, name: String): goods_requests.append([actor, index, name]))
 		if not check(hud.apply_npc_message("a<D<<>=B<?H<<<<<PbQ`DC=kYBakW^xmGoDlGoPkLbmqUN=lWsMeWrtkH>xnINxpGl".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "645 goods list"): return
