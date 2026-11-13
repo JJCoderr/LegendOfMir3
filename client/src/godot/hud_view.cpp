@@ -2152,7 +2152,6 @@ void Mir3HudView::draw_status() {
     const auto [x,y,w,h]=status.rect;
     const auto skin=frame(1280);
     if (skin.is_valid()) sprite(1280,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
-    sprite(status_close_pressed?1222:1221,{x+Layout::close[0],y+Layout::close[1]});
     const bool obscured=panel_covered(Panel::status,inventory_cursor);
     const int local_x=int(inventory_cursor.x)-x,local_y=int(inventory_cursor.y)-y;
     if (bag.held && !obscured) {
@@ -2258,7 +2257,7 @@ void Mir3HudView::draw_status() {
         const auto hit=Layout::tooltip(row);
         hint({hit[0]-10,hit[1]-15,measured.text_width,hit[3]},caption);
     }
-
+    sprite(status_close_pressed?1222:1221,{x+Layout::close[0],y+Layout::close[1]});
 }
 
 void Mir3HudView::toggle_status() {
