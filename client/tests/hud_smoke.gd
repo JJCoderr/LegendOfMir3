@@ -534,12 +534,12 @@ func run() -> void:
 		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "reject previous category reply"): return
 		if not check(hud.apply_shop_offers(2, 8, names, icons, prices, ids, 0), "accept new category at offset zero"): return
 		if not await capture("bichon-merchant-switch-category"): return
-		click_at(Vector2(465, 398), true)
-		click_at(Vector2(465, 398), false)
 		click_at(Vector2(273, 421), true)
+		if not await capture("bichon-merchant-close-from-details"): return
 		click_at(Vector2(273, 421), false)
 		if not check(hud.hud_snapshot().npc_dialogue_actor == 2, "closing shop keeps NPC dialogue"): return
 		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "closed shop ignores pending details"): return
+		if not check(not hud.apply_shop_offers(2, 8, names, icons, prices, ids), "list close dismisses the active detail grid"): return
 		if not await capture("bichon-merchant-shop-closed"): return
 		if not check(hud.apply_npc_message("aL<<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
 		if not check(not hud.apply_shop_goods(2, 10, stock_list), "late goods reply cannot reopen closed merchant"): return

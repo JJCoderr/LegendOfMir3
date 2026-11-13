@@ -803,7 +803,8 @@ void Mir3HudView::draw_shop() {
     // 0x47776B draws frame 1225 at (260,32), with 85 pixels of travel.
     if (last>0) sprite(1225,{260,shop_top+32+int(std::lround(85.0*goods_first/last))});
     // 0x478000 repositions the controls after the shop changes modes.
-    if (shop_pressed==-5) sprite(1222,shop_show_offers?mir3::HudLayout::Point{449,shop_top+159}:mir3::HudLayout::Point{258,shop_top+183});
+    if (shop_pressed==-5) sprite(1222,{449,shop_top+159});
+    if (shop_pressed==-7) sprite(1222,{258,shop_top+183});
     if (shop_pressed==-6) sprite(1264,{106,shop_top+186});
     if (shop_show_offers) {
         // 0x477780: 652 acknowledges the page; the request path displays an ellipsis.
@@ -893,9 +894,11 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     constexpr int category_button=-6;
     int control=0;
     const auto close_icon=frame(1221);
-    if (close_icon.is_valid() &&
-        Rect2(details?Vector2(449,shop_top+159):Vector2(258,shop_top+183),close_icon->get_size()).has_point(pointer))
-        control=-5;
+    if (close_icon.is_valid()) {
+        // 0x478850 checks the list close button even in mode 1 (detail grid).
+        if (Rect2(Vector2(258,shop_top+183),close_icon->get_size()).has_point(pointer)) control=-7;
+        else if (details && Rect2(Vector2(449,shop_top+159),close_icon->get_size()).has_point(pointer)) control=-5;
+    }
     if (details && !control) {
         for (const auto& spec:std::array{std::array{confirm_button,1265,358},std::array{-3,1268,316},std::array{-4,1270,406}}) {
             const auto image=frame(spec[1]);
@@ -913,10 +916,9 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     if (control || shop_pressed<=confirm_button) {
         const int activate=kind==2 && control==shop_pressed?control:0;
         shop_pressed=kind==0 && control?control:-1;
-        if (activate==-5) {
-            if (details) close_shop_offers();
-            else close_shop();
-        } else if (activate==category_button && shop_highlighted>=0 && shop_goods[shop_highlighted].variants>0) {
+        if (activate==-7) close_shop();
+        else if (activate==-5) close_shop_offers();
+        else if (activate==category_button && shop_highlighted>=0 && shop_goods[shop_highlighted].variants>0) {
             shop_selected=shop_highlighted;
             shop_offer_page=0;
             if (details) shop_offer_loading=true;
