@@ -124,6 +124,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["terrain_ready"]=terrain_ready;
     result["player_cell"]=player_cell;
     result["walk_frame"]=walk_frame;
+    result["map_camera_pixel"]=map_camera();
+    result["map_player_pixel"]=player_pixel();
     const auto movement=step_destination-step_origin;
     result["map_running"]=walk_frame>=0 && std::max(std::abs(movement.x),std::abs(movement.y))==2;
     result["character_portrait"]=model.portrait_frame();

@@ -156,7 +156,22 @@ func run() -> void:
 		run = run.duplicate()
 		run.pressed = false
 		root.push_input(run, true)
-		if not await capture("bichon-right-run"): return
+		var run_start: Vector2i = hud.hud_snapshot().player_cell
+		var camera_y := [10, 22, 32, 42, 54, 64]
+		var actor_y := [10, 24, 34, 44, 54, 64]
+		var seen_frames := {}
+		var finish_deadline := Time.get_ticks_msec() + 2000
+		while Time.get_ticks_msec() < finish_deadline:
+			var state: Dictionary = hud.hud_snapshot()
+			var index: int = state.walk_frame
+			if index < 0: break
+			seen_frames[index] = true
+			var origin_pixel := run_start * Vector2i(48, 32)
+			if not check(state.map_running and state.map_camera_pixel == origin_pixel - Vector2i(376, 227 + camera_y[index]), "run camera follows frame offsets %s %s %s" % [state.map_camera_pixel, state.player_cell, index]): return
+			if not check(state.map_player_pixel == origin_pixel - Vector2i(0, actor_y[index]), "run actor follows frame offsets"): return
+			if index == 0 and seen_frames.size() == 1 and not await capture("bichon-right-run"): return
+			await process_frame
+		if not check(seen_frames.size() == 6 and hud.hud_snapshot().player_cell == run_start + Vector2i(0, -2), "run renders six frames and release stops after two cells"): return
 		hud.set_meta("map_camera_cell", Vector2i(404, 402))
 		hud.queue_redraw()
 		if not await capture("bichon-merchant"): return
