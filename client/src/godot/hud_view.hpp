@@ -37,6 +37,8 @@ public:
     bool set_music_map(godot::String map);
     bool apply_minimap_reply(int map_number);
     void set_minimap_position(int x,int y);
+    void set_minimap_markers(godot::PackedVector2Array type_five,godot::PackedVector2Array nearby_green,
+        godot::PackedVector2Array nearby_orange);
     bool apply_portrait_reply(godot::PackedByteArray jpeg);
     bool load_portrait_cache(godot::String server,godot::String character);
     void set_portrait_names(godot::PackedStringArray names);

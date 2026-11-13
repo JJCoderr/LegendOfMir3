@@ -111,7 +111,15 @@ func run() -> void:
 	if not check(hud.hud_snapshot().minimap_source == Vector2(441, 203), "minimap centered on player"): return
 	key(KEY_V)
 	if not check(hud.hud_snapshot().minimap_visible, "minimap reply cooldown"): return
-	if not await capture("hud-minimap-compact"): return
+	hud.set_minimap_markers(PackedVector2Array([Vector2(322, 251)]),
+		PackedVector2Array([Vector2(350, 284)]), PackedVector2Array([Vector2(360, 276), Vector2(380, 283)]))
+	if not await capture("hud-minimap-markers"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var rendered := root.get_texture().get_image()
+		if not check(rendered.get_pixel(713, 47).is_equal_approx(Color.YELLOW), "yellow minimap marker"): return
+		if not check(rendered.get_pixel(755, 80).is_equal_approx(Color8(100, 250, 100)), "green minimap marker"): return
+		if not check(rendered.get_pixel(770, 72).is_equal_approx(Color8(250, 150, 50)), "orange minimap marker"): return
+		if not check(not rendered.get_pixel(799, 79).is_equal_approx(Color8(250, 150, 50)), "distant minimap marker clipped"): return
 	click_at(Vector2(792, 120), true)
 	click_at(Vector2(792, 120), false)
 	if not check(hud.hud_snapshot().minimap_bounds == Rect2(544, 0, 256, 256), "minimap size button"): return

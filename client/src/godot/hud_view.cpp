@@ -48,6 +48,7 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
     ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
+    ClassDB::bind_method(D_METHOD("set_minimap_markers","type_five","nearby_green","nearby_orange"),&Mir3HudView::set_minimap_markers);
     ADD_SIGNAL(MethodInfo("portrait_list_requested"));
     ADD_SIGNAL(MethodInfo("portrait_upload_requested",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"jpeg")));
     ClassDB::bind_method(D_METHOD("load_portrait_cache","server","character"),&Mir3HudView::load_portrait_cache);
@@ -1709,6 +1710,23 @@ void Mir3HudView::set_minimap_position(int x,int y) {
     queue_redraw();
 }
 
+void Mir3HudView::set_minimap_markers(PackedVector2Array type_five,PackedVector2Array nearby_green,
+        PackedVector2Array nearby_orange) {
+    const auto replace=[](auto& destination,const PackedVector2Array& cells) {
+        destination.clear();
+        destination.reserve(cells.size());
+        for (int64_t i=0;i<cells.size();++i) {
+            const auto cell=cells[i];
+            if (cell.x>=0 && cell.x<=65535 && cell.y>=0 && cell.y<=65535)
+                destination.push_back({int(cell.x),int(cell.y)});
+        }
+    };
+    replace(minimap.type_five_actors,type_five);
+    replace(minimap.nearby_green,nearby_green);
+    replace(minimap.nearby_orange,nearby_orange);
+    queue_redraw();
+}
+
 void Mir3HudView::draw_minimap() {
     if (!minimap.visible || minimap_image.is_null()) return;
     const auto bounds=rect(minimap.bounds());
@@ -1718,10 +1736,24 @@ void Mir3HudView::draw_minimap() {
     draw_texture_rect_region(minimap_image,bounds,Rect2(source,bounds.size),
         Color(light,light,light,minimap.translucent?175.f/255:1.f));
     draw_rect(bounds,Color(100.f/255,100.f/255,100.f/255),false);
+    const auto origin=bounds.position-source;
+    const auto player=origin+Vector2(float(mir3::Minimap::map_pixel_x(minimap.player_x)-2),
+        float(std::int64_t(minimap.player_y)-2));
+    const auto draw_markers=[&](const auto& cells,Color color,bool nearby) {
+        for (const auto& [x,y]:cells) {
+            const auto marker=origin+Vector2(mir3::Minimap::actor_marker_x(x),y-1);
+            if (nearby && (std::abs(marker.x-player.x)>=minimap.size()/2 ||
+                std::abs(marker.y-player.y)>=minimap.size()/2)) continue;
+            const auto area=Rect2(marker-Vector2(nearby,nearby),Vector2(nearby?3:2,nearby?3:2)).intersection(bounds);
+            if (area.has_area()) draw_rect(area,color);
+        }
+    };
+    draw_markers(minimap.type_five_actors,Color(1,1,0),false);
+    draw_markers(minimap.nearby_green,Color(100.f/255,250.f/255,100.f/255),true);
+    draw_markers(minimap.nearby_orange,Color(250.f/255,150.f/255,50.f/255),true);
     if (ticks_msec()%801<500) {
-        const auto x=std::int64_t(minimap.player_x)*3/2;
-        const auto marker=bounds.position+Vector2(float(x-2),float(std::int64_t(minimap.player_y)-2))-source;
-        draw_rect(Rect2(marker,Vector2(4,4)).intersection(bounds),Color(100.f/255,250.f/255,100.f/255),false);
+        const auto area=Rect2(player,Vector2(4,4)).intersection(bounds);
+        if (area.has_area()) draw_rect(area,Color(100.f/255,250.f/255,100.f/255),false);
     }
     sprite(1486,minimap.position);
     sprite(1487,{int(end.x)-32,int(bounds.position.y)});
