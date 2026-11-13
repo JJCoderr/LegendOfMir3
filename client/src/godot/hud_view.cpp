@@ -517,13 +517,20 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
     return true;
 }
 
-void Mir3HudView::close_npc_dialogue() {
-    npc_dialogue_actor=0;
+void Mir3HudView::close_shop() {
     shop_actor=0;
+    shop_goods.clear();
     shop_selected=-1;
     shop_offers.clear();
     shop_show_offers=false;
     shop_pressed=-1;
+    shop_first=shop_category_first=0;
+    queue_redraw();
+}
+
+void Mir3HudView::close_npc_dialogue() {
+    close_shop();
+    npc_dialogue_actor=0;
     npc_dialogue_rows.clear();
     npc_dialogue_pressed=-1;
     queue_redraw();
@@ -1408,6 +1415,11 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
             shop_first=shop_category_first;
             get_viewport()->set_input_as_handled();
             queue_redraw();
+            return;
+        }
+        if (shop_actor) {
+            close_shop();
+            get_viewport()->set_input_as_handled();
             return;
         }
         for (auto it=panel_order.rbegin();it!=panel_order.rend();++it) {

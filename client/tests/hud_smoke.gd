@@ -291,6 +291,10 @@ func run() -> void:
 		click_at(Vector2(45, 171), false)
 		if not check(goods_requests.size() == 3, "focus loss cancels pressed goods row"): return
 		if not await capture("bichon-merchant-focus-reset"): return
+		key(KEY_ESCAPE)
+		if not check(hud.hud_snapshot().npc_dialogue_actor == 2, "closing shop keeps NPC dialogue"): return
+		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "closed shop ignores pending details"): return
+		if not await capture("bichon-merchant-shop-closed"): return
 		if not check(hud.apply_npc_dialogue(644, 2, "") and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
 		if not check(not hud.apply_shop_goods(2, 10, stock_list), "late goods reply cannot reopen closed merchant"): return
 		if not check(hud.apply_npc_dialogue(643, 2, script) and hud.walk_to_map_cell(Vector2i(419, 410)), "walk away from reopened NPC dialogue"): return
