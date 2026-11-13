@@ -356,6 +356,17 @@ func run() -> void:
 	click_at(Vector2(40, 32), false)
 	if not check(hud.hud_snapshot().portrait_selected == 0 and hud.hud_snapshot().portrait_count == 1 and hud.hud_snapshot().portrait_preview, "portrait row selection"): return
 	if not await capture("portrait-preview"): return
+	var portrait_uploads: Array[PackedByteArray] = []
+	hud.portrait_upload_requested.connect(func(jpeg: PackedByteArray): portrait_uploads.append(jpeg))
+	click_at(Vector2(70, 350), true)
+	click_at(Vector2(70, 350), false)
+	if not check(portrait_uploads.size() == 1 and not portrait_uploads[0].is_empty(), "portrait upload reads actual file"): return
+	if not check(not hud.hud_snapshot().custom_portrait and hud.apply_portrait_reply(portrait_uploads[0]), "portrait applies on reply"): return
+	if not await capture("portrait-uploaded"): return
+	click_at(Vector2(185, 350), true)
+	click_at(Vector2(185, 350), false)
+	if not check(portrait_uploads.size() == 2 and portrait_uploads[1].is_empty() and hud.apply_portrait_reply(portrait_uploads[1]), "reset portrait reply"): return
+	if not check(not hud.hud_snapshot().custom_portrait, "restore profession portrait"): return
 	DirAccess.remove_absolute(portrait_dir.path_join("sample.JPG"))
 	DirAccess.remove_absolute(portrait_dir)
 	key(KEY_ESCAPE)

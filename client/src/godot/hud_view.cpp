@@ -41,7 +41,8 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
     ADD_SIGNAL(MethodInfo("portrait_list_requested"));
-    ADD_SIGNAL(MethodInfo("portrait_file_requested",PropertyInfo(Variant::INT,"button"),PropertyInfo(Variant::STRING,"name")));
+    ADD_SIGNAL(MethodInfo("portrait_upload_requested",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"jpeg")));
+    ClassDB::bind_method(D_METHOD("apply_portrait_reply","jpeg"),&Mir3HudView::apply_portrait_reply);
     ClassDB::bind_method(D_METHOD("set_portrait_names","names"),&Mir3HudView::set_portrait_names);
     ADD_SIGNAL(MethodInfo("guild_members_requested"));
     ADD_SIGNAL(MethodInfo("guild_edit_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"body")));
@@ -74,6 +75,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_compact_first"]=chat_history.first(false);
     result["chat_expanded_first"]=chat_history.first(true);
     result["portrait_visible"]=portrait_visible;
+    result["custom_portrait"]=active_portrait.is_valid();
     result["portrait_preview"]=portrait_preview.is_valid();
     result["portrait_count"]=int64_t(portrait_picker.names.size());
     result["portrait_selected"]=portrait_picker.selected;
@@ -203,7 +205,9 @@ void Mir3HudView::_draw() {
     if (!model.layout.expanded) {
         sprite(1490,Layout::image_position(Layout::Image::portrait));
         const int id=model.portrait_frame();
-        if (id>=0) {
+        if (active_portrait.is_valid()) {
+            draw_texture_rect(active_portrait,Rect2(point(Layout::image_position(Layout::Image::portrait)),Vector2(82,94)),false);
+        } else if (id>=0) {
             if (!portrait_frames.contains(id)) {
                 auto decoded=portraits.frame(id);
                 portrait_frames[id]=decoded?texture(decoded->pixels.rgba,decoded->width,decoded->height):Ref<ImageTexture>{};
@@ -1129,7 +1133,7 @@ void Mir3HudView::open_group_dialog(int action) {
     group_request=action>=1000?action:1019+action;
     group_selected=0;
     group_dialog_pressed=-1;
-    if (group_request==4000 || group_request==4017) { chat_input->release_focus();return; }
+    if (group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716) { chat_input->release_focus();return; }
     chat_input->set_position(Vector2(group_dialog[0]+24,group_dialog[1]+228));
     chat_input->set_size(Vector2(309,15));
     chat_input->focus_chat("",true);
@@ -1144,7 +1148,7 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
     chat_input->release_focus();
     chat_input->layout(model.layout.expanded);
     queue_redraw();
-    if (!confirm || name.is_empty() || request==4000 || request==4017) return;
+    if (!confirm || name.is_empty() || request==4000 || request==4017 || request==4714 || request==4716) return;
     if (request==1039) {
         emit_signal("guild_member_removal_requested",name);
         emit_signal("guild_members_requested");
@@ -1159,7 +1163,7 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
 void Mir3HudView::draw_group_dialog() {
     const int x=group_dialog[0],y=group_dialog[1];
     sprite(1240,{x,y});
-    if (group_request==4000 || group_request==4017) {
+    if (group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716) {
         text(message(group_request),{x+23,y+84,308,95},0xc8faff,mir3::TextFont::dialog);
         sprite(1243+(group_dialog_pressed==0),{x+137,y+188});
         return;
@@ -1175,7 +1179,7 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
     Ref<InputEventKey> key=event;
     if (key.is_valid()) {
         const auto code=key->get_keycode();
-        if (group_request==4000 || group_request==4017) {
+        if (group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716) {
             if (key->is_pressed() && !key->is_echo() && (code==KEY_ENTER || code==KEY_KP_ENTER || code==KEY_SPACE))
                 finish_group_dialog(false);
             get_viewport()->set_input_as_handled();
@@ -1191,13 +1195,13 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
     }
     Ref<InputEventMouseButton> mouse=event;
     if (mouse.is_valid()) {
-        if (group_request!=4000 && group_request!=4017 && chat_input->get_rect().has_point(mouse->get_position())) return false;
+        if (group_request!=4000 && group_request!=4017 && group_request!=4714 && group_request!=4716 && chat_input->get_rect().has_point(mouse->get_position())) return false;
         if (mouse->get_button_index()==MOUSE_BUTTON_LEFT) {
             int hit=-1;
             for (const int index:{0,2}) {
-                if ((group_request==4000 || group_request==4017) && index==2) continue;
-                const auto icon=frame((group_request==4000 || group_request==4017)?1243:index==0?1241:1245);
-                const Vector2 pos(group_dialog[0]+((group_request==4000 || group_request==4017)?137:index==0?41:234),group_dialog[1]+188);
+                if ((group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716) && index==2) continue;
+                const auto icon=frame((group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716)?1243:index==0?1241:1245);
+                const Vector2 pos(group_dialog[0]+((group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716)?137:index==0?41:234),group_dialog[1]+188);
                 if (icon.is_valid() && Rect2(pos,icon->get_size()).has_point(mouse->get_position())) hit=index;
             }
             if (mouse->is_pressed()) group_dialog_pressed=hit;
@@ -1641,8 +1645,8 @@ bool Mir3HudView::portrait_input(int kind,Vector2 point) {
         if (kind==2) {
             if (hit>=0 && hit==portrait_pressed) {
                 if (hit==0) close_portrait_picker();
-                else if (portrait_picker.selected>=0)
-                    emit_signal("portrait_file_requested",hit,String::utf8(portrait_picker.names[portrait_picker.selected].c_str()));
+                else request_portrait_change(hit,static_cast<std::uint32_t>(tick));
+                if (hud_sound && audio_options.effects_enabled) hud_sound->play();
             }
             portrait_pressed=-1;
         }
@@ -1672,13 +1676,48 @@ void Mir3HudView::enumerate_portraits() {
 
 void Mir3HudView::load_portrait_preview() {
     portrait_preview.unref();
-    if (portrait_picker.selected<0 || portrait_picker.selected>=int(portrait_picker.names.size())) return;
-    const String name=String::utf8(portrait_picker.names[portrait_picker.selected].c_str());
-    if (name.get_file()!=name || name.contains(":") || name.get_extension().to_lower()!="jpg") return;
-    const auto file=FileAccess::open(portrait_directory.path_join(name),FileAccess::READ);
+    const auto file=open_selected_portrait();
     if (file.is_null() || !mir3::PortraitPicker::accepts_size(file->get_length())) return;
     Ref<Image> image;
     image.instantiate();
     if (image->load_jpg_from_buffer(file->get_buffer(file->get_length()))==OK)
         portrait_preview=ImageTexture::create_from_image(image);
+}
+
+Ref<FileAccess> Mir3HudView::open_selected_portrait() const {
+    if (portrait_picker.selected<0 || portrait_picker.selected>=int(portrait_picker.names.size())) return {};
+    const String name=String::utf8(portrait_picker.names[portrait_picker.selected].c_str());
+    if (name.get_file()!=name || name.contains(":") || name.get_extension().to_lower()!="jpg") return {};
+    return FileAccess::open(portrait_directory.path_join(name),FileAccess::READ);
+}
+
+void Mir3HudView::request_portrait_change(int button,std::uint32_t tick) {
+    if (button==2) {
+        emit_signal("portrait_upload_requested",PackedByteArray{});
+        return;
+    }
+    if (portrait_picker.selected<0) return;
+    const auto file=open_selected_portrait();
+    if (file.is_null()) { open_group_dialog(4716);return; }
+    const auto length=file->get_length();
+    if (!mir3::PortraitPicker::accepts_size(length)) { open_group_dialog(4714);return; }
+    const auto bytes=file->get_buffer(length);
+    Ref<Image> image;
+    image.instantiate();
+    if (image->load_jpg_from_buffer(bytes)!=OK) { open_group_dialog(4716);return; }
+    if (portrait_picker.accept_upload_tick(tick)) emit_signal("portrait_upload_requested",bytes);
+}
+
+bool Mir3HudView::apply_portrait_reply(PackedByteArray jpeg) {
+    if (jpeg.is_empty()) {
+        active_portrait.unref();
+    } else {
+        if (!mir3::PortraitPicker::accepts_size(jpeg.size())) return false;
+        Ref<Image> image;
+        image.instantiate();
+        if (image->load_jpg_from_buffer(jpeg)!=OK) return false;
+        active_portrait=ImageTexture::create_from_image(image);
+    }
+    queue_redraw();
+    return true;
 }

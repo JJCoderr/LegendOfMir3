@@ -17,6 +17,7 @@
 #include <godot_cpp/classes/image_texture.hpp>
 #include <godot_cpp/classes/input_event.hpp>
 #include <map>
+#include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/audio_stream_player.hpp>
 #include <godot_cpp/classes/text_edit.hpp>
 
@@ -33,6 +34,7 @@ public:
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     bool set_music_map(godot::String map);
+    bool apply_portrait_reply(godot::PackedByteArray jpeg);
     void set_portrait_names(godot::PackedStringArray names);
     void set_guild_manager(bool allowed);
     void set_guild_members(godot::PackedStringArray lines);
@@ -53,6 +55,9 @@ private:
     void draw_portrait_picker();
     void enumerate_portraits();
     void load_portrait_preview();
+    void request_portrait_change(int button,std::uint32_t tick);
+    godot::Ref<godot::FileAccess> open_selected_portrait() const;
+    godot::Ref<godot::ImageTexture> active_portrait;
     godot::String portrait_directory;
     godot::Ref<godot::ImageTexture> portrait_preview;
     bool portrait_input(int kind,godot::Vector2 point);
