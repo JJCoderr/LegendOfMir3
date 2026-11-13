@@ -832,6 +832,12 @@ func run() -> void:
 	if not check(hud.apply_trade_cancel() and not hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_visible, "trade cancellation closes offer and preserves bag"): return
 	if not check(not hud.apply_trade_cancel(), "duplicate trade cancellation ignored"): return
 	if not await capture("hud-trade-cancelled"): return
+	if not check(hud.open_trade("比奇旅人") and hud.set_trade_item(1, 0, 301, 1), "open trade for settlement"): return
+	if not check(not hud.apply_trade_complete(19320) and hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_gold == 0, "incomplete received item preserves trade and balance"): return
+	if not check(hud.set_trade_item(1, 0, 301, 1, 87654, "Received potion", 0, 0), "apply received item identity"): return
+	if not check(hud.apply_trade_complete(19320) and not hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_gold == 19320, "settle received item and authoritative balance"): return
+	if not check(not hud.apply_trade_complete(19320), "duplicate settlement ignored"): return
+	if not await capture("hud-trade-completed"): return
 	var exit_requests: Array[int] = []
 	hud.exit_confirmed.disconnect(hud.handle_exit_confirmation)
 	hud.exit_confirmed.connect(func(id: int): exit_requests.append(id))

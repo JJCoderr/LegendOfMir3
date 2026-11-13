@@ -52,9 +52,10 @@ public:
     bool apply_minimap_reply(int map_number);
     void handle_exit_confirmation(int dialog_id);
     bool apply_trade_offer_reply(int identifier);
-    bool set_trade_item(int side,int slot,int icon,int count);
+    bool set_trade_item(int side,int slot,int icon,int count,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     bool set_trade_gold(int64_t local,int64_t remote);
     bool apply_trade_cancel();
+    bool apply_trade_complete(int64_t balance);
     bool open_trade(godot::String partner);
     void set_trade_context(int direction,godot::Vector2i cell,int actor_type,bool dead,godot::String name);
     void set_map_location(godot::String name,int x,int y);
@@ -85,6 +86,7 @@ private:
     mir3::DraggablePanel trade{{0,0,494,330}};
     godot::String trade_partner;
     mir3::TradeScroll trade_scroll;
+    std::uint32_t inventory_gold=0;
     std::array<std::uint32_t,2> trade_gold{};
     std::array<std::array<mir3::BagItem,200>,2> trade_items;
     int trade_pending_slot=-1, trade_return_slot=-1;

@@ -88,8 +88,9 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("trade_offer_requested",PropertyInfo(Variant::INT,"identifier"),
         PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::STRING,"name")));
     ClassDB::bind_method(D_METHOD("apply_trade_offer_reply","identifier"),&Mir3HudView::apply_trade_offer_reply);
-    ClassDB::bind_method(D_METHOD("set_trade_item","side","slot","icon","count"),&Mir3HudView::set_trade_item);
+    ClassDB::bind_method(D_METHOD("set_trade_item","side","slot","icon","count","make_index","name","std_mode","stack_mode"),&Mir3HudView::set_trade_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("set_trade_gold","local","remote"),&Mir3HudView::set_trade_gold);
+    ClassDB::bind_method(D_METHOD("apply_trade_complete","balance"),&Mir3HudView::apply_trade_complete);
     ClassDB::bind_method(D_METHOD("apply_trade_cancel"),&Mir3HudView::apply_trade_cancel);
     ClassDB::bind_method(D_METHOD("open_trade","partner"),&Mir3HudView::open_trade);
     ADD_SIGNAL(MethodInfo("trade_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
@@ -113,6 +114,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["quest_first"]=quest.first;
     result["quest_selected"]=quest.selected;
     result["trade_scroll"]=Vector2i(trade_scroll.first[0],trade_scroll.first[1]);
+    result["inventory_gold"]=int64_t(inventory_gold);
     result["trade_confirmed"]=trade_confirmed;
     result["trade_visible"]=trade.visible;
     result["quest_visible"]=quest.visible;
@@ -622,7 +624,7 @@ void Mir3HudView::draw_inventory() {
     text(weight,{x+94,y+20,126,16},0xF8C8C8);
     sprite(inventory.close_pressed?1222:1221,{x+242,y+423});
     sprite(1225,{x+250,mir3::InventoryScroll::thumb_y(inventory.row,y)});
-    text("0",{x+72,y+402,77,17},0x64C8F8,mir3::TextFont::gold);
+    text(std::to_string(inventory_gold),{x+72,y+402,77,17},0x64C8F8,mir3::TextFont::gold);
     const Rect2 clip(x+17,y+60,228,304);
     // 0x440280 shares placement between the held-item preview and release.
     if (bag.held && clip.has_point(inventory_cursor)) {
@@ -2134,8 +2136,8 @@ bool Mir3HudView::apply_trade_offer_reply(int identifier) {
     return true;
 }
 
-bool Mir3HudView::set_trade_item(int side,int slot,int icon,int count) {
-    if (!trade.visible || side<0 || side>=2 || slot<0 || slot>=200 || icon< -1 || count<0) return false;
+bool Mir3HudView::set_trade_item(int side,int slot,int icon,int count,int64_t make_index,String name,int std_mode,int stack_mode) {
+    if (!trade.visible || side<0 || side>=2 || slot<0 || slot>=200 || icon< -1 || count<0 || make_index<0 || make_index>UINT32_MAX) return false;
     auto& item=trade_items[side][slot];
     if (icon<0) item={};
     else {
@@ -2146,6 +2148,10 @@ bool Mir3HudView::set_trade_item(int side,int slot,int icon,int count) {
         item={};
         item.icon=icon;
         item.count=count;
+        item.make_index=static_cast<std::uint32_t>(make_index);
+        item.name=name.utf8().get_data();
+        item.std_mode=std_mode;
+        item.stack_mode=stack_mode;
         item.width=width;
         item.height=height;
     }
@@ -2158,6 +2164,20 @@ bool Mir3HudView::set_trade_gold(int64_t local,int64_t remote) {
     trade_gold={static_cast<std::uint32_t>(local),static_cast<std::uint32_t>(remote)};
     queue_redraw();
     return true;
+}
+
+bool Mir3HudView::apply_trade_complete(int64_t balance) {
+    if (!trade.visible || balance<0 || balance>UINT32_MAX ||
+        trade_pending_slot>=0 || trade_return_pending) return false;
+
+    auto received=bag;
+    for (const auto& item:trade_items[1]) {
+        if (item && (!item.make_index || !received.insert(item))) return false;
+    }
+    bag=std::move(received);
+    inventory_gold=static_cast<std::uint32_t>(balance);
+    trade_items={};
+    return open_trade(String());
 }
 
 bool Mir3HudView::apply_trade_cancel() {
