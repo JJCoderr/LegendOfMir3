@@ -40,6 +40,9 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines"),&Mir3HudView::set_guild_overview);
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
+    ADD_SIGNAL(MethodInfo("portrait_list_requested"));
+    ADD_SIGNAL(MethodInfo("portrait_file_requested",PropertyInfo(Variant::INT,"button"),PropertyInfo(Variant::STRING,"name")));
+    ClassDB::bind_method(D_METHOD("set_portrait_names","names"),&Mir3HudView::set_portrait_names);
     ADD_SIGNAL(MethodInfo("guild_members_requested"));
     ADD_SIGNAL(MethodInfo("guild_edit_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"body")));
     ADD_SIGNAL(MethodInfo("guild_member_removal_requested",PropertyInfo(Variant::STRING,"name")));
@@ -70,6 +73,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_expanded_count"]=int(chat_history.lines(true).size());
     result["chat_compact_first"]=chat_history.first(false);
     result["chat_expanded_first"]=chat_history.first(true);
+    result["portrait_visible"]=portrait_visible;
+    result["portrait_selected"]=portrait_picker.selected;
     result["options_visible"]=options.visible;
     result["music_enabled"]=audio_options.music_enabled;
     result["music_level"]=audio_options.music_level;
@@ -254,6 +259,9 @@ void Mir3HudView::_draw() {
     if (guild.visible) draw_guild();
     if (options.visible) draw_options();
     if (guild_editor.visible) draw_guild_editor();
+    if (!model.layout.expanded && Rect2(535,486,81,94).has_point(inventory_cursor))
+        sprite(mir3::HudLayout::portrait_entry_frame(portrait_entry_pressed),mir3::HudLayout::portrait_entry_position);
+    if (portrait_visible) draw_portrait_picker();
     if (group_request) draw_group_dialog();
     button_hint();
     if (bag.held) {
@@ -344,7 +352,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     if (group_request && group_dialog_input(event)) return;
     if (guild_editor.visible && guild_editor_input(event)) return;
     Ref<InputEventMouseMotion> motion=event;
-    if (motion.is_valid()) { auto p=motion->get_position();inventory_cursor=p;if (panel_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
+    if (motion.is_valid()) { auto p=motion->get_position();inventory_cursor=p;if (portrait_input(1,p)) return;if (panel_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
     Ref<InputEventMouseButton> button=event;
     if (guild.visible && button.is_valid() && button->is_pressed() &&
         rect(guild.rect).has_point(button->get_position())) {
@@ -367,7 +375,25 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         inventory_cursor=p;
         const int kind=button->is_pressed()?0:2;
         if (skill_menu_input(kind,p,button->is_double_click())) return;
-        if (panel_pointer(kind,p) || scroll_input(kind,p)) return;
+        if (portrait_input(kind,p) || panel_pointer(kind,p) || scroll_input(kind,p)) return;
+        const auto entry=frame(2096);
+        const auto anchor=mir3::HudLayout::portrait_entry_position;
+        const bool portrait_hit=!model.layout.expanded && entry.is_valid() &&
+            Rect2(Vector2(anchor[0],anchor[1]),entry->get_size()).has_point(p) && Rect2(535,486,81,94).has_point(p);
+        if (portrait_hit || portrait_entry_pressed) {
+            portrait_entry_pressed=kind==0 && portrait_hit;
+            if (kind==2 && portrait_hit) {
+                if (portrait_visible) close_portrait_picker();
+                else {
+                    portrait_visible=true;
+                    emit_signal("portrait_list_requested");
+                }
+                if (hud_sound && audio_options.effects_enabled) hud_sound->play();
+            }
+            get_viewport()->set_input_as_handled();
+            queue_redraw();
+            return;
+        }
         const bool captured=model.pressed>=0 || controller.hit(int(p.x),int(p.y))>=0;
         int action=controller.pointer(int(p.x),int(p.y),button->is_pressed());
         if (chat_input) {
@@ -507,6 +533,7 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         get_viewport()->set_input_as_handled();
         return;
     }
+    if (code==KEY_ESCAPE && portrait_visible) { close_portrait_picker();get_viewport()->set_input_as_handled();return; }
     if (code==KEY_N || (code==KEY_ESCAPE && options.visible)) {
         toggle_options();get_viewport()->set_input_as_handled();return;
     }
@@ -1548,4 +1575,72 @@ bool Mir3HudView::set_music_map(String map) {
         return true;
     }
     return false;
+}
+
+void Mir3HudView::set_portrait_names(PackedStringArray names) {
+    portrait_picker.close();
+    for (int i=0;i<names.size();++i) portrait_picker.names.emplace_back(names[i].utf8().get_data());
+    queue_redraw();
+}
+
+void Mir3HudView::close_portrait_picker() {
+    portrait_visible=false;
+    portrait_pressed=-1;
+    portrait_picker.close();
+    queue_redraw();
+}
+
+void Mir3HudView::draw_portrait_picker() {
+    using Picker=mir3::PortraitPicker;
+    const auto skin=frame(Picker::frame);
+    if (skin.is_valid()) sprite(Picker::frame,{-(skin->get_width()-Picker::initial[2])/2,-(skin->get_height()-Picker::initial[3])/2});
+    for (int i=0;i<Picker::visible_rows;++i) {
+        const auto bounds=Picker::row(i);
+        if (i==portrait_picker.hovered) legacy_rect(rect(bounds),Color(30.f/255,30.f/255,30.f/255,180.f/255));
+        if (i==portrait_picker.selected_row()) legacy_rect(rect(bounds),Color(35.f/255,114.f/255,156.f/255,180.f/255));
+        const int index=portrait_picker.first+i;
+        if (index<int(portrait_picker.names.size()))
+            text(portrait_picker.names[index],{bounds[0],bounds[1]+5,bounds[2],bounds[3]},0xfafafa,mir3::TextFont::normal,false);
+        const auto at=Picker::instruction(i);
+        text(message(Picker::instruction_message(i)),{at[0],at[1],260,15},0xfafafa,mir3::TextFont::normal,false);
+    }
+    sprite(Picker::scroll[0],{Picker::scroll[1],portrait_picker.thumb_y()});
+    for (int i=0;i<3;++i) {
+        const auto spec=Picker::buttons[i];
+        sprite(spec[0]+(i==0 && portrait_pressed==0),{spec[1],spec[2]});
+    }
+}
+
+bool Mir3HudView::portrait_input(int kind,Vector2 point) {
+    if (!portrait_visible) return false;
+    using Picker=mir3::PortraitPicker;
+    const auto thumb=frame(Picker::scroll[0]);
+    const auto tick=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    const bool scroll=thumb.is_valid() && portrait_picker.scroll_input(kind,int(point.x),int(point.y),
+        thumb->get_width(),thumb->get_height(),static_cast<std::uint32_t>(tick));
+    if (!scroll && !rect(Picker::initial).has_point(point) && portrait_pressed<0) return false;
+    if (!scroll) {
+        int hit=-1;
+        for (int i=0;i<3;++i) {
+            const auto spec=Picker::buttons[i];
+            const auto icon=frame(spec[0]);
+            if (icon.is_valid() && Rect2(Vector2(spec[1],spec[2]),icon->get_size()).has_point(point)) hit=i;
+        }
+        if (kind==1) portrait_picker.move(int(point.x),int(point.y));
+        if (kind==0) {
+            portrait_pressed=hit;
+            if (hit<0) portrait_picker.select(int(point.x),int(point.y));
+        }
+        if (kind==2) {
+            if (hit>=0 && hit==portrait_pressed) {
+                if (hit==0) close_portrait_picker();
+                else if (portrait_picker.selected>=0)
+                    emit_signal("portrait_file_requested",hit,String::utf8(portrait_picker.names[portrait_picker.selected].c_str()));
+            }
+            portrait_pressed=-1;
+        }
+    }
+    get_viewport()->set_input_as_handled();
+    queue_redraw();
+    return true;
 }

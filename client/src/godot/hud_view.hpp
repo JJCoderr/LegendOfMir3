@@ -1,6 +1,7 @@
 #pragma once
 #include "hud/hud_model.hpp"
 #include "hud/audio_options.hpp"
+#include "hud/portrait_picker.hpp"
 #include "inventory/inventory_panel.hpp"
 #include "inventory/inventory_grid.hpp"
 #include "status/equipment.hpp"
@@ -32,6 +33,7 @@ public:
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     bool set_music_map(godot::String map);
+    void set_portrait_names(godot::PackedStringArray names);
     void set_guild_manager(bool allowed);
     void set_guild_members(godot::PackedStringArray lines);
     void set_guild_notices(godot::PackedStringArray lines);
@@ -45,6 +47,12 @@ protected:
     static void _bind_methods();
 private:
     mir3::HudModel model;
+    mir3::PortraitPicker portrait_picker;
+    bool portrait_visible=false,portrait_entry_pressed=false;
+    int portrait_pressed=-1;
+    void draw_portrait_picker();
+    bool portrait_input(int kind,godot::Vector2 point);
+    void close_portrait_picker();
     mir3::DraggablePanel options{{145,30,510,468}};
     mir3::AudioOptions audio_options;
     bool magic_light=true,damage_numbers=true;

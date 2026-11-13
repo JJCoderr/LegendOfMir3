@@ -343,6 +343,15 @@ func run() -> void:
 	reloaded.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(options_file))
 	if not check(not persisted.music_enabled and persisted.music_level == -5, "system options reload from original INI keys"): return
+	hud.portrait_list_requested.connect(func(): hud.set_portrait_names(PackedStringArray(["sample.jpg", "portrait.jpg"])))
+	click_at(Vector2(540, 570), false)
+	if not check(hud.hud_snapshot().portrait_visible, "portrait HUD entry"): return
+	click_at(Vector2(40, 32), true)
+	click_at(Vector2(40, 32), false)
+	if not check(hud.hud_snapshot().portrait_selected == 0, "portrait row selection"): return
+	if not await capture("portrait-picker"): return
+	key(KEY_ESCAPE)
+	if not check(not hud.hud_snapshot().portrait_visible, "portrait escape"): return
 	var input: LineEdit = hud.get_node("ChatInput")
 	if not check(input.position == Vector2(185, 575) and input.size == Vector2(344, 15), "compact input bounds"): return
 	key(KEY_ENTER)
