@@ -2270,7 +2270,11 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
         const bool activate=status_close_pressed && on_close;
         captured=status.end_drag() || status_close_pressed;
         status_close_pressed=false;
-        if (activate) toggle_status();
+        if (activate) {
+            // 0x4767E5 enables the close button's release sound.
+            if (hud_sound && audio_options.effects_enabled) hud_sound->play();
+            toggle_status();
+        }
         if (!captured && slot>=0 && trade_pending_slot<0 && trade_return_slot<0 &&
             (!bag.held || bag.held.make_index)) {
             const auto now=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();

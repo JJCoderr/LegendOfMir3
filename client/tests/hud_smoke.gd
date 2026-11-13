@@ -950,8 +950,13 @@ func run() -> void:
 	key(KEY_Q)
 	await process_frame
 	if not check(hud.hud_snapshot().status_visible, "status Q shortcut"): return
+	var status_sound: AudioStreamPlayer = hud.get_node("HudClickSound")
+	status_sound.stop()
 	click_at(Vector2(291, 16), true)
+	if not check(not status_sound.playing, "status close press stays silent"): return
+	if not await capture("character-status-close-pressed"): return
 	click_at(Vector2(291, 16), false)
+	if not check(status_sound.playing, "status close release plays original click"): return
 	await process_frame
 	if not check(not hud.hud_snapshot().status_visible, "status close button"): return
 	key(KEY_E)
