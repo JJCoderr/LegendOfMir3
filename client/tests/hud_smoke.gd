@@ -195,6 +195,9 @@ func run() -> void:
 		hud.npc_packet_ready.connect(func(packet: PackedByteArray): npc_packets.append(packet.get_string_from_ascii()))
 		hud.npc_request.connect(func(opcode: int, actor: int, body: String): npc_protocol.append([opcode, actor, body]))
 		hud.npc_dialogue_requested.connect(func(actor: int): merchant_requests.append(actor))
+		await process_frame
+		if not DisplayServer.get_name() == "headless":
+			await RenderingServer.frame_post_draw
 		for i in 2:
 			var talk := InputEventMouseButton.new()
 			talk.position = Vector2(457, 215)

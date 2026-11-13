@@ -255,6 +255,7 @@ private:
     mir3::WilArchive map_human, map_npc;
     std::array<MapActorFrame,80> map_human_frames, map_walk_frames, map_run_frames;
     std::array<MapActorFrame,4> map_npc_frames;
+    godot::Rect2 merchant_draw_bounds;
     godot::Ref<godot::ImageTexture> terrain_texture(int package,int id);
     std::map<std::pair<int,int>,godot::Ref<godot::ImageTexture>> terrain_frames;
     bool terrain_ready=false;

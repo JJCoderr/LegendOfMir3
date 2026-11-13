@@ -1270,12 +1270,8 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
 }
 
 bool Mir3HudView::merchant_pointer(Vector2 pointer) {
-    const auto& frame=map_npc_frames[ticks_msec()/200%4];
-    if (frame.image.is_null()) return false;
+    if (!merchant_draw_bounds.has_point(pointer)) return false;
     const Vector2i merchant{413,409};
-    const auto camera=map_camera();
-    const Vector2 origin(merchant.x*48-camera.x,merchant.y*32-camera.y);
-    if (!Rect2(origin+frame.offset,frame.image->get_size()).has_point(pointer)) return false;
     map_route.clear();
     const auto now=ticks_msec();
     if (!last_merchant_request || now-last_merchant_request>1500) {
@@ -1365,6 +1361,7 @@ void Mir3HudView::draw_terrain() {
             draw_texture(image,offset+Vector2(96*column,64*row));
     }
     animated_map_objects=false;
+    merchant_draw_bounds=Rect2();
     if (!bool(get_meta("show_map_objects",true))) return;
 
     struct Sprite { Ref<ImageTexture> image; Vector2 position; int row; };
@@ -1389,7 +1386,9 @@ void Mir3HudView::draw_terrain() {
     }
     const auto draw_actor=[&](const MapActorFrame& frame,int x,int y) {
         if (frame.image.is_null() || x<start_x-5 || x>=start_x+21) return;
-        draw_texture(frame.image,Vector2(x*48-camera.x,y*32-camera.y)+frame.offset);
+        const auto position=Vector2(x*48-camera.x,y*32-camera.y)+frame.offset;
+        merchant_draw_bounds=Rect2(position,frame.image->get_size());
+        draw_texture(frame.image,position);
         animated_map_objects=true;
     };
     auto object=tall_objects.begin();
