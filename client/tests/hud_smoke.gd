@@ -234,6 +234,15 @@ func run() -> void:
 		hud.set_meta("map_camera_cell", Vector2i(404, 402))
 		hud.queue_redraw()
 		if not await capture("bichon-merchant"): return
+		var distant_requests: Array[int] = []
+		hud.npc_dialogue_requested.connect(func(actor: int): distant_requests.append(actor))
+		await process_frame
+		var distant_cell: Vector2i = hud.hud_snapshot().player_cell
+		click_at(Vector2(457, 215), true)
+		click_at(Vector2(457, 215), false)
+		if not check(distant_requests.is_empty() and hud.hud_snapshot().player_cell == distant_cell
+			and hud.hud_snapshot().walk_frame == -1, "distant merchant click neither sends a request nor walks"): return
+		if not await capture("bichon-merchant-out-of-range"): return
 		var merchant_hud: Node = load("res://main.tscn").instantiate()
 		merchant_hud.set_meta("options_path", options_file)
 		merchant_hud.set_meta("map_spawn_cell", Vector2i(413, 410))
