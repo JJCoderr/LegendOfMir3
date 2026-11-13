@@ -899,6 +899,12 @@ func run() -> void:
 	if not check(hud.hud_snapshot().mount_bounds == Rect2(40, 30, 276, 322), "mount window dragging"): return
 	key(KEY_S)
 	if not check(not hud.hud_snapshot().mount_visible, "S closes mount window"): return
+	key(KEY_S)
+	if not check(hud.hud_snapshot().mount_visible and hud.hud_snapshot().mount_bounds == Rect2(40, 30, 276, 322), "mount reopen retains dragged position"): return
+	if not await capture("hud-mount-reopened"): return
+	click_at(Vector2(290, 318), true)
+	click_at(Vector2(290, 318), false)
+	if not check(not hud.hud_snapshot().mount_visible, "close button follows dragged mount window"): return
 	click_at(Vector2(750, 490), true)
 	click_at(Vector2(750, 490), false)
 	if not check(hud.hud_snapshot().quest_visible and hud.hud_snapshot().quest_bounds == Rect2(0, 0, 340, 440), "quest HUD button and original bounds"): return
