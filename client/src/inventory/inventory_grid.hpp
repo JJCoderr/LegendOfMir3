@@ -3,6 +3,7 @@
 #include <utility>
 #include <cstdint>
 #include <string>
+#include <limits>
 namespace mir3 {
 struct BagItem {
     int kind = -1, icon = -1, count = 0, width = 1, height = 1;
@@ -77,6 +78,18 @@ public:
                 cells[r*columns+c] = static_cast<short>(id);
         cells[anchors[id]] = static_cast<short>(1000+id); // anchor marker
         return true;
+    }
+    bool restore_trade_item(const BagItem& returned) {
+        if (returned.stack_mode>=2 && returned.make_index && returned.count>0) {
+            for (auto& item:items) {
+                if (!item || item.make_index!=returned.make_index || item.name!=returned.name ||
+                    item.icon!=returned.icon || item.stack_mode!=returned.stack_mode) continue;
+                if (item.count>std::numeric_limits<int>::max()-returned.count) return false;
+                item.count+=returned.count;
+                return true;
+            }
+        }
+        return insert(returned);
     }
     BagItem take(int id) {
         if (id < 0 || id >= capacity || !items[id]) return {};

@@ -830,6 +830,12 @@ func run() -> void:
 	if not check(offers[-1] == [1026, 98766, "Trade stack", 2] and not hud.apply_trade_offer_reply(675, 3), "send selected quantity and reject excess acknowledgement"): return
 	if not check(hud.apply_trade_offer_reply(675, 2) and hud.hud_snapshot().held_inventory_icon == -1, "split offer restores remainder"): return
 	if not await capture("hud-trade-stack-split"): return
+	click_at(Vector2(70, 75), true)
+	click_at(Vector2(70, 75), false)
+	click_at(trade_pickup, true)
+	click_at(trade_pickup, false)
+	if not check(offers[-1] == [1027, 98766, "Trade stack", 2] and hud.apply_trade_offer_reply(677), "return split quantity"): return
+	if not await capture("hud-trade-stack-merged"): return
 	if not check(hud.set_trade_item(0, 30, 301, 3), "apply trade item below first page"): return
 	click_at(Vector2(211, 170), true)
 	click_at(Vector2(211, 170), false)

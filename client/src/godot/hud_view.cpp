@@ -2148,7 +2148,7 @@ bool Mir3HudView::apply_trade_offer_reply(int identifier,int accepted_count) {
         if (!trade_return_pending) return false;
         auto& item=trade_items[0][trade_return_slot];
         if (identifier==677) {
-            if (!bag.insert(item)) {
+            if (!bag.restore_trade_item(item)) {
                 bag.held=item;
                 bag.held_slot=-1;
             }
@@ -2249,7 +2249,7 @@ bool Mir3HudView::apply_trade_cancel(int64_t balance) {
     // full, leave the offer intact so the session can reconcile and retry.
     auto restored=bag;
     for (const auto& item:trade_items[0]) {
-        if (item && !restored.insert(item)) return false;
+        if (item && !restored.restore_trade_item(item)) return false;
     }
     if (trade_pending_slot>=0) {
         if (!restored.insert(restored.held)) return false;

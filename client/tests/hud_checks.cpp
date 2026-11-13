@@ -1,3 +1,4 @@
+#include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
 #include "chat/chat_reception.hpp"
 #include "resources/wil_archive.hpp"
@@ -70,6 +71,21 @@ int main(int argc,char** argv) {
             check(!messages.get(command).empty(),"reception command resource");
         }
         check(messages.get(1073).back()==' ',"preserve trailing space in original all-chat command");
+        mir3::InventoryGrid trade_bag;
+        mir3::BagItem remainder;
+        remainder.icon=301;
+        remainder.make_index=98766;
+        remainder.name="Trade stack";
+        remainder.stack_mode=3;
+        remainder.count=3;
+        check(trade_bag.insert(remainder),"insert stack remainder");
+        auto returned=remainder;
+        returned.count=2;
+        check(trade_bag.restore_trade_item(returned) && trade_bag.items[0].count==5 &&
+              !trade_bag.items[1],"trade return merges with matching remainder");
+        returned.make_index++;
+        check(trade_bag.restore_trade_item(returned) && trade_bag.items[1].count==2,
+              "trade return keeps different item identity separate");
         std::cout<<"HUD resources, hit regions, release behavior and crop precision passed\n";
     } catch (const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }
