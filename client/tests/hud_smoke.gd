@@ -386,9 +386,15 @@ func run() -> void:
 		if not await capture("bichon-merchant-goods"): return
 		click_at(Vector2(45, 285), true)
 		click_at(Vector2(45, 285), false)
+		click_at(Vector2(135, 420), true)
+		click_at(Vector2(135, 420), false)
 		if not check(goods_requests.is_empty(), "goods without variants do not request details"): return
 		click_at(Vector2(45, 265), true)
 		click_at(Vector2(45, 265), false)
+		if not check(goods_requests.is_empty(), "selecting a category does not request details"): return
+		click_at(Vector2(135, 420), true)
+		if not await capture("bichon-merchant-category-confirm"): return
+		click_at(Vector2(135, 420), false)
 		if not check(goods_requests == [[2, 0, "Red potion"]], "valid goods selection survives invalid reply"): return
 		if not check(not hud.apply_npc_body(645, 2, 2, "!!!!".to_ascii_buffer()), "reject invalid six-bit alphabet"): return
 		var stock_list := ""
@@ -403,6 +409,8 @@ func run() -> void:
 		if not await capture("bichon-merchant-goods-scrolled"): return
 		click_at(Vector2(80, 378), true)
 		click_at(Vector2(80, 378), false)
+		click_at(Vector2(135, 420), true)
+		click_at(Vector2(135, 420), false)
 		if not check(goods_requests.back() == [2, 9, "Potion 9"], "wheel over shop frame scrolls goods and preserves their original index"): return
 		if not check(npc_protocol.back() == [1015, 2, "Potion 9"], "detail request uses NPC and item name"): return
 		var offer_selections: Array = []
@@ -462,6 +470,8 @@ func run() -> void:
 		if not await capture("bichon-merchant-return-to-goods"): return
 		click_at(Vector2(80, 378), true)
 		click_at(Vector2(80, 378), false)
+		click_at(Vector2(135, 420), true)
+		click_at(Vector2(135, 420), false)
 		if not check(goods_requests.size() == 3 and goods_requests.back() == [2, 9, "Potion 9"], "return restores category scroll"): return
 		click_at(Vector2(80, 378), true)
 		hud.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)

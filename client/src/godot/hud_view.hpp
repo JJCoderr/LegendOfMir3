@@ -300,6 +300,7 @@ private:
     struct ShopOffer { std::string name; int icon, price; std::uint32_t id; };
     std::vector<ShopOffer> shop_offers;
     int shop_selected=-1;
+    int shop_highlighted=-1;
     bool apply_shop_offers(int actor,int index,godot::PackedStringArray names,godot::PackedInt32Array icons,
         godot::PackedInt32Array prices,godot::PackedInt64Array identifiers);
     void draw_shop();
