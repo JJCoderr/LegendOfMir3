@@ -71,6 +71,7 @@ public:
     void set_trade_context(int direction,godot::Vector2i cell,int actor_type,bool dead,godot::String name);
     void set_map_location(godot::String name,int x,int y);
     bool set_scene_npc(int actor,godot::Vector2i cell,int first_frame);
+    bool set_scene_chicken(int actor,godot::Vector2i cell);
     void set_minimap_position(int x,int y);
     void set_minimap_markers(godot::PackedVector2Array type_five,godot::PackedVector2Array nearby_green,
         godot::PackedVector2Array nearby_orange);
@@ -269,13 +270,16 @@ private:
     struct MapActorFrame { godot::Ref<godot::ImageTexture> image; godot::Vector2 offset; };
     mir3::WilArchive map_human, map_npc;
     std::array<MapActorFrame,80> map_human_frames, map_walk_frames, map_run_frames;
-    struct SceneNpc {
+    struct SceneActor {
         godot::Vector2i cell;
         std::array<MapActorFrame,4> frames;
         godot::Rect2 bounds;
     };
-    std::map<int,SceneNpc> scene_npcs;
-    bool npc_occupies(godot::Vector2i cell) const;
+    std::map<int,SceneActor> scene_npcs;
+    std::map<int,SceneActor> scene_chickens;
+    mir3::WilArchive map_chickens;
+    void update_scene_target(godot::Vector2 pointer);
+    bool scene_occupied(godot::Vector2i cell) const;
     godot::Ref<godot::ImageTexture> terrain_texture(int package,int id);
     std::map<std::pair<int,int>,godot::Ref<godot::ImageTexture>> terrain_frames;
     bool terrain_ready=false;

@@ -96,6 +96,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
     ClassDB::bind_method(D_METHOD("set_scene_npc","actor","cell","first_frame"),&Mir3HudView::set_scene_npc);
+    ClassDB::bind_method(D_METHOD("set_scene_chicken","actor","cell"),&Mir3HudView::set_scene_chicken);
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
     ClassDB::bind_method(D_METHOD("set_minimap_markers","type_five","nearby_green","nearby_orange"),&Mir3HudView::set_minimap_markers);
     ClassDB::bind_method(D_METHOD("set_hovered_target","actor","type","shape","excluded","state","hp","max_hp","percent","cell"),
@@ -155,6 +156,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["ready"]=loaded;
     result["character_level"]=model.level;
     result["terrain_ready"]=terrain_ready;
+    Dictionary chicken_bounds;
+    for (const auto& [actor,chicken]:scene_chickens) chicken_bounds[actor]=chicken.bounds;
+    result["scene_chicken_bounds"]=chicken_bounds;
     result["player_idle_frame"]=player_idle.frame();
     result["npc_dialogue_actor"]=npc_dialogue_actor;
     result["player_cell"]=player_cell;
@@ -299,6 +303,7 @@ void Mir3HudView::_ready() {
         load_actor(map_human,map_walk_frames,nullptr,1680);
         load_actor(map_human,map_run_frames,nullptr,1760);
         map_npc.open(resource_root/"Data"/"NPC");
+        map_chickens.open(resource_root/"Data"/"Mon-3");
         set_scene_npc(2,Vector2i(413,409),110);
         const auto footstep=AudioStreamWAV::load_from_file(audio_root.path_join("1.wav"));
         if (footstep.is_valid()) {
@@ -318,7 +323,7 @@ void Mir3HudView::_ready() {
             sync_hud_sound();
         }
         const Vector2i spawn=get_meta("map_spawn_cell",player_cell);
-        if (!npc_occupies(spawn) && terrain.walkable(spawn.x,spawn.y)) player_cell=spawn;
+        if (!scene_occupied(spawn) && terrain.walkable(spawn.x,spawn.y)) player_cell=spawn;
     }
     if (!portraits.open(resource_root/"Data"/"ProgUse")) UtilityFunctions::push_error("Cannot read ProgUse portraits.");
     if (!monster_portraits.open(resource_root/"Data"/"MonImg")) UtilityFunctions::push_error("Cannot read MonImg portraits.");
@@ -569,7 +574,7 @@ bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
     if (!terrain_ready) return false;
     const auto start=walk_frame>=0?step_destination:player_cell;
     map_route=terrain.route({start.x,start.y},{destination.x,destination.y},
-        [this](mir3::MapCell cell) { return npc_occupies(Vector2i(cell[0],cell[1])); });
+        [this](mir3::MapCell cell) { return scene_occupied(Vector2i(cell[0],cell[1])); });
     return !map_route.empty();
 }
 
@@ -1357,8 +1362,8 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
 }
 
 bool Mir3HudView::set_scene_npc(int actor,Vector2i cell,int first_frame) {
-    if (!terrain_ready || actor<=0 || first_frame<0 || first_frame>65532) return false;
-    SceneNpc npc{};
+    if (!terrain_ready || actor<=0 || scene_chickens.contains(actor) || first_frame<0 || first_frame>65532) return false;
+    SceneActor npc{};
     npc.cell=cell;
     for (int i=0;i<int(npc.frames.size());++i) {
         if (const auto frame=map_npc.frame(first_frame+i))
@@ -1370,8 +1375,36 @@ bool Mir3HudView::set_scene_npc(int actor,Vector2i cell,int first_frame) {
     return true;
 }
 
-bool Mir3HudView::npc_occupies(Vector2i cell) const {
-    return std::ranges::any_of(scene_npcs,[cell](const auto& npc) { return npc.second.cell==cell; });
+bool Mir3HudView::scene_occupied(Vector2i cell) const {
+    const auto occupies=[cell](const auto& actor) { return actor.second.cell==cell; };
+    return std::ranges::any_of(scene_npcs,occupies) || std::ranges::any_of(scene_chickens,occupies);
+}
+
+bool Mir3HudView::set_scene_chicken(int actor,Vector2i cell) {
+    if (!terrain_ready || actor<=0 || scene_npcs.contains(actor) || !terrain.walkable(cell.x,cell.y)) return false;
+    SceneActor chicken{};
+    chicken.cell=cell;
+    // mir3_1.45 MockServer::sprite_frame uses the four west-facing Mon-3 frames.
+    for (int i=0;i<4;++i) {
+        const auto frame=map_chickens.frame(60+i);
+        if (!frame) return false;
+        chicken.frames[i]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y)};
+    }
+    scene_chickens.insert_or_assign(actor,std::move(chicken));
+    queue_redraw();
+    return true;
+}
+
+void Mir3HudView::update_scene_target(Vector2 pointer) {
+    if (scene_chickens.empty()) return;
+    auto hit=scene_chickens.end();
+    if (spell_pointer_available()) {
+        for (auto it=scene_chickens.begin();it!=scene_chickens.end();++it)
+            if (it->second.bounds.has_point(pointer) && (hit==scene_chickens.end() || it->second.cell.y>=hit->second.cell.y))
+                hit=it;
+    }
+    if (hit!=scene_chickens.end()) set_hovered_target(hit->first,3,20,false,0,0,0,0,hit->second.cell);
+    else if (scene_chickens.contains(int(hovered_target))) set_hovered_target(0,0,0,false,0,0,0,0);
 }
 
 bool Mir3HudView::merchant_pointer(Vector2 pointer) {
@@ -1412,7 +1445,7 @@ void Mir3HudView::step_toward_pointer(bool run) {
         return;
     }
     const auto traversable=[this](Vector2i cell) {
-        return !npc_occupies(cell) && terrain.walkable(cell.x,cell.y);
+        return !scene_occupied(cell) && terrain.walkable(cell.x,cell.y);
     };
     auto destination=player_cell+Vector2i(dx,dy);
     const auto second=destination+Vector2i(dx,dy);
@@ -1488,6 +1521,7 @@ void Mir3HudView::draw_terrain() {
     }
     animated_map_objects=false;
     for (auto& [actor,npc]:scene_npcs) npc.bounds=Rect2();
+    for (auto& [actor,chicken]:scene_chickens) chicken.bounds=Rect2();
     if (!bool(get_meta("show_map_objects",true))) return;
 
     struct Sprite { Ref<ImageTexture> image; Vector2 position; int row; };
@@ -1510,8 +1544,9 @@ void Mir3HudView::draw_terrain() {
             else tall_objects.push_back({image,position,row});
         }
     }
-    const auto draw_npc=[&](SceneNpc& npc) {
-        const auto& frame=npc.frames[tick/200%4].image.is_valid()?npc.frames[tick/200%4]:npc.frames.front();
+    const auto draw_scene_actor=[&](SceneActor& npc,int interval) {
+        const auto& selected=npc.frames[tick/interval%4];
+        const auto& frame=selected.image.is_valid()?selected:npc.frames.front();
         if (npc.cell.x<start_x-5 || npc.cell.x>=start_x+21) return;
         const auto position=Vector2(npc.cell.x*48-camera.x,npc.cell.y*32-camera.y)+frame.offset;
         npc.bounds=Rect2(position,frame.image->get_size());
@@ -1525,7 +1560,9 @@ void Mir3HudView::draw_terrain() {
             ++object;
         }
         for (auto& [actor,npc]:scene_npcs)
-            if (start_y+row==npc.cell.y) draw_npc(npc);
+            if (start_y+row==npc.cell.y) draw_scene_actor(npc,200);
+        for (auto& [actor,chicken]:scene_chickens)
+            if (start_y+row==chicken.cell.y) draw_scene_actor(chicken,180);
         const auto pixel=player_pixel();
         if (start_y+row==int(std::round(pixel.y/32.0))) {
             const auto step=step_destination-step_origin;
@@ -1937,6 +1974,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     if (motion.is_valid()) {
         const auto p=motion->get_position();
         inventory_cursor=p;
+        update_scene_target(p);
         if (shop_scroll_dragging && shop_scroll_input(1,p)) return;
         if (chat_history.scroll(model.layout.expanded).captured() && scroll_input(1,p)) return;
         if (minimap_pointer(1,p,motion->is_ctrl_pressed()) || panel_pointer(1,p)) return;

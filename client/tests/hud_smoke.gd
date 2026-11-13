@@ -806,6 +806,21 @@ func run() -> void:
 		click_at(Vector2(457, 215), false)
 		if not check(merchant_requests.back() == 3, "clicking the loaded NPC dispatches its own actor ID"): return
 		if not await capture("bichon-second-npc"): return
+		var chicken_loaded := false
+		for offset in [Vector2i(2, 1), Vector2i(-3, 2), Vector2i(3, -2), Vector2i(0, 3)]:
+			if hud.set_scene_chicken(4, hud.hud_snapshot().player_cell + offset):
+				chicken_loaded = true
+				break
+		if not check(chicken_loaded, "load a chicken on a walkable Bichon cell"): return
+		await process_frame
+		await process_frame
+		var chicken_bounds: Rect2 = hud.hud_snapshot().scene_chicken_bounds[4]
+		if not check(chicken_bounds.has_area(), "chicken appears in the map draw pass"): return
+		var chicken_hover := InputEventMouseMotion.new()
+		chicken_hover.position = chicken_bounds.get_center()
+		root.push_input(chicken_hover, true)
+		if not check(hud.hud_snapshot().target_portrait == 20, "hovering the map chicken displays its original portrait"): return
+		if not await capture("bichon-chicken-target"): return
 		quit()
 		return
 	for i in 20:
