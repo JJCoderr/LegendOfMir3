@@ -74,6 +74,8 @@ public:
     bool set_scene_chicken(int actor,godot::Vector2i cell);
     bool set_scene_human(int actor,godot::Vector2i cell,int facing,int profession,godot::String name);
     bool set_scene_human_body(int actor,int type,int clothing);
+    bool set_player_attachments(int hair,int weapon);
+    bool set_scene_human_attachments(int actor,int hair,int weapon);
     bool set_player_body(int type,int clothing);
     bool apply_scene_human_stand(int actor,godot::Vector2i cell,int facing);
     bool apply_scene_human_step(int actor,int opcode,godot::Vector2i destination,int facing);
@@ -280,7 +282,13 @@ private:
     };
     std::map<std::pair<int,int>,HumanBody> human_bodies;
     const HumanBody* human_body(int type,int clothing);
-    int player_type=0, player_clothing=0;
+    int player_type=0, player_clothing=0, player_hair=0, player_weapon=0;
+    godot::String actor_resource_root;
+    godot::PackedByteArray weapon_order;
+    std::map<std::string,mir3::WilArchive> attachment_archives;
+    std::map<std::pair<std::string,int>,MapActorFrame> attachment_frames;
+    const MapActorFrame* attachment_frame(int type,int shape,bool weapon,int motion_frame);
+    void draw_human_layers(const MapActorFrame& body,godot::Vector2 anchor,int type,int hair,int weapon,int motion_frame);
     std::array<MapActorFrame,80> map_human_frames, map_walk_frames, map_run_frames;
     struct SceneActor {
         godot::Vector2i cell;
@@ -290,7 +298,7 @@ private:
     std::map<int,SceneActor> scene_npcs;
     std::map<int,SceneActor> scene_chickens;
     struct SceneHuman : SceneActor {
-        int profession=0, type=0, clothing=0;
+        int profession=0, type=0, clothing=0, hair=0, weapon=0;
         godot::String name;
         int facing=0, movement_frame=-1, step_distance=0;
         mir3::HumanIdleClock idle;

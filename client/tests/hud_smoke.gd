@@ -83,6 +83,16 @@ func run_scene_actor_removal() -> void:
 			and not hud.set_player_body(-1, 0)
 			and hud.hud_snapshot().scene_human_bodies[5] == Vector2i(1, 1),
 			"invalid appearance leaves the existing body intact"): return
+		if OS.get_cmdline_user_args().has("--scene-human-attachments"):
+			if not check(hud.set_player_attachments(1, 1) and hud.set_scene_human_attachments(5, 1, 1),
+				"equip hair and weapons on male and female actors"): return
+			if not check(not hud.set_player_attachments(30, 1)
+				and not hud.set_scene_human_attachments(5, 1, 50)
+				and not hud.set_scene_human_attachments(9999, 1, 1)
+				and hud.hud_snapshot().player_attachments == Vector2i(1, 1)
+				and hud.hud_snapshot().scene_human_attachments[5] == Vector2i(1, 1),
+				"invalid attachments preserve current equipment"): return
+			if not await capture("bichon-human-hair-weapons"): return
 		if not await capture("bichon-human-clothing"): return
 	if not await capture("bichon-removal-before"): return
 	if OS.get_cmdline_user_args().has("--scene-human-step"):
@@ -139,6 +149,13 @@ func run_scene_actor_removal() -> void:
 			and hud.hud_snapshot().scene_human_facings[5] == 6,
 			"cancelled movement cannot overwrite standing state"): return
 		if not await capture("bichon-remote-human-standing"): return
+		if OS.get_cmdline_user_args().has("--scene-human-attachments"):
+			if not check(hud.set_scene_human_attachments(5, 0, 0)
+				and hud.set_player_attachments(0, 0), "remove both attachment layers"): return
+			if not check(hud.hud_snapshot().player_attachments == Vector2i.ZERO
+				and hud.hud_snapshot().scene_human_attachments[5] == Vector2i.ZERO,
+				"removed attachment state is cleared"): return
+			if not await capture("bichon-human-attachments-removed"): return
 		print("SCENE_HUMAN_STEP_OK")
 		quit()
 		return
