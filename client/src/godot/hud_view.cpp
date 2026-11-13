@@ -543,7 +543,8 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
         constexpr std::array<unsigned,17> colors{0,0xff,0x8000,0x8080,0x808080,0x80,0x808000,0x800000,
             0xc0c0c0,0x800080,0xff00,0xff0000,0xffffff,0xff00ff,0xffff00,0xffff,0x10101};
         unsigned color=0xffffff;
-        bool can_close=true;
+        // 0x460120 restores the close action when the window is dismissed.
+        bool can_close=npc_dialogue_actor!=actor || npc_dialogue_can_close;
         int line=0;
         int estimated_lines=0;
         int option_id=0;
@@ -805,7 +806,8 @@ void Mir3HudView::draw_npc_dialogue() {
     for (int i=0;i<std::max(1,npc_dialogue_extra_rows);++i) sprite(1351,{0,160+20*i});
     sprite(1352,{0,160+20*std::max(1,npc_dialogue_extra_rows)});
     const int bottom=npc_dialogue_bounds()[3];
-    if (npc_dialogue_can_close) sprite(npc_dialogue_close_pressed?1222:1221,{346,bottom-42});
+    // 0x460F07 draws the button even when NOTCLOSE disables dismissal.
+    sprite(npc_dialogue_close_pressed?1222:1221,{346,bottom-42});
     if (npc_dialogue_scroll_enabled) {
         sprite(npc_dialogue_arrow_pressed==-1?1358:1357,{183,bottom-48});
         if (npc_dialogue_first<npc_dialogue_scroll_limit)
@@ -846,9 +848,9 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
         const auto image=frame(id);
         return image.is_valid() && Rect2(x,y,image->get_width(),image->get_height()).has_point(pointer);
     };
-    const bool close_hit=npc_dialogue_can_close && hit_button(1221,346,bottom-42);
+    const bool close_hit=hit_button(1221,346,bottom-42);
     if (close_hit || npc_dialogue_close_pressed) {
-        const bool close=kind==2 && close_hit && npc_dialogue_close_pressed;
+        const bool close=kind==2 && close_hit && npc_dialogue_close_pressed && npc_dialogue_can_close;
         npc_dialogue_close_pressed=kind==0 && close_hit;
         if (close) close_npc_dialogue();
         get_viewport()->set_input_as_handled();

@@ -209,6 +209,18 @@ func run() -> void:
 		click_at(Vector2(350, 186), true)
 		click_at(Vector2(350, 186), false)
 		if not check(hud.hud_snapshot().npc_dialogue_actor == 0, "NPC footer button closes locally"): return
+		var locked_script := "老黄/{NOTCLOSE/1}{FCOLOR/10}请先选择一项" + char(92) + "<购买药品/@buy>"
+		if not check(hud.apply_npc_dialogue(643, 2, locked_script), "open NPC dialogue with script tags"): return
+		if not await capture("bichon-merchant-notclose"): return
+		for reply in [locked_script, script]:
+			if not check(hud.apply_npc_dialogue(643, 2, reply), "update open NPC dialogue"): return
+			click_at(Vector2(350, 186), true)
+			click_at(Vector2(350, 186), false)
+			if not check(hud.hud_snapshot().npc_dialogue_actor == 2, "NOTCLOSE persists while the dialogue stays open"): return
+		if not check(hud.apply_npc_dialogue(644, 2, "") and hud.apply_npc_dialogue(643, 2, script), "reopen after server dismissal"): return
+		click_at(Vector2(350, 186), true)
+		click_at(Vector2(350, 186), false)
+		if not check(hud.hud_snapshot().npc_dialogue_actor == 0, "server dismissal resets NOTCLOSE"): return
 		var long_script := script + char(92).repeat(8) + "比".repeat(2800)
 		if not check(hud.apply_npc_dialogue(643, 2, long_script), "dialogue limit counts ANSI bytes"): return
 		if not check(not hud.apply_npc_dialogue(643, 2, long_script + "比".repeat(1400)), "reject dialogue above ANSI byte limit"): return
