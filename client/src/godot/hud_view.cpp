@@ -804,7 +804,7 @@ void Mir3HudView::draw_shop() {
     if (last>0) sprite(1225,{260,shop_top+32+int(std::lround(85.0*goods_first/last))});
     // 0x478000 repositions the controls after the shop changes modes.
     if (shop_pressed==-5) sprite(1222,shop_show_offers?mir3::HudLayout::Point{449,shop_top+159}:mir3::HudLayout::Point{258,shop_top+183});
-    if (!shop_show_offers && shop_pressed==-2) sprite(1264,{106,shop_top+186});
+    if (shop_pressed==-6) sprite(1264,{106,shop_top+186});
     if (shop_show_offers) {
         // 0x477780: 652 acknowledges the page; the request path displays an ellipsis.
         text(shop_offer_loading?"...":std::to_string(shop_offer_page),
@@ -890,6 +890,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     const bool inside=Rect2(0,shop_top,shop_width(),224).has_point(pointer);
     const bool details=shop_show_offers;
     constexpr int confirm_button=-2;
+    constexpr int category_button=-6;
     int control=0;
     const auto close_icon=frame(1221);
     if (close_icon.is_valid() &&
@@ -904,10 +905,10 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
             }
         }
     }
-    if (!details && !control) {
+    if (!control) {
         const auto confirm=frame(1263);
         if (confirm.is_valid() && Rect2(Vector2(106,shop_top+186),confirm->get_size()).has_point(pointer))
-            control=confirm_button;
+            control=category_button;
     }
     if (control || shop_pressed<=confirm_button) {
         const int activate=kind==2 && control==shop_pressed?control:0;
@@ -915,8 +916,10 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
         if (activate==-5) {
             if (details) close_shop_offers();
             else close_shop();
-        } else if (activate==confirm_button && !details && shop_highlighted>=0 && shop_goods[shop_highlighted].variants>0) {
+        } else if (activate==category_button && shop_highlighted>=0 && shop_goods[shop_highlighted].variants>0) {
             shop_selected=shop_highlighted;
+            shop_offer_page=0;
+            if (details) shop_offer_loading=true;
             const int actor=shop_actor;
             const int index=shop_selected;
             const auto name=String::utf8(shop_goods[index].name.c_str());
@@ -929,7 +932,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
             const int actor=shop_actor;
             emit_signal("shop_purchase_requested",1014,actor,name);
             emit_npc_packet(1014,actor,name,instance);
-        } else if (activate<=-3 && shop_selected>=0 && !shop_offer_loading) {
+        } else if ((activate==-3 || activate==-4) && shop_selected>=0 && !shop_offer_loading) {
             // 0x478850 requests a server page with a ten-item offset.
             const int page=std::clamp(shop_offer_page+(activate==-3?-1:1),0,65535/10);
             if (page!=shop_offer_page) {
@@ -944,26 +947,29 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
         return true;
     }
     int row=-1;
+    bool offer_cell=false;
     if (details) {
         for (int i=0;i<12;++i) {
-            if (rect(shop_offer_cell(i)).has_point(pointer)) { row=shop_first+i; break; }
+            if (rect(shop_offer_cell(i)).has_point(pointer)) { row=shop_first+i; offer_cell=true; break; }
         }
-    } else {
+    }
+    if (!offer_cell) {
         // 0x4770B4 / 0x4785A0: icon and text are separate hit rectangles.
         for (int i=0;i<shop_goods_rows;++i) {
             const int y=shop_top+shop_goods_row_top+shop_goods_pitch*i;
             if (Rect2(20,y,36,36).has_point(pointer) || Rect2(62,y,189,36).has_point(pointer)) {
-                row=shop_first+i;
+                row=(details?shop_category_first:shop_first)+i;
                 break;
             }
         }
     }
-    const bool hit=row>=0 && (details?row<int(shop_offers.size()):
+    const bool hit=row>=0 && (offer_cell?row<int(shop_offers.size()):
         row<int(shop_goods.size()));
+    const int hit_id=offer_cell?256+row:row;
     const int pressed=shop_pressed;
-    shop_pressed=kind==0 && hit?row:-1;
-    if (kind==2 && hit && pressed==row) {
-        if (details) {
+    shop_pressed=kind==0 && hit?hit_id:-1;
+    if (kind==2 && hit && pressed==hit_id) {
+        if (offer_cell) {
             shop_offer_index=row;
             emit_signal("shop_offer_selected",shop_actor,int64_t(shop_offers[row].id));
         } else {

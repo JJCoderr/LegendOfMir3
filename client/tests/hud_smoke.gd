@@ -519,6 +519,18 @@ func run() -> void:
 		click_at(Vector2(80, 378), false)
 		if not check(goods_requests.size() == 3, "focus loss cancels pressed goods row"): return
 		if not await capture("bichon-merchant-focus-reset"): return
+		if not check(hud.apply_shop_offers(2, 9, names, icons, prices, ids), "open details before switching category"): return
+		click_at(Vector2(80, 336), true)
+		click_at(Vector2(80, 336), false)
+		if not check(goods_requests.size() == 3, "selection beside the detail grid sends no request"): return
+		click_at(Vector2(135, 420), true)
+		click_at(Vector2(135, 420), false)
+		if not check(goods_requests.back() == [2, 8, "Potion 8"], "request a different category while details are open"): return
+		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "reject previous category reply"): return
+		if not check(hud.apply_shop_offers(2, 8, names, icons, prices, ids, 0), "accept new category at offset zero"): return
+		if not await capture("bichon-merchant-switch-category"): return
+		click_at(Vector2(465, 398), true)
+		click_at(Vector2(465, 398), false)
 		click_at(Vector2(273, 421), true)
 		click_at(Vector2(273, 421), false)
 		if not check(hud.hud_snapshot().npc_dialogue_actor == 2, "closing shop keeps NPC dialogue"): return
