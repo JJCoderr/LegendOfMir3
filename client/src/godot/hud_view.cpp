@@ -64,6 +64,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
     ClassDB::bind_method(D_METHOD("set_minimap_markers","type_five","nearby_green","nearby_orange"),&Mir3HudView::set_minimap_markers);
+    ClassDB::bind_method(D_METHOD("set_hovered_target","actor","type","shape","excluded","state","hp","max_hp","percent"),&Mir3HudView::set_hovered_target);
     ADD_SIGNAL(MethodInfo("portrait_list_requested"));
     ADD_SIGNAL(MethodInfo("portrait_upload_requested",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"jpeg")));
     ClassDB::bind_method(D_METHOD("load_portrait_cache","server","character"),&Mir3HudView::load_portrait_cache);
@@ -106,6 +107,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["ready"]=loaded;
     result["character_level"]=model.level;
     result["character_portrait"]=model.portrait_frame();
+    result["target_portrait"]=model.layout.expanded || !target_focus.displayed() || target_portrait.is_null()?-1:target_frame;
+    result["target_hp_width"]=target_focus.displayed() && target_portrait.is_valid()?target_vitals.bar_width():0;
     result["character_shared_hp"]=model.shared_hp();
     result["character_hp"]=Vector2i(model.hp,model.max_hp);
     result["character_mp"]=Vector2i(model.mp,model.max_mp);
@@ -208,6 +211,7 @@ void Mir3HudView::_ready() {
     portrait_directory=ProjectSettings::get_singleton()->globalize_path(String(get_meta("portrait_directory",root)));
     const auto resource_root=std::filesystem::u8path(root.utf8().get_data());
     if (!portraits.open(resource_root/"Data"/"ProgUse")) UtilityFunctions::push_error("Cannot read ProgUse portraits.");
+    if (!monster_portraits.open(resource_root/"Data"/"MonImg")) UtilityFunctions::push_error("Cannot read MonImg portraits.");
     load_status_body();
     minimap_archive.open(resource_root/"Data"/"Mmap");
     full_minimap_archive.open(resource_root/"Data"/"Fmmap");
@@ -272,20 +276,60 @@ void Mir3HudView::buttons() {
             if (id>=0) sprite(id,{button[1],button[2]});
     }
 }
+Ref<ImageTexture> Mir3HudView::portrait_texture(mir3::WilArchive& archive,
+        std::map<int,Ref<ImageTexture>>& cache,int id) {
+    if (id<0) return {};
+    if (const auto it=cache.find(id); it!=cache.end()) return it->second;
+    const auto decoded=archive.frame(id);
+    return cache.emplace(id,decoded?texture(decoded->pixels.rgba,decoded->width,decoded->height):Ref<ImageTexture>{}).first->second;
+}
+
+void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool excluded,int state,int hp,int max_hp,int percent) {
+    hovered_target=actor;
+    target_focus.update(actor,static_cast<std::uint32_t>(ticks_msec()));
+    if (actor) {
+        target_frame=mir3::TargetPortrait::monster_frame(static_cast<std::uint8_t>(type),
+            static_cast<std::uint16_t>(shape),excluded);
+        target_portrait=portrait_texture(monster_portraits,monster_portrait_frames,target_frame);
+        target_frame=mir3::TargetPortrait::fallback_frame(target_frame,target_portrait.is_valid());
+        if (target_portrait.is_null()) target_portrait=portrait_texture(monster_portraits,monster_portrait_frames,target_frame);
+        target_badge=mir3::TargetPortrait::badge(static_cast<std::uint16_t>(shape),state);
+        target_vitals={static_cast<std::uint8_t>(percent),static_cast<std::uint16_t>(max_hp),static_cast<std::uint16_t>(hp)};
+    }
+    queue_redraw();
+}
+
+void Mir3HudView::draw_target_vitals() {
+    using Layout=mir3::HudLayout;
+    if (model.layout.expanded || !target_focus.displayed() || target_portrait.is_null()) return;
+    for (int i=0;i<3;++i)
+        text(target_vitals.text(i),mir3::TargetPortraitVitals::text_rect(i),0xe6e6e6);
+    const auto border=portrait_texture(portraits,portrait_frames,660);
+    if (border.is_valid()) draw_texture(border,point(Layout::image_position(Layout::Image::target_hp_border)));
+    const auto fill=portrait_texture(portraits,portrait_frames,661);
+    if (fill.is_valid()) {
+        const int width=std::min(target_vitals.bar_width(),fill->get_width());
+        if (width>0) {
+            const Rect2 source(0,0,width,fill->get_height());
+            draw_texture_rect_region(fill,Rect2(point(Layout::image_position(Layout::Image::target_hp_fill)),source.size),source);
+        }
+    }
+}
+
 void Mir3HudView::_draw() {
     using Layout=mir3::HudLayout;
     if (!loaded) return;
     if (!model.layout.expanded) {
         sprite(1490,Layout::image_position(Layout::Image::portrait));
-        const int id=model.portrait_frame();
-        if (active_portrait.is_valid()) {
+        const auto origin=point(Layout::image_position(Layout::Image::portrait));
+        if (target_focus.displayed() && target_portrait.is_valid()) {
+            draw_texture(target_portrait,origin);
+            const auto badge=portrait_texture(portraits,portrait_frames,target_badge);
+            if (badge.is_valid()) draw_texture(badge,point(Layout::image_position(Layout::Image::target_badge)));
+        } else if (active_portrait.is_valid()) {
             draw_texture_rect(active_portrait,Rect2(point(Layout::image_position(Layout::Image::portrait)),Vector2(82,94)),false);
-        } else if (id>=0) {
-            if (!portrait_frames.contains(id)) {
-                auto decoded=portraits.frame(id);
-                portrait_frames[id]=decoded?texture(decoded->pixels.rgba,decoded->width,decoded->height):Ref<ImageTexture>{};
-            }
-            if (portrait_frames[id].is_valid()) draw_texture(portrait_frames[id],point(Layout::image_position(Layout::Image::portrait)));
+        } else if (const auto portrait=portrait_texture(portraits,portrait_frames,model.portrait_frame());portrait.is_valid()) {
+            draw_texture(portrait,origin);
         }
     }
     // Preserve the recovered order from 0x438000 / 0x4390E0.
@@ -327,6 +371,7 @@ void Mir3HudView::_draw() {
     buttons();
     sprite(mir3::ChatScrollLayout::frame,{mir3::ChatScrollLayout::x,mir3::chat_thumb_y(chat_history.first(model.layout.expanded),int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded)});
     buttons();
+    draw_target_vitals();
     for (const auto panel:panel_order) {
         if (!panel_state(panel).visible) continue;
         switch (panel) {
@@ -479,6 +524,10 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double) {
+    if (!hovered_target && target_focus.displayed()) {
+        target_focus.update(0,static_cast<std::uint32_t>(ticks_msec()));
+        if (!target_focus.displayed()) queue_redraw();
+    }
     // Original button tooltip grows once per draw, not once per mouse event.
     if (minimap.visible || model.hovered>=0 || (button_tooltip.expanding && !button_tooltip.previous.empty())) queue_redraw();
 }
@@ -2455,6 +2504,8 @@ void Mir3HudView::set_map_location(String name,int x,int y) {
     set_minimap_position(x,y);
     if (!changed) return;
     trade_actor_name=String();
+    hovered_target=0;
+    target_focus.clear();
 
     const bool refresh=minimap.visible || minimap.pending;
     minimap.visible=false;

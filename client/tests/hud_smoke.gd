@@ -72,6 +72,15 @@ func run() -> void:
 	await process_frame
 	if not check(hud.hud_snapshot().chat_compact_count == 20 and hud.hud_snapshot().chat_compact_first == 15, "chat compact following"): return
 	if not await capture("hud-chat-compact"): return
+	hud.set_hovered_target(1, 3, 20, false, 1, 5, 10, 50)
+	if not check(hud.hud_snapshot().target_portrait == 20 and hud.hud_snapshot().target_hp_width == 41, "monster portrait and half HP"): return
+	if not await capture("hud-target-portrait"): return
+	hud.set_hovered_target(0, 0, 0, false, 0, 0, 0, 0)
+	if not check(hud.hud_snapshot().target_portrait == 20, "portrait persists after pointer leaves"): return
+	var portrait_deadline := Time.get_ticks_msec() + 1200
+	while hud.hud_snapshot().target_portrait != -1 and Time.get_ticks_msec() < portrait_deadline:
+		await process_frame
+	if not check(hud.hud_snapshot().target_portrait == -1, "portrait expires"): return
 	click_at(Vector2(0, 0), true)
 	click_at(Vector2(620, 473), false)
 	await process_frame

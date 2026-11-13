@@ -6,6 +6,7 @@
 #include "hud/trade_scroll.hpp"
 #include "hud/audio_options.hpp"
 #include "hud/portrait_picker.hpp"
+#include "hud/target_portrait.hpp"
 #include "inventory/inventory_panel.hpp"
 #include "inventory/inventory_grid.hpp"
 #include "status/equipment.hpp"
@@ -63,6 +64,7 @@ public:
     void set_minimap_position(int x,int y);
     void set_minimap_markers(godot::PackedVector2Array type_five,godot::PackedVector2Array nearby_green,
         godot::PackedVector2Array nearby_orange);
+    void set_hovered_target(std::uint32_t actor,int type,int shape,bool excluded,int state,int hp,int max_hp,int percent);
     bool apply_portrait_reply(godot::PackedByteArray jpeg);
     bool load_portrait_cache(godot::String server,godot::String character);
     void set_portrait_names(godot::PackedStringArray names);
@@ -231,7 +233,16 @@ private:
     bool inventory_pointer(int kind,godot::Vector2 position);
     mir3::HudController controller{model};
     mir3::WilArchive archive;
-    mir3::WilArchive portraits;
+    mir3::WilArchive portraits, monster_portraits;
+    mir3::PortraitFocus target_focus;
+    mir3::TargetPortraitVitals target_vitals;
+    std::uint32_t hovered_target=0;
+    int target_frame=-1, target_badge=-1;
+    godot::Ref<godot::ImageTexture> target_portrait;
+    std::map<int,godot::Ref<godot::ImageTexture>> monster_portrait_frames;
+    godot::Ref<godot::ImageTexture> portrait_texture(mir3::WilArchive& archive,
+        std::map<int,godot::Ref<godot::ImageTexture>>& cache,int id);
+    void draw_target_vitals();
     mir3::Messages messages;
     mir3::HudButtonTooltip button_tooltip;
     mir3::ChatHistory chat_history;
