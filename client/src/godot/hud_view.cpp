@@ -27,6 +27,7 @@ Vector2 point(mir3::HudLayout::Point p) { return Vector2(p[0],p[1]); }
 void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add_inventory_item","icon","count","slot","make_index","name","std_mode","stack_mode"),&Mir3HudView::add_inventory_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_inventory_use_reply","identifier","remaining"),&Mir3HudView::apply_inventory_use_reply);
+    ClassDB::bind_method(D_METHOD("set_learned_skill","id","level","key"),&Mir3HudView::set_learned_skill);
     ClassDB::bind_method(D_METHOD("apply_equipment_reply","identifier"),&Mir3HudView::apply_equipment_reply);
     ADD_SIGNAL(MethodInfo("equipment_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"slot"),PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("inventory_use_requested",PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::INT,"tick"),PropertyInfo(Variant::STRING,"name")));
@@ -81,6 +82,7 @@ void Mir3HudView::_ready() {
         status_body=texture(body->pixels.rgba,body->width,body->height);
         status_body_offset=Vector2(body->offset_x,body->offset_y);
     }
+    magic_icons.open(resource_root/"Data"/"MIcon");
     equipment_archive.open(resource_root/"Data"/"Equip");
     item_archive.open(resource_root/"Data"/"Inventory");
     std::ifstream message_file(resource_root/"CmList.dat",std::ios::binary);
@@ -647,9 +649,36 @@ void Mir3HudView::draw_skills() {
         draw_texture_rect_region(tree,Rect2(Vector2(x+origin[0],y+origin[1]),crop.size),crop);
     }
     sprite(1672,{x+322,y+skills.thumb_y()});
+    const auto& learned=skills.learned[skills.tab];
+    for (int i=0;i<int(learned.size());++i) {
+        const auto& skill=learned[i];
+        if (!skill.id) continue;
+        const int slot=mir3::SkillLayout::slot(skills.tab,skill.id);
+        const auto pos=slot>=0?mir3::SkillLayout::positions[skills.tab][slot]:
+            mir3::SkillPosition{skill.id,i<6?55:0,i<6?27+46*i:0};
+        const int top=pos.y-(slot>=0?skills.scroll:0);
+        const int id=2*skill.id-2;
+        if (!skill_frames.contains(id)) {
+            const auto decoded=magic_icons.frame(id);
+            if (decoded) skill_frames.emplace(id,texture(decoded->pixels.rgba,decoded->width,decoded->height));
+        }
+        const auto draw_icon=[&](const Ref<ImageTexture>& icon) {
+            if (icon.is_null()) return;
+            const int hidden_top=std::max(0,64-top);
+            const int hidden_bottom=std::max(0,top-355);
+            const int height=icon->get_height()-hidden_top-hidden_bottom;
+            if (height<=0) return;
+            const Rect2 crop(0,hidden_top,icon->get_width(),height);
+            draw_texture_rect_region(icon,Rect2(Vector2(x+pos.x,y+top+hidden_top),crop.size),crop);
+        };
+        if (const auto icon=skill_frames.find(id);icon!=skill_frames.end()) draw_icon(icon->second);
+        if (skill.key) draw_icon(frame(1659+skill.key));
+        if (top+37>56 && top+37<385)
+            text(std::to_string(skill.level),{x+pos.x+34,y+top+37,15,15},0x64fafa,mir3::TextFont::skill_level);
+    }
     for (const int index:{0,8,7,6,5,4,3,2,1}) {
         const auto [base,left,top]=mir3::SkillPanel::button(index);
-        if (index==0 || skills.pressed==index)
+        if (index==0 || skills.pressed==index || skills.learned[index-1][0].id)
             sprite(base+(index==0 && skills.pressed==0),{x+left,y+top});
         if (index>0 && skills.tab==index-1) sprite(base+1,{x+left,y+top});
     }
@@ -700,6 +729,18 @@ void Mir3HudView::emit_equipment_request() {
 
 bool Mir3HudView::apply_equipment_reply(int identifier) {
     if (!equipment.reply(identifier,bag)) return false;
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::set_learned_skill(int id,int level,int key) {
+    if (id<1 || id>65535 || level<0 || level>255 || key<0 || key>12) return false;
+    auto& learned=skills.learned[mir3::SkillLayout::category(id)];
+    auto found=std::find_if(learned.begin(),learned.end(),[id](const auto& skill) { return skill.id==id; });
+    if (found==learned.end())
+        found=std::find_if(learned.begin(),learned.end(),[](const auto& skill) { return skill.id==0; });
+    if (found==learned.end()) return false;
+    *found={id,level,key};
     queue_redraw();
     return true;
 }

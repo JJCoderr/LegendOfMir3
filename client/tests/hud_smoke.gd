@@ -189,7 +189,8 @@ func run() -> void:
 	key(KEY_E)
 	await process_frame
 	if not check(hud.hud_snapshot().skills_visible and hud.hud_snapshot().skill_tab == 0, "magic opens on first tab"): return
-	if not await capture("magic-tree"): return
+	if not check(hud.set_learned_skill(1, 2, 1) and hud.set_learned_skill(5, 1, 0) and not hud.set_learned_skill(1, 2, 13), "learned magic data"): return
+	if not await capture("magic-tree-learned"): return
 	click_at(Vector2(636, 32), true)
 	click_at(Vector2(636, 32), false)
 	if not check(hud.hud_snapshot().skill_tab == 7, "magic category selection"): return

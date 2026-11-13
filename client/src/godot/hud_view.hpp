@@ -27,6 +27,7 @@ public:
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
+    bool set_learned_skill(int id,int level,int key);
     bool apply_equipment_reply(int identifier);
     bool apply_inventory_use_reply(int identifier,int remaining);
     bool update_chat_rejection(int channel,bool rejected);
@@ -36,6 +37,8 @@ private:
     mir3::HudModel model;
     mir3::InventoryPanel inventory;
     mir3::SkillPanel skills;
+    mir3::WilArchive magic_icons;
+    std::map<int,godot::Ref<godot::ImageTexture>> skill_frames;
     bool skills_on_top=false;
     void toggle_skills();
     void draw_skills();
