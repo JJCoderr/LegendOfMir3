@@ -3407,8 +3407,9 @@ bool Mir3HudView::options_pointer(int kind,Vector2 point) {
         if (kind==1) {
             audio_options.drag_volume(audio_drag==0,int(local.x));
             sync_hud_sound();
+            save_options();
         }
-        if (kind==2) { audio_drag=-1;changed=true; }
+        if (kind==2) audio_drag=-1;
     } else if (options.dragging && kind!=0) {
         if (kind==1) options.move_drag(int(point.x),int(point.y));
         if (kind==2) options.end_drag();

@@ -1643,6 +1643,13 @@ func run() -> void:
 	for option in ["magic_light", "damage_numbers", "reverse_pan"]:
 		if not check(changed_options[option] != display_options[option], "toggle system option " + option): return
 	if not await capture("system-options-display-toggles"): return
+	click_at(Vector2(596, 152), true)
+	var music_drag := InputEventMouseMotion.new()
+	music_drag.position = Vector2(523, 152)
+	Input.parse_input_event(music_drag)
+	hud.notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_OUT)
+	if not check(hud.hud_snapshot().music_level == -50, "focus loss retains last dragged music level"): return
+	if not await capture("system-options-volume-after-focus-loss"): return
 	click_at(Vector2(595, 447), false)
 	if not check(not hud.hud_snapshot().options_visible, "options close"): return
 	var reloaded: Node = load("res://main.tscn").instantiate()
@@ -1651,7 +1658,7 @@ func run() -> void:
 	var persisted: Dictionary = reloaded.hud_snapshot()
 	reloaded.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(options_file))
-	if not check(not persisted.music_enabled and persisted.music_level == -5, "system options reload from original INI keys"): return
+	if not check(not persisted.music_enabled and persisted.music_level == -50, "system options reload from original INI keys"): return
 	for option in ["magic_light", "damage_numbers", "reverse_pan"]:
 		if not check(persisted[option] == changed_options[option], "reload system option " + option): return
 	click_at(Vector2(540, 570), false)
