@@ -1896,12 +1896,53 @@ void Mir3HudView::_notification(int what) {
         queue_redraw();
     }
     if (what==NOTIFICATION_APPLICATION_FOCUS_OUT || what==NOTIFICATION_WM_WINDOW_FOCUS_OUT) {
-        group_dialog_pressed=-1;
-        npc_dialogue_close_pressed=false;
-        shop_scroll_dragging=false;
-        npc_dialogue_arrow_pressed=0;
+        cancel_pointer_interactions();
+        inventory_cursor=Vector2(-1,-1);
+        queue_redraw();
     }
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT || what==NOTIFICATION_WM_WINDOW_FOCUS_OUT) { map_pointer_button=0;merchant_click_captured=false;shop_pressed=npc_dialogue_pressed=-1;minimap.dragging=false;minimap.release_captured=false;trade.end_drag();trade_scroll.captured=-1;trade_confirm_pressed=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;guild_editor.end_drag();guild_edit_pressed=-1;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+}
+
+void Mir3HudView::cancel_pointer_interactions() {
+    map_pointer_button=0;
+    merchant_click_captured=false;
+    group_dialog_pressed=-1;
+    npc_dialogue_close_pressed=false;
+    npc_dialogue_arrow_pressed=0;
+    shop_pressed=npc_dialogue_pressed=-1;
+    shop_scroll_dragging=false;
+    minimap.dragging=false;
+    minimap.release_captured=false;
+    trade.end_drag();
+    trade_scroll.captured=-1;
+    trade_confirm_pressed=false;
+    mount.end_drag();
+    mount.pressed=-1;
+    quest.end_drag();
+    quest.pressed=-1;
+    quest.scroll_captured=false;
+    controller.cancel();
+    portrait_entry_pressed=false;
+    portrait_pressed=-1;
+    portrait_picker.scrolling=false;
+    options.end_drag();
+    audio_drag=-1;
+    guild.end_drag();
+    guild_layout.pressed=-1;
+    guild_scroll.captured=false;
+    guild_editor.end_drag();
+    guild_edit_pressed=-1;
+    group.end_drag();
+    group_pressed=-1;
+    skills.end_drag();
+    skills.pressed=-1;
+    skills.scroll_captured=false;
+    status.end_drag();
+    status_close_pressed=false;
+    inventory.end_drag();
+    inventory.close_pressed=false;
+    inventory.scroll.captured=false;
+    chat_history.input(2,0,0,false,0,0,0);
+    chat_history.input(2,0,0,true,0,0,0);
 }
 
 void Mir3HudView::draw_inventory() {
@@ -2815,8 +2856,7 @@ void Mir3HudView::open_group_dialog(int action) {
     const auto skin=frame(1240);
     if (skin.is_null() || !chat_input) return;
     if (group_request) finish_group_dialog(false);
-    map_pointer_button=0;
-    shop_scroll_dragging=false;
+    cancel_pointer_interactions();
     const int w=skin->get_width(),h=skin->get_height();
     group_dialog={400-w/2,246-h/2,w,h};
     group_request=action<=3?1019+action:action;

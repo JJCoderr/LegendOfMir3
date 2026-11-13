@@ -232,6 +232,7 @@ private:
     void raise_panel(Panel panel);
     const mir3::DraggablePanel& panel_state(Panel panel) const;
     bool panel_covered(Panel panel,godot::Vector2 point) const;
+    void cancel_pointer_interactions();
     bool panel_pointer(int kind,godot::Vector2 position,bool captured_only=false);
     bool status_pointer(int kind,godot::Vector2 position);
     mir3::InventoryGrid bag;

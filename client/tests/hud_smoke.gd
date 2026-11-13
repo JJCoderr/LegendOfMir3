@@ -1356,6 +1356,18 @@ func run() -> void:
 	var stacked_bag_origin := Vector2(hud.hud_snapshot().inventory_position)
 	var stacked_bag_grab := stacked_bag_origin + Vector2(12, 25)
 	click_at(stacked_bag_grab, true)
+	key(KEY_Q, 0, true)
+	if not check(hud.hud_snapshot().group_request == 109, "open modal during inventory drag"): return
+	click_at(stacked_bag_grab, false)
+	key(KEY_TAB)
+	key(KEY_ENTER)
+	var interrupted_bag_motion := InputEventMouseMotion.new()
+	interrupted_bag_motion.position = stacked_bag_grab - Vector2(20, 0)
+	Input.parse_input_event(interrupted_bag_motion)
+	if not check(hud.hud_snapshot().group_request == 0 and Vector2(hud.hud_snapshot().inventory_position) == stacked_bag_origin,
+		"dismissing modal does not resume inventory drag"): return
+	if not await capture("hud-inventory-drag-interrupted"): return
+	click_at(stacked_bag_grab, true)
 	var stacked_bag_motion := InputEventMouseMotion.new()
 	stacked_bag_motion.position = stacked_bag_grab - Vector2(200, 0)
 	Input.parse_input_event(stacked_bag_motion)
