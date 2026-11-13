@@ -769,6 +769,31 @@ func run() -> void:
 	click_at(overlap_cell, false)
 	if not check(hud.hud_snapshot().held_inventory_icon == -1 and hud.hud_snapshot().minimap_bounds == Rect2(672, 0, 128, 128), "minimap resize owns release over inventory"): return
 	if not await capture("hud-minimap-resize-over-inventory"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		click_at(overlap_cell, true)
+		click_at(overlap_cell, false)
+		if not check(hud.hud_snapshot().held_inventory_icon == 301, "pick up potion from exposed bag"): return
+		var held_motion := InputEventMouseMotion.new()
+		held_motion.position = overlap_cell + Vector2(38, 0)
+		Input.parse_input_event(held_motion)
+		if not await capture("hud-inventory-held-preview"): return
+		key(KEY_T)
+		if not await capture("hud-minimap-covered-held-preview"): return
+		var covered_frame := root.get_texture().get_image()
+		held_motion = InputEventMouseMotion.new()
+		held_motion.position = Vector2(480, 250)
+		Input.parse_input_event(held_motion)
+		await process_frame
+		await RenderingServer.frame_post_draw
+		var idle_frame := root.get_texture().get_image()
+		var edge := Rect2i(Vector2i(overlap_origin) + Vector2i(55, 60), Vector2i(4, 38))
+		if not check(covered_frame.get_region(edge).get_data() == idle_frame.get_region(edge).get_data(),
+			"covered bag cell has no placement highlight"): return
+		key(KEY_T)
+		await create_timer(0.31).timeout
+		click_at(overlap_cell, true)
+		click_at(overlap_cell, false)
+		if not check(hud.hud_snapshot().held_inventory_icon == -1, "return potion to exposed bag"): return
 	key(KEY_T)
 	key(KEY_T)
 	if not check(hud.hud_snapshot().minimap_bounds == Rect2(672, 0, 128, 128), "minimap size shortcut"): return
