@@ -1974,7 +1974,11 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
         }
         consumed=inventory.end_drag() || inventory.close_pressed || consumed;
         inventory.close_pressed=false;
-        if (close_window) toggle_inventory();
+        if (close_window) {
+            // 0x441310 enables the close button's release sound.
+            if (hud_sound && audio_options.effects_enabled) hud_sound->play();
+            toggle_inventory();
+        }
     }
     bag.scroll_row=inventory.row;
     if (!inside && !consumed) return false;

@@ -862,8 +862,13 @@ func run() -> void:
 	click_at(Vector2(450, 155), false)
 	await process_frame
 	if not check(hud.hud_snapshot().inventory_position == Vector2i(438, 99), "inventory drag and bottom clamp"): return
+	var inventory_sound: AudioStreamPlayer = hud.get_node("HudClickSound")
+	inventory_sound.stop()
 	click_at(Vector2(681, 523), true)
+	if not check(not inventory_sound.playing, "inventory close press stays silent"): return
+	if not await capture("inventory-close-pressed"): return
 	click_at(Vector2(681, 523), false)
+	if not check(inventory_sound.playing, "inventory close release plays original click"): return
 	await process_frame
 	if not check(not hud.hud_snapshot().inventory_visible, "inventory close button"): return
 	key(KEY_W)
