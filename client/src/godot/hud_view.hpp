@@ -273,7 +273,8 @@ private:
     bool apply_shop_goods(int actor,int count,godot::String body);
     struct ShopGood { std::string name; int variants, price, stock; };
     std::vector<ShopGood> shop_goods;
-    int shop_actor=0, shop_pressed=-1, shop_first=0;
+    int shop_actor=0, shop_pressed=-1, shop_first=0, shop_category_first=0;
+    bool shop_show_offers=false;
     struct ShopOffer { std::string name; int icon, price; std::uint32_t id; };
     std::vector<ShopOffer> shop_offers;
     int shop_selected=-1;

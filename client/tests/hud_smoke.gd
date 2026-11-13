@@ -256,6 +256,16 @@ func run() -> void:
 		click_at(Vector2(60, 40), true)
 		click_at(Vector2(60, 40), false)
 		if not check(offer_selections == [[2, 10001]], "select offer by its instance identifier"): return
+		if not check(hud.apply_shop_offers(2, 9, PackedStringArray(), PackedInt32Array(), PackedInt32Array(), PackedInt64Array()), "accept empty detail page"): return
+		click_at(Vector2(60, 40), true)
+		click_at(Vector2(60, 40), false)
+		if not check(goods_requests.size() == 2, "empty details stay in detail view"): return
+		key(KEY_ESCAPE)
+		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "late detail cannot reopen dismissed page"): return
+		if not await capture("bichon-merchant-return-to-goods"): return
+		click_at(Vector2(45, 171), true)
+		click_at(Vector2(45, 171), false)
+		if not check(goods_requests.size() == 3 and goods_requests.back() == [2, 9, "Potion 9"], "return restores category scroll"): return
 		if not check(hud.apply_npc_dialogue(644, 2, "") and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
 		if not check(hud.apply_npc_dialogue(643, 2, script) and hud.walk_to_map_cell(Vector2i(419, 410)), "walk away from reopened NPC dialogue"): return
 		var leave_deadline := Time.get_ticks_msec() + 6000

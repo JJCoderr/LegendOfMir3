@@ -516,6 +516,7 @@ void Mir3HudView::close_npc_dialogue() {
     shop_actor=0;
     shop_selected=-1;
     shop_offers.clear();
+    shop_show_offers=false;
     shop_pressed=-1;
     npc_dialogue_rows.clear();
     npc_dialogue_pressed=-1;
@@ -550,6 +551,8 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body) {
     shop_selected=-1;
     shop_offers.clear();
     shop_first=0;
+    shop_category_first=0;
+    shop_show_offers=false;
     shop_pressed=-1;
     queue_redraw();
     return true;
@@ -567,6 +570,8 @@ bool Mir3HudView::apply_shop_offers(int actor,int index,PackedStringArray names,
         offers.push_back({names[i].utf8().get_data(),icons[i],prices[i],static_cast<std::uint32_t>(identifiers[i])});
     }
     shop_offers=std::move(offers);
+    if (!shop_show_offers) shop_category_first=shop_first;
+    shop_show_offers=true;
     shop_first=0;
     shop_pressed=-1;
     queue_redraw();
@@ -576,7 +581,7 @@ bool Mir3HudView::apply_shop_offers(int actor,int index,PackedStringArray names,
 void Mir3HudView::draw_shop() {
     if (!shop_actor) return;
     sprite(1260,{0,0});
-    if (!shop_offers.empty()) {
+    if (shop_show_offers) {
         for (int row=0;row<std::min(8,int(shop_offers.size())-shop_first);++row) {
             const auto& offer=shop_offers[shop_first+row];
             const int y=34+19*row;
@@ -599,7 +604,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
     if (!shop_actor) return false;
     const bool inside=Rect2(0,0,292,224).has_point(pointer);
     const int row=Rect2(22,34,247,152).has_point(pointer)?shop_first+(int(pointer.y)-34)/19:-1;
-    const bool details=!shop_offers.empty();
+    const bool details=shop_show_offers;
     const bool hit=row>=0 && (details?row<int(shop_offers.size()):
         row<int(shop_goods.size()) && shop_goods[row].variants>0);
     const int pressed=shop_pressed;
@@ -1080,7 +1085,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) &&
         Rect2(22,34,247,152).has_point(button->get_position())) {
         const int direction=button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN?1:-1;
-        shop_first=std::clamp(shop_first+direction,0,std::max(0,int(shop_offers.empty()?shop_goods.size():shop_offers.size())-1));
+        shop_first=std::clamp(shop_first+direction,0,std::max(0,int(shop_show_offers?shop_offers.size():shop_goods.size())-1));
         shop_pressed=-1;
         get_viewport()->set_input_as_handled();
         queue_redraw();
@@ -1374,6 +1379,15 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         toggle_options();get_viewport()->set_input_as_handled();return;
     }
     if (code==KEY_ESCAPE) {
+        if (shop_actor && shop_show_offers) {
+            shop_show_offers=false;
+            shop_selected=shop_pressed=-1;
+            shop_offers.clear();
+            shop_first=shop_category_first;
+            get_viewport()->set_input_as_handled();
+            queue_redraw();
+            return;
+        }
         for (auto it=panel_order.rbegin();it!=panel_order.rend();++it) {
             if (!panel_state(*it).visible) continue;
             switch (*it) {
