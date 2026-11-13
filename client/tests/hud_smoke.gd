@@ -1154,7 +1154,11 @@ func run() -> void:
 	click_at(Vector2(280, 348), false)
 	click_at(Vector2(490, 316), false)
 	if not check(hud.hud_snapshot().group_request == 1022, "release over edit clears modal button press"): return
-	if not await capture("group-dialog-release"): return
+	click_at(Vector2(490, 316), true)
+	hud.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
+	click_at(Vector2(490, 316), false)
+	if not check(hud.hud_snapshot().group_request == 1022, "focus loss cancels modal button press"): return
+	if not await capture("group-dialog-focus-loss"): return
 	key(KEY_TAB)
 	key(KEY_ENTER)
 	if not check(hud.hud_snapshot().group_request == 0 and member_requests.size() == 1, "cancel member request"): return
