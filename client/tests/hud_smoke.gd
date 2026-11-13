@@ -94,8 +94,12 @@ func run() -> void:
 			step = step.duplicate()
 			step.pressed = false
 			root.push_input(step, true)
-			var expected := Vector2i(475 if destination.x == 350 else 476, 360)
-			if not check(hud.hud_snapshot().player_cell == expected, "map walkability and movement"): return
+			if not check(hud.hud_snapshot().walk_frame == (-1 if destination.x == 350 else 0), "map walkability and walk start"): return
+		if not await capture("bichon-walking"): return
+		var walk_deadline := Time.get_ticks_msec() + 2000
+		while hud.hud_snapshot().walk_frame >= 0 and Time.get_ticks_msec() < walk_deadline:
+			await process_frame
+		if not check(hud.hud_snapshot().walk_frame == -1 and hud.hud_snapshot().player_cell == Vector2i(476, 360), "walk finishes in destination cell"): return
 		if not await capture("bichon-step-camera"): return
 		hud.set_meta("map_camera_cell", Vector2i(404, 402))
 		hud.queue_redraw()

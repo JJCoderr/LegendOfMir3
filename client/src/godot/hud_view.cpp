@@ -122,6 +122,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["character_level"]=model.level;
     result["terrain_ready"]=terrain_ready;
     result["player_cell"]=player_cell;
+    result["walk_frame"]=walk_frame;
     result["character_portrait"]=model.portrait_frame();
     result["target_portrait"]=model.layout.expanded || !target_focus.displayed() || target_portrait.is_null()?-1:target_frame;
     result["target_hp_width"]=!model.layout.expanded && target_focus.displayed() && !target_is_human && target_portrait.is_valid()?target_vitals.bar_width():0;
@@ -243,13 +244,14 @@ void Mir3HudView::_ready() {
     }
     if (terrain_ready) {
         const auto load_actor=[&](auto& archive,auto& frames,const char* library,int first) {
-            if (!archive.open(resource_root/"Data"/library)) return;
+            if (library && !archive.open(resource_root/"Data"/library)) return;
             for (int i=0;i<int(frames.size());++i) {
                 if (const auto frame=archive.frame(first+i))
                     frames[i]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y)};
             }
         };
-        load_actor(map_human,map_human_frames,"M-Hum",40);
+        load_actor(map_human,map_human_frames,"M-Hum",0);
+        load_actor(map_human,map_walk_frames,nullptr,1680);
         load_actor(map_npc,map_npc_frames,"NPC",110);
         set_map_location(String::utf8("\xe6\xaf\x94\xe5\xa5\x87\xe7\x9c\x81"),player_cell.x,player_cell.y);
     }
@@ -408,7 +410,40 @@ Vector2i Mir3HudView::map_camera() const {
         const Vector2i cell=get_meta("map_camera_cell");
         return {cell.x*48,cell.y*32};
     }
-    return {(player_cell.x-12)*48+200,(player_cell.y-12)*32+157};
+    const auto focus=walk_frame>=0?step_origin:player_cell;
+    Vector2i camera((focus.x-12)*48+200,(focus.y-12)*32+157);
+    if (walk_frame>=0) {
+        constexpr std::array xs{8,16,24,32,40,48}, ys{5,11,16,21,27,32};
+        const auto step=step_destination-step_origin;
+        camera+=Vector2i(step.x*xs[walk_frame],step.y*ys[walk_frame]);
+    }
+    return camera;
+}
+
+Vector2i Mir3HudView::player_pixel() const {
+    Vector2i pixel(player_cell.x*48,player_cell.y*32);
+    if (walk_frame>=0) {
+        const bool committed=walk_frame>=(player_facing==7?4:1);
+        const int frames=committed?walk_frame-5:walk_frame+1;
+        const auto step=step_destination-step_origin;
+        const int y_step=committed && player_facing%2!=0?32*step.y/6:5*step.y;
+        pixel+=Vector2i(step.x*8*frames,y_step*frames);
+    }
+    return pixel;
+}
+
+void Mir3HudView::advance_map_step(double delta) {
+    if (walk_frame<0) return;
+    movement_ms+=delta*1000;
+    if (movement_ms<=95) return;
+    movement_ms=0;
+    ++walk_frame;
+    if (walk_frame==(player_facing==7?4:1)) {
+        player_cell=step_destination;
+        set_minimap_position(player_cell.x,player_cell.y);
+    }
+    if (walk_frame==6) walk_frame=-1;
+    queue_redraw();
 }
 
 void Mir3HudView::draw_terrain() {
@@ -456,7 +491,15 @@ void Mir3HudView::draw_terrain() {
             ++object;
         }
         if (start_y+row==409) draw_actor(map_npc_frames[tick/200%4],413,409);
-        if (start_y+row==player_cell.y) draw_actor(map_human_frames[tick/500%2],player_cell.x,player_cell.y);
+        const auto pixel=player_pixel();
+        if (start_y+row==int(std::round(pixel.y/32.0))) {
+            const auto& actor=walk_frame>=0?map_walk_frames[player_facing*10+walk_frame]:
+                map_human_frames[player_facing*10+tick/500%2];
+            if (actor.image.is_valid()) {
+                draw_texture(actor.image,Vector2(pixel-camera)+actor.offset);
+                animated_map_objects=true;
+            }
+        }
     }
 }
 
@@ -671,7 +714,8 @@ void Mir3HudView::button_hint() {
     if (bounds[2]>2 && bounds[3]>2) draw_rect(rect(bounds).grow(-1),Color(1,1,150.f/255));
     text(caption,bounds,0);
 }
-void Mir3HudView::_process(double) {
+void Mir3HudView::_process(double delta) {
+    advance_map_step(delta);
     if (!hovered_target && target_focus.displayed()) {
         target_focus.update(0,static_cast<std::uint32_t>(ticks_msec()));
         if (!target_focus.displayed()) queue_redraw();
@@ -822,14 +866,20 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             if (hud_sound && audio_options.effects_enabled) hud_sound->play();
             emit_signal("hud_action",action);
         }
-        if (!captured && kind==0 && terrain_ready && !minimap.visible && p.y<mir3::HudLayout::origin[1]) {
+        if (!captured && kind==0 && terrain_ready && walk_frame<0 && !minimap.visible && p.y<mir3::HudLayout::origin[1]) {
             const auto camera=map_camera();
             const Vector2i destination(int(p.x+camera.x)/48,int(p.y+camera.y)/32);
             const auto delta=destination-player_cell;
             if (std::max(std::abs(delta.x),std::abs(delta.y))==1 &&
                 destination!=Vector2i(413,409) && terrain.walkable(destination.x,destination.y)) {
-                player_cell=destination;
-                set_minimap_position(player_cell.x,player_cell.y);
+                const std::array<Vector2i,8> directions{{
+                    {0,-1},{1,-1},{1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1}
+                }};
+                player_facing=int(std::find(directions.begin(),directions.end(),delta)-directions.begin());
+                step_origin=player_cell;
+                step_destination=destination;
+                walk_frame=0;
+                movement_ms=0;
                 get_viewport()->set_input_as_handled();
             }
         }
