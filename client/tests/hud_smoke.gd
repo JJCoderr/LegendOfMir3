@@ -536,7 +536,11 @@ func run() -> void:
 	click_at(Vector2(196, 410), true)
 	click_at(Vector2(196, 410), false)
 	if not check(hud.hud_snapshot().guild_tab == 1, "guild members tab"): return
-	hud.set_guild_members(PackedStringArray(["会长  比奇旅人", "会员  银杏剑客"]), PackedStringArray(["#1 会长", "比奇旅人", "#2 会员", "银杏剑客"]))
+	var member_body := "#1/*Leader/Bichon/#2/*Member/Ginkgo/Incomplete".to_ascii_buffer()
+	if not check(hud.apply_guild_members_reply(756, member_body), "756 parses guild member ranks"): return
+	if not check(hud.apply_guild_members_reply(775, "#9/*Old/Obsolete/".to_ascii_buffer()), "775 replaces guild members"): return
+	if not check(hud.apply_guild_members_reply(776, member_body), "776 replaces guild members"): return
+	if not check(not hud.apply_guild_members_reply(776, ("x".repeat(260) + "/").to_ascii_buffer()), "oversized member token rejected"): return
 	if not await capture("guild-members"): return
 	hud.set_guild_notices(PackedStringArray(["第一条行会通知", "第二条行会通知"]))
 	click_at(Vector2(246, 410), true)
@@ -616,7 +620,7 @@ func run() -> void:
 	if not check(not editor.visible and guild_edits == [[1040, "行会公告\r \r今晚集合"]], "guild announcement submit"): return
 	click_at(Vector2(550, 415), true)
 	click_at(Vector2(550, 415), false)
-	if not check(editor.visible and editor.text == "#1 会长\n比奇旅人\n#2 会员\n银杏剑客\n", "guild member editor uses rank source"): return
+	if not check(editor.visible and editor.text == "#1 <Leader>\nBichon \n#2 <Member>\n", "guild member editor uses rank source"): return
 	if not await capture("guild-member-editor"): return
 	click_at(Vector2(660, 328), true)
 	click_at(Vector2(660, 328), false)

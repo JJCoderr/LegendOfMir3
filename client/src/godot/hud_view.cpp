@@ -4,6 +4,7 @@
 #include <godot_cpp/classes/file_access.hpp>
 #include "hud_view.hpp"
 #include "hud/portrait_fac.hpp"
+#include "guild/guild_members.hpp"
 #include <godot_cpp/classes/config_file.hpp>
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/input_event_mouse_button.hpp>
@@ -79,6 +80,7 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("guild_edit_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"body")));
     ADD_SIGNAL(MethodInfo("guild_member_removal_requested",PropertyInfo(Variant::STRING,"name")));
     ClassDB::bind_method(D_METHOD("set_guild_manager","allowed"),&Mir3HudView::set_guild_manager);
+    ClassDB::bind_method(D_METHOD("apply_guild_members_reply","identifier","body"),&Mir3HudView::apply_guild_members_reply);
     ClassDB::bind_method(D_METHOD("set_guild_members","lines","editable"),&Mir3HudView::set_guild_members,DEFVAL(PackedStringArray()));
     ClassDB::bind_method(D_METHOD("post_system_notice","text","foreground","background"),&Mir3HudView::post_system_notice);
     ClassDB::bind_method(D_METHOD("set_guild_notices","lines"),&Mir3HudView::set_guild_notices);
@@ -1805,6 +1807,21 @@ bool Mir3HudView::guild_pointer(int kind,Vector2 point) {
     controller.cancel();
     get_viewport()->set_input_as_handled();
     queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::apply_guild_members_reply(int identifier,PackedByteArray body) {
+    if (body.size()>8191) return false;
+    mir3::GuildReply reply{identifier,{}};
+    if (!body.is_empty()) reply.ansi.assign(reinterpret_cast<const char*>(body.ptr()),body.size());
+    mir3::GuildMembers members;
+    if (!members.receive(reply,guild_manager)) return false;
+    PackedStringArray lines,editable;
+    for (const auto& row:members.members)
+        lines.append(String::utf8((row.message?message(row.message):mir3::ansi_to_utf8(row.ansi)).c_str()));
+    for (const auto& row:members.editable_members)
+        editable.append(String::utf8(mir3::ansi_to_utf8(row).c_str()));
+    set_guild_members(lines,editable);
     return true;
 }
 

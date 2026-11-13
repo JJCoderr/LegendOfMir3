@@ -72,6 +72,7 @@ public:
     bool load_portrait_cache(godot::String server,godot::String character);
     void set_portrait_names(godot::PackedStringArray names);
     void set_guild_manager(bool allowed);
+    bool apply_guild_members_reply(int identifier,godot::PackedByteArray body);
     void set_guild_members(godot::PackedStringArray lines,godot::PackedStringArray editable);
     void post_system_notice(godot::String value,int64_t foreground,int64_t background);
     void set_guild_notices(godot::PackedStringArray lines);
