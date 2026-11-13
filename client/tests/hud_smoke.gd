@@ -351,6 +351,13 @@ func run() -> void:
 	click_at(Vector2(660, 328), true)
 	click_at(Vector2(660, 328), false)
 	if not check(not editor.visible and guild_edits.size() == 1, "guild editor cancel"): return
+	key(KEY_N)
+	key(KEY_E)
+	if not await capture("hud-six-panel-order"): return
+	key(KEY_ESCAPE)
+	if not check(not hud.hud_snapshot().skills_visible and hud.hud_snapshot().options_visible and hud.hud_snapshot().guild_visible, "magic above options and guild"): return
+	key(KEY_ESCAPE)
+	if not check(not hud.hud_snapshot().options_visible and hud.hud_snapshot().guild_visible, "options above guild"): return
 	key(KEY_ESCAPE)
 	if not check(not hud.hud_snapshot().guild_visible, "guild escape closes"): return
 	if not check(hud.set_music_map("0"), "original map music lookup"): return

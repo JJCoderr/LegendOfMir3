@@ -264,12 +264,12 @@ void Mir3HudView::_draw() {
         case Panel::skills: draw_skills(); break;
         case Panel::status: draw_status(); break;
         case Panel::inventory: draw_inventory(); break;
+        case Panel::guild: draw_guild(); break;
+        case Panel::options: draw_options(); break;
         }
     }
     draw_skill_key_menu();
     draw_skill_description();
-    if (guild.visible) draw_guild();
-    if (options.visible) draw_options();
     if (guild_editor.visible) draw_guild_editor();
     if (!model.layout.expanded && Rect2(535,486,81,94).has_point(inventory_cursor))
         sprite(mir3::HudLayout::portrait_entry_frame(portrait_entry_pressed),mir3::HudLayout::portrait_entry_position);
@@ -379,13 +379,12 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     const auto covers_wheel=[&](const mir3::DraggablePanel& panel) {
         return button.is_valid() && panel.visible && rect(panel.rect).has_point(button->get_position());
     };
-    if (covers_wheel(options) && button->is_pressed() &&
+    if (covers_wheel(options) && !panel_covered(Panel::options,button->get_position()) && button->is_pressed() &&
         (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN)) {
         get_viewport()->set_input_as_handled();
         return;
     }
-    if (guild.visible && button.is_valid() && button->is_pressed() &&
-        rect(guild.rect).has_point(button->get_position())) {
+    if (covers_wheel(guild) && button->is_pressed() && !panel_covered(Panel::guild,button->get_position())) {
         const auto index=button->get_button_index();
         if (index==MOUSE_BUTTON_WHEEL_UP || index==MOUSE_BUTTON_WHEEL_DOWN) {
             const int count=int(guild_pages[guild_layout.tab].size());
@@ -408,7 +407,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         }
     }
     if (button.is_valid() && button->is_pressed() && (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) && rect(mir3::HudLayout::chat_frame(model.layout.expanded)).has_point(button->get_position()) &&
-        !covers_wheel(guild) && !covers_wheel(group) && !covers_wheel(skills) &&
+        !covers_wheel(options) && !covers_wheel(guild) && !covers_wheel(group) && !covers_wheel(skills) &&
         !covers_wheel(status) && !covers_wheel(inventory)) {
         chat_history.scroll(model.layout.expanded).wheel(button->get_button_index()==MOUSE_BUTTON_WHEEL_UP?1:-1,int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded);
         get_viewport()->set_input_as_handled();queue_redraw();return;
@@ -582,10 +581,9 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         return;
     }
     if (code==KEY_ESCAPE && portrait_visible) { close_portrait_picker();get_viewport()->set_input_as_handled();return; }
-    if (code==KEY_N || (code==KEY_ESCAPE && options.visible)) {
+    if (code==KEY_N) {
         toggle_options();get_viewport()->set_input_as_handled();return;
     }
-    if (code==KEY_ESCAPE && guild.visible) { guild.toggle();queue_redraw();get_viewport()->set_input_as_handled();return; }
     if (code==KEY_ESCAPE) {
         for (auto it=panel_order.rbegin();it!=panel_order.rend();++it) {
             if (!panel_state(*it).visible) continue;
@@ -594,6 +592,8 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
             case Panel::skills: toggle_skills(); break;
             case Panel::status: toggle_status(); break;
             case Panel::inventory: toggle_inventory(); break;
+            case Panel::guild: guild.toggle();queue_redraw();break;
+            case Panel::options: toggle_options();break;
             }
             get_viewport()->set_input_as_handled();
             return;
@@ -795,8 +795,8 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
 }
 
 bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
-    if (options_pointer(kind,position)) return true;
-    if (guild_pointer(kind,position)) return true;
+    if (options.dragging || audio_drag>=0) return options_pointer(kind,position);
+    if (guild.dragging || guild_scroll.captured || guild_layout.pressed>=0) return guild_pointer(kind,position);
     if (status.dragging || status_close_pressed) return status_pointer(kind,position);
     if (inventory.dragging || inventory.close_pressed || inventory.scroll.captured)
         return inventory_pointer(kind,position);
@@ -809,6 +809,8 @@ bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
         case Panel::skills: if (skill_pointer(kind,position)) return true; break;
         case Panel::status: if (status_pointer(kind,position)) return true; break;
         case Panel::inventory: if (inventory_pointer(kind,position)) return true; break;
+        case Panel::guild: if (guild_pointer(kind,position)) return true; break;
+        case Panel::options: if (options_pointer(kind,position)) return true; break;
         }
     }
     return false;
@@ -1267,6 +1269,7 @@ void Mir3HudView::set_guild_overview(String name,PackedStringArray lines) {
     guild_pages[0]=lines;
     guild_layout.tab=0;
     guild_first=0;
+    if (!guild.visible) raise_panel(Panel::guild);
     guild.visible=true;
     queue_redraw();
 }
@@ -1323,7 +1326,7 @@ bool Mir3HudView::guild_pointer(int kind,Vector2 point) {
         }
         if (kind==0 && inside) {
             guild_layout.pressed=hit;
-            guild.begin_drag(int(point.x),int(point.y),hit>=0);
+            if (guild.begin_drag(int(point.x),int(point.y),hit>=0)) raise_panel(Panel::guild);
         } else if (kind==1) {
             captured=guild.move_drag(int(point.x),int(point.y));
         } else if (kind==2) {
@@ -1478,6 +1481,7 @@ bool Mir3HudView::guild_editor_input(const Ref<InputEvent>& event) {
 void Mir3HudView::toggle_options() {
     if (frame(1290).is_null()) return;
     options.toggle();
+    if (options.visible) raise_panel(Panel::options);
     audio_drag=-1;
     controller.cancel();
     queue_redraw();
@@ -1549,7 +1553,7 @@ bool Mir3HudView::options_pointer(int kind,Vector2 point) {
                 }
             }
         }
-        if (!control && kind==0) options.begin_drag(int(point.x),int(point.y),false);
+        if (!control && kind==0 && options.begin_drag(int(point.x),int(point.y),false)) raise_panel(Panel::options);
     }
     if (changed) { sync_hud_sound();save_options(); }
     controller.cancel();
@@ -1837,6 +1841,8 @@ const mir3::DraggablePanel& Mir3HudView::panel_state(Panel panel) const {
     case Panel::skills: return skills;
     case Panel::status: return status;
     case Panel::inventory: return inventory;
+    case Panel::guild: return guild;
+    case Panel::options: return options;
     }
     return inventory;
 }
@@ -1845,7 +1851,7 @@ bool Mir3HudView::panel_covered(Panel panel,Vector2 point) const {
     const auto covers=[&](const mir3::DraggablePanel& state) {
         return state.visible && rect(state.rect).has_point(point);
     };
-    if (covers(options) || covers(guild) || covers(guild_editor) ||
+    if (covers(guild_editor) ||
         (portrait_visible && rect(mir3::PortraitPicker::initial).has_point(point)) || group_request)
         return true;
     for (auto it=panel_order.rbegin();it!=panel_order.rend() && *it!=panel;++it)

@@ -135,8 +135,8 @@ private:
     godot::Vector2 status_body_offset;
     void draw_status();
     void toggle_status();
-    enum class Panel { group, skills, status, inventory };
-    std::array<Panel,4> panel_order{Panel::group,Panel::skills,Panel::status,Panel::inventory};
+    enum class Panel { group, skills, status, inventory, guild, options };
+    std::array<Panel,6> panel_order{Panel::group,Panel::skills,Panel::status,Panel::inventory,Panel::guild,Panel::options};
     void raise_panel(Panel panel);
     const mir3::DraggablePanel& panel_state(Panel panel) const;
     bool panel_covered(Panel panel,godot::Vector2 point) const;
