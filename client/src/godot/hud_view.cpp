@@ -852,9 +852,19 @@ void Mir3HudView::draw_shop() {
         }
         if (selected || good.variants)
             draw_rect(icon_cell,selected?selected_border:Color(180.f/255,180.f/255,180.f/255),false);
-        text(good.name,{63,y+3,184,16},0xfafa,mir3::TextFont::normal,false);
-        text(std::to_string(good.price),{63,y+19,140,16},0xfafafa,mir3::TextFont::normal,false);
-        text(std::to_string(good.stock),{205,y+19,44,16},0xfafafa,mir3::TextFont::normal,false);
+        // 0x477160 places the localized price two pixels after the measured name.
+        const int label_y=y+(good.icon==304?2:13);
+        const int name_width=mir3::raster_text(good.name,1,1,false,mir3::TextFont::normal).text_width;
+        auto price=message(2300);
+        const auto marker=price.find("%d");
+        if (marker!=price.npos) price.replace(marker,2,std::to_string(good.price));
+        else price=std::to_string(good.price);
+        if (selected) {
+            text(good.name,{65,label_y-1,184,16},0x0a0a0a,mir3::TextFont::normal,false);
+            text(price,{67+name_width,label_y-1,124,16},0x0a0a0a,mir3::TextFont::normal,false);
+        }
+        text(good.name,{66,label_y,184,16},0xfafa,mir3::TextFont::normal,false);
+        text(price,{68+name_width,label_y,124,16},0x64b4fa,mir3::TextFont::normal,false);
     }
 }
 
