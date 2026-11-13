@@ -561,6 +561,10 @@ func run() -> void:
 		click_at(Vector2(334, 399), true)
 		click_at(Vector2(334, 399), false)
 		if not check(npc_packets.size() == page_packet_count, "shop ignores both page arrows while awaiting 652"): return
+		click_at(Vector2(378, 399), true)
+		click_at(Vector2(378, 399), false)
+		if not check(purchases.is_empty() and npc_packets.size() == page_packet_count,
+			"confirm cannot purchase a stale offer while loading another page"): return
 		if not await capture("bichon-merchant-offers-awaiting-page"): return
 		var next_offer_packet := "cL@F<>=@<?H<<<<<".to_ascii_buffer() + offer_packet.slice(16)
 		if not check(not hud.apply_npc_message(offer_packet, offer_key), "ignore previous page packet while next page is requested"): return

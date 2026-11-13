@@ -932,6 +932,7 @@ void Mir3HudView::draw_shop_requirement(const ShopGood& good,int x,int y,int wid
 }
 
 void Mir3HudView::buy_shop_offer(int index) {
+    if (shop_offer_loading) return;
     const auto& offer=shop_offers[index];
     const auto name=String::utf8(offer.name.c_str());
     const auto instance=offer.id;
