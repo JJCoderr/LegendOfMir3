@@ -22,6 +22,8 @@
 #include "chat/chat_reception.hpp"
 #include "chat_input_view.hpp"
 #include <godot_cpp/classes/node2d.hpp>
+#include <godot_cpp/classes/back_buffer_copy.hpp>
+#include <godot_cpp/classes/sprite2d.hpp>
 #include <godot_cpp/classes/image_texture.hpp>
 #include <godot_cpp/classes/input_event.hpp>
 #include <map>
@@ -337,6 +339,13 @@ private:
     godot::Vector2i player_pixel() const;
     godot::Vector2i map_camera() const;
     void draw_terrain();
+    void draw_hud_tail();
+    void set_hud_decoration(godot::Vector4i state);
+    godot::Node2D* paint_canvas=this;
+    godot::Node2D* hud_tail=nullptr;
+    godot::BackBufferCopy* hud_copy=nullptr;
+    godot::Sprite2D* hud_decoration=nullptr;
+    int hud_decoration_frame=-1;
     mir3::WilArchive portraits, monster_portraits;
     mir3::PortraitFocus target_focus;
     mir3::TargetPortraitVitals target_vitals;

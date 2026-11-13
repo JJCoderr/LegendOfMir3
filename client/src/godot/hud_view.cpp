@@ -1,3 +1,4 @@
+#include <godot_cpp/classes/resource_loader.hpp>
 #include "hud/sound_position.hpp"
 #include <godot_cpp/classes/audio_server.hpp>
 #include <godot_cpp/classes/audio_effect_panner.hpp>
@@ -51,6 +52,7 @@ std::uint64_t ticks_msec() {
 }
 }
 void Mir3HudView::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("set_hud_decoration","state"),&Mir3HudView::set_hud_decoration);
     ClassDB::bind_method(D_METHOD("apply_inventory_add","identifier","icon","count","make_index","name","std_mode","stack_mode"),&Mir3HudView::apply_inventory_add);
     ClassDB::bind_method(D_METHOD("add_inventory_item","icon","count","slot","make_index","name","std_mode","stack_mode"),&Mir3HudView::add_inventory_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_inventory_use_reply","identifier","remaining"),&Mir3HudView::apply_inventory_use_reply);
@@ -332,6 +334,24 @@ void Mir3HudView::_ready() {
     Ref<Shader> shader;shader.instantiate();
     shader->set_code("shader_type canvas_item; render_mode unshaded, blend_premul_alpha; varying vec4 source_modulate; void vertex() { source_modulate=COLOR; } void fragment() { if (UV.x < -1.0) { COLOR=source_modulate*texture(TEXTURE,UV+vec2(2.0)); } else { COLOR.rgb *= COLOR.a; } }");
     Ref<ShaderMaterial> material;material.instantiate();material->set_shader(shader);set_material(material);
+    hud_copy=memnew(BackBufferCopy);
+    hud_copy->set_copy_mode(BackBufferCopy::COPY_MODE_VIEWPORT);
+    add_child(hud_copy);
+    hud_copy->hide();
+    hud_decoration=memnew(Sprite2D);
+    hud_decoration->set_centered(false);
+    hud_decoration->set_position(point(mir3::HudLayout::decoration_position));
+    Ref<ShaderMaterial> dye;
+    dye.instantiate();
+    dye->set_shader(ResourceLoader::get_singleton()->load("res://hud_dye.gdshader"));
+    hud_decoration->set_material(dye);
+    add_child(hud_decoration);
+    hud_decoration->hide();
+    hud_tail=memnew(Node2D);
+    hud_tail->set_material(material);
+    add_child(hud_tail);
+    hud_tail->connect("draw",callable_mp(this,&Mir3HudView::draw_hud_tail));
+
     for (int i=0;i<23;++i) {
         auto image=frame(mir3::HudLayout::buttons[i][0]);
         if (image.is_valid()) model.button_sizes[i]={image->get_width(),image->get_height()};
@@ -354,7 +374,7 @@ Ref<ImageTexture> Mir3HudView::frame(int id) {
 }
 void Mir3HudView::sprite(int id,mir3::HudLayout::Point position) {
     auto image=frame(id);
-    if (image.is_valid()) draw_texture(image,point(position));
+    if (image.is_valid()) paint_canvas->draw_texture(image,point(position));
 }
 void Mir3HudView::text(const std::string& value,mir3::HudLayout::Rect r,unsigned color,mir3::TextFont font,bool centered,bool inverted) {
     if (value.empty()) return;
@@ -365,7 +385,7 @@ void Mir3HudView::text(const std::string& value,mir3::HudLayout::Rect r,unsigned
         const auto bitmap=mir3::raster_text(value,r[2],r[3],centered,font,messages.get(1074),inverted);
         found=text_cache.emplace(key,texture(bitmap.rgba,r[2],r[3])).first;
     }
-    if (found->second.is_valid()) draw_texture(found->second,Vector2(r[0],r[1]),Color(float(color&255)/255,float((color>>8)&255)/255,float((color>>16)&255)/255));
+    if (found->second.is_valid()) paint_canvas->draw_texture(found->second,Vector2(r[0],r[1]),Color(float(color&255)/255,float((color>>8)&255)/255,float((color>>16)&255)/255));
 }
 void Mir3HudView::buttons() {
     for (int i=mir3::HudLayout::count(model.layout.expanded)-1;i>=0;--i) {
@@ -448,13 +468,13 @@ void Mir3HudView::draw_target_vitals() {
     for (int i=0;i<3;++i)
         text(target_vitals.text(i),mir3::TargetPortraitVitals::text_rect(i),0xe6e6e6);
     const auto border=portrait_texture(portraits,portrait_frames,660);
-    if (border.is_valid()) draw_texture(border,point(Layout::image_position(Layout::Image::target_hp_border)));
+    if (border.is_valid()) paint_canvas->draw_texture(border,point(Layout::image_position(Layout::Image::target_hp_border)));
     const auto fill=portrait_texture(portraits,portrait_frames,661);
     if (fill.is_valid()) {
         const int width=std::min(target_vitals.bar_width(),fill->get_width());
         if (width>0) {
             const Rect2 source(0,0,width,fill->get_height());
-            draw_texture_rect_region(fill,Rect2(point(Layout::image_position(Layout::Image::target_hp_fill)),source.size),source);
+            paint_canvas->draw_texture_rect_region(fill,Rect2(point(Layout::image_position(Layout::Image::target_hp_fill)),source.size),source);
         }
     }
 }
@@ -840,7 +860,7 @@ void Mir3HudView::draw_shop() {
     // 0x479410 positions the goods window below the NPC dialogue.
     const auto skin=frame(shop_bulk_index>=0?1262:shop_show_offers?1261:1260);
     if (skin.is_valid())
-        draw_texture(skin,Vector2((shop_width()-skin->get_width())/2,shop_top+(224-skin->get_height())/2));
+        paint_canvas->draw_texture(skin,Vector2((shop_width()-skin->get_width())/2,shop_top+(224-skin->get_height())/2));
     const int last=std::max(0,int(shop_goods.size())-1);
     // 0x47776B draws frame 1225 at (260,32), with 85 pixels of travel.
     if (last>0) sprite(1225,{260,shop_top+32+int(std::lround(85.0*shop_scroll_fraction))});
@@ -855,10 +875,10 @@ void Mir3HudView::draw_shop() {
         const Color tint(80.f/255,80.f/255,160.f/255,1.f/255);
         legacy_rect(icon_cell,tint);
         legacy_rect(description_cell,tint);
-        draw_rect(icon_cell,Color(180.f/255,180.f/255,180.f/255),false);
-        draw_rect(description_cell,Color(250.f/255,200.f/255,150.f/255),false);
+        paint_canvas->draw_rect(icon_cell,Color(180.f/255,180.f/255,180.f/255),false);
+        paint_canvas->draw_rect(description_cell,Color(250.f/255,200.f/255,150.f/255),false);
         const auto icon=item_frame(good.icon);
-        if (icon.is_valid()) draw_texture(icon,Vector2(324-icon->get_width()/2,shop_top+36-icon->get_height()/2));
+        if (icon.is_valid()) paint_canvas->draw_texture(icon,Vector2(324-icon->get_width()/2,shop_top+36-icon->get_height()/2));
         const int y=shop_top+(good.requirement?19:30);
         auto price=message(2300);
         const auto marker=price.find("%d");
@@ -887,10 +907,10 @@ void Mir3HudView::draw_shop() {
             if (icon.is_valid()) {
                 if (row==shop_offer_index) {
                     legacy_rect(cell,Color(50.f/255,150.f/255,150.f/255,1.f/255));
-                    draw_rect(cell,Color(180.f/255,180.f/255,180.f/255),false);
+                    paint_canvas->draw_rect(cell,Color(180.f/255,180.f/255,180.f/255),false);
                 }
                 // 0x442200 draws native-size icons around (19,19) in the 38px grid.
-                draw_texture(icon,cell.position+Vector2(19-icon->get_width()/2,19-icon->get_height()/2));
+                paint_canvas->draw_texture(icon,cell.position+Vector2(19-icon->get_width()/2,19-icon->get_height()/2));
                 const auto price=std::to_string(offer.price);
                 const auto bounds=shop_offer_cell(row);
                 text(price,{bounds[0]-1,bounds[1]+20,35,15},0x0a0a0a,mir3::TextFont::skill_level);
@@ -911,14 +931,14 @@ void Mir3HudView::draw_shop() {
                 Color(80.f/255,80.f/255,160.f/255,1.f/255);
             legacy_rect(icon_cell,tint);
             legacy_rect(description_cell,tint);
-            draw_rect(description_cell,selected_border,false);
+            paint_canvas->draw_rect(description_cell,selected_border,false);
         }
         if (good.icon>=0) {
             const auto icon=item_frame(good.icon);
-            if (icon.is_valid()) draw_texture(icon,Vector2(39-icon->get_width()/2,y+19-icon->get_height()/2));
+            if (icon.is_valid()) paint_canvas->draw_texture(icon,Vector2(39-icon->get_width()/2,y+19-icon->get_height()/2));
         }
         if (selected || good.variants)
-            draw_rect(icon_cell,selected?selected_border:Color(180.f/255,180.f/255,180.f/255),false);
+            paint_canvas->draw_rect(icon_cell,selected?selected_border:Color(180.f/255,180.f/255,180.f/255),false);
         // 0x477160 places the localized price two pixels after the measured name.
         const bool has_requirement=good.variants && good.requirement>0;
         const int label_y=y+(good.icon==304 || has_requirement?2:13);
@@ -1172,7 +1192,7 @@ void Mir3HudView::draw_npc_dialogue() {
         compose(1352,160+20*strips);
         background=ImageTexture::create_from_image(surface);
     }
-    if (background.is_valid()) draw_texture(background,Vector2(),background_modulation);
+    if (background.is_valid()) paint_canvas->draw_texture(background,Vector2(),background_modulation);
     const int bottom=npc_dialogue_bounds()[3];
     // 0x460F07 draws the button even when NOTCLOSE disables dismissal.
     sprite(npc_dialogue_close_pressed?1222:1221,{346,bottom-42});
@@ -1401,7 +1421,7 @@ void Mir3HudView::draw_terrain() {
     for (int row=0;row<10;++row) for (int column=0;column<10;++column) {
         const auto [package,id]=terrain.tile(start_x+2*column,start_y+2*row);
         if (const auto image=terrain_texture(package,id);image.is_valid())
-            draw_texture(image,offset+Vector2(96*column,64*row));
+            paint_canvas->draw_texture(image,offset+Vector2(96*column,64*row));
     }
     animated_map_objects=false;
     merchant_draw_bounds=Rect2();
@@ -1423,7 +1443,7 @@ void Mir3HudView::draw_terrain() {
             const auto image=terrain_texture(entry.package,id);
             if (image.is_null()) continue;
             const auto position=pixel+Vector2(0,32-image->get_height());
-            if (image->get_width()<=48 && image->get_height()<=32) draw_texture(image,position);
+            if (image->get_width()<=48 && image->get_height()<=32) paint_canvas->draw_texture(image,position);
             else tall_objects.push_back({image,position,row});
         }
     }
@@ -1431,13 +1451,13 @@ void Mir3HudView::draw_terrain() {
         if (frame.image.is_null() || x<start_x-5 || x>=start_x+21) return;
         const auto position=Vector2(x*48-camera.x,y*32-camera.y)+frame.offset;
         merchant_draw_bounds=Rect2(position,frame.image->get_size());
-        draw_texture(frame.image,position);
+        paint_canvas->draw_texture(frame.image,position);
         animated_map_objects=true;
     };
     auto object=tall_objects.begin();
     for (int row=-4;row<31;++row) {
         while (object!=tall_objects.end() && object->row==row) {
-            draw_texture(object->image,object->position);
+            paint_canvas->draw_texture(object->image,object->position);
             ++object;
         }
         if (start_y+row==409) draw_actor(map_npc_frames[tick/200%4],413,409);
@@ -1448,7 +1468,7 @@ void Mir3HudView::draw_terrain() {
             const auto& actor=walk_frame>=0?movement[player_facing*10+walk_frame]:
                 map_human_frames[player_facing*10+tick/500%2];
             if (actor.image.is_valid()) {
-                draw_texture(actor.image,Vector2(pixel-camera)+actor.offset);
+                paint_canvas->draw_texture(actor.image,Vector2(pixel-camera)+actor.offset);
                 animated_map_objects=true;
             }
         }
@@ -1463,17 +1483,17 @@ void Mir3HudView::_draw() {
         sprite(1490,Layout::image_position(Layout::Image::portrait));
         const auto origin=point(Layout::image_position(Layout::Image::portrait));
         if (active_portrait.is_valid()) {
-            draw_texture_rect(active_portrait,Rect2(point(Layout::image_position(Layout::Image::portrait)),Vector2(82,94)),false);
+            paint_canvas->draw_texture_rect(active_portrait,Rect2(point(Layout::image_position(Layout::Image::portrait)),Vector2(82,94)),false);
         } else if (const auto portrait=portrait_texture(portraits,portrait_frames,model.portrait_frame());portrait.is_valid()) {
-            draw_texture(portrait,origin);
+            paint_canvas->draw_texture(portrait,origin);
         }
         if (target_focus.displayed()) {
             if (target_custom_portrait.is_valid())
-                draw_texture_rect(target_custom_portrait,rect(Layout::custom_portrait_rect(true)),false);
+                paint_canvas->draw_texture_rect(target_custom_portrait,rect(Layout::custom_portrait_rect(true)),false);
             else if (target_portrait.is_valid())
-                draw_texture(target_portrait,origin);
+                paint_canvas->draw_texture(target_portrait,origin);
             const auto badge=portrait_texture(portraits,portrait_frames,target_badge);
-            if (badge.is_valid()) draw_texture(badge,point(Layout::image_position(Layout::Image::target_badge)));
+            if (badge.is_valid()) paint_canvas->draw_texture(badge,point(Layout::image_position(Layout::Image::target_badge)));
         }
     }
     // Preserve the recovered order from 0x438000 / 0x4390E0.
@@ -1488,7 +1508,7 @@ void Mir3HudView::_draw() {
         for (int side=0;side<2;++side) {
             auto crop=model.orb_crop(side,{left->get_width(),left->get_height()},{right->get_width(),right->get_height()});
             auto dest=rect(crop); dest.position+=point(Layout::image_position(side==0?Layout::Image::hp:Layout::Image::mp));
-            if (crop[3]>0) draw_texture_rect_region(side==0?left:right,dest,rect(crop));
+            if (crop[3]>0) paint_canvas->draw_texture_rect_region(side==0?left:right,dest,rect(crop));
         }
     }
     const int tooltip_kind=Layout::tooltip_at(model.pointer,model.shared_hp());
@@ -1498,7 +1518,7 @@ void Mir3HudView::_draw() {
         int hidden=model.meter_crop(meter,image->get_height());
         auto crop=Rect2(0,hidden,image->get_width(),image->get_height()-hidden);
         auto dest=crop; dest.position+=point(Layout::image_position(meter==0?Layout::Image::experience:Layout::Image::weight));
-        if (crop.size.y>0) draw_texture_rect_region(image,dest,crop);
+        if (crop.size.y>0) paint_canvas->draw_texture_rect_region(image,dest,crop);
         if (tooltip_kind==(meter==0?4:3)) tooltip(tooltip_kind);
     }
     text(std::to_string(model.level),Layout::level(model.layout.expanded),Layout::text_color(1),mir3::TextFont::level);
@@ -1515,6 +1535,12 @@ void Mir3HudView::_draw() {
         text(std::to_string(values[1])+"-"+std::to_string(values[2]),Layout::stat(side),Layout::text_color(2+side));
     }
     buttons();
+    hud_tail->queue_redraw();
+}
+
+void Mir3HudView::draw_hud_tail() {
+    using Layout=mir3::HudLayout;
+    paint_canvas=hud_tail;
     sprite(mir3::ChatScrollLayout::frame,{mir3::ChatScrollLayout::x,mir3::chat_thumb_y(chat_history.first(model.layout.expanded),int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded)});
     buttons();
     draw_target_vitals();
@@ -1545,9 +1571,36 @@ void Mir3HudView::_draw() {
     const auto& held=trade.visible && trade_return_slot>=0?trade_items[0][trade_return_slot]:bag.held;
     if (held && Rect2(0,0,800,600).has_point(inventory_cursor)) {
         const auto icon=item_frame(held.icon);
-        if (icon.is_valid()) draw_texture(icon,(inventory_cursor-icon->get_size()*0.5).floor());
+        if (icon.is_valid()) paint_canvas->draw_texture(icon,(inventory_cursor-icon->get_size()*0.5).floor());
     }
+    paint_canvas=this;
 }
+
+void Mir3HudView::set_hud_decoration(Vector4i state) {
+    if (!hud_decoration || state.x<0 || state.x>255) return;
+    const int id=mir3::HudLayout::decoration_frame(static_cast<std::uint8_t>(state.x));
+    const Ref<ShaderMaterial> dye=hud_decoration->get_material();
+    if (id!=hud_decoration_frame) {
+        hud_decoration_frame=id;
+        const auto decoded=archive.frame(id);
+        if (decoded) {
+            PackedByteArray regions;
+            regions.resize(decoded->pixels.regions.size());
+            std::copy(decoded->pixels.regions.begin(),decoded->pixels.regions.end(),regions.ptrw());
+            dye->set_shader_parameter("dye_regions",ImageTexture::create_from_image(Image::create_from_data(
+                decoded->width,decoded->height,false,Image::FORMAT_L8,regions)));
+        }
+        hud_decoration->set_texture(frame(id));
+    }
+    const auto color=mir3::Rgb565::pack(static_cast<std::uint8_t>(state.y),static_cast<std::uint8_t>(state.z),
+        static_cast<std::uint8_t>(state.w));
+    dye->set_shader_parameter("first_dye",Vector3(color>>11,(color>>5)&63,color&31));
+    const bool visible=hud_decoration->get_texture().is_valid();
+    hud_copy->set_visible(visible);
+    hud_decoration->set_visible(visible);
+    queue_redraw();
+}
+
 void Mir3HudView::post_chat(String value,int64_t foreground,int64_t background) {
     const auto utf8=value.utf8();
     chat_history.post({utf8.get_data(),static_cast<std::size_t>(utf8.length())},static_cast<unsigned>(foreground),static_cast<unsigned>(background));
@@ -1563,7 +1616,7 @@ void Mir3HudView::chat_lines() {
         if (line.background) {
             const auto measured=mir3::raster_text(line.text,800,24,false,mir3::TextFont::normal);
             const auto c=line.background;
-            draw_rect(Rect2(bounds[0],bounds[1],measured.text_width,measured.text_height),Color(float(c&255)/255,float((c>>8)&255)/255,float((c>>16)&255)/255));
+            paint_canvas->draw_rect(Rect2(bounds[0],bounds[1],measured.text_width,measured.text_height),Color(float(c&255)/255,float((c>>8)&255)/255,float((c>>16)&255)/255));
         }
         text(line.text,bounds,line.foreground,mir3::TextFont::normal,false);
         bounds[1]+=bounds[3];
@@ -1600,7 +1653,7 @@ void Mir3HudView::tooltip(int kind) {
     const Color backgrounds[]={Color(120.f/255,60.f/255,60.f/255,150.f/255),Color(60.f/255,60.f/255,120.f/255,150.f/255),Color(120.f/255,60.f/255,60.f/255,150.f/255),Color(100.f/255,100.f/255,0,150.f/255),Color(80.f/255,60.f/255,40.f/255,150.f/255)};
     legacy_rect(rect(bounds),backgrounds[kind]);text(caption,bounds,0xffffff);
     const Color borders[]={Color("a05050"),Color("5050a0"),Color("a05050"),Color("787800"),Color("644b32")};
-    draw_rect(rect(bounds),borders[kind],false);
+    paint_canvas->draw_rect(rect(bounds),borders[kind],false);
 }
 void Mir3HudView::button_hint() {
     button_hint_animating=false;
@@ -1702,8 +1755,8 @@ void Mir3HudView::button_hint() {
     const auto bounds=button_tooltip.draw(caption,{measured.text_width,measured.text_height},{int(anchor.x),int(anchor.y)});
 
     button_hint_animating=button_tooltip.expanding;
-    draw_rect(rect(bounds),Color(0,0,0));
-    if (bounds[2]>2 && bounds[3]>2) draw_rect(rect(bounds).grow(-1),Color(1,1,150.f/255));
+    paint_canvas->draw_rect(rect(bounds),Color(0,0,0));
+    if (bounds[2]>2 && bounds[3]>2) paint_canvas->draw_rect(rect(bounds).grow(-1),Color(1,1,150.f/255));
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
@@ -1738,7 +1791,7 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     vertices.push_back(a);vertices.push_back(Vector2(b.x,a.y));vertices.push_back(b);vertices.push_back(Vector2(a.x,b.y));
     for (int i=0;i<4;++i) uv.push_back(Vector2(-2,-2));
     PackedColorArray colors;colors.push_back(color);
-    draw_polygon(vertices,colors,uv);
+    paint_canvas->draw_polygon(vertices,colors,uv);
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
     if (merchant_click_captured) {
@@ -2043,7 +2096,7 @@ void Mir3HudView::draw_inventory() {
         const Rect2 target((bounds.get_center()-icon->get_size()*0.5).floor(),icon->get_size());
         const Rect2 visible=target.intersection(clip);
         if (!visible.has_area()) continue;
-        draw_texture_rect_region(icon,visible,Rect2(visible.position-target.position,visible.size));
+        paint_canvas->draw_texture_rect_region(icon,visible,Rect2(visible.position-target.position,visible.size));
         const int label_x=int(bounds.position.x)+18,label_y=int(bounds.position.y)+22;
         if (item.count>1 && clip.encloses(Rect2(label_x,label_y,20,16)))
             text(std::to_string(item.count),{label_x,label_y,20,16},0xffffff,mir3::TextFont::normal,false);
@@ -2279,12 +2332,12 @@ void Mir3HudView::draw_status() {
                     uv.push_back(point);
                 PackedColorArray colors;
                 colors.push_back(Color(1,1,1,20.f/255));
-                draw_polygon(vertices,colors,uv,highlight);
+                paint_canvas->draw_polygon(vertices,colors,uv,highlight);
             }
         }
     }
     if (status_body.is_valid())
-        draw_texture(status_body,Vector2(x+Layout::body[0],y+Layout::body[1])+status_body_offset);
+        paint_canvas->draw_texture(status_body,Vector2(x+Layout::body[0],y+Layout::body[1])+status_body_offset);
     for (int slot=0;slot<12;++slot) {
         const auto& item=equipment.slots[slot];
         if (!item) continue;
@@ -2305,7 +2358,7 @@ void Mir3HudView::draw_status() {
         }
         if (icon.is_null()) continue;
         const auto pos=mir3::EquipmentState::draw_position(slot,icon->get_width(),icon->get_height(),int(offset.x),int(offset.y));
-        draw_texture(icon,Vector2(x+pos[0],y+pos[1]));
+        paint_canvas->draw_texture(icon,Vector2(x+pos[0],y+pos[1]));
     }
     const int hovered_element=obscured?-1:Layout::element_at(local_x,local_y);
     const auto label=[&](Layout::Rect r,const std::string& value,unsigned color=0xfafafa,bool centered=true) {
@@ -2334,7 +2387,7 @@ void Mir3HudView::draw_status() {
         const Rect2 bounds(x+r[0],y+r[1],r[2],r[3]);
         legacy_rect(bounds,Color(80.f/255,60.f/255,40.f/255,150.f/255));
         label(r,caption,0xffffff);
-        draw_rect(bounds,Color("644b32"),false);
+        paint_canvas->draw_rect(bounds,Color("644b32"),false);
     };
     for (int row=0;row<3;++row) {
         label(Layout::element_labels[row],message(Layout::element_messages[row]));
@@ -2471,7 +2524,7 @@ void Mir3HudView::draw_skills() {
     if (tree.is_valid()) {
         const Rect2 crop(0,skills.scroll,tree->get_width(),mir3::SkillPanel::tree_height);
         const auto origin=mir3::SkillPanel::tree_origin;
-        draw_texture_rect_region(tree,Rect2(Vector2(x+origin[0],y+origin[1]),crop.size),crop);
+        paint_canvas->draw_texture_rect_region(tree,Rect2(Vector2(x+origin[0],y+origin[1]),crop.size),crop);
     }
     sprite(1672,{x+322,y+skills.thumb_y()});
     const auto& learned=skills.learned[skills.tab];
@@ -2486,10 +2539,10 @@ void Mir3HudView::draw_skills() {
             if (top-1>62 && top-1<352) {
                 const int left=x+pos.x-1,upper=y+top-1;
                 const Color edge("c8c800");
-                draw_rect(Rect2(left,upper,42,1),edge);
-                draw_rect(Rect2(left,upper+41,42,1),edge);
-                draw_rect(Rect2(left,upper,1,42),edge);
-                draw_rect(Rect2(left+41,upper,1,42),edge);
+                paint_canvas->draw_rect(Rect2(left,upper,42,1),edge);
+                paint_canvas->draw_rect(Rect2(left,upper+41,42,1),edge);
+                paint_canvas->draw_rect(Rect2(left,upper,1,42),edge);
+                paint_canvas->draw_rect(Rect2(left+41,upper,1,42),edge);
             }
             text(skill.name,{x+20,y+387,80,61},0xfafafa,mir3::TextFont::normal,true,true);
             const auto level=skill.level>=3?std::string("Level : Max"):"Level : "+std::to_string(skill.level);
@@ -2510,7 +2563,7 @@ void Mir3HudView::draw_skills() {
             const int height=icon->get_height()-hidden_top-hidden_bottom;
             if (height<=0) return;
             const Rect2 crop(0,hidden_top,icon->get_width(),height);
-            draw_texture_rect_region(icon,Rect2(Vector2(x+pos.x,y+top+hidden_top),crop.size),crop);
+            paint_canvas->draw_texture_rect_region(icon,Rect2(Vector2(x+pos.x,y+top+hidden_top),crop.size),crop);
         };
         if (const auto icon=skill_frames.find(id);icon!=skill_frames.end()) draw_icon(icon->second);
         if (skill.key) draw_icon(frame(1659+skill.key));
@@ -2802,10 +2855,10 @@ void Mir3HudView::draw_skill_shortcuts() {
                 if (decoded) skill_frames.emplace(frame_id,texture(decoded->pixels.rgba,decoded->width,decoded->height));
             }
             if (const auto it=skill_frames.find(frame_id);it!=skill_frames.end())
-                draw_texture(it->second,Vector2(x,2),Color(1,1,1,200.f/255));
+                paint_canvas->draw_texture(it->second,Vector2(x,2),Color(1,1,1,200.f/255));
         }
         const auto label=frame(1450+index);
-        if (label.is_valid()) draw_texture(label,Vector2(x-13,-11),Color(150.f/255,150.f/255,150.f/255,150.f/255));
+        if (label.is_valid()) paint_canvas->draw_texture(label,Vector2(x-13,-11),Color(150.f/255,150.f/255,150.f/255,150.f/255));
     }
 }
 
@@ -2821,7 +2874,7 @@ void Mir3HudView::draw_skill_key_menu() {
                 const auto decoded=magic_icons.frame(frame_id);
                 if (decoded) skill_frames.emplace(frame_id,texture(decoded->pixels.rgba,decoded->width,decoded->height));
             }
-            if (const auto it=skill_frames.find(frame_id);it!=skill_frames.end()) draw_texture(it->second,point);
+            if (const auto it=skill_frames.find(frame_id);it!=skill_frames.end()) paint_canvas->draw_texture(it->second,point);
         }
         sprite(1660+index,{int(point.x),int(point.y)});
     }
@@ -3569,7 +3622,7 @@ void Mir3HudView::draw_quest() {
     const auto skin=frame(quest.background);
     if (skin.is_valid()) {
         const Vector2 anchor(x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2);
-        draw_texture(skin,anchor,Color(1,1,1,220.f/255));
+        paint_canvas->draw_texture(skin,anchor,Color(1,1,1,220.f/255));
     }
     sprite(1225,{x+quest.scroll_x,quest.thumb_y()});
     if (!quest.entries.empty()) {
@@ -3669,7 +3722,7 @@ void Mir3HudView::draw_mount() {
     const auto skin=frame(mount.background);
     if (skin.is_valid()) {
         const Vector2 anchor(x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2);
-        draw_texture(skin,anchor,Color(1,1,1,220.f/255));
+        paint_canvas->draw_texture(skin,anchor,Color(1,1,1,220.f/255));
     }
     for (int index=0;index<int(mount.buttons.size());++index) {
         const auto [id,left,top,hint]=mount.buttons[index];
@@ -3921,7 +3974,7 @@ void Mir3HudView::draw_trade() {
             const Rect2 target(cell+padding,icon->get_size());
             const Rect2 visible=target.intersection(clip);
             if (!visible.has_area()) continue;
-            draw_texture_rect_region(icon,visible,Rect2(visible.position-target.position,visible.size),
+            paint_canvas->draw_texture_rect_region(icon,visible,Rect2(visible.position-target.position,visible.size),
                 side==0 && slot==trade_return_slot?Color(1,1,1,0.5f):Color(1,1,1));
             const int label_x=int(cell.x)+22,label_y=int(cell.y)+23;
             if (item.count>1 && clip.encloses(Rect2(label_x,label_y,16,15)))
@@ -4092,9 +4145,9 @@ void Mir3HudView::draw_minimap() {
     const auto end=bounds.get_end();
     const auto source=point(minimap.source());
     constexpr float light=150.f/255;
-    draw_texture_rect_region(minimap_image,bounds,Rect2(source,bounds.size),
+    paint_canvas->draw_texture_rect_region(minimap_image,bounds,Rect2(source,bounds.size),
         Color(light,light,light,minimap.translucent?175.f/255:1.f));
-    draw_rect(bounds,Color(100.f/255,100.f/255,100.f/255),false);
+    paint_canvas->draw_rect(bounds,Color(100.f/255,100.f/255,100.f/255),false);
     const auto origin=bounds.position-source;
     const auto player=origin+Vector2(float(mir3::Minimap::map_pixel_x(minimap.player_x)-2),
         float(std::int64_t(minimap.player_y)-2));
@@ -4104,7 +4157,7 @@ void Mir3HudView::draw_minimap() {
             if (nearby && (std::abs(marker.x-player.x)>=minimap.size()/2 ||
                 std::abs(marker.y-player.y)>=minimap.size()/2)) continue;
             const auto area=Rect2(marker-Vector2(nearby,nearby),Vector2(nearby?3:2,nearby?3:2)).intersection(bounds);
-            if (area.has_area()) draw_rect(area,color);
+            if (area.has_area()) paint_canvas->draw_rect(area,color);
         }
     };
     draw_markers(minimap.type_five_actors,Color(1,1,0),false);
@@ -4112,7 +4165,7 @@ void Mir3HudView::draw_minimap() {
     draw_markers(minimap.nearby_orange,Color(250.f/255,150.f/255,50.f/255),true);
     if (ticks_msec()%801<500) {
         const auto area=Rect2(player,Vector2(4,4)).intersection(bounds);
-        if (area.has_area()) draw_rect(area,Color(100.f/255,250.f/255,100.f/255),false);
+        if (area.has_area()) paint_canvas->draw_rect(area,Color(100.f/255,250.f/255,100.f/255),false);
     }
     sprite(1486,minimap.position);
     sprite(1487,{int(end.x)-32,int(bounds.position.y)});
@@ -4280,7 +4333,7 @@ void Mir3HudView::draw_portrait_picker() {
         const auto at=Picker::instruction(i);
         text(message(Picker::instruction_message(i)),{at[0],at[1],260,15},0xfafafa,mir3::TextFont::normal,false);
     }
-    if (portrait_preview.is_valid()) draw_texture_rect(portrait_preview,rect(Picker::preview),false);
+    if (portrait_preview.is_valid()) paint_canvas->draw_texture_rect(portrait_preview,rect(Picker::preview),false);
     sprite(Picker::scroll[0],{Picker::scroll[1],portrait_picker.thumb_y()});
     const int hovered=portrait_button_at(inventory_cursor);
     for (int i=0;i<3;++i) {

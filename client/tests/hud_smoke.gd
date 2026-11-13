@@ -797,6 +797,22 @@ func run() -> void:
 	await process_frame
 	if not check(hud.hud_snapshot().chat_compact_count == 20 and hud.hud_snapshot().chat_compact_first == 15, "chat compact following"): return
 	if not await capture("hud-chat-compact"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var decoration_area := Rect2i(0, 360, 140, 107)
+		var undecorated := root.get_texture().get_image().get_region(decoration_area)
+		hud.set_hud_decoration(Vector4i(1, 237, 87, 149))
+		if not await capture("hud-decoration-dyed"): return
+		var decorated := root.get_texture().get_image().get_region(decoration_area)
+		if not check(decorated.get_data() != undecorated.get_data(), "draw original HUD decoration"): return
+		hud.set_hud_decoration(Vector4i(1, 20, 230, 40))
+		if not await capture("hud-decoration-recolored"): return
+		if not check(root.get_texture().get_image().get_region(decoration_area).get_data() != decorated.get_data(),
+			"HUD decoration dye changes rendered pixels"): return
+		hud.set_hud_decoration(Vector4i.ZERO)
+		await process_frame
+		await RenderingServer.frame_post_draw
+		if not check(root.get_texture().get_image().get_region(decoration_area).get_data() == undecorated.get_data(),
+			"zero decoration returns to original HUD background"): return
 	hud.set_hovered_target(1, 3, 20, false, 1, 5, 10, 50)
 	if not check(hud.hud_snapshot().target_portrait == 20 and hud.hud_snapshot().target_hp_width == 41, "monster portrait and half HP"): return
 	if not await capture("hud-target-portrait"): return
