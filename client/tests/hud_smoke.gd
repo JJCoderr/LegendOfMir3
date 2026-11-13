@@ -523,6 +523,19 @@ func run() -> void:
 		click_at(Vector2(135, 420), false)
 		if not check(goods_requests.back() == [2, 9, "Potion 9"], "dragging shop scrollbar to end selects final row"): return
 		goods_requests.pop_back()
+		if not check(hud.apply_shop_goods(2, 10, stock_list), "reset shop list before alert interrupts dragging"): return
+		click_at(Vector2(265, 261), true)
+		if not check(hud.apply_shop_purchase_reply(651, 1), "open purchase alert during shop drag"): return
+		click_at(Vector2(265, 450), false)
+		key(KEY_ENTER)
+		root.push_input(shop_drag, true)
+		if not await capture("bichon-merchant-scroll-after-alert"): return
+		click_at(Vector2(80, 250), true)
+		click_at(Vector2(80, 250), false)
+		click_at(Vector2(135, 420), true)
+		click_at(Vector2(135, 420), false)
+		if not check(goods_requests.back() == [2, 0, "Potion 0"], "dismissing alert does not resume shop drag"): return
+		goods_requests.pop_back()
 		if not check(hud.apply_shop_goods(2, 10, stock_list), "reset shop list before wheel test"): return
 		for i in 6:
 			var wheel_down := InputEventMouseButton.new()
