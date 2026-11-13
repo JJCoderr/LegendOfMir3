@@ -34,6 +34,39 @@ std::string encode(const wchar_t* text, int size, UINT page) {
 }
 }
 
+std::string utf8_to_ansi(std::string_view text) {
+    if (text.size()>1024*1024) return {};
+    const int count=MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,text.data(),int(text.size()),nullptr,0);
+    std::wstring wide(count,L'\0');
+    if (count) MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,text.data(),int(text.size()),wide.data(),count);
+    return encode(wide.data(),count,CP_ACP);
+}
+
+std::string edit_multiline_ansi(std::string_view previous_ansi,std::string_view proposed_utf8) {
+    previous_ansi=previous_ansi.substr(0,previous_ansi.find(char(0)));
+    const auto proposed=utf8_to_ansi(proposed_utf8);
+    std::string next;
+    for (std::size_t i=0;i<proposed.size() && proposed[i];++i) {
+        if (proposed[i]=='\n' && (i==0 || proposed[i-1]!='\r')) next+='\r';
+        next+=proposed[i];
+    }
+    const auto boundary=[](std::string_view value,std::size_t index) {
+        std::size_t i=0;
+        while (i<index) i+=IsDBCSLeadByteEx(CP_ACP,static_cast<BYTE>(value[i])) && i+1<value.size()?2:1;
+        return i==index;
+    };
+    std::size_t prefix=0,suffix=0;
+    while (prefix<previous_ansi.size() && prefix<next.size() && previous_ansi[prefix]==next[prefix]) ++prefix;
+    while (prefix && (!boundary(previous_ansi,prefix) || !boundary(next,prefix))) --prefix;
+    while (suffix<previous_ansi.size()-prefix && suffix<next.size()-prefix && previous_ansi[previous_ansi.size()-1-suffix]==next[next.size()-1-suffix]) ++suffix;
+    while (suffix && (!boundary(previous_ansi,previous_ansi.size()-suffix) || !boundary(next,next.size()-suffix))) --suffix;
+    const auto retained=prefix+suffix;
+    const auto available=retained<4000?4000-retained:0;
+    auto inserted=std::min(next.size()-retained,available);
+    while (inserted && !boundary(next,prefix+inserted)) --inserted;
+    return next.substr(0,prefix)+next.substr(prefix,inserted)+next.substr(next.size()-suffix);
+}
+
 std::string ansi_to_utf8(std::string_view text)
 {
     const int count = MultiByteToWideChar(CP_ACP, 0, text.data(), static_cast<int>(text.size()), nullptr, 0);

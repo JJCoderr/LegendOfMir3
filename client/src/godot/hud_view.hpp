@@ -15,6 +15,7 @@
 #include <godot_cpp/classes/image_texture.hpp>
 #include <godot_cpp/classes/input_event.hpp>
 #include <map>
+#include <godot_cpp/classes/text_edit.hpp>
 
 class Mir3HudView : public godot::Node2D {
     GDCLASS(Mir3HudView,godot::Node2D)
@@ -50,6 +51,15 @@ private:
     godot::String guild_name;
     std::array<godot::PackedStringArray,3> guild_pages;
     void draw_guild();
+    void open_guild_editor(bool announcement);
+    void draw_guild_editor();
+    bool guild_editor_input(const godot::Ref<godot::InputEvent>& event);
+    void guild_editor_changed();
+    mir3::DraggablePanel guild_editor{{107,110,584,252}};
+    godot::TextEdit* guild_edit=nullptr;
+    bool guild_edit_announcement=true;
+    int guild_edit_pressed=-1;
+    std::string guild_edit_ansi;
     bool guild_pointer(int kind,godot::Vector2 point);
     mir3::DraggablePanel group{{272,123,258,244}};
     bool group_on_top=false,group_allow=false;

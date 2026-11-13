@@ -1,3 +1,4 @@
+#include <godot_cpp/classes/font.hpp>
 #include "hud_view.hpp"
 #include <godot_cpp/classes/config_file.hpp>
 #include <godot_cpp/classes/image.hpp>
@@ -7,6 +8,7 @@
 #include <godot_cpp/classes/shader.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <chrono>
+#include <godot_cpp/classes/style_box_empty.hpp>
 #include "status/status_layout.hpp"
 #include <godot_cpp/classes/input_event_key.hpp>
 #include <cstdio>
@@ -32,6 +34,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines"),&Mir3HudView::set_guild_overview);
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
     ADD_SIGNAL(MethodInfo("guild_members_requested"));
+    ADD_SIGNAL(MethodInfo("guild_edit_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"body")));
     ADD_SIGNAL(MethodInfo("guild_member_removal_requested",PropertyInfo(Variant::STRING,"name")));
     ClassDB::bind_method(D_METHOD("set_guild_manager","allowed"),&Mir3HudView::set_guild_manager);
     ClassDB::bind_method(D_METHOD("set_guild_members","lines"),&Mir3HudView::set_guild_members);
@@ -223,6 +226,7 @@ void Mir3HudView::_draw() {
     draw_skill_key_menu();
     draw_skill_description();
     if (guild.visible) draw_guild();
+    if (guild_editor.visible) draw_guild_editor();
     if (group_request) draw_group_dialog();
     button_hint();
     if (bag.held) {
@@ -311,6 +315,7 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
     if (group_request && group_dialog_input(event)) return;
+    if (guild_editor.visible && guild_editor_input(event)) return;
     Ref<InputEventMouseMotion> motion=event;
     if (motion.is_valid()) { auto p=motion->get_position();inventory_cursor=p;if (panel_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
     Ref<InputEventMouseButton> button=event;
@@ -1058,7 +1063,7 @@ void Mir3HudView::open_group_dialog(int action) {
     group_request=action>=1000?action:1019+action;
     group_selected=0;
     group_dialog_pressed=-1;
-    if (group_request==4000) { chat_input->release_focus();return; }
+    if (group_request==4000 || group_request==4017) { chat_input->release_focus();return; }
     chat_input->set_position(Vector2(group_dialog[0]+24,group_dialog[1]+228));
     chat_input->set_size(Vector2(309,15));
     chat_input->focus_chat("",true);
@@ -1073,7 +1078,7 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
     chat_input->release_focus();
     chat_input->layout(model.layout.expanded);
     queue_redraw();
-    if (!confirm || name.is_empty() || request==4000) return;
+    if (!confirm || name.is_empty() || request==4000 || request==4017) return;
     if (request==1039) {
         emit_signal("guild_member_removal_requested",name);
         emit_signal("guild_members_requested");
@@ -1088,8 +1093,8 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
 void Mir3HudView::draw_group_dialog() {
     const int x=group_dialog[0],y=group_dialog[1];
     sprite(1240,{x,y});
-    if (group_request==4000) {
-        text(message(4000),{x+23,y+84,308,95},0xc8faff,mir3::TextFont::dialog);
+    if (group_request==4000 || group_request==4017) {
+        text(message(group_request),{x+23,y+84,308,95},0xc8faff,mir3::TextFont::dialog);
         sprite(1243+(group_dialog_pressed==0),{x+137,y+188});
         return;
     }
@@ -1104,7 +1109,7 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
     Ref<InputEventKey> key=event;
     if (key.is_valid()) {
         const auto code=key->get_keycode();
-        if (group_request==4000) {
+        if (group_request==4000 || group_request==4017) {
             if (key->is_pressed() && !key->is_echo() && (code==KEY_ENTER || code==KEY_KP_ENTER || code==KEY_SPACE))
                 finish_group_dialog(false);
             get_viewport()->set_input_as_handled();
@@ -1120,13 +1125,13 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
     }
     Ref<InputEventMouseButton> mouse=event;
     if (mouse.is_valid()) {
-        if (group_request!=4000 && chat_input->get_rect().has_point(mouse->get_position())) return false;
+        if (group_request!=4000 && group_request!=4017 && chat_input->get_rect().has_point(mouse->get_position())) return false;
         if (mouse->get_button_index()==MOUSE_BUTTON_LEFT) {
             int hit=-1;
             for (const int index:{0,2}) {
-                if (group_request==4000 && index==2) continue;
-                const auto icon=frame(group_request==4000?1243:index==0?1241:1245);
-                const Vector2 pos(group_dialog[0]+(group_request==4000?137:index==0?41:234),group_dialog[1]+188);
+                if ((group_request==4000 || group_request==4017) && index==2) continue;
+                const auto icon=frame((group_request==4000 || group_request==4017)?1243:index==0?1241:1245);
+                const Vector2 pos(group_dialog[0]+((group_request==4000 || group_request==4017)?137:index==0?41:234),group_dialog[1]+188);
                 if (icon.is_valid() && Rect2(pos,icon->get_size()).has_point(mouse->get_position())) hit=index;
             }
             if (mouse->is_pressed()) group_dialog_pressed=hit;
@@ -1214,6 +1219,7 @@ bool Mir3HudView::guild_pointer(int kind,Vector2 point) {
                 if (hit==1) emit_signal("guild_overview_requested");
                 if (hit==2) emit_signal("guild_members_requested");
                 if (mir3::GuildLayout::denial(hit,guild_manager)==4000) open_group_dialog(4000);
+                else if (hit==4 || hit==7) open_guild_editor(hit==4);
                 else if (hit==5) open_group_dialog(1039);
                 else if (hit==8) open_group_dialog(1045);
             }
@@ -1239,3 +1245,117 @@ void Mir3HudView::set_guild_notices(PackedStringArray lines) {
 }
 
 void Mir3HudView::set_guild_manager(bool allowed) { guild_manager=allowed; }
+
+void Mir3HudView::open_guild_editor(bool announcement) {
+    if (!announcement && guild_pages[1].is_empty()) {
+        open_group_dialog(4017);
+        return;
+    }
+    if (frame(1326).is_null()) return;
+    if (!guild_edit) {
+        guild_edit=memnew(TextEdit);
+        guild_edit->set_z_index(500);guild_edit->set_name("GuildEdit");
+        guild_edit->set_line_wrapping_mode(TextEdit::LINE_WRAPPING_BOUNDARY);
+        guild_edit->add_theme_font_override("font",chat_input->get_theme_font("font"));
+        guild_edit->add_theme_font_size_override("font_size",12);
+        for (const auto* style:{"normal","focus","read_only"}) {
+            Ref<StyleBoxEmpty> empty;
+            empty.instantiate();
+            guild_edit->add_theme_stylebox_override(style,empty);
+        }
+        add_child(guild_edit);
+        guild_edit->connect("text_changed",callable_mp(this,&Mir3HudView::guild_editor_changed));
+    }
+    guild_edit_announcement=announcement;
+    const String initial=String("\n").join(guild_pages[announcement?0:1]);
+    guild_edit_ansi=mir3::edit_multiline_ansi("",initial.utf8().get_data());
+    guild_edit->set_text(String::utf8(mir3::ansi_to_utf8(guild_edit_ansi).c_str()).replace("\r\n","\n"));
+    guild_editor.visible=true;
+    guild_edit_pressed=-1;
+    guild_edit->set_position(Vector2(guild_editor.rect[0]+46,guild_editor.rect[1]+54));
+    guild_edit->set_size(Vector2(468,170));
+    guild_edit->show();
+    guild_edit->grab_focus();
+    queue_redraw();
+}
+
+void Mir3HudView::guild_editor_changed() {
+    guild_edit_ansi=mir3::edit_multiline_ansi(guild_edit_ansi,guild_edit->get_text().utf8().get_data());
+    const auto accepted=String::utf8(mir3::ansi_to_utf8(guild_edit_ansi).c_str()).replace("\r\n","\n");
+    if (accepted!=guild_edit->get_text()) guild_edit->set_text(accepted);
+}
+
+void Mir3HudView::draw_guild_editor() {
+    const auto [x,y,w,h]=guild_editor.rect;
+    const auto skin=frame(1326);
+    if (skin.is_valid()) sprite(1326,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
+    const auto label=[&](int id,int left,int top,unsigned color) {
+        text(message(id),{x+left,y+top,420,16},color,mir3::TextFont::normal,false);
+    };
+    label(guild_edit_announcement?1903:1900,70,20,0x96c8ff);
+    if (guild_edit_announcement) {
+        label(1904,154,21,0x323232);
+        label(1904,154,22,0x96c8ff);
+    } else {
+        label(1901,154,14,0x96c8ff);
+        label(1902,154,28,0x96c8ff);
+    }
+    sprite(1221+(guild_edit_pressed==0),{x+546,y+212});
+    sprite(1327+(guild_edit_pressed==1),{x+461,y+12});
+}
+
+bool Mir3HudView::guild_editor_input(const Ref<InputEvent>& event) {
+    Ref<InputEventMouseMotion> motion=event;
+    if (motion.is_valid()) {
+        const auto pos=motion->get_position();
+        if (guild_editor.move_drag(int(pos.x),int(pos.y))) {
+            guild_edit->set_position(Vector2(guild_editor.rect[0]+46,guild_editor.rect[1]+54));
+            queue_redraw();
+        }
+        return false;
+    }
+    Ref<InputEventMouseButton> mouse=event;
+    if (mouse.is_null()) return false;
+    const auto pos=mouse->get_position();
+    if (guild_edit->get_rect().has_point(pos) && !guild_editor.dragging && guild_edit_pressed<0) return false;
+    const auto [x,y,w,h]=guild_editor.rect;
+    int hit=-1;
+    for (const int i:{0,1}) {
+        const auto icon=frame(i==0?1221:1327);
+        const Vector2 origin(x+(i==0?546:461),y+(i==0?212:12));
+        if (icon.is_valid() && Rect2(origin,icon->get_size()).has_point(pos)) hit=i;
+    }
+    if (mouse->get_button_index()==MOUSE_BUTTON_LEFT) {
+        if (mouse->is_pressed()) {
+            guild_edit_pressed=hit;
+            guild_editor.begin_drag(int(pos.x),int(pos.y),hit>=0);
+        } else {
+            guild_editor.end_drag();
+            if (hit>=0 && hit==guild_edit_pressed) {
+                if (hit==1) guild_editor_changed();
+                guild_editor.visible=false;
+                guild_edit->hide();
+                guild_edit->release_focus();
+                if (hit==1) {
+                    std::string body;
+                    std::string_view input(guild_edit_ansi);
+                    input=input.substr(0,3999);
+                    while (!input.empty()) {
+                        const auto end=input.find('\n');
+                        const auto line=input.substr(0,end);
+                        if (end!=input.npos && !line.empty() && line.front()=='\r') body+=" \r";
+                        else body+=line;
+                        if (end==input.npos) break;
+                        input.remove_prefix(end+1);
+                    }
+                    if (!body.empty() && body.size()<=3999)
+                        emit_signal("guild_edit_requested",guild_edit_announcement?1040:1041,String::utf8(mir3::ansi_to_utf8(body).c_str()));
+                }
+            }
+            guild_edit_pressed=-1;
+        }
+        queue_redraw();
+    }
+    get_viewport()->set_input_as_handled();
+    return true;
+}

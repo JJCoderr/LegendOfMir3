@@ -294,6 +294,24 @@ func run() -> void:
 	if not await capture("guild-remove"): return
 	key(KEY_ENTER)
 	if not check(removals == ["银杏剑客"], "guild removal request"): return
+	var guild_edits: Array = []
+	hud.guild_edit_requested.connect(func(id: int, body: String): guild_edits.append([id, body]))
+	click_at(Vector2(400, 415), true)
+	click_at(Vector2(400, 415), false)
+	var editor: TextEdit = hud.get_node("GuildEdit")
+	if not check(editor.visible and editor.has_focus() and editor.size == Vector2(468, 170), "guild announcement editor layout"): return
+	editor.text = "行会公告\n\n今晚集合"
+	if not await capture("guild-announcement-editor"): return
+	click_at(Vector2(575, 130), true)
+	click_at(Vector2(575, 130), false)
+	if not check(not editor.visible and guild_edits == [[1040, "行会公告\r \r今晚集合"]], "guild announcement submit"): return
+	click_at(Vector2(550, 415), true)
+	click_at(Vector2(550, 415), false)
+	if not check(editor.visible, "guild member editor opens"): return
+	if not await capture("guild-member-editor"): return
+	click_at(Vector2(660, 328), true)
+	click_at(Vector2(660, 328), false)
+	if not check(not editor.visible and guild_edits.size() == 1, "guild editor cancel"): return
 	key(KEY_ESCAPE)
 	if not check(not hud.hud_snapshot().guild_visible, "guild escape closes"): return
 	var input: LineEdit = hud.get_node("ChatInput")
