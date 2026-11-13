@@ -357,6 +357,7 @@ private:
     std::uint32_t hovered_target=0;
     int target_frame=-1, target_badge=-1;
     bool target_is_human=false;
+    bool target_special_shape=false;
     godot::String target_portrait_query_name;
     godot::Ref<godot::ImageTexture> target_custom_portrait;
     godot::Ref<godot::ImageTexture> target_portrait;

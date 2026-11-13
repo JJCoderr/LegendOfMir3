@@ -5,6 +5,7 @@
 namespace mir3 {
 // 0x438000 actor fields: +69 type, +71/+72 shape, +400432 exclusion.
 struct TargetPortrait {
+    static bool special_shape(std::uint16_t shape) { return shape>=530 && shape<=533; }
     // 0x43F300: actor+68 profession, actor+69 human type (0 or 1).
     static int human_frame(std::uint8_t profession,std::uint8_t type) {
         if (type>1) return -1;
@@ -12,14 +13,14 @@ struct TargetPortrait {
     }
     static int monster_frame(std::uint8_t type, std::uint16_t shape, bool excluded) {
         if (type != 3 || excluded || shape == 127 || shape == 153) return -1;
-        return shape >= 2000 || (shape >= 530 && shape <= 533) ? shape : shape & 255;
+        return shape >= 2000 || special_shape(shape) ? shape : shape & 255;
     }
     static int fallback_frame(int frame, bool available) {
         return frame < 0 ? -1 : (available ? frame : 1999);
     }
     // 0x438310: +400660 == 1 selects 635; special 530..533 omit badge.
     static int badge(std::uint16_t shape, int state) {
-        return shape >= 530 && shape <= 533 ? -1 : (state == 1 ? 635 : 634);
+        return special_shape(shape) ? -1 : (state == 1 ? 635 : 634);
     }
 };
 // actor+0x61C38 points to stats: percent +9, maximum u16 +10, current u16 +12.

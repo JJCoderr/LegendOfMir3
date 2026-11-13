@@ -851,6 +851,16 @@ func run() -> void:
 	hud.set_hovered_target(1, 3, 20, false, 1, 5, 10, 50)
 	if not check(hud.hud_snapshot().target_portrait == 20 and hud.hud_snapshot().target_hp_width == 41, "monster portrait and half HP"): return
 	if not await capture("hud-target-portrait"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var ordinary_frame := root.get_texture().get_image()
+		if not check(ordinary_frame.get_pixel(615, 490) == Color8(120, 120, 120),
+			"ordinary monster draws the original information frame"): return
+		hud.set_hovered_target(2, 3, 530, false, 1, 5, 10, 50)
+		if not await capture("hud-target-special-monster"): return
+		var special_frame := root.get_texture().get_image()
+		if not check(special_frame.get_pixel(615, 490) != Color8(120, 120, 120)
+			and hud.hud_snapshot().target_hp_width == 41, "special monster keeps HP without the information frame"): return
+		hud.set_hovered_target(1, 3, 20, false, 1, 5, 10, 50)
 	hud.set_hovered_target(0, 0, 0, false, 0, 0, 0, 0)
 	if not check(hud.hud_snapshot().target_portrait == 20, "portrait persists after pointer leaves"): return
 	var portrait_deadline := Time.get_ticks_msec() + 1200

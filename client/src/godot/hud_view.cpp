@@ -432,6 +432,7 @@ void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool
         if (target_portrait.is_null()) target_portrait=portrait_texture(monster_portraits,monster_portrait_frames,target_frame);
         // 0x43823D..0x438269 skips both the monster image and its badge.
         target_badge=target_frame<0?-1:mir3::TargetPortrait::badge(static_cast<std::uint16_t>(shape),state);
+        target_special_shape=mir3::TargetPortrait::special_shape(static_cast<std::uint16_t>(shape));
         target_vitals={static_cast<std::uint8_t>(percent),static_cast<std::uint16_t>(max_hp),static_cast<std::uint16_t>(hp)};
     }
     queue_redraw();
@@ -1579,6 +1580,13 @@ void Mir3HudView::draw_hud_tail() {
     draw_npc_dialogue();
     draw_shop();
     if (guild_editor.visible) draw_guild_editor();
+    // 0x438CBD..0x438D9F draws the monster information backing even when its fields are absent.
+    if (!model.layout.expanded && target_focus.displayed() && !target_is_human &&
+        !target_special_shape && target_frame>=0) {
+        const Rect2 information(615,487,105,85);
+        legacy_rect(information,Color(50.f/255,50.f/255,50.f/255,230.f/255));
+        paint_canvas->draw_rect(information.grow(-0.5),Color(120.f/255,120.f/255,120.f/255),false);
+    }
     if (group_request) draw_group_dialog();
     button_hint();
     const auto& held=trade.visible && trade_return_slot>=0?trade_items[0][trade_return_slot]:bag.held;
