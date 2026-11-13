@@ -579,7 +579,20 @@ func run() -> void:
 			click_at(position, false)
 			if not check(hud.hud_snapshot().group_request == 0 and purchases.size() == before_bulk_double + 1 and npc_packets.back().substr(2, 16) == "<\\<<<KT?=L<<<<@<", "bulk preview double-click buys one without a prompt"): return
 		if not await capture("bichon-merchant-bulk-double-click"): return
+		var before_bulk_cancel := purchases.size()
+		click_at(Vector2(380, 296), true)
+		click_at(Vector2(380, 296), false)
+		npc_input.text = "4"
+		click_at(Vector2(490, 316), true)
+		click_at(Vector2(490, 316), false)
+		if not check(hud.hud_snapshot().group_request == 0 and npc_input.text.is_empty() and purchases.size() == before_bulk_cancel, "cancel bulk quantity without purchase"): return
+		click_at(Vector2(380, 296), true)
+		click_at(Vector2(380, 296), false)
+		if not check(hud.hud_snapshot().group_request == 110, "reopen bulk quantity before server closes shop"): return
+		npc_input.text = "5"
 		if not check(hud.apply_npc_message("aL<<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
+		if not check(hud.hud_snapshot().group_request == 0 and npc_input.text.is_empty() and not npc_input.has_focus() and purchases.size() == before_bulk_cancel, "server close clears pending bulk quantity"): return
+		if not await capture("bichon-merchant-bulk-server-closed"): return
 		if not check(not hud.apply_shop_goods(2, 10, stock_list), "late goods reply cannot reopen closed merchant"): return
 		if not check(hud.apply_npc_dialogue(643, 2, script) and hud.walk_to_map_cell(Vector2i(419, 410)), "walk away from reopened NPC dialogue"): return
 		var leave_deadline := Time.get_ticks_msec() + 6000

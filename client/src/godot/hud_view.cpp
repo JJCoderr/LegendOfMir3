@@ -692,6 +692,7 @@ void Mir3HudView::emit_npc_packet(int identifier,int actor,const String& body,st
 }
 
 void Mir3HudView::close_shop() {
+    if (group_request==110) finish_group_dialog(false);
     shop_bulk_index=-1;
     shop_scroll_dragging=false;
     shop_actor=0;
@@ -754,6 +755,7 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body,bool wire_for
         goods.push_back(std::move(good));
     }
     if (wire_format && !remaining.empty()) return false;
+    if (group_request==110) finish_group_dialog(false);
     shop_goods=std::move(goods);
     shop_bulk_index=-1;
     shop_scroll_dragging=false;
@@ -782,6 +784,7 @@ bool Mir3HudView::apply_shop_offers(int actor,int index,PackedStringArray names,
             identifiers[i]<=0 || identifiers[i]>UINT32_MAX) return false;
         offers.push_back({names[i].utf8().get_data(),icons[i],prices[i],static_cast<std::uint32_t>(identifiers[i])});
     }
+    if (group_request==110) finish_group_dialog(false);
     shop_offers=std::move(offers);
     shop_bulk_index=-1;
     shop_offer_index=shop_offers.empty()?-1:0;
@@ -2771,7 +2774,7 @@ bool Mir3HudView::dialog_has_input() const {
 void Mir3HudView::open_group_dialog(int action) {
     const auto skin=frame(1240);
     if (skin.is_null() || !chat_input) return;
-    if (group_request==1011 && action!=1011) finish_group_dialog(false);
+    if ((group_request==1011 || group_request==110) && action!=group_request) finish_group_dialog(false);
     const int w=skin->get_width(),h=skin->get_height();
     group_dialog={400-w/2,246-h/2,w,h};
     group_request=action<=3?1019+action:action;
