@@ -274,6 +274,11 @@ func run() -> void:
 	key(KEY_F12)
 	if not check(skill_requests == [Vector2i(1, 0), Vector2i(5, 49), Vector2i(5, 67)], "magic shortcut conflict and F12 encoding"): return
 	if not await capture("magic-key-binding"): return
+	key(KEY_B)
+	if not check(hud.hud_snapshot().skill_shortcuts_visible, "B opens magic shortcuts"): return
+	if not await capture("hud-magic-shortcuts"): return
+	key(KEY_B)
+	if not check(not hud.hud_snapshot().skill_shortcuts_visible, "B closes magic shortcuts"): return
 	if not await capture("magic-description"): return
 	click_at(Vector2(385, 152), true)
 	click_at(Vector2(385, 152), false)

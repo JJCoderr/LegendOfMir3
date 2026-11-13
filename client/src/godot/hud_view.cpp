@@ -117,6 +117,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["group_request"]=group_request;
     result["group_visible"]=group.visible;
     result["group_allow"]=group_allow;
+    result["skill_shortcuts_visible"]=skill_shortcuts_visible;
     result["skills_visible"]=skills.visible;
     result["skill_tab"]=skills.tab;
     result["skill_scroll"]=skills.scroll;
@@ -300,6 +301,7 @@ void Mir3HudView::_draw() {
         }
     }
     draw_minimap();
+    draw_skill_shortcuts();
     draw_skill_key_menu();
     draw_skill_description();
     if (guild_editor.visible) draw_guild_editor();
@@ -545,6 +547,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             chat_requested(String::utf8(message(id).c_str()));
         }
         if (action==1) toggle_minimap(100);
+        if (action==2) skill_shortcuts_visible=!skill_shortcuts_visible;
         if (action==3 || action==4) open_group_dialog(action==3?109:101);
         if (action==6) emit_signal("guild_overview_requested");
         if (action==5) toggle_group();
@@ -687,6 +690,12 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
     }
     if (key->is_alt_pressed() && (code==KEY_Q || code==KEY_X)) {
         open_group_dialog(code==KEY_Q?109:101);
+        get_viewport()->set_input_as_handled();
+        return;
+    }
+    if (code==KEY_B) {
+        skill_shortcuts_visible=!skill_shortcuts_visible;
+        queue_redraw();
         get_viewport()->set_input_as_handled();
         return;
     }
@@ -1195,6 +1204,28 @@ bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
         return true;
     }
     return false;
+}
+
+void Mir3HudView::draw_skill_shortcuts() {
+    if (!skill_shortcuts_visible) return;
+    std::array<int,12> bound{};
+    for (const auto& group:skills.learned) for (const auto& skill:group)
+        if (skill.key>=1 && skill.key<=12 && skill.id) bound[skill.key-1]=skill.id&255;
+    for (int index=0;index<int(bound.size());++index) {
+        // 0x43A5D0: slot origins advance 40 px, plus a gap after F4 and F8.
+        const int x=40*(index+index/4);
+        if (bound[index]) {
+            const int frame_id=999+bound[index];
+            if (!skill_frames.contains(frame_id)) {
+                const auto decoded=magic_icons.frame(frame_id);
+                if (decoded) skill_frames.emplace(frame_id,texture(decoded->pixels.rgba,decoded->width,decoded->height));
+            }
+            if (const auto it=skill_frames.find(frame_id);it!=skill_frames.end())
+                draw_texture(it->second,Vector2(x,2),Color(1,1,1,200.f/255));
+        }
+        const auto label=frame(1450+index);
+        if (label.is_valid()) draw_texture(label,Vector2(x-13,-11),Color(150.f/255,150.f/255,150.f/255,150.f/255));
+    }
 }
 
 void Mir3HudView::draw_skill_key_menu() {

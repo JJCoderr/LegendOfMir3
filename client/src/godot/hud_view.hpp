@@ -62,6 +62,8 @@ protected:
 private:
     mir3::HudModel model;
     mir3::Minimap minimap;
+    bool skill_shortcuts_visible=false;
+    void draw_skill_shortcuts();
     mir3::MountPanel mount;
     mir3::QuestPanel quest;
     void toggle_quest();
