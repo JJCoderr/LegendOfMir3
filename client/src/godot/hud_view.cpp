@@ -710,7 +710,7 @@ void Mir3HudView::close_shop() {
     shop_offers.clear();
     shop_show_offers=false;
     shop_pressed=-1;
-    shop_first=shop_category_first=0;
+    shop_category_first=0;
     queue_redraw();
 }
 
@@ -773,7 +773,6 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body,bool wire_for
     shop_selected=-1;
     shop_offers.clear();
     shop_offer_page=0;
-    shop_first=0;
     shop_category_first=0;
     shop_show_offers=false;
     shop_pressed=-1;
@@ -798,12 +797,8 @@ bool Mir3HudView::apply_shop_offers(int actor,int index,PackedStringArray names,
     shop_bulk_index=-1;
     shop_offer_index=shop_offers.empty()?-1:0;
     shop_offer_loading=false;
-    if (!shop_show_offers) {
-        shop_offer_page=0;
-        shop_category_first=shop_first;
-    }
+    if (!shop_show_offers) shop_offer_page=0;
     shop_show_offers=true;
-    shop_first=0;
     shop_pressed=-1;
     queue_redraw();
     return true;
@@ -815,7 +810,6 @@ void Mir3HudView::draw_shop() {
     const auto skin=frame(shop_bulk_index>=0?1262:shop_show_offers?1261:1260);
     if (skin.is_valid())
         draw_texture(skin,Vector2((shop_width()-skin->get_width())/2,shop_top+(224-skin->get_height())/2));
-    const int goods_first=shop_show_offers?shop_category_first:shop_first;
     const int last=std::max(0,int(shop_goods.size())-1);
     // 0x47776B draws frame 1225 at (260,32), with 85 pixels of travel.
     if (last>0) sprite(1225,{260,shop_top+32+int(std::lround(85.0*shop_scroll_fraction))});
@@ -855,12 +849,12 @@ void Mir3HudView::draw_shop() {
         if (shop_pressed==-2) sprite(1266,{358,shop_top+163});
         if (shop_pressed==-3) sprite(1269,{316,shop_top+163});
         if (shop_pressed==-4) sprite(1271,{406,shop_top+163});
-        for (int row=0;row<std::min(12,int(shop_offers.size())-shop_first);++row) {
-            const auto& offer=shop_offers[shop_first+row];
+        for (int row=0;row<std::min(12,int(shop_offers.size()));++row) {
+            const auto& offer=shop_offers[row];
             const auto cell=rect(shop_offer_cell(row));
             const auto icon=item_frame(offer.icon);
             if (icon.is_valid()) {
-                if (shop_first+row==shop_offer_index) {
+                if (row==shop_offer_index) {
                     legacy_rect(cell,Color(50.f/255,150.f/255,150.f/255,1.f/255));
                     draw_rect(cell,Color(180.f/255,180.f/255,180.f/255),false);
                 }
@@ -873,8 +867,8 @@ void Mir3HudView::draw_shop() {
             }
         }
     }
-    for (int i=0;i<std::min(shop_goods_rows,int(shop_goods.size())-goods_first);++i) {
-        const int index=goods_first+i;
+    for (int i=0;i<std::min(shop_goods_rows,int(shop_goods.size())-shop_category_first);++i) {
+        const int index=shop_category_first+i;
         const auto& good=shop_goods[index];
         const int y=shop_top+shop_goods_row_top+shop_goods_pitch*i;
         const Rect2 icon_cell(20,y,36,36), description_cell(62,y,189,36);
@@ -946,7 +940,6 @@ void Mir3HudView::open_shop_category() {
     if (shop_highlighted<0) return;
     if (shop_goods[shop_highlighted].variants==2) {
         shop_bulk_index=shop_highlighted;
-        if (shop_show_offers) shop_first=shop_category_first;
         shop_show_offers=false;
         shop_selected=-1;
         shop_offers.clear();
@@ -1046,7 +1039,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
     bool offer_cell=false;
     if (details) {
         for (int i=0;i<12;++i) {
-            if (rect(shop_offer_cell(i)).has_point(pointer)) { row=shop_first+i; offer_cell=true; break; }
+            if (rect(shop_offer_cell(i)).has_point(pointer)) { row=i; offer_cell=true; break; }
         }
     }
     if (!offer_cell) {
@@ -1054,7 +1047,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
         for (int i=0;i<shop_goods_rows;++i) {
             const int y=shop_top+shop_goods_row_top+shop_goods_pitch*i;
             if (Rect2(20,y,36,36).has_point(pointer) || Rect2(62,y,189,36).has_point(pointer)) {
-                row=(details?shop_category_first:shop_first)+i;
+                row=shop_category_first+i;
                 break;
             }
         }
@@ -1094,7 +1087,6 @@ bool Mir3HudView::shop_scroll_input(int kind,Vector2 pointer) {
     if (thumb.is_null()) return false;
     constexpr int x=260, top=shop_top+32, travel=85;
     const int last=int(shop_goods.size())-1;
-    auto& first=shop_show_offers?shop_category_first:shop_first;
     const int y=top+int(std::lround(travel*shop_scroll_fraction));
     if (kind==0 && Rect2(x,top,thumb->get_width(),travel+thumb->get_height()).has_point(pointer)) {
         shop_scroll_dragging=Rect2(x,y,thumb->get_width(),thumb->get_height()).has_point(pointer);
@@ -1102,11 +1094,11 @@ bool Mir3HudView::shop_scroll_input(int kind,Vector2 pointer) {
             // 0x420200 changes the normalized position by 5 / item count.
             const int direction=pointer.y<y+thumb->get_height()/2?-1:1;
             shop_scroll_fraction=std::clamp(shop_scroll_fraction+direction*5.0/shop_goods.size(),0.0,1.0);
-            first=int(std::lround(last*shop_scroll_fraction));
+            shop_category_first=int(std::lround(last*shop_scroll_fraction));
         }
     } else if (kind==1 && shop_scroll_dragging) {
         shop_scroll_fraction=std::clamp((pointer.y-top)/double(travel+thumb->get_height()),0.0,1.0);
-        first=int(std::lround(last*shop_scroll_fraction));
+        shop_category_first=int(std::lround(last*shop_scroll_fraction));
     } else if (kind==2 && shop_scroll_dragging) shop_scroll_dragging=false;
     else return false;
     shop_pressed=-1;
@@ -1125,7 +1117,6 @@ void Mir3HudView::close_shop_offers() {
     shop_selected=shop_pressed=shop_offer_index=-1;
     shop_offers.clear();
     shop_offer_page=0;
-    shop_first=shop_category_first;
     queue_redraw();
 }
 
@@ -1731,10 +1722,9 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         Rect2(0,shop_top,shop_width(),224).has_point(button->get_position())) {
         // 0x43D310 / 0x43D490 dispatch by the window under the pointer, including its frame.
         const int direction=button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN?1:-1;
-        auto& first=shop_show_offers?shop_category_first:shop_first;
         const int last=std::max(0,int(shop_goods.size())-1);
-        first=std::clamp(first+direction,0,last);
-        shop_scroll_fraction=last?double(first)/last:0;
+        shop_category_first=std::clamp(shop_category_first+direction,0,last);
+        shop_scroll_fraction=last?double(shop_category_first)/last:0;
         shop_pressed=-1;
         get_viewport()->set_input_as_handled();
         queue_redraw();

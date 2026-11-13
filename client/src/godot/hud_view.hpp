@@ -294,7 +294,7 @@ private:
     bool apply_shop_goods(int actor,int count,godot::String body,bool wire_format=false);
     struct ShopGood { std::string name; int variants, price, stock, icon=-1, requirement_type=0, requirement=0; };
     std::vector<ShopGood> shop_goods;
-    int shop_actor=0, shop_pressed=-1, shop_first=0, shop_category_first=0;
+    int shop_actor=0, shop_pressed=-1, shop_category_first=0;
     int shop_offer_index=-1;
     int shop_offer_page=0;
     bool shop_offer_loading=false;
