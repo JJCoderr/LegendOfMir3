@@ -185,6 +185,8 @@ func run() -> void:
 		hud = merchant_hud
 		root.add_child(hud)
 		var merchant_requests: Array[int] = []
+		var npc_protocol: Array = []
+		hud.npc_request.connect(func(opcode: int, actor: int, body: String): npc_protocol.append([opcode, actor, body]))
 		hud.npc_dialogue_requested.connect(func(actor: int): merchant_requests.append(actor))
 		for i in 2:
 			var talk := InputEventMouseButton.new()
@@ -211,6 +213,7 @@ func run() -> void:
 		option.pressed = false
 		root.push_input(option, true)
 		if not check(dialogue_actions == [[2, "@buy"]], "merchant dialogue option emits command"): return
+		if not check(npc_protocol == [[1010, 2, ""], [1011, 2, "@buy"]], "NPC click and choice use reference protocol fields"): return
 		if not check(hud.apply_npc_dialogue(643, 2, "Merchant/AA <Buy/@buy> <Exit/@exit>"), "inline NPC options"): return
 		if not await capture("bichon-merchant-inline"): return
 		click_at(Vector2(32, 32), true)

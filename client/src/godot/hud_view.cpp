@@ -66,6 +66,8 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_mount_reply","identifier","recognition"),&Mir3HudView::apply_mount_reply);
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
     ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
+    ADD_SIGNAL(MethodInfo("npc_request",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"actor"),
+        PropertyInfo(Variant::STRING,"body")));
     ADD_SIGNAL(MethodInfo("npc_dialogue_requested",PropertyInfo(Variant::INT,"actor")));
     ClassDB::bind_method(D_METHOD("apply_shop_purchase_reply","identifier","value"),&Mir3HudView::apply_shop_purchase_reply);
     ClassDB::bind_method(D_METHOD("apply_shop_goods","actor","count","body"),&Mir3HudView::apply_shop_goods);
@@ -673,7 +675,9 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
     npc_dialogue_pressed=kind==0 && action?row:-1;
     if (kind==2 && action && pressed==row) {
         const auto command=String::utf8(npc_dialogue_rows[row].command.c_str());
-        emit_signal("npc_dialogue_action",npc_dialogue_actor,command);
+        const int actor=npc_dialogue_actor;
+        emit_signal("npc_dialogue_action",actor,command);
+        emit_signal("npc_request",1011,actor,command);
     }
     if (!inside && pressed<0) return false;
     get_viewport()->set_input_as_handled();
@@ -693,7 +697,10 @@ bool Mir3HudView::merchant_pointer(Vector2 pointer) {
     if (!last_merchant_request || now-last_merchant_request>1500) {
         last_merchant_request=now;
         const auto delta=player_cell-merchant;
-        if (std::max(std::abs(delta.x),std::abs(delta.y))<=2) emit_signal("npc_dialogue_requested",2);
+        if (std::max(std::abs(delta.x),std::abs(delta.y))<=2) {
+            emit_signal("npc_dialogue_requested",2);
+            emit_signal("npc_request",1010,2,String());
+        }
     }
     return true;
 }
