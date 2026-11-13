@@ -2748,6 +2748,8 @@ bool Mir3HudView::group_pointer(int kind,Vector2 point) {
         const bool clicked=button>=0 && button==group_pressed;
         captured=group.end_drag() || group_pressed>=0;
         group_pressed=-1;
+        // 0x431F20 enables the release sound for all five group controls.
+        if (clicked && hud_sound && audio_options.effects_enabled) hud_sound->play();
         if (clicked && button==0) toggle_group();
         if (clicked && button>=1 && button<=3) open_group_dialog(button);
         if (clicked && button==4) {

@@ -1131,8 +1131,12 @@ func run() -> void:
 	key(KEY_G)
 	await process_frame
 	if not check(hud.hud_snapshot().group_visible, "group keyboard opens"): return
+	var group_sound: AudioStreamPlayer = hud.get_node("HudClickSound")
+	group_sound.stop()
 	click_at(Vector2(300, 174), true)
+	if not check(not group_sound.playing, "group allowance press stays silent"): return
 	click_at(Vector2(300, 174), false)
+	if not check(group_sound.playing, "group allowance release plays original click"): return
 	if not check(hud.hud_snapshot().group_allow and allowance_requests == [true], "group allowance request"): return
 	if not await capture("group-members"): return
 	var member_requests: Array = []
