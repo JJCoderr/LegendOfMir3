@@ -812,6 +812,24 @@ func run() -> void:
 	map_drag.pressed = false
 	Input.parse_input_event(map_drag)
 	if not check(hud.hud_snapshot().minimap_bounds == Rect2(652, 24, 128, 128), "minimap Ctrl drag"): return
+	map_drag = map_drag.duplicate()
+	map_drag.pressed = true
+	Input.parse_input_event(map_drag)
+	for step in range(1, 9):
+		map_motion = map_motion.duplicate()
+		map_motion.position = map_drag.position + Vector2(-30, 50) * step
+		Input.parse_input_event(map_motion)
+	map_drag = map_drag.duplicate()
+	map_drag.position = map_motion.position
+	map_drag.pressed = false
+	Input.parse_input_event(map_drag)
+	var chat_before_map_wheel: int = hud.hud_snapshot().chat_compact_first
+	var map_wheel := wheel.duplicate() as InputEventMouseButton
+	map_wheel.position = Vector2(470, 510)
+	if not check(hud.hud_snapshot().minimap_bounds.has_point(map_wheel.position), "drag minimap over chat"): return
+	Input.parse_input_event(map_wheel)
+	if not check(hud.hud_snapshot().chat_compact_first == chat_before_map_wheel, "minimap blocks wheel over chat"): return
+	if not await capture("hud-minimap-over-chat"): return
 	await create_timer(1.01).timeout
 	key(KEY_V)
 	if not check(not hud.hud_snapshot().minimap_visible, "minimap closes with V"): return

@@ -1753,6 +1753,12 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             return;
         }
     }
+    if (minimap.visible && button.is_valid() && button->is_pressed() &&
+        (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) &&
+        rect(minimap.bounds()).has_point(button->get_position())) {
+        get_viewport()->set_input_as_handled();
+        return;
+    }
     if (portrait_panel.visible && button.is_valid() && button->is_pressed() &&
         rect(portrait_panel.rect).has_point(button->get_position()) &&
         !panel_covered(Panel::portrait,button->get_position())) {
