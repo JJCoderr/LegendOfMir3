@@ -615,6 +615,18 @@ func run() -> void:
 	var editor: TextEdit = hud.get_node("GuildEdit")
 	if not check(editor.visible and editor.has_focus() and editor.size == Vector2(468, 170), "guild announcement editor layout"): return
 	if not check(editor.text == "今晚集合练级\n", "announcement prefill uses editable lines only"): return
+	var editor_origin := editor.position
+	click_at(Vector2(150, 140), true)
+	hud.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
+	var editor_motion := InputEventMouseMotion.new()
+	editor_motion.position = Vector2(190, 160)
+	Input.parse_input_event(editor_motion)
+	click_at(Vector2(190, 160), false)
+	if not check(editor.position == editor_origin, "focus loss cancels guild editor drag"): return
+	click_at(Vector2(575, 130), true)
+	hud.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
+	click_at(Vector2(575, 130), false)
+	if not check(editor.visible and guild_edits.is_empty(), "focus loss cancels pressed submit"): return
 	editor.text = "行会公告\n\n今晚集合"
 	if not await capture("guild-announcement-editor"): return
 	click_at(Vector2(575, 130), true)
