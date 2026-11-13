@@ -1132,6 +1132,17 @@ func run() -> void:
 			await RenderingServer.frame_post_draw
 		if not check(root.get_texture().get_image().get_pixelv(marker_pixel) == green,
 			"portrait map player marker returns after the hidden phase"): return
+	var restored_map_hud: Node = load("res://main.tscn").instantiate()
+	restored_map_hud.set_meta("options_path", options_file)
+	var restored_map_requests: Array[int] = []
+	restored_map_hud.minimap_requested.connect(func(id: int):
+		restored_map_requests.append(id)
+		restored_map_hud.apply_minimap_reply(1001))
+	root.add_child(restored_map_hud)
+	var restored_map: Dictionary = restored_map_hud.hud_snapshot()
+	restored_map_hud.free()
+	if not check(restored_map_requests == [1033] and restored_map.portrait_map_visible
+		and not restored_map.minimap_visible, "reload InformationMode and accept a synchronous map reply"): return
 	key(KEY_R)
 	if not check(hud.hud_snapshot().expanded and hud.hud_snapshot().portrait_map_mode
 		and not hud.hud_snapshot().portrait_map_visible, "expanded chat hides the portrait map without clearing the mode"): return

@@ -312,7 +312,6 @@ void Mir3HudView::_ready() {
         }
         const Vector2i spawn=get_meta("map_spawn_cell",player_cell);
         if (spawn!=Vector2i(413,409) && terrain.walkable(spawn.x,spawn.y)) player_cell=spawn;
-        set_map_location(String::utf8("\xe6\xaf\x94\xe5\xa5\x87\xe7\x9c\x81"),player_cell.x,player_cell.y);
     }
     if (!portraits.open(resource_root/"Data"/"ProgUse")) UtilityFunctions::push_error("Cannot read ProgUse portraits.");
     if (!monster_portraits.open(resource_root/"Data"/"MonImg")) UtilityFunctions::push_error("Cannot read MonImg portraits.");
@@ -360,6 +359,12 @@ void Mir3HudView::_ready() {
         if (image.is_valid()) model.button_sizes[i]={image->get_width(),image->get_height()};
     }
     UtilityFunctions::print("HUD ready: 800x600; original WIL resources; C++ MVC.");
+    // A restored map request can receive a synchronous reply, so dispatch it
+    // after the map archives and the HUD have been initialized.
+    if (terrain_ready)
+        set_map_location(String::utf8("\xe6\xaf\x94\xe5\xa5\x87\xe7\x9c\x81"),player_cell.x,player_cell.y);
+    else if (portrait_map_pending)
+        emit_signal("minimap_requested",1033);
     queue_redraw();
 }
 void Mir3HudView::_exit_tree() {
