@@ -73,6 +73,7 @@ public:
     bool set_scene_npc(int actor,godot::Vector2i cell,int first_frame);
     bool set_scene_chicken(int actor,godot::Vector2i cell);
     bool set_scene_human(int actor,godot::Vector2i cell,int facing,int profession,godot::String name);
+    bool remove_scene_actor(int actor);
     void set_minimap_position(int x,int y);
     void set_minimap_markers(godot::PackedVector2Array type_five,godot::PackedVector2Array nearby_green,
         godot::PackedVector2Array nearby_orange);

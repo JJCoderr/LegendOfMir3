@@ -78,6 +78,10 @@ public:
         } else if (std::uint32_t(now - changed_at) > 800) shown = 0;
     }
     void clear() { shown = previous = changed_at = 0; }
+    void remove(std::uint32_t actor) {
+        if (shown==actor) shown=0;
+        if (previous==actor) previous=0;
+    }
     std::uint32_t displayed() const { return shown; }
     bool changes_to(std::uint32_t actor) const { return actor && actor!=previous; }
 private:

@@ -98,6 +98,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_scene_npc","actor","cell","first_frame"),&Mir3HudView::set_scene_npc);
     ClassDB::bind_method(D_METHOD("set_scene_chicken","actor","cell"),&Mir3HudView::set_scene_chicken);
     ClassDB::bind_method(D_METHOD("set_scene_human","actor","cell","facing","profession","name"),&Mir3HudView::set_scene_human);
+    ClassDB::bind_method(D_METHOD("remove_scene_actor","actor"),&Mir3HudView::remove_scene_actor);
     ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
     ClassDB::bind_method(D_METHOD("set_minimap_markers","type_five","nearby_green","nearby_orange"),&Mir3HudView::set_minimap_markers);
     ClassDB::bind_method(D_METHOD("set_hovered_target","actor","type","shape","excluded","state","hp","max_hp","percent","cell"),
@@ -1410,6 +1411,17 @@ bool Mir3HudView::set_scene_human(int actor,Vector2i cell,int facing,int profess
     std::copy_n(map_human_frames.begin()+facing*10,human.frames.size(),human.frames.begin());
     if (human.frames.front().image.is_null()) return false;
     scene_humans.insert_or_assign(actor,std::move(human));
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::remove_scene_actor(int actor) {
+    if (!scene_npcs.erase(actor) && !scene_chickens.erase(actor) && !scene_humans.erase(actor)) return false;
+    const auto id=static_cast<std::uint32_t>(actor);
+    target_attributes_by_actor.erase(id);
+    if (hovered_target==id) hovered_target=0;
+    target_focus.remove(id);
+    if (npc_dialogue_actor==actor) close_npc_dialogue();
     queue_redraw();
     return true;
 }

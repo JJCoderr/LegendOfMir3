@@ -54,10 +54,40 @@ func capture(name: String) -> bool:
 	print("SCREENSHOT: ", directory.path_join(name + ".png"))
 	return true
 
+func run_scene_actor_removal() -> void:
+	hud.set_meta("options_path", "user://scene-removal-%d.ini" % OS.get_process_id())
+	hud.set_meta("map_spawn_cell", Vector2i(413, 410))
+	root.add_child(hud)
+	var loaded := false
+	for offset in [Vector2i(-2, 1), Vector2i(-3, 2), Vector2i(-3, -2), Vector2i(2, 1)]:
+		if hud.set_scene_human(5, hud.hud_snapshot().player_cell + offset, 4, 1, "比奇旅人"):
+			loaded = true
+			break
+	if not check(loaded, "load remote human on a walkable cell"): return
+	await process_frame
+	await process_frame
+	var bounds: Rect2 = hud.hud_snapshot().scene_human_bounds[5]
+	var hover := InputEventMouseMotion.new()
+	hover.position = bounds.get_center()
+	root.push_input(hover, true)
+	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if not await capture("bichon-removal-before"): return
+	if not check(hud.remove_scene_actor(5) and not hud.remove_scene_actor(5)
+		and not hud.hud_snapshot().scene_human_bounds.has(5) and hud.hud_snapshot().target_portrait == -1,
+		"removal clears the remote human bounds and portrait"): return
+	root.push_input(hover.duplicate(), true)
+	if not check(hud.hud_snapshot().target_portrait == -1, "old bounds cannot reacquire the removed human"): return
+	if not await capture("bichon-remote-human-left"): return
+	print("SCENE_ACTOR_REMOVAL_OK")
+	quit()
+
 func run() -> void:
 	hud = load("res://main.tscn").instantiate()
 	root.size = Vector2i(800, 600)
 	Input.use_accumulated_input = false
+	if OS.get_cmdline_user_args().has("--scene-actor-removal"):
+		await run_scene_actor_removal()
+		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()
 	hud.set_meta("options_path", options_file)
 	hud.set_meta("show_terrain", OS.get_cmdline_user_args().has("--terrain"))
