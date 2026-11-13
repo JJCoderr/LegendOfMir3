@@ -1,0 +1,5 @@
+/build*/
+/godot/.godot/
+/godot/bin/
+/godot/resource_path.cfg
+*.uid

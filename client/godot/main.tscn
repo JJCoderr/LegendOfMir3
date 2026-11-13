@@ -1,0 +1,4 @@
+[gd_scene format=3]
+
+[node name="Mir3" type="Mir3HudView"]
+texture_filter = 1

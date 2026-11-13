@@ -1,0 +1,5 @@
+[configuration]
+entry_symbol = "mir3_client_init"
+compatibility_minimum = "4.5"
+[libraries]
+windows.x86_64 = "res://bin/mir3_client.dll"

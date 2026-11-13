@@ -1,0 +1,9 @@
+int __thiscall sub_41FCD0(_BYTE *this, int a2, int a3, int a4)
+{
+  this[37] = 0;
+  if ( !dword_4AF2AC(this + 4, a2, a3) )
+    return 0;
+  if ( a4 == 1 )
+    sub_4832D0(105, 0, 0, 0);
+  return 1;
+}
