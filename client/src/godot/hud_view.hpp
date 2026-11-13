@@ -301,6 +301,7 @@ private:
     bool apply_shop_offers(int actor,int index,godot::PackedStringArray names,godot::PackedInt32Array icons,
         godot::PackedInt32Array prices,godot::PackedInt64Array identifiers);
     void draw_shop();
+    static constexpr int shop_top=225;
     bool shop_input(int kind,godot::Vector2 pointer);
     void draw_npc_dialogue();
     bool npc_dialogue_input(int kind,godot::Vector2 pointer);

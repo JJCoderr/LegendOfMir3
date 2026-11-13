@@ -384,11 +384,11 @@ func run() -> void:
 		if not check(hud.apply_npc_message("a<D<<>=B<?H<<<<<PbQ`DC=kYBakW^xmGoDlGoPkLbmqUN=lWsMeWrtkH>xnINxpGl".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "645 goods list"): return
 		if not check(not hud.apply_shop_goods(2, 1, "Broken/1/"), "reject truncated goods list"): return
 		if not await capture("bichon-merchant-goods"): return
-		click_at(Vector2(45, 60), true)
-		click_at(Vector2(45, 60), false)
+		click_at(Vector2(45, 285), true)
+		click_at(Vector2(45, 285), false)
 		if not check(goods_requests.is_empty(), "goods without variants do not request details"): return
-		click_at(Vector2(45, 40), true)
-		click_at(Vector2(45, 40), false)
+		click_at(Vector2(45, 265), true)
+		click_at(Vector2(45, 265), false)
 		if not check(goods_requests == [[2, 0, "Red potion"]], "valid goods selection survives invalid reply"): return
 		if not check(not hud.apply_npc_body(645, 2, 2, "!!!!".to_ascii_buffer()), "reject invalid six-bit alphabet"): return
 		var stock_list := ""
@@ -398,11 +398,11 @@ func run() -> void:
 			var wheel_down := InputEventMouseButton.new()
 			wheel_down.button_index = MOUSE_BUTTON_WHEEL_DOWN
 			wheel_down.pressed = true
-			wheel_down.position = Vector2(12, 20)
+			wheel_down.position = Vector2(12, 245)
 			root.push_input(wheel_down, true)
 		if not await capture("bichon-merchant-goods-scrolled"): return
-		click_at(Vector2(45, 171), true)
-		click_at(Vector2(45, 171), false)
+		click_at(Vector2(45, 396), true)
+		click_at(Vector2(45, 396), false)
 		if not check(goods_requests.back() == [2, 9, "Potion 9"], "wheel over shop frame scrolls goods and preserves their original index"): return
 		if not check(npc_protocol.back() == [1015, 2, "Potion 9"], "detail request uses NPC and item name"): return
 		var offer_selections: Array = []
@@ -416,8 +416,8 @@ func run() -> void:
 		if not check(not hud.apply_shop_offers(2, 8, names, icons, prices, ids), "ignore stale goods details"): return
 		if not check(hud.apply_shop_offers(2, 9, names, icons, prices, ids), "apply decoded 652 offer"): return
 		if not await capture("bichon-merchant-offers"): return
-		click_at(Vector2(60, 40), true)
-		click_at(Vector2(60, 40), false)
+		click_at(Vector2(60, 265), true)
+		click_at(Vector2(60, 265), false)
 		if not check(offer_selections == [[2, 10001]], "select offer by its instance identifier"): return
 		if not check(purchases == [[1014, 2, "Red potion"]], "purchase uses NPC and item name"): return
 		if not check(hud.apply_npc_message("bsp<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().inventory_gold == 125, "650 applies server gold balance"): return
@@ -439,18 +439,18 @@ func run() -> void:
 		if not await capture("bichon-merchant-purchase-failed"): return
 		key(KEY_ENTER)
 		if not check(hud.apply_shop_offers(2, 9, PackedStringArray(), PackedInt32Array(), PackedInt32Array(), PackedInt64Array()), "accept empty detail page"): return
-		click_at(Vector2(60, 40), true)
-		click_at(Vector2(60, 40), false)
+		click_at(Vector2(60, 265), true)
+		click_at(Vector2(60, 265), false)
 		if not check(goods_requests.size() == 2, "empty details stay in detail view"): return
 		key(KEY_ESCAPE)
 		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "late detail cannot reopen dismissed page"): return
 		if not await capture("bichon-merchant-return-to-goods"): return
-		click_at(Vector2(45, 171), true)
-		click_at(Vector2(45, 171), false)
+		click_at(Vector2(45, 396), true)
+		click_at(Vector2(45, 396), false)
 		if not check(goods_requests.size() == 3 and goods_requests.back() == [2, 9, "Potion 9"], "return restores category scroll"): return
-		click_at(Vector2(45, 171), true)
+		click_at(Vector2(45, 396), true)
 		hud.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
-		click_at(Vector2(45, 171), false)
+		click_at(Vector2(45, 396), false)
 		if not check(goods_requests.size() == 3, "focus loss cancels pressed goods row"): return
 		if not await capture("bichon-merchant-focus-reset"): return
 		key(KEY_ESCAPE)
