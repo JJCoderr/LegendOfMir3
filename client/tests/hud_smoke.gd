@@ -270,13 +270,25 @@ func run() -> void:
 	var magic_hover := InputEventMouseMotion.new()
 	magic_hover.position = Vector2(385, 152)
 	Input.parse_input_event(magic_hover)
+	var spell_requests: Array[Array] = []
+	hud.spell_key_requested.connect(func(slot: int, id: int, pointer: Vector2): spell_requests.append([slot, id, pointer]))
 	key(KEY_F1)
 	key(KEY_F12)
+	if not check(spell_requests.is_empty(), "skill tree binding does not cast"): return
 	if not check(skill_requests == [Vector2i(1, 0), Vector2i(5, 49), Vector2i(5, 67)], "magic shortcut conflict and F12 encoding"): return
 	if not await capture("magic-key-binding"): return
 	key(KEY_B)
 	if not check(hud.hud_snapshot().skill_shortcuts_visible, "B opens magic shortcuts"): return
 	if not await capture("hud-magic-shortcuts"): return
+	var cast_pointer := InputEventMouseMotion.new()
+	cast_pointer.position = Vector2(180, 160)
+	Input.parse_input_event(cast_pointer)
+	key(KEY_F1)
+	key(KEY_F12)
+	if not check(spell_requests == [[12, 5, Vector2(180, 160)]], "only bound shortcut dispatches spell"): return
+	if not await capture("hud-spell-key-dispatch"): return
+	magic_hover = magic_hover.duplicate()
+	Input.parse_input_event(magic_hover)
 	key(KEY_B)
 	if not check(not hud.hud_snapshot().skill_shortcuts_visible, "B closes magic shortcuts"): return
 	if not await capture("magic-description"): return

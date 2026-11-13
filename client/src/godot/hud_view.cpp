@@ -41,6 +41,8 @@ std::uint64_t ticks_msec() {
 void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add_inventory_item","icon","count","slot","make_index","name","std_mode","stack_mode"),&Mir3HudView::add_inventory_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_inventory_use_reply","identifier","remaining"),&Mir3HudView::apply_inventory_use_reply);
+    ADD_SIGNAL(MethodInfo("spell_key_requested",PropertyInfo(Variant::INT,"key"),
+        PropertyInfo(Variant::INT,"skill_id"),PropertyInfo(Variant::VECTOR2,"pointer")));
     ADD_SIGNAL(MethodInfo("skill_key_requested",PropertyInfo(Variant::INT,"id"),PropertyInfo(Variant::INT,"legacy_key")));
     ClassDB::bind_method(D_METHOD("set_group_roster","player","members"),&Mir3HudView::set_group_roster);
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines","editable"),&Mir3HudView::set_guild_overview,DEFVAL(PackedStringArray()));
@@ -668,7 +670,13 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
     Ref<InputEventKey> key=event;
     if (key.is_null() || !key->is_pressed() || key->is_echo()) return;
     const auto code=key->get_physical_keycode();
-    if (code>=KEY_F1 && code<=KEY_F12 && bind_skill_at_cursor(code-KEY_F1+1)) {
+    if (code>=KEY_F1 && code<=KEY_F12) {
+        const int slot=code-KEY_F1+1;
+        if (!bind_skill_at_cursor(slot)) {
+            const int id=bound_skill(slot);
+            if (!id) return;
+            emit_signal("spell_key_requested",slot,id,inventory_cursor);
+        }
         get_viewport()->set_input_as_handled();
         return;
     }
@@ -1206,16 +1214,19 @@ bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
     return false;
 }
 
+int Mir3HudView::bound_skill(int key) const {
+    for (const auto& group:skills.learned) for (const auto& skill:group)
+        if (skill.id && skill.key==key) return skill.id;
+    return 0;
+}
+
 void Mir3HudView::draw_skill_shortcuts() {
     if (!skill_shortcuts_visible) return;
-    std::array<int,12> bound{};
-    for (const auto& group:skills.learned) for (const auto& skill:group)
-        if (skill.key>=1 && skill.key<=12 && skill.id) bound[skill.key-1]=skill.id&255;
-    for (int index=0;index<int(bound.size());++index) {
+    for (int index=0;index<12;++index) {
         // 0x43A5D0: slot origins advance 40 px, plus a gap after F4 and F8.
         const int x=40*(index+index/4);
-        if (bound[index]) {
-            const int frame_id=999+bound[index];
+        if (const int id=bound_skill(index+1)&255;id!=0) {
+            const int frame_id=999+id;
             if (!skill_frames.contains(frame_id)) {
                 const auto decoded=magic_icons.frame(frame_id);
                 if (decoded) skill_frames.emplace(frame_id,texture(decoded->pixels.rgba,decoded->width,decoded->height));
