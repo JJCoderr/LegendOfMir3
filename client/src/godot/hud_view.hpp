@@ -308,6 +308,7 @@ private:
     bool apply_shop_offers(int actor,int index,godot::PackedStringArray names,godot::PackedInt32Array icons,
         godot::PackedInt32Array prices,godot::PackedInt64Array identifiers,int offset=-1);
     void draw_shop();
+    void draw_shop_requirement(const ShopGood& good,int x,int y,int width);
     void close_shop_offers();
     static constexpr int shop_top=225;
     int shop_width() const { return shop_bulk_index>=0?516:shop_show_offers?488:292; }

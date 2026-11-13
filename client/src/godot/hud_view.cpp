@@ -832,6 +832,7 @@ void Mir3HudView::draw_shop() {
         text(good.name,{358,y,126,16},0xfafa,mir3::TextFont::normal,false);
         text(price,{359+name_width,y-1,140,16},0x0a0a0a,mir3::TextFont::normal,false);
         text(price,{360+name_width,y,140,16},0x64b4fa,mir3::TextFont::normal,false);
+        draw_shop_requirement(good,358,y+20,142);
         if (shop_pressed==-8) sprite(1273,{367,shop_top+59});
         if (shop_pressed==-5) sprite(1222,{475,shop_top+56});
     }
@@ -895,22 +896,26 @@ void Mir3HudView::draw_shop() {
         }
         text(good.name,{66,label_y,184,16},0xfafa,mir3::TextFont::normal,false);
         text(price,{68+name_width,label_y,124,16},0x64b4fa,mir3::TextFont::normal,false);
-        // 0x478250: frame 304 displays a localized profession requirement.
-        if (good.icon==304 && good.requirement<=2)
-            text(message(5170+good.requirement),{66,label_y+20,184,16},
-                model.profession==good.requirement?13172680:1974015,mir3::TextFont::normal,false);
-        else if (good.icon!=304 && has_requirement && good.requirement_type<12) {
-            // 0x4782E0 compares level, maximum attack, or the minimum across the requested elements.
-            const auto& attack=elements.bytes[0];
-            const auto minimum=[&](int first,int last) {
-                return int(*std::min_element(attack.begin()+first,attack.begin()+last));
-            };
-            const std::array attributes{model.level,model.attack[1],minimum(0,4),minimum(4,7),minimum(0,7),
-                int(attack[0]),int(attack[1]),int(attack[2]),int(attack[3]),int(attack[4]),int(attack[5]),int(attack[6])};
-            const auto label=message(5140+good.requirement_type)+" "+std::to_string(good.requirement);
-            text(label,{66,label_y+20,184,16},attributes[good.requirement_type]>=good.requirement?16773360:1974015,
-                mir3::TextFont::normal,false);
-        }
+        draw_shop_requirement(good,66,label_y+20,184);
+    }
+}
+
+void Mir3HudView::draw_shop_requirement(const ShopGood& good,int x,int y,int width) {
+    // 0x478250: frame 304 displays a localized profession requirement.
+    if (good.icon==304 && good.requirement<=2)
+        text(message(5170+good.requirement),{x,y,width,16},
+            model.profession==good.requirement?13172680:1974015,mir3::TextFont::normal,false);
+    else if (good.icon!=304 && good.variants && good.requirement>0 && good.requirement_type<12) {
+        // 0x4782E0 compares level, maximum attack, or the minimum across the requested elements.
+        const auto& attack=elements.bytes[0];
+        const auto minimum=[&](int first,int last) {
+            return int(*std::min_element(attack.begin()+first,attack.begin()+last));
+        };
+        const std::array attributes{model.level,model.attack[1],minimum(0,4),minimum(4,7),minimum(0,7),
+            int(attack[0]),int(attack[1]),int(attack[2]),int(attack[3]),int(attack[4]),int(attack[5]),int(attack[6])};
+        const auto label=message(5140+good.requirement_type)+" "+std::to_string(good.requirement);
+        text(label,{x,y,width,16},attributes[good.requirement_type]>=good.requirement?16773360:1974015,
+            mir3::TextFont::normal,false);
     }
 }
 

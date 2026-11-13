@@ -549,7 +549,7 @@ func run() -> void:
 		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "closed shop ignores pending details"): return
 		if not check(not hud.apply_shop_offers(2, 8, names, icons, prices, ids), "list close dismisses the active detail grid"): return
 		if not await capture("bichon-merchant-shop-closed"): return
-		if not check(hud.apply_shop_goods(2, 1, "Bundle/2/20/5/301/0/0/", true), "open quantity-based goods"): return
+		if not check(hud.apply_shop_goods(2, 1, "Bundle/2/20/5/301/0/10/", true), "open quantity-based goods with level requirement"): return
 		click_at(Vector2(135, 420), true)
 		click_at(Vector2(135, 420), false)
 		if not await capture("bichon-merchant-bulk-preview"): return
