@@ -684,7 +684,13 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
         if (!consumed && !inventory.dragging && !inventory.close_pressed && trade_pending_slot<0) {
             bag.scroll_row=inventory.row;
             consumed=bag.slot_at(int(position.x),int(position.y),x,y)>=0;
-            if (consumed && !equipment.pending && bag.held_equipment_slot>=0) {
+            if (consumed && trade_return_slot>=0) {
+                if (!trade_return_pending) {
+                    const auto& item=trade_items[0][trade_return_slot];
+                    trade_return_pending=true;
+                    emit_signal("trade_offer_requested",1027,int64_t(item.make_index),String::utf8(item.name.c_str()));
+                }
+            } else if (consumed && !equipment.pending && bag.held_equipment_slot>=0) {
                 if (equipment.takeoff(bag)) emit_equipment_request();
             } else if (consumed && !equipment.pending) {
                 const auto tick=static_cast<std::uint32_t>(now);
@@ -2098,6 +2104,21 @@ bool Mir3HudView::apply_minimap_reply(int map_number) {
 }
 
 bool Mir3HudView::apply_trade_offer_reply(int identifier) {
+    if (identifier==677 || identifier==678) {
+        if (!trade_return_pending) return false;
+        auto& item=trade_items[0][trade_return_slot];
+        if (identifier==677) {
+            if (!bag.insert(item)) {
+                bag.held=item;
+                bag.held_slot=-1;
+            }
+            item={};
+        }
+        trade_return_slot=-1;
+        trade_return_pending=false;
+        queue_redraw();
+        return true;
+    }
     if (trade_pending_slot<0 || (identifier!=675 && identifier!=676)) return false;
     if (identifier==675) {
         trade_items[0][trade_pending_slot]=bag.held;
@@ -2144,6 +2165,8 @@ bool Mir3HudView::open_trade(String partner) {
         if (trade.visible) trade.toggle();
         trade_confirm_pressed=false;
         trade_confirmed=false;
+        trade_return_slot=-1;
+        trade_return_pending=false;
         trade_scroll.captured=-1;
         queue_redraw();
         return true;
@@ -2187,7 +2210,8 @@ void Mir3HudView::draw_trade() {
             const Vector2 padding((38*item.width-icon->get_width())/2,(38*item.height-icon->get_height())/2);
             const Rect2 target(cell+padding,icon->get_size());
             const Rect2 visible=target.intersection(clip);
-            if (visible.has_area()) draw_texture_rect_region(icon,visible,Rect2(visible.position-target.position,visible.size));
+            if (visible.has_area()) draw_texture_rect_region(icon,visible,Rect2(visible.position-target.position,visible.size),
+                side==0 && slot==trade_return_slot?Color(1,1,1,0.5f):Color(1,1,1));
             if (item.count>1 && slot/5>=first)
                 text(std::to_string(item.count),{int(cell.x)+22,int(cell.y)+23,16,15},0xffffff,mir3::TextFont::normal,false);
         }
@@ -2218,7 +2242,7 @@ bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
         trade.begin_drag(int(position.x),int(position.y),on_confirm || position.y>=trade.rect[1]+56);
     } else if (kind==1) captured=trade.move_drag(int(position.x),int(position.y)) || trade_confirm_pressed;
     else if (kind==2) {
-        const bool activate=trade_confirm_pressed && on_confirm && !trade_confirmed && trade_pending_slot<0;
+        const bool activate=trade_confirm_pressed && on_confirm && !trade_confirmed && trade_pending_slot<0 && trade_return_slot<0;
         captured=trade.end_drag() || trade_confirm_pressed;
         trade_confirm_pressed=false;
         if (activate) {
@@ -2226,7 +2250,21 @@ bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
             emit_signal("trade_requested",1030,String());
         }
         const auto [x,y,w,h]=trade.rect;
-        if (!captured && !trade_confirmed && trade_pending_slot<0 && bag.held &&
+        const Rect2 local_grid(x+14,y+56,190,190);
+        if (!captured && !trade_confirmed && trade_pending_slot<0 && !trade_return_pending &&
+            !bag.held && local_grid.has_point(position)) {
+            const int column=(int(position.x)-x-14)/38;
+            const int row=trade_scroll.first[0]+(int(position.y)-y-56)/38;
+            trade_return_slot=-1;
+            for (int index=0;index<200;++index) {
+                const auto& item=trade_items[0][index];
+                if (!item || !item.make_index) continue;
+                if (!Rect2(index%5,index/5,item.width,item.height).has_point(Vector2(column,row))) continue;
+                trade_return_slot=index;
+                break;
+            }
+        }
+        if (!captured && !trade_confirmed && trade_pending_slot<0 && trade_return_slot<0 && bag.held &&
             bag.held.make_index && bag.held_equipment_slot<0 && !bag.pending_use && !equipment.pending &&
             (bag.held.stack_mode<2 || bag.held.count==1) &&
             Rect2(x+14,y+56,190,190).has_point(position)) {

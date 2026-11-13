@@ -806,6 +806,13 @@ func run() -> void:
 	if not check(offers == [[1026, 98765, "Trade potion"]] and hud.hud_snapshot().held_inventory_icon == 301, "offer waits for server reply"): return
 	if not check(hud.apply_trade_offer_reply(675) and hud.hud_snapshot().held_inventory_icon == -1, "offer reply transfers item into local trade grid"): return
 	if not await capture("hud-trade-offer-accepted"): return
+	click_at(Vector2(70, 75), true)
+	click_at(Vector2(70, 75), false)
+	click_at(trade_pickup, true)
+	click_at(trade_pickup, false)
+	if not check(offers[-1] == [1027, 98765, "Trade potion"], "placing selected offer in bag sends return request"): return
+	if not check(hud.apply_trade_offer_reply(677) and not hud.apply_trade_offer_reply(677), "return acknowledgement applies once"): return
+	if not await capture("hud-trade-item-returned"): return
 	if not check(hud.set_trade_item(0, 30, 301, 3), "apply trade item below first page"): return
 	click_at(Vector2(211, 170), true)
 	click_at(Vector2(211, 170), false)

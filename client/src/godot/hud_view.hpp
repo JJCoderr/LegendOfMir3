@@ -86,7 +86,8 @@ private:
     mir3::TradeScroll trade_scroll;
     std::array<std::uint32_t,2> trade_gold{};
     std::array<std::array<mir3::BagItem,200>,2> trade_items;
-    int trade_pending_slot=-1;
+    int trade_pending_slot=-1, trade_return_slot=-1;
+    bool trade_return_pending=false;
     bool trade_confirm_pressed=false,trade_confirmed=false;
     void draw_trade();
     bool trade_pointer(int kind,godot::Vector2 position);
