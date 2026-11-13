@@ -426,7 +426,6 @@ Ref<ImageTexture> Mir3HudView::portrait_texture(mir3::WilArchive& archive,
 void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool excluded,int state,int hp,int max_hp,int percent,
         Vector2i cell) {
     const bool changed=target_focus.changes_to(actor);
-    if (actor && (actor!=target_focus.displayed() || target_is_human)) target_attributes={};
     hovered_target=actor;
     target_focus.update(actor,static_cast<std::uint32_t>(ticks_msec()));
     if (actor) {
@@ -442,8 +441,11 @@ void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool
         target_special_shape=mir3::TargetPortrait::special_shape(static_cast<std::uint16_t>(shape));
         target_vitals={static_cast<std::uint8_t>(percent),static_cast<std::uint16_t>(max_hp),static_cast<std::uint16_t>(hp)};
         // 0x4248F7 / 0x47BEC0 requests missing attributes on a focus change.
-        if (changed && target_attributes.icon==-1 && cell.x>=0 && cell.x<=65535 && cell.y>=0 && cell.y<=65535)
-            emit_signal("target_attributes_requested",1047,actor,cell);
+        if (changed && cell.x>=0 && cell.x<=65535 && cell.y>=0 && cell.y<=65535) {
+            const auto attributes=target_attributes_by_actor.find(actor);
+            if (attributes==target_attributes_by_actor.end() || attributes->second.icon==-1)
+                emit_signal("target_attributes_requested",1047,actor,cell);
+        }
     }
     queue_redraw();
 }
@@ -452,6 +454,7 @@ bool Mir3HudView::apply_target_attributes(std::uint32_t actor,int category,int s
     if (!actor || actor!=target_focus.displayed() || target_is_human || body.size()!=10 ||
         category<0 || category>65535 || state<0 || state>65535) return false;
     // Decoded 1304 body at actor+0x61D18. The second byte is unused here.
+    auto& target_attributes=target_attributes_by_actor[actor];
     target_attributes.category=category;
     target_attributes.state=state;
     target_attributes.icon=static_cast<std::int8_t>(body[0]);
@@ -1609,7 +1612,9 @@ void Mir3HudView::draw_hud_tail() {
         const Rect2 information(615,487,105,85);
         legacy_rect(information,Color(50.f/255,50.f/255,50.f/255,230.f/255));
         paint_canvas->draw_rect(information.grow(-0.5),Color(120.f/255,120.f/255,120.f/255),false);
-        if (target_attributes.visible()) {
+        const auto attributes=target_attributes_by_actor.find(target_focus.displayed());
+        if (attributes!=target_attributes_by_actor.end() && attributes->second.visible()) {
+            const auto& target_attributes=attributes->second;
             const auto draw_icon=[&](int frame,Layout::Point at) {
                 const auto icon=portrait_texture(portraits,portrait_frames,frame);
                 if (icon.is_valid()) paint_canvas->draw_texture(icon,point(at));
@@ -4241,6 +4246,7 @@ void Mir3HudView::set_map_location(String name,int x,int y) {
     trade_actor_name=String();
     hovered_target=0;
     target_focus.clear();
+    target_attributes_by_actor.clear();
 
     const bool refresh=minimap.visible || minimap.pending;
     minimap.visible=false;

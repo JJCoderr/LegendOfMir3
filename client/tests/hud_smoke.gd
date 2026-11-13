@@ -875,7 +875,12 @@ func run() -> void:
 		var special_frame := root.get_texture().get_image()
 		if not check(special_frame.get_pixel(615, 490) != Color8(120, 120, 120)
 			and hud.hud_snapshot().target_hp_width == 41, "special monster keeps HP without the information frame"): return
-		hud.set_hovered_target(1, 3, 20, false, 1, 5, 10, 50)
+		hud.set_hovered_target(1, 3, 20, false, 1, 5, 10, 50, Vector2i(338, 267))
+		if not check(attribute_requests.size() == 1, "returning to a known target reuses its 1304 attributes"): return
+		if not await capture("hud-target-attributes-restored"): return
+		var attribute_area := Rect2i(618, 489, 99, 64)
+		if not check(root.get_texture().get_image().get_region(attribute_area).get_data() ==
+			ordinary_frame.get_region(attribute_area).get_data(), "returning to a known target restores its attribute pixels"): return
 	hud.set_hovered_target(0, 0, 0, false, 0, 0, 0, 0)
 	if not check(hud.hud_snapshot().target_portrait == 20, "portrait persists after pointer leaves"): return
 	var portrait_deadline := Time.get_ticks_msec() + 1200

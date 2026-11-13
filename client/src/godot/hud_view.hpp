@@ -360,7 +360,7 @@ private:
     int target_frame=-1, target_badge=-1;
     bool target_is_human=false;
     bool target_special_shape=false;
-    mir3::TargetAttributes target_attributes;
+    std::map<std::uint32_t,mir3::TargetAttributes> target_attributes_by_actor;
     godot::String target_portrait_query_name;
     godot::Ref<godot::ImageTexture> target_custom_portrait;
     godot::Ref<godot::ImageTexture> target_portrait;
