@@ -20,6 +20,7 @@ public:
     std::array<short, columns * rows> cells{};
     BagItem held;
     int held_slot = -1;
+    int held_equipment_slot = -1;
     bool pending_use=false;
     std::uint32_t last_release=0,last_use=0;
     int scroll_row = 0;

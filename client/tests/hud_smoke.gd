@@ -157,6 +157,20 @@ func run() -> void:
 	key(KEY_W)
 	await process_frame
 	if not check(hud.hud_snapshot().inventory_visible and hud.hud_snapshot().status_visible, "inventory and status coexist"): return
+	var equipment_requests: Array[Vector2i] = []
+	hud.equipment_requested.connect(func(id: int, slot: int, _index: int, _name: String): equipment_requests.append(Vector2i(id, slot)))
+	if not check(hud.add_inventory_item(1520, 1, 48, 54321, "Test necklace", 20), "equipment fixture"): return
+	click_at(Vector2(465, 170), false)
+	click_at(Vector2(180, 100), false)
+	if not check(equipment_requests == [Vector2i(1003, 3)] and hud.hud_snapshot().equipment_pending, "equip request"): return
+	if not check(not hud.apply_equipment_reply(619) and hud.apply_equipment_reply(615), "equip response"): return
+	if not await capture("character-equipment"): return
+	click_at(Vector2(180, 100), false)
+	click_at(Vector2(465, 170), false)
+	if not check(equipment_requests == [Vector2i(1003, 3), Vector2i(1004, 3)] and hud.apply_equipment_reply(620), "failed takeoff restores equipment"): return
+	click_at(Vector2(180, 100), false)
+	click_at(Vector2(465, 170), false)
+	if not check(equipment_requests.size() == 3 and hud.apply_equipment_reply(619), "takeoff returns item"): return
 	key(KEY_ESCAPE)
 	key(KEY_ESCAPE)
 	await process_frame

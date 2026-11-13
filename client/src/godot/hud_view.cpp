@@ -27,6 +27,8 @@ Vector2 point(mir3::HudLayout::Point p) { return Vector2(p[0],p[1]); }
 void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add_inventory_item","icon","count","slot","make_index","name","std_mode","stack_mode"),&Mir3HudView::add_inventory_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_inventory_use_reply","identifier","remaining"),&Mir3HudView::apply_inventory_use_reply);
+    ClassDB::bind_method(D_METHOD("apply_equipment_reply","identifier"),&Mir3HudView::apply_equipment_reply);
+    ADD_SIGNAL(MethodInfo("equipment_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"slot"),PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("inventory_use_requested",PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::INT,"tick"),PropertyInfo(Variant::STRING,"name")));
     ClassDB::bind_method(D_METHOD("hud_snapshot"),&Mir3HudView::hud_snapshot);
     ClassDB::bind_method(D_METHOD("post_chat","value","foreground","background"),&Mir3HudView::post_chat);
@@ -51,6 +53,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["inventory_visible"]=inventory.visible;
     result["inventory_position"]=Vector2i(inventory.rect[0],inventory.rect[1]);
     result["inventory_use_pending"]=bag.pending_use;
+    result["equipment_pending"]=equipment.pending;
     result["held_inventory_icon"]=bag.held.icon;
     result["inventory_row"]=inventory.row;
     result["chat_mode"]=chat_input?chat_input->mode.mode:0;
@@ -75,6 +78,7 @@ void Mir3HudView::_ready() {
         status_body=texture(body->pixels.rgba,body->width,body->height);
         status_body_offset=Vector2(body->offset_x,body->offset_y);
     }
+    equipment_archive.open(resource_root/"Data"/"Equip");
     item_archive.open(resource_root/"Data"/"Inventory");
     std::ifstream message_file(resource_root/"CmList.dat",std::ios::binary);
     std::vector<std::uint8_t> message_bytes{std::istreambuf_iterator<char>(message_file),{}};
@@ -385,7 +389,9 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
         if (!consumed && !inventory.dragging && !inventory.close_pressed) {
             bag.scroll_row=inventory.row;
             consumed=bag.slot_at(int(position.x),int(position.y),x,y)>=0;
-            if (consumed) {
+            if (consumed && !equipment.pending && bag.held_equipment_slot>=0) {
+                if (equipment.takeoff(bag)) emit_equipment_request();
+            } else if (consumed && !equipment.pending) {
                 const auto tick=static_cast<std::uint32_t>(now);
                 const int action=bag.release_action(int(position.x),int(position.y),x,y,tick);
                 if (action==1) emit_signal("inventory_use_requested",int64_t(bag.held.make_index),int64_t(tick),String::utf8(bag.held.name.c_str()));
@@ -454,6 +460,28 @@ void Mir3HudView::draw_status() {
     sprite(status_close_pressed?1222:1221,{x+Layout::close[0],y+Layout::close[1]});
     if (status_body.is_valid())
         draw_texture(status_body,Vector2(x+Layout::body[0],y+Layout::body[1])+status_body_offset);
+    for (int slot=0;slot<12;++slot) {
+        const auto& item=equipment.slots[slot];
+        if (!item) continue;
+        Ref<ImageTexture> icon;
+        Vector2 offset;
+        if (mir3::EquipmentState::uses_paperdoll(slot)) {
+            if (!equipment_frames.contains(item.icon)) {
+                const auto decoded=equipment_archive.frame(item.icon);
+                if (!decoded) continue;
+                equipment_frames.emplace(item.icon,std::make_pair(
+                    texture(decoded->pixels.rgba,decoded->width,decoded->height),Vector2(decoded->offset_x,decoded->offset_y)));
+            }
+            const auto& cached=equipment_frames.at(item.icon);
+            icon=cached.first;
+            offset=cached.second;
+        } else {
+            icon=item_frame(item.icon);
+        }
+        if (icon.is_null()) continue;
+        const auto pos=mir3::EquipmentState::draw_position(slot,icon->get_width(),icon->get_height(),int(offset.x),int(offset.y));
+        draw_texture(icon,Vector2(x+pos[0],y+pos[1]));
+    }
     const auto [bag_x,bag_y,bag_width,bag_height]=inventory.rect;
     const bool obscured=inventory.visible && !status_on_top &&
         Rect2(bag_x,bag_y,bag_width,bag_height).has_point(inventory_cursor);
@@ -522,10 +550,11 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
     const auto close=frame(1221);
     const auto anchor=mir3::StatusLayout::close;
     const bool on_close=close.is_valid() && Rect2(x+anchor[0],y+anchor[1],close->get_width(),close->get_height()).has_point(position);
+    const int slot=mir3::EquipmentState::hit(int(position.x),int(position.y),x,y);
     bool captured=false;
     if (kind==0 && inside) {
         status_close_pressed=on_close;
-        if (status.begin_drag(int(position.x),int(position.y),on_close)) status_on_top=true;
+        if (status.begin_drag(int(position.x),int(position.y),on_close || slot>=0)) status_on_top=true;
     } else if (kind==1) {
         captured=status.move_drag(int(position.x),int(position.y));
     } else if (kind==2) {
@@ -533,6 +562,16 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
         captured=status.end_drag() || status_close_pressed;
         status_close_pressed=false;
         if (activate) toggle_status();
+        if (!captured && slot>=0 && (!bag.held || bag.held.make_index)) {
+            const auto now=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+            const bool was_pending=equipment.pending;
+            equipment.release_action(slot,bag,static_cast<std::uint32_t>(now));
+            if (equipment.use_rejected_notice) post_chat(String::utf8(message(2413).c_str()),11861940,0);
+            if ((!was_pending && equipment.pending) || equipment.quick_request_ready) {
+                equipment.quick_request_ready=false;
+                emit_equipment_request();
+            }
+        }
     }
     if (!inside && !captured) return false;
     controller.cancel();
@@ -547,4 +586,15 @@ bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
         return inventory_pointer(kind,position);
     if (status_on_top) return status_pointer(kind,position) || inventory_pointer(kind,position);
     return inventory_pointer(kind,position) || status_pointer(kind,position);
+}
+
+void Mir3HudView::emit_equipment_request() {
+    const auto& request=equipment.request;
+    emit_signal("equipment_requested",request.identifier,request.slot,int64_t(request.make_index),String::utf8(request.name.c_str()));
+}
+
+bool Mir3HudView::apply_equipment_reply(int identifier) {
+    if (!equipment.reply(identifier,bag)) return false;
+    queue_redraw();
+    return true;
 }

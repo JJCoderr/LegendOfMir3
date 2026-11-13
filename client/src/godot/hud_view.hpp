@@ -2,6 +2,7 @@
 #include "hud/hud_model.hpp"
 #include "inventory/inventory_panel.hpp"
 #include "inventory/inventory_grid.hpp"
+#include "status/equipment.hpp"
 #include "resources/wil_archive.hpp"
 #include "resources/messages.hpp"
 #include "text/native_text.hpp"
@@ -25,6 +26,7 @@ public:
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
+    bool apply_equipment_reply(int identifier);
     bool apply_inventory_use_reply(int identifier,int remaining);
     bool update_chat_rejection(int channel,bool rejected);
 protected:
@@ -42,6 +44,10 @@ private:
     bool panel_pointer(int kind,godot::Vector2 position);
     bool status_pointer(int kind,godot::Vector2 position);
     mir3::InventoryGrid bag;
+    mir3::EquipmentState equipment;
+    mir3::WilArchive equipment_archive;
+    void emit_equipment_request();
+    std::map<int,std::pair<godot::Ref<godot::ImageTexture>,godot::Vector2>> equipment_frames;
     mir3::WilArchive item_archive;
     std::map<int,godot::Ref<godot::ImageTexture>> item_frames;
     godot::Ref<godot::ImageTexture> item_frame(int id);
