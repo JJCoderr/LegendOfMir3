@@ -809,14 +809,22 @@ void Mir3HudView::draw_npc_dialogue() {
     if (!npc_dialogue_actor) return;
     // 0x45F9B0 / 0x45FD00: modulate the assembled background, then draw text and controls separately.
     const Color background_modulation(180.f/255,180.f/255,180.f/255,220.f/255);
-    const auto draw_background=[&](int id,int y) {
-        const auto image=frame(id);
-        if (image.is_valid()) draw_texture(image,Vector2(0,y),background_modulation);
-    };
     const int strips=std::max(1,npc_dialogue_extra_rows);
-    draw_background(1353,0);
-    for (int i=0;i<strips;++i) draw_background(1351,160+20*i);
-    draw_background(1352,160+20*strips);
+    auto& background=npc_dialogue_backgrounds[strips-1];
+    if (background.is_null()) {
+        auto surface=Image::create_empty(386,npc_dialogue_bounds()[3],false,Image::FORMAT_RGBA8);
+        const auto compose=[&](int id,int y) {
+            const auto part=frame(id);
+            if (part.is_null()) return;
+            const auto image=part->get_image();
+            if (image.is_valid()) surface->blend_rect(image,Rect2i(Vector2i(),image->get_size()),Vector2i(0,y));
+        };
+        compose(1353,0);
+        for (int i=0;i<strips;++i) compose(1351,160+20*i);
+        compose(1352,160+20*strips);
+        background=ImageTexture::create_from_image(surface);
+    }
+    if (background.is_valid()) draw_texture(background,Vector2(),background_modulation);
     const int bottom=npc_dialogue_bounds()[3];
     // 0x460F07 draws the button even when NOTCLOSE disables dismissal.
     sprite(npc_dialogue_close_pressed?1222:1221,{346,bottom-42});

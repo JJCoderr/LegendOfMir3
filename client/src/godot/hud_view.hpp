@@ -275,6 +275,7 @@ private:
     std::string npc_dialogue_prompt, npc_dialogue_prompt_command;
     int npc_dialogue_prompt_actor=0;
     int npc_dialogue_extra_rows=0, npc_dialogue_first=0, npc_dialogue_scroll_limit=0;
+    std::array<godot::Ref<godot::ImageTexture>,13> npc_dialogue_backgrounds;
     int npc_dialogue_arrow_pressed=0;
     int npc_dialogue_arrow_frame=0;
     bool npc_dialogue_down_lit=false;
