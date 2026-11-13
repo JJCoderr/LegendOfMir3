@@ -919,6 +919,10 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
         if (activate==-7) close_shop();
         else if (activate==-5) close_shop_offers();
         else if (activate==category_button && shop_highlighted>=0 && shop_goods[shop_highlighted].variants>0) {
+            if (shop_selected!=shop_highlighted) {
+                shop_offers.clear();
+                shop_offer_index=-1;
+            }
             shop_selected=shop_highlighted;
             shop_offer_page=0;
             if (details) shop_offer_loading=true;

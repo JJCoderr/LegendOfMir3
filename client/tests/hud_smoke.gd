@@ -531,6 +531,13 @@ func run() -> void:
 		click_at(Vector2(135, 420), true)
 		click_at(Vector2(135, 420), false)
 		if not check(goods_requests.back() == [2, 8, "Potion 8"], "request a different category while details are open"): return
+		var purchases_before_switch := purchases.size()
+		click_at(Vector2(330, 280), true)
+		click_at(Vector2(330, 280), false)
+		click_at(Vector2(378, 399), true)
+		click_at(Vector2(378, 399), false)
+		if not check(purchases.size() == purchases_before_switch, "old instances cannot be purchased under a new category"): return
+		if not await capture("bichon-merchant-category-loading"): return
 		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "reject previous category reply"): return
 		if not check(hud.apply_shop_offers(2, 8, names, icons, prices, ids, 0), "accept new category at offset zero"): return
 		if not await capture("bichon-merchant-switch-category"): return
