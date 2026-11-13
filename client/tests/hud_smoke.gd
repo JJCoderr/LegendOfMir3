@@ -228,7 +228,7 @@ func run() -> void:
 		if not check(dialogue_actions == [[2, "@buy"], [2, "@buy"], [2, "@exit"]], "only inline labels dispatch their own commands"): return
 		var goods_requests: Array = []
 		hud.shop_good_requested.connect(func(actor: int, index: int, name: String): goods_requests.append([actor, index, name]))
-		if not check(hud.apply_npc_body(645, 2, 2, "PbQ`DC=kYBakW^xmGoDlGoPkLbmqUN=lWsMeWrtkH>xnINxpGl".to_ascii_buffer()), "645 goods list"): return
+		if not check(hud.apply_npc_message("a<D<<>=B<?H<<<<<PbQ`DC=kYBakW^xmGoDlGoPkLbmqUN=lWsMeWrtkH>xnINxpGl".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "645 goods list"): return
 		if not check(not hud.apply_shop_goods(2, 1, "Broken/1/"), "reject truncated goods list"): return
 		if not await capture("bichon-merchant-goods"): return
 		click_at(Vector2(45, 60), true)
@@ -267,11 +267,12 @@ func run() -> void:
 		click_at(Vector2(60, 40), false)
 		if not check(offer_selections == [[2, 10001]], "select offer by its instance identifier"): return
 		if not check(purchases == [[1014, 2, "Red potion"]], "purchase uses NPC and item name"): return
-		if not check(hud.apply_shop_purchase_reply(650, 125) and hud.hud_snapshot().inventory_gold == 125, "650 applies server gold balance"): return
+		if not check(hud.apply_npc_message("bsp<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().inventory_gold == 125, "650 applies server gold balance"): return
 		if not check(not hud.apply_inventory_add(650, 301, 1, 10001, "Red potion", 0, 3), "gold reply is not an item addition"): return
 		if not check(hud.apply_inventory_add(200, 301, 1, 10001, "Red potion", 0, 3), "200 places purchased item in bag"): return
 		key(KEY_W)
 		if not check(hud.hud_snapshot().inventory_visible, "open bag after purchase"): return
+		if not check(not hud.apply_npc_message("bl<<<>=B<?H<<<<<Z<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().inventory_gold == 125, "unexpected body cannot overwrite balance"): return
 		if not await capture("bichon-merchant-purchased-item"): return
 		var pickup := Vector2(hud.hud_snapshot().inventory_position) + Vector2(30, 75)
 		click_at(pickup, true)
@@ -280,7 +281,7 @@ func run() -> void:
 		click_at(pickup, true)
 		click_at(pickup, false)
 		key(KEY_W)
-		if not check(not hud.apply_shop_purchase_reply(651, 4) and hud.apply_shop_purchase_reply(651, 2), "651 maps known purchase failure"): return
+		if not check(not hud.apply_npc_message("b\\L<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.apply_npc_message("b\\D<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "651 maps known purchase failure"): return
 		if not check(hud.hud_snapshot().group_request == 1438 and hud.hud_snapshot().inventory_gold == 125, "failure opens original caption without changing gold"): return
 		if not await capture("bichon-merchant-purchase-failed"): return
 		key(KEY_ENTER)
@@ -303,7 +304,7 @@ func run() -> void:
 		if not check(hud.hud_snapshot().npc_dialogue_actor == 2, "closing shop keeps NPC dialogue"): return
 		if not check(not hud.apply_shop_offers(2, 9, names, icons, prices, ids), "closed shop ignores pending details"): return
 		if not await capture("bichon-merchant-shop-closed"): return
-		if not check(hud.apply_npc_dialogue(644, 2, "") and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
+		if not check(hud.apply_npc_message("aL<<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
 		if not check(not hud.apply_shop_goods(2, 10, stock_list), "late goods reply cannot reopen closed merchant"): return
 		if not check(hud.apply_npc_dialogue(643, 2, script) and hud.walk_to_map_cell(Vector2i(419, 410)), "walk away from reopened NPC dialogue"): return
 		var leave_deadline := Time.get_ticks_msec() + 6000
