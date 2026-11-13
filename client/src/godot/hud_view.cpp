@@ -526,9 +526,10 @@ bool Mir3HudView::apply_npc_message(PackedByteArray encoded,PackedByteArray key)
             const auto end=item->find(char(0));
             if (end==0 || end>=30) return false;
             names.push_back(String::utf8(mir3::ansi_to_utf8(std::string_view(*item).substr(0,end)).c_str()));
-            icons.push_back(byte(40)|(byte(41)<<8));
-            prices.push_back(0);
-            identifiers.push_back(byte(66)|(byte(67)<<8)|(byte(68)<<16)|(byte(69)<<24));
+            // 0x4420F0 copies the wire item into the object at +4.
+            icons.push_back(byte(36)|(byte(37)<<8));
+            prices.push_back(byte(68)|(byte(69)<<8));
+            identifiers.push_back(byte(62)|(byte(63)<<8)|(byte(64)<<16)|(byte(65)<<24));
             remaining.remove_prefix(delimiter+1);
         }
         if (!remaining.empty()) return false;
@@ -776,6 +777,7 @@ bool Mir3HudView::apply_shop_offers(int actor,int index,PackedStringArray names,
     }
     shop_offers=std::move(offers);
     shop_offer_index=shop_offers.empty()?-1:0;
+    shop_offer_loading=false;
     if (!shop_show_offers) {
         shop_offer_page=0;
         shop_category_first=shop_first;
@@ -801,17 +803,27 @@ void Mir3HudView::draw_shop() {
     if (shop_pressed==-5) sprite(1222,shop_show_offers?mir3::HudLayout::Point{449,shop_top+159}:mir3::HudLayout::Point{258,shop_top+183});
     if (!shop_show_offers && shop_pressed==-2) sprite(1264,{106,shop_top+186});
     if (shop_show_offers) {
+        // 0x477780: 652 acknowledges the page; the request path displays an ellipsis.
+        text(shop_offer_loading?"...":std::to_string(shop_offer_page),
+            {310,shop_top-3,163,44},0x96c8ff);
         if (shop_pressed==-2) sprite(1266,{358,shop_top+163});
         if (shop_pressed==-3) sprite(1269,{316,shop_top+163});
         if (shop_pressed==-4) sprite(1271,{406,shop_top+163});
         for (int row=0;row<std::min(12,int(shop_offers.size())-shop_first);++row) {
             const auto& offer=shop_offers[shop_first+row];
             const auto cell=rect(shop_offer_cell(row));
-            if (shop_first+row==shop_offer_index) draw_rect(cell,Color(1,1,0),false);
             const auto icon=item_frame(offer.icon);
             if (icon.is_valid()) {
+                if (shop_first+row==shop_offer_index) {
+                    legacy_rect(cell,Color(50.f/255,150.f/255,150.f/255,1.f/255));
+                    draw_rect(cell,Color(180.f/255,180.f/255,180.f/255),false);
+                }
                 const auto size=icon->get_size().min(cell.size);
                 draw_texture_rect(icon,Rect2(cell.get_center()-size/2,size),false);
+                const auto price=std::to_string(offer.price);
+                const auto bounds=shop_offer_cell(row);
+                text(price,{bounds[0]-1,bounds[1]+20,35,15},0x0a0a0a,mir3::TextFont::skill_level);
+                text(price,{bounds[0],bounds[1]+21,35,15},0xffffff,mir3::TextFont::skill_level);
             }
         }
     }
@@ -876,6 +888,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer) {
             const int page=std::clamp(shop_offer_page+(activate==-3?-1:1),0,65535/10);
             if (page!=shop_offer_page) {
                 shop_offer_page=page;
+                shop_offer_loading=true;
                 const auto name=String::utf8(shop_goods[shop_selected].name.c_str());
                 emit_npc_packet(1015,shop_actor,name,std::uint32_t(10*page));
             }
