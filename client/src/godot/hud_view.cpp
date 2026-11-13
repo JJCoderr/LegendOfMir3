@@ -3965,7 +3965,7 @@ bool Mir3HudView::minimap_pointer(int kind,Vector2 position,bool ctrl) {
         minimap.release_captured=true;
     } else if (kind==1 && minimap.dragging && ctrl && bounds.has_point(position)) {
         minimap.position={int(position.x)-minimap.drag_offset[0],int(position.y)-minimap.drag_offset[1]};
-    } else {
+    } else if (kind==1 || !bounds.has_point(position)) {
         return false;
     }
     controller.cancel();

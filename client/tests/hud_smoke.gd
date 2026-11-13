@@ -754,6 +754,10 @@ func run() -> void:
 	var overlap_origin: Vector2 = Vector2(hud.hud_snapshot().inventory_position)
 	var overlap_cell := overlap_origin + Vector2(36, 79)
 	if not check(hud.add_inventory_item(301, 1, 0, 45678, "Minimap test potion", 0, 3), "add item under expanded minimap"): return
+	click_at(overlap_cell, true)
+	click_at(overlap_cell, false)
+	if not check(hud.hud_snapshot().held_inventory_icon == -1, "minimap surface blocks clicks on the covered bag slot"): return
+	if not await capture("hud-minimap-over-inventory"): return
 	click_at(Vector2(792, 249), true)
 	click_at(overlap_cell, false)
 	if not check(hud.hud_snapshot().held_inventory_icon == -1 and hud.hud_snapshot().minimap_bounds == Rect2(672, 0, 128, 128), "minimap resize owns release over inventory"): return
