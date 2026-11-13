@@ -2,3 +2,5 @@
 
 [node name="Mir3" type="Mir3HudView"]
 texture_filter = 1
+
+[connection signal="exit_confirmed" from="." to="." method="handle_exit_confirmation"]

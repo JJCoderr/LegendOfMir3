@@ -9,6 +9,7 @@
 #include <godot_cpp/classes/input_event_mouse_button.hpp>
 #include <godot_cpp/classes/input_event_mouse_motion.hpp>
 #include <godot_cpp/classes/viewport.hpp>
+#include <godot_cpp/classes/scene_tree.hpp>
 #include <godot_cpp/classes/shader.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <chrono>
@@ -70,6 +71,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("hud_snapshot"),&Mir3HudView::hud_snapshot);
     ClassDB::bind_method(D_METHOD("post_chat","value","foreground","background"),&Mir3HudView::post_chat);
     ClassDB::bind_method(D_METHOD("update_chat_rejection","channel","rejected"),&Mir3HudView::update_chat_rejection);
+    ClassDB::bind_method(D_METHOD("handle_exit_confirmation","dialog_id"),&Mir3HudView::handle_exit_confirmation);
     ADD_SIGNAL(MethodInfo("exit_confirmed",PropertyInfo(Variant::INT,"dialog_id")));
     ADD_SIGNAL(MethodInfo("hud_action",PropertyInfo(Variant::INT,"button")));
     ADD_SIGNAL(MethodInfo("chat_requested",PropertyInfo(Variant::STRING,"text")));
@@ -1266,6 +1268,11 @@ void Mir3HudView::set_group_roster(String player,PackedStringArray members) {
     group_player=player;
     group_members=members;
     queue_redraw();
+}
+
+void Mir3HudView::handle_exit_confirmation(int dialog_id) {
+    // 109 ends the program. 101 is consumed by the game session when connected.
+    if (dialog_id==109) get_tree()->quit();
 }
 
 bool Mir3HudView::dialog_is_alert() const {

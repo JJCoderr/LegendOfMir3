@@ -614,6 +614,7 @@ func run() -> void:
 	key(KEY_S)
 	if not check(not hud.hud_snapshot().mount_visible, "S closes mount window"): return
 	var exit_requests: Array[int] = []
+	hud.exit_confirmed.disconnect(hud.handle_exit_confirmation)
 	hud.exit_confirmed.connect(func(id: int): exit_requests.append(id))
 	key(KEY_Q, 0, true)
 	if not check(hud.hud_snapshot().group_request == 109, "Alt+Q opens program exit confirmation"): return
@@ -633,4 +634,10 @@ func run() -> void:
 		key(KEY_ENTER)
 	if not check(exit_requests == [101, 109, 101], "HUD exit requests"): return
 	print("HUD_SMOKE_OK: resources, expansion, collapse, stat switching, action dispatch")
-	quit(0)
+	hud.exit_confirmed.connect(hud.handle_exit_confirmation)
+	key(KEY_Q, 0, true)
+	if not check(hud.hud_snapshot().group_request == 109, "reopen program exit"): return
+	if not await capture("hud-program-exit-confirm"): return
+	key(KEY_ENTER)
+	await create_timer(0.5).timeout
+	check(false, "confirmed program exit must stop the scene tree")
