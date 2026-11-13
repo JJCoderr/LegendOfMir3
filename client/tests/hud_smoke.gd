@@ -1210,6 +1210,11 @@ func run() -> void:
 	Input.parse_input_event(group_hover)
 	for frame in range(30): await process_frame
 	if not await capture("group-add-member-hint"): return
+	hud.notification(Node.NOTIFICATION_WM_MOUSE_EXIT)
+	if not await capture("group-hint-after-mouse-exit"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var image := root.get_texture().get_image()
+		if not check(not image.get_pixel(408, 335).is_equal_approx(Color8(255, 255, 150)), "mouse exit clears group tooltip"): return
 	var member_requests: Array = []
 	hud.group_member_requested.connect(func(id: int, name: String): member_requests.append([id, name]))
 	click_at(Vector2(375, 322), true)

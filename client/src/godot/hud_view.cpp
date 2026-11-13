@@ -1896,6 +1896,11 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
+    if (what==NOTIFICATION_WM_MOUSE_EXIT) {
+        inventory_cursor=Vector2(-1,-1);
+        controller.motion(-1,-1);
+        queue_redraw();
+    }
     if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) {
         group_dialog_pressed=-1;
         npc_dialogue_close_pressed=false;
