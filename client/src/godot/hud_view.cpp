@@ -2180,7 +2180,9 @@ bool Mir3HudView::set_quest_entries(PackedStringArray titles,PackedInt32Array co
 
 bool Mir3HudView::set_quest_details(int index,PackedStringArray lines) {
     if (index<0 || index>=int(quest.entries.size()) || lines.size()>INT_MAX-int(quest.entries.size())) return false;
-    auto& details=quest.entries[index].details;
+    auto& entry=quest.entries[index];
+    entry.detail_requested=true;
+    auto& details=entry.details;
     details.clear();
     details.reserve(lines.size());
     constexpr int wrap_threshold=170; // 0x46C3C7 measures each character prefix.
@@ -2281,8 +2283,11 @@ bool Mir3HudView::quest_pointer(int kind,Vector2 position) {
             else if (quest.selected>=0) {
                 quest.expanded=quest.selected;
                 quest.scroll(0);
-                if (quest.entries[quest.selected].details.empty())
+                auto& entry=quest.entries[quest.selected];
+                if (!entry.detail_requested) {
+                    entry.detail_requested=true;
                     emit_signal("quest_detail_requested",quest.selected);
+                }
             }
         }
     }

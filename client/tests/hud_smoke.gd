@@ -920,6 +920,14 @@ func run() -> void:
 	click_at(Vector2(280, 90), false)
 	if not check(quest_details == [1], "quest detail button uses selected entry"): return
 	if not await capture("hud-quest-list"): return
+	click_at(Vector2(280, 90), true)
+	click_at(Vector2(280, 90), false)
+	if not check(quest_details == [1], "pending detail request is not repeated"): return
+	if not check(hud.set_quest_details(1, PackedStringArray()), "accept empty quest detail response"): return
+	click_at(Vector2(280, 90), true)
+	click_at(Vector2(280, 90), false)
+	if not check(quest_details == [1], "empty detail response is cached"): return
+	if not await capture("hud-quest-empty-detail"): return
 	if not check(hud.set_quest_details(1, PackedStringArray(["到比奇城药店交付书信。", "回报后领取奖励。"])), "apply quest detail response"): return
 	if not await capture("hud-quest-detail"): return
 	click_at(Vector2(83, 155), true)

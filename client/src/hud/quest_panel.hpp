@@ -11,7 +11,12 @@ struct QuestPanel : DraggablePanel {
         {1422,267,75}, {1425,267,107}
     }};
     static constexpr int visible_rows=19;
-    struct Entry { std::string title; bool completed=false; std::vector<std::string> details; };
+    struct Entry {
+        std::string title;
+        bool completed=false;
+        std::vector<std::string> details;
+        bool detail_requested=false;
+    };
     std::vector<Entry> entries;
     int pressed=-1, selected=-1, expanded=-1, first=0;
 
