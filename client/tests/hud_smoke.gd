@@ -398,12 +398,12 @@ func run() -> void:
 			var wheel_down := InputEventMouseButton.new()
 			wheel_down.button_index = MOUSE_BUTTON_WHEEL_DOWN
 			wheel_down.pressed = true
-			wheel_down.position = Vector2(45, 60)
+			wheel_down.position = Vector2(12, 20)
 			root.push_input(wheel_down, true)
 		if not await capture("bichon-merchant-goods-scrolled"): return
 		click_at(Vector2(45, 171), true)
 		click_at(Vector2(45, 171), false)
-		if not check(goods_requests.back() == [2, 9, "Potion 9"], "scroll preserves original goods index"): return
+		if not check(goods_requests.back() == [2, 9, "Potion 9"], "wheel over shop frame scrolls goods and preserves their original index"): return
 		if not check(npc_protocol.back() == [1015, 2, "Potion 9"], "detail request uses NPC and item name"): return
 		var offer_selections: Array = []
 		var purchases: Array = []

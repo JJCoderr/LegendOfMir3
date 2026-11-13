@@ -1402,7 +1402,8 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     };
     if (shop_actor && button.is_valid() && button->is_pressed() &&
         (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) &&
-        Rect2(22,34,247,152).has_point(button->get_position())) {
+        Rect2(0,0,292,224).has_point(button->get_position())) {
+        // 0x43D310 / 0x43D490 dispatch by the window under the pointer, including its frame.
         const int direction=button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN?1:-1;
         shop_first=std::clamp(shop_first+direction,0,std::max(0,int(shop_show_offers?shop_offers.size():shop_goods.size())-1));
         shop_pressed=-1;
