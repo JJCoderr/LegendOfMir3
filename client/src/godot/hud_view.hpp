@@ -1,5 +1,6 @@
 #pragma once
 #include "hud/hud_model.hpp"
+#include "hud/minimap.hpp"
 #include "hud/audio_options.hpp"
 #include "hud/portrait_picker.hpp"
 #include "inventory/inventory_panel.hpp"
@@ -34,6 +35,8 @@ public:
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     bool set_music_map(godot::String map);
+    bool apply_minimap_reply(int map_number);
+    void set_minimap_position(int x,int y);
     bool apply_portrait_reply(godot::PackedByteArray jpeg);
     bool load_portrait_cache(godot::String server,godot::String character);
     void set_portrait_names(godot::PackedStringArray names);
@@ -50,6 +53,12 @@ protected:
     static void _bind_methods();
 private:
     mir3::HudModel model;
+    mir3::Minimap minimap;
+    mir3::WilArchive minimap_archive, full_minimap_archive;
+    godot::Ref<godot::ImageTexture> minimap_image;
+    void toggle_minimap(std::uint64_t cooldown);
+    void draw_minimap();
+    bool minimap_pointer(int kind,godot::Vector2 position,bool ctrl);
     mir3::PortraitPicker portrait_picker;
     mir3::DraggablePanel portrait_panel{mir3::PortraitPicker::initial};
     bool portrait_entry_pressed=false;

@@ -101,6 +101,49 @@ func run() -> void:
 	click_at(Vector2(685, 510), false)
 	await process_frame
 	if not check(actions == [14, 14, 12] and hud.hud_snapshot().pressed == -1, "inventory action dispatch"): return
+	var map_requests: Array[int] = []
+	hud.minimap_requested.connect(func(identifier: int): map_requests.append(identifier))
+	hud.set_minimap_position(337, 267)
+	key(KEY_V)
+	if not check(map_requests == [1033] and not hud.hud_snapshot().minimap_visible, "minimap waits for reply"): return
+	if not check(hud.apply_minimap_reply(1001), "read Bichon from original Fmmap"): return
+	if not check(hud.hud_snapshot().minimap_bounds == Rect2(672, 0, 128, 128), "compact minimap geometry"): return
+	if not check(hud.hud_snapshot().minimap_source == Vector2(441, 203), "minimap centered on player"): return
+	key(KEY_V)
+	if not check(hud.hud_snapshot().minimap_visible, "minimap reply cooldown"): return
+	if not await capture("hud-minimap-compact"): return
+	click_at(Vector2(792, 120), true)
+	click_at(Vector2(792, 120), false)
+	if not check(hud.hud_snapshot().minimap_bounds == Rect2(544, 0, 256, 256), "minimap size button"): return
+	key(KEY_Y)
+	if not check(hud.hud_snapshot().minimap_translucent, "minimap transparency shortcut"): return
+	if not await capture("hud-minimap-expanded"): return
+	key(KEY_T)
+	if not check(hud.hud_snapshot().minimap_bounds == Rect2(672, 0, 128, 128), "minimap size shortcut"): return
+	var map_drag := InputEventMouseButton.new()
+	map_drag.button_index = MOUSE_BUTTON_LEFT
+	map_drag.ctrl_pressed = true
+	map_drag.pressed = true
+	map_drag.position = Vector2(730, 64)
+	Input.parse_input_event(map_drag)
+	var map_motion := InputEventMouseMotion.new()
+	map_motion.position = Vector2(710, 88)
+	map_motion.ctrl_pressed = true
+	Input.parse_input_event(map_motion)
+	map_drag = map_drag.duplicate()
+	map_drag.position = map_motion.position
+	map_drag.pressed = false
+	Input.parse_input_event(map_drag)
+	if not check(hud.hud_snapshot().minimap_bounds == Rect2(652, 24, 128, 128), "minimap Ctrl drag"): return
+	await create_timer(1.01).timeout
+	key(KEY_V)
+	if not check(not hud.hud_snapshot().minimap_visible, "minimap closes with V"): return
+	click_at(Vector2(643, 513), true)
+	click_at(Vector2(643, 513), false)
+	if not check(map_requests == [1033, 1033] and hud.apply_minimap_reply(1), "HUD button requests original Mmap"): return
+	key(KEY_Y)
+	await create_timer(1.01).timeout
+	key(KEY_V)
 	if not check(hud.hud_snapshot().inventory_visible and hud.hud_snapshot().inventory_position == Vector2i(518, 0), "inventory origin"): return
 	if not await capture("inventory-empty"): return
 	if not check(hud.add_inventory_item(5, 3, 0) and hud.add_inventory_item(1043, 1, 14) and hud.add_inventory_item(15, 1, 54), "inventory fixtures"): return

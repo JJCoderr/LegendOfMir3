@@ -32,6 +32,10 @@ Ref<ImageTexture> texture(const std::vector<std::uint8_t>& rgba,int width,int he
 }
 Rect2 rect(mir3::HudLayout::Rect r) { return Rect2(r[0],r[1],r[2],r[3]); }
 Vector2 point(mir3::HudLayout::Point p) { return Vector2(p[0],p[1]); }
+std::uint64_t ticks_msec() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
 }
 void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add_inventory_item","icon","count","slot","make_index","name","std_mode","stack_mode"),&Mir3HudView::add_inventory_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
@@ -41,6 +45,9 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines","editable"),&Mir3HudView::set_guild_overview,DEFVAL(PackedStringArray()));
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
+    ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
+    ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
+    ClassDB::bind_method(D_METHOD("set_minimap_position","x","y"),&Mir3HudView::set_minimap_position);
     ADD_SIGNAL(MethodInfo("portrait_list_requested"));
     ADD_SIGNAL(MethodInfo("portrait_upload_requested",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"jpeg")));
     ClassDB::bind_method(D_METHOD("load_portrait_cache","server","character"),&Mir3HudView::load_portrait_cache);
@@ -68,6 +75,10 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary result;
     result["ready"]=loaded;
     result["expanded"]=model.layout.expanded;
+    result["minimap_visible"]=minimap.visible;
+    result["minimap_bounds"]=rect(minimap.bounds());
+    result["minimap_translucent"]=minimap.translucent;
+    result["minimap_source"]=point(minimap.source());
     result["pressed"]=model.pressed;
     result["hovered"]=model.hovered;
     result["primary_defence"]=model.primary_stat[0];
@@ -141,6 +152,8 @@ void Mir3HudView::_ready() {
         status_body=texture(body->pixels.rgba,body->width,body->height);
         status_body_offset=Vector2(body->offset_x,body->offset_y);
     }
+    minimap_archive.open(resource_root/"Data"/"Mmap");
+    full_minimap_archive.open(resource_root/"Data"/"Fmmap");
     magic_icons.open(resource_root/"Data"/"MIcon");
     equipment_archive.open(resource_root/"Data"/"Equip");
     std::ifstream descriptions(resource_root/"Magic.exp",std::ios::binary);
@@ -269,6 +282,7 @@ void Mir3HudView::_draw() {
         case Panel::portrait: draw_portrait_picker(); break;
         }
     }
+    draw_minimap();
     draw_skill_key_menu();
     draw_skill_description();
     if (guild_editor.visible) draw_guild_editor();
@@ -383,7 +397,7 @@ void Mir3HudView::button_hint() {
 }
 void Mir3HudView::_process(double) {
     // Original button tooltip grows once per draw, not once per mouse event.
-    if (model.hovered>=0 || (button_tooltip.expanding && !button_tooltip.previous.empty())) queue_redraw();
+    if (minimap.visible || model.hovered>=0 || (button_tooltip.expanding && !button_tooltip.previous.empty())) queue_redraw();
 }
 void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     const auto a=bounds.position,b=bounds.get_end();
@@ -397,7 +411,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     if (group_request && group_dialog_input(event)) return;
     if (guild_editor.visible && guild_editor_input(event)) return;
     Ref<InputEventMouseMotion> motion=event;
-    if (motion.is_valid()) { auto p=motion->get_position();inventory_cursor=p;if (panel_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
+    if (motion.is_valid()) { auto p=motion->get_position();inventory_cursor=p;if (minimap_pointer(1,p,motion->is_ctrl_pressed()) || panel_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
     Ref<InputEventMouseButton> button=event;
     if (portrait_panel.visible && button.is_valid() && button->is_pressed() &&
         rect(portrait_panel.rect).has_point(button->get_position()) &&
@@ -451,7 +465,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         inventory_cursor=p;
         const int kind=button->is_pressed()?0:2;
         if (skill_menu_input(kind,p,button->is_double_click())) return;
-        if (panel_pointer(kind,p) || scroll_input(kind,p)) return;
+        if (minimap_pointer(kind,p,button->is_ctrl_pressed()) || panel_pointer(kind,p) || scroll_input(kind,p)) return;
         const auto entry=frame(2096);
         const auto anchor=mir3::HudLayout::portrait_entry_position;
         const bool portrait_hit=!model.layout.expanded && entry.is_valid() &&
@@ -486,6 +500,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             const int id=reception_buttons.press(action,rejected_chat[action-20]);
             chat_requested(String::utf8(message(id).c_str()));
         }
+        if (action==1) toggle_minimap(100);
         if (action==6) emit_signal("guild_overview_requested");
         if (action==5) toggle_group();
         if (action==9) toggle_options();
@@ -501,7 +516,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
@@ -613,6 +628,14 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         if (chat_input) chat_input->layout(model.layout.expanded);
         queue_redraw();
         get_viewport()->set_input_as_handled();
+        return;
+    }
+    if (code==KEY_V || (minimap.visible && (code==KEY_T || code==KEY_Y))) {
+        if (code==KEY_V) toggle_minimap(1000);
+        if (code==KEY_T) minimap.resize();
+        if (code==KEY_Y) minimap.translucent=!minimap.translucent;
+        get_viewport()->set_input_as_handled();
+        queue_redraw();
         return;
     }
     if (code==KEY_N) {
@@ -1661,6 +1684,74 @@ void Mir3HudView::sync_hud_sound() {
         if (!audio_options.music_enabled) map_music->stop();
         else if (map_music->get_stream().is_valid() && !map_music->is_playing()) map_music->play();
     }
+}
+
+void Mir3HudView::toggle_minimap(std::uint64_t cooldown) {
+    if (minimap.toggle(ticks_msec(),cooldown)) emit_signal("minimap_requested",1033);
+    queue_redraw();
+}
+
+bool Mir3HudView::apply_minimap_reply(int map_number) {
+    if (map_number<=0 || map_number>65535) return false;
+    const int id=map_number-1;
+    auto decoded=id<1000?minimap_archive.frame(id):full_minimap_archive.frame(id-1000);
+    if (!decoded) return false;
+    minimap_image=texture(decoded->pixels.rgba,decoded->width,decoded->height);
+    if (minimap_image.is_null()) return false;
+    minimap.receive(decoded->width,decoded->height,ticks_msec());
+    queue_redraw();
+    return true;
+}
+
+void Mir3HudView::set_minimap_position(int x,int y) {
+    minimap.player_x=x;
+    minimap.player_y=y;
+    queue_redraw();
+}
+
+void Mir3HudView::draw_minimap() {
+    if (!minimap.visible || minimap_image.is_null()) return;
+    const auto bounds=rect(minimap.bounds());
+    const auto end=bounds.get_end();
+    const auto source=point(minimap.source());
+    constexpr float light=150.f/255;
+    draw_texture_rect_region(minimap_image,bounds,Rect2(source,bounds.size),
+        Color(light,light,light,minimap.translucent?175.f/255:1.f));
+    draw_rect(bounds,Color(100.f/255,100.f/255,100.f/255),false);
+    if (ticks_msec()%801<500) {
+        const auto x=std::int64_t(minimap.player_x)*3/2;
+        const auto marker=bounds.position+Vector2(float(x-2),float(std::int64_t(minimap.player_y)-2))-source;
+        draw_rect(Rect2(marker,Vector2(4,4)).intersection(bounds),Color(100.f/255,250.f/255,100.f/255),false);
+    }
+    sprite(1486,minimap.position);
+    sprite(1487,{int(end.x)-32,int(bounds.position.y)});
+    sprite(1488,{int(bounds.position.x),int(end.y)-35});
+    sprite(minimap.translucent?1482:1483,{int(end.x)-38,int(end.y)-19});
+    sprite(minimap.large?1485:1484,{int(end.x)-19,int(end.y)-19});
+}
+
+bool Mir3HudView::minimap_pointer(int kind,Vector2 position,bool ctrl) {
+    if (!minimap.visible) return false;
+    const auto bounds=rect(minimap.bounds());
+    const auto end=bounds.get_end();
+    if (kind==0 && ctrl && bounds.has_point(position)) {
+        minimap.drag_offset={int(position.x)-minimap.position[0],int(position.y)-minimap.position[1]};
+        minimap.dragging=true;
+    } else if (kind==0 && Rect2(end-Vector2(38,19),Vector2(19,19)).has_point(position)) {
+        minimap.translucent=!minimap.translucent;
+    } else if (kind==0 && Rect2(end-Vector2(19,19),Vector2(19,19)).has_point(position)) {
+        minimap.resize();
+    } else if (kind==1 && minimap.dragging && ctrl && bounds.has_point(position)) {
+        minimap.position={int(position.x)-minimap.drag_offset[0],int(position.y)-minimap.drag_offset[1]};
+    } else if (kind==2 && minimap.dragging) {
+        minimap.dragging=false;
+    } else {
+        return false;
+    }
+    controller.cancel();
+    get_viewport()->set_input_as_handled();
+    queue_redraw();
+    return true;
 }
 
 bool Mir3HudView::set_music_map(String map) {
