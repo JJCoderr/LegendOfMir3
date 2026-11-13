@@ -788,6 +788,11 @@ func run() -> void:
 	Input.parse_input_event(trade_hover)
 	await create_timer(0.3).timeout
 	if not await capture("hud-trade-entry"): return
+	hud.set_character_identity("比奇守卫", "", "", "")
+	if not check(hud.open_trade("比奇旅人") and hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_visible, "trade reply opens paired panel and inventory"): return
+	if not await capture("hud-trade-window"): return
+	hud.open_trade("")
+	if not check(not hud.hud_snapshot().trade_visible, "trade session closes panel"): return
 	var exit_requests: Array[int] = []
 	hud.exit_confirmed.disconnect(hud.handle_exit_confirmation)
 	hud.exit_confirmed.connect(func(id: int): exit_requests.append(id))

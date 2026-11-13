@@ -50,6 +50,7 @@ public:
     bool apply_mount_reply(int identifier,int64_t recognition);
     bool apply_minimap_reply(int map_number);
     void handle_exit_confirmation(int dialog_id);
+    bool open_trade(godot::String partner);
     void set_trade_context(int direction,godot::Vector2i cell,int actor_type,bool dead,godot::String name);
     void set_map_location(godot::String name,int x,int y);
     void set_minimap_position(int x,int y);
@@ -76,6 +77,10 @@ private:
     bool trade_actor_dead=false;
     godot::String trade_actor_name;
     bool request_trade();
+    mir3::DraggablePanel trade{{0,0,494,330}};
+    godot::String trade_partner;
+    void draw_trade();
+    bool trade_pointer(int kind,godot::Vector2 position);
     mir3::ElementAttributes elements;
     godot::String character_name,character_secondary,character_tertiary,character_badge;
     mir3::Minimap minimap;
@@ -186,8 +191,8 @@ private:
     godot::Vector2 status_body_offset;
     void draw_status();
     void toggle_status();
-    enum class Panel { group, skills, status, inventory, guild, options, portrait, mount, quest };
-    std::array<Panel,9> panel_order{Panel::group,Panel::skills,Panel::status,Panel::inventory,Panel::guild,Panel::options,Panel::portrait,Panel::mount,Panel::quest};
+    enum class Panel { group, skills, status, inventory, guild, options, portrait, mount, quest, trade };
+    std::array<Panel,10> panel_order{Panel::group,Panel::skills,Panel::status,Panel::inventory,Panel::guild,Panel::options,Panel::portrait,Panel::mount,Panel::quest,Panel::trade};
     void raise_panel(Panel panel);
     const mir3::DraggablePanel& panel_state(Panel panel) const;
     bool panel_covered(Panel panel,godot::Vector2 point) const;

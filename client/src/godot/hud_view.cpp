@@ -85,6 +85,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("update_chat_rejection","channel","rejected"),&Mir3HudView::update_chat_rejection);
     ClassDB::bind_method(D_METHOD("handle_exit_confirmation","dialog_id"),&Mir3HudView::handle_exit_confirmation);
     ClassDB::bind_method(D_METHOD("set_trade_context","direction","cell","actor_type","dead","name"),&Mir3HudView::set_trade_context);
+    ClassDB::bind_method(D_METHOD("open_trade","partner"),&Mir3HudView::open_trade);
     ADD_SIGNAL(MethodInfo("trade_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("exit_confirmed",PropertyInfo(Variant::INT,"dialog_id")));
     ADD_SIGNAL(MethodInfo("hud_action",PropertyInfo(Variant::INT,"button")));
@@ -105,6 +106,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["expanded"]=model.layout.expanded;
     result["quest_first"]=quest.first;
     result["quest_selected"]=quest.selected;
+    result["trade_visible"]=trade.visible;
     result["quest_visible"]=quest.visible;
     result["quest_bounds"]=rect(quest.rect);
     result["mount_visible"]=mount.visible;
@@ -320,6 +322,7 @@ void Mir3HudView::_draw() {
         case Panel::portrait: draw_portrait_picker(); break;
         case Panel::mount: draw_mount(); break;
         case Panel::quest: draw_quest(); break;
+        case Panel::trade: draw_trade(); break;
         }
     }
     draw_minimap();
@@ -531,7 +534,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
     if (button.is_valid() && button->is_pressed() && (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) && rect(mir3::HudLayout::chat_frame(model.layout.expanded)).has_point(button->get_position()) &&
         !covers_wheel(portrait_panel) && !covers_wheel(options) && !covers_wheel(guild) && !covers_wheel(group) && !covers_wheel(skills) &&
-        !covers_wheel(status) && !covers_wheel(inventory) && !covers_wheel(mount) && !covers_wheel(quest)) {
+        !covers_wheel(status) && !covers_wheel(inventory) && !covers_wheel(mount) && !covers_wheel(quest) && !covers_wheel(trade)) {
         chat_history.scroll(model.layout.expanded).wheel(button->get_button_index()==MOUSE_BUTTON_WHEEL_UP?1:-1,int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded);
         get_viewport()->set_input_as_handled();queue_redraw();return;
     }
@@ -597,7 +600,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
 }
 void Mir3HudView::_notification(int what) {
-    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
+    if (what==NOTIFICATION_APPLICATION_FOCUS_OUT) { minimap.dragging=false;trade.end_drag();mount.end_drag();mount.pressed=-1;quest.end_drag();quest.pressed=-1;quest.scroll_captured=false;controller.cancel();portrait_entry_pressed=false;portrait_pressed=-1;portrait_picker.scrolling=false;options.end_drag();audio_drag=-1;guild.end_drag();guild_layout.pressed=-1;guild_scroll.captured=false;group.end_drag();group_pressed=-1;skills.end_drag();skills.pressed=-1;skills.scroll_captured=false;inventory_cursor=Vector2(-1,-1);status.end_drag();status_close_pressed=false;inventory.end_drag();inventory.close_pressed=false;inventory.scroll.captured=false;chat_history.input(2,0,0,false,0,0,0);chat_history.input(2,0,0,true,0,0,0);queue_redraw(); }
 }
 
 void Mir3HudView::draw_inventory() {
@@ -763,6 +766,7 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
             case Panel::portrait: close_portrait_picker();break;
             case Panel::mount: toggle_mount();break;
             case Panel::quest: toggle_quest();break;
+            case Panel::trade: break;
             }
             get_viewport()->set_input_as_handled();
             return;
@@ -978,6 +982,7 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
 }
 
 bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
+    if (trade.dragging) return trade_pointer(kind,position);
     if (quest.dragging || quest.pressed>=0 || quest.scroll_captured) return quest_pointer(kind,position);
     if (mount.dragging || mount.pressed>=0) return mount_pointer(kind,position);
     if (portrait_picker.scrolling || portrait_pressed>=0) return portrait_input(kind,position);
@@ -1000,6 +1005,7 @@ bool Mir3HudView::panel_pointer(int kind,Vector2 position) {
         case Panel::portrait: if (portrait_input(kind,position)) return true; break;
         case Panel::mount: if (mount_pointer(kind,position)) return true; break;
         case Panel::quest: if (quest_pointer(kind,position)) return true; break;
+        case Panel::trade: if (trade_pointer(kind,position)) return true; break;
         }
     }
     return false;
@@ -2084,6 +2090,49 @@ bool Mir3HudView::apply_minimap_reply(int map_number) {
     return true;
 }
 
+bool Mir3HudView::open_trade(String partner) {
+    if (partner.is_empty()) {
+        if (trade.visible) trade.toggle();
+        queue_redraw();
+        return true;
+    }
+    if (frame(1390).is_null()) return false;
+    if (trade.visible) return true;
+    trade_partner=partner;
+    trade.toggle();
+    raise_panel(Panel::trade);
+    if (!inventory.visible) {
+        inventory.rect[0]=518;
+        inventory.rect[1]=0;
+        toggle_inventory();
+    }
+    queue_redraw();
+    return true;
+}
+
+void Mir3HudView::draw_trade() {
+    const auto [x,y,w,h]=trade.rect;
+    const auto skin=frame(1390);
+    if (skin.is_valid()) sprite(1390,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
+    text(character_name.utf8().get_data(),{x,y,228,30},0xfac8c8);
+    text(trade_partner.utf8().get_data(),{x+247,y,120,30},0xfac8c8);
+}
+
+bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
+    const bool inside=rect(trade.rect).has_point(position);
+    bool captured=false;
+    if (kind==0 && inside) {
+        raise_panel(Panel::trade);
+        trade.begin_drag(int(position.x),int(position.y),position.y>=trade.rect[1]+56);
+    } else if (kind==1) captured=trade.move_drag(int(position.x),int(position.y));
+    else if (kind==2) captured=trade.end_drag();
+    if (!inside && !captured) return false;
+    controller.cancel();
+    get_viewport()->set_input_as_handled();
+    queue_redraw();
+    return true;
+}
+
 void Mir3HudView::set_trade_context(int direction,Vector2i cell,int actor_type,bool dead,String name) {
     trade_direction=direction;
     trade_actor_cell=cell;
@@ -2529,6 +2578,7 @@ const mir3::DraggablePanel& Mir3HudView::panel_state(Panel panel) const {
     case Panel::portrait: return portrait_panel;
     case Panel::mount: return mount;
     case Panel::quest: return quest;
+    case Panel::trade: return trade;
     }
     return inventory;
 }
