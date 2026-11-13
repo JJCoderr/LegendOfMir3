@@ -1729,6 +1729,27 @@ func run() -> void:
 	for option in ["magic_light", "damage_numbers", "reverse_pan"]:
 		if not check(persisted[option] == changed_options[option], "reload system option " + option): return
 	var portrait_hover := InputEventMouseMotion.new()
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var entry_region := Rect2i(535, 567, 40, 13)
+		portrait_hover.position = Vector2(540, 580)
+		Input.parse_input_event(portrait_hover)
+		await process_frame
+		await RenderingServer.frame_post_draw
+		var hidden_entry := root.get_texture().get_image().get_region(entry_region).get_data()
+		portrait_hover = portrait_hover.duplicate()
+		portrait_hover.position.y = 579
+		Input.parse_input_event(portrait_hover)
+		await process_frame
+		await RenderingServer.frame_post_draw
+		var normal_entry := root.get_texture().get_image().get_region(entry_region).get_data()
+		if not check(normal_entry != hidden_entry, "portrait entry draws at the last row inside its hover rectangle"): return
+		click_at(Vector2(540, 570), true)
+		if not await capture("hud-portrait-entry-pressed"): return
+		var pressed_entry := root.get_texture().get_image().get_region(entry_region).get_data()
+		if not check(pressed_entry != normal_entry, "portrait entry uses the pressed frame"): return
+		click_at(Vector2(540, 580), false)
+		if not check(not hud.hud_snapshot().portrait_visible, "release outside the portrait hover rectangle cancels activation"): return
+		portrait_hover = portrait_hover.duplicate()
 	portrait_hover.position = Vector2(540, 570)
 	Input.parse_input_event(portrait_hover)
 	for frame in range(20): await process_frame

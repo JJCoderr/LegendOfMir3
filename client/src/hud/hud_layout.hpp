@@ -38,6 +38,8 @@ struct HudLayout {
     // 0x436A30 positions object +0x6960 at the HUD origin plus (535,100).
     static constexpr Point portrait_entry_position{origin[0]+535,origin[1]+100};
     static constexpr int portrait_entry_frame(bool pressed) { return pressed?2097:2096; }
+    // 0x4359AF..0x4359CA sets the portrait hover RECT at this+0x7270.
+    static constexpr Rect portrait_hover{535,486,81,94};
     // 0x43849D..0x4384BD: float origin/extent, drawn BEFORE GameInter[1160].
     static constexpr Rect chat_backing{185,317,433,213};
     // 0x438599/0x4385E1: offsets from HUD origin; sizes from packed frames.

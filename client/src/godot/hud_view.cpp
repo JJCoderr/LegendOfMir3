@@ -1543,6 +1543,9 @@ void Mir3HudView::draw_hud_tail() {
     paint_canvas=hud_tail;
     sprite(mir3::ChatScrollLayout::frame,{mir3::ChatScrollLayout::x,mir3::chat_thumb_y(chat_history.first(model.layout.expanded),int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded)});
     buttons();
+    // 0x43877F..0x4387B6 draws the upload entry in the HUD pass.
+    if (!model.layout.expanded && rect(Layout::portrait_hover).has_point(inventory_cursor))
+        sprite(Layout::portrait_entry_frame(portrait_entry_pressed),Layout::portrait_entry_position);
     draw_target_vitals();
     for (const auto panel:panel_order) {
         if (!panel_state(panel).visible) continue;
@@ -1564,8 +1567,6 @@ void Mir3HudView::draw_hud_tail() {
     draw_npc_dialogue();
     draw_shop();
     if (guild_editor.visible) draw_guild_editor();
-    if (!model.layout.expanded && Rect2(535,486,81,94).has_point(inventory_cursor))
-        sprite(mir3::HudLayout::portrait_entry_frame(portrait_entry_pressed),mir3::HudLayout::portrait_entry_position);
     if (group_request) draw_group_dialog();
     button_hint();
     const auto& held=trade.visible && trade_return_slot>=0?trade_items[0][trade_return_slot]:bag.held;
@@ -1729,8 +1730,8 @@ void Mir3HudView::button_hint() {
         }
         break;
     }
-    if (!panel_hit && !model.layout.expanded && Rect2(535,486,81,94).has_point(inventory_cursor)) {
-        const auto entry=frame(2096);
+    if (!panel_hit && !model.layout.expanded && rect(mir3::HudLayout::portrait_hover).has_point(inventory_cursor)) {
+        const auto entry=frame(mir3::HudLayout::portrait_entry_frame(false));
         if (entry.is_valid()) {
             const Rect2 hit(point(mir3::HudLayout::portrait_entry_position),entry->get_size());
             if (hit.has_point(inventory_cursor)) {
@@ -1939,10 +1940,10 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         if (kind==2 && panel_pointer(kind,p,true)) return;
         if (shop_input(kind,p,button->is_double_click()) || npc_dialogue_input(kind,p) || skill_menu_input(kind,p,button->is_double_click())) return;
         if (minimap_pointer(kind,p,button->is_ctrl_pressed()) || panel_pointer(kind,p) || scroll_input(kind,p)) return;
-        const auto entry=frame(2096);
+        const auto entry=frame(mir3::HudLayout::portrait_entry_frame(false));
         const auto anchor=mir3::HudLayout::portrait_entry_position;
         const bool portrait_hit=!model.layout.expanded && entry.is_valid() &&
-            Rect2(Vector2(anchor[0],anchor[1]),entry->get_size()).has_point(p) && Rect2(535,486,81,94).has_point(p);
+            Rect2(Vector2(anchor[0],anchor[1]),entry->get_size()).has_point(p) && rect(mir3::HudLayout::portrait_hover).has_point(p);
         if (portrait_hit || portrait_entry_pressed) {
             portrait_entry_pressed=kind==0 && portrait_hit;
             if (kind==2 && portrait_hit) {
