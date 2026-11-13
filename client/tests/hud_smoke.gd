@@ -794,6 +794,18 @@ func run() -> void:
 	if not check(hud.set_trade_item(0, 0, 301, 2) and hud.set_trade_item(1, 6, 5, 1), "apply both sides of trade offer"): return
 	if not check(not hud.set_trade_item(2, 0, 301, 1) and not hud.set_trade_item(0, 200, 301, 1), "reject invalid trade slot"): return
 	if not await capture("hud-trade-offers"): return
+	var offers: Array[Array] = []
+	hud.trade_offer_requested.connect(func(id: int, item: int, label: String): offers.append([id, item, label]))
+	if not check(hud.add_inventory_item(301, 1, hud.hud_snapshot().inventory_row * 6 + 4, 98765, "Trade potion"), "create trade pickup fixture"): return
+	var trade_pickup: Vector2 = Vector2(hud.hud_snapshot().inventory_position) + Vector2(185, 76)
+	click_at(trade_pickup, true)
+	click_at(trade_pickup, false)
+	if not check(hud.hud_snapshot().held_inventory_icon == 301, "pick up trade item"): return
+	click_at(Vector2(70, 75), true)
+	click_at(Vector2(70, 75), false)
+	if not check(offers == [[1026, 98765, "Trade potion"]] and hud.hud_snapshot().held_inventory_icon == 301, "offer waits for server reply"): return
+	if not check(hud.apply_trade_offer_reply(675) and hud.hud_snapshot().held_inventory_icon == -1, "offer reply transfers item into local trade grid"): return
+	if not await capture("hud-trade-offer-accepted"): return
 	if not check(hud.set_trade_item(0, 30, 301, 3), "apply trade item below first page"): return
 	click_at(Vector2(211, 170), true)
 	click_at(Vector2(211, 170), false)

@@ -85,6 +85,9 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("update_chat_rejection","channel","rejected"),&Mir3HudView::update_chat_rejection);
     ClassDB::bind_method(D_METHOD("handle_exit_confirmation","dialog_id"),&Mir3HudView::handle_exit_confirmation);
     ClassDB::bind_method(D_METHOD("set_trade_context","direction","cell","actor_type","dead","name"),&Mir3HudView::set_trade_context);
+    ADD_SIGNAL(MethodInfo("trade_offer_requested",PropertyInfo(Variant::INT,"identifier"),
+        PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::STRING,"name")));
+    ClassDB::bind_method(D_METHOD("apply_trade_offer_reply","identifier"),&Mir3HudView::apply_trade_offer_reply);
     ClassDB::bind_method(D_METHOD("set_trade_item","side","slot","icon","count"),&Mir3HudView::set_trade_item);
     ClassDB::bind_method(D_METHOD("set_trade_gold","local","remote"),&Mir3HudView::set_trade_gold);
     ClassDB::bind_method(D_METHOD("open_trade","partner"),&Mir3HudView::open_trade);
@@ -678,7 +681,7 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
         consumed=inventory.move_drag(int(position.x),int(position.y));
     } else if (kind==2) {
         const bool close_window=inventory.close_pressed && on_close;
-        if (!consumed && !inventory.dragging && !inventory.close_pressed) {
+        if (!consumed && !inventory.dragging && !inventory.close_pressed && trade_pending_slot<0) {
             bag.scroll_row=inventory.row;
             consumed=bag.slot_at(int(position.x),int(position.y),x,y)>=0;
             if (consumed && !equipment.pending && bag.held_equipment_slot>=0) {
@@ -2094,6 +2097,21 @@ bool Mir3HudView::apply_minimap_reply(int map_number) {
     return true;
 }
 
+bool Mir3HudView::apply_trade_offer_reply(int identifier) {
+    if (trade_pending_slot<0 || (identifier!=675 && identifier!=676)) return false;
+    if (identifier==675) {
+        trade_items[0][trade_pending_slot]=bag.held;
+        bag.held={};
+        bag.held_slot=-1;
+    } else if (bag.insert(bag.held)) {
+        bag.held={};
+        bag.held_slot=-1;
+    }
+    trade_pending_slot=-1;
+    queue_redraw();
+    return true;
+}
+
 bool Mir3HudView::set_trade_item(int side,int slot,int icon,int count) {
     if (!trade.visible || side<0 || side>=2 || slot<0 || slot>=200 || icon< -1 || count<0) return false;
     auto& item=trade_items[side][slot];
@@ -2122,6 +2140,7 @@ bool Mir3HudView::set_trade_gold(int64_t local,int64_t remote) {
 
 bool Mir3HudView::open_trade(String partner) {
     if (partner.is_empty()) {
+        if (trade_pending_slot>=0) apply_trade_offer_reply(676);
         if (trade.visible) trade.toggle();
         trade_confirm_pressed=false;
         trade_confirmed=false;
@@ -2199,12 +2218,33 @@ bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
         trade.begin_drag(int(position.x),int(position.y),on_confirm || position.y>=trade.rect[1]+56);
     } else if (kind==1) captured=trade.move_drag(int(position.x),int(position.y)) || trade_confirm_pressed;
     else if (kind==2) {
-        const bool activate=trade_confirm_pressed && on_confirm && !trade_confirmed;
+        const bool activate=trade_confirm_pressed && on_confirm && !trade_confirmed && trade_pending_slot<0;
         captured=trade.end_drag() || trade_confirm_pressed;
         trade_confirm_pressed=false;
         if (activate) {
             trade_confirmed=true;
             emit_signal("trade_requested",1030,String());
+        }
+        const auto [x,y,w,h]=trade.rect;
+        if (!captured && !trade_confirmed && trade_pending_slot<0 && bag.held &&
+            bag.held.make_index && bag.held_equipment_slot<0 && !bag.pending_use && !equipment.pending &&
+            (bag.held.stack_mode<2 || bag.held.count==1) &&
+            Rect2(x+14,y+56,190,190).has_point(position)) {
+            const int column=(int(position.x)-x-14)/38;
+            const int row=trade_scroll.first[0]+(int(position.y)-y-56)/38;
+            const int slot=row*5+column;
+            const auto& held=bag.held;
+            bool fits=column+held.width<=5 && row+held.height<=40;
+            for (int index=0;fits && index<200;++index) {
+                const auto& item=trade_items[0][index];
+                if (!item) continue;
+                fits=!Rect2(column,row,held.width,held.height).intersects(
+                    Rect2(index%5,index/5,item.width,item.height));
+            }
+            if (fits) {
+                trade_pending_slot=slot;
+                emit_signal("trade_offer_requested",1026,int64_t(held.make_index),String::utf8(held.name.c_str()));
+            }
         }
     }
     if (!inside && !captured) return false;

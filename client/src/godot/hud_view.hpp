@@ -51,6 +51,7 @@ public:
     bool apply_mount_reply(int identifier,int64_t recognition);
     bool apply_minimap_reply(int map_number);
     void handle_exit_confirmation(int dialog_id);
+    bool apply_trade_offer_reply(int identifier);
     bool set_trade_item(int side,int slot,int icon,int count);
     bool set_trade_gold(int64_t local,int64_t remote);
     bool open_trade(godot::String partner);
@@ -85,6 +86,7 @@ private:
     mir3::TradeScroll trade_scroll;
     std::array<std::uint32_t,2> trade_gold{};
     std::array<std::array<mir3::BagItem,200>,2> trade_items;
+    int trade_pending_slot=-1;
     bool trade_confirm_pressed=false,trade_confirmed=false;
     void draw_trade();
     bool trade_pointer(int kind,godot::Vector2 position);
