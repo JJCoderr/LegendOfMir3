@@ -21,6 +21,7 @@
 #include "status/status_layout.hpp"
 #include <godot_cpp/classes/input_event_key.hpp>
 #include <cstdio>
+#include <cstdlib>
 #include <charconv>
 #include <iterator>
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -87,6 +88,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_guild_notices","lines"),&Mir3HudView::set_guild_notices);
     ADD_SIGNAL(MethodInfo("group_member_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("group_allow_requested",PropertyInfo(Variant::BOOL,"allowed")));
+    ClassDB::bind_method(D_METHOD("apply_skill_records","identifier","count","records"),&Mir3HudView::apply_skill_records);
     ClassDB::bind_method(D_METHOD("apply_skill_removal","id"),&Mir3HudView::apply_skill_removal);
     ClassDB::bind_method(D_METHOD("apply_skill_progress","id","experience","level"),&Mir3HudView::apply_skill_progress);
     ClassDB::bind_method(D_METHOD("set_learned_skill","id","level","key","experience","required","name"),&Mir3HudView::set_learned_skill,DEFVAL(0),DEFVAL(0),DEFVAL(String()));
@@ -1220,7 +1222,7 @@ void Mir3HudView::draw_skills() {
     }
     for (const int index:{0,8,7,6,5,4,3,2,1}) {
         const auto [base,left,top]=mir3::SkillPanel::button(index);
-        if (index==0 || skills.pressed==index || skills.learned[index-1][0].id)
+        if (index==0 || skills.pressed==index || !skills.learned[index-1].empty())
             sprite(base+(index==0 && skills.pressed==0),{x+left,y+top});
         if (index>0 && skills.tab==index-1) sprite(base+1,{x+left,y+top});
     }
@@ -1287,12 +1289,49 @@ bool Mir3HudView::set_learned_skill(int id,int level,int key,int experience,int 
     if (id<1 || id>65535 || level<0 || level>255 || key<0 || key>12) return false;
     auto& learned=skills.learned[mir3::SkillLayout::category(id)];
     auto found=std::find_if(learned.begin(),learned.end(),[id](const auto& skill) { return skill.id==id; });
-    if (found==learned.end())
-        found=std::find_if(learned.begin(),learned.end(),[](const auto& skill) { return skill.id==0; });
-    if (found==learned.end()) return false;
-    if (found->key && skills.bindings[found->key]==id) skills.bindings[found->key]=0;
+    const mir3::SkillDisplay entry{id,level,key,static_cast<std::uint32_t>(experience),required,name.utf8().get_data(),{}};
+    if (found==learned.end()) learned.push_back(entry);
+    else {
+        if (found->key && skills.bindings[found->key]==id) skills.bindings[found->key]=0;
+        *found=entry;
+    }
     if (key) skills.bindings[key]=id;
-    *found={id,level,key,static_cast<std::uint32_t>(experience),required,name.utf8().get_data()};
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::apply_skill_records(int identifier,int count,PackedByteArray records) {
+    const bool full=identifier==211;
+    if ((!full && (identifier!=210 || count!=1)) || count<0 || count>255 || records.size()!=74*count) return false;
+    // The transport supplies fixed-size records after decoding each wire segment.
+    auto next=skills.learned;
+    auto bindings=skills.bindings;
+    if (full) for (auto& group:next) group.clear();
+    for (int i=0;i<count;++i) {
+        const auto* data=records.ptr()+74*i;
+        const auto word=[data](int offset) {
+            std::uint32_t value=0;
+            for (int j=0;j<4;++j) value|=std::uint32_t(data[offset+j])<<(8*j);
+            return value;
+        };
+        const int id=data[6]|(data[7]<<8), level=data[5];
+        if (!id) return false;
+        const std::string key_text(reinterpret_cast<const char*>(data+4),70);
+        const long decimal=std::strtol(key_text.c_str(),nullptr,10);
+        const int label=decimal>0 && decimal<10?int(decimal):int(data[4])-55;
+        const int slot=full?label:static_cast<std::uint8_t>(decimal);
+        if (slot>=1 && slot<=12) bindings[slot]=data[6];
+        const std::string_view name(reinterpret_cast<const char*>(data+8),66);
+        const std::array thresholds{int(word(31)),int(word(35)),int(word(39))};
+        next[mir3::SkillLayout::category(id)].push_back({id,level,label>=1 && label<=12?label:0,
+            word(0),level<3?thresholds[level]:0,mir3::ansi_to_utf8(name.substr(0,name.find(char(0)))),thresholds});
+    }
+    skills.learned=std::move(next);
+    skills.bindings=bindings;
+    const int previous=skills.tab;
+    if (full) skills.tab=0;
+    skills.select_nonempty();
+    if (full && skills.learned[skills.tab].empty()) skills.tab=previous;
     queue_redraw();
     return true;
 }

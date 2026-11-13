@@ -1,5 +1,7 @@
 #pragma once
 #include <string>
+#include <optional>
+#include <vector>
 #include "inventory/inventory_panel.hpp"
 namespace mir3 {
 struct SkillPosition { int id,x,y; };
@@ -40,11 +42,12 @@ struct SkillDisplay {
     std::uint32_t experience=0;
     int required=0;
     std::string name;
+    std::optional<std::array<int,3>> thresholds;
 };
 
 struct SkillPanel : DraggablePanel {
     SkillPanel() : DraggablePanel({348,0,360,488}) {}
-    std::array<std::array<SkillDisplay,15>,8> learned{};
+    std::array<std::vector<SkillDisplay>,8> learned{};
     std::array<int,8> selected{-1,-1,-1,-1,-1,-1,-1,-1};
     std::array<int,13> bindings{};
     int tab=0,scroll=0,pressed=-1;
@@ -53,15 +56,17 @@ struct SkillPanel : DraggablePanel {
         const auto skill=std::find_if(group.begin(),group.end(),[id](const auto& entry) { return entry.id==id; });
         const bool removed=skill!=group.end();
         if (removed) {
-            std::move(skill+1,group.end(),skill);
-            group.back()={};
+            group.erase(skill);
         }
-        if (!learned[tab].front().id) {
+        select_nonempty();
+        return removed;
+    }
+    void select_nonempty() {
+        if (learned[tab].empty()) {
             for (int i=0;i<int(learned.size());++i) {
-                if (learned[i].front().id) { tab=i;break; }
+                if (!learned[i].empty()) { tab=i;break; }
             }
         }
-        return removed;
     }
     bool update_progress(int id,std::uint32_t experience,int level) {
         auto& group=learned[SkillLayout::category(id)];
@@ -69,6 +74,7 @@ struct SkillPanel : DraggablePanel {
         if (skill==group.end()) return false;
         skill->experience=experience;
         skill->level=level;
+        if (skill->thresholds && level<3) skill->required=(*skill->thresholds)[level];
         return true;
     }
     void wheel(bool up) { scroll=std::clamp(scroll+(up?-30:30),0,190); }

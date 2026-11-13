@@ -454,6 +454,17 @@ func run() -> void:
 	if not check(hud.set_learned_skill(3, 1, 0) and hud.apply_skill_removal(3), "212 removes last skill in current category"): return
 	if not check(hud.hud_snapshot().skill_tab == 0 and hud.hud_snapshot().skill_scroll == 6, "212 selects first nonempty category and preserves scroll"): return
 	if not await capture("magic-removal-reply"): return
+	var record := PackedByteArray()
+	record.resize(74)
+	record[6] = 39
+	record[5] = 2
+	record[4] = 65
+	record[8] = 65
+	if not check(not hud.apply_skill_records(211, 2, record), "truncated skill list rejected"): return
+	if not check(hud.apply_skill_records(211, 1, record) and hud.hud_snapshot().skill_tab == 1, "211 replaces list and selects first populated category"): return
+	record[6] = 5
+	if not check(hud.apply_skill_records(210, 1, record) and hud.hud_snapshot().skill_tab == 1, "210 adds skill while retaining active category"): return
+	if not await capture("magic-list-reply"): return
 	click_at(Vector2(636, 32), true)
 	click_at(Vector2(636, 32), false)
 	var skill_wheel := InputEventMouseButton.new()
