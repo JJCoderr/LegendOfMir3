@@ -1087,7 +1087,12 @@ bool Mir3HudView::shop_scroll_input(int kind,Vector2 pointer) {
     const int y=top+int(std::lround(double(travel)*first/last));
     if (kind==0 && Rect2(x,top,thumb->get_width(),travel+thumb->get_height()).has_point(pointer)) {
         shop_scroll_dragging=Rect2(x,y,thumb->get_width(),thumb->get_height()).has_point(pointer);
-        if (!shop_scroll_dragging) first=std::clamp(first+(pointer.y<y?-5:5),0,last);
+        if (!shop_scroll_dragging) {
+            // 0x420200 changes the normalized position by 5 / item count.
+            const int direction=pointer.y<y+thumb->get_height()/2?-1:1;
+            const double position=double(first)/last+direction*5.0/shop_goods.size();
+            first=int(std::lround(last*std::clamp(position,0.0,1.0)));
+        }
     } else if (kind==1 && shop_scroll_dragging) {
         const double ratio=std::clamp((pointer.y-top)/double(travel+thumb->get_height()),0.0,1.0);
         first=int(std::lround(last*ratio));

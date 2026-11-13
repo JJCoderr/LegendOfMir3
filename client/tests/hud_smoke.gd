@@ -414,6 +414,16 @@ func run() -> void:
 		var stock_list := ""
 		for i in 10: stock_list += "Potion %d/1/20/5/" % i
 		if not check(hud.apply_shop_goods(2, 10, stock_list), "shop list exceeds one screen"): return
+		click_at(Vector2(265, 325), true)
+		click_at(Vector2(265, 325), false)
+		if not await capture("bichon-merchant-goods-track-click"): return
+		click_at(Vector2(80, 250), true)
+		click_at(Vector2(80, 250), false)
+		click_at(Vector2(135, 420), true)
+		click_at(Vector2(135, 420), false)
+		if not check(goods_requests.back() == [2, 5, "Potion 5"], "shop track click advances by a normalized page"): return
+		goods_requests.pop_back()
+		if not check(hud.apply_shop_goods(2, 10, stock_list), "reset shop list before dragging"): return
 		click_at(Vector2(265, 261), true)
 		var shop_drag := InputEventMouseMotion.new()
 		shop_drag.position = Vector2(265, 450)
