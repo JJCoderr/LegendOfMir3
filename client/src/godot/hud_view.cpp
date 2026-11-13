@@ -475,13 +475,27 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
         if (slash==script.npos) return false;
         script.remove_prefix(slash+1);
         npc_dialogue_rows.clear();
-        while (!script.empty() && npc_dialogue_rows.size()<7) {
+        for (int line=0;line<7 && !script.empty();++line) {
             const auto end=script.find(char(92));
-            const auto row=script.substr(0,end);
-            const auto split=row.find("/@");
-            if (row.starts_with('<') && row.ends_with('>') && split!=row.npos)
-                npc_dialogue_rows.push_back({std::string(row.substr(1,split-1)),std::string(row.substr(split+1,row.size()-split-2))});
-            else npc_dialogue_rows.push_back({std::string(row),{}});
+            auto row=script.substr(0,end);
+            int x=28;
+            const auto append=[&](std::string_view label,std::string_view command={}) {
+                if (label.empty() || x>=358) return;
+                const int width=mir3::raster_text(label,1,1,false,mir3::TextFont::normal).text_width;
+                npc_dialogue_rows.push_back({std::string(label),std::string(command),{x,25+18*line,std::min(width,358-x),18}});
+                x+=width;
+            };
+            while (!row.empty()) {
+                const auto open=row.find('<');
+                const auto close=open==row.npos?row.npos:row.find('>',open+1);
+                if (close==row.npos) { append(row); break; }
+                append(row.substr(0,open));
+                const auto tag=row.substr(open+1,close-open-1);
+                const auto split=tag.find("/@");
+                if (split!=tag.npos && split>0 && split+2<tag.size()) append(tag.substr(0,split),tag.substr(split+1));
+                else append(row.substr(open,close-open+1));
+                row.remove_prefix(close+1);
+            }
             if (end==script.npos) break;
             script.remove_prefix(end+1);
         }
@@ -498,15 +512,18 @@ void Mir3HudView::draw_npc_dialogue() {
     for (int i=0;i<int(npc_dialogue_rows.size());++i) {
         const auto& row=npc_dialogue_rows[i];
         const auto color=row.command.empty()?0xfafafa:npc_dialogue_pressed==i?0x96ffff:0x64ffff;
-        text(row.text,{28,25+18*i,330,18},color,mir3::TextFont::normal,false);
+        text(row.text,row.bounds,color,mir3::TextFont::normal,false);
     }
 }
 
 bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
     if (!npc_dialogue_actor) return false;
     const bool inside=Rect2(0,0,386,160).has_point(pointer);
-    const int row=Rect2(28,25,330,126).has_point(pointer)?(int(pointer.y)-25)/18:-1;
-    const bool action=row>=0 && row<int(npc_dialogue_rows.size()) && !npc_dialogue_rows[row].command.empty();
+    const auto item=std::find_if(npc_dialogue_rows.begin(),npc_dialogue_rows.end(),[&](const auto& span) {
+        return !span.command.empty() && rect(span.bounds).has_point(pointer);
+    });
+    const bool action=item!=npc_dialogue_rows.end();
+    const int row=action?int(item-npc_dialogue_rows.begin()):-1;
     const int pressed=npc_dialogue_pressed;
     npc_dialogue_pressed=kind==0 && action?row:-1;
     if (kind==2 && action && pressed==row) {

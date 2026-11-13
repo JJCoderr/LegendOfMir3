@@ -265,7 +265,7 @@ private:
     void step_toward_pointer(bool run=false);
     bool merchant_pointer(godot::Vector2 pointer);
     bool apply_npc_dialogue(int opcode,int actor,godot::String body);
-    struct NpcDialogueRow { std::string text, command; };
+    struct NpcDialogueRow { std::string text, command; mir3::HudLayout::Rect bounds; };
     std::vector<NpcDialogueRow> npc_dialogue_rows;
     int npc_dialogue_actor=0, npc_dialogue_pressed=-1;
     void draw_npc_dialogue();
