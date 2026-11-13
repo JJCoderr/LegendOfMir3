@@ -837,6 +837,17 @@ func run() -> void:
 		await RenderingServer.frame_post_draw
 		if not check(root.get_texture().get_image().get_region(decoration_area).get_data() == undecorated.get_data(),
 			"zero decoration returns to original HUD background"): return
+	if OS.get_cmdline_user_args().has("--screenshots"):
+		var badge_area := Rect2i(595, 561, 24, 25)
+		var no_target := root.get_texture().get_image().get_region(badge_area).get_data()
+		for shape in [127, 153, 20]:
+			hud.set_hovered_target(1, 3, shape, shape == 20, 1, 5, 10, 50)
+			await process_frame
+			await RenderingServer.frame_post_draw
+			if not check(root.get_texture().get_image().get_region(badge_area).get_data() == no_target
+				and hud.hud_snapshot().target_portrait == -1 and hud.hud_snapshot().target_hp_width == 0,
+				"excluded monster draws no target portrait, badge or HP"): return
+		if not await capture("hud-target-excluded"): return
 	hud.set_hovered_target(1, 3, 20, false, 1, 5, 10, 50)
 	if not check(hud.hud_snapshot().target_portrait == 20 and hud.hud_snapshot().target_hp_width == 41, "monster portrait and half HP"): return
 	if not await capture("hud-target-portrait"): return

@@ -430,7 +430,8 @@ void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool
         target_portrait=portrait_texture(monster_portraits,monster_portrait_frames,target_frame);
         target_frame=mir3::TargetPortrait::fallback_frame(target_frame,target_portrait.is_valid());
         if (target_portrait.is_null()) target_portrait=portrait_texture(monster_portraits,monster_portrait_frames,target_frame);
-        target_badge=mir3::TargetPortrait::badge(static_cast<std::uint16_t>(shape),state);
+        // 0x43823D..0x438269 skips both the monster image and its badge.
+        target_badge=target_frame<0?-1:mir3::TargetPortrait::badge(static_cast<std::uint16_t>(shape),state);
         target_vitals={static_cast<std::uint8_t>(percent),static_cast<std::uint16_t>(max_hp),static_cast<std::uint16_t>(hp)};
     }
     queue_redraw();
