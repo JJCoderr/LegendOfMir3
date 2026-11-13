@@ -16,6 +16,7 @@
 #include <godot_cpp/classes/image_texture.hpp>
 #include <godot_cpp/classes/input_event.hpp>
 #include <map>
+#include <godot_cpp/classes/audio_stream_player.hpp>
 #include <godot_cpp/classes/text_edit.hpp>
 
 class Mir3HudView : public godot::Node2D {
@@ -50,6 +51,8 @@ private:
     void toggle_options();
     void load_options();
     void save_options();
+    godot::AudioStreamPlayer* hud_sound=nullptr;
+    void sync_hud_sound();
     godot::String options_path;
     void draw_options();
     bool options_pointer(int kind,godot::Vector2 point);

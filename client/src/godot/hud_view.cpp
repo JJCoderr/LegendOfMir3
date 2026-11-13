@@ -1,4 +1,5 @@
 #include <godot_cpp/classes/font.hpp>
+#include <godot_cpp/classes/audio_stream_wav.hpp>
 #include "hud_view.hpp"
 #include <godot_cpp/classes/config_file.hpp>
 #include <godot_cpp/classes/image.hpp>
@@ -104,6 +105,14 @@ void Mir3HudView::_ready() {
     loaded=archive.open(std::filesystem::u8path(root.utf8().get_data())/"Data"/"GameInter");
     if (!loaded || frame(1160).is_null()) {
         loaded=false; UtilityFunctions::push_error("Cannot read original GameInter WIL/WIX resources."); return;
+    }
+    const auto sample=AudioStreamWAV::load_from_file(root.path_join("Sound/105.wav"));
+    if (sample.is_valid()) {
+        hud_sound=memnew(AudioStreamPlayer);
+        hud_sound->set_name("HudClickSound");
+        hud_sound->set_stream(sample);
+        add_child(hud_sound);
+        sync_hud_sound();
     }
     const auto resource_root=std::filesystem::u8path(root.utf8().get_data());
     if (!portraits.open(resource_root/"Data"/"ProgUse")) UtilityFunctions::push_error("Cannot read ProgUse portraits.");
@@ -371,7 +380,10 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         if (action==7) toggle_skills();
         if (action==12) toggle_inventory();
         if (action==13) toggle_status();
-        if (action>=0) emit_signal("hud_action",action);
+        if (action>=0) {
+            if (hud_sound && audio_options.effects_enabled) hud_sound->play();
+            emit_signal("hud_action",action);
+        }
         if (captured) get_viewport()->set_input_as_handled();
         queue_redraw();
     }
@@ -1451,7 +1463,7 @@ bool Mir3HudView::options_pointer(int kind,Vector2 point) {
         }
         if (!control && kind==0) options.begin_drag(int(point.x),int(point.y),false);
     }
-    if (changed) save_options();
+    if (changed) { sync_hud_sound();save_options(); }
     controller.cancel();
     get_viewport()->set_input_as_handled();
     queue_redraw();
@@ -1488,4 +1500,10 @@ void Mir3HudView::save_options() {
     saved=write(L"MagicLight",magic_light) && saved;
     saved=write(L"BloodNum",damage_numbers) && saved;
     if (!saved) UtilityFunctions::push_warning("Could not save system options to ",options_path);
+}
+
+void Mir3HudView::sync_hud_sound() {
+    if (!hud_sound) return;
+    hud_sound->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
+    if (!audio_options.effects_enabled) hud_sound->stop();
 }

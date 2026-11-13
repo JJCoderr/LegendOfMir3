@@ -322,6 +322,12 @@ func run() -> void:
 	if not check(not hud.hud_snapshot().music_enabled, "music toggle"): return
 	click_at(Vector2(460, 154), false)
 	if not check(hud.hud_snapshot().music_level == -5, "music slider step"): return
+	var click_sound: AudioStreamPlayer = hud.get_node("HudClickSound")
+	if not check(click_sound.stream != null, "original HUD click sample loads"): return
+	click_at(Vector2(460, 214), false)
+	if not check(is_equal_approx(click_sound.volume_db, -2.0), "effect slider updates player volume"): return
+	click_at(Vector2(580, 180), false)
+	if not check(not click_sound.playing, "effects switch stops click sound"): return
 	if not await capture("system-options"): return
 	click_at(Vector2(595, 447), false)
 	if not check(not hud.hud_snapshot().options_visible, "options close"): return
