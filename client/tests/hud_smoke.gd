@@ -1083,6 +1083,20 @@ func run() -> void:
 	click_at(Vector2(643, 513), false)
 	if not check(not hud.hud_snapshot().minimap_visible, "close refreshed minimap"): return
 	hud.set_map_location("比奇省", 337, 267)
+	click_at(Vector2(643, 513), true)
+	click_at(Vector2(643, 513), false)
+	if not check(map_requests.size() == 4, "request map before unavailable reply"): return
+	var chat_before_unavailable: int = hud.hud_snapshot().chat_compact_count
+	hud.apply_minimap_unavailable()
+	if not check(not hud.hud_snapshot().minimap_visible and hud.hud_snapshot().chat_compact_count > chat_before_unavailable,
+		"711 closes map and posts an unavailable message"): return
+	key(KEY_V)
+	if not check(map_requests.size() == 4, "711 path respects the map request cooldown"): return
+	if not check(hud.apply_minimap_reply(1001) and not hud.hud_snapshot().minimap_visible,
+		"711 clears the pending open before a subsequent map reply"): return
+	if not await capture("hud-minimap-unavailable"): return
+	# The later spell test opens the minimap again with the 1000 ms V shortcut.
+	await create_timer(1.01).timeout
 	if not check(hud.hud_snapshot().inventory_visible and hud.hud_snapshot().inventory_position == Vector2i(518, 0), "inventory origin"): return
 	click_at(overlap_cell, true)
 	click_at(overlap_cell, false)

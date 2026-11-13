@@ -77,6 +77,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_mount_reply","identifier","recognition"),&Mir3HudView::apply_mount_reply);
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
     ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
+    ClassDB::bind_method(D_METHOD("apply_minimap_unavailable"),&Mir3HudView::apply_minimap_unavailable);
     ADD_SIGNAL(MethodInfo("npc_packet_ready",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"packet")));
     ADD_SIGNAL(MethodInfo("npc_request",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"actor"),
         PropertyInfo(Variant::STRING,"body")));
@@ -3790,6 +3791,16 @@ bool Mir3HudView::apply_minimap_reply(int map_number) {
     minimap.receive(decoded->width,decoded->height,ticks_msec());
     queue_redraw();
     return true;
+}
+
+void Mir3HudView::apply_minimap_unavailable() {
+    // 0x4282C0 case 711 completes the request and posts CMList 1458.
+    minimap.reply_time=ticks_msec();
+    minimap.visible=false;
+    minimap.pending=false;
+    minimap.dragging=false;
+    post_chat(String::utf8(message(1458).c_str()),0xffffff,0xff);
+    queue_redraw();
 }
 
 void Mir3HudView::send_trade_offer(int count) {

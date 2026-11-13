@@ -58,6 +58,7 @@ public:
     bool set_quest_entries(godot::PackedStringArray titles,godot::PackedInt32Array completed);
     bool apply_mount_reply(int identifier,int64_t recognition);
     bool apply_minimap_reply(int map_number);
+    void apply_minimap_unavailable();
     void handle_exit_confirmation(int dialog_id);
     bool apply_trade_offer_reply(int identifier,int accepted_count=0);
     bool set_trade_item(int side,int slot,int icon,int count,int64_t make_index,godot::String name,int std_mode,int stack_mode);
