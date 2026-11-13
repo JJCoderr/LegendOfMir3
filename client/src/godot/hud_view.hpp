@@ -50,6 +50,7 @@ public:
     bool apply_mount_reply(int identifier,int64_t recognition);
     bool apply_minimap_reply(int map_number);
     void handle_exit_confirmation(int dialog_id);
+    void set_trade_context(int direction,godot::Vector2i cell,int actor_type,bool dead,godot::String name);
     void set_map_location(godot::String name,int x,int y);
     void set_minimap_position(int x,int y);
     void set_minimap_markers(godot::PackedVector2Array type_five,godot::PackedVector2Array nearby_green,
@@ -70,6 +71,11 @@ protected:
     static void _bind_methods();
 private:
     mir3::HudModel model;
+    int trade_direction=0,trade_actor_type=-1;
+    godot::Vector2i trade_actor_cell;
+    bool trade_actor_dead=false;
+    godot::String trade_actor_name;
+    bool request_trade();
     mir3::ElementAttributes elements;
     godot::String character_name,character_secondary,character_tertiary,character_badge;
     mir3::Minimap minimap;

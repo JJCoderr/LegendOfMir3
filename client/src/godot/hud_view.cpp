@@ -84,6 +84,8 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("post_chat","value","foreground","background"),&Mir3HudView::post_chat);
     ClassDB::bind_method(D_METHOD("update_chat_rejection","channel","rejected"),&Mir3HudView::update_chat_rejection);
     ClassDB::bind_method(D_METHOD("handle_exit_confirmation","dialog_id"),&Mir3HudView::handle_exit_confirmation);
+    ClassDB::bind_method(D_METHOD("set_trade_context","direction","cell","actor_type","dead","name"),&Mir3HudView::set_trade_context);
+    ADD_SIGNAL(MethodInfo("trade_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("exit_confirmed",PropertyInfo(Variant::INT,"dialog_id")));
     ADD_SIGNAL(MethodInfo("hud_action",PropertyInfo(Variant::INT,"button")));
     ADD_SIGNAL(MethodInfo("chat_requested",PropertyInfo(Variant::STRING,"text")));
@@ -574,6 +576,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             const int id=reception_buttons.press(action,rejected_chat[action-20]);
             chat_requested(String::utf8(message(id).c_str()));
         }
+        if (action==0) request_trade();
         if (action==1) toggle_minimap(100);
         if (action==2) skill_shortcuts_visible=!skill_shortcuts_visible;
         if (action==3 || action==4) open_group_dialog(action==3?109:101);
@@ -724,6 +727,11 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
     }
     if (key->is_alt_pressed() && (code==KEY_Q || code==KEY_X)) {
         open_group_dialog(code==KEY_Q?109:101);
+        get_viewport()->set_input_as_handled();
+        return;
+    }
+    if (code==KEY_C) {
+        request_trade();
         get_viewport()->set_input_as_handled();
         return;
     }
@@ -2076,12 +2084,35 @@ bool Mir3HudView::apply_minimap_reply(int map_number) {
     return true;
 }
 
+void Mir3HudView::set_trade_context(int direction,Vector2i cell,int actor_type,bool dead,String name) {
+    trade_direction=direction;
+    trade_actor_cell=cell;
+    trade_actor_type=actor_type;
+    trade_actor_dead=dead;
+    trade_actor_name=name;
+}
+
+bool Mir3HudView::request_trade() {
+    // 0x4281B0 selects a live type 0/1 actor exactly one cell ahead.
+    constexpr std::array<std::array<int,2>,8> directions{{
+        {0,-1},{1,-1},{1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1}
+    }};
+    if (trade_direction<0 || trade_direction>=int(directions.size()) ||
+        trade_actor_type<0 || trade_actor_type>1 || trade_actor_dead || trade_actor_name.is_empty()) return false;
+    const auto [dx,dy]=directions[trade_direction];
+    if (std::int64_t(trade_actor_cell.x)!=std::int64_t(model.map_x)+dx ||
+        std::int64_t(trade_actor_cell.y)!=std::int64_t(model.map_y)+dy) return false;
+    emit_signal("trade_requested",1025,trade_actor_name);
+    return true;
+}
+
 void Mir3HudView::set_map_location(String name,int x,int y) {
     const auto utf8=name.utf8();
     const bool changed=model.map_name!=utf8.get_data();
     model.map_name=utf8.get_data();
     set_minimap_position(x,y);
     if (!changed) return;
+    trade_actor_name=String();
 
     const bool refresh=minimap.visible || minimap.pending;
     minimap.visible=false;

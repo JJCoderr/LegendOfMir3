@@ -770,6 +770,24 @@ func run() -> void:
 	if not check(hud.hud_snapshot().quest_visible, "quest D shortcut"): return
 	key(KEY_D)
 	if not check(not hud.hud_snapshot().quest_visible, "D closes quest window"): return
+	key(KEY_R)
+	var trades: Array[Array] = []
+	hud.trade_requested.connect(func(id: int, player: String): trades.append([id, player]))
+	hud.set_map_location("比奇省", 337, 267)
+	for target in [[Vector2i(337, 266), 0, false], [Vector2i(338, 267), 3, false], [Vector2i(338, 267), 0, true]]:
+		hud.set_trade_context(2, target[0], target[1], target[2], "比奇旅人")
+		key(KEY_C)
+	if not check(trades.is_empty(), "trade rejects side cells, NPCs and dead actors"): return
+	hud.set_trade_context(2, Vector2i(338, 267), 1, false, "比奇旅人")
+	key(KEY_C)
+	click_at(Vector2(644, 484), true)
+	click_at(Vector2(644, 484), false)
+	if not check(trades == [[1025, "比奇旅人"], [1025, "比奇旅人"]], "C and HUD send original trade request"): return
+	var trade_hover := InputEventMouseMotion.new()
+	trade_hover.position = Vector2(644, 484)
+	Input.parse_input_event(trade_hover)
+	await create_timer(0.3).timeout
+	if not await capture("hud-trade-entry"): return
 	var exit_requests: Array[int] = []
 	hud.exit_confirmed.disconnect(hud.handle_exit_confirmation)
 	hud.exit_confirmed.connect(func(id: int): exit_requests.append(id))
