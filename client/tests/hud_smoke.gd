@@ -191,6 +191,15 @@ func run() -> void:
 	if not check(hud.hud_snapshot().skills_visible and hud.hud_snapshot().skill_tab == 0, "magic opens on first tab"): return
 	if not check(hud.set_learned_skill(1, 2, 1) and hud.set_learned_skill(5, 1, 0) and not hud.set_learned_skill(1, 2, 13), "learned magic data"): return
 	if not await capture("magic-tree-learned"): return
+	var skill_requests: Array[Vector2i] = []
+	hud.skill_key_requested.connect(func(id: int, legacy_key: int): skill_requests.append(Vector2i(id, legacy_key)))
+	var magic_hover := InputEventMouseMotion.new()
+	magic_hover.position = Vector2(385, 152)
+	Input.parse_input_event(magic_hover)
+	key(KEY_F1)
+	key(KEY_F12)
+	if not check(skill_requests == [Vector2i(1, 0), Vector2i(5, 49), Vector2i(5, 67)], "magic shortcut conflict and F12 encoding"): return
+	if not await capture("magic-key-binding"): return
 	click_at(Vector2(636, 32), true)
 	click_at(Vector2(636, 32), false)
 	if not check(hud.hud_snapshot().skill_tab == 7, "magic category selection"): return

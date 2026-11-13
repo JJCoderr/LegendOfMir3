@@ -27,6 +27,7 @@ Vector2 point(mir3::HudLayout::Point p) { return Vector2(p[0],p[1]); }
 void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add_inventory_item","icon","count","slot","make_index","name","std_mode","stack_mode"),&Mir3HudView::add_inventory_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_inventory_use_reply","identifier","remaining"),&Mir3HudView::apply_inventory_use_reply);
+    ADD_SIGNAL(MethodInfo("skill_key_requested",PropertyInfo(Variant::INT,"id"),PropertyInfo(Variant::INT,"legacy_key")));
     ClassDB::bind_method(D_METHOD("set_learned_skill","id","level","key"),&Mir3HudView::set_learned_skill);
     ClassDB::bind_method(D_METHOD("apply_equipment_reply","identifier"),&Mir3HudView::apply_equipment_reply);
     ADD_SIGNAL(MethodInfo("equipment_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"slot"),PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::STRING,"name")));
@@ -424,6 +425,10 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
     Ref<InputEventKey> key=event;
     if (key.is_null() || !key->is_pressed() || key->is_echo()) return;
     const auto code=key->get_physical_keycode();
+    if (code>=KEY_F1 && code<=KEY_F12 && bind_skill_at_cursor(code-KEY_F1+1)) {
+        get_viewport()->set_input_as_handled();
+        return;
+    }
     if (code==KEY_E || (code==KEY_ESCAPE && skills.visible && (skills_on_top || (!status.visible && !inventory.visible)))) {
         toggle_skills();
         get_viewport()->set_input_as_handled();
@@ -741,6 +746,36 @@ bool Mir3HudView::set_learned_skill(int id,int level,int key) {
         found=std::find_if(learned.begin(),learned.end(),[](const auto& skill) { return skill.id==0; });
     if (found==learned.end()) return false;
     *found={id,level,key};
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::bind_skill_at_cursor(int key) {
+    const auto [x,y,w,h]=skills.rect;
+    if (!skills.visible || !Rect2(x,y,w,h).has_point(inventory_cursor)) return false;
+    if (!skills_on_top) {
+        const auto covers=[&](const mir3::DraggablePanel& panel) {
+            return panel.visible && rect(panel.rect).has_point(inventory_cursor);
+        };
+        if (covers(status) || covers(inventory)) return false;
+    }
+    // 0x44F8E0 clears a conflicting binding even over an unlearned tree slot.
+    for (const auto pos:mir3::SkillLayout::positions[skills.tab]) {
+        const Rect2 hit(x+pos.x,y+pos.y-skills.scroll,40,40);
+        if (!hit.has_point(inventory_cursor)) continue;
+        for (auto& group:skills.learned) for (auto& skill:group) {
+            if (!skill.id || skill.key!=key) continue;
+            skill.key=0;
+            emit_signal("skill_key_requested",skill.id,0);
+        }
+        for (auto& skill:skills.learned[skills.tab]) {
+            if (!skill.id || skill.id!=pos.id) continue;
+            skill.key=key;
+            const int legacy_key=key<=9?'0'+key:'A'+key-10;
+            emit_signal("skill_key_requested",skill.id,legacy_key);
+            break;
+        }
+    }
     queue_redraw();
     return true;
 }

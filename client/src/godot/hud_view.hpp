@@ -42,6 +42,7 @@ private:
     bool skills_on_top=false;
     void toggle_skills();
     void draw_skills();
+    bool bind_skill_at_cursor(int key);
     bool skill_pointer(int kind,godot::Vector2 position);
     int skill_button_at(godot::Vector2 position);
     mir3::DraggablePanel status{{0,0,328,466}};
