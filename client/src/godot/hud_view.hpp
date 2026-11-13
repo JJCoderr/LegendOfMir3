@@ -1,6 +1,7 @@
 #pragma once
 #include "hud/hud_model.hpp"
 #include "inventory/inventory_panel.hpp"
+#include "inventory/inventory_grid.hpp"
 #include "resources/wil_archive.hpp"
 #include "resources/messages.hpp"
 #include "text/native_text.hpp"
@@ -23,12 +24,18 @@ public:
     void _notification(int what);
     godot::Dictionary hud_snapshot() const;
     void post_chat(godot::String value,int64_t foreground,int64_t background);
+    bool add_inventory_item(int icon,int count,int slot);
     bool update_chat_rejection(int channel,bool rejected);
 protected:
     static void _bind_methods();
 private:
     mir3::HudModel model;
     mir3::InventoryPanel inventory;
+    mir3::InventoryGrid bag;
+    mir3::WilArchive item_archive;
+    std::map<int,godot::Ref<godot::ImageTexture>> item_frames;
+    godot::Ref<godot::ImageTexture> item_frame(int id);
+    godot::Vector2 inventory_cursor;
     void draw_inventory();
     void toggle_inventory();
     bool inventory_pointer(int kind,godot::Vector2 position);

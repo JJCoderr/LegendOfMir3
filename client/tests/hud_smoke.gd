@@ -89,6 +89,21 @@ func run() -> void:
 	if not check(actions == [14, 14, 12] and hud.hud_snapshot().pressed == -1, "inventory action dispatch"): return
 	if not check(hud.hud_snapshot().inventory_visible and hud.hud_snapshot().inventory_position == Vector2i(518, 0), "inventory origin"): return
 	if not await capture("inventory-empty"): return
+	if not check(hud.add_inventory_item(5, 3, 0) and hud.add_inventory_item(1043, 1, 14) and hud.add_inventory_item(15, 1, 54), "inventory fixtures"): return
+	if not await capture("inventory-items"): return
+	click_at(Vector2(550, 75), false)
+	if not check(hud.hud_snapshot().held_inventory_icon == 5, "inventory pickup"): return
+	click_at(Vector2(590, 75), false)
+	if not check(hud.hud_snapshot().held_inventory_icon == -1, "inventory placement"): return
+	click_at(Vector2(590, 75), false)
+	if not check(hud.hud_snapshot().held_inventory_icon == 5, "inventory moved to new slot"): return
+	click_at(Vector2(590, 75), false)
+	OS.delay_msec(20)
+	click_at(Vector2(770, 150), true)
+	click_at(Vector2(770, 150), false)
+	await process_frame
+	if not check(hud.hud_snapshot().inventory_row == 8, "inventory track pages eight rows"): return
+	if not await capture("inventory-scrolled"): return
 	click_at(Vector2(530, 25), true)
 	var drag := InputEventMouseMotion.new()
 	drag.position = Vector2(450, 155)

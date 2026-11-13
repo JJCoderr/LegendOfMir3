@@ -24,6 +24,7 @@ Rect2 rect(mir3::HudLayout::Rect r) { return Rect2(r[0],r[1],r[2],r[3]); }
 Vector2 point(mir3::HudLayout::Point p) { return Vector2(p[0],p[1]); }
 }
 void Mir3HudView::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("add_inventory_item","icon","count","slot"),&Mir3HudView::add_inventory_item);
     ClassDB::bind_method(D_METHOD("hud_snapshot"),&Mir3HudView::hud_snapshot);
     ClassDB::bind_method(D_METHOD("post_chat","value","foreground","background"),&Mir3HudView::post_chat);
     ClassDB::bind_method(D_METHOD("update_chat_rejection","channel","rejected"),&Mir3HudView::update_chat_rejection);
@@ -44,6 +45,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["chat_expanded_first"]=chat_history.first(true);
     result["inventory_visible"]=inventory.visible;
     result["inventory_position"]=Vector2i(inventory.rect[0],inventory.rect[1]);
+    result["held_inventory_icon"]=bag.held.icon;
     result["inventory_row"]=inventory.row;
     result["chat_mode"]=chat_input?chat_input->mode.mode:0;
     PackedInt32Array frames,hints,rejected;
@@ -63,6 +65,7 @@ void Mir3HudView::_ready() {
     }
     const auto resource_root=std::filesystem::u8path(root.utf8().get_data());
     if (!portraits.open(resource_root/"Data"/"ProgUse")) UtilityFunctions::push_error("Cannot read ProgUse portraits.");
+    item_archive.open(resource_root/"Data"/"Inventory");
     std::ifstream message_file(resource_root/"CmList.dat",std::ios::binary);
     std::vector<std::uint8_t> message_bytes{std::istreambuf_iterator<char>(message_file),{}};
     if (!messages.load(message_bytes)) UtilityFunctions::push_error("Cannot read CmList.dat captions.");
@@ -173,6 +176,10 @@ void Mir3HudView::_draw() {
     buttons();
     if (inventory.visible) draw_inventory();
     button_hint();
+    if (bag.held) {
+        const auto icon=item_frame(bag.held.icon);
+        if (icon.is_valid()) draw_texture(icon,(inventory_cursor-icon->get_size()*0.5).floor());
+    }
 }
 void Mir3HudView::post_chat(String value,int64_t foreground,int64_t background) {
     const auto utf8=value.utf8();
@@ -255,7 +262,7 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
     Ref<InputEventMouseMotion> motion=event;
-    if (motion.is_valid()) { auto p=motion->get_position();if (inventory_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
+    if (motion.is_valid()) { auto p=motion->get_position();inventory_cursor=p;if (inventory_pointer(1,p)) return;controller.motion(int(p.x),int(p.y));if (scroll_input(1,p)) return;queue_redraw(); }
     Ref<InputEventMouseButton> button=event;
     if (button.is_valid() && button->is_pressed() && (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) && rect(mir3::HudLayout::chat_frame(model.layout.expanded)).has_point(button->get_position())) {
         chat_history.scroll(model.layout.expanded).wheel(button->get_button_index()==MOUSE_BUTTON_WHEEL_UP?1:-1,int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded);
@@ -263,6 +270,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
     if (button.is_valid() && button->get_button_index()==MOUSE_BUTTON_LEFT) {
         auto p=button->get_position();
+        inventory_cursor=p;
         if (inventory_pointer(button->is_pressed()?0:2,p) || scroll_input(button->is_pressed()?0:2,p)) return;
         const bool captured=model.pressed>=0 || controller.hit(int(p.x),int(p.y))>=0;
         int action=controller.pointer(int(p.x),int(p.y),button->is_pressed());
@@ -300,6 +308,23 @@ void Mir3HudView::draw_inventory() {
     sprite(inventory.close_pressed?1222:1221,{x+242,y+423});
     sprite(1225,{x+250,mir3::InventoryScroll::thumb_y(inventory.row,y)});
     text("0",{x+72,y+402,77,17},0x64C8F8,mir3::TextFont::gold);
+    const Rect2 clip(x+17,y+60,228,304);
+    for (int id=0;id<mir3::InventoryGrid::capacity;++id) {
+        const auto& item=bag.items[id];
+        if (!item) continue;
+        const auto icon=item_frame(item.icon);
+        if (icon.is_null()) continue;
+        const int slot=bag.anchors[id];
+        const Rect2 bounds(x+17+(slot%6)*38,y+60+(slot/6-inventory.row)*38,item.width*38,item.height*38);
+        const Rect2 target((bounds.get_center()-icon->get_size()*0.5).floor(),icon->get_size());
+        const Rect2 visible=target.intersection(clip);
+        if (!visible.has_area()) continue;
+        draw_texture_rect_region(icon,visible,Rect2(visible.position-target.position,visible.size));
+        const int label_x=int(bounds.position.x)+18,label_y=int(bounds.position.y)+22;
+        if (item.count>1 && clip.encloses(Rect2(label_x,label_y,20,16)))
+            text(std::to_string(item.count),{label_x,label_y,20,16},0xffffff,mir3::TextFont::normal,false);
+    }
+
 }
 
 void Mir3HudView::toggle_inventory() {
@@ -328,6 +353,10 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
         consumed=inventory.move_drag(int(position.x),int(position.y));
     } else if (kind==2) {
         const bool close_window=inventory.close_pressed && on_close;
+        if (!consumed && !inventory.dragging && !inventory.close_pressed) {
+            bag.scroll_row=inventory.row;
+            consumed=bag.release(int(position.x),int(position.y),x,y);
+        }
         consumed=inventory.end_drag() || inventory.close_pressed || consumed;
         inventory.close_pressed=false;
         if (close_window) toggle_inventory();
@@ -347,4 +376,22 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         toggle_inventory();
         get_viewport()->set_input_as_handled();
     }
+}
+
+Ref<ImageTexture> Mir3HudView::item_frame(int id) {
+    if (const auto it=item_frames.find(id);it!=item_frames.end()) return it->second;
+    const auto decoded=item_archive.frame(id);
+    if (!decoded) return {};
+    return item_frames.emplace(id,texture(decoded->pixels.rgba,decoded->width,decoded->height)).first->second;
+}
+
+bool Mir3HudView::add_inventory_item(int icon,int count,int slot) {
+    if (count<0 || slot < -1 || slot>=mir3::InventoryGrid::columns*mir3::InventoryGrid::rows) return false;
+    const auto sprite=item_frame(icon);
+    if (sprite.is_null()) return false;
+    const auto [width,height]=mir3::InventoryGrid::dimensions(sprite->get_width(),sprite->get_height());
+    const int x=17+38*(slot%6)+20,y=60+38*(slot/6)+20;
+    const bool inserted=bag.insert({-1,icon,count,width,height},slot,x,y);
+    if (inserted) queue_redraw();
+    return inserted;
 }
