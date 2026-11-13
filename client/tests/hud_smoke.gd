@@ -1719,6 +1719,7 @@ func run() -> void:
 	if not check(offers[-1] == [1027, 98766, "Trade stack", 2] and hud.apply_trade_offer_reply(677), "return split quantity"): return
 	if not await capture("hud-trade-stack-merged"): return
 	if not check(hud.set_trade_item(0, 30, 301, 3), "apply trade item below first page"): return
+	if not check(hud.set_trade_item(0, 27, 1043, 2), "apply tall trade item above scrolled page"): return
 	click_at(Vector2(211, 170), true)
 	click_at(Vector2(211, 170), false)
 	if not check(hud.hud_snapshot().trade_scroll == Vector2i(6, 0), "trade track scrolls local side only"): return

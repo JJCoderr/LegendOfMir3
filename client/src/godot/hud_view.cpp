@@ -3784,19 +3784,21 @@ void Mir3HudView::draw_trade() {
         const Rect2 clip(left,y+56,190,190);
         const int first=trade_scroll.first[side];
         sprite(1225,{x+mir3::TradeScroll::x[side],y+mir3::TradeScroll::top+trade_scroll.offset(side)});
-        for (int slot=5*std::max(0,first-5);slot<5*(first+5);++slot) {
+        for (int slot=0;slot<5*(first+5);++slot) {
             const auto& item=trade_items[side][slot];
-            if (!item) continue;
+            if (!item || slot/5+item.height<=first) continue;
             const auto icon=item_frame(item.icon);
             if (icon.is_null()) continue;
             const Vector2 cell(left+38*(slot%5),y+56+38*(slot/5-first));
             const Vector2 padding((38*item.width-icon->get_width())/2,(38*item.height-icon->get_height())/2);
             const Rect2 target(cell+padding,icon->get_size());
             const Rect2 visible=target.intersection(clip);
-            if (visible.has_area()) draw_texture_rect_region(icon,visible,Rect2(visible.position-target.position,visible.size),
+            if (!visible.has_area()) continue;
+            draw_texture_rect_region(icon,visible,Rect2(visible.position-target.position,visible.size),
                 side==0 && slot==trade_return_slot?Color(1,1,1,0.5f):Color(1,1,1));
-            if (item.count>1 && slot/5>=first)
-                text(std::to_string(item.count),{int(cell.x)+22,int(cell.y)+23,16,15},0xffffff,mir3::TextFont::normal,false);
+            const int label_x=int(cell.x)+22,label_y=int(cell.y)+23;
+            if (item.count>1 && clip.encloses(Rect2(label_x,label_y,16,15)))
+                text(std::to_string(item.count),{label_x,label_y,16,15},0xffffff,mir3::TextFont::normal,false);
         }
         auto amount=std::to_string(trade_gold[side]);
         for (int i=int(amount.size())-3;i>0;i-=3) amount.insert(i,1,',');
