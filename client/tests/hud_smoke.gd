@@ -85,6 +85,9 @@ func run() -> void:
 		if OS.get_cmdline_user_args().has("--screenshots"):
 			var frame := root.get_texture().get_image()
 			if not check(frame.get_pixel(100, 100) != frame.get_pixel(200, 200), "Bichon terrain pixels"): return
+		hud.set_meta("map_camera_cell", Vector2i(404, 402))
+		hud.queue_redraw()
+		if not await capture("bichon-merchant"): return
 		quit()
 		return
 	for i in 20:

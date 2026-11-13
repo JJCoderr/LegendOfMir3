@@ -240,6 +240,17 @@ void Mir3HudView::_ready() {
             }
         }
     }
+    if (terrain_ready) {
+        const auto load_actor=[&](auto& archive,auto& frames,const char* library,int first) {
+            if (!archive.open(resource_root/"Data"/library)) return;
+            for (int i=0;i<int(frames.size());++i) {
+                if (const auto frame=archive.frame(first+i))
+                    frames[i]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y)};
+            }
+        };
+        load_actor(map_human,map_human_frames,"M-Hum",40);
+        load_actor(map_npc,map_npc_frames,"NPC",110);
+    }
     if (!portraits.open(resource_root/"Data"/"ProgUse")) UtilityFunctions::push_error("Cannot read ProgUse portraits.");
     if (!monster_portraits.open(resource_root/"Data"/"MonImg")) UtilityFunctions::push_error("Cannot read MonImg portraits.");
     load_status_body();
@@ -392,7 +403,8 @@ Ref<ImageTexture> Mir3HudView::terrain_texture(int package,int id) {
 
 void Mir3HudView::draw_terrain() {
     if (!terrain_ready) return;
-    constexpr int start_x=466,start_y=352;
+    const Vector2i camera_cell=get_meta("map_camera_cell",Vector2i(466,352));
+    const int start_x=camera_cell.x,start_y=camera_cell.y;
     for (int row=0;row<10;++row) for (int column=0;column<9;++column) {
         const auto [package,id]=terrain.tile(start_x+2*column,start_y+2*row);
         if (const auto image=terrain_texture(package,id);image.is_valid())
@@ -401,7 +413,7 @@ void Mir3HudView::draw_terrain() {
     animated_map_objects=false;
     if (!bool(get_meta("show_map_objects",true))) return;
 
-    struct Sprite { Ref<ImageTexture> image; Vector2 position; };
+    struct Sprite { Ref<ImageTexture> image; Vector2 position; int row; };
     std::vector<Sprite> tall_objects;
     constexpr std::array animation_ms{150,200,250,300,350,400,420,450};
     const auto tick=ticks_msec();
@@ -418,10 +430,23 @@ void Mir3HudView::draw_terrain() {
             if (image.is_null()) continue;
             const auto position=pixel+Vector2(0,32-image->get_height());
             if (image->get_width()<=48 && image->get_height()<=32) draw_texture(image,position);
-            else tall_objects.push_back({image,position});
+            else tall_objects.push_back({image,position,row});
         }
     }
-    for (const auto& object:tall_objects) draw_texture(object.image,object.position);
+    const auto draw_actor=[&](const MapActorFrame& frame,int x,int y) {
+        if (frame.image.is_null() || x<start_x-5 || x>=start_x+21) return;
+        draw_texture(frame.image,Vector2((x-start_x)*48,(y-start_y)*32)+frame.offset);
+        animated_map_objects=true;
+    };
+    auto object=tall_objects.begin();
+    for (int row=-4;row<31;++row) {
+        while (object!=tall_objects.end() && object->row==row) {
+            draw_texture(object->image,object->position);
+            ++object;
+        }
+        if (start_y+row==409) draw_actor(map_npc_frames[tick/200%4],413,409);
+        if (start_y+row==360) draw_actor(map_human_frames[tick/500%2],475,360);
+    }
 }
 
 void Mir3HudView::_draw() {

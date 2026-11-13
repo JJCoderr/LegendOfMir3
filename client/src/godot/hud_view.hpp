@@ -250,6 +250,10 @@ private:
     mir3::MapTerrain terrain;
     std::array<mir3::WilArchive,75> terrain_archives;
     bool animated_map_objects=false;
+    struct MapActorFrame { godot::Ref<godot::ImageTexture> image; godot::Vector2 offset; };
+    mir3::WilArchive map_human, map_npc;
+    std::array<MapActorFrame,2> map_human_frames;
+    std::array<MapActorFrame,4> map_npc_frames;
     godot::Ref<godot::ImageTexture> terrain_texture(int package,int id);
     std::map<std::pair<int,int>,godot::Ref<godot::ImageTexture>> terrain_frames;
     bool terrain_ready=false;
