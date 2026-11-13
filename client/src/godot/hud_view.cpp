@@ -516,7 +516,7 @@ bool Mir3HudView::apply_npc_message(PackedByteArray encoded,PackedByteArray key)
 bool Mir3HudView::apply_npc_body(int opcode,int actor,int count,PackedByteArray encoded) {
     if (opcode==644) return encoded.is_empty() && apply_npc_dialogue(opcode,actor,String());
     const int limit=opcode==643?8192:opcode==645?10240:0;
-    if (!limit || encoded.size()>(limit*4+2)/3 || encoded.size()%4==1) return false;
+    if (!limit || encoded.size()>(limit*4+2)/3) return false;
 
     const auto decoded=decode_npc_six_bit(encoded.ptr(),encoded.size());
     if (!decoded) return false;
@@ -533,8 +533,9 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
     } else {
         if (opcode!=643 || actor<=0) return false;
         const auto utf8=body.utf8();
-        if (utf8.length()>8192) return false;
-        std::string_view script(utf8.get_data(),utf8.length());
+        const std::string_view message(utf8.get_data(),utf8.length());
+        if (message.size()>8192*4 || mir3::utf8_to_ansi(message).size()>8192) return false;
+        auto script=message.substr(0,message.find(char(0)));
         const auto slash=script.find('/');
         if (slash==script.npos) return false;
         script.remove_prefix(slash+1);
@@ -637,8 +638,10 @@ bool Mir3HudView::apply_shop_purchase_reply(int identifier,int64_t value) {
 
 bool Mir3HudView::apply_shop_goods(int actor,int count,String body) {
     const auto utf8=body.utf8();
-    if (actor<=0 || actor!=npc_dialogue_actor || count<0 || count>255 || utf8.length()>10240) return false;
-    std::string_view remaining(utf8.get_data(),utf8.length());
+    if (actor<=0 || actor!=npc_dialogue_actor || count<0 || count>255 || utf8.length()>10240*4) return false;
+    const std::string_view message(utf8.get_data(),utf8.length());
+    if (mir3::utf8_to_ansi(message).size()>10240) return false;
+    auto remaining=message.substr(0,message.find(char(0)));
     std::vector<ShopGood> goods;
     for (int i=0;i<count;++i) {
         std::array<std::string_view,4> fields;

@@ -205,6 +205,9 @@ func run() -> void:
 		hud.npc_dialogue_action.connect(func(actor: int, command: String): dialogue_actions.append([actor, command]))
 		var script := "老黄/要买点什么？" + char(92) + "<购买药品/@buy>" + char(92) + "<离开/@exit>"
 		if not check(hud.apply_npc_message("`\\<<<>=B<?H<<<<<lHzwm^{NfhGniZKFhhJpdwyXKGbvlkGNfXVsGp=^YS`zS?o<vwzfGp=aZBapK\\".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "decode merchant dialogue reply"): return
+		var long_script := script + char(92).repeat(8) + "比".repeat(2800)
+		if not check(hud.apply_npc_dialogue(643, 2, long_script), "dialogue limit counts ANSI bytes"): return
+		if not check(not hud.apply_npc_dialogue(643, 2, long_script + "比".repeat(1400)), "reject dialogue above ANSI byte limit"): return
 		if not await capture("bichon-merchant-dialogue"): return
 		var option := InputEventMouseButton.new()
 		option.position = Vector2(45, 48)
