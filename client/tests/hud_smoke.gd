@@ -617,6 +617,17 @@ func run() -> void:
 	click_at(Vector2(750, 490), false)
 	if not check(hud.hud_snapshot().quest_visible and hud.hud_snapshot().quest_bounds == Rect2(0, 0, 340, 440), "quest HUD button and original bounds"): return
 	if not await capture("hud-quest-window"): return
+	var quest_names := PackedStringArray(["比奇省的委托", "送信给药店老板", "寻找失踪的矿工"])
+	if not check(hud.set_quest_entries(quest_names, PackedInt32Array([0, 1, 0])), "apply quest list"): return
+	var quest_details: Array[int] = []
+	hud.quest_detail_requested.connect(func(index: int): quest_details.append(index))
+	click_at(Vector2(83, 110), true)
+	click_at(Vector2(83, 110), false)
+	if not check(hud.hud_snapshot().quest_selected == 1, "quest row selection"): return
+	click_at(Vector2(280, 90), true)
+	click_at(Vector2(280, 90), false)
+	if not check(quest_details == [1], "quest detail button uses selected entry"): return
+	if not await capture("hud-quest-list"): return
 	click_at(Vector2(275, 115), true)
 	click_at(Vector2(275, 115), false)
 	if not check(not hud.hud_snapshot().quest_visible, "quest close button"): return

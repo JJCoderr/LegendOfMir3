@@ -46,6 +46,8 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_guild_overview","name","lines","editable"),&Mir3HudView::set_guild_overview,DEFVAL(PackedStringArray()));
     ADD_SIGNAL(MethodInfo("guild_overview_requested"));
     ClassDB::bind_method(D_METHOD("set_music_map","map"),&Mir3HudView::set_music_map);
+    ClassDB::bind_method(D_METHOD("set_quest_entries","titles","completed"),&Mir3HudView::set_quest_entries);
+    ADD_SIGNAL(MethodInfo("quest_detail_requested",PropertyInfo(Variant::INT,"index")));
     ClassDB::bind_method(D_METHOD("apply_mount_reply","identifier","recognition"),&Mir3HudView::apply_mount_reply);
     ADD_SIGNAL(MethodInfo("minimap_requested",PropertyInfo(Variant::INT,"identifier")));
     ClassDB::bind_method(D_METHOD("apply_minimap_reply","map_number"),&Mir3HudView::apply_minimap_reply);
@@ -80,6 +82,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary result;
     result["ready"]=loaded;
     result["expanded"]=model.layout.expanded;
+    result["quest_first"]=quest.first;
+    result["quest_selected"]=quest.selected;
     result["quest_visible"]=quest.visible;
     result["quest_bounds"]=rect(quest.rect);
     result["mount_visible"]=mount.visible;
@@ -457,6 +461,15 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     const auto covers_wheel=[&](const mir3::DraggablePanel& panel) {
         return button.is_valid() && panel.visible && rect(panel.rect).has_point(button->get_position());
     };
+    if (covers_wheel(quest) && !panel_covered(Panel::quest,button->get_position()) && button->is_pressed()) {
+        const auto index=button->get_button_index();
+        if (index==MOUSE_BUTTON_WHEEL_UP || index==MOUSE_BUTTON_WHEEL_DOWN) {
+            quest.scroll(index==MOUSE_BUTTON_WHEEL_UP?-1:1);
+            get_viewport()->set_input_as_handled();
+            queue_redraw();
+            return;
+        }
+    }
     if (covers_wheel(options) && !panel_covered(Panel::options,button->get_position()) && button->is_pressed() &&
         (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN)) {
         get_viewport()->set_input_as_handled();
@@ -1759,6 +1772,18 @@ void Mir3HudView::sync_hud_sound() {
     }
 }
 
+bool Mir3HudView::set_quest_entries(PackedStringArray titles,PackedInt32Array completed) {
+    if (titles.size()!=completed.size() || titles.size()>INT_MAX) return false;
+    quest.entries.clear();
+    quest.entries.reserve(titles.size());
+    for (int64_t i=0;i<titles.size();++i)
+        quest.entries.push_back({titles[i].utf8().get_data(),completed[i]!=0});
+    quest.selected=-1;
+    quest.first=0;
+    queue_redraw();
+    return true;
+}
+
 void Mir3HudView::toggle_quest() {
     quest.toggle();
     quest.pressed=-1;
@@ -1773,7 +1798,13 @@ void Mir3HudView::draw_quest() {
         const Vector2 anchor(x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2);
         draw_texture(skin,anchor,Color(1,1,1,220.f/255));
     }
-    sprite(1225,{x+272,y+160});
+    const int count=int(quest.entries.size());
+    sprite(1225,{x+272,y+160+(count>1?int(182LL*quest.first/(count-1)):0)});
+    for (int row=0;row<quest.visible_rows && quest.first+row<count;++row) {
+        const int index=quest.first+row;
+        text(quest.entries[index].title,{x+65,y+90+15*row,200,15},
+            quest.title_color(index),mir3::TextFont::normal,false);
+    }
     for (int index=0;index<int(quest.buttons.size());++index) {
         const auto [id,left,top]=quest.buttons[index];
         sprite(id+(index==quest.pressed),{x+left,y+top});
@@ -1797,7 +1828,13 @@ bool Mir3HudView::quest_pointer(int kind,Vector2 position) {
     if (kind==0 && inside) {
         raise_panel(Panel::quest);
         quest.pressed=hit;
-        quest.begin_drag(int(position.x),int(position.y),hit>=0);
+        const int row=(int(position.y)-y-90)/15;
+        const bool in_list=Rect2(x+65,y+90,200,15*quest.visible_rows).has_point(position);
+        quest.begin_drag(int(position.x),int(position.y),hit>=0 || in_list);
+        if (in_list) {
+            const int index=quest.first+row;
+            quest.selected=index<int(quest.entries.size())?index:-1;
+        }
     } else if (kind==1) {
         captured=quest.move_drag(int(position.x),int(position.y)) || quest.pressed>=0;
     } else if (kind==2) {
@@ -1807,6 +1844,7 @@ bool Mir3HudView::quest_pointer(int kind,Vector2 position) {
         if (activate) {
             if (hud_sound && audio_options.effects_enabled) hud_sound->play();
             if (hit==1) toggle_quest();
+            else if (quest.selected>=0) emit_signal("quest_detail_requested",quest.selected);
         }
     }
     if (!inside && !captured) return false;
