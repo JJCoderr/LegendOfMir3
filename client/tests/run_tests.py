@@ -16,6 +16,7 @@ SUITES = {
         "bindings": ([], "skill_wire.gd"),
         "casting": ([], "skill_casting.gd"),
         "enchantment": (["--spell-weapon-color"], "weapon_enchantment.gd"),
+        "enchantment-visual": ([], "enchantment_pixels.gd"),
         "correction": ([], "forced_motion.gd"),
         "cast-correction": ([], "spell_correction.gd"),
         "ranges": ([], "spell_ranges.gd"),
@@ -73,7 +74,7 @@ def main():
     if any(case not in suite for case in cases):
         parser.error(f"无效子集；可选：{', '.join(suite)}")
     if args.skill is not None:
-        allowed = ["casting"] + (["enchantment"] if args.skill >= 408 else [])
+        allowed = ["casting"] + (["enchantment", "enchantment-visual"] if args.skill >= 408 else [])
         if args.skill in (3, 4):
             allowed = ["passive"]
         if args.skill in COMMON_SKILLS:
