@@ -98,9 +98,12 @@ struct QuestPanel : DraggablePanel {
         else scroll(y<thumb_y()+7?-5:5);
         return true;
     }
+    static std::uint32_t title_color(bool completed,bool highlighted) {
+        if(highlighted) return completed?0x191a32:0x1919c8;
+        return completed?0x191a64:0x191996;
+    }
     std::uint32_t title_color(int index) const {
-        if (index==selected) return entries[index].completed?0x191a32:0x1919c8;
-        return entries[index].completed?0x191a64:0x191996;
+        return title_color(entries[index].completed,index==selected);
     }
 };
 }

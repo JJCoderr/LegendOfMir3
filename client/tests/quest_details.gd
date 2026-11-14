@@ -1,4 +1,4 @@
-# 测试内容：父任务展开、子列表与描述原包、迟到正文归属、空正文重试及缓存复用、增量及内联描述。
+# 测试内容：父任务展开、子列表与描述原包、迟到正文归属、空正文重试及缓存复用、增量、内联描述及完成态全量刷新。
 extends "quest_wire.gd"
 
 func press_quest(point: Vector2) -> void:
@@ -52,6 +52,20 @@ func run() -> void:
 	var truncated := quest_reply(Mir3HudView.SM_QUEST_CHILD_ADDED,"30/25/Incomplete".to_ascii_buffer(),30,1)
 	if not check(not hud.apply_game_message(truncated) and hud.hud_snapshot().quest_detail_rows==4,"截断增量保持已有子任务"): return
 	if not await capture("quest-wire-child-increment"): return
+	var completed := quest_reply(Mir3HudView.SM_QUEST_LIST,
+		"30/Border patrol/2/1/Patrol complete/".to_ascii_buffer(),1,0)
+	if not check(hud.apply_game_message(completed),"原包全量完成状态"): return
+	var refreshed: Dictionary = hud.hud_snapshot()
+	if not check(refreshed.quest_completed==PackedInt32Array([1]) and refreshed.quest_detail_rows==0
+		and refreshed.quest_description=="","完成更新清理旧展开和正文"): return
+	press_quest(Vector2(76,96))
+	press_quest(Vector2(279,87))
+	if not check(packets[-1]==expected_query(Mir3HudView.CM_QUERYQUESTCHILDREN,5,30),"刷新后重新取得子列表"): return
+	if not check(hud.apply_game_message(children),"重新接收完成任务的子标题"): return
+	press_quest(Vector2(90,113))
+	if not check(hud.hud_snapshot().quest_selected==-1,"选中子项取消父标题高亮"): return
+	if not check(hud.apply_game_message(selected),"重新取得完成任务的正文"): return
+	if not await capture("quest-wire-completed"): return
 	hud.queue_free()
 	await create_timer(0.1).timeout
 	print("QUEST_DETAILS_UI_OK")

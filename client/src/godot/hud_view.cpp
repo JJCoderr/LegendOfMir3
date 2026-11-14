@@ -3213,7 +3213,10 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
         if(header->opcode==mir3::protocol::SM_QUEST_CHILDREN) {
             auto records=mir3::decode_quest_list(*header,body);
             if(!records || records->empty()) return false;
-            for(auto& record:*records) record.title=mir3::ansi_to_utf8(record.title);
+            for(auto& record:*records) {
+                record.title=mir3::ansi_to_utf8(record.title);
+                record.completed=parent->completed;
+            }
             parent->children=std::move(*records);
             parent->children_loaded=true;
             if(quest.description_parent==parent-quest.entries.begin()) {
@@ -7028,7 +7031,11 @@ void Mir3HudView::draw_quest() {
                 const auto& entry=quest.entries[quest.expanded];
                 const int child=line-quest.expanded-1;
                 const auto& detail=entry.wire?entry.children[child].title:entry.details[child];
-                text(detail,{x+75,top,190,15},quest.title_color(quest.expanded),mir3::TextFont::normal,false);
+                const auto color=entry.wire?
+                    mir3::QuestPanel::title_color(entry.children[child].completed,
+                        quest.description_parent==quest.expanded && quest.description_child==child):
+                    quest.title_color(quest.expanded);
+                text(detail,{x+75,top,190,15},color,mir3::TextFont::normal,false);
             }
         }
     }
@@ -7080,6 +7087,7 @@ bool Mir3HudView::quest_pointer(int kind,Vector2 position) {
                 const auto& entry=quest.entries[quest.expanded];
                 const int child=quest.first+row-quest.expanded-1;
                 if(entry.wire && child<int(entry.children.size())) {
+                    quest.selected=-1;
                     quest.description_parent=quest.expanded;
                     quest.description_child=child;
                     quest.description_first=0;
