@@ -97,6 +97,8 @@ func run() -> void:
 	hud.change_map("0","比奇省",origin,1)
 	if not check(hud.apply_game_message(magic_reply(Skill.THREE_RAYS,target)),"110回包进入队列"): return
 	if not check(await wait_until(func(s): return s.map_event_count==15),"三射线保留15段及重叠起点"): return
+	if not check(hud.hud_snapshot().spell_effects.all(func(e): return e.ground_wave and e.emits_light),
+		"三射线各段启用原资源光源"): return
 	await settle(0.2)
 	if not await capture("skill-casting-rays"): return
 	hud.change_map("0","比奇省",origin,1)
@@ -143,6 +145,32 @@ func run() -> void:
 	if not await capture("skill-casting-rush"): return
 	if not check(await wait_until(func(s): return s.forced_motion_opcode==0 and s.player_cell==landing and not s.action_reply_pending)
 		and packets.size()==2,"冲撞落点、解除等待且不重复发包"): return
+	# 近战回包的高字节携带元素，七系附魔沿人物动作帧绘制。
+	hud.change_map("0","比奇省",origin,1)
+	if not check(hud.set_scene_human(88,remote,0,0,"附魔验收"),"准备附魔人物"): return
+	if not check(hud.set_scene_human_attachments(88,0,1),"准备附魔武器外观"): return
+	var elemental_colors := [Color8(240,180,100),Color8(100,140,190),Color8(50,70,200),
+		Color8(140,200,150),Color8(200,200,200),Color8(160,100,180),Color8(200,220,130)]
+	for element in range(7):
+		if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_HIT,88,remote.x,remote.y,2|(element<<8))),
+			"七系附魔原包入队"): return
+		if not check(await wait_until(func(s): return s.drawn_human_spells.any(func(e):
+			return e.weapon and e.skill==408+element and e.relative_frame>=3 and e.tint.is_equal_approx(elemental_colors[element]))),
+			"附魔效果编号、七系颜色及动作中段绘制正确"): return
+		if element==2:
+			if not await capture("skill-casting-enchantment"): return
+		if not check(await wait_until(func(s): return s.scene_human_actions[88].x==-1),"附魔动作结束"): return
+	# 完整等待八秒，确认施法等待超时后可恢复输入，动画结束不能提前解锁。
+	if not check(await wait_until(func(s): return s.map_left_delay_ms==0),"超时验收换图门控结束"): return
+	root.push_input(mouse,true)
+	key(KEY_F1)
+	if not check(hud.hud_snapshot().action_reply_pending,"施法进入等待确认"): return
+	await settle(1.3)
+	if not check(hud.hud_snapshot().action_reply_pending,"起手结束仍等待服务器"): return
+	if not check(await wait_until(func(s): return not s.action_reply_pending,7500),"八秒超时解除施法等待"): return
+	if not await capture("skill-casting-timeout"): return
+	hud.apply_game_message("+FAIL".to_ascii_buffer())
+	if not check(hud.hud_snapshot().player_cell==origin,"迟到拒绝恢复保存的施法原点"): return
 	hud.queue_free()
 	await settle()
 	print("SKILL_CASTING_UI_OK")

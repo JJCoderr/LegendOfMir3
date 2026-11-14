@@ -18,5 +18,9 @@ struct SpellColor {
         }
         return fallback;
     }
+    // 412C80 supplies a zero-based element in the attack header's high byte.
+    static constexpr int weapon_effect(unsigned element) {
+        return element<palette.size()?408+int(element):0;
+    }
 };
 }

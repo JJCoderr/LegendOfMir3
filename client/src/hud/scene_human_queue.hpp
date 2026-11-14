@@ -21,6 +21,7 @@ struct SceneHumanMessage {
     std::optional<std::int16_t> status_speed;
     std::optional<std::uint16_t> spell;
     std::optional<SpellReply> spell_reply;
+    std::uint8_t weapon_element=7;
     static bool accepts(int opcode) {
         switch (opcode) {
         case mir3::protocol::SM_SITDOWN: case mir3::protocol::SM_BUTCH: case mir3::protocol::SM_SPELL:
@@ -28,6 +29,8 @@ struct SceneHumanMessage {
         case mir3::protocol::SM_801: case mir3::protocol::SM_ACTOR_STATUS: case mir3::protocol::SM_808:
         case mir3::protocol::SM_STRUCK: case mir3::protocol::SM_BUMP: case mir3::protocol::SM_TURN: case mir3::protocol::SM_WALK: case mir3::protocol::SM_RUN: case mir3::protocol::SM_HIT: case mir3::protocol::SM_HIT2: case mir3::protocol::SM_DEATH: case mir3::protocol::SM_NOWDEATH: case mir3::protocol::SM_REVIVE: case mir3::protocol::SM_REVIVE_REFRESH:
         case mir3::protocol::SM_HUMAN_CAST: case mir3::protocol::SM_HUMAN_CAST_ALT: case mir3::protocol::SM_HUMAN_ACTION18: case mir3::protocol::SM_HUMAN_STRUCK: case mir3::protocol::SM_HUMAN_ATTACK: return true;
+        case mir3::protocol::SM_FIREHIT: case mir3::protocol::SM_POWERHIT:
+        case mir3::protocol::SM_LONGHIT: case mir3::protocol::SM_WIDEHIT: case mir3::protocol::SM_WIDEHIT2: return true;
         default: return false;
         }
     }

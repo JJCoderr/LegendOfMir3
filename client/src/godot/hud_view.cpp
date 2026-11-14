@@ -570,11 +570,14 @@ Dictionary Mir3HudView::hud_snapshot() const {
     for(const auto& [id,event]:map_events) {
         event_states[int64_t(id)]=event.frame;
         if (event.ground_wave) ground_wave_delays[event.cell]=event.delay_ms;
-        if (event.spell_effect || event.staged_spell) {
+        if (event.spell_effect || event.staged_spell || event.ground_wave) {
             Dictionary state;
             state["skill"]=int(event.resource->id);state["frame"]=event.frame;
             state["projectile"]=event.projectile.has_value();state["delay"]=event.delay_ms;
             state["light_tail"]=event.light_tail;
+            state["emits_light"]=event.emits_light;
+            state["ground_wave"]=event.ground_wave;
+            state["cell"]=event.cell;
             state["stage"]=event.staged_spell?int(event.staged_spell->stage):-1;
             spell_states.append(state);
         }
@@ -3606,6 +3609,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     const auto found=scene_humans.find(actor);
     if (found==scene_humans.end() || !mir3::SceneHumanMessage::accepts(opcode)) return false;
     mir3::SceneHumanMessage message{opcode,p[0],p[1],opcode==mir3::protocol::SM_HUMAN_STRUCK || opcode==mir3::protocol::SM_STRUCK?0:p[2]&255};
+    message.weapon_element=std::uint8_t(p[2]>>8);
     if (opcode==mir3::protocol::SM_SPELL) {
         // 413C80：正文是原始十进制技能文本，不是六位编码后的外观记录。
         const std::string text(reinterpret_cast<const char*>(encoded.ptr()+16),size);
@@ -3752,6 +3756,26 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
         if (accepted) {
             if (next->opcode!=mir3::protocol::SM_HUMAN_STRUCK) human.cell=cell;
             human.action.start(human.action.action(),catch_up);
+            int effect=0;
+            switch (next->opcode) {
+            case mir3::protocol::SM_HIT: effect=mir3::SpellColor::weapon_effect(next->weapon_element);break;
+            case mir3::protocol::SM_FIREHIT: effect=int(mir3::SkillId::firesword);break;
+            case mir3::protocol::SM_POWERHIT: effect=int(mir3::SkillId::yedo);break;
+            case mir3::protocol::SM_LONGHIT: effect=int(mir3::SkillId::ergum);break;
+            case mir3::protocol::SM_WIDEHIT: effect=int(mir3::SkillId::banwol);break;
+            case mir3::protocol::SM_WIDEHIT2: effect=int(mir3::SkillId::original_103);break;
+            case mir3::protocol::SM_HUMAN_ACTION17: effect=int(mir3::SkillId::randswing);break;
+            case mir3::protocol::SM_HUMAN_ACTION16: effect=int(mir3::SkillId::spacemove2);break;
+            default:break;
+            }
+            human.spell={};
+            if (effect && effect_catalog.find(mir3::EffectCatalog::Section::spell,std::uint16_t(effect))) {
+                human.spell={effect,next->opcode==mir3::protocol::SM_WIDEHIT2?0:next->facing};
+                human.spell.weapon=true;
+                if (next->weapon_element<mir3::SpellColor::palette.size())
+                    human.spell.tint=mir3::SpellColor::palette[next->weapon_element];
+                play_actor_sound(actor,10*(effect+1000),human.cell);
+            }
         }
     }
     if (accepted) {
@@ -3776,6 +3800,10 @@ bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing,int h
     switch (opcode) {
     case mir3::protocol::SM_SITDOWN: action=8; break;
     case mir3::protocol::SM_HIT: case mir3::protocol::SM_HIT2: action=mir3::HumanActions::weapon_attack(human.weapon); break;
+    case mir3::protocol::SM_FIREHIT: case mir3::protocol::SM_POWERHIT: case mir3::protocol::SM_LONGHIT:
+        action=mir3::HumanActions::weapon_attack(human.weapon);break;
+    case mir3::protocol::SM_WIDEHIT: case mir3::protocol::SM_WIDEHIT2:
+        action=mir3::HumanActions::weapon_attack(human.weapon,false);break;
     case mir3::protocol::SM_HUMAN_ACTION17: action=17; break;
     case mir3::protocol::SM_HUMAN_ACTION16: action=16; facing=human.facing; break;
     case mir3::protocol::SM_HUMAN_ACTION18: action=18; break;
@@ -4233,21 +4261,22 @@ void Mir3HudView::advance_map_step(double delta) {
 }
 
 void Mir3HudView::draw_human_spell(HumanSpellVisual& spell,const mir3::HumanActionClock& action,Vector2 anchor) {
-    if (!spell.skill || action.finished() || (action.action()!=int(mir3::SpellAction::directed) &&
+    if (!spell.skill || action.finished() || (!spell.weapon && action.action()!=int(mir3::SpellAction::directed) &&
         action.action()!=int(mir3::SpellAction::area))) return;
     const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::spell,std::uint16_t(spell.skill));
     if (!resource) return;
     // 40E1F0：光源不依赖该帧贴图存在；半程后收缩，外半径降到0便不再更新。
     if (spell.light_active && resource->outer_radius) {
-        const int relative=std::uint8_t(action.spell_frame()),limit=action.spell_frame_limit();
-        const int outer=std::uint8_t(relative>=(limit>>1)?limit-relative:relative+1);
+        const int relative=spell.weapon?action.frame():std::uint8_t(action.spell_frame()),limit=action.spell_frame_limit();
+        const int outer=spell.weapon?((resource->end-resource->first<=8?relative:relative/2)+3):
+            std::uint8_t(relative>=(limit>>1)?limit-relative:relative+1);
         const int inner=std::uint8_t(outer-1);
         human_spell_lights.push_back({int(anchor.x)+24,int(anchor.y)+16,inner,
             {resource->inner_color[0],resource->inner_color[1],resource->inner_color[2]},outer,
             {resource->outer_color[0],resource->outer_color[1],resource->outer_color[2]}});
         if (!outer) spell.light_active=false;
     }
-    const int index=int(resource->first)+10*spell.direction+action.spell_frame();
+    const int index=int(resource->first)+10*spell.direction+(spell.weapon?action.frame():action.spell_frame());
     const MapActorFrame* frame=nullptr;
     if (resource->library==137) frame=level_frame(index);
     else {
@@ -4275,6 +4304,9 @@ void Mir3HudView::draw_human_spell(HumanSpellVisual& spell,const mir3::HumanActi
     const auto tint=spell.tint.value_or(resource->tint);
     Dictionary drawn;
     drawn["skill"]=spell.skill;drawn["frame"]=index;
+    drawn["tint"]=Color(tint[0]/255.f,tint[1]/255.f,tint[2]/255.f);
+    drawn["weapon"]=spell.weapon;
+    drawn["relative_frame"]=spell.weapon?action.frame():action.spell_frame();
     drawn["bounds"]=Rect2(anchor+frame->offset,frame->image->get_size());
     drawn_human_spells.append(drawn);
     draw_terrain_texture(frame->image,anchor+frame->offset,
@@ -4580,7 +4612,7 @@ void Mir3HudView::draw_scene_lighting() {
             const auto p=world-Vector2(camera)+Vector2(24,16);
             const auto light_color=[&](const auto& rgb) -> mir3::SceneLight::Rgb {
                 if (!event.light_fade) return {rgb[0],rgb[1],rgb[2]};
-                if (event.spell_effect) return {mir3::SpellLight::channel(rgb[0],event.light_fade),
+                if (event.spell_effect || event.ground_wave) return {mir3::SpellLight::channel(rgb[0],event.light_fade),
                     mir3::SpellLight::channel(rgb[1],event.light_fade),mir3::SpellLight::channel(rgb[2],event.light_fade)};
                 return {std::max(2,rgb[0]-event.light_fade),std::max(2,rgb[1]-event.light_fade),
                     std::max(2,rgb[2]-event.light_fade)};
@@ -5047,7 +5079,11 @@ void Mir3HudView::show_ground_magic(mir3::MagicEffectId effect,Vector2i source,V
     const auto segment=[&](Vector2i cell,int delay) {
         const auto id=harvest_effect_id;
         show_scene_effect(mir3::EffectCatalog::Section::magic,int(effect),cell,0,delay);
-        if (const auto event=map_events.find(id);event!=map_events.end()) event->second.ground_wave=true;
+        if (const auto event=map_events.find(id);event!=map_events.end()) {
+            event->second.ground_wave=true;
+            // 44C7D0 delegates creation to 4495D0, whose light flag starts enabled.
+            event->second.emits_light=event->second.resource->outer_radius>0;
+        }
     };
     if (effect==mir3::MagicEffectId::three_rays) {
         if (facing<0 || facing>=8) return;
@@ -5568,14 +5604,14 @@ void Mir3HudView::advance_map_events(double milliseconds) {
         if (!spell_impact && event.emits_light) {
             event.light_clock+=flight_ms;
             const auto effect=event.resource->id;
-            if (event.light_tail && (effect==22 || effect==538 || effect==539 ||
+            if (event.light_tail && (effect==22 || effect==538 || effect==539 || event.ground_wave ||
                 (event.spell_effect && mir3::SpellLight::fades(static_cast<mir3::SkillId>(effect))))) {
                 event.light_phase=0;
                 if (milliseconds>0) event.light_fade+=2;
                 const auto& r=*event.resource;
                 int strongest=std::max(*std::ranges::max_element(r.inner_color),
                     *std::ranges::max_element(r.outer_color));
-                if (event.spell_effect) {
+                if (event.spell_effect || event.ground_wave) {
                     strongest=0;
                     for (const auto& color:{r.inner_color,r.outer_color})
                         for (const auto channel:color) strongest=std::max(strongest,channel<2?int(channel)+256:int(channel));

@@ -574,6 +574,7 @@ private:
         int skill=0,direction=0;
         std::optional<mir3::SpellColor::Rgb> tint;
         bool light_active=true;
+        bool weapon=false;
     };
     struct SceneHuman : SceneActor {
         HumanSpellVisual spell;
