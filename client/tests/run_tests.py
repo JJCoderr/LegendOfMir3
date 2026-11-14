@@ -1,4 +1,19 @@
-"""客户端测试总入口：按子系统或单项筛选；无筛选时运行该子系统全集。"""
+"""客户端唯一测试入口：子系统使用子命令，技能实现统一在 skills.gd。
+
+使用示例（仓库根目录）：
+  python client/tests/run_tests.py skills --screenshots  # 技能全集及截图
+  python client/tests/run_tests.py skills --skill 47  # 单技能的适用场景
+  python client/tests/run_tests.py skills --skills 3,47,48,410  # 混选、去重
+  python client/tests/run_tests.py skills common --skills 47,48  # 仅共用施法场景
+  python client/tests/run_tests.py skills --list  # 场景与技能编号
+  python client/tests/run_tests.py equipment  # 装备全集
+  python client/tests/run_tests.py map-events  # 地图事件全集
+
+--godot/--checks 指定程序；也可设置 MIR3_GODOT_EXECUTABLE。
+技能图形用例在同一进程运行，背景音乐持续播放，技能声效保留。
+无筛选运行全集；调试只选受影响技能。共享模型按场景检查，不等于逐技能图形复测。
+入口使用参数数组，适配不同平台路径；Linux 实际验收仍需在对应平台执行。
+"""
 import argparse
 import json
 import os
@@ -16,23 +31,23 @@ STATIONARY_SKILLS = tuple(int(c["id"]) for c in COMMON_CASES if not c["projectil
 SUITES = {
     "skills": {
         "models": (["--spell", "--skill-wire", "--action-reply"], None),
-        "bindings": ([], "skill_wire.gd"),
-        "casting": ([], "skill_casting.gd"),
-        "enchantment": (["--spell-weapon-color"], "weapon_enchantment.gd"),
-        "enchantment-visual": ([], "enchantment_pixels.gd"),
-        "correction": ([], "forced_motion.gd"),
-        "cast-correction": ([], "spell_correction.gd"),
-        "ranges": ([], "spell_ranges.gd"),
+        "bindings": ([], "skills.gd"),
+        "casting": ([], "skills.gd"),
+        "enchantment": (["--spell-weapon-color"], "skills.gd"),
+        "enchantment-visual": ([], "skills.gd"),
+        "correction": ([], "skills.gd"),
+        "cast-correction": ([], "skills.gd"),
+        "ranges": ([], "skills.gd"),
         "lightning-model": (["--spell-lightning"], None),
-        "common": (["--spell-common"], "spell_common.gd"),
-        "passive": ([], "spell_passive.gd"),
-        "special": (["--spell-special"], "spell_special.gd"),
-        "impact": ([], "spell_impact.gd"),
-        "target-loss": ([], "spell_target_loss.gd"),
-        "stationary": ([], "spell_stationary.gd"),
-        "melee": (["--spell-melee"], "melee_spells.gd"),
+        "common": (["--spell-common"], "skills.gd"),
+        "passive": ([], "skills.gd"),
+        "special": (["--spell-special"], "skills.gd"),
+        "impact": ([], "skills.gd"),
+        "target-loss": ([], "skills.gd"),
+        "stationary": ([], "skills.gd"),
+        "melee": (["--spell-melee"], "skills.gd"),
         "particle-model": (["--spell-particles"], None),
-        "sound": (["--spell-sound"], "spell_sound.gd"),
+        "sound": (["--spell-sound"], "skills.gd"),
     },
     "map-events": {"effects": ([], "map_events.gd")},
     "equipment": {
@@ -55,18 +70,51 @@ def executable(explicit, candidates):
     raise FileNotFoundError(f"找不到可执行程序：{explicit or candidates}")
 
 
+def skill_cases(skill):
+    """按技能编号归集所有适用场景；全集仍由 SUITES 统一登记。"""
+    allowed = ["casting"] + (["enchantment", "enchantment-visual"] if skill >= 408 else [])
+    if skill in (3, 4):
+        allowed = ["passive"]
+    if skill in COMMON_SKILLS:
+        allowed = ["common"]
+    if skill in (5,13,37,38,39,40,41,67):
+        allowed.append("target-loss")
+    if skill in STATIONARY_SKILLS:
+        allowed.append("stationary")
+    if skill in IMPACT_SKILLS:
+        allowed.append("impact")
+    if skill in (36, 74, 104, 107, 108):
+        allowed.append("special")
+    if skill in (7, 12, 25, 26, 34, 35, 103):
+        allowed = ["melee"]
+    if skill == 1:
+        allowed.append("cast-correction")
+    if skill in (9, 10, 53):
+        allowed = ["ranges"]
+        if skill == 10:
+            allowed.insert(0, "lightning-model")
+    if skill in (1, 53):
+        allowed.append("sound")
+    return allowed
+
+
+BATCH_CASES = {"common", "enchantment", "melee", "special", "impact", "target-loss", "stationary"}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--suite", choices=SUITES, default="skills", help="子系统测试集")
-    parser.add_argument("--case", action="append", help="子集名称，可重复指定；--list查看")
-    parser.add_argument("--skill", type=int, choices=SKILLS, help="仅运行对应技能")
-    parser.add_argument("--skills", help="编号集合，逗号分隔；支持--case melee、common、enchantment、special、impact、target-loss或stationary")
-    parser.add_argument("--screenshots", action="store_true", help="保存真实视口截图")
-    parser.add_argument("--godot", default=os.environ.get("MIR3_GODOT_EXECUTABLE"))
-    parser.add_argument("--checks", help="hud_checks程序的路径")
-    parser.add_argument("--build-dir", type=Path, default=ROOT / "build")
-    parser.add_argument("--config", default="Release", help="多配置生成器的构建配置")
-    parser.add_argument("--list", action="store_true", help="列出已登记子集，不运行测试")
+    subcommands = parser.add_subparsers(dest="suite", required=True, help="选择子系统测试集")
+    for name, scenarios in SUITES.items():
+        command = subcommands.add_parser(name, help=f"{name}测试全集")
+        command.add_argument("scenario", nargs="?", choices=scenarios, help="可选场景子命令；省略时运行全部适用场景")
+        command.add_argument("--skill", type=int, choices=SKILLS, help="仅运行对应技能")
+        command.add_argument("--skills", help="技能编号集合，逗号分隔；可与场景子命令组合，不指定场景时自动归集")
+        command.add_argument("--screenshots", action="store_true", help="保存真实视口截图")
+        command.add_argument("--godot", default=os.environ.get("MIR3_GODOT_EXECUTABLE"))
+        command.add_argument("--checks", help="hud_checks程序的路径")
+        command.add_argument("--build-dir", type=Path, default=ROOT / "build")
+        command.add_argument("--config", default="Release", help="多配置生成器的构建配置")
+        command.add_argument("--list", action="store_true", help="列出已登记子集，不运行测试")
     args = parser.parse_args()
     suite = SUITES[args.suite]
     if args.list:
@@ -76,43 +124,30 @@ def main():
         return 0
     if args.skill is not None and args.suite != "skills":
         parser.error("--skill仅适用于skills测试集")
-    cases = args.case or list(suite)
+    cases = [args.scenario] if args.scenario else list(suite)
     if any(case not in suite for case in cases):
         parser.error(f"无效子集；可选：{', '.join(suite)}")
-    if args.skill is not None:
-        allowed = ["casting"] + (["enchantment", "enchantment-visual"] if args.skill >= 408 else [])
-        if args.skill in (3, 4):
-            allowed = ["passive"]
-        if args.skill in COMMON_SKILLS:
-            allowed = ["common"]
-        if args.skill in (5,13,37,38,39,40,41,67):
-            allowed.append("target-loss")
-        if args.skill in STATIONARY_SKILLS:
-            allowed.append("stationary")
-        if args.skill in IMPACT_SKILLS:
-            allowed.append("impact")
-        if args.skill in (36, 74, 104, 107, 108):
-            allowed.append("special")
-        if args.skill in (7, 12, 25, 26, 34, 35, 103):
-            allowed = ["melee"]
-        if args.skill == 1:
-            allowed.append("cast-correction")
-        if args.skill in (9, 10, 53):
-            allowed = ["ranges"]
-            if args.skill == 10:
-                allowed.insert(0, "lightning-model")
-        if args.skill in (1, 53):
-            allowed.append("sound")
-        if args.case and any(case not in allowed for case in cases):
-            parser.error("所选子集不支持该技能编号筛选")
-        cases = args.case or allowed
-    if args.skills:
-        if args.suite != "skills" or cases not in (["melee"], ["common"], ["enchantment"], ["special"], ["impact"], ["target-loss"], ["stationary"]) or args.skill is not None:
-            parser.error("--skills当前用于--suite skills --case melee、common、enchantment、special、impact、target-loss或stationary，不能与--skill并用")
-        selection_ids = {"common": COMMON_SKILLS, "enchantment": range(408,415), "melee": (7,12,25,26,34,35,103), "special": (36,74,104,107,108), "impact": IMPACT_SKILLS, "target-loss": (5,13,37,38,39,40,41,67), "stationary": STATIONARY_SKILLS}[cases[0]]
-        selected = args.skills.split(",")
-        if not selected or any(not n.isdecimal() or int(n) not in selection_ids for n in selected):
-            parser.error("--skills包含无效技能编号")
+    selected = None
+    if args.skill is not None and args.skills is not None:
+        parser.error("--skill与--skills不能同时使用")
+    if args.skills is not None:
+        values = [value.strip() for value in args.skills.split(",")]
+        if args.suite != "skills" or any(not value.isdecimal() or int(value) not in SKILLS for value in values):
+            parser.error("--skills仅适用于skills，且必须包含有效技能编号")
+        selected = list(dict.fromkeys(map(int, values)))
+    elif args.skill is not None:
+        selected = [args.skill]
+    selected_by_case = {}
+    if selected is not None:
+        applicable = {skill: skill_cases(skill) for skill in selected}
+        if args.scenario:
+            if any(not any(case in applicable[skill] for skill in selected) for case in cases):
+                parser.error("所选场景没有适用的技能")
+            if any(not any(case in applicable[skill] for case in cases) for skill in selected):
+                parser.error("所选技能没有适用的场景")
+        else:
+            cases = [case for case in suite if any(case in applicable[skill] for skill in selected)]
+        selected_by_case = {case: [skill for skill in selected if case in applicable[skill]] for case in cases}
     cases = list(dict.fromkeys(cases))
     suffix = ".exe" if os.name == "nt" else ""
     checks = None
@@ -122,28 +157,44 @@ def main():
                                          args.build_dir / f"hud_checks{suffix}"])
     if any(suite[case][1] for case in cases):
         godot = executable(args.godot, ["godot", "godot4", "Godot_v4.7.2-stable_win64_console.exe"])
+    skill_plan = []
     for case in cases:
         models, script = suite[case]
         # skills/models的--spell已包含颜色、闪电与声道模型，全量时不重复执行。
         commands = [[checks, model] for model in models
                     if not (args.suite == "skills" and "models" in cases and model in ("--spell-weapon-color", "--spell-lightning", "--spell-sound", "--spell-particles", "--spell-melee", "--spell-common", "--spell-special"))]
         if script:
-            command = [godot, "--path", str(ROOT / "godot"), "--script", str(ROOT / "tests" / script), "--"]
-            if args.skill is not None:
-                command.append(f"--skill={args.skill}")
-            if args.skills:
-                command.append(f"--skills={args.skills}")
-            if args.screenshots:
-                command.append("--screenshots")
-            commands.append(command)
+            ids = selected_by_case.get(case)
+            # 支持批量的场景只启动一次；其他场景分别传单技能，避免忽略筛选误跑全集。
+            selections = [[]] if ids is None else (
+                [["--skills=" + ",".join(map(str, ids))]] if case in BATCH_CASES
+                else [[f"--skill={skill}"] for skill in ids])
+            for selection in selections:
+                command = [godot, "--path", str(ROOT / "godot"), "--script", str(ROOT / "tests" / script), "--", *selection]
+                if args.screenshots:
+                    command.append("--screenshots")
+                if args.suite == "skills":
+                    skill_plan.append({"case": case, "args": command[command.index("--") + 1:]})
+                else:
+                    commands.append(command)
         for command in commands:
             print(f"RUN {args.suite}/{case}: {command}", flush=True)
             result = subprocess.run(command, cwd=ROOT)
             if result.returncode:
                 print(f"FAILED {args.suite}/{case}: exit={result.returncode}", file=sys.stderr)
                 return result.returncode if result.returncode > 0 else 1
-    scope = "SUBSET" if args.case or args.skill is not None else "ALL"
-    print(f"TEST_SUITE_{scope}_OK suite={args.suite} cases={','.join(cases)} skill={args.skill}")
+    if skill_plan:
+        # 所有技能图形用例合并在 skills.gd，一个进程执行计划，背景音乐保持连续。
+        command = [godot, "--path", str(ROOT / "godot"), "--script", str(ROOT / "tests" / "skills.gd"), "--", "--plan=" + json.dumps(skill_plan)]
+        if args.screenshots:
+            command.append("--screenshots")
+        print(f"RUN skills: {command}", flush=True)
+        result = subprocess.run(command, cwd=ROOT)
+        if result.returncode:
+            print(f"FAILED skills: exit={result.returncode}", file=sys.stderr)
+            return result.returncode if result.returncode > 0 else 1
+    scope = "SUBSET" if args.scenario or selected is not None else "ALL"
+    print(f"TEST_SUITE_{scope}_OK suite={args.suite} cases={','.join(cases)} skills={selected}")
     return 0
 
 
