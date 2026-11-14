@@ -13,6 +13,7 @@
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"
 #include "hud/human_actions.hpp"
+#include "hud/melee_cooldown.hpp"
 #include "hud/scene_human_queue.hpp"
 #include "hud/human_life.hpp"
 #include "hud/ground_items.hpp"
@@ -581,6 +582,7 @@ private:
     int walk_frame=-1, player_facing=4;
     mir3::HumanIdleClock player_idle;
     mir3::HumanActionClock player_action;
+    mir3::MeleeCooldown melee_cooldown;
     bool player_harvest_impact=false;
     bool map_shift_pressed=false;
     mir3::EffectCatalog effect_catalog;

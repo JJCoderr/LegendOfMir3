@@ -37,3 +37,7 @@ IDA 数据库名为 `mir3-map-review`，本机 MCP 地址为 `http://127.0.0.1:1
 - Godot 定向测试：使用 Godot console 的 `--path client/godot --script ../tests/<功能脚本>.gd -- --screenshots`。
 - 真实视口截图位于 `client/build/screenshots`，在对话中使用绝对路径图片展示。历史截图仅说明历史批次，不能作为新代码测试结果。
 - 模拟回包、环回连接与截图通过均不能替代真实服务器联调或原版同状态像素验收；未知项保留在 TODO。
+
+## 普攻频率门禁批次
+
+已接通417C40准入门禁，见client/src/hud/melee_cooldown.hpp。速度由本地801/807/808参数3按有符号WORD读取，等级及手持重量取现有角色模型。普通近战与挖矿共用最近获准时间，换角色或退出游戏清零。hud_checks --melee-cooldown及melee_cooldown.gd一次集中验收通过，总耗时约6秒。截图melee-cooldown-attack.png。现有近战/采矿脚本的点击等待调整到原版间隔；未启动这些长脚本。后续仍需完成419B40共用动作等待及服务端反馈，G01保持未完成。

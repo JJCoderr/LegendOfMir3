@@ -574,6 +574,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["character_weight"]=Vector2i(model.weight,model.max_weight);
     result["character_wear_weight"]=Vector2i(model.wear_weight[0],model.wear_weight[1]);
     result["character_hand_weight"]=Vector2i(model.hand_weight[0],model.hand_weight[1]);
+    result["melee_speed"]=melee_cooldown.speed;
+    result["melee_interval_ms"]=mir3::MeleeCooldown::interval(model.level,melee_cooldown.speed,model.hand_weight[0],model.hand_weight[1]);
     result["character_bonuses"]=Vector2i(model.status_bonus_percent[0],model.status_bonus_percent[1]);
     result["expanded"]=model.layout.expanded;
     result["quest_first"]=quest.first;
@@ -2851,7 +2853,7 @@ bool Mir3HudView::apply_scene_human_life(int actor,int opcode,Vector2i cell,int 
 
 bool Mir3HudView::set_local_actor_identity(int actor) {
     if (actor<=0 || scene_humans.contains(actor) || scene_npcs.contains(actor) || scene_chickens.contains(actor)) return false;
-    if (local_actor_identity!=actor) player_light_attribute=0;
+    if (local_actor_identity!=actor) { player_light_attribute=0;melee_cooldown={}; }
     local_actor_identity=actor;
     queue_redraw();
     return true;
@@ -2865,6 +2867,13 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS && header->opcode!=mir3::protocol::SM_DAYCHANGING && header->opcode!=mir3::protocol::SM_SHOWEVENT && header->opcode!=mir3::protocol::SM_HIDEEVENT)) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
+    // 40D8C0虚表+116 -> 411BA0，参数3是有符号攻击速度。
+    if ((opcode==mir3::protocol::SM_801 || opcode==mir3::protocol::SM_808) &&
+            local_actor_identity && actor==local_actor_identity) {
+        if (encoded.size()!=16) return false;
+        melee_cooldown.speed=std::int16_t(p[2]);
+        return true;
+    }
     const bool chicken_death=opcode==mir3::protocol::SM_27 ||
         opcode==mir3::protocol::SM_DEATH || opcode==mir3::protocol::SM_NOWDEATH ||
         opcode==mir3::protocol::SM_SKELETON;
@@ -3291,6 +3300,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         if (encoded.size()!=16 || actor<=0) return false;
         const unsigned light=p[2]>>8;
         if (actor==local_actor_identity) {
+            melee_cooldown.speed=std::int16_t(p[2]);
             player_light_attribute=light;queue_redraw();return true;
         }
         const auto human=scene_humans.find(actor);
@@ -3736,13 +3746,14 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
     if (left_click && model.hp>0 && !player_mount && !ranged_weapon &&
         ((melee_target && std::max(std::abs(delta.x),std::abs(delta.y))==1) ||
          (force_attack && (melee_target || (!hovered_target && player_weapon!=7))))) {
+        const auto tick=std::uint32_t(GetTickCount());
+        if (!melee_cooldown.accept(tick,model.level,model.hand_weight[0],model.hand_weight[1])) return;
         const mir3::MapCell heading{dx,dy};
         if (target!=player_cell)
             player_facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),heading)-mir3::map_directions.begin());
         map_route.clear();
         player_harvest_impact=false;
         player_action.start(mir3::HumanActions::weapon_attack(player_weapon));
-        const auto tick=std::uint32_t(GetTickCount());
         const auto position=std::uint32_t(player_cell.x)|(std::uint32_t(player_cell.y)<<16);
         const auto parameters=(tick&0xffffu)|(std::uint32_t(player_facing)<<16);
         send_client_packet(mir3::protocol::CM_HIT,position,String(),parameters,tick>>16);
@@ -3762,12 +3773,13 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
         const bool same_cell=target==player_cell;
         const auto facing=mir3::map_directions[player_facing];
         if (force_attack || (!same_cell && blocked(heading) && blocked(facing))) {
+            const auto tick=std::uint32_t(GetTickCount());
+            if (!melee_cooldown.accept(tick,model.level,model.hand_weight[0],model.hand_weight[1])) return;
             if (force_attack && !same_cell)
                 player_facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),heading)-mir3::map_directions.begin());
             map_route.clear();
             player_harvest_impact=false;
             player_action.start(mir3::HumanActions::weapon_attack(player_weapon));
-            const auto tick=std::uint32_t(GetTickCount());
             const auto position=std::uint32_t(player_cell.x)|(std::uint32_t(player_cell.y)<<16);
             const auto parameters=(tick&0xffffu)|(std::uint32_t(player_facing)<<16);
             send_client_packet(mir3::protocol::CM_FORCEHIT,position,String(),parameters,tick>>16);
@@ -4236,7 +4248,7 @@ void Mir3HudView::clear_game_scene() {
     map_route.clear();walk_frame=-1;movement_ms=0;
     map_input_delay={};player_mount=0;mount.shape=0;
     terrain_ready=false;terrain=mir3::MapTerrain{};terrain_frames.clear();current_map_id=String();
-    target_focus.clear();local_actor_identity=0;player_light_attribute=0;exit_guard={};
+    target_focus.clear();local_actor_identity=0;player_light_attribute=0;exit_guard={};melee_cooldown={};
     login_actor_pending.reset();login_actor_extra={};server_ability.reset();server_sub_ability={};weapon_training=0;
     guild_overview={};guild_overview_started=false;guild_manager=false;guild_name=String();
     for (auto& page:guild_pages) page.clear();

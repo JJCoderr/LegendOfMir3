@@ -43,7 +43,7 @@ func run() -> void:
 	if not check(request.size()==12 and request.decode_u16(4)==3015
 		and request.decode_u16(0)==origin.x and request.decode_u16(2)==origin.y
 		and request.decode_u16(8)==2,"挖矿请求携带角色坐标和向东朝向"): return
-	await create_timer(0.7).timeout
+	await create_timer(1.45).timeout
 	if not check(hud.hud_snapshot().map_event_frames[701]==230,"没有标记回包时不推进地表"): return
 	harvest_click(pointer,true)
 	harvest_click(pointer,false)

@@ -19,6 +19,7 @@
 #include "status/equipment.hpp"
 #include "inventory/trade_grid.hpp"
 #include "quick_items_checks.hpp"
+#include "melee_cooldown_checks.hpp"
 #include "item_layout_checks.hpp"
 #include "chat_submission_checks.hpp"
 #include "chat_shortcuts_checks.hpp"
@@ -57,6 +58,7 @@ int main(int argc,char** argv) {
             std::cout<<"ITEM_LAYOUT_ORIGINAL_OK "<<item_layout_original_checks(argv[2])<<"\n";return 0;
         }
         check(argc==2,"resource root required");
+        if(std::filesystem::path(argv[1])=="--melee-cooldown") {melee_cooldown_checks();std::cout<<"MELEE_COOLDOWN_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--weather") {weather_checks();std::cout<<"WEATHER_MODEL_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--chat-log") {chat_log_checks();std::cout<<"CHAT_LOG_MODEL_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--chat-shortcuts") {chat_shortcuts_checks();std::cout<<"CHAT_SHORTCUTS_MODEL_OK\n";return 0;}

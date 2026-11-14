@@ -53,7 +53,7 @@ func run() -> void:
 		and attacks[0].decode_u16(8)==4,"普攻带角色所在格且面向南侧目标"): return
 	if not check(hud.hud_snapshot().player_action==9,"空手播放动作9"): return
 	if not await capture("melee-input"): return
-	await settle(1.0)
+	await settle(1.5)
 	if not check(hud.remove_scene_actor(6) and hud.set_scene_human(7,cell,0,0,"玩家"),
 		"在相邻格建立玩家目标"): return
 	await settle()
@@ -88,7 +88,7 @@ func verify_player_gate() -> void:
 	attack_click(bounds.get_center(),true)
 	if not check(packets.size()==1 and packets[0].decode_u16(4)==Mir3HudView.CM_HIT,
 		"Shift允许对白名玩家强攻"): return
-	await settle(1.0)
+	await settle(1.5)
 	for color in [125,69]:
 		if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHANGENAMECOLOR,7,color,0,0)),
 			"接收名称颜色回包"): return
@@ -96,7 +96,7 @@ func verify_player_gate() -> void:
 		attack_click(bounds.get_center())
 		if not check(packets.size()==before+1 and packets.back().decode_u16(4)==Mir3HudView.CM_HIT,
 			"原版名称颜色例外允许普通攻击"): return
-		await settle(1.0)
+		await settle(1.5)
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHANGENAMECOLOR,7,255,0,0)),
 		"恢复白名"): return
 	var before := packets.size()
