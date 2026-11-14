@@ -35,6 +35,22 @@ func run() -> void:
 		and attacks[0].decode_u16(8)==4,"普攻带角色所在格且面向南侧目标"): return
 	if not check(hud.hud_snapshot().player_action==9,"空手播放动作9"): return
 	if not await capture("melee-input"): return
+	await settle(1.0)
+	if not check(hud.remove_scene_actor(6) and hud.set_scene_human(7,cell,0,0,"玩家"),
+		"在相邻格建立玩家目标"): return
+	await settle()
+	var player_bounds: Rect2=hud.hud_snapshot().scene_human_bounds[7]
+	if not check(player_bounds.has_area(),"玩家目标进入视野"): return
+	var mouse := InputEventMouseButton.new()
+	mouse.button_index=MOUSE_BUTTON_LEFT
+	mouse.position=player_bounds.get_center()
+	mouse.pressed=true
+	root.push_input(mouse,true)
+	if not check(attacks.size()==2,"启用 AttackUser 时普通左键可攻击玩家"): return
+	mouse=mouse.duplicate()
+	mouse.pressed=false
+	root.push_input(mouse,true)
+	if not await capture("melee-player-input"): return
 	hud.queue_free()
 	await settle()
 	print("MELEE_INPUT_OK")

@@ -3678,9 +3678,27 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
     const bool left_click=map_pointer_button==MOUSE_BUTTON_LEFT;
     const bool ranged_weapon=player_weapon>=34 && player_weapon<=37;
     const auto monster=scene_chickens.find(hovered_target);
+    const auto human=scene_humans.find(hovered_target);
     const bool monster_target=left_click && !cut && !ranged_weapon && monster!=scene_chickens.end() &&
         monster->second.death_frame<0 && !monster->second.buried && monster->second.burrow_frame<0;
+    if (monster_target) {
+        const auto shape=monster->second.shape;
+        const int low_shape=shape&255;
+        if (low_shape==26 || low_shape==86 || (low_shape>=113 && low_shape<=115) ||
+            low_shape==165 || low_shape==166 ||
+            (shape>=530 && shape<=533 && monster->second.facing==7)) return;
+    }
+    const bool human_target=left_click && !cut && !ranged_weapon && human!=scene_humans.end() &&
+        !human->second.life.dead;
+    if (human_target) {
+        const auto name=scene_names.find(hovered_target);
+        const auto color=name==scene_names.end()?0xffffffu:name->second.color;
+        // 4264D0 lets Shift and AttackUser bypass the target name color gate.
+        if (!force_attack && !system_options.force_attack && color!=255 && color!=27631) return;
+        target=human->second.cell;
+    }
     if (monster_target) target=monster->second.cell;
+    const bool melee_target=monster_target || human_target;
     const auto delta=target-player_cell;
     // 0x417E10 chooses one step along the cursor heading.
     const int dx=std::abs(delta.y)>2 && std::abs(delta.x)<=1?0:(delta.x>0)-(delta.x<0);
@@ -3716,8 +3734,8 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
         return;
     }
     if (left_click && model.hp>0 && !player_mount && !ranged_weapon &&
-        ((monster_target && std::max(std::abs(delta.x),std::abs(delta.y))==1) ||
-         (force_attack && (monster_target || (!hovered_target && player_weapon!=7))))) {
+        ((melee_target && std::max(std::abs(delta.x),std::abs(delta.y))==1) ||
+         (force_attack && (melee_target || (!hovered_target && player_weapon!=7))))) {
         const mir3::MapCell heading{dx,dy};
         if (target!=player_cell)
             player_facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),heading)-mir3::map_directions.begin());
@@ -3731,7 +3749,7 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
         queue_redraw();
         return;
     }
-    if (monster_target && std::max(std::abs(delta.x),std::abs(delta.y))==1) return;
+    if (melee_target && std::max(std::abs(delta.x),std::abs(delta.y))==1) return;
     if (map_pointer_button==MOUSE_BUTTON_LEFT && player_weapon==7 && !player_mount && model.hp>0 &&
         !hovered_target && std::none_of(scene_npcs.begin(),scene_npcs.end(),[p](const auto& npc) {
             return npc.second.bounds.has_point(p);
@@ -3785,7 +3803,7 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
         const auto third=second+Vector2i(dx,dy);
         if (!player_mount || traversable(third)) destination=player_mount?third:second;
     }
-    if (!traversable(destination) && monster_target) return;
+    if (!traversable(destination) && melee_target) return;
     if (!traversable(destination)) {
         destination=player_cell;
         int best_distance=100;
