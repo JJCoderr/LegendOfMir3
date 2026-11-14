@@ -237,13 +237,15 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary chicken_bounds;
     for (const auto& [actor,chicken]:scene_chickens) chicken_bounds[actor]=chicken.bounds;
     result["scene_chicken_bounds"]=chicken_bounds;
-    Dictionary chicken_cells, chicken_steps;
+    Dictionary chicken_cells, chicken_steps, chicken_struck;
     for (const auto& [actor,chicken]:scene_chickens) {
         chicken_cells[actor]=chicken.cell;
         chicken_steps[actor]=chicken.walk_frame;
+        chicken_struck[actor]=chicken.struck_frame;
     }
     result["scene_chicken_cells"]=chicken_cells;
     result["scene_chicken_steps"]=chicken_steps;
+    result["scene_chicken_struck"]=chicken_struck;
     Dictionary actor_health_values;
     for (const auto& [actor,health]:scene_health) {
         PackedInt32Array values;
@@ -2073,7 +2075,7 @@ bool Mir3HudView::move_scene_chicken(int actor,Vector2i cell,int facing) {
     if (!terrain.walkable(cell.x,cell.y)) return false;
     auto& chicken=scene_chickens.at(actor);
     if (chicken.death_frame>=0) return true;
-    if (chicken.walk_frame>=0) {
+    if (chicken.walk_frame>=0 || chicken.struck_frame>=0) {
         if (chicken.turns.size()>=64) return false;
         chicken.turns.emplace_back(cell,facing);
         return true;
@@ -2346,6 +2348,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
             chicken.cell=cell;
             chicken.facing=facing;
             chicken.walk_frame=-1;
+            chicken.struck_frame=-1;
             chicken.turns.clear();
             if (chicken.death_frame<0 || skeleton) {
                 chicken.death_frame=opcode==mir3::protocol::SM_NOWDEATH?0:frames-1;
@@ -2357,6 +2360,41 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
             queue_redraw();
             return true;
         }
+    }
+    if (opcode==mir3::protocol::SM_WALK && scene_chickens.contains(actor)) {
+        if (encoded.size()!=16) return false;
+        auto& health=scene_health[actor];
+        health.current=p[0];health.maximum=p[2];
+        queue_redraw();
+        return true;
+    }
+    if (opcode==mir3::protocol::SM_HUMAN_STRUCK && scene_chickens.contains(actor)) {
+        const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
+        if (!body || body->size()!=16 || (*body)[0]!=3 || (*body)[2]!=20 || (*body)[3]!=0) return false;
+        auto& chicken=scene_chickens.at(actor);
+        if (chicken.death_frame<0 && p[0] && p[2]) {
+            for (int i=0;i<2;++i) if (!chicken_frame(240+10*chicken.facing+i)) return false;
+        }
+        mir3::SceneHumanMessage hit{};
+        hit.opcode=opcode;
+        hit.health=p;
+        apply_actor_health_record(actor,hit);
+        if (chicken.death_frame>=0) return true;
+        if (!p[0]) {
+            for (int i=0;i<10;++i) if (!chicken_frame(320+10*chicken.facing+i)) return false;
+            chicken.walk_frame=-1;
+            chicken.struck_frame=-1;
+            chicken.turns.clear();
+            chicken.death_frame=0;
+            chicken.death_ms=0;
+            update_scene_target(inventory_cursor);
+            target_focus.remove(actor);
+        } else if (p[2]) {
+            chicken.walk_frame=-1;
+            chicken.struck_frame=0;
+            chicken.struck_ms=0;
+        }
+        return true;
     }
     if (opcode==mir3::protocol::SM_SITDOWN && local_actor_identity && actor==local_actor_identity) {
         if (encoded.size()!=16 || (p[2]&255)>=8 || !terrain.walkable(p[0],p[1])) return false;
@@ -3082,8 +3120,9 @@ void Mir3HudView::draw_terrain() {
                 continue;
             }
             const int base=(chicken.skeleton?880:320)+10*chicken.facing;
-            const auto* pose=chicken.death_frame<0?chicken_frame(10*chicken.facing+tick/300%4):
-                chicken_frame(base+chicken.death_frame);
+            const auto* pose=chicken.death_frame>=0?chicken_frame(base+chicken.death_frame):
+                chicken.struck_frame>=0?chicken_frame(240+10*chicken.facing+chicken.struck_frame):
+                chicken_frame(10*chicken.facing+tick/300%4);
             draw_scene_actor(chicken,180,pose);
         }
         for (auto& [actor,human]:scene_humans) {
@@ -5268,20 +5307,28 @@ void Mir3HudView::_process(double delta) {
 
     apply_login_actor();
     for (auto& [actor,chicken]:scene_chickens) {
+        if (chicken.struck_frame>=0) {
+            chicken.struck_ms+=delta*1000;
+            if (chicken.struck_ms>300) {
+                chicken.struck_ms=0;
+                if (++chicken.struck_frame>=2) chicken.struck_frame=-1;
+                queue_redraw();
+            }
+        }
         if (chicken.walk_frame>=0) {
             chicken.walk_ms+=delta*1000;
             if (chicken.walk_ms>130) {
                 chicken.walk_ms=0;
                 if (++chicken.walk_frame>=6) {
                     chicken.walk_frame=-1;
-                    while (!chicken.turns.empty() && chicken.walk_frame<0) {
-                        const auto [cell,facing]=chicken.turns.front();
-                        chicken.turns.pop_front();
-                        move_scene_chicken(actor,cell,facing);
-                    }
                 }
                 queue_redraw();
             }
+        }
+        if (!chicken.turns.empty() && chicken.walk_frame<0 && chicken.struck_frame<0) {
+            const auto [cell,facing]=chicken.turns.front();
+            chicken.turns.pop_front();
+            move_scene_chicken(actor,cell,facing);
         }
         if (chicken.death_frame<0 || chicken.death_frame>=9 || chicken.skeleton) continue;
         chicken.death_ms+=delta*1000;

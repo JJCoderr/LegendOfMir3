@@ -80,9 +80,24 @@ func run() -> void:
 	await settle(0.8)
 	if not check(hud.hud_snapshot().scene_chicken_cells[6]==cell and hud.hud_snapshot().scene_chicken_steps[6]==-1,
 		"走完两步后恢复站立"): return
-	var death := game_reply(Mir3HudView.SM_NOWDEATH,6,cell.x,cell.y,6)
+	var health := game_reply(Mir3HudView.SM_WALK,6,10,0,10)
+	if not check(hud.apply_game_message(health) and hud.hud_snapshot().scene_health_values[6][2]==10
+		and hud.hud_snapshot().scene_chicken_steps[6]==-1,"怪物11只更新血量"): return
+	var miss := game_reply(Mir3HudView.SM_HUMAN_STRUCK,6,10,10,0)
+	miss.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(miss) and hud.hud_snapshot().scene_chicken_struck[6]==-1,
+		"零伤害不触发受击帧"): return
+	var strike := game_reply(Mir3HudView.SM_HUMAN_STRUCK,6,6,10,4)
+	strike.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(strike) and hud.hud_snapshot().scene_chicken_struck[6]==0
+		and hud.hud_snapshot().scene_health_values[6][0]==6,"有伤害时更新血量并播放受击"): return
+	if not await capture("map-chicken-struck"): return
+	await settle(0.7)
+	if not check(hud.hud_snapshot().scene_chicken_struck[6]==-1,"受击动作结束"): return
+	var death := game_reply(Mir3HudView.SM_HUMAN_STRUCK,6,0,10,6)
 	death.append_array(encode_scene_bytes(feature))
-	if not check(hud.apply_game_message(death),"用带鸡外观的死亡原包创建动物尸体"): return
+	if not check(hud.apply_game_message(death) and hud.hud_snapshot().scene_health_values[6][0]==0,
+		"致死受击包触发死亡"): return
 	await settle()
 	var early: Rect2=hud.hud_snapshot().scene_chicken_bounds[6]
 	await settle(1.65)

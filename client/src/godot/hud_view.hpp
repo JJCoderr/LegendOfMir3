@@ -469,9 +469,10 @@ private:
     struct SceneChicken : SceneActor {
         int facing=6, death_frame=-1;
         int walk_frame=-1;
+        int struck_frame=-1;
         godot::Vector2i walk_origin;
         bool skeleton=false;
-        double death_ms=0, walk_ms=0;
+        double death_ms=0, walk_ms=0, struck_ms=0;
         std::deque<std::pair<godot::Vector2i,int>> turns;
     };
     std::map<int,SceneChicken> scene_chickens;
