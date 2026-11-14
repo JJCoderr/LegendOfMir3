@@ -781,9 +781,10 @@ func run_scene_light() -> void:
 	hud.set_process(true)
 	await create_timer(0.25).timeout
 	var level: int = hud.hud_snapshot().scene_ambient
-	if not check(level < 85 and level >= 80, "real clock advances half-unit light fade"): return
+	if not check(level >= 0 and level <= 4, "first ticks use the original zero-initialized accumulator"): return
 	if not check(hud.change_map("0","比奇省",origin,0), "map entry replaces fade"): return
-	if not check(not hud.hud_snapshot().scene_ambient_fading and hud.hud_snapshot().scene_ambient == 255, "old fade cleared"): return
+	if not check(hud.hud_snapshot().scene_ambient_fading and hud.hud_snapshot().scene_ambient == 255, "cross-mode entry preserves timer and paints daylight"): return
+	if not check(hud.change_map("0","比奇省",origin,0) and not hud.hud_snapshot().scene_ambient_fading, "same-mode entry cancels timer"): return
 	hud.queue_free()
 	await process_frame
 	await process_frame

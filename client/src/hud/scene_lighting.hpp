@@ -51,14 +51,23 @@ private:
 // 0x42EE00 entry, 0x429213 update, 0x425E10 timer.
 struct SceneAmbient {
     std::uint8_t mode=0;
-    int half_level=510;
+    int half_level=0;
+    int display_level=255;
+    std::array<int,4> base_values{};
+    int selected_base=0;
     double elapsed_ms=0;
     bool fading=false;
-    int level() const { return half_level/2; }
-    void enter(std::uint8_t value) {
+    int level() const { return display_level; }
+    void select_base(std::uint8_t index,int roll) {
+        const int mid=(roll+37)/2;
+        base_values={roll,mid,mid+46,mid+75};
+        if(index<base_values.size()) selected_base=base_values[index];
+    }
+    void enter(std::uint16_t value) {
         constexpr std::array levels{255,15,85};
-        mode=value;half_level=2*(value<levels.size()?levels[value]:10);
-        elapsed_ms=0;fading=false;
+        if(mode==value) { elapsed_ms=0;fading=false; }
+        mode=static_cast<std::uint8_t>(value);
+        display_level=mode<levels.size()?levels[mode]:10;
     }
     void update(std::uint16_t value) {
         if (value!=mode) { fading=true;elapsed_ms=0; }
@@ -69,10 +78,14 @@ struct SceneAmbient {
         constexpr std::array levels{510,30,170};
         const int target=mode<levels.size()?levels[mode]:0;
         elapsed_ms+=ms;
-        const int steps=static_cast<int>(std::min(std::floor(elapsed_ms/50),double(std::abs(target-half_level))));
-        elapsed_ms-=steps*50;
+        const double ticks=std::floor(elapsed_ms/50);
+        if(ticks<1) return;
+        const int distance=std::abs(target-half_level);
+        const int steps=static_cast<int>(std::min(ticks,double(distance)));
+        elapsed_ms-=ticks*50;
         half_level+=half_level<target?steps:-steps;
-        if (half_level==target) { fading=false;elapsed_ms=0; }
+        display_level=half_level/2;
+        if(ticks>distance) { fading=false;elapsed_ms=0; }
     }
 };
 struct SceneLightGrid {

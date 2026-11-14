@@ -308,6 +308,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["scene_human_lights"]=lights;
     result["scene_light_samples"]=scene_light_samples;
     result["scene_ambient"]=scene_ambient.level();
+    result["scene_ambient_selected_base"]=scene_ambient.selected_base;
     result["scene_ambient_mode"]=scene_ambient.mode;
     result["scene_ambient_fading"]=scene_ambient.fading;
     result["pending_map_changes"]=int(map_changes.size());
@@ -2251,6 +2252,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     }
     if (opcode==mir3::protocol::SM_DAYCHANGING) {
         if (encoded.size()!=16) return false;
+        scene_ambient.select_base(std::uint8_t(p[0]),weather.random());
         scene_ambient.update(p[1]);
         weather.select(p[2]);update_weather_layers();
         queue_redraw();
@@ -2919,6 +2921,7 @@ void Mir3HudView::clear_game_scene() {
     while (!scene_npcs.empty()) remove_scene_actor(scene_npcs.begin()->first);
     while (!scene_chickens.empty()) remove_scene_actor(scene_chickens.begin()->first);
     scene_removals.clear();scene_clear_pending=false;map_changes.clear();
+    scene_ambient={};
     weather.select(0);weather.particles={};weather.active=0;weather.clear_rain();update_weather_layers();
     ground_items.items.clear();ground_bounds.clear();displayed_ground_item=-1;
     scene_speech.clear();speech_bounds.clear();scene_health.clear();scene_health_bounds.clear();scene_damage_glyphs.clear();
@@ -3102,7 +3105,7 @@ void Mir3HudView::process_map_changes() {
         const auto message=std::move(map_changes.front());map_changes.pop_front();
         const auto id=String::utf8(message.map_id.c_str());
         const auto name=model.map_name.empty()?id:String::utf8(model.map_name.c_str());
-        const bool success=change_map(id,name,Vector2i(message.x,message.y),message.ambient);
+        const bool success=change_map(id,name,Vector2i(message.x,message.y),message.ambient|(int(message.series)<<8));
         if (success) {map_series=message.series;weather.select(message.series,true);update_weather_layers();}
         emit_signal("map_change_finished",message.opcode,id,success);
     }
@@ -7623,14 +7626,14 @@ bool Mir3HudView::request_trade() {
 
 bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn,int ambient_mode) {
     // Decode into a temporary map: failure must not destroy the live scene.
-    if (ambient_mode<0 || ambient_mode>255 || !loaded || name.is_empty() ||
+    if (ambient_mode<0 || ambient_mode>65535 || !loaded || name.is_empty() ||
         !mir3::valid_map_id(map_id.utf8().get_data())) return false;
     mir3::MapTerrain next;
     if (!next.open(std::filesystem::u8path(map_directory.path_join(map_id+".map").utf8().get_data())) ||
         !next.walkable(spawn.x,spawn.y)) return false;
     clear_level_effects();player_level_action={};
     terrain=std::move(next);terrain_ready=true;
-    scene_ambient.enter(static_cast<std::uint8_t>(ambient_mode));
+    scene_ambient.enter(static_cast<std::uint16_t>(ambient_mode));
     current_map_id=map_id;
     map_input_delay.enter();
     map_series=0;weather.select(0,true);update_weather_layers();

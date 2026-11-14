@@ -476,16 +476,22 @@ int main(int argc,char** argv) {
             std::cout << "MAP_WIRE_MODEL_OK\n";return 0;
         }
         if (std::filesystem::path(argv[1])=="--scene-light") {
+            // 验证 46 随机分支、渐变时钟和换图亮度与累加器独立。
             mir3::SceneAmbient light;
+            light.select_base(3,100);check(light.selected_base==143,"select fourth raw base");
+            light.select_base(4,500);check(light.selected_base==143 && light.base_values[0]==500,"unknown selector preserves previous base");
+            light.update(0x100);light.advance(50000);check(light.level()==255,"initialize day accumulator through original timer");
             light.update(2);light.advance(49);check(light.half_level==510,"timer waits 50ms");
             light.advance(1);check(light.half_level==509 && light.level()==254,"half-unit timer step truncates");
             light.advance(25);light.update(2);light.advance(25);
             check(light.half_level==508,"same mode does not restart timer");
             light.advance(50000);check(light.level()==85 && !light.fading,"dawn transition clamps at endpoint");
             light.update(1);light.advance(100);check(light.level()==84,"fade toward night");
-            light.enter(0);light.advance(1000);check(light.level()==255 && !light.fading,"entry cancels pending fade");
+            light.enter(0);check(light.level()==255 && light.fading,"cross-mode entry paints immediately and preserves active timer");
+            light.advance(50);check(light.level()==84,"timer resumes from separate accumulator");
+            light.enter(0);light.advance(1000);check(light.level()==255 && !light.fading,"same-mode entry cancels timer");
             light.enter(200);check(light.level()==10,"unknown entry fallback");
-            light.update(201);light.advance(1000);check(light.level()==0,"unknown update fallback");
+            light.update(201);light.advance(50000);check(light.level()==0,"unknown update fallback");
             auto actor=mir3::SceneLight::actor(40,3,0,true);
             check(actor.sample(1,1)==mir3::SceneLight::Rgb{100,100,100},"actor light center includes original bias");
             check(actor.sample(17,18)==mir3::SceneLight::Rgb{},"out-of-radius vertex stays dark");
