@@ -2034,13 +2034,18 @@ bool Mir3HudView::scene_occupied(Vector2i cell) const {
 }
 
 bool Mir3HudView::set_scene_chicken(int actor,Vector2i cell) {
+    return place_scene_chicken(actor,cell,6);
+}
+
+bool Mir3HudView::place_scene_chicken(int actor,Vector2i cell,int facing) {
     if (actor==local_actor_identity) return false;
     if (!terrain_ready || actor<=0 || scene_npcs.contains(actor) || scene_humans.contains(actor) || !terrain.walkable(cell.x,cell.y)) return false;
     SceneChicken chicken{};
     chicken.cell=cell;
-    // mir3_1.45 MockServer::sprite_frame uses the four west-facing Mon-3 frames.
+    chicken.facing=facing;
+    // 405E50 and 46EFA0: type 3 / shape 20, action 0.
     for (int i=0;i<4;++i) {
-        const auto* frame=chicken_frame(60+i);
+        const auto* frame=chicken_frame(facing*10+i);
         if (!frame) return false;
         chicken.frames[i]=*frame;
     }
@@ -2287,10 +2292,17 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     const auto& p=header->parameters;
     const bool chicken_death=opcode==mir3::protocol::SM_DEATH || opcode==mir3::protocol::SM_NOWDEATH ||
         opcode==mir3::protocol::SM_SKELETON;
-    if (chicken_death && actor>0 && actor!=local_actor_identity) {
+    if ((chicken_death || opcode==mir3::protocol::SM_TURN) && actor>0 && actor!=local_actor_identity) {
         const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
         const bool chicken_feature=body && body->size()>=8 && (*body)[0]==3 && (*body)[2]==20 && (*body)[3]==0;
-        if (scene_chickens.contains(actor) || chicken_feature) {
+        if (opcode==mir3::protocol::SM_TURN && chicken_feature) {
+            const int facing=p[2]&255;
+            if (facing>=8) return false;
+            if (const auto it=scene_chickens.find(actor);it!=scene_chickens.end() && it->second.death_frame>=0)
+                return true;
+            return place_scene_chicken(actor,Vector2i(p[0],p[1]),facing);
+        }
+        if (chicken_death && (scene_chickens.contains(actor) || chicken_feature)) {
             const int facing=p[2]&255;
             if (facing>=8 || !terrain.walkable(p[0],p[1]) || (encoded.size()!=16 && !chicken_feature)) return false;
             const bool skeleton=opcode==mir3::protocol::SM_SKELETON;

@@ -474,6 +474,7 @@ private:
     std::map<int,SceneChicken> scene_chickens;
     std::map<int,MapActorFrame> chicken_frames;
     const MapActorFrame* chicken_frame(int id);
+    bool place_scene_chicken(int actor,godot::Vector2i cell,int facing);
     struct SceneHuman : SceneActor {
         int profession=0, type=0, clothing=0, hair=0, weapon=0;
         int clothing_dye=65535, hair_dye=65535, mount_shape=0;

@@ -57,6 +57,13 @@ func run() -> void:
 	feature.resize(16)
 	feature[0]=3
 	feature[2]=20
+	var stand := game_reply(Mir3HudView.SM_TURN,6,cell.x,cell.y,6)
+	stand.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(stand),"原始站立包创建活鸡"): return
+	await settle()
+	var living: Rect2=hud.hud_snapshot().scene_chicken_bounds[6]
+	if not check(living.has_area(),"活鸡在地图上绘制"): return
+	if not await capture("map-butch-live-chicken"): return
 	var death := game_reply(Mir3HudView.SM_NOWDEATH,6,cell.x,cell.y,6)
 	death.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(death),"用带鸡外观的死亡原包创建动物尸体"): return
@@ -77,6 +84,9 @@ func run() -> void:
 	await settle()
 	var bones: Rect2=hud.hud_snapshot().scene_chicken_bounds[6]
 	if not check(bones.has_area() and bones!=corpse,"骨架使用独立资源帧"): return
+	if not check(hud.apply_game_message(stand),"处理已死亡对象的站立更新"): return
+	await settle()
+	if not check(hud.hud_snapshot().scene_chicken_bounds[6]==bones,"站立更新不使骨架复活"): return
 	cut_at(bones.get_center())
 	if not check(packets.size()==6 and decode_request(packets[5]).decode_u16(4)==Mir3HudView.CM_SITDOWN,
 		"骨架只触发蹲姿"): return
