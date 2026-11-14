@@ -10,6 +10,53 @@ var suite_failed := false
 func skill_arguments() -> PackedStringArray:
     return active_arguments
 
+# 召唤神兽：施法请求不等于怪物创建；使用原协议入场消息覆盖之前漏测的可见怪物。
+func run_summon() -> void:
+    const SUMMON_SHINSU := 30
+    const SHINSU_SHAPE := 90 # 原版 Mon-10 第0组，见46F7A4的外观索引。
+    Input.use_accumulated_input = false
+    hud = load("res://main.tscn").instantiate()
+    hud.set_meta("offline_preview", true)
+    hud.set_meta("options_path", "user://summon-%d.ini" % OS.get_process_id())
+    hud.set_connection_enabled(false)
+    root.add_child(hud)
+    await settle()
+    hud.set_local_actor_identity(77)
+    hud.set_character_vitals(100,100,200,200,0,100)
+    var origin: Vector2i = hud.hud_snapshot().player_cell + Vector2i(0,2)
+    var pet_cell := origin + Vector2i(0,4)
+    if not check(hud.change_map("0","比奇省",origin,1), "准备召唤场景"): return
+    var learned := game_reply(Mir3HudView.SM_SENDMYMAGIC,0,0,0,1)
+    learned.append_array(skill_record(SUMMON_SHINSU,49))
+    learned.append(47)
+    if not check(hud.apply_game_message(learned), "学习召唤神兽并绑定F1"): return
+    var packets: Array[PackedByteArray] = []
+    hud.client_packet_ready.connect(func(packet: PackedByteArray):
+        packets.append(packet)
+        hud.apply_game_message("+GOOD".to_ascii_buffer()))
+    if not check(await wait_until(func(s): return s.map_left_delay_ms==0), "召唤输入门控结束"): return
+    key(KEY_F1)
+    if not check(packets.size()==1 and decode_request(packets[0]).decode_u16(8)==SUMMON_SHINSU, "发出30号施法请求"): return
+    if not check(await wait_until(func(s): return s.player_action==-1), "召唤起手结束"): return
+    if not check(hud.apply_game_message(magic_reply(SUMMON_SHINSU,pet_cell)), "接收召唤技能效果回包"): return
+    if not check(not hud.hud_snapshot().scene_chicken_cells.has(130), "仅施法回包不能凭空生成神兽"): return
+    # 离线验收注入服务器应发送的角色入场包；不实现服务端召唤或伤害结算。
+    var feature := PackedByteArray()
+    feature.resize(16)
+    feature[0] = 3
+    feature.encode_u16(2,SHINSU_SHAPE)
+    var entry := game_reply(Mir3HudView.SM_DIGUP,130,pet_cell.x,pet_cell.y,0)
+    entry.append_array(encode_scene_bytes(feature))
+    if not check(hud.apply_game_message(entry), "神兽通过怪物入场协议创建"): return
+    if not check(await wait_until(func(s): return s.scene_chicken_bounds.has(130) and s.scene_chicken_bounds[130].has_area()), "神兽原资源身体可见"): return
+    if not check(hud.hud_snapshot().scene_chicken_cells[130]==pet_cell, "神兽落在入场包指定格"): return
+    await settle(0.3)
+    if not await capture("skill-summon-30-shinsu"): return
+    if not check(hud.change_map("0","比奇省",origin,1) and not hud.hud_snapshot().scene_chicken_cells.has(130), "换图释放召唤物"): return
+    hud.queue_free()
+    await settle()
+    print("SKILL_SUMMON_UI_OK 30")
+
 func check(condition: bool, label: String) -> bool:
     if not condition:
         suite_failed = true

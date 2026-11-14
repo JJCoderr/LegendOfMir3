@@ -50,6 +50,7 @@ SUITES = {
         "impact": ([], "skills.gd"),
         "target-loss": ([], "skills.gd"),
         "stationary": ([], "skills.gd"),
+        "summon": ([], "skills.gd"),
         "melee": (["--spell-melee"], "skills.gd"),
         "particle-model": (["--spell-particles"], None),
         "sound": (["--spell-sound"], "skills.gd"),
@@ -86,6 +87,8 @@ def skill_cases(skill):
         allowed.append("target-loss")
     if skill in STATIONARY_SKILLS:
         allowed.append("stationary")
+    if skill == 30:
+        allowed.append("summon")  # 神兽必须由怪物入场消息创建，不能只测施法回包。
     if skill in IMPACT_SKILLS:
         allowed.append("impact")
     if skill in (36, 74, 104, 107, 108):

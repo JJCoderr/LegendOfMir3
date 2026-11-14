@@ -49,7 +49,7 @@ class SkillSelectionTests(unittest.TestCase):
         self.assertEqual(sum("--script" in c for c in commands), 1)
         graphic = next(c for c in commands if "--script" in c)
         plan = json.loads(next(a[7:] for a in graphic if a.startswith("--plan=")))
-        self.assertEqual(len(plan), 15)
+        self.assertEqual(len(plan), 16)
         self.assertTrue(all(item["args"] == [] for item in plan))
         self.assertTrue(all(not any(a.startswith(("--skill=", "--skills=")) for a in c) for c in commands))
         self.assertIn("TEST_SUITE_ALL_OK", output)
@@ -67,6 +67,13 @@ class SkillSelectionTests(unittest.TestCase):
         self.assertEqual(result, 7)
         self.assertEqual(len(commands), 1)
         self.assertNotIn("TEST_SUITE_SUBSET_OK", output)
+
+    def test_shinsu_includes_monster_entry(self):
+        # 召唤神兽不能仅覆盖起手和被忽略的技能回包，必须包含怪物入场场景。
+        _, commands, _ = self.invoke("--skill", "30")
+        graphic = next(c for c in commands if "--script" in c)
+        plan = json.loads(next(a[7:] for a in graphic if a.startswith("--plan=")))
+        self.assertEqual([item["case"] for item in plan], ["common", "stationary", "summon"])
 
 
 if __name__ == "__main__":
