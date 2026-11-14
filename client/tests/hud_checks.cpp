@@ -1,6 +1,7 @@
 // 测试内容：界面模型、选项确认与聊天联动、场景消息、人物行为、地图及资源解析。
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
+#include "hud/exit_transition.hpp"
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/ground_items.hpp"
@@ -32,6 +33,16 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--exit-transition") {
+            mir3::ExitTransition transition;
+            check(!transition.advance(3000) && transition.brightness()==1,"未开始时不离场");
+            transition.begin();check(!transition.advance(1250) && transition.brightness()>0.50f && transition.brightness()<0.52f,"中段亮度按原版255减毫秒乘0.1");
+            check(!transition.advance(1250) && transition.active && transition.brightness()>0.019f && transition.brightness()<0.020f,"2500毫秒仍显示末帧");
+            check(transition.advance(1) && !transition.active && transition.elapsed==0,"2501毫秒离场且复位");
+            check(!transition.advance(10000),"离场事件只触发一次");
+            transition.begin();transition.advance(1000);transition.begin();check(transition.elapsed==0,"再次确认重启原版计时");
+            std::cout << "EXIT_TRANSITION_MODEL_OK\n";return 0;
+        }
         if (std::filesystem::path(argv[1])=="--exit-guard") {
             mir3::ExitGuard guard;
             check(!guard.allowed(8000) && guard.allowed(8001),"原版8000毫秒边界仍限制，8001放行");

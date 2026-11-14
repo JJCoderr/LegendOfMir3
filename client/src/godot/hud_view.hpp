@@ -18,6 +18,7 @@
 #include "hud/audio_options.hpp"
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
+#include "hud/exit_transition.hpp"
 #include "hud/portrait_picker.hpp"
 #include "resources/map_terrain.hpp"
 #include "protocol/map_message.hpp"
@@ -443,6 +444,16 @@ private:
     mir3::HudLayout::Rect npc_dialogue_text_bounds(const NpcDialogueRow& row) const;
     int npc_dialogue_option_at(godot::Vector2 pointer) const;
     godot::Vector2i npc_dialogue_origin;
+    mir3::ExitTransition exit_transition;
+    mir3::CharacterSelectionPage character_selection;
+    double exit_fraction_ms=0;
+    mir3::WilArchive selection_archive;
+    std::map<int,godot::Ref<godot::ImageTexture>> selection_frames;
+    godot::Node2D* exit_layer=nullptr;
+    bool prepare_character_selection();
+    void enter_character_selection();
+    void draw_character_selection();
+    void draw_exit_transition();
     mir3::ExitGuard exit_guard;
     bool check_exit_allowed();
     mir3::SendMessages outgoing_messages;

@@ -22,4 +22,4 @@ C++ `ExitGuard`封装判定；`set_local_exit_state(action, ticks)`提供解码�
 
 Release构建通过。原生 `--exit-guard`检查8000/8001边界、三项独立限制、DWORD回绕、死亡动作豁免及非死亡动作拒绝。Godot同名场景检查两个窗口入口受限、直接确认入口受限、原版聊天提示、非法字段无部分应用、确认框打开后新动作阻止退出、死亡豁免生成1009。实际截图为exit-guard-blocked.png、exit-guard-death-exemption.png。
 
-回归--exit-request和--exit-dialog均通过，仅覆盖受影响退出模块，不执行其他全场景。当前退出状态2消费、缓存保存、返回页面和真实服务端联调仍未完成。
+回归--exit-request和--exit-dialog均通过，仅覆盖受影响退出模块，不执行其他全场景。退出状态2过渡及角色选择初始页已接入，见exit-transition.md；缓存保存、完整选角/再入场与真实服务端联调仍未完成。

@@ -17,6 +17,7 @@
 #include <godot_cpp/classes/input_event_mouse_motion.hpp>
 #include <godot_cpp/classes/viewport.hpp>
 #include <godot_cpp/classes/scene_tree.hpp>
+#include <godot_cpp/classes/window.hpp>
 #include <godot_cpp/classes/shader.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <chrono>
@@ -83,6 +84,8 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_minimap_unavailable"),&Mir3HudView::apply_minimap_unavailable);
     ADD_SIGNAL(MethodInfo("npc_packet_ready",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"packet")));
     ADD_SIGNAL(MethodInfo("client_packet_ready",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"packet")));
+    ADD_SIGNAL(MethodInfo("game_connection_close_requested"));
+    ADD_SIGNAL(MethodInfo("character_selection_connection_requested"));
     ADD_SIGNAL(MethodInfo("npc_request",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"actor"),
         PropertyInfo(Variant::STRING,"body")));
     ADD_SIGNAL(MethodInfo("npc_dialogue_requested",PropertyInfo(Variant::INT,"actor")));
@@ -370,6 +373,11 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["portrait_count"]=int64_t(portrait_picker.names.size());
     result["portrait_first"]=portrait_picker.first;
     result["portrait_selected"]=portrait_picker.selected;
+    result["client_page"]=character_selection.visible?2:3;
+    result["exit_transition_active"]=exit_transition.active;
+    result["exit_transition_ms"]=int64_t(exit_transition.elapsed);
+    result["exit_brightness"]=exit_transition.brightness();
+    result["selection_connecting"]=character_selection.visible && character_selection.connecting;
     result["exit_clock"]=int64_t(GetTickCount());
     result["exit_allowed"]=exit_guard.allowed(GetTickCount());
     result["exit_action"]=int(exit_guard.action);
@@ -560,6 +568,11 @@ void Mir3HudView::_ready() {
     add_child(hud_tail);
     hud_tail->connect("draw",callable_mp(this,&Mir3HudView::draw_hud_tail));
 
+    exit_layer=memnew(Node2D);
+    exit_layer->set_material(light_material);
+    exit_layer->set_z_index(100);
+    add_child(exit_layer);
+    exit_layer->connect("draw",callable_mp(this,&Mir3HudView::draw_exit_transition));
     for (int i=0;i<23;++i) {
         auto image=frame(mir3::HudLayout::buttons[i][0]);
         if (image.is_valid()) model.button_sizes[i]={image->get_width(),image->get_height()};
@@ -774,6 +787,7 @@ bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
 }
 
 bool Mir3HudView::apply_npc_message(PackedByteArray encoded,PackedByteArray key) {
+    if (character_selection.visible) return false;
     constexpr int header_size=16;
     if (key.size()!=4 || encoded.size()<header_size || encoded.size()>header_size+(10240*4+2)/3) return false;
     const auto header=mir3::decode_six_bit(encoded.ptr(),header_size);
@@ -1943,6 +1957,7 @@ bool Mir3HudView::set_local_actor_identity(int actor) {
 }
 
 bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray key) {
+    if (character_selection.visible) return false;
     if (encoded.size()<16 || encoded.size()>1039) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),static_cast<std::size_t>(encoded.size())},
         {key.ptr(),static_cast<std::size_t>(key.size())});
@@ -2568,9 +2583,70 @@ void Mir3HudView::draw_scene_lighting() {
     }
 }
 
+void Mir3HudView::draw_exit_transition() {
+    if (!exit_transition.active || character_selection.visible) return;
+    const float value=exit_transition.brightness();
+    exit_layer->draw_rect(Rect2(0,0,800,600),Color(value,value,value));
+}
+
+bool Mir3HudView::prepare_character_selection() {
+    if (!selection_frames.empty()) return true;
+    if (!selection_archive.open(std::filesystem::u8path(actor_resource_root.path_join("Interface1c").utf8().get_data()))) return false;
+    std::map<int,Ref<ImageTexture>> loaded_frames;
+    for (int index:{50,52,54,56,58}) {
+        const auto source=selection_archive.frame(index);
+        if (!source) return false;
+        loaded_frames.emplace(index,texture(source->pixels.rgba,source->width,source->height));
+    }
+    if (frame(1248).is_null()) return false;
+    selection_frames=std::move(loaded_frames);return true;
+}
+
+void Mir3HudView::enter_character_selection() {
+    cancel_pointer_interactions();
+    while (!scene_humans.empty()) remove_scene_actor(scene_humans.begin()->first);
+    while (!scene_npcs.empty()) remove_scene_actor(scene_npcs.begin()->first);
+    while (!scene_chickens.empty()) remove_scene_actor(scene_chickens.begin()->first);
+    scene_removals.clear();scene_clear_pending=false;map_changes.clear();
+    ground_items.items.clear();ground_bounds.clear();displayed_ground_item=-1;
+    scene_speech.clear();speech_bounds.clear();scene_health.clear();scene_health_bounds.clear();scene_damage_glyphs.clear();
+    map_route.clear();walk_frame=-1;movement_ms=0;
+    terrain_ready=false;terrain=mir3::MapTerrain{};terrain_frames.clear();current_map_id=String();
+    target_focus.clear();local_actor_identity=0;player_light_attribute=0;exit_guard={};
+    group_request=0;npc_dialogue_actor=0;shop_actor=0;
+    inventory.visible=status.visible=skills.visible=group.visible=guild.visible=false;
+    options.visible=portrait_panel.visible=mount.visible=quest.visible=trade.visible=false;
+    minimap.visible=false;
+    if (map_music) { map_music->stop();map_music->set_stream(Ref<AudioStream>()); }
+    if (footstep_sound) footstep_sound->stop();
+    if (hud_sound) hud_sound->stop();
+    while (!actor_sounds.empty()) remove_actor_sound(actor_sounds.begin()->first);
+    chat_input->release_focus();chat_input->hide();
+    scene_light_layer->hide();hud_base->hide();hud_copy->hide();hud_decoration->hide();hud_tail->hide();exit_layer->hide();
+    character_selection.visible=true;character_selection.connecting=true;
+    outgoing_messages.sequence=0;
+    get_window()->set_content_scale_size(Vector2i(640,480));
+    get_window()->set_size(Vector2i(640,480));
+    queue_redraw();
+    emit_signal("game_connection_close_requested");
+    emit_signal("character_selection_connection_requested");
+}
+
+void Mir3HudView::draw_character_selection() {
+    paint_canvas=this;
+    draw_texture(selection_frames.at(50),Vector2());
+    constexpr std::array<mir3::HudLayout::Point,4> positions{{{440,93},{79,243},{259,49},{28,438}}};
+    for (int i=0;i<4;++i) draw_texture(selection_frames.at(52+i*2),point(positions[i]));
+    if (character_selection.connecting) {
+        sprite(1248,{155,150});
+        text(message(200),{178,234,308,95},0xc8faff,mir3::TextFont::dialog);
+    }
+}
+
 void Mir3HudView::_draw() {
     using Layout=mir3::HudLayout;
     if (!loaded) return;
+    if (character_selection.visible) { draw_character_selection();return; }
     draw_terrain();
     scene_light_layer->queue_redraw();
     hud_base->queue_redraw();
@@ -2897,6 +2973,14 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
+    if (character_selection.visible) return;
+    if (exit_transition.active) {
+        exit_fraction_ms+=delta*1000;
+        const auto elapsed=static_cast<std::uint32_t>(exit_fraction_ms);
+        exit_fraction_ms-=elapsed;
+        if (exit_transition.advance(elapsed)) { enter_character_selection();return; }
+        exit_layer->queue_redraw();
+    }
     map_input_delay.advance(delta*1000);
     // Snapshot the count: synchronous signal callbacks enqueue for the next update.
     const auto maps_to_process=map_changes.size();
@@ -3036,6 +3120,7 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     paint_canvas->draw_polygon(vertices,colors,uv);
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
+    if (character_selection.visible) { get_viewport()->set_input_as_handled();return; }
     const Ref<InputEventMouseButton> button=event;
     const bool left_released=button.is_valid() && button->get_button_index()==MOUSE_BUTTON_LEFT && !button->is_pressed();
     if (left_released && portrait_entry_pressed) {
@@ -3427,6 +3512,7 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
 }
 
 void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
+    if (character_selection.visible) { get_viewport()->set_input_as_handled();return; }
     Ref<InputEventKey> key=event;
     if (key.is_null() || !key->is_pressed() || key->is_echo()) return;
     if (guild_edit && guild_edit->has_focus()) return;
@@ -4230,9 +4316,16 @@ bool Mir3HudView::check_exit_allowed() {
 }
 
 void Mir3HudView::handle_exit_confirmation(int dialog_id) {
+    if (character_selection.visible) return;
     if ((dialog_id==101 || dialog_id==109) && !check_exit_allowed()) return;
     // 0x4256B0 / 0x47BE10: game logout sends an empty 1009; it is not WM_DESTROY.
-    if (dialog_id==101) send_client_packet(1009,0,String());
+    if (dialog_id==101) {
+        if (!prepare_character_selection()) {
+            UtilityFunctions::push_error("Cannot read original character selection resources.");return;
+        }
+        send_client_packet(1009,0,String());
+        exit_transition.begin();exit_fraction_ms=0;exit_layer->queue_redraw();
+    }
     if (dialog_id==109) get_tree()->quit();
 }
 

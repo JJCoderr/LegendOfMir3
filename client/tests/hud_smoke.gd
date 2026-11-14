@@ -3,6 +3,7 @@
 # - 选项交互：普通、悬停及按下帧，跨按钮移动、释放落点触发与关闭重开清理。
 # - 选项原包：1401 位掩码、重复确认、聊天拒绝联动、攻击模式与非法消息。
 # - 选项窗口：完整文字和开关、七类服务器命令、攻击模式、确认状态与本地持久化。
+# - 退出过渡：整屏乘法变暗、离场清理、单次关闭/重连通知及640×480角色选择连接页。
 # - 退出限制：近期动作阻止窗口、确认二次检查、死亡豁免、拒绝提示与非法状态拒绝。
 # - 退出请求：取消不发送、确认生成1009、NPC共用发送序号、场景保留及兼容通知。
 # - 退出窗口：快捷键与底栏入口、程序退出取消、游戏退出确认及窗口关闭。
@@ -61,13 +62,13 @@ func key(code: int, unicode_value: int = 0, alt: bool = false) -> void:
 	event.pressed = false
 	Input.parse_input_event(event)
 
-func capture(name: String) -> bool:
+func capture(name: String, expected_size: Vector2i = Vector2i(800,600)) -> bool:
 	if not OS.get_cmdline_user_args().has("--screenshots"):
 		return true
 	await process_frame
 	await RenderingServer.frame_post_draw
 	var image := root.get_texture().get_image()
-	if not check(image != null and image.get_size() == Vector2i(800, 600), "viewport capture size"):
+	if not check(image != null and image.get_size() == expected_size, "viewport capture size"):
 		return false
 	var directory := ProjectSettings.globalize_path("res://../build/screenshots")
 	DirAccess.make_dir_recursive_absolute(directory)
@@ -172,6 +173,46 @@ func scene_text_packet(opcode: int, actor: int, foreground: int, background: int
 	var packet := scene_packet(opcode,actor,foreground,background,0)
 	packet.append_array(encode_scene_bytes(body))
 	return packet
+
+func run_exit_transition() -> void:
+	var events: Array[String] = []
+	hud.game_connection_close_requested.connect(func(): events.append("close"))
+	hud.character_selection_connection_requested.connect(func(): events.append("selection"))
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var baseline := root.get_texture().get_image()
+	key(KEY_X,0,true)
+	key(KEY_ENTER)
+	if not check(hud.hud_snapshot().exit_transition_active and hud.hud_snapshot().client_page==3, "确认后开始过渡且仍在游戏场景"): return
+	await create_timer(0.9).timeout
+	if not await capture("exit-transition-fading"): return
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var fading := root.get_texture().get_image()
+	var before_hud := baseline.get_pixel(190,575)
+	var after_hud := fading.get_pixel(190,575)
+	var before_map := baseline.get_pixel(700,80)
+	var after_map := fading.get_pixel(700,80)
+	if not check(after_hud.r+after_hud.g+after_hud.b < (before_hud.r+before_hud.g+before_hud.b)*0.9 and after_map.r+after_map.g+after_map.b < (before_map.r+before_map.g+before_map.b)*0.9, "地图和HUD均受整屏乘法变暗影响"): return
+	var deadline := Time.get_ticks_msec()+4000
+	while hud.hud_snapshot().client_page==3 and Time.get_ticks_msec()<deadline:
+		await process_frame
+	var state: Dictionary = hud.hud_snapshot()
+	if not check(state.client_page==2 and state.selection_connecting and not state.terrain_ready and state.scene_human_cells.is_empty() and state.route_destination==Vector2i(-1,-1), "离场清理地图人物与路径并进入角色选择连接页"): return
+	if not check(events==["close","selection"], "先关闭旧连接再请求角色选择连接且各一次"): return
+	await process_frame
+	await process_frame
+	if not await capture("character-selection-connecting",Vector2i(640,480)): return
+	key(KEY_X,0,true)
+	click_at(Vector2(470,105),true)
+	click_at(Vector2(470,105),false)
+	await create_timer(0.1).timeout
+	if not check(hud.hud_snapshot().group_request==0 and events.size()==2, "无按钮连接提示阻止旧游戏快捷键和底层按钮"): return
+	if not check(not hud.apply_scene_message(scene_packet(1401,0,0,0,0),PackedByteArray([18,52,86,120])), "角色选择页拒绝旧游戏连接消息"): return
+	hud.handle_exit_confirmation(101)
+	if not check(not hud.hud_snapshot().exit_transition_active, "离场后不能从旧游戏确认入口重新启动过渡"): return
+	print("PASS 退出过渡：全屏变暗、离场清理、640×480角色选择页")
+	quit()
 
 func run_exit_guard() -> void:
 	var packets: Array = []
@@ -1250,6 +1291,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--exit-transition"):
+		await run_exit_transition()
+		return
 	if OS.get_cmdline_user_args().has("--exit-guard"):
 		await run_exit_guard()
 		return
@@ -1451,7 +1495,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light") or OS.get_cmdline_user_args().has("--map-wire") or OS.get_cmdline_user_args().has("--map-input") or OS.get_cmdline_user_args().has("--options-panel") or OS.get_cmdline_user_args().has("--options-wire") or OS.get_cmdline_user_args().has("--options-input") or OS.get_cmdline_user_args().has("--exit-dialog") or OS.get_cmdline_user_args().has("--exit-request") or OS.get_cmdline_user_args().has("--exit-guard"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light") or OS.get_cmdline_user_args().has("--map-wire") or OS.get_cmdline_user_args().has("--map-input") or OS.get_cmdline_user_args().has("--options-panel") or OS.get_cmdline_user_args().has("--options-wire") or OS.get_cmdline_user_args().has("--options-input") or OS.get_cmdline_user_args().has("--exit-dialog") or OS.get_cmdline_user_args().has("--exit-request") or OS.get_cmdline_user_args().has("--exit-guard") or OS.get_cmdline_user_args().has("--exit-transition"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()
