@@ -411,6 +411,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["trade_partner"]=trade_partner;
     result["shop_goods_count"]=int(shop_goods.size());result["shop_offers_count"]=int(shop_offers.size());
     result["shop_offer_loading"]=shop_offer_loading;
+    result["shop_storage_page"]=storage_list?shop_offer_page+1:0;
     result["trade_gold_local"]=int64_t(trade_gold[0]);
     result["trade_gold_remote"]=int64_t(trade_gold[1]);
     result["inventory_gold"]=int64_t(inventory_gold);
@@ -1375,7 +1376,11 @@ void Mir3HudView::draw_shop() {
     }
     if (shop_show_offers) {
         // 0x477780: 652 acknowledges the page; the request path displays an ellipsis.
-        text(shop_offer_loading?"...":std::to_string(shop_offer_page),
+        if(storage_list) {
+            const int pages=std::max(1,(int(shop_offers.size())+11)/12);
+            text(std::to_string(shop_offer_page+1),{52,229,40,30},0x96c8ff);
+            text("/    "+std::to_string(pages),{82,229,50,30},0x96c8ff);
+        } else text(shop_offer_loading?"...":std::to_string(shop_offer_page),
             {detail_x+310,shop_window_top()-3,163,44},0x96c8ff);
         if (shop_pressed==-2) sprite(1266,{detail_x+358,detail_y});
         if (shop_pressed==-3) sprite(1269,{detail_x+316,detail_y});
@@ -1393,7 +1398,8 @@ void Mir3HudView::draw_shop() {
                 }
                 // 0x442200 draws native-size icons around (19,19) in the 38px grid.
                 paint_canvas->draw_texture(icon,cell.position+Vector2(19-icon->get_width()/2,19-icon->get_height()/2));
-                const auto price=std::to_string(storage_list?offer.count:offer.price);
+                if(storage_list) continue; // 477780 uses the item drawing alone in mode 2.
+                const auto price=std::to_string(offer.price);
                 const auto bounds=shop_offer_cell(row);
                 text(price,{bounds[0]-1,bounds[1]+20,35,15},0x0a0a0a,mir3::TextFont::skill_level);
                 text(price,{bounds[0],bounds[1]+21,35,15},0xffffff,mir3::TextFont::skill_level);

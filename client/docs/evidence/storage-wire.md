@@ -18,3 +18,9 @@ Windows Release 构建及 storage_wire、sell_wire、buy_wire、repair_wire 通�
 4798D0 使用模式2的 (−292,234,488,205) 窗口，第一格相对坐标为 (314,32)，共 4×3 格。478000 将关闭、确认及分页按钮放在相对 (449,150)、(358,154)、(316,154)、(406,154)。478850 按 12 条计算本地页数。堆叠大于1时用 CmList 2301 提示取回数量；堆叠只有1件时明确发送数量1。441AA0 对存入也区分普通物品的0和单件堆叠的1。705 第二 WORD 是同编号背包栈的新总数，441DD0 同时同步快捷引用。
 
 更新后 Windows Release、storage_wire、buy_wire、sell_wire 通过。仓库取回截图为 npc-storage-withdraw.png。买入回归仍偶发报告两个 ObjectDB 实例。
+
+## 页码与背包已满
+
+477780 的模式2把当前页加一，显示当前页和总页数。商品详情的价格文字分支仅在非模式2绘制，仓库格沿用物品图绘制。707 显示 1446 并保留记录，确认提示后可重试。最后一页搬空时，Godot 将页码收回至有效范围。
+
+Windows Release、storage_wire、buy_wire、sell_wire 通过。npc-storage-withdraw.png 展示取空末页后的页码与背包数量。买入回归仍出现两个 ObjectDB 实例警告。

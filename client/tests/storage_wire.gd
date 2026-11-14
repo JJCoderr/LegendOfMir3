@@ -1,4 +1,4 @@
-# 测试内容：仓库堆叠存入、满仓重试、列表解码、本地翻页、取回以及关闭。
+# 测试内容：仓库堆叠存入、满仓重试、列表解码、原版页码、部分取回、背包满后重试以及关闭。
 extends "inventory_wire.gd"
 
 var storage_packets: Array[PackedByteArray] = []
@@ -40,6 +40,7 @@ func run() -> void:
 	if not check(hud.apply_game_message(storage) and hud.hud_snapshot().shop_offers_count==13,"原包仓库记录"): return
 	if not await capture("npc-storage-list"): return
 	tap(Vector2(135,399))
+	if not check(hud.hud_snapshot().shop_storage_page==2,"第13项位于第二页"): return
 	tap(Vector2(35,280))
 	tap(Vector2(87,399))
 	if not check(hud.hud_snapshot().group_request==1707 and storage_packets.size()==2,"本地翻页与取回数量"): return
@@ -51,12 +52,20 @@ func run() -> void:
 	expected.append_array(encode_scene_bytes("Potion".to_ascii_buffer()))
 	expected.append(33)
 	if not check(storage_packets.size()==3 and storage_packets[-1]==expected,"第二页物品完整取回包"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_STORAGE_BAG_FULL,0,0,0,0))
+		and hud.hud_snapshot().group_request==1446 and hud.hud_snapshot().shop_offers_count==13,"背包满时保持仓库原记录"): return
+	key(KEY_ENTER)
+	tap(Vector2(87,399))
+	hud.get_node("ChatInput").text="1"
+	key(KEY_ENTER)
+	if not check(storage_packets.size()==4,"背包满后可重试"): return
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_STORAGE_WITHDRAW_OK,0,2,4,0)) and hud.hud_snapshot().shop_offers_count==13 and hud.hud_snapshot().bag_records[0].count==4,"部分取回同步两侧数量"): return
 	tap(Vector2(87,399))
 	if not check(hud.hud_snapshot().group_request==1707,"剩余两件可继续取回"): return
 	hud.get_node("ChatInput").text="*"
 	key(KEY_ENTER)
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_STORAGE_WITHDRAW_OK,0,0,6,0)) and hud.hud_snapshot().shop_offers_count==12,"取回全部移除仓库项"): return
+	if not check(hud.hud_snapshot().shop_storage_page==1,"末页清空后回到有效页"): return
 	if not await capture("npc-storage-withdraw"): return
 	hud.open_login()
 	if not check(hud.hud_snapshot().shop_offers_count==0,"离场清理仓库"): return
