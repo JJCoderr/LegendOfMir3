@@ -2,6 +2,7 @@
 #include "protocol/message_ids.hpp"
 #include "protocol/actor_ability.hpp"
 #include "protocol/actor_increments.hpp"
+#include "protocol/actor_experience.hpp"
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
 #include "hud/exit_transition.hpp"
@@ -38,6 +39,19 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        // 测试内容：经验无符号总量、修炼累加回绕/覆盖/零值、两种提示格式和错误类型拒绝。
+        if (std::filesystem::path(argv[1])=="--actor-experience") {
+            const auto gained=mir3::ActorExperience::parse({0xfedcba98,mir3::protocol::SM_WINEXP,{123,7,0xff00}});
+            check(gained && gained->total==0xfedcba98 && gained->extra_notice && !gained->replace_training,"experience fields");
+            check(gained->apply_training(65533)==4 && gained->message_id()==1459,"training wraps as word");
+            check(gained->caption("Exp %d Training %d")=="Exp 123 Training 7","two argument caption");
+            const auto replaced=mir3::ActorExperience::parse({0,mir3::protocol::SM_WINEXP,{0,7,1}});
+            check(replaced && replaced->replace_training && !replaced->extra_notice && replaced->apply_training(20)==7,"replace training");
+            const auto zero=mir3::ActorExperience::parse({0,mir3::protocol::SM_WINEXP,{9,0,1}});
+            check(zero && zero->apply_training(20)==20 && zero->message_id()==1460 && zero->caption("Exp %d")=="Exp 9","zero training ignored");
+            check(!mir3::ActorExperience::parse({0,mir3::protocol::SM_LEVELUP,{}}),"level up is distinct");
+            std::cout << "ACTOR_EXPERIENCE_MODEL_OK\n";return 0;
+        }
         // 测试内容：负重及附加能力头字段、有效位截取、零值及错误消息类型拒绝。
         if (std::filesystem::path(argv[1])=="--actor-increments") {
             const auto weight=mir3::ActorWeightChange::parse({0xabcd1234,mir3::protocol::SM_WEIGHTCHANGED,{0xef81,0xcdfe,0xffff}});

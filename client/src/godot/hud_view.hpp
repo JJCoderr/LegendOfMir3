@@ -1,6 +1,7 @@
 #pragma once
 #include "protocol/actor_ability.hpp"
 #include "protocol/actor_increments.hpp"
+#include "protocol/actor_experience.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"
 #include "hud/human_actions.hpp"
@@ -441,6 +442,7 @@ private:
     mir3::HumanIdleClock player_idle;
     std::optional<mir3::ActorAbility> server_ability;
     mir3::ActorSubAbility server_sub_ability;
+    std::uint16_t weapon_training=0;
     double movement_ms=0;
     int map_pointer_button=0;
     double map_pointer_seconds=0;

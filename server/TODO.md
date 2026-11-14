@@ -75,3 +75,5 @@
 - [ ] 联调SM_ABILITY：1.45正文63字节、recognition金币、参数一低字节职业；字段顺序以原版42F5A0与4390E0为准。
 
 - [ ] 联调SM_WEIGHTCHANGED/SM_SUBABILITY：客户端已完成低16位背包负重、低8位穿戴/手持负重及七项附加能力解析，见actor-increments证据；真实服务端未验收。
+
+- [ ] SM_WINEXP真实联调：recognition为总经验，参数一为本次经验，参数二为修炼数值，参数三低/高字节分别控制覆盖及附加提示；客户端模型及视口测试已通过。

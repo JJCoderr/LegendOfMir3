@@ -265,3 +265,6 @@ IDA 404D80：注册/找回按钮在鼠标释放命中时读取配置URL，ShellE
 
 ## 负重及附加能力增量
 已核对原版4282C0/429F8A、42F650和4710F0；字段对应Mir3EIClient ACTORSUBABILITY，消息使用共用SM_WEIGHTCHANGED/SM_SUBABILITY定义。详见client/docs/evidence/actor-increments.md。
+
+## 经验获得
+原版4282C0 case 44和401430已核对，复用mir3_1.45中的经验/提示功能，消息使用SM_WINEXP定义。详细字段及升级待办见client/docs/evidence/actor-experience.md。

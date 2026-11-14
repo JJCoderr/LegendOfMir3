@@ -99,3 +99,7 @@
 - [x] SM_WEIGHTCHANGED只更新三类当前负重，保留上限；SM_SUBABILITY按ACTORSUBABILITY定义解析并更新状态页百分比，换角色清理。
 - [x] 独立原包模型向量、实际状态窗口定向测试与截图通过。
 - [ ] SM_WINEXP/SM_LEVELUP完整数值、聊天和动画反馈继续恢复；附加能力其余字段仅保留，后续核对消费者。
+
+## 经验获得
+- [x] SM_WINEXP总经验、武器修炼WORD累加回绕/覆盖、附加提示及原资源聊天正文完整接入；定向协议和视口测试通过并展示截图。
+- [ ] SM_LEVELUP本地/远端分支、人物状态7/4、世界特效422及提示1469整体实现；已找到旧Godot MagicInfo及LevelUpEffect可按功能复用，见actor-experience.md。
