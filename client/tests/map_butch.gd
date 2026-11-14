@@ -88,12 +88,19 @@ func run() -> void:
 	miss.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(miss) and hud.hud_snapshot().scene_chicken_struck[6]==-1,
 		"零伤害不触发受击帧"): return
+	if not check(hud.hud_snapshot().map_event_count==0,"零伤害不创建命中特效"): return
+	await settle(1.0)
+	var strike_feature := feature.duplicate()
+	strike_feature[14]=1
 	var strike := game_reply(Mir3HudView.SM_HUMAN_STRUCK,6,6,10,4)
-	strike.append_array(encode_scene_bytes(feature))
+	strike.append_array(encode_scene_bytes(strike_feature))
 	if not check(hud.apply_game_message(strike) and hud.hud_snapshot().scene_chicken_struck[6]==0
 		and hud.hud_snapshot().scene_health_values[6][0]==6,"有伤害时更新血量并播放受击"): return
+	if not check(hud.hud_snapshot().map_event_frames.values().has(810),"正文变体1选择 MAGIC 401 和起始帧810"): return
+	await settle(0.15)
 	if not await capture("map-chicken-struck"): return
 	await settle(0.7)
+	if not check(hud.hud_snapshot().map_event_count==0,"命中特效播放结束后清理"): return
 	if not check(hud.hud_snapshot().scene_chicken_struck[6]==-1,"受击动作结束"): return
 	if not check(hud.hud_snapshot().scene_actor_sounds.get(6,{}).get("sample")==404,
 		"受击动作播放原版鸡叫声"): return

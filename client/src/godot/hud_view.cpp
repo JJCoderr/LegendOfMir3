@@ -2380,6 +2380,10 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         hit.health=p;
         apply_actor_health_record(actor,hit);
         if (chicken.death_frame>=0) return true;
+        if (p[2]) {
+            const auto variant=std::uint8_t((*body)[14])|(int(std::uint8_t((*body)[15]))<<8);
+            if (variant<=65535-400) show_map_impact(400+variant,chicken.cell);
+        }
         if (!p[0]) {
             for (int i=0;i<10;++i) if (!chicken_frame(320+10*chicken.facing+i)) return false;
             chicken.walk_frame=-1;
@@ -3509,8 +3513,13 @@ void Mir3HudView::show_harvest_impact(Vector2i cell) {
             break;
         }
     }
-    const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::magic,335);
-    if(!resource || resource->library!=81 || resource->end<=resource->first || !resource->interval) return;
+    show_map_impact(335,cell);
+}
+
+void Mir3HudView::show_map_impact(int effect,Vector2i cell) {
+    const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::magic,effect);
+    if(!resource || (resource->library!=81 && resource->library!=137) ||
+        resource->end<=resource->first || !resource->interval) return;
     auto* copy=memnew(BackBufferCopy);
     copy->set_copy_mode(BackBufferCopy::COPY_MODE_VIEWPORT);
     level_layer->add_child(copy);
@@ -3521,6 +3530,7 @@ void Mir3HudView::show_harvest_impact(Vector2i cell) {
     material.instantiate();
     material->set_shader(ResourceLoader::get_singleton()->load("res://level_effect.gdshader"));
     sprite->set_material(material);
+    sprite->set_modulate(Color(resource->tint[0]/255.f,resource->tint[1]/255.f,resource->tint[2]/255.f,1));
     auto& event=map_events.emplace(harvest_effect_id++,MapEvent{resource,cell,copy,sprite,int(resource->first)}).first->second;
     event.one_shot=true;
 }
@@ -3644,6 +3654,15 @@ void Mir3HudView::advance_map_events(double milliseconds) {
             update_sprite(event.sprite,event.frame,anchor);
             if(event.frame<=100) update_sprite(event.secondary,event.frame+20,anchor+Vector2(12,8));
             else event.secondary->hide();
+            continue;
+        }
+        if (event.resource->library==137) {
+            const auto* image=level_frame(event.frame);
+            event.sprite->set_visible(image!=nullptr);
+            if (image) {
+                event.sprite->set_texture(image->image);
+                event.sprite->set_position(Vector2(event.cell.x*48-camera.x,event.cell.y*32-camera.y)+image->offset);
+            }
             continue;
         }
         auto found=event_frames.find(event.frame);

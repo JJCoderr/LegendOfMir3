@@ -536,6 +536,7 @@ private:
     std::map<std::uint64_t,MapEvent> map_events;
     std::uint64_t harvest_effect_id=std::uint64_t{1}<<32;
     void show_harvest_impact(godot::Vector2i cell);
+    void show_map_impact(int effect,godot::Vector2i cell);
     struct EventParticle {
         godot::Vector2 position,velocity,acceleration;
         int age=0,life=0,interval=0,frame_clock=0,frame=0;
