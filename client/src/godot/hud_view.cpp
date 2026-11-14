@@ -1313,7 +1313,7 @@ void Mir3HudView::advance_local_action() {
             player_spell={effect,action.facing};
             player_spell.weapon=true;
             player_spell.tint=mir3::SpellColor::local_weapon_color(weapon.server_record,elements.attack_words,resource->tint);
-            play_actor_sound(int(local_actor_identity),10*(effect+1000),player_cell);
+            play_spell_sound(10*(effect+1000),player_cell);
         }
     }
     const auto tick=action.movement?local_action_clock.move_admitted:now;
@@ -3730,7 +3730,7 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
         human.spell={skill,route.directional_effect?human.facing:0};
         human.catching_up=catch_up;human.harvest=false;human.idle.reset();
         if (effect_catalog.find(mir3::EffectCatalog::Section::spell,std::uint16_t(skill)))
-            play_actor_sound(actor,10*(skill+1000),human.cell);
+            play_spell_sound(10*(skill+1000),human.cell);
         queue_redraw();return true;
     }
     if (next->status_speed) {
@@ -3784,7 +3784,7 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
                 human.spell.weapon=true;
                 if (next->weapon_element<mir3::SpellColor::palette.size())
                     human.spell.tint=mir3::SpellColor::palette[next->weapon_element];
-                play_actor_sound(actor,10*(effect+1000),human.cell);
+                play_spell_sound(10*(effect+1000),human.cell);
             }
         }
     }
@@ -4151,6 +4151,7 @@ void Mir3HudView::process_local_actor_message() {
         else if (const auto source=scene_humans.find(message.hit->hit_source);source!=scene_humans.end())
             local_hit_weapon=source->second.weapon;
         if (!player_life.dead && hp[2]) {
+            player_spell={};
             player_action.start(player_mount?32:15);
             player_harvest_impact=false;
             show_map_impact(400+message.hit_variant,player_cell);
@@ -4189,6 +4190,7 @@ void Mir3HudView::process_local_actor_message() {
         queue_redraw();return;
     }
     if (death) {
+        player_spell={};
         pending_local_action.reset();forced_motion.reset();map_route.clear();
         walk_frame=-1;movement_ms=0;player_harvest_impact=false;
         player_cell=step_origin=step_destination=Vector2i(message.motion.destination[0],message.motion.destination[1]);
@@ -4204,7 +4206,7 @@ void Mir3HudView::process_local_actor_message() {
     player_cell=step_origin=Vector2i(origin[0],origin[1]);
     step_destination=Vector2i(forced_motion->destination[0],forced_motion->destination[1]);
     player_facing=forced_motion->facing;
-    map_route.clear();player_action={};player_harvest_impact=false;
+    map_route.clear();player_action={};player_spell={};player_harvest_impact=false;
     walk_frame=0;movement_ms=0;
     if (forced_motion->walking()) action_prediction.confirm();
     set_minimap_position(player_cell.x,player_cell.y);
@@ -5291,12 +5293,18 @@ void Mir3HudView::show_scene_effect(mir3::EffectCatalog::Section section,int eff
         effect==535 || effect==536 || effect==544 || effect==545 || effect==551 ||
         effect==575 || effect==578 || effect==593 || effect==595;
     event.emits_light=monster_effect && !light_disabled && !attached_actor && resource->outer_radius>0;
-    if (section==mir3::EffectCatalog::Section::magic)
-        play_actor_sound(0,10*effect+(projectile?10001:10002),cell);
+    if (section==mir3::EffectCatalog::Section::magic) {
+        const int sample=10*effect+(projectile?10001:10002);
+        if (effect<500) {event.sound_sample=sample;event.sound_voice=play_spell_sound(sample,cell);}
+        else play_actor_sound(0,sample,cell);
+    }
     if (delay_ms) sprite->hide();
 }
 
 void Mir3HudView::clear_map_events() {
+    while (!actor_sounds.empty() && actor_sounds.begin()->first<=mir3::SpellSoundVoices::key(0,0))
+        remove_actor_sound(actor_sounds.begin()->first);
+    spell_sound_voices={};
     ground_events.clear();
     event_particles.clear();
     spell_particles.clear();
@@ -5584,7 +5592,7 @@ void Mir3HudView::advance_map_events(double milliseconds) {
                     event.resource=resource;event.frame=int(resource->first);event.frame_offset=0;
                     event.cell=target;event.follow_actor=following?actor:0;
                     event.follow_position=flight.destination;event.one_shot=true;
-                    if (following) play_actor_sound(0,10*flight.effect+10002,target);
+                    if (following) play_spell_sound(10*flight.effect+10002,target);
                     Ref<ShaderMaterial> material=event.sprite->get_material();
                     material->set_shader_parameter("effect_blend",int(resource->blend));
                     material->set_shader_parameter("effect_opacity",resource->opacity/255.f);
@@ -5721,6 +5729,8 @@ void Mir3HudView::advance_map_events(double milliseconds) {
         }
         auto world=event.projectile?event.projectile->position:
             event.follow_position.value_or(Vector2(event.cell*Vector2i(48,32)));
+        if (event.projectile && event.sound_voice && (-event.sound_voice-1)%mir3::SpellSoundVoices::voices<5)
+            position_spell_sound(event.sound_voice,event.sound_sample,Vector2i(world/Vector2(48,32)));
         if (event.ground_wave && event.resource->id==int(mir3::MagicEffectId::lightning_trail)) {
             event.sprite->hide();continue; // 44CDA0仅触发粒子，不调用普通WIL贴图绘制。
         }
@@ -9194,7 +9204,7 @@ void Mir3HudView::request_skill_cast(int slot,bool repeat) {
                     player_spell={id,route.directional_effect?facing:0};
                     if (const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::spell,std::uint16_t(id))) {
                         player_spell.tint=mir3::SpellColor::strongest(elements.attack_words,resource->tint);
-                        play_actor_sound(0,10*(id+1000),player_cell);
+                        play_spell_sound(10*(id+1000),player_cell);
                     }
                 } else {
                     player_action.start(static_cast<int>(action));player_spell={};
@@ -10058,7 +10068,7 @@ void Mir3HudView::save_options() {
     if (!saved) UtilityFunctions::push_warning("Could not save system options to ",options_path);
 }
 
-void Mir3HudView::remove_actor_sound(int actor) {
+void Mir3HudView::remove_actor_sound(std::int64_t actor) {
     auto found=actor_sounds.find(actor);
     if (found==actor_sounds.end()) return;
     found->second.player->stop();
@@ -10071,7 +10081,7 @@ void Mir3HudView::remove_actor_sound(int actor) {
     actor_sounds.erase(found);
 }
 
-void Mir3HudView::play_actor_sound(int actor,int sample,Vector2i cell) {
+void Mir3HudView::play_actor_sound(std::int64_t actor,int sample,Vector2i cell) {
     if (!sample || !audio_options.effects_enabled) return;
     const auto camera=map_camera();
     const auto mix=mir3::SoundPosition::from_view(cell.x*48-camera.x,cell.y*32-camera.y);
@@ -10112,6 +10122,37 @@ void Mir3HudView::play_actor_sound(int actor,int sample,Vector2i cell) {
     sound.sample=sample;
     sound.volume=volume;
     ++sound.count;
+}
+
+std::int64_t Mir3HudView::play_spell_sound(int sample,Vector2i cell) {
+    if (!audio_options.effects_enabled) return 0;
+    const auto name=sound_list.file(sample);
+    if (name.empty() || !FileAccess::file_exists(audio_root.path_join(String::utf8(name.c_str())))) return 0;
+    const auto selected=spell_sound_voices.select(sample,std::uint32_t(ticks_msec()),[&](std::int64_t key) {
+        const auto sound=actor_sounds.find(key);
+        return sound!=actor_sounds.end() && sound->second.player->is_playing();
+    });
+    if (!selected) return 0;
+    if (selected->replaced)
+        for(int i=0;i<mir3::SpellSoundVoices::voices;++i) remove_actor_sound(mir3::SpellSoundVoices::key(selected->cache,i));
+    if (selected->play) play_actor_sound(selected->key,sample,cell);
+    return selected->key;
+}
+
+void Mir3HudView::position_spell_sound(std::int64_t key,int sample,Vector2i cell) {
+    const auto found=actor_sounds.find(key);
+    if (found==actor_sounds.end() || found->second.sample!=sample) return;
+    auto& sound=found->second;
+    const auto camera=map_camera();
+    const auto mix=mir3::SoundPosition::from_view(cell.x*48-camera.x,cell.y*32-camera.y);
+    auto* audio=AudioServer::get_singleton();
+    const int bus=audio->get_bus_index(sound.bus);
+    if (bus<0) return;
+    const Ref<AudioEffectPanner> panner=audio->get_bus_effect(bus,0);
+    sound.pan=mix.pan*(audio_options.reverse_pan?-1:1);
+    panner->set_pan((sound.pan<0?-1.f:1.f)*(1.f-std::pow(10.f,-std::abs(sound.pan)/2000.f)));
+    sound.volume=mix.volume+mir3::AudioOptions::volume(audio_options.effects_level);
+    sound.player->set_volume_db(mix.volume/100.f);
 }
 
 void Mir3HudView::sync_hud_sound() {

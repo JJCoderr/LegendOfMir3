@@ -23,6 +23,7 @@
 #include "hud/scene_lighting.hpp"
 #include "hud/combat_stance.hpp"
 #include "resources/sound_list.hpp"
+#include "magic/spell_sound_voices.hpp"
 #include "hud/scene_name.hpp"
 #include "hud/scene_health.hpp"
 #include "hud/speech_bubble.hpp"
@@ -283,9 +284,12 @@ private:
         godot::StringName bus;
         int sample=0, count=0, volume=0, pan=0;
     };
-    std::map<int,ActorSound> actor_sounds;
-    void play_actor_sound(int actor,int sample,godot::Vector2i cell);
-    void remove_actor_sound(int actor);
+    std::map<std::int64_t,ActorSound> actor_sounds;
+    mir3::SpellSoundVoices spell_sound_voices;
+    std::int64_t play_spell_sound(int sample,godot::Vector2i cell);
+    void position_spell_sound(std::int64_t key,int sample,godot::Vector2i cell);
+    void play_actor_sound(std::int64_t actor,int sample,godot::Vector2i cell);
+    void remove_actor_sound(std::int64_t actor);
     godot::StringName footstep_bus;
     godot::String audio_root,music_file;
     godot::PackedByteArray music_table;
@@ -688,6 +692,8 @@ private:
         std::uint32_t follow_actor=0;
         std::optional<godot::Vector2> follow_position;
         bool spell_effect=false;
+        std::int64_t sound_voice=0;
+        int sound_sample=0;
         double lifetime_ms=0;
         std::optional<mir3::StagedSpell> staged_spell;
         std::optional<mir3::SpellOrbit> orbit;

@@ -42,9 +42,9 @@ func run() -> void:
 				elif not check(not waiting_segment,"九段按距离顺序触发，不能越过等待中的前段"): return
 			# 原SoundList：10092为空，10102/13362无记录；只有10532映射m53-3.wav。
 			if skill==RangeSkill.ICE_WAVE:
-				if not check(state.scene_actor_sounds.has(0) and state.scene_actor_sounds[0].sample==10532,
+				if not check(state.scene_actor_sounds.values().any(func(s): return s.sample==10532),
 					"冰波创建使用原表m53-3.wav"): return
-			elif not check(not state.scene_actor_sounds.has(0),"空或缺失的创建音效记录保持静音"): return
+			elif not check(state.scene_actor_sounds.is_empty(),"空或缺失的创建音效记录保持静音"): return
 			await settle(0.25)
 			if skill==RangeSkill.LIGHTNING and not check(hud.hud_snapshot().spell_particle_count>0,"336零间隔尾迹触发可见粒子"): return
 			if offset.y==0 and not await capture("skill-range-%d" % skill): return

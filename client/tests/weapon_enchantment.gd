@@ -50,6 +50,12 @@ func run() -> void:
 				return e.weapon and e.skill==effect and e.relative_frame>=3 and e.tint.is_equal_approx(colors[element-1]))),
 				"本地附魔读取装备字段并按优先级选色"): return
 			if values[2]==element and not await capture("skill-local-enchantment-%d" % effect): return
+			if values[2]==element:
+				# 附魔挥击后排队的碰撞折返不能沿用上一次武器贴图。
+				if not check(hud.apply_game_message(motion_reply(Mir3HudView.SM_BUMP,77,origin+Vector2i(1,0),2)),"附魔期间碰撞回包入队"): return
+				if not check(await wait_until(func(s): return s.player_action==7 and s.forced_motion_opcode==0),"附魔后进入碰撞折返动作"): return
+				await process_frame
+				if not check(hud.hud_snapshot().drawn_human_spells.is_empty(),"碰撞折返不残留武器附魔"): return
 			if not check(await wait_until(func(s): return s.player_action==-1),"等待本地挥击结束"): return
 			await settle(1.5) # 等级1的普通挥击准入间隔接近1400ms，不能过早再次点击。
 	# 有元素但强度WORD为0时，不产生普通附魔；上一次附魔不得残留。

@@ -35,3 +35,17 @@ python client/tests/run_tests.py --suite equipment --list
 总入口只使用Python标准库与参数数组启动进程，不依赖PowerShell或shell拼接。用`--godot`或环境变量`MIR3_GODOT_EXECUTABLE`指定Godot程序，`--checks`指定模型检查程序；自动识别Windows的`.exe`及Linux无后缀程序，并查找多配置的`build/Release`或单配置的`build`目录。`--build-dir`、`--config`可覆盖构建位置。Linux也可用`python3`执行；当前实际运行验证在Windows，Linux客户端构建和运行仍需目标平台验证。
 
 截图保存在`client/build/screenshots`，使用真实渲染视口；不要添加`--headless`。怪物等其他子系统后续按同样的全集/单项规则登记，未登记的测试集不会被入口宣称通过。
+
+
+声音子集可独立运行，包含声道容量模型及真实场景并发、飞行声像和换图释放：
+
+```sh
+python client/tests/run_tests.py --suite skills --case sound --screenshots
+python client/tests/run_tests.py --suite skills --case sound --skill 53
+```
+
+不传筛选的技能全集也包含声音子集。Linux示例（需先在目标平台构建客户端及模型程序，并准备资源和图形环境）：
+
+```sh
+python3 client/tests/run_tests.py --suite skills --build-dir client/build-linux --godot /usr/bin/godot --screenshots
+```

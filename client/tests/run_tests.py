@@ -18,6 +18,7 @@ SUITES = {
         "cast-correction": ([], "spell_correction.gd"),
         "ranges": ([], "spell_ranges.gd"),
         "lightning-model": (["--spell-lightning"], None),
+        "sound": (["--spell-sound"], "spell_sound.gd"),
     },
     "equipment": {
         "wire": (["--equipment-wire"], "equipment_wire.gd"),
@@ -70,6 +71,8 @@ def main():
             allowed = ["ranges"]
             if args.skill == 10:
                 allowed.insert(0, "lightning-model")
+        if args.skill in (1, 53):
+            allowed.append("sound")
         if args.case and any(case not in allowed for case in cases):
             parser.error("所选子集不支持该技能编号筛选")
         cases = args.case or allowed
@@ -84,9 +87,9 @@ def main():
         godot = executable(args.godot, ["godot", "godot4", "Godot_v4.7.2-stable_win64_console.exe"])
     for case in cases:
         models, script = suite[case]
-        # skills/models的--spell已包含颜色与闪电模型，全量时不重复执行。
+        # skills/models的--spell已包含颜色、闪电与声道模型，全量时不重复执行。
         commands = [[checks, model] for model in models
-                    if not (args.suite == "skills" and "models" in cases and model in ("--spell-weapon-color", "--spell-lightning"))]
+                    if not (args.suite == "skills" and "models" in cases and model in ("--spell-weapon-color", "--spell-lightning", "--spell-sound"))]
         if script:
             command = [godot, "--path", str(ROOT / "godot"), "--script", str(ROOT / "tests" / script), "--"]
             if args.skill is not None:
