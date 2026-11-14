@@ -4,6 +4,7 @@
 #include "hud/scene_lighting.hpp"
 #include "protocol/receive_message.hpp"
 #include "protocol/map_message.hpp"
+#include "hud/map_input_delay.hpp"
 #include "chat/scene_chat.hpp"
 #include "hud/human_actions.hpp"
 #include "hud/scene_human_queue.hpp"
@@ -27,6 +28,16 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--map-input") {
+            mir3::MapInputDelay delay;
+            check(!delay.active(),"未换图时左键不延迟");
+            delay.enter();delay.advance(1499);check(delay.active() && delay.remaining_ms==1,"1499ms 仍阻止左键按下");
+            delay.advance(1);check(!delay.active(),"1500ms 边界解除");
+            delay.enter();delay.advance(900);delay.enter();check(delay.remaining_ms==1500,"连续换图重新计时");
+            delay.advance(-1);check(delay.remaining_ms==1500,"无效时间不能延长或提前解除");
+            delay.advance(2000);check(!delay.active() && delay.remaining_ms==0,"长帧钳制到解除状态");
+            std::cout << "MAP_INPUT_MODEL_OK\n";return 0;
+        }
         if (std::filesystem::path(argv[1])=="--map-wire") {
             const auto message=mir3::MapChangeMessage::parse(634,{312,310,0x0301},"01");
             check(message && message->x==312 && message->y==310 && message->ambient==1 && message->series==3,"地图消息独立解析坐标、亮度及地图状态");

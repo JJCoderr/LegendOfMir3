@@ -9,6 +9,7 @@
 # - 人物行为：有限动作、音效、动作队列、战斗姿态、受击后退、死亡与复活。
 # - 场景消息：原始消息解码、外观与血量更新、聊天名称更新、人物离场与清场。
 # - 地面物品：显示和移除、同格物品名称、图片定位、移动阻挡与拾取请求。
+# - 换图左键延迟：1500ms 边界、拾取与 NPC 点击限制、键盘与右键保留、失败不重启及期满恢复。
 # - 地图原始消息：51/634 排队切图、54 独立名称更新、地图状态字段与资源失败通知。
 # - 地图切换：无效地图和落点拒绝、失败保留现场、场景清理、小地图刷新及同图重入。
 # - 环境照明：昼夜与暮色亮度、46 消息渐变、地图灯光、RGB 乘法及 HUD 颜色隔离。
@@ -165,6 +166,58 @@ func scene_text_packet(opcode: int, actor: int, foreground: int, background: int
 	var packet := scene_packet(opcode,actor,foreground,background,0)
 	packet.append_array(encode_scene_bytes(body))
 	return packet
+
+func run_map_input() -> void:
+	var origin: Vector2i = hud.hud_snapshot().player_cell
+	var pickups: Array = []
+	var conversations: Array = []
+	hud.pickup_requested.connect(func(op: int, cell: Vector2i): pickups.append([op,cell]))
+	hud.npc_dialogue_requested.connect(func(actor: int): conversations.append(actor))
+	if not check(hud.change_map("0","比奇省",origin), "成功换图启动左键延迟"): return
+	if not check(hud.hud_snapshot().map_left_delay_ms==1500, "目标原版延迟为 1500ms"): return
+	if not check(hud.set_scene_npc(2,Vector2i(413,409),110), "换图后显示 NPC"): return
+	await process_frame
+	await process_frame
+	var camera: Vector2i = hud.hud_snapshot().map_camera_pixel
+	var self_point := Vector2(origin.x*48-camera.x+24,origin.y*32-camera.y+16)
+	click_at(self_point,true)
+	click_at(self_point,false)
+	var npc: Rect2 = hud.hud_snapshot().scene_npc_bounds[2]
+	click_at(npc.get_center(),true)
+	click_at(npc.get_center(),false)
+	if not check(pickups.is_empty() and conversations.is_empty() and hud.hud_snapshot().walk_frame==-1, "延迟期间左键不拾取、不请求 NPC、不启动移动"): return
+	key(KEY_N)
+	if not check(hud.hud_snapshot().options_visible, "键盘打开选项不受左键延迟影响"): return
+	if not await capture("map-input-keyboard"): return
+	key(KEY_ESCAPE)
+	var remaining: float = hud.hud_snapshot().map_left_delay_ms
+	if not check(not hud.change_map("missing_map_987654","无效地图",origin) and hud.hud_snapshot().map_left_delay_ms==remaining, "失败换图不重置计时"): return
+	var deadline := Time.get_ticks_msec()+1800
+	while hud.hud_snapshot().map_left_delay_ms>0 and Time.get_ticks_msec()<deadline:
+		await process_frame
+	if not check(hud.hud_snapshot().map_left_delay_ms==0, "真实帧计时期满解除延迟"): return
+	click_at(self_point,true)
+	click_at(self_point,false)
+	if not check(pickups==[[1001,origin]], "期满后恢复拾取且之前点击不补发"): return
+	click_at(npc.get_center(),true)
+	click_at(npc.get_center(),false)
+	if not check(conversations==[2], "期满后恢复 NPC 请求"): return
+	hud.apply_npc_dialogue(643,2,"老黄/<购买药品/@buy>")
+	if not await capture("map-input-restored"): return
+	hud.change_map("0","比奇省",origin)
+	var right_started := false
+	for direction in [Vector2i(1,1),Vector2i(1,0),Vector2i(0,1),Vector2i(-1,0)]:
+		local_movement_click(direction,true)
+		local_movement_click(direction,false)
+		if hud.hud_snapshot().walk_frame>=0:
+			right_started = true
+			break
+	if not check(right_started and hud.hud_snapshot().map_left_delay_ms>0, "右键移动不受普通左键按下延迟限制"): return
+	hud.queue_free()
+	await process_frame
+	await process_frame
+	print("PASS 换图左键延迟：1500ms、输入范围、失败保留与期满恢复")
+	quit()
 
 func run_map_wire() -> void:
 	var keys := PackedByteArray([18,52,86,120])
@@ -963,6 +1016,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--map-input"):
+		await run_map_input()
+		return
 	if OS.get_cmdline_user_args().has("--map-wire"):
 		await run_map_wire()
 		return
@@ -1143,7 +1199,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light") or OS.get_cmdline_user_args().has("--map-wire"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light") or OS.get_cmdline_user_args().has("--map-wire") or OS.get_cmdline_user_args().has("--map-input"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

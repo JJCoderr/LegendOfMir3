@@ -286,6 +286,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["scene_ambient_fading"]=scene_ambient.fading;
     result["pending_map_changes"]=int(map_changes.size());
     result["map_series"]=map_series;
+    result["map_left_delay_ms"]=map_input_delay.remaining_ms;
     result["map_id"]=current_map_id;
     result["map_name"]=String::utf8(model.map_name.c_str());
     result["player_cell"]=player_cell;
@@ -2893,6 +2894,7 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
+    map_input_delay.advance(delta*1000);
     // Snapshot the count: synchronous signal callbacks enqueue for the next update.
     const auto maps_to_process=map_changes.size();
     for (std::size_t i=0;i<maps_to_process;++i) {
@@ -3063,6 +3065,9 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         }
     }
     if (group_request && group_dialog_input(event)) return;
+    if (map_input_delay.active() && button.is_valid() && button->get_button_index()==MOUSE_BUTTON_LEFT && button->is_pressed()) {
+        get_viewport()->set_input_as_handled();return;
+    }
     if (guild_editor.visible && guild_editor_input(event)) return;
     Ref<InputEventMouseMotion> motion=event;
     if (motion.is_valid()) {
@@ -5471,6 +5476,7 @@ bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn,int ambien
     terrain=std::move(next);
     scene_ambient.enter(static_cast<std::uint8_t>(ambient_mode));
     current_map_id=map_id;
+    map_input_delay.enter();
     map_series=0;
     while (!scene_humans.empty()) remove_scene_actor(scene_humans.begin()->first);
     while (!scene_npcs.empty()) remove_scene_actor(scene_npcs.begin()->first);

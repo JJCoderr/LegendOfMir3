@@ -8,7 +8,7 @@
 - 0x42EC70/0x42EDDD：51、634 共用 0x42EE00，此分支先于普通人物 ID 匹配。
 - 0x42EEC3 / 0x42EEE1：record+6 / +8 为 x / y；0x42EF2A 从 record+12 解码地图文件名；0x42EF55 设置以人物格减 12 为基准的视点，0x42EF61 载入地图。
 - 0x42EF9D 读取 record+10 低字节：0→255、1→15、2→85，其余→10；record+11 高字节在 0x42EFEE..0x42F03F 处理 1/2/3 的地图状态，不能当成亮度。
-- 0x42EE30 写入 1500ms 字段；其含义仍需跟踪读取处。两个早期参考版本的换图代码使用 2300ms，不能直接移植该常量。
+- 0x42EE30 写入 1500ms 字段；本批后续已追踪为普通左键按下延迟，见 map-input.md。两个早期参考版本的换图代码使用 2300ms，不能直接移植该常量。
 - 0x42F082 之后清理临时列表；名称消息 54 没有这些清理操作。
 
 两套早期 C++ 的 SendNewMap / RM_CHANGEMAP / SendMapName 同样区分地图文件编号和地图显示名称；Zircon 使用 MapIndex/InstanceIndex、mir2x 使用本地主角 action.mapUID，协议不可混用。完整对照见 ../../RERENCES.md。
@@ -36,4 +36,4 @@
 - `--map-change --screenshots` 定向回归既有切图入口。
 - 截图：client/build/screenshots/map-wire-arrival.png、map-wire-description.png。脚本开头中文注释仅列测试内容，不记录准备条件和执行流程。
 
-地图状态视觉、1500ms 字段语义、输入锁/淡入、正式网关解帧及完整接收顺序仍待完成。原版错误包可能存在越界风险，本实现拒绝超长名称，不复刻内存破坏行为。
+1500ms 普通左键延迟已实现，见 map-input.md；地图状态视觉、淡入、正式网关解帧及完整接收顺序仍待完成。原版错误包可能存在越界风险，本实现拒绝超长名称，不复刻内存破坏行为。
