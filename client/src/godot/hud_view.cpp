@@ -5311,7 +5311,10 @@ void Mir3HudView::_process(double delta) {
             chicken.struck_ms+=delta*1000;
             if (chicken.struck_ms>300) {
                 chicken.struck_ms=0;
-                if (++chicken.struck_frame>=2) chicken.struck_frame=-1;
+                ++chicken.struck_frame;
+                // 406E60: shape 20 uses 10 * shape + 204 on struck frame 1.
+                if (chicken.struck_frame==1) play_actor_sound(actor,404,chicken.cell);
+                if (chicken.struck_frame>=2) chicken.struck_frame=-1;
                 queue_redraw();
             }
         }
@@ -5335,6 +5338,9 @@ void Mir3HudView::_process(double delta) {
         if (chicken.death_ms>150) {
             chicken.death_ms=0;
             ++chicken.death_frame;
+            // The second death sample (406) is absent from this installation's sound table.
+            if (chicken.death_frame==2 || chicken.death_frame==3)
+                play_actor_sound(actor,403+chicken.death_frame,chicken.cell);
             queue_redraw();
         }
     }

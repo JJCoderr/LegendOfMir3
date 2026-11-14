@@ -14,6 +14,7 @@ func run() -> void:
 	hud=load("res://main.tscn").instantiate()
 	hud.set_meta("offline_preview",true)
 	hud.set_meta("show_terrain",true)
+	hud.set_meta("options_path","user://map-butch-%d.ini" % OS.get_process_id())
 	hud.set_connection_enabled(false)
 	root.add_child(hud)
 	await settle()
@@ -94,6 +95,8 @@ func run() -> void:
 	if not await capture("map-chicken-struck"): return
 	await settle(0.7)
 	if not check(hud.hud_snapshot().scene_chicken_struck[6]==-1,"受击动作结束"): return
+	if not check(hud.hud_snapshot().scene_actor_sounds.get(6,{}).get("sample")==404,
+		"受击动作播放原版鸡叫声"): return
 	var death := game_reply(Mir3HudView.SM_HUMAN_STRUCK,6,0,10,6)
 	death.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(death) and hud.hud_snapshot().scene_health_values[6][0]==0,
@@ -101,6 +104,8 @@ func run() -> void:
 	await settle()
 	var early: Rect2=hud.hud_snapshot().scene_chicken_bounds[6]
 	await settle(1.65)
+	if not check(hud.hud_snapshot().scene_actor_sounds.get(6,{}).get("sample")==405
+		and hud.hud_snapshot().scene_actor_sounds[6].count==2,"死亡只播放资源表存在的样本"): return
 	var corpse: Rect2=hud.hud_snapshot().scene_chicken_bounds[6]
 	if not check(corpse.has_area() and corpse!=early,"鸡死亡动画停在尸体帧"): return
 	cut_at(corpse.get_center())
