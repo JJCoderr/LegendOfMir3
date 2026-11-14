@@ -4,6 +4,7 @@
 #include "hud/human_actions.hpp"
 #include "hud/scene_human_queue.hpp"
 #include "hud/human_life.hpp"
+#include "hud/combat_stance.hpp"
 #include "resources/sound_list.hpp"
 #include "hud/scene_name.hpp"
 #include "hud/scene_health.hpp"
@@ -361,6 +362,8 @@ private:
         int hit_weapon=0;
         mir3::SceneHumanQueue messages;
         mir3::HumanLife life;
+        mir3::CombatStance combat;
+        bool bump=false;
         bool catching_up=false;
         std::uint32_t action_flags=0;
         unsigned slow_ticks=0;

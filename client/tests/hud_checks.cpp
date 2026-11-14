@@ -3,6 +3,8 @@
 #include "hud/human_actions.hpp"
 #include "hud/scene_human_queue.hpp"
 #include "hud/human_life.hpp"
+#include "hud/combat_stance.hpp"
+#include "hud/human_idle.hpp"
 #include "resources/sound_list.hpp"
 #include "hud/scene_name.hpp"
 #include "hud/scene_health.hpp"
@@ -20,6 +22,21 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--scene-combat") {
+            mir3::CombatStance stance;
+            check(stance.idle_action(false)==0 && stance.idle_action(true)==29,"normal and mounted standing");
+            stance.attack();check(stance.idle_action(false)==7,"attack enables combat stance");
+            check(!stance.advance(4000),"stance still active");
+            stance.attack();check(stance.remaining_ms==1001,"repeated attacks do not extend active stance");
+            check(!stance.advance(1000) && stance.idle_action(false)==7,"strict 5000ms expiry");
+            check(stance.advance(1) && stance.idle_action(false)==0,"expiry resets ordinary standing");
+            stance.attack();stance.clear();check(stance.idle_action(false)==0,"revival clears combat stance");
+            mir3::HumanIdleClock idle;
+            for (int i=1;i<=6;++i) { idle.advance(201,3);check(idle.frame()==i%3,"combat idle loops three frames"); }
+            check(mir3::SceneHumanMessage::accepts(7) && mir3::HumanActions::frame(23,4,2)==1882,"bump opcode and frame bank");
+            std::cout << "SCENE_COMBAT_MODEL_OK\n";
+            return 0;
+        }
         if (std::filesystem::path(argv[1])=="--scene-life") {
             mir3::HumanLife life;
             check(life.opacity()==1 && !life.dead,"initial live state");

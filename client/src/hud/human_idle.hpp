@@ -5,11 +5,11 @@ namespace mir3 {
 class HumanIdleClock {
 public:
     void reset() { elapsed_ms=0; current=0; }
-    void advance(double milliseconds) {
+    void advance(double milliseconds,int count=4) {
         elapsed_ms+=milliseconds;
         if (elapsed_ms>=201) {
             elapsed_ms=0;
-            current=(current+1)%4;
+            current=(current+1)%count;
         }
     }
     int frame() const { return current; }

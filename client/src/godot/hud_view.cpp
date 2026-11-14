@@ -208,7 +208,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary human_cells;
     Dictionary human_idle_frames;
     Dictionary human_actions;
-    Dictionary human_pending, human_movement, human_catchup, human_life;
+    Dictionary human_pending, human_movement, human_catchup, human_life, human_stance;
     Dictionary human_facings;
     Dictionary human_appearances;
     Dictionary human_attachments;
@@ -223,6 +223,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
         life["opacity"]=human.life.opacity();
         life["frame"]=human.life.dead?(human.life.dying?human.action.frame():9):-1;
         human_life[actor]=life;
+        human_stance[actor]=human.combat.idle_action(human.mount_shape!=0);
         human_pending[actor]=int(human.messages.size());
         human_movement[actor]=human.movement_frame;
         human_catchup[actor]=human.catching_up;
@@ -244,6 +245,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["scene_human_idle_frames"]=human_idle_frames;
     result["scene_human_actions"]=human_actions;
     result["scene_human_life"]=human_life;
+    result["scene_human_stance"]=human_stance;
     result["scene_human_pending"]=human_pending;
     result["scene_human_movement"]=human_movement;
     result["scene_human_catchup"]=human_catchup;
@@ -1735,6 +1737,7 @@ bool Mir3HudView::set_scene_human_mount(int actor,int shape) {
     const auto& human=found->second;
     if (shape && (!human_body(human.type,human.clothing,true) || !horse_frame(shape,2320))) return false;
     found->second.mount_shape=shape;
+    found->second.idle.reset();
     found->second.bounds=Rect2();
     queue_redraw();
     return true;
@@ -1770,7 +1773,7 @@ Ref<ImageTexture> Mir3HudView::dyed_frame(const MapActorFrame& frame,int clothin
 
 void Mir3HudView::draw_human_layers(const MapActorFrame& body,Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape,float opacity) {
     const auto* hair_frame=attachment_frame(type,hair,false,motion_frame);
-    const auto* weapon_frame=mount_shape?nullptr:attachment_frame(type,weapon,true,motion_frame);
+    const auto* weapon_frame=motion_frame>=2000?nullptr:attachment_frame(type,weapon,true,motion_frame);
     const auto draw=[&](const MapActorFrame* frame,bool tint=false) {
         if (frame && frame->image.is_valid()) paint_canvas->draw_texture(tint?dyed_frame(*frame,clothing_dye,hair_dye):frame->image,anchor+frame->offset,Color(1,1,1,opacity));
     };
@@ -1871,7 +1874,7 @@ bool Mir3HudView::apply_scene_human_life(int actor,int opcode,Vector2i cell,int 
             if (!human_action_frame(human.type,human.clothing,mir3::HumanActions::frame(19,facing,i))) return false;
     }
     apply_scene_human_stand(actor,cell,facing);
-    if (revive) human.life.revive();
+    if (revive) { human.life.revive(); human.combat.clear(); }
     else {
         if (human.life.die(opcode==34)) human.action.start(19);
         if (hovered_target==static_cast<std::uint32_t>(actor)) set_hovered_target(0,0,0,false,0,0,0,0);
@@ -1900,7 +1903,7 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
         if (accepted && human.life.dying) human.action.start(19,catch_up);
     } else if (next->opcode==10) accepted=apply_scene_human_stand(actor,cell,next->facing);
     else if (human.life.dead) return true; // dead actors drain ordinary records without acting
-    else if (next->opcode==11 || next->opcode==13)
+    else if (next->opcode==7 || next->opcode==11 || next->opcode==13)
         accepted=apply_scene_human_step(actor,next->opcode,cell,next->facing);
     else {
         accepted=apply_scene_human_action(actor,next->opcode,next->facing,next->hit_weapon);
@@ -1940,6 +1943,7 @@ bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing,int h
     human.catching_up=false;
     human.action_flags=0;
     human.hit_weapon=hit_weapon;
+    if (opcode!=1309) human.combat.attack();
     human.idle.reset();
     queue_redraw();
     return true;
@@ -1957,6 +1961,7 @@ bool Mir3HudView::apply_scene_human_stand(int actor,Vector2i cell,int facing) {
     human.movement_frame=-1;
     human.movement_ms=0;
     human.step_distance=0;
+    human.bump=false;
     human.idle.reset();
     human.action=mir3::HumanActionClock{};
     human.catching_up=false;
@@ -1969,10 +1974,17 @@ bool Mir3HudView::apply_scene_human_stand(int actor,Vector2i cell,int facing) {
 
 bool Mir3HudView::apply_scene_human_step(int actor,int opcode,Vector2i destination,int facing) {
     auto entry=scene_humans.find(actor);
-    if (entry==scene_humans.end() || (opcode!=11 && opcode!=13) || facing<0 || facing>=8 ||
+    if (entry==scene_humans.end() || (opcode!=7 && opcode!=11 && opcode!=13) || facing<0 || facing>=8 ||
         !terrain.walkable(destination.x,destination.y)) return false;
     auto& human=entry->second;
     if (human.life.dead) return false;
+    if (opcode==7) {
+        for (int i=0;i<6;++i)
+            if (!human_action_frame(human.type,human.clothing,mir3::HumanActions::frame(23,facing,i))) return false;
+        for (int i=0;i<3;++i)
+            if (!human_action_frame(human.type,human.clothing,mir3::HumanActions::frame(7,facing,i))) return false;
+    }
+    human.bump=opcode==7;
     // 0x453450 derives the step origin from the server destination and facing.
     const int distance=opcode==13?(human.mount_shape?3:2):1;
     const auto [dx,dy]=mir3::map_directions[facing];
@@ -2211,9 +2223,10 @@ void Mir3HudView::draw_terrain() {
                 if (start_y+row!=human.cell.y || human.cell.x<start_x-5 || human.cell.x>=start_x+21) continue;
                 const auto* body=human_body(human.type,human.clothing,human.mount_shape!=0);
                 const bool standing=human.action.finished() && !human.life.dead;
-                const int motion=human.life.dead?mir3::HumanActions::frame(19,human.facing,human.life.dying?human.action.frame():9):human.action.finished()?(human.mount_shape?2320:0)+human.facing*10+human.idle.frame():
+                const int idle_action=human.combat.idle_action(human.mount_shape!=0);
+                const int motion=human.life.dead?mir3::HumanActions::frame(19,human.facing,human.life.dying?human.action.frame():9):human.action.finished()?mir3::HumanActions::frame(idle_action,human.facing,human.idle.frame()):
                     mir3::HumanActions::frame(human.action.action(),human.facing,human.action.frame());
-                const auto* selected=standing?&body->standing[human.facing*10+human.idle.frame()]:
+                const auto* selected=standing && idle_action!=7?&body->standing[human.facing*10+human.idle.frame()]:
                     human_action_frame(human.type,human.clothing,motion);
                 if (!selected) continue;
                 const auto& frame=*selected;
@@ -2227,8 +2240,9 @@ void Mir3HudView::draw_terrain() {
             }
             const auto* body=human_body(human.type,human.clothing,human.mount_shape!=0);
             const auto& frames=human.step_distance>1?body->running:body->walking;
-            const auto& frame=frames[human.facing*10+human.movement_frame];
-            if (frame.image.is_null()) continue;
+            const auto* selected=human.bump?human_action_frame(human.type,human.clothing,1840+human.facing*10+human.movement_frame):&frames[human.facing*10+human.movement_frame];
+            if (!selected || selected->image.is_null()) continue;
+            const auto& frame=*selected;
             const auto step=human.step_destination-human.step_origin;
             const bool committed=human.movement_frame>=(human.facing==7?4:1);
             const int offset_frames=committed?human.movement_frame-5:human.movement_frame+1;
@@ -2240,7 +2254,7 @@ void Mir3HudView::draw_terrain() {
             human.anchor=position-frame.offset;
             human.bounds=Rect2(position,frame.image->get_size());
             draw_human_layers(frame,position-frame.offset,human.type,human.hair,human.weapon,
-                (human.mount_shape?(human.step_distance>1?2480:2400):(human.step_distance>1?1760:1680))+human.facing*10+human.movement_frame,human.clothing_dye,human.hair_dye,human.mount_shape,human.life.opacity());
+                (human.bump?1840:human.mount_shape?(human.step_distance>1?2480:2400):(human.step_distance>1?1760:1680))+human.facing*10+human.movement_frame,human.clothing_dye,human.hair_dye,human.bump?0:human.mount_shape,human.life.opacity());
             animated_map_objects=true;
         }
         const auto pixel=player_pixel();
@@ -2598,6 +2612,7 @@ void Mir3HudView::_process(double delta) {
     if (scene_movement_tick) scene_movement_ms=0;
     for (auto& [actor,human]:scene_humans) {
         human.life.advance(delta*1000);
+        if (human.combat.advance(delta*1000)) human.idle.reset();
         if (human.life.dying) {
             const int previous=human.action.frame();
             human.action.advance(static_cast<std::uint32_t>(delta*1000),human.action_flags);
@@ -2622,13 +2637,25 @@ void Mir3HudView::_process(double delta) {
                 if (!human.action.finished()) continue;
                 human.idle.reset();
                 dispatch_scene_human_message(actor);
-            } else if (!dispatch_scene_human_message(actor)) human.idle.advance(delta*1000);
+            } else if (!dispatch_scene_human_message(actor)) human.idle.advance(delta*1000,human.combat.idle_action(human.mount_shape!=0)==7?3:4);
             continue;
         }
         if (!scene_movement_tick) continue;
         if (human.action_flags&0x08000000u) {
             if (++human.slow_ticks>100000) human.slow_ticks=1;
             if (human.slow_ticks&1) continue;
+        }
+        if (human.bump) {
+            human.movement_frame+=2;
+            if (human.movement_frame>=4) {
+                human.cell=human.step_origin;
+                human.movement_frame=-1;
+                human.action.start(7);
+                human.idle.reset();
+                human.bump=false;
+            } else if (human.movement_frame>=(human.facing==7?4:1)) human.cell=human.step_destination;
+            queue_redraw();
+            continue;
         }
         ++human.movement_frame;
         const int movement_action=human.mount_shape?(human.step_distance>1?31:30):(human.step_distance>1?22:21);
