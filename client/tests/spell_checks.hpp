@@ -11,7 +11,30 @@
 #include <stdexcept>
 
 // 定向验收：协议字段独立性、DWORD冷却边界、人物循环动作、特殊阶段及粒子生命周期。
+inline void spell_weapon_color_checks() {
+    using mir3::SpellColor;
+    const auto require=[](bool ok,const char* message) { if(!ok) throw std::runtime_error(message); };
+    std::array<std::uint8_t,100> record{};
+    std::array<std::uint16_t,7> attack{};
+    record[SpellColor::element]=2;
+    require(SpellColor::local_weapon_effect(record)==0,"普通元素强度为零不启用附魔");
+    record[SpellColor::power+1]=1;
+    require(SpellColor::local_weapon_effect(record)==409,"普通元素强度使用完整WORD");
+    attack[4]=1;
+    require(SpellColor::local_weapon_color(record,attack,{0,0,0})==SpellColor::palette[4],"本地元素攻击优先于普通武器底色");
+    record[SpellColor::special_element]=3;
+    require(SpellColor::local_weapon_effect(record)==410 &&
+        SpellColor::local_weapon_color(record,attack,{0,0,0})==SpellColor::palette[2],"特殊武器元素优先于本地攻击与普通底色");
+    record[SpellColor::special_element]=128;
+    require(SpellColor::local_weapon_effect(record)==409,"特殊选择器按有符号BYTE判断");
+    attack={};
+    require(SpellColor::local_weapon_color(record,attack,{0,0,0})==SpellColor::palette[1],"无元素攻击退回武器底色");
+    record[SpellColor::element]=255;
+    require(SpellColor::local_weapon_effect(record)==0,"非法元素不能越界访问调色板");
+}
+
 inline void spell_checks() {
+    spell_weapon_color_checks();
     using namespace mir3;
     const auto require=[](bool ok,const char* message) { if(!ok) throw std::runtime_error(message); };
     const SpellRequest request{std::uint16_t(SkillId::fireball),123,456,0x89abcdef,0x80000000};

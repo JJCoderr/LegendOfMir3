@@ -1305,6 +1305,16 @@ void Mir3HudView::advance_local_action() {
     } else {
         local_action_clock.attacked=now;
         player_action.start(mir3::HumanActions::weapon_attack(action.weapon));
+        player_spell={};
+        // 415F90普通挥击使用装备槽原包选择附魔，40DB10再确定颜色优先级。
+        const auto& weapon=equipment.slots[1];
+        const int effect=weapon?mir3::SpellColor::local_weapon_effect(weapon.server_record):0;
+        if (const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::spell,std::uint16_t(effect));effect && resource) {
+            player_spell={effect,action.facing};
+            player_spell.weapon=true;
+            player_spell.tint=mir3::SpellColor::local_weapon_color(weapon.server_record,elements.attack_words,resource->tint);
+            play_actor_sound(int(local_actor_identity),10*(effect+1000),player_cell);
+        }
     }
     const auto tick=action.movement?local_action_clock.move_admitted:now;
     const auto position=std::uint32_t(action.destination.x)|(std::uint32_t(action.destination.y)<<16);

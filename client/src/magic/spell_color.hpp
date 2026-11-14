@@ -22,5 +22,21 @@ struct SpellColor {
     static constexpr int weapon_effect(unsigned element) {
         return element<palette.size()?408+int(element):0;
     }
+    // 装备窗口+928+3112*武器槽+8为100字节原包：78C191/192/1C1对应49/50/97。
+    enum WeaponField : unsigned { element=49, power=50, special_element=97 };
+    static constexpr int local_weapon_effect(const std::array<std::uint8_t,100>& record) {
+        const auto special=record[special_element];
+        const unsigned selector=special>0 && special<128?special:
+            (record[power] || record[power+1]?record[element]:0);
+        return selector>=1 && selector<=palette.size()?weapon_effect(selector-1):0;
+    }
+    static constexpr Rgb local_weapon_color(const std::array<std::uint8_t,100>& record,
+        const std::array<std::uint16_t,7>& attack,Rgb fallback) {
+        const auto special=record[special_element];
+        if (special>=1 && special<=palette.size()) return palette[special-1];
+        for (const auto value:attack) if (value) return strongest(attack,fallback);
+        const auto base=record[element];
+        return base>=1 && base<=palette.size()?palette[base-1]:fallback;
+    }
 };
 }
