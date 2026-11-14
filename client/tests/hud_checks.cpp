@@ -1,5 +1,6 @@
 // 测试内容：角色查询与进入请求、失败提示、角色列表协议、选中及翻页动画、界面模型、选项确认与聊天联动、场景消息、人物行为、地图及资源解析。
 #include "protocol/message_ids.hpp"
+#include "protocol/actor_ability.hpp"
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
 #include "hud/exit_transition.hpp"
@@ -36,6 +37,23 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--actor-ability") {
+            // 测试内容：63字节能力固定向量、无符号金币、核心字段和元素顺序、非法长度及职业拒绝。
+            const std::string encoded=R"WIRE(FlDC<l\FCLPM=mYZ<S\<y<Cl<H?P<L><B\T<U<?v<<xZ=ll=<l<<<\P?\<O{=L`B>\@<[t?{<lL><Cv={\PB)WIRE";
+            const auto bytes=std::span(reinterpret_cast<const std::uint8_t*>(encoded.data()),encoded.size());
+            mir3::ReceiveHeader header{0xfedcba98,mir3::protocol::SM_ABILITY,{2,0x0201,0x0403}};
+            const auto value=mir3::ActorAbility::parse(header,bytes);
+            check(value && value->gold==0xfedcba98 && value->profession==2 && value->level==43,"金币不作为有符号人物ID");
+            check(value->hp==350 && value->max_hp==500 && value->mp==120 && value->max_mp==240,"紧凑WORD生命魔法偏移");
+            check(value->experience==120000 && value->next_experience==400000 && value->weight==100 && value->max_weight==250,"经验DWORD与重量WORD");
+            check(value->defence==std::array<int,2>{2,7} && value->spirit==std::array<int,2>{7,23} && value->wear==std::array<unsigned,2>{15,30},"范围和穿戴负重");
+            check(value->element_attack==std::array<std::uint8_t,7>{3,0,5,128,255,9,10} && value->element_strength[3]==128 && value->element_weakness[6]==6,"元素按原版高字节和有符号原始值保留");
+            check(value->header_options==std::array<std::uint8_t,4>{1,32,48,64},"头附加字节乘16后截断");
+            check(!mir3::ActorAbility::parse(header,bytes.first(83)),"截断能力包拒绝");
+            header.parameters[0]=3;check(!mir3::ActorAbility::parse(header,bytes),"无效职业拒绝");
+            header.parameters[0]=2;header.opcode=mir3::protocol::SM_LOGON;check(!mir3::ActorAbility::parse(header,bytes),"其他消息不当作能力包");
+            std::cout << "ACTOR_ABILITY_MODEL_OK\n";return 0;
+        }
         if (std::filesystem::path(argv[1])=="--selection-requests") {
             mir3::SelectionSession session;
             check(session.configure("account",-123) && session.query_body()=="account/-123" && session.start_body("Hero")=="account/Hero","查询及进入正文顺序，编号有符号格式");

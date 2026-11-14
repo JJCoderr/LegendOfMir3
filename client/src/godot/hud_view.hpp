@@ -1,4 +1,5 @@
 #pragma once
+#include "protocol/actor_ability.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"
 #include "hud/human_actions.hpp"
@@ -437,6 +438,7 @@ private:
     godot::Vector2i player_cell{475,360}, step_origin{}, step_destination{};
     int walk_frame=-1, player_facing=4;
     mir3::HumanIdleClock player_idle;
+    std::optional<mir3::ActorAbility> server_ability;
     double movement_ms=0;
     int map_pointer_button=0;
     double map_pointer_seconds=0;

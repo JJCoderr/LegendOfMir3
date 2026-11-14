@@ -339,6 +339,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["target_hp_width"]=!model.layout.expanded && target_focus.displayed() && !target_is_human && target_portrait.is_valid()?target_vitals.bar_width():0;
     result["target_custom_portrait"]=!model.layout.expanded && target_focus.displayed() && system_options.user_photos && target_custom_portrait.is_valid();
     result["character_shared_hp"]=model.shared_hp();
+    result["character_experience"]=int64_t(model.experience);result["character_next_experience"]=int64_t(model.next_experience);
     result["character_hp"]=Vector2i(model.hp,model.max_hp);
     result["character_mp"]=Vector2i(model.mp,model.max_mp);
     result["character_weight"]=Vector2i(model.weight,model.max_weight);
@@ -2714,7 +2715,7 @@ void Mir3HudView::clear_game_scene() {
     map_route.clear();walk_frame=-1;movement_ms=0;
     terrain_ready=false;terrain=mir3::MapTerrain{};terrain_frames.clear();current_map_id=String();
     target_focus.clear();local_actor_identity=0;player_light_attribute=0;exit_guard={};
-    login_actor_pending.reset();login_actor_extra={};
+    login_actor_pending.reset();login_actor_extra={};server_ability.reset();
     group_request=0;npc_dialogue_actor=0;shop_actor=0;
     inventory.visible=status.visible=skills.visible=group.visible=guild.visible=false;
     options.visible=portrait_panel.visible=mount.visible=quest.visible=trade.visible=false;
@@ -2835,7 +2836,11 @@ void Mir3HudView::finish_game_entry() {
     if (!game_entry.finish_transition()) return;
     clear_game_scene();character_selection.visible=false;character_creation.close();selection_notice.close();
     login_visible=false;login_flow.previous_endpoint=login_flow.endpoint;login_flow.endpoint=game_entry.endpoint;
-    game_connection={};
+    game_connection={};inventory_gold=0;elements={};
+    set_character_vitals(0,0,0,0,0,0);
+    set_character_progress(0,0,0,0,0);
+    set_character_combat(Vector2i(),Vector2i(),Vector2i(),Vector2i(),Vector2i());
+    set_character_load_bonuses(Vector2i(),Vector2i(),Vector2i());
     get_window()->set_content_scale_size(Vector2i(800,600));get_window()->set_size(Vector2i(800,600));
     scene_light_layer->show();hud_base->show();hud_copy->show();hud_decoration->show();hud_tail->show();
     connect_page(ConnectionPage::game,game_entry.endpoint);queue_redraw();
@@ -2878,6 +2883,25 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    if (header->opcode==mir3::protocol::SM_ABILITY) {
+        const auto value=mir3::ActorAbility::parse(*header,{encoded.ptr()+16,std::size_t(encoded.size()-16)});
+        if (!value) return false;
+        server_ability=*value;inventory_gold=value->gold;
+        model.level=value->level;model.profession=value->profession;
+        model.defence=value->defence;model.magic_defence=value->magic_defence;
+        model.attack=value->attack;model.magic_attack=value->magic;model.spirit_attack=value->spirit;
+        model.hp=value->hp;model.mp=value->mp;model.max_hp=value->max_hp;model.max_mp=value->max_mp;
+        model.experience=value->experience;model.next_experience=value->next_experience;
+        model.weight=value->weight;model.max_weight=value->max_weight;
+        model.wear_weight=value->wear;model.hand_weight=value->hand;
+        for (int i=0;i<7;++i) {
+            elements.set(0,i,value->element_attack[i]);elements.set(1,i,value->element_strength[i]);elements.set(2,i,value->element_weakness[i]);
+        }
+        // 能力同步不是受击消息：更新头顶血条，不产生伤害跳字。
+        auto& health=scene_health[0];health.current=value->hp;health.mana=value->mp;health.maximum=value->max_hp;
+        health.damage.enabled=damage_numbers;
+        queue_redraw();return true;
+    }
     if (header->opcode==mir3::protocol::SM_LOGON) {
         const auto actor=mir3::LoginActor::parse(*header,{encoded.ptr()+16,std::size_t(encoded.size()-16)});
         if (!actor) return false;
