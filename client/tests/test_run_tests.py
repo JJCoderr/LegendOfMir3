@@ -93,6 +93,27 @@ class SkillSelectionTests(unittest.TestCase):
         plan = json.loads(next(a[7:] for a in graphic if a.startswith("--plan=")))
         self.assertEqual(next(item["args"] for item in plan if item["case"] == "summon"), ["--skills=17,105"])
 
+    def test_display_progress_counts_individual_plans_once(self):
+        # 多个非批量技能产生多个计划，每个计划只计自己的技能，不能平方累加。
+        _, commands, _ = self.invoke("casting", "--skills", "1,27")
+        graphic = next(c for c in commands if "--script" in c)
+        self.assertIn("--display-total=2", graphic)
+
+    def test_mp4_option_passes_optional_output(self):
+        # 大写MP4既可自动命名，也可指定路径；不额外建立测试入口。
+        for extra, expected in ((["--MP4"], ""), (["--MP4", "demo.mp4"], "demo.mp4")):
+            with self.subTest(extra=extra), patch.object(runner,"run_graphics") as record:
+                record.return_value.returncode=0
+                result, _, _ = self.invoke("common", "--skill", "2", *extra)
+                self.assertEqual(result,0)
+                self.assertEqual(record.call_args.args[1].MP4,expected)
+
+    def test_model_only_cannot_record(self):
+        # 纯模型没有视口，不能生成假视频或启动无输入编码器。
+        with self.assertRaises(SystemExit) as error:
+            self.invoke("models","--MP4")
+        self.assertEqual(error.exception.code,2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,6 +2,8 @@
 
 使用示例（仓库根目录）：
   python client/tests/run_tests.py skills --screenshots  # 技能全集及截图
+  python client/tests/run_tests.py skills --skill 2 --MP4  # 治愈术MP4，默认build/videos
+  python client/tests/run_tests.py skills --MP4 client/build/videos/skills.mp4  # 自定输出路径
   python client/tests/run_tests.py skills --skill 47  # 单技能的适用场景
   python client/tests/run_tests.py skills --skills 3,47,48,410  # 混选、去重
   python client/tests/run_tests.py skills common --skills 47,48  # 仅共用施法场景
@@ -12,6 +14,9 @@
   python client/tests/run_tests.py map-events  # 地图事件全集
 
 --godot/--checks 指定程序；也可设置 MIR3_GODOT_EXECUTABLE。
+--MP4 可选录制：H.264 800×600/15fps，CRF30/900kbps上限，AAC 48kbps；仅捕获游戏视口与混音。
+需要PATH中的ffmpeg、--ffmpeg路径或python -m pip install imageio-ffmpeg；不启用则无录制开销。
+输出默认build/videos，不覆盖已有文件；多场景子系统指定路径时按场景追加文件名。
 技能图形用例在同一进程运行，背景音乐持续播放，技能声效保留。
 统一从比奇地图 0 的 (413,410) 开始，各场景相对偏移保持一致。
 画面左上显示技能名、编号和施法阶段；未知名称保留未命名，不猜测。
@@ -38,6 +43,11 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import socket
+import struct
+import tempfile
+import threading
+from datetime import datetime
 
 ROOT = Path(__file__).resolve().parents[1]
 # 每项只登记已有验收，避免把尚未实现的用例当作通过。
@@ -127,6 +137,95 @@ def skill_cases(skill):
 BATCH_CASES = {"common", "enchantment", "melee", "special", "impact", "target-loss", "stationary", "summon", "persistent", "displacement"}
 
 
+def run_graphics(command, args, label):
+    """直接录制 Godot 视口与游戏混音，不抓桌面；流式编码避免保存大量截图。"""
+    if args.MP4 is None:
+        return subprocess.run(command, cwd=ROOT)
+    encoder = args.ffmpeg or shutil.which("ffmpeg")
+    if not encoder:
+        try:
+            import imageio_ffmpeg
+            encoder = imageio_ffmpeg.get_ffmpeg_exe()
+        except ImportError as error:
+            raise OSError("MP4需要ffmpeg：使用--ffmpeg指定，或安装imageio-ffmpeg") from error
+    output = (Path(args.MP4) if args.MP4 else args.build_dir / "videos" / f"{label}-{datetime.now():%Y%m%d-%H%M%S}.mp4").resolve()
+    if args.MP4 and args.suite != "skills" and args.scenario is None:
+        output = output.with_name(f"{output.stem}-{label}{output.suffix}")
+    if output.suffix.lower() != ".mp4":
+        raise OSError("--MP4输出路径必须以.mp4结尾")
+    if output.exists():
+        raise OSError(f"录制文件已存在，不覆盖：{output}")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    failures = []
+    sample_rate = [48000]
+    with tempfile.TemporaryDirectory(prefix="mir3-mp4-",dir=output.parent) as temporary, socket.socket() as listener:
+        folder = Path(temporary)
+        video, audio = folder / "video.mp4", folder / "audio.f32"
+        listener.bind(("127.0.0.1",0)); listener.listen(1); listener.settimeout(0.25)
+        stop = threading.Event()
+        # H.264上限约0.9Mb/s，加AAC音轨；800x600/15fps，约7MB/分钟以内。
+        with (folder / "encoder.log").open("wb") as errors:
+            process = subprocess.Popen([encoder,"-hide_banner","-loglevel","error","-f","image2pipe","-vcodec","mjpeg","-framerate","15","-i","pipe:0","-vf","scale=800:600:force_original_aspect_ratio=decrease,pad=800:600:(ow-iw)/2:(oh-ih)/2","-an","-c:v","libx264","-preset","veryfast","-crf","30","-maxrate","900k","-bufsize","1800k","-pix_fmt","yuv420p",str(video)],stdin=subprocess.PIPE,stderr=errors)
+            def receive():
+                try:
+                    connection = None
+                    while not stop.is_set():
+                        try:
+                            connection,_ = listener.accept(); break
+                        except socket.timeout:
+                            pass
+                    if connection is None:
+                        raise OSError("游戏没有连接MP4录制通道")
+                    with connection, audio.open("wb") as sound:
+                        connection.settimeout(1)
+                        def read_exact(count):
+                            result = bytearray()
+                            while len(result)<count:
+                                try: chunk=connection.recv(min(count-len(result),65536))
+                                except socket.timeout:
+                                    if stop.is_set(): return None
+                                    continue
+                                if not chunk: return None
+                                result.extend(chunk)
+                            return result
+                        while True:
+                            header=read_exact(5)
+                            if header is None: break
+                            kind,length=struct.unpack("<BI",header)
+                            if length>16*1024*1024: raise OSError("录制数据帧超限")
+                            payload=read_exact(length)
+                            if payload is None: raise OSError("录制数据帧不完整")
+                            if kind==1: process.stdin.write(payload)
+                            elif kind==2: sound.write(payload)
+                            elif kind==3: sample_rate[0]=struct.unpack("<I",payload)[0]
+                            else: raise OSError("无效录制数据类型")
+                except Exception as error:
+                    failures.append(str(error))
+                finally:
+                    process.stdin.close()
+            worker=threading.Thread(target=receive,daemon=True); worker.start()
+            try:
+                result=subprocess.run([*command,f"--mp4-port={listener.getsockname()[1]}"],cwd=ROOT)
+            finally:
+                stop.set(); worker.join(5)
+                if worker.is_alive():
+                    process.kill(); worker.join(2)
+                    failures.append("录制通道关闭超时")
+                try: code=process.wait(timeout=30)
+                except subprocess.TimeoutExpired:
+                    process.kill(); process.wait(); raise OSError("MP4编码结束超时")
+            if code or failures:
+                errors.flush()
+                raise OSError("MP4录制失败："+"; ".join(failures)+(folder / "encoder.log").read_text(errors="replace"))
+        mux=[encoder,"-hide_banner","-loglevel","error","-n","-i",str(video)]
+        if audio.exists() and audio.stat().st_size:
+            mux += ["-f","f32le","-ar",str(sample_rate[0]),"-ac","2","-i",str(audio),"-c:a","aac","-b:a","48k","-ar","24000"]
+        mux += ["-c:v","copy","-movflags","+faststart",str(output)]
+        subprocess.run(mux,check=True)
+    print(f"MP4: {output} ({output.stat().st_size/1024/1024:.2f} MiB)",flush=True)
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     subcommands = parser.add_subparsers(dest="suite", required=True, help="选择子系统测试集")
@@ -135,6 +234,8 @@ def main():
         command.add_argument("scenario", nargs="?", choices=scenarios, help="可选场景子命令；省略时运行全部适用场景")
         command.add_argument("--skill", type=int, choices=SKILLS, help="仅运行对应技能")
         command.add_argument("--skills", help="技能编号集合，逗号分隔；可与场景子命令组合，不指定场景时自动归集")
+        command.add_argument("--MP4", nargs="?", const="", help="录制小体积MP4，可选输出路径；默认build/videos")
+        command.add_argument("--ffmpeg", help="MP4编码器路径；默认PATH或imageio-ffmpeg")
         command.add_argument("--screenshots", action="store_true", help="保存真实视口截图")
         command.add_argument("--godot", default=os.environ.get("MIR3_GODOT_EXECUTABLE"))
         command.add_argument("--checks", help="hud_checks程序的路径")
@@ -183,6 +284,8 @@ def main():
                                          args.build_dir / f"hud_checks{suffix}"])
     if any(suite[case][1] for case in cases):
         godot = executable(args.godot, ["godot", "godot4", "Godot_v4.7.2-stable_win64_console.exe"])
+    if args.MP4 is not None and godot is None:
+        parser.error("所选用例没有图形场景，无法录制MP4")
     skill_plan = []
     for case in cases:
         models, script = suite[case]
@@ -205,7 +308,7 @@ def main():
                     commands.append(command)
         for command in commands:
             print(f"RUN {args.suite}/{case}: {command}", flush=True)
-            result = subprocess.run(command, cwd=ROOT)
+            result = run_graphics(command,args,f"{args.suite}-{case}") if "--script" in command else subprocess.run(command, cwd=ROOT)
             if result.returncode:
                 print(f"FAILED {args.suite}/{case}: exit={result.returncode}", file=sys.stderr)
                 return result.returncode if result.returncode > 0 else 1
@@ -214,8 +317,13 @@ def main():
         command = [godot, "--path", str(ROOT / "godot"), "--script", str(ROOT / "tests" / "skills.gd"), "--", "--plan=" + json.dumps(skill_plan)]
         if args.screenshots:
             command.append("--screenshots")
+        display_total = 0
+        for item in skill_plan:
+            selection = next((value.split("=",1)[1] for value in item["args"] if value.startswith(("--skill=","--skills="))), None)
+            display_total += len(selection.split(",")) if selection else sum(item["case"] in skill_cases(skill) for skill in SKILLS)
+        command.append(f"--display-total={display_total}")
         print(f"RUN skills: {command}", flush=True)
-        result = subprocess.run(command, cwd=ROOT)
+        result = run_graphics(command,args,"skills")
         if result.returncode:
             print(f"FAILED skills: exit={result.returncode}", file=sys.stderr)
             return result.returncode if result.returncode > 0 else 1
@@ -227,6 +335,6 @@ def main():
 if __name__ == "__main__":
     try:
         sys.exit(main())
-    except (OSError, KeyboardInterrupt) as error:
+    except (OSError, subprocess.SubprocessError, KeyboardInterrupt) as error:
         print(f"测试入口失败：{error}", file=sys.stderr)
         sys.exit(1)

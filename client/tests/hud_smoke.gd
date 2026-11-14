@@ -31,7 +31,47 @@ var actions: Array[int] = []
 var requests: Array[String] = []
 
 func _initialize() -> void:
+	start_mp4_capture()
 	call_deferred("run")
+
+# 各子系统共用视口录制：只发送游戏画面和Master混音，Python流式压缩成MP4。
+var mp4_peer: StreamPeerTCP
+var mp4_capture: AudioEffectCapture
+var mp4_started := 0
+var mp4_frames := 0
+
+func start_mp4_capture() -> void:
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--mp4-port="):
+			mp4_peer=StreamPeerTCP.new()
+			if not check(mp4_peer.connect_to_host("127.0.0.1",int(argument.trim_prefix("--mp4-port=")))==OK,"连接MP4录制"): return
+			RenderingServer.frame_post_draw.connect(record_mp4_frame)
+
+func send_mp4(kind: int, data: PackedByteArray) -> void:
+	var header := PackedByteArray(); header.resize(5)
+	header[0]=kind; header.encode_u32(1,data.size())
+	if not check(mp4_peer.put_data(header)==OK and mp4_peer.put_data(data)==OK,"传送MP4画面/声音"): return
+
+func record_mp4_frame() -> void:
+	mp4_peer.poll()
+	if mp4_peer.get_status()==StreamPeerTCP.STATUS_CONNECTING: return
+	if not check(mp4_peer.get_status()==StreamPeerTCP.STATUS_CONNECTED,"MP4通道保持连接"): return
+	if mp4_started==0:
+		mp4_started=Time.get_ticks_usec()
+		var rate := PackedByteArray(); rate.resize(4); rate.encode_u32(0,int(AudioServer.get_mix_rate()))
+		send_mp4(3,rate)
+		mp4_capture=AudioEffectCapture.new()
+		AudioServer.add_bus_effect(0,mp4_capture)
+	var available := mp4_capture.get_frames_available()
+	if available>0: send_mp4(2,mp4_capture.get_buffer(available).to_byte_array())
+	var expected := int((Time.get_ticks_usec()-mp4_started)*15/1000000)+1
+	if expected<=mp4_frames: return
+	var picture := root.get_texture().get_image().save_jpg_to_buffer(0.8)
+	# 偶发加载停顿补帧，保持视频时长与真实时间/音轨一致。
+	while mp4_frames<expected:
+		send_mp4(1,picture)
+		mp4_frames+=1
+
 
 func check(condition: bool, label: String) -> bool:
 	if not condition:

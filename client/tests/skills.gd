@@ -12,16 +12,23 @@ const SKILL_SPAWN := Vector2i(413,410)
 
 # 验收提示独立于游戏 HUD，不拦截鼠标，不修改角色动作与服务端回包。
 var showcase_label: Label
+var progress_label: Label
 var transition_image: TextureRect
 var showcase_names: Dictionary = {}
 var showcase_case := ""
+var showcase_total := 0
+var showcase_seen := {}
+var showcase_index := -1
 
 func show_skill(id: int, phase: String = "技能展示") -> void:
     if is_instance_valid(showcase_label):
-        showcase_label.text = "%s  [ID %d]  ·  %s\n%s" % [showcase_names.get(str(id),"未命名技能"),id,phase,showcase_case]
+        showcase_seen["%d/%d" % [showcase_index,id]] = true
+        progress_label.text = "(%d/%d)" % [showcase_seen.size(),showcase_total]
+        showcase_label.text = "%s（%d）· %s" % [showcase_names.get(str(id),"未命名技能"),id,phase]
 
 func release_test_hud() -> void:
     # HUD 销毁后的等待帧保留上一幅地图，避免露出窗口默认灰色清屏。
+    await RenderingServer.frame_post_draw
     if is_instance_valid(transition_image):
         transition_image.texture = ImageTexture.create_from_image(root.get_texture().get_image())
     hud.queue_free()
@@ -41,17 +48,32 @@ func setup_showcase() -> void:
     overlay.layer = 100
     root.add_child(overlay)
     var panel := PanelContainer.new()
+    panel.add_theme_stylebox_override("panel",StyleBoxEmpty.new())
     panel.position = Vector2(8,8)
     panel.size = Vector2(520,60)
     panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
     overlay.add_child(panel)
+    var row := HBoxContainer.new()
+    row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    panel.add_child(row)
+    progress_label = Label.new()
+    progress_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    var progress_font := SystemFont.new()
+    progress_font.font_names = PackedStringArray(["Microsoft YaHei","Noto Sans CJK SC","sans-serif"])
+    progress_label.add_theme_font_override("font",progress_font)
+    progress_label.add_theme_font_size_override("font_size",16)
+    row.add_child(progress_label)
     showcase_label = Label.new()
+    showcase_label.add_theme_font_override("font",progress_font)
+    showcase_label.add_theme_font_size_override("font_size",16)
     showcase_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    var font := SystemFont.new()
-    font.font_names = PackedStringArray(["Microsoft YaHei","Noto Sans CJK SC","sans-serif"])
-    showcase_label.add_theme_font_override("font",font)
-    showcase_label.add_theme_font_size_override("font_size",18)
-    panel.add_child(showcase_label)
+    row.add_child(showcase_label)
+
+func sync_showcase_font() -> void:
+    # 提示整行使用常规字体；文字颜色沿用游戏聊天输入控件。
+    var input: Control = hud.get_node("ChatInput")
+    showcase_label.add_theme_color_override("font_color",input.get_theme_color("font_color"))
+    progress_label.add_theme_color_override("font_color",input.get_theme_color("font_color"))
 
 func skill_arguments() -> PackedStringArray:
     return active_arguments
@@ -77,6 +99,7 @@ func prepare_outcome(skill: int) -> bool:
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
+    sync_showcase_font()
     await settle()
     hud.set_local_actor_identity(77)
     hud.set_character_vitals(100,100,200,200,0,100)
@@ -126,7 +149,7 @@ func run_summon() -> void:
         if not check(hud.apply_game_message(entry), "同编号重新入场"): return
         if not check(await wait_until(func(s): return s.scene_chicken_cells.has(PET)), "重新入场恢复召唤物"): return
         if not check(hud.change_map("0","比奇省",outcome_origin,1) and not hud.hud_snapshot().scene_chicken_cells.has(PET), "换图释放召唤物"): return
-        release_test_hud(); await settle()
+        await release_test_hud(); await settle()
         print("SKILL_SUMMON_UI_OK ",skill)
 
 # 困魔咒/火墙：普通技能回包不创建持续地面效果，实际由SHOWEVENT/HIDEEVENT控制。
@@ -152,7 +175,7 @@ func run_persistent() -> void:
             if not check(frame>=2450 and frame<=2490 and hud.hud_snapshot().map_ground_event_count==1, "火墙停止后保留余烬而非立即删除"): return
             if not await capture("skill-persistent-22-embers"): return
         if not check(hud.change_map("0","比奇省",outcome_origin,1) and hud.hud_snapshot().map_event_count==0 and hud.hud_snapshot().map_ground_event_count==0, "换图清除持续效果及余烬"): return
-        release_test_hud(); await settle()
+        await release_test_hud(); await settle()
         print("SKILL_PERSISTENT_UI_OK ",skill)
 
 # 抗拒火环的受击者由强制位移包驱动；传送/换位由服务器地图落点驱动，施法成功不自行位移。
@@ -172,7 +195,7 @@ func run_displacement() -> void:
             if not check(await wait_until(func(s): return s.player_cell==outcome_target and s.map_id=="0"), "地图内传送到指定格"): return
             if not check(hud.hud_snapshot().spell_effects.is_empty() and not hud.hud_snapshot().action_reply_pending, "传送清理原施法和等待状态"): return
         if not await capture("skill-displacement-%d" % skill): return
-        release_test_hud(); await settle()
+        await release_test_hud(); await settle()
         print("SKILL_DISPLACEMENT_UI_OK ",skill)
 
 func check(condition: bool, label: String) -> bool:
@@ -207,6 +230,8 @@ func run() -> void:
             if not check(decoded is Array, "Python 场景计划格式有效"): return
             plan = decoded
     if not check(not plan.is_empty(), "请通过 Python 统一入口启动技能测试"): return
+    for argument in OS.get_cmdline_user_args():
+        if argument.begins_with("--display-total="): showcase_total=int(argument.trim_prefix("--display-total="))
     setup_showcase()
     var bus := AudioServer.bus_count
     AudioServer.add_bus()
@@ -217,6 +242,7 @@ func run() -> void:
     node_added.connect(preserve_music)
     process_frame.connect(sync_suite_music)
     for item in plan:
+        showcase_index += 1
         var method := "run_" + str(item["case"]).replace("-", "_")
         if not check(has_method(method), "有效技能场景：" + method): return
         active_arguments = PackedStringArray(item["args"])
@@ -233,7 +259,7 @@ func run() -> void:
         if suite_failed: return
         # 旧独立脚本部分依赖进程退出释放 HUD；合并后必须在场景边界主动释放。
         if is_instance_valid(hud):
-            release_test_hud()
+            await release_test_hud()
             await settle()
         if transition_image.texture != null:
             await RenderingServer.frame_post_draw
@@ -254,6 +280,7 @@ func run() -> void:
     AudioServer.remove_bus(AudioServer.get_bus_index("SkillTestMapMusic"))
     # 等待延迟释放完成再结束 SceneTree，避免会话音乐对象留到引擎强制退出。
     await settle()
+    print("SKILL_DISPLAY_PROGRESS %d/%d" % [showcase_seen.size(),showcase_total])
     print("SKILLS_COLLECTION_OK scenarios=" + str(plan.size()))
     quit()
 
@@ -296,6 +323,7 @@ func run_bindings() -> void:
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
+    sync_showcase_font()
     await settle()
     var packets: Array[PackedByteArray] = []
     hud.client_packet_ready.connect(func(packet: PackedByteArray): packets.append(packet))
@@ -412,6 +440,7 @@ func run_casting() -> void:
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
+    sync_showcase_font()
     await settle()
     hud.set_local_actor_identity(77)
     hud.set_character_vitals(100,100,200,200,0,100)
@@ -553,7 +582,7 @@ func run_casting() -> void:
         if not await capture("skill-casting-timeout"): return
         hud.apply_game_message("+FAIL".to_ascii_buffer())
         if not check(hud.hud_snapshot().player_cell==origin,"迟到拒绝恢复保存的施法原点"): return
-    release_test_hud()
+    await release_test_hud()
     await settle()
     print("SKILL_CASTING_UI_OK selection="+("ALL" if selected_skill==0 else str(selected_skill)))
     return
@@ -592,6 +621,7 @@ func run_enchantment() -> void:
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
+    sync_showcase_font()
     await settle()
     hud.set_local_actor_identity(77)
     hud.set_character_vitals(100,100,200,200,0,100)
@@ -627,7 +657,7 @@ func run_enchantment() -> void:
     if not check(await wait_until(func(s): return s.player_action>=0),"无附魔时仍有挥击动作"): return
     await settle(0.2)
     if not check(hud.hud_snapshot().drawn_human_spells.is_empty(),"普通强度为零不残留附魔"): return
-    release_test_hud()
+    await release_test_hud()
     await settle()
     print("LOCAL_WEAPON_ENCHANTMENT_OK "+str(ids))
     return
@@ -649,7 +679,8 @@ func run_enchantment_visual() -> void:
     hud.set_meta("options_path","user://enchant-pixels-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
-    root.add_child(hud);await settle()
+    root.add_child(hud)
+    sync_showcase_font();await settle()
     hud.set_local_actor_identity(77)
     hud.set_character_vitals(100,100,200,200,0,100)
     var origin: Vector2i=hud.hud_snapshot().player_cell+Vector2i(0,2)
@@ -702,7 +733,7 @@ func run_enchantment_visual() -> void:
             print("SCREENSHOT: ",path)
         if not check(await wait_until(func(s): return s.player_action==-1),"挥击结束"): return
         await settle(1.5)
-    release_test_hud();await settle()
+    await release_test_hud();await settle()
     print("ENCHANTMENT_PIXELS_UI_OK ",ids);return
 
 
@@ -713,6 +744,7 @@ func run_correction() -> void:
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
+    sync_showcase_font()
     await settle()
     hud.set_local_actor_identity(77)
     hud.set_character_vitals(100,100,0,0,0,100)
@@ -760,7 +792,7 @@ func run_correction() -> void:
     if not check(state.player_cell==origin+Vector2i(0,2) and state.player_mount==1
         and not state.action_reply_pending and packets.size()==1,"强制骑乘走步落点正确、解除确认且不反发动作请求"): return
     if not await capture("forced-motion-arrival"): return
-    release_test_hud()
+    await release_test_hud()
     await settle()
     print("FORCED_MOTION_UI_OK")
     return
@@ -787,6 +819,7 @@ func run_cast_correction() -> void:
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
+    sync_showcase_font()
     await settle()
     hud.set_local_actor_identity(77)
     hud.set_character_vitals(100,100,200,200,0,100)
@@ -822,7 +855,7 @@ func run_cast_correction() -> void:
     if not check(state.player_cell==new_origin and not state.action_reply_pending and state.player_action==-1
         and state.forced_motion_queue==0 and state.map_event_count==0,"旧拒绝不能跨地图回滚，动作与效果清空"): return
     if not await capture("skill-correction-map"): return
-    release_test_hud()
+    await release_test_hud()
     await settle()
     print("SPELL_CORRECTION_UI_OK")
     return
@@ -846,6 +879,7 @@ func run_ranges() -> void:
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
+    sync_showcase_font()
     await settle()
     hud.set_local_actor_identity(77)
     var origin: Vector2i=hud.hud_snapshot().player_cell+Vector2i(0,2)
@@ -884,7 +918,7 @@ func run_ranges() -> void:
             if offset.y==0 and not await capture("skill-range-%d" % skill): return
     hud.change_map("0","比奇省",origin,1)
     if not check(hud.hud_snapshot().spell_effects.is_empty() and hud.hud_snapshot().spell_particle_count==0,"范围技能离场清空"): return
-    release_test_hud()
+    await release_test_hud()
     await settle()
     print("SPELL_RANGES_UI_OK "+str(ids))
     return
@@ -914,6 +948,7 @@ func run_common() -> void:
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
+    sync_showcase_font()
     await settle()
     hud.set_local_actor_identity(77)
     hud.set_character_vitals(100,100,200,200,0,100)
@@ -936,7 +971,7 @@ func run_common() -> void:
         var mouse := InputEventMouseMotion.new()
         mouse.position=Vector2(target*Vector2i(48,32)-hud.hud_snapshot().map_camera_pixel)+Vector2(1,1)
         root.push_input(mouse,true)
-        show_skill(id,"本地角色施法")
+        show_skill(id,"本地施法")
         packets.clear();key(KEY_F1)
         if not check(packets.size()==1,"技能%d只发一个请求" % id): return
         var request := decode_request(packets[0])
@@ -978,9 +1013,10 @@ func run_common() -> void:
         else:
             await settle(0.05)
             if not check(hud.hud_snapshot().spell_effects.is_empty(),"被忽略/无MAGIC资源的回包不凭空生成效果"): return
-        show_skill(id,"远端角色施法（主角保持站立）")
+        if not check(await wait_until(func(s): return s.spell_effects.is_empty(),7000),"本地效果释放后再展示远端施法"): return
+        show_skill(id,"远端施法")
         # 远端起手复用同资源，但30号明确使用动作3。
-        if not check(hud.set_scene_human(88,origin+Vector2i(0,-1),0,0,"远端施法者"),"准备远端人物"): return
+        if not check(hud.set_scene_human(88,origin+Vector2i(-3,0),0,0,"远端施法者"),"准备远端人物"): return
         var start := game_reply(Mir3HudView.SM_SPELL,88,target.x,target.y,0)
         start.append_array(str(id).to_ascii_buffer())
         if not check(hud.apply_game_message(start),"远端十进制技能起手"): return
@@ -998,7 +1034,7 @@ func run_common() -> void:
     if not hud.hud_snapshot().scene_actor_sounds.is_empty():
         print("COMMON_EXIT_REMAINING_SOUNDS "+str(hud.hud_snapshot().scene_actor_sounds))
     if not check(hud.hud_snapshot().spell_effects.is_empty() and hud.hud_snapshot().scene_actor_sounds.is_empty(),"批次离场释放技能效果与声音"): return
-    release_test_hud()
+    await release_test_hud()
     await settle()
     print("SPELL_COMMON_UI_OK "+str(cases.map(func(c): return int(c.id))))
     return
@@ -1021,6 +1057,7 @@ func run_passive() -> void:
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
+    sync_showcase_font()
     await settle()
     hud.set_local_actor_identity(77)
     hud.set_character_vitals(100,100,200,200,0,100)
@@ -1045,7 +1082,7 @@ func run_passive() -> void:
         motion.position=pointer;root.push_input(motion,true)
         # 前项普通挥击可能仍留声音计数，核对本次没有新增声音。
         var sounds_before: int=hud.hud_snapshot().scene_actor_sounds.values().reduce(func(n,a): return n+a.count,0)
-        show_skill(id,"本地角色施法")
+        show_skill(id,"本地施法")
         packets.clear();key(KEY_F1)
         await settle(0.25)
         if not check(packets.is_empty() and hud.hud_snapshot().player_action==-1,"被动快捷键不发主动请求或动作"): return
@@ -1059,7 +1096,7 @@ func run_passive() -> void:
         if not await capture("skill-passive-%d" % id): return
         key(KEY_E)
         print("PASSIVE_CASE_OK %d" % id)
-    release_test_hud();await settle()
+    await release_test_hud();await settle()
     print("SPELL_PASSIVE_UI_OK "+str(ids));return
 
 
@@ -1079,7 +1116,8 @@ func run_special() -> void:
     hud.set_meta("options_path","user://spell-special-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
-    root.add_child(hud);await settle()
+    root.add_child(hud)
+    sync_showcase_font();await settle()
     hud.set_local_actor_identity(77)
     hud.set_character_vitals(100,100,200,200,0,100)
     var origin: Vector2i=hud.hud_snapshot().player_cell+Vector2i(0,2)
@@ -1113,7 +1151,7 @@ func run_special() -> void:
             var pointer := InputEventMouseMotion.new()
             pointer.position=Vector2(target*Vector2i(48,32)-hud.hud_snapshot().map_camera_pixel)+Vector2(1,1)
             root.push_input(pointer,true)
-            show_skill(id,"本地角色施法")
+            show_skill(id,"本地施法")
             packets.clear();key(KEY_F1)
             var action := 18 if id==36 else (2 if id==108 else 3)
             if not check(packets.size()==1 and hud.hud_snapshot().player_action==action and hud.hud_snapshot().action_reply_pending,"特殊动作并等待确认"): return
@@ -1127,7 +1165,7 @@ func run_special() -> void:
             if not check(hud.apply_game_message("+FAIL".to_ascii_buffer()) and hud.hud_snapshot().player_cell==origin,"纠偏后的拒绝不错误移动"): return
             if not await capture("skill-special-%d-correction" % id): return
         print("SPECIAL_CASE_OK %d" % id)
-    release_test_hud();await settle()
+    await release_test_hud();await settle()
     print("SPELL_SPECIAL_UI_OK "+str(ids));return
 
 
@@ -1152,7 +1190,8 @@ func run_impact() -> void:
     hud.set_meta("options_path","user://spell-impact-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
-    root.add_child(hud);await settle()
+    root.add_child(hud)
+    sync_showcase_font();await settle()
     hud.set_local_actor_identity(77)
     var origin: Vector2i=hud.hud_snapshot().player_cell+Vector2i(0,2)
     var target := origin+Vector2i(0,4)
@@ -1180,7 +1219,7 @@ func run_impact() -> void:
         if not check(voice_count(sample)-before==expected,"命中声音不随爆炸帧重复"): return
         if not check(await wait_until(func(s): return s.spell_effects.is_empty(),5000),"光尾释放，不遗留事件"): return
         print("IMPACT_CASE_OK ",id)
-    release_test_hud();await settle()
+    await release_test_hud();await settle()
     print("SPELL_IMPACT_UI_OK ",cases.map(func(c): return int(c.id)));return
 
 
@@ -1198,7 +1237,8 @@ func run_target_loss() -> void:
     hud.set_meta("options_path","user://spell-target-loss-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
-    root.add_child(hud);await settle()
+    root.add_child(hud)
+    sync_showcase_font();await settle()
     hud.set_local_actor_identity(77)
     var origin: Vector2i=hud.hud_snapshot().player_cell+Vector2i(0,2)
     var target := origin+Vector2i(0,4)
@@ -1222,7 +1262,7 @@ func run_target_loss() -> void:
         if not check(await wait_until(func(s): return s.spell_effects.is_empty(),5000 if id==38 else 1600),"无目标效果最终释放"): return
         if not check(voice_count(sample)==before,"释放时不补发命中声"): return
         print("TARGET_LOSS_CASE_OK ",id)
-    release_test_hud();await settle()
+    await release_test_hud();await settle()
     print("SPELL_TARGET_LOSS_UI_OK ",ids);return
 
 
@@ -1243,7 +1283,8 @@ func run_stationary() -> void:
     hud.set_meta("options_path","user://spell-stationary-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
-    root.add_child(hud);await settle()
+    root.add_child(hud)
+    sync_showcase_font();await settle()
     hud.set_local_actor_identity(77)
     var origin: Vector2i=hud.hud_snapshot().player_cell+Vector2i(0,2)
     var target := origin+Vector2i(0,4)
@@ -1288,7 +1329,7 @@ func run_stationary() -> void:
         await settle(0.08)
         if not check(hud.hud_snapshot().active_spell==id and hud.hud_snapshot().spell_effects.is_empty(),"非113列表仅更新编号，无新增效果"): return
         print("STATIONARY_CASE_OK ",id)
-    release_test_hud();await settle()
+    await release_test_hud();await settle()
     print("SPELL_STATIONARY_UI_OK ",cases.map(func(c): return int(c.id)));return
 
 
@@ -1316,6 +1357,7 @@ func run_melee() -> void:
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
+    sync_showcase_font()
     await settle()
     hud.set_local_actor_identity(77)
     hud.set_character_vitals(100,100,200,200,0,100)
@@ -1369,7 +1411,7 @@ func run_melee() -> void:
         if not check((after>before) if c[0]!=35 else (after==before),"远端声音遵守原声音表与缺文件行为"): return
         if not check(await wait_until(func(s): return s.scene_human_actions[89].x==-1),"远端动作完成"): return
         print("MELEE_CASE_OK %d" % c[0])
-    release_test_hud()
+    await release_test_hud()
     await settle()
     print("MELEE_SPELLS_UI_OK "+str(cases.map(func(c): return c[0])))
     return
@@ -1391,6 +1433,7 @@ func run_sound() -> void:
     hud.set_connection_enabled(false)
     hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
+    sync_showcase_font()
     await settle()
     hud.set_local_actor_identity(77)
     var origin: Vector2i=hud.hud_snapshot().player_cell+Vector2i(0,2)
@@ -1419,7 +1462,7 @@ func run_sound() -> void:
     hud.change_map("0","比奇省",origin,1)
     await process_frame
     if not check(hud.hud_snapshot().scene_actor_sounds.is_empty() and AudioServer.bus_count==buses_before,"换图释放全部技能声道及音频总线"): return
-    release_test_hud()
+    await release_test_hud()
     await settle()
     print("SPELL_SOUND_UI_OK "+str(ids))
     return
