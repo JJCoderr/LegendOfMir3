@@ -36,3 +36,9 @@
 - mir2x 未找到可替代 807 的证据。旧项目的项链属性 2 是离线 fixture，不能作为物品数据库规则。
 
 客户端接收 807，并新增 set_local_actor_identity 登记本地网络 ID；网络识别号与渲染 actor=0 区分。真实登录角色 ID、穿脱装备结果和灯属性包顺序仍待服务端联调。
+
+## 地图消息联调接口（2026-11-14）
+
+两套早期 C++ ObjectPlayer::SendNewMap 发送 51(角色 ID,x,y,MAKEWORD(DayBright,series)) 加六位编码文件编号；RM_CHANGEMAP 对应 634，SendMapName 另发 54 显示名称。Zircon 使用 MapIndex/InstanceIndex，mir2x 使用行动消息 mapUID，不直接兼容。目标客户端本批 IDA 确认 51/634 共用 0x42EE00、低字节亮度、高字节地图状态、54 独立名称字段。
+
+客户端原包接口现可排队处理地图消息，并通过 map_change_finished 报告加载结果；真实网关连接、初次登录人物数据、地图状态效果和跨消息批次的视野重建顺序继续待联调。

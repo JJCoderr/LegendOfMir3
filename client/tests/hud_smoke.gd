@@ -9,6 +9,7 @@
 # - 人物行为：有限动作、音效、动作队列、战斗姿态、受击后退、死亡与复活。
 # - 场景消息：原始消息解码、外观与血量更新、聊天名称更新、人物离场与清场。
 # - 地面物品：显示和移除、同格物品名称、图片定位、移动阻挡与拾取请求。
+# - 地图原始消息：51/634 排队切图、54 独立名称更新、地图状态字段与资源失败通知。
 # - 地图切换：无效地图和落点拒绝、失败保留现场、场景清理、小地图刷新及同图重入。
 # - 环境照明：昼夜与暮色亮度、46 消息渐变、地图灯光、RGB 乘法及 HUD 颜色隔离。
 # - 人物灯光：807 灯属性、本地身份冲突、照明范围、远端队列及移除和换图生命周期。
@@ -164,6 +165,51 @@ func scene_text_packet(opcode: int, actor: int, foreground: int, background: int
 	var packet := scene_packet(opcode,actor,foreground,background,0)
 	packet.append_array(encode_scene_bytes(body))
 	return packet
+
+func run_map_wire() -> void:
+	var keys := PackedByteArray([18,52,86,120])
+	var completed: Array = []
+	hud.map_change_finished.connect(func(op: int, id: String, success: bool): completed.append([op,id,success]))
+	var origin: Vector2i = hud.hud_snapshot().player_cell
+	hud.set_local_actor_identity(100)
+	var packet := scene_packet(51,100,312,310,0x0201)
+	packet.append_array(encode_scene_bytes("01".to_ascii_buffer()))
+	if not check(hud.apply_scene_message(packet,keys) and hud.hud_snapshot().map_id=="0" and hud.hud_snapshot().pending_map_changes==1, "51 入队后尚未立即切图"): return
+	var description := scene_text_packet(54,0,0,0,PackedByteArray([178,226,202,212,181,216,205,188]))
+	if not check(hud.apply_scene_message(description,keys) and hud.hud_snapshot().map_name=="测试地图", "54 独立更新中文地图名称"): return
+	await process_frame
+	await process_frame
+	if not check(completed==[[51,"01",true]] and hud.hud_snapshot().map_id=="01" and hud.hud_snapshot().map_name=="测试地图", "排队切图保留随后收到的显示名称"): return
+	if not check(hud.hud_snapshot().scene_ambient_mode==1 and hud.hud_snapshot().map_series==2 and hud.hud_snapshot().player_cell==Vector2i(312,310), "亮度低字节与地图状态高字节互不混用"): return
+	if not await capture("map-wire-arrival"): return
+	for bad in ["", "../0", "0.map"]:
+		var invalid := scene_packet(634,100,413,410,0)
+		invalid.append_array(encode_scene_bytes(bad.to_ascii_buffer()))
+		if not check(not hud.apply_scene_message(invalid,keys), "拒绝空编号和路径型地图编号"): return
+	var missing := scene_packet(634,100,413,410,0)
+	missing.append_array(encode_scene_bytes("missing_map_987654".to_ascii_buffer()))
+	if not check(hud.apply_scene_message(missing,keys), "合法消息可以排队等待资源加载"): return
+	await process_frame
+	await process_frame
+	if not check(completed.back()==[634,"missing_map_987654",false] and hud.hud_snapshot().map_id=="01" and hud.hud_snapshot().map_series==2, "加载失败通知与消息接收成功区分，原场景保留"): return
+	var back := scene_packet(634,100,origin.x,origin.y,0)
+	back.append_array(encode_scene_bytes("0".to_ascii_buffer()))
+	hud.apply_scene_message(back,keys)
+	await process_frame
+	await process_frame
+	if not check(hud.set_scene_human(5,origin+Vector2i(-2,1),4,1,"比奇旅人") and hud.set_scene_npc(2,Vector2i(413,409),110), "切图后加入人物及 NPC"): return
+	if not check(hud.apply_npc_dialogue(643,2,"老黄/<购买药品/@buy>"), "显示名称更新前打开 NPC 对话"): return
+	var rename := scene_text_packet(54,0,0,0,PackedByteArray([177,200,198,230,202,161]))
+	if not check(hud.apply_scene_message(rename,keys), "54 更新为比奇省名称"): return
+	if not check(hud.hud_snapshot().map_name=="比奇省" and hud.hud_snapshot().scene_human_cells.has(5) and hud.hud_snapshot().npc_dialogue_actor==2, "54 不清理人物或关闭对话"): return
+	var excessive := scene_text_packet(54,0,0,0,"x".repeat(260).to_ascii_buffer())
+	if not check(not hud.apply_scene_message(excessive,keys) and hud.hud_snapshot().map_name=="比奇省", "拒绝超出名称缓冲区的载荷"): return
+	if not await capture("map-wire-description"): return
+	hud.queue_free()
+	await process_frame
+	await process_frame
+	print("PASS 地图原始消息：排队切图、独立名称、字段和失败通知")
+	quit()
 
 func run_actor_light() -> void:
 	var keys := PackedByteArray([18,52,86,120])
@@ -917,6 +963,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--map-wire"):
+		await run_map_wire()
+		return
 	if OS.get_cmdline_user_args().has("--actor-light"):
 		await run_actor_light()
 		return
@@ -1094,7 +1143,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light") or OS.get_cmdline_user_args().has("--map-wire"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

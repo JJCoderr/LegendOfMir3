@@ -18,6 +18,7 @@
 #include "hud/audio_options.hpp"
 #include "hud/portrait_picker.hpp"
 #include "resources/map_terrain.hpp"
+#include "protocol/map_message.hpp"
 #include "hud/target_portrait.hpp"
 #include "inventory/inventory_panel.hpp"
 #include "inventory/inventory_grid.hpp"
@@ -326,6 +327,8 @@ private:
     void draw_hud_base();
     void reset_map_overlays();
     godot::String map_directory, current_map_id="0";
+    std::deque<mir3::MapChangeMessage> map_changes;
+    int map_series=0;
     mir3::MapTerrain terrain;
     std::array<mir3::WilArchive,75> terrain_archives;
     bool animated_map_objects=false;

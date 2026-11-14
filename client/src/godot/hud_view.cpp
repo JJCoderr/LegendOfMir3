@@ -97,6 +97,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_npc_body","opcode","actor","count","encoded"),&Mir3HudView::apply_npc_body);
     ClassDB::bind_method(D_METHOD("apply_npc_dialogue","opcode","actor","body"),&Mir3HudView::apply_npc_dialogue);
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
+    ADD_SIGNAL(MethodInfo("map_change_finished",PropertyInfo(Variant::INT,"opcode"),PropertyInfo(Variant::STRING,"map_id"),PropertyInfo(Variant::BOOL,"success")));
     ClassDB::bind_method(D_METHOD("set_local_actor_identity","actor"),&Mir3HudView::set_local_actor_identity);
     ClassDB::bind_method(D_METHOD("change_map","map_id","name","spawn","ambient_mode"),&Mir3HudView::change_map,DEFVAL(0));
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
@@ -283,6 +284,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["scene_ambient"]=scene_ambient.level();
     result["scene_ambient_mode"]=scene_ambient.mode;
     result["scene_ambient_fading"]=scene_ambient.fading;
+    result["pending_map_changes"]=int(map_changes.size());
+    result["map_series"]=map_series;
     result["map_id"]=current_map_id;
     result["map_name"]=String::utf8(model.map_name.c_str());
     result["player_cell"]=player_cell;
@@ -1945,9 +1948,23 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (encoded.size()<16 || encoded.size()>1039) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),static_cast<std::size_t>(encoded.size())},
         {key.ptr(),static_cast<std::size_t>(key.size())});
-    if (!header || header->recognition>INT_MAX) return false;
+    if (!header || (header->recognition>INT_MAX && header->opcode!=51 && header->opcode!=634 && header->opcode!=54)) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
+    if (opcode==51 || opcode==634 || opcode==54) {
+        const auto decoded=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
+        if (!decoded) return false;
+        if (opcode==54) {
+            const auto ansi=decoded->substr(0,decoded->find(char(0)));
+            if (ansi.size()>259) return false;
+            // 0x4282C0: description changes do not reset the map or its overlays.
+            model.map_name=mir3::ansi_to_utf8(ansi);
+            queue_redraw();return true;
+        }
+        const auto message=mir3::MapChangeMessage::parse(opcode,p,*decoded);
+        if (!message || map_changes.size()>=99999) return false;
+        map_changes.push_back(*message);return true;
+    }
     if (opcode==807) {
         if (encoded.size()!=16 || actor<=0) return false;
         const unsigned light=p[2]>>8;
@@ -2876,6 +2893,17 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
+    // Snapshot the count: synchronous signal callbacks enqueue for the next update.
+    const auto maps_to_process=map_changes.size();
+    for (std::size_t i=0;i<maps_to_process;++i) {
+        const auto message=std::move(map_changes.front());map_changes.pop_front();
+        const auto id=String::utf8(message.map_id.c_str());
+        const auto name=model.map_name.empty()?id:String::utf8(model.map_name.c_str());
+        const bool success=change_map(id,name,Vector2i(message.x,message.y),message.ambient);
+        if (success) map_series=message.series;
+        emit_signal("map_change_finished",message.opcode,id,success);
+    }
+
     if (scene_ambient.fading) { scene_ambient.advance(delta*1000);queue_redraw(); }
     // Default object messages are processed outside each actor's animation queue.
     if (scene_clear_pending) {
@@ -5435,17 +5463,15 @@ bool Mir3HudView::request_trade() {
 
 bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn,int ambient_mode) {
     // Decode into a temporary map: failure must not destroy the live scene.
-    if (ambient_mode<0 || ambient_mode>255 || !terrain_ready || map_id.is_empty() || name.is_empty() || map_id.length()>64) return false;
-    for (int i=0;i<map_id.length();++i) {
-        const auto c=map_id[i];
-        if (!((c>='0' && c<='9') || (c>='A' && c<='Z') || (c>='a' && c<='z') || c=='_' || c=='-')) return false;
-    }
+    if (ambient_mode<0 || ambient_mode>255 || !terrain_ready || name.is_empty() ||
+        !mir3::valid_map_id(map_id.utf8().get_data())) return false;
     mir3::MapTerrain next;
     if (!next.open(std::filesystem::u8path(map_directory.path_join(map_id+".map").utf8().get_data())) ||
         !next.walkable(spawn.x,spawn.y)) return false;
     terrain=std::move(next);
     scene_ambient.enter(static_cast<std::uint8_t>(ambient_mode));
     current_map_id=map_id;
+    map_series=0;
     while (!scene_humans.empty()) remove_scene_actor(scene_humans.begin()->first);
     while (!scene_npcs.empty()) remove_scene_actor(scene_npcs.begin()->first);
     while (!scene_chickens.empty()) remove_scene_actor(scene_chickens.begin()->first);

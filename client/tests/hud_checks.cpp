@@ -3,6 +3,7 @@
 #include "hud/ground_items.hpp"
 #include "hud/scene_lighting.hpp"
 #include "protocol/receive_message.hpp"
+#include "protocol/map_message.hpp"
 #include "chat/scene_chat.hpp"
 #include "hud/human_actions.hpp"
 #include "hud/scene_human_queue.hpp"
@@ -26,6 +27,16 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--map-wire") {
+            const auto message=mir3::MapChangeMessage::parse(634,{312,310,0x0301},"01");
+            check(message && message->x==312 && message->y==310 && message->ambient==1 && message->series==3,"地图消息独立解析坐标、亮度及地图状态");
+            check(mir3::MapChangeMessage::parse(51,{0,0,0},std::string("0\0ignored",9))->map_id=="0","地图文件名按 NUL 终止");
+            for (const auto* id:{"","../0","a/b","a\\b","G:0","0.map"})
+                check(!mir3::MapChangeMessage::parse(51,{0,0,0},id),"拒绝空编号、路径及扩展名");
+            check(mir3::valid_map_id("A_01-2") && mir3::valid_map_id(std::string(64,'a')) && !mir3::valid_map_id(std::string(65,'a')),"地图编号字符和长度边界");
+            check(!mir3::MapChangeMessage::parse(54,{0,0,0},"0"),"名称消息不能作为地图切换");
+            std::cout << "MAP_WIRE_MODEL_OK\n";return 0;
+        }
         if (std::filesystem::path(argv[1])=="--scene-light") {
             mir3::SceneAmbient light;
             light.update(2);light.advance(49);check(light.half_level==510,"timer waits 50ms");
