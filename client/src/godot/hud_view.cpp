@@ -2095,6 +2095,25 @@ const Mir3HudView::MapActorFrame* Mir3HudView::monster_frame(int shape,int relat
         Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions}).first->second;
 }
 
+bool Mir3HudView::refresh_monster_shape(SceneChicken& monster,int shape,int action) {
+    if (shape!=20 && shape!=21 && shape!=23 && shape!=119) return false;
+    if (action<0) {
+        action=monster.skeleton?880:monster.death_frame>=0?320:
+            monster.struck_frame>=0?240:monster.walk_frame>=0?80:0;
+    }
+    const int direction=10*monster.facing;
+    const int count=action==880?1:action==320?10:action==240?2:action==80?6:4;
+    for (int i=0;i<4;++i)
+        if (!monster_frame(shape,direction+i)) return false;
+    for (int i=0;i<count;++i)
+        if (!monster_frame(shape,action+direction+i)) return false;
+    if (monster.shape!=shape) {
+        monster.shape=shape;
+        for (int i=0;i<4;++i) monster.frames[i]=*monster_frame(shape,direction+i);
+    }
+    return true;
+}
+
 void Mir3HudView::update_monster_bar_status(int actor,bool status_bit) {
     auto& health=scene_health[actor];
     health.status_tick=status_bit?std::uint32_t(ticks_msec()):0;
@@ -2431,18 +2450,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
         if (!body || body->size()!=16 || (*body)[0]!=3 || (*body)[3]!=0) return false;
         const int shape=std::uint8_t((*body)[2]);
-        if (shape!=20 && shape!=21 && shape!=23 && shape!=119) return false;
-        auto& monster=scene_chickens.at(actor);
-        const int direction=10*monster.facing;
-        for (int i=0;i<4;++i)
-            if (!monster_frame(shape,direction+i)) return false;
-        const int action=monster.skeleton?880:monster.death_frame>=0?320:
-            monster.struck_frame>=0?240:monster.walk_frame>=0?80:0;
-        const int count=monster.skeleton?1:action==320?10:action==240?2:action==80?6:4;
-        for (int i=0;i<count;++i)
-            if (!monster_frame(shape,action+direction+i)) return false;
-        monster.shape=shape;
-        for (int i=0;i<4;++i) monster.frames[i]=*monster_frame(shape,direction+i);
+        if (!refresh_monster_shape(scene_chickens.at(actor),shape)) return false;
         update_monster_bar_status(actor,((*body)[4]&2)!=0);
         return true;
     }
@@ -2472,10 +2480,12 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     }
     if (opcode==mir3::protocol::SM_HUMAN_STRUCK && scene_chickens.contains(actor)) {
         const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
-        if (!body || body->size()!=16 || (*body)[0]!=3 || (*body)[2]!=scene_chickens.at(actor).shape || (*body)[3]!=0) return false;
+        if (!body || body->size()!=16 || (*body)[0]!=3 || (*body)[3]!=0) return false;
         auto& chicken=scene_chickens.at(actor);
-        if (chicken.death_frame<0 && p[0] && p[2]) {
-            for (int i=0;i<2;++i) if (!monster_frame(chicken.shape,240+10*chicken.facing+i)) return false;
+        const int shape=std::uint8_t((*body)[2]);
+        if (chicken.death_frame<0) {
+            const int action=!p[0]?320:p[2]?240:-1;
+            if (!refresh_monster_shape(chicken,shape,action)) return false;
         }
         mir3::SceneHumanMessage hit{};
         hit.opcode=opcode;
@@ -2487,7 +2497,6 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
             if (variant<=65535-400) show_map_impact(400+variant,chicken.cell);
         }
         if (!p[0]) {
-            for (int i=0;i<10;++i) if (!monster_frame(chicken.shape,320+10*chicken.facing+i)) return false;
             chicken.walk_frame=-1;
             chicken.struck_frame=-1;
             chicken.turns.clear();

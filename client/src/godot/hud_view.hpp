@@ -497,6 +497,7 @@ private:
     bool place_scene_chicken(int actor,godot::Vector2i cell,int facing,int shape=20,unsigned light=0);
     bool move_scene_chicken(int actor,SceneChicken::Turn turn);
     void update_monster_bar_status(int actor,bool status_bit);
+    bool refresh_monster_shape(SceneChicken& monster,int shape,int action=-1);
     void play_animal_call(int actor,SceneChicken& animal);
     struct SceneHuman : SceneActor {
         int profession=0, type=0, clothing=0, hair=0, weapon=0;

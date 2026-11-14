@@ -286,9 +286,12 @@ func run() -> void:
 	if not check(hud.hud_snapshot().scene_chicken_cells[9]==cell
 		and hud.hud_snapshot().scene_chicken_bounds[9]!=pig_live,"同一对象在原格更换图像"): return
 	if not await capture("map-monster-feature-change"): return
-	transform=game_reply(Mir3HudView.SM_FEATURECHANGED,9,0,0,0)
+	transform=game_reply(Mir3HudView.SM_HUMAN_STRUCK,9,8,10,2)
 	transform.append_array(encode_scene_bytes(feature))
-	if not check(hud.apply_game_message(transform),"用41号包恢复猪外观"): return
+	if not check(hud.apply_game_message(transform) and hud.hud_snapshot().scene_chicken_struck[9]==0
+		and hud.hud_snapshot().scene_health_values[9][0]==8,"受击包恢复猪外观、更新生命并进入受击动作"): return
+	if not await capture("map-pig-transformed-hit"): return
+	await settle(0.8)
 	var pig_walk := game_reply(Mir3HudView.SM_TURN,9,origin.x,origin.y,0)
 	pig_walk.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(pig_walk) and hud.hud_snapshot().scene_chicken_steps[9]==0,"猪进入行走动作"): return
