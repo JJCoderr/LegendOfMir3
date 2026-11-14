@@ -198,3 +198,6 @@ CM_GROUPMODE参数一为允许标志；创建/增加/删除成员使用独立正
 
 ## 行会协议联调依据
 原版F键/底栏请求CM_GUILDHOME；主页回包753、续包773/774，成员756/775/776。公告和封号正文使用ANSI及CR；成员增删成功触发客户端再次查询。联盟OK/FAIL共享负数原因提示分支，不可只按消息名判断结果。详情client/docs/evidence/guild-wire.md。
+
+## 界面命令
+选项、聊天拒绝、骑马及解除联盟采用CM_SAY零头参数+ANSI正文，保留原资源空格。收到命令后需由状态回包确认，客户端只预测部分按钮。界面命令与输入框本地指令分流依据见client/docs/evidence/ui-chat-commands.md。

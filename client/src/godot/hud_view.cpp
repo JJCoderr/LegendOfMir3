@@ -3927,6 +3927,11 @@ bool Mir3HudView::scroll_input(int kind,Vector2 position) {
 }
 std::string Mir3HudView::message(int id) const { return mir3::ansi_to_utf8(messages.get(id)); }
 void Mir3HudView::chat_requested(String value) { emit_signal("chat_requested",value); }
+void Mir3HudView::send_chat_command(String value) {
+    // 0x47CA80：界面命令直接发送；不经过0x427400的输入框本地指令分支。
+    chat_requested(value);
+    send_client_packet(mir3::protocol::CM_SAY,0,value);
+}
 bool Mir3HudView::update_chat_rejection(int channel,bool rejected) {
     if (channel<0 || channel>=3) return false;
     // State producer is external. The recovered click path reads these flags;
@@ -4463,7 +4468,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         }
         if (action>=20 && action<=22) {
             const int id=reception_buttons.press(action,rejected_chat[action-20]);
-            chat_requested(String::utf8(message(id).c_str()));
+            send_chat_command(String::utf8(message(id).c_str()));
         }
         if (action==0) request_trade();
         if (action==1) toggle_minimap(100);
@@ -5592,7 +5597,7 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
         send_client_packet(mir3::protocol::CM_GUILDMEMBERLIST,0,String());
     } else if (request==mir3::protocol::CM_GUILDBREAKALLY) {
         const auto command=String::utf8(message(4016).c_str())+name;
-        chat_requested(command);send_client_packet(mir3::protocol::CM_SAY,0,command);
+        send_chat_command(command);
         emit_signal("guild_overview_requested");
         send_client_packet(mir3::protocol::CM_GUILDHOME,0,String());
     } else {
@@ -6089,10 +6094,10 @@ bool Mir3HudView::options_pointer(int kind,Vector2 point) {
         local_toggle(system_options.user_photos,430,295,2132,2131);
         for (int i=0;i<7;++i) if (hit(1292,system_options.toggle_x[i],system_options.toggle_y[i])) {
             control=true;
-            if (kind==2) chat_requested(String::utf8(message(system_options.request(i)).c_str()));
+            if (kind==2) send_chat_command(String::utf8(message(system_options.request(i)).c_str()));
         }
         if (hit(1296,430,265)) {
-            control=true;if (kind==2) chat_requested(String::utf8(message(1422).c_str()));
+            control=true;if (kind==2) send_chat_command(String::utf8(message(1422).c_str()));
         }
         toggle(audio_options.reverse_pan,430,205);
         for (int i=0;i<2;++i) {
@@ -6439,7 +6444,7 @@ bool Mir3HudView::mount_pointer(int kind,Vector2 position) {
             if (hud_sound && audio_options.effects_enabled) hud_sound->play();
             if (hit==0) toggle_mount();
             else if (const int command=mount.command(hit);command!=0)
-                chat_requested(String::utf8(message(command).c_str()));
+                send_chat_command(String::utf8(message(command).c_str()));
         }
     }
     if (!inside && !captured) return false;

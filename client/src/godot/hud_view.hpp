@@ -667,6 +667,7 @@ private:
     std::array<bool,3> rejected_chat{};
     Mir3ChatInput* chat_input=nullptr;
     void chat_requested(godot::String value);
+    void send_chat_command(godot::String value);
     bool loaded=false;
     std::map<int,godot::Ref<godot::ImageTexture>> frames;
     std::map<int,godot::Ref<godot::ImageTexture>> portrait_frames;
