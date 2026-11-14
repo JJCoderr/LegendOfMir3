@@ -4054,6 +4054,7 @@ void Mir3HudView::_process(double delta) {
         exit_layer->queue_redraw();
     }
     advance_level_effects(delta*1000);
+    const bool advancing_level=!player_level_action.finished();
     if (walk_frame>=0) player_level_action={};
     player_level_action.advance(std::uint32_t(delta*1000));
     map_input_delay.advance(delta*1000);
@@ -4145,7 +4146,7 @@ void Mir3HudView::_process(double delta) {
         queue_redraw();
     }
     if (terrain_ready) {
-        if (walk_frame>=0) player_idle.reset();
+        if (walk_frame>=0 || advancing_level) player_idle.reset();
         else player_idle.advance(delta*1000);
     }
     if (portrait_map_visible && !model.layout.expanded) {

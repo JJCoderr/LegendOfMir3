@@ -1,4 +1,4 @@
-# 测试内容：原资源升级特效、本地等级经验和提示、远端升级隔离、无效分支、并行效果、末帧光尾及结束回收。
+# 测试内容：原资源升级特效、本地等级经验和提示、远端升级隔离、无效分支、并行效果、末帧光尾、移动中升级、骑乘恢复及结束回收。
 extends "login_smoke.gd"
 
 func run() -> void:
@@ -40,6 +40,23 @@ func run() -> void:
 	await settle()
 	if not await capture("level-up-status"): return
 	key(KEY_Q)
+	if not check(hud.set_player_body(0,1) and hud.set_player_mount(1) and hud.set_scene_human_mount(5,1),"本地和远端骑乘"): return
+	if not check(hud.walk_to_map_cell(origin+Vector2i(0,1)),"开始骑乘移动"): return
+	await settle(0.1)
+	if not check(hud.hud_snapshot().walk_frame>=0,"升级发生在移动中"): return
+	var upgrade_cell: Vector2i = hud.hud_snapshot().player_cell
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_LEVELUP,215000,44,0,0)) and hud.apply_game_message(game_reply(Mir3HudView.SM_LEVELUP,5,44,0,1)),"移动与骑乘升级"): return
+	state=hud.hud_snapshot()
+	if not check(state.walk_frame==-1 and state.player_mount==1 and state.scene_human_mounts[5]==1 and state.level_effects[0].cell==upgrade_cell,"升级切换动作但保留坐骑"): return
+	await settle(0.7)
+	state=hud.hud_snapshot()
+	if not check(not state.player_level_action and state.scene_human_actions[5].x==-1 and state.player_mount==1 and state.scene_human_mounts[5]==1,"动作结束恢复骑乘"): return
+	if not await capture("level-up-mounted"): return
+	if not check(hud.walk_to_map_cell(upgrade_cell+Vector2i(0,1)),"升级后继续移动"): return
+	await settle(0.08)
+	state=hud.hud_snapshot()
+	if not check(not state.level_effects.is_empty() and state.level_effects[0].cell==upgrade_cell,"升级特效保留发生地点"): return
+	if not check(hud.set_player_mount(0),"恢复步行"): return
 	if not check(hud.change_map("0","比奇省",origin,1),"夜间照明场景"): return
 	await settle()
 	var baseline: PackedColorArray = hud.hud_snapshot().scene_light_samples
