@@ -381,6 +381,14 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["expanded"]=model.layout.expanded;
     result["quest_first"]=quest.first;
     result["quest_selected"]=quest.selected;
+    PackedStringArray quest_titles;
+    PackedInt32Array quest_completion;
+    for(const auto& entry:quest.entries) {
+        quest_titles.append(String::utf8(entry.title.c_str()));
+        quest_completion.append(entry.completed?1:0);
+    }
+    result["quest_titles"]=quest_titles;
+    result["quest_completed"]=quest_completion;
     result["trade_scroll"]=Vector2i(trade_scroll.first[0],trade_scroll.first[1]);
     result["trade_gold_pending"]=trade_gold_pending;
     PackedInt32Array trade_item_counts;
@@ -2935,7 +2943,8 @@ void Mir3HudView::clear_game_scene() {
     close_npc_dialogue();shop_offer_index=-1;shop_offer_page=0;shop_offer_loading=false;
     last_merchant_request=0;merchant_click_captured=false;
     inventory.visible=status.visible=skills.visible=group.visible=guild.visible=false;
-    options.visible=portrait_panel.visible=mount.visible=quest.visible=trade.visible=false;
+    quest={};
+    options.visible=portrait_panel.visible=mount.visible=trade.visible=false;
     minimap.visible=false;
     if (map_music) { map_music->stop();map_music->set_stream(Ref<AudioStream>()); }
     if (footstep_sound) footstep_sound->stop();
@@ -3158,6 +3167,26 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    if(header->opcode==mir3::protocol::SM_QUEST_LIST || header->opcode==mir3::protocol::SM_QUEST_ADDED) {
+        constexpr auto offset=mir3::ReceiveHeader::encoded_size;
+        auto records=mir3::decode_quest_list(*header,{encoded.ptr()+offset,std::size_t(encoded.size()-offset)});
+        if(!records) return false;
+        const bool full=header->opcode==mir3::protocol::SM_QUEST_LIST;
+        if(!full) {
+            post_chat(String::utf8(message(1433).c_str()),mir3::chat_palette(2),mir3::chat_palette(3));
+            if(!quest.list_initialized) {
+                send_client_packet(mir3::protocol::CM_QUERYQUESTLIST,0,String());
+                return true;
+            }
+        }
+        for(auto& record:*records) {
+            record.title=mir3::ansi_to_utf8(record.title);
+            record.summary=mir3::ansi_to_utf8(record.summary);
+        }
+        quest.sync_list(std::move(*records),full);
+        queue_redraw();
+        return true;
+    }
     switch(header->opcode) {
     case mir3::protocol::SM_TRADE_OPEN:case mir3::protocol::SM_TRADE_OPEN_FAIL:
     case mir3::protocol::SM_TRADE_ADD_OK:case mir3::protocol::SM_TRADE_ADD_FAIL:
@@ -6864,10 +6893,8 @@ bool Mir3HudView::set_quest_entries(PackedStringArray titles,PackedInt32Array co
     quest.entries.reserve(titles.size());
     for (int64_t i=0;i<titles.size();++i)
         quest.entries.push_back({titles[i].utf8().get_data(),completed[i]!=0});
-    quest.selected=-1;
-    quest.expanded=-1;
-    quest.first=0;
-    quest.scroll_captured=false;
+    quest.list_initialized=false;
+    quest.reset_list_view();
     queue_redraw();
     return true;
 }
@@ -6902,7 +6929,11 @@ void Mir3HudView::toggle_quest() {
     quest.toggle();
     quest.scroll_captured=false;
     quest.pressed=-1;
-    if (quest.visible) raise_panel(Panel::quest);
+    if (quest.visible) {
+        raise_panel(Panel::quest);
+        if (!quest.list_initialized && quest.entries.empty())
+            send_client_packet(mir3::protocol::CM_QUERYQUESTLIST,0,String());
+    }
     queue_redraw();
 }
 

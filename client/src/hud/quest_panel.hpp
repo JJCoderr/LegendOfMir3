@@ -1,5 +1,6 @@
 #pragma once
 #include "inventory/inventory_panel.hpp"
+#include "protocol/quest_wire.hpp"
 #include <string>
 #include <vector>
 
@@ -17,8 +18,36 @@ struct QuestPanel : DraggablePanel {
         std::vector<std::string> details;
         enum class Detail { idle, pending, received };
         Detail detail=Detail::idle;
+        std::optional<QuestRecord> wire;
     };
     std::vector<Entry> entries;
+    bool list_initialized=false;
+
+    void reset_list_view() {
+        selected=expanded=-1;
+        first=0;
+        scroll_captured=false;
+    }
+
+    void sync_list(std::vector<QuestRecord> records,bool full) {
+        if(full) {
+            entries.clear();
+            list_initialized=!records.empty();
+        }
+        for(auto& record:records) {
+            if(!full && std::ranges::any_of(entries,[&](const Entry& entry) {
+                return entry.wire && entry.wire->id==record.id;
+            })) break;
+            Entry entry;
+            entry.title=record.title;
+            entry.completed=record.completed;
+            entry.wire=std::move(record);
+            entries.push_back(std::move(entry));
+        }
+        std::ranges::stable_sort(entries,{},[](const Entry& entry){return entry.wire->id;});
+        reset_list_view();
+    }
+
     int pressed=-1, selected=-1, expanded=-1, first=0;
 
     static constexpr int scroll_x=272, scroll_top=160, scroll_travel=182;
