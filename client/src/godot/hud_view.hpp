@@ -31,6 +31,7 @@
 #include <tuple>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/audio_stream_player.hpp>
+#include <godot_cpp/classes/audio_stream_wav.hpp>
 #include <godot_cpp/classes/text_edit.hpp>
 
 class Mir3HudView : public godot::Node2D {
@@ -187,6 +188,8 @@ private:
     void sync_hud_sound();
     godot::AudioStreamPlayer* map_music=nullptr;
     godot::AudioStreamPlayer* footstep_sound=nullptr;
+    std::map<int,godot::Ref<godot::AudioStreamWAV>> movement_sounds;
+    int last_movement_sound=0;
     godot::StringName footstep_bus;
     godot::String audio_root,music_file;
     godot::PackedByteArray music_table;

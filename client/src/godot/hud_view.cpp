@@ -208,7 +208,11 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["map_camera_pixel"]=map_camera();
     result["map_player_pixel"]=player_pixel();
     const auto movement=step_destination-step_origin;
-    result["map_running"]=walk_frame>=0 && std::max(std::abs(movement.x),std::abs(movement.y))==2;
+    result["map_running"]=walk_frame>=0 && std::max(std::abs(movement.x),std::abs(movement.y))>1;
+    result["map_step_distance"]=std::max(std::abs(movement.x),std::abs(movement.y));
+    result["map_step_origin"]=step_origin;
+    result["map_step_destination"]=step_destination;
+    result["last_movement_sound"]=last_movement_sound;
     result["character_portrait"]=model.portrait_frame();
     result["target_portrait"]=model.layout.expanded || !target_focus.displayed() || target_portrait.is_null()?-1:target_frame;
     result["target_hp_width"]=!model.layout.expanded && target_focus.displayed() && !target_is_human && target_portrait.is_valid()?target_vitals.bar_width():0;
@@ -352,7 +356,9 @@ void Mir3HudView::_ready() {
         map_npc.open(resource_root/"Data"/"NPC");
         map_chickens.open(resource_root/"Data"/"Mon-3");
         set_scene_npc(2,Vector2i(413,409),110);
-        const auto footstep=AudioStreamWAV::load_from_file(audio_root.path_join("1.wav"));
+        for (const int sample:{1,33,34,35})
+            movement_sounds.emplace(sample,AudioStreamWAV::load_from_file(audio_root.path_join(String::num_int64(sample)+".wav")));
+        const auto footstep=movement_sounds.at(1);
         if (footstep.is_valid()) {
             footstep_sound=memnew(AudioStreamPlayer);
             footstep_sound->set_name("FootstepSound");
@@ -1771,8 +1777,12 @@ void Mir3HudView::advance_map_step(double delta) {
     if (movement_ms<=95) return;
     movement_ms=0;
     ++walk_frame;
-    // 0x410DF0 plays sample 1 on frames 1 and 4 for walking and running.
-    if ((walk_frame==1 || walk_frame==4) && footstep_sound && audio_options.effects_enabled) {
+    // mir3_1.45 HumanActions::movement_sound (0x410DF0).
+    const auto step=step_destination-step_origin;
+    const bool running=std::max(std::abs(step.x),std::abs(step.y))>1;
+    const int sample=player_mount?(running?(walk_frame==3?35:0):(walk_frame==1?33:walk_frame==4?34:0)):
+        (walk_frame==1 || walk_frame==4?1:0);
+    if (sample && footstep_sound && audio_options.effects_enabled && movement_sounds.at(sample).is_valid()) {
         const auto camera=map_camera();
         const auto mix=mir3::SoundPosition::from_view(player_cell.x*48-camera.x,player_cell.y*32-camera.y);
         const int volume=mix.volume+mir3::AudioOptions::volume(audio_options.effects_level);
@@ -1785,7 +1795,9 @@ void Mir3HudView::advance_map_step(double delta) {
                 panner->set_pan((mix.pan<0?-1.f:1.f)*(audio_options.reverse_pan?-1.f:1.f)*magnitude);
             }
             footstep_sound->set_volume_db(mix.volume/100.f);
+            footstep_sound->set_stream(movement_sounds.at(sample));
             footstep_sound->play();
+            last_movement_sound=sample;
         }
     }
     if (walk_frame==(player_facing==7?4:1)) {

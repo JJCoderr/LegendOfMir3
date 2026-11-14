@@ -54,6 +54,76 @@ func capture(name: String) -> bool:
 	print("SCREENSHOT: ", directory.path_join(name + ".png"))
 	return true
 
+func local_movement_click(direction: Vector2i, pressed: bool) -> void:
+	var state: Dictionary = hud.hud_snapshot()
+	var target: Vector2i = state.player_cell + direction * 6
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_RIGHT
+	event.position = Vector2(target.x * 48, target.y * 32) - Vector2(state.map_camera_pixel) + Vector2(1, 1)
+	event.pressed = pressed
+	root.push_input(event, true)
+
+func wait_for_following_step(origin: Vector2i) -> bool:
+	var deadline := Time.get_ticks_msec() + 2500
+	while Time.get_ticks_msec() < deadline:
+		var state: Dictionary = hud.hud_snapshot()
+		if state.walk_frame >= 0 and state.map_step_origin != origin:
+			return true
+		await process_frame
+	return check(false, "held right button starts the following step")
+
+func run_local_mount() -> void:
+	hud.set_meta("options_path", "user://local-mount-%d.ini" % OS.get_process_id())
+	hud.set_meta("map_spawn_cell", Vector2i(413, 410))
+	root.add_child(hud)
+	hud.set_character_vitals(100, 100, 100, 100, 0, 100)
+	if not check(hud.set_player_body(0, 1) and hud.set_player_mount(1), "prepare local rider"): return
+	var direction := Vector2i.ZERO
+	var origin: Vector2i = hud.hud_snapshot().player_cell
+	for candidate in [Vector2i.DOWN, Vector2i.RIGHT, Vector2i(1, 1), Vector2i.LEFT]:
+		var clear := true
+		for distance in range(1, 13):
+			if not hud.set_scene_human(900, origin + candidate * distance, 4, 0, ""):
+				clear = false
+				break
+		hud.remove_scene_actor(900)
+		if clear:
+			direction = candidate
+			break
+	if not check(direction != Vector2i.ZERO, "find a traversable local movement corridor"): return
+	local_movement_click(direction, true)
+	if not await wait_for_following_step(origin): return
+	var state: Dictionary = hud.hud_snapshot()
+	if not check(state.map_step_distance == 3 and state.map_running
+		and state.last_movement_sound == 34, "riding walk uses hoof samples before three-cell running"): return
+	local_movement_click(direction, false)
+	if not await capture("bichon-local-mounted-running"): return
+	await create_timer(0.8).timeout
+	state = hud.hud_snapshot()
+	if not check(state.player_cell == origin + direction * 4 and state.walk_frame == -1
+		and state.last_movement_sound == 35, "local horse run settles and uses running hoof sound"): return
+	origin = state.player_cell
+	if not check(hud.set_scene_human(901, origin + direction * 3, 4, 0, "挡路旅人"), "place blocker inside next run"): return
+	local_movement_click(direction, true)
+	if not await wait_for_following_step(origin): return
+	if not check(hud.hud_snapshot().map_step_distance == 1, "horse cannot run across an occupied intermediate cell"): return
+	local_movement_click(direction, false)
+	await create_timer(0.8).timeout
+	if not check(hud.hud_snapshot().player_cell == origin + direction * 2, "blocked run falls back to one safe step"): return
+	hud.remove_scene_actor(901)
+	if not check(hud.set_player_mount(0), "dismount locally"): return
+	origin = hud.hud_snapshot().player_cell
+	local_movement_click(direction, true)
+	if not await wait_for_following_step(origin): return
+	if not check(hud.hud_snapshot().map_step_distance == 2, "dismount restores two-cell running"): return
+	local_movement_click(direction, false)
+	await create_timer(0.8).timeout
+	if not check(hud.hud_snapshot().player_cell == origin + direction * 3
+		and hud.hud_snapshot().last_movement_sound == 1, "dismount restores footstep sound"): return
+	if not await capture("bichon-local-dismounted"): return
+	print("LOCAL_MOUNT_OK")
+	quit()
+
 func run_scene_actor_removal() -> void:
 	hud.set_meta("options_path", "user://scene-removal-%d.ini" % OS.get_process_id())
 	hud.set_meta("map_spawn_cell", Vector2i(413, 410))
@@ -197,6 +267,9 @@ func run() -> void:
 	hud = load("res://main.tscn").instantiate()
 	root.size = Vector2i(800, 600)
 	Input.use_accumulated_input = false
+	if OS.get_cmdline_user_args().has("--local-mount"):
+		await run_local_mount()
+		return
 	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step"):
 		await run_scene_actor_removal()
 		return
