@@ -276,6 +276,19 @@ func run() -> void:
 	if not check(hud.hud_snapshot().displayed_name_actor==9 and hud.hud_snapshot().displayed_name_color==255,
 		"悬停显示入场包中的名称颜色"): return
 	if not await capture("map-pig-name"): return
+	# 41号包只刷新原对象外观，先跨库切到半兽人再切回猪。
+	var transform_feature := feature.duplicate()
+	transform_feature[2]=23
+	var transform := game_reply(Mir3HudView.SM_FEATURECHANGED,9,0,0,0)
+	transform.append_array(encode_scene_bytes(transform_feature))
+	if not check(hud.apply_game_message(transform),"用41号包跨库更换怪物外观"): return
+	await settle()
+	if not check(hud.hud_snapshot().scene_chicken_cells[9]==cell
+		and hud.hud_snapshot().scene_chicken_bounds[9]!=pig_live,"同一对象在原格更换图像"): return
+	if not await capture("map-monster-feature-change"): return
+	transform=game_reply(Mir3HudView.SM_FEATURECHANGED,9,0,0,0)
+	transform.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(transform),"用41号包恢复猪外观"): return
 	var pig_walk := game_reply(Mir3HudView.SM_TURN,9,origin.x,origin.y,0)
 	pig_walk.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(pig_walk) and hud.hud_snapshot().scene_chicken_steps[9]==0,"猪进入行走动作"): return
