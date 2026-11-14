@@ -87,6 +87,20 @@ func run() -> void:
 	await settle(0.8)
 	if not check(hud.hud_snapshot().scene_chicken_cells[6]==cell and hud.hud_snapshot().scene_chicken_steps[6]==-1,
 		"走完两步后恢复站立"): return
+	# 第一段动作结束时还有三条消息，第二段首次换帧后按半间隔播放。
+	if not check(hud.apply_game_message(outward) and hud.apply_game_message(returning)
+		and hud.apply_game_message(outward) and hud.apply_game_message(returning),"连续入队四步"): return
+	for i in range(60):
+		await process_frame
+		if hud.hud_snapshot().scene_chicken_cells[6]==cell: break
+	if not check(hud.hud_snapshot().scene_chicken_steps[6]==0,"追帧动作仍从首帧开始"): return
+	for i in range(6): await process_frame
+	if not check(hud.hud_snapshot().scene_chicken_steps[6]==0,"首帧仍使用原始间隔"): return
+	for i in range(9): await process_frame
+	if not check(hud.hud_snapshot().scene_chicken_steps[6]>=2,"从第二帧起消化积压"): return
+	if not await capture("map-chicken-queue"): return
+	await settle(2.2)
+	if not check(hud.hud_snapshot().scene_chicken_steps[6]==-1,"连续动作全部结束"): return
 	var health := game_reply(Mir3HudView.SM_WALK,6,10,0,10)
 	if not check(hud.apply_game_message(health) and hud.hud_snapshot().scene_health_values[6][2]==10
 		and hud.hud_snapshot().scene_chicken_steps[6]==-1,"怪物11只更新血量"): return

@@ -472,6 +472,8 @@ private:
         int frame_base() const { return (shape-20)*1000; }
         int facing=6, death_frame=-1;
         int walk_frame=-1;
+        int walk_interval=130;
+        bool walk_catch_up=false;
         int struck_frame=-1;
         godot::Vector2i walk_origin;
         godot::Vector2i walk_pixel() const {

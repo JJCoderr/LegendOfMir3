@@ -2098,6 +2098,8 @@ bool Mir3HudView::move_scene_chicken(int actor,Vector2i cell,int facing,unsigned
     chicken.light_attribute=light;
     chicken.walk_frame=0;
     chicken.walk_ms=0;
+    chicken.walk_interval=130;
+    chicken.walk_catch_up=false;
     queue_redraw();
     return true;
 }
@@ -5384,18 +5386,22 @@ void Mir3HudView::_process(double delta) {
         }
         if (chicken.walk_frame>=0) {
             chicken.walk_ms+=delta*1000;
-            if (chicken.walk_ms>130) {
+            if (chicken.walk_ms>chicken.walk_interval) {
                 chicken.walk_ms=0;
-                if (++chicken.walk_frame>=6) {
+                ++chicken.walk_frame;
+                if (chicken.walk_frame==1 && chicken.walk_catch_up) chicken.walk_interval/=2;
+                if (chicken.walk_frame>=6) {
                     chicken.walk_frame=-1;
                 }
                 queue_redraw();
             }
         }
         if (!chicken.turns.empty() && chicken.walk_frame<0 && chicken.struck_frame<0) {
+            const bool catch_up=chicken.turns.size()>=3;
             const auto [cell,facing,light,backward]=chicken.turns.front();
             chicken.turns.pop_front();
-            move_scene_chicken(actor,cell,facing,light,backward);
+            if (move_scene_chicken(actor,cell,facing,light,backward) && chicken.walk_frame==0)
+                chicken.walk_catch_up=catch_up;
         }
         if (chicken.death_frame<0 || chicken.death_frame>=9 || chicken.skeleton) continue;
         chicken.death_ms+=delta*1000;
