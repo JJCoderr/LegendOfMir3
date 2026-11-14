@@ -64,3 +64,7 @@ Godot_v4.7.2-stable_win64_console.exe --path client/godot --script ../tests/hud_
 ### 角色物品布局
 
 CMake变量`MIR3_ITEM_LAYOUT_DIRECTORY`配置可写布局目录，默认`user://Data`，生成至resource_path.cfg的`storage/item_layout_directory`。每个角色保存独立的`.itms`，与原版163392字节格式兼容。原始WIL资源仍从`MIR3_RESOURCE_ROOT`读取，不复制、不写入资源目录。确认退出角色或关闭游戏时保存；收到完整背包后恢复格位与快捷引用，物品数量以服务器为准。证据及测试见[物品布局](docs/evidence/item-layout.md)。
+
+### 聊天日志
+
+`MIR3_CHAT_LOG_PATH`配置日志文件，默认`user://Chat.txt`，空字符串禁用文件输出；原始资源目录不写入。日志保留原版GBK和CRLF格式及两处独立追加分支，因此`@chatsave`不是通常的总开关，部分消息在开启时会出现两行。完整通道表见[聊天日志证据](docs/evidence/chat-log.md)。

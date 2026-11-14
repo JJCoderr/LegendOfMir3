@@ -237,3 +237,6 @@ CM_EAT recognition=MakeIndex，参数一计时低WORD、参数二0、参数三�
 
 ## 聊天历史菜单
 47B430数字键转发、43D760上下键、437210/437240及4378B0/4378E0选中与填入、4373E0/437A60绘制；435180初始化独立选中索引。详见client/docs/evidence/chat-shortcuts.md。菜单只填入文本，Enter继续使用既有CM_SAY分派，不新增协议。
+
+## 接收聊天日志
+42F380两处Chat.txt/ab写入分支，应用+72控制第一处分支；100排除第一处、104排除第二处。编码正文上限1024，写原ANSI加CRLF。详见client/docs/evidence/chat-log.md，不将原版重复行简化掉。

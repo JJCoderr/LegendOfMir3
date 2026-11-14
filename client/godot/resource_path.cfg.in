@@ -3,3 +3,4 @@ root="@MIR3_RESOURCE_ROOT@"
 
 [storage]
 item_layout_directory="@MIR3_ITEM_LAYOUT_DIRECTORY@"
+chat_log_path="@MIR3_CHAT_LOG_PATH@"

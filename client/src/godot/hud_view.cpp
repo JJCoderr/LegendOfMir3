@@ -546,6 +546,9 @@ void Mir3HudView::_ready() {
     }
     String root=config->get_value("resources","root","");
     item_layout_directory=ProjectSettings::get_singleton()->globalize_path(String(get_meta("item_layout_directory",config->get_value("storage","item_layout_directory","user://Data"))));
+    const String log_path=get_meta("chat_log_path",config->get_value("storage","chat_log_path","user://Chat.txt"));
+    chat_log_path=log_path.is_empty()?String():ProjectSettings::get_singleton()->globalize_path(log_path);
+    if(bool(get_meta("offline_preview",false)) && !has_meta("chat_log_path")) chat_log_path=String();
     // 离线测试须显式指定独立目录，避免写入玩家布局。
     if(bool(get_meta("offline_preview",false)) && !has_meta("item_layout_directory")) item_layout_directory=String();
     loaded=archive.open(std::filesystem::u8path(root.utf8().get_data())/"Data"/"GameInter");
@@ -2145,7 +2148,7 @@ bool Mir3HudView::set_local_actor_identity(int actor) {
 
 bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray key) {
     if (server_groups.visible || login_visible || character_selection.visible) return false;
-    if (encoded.size()<16 || encoded.size()>1039) return false;
+    if (encoded.size()<mir3::ReceiveHeader::encoded_size || encoded.size()>mir3::ReceiveHeader::encoded_size+mir3::ChatLog::max_encoded_text) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),static_cast<std::size_t>(encoded.size())},
         {key.ptr(),static_cast<std::size_t>(key.size())});
     if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS)) return false;
@@ -2217,17 +2220,19 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     }
     if (opcode==mir3::protocol::SM_CHANGENAMECOLOR) return size==0 && apply_scene_name(actor,opcode,p[0]&255,String());
     if (opcode==mir3::protocol::SM_USERNAME || mir3::chat_opcode(opcode)) {
+        if(mir3::chat_opcode(opcode) && size>mir3::ChatLog::max_encoded_text) return false;
         const auto decoded=mir3::decode_six_bit(encoded.ptr()+16,size);
         if (!decoded) return false;
         const auto ansi=std::string_view(*decoded).substr(0,decoded->find(char(0)));
-        if (opcode!=mir3::protocol::SM_USERNAME && ansi.size()>259) return false;
+        if ((opcode==mir3::protocol::SM_HEAR || opcode==mir3::protocol::SM_MONSTERSAY) && ansi.size()>259) return false;
         const auto text=String::utf8(mir3::ansi_to_utf8(ansi).c_str());
         if (opcode==mir3::protocol::SM_USERNAME) return apply_scene_name(actor,opcode,p[0]&255,text);
-        // 1.45 0x42F380: log once, only 40/1501 also update actor speech.
+        // 42F380：聊天窗口显示一次，文件独立分支可能追加两次；40/1501另更新头顶文字。
         if (opcode==mir3::protocol::SM_HEAR || opcode==mir3::protocol::SM_MONSTERSAY) {
             const bool present=actor==0 || scene_humans.contains(actor) || scene_npcs.contains(actor) || scene_chickens.contains(actor);
             if (present && !apply_scene_speech(actor,opcode,text)) return false;
         }
+        append_chat_log(opcode,ansi);
         post_chat(text,mir3::chat_palette(opcode==mir3::protocol::SM_GUILDMESSAGE?4:p[0]&255),mir3::chat_palette(opcode==mir3::protocol::SM_GUILDMESSAGE?0:p[1]&255));
         return true;
     }
@@ -4079,6 +4084,20 @@ bool Mir3HudView::scroll_input(int kind,Vector2 position) {
     return consumed;
 }
 std::string Mir3HudView::message(int id) const { return mir3::ansi_to_utf8(messages.get(id)); }
+void Mir3HudView::append_chat_log(int opcode,std::string_view ansi) {
+    if(chat_log_path.is_empty()) return;
+    const auto contents=mir3::ChatLog::payload(opcode,chat_submission.save_chat,ansi);
+    if(contents.empty()) return;
+    std::error_code error;
+    std::filesystem::create_directories(std::filesystem::u8path(chat_log_path.get_base_dir().utf8().get_data()),error);
+    if(error) return;
+    const auto file=FileAccess::open(chat_log_path,FileAccess::file_exists(chat_log_path)?FileAccess::READ_WRITE:FileAccess::WRITE);
+    if(file.is_null()) return; // 原版打不开日志时仍继续显示收到的消息。
+    file->seek_end();
+    PackedByteArray bytes;bytes.resize(contents.size());std::copy(contents.begin(),contents.end(),bytes.ptrw());
+    file->store_buffer(bytes);file->flush();
+}
+
 bool Mir3HudView::chat_shortcut_input(const Ref<InputEvent>& event) {
     const Ref<InputEventKey> key=event;if(key.is_null()) return false;
     const auto code=key->get_keycode()!=KEY_NONE?key->get_keycode():key->get_physical_keycode();
