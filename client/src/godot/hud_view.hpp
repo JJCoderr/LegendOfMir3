@@ -1,4 +1,5 @@
 #pragma once
+#include <godot_cpp/classes/shader_material.hpp>
 #include "protocol/actor_ability.hpp"
 #include "protocol/actor_increments.hpp"
 #include "protocol/actor_experience.hpp"
@@ -72,6 +73,7 @@
 #include <godot_cpp/classes/input_event.hpp>
 #include <map>
 #include <tuple>
+#include <variant>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/audio_stream_player.hpp>
 #include <godot_cpp/classes/audio_stream_wav.hpp>
@@ -421,7 +423,8 @@ private:
     mir3::MapTerrain terrain;
     std::array<mir3::WilArchive,75> terrain_archives;
     bool animated_map_objects=false;
-    struct MapActorFrame { godot::Ref<godot::ImageTexture> image; godot::Vector2 offset; std::vector<std::uint8_t> regions; };
+    struct MapActorFrame { godot::Ref<godot::ImageTexture> image; godot::Vector2 offset; std::vector<std::uint8_t> regions;
+        int shadow_mode=48; godot::Vector2 shadow_offset{}; };
     mir3::WilArchive map_human, map_female, map_npc, map_horse;
     mir3::GroundItems ground_items;
     mir3::WilArchive ground_archive;
@@ -442,7 +445,7 @@ private:
     int player_type=0, player_clothing=0, player_hair=0, player_weapon=0;
     int player_clothing_dye=65535, player_hair_dye=65535;
     std::map<std::tuple<std::uint64_t,int,int>,godot::Ref<godot::ImageTexture>> dyed_frames;
-    godot::Ref<godot::ImageTexture> dyed_frame(const MapActorFrame& frame,int clothing,int hair);
+    godot::Ref<godot::ImageTexture> dyed_frame(const MapActorFrame& frame,int clothing,int hair,int status_color=65535);
     godot::String actor_resource_root;
     godot::PackedByteArray weapon_order;
     std::map<std::string,mir3::WilArchive> attachment_archives;
@@ -467,7 +470,14 @@ private:
     };
     std::map<int,SceneActor> scene_npcs;
     struct SceneChicken : SceneActor {
+        godot::Rect2 target_bounds;
         int shape=20;
+        int burrow_frame=-1;
+        bool hide_after_burrow=false, reverse_burrow=false;
+        bool turned_burrow_once=false;
+        bool hidden_pose=false;
+        double burrow_ms=0;
+        bool buried=false;
         int idle_frame=0;
         double idle_ms=0;
         bool called=false;
@@ -475,27 +485,65 @@ private:
         bool can_be_butchered() const { return shape==20 || shape==21 || shape==119; }
         int facing=6, death_frame=-1;
         int walk_frame=-1;
-        int walk_interval=130;
-        bool walk_catch_up=false;
+        bool walk_catch_up=false, walking_backward=false;
+        bool skip_movement_tick=false;
+        std::uint32_t status_flags=0;
+        bool slowed() const { return (status_flags & 0x08000000u)!=0; }
         int struck_frame=-1;
+        int attack_frame=-1, attack_interval=120;
+        int attack_action=2;
+        std::uint64_t action_overlay=0;
+        double attack_ms=0;
+        bool attack_catch_up=false, struck_catch_up=false, burrow_catch_up=false, death_catch_up=false;
         godot::Vector2i walk_origin;
+        int walk_pose() const { return walk_frame>=0 && walking_backward?5-walk_frame:walk_frame; }
         godot::Vector2i walk_pixel() const {
             const auto direction=cell-walk_origin;
             const int step=walk_frame+1;
+            // 4075B0 reanchors the backstep to the destination before the final frame.
+            if (walking_backward && walk_frame>=(facing==7?4:1)) {
+                const int remaining=6-step;
+                return cell*godot::Vector2i(48,32)-direction*godot::Vector2i(8*remaining,5*remaining);
+            }
             const int y=direction.x==0?32*step/6:5*step;
             return walk_origin*godot::Vector2i(48,32)+direction*godot::Vector2i(8*step,y);
         }
         bool skeleton=false;
-        double death_ms=0, walk_ms=0, struck_ms=0;
-        struct Turn { godot::Vector2i cell; int facing; int shape; unsigned light; bool backward; bool status_bit; };
-        std::deque<Turn> turns;
+        double death_ms=0, struck_ms=0;
+        struct Turn { godot::Vector2i cell; int facing; int shape; unsigned light; bool backward; std::uint32_t status; bool force_walk=false; };
+        struct Hit { int shape; int variant; std::array<std::uint16_t,3> health; };
+        struct Death { godot::Vector2i cell; int facing; int shape; int opcode; unsigned light; };
+        struct Burrow { godot::Vector2i cell; int facing, shape; unsigned light; };
+        struct ReverseBurrow { godot::Vector2i cell; };
+        struct Rise { godot::Vector2i cell; int facing, shape; unsigned light; };
+        struct Attack {
+            godot::Vector2i cell;
+            int facing;
+            std::optional<godot::Vector2i> target;
+            std::uint32_t target_actor=0;
+            int action_override=0;
+        };
+        struct Entry { godot::Vector2i cell; int facing,shape; unsigned light; std::uint32_t status; bool appearance_sound; std::optional<mir3::SceneName> name; bool hidden_pose=false; };
+        struct BarStatus { std::uint32_t flags; };
+        struct Health { std::array<std::uint16_t,3> values; };
+        struct RelayedBackstep { Turn turn; };
+        using Action=std::variant<Turn,Hit,Death,Burrow,Entry,BarStatus,Health,RelayedBackstep,Attack,Rise,ReverseBurrow>;
+        std::deque<Action> actions;
     };
     std::map<int,SceneChicken> scene_chickens;
-    std::map<std::pair<int,int>,MapActorFrame> monster_frames;
-    std::map<int,mir3::WilArchive> monster_archives;
-    const MapActorFrame* monster_frame(int shape,int relative);
+    std::map<std::pair<int,int>,std::optional<MapActorFrame>> monster_frames;
+    std::map<int,std::optional<mir3::WilArchive>> monster_archives;
+    std::map<std::pair<std::uint64_t,bool>,MapActorFrame> projected_monster_shadows;
+    const MapActorFrame* project_monster_shadow(const MapActorFrame& body,bool flat);
+    const MapActorFrame* monster_frame(int shape,int action_base,int facing,int frame_offset,bool shadow=false);
     bool place_scene_chicken(int actor,godot::Vector2i cell,int facing,int shape=20,unsigned light=0);
     bool move_scene_chicken(int actor,SceneChicken::Turn turn);
+    bool apply_monster_hit(int actor,const SceneChicken::Hit& hit);
+    bool apply_monster_death(int actor,const SceneChicken::Death& death);
+    bool apply_monster_burrow(int actor,SceneChicken::Burrow burrow);
+    bool apply_monster_entry(int actor,const SceneChicken::Entry& entry);
+    bool apply_monster_action(int actor,const SceneChicken::Action& action);
+    bool receive_monster_action(int actor,SceneChicken::Action action);
     void update_monster_bar_status(int actor,bool status_bit);
     bool refresh_monster_shape(SceneChicken& monster,int shape,int action=-1,int facing=-1);
     void play_animal_call(int actor,SceneChicken& animal);
@@ -539,8 +587,17 @@ private:
     mir3::WilArchive event_archive;
     std::map<int,MapActorFrame> ground_event_frames;
     struct GroundEvent { godot::Vector2i cell; int frame; double age=0; bool hidden=false; double lifetime=65535; float opacity=1.f; };
-    std::map<std::uint32_t,GroundEvent> ground_events;
+    std::map<std::uint64_t,GroundEvent> ground_events;
     std::map<int,MapActorFrame> event_frames;
+    std::map<int,mir3::WilArchive> monster_effect_archives;
+    struct MonsterProjectile {
+        godot::Vector2 position, destination;
+        std::uint32_t target_actor;
+        int effect;
+        godot::Vector2 velocity{};
+        godot::Vector2 previous_distance{10000,10000};
+    };
+    enum class MonsterEffectPose { attack, struck, death, idle, walk, burrow, skeleton };
     struct MapEvent {
         const mir3::EffectResource* resource;
         godot::Vector2i cell;
@@ -551,11 +608,29 @@ private:
         godot::Sprite2D* secondary=nullptr;
         bool ending=false,one_shot=false;
         int remaining_ms=-1, tint=255;
+        int frame_offset=0, delay_ms=0, attached_actor=0;
+        std::optional<MonsterProjectile> projectile;
+        MonsterEffectPose attached_pose=MonsterEffectPose::attack;
+        bool emits_light=false;
+        double light_clock=0;
+        int light_phase=0, light_shrink=0, light_fade=0;
+        bool light_tail=false;
+        bool ground_wave=false;
+        std::uint32_t follow_actor=0;
+        std::optional<godot::Vector2> follow_position;
     };
     std::map<std::uint64_t,MapEvent> map_events;
     std::uint64_t harvest_effect_id=std::uint64_t{1}<<32;
     void show_harvest_impact(godot::Vector2i cell);
     void show_map_impact(int effect,godot::Vector2i cell);
+    void show_scene_effect(mir3::EffectCatalog::Section section,int effect,godot::Vector2i cell,
+        int frame_offset=0,int delay_ms=0,int attached_actor=0,
+        std::optional<MonsterProjectile> projectile=std::nullopt,
+        MonsterEffectPose attached_pose=MonsterEffectPose::attack);
+    void play_monster_attack_effect(int actor,const SceneChicken& monster);
+    void sync_monster_action_overlay(int actor,SceneChicken& monster,bool restart=false);
+    void play_monster_death_effect(int actor,const SceneChicken& monster);
+    bool play_monster_ranged_attack(const SceneChicken& monster,const SceneChicken::Attack& attack);
     struct EventParticle {
         godot::Vector2 position,velocity,acceleration;
         int age=0,life=0,interval=0,frame_clock=0,frame=0;
@@ -764,6 +839,13 @@ private:
     godot::Vector2i player_pixel() const;
     godot::Vector2i map_camera() const;
     void draw_terrain();
+    void draw_terrain_texture(const godot::Ref<godot::ImageTexture>& image,godot::Vector2 position,
+        godot::Color modulate=godot::Color(1,1,1),int rgb565_weight=0);
+    std::vector<godot::RID> terrain_draw_items;
+    godot::Node2D* terrain_layer=nullptr;
+    std::size_t terrain_draw_count=0;
+    godot::RID terrain_draw_batch;
+    godot::Ref<godot::ShaderMaterial> monster_shadow_mix,monster_body_mix;
     void draw_hud_tail();
     void set_hud_decoration(godot::Vector4i state);
     godot::Node2D* paint_canvas=this;

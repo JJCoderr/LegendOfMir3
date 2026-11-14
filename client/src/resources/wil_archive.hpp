@@ -8,6 +8,7 @@ namespace mir3 {
 struct WilFrame {
     int width=0, height=0, offset_x=0, offset_y=0;
     WilPixels pixels;
+    int shadow_mode=48, shadow_x=0, shadow_y=0;
 };
 // Adapted from mir3_1.45/wil.gd. Archives are read in place; no exported frames.
 class WilArchive {

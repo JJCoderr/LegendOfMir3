@@ -48,6 +48,9 @@ std::optional<WilFrame> WilArchive::frame(int id) {
     result.height=static_cast<std::int16_t>(u16(header+2));
     result.offset_x=static_cast<std::int16_t>(u16(header+4));
     result.offset_y=static_cast<std::int16_t>(u16(header+6));
+    result.shadow_mode=header[8];
+    result.shadow_x=static_cast<std::int16_t>(u16(header+9));
+    result.shadow_y=static_cast<std::int16_t>(u16(header+11));
     const auto bytes=std::uint64_t(u32(header+13))*2;
     if (!archive || result.width<=0 || result.height<=0 || result.width>4096 || result.height>4096 || bytes>length-offset-header_size) return {};
     std::vector<std::uint8_t> source(static_cast<std::size_t>(bytes));
