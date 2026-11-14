@@ -1,3 +1,4 @@
+#include "protocol/receive_message.hpp"
 #include <godot_cpp/classes/resource_loader.hpp>
 #include "hud/sound_position.hpp"
 #include <godot_cpp/classes/audio_server.hpp>
@@ -111,6 +112,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_scene_human_attachments","actor","hair","weapon"),&Mir3HudView::set_scene_human_attachments);
     ClassDB::bind_method(D_METHOD("set_player_body","type","clothing"),&Mir3HudView::set_player_body);
     ClassDB::bind_method(D_METHOD("apply_scene_human_life","actor","opcode","cell","facing"),&Mir3HudView::apply_scene_human_life);
+    ClassDB::bind_method(D_METHOD("apply_scene_message","encoded","key"),&Mir3HudView::apply_scene_message);
     ClassDB::bind_method(D_METHOD("queue_scene_human_state","actor","opcode","cell","facing","body","hit_weapon"),&Mir3HudView::queue_scene_human_state,DEFVAL(0));
     ClassDB::bind_method(D_METHOD("queue_scene_human_message","actor","opcode","cell","facing","hit_weapon","flags"),&Mir3HudView::queue_scene_human_message,DEFVAL(0),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_scene_human_action","actor","opcode","facing","hit_weapon"),&Mir3HudView::apply_scene_human_action,DEFVAL(0));
@@ -205,6 +207,13 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary chicken_bounds;
     for (const auto& [actor,chicken]:scene_chickens) chicken_bounds[actor]=chicken.bounds;
     result["scene_chicken_bounds"]=chicken_bounds;
+    Dictionary actor_health_values;
+    for (const auto& [actor,health]:scene_health) {
+        PackedInt32Array values;
+        values.push_back(health.current);values.push_back(health.mana);values.push_back(health.maximum);
+        actor_health_values[actor]=values;
+    }
+    result["scene_health_values"]=actor_health_values;
     Dictionary human_bounds;
     Dictionary human_cells;
     Dictionary human_idle_frames;
@@ -703,32 +712,10 @@ bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
     return !map_route.empty();
 }
 
-namespace {
-std::optional<std::string> decode_npc_six_bit(const std::uint8_t* encoded,std::size_t size) {
-    if (size%4==1) return {};
-    std::string decoded;
-    decoded.reserve(size*3/4);
-    unsigned accumulator=0;
-    int bits=0;
-    for (std::size_t i=0;i<size;++i) {
-        const auto byte=encoded[i];
-        if (byte<60 || byte>123) return {};
-        accumulator=(accumulator<<6)|(byte-60);
-        bits+=6;
-        if (bits>=8) {
-            bits-=8;
-            decoded+=char((accumulator>>bits)&255);
-        }
-    }
-    if (bits && (accumulator&((1u<<bits)-1))) return {};
-    return decoded;
-}
-}
-
 bool Mir3HudView::apply_npc_message(PackedByteArray encoded,PackedByteArray key) {
     constexpr int header_size=16;
     if (key.size()!=4 || encoded.size()<header_size || encoded.size()>header_size+(10240*4+2)/3) return false;
-    const auto header=decode_npc_six_bit(encoded.ptr(),header_size);
+    const auto header=mir3::decode_six_bit(encoded.ptr(),header_size);
     if (!header) return false;
     const auto b=[&](int index) { return std::uint32_t(std::uint8_t((*header)[index])); };
     // 0x428308..0x428399 reconstructs these fields using the connection key.
@@ -739,7 +726,7 @@ bool Mir3HudView::apply_npc_message(PackedByteArray encoded,PackedByteArray key)
         // 0x42A8B6 / 0x4796A0: count and offset precede a nested six-bit item list.
         const int offset=b(2)|(b(8)<<8);
         if (first_parameter>255 || shop_selected<0) return false;
-        const auto list=decode_npc_six_bit(encoded.ptr()+header_size,encoded.size()-header_size);
+        const auto list=mir3::decode_six_bit(encoded.ptr()+header_size,encoded.size()-header_size);
         if (!list || list->size()>8196) return false;
         std::string_view remaining=*list;
         PackedStringArray names;
@@ -748,7 +735,7 @@ bool Mir3HudView::apply_npc_message(PackedByteArray encoded,PackedByteArray key)
         for (int i=0;i<first_parameter;++i) {
             const auto delimiter=remaining.find('/');
             if (delimiter==remaining.npos) return false;
-            const auto item=decode_npc_six_bit(reinterpret_cast<const std::uint8_t*>(remaining.data()),delimiter);
+            const auto item=mir3::decode_six_bit(reinterpret_cast<const std::uint8_t*>(remaining.data()),delimiter);
             if (!item || item->size()!=100) return false;
             const auto byte=[&](int position) { return std::uint32_t(std::uint8_t((*item)[position])); };
             const auto end=item->find(char(0));
@@ -774,7 +761,7 @@ bool Mir3HudView::apply_npc_body(int opcode,int actor,int count,PackedByteArray 
     const int limit=opcode==643?8192:opcode==645?10240:0;
     if (!limit || encoded.size()>(limit*4+2)/3) return false;
 
-    const auto decoded=decode_npc_six_bit(encoded.ptr(),encoded.size());
+    const auto decoded=mir3::decode_six_bit(encoded.ptr(),encoded.size());
     if (!decoded) return false;
     const auto& ansi=*decoded;
     const auto end=ansi.find(char(0));
@@ -1885,6 +1872,60 @@ bool Mir3HudView::apply_scene_human_life(int actor,int opcode,Vector2i cell,int 
     return true;
 }
 
+bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray key) {
+    if (encoded.size()<16 || encoded.size()>1039) return false;
+    const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),static_cast<std::size_t>(encoded.size())},
+        {key.ptr(),static_cast<std::size_t>(key.size())});
+    if (!header || header->recognition>INT_MAX) return false;
+    const int actor=header->recognition, opcode=header->opcode;
+    const auto& p=header->parameters;
+    const int size=encoded.size()-16;
+    if (opcode==53 || opcode==1312) return size==0 && apply_scene_health(actor,opcode,p[0],p[1],p[2]);
+    const auto found=scene_humans.find(actor);
+    if (found==scene_humans.end() || !mir3::SceneHumanMessage::accepts(opcode)) return false;
+    mir3::SceneHumanMessage message{opcode,p[0],p[1],opcode==1309 || opcode==31?0:p[2]&255};
+    if (opcode==31) {
+        if (size) return false;
+        message.health=p;
+    } else if (opcode==7 || opcode==10 || opcode==11 || opcode==13 || opcode==1309 || opcode==1316 || opcode==1321) {
+        const bool required=opcode==10 || opcode==1309 || opcode==1316 || opcode==1321;
+        if (size || required) {
+            if (size!=22 && size!=29) return false;
+            if ((opcode==10 || opcode==1316 || opcode==1321) && size!=29) return false;
+            auto body=mir3::decode_six_bit(encoded.ptr()+16,22);
+            if (!body || body->size()!=16) return false;
+            if (size==29) {
+                const auto extra=mir3::decode_six_bit(encoded.ptr()+38,7);
+                if (!extra || extra->size()!=5) return false;
+                *body+=*extra;
+            }
+            message.appearance=mir3::HumanAppearance::parse({reinterpret_cast<const std::uint8_t*>(body->data()),body->size()},opcode==1309);
+            if (!message.appearance) return false;
+            message.flags=message.appearance->flags;
+            if (opcode==1309) {
+                message.health=p;
+                for (int i=0;i<4;++i) message.hit_source|=std::uint32_t(std::uint8_t((*body)[8+i]))<<(8*i);
+            }
+        }
+    } else if (size) {
+        // The optional raw marker on opcode 15 requests a separate effect path.
+        // Reject it until that effect is implemented rather than silently drop it.
+        return false;
+    }
+    if (opcode!=1309 && opcode!=31 && !terrain.walkable(message.x,message.y)) return false;
+    return found->second.messages.push(message);
+}
+
+void Mir3HudView::apply_actor_health_record(int actor,const mir3::SceneHumanMessage& message) {
+    if (!message.health) return;
+    auto& health=scene_health[actor];
+    const auto& p=*message.health;
+    health.current=p[0];health.maximum=p[1];
+    health.damage.enabled=damage_numbers;
+    if (message.opcode==1309) health.damage.push(-int(p[2]));
+    queue_redraw();
+}
+
 bool Mir3HudView::queue_scene_human_state(int actor,int opcode,Vector2i cell,int facing,const PackedByteArray& body,int hit_weapon) {
     switch (opcode) {
     case 7: case 10: case 11: case 13: case 1309: case 1316: case 1321: break;
@@ -1933,6 +1974,7 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     if (!next) return false;
     bool accepted=false;
     const Vector2i cell(next->x,next->y);
+    if (next->opcode==31) { apply_actor_health_record(actor,*next);return true; }
     // Dead actors only accept standing/revival feature refreshes.
     const bool refresh=next->opcode==10 || next->opcode==1316 || next->opcode==1321;
     if (next->appearance && (!human.life.dead || refresh) && !apply_scene_appearance(actor,*next->appearance)) return true;
@@ -1944,7 +1986,13 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     else if (next->opcode==7 || next->opcode==11 || next->opcode==13)
         accepted=apply_scene_human_step(actor,next->opcode,cell,next->facing);
     else {
-        accepted=apply_scene_human_action(actor,next->opcode,next->facing,next->hit_weapon);
+        int hit_weapon=next->hit_weapon;
+        if (next->opcode==1309 && next->health) {
+            apply_actor_health_record(actor,*next);
+            if ((*next->health)[2]==0) return true; // miss updates HP but does not interrupt with hit animation
+            if (const auto source=scene_humans.find(next->hit_source);source!=scene_humans.end()) hit_weapon=source->second.weapon;
+        }
+        accepted=apply_scene_human_action(actor,next->opcode,next->facing,hit_weapon);
         if (accepted) {
             if (next->opcode!=1309) human.cell=cell;
             human.action.start(human.action.action(),catch_up);
@@ -2649,6 +2697,7 @@ void Mir3HudView::_process(double delta) {
     const bool scene_movement_tick=scene_movement_ms>95;
     if (scene_movement_tick) scene_movement_ms=0;
     for (auto& [actor,human]:scene_humans) {
+        for (const auto& update:human.messages.fold_health()) apply_actor_health_record(actor,update);
         human.life.advance(delta*1000);
         if (human.combat.advance(delta*1000)) human.idle.reset();
         if (human.life.dying) {

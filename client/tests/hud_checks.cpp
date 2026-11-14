@@ -1,5 +1,6 @@
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
+#include "protocol/receive_message.hpp"
 #include "hud/human_actions.hpp"
 #include "hud/scene_human_queue.hpp"
 #include "hud/human_life.hpp"
@@ -22,6 +23,22 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--scene-wire") {
+            const std::string wire="Ex\\Zn?My<AT<<<<<";
+            const std::array<std::uint8_t,4> key{18,52,86,120};
+            const auto header=mir3::ReceiveHeader::decode({reinterpret_cast<const std::uint8_t*>(wire.data()),wire.size()},key);
+            check(header && header->recognition==5 && header->opcode==53 && header->parameters==std::array<std::uint16_t,3>{200,30,200},"fixed permuted keyed header fixture");
+            const std::array<std::uint8_t,2> bad{60,61};
+            check(!mir3::decode_six_bit(bad.data(),bad.size()),"reject nonzero six-bit padding");
+            check(!mir3::ReceiveHeader::decode({},key),"reject truncated header");
+            mir3::SceneHumanQueue queue;
+            mir3::SceneHumanMessage hp{31};hp.health=std::array<std::uint16_t,3>{100,200,0};
+            queue.push(hp);check(queue.fold_health().empty(),"single health record stays ordered");
+            queue.push({14});queue.push(hp);
+            check(queue.fold_health().size()==2 && queue.size()==1 && queue.take()->opcode==14,"fold only health records while preserving actions");
+            std::cout << "SCENE_WIRE_MODEL_OK\n";
+            return 0;
+        }
         if (std::filesystem::path(argv[1])=="--scene-feature") {
             std::vector<std::uint8_t> bytes(21,0);
             bytes[0]=1;bytes[1]=2;bytes[2]=3;bytes[3]=129;bytes[7]=8;bytes[16]=2;

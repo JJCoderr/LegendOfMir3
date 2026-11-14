@@ -99,6 +99,8 @@ public:
     bool set_scene_human_attachments(int actor,int hair,int weapon);
     bool set_player_body(int type,int clothing);
     bool apply_scene_human_life(int actor,int opcode,godot::Vector2i cell,int facing);
+    bool apply_scene_message(godot::PackedByteArray encoded,godot::PackedByteArray key);
+    void apply_actor_health_record(int actor,const mir3::SceneHumanMessage& message);
     bool queue_scene_human_state(int actor,int opcode,godot::Vector2i cell,int facing,const godot::PackedByteArray& body,int hit_weapon=0);
     bool apply_scene_appearance(int actor,const mir3::HumanAppearance& appearance);
     bool queue_scene_human_message(int actor,int opcode,godot::Vector2i cell,int facing,int hit_weapon=0,std::int64_t flags=0);

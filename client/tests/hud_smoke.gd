@@ -124,6 +124,81 @@ func run_local_mount() -> void:
 	print("LOCAL_MOUNT_OK")
 	quit()
 
+func encode_scene_bytes(bytes: PackedByteArray) -> PackedByteArray:
+	var result := PackedByteArray()
+	var accumulator := 0
+	var bits := 0
+	for value in bytes:
+		accumulator = ((accumulator << 8) | value) & 0xffffff
+		bits += 8
+		while bits >= 6:
+			bits -= 6
+			result.append(60 + ((accumulator >> bits) & 63))
+	if bits: result.append(60 + ((accumulator << (6-bits)) & 63))
+	return result
+
+func scene_packet(opcode: int, actor: int, a: int, b: int, c: int, body: PackedByteArray = PackedByteArray()) -> PackedByteArray:
+	var raw := PackedByteArray([(opcode & 255)^18,a&255,b&255,c&255,((opcode>>8)&255)^52,(actor&255)^120,(a>>8)&255,((actor>>8)&255)^86,(b>>8)&255,(actor>>16)&255,(c>>8)&255,(actor>>24)&255])
+	var result := encode_scene_bytes(raw)
+	if body.size() == 21:
+		result.append_array(encode_scene_bytes(body.slice(0,16)))
+		result.append_array(encode_scene_bytes(body.slice(16)))
+	else: result.append_array(encode_scene_bytes(body))
+	return result
+
+func run_scene_wire() -> void:
+	var key_bytes := PackedByteArray([18,52,86,120])
+	var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
+	if not check(hud.apply_npc_message(scene_packet(643,2,0,0,0,"npc/Hello".to_ascii_buffer()),key_bytes) and hud.apply_npc_message(scene_packet(644,2,0,0,0),key_bytes), "shared decoder preserves NPC message path"): return
+	if not check(hud.apply_scene_message(scene_packet(53,5,200,30,200),key_bytes) and hud.apply_scene_message(scene_packet(1312,5,1,2,3),key_bytes), "wire health and registration"): return
+	hud.apply_scene_message(scene_packet(14,5,cell.x,cell.y,4),key_bytes)
+	var body := PackedByteArray()
+	body.resize(21)
+	body[0]=1
+	body[1]=1
+	body[2]=1
+	body[3]=65
+	if not check(hud.apply_scene_message(scene_packet(31,5,190,220,0),key_bytes) and hud.apply_scene_message(scene_packet(10,5,cell.x,cell.y,4,body),key_bytes), "queue raw HP and extended standing messages"): return
+	await process_frame
+	await process_frame
+	if not check(hud.hud_snapshot().scene_health_values[5] == PackedInt32Array([190,30,220]) and hud.hud_snapshot().scene_human_actions[5].x == 9 and hud.hud_snapshot().scene_damage_frames.is_empty(), "HP fold bypasses active animation without generating damage"): return
+	if not await wait_human_state(-1,0): return
+	if not check(hud.hud_snapshot().scene_human_bodies[5] == Vector2i(1,1), "separately encoded feature extension decodes"): return
+	body.resize(16)
+	body[8]=5
+	if not check(hud.apply_scene_message(scene_packet(1309,5,160,220,12,body),key_bytes), "raw hit with explicit damage amount"): return
+	if not await wait_human_state(15,0): return
+	if not await capture("bichon-wire-hit"): return
+	if not check(hud.hud_snapshot().scene_health_values[5][0] == 160 and hud.hud_snapshot().scene_damage_frames[5] == PackedInt32Array([1800,1791,1792]), "damage uses packet amount twelve rather than HP difference thirty"): return
+	if not await wait_human_state(-1,0): return
+	hud.apply_scene_message(scene_packet(1309,5,160,220,0,body),key_bytes)
+	await process_frame
+	await process_frame
+	if not check(hud.hud_snapshot().scene_human_actions[5].x == -1 and hud.hud_snapshot().scene_damage_frames[5].has(1850), "miss creates miss glyph without hit animation"): return
+	var invalid := scene_packet(10,5,cell.x,cell.y,4,body)
+	if not check(not hud.apply_scene_message(invalid,key_bytes) and not hud.apply_scene_message(invalid.slice(0,15),key_bytes) and not hud.apply_scene_message(scene_packet(14,9999,cell.x,cell.y,4),key_bytes) and not hud.apply_scene_message(scene_packet(14,5,cell.x,cell.y,8),key_bytes) and not hud.apply_scene_message(scene_packet(14,5,cell.x,cell.y,4),PackedByteArray([0])), "reject malformed header body actor direction and key"): return
+	hud.apply_scene_message(scene_packet(32,5,cell.x,cell.y,4),key_bytes)
+	await process_frame
+	await process_frame
+	if not check(hud.hud_snapshot().scene_human_life[5].dead, "raw corpse message"): return
+	body.resize(21)
+	hud.apply_scene_message(scene_packet(1316,5,cell.x,cell.y,4,body),key_bytes)
+	await process_frame
+	await process_frame
+	if not check(not hud.hud_snapshot().scene_human_life[5].dead, "raw revival message"): return
+	await create_timer(0.65).timeout
+	body[16]=1
+	if not check(hud.apply_scene_message(scene_packet(13,5,cell.x,cell.y,4,body),key_bytes), "raw mounted run accepted"): return
+	await process_frame
+	await process_frame
+	if not check(hud.hud_snapshot().scene_human_mounts[5] == 1 and hud.hud_snapshot().scene_human_movement[5] >= 0, "raw movement applies mounted feature before choosing movement"): return
+	if not await capture("bichon-wire-mounted-run"): return
+	hud.remove_scene_actor(5)
+	await process_frame
+	await process_frame
+	print("PASS scene wire messages")
+	quit()
+
 func run_scene_feature() -> void:
 	var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
 	var body := PackedByteArray()
@@ -558,6 +633,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--scene-wire"):
+		await run_scene_wire()
+		return
 	if OS.get_cmdline_user_args().has("--scene-feature"):
 		await run_scene_feature()
 		return
@@ -717,7 +795,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()
