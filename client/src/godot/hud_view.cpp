@@ -374,6 +374,16 @@ Dictionary Mir3HudView::hud_snapshot() const {
         bag_records.append(row);
     }
     result["bag_records"]=bag_records;
+    Array equipment_records;
+    for (int i=0;i<12;++i) if (equipment.slots[i]) {
+        const auto& item=equipment.slots[i];Dictionary row;
+        row["slot"]=i;row["id"]=int64_t(item.make_index);row["icon"]=item.icon;
+        row["name"]=String::utf8(item.name.c_str());
+        row["durability"]=int(item.server_record[66])|(int(item.server_record[67])<<8);
+        row["max_durability"]=int(item.server_record[68])|(int(item.server_record[69])<<8);
+        equipment_records.append(row);
+    }
+    result["equipment_records"]=equipment_records;
     result["trade_return_slot"]=trade_return_slot;
     result["trade_confirmed"]=trade_confirmed;
     result["trade_visible"]=trade.visible;
@@ -2996,6 +3006,34 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    if (header->opcode==mir3::protocol::SM_SENDUSEITEMS) {
+        const auto decoded=mir3::EquipmentWire::parse(*header,{encoded.ptr()+16,std::size_t(encoded.size()-16)});
+        if (!decoded) return false;
+        auto next=equipment.slots;
+        for (const auto& entry:decoded->records) {
+            const auto& record=entry.item;
+            const auto sprite=item_frame(record.icon());
+            if (sprite.is_null()) return false;
+            const auto [width,height]=mir3::InventoryGrid::dimensions(sprite->get_width(),sprite->get_height());
+            next[entry.slot]={mir3::EquipmentState::category(record.mode()),record.icon(),record.count(),width,height,
+                record.mode(),record.identity(),mir3::ansi_to_utf8(record.name()),record.stack_mode(),record.raw};
+        }
+        equipment.slots=std::move(next);queue_redraw();return true;
+    }
+    if (const auto change=mir3::EquipmentDurability::parse(*header)) {
+        if (change->slot<12 && equipment.slots[change->slot]) {
+            auto& item=equipment.slots[change->slot];
+            item.server_record[66]=std::uint8_t(change->current);item.server_record[67]=std::uint8_t(change->current>>8);
+            item.server_record[68]=std::uint8_t(change->maximum);item.server_record[69]=std::uint8_t(change->maximum>>8);
+            if (change->warns(item.std_mode)) {
+                auto caption=message(1470);
+                if (const auto at=caption.find("%s");at!=std::string::npos) caption.replace(at,2,item.name);
+                post_chat(String::utf8(caption.c_str()),mir3::chat_palette(2),mir3::chat_palette(7));
+            }
+            queue_redraw();
+        }
+        return true;
+    }
     if (header->opcode==mir3::protocol::SM_ADDITEM || header->opcode==mir3::protocol::SM_BAGITEMS ||
         header->opcode==mir3::protocol::SM_DELITEM || header->opcode==mir3::protocol::SM_UPDATEITEM)
         return apply_inventory_wire(*header,{encoded.ptr()+16,std::size_t(encoded.size()-16)});

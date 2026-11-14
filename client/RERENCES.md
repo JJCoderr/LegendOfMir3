@@ -296,3 +296,6 @@ IDA 404D80：注册/找回按钮在鼠标释放命中时读取配置URL，ShellE
 
 ## 背包原包同步
 实时核对4282C0、4420F0、440420、440C00、43ED40、476440及43E6F0，确认100字节记录和200至203语义；203为联合匹配后更新，数量在WORD71。布局持久化与装备耐久保持独立待办。详见client/docs/evidence/inventory-wire.md。
+
+## 装备列表与耐久
+实时核对4282C0的621/642，及4017A0汇编、0.5常量和49FE1C截断转换。列表逐槽覆盖且不清空未出现的槽位；耐久低WORD存储但完整recognition参与提示判断。详见client/docs/evidence/equipment-wire.md。

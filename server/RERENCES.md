@@ -210,3 +210,6 @@ SM_RIDEHORSE recognition低字节为本地骑乘形状，客户端确认后才�
 
 ## 背包原包布局
 200/202/203正文为独立六位编码100字节记录；201每条独立编码并附斜杠，参数三完整WORD为计数。MakeIndex在62、数量WORD在71，203是更新。原客户端布局优先于早期开源结构，详见client/docs/evidence/inventory-wire.md。
+
+## 装备与耐久协议
+621使用ASCII槽位/编码记录/成对正文，最大12条且头计数不参与；客户端不会清空未出现槽位。642参数一槽位、recognition当前耐久、参数二最大耐久；当前耐久低WORD存储，完整有符号值按原版取整判断提示。详见client/docs/evidence/equipment-wire.md。

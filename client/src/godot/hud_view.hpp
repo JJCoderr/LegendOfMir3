@@ -7,6 +7,7 @@
 #include "protocol/guild_notice.hpp"
 #include "protocol/skill_wire.hpp"
 #include "protocol/inventory_wire.hpp"
+#include "protocol/equipment_wire.hpp"
 #include "hud/level_up_effect.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"

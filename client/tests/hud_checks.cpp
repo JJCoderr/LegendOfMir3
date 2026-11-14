@@ -8,6 +8,7 @@
 #include "protocol/guild_notice.hpp"
 #include "protocol/skill_wire.hpp"
 #include "protocol/inventory_wire.hpp"
+#include "protocol/equipment_wire.hpp"
 #include "hud/level_up_effect.hpp"
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
@@ -46,7 +47,7 @@ int main(int argc,char** argv) {
     try {
         check(argc==2,"resource root required");
         // 测试内容：背包100字节布局、完整计数、逐条编码及尾分隔符、未知消息和畸形包拒绝。
-        if (std::filesystem::path(argv[1])=="--inventory-wire") {
+        if (std::filesystem::path(argv[1])=="--inventory-wire" || std::filesystem::path(argv[1])=="--equipment-wire") {
             using namespace mir3::protocol;
             std::string raw(100,0);raw.replace(0,4,"Item");raw[30]=5;raw[36]=char(0x13);raw[37]=4;
             raw[61]=3;raw[62]=char(0xef);raw[63]=char(0xcd);raw[64]=char(0xab);raw[65]=char(0x89);
@@ -58,6 +59,27 @@ int main(int argc,char** argv) {
             const auto parse=[](mir3::ReceiveHeader h,const std::string& body) {
                 return mir3::InventoryWire::parse(h,{reinterpret_cast<const std::uint8_t*>(body.data()),body.size()});
             };
+            // 测试内容：装备槽位分段、重复槽位和12条上限、畸形包拒绝，以及耐久取整与完整recognition判断。
+            if (std::filesystem::path(argv[1])=="--equipment-wire") {
+                const auto equipment=[](const std::string& body) {
+                    return mir3::EquipmentWire::parse({0,SM_SENDUSEITEMS,{}},{reinterpret_cast<const std::uint8_t*>(body.data()),body.size()});
+                };
+                auto list=equipment("1/"+encoded+"/11/"+encoded+"/");
+                check(list && list->records.size()==2 && list->records[1].slot==11 && list->records[0].item.identity()==0x89abcdef,"slot/record pairs");
+                check(equipment("")->records.empty(),"empty equipment list");
+                check(equipment("1/"+encoded+"/1/"+encoded+"/")->records.size()==2,"duplicate slots in order");
+                for (const auto& body:{"12/"+encoded+"/","-1/"+encoded+"/","x/"+encoded+"/","1/"+encoded,"1/"+encoded+"/2/"})
+                    check(!equipment(body),"malformed equipment list rejected");
+                std::string full;for(int i=0;i<12;++i) full+="1/"+encoded+"/";
+                check(equipment(full+"ignored")->records.size()==12,"original twelve entry limit");
+                const auto durability=[](std::uint32_t value) {return *mir3::EquipmentDurability::parse({value,SM_DURACHANGE,{11,6000,65535}});};
+                check(durability(499).warns(5) && !durability(500).warns(5),"ordinary rounded boundary");
+                check(durability(49).warns(54) && !durability(50).warns(54) && durability(49).warns(55),"special weapon rounded boundary");
+                auto high=durability(65536);check(high.current==0 && high.maximum==6000 && high.slot==11 && !high.warns(5),"stored word distinct from full warning value");
+                check(durability(0xffffffff).warns(5),"signed warning value");
+                check(!mir3::EquipmentDurability::parse({0,SM_ABILITY,{}}),"unrelated durability message");
+                std::cout << "EQUIPMENT_WIRE_MODEL_OK\n";return 0;
+            }
             for (int opcode:{SM_ADDITEM,SM_DELITEM,SM_UPDATEITEM}) {
                 auto value=parse({0,std::uint16_t(opcode),{}},encoded);
                 check(value && value->records.size()==1,"single item");const auto& row=value->records.front();
