@@ -1,5 +1,6 @@
 """客户端测试总入口：按子系统或单项筛选；无筛选时运行该子系统全集。"""
 import argparse
+import json
 import os
 from pathlib import Path
 import shutil
@@ -8,6 +9,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 # 每项只登记已有验收，避免把尚未实现的用例当作通过。
+COMMON_SKILLS = tuple(int(c["id"]) for c in json.loads((ROOT / "tests" / "skill_common_cases.json").read_text(encoding="utf-8"))["cases"])
 SUITES = {
     "skills": {
         "models": (["--spell", "--skill-wire", "--action-reply"], None),
@@ -18,6 +20,7 @@ SUITES = {
         "cast-correction": ([], "spell_correction.gd"),
         "ranges": ([], "spell_ranges.gd"),
         "lightning-model": (["--spell-lightning"], None),
+        "common": (["--spell-common"], "spell_common.gd"),
         "melee": (["--spell-melee"], "melee_spells.gd"),
         "particle-model": (["--spell-particles"], None),
         "sound": (["--spell-sound"], "spell_sound.gd"),
@@ -28,7 +31,7 @@ SUITES = {
         "actions": (["--equipment-actions"], "equipment_actions.gd"),
     },
 }
-SKILLS = (1, 7, 9, 10, 12, 25, 26, 27, 34, 35, 103, 53, 73, 110, 113, 150, *range(408, 415))
+SKILLS = (1, 7, 9, 10, 12, 25, 26, 27, 34, 35, 103, 53, 73, 110, 113, 150, *range(408, 415), *COMMON_SKILLS)
 
 
 def executable(explicit, candidates):
@@ -48,7 +51,7 @@ def main():
     parser.add_argument("--suite", choices=SUITES, default="skills", help="子系统测试集")
     parser.add_argument("--case", action="append", help="子集名称，可重复指定；--list查看")
     parser.add_argument("--skill", type=int, choices=SKILLS, help="仅运行对应技能")
-    parser.add_argument("--skills", help="近战批次编号集合，逗号分隔；与--case melee一起使用")
+    parser.add_argument("--skills", help="编号集合，逗号分隔；支持--case melee或common")
     parser.add_argument("--screenshots", action="store_true", help="保存真实视口截图")
     parser.add_argument("--godot", default=os.environ.get("MIR3_GODOT_EXECUTABLE"))
     parser.add_argument("--checks", help="hud_checks程序的路径")
@@ -69,6 +72,8 @@ def main():
         parser.error(f"无效子集；可选：{', '.join(suite)}")
     if args.skill is not None:
         allowed = ["casting"] + (["enchantment"] if args.skill >= 408 else [])
+        if args.skill in COMMON_SKILLS:
+            allowed = ["common"]
         if args.skill in (7, 12, 25, 26, 34, 35, 103):
             allowed = ["melee"]
         if args.skill == 1:
@@ -83,11 +88,12 @@ def main():
             parser.error("所选子集不支持该技能编号筛选")
         cases = args.case or allowed
     if args.skills:
-        if args.suite != "skills" or cases != ["melee"] or args.skill is not None:
-            parser.error("--skills当前用于--suite skills --case melee，不能与--skill并用")
+        if args.suite != "skills" or cases not in (["melee"], ["common"]) or args.skill is not None:
+            parser.error("--skills当前用于--suite skills --case melee或common，不能与--skill并用")
+        selection_ids = COMMON_SKILLS if cases == ["common"] else (7,12,25,26,34,35,103)
         selected = args.skills.split(",")
-        if not selected or any(not n.isdecimal() or int(n) not in (7,12,25,26,34,35,103) for n in selected):
-            parser.error("--skills包含无效近战技能编号")
+        if not selected or any(not n.isdecimal() or int(n) not in selection_ids for n in selected):
+            parser.error("--skills包含无效技能编号")
     cases = list(dict.fromkeys(cases))
     suffix = ".exe" if os.name == "nt" else ""
     checks = None
@@ -101,7 +107,7 @@ def main():
         models, script = suite[case]
         # skills/models的--spell已包含颜色、闪电与声道模型，全量时不重复执行。
         commands = [[checks, model] for model in models
-                    if not (args.suite == "skills" and "models" in cases and model in ("--spell-weapon-color", "--spell-lightning", "--spell-sound", "--spell-particles", "--spell-melee"))]
+                    if not (args.suite == "skills" and "models" in cases and model in ("--spell-weapon-color", "--spell-lightning", "--spell-sound", "--spell-particles", "--spell-melee", "--spell-common"))]
         if script:
             command = [godot, "--path", str(ROOT / "godot"), "--script", str(ROOT / "tests" / script), "--"]
             if args.skill is not None:

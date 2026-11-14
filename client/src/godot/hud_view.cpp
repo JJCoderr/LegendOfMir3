@@ -573,6 +573,11 @@ Dictionary Mir3HudView::hud_snapshot() const {
         if (event.spell_effect || event.staged_spell || event.ground_wave) {
             Dictionary state;
             state["skill"]=int(event.resource->id);state["frame"]=event.frame;
+            state["library"]=int(event.resource->library);
+            state["first"]=int(event.resource->first);state["end"]=int(event.resource->end);
+            state["interval"]=int(event.resource->interval);state["frame_offset"]=event.frame_offset;
+            state["repeat"]=!event.one_shot;
+            state["target_actor"]=int64_t(event.projectile?event.projectile->target_actor:event.follow_actor);
             state["projectile"]=event.projectile.has_value();state["delay"]=event.delay_ms;
             state["light_tail"]=event.light_tail;
             state["emits_light"]=event.emits_light;
