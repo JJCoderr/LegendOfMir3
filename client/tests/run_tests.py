@@ -56,6 +56,7 @@ COMMON_SKILLS = tuple(int(c["id"]) for c in COMMON_CASES)
 IMPACT_SKILLS = tuple(int(c["id"]) for c in COMMON_CASES if c["projectile"] and c["explosion"] is not None)
 STATIONARY_SKILLS = tuple(int(c["id"]) for c in COMMON_CASES if not c["projectile"] and c["id"] not in (36,74,104,107,108))
 SUITES = {
+    "monsters": {"gallery": ([], "monsters.gd"), "regression": ([], "monsters.gd")},
     "skills": {
         "models": (["--spell", "--skill-wire", "--action-reply"], None),
         "bindings": ([], "skills.gd"),
@@ -234,6 +235,7 @@ def main():
         command.add_argument("scenario", nargs="?", choices=scenarios, help="可选场景子命令；省略时运行全部适用场景")
         command.add_argument("--skill", type=int, choices=SKILLS, help="仅运行对应技能")
         command.add_argument("--skills", help="技能编号集合，逗号分隔；可与场景子命令组合，不指定场景时自动归集")
+        command.add_argument("--shapes", help="怪物shape集合，逗号分隔；默认1.45全部外观")
         command.add_argument("--MP4", nargs="?", const="", help="录制小体积MP4，可选输出路径；默认build/videos")
         command.add_argument("--ffmpeg", help="MP4编码器路径；默认PATH或imageio-ffmpeg")
         command.add_argument("--screenshots", action="store_true", help="保存真实视口截图")
@@ -244,6 +246,10 @@ def main():
         command.add_argument("--list", action="store_true", help="列出已登记子集，不运行测试")
     args = parser.parse_args()
     suite = SUITES[args.suite]
+    if args.shapes is not None:
+        valid = {row["shape"] for row in json.loads((ROOT / "tests/monster_cases.json").read_text(encoding="utf-8"))["monsters"]}
+        if args.suite != "monsters" or any(not v.isdecimal() or int(v) not in valid for v in args.shapes.split(",")):
+            parser.error("--shapes仅用于monsters，且必须为清单中的shape")
     if args.list:
         print(f"{args.suite}: {', '.join(suite)}")
         if args.suite == "skills":
@@ -302,6 +308,10 @@ def main():
                 command = [godot, "--path", str(ROOT / "godot"), "--script", str(ROOT / "tests" / script), "--", *selection]
                 if args.screenshots:
                     command.append("--screenshots")
+                if args.suite == "monsters":
+                    command.append(f"--monster-scenario={case}")
+                    if args.shapes is not None:
+                        command.append("--shapes=" + args.shapes)
                 if args.suite == "skills":
                     skill_plan.append({"case": case, "args": command[command.index("--") + 1:]})
                 else:

@@ -4,6 +4,8 @@
 
 原版 1.45 清单见[技能](Skills.md)和[怪物外观](Monsters.md)，可按技能 ID、怪物 shape 和资源索引查找。
 
+怪物系统的现行消息规格见[怪物行为与消息对应](MonsterBehavior.md)，包括创建白名单、即时/队列分流和32–34历史解释的修正。
+
 版本对照见[技能总表](Skills.md#技能总表)和[怪物外观总表](Monsters.md#怪物外观总表)。
 
 本地动作相关专题：[频率及共用等待](../client/docs/evidence/map-input.md)、[服务器确认与拒绝](../client/docs/evidence/action-reply.md)、[服务器位移](../client/docs/evidence/forced-motion.md)、[死亡及重新入场](../client/docs/evidence/local-life.md)。
