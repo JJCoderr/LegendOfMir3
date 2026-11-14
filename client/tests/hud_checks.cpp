@@ -1,5 +1,6 @@
 // 测试内容：界面模型、选项确认与聊天联动、场景消息、人物行为、地图及资源解析。
 #include "hud/system_options.hpp"
+#include "hud/exit_guard.hpp"
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/ground_items.hpp"
@@ -31,6 +32,19 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--exit-guard") {
+            mir3::ExitGuard guard;
+            check(!guard.allowed(8000) && guard.allowed(8001),"原版8000毫秒边界仍限制，8001放行");
+            for (int i=0;i<3;++i) {
+                guard.ticks={0,0,0};guard.ticks[i]=10000;
+                check(!guard.allowed(18000) && guard.allowed(18001),"三个时间字段均独立限制退出");
+            }
+            guard.ticks={0xfffffff0u,0xfffffff0u,0xfffffff0u};
+            check(!guard.allowed(7984) && guard.allowed(7985),"DWORD回绕仍保持8000边界");
+            guard.action=19;check(guard.allowed(0xfffffff0u),"死亡动作19豁免等待");
+            guard.action=18;check(!guard.allowed(0xfffffff0u),"其他动作不套用死亡豁免");
+            std::cout << "EXIT_GUARD_MODEL_OK\n";return 0;
+        }
         if (std::filesystem::path(argv[1])=="--exit-request") {
             mir3::SendMessages sender;
             const auto logout=sender.packet(1009);

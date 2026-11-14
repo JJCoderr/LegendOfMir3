@@ -17,6 +17,7 @@
 #include "hud/trade_scroll.hpp"
 #include "hud/audio_options.hpp"
 #include "hud/system_options.hpp"
+#include "hud/exit_guard.hpp"
 #include "hud/portrait_picker.hpp"
 #include "resources/map_terrain.hpp"
 #include "protocol/map_message.hpp"
@@ -77,6 +78,7 @@ public:
     bool apply_minimap_reply(int map_number);
     void apply_minimap_unavailable();
     void handle_exit_confirmation(int dialog_id);
+    bool set_local_exit_state(int action,godot::PackedInt64Array ticks);
     bool apply_trade_offer_reply(int identifier,int accepted_count=0);
     bool set_trade_item(int side,int slot,int icon,int count,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     bool apply_trade_gold_reply(int identifier,int64_t amount,int low_word,int high_word);
@@ -441,6 +443,8 @@ private:
     mir3::HudLayout::Rect npc_dialogue_text_bounds(const NpcDialogueRow& row) const;
     int npc_dialogue_option_at(godot::Vector2 pointer) const;
     godot::Vector2i npc_dialogue_origin;
+    mir3::ExitGuard exit_guard;
+    bool check_exit_allowed();
     mir3::SendMessages outgoing_messages;
     godot::PackedByteArray send_client_packet(int identifier,int actor,const godot::String& body,std::uint32_t instance=0,std::uint16_t quantity=0);
     void emit_npc_packet(int identifier,int actor,const godot::String& body,std::uint32_t instance=0,std::uint16_t quantity=0);

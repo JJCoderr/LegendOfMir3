@@ -163,6 +163,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("post_chat","value","foreground","background"),&Mir3HudView::post_chat);
     ClassDB::bind_method(D_METHOD("update_chat_rejection","channel","rejected"),&Mir3HudView::update_chat_rejection);
     ClassDB::bind_method(D_METHOD("handle_exit_confirmation","dialog_id"),&Mir3HudView::handle_exit_confirmation);
+    ClassDB::bind_method(D_METHOD("set_local_exit_state","action","ticks"),&Mir3HudView::set_local_exit_state);
     ClassDB::bind_method(D_METHOD("set_trade_context","direction","cell","actor_type","dead","name"),&Mir3HudView::set_trade_context);
     ADD_SIGNAL(MethodInfo("trade_gold_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"amount")));
     ADD_SIGNAL(MethodInfo("trade_offer_requested",PropertyInfo(Variant::INT,"identifier"),
@@ -369,6 +370,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["portrait_count"]=int64_t(portrait_picker.names.size());
     result["portrait_first"]=portrait_picker.first;
     result["portrait_selected"]=portrait_picker.selected;
+    result["exit_clock"]=int64_t(GetTickCount());
+    result["exit_allowed"]=exit_guard.allowed(GetTickCount());
+    result["exit_action"]=int(exit_guard.action);
     result["options_visible"]=options.visible;
     result["option_show_mon"]=system_options.show_mon;
     result["option_force_attack"]=system_options.force_attack;
@@ -4212,7 +4216,21 @@ void Mir3HudView::set_group_roster(String player,PackedStringArray members) {
     queue_redraw();
 }
 
+bool Mir3HudView::set_local_exit_state(int action,PackedInt64Array ticks) {
+    if (action<0 || action>255 || ticks.size()!=3) return false;
+    for (int i=0;i<3;++i) if (ticks[i]<0 || ticks[i]>UINT32_MAX) return false;
+    for (int i=0;i<3;++i) exit_guard.ticks[i]=std::uint32_t(ticks[i]);
+    exit_guard.action=std::uint8_t(action);return true;
+}
+
+bool Mir3HudView::check_exit_allowed() {
+    if (exit_guard.allowed(GetTickCount())) return true;
+    post_chat(String::utf8(message(1407).c_str()),mir3::chat_palette(2),mir3::chat_palette(3));
+    queue_redraw();return false;
+}
+
 void Mir3HudView::handle_exit_confirmation(int dialog_id) {
+    if ((dialog_id==101 || dialog_id==109) && !check_exit_allowed()) return;
     // 0x4256B0 / 0x47BE10: game logout sends an empty 1009; it is not WM_DESTROY.
     if (dialog_id==101) send_client_packet(1009,0,String());
     if (dialog_id==109) get_tree()->quit();
@@ -4227,6 +4245,7 @@ bool Mir3HudView::dialog_has_input() const {
 }
 
 void Mir3HudView::open_group_dialog(int action) {
+    if ((action==101 || action==109) && !check_exit_allowed()) return;
     const auto skin=frame(1240);
     if (skin.is_null() || !chat_input) return;
     if (group_request) finish_group_dialog(false);
@@ -4296,6 +4315,7 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
     }
     if (!confirm) return;
     if (request==101 || request==109) {
+        if (!check_exit_allowed()) return;
         emit_signal("exit_confirmed",request);
         return;
     }
