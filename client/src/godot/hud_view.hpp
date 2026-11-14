@@ -403,6 +403,10 @@ private:
     godot::BackBufferCopy* fog_copy=nullptr;
     godot::Sprite2D* fog_sprite=nullptr;
     godot::Ref<godot::ImageTexture> snow_texture;
+    godot::BackBufferCopy* rain_copy=nullptr;
+    godot::Node2D* rain_layer=nullptr;
+    std::array<godot::Ref<godot::ImageTexture>,15> rain_textures;
+    void draw_rain();
     void draw_snow();
     void update_weather_layers();
     mir3::MapInputDelay map_input_delay;

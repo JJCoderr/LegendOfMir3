@@ -315,6 +315,19 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["weather_snow"]=weather.snow;result["weather_fog"]=weather.fog;result["weather_other"]=weather.other;
     result["snow_particle_count"]=weather.active;result["weather_fog_frame"]=weather.fog_frame;
     result["weather_fog_position"]=Vector2(weather.fog_x,weather.fog_y);
+    result["rain_particle_count"]=weather.rain_active;
+    result["rain_resources_loaded"]=std::all_of(rain_textures.begin()+10,rain_textures.end(),
+        [](const auto& image){return image.is_valid();});
+    for(const auto& p:weather.rain_particles) if(p.active) {
+        if(p.splash()) {
+            result["rain_splash_position"]=Vector2(p.x,p.y);
+            break;
+        }
+        if(!result.has("rain_first_position")) {
+            result["rain_first_position"]=Vector2(p.x,p.y);
+            result["rain_first_age"]=p.age;
+        }
+    }
     result["snow_resource_loaded"]=snow_texture.is_valid();
     result["fog_resource_loaded"]=fog_sprite && fog_sprite->get_texture().is_valid();
     if(weather.active) for(const auto& p:weather.particles) if(p.active) {
@@ -691,6 +704,21 @@ void Mir3HudView::_ready() {
     snow_shader->set_code("shader_type canvas_item; render_mode unshaded, blend_premul_alpha; varying vec3 tint; void vertex(){tint=COLOR.rgb;} void fragment(){vec4 s=texture(TEXTURE,UV); COLOR=vec4(s.rgb*tint*s.a,s.a/255.0);}");
     Ref<ShaderMaterial> snow_material;snow_material.instantiate();snow_material->set_shader(snow_shader);snow_layer->set_material(snow_material);
     snow_layer->connect("draw",callable_mp(this,&Mir3HudView::draw_snow));
+    rain_copy=memnew(BackBufferCopy);
+    rain_copy->set_copy_mode(BackBufferCopy::COPY_MODE_VIEWPORT);
+    add_child(rain_copy);
+    rain_layer=memnew(Node2D);
+    rain_layer->set_name("RainWeather");
+    rain_copy->add_child(rain_layer);
+    rain_layer->set_material(fog_material);
+    rain_layer->connect("draw",callable_mp(this,&Mir3HudView::draw_rain));
+    rain_textures[0]=snow_texture;
+    for(int frame=1;frame<int(rain_textures.size());++frame) {
+        if(frame>=5 && frame<10) continue;
+        if(const auto source=weather_archive.frame(500+frame))
+            rain_textures[frame]=texture(source->pixels.rgba,source->width,source->height);
+    }
+    rain_copy->hide();
     weather.random_state=std::uint32_t(ticks_msec());
     scene_light_layer=memnew(Node2D);
     Ref<Shader> light_shader;light_shader.instantiate();
@@ -2771,6 +2799,8 @@ void Mir3HudView::update_weather_layers() {
         fog_sprite->set_scale(Vector2(4000,1200)/image->get_size());
     }
     snow_layer->queue_redraw();
+    rain_copy->set_visible(visible && weather.other);
+    if(rain_copy->is_visible()) rain_layer->queue_redraw();
 }
 void Mir3HudView::draw_snow() {
     if(snow_texture.is_null() || !terrain_ready || !weather.snow || !chat_submission.snow) return;
@@ -2780,6 +2810,26 @@ void Mir3HudView::draw_snow() {
         PackedVector2Array vertices{Vector2(p.x-half,p.y-half),Vector2(p.x+half,p.y-half),Vector2(p.x+half,p.y+half),Vector2(p.x-half,p.y+half)};
         PackedColorArray colors;colors.push_back(Color(p.rgb[0]/255.f,p.rgb[1]/255.f,p.rgb[2]/255.f));
         snow_layer->draw_polygon(vertices,colors,uv,snow_texture);
+    }
+}
+
+void Mir3HudView::draw_rain() {
+    const PackedVector2Array uv{Vector2(1,1),Vector2(1,0),Vector2(0,0),Vector2(0,1)};
+    for(const auto& p:weather.rain_particles) if(p.active) {
+        const auto& image=rain_textures[p.texture_frame()-500];
+        if(image.is_null()) continue;
+        const float half_width=p.splash()?16.f:0.75f;
+        const float half_height=p.splash()?16.f:p.size*0.5f;
+        const float dx=p.x-p.previous_x;
+        const float angle=dx==0.f?0.f:std::atan2((p.y-p.previous_y)/dx,1.f)-1.57079632679f;
+        const Vector2 center(p.x,p.y);
+        PackedVector2Array vertices;
+        for(const auto& corner:{Vector2(-half_width,-half_height),Vector2(half_width,-half_height),
+                Vector2(half_width,half_height),Vector2(-half_width,half_height)})
+            vertices.push_back(center+corner.rotated(angle));
+        PackedColorArray colors;
+        colors.push_back(Color(p.rgb[0]/255.f,p.rgb[1]/255.f,p.rgb[2]/255.f));
+        rain_layer->draw_polygon(vertices,colors,uv,image);
     }
 }
 
@@ -2858,7 +2908,7 @@ void Mir3HudView::clear_game_scene() {
     while (!scene_npcs.empty()) remove_scene_actor(scene_npcs.begin()->first);
     while (!scene_chickens.empty()) remove_scene_actor(scene_chickens.begin()->first);
     scene_removals.clear();scene_clear_pending=false;map_changes.clear();
-    weather.select(0);weather.particles={};weather.active=0;update_weather_layers();
+    weather.select(0);weather.particles={};weather.active=0;weather.clear_rain();update_weather_layers();
     ground_items.items.clear();ground_bounds.clear();displayed_ground_item=-1;
     scene_speech.clear();speech_bounds.clear();scene_health.clear();scene_health_bounds.clear();scene_damage_glyphs.clear();
     map_route.clear();walk_frame=-1;movement_ms=0;
@@ -2893,7 +2943,7 @@ void Mir3HudView::clear_game_scene() {
     if (gold_sound) gold_sound->stop();
     while (!actor_sounds.empty()) remove_actor_sound(actor_sounds.begin()->first);
     chat_input->release_focus();chat_input->hide();
-    scene_light_layer->hide();snow_layer->hide();fog_copy->hide();hud_base->hide();hud_copy->hide();hud_decoration->hide();hud_tail->hide();exit_layer->hide();
+    scene_light_layer->hide();snow_layer->hide();fog_copy->hide();rain_copy->hide();hud_base->hide();hud_copy->hide();hud_decoration->hide();hud_tail->hide();exit_layer->hide();
 }
 
 void Mir3HudView::load_login_announcement() {

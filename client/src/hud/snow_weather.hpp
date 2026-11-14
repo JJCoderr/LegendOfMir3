@@ -13,6 +13,15 @@ struct SnowWeather {
         float x=0,y=0,vx=0,vy=0,ax=0,ay=0,mass=1,size=0;
         std::array<std::uint8_t,3> rgb{255,255,255};
     };
+    struct RainParticle : Particle {
+        float previous_x=0,previous_y=0;
+        int frame=0,frame_interval=0;
+
+        bool splash() const { return age>life && age-life<510; }
+        int texture_frame() const { return (splash()?510:500)+frame; }
+    };
+    std::array<RainParticle,400> rain_particles{};
+    int rain_active=0;
     std::array<Particle,500> particles{};
     bool snow=false,fog=false,other=false;
     int active=0,fog_frame=0;
@@ -35,8 +44,61 @@ struct SnowWeather {
         p.size=float(between(2,6))+fraction;
         const auto color=std::uint8_t(between(120,150));p.rgb={color,color,std::uint8_t(color+100)};
     }
+    void spawn_rain(RainParticle& p) {
+        p={};
+        p.active=true;
+        p.y=float(between(-500,0));
+        p.x=float(between(-100,900));
+        p.vy=500.f;
+        p.life=between(800,1400);
+        p.mass=100.f;
+        const float fraction=float(random()%1000)*0.001f;
+        p.size=float(between(3,30))+fraction;
+        const auto color=std::uint8_t(between(120,180));
+        p.rgb={color,color,125};
+        p.frame_interval=between(50,150);
+    }
+    void advance_rain(int ms) {
+        const float step=float(std::max(1,ms/17))*0.02f;
+        int created=0,processed=0;
+        for(auto& p:rain_particles) {
+            if(!p.active && created<11) {spawn_rain(p);++created;++rain_active;}
+            if(!p.active) {if(processed>=rain_active) break;continue;}
+            p.age+=ms;
+            const int excess=p.age-p.life;
+            if(excess<=0 && p.y<600.f) {
+                p.ax+=(-p.vx*(-0.05f)+10.f)/p.mass;
+                p.ay+=(-p.vy*(-0.05f)+100.f)/p.mass;
+                p.vx+=p.ax*step;p.vy+=p.ay*step;
+                p.previous_x=p.x;p.previous_y=p.y;
+                p.x+=p.vx*step;p.y+=p.vy*step;
+                p.frame_ms+=ms;
+                if(p.frame_ms>p.frame_interval) {p.frame_ms=0;p.frame=0;}
+                if(++processed>=rain_active) break;
+            } else if(excess<=250) {
+                const auto fade=std::uint8_t(250-excess/4);
+                for(auto& channel:p.rgb) channel=std::min(channel,fade);
+                p.frame_interval=50;
+                p.frame_ms+=ms;
+                if(p.frame_ms>50) {p.frame_ms=0;p.frame=(p.frame+1)%5;}
+                ++processed;
+            } else {
+                p={};
+                --rain_active;
+                --processed;
+            }
+        }
+    }
+    void clear_rain() {
+        rain_particles={};
+        rain_active=0;
+    }
     void advance(int ms,bool enabled) {
-        if(!enabled || ms<0) return;
+        if(ms<0) return;
+        if(enabled) advance_snow_and_fog(ms);
+        if(other) advance_rain(ms);
+    }
+    void advance_snow_and_fog(int ms) {
         if(fog) {
             ++fog_frame;
             if(fog_frame<800) {fog_x-=1.9f;fog_y-=0.2f;}
