@@ -22,6 +22,7 @@ SUITES = {
         "lightning-model": (["--spell-lightning"], None),
         "common": (["--spell-common"], "spell_common.gd"),
         "passive": ([], "spell_passive.gd"),
+        "special": (["--spell-special"], "spell_special.gd"),
         "melee": (["--spell-melee"], "melee_spells.gd"),
         "particle-model": (["--spell-particles"], None),
         "sound": (["--spell-sound"], "spell_sound.gd"),
@@ -52,7 +53,7 @@ def main():
     parser.add_argument("--suite", choices=SUITES, default="skills", help="子系统测试集")
     parser.add_argument("--case", action="append", help="子集名称，可重复指定；--list查看")
     parser.add_argument("--skill", type=int, choices=SKILLS, help="仅运行对应技能")
-    parser.add_argument("--skills", help="编号集合，逗号分隔；支持--case melee、common或enchantment")
+    parser.add_argument("--skills", help="编号集合，逗号分隔；支持--case melee、common、enchantment或special")
     parser.add_argument("--screenshots", action="store_true", help="保存真实视口截图")
     parser.add_argument("--godot", default=os.environ.get("MIR3_GODOT_EXECUTABLE"))
     parser.add_argument("--checks", help="hud_checks程序的路径")
@@ -77,6 +78,8 @@ def main():
             allowed = ["passive"]
         if args.skill in COMMON_SKILLS:
             allowed = ["common"]
+        if args.skill in (36, 74, 104, 107, 108):
+            allowed.append("special")
         if args.skill in (7, 12, 25, 26, 34, 35, 103):
             allowed = ["melee"]
         if args.skill == 1:
@@ -91,9 +94,9 @@ def main():
             parser.error("所选子集不支持该技能编号筛选")
         cases = args.case or allowed
     if args.skills:
-        if args.suite != "skills" or cases not in (["melee"], ["common"], ["enchantment"]) or args.skill is not None:
-            parser.error("--skills当前用于--suite skills --case melee、common或enchantment，不能与--skill并用")
-        selection_ids = COMMON_SKILLS if cases == ["common"] else (range(408,415) if cases == ["enchantment"] else (7,12,25,26,34,35,103))
+        if args.suite != "skills" or cases not in (["melee"], ["common"], ["enchantment"], ["special"]) or args.skill is not None:
+            parser.error("--skills当前用于--suite skills --case melee、common、enchantment或special，不能与--skill并用")
+        selection_ids = {"common": COMMON_SKILLS, "enchantment": range(408,415), "melee": (7,12,25,26,34,35,103), "special": (36,74,104,107,108)}[cases[0]]
         selected = args.skills.split(",")
         if not selected or any(not n.isdecimal() or int(n) not in selection_ids for n in selected):
             parser.error("--skills包含无效技能编号")
@@ -110,7 +113,7 @@ def main():
         models, script = suite[case]
         # skills/models的--spell已包含颜色、闪电与声道模型，全量时不重复执行。
         commands = [[checks, model] for model in models
-                    if not (args.suite == "skills" and "models" in cases and model in ("--spell-weapon-color", "--spell-lightning", "--spell-sound", "--spell-particles", "--spell-melee", "--spell-common"))]
+                    if not (args.suite == "skills" and "models" in cases and model in ("--spell-weapon-color", "--spell-lightning", "--spell-sound", "--spell-particles", "--spell-melee", "--spell-common", "--spell-special"))]
         if script:
             command = [godot, "--path", str(ROOT / "godot"), "--script", str(ROOT / "tests" / script), "--"]
             if args.skill is not None:

@@ -67,6 +67,7 @@ int main(int argc,char** argv) {
         if(std::filesystem::path(argv[1])=="--spell-lightning") {spell_lightning_checks();std::cout<<"SPELL_LIGHTNING_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--spell-particles") {spell_shared_particle_checks();std::cout<<"SPELL_PARTICLES_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--spell-melee") {melee_spell_checks();std::cout<<"SPELL_MELEE_OK\n";return 0;}
+        if(std::filesystem::path(argv[1])=="--spell-special") {spell_special_checks();std::cout<<"SPELL_SPECIAL_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--spell-common") {spell_common_checks();std::cout<<"SPELL_COMMON_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--spell-sound") {spell_sound_checks();std::cout<<"SPELL_SOUND_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--forced-motion") {forced_motion_checks();std::cout<<"FORCED_MOTION_OK\n";return 0;}
