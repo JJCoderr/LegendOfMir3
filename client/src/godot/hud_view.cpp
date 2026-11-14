@@ -237,6 +237,13 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary chicken_bounds;
     for (const auto& [actor,chicken]:scene_chickens) chicken_bounds[actor]=chicken.bounds;
     result["scene_chicken_bounds"]=chicken_bounds;
+    Dictionary chicken_cells, chicken_steps;
+    for (const auto& [actor,chicken]:scene_chickens) {
+        chicken_cells[actor]=chicken.cell;
+        chicken_steps[actor]=chicken.walk_frame;
+    }
+    result["scene_chicken_cells"]=chicken_cells;
+    result["scene_chicken_steps"]=chicken_steps;
     Dictionary actor_health_values;
     for (const auto& [actor,health]:scene_health) {
         PackedInt32Array values;
@@ -2062,6 +2069,31 @@ const Mir3HudView::MapActorFrame* Mir3HudView::chicken_frame(int id) {
         Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions}).first->second;
 }
 
+bool Mir3HudView::move_scene_chicken(int actor,Vector2i cell,int facing) {
+    if (!terrain.walkable(cell.x,cell.y)) return false;
+    auto& chicken=scene_chickens.at(actor);
+    if (chicken.death_frame>=0) return true;
+    if (chicken.walk_frame>=0) {
+        if (chicken.turns.size()>=64) return false;
+        chicken.turns.emplace_back(cell,facing);
+        return true;
+    }
+    if (cell==chicken.cell) {
+        chicken.facing=facing;
+        queue_redraw();
+        return true;
+    }
+    for (int i=0;i<6;++i) if (!chicken_frame(80+10*facing+i)) return false;
+    const auto direction=mir3::map_directions[facing];
+    chicken.walk_origin=cell-Vector2i(direction[0],direction[1]);
+    chicken.cell=cell;
+    chicken.facing=facing;
+    chicken.walk_frame=0;
+    chicken.walk_ms=0;
+    queue_redraw();
+    return true;
+}
+
 const Mir3HudView::MapActorFrame* Mir3HudView::attachment_frame(int type,int shape,bool weapon,int motion_frame) {
     if (!shape || (weapon && shape==37)) return nullptr;
     // mir3_1.45 ActorAppearance, 0x414650 / 0x414870.
@@ -2298,9 +2330,8 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         if (opcode==mir3::protocol::SM_TURN && chicken_feature) {
             const int facing=p[2]&255;
             if (facing>=8) return false;
-            if (const auto it=scene_chickens.find(actor);it!=scene_chickens.end() && it->second.death_frame>=0)
-                return true;
-            return place_scene_chicken(actor,Vector2i(p[0],p[1]),facing);
+            const Vector2i cell(p[0],p[1]);
+            return scene_chickens.contains(actor)?move_scene_chicken(actor,cell,facing):place_scene_chicken(actor,cell,facing);
         }
         if (chicken_death && (scene_chickens.contains(actor) || chicken_feature)) {
             const int facing=p[2]&255;
@@ -2314,6 +2345,8 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
             auto& chicken=scene_chickens.at(actor);
             chicken.cell=cell;
             chicken.facing=facing;
+            chicken.walk_frame=-1;
+            chicken.turns.clear();
             if (chicken.death_frame<0 || skeleton) {
                 chicken.death_frame=opcode==mir3::protocol::SM_NOWDEATH?0:frames-1;
                 chicken.death_ms=0;
@@ -3012,11 +3045,11 @@ void Mir3HudView::draw_terrain() {
         paint_canvas->draw_texture_rect(image->second.image,
             Rect2(particle.position-Vector2(camera)-extent*0.5f,extent),false,particle.tint);
     }
-    const auto draw_scene_actor=[&](SceneActor& npc,int interval,const MapActorFrame* pose=nullptr) {
+    const auto draw_scene_actor=[&](SceneActor& npc,int interval,const MapActorFrame* pose=nullptr,Vector2i offset={}) {
         const auto& selected=npc.frames[tick/interval%4];
         const auto& frame=pose?*pose:selected.image.is_valid()?selected:npc.frames.front();
         if (npc.cell.x<start_x-5 || npc.cell.x>=start_x+21) return;
-        const auto position=Vector2(npc.cell.x*48-camera.x,npc.cell.y*32-camera.y)+frame.offset;
+        const auto position=Vector2(npc.cell.x*48-camera.x,npc.cell.y*32-camera.y)+frame.offset+Vector2(offset);
         npc.anchor=position-frame.offset;
         npc.bounds=Rect2(position,frame.image->get_size());
         paint_canvas->draw_texture(frame.image,position);
@@ -3042,8 +3075,15 @@ void Mir3HudView::draw_terrain() {
             if (start_y+row==npc.cell.y) draw_scene_actor(npc,200);
         for (auto& [actor,chicken]:scene_chickens) {
             if (start_y+row!=chicken.cell.y) continue;
+            if (chicken.walk_frame>=0) {
+                const auto remaining=(chicken.walk_origin-chicken.cell)*(5-chicken.walk_frame);
+                draw_scene_actor(chicken,180,chicken_frame(80+10*chicken.facing+chicken.walk_frame),
+                    remaining*Vector2i(8,5));
+                continue;
+            }
             const int base=(chicken.skeleton?880:320)+10*chicken.facing;
-            const auto* pose=chicken.death_frame<0?nullptr:chicken_frame(base+chicken.death_frame);
+            const auto* pose=chicken.death_frame<0?chicken_frame(10*chicken.facing+tick/300%4):
+                chicken_frame(base+chicken.death_frame);
             draw_scene_actor(chicken,180,pose);
         }
         for (auto& [actor,human]:scene_humans) {
@@ -5228,6 +5268,21 @@ void Mir3HudView::_process(double delta) {
 
     apply_login_actor();
     for (auto& [actor,chicken]:scene_chickens) {
+        if (chicken.walk_frame>=0) {
+            chicken.walk_ms+=delta*1000;
+            if (chicken.walk_ms>130) {
+                chicken.walk_ms=0;
+                if (++chicken.walk_frame>=6) {
+                    chicken.walk_frame=-1;
+                    while (!chicken.turns.empty() && chicken.walk_frame<0) {
+                        const auto [cell,facing]=chicken.turns.front();
+                        chicken.turns.pop_front();
+                        move_scene_chicken(actor,cell,facing);
+                    }
+                }
+                queue_redraw();
+            }
+        }
         if (chicken.death_frame<0 || chicken.death_frame>=9 || chicken.skeleton) continue;
         chicken.death_ms+=delta*1000;
         if (chicken.death_ms>150) {
