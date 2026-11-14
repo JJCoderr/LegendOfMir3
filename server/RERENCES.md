@@ -11,3 +11,12 @@
 - 原版证据边界：本批未新增服务端 IDA 分析，沿用旧项目拾取输入路径记录。客户端只发 1001+坐标信号；背包更新、物品消失、重量/拥有权/金币/失败通知须由服务端真实回包驱动。
 
 待办见 TODO.md；尚未启动测试服务端，不能把客户端测试注入物品当作端到端拾取通过。
+
+## 地图切换（实现前记录，2026-11-14）
+
+- 两套早期 C++ ObjectPlayer.cpp::RM_CHANGEMAP 都发送当前人物识别号、x/y、DayBright 与地图 series，六位编码地图文件名，再 SendMapName；文件名和显示名称不是一个字段。
+- Zircon ServerLibrary/Models/PlayerObject.cs 地图变化发送 MapChanged(MapIndex, InstanceIndex)，清异图法术、按地图限制下马；位置消息独立。
+- mir2x server/src/playerop.cpp::on_AM_MAPSWITCHTRIGGER 区分同图 requestSpaceMove 与异图 requestMapSwitch，由服务端请求流程裁决。
+- 旧 mir3_1.45/gameplay.cpp::cross_exit 使用 MockServer::enter_region，不能据此实现生产服务端换图包。
+
+当前只实现客户端已解码切换入口和资源/场景生命周期；真实角色识别号、网关帧、地图文件名/显示名分包、视野重建顺序、换图失败与实例生命周期需要实服联调。客户端不自行推断传送门或服务器落点。

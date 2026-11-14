@@ -97,6 +97,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_npc_body","opcode","actor","count","encoded"),&Mir3HudView::apply_npc_body);
     ClassDB::bind_method(D_METHOD("apply_npc_dialogue","opcode","actor","body"),&Mir3HudView::apply_npc_dialogue);
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
+    ClassDB::bind_method(D_METHOD("change_map","map_id","name","spawn"),&Mir3HudView::change_map);
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
     ClassDB::bind_method(D_METHOD("apply_scene_health","actor","opcode","current","mana","maximum"),&Mir3HudView::apply_scene_health);
     ClassDB::bind_method(D_METHOD("set_scene_health_flags","actor","status_tick","saved_tick","excluded","raised"),&Mir3HudView::set_scene_health_flags);
@@ -272,6 +273,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["scene_human_cells"]=human_cells;
     result["player_idle_frame"]=player_idle.frame();
     result["npc_dialogue_actor"]=npc_dialogue_actor;
+    result["map_id"]=current_map_id;
+    result["map_name"]=String::utf8(model.map_name.c_str());
     result["player_cell"]=player_cell;
     result["walk_frame"]=walk_frame;
     result["map_camera_pixel"]=map_camera();
@@ -394,6 +397,7 @@ void Mir3HudView::_ready() {
     if (!loaded || frame(1160).is_null()) {
         loaded=false; UtilityFunctions::push_error("Cannot read original GameInter WIL/WIX resources."); return;
     }
+    map_directory=root.path_join("Map");
     actor_resource_root=root.path_join("Data");
     weapon_order=FileAccess::get_file_as_bytes(root.path_join("Weapon.ord"));
     audio_root=root.path_join("Sound");
@@ -5327,12 +5331,63 @@ bool Mir3HudView::request_trade() {
     return true;
 }
 
+bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn) {
+    // Decode into a temporary map: failure must not destroy the live scene.
+    if (!terrain_ready || map_id.is_empty() || name.is_empty() || map_id.length()>64) return false;
+    for (int i=0;i<map_id.length();++i) {
+        const auto c=map_id[i];
+        if (!((c>='0' && c<='9') || (c>='A' && c<='Z') || (c>='a' && c<='z') || c=='_' || c=='-')) return false;
+    }
+    mir3::MapTerrain next;
+    if (!next.open(std::filesystem::u8path(map_directory.path_join(map_id+".map").utf8().get_data())) ||
+        !next.walkable(spawn.x,spawn.y)) return false;
+    terrain=std::move(next);
+    current_map_id=map_id;
+    while (!scene_humans.empty()) remove_scene_actor(scene_humans.begin()->first);
+    while (!scene_npcs.empty()) remove_scene_actor(scene_npcs.begin()->first);
+    while (!scene_chickens.empty()) remove_scene_actor(scene_chickens.begin()->first);
+    scene_removals.clear();
+    scene_clear_pending=false;
+    scene_movement_ms=0;
+    ground_items.items.clear();
+    ground_bounds.clear();
+    displayed_ground_item=-1;
+    scene_speech.clear();
+    speech_bounds.clear();
+    scene_damage_glyphs.clear();
+    if (auto local=scene_health.find(0);local!=scene_health.end()) local->second.damage={};
+    scene_health_bounds.clear();
+    displayed_name_actor=-1;
+    map_route.clear();
+    walk_frame=-1;
+    movement_ms=0;
+    map_pointer_button=0;
+    map_pointer_seconds=0;
+    merchant_click_captured=false;
+    player_cell=step_origin=step_destination=spawn;
+    player_idle.reset();
+    player_bounds=Rect2();
+    if (footstep_sound) footstep_sound->stop();
+    model.map_name=name.utf8().get_data();
+    set_minimap_position(spawn.x,spawn.y);
+    // Same-name map instances also need fresh minimap and target state.
+    reset_map_overlays();
+    if (map_music) map_music->stop();
+    music_file=String();
+    set_music_map(map_id);
+    queue_redraw();
+    return true;
+}
+
 void Mir3HudView::set_map_location(String name,int x,int y) {
     const auto utf8=name.utf8();
     const bool changed=model.map_name!=utf8.get_data();
     model.map_name=utf8.get_data();
     set_minimap_position(x,y);
-    if (!changed) return;
+    if (changed) reset_map_overlays();
+}
+
+void Mir3HudView::reset_map_overlays() {
     close_npc_dialogue();
     trade_actor_name=String();
     hovered_target=0;

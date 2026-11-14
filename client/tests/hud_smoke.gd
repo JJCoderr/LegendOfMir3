@@ -151,6 +151,51 @@ func scene_text_packet(opcode: int, actor: int, foreground: int, background: int
 	packet.append_array(encode_scene_bytes(body))
 	return packet
 
+func run_map_change() -> void:
+	var keys := PackedByteArray([18,52,86,120])
+	var requests: Array = []
+	hud.minimap_requested.connect(func(id: int): requests.append(id))
+	key(KEY_V)
+	if not check(hud.apply_minimap_reply(1001), "seed minimap"): return
+	var origin: Vector2i = hud.hud_snapshot().player_cell
+	var packet := scene_packet(610,101,origin.x,origin.y,1)
+	packet.append_array(encode_scene_bytes("Old map drop".to_ascii_buffer()))
+	if not check(hud.apply_scene_message(packet,keys), "seed old map item"): return
+	if not check(hud.apply_npc_dialogue(643,2,"老黄/<购买药品/@buy>"), "seed NPC dialogue"): return
+	var before: Dictionary = hud.hud_snapshot()
+	for bad in ["missing_map_987654", "../0", "G:/0", "0.map"]:
+		if not check(not hud.change_map(bad,"Invalid",Vector2i(312,310)), "reject missing or unsafe map ID"): return
+	for bad_spawn in [Vector2i(-1,0),Vector2i(9999,9999),Vector2i(310,310)]:
+		if not check(not hud.change_map("01","Invalid",bad_spawn), "reject invalid spawn"): return
+	var unchanged: Dictionary = hud.hud_snapshot()
+	if not check(unchanged.player_cell == origin and unchanged.scene_human_cells == before.scene_human_cells and unchanged.ground_item_cells == before.ground_item_cells and unchanged.npc_dialogue_actor == 2, "failed switch preserves scene"): return
+	if not await capture("map-change-before"): return
+	if not check(hud.change_map("01","地图 01",Vector2i(312,310)), "load second external map"): return
+	await process_frame
+	await process_frame
+	var changed: Dictionary = hud.hud_snapshot()
+	if not check(changed.map_id == "01" and changed.player_cell == Vector2i(312,310) and changed.map_position == Vector2i(312,310), "map and HUD coordinates switch together"): return
+	if not check(changed.scene_human_cells.is_empty() and changed.scene_npc_bounds.is_empty() and changed.ground_item_cells.is_empty() and changed.npc_dialogue_actor == 0 and changed.walk_frame == -1, "clear old scene"): return
+	if not check(requests == [1033,1033] and not changed.minimap_visible, "invalidate old minimap and request fresh image"): return
+	if not await capture("map-change-arrival"): return
+	if not check(hud.change_map("0","比奇省",origin), "return to original map"): return
+	if not check(hud.set_scene_human(5,origin+Vector2i(-2,1),4,1,"重入前人物"), "seed same-map actor"): return
+	hud.apply_scene_message(scene_packet(30,5,0,0,0),keys)
+	hud.walk_to_map_cell(origin+Vector2i(1,1))
+	if not check(hud.change_map("0","比奇省",origin), "same-map same-name reentry"): return
+	if not check(hud.hud_snapshot().scene_human_cells.is_empty() and hud.hud_snapshot().route_destination == Vector2i(-1,-1), "same-map reset clears objects and route"): return
+	if not check(hud.set_scene_human(5,origin+Vector2i(-2,1),4,1,"新地图旅人"), "reuse actor identity"): return
+	if not check(hud.set_scene_npc(2,Vector2i(413,409),110), "new scene NPC"): return
+	await process_frame
+	await process_frame
+	if not check(hud.hud_snapshot().scene_human_cells.has(5), "stale removal cannot remove new actor"): return
+	if not await capture("map-change-return"): return
+	hud.queue_free()
+	await process_frame
+	await process_frame
+	print("PASS map change: rollback, arrival, reset, same-map reentry")
+	quit()
+
 func run_ground_items() -> void:
 	var keys := PackedByteArray([18,52,86,120])
 	var player: Vector2i = hud.hud_snapshot().player_cell
@@ -745,6 +790,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--map-change"):
+		await run_map_change()
+		return
 	if OS.get_cmdline_user_args().has("--ground-items"):
 		await run_ground_items()
 		return
@@ -913,7 +961,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

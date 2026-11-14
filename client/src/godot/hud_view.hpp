@@ -314,6 +314,9 @@ private:
     bool inventory_pointer(int kind,godot::Vector2 position);
     mir3::HudController controller{model};
     mir3::WilArchive archive;
+    bool change_map(godot::String map_id,godot::String name,godot::Vector2i spawn);
+    void reset_map_overlays();
+    godot::String map_directory, current_map_id="0";
     mir3::MapTerrain terrain;
     std::array<mir3::WilArchive,75> terrain_archives;
     bool animated_map_objects=false;
