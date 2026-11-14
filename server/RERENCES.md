@@ -28,3 +28,11 @@
 - mir2x 未找到可替代目标 46 昼夜包的证据。旧 mir3_1.45 MockServer 的 120 秒循环只是离线演示，不移植自动时间循环。
 
 客户端按旧目标分析消费 46 第三参数；入场亮度由已解码 change_map 参数传入。真实服务端字段、地图初始设置、人物装备灯属性和特效光源仍待联调。
+
+## 人物灯属性（实现前记录，2026-11-14）
+
+- 两套早期 C++ ObjectPlayer.cpp 的 RM_CHANGELIGHT 发 654、wParam=m_btLight；与目标旧分析 807、第三参数高字节不同，联调前须核对。
+- Zircon PlayerObject 对象数据以 Stats[Stat.Light] 提供 Light，客户端不自行裁定装备照明。
+- mir2x 未找到可替代 807 的证据。旧项目的项链属性 2 是离线 fixture，不能作为物品数据库规则。
+
+客户端接收 807，并新增 set_local_actor_identity 登记本地网络 ID；网络识别号与渲染 actor=0 区分。真实登录角色 ID、穿脱装备结果和灯属性包顺序仍待服务端联调。

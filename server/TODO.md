@@ -37,3 +37,5 @@
 换图联调入口：change_map(map_id, name, spawn) 已支持客户端场景重置；文件编号和显示名称分离。尚未接 SM_CHANGEMAP 原包、视野重建顺序和失败回包；服务端实现未标记完成。
 
 环境联调：客户端已接 46 第三参数渐变及 change_map 入场模式；需用目标服务端确认字段（早期 C++ 使用不同参数）、下发装备灯属性与法术光源；未实现自动昼夜服务端。规则和资源字段见 ../client/docs/evidence/scene-lighting.md。
+
+人物灯属性联调：客户端支持 set_local_actor_identity 与 807 第三参数高字节灯属性；与早期参考 654/wParam 不同。需由登录流程提供本地网络 ID，并验证穿脱装备/属性包顺序；当前仅原始包注入测试通过，见 ../client/docs/evidence/actor-light.md。

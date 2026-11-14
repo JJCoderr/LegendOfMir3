@@ -316,6 +316,9 @@ private:
     mir3::HudController controller{model};
     mir3::WilArchive archive;
     bool change_map(godot::String map_id,godot::String name,godot::Vector2i spawn,int ambient_mode=0);
+    bool set_local_actor_identity(int actor);
+    int local_actor_identity=0;
+    unsigned player_light_attribute=0;
     mir3::SceneAmbient scene_ambient;
     godot::PackedColorArray scene_light_samples;
     godot::Node2D *scene_light_layer=nullptr, *hud_base=nullptr;
@@ -383,6 +386,7 @@ private:
         mir3::SceneHumanQueue messages;
         mir3::HumanLife life;
         mir3::CombatStance combat;
+        unsigned light_attribute=0;
         bool bump=false;
         bool catching_up=false;
         std::uint32_t action_flags=0;

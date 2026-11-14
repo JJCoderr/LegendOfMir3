@@ -97,6 +97,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_npc_body","opcode","actor","count","encoded"),&Mir3HudView::apply_npc_body);
     ClassDB::bind_method(D_METHOD("apply_npc_dialogue","opcode","actor","body"),&Mir3HudView::apply_npc_dialogue);
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
+    ClassDB::bind_method(D_METHOD("set_local_actor_identity","actor"),&Mir3HudView::set_local_actor_identity);
     ClassDB::bind_method(D_METHOD("change_map","map_id","name","spawn","ambient_mode"),&Mir3HudView::change_map,DEFVAL(0));
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
     ClassDB::bind_method(D_METHOD("apply_scene_health","actor","opcode","current","mana","maximum"),&Mir3HudView::apply_scene_health);
@@ -273,6 +274,11 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["scene_human_cells"]=human_cells;
     result["player_idle_frame"]=player_idle.frame();
     result["npc_dialogue_actor"]=npc_dialogue_actor;
+    result["local_actor_identity"]=local_actor_identity;
+    result["player_light_attribute"]=player_light_attribute;
+    Dictionary lights;
+    for (const auto& [id,human]:scene_humans) lights[id]=human.light_attribute;
+    result["scene_human_lights"]=lights;
     result["scene_light_samples"]=scene_light_samples;
     result["scene_ambient"]=scene_ambient.level();
     result["scene_ambient_mode"]=scene_ambient.mode;
@@ -1679,6 +1685,7 @@ void Mir3HudView::draw_scene_name() {
 }
 
 bool Mir3HudView::set_scene_npc(int actor,Vector2i cell,int first_frame) {
+    if (actor==local_actor_identity) return false;
     if (!terrain_ready || actor<=0 || scene_chickens.contains(actor) || scene_humans.contains(actor) || first_frame<0 || first_frame>65532) return false;
     SceneActor npc{};
     npc.cell=cell;
@@ -1699,6 +1706,7 @@ bool Mir3HudView::scene_occupied(Vector2i cell) const {
 }
 
 bool Mir3HudView::set_scene_chicken(int actor,Vector2i cell) {
+    if (actor==local_actor_identity) return false;
     if (!terrain_ready || actor<=0 || scene_npcs.contains(actor) || scene_humans.contains(actor) || !terrain.walkable(cell.x,cell.y)) return false;
     SceneActor chicken{};
     chicken.cell=cell;
@@ -1877,6 +1885,7 @@ bool Mir3HudView::set_scene_human_body(int actor,int type,int clothing) {
 }
 
 bool Mir3HudView::set_scene_human(int actor,Vector2i cell,int facing,int profession,String name) {
+    if (actor==local_actor_identity) return false;
     if (!terrain_ready || actor<=0 || facing<0 || facing>=8 || profession<0 || profession>2 ||
         scene_npcs.contains(actor) || scene_chickens.contains(actor) || !terrain.walkable(cell.x,cell.y)) return false;
     SceneHuman human{};
@@ -1924,6 +1933,14 @@ bool Mir3HudView::apply_scene_human_life(int actor,int opcode,Vector2i cell,int 
     return true;
 }
 
+bool Mir3HudView::set_local_actor_identity(int actor) {
+    if (actor<=0 || scene_humans.contains(actor) || scene_npcs.contains(actor) || scene_chickens.contains(actor)) return false;
+    if (local_actor_identity!=actor) player_light_attribute=0;
+    local_actor_identity=actor;
+    queue_redraw();
+    return true;
+}
+
 bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray key) {
     if (encoded.size()<16 || encoded.size()>1039) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),static_cast<std::size_t>(encoded.size())},
@@ -1931,6 +1948,18 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (!header || header->recognition>INT_MAX) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
+    if (opcode==807) {
+        if (encoded.size()!=16 || actor<=0) return false;
+        const unsigned light=p[2]>>8;
+        if (actor==local_actor_identity) {
+            player_light_attribute=light;queue_redraw();return true;
+        }
+        const auto human=scene_humans.find(actor);
+        if (human==scene_humans.end()) return false;
+        mir3::SceneHumanMessage message;
+        message.opcode=807;message.light_attribute=light;
+        return human->second.messages.push(message);
+    }
     if (opcode==46) {
         if (encoded.size()!=16) return false;
         scene_ambient.update(p[2]);
@@ -2073,6 +2102,7 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     if (!next) return false;
     bool accepted=false;
     const Vector2i cell(next->x,next->y);
+    if (next->opcode==807) { human.light_attribute=next->light_attribute;queue_redraw();return true; }
     if (next->opcode==31) { apply_actor_health_record(actor,*next);return true; }
     // Dead actors only accept standing/revival feature refreshes.
     const bool refresh=next->opcode==10 || next->opcode==1316 || next->opcode==1321;
@@ -2489,10 +2519,10 @@ void Mir3HudView::draw_scene_lighting() {
             if (const auto packed=terrain.light(x,y))
                 grid.add({x*48-camera.x,y*32-camera.y,0,{},radii[packed>>14],colors[(packed>>4)&255]});
     const auto local=player_pixel()-camera;
-    grid.add(mir3::SceneLight::actor(local.x,local.y,0,true));
+    grid.add(mir3::SceneLight::actor(local.x,local.y,player_light_attribute,true));
     for (const auto& [id,human]:scene_humans) {
         if (human.life.dead || !human.bounds.has_area()) continue;
-        grid.add(mir3::SceneLight::actor(int(human.anchor.x)+24,int(human.anchor.y)+16,0,false));
+        grid.add(mir3::SceneLight::actor(int(human.anchor.x)+24,int(human.anchor.y)+16,human.light_attribute,false));
     }
     const auto color=[&](int i) {
         const auto& c=grid.samples[i];return Color(c[0]/255.f,c[1]/255.f,c[2]/255.f);

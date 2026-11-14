@@ -44,6 +44,14 @@ int main(int argc,char** argv) {
             check(grid.samples[19]==mir3::SceneLight::Rgb{115,115,115},"ambient plus actor contribution");
             grid.add(actor);grid.add(actor);check(grid.samples[19][0]==255,"additive lamps saturate");
             check(actor.diagonal_top_left_to_bottom_right(2,0) && !actor.diagonal_top_left_to_bottom_right(2,2),"original light triangle quadrants");
+            check(mir3::SceneLight::actor(0,0,2,true).outer_radius_cells==8 && mir3::SceneLight::actor(0,0,2,false).outer_radius_cells==4,"attribute 2 local/remote radius distinction");
+            check(mir3::SceneLight::actor(0,0,8,true).outer_radius_cells==10 && mir3::SceneLight::actor(0,0,8,false).outer_radius_cells==8,"attribute 8 radius distinction");
+            check(mir3::SceneLight::actor(0,0,255,true).outer_radius_cells==14 && mir3::SceneLight::actor(0,0,255,false).outer_radius_cells==10,"other byte attributes use bright fallback");
+            mir3::SceneHumanQueue queue;
+            mir3::SceneHumanMessage update;update.opcode=807;update.light_attribute=8;
+            check(queue.push(update),"light update joins actor queue");
+            update.light_attribute=256;check(!queue.push(update),"reject invalid light byte");
+            queue.push({31});check(queue.fold_health().size()==1 && queue.size()==1 && queue.take()->light_attribute==8,"health folding preserves light records");
             std::cout << "SCENE_LIGHT_MODEL_OK\n";return 0;
         }
         if (std::filesystem::path(argv[1])=="--ground-items") {

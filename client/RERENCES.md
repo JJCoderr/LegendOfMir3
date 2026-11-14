@@ -34,3 +34,12 @@
 - mir2x client/src 的 processrun 绘制与 light 搜索未定位对应原版昼夜网格实现；无可复用证据，不以特效类 LightBolt 的名字推断环境算法。
 
 选择：独立 C++ 环境状态与灯网格模型，支持 46 原始消息渐变、change_map 入场模式、静态地图灯及默认人物灯；GPU 使用场景 RGB 乘法，HUD/名称/对话在照明后绘制。装备灯属性与法术光源仍需接消息/特效模块，不能标记完整夜景已还原。
+
+## 人物灯属性更新（实现前记录，2026-11-14）
+
+- 旧 mir3_1.45/gameplay.hpp::receive_player_light 记录 0x415AD0 将 807 分发至 0x4117D0，从 record+11 复制到 actor descriptor+20，即第三参数高字节；spell_light.hpp::actor 给出本地/远端半径差异。MockServer 项链属性 2 仅是测试数据，不能自动从装备图标推断。
+- LegendOfMir3_Src Actor.cpp::OnChangeLight 和 legendOfMir2_src Mir3EIClient/Actor.cpp 同名函数均读 SM_CHANGELIGHT=654 的 wParam。原版分析优先，不将 654 当成 807 的别名。
+- Zircon Client/Models/PlayerObject.cs 从对象信息取 Light，ServerLibrary/Models/PlayerObject.cs 从 Stats[Stat.Light] 填入对象信息；参考“服务端决定灯属性”的边界，不照搬消息格式。
+- mir2x client/src/hero.cpp 未找到目标人物灯属性消息对应实现，不能以名字相似代码推断灯属性。
+
+选择：显式登记本地网络 ID；807 无消息体，本地匹配 ID 更新持久灯属性，远端仅对已存在人物入队，随原有人物队列消费，不挪动人物坐标/方向。移除远端人物即丢弃灯属性和排队更新；换图保留本地装备灯属性。死亡远端不发光，属性保存供复活使用。队列/死亡细节仍需与目标运行时进一步对照，本批无新增 IDA 证据。

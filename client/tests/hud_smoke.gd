@@ -151,6 +151,64 @@ func scene_text_packet(opcode: int, actor: int, foreground: int, background: int
 	packet.append_array(encode_scene_bytes(body))
 	return packet
 
+func run_actor_light() -> void:
+	var keys := PackedByteArray([18,52,86,120])
+	if not check(hud.change_map("01","地图 01",Vector2i(312,310),1), "night map for actor lights"): return
+	if not check(not hud.apply_scene_message(scene_packet(807,100,0,0,512),keys), "unbound local identity is rejected"): return
+	if not check(hud.set_local_actor_identity(100), "bind real local identity"): return
+	if not check(not hud.set_scene_human(100,Vector2i(312,310),4,1,"duplicate"), "local identity cannot become remote actor"): return
+	hud.set_process(false)
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var original: PackedColorArray = hud.hud_snapshot().scene_light_samples
+	if not await capture("actor-light-unequipped"): return
+	var position: Vector2i = hud.hud_snapshot().player_cell
+	if not check(hud.apply_scene_message(scene_packet(807,100,9999,9999,2*256+7),keys), "807 reads high byte and ignores position/direction"): return
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var lit: PackedColorArray = hud.hud_snapshot().scene_light_samples
+	var brighter := 0
+	for i in original.size():
+		if lit[i].get_luminance()>original[i].get_luminance()+0.01: brighter += 1
+	if not check(brighter>20 and hud.hud_snapshot().player_cell==position and hud.hud_snapshot().player_light_attribute==2, "equipment light expands actual grid without moving player"): return
+	if not await capture("actor-light-equipped"): return
+	var malformed := scene_packet(807,100,0,0,0)
+	malformed.append(60)
+	if not check(not hud.apply_scene_message(malformed,keys) and hud.hud_snapshot().player_light_attribute==2, "malformed light update has no side effects"): return
+	if not check(hud.apply_scene_message(scene_packet(807,100,0,0,0),keys), "remove equipment light"): return
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	if not check(hud.hud_snapshot().scene_light_samples==original, "unequip restores baseline light grid"): return
+	hud.set_process(true)
+	if not check(hud.change_map("0","比奇省",Vector2i(413,410),1), "remote queue fixture"): return
+	if not check(hud.set_scene_human(5,Vector2i(411,411),4,1,"持灯旅人"), "remote light actor"): return
+	if not check(not hud.set_local_actor_identity(5) and hud.hud_snapshot().local_actor_identity==100, "reject identity conflict without changing binding"): return
+	if not check(hud.apply_scene_human_action(5,1307,4,0), "remote cast delays queued light"): return
+	if not check(hud.apply_scene_message(scene_packet(807,5,0,0,8*256),keys) and hud.hud_snapshot().scene_human_lights[5]==0, "remote light waits for action queue"): return
+	var deadline := Time.get_ticks_msec()+2200
+	while hud.hud_snapshot().scene_human_lights[5]!=8 and Time.get_ticks_msec()<deadline:
+		await process_frame
+	if not check(hud.hud_snapshot().scene_human_lights[5]==8, "remote queued light applied"): return
+	if not await capture("actor-light-remote"): return
+	hud.apply_scene_message(scene_packet(807,5,0,0,2*256),keys)
+	hud.remove_scene_actor(5)
+	hud.set_scene_human(5,Vector2i(411,411),4,1,"新人物")
+	await process_frame
+	if not check(hud.hud_snapshot().scene_human_lights[5]==0, "removed identity discards queued light"): return
+	hud.apply_scene_message(scene_packet(807,100,0,0,8*256),keys)
+	hud.change_map("0","比奇省",Vector2i(413,410),1)
+	if not check(hud.hud_snapshot().player_light_attribute==8, "map change preserves local equipment light"): return
+	hud.set_local_actor_identity(101)
+	if not check(hud.hud_snapshot().player_light_attribute==0, "new local identity starts without stale light"): return
+	hud.queue_free()
+	await process_frame
+	await process_frame
+	print("PASS actor lights: identity, 807, equipment, queue and lifecycle")
+	quit()
+
 func run_scene_light() -> void:
 	var keys := PackedByteArray([18,52,86,120])
 	var origin: Vector2i = hud.hud_snapshot().player_cell
@@ -845,6 +903,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--actor-light"):
+		await run_actor_light()
+		return
 	if OS.get_cmdline_user_args().has("--scene-light"):
 		await run_scene_light()
 		return
@@ -1019,7 +1080,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()
