@@ -119,6 +119,13 @@ func run() -> void:
 	if not check(hud.hud_snapshot().scene_health_bounds[6].size.x==17 and hud.hud_snapshot().scene_damage_frames.has(6),
 		"注册血条显示半血并绘制生命差值"): return
 	if not await capture("map-chicken-health"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_801,6,2,0,0)),"怪物状态设置血条校验值"): return
+	await settle()
+	if not check(hud.hud_snapshot().scene_health_bounds.has(6),"匹配时仍显示血条"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_801,6,0,0,0)),"清除怪物状态位"): return
+	await settle()
+	if not check(not hud.hud_snapshot().scene_health_bounds.has(6),"校验值不匹配时隐藏血条"): return
+	if not await capture("map-chicken-health-hidden"): return
 	await settle(1.0)
 	var miss := game_reply(Mir3HudView.SM_HUMAN_STRUCK,6,10,10,0)
 	miss.append_array(encode_scene_bytes(feature))

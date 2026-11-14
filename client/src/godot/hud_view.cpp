@@ -1900,7 +1900,9 @@ void Mir3HudView::draw_scene_health() {
         };
         // 0x424280: world damage precedes bars; the local actor draws damage last.
         if (actor!=0) draw_damage();
-        if (health.visible(actor==0) && health_border.is_valid() && health_fill.is_valid()) {
+        const auto monster=scene_chickens.find(actor);
+        if ((monster==scene_chickens.end() || monster->second.death_frame<0) &&
+            health.visible(actor==0) && health_border.is_valid() && health_fill.is_valid()) {
             const auto position=anchor+Vector2(7,human && health.raised?-80:-56);
             const auto percent=actor==0?mir3::SceneHealth::percent(model.hp,model.max_hp):mir3::SceneHealth::percent(health.current,health.maximum);
             const int width=mir3::SceneHealth::width(percent);
@@ -2411,6 +2413,15 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
             queue_redraw();
             return true;
         }
+    }
+    // 407C60 updates the token compared by the monster blood-bar renderer at 40F100.
+    if (opcode==mir3::protocol::SM_801 && scene_chickens.contains(actor)) {
+        if (encoded.size()!=16) return false;
+        auto& health=scene_health[actor];
+        health.status_tick=(p[0]&2)?std::uint32_t(ticks_msec()):0;
+        if (p[0]&2) health.saved_tick=health.status_tick;
+        queue_redraw();
+        return true;
     }
     if (opcode==mir3::protocol::SM_STRUCK && scene_chickens.contains(actor)) {
         const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
