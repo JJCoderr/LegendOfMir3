@@ -4,6 +4,7 @@
 #include "protocol/actor_increments.hpp"
 #include "protocol/actor_experience.hpp"
 #include "protocol/gold_change.hpp"
+#include "protocol/group_message.hpp"
 #include "hud/level_up_effect.hpp"
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
@@ -41,6 +42,34 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        // 测试内容：组队失败原因全映射、未知原因忽略、成员尾字段及名字长度边界、非法编码拒绝。
+        if (std::filesystem::path(argv[1])=="--group-wire") {
+            using namespace mir3::protocol;
+            const std::vector<std::pair<int,std::vector<int>>> cases{
+                {SM_CREATEGROUP_FAIL,{1495,1496,1497,1498}},
+                {SM_ADDGROUPMEMBER_FAIL,{1499,1500,1501,1498,1502}},
+                {SM_DELGROUPMEMBER_FAIL,{1499,1500,1503}}};
+            for (const auto& [opcode,notices]:cases) {
+                for (std::size_t i=0;i<notices.size();++i) {
+                    const auto message=mir3::GroupMessage::parse({std::uint32_t(-1-int(i)),std::uint16_t(opcode),{}},{});
+                    check(message && message->notice==notices[i],"group error mapping");
+                }
+                check(mir3::GroupMessage::parse({0,std::uint16_t(opcode),{}},{})->notice==0,"unknown reason ignored");
+            }
+            const auto roster=[](std::string body) {
+                mir3::SendMessages sender;
+                const auto packet=sender.packet(SM_GROUPMEMBERS,0,0,0,body);
+                return mir3::GroupMessage::parse({0,SM_GROUPMEMBERS,{}},
+                    {reinterpret_cast<const std::uint8_t*>(packet.data()+18),packet.size()-19});
+            };
+            check(roster("A/B/tail")->members==std::vector<std::string>{"A","B"},"only slash terminated names");
+            check(roster("")->members.empty() && roster("/")->members.size()==1,"empty roster and empty member");
+            check(bool(roster(std::string(31,'a')+"/")) && !roster(std::string(32,'a')+"/"),"name byte boundary");
+            const std::uint8_t invalid=255;
+            check(!mir3::GroupMessage::parse({0,SM_GROUPMEMBERS,{}},{&invalid,1}),"invalid encoding");
+            check(!mir3::GroupMessage::parse({0,SM_ABILITY,{}},{}),"unrelated message");
+            std::cout << "GROUP_WIRE_MODEL_OK\n";return 0;
+        }
         // 测试内容：金币余额全DWORD、增减/重复、差值回绕边界、消息类型和原文案占位替换。
         if (std::filesystem::path(argv[1])=="--gold-change") {
             const auto value=mir3::GoldChange::parse({350,mir3::protocol::SM_GOLDCHANGED,{}});

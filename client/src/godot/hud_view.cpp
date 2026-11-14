@@ -452,6 +452,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["group_request"]=group_request;
     result["group_visible"]=group.visible;
     result["group_allow"]=group_allow;
+    result["group_members"]=group_members;
     result["skill_shortcuts_visible"]=skill_shortcuts_visible;
     result["skills_visible"]=skills.visible;
     result["skill_tab"]=skills.tab;
@@ -2742,7 +2743,7 @@ void Mir3HudView::clear_game_scene() {
     terrain_ready=false;terrain=mir3::MapTerrain{};terrain_frames.clear();current_map_id=String();
     target_focus.clear();local_actor_identity=0;player_light_attribute=0;exit_guard={};
     login_actor_pending.reset();login_actor_extra={};server_ability.reset();server_sub_ability={};weapon_training=0;
-    group_request=0;npc_dialogue_actor=0;shop_actor=0;
+    group_request=0;group_members.clear();group_allow=false;npc_dialogue_actor=0;shop_actor=0;
     inventory.visible=status.visible=skills.visible=group.visible=guild.visible=false;
     options.visible=portrait_panel.visible=mount.visible=quest.visible=trade.visible=false;
     minimap.visible=false;
@@ -2967,6 +2968,18 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    if (const auto value=mir3::GroupMessage::parse(*header,{encoded.ptr()+16,std::size_t(encoded.size()-16)})) {
+        using Kind=mir3::GroupMessage::Kind;
+        if (value->kind==Kind::allow) group_allow=true;
+        if (value->kind==Kind::clear) group_members.clear();
+        if (value->kind==Kind::members) {
+            PackedStringArray members;
+            for (const auto& member:value->members) members.append(String::utf8(mir3::ansi_to_utf8(member).c_str()));
+            group_members=members;
+        }
+        if (value->notice) open_group_dialog(value->notice);
+        queue_redraw();return true;
+    }
     if (const auto value=mir3::GoldChange::parse(*header)) {
         if (gold_sound && audio_options.effects_enabled) { gold_sound->play();++gold_sound_count; }
         if (value->gain(inventory_gold)>0)
@@ -5400,6 +5413,7 @@ bool Mir3HudView::group_pointer(int kind,Vector2 point) {
         if (clicked && button==4) {
             group_allow=!group_allow;
             emit_signal("group_allow_requested",group_allow);
+            send_client_packet(mir3::protocol::CM_GROUPMODE,0,String(),group_allow?1:0);
         }
     }
     if (!inside && !captured) return false;
@@ -5443,7 +5457,7 @@ void Mir3HudView::handle_exit_confirmation(int dialog_id) {
 }
 
 bool Mir3HudView::dialog_is_alert() const {
-    return (group_request>=1437 && group_request<=1439) || group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
+    return (group_request>=1495 && group_request<=1503) || (group_request>=1437 && group_request<=1439) || group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
 }
 
 bool Mir3HudView::dialog_has_input() const {
@@ -5545,6 +5559,8 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
         emit_signal("guild_overview_requested");
     } else {
         emit_signal("group_member_requested",request,name);
+        if (request==mir3::protocol::CM_CREATEGROUP || request==mir3::protocol::CM_ADDGROUPMEMBER || request==mir3::protocol::CM_DELGROUPMEMBER)
+            send_client_packet(request,0,name);
     }
 }
 
@@ -6952,6 +6968,7 @@ void Mir3HudView::load_status_body() {
 }
 
 void Mir3HudView::set_character_identity(String name,String secondary,String tertiary,String badge) {
+    group_player=name;
     character_name=name;
     character_secondary=secondary;
     character_tertiary=tertiary;

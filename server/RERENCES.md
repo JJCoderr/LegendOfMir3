@@ -192,3 +192,6 @@ IDA 0x47C920构造100、recognition及三WORD参数均0，正文`%s/%d`使用全
 
 ## 金币更新
 SM_GOLDCHANGED recognition为DWORD余额，其他参数无效；客户端42AE12减旧值，随后单独CMP结果，差值为有符号32位回绕。每次回包请求106音效，仅正差显示收入提示。详见client/docs/evidence/gold-change.md。
+
+## 组队消息约定
+CM_GROUPMODE参数一为允许标志；创建/增加/删除成员使用独立正文。SM_CREATEGROUP_OK设允许；失败原因使用recognition有符号负数，详见client/docs/evidence/group-wire.md。SM_GROUPMEMBERS正文每个名字以斜杠结束；SM_GROUPCANCEL仅清空名单。
