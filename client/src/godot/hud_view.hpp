@@ -476,14 +476,14 @@ private:
         godot::Vector2i walk_origin;
         bool skeleton=false;
         double death_ms=0, walk_ms=0, struck_ms=0;
-        struct Turn { godot::Vector2i cell; int facing; unsigned light; };
+        struct Turn { godot::Vector2i cell; int facing; unsigned light; bool backward; };
         std::deque<Turn> turns;
     };
     std::map<int,SceneChicken> scene_chickens;
     std::map<int,MapActorFrame> chicken_frames;
     const MapActorFrame* chicken_frame(int id);
     bool place_scene_chicken(int actor,godot::Vector2i cell,int facing,int shape=20,unsigned light=0);
-    bool move_scene_chicken(int actor,godot::Vector2i cell,int facing,unsigned light);
+    bool move_scene_chicken(int actor,godot::Vector2i cell,int facing,unsigned light,bool backward=false);
     struct SceneHuman : SceneActor {
         int profession=0, type=0, clothing=0, hair=0, weapon=0;
         int clothing_dye=65535, hair_dye=65535, mount_shape=0;

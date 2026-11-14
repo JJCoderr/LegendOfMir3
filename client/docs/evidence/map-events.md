@@ -169,3 +169,6 @@ Windows Release、map_butch.gd 和 map_harvest.gd 通过。鹿的入场、尸体
 ```
 
 Windows Release、map_butch.gd 以及人物光照回归通过。夜间同格验收截图为 map-deer-light.png 和 map-deer-light-out.png。
+### 怪物后退
+
+40D8C0 将怪物消息31交给409500。它读入位置、朝向、光照和16字节外观，播放动作1，实际位移取朝向反向，共1格。Godot 保留包内朝向绘制，按反方向推导起点，并按现有移动队列衔接下一动作。回放覆盖后退后正向返回、受击、死亡及割肉；Windows Release、map_butch.gd 与 map_harvest.gd 通过。截图 map-chicken-backstep.png。

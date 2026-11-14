@@ -68,15 +68,15 @@ func run() -> void:
 	if not check(living.has_area(),"活鸡在地图上绘制"): return
 	if not await capture("map-butch-live-chicken"): return
 	# 怪物的 SM_TURN 带新格坐标时触发行动1。重放往返两步，验证排队。
-	var outward := game_reply(Mir3HudView.SM_TURN,6,origin.x,origin.y,6 if cell.x>origin.x else 2)
+	var outward := game_reply(Mir3HudView.SM_STRUCK,6,origin.x,origin.y,2 if cell.x>origin.x else 6)
 	outward.append_array(encode_scene_bytes(feature))
 	var returning := game_reply(Mir3HudView.SM_TURN,6,cell.x,cell.y,2 if cell.x>origin.x else 6)
 	returning.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(outward) and hud.apply_game_message(returning)
 		and hud.hud_snapshot().scene_chicken_steps[6]==0
-		and hud.hud_snapshot().scene_chicken_cells[6]==origin,"先走第一步，第二步留在队列"): return
+		and hud.hud_snapshot().scene_chicken_cells[6]==origin,"先面向原侧后退，随后移动留在队列"): return
 	await settle(0.25)
-	if not await capture("map-chicken-walk"): return
+	if not await capture("map-chicken-backstep"): return
 	await settle(0.75)
 	if not check(hud.hud_snapshot().scene_chicken_cells[6]==cell and hud.hud_snapshot().scene_chicken_steps[6]>=0,
 		"第一步结束后开始返回"): return
