@@ -468,6 +468,7 @@ private:
     std::map<int,SceneActor> scene_npcs;
     struct SceneChicken : SceneActor {
         int shape=20;
+        unsigned light_attribute=0;
         int frame_base() const { return (shape-20)*1000; }
         int facing=6, death_frame=-1;
         int walk_frame=-1;
@@ -475,13 +476,14 @@ private:
         godot::Vector2i walk_origin;
         bool skeleton=false;
         double death_ms=0, walk_ms=0, struck_ms=0;
-        std::deque<std::pair<godot::Vector2i,int>> turns;
+        struct Turn { godot::Vector2i cell; int facing; unsigned light; };
+        std::deque<Turn> turns;
     };
     std::map<int,SceneChicken> scene_chickens;
     std::map<int,MapActorFrame> chicken_frames;
     const MapActorFrame* chicken_frame(int id);
-    bool place_scene_chicken(int actor,godot::Vector2i cell,int facing,int shape=20);
-    bool move_scene_chicken(int actor,godot::Vector2i cell,int facing);
+    bool place_scene_chicken(int actor,godot::Vector2i cell,int facing,int shape=20,unsigned light=0);
+    bool move_scene_chicken(int actor,godot::Vector2i cell,int facing,unsigned light);
     struct SceneHuman : SceneActor {
         int profession=0, type=0, clothing=0, hair=0, weapon=0;
         int clothing_dye=65535, hair_dye=65535, mount_shape=0;

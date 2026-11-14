@@ -153,6 +153,21 @@ func run() -> void:
 	cut_at(hud.hud_snapshot().scene_chicken_bounds[7].get_center())
 	if not check(packets.size()==8 and decode_request(packets[7]).decode_u32(0)==7,"鹿尸体成为割肉目标"): return
 	if not await capture("map-butch-deer"): return
+	# 夜间对比同格、同朝向的活鹿，并验证离场清除光源。
+	if not check(hud.change_map("0","比奇省",origin,1),"进入夜间比奇"): return
+	await settle()
+	var night: PackedColorArray=hud.hud_snapshot().scene_light_samples
+	var lit_deer := game_reply(Mir3HudView.SM_DIGUP,7,cell.x,cell.y,6+8*256)
+	lit_deer.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(lit_deer),"怪物入场包携带光照高字节"): return
+	await settle()
+	var lit: PackedColorArray=hud.hud_snapshot().scene_light_samples
+	if not check(lit!=night,"活鹿改变夜间光照网格"): return
+	if not await capture("map-deer-light"): return
+	if not check(hud.apply_game_message(deer_death),"夜间鹿死亡"): return
+	await settle()
+	if not check(hud.hud_snapshot().scene_light_samples==night,"鹿死亡后移除活动光源"): return
+	if not await capture("map-deer-light-out"): return
 	hud.queue_free()
 	await settle()
 	print("MAP_BUTCH_UI_OK")
