@@ -295,8 +295,20 @@ func run() -> void:
 	var pig_walk := game_reply(Mir3HudView.SM_TURN,9,origin.x,origin.y,0)
 	pig_walk.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(pig_walk) and hud.hud_snapshot().scene_chicken_steps[9]==0,"猪进入行走动作"): return
+	var oma_back := game_reply(Mir3HudView.SM_STRUCK,9,cell.x,cell.y,0)
+	oma_back.append_array(encode_scene_bytes(transform_feature))
+	var pig_turn := game_reply(Mir3HudView.SM_TURN,9,cell.x,cell.y,6)
+	pig_turn.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(oma_back) and hud.apply_game_message(pig_turn)
+		and hud.hud_snapshot().scene_monster_shapes[9]==119,"排队后退不提前改变猪外观"): return
 	if not await capture("map-pig-walk"): return
 	await settle(0.9)
+	if not check(hud.hud_snapshot().scene_monster_shapes[9]==23 and hud.hud_snapshot().scene_chicken_steps[9]>=0,
+		"后退开始时切换到半兽人外观"): return
+	if not await capture("map-monster-transform-backstep"): return
+	await settle(0.9)
+	if not check(hud.hud_snapshot().scene_monster_shapes[9]==119 and hud.hud_snapshot().scene_chicken_steps[9]==-1,
+		"后退结束后，同格转向恢复猪外观"): return
 	var pig_death := game_reply(Mir3HudView.SM_DEATH,9,cell.x,cell.y,6)
 	pig_death.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(pig_death),"显示猪尸体"): return
