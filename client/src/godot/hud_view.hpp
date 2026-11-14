@@ -473,6 +473,7 @@ private:
         bool called=false;
         unsigned light_attribute=0;
         int frame_base() const { return (shape-20)*1000; }
+        bool can_be_butchered() const { return shape==20 || shape==21; }
         int facing=6, death_frame=-1;
         int walk_frame=-1;
         int walk_interval=130;

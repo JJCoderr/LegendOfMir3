@@ -219,6 +219,26 @@ func run() -> void:
 	await settle()
 	if not check(not hud.hud_snapshot().scene_chicken_bounds.has(7)
 		and hud.hud_snapshot().scene_light_samples==night,"最终离场移除对象和光源"): return
+	# 形状23使用 Mon-3 第四组资源，非动物尸体只触发蹲姿。
+	if not check(hud.change_map("0","比奇省",origin,0),"回到白天验证普通怪物"): return
+	await settle(1.6)
+	feature[2]=23
+	var oma := game_reply(Mir3HudView.SM_DIGUP,8,cell.x,cell.y,6)
+	oma.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(oma),"原始入场包创建半兽人"): return
+	await settle()
+	var oma_live: Rect2=hud.hud_snapshot().scene_chicken_bounds[8]
+	if not check(oma_live.has_area() and oma_live.size.y>living.size.y,"使用半兽人的原版站立资源"): return
+	if not await capture("map-oma-entry"): return
+	var oma_death := game_reply(Mir3HudView.SM_DEATH,8,cell.x,cell.y,6)
+	oma_death.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(oma_death),"显示半兽人尸体末帧"): return
+	await settle()
+	var oma_body: Rect2=hud.hud_snapshot().scene_chicken_bounds[8]
+	var before_oma := packets.size()
+	cut_at(oma_body.get_center())
+	if not check(oma_body.has_area() and oma_body!=oma_live and packets.size()==before_oma+1
+		and decode_request(packets.back()).decode_u16(4)==Mir3HudView.CM_SITDOWN,"半兽人尸体不发送割肉请求"): return
 	hud.queue_free()
 	await settle()
 	print("MAP_BUTCH_UI_OK")

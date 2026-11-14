@@ -2345,7 +2345,8 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if ((chicken_death || opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_DIGUP) &&
         actor>0 && actor!=local_actor_identity) {
         const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
-        const bool chicken_feature=body && body->size()>=8 && (*body)[0]==3 && ((*body)[2]==20 || (*body)[2]==21) && (*body)[3]==0;
+        const bool chicken_feature=body && body->size()>=8 && (*body)[0]==3 &&
+            ((*body)[2]==20 || (*body)[2]==21 || (*body)[2]==23) && (*body)[3]==0;
         if (chicken_feature && (opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_DIGUP) &&
             (opcode!=mir3::protocol::SM_DIGUP || body->size()==16) && (p[2]&255)<8 &&
             terrain.walkable(p[0],p[1]) &&
@@ -2941,7 +2942,7 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
         if (!hovered_target) {
             for (const auto& [actor,chicken]:scene_chickens) {
                 const auto distance=chicken.cell-player_cell;
-                if (chicken.death_frame>=0 && !chicken.skeleton && chicken.bounds.has_point(p) &&
+                if (chicken.can_be_butchered() && chicken.death_frame>=0 && !chicken.skeleton && chicken.bounds.has_point(p) &&
                     std::max(std::abs(distance.x),std::abs(distance.y))<=1)
                     corpse=actor;
             }
