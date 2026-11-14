@@ -555,7 +555,7 @@ private:
     double movement_ms=0;
     int map_pointer_button=0;
     double map_pointer_seconds=0;
-    void step_toward_pointer(bool run=false,bool force_attack=false);
+    void step_toward_pointer(bool run=false,bool force_attack=false,bool cut=false);
     bool merchant_pointer(godot::Vector2 pointer);
     bool apply_npc_message(godot::PackedByteArray encoded,godot::PackedByteArray key);
     bool apply_npc_body(int opcode,int actor,int count,godot::PackedByteArray encoded);

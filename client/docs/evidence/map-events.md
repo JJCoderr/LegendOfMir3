@@ -60,3 +60,15 @@ Windows Release、map_harvest.gd 和 map_events.gd 通过，截图 map-harvest-i
 ```
 
 Windows Release 构建通过。map_harvest.gd 使用离线协议回放，校验鼠标发包、挥击、无回包时保持地表、本地与远端标记更新。map_events.gd 和 level_up.gd 同批通过。截图 map-harvest-local.png。撞墙触发与实际服务器产物发放留待实服场景对照。
+
+## 割肉输入与蹲姿
+
+4264D0 和 417540 从指针命中对象取尸体状态与坐标。417E10 先判断 Shift 分支，再判断 Alt。Alt 分支以鼠标格定向，以目标格判断距离。415F90 动作8锁定输入并播放两帧蹲姿，47BBE0 发送 CM_SITDOWN，47C200 在存在近距离尸体目标时追加 CM_BUTCH。
+
+```text
+Alt 左键 → 播放动作8，发送 CM_SITDOWN，坐标放入识别字
+指针命中相邻尸体 → 追加 CM_BUTCH，识别字为尸体 ID，参数为玩家 X、Y、朝向
+收到 SM_SITDOWN → 自身或远端人物进入动作8
+```
+
+413F90 将 12 和 637 送到虚表 +176，但不同人物类的实现有差别。远端人物表指向 412FF0，该函数还会从正文取四字节并尝试生成 MAGIC 效果。可验证的空正文蹲姿已接通。带正文的 637 效果、动物尸体资源和最终掉肉仍待核对。Windows Release、map_butch.gd 和 map_harvest.gd 通过，截图 map-butch-crouch.png 使用离线人物尸体。

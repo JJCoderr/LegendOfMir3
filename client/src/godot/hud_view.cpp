@@ -2274,6 +2274,17 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS && header->opcode!=mir3::protocol::SM_DAYCHANGING && header->opcode!=mir3::protocol::SM_SHOWEVENT && header->opcode!=mir3::protocol::SM_HIDEEVENT)) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
+    if (opcode==mir3::protocol::SM_SITDOWN && local_actor_identity && actor==local_actor_identity) {
+        if (encoded.size()!=16 || (p[2]&255)>=8 || !terrain.walkable(p[0],p[1])) return false;
+        if (player_mount || model.hp==0) return true;
+        player_cell=Vector2i(p[0],p[1]);
+        player_facing=p[2]&255;
+        walk_frame=-1;movement_ms=0;map_route.clear();
+        player_harvest_impact=false;
+        if (player_action.finished() || player_action.action()!=8) player_action.start(8);
+        queue_redraw();
+        return true;
+    }
     if (opcode==mir3::protocol::SM_HIT2 && local_actor_identity && actor==local_actor_identity) {
         if (encoded.size()>17 || (p[2]&255)>=8) return false;
         if (player_action.finished() || player_action.action()!=mir3::HumanActions::weapon_attack(player_weapon) ||
@@ -2583,6 +2594,7 @@ bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing,int h
     if (human.movement_frame>=0 || human.life.dead) return false;
     int action=-1;
     switch (opcode) {
+    case mir3::protocol::SM_SITDOWN: action=8; break;
     case mir3::protocol::SM_HIT: case mir3::protocol::SM_HIT2: action=mir3::HumanActions::weapon_attack(human.weapon); break;
     case mir3::protocol::SM_HUMAN_CAST: action=17; break;
     case mir3::protocol::SM_HUMAN_CAST_ALT: action=16; facing=human.facing; break;
@@ -2600,7 +2612,7 @@ bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing,int h
     human.action_flags=0;
     human.harvest=false;
     human.hit_weapon=hit_weapon;
-    if (opcode!=mir3::protocol::SM_HUMAN_STRUCK) human.combat.attack();
+    if (opcode!=mir3::protocol::SM_HUMAN_STRUCK && opcode!=mir3::protocol::SM_SITDOWN) human.combat.attack();
     human.idle.reset();
     queue_redraw();
     return true;
@@ -2730,7 +2742,7 @@ bool Mir3HudView::merchant_pointer(Vector2 pointer) {
     return true;
 }
 
-void Mir3HudView::step_toward_pointer(bool run,bool force_attack) {
+void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
     if (map_input_delay.active() || walk_frame>=0 || !spell_pointer_available()) return;
     if (!player_action.finished() && player_action.action()!=7) return;
     const auto p=inventory_cursor;
@@ -2740,6 +2752,30 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack) {
     // 0x417E10 chooses one step along the cursor heading.
     const int dx=std::abs(delta.y)>2 && std::abs(delta.x)<=1?0:(delta.x>0)-(delta.x<0);
     const int dy=std::abs(delta.x)>2 && std::abs(delta.y)<=1?0:(delta.y>0)-(delta.y<0);
+    if (map_pointer_button==MOUSE_BUTTON_LEFT && cut && !force_attack) {
+        if (player_mount || model.hp==0) return;
+        int corpse=0;
+        if (!hovered_target) {
+            for (const auto& [actor,human]:scene_humans) {
+                const auto distance=human.cell-player_cell;
+                if (human.life.dead && human.bounds.has_point(p) &&
+                    std::max(std::abs(distance.x),std::abs(distance.y))<=1)
+                    corpse=actor;
+            }
+        }
+        if (target!=player_cell) {
+            const mir3::MapCell heading{dx,dy};
+            player_facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),heading)-mir3::map_directions.begin());
+        }
+        map_route.clear();
+        player_harvest_impact=false;
+        player_action.start(8);
+        const auto position=std::uint32_t(player_cell.x)|(std::uint32_t(player_cell.y)<<16);
+        send_client_packet(mir3::protocol::CM_SITDOWN,position,String(),std::uint32_t(player_facing)<<16);
+        if (corpse) send_client_packet(mir3::protocol::CM_BUTCH,corpse,String(),position,player_facing);
+        queue_redraw();
+        return;
+    }
     if (map_pointer_button==MOUSE_BUTTON_LEFT && player_weapon==7 && !player_mount && model.hp>0 &&
         !hovered_target && std::none_of(scene_npcs.begin(),scene_npcs.end(),[p](const auto& npc) {
             return npc.second.bounds.has_point(p);
@@ -5251,7 +5287,7 @@ void Mir3HudView::_process(double delta) {
         map_pointer_seconds+=delta;
         if (map_pointer_seconds>0.3 && map_route.empty()) {
             update_scene_target(inventory_cursor);
-            step_toward_pointer(false,map_shift_pressed);
+            step_toward_pointer(false,map_shift_pressed,chat_submission.alt_down);
         }
     }
     if (!hovered_target && target_focus.displayed()) {
@@ -5532,7 +5568,8 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             map_pointer_seconds=0;
             update_scene_target(p);
             map_shift_pressed=button->is_shift_pressed();
-            step_toward_pointer(false,map_shift_pressed);
+            chat_submission.alt_down=button->is_alt_pressed();
+            step_toward_pointer(false,map_shift_pressed,chat_submission.alt_down);
             get_viewport()->set_input_as_handled();
         }
         if (captured) get_viewport()->set_input_as_handled();
