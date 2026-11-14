@@ -2095,18 +2095,27 @@ const Mir3HudView::MapActorFrame* Mir3HudView::monster_frame(int shape,int relat
         Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions}).first->second;
 }
 
-bool Mir3HudView::move_scene_chicken(int actor,Vector2i cell,int facing,unsigned light,bool backward) {
+void Mir3HudView::update_monster_bar_status(int actor,bool status_bit) {
+    auto& health=scene_health[actor];
+    health.status_tick=status_bit?std::uint32_t(ticks_msec()):0;
+    if (status_bit) health.saved_tick=health.status_tick;
+    queue_redraw();
+}
+
+bool Mir3HudView::move_scene_chicken(int actor,SceneChicken::Turn turn) {
+    const auto [cell,facing,light,backward,status_bit]=turn;
     if (!terrain.walkable(cell.x,cell.y)) return false;
     auto& chicken=scene_chickens.at(actor);
     if (chicken.death_frame>=0) return true;
     if (chicken.walk_frame>=0 || chicken.struck_frame>=0) {
         if (chicken.turns.size()>=64) return false;
-        chicken.turns.push_back({cell,facing,light,backward});
+        chicken.turns.push_back(turn);
         return true;
     }
     if (cell==chicken.cell && !backward) {
         chicken.facing=facing;
         chicken.light_attribute=light;
+        update_monster_bar_status(actor,status_bit);
         queue_redraw();
         return true;
     }
@@ -2119,6 +2128,7 @@ bool Mir3HudView::move_scene_chicken(int actor,Vector2i cell,int facing,unsigned
     chicken.walk_frame=0;
     chicken.walk_ms=0;
     chicken.walk_interval=130;
+    update_monster_bar_status(actor,status_bit);
     chicken.walk_catch_up=false;
     queue_redraw();
     return true;
@@ -2381,8 +2391,10 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
                 return true;
             const Vector2i cell(p[0],p[1]);
             if (opcode==mir3::protocol::SM_TURN && existing!=scene_chickens.end())
-                return existing->second.shape==(*body)[2] && move_scene_chicken(actor,cell,facing,p[2]>>8);
+                return existing->second.shape==(*body)[2] &&
+                    move_scene_chicken(actor,{cell,facing,unsigned(p[2]>>8),false,((*body)[4]&2)!=0});
             if (!place_scene_chicken(actor,cell,facing,(*body)[2],p[2]>>8)) return false;
+            update_monster_bar_status(actor,((*body)[4]&2)!=0);
             if (name) scene_names.insert_or_assign(actor,std::move(*name));
             return true;
         }
@@ -2417,10 +2429,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     // 407C60 updates the token compared by the monster blood-bar renderer at 40F100.
     if (opcode==mir3::protocol::SM_801 && scene_chickens.contains(actor)) {
         if (encoded.size()!=16) return false;
-        auto& health=scene_health[actor];
-        health.status_tick=(p[0]&2)?std::uint32_t(ticks_msec()):0;
-        if (p[0]&2) health.saved_tick=health.status_tick;
-        queue_redraw();
+        update_monster_bar_status(actor,(p[0]&2)!=0);
         return true;
     }
     if (opcode==mir3::protocol::SM_STRUCK && scene_chickens.contains(actor)) {
@@ -2428,7 +2437,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         const int facing=p[2]&255;
         if (!body || body->size()!=16 || (*body)[0]!=3 || (*body)[2]!=scene_chickens.at(actor).shape ||
             (*body)[3]!=0 || facing>=8) return false;
-        return move_scene_chicken(actor,Vector2i(p[0],p[1]),facing,p[2]>>8,true);
+        return move_scene_chicken(actor,{Vector2i(p[0],p[1]),facing,unsigned(p[2]>>8),true,((*body)[4]&2)!=0});
     }
     if (opcode==mir3::protocol::SM_WALK && scene_chickens.contains(actor)) {
         if (encoded.size()!=16) return false;
@@ -5441,9 +5450,9 @@ void Mir3HudView::_process(double delta) {
         }
         if (!chicken.turns.empty() && chicken.walk_frame<0 && chicken.struck_frame<0) {
             const bool catch_up=chicken.turns.size()>=3;
-            const auto [cell,facing,light,backward]=chicken.turns.front();
+            const auto turn=chicken.turns.front();
             chicken.turns.pop_front();
-            if (move_scene_chicken(actor,cell,facing,light,backward) && chicken.walk_frame==0)
+            if (move_scene_chicken(actor,turn) && chicken.walk_frame==0)
                 chicken.walk_catch_up=catch_up;
         }
         if (chicken.death_frame<0 && chicken.walk_frame<0 && chicken.struck_frame<0) {

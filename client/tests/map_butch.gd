@@ -126,6 +126,17 @@ func run() -> void:
 	await settle()
 	if not check(not hud.hud_snapshot().scene_health_bounds.has(6),"校验值不匹配时隐藏血条"): return
 	if not await capture("map-chicken-health-hidden"): return
+	# 外观包中的状态位也经过血条校验，并随动作队列应用。
+	var marked := feature.duplicate()
+	marked[4]=2
+	var marked_turn := game_reply(Mir3HudView.SM_TURN,6,origin.x,origin.y,0)
+	marked_turn.append_array(encode_scene_bytes(marked))
+	if not check(hud.apply_game_message(marked_turn) and hud.apply_game_message(returning),"发送带状态的移动与清位回程"): return
+	await settle(0.2)
+	if not check(hud.hud_snapshot().scene_health_bounds.has(6),"移动更新恢复血条，排队回程尚未清位"): return
+	if not await capture("map-chicken-health-moving"): return
+	await settle(1.5)
+	if not check(not hud.hud_snapshot().scene_health_bounds.has(6),"回程外观清位后隐藏血条"): return
 	await settle(1.0)
 	var miss := game_reply(Mir3HudView.SM_HUMAN_STRUCK,6,10,10,0)
 	miss.append_array(encode_scene_bytes(feature))

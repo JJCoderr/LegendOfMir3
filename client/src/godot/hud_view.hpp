@@ -487,7 +487,7 @@ private:
         }
         bool skeleton=false;
         double death_ms=0, walk_ms=0, struck_ms=0;
-        struct Turn { godot::Vector2i cell; int facing; unsigned light; bool backward; };
+        struct Turn { godot::Vector2i cell; int facing; unsigned light; bool backward; bool status_bit; };
         std::deque<Turn> turns;
     };
     std::map<int,SceneChicken> scene_chickens;
@@ -495,7 +495,8 @@ private:
     std::map<int,mir3::WilArchive> monster_archives;
     const MapActorFrame* monster_frame(int shape,int relative);
     bool place_scene_chicken(int actor,godot::Vector2i cell,int facing,int shape=20,unsigned light=0);
-    bool move_scene_chicken(int actor,godot::Vector2i cell,int facing,unsigned light,bool backward=false);
+    bool move_scene_chicken(int actor,SceneChicken::Turn turn);
+    void update_monster_bar_status(int actor,bool status_bit);
     void play_animal_call(int actor,SceneChicken& animal);
     struct SceneHuman : SceneActor {
         int profession=0, type=0, clothing=0, hair=0, weapon=0;
