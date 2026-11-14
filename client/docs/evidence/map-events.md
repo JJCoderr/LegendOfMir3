@@ -42,3 +42,9 @@ Windows Release、map_events.gd 和 --ground-items 通过。类型5残留截图 
 44DFF0 在基础地图格可走时，于帧101–105每次更新调用 46A5D0 和 467C40，分别在格原点加(24,0)及(24,16)发射一和两个粒子。468000/46A5D0 的速度、寿命与大小范围见实现，4675C0 用 ProgUse 520–523 循环且随寿命缩小，468F40/469290 固定520。帧107–109刷新同格 ProgUse 260 印记，寿命3000毫秒。Godot 合并同格连续印记并刷新计时。粒子使用原版步长和累计受力，混合采用既有预乘绘制近似原材质。
 
 Windows Release、map_events.gd 和 --ground-items 通过。退场截图 map-event-layered-particles.png，验证尾段发射、印记和切图清理。
+
+## 采集动作与地表变化
+
+4282C0 将15的原始正文转入人物队列。412C80 对15使用对应武器的普通攻击动作，正文首字节非零时设置 +62800。414220/416E70 到相对帧3时消费该标记，播放 MAGIC 335（Magic 3470–3472，100ms），查找同格第一个类型3事件并将 ProgUse 图号加一，上限234。无标记的普通攻击不改地表。此批接通已有远端人物队列，主动采集输入及本地动作仍需按原版核对。
+
+Windows Release、map_harvest.gd 和 map_events.gd 通过，截图 map-harvest-impact.png。

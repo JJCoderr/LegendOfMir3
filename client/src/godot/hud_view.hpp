@@ -482,6 +482,7 @@ private:
         bool bump=false;
         bool catching_up=false;
         std::uint32_t action_flags=0;
+        bool harvest=false;
         unsigned slow_ticks=0;
         double movement_ms=0;
         godot::Vector2i step_origin, step_destination;
@@ -514,10 +515,12 @@ private:
         int frame;
         double elapsed=0;
         godot::Sprite2D* secondary=nullptr;
-        bool ending=false;
+        bool ending=false,one_shot=false;
         int remaining_ms=-1, tint=255;
     };
-    std::map<std::uint32_t,MapEvent> map_events;
+    std::map<std::uint64_t,MapEvent> map_events;
+    std::uint64_t harvest_effect_id=std::uint64_t{1}<<32;
+    void show_harvest_impact(godot::Vector2i cell);
     struct EventParticle {
         godot::Vector2 position,velocity,acceleration;
         int age=0,life=0,interval=0,frame_clock=0,frame=0;

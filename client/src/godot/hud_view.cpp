@@ -715,7 +715,7 @@ void Mir3HudView::_ready() {
     if(weather_archive.open(resource_root/"Data"/"ProgUse")) {
         if(const auto source=weather_archive.frame(500)) snow_texture=texture(source->pixels.rgba,source->width,source->height);
     }
-    for(const int id:{210,220,230,260,520,521,522,523}) {
+    for(const int id:{210,220,230,231,232,233,234,260,520,521,522,523}) {
         if(const auto source=weather_archive.frame(id))
             ground_event_frames.emplace(id,MapActorFrame{
                 texture(source->pixels.rgba,source->width,source->height),
@@ -2463,11 +2463,10 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
                 for (int i=0;i<4;++i) message.hit_source|=std::uint32_t(std::uint8_t((*body)[8+i]))<<(8*i);
             }
         }
-    } else if (size) {
-        // The optional raw marker on opcode 15 requests a separate effect path.
-        // Reject it until that effect is implemented rather than silently drop it.
-        return false;
-    }
+    } else if(opcode==mir3::protocol::SM_HIT2) {
+        if(size>1) return false;
+        message.harvest=size==1 && encoded[16]!=0;
+    } else if(size) return false;
     if (opcode!=mir3::protocol::SM_HUMAN_STRUCK && opcode!=mir3::protocol::SM_STRUCK && !terrain.walkable(message.x,message.y)) return false;
     return found->second.messages.push(message);
 }
@@ -2558,6 +2557,7 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     if (accepted) {
         human.catching_up=catch_up;
         human.action_flags=next->flags;
+        human.harvest=next->harvest;
     }
     return true; // consume at most one record per update, including rejected state
 }
@@ -2585,6 +2585,7 @@ bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing,int h
     human.action.start(action);
     human.catching_up=false;
     human.action_flags=0;
+    human.harvest=false;
     human.hit_weapon=hit_weapon;
     if (opcode!=mir3::protocol::SM_HUMAN_STRUCK) human.combat.attack();
     human.idle.reset();
@@ -2609,6 +2610,7 @@ bool Mir3HudView::apply_scene_human_stand(int actor,Vector2i cell,int facing) {
     human.action=mir3::HumanActionClock{};
     human.catching_up=false;
     human.action_flags=0;
+    human.harvest=false;
     human.bounds=Rect2();
     std::copy_n(human_body(human.type,human.clothing)->standing.begin()+facing*10,human.frames.size(),human.frames.begin());
     queue_redraw();
@@ -2639,6 +2641,7 @@ bool Mir3HudView::apply_scene_human_step(int actor,int opcode,Vector2i destinati
     human.action=mir3::HumanActionClock{};
     human.catching_up=false;
     human.action_flags=0;
+    human.harvest=false;
     human.movement_frame=0;
     human.movement_ms=0;
     human.step_distance=distance;
@@ -3283,6 +3286,29 @@ const Mir3HudView::MapActorFrame* Mir3HudView::level_frame(int index) {
     return &level_frames.emplace(index,MapActorFrame{texture(decoded->pixels.rgba,decoded->width,decoded->height),
         Vector2(decoded->offset_x,decoded->offset_y),decoded->pixels.regions}).first->second;
 }
+void Mir3HudView::show_harvest_impact(Vector2i cell) {
+    for(auto& [id,event]:ground_events) {
+        if(event.cell==cell && !event.hidden && event.frame>=230 && event.frame<=234) {
+            event.frame=std::min(event.frame+1,234);
+            break;
+        }
+    }
+    const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::magic,335);
+    if(!resource || resource->library!=81 || resource->end<=resource->first || !resource->interval) return;
+    auto* copy=memnew(BackBufferCopy);
+    copy->set_copy_mode(BackBufferCopy::COPY_MODE_VIEWPORT);
+    level_layer->add_child(copy);
+    auto* sprite=memnew(Sprite2D);
+    sprite->set_centered(false);
+    copy->add_child(sprite);
+    Ref<ShaderMaterial> material;
+    material.instantiate();
+    material->set_shader(ResourceLoader::get_singleton()->load("res://level_effect.gdshader"));
+    sprite->set_material(material);
+    auto& event=map_events.emplace(harvest_effect_id++,MapEvent{resource,cell,copy,sprite,int(resource->first)}).first->second;
+    event.one_shot=true;
+}
+
 void Mir3HudView::clear_map_events() {
     ground_events.clear();
     event_particles.clear();
@@ -3380,7 +3406,14 @@ void Mir3HudView::advance_map_events(double milliseconds) {
                     event.copy->queue_free();
                     continue;
                 }
-            } else if(event.frame>=int(event.resource->end)) event.frame=event.resource->first;
+            } else if(event.frame>=int(event.resource->end)) {
+                if(event.one_shot) {
+                    event.copy->hide();
+                    event.copy->queue_free();
+                    continue;
+                }
+                event.frame=event.resource->first;
+            }
         }
         if(event.secondary) {
             const auto anchor=Vector2(event.cell.x*48-camera.x,event.cell.y*32-camera.y);
@@ -3412,7 +3445,8 @@ void Mir3HudView::advance_map_events(double milliseconds) {
     }
     std::erase_if(map_events,[](const auto& pair) {
         const auto& event=pair.second;
-        return !event.tint || (event.ending && event.frame>=110);
+        return !event.tint || (event.ending && event.frame>=110) ||
+            (event.one_shot && event.frame>=int(event.resource->end));
     });
 }
 
@@ -5093,6 +5127,10 @@ void Mir3HudView::_process(double delta) {
             if (!human.action.finished()) {
                 const int previous=human.action.frame();
                 human.action.advance(static_cast<std::uint32_t>(delta*1000),human.action_flags);
+                if(human.harvest && human.action.frame()==3) {
+                    human.harvest=false;
+                    show_harvest_impact(human.cell);
+                }
                 if (previous!=human.action.frame())
                     play_actor_sound(actor,mir3::HumanActions::frame_sound(human.action.action(),human.action.frame(),
                         human.weapon,human.hit_weapon,human.clothing,human.type),human.cell);
