@@ -1,9 +1,28 @@
 #include "text/native_text.hpp"
 #include "chat/chat_history.hpp"
 #include "chat/chat_input.hpp"
+#include "hud/speech_bubble.hpp"
 #include <algorithm>
 #include <iostream>
-int main() {
+int main(int argc,char** argv) {
+    if (argc==2 && std::string_view(argv[1])=="--speech") {
+        mir3::SpeechBubble bubble;
+        bubble.actor_id=7;
+        if (!bubble.receive({40,7,"  比奇城见  "}) || bubble.lines.size()!=1 || bubble.lines[0].text!="  比奇城见  ") return 80;
+        bubble.advance(3000);
+        if (bubble.lines.empty()) return 81;
+        bubble.advance(1);
+        if (!bubble.lines.empty()) return 82;
+        if (!bubble.receive({1501,7,"比奇城的商人正在出售武器和防具，请到城中寻找他们。"}) || bubble.lines.size()<2 || bubble.lines.size()>8) return 83;
+        for (const auto& line:bubble.lines) if (line.width>144) return 84;
+        const auto lines=bubble.lines.size();
+        if (bubble.receive({41,7,"wrong channel"}) || bubble.receive({40,8,"wrong actor"}) || bubble.receive({40,7,std::string(260,'a')}) || bubble.lines.size()!=lines) return 85;
+        bubble.advance(2999);
+        if (!bubble.receive({40,7,"new"}) || bubble.elapsed!=0) return 86;
+        if (!bubble.receive({40,7,""}) || !bubble.lines.empty()) return 87;
+        std::cout << "SPEECH_MODEL_OK\n";
+        return 0;
+    }
     const auto normal=mir3::raster_text("坐标 : [100,200]",133,17,true,mir3::TextFont::normal);
     const auto level=mir3::raster_text("24",16,16,true,mir3::TextFont::level);
     if (normal.rgba.size()!=133*17*4 || level.rgba.size()!=16*16*4 || normal.dpi!=96 || normal.face.empty()) return 1;

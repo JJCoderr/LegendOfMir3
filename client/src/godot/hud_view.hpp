@@ -2,6 +2,7 @@
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"
 #include "hud/scene_name.hpp"
+#include "hud/speech_bubble.hpp"
 #include "hud/minimap.hpp"
 #include "hud/mount_panel.hpp"
 #include "hud/quest_panel.hpp"
@@ -73,6 +74,8 @@ public:
     bool open_trade(godot::String partner);
     void set_trade_context(int direction,godot::Vector2i cell,int actor_type,bool dead,godot::String name);
     void set_map_location(godot::String name,int x,int y);
+    bool apply_scene_speech(int actor,int opcode,godot::String value);
+    void draw_scene_speech();
     bool apply_scene_name(int actor,int opcode,int color,godot::String value);
     void draw_scene_name();
     bool set_scene_npc(int actor,godot::Vector2i cell,int first_frame);
@@ -308,6 +311,8 @@ private:
     const MapActorFrame* attachment_frame(int type,int shape,bool weapon,int motion_frame);
     void draw_human_layers(const MapActorFrame& body,godot::Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape=0);
     std::array<MapActorFrame,80> map_human_frames, map_walk_frames, map_run_frames;
+    std::map<int,mir3::SpeechBubble> scene_speech;
+    std::map<int,godot::Rect2> speech_bounds;
     std::map<int,mir3::SceneName> scene_names;
     int displayed_name_actor=-1;
     godot::Rect2 displayed_name_bounds, player_bounds;

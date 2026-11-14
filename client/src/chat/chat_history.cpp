@@ -1,5 +1,6 @@
 #include "text/native_text.hpp"
 #include "chat_history.hpp"
+#include "hud/speech_bubble.hpp"
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -168,6 +169,35 @@ void ChatHistory::post(std::string_view utf8, std::uint32_t foreground, std::uin
                 scrolls[mode].set_position(scrolls[mode].position() - 1);
         }
     }
+}
+
+std::vector<SpeechLine> wrap_speech(std::string_view utf8)
+{
+    if (utf8.empty() || utf8.size()>4096) return {};
+    const int length=MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,utf8.data(),static_cast<int>(utf8.size()),nullptr,0);
+    if (!length) return {};
+    std::wstring wide(length,L'\0');
+    MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,utf8.data(),static_cast<int>(utf8.size()),wide.data(),length);
+    auto ansi=encode(wide.data(),length,CP_ACP);
+    const auto nul=ansi.find(char(0));if (nul!=ansi.npos) ansi.resize(nul);
+    if (ansi.empty() || ansi.size()>259) return {}; // original actor buffer260
+    Surface surface;
+    if (!surface.dc) return {};
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    surface.font=CreateFontA(-MulDiv(9,GetDeviceCaps(surface.dc,LOGPIXELSY),72),0,0,0,400,0,0,0,DEFAULT_CHARSET,0,0,0,0,face);
+    if (!surface.font) return {};
+    surface.old_font=SelectObject(surface.dc,surface.font);
+    int count=0;
+    const auto buffer=wrapped_ansi(surface.dc,ansi,144,count);
+    if (count>8) return {}; // reject legacy fixed-buffer overflow
+    char rows[8][260]{};
+    std::sscanf(buffer.c_str(),"%259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c",rows[0],rows[1],rows[2],rows[3],rows[4],rows[5],rows[6],rows[7]);
+    std::vector<SpeechLine> result;
+    for (int i=0;i<count;++i) {
+        SIZE size{};GetTextExtentPoint32A(surface.dc,rows[i],static_cast<int>(std::strlen(rows[i])),&size);
+        result.push_back({ansi_to_utf8(rows[i]),size.cx});
+    }
+    return result;
 }
 
 }

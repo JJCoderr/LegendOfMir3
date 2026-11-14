@@ -141,6 +141,32 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--scene-speech"):
+		if not check(hud.apply_scene_speech(0, 40, "  比奇城见  ")
+			and hud.apply_scene_speech(5, 1501, "比奇城的商人正在出售武器和防具，请到城中寻找他们。")
+			and hud.apply_scene_speech(2, 40, "欢迎光临"), "receive local remote and NPC speech"): return
+		if not await capture("bichon-speech-bubbles"): return
+		var state: Dictionary = hud.hud_snapshot()
+		if not check(state.speech_bounds.size() == 3 and state.speech_lines[0] == PackedStringArray(["  比奇城见  "])
+			and state.speech_lines[5].size() > 1, "preserve spaces and wrap long Chinese speech"): return
+		if not check(not hud.apply_scene_speech(5, 41, "other channel")
+			and not hud.apply_scene_speech(9999, 40, "unknown")
+			and not hud.apply_scene_speech(5, 40, "a".repeat(260)), "reject unrelated channel actor and overflow"): return
+		var original: Rect2 = state.speech_bounds[5]
+		if not check(hud.apply_scene_human_step(5, 11, state.scene_human_cells[5] + Vector2i.RIGHT, 2), "move speaking actor"): return
+		await create_timer(0.25).timeout
+		if not await capture("bichon-speech-moving"): return
+		if not check(hud.hud_snapshot().speech_bounds[5].position.x > original.position.x, "speech follows movement anchor"): return
+		if not check(hud.apply_scene_speech(2, 40, "") and hud.remove_scene_actor(5), "clear speech and remove speaker"): return
+		await process_frame
+		await process_frame
+		if not check(not hud.hud_snapshot().speech_lines.has(2) and not hud.hud_snapshot().speech_lines.has(5), "clear and departure remove bubbles"): return
+		await create_timer(3.1).timeout
+		if not await capture("bichon-speech-expired"): return
+		if not check(hud.hud_snapshot().speech_lines.is_empty() and hud.hud_snapshot().speech_bounds.is_empty(), "speech expires without pointer interaction"): return
+		print("SCENE_SPEECH_OK")
+		quit()
+		return
 	if OS.get_cmdline_user_args().has("--scene-names"):
 		if not check(hud.apply_scene_name(5, 42, 255, "比奇旅人\r比奇行会\r武士/ignored")
 			and hud.apply_scene_name(2, 42, 251, "比奇商人"), "apply human and NPC names"): return
@@ -306,7 +332,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

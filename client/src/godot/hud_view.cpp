@@ -95,6 +95,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_npc_dialogue","opcode","actor","body"),&Mir3HudView::apply_npc_dialogue);
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
+    ClassDB::bind_method(D_METHOD("apply_scene_speech","actor","opcode","value"),&Mir3HudView::apply_scene_speech);
     ClassDB::bind_method(D_METHOD("apply_scene_name","actor","opcode","color","value"),&Mir3HudView::apply_scene_name);
     ClassDB::bind_method(D_METHOD("set_scene_npc","actor","cell","first_frame"),&Mir3HudView::set_scene_npc);
     ClassDB::bind_method(D_METHOD("set_scene_chicken","actor","cell"),&Mir3HudView::set_scene_chicken);
@@ -173,6 +174,15 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["displayed_name_bounds"]=displayed_name_bounds;
     result["displayed_name_color"]=scene_names.contains(displayed_name_actor)?scene_names.at(displayed_name_actor).color:0xffffff;
     result["player_bounds"]=player_bounds;
+    Dictionary bubbles, bubble_lines;
+    for (const auto& [actor,bounds]:speech_bounds) bubbles[actor]=bounds;
+    for (const auto& [actor,bubble]:scene_speech) {
+        PackedStringArray lines;
+        for (const auto& line:bubble.lines) lines.push_back(String::utf8(line.text.c_str()));
+        bubble_lines[actor]=lines;
+    }
+    result["speech_bounds"]=bubbles;
+    result["speech_lines"]=bubble_lines;
     Dictionary npc_bounds;
     for (const auto& [actor,npc]:scene_npcs) npc_bounds[actor]=npc.bounds;
     result["scene_npc_bounds"]=npc_bounds;
@@ -1422,6 +1432,46 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
     return true;
 }
 
+bool Mir3HudView::apply_scene_speech(int actor,int opcode,String value) {
+    if (!terrain_ready || (actor!=0 && !scene_humans.contains(actor) && !scene_npcs.contains(actor) && !scene_chickens.contains(actor))) return false;
+    auto bubble=scene_speech.contains(actor)?scene_speech.at(actor):mir3::SpeechBubble{};
+    bubble.actor_id=static_cast<std::uint32_t>(actor);
+    const auto utf8=value.utf8();
+    if (!bubble.receive({opcode,static_cast<std::uint32_t>(actor),std::string(utf8.get_data(),utf8.length())})) return false;
+    if (bubble.lines.empty()) scene_speech.erase(actor);
+    else scene_speech.insert_or_assign(actor,std::move(bubble));
+    queue_redraw();
+    return true;
+}
+
+void Mir3HudView::draw_scene_speech() {
+    speech_bounds.clear();
+    for (const auto& [actor,bubble]:scene_speech) {
+        Vector2 anchor;
+        if (actor==0) {
+            if (!player_bounds.has_area()) continue;
+            anchor=Vector2(player_pixel()-map_camera());
+        } else {
+            const SceneActor* source=nullptr;
+            if (const auto it=scene_humans.find(actor);it!=scene_humans.end()) source=&it->second;
+            else if (const auto it=scene_npcs.find(actor);it!=scene_npcs.end()) source=&it->second;
+            else if (const auto it=scene_chickens.find(actor);it!=scene_chickens.end()) source=&it->second;
+            if (!source || !source->bounds.has_area()) continue;
+            anchor=source->anchor;
+        }
+        const auto bounds=rect(bubble.background(int(anchor.x),int(anchor.y)));
+        speech_bounds[actor]=bounds;
+        legacy_rect(bounds,Color(80.f/255,60.f/255,40.f/255,120.f/255));
+        for (int row=0;row<int(bubble.lines.size());++row) {
+            const auto position=bubble.position(row,int(anchor.x),int(anchor.y));
+            const auto& line=bubble.lines[row];
+            const mir3::HudLayout::Rect shadow{position[0]+1,position[1]+1,line.width,14};
+            text(line.text,shadow,0x0a0a0a,mir3::TextFont::normal,false);
+            text(line.text,{position[0],position[1],line.width,14},0xffffff,mir3::TextFont::normal,false);
+        }
+    }
+}
+
 bool Mir3HudView::apply_scene_name(int actor,int opcode,int color,String value) {
     if (color<0 || color>255 || (!scene_humans.contains(actor) && !scene_npcs.contains(actor) && !scene_chickens.contains(actor))) return false;
     auto identity=scene_names.contains(actor)?scene_names.at(actor):mir3::SceneName{};
@@ -1729,6 +1779,8 @@ bool Mir3HudView::remove_scene_actor(int actor) {
     if (!scene_npcs.erase(actor) && !scene_chickens.erase(actor) && !scene_humans.erase(actor)) return false;
     const auto id=static_cast<std::uint32_t>(actor);
     scene_names.erase(actor);
+    scene_speech.erase(actor);
+    speech_bounds.erase(actor);
     target_attributes_by_actor.erase(id);
     if (hovered_target==id) hovered_target=0;
     target_focus.remove(id);
@@ -1984,6 +2036,7 @@ void Mir3HudView::_draw() {
     if (!loaded) return;
     draw_terrain();
     draw_scene_name();
+    draw_scene_speech();
     if (!model.layout.expanded) {
         sprite(1490,Layout::image_position(Layout::Image::portrait));
         const auto origin=point(Layout::image_position(Layout::Image::portrait));
@@ -2297,6 +2350,12 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
+    for (auto it=scene_speech.begin();it!=scene_speech.end();) {
+        it->second.advance(delta*1000);
+        if (it->second.lines.empty()) it=scene_speech.erase(it);
+        else ++it;
+        queue_redraw();
+    }
     for (auto& [actor,human]:scene_humans) {
         if (human.movement_frame<0) {
             human.idle.advance(delta*1000);
