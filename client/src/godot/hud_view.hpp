@@ -56,6 +56,15 @@
 #include "guild/guild_layout.hpp"
 #include "guild/guild_overview.hpp"
 #include "magic/skill_panel.hpp"
+#include "magic/spell_timing.hpp"
+#include "magic/spell_routes.hpp"
+#include "magic/magic_rules.hpp"
+#include "magic/staged_spell.hpp"
+#include "magic/spell_orbit.hpp"
+#include "magic/spell_particle_pool.hpp"
+#include "magic/spell_light.hpp"
+#include "magic/spell_color.hpp"
+#include "protocol/spell_request.hpp"
 #include "hud/snow_weather.hpp"
 #include "resources/wil_archive.hpp"
 #include "resources/messages.hpp"
@@ -463,6 +472,8 @@ private:
     void draw_weapon_glow(godot::Vector2 anchor,int type,int motion_frame);
     std::map<int,MapActorFrame> weapon_glow_frames;
     std::vector<godot::Vector2> weapon_glow_lights;
+    std::vector<mir3::SceneLight> human_spell_lights;
+    godot::Array drawn_human_spells;
     std::vector<int> drawn_weapon_glow_frames;
     std::array<MapActorFrame,80> map_human_frames, map_walk_frames, map_run_frames;
     std::map<int,mir3::SceneHealth> scene_health;
@@ -559,7 +570,13 @@ private:
     void update_actor_bar_status(int actor,bool status_bit);
     bool refresh_monster_shape(SceneChicken& monster,int shape,int action=-1,int facing=-1);
     void play_animal_call(int actor,SceneChicken& animal);
+    struct HumanSpellVisual {
+        int skill=0,direction=0;
+        std::optional<mir3::SpellColor::Rgb> tint;
+        bool light_active=true;
+    };
     struct SceneHuman : SceneActor {
+        HumanSpellVisual spell;
         int profession=0, type=0, clothing=0, hair=0, weapon=0;
         int clothing_dye=65535, hair_dye=65535, mount_shape=0;
         godot::String name;
@@ -596,6 +613,12 @@ private:
     mir3::HumanActionClock player_action;
     mir3::MeleeCooldown melee_cooldown;
     mir3::LocalActionClock local_action_clock;
+    mir3::SpellTiming spell_timing;
+    int active_spell=0;
+    HumanSpellVisual player_spell;
+    std::map<std::pair<int,int>,godot::Ref<godot::ShaderMaterial>> human_spell_materials;
+    void draw_human_spell(HumanSpellVisual& spell,const mir3::HumanActionClock& action,godot::Vector2 anchor);
+    void request_skill_cast(int slot,bool repeat);
     mir3::ActionPrediction action_prediction;
     mir3::HumanLife player_life;
     struct LocalActorMessage {
@@ -605,6 +628,7 @@ private:
         std::optional<mir3::SceneHumanMessage> hit;
         unsigned hit_variant=0;
         std::optional<mir3::SceneHumanMessage> status;
+        std::optional<mir3::SpellReply> spell_reply;
     };
     std::deque<LocalActorMessage> local_actor_messages;
     std::optional<mir3::ForcedMotion> forced_motion;
@@ -631,6 +655,7 @@ private:
     struct GroundEvent { godot::Vector2i cell; int frame; double age=0; bool hidden=false; double lifetime=65535; float opacity=1.f; };
     std::map<std::uint64_t,GroundEvent> ground_events;
     std::map<int,MapActorFrame> event_frames;
+    std::map<int,godot::Vector2> effect_library_offsets;
     std::map<int,mir3::WilArchive> monster_effect_archives;
     struct MonsterProjectile {
         godot::Vector2 position, destination;
@@ -638,6 +663,7 @@ private:
         int effect;
         godot::Vector2 velocity{};
         godot::Vector2 previous_distance{10000,10000};
+        bool untargeted_timeout=false;
     };
     enum class MonsterEffectPose { attack, struck, death, idle, walk, burrow, skeleton };
     struct MapEvent {
@@ -660,11 +686,20 @@ private:
         bool ground_wave=false;
         std::uint32_t follow_actor=0;
         std::optional<godot::Vector2> follow_position;
+        bool spell_effect=false;
+        double lifetime_ms=0;
+        std::optional<mir3::StagedSpell> staged_spell;
+        std::optional<mir3::SpellOrbit> orbit;
+        unsigned orbit_direction=0;
     };
     std::map<std::uint64_t,MapEvent> map_events;
     std::uint64_t harvest_effect_id=std::uint64_t{1}<<32;
     void show_harvest_impact(godot::Vector2i cell);
     void show_map_impact(int effect,godot::Vector2i cell);
+    void show_player_magic(mir3::SkillId skill,godot::Vector2i source,godot::Vector2i target,std::uint32_t target_actor);
+    void play_spell_reply(int actor,const mir3::SpellReply& reply);
+    void show_ground_magic(mir3::MagicEffectId effect,godot::Vector2i source,godot::Vector2i target,int facing=-1);
+    bool prepare_effect_library(int library);
     void show_scene_effect(mir3::EffectCatalog::Section section,int effect,godot::Vector2i cell,
         int frame_offset=0,int delay_ms=0,int attached_actor=0,
         std::optional<MonsterProjectile> projectile=std::nullopt,
@@ -681,6 +716,11 @@ private:
         bool shrinking=false;
     };
     std::vector<EventParticle> event_particles;
+    mir3::SpellParticlePool spell_particles;
+    godot::Node2D* spell_particle_layer=nullptr;
+    std::vector<godot::RID> spell_particle_items;
+    std::array<godot::Ref<godot::ShaderMaterial>,2> spell_particle_materials;
+    void sync_spell_particles();
     std::map<std::pair<int,int>,GroundEvent> event_marks;
     void emit_event_particles(godot::Vector2i cell);
     void advance_map_events(double milliseconds);
@@ -882,7 +922,8 @@ private:
     godot::Vector2i map_camera() const;
     void draw_terrain();
     void draw_terrain_texture(const godot::Ref<godot::ImageTexture>& image,godot::Vector2 position,
-        godot::Color modulate=godot::Color(1,1,1),int rgb565_weight=0,bool weapon_glow=false);
+        godot::Color modulate=godot::Color(1,1,1),int rgb565_weight=0,bool weapon_glow=false,
+        const godot::Ref<godot::ShaderMaterial>& effect_material={});
     std::vector<godot::RID> terrain_draw_items;
     godot::Node2D* terrain_layer=nullptr;
     std::size_t terrain_draw_count=0;

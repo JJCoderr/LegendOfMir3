@@ -55,12 +55,33 @@ func run() -> void:
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_MAGIC_LVEXP,5,2,215,0)),"正常修炼值显示"): return
 	await settle()
 	if not await capture("skill-wire-progress"): return
+	click_at(Vector2(385,152),true)
+	click_at(Vector2(385,152),false)
+	var popup := InputEventMouseButton.new()
+	popup.position=Vector2(385,152)
+	popup.button_index=MOUSE_BUTTON_LEFT
+	popup.pressed=true
+	popup.double_click=true
+	root.push_input(popup,true)
+	click_at(Vector2(385,152),false)
+	if not await capture("skill-wire-key-menu"): return
 	if not check(hud.apply_game_message(records_packet(Mir3HudView.SM_ADDMAGIC,[record(261,65)])),"新增高位技能ID"): return
 	if not check(hud.hud_snapshot().learned_skills.size()==3 and hud.hud_snapshot().skill_bindings[10]==0,"新增A键标签不按全量规则建立绑定"): return
 	var bad := full.slice(0,full.size()-2)
 	if not check(not hud.apply_game_message(bad) and hud.hud_snapshot().learned_skills.size()==3,"坏列表不部分替换"): return
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_DELMAGIC,5,0,0,0)) and hud.hud_snapshot().learned_skills.size()==2 and hud.hud_snapshot().skill_bindings[12]==5,"删除保留原版快捷表"): return
 	if not check(hud.apply_game_message(records_packet(Mir3HudView.SM_SENDMYMAGIC,[record(1,49),record(5,67)])),"重新全量列表"): return
+	click_at(Vector2(435,202),true)
+	click_at(Vector2(435,202),false)
+	if not check(packets.size()==3 and hud.hud_snapshot().skill_bindings[12]==5,"删除和重同步使旧快捷键菜单失效"): return
+	click_at(Vector2(636,32),true)
+	click_at(Vector2(636,32),false)
+	if not check(hud.hud_snapshot().skill_tab==7,"可切换技能分类页签"): return
+	click_at(Vector2(397,32),true)
+	click_at(Vector2(397,32),false)
+	motion=InputEventMouseMotion.new()
+	motion.position=Vector2(385,152)
+	root.push_input(motion,true)
 	await settle()
 	if not await capture("skill-wire-list"): return
 	if not check(hud.apply_game_message(records_packet(Mir3HudView.SM_SENDMYMAGIC,[])) and hud.hud_snapshot().learned_skills.is_empty() and hud.hud_snapshot().skill_bindings[12]==5,"空全量清列表但不擅改快捷表"): return

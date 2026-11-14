@@ -156,6 +156,13 @@ int monster_projectile_direction(Vector2 delta,bool eight_directions) {
     return (quadrant*(count/4)+slot/2)%count;
 }
 
+Vector2 spell_initial_velocity(Vector2 delta) {
+    // 4497CD–44984C：横轴占优保留x87商，纵轴占优先把商存为float。
+    const auto x=std::max(1,std::abs(int(delta.x))),y=std::max(1,std::abs(int(delta.y)));
+    const double factor=x>y?500.0/x:double(float(500.0/y));
+    return Vector2(std::trunc(delta.x*factor),std::trunc(delta.y*factor));
+}
+
 MonsterMotion monster_burrow_motion(int shape) {
     if (shape==83 || shape==84) return {640,6,120};
     if (shape==85) return {640,20,120};
@@ -559,13 +566,26 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["level_effects"]=level_states;
     result["map_event_count"]=int(map_events.size()+ground_events.size());
     Dictionary event_states, ground_wave_delays;
+    Array spell_states;
     for(const auto& [id,event]:map_events) {
         event_states[int64_t(id)]=event.frame;
         if (event.ground_wave) ground_wave_delays[event.cell]=event.delay_ms;
+        if (event.spell_effect || event.staged_spell) {
+            Dictionary state;
+            state["skill"]=int(event.resource->id);state["frame"]=event.frame;
+            state["projectile"]=event.projectile.has_value();state["delay"]=event.delay_ms;
+            state["light_tail"]=event.light_tail;
+            state["stage"]=event.staged_spell?int(event.staged_spell->stage):-1;
+            spell_states.append(state);
+        }
     }
+    result["spell_effects"]=spell_states;
+    result["human_spell_light_count"]=int(human_spell_lights.size());
+    result["drawn_human_spells"]=drawn_human_spells;
     result["map_ground_wave_delays"]=ground_wave_delays;
     for(const auto& [id,event]:ground_events) if(!event_states.has(int64_t(id))) event_states[int64_t(id)]=event.frame;
     result["map_event_particle_count"]=int(event_particles.size());
+    result["spell_particle_count"]=int(spell_particles.count());
     result["map_event_mark_count"]=int(event_marks.size());
     result["map_ground_event_count"]=int(ground_events.size());
     result["map_event_frames"]=event_states;
@@ -589,6 +609,11 @@ Dictionary Mir3HudView::hud_snapshot() const {
     for (const auto& [id,human]:scene_humans) human_status[id]=Vector2i(human.action_flags,human.attack_speed);
     result["scene_human_status"]=human_status;
     result["local_action_pending"]=pending_local_action.has_value();
+    result["active_spell"]=active_spell;
+    result["player_spell_frame"]=player_action.finished()?-1:player_action.spell_frame();
+    result["spell_cast_tick"]=int64_t(spell_timing.cast_at);
+    result["spell_cast_delay"]=int64_t(spell_timing.casting_delay);
+    result["spell_movement_delay"]=int64_t(spell_timing.movement_delay);
     result["action_reply_pending"]=action_prediction.waiting;
     result["player_dead"]=player_life.dead;
     result["player_dying"]=player_life.dying;
@@ -934,7 +959,7 @@ void Mir3HudView::_ready() {
         if(const auto source=weather_archive.frame(500)) snow_texture=texture(source->pixels.rgba,source->width,source->height);
     }
     for(const int id:{200,201,202,203,204,205,206,207,210,220,230,231,232,233,234,
-            240,241,242,243,244,245,246,247,260,261,520,521,522,523}) {
+            240,241,242,243,244,245,246,247,260,261,520,521,522,523,530}) {
         if(const auto source=weather_archive.frame(id))
             ground_event_frames.emplace(id,MapActorFrame{
                 texture(source->pixels.rgba,source->width,source->height),
@@ -975,6 +1000,13 @@ void Mir3HudView::_ready() {
     add_child(scene_light_layer);
     scene_light_layer->connect("draw",callable_mp(this,&Mir3HudView::draw_scene_lighting));
     level_layer=memnew(Node2D);add_child(level_layer);
+    spell_particle_layer=memnew(Node2D);add_child(spell_particle_layer);
+    for (int i=0;i<2;++i) {
+        auto& particle_material=spell_particle_materials[i];
+        particle_material.instantiate();
+        particle_material->set_shader(ResourceLoader::get_singleton()->load("res://spell_particle.gdshader"));
+        particle_material->set_shader_parameter("glow",i==1);
+    }
     hud_base=memnew(Node2D);
     hud_base->set_material(material);
     add_child(hud_base);
@@ -1023,6 +1055,8 @@ void Mir3HudView::_exit_tree() {
     auto* renderer=RenderingServer::get_singleton();
     for (const auto& item:terrain_draw_items) renderer->free_rid(item);
     terrain_draw_items.clear();
+    for (const auto& item:spell_particle_items) renderer->free_rid(item);
+    spell_particle_items.clear();
     if(!login_visible && !character_selection.visible && !exit_transition.active) save_item_layout();
     connection.close();login_movie.close();
     const auto stop=[](AudioStreamPlayer* player) {
@@ -1240,7 +1274,13 @@ void Mir3HudView::advance_local_action() {
         return;
     }
     if (!pending.waiting_since) {
-        if (pending.movement && !local_action_clock.admit_move(now)) return;
+        if (pending.movement) {
+            if (!local_action_clock.admit_move(now)) return;
+            if (!spell_timing.movement_ready(now)) {
+                pending_local_action.reset();
+                return;
+            }
+        }
         pending.waiting_since=now;
         pending.wait_ms=local_action_clock.shared_wait(now,
             mir3::MeleeCooldown::interval(model.level,melee_cooldown.speed,model.hand_weight[0],model.hand_weight[1]));
@@ -2991,7 +3031,7 @@ bool Mir3HudView::apply_scene_human_life(int actor,int opcode,Vector2i cell,int 
 bool Mir3HudView::set_local_actor_identity(int actor) {
     if (actor<=0 || scene_humans.contains(actor) || scene_npcs.contains(actor) || scene_chickens.contains(actor)) return false;
     if (local_actor_identity!=actor) {
-        player_light_attribute=0;melee_cooldown={};local_action_clock={};pending_local_action.reset();
+        player_light_attribute=0;melee_cooldown={};local_action_clock={};spell_timing={};active_spell=0;player_spell={};pending_local_action.reset();
         action_prediction={};
         local_actor_messages.clear();forced_motion.reset();
         player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;player_status_flags=0;
@@ -3009,6 +3049,19 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_REVIVE_REFRESH && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS && header->opcode!=mir3::protocol::SM_DAYCHANGING && header->opcode!=mir3::protocol::SM_SHOWEVENT && header->opcode!=mir3::protocol::SM_HIDEEVENT)) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
+    if (opcode==mir3::protocol::SM_MAGICFIRE || opcode==mir3::protocol::SM_MAGICFIRE_LIST) {
+        const auto reply=mir3::SpellReply::parse(*header,{encoded.ptr()+16,std::size_t(encoded.size()-16)});
+        if (!reply) return false;
+        if (local_actor_identity && actor==local_actor_identity) {
+            if (local_actor_messages.size()>=64) return false;
+            LocalActorMessage message{{opcode,0,{}},{},0};message.spell_reply=*reply;
+            local_actor_messages.push_back(std::move(message));return true;
+        }
+        const auto found=scene_humans.find(actor);
+        if (found==scene_humans.end()) return false;
+        mir3::SceneHumanMessage message;message.opcode=opcode;message.spell_reply=*reply;
+        return found->second.messages.push(std::move(message));
+    }
     if (local_actor_identity && actor==local_actor_identity &&
         (opcode==mir3::protocol::SM_SITDOWN || opcode==mir3::protocol::SM_BUTCH)) {
         // 415AD0没有12/637动作分支，但仍按FIFO逐条消费，不能中断本地预测动作。
@@ -3259,17 +3312,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
             play_actor_sound(actor,10*(overlay+1000),source);
         }
         if (ground_wave) {
-            const auto delta=target-source;
-            Vector2i step((delta.x>0)-(delta.x<0),(delta.y>0)-(delta.y<0));
-            if (std::abs(delta.y)>2 && std::abs(delta.x)<=1) step.x=0;
-            if (std::abs(delta.x)>2 && std::abs(delta.y)<=1) step.y=0;
-            if (step==Vector2i()) step.y=1;
-            for (int index=0;index<9;++index) {
-                const auto id=harvest_effect_id;
-                show_scene_effect(Section::magic,effect,source+step*(index+1),0,150*index);
-                if (const auto event=map_events.find(id);event!=map_events.end())
-                    event->second.ground_wave=true;
-            }
+            show_ground_magic(static_cast<mir3::MagicEffectId>(effect),source,target);
         } else if (travels) {
             const auto start=Vector2(source*Vector2i(48,32));
             const auto destination=Vector2(target*Vector2i(48,32));
@@ -3563,7 +3606,12 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     const auto found=scene_humans.find(actor);
     if (found==scene_humans.end() || !mir3::SceneHumanMessage::accepts(opcode)) return false;
     mir3::SceneHumanMessage message{opcode,p[0],p[1],opcode==mir3::protocol::SM_HUMAN_STRUCK || opcode==mir3::protocol::SM_STRUCK?0:p[2]&255};
-    if (opcode==mir3::protocol::SM_STRUCK) {
+    if (opcode==mir3::protocol::SM_SPELL) {
+        // 413C80：正文是原始十进制技能文本，不是六位编码后的外观记录。
+        const std::string text(reinterpret_cast<const char*>(encoded.ptr()+16),size);
+        message.spell=static_cast<std::uint16_t>(std::strtol(text.c_str(),nullptr,10));
+        message.facing=0; // 出队时按当前角色格与目标格求方向。
+    } else if (opcode==mir3::protocol::SM_STRUCK) {
         if (size) return false;
         message.health=p;
     } else if (opcode==mir3::protocol::SM_BUMP || opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_WALK || opcode==mir3::protocol::SM_RUN || opcode==mir3::protocol::SM_HUMAN_STRUCK || opcode==mir3::protocol::SM_REVIVE || opcode==mir3::protocol::SM_REVIVE_REFRESH) {
@@ -3590,7 +3638,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         if(size>1) return false;
         message.harvest=size==1 && encoded[16]!=0;
     } else if(size && opcode!=mir3::protocol::SM_SITDOWN && opcode!=mir3::protocol::SM_BUTCH) return false;
-    if (opcode!=mir3::protocol::SM_HUMAN_STRUCK && opcode!=mir3::protocol::SM_STRUCK && !terrain.walkable(message.x,message.y)) return false;
+    if (opcode!=mir3::protocol::SM_SPELL && opcode!=mir3::protocol::SM_HUMAN_STRUCK && opcode!=mir3::protocol::SM_STRUCK && !terrain.walkable(message.x,message.y)) return false;
     return found->second.messages.push(message);
 }
 
@@ -3652,6 +3700,25 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     if (!next) return false;
     bool accepted=false;
     const Vector2i cell(next->x,next->y);
+    if (next->spell_reply) { play_spell_reply(actor,*next->spell_reply);return true; }
+    if (next->spell) {
+        if (human.life.dead) return true;
+        const int skill=*next->spell;
+        const auto delta=cell-human.cell;
+        const mir3::MapCell direction{
+            std::abs(delta.y)>2 && std::abs(delta.x)<=1?0:(delta.x>0)-(delta.x<0),
+            std::abs(delta.x)>2 && std::abs(delta.y)<=1?0:(delta.y>0)-(delta.y<0)};
+        const auto heading=std::find(mir3::map_directions.begin(),mir3::map_directions.end(),direction);
+        human.facing=heading==mir3::map_directions.end()?4:int(heading-mir3::map_directions.begin());
+        const auto& route=mir3::SpellRoutes::get(skill);
+        human.action.start_spell(int(mir3::SpellRoutes::remote_action(skill)),route.action_limit,catch_up);
+        if (route.action_interval) human.action.set_interval(route.action_interval);
+        human.spell={skill,route.directional_effect?human.facing:0};
+        human.catching_up=catch_up;human.harvest=false;human.idle.reset();
+        if (effect_catalog.find(mir3::EffectCatalog::Section::spell,std::uint16_t(skill)))
+            play_actor_sound(actor,10*(skill+1000),human.cell);
+        queue_redraw();return true;
+    }
     if (next->status_speed) {
         human.attack_speed=*next->status_speed;human.action_flags=next->flags;
         update_actor_bar_status(actor,(next->flags&2)!=0);return true;
@@ -3709,8 +3776,8 @@ bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing,int h
     switch (opcode) {
     case mir3::protocol::SM_SITDOWN: action=8; break;
     case mir3::protocol::SM_HIT: case mir3::protocol::SM_HIT2: action=mir3::HumanActions::weapon_attack(human.weapon); break;
-    case mir3::protocol::SM_HUMAN_CAST: action=17; break;
-    case mir3::protocol::SM_HUMAN_CAST_ALT: action=16; facing=human.facing; break;
+    case mir3::protocol::SM_HUMAN_ACTION17: action=17; break;
+    case mir3::protocol::SM_HUMAN_ACTION16: action=16; facing=human.facing; break;
     case mir3::protocol::SM_HUMAN_ACTION18: action=18; break;
     case mir3::protocol::SM_HUMAN_ATTACK: action=9; break;
     case mir3::protocol::SM_HUMAN_STRUCK: action=human.mount_shape?32:15; facing=human.facing; break;
@@ -4025,6 +4092,7 @@ void Mir3HudView::process_local_actor_message() {
         (!player_action.finished() && player_action.action()!=7 && !(player_life.dead && !player_life.dying))) return;
     const auto message=local_actor_messages.front();
     local_actor_messages.pop_front();
+    if (message.spell_reply) { play_spell_reply(0,*message.spell_reply);return; }
     if (message.motion.opcode==mir3::protocol::SM_SITDOWN || message.motion.opcode==mir3::protocol::SM_BUTCH) return;
     if (message.status) {
         player_status_flags=message.status->flags;
@@ -4164,9 +4232,59 @@ void Mir3HudView::advance_map_step(double delta) {
     queue_redraw();
 }
 
-void Mir3HudView::draw_terrain_texture(const Ref<ImageTexture>& image,Vector2 position,Color modulate,int rgb565_weight,bool weapon_glow) {
+void Mir3HudView::draw_human_spell(HumanSpellVisual& spell,const mir3::HumanActionClock& action,Vector2 anchor) {
+    if (!spell.skill || action.finished() || (action.action()!=int(mir3::SpellAction::directed) &&
+        action.action()!=int(mir3::SpellAction::area))) return;
+    const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::spell,std::uint16_t(spell.skill));
+    if (!resource) return;
+    // 40E1F0：光源不依赖该帧贴图存在；半程后收缩，外半径降到0便不再更新。
+    if (spell.light_active && resource->outer_radius) {
+        const int relative=std::uint8_t(action.spell_frame()),limit=action.spell_frame_limit();
+        const int outer=std::uint8_t(relative>=(limit>>1)?limit-relative:relative+1);
+        const int inner=std::uint8_t(outer-1);
+        human_spell_lights.push_back({int(anchor.x)+24,int(anchor.y)+16,inner,
+            {resource->inner_color[0],resource->inner_color[1],resource->inner_color[2]},outer,
+            {resource->outer_color[0],resource->outer_color[1],resource->outer_color[2]}});
+        if (!outer) spell.light_active=false;
+    }
+    const int index=int(resource->first)+10*spell.direction+action.spell_frame();
+    const MapActorFrame* frame=nullptr;
+    if (resource->library==137) frame=level_frame(index);
+    else {
+        if (!prepare_effect_library(resource->library)) return;
+        const int key=(resource->library<<16)|index;
+        auto found=event_frames.find(key);
+        if (found==event_frames.end()) {
+            auto& archive=resource->library==81?event_archive:monster_effect_archives.at(resource->library);
+            if (const auto decoded=archive.frame(index))
+                found=event_frames.emplace(key,MapActorFrame{texture(decoded->pixels.rgba,decoded->width,decoded->height),
+                    Vector2(decoded->offset_x,decoded->offset_y),{}}).first;
+        }
+        if (found!=event_frames.end()) frame=&found->second;
+    }
+    if (!frame || frame->image.is_null()) return;
+    effect_library_offsets[resource->library]=frame->offset;
+    const auto key=std::pair{int(resource->blend),int(resource->opacity)};
+    auto& material=human_spell_materials[key];
+    if (material.is_null()) {
+        material.instantiate();
+        material->set_shader(ResourceLoader::get_singleton()->load("res://level_effect.gdshader"));
+        material->set_shader_parameter("effect_blend",int(resource->blend));
+        material->set_shader_parameter("effect_opacity",resource->opacity/255.f);
+    }
+    const auto tint=spell.tint.value_or(resource->tint);
+    Dictionary drawn;
+    drawn["skill"]=spell.skill;drawn["frame"]=index;
+    drawn["bounds"]=Rect2(anchor+frame->offset,frame->image->get_size());
+    drawn_human_spells.append(drawn);
+    draw_terrain_texture(frame->image,anchor+frame->offset,
+        Color(tint[0]/255.f,tint[1]/255.f,tint[2]/255.f),0,false,material);
+}
+
+void Mir3HudView::draw_terrain_texture(const Ref<ImageTexture>& image,Vector2 position,Color modulate,int rgb565_weight,bool weapon_glow,
+        const Ref<ShaderMaterial>& effect_material) {
     auto* renderer=RenderingServer::get_singleton();
-    const bool blend=rgb565_weight || weapon_glow;
+    const bool blend=rgb565_weight || weapon_glow || effect_material.is_valid();
     // Keep opaque draws batched, with a fresh screen copy at each translucent sprite.
     if (!terrain_draw_batch.is_valid() || blend) {
         if (terrain_draw_count==terrain_draw_items.size()) {
@@ -4181,7 +4299,7 @@ void Mir3HudView::draw_terrain_texture(const Ref<ImageTexture>& image,Vector2 po
         renderer->canvas_item_set_copy_to_backbuffer(terrain_draw_batch,blend,
             blend?Rect2(position,image->get_size()):Rect2());
         renderer->canvas_item_set_material(terrain_draw_batch,
-            weapon_glow?weapon_glow_mix->get_rid():rgb565_weight==8?monster_body_mix->get_rid():rgb565_weight?monster_shadow_mix->get_rid():RID());
+            effect_material.is_valid()?effect_material->get_rid():weapon_glow?weapon_glow_mix->get_rid():rgb565_weight==8?monster_body_mix->get_rid():rgb565_weight?monster_shadow_mix->get_rid():RID());
     }
     renderer->canvas_item_add_texture_rect(terrain_draw_batch,Rect2(position,image->get_size()),image->get_rid(),false,modulate);
     if (blend) terrain_draw_batch=RID();
@@ -4200,6 +4318,8 @@ void Mir3HudView::draw_terrain() {
     player_bounds=Rect2();
     human_shadow_bounds.clear();
     weapon_glow_lights.clear();drawn_weapon_glow_frames.clear();
+    human_spell_lights.clear();
+    drawn_human_spells.clear();
     animated_map_objects=false;
     for (auto& [actor,npc]:scene_npcs) npc.bounds=Rect2();
     for (auto& [actor,chicken]:scene_chickens) {
@@ -4342,6 +4462,7 @@ void Mir3HudView::draw_terrain() {
                 human.anchor=position-frame.offset;
                 human.bounds=Rect2(position,frame.image->get_size());
                 draw_human_layers(frame,position-frame.offset,human.type,human.hair,human.weapon,motion,human.clothing_dye,human.hair_dye,human.life.dead?0:human.mount_shape,human.life.opacity(),actor_status_color(human.action_flags),human.life.dead && !human.life.dying);
+                if (!human.life.dead) draw_human_spell(human.spell,human.action,position-frame.offset);
                 animated_map_objects=true;
                 continue;
             }
@@ -4384,6 +4505,7 @@ void Mir3HudView::draw_terrain() {
                     (player_mount?(walk_frame>=0?(running?2480:2400):2320):(walk_frame>=0?(running?1760:1680):0))+
                     player_facing*10+(walk_frame>=0?walk_frame:player_idle.frame()),player_clothing_dye,player_hair_dye,
                     player_life.dead || (action_pose && !(forced_motion && forced_motion->walking()))?0:player_mount,1.f,actor_status_color(player_status_flags),player_life.dead && !player_life.dying);
+                draw_human_spell(player_spell,player_action,Vector2(pixel-camera));
                 animated_map_objects=true;
             }
         }
@@ -4448,6 +4570,7 @@ void Mir3HudView::draw_scene_lighting() {
             if (const auto packed=terrain.light(x,y))
                 grid.add({x*48-camera.x,y*32-camera.y,0,{},radii[packed>>14],colors[(packed>>4)&255]});
     if (magic_light) {
+        for (const auto& light:human_spell_lights) grid.add(light);
         for (const auto& effect:level_effects) grid.add(effect.playback.light(camera.x,camera.y));
         for (const auto& [id,event]:map_events) {
             if (!event.emits_light || event.delay_ms) continue;
@@ -4457,6 +4580,8 @@ void Mir3HudView::draw_scene_lighting() {
             const auto p=world-Vector2(camera)+Vector2(24,16);
             const auto light_color=[&](const auto& rgb) -> mir3::SceneLight::Rgb {
                 if (!event.light_fade) return {rgb[0],rgb[1],rgb[2]};
+                if (event.spell_effect) return {mir3::SpellLight::channel(rgb[0],event.light_fade),
+                    mir3::SpellLight::channel(rgb[1],event.light_fade),mir3::SpellLight::channel(rgb[2],event.light_fade)};
                 return {std::max(2,rgb[0]-event.light_fade),std::max(2,rgb[1]-event.light_fade),
                     std::max(2,rgb[2]-event.light_fade)};
             };
@@ -4540,7 +4665,7 @@ void Mir3HudView::clear_game_scene() {
     map_input_delay={};player_mount=0;mount.shape=0;
     terrain_ready=false;terrain=mir3::MapTerrain{};terrain_frames.clear();current_map_id=String();
     target_focus.clear();local_actor_identity=0;player_light_attribute=0;exit_guard={};melee_cooldown={};
-    pending_local_action.reset();local_action_clock={};
+    pending_local_action.reset();local_action_clock={};spell_timing={};active_spell=0;player_spell={};
     action_prediction={};
     local_actor_messages.clear();forced_motion.reset();
     player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;player_status_flags=0;
@@ -4703,6 +4828,7 @@ bool Mir3HudView::apply_login_actor() {
     if (!body || (mount && (!human_body(appearance.type,appearance.clothing,true) || !horse_frame(mount,2320))) ||
         (appearance.weapon && weapon_order.size()!=2640)) return false;
     player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;player_status_flags=0;player_action={};action_prediction={};pending_local_action.reset();
+    spell_timing={};active_spell=0;player_spell={};
     local_actor_messages.clear();forced_motion.reset();
     player_mount=0;set_player_body(appearance.type,appearance.clothing);
     set_player_mount(mount);this->mount.shape=std::uint8_t(mount);set_player_attachments(appearance.hair,appearance.weapon);
@@ -4909,28 +5035,182 @@ bool Mir3HudView::play_monster_ranged_attack(const SceneChicken& monster,const S
     return monster.shape!=124 && monster.shape!=125;
 }
 
-void Mir3HudView::show_scene_effect(mir3::EffectCatalog::Section section,int effect,Vector2i cell,
-        int frame_offset,int delay_ms,int attached_actor,std::optional<MonsterProjectile> projectile,
-        MonsterEffectPose attached_pose) {
-    const auto* resource=effect_catalog.find(section,effect);
-    if (!resource || resource->end<=resource->first || !resource->interval) return;
-    if (resource->library!=81 && resource->library!=137) {
+void Mir3HudView::show_ground_magic(mir3::MagicEffectId effect,Vector2i source,Vector2i target,int facing) {
+    const auto direction=[](Vector2i source,Vector2i target) {
+        const auto delta=target-source;
+        Vector2i step((delta.x>0)-(delta.x<0),(delta.y>0)-(delta.y<0));
+        if (std::abs(delta.y)>2 && std::abs(delta.x)<=1) step.x=0;
+        if (std::abs(delta.x)>2 && std::abs(delta.y)<=1) step.y=0;
+        if (step==Vector2i()) step.y=1;
+        return step;
+    };
+    const auto segment=[&](Vector2i cell,int delay) {
+        const auto id=harvest_effect_id;
+        show_scene_effect(mir3::EffectCatalog::Section::magic,int(effect),cell,0,delay);
+        if (const auto event=map_events.find(id);event!=map_events.end()) event->second.ground_wave=true;
+    };
+    if (effect==mir3::MagicEffectId::three_rays) {
+        if (facing<0 || facing>=8) return;
+        // 413150 -> 40DFE0：调用顺序及重叠起点都保留，不能按坐标去重。
+        static constexpr std::array<std::array<int,3>,8> rays{{
+            {{0,7,1}},{{1,0,2}},{{1,2,3}},{{3,2,4}},
+            {{4,3,5}},{{5,4,6}},{{6,7,5}},{{7,0,6}}
+        }};
+        const auto forward=mir3::map_directions[facing];
+        const auto start=source+Vector2i(forward[0],forward[1]);
+        for (const int ray:rays[facing]) {
+            const auto heading=mir3::map_directions[ray];
+            const auto step=direction(start,source+Vector2i(heading[0],heading[1])*5);
+            for (int i=0;i<5;++i) segment(start+step*i,150*i);
+        }
+    } else {
+        const auto step=direction(source,target);
+        const int interval=effect==mir3::MagicEffectId::lightning_trail?30:150;
+        for (int i=0;i<9;++i) segment(source+step*(i+1),interval*i);
+    }
+}
+
+void Mir3HudView::play_spell_reply(int actor,const mir3::SpellReply& reply) {
+    const auto source=actor==0?player_cell:scene_humans.at(actor).cell;
+    const auto skill=static_cast<mir3::SkillId>(reply.skill);
+    if (!reply.multiple) {
+        // 413150：这些回包完全忽略，连当前技能编号也不更新。
+        switch (skill) {
+        case mir3::SkillId::original_104: case mir3::SkillId::spacemove:
+        case mir3::SkillId::sinsu: case mir3::SkillId::firewind:
+        case mir3::SkillId::cloak: case mir3::SkillId::skelleton:
+        case mir3::SkillId::original_78: case mir3::SkillId::original_64:
+        case mir3::SkillId::original_105: case mir3::SkillId::original_121: return;
+        default: break;
+        }
+        const Vector2i target(reply.x,reply.y);
+        const auto target_actor=reply.targets.empty()?0:reply.targets.front();
+        switch (skill) {
+        case mir3::SkillId::fire:
+            show_ground_magic(mir3::MagicEffectId::fire_wave,source,target);break;
+        case mir3::SkillId::original_53:
+            show_ground_magic(mir3::MagicEffectId::ice_wave,source,target);break;
+        case mir3::SkillId::original_110:
+            show_ground_magic(mir3::MagicEffectId::three_rays,source,target,
+                actor==0?player_facing:scene_humans.at(actor).facing);break;
+        case mir3::SkillId::earthfire: case mir3::SkillId::holyshield:
+        case mir3::SkillId::original_63: break;
+        default:
+            show_player_magic(skill,source,target,target_actor);
+            if (skill==mir3::SkillId::shootlighten)
+                show_ground_magic(mir3::MagicEffectId::lightning_trail,source,target);
+            break;
+        }
+    }
+    // 4138C0 只有113创建目标列表效果；其他技能仍更新当前技能编号。
+    if (reply.multiple && skill==mir3::SkillId::original_113) {
+        for (const auto target:reply.targets) {
+            std::optional<Vector2i> cell;
+            if (local_actor_identity && target==std::uint32_t(local_actor_identity)) cell=player_cell;
+            else if (const auto human=scene_humans.find(target);human!=scene_humans.end()) cell=human->second.cell;
+            else if (const auto monster=scene_chickens.find(target);monster!=scene_chickens.end()) cell=monster->second.cell;
+            else if (const auto npc=scene_npcs.find(target);npc!=scene_npcs.end()) cell=npc->second.cell;
+            if (cell) show_player_magic(skill,source,*cell,target);
+        }
+    }
+    if (actor==0) active_spell=reply.skill;
+}
+
+void Mir3HudView::show_player_magic(mir3::SkillId skill,Vector2i source,Vector2i target,std::uint32_t target_actor) {
+    if (skill==mir3::SkillId::original_150) {
+        show_player_magic(mir3::SkillId::fireball,source,target,0);
+        const auto delta=Vector2((target-source)*Vector2i(48,32));
+        const int direction=monster_projectile_direction(delta,false);
+        if (source==target) return;
+        for (int i=0;i<2;++i) {
+            const auto id=harvest_effect_id;
+            MonsterProjectile flight{Vector2(source*Vector2i(48,32)),Vector2(target*Vector2i(48,32)),0,int(skill)};
+            show_scene_effect(mir3::EffectCatalog::Section::magic,int(skill),source,10*direction,30*i,0,flight);
+            if (const auto found=map_events.find(id);found!=map_events.end()) {
+                auto& event=found->second;
+                event.spell_effect=true;event.one_shot=false;
+                event.projectile->velocity=spell_initial_velocity(delta);
+                event.orbit=mir3::SpellOrbit{0,i==1};
+                event.orbit_direction=unsigned(direction);
+                event.sprite->hide();
+            }
+        }
+        return;
+    }
+    if (skill==mir3::SkillId::original_73 || skill==mir3::SkillId::original_74) {
+        const auto anchor=skill==mir3::SkillId::original_73?source:target;
+        const auto event_id=harvest_effect_id;
+        show_scene_effect(mir3::EffectCatalog::Section::magic,int(skill),target);
+        if (const auto found=map_events.find(event_id);found!=map_events.end()) {
+            auto& event=found->second;
+            event.cell=anchor;
+            const auto& resource=*event.resource;
+            const auto delta=Vector2((target-source)*Vector2i(48,32));
+            event.staged_spell.emplace(skill,monster_projectile_direction(delta,false)>>1,
+                mir3::StagedSpell::Frames{int(resource.first),int(resource.end),resource.interval});
+            const auto offset=event.staged_spell->offset;
+            event.follow_position=Vector2(anchor*Vector2i(48,32))+Vector2(offset[0],offset[1]);
+            event.emits_light=resource.outer_radius>0;
+            // 子类44D9B0不调用普通弹道推进，也没有其60秒寿命限制。
+        }
+        return;
+    }
+    const auto rules=mir3::MagicRules::for_skill(skill);
+    if (rules.reject_same_cell && source==target) return;
+    // 原版创建时查找目标对象，未知编号不能在以后出现时才绑定。
+    if (!rules.track_target || (!scene_humans.contains(target_actor) && !scene_chickens.contains(target_actor) && !scene_npcs.contains(target_actor) &&
+        (!local_actor_identity || target_actor!=std::uint32_t(local_actor_identity)))) target_actor=0;
+    const auto delta=Vector2((target-source)*Vector2i(48,32));
+    const int direction=rules.direction==mir3::MagicDirection::fixed?0:
+        monster_projectile_direction(delta,rules.direction==mir3::MagicDirection::eight);
+    if (rules.use_source_as_target) target=source;
+    const auto event_id=harvest_effect_id;
+    if (rules.at_target) {
+        show_scene_effect(mir3::EffectCatalog::Section::magic,int(skill),target,10*direction);
+    } else {
+        MonsterProjectile projectile{Vector2(source*Vector2i(48,32)),Vector2(target*Vector2i(48,32)),target_actor,int(skill)};
+        projectile.untargeted_timeout=rules.untargeted_timeout;
+        show_scene_effect(mir3::EffectCatalog::Section::magic,int(skill),source,10*direction,0,0,projectile);
+    }
+    if (auto found=map_events.find(event_id);found!=map_events.end()) {
+        auto& event=found->second;
+        event.spell_effect=true;
+        if (event.projectile) event.projectile->velocity=spell_initial_velocity(event.projectile->destination-event.projectile->position);
+        event.one_shot=!rules.repeat;
+        event.emits_light=rules.light && event.resource->outer_radius>0;
+        if (rules.at_target) event.follow_actor=target_actor;
+    }
+}
+
+bool Mir3HudView::prepare_effect_library(int library) {
+    if (library!=81 && library!=137) {
         const char* archive_name=nullptr;
-        switch (resource->library) {
+        switch (library) {
+        case 91: archive_name="Mon-4"; break;
         case 129: archive_name="MonMagic"; break;
         case 138: archive_name="MonMagicEx"; break;
         case 140: archive_name="MonMagicEx2"; break;
         case 143: archive_name="MonMagicEx3"; break;
         case 148: archive_name="MonMagicEx4"; break;
-        default: return;
+        case 149: archive_name="MagicEx2"; break;
+        default: return false;
         }
-        if (!monster_effect_archives.contains(resource->library)) {
+        if (!monster_effect_archives.contains(library)) {
             mir3::WilArchive archive;
             const auto data=std::filesystem::u8path(actor_resource_root.utf8().get_data());
-            if (!archive.open(data/archive_name)) return;
-            monster_effect_archives.emplace(resource->library,std::move(archive));
+            if (!archive.open(data/archive_name)) return false;
+            monster_effect_archives.emplace(library,std::move(archive));
         }
     }
+    return true;
+}
+
+void Mir3HudView::show_scene_effect(mir3::EffectCatalog::Section section,int effect,Vector2i cell,
+        int frame_offset,int delay_ms,int attached_actor,std::optional<MonsterProjectile> projectile,
+        MonsterEffectPose attached_pose) {
+    const auto* resource=effect_catalog.find(section,effect);
+    const bool particle_only=section!=mir3::EffectCatalog::Section::spell && effect==int(mir3::SkillId::original_150);
+    if (!resource || (!particle_only && (resource->end<=resource->first || !resource->interval)) || !prepare_effect_library(resource->library)) return;
     auto* copy=memnew(BackBufferCopy);
     copy->set_copy_mode(BackBufferCopy::COPY_MODE_VIEWPORT);
     level_layer->add_child(copy);
@@ -4972,12 +5252,45 @@ void Mir3HudView::show_scene_effect(mir3::EffectCatalog::Section section,int eff
 void Mir3HudView::clear_map_events() {
     ground_events.clear();
     event_particles.clear();
+    spell_particles.clear();
+    sync_spell_particles();
     event_marks.clear();
     for(auto& [id,event]:map_events) {
         event.copy->hide();
         event.copy->queue_free();
     }
     map_events.clear();
+}
+
+void Mir3HudView::sync_spell_particles() {
+    if (!spell_particle_layer) return;
+    auto* renderer=RenderingServer::get_singleton();
+    std::size_t used=0;
+    for (const auto* slots:{&spell_particles.sparks,&spell_particles.glows}) {
+        for (const auto& slot:*slots) {
+            if (!slot) continue;
+            const auto& particle=*slot;
+            const auto image=ground_event_frames.find(particle.resource_frame());
+            if (image==ground_event_frames.end() || particle.size<=0) continue;
+            if (used==spell_particle_items.size()) {
+                const auto item=renderer->canvas_item_create();
+                renderer->canvas_item_set_parent(item,spell_particle_layer->get_canvas_item());
+                renderer->canvas_item_set_draw_index(item,int(used));
+                spell_particle_items.push_back(item);
+            }
+            const auto item=spell_particle_items[used++];
+            renderer->canvas_item_clear(item);
+            renderer->canvas_item_set_visible(item,true);
+            const Vector2 extent(particle.size,particle.size);
+            const Rect2 bounds(Vector2(particle.position[0],particle.position[1])-extent*0.5f,extent);
+            renderer->canvas_item_set_copy_to_backbuffer(item,true,bounds);
+            renderer->canvas_item_set_material(item,spell_particle_materials[particle.kind==mir3::SpellParticle::Kind::glow?1:0]->get_rid());
+            const auto& tint=particle.color;
+            renderer->canvas_item_add_texture_rect(item,bounds,image->second.image->get_rid(),false,
+                Color(tint[0]/255.f,tint[1]/255.f,tint[2]/255.f));
+        }
+    }
+    for (;used<spell_particle_items.size();++used) renderer->canvas_item_set_visible(spell_particle_items[used],false);
 }
 
 void Mir3HudView::emit_event_particles(Vector2i cell) {
@@ -5047,6 +5360,13 @@ void Mir3HudView::advance_map_events(double milliseconds) {
                     GroundEvent{event.cell,260,0,false,3000,180.f/255});
         }
         event.elapsed+=milliseconds;
+        if (event.spell_effect) {
+            event.lifetime_ms+=milliseconds;
+            if (event.lifetime_ms>60000) {
+                event.frame=int(event.resource->end)+event.frame_offset;
+                event.copy->hide();event.copy->queue_free();continue;
+            }
+        }
         if(event.remaining_ms>=0) {
             event.remaining_ms=std::max(0,event.remaining_ms-int(milliseconds));
             if(!event.remaining_ms) {
@@ -5111,24 +5431,155 @@ void Mir3HudView::advance_map_events(double milliseconds) {
                 const auto& target=human->second;
                 event.follow_position=target.bounds.has_area()?target.anchor+Vector2(camera):
                     Vector2(target.cell*Vector2i(48,32));
-            }
+            } else if (const auto npc=scene_npcs.find(actor);npc!=scene_npcs.end())
+                event.follow_position=Vector2(npc->second.cell*Vector2i(48,32));
+            else if (event.spell_effect) event.follow_actor=0;
         }
         double flight_ms=milliseconds;
         if (event.delay_ms) {
-            if (event.elapsed<event.delay_ms) continue;
-            event.elapsed-=event.delay_ms;
-            flight_ms=event.elapsed;
+            if (event.spell_effect) {
+                // 44B7E0比较总年龄；等待中清帧计时，解除时使用本次完整delta。
+                if (event.lifetime_ms<event.delay_ms) { event.elapsed=0;continue; }
+            } else {
+                if (event.elapsed<event.delay_ms) continue;
+                event.elapsed-=event.delay_ms;
+                flight_ms=event.elapsed;
+            }
             event.delay_ms=0;
         }
-        if (event.emits_light) {
+        if (event.staged_spell && !event.light_tail) {
+            auto& staged=*event.staged_spell;
+            const auto change=staged.advance(std::uint32_t(std::max(0,ms)));
+            if (change==mir3::StagedSpell::Change::load_explosion) {
+                const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::explosion,int(staged.skill));
+                if (!resource || resource->end<=resource->first || !resource->interval ||
+                    !prepare_effect_library(resource->library)) {
+                    event.frame=int(event.resource->end);
+                    event.copy->hide();event.copy->queue_free();continue;
+                }
+                event.resource=resource;
+                staged.load_explosion({int(resource->first),int(resource->end),resource->interval});
+                Ref<ShaderMaterial> material=event.sprite->get_material();
+                material->set_shader_parameter("effect_blend",int(resource->blend));
+                material->set_shader_parameter("effect_opacity",resource->opacity/255.f);
+                event.sprite->set_modulate(Color(resource->tint[0]/255.f,resource->tint[1]/255.f,resource->tint[2]/255.f));
+            }
+            event.frame=staged.frame;
+            event.follow_position=Vector2(event.cell*Vector2i(48,32))+Vector2(staged.offset[0],staged.offset[1]);
+            if (change==mir3::StagedSpell::Change::finished) {
+                if (!event.emits_light) {
+                    event.copy->hide();event.copy->queue_free();continue;
+                }
+                event.light_tail=true;
+                --event.frame;
+            }
+        }
+        bool spell_impact=false;
+        if (event.spell_effect && !event.light_tail && event.elapsed>event.resource->interval) {
+            event.elapsed=0;
+            ++event.frame;
+            if (event.frame>=int(event.resource->end)+event.frame_offset) {
+                if (event.one_shot) {
+                    event.frame=int(event.resource->end)+event.frame_offset-1;
+                    event.light_tail=true;
+                } else event.frame=int(event.resource->first)+event.frame_offset;
+            }
+        }
+        if (event.projectile) {
+            auto& flight=*event.projectile;
+            const auto actor=flight.target_actor;
+            bool following=false;
+            if (actor) {
+                following=true;
+                if (const auto monster=scene_chickens.find(actor);monster!=scene_chickens.end())
+                    flight.destination=Vector2(monster->second.walk_frame>=0?monster->second.walk_pixel():
+                        monster->second.cell*Vector2i(48,32));
+                else if (const auto human=scene_humans.find(actor);human!=scene_humans.end())
+                    flight.destination=event.spell_effect && human->second.bounds.has_area()?
+                        human->second.anchor+Vector2(camera):Vector2(human->second.cell*Vector2i(48,32));
+                else if (const auto npc=scene_npcs.find(actor);npc!=scene_npcs.end())
+                    flight.destination=Vector2(npc->second.cell*Vector2i(48,32));
+                else if (actor==static_cast<std::uint32_t>(local_actor_identity))
+                    flight.destination=Vector2(event.spell_effect?player_pixel():player_cell*Vector2i(48,32));
+                else following=false;
+            }
+            if (!following && event.spell_effect) flight.target_actor=0;
+            if (following) {
+                const auto position=event.spell_effect?
+                    Vector2(std::trunc(flight.position.x),std::trunc(flight.position.y)):flight.position.round();
+                const auto delta=flight.destination-position;
+                const int dominant=std::max(1,int(std::max(std::abs(delta.x),std::abs(delta.y))));
+                flight.velocity=delta*(500/dominant);
+            }
+            if (event.spell_effect) {
+                // 44B7E0每次存回32位float，不能让宿主Vector2的精度改变累积弹道。
+                constexpr double step=double(0.0011111111380159855f);
+                flight.position=Vector2(float(double(flight.velocity.x)*step*flight_ms+float(flight.position.x)),
+                    float(double(flight.velocity.y)*step*flight_ms+float(flight.position.y)));
+            } else flight.position+=flight.velocity*(flight_ms/900.0);
+            const auto pixel=Vector2(std::trunc(flight.position.x),std::trunc(flight.position.y));
+            const auto distance=(flight.destination-pixel).abs();
+            const bool approaching=distance.x<flight.previous_distance.x || distance.y<flight.previous_distance.y;
+            if (event.spell_effect && !following && flight.untargeted_timeout && event.lifetime_ms>=3000) {
+                event.frame=int(event.resource->end)+event.frame_offset;
+                event.copy->hide();event.copy->queue_free();continue;
+            }
+            const bool timeout_flight=event.spell_effect && !following && flight.untargeted_timeout;
+            if (!timeout_flight && ((flight_ms>0 && !approaching) || (distance.x<=15 && distance.y<=15))) {
+                const auto target=Vector2i((flight.destination/Vector2(48,32)).round());
+                if (event.spell_effect) {
+                    const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::explosion,flight.effect);
+                    if (!resource || (!event.orbit && (resource->end<=resource->first || !resource->interval)) ||
+                        !prepare_effect_library(resource->library)) {
+                        event.copy->hide();event.copy->queue_free();continue;
+                    }
+                    // 44B7E0在原对象内换资源，命中当帧显示爆炸首帧，计时不清零。
+                    event.resource=resource;event.frame=int(resource->first);event.frame_offset=0;
+                    event.cell=target;event.follow_actor=following?actor:0;
+                    event.follow_position=flight.destination;event.one_shot=true;
+                    if (following) play_actor_sound(0,10*flight.effect+10002,target);
+                    Ref<ShaderMaterial> material=event.sprite->get_material();
+                    material->set_shader_parameter("effect_blend",int(resource->blend));
+                    material->set_shader_parameter("effect_opacity",resource->opacity/255.f);
+                    event.sprite->set_modulate(Color(resource->tint[0]/255.f,resource->tint[1]/255.f,resource->tint[2]/255.f));
+                    event.projectile.reset();
+                    spell_impact=true;
+                } else {
+                    const auto impact_id=harvest_effect_id;
+                    show_scene_effect(mir3::EffectCatalog::Section::explosion,flight.effect,target);
+                    if (const auto impact=map_events.find(impact_id);impact!=map_events.end()) {
+                        impact->second.follow_actor=following?actor:0;
+                        impact->second.follow_position=flight.destination;
+                        if (following || flight.effect==594)
+                            play_actor_sound(0,10*flight.effect+10002,target);
+                    }
+                    event.frame=int(event.resource->end)+event.frame_offset;
+                    event.copy->hide();
+                    event.copy->queue_free();
+                    continue;
+                }
+            }
+            if (!spell_impact) flight.previous_distance=distance;
+            if (!spell_impact && event.orbit && ms>0) {
+                const auto pixel=event.orbit->advance(float(flight.position.x),float(flight.position.y),event.orbit_direction);
+                event.follow_position=Vector2(pixel[0],pixel[1]);
+            }
+        }
+        if (!spell_impact && event.emits_light) {
             event.light_clock+=flight_ms;
             const auto effect=event.resource->id;
-            if (event.light_tail && (effect==22 || effect==538 || effect==539)) {
+            if (event.light_tail && (effect==22 || effect==538 || effect==539 ||
+                (event.spell_effect && mir3::SpellLight::fades(static_cast<mir3::SkillId>(effect))))) {
                 event.light_phase=0;
                 if (milliseconds>0) event.light_fade+=2;
                 const auto& r=*event.resource;
-                const int strongest=std::max(*std::ranges::max_element(r.inner_color),
+                int strongest=std::max(*std::ranges::max_element(r.inner_color),
                     *std::ranges::max_element(r.outer_color));
+                if (event.spell_effect) {
+                    strongest=0;
+                    for (const auto& color:{r.inner_color,r.outer_color})
+                        for (const auto channel:color) strongest=std::max(strongest,channel<2?int(channel)+256:int(channel));
+                }
                 if (strongest<=event.light_fade+2) {
                     event.frame=int(r.end)+event.frame_offset;
                     event.copy->hide();
@@ -5153,54 +5604,14 @@ void Mir3HudView::advance_map_events(double milliseconds) {
                 }
             }
         }
-        if (event.projectile) {
-            auto& flight=*event.projectile;
-            const auto actor=flight.target_actor;
-            bool following=false;
-            if (actor) {
-                following=true;
-                if (const auto monster=scene_chickens.find(actor);monster!=scene_chickens.end())
-                    flight.destination=Vector2(monster->second.walk_frame>=0?monster->second.walk_pixel():
-                        monster->second.cell*Vector2i(48,32));
-                else if (const auto human=scene_humans.find(actor);human!=scene_humans.end())
-                    flight.destination=Vector2(human->second.cell*Vector2i(48,32));
-                else if (actor==static_cast<std::uint32_t>(local_actor_identity))
-                    flight.destination=Vector2(player_cell*Vector2i(48,32));
-                else following=false;
-            }
-            if (following) {
-                const auto delta=flight.destination-flight.position.round();
-                const int dominant=std::max(1,int(std::max(std::abs(delta.x),std::abs(delta.y))));
-                flight.velocity=delta*(500/dominant);
-            }
-            flight.position+=flight.velocity*(flight_ms/900.0);
-            const auto pixel=Vector2(std::trunc(flight.position.x),std::trunc(flight.position.y));
-            const auto distance=(flight.destination-pixel).abs();
-            const bool approaching=distance.x<flight.previous_distance.x || distance.y<flight.previous_distance.y;
-            if ((flight_ms>0 && !approaching) || (distance.x<=15 && distance.y<=15)) {
-                const auto target=Vector2i((flight.destination/Vector2(48,32)).round());
-                const auto impact_id=harvest_effect_id;
-                show_scene_effect(mir3::EffectCatalog::Section::explosion,flight.effect,target);
-                if (const auto impact=map_events.find(impact_id);impact!=map_events.end()) {
-                    impact->second.follow_actor=following?actor:0;
-                    impact->second.follow_position=flight.destination;
-                    if (following || flight.effect==594)
-                        play_actor_sound(0,10*flight.effect+10002,target);
-                }
-                event.frame=int(event.resource->end)+event.frame_offset;
-                event.copy->hide();
-                event.copy->queue_free();
-                continue;
-            }
-            flight.previous_distance=distance;
-        }
         const int interval=event.ground_wave && event.resource->id==9 && event.frame>=1925 &&
             terrain.base_walkable(event.cell.x,event.cell.y)?80:event.resource->interval;
-        if(!event.light_tail && event.elapsed>interval) {
+        if(!event.spell_effect && !event.staged_spell && !event.light_tail && event.elapsed>interval) {
             event.elapsed=0;
             const int previous_frame=event.frame++;
-            if (event.ground_wave) {
-                const bool fire=event.resource->id==9;
+            if (event.ground_wave && (event.resource->id==int(mir3::MagicEffectId::fire_wave) ||
+                event.resource->id==int(mir3::MagicEffectId::ice_wave))) {
+                const bool fire=event.resource->id==int(mir3::MagicEffectId::fire_wave);
                 const int end=int(event.resource->end)+event.frame_offset;
                 const bool walkable=terrain.base_walkable(event.cell.x,event.cell.y);
                 if (fire && walkable && event.frame<1915) ++event.frame;
@@ -5229,7 +5640,7 @@ void Mir3HudView::advance_map_events(double milliseconds) {
                     continue;
                 }
             } else if(event.frame>=int(event.resource->end)+event.frame_offset) {
-                if(event.one_shot && !event.projectile) {
+                if(event.one_shot && (!event.projectile || event.spell_effect)) {
                     if (!event.emits_light) {
                         event.copy->hide();
                         event.copy->queue_free();
@@ -5259,12 +5670,33 @@ void Mir3HudView::advance_map_events(double milliseconds) {
         }
         auto world=event.projectile?event.projectile->position:
             event.follow_position.value_or(Vector2(event.cell*Vector2i(48,32)));
+        if ((event.staged_spell || event.spell_effect) && event.light_tail) {
+            if (event.spell_effect && !event.emits_light) {
+                event.copy->hide();event.copy->queue_free();continue;
+            }
+            event.sprite->hide();
+            continue;
+        }
         if (event.attached_pose==MonsterEffectPose::walk && event.attached_actor)
             world=Vector2(scene_chickens.at(event.attached_actor).walk_pixel());
+        const auto emit_orbit=[&]() {
+            if (!event.orbit) return false;
+            event.sprite->hide();
+            if (event.projectile && !event.light_tail && ms>0) {
+                const auto pixel=event.follow_position.value_or(event.projectile->position)-Vector2(camera);
+                const auto offset=effect_library_offsets[event.resource->library];
+                const auto emitter=mir3::SpellOrbit::emitter({int(pixel.x),int(pixel.y)},event.orbit_direction,
+                    int(offset.x),int(offset.y));
+                spell_particles.emit({float(emitter[0]),float(emitter[1])},weather);
+            }
+            return true;
+        };
+        if (emit_orbit()) continue;
         if (event.resource->library==137) {
             const auto* image=level_frame(event.frame);
             event.sprite->set_visible(image!=nullptr);
             if (image) {
+                effect_library_offsets[event.resource->library]=image->offset;
                 event.sprite->set_texture(image->image);
                 event.sprite->set_position(world-Vector2(camera)+image->offset);
             }
@@ -5281,15 +5713,18 @@ void Mir3HudView::advance_map_events(double milliseconds) {
         }
         event.sprite->set_visible(found!=event_frames.end());
         if(found!=event_frames.end()) {
+            effect_library_offsets[event.resource->library]=found->second.offset;
             event.sprite->set_texture(found->second.image);
             event.sprite->set_position(world-Vector2(camera)+found->second.offset);
         }
     }
     std::erase_if(map_events,[](const auto& pair) {
         const auto& event=pair.second;
-        return !event.tint || (event.ending && event.frame>=110) ||
+        return event.copy->is_queued_for_deletion() || !event.tint || (event.ending && event.frame>=110) ||
             (event.one_shot && event.frame>=int(event.resource->end)+event.frame_offset);
     });
+    if (ms>0) spell_particles.advance(ms,weather);
+    sync_spell_particles();
 }
 
 void Mir3HudView::clear_level_effects() {
@@ -5353,7 +5788,7 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
             forced_motion.reset();
             player_cell=step_origin=step_destination=Vector2i(origin->cell[0],origin->cell[1]);
             player_facing=origin->facing;walk_frame=-1;movement_ms=0;
-            player_action={};player_harvest_impact=false;player_idle.reset();
+            player_action={};player_spell={};player_harvest_impact=false;player_idle.reset();
             set_minimap_position(player_cell.x,player_cell.y);
             queue_redraw();
         }
@@ -5745,6 +6180,7 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
         for (int i=0;i<7;++i) {
             elements.set(0,i,value->element_attack[i]);elements.set(1,i,value->element_strength[i]);elements.set(2,i,value->element_weakness[i]);
         }
+        elements.attack_words=value->element_attack_words;
         // 能力同步不是受击消息：更新头顶血条，不产生伤害跳字。
         auto& health=scene_health[0];health.current=value->hp;health.mana=value->mp;health.maximum=value->max_hp;
         health.damage.enabled=damage_numbers;
@@ -7169,7 +7605,7 @@ void Mir3HudView::_process(double delta) {
     advance_map_step(delta);
     for (auto& [actor,monster]:scene_chickens)
         if (monster.shape==141 || monster.shape==184 || monster.action_overlay) sync_monster_action_overlay(actor,monster);
-    if(!map_events.empty() || !event_particles.empty() || !event_marks.empty()) advance_map_events(delta*1000);
+    if(!map_events.empty() || !event_particles.empty() || !event_marks.empty() || spell_particles.count()) advance_map_events(delta*1000);
     if(!ground_events.empty()) {
         for(auto& [id,event]:ground_events) event.age+=delta*1000;
         std::erase_if(ground_events,[](const auto& entry) {
@@ -7796,14 +8232,24 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
 void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
     if (login_visible || character_selection.visible) { get_viewport()->set_input_as_handled();return; }
     Ref<InputEventKey> key=event;
-    if (key.is_null() || !key->is_pressed() || key->is_echo()) return;
+    if (key.is_null() || !key->is_pressed()) return;
     if (guild_edit && guild_edit->has_focus()) return;
     const auto code=key->get_physical_keycode();
+    if (key->is_echo()) {
+        if (code==KEY_F10 || code==KEY_F12) {
+            request_skill_cast(code-KEY_F1+1,true);
+            get_viewport()->set_input_as_handled();
+        }
+        return;
+    }
     if (code>=KEY_F1 && code<=KEY_F12) {
         const int slot=code-KEY_F1+1;
         if (!bind_skill_at_cursor(slot)) {
             const int id=bound_skill(slot);
-            if (id && !map_input_delay.active() && !player_mount && spell_pointer_available()) emit_signal("spell_key_requested",slot,id,inventory_cursor);
+            if (id && !map_input_delay.active() && !player_mount && spell_pointer_available()) {
+                emit_signal("spell_key_requested",slot,id,inventory_cursor);
+                request_skill_cast(slot,false);
+            }
         }
         get_viewport()->set_input_as_handled();
         return;
@@ -8443,12 +8889,17 @@ bool Mir3HudView::apply_skill_records(int identifier,int count,PackedByteArray r
         const std::string_view name(reinterpret_cast<const char*>(data+8),66);
         const std::array thresholds{int(word(31)),int(word(35)),int(word(39))};
         next[mir3::SkillLayout::category(id)].push_back({id,level,label>=1 && label<=12?label:0,
-            word(0),level<3?thresholds[level]:0,mir3::ansi_to_utf8(name.substr(0,name.find(char(0)))),thresholds});
+            word(0),level<3?thresholds[level]:0,mir3::ansi_to_utf8(name.substr(0,name.find(char(0)))),thresholds,
+            word(49),data[53]});
     }
     skills.learned=std::move(next);
     skills.bindings=bindings;
     const int previous=skills.tab;
-    if (full) skills.tab=0;
+    if (full) {
+        skills.tab=0;
+        skill_key_menu={};
+        skill_menu_target=0;
+    }
     skills.select_nonempty();
     if (full && skills.learned[skills.tab].empty()) skills.tab=previous;
     queue_redraw();
@@ -8459,6 +8910,10 @@ bool Mir3HudView::apply_skill_removal(int id) {
     if (id<1 || id>65535) return false;
     // 0x44F670 (212) removes the record but leaves the shortcut table intact.
     const bool removed=skills.remove(id);
+    if (removed && skill_menu_target==id) {
+        skill_key_menu={};
+        skill_menu_target=0;
+    }
     queue_redraw();
     return removed;
 }
@@ -8486,7 +8941,8 @@ bool Mir3HudView::bind_skill_at_cursor(int key) {
 }
 
 void Mir3HudView::draw_skill_description() {
-    if (!skills.visible || skills.scroll_captured || !rect(skills.rect).has_point(inventory_cursor)) return;
+    if (!skills.visible || skills.scroll_captured || skill_key_menu.has_area() ||
+        !rect(skills.rect).has_point(inventory_cursor)) return;
     if (panel_covered(Panel::skills,inventory_cursor)) return;
 
     int id=0;
@@ -8604,6 +9060,105 @@ bool Mir3HudView::spell_pointer_available() const {
         if (state.visible && rect(state.rect).has_point(pointer)) return false;
     }
     return true;
+}
+
+void Mir3HudView::request_skill_cast(int slot,bool repeat) {
+    if (slot<1 || slot>12 || !terrain_ready || player_life.dead || player_mount ||
+        map_input_delay.active() || !spell_pointer_available() || pending_local_action) return;
+    const auto now=std::uint32_t(GetTickCount());
+    if (!spell_timing.key_ready(now,slot,repeat)) return;
+    const int id=bound_skill(slot);
+    const auto& group=skills.learned[mir3::SkillLayout::category(id)];
+    const auto found=std::find_if(group.begin(),group.end(),[id](const auto& skill) { return skill.id==id; });
+    if (found==group.end()) return; // 删除技能后原版快捷表可残留，仍须查实际技能记录。
+    const auto& route=mir3::SpellRoutes::get(id);
+    if (!route.bypass_mana && model.mp<int(found->mana_threshold)+10) {
+        post_system_notice(String::utf8(message(1000).c_str()),11861940,0);
+        return;
+    }
+    active_spell=id;
+    const auto camera=map_camera();
+    Vector2i target(int(inventory_cursor.x+camera.x)/48,int(inventory_cursor.y+camera.y)/32);
+    std::uint32_t target_actor=0;
+    int target_type=-1;
+    if (const auto human=scene_humans.find(hovered_target);human!=scene_humans.end()) {
+        target=human->second.cell;target_actor=hovered_target;target_type=human->second.type;
+    } else if (const auto monster=scene_chickens.find(hovered_target);monster!=scene_chickens.end()) {
+        target=monster->second.cell;target_actor=hovered_target;target_type=3;
+    }
+    const auto delta=target-player_cell;
+    const mir3::MapCell direction{
+        std::abs(delta.y)>2 && std::abs(delta.x)<=1?0:(delta.x>0)-(delta.x<0),
+        std::abs(delta.x)>2 && std::abs(delta.y)<=1?0:(delta.y>0)-(delta.y<0)};
+    const auto heading=std::find(mir3::map_directions.begin(),mir3::map_directions.end(),direction);
+    const int facing=heading==mir3::map_directions.end()?4:int(heading-mir3::map_directions.begin());
+    auto action=route.action;
+    auto followup_target=target_actor;
+    bool send=false,predict=false;
+    std::uint32_t* direct_tick=nullptr;
+    std::uint32_t direct_interval=0;
+    if (!action_prediction.waiting && action!=mir3::SpellAction::none) {
+        if (action==mir3::SpellAction::rush) {
+            if (mir3::SpellTiming::elapsed_after(now,spell_timing.rush_at,3000)) {
+                spell_timing.rush_at=now;send=predict=true;target={facing,0};target_actor=0;
+            }
+        } else if (action==mir3::SpellAction::special) {
+            if (mir3::SpellTiming::elapsed_after(now,spell_timing.special_at,3000)) {
+                spell_timing.special_at=now;send=predict=true;target={facing,0};target_actor=0;
+            }
+        } else {
+            spell_timing.begin_animated(now,found->casting_delay);
+            if (route.self_target) {
+                target=player_cell;target_actor=std::uint32_t(local_actor_identity);followup_target=target_actor;
+            }
+            send=predict=true;
+        }
+    }
+    switch (route.direct) {
+    case mir3::DirectSpell::rapid: direct_tick=&spell_timing.cast_at;direct_interval=200;break;
+    case mir3::DirectSpell::predicted: direct_tick=&spell_timing.cast_at;direct_interval=1000;break;
+    case mir3::DirectSpell::fire_sword: direct_tick=&spell_timing.fire_sword_at;direct_interval=10000;break;
+    case mir3::DirectSpell::skill35: direct_tick=&spell_timing.skill35_at;direct_interval=10000;break;
+    case mir3::DirectSpell::skill34: direct_tick=&spell_timing.skill34_at;direct_interval=10000;break;
+    case mir3::DirectSpell::none: break;
+    }
+    if (direct_tick && mir3::SpellTiming::elapsed_after(now,*direct_tick,direct_interval)) {
+        *direct_tick=now;send=true;target={0,0};
+        predict=route.direct==mir3::DirectSpell::predicted;
+        if (route.direct==mir3::DirectSpell::rapid) spell_timing.casting_delay=0;
+    }
+    if (send) {
+        if (predict) {
+            action_prediction.begin({player_cell.x,player_cell.y},player_facing);
+            map_route.clear();forced_motion.reset();player_harvest_impact=false;
+            // 415F90的23分支只发请求并等待服务器冲撞，不提前播放1840动作。
+            if (action!=mir3::SpellAction::none && action!=mir3::SpellAction::rush) {
+                walk_frame=-1;movement_ms=0;player_facing=facing;
+                if (action==mir3::SpellAction::directed || action==mir3::SpellAction::area) {
+                    player_action.start_spell(static_cast<int>(action),route.action_limit);
+                    if (route.action_interval) player_action.set_interval(route.action_interval);
+                    player_spell={id,route.directional_effect?facing:0};
+                    if (const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::spell,std::uint16_t(id))) {
+                        player_spell.tint=mir3::SpellColor::strongest(elements.attack_words,resource->tint);
+                        play_actor_sound(0,10*(id+1000),player_cell);
+                    }
+                } else {
+                    player_action.start(static_cast<int>(action));player_spell={};
+                    if (action==mir3::SpellAction::special) play_actor_sound(0,142,player_cell);
+                }
+            }
+        }
+        const mir3::SpellRequest request{std::uint16_t(id),std::uint16_t(target.x),std::uint16_t(target.y),target_actor,now};
+        const auto header=request.header();
+        send_client_packet(header.identifier,header.recognition,String::utf8(request.body().c_str()),
+            std::uint32_t(header.parameters[0])|(std::uint32_t(header.parameters[1])<<16),header.parameters[2]);
+    }
+    if (route.restrict_followup) spell_timing.restricted_at=now;
+    if (followup_target && (target_type==0 || target_type==1)) {
+        const auto first=std::uint32_t(std::rand()),second=std::uint32_t(std::rand());
+        spell_timing.finish_target(followup_target,target_type,first,second);
+    } else spell_timing.movement_delay=0;
+    queue_redraw();
 }
 
 int Mir3HudView::bound_skill(int key) const {
@@ -10209,7 +10764,7 @@ bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn,int ambien
     mir3::MapTerrain next;
     if (!next.open(std::filesystem::u8path(map_directory.path_join(map_id+".map").utf8().get_data())) ||
         !next.walkable(spawn.x,spawn.y)) return false;
-    clear_map_events();clear_level_effects();player_action={};player_harvest_impact=false;
+    clear_map_events();clear_level_effects();player_action={};player_spell={};active_spell=0;player_harvest_impact=false;
     terrain=std::move(next);terrain_ready=true;
     pending_local_action.reset();
     action_prediction={};

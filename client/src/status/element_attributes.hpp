@@ -7,10 +7,13 @@ namespace mir3 {
 // weakness 0x8246CC+i. Preserve raw bytes and original signed comparisons.
 struct ElementAttributes {
     std::array<std::array<std::uint8_t,7>,3> bytes{};
+    std::array<std::uint16_t,7> attack_words{};
     static bool valid(int row,int column) { return row>=0 && row<3 && column>=0 && column<7; }
     bool set(int row,int column,int raw) {
         if (!valid(row,column) || raw<0 || raw>255) return false;
-        bytes[row][column]=static_cast<std::uint8_t>(raw); return true;
+        bytes[row][column]=static_cast<std::uint8_t>(raw);
+        if (row==0) attack_words[column]=std::uint16_t((attack_words[column]&255)|(unsigned(raw)<<8));
+        return true;
     }
     int value(int row,int column) const {
         if (!valid(row,column)) return 0;

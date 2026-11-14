@@ -116,6 +116,12 @@ public:
         selected=action; current=0; elapsed=0;
         halve_after_first_frame=catch_up;
         interval_override=0;
+        spell_active=false;spell_relative=0;spell_limit=10;
+    }
+    void start_spell(int action,int limit=10,bool catch_up=false) {
+        start(action,catch_up);
+        spell_active=action==2 || action==3;
+        spell_limit=static_cast<std::uint8_t>(limit);
     }
     void advance(std::uint32_t milliseconds,std::uint32_t flags=0) {
         if (finished()) return;
@@ -124,21 +130,40 @@ public:
             HumanActions::interval(selected,interval_override,flags))) {
             elapsed=0;
             ++current;
+            if (spell_active) ++spell_relative;
             // 0x414220 halves the interval after the first frame increment.
             if (halve_after_first_frame) {
-                interval_override=HumanActions::interval(selected)/2;
+                interval_override=HumanActions::interval(selected,interval_override)/2;
                 halve_after_first_frame=false;
+            }
+            // 414220 / 416E70：法术帧持续前进，人物中段动作可重复。
+            if (spell_active) {
+                const int end=HumanActions::table[selected].count;
+                if (selected==3) {
+                    if (current>=end-1 && spell_relative<=static_cast<std::uint8_t>(spell_limit-2)) {
+                        interval_override=70;
+                        current=end-2;
+                    }
+                } else if (current>=end-3 && current<end-2) {
+                    if (spell_relative<static_cast<std::uint8_t>(spell_limit-4)) current=end-4;
+                } else if (current>=end-2 && current<end-1) interval_override=200;
+                else if (current>=end-1) interval_override=80;
             }
         }
     }
     bool finished() const { return selected<0 || selected>=33 || current>=HumanActions::table[selected].count; }
     void set_interval(std::uint32_t milliseconds) { interval_override=milliseconds; }
     int action() const { return selected; }
+    int spell_frame() const { return spell_relative; }
+    int spell_frame_limit() const { return spell_limit; }
     int frame() const { return finished() ? (selected>=0 && selected<33 ? HumanActions::table[selected].count-1 : 0) : current; }
 private:
     int selected=-1,current=0;
     std::uint32_t elapsed=0;
     std::uint32_t interval_override=0;
     bool halve_after_first_frame=false;
+    bool spell_active=false;
+    int spell_relative=0;
+    std::uint8_t spell_limit=10;
 };
 }

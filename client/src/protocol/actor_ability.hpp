@@ -13,6 +13,7 @@ struct ActorAbility {
     std::array<unsigned,2> wear{},hand{};
     std::array<std::uint8_t,28> extension{};
     std::array<std::uint8_t,7> element_attack{},element_strength{},element_weakness{};
+    std::array<std::uint16_t,7> element_attack_words{};
     std::array<std::uint8_t,4> header_options{};
     static std::optional<ActorAbility> parse(const ReceiveHeader& header,std::span<const std::uint8_t> encoded) {
         if (header.opcode!=protocol::SM_ABILITY || (header.parameters[0]&255)>2) return {};
@@ -29,6 +30,7 @@ struct ActorAbility {
         value.wear={byte(31),byte(32)};value.hand={byte(33),byte(34)};
         for (int i=0;i<28;++i) value.extension[i]=byte(35+i);
         for (int i=0;i<7;++i) {
+            value.element_attack_words[i]=word(35+2*i);
             value.element_attack[i]=byte(36+2*i);value.element_strength[i]=byte(49+i);value.element_weakness[i]=byte(56+i);
         }
         value.header_options={std::uint8_t(header.parameters[1]),std::uint8_t((header.parameters[1]>>8)*16),

@@ -43,6 +43,9 @@ struct SkillDisplay {
     int required=0;
     std::string name;
     std::optional<std::array<int,3>> thresholds;
+    // 原版 418D80 / 4197C0：保留技能记录的施法延迟与魔法值门槛字段。
+    std::uint32_t casting_delay=0;
+    std::uint8_t mana_threshold=0;
     std::string progress_text() const {
         return std::to_string(static_cast<std::int32_t>(experience))+"/"+std::to_string(required);
     }

@@ -23,6 +23,7 @@
 #include "local_action_clock_checks.hpp"
 #include "action_reply_checks.hpp"
 #include "forced_motion_checks.hpp"
+#include "spell_checks.hpp"
 #include "item_layout_checks.hpp"
 #include "chat_submission_checks.hpp"
 #include "chat_shortcuts_checks.hpp"
@@ -61,6 +62,7 @@ int main(int argc,char** argv) {
             std::cout<<"ITEM_LAYOUT_ORIGINAL_OK "<<item_layout_original_checks(argv[2])<<"\n";return 0;
         }
         check(argc==2,"resource root required");
+        if(std::filesystem::path(argv[1])=="--spell") {spell_checks();std::cout<<"SPELL_MODEL_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--forced-motion") {forced_motion_checks();std::cout<<"FORCED_MOTION_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--action-reply") {action_reply_checks();std::cout<<"ACTION_REPLY_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--local-action-clock") {local_action_clock_checks();std::cout<<"LOCAL_ACTION_CLOCK_OK\n";return 0;}
