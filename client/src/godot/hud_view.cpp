@@ -188,6 +188,13 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary bars;
     for (const auto& [actor,bounds]:scene_health_bounds) bars[actor]=bounds;
     result["scene_health_bounds"]=bars;
+    Dictionary damage_frames;
+    for (const auto& [actor,glyphs]:scene_damage_glyphs) {
+        PackedInt32Array frames;
+        for (const auto& glyph:glyphs) frames.push_back(glyph.frame);
+        damage_frames[actor]=frames;
+    }
+    result["scene_damage_frames"]=damage_frames;
     Dictionary npc_bounds;
     for (const auto& [actor,npc]:scene_npcs) npc_bounds[actor]=npc.bounds;
     result["scene_npc_bounds"]=npc_bounds;
@@ -1446,7 +1453,10 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
 bool Mir3HudView::apply_scene_health(int actor,int opcode,int current,int mana,int maximum) {
     if (!terrain_ready || (actor!=0 && !scene_humans.contains(actor) && !scene_chickens.contains(actor))) return false;
     auto health=scene_health.contains(actor)?scene_health.at(actor):mir3::SceneHealth{};
+    const int previous=actor==0?model.hp:health.current;
     if (!health.apply(opcode,current,mana,maximum)) return false;
+    health.damage.enabled=damage_numbers;
+    if (opcode==53) health.damage.changed(previous,current);
     scene_health.insert_or_assign(actor,health);
     if (actor==0 && opcode==53) { model.hp=current;model.max_hp=maximum;model.mp=mana; }
     queue_redraw();
@@ -1467,9 +1477,8 @@ bool Mir3HudView::set_scene_health_flags(int actor,int64_t status_tick,int64_t s
 
 void Mir3HudView::draw_scene_health() {
     scene_health_bounds.clear();
-    if (health_border.is_null() || health_fill.is_null()) return;
-    for (const auto& [actor,health]:scene_health) {
-        if (!health.visible(actor==0)) continue;
+    scene_damage_glyphs.clear();
+    for (auto& [actor,health]:scene_health) {
         Vector2 anchor;
         const bool human=actor==0 || scene_humans.contains(actor);
         if (actor==0) {
@@ -1482,12 +1491,26 @@ void Mir3HudView::draw_scene_health() {
             if (!source || !source->bounds.has_area()) continue;
             anchor=source->anchor;
         }
-        const auto position=anchor+Vector2(7,human && health.raised?-80:-56);
-        const auto percent=actor==0?mir3::SceneHealth::percent(model.hp,model.max_hp):mir3::SceneHealth::percent(health.current,health.maximum);
-        const int width=mir3::SceneHealth::width(percent);
-        paint_canvas->draw_texture(health_border,position);
-        scene_health_bounds[actor]=Rect2(position,Vector2(width,4));
-        if (width>0) paint_canvas->draw_texture_rect_region(health_fill,Rect2(position,Vector2(width,4)),Rect2(0,0,width,4));
+        const auto draw_damage=[&]() {
+            health.damage.enabled=damage_numbers;
+            auto glyphs=health.damage.draw(int(anchor.x),int(anchor.y),human);
+            if (glyphs.empty()) return;
+            for (const auto& glyph:glyphs)
+                if (const auto image=frame(glyph.frame);image.is_valid()) paint_canvas->draw_texture(image,Vector2(glyph.x,glyph.y));
+            scene_damage_glyphs[actor]=std::move(glyphs);
+            animated_map_objects=true;
+        };
+        // 0x424280: world damage precedes bars; the local actor draws damage last.
+        if (actor!=0) draw_damage();
+        if (health.visible(actor==0) && health_border.is_valid() && health_fill.is_valid()) {
+            const auto position=anchor+Vector2(7,human && health.raised?-80:-56);
+            const auto percent=actor==0?mir3::SceneHealth::percent(model.hp,model.max_hp):mir3::SceneHealth::percent(health.current,health.maximum);
+            const int width=mir3::SceneHealth::width(percent);
+            paint_canvas->draw_texture(health_border,position);
+            scene_health_bounds[actor]=Rect2(position,Vector2(width,4));
+            if (width>0) paint_canvas->draw_texture_rect_region(health_fill,Rect2(position,Vector2(width,4)),Rect2(0,0,width,4));
+        }
+        if (actor==0) draw_damage();
     }
 }
 
@@ -1837,6 +1860,7 @@ bool Mir3HudView::apply_scene_human_step(int actor,int opcode,Vector2i destinati
 bool Mir3HudView::remove_scene_actor(int actor) {
     if (!scene_npcs.erase(actor) && !scene_chickens.erase(actor) && !scene_humans.erase(actor)) return false;
     const auto id=static_cast<std::uint32_t>(actor);
+    scene_damage_glyphs.erase(actor);
     scene_health.erase(actor);
     scene_health_bounds.erase(actor);
     scene_names.erase(actor);

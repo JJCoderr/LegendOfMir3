@@ -317,6 +317,7 @@ private:
     std::array<MapActorFrame,80> map_human_frames, map_walk_frames, map_run_frames;
     std::map<int,mir3::SceneHealth> scene_health;
     std::map<int,godot::Rect2> scene_health_bounds;
+    std::map<int,std::vector<mir3::DamageGlyph>> scene_damage_glyphs;
     godot::Ref<godot::ImageTexture> health_border, health_fill;
     std::map<int,mir3::SpeechBubble> scene_speech;
     std::map<int,godot::Rect2> speech_bounds;

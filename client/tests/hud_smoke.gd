@@ -124,6 +124,144 @@ func run_local_mount() -> void:
 	print("LOCAL_MOUNT_OK")
 	quit()
 
+func run_scene_damage() -> void:
+	if not check(hud.apply_scene_health(0, 53, 200, 0, 200) and hud.apply_scene_health(5, 53, 200, 0, 200), "initialize actor health without digits"): return
+	if not check(hud.apply_scene_health(0, 53, 50, 0, 200)
+		and hud.apply_scene_health(5, 53, 188, 0, 200)
+		and hud.apply_scene_health(5, 53, 193, 0, 200), "queue local large damage and remote damage healing"): return
+	if not await capture("bichon-damage-healing"): return
+	var frames: Dictionary = hud.hud_snapshot().scene_damage_frames
+	if not check(frames[0] == PackedInt32Array([1840, 1831, 1835, 1830])
+		and frames[5] == PackedInt32Array([1800, 1791, 1792, 1821, 1815]), "render original damage and healing frame banks"): return
+	for i in range(45): await process_frame
+	if not check(hud.hud_snapshot().scene_damage_frames.is_empty(), "draw-aged digits disappear"): return
+	key(KEY_N)
+	click_at(Vector2(335, 179), true)
+	click_at(Vector2(335, 179), false)
+	key(KEY_N)
+	if not check(not hud.hud_snapshot().damage_numbers and hud.apply_scene_health(5, 53, 180, 0, 200), "disabled display suppresses new damage"): return
+	await process_frame
+	await process_frame
+	if not check(hud.hud_snapshot().scene_damage_frames.is_empty(), "disabled setting produces no glyphs"): return
+	key(KEY_N)
+	click_at(Vector2(335, 179), true)
+	click_at(Vector2(335, 179), false)
+	key(KEY_N)
+	if not check(hud.apply_scene_health(5, 53, 170, 0, 200) and hud.remove_scene_actor(5), "remove actor with pending damage"): return
+	if not await capture("bichon-damage-cleared"): return
+	if not check(not hud.hud_snapshot().scene_damage_frames.has(5), "departure clears pending digits"): return
+	print("SCENE_DAMAGE_OK")
+	quit()
+	return
+
+func run_scene_health() -> void:
+	if not check(hud.apply_scene_health(0, 53, 50, 20, 100)
+		and hud.apply_scene_health(5, 53, 75, 10, 100), "apply local and remote health"): return
+	if not await capture("bichon-local-health"): return
+	if not check(hud.hud_snapshot().scene_health_bounds[0].size.x == 17
+		and not hud.hud_snapshot().scene_health_bounds.has(5), "remote bar requires registration"): return
+	if not check(hud.apply_scene_health(5, 1312, 1, 2, 3), "register remote health display"): return
+	var chicken_loaded := false
+	for offset in [Vector2i(2, 2), Vector2i(3, 1), Vector2i(-2, 3)]:
+		if hud.set_scene_chicken(8, hud.hud_snapshot().player_cell + offset):
+			chicken_loaded = true
+			break
+	if not check(chicken_loaded and hud.apply_scene_health(8, 53, 25, 0, 100)
+		and hud.apply_scene_health(8, 1312, 0, 0, 0), "register monster health"): return
+	if not await capture("bichon-human-health"): return
+	if not check(hud.hud_snapshot().scene_health_bounds[8].size.x == 8, "monster bar uses the same original percentage scale"): return
+	if not check(hud.remove_scene_actor(8), "remove registered monster"): return
+
+	var bar: Rect2 = hud.hud_snapshot().scene_health_bounds[5]
+	if not check(bar.size.x == 26, "registration does not overwrite actual health"): return
+	if not check(hud.set_scene_health_flags(5, 1, 2, false, false), "set mismatched actor status"): return
+	await process_frame
+	await process_frame
+	if not check(not hud.hud_snapshot().scene_health_bounds.has(5), "mismatched status hides bar"): return
+	if not check(hud.set_scene_health_flags(5, 2, 2, false, true)
+		and hud.set_scene_human_mount(5, 1), "restore raised rider health display"): return
+	if not await capture("bichon-rider-health"): return
+	if not check(hud.hud_snapshot().scene_health_bounds[5].position.y == bar.position.y - 24, "raised human health shifts 24 pixels"): return
+	var state: Dictionary = hud.hud_snapshot()
+	if not check(hud.apply_scene_human_step(5, 11, state.scene_human_cells[5] + Vector2i.RIGHT, 2), "move registered rider"): return
+	await create_timer(0.25).timeout
+	if not await capture("bichon-moving-health"): return
+	if not check(hud.hud_snapshot().scene_health_bounds[5].position.x > bar.position.x, "bar follows current movement position"): return
+	await create_timer(5.1).timeout
+	if not await capture("bichon-health-expired"): return
+	if not check(not hud.hud_snapshot().scene_health_bounds.has(5)
+		and hud.hud_snapshot().scene_health_bounds.has(0), "remote expires while local bar persists"): return
+	if not check(hud.apply_scene_health(5, 1312, 0, 0, 0)
+		and hud.remove_scene_actor(5)
+		and not hud.apply_scene_health(5, 53, 1, 0, 1), "departure removes health registration"): return
+	print("SCENE_HEALTH_OK")
+	quit()
+	return
+
+func run_scene_speech() -> void:
+	if not check(hud.apply_scene_speech(0, 40, "  比奇城见  ")
+		and hud.apply_scene_speech(5, 1501, "比奇城的商人正在出售武器和防具，请到城中寻找他们。")
+		and hud.apply_scene_speech(2, 40, "欢迎光临"), "receive local remote and NPC speech"): return
+	if not await capture("bichon-speech-bubbles"): return
+	var state: Dictionary = hud.hud_snapshot()
+	if not check(state.speech_bounds.size() == 3 and state.speech_lines[0] == PackedStringArray(["  比奇城见  "])
+		and state.speech_lines[5].size() > 1, "preserve spaces and wrap long Chinese speech"): return
+	if not check(not hud.apply_scene_speech(5, 41, "other channel")
+		and not hud.apply_scene_speech(9999, 40, "unknown")
+		and not hud.apply_scene_speech(5, 40, "a".repeat(260)), "reject unrelated channel actor and overflow"): return
+	var original: Rect2 = state.speech_bounds[5]
+	if not check(hud.apply_scene_human_step(5, 11, state.scene_human_cells[5] + Vector2i.RIGHT, 2), "move speaking actor"): return
+	await create_timer(0.25).timeout
+	if not await capture("bichon-speech-moving"): return
+	if not check(hud.hud_snapshot().speech_bounds[5].position.x > original.position.x, "speech follows movement anchor"): return
+	if not check(hud.apply_scene_speech(2, 40, "") and hud.remove_scene_actor(5), "clear speech and remove speaker"): return
+	await process_frame
+	await process_frame
+	if not check(not hud.hud_snapshot().speech_lines.has(2) and not hud.hud_snapshot().speech_lines.has(5), "clear and departure remove bubbles"): return
+	await create_timer(3.1).timeout
+	if not await capture("bichon-speech-expired"): return
+	if not check(hud.hud_snapshot().speech_lines.is_empty() and hud.hud_snapshot().speech_bounds.is_empty(), "speech expires without pointer interaction"): return
+	print("SCENE_SPEECH_OK")
+	quit()
+	return
+
+func run_scene_names(hover: InputEventMouseMotion) -> void:
+	if not check(hud.apply_scene_name(5, 42, 255, "比奇旅人\r比奇行会\r武士/ignored")
+		and hud.apply_scene_name(2, 42, 251, "比奇商人"), "apply human and NPC names"): return
+	if not await capture("bichon-human-name"): return
+	if not check(hud.hud_snapshot().displayed_name_actor == 5
+		and hud.hud_snapshot().displayed_name_bounds.size.y == 45, "hover displays three identity lines"): return
+	if not check(hud.apply_scene_name(5, 656, 249, "ignored")
+		and not hud.apply_scene_name(5, 42, 255, "a".repeat(64)), "color-only and rejected oversized update"): return
+	if not await capture("bichon-human-name-red"): return
+	if not check(hud.hud_snapshot().displayed_name_color == 255, "name color keeps original COLORREF mapping"): return
+	var npc_rect: Rect2 = hud.hud_snapshot().scene_npc_bounds[2]
+	hover.position = npc_rect.position + Vector2(npc_rect.size.x / 2, 2)
+	root.push_input(hover.duplicate(), true)
+	if not await capture("bichon-npc-name"): return
+	if not check(hud.hud_snapshot().displayed_name_actor == 2, "hover switches to the NPC identity"): return
+	hud.set_character_identity("本地武士", "本地行会", "", "")
+	hover.position = hud.hud_snapshot().player_bounds.get_center()
+	root.push_input(hover.duplicate(), true)
+	if not await capture("bichon-player-name"): return
+	if not check(hud.hud_snapshot().displayed_name_actor == 0, "local player identity uses current actor bounds"): return
+	hover.position = hud.hud_snapshot().scene_human_bounds[5].get_center()
+	root.push_input(hover.duplicate(), true)
+	var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
+	if not check(hud.apply_scene_human_step(5, 11, cell + Vector2i.RIGHT, 2), "move named human"): return
+	await create_timer(0.25).timeout
+	hover.position = hud.hud_snapshot().scene_human_bounds[5].get_center()
+	root.push_input(hover.duplicate(), true)
+	if not await capture("bichon-human-name-moving"): return
+	if not check(hud.hud_snapshot().displayed_name_actor == 5, "moving name follows current actor bounds"): return
+	if not check(hud.remove_scene_actor(5), "remove named human"): return
+	if not await capture("bichon-name-removed"): return
+	if not check(hud.hud_snapshot().displayed_name_actor == -1
+		and not hud.apply_scene_name(5, 42, 255, "stale"), "removed actor cannot retain or receive names"): return
+	print("SCENE_NAMES_OK")
+	quit()
+	return
+
 func run_scene_actor_removal() -> void:
 	hud.set_meta("options_path", "user://scene-removal-%d.ini" % OS.get_process_id())
 	hud.set_meta("map_spawn_cell", Vector2i(413, 410))
@@ -141,110 +279,17 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--scene-damage"):
+		await run_scene_damage()
+		return
 	if OS.get_cmdline_user_args().has("--scene-health"):
-		if not check(hud.apply_scene_health(0, 53, 50, 20, 100)
-			and hud.apply_scene_health(5, 53, 75, 10, 100), "apply local and remote health"): return
-		if not await capture("bichon-local-health"): return
-		if not check(hud.hud_snapshot().scene_health_bounds[0].size.x == 17
-			and not hud.hud_snapshot().scene_health_bounds.has(5), "remote bar requires registration"): return
-		if not check(hud.apply_scene_health(5, 1312, 1, 2, 3), "register remote health display"): return
-		var chicken_loaded := false
-		for offset in [Vector2i(2, 2), Vector2i(3, 1), Vector2i(-2, 3)]:
-			if hud.set_scene_chicken(8, hud.hud_snapshot().player_cell + offset):
-				chicken_loaded = true
-				break
-		if not check(chicken_loaded and hud.apply_scene_health(8, 53, 25, 0, 100)
-			and hud.apply_scene_health(8, 1312, 0, 0, 0), "register monster health"): return
-		if not await capture("bichon-human-health"): return
-		if not check(hud.hud_snapshot().scene_health_bounds[8].size.x == 8, "monster bar uses the same original percentage scale"): return
-		if not check(hud.remove_scene_actor(8), "remove registered monster"): return
-
-		var bar: Rect2 = hud.hud_snapshot().scene_health_bounds[5]
-		if not check(bar.size.x == 26, "registration does not overwrite actual health"): return
-		if not check(hud.set_scene_health_flags(5, 1, 2, false, false), "set mismatched actor status"): return
-		await process_frame
-		await process_frame
-		if not check(not hud.hud_snapshot().scene_health_bounds.has(5), "mismatched status hides bar"): return
-		if not check(hud.set_scene_health_flags(5, 2, 2, false, true)
-			and hud.set_scene_human_mount(5, 1), "restore raised rider health display"): return
-		if not await capture("bichon-rider-health"): return
-		if not check(hud.hud_snapshot().scene_health_bounds[5].position.y == bar.position.y - 24, "raised human health shifts 24 pixels"): return
-		var state: Dictionary = hud.hud_snapshot()
-		if not check(hud.apply_scene_human_step(5, 11, state.scene_human_cells[5] + Vector2i.RIGHT, 2), "move registered rider"): return
-		await create_timer(0.25).timeout
-		if not await capture("bichon-moving-health"): return
-		if not check(hud.hud_snapshot().scene_health_bounds[5].position.x > bar.position.x, "bar follows current movement position"): return
-		await create_timer(5.1).timeout
-		if not await capture("bichon-health-expired"): return
-		if not check(not hud.hud_snapshot().scene_health_bounds.has(5)
-			and hud.hud_snapshot().scene_health_bounds.has(0), "remote expires while local bar persists"): return
-		if not check(hud.apply_scene_health(5, 1312, 0, 0, 0)
-			and hud.remove_scene_actor(5)
-			and not hud.apply_scene_health(5, 53, 1, 0, 1), "departure removes health registration"): return
-		print("SCENE_HEALTH_OK")
-		quit()
+		await run_scene_health()
 		return
 	if OS.get_cmdline_user_args().has("--scene-speech"):
-		if not check(hud.apply_scene_speech(0, 40, "  比奇城见  ")
-			and hud.apply_scene_speech(5, 1501, "比奇城的商人正在出售武器和防具，请到城中寻找他们。")
-			and hud.apply_scene_speech(2, 40, "欢迎光临"), "receive local remote and NPC speech"): return
-		if not await capture("bichon-speech-bubbles"): return
-		var state: Dictionary = hud.hud_snapshot()
-		if not check(state.speech_bounds.size() == 3 and state.speech_lines[0] == PackedStringArray(["  比奇城见  "])
-			and state.speech_lines[5].size() > 1, "preserve spaces and wrap long Chinese speech"): return
-		if not check(not hud.apply_scene_speech(5, 41, "other channel")
-			and not hud.apply_scene_speech(9999, 40, "unknown")
-			and not hud.apply_scene_speech(5, 40, "a".repeat(260)), "reject unrelated channel actor and overflow"): return
-		var original: Rect2 = state.speech_bounds[5]
-		if not check(hud.apply_scene_human_step(5, 11, state.scene_human_cells[5] + Vector2i.RIGHT, 2), "move speaking actor"): return
-		await create_timer(0.25).timeout
-		if not await capture("bichon-speech-moving"): return
-		if not check(hud.hud_snapshot().speech_bounds[5].position.x > original.position.x, "speech follows movement anchor"): return
-		if not check(hud.apply_scene_speech(2, 40, "") and hud.remove_scene_actor(5), "clear speech and remove speaker"): return
-		await process_frame
-		await process_frame
-		if not check(not hud.hud_snapshot().speech_lines.has(2) and not hud.hud_snapshot().speech_lines.has(5), "clear and departure remove bubbles"): return
-		await create_timer(3.1).timeout
-		if not await capture("bichon-speech-expired"): return
-		if not check(hud.hud_snapshot().speech_lines.is_empty() and hud.hud_snapshot().speech_bounds.is_empty(), "speech expires without pointer interaction"): return
-		print("SCENE_SPEECH_OK")
-		quit()
+		await run_scene_speech()
 		return
 	if OS.get_cmdline_user_args().has("--scene-names"):
-		if not check(hud.apply_scene_name(5, 42, 255, "比奇旅人\r比奇行会\r武士/ignored")
-			and hud.apply_scene_name(2, 42, 251, "比奇商人"), "apply human and NPC names"): return
-		if not await capture("bichon-human-name"): return
-		if not check(hud.hud_snapshot().displayed_name_actor == 5
-			and hud.hud_snapshot().displayed_name_bounds.size.y == 45, "hover displays three identity lines"): return
-		if not check(hud.apply_scene_name(5, 656, 249, "ignored")
-			and not hud.apply_scene_name(5, 42, 255, "a".repeat(64)), "color-only and rejected oversized update"): return
-		if not await capture("bichon-human-name-red"): return
-		if not check(hud.hud_snapshot().displayed_name_color == 255, "name color keeps original COLORREF mapping"): return
-		var npc_rect: Rect2 = hud.hud_snapshot().scene_npc_bounds[2]
-		hover.position = npc_rect.position + Vector2(npc_rect.size.x / 2, 2)
-		root.push_input(hover.duplicate(), true)
-		if not await capture("bichon-npc-name"): return
-		if not check(hud.hud_snapshot().displayed_name_actor == 2, "hover switches to the NPC identity"): return
-		hud.set_character_identity("本地武士", "本地行会", "", "")
-		hover.position = hud.hud_snapshot().player_bounds.get_center()
-		root.push_input(hover.duplicate(), true)
-		if not await capture("bichon-player-name"): return
-		if not check(hud.hud_snapshot().displayed_name_actor == 0, "local player identity uses current actor bounds"): return
-		hover.position = hud.hud_snapshot().scene_human_bounds[5].get_center()
-		root.push_input(hover.duplicate(), true)
-		var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
-		if not check(hud.apply_scene_human_step(5, 11, cell + Vector2i.RIGHT, 2), "move named human"): return
-		await create_timer(0.25).timeout
-		hover.position = hud.hud_snapshot().scene_human_bounds[5].get_center()
-		root.push_input(hover.duplicate(), true)
-		if not await capture("bichon-human-name-moving"): return
-		if not check(hud.hud_snapshot().displayed_name_actor == 5, "moving name follows current actor bounds"): return
-		if not check(hud.remove_scene_actor(5), "remove named human"): return
-		if not await capture("bichon-name-removed"): return
-		if not check(hud.hud_snapshot().displayed_name_actor == -1
-			and not hud.apply_scene_name(5, 42, 255, "stale"), "removed actor cannot retain or receive names"): return
-		print("SCENE_NAMES_OK")
-		quit()
+		await run_scene_names(hover)
 		return
 	if OS.get_cmdline_user_args().has("--scene-human-body"):
 		if not check(hud.set_player_body(0, 1) and hud.set_scene_human_body(5, 1, 1),
@@ -375,7 +420,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

@@ -1,9 +1,11 @@
 #pragma once
 #include <array>
+#include "damage_numbers.hpp"
 #include <cstdint>
 namespace mir3 {
 // 0x408281/0x410A00, registry 0x428110: health and registration are separate.
 struct SceneHealth {
+    DamageNumbers damage;
     std::uint16_t current=0, mana=0, maximum=0;
     std::array<std::uint16_t,3> registration_fields{};
     std::uint32_t status_tick=0, saved_tick=0;

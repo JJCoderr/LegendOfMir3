@@ -16,6 +16,22 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--scene-damage") {
+            mir3::DamageNumbers numbers;
+            numbers.changed(0,100);check(numbers.cursor==0,"initial HP does not create healing digits");
+            numbers.changed(100,88);
+            const auto small=numbers.draw(100,200,true);
+            check(small==std::vector<mir3::DamageGlyph>{{1800,112,164},{1791,120,160},{1792,131,160}},"small damage frame and coordinate mapping");
+            check(mir3::DamageNumbers::glyphs(5,10,20)==std::vector<mir3::DamageGlyph>{{1821,0,20},{1815,10,20}},"healing frame mapping");
+            check(mir3::DamageNumbers::glyphs(-150,10,20).front().frame==1840,"large damage uses alternate bank");
+            for (int i=0;i<40;++i) numbers.draw(100,200,true);
+            check(numbers.draw(100,200,true).empty(),"digits expire after 41 draws");
+            numbers={};for(int i=0;i<8;++i) numbers.push(-1);
+            check(numbers.cursor==0 && numbers.draw(0,0,false).empty(),"preserve original eight-slot cursor wrap");
+            numbers.enabled=false;numbers.changed(100,90);check(numbers.cursor==0,"disabled option suppresses queue");
+            std::cout << "SCENE_DAMAGE_MODEL_OK\n";
+            return 0;
+        }
         if (std::filesystem::path(argv[1])=="--scene-health") {
             mir3::SceneHealth health;
             check(health.apply(53,75,20,100) && !health.visible(),"health alone does not register remote bar");
