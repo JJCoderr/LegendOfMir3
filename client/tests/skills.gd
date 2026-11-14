@@ -6,6 +6,8 @@ var active_arguments := PackedStringArray()
 var suite_music: AudioStreamPlayer
 var music_sources: Array[AudioStreamPlayer] = []
 var suite_failed := false
+# 比奇验收统一出生格：远离城内台阶，所有场景从相同地图位置开始。
+const SKILL_SPAWN := Vector2i(413,410)
 
 func skill_arguments() -> PackedStringArray:
     return active_arguments
@@ -28,6 +30,7 @@ func prepare_outcome(skill: int) -> bool:
     hud.set_meta("offline_preview", true)
     hud.set_meta("options_path", "user://skill-outcome-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
     await settle()
     hud.set_local_actor_identity(77)
@@ -235,6 +238,7 @@ func run_bindings() -> void:
     hud.set_meta("show_terrain",true)
     hud.set_meta("options_path","user://skill-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
     await settle()
     var packets: Array[PackedByteArray] = []
@@ -348,6 +352,7 @@ func run_casting() -> void:
     hud.set_meta("offline_preview",true)
     hud.set_meta("options_path","user://skill-casting-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
     await settle()
     hud.set_local_actor_identity(77)
@@ -527,6 +532,7 @@ func run_enchantment() -> void:
     hud.set_meta("offline_preview",true)
     hud.set_meta("options_path","user://weapon-enchantment-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
     await settle()
     hud.set_local_actor_identity(77)
@@ -583,6 +589,7 @@ func run_enchantment_visual() -> void:
     hud.set_meta("offline_preview",true)
     hud.set_meta("options_path","user://enchant-pixels-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud);await settle()
     hud.set_local_actor_identity(77)
     hud.set_character_vitals(100,100,200,200,0,100)
@@ -644,6 +651,7 @@ func run_correction() -> void:
     hud=load("res://main.tscn").instantiate()
     hud.set_meta("offline_preview",true)
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
     await settle()
     hud.set_local_actor_identity(77)
@@ -717,6 +725,7 @@ func run_cast_correction() -> void:
     hud.set_meta("offline_preview",true)
     hud.set_meta("options_path","user://spell-correction-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
     await settle()
     hud.set_local_actor_identity(77)
@@ -775,6 +784,7 @@ func run_ranges() -> void:
     hud.set_meta("offline_preview",true)
     hud.set_meta("options_path","user://spell-ranges-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
     await settle()
     hud.set_local_actor_identity(77)
@@ -841,6 +851,7 @@ func run_common() -> void:
     hud.set_meta("offline_preview",true)
     hud.set_meta("options_path","user://spell-common-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
     await settle()
     hud.set_local_actor_identity(77)
@@ -908,6 +919,9 @@ func run_common() -> void:
         if not check(hud.apply_game_message(start),"远端十进制技能起手"): return
         var remote_action := 2 if int(c.action)==2 and id!=30 else 3
         if not check(await wait_until(func(s): return s.scene_human_actions[88].x==remote_action),"远端逐技能动作路由"): return
+        # 保留原人物站位和动作触发，仅等动画/光尾结束，避免下一技能截断当前表现。
+        if not check(await wait_until(func(s): return s.scene_human_actions[88].x==-1,4000),"远端起手完整结束后再切换技能"): return
+        if not check(await wait_until(func(s): return s.spell_effects.is_empty(),7000),"技能效果及光尾完整结束后再切换"): return
         print("COMMON_CASE_OK %d" % id)
     if not check(hud.change_map("0","比奇省",origin,1),"批次离场换图成功"): return
     if not hud.hud_snapshot().scene_actor_sounds.is_empty():
@@ -934,6 +948,7 @@ func run_passive() -> void:
     hud.set_meta("offline_preview",true)
     hud.set_meta("options_path","user://passive-skills-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
     await settle()
     hud.set_local_actor_identity(77)
@@ -990,6 +1005,7 @@ func run_special() -> void:
     hud.set_meta("offline_preview",true)
     hud.set_meta("options_path","user://spell-special-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud);await settle()
     hud.set_local_actor_identity(77)
     hud.set_character_vitals(100,100,200,200,0,100)
@@ -1060,6 +1076,7 @@ func run_impact() -> void:
     hud.set_meta("offline_preview",true)
     hud.set_meta("options_path","user://spell-impact-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud);await settle()
     hud.set_local_actor_identity(77)
     var origin: Vector2i=hud.hud_snapshot().player_cell+Vector2i(0,2)
@@ -1104,6 +1121,7 @@ func run_target_loss() -> void:
     hud.set_meta("offline_preview",true)
     hud.set_meta("options_path","user://spell-target-loss-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud);await settle()
     hud.set_local_actor_identity(77)
     var origin: Vector2i=hud.hud_snapshot().player_cell+Vector2i(0,2)
@@ -1147,6 +1165,7 @@ func run_stationary() -> void:
     hud.set_meta("offline_preview",true)
     hud.set_meta("options_path","user://spell-stationary-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud);await settle()
     hud.set_local_actor_identity(77)
     var origin: Vector2i=hud.hud_snapshot().player_cell+Vector2i(0,2)
@@ -1217,6 +1236,7 @@ func run_melee() -> void:
     hud.set_meta("offline_preview",true)
     hud.set_meta("options_path","user://melee-spells-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
     await settle()
     hud.set_local_actor_identity(77)
@@ -1290,6 +1310,7 @@ func run_sound() -> void:
     hud.set_meta("offline_preview",true)
     hud.set_meta("options_path","user://spell-sound-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
+    hud.set_meta("map_spawn_cell", SKILL_SPAWN)
     root.add_child(hud)
     await settle()
     hud.set_local_actor_identity(77)
