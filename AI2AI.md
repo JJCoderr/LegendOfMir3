@@ -49,3 +49,7 @@ IDA 数据库名为 `mir3-map-review`，本机 MCP 地址为 `http://127.0.0.1:1
 ## 本地动作确认批次
 
 4282C0的+前缀控制包转427C50；GOOD清等待，FAIL调用415E60恢复发起位置与方向。已接入ActionPrediction、输入门禁、8秒严格超时及换图清理。action_reply.gd故意不自动确认，测试预测位移、等待门禁、拒绝回滚、确认不截断动画及地图清理；模型检查包含8000/8001边界。local_action_clock.gd和melee_cooldown.gd回归通过。旧melee_input/map_harvest用例也显式模拟GOOD，未启动长场景。首轮固定0.16秒断言过早，改为等待实际位移状态后通过。截图action-reply-rollback.png。实服及二进制纠偏仍待完成。
+
+## 本地服务器位移批次
+
+按415AD0/411C00/411D40/411EA0/4120A0及417540接通6、7、9、1321。1321仍沿用既有SM_REVIVE_REFRESH标识，但本地实际行为是带外观的强制走步，识别字不作为本地ID门禁。原包必须16字节外观加5字节扩展分段编码；6/7保留骑乘，9/1321应用扩展骑乘。服务器强制位移不发送本地动作包，7相对帧4退回推导起点并战斗站立。模型forced-motion、Godot forced_motion与action_reply通过；初次退出2项ObjectDB提示在verbose定向复查中未复现，记录到TODO。实服及完整状态位仍待后续。

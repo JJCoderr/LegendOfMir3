@@ -16,6 +16,7 @@
 #include "hud/melee_cooldown.hpp"
 #include "hud/local_action_clock.hpp"
 #include "hud/action_prediction.hpp"
+#include "hud/forced_motion.hpp"
 #include "hud/scene_human_queue.hpp"
 #include "hud/human_life.hpp"
 #include "hud/ground_items.hpp"
@@ -587,6 +588,14 @@ private:
     mir3::MeleeCooldown melee_cooldown;
     mir3::LocalActionClock local_action_clock;
     mir3::ActionPrediction action_prediction;
+    struct ForcedMotionMessage {
+        mir3::ForcedMotion motion;
+        mir3::HumanAppearance appearance;
+        unsigned light;
+    };
+    std::deque<ForcedMotionMessage> forced_motions;
+    std::optional<mir3::ForcedMotion> forced_motion;
+    void begin_forced_motion();
     struct PendingLocalAction {
         bool movement;
         godot::Vector2i origin,destination;
