@@ -1,0 +1,1398 @@
+{
+  "source": "docs/Monsters.md: 1.45 怪物外观",
+  "monsters": [
+    {
+      "shape": 0,
+      "name": "沙漠蜥蜴（参考）",
+      "archive": "Mon-1",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 1,
+      "name": "夜行鬼（参考）",
+      "archive": "Mon-1",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 2,
+      "name": "变异章鱼",
+      "archive": "Mon-1",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 3,
+      "name": "沙鬼（参考）",
+      "archive": "Mon-1",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 4,
+      "name": "石巨人",
+      "archive": "Mon-1",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 5,
+      "name": "冥界之门",
+      "archive": "Mon-1",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 6,
+      "name": "轻装士兵",
+      "archive": "Mon-1",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 7,
+      "name": "蚂蚁治疗者",
+      "archive": "Mon-1",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 8,
+      "name": "铠甲蚁",
+      "archive": "Mon-1",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 9,
+      "name": "践踏者",
+      "archive": "Mon-1",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 10,
+      "name": "混沌骑士",
+      "archive": "Mon-2",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 12,
+      "name": "尸体潜行者",
+      "archive": "Mon-2",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 13,
+      "name": "诺玛法师",
+      "archive": "Mon-2",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 14,
+      "name": "蚂蚁士兵",
+      "archive": "Mon-2",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 15,
+      "name": "未命名外观",
+      "archive": "Mon-2",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 16,
+      "name": "劳动蚂蚁（参考）",
+      "archive": "Mon-2",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 17,
+      "name": "诺玛精英",
+      "archive": "Mon-2",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 18,
+      "name": "幻影",
+      "archive": "Mon-2",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 19,
+      "name": "血色死灵法师",
+      "archive": "Mon-2",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 20,
+      "name": "鸡",
+      "archive": "Mon-3",
+      "evidence": "项目原版记录",
+      "alias": false
+    },
+    {
+      "shape": 21,
+      "name": "鹿",
+      "archive": "Mon-3",
+      "evidence": "项目原版记录",
+      "alias": false
+    },
+    {
+      "shape": 22,
+      "name": "半兽人（参考）",
+      "archive": "Mon-3",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 23,
+      "name": "半兽人",
+      "archive": "Mon-3",
+      "evidence": "项目原版记录",
+      "alias": false
+    },
+    {
+      "shape": 24,
+      "name": "半兽勇士",
+      "archive": "Mon-3",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 25,
+      "name": "吐液蜘蛛",
+      "archive": "Mon-3",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 26,
+      "name": "守卫",
+      "archive": "Mon-3",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 27,
+      "name": "半兽统领",
+      "archive": "Mon-3",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 28,
+      "name": "蝎子",
+      "archive": "Mon-3",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 29,
+      "name": "洞穴蝙蝠",
+      "archive": "Mon-3",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 30,
+      "name": "森林雪人",
+      "archive": "Mon-4",
+      "evidence": "原版分支 0x46F9D0",
+      "alias": false
+    },
+    {
+      "shape": 31,
+      "name": "食人花",
+      "archive": "Mon-4",
+      "evidence": "原版分支 0x405F3D",
+      "alias": false
+    },
+    {
+      "shape": 32,
+      "name": "骷髅",
+      "archive": "Mon-4",
+      "evidence": "原版分支 0x408C49",
+      "alias": false
+    },
+    {
+      "shape": 33,
+      "name": "掷斧骷髅",
+      "archive": "Mon-4",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 34,
+      "name": "骷髅斧兵",
+      "archive": "Mon-4",
+      "evidence": "原版分支 0x408C49",
+      "alias": false
+    },
+    {
+      "shape": 35,
+      "name": "骷髅战士",
+      "archive": "Mon-4",
+      "evidence": "原版分支 0x408C49",
+      "alias": false
+    },
+    {
+      "shape": 36,
+      "name": "骷髅领主",
+      "archive": "Mon-4",
+      "evidence": "原版分支 0x408C49",
+      "alias": false
+    },
+    {
+      "shape": 37,
+      "name": "洞穴蛆虫",
+      "archive": "Mon-4",
+      "evidence": "原版分支 0x46F9D0",
+      "alias": false
+    },
+    {
+      "shape": 38,
+      "name": "钉耙猫",
+      "archive": "Mon-4",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 39,
+      "name": "钉耙猫（参考）",
+      "archive": "Mon-4",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 40,
+      "name": "稻草人",
+      "archive": "Mon-5",
+      "evidence": "原版分支 0x408C49",
+      "alias": false
+    },
+    {
+      "shape": 41,
+      "name": "沃玛异教徒",
+      "archive": "Mon-5",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 42,
+      "name": "嗜血食尸鬼",
+      "archive": "Mon-5",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 43,
+      "name": "沃玛喷火者",
+      "archive": "Mon-5",
+      "evidence": "原版分支 0x40CC75",
+      "alias": false
+    },
+    {
+      "shape": 44,
+      "name": "沃玛折磨者",
+      "archive": "Mon-5",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 45,
+      "name": "沃玛教主",
+      "archive": "Mon-5",
+      "evidence": "原版分支 0x40CC75",
+      "alias": false
+    },
+    {
+      "shape": 46,
+      "name": "棘背暗蜥",
+      "archive": "Mon-5",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 47,
+      "name": "粪怪",
+      "archive": "Mon-5",
+      "evidence": "原版分支 0x40CC75",
+      "alias": false
+    },
+    {
+      "shape": 48,
+      "name": "幽灵术士",
+      "archive": "Mon-5",
+      "evidence": "原版分支 0x408C49",
+      "alias": false
+    },
+    {
+      "shape": 49,
+      "name": "幽灵法师",
+      "archive": "Mon-5",
+      "evidence": "原版分支 0x408720",
+      "alias": false
+    },
+    {
+      "shape": 50,
+      "name": "贪食鬼",
+      "archive": "Mon-6",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 51,
+      "name": "吞噬鬼",
+      "archive": "Mon-6",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 52,
+      "name": "驱尸鬼",
+      "archive": "Mon-6",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 53,
+      "name": "食尸鬼勇士",
+      "archive": "Mon-6",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 54,
+      "name": "红蛇",
+      "archive": "Mon-6",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 55,
+      "name": "护卫武士／练功师（参考）",
+      "archive": "Mon-6",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 56,
+      "name": "白骨",
+      "archive": "Mon-6",
+      "evidence": "原版分支 0x408720",
+      "alias": false
+    },
+    {
+      "shape": 57,
+      "name": "虎蛇",
+      "archive": "Mon-6",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 58,
+      "name": "羊",
+      "archive": "Mon-6",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 59,
+      "name": "飞天刺虫",
+      "archive": "Mon-6",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 60,
+      "name": "螯虫",
+      "archive": "Mon-7",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 61,
+      "name": "内脏蠕虫",
+      "archive": "Mon-7",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 62,
+      "name": "威思而小虫（参考）",
+      "archive": "Mon-7",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 63,
+      "name": "甲虫",
+      "archive": "Mon-7",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 64,
+      "name": "尖刺甲虫",
+      "archive": "Mon-7",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 65,
+      "name": "狼",
+      "archive": "Mon-7",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 66,
+      "name": "蜈蚣",
+      "archive": "Mon-7",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 67,
+      "name": "邪恶钳虫领主",
+      "archive": "Mon-7",
+      "evidence": "原版分支 0x40CC75",
+      "alias": false
+    },
+    {
+      "shape": 68,
+      "name": "变异蛆虫",
+      "archive": "Mon-7",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 69,
+      "name": "蠼螋",
+      "archive": "Mon-7",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 70,
+      "name": "铁枪虫",
+      "archive": "Mon-8",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 71,
+      "name": "幼蜂",
+      "archive": "Mon-8",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 72,
+      "name": "蝴蝶虫",
+      "archive": "Mon-8",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 73,
+      "name": "楔蛾幼虫",
+      "archive": "Mon-8",
+      "evidence": "原版分支 0x405F3D",
+      "alias": false
+    },
+    {
+      "shape": 74,
+      "name": "小楔蛾",
+      "archive": "Mon-8",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 75,
+      "name": "楔蛾",
+      "archive": "Mon-8",
+      "evidence": "原版分支 0x40CC75",
+      "alias": false
+    },
+    {
+      "shape": 76,
+      "name": "红野猪",
+      "archive": "Mon-8",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 77,
+      "name": "黑野猪",
+      "archive": "Mon-8",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 78,
+      "name": "獠牙领主",
+      "archive": "Mon-8",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 79,
+      "name": "爪蛇",
+      "archive": "Mon-8",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 80,
+      "name": "邪恶毒蛇",
+      "archive": "Mon-9",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 81,
+      "name": "凶鼠",
+      "archive": "Mon-9",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 82,
+      "name": "祖玛弓箭手",
+      "archive": "Mon-9",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 83,
+      "name": "祖玛狂信徒",
+      "archive": "Mon-9",
+      "evidence": "原版分支 0x46FCFC",
+      "alias": false
+    },
+    {
+      "shape": 84,
+      "name": "祖玛卫士",
+      "archive": "Mon-9",
+      "evidence": "原版分支 0x46FCFC",
+      "alias": false
+    },
+    {
+      "shape": 85,
+      "name": "祖玛教主",
+      "archive": "Mon-9",
+      "evidence": "原版分支 0x40CC75",
+      "alias": false
+    },
+    {
+      "shape": 86,
+      "name": "弓箭守卫",
+      "archive": "Mon-9",
+      "evidence": "原版分支 0x46F9D0",
+      "alias": false
+    },
+    {
+      "shape": 89,
+      "name": "神兽（参考）",
+      "archive": "Mon-9",
+      "evidence": "原版分支 0x408720",
+      "alias": false
+    },
+    {
+      "shape": 90,
+      "name": "神兽",
+      "archive": "Mon-10",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 91,
+      "name": "沃玛战将（参考）",
+      "archive": "Mon-10",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 92,
+      "name": "水蜥蜴",
+      "archive": "Mon-10",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 93,
+      "name": "腐蚀喷毒兽",
+      "archive": "Mon-10",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 94,
+      "name": "沙鲨",
+      "archive": "Mon-10",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 95,
+      "name": "诅咒仙人掌",
+      "archive": "Mon-10",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 96,
+      "name": "针蚁",
+      "archive": "Mon-10",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 97,
+      "name": "风怒女巫",
+      "archive": "Mon-10",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 98,
+      "name": "诺玛教主+（参考）",
+      "archive": "Mon-10",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 99,
+      "name": "幻影士兵",
+      "archive": "Mon-10",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 101,
+      "name": "蝙蝠蜘蛛",
+      "archive": "Mon-11",
+      "evidence": "原版分支 0x408C49",
+      "alias": false
+    },
+    {
+      "shape": 102,
+      "name": "独眼蜘蛛（参考）",
+      "archive": "Mon-11",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 103,
+      "name": "天狼蜘蛛（参考）",
+      "archive": "Mon-11",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 104,
+      "name": "赤月恶魔",
+      "archive": "Mon-11",
+      "evidence": "原版分支 0x46F9D0",
+      "alias": false
+    },
+    {
+      "shape": 105,
+      "name": "幼虫",
+      "archive": "Mon-11",
+      "evidence": "原版分支 0x46F9D0",
+      "alias": false
+    },
+    {
+      "shape": 106,
+      "name": "凝视蜘蛛",
+      "archive": "Mon-11",
+      "evidence": "原版分支 0x405F3D",
+      "alias": false
+    },
+    {
+      "shape": 107,
+      "name": "赤月守卫",
+      "archive": "Mon-11",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 108,
+      "name": "赤月护卫",
+      "archive": "Mon-11",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 109,
+      "name": "赤月红护卫",
+      "archive": "Mon-11",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 110,
+      "name": "赤月灰护卫",
+      "archive": "Mon-12",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 111,
+      "name": "剧毒蜘蛛",
+      "archive": "Mon-12",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 112,
+      "name": "暗黑蜘蛛",
+      "archive": "Mon-12",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 113,
+      "name": "森林守卫",
+      "archive": "Mon-12",
+      "evidence": "原版分支 0x40CC75",
+      "alias": false
+    },
+    {
+      "shape": 114,
+      "name": "城镇守卫",
+      "archive": "Mon-12",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 115,
+      "name": "沙漠守卫",
+      "archive": "Mon-12",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 116,
+      "name": "褐色马（参考）",
+      "archive": "Mon-12",
+      "evidence": "原版分支 0x46F8BF",
+      "alias": false
+    },
+    {
+      "shape": 117,
+      "name": "白马（参考）",
+      "archive": "Mon-12",
+      "evidence": "原版分支 0x46F8BF",
+      "alias": false
+    },
+    {
+      "shape": 118,
+      "name": "黑马（参考）",
+      "archive": "Mon-12",
+      "evidence": "原版分支 0x46F8BF",
+      "alias": false
+    },
+    {
+      "shape": 119,
+      "name": "猪",
+      "archive": "Mon-12",
+      "evidence": "项目原版记录",
+      "alias": false
+    },
+    {
+      "shape": 120,
+      "name": "混沌使者破天",
+      "archive": "Mon-13",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 121,
+      "name": "牛",
+      "archive": "Mon-13",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 122,
+      "name": "诺玛（参考，同外观有多个名称）",
+      "archive": "Mon-13",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 123,
+      "name": "未命名外观",
+      "archive": "Mon-13",
+      "evidence": "仅见资源索引或库复用",
+      "alias": false
+    },
+    {
+      "shape": 124,
+      "name": "玲花（参考）",
+      "archive": "Mon-13",
+      "evidence": "原版分支 0x40B145",
+      "alias": false
+    },
+    {
+      "shape": 125,
+      "name": "咸蛋／柴三郎等（参考）",
+      "archive": "Mon-13",
+      "evidence": "原版分支 0x40B145",
+      "alias": false
+    },
+    {
+      "shape": 126,
+      "name": "千年毒蛇／七点白蛇（参考）",
+      "archive": "Mon-13",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 127,
+      "name": "栗树",
+      "archive": "Mon-13",
+      "evidence": "原版分支 0x46F9D0",
+      "alias": false
+    },
+    {
+      "shape": 128,
+      "name": "诺玛杂兵",
+      "archive": "Mon-13",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 129,
+      "name": "诺玛战士",
+      "archive": "Mon-13",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 130,
+      "name": "般若右护卫",
+      "archive": "Mon-14",
+      "evidence": "原版分支 0x40CC75",
+      "alias": false
+    },
+    {
+      "shape": 131,
+      "name": "般若左护卫",
+      "archive": "Mon-14",
+      "evidence": "原版分支 0x40CC75",
+      "alias": false
+    },
+    {
+      "shape": 132,
+      "name": "腐败食尸鬼",
+      "archive": "Mon-14",
+      "evidence": "原版分支 0x40CC75",
+      "alias": false
+    },
+    {
+      "shape": 133,
+      "name": "冰霜牛魔",
+      "archive": "Mon-14",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 134,
+      "name": "雷电牛魔",
+      "archive": "Mon-14",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 135,
+      "name": "狂暴牛魔",
+      "archive": "Mon-14",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 136,
+      "name": "火焰牛魔",
+      "archive": "Mon-14",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 137,
+      "name": "牛魔",
+      "archive": "Mon-14",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 138,
+      "name": "腐烂食尸鬼",
+      "archive": "Mon-14",
+      "evidence": "原版分支 0x408C49",
+      "alias": false
+    },
+    {
+      "shape": 139,
+      "name": "邪恶帝王",
+      "archive": "Mon-14",
+      "evidence": "原版分支 0x46FBCD",
+      "alias": false
+    },
+    {
+      "shape": 140,
+      "name": "骷髅队长",
+      "archive": "Mon-15",
+      "evidence": "原版分支 0x408C49",
+      "alias": false
+    },
+    {
+      "shape": 141,
+      "name": "太斗巫妖",
+      "archive": "Mon-15",
+      "evidence": "原版分支 0x46F9D0",
+      "alias": false
+    },
+    {
+      "shape": 142,
+      "name": "骷髅士兵",
+      "archive": "Mon-15",
+      "evidence": "原版分支 0x408C49",
+      "alias": false
+    },
+    {
+      "shape": 143,
+      "name": "骷髅刀兵",
+      "archive": "Mon-15",
+      "evidence": "原版分支 0x408C49",
+      "alias": false
+    },
+    {
+      "shape": 144,
+      "name": "骷髅弓手",
+      "archive": "Mon-15",
+      "evidence": "原版分支 0x40B145",
+      "alias": false
+    },
+    {
+      "shape": 145,
+      "name": "变异跳蚤",
+      "archive": "Mon-15",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 146,
+      "name": "紫色跳蚤",
+      "archive": "Mon-15",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 147,
+      "name": "爆破变异跳蚤",
+      "archive": "Mon-15",
+      "evidence": "原版分支 0x46F6BC",
+      "alias": false
+    },
+    {
+      "shape": 148,
+      "name": "蓝色爆破跳蚤",
+      "archive": "Mon-15",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 149,
+      "name": "毒跳蚤",
+      "archive": "Mon-15",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 150,
+      "name": "利牙兽",
+      "archive": "Mon-16",
+      "evidence": "原版分支 0x40CC75",
+      "alias": false
+    },
+    {
+      "shape": 152,
+      "name": "怒龙神（参考）",
+      "archive": "Mon-16",
+      "evidence": "原版分支 0x40CC75",
+      "alias": false
+    },
+    {
+      "shape": 153,
+      "name": "圣诞树（参考）",
+      "archive": "Mon-16",
+      "evidence": "原版分支 0x405E50",
+      "alias": false
+    },
+    {
+      "shape": 154,
+      "name": "猴子",
+      "archive": "Mon-16",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 155,
+      "name": "猿猴战将（参考）",
+      "archive": "Mon-16",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 156,
+      "name": "食人狂信徒",
+      "archive": "Mon-16",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 157,
+      "name": "邪恶狂信徒",
+      "archive": "Mon-16",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 158,
+      "name": "邪恶巨象",
+      "archive": "Mon-16",
+      "evidence": "原版分支 0x46FA91",
+      "alias": false
+    },
+    {
+      "shape": 159,
+      "name": "火焰狮鹫",
+      "archive": "Mon-16",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 160,
+      "name": "石狮鹫",
+      "archive": "Mon-17",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 161,
+      "name": "变异队长",
+      "archive": "Mon-17",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 162,
+      "name": "粉红女神",
+      "archive": "Mon-17",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 163,
+      "name": "绿色女神",
+      "archive": "Mon-17",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 164,
+      "name": "真天魔神",
+      "archive": "Mon-17",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 165,
+      "name": "丛林战士1（参考）",
+      "archive": "Mon-17",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 166,
+      "name": "丛林战士2（参考）",
+      "archive": "Mon-17",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 167,
+      "name": "投石车（参考）",
+      "archive": "Mon-17",
+      "evidence": "原版分支 0x40B145",
+      "alias": false
+    },
+    {
+      "shape": 169,
+      "name": "弩车（参考）",
+      "archive": "Mon-17",
+      "evidence": "原版分支 0x40B145",
+      "alias": false
+    },
+    {
+      "shape": 170,
+      "name": "冰雪女神",
+      "archive": "Mon-18",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 171,
+      "name": "野猪",
+      "archive": "Mon-18",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 172,
+      "name": "寒冰守护神（参考）",
+      "archive": "Mon-18",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 173,
+      "name": "木障（参考）",
+      "archive": "Mon-18",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 174,
+      "name": "诺玛长老",
+      "archive": "Mon-18",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 175,
+      "name": "雌诺玛（参考）",
+      "archive": "Mon-18",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 176,
+      "name": "小诺玛（参考）",
+      "archive": "Mon-18",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 177,
+      "name": "诺玛残兵",
+      "archive": "Mon-18",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 178,
+      "name": "独臂诺玛（参考）",
+      "archive": "Mon-18",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 179,
+      "name": "诺玛卫士（参考）",
+      "archive": "Mon-18",
+      "evidence": "原版分支 0x405E50",
+      "alias": false
+    },
+    {
+      "shape": 180,
+      "name": "诺玛骑兵",
+      "archive": "Mon-19",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 181,
+      "name": "诺玛重甲兵",
+      "archive": "Mon-19",
+      "evidence": "原版分支 0x46FBCD",
+      "alias": false
+    },
+    {
+      "shape": 183,
+      "name": "诺玛投石兵",
+      "archive": "Mon-19",
+      "evidence": "原版分支 0x40B145",
+      "alias": false
+    },
+    {
+      "shape": 184,
+      "name": "诺玛大法师",
+      "archive": "Mon-19",
+      "evidence": "原版分支 0x408C49",
+      "alias": false
+    },
+    {
+      "shape": 185,
+      "name": "诺玛皇家卫士",
+      "archive": "Mon-19",
+      "evidence": "原版分支 0x46FBCD",
+      "alias": false
+    },
+    {
+      "shape": 186,
+      "name": "诺玛统帅",
+      "archive": "Mon-19",
+      "evidence": "原版分支 0x46F7A4",
+      "alias": false
+    },
+    {
+      "shape": 187,
+      "name": "血石",
+      "archive": "Mon-19",
+      "evidence": "原版分支 0x405E50",
+      "alias": false
+    },
+    {
+      "shape": 188,
+      "name": "聚宝箱（参考）",
+      "archive": "Mon-19",
+      "evidence": "原版分支 0x405E50",
+      "alias": false
+    },
+    {
+      "shape": 189,
+      "name": "未命名外观",
+      "archive": "Mon-19",
+      "evidence": "原版分支 0x405E50",
+      "alias": false
+    },
+    {
+      "shape": 190,
+      "name": "雪人（参考）",
+      "archive": "Mon-20",
+      "evidence": "原版通用加载＋King_Monster 同外观",
+      "alias": false
+    },
+    {
+      "shape": 191,
+      "name": "狂暴蜥蜴",
+      "archive": "Mon-20",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 192,
+      "name": "锯齿蜥蜴",
+      "archive": "Mon-20",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 193,
+      "name": "变异蜥蜴",
+      "archive": "Mon-20",
+      "evidence": "原版通用加载＋Zircon 同库同组",
+      "alias": false
+    },
+    {
+      "shape": 200,
+      "name": "普通阴影库别名",
+      "archive": "MonS-1",
+      "evidence": "仅见资源索引或库复用",
+      "alias": true
+    },
+    {
+      "shape": 470,
+      "name": "染色身体库别名",
+      "archive": "DMon-1",
+      "evidence": "仅见资源索引或库复用",
+      "alias": true
+    },
+    {
+      "shape": 480,
+      "name": "染色阴影库别名",
+      "archive": "DMonS-1",
+      "evidence": "仅见资源索引或库复用",
+      "alias": true
+    },
+    {
+      "shape": 530,
+      "name": "沙巴克南门",
+      "archive": "Mon-54",
+      "evidence": "原版分支 0x408720",
+      "alias": false
+    },
+    {
+      "shape": 531,
+      "name": "沙巴克北门",
+      "archive": "Mon-54",
+      "evidence": "原版分支 0x408720",
+      "alias": false
+    },
+    {
+      "shape": 532,
+      "name": "沙巴克东门",
+      "archive": "Mon-54",
+      "evidence": "原版分支 0x408720",
+      "alias": false
+    },
+    {
+      "shape": 533,
+      "name": "沙巴克西门",
+      "archive": "Mon-54",
+      "evidence": "原版分支 0x408720",
+      "alias": false
+    },
+    {
+      "shape": 534,
+      "name": "记事本1（参考）",
+      "archive": "Mon-54",
+      "evidence": "原版分支 0x405E50",
+      "alias": false
+    },
+    {
+      "shape": 535,
+      "name": "记事本2（参考）",
+      "archive": "Mon-54",
+      "evidence": "原版分支 0x405E50",
+      "alias": false
+    },
+    {
+      "shape": 536,
+      "name": "记事本3（参考）",
+      "archive": "Mon-54",
+      "evidence": "原版分支 0x405E50",
+      "alias": false
+    },
+    {
+      "shape": 537,
+      "name": "记事本4（参考）",
+      "archive": "Mon-54",
+      "evidence": "原版分支 0x405E50",
+      "alias": false
+    },
+    {
+      "shape": 538,
+      "name": "诺玛城门（参考）",
+      "archive": "Mon-54",
+      "evidence": "原版分支 0x406750",
+      "alias": false
+    }
+  ]
+}

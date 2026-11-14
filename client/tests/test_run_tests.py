@@ -114,6 +114,34 @@ class SkillSelectionTests(unittest.TestCase):
             self.invoke("models","--MP4")
         self.assertEqual(error.exception.code,2)
 
+    def test_monster_filter_routes_to_matching_scenario(self):
+        # 地图筛选不能误跑外观全集；shape筛选不能被maps静默忽略。
+        for arguments, scenario, flag in [
+            (("--map", "0"), "maps", "--monster-map=0"),
+            (("--shapes", "20,23"), "gallery", "--shapes=20,23"),
+            (("--start-index", "2"), "maps", "--start-index=2"),
+        ]:
+            result, commands, output = self.invoke("monsters", *arguments)
+            self.assertEqual(result, 0)
+            self.assertEqual(len(commands), 1)
+            self.assertIn("--monster-scenario=" + scenario, commands[0])
+            self.assertIn(flag, commands[0])
+            self.assertIn("TEST_SUITE_SUBSET_OK", output)
+
+    def test_monster_empty_or_incompatible_selection_fails(self):
+        # 无效或互斥筛选必须在启动游戏前失败，不能以零用例成功结束。
+        for arguments in [
+            ("monsters", "--map", "missing"),
+            ("monsters", "--start-index", "9999"),
+            ("monsters", "--start-index", "0"),
+            ("monsters", "maps", "--shapes", "20"),
+            ("monsters", "--map", "0", "--shapes", "20"),
+            ("equipment", "--map", "0"),
+        ]:
+            with self.subTest(arguments=arguments), self.assertRaises(SystemExit) as error:
+                self.invoke(*arguments)
+            self.assertEqual(error.exception.code, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

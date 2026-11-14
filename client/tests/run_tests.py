@@ -56,7 +56,7 @@ COMMON_SKILLS = tuple(int(c["id"]) for c in COMMON_CASES)
 IMPACT_SKILLS = tuple(int(c["id"]) for c in COMMON_CASES if c["projectile"] and c["explosion"] is not None)
 STATIONARY_SKILLS = tuple(int(c["id"]) for c in COMMON_CASES if not c["projectile"] and c["id"] not in (36,74,104,107,108))
 SUITES = {
-    "monsters": {"gallery": ([], "monsters.gd"), "regression": ([], "monsters.gd")},
+    "monsters": {"maps": ([], "monsters.gd"), "gallery": ([], "monsters.gd"), "regression": ([], "monsters.gd")},
     "skills": {
         "models": (["--spell", "--skill-wire", "--action-reply"], None),
         "bindings": ([], "skills.gd"),
@@ -236,6 +236,8 @@ def main():
         command.add_argument("--skill", type=int, choices=SKILLS, help="仅运行对应技能")
         command.add_argument("--skills", help="技能编号集合，逗号分隔；可与场景子命令组合，不指定场景时自动归集")
         command.add_argument("--shapes", help="怪物shape集合，逗号分隔；默认1.45全部外观")
+        command.add_argument("--start-index", type=int, default=1, help="地图展示从第几个开始，保留总进度")
+        command.add_argument("--map", help="怪物地图编号，例如0为比奇省")
         command.add_argument("--MP4", nargs="?", const="", help="录制小体积MP4，可选输出路径；默认build/videos")
         command.add_argument("--ffmpeg", help="MP4编码器路径；默认PATH或imageio-ffmpeg")
         command.add_argument("--screenshots", action="store_true", help="保存真实视口截图")
@@ -246,10 +248,25 @@ def main():
         command.add_argument("--list", action="store_true", help="列出已登记子集，不运行测试")
     args = parser.parse_args()
     suite = SUITES[args.suite]
+    if args.start_index < 1:
+        parser.error("--start-index必须大于零")
+    if args.map is not None or args.start_index != 1:
+        if args.suite != "monsters" or args.scenario not in (None, "maps") or args.shapes is not None:
+            parser.error("--map/--start-index仅用于怪物maps场景，不能与--shapes混用")
+        maps = json.loads((ROOT / "tests/monster_maps.json").read_text(encoding="utf-8"))["maps"]
+        if args.map is not None and args.map not in {row["map"] for row in maps}:
+            parser.error("所选地图不在怪物刷怪清单中")
+        count = 1 if args.map is not None else len({row["family"] for row in maps})
+        if args.start_index > count:
+            parser.error("--start-index超出所选地图系列范围")
+        args.scenario = "maps"
     if args.shapes is not None:
         valid = {row["shape"] for row in json.loads((ROOT / "tests/monster_cases.json").read_text(encoding="utf-8"))["monsters"]}
         if args.suite != "monsters" or any(not v.isdecimal() or int(v) not in valid for v in args.shapes.split(",")):
             parser.error("--shapes仅用于monsters，且必须为清单中的shape")
+        if args.scenario not in (None, "gallery"):
+            parser.error("--shapes仅用于gallery外观场景")
+        args.scenario = "gallery"
     if args.list:
         print(f"{args.suite}: {', '.join(suite)}")
         if args.suite == "skills":
@@ -310,6 +327,8 @@ def main():
                     command.append("--screenshots")
                 if args.suite == "monsters":
                     command.append(f"--monster-scenario={case}")
+                    command.append(f"--start-index={args.start_index}")
+                    if args.map is not None: command.append("--monster-map=" + args.map)
                     if args.shapes is not None:
                         command.append("--shapes=" + args.shapes)
                 if args.suite == "skills":
@@ -337,7 +356,7 @@ def main():
         if result.returncode:
             print(f"FAILED skills: exit={result.returncode}", file=sys.stderr)
             return result.returncode if result.returncode > 0 else 1
-    scope = "SUBSET" if args.scenario or selected is not None else "ALL"
+    scope = "SUBSET" if args.scenario or selected is not None or args.shapes is not None else "ALL"
     print(f"TEST_SUITE_{scope}_OK suite={args.suite} cases={','.join(cases)} skills={selected}")
     return 0
 

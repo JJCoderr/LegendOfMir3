@@ -2319,6 +2319,28 @@ void Mir3HudView::draw_ground_name() {
 void Mir3HudView::draw_scene_name() {
     displayed_name_actor=-1;
     displayed_name_bounds=Rect2();
+    const auto draw_name=[&](const mir3::SceneName* identity,Vector2 anchor) {
+        Rect2 bounds;
+        for (int line=0;line<3;++line) {
+            const auto caption=mir3::ansi_to_utf8(identity->lines[line]);
+            if (caption.empty()) continue;
+            const auto measured=mir3::raster_text(caption,800,15,false,mir3::TextFont::normal);
+            const auto r=mir3::SceneName::rect(int(anchor.x),int(anchor.y),measured.text_width,line);
+            bounds=bounds.has_area()?bounds.merge(rect(r)):rect(r);
+            for (const auto [x,y]:std::array<std::array<int,2>,4>{{{-1,-1},{1,-1},{-1,1},{1,1}}}) {
+                auto outline=r;outline[0]+=x;outline[1]+=y;
+                text(caption,outline,0x0a0a0a,mir3::TextFont::normal,true);
+            }
+            text(caption,r,identity->color,mir3::TextFont::normal,true);
+        }
+        return bounds;
+    };
+    // 离线全集仅扩大姓名显示范围；字体、颜色、描边和布局复用游戏绘制。
+    if (bool(get_meta("offline_preview",false)) && bool(get_meta("showcase_monster_names",false))) {
+        for (const auto& [actor,monster]:scene_chickens)
+            if (const auto name=scene_names.find(actor);name!=scene_names.end()) draw_name(&name->second,monster.anchor);
+        return;
+    }
     if (!spell_pointer_available()) return;
     Vector2 anchor;
     const auto pick=[&](const auto& actors) {
@@ -2339,20 +2361,8 @@ void Mir3HudView::draw_scene_name() {
         identity=&local;
     } else if (const auto found=scene_names.find(displayed_name_actor);found!=scene_names.end()) identity=&found->second;
     if (!identity || identity->lines[0].empty()) { displayed_name_actor=-1; return; }
-    for (int line=0;line<3;++line) {
-        const auto caption=mir3::ansi_to_utf8(identity->lines[line]);
-        if (caption.empty()) continue;
-        const auto measured=mir3::raster_text(caption,800,15,false,mir3::TextFont::normal);
-        const auto r=mir3::SceneName::rect(int(anchor.x),int(anchor.y),measured.text_width,line);
-        displayed_name_bounds=displayed_name_bounds.has_area()?displayed_name_bounds.merge(rect(r)):rect(r);
-        for (const auto [x,y]:std::array<std::array<int,2>,4>{{{-1,-1},{1,-1},{-1,1},{1,1}}}) {
-            auto outline=r;outline[0]+=x;outline[1]+=y;
-            text(caption,outline,0x0a0a0a,mir3::TextFont::normal,true);
-        }
-        text(caption,r,identity->color,mir3::TextFont::normal,true);
-    }
+    displayed_name_bounds=draw_name(identity,anchor);
 }
-
 bool Mir3HudView::set_scene_npc(int actor,Vector2i cell,int first_frame) {
     if (actor==local_actor_identity) return false;
     if (!terrain_ready || actor<=0 || scene_chickens.contains(actor) || scene_humans.contains(actor) || first_frame<0 || first_frame>65532) return false;
