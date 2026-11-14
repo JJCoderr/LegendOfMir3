@@ -1,0 +1,6854 @@
+[
+	{
+		"actors": [
+			{
+				"actor": 7000,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 369)",
+				"death_accepted": true,
+				"death_at": 9070,
+				"death_delay": 0.829568922519684,
+				"death_frame": 9,
+				"death_sent_after_ms": 841,
+				"hit_skill": 91,
+				"name": "半兽勇士",
+				"shape": 24,
+				"struck_accepted": true,
+				"struck_at": 8241,
+				"walked": true
+			},
+			{
+				"actor": 7001,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 372)",
+				"death_accepted": true,
+				"death_at": 8885,
+				"death_delay": 0.642417192459106,
+				"death_frame": 8,
+				"death_sent_after_ms": 670,
+				"hit_skill": 102,
+				"name": "栗子树",
+				"shape": 127,
+				"struck_accepted": true,
+				"struck_at": 8243,
+				"walked": false
+			},
+			{
+				"actor": 7002,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(427, 374)",
+				"death_accepted": true,
+				"death_at": 9681,
+				"death_delay": 1.43861865997314,
+				"death_frame": 9,
+				"death_sent_after_ms": 1448,
+				"hit_skill": 66,
+				"name": "鸡",
+				"shape": 20,
+				"struck_accepted": true,
+				"struck_at": 8243,
+				"walked": true
+			},
+			{
+				"actor": 7003,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 372)",
+				"death_accepted": true,
+				"death_at": 9105,
+				"death_delay": 0.862334966659546,
+				"death_frame": 9,
+				"death_sent_after_ms": 871,
+				"hit_skill": 90,
+				"name": "牛",
+				"shape": 121,
+				"struck_accepted": true,
+				"struck_at": 8243,
+				"walked": true
+			},
+			{
+				"actor": 7004,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 370)",
+				"death_accepted": true,
+				"death_at": 10032,
+				"death_delay": 1.78906631469727,
+				"death_frame": 9,
+				"death_sent_after_ms": 1793,
+				"hit_skill": 99,
+				"name": "猪",
+				"shape": 119,
+				"struck_accepted": true,
+				"struck_at": 8243,
+				"walked": true
+			},
+			{
+				"actor": 7005,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 373)",
+				"death_accepted": true,
+				"death_at": 9936,
+				"death_delay": 1.69386124610901,
+				"death_frame": 9,
+				"death_sent_after_ms": 1701,
+				"hit_skill": 33,
+				"name": "狼",
+				"shape": 65,
+				"struck_accepted": true,
+				"struck_at": 8243,
+				"walked": true
+			},
+			{
+				"actor": 7006,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 369)",
+				"death_accepted": true,
+				"death_at": 8581,
+				"death_delay": 0.338123977184296,
+				"death_frame": 9,
+				"death_sent_after_ms": 387,
+				"hit_skill": 24,
+				"name": "半兽人",
+				"shape": 22,
+				"struck_accepted": true,
+				"struck_at": 8243,
+				"walked": true
+			},
+			{
+				"actor": 7007,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 374)",
+				"death_accepted": true,
+				"death_at": 9182,
+				"death_delay": 0.939442217350006,
+				"death_frame": 3,
+				"death_sent_after_ms": 944,
+				"hit_skill": 38,
+				"name": "森林雪人",
+				"shape": 30,
+				"struck_accepted": true,
+				"struck_at": 8243,
+				"walked": true
+			},
+			{
+				"actor": 7008,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(431, 370)",
+				"death_accepted": true,
+				"death_at": 9367,
+				"death_delay": 1.12428855895996,
+				"death_frame": 9,
+				"death_sent_after_ms": 1125,
+				"hit_skill": 15,
+				"name": "食人花",
+				"shape": 31,
+				"struck_accepted": true,
+				"struck_at": 8243,
+				"walked": false
+			},
+			{
+				"actor": 7009,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(419, 371)",
+				"death_accepted": true,
+				"death_at": 8856,
+				"death_delay": 0.613377928733826,
+				"death_frame": 9,
+				"death_sent_after_ms": 618,
+				"hit_skill": 11,
+				"name": "毒蜘蛛",
+				"shape": 25,
+				"struck_accepted": true,
+				"struck_at": 8243,
+				"walked": true
+			},
+			{
+				"actor": 7010,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 375)",
+				"death_accepted": true,
+				"death_at": 9494,
+				"death_delay": 1.25166630744934,
+				"death_frame": 9,
+				"death_sent_after_ms": 1265,
+				"hit_skill": 92,
+				"name": "半兽战士",
+				"shape": 23,
+				"struck_accepted": true,
+				"struck_at": 8243,
+				"walked": true
+			},
+			{
+				"actor": 7011,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(427, 369)",
+				"death_accepted": true,
+				"death_at": 10154,
+				"death_delay": 1.91199159622192,
+				"death_frame": 9,
+				"death_sent_after_ms": 1914,
+				"hit_skill": 101,
+				"name": "多钩猫",
+				"shape": 38,
+				"struck_accepted": true,
+				"struck_at": 8243,
+				"walked": true
+			},
+			{
+				"actor": 7012,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 373)",
+				"death_accepted": true,
+				"death_at": 8868,
+				"death_delay": 0.624051094055176,
+				"death_frame": 9,
+				"death_sent_after_ms": 637,
+				"hit_skill": 110,
+				"name": "钉耙猫",
+				"shape": 39,
+				"struck_accepted": true,
+				"struck_at": 8244,
+				"walked": true
+			},
+			{
+				"actor": 7013,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 375)",
+				"death_accepted": true,
+				"death_at": 9030,
+				"death_delay": 0.786923289299011,
+				"death_frame": 9,
+				"death_sent_after_ms": 786,
+				"hit_skill": 123,
+				"name": "鹿",
+				"shape": 21,
+				"struck_accepted": true,
+				"struck_at": 8244,
+				"walked": true
+			},
+			{
+				"actor": 7014,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 370)",
+				"death_accepted": true,
+				"death_at": 9157,
+				"death_delay": 0.913996934890747,
+				"death_frame": 9,
+				"death_sent_after_ms": 921,
+				"hit_skill": 39,
+				"name": "稻草人",
+				"shape": 40,
+				"struck_accepted": true,
+				"struck_at": 8244,
+				"walked": true
+			},
+			{
+				"actor": 7015,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 373)",
+				"death_accepted": true,
+				"death_at": 9432,
+				"death_delay": 1.188143491745,
+				"death_frame": 9,
+				"death_sent_after_ms": 1190,
+				"hit_skill": 106,
+				"name": "蛤蟆",
+				"shape": 27,
+				"struck_accepted": true,
+				"struck_at": 8244,
+				"walked": true
+			},
+			{
+				"actor": 7016,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 374)",
+				"death_accepted": true,
+				"death_at": 10208,
+				"death_delay": 1.96437287330627,
+				"death_frame": 9,
+				"death_sent_after_ms": 1966,
+				"hit_skill": 88,
+				"name": "骷髅精灵",
+				"shape": 36,
+				"struck_accepted": true,
+				"struck_at": 8244,
+				"walked": true
+			},
+			{
+				"actor": 7017,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 373)",
+				"death_accepted": true,
+				"death_at": 9481,
+				"death_delay": 1.23731350898743,
+				"death_frame": 9,
+				"death_sent_after_ms": 1245,
+				"hit_skill": 32,
+				"name": "蝎子",
+				"shape": 28,
+				"struck_accepted": true,
+				"struck_at": 8244,
+				"walked": true
+			},
+			{
+				"actor": 7018,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 369)",
+				"death_accepted": true,
+				"death_at": 9237,
+				"death_delay": 0.993741393089294,
+				"death_frame": 9,
+				"death_sent_after_ms": 1000,
+				"hit_skill": 72,
+				"name": "骷髅",
+				"shape": 32,
+				"struck_accepted": true,
+				"struck_at": 8244,
+				"walked": true
+			},
+			{
+				"actor": 7019,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 372)",
+				"death_accepted": true,
+				"death_at": 9668,
+				"death_delay": 1.42477297782898,
+				"death_frame": 9,
+				"death_sent_after_ms": 1429,
+				"hit_skill": 107,
+				"name": "骷髅战士",
+				"shape": 34,
+				"struck_accepted": true,
+				"struck_at": 8244,
+				"walked": true
+			},
+			{
+				"actor": 7020,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 374)",
+				"death_accepted": true,
+				"death_at": 10051,
+				"death_delay": 1.80703139305115,
+				"death_frame": 3,
+				"death_sent_after_ms": 1811,
+				"hit_skill": 100,
+				"name": "洞蛆",
+				"shape": 37,
+				"struck_accepted": true,
+				"struck_at": 8244,
+				"walked": true
+			},
+			{
+				"actor": 7021,
+				"behavior": {
+					"attack_opcode": 22,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(427, 372)",
+				"death_accepted": true,
+				"death_at": 8665,
+				"death_delay": 0.421413093805313,
+				"death_frame": 9,
+				"death_sent_after_ms": 421,
+				"hit_skill": 31,
+				"name": "掷斧骷髅",
+				"shape": 33,
+				"struck_accepted": true,
+				"struck_at": 8244,
+				"walked": true
+			},
+			{
+				"actor": 7022,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(427, 373)",
+				"death_accepted": true,
+				"death_at": 9269,
+				"death_delay": 1.02564024925232,
+				"death_frame": 9,
+				"death_sent_after_ms": 1029,
+				"hit_skill": 2,
+				"name": "骷髅战将",
+				"shape": 35,
+				"struck_accepted": true,
+				"struck_at": 8244,
+				"walked": true
+			},
+			{
+				"actor": 7023,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(427, 370)",
+				"death_accepted": true,
+				"death_at": 8739,
+				"death_delay": 0.494280815124512,
+				"death_frame": 9,
+				"death_sent_after_ms": 502,
+				"hit_skill": 67,
+				"name": "蜘蛛娃",
+				"shape": 149,
+				"struck_accepted": true,
+				"struck_at": 8245,
+				"walked": true
+			},
+			{
+				"actor": 7024,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 371)",
+				"death_accepted": true,
+				"death_at": 9999,
+				"death_delay": 1.75474286079407,
+				"death_frame": 9,
+				"death_sent_after_ms": 1760,
+				"hit_skill": 73,
+				"name": "胞眼虫1",
+				"shape": 147,
+				"struck_accepted": true,
+				"struck_at": 8245,
+				"walked": true
+			},
+			{
+				"actor": 7025,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 369)",
+				"death_accepted": true,
+				"death_at": 10134,
+				"death_delay": 1.88921689987183,
+				"death_frame": 9,
+				"death_sent_after_ms": 1892,
+				"hit_skill": 97,
+				"name": "胞眼虫2",
+				"shape": 148,
+				"struck_accepted": true,
+				"struck_at": 8245,
+				"walked": true
+			},
+			{
+				"actor": 7026,
+				"behavior": {
+					"attack_opcode": 22,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 372)",
+				"death_accepted": true,
+				"death_at": 9786,
+				"death_delay": 1.54195547103882,
+				"death_frame": 9,
+				"death_sent_after_ms": 1548,
+				"hit_skill": 28,
+				"name": "多脚虫1",
+				"shape": 145,
+				"struck_accepted": true,
+				"struck_at": 8245,
+				"walked": true
+			},
+			{
+				"actor": 7027,
+				"behavior": {
+					"attack_opcode": 22,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 370)",
+				"death_accepted": true,
+				"death_at": 10029,
+				"death_delay": 1.78433179855347,
+				"death_frame": 9,
+				"death_sent_after_ms": 1791,
+				"hit_skill": 19,
+				"name": "多脚虫2",
+				"shape": 146,
+				"struck_accepted": true,
+				"struck_at": 8245,
+				"walked": true
+			},
+			{
+				"actor": 7028,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 370)",
+				"death_accepted": true,
+				"death_at": 10241,
+				"death_delay": 1.99664855003357,
+				"death_frame": 9,
+				"death_sent_after_ms": 1998,
+				"hit_skill": 120,
+				"name": "僵尸10",
+				"shape": 48,
+				"struck_accepted": true,
+				"struck_at": 8245,
+				"walked": true
+			},
+			{
+				"actor": 7029,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 369)",
+				"death_accepted": true,
+				"death_at": 9706,
+				"death_delay": 1.46115350723267,
+				"death_frame": 9,
+				"death_sent_after_ms": 1465,
+				"hit_skill": 10,
+				"name": "僵尸50",
+				"shape": 52,
+				"struck_accepted": true,
+				"struck_at": 8245,
+				"walked": true
+			},
+			{
+				"actor": 7030,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 373)",
+				"death_accepted": true,
+				"death_at": 9605,
+				"death_delay": 1.36022520065308,
+				"death_frame": 9,
+				"death_sent_after_ms": 1371,
+				"hit_skill": 113,
+				"name": "僵尸40",
+				"shape": 51,
+				"struck_accepted": true,
+				"struck_at": 8245,
+				"walked": true
+			},
+			{
+				"actor": 7031,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 371)",
+				"death_accepted": true,
+				"death_at": 9414,
+				"death_delay": 1.16972875595093,
+				"death_frame": 9,
+				"death_sent_after_ms": 1169,
+				"hit_skill": 87,
+				"name": "僵尸20",
+				"shape": 49,
+				"struck_accepted": true,
+				"struck_at": 8245,
+				"walked": true
+			},
+			{
+				"actor": 7032,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 369)",
+				"death_accepted": true,
+				"death_at": 9270,
+				"death_delay": 1.02542090415955,
+				"death_frame": 9,
+				"death_sent_after_ms": 1029,
+				"hit_skill": 20,
+				"name": "尸王61",
+				"shape": 53,
+				"struck_accepted": true,
+				"struck_at": 8245,
+				"walked": true
+			},
+			{
+				"actor": 7033,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 370)",
+				"death_accepted": true,
+				"death_at": 9908,
+				"death_delay": 1.66326594352722,
+				"death_frame": 9,
+				"death_sent_after_ms": 1668,
+				"hit_skill": 41,
+				"name": "僵尸3",
+				"shape": 50,
+				"struck_accepted": true,
+				"struck_at": 8245,
+				"walked": true
+			},
+			{
+				"actor": 7034,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 372)",
+				"death_accepted": true,
+				"death_at": 9607,
+				"death_delay": 1.36238694190979,
+				"death_frame": 9,
+				"death_sent_after_ms": 1371,
+				"hit_skill": 5,
+				"name": "山洞蝙蝠",
+				"shape": 29,
+				"struck_accepted": true,
+				"struck_at": 8245,
+				"walked": true
+			}
+		],
+		"family": "比奇地区",
+		"maps": [
+			"0",
+			"01",
+			"02",
+			"D001",
+			"D002",
+			"D003",
+			"D011",
+			"D012",
+			"D1301",
+			"D1302",
+			"D1303",
+			"D1304",
+			"D1305",
+			"D1311",
+			"D1312",
+			"D1313",
+			"D1314",
+			"D1315",
+			"D1321",
+			"D1322",
+			"D1323",
+			"D1324",
+			"D1325",
+			"D1405",
+			"D1411",
+			"D1412",
+			"D1413",
+			"D1414",
+			"D1415",
+			"D1421",
+			"D1422",
+			"D1423",
+			"D1424",
+			"D1425",
+			"D400_001",
+			"D401",
+			"D401_001",
+			"D402",
+			"D402_001",
+			"D403",
+			"D403_001",
+			"D404",
+			"D404_001",
+			"D405",
+			"D405_001",
+			"D406",
+			"D406_001",
+			"D411",
+			"D412",
+			"D413",
+			"D415",
+			"D416",
+			"E001",
+			"E002",
+			"E402",
+			"d1405",
+			"d1411",
+			"d1412",
+			"d1413",
+			"d1414",
+			"d1415",
+			"d1421",
+			"d1422",
+			"d1423",
+			"d1424",
+			"d1425"
+		],
+		"missing": [
+			{
+				"map": "D1301",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1302",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1303",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1304",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1305",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1311",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1312",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1313",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1314",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1315",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1321",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1322",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1323",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1324",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			},
+			{
+				"map": "D1325",
+				"name": "红甲虫",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "MidBoss.gen"
+			}
+		],
+		"rng_state": -8620386294898700558
+	},
+	{
+		"actors": [
+			{
+				"actor": 7000,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 370)",
+				"death_accepted": true,
+				"death_at": 22635,
+				"death_delay": 1.74568867683411,
+				"death_frame": 8,
+				"death_sent_after_ms": 1752,
+				"hit_skill": 66,
+				"name": "栗子树",
+				"shape": 127,
+				"struck_accepted": true,
+				"struck_at": 20890,
+				"walked": false
+			},
+			{
+				"actor": 7001,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(431, 373)",
+				"death_accepted": true,
+				"death_at": 22071,
+				"death_delay": 1.18077254295349,
+				"death_frame": 9,
+				"death_sent_after_ms": 1183,
+				"hit_skill": 113,
+				"name": "鸡",
+				"shape": 20,
+				"struck_accepted": true,
+				"struck_at": 20891,
+				"walked": true
+			},
+			{
+				"actor": 7002,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(419, 370)",
+				"death_accepted": true,
+				"death_at": 22821,
+				"death_delay": 1.93033981323242,
+				"death_frame": 9,
+				"death_sent_after_ms": 1932,
+				"hit_skill": 14,
+				"name": "牛",
+				"shape": 121,
+				"struck_accepted": true,
+				"struck_at": 20891,
+				"walked": true
+			},
+			{
+				"actor": 7003,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 372)",
+				"death_accepted": true,
+				"death_at": 22569,
+				"death_delay": 1.67857718467712,
+				"death_frame": 9,
+				"death_sent_after_ms": 1681,
+				"hit_skill": 95,
+				"name": "猪",
+				"shape": 119,
+				"struck_accepted": true,
+				"struck_at": 20891,
+				"walked": true
+			},
+			{
+				"actor": 7004,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 374)",
+				"death_accepted": true,
+				"death_at": 21886,
+				"death_delay": 0.995404899120331,
+				"death_frame": 9,
+				"death_sent_after_ms": 995,
+				"hit_skill": 10,
+				"name": "狼",
+				"shape": 65,
+				"struck_accepted": true,
+				"struck_at": 20891,
+				"walked": true
+			},
+			{
+				"actor": 7005,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 375)",
+				"death_accepted": true,
+				"death_at": 22535,
+				"death_delay": 1.64474129676819,
+				"death_frame": 9,
+				"death_sent_after_ms": 1647,
+				"hit_skill": 94,
+				"name": "半兽人",
+				"shape": 22,
+				"struck_accepted": true,
+				"struck_at": 20891,
+				"walked": true
+			},
+			{
+				"actor": 7006,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 372)",
+				"death_accepted": true,
+				"death_at": 21962,
+				"death_delay": 1.07101106643677,
+				"death_frame": 3,
+				"death_sent_after_ms": 1078,
+				"hit_skill": 92,
+				"name": "森林雪人",
+				"shape": 30,
+				"struck_accepted": true,
+				"struck_at": 20891,
+				"walked": true
+			},
+			{
+				"actor": 7007,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 371)",
+				"death_accepted": true,
+				"death_at": 22046,
+				"death_delay": 1.15564060211182,
+				"death_frame": 9,
+				"death_sent_after_ms": 1157,
+				"hit_skill": 87,
+				"name": "毒蜘蛛",
+				"shape": 25,
+				"struck_accepted": true,
+				"struck_at": 20891,
+				"walked": true
+			},
+			{
+				"actor": 7008,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(419, 373)",
+				"death_accepted": true,
+				"death_at": 22436,
+				"death_delay": 1.54527020454407,
+				"death_frame": 9,
+				"death_sent_after_ms": 1556,
+				"hit_skill": 5,
+				"name": "鹿",
+				"shape": 21,
+				"struck_accepted": true,
+				"struck_at": 20891,
+				"walked": true
+			},
+			{
+				"actor": 7009,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 370)",
+				"death_accepted": true,
+				"death_at": 22079,
+				"death_delay": 1.18839311599731,
+				"death_frame": 9,
+				"death_sent_after_ms": 1198,
+				"hit_skill": 111,
+				"name": "稻草人",
+				"shape": 40,
+				"struck_accepted": true,
+				"struck_at": 20891,
+				"walked": true
+			},
+			{
+				"actor": 7010,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 373)",
+				"death_accepted": true,
+				"death_at": 21660,
+				"death_delay": 0.768465757369995,
+				"death_frame": 9,
+				"death_sent_after_ms": 770,
+				"hit_skill": 97,
+				"name": "多钩猫",
+				"shape": 38,
+				"struck_accepted": true,
+				"struck_at": 20892,
+				"walked": true
+			},
+			{
+				"actor": 7011,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 373)",
+				"death_accepted": true,
+				"death_at": 21460,
+				"death_delay": 0.568271636962891,
+				"death_frame": 9,
+				"death_sent_after_ms": 570,
+				"hit_skill": 101,
+				"name": "钉耙猫",
+				"shape": 39,
+				"struck_accepted": true,
+				"struck_at": 20892,
+				"walked": true
+			},
+			{
+				"actor": 7012,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 372)",
+				"death_accepted": true,
+				"death_at": 21781,
+				"death_delay": 0.889883399009705,
+				"death_frame": 9,
+				"death_sent_after_ms": 892,
+				"hit_skill": 150,
+				"name": "蛤蟆",
+				"shape": 27,
+				"struck_accepted": true,
+				"struck_at": 20892,
+				"walked": true
+			},
+			{
+				"actor": 7013,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 375)",
+				"death_accepted": true,
+				"death_at": 21653,
+				"death_delay": 0.761097311973572,
+				"death_frame": 9,
+				"death_sent_after_ms": 770,
+				"hit_skill": 96,
+				"name": "山洞蝙蝠",
+				"shape": 29,
+				"struck_accepted": true,
+				"struck_at": 20892,
+				"walked": true
+			},
+			{
+				"actor": 7014,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 373)",
+				"death_accepted": true,
+				"death_at": 22427,
+				"death_delay": 1.53547406196594,
+				"death_frame": 3,
+				"death_sent_after_ms": 1540,
+				"hit_skill": 19,
+				"name": "洞蛆",
+				"shape": 37,
+				"struck_accepted": true,
+				"struck_at": 20892,
+				"walked": true
+			},
+			{
+				"actor": 7015,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 370)",
+				"death_accepted": true,
+				"death_at": 21941,
+				"death_delay": 1.04997324943542,
+				"death_frame": 9,
+				"death_sent_after_ms": 1051,
+				"hit_skill": 31,
+				"name": "沃玛卫士",
+				"shape": 44,
+				"struck_accepted": true,
+				"struck_at": 20892,
+				"walked": true
+			},
+			{
+				"actor": 7016,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 373)",
+				"death_accepted": true,
+				"death_at": 22094,
+				"death_delay": 1.20267117023468,
+				"death_frame": 9,
+				"death_sent_after_ms": 1213,
+				"hit_skill": 73,
+				"name": "沃玛勇士60",
+				"shape": 42,
+				"struck_accepted": true,
+				"struck_at": 20892,
+				"walked": true
+			},
+			{
+				"actor": 7017,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 370)",
+				"death_accepted": true,
+				"death_at": 22108,
+				"death_delay": 1.21648550033569,
+				"death_frame": 9,
+				"death_sent_after_ms": 1229,
+				"hit_skill": 37,
+				"name": "粪虫",
+				"shape": 47,
+				"struck_accepted": true,
+				"struck_at": 20892,
+				"walked": true
+			},
+			{
+				"actor": 7018,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 375)",
+				"death_accepted": true,
+				"death_at": 21816,
+				"death_delay": 0.924981117248535,
+				"death_frame": 9,
+				"death_sent_after_ms": 928,
+				"hit_skill": 20,
+				"name": "沃玛战士",
+				"shape": 41,
+				"struck_accepted": true,
+				"struck_at": 20892,
+				"walked": true
+			},
+			{
+				"actor": 7019,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 369)",
+				"death_accepted": true,
+				"death_at": 21668,
+				"death_delay": 0.77543044090271,
+				"death_frame": 9,
+				"death_sent_after_ms": 786,
+				"hit_skill": 11,
+				"name": "沃玛战将",
+				"shape": 91,
+				"struck_accepted": true,
+				"struck_at": 20893,
+				"walked": true
+			},
+			{
+				"actor": 7020,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 371)",
+				"death_accepted": true,
+				"death_at": 22260,
+				"death_delay": 1.36707186698914,
+				"death_frame": 9,
+				"death_sent_after_ms": 1370,
+				"hit_skill": 24,
+				"name": "火焰沃玛",
+				"shape": 43,
+				"struck_accepted": true,
+				"struck_at": 20893,
+				"walked": true
+			},
+			{
+				"actor": 7021,
+				"behavior": {
+					"attack_opcode": 22,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 373)",
+				"death_accepted": true,
+				"death_at": 21636,
+				"death_delay": 0.743951022624969,
+				"death_frame": 9,
+				"death_sent_after_ms": 752,
+				"hit_skill": 40,
+				"name": "暗黑战士",
+				"shape": 46,
+				"struck_accepted": true,
+				"struck_at": 20893,
+				"walked": true
+			},
+			{
+				"actor": 7022,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 369)",
+				"death_accepted": true,
+				"death_at": 21560,
+				"death_delay": 0.667359590530396,
+				"death_frame": 9,
+				"death_sent_after_ms": 669,
+				"hit_skill": 13,
+				"name": "沃玛教主",
+				"shape": 45,
+				"struck_accepted": true,
+				"struck_at": 20893,
+				"walked": true
+			}
+		],
+		"family": "道馆·沃玛神殿",
+		"maps": [
+			"1",
+			"D021",
+			"D022",
+			"D022_001",
+			"D023",
+			"D024",
+			"D032",
+			"D033",
+			"D042",
+			"D043",
+			"D052",
+			"D053"
+		],
+		"missing": [],
+		"rng_state": 6861443898229850601
+	},
+	{
+		"actors": [
+			{
+				"actor": 7000,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 371)",
+				"death_accepted": true,
+				"death_at": 34327,
+				"death_delay": 0.783737897872925,
+				"death_frame": 9,
+				"death_sent_after_ms": 793,
+				"hit_skill": 150,
+				"name": "八脚首领",
+				"shape": 112,
+				"struck_accepted": true,
+				"struck_at": 33544,
+				"walked": true
+			},
+			{
+				"actor": 7001,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 370)",
+				"death_accepted": true,
+				"death_at": 35358,
+				"death_delay": 1.81491613388062,
+				"death_frame": 9,
+				"death_sent_after_ms": 1815,
+				"hit_skill": 40,
+				"name": "独眼蜘蛛",
+				"shape": 102,
+				"struck_accepted": true,
+				"struck_at": 33544,
+				"walked": true
+			},
+			{
+				"actor": 7002,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 371)",
+				"death_accepted": true,
+				"death_at": 34178,
+				"death_delay": 0.634398698806763,
+				"death_frame": 9,
+				"death_sent_after_ms": 640,
+				"hit_skill": 99,
+				"name": "花色蜘蛛",
+				"shape": 111,
+				"struck_accepted": true,
+				"struck_at": 33544,
+				"walked": true
+			},
+			{
+				"actor": 7003,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 375)",
+				"death_accepted": true,
+				"death_at": 33845,
+				"death_delay": 0.301547437906265,
+				"death_frame": 9,
+				"death_sent_after_ms": 364,
+				"hit_skill": 53,
+				"name": "月魔蜘蛛",
+				"shape": 101,
+				"struck_accepted": true,
+				"struck_at": 33544,
+				"walked": true
+			},
+			{
+				"actor": 7004,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 369)",
+				"death_accepted": true,
+				"death_at": 34050,
+				"death_delay": 0.505682766437531,
+				"death_frame": 9,
+				"death_sent_after_ms": 515,
+				"hit_skill": 32,
+				"name": "天狼蜘蛛",
+				"shape": 103,
+				"struck_accepted": true,
+				"struck_at": 33545,
+				"walked": true
+			},
+			{
+				"actor": 7005,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 373)",
+				"death_accepted": true,
+				"death_at": 34480,
+				"death_delay": 0.935602486133575,
+				"death_frame": 9,
+				"death_sent_after_ms": 942,
+				"hit_skill": 92,
+				"name": "幻影蜘蛛",
+				"shape": 106,
+				"struck_accepted": true,
+				"struck_at": 33545,
+				"walked": false
+			},
+			{
+				"actor": 7006,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 374)",
+				"death_accepted": true,
+				"death_at": 35066,
+				"death_delay": 1.52123165130615,
+				"death_frame": 9,
+				"death_sent_after_ms": 1528,
+				"hit_skill": 9,
+				"name": "神鬼王",
+				"shape": 108,
+				"struck_accepted": true,
+				"struck_at": 33545,
+				"walked": true
+			},
+			{
+				"actor": 7007,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 369)",
+				"death_accepted": true,
+				"death_at": 34442,
+				"death_delay": 0.897608518600464,
+				"death_frame": 9,
+				"death_sent_after_ms": 899,
+				"hit_skill": 112,
+				"name": "血巨人",
+				"shape": 107,
+				"struck_accepted": true,
+				"struck_at": 33545,
+				"walked": true
+			},
+			{
+				"actor": 7008,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 372)",
+				"death_accepted": true,
+				"death_at": 34800,
+				"death_delay": 1.25541841983795,
+				"death_frame": 9,
+				"death_sent_after_ms": 1265,
+				"hit_skill": 23,
+				"name": "赤血恶魔",
+				"shape": 109,
+				"struck_accepted": true,
+				"struck_at": 33545,
+				"walked": true
+			},
+			{
+				"actor": 7009,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 370)",
+				"death_accepted": true,
+				"death_at": 34231,
+				"death_delay": 0.685454368591309,
+				"death_frame": 9,
+				"death_sent_after_ms": 692,
+				"hit_skill": 100,
+				"name": "灰血恶魔",
+				"shape": 110,
+				"struck_accepted": true,
+				"struck_at": 33546,
+				"walked": true
+			},
+			{
+				"actor": 7010,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 373)",
+				"death_accepted": true,
+				"death_at": 34612,
+				"death_delay": 1.06612634658813,
+				"death_frame": 19,
+				"death_sent_after_ms": 1072,
+				"hit_skill": 1,
+				"name": "赤月恶魔",
+				"shape": 104,
+				"struck_accepted": true,
+				"struck_at": 33546,
+				"walked": false
+			}
+		],
+		"family": "灌木林·赤月山谷",
+		"maps": [
+			"12",
+			"122",
+			"125",
+			"D1001",
+			"D1002",
+			"D10031",
+			"D10032",
+			"D1004",
+			"D10051",
+			"D10052",
+			"D1011",
+			"D1012",
+			"D10131",
+			"D10132",
+			"D1014",
+			"D10151",
+			"D10152",
+			"D10162",
+			"D1021",
+			"D1022",
+			"D10231",
+			"D10232",
+			"D1024",
+			"D10251",
+			"D10252",
+			"d1021",
+			"d1022",
+			"d10231",
+			"d10232",
+			"d1024",
+			"d10251",
+			"d10252"
+		],
+		"missing": [],
+		"rng_state": -6040353835857159717
+	},
+	{
+		"actors": [
+			{
+				"actor": 7000,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 372)",
+				"death_accepted": true,
+				"death_at": 46796,
+				"death_delay": 0.763470649719238,
+				"death_frame": 9,
+				"death_sent_after_ms": 772,
+				"hit_skill": 37,
+				"name": "七点白蛇",
+				"shape": 126,
+				"struck_accepted": true,
+				"struck_at": 46033,
+				"walked": true
+			},
+			{
+				"actor": 7001,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 372)",
+				"death_accepted": true,
+				"death_at": 46516,
+				"death_delay": 0.483809143304825,
+				"death_frame": 8,
+				"death_sent_after_ms": 486,
+				"hit_skill": 94,
+				"name": "栗子树",
+				"shape": 127,
+				"struck_accepted": true,
+				"struck_at": 46033,
+				"walked": false
+			},
+			{
+				"actor": 7002,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 373)",
+				"death_accepted": true,
+				"death_at": 46659,
+				"death_delay": 0.626770973205566,
+				"death_frame": 9,
+				"death_sent_after_ms": 632,
+				"hit_skill": 86,
+				"name": "食人花",
+				"shape": 31,
+				"struck_accepted": true,
+				"struck_at": 46033,
+				"walked": false
+			},
+			{
+				"actor": 7003,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 372)",
+				"death_accepted": true,
+				"death_at": 46870,
+				"death_delay": 0.836881458759308,
+				"death_frame": 9,
+				"death_sent_after_ms": 837,
+				"hit_skill": 5,
+				"name": "虎蛇",
+				"shape": 57,
+				"struck_accepted": true,
+				"struck_at": 46034,
+				"walked": true
+			},
+			{
+				"actor": 7004,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 373)",
+				"death_accepted": true,
+				"death_at": 47045,
+				"death_delay": 1.01101541519165,
+				"death_frame": 9,
+				"death_sent_after_ms": 1020,
+				"hit_skill": 73,
+				"name": "红蛇",
+				"shape": 54,
+				"struck_accepted": true,
+				"struck_at": 46034,
+				"walked": true
+			},
+			{
+				"actor": 7005,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 372)",
+				"death_accepted": true,
+				"death_at": 47288,
+				"death_delay": 1.25440120697021,
+				"death_frame": 9,
+				"death_sent_after_ms": 1260,
+				"hit_skill": 20,
+				"name": "狼",
+				"shape": 65,
+				"struck_accepted": true,
+				"struck_at": 46034,
+				"walked": true
+			},
+			{
+				"actor": 7006,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 374)",
+				"death_accepted": true,
+				"death_at": 47010,
+				"death_delay": 0.976309537887573,
+				"death_frame": 9,
+				"death_sent_after_ms": 976,
+				"hit_skill": 33,
+				"name": "半兽人",
+				"shape": 22,
+				"struck_accepted": true,
+				"struck_at": 46034,
+				"walked": true
+			},
+			{
+				"actor": 7007,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 375)",
+				"death_accepted": true,
+				"death_at": 46735,
+				"death_delay": 0.701257109642029,
+				"death_frame": 3,
+				"death_sent_after_ms": 701,
+				"hit_skill": 106,
+				"name": "森林雪人",
+				"shape": 30,
+				"struck_accepted": true,
+				"struck_at": 46034,
+				"walked": true
+			},
+			{
+				"actor": 7008,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 374)",
+				"death_accepted": true,
+				"death_at": 47226,
+				"death_delay": 1.19271516799927,
+				"death_frame": 9,
+				"death_sent_after_ms": 1195,
+				"hit_skill": 150,
+				"name": "多钩猫",
+				"shape": 38,
+				"struck_accepted": true,
+				"struck_at": 46034,
+				"walked": true
+			},
+			{
+				"actor": 7009,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 370)",
+				"death_accepted": true,
+				"death_at": 47406,
+				"death_delay": 1.37268137931824,
+				"death_frame": 9,
+				"death_sent_after_ms": 1377,
+				"hit_skill": 13,
+				"name": "钉耙猫",
+				"shape": 39,
+				"struck_accepted": true,
+				"struck_at": 46034,
+				"walked": true
+			},
+			{
+				"actor": 7010,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 375)",
+				"death_accepted": true,
+				"death_at": 47422,
+				"death_delay": 1.38800764083862,
+				"death_frame": 9,
+				"death_sent_after_ms": 1391,
+				"hit_skill": 48,
+				"name": "尸王61",
+				"shape": 53,
+				"struck_accepted": true,
+				"struck_at": 46034,
+				"walked": true
+			},
+			{
+				"actor": 7011,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 371)",
+				"death_accepted": true,
+				"death_at": 46550,
+				"death_delay": 0.516517102718353,
+				"death_frame": 9,
+				"death_sent_after_ms": 525,
+				"hit_skill": 95,
+				"name": "僵尸1",
+				"shape": 48,
+				"struck_accepted": true,
+				"struck_at": 46034,
+				"walked": true
+			},
+			{
+				"actor": 7012,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 370)",
+				"death_accepted": true,
+				"death_at": 47162,
+				"death_delay": 1.12804794311523,
+				"death_frame": 9,
+				"death_sent_after_ms": 1132,
+				"hit_skill": 91,
+				"name": "僵尸2",
+				"shape": 49,
+				"struck_accepted": true,
+				"struck_at": 46034,
+				"walked": true
+			},
+			{
+				"actor": 7013,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 369)",
+				"death_accepted": true,
+				"death_at": 46414,
+				"death_delay": 0.380505919456482,
+				"death_frame": 9,
+				"death_sent_after_ms": 384,
+				"hit_skill": 113,
+				"name": "僵尸3",
+				"shape": 50,
+				"struck_accepted": true,
+				"struck_at": 46034,
+				"walked": true
+			},
+			{
+				"actor": 7014,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 370)",
+				"death_accepted": true,
+				"death_at": 47549,
+				"death_delay": 1.5149552822113,
+				"death_frame": 9,
+				"death_sent_after_ms": 1518,
+				"hit_skill": 14,
+				"name": "僵尸4",
+				"shape": 51,
+				"struck_accepted": true,
+				"struck_at": 46035,
+				"walked": true
+			},
+			{
+				"actor": 7015,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(427, 374)",
+				"death_accepted": true,
+				"death_at": 46937,
+				"death_delay": 0.902435839176178,
+				"death_frame": 9,
+				"death_sent_after_ms": 911,
+				"hit_skill": 72,
+				"name": "僵尸5",
+				"shape": 52,
+				"struck_accepted": true,
+				"struck_at": 46035,
+				"walked": true
+			},
+			{
+				"actor": 7016,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(431, 370)",
+				"death_accepted": true,
+				"death_at": 47426,
+				"death_delay": 1.3918604850769,
+				"death_frame": 3,
+				"death_sent_after_ms": 1405,
+				"hit_skill": 10,
+				"name": "洞蛆",
+				"shape": 37,
+				"struck_accepted": true,
+				"struck_at": 46035,
+				"walked": true
+			}
+		],
+		"family": "毒蛇山谷",
+		"maps": [
+			"2",
+			"D420_001",
+			"D421",
+			"D422",
+			"D431",
+			"D431_001",
+			"D432",
+			"D432_001",
+			"D433",
+			"D434",
+			"D435",
+			"D436",
+			"D451",
+			"D452",
+			"d431",
+			"d432",
+			"d433",
+			"d434",
+			"d435",
+			"d436",
+			"d441",
+			"d442",
+			"d443",
+			"d445",
+			"d446",
+			"d451",
+			"d452"
+		],
+		"missing": [],
+		"rng_state": 8100289413199263045
+	},
+	{
+		"actors": [
+			{
+				"actor": 7000,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 374)",
+				"death_accepted": true,
+				"death_at": 58632,
+				"death_delay": 0.380194038152695,
+				"death_frame": 9,
+				"death_sent_after_ms": 390,
+				"hit_skill": 6,
+				"name": "大法老",
+				"shape": 13,
+				"struck_accepted": true,
+				"struck_at": 58252,
+				"walked": true
+			},
+			{
+				"actor": 7001,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 374)",
+				"death_accepted": true,
+				"death_at": 58905,
+				"death_delay": 0.6534024477005,
+				"death_frame": 9,
+				"death_sent_after_ms": 660,
+				"hit_skill": 86,
+				"name": "羊",
+				"shape": 58,
+				"struck_accepted": true,
+				"struck_at": 58252,
+				"walked": true
+			},
+			{
+				"actor": 7002,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 372)",
+				"death_accepted": true,
+				"death_at": 59796,
+				"death_delay": 1.54371881484985,
+				"death_frame": 9,
+				"death_sent_after_ms": 1548,
+				"hit_skill": 67,
+				"name": "诺玛0",
+				"shape": 18,
+				"struck_accepted": true,
+				"struck_at": 58253,
+				"walked": true
+			},
+			{
+				"actor": 7003,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(419, 371)",
+				"death_accepted": true,
+				"death_at": 59358,
+				"death_delay": 1.10599684715271,
+				"death_frame": 9,
+				"death_sent_after_ms": 1112,
+				"hit_skill": 29,
+				"name": "诺玛1",
+				"shape": 122,
+				"struck_accepted": true,
+				"struck_at": 58253,
+				"walked": true
+			},
+			{
+				"actor": 7004,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 370)",
+				"death_accepted": true,
+				"death_at": 59119,
+				"death_delay": 0.866935849189758,
+				"death_frame": 9,
+				"death_sent_after_ms": 870,
+				"hit_skill": 47,
+				"name": "诺玛将士",
+				"shape": 17,
+				"struck_accepted": true,
+				"struck_at": 58253,
+				"walked": true
+			},
+			{
+				"actor": 7005,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 375)",
+				"death_accepted": true,
+				"death_at": 59522,
+				"death_delay": 1.26902532577515,
+				"death_frame": 9,
+				"death_sent_after_ms": 1279,
+				"hit_skill": 10,
+				"name": "沙漠石人",
+				"shape": 4,
+				"struck_accepted": true,
+				"struck_at": 58253,
+				"walked": true
+			},
+			{
+				"actor": 7006,
+				"behavior": {
+					"attack_opcode": 22,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 372)",
+				"death_accepted": true,
+				"death_at": 58700,
+				"death_delay": 0.447031676769257,
+				"death_frame": 9,
+				"death_sent_after_ms": 455,
+				"hit_skill": 96,
+				"name": "沙漠树魔",
+				"shape": 95,
+				"struck_accepted": true,
+				"struck_at": 58253,
+				"walked": false
+			},
+			{
+				"actor": 7007,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 373)",
+				"death_accepted": true,
+				"death_at": 58906,
+				"death_delay": 0.653746247291565,
+				"death_frame": 9,
+				"death_sent_after_ms": 659,
+				"hit_skill": 66,
+				"name": "沙漠鱼魔",
+				"shape": 94,
+				"struck_accepted": true,
+				"struck_at": 58253,
+				"walked": true
+			},
+			{
+				"actor": 7008,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(419, 374)",
+				"death_accepted": true,
+				"death_at": 60127,
+				"death_delay": 1.87428998947144,
+				"death_frame": 9,
+				"death_sent_after_ms": 1881,
+				"hit_skill": 77,
+				"name": "沙漠风魔",
+				"shape": 97,
+				"struck_accepted": true,
+				"struck_at": 58253,
+				"walked": true
+			},
+			{
+				"actor": 7009,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 370)",
+				"death_accepted": true,
+				"death_at": 59104,
+				"death_delay": 0.85119754076004,
+				"death_frame": 9,
+				"death_sent_after_ms": 854,
+				"hit_skill": 122,
+				"name": "沙鬼",
+				"shape": 3,
+				"struck_accepted": true,
+				"struck_at": 58253,
+				"walked": true
+			},
+			{
+				"actor": 7010,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 372)",
+				"death_accepted": true,
+				"death_at": 59805,
+				"death_delay": 1.55185794830322,
+				"death_frame": 9,
+				"death_sent_after_ms": 1562,
+				"hit_skill": 87,
+				"name": "诺玛3",
+				"shape": 129,
+				"struck_accepted": true,
+				"struck_at": 58254,
+				"walked": true
+			},
+			{
+				"actor": 7011,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 375)",
+				"death_accepted": true,
+				"death_at": 60197,
+				"death_delay": 1.94339442253113,
+				"death_frame": 9,
+				"death_sent_after_ms": 1948,
+				"hit_skill": 99,
+				"name": "沙漠蜥蜴",
+				"shape": 0,
+				"struck_accepted": true,
+				"struck_at": 58254,
+				"walked": true
+			},
+			{
+				"actor": 7012,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 375)",
+				"death_accepted": true,
+				"death_at": 59238,
+				"death_delay": 0.984845995903015,
+				"death_frame": 9,
+				"death_sent_after_ms": 994,
+				"hit_skill": 28,
+				"name": "诺玛2",
+				"shape": 128,
+				"struck_accepted": true,
+				"struck_at": 58254,
+				"walked": true
+			},
+			{
+				"actor": 7013,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 373)",
+				"death_accepted": false,
+				"death_at": 60232,
+				"death_delay": 1.9785623550415,
+				"death_frame": -1,
+				"death_sent_after_ms": 1980,
+				"hit_skill": 93,
+				"name": "异界之门",
+				"shape": 5,
+				"struck_accepted": false,
+				"struck_at": 58254,
+				"walked": false
+			},
+			{
+				"actor": 7014,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 369)",
+				"death_accepted": true,
+				"death_at": 59088,
+				"death_delay": 0.834499359130859,
+				"death_frame": 9,
+				"death_sent_after_ms": 836,
+				"hit_skill": 98,
+				"name": "盔甲虫0",
+				"shape": 60,
+				"struck_accepted": true,
+				"struck_at": 58254,
+				"walked": true
+			},
+			{
+				"actor": 7015,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(431, 370)",
+				"death_accepted": true,
+				"death_at": 59321,
+				"death_delay": 1.06711554527283,
+				"death_frame": 9,
+				"death_sent_after_ms": 1068,
+				"hit_skill": 37,
+				"name": "多角虫0",
+				"shape": 63,
+				"struck_accepted": true,
+				"struck_at": 58254,
+				"walked": true
+			},
+			{
+				"actor": 7016,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 369)",
+				"death_accepted": true,
+				"death_at": 58766,
+				"death_delay": 0.512626707553864,
+				"death_frame": 9,
+				"death_sent_after_ms": 516,
+				"hit_skill": 107,
+				"name": "猎鹰0",
+				"shape": 59,
+				"struck_accepted": true,
+				"struck_at": 58254,
+				"walked": true
+			},
+			{
+				"actor": 7017,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 373)",
+				"death_accepted": true,
+				"death_at": 58709,
+				"death_delay": 0.455646514892578,
+				"death_frame": 9,
+				"death_sent_after_ms": 474,
+				"hit_skill": 9,
+				"name": "蚂蚁将军",
+				"shape": 8,
+				"struck_accepted": true,
+				"struck_at": 58254,
+				"walked": true
+			},
+			{
+				"actor": 7018,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 371)",
+				"death_accepted": true,
+				"death_at": 59233,
+				"death_delay": 0.979639530181885,
+				"death_frame": 9,
+				"death_sent_after_ms": 979,
+				"hit_skill": 100,
+				"name": "劳动蚂蚁",
+				"shape": 16,
+				"struck_accepted": true,
+				"struck_at": 58254,
+				"walked": true
+			},
+			{
+				"actor": 7019,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 373)",
+				"death_accepted": true,
+				"death_at": 59360,
+				"death_delay": 1.10604190826416,
+				"death_frame": 9,
+				"death_sent_after_ms": 1112,
+				"hit_skill": 102,
+				"name": "蚂蚁战士",
+				"shape": 14,
+				"struck_accepted": true,
+				"struck_at": 58254,
+				"walked": true
+			},
+			{
+				"actor": 7020,
+				"behavior": {
+					"attack_opcode": 22,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 371)",
+				"death_accepted": true,
+				"death_at": 59601,
+				"death_delay": 1.34688377380371,
+				"death_frame": 9,
+				"death_sent_after_ms": 1355,
+				"hit_skill": 23,
+				"name": "爆毒蚂蚁",
+				"shape": 96,
+				"struck_accepted": true,
+				"struck_at": 58255,
+				"walked": true
+			},
+			{
+				"actor": 7021,
+				"behavior": {
+					"attack_opcode": 22,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 371)",
+				"death_accepted": true,
+				"death_at": 59555,
+				"death_delay": 1.30044937133789,
+				"death_frame": 9,
+				"death_sent_after_ms": 1302,
+				"hit_skill": 113,
+				"name": "蚂蚁道士0",
+				"shape": 7,
+				"struck_accepted": true,
+				"struck_at": 58255,
+				"walked": true
+			}
+		],
+		"family": "沙漠·绿洲",
+		"maps": [
+			"4",
+			"42",
+			"43",
+			"44",
+			"5",
+			"6",
+			"71",
+			"72",
+			"73",
+			"76",
+			"77",
+			"78",
+			"D8001",
+			"D8002",
+			"D8003",
+			"D8004",
+			"D8101",
+			"D8102",
+			"D8103",
+			"D8104",
+			"D8201",
+			"D8202",
+			"D8203",
+			"D8204"
+		],
+		"missing": [
+			{
+				"map": "4",
+				"name": "诺玛法老",
+				"reason": "unsupported_shape",
+				"shape": 525.0,
+				"spawn_source": "!Lv8_Oasis.gen"
+			},
+			{
+				"map": "42",
+				"name": "诺玛教主2",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "Boss.gen"
+			},
+			{
+				"map": "42",
+				"name": "诺玛法老",
+				"reason": "unsupported_shape",
+				"shape": 525.0,
+				"spawn_source": "!Lv8_Desert.gen"
+			},
+			{
+				"map": "43",
+				"name": "诺玛教主2",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "Boss.gen"
+			},
+			{
+				"map": "43",
+				"name": "诺玛法老",
+				"reason": "unsupported_shape",
+				"shape": 525.0,
+				"spawn_source": "!Lv8_Desert.gen"
+			},
+			{
+				"map": "44",
+				"name": "诺玛法老",
+				"reason": "unsupported_shape",
+				"shape": 525.0,
+				"spawn_source": "!Lv8_Desert.gen"
+			},
+			{
+				"map": "6",
+				"name": "诺玛教主2",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "Boss.gen"
+			},
+			{
+				"map": "6",
+				"name": "诺玛法老",
+				"reason": "unsupported_shape",
+				"shape": 525.0,
+				"spawn_source": "!Lv8_Desert.gen"
+			},
+			{
+				"map": "D8001",
+				"name": "劳动蚂蚁0",
+				"reason": "unsupported_shape",
+				"shape": 16777232.0,
+				"spawn_source": "!Lv6_AntCave_T.gen"
+			},
+			{
+				"map": "D8002",
+				"name": "劳动蚂蚁0",
+				"reason": "unsupported_shape",
+				"shape": 16777232.0,
+				"spawn_source": "!Lv6_AntCave_T.gen"
+			},
+			{
+				"map": "D8003",
+				"name": "劳动蚂蚁0",
+				"reason": "unsupported_shape",
+				"shape": 16777232.0,
+				"spawn_source": "!Lv6_AntCave_T.gen"
+			},
+			{
+				"map": "D8004",
+				"name": "劳动蚂蚁0",
+				"reason": "unsupported_shape",
+				"shape": 16777232.0,
+				"spawn_source": "!Lv6_AntCave_T.gen"
+			},
+			{
+				"map": "D8101",
+				"name": "劳动蚂蚁0",
+				"reason": "unsupported_shape",
+				"shape": 16777232.0,
+				"spawn_source": "!Lv6_AntCave_T.gen"
+			},
+			{
+				"map": "D8102",
+				"name": "劳动蚂蚁0",
+				"reason": "unsupported_shape",
+				"shape": 16777232.0,
+				"spawn_source": "!Lv6_AntCave_T.gen"
+			},
+			{
+				"map": "D8103",
+				"name": "劳动蚂蚁0",
+				"reason": "unsupported_shape",
+				"shape": 16777232.0,
+				"spawn_source": "!Lv6_AntCave_T.gen"
+			},
+			{
+				"map": "D8104",
+				"name": "劳动蚂蚁0",
+				"reason": "unsupported_shape",
+				"shape": 16777232.0,
+				"spawn_source": "!Lv6_AntCave_T.gen"
+			},
+			{
+				"map": "D8201",
+				"name": "劳动蚂蚁0",
+				"reason": "unsupported_shape",
+				"shape": 16777232.0,
+				"spawn_source": "!Lv6_AntCave_T.gen"
+			},
+			{
+				"map": "D8202",
+				"name": "劳动蚂蚁0",
+				"reason": "unsupported_shape",
+				"shape": 16777232.0,
+				"spawn_source": "!Lv6_AntCave_T.gen"
+			},
+			{
+				"map": "D8203",
+				"name": "劳动蚂蚁0",
+				"reason": "unsupported_shape",
+				"shape": 16777232.0,
+				"spawn_source": "!Lv6_AntCave_T.gen"
+			},
+			{
+				"map": "D8204",
+				"name": "劳动蚂蚁0",
+				"reason": "unsupported_shape",
+				"shape": 16777232.0,
+				"spawn_source": "!Lv6_AntCave_T.gen"
+			}
+		],
+		"rng_state": -8781123922141216730
+	},
+	{
+		"actors": [
+			{
+				"actor": 7000,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(419, 370)",
+				"death_accepted": true,
+				"death_at": 71487,
+				"death_delay": 0.603954672813416,
+				"death_frame": 9,
+				"death_sent_after_ms": 613,
+				"hit_skill": 73,
+				"name": "大法老",
+				"shape": 13,
+				"struck_accepted": true,
+				"struck_at": 70884,
+				"walked": true
+			},
+			{
+				"actor": 7001,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 375)",
+				"death_accepted": true,
+				"death_at": 72881,
+				"death_delay": 1.99731040000916,
+				"death_frame": 9,
+				"death_sent_after_ms": 1999,
+				"hit_skill": 15,
+				"name": "诺玛0",
+				"shape": 18,
+				"struck_accepted": true,
+				"struck_at": 70884,
+				"walked": true
+			},
+			{
+				"actor": 7002,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 373)",
+				"death_accepted": true,
+				"death_at": 72708,
+				"death_delay": 1.82438063621521,
+				"death_frame": 9,
+				"death_sent_after_ms": 1832,
+				"hit_skill": 48,
+				"name": "诺玛1",
+				"shape": 122,
+				"struck_accepted": true,
+				"struck_at": 70884,
+				"walked": true
+			},
+			{
+				"actor": 7003,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 371)",
+				"death_accepted": true,
+				"death_at": 71475,
+				"death_delay": 0.590052723884583,
+				"death_frame": 9,
+				"death_sent_after_ms": 596,
+				"hit_skill": 96,
+				"name": "诺玛将士",
+				"shape": 17,
+				"struck_accepted": true,
+				"struck_at": 70885,
+				"walked": true
+			},
+			{
+				"actor": 7004,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 370)",
+				"death_accepted": true,
+				"death_at": 71929,
+				"death_delay": 1.0446834564209,
+				"death_frame": 9,
+				"death_sent_after_ms": 1045,
+				"hit_skill": 66,
+				"name": "沙漠石人",
+				"shape": 4,
+				"struck_accepted": true,
+				"struck_at": 70885,
+				"walked": true
+			},
+			{
+				"actor": 7005,
+				"behavior": {
+					"attack_opcode": 22,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 370)",
+				"death_accepted": true,
+				"death_at": 72497,
+				"death_delay": 1.61253523826599,
+				"death_frame": 9,
+				"death_sent_after_ms": 1620,
+				"hit_skill": 39,
+				"name": "沙漠树魔",
+				"shape": 95,
+				"struck_accepted": true,
+				"struck_at": 70885,
+				"walked": false
+			},
+			{
+				"actor": 7006,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(427, 370)",
+				"death_accepted": true,
+				"death_at": 72610,
+				"death_delay": 1.72580671310425,
+				"death_frame": 9,
+				"death_sent_after_ms": 1725,
+				"hit_skill": 106,
+				"name": "沙漠风魔",
+				"shape": 97,
+				"struck_accepted": true,
+				"struck_at": 70885,
+				"walked": true
+			},
+			{
+				"actor": 7007,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 370)",
+				"death_accepted": true,
+				"death_at": 72694,
+				"death_delay": 1.80919146537781,
+				"death_frame": 9,
+				"death_sent_after_ms": 1816,
+				"hit_skill": 113,
+				"name": "沙鬼",
+				"shape": 3,
+				"struck_accepted": true,
+				"struck_at": 70885,
+				"walked": true
+			},
+			{
+				"actor": 7008,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(431, 370)",
+				"death_accepted": true,
+				"death_at": 71564,
+				"death_delay": 0.679180502891541,
+				"death_frame": 9,
+				"death_sent_after_ms": 687,
+				"hit_skill": 91,
+				"name": "沙漠鱼魔",
+				"shape": 94,
+				"struck_accepted": true,
+				"struck_at": 70885,
+				"walked": true
+			},
+			{
+				"actor": 7009,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(419, 371)",
+				"death_accepted": true,
+				"death_at": 72033,
+				"death_delay": 1.14821934700012,
+				"death_frame": 9,
+				"death_sent_after_ms": 1156,
+				"hit_skill": 14,
+				"name": "诺玛3",
+				"shape": 129,
+				"struck_accepted": true,
+				"struck_at": 70885,
+				"walked": true
+			},
+			{
+				"actor": 7010,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 370)",
+				"death_accepted": true,
+				"death_at": 72420,
+				"death_delay": 1.53589224815369,
+				"death_frame": 9,
+				"death_sent_after_ms": 1535,
+				"hit_skill": 110,
+				"name": "沙漠蜥蜴",
+				"shape": 0,
+				"struck_accepted": true,
+				"struck_at": 70885,
+				"walked": true
+			},
+			{
+				"actor": 7011,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 372)",
+				"death_accepted": true,
+				"death_at": 72676,
+				"death_delay": 1.78653883934021,
+				"death_frame": 9,
+				"death_sent_after_ms": 1787,
+				"hit_skill": 31,
+				"name": "诺玛2",
+				"shape": 128,
+				"struck_accepted": true,
+				"struck_at": 70890,
+				"walked": true
+			},
+			{
+				"actor": 7012,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 371)",
+				"death_accepted": true,
+				"death_at": 72706,
+				"death_delay": 1.8159875869751,
+				"death_frame": 9,
+				"death_sent_after_ms": 1825,
+				"hit_skill": 67,
+				"name": "诺玛突击队长",
+				"shape": 185,
+				"struck_accepted": true,
+				"struck_at": 70891,
+				"walked": true
+			},
+			{
+				"actor": 7013,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 373)",
+				"death_accepted": false,
+				"death_at": 72533,
+				"death_delay": 1.64294815063477,
+				"death_frame": -1,
+				"death_sent_after_ms": 1649,
+				"hit_skill": 38,
+				"name": "诺玛教主",
+				"shape": 186,
+				"struck_accepted": true,
+				"struck_at": 70891,
+				"walked": true
+			},
+			{
+				"actor": 7014,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 372)",
+				"death_accepted": true,
+				"death_at": 71695,
+				"death_delay": 0.804939329624176,
+				"death_frame": 9,
+				"death_sent_after_ms": 808,
+				"hit_skill": 41,
+				"name": "诺玛司令",
+				"shape": 184,
+				"struck_accepted": true,
+				"struck_at": 70891,
+				"walked": true
+			},
+			{
+				"actor": 7015,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 373)",
+				"death_accepted": true,
+				"death_at": 72204,
+				"death_delay": 1.31303906440735,
+				"death_frame": 9,
+				"death_sent_after_ms": 1319,
+				"hit_skill": 37,
+				"name": "诺玛装甲兵",
+				"shape": 181,
+				"struck_accepted": true,
+				"struck_at": 70891,
+				"walked": true
+			},
+			{
+				"actor": 7016,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 371)",
+				"death_accepted": true,
+				"death_at": 72177,
+				"death_delay": 1.28645348548889,
+				"death_frame": 9,
+				"death_sent_after_ms": 1287,
+				"hit_skill": 87,
+				"name": "诺玛骑兵",
+				"shape": 180,
+				"struck_accepted": true,
+				"struck_at": 70891,
+				"walked": true
+			}
+		],
+		"family": "诺玛地区",
+		"maps": [
+			"41",
+			"D1601",
+			"D1602",
+			"D16031",
+			"D16032",
+			"D16033",
+			"D16034",
+			"D1604",
+			"D1605",
+			"D1606",
+			"d1601",
+			"d1602",
+			"d16031",
+			"d16032",
+			"d16033",
+			"d16034",
+			"d1604",
+			"d1605"
+		],
+		"missing": [
+			{
+				"map": "41",
+				"name": "诺玛法老",
+				"reason": "unsupported_shape",
+				"shape": 525.0,
+				"spawn_source": "!Lv8_Desert.gen"
+			},
+			{
+				"map": "D1606",
+				"name": "诺玛抛石兵",
+				"reason": "unsupported_shape",
+				"shape": 131255.0,
+				"spawn_source": "Boss.gen"
+			},
+			{
+				"map": "d1601",
+				"name": "诺玛抛石兵",
+				"reason": "unsupported_shape",
+				"shape": 131255.0,
+				"spawn_source": "!Lv13_numavestiges.gen"
+			},
+			{
+				"map": "d1601",
+				"name": "诺玛骑兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1601",
+				"name": "诺玛装甲兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1601",
+				"name": "诺玛司令8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1601",
+				"name": "诺玛抛石兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1601",
+				"name": "诺玛斧兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1602",
+				"name": "诺玛抛石兵",
+				"reason": "unsupported_shape",
+				"shape": 131255.0,
+				"spawn_source": "!Lv13_numavestiges.gen"
+			},
+			{
+				"map": "d1602",
+				"name": "诺玛骑兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1602",
+				"name": "诺玛装甲兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1602",
+				"name": "诺玛司令8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1602",
+				"name": "诺玛抛石兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1602",
+				"name": "诺玛斧兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16031",
+				"name": "诺玛抛石兵",
+				"reason": "unsupported_shape",
+				"shape": 131255.0,
+				"spawn_source": "!Lv13_numavestiges.gen"
+			},
+			{
+				"map": "d16031",
+				"name": "诺玛骑兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16031",
+				"name": "诺玛装甲兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16031",
+				"name": "诺玛司令8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16031",
+				"name": "诺玛抛石兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16031",
+				"name": "诺玛斧兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16032",
+				"name": "诺玛抛石兵",
+				"reason": "unsupported_shape",
+				"shape": 131255.0,
+				"spawn_source": "!Lv13_numavestiges.gen"
+			},
+			{
+				"map": "d16032",
+				"name": "诺玛骑兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16032",
+				"name": "诺玛装甲兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16032",
+				"name": "诺玛司令8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16032",
+				"name": "诺玛抛石兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16032",
+				"name": "诺玛斧兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16033",
+				"name": "诺玛抛石兵",
+				"reason": "unsupported_shape",
+				"shape": 131255.0,
+				"spawn_source": "!Lv13_numavestiges.gen"
+			},
+			{
+				"map": "d16033",
+				"name": "诺玛骑兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16033",
+				"name": "诺玛装甲兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16033",
+				"name": "诺玛司令8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16033",
+				"name": "诺玛抛石兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16033",
+				"name": "诺玛斧兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16034",
+				"name": "诺玛抛石兵",
+				"reason": "unsupported_shape",
+				"shape": 131255.0,
+				"spawn_source": "!Lv13_numavestiges.gen"
+			},
+			{
+				"map": "d16034",
+				"name": "诺玛骑兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16034",
+				"name": "诺玛装甲兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16034",
+				"name": "诺玛司令8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16034",
+				"name": "诺玛抛石兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d16034",
+				"name": "诺玛斧兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1604",
+				"name": "诺玛抛石兵",
+				"reason": "unsupported_shape",
+				"shape": 131255.0,
+				"spawn_source": "!Lv13_numavestiges.gen"
+			},
+			{
+				"map": "d1604",
+				"name": "诺玛骑兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1604",
+				"name": "诺玛装甲兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1604",
+				"name": "诺玛司令8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1604",
+				"name": "诺玛抛石兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1604",
+				"name": "诺玛斧兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1605",
+				"name": "诺玛抛石兵",
+				"reason": "unsupported_shape",
+				"shape": 131255.0,
+				"spawn_source": "!Lv13_numavestiges.gen"
+			},
+			{
+				"map": "d1605",
+				"name": "诺玛骑兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1605",
+				"name": "诺玛装甲兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1605",
+				"name": "诺玛司令8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1605",
+				"name": "诺玛抛石兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			},
+			{
+				"map": "d1605",
+				"name": "诺玛斧兵8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv13_numavestiges_T.gen"
+			}
+		],
+		"rng_state": 4533568266710592613
+	},
+	{
+		"actors": [
+			{
+				"actor": 7000,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 371)",
+				"death_accepted": true,
+				"death_at": 84545,
+				"death_delay": 0.976298570632935,
+				"death_frame": 9,
+				"death_sent_after_ms": 983,
+				"hit_skill": 100,
+				"name": "巨型多角虫",
+				"shape": 64,
+				"struck_accepted": true,
+				"struck_at": 83569,
+				"walked": true
+			},
+			{
+				"actor": 7001,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 372)",
+				"death_accepted": true,
+				"death_at": 85442,
+				"death_delay": 1.87360453605652,
+				"death_frame": 9,
+				"death_sent_after_ms": 1873,
+				"hit_skill": 41,
+				"name": "盔甲虫",
+				"shape": 60,
+				"struck_accepted": true,
+				"struck_at": 83569,
+				"walked": true
+			},
+			{
+				"actor": 7002,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 374)",
+				"death_accepted": true,
+				"death_at": 84979,
+				"death_delay": 1.41092801094055,
+				"death_frame": 9,
+				"death_sent_after_ms": 1416,
+				"hit_skill": 37,
+				"name": "多角虫",
+				"shape": 63,
+				"struck_accepted": true,
+				"struck_at": 83569,
+				"walked": true
+			},
+			{
+				"actor": 7003,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 374)",
+				"death_accepted": true,
+				"death_at": 84384,
+				"death_delay": 0.815905511379242,
+				"death_frame": 9,
+				"death_sent_after_ms": 815,
+				"hit_skill": 11,
+				"name": "猎鹰",
+				"shape": 59,
+				"struck_accepted": true,
+				"struck_at": 83569,
+				"walked": true
+			},
+			{
+				"actor": 7004,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 370)",
+				"death_accepted": true,
+				"death_at": 85501,
+				"death_delay": 1.93233585357666,
+				"death_frame": 9,
+				"death_sent_after_ms": 1938,
+				"hit_skill": 122,
+				"name": "沙漠威思而小虫",
+				"shape": 61,
+				"struck_accepted": true,
+				"struck_at": 83569,
+				"walked": true
+			},
+			{
+				"actor": 7005,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 372)",
+				"death_accepted": true,
+				"death_at": 85169,
+				"death_delay": 1.60067415237427,
+				"death_frame": 9,
+				"death_sent_after_ms": 1601,
+				"hit_skill": 66,
+				"name": "威思而小虫",
+				"shape": 62,
+				"struck_accepted": true,
+				"struck_at": 83569,
+				"walked": true
+			},
+			{
+				"actor": 7006,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 370)",
+				"death_accepted": true,
+				"death_at": 85336,
+				"death_delay": 1.76767301559448,
+				"death_frame": 9,
+				"death_sent_after_ms": 1774,
+				"hit_skill": 99,
+				"name": "邪恶钳虫",
+				"shape": 70,
+				"struck_accepted": true,
+				"struck_at": 83569,
+				"walked": true
+			},
+			{
+				"actor": 7007,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 369)",
+				"death_accepted": true,
+				"death_at": 84634,
+				"death_delay": 1.06589305400848,
+				"death_frame": 9,
+				"death_sent_after_ms": 1071,
+				"hit_skill": 33,
+				"name": "蜈蚣",
+				"shape": 66,
+				"struck_accepted": true,
+				"struck_at": 83569,
+				"walked": true
+			},
+			{
+				"actor": 7008,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 370)",
+				"death_accepted": true,
+				"death_at": 84459,
+				"death_delay": 0.8890780210495,
+				"death_frame": 9,
+				"death_sent_after_ms": 895,
+				"hit_skill": 97,
+				"name": "跳跳蜂",
+				"shape": 71,
+				"struck_accepted": true,
+				"struck_at": 83570,
+				"walked": true
+			},
+			{
+				"actor": 7009,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 370)",
+				"death_accepted": true,
+				"death_at": 85164,
+				"death_delay": 1.59448504447937,
+				"death_frame": 9,
+				"death_sent_after_ms": 1600,
+				"hit_skill": 15,
+				"name": "蝴蝶虫",
+				"shape": 72,
+				"struck_accepted": true,
+				"struck_at": 83570,
+				"walked": true
+			},
+			{
+				"actor": 7010,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 372)",
+				"death_accepted": true,
+				"death_at": 83945,
+				"death_delay": 0.375812292098999,
+				"death_frame": 9,
+				"death_sent_after_ms": 379,
+				"hit_skill": 28,
+				"name": "黑色恶蛆",
+				"shape": 68,
+				"struck_accepted": true,
+				"struck_at": 83570,
+				"walked": true
+			},
+			{
+				"actor": 7011,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 371)",
+				"death_accepted": true,
+				"death_at": 85342,
+				"death_delay": 1.77210092544556,
+				"death_frame": 9,
+				"death_sent_after_ms": 1773,
+				"hit_skill": 10,
+				"name": "钳虫",
+				"shape": 69,
+				"struck_accepted": true,
+				"struck_at": 83570,
+				"walked": true
+			},
+			{
+				"actor": 7012,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(431, 373)",
+				"death_accepted": true,
+				"death_at": 84757,
+				"death_delay": 1.18607330322266,
+				"death_frame": 9,
+				"death_sent_after_ms": 1194,
+				"hit_skill": 93,
+				"name": "触龙神",
+				"shape": 67,
+				"struck_accepted": true,
+				"struck_at": 83571,
+				"walked": false
+			},
+			{
+				"actor": 7013,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 374)",
+				"death_accepted": true,
+				"death_at": 84288,
+				"death_delay": 0.713730752468109,
+				"death_frame": 9,
+				"death_sent_after_ms": 722,
+				"hit_skill": 74,
+				"name": "白野猪",
+				"shape": 78,
+				"struck_accepted": true,
+				"struck_at": 83575,
+				"walked": true
+			},
+			{
+				"actor": 7014,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 372)",
+				"death_accepted": true,
+				"death_at": 84365,
+				"death_delay": 0.790713787078857,
+				"death_frame": 9,
+				"death_sent_after_ms": 794,
+				"hit_skill": 6,
+				"name": "黑野猪",
+				"shape": 77,
+				"struck_accepted": true,
+				"struck_at": 83575,
+				"walked": true
+			},
+			{
+				"actor": 7015,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 375)",
+				"death_accepted": true,
+				"death_at": 85235,
+				"death_delay": 1.66098499298096,
+				"death_frame": 9,
+				"death_sent_after_ms": 1668,
+				"hit_skill": 67,
+				"name": "红野猪0",
+				"shape": 76,
+				"struck_accepted": true,
+				"struck_at": 83575,
+				"walked": true
+			},
+			{
+				"actor": 7016,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(419, 373)",
+				"death_accepted": true,
+				"death_at": 84862,
+				"death_delay": 1.28730988502502,
+				"death_frame": 9,
+				"death_sent_after_ms": 1291,
+				"hit_skill": 101,
+				"name": "蝎蛇",
+				"shape": 79,
+				"struck_accepted": true,
+				"struck_at": 83575,
+				"walked": true
+			},
+			{
+				"actor": 7017,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 371)",
+				"death_accepted": true,
+				"death_at": 85005,
+				"death_delay": 1.43013501167297,
+				"death_frame": 9,
+				"death_sent_after_ms": 1432,
+				"hit_skill": 40,
+				"name": "角蝇",
+				"shape": 73,
+				"struck_accepted": true,
+				"struck_at": 83575,
+				"walked": false
+			},
+			{
+				"actor": 7018,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 374)",
+				"death_accepted": true,
+				"death_at": 85205,
+				"death_delay": 1.62933015823364,
+				"death_frame": 9,
+				"death_sent_after_ms": 1636,
+				"hit_skill": 88,
+				"name": "邪恶毒蛇",
+				"shape": 80,
+				"struck_accepted": true,
+				"struck_at": 83576,
+				"walked": true
+			}
+		],
+		"family": "盟重·石阁·虫谷",
+		"maps": [
+			"74",
+			"75",
+			"D60011",
+			"D60012",
+			"D60013",
+			"D60021",
+			"D60022",
+			"D6004",
+			"D6011",
+			"D6012",
+			"D60131",
+			"D60132",
+			"D60133",
+			"D60134",
+			"D60135",
+			"D6014",
+			"D6015",
+			"D6021",
+			"D6022",
+			"D6023",
+			"D6024",
+			"D6025",
+			"D711",
+			"D712",
+			"D713",
+			"D714",
+			"D715",
+			"D716",
+			"D717"
+		],
+		"missing": [
+			{
+				"map": "D711",
+				"name": "红野猪",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv7_SukGakCave.gen"
+			},
+			{
+				"map": "D712",
+				"name": "红野猪",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv7_SukGakCave.gen"
+			},
+			{
+				"map": "D712",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv7_SukGakCave.gen"
+			},
+			{
+				"map": "D713",
+				"name": "红野猪",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv7_SukGakCave.gen"
+			},
+			{
+				"map": "D713",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv7_SukGakCave.gen"
+			},
+			{
+				"map": "D714",
+				"name": "红野猪",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv7_SukGakCave.gen"
+			},
+			{
+				"map": "D714",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv7_SukGakCave.gen"
+			},
+			{
+				"map": "D715",
+				"name": "红野猪",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv7_SukGakCave.gen"
+			},
+			{
+				"map": "D715",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv7_SukGakCave.gen"
+			},
+			{
+				"map": "D716",
+				"name": "红野猪",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv7_SukGakCave.gen"
+			},
+			{
+				"map": "D716",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv7_SukGakCave.gen"
+			},
+			{
+				"map": "D717",
+				"name": "红野猪",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv7_SukGakCave.gen"
+			},
+			{
+				"map": "D717",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv7_SukGakCave.gen"
+			}
+		],
+		"rng_state": 1815141639388812403
+	},
+	{
+		"actors": [
+			{
+				"actor": 7000,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 375)",
+				"death_accepted": true,
+				"death_at": 97463,
+				"death_delay": 1.29447436332703,
+				"death_frame": 9,
+				"death_sent_after_ms": 1298,
+				"hit_skill": 13,
+				"name": "浪子人鬼",
+				"shape": 138,
+				"struck_accepted": true,
+				"struck_at": 96169,
+				"walked": true
+			},
+			{
+				"actor": 7001,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 369)",
+				"death_accepted": true,
+				"death_at": 97370,
+				"death_delay": 1.20164036750793,
+				"death_frame": 9,
+				"death_sent_after_ms": 1202,
+				"hit_skill": 150,
+				"name": "腐蚀人鬼0",
+				"shape": 132,
+				"struck_accepted": true,
+				"struck_at": 96169,
+				"walked": true
+			},
+			{
+				"actor": 7002,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 371)",
+				"death_accepted": true,
+				"death_at": 96502,
+				"death_delay": 0.333286225795746,
+				"death_frame": 9,
+				"death_sent_after_ms": 350,
+				"hit_skill": 91,
+				"name": "潘夜鬼将",
+				"shape": 137,
+				"struck_accepted": true,
+				"struck_at": 96169,
+				"walked": true
+			},
+			{
+				"actor": 7003,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(431, 371)",
+				"death_accepted": true,
+				"death_at": 96821,
+				"death_delay": 0.652776122093201,
+				"death_frame": 9,
+				"death_sent_after_ms": 661,
+				"hit_skill": 98,
+				"name": "潘夜冰魔",
+				"shape": 133,
+				"struck_accepted": true,
+				"struck_at": 96169,
+				"walked": true
+			},
+			{
+				"actor": 7004,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 370)",
+				"death_accepted": true,
+				"death_at": 96765,
+				"death_delay": 0.596392691135406,
+				"death_frame": 9,
+				"death_sent_after_ms": 607,
+				"hit_skill": 73,
+				"name": "潘夜云魔",
+				"shape": 134,
+				"struck_accepted": true,
+				"struck_at": 96169,
+				"walked": true
+			},
+			{
+				"actor": 7005,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(419, 369)",
+				"death_accepted": true,
+				"death_at": 98097,
+				"death_delay": 1.92867636680603,
+				"death_frame": 9,
+				"death_sent_after_ms": 1933,
+				"hit_skill": 77,
+				"name": "潘夜火魔",
+				"shape": 136,
+				"struck_accepted": true,
+				"struck_at": 96169,
+				"walked": true
+			},
+			{
+				"actor": 7006,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 371)",
+				"death_accepted": true,
+				"death_at": 96568,
+				"death_delay": 0.399963468313217,
+				"death_frame": 9,
+				"death_sent_after_ms": 404,
+				"hit_skill": 122,
+				"name": "潘夜风魔",
+				"shape": 135,
+				"struck_accepted": true,
+				"struck_at": 96169,
+				"walked": true
+			},
+			{
+				"actor": 7007,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 375)",
+				"death_accepted": true,
+				"death_at": 96755,
+				"death_delay": 0.586898922920227,
+				"death_frame": 9,
+				"death_sent_after_ms": 591,
+				"hit_skill": 23,
+				"name": "潘夜左护卫",
+				"shape": 131,
+				"struck_accepted": true,
+				"struck_at": 96169,
+				"walked": true
+			},
+			{
+				"actor": 7008,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 369)",
+				"death_accepted": true,
+				"death_at": 96806,
+				"death_delay": 0.637766242027283,
+				"death_frame": 9,
+				"death_sent_after_ms": 643,
+				"hit_skill": 24,
+				"name": "潘夜右护卫",
+				"shape": 130,
+				"struck_accepted": true,
+				"struck_at": 96169,
+				"walked": true
+			},
+			{
+				"actor": 7009,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 372)",
+				"death_accepted": true,
+				"death_at": 97973,
+				"death_delay": 1.803950548172,
+				"death_frame": 9,
+				"death_sent_after_ms": 1811,
+				"hit_skill": 66,
+				"name": "潘夜牛魔王",
+				"shape": 139,
+				"struck_accepted": true,
+				"struck_at": 96170,
+				"walked": true
+			},
+			{
+				"actor": 7010,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 373)",
+				"death_accepted": true,
+				"death_at": 96727,
+				"death_delay": 0.557235658168793,
+				"death_frame": 9,
+				"death_sent_after_ms": 564,
+				"hit_skill": 29,
+				"name": "骨鬼将",
+				"shape": 140,
+				"struck_accepted": true,
+				"struck_at": 96170,
+				"walked": true
+			},
+			{
+				"actor": 7011,
+				"behavior": {
+					"attack_opcode": 22,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(419, 373)",
+				"death_accepted": true,
+				"death_at": 97708,
+				"death_delay": 1.53830003738403,
+				"death_frame": 9,
+				"death_sent_after_ms": 1539,
+				"hit_skill": 112,
+				"name": "骷髅弓箭手",
+				"shape": 144,
+				"struck_accepted": true,
+				"struck_at": 96170,
+				"walked": true
+			},
+			{
+				"actor": 7012,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 371)",
+				"death_accepted": true,
+				"death_at": 96867,
+				"death_delay": 0.697807013988495,
+				"death_frame": 9,
+				"death_sent_after_ms": 705,
+				"hit_skill": 20,
+				"name": "骷髅武士",
+				"shape": 143,
+				"struck_accepted": true,
+				"struck_at": 96170,
+				"walked": true
+			},
+			{
+				"actor": 7013,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(424, 373)",
+				"death_accepted": true,
+				"death_at": 96529,
+				"death_delay": 0.35945650935173,
+				"death_frame": 9,
+				"death_sent_after_ms": 360,
+				"hit_skill": 85,
+				"name": "骷髅士兵",
+				"shape": 142,
+				"struck_accepted": true,
+				"struck_at": 96170,
+				"walked": true
+			},
+			{
+				"actor": 7014,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 374)",
+				"death_accepted": true,
+				"death_at": 96638,
+				"death_delay": 0.459171682596207,
+				"death_frame": 19,
+				"death_sent_after_ms": 469,
+				"hit_skill": 86,
+				"name": "骷髅教主",
+				"shape": 141,
+				"struck_accepted": true,
+				"struck_at": 96179,
+				"walked": true
+			}
+		],
+		"family": "潘夜岛",
+		"maps": [
+			"8",
+			"D1101",
+			"D1102",
+			"D11031",
+			"D11032",
+			"D1104",
+			"D1105",
+			"D1111",
+			"D1112",
+			"D1113",
+			"D11141",
+			"D11142",
+			"D1115",
+			"D1116",
+			"D1211",
+			"D12121",
+			"D1213",
+			"D1214",
+			"D1215"
+		],
+		"missing": [
+			{
+				"map": "8",
+				"name": "腐蚀人鬼",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv6_HalfNight.gen"
+			},
+			{
+				"map": "D1101",
+				"name": "潘夜战士8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1101",
+				"name": "潘夜火魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1102",
+				"name": "潘夜冰魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1102",
+				"name": "潘夜火魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D11031",
+				"name": "潘夜战士8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D11031",
+				"name": "潘夜云魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1104",
+				"name": "潘夜左护卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1104",
+				"name": "潘夜右护卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1105",
+				"name": "潘夜战士8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1105",
+				"name": "潘夜左护卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1111",
+				"name": "潘夜火魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1111",
+				"name": "潘夜右护卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1112",
+				"name": "潘夜左护卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1112",
+				"name": "潘夜右护卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1113",
+				"name": "潘夜云魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1113",
+				"name": "潘夜右护卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D11141",
+				"name": "潘夜冰魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D11141",
+				"name": "潘夜风魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D11142",
+				"name": "潘夜战士8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D11142",
+				"name": "潘夜右护卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1115",
+				"name": "潘夜左护卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			},
+			{
+				"map": "D1115",
+				"name": "潘夜右护卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+			}
+		],
+		"rng_state": -6886632714529452840
+	},
+	{
+		"actors": [
+			{
+				"actor": 7000,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 374)",
+				"death_accepted": true,
+				"death_at": 110049,
+				"death_delay": 1.22994494438171,
+				"death_frame": 9,
+				"death_sent_after_ms": 1234,
+				"hit_skill": 6,
+				"name": "疯狂魔神盗",
+				"shape": 157,
+				"struck_accepted": true,
+				"struck_at": 108820,
+				"walked": true
+			},
+			{
+				"actor": 7001,
+				"behavior": {
+					"attack_opcode": 22,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 369)",
+				"death_accepted": true,
+				"death_at": 110179,
+				"death_delay": 1.35885667800903,
+				"death_frame": 9,
+				"death_sent_after_ms": 1365,
+				"hit_skill": 32,
+				"name": "魔神怪1",
+				"shape": 156,
+				"struck_accepted": true,
+				"struck_at": 108821,
+				"walked": true
+			},
+			{
+				"actor": 7002,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(427, 369)",
+				"death_accepted": true,
+				"death_at": 110056,
+				"death_delay": 1.23583400249481,
+				"death_frame": 9,
+				"death_sent_after_ms": 1250,
+				"hit_skill": 31,
+				"name": "猿猴战将",
+				"shape": 155,
+				"struck_accepted": true,
+				"struck_at": 108821,
+				"walked": true
+			},
+			{
+				"actor": 7003,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 370)",
+				"death_accepted": true,
+				"death_at": 109869,
+				"death_delay": 1.04092729091644,
+				"death_frame": 9,
+				"death_sent_after_ms": 1042,
+				"hit_skill": 112,
+				"name": "猿猴战士",
+				"shape": 154,
+				"struck_accepted": true,
+				"struck_at": 108829,
+				"walked": true
+			},
+			{
+				"actor": 7004,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 373)",
+				"death_accepted": true,
+				"death_at": 109388,
+				"death_delay": 0.55940568447113,
+				"death_frame": 9,
+				"death_sent_after_ms": 561,
+				"hit_skill": 9,
+				"name": "巨象兽",
+				"shape": 158,
+				"struck_accepted": true,
+				"struck_at": 108829,
+				"walked": true
+			},
+			{
+				"actor": 7005,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 372)",
+				"death_accepted": true,
+				"death_at": 110169,
+				"death_delay": 1.33941268920898,
+				"death_frame": 9,
+				"death_sent_after_ms": 1341,
+				"hit_skill": 97,
+				"name": "震天首将",
+				"shape": 161,
+				"struck_accepted": true,
+				"struck_at": 108830,
+				"walked": true
+			},
+			{
+				"actor": 7006,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 373)",
+				"death_accepted": true,
+				"death_at": 109778,
+				"death_delay": 0.948940813541412,
+				"death_frame": 9,
+				"death_sent_after_ms": 951,
+				"hit_skill": 122,
+				"name": "石像狮子",
+				"shape": 160,
+				"struck_accepted": true,
+				"struck_at": 108830,
+				"walked": true
+			},
+			{
+				"actor": 7007,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(419, 373)",
+				"death_accepted": true,
+				"death_at": 110018,
+				"death_delay": 1.18839597702026,
+				"death_frame": 9,
+				"death_sent_after_ms": 1195,
+				"hit_skill": 1,
+				"name": "火焰狮子",
+				"shape": 159,
+				"struck_accepted": true,
+				"struck_at": 108830,
+				"walked": true
+			},
+			{
+				"actor": 7008,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 371)",
+				"death_accepted": true,
+				"death_at": 110110,
+				"death_delay": 1.28059840202332,
+				"death_frame": 9,
+				"death_sent_after_ms": 1286,
+				"hit_skill": 123,
+				"name": "地牢女神1",
+				"shape": 162,
+				"struck_accepted": true,
+				"struck_at": 108830,
+				"walked": true
+			},
+			{
+				"actor": 7009,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 372)",
+				"death_accepted": true,
+				"death_at": 109198,
+				"death_delay": 0.368977308273315,
+				"death_frame": 9,
+				"death_sent_after_ms": 373,
+				"hit_skill": 66,
+				"name": "地牢女神2",
+				"shape": 163,
+				"struck_accepted": true,
+				"struck_at": 108830,
+				"walked": true
+			},
+			{
+				"actor": 7010,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 373)",
+				"death_accepted": true,
+				"death_at": 110598,
+				"death_delay": 1.75524139404297,
+				"death_frame": 9,
+				"death_sent_after_ms": 1756,
+				"hit_skill": 90,
+				"name": "震天魔神",
+				"shape": 164,
+				"struck_accepted": true,
+				"struck_at": 108843,
+				"walked": true
+			}
+		],
+		"family": "失乐园·真天宫",
+		"maps": [
+			"9",
+			"D1500",
+			"D15011",
+			"D15012",
+			"D15013",
+			"D15014",
+			"D15021",
+			"D15022",
+			"D15023",
+			"D15024",
+			"D15032",
+			"D15033",
+			"D15034",
+			"D15043",
+			"D15044",
+			"D15054",
+			"D1506",
+			"D1510",
+			"D15111",
+			"D15112",
+			"D1512",
+			"D1513"
+		],
+		"missing": [
+			{
+				"map": "9",
+				"name": "魔神怪8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_Silnakwon_T.gen"
+			},
+			{
+				"map": "9",
+				"name": "猿猴战将8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_Silnakwon_T.gen"
+			},
+			{
+				"map": "9",
+				"name": "猿猴战士8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_Silnakwon_T.gen"
+			},
+			{
+				"map": "9",
+				"name": "巨象兽8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_Silnakwon_T.gen"
+			},
+			{
+				"map": "D1500",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D1500",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D1500",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15011",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15011",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15011",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15012",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15012",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15012",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15012",
+				"name": "武力神将8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15013",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15013",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15013",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15014",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15014",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15014",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15021",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15021",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15021",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15022",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15022",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15022",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15023",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15023",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15023",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15024",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15024",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15024",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15024",
+				"name": "武力神将8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15032",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15032",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15032",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15032",
+				"name": "武力神将8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15033",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15033",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15033",
+				"name": "武力神将8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15034",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15034",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15034",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15034",
+				"name": "武力神将8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15043",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15043",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15043",
+				"name": "武力神将8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15043",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15044",
+				"name": "武力神将8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15044",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15044",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15044",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15054",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15054",
+				"name": "武力神将8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15054",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15054",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D1506",
+				"name": "火焰狮子97",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "Bossbodyguard.gen"
+			},
+			{
+				"map": "D1510",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D1510",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15111",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15111",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15111",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15112",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15112",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D15112",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D1512",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D1512",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D1513",
+				"name": "石像狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D1513",
+				"name": "地牢女神8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D1513",
+				"name": "火焰狮子8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			},
+			{
+				"map": "D1513",
+				"name": "武力神将8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv11_SilnakCave_T.gen"
+			}
+		],
+		"rng_state": 8256422449095280925
+	},
+	{
+		"actors": [
+			{
+				"actor": 7000,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 373)",
+				"death_accepted": true,
+				"death_at": 124586,
+				"death_delay": 0.811591386795044,
+				"death_frame": 9,
+				"death_sent_after_ms": 819,
+				"hit_skill": 77,
+				"name": "僵尸1",
+				"shape": 48,
+				"struck_accepted": true,
+				"struck_at": 123775,
+				"walked": true
+			},
+			{
+				"actor": 7001,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(419, 375)",
+				"death_accepted": true,
+				"death_at": 125467,
+				"death_delay": 1.69133472442627,
+				"death_frame": 9,
+				"death_sent_after_ms": 1692,
+				"hit_skill": 88,
+				"name": "僵尸2",
+				"shape": 49,
+				"struck_accepted": true,
+				"struck_at": 123776,
+				"walked": true
+			},
+			{
+				"actor": 7002,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(420, 372)",
+				"death_accepted": true,
+				"death_at": 124271,
+				"death_delay": 0.495525300502777,
+				"death_frame": 9,
+				"death_sent_after_ms": 501,
+				"hit_skill": 13,
+				"name": "僵尸3",
+				"shape": 50,
+				"struck_accepted": true,
+				"struck_at": 123776,
+				"walked": true
+			},
+			{
+				"actor": 7003,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 374)",
+				"death_accepted": true,
+				"death_at": 125621,
+				"death_delay": 1.84532284736633,
+				"death_frame": 9,
+				"death_sent_after_ms": 1850,
+				"hit_skill": 150,
+				"name": "僵尸4",
+				"shape": 51,
+				"struck_accepted": true,
+				"struck_at": 123776,
+				"walked": true
+			},
+			{
+				"actor": 7004,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 373)",
+				"death_accepted": true,
+				"death_at": 124958,
+				"death_delay": 1.18218111991882,
+				"death_frame": 9,
+				"death_sent_after_ms": 1189,
+				"hit_skill": 39,
+				"name": "僵尸5",
+				"shape": 52,
+				"struck_accepted": true,
+				"struck_at": 123776,
+				"walked": true
+			},
+			{
+				"actor": 7005,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 1,
+					"wake_facing": 0,
+					"wake_frames": 20,
+					"wake_interval_ms": 120,
+					"wake_opcode": 20
+				},
+				"cell": "(424, 373)",
+				"death_accepted": true,
+				"death_at": 124830,
+				"death_delay": 1.05494320392609,
+				"death_frame": 9,
+				"death_sent_after_ms": 1061,
+				"hit_skill": 90,
+				"name": "祖玛教主62",
+				"shape": 85,
+				"struck_accepted": true,
+				"struck_at": 123776,
+				"walked": true
+			}
+		],
+		"family": "特殊任务区域",
+		"maps": [
+			"B115_001",
+			"B139_001"
+		],
+		"missing": [],
+		"rng_state": -4255308727380105339
+	},
+	{
+		"actors": [
+			{
+				"actor": 7000,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 373)",
+				"death_accepted": true,
+				"death_at": 137075,
+				"death_delay": 0.802233397960663,
+				"death_frame": 9,
+				"death_sent_after_ms": 806,
+				"hit_skill": 40,
+				"name": "赤黄猪王",
+				"shape": 150,
+				"struck_accepted": true,
+				"struck_at": 136273,
+				"walked": true
+			},
+			{
+				"actor": 7001,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 375)",
+				"death_accepted": true,
+				"death_at": 138210,
+				"death_delay": 1.92428994178772,
+				"death_frame": 9,
+				"death_sent_after_ms": 1928,
+				"hit_skill": 33,
+				"name": "怒龙神",
+				"shape": 152,
+				"struck_accepted": true,
+				"struck_at": 136286,
+				"walked": true
+			}
+		],
+		"family": "流放岛·罪孽洞穴",
+		"maps": [
+			"D1201",
+			"D1202",
+			"D12031",
+			"D12032",
+			"D1204",
+			"D1205"
+		],
+		"missing": [],
+		"rng_state": 1937110504685107317
+	},
+	{
+		"actors": [
+			{
+				"actor": 7000,
+				"behavior": {
+					"attack_opcode": 22,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(430, 373)",
+				"death_accepted": true,
+				"death_at": 152904,
+				"death_delay": 1.46723985671997,
+				"death_frame": 9,
+				"death_sent_after_ms": 1469,
+				"hit_skill": 23,
+				"name": "祖玛弓箭手",
+				"shape": 82,
+				"struck_accepted": true,
+				"struck_at": 151437,
+				"walked": true
+			},
+			{
+				"actor": 7001,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(429, 375)",
+				"death_accepted": true,
+				"death_at": 153068,
+				"death_delay": 1.63173961639404,
+				"death_frame": 9,
+				"death_sent_after_ms": 1636,
+				"hit_skill": 86,
+				"name": "大老鼠0",
+				"shape": 81,
+				"struck_accepted": true,
+				"struck_at": 151437,
+				"walked": true
+			},
+			{
+				"actor": 7002,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 373)",
+				"death_accepted": true,
+				"death_at": 152100,
+				"death_delay": 0.663909196853638,
+				"death_frame": 9,
+				"death_sent_after_ms": 665,
+				"hit_skill": 91,
+				"name": "角蝇",
+				"shape": 73,
+				"struck_accepted": true,
+				"struck_at": 151437,
+				"walked": false
+			},
+			{
+				"actor": 7003,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 1,
+					"wake_facing": -1,
+					"wake_frames": 6,
+					"wake_interval_ms": 120,
+					"wake_opcode": 20
+				},
+				"cell": "(426, 371)",
+				"death_accepted": true,
+				"death_at": 152142,
+				"death_delay": 0.705012559890747,
+				"death_frame": 9,
+				"death_sent_after_ms": 709,
+				"hit_skill": 9,
+				"name": "护法天",
+				"shape": 84,
+				"struck_accepted": true,
+				"struck_at": 151437,
+				"walked": true
+			},
+			{
+				"actor": 7004,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 1,
+					"wake_facing": -1,
+					"wake_frames": 6,
+					"wake_interval_ms": 120,
+					"wake_opcode": 20
+				},
+				"cell": "(427, 373)",
+				"death_accepted": true,
+				"death_at": 153278,
+				"death_delay": 1.84123277664185,
+				"death_frame": 9,
+				"death_sent_after_ms": 1842,
+				"hit_skill": 39,
+				"name": "祖玛雕像",
+				"shape": 83,
+				"struck_accepted": true,
+				"struck_at": 151437,
+				"walked": true
+			},
+			{
+				"actor": 7005,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 1,
+					"wake_facing": 0,
+					"wake_frames": 20,
+					"wake_interval_ms": 120,
+					"wake_opcode": 20
+				},
+				"cell": "(430, 374)",
+				"death_accepted": true,
+				"death_at": 153422,
+				"death_delay": 1.98512363433838,
+				"death_frame": 9,
+				"death_sent_after_ms": 1990,
+				"hit_skill": 102,
+				"name": "祖玛教主",
+				"shape": 85,
+				"struck_accepted": true,
+				"struck_at": 151437,
+				"walked": true
+			},
+			{
+				"actor": 7006,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 369)",
+				"death_accepted": true,
+				"death_at": 152176,
+				"death_delay": 0.739025831222534,
+				"death_frame": 9,
+				"death_sent_after_ms": 743,
+				"hit_skill": 15,
+				"name": "楔蛾93",
+				"shape": 75,
+				"struck_accepted": true,
+				"struck_at": 151437,
+				"walked": true
+			}
+		],
+		"family": "祖玛神殿",
+		"maps": [
+			"D501",
+			"D502",
+			"D503",
+			"D504",
+			"D505",
+			"D5072",
+			"D5073",
+			"D5074",
+			"D515"
+		],
+		"missing": [
+			{
+				"map": "D501",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace.gen"
+			},
+			{
+				"map": "D501",
+				"name": "大老鼠",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace.gen"
+			},
+			{
+				"map": "D501",
+				"name": "大老鼠8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D501",
+				"name": "祖玛弓箭手8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D502",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace.gen"
+			},
+			{
+				"map": "D502",
+				"name": "大老鼠",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace.gen"
+			},
+			{
+				"map": "D502",
+				"name": "大老鼠8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D502",
+				"name": "祖玛弓箭手8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D503",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace.gen"
+			},
+			{
+				"map": "D503",
+				"name": "大老鼠",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace.gen"
+			},
+			{
+				"map": "D503",
+				"name": "祖玛弓箭手8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D503",
+				"name": "祖玛雕像8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D503",
+				"name": "祖玛卫士8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D503",
+				"name": "大老鼠8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D504",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace.gen"
+			},
+			{
+				"map": "D504",
+				"name": "大老鼠",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace.gen"
+			},
+			{
+				"map": "D504",
+				"name": "祖玛弓箭手8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D504",
+				"name": "祖玛卫士8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D504",
+				"name": "祖玛雕像8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D505",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace.gen"
+			},
+			{
+				"map": "D505",
+				"name": "祖玛弓箭手8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D505",
+				"name": "祖玛卫士8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D505",
+				"name": "祖玛雕像8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D5072",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace.gen"
+			},
+			{
+				"map": "D5072",
+				"name": "祖玛雕像8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D5072",
+				"name": "祖玛卫士8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D5072",
+				"name": "祖玛弓箭手8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D5073",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace.gen"
+			},
+			{
+				"map": "D5073",
+				"name": "祖玛雕像8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D5073",
+				"name": "祖玛卫士8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D5073",
+				"name": "祖玛弓箭手8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D5074",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace.gen"
+			},
+			{
+				"map": "D5074",
+				"name": "祖玛雕像8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D5074",
+				"name": "祖玛卫士8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D5074",
+				"name": "祖玛弓箭手8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv10_ZumaPalace_T.gen"
+			},
+			{
+				"map": "D515",
+				"name": "楔蛾",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "Boss.gen"
+			}
+		],
+		"rng_state": -6091875990300996491
+	},
+	{
+		"actors": [
+			{
+				"actor": 7000,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 373)",
+				"death_accepted": true,
+				"death_at": 165705,
+				"death_delay": 1.62015724182129,
+				"death_frame": 9,
+				"death_sent_after_ms": 1628,
+				"hit_skill": 14,
+				"name": "霸王守卫",
+				"shape": 10,
+				"struck_accepted": true,
+				"struck_at": 164085,
+				"walked": true
+			},
+			{
+				"actor": 7001,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 370)",
+				"death_accepted": true,
+				"death_at": 164691,
+				"death_delay": 0.606955409049988,
+				"death_frame": 9,
+				"death_sent_after_ms": 612,
+				"hit_skill": 20,
+				"name": "犬猴魔",
+				"shape": 12,
+				"struck_accepted": true,
+				"struck_at": 164085,
+				"walked": true
+			},
+			{
+				"actor": 7002,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 369)",
+				"death_accepted": true,
+				"death_at": 165773,
+				"death_delay": 1.68733143806458,
+				"death_frame": 9,
+				"death_sent_after_ms": 1690,
+				"hit_skill": 5,
+				"name": "轻甲守卫",
+				"shape": 6,
+				"struck_accepted": true,
+				"struck_at": 164086,
+				"walked": true
+			},
+			{
+				"actor": 7003,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(422, 371)",
+				"death_accepted": true,
+				"death_at": 166067,
+				"death_delay": 1.98129796981812,
+				"death_frame": 9,
+				"death_sent_after_ms": 1981,
+				"hit_skill": 37,
+				"name": "恶形鬼",
+				"shape": 92,
+				"struck_accepted": true,
+				"struck_at": 164086,
+				"walked": true
+			},
+			{
+				"actor": 7004,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(425, 373)",
+				"death_accepted": true,
+				"death_at": 165391,
+				"death_delay": 1.30513381958008,
+				"death_frame": 9,
+				"death_sent_after_ms": 1308,
+				"hit_skill": 6,
+				"name": "触角神魔",
+				"shape": 2,
+				"struck_accepted": true,
+				"struck_at": 164086,
+				"walked": true
+			},
+			{
+				"actor": 7005,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 371)",
+				"death_accepted": true,
+				"death_at": 165435,
+				"death_delay": 1.34916377067566,
+				"death_frame": 9,
+				"death_sent_after_ms": 1351,
+				"hit_skill": 122,
+				"name": "海神将领",
+				"shape": 9,
+				"struck_accepted": true,
+				"struck_at": 164086,
+				"walked": true
+			},
+			{
+				"actor": 7006,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(423, 370)",
+				"death_accepted": true,
+				"death_at": 164875,
+				"death_delay": 0.789328932762146,
+				"death_frame": 9,
+				"death_sent_after_ms": 794,
+				"hit_skill": 93,
+				"name": "爆毒神魔",
+				"shape": 93,
+				"struck_accepted": true,
+				"struck_at": 164086,
+				"walked": true
+			},
+			{
+				"actor": 7007,
+				"behavior": {
+					"attack_opcode": 22,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(428, 370)",
+				"death_accepted": true,
+				"death_at": 165445,
+				"death_delay": 1.35978841781616,
+				"death_frame": 9,
+				"death_sent_after_ms": 1364,
+				"hit_skill": 31,
+				"name": "红衣法师",
+				"shape": 19,
+				"struck_accepted": true,
+				"struck_at": 164086,
+				"walked": true
+			},
+			{
+				"actor": 7008,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(421, 371)",
+				"death_accepted": true,
+				"death_at": 164787,
+				"death_delay": 0.701165378093719,
+				"death_frame": 9,
+				"death_sent_after_ms": 702,
+				"hit_skill": 101,
+				"name": "神舰守卫",
+				"shape": 99,
+				"struck_accepted": true,
+				"struck_at": 164086,
+				"walked": true
+			},
+			{
+				"actor": 7009,
+				"behavior": {
+					"attack_opcode": 14,
+					"birth_opcode": 10,
+					"birth_status": 0,
+					"wake_facing": -1,
+					"wake_frames": 0,
+					"wake_interval_ms": 0,
+					"wake_opcode": 0
+				},
+				"cell": "(426, 370)",
+				"death_accepted": true,
+				"death_at": 165318,
+				"death_delay": 1.23113310337067,
+				"death_frame": 9,
+				"death_sent_after_ms": 1233,
+				"hit_skill": 11,
+				"name": "霸王教主",
+				"shape": 120,
+				"struck_accepted": true,
+				"struck_at": 164087,
+				"walked": true
+			}
+		],
+		"family": "神舰",
+		"maps": [
+			"D901",
+			"D9021",
+			"D90212",
+			"D9022",
+			"D90222",
+			"D90223",
+			"D903",
+			"D9031",
+			"D9032",
+			"D904"
+		],
+		"missing": [
+			{
+				"map": "D901",
+				"name": "犬猴魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D901",
+				"name": "轻甲守卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D901",
+				"name": "恶形鬼8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D901",
+				"name": "触角神魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D901",
+				"name": "海神将领8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D901",
+				"name": "爆毒神魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D9021",
+				"name": "犬猴魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D9021",
+				"name": "轻甲守卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D9021",
+				"name": "恶形鬼8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D9021",
+				"name": "触角神魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D9021",
+				"name": "爆毒神魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D9022",
+				"name": "触角神魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D9022",
+				"name": "爆毒神魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D9022",
+				"name": "红衣法师8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D9022",
+				"name": "神舰守卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D9022",
+				"name": "犬猴魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D9022",
+				"name": "轻甲守卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D9022",
+				"name": "恶形鬼8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D9022",
+				"name": "海神将领8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D903",
+				"name": "触角神魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D903",
+				"name": "爆毒神魔8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D903",
+				"name": "轻甲守卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D903",
+				"name": "红衣法师8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D903",
+				"name": "神舰守卫8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			},
+			{
+				"map": "D903",
+				"name": "海神将领8",
+				"reason": "unresolved_shape",
+				"shape": null,
+				"spawn_source": "!Lv12_SinGiSun_T.gen"
+			}
+		],
+		"rng_state": 6405852297878619463
+	}
+]

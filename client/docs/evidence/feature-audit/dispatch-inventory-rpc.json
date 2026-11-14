@@ -1,0 +1,5 @@
+{
+  "result": "None",
+  "stdout": "[{\"function\": \"0x4282c0\", \"switches\": 26, \"comparisons\": 41, \"error\": null}, {\"function\": \"0x43ab90\", \"switches\": 1, \"comparisons\": 0, \"error\": null}, {\"function\": \"0x43c130\", \"switches\": 2, \"comparisons\": 0, \"error\": null}, {\"function\": \"0x43d760\", \"switches\": 2, \"comparisons\": 0, \"error\": null}, {\"function\": \"0x401040\", \"switches\": 1, \"comparisons\": 0, \"error\": null}]\n",
+  "stderr": ""
+}

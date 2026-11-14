@@ -12,6 +12,9 @@
 #include "hud/level_up_effect.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"
+#include "hud/monster_behavior.hpp"
+#include "world/zuma_ai.hpp"
+#include "world/monster_prototypes.hpp"
 #include "hud/human_actions.hpp"
 #include "hud/melee_cooldown.hpp"
 #include "hud/local_action_clock.hpp"
@@ -107,6 +110,8 @@ public:
     void _unhandled_key_input(const godot::Ref<godot::InputEvent>& event) override;
     void _notification(int what);
     godot::Dictionary hud_snapshot() const;
+    godot::Dictionary monster_behavior_profile(int shape);
+    godot::Dictionary advance_monster_ai(int elapsed_ms,godot::Array targets);
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool apply_inventory_add(int identifier,int icon,int count,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
@@ -502,7 +507,6 @@ private:
         int shape=20;
         int burrow_frame=-1;
         bool hide_after_burrow=false, reverse_burrow=false;
-        bool turned_burrow_once=false;
         bool hidden_pose=false;
         double burrow_ms=0;
         bool buried=false;
@@ -516,6 +520,8 @@ private:
         bool walk_catch_up=false, walking_backward=false;
         bool skip_movement_tick=false;
         std::uint32_t status_flags=0;
+        // 4085A0 / 40E7F0：1316出队后开始600ms显现，独立于动作帧。
+        double revive_elapsed_ms=-1;
         bool slowed() const { return (status_flags & 0x08000000u)!=0; }
         int struck_frame=-1;
         int attack_frame=-1, attack_interval=120;
@@ -540,10 +546,10 @@ private:
         double death_ms=0, struck_ms=0;
         struct Turn { godot::Vector2i cell; int facing; int shape; unsigned light; bool backward; std::uint32_t status; bool force_walk=false; };
         struct Hit { int shape; int variant; std::array<std::uint16_t,3> health; };
-        struct Death { godot::Vector2i cell; int facing; int shape; int opcode; unsigned light; };
-        struct Burrow { godot::Vector2i cell; int facing, shape; unsigned light; };
+        struct Death { godot::Vector2i cell; int facing; int shape; int opcode; unsigned light; std::optional<std::uint32_t> status; };
+        struct Burrow { godot::Vector2i cell; int facing, shape; unsigned light; std::optional<std::uint32_t> status; };
         struct ReverseBurrow { godot::Vector2i cell; };
-        struct Rise { godot::Vector2i cell; int facing, shape; unsigned light; };
+        struct Rise { godot::Vector2i cell; int facing, shape; unsigned light; std::optional<std::uint32_t> status; };
         struct Attack {
             godot::Vector2i cell;
             int facing;
@@ -551,11 +557,13 @@ private:
             std::uint32_t target_actor=0;
             int action_override=0;
         };
-        struct Entry { godot::Vector2i cell; int facing,shape; unsigned light; std::uint32_t status; bool appearance_sound; std::optional<mir3::SceneName> name; bool hidden_pose=false; };
+        struct Entry { godot::Vector2i cell; int facing,shape; unsigned light; std::uint32_t status; bool appearance_sound; std::optional<mir3::SceneName> name; bool hidden_pose=false; bool revive=false; };
         struct BarStatus { std::uint32_t flags; };
         struct Health { std::array<std::uint16_t,3> values; };
-        struct RelayedBackstep { Turn turn; };
-        using Action=std::variant<Turn,Hit,Death,Burrow,Entry,BarStatus,Health,RelayedBackstep,Attack,Rise,ReverseBurrow>;
+        struct RelayedHit { Hit hit; };
+        struct SpecialAttack { std::array<std::uint16_t,3> parameters; godot::PackedByteArray encoded; };
+        struct Transfer { int opcode; std::optional<Entry> entry; };
+        using Action=std::variant<Turn,Hit,Death,Burrow,Entry,BarStatus,Health,Attack,Rise,ReverseBurrow,RelayedHit,SpecialAttack,Transfer>;
         std::deque<Action> actions;
     };
     std::map<int,SceneChicken> scene_chickens;
@@ -800,6 +808,8 @@ private:
     std::array<std::uint8_t,16> login_actor_extra{};
     bool apply_login_actor();
     bool apply_game_message(const godot::PackedByteArray& message);
+    std::optional<bool> apply_monster_wire(int opcode,int actor,const std::array<std::uint16_t,3>& parameters,const godot::PackedByteArray& encoded);
+    bool apply_monster_special(int actor,const SceneChicken::SpecialAttack& special);
     void process_map_changes();
     mir3::ServerGroups server_groups;
     mir3::WilArchive server_group_archive;
@@ -931,6 +941,11 @@ private:
     std::size_t terrain_draw_count=0;
     godot::RID terrain_draw_batch;
     godot::Ref<godot::ShaderMaterial> monster_shadow_mix,monster_body_mix;
+    std::array<godot::Ref<godot::ShaderMaterial>,32> monster_appearance_mix;
+    godot::Ref<godot::ShaderMaterial> monster_tint_appearance_mix;
+    mir3::ZumaAi monster_ai;
+    mir3::ZumaAi::Time monster_ai_clock=0;
+    int monster_ai_next_id=1000000;
     godot::Ref<godot::ShaderMaterial> weapon_glow_mix;
     void draw_hud_tail();
     void set_hud_decoration(godot::Vector4i state);

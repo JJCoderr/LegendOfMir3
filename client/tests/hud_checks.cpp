@@ -21,6 +21,8 @@
 #include "quick_items_checks.hpp"
 #include "melee_cooldown_checks.hpp"
 #include "local_action_clock_checks.hpp"
+#include "zuma_ai_checks.hpp"
+#include "monster_pursuit_checks.hpp"
 #include "action_reply_checks.hpp"
 #include "forced_motion_checks.hpp"
 #include "spell_checks.hpp"
@@ -62,6 +64,7 @@ int main(int argc,char** argv) {
             std::cout<<"ITEM_LAYOUT_ORIGINAL_OK "<<item_layout_original_checks(argv[2])<<"\n";return 0;
         }
         check(argc==2,"resource root required");
+        if(std::filesystem::path(argv[1])=="--monster-ai") {zuma_ai_checks();monster_pursuit_checks();std::cout<<"MONSTER_AI_MODEL_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--spell") {spell_checks();std::cout<<"SPELL_MODEL_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--spell-weapon-color") {spell_weapon_color_checks();std::cout<<"SPELL_WEAPON_COLOR_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--spell-lightning") {spell_lightning_checks();std::cout<<"SPELL_LIGHTNING_OK\n";return 0;}

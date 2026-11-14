@@ -1,0 +1,370 @@
+{
+  "metadata": {
+    "path": "C:\\Users\\czx\\AppData\\Local\\Temp\\mir3-map-cefefa68-0e75-4cd8-82dd-af351c782884.i64",
+    "module": "Mir3-unpacked-analysis.exe",
+    "arch": "32",
+    "base_address": "0x400000",
+    "image_size": "0x572000",
+    "md5": "48557771f068bd81b66d4c68a4d07f2f",
+    "sha256": "08f68b794bfb28803d1132c02b26d2595dba309be5b2b475ae0cdfe6a752f8aa"
+  },
+  "statistics": {
+    "total_functions": 2006,
+    "named_functions": 70,
+    "library_functions": 176,
+    "unnamed_functions": 1760,
+    "total_strings": 768,
+    "total_segments": 4
+  },
+  "segments": [
+    {
+      "name": "UPX0",
+      "start": "0x401000",
+      "end": "0x926000",
+      "size": "0x525000",
+      "permissions": "rwx"
+    },
+    {
+      "name": "UPX1",
+      "start": "0x926000",
+      "end": "0x96e000",
+      "size": "0x48000",
+      "permissions": "rwx"
+    },
+    {
+      "name": ".aspack",
+      "start": "0x96f000",
+      "end": "0x971000",
+      "size": "0x2000",
+      "permissions": "rw"
+    },
+    {
+      "name": ".adata",
+      "start": "0x971000",
+      "end": "0x972000",
+      "size": "0x1000",
+      "permissions": "rw"
+    }
+  ],
+  "entrypoints": [
+    {
+      "addr": "0x4a14ec",
+      "name": "start",
+      "ordinal": 4855020
+    }
+  ],
+  "interesting_strings": [
+    {
+      "addr": "0x4b584c",
+      "string": "Options",
+      "xref_count": 35
+    },
+    {
+      "addr": "0x4b58f4",
+      "string": " %s+%d",
+      "xref_count": 26
+    },
+    {
+      "addr": "0x4b5930",
+      "string": "%s: %d",
+      "xref_count": 21
+    },
+    {
+      "addr": "0x4b5900",
+      "string": "%s: +%d",
+      "xref_count": 13
+    },
+    {
+      "addr": "0x4b5920",
+      "string": "%s: %d-%d (+%d)",
+      "xref_count": 13
+    },
+    {
+      "addr": "0x4b54b0",
+      "string": "%s (%s)",
+      "xref_count": 12
+    },
+    {
+      "addr": "0x4b56e4",
+      "string": "MirDXG",
+      "xref_count": 12
+    },
+    {
+      "addr": "0x4b5954",
+      "string": " %sx1",
+      "xref_count": 12
+    },
+    {
+      "addr": "0x4b5360",
+      "string": "[Error] - Legend of Mir III",
+      "xref_count": 11
+    },
+    {
+      "addr": "0x4b58e4",
+      "string": " %sx2",
+      "xref_count": 10
+    },
+    {
+      "addr": "0x4b5814",
+      "string": "%d-%d",
+      "xref_count": 9
+    },
+    {
+      "addr": "0x4b5a20",
+      "string": "%s: %sx1",
+      "xref_count": 9
+    },
+    {
+      "addr": "0x4b54f4",
+      "string": "Initial",
+      "xref_count": 8
+    },
+    {
+      "addr": "0x4b58c8",
+      "string": "%s%d ",
+      "xref_count": 8
+    },
+    {
+      "addr": "0x4b59a8",
+      "string": "%s: +%d (+%d)",
+      "xref_count": 8
+    }
+  ],
+  "interesting_functions": [
+    {
+      "addr": "0x480550",
+      "name": "sub_480550",
+      "size": 25,
+      "xref_count": 738,
+      "callee_count": 1,
+      "type": "wrapper"
+    },
+    {
+      "addr": "0x49fa18",
+      "name": "",
+      "size": 82,
+      "xref_count": 563,
+      "callee_count": 2,
+      "type": "complex"
+    },
+    {
+      "addr": "0x4939f6",
+      "name": "",
+      "size": 11,
+      "xref_count": 458,
+      "callee_count": 1,
+      "type": "wrapper"
+    },
+    {
+      "addr": "0x491c70",
+      "name": "sub_491C70",
+      "size": 42,
+      "xref_count": 217,
+      "callee_count": 2,
+      "type": "complex"
+    },
+    {
+      "addr": "0x401710",
+      "name": "sub_401710",
+      "size": 43,
+      "xref_count": 204,
+      "callee_count": 2,
+      "type": "complex"
+    },
+    {
+      "addr": "0x48bd63",
+      "name": "sub_48BD63",
+      "size": 172,
+      "xref_count": 201,
+      "callee_count": 0,
+      "type": "leaf"
+    },
+    {
+      "addr": "0x41fa00",
+      "name": "sub_41FA00",
+      "size": 152,
+      "xref_count": 163,
+      "callee_count": 1,
+      "type": "complex"
+    },
+    {
+      "addr": "0x48bcaf",
+      "name": "sub_48BCAF",
+      "size": 180,
+      "xref_count": 146,
+      "callee_count": 1,
+      "type": "complex"
+    },
+    {
+      "addr": "0x449480",
+      "name": "sub_449480",
+      "size": 281,
+      "xref_count": 133,
+      "callee_count": 0,
+      "type": "leaf"
+    },
+    {
+      "addr": "0x41fd20",
+      "name": "sub_41FD20",
+      "size": 72,
+      "xref_count": 113,
+      "callee_count": 1,
+      "type": "wrapper"
+    },
+    {
+      "addr": "0x41fd70",
+      "name": "sub_41FD70",
+      "size": 90,
+      "xref_count": 112,
+      "callee_count": 1,
+      "type": "wrapper"
+    },
+    {
+      "addr": "0x49239b",
+      "name": "sub_49239B",
+      "size": 58,
+      "xref_count": 112,
+      "callee_count": 1,
+      "type": "wrapper"
+    },
+    {
+      "addr": "0x44b7d0",
+      "name": "nullsub_5",
+      "size": 1,
+      "xref_count": 102,
+      "callee_count": 0,
+      "type": "thunk"
+    },
+    {
+      "addr": "0x47d780",
+      "name": "sub_47D780",
+      "size": 199,
+      "xref_count": 100,
+      "callee_count": 0,
+      "type": "leaf"
+    },
+    {
+      "addr": "0x49faf5",
+      "name": "",
+      "size": 11,
+      "xref_count": 99,
+      "callee_count": 1,
+      "type": "wrapper"
+    }
+  ],
+  "imports_by_category": {
+    "crypto": [],
+    "network": [],
+    "file_io": [],
+    "process": [],
+    "registry": [],
+    "other": []
+  },
+  "call_graph_summary": {
+    "total_edges": 9526,
+    "max_depth_estimate": null,
+    "root_functions": [
+      "sub_401310",
+      "sub_401370",
+      "sub_4013D0",
+      "sub_4013E0",
+      "nullsub_8",
+      "sub_401880",
+      "0x4018b0",
+      "sub_4018C0",
+      "0x401900",
+      "sub_401910",
+      "0x401940",
+      "sub_401950",
+      "0x401980",
+      "sub_401990",
+      "0x4019c0",
+      "sub_4019D0",
+      "0x401a00",
+      "sub_401A10",
+      "0x401a40",
+      "sub_401A50",
+      "0x401a80",
+      "sub_401A90",
+      "0x401ac0",
+      "sub_401AD0",
+      "0x401b00",
+      "sub_401B10",
+      "0x401b40",
+      "sub_402020",
+      "sub_402030",
+      "sub_4020C0",
+      "sub_4021C0",
+      "sub_4043B0",
+      "sub_4049C0",
+      "sub_405260",
+      "sub_405270",
+      "sub_4052D0",
+      "sub_405330",
+      "sub_405340",
+      "sub_4053E0",
+      "sub_405480",
+      "sub_4054F0",
+      "sub_405500",
+      "sub_4055A0",
+      "sub_405640",
+      "sub_406750",
+      "sub_406E60",
+      "sub_407B70",
+      "sub_407BE0",
+      "sub_407C00",
+      "sub_407C20",
+      "sub_407C50",
+      "sub_407C60",
+      "sub_407CC0",
+      "sub_407FC0",
+      "sub_4081C0",
+      "sub_4081F0",
+      "sub_4082F0",
+      "sub_4083D0",
+      "sub_4085A0",
+      "sub_408720",
+      "sub_408B70",
+      "sub_4093B0",
+      "sub_4094A0",
+      "sub_409500",
+      "sub_409600",
+      "sub_409DB0",
+      "sub_40B090",
+      "sub_40B0A0",
+      "sub_40CBF0",
+      "sub_40D8C0",
+      "sub_40E730",
+      "sub_40E7F0",
+      "sub_40E9F0",
+      "sub_40ECB0",
+      "sub_40F100",
+      "sub_40F210",
+      "sub_40FFB0",
+      "sub_410280",
+      "sub_4103B0",
+      "sub_410420",
+      "sub_4104C0",
+      "sub_410940",
+      "sub_410A00",
+      "sub_410B20",
+      "sub_411480",
+      "sub_411700",
+      "sub_4117D0",
+      "sub_411B40",
+      "sub_411BA0",
+      "sub_411C00",
+      "sub_411D40",
+      "sub_411EA0",
+      "sub_412000",
+      "sub_4120A0",
+      "sub_4121F0",
+      "sub_412350",
+      "sub_412500",
+      "sub_412C80",
+      "sub_412FF0",
+      "sub_413150"
+    ],
+    "leaf_functions_count": 653
+  }
+}

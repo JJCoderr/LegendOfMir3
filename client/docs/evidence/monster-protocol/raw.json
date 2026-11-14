@@ -1,0 +1,18 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"result\":\"None\",\"stdout\":\"saved\\n\",\"stderr\":\"\"}"
+      }
+    ],
+    "structuredContent": {
+      "result": "None",
+      "stdout": "saved\n",
+      "stderr": ""
+    },
+    "isError": false
+  },
+  "id": 1
+}

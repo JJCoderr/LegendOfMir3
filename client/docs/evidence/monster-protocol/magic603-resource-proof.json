@@ -1,0 +1,37 @@
+{
+  "source": "G:\\游戏\\宝藏传奇3客户端\\MInfo.dat",
+  "sha256": "ed46fe33682180fbc23796797ba04f4db9928daf4eadb6937d79803d957a3b0b",
+  "rows_603": {
+    "#SPELL": [
+      [
+        900,
+        906,
+        150,
+        148,
+        603,
+        2,
+        3,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        255,
+        255,
+        255,
+        2,
+        1,
+        0
+      ]
+    ],
+    "#MAGIC": [],
+    "#EXPLOSION": []
+  },
+  "magic_603_present": false,
+  "ida": [
+    "4495D0:46EF60 lookup, null returns 0",
+    "46EF60:MAGIC table linear search, no SPELL fallback"
+  ],
+  "scope": "disk resource and static initializer; runtime extension patching not verified"
+}

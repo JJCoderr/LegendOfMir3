@@ -1,0 +1,46 @@
+char *__thiscall sub_449480(char *this)
+{
+  *(_DWORD *)this = &off_4AF934;
+  this[4] = 2;
+  *((_DWORD *)this + 70) = 10000;
+  *((_DWORD *)this + 71) = 10000;
+  *((_DWORD *)this + 2) = 0;
+  *((_DWORD *)this + 3) = 0;
+  *((_DWORD *)this + 73) = 1;
+  *((_DWORD *)this + 5) = 0;
+  *((_DWORD *)this + 6) = 0;
+  *((_DWORD *)this + 41) = 0;
+  *((_DWORD *)this + 40) = 0;
+  *((_DWORD *)this + 45) = 0;
+  *((_DWORD *)this + 44) = 0;
+  *((_DWORD *)this + 47) = 0;
+  *((_DWORD *)this + 46) = 0;
+  *((_DWORD *)this + 49) = 0;
+  *((_DWORD *)this + 48) = 0;
+  *((_DWORD *)this + 51) = 0;
+  *((_DWORD *)this + 50) = 0;
+  *((_DWORD *)this + 53) = 0;
+  *((_DWORD *)this + 52) = 0;
+  *((_WORD *)this + 8) = 0;
+  *((_DWORD *)this + 54) = 0;
+  *((_DWORD *)this + 56) = 0;
+  *((_DWORD *)this + 57) = 0;
+  *((_DWORD *)this + 61) = 0;
+  *((_DWORD *)this + 62) = 0;
+  *((_DWORD *)this + 63) = 0;
+  this[256] = 0;
+  this[257] = 0;
+  this[258] = 0;
+  this[288] = 0;
+  *((_WORD *)this + 148) = 0;
+  *((_WORD *)this + 116) = 0;
+  *(_DWORD *)(this + 234) = 0;
+  *((_WORD *)this + 119) = 0;
+  *((_WORD *)this + 120) = 0;
+  this[242] = 0;
+  memset(this + 316, 0, 0x104u);
+  *((_WORD *)this + 149) = 0;
+  *((_WORD *)this + 150) = 0;
+  *((_DWORD *)this + 76) = 5;
+  return this;
+}

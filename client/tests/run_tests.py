@@ -56,7 +56,7 @@ COMMON_SKILLS = tuple(int(c["id"]) for c in COMMON_CASES)
 IMPACT_SKILLS = tuple(int(c["id"]) for c in COMMON_CASES if c["projectile"] and c["explosion"] is not None)
 STATIONARY_SKILLS = tuple(int(c["id"]) for c in COMMON_CASES if not c["projectile"] and c["id"] not in (36,74,104,107,108))
 SUITES = {
-    "monsters": {"maps": ([], "monsters.gd"), "gallery": ([], "monsters.gd"), "regression": ([], "monsters.gd")},
+    "monsters": {"ai": (["--monster-ai"], None), "maps": ([], "monsters.gd"), "gallery": ([], "monsters.gd"), "regression": ([], "monsters.gd")},
     "skills": {
         "models": (["--spell", "--skill-wire", "--action-reply"], None),
         "bindings": ([], "skills.gd"),
@@ -236,6 +236,7 @@ def main():
         command.add_argument("--skill", type=int, choices=SKILLS, help="仅运行对应技能")
         command.add_argument("--skills", help="技能编号集合，逗号分隔；可与场景子命令组合，不指定场景时自动归集")
         command.add_argument("--shapes", help="怪物shape集合，逗号分隔；默认1.45全部外观")
+        command.add_argument("--monster-case", help="怪物regression中的专项，例如wire、zuma")
         command.add_argument("--start-index", type=int, default=1, help="地图展示从第几个开始，保留总进度")
         command.add_argument("--map", help="怪物地图编号，例如0为比奇省")
         command.add_argument("--MP4", nargs="?", const="", help="录制小体积MP4，可选输出路径；默认build/videos")
@@ -264,9 +265,12 @@ def main():
         valid = {row["shape"] for row in json.loads((ROOT / "tests/monster_cases.json").read_text(encoding="utf-8"))["monsters"]}
         if args.suite != "monsters" or any(not v.isdecimal() or int(v) not in valid for v in args.shapes.split(",")):
             parser.error("--shapes仅用于monsters，且必须为清单中的shape")
-        if args.scenario not in (None, "gallery"):
-            parser.error("--shapes仅用于gallery外观场景")
-        args.scenario = "gallery"
+        if args.scenario == "regression" and args.monster_case == "burrow":
+            pass
+        elif args.scenario in (None, "gallery"):
+            args.scenario = "gallery"
+        else:
+            parser.error("--shapes仅用于gallery或regression的burrow专项")
     if args.list:
         print(f"{args.suite}: {', '.join(suite)}")
         if args.suite == "skills":
@@ -328,6 +332,7 @@ def main():
                 if args.suite == "monsters":
                     command.append(f"--monster-scenario={case}")
                     command.append(f"--start-index={args.start_index}")
+                    if args.monster_case is not None: command.append("--monster-case=" + args.monster_case)
                     if args.map is not None: command.append("--monster-map=" + args.map)
                     if args.shapes is not None:
                         command.append("--shapes=" + args.shapes)

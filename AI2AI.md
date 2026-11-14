@@ -868,3 +868,102 @@ Features.md将功能细项及验收口径直接并入原48个模块的同一表�
 - 死亡阶段追加随机期限：每只怪物在共同起点后 0.2～4 秒死亡，按绝对时间调度，避免串行延迟随怪物数量累积。最后死亡后保留约 3 秒尸体，死亡阶段总长约 7 秒（帧调度可能有微小误差）。报告保存 death_delay。
 - 用户最终时间要求覆盖上述 4 秒方案：按每只怪物的 SM_HIT 发送时刻起算，随机 0.3～2 秒发送死亡，取消受击后额外 3 秒等待及独立死亡阶段。记录 struck_at/death_at/death_sent_after_ms；以绝对期限调度，图形帧可带来毫秒级误差。重新启动日志为 monster-regions-hit-2s.log。
 - 每轮地图的受击随机再次调整：切换区域时重新初始化随机源并清空洗牌袋，由该地图独立洗牌完整61项池；保留上一只技能编号避免跨地图相邻重复。此前跨地图连续耗尽技能池的说明由本条覆盖。2秒内随机死亡保持不变。
+
+## 2026-11-15 特殊怪物C++与原版核查
+- 用户明确特殊行为在C++实现，GD只作消息回放/断言。加入MonsterBehavior和C++行为描述接口，将远程攻击分支选择从GD迁入C++。
+- IDA新会话mir3-special-monsters只读提取405E50/4064B0/46F690/408C10/406E60/407FC0/405C00；核对祖玛入场石化位、动作后休眠恢复、21苏醒及85的20帧/固定方向。
+- 修复C++休眠状态仅入场生效、动作完成后不重应用的问题；83/84/85专项通过，祖玛区域回放通过。截图在build/screenshots/monster-map-D501-awake.png等。
+- 建立196非别名外观逐项special-audit.json，所有仍标记pending_full_review，不用3种专项代替全部特殊怪物完成。
+- 参考原始C++与Zircon核查教主AI，发现召唤阶段/数量版本不同，记录而不盲目移植。全集回归先前缺+GOOD导致二次操作被预测门禁阻止，已补首次确认；仍有后续鹿割肉路径需补协议闭环并复核，不能标记全集通过。
+
+## 2026-11-15 关键纠错：怪物虚表起点偏移4字节
+- IDA查证4AF3D0属于链表节点，405500分配16字节节点使用它；真正怪物虚表4AF3D4由40579B/40581D引用。+16=406750动作、+36=407B70外观更新，签名闭合。此前按4AF3D0导出的整张消息映射错误，相关旧测试通过结论作废。
+- collect.py更正基址并重新导出32函数及vtable.json。正确核心映射：9后退、10/1316站立入场、11走动、14普通攻击、20钻出/苏醒、21钻回、22远程、23特殊分支队列、27起身、31受击、32尸体末帧、33骨架、34死亡动画、1309受击再追加31。53生命，41头部外观DWORD，42名字，654光照，656名色，657即时状态，1100/1101开关血条。801/807/808入场/转移，800/806离场表现。
+- 新增C++ hud_monster_wire.cpp，已接入CMake与apply_scene_message；删除旧怪物错误分派段，保留独立人物路径。23特殊攻击通过SceneChicken::SpecialAttack入队；1309使用RelayedHit，转移消息使用Transfer。处理32末帧、33骨架、34动画，不再用27死亡。
+- 展示maps/gallery及祖玛专项的消息常量已改用正确映射；C++行为描述birth=10、wake=20、普通攻击14/远程22。最新build通过；monster-zuma-correct-wire.log祖玛区域通过，monster-zuma-wire-v2.log三类专项通过。
+- 重要未完：旧run_regression主体仍有旧映射，必须逐条迁移/重验；其它技能召唤/map-events等GD也可能引用旧怪物包，需审计。不能凭当前子集声称怪物全集完成。特殊行为审计196条仍pending_full_review。
+- 后续实现核查点：20/27/死亡正文状态需随队列消费更新而非提前生效；1316过渡/复活字段；9/11头坐标与453450位移公式；21/20反序和实际移除时机；41正确头部外观；23各分支参数/队列时序；死亡后消息消费。C++新入口已纠正主分派，但这些细节须继续对照IDA。
+- 构建注意：不要在并行构建hud_view.cpp期间修改同文件，否则对象文件可能带旧内容且mtime更新后跳过重编。本次已在构建结束后touch源文件并完整重编，运行时profile已验证正确新消息值。
+
+### C18 队列状态与复活修正
+- 重新实时调用IDA collect.py成功，32函数证据更新；4085A0确认1316清除死亡标志并站立。Entry增加revive，修复死怪忽略复活；600过渡字段尚未实现。
+- 20/27/32–34的状态随动作保存并在消费时应用，已检查Death/Burrow/Rise落点正确。Release构建成功，无运行中的Godot占用。
+- 单一monsters.gd新增wire专项，统一run_tests.py新增--monster-case。实际运行 `monsters regression --monster-case wire` 通过，日志monster-corrected-wire.log；验证教主苏醒中排队尸体的状态不提前生效、出队生效、1316站立复活、657即时状态。入口13项单测通过。
+- 尚待旧regression全集迁移、特殊怪物逐项审计和参考AI实现；196条special-audit不能标完成。目标保持active。
+
+### C18 钻出、钻回与门类生命周期
+- IDA全库扫描+400444位移引用，得到405880/408720/408B70/40E7F0/421FF0/42E780，完整证据burrow-state-xrefs.json。21完成状态2→3后由场景删除，移除包不会打断状态2；20的倒序不意味着隐藏。530–533/538完成20方向7、21方向0并保留。
+- C++修复倒播与隐藏混用、门方向按历史次数错误切换、钻回后残留对象；移除包保留当前钻回并清队列。新增snapshot方向和倒播字段，仅供验收观察。
+- Release通过；burrow专项前14外观通过，538方向6入场因资源验证失败，使用方向0单项重新实跑通过（monster-burrow-538.log）。这个方向限制尚待资源/原版空帧策略核查，不能视为完整八方向通过。burrow-removal专项通过，验证移除不截断动画且结束删除。
+- 更新audit_special.py的阶段证据和旧祖玛日志引用，但所有196条仍pending_full_review。旧巨大regression仍未迁移，地图/人物/NPC独立全集仍待。
+
+### C18 特殊攻击专项迁移及603缺项
+- 将check_special_effect重写为23排队而不是657打断移动，分支1/4/25实跑通过；check_status_blend改657并通过；check_rise_health改34/27/53，保持独立SM_HEALTH_PERCENT注册并通过。第一次误将注册替换成OPENHEALTH导致字典缺键，已纠正且结束对应Godot进程。
+- C++快照新增scene_effects包含独立怪物效果；原spell_effects保持过滤逻辑，Release编译通过。新增同一monsters.gd中special-branches遍历26分支，25项登记资源通过，21号资源603缺失，保留失败。日志monster-special-branches.log，不得宣称全26通过。
+- 内存解析MInfo.dat确认MAGIC无603，SPELL603为900/906/150/148；IDA409DB0请求独立magic603。需跟4495D0的查表/补表及原版模块；不要随意换SPELL。branch26仍未修正反向端点。其余旧regression大段仍待迁移。
+
+### C18 独立魔法初始化器证据
+- IDA实时导出449480/4495D0/46EF60/44B7D0/44B7E0/44A500/44A110及401960/401980/401B50/46EFA0/46ED80。4495D0仅查MAGIC表，缺编号返回0，无SPELL回退；新增check_magic603.py可重复内存解析并校验长度/校验和/SHA，magic603-resource-proof.json确认当前表缺603。外部模块运行时补表仍未查，不替换效果，不将完整效果检查改为跳过。
+- 修正此前branch26待改推断：120为定点而非弹道，44B7E0采用终点（施法者），有target才跟随；现有C++无目标落点正确。special-origin专项实际通过，观察非弹道/施法者格/700ms/方向0，日志monster-special-origin.log。目标跟随未验；退出出现4个ObjectDB实例泄漏警告待查。
+- 本轮无生产逻辑改动，证据排除了错误修改方向。旧regression迁移、全部特殊AI和地图/人物/NPC仍未完成，goal保持active。
+
+### C18 目标跟随与退出回收验证
+- 新增monsters.gd中special-follow，实际通过26分支延迟结束后跟随移动像素、目标删除解绑/停最后位置、同编号重建不补绑，日志monster-special-follow.log。
+- verbose重跑special-origin定位4泄漏实例为MP3/WAV音频流及Playback，不是特效节点。检查_exit_tree已有stop+清空stream，测试finish将释放后等待80ms改350ms给音频线程回收。相同用例复测monster-effect-cleanup-after.log无泄漏警告，special-follow亦无警告；未改生产音频逻辑。不要扩大成全局无泄漏结论。
+- 下一步仍需迁移旧run_regression主体：422行后的旧20入场、31后退、10移动、14受击、1309后退等错误，尤其1309应受击后追加31，不能机械替换断言；保留原功能覆盖，不用新少量专项代替全集。
+
+### C18 旧回归移动/受击段迁移
+- 迁移run_regression从首次鸡入场至死亡受击段：10站立、9后退、11移动、31受击、53生命、657即时状态，41头部外观DWORD。后续33及其他尸体/名字/钻地/首次创建段仍未迁移，不得宣称完整正确。
+- 按40D8C0重写1309检查为check_relay_queue，共用于旧全集和--monster-case relay；先行走→1309受击→此前排队的返回→复制31受击，专项实跑通过，monster-relay-queue.log。删除无引用的RelayedBackstep错误C++类型及处理分支，Release构建成功。
+- wait_for_monster_step及旧回归头部几处改为毫秒截止时间，原120/20/15渲染帧窗口在高FPS下不足实际动作时长。修复后旧全集已越过后退、追帧、受击、1309，在“注册血条显示半血并绘制生命差值”断言失败；日志monster-regression-migration.log。下一步拆开该联合断言记录实际健康/绘制状态，查damage_numbers或注册时序，不降低验收预期。当前无测试进程继续运行。
+
+### C18 血条绘制与姓名格式纠错
+- 拆分联合断言确认血条半血正确，伤害数字enabled=true但80ms后为空。DamageNumbers按绘制次数老化40帧；改为RenderingServer.frame_post_draw取首次绘制结果后通过。全集随后通过状态、变形头部、受击、鸡尸体等段。
+- 迁移33骨架、鹿/半兽人/猪入场和34死亡、姓名656/42、变形41头部DWORD。尚未验证全部迁移部分；运行停在鹿同帧离场+入场的编号重用预期。日志monster-regression-migration.log。42E780与42EC70各有不同队列，下一步先查原版帧调用顺序，不能单为旧测试通过就擅自提前清空移除队列。
+- IDA实时导出49FAF5/49FA6A/4A09E0，证明入场名字取最后斜杠并atoi解析十进制颜色，不是旧测试的单字节249。hud_monster_wire.cpp补rfind+strtol+BYTE截断，测试改GBK猪/249文本。Release编译成功；新增identity专项验证入场红色、656白色、42红色、41变形，实际通过monster-identity.log。
+- 所有目标仍active；没有启动后遗留测试进程。先前同帧重用失败须复核语义，不能直接当作已证实C++缺陷。
+
+### C18 旧回归完整迁移后首次通过
+- IDA调用链证实424280先在4243B7执行42E780删除，再在4243BE执行42EC70分发对象消息；scene-queue-callers.json及424280.c保存证据。hud_monster_wire.cpp处理可创建消息前清理待移除记录，再判断对象存在性，修复尸体吞掉重入和新对象被后续删除。Release通过；reentry与burrow-removal专项均通过。
+- 迁移旧regression后段：33骨架、31钻回后真正删除及丢弃旧队列、32直接末帧尸体、14普通攻击/22远程、27起身、34死亡先创建对象、1316站立、807/801/808首次入场、657即时状态。剩余旧120帧等待改2500ms上限，修复高FPS下攻击断言提前超时。保留割肉/姓名/变形/资源库/光照/队列/状态等功能覆盖。
+- **当前monsters regression整条回放首次退出0通过**，日志client/build/monster-regression-migration.log，含MONSTER_RELAY_QUEUE_OK、MONSTER_SPECIAL_QUEUE_OK、MONSTER_ZUMA_LIFECYCLE_OK、MAP_BUTCH_UI_OK和TEST_SUITE_SUBSET_OK；无该次泄漏警告。13项入口单测通过。此命令仅regression场景，不是全部maps/gallery/special-branches，更不是全部196外观或服务端AI完成。
+- 待办仍包括MAGIC603资源/外部模块边界、完整26分支视觉/时序、所有特殊行为和参考AI、全地图展示、后续地图/人物/NPC独立测试全集。其它网络批次交错（例如先入场后移除）尚未完整模拟双队列，不要扩大reentry专项证明。goal保持active，无运行中Godot任务。
+
+### C18 修正协议后的13区域完整展示与审计
+- 实际运行monsters maps --screenshots完整退出0，日志monster-all-regions-corrected.log，13区域/276来源地图归类、195次怪物实例展示；已查看比奇攻击截图，进度/区域标题及多怪同屏正常。
+- 新增audit_monster_showcase.py，核对完整区域集合、结束标记、受击/死亡接受、尸体、随机技能连续重复与两秒时限，输出monster-showcase-audit.json。它发现展示脚本先前只对accepted=true项目断言，未接受的行为被默默放过，故日志成功不能代表行为成功。
+- 本轮真实缺陷/待核项：shape5受击及死亡不接受，shape186死亡不接受且未形成尸体；13个实例未观察到走动，含5/31/67/73/95/104/106/127（需按原版固定怪/资源判断）；253条不可用来源记录、39未映射名称。死亡发包350–1999ms，无超2秒记录，技能池无审计重复错误。
+- 原始报告和审计已保存在docs/evidence/monster-protocol/all-regions-report.json及all-regions-audit.json。traversal_verified=false表示行为要求不全，不是区域没跑完。下一步核对5和186资源/动作，给展示补攻击接受和其他明确失败报告，不能过滤失败项伪装通过。当前没有Godot运行任务，goal保持active。
+
+### C18 空帧与可见行走方向
+- 再次实时IDA导出32函数成功。406750/40ECB0确认逻辑动作与当前帧绘制分离；资源证据empty-action-frames.json确认5整组动作为空、186死亡第10帧空。refresh_monster_shape不再为已有同外观对象预验整组动作，保留原10帧死亡，空帧不绘制。变形/首次创建的站立资源验证仍保留，不能扩大为全部空帧路径一致。
+- C++ profile增加visible_walk_directions，使用实际行走六帧与站立资源；展示随机选择这些方向，无可见方向则记录incomplete_walk_or_idle_resources，不推断为固定AI。普通/远程攻击接受值均写报告，审计新增攻击检查。
+- Release构建通过；empty-actions专项实际通过，日志monster-empty-actions-profile.log（5无可见行走方向，186为八方向；两者受击与死亡状态成功）。完整regression复测在运行，最终状态须另记。
+- 参考ObjectMonster.cpp复核祖玛群体苏醒/召唤、蜂后500ms产蜂、石怪/触龙/沙怪钻地、骷髅首次出生及神兽战斗形态，细节补docs/MonsterBehavior.md。仍需服务端行为实现和逐项验收，196条清单不能整体勾选。
+- 后续结果：monster-regression-empty-frames.log完整regression退出0，祖玛/特殊队列/转发受击断言通过。monster-all-regions-empty-frames.log全部13区域195实例截图回放退出0；独立audit_monster_showcase.py退出0，errors为空，所有攻击/受击/死亡接受，死亡364–1980ms，完整行走资源的实例均观察到移动。
+- 13次实例仍因不完整行走/站立资源没有展示移动；253条不可用来源记录、39未映射名称未解决，complete_monster_system=false。最新报告及审计另存all-regions-empty-frames-report.json / all-regions-empty-frames-audit.json，不覆盖前轮失败证据。已查看沙漠行走截图。构建和Godot进程均已结束。
+
+### C18 1316显现过渡
+- 上一轮为有效进展：空帧修正及13区域独立审计通过。本轮get_goal确认目标仍为怪物→地图→人物→NPC各一个独立测试集，保持active。
+- 实时IDA读取405CB0/490821并保存伪代码。结合4085A0/40E7F0/40ECB0，落实1316出队后600ms显现；普通权重31*elapsed/600，隐身固定8/32，状态色过渡整数(sum/2)，阴影13/32。C++计时与材质管理，shader仅实现像素混合，GD无行为逻辑。旧待办600过渡已实现普通非悬停路径；300ms离场及悬停权重修饰仍待。
+- Release构建通过；同一monsters.gd新增revive-transition并接入regression主体。实际专项+截图通过monster-revive-transition.log，检查队列延后启动、尸体清除、600ms结束、重复复活重置及普通站立保持计时。已目视中段/结束截图；status-blend复测通过monster-status-after-revive.log。本轮没有重跑未受影响的全部地图。没有遗留构建/Godot进程。
+- 目标仍未完成：所有特殊AI及196外观完整审计、MAGIC603边界、来源缺项与其余子系统待处理。下一步可继续42E9A0离场过渡及特殊怪物参考状态机，而非重复已通过区域回放。
+
+### C18/S11 祖玛参考AI模型及场景接入
+- 上一轮1316过渡为有效进展。本轮转入实际特殊AI：复核ObjectMonster.cpp的CheckComeOut、CScultureObject、CScultureKingObject和Handler_Map.cpp的GetMapObject，明确距离方形、对象资格、非递归群体唤醒及不联动教主。来源为参考服务端，不声称从客户端IDA得出服务端AI。
+- 新增无Godot依赖的world/zuma_ai.hpp：石像状态、直接触发等待2秒+步速门限、间接触发不加等待、教主危险等级及6–11次生成/30上限、生成失败不占额、存活随从回收、满血重置。随机与生成/存活/视野通过回调注入；数据库索引用enum，未冒充shape。保留参考HP/MaxHP*5整数除法，时间用单调截止值避免旧DWORD未来时间下溢。默认600ms仅演示夹具，真实步速待数据库。
+- C++ advance_monster_ai离线适配器把唤醒结果送现有Burrow队列，默认不运行，联网拒绝；移除或重建对象同步清AI。教主原型尚未映射，输出unresolved_summons；不生成假随从。ready仅供通用移动/攻击层继续接入，尚无完整追踪/攻击闭环，石化/视野完整生产接入亦待。
+- 统一入口新增monsters ai，使用原hud_checks中的--monster-ai，无第二个GD。模型测试覆盖资格过滤、≤2/7边界、不连锁、不唤醒教主、严格等待边界、召唤上限/失败/清理顺序/满血/石化，实际通过MONSTER_AI_MODEL_OK。13项入口单测通过，Release DLL/hud_checks构建成功。
+- monsters.gd新增zuma-ai并接入regression主体，实际图形专项+截图monster-zuma-ai-scene.log通过；验证联动进入原版动作、教主独立唤醒方向0、未映射请求6–11、不生成错误shape、同ID重建重新唤醒。已看group-wake截图。未重复跑无关全地图；没有遗留Godot或构建任务。目标继续active，召唤原型解析/完整AI及其他子系统仍待。
+
+### C18/S11 教主随从实际生成
+- 上轮AI模型和场景接入为有效进展。本轮检查参考仓库，SQL仅DDL没有原始FLD_APPR数据。按CP949解码CallSlave注释（143마궁사、145주마신장、148주마호법、126쐐기나방），再核对Zircon Client/Models/MonsterObject.cs同名Mon_9组2/3/4、Mon_8组5，得到82/83/84/75的参考语义映射。reference-zuma-prototypes.json保存源哈希和原文；不将此说成恢复原数据库。
+- 新world/monster_prototypes.hpp使用枚举及明确名称绑定，未知原型失败。advance_monster_ai实际分配独立ID、写原生ANSI名字、按83/84特殊出生状态创建，成功返回spawned、失败spawn_failures。参考AddCreature(...,FALSE)不搜索替代格，故同批在教主前方同格叠放，没有为了展示改成随机散布。
+- Release DLL和hud_checks构建通过；monsters ai模型通过（增加四映射/未知原型检查）。monsters regression --monster-case zuma-ai --screenshots实际通过monster-zuma-spawn-scene.log，验证5波30实体、6–11波次、ID唯一、外观/出生/前方格、移除10+尸体3释放配额、满血后再次召唤，以及原唤醒/重建检查。已目视summons截图。无遗留Godot或构建任务。
+- 待办仍有真实随从属性、客户端教主固定唤醒方向与服务端逻辑方向分离、ready输出通用追踪/攻击，以及其它特殊AI和后续子系统。当前适配器始终显式离线，不运行联网自主AI。完整目标继续active，不能以新增召唤专项代替196外观及四子系统完成。
+
+### C18/S11 追踪与近战、提交前记录
+- 上轮随从实体生成是有效进展。本轮读取参考MonsterNormalAttack/AttackTarget/GotoTargetXY，新增无Godot依赖monster_pursuit.hpp，覆盖列表顺序选敌、搜索/焦点时钟、八邻格攻击及冷却、方向试探与无效目标释放。保留近战冷却期间原地等待和同格不能攻击。
+- ZumaAi::Actor持有独立pursuit逻辑方向，出生时记录；召唤按该方向而非客户端苏醒强制方向0。advance_monster_ai接入地形/占位检查与C++行走/攻击动作，显示忙碌时不堆积离线快进动作。只接入祖玛对象，完整其他AI、伤害/原始属性等仍待。
+- Release DLL/hud_checks构建成功；monsters ai通过（含新增monster_pursuit_checks.hpp）；同一monsters.gd新增pursuit并接入regression主体，实际图形通过monster-pursuit-scene.log，已看攻击截图；zuma-ai复测monster-zuma-after-pursuit.log通过。pursuit期间WASAPI设备失效警告，行为通过但不宣称音频验证通过。无遗留进程。
+- 用户要求提交当前修改；本次提交包括现有代码、测试、IDA证据、文档与用户增加的AGENTS怪物规则。该提交是阶段进展，不标记整个目标完成。

@@ -3,6 +3,7 @@ render_mode unshaded, blend_disabled;
 
 uniform sampler2D background : hint_screen_texture, repeat_disable, filter_nearest;
 uniform float source_weight = 13.0;
+uniform bool combine_before_floor = false;
 
 void fragment() {
     vec4 source = texture(TEXTURE, UV);
@@ -13,5 +14,7 @@ void fragment() {
     vec3 dst565 = floor(round(destination * 255.0) / channel_step);
     vec3 mixed = floor(src565 * source_weight / 32.0)
         + floor(dst565 * (32.0 - source_weight) / 32.0);
+    // 490821的状态色过渡使用整数(sum/2)，不同于48EF15分别截断。
+    if (combine_before_floor) mixed = floor((src565 + dst565) / 2.0);
     COLOR = vec4(mixed * channel_step / 255.0, 1.0);
 }

@@ -1,0 +1,3190 @@
+{
+  "scope": "1.45 catalog, excludes resource aliases",
+  "warning": "branch_categories is an initial inventory, not an exhaustive proof; conditions, resource tables, subclass dispatch and server rules still require review",
+  "functions": {
+    "attack_effect": [
+      "0x40CBF0.c",
+      6,
+      0
+    ],
+    "ranged_attack": [
+      "0x40B0A0.c",
+      4,
+      7
+    ],
+    "death_effect": [
+      "0x408c10.c",
+      4,
+      0
+    ]
+  },
+  "monsters": [
+    {
+      "shape": 0,
+      "name": "沙漠蜥蜴（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 1,
+      "name": "夜行鬼（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 2,
+      "name": "变异章鱼",
+      "branch_categories": [
+        "struck_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 3,
+      "name": "沙鬼（参考）",
+      "branch_categories": [
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 4,
+      "name": "石巨人",
+      "branch_categories": [
+        "death_effect",
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 5,
+      "name": "冥界之门",
+      "branch_categories": [
+        "attack_effect",
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 6,
+      "name": "轻装士兵",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 7,
+      "name": "蚂蚁治疗者",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 8,
+      "name": "铠甲蚁",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 9,
+      "name": "践踏者",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 10,
+      "name": "混沌骑士",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 12,
+      "name": "尸体潜行者",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 13,
+      "name": "诺玛法师",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 14,
+      "name": "蚂蚁士兵",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 15,
+      "name": "未命名外观",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 16,
+      "name": "劳动蚂蚁（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 17,
+      "name": "诺玛精英",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 18,
+      "name": "幻影",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 19,
+      "name": "血色死灵法师",
+      "branch_categories": [
+        "attack_effect",
+        "ranged_attack",
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 20,
+      "name": "鸡",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 21,
+      "name": "鹿",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 22,
+      "name": "半兽人（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 23,
+      "name": "半兽人",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 24,
+      "name": "半兽勇士",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 25,
+      "name": "吐液蜘蛛",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 26,
+      "name": "守卫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 27,
+      "name": "半兽统领",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 28,
+      "name": "蝎子",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 29,
+      "name": "洞穴蝙蝠",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 30,
+      "name": "森林雪人",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 31,
+      "name": "食人花",
+      "branch_categories": [
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 32,
+      "name": "骷髅",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 33,
+      "name": "掷斧骷髅",
+      "branch_categories": [
+        "ranged_attack",
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 34,
+      "name": "骷髅斧兵",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 35,
+      "name": "骷髅战士",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 36,
+      "name": "骷髅领主",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 37,
+      "name": "洞穴蛆虫",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 38,
+      "name": "钉耙猫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 39,
+      "name": "钉耙猫（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 40,
+      "name": "稻草人",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 41,
+      "name": "沃玛异教徒",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 42,
+      "name": "嗜血食尸鬼",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 43,
+      "name": "沃玛喷火者",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 44,
+      "name": "沃玛折磨者",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 45,
+      "name": "沃玛教主",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 46,
+      "name": "棘背暗蜥",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 47,
+      "name": "粪怪",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 48,
+      "name": "幽灵术士",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 49,
+      "name": "幽灵法师",
+      "branch_categories": [
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 50,
+      "name": "贪食鬼",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 51,
+      "name": "吞噬鬼",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 52,
+      "name": "驱尸鬼",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 53,
+      "name": "食尸鬼勇士",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 54,
+      "name": "红蛇",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 55,
+      "name": "护卫武士／练功师（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 56,
+      "name": "白骨",
+      "branch_categories": [
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 57,
+      "name": "虎蛇",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 58,
+      "name": "羊",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 59,
+      "name": "飞天刺虫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 60,
+      "name": "螯虫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 61,
+      "name": "内脏蠕虫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 62,
+      "name": "威思而小虫（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 63,
+      "name": "甲虫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 64,
+      "name": "尖刺甲虫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 65,
+      "name": "狼",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 66,
+      "name": "蜈蚣",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 67,
+      "name": "邪恶钳虫领主",
+      "branch_categories": [
+        "attack_effect",
+        "struck_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 68,
+      "name": "变异蛆虫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 69,
+      "name": "蠼螋",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 70,
+      "name": "铁枪虫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 71,
+      "name": "幼蜂",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 72,
+      "name": "蝴蝶虫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 73,
+      "name": "楔蛾幼虫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 74,
+      "name": "小楔蛾",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 75,
+      "name": "楔蛾",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 76,
+      "name": "红野猪",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 77,
+      "name": "黑野猪",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 78,
+      "name": "獠牙领主",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 79,
+      "name": "爪蛇",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 80,
+      "name": "邪恶毒蛇",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 81,
+      "name": "凶鼠",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 82,
+      "name": "祖玛弓箭手",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 83,
+      "name": "祖玛狂信徒",
+      "branch_categories": [
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "dormant_entry",
+        "wake_animation",
+        "dormant_restore",
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "test": "monsters.gd/check_zuma_lifecycle; monster-zuma-wire-v2.log",
+      "reference": "LegendOfMir3_Src/ObjectMonster.cpp:CScultureObject,CScultureKingObject; Zircon/ZumaGuardian.cs,ZumaKing.cs",
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 84,
+      "name": "祖玛卫士",
+      "branch_categories": [
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "dormant_entry",
+        "wake_animation",
+        "dormant_restore",
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "test": "monsters.gd/check_zuma_lifecycle; monster-zuma-wire-v2.log",
+      "reference": "LegendOfMir3_Src/ObjectMonster.cpp:CScultureObject,CScultureKingObject; Zircon/ZumaGuardian.cs,ZumaKing.cs",
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 85,
+      "name": "祖玛教主",
+      "branch_categories": [
+        "attack_effect",
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "dormant_entry",
+        "wake_animation",
+        "dormant_restore",
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "test": "monsters.gd/check_zuma_lifecycle; monster-zuma-wire-v2.log",
+      "reference": "LegendOfMir3_Src/ObjectMonster.cpp:CScultureObject,CScultureKingObject; Zircon/ZumaGuardian.cs,ZumaKing.cs",
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 86,
+      "name": "弓箭守卫",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 89,
+      "name": "神兽（参考）",
+      "branch_categories": [
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 90,
+      "name": "神兽",
+      "branch_categories": [
+        "attack_effect",
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 91,
+      "name": "沃玛战将（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 92,
+      "name": "水蜥蜴",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 93,
+      "name": "腐蚀喷毒兽",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 94,
+      "name": "沙鲨",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 95,
+      "name": "诅咒仙人掌",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 96,
+      "name": "针蚁",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 97,
+      "name": "风怒女巫",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 98,
+      "name": "诺玛教主+（参考）",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 99,
+      "name": "幻影士兵",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 101,
+      "name": "蝙蝠蜘蛛",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 102,
+      "name": "独眼蜘蛛（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 103,
+      "name": "天狼蜘蛛（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 104,
+      "name": "赤月恶魔",
+      "branch_categories": [
+        "struck_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 105,
+      "name": "幼虫",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 106,
+      "name": "凝视蜘蛛",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 107,
+      "name": "赤月守卫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 108,
+      "name": "赤月护卫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 109,
+      "name": "赤月红护卫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 110,
+      "name": "赤月灰护卫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 111,
+      "name": "剧毒蜘蛛",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 112,
+      "name": "暗黑蜘蛛",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 113,
+      "name": "森林守卫",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 114,
+      "name": "城镇守卫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 115,
+      "name": "沙漠守卫",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 116,
+      "name": "褐色马（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 117,
+      "name": "白马（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 118,
+      "name": "黑马（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 119,
+      "name": "猪",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 120,
+      "name": "混沌使者破天",
+      "branch_categories": [
+        "attack_effect",
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 121,
+      "name": "牛",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 122,
+      "name": "诺玛（参考，同外观有多个名称）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 123,
+      "name": "未命名外观",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 124,
+      "name": "玲花（参考）",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 125,
+      "name": "咸蛋／柴三郎等（参考）",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 126,
+      "name": "千年毒蛇／七点白蛇（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 127,
+      "name": "栗树",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 128,
+      "name": "诺玛杂兵",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 129,
+      "name": "诺玛战士",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 130,
+      "name": "般若右护卫",
+      "branch_categories": [
+        "attack_effect",
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 131,
+      "name": "般若左护卫",
+      "branch_categories": [
+        "attack_effect",
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 132,
+      "name": "腐败食尸鬼",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 133,
+      "name": "冰霜牛魔",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 134,
+      "name": "雷电牛魔",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 135,
+      "name": "狂暴牛魔",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 136,
+      "name": "火焰牛魔",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 137,
+      "name": "牛魔",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 138,
+      "name": "腐烂食尸鬼",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 139,
+      "name": "邪恶帝王",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 140,
+      "name": "骷髅队长",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 141,
+      "name": "太斗巫妖",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 142,
+      "name": "骷髅士兵",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 143,
+      "name": "骷髅刀兵",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 144,
+      "name": "骷髅弓手",
+      "branch_categories": [
+        "ranged_attack",
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 145,
+      "name": "变异跳蚤",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 146,
+      "name": "紫色跳蚤",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 147,
+      "name": "爆破变异跳蚤",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 148,
+      "name": "蓝色爆破跳蚤",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 149,
+      "name": "毒跳蚤",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 150,
+      "name": "利牙兽",
+      "branch_categories": [
+        "attack_effect",
+        "struck_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 152,
+      "name": "怒龙神（参考）",
+      "branch_categories": [
+        "attack_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 153,
+      "name": "圣诞树（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 154,
+      "name": "猴子",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 155,
+      "name": "猿猴战将（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 156,
+      "name": "食人狂信徒",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 157,
+      "name": "邪恶狂信徒",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 158,
+      "name": "邪恶巨象",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 159,
+      "name": "火焰狮鹫",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 160,
+      "name": "石狮鹫",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 161,
+      "name": "变异队长",
+      "branch_categories": [
+        "death_effect",
+        "struck_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 162,
+      "name": "粉红女神",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 163,
+      "name": "绿色女神",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 164,
+      "name": "真天魔神",
+      "branch_categories": [
+        "attack_effect",
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 165,
+      "name": "丛林战士1（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 166,
+      "name": "丛林战士2（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 167,
+      "name": "投石车（参考）",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 169,
+      "name": "弩车（参考）",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 170,
+      "name": "冰雪女神",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 171,
+      "name": "野猪",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 172,
+      "name": "寒冰守护神（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 173,
+      "name": "木障（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 174,
+      "name": "诺玛长老",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 175,
+      "name": "雌诺玛（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 176,
+      "name": "小诺玛（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 177,
+      "name": "诺玛残兵",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 178,
+      "name": "独臂诺玛（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 179,
+      "name": "诺玛卫士（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 180,
+      "name": "诺玛骑兵",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 181,
+      "name": "诺玛重甲兵",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 183,
+      "name": "诺玛投石兵",
+      "branch_categories": [
+        "ranged_attack"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 184,
+      "name": "诺玛大法师",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 185,
+      "name": "诺玛皇家卫士",
+      "branch_categories": [
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 186,
+      "name": "诺玛统帅",
+      "branch_categories": [
+        "attack_effect",
+        "death_effect"
+      ],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 187,
+      "name": "血石",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 188,
+      "name": "聚宝箱（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 189,
+      "name": "未命名外观",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 190,
+      "name": "雪人（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 191,
+      "name": "狂暴蜥蜴",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 192,
+      "name": "锯齿蜥蜴",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 193,
+      "name": "变异蜥蜴",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 530,
+      "name": "沙巴克南门",
+      "branch_categories": [
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 531,
+      "name": "沙巴克北门",
+      "branch_categories": [
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 532,
+      "name": "沙巴克东门",
+      "branch_categories": [
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 533,
+      "name": "沙巴克西门",
+      "branch_categories": [
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ],
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    },
+    {
+      "shape": 534,
+      "name": "记事本1（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 535,
+      "name": "记事本2（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 536,
+      "name": "记事本3（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 537,
+      "name": "记事本4（参考）",
+      "branch_categories": [],
+      "status": "pending_full_review",
+      "verified": [],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior"
+      ]
+    },
+    {
+      "shape": 538,
+      "name": "诺玛城门（参考）",
+      "branch_categories": [
+        "birth_or_hide"
+      ],
+      "status": "pending_full_review",
+      "verified": [
+        "digup_survives_digdown_removes_or_gate_pose"
+      ],
+      "pending": [
+        "birth_idle",
+        "movement_direction",
+        "attacks",
+        "struck",
+        "death_remove",
+        "server_behavior",
+        "direction_6_entry_resource_rejected"
+      ],
+      "burrow_test": "monsters.gd/check_burrow_lifecycle; monster-burrow-lifecycle.log (14 cases), monster-burrow-538.log (direction 0)"
+    }
+  ]
+}

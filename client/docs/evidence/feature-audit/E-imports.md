@@ -1,0 +1,7 @@
+# E-imports：目标身份与导入视图
+
+本次IDA survey确认分析镜像为Mir3-unpacked-analysis.exe，SHA256为08f68b794bfb28803d1132c02b26d2595dba309be5b2b475ae0cdfe6a752f8aa，与已有证据一致。当前库包含2006个函数、768个字符串、4个段。
+
+IDA的imports_by_category六类均为空：当前解包分析库未提供可用标准导入目录。此结果不是“没有网络或文件功能”的证据。后续以API命名符号、调用点和资源字符串作为辅助锚点；不能据此宣称完整IAT已恢复。尚未执行IAT修复或动态API覆盖验证，本次功能审计需保留此边界。
+
+原始证据见survey.json。

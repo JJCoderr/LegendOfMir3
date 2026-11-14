@@ -87,17 +87,17 @@ func run() -> void:
 	await settle()
 	quit()
 
-func monster_packet(opcode: int, actor: int, cell: Vector2i, facing: int, shape: int, hit_variant: int = 0) -> PackedByteArray:
+func monster_packet(opcode: int, actor: int, cell: Vector2i, facing: int, shape: int, hit_variant: int = 0, status: int = 0) -> PackedByteArray:
 	var feature := PackedByteArray()
 	feature.resize(16)
 	feature[0]=3
 	feature.encode_u16(2,shape)
+	feature.encode_u32(4,status)
 	feature.encode_u16(14,hit_variant)
 	var packet := game_reply(opcode,actor,cell.x,cell.y,facing)
 	packet.append_array(encode_scene_bytes(feature))
 	return packet
 
-const RANGED_SHAPES := [7,19,33,46,82,86,95,96,124,125,144,145,146,156,167,169,183]
 
 func showcase_maps() -> void:
 	var selected_map := ""
@@ -153,22 +153,23 @@ func showcase_map_group(group: Dictionary) -> bool:
 		var actor := 7000+index
 		index+=1
 		var shape := int(monster.shape)
+		var behavior: Dictionary=hud.monster_behavior_profile(shape)
 		var placed := false
 		for attempt in range(80):
 			var pixel := Vector2i(showcase_rng.randi_range(90,690),showcase_rng.randi_range(210,370))+camera
 			cell=Vector2i(pixel.x/48,pixel.y/32)
 			if cell in occupied or cell==SHOWCASE_ORIGIN: continue
-			if hud.apply_game_message(monster_packet(Mir3HudView.SM_DIGUP,actor,cell,showcase_rng.randi_range(0,7),shape)):
+			if hud.apply_game_message(monster_packet(behavior.birth_opcode,actor,cell,showcase_rng.randi_range(0,7),shape,0,behavior.birth_status)):
 				placed=true
 				occupied.append(cell)
 				break
 		if placed:
-			var record := {"actor":actor,"shape":shape,"cell":cell,"name":monster.name,"walked":false}
+			var record := {"actor":actor,"shape":shape,"cell":cell,"name":monster.name,"walked":false,"behavior":behavior}
 			actors.append(record)
 			report.actors.append(record)
 			if not check(hud.hud_snapshot().scene_monster_shapes.get(actor)==shape,"入场保留数据库外观"): return false
-			hud.apply_game_message(game_reply(Mir3HudView.SM_WALK,actor,100,0,100))
-			var name_packet := game_reply(Mir3HudView.SM_CHANGENAMECOLOR,actor,255,0,0)
+			hud.apply_game_message(game_reply(Mir3HudView.SM_HEALTHSPELLCHANGED,actor,100,0,100))
+			var name_packet := game_reply(Mir3HudView.SM_USERNAME,actor,255,0,0)
 			name_packet.append_array(encode_scene_bytes(PackedByteArray(monster.name_bytes)))
 			if not check(hud.apply_game_message(name_packet),"原版怪物姓名包"): return false
 		else:
@@ -177,18 +178,35 @@ func showcase_map_group(group: Dictionary) -> bool:
 	show_phase(item,"同时出生 · %d种外观 · 仓库南侧展示场" % actors.size())
 	await settle(1.2)
 	if not await capture("monster-map-%s-birth" % group.maps[0]): return false
+	var waking: Array=actors.filter(func(actor): return int(actor.behavior.wake_opcode)!=0)
+	if not waking.is_empty():
+		show_phase(item,"特殊出生 / 苏醒")
+		for actor in waking:
+			if not check(hud.hud_snapshot().scene_monster_dormant[actor.actor],"C++入场休眠姿势 shape=%d profile=%s" % [actor.shape,actor.behavior]): return false
+			if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,actor.actor,0,0,0)),"服务器解除休眠状态"): return false
+			if not check(hud.apply_game_message(monster_packet(actor.behavior.wake_opcode,actor.actor,actor.cell,showcase_rng.randi_range(0,7),actor.shape)),"特殊苏醒消息"): return false
+		await settle(0.3)
+		if not await capture("monster-map-%s-awake" % group.maps[0]): return false
+		var deadline := Time.get_ticks_msec()+5000
+		while waking.any(func(actor): return hud.hud_snapshot().scene_monster_burrow_frames[actor.actor]>=0) and Time.get_ticks_msec()<deadline:
+			await process_frame
+		if not check(waking.all(func(actor): return hud.hud_snapshot().scene_monster_burrow_frames[actor.actor]==-1 and not hud.hud_snapshot().scene_monster_dormant[actor.actor]),"C++特殊出生完成后恢复活动"): return false
 	show_phase(item,"行走")
 	# 独立随机游走；包接收端验证阻挡，展示层限制可视范围与占位。
 	var directions := [Vector2i(0,-1),Vector2i(1,-1),Vector2i(1,0),Vector2i(1,1),Vector2i(0,1),Vector2i(-1,1),Vector2i(-1,0),Vector2i(-1,-1)]
 	for step in range(4):
 		for actor in actors:
 			var cell: Vector2i=hud.hud_snapshot().scene_chicken_cells[actor.actor]
+			var visible_directions: Array=actor.behavior.visible_walk_directions
+			if visible_directions.is_empty():
+				actor.walk_unavailable_reason="incomplete_walk_or_idle_resources"
+				continue
 			for attempt in range(8):
-				var facing := showcase_rng.randi_range(0,7)
+				var facing: int=visible_directions[showcase_rng.randi_range(0,visible_directions.size()-1)]
 				var destination: Vector2i=cell+directions[facing]
 				var pixel := Vector2(destination*Vector2i(48,32)-camera)
 				if not Rect2(75,185,625,205).has_point(pixel) or destination in occupied: continue
-				if hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor.actor,destination,facing,actor.shape)):
+				if hud.apply_game_message(monster_packet(Mir3HudView.SM_WALK,actor.actor,destination,facing,actor.shape)):
 					occupied.erase(cell)
 					actor.cell=hud.hud_snapshot().scene_chicken_cells[actor.actor]
 					actor.walked=actor.walked or actor.cell!=cell
@@ -204,17 +222,17 @@ func showcase_map_group(group: Dictionary) -> bool:
 		var delta: Vector2i=target_cell-actor.cell
 		var facing := directions.find(Vector2i(signi(delta.x),signi(delta.y)))
 		if facing<0: facing=4
-		if actor.shape in RANGED_SHAPES:
+		if int(actor.behavior.attack_opcode)==Mir3HudView.SM_FLYAXE:
 			var body := PackedByteArray()
 			body.resize(8)
 			body.encode_u16(0,target_cell.x)
 			body.encode_u16(2,target_cell.y)
 			body.encode_u32(4,target.actor if actors.size()>1 else 0)
-			var packet := game_reply(Mir3HudView.SM_LIGHTING,actor.actor,actor.cell.x,actor.cell.y,facing)
+			var packet := game_reply(Mir3HudView.SM_FLYAXE,actor.actor,actor.cell.x,actor.cell.y,facing)
 			packet.append_array(encode_scene_bytes(body))
-			if not check(hud.apply_game_message(packet),"远程攻击目标载荷"): return false
+			actor.attack_accepted=hud.apply_game_message(packet)
 		else:
-			hud.apply_game_message(game_reply(Mir3HudView.SM_FLYAXE,actor.actor,actor.cell.x,actor.cell.y,facing))
+			actor.attack_accepted=hud.apply_game_message(game_reply(Mir3HudView.SM_HIT,actor.actor,actor.cell.x,actor.cell.y,facing))
 	await settle(0.5)
 	if not await capture("monster-map-%s-attack" % group.maps[0]): return false
 	await settle(2.3)
@@ -240,7 +258,7 @@ func showcase_map_group(group: Dictionary) -> bool:
 		target_body.encode_u32(0,actor.actor)
 		magic.append_array(encode_scene_bytes(target_body))
 		if not check(hud.apply_game_message(magic),"随机技能回包入队"): return false
-		actor.struck_accepted=hud.apply_game_message(monster_packet(Mir3HudView.SM_HIT,actor.actor,Vector2i(70,100),30,actor.shape))
+		actor.struck_accepted=hud.apply_game_message(monster_packet(Mir3HudView.SM_STRUCK,actor.actor,Vector2i(70,100),30,actor.shape))
 		actor.struck_at=Time.get_ticks_msec()
 		actor.death_delay=showcase_rng.randf_range(0.3,2.0)
 		actor.death_at=actor.struck_at+int(actor.death_delay*1000.0)
@@ -256,7 +274,7 @@ func showcase_map_group(group: Dictionary) -> bool:
 		# 以本怪物受击为起点，两秒内发送死亡，不叠加独立死亡阶段等待。
 		while Time.get_ticks_msec()<actor.death_at:
 			await process_frame
-		actor.death_accepted=hud.apply_game_message(monster_packet(Mir3HudView.SM_27,actor.actor,actor.cell,4,actor.shape))
+		actor.death_accepted=hud.apply_game_message(monster_packet(Mir3HudView.SM_NOWDEATH,actor.actor,actor.cell,4,actor.shape))
 		actor.death_sent_after_ms=Time.get_ticks_msec()-actor.struck_at
 	await settle(0.35)
 	if not await capture("monster-map-%s-death" % group.maps[0]): return false
@@ -287,38 +305,38 @@ func showcase_monster(item: Dictionary) -> bool:
 	var cell := SHOWCASE_ORIGIN+Vector2i(2,3)
 	if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"准备仓库南侧怪物展示空地"): return false
 	show_phase(item,"出生 / 站立")
-	if not hud.apply_game_message(monster_packet(Mir3HudView.SM_DIGUP,actor,cell,4,shape)):
+	if not hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor,cell,4,shape)):
 		result["status"]="entry_resource_unavailable"
 		show_phase(item,"无法创建：外观资源或初始化条件不满足（未计通过）")
 		await settle(0.35)
 		return true
 	if not check(hud.hud_snapshot().scene_monster_shapes.get(actor)==shape,"出生外观与协议一致"): return false
 	result.stages.append("birth")
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_WALK,actor,100,0,100)),"初始化生命100"): return false
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_HEALTHSPELLCHANGED,actor,100,0,100)),"初始化生命100"): return false
 	await settle(0.4)
 	if not await capture("monster-%d-birth" % shape): return false
 	for facing in range(8):
 		show_phase(item,"站立方向 %d / 7" % facing)
-		if not hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor,cell,facing,shape)):
+		if not hud.apply_game_message(monster_packet(Mir3HudView.SM_WALK,actor,cell,facing,shape)):
 			result.stages.append("direction_%d_resource_unavailable" % facing)
 		await settle(0.12)
 	show_phase(item,"行走")
 	var destination := cell+Vector2i(1,0)
-	if hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor,destination,2,shape)):
+	if hud.apply_game_message(monster_packet(Mir3HudView.SM_WALK,actor,destination,2,shape)):
 		await settle(0.9)
 		if not check(hud.hud_snapshot().scene_chicken_cells[actor]==destination,"移动到协议目标格"): return false
 		cell=destination
 		result.stages.append("walk")
 	else: result.stages.append("walk_resource_unavailable")
 	show_phase(item,"攻击")
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_FLYAXE,actor,cell.x,cell.y,4)),"攻击包接收"): return false
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_HIT,actor,cell.x,cell.y,4)),"攻击包接收"): return false
 	if not check(hud.hud_snapshot().scene_monster_attack_frames[actor]>=0,"攻击动作启动"): return false
 	result.stages.append("attack")
 	await settle(0.2)
 	if not await capture("monster-%d-attack" % shape): return false
 	await settle(1.6)
 	show_phase(item,"被攻击：生命100 → 70，伤害30")
-	var hit := monster_packet(Mir3HudView.SM_HIT,actor,Vector2i(70,100),30,shape)
+	var hit := monster_packet(Mir3HudView.SM_STRUCK,actor,Vector2i(70,100),30,shape)
 	if hud.apply_game_message(hit):
 		result.stages.append("struck")
 		await settle(0.1)
@@ -327,7 +345,7 @@ func showcase_monster(item: Dictionary) -> bool:
 		await settle(0.65)
 	else: result.stages.append("struck_resource_unavailable")
 	show_phase(item,"死亡 → 尸体驻留")
-	if hud.apply_game_message(monster_packet(Mir3HudView.SM_27,actor,cell,4,shape)):
+	if hud.apply_game_message(monster_packet(Mir3HudView.SM_NOWDEATH,actor,cell,4,shape)):
 		await settle(3.5)
 		if not check(hud.hud_snapshot().scene_monster_death_frames[actor]>=0,"死亡状态保留"): return false
 		result.stages.append("death")
@@ -349,7 +367,8 @@ func cut_at(pointer: Vector2) -> void:
 		root.push_input(button,true)
 
 func wait_for_monster_step(actor: int, destination: Vector2i) -> bool:
-	for i in range(120):
+	var deadline := Time.get_ticks_msec()+2500
+	while Time.get_ticks_msec()<deadline:
 		var snapshot: Dictionary = hud.hud_snapshot()
 		if snapshot.scene_chicken_cells.get(actor) == destination and snapshot.scene_chicken_steps.get(actor, -1) >= 0:
 			return true
@@ -383,9 +402,8 @@ func run_regression() -> void:
 	cut_at(hud.hud_snapshot().scene_human_bounds[5].get_center())
 	if not check(packets.size()==1 and decode_request(packets[0]).decode_u16(4)==Mir3HudView.CM_SITDOWN,
 		"活体只触发蹲姿"): return
-	# 首次预测蹲姿必须收到本地确认，随后才允许第二次割肉操作。
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_SITDOWN,77,origin.x,origin.y,
-		decode_request(packets[0]).decode_u16(8))),"确认首次本地蹲姿"): return
+	# 动作回包不解除预测等待；使用真实的 +GOOD 确认再进行下一次操作。
+	if not check(hud.apply_game_message("+GOOD/200".to_ascii_buffer()),"确认首次本地蹲姿"): return
 	await settle(1.0)
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_SITDOWN,5,cell.x,cell.y,4)),"远端蹲姿回包入队"): return
 	await settle()
@@ -402,6 +420,7 @@ func run_regression() -> void:
 		and cut.decode_u16(10)==sit.decode_u16(8),"核对割肉目标、角色坐标和朝向"): return
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_SITDOWN,77,origin.x,origin.y,cut.decode_u16(10))),
 		"本地蹲姿回包"): return
+	if not check(hud.apply_game_message("+GOOD/200".to_ascii_buffer()),"确认人物尸体割肉动作"): return
 	hud.set_process(false)
 	if not await capture("map-butch-crouch"): return
 	hud.set_process(true)
@@ -411,7 +430,7 @@ func run_regression() -> void:
 	feature.resize(16)
 	feature[0]=3
 	feature[2]=20
-	var stand := game_reply(Mir3HudView.SM_DIGUP,6,cell.x,cell.y,6)
+	var stand := game_reply(Mir3HudView.SM_TURN,6,cell.x,cell.y,6)
 	stand.append_array(encode_scene_bytes(feature))
 	if not check(not hud.apply_game_message(stand.slice(0,27)),"拒绝正文截断的入场包"): return
 	if not check(hud.apply_game_message(stand) and hud.hud_snapshot().scene_chicken_steps[6]==-1,
@@ -426,16 +445,17 @@ func run_regression() -> void:
 	if not check(hud.hud_snapshot().scene_actor_sounds.get(6,{}).get("sample")==401,
 		"站立动作触发原版鸡叫声"): return
 	if not await capture("map-chicken-idle-call"): return
-	# 怪物的 SM_TURN 带新格坐标时触发行动1。重放往返两步，验证排队。
-	var outward := game_reply(Mir3HudView.SM_STRUCK,6,origin.x,origin.y,4)
+	# 怪物的 SM_WALK 带新格坐标时触发行动1。重放往返两步，验证排队。
+	var outward := game_reply(Mir3HudView.SM_BACKSTEP,6,origin.x,origin.y,4)
 	outward.append_array(encode_scene_bytes(feature))
-	var returning := game_reply(Mir3HudView.SM_TURN,6,cell.x,cell.y,4)
+	var returning := game_reply(Mir3HudView.SM_WALK,6,cell.x,cell.y,4)
 	returning.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(outward) and hud.apply_game_message(returning)
 		and hud.hud_snapshot().scene_chicken_steps[6]==0
 		and hud.hud_snapshot().scene_monster_walk_poses[6]==5
 		and hud.hud_snapshot().scene_chicken_cells[6]==origin,"先面向原侧后退，随后移动留在队列"): return
-	for i in range(20):
+	var step_deadline := Time.get_ticks_msec()+1000
+	while Time.get_ticks_msec()<step_deadline:
 		if hud.hud_snapshot().scene_chicken_steps[6]>0: break
 		await process_frame
 	var retreat: Dictionary=hud.hud_snapshot()
@@ -451,11 +471,13 @@ func run_regression() -> void:
 	# 第一段动作结束时还有三条消息，第二段在首个移动节拍前进两帧。
 	if not check(hud.apply_game_message(outward) and hud.apply_game_message(returning)
 		and hud.apply_game_message(outward) and hud.apply_game_message(returning),"连续入队四步"): return
-	for i in range(60):
+	step_deadline=Time.get_ticks_msec()+2500
+	while Time.get_ticks_msec()<step_deadline:
 		await process_frame
 		if hud.hud_snapshot().scene_chicken_cells[6]==cell: break
 	if not check(hud.hud_snapshot().scene_chicken_steps[6]==0,"追帧动作仍从首帧开始"): return
-	for i in range(15):
+	step_deadline=Time.get_ticks_msec()+1000
+	while Time.get_ticks_msec()<step_deadline:
 		await process_frame
 		if hud.hud_snapshot().scene_chicken_steps[6]>0: break
 	if not check(hud.hud_snapshot().scene_chicken_steps[6]==2,"积压时首个移动节拍前进两帧"): return
@@ -463,13 +485,14 @@ func run_regression() -> void:
 	await settle(2.2)
 	if not check(hud.hud_snapshot().scene_chicken_steps[6]==-1,"连续动作全部结束"): return
 	# 行走期间的受击应先排队，后续移动须等受击动作结束。
-	# 怪物的14号消息走血量及受击分支，人物仍使用各自的14号攻击逻辑。
-	var queued_hit := game_reply(Mir3HudView.SM_HIT,6,9,10,1)
+	# 怪物31号更新生命并进入受击动作。
+	var queued_hit := game_reply(Mir3HudView.SM_STRUCK,6,9,10,1)
 	queued_hit.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(outward) and hud.apply_game_message(queued_hit)
 		and hud.apply_game_message(returning) and hud.hud_snapshot().scene_chicken_struck[6]==-1,
 		"受击不抢占正在播放的后退"): return
-	for i in range(120):
+	step_deadline=Time.get_ticks_msec()+2500
+	while Time.get_ticks_msec()<step_deadline:
 		await process_frame
 		if hud.hud_snapshot().scene_chicken_struck[6]>=0: break
 	if not check(hud.hud_snapshot().scene_chicken_struck[6]>=0 and hud.hud_snapshot().scene_chicken_cells[6]==origin
@@ -478,59 +501,54 @@ func run_regression() -> void:
 	await settle(1.6)
 	if not check(hud.hud_snapshot().scene_chicken_cells[6]==cell and hud.hud_snapshot().scene_chicken_steps[6]==-1,
 		"受击完成后才执行返回"): return
-	# 怪物1309在队列消费时用原始坐标和朝向执行后退。
-	var relay := game_reply(Mir3HudView.SM_HUMAN_STRUCK,6,origin.x,origin.y,4)
-	relay.append_array(encode_scene_bytes(feature))
-	if not check(hud.apply_game_message(relay) and hud.apply_game_message(returning)
-		and hud.hud_snapshot().scene_chicken_steps[6]==-1,"1309与回程依次进入队列"): return
-	if not check(await wait_for_monster_step(6,origin),"按原坐标执行后退"): return
-	if not await capture("map-chicken-relayed-backstep"): return
-	if not check(await wait_for_monster_step(6,cell),"已排队的回程先于复制消息执行"): return
-	if not check(await wait_for_monster_step(6,origin),"同一对象消费复制后的31号后退"): return
-	if not check(hud.apply_game_message(returning),"第二次后退后恢复位置"): return
-	await settle(1.7)
-	var health := game_reply(Mir3HudView.SM_WALK,6,10,3,10)
+	if not await check_relay_queue(origin,cell): return
+	var health := game_reply(Mir3HudView.SM_HEALTHSPELLCHANGED,6,10,3,10)
 	if not check(hud.apply_game_message(health) and hud.hud_snapshot().scene_health_values[6][2]==10
-		and hud.hud_snapshot().scene_chicken_steps[6]==-1,"怪物11只更新血量"): return
+		and hud.hud_snapshot().scene_chicken_steps[6]==-1,"怪物53即时更新血量"): return
 	var register_bar := game_reply(Mir3HudView.SM_HEALTH_PERCENT,6,0,0,0)
 	if not check(hud.apply_game_message(register_bar),"用原包登记怪物血条"): return
-	var health_delta := game_reply(Mir3HudView.SM_WALK,6,5,2,10)
+	var health_delta := game_reply(Mir3HudView.SM_HEALTHSPELLCHANGED,6,5,2,10)
 	if not check(hud.apply_game_message(health_delta) and hud.hud_snapshot().scene_health_values[6]==PackedInt32Array([5,2,10]),
 		"生命和第二数值字段随回包更新"): return
-	await settle()
-	if not check(hud.hud_snapshot().scene_health_bounds[6].size.x==17 and hud.hud_snapshot().scene_damage_frames.has(6),
-		"注册血条显示半血并绘制生命差值"): return
+	# 伤害字按绘制次数老化；首个完成绘制帧验收，避免高FPS下80ms已经超过40帧。
+	await RenderingServer.frame_post_draw
+	var health_snapshot: Dictionary=hud.hud_snapshot()
+	if not check(health_snapshot.scene_health_bounds.get(6,Rect2()).size.x==17,
+		"注册血条显示半血：%s" % [health_snapshot.scene_health_bounds]): return
+	if not check(health_snapshot.scene_damage_frames.has(6),
+		"绘制生命差值 enabled=%s frames=%s" % [health_snapshot.damage_numbers,health_snapshot.scene_damage_frames]): return
 	if not await capture("map-chicken-health"): return
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_801,6,2,0,0)),"怪物状态设置血条校验值"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,6,2,0,0)),"怪物状态设置血条校验值"): return
 	await settle()
 	if not check(hud.hud_snapshot().scene_health_bounds.has(6),"匹配时仍显示血条"): return
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_801,6,0,0,0)),"清除怪物状态位"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,6,0,0,0)),"清除怪物状态位"): return
 	await settle()
 	if not check(not hud.hud_snapshot().scene_health_bounds.has(6),"校验值不匹配时隐藏血条"): return
 	if not await capture("map-chicken-health-hidden"): return
 	# 外观包中的状态位也经过血条校验，并随动作队列应用。
 	var marked := feature.duplicate()
 	marked[4]=2
-	var marked_turn := game_reply(Mir3HudView.SM_TURN,6,origin.x,origin.y,0)
+	var marked_turn := game_reply(Mir3HudView.SM_WALK,6,origin.x,origin.y,0)
 	marked_turn.append_array(encode_scene_bytes(marked))
-	var queued_status := game_reply(Mir3HudView.SM_801,6,0,0,0)
-	var queued_health := game_reply(Mir3HudView.SM_WALK,6,4,1,10)
+	var queued_status := game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,6,0,0,0)
+	var queued_health := game_reply(Mir3HudView.SM_HEALTHSPELLCHANGED,6,4,1,10)
 	if not check(hud.apply_game_message(marked_turn) and hud.apply_game_message(queued_status)
 		and hud.apply_game_message(queued_health) and hud.apply_game_message(returning),"发送移动、清位、血量与回程"): return
 	await settle(0.2)
-	if not check(hud.hud_snapshot().scene_health_bounds.has(6)
-		and hud.hud_snapshot().scene_health_values[6][0]==5,"行走中保留原生命，排队状态尚未清位"): return
+	if not check(not hud.hud_snapshot().scene_health_bounds.has(6)
+		and hud.hud_snapshot().scene_health_values[6][0]==4,"行走中657与53即时清位和更新生命"): return
 	if not await capture("map-chicken-health-moving"): return
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_FEATURECHANGED,6,0,0,0)),
-		"怪物41直接清除当前血条校验值"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_FEATURECHANGED,6,3,21,0)),
+		"怪物41用头部外观DWORD立即更换为鹿"): return
 	await settle()
 	if not check(not hud.hud_snapshot().scene_health_bounds.has(6)
-		and hud.hud_snapshot().scene_chicken_steps[6]>=0,"41在当前动作结束前生效"): return
+		and hud.hud_snapshot().scene_monster_shapes[6]==21
+		and hud.hud_snapshot().scene_chicken_steps[6]>=0,"41在当前动作结束前更换外观"): return
 	await settle(1.5)
 	if not check(not hud.hud_snapshot().scene_health_bounds.has(6)
 		and hud.hud_snapshot().scene_health_values[6]==PackedInt32Array([4,1,10]),"回程前应用清位与新生命"): return
 	await settle(1.0)
-	var miss := game_reply(Mir3HudView.SM_HIT,6,10,10,0)
+	var miss := game_reply(Mir3HudView.SM_STRUCK,6,10,10,0)
 	miss.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(miss) and hud.hud_snapshot().scene_chicken_struck[6]==-1,
 		"零伤害不触发受击帧"): return
@@ -538,7 +556,7 @@ func run_regression() -> void:
 	await settle(1.0)
 	var strike_feature := feature.duplicate()
 	strike_feature[14]=1
-	var strike := game_reply(Mir3HudView.SM_HIT,6,6,10,4)
+	var strike := game_reply(Mir3HudView.SM_STRUCK,6,6,10,4)
 	strike.append_array(encode_scene_bytes(strike_feature))
 	if not check(hud.apply_game_message(strike) and hud.hud_snapshot().scene_chicken_struck[6]==0
 		and hud.hud_snapshot().scene_health_values[6][0]==6,"有伤害时更新血量并播放受击"): return
@@ -551,7 +569,7 @@ func run_regression() -> void:
 	if not check(hud.hud_snapshot().scene_actor_sounds.get(6,{}).get("sample")==404,
 		"受击动作播放原版鸡叫声"): return
 	var sounds_before_death: int=hud.hud_snapshot().scene_actor_sounds[6].count
-	var death := game_reply(Mir3HudView.SM_HIT,6,0,10,6)
+	var death := game_reply(Mir3HudView.SM_STRUCK,6,0,10,6)
 	death.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(death) and hud.hud_snapshot().scene_health_values[6][0]==0,
 		"致死受击包触发死亡"): return
@@ -564,44 +582,43 @@ func run_regression() -> void:
 	if not check(corpse.has_area() and corpse!=early,"鸡死亡动画停在尸体帧"): return
 	cut_at(corpse.get_center())
 	if not check(packets.size()==5 and decode_request(packets[4]).decode_u32(0)==6,"割肉请求以鸡尸体为目标"): return
+	if not check(hud.apply_game_message("+GOOD/200".to_ascii_buffer()),"确认鸡尸体割肉动作"): return
 	hud.set_process(false)
 	if not await capture("map-butch-chicken"): return
 	hud.set_process(true)
 	await settle(1.0)
-	# 33 creates a standing object before the reposted message starts action 8.
-	var skeleton := game_reply(Mir3HudView.SM_SKELETON,60,cell.x,cell.y,6)
-	skeleton.append_array(encode_scene_bytes(feature))
+	# 33号创建骨架尸体，动作10，不是站立或钻地动作8。
+	var skeleton := monster_packet(Mir3HudView.SM_SKELETON,60,cell,6,20)
 	if not check(hud.apply_game_message(skeleton)
-		and hud.hud_snapshot().scene_monster_death_frames[60]==-1
-		and hud.hud_snapshot().scene_monster_burrow_frames[60]==-1,"33号先建立站立对象"): return
-	await settle()
-	if not check(hud.hud_snapshot().scene_monster_burrow_frames[60]>=0,"重投后开始动作8"): return
-	if not check(hud.remove_scene_actor(60),"清理首次入场的怪物"): return
+		and hud.hud_snapshot().scene_monster_death_frames[60]>=0
+		and hud.hud_snapshot().scene_monster_burrow_frames[60]==-1,"33号建立骨架尸体"): return
+	if not check(hud.remove_scene_actor(60),"清理首次入场的尸体"): return
 	# 原尸体仍可用于独立验证超距割肉。
 	var before_deer := packets.size()
 	# 形状21与鸡共用动作规则，在 Mon-3 取下一组图像。
 	hud.remove_scene_actor(6)
 	await settle(0.9)
 	feature[2]=21
-	var deer := game_reply(Mir3HudView.SM_DIGUP,7,cell.x,cell.y,6)
+	var deer := game_reply(Mir3HudView.SM_TURN,7,cell.x,cell.y,6)
 	deer.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(deer),"鹿按原版外观入场"): return
 	await settle()
 	if not check(hud.hud_snapshot().scene_chicken_bounds[7].size.y>living.size.y,"鹿使用自己的站立图"): return
 	if not await capture("map-butch-deer-live"): return
-	var deer_death := game_reply(Mir3HudView.SM_27,7,cell.x,cell.y,6)
+	var deer_death := game_reply(Mir3HudView.SM_NOWDEATH,7,cell.x,cell.y,6)
 	deer_death.append_array(encode_scene_bytes(feature))
-	if not check(hud.apply_game_message(deer_death),"鹿接收27号死亡动作"): return
+	if not check(hud.apply_game_message(deer_death),"鹿接收34号死亡动作"): return
 	await settle(1.65)
 	cut_at(hud.hud_snapshot().scene_chicken_bounds[7].get_center())
 	if not check(packets.size()==before_deer+2 and decode_request(packets.back()).decode_u32(0)==7,
 		"蹲下后发送以鹿尸体为目标的割肉请求"): return
+	if not check(hud.apply_game_message("+GOOD/200".to_ascii_buffer()),"确认鹿尸体割肉动作"): return
 	if not await capture("map-butch-deer"): return
 	# 夜间对比同格、同朝向的活鹿，并验证离场清除光源。
 	if not check(hud.change_map("0","比奇省",origin,1),"进入夜间比奇"): return
 	await settle()
 	var night: PackedColorArray=hud.hud_snapshot().scene_light_samples
-	var lit_deer := game_reply(Mir3HudView.SM_DIGUP,7,cell.x,cell.y,6+8*256)
+	var lit_deer := game_reply(Mir3HudView.SM_TURN,7,cell.x,cell.y,6+8*256)
 	lit_deer.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(lit_deer),"怪物入场包携带光照高字节"): return
 	await settle()
@@ -632,31 +649,32 @@ func run_regression() -> void:
 	if not check(hud.change_map("0","比奇省",origin,0),"回到白天验证普通怪物"): return
 	await settle(1.6)
 	feature[2]=23
-	var oma := game_reply(Mir3HudView.SM_800,8,cell.x,cell.y,6)
+	var oma := game_reply(Mir3HudView.SM_801,8,cell.x,cell.y,6)
 	oma.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(oma),"原始入场包创建半兽人"): return
-	if not check(hud.hud_snapshot().scene_actor_sounds.get(8,{}).get("sample")==109,"800 触发现身音效"): return
+	if not check(hud.hud_snapshot().scene_actor_sounds.get(8,{}).get("sample")==109,"801 触发现身音效"): return
 	await settle()
 	var oma_live: Rect2=hud.hud_snapshot().scene_chicken_bounds[8]
 	if not check(oma_live.has_area() and oma_live.size.y>living.size.y,"使用半兽人的原版站立资源"): return
 	if not await capture("map-oma-entry"): return
-	var oma_death := game_reply(Mir3HudView.SM_27,8,cell.x,cell.y,6)
+	var oma_death := game_reply(Mir3HudView.SM_NOWDEATH,8,cell.x,cell.y,6)
 	oma_death.append_array(encode_scene_bytes(feature))
-	if not check(hud.apply_game_message(oma_death),"27号启动半兽人死亡"): return
+	if not check(hud.apply_game_message(oma_death),"34号启动半兽人死亡"): return
 	await settle(1.5)
 	var oma_body: Rect2=hud.hud_snapshot().scene_chicken_bounds[8]
 	var before_oma := packets.size()
 	cut_at(oma_body.get_center())
 	if not check(oma_body.has_area() and oma_body!=oma_live and packets.size()==before_oma+1
 		and decode_request(packets.back()).decode_u16(4)==Mir3HudView.CM_SITDOWN,"半兽人尸体不发送割肉请求"): return
+	if not check(hud.apply_game_message("+GOOD/200".to_ascii_buffer()),"确认非割肉尸体蹲姿"): return
 	hud.remove_scene_actor(8)
 	await settle(0.9)
 	# 猪在 Mon-12 的第十组，验证另一资源库及割肉请求。
 	feature[2]=119
-	var pig := game_reply(Mir3HudView.SM_DIGUP,9,cell.x,cell.y,6)
+	var pig := game_reply(Mir3HudView.SM_TURN,9,cell.x,cell.y,6)
 	pig.append_array(encode_scene_bytes(feature))
-	# GBK「猪」，斜杠后的单字节是原版名称颜色索引。
-	pig.append_array(encode_scene_bytes(PackedByteArray([0xd6,0xed,47,249])))
+	# GBK「猪」，斜杠后的十进制文本经atoi转为名称颜色索引。
+	pig.append_array(encode_scene_bytes(PackedByteArray([0xd6,0xed,47,50,52,57])))
 	if not check(hud.apply_game_message(pig),"跨资源库加载猪"): return
 	await settle()
 	var pig_live: Rect2=hud.hud_snapshot().scene_chicken_bounds[9]
@@ -668,37 +686,36 @@ func run_regression() -> void:
 	if not check(hud.hud_snapshot().displayed_name_actor==9 and hud.hud_snapshot().displayed_name_color==255,
 		"悬停显示入场包中的名称颜色"): return
 	if not await capture("map-pig-name"): return
-	# 654 更新名字颜色，656 同时更新名字正文和颜色。
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHANGELIGHT,9,255,0,0)),
-		"654更新怪物名色"): return
+	# 656 更新名字颜色，42 同时更新名字正文和颜色。
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHANGENAMECOLOR,9,255,0,0)),
+		"656更新怪物名色"): return
 	await settle()
 	if not check(hud.hud_snapshot().displayed_name_actor==9
-		and hud.hud_snapshot().displayed_name_color==0xffffff,"654保留名称并切换为白色"): return
-	var pig_name := game_reply(Mir3HudView.SM_CHANGENAMECOLOR,9,249,0,0)
+		and hud.hud_snapshot().displayed_name_color==0xffffff,"656保留名称并切换为白色"): return
+	var pig_name := game_reply(Mir3HudView.SM_USERNAME,9,249,0,0)
 	pig_name.append_array(encode_scene_bytes(PackedByteArray([0xd6,0xed])))
-	if not check(hud.apply_game_message(pig_name),"656更新怪物名称正文"): return
+	if not check(hud.apply_game_message(pig_name),"42更新怪物名称正文"): return
 	await settle()
-	if not check(hud.hud_snapshot().displayed_name_color==255,"656应用名字颜色"): return
-	# 怪物42号包刷新原对象外观，先跨库切到半兽人再切回猪。
+	if not check(hud.hud_snapshot().displayed_name_color==255,"42应用名字颜色"): return
+	# 怪物41号包刷新原对象外观，先跨库切到半兽人再切回猪。
 	var transform_feature := feature.duplicate()
 	transform_feature[2]=23
-	var transform := game_reply(Mir3HudView.SM_USERNAME,9,0,0,0)
-	transform.append_array(encode_scene_bytes(transform_feature))
-	if not check(hud.apply_game_message(transform),"用怪物42号包跨库更换外观"): return
+	var transform := game_reply(Mir3HudView.SM_FEATURECHANGED,9,3,23,0)
+	if not check(hud.apply_game_message(transform),"用怪物41号包跨库更换外观"): return
 	await settle()
 	if not check(hud.hud_snapshot().scene_chicken_cells[9]==cell
 		and hud.hud_snapshot().scene_chicken_bounds[9]!=pig_live,"同一对象在原格更换图像"): return
 	if not await capture("map-monster-feature-change"): return
-	transform=game_reply(Mir3HudView.SM_HIT,9,8,10,2)
+	transform=game_reply(Mir3HudView.SM_STRUCK,9,8,10,2)
 	transform.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(transform) and hud.hud_snapshot().scene_chicken_struck[9]==0
 		and hud.hud_snapshot().scene_health_values[9][0]==8,"受击包恢复猪外观、更新生命并进入受击动作"): return
 	if not await capture("map-pig-transformed-hit"): return
 	await settle(0.8)
-	var pig_walk := game_reply(Mir3HudView.SM_TURN,9,origin.x,origin.y,0)
+	var pig_walk := game_reply(Mir3HudView.SM_WALK,9,origin.x,origin.y,0)
 	pig_walk.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(pig_walk) and hud.hud_snapshot().scene_chicken_steps[9]==0,"猪进入行走动作"): return
-	var oma_back := game_reply(Mir3HudView.SM_STRUCK,9,cell.x,cell.y,0)
+	var oma_back := game_reply(Mir3HudView.SM_BACKSTEP,9,cell.x,cell.y,0)
 	oma_back.append_array(encode_scene_bytes(transform_feature))
 	var pig_turn := game_reply(Mir3HudView.SM_TURN,9,cell.x,cell.y,6)
 	pig_turn.append_array(encode_scene_bytes(feature))
@@ -711,13 +728,12 @@ func run_regression() -> void:
 	await settle(0.9)
 	if not check(hud.hud_snapshot().scene_monster_shapes[9]==119 and hud.hud_snapshot().scene_chicken_steps[9]==-1,
 		"后退结束后，同格转向恢复猪外观"): return
-	var oma_appearance := game_reply(Mir3HudView.SM_USERNAME,9,0,0,0)
-	oma_appearance.append_array(encode_scene_bytes(transform_feature))
+	var oma_appearance := game_reply(Mir3HudView.SM_FEATURECHANGED,9,3,23,0)
 	if not check(hud.apply_game_message(oma_appearance) and hud.hud_snapshot().scene_monster_shapes[9]==23,
 		"死亡前对象显示半兽人"): return
-	var pig_death := game_reply(Mir3HudView.SM_27,9,cell.x,cell.y,6)
+	var pig_death := game_reply(Mir3HudView.SM_NOWDEATH,9,cell.x,cell.y,6)
 	pig_death.append_array(encode_scene_bytes(feature))
-	var final_walk := game_reply(Mir3HudView.SM_TURN,9,origin.x,origin.y,0)
+	var final_walk := game_reply(Mir3HudView.SM_WALK,9,origin.x,origin.y,0)
 	final_walk.append_array(encode_scene_bytes(transform_feature))
 	if not check(hud.apply_game_message(final_walk) and hud.apply_game_message(pig_death)
 		and hud.hud_snapshot().scene_monster_shapes[9]==23,"死亡回包等待当前行动播放"): return
@@ -727,21 +743,22 @@ func run_regression() -> void:
 	cut_at(hud.hud_snapshot().scene_chicken_bounds[9].get_center())
 	if not check(packets.size()==before_oma+3 and decode_request(packets.back()).decode_u32(0)==9,
 		"猪尸体发送对应编号的割肉请求"): return
+	if not check(hud.apply_game_message("+GOOD/200".to_ascii_buffer()),"确认猪尸体割肉动作"): return
 	if not await capture("map-pig-death-transform"): return
 	hud.remove_scene_actor(9)
 	feature[2]=31
 	# 形状31按原版固定读取方向0资源，即使入场包指定方向6。
-	var emergence := game_reply(Mir3HudView.SM_DIGUP,10,cell.x,cell.y,6)
+	var emergence := game_reply(Mir3HudView.SM_TURN,10,cell.x,cell.y,6)
 	emergence.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(emergence),"形状31从 Mon-4 入场"): return
 	await settle()
 	if not check(hud.hud_snapshot().scene_chicken_bounds[10].has_area(),"钻地前可见"): return
 	# 先以猪的资源播放移动，到达后通过受击包换成具备钻地图的形状31。
-	var moving_pig := game_reply(Mir3HudView.SM_TURN,10,origin.x,origin.y,0)
+	var moving_pig := game_reply(Mir3HudView.SM_WALK,10,origin.x,origin.y,0)
 	var pig_feature := feature.duplicate()
 	pig_feature[2]=119
 	moving_pig.append_array(encode_scene_bytes(pig_feature))
-	var burrow_shape := game_reply(Mir3HudView.SM_HIT,10,10,10,0)
+	var burrow_shape := game_reply(Mir3HudView.SM_STRUCK,10,10,10,0)
 	burrow_shape.append_array(encode_scene_bytes(feature))
 	var burrow := game_reply(Mir3HudView.SM_DIGDOWN,10,cell.x,cell.y,0)
 	if not check(hud.apply_game_message(moving_pig) and hud.apply_game_message(burrow_shape)
@@ -752,46 +769,40 @@ func run_regression() -> void:
 		and hud.hud_snapshot().scene_chicken_bounds[10].has_area(),"钻地过程保留动作图像"): return
 	if not await capture("map-monster-burrow"): return
 	await settle(1.3)
-	if not check(not hud.hud_snapshot().scene_chicken_bounds[10].has_area(),"钻地末帧结束后隐藏"): return
+	if not check(not hud.hud_snapshot().scene_monster_shapes.has(10),"钻地末帧结束后删除对象"): return
 	if not check(hud.apply_game_message(emergence),"同一对象重新出土"): return
 	await settle()
 	if not check(hud.hud_snapshot().scene_chicken_bounds[10].has_area(),"出土恢复可见"): return
-	# 连续到达的钻地、现身和再次钻地必须保持原始顺序。
-	var reentry := game_reply(Mir3HudView.SM_806,10,origin.x,origin.y,0)
-	reentry.append_array(encode_scene_bytes(feature))
-	var second_burrow := game_reply(Mir3HudView.SM_DIGDOWN,10,origin.x,origin.y,0)
-	if not check(hud.apply_game_message(burrow) and hud.apply_game_message(reentry)
-		and hud.apply_game_message(second_burrow),"连续接收钻地、现身和再次钻地"): return
-	await settle(0.3)
-	if not check(hud.hud_snapshot().scene_chicken_cells[10]==cell
-		and hud.hud_snapshot().scene_monster_burrow_frames[10]>=0
-		and hud.hud_snapshot().scene_actor_sounds.get(10,{}).get("sample")!=109,"现身音效等待第一段钻地"): return
-	await settle(1.15)
-	if not check(hud.hud_snapshot().scene_chicken_cells[10]==origin
-		and hud.hud_snapshot().scene_monster_burrow_frames[10]>=0,"现身后仍会消费下一条钻地"): return
-	if not await capture("map-monster-queued-reentry"): return
-	await settle(1.4)
-	if not check(not hud.hud_snapshot().scene_chicken_bounds[10].has_area(),"再次钻地结束后隐藏"): return
+	# 钻回期间排队的消息随旧对象删除，不得凭旧队列复活对象。
+	var reentry := monster_packet(Mir3HudView.SM_ACTOR_STATUS,10,origin,0,31)
+	if not check(hud.apply_game_message(burrow) and hud.apply_game_message(reentry),"钻回期间收到入场消息"): return
+	await settle(1.5)
+	if not check(not hud.hud_snapshot().scene_monster_shapes.has(10),"钻回结束释放旧对象及其队列"): return
+	if not check(hud.apply_game_message(reentry),"旧对象释放后新入场"): return
+	await settle()
+	if not check(hud.hud_snapshot().scene_chicken_cells[10]==origin,"新入场使用新的位置"): return
+	hud.remove_scene_actor(10)
 	# 骷髅按通用索引读取 Mon-4 第三组，覆盖入场、移动及死亡。
 	feature[2]=32
-	var skeleton_entry := game_reply(Mir3HudView.SM_DIGUP,11,cell.x,cell.y,6)
+	var skeleton_entry := game_reply(Mir3HudView.SM_TURN,11,cell.x,cell.y,6)
 	skeleton_entry.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(skeleton_entry),"形状32按通用索引入场"): return
 	await settle()
 	if not check(hud.hud_snapshot().scene_chicken_bounds[11].has_area(),"骷髅站立帧可见"): return
-	var skeleton_walk := game_reply(Mir3HudView.SM_TURN,11,origin.x,origin.y,0)
+	var skeleton_walk := game_reply(Mir3HudView.SM_WALK,11,origin.x,origin.y,0)
 	skeleton_walk.append_array(encode_scene_bytes(feature))
-	var skeleton_burrow := game_reply(Mir3HudView.SM_DEATH,11,cell.x,cell.y,6)
+	var skeleton_burrow := monster_packet(Mir3HudView.SM_DEATH,11,cell,6,32)
 	if not check(hud.apply_game_message(skeleton_walk) and hud.apply_game_message(skeleton_burrow)
 		and hud.hud_snapshot().scene_chicken_steps[11]==0,"骷髅行走时死亡包进入队列"): return
 	if not await capture("map-skeleton-walk"): return
-	for i in range(120):
-		if hud.hud_snapshot().scene_monster_burrow_frames[11]>=0: break
+	step_deadline=Time.get_ticks_msec()+2500
+	while Time.get_ticks_msec()<step_deadline:
+		if hud.hud_snapshot().scene_monster_death_frames[11]>=0: break
 		await process_frame
 	if not check(hud.hud_snapshot().scene_chicken_steps[11]==-1
 		and hud.hud_snapshot().scene_chicken_cells[11]==cell
-		and hud.hud_snapshot().scene_monster_burrow_frames[11]>=0
-		and hud.hud_snapshot().scene_monster_death_frames[11]==-1,"已有骷髅在32号消息下启动动作8"): return
+		and hud.hud_snapshot().scene_monster_burrow_frames[11]==-1
+		and hud.hud_snapshot().scene_monster_death_frames[11]>=0,"32号在移动结束后直接进入尸体末帧"): return
 	# 从原版档案读取两类怪物的站立动画，形状2000覆盖高位资源分组。
 	for fixture in [[12, 200, cell], [13, 2000, origin]]:
 		var actor: int = fixture[0]
@@ -822,15 +833,16 @@ func run_regression() -> void:
 	feature[3]=0
 	var fighter := game_reply(Mir3HudView.SM_TURN,14,cell.x,cell.y,6)
 	fighter.append_array(encode_scene_bytes(feature))
-	var approach := game_reply(Mir3HudView.SM_TURN,14,origin.x,origin.y,0)
+	var approach := game_reply(Mir3HudView.SM_WALK,14,origin.x,origin.y,0)
 	approach.append_array(encode_scene_bytes(feature))
-	var attack := game_reply(Mir3HudView.SM_FLYAXE,14,origin.x,origin.y,0)
-	var attack_retreat := game_reply(Mir3HudView.SM_TURN,14,cell.x,cell.y,4)
+	var attack := game_reply(Mir3HudView.SM_HIT,14,origin.x,origin.y,0)
+	var attack_retreat := game_reply(Mir3HudView.SM_WALK,14,cell.x,cell.y,4)
 	attack_retreat.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(fighter) and hud.apply_game_message(approach)
 		and hud.apply_game_message(attack) and hud.apply_game_message(attack_retreat)
 		and hud.hud_snapshot().scene_monster_attack_frames[14]==-1,"攻击等待移动完成"): return
-	for i in range(120):
+	step_deadline=Time.get_ticks_msec()+2500
+	while Time.get_ticks_msec()<step_deadline:
 		if hud.hud_snapshot().scene_monster_attack_frames[14]>=0: break
 		await process_frame
 	if not check(hud.hud_snapshot().scene_monster_attack_frames[14]>=0
@@ -844,10 +856,10 @@ func run_regression() -> void:
 		var actor: int = fixture[0]
 		var position: Vector2i = fixture[2]
 		feature[2]=fixture[1]
-		var corpse_packet := game_reply(Mir3HudView.SM_27,actor,position.x,position.y,0)
+		var corpse_packet := game_reply(Mir3HudView.SM_NOWDEATH,actor,position.x,position.y,0)
 		corpse_packet.append_array(encode_scene_bytes(feature))
-		if not check(hud.apply_game_message(corpse_packet)
-			and hud.hud_snapshot().scene_monster_death_frames[actor]==0,"27号从首帧开始死亡动作"): return
+		if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor,position,0,fixture[1])) and hud.apply_game_message(corpse_packet)
+			and hud.hud_snapshot().scene_monster_death_frames[actor]==0,"34号在已存在对象上启动死亡动作"): return
 	await settle(2.6)
 	if not check(hud.hud_snapshot().scene_monster_death_frames[15]==3
 		and hud.hud_snapshot().scene_monster_death_frames[16]==19
@@ -859,7 +871,7 @@ func run_regression() -> void:
 	var caster := game_reply(Mir3HudView.SM_TURN,17,cell.x,cell.y,0)
 	caster.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(caster)
-		and hud.apply_game_message(game_reply(Mir3HudView.SM_FLYAXE,17,cell.x,cell.y,0))
+		and hud.apply_game_message(game_reply(Mir3HudView.SM_HIT,17,cell.x,cell.y,0))
 		and hud.hud_snapshot().map_event_frames.values().has(300),"怪物专用攻击从501号首帧播放"): return
 	await settle()
 	if not await capture("map-monster-attack-effect"): return
@@ -871,30 +883,30 @@ func run_regression() -> void:
 	target.resize(8)
 	target.encode_u16(0,origin.x)
 	target.encode_u16(2,origin.y)
-	var ranged := game_reply(Mir3HudView.SM_LIGHTING,18,cell.x,cell.y,0)
+	var ranged := game_reply(Mir3HudView.SM_FLYAXE,18,cell.x,cell.y,0)
 	ranged.append_array(encode_scene_bytes(target))
 	if not check(hud.apply_game_message(ranged_actor) and hud.apply_game_message(ranged)
 		and hud.hud_snapshot().scene_monster_attack_frames[18]==0,"远程攻击解析目标并播放攻击动作"): return
 	await settle(0.4)
 	if not await capture("map-monster-ranged-attack"): return
 	# 9号消息让怪物播放起身动作，并清理死亡状态。
-	var rise := game_reply(Mir3HudView.SM_BACKSTEP,15,cell.x,cell.y,0)
+	var rise := game_reply(Mir3HudView.SM_27,15,cell.x,cell.y,0)
 	feature[2]=83
 	rise.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(rise)
 		and hud.hud_snapshot().scene_monster_death_frames[15]==-1
 		and hud.hud_snapshot().scene_monster_burrow_frames[15]==0,"起身后恢复活体状态并开始动作8"): return
 	if not await capture("map-monster-rise"): return
-	# 已存在的活怪物接收1316时，即使目标格相同也要走一步。
+	# 1316清除死亡状态并恢复站立。
 	var forced_step := game_reply(Mir3HudView.SM_REVIVE,14,cell.x,cell.y,0)
 	feature[2]=23
 	forced_step.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(forced_step)
-		and hud.hud_snapshot().scene_chicken_steps[14]==0,"1316同格移动也启动动作1"): return
+		and hud.hud_snapshot().scene_chicken_steps[14]==-1,"1316恢复站立而不强制行走"): return
 	# 形状83携带状态位1入场时固定显示动作8首帧。
 	feature[2]=83
 	feature[4]=1
-	var hidden_entry := game_reply(Mir3HudView.SM_DIGUP,19,cell.x,cell.y,6)
+	var hidden_entry := game_reply(Mir3HudView.SM_TURN,19,cell.x,cell.y,6)
 	hidden_entry.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(hidden_entry),"钻地形状以固定姿势入场"): return
 	await settle()
@@ -911,13 +923,14 @@ func run_regression() -> void:
 	var action_six_actor := game_reply(Mir3HudView.SM_TURN,20,origin.x,origin.y,0)
 	action_six_actor.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(action_six_actor)
-		and hud.apply_game_message(game_reply(Mir3HudView.SM_FLYAXE,20,origin.x,origin.y,0))
+		and hud.apply_game_message(game_reply(Mir3HudView.SM_HIT,20,origin.x,origin.y,0))
 		and hud.apply_game_message(game_reply(Mir3HudView.SM_1317,20,cell.x,cell.y,6)),
 		"普通攻击和1317依次处理"): return
 	if not check(hud.hud_snapshot().scene_monster_attack_actions[20]==6
 		and hud.hud_snapshot().map_event_frames.values().has(1390),"形状141的动作6附加565号特效"): return
 	if not await capture("map-monster-action-six"): return
-	for i in range(120):
+	step_deadline=Time.get_ticks_msec()+2500
+	while Time.get_ticks_msec()<step_deadline:
 		await process_frame
 		if hud.hud_snapshot().scene_monster_attack_frames[20]==0: break
 	if not check(hud.hud_snapshot().scene_monster_attack_actions[20]==6
@@ -936,7 +949,7 @@ func run_regression() -> void:
 	feature[4]=0
 	for fixture in [[21, Mir3HudView.SM_BACKSTEP], [22, Mir3HudView.SM_WALK],
 		[23, Mir3HudView.SM_RUN], [24, Mir3HudView.SM_801],
-		[25, Mir3HudView.SM_ACTOR_LIGHT], [26, Mir3HudView.SM_808]]:
+		[25, Mir3HudView.SM_ACTOR_STATUS], [26, Mir3HudView.SM_808]]:
 		var actor: int = fixture[0]
 		var opcode: int = fixture[1]
 		var entry := game_reply(opcode,actor,cell.x,cell.y,0)
@@ -946,10 +959,10 @@ func run_regression() -> void:
 			"首次收到 %d 时按外观创建怪物" % opcode): return
 	await settle()
 	var initial_actors: Dictionary = hud.hud_snapshot()
-	if not check(initial_actors.scene_monster_burrow_frames[21]>=0
-		and initial_actors.scene_health_values[22]==PackedInt32Array([cell.x,cell.y,0])
-		and initial_actors.scene_chicken_steps[23]==-1,"首次消息出队后分别应用起身、血量和站立"): return
-	var status_update := game_reply(Mir3HudView.SM_808,24,0,0,0)
+	if not check(initial_actors.scene_chicken_steps[21]>=0
+		and initial_actors.scene_chicken_steps[22]>=0
+		and initial_actors.scene_chicken_steps[23]==-1,"首次消息分别应用后退、行走和站立"): return
+	var status_update := game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,24,0,0,0)
 	feature[2]=21
 	status_update.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(status_update)
@@ -959,11 +972,16 @@ func run_regression() -> void:
 	for actor in [21,22,24,25,26,27,28]:
 		hud.remove_scene_actor(actor)
 	if not await check_status_blend(): return
+	if not await check_zuma_lifecycle(cell): return
+	if not await check_zuma_ai_scene(): return
+	if not await check_monster_pursuit(): return
+	if not await check_revive_transition(): return
 	await finish()
 
 func finish() -> void:
 	hud.queue_free()
-	await settle()
+	# 停止播放由音频线程异步回收，退出前留出混音线程处理释放请求的时间。
+	await settle(0.35)
 	print("MAP_BUTCH_UI_OK")
 	quit()
 
@@ -975,6 +993,35 @@ func run_targeted(case: String) -> void:
 	feature[0]=3
 	feature[2]=23
 	match case:
+		"pursuit":
+			if not await check_monster_pursuit(): return
+		"zuma-ai":
+			if not await check_zuma_ai_scene(): return
+		"revive-transition":
+			if not await check_revive_transition(): return
+		"empty-actions":
+			if not await check_empty_actions(): return
+		"reentry":
+			if not await check_monster_reentry(): return
+		"identity":
+			if not await check_monster_identity(): return
+		"relay":
+			if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,6,cell,0,20)),"建立队列专项怪物"): return
+			if not await check_relay_queue(origin,cell): return
+		"special-follow":
+			if not await check_special_follow(): return
+		"special-origin":
+			if not await check_special_origin(): return
+		"special-branches":
+			if not await check_special_branches(): return
+		"burrow-removal":
+			if not await check_burrow_removal(cell): return
+		"burrow":
+			if not await check_burrow_lifecycle(cell): return
+		"wire":
+			if not await check_corrected_wire(cell): return
+		"zuma":
+			if not await check_zuma_lifecycle(cell): return
 		"rise-health":
 			if not await check_rise_health(cell,feature): return
 		"special-effect":
@@ -992,23 +1039,321 @@ func run_targeted(case: String) -> void:
 			return
 	await finish()
 
+func check_monster_pursuit() -> bool:
+	# 夹具只提供目标观察与推进时钟，移动选择和攻击冷却全部在C++。
+	if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"追踪AI清场"): return false
+	var cell := SHOWCASE_ORIGIN+Vector2i(0,2)
+	var actor := 9981
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor,cell,0,83)),"建立已苏醒卫士"): return false
+	var target := {"id":500,"cell":cell+Vector2i(3,0)}
+	var result: Dictionary=hud.advance_monster_ai(1001,[target])
+	if not check(result.moved==[actor] and hud.hud_snapshot().scene_chicken_cells[actor]==cell+Vector2i(1,0),"C++向目标方向迈第一步"): return false
+	result=hud.advance_monster_ai(601,[target])
+	if not check(result.moved.is_empty() and result.attacked.is_empty(),"画面动作未完成时离线快进不堆积动作"): return false
+	await settle(0.8)
+	result=hud.advance_monster_ai(601,[target])
+	if not check(result.moved==[actor] and hud.hud_snapshot().scene_chicken_cells[actor]==cell+Vector2i(2,0),"C++追踪第二步"): return false
+	await settle(0.8)
+	result=hud.advance_monster_ai(601,[target])
+	if not check(result.attacked==[actor] and result.moved.is_empty() and hud.hud_snapshot().scene_monster_attack_frames[actor]>=0 and hud.hud_snapshot().scene_monster_facings[actor]==2,"邻格转朝目标并进入攻击动画"): return false
+	if not await capture("monster-ai-pursuit-attack"): return false
+	await settle(0.9)
+	result=hud.advance_monster_ai(601,[target])
+	if not check(result.attacked.is_empty() and result.moved.is_empty(),"攻击间隔内原地等待，不进入目标格"): return false
+	result=hud.advance_monster_ai(601,[target])
+	if not check(result.attacked==[actor],"攻击间隔结束重新攻击"): return false
+	await settle(0.9)
+	target.alive=false
+	result=hud.advance_monster_ai(601,[target])
+	if not check(result.attacked.is_empty() and result.moved.is_empty(),"无效目标停止追踪和攻击"): return false
+	# 教主外观苏醒强制朝北，但服务端逻辑朝西仍用于前方召唤。
+	if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"方向分离清场"): return false
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,9982,cell,6,85,0,1)),"朝西教主入场"): return false
+	result=hud.advance_monster_ai(601,[{"id":501,"cell":cell}])
+	if not check(result.woke==[9982],"朝西教主苏醒"): return false
+	await settle(2.6)
+	if not check(hud.hud_snapshot().scene_monster_facings[9982]==0,"原版苏醒显示方向0"): return false
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_HEALTHSPELLCHANGED,9982,99,0,100)),"教主触发召唤"): return false
+	result=hud.advance_monster_ai(2601,[])
+	if not check(not result.spawned.is_empty() and result.spawned.all(func(slave): return slave.cell==cell+Vector2i(-1,0)),"召唤使用独立逻辑方向，不被客户端朝北姿势覆盖"): return false
+	print("MONSTER_PURSUIT_OK logic_facing_preserved=true")
+	return true
+
+func check_zuma_ai_scene() -> bool:
+	# GD只提供场景和观察对象，距离、联动、暂停、召唤均由C++计算。
+	if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"祖玛AI场景清场"): return false
+	var cell := SHOWCASE_ORIGIN+Vector2i(0,2)
+	var actors := [{"id":9971,"shape":83,"cell":cell},{"id":9972,"shape":84,"cell":cell+Vector2i(5,0)},{"id":9973,"shape":85,"cell":cell+Vector2i(0,3)}]
+	for actor in actors:
+		if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor.id,actor.cell,0,actor.shape,0,1)),"AI石像入场"): return false
+	var target := {"cell":cell+Vector2i(-2,-2)}
+	var result: Dictionary=hud.advance_monster_ai(600,[target])
+	if not check(result.woke.is_empty(),"出生正常步速门限采用严格大于"): return false
+	result=hud.advance_monster_ai(1,[target])
+	if not check(result.woke.has(9971) and result.woke.has(9972) and not result.woke.has(9973) and result.rejected.is_empty(),"C++邻近唤醒、范围内卫士联动、教主不联动"): return false
+	await settle(0.25)
+	if not check(hud.hud_snapshot().scene_monster_burrow_frames[9971]>=0 and hud.hud_snapshot().scene_monster_burrow_frames[9972]>=0 and hud.hud_snapshot().scene_monster_dormant[9973],"AI输出进入原版动画状态机"): return false
+	if not await capture("monster-zuma-ai-group-wake"): return false
+	await settle(0.8)
+	result=hud.advance_monster_ai(2600,[])
+	if not check(not result.ready.has(9971),"触发卫士暂停边界"): return false
+	result=hud.advance_monster_ai(1,[])
+	if not check(result.ready.has(9971),"触发卫士结束暂停允许正常行动"): return false
+	result=hud.advance_monster_ai(1,[{"cell":actors[2].cell}])
+	if not check(result.woke==[9973],"教主独立靠近才唤醒"): return false
+	await settle(0.3)
+	if not check(hud.hud_snapshot().scene_monster_burrow_frames[9973]>=0 and hud.hud_snapshot().scene_monster_facings[9973]==0,"教主唤醒走C++固定方向长动画"): return false
+	if not await capture("monster-zuma-ai-king-wake"): return false
+	await settle(2.3)
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_HEALTHSPELLCHANGED,9973,99,0,100)),"教主生命输入"): return false
+	result=hud.advance_monster_ai(2601,[])
+	if not check(result.spawned.size()>=6 and result.spawned.size()<=11 and result.spawn_failures.is_empty(),"C++教主实际生成一波6–11只随从"): return false
+	var summoned: Array=result.spawned.duplicate(true)
+	for wave in range(4):
+		result=hud.advance_monster_ai(601,[])
+		if not check(result.spawn_failures.is_empty(),"有效前方格召唤成功"): return false
+		summoned.append_array(result.spawned)
+	if not check(summoned.size()==30 and hud.hud_snapshot().scene_monster_shapes.size()==33,"五波到达30存活随从上限"): return false
+	var prototype_shapes := {143:82,145:83,148:84,126:75}
+	var identities: Array=[]
+	for request in summoned:
+		if not check(request.owner==9973 and prototype_shapes.get(request.prototype)==request.shape and request.actor not in identities,"每只随从使用独立对象ID及明确原型映射"): return false
+		identities.append(request.actor)
+		if not check(hud.hud_snapshot().scene_monster_shapes.get(request.actor)==request.shape and request.cell==actors[2].cell+Vector2i(0,-1),"实际实体按教主前方格入场"): return false
+		if not check(hud.hud_snapshot().scene_monster_dormant[request.actor]==(request.shape in [83,84]),"召唤石像保留特殊出生状态"): return false
+	if not await capture("monster-zuma-ai-summons"): return false
+	# 离场及死亡都释放存活配额；尸体可以留在场景，不应被计作活随从。
+	for index in range(10): hud.remove_scene_actor(summoned[index].actor)
+	for index in range(10,13):
+		var slave: Dictionary=summoned[index]
+		if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_DEATH,slave.actor,slave.cell,0,slave.shape)),"随从成为尸体"): return false
+	result=hud.advance_monster_ai(601,[])
+	if not check(result.spawned.is_empty(),"危险等级耗尽不自动继续召唤"): return false
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_HEALTHSPELLCHANGED,9973,100,0,100)),"教主满血重置输入"): return false
+	hud.advance_monster_ai(601,[])
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_HEALTHSPELLCHANGED,9973,99,0,100)),"教主再次受击"): return false
+	result=hud.advance_monster_ai(601,[])
+	if not check(result.spawned.size()>=6 and result.spawned.size()<=11 and result.spawn_failures.is_empty(),"死去和离场随从释放名额后可再次生成"): return false
+	hud.remove_scene_actor(9971)
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,9971,cell,0,83,0,1)),"同编号石像重建"): return false
+	result=hud.advance_monster_ai(601,[target])
+	if not check(result.woke.has(9971),"重建对象重置AI，不继承上一个对象已唤醒状态"): return false
+	print("MONSTER_ZUMA_AI_SCENE_OK resolved_prototypes=4 live_limit=30")
+	return true
+
+func check_revive_transition() -> bool:
+	# 1316应等待当前死亡动画，然后从出队时开始600ms显现。
+	if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"复活过渡清场"): return false
+	var cell := SHOWCASE_ORIGIN+Vector2i(0,2)
+	var actor := 9960
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor,cell,0,23)),"建立复活对象"): return false
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_NOWDEATH,actor,cell,0,23)),"播放死亡"): return false
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_REVIVE,actor,cell,0,23)),"复活排队"): return false
+	await settle(0.2)
+	if not check(hud.hud_snapshot().scene_monster_revive_elapsed_ms[actor]==-1 and hud.hud_snapshot().scene_monster_death_frames[actor]>=0,"队列中复活不能提前启动过渡"): return false
+	var deadline := Time.get_ticks_msec()+2500
+	while hud.hud_snapshot().scene_monster_revive_elapsed_ms[actor]<0 and Time.get_ticks_msec()<deadline:
+		await process_frame
+	if not check(hud.hud_snapshot().scene_monster_revive_elapsed_ms[actor]>=0 and hud.hud_snapshot().scene_monster_death_frames[actor]==-1,"出队恢复站立并开始过渡"): return false
+	await settle(0.18)
+	hud.set_process(false)
+	var elapsed: float=hud.hud_snapshot().scene_monster_revive_elapsed_ms[actor]
+	if not check(elapsed>=150 and elapsed<600,"复活中段保留计时"): return false
+	if not await capture("monster-revive-transition-mid"): return false
+	hud.set_process(true)
+	await settle(0.65)
+	if not check(hud.hud_snapshot().scene_monster_revive_elapsed_ms[actor]==-1,"600ms结束恢复普通绘制"): return false
+	if not await capture("monster-revive-transition-end"): return false
+	# 立即重复复活重新计时，普通站立包不清除正在进行的过渡。
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_REVIVE,actor,cell,0,23)),"重复复活"): return false
+	if not check(hud.hud_snapshot().scene_monster_revive_elapsed_ms[actor]==0,"重复复活重置计时"): return false
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor,cell,0,23)),"过渡中站立"): return false
+	if not check(hud.hud_snapshot().scene_monster_revive_elapsed_ms[actor]==0,"站立不取消过渡"): return false
+	await settle(0.7)
+	print("MONSTER_REVIVE_TRANSITION_OK duration_ms=600")
+	return true
+
+func check_empty_actions() -> bool:
+	if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"空帧专项清场"): return false
+	var cell := SHOWCASE_ORIGIN+Vector2i(0,2)
+	for shape in [5,186]:
+		var profile: Dictionary=hud.monster_behavior_profile(shape)
+		if not check(profile.visible_walk_directions.size()==(0 if shape==5 else 8),"C++按资源提供可见行走方向，不将缺帧当作固定AI"): return false
+		var actor: int=9950+shape
+		if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor,cell,0,shape)),"建立空帧资源对象"): return false
+		if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_STRUCK,actor,Vector2i(70,100),30,shape)),"空帧不拒绝受击及生命更新 shape=%d" % shape): return false
+		if not check(hud.hud_snapshot().scene_health_values[actor][0]==70,"受击生命更新"): return false
+		await settle(0.5)
+		if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_NOWDEATH,actor,cell,4,shape)),"死亡消息不因空帧拒绝"): return false
+		await settle(1.7)
+		if not check(hud.hud_snapshot().scene_monster_death_frames[actor]==9,"保留原版10帧死亡，不缩短到9帧"): return false
+		if not check(not hud.hud_snapshot().scene_chicken_bounds[actor].has_area(),"空尸体帧不伪造可见图像"): return false
+		hud.remove_scene_actor(actor)
+	print("MONSTER_EMPTY_ACTIONS_OK shapes=5,186")
+	return true
+
+func check_monster_reentry() -> bool:
+	if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"重入专项清场"): return false
+	var cell := SHOWCASE_ORIGIN+Vector2i(0,2)
+	var entry := monster_packet(Mir3HudView.SM_TURN,9901,cell,6,21)
+	if not check(hud.apply_game_message(entry),"建立旧对象"): return false
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_DEATH,9901,cell,6,21)),"旧对象成为尸体"): return false
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_DISAPPEAR,9901,0,0,0)) and hud.apply_game_message(entry),"同批删除后重新入场"): return false
+	await settle()
+	if not check(hud.hud_snapshot().scene_monster_shapes.has(9901) and hud.hud_snapshot().scene_monster_death_frames[9901]==-1,"删除阶段先于新入场，新对象存活"): return false
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CLEAROBJECTS,0,0,0,0)) and hud.apply_game_message(entry),"同批清场后重新入场"): return false
+	await settle()
+	if not check(hud.hud_snapshot().scene_monster_shapes.has(9901),"清场后新对象保留"): return false
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_DISAPPEAR,9901,0,0,0)),"最终离场"): return false
+	await settle()
+	if not check(not hud.hud_snapshot().scene_monster_shapes.has(9901),"最终离场释放对象"): return false
+	print("MONSTER_REENTRY_OK")
+	return true
+
+func check_monster_identity() -> bool:
+	if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"姓名专项清场"): return false
+	var cell := SHOWCASE_ORIGIN+Vector2i(0,2)
+	var entry := monster_packet(Mir3HudView.SM_TURN,9900,cell,6,119)
+	entry.append_array(encode_scene_bytes(PackedByteArray([0xd6,0xed,47,50,52,57])))
+	if not check(hud.apply_game_message(entry),"入场姓名携带十进制颜色249"): return false
+	await settle()
+	var hover := InputEventMouseMotion.new()
+	hover.position=hud.hud_snapshot().scene_chicken_bounds[9900].get_center()
+	root.push_input(hover,true)
+	await settle()
+	if not check(hud.hud_snapshot().displayed_name_actor==9900 and hud.hud_snapshot().displayed_name_color==255,"入场解析249为原版红色"): return false
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHANGENAMECOLOR,9900,255,0,0)),"656改名色"): return false
+	await settle()
+	if not check(hud.hud_snapshot().displayed_name_color==0xffffff,"656更新白色"): return false
+	var name_packet := game_reply(Mir3HudView.SM_USERNAME,9900,249,0,0)
+	name_packet.append_array(encode_scene_bytes(PackedByteArray([0xd6,0xed])))
+	if not check(hud.apply_game_message(name_packet),"42更新名字与颜色"): return false
+	await settle()
+	if not check(hud.hud_snapshot().displayed_name_color==255,"42应用颜色"): return false
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_FEATURECHANGED,9900,3,23,0)) and hud.hud_snapshot().scene_monster_shapes[9900]==23,"41从消息头DWORD跨外观变形"): return false
+	print("MONSTER_IDENTITY_OK")
+	return true
+
+func check_relay_queue(origin: Vector2i, cell: Vector2i) -> bool:
+	# 1309出队时先受击，再把31追加队尾；已经等待的回程应先于复制受击。
+	var outward := monster_packet(Mir3HudView.SM_WALK,6,origin,0,20)
+	var returning := monster_packet(Mir3HudView.SM_WALK,6,cell,4,20)
+	var relay := monster_packet(Mir3HudView.SM_HUMAN_STRUCK,6,Vector2i(9,10),1,20)
+	if not check(hud.apply_game_message(outward) and hud.apply_game_message(relay) and hud.apply_game_message(returning),"移动、1309、回程依次入队"): return false
+	if not check(hud.hud_snapshot().scene_chicken_struck[6]==-1,"1309不抢占移动"): return false
+	var deadline := Time.get_ticks_msec()+2500
+	while hud.hud_snapshot().scene_chicken_struck[6]<0 and Time.get_ticks_msec()<deadline: await settle(0.01)
+	if not check(hud.hud_snapshot().scene_chicken_struck[6]>=0 and hud.hud_snapshot().scene_chicken_cells[6]==origin and hud.hud_snapshot().scene_health_values[6][0]==9,"1309在原位置受击并更新生命"): return false
+	if not check(await wait_for_monster_step(6,cell),"回程在复制31之前执行"): return false
+	deadline=Time.get_ticks_msec()+2500
+	while hud.hud_snapshot().scene_chicken_struck[6]<0 and Time.get_ticks_msec()<deadline: await settle(0.01)
+	if not check(hud.hud_snapshot().scene_chicken_struck[6]>=0 and hud.hud_snapshot().scene_chicken_cells[6]==cell,"复制31在回程终点再次受击，不后退"): return false
+	await settle(0.5)
+	if not check(hud.hud_snapshot().scene_chicken_steps[6]==-1 and hud.hud_snapshot().scene_chicken_struck[6]==-1,"复制受击结束后站立"): return false
+	print("MONSTER_RELAY_QUEUE_OK")
+	return true
+
+func check_burrow_removal(cell: Vector2i) -> bool:
+	# 42E780: 正在钻回的对象先完成动作，移除包清队列但不截断动画。
+	var actor := 9603
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor,cell,0,3)),"移除专项建立对象"): return false
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_DIGDOWN,actor,cell.x,cell.y,0)),"开始钻回"): return false
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_DISAPPEAR,actor,0,0,0)),"钻回期间收到移除"): return false
+	await settle(0.2)
+	if not check(hud.hud_snapshot().scene_monster_shapes.has(actor) and hud.hud_snapshot().scene_monster_burrow_frames[actor]>=0,"移除不截断钻回动画"): return false
+	await settle(1.4)
+	if not check(not hud.hud_snapshot().scene_monster_shapes.has(actor),"动画完成删除对象"): return false
+	print("MONSTER_BURROW_REMOVAL_OK")
+	return true
+
+func check_burrow_lifecycle(cell: Vector2i) -> bool:
+	# 20号倒播不代表隐藏；21号完成删除。门对象由原版单独保留开关姿势。
+	if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"钻地专项清理场景"): return false
+	cell=SHOWCASE_ORIGIN+Vector2i(0,2)
+	var selected: Array[int]=[]
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--shapes="):
+			for value in arg.get_slice("=",1).split(","): selected.append(int(value))
+	for shape in [3,4,31,49,56,83,84,85,89,90,530,531,532,533,538]:
+		if not selected.is_empty() and not shape in selected: continue
+		var actor: int=9500+shape
+		var gate: bool=shape>=530
+		if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_DIGUP,actor,cell,0 if shape==538 else 6,shape)),"20号创建并钻出 shape=%d" % shape): return false
+		if not check(hud.hud_snapshot().scene_monster_reverse_burrows[actor]==(shape in [3,31]),"钻出方向使用原版倒序分支"): return false
+		await settle(2.7 if shape==85 else 1.5)
+		if not check(hud.hud_snapshot().scene_monster_shapes.has(actor) and hud.hud_snapshot().scene_monster_burrow_frames[actor]==-1,"钻出完成保留对象 shape=%d" % shape): return false
+		if gate and not check(hud.hud_snapshot().scene_monster_facings[actor]==7,"门打开后固定方向7"): return false
+		if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_DIGDOWN,actor,cell.x,cell.y,0)),"21号钻回"): return false
+		if not check(hud.hud_snapshot().scene_monster_reverse_burrows[actor]==(not shape in [3,31]),"钻回倒序与钻出相反"): return false
+		await settle(2.7 if shape==85 else 1.5)
+		if gate:
+			if not check(hud.hud_snapshot().scene_monster_shapes.has(actor) and hud.hud_snapshot().scene_monster_facings[actor]==0,"门关闭后保留并固定方向0"): return false
+			hud.remove_scene_actor(actor)
+		elif not check(not hud.hud_snapshot().scene_monster_shapes.has(actor),"钻回结束删除对象及资源 shape=%d" % shape): return false
+		print("MONSTER_BURROW_CASE_OK shape=",shape)
+	print("MONSTER_BURROW_LIFECYCLE_OK")
+	return true
+
+func check_corrected_wire(cell: Vector2i) -> bool:
+	# 按4AF3D4虚表验证消息语义，不能复用旧偏移的期望值。
+	var actor := 9085
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor,cell,0,85)),"10号站立入场"): return false
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_DIGUP,actor,cell,0,85)),"20号启动教主苏醒"): return false
+	# 苏醒期间排入携带灰阶位的尸体消息，状态要到出队才更新。
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_DEATH,actor,cell,0,85,0,0x04000000)),"32号尸体排队"): return false
+	if not check(hud.hud_snapshot().scene_monster_status_colors[actor]==65535 and hud.hud_snapshot().scene_monster_death_frames[actor]==-1,"排队不提前改变状态和死亡姿势"): return false
+	await settle(2.8)
+	if not check(hud.hud_snapshot().scene_monster_status_colors[actor]==0 and hud.hud_snapshot().scene_monster_death_frames[actor]>=0,"出队时应用尸体及状态"): return false
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_REVIVE,actor,cell,4,85)),"1316号复活"): return false
+	if not check(hud.hud_snapshot().scene_monster_death_frames[actor]==-1 and hud.hud_snapshot().scene_chicken_steps[actor]==-1,"复活清除尸体并站立，不强制行走"): return false
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,actor,0,0x0400,0)) and hud.hud_snapshot().scene_monster_status_colors[actor]==0,"657即时更新状态"): return false
+	hud.remove_scene_actor(actor)
+	print("MONSTER_CORRECTED_WIRE_OK")
+	return true
+
+func check_zuma_lifecycle(cell: Vector2i) -> bool:
+	# 仅重放服务器消息；全部特殊帧数、方向与状态恢复由C++处理。
+	if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"特殊怪物验收使用仓库空地"): return false
+	cell=SHOWCASE_ORIGIN+Vector2i(0,2)
+	for shape in [83,84,85]:
+		var actor: int = 9000+shape
+		if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor,cell,6,shape,0,1)),"祖玛休眠入场"): return false
+		await settle(0.3)
+		if not check(hud.hud_snapshot().scene_monster_dormant[actor],"特征位1冻结休眠首帧"): return false
+		if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,actor,0,0,0)),"清除休眠位"): return false
+		if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_DIGUP,actor,cell,6,shape)),"21号开始苏醒"): return false
+		await settle(0.35)
+		if not check(hud.hud_snapshot().scene_monster_burrow_frames[actor]>=1 and not hud.hud_snapshot().scene_monster_dormant[actor],"苏醒按原版帧钟推进"): return false
+		if not await capture("monster-special-%d-awake" % shape): return false
+		await settle(0.6)
+		if shape==85 and not check(hud.hud_snapshot().scene_monster_burrow_frames[actor]>=0,"教主20帧苏醒不能按普通6帧提前结束"): return false
+		await settle(2.0)
+		if not check(hud.hud_snapshot().scene_monster_burrow_frames[actor]==-1 and not hud.hud_snapshot().scene_monster_dormant[actor],"苏醒完成转正常待机"): return false
+		if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,actor,1,0,0)),"重新设置休眠位"): return false
+		if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_HIT,actor,cell.x,cell.y,4)),"播放攻击后检查状态恢复"): return false
+		await settle(1.1)
+		if not check(hud.hud_snapshot().scene_monster_dormant[actor],"动作结束重新应用休眠状态"): return false
+		hud.remove_scene_actor(actor)
+	print("MONSTER_ZUMA_LIFECYCLE_OK shapes=83,84,85")
+	return true
+
 
 func check_rise_health(cell: Vector2i, feature: PackedByteArray) -> bool:
-	# 27号清空填充但保留生命值，9号起身后由下一条血量回包恢复填充。
+	# 34号死亡清空填充但保留生命值，27号起身，53号恢复血量显示。
 	feature[2]=30
 	feature[3]=0
 	feature[4]=0
 	var bar_actor := game_reply(Mir3HudView.SM_TURN,27,cell.x,cell.y,0)
 	bar_actor.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(bar_actor)
-		and hud.apply_game_message(game_reply(Mir3HudView.SM_WALK,27,5,0,10))
+		and hud.apply_game_message(game_reply(Mir3HudView.SM_HEALTHSPELLCHANGED,27,5,0,10))
 		and hud.apply_game_message(game_reply(Mir3HudView.SM_HEALTH_PERCENT,27,0,0,0)),
 		"建立带半血血条的怪物"): return false
 	await settle()
-	if not check(hud.hud_snapshot().scene_health_bounds[27].size.x==17,"死亡前显示半血填充"): return false
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_27,27,cell.x,cell.y,0)),
+	if not check(hud.hud_snapshot().scene_health_bounds.get(27,Rect2()).size.x==17,"死亡前显示半血填充"): return false
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_NOWDEATH,27,cell,0,30)),
 		"死亡动作开始"): return false
-	var bar_rise := game_reply(Mir3HudView.SM_BACKSTEP,27,cell.x,cell.y,0)
+	var bar_rise := game_reply(Mir3HudView.SM_27,27,cell.x,cell.y,0)
 	feature[2]=83
 	bar_rise.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(bar_rise),"死亡期间排队起身"): return false
@@ -1020,68 +1365,141 @@ func check_rise_health(cell: Vector2i, feature: PackedByteArray) -> bool:
 	await settle()
 	var revived: Dictionary = hud.hud_snapshot()
 	if not check(revived.scene_monster_death_frames[27]==-1 and revived.scene_monster_burrow_frames[27]==-1
-		and revived.scene_health_values[27][0]==5 and revived.scene_health_bounds[27].size.x==0,
+		and revived.scene_health_values[27][0]==5 and revived.scene_health_bounds.get(27,Rect2()).size.x==0,
 		"起身后保留生命值并显示空血条"): return false
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_WALK,27,5,0,10)),
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_HEALTHSPELLCHANGED,27,5,0,10)),
 		"起身后接收血量回包"): return false
 	await settle()
-	if not check(hud.hud_snapshot().scene_health_bounds[27].size.x==17,"血量回包恢复半血填充"): return false
+	if not check(hud.hud_snapshot().scene_health_bounds.get(27,Rect2()).size.x==17,"血量回包恢复半血填充"): return false
+	return true
+
+func check_special_follow() -> bool:
+	if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"跟随专项清场"): return false
+	var cell := SHOWCASE_ORIGIN+Vector2i(0,2)
+	var target := cell+Vector2i(0,2)
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,9800,cell,0,23)) and hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,9801,target,0,20)),"建立施法者与跟随目标"): return false
+	var body := PackedByteArray()
+	body.resize(16)
+	body.encode_u32(0,target.x)
+	body.encode_u32(4,target.y)
+	body.encode_u32(8,9801)
+	body.encode_u32(12,26)
+	var packet := game_reply(Mir3HudView.SM_LIGHTING,9800,cell.x,cell.y,0)
+	packet.append_array(encode_scene_bytes(body))
+	if not check(hud.apply_game_message(packet),"26分支绑定目标"): return false
+	await settle(0.72)
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_WALK,9801,target+Vector2i(0,1),4,20)),"移动被跟随目标"): return false
+	await settle(0.15)
+	var effects: Array=hud.hud_snapshot().scene_effects.filter(func(effect): return effect.skill==120)
+	if not check(effects.size()==1,"跟随效果仍存活"): return false
+	if not check(effects[0].target_actor==9801 and Vector2(effects[0].world_position).distance_to(Vector2(hud.hud_snapshot().scene_chicken_pixels[9801]))<10,"效果跟随目标的移动像素坐标"): return false
+	var last_position: Vector2=effects[0].world_position
+	if not check(hud.remove_scene_actor(9801),"移除目标"): return false
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,9801,cell,0,20)),"同编号重新出现"): return false
+	await settle(0.04)
+	effects=hud.hud_snapshot().scene_effects.filter(func(effect): return effect.skill==120)
+	if not check(effects.size()==1 and effects[0].target_actor==0 and effects[0].world_position==last_position,"目标删除后解绑并保留最后位置，不补绑同编号对象"): return false
+	print("MONSTER_SPECIAL_FOLLOW_OK branch=26")
+	return true
+
+func check_special_origin() -> bool:
+	# 409DB0分支26反传坐标，但4495D0的120为定点模式，44B7E0使用终点。
+	if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"特殊落点清场"): return false
+	var cell := SHOWCASE_ORIGIN+Vector2i(0,2)
+	var target := cell+Vector2i(0,3)
+	if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,9800,cell,0,23)),"建立施法者"): return false
+	var body := PackedByteArray()
+	body.resize(16)
+	body.encode_u32(0,target.x)
+	body.encode_u32(4,target.y)
+	body.encode_u32(12,26)
+	var packet := game_reply(Mir3HudView.SM_LIGHTING,9800,cell.x,cell.y,4)
+	packet.append_array(encode_scene_bytes(body))
+	if not check(hud.apply_game_message(packet),"26号分支接受"): return false
+	var effects: Array=hud.hud_snapshot().scene_effects
+	var matching: Array=effects.filter(func(effect): return effect.skill==120)
+	if not check(matching.size()==1,"登记120号独立效果"): return false
+	var effect: Dictionary=matching[0]
+	if not check(effect.cell==cell and not effect.projectile and effect.delay==700 and effect.frame_offset==0,"无目标对象时在施法者终点定点播放，延时700ms，方向0"): return false
+	print("MONSTER_SPECIAL_ORIGIN_OK branch=26")
+	return true
+
+func check_special_branches() -> bool:
+	# 409DB0逐分支资源登记；此处验证分派，不代替弹道/延时/像素验收。
+	var resources := [515,538,539,543,23,9,576,538,555,590,590,581,579,524,592,584,576,588,587,597,603,606,2,29,53,120]
+	var missing: Array[int]=[]
+	for index in range(resources.size()):
+		if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"分支间清理特效"): return false
+		var cell := SHOWCASE_ORIGIN+Vector2i(0,2)
+		var actor := 9700+index
+		if not check(hud.apply_game_message(monster_packet(Mir3HudView.SM_TURN,actor,cell,0,13 if index==1 else 23)),"特殊攻击建立施法者"): return false
+		var body := PackedByteArray()
+		body.resize(16)
+		body.encode_u32(0,cell.x)
+		body.encode_u32(4,cell.y+4)
+		body.encode_u32(12,index+1)
+		var packet := game_reply(Mir3HudView.SM_LIGHTING,actor,cell.x,cell.y,0)
+		packet.append_array(encode_scene_bytes(body))
+		if not check(hud.apply_game_message(packet),"23分支%d接受" % (index+1)): return false
+		var effects: Array=hud.hud_snapshot().scene_effects
+		if not effects.any(func(effect): return effect.skill==resources[index]):
+			missing.append(index+1)
+			print("MONSTER_SPECIAL_BRANCH_MISSING branch=",index+1," resource=",resources[index])
+			continue
+		print("MONSTER_SPECIAL_BRANCH_OK branch=",index+1," resource=",resources[index])
+	if not check(missing.is_empty(),"特殊攻击未登记资源的分支：%s" % [missing]): return false
+	print("MONSTER_SPECIAL_BRANCHES_OK count=26")
 	return true
 
 func check_special_effect(origin: Vector2i, cell: Vector2i, feature: PackedByteArray) -> bool:
-	# 657分支1立即切换攻击，越过当前移动但保留已排队消息。
+	# 23参与动作队列，657只更新状态；原版40D8C0调用+108。
 	feature[2]=23
-	var interrupt_entry := game_reply(Mir3HudView.SM_TURN,28,cell.x,cell.y,0)
-	interrupt_entry.append_array(encode_scene_bytes(feature))
-	var interrupt_step := game_reply(Mir3HudView.SM_TURN,28,origin.x,origin.y,0)
-	interrupt_step.append_array(encode_scene_bytes(feature))
-	var interrupt_body := PackedByteArray()
-	interrupt_body.resize(16)
-	interrupt_body.encode_u32(12,1)
-	var interrupt := game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,28,origin.x,origin.y,0)
-	interrupt.append_array(encode_scene_bytes(interrupt_body))
-	if not check(hud.apply_game_message(interrupt_entry) and hud.apply_game_message(interrupt_step)
-		and hud.hud_snapshot().scene_chicken_steps[28]==0,"开始待打断的移动"): return false
-	if not check(hud.apply_game_message(interrupt)
-		and hud.hud_snapshot().scene_chicken_steps[28]==-1
-		and hud.hud_snapshot().scene_monster_attack_actions[28]==2,
-		"657立即打断移动并启动攻击"): return false
-	# 分支4只转向，保留怪物所在格，即使消息头带了另一个位置。
-	interrupt_body.encode_u32(0,cell.x)
-	interrupt_body.encode_u32(4,cell.y)
-	interrupt_body.encode_u32(12,4)
-	var fixed_target := game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,28,cell.x,cell.y,2)
-	fixed_target.append_array(encode_scene_bytes(interrupt_body))
-	if not check(hud.apply_game_message(fixed_target)
-		and hud.hud_snapshot().scene_chicken_cells[28]==origin,
-		"657分支4保留施法者所在格"): return false
-	# 657分支25向南依次布置九格，发射间隔为150毫秒。
-	var wave_body := PackedByteArray()
-	wave_body.resize(16)
-	wave_body.encode_u32(0,cell.x)
-	wave_body.encode_u32(4,cell.y+5)
-	wave_body.encode_u32(12,25)
-	var wave := game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,27,cell.x,cell.y,0)
-	wave.append_array(encode_scene_bytes(wave_body))
-	if not check(hud.apply_game_message(wave),"657分支25启动地面波"): return false
-	var wave_delays: Dictionary = hud.hud_snapshot().map_ground_wave_delays
-	if not check(wave_delays.size()==9,"地面波布置九格"): return false
+	var entry := monster_packet(Mir3HudView.SM_TURN,28,cell,0,23)
+	var step := monster_packet(Mir3HudView.SM_WALK,28,origin,0,23)
+	var body := PackedByteArray()
+	body.resize(16)
+	body.encode_u32(12,1)
+	var attack := game_reply(Mir3HudView.SM_LIGHTING,28,origin.x,origin.y,0)
+	attack.append_array(encode_scene_bytes(body))
+	if not check(hud.apply_game_message(entry) and hud.apply_game_message(step),"建立移动中的怪物"): return false
+	if not check(hud.apply_game_message(attack) and hud.hud_snapshot().scene_chicken_steps[28]>=0
+		and hud.hud_snapshot().scene_monster_attack_actions[28]==0,"23入队不打断当前移动"): return false
+	var deadline := Time.get_ticks_msec()+2000
+	while hud.hud_snapshot().scene_monster_attack_actions[28]!=2 and Time.get_ticks_msec()<deadline:
+		await settle(0.02)
+	if not check(hud.hud_snapshot().scene_chicken_steps[28]==-1 and hud.hud_snapshot().scene_monster_attack_actions[28]==2,"移动完成后启动特殊攻击"): return false
+	await settle(1.5)
+	# 分支4只转向，不采纳消息头的位置。
+	body.encode_u32(0,cell.x)
+	body.encode_u32(4,cell.y)
+	body.encode_u32(12,4)
+	var fixed_target := game_reply(Mir3HudView.SM_LIGHTING,28,cell.x,cell.y,2)
+	fixed_target.append_array(encode_scene_bytes(body))
+	if not check(hud.apply_game_message(fixed_target) and hud.hud_snapshot().scene_chicken_cells[28]==origin
+		and hud.hud_snapshot().scene_monster_facings[28]==2,"23分支4保留施法者位置并转向"): return false
+	body.encode_u32(4,cell.y+5)
+	body.encode_u32(12,25)
+	var wave := game_reply(Mir3HudView.SM_LIGHTING,27,cell.x,cell.y,0)
+	wave.append_array(encode_scene_bytes(body))
+	if not check(hud.apply_game_message(wave),"23分支25启动地面波"): return false
+	var delays: Dictionary=hud.hud_snapshot().map_ground_wave_delays
+	if not check(delays.size()==9,"地面波布置九格"): return false
 	for index in range(9):
-		if not check(wave_delays.get(cell+Vector2i(0,index+1),-1)==150*index,
-			"第%d格使用原版启动延时" % (index+1)): return false
+		if not check(delays.get(cell+Vector2i(0,index+1),-1)==150*index,"地面波逐格延迟150毫秒"): return false
 	await settle(0.6)
 	if not await capture("map-monster-ground-wave"): return false
+	print("MONSTER_SPECIAL_QUEUE_OK branches=1,4,25")
 	return true
 
 func check_status_blend() -> bool:
-	# 801的高WORD依次设置灰阶、减速色与半透明，核对重叠位优先级。
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_801,23,0,0x0400,0))
+	# 657的高WORD依次设置灰阶、减速色与半透明，核对重叠位优先级。
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,23,0,0x0400,0))
 		and hud.hud_snapshot().scene_monster_status_colors[23]==0,"灰阶状态选择模式0"): return false
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_801,23,0,0x0c00,0))
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,23,0,0x0c00,0))
 		and hud.hud_snapshot().scene_monster_status_colors[23]==38079,"减速色覆盖灰阶"): return false
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_801,23,0,0x0c02,0))
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,23,0,0x0c02,0))
 		and hud.hud_snapshot().scene_monster_status_colors[23]==1,"半透明状态优先于颜色状态"): return false
 	if not await capture("map-monster-status-blend"): return false
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_801,23,0,0,0))
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_CHARSTATUSCHANGE,23,0,0,0))
 		and hud.hud_snapshot().scene_monster_status_colors[23]==65535,"清除状态后恢复普通显示"): return false
 	return true

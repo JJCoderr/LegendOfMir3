@@ -1,0 +1,2134 @@
+{
+  "regions": 13,
+  "expected_regions": 13,
+  "actor_instances": 195,
+  "errors": [],
+  "unavailable": [
+    {
+      "family": "比奇地区",
+      "map": "D1301",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1302",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1303",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1304",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1305",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1311",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1312",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1313",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1314",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1315",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1321",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1322",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1323",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1324",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "比奇地区",
+      "map": "D1325",
+      "name": "红甲虫",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "MidBoss.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "4",
+      "name": "诺玛法老",
+      "reason": "unsupported_shape",
+      "shape": 525.0,
+      "spawn_source": "!Lv8_Oasis.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "42",
+      "name": "诺玛教主2",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "Boss.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "42",
+      "name": "诺玛法老",
+      "reason": "unsupported_shape",
+      "shape": 525.0,
+      "spawn_source": "!Lv8_Desert.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "43",
+      "name": "诺玛教主2",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "Boss.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "43",
+      "name": "诺玛法老",
+      "reason": "unsupported_shape",
+      "shape": 525.0,
+      "spawn_source": "!Lv8_Desert.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "44",
+      "name": "诺玛法老",
+      "reason": "unsupported_shape",
+      "shape": 525.0,
+      "spawn_source": "!Lv8_Desert.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "6",
+      "name": "诺玛教主2",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "Boss.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "6",
+      "name": "诺玛法老",
+      "reason": "unsupported_shape",
+      "shape": 525.0,
+      "spawn_source": "!Lv8_Desert.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "D8001",
+      "name": "劳动蚂蚁0",
+      "reason": "unsupported_shape",
+      "shape": 16777232.0,
+      "spawn_source": "!Lv6_AntCave_T.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "D8002",
+      "name": "劳动蚂蚁0",
+      "reason": "unsupported_shape",
+      "shape": 16777232.0,
+      "spawn_source": "!Lv6_AntCave_T.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "D8003",
+      "name": "劳动蚂蚁0",
+      "reason": "unsupported_shape",
+      "shape": 16777232.0,
+      "spawn_source": "!Lv6_AntCave_T.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "D8004",
+      "name": "劳动蚂蚁0",
+      "reason": "unsupported_shape",
+      "shape": 16777232.0,
+      "spawn_source": "!Lv6_AntCave_T.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "D8101",
+      "name": "劳动蚂蚁0",
+      "reason": "unsupported_shape",
+      "shape": 16777232.0,
+      "spawn_source": "!Lv6_AntCave_T.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "D8102",
+      "name": "劳动蚂蚁0",
+      "reason": "unsupported_shape",
+      "shape": 16777232.0,
+      "spawn_source": "!Lv6_AntCave_T.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "D8103",
+      "name": "劳动蚂蚁0",
+      "reason": "unsupported_shape",
+      "shape": 16777232.0,
+      "spawn_source": "!Lv6_AntCave_T.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "D8104",
+      "name": "劳动蚂蚁0",
+      "reason": "unsupported_shape",
+      "shape": 16777232.0,
+      "spawn_source": "!Lv6_AntCave_T.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "D8201",
+      "name": "劳动蚂蚁0",
+      "reason": "unsupported_shape",
+      "shape": 16777232.0,
+      "spawn_source": "!Lv6_AntCave_T.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "D8202",
+      "name": "劳动蚂蚁0",
+      "reason": "unsupported_shape",
+      "shape": 16777232.0,
+      "spawn_source": "!Lv6_AntCave_T.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "D8203",
+      "name": "劳动蚂蚁0",
+      "reason": "unsupported_shape",
+      "shape": 16777232.0,
+      "spawn_source": "!Lv6_AntCave_T.gen"
+    },
+    {
+      "family": "沙漠·绿洲",
+      "map": "D8204",
+      "name": "劳动蚂蚁0",
+      "reason": "unsupported_shape",
+      "shape": 16777232.0,
+      "spawn_source": "!Lv6_AntCave_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "41",
+      "name": "诺玛法老",
+      "reason": "unsupported_shape",
+      "shape": 525.0,
+      "spawn_source": "!Lv8_Desert.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "D1606",
+      "name": "诺玛抛石兵",
+      "reason": "unsupported_shape",
+      "shape": 131255.0,
+      "spawn_source": "Boss.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1601",
+      "name": "诺玛抛石兵",
+      "reason": "unsupported_shape",
+      "shape": 131255.0,
+      "spawn_source": "!Lv13_numavestiges.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1601",
+      "name": "诺玛骑兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1601",
+      "name": "诺玛装甲兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1601",
+      "name": "诺玛司令8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1601",
+      "name": "诺玛抛石兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1601",
+      "name": "诺玛斧兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1602",
+      "name": "诺玛抛石兵",
+      "reason": "unsupported_shape",
+      "shape": 131255.0,
+      "spawn_source": "!Lv13_numavestiges.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1602",
+      "name": "诺玛骑兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1602",
+      "name": "诺玛装甲兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1602",
+      "name": "诺玛司令8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1602",
+      "name": "诺玛抛石兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1602",
+      "name": "诺玛斧兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16031",
+      "name": "诺玛抛石兵",
+      "reason": "unsupported_shape",
+      "shape": 131255.0,
+      "spawn_source": "!Lv13_numavestiges.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16031",
+      "name": "诺玛骑兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16031",
+      "name": "诺玛装甲兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16031",
+      "name": "诺玛司令8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16031",
+      "name": "诺玛抛石兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16031",
+      "name": "诺玛斧兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16032",
+      "name": "诺玛抛石兵",
+      "reason": "unsupported_shape",
+      "shape": 131255.0,
+      "spawn_source": "!Lv13_numavestiges.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16032",
+      "name": "诺玛骑兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16032",
+      "name": "诺玛装甲兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16032",
+      "name": "诺玛司令8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16032",
+      "name": "诺玛抛石兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16032",
+      "name": "诺玛斧兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16033",
+      "name": "诺玛抛石兵",
+      "reason": "unsupported_shape",
+      "shape": 131255.0,
+      "spawn_source": "!Lv13_numavestiges.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16033",
+      "name": "诺玛骑兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16033",
+      "name": "诺玛装甲兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16033",
+      "name": "诺玛司令8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16033",
+      "name": "诺玛抛石兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16033",
+      "name": "诺玛斧兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16034",
+      "name": "诺玛抛石兵",
+      "reason": "unsupported_shape",
+      "shape": 131255.0,
+      "spawn_source": "!Lv13_numavestiges.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16034",
+      "name": "诺玛骑兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16034",
+      "name": "诺玛装甲兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16034",
+      "name": "诺玛司令8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16034",
+      "name": "诺玛抛石兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d16034",
+      "name": "诺玛斧兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1604",
+      "name": "诺玛抛石兵",
+      "reason": "unsupported_shape",
+      "shape": 131255.0,
+      "spawn_source": "!Lv13_numavestiges.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1604",
+      "name": "诺玛骑兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1604",
+      "name": "诺玛装甲兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1604",
+      "name": "诺玛司令8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1604",
+      "name": "诺玛抛石兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1604",
+      "name": "诺玛斧兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1605",
+      "name": "诺玛抛石兵",
+      "reason": "unsupported_shape",
+      "shape": 131255.0,
+      "spawn_source": "!Lv13_numavestiges.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1605",
+      "name": "诺玛骑兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1605",
+      "name": "诺玛装甲兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1605",
+      "name": "诺玛司令8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1605",
+      "name": "诺玛抛石兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "诺玛地区",
+      "map": "d1605",
+      "name": "诺玛斧兵8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv13_numavestiges_T.gen"
+    },
+    {
+      "family": "盟重·石阁·虫谷",
+      "map": "D711",
+      "name": "红野猪",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv7_SukGakCave.gen"
+    },
+    {
+      "family": "盟重·石阁·虫谷",
+      "map": "D712",
+      "name": "红野猪",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv7_SukGakCave.gen"
+    },
+    {
+      "family": "盟重·石阁·虫谷",
+      "map": "D712",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv7_SukGakCave.gen"
+    },
+    {
+      "family": "盟重·石阁·虫谷",
+      "map": "D713",
+      "name": "红野猪",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv7_SukGakCave.gen"
+    },
+    {
+      "family": "盟重·石阁·虫谷",
+      "map": "D713",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv7_SukGakCave.gen"
+    },
+    {
+      "family": "盟重·石阁·虫谷",
+      "map": "D714",
+      "name": "红野猪",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv7_SukGakCave.gen"
+    },
+    {
+      "family": "盟重·石阁·虫谷",
+      "map": "D714",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv7_SukGakCave.gen"
+    },
+    {
+      "family": "盟重·石阁·虫谷",
+      "map": "D715",
+      "name": "红野猪",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv7_SukGakCave.gen"
+    },
+    {
+      "family": "盟重·石阁·虫谷",
+      "map": "D715",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv7_SukGakCave.gen"
+    },
+    {
+      "family": "盟重·石阁·虫谷",
+      "map": "D716",
+      "name": "红野猪",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv7_SukGakCave.gen"
+    },
+    {
+      "family": "盟重·石阁·虫谷",
+      "map": "D716",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv7_SukGakCave.gen"
+    },
+    {
+      "family": "盟重·石阁·虫谷",
+      "map": "D717",
+      "name": "红野猪",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv7_SukGakCave.gen"
+    },
+    {
+      "family": "盟重·石阁·虫谷",
+      "map": "D717",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv7_SukGakCave.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "8",
+      "name": "腐蚀人鬼",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv6_HalfNight.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1101",
+      "name": "潘夜战士8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1101",
+      "name": "潘夜火魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1102",
+      "name": "潘夜冰魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1102",
+      "name": "潘夜火魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D11031",
+      "name": "潘夜战士8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D11031",
+      "name": "潘夜云魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1104",
+      "name": "潘夜左护卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1104",
+      "name": "潘夜右护卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1105",
+      "name": "潘夜战士8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1105",
+      "name": "潘夜左护卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1111",
+      "name": "潘夜火魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1111",
+      "name": "潘夜右护卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1112",
+      "name": "潘夜左护卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1112",
+      "name": "潘夜右护卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1113",
+      "name": "潘夜云魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1113",
+      "name": "潘夜右护卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D11141",
+      "name": "潘夜冰魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D11141",
+      "name": "潘夜风魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D11142",
+      "name": "潘夜战士8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D11142",
+      "name": "潘夜右护卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1115",
+      "name": "潘夜左护卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "潘夜岛",
+      "map": "D1115",
+      "name": "潘夜右护卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_HalfNightWoomaPalace_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "9",
+      "name": "魔神怪8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_Silnakwon_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "9",
+      "name": "猿猴战将8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_Silnakwon_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "9",
+      "name": "猿猴战士8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_Silnakwon_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "9",
+      "name": "巨象兽8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_Silnakwon_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D1500",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D1500",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D1500",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15011",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15011",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15011",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15012",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15012",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15012",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15012",
+      "name": "武力神将8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15013",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15013",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15013",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15014",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15014",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15014",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15021",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15021",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15021",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15022",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15022",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15022",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15023",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15023",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15023",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15024",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15024",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15024",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15024",
+      "name": "武力神将8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15032",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15032",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15032",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15032",
+      "name": "武力神将8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15033",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15033",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15033",
+      "name": "武力神将8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15034",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15034",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15034",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15034",
+      "name": "武力神将8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15043",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15043",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15043",
+      "name": "武力神将8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15043",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15044",
+      "name": "武力神将8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15044",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15044",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15044",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15054",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15054",
+      "name": "武力神将8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15054",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15054",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D1506",
+      "name": "火焰狮子97",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "Bossbodyguard.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D1510",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D1510",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15111",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15111",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15111",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15112",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15112",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D15112",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D1512",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D1512",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D1513",
+      "name": "石像狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D1513",
+      "name": "地牢女神8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D1513",
+      "name": "火焰狮子8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "失乐园·真天宫",
+      "map": "D1513",
+      "name": "武力神将8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv11_SilnakCave_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D501",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D501",
+      "name": "大老鼠",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D501",
+      "name": "大老鼠8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D501",
+      "name": "祖玛弓箭手8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D502",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D502",
+      "name": "大老鼠",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D502",
+      "name": "大老鼠8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D502",
+      "name": "祖玛弓箭手8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D503",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D503",
+      "name": "大老鼠",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D503",
+      "name": "祖玛弓箭手8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D503",
+      "name": "祖玛雕像8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D503",
+      "name": "祖玛卫士8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D503",
+      "name": "大老鼠8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D504",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D504",
+      "name": "大老鼠",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D504",
+      "name": "祖玛弓箭手8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D504",
+      "name": "祖玛卫士8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D504",
+      "name": "祖玛雕像8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D505",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D505",
+      "name": "祖玛弓箭手8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D505",
+      "name": "祖玛卫士8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D505",
+      "name": "祖玛雕像8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D5072",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D5072",
+      "name": "祖玛雕像8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D5072",
+      "name": "祖玛卫士8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D5072",
+      "name": "祖玛弓箭手8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D5073",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D5073",
+      "name": "祖玛雕像8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D5073",
+      "name": "祖玛卫士8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D5073",
+      "name": "祖玛弓箭手8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D5074",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D5074",
+      "name": "祖玛雕像8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D5074",
+      "name": "祖玛卫士8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D5074",
+      "name": "祖玛弓箭手8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv10_ZumaPalace_T.gen"
+    },
+    {
+      "family": "祖玛神殿",
+      "map": "D515",
+      "name": "楔蛾",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "Boss.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D901",
+      "name": "犬猴魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D901",
+      "name": "轻甲守卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D901",
+      "name": "恶形鬼8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D901",
+      "name": "触角神魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D901",
+      "name": "海神将领8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D901",
+      "name": "爆毒神魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D9021",
+      "name": "犬猴魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D9021",
+      "name": "轻甲守卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D9021",
+      "name": "恶形鬼8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D9021",
+      "name": "触角神魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D9021",
+      "name": "爆毒神魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D9022",
+      "name": "触角神魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D9022",
+      "name": "爆毒神魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D9022",
+      "name": "红衣法师8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D9022",
+      "name": "神舰守卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D9022",
+      "name": "犬猴魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D9022",
+      "name": "轻甲守卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D9022",
+      "name": "恶形鬼8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D9022",
+      "name": "海神将领8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D903",
+      "name": "触角神魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D903",
+      "name": "爆毒神魔8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D903",
+      "name": "轻甲守卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D903",
+      "name": "红衣法师8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D903",
+      "name": "神舰守卫8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    },
+    {
+      "family": "神舰",
+      "map": "D903",
+      "name": "海神将领8",
+      "reason": "unresolved_shape",
+      "shape": null,
+      "spawn_source": "!Lv12_SinGiSun_T.gen"
+    }
+  ],
+  "unmapped_names": [
+    "地牢女神8",
+    "大老鼠",
+    "大老鼠8",
+    "巨象兽8",
+    "恶形鬼8",
+    "楔蛾",
+    "武力神将8",
+    "海神将领8",
+    "潘夜云魔8",
+    "潘夜冰魔8",
+    "潘夜右护卫8",
+    "潘夜左护卫8",
+    "潘夜战士8",
+    "潘夜火魔8",
+    "潘夜风魔8",
+    "火焰狮子8",
+    "火焰狮子97",
+    "爆毒神魔8",
+    "犬猴魔8",
+    "猿猴战士8",
+    "猿猴战将8",
+    "石像狮子8",
+    "祖玛卫士8",
+    "祖玛弓箭手8",
+    "祖玛雕像8",
+    "神舰守卫8",
+    "红甲虫",
+    "红衣法师8",
+    "红野猪",
+    "腐蚀人鬼",
+    "触角神魔8",
+    "诺玛司令8",
+    "诺玛抛石兵8",
+    "诺玛教主2",
+    "诺玛斧兵8",
+    "诺玛装甲兵8",
+    "诺玛骑兵8",
+    "轻甲守卫8",
+    "魔神怪8"
+  ],
+  "not_observed_walking": [
+    {
+      "actor": "比奇地区/127",
+      "reason": "incomplete_walk_or_idle_resources"
+    },
+    {
+      "actor": "比奇地区/31",
+      "reason": "incomplete_walk_or_idle_resources"
+    },
+    {
+      "actor": "道馆·沃玛神殿/127",
+      "reason": "incomplete_walk_or_idle_resources"
+    },
+    {
+      "actor": "灌木林·赤月山谷/106",
+      "reason": "incomplete_walk_or_idle_resources"
+    },
+    {
+      "actor": "灌木林·赤月山谷/104",
+      "reason": "incomplete_walk_or_idle_resources"
+    },
+    {
+      "actor": "毒蛇山谷/127",
+      "reason": "incomplete_walk_or_idle_resources"
+    },
+    {
+      "actor": "毒蛇山谷/31",
+      "reason": "incomplete_walk_or_idle_resources"
+    },
+    {
+      "actor": "沙漠·绿洲/95",
+      "reason": "incomplete_walk_or_idle_resources"
+    },
+    {
+      "actor": "沙漠·绿洲/5",
+      "reason": "incomplete_walk_or_idle_resources"
+    },
+    {
+      "actor": "诺玛地区/95",
+      "reason": "incomplete_walk_or_idle_resources"
+    },
+    {
+      "actor": "盟重·石阁·虫谷/67",
+      "reason": "incomplete_walk_or_idle_resources"
+    },
+    {
+      "actor": "盟重·石阁·虫谷/73",
+      "reason": "incomplete_walk_or_idle_resources"
+    },
+    {
+      "actor": "祖玛神殿/73",
+      "reason": "incomplete_walk_or_idle_resources"
+    }
+  ],
+  "death_delay_ms": [
+    364,
+    1980
+  ],
+  "traversal_verified": true,
+  "complete_monster_system": false,
+  "scope": "区域遍历、消息接受、可见行走资源、死亡和随机技能；不证明全部攻击视觉、特殊AI或外观覆盖"
+}

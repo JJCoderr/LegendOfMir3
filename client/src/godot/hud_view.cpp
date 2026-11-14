@@ -12,6 +12,7 @@
 #include <godot_cpp/classes/audio_stream_mp3.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include "hud_view.hpp"
+#include <climits>
 #include "hud/portrait_fac.hpp"
 #include "guild/guild_members.hpp"
 #include <godot_cpp/classes/config_file.hpp>
@@ -261,6 +262,8 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_connection_enabled","enabled"),&Mir3HudView::set_connection_enabled);
     ClassDB::bind_method(D_METHOD("apply_login_message","message"),&Mir3HudView::apply_login_message);
     ClassDB::bind_method(D_METHOD("apply_game_message","message"),&Mir3HudView::apply_game_message);
+    ClassDB::bind_method(D_METHOD("monster_behavior_profile","shape"),&Mir3HudView::monster_behavior_profile);
+    ClassDB::bind_method(D_METHOD("advance_monster_ai","elapsed_ms","targets"),&Mir3HudView::advance_monster_ai);
     ADD_SIGNAL(MethodInfo("login_connection_requested",PropertyInfo(Variant::STRING,"host"),PropertyInfo(Variant::INT,"port")));
     ADD_SIGNAL(MethodInfo("login_connection_close_requested"));
     ADD_SIGNAL(MethodInfo("selection_endpoint_ready",PropertyInfo(Variant::STRING,"host"),PropertyInfo(Variant::INT,"port")));
@@ -402,15 +405,25 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary npc_bounds;
     for (const auto& [actor,npc]:scene_npcs) npc_bounds[actor]=npc.bounds;
     result["scene_npc_bounds"]=npc_bounds;
-    Dictionary chicken_bounds;
+    Dictionary chicken_bounds, monster_facings, monster_reverse_burrows;
+    Dictionary monster_revive_elapsed;
+    for (const auto& [actor,chicken]:scene_chickens) {
+        monster_facings[actor]=chicken.facing;
+        monster_reverse_burrows[actor]=chicken.reverse_burrow;
+        monster_revive_elapsed[actor]=chicken.revive_elapsed_ms;
+    }
+    result["scene_monster_facings"]=monster_facings;
+    result["scene_monster_reverse_burrows"]=monster_reverse_burrows;
+    result["scene_monster_revive_elapsed_ms"]=monster_revive_elapsed;
     for (const auto& [actor,chicken]:scene_chickens) chicken_bounds[actor]=chicken.bounds;
     result["scene_chicken_bounds"]=chicken_bounds;
-    Dictionary chicken_cells, chicken_steps, chicken_walk_poses, chicken_struck, chicken_pixels, monster_shapes, monster_burrow_frames, monster_attack_frames, monster_attack_actions, monster_death_frames, monster_body_dyes, actor_status_colors;
+    Dictionary chicken_cells, chicken_steps, chicken_walk_poses, chicken_struck, chicken_pixels, monster_shapes, monster_burrow_frames, monster_attack_frames, monster_attack_actions, monster_death_frames, monster_body_dyes, actor_status_colors, monster_dormant;
     for (const auto& [actor,chicken]:scene_chickens) {
         chicken_cells[actor]=chicken.cell;
         chicken_steps[actor]=chicken.walk_frame;
         chicken_walk_poses[actor]=chicken.walk_pose();
         monster_shapes[actor]=chicken.shape;
+        monster_dormant[actor]=chicken.hidden_pose;
         monster_body_dyes[actor]=monster_body_dye(chicken.shape);
         actor_status_colors[actor]=actor_status_color(chicken.status_flags);
         monster_burrow_frames[actor]=chicken.burrow_frame;
@@ -424,6 +437,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["scene_chicken_steps"]=chicken_steps;
     result["scene_monster_walk_poses"]=chicken_walk_poses;
     result["scene_monster_shapes"]=monster_shapes;
+    result["scene_monster_dormant"]=monster_dormant;
     result["scene_monster_body_dyes"]=monster_body_dyes;
     result["scene_monster_status_colors"]=actor_status_colors;
     result["scene_monster_burrow_frames"]=monster_burrow_frames;
@@ -566,11 +580,11 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["level_effects"]=level_states;
     result["map_event_count"]=int(map_events.size()+ground_events.size());
     Dictionary event_states, ground_wave_delays;
-    Array spell_states;
+    Array spell_states, scene_effect_states;
     for(const auto& [id,event]:map_events) {
         event_states[int64_t(id)]=event.frame;
         if (event.ground_wave) ground_wave_delays[event.cell]=event.delay_ms;
-        if (event.spell_effect || event.staged_spell || event.ground_wave) {
+        {
             Dictionary state;
             state["skill"]=int(event.resource->id);state["frame"]=event.frame;
             state["library"]=int(event.resource->library);
@@ -587,10 +601,12 @@ Dictionary Mir3HudView::hud_snapshot() const {
                 event.follow_position.value_or(Vector2(event.cell*Vector2i(48,32)));
             state["stage"]=event.staged_spell?int(event.staged_spell->stage):-1;
             if (event.staged_spell) state["stage_offset"]=Vector2i(event.staged_spell->offset[0],event.staged_spell->offset[1]);
-            spell_states.append(state);
+            scene_effect_states.append(state);
+            if (event.spell_effect || event.staged_spell || event.ground_wave) spell_states.append(state);
         }
     }
     result["spell_effects"]=spell_states;
+    result["scene_effects"]=scene_effect_states;
     result["human_spell_light_count"]=int(human_spell_lights.size());
     result["drawn_human_spells"]=drawn_human_spells;
     result["map_ground_wave_delays"]=ground_wave_delays;
@@ -965,6 +981,14 @@ void Mir3HudView::_ready() {
     monster_body_mix.instantiate();
     monster_body_mix->set_shader(monster_mix);
     monster_body_mix->set_shader_parameter("source_weight",8.0);
+    for (int weight=0;weight<32;++weight) {
+        monster_appearance_mix[weight].instantiate();
+        monster_appearance_mix[weight]->set_shader(monster_mix);
+        monster_appearance_mix[weight]->set_shader_parameter("source_weight",double(weight));
+    }
+    monster_tint_appearance_mix.instantiate();
+    monster_tint_appearance_mix->set_shader(monster_mix);
+    monster_tint_appearance_mix->set_shader_parameter("combine_before_floor",true);
     mir3::WilArchive weather_archive;
     if(weather_archive.open(resource_root/"Data"/"ProgUse")) {
         if(const auto source=weather_archive.frame(500)) snow_texture=texture(source->pixels.rgba,source->width,source->height);
@@ -2408,6 +2432,7 @@ bool Mir3HudView::place_scene_chicken(int actor,Vector2i cell,int facing,int sha
         chicken.frames[i]=*frame;
     }
     scene_chickens.insert_or_assign(actor,std::move(chicken));
+    monster_ai.actors.erase(actor);
     queue_redraw();
     return true;
 }
@@ -2477,25 +2502,22 @@ const Mir3HudView::MapActorFrame* Mir3HudView::project_monster_shadow(const MapA
         texture(rgba,projected_width,projected_height),flat?body.offset+Vector2(3,2):body.shadow_offset,{}}).first->second;
 }
 
-bool Mir3HudView::refresh_monster_shape(SceneChicken& monster,int shape,int action,int facing) {
-    if (action<0) {
-        action=monster.skeleton?880:monster.death_frame>=0?320:monster.burrow_frame>=0?640:
-            monster.struck_frame>=0?240:monster.walk_frame>=0?80:monster.attack_frame>=0?160:0;
-    }
+bool Mir3HudView::refresh_monster_shape(SceneChicken& monster,int shape,int /*action*/,int facing) {
     const int direction=facing<0?monster.facing:facing;
     const auto idle=monster_idle_motion(shape);
-    const auto attack=monster_attack_motion(shape,monster.attack_action);
-    const int count=action==880?1:action==320?monster_death_motion(shape).frames:action==240?monster_struck_motion(shape).frames:
-        action==160?attack.frames:action==640?monster_burrow_motion(shape).frames:action==80?6:idle.frames;
-    for (int i=0;i<idle.frames;++i)
-        if (!monster_frame(shape,0,direction,i)) return false;
-    for (int i=0;i<count;++i)
-        if (!monster_frame(shape,action==160?attack.base:action,direction,i)) return false;
+    // 406750 selects actions without preloading every frame. 40ECB0 returns
+    // without drawing when 491C70 cannot load a frame; it does not reject the
+    // network action (e.g. shape 186 has an empty final death frame).
+    if (monster.shape!=shape) {
+        for (int i=0;i<idle.frames;++i)
+            if (!monster_frame(shape,0,direction,i)) return false;
+    }
     if (monster.shape!=shape || (facing>=0 && facing!=monster.facing)) {
         monster.shape=shape;
         monster.frames={};
         monster.idle_frame%=idle.frames;
-        for (int i=0;i<idle.frames;++i) monster.frames[i]=*monster_frame(shape,0,direction,i);
+        for (int i=0;i<idle.frames;++i)
+            if (const auto* frame=monster_frame(shape,0,direction,i)) monster.frames[i]=*frame;
     }
     return true;
 }
@@ -2577,7 +2599,7 @@ bool Mir3HudView::apply_monster_hit(int actor,const SceneChicken::Hit& hit) {
 }
 
 bool Mir3HudView::apply_monster_death(int actor,const SceneChicken::Death& death) {
-    const auto [cell,facing,packet_shape,opcode,light]=death;
+    const auto [cell,facing,packet_shape,opcode,light,status]=death;
     const bool skeleton=opcode==mir3::protocol::SM_SKELETON;
     const int shape=packet_shape>=0?packet_shape:scene_chickens.at(actor).shape;
     const int frames=skeleton?1:monster_death_motion(shape).frames;
@@ -2592,6 +2614,7 @@ bool Mir3HudView::apply_monster_death(int actor,const SceneChicken::Death& death
     auto& chicken=scene_chickens.at(actor);
     chicken.cell=cell;
     chicken.facing=facing;
+    if (status) { chicken.status_flags=*status;update_actor_bar_status(actor,(*status&2)!=0); }
     chicken.walk_frame=-1;
     chicken.struck_frame=-1;
     chicken.burrow_frame=-1;
@@ -2599,7 +2622,7 @@ bool Mir3HudView::apply_monster_death(int actor,const SceneChicken::Death& death
     chicken.buried=false;
     chicken.light_attribute=light;
     if (auto health=scene_health.find(actor);health!=scene_health.end()) health->second.empty_bar=true;
-    const bool animated=opcode==mir3::protocol::SM_NOWDEATH || opcode==mir3::protocol::SM_27;
+    const bool animated=opcode==mir3::protocol::SM_NOWDEATH;
     if (chicken.death_frame<0 || !animated || chicken.skeleton || chicken.death_frame>=frames) {
         chicken.death_frame=animated?0:frames-1;
         chicken.death_ms=0;
@@ -2613,6 +2636,147 @@ bool Mir3HudView::apply_monster_death(int actor,const SceneChicken::Death& death
     return true;
 }
 
+Dictionary Mir3HudView::advance_monster_ai(int elapsed_ms,Array targets) {
+    Dictionary result;
+    // 显式离线世界适配器；联网场景仍由服务器驱动，不能擅自发送唤醒或召唤。
+    if (!bool(get_meta("offline_preview",false)) || elapsed_ms<0 || elapsed_ms>10000) {
+        result["error"]="offline preview and elapsed_ms in [0,10000] required";
+        return result;
+    }
+    std::vector<mir3::ZumaAi::Target> visible;
+    for (int index=0;index<targets.size();++index) {
+        if (targets[index].get_type()!=Variant::DICTIONARY) {
+            result["error"]="target dictionary required";return result;
+        }
+        const Dictionary target=targets[index];
+        if (!target.has("cell") || target["cell"].get_type()!=Variant::VECTOR2I) {
+            result["error"]="target cell required";return result;
+        }
+        const Vector2i cell=target["cell"];
+        visible.push_back({cell.x,cell.y,bool(target.get("alive",true)),
+            bool(target.get("proper",true)),bool(target.get("inspector",false)),
+            int(target.get("id",index+1)),bool(target.get("hidden",false))});
+    }
+    std::erase_if(monster_ai.actors,[&](const auto& entry) {
+        const auto found=scene_chickens.find(entry.first);
+        return found==scene_chickens.end() || found->second.shape<83 || found->second.shape>85;
+    });
+    for (const auto& [id,monster]:scene_chickens) {
+        if (monster.shape<83 || monster.shape>85) continue;
+        auto [found,inserted]=monster_ai.actors.try_emplace(id);
+        auto& brain=found->second;
+        if (inserted) {
+            brain.id=id;
+            brain.pursuit.facing=monster.facing;
+            brain.stone=mir3::MonsterBehavior::for_shape(monster.shape).dormant(monster.status_flags);
+            brain.next_turn=monster_ai_clock+brain.walk_interval_ms;
+        }
+        brain.kind=monster.shape==85?mir3::ZumaKind::king:mir3::ZumaKind::statue;
+        brain.x=monster.cell.x;brain.y=monster.cell.y;
+        brain.dead=monster.death_frame>=0;
+        if (const auto health=scene_health.find(id);health!=scene_health.end() && health->second.maximum>0) {
+            brain.hp=health->second.current;brain.max_hp=health->second.maximum;
+        }
+    }
+    monster_ai_clock+=elapsed_ms;
+    Array spawned,spawn_failures;
+    const auto events=monster_ai.tick(monster_ai_clock,[&](int) {return std::span<const mir3::ZumaAi::Target>(visible);},
+        [&](const mir3::ZumaAi::Actor& owner,mir3::ZumaSlavePrototype prototype)->std::optional<int> {
+            Dictionary request;request["owner"]=owner.id;request["prototype"]=int(prototype);
+            const auto binding=mir3::reference_zuma_prototype(prototype);
+            if (!binding) {
+                request["reason"]="unresolved_reference_prototype";spawn_failures.append(request);return {};
+            }
+            const auto& summoner=scene_chickens.at(owner.id);
+            // 服务器逻辑方向独立保留；教主客户端苏醒会强制显示方向0。
+            const auto direction=mir3::map_directions[owner.pursuit.facing%8];
+            const auto cell=summoner.cell+Vector2i(direction[0],direction[1]);
+            // CallSlave每次取同一个前方格，AddCreature(...,FALSE)不搜索替代位置。
+            // 允许同格多实体；不能为展示便利擅自改成环形散布。
+            while (monster_ai_next_id<INT_MAX && (scene_chickens.contains(monster_ai_next_id) ||
+                scene_npcs.contains(monster_ai_next_id) || scene_humans.contains(monster_ai_next_id) ||
+                monster_ai_next_id==local_actor_identity)) ++monster_ai_next_id;
+            if (monster_ai_next_id==INT_MAX) {
+                request["reason"]="actor_id_exhausted";spawn_failures.append(request);return {};
+            }
+            const int id=monster_ai_next_id++;
+            const int shape=int(binding->appearance);
+            const auto behavior=mir3::MonsterBehavior::for_shape(shape);
+            const auto status=behavior.birth==mir3::MonsterBehavior::Birth::dormant_statue?
+                mir3::MonsterBehavior::dormant_flag:0u;
+            mir3::SceneName name;
+            name.update(mir3::protocol::SM_USERNAME,255,mir3::utf8_to_ansi(binding->name));
+            if (!apply_monster_entry(id,SceneChicken::Entry{cell,int(UtilityFunctions::randi()%8),shape,0,
+                    status,false,name,behavior.dormant(status),false})) {
+                request["reason"]="entry_rejected";request["shape"]=shape;request["cell"]=cell;
+                spawn_failures.append(request);return {};
+            }
+            request["actor"]=id;request["shape"]=shape;request["cell"]=cell;
+            spawned.append(request);
+            return id;
+        },[&](int id) { const auto found=scene_chickens.find(id);return found!=scene_chickens.end() && found->second.death_frame<0; },
+        [](unsigned bound) {return unsigned(UtilityFunctions::randi())%bound;});
+    Array woke,ready,rejected;
+    for (int id:events.woke) {
+        const auto& monster=scene_chickens.at(id);
+        if (receive_monster_action(id,SceneChicken::Burrow{monster.cell,monster.facing,monster.shape,
+                monster.light_attribute,monster.status_flags&~mir3::MonsterBehavior::dormant_flag})) woke.append(id);
+        else { monster_ai.actors.at(id).stone=true;rejected.append(id); }
+    }
+    Array moved,attacked,blocked;
+    for (int id:events.ready) {
+        ready.append(id);
+        auto& monster=scene_chickens.at(id);
+        auto& brain=monster_ai.actors.at(id);
+        // 离线适配器按完成动作逐步推进；避免测试时快进时钟堆积无限动作。
+        if (monster.walk_frame>=0 || monster.struck_frame>=0 || monster.burrow_frame>=0 ||
+            monster.attack_frame>=0 || !monster.actions.empty()) continue;
+        const auto action=brain.pursuit.tick(monster_ai_clock,monster.cell.x,monster.cell.y,visible,
+            [&](int x,int y,int facing) {
+                const Vector2i destination(x,y);
+                if (!terrain.walkable(x,y) || scene_occupied(destination) || destination==player_cell ||
+                    std::any_of(visible.begin(),visible.end(),[&](const auto& target) {return target.alive && target.x==x && target.y==y;})) return false;
+                return receive_monster_action(id,SceneChicken::Turn{destination,facing,monster.shape,
+                    monster.light_attribute,false,monster.status_flags,true});
+            },[&](int facing,const mir3::MonsterAiTarget&) {
+                return receive_monster_action(id,SceneChicken::Attack{monster.cell,facing,std::nullopt,0,0});
+            },[](unsigned bound) {return unsigned(UtilityFunctions::randi())%bound;});
+        if (action==mir3::MonsterPursuit::Action::walk) moved.append(id);
+        else if (action==mir3::MonsterPursuit::Action::attack) attacked.append(id);
+        else if (action==mir3::MonsterPursuit::Action::blocked) blocked.append(id);
+    }
+    result["woke"]=woke;result["ready"]=ready;result["rejected"]=rejected;
+    result["spawned"]=spawned;result["spawn_failures"]=spawn_failures;
+    result["moved"]=moved;result["attacked"]=attacked;result["blocked"]=blocked;
+    return result;
+}
+
+Dictionary Mir3HudView::monster_behavior_profile(int shape) {
+    const auto behavior=mir3::MonsterBehavior::for_shape(shape);
+    Dictionary profile;
+    profile["birth_opcode"]=int(mir3::protocol::SM_TURN);
+    profile["birth_status"]=behavior.birth==mir3::MonsterBehavior::Birth::dormant_statue?int(mir3::MonsterBehavior::dormant_flag):0;
+    profile["wake_opcode"]=behavior.wake_frames?int(mir3::protocol::SM_DIGUP):0;
+    profile["wake_frames"]=behavior.wake_frames;
+    profile["wake_interval_ms"]=behavior.wake_interval_ms;
+    profile["wake_facing"]=behavior.wake_facing;
+    profile["attack_opcode"]=mir3::MonsterBehavior::attack_message(shape);
+    // 展示能力只描述现有资源，不据此推断服务端是否允许移动。
+    // 原版40ECB0允许空帧，不能用这张表拒绝网络动作。
+    Array walk_directions;
+    const auto idle=monster_idle_motion(shape);
+    for (int direction=0;direction<8;++direction) {
+        bool complete=true;
+        for (int frame=0;frame<6 && complete;++frame)
+            complete=monster_frame(shape,80,direction,frame)!=nullptr;
+        for (int frame=0;frame<idle.frames && complete;++frame)
+            complete=monster_frame(shape,0,direction,frame)!=nullptr;
+        if (complete) walk_directions.append(direction);
+    }
+    profile["visible_walk_directions"]=walk_directions;
+    return profile;
+}
+
 bool Mir3HudView::apply_monster_burrow(int actor,SceneChicken::Burrow burrow) {
     auto& monster=scene_chickens.at(actor);
     if (!terrain.walkable(burrow.cell.x,burrow.cell.y)) return false;
@@ -2622,11 +2786,13 @@ bool Mir3HudView::apply_monster_burrow(int actor,SceneChicken::Burrow burrow) {
     if (!refresh_monster_shape(monster,shape,0,facing)) return false;
     monster.cell=burrow.cell;
     monster.facing=facing;
+    if (burrow.status) { monster.status_flags=*burrow.status;update_actor_bar_status(actor,(*burrow.status&2)!=0); }
     monster.light_attribute=burrow.light;
     monster.burrow_frame=0;
+    monster.hidden_pose=false;
     monster.burrow_ms=0;
-    monster.hide_after_burrow=shape==3 || shape==31;
-    monster.reverse_burrow=monster.hide_after_burrow;
+    monster.hide_after_burrow=false;
+    monster.reverse_burrow=shape==3 || shape==31;
     monster.burrow_catch_up=false;
     if (shape==56 || shape==89) show_map_impact(shape==56?17:30,burrow.cell);
     if (shape==4 || shape==49) {
@@ -2640,11 +2806,25 @@ bool Mir3HudView::apply_monster_burrow(int actor,SceneChicken::Burrow burrow) {
 }
 
 bool Mir3HudView::apply_monster_action(int actor,const SceneChicken::Action& action) {
-    if (const auto* relay=std::get_if<SceneChicken::RelayedBackstep>(&action)) {
-        // 40DA45 passes this + 0xA4 to 481A30, the same queue 40D8C0 consumes.
-        if (!move_scene_chicken(actor,relay->turn)) return false;
+    if (const auto* special=std::get_if<SceneChicken::SpecialAttack>(&action))
+        return apply_monster_special(actor,*special);
+    if (const auto* relay=std::get_if<SceneChicken::RelayedHit>(&action)) {
+        if (!apply_monster_hit(actor,relay->hit)) return false;
         auto& actions=scene_chickens.at(actor).actions;
-        if (actions.size()<64) actions.emplace_back(relay->turn);
+        if (actions.size()<64) actions.emplace_back(relay->hit);
+        return true;
+    }
+    if (const auto* transfer=std::get_if<SceneChicken::Transfer>(&action)) {
+        if (transfer->entry) {
+            if (!apply_monster_entry(actor,*transfer->entry)) return false;
+            const int effect=transfer->opcode==mir3::protocol::SM_801?321:
+                transfer->opcode==mir3::protocol::SM_808?323:0;
+            if (effect) show_map_impact(effect,scene_chickens.at(actor).cell);
+        } else {
+            const auto cell=scene_chickens.at(actor).cell;
+            play_actor_sound(actor,110,cell);
+            show_map_impact(transfer->opcode==mir3::protocol::SM_800?322:320,cell);
+        }
         return true;
     }
     if (const auto* turn=std::get_if<SceneChicken::Turn>(&action)) return move_scene_chicken(actor,*turn);
@@ -2657,9 +2837,8 @@ bool Mir3HudView::apply_monster_action(int actor,const SceneChicken::Action& act
         monster.cell=reverse->cell;
         if (monster.shape==31 || (monster.shape>=530 && monster.shape<=533)) monster.facing=0;
         monster.buried=false;
-        monster.hide_after_burrow=monster.shape!=3 && monster.shape!=31;
-        monster.reverse_burrow=monster.hide_after_burrow;
-        monster.turned_burrow_once=true;
+        monster.hide_after_burrow=true;
+        monster.reverse_burrow=monster.shape!=3 && monster.shape!=31;
         monster.burrow_frame=0;
         monster.burrow_ms=0;
         monster.burrow_catch_up=false;
@@ -2672,6 +2851,7 @@ bool Mir3HudView::apply_monster_action(int actor,const SceneChicken::Action& act
         if (!refresh_monster_shape(monster,shape,0,rise->facing)) return false;
         monster.cell=rise->cell;
         monster.facing=rise->facing;
+        if (rise->status) { monster.status_flags=*rise->status;update_actor_bar_status(actor,(*rise->status&2)!=0); }
         monster.light_attribute=rise->light;
         monster.death_frame=-1;
         monster.skeleton=false;
@@ -2731,7 +2911,7 @@ bool Mir3HudView::apply_monster_action(int actor,const SceneChicken::Action& act
 
 bool Mir3HudView::apply_monster_entry(int actor,const SceneChicken::Entry& entry) {
     const auto existing=scene_chickens.find(actor);
-    if (existing!=scene_chickens.end() && existing->second.death_frame>=0) return true;
+    if (existing!=scene_chickens.end() && existing->second.death_frame>=0 && !entry.revive) return true;
     if (existing==scene_chickens.end()) {
         if (!place_scene_chicken(actor,entry.cell,entry.facing,entry.shape,entry.light)) return false;
     } else {
@@ -2744,8 +2924,15 @@ bool Mir3HudView::apply_monster_entry(int actor,const SceneChicken::Entry& entry
         monster.buried=false;
         monster.idle_frame=0;
         monster.idle_ms=0;
+        if (entry.revive) {
+            // 4085A0: SM_REVIVE clears the corpse flag before selecting standing.
+            monster.death_frame=-1;
+            monster.death_ms=0;
+            monster.skeleton=false;
+        }
     }
     scene_chickens.at(actor).hidden_pose=entry.hidden_pose;
+    if (entry.revive) scene_chickens.at(actor).revive_elapsed_ms=0;
     scene_chickens.at(actor).status_flags=entry.status;
     update_actor_bar_status(actor,(entry.status&2)!=0);
     if (entry.name) scene_names.insert_or_assign(actor,*entry.name);
@@ -2757,8 +2944,7 @@ bool Mir3HudView::receive_monster_action(int actor,SceneChicken::Action action) 
     auto& monster=scene_chickens.at(actor);
     if (const auto* turn=std::get_if<SceneChicken::Turn>(&action);
         turn && !terrain.walkable(turn->cell.x,turn->cell.y)) return false;
-    if (std::holds_alternative<SceneChicken::RelayedBackstep>(action) ||
-        monster.walk_frame>=0 || monster.struck_frame>=0 || monster.burrow_frame>=0 || monster.attack_frame>=0 ||
+    if (monster.walk_frame>=0 || monster.struck_frame>=0 || monster.burrow_frame>=0 || monster.attack_frame>=0 ||
         (monster.death_frame>=0 && monster.death_frame<monster_death_motion(monster.shape).frames-1 && !monster.skeleton) ||
         !monster.actions.empty()) {
         if (monster.actions.size()>=64) return false;
@@ -3083,201 +3269,9 @@ bool Mir3HudView::set_local_actor_identity(int actor) {
     return true;
 }
 
-bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray key) {
-    if (server_groups.visible || login_visible || character_selection.visible) return false;
-    if (encoded.size()<mir3::ReceiveHeader::encoded_size || encoded.size()>mir3::ReceiveHeader::encoded_size+mir3::ChatLog::max_encoded_text) return false;
-    const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),static_cast<std::size_t>(encoded.size())},
-        {key.ptr(),static_cast<std::size_t>(key.size())});
-    if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_REVIVE_REFRESH && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS && header->opcode!=mir3::protocol::SM_DAYCHANGING && header->opcode!=mir3::protocol::SM_SHOWEVENT && header->opcode!=mir3::protocol::SM_HIDEEVENT)) return false;
-    const int actor=header->recognition, opcode=header->opcode;
-    const auto& p=header->parameters;
-    if (opcode==mir3::protocol::SM_MAGICFIRE || opcode==mir3::protocol::SM_MAGICFIRE_LIST) {
-        const auto reply=mir3::SpellReply::parse(*header,{encoded.ptr()+16,std::size_t(encoded.size()-16)});
-        if (!reply) return false;
-        if (local_actor_identity && actor==local_actor_identity) {
-            if (local_actor_messages.size()>=64) return false;
-            LocalActorMessage message{{opcode,0,{}},{},0};message.spell_reply=*reply;
-            local_actor_messages.push_back(std::move(message));return true;
-        }
-        const auto found=scene_humans.find(actor);
-        if (found==scene_humans.end()) return false;
-        mir3::SceneHumanMessage message;message.opcode=opcode;message.spell_reply=*reply;
-        return found->second.messages.push(std::move(message));
-    }
-    if (local_actor_identity && actor==local_actor_identity &&
-        (opcode==mir3::protocol::SM_SITDOWN || opcode==mir3::protocol::SM_BUTCH)) {
-        // 415AD0没有12/637动作分支，但仍按FIFO逐条消费，不能中断本地预测动作。
-        if (local_actor_messages.size()>=64) return false;
-        local_actor_messages.push_back({{opcode,0,{}},{},0});
-        return true;
-    }
-    if (local_actor_identity && actor==local_actor_identity &&
-        (opcode==mir3::protocol::SM_STRUCK || opcode==mir3::protocol::SM_HUMAN_STRUCK)) {
-        if (encoded.size()!=38 || local_actor_messages.size()>=64) return false;
-        const auto body=mir3::decode_six_bit(encoded.ptr()+16,22);
-        if (!body || body->size()!=16) return false;
-        const auto appearance=mir3::HumanAppearance::parse({reinterpret_cast<const std::uint8_t*>(body->data()),body->size()},true);
-        if (!appearance) return false;
-        mir3::SceneHumanMessage hit{opcode};
-        hit.health=p;
-        for (int i=0;i<4;++i) hit.hit_source|=std::uint32_t(std::uint8_t((*body)[8+i]))<<(8*i);
-        const unsigned variant=std::uint8_t((*body)[14])|(unsigned(std::uint8_t((*body)[15]))<<8);
-        if (opcode==mir3::protocol::SM_STRUCK) {
-            // 42EC70：特殊受击后的500ms内，非致死31只同步生命数值。
-            if (std::uint32_t(ticks_msec())-local_struck_tick<500) {
-                model.hp=p[0];model.max_hp=p[1];
-                if (p[0]) { queue_redraw();return true; }
-            }
-            // 40D7F0：仅当队长大于1时，折叠已排队的31，保留其他消息顺序。
-            local_folded_hits=0;
-            if (local_actor_messages.size()>1) {
-                for (auto it=local_actor_messages.begin();it!=local_actor_messages.end();) {
-                    if (it->hit && it->motion.opcode==mir3::protocol::SM_STRUCK) {
-                        const auto& hp=*it->hit->health;
-                        model.hp=hp[0];model.max_hp=hp[1];
-                        apply_actor_health_record(0,*it->hit);
-                        ++local_folded_hits;
-                        it=local_actor_messages.erase(it);
-                    } else ++it;
-                }
-            }
-        }
-        local_actor_messages.push_back({{opcode,player_facing,{player_cell.x,player_cell.y}},*appearance,0,hit,variant});
-        return true;
-    }
-    const bool local_death=opcode==mir3::protocol::SM_DEATH || opcode==mir3::protocol::SM_NOWDEATH;
-    if ((mir3::ForcedMotion::accepts(opcode) || local_death) && local_actor_identity &&
-            (actor==local_actor_identity || opcode==mir3::protocol::SM_REVIVE_REFRESH)) {
-        if ((encoded.size()!=45 && !(local_death && encoded.size()==38)) || (p[2]&255)>=8 || local_actor_messages.size()>=64) return false;
-        const auto base=mir3::decode_six_bit(encoded.ptr()+16,22);
-        const auto extra=encoded.size()==45?mir3::decode_six_bit(encoded.ptr()+38,7):std::optional<std::string>(std::string(5,0));
-        if (!base || base->size()!=16 || !extra || extra->size()!=5) return false;
-        const auto body=*base+*extra;
-        const auto appearance=mir3::HumanAppearance::parse({reinterpret_cast<const std::uint8_t*>(body.data()),body.size()},false);
-        const mir3::ForcedMotion motion{opcode,p[2]&255,{p[0],p[1]}};
-        const auto origin=motion.origin();
-        if (!appearance || !terrain.contains(p[0],p[1]) || (!local_death && !terrain.contains(origin[0],origin[1]))) return false;
-        local_actor_messages.push_back({motion,*appearance,unsigned(p[2]>>8)});
-        return true;
-    }
-    // 413F90/415AD0虚表+116 -> 411BA0：排队更新状态DWORD和有符号攻击速度。
-    if ((opcode==mir3::protocol::SM_801 || opcode==mir3::protocol::SM_ACTOR_STATUS || opcode==mir3::protocol::SM_808) &&
-            ((local_actor_identity && actor==local_actor_identity) || scene_humans.contains(actor))) {
-        if (encoded.size()!=16) return false;
-        mir3::SceneHumanMessage status;
-        status.opcode=opcode;status.flags=std::uint32_t(p[0])|(std::uint32_t(p[1])<<16);
-        status.status_speed=std::int16_t(p[2]);
-        if (actor==local_actor_identity) {
-            if (local_actor_messages.size()>=64) return false;
-            LocalActorMessage message{{opcode,0,{}},{},0};message.status=status;
-            local_actor_messages.push_back(message);return true;
-        }
-        return scene_humans.at(actor).messages.push(status);
-    }
-    const bool chicken_death=opcode==mir3::protocol::SM_27 ||
-        opcode==mir3::protocol::SM_DEATH || opcode==mir3::protocol::SM_NOWDEATH ||
-        opcode==mir3::protocol::SM_SKELETON;
-    const bool special_entry=opcode==mir3::protocol::SM_800 || opcode==mir3::protocol::SM_806;
-    const bool removal_pending=scene_clear_pending ||
-        std::ranges::find(scene_removals,actor)!=scene_removals.end();
-    if ((opcode==mir3::protocol::SM_DEATH || opcode==mir3::protocol::SM_SKELETON ||
-        opcode==mir3::protocol::SM_NOWDEATH) && !removal_pending && scene_chickens.contains(actor)) {
-        if (!terrain.walkable(p[0],p[1])) return false;
-        return receive_monster_action(actor,SceneChicken::ReverseBurrow{Vector2i(p[0],p[1])});
-    }
-    const bool monster_status_packet=opcode==mir3::protocol::SM_801 ||
-        opcode==mir3::protocol::SM_ACTOR_STATUS || opcode==mir3::protocol::SM_808;
-    const auto monster_status=std::uint32_t(p[0])|(std::uint32_t(p[1])<<16);
-    const bool monster_initial_packet=opcode==mir3::protocol::SM_BACKSTEP ||
-        opcode==mir3::protocol::SM_WALK || opcode==mir3::protocol::SM_RUN || monster_status_packet;
-    const bool creates_monster=monster_initial_packet && (removal_pending || !scene_chickens.contains(actor));
-    if (monster_status_packet && !removal_pending && scene_chickens.contains(actor))
-        return receive_monster_action(actor,SceneChicken::BarStatus{monster_status});
-    if ((chicken_death || creates_monster || opcode==mir3::protocol::SM_TURN ||
-        opcode==mir3::protocol::SM_DIGUP || special_entry) &&
-        actor>0 && actor!=local_actor_identity) {
-        const auto body=mir3::decode_six_bit(encoded.ptr()+16,std::min<std::int64_t>(22,encoded.size()-16));
-        const bool chicken_feature=body && body->size()>=8 && (*body)[0]==3;
-        if (chicken_feature && !chicken_death) {
-            const int facing=p[2]&255;
-            if (body->size()!=16 || facing>=8 || !terrain.walkable(p[0],p[1])) return false;
-            if (creates_monster) {
-                if (scene_clear_pending || std::ranges::find(scene_removals,actor)!=scene_removals.end())
-                    apply_scene_removals();
-                const Vector2i cell(p[0],p[1]);
-                const int shape=monster_feature_shape(*body);
-                const unsigned light=p[2]>>8;
-                if (!scene_chickens.contains(actor) && !place_scene_chicken(actor,cell,0,shape)) return false;
-                auto& actions=scene_chickens.at(actor).actions;
-                if (opcode==mir3::protocol::SM_RUN) return true; // 40D8C0 has no monster dispatch for 13.
-                if (actions.size()>=64) return false;
-                if (opcode==mir3::protocol::SM_BACKSTEP)
-                    actions.emplace_back(SceneChicken::Rise{cell,facing,shape,light});
-                else if (monster_status_packet)
-                    actions.emplace_back(SceneChicken::BarStatus{monster_status});
-                else
-                    actions.emplace_back(SceneChicken::Health{p});
-                return true;
-            }
-            std::optional<mir3::SceneName> name;
-            if ((opcode==mir3::protocol::SM_DIGUP || special_entry) && encoded.size()>38) {
-                const auto decoded=mir3::decode_six_bit(encoded.ptr()+38,encoded.size()-38);
-                if (!decoded || decoded->size()>64) return false;
-                std::string_view ansi(*decoded);
-                ansi=ansi.substr(0,ansi.find(char(0)));
-                unsigned color=255;
-                if (const auto slash=ansi.rfind('/');slash!=ansi.npos && slash+2==ansi.size())
-                    color=std::uint8_t(ansi.back());
-                name.emplace();
-                if (!name->update(mir3::protocol::SM_USERNAME,color,ansi)) return false;
-            }
-            if (scene_clear_pending || std::ranges::find(scene_removals,actor)!=scene_removals.end())
-                apply_scene_removals();
-            const auto existing=scene_chickens.find(actor);
-            const Vector2i cell(p[0],p[1]);
-            if (opcode==mir3::protocol::SM_TURN && existing!=scene_chickens.end())
-                return receive_monster_action(actor,SceneChicken::Turn{cell,facing,monster_feature_shape(*body),unsigned(p[2]>>8),false,monster_feature_status(*body)});
-            const int shape=monster_feature_shape(*body);
-            const bool hidden_pose=opcode==mir3::protocol::SM_DIGUP && shape>=83 && shape<=85 && ((*body)[4]&1)!=0;
-            const SceneChicken::Entry entry{cell,facing,shape,unsigned(p[2]>>8),
-                monster_feature_status(*body),special_entry,std::move(name),hidden_pose};
-            return existing!=scene_chickens.end()?receive_monster_action(actor,entry):apply_monster_entry(actor,entry);
-        }
-        if (chicken_death && ((!removal_pending && scene_chickens.contains(actor)) || chicken_feature)) {
-            const int facing=p[2]&255;
-            if (facing>=8 || !terrain.walkable(p[0],p[1]) ||
-                (encoded.size()!=16 && (!chicken_feature || body->size()!=16))) return false;
-            const int shape=chicken_feature?monster_feature_shape(*body):-1;
-            const SceneChicken::Death death{Vector2i(p[0],p[1]),facing,shape,opcode,unsigned(p[2]>>8)};
-            if (opcode==mir3::protocol::SM_NOWDEATH) return false;
-            if (removal_pending) apply_scene_removals();
-            if (scene_chickens.contains(actor)) return receive_monster_action(actor,death);
-            if (opcode==mir3::protocol::SM_27) return apply_monster_death(actor,death);
-            // 42E9A0 creates a standing actor and reposts 32/33 to the normal actor queue.
-            const unsigned light=p[2]>>8;
-            if (!place_scene_chicken(actor,death.cell,0,shape,light)) return false;
-            scene_chickens.at(actor).actions.emplace_back(SceneChicken::ReverseBurrow{death.cell});
-            return true;
-        }
-    }
-    // 4282C0虚表+52/+56：所有已存在角色即时更新，与动作队列无关。
-    if (scene_chickens.contains(actor) || scene_humans.contains(actor) || (local_actor_identity && actor==local_actor_identity)) {
-        if (opcode==mir3::protocol::SM_OPENHEALTH) {
-            if (encoded.size()!=16) return false;
-            if (actor==local_actor_identity) player_light_attribute=p[0]&255;
-            else if (scene_humans.contains(actor)) scene_humans.at(actor).light_attribute=p[0]&255;
-            else scene_chickens.at(actor).light_attribute=p[0]&255;
-            queue_redraw();
-            return true;
-        }
-        if (opcode==mir3::protocol::SM_CLOSEHEALTH) {
-            if (encoded.size()!=16) return false;
-            update_actor_bar_status(actor==local_actor_identity?0:actor,true);
-            return true;
-        }
-    }
-    // 657 calls 409DB0 directly, outside the monster's action queue.
-    if (opcode==mir3::protocol::SM_CHARSTATUSCHANGE && scene_chickens.contains(actor)) {
+bool Mir3HudView::apply_monster_special(int actor,const SceneChicken::SpecialAttack& special) {
+    const auto& encoded=special.encoded;
+    const auto& p=special.parameters;
         const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
         const int facing=p[2]&255;
         if (!body || body->size()!=16 || facing>=8) return false;
@@ -3371,102 +3365,115 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         }
         queue_redraw();
         return true;
-    }
-    // Monster 22 starts action 2 at the packet coordinates and facing (40CBF0).
-    if (opcode==mir3::protocol::SM_FLYAXE && scene_chickens.contains(actor)) {
-        const int facing=p[2]&255;
-        if (facing>=8 || !terrain.walkable(p[0],p[1])) return false;
-        return receive_monster_action(actor,SceneChicken::Attack{Vector2i(p[0],p[1]),facing});
-    }
-    if (opcode==mir3::protocol::SM_1317 && scene_chickens.contains(actor)) {
-        return receive_monster_action(actor,SceneChicken::Attack{{},0,std::nullopt,0,6});
-    }
-    if (opcode==mir3::protocol::SM_LIGHTING && scene_chickens.contains(actor)) {
-        const int facing=p[2]&255;
-        if (encoded.size()!=27 || facing>=8 || !terrain.walkable(p[0],p[1])) return false;
-        const auto body=mir3::decode_six_bit(encoded.ptr()+16,11);
-        if (!body || body->size()!=8) return false;
-        const auto word=[&](int offset) { return unsigned(std::uint8_t((*body)[offset])) |
-            (unsigned(std::uint8_t((*body)[offset+1]))<<8); };
-        return receive_monster_action(actor,SceneChicken::Attack{
-            Vector2i(p[0],p[1]),facing,Vector2i(word(0),word(2)),word(4)|(word(6)<<16)});
-    }
-    // The monster queue routes opcode 9 to 4094A0, which clears death and starts action 8.
-    if (opcode==mir3::protocol::SM_BACKSTEP && scene_chickens.contains(actor)) {
-        const int facing=p[2]&255;
-        if (facing>=8 || !terrain.walkable(p[0],p[1])) return false;
-        int shape=-1;
-        if (encoded.size()!=16) {
-            const auto feature=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
-            if (!feature || feature->size()!=16 || (*feature)[0]!=3) return false;
-            shape=monster_feature_shape(*feature);
+}
+
+bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray key) {
+    if (server_groups.visible || login_visible || character_selection.visible) return false;
+    if (encoded.size()<mir3::ReceiveHeader::encoded_size || encoded.size()>mir3::ReceiveHeader::encoded_size+mir3::ChatLog::max_encoded_text) return false;
+    const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),static_cast<std::size_t>(encoded.size())},
+        {key.ptr(),static_cast<std::size_t>(key.size())});
+    if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_REVIVE_REFRESH && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS && header->opcode!=mir3::protocol::SM_DAYCHANGING && header->opcode!=mir3::protocol::SM_SHOWEVENT && header->opcode!=mir3::protocol::SM_HIDEEVENT)) return false;
+    const int actor=header->recognition, opcode=header->opcode;
+    const auto& p=header->parameters;
+    if (opcode==mir3::protocol::SM_MAGICFIRE || opcode==mir3::protocol::SM_MAGICFIRE_LIST) {
+        const auto reply=mir3::SpellReply::parse(*header,{encoded.ptr()+16,std::size_t(encoded.size()-16)});
+        if (!reply) return false;
+        if (local_actor_identity && actor==local_actor_identity) {
+            if (local_actor_messages.size()>=64) return false;
+            LocalActorMessage message{{opcode,0,{}},{},0};message.spell_reply=*reply;
+            local_actor_messages.push_back(std::move(message));return true;
         }
-        return receive_monster_action(actor,SceneChicken::Rise{Vector2i(p[0],p[1]),facing,shape,unsigned(p[2]>>8)});
+        const auto found=scene_humans.find(actor);
+        if (found==scene_humans.end()) return false;
+        mir3::SceneHumanMessage message;message.opcode=opcode;message.spell_reply=*reply;
+        return found->second.messages.push(std::move(message));
     }
-    // 1316 is queued for monsters and uses the forced movement handler at 4082F0.
-    if (opcode==mir3::protocol::SM_REVIVE && scene_chickens.contains(actor)) {
-        const int facing=p[2]&255;
-        if (encoded.size()!=38 || facing>=8 || !terrain.walkable(p[0],p[1])) return false;
-        const auto feature=mir3::decode_six_bit(encoded.ptr()+16,22);
-        if (!feature || feature->size()!=16 || (*feature)[0]!=3) return false;
-        return receive_monster_action(actor,SceneChicken::Turn{Vector2i(p[0],p[1]),facing,
-            monster_feature_shape(*feature),unsigned(p[2]>>8),false,monster_feature_status(*feature),true});
-    }
-    if (opcode==mir3::protocol::SM_DIGDOWN && scene_chickens.contains(actor)) {
-        const int facing=p[2]&255;
-        if (facing>=8 || !terrain.walkable(p[0],p[1])) return false;
-        int shape=-1;
-        if (encoded.size()!=16) {
-            const auto feature=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
-            if (!feature || feature->size()!=16 || (*feature)[0]!=3) return false;
-            shape=monster_feature_shape(*feature);
-        }
-        return receive_monster_action(actor,SceneChicken::Burrow{Vector2i(p[0],p[1]),facing,shape,unsigned(p[2]>>8)});
-    }
-    // 654 uses the monster's name color slot rather than the light attribute.
-    if (opcode==mir3::protocol::SM_CHANGELIGHT && scene_chickens.contains(actor))
-        return apply_scene_name(actor,mir3::protocol::SM_CHANGENAMECOLOR,p[0]&255,String());
-    // 4282C0 dispatches monster 41 to slot +60 (407C50), clearing only the current token.
-    if (opcode==mir3::protocol::SM_FEATURECHANGED && scene_chickens.contains(actor)) {
-        update_actor_bar_status(actor,false);
+    if (local_actor_identity && actor==local_actor_identity &&
+        (opcode==mir3::protocol::SM_SITDOWN || opcode==mir3::protocol::SM_BUTCH)) {
+        // 415AD0没有12/637动作分支，但仍按FIFO逐条消费，不能中断本地预测动作。
+        if (local_actor_messages.size()>=64) return false;
+        local_actor_messages.push_back({{opcode,0,{}},{},0});
         return true;
     }
-    // Monster 42 uses slot +40 (407B70), which applies the feature immediately.
-    if (opcode==mir3::protocol::SM_USERNAME && scene_chickens.contains(actor)) {
-        if (encoded.size()!=38) return false;
-        const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
-        if (body && body->size()==16 && (*body)[0]==3) {
-            auto& monster=scene_chickens.at(actor);
-            const int shape=monster_feature_shape(*body);
-            if (!refresh_monster_shape(monster,shape)) return false;
-            monster.status_flags=monster_feature_status(*body);
-            update_actor_bar_status(actor,(monster.status_flags&2)!=0);
+    if (local_actor_identity && actor==local_actor_identity &&
+        (opcode==mir3::protocol::SM_STRUCK || opcode==mir3::protocol::SM_HUMAN_STRUCK)) {
+        if (encoded.size()!=38 || local_actor_messages.size()>=64) return false;
+        const auto body=mir3::decode_six_bit(encoded.ptr()+16,22);
+        if (!body || body->size()!=16) return false;
+        const auto appearance=mir3::HumanAppearance::parse({reinterpret_cast<const std::uint8_t*>(body->data()),body->size()},true);
+        if (!appearance) return false;
+        mir3::SceneHumanMessage hit{opcode};
+        hit.health=p;
+        for (int i=0;i<4;++i) hit.hit_source|=std::uint32_t(std::uint8_t((*body)[8+i]))<<(8*i);
+        const unsigned variant=std::uint8_t((*body)[14])|(unsigned(std::uint8_t((*body)[15]))<<8);
+        if (opcode==mir3::protocol::SM_STRUCK) {
+            // 42EC70：特殊受击后的500ms内，非致死31只同步生命数值。
+            if (std::uint32_t(ticks_msec())-local_struck_tick<500) {
+                model.hp=p[0];model.max_hp=p[1];
+                if (p[0]) { queue_redraw();return true; }
+            }
+            // 40D7F0：仅当队长大于1时，折叠已排队的31，保留其他消息顺序。
+            local_folded_hits=0;
+            if (local_actor_messages.size()>1) {
+                for (auto it=local_actor_messages.begin();it!=local_actor_messages.end();) {
+                    if (it->hit && it->motion.opcode==mir3::protocol::SM_STRUCK) {
+                        const auto& hp=*it->hit->health;
+                        model.hp=hp[0];model.max_hp=hp[1];
+                        apply_actor_health_record(0,*it->hit);
+                        ++local_folded_hits;
+                        it=local_actor_messages.erase(it);
+                    } else ++it;
+                }
+            }
+        }
+        local_actor_messages.push_back({{opcode,player_facing,{player_cell.x,player_cell.y}},*appearance,0,hit,variant});
+        return true;
+    }
+    const bool local_death=opcode==mir3::protocol::SM_DEATH || opcode==mir3::protocol::SM_NOWDEATH;
+    if ((mir3::ForcedMotion::accepts(opcode) || local_death) && local_actor_identity &&
+            (actor==local_actor_identity || opcode==mir3::protocol::SM_REVIVE_REFRESH)) {
+        if ((encoded.size()!=45 && !(local_death && encoded.size()==38)) || (p[2]&255)>=8 || local_actor_messages.size()>=64) return false;
+        const auto base=mir3::decode_six_bit(encoded.ptr()+16,22);
+        const auto extra=encoded.size()==45?mir3::decode_six_bit(encoded.ptr()+38,7):std::optional<std::string>(std::string(5,0));
+        if (!base || base->size()!=16 || !extra || extra->size()!=5) return false;
+        const auto body=*base+*extra;
+        const auto appearance=mir3::HumanAppearance::parse({reinterpret_cast<const std::uint8_t*>(body.data()),body.size()},false);
+        const mir3::ForcedMotion motion{opcode,p[2]&255,{p[0],p[1]}};
+        const auto origin=motion.origin();
+        if (!appearance || !terrain.contains(p[0],p[1]) || (!local_death && !terrain.contains(origin[0],origin[1]))) return false;
+        local_actor_messages.push_back({motion,*appearance,unsigned(p[2]>>8)});
+        return true;
+    }
+    // 413F90/415AD0虚表+116 -> 411BA0：排队更新状态DWORD和有符号攻击速度。
+    if ((opcode==mir3::protocol::SM_801 || opcode==mir3::protocol::SM_ACTOR_STATUS || opcode==mir3::protocol::SM_808) &&
+            ((local_actor_identity && actor==local_actor_identity) || scene_humans.contains(actor))) {
+        if (encoded.size()!=16) return false;
+        mir3::SceneHumanMessage status;
+        status.opcode=opcode;status.flags=std::uint32_t(p[0])|(std::uint32_t(p[1])<<16);
+        status.status_speed=std::int16_t(p[2]);
+        if (actor==local_actor_identity) {
+            if (local_actor_messages.size()>=64) return false;
+            LocalActorMessage message{{opcode,0,{}},{},0};message.status=status;
+            local_actor_messages.push_back(message);return true;
+        }
+        return scene_humans.at(actor).messages.push(status);
+    }
+    if (const auto monster_result=apply_monster_wire(opcode,actor,p,encoded)) return *monster_result;
+    // 4282C0虚表+52/+56：所有已存在角色即时更新，与动作队列无关。
+    if (scene_chickens.contains(actor) || scene_humans.contains(actor) || (local_actor_identity && actor==local_actor_identity)) {
+        if (opcode==mir3::protocol::SM_OPENHEALTH) {
+            if (encoded.size()!=16) return false;
+            if (actor==local_actor_identity) player_light_attribute=p[0]&255;
+            else if (scene_humans.contains(actor)) scene_humans.at(actor).light_attribute=p[0]&255;
+            else scene_chickens.at(actor).light_attribute=p[0]&255;
+            queue_redraw();
             return true;
         }
-        return false;
-    }
-    if ((opcode==mir3::protocol::SM_STRUCK || opcode==mir3::protocol::SM_HUMAN_STRUCK) &&
-        scene_chickens.contains(actor)) {
-        const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
-        const int facing=p[2]&255;
-        if (!body || body->size()!=16 || (*body)[0]!=3 || facing>=8) return false;
-        const SceneChicken::Turn turn{Vector2i(p[0],p[1]),facing,monster_feature_shape(*body),
-            unsigned(p[2]>>8),true,monster_feature_status(*body)};
-        if (!terrain.walkable(turn.cell.x,turn.cell.y)) return false;
-        if (opcode==mir3::protocol::SM_HUMAN_STRUCK)
-            return receive_monster_action(actor,SceneChicken::RelayedBackstep{turn});
-        return receive_monster_action(actor,turn);
-    }
-    if (opcode==mir3::protocol::SM_WALK && scene_chickens.contains(actor)) {
-        if (encoded.size()!=16) return false;
-        return receive_monster_action(actor,SceneChicken::Health{p});
-    }
-    // The monster queue dispatches opcode 14 to its struck handler (409600).
-    if (opcode==mir3::protocol::SM_HIT && scene_chickens.contains(actor)) {
-        const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
-        if (!body || body->size()!=16 || (*body)[0]!=3) return false;
-        const int variant=std::uint8_t((*body)[14])|(int(std::uint8_t((*body)[15]))<<8);
-        return receive_monster_action(actor,SceneChicken::Hit{monster_feature_shape(*body),variant,p});
+        if (opcode==mir3::protocol::SM_CLOSEHEALTH) {
+            if (encoded.size()!=16) return false;
+            update_actor_bar_status(actor==local_actor_identity?0:actor,true);
+            return true;
+        }
     }
     if (opcode==mir3::protocol::SM_HIT2 && local_actor_identity && actor==local_actor_identity) {
         if (encoded.size()>17 || (p[2]&255)>=8) return false;
@@ -3922,6 +3929,7 @@ bool Mir3HudView::apply_scene_human_step(int actor,int opcode,Vector2i destinati
 
 bool Mir3HudView::remove_scene_actor(int actor) {
     const bool monster_removed=scene_chickens.erase(actor)!=0;
+    monster_ai.actors.erase(actor);
     if (!monster_removed && !scene_npcs.erase(actor) && !scene_humans.erase(actor)) return false;
     const auto id=static_cast<std::uint32_t>(actor);
     for (auto& [event_id,event]:map_events) {
@@ -3958,7 +3966,15 @@ void Mir3HudView::apply_scene_removals() {
         while (!scene_chickens.empty()) remove_scene_actor(scene_chickens.begin()->first);
         scene_clear_pending=false;
     }
-    for (const int actor:scene_removals) remove_scene_actor(actor);
+    for (const int actor:scene_removals) {
+        const auto monster=scene_chickens.find(actor);
+        // 42E780 preserves a monster while DIGDOWN state 2 is playing.
+        if (monster!=scene_chickens.end() && monster->second.burrow_frame>=0 && monster->second.hide_after_burrow) {
+            monster->second.actions.clear();
+            continue;
+        }
+        remove_scene_actor(actor);
+    }
     scene_removals.clear();
 }
 
@@ -4436,7 +4452,7 @@ void Mir3HudView::draw_terrain() {
         draw_terrain_texture(image->second.image,position,Color(1,1,1,event.opacity));
     }
     const auto draw_scene_actor=[&](SceneActor& npc,int interval,const MapActorFrame* pose=nullptr,
-            Vector2i offset={},int dye=65535,int status_color=65535,const MapActorFrame* shadow=nullptr) {
+            Vector2i offset={},int dye=65535,int status_color=65535,const MapActorFrame* shadow=nullptr,int appearance_weight=-1) {
         const auto& selected=npc.frames[tick/interval%4];
         const auto& frame=pose?*pose:selected.image.is_valid()?selected:npc.frames.front();
         if (npc.cell.x<start_x-5 || npc.cell.x>=start_x+21) return;
@@ -4445,10 +4461,14 @@ void Mir3HudView::draw_terrain() {
         npc.bounds=Rect2(position,frame.image->get_size());
         if (shadow)
             draw_terrain_texture(shadow->image,npc.anchor+shadow->offset,
-                Color(1,1,1),(system_options.shadow_blend || status_color==1)?13:0);
+                Color(1,1,1),(appearance_weight>=0 || system_options.shadow_blend || status_color==1)?13:0);
         // 405CB0 uses the 8/32 source weight from 48EF15 for status mode 1.
+        // 405CB0：隐身优先保持8/32；有颜色状态的显现按490821作半混合。
+        Ref<ShaderMaterial> appearance;
+        if (appearance_weight>=0 && status_color!=1)
+            appearance=status_color==65535?monster_appearance_mix[appearance_weight]:monster_tint_appearance_mix;
         draw_terrain_texture(dyed_frame(frame,dye,65535,status_color),
-            position,Color(1,1,1),status_color==1?8:0);
+            position,Color(1,1,1),status_color==1?8:0,false,appearance);
         animated_map_objects=true;
     };
     ground_bounds.clear();
@@ -4474,7 +4494,8 @@ void Mir3HudView::draw_terrain() {
             const auto dye=monster_body_dye(chicken.shape);
             const int status_color=actor_status_color(chicken.status_flags);
             const auto draw_monster=[&](const MapActorFrame& body,Vector2i offset,const MapActorFrame* shadow) {
-                draw_scene_actor(chicken,180,&body,offset,dye,status_color,shadow);
+                const int appearance=chicken.revive_elapsed_ms<0?-1:int(31*chicken.revive_elapsed_ms/600);
+                draw_scene_actor(chicken,180,&body,offset,dye,status_color,shadow,appearance);
                 // 40ECB0 centers the pointer bounds within the current sprite.
                 const auto full_size=Vector2i(chicken.bounds.size);
                 const Vector2i excess(std::max(0,full_size.x-58),std::max(0,full_size.y-40));
@@ -7451,6 +7472,11 @@ void Mir3HudView::_process(double delta) {
     const bool scene_movement_tick=scene_movement_ms>95;
     if (scene_movement_tick) scene_movement_ms=0;
     for (auto& [actor,chicken]:scene_chickens) {
+        if (chicken.revive_elapsed_ms>=0) {
+            chicken.revive_elapsed_ms+=delta*1000;
+            if (chicken.revive_elapsed_ms>=600) chicken.revive_elapsed_ms=-1;
+            queue_redraw();
+        }
         if (chicken.burrow_frame>=0) {
             chicken.burrow_ms+=delta*1000;
             const auto motion=monster_burrow_motion(chicken.shape);
@@ -7461,12 +7487,15 @@ void Mir3HudView::_process(double delta) {
                     play_actor_sound(actor,10*(chicken.shape+20),chicken.cell);
                 if (chicken.burrow_frame>=motion.frames) {
                     chicken.burrow_frame=-1;
-                    chicken.buried=chicken.hide_after_burrow;
+                    // 40E7F0 changes DIGDOWN state 2 to 3; 421FF0 deletes it.
+                    // Gate shapes instead return to their open/closed standing direction.
+                    const bool gate=(chicken.shape>=530 && chicken.shape<=533) || chicken.shape==538;
+                    if (gate) chicken.facing=chicken.hide_after_burrow?0:7;
+                    else if (chicken.hide_after_burrow) scene_removals.push_back(actor);
+                    chicken.buried=false;
                     chicken.hide_after_burrow=false;
                     chicken.reverse_burrow=false;
-                    if ((chicken.shape>=530 && chicken.shape<=533) || chicken.shape==538)
-                        chicken.facing=chicken.turned_burrow_once?7:0;
-                    chicken.turned_burrow_once=true;
+                    chicken.hidden_pose=mir3::MonsterBehavior::for_shape(chicken.shape).dormant(chicken.status_flags);
                     if (chicken.buried) target_focus.remove(actor);
                 }
                 queue_redraw();
@@ -7516,6 +7545,9 @@ void Mir3HudView::_process(double delta) {
                 queue_redraw();
             }
         }
+        // 40E7F0：每次动作返回待机时重新应用祖玛休眠位，而非仅在入场时判断。
+        if (chicken.walk_frame<0 && chicken.struck_frame<0 && chicken.attack_frame<0 && chicken.death_frame<0)
+            chicken.hidden_pose=mir3::MonsterBehavior::for_shape(chicken.shape).dormant(chicken.status_flags);
         if (!chicken.actions.empty() && chicken.walk_frame<0 && chicken.struck_frame<0 && chicken.attack_frame<0 &&
             (chicken.death_frame<0 || chicken.death_frame>=monster_death_motion(chicken.shape).frames-1 || chicken.skeleton)) {
             const bool catch_up=chicken.actions.size()>=3;

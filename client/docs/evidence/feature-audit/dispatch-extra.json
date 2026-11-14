@@ -1,0 +1,794 @@
+{
+  "vtable": {
+    "0x4afbfc": [
+      {
+        "slot": 0,
+        "addr": "0x46e470",
+        "name": "loc_46E470"
+      },
+      {
+        "slot": 1,
+        "addr": "0x46e500",
+        "name": "sub_46E500"
+      },
+      {
+        "slot": 2,
+        "addr": "0x46e590",
+        "name": "sub_46E590"
+      },
+      {
+        "slot": 3,
+        "addr": "0x431630",
+        "name": "sub_431630"
+      },
+      {
+        "slot": 4,
+        "addr": "0x4318b0",
+        "name": "sub_4318B0"
+      },
+      {
+        "slot": 5,
+        "addr": "0x3fd8f2fc",
+        "name": ""
+      },
+      {
+        "slot": 6,
+        "addr": "0x3f762763",
+        "name": ""
+      },
+      {
+        "slot": 7,
+        "addr": "0x470ad0",
+        "name": "sub_470AD0"
+      },
+      {
+        "slot": 8,
+        "addr": "0x470b90",
+        "name": "sub_470B90"
+      },
+      {
+        "slot": 9,
+        "addr": "0x431620",
+        "name": "sub_431620"
+      },
+      {
+        "slot": 10,
+        "addr": "0x431630",
+        "name": "sub_431630"
+      },
+      {
+        "slot": 11,
+        "addr": "0x4318b0",
+        "name": "sub_4318B0"
+      },
+      {
+        "slot": 12,
+        "addr": "0x470c30",
+        "name": "sub_470C30"
+      },
+      {
+        "slot": 13,
+        "addr": "0x0",
+        "name": ""
+      },
+      {
+        "slot": 14,
+        "addr": "0x0",
+        "name": ""
+      },
+      {
+        "slot": 15,
+        "addr": "0x41a80000",
+        "name": ""
+      }
+    ],
+    "0x4af77c": [
+      {
+        "slot": 0,
+        "addr": "0x431330",
+        "name": ""
+      },
+      {
+        "slot": 1,
+        "addr": "0x430930",
+        "name": "sub_430930"
+      },
+      {
+        "slot": 2,
+        "addr": "0x4309d0",
+        "name": "sub_4309D0"
+      },
+      {
+        "slot": 3,
+        "addr": "0x430a70",
+        "name": "sub_430A70"
+      },
+      {
+        "slot": 4,
+        "addr": "0x430ca0",
+        "name": "sub_430CA0"
+      },
+      {
+        "slot": 5,
+        "addr": "0x431280",
+        "name": "sub_431280"
+      },
+      {
+        "slot": 6,
+        "addr": "0x4312f0",
+        "name": "sub_4312F0"
+      },
+      {
+        "slot": 7,
+        "addr": "0x42a80000",
+        "name": ""
+      },
+      {
+        "slot": 8,
+        "addr": "0x3dcccccd",
+        "name": ""
+      },
+      {
+        "slot": 9,
+        "addr": "0x41700000",
+        "name": ""
+      },
+      {
+        "slot": 10,
+        "addr": "0x42aa0000",
+        "name": ""
+      },
+      {
+        "slot": 11,
+        "addr": "0x4277a0",
+        "name": "loc_4277A0"
+      },
+      {
+        "slot": 12,
+        "addr": "0x405880",
+        "name": "sub_405880"
+      },
+      {
+        "slot": 13,
+        "addr": "0x405c00",
+        "name": "sub_405C00"
+      },
+      {
+        "slot": 14,
+        "addr": "0x405e50",
+        "name": "sub_405E50"
+      },
+      {
+        "slot": 15,
+        "addr": "0x406750",
+        "name": "sub_406750"
+      }
+    ],
+    "0x4af760": [
+      {
+        "slot": 0,
+        "addr": "0x431350",
+        "name": ""
+      },
+      {
+        "slot": 1,
+        "addr": "0x430af0",
+        "name": "sub_430AF0"
+      },
+      {
+        "slot": 2,
+        "addr": "0x430b90",
+        "name": "sub_430B90"
+      },
+      {
+        "slot": 3,
+        "addr": "0x430c30",
+        "name": "sub_430C30"
+      },
+      {
+        "slot": 4,
+        "addr": "0x430ca0",
+        "name": "sub_430CA0"
+      },
+      {
+        "slot": 5,
+        "addr": "0x431280",
+        "name": "sub_431280"
+      },
+      {
+        "slot": 6,
+        "addr": "0x4312f0",
+        "name": "sub_4312F0"
+      },
+      {
+        "slot": 7,
+        "addr": "0x431330",
+        "name": ""
+      },
+      {
+        "slot": 8,
+        "addr": "0x430930",
+        "name": "sub_430930"
+      },
+      {
+        "slot": 9,
+        "addr": "0x4309d0",
+        "name": "sub_4309D0"
+      },
+      {
+        "slot": 10,
+        "addr": "0x430a70",
+        "name": "sub_430A70"
+      },
+      {
+        "slot": 11,
+        "addr": "0x430ca0",
+        "name": "sub_430CA0"
+      },
+      {
+        "slot": 12,
+        "addr": "0x431280",
+        "name": "sub_431280"
+      },
+      {
+        "slot": 13,
+        "addr": "0x4312f0",
+        "name": "sub_4312F0"
+      },
+      {
+        "slot": 14,
+        "addr": "0x42a80000",
+        "name": ""
+      },
+      {
+        "slot": 15,
+        "addr": "0x3dcccccd",
+        "name": ""
+      }
+    ],
+    "0x4af744": [
+      {
+        "slot": 0,
+        "addr": "0x431370",
+        "name": ""
+      },
+      {
+        "slot": 1,
+        "addr": "0x430d50",
+        "name": "sub_430D50"
+      },
+      {
+        "slot": 2,
+        "addr": "0x430df0",
+        "name": "sub_430DF0"
+      },
+      {
+        "slot": 3,
+        "addr": "0x430e90",
+        "name": "sub_430E90"
+      },
+      {
+        "slot": 4,
+        "addr": "0x430ca0",
+        "name": "sub_430CA0"
+      },
+      {
+        "slot": 5,
+        "addr": "0x431280",
+        "name": "sub_431280"
+      },
+      {
+        "slot": 6,
+        "addr": "0x4312f0",
+        "name": "sub_4312F0"
+      },
+      {
+        "slot": 7,
+        "addr": "0x431350",
+        "name": ""
+      },
+      {
+        "slot": 8,
+        "addr": "0x430af0",
+        "name": "sub_430AF0"
+      },
+      {
+        "slot": 9,
+        "addr": "0x430b90",
+        "name": "sub_430B90"
+      },
+      {
+        "slot": 10,
+        "addr": "0x430c30",
+        "name": "sub_430C30"
+      },
+      {
+        "slot": 11,
+        "addr": "0x430ca0",
+        "name": "sub_430CA0"
+      },
+      {
+        "slot": 12,
+        "addr": "0x431280",
+        "name": "sub_431280"
+      },
+      {
+        "slot": 13,
+        "addr": "0x4312f0",
+        "name": "sub_4312F0"
+      },
+      {
+        "slot": 14,
+        "addr": "0x431330",
+        "name": ""
+      },
+      {
+        "slot": 15,
+        "addr": "0x430930",
+        "name": "sub_430930"
+      }
+    ]
+  },
+  "refs": [
+    {
+      "func": "0x4214a0",
+      "at": "0x42150a",
+      "line": "mov     dword ptr (loc_43843F+1)[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x421510",
+      "line": "mov     dword ptr (loc_438442+2)[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x421516",
+      "line": "mov     dword ptr loc_438450[esi], 3F800000h"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x421520",
+      "line": "mov     dword ptr (loc_438451+3)[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x421526",
+      "line": "mov     dword ptr (loc_438445+3)[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x42152c",
+      "line": "mov     dword ptr (loc_438449+3)[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x4215d1",
+      "line": "mov     dword ptr (loc_43827F+1)[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x4215d7",
+      "line": "mov     dword ptr (loc_438281+3)[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x4215ee",
+      "line": "mov     byte ptr (loc_438437+1)[esi], bl"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x4215f4",
+      "line": "mov     dword ptr (loc_43843B+1)[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x42169e",
+      "line": "lea     ecx, loc_4382A4[esi]"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x4216b6",
+      "line": "lea     eax, (loc_438287+1)[esi]"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x4216d8",
+      "line": "mov     dword ptr loc_43845C[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x4216de",
+      "line": "mov     dword ptr (loc_438455+3)[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x4216e4",
+      "line": "mov     dword ptr loc_438460[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x4216f0",
+      "line": "mov     dword ptr (loc_438297+1)[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x4216f6",
+      "line": "mov     dword ptr (loc_438299+3)[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x4216fc",
+      "line": "mov     dword ptr (loc_43829F+1)[esi], ebx"
+    },
+    {
+      "func": "0x4214a0",
+      "at": "0x42170d",
+      "line": "lea     edi, (loc_4383A3+5)[esi]"
+    },
+    {
+      "func": "0x423d50",
+      "at": "0x423d61",
+      "line": "mov     ebx, dword ptr (loc_43843B+1)[esi]"
+    },
+    {
+      "func": "0x423d50",
+      "at": "0x423d69",
+      "line": "mov     al, byte ptr (loc_438437+1)[esi]"
+    },
+    {
+      "func": "0x423d50",
+      "at": "0x423d6f",
+      "line": "mov     dword ptr (loc_43843B+1)[esi], ebx"
+    },
+    {
+      "func": "0x423d50",
+      "at": "0x423d7d",
+      "line": "mov     dword ptr (loc_43843B+1)[esi], ebx"
+    },
+    {
+      "func": "0x423d50",
+      "at": "0x423d9b",
+      "line": "mov     byte ptr (loc_438437+1)[esi], bl"
+    },
+    {
+      "func": "0x423d50",
+      "at": "0x423da1",
+      "line": "mov     dword ptr (loc_43843B+1)[esi], ebx"
+    },
+    {
+      "func": "0x423d50",
+      "at": "0x423dd3",
+      "line": "mov     byte ptr (loc_438437+1)[esi], bl"
+    },
+    {
+      "func": "0x423d50",
+      "at": "0x423dd9",
+      "line": "mov     dword ptr (loc_43843B+1)[esi], ebx"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x423ead",
+      "line": "lea     eax, loc_4382A4[ebp]"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x423ec6",
+      "line": "mov     byte ptr loc_4382A4[eax+ebp], bl"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x423f29",
+      "line": "lea     edi, [ebp+4383A8h]"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x423f2f",
+      "line": "mov     dword ptr [ebp+438298h], 1"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x423f39",
+      "line": "mov     [ebp+43829Ch], ebx"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x423f3f",
+      "line": "mov     [ebp+4382A0h], ebx"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x423f47",
+      "line": "lea     ecx, [ebp+438288h]"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x423f9b",
+      "line": "lea     esi, [ebp+4383ACh]"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x423fdf",
+      "line": "mov     ecx, [ebp+438288h]"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x423fef",
+      "line": "mov     eax, [ebp+43828Ch]"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x423ffe",
+      "line": "cmp     eax, [ebp+43829Ch]"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x424006",
+      "line": "mov     [ebp+43829Ch], eax"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x424030",
+      "line": "mov     eax, [ebp+43829Ch]"
+    },
+    {
+      "func": "0x423e90",
+      "at": "0x42403d",
+      "line": "mov     [ebp+43829Ch], eax"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x42405b",
+      "line": "cmp     dword ptr (loc_438297+1)[esi], ebx"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x42406b",
+      "line": "mov     edx, dword ptr (loc_43829F+1)[esi]"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x424071",
+      "line": "mov     ecx, dword ptr (loc_438299+3)[esi]"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x42407b",
+      "line": "mov     dword ptr (loc_43829F+1)[esi], edx"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x42408c",
+      "line": "lea     edi, (loc_4383A3+5)[esi]"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x424092",
+      "line": "mov     dword ptr (loc_438297+1)[esi], ebx"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x4240a8",
+      "line": "mov     dword ptr (loc_438299+3)[esi], ebx"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x4240ae",
+      "line": "mov     dword ptr (loc_43829F+1)[esi], ebx"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x4240b6",
+      "line": "lea     ecx, (loc_438287+1)[esi]"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x4240bc",
+      "line": "lea     edi, loc_4382A4[esi]"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x4240f1",
+      "line": "mov     eax, dword ptr (loc_438287+1)[esi]"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x4240f7",
+      "line": "lea     edi, (loc_438287+1)[esi]"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x4240fd",
+      "line": "mov     ecx, dword ptr (loc_43828B+1)[esi]"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x42410b",
+      "line": "mov     edx, dword ptr (loc_43828D+3)[esi]"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x424117",
+      "line": "mov     eax, dword ptr (loc_438293+1)[esi]"
+    },
+    {
+      "func": "0x424050",
+      "at": "0x4241b7",
+      "line": "add     esi, (offset loc_4383B7+1)"
+    },
+    {
+      "func": "0x424280",
+      "at": "0x42429f",
+      "line": "fmul    dword ptr [esi+438450h]"
+    },
+    {
+      "func": "0x424280",
+      "at": "0x42495a",
+      "line": "mov     eax, dword ptr (loc_43827F+1)[esi]"
+    },
+    {
+      "func": "0x424280",
+      "at": "0x424964",
+      "line": "mov     ecx, dword ptr (loc_438281+3)[esi]"
+    },
+    {
+      "func": "0x424ad0",
+      "at": "0x424afb",
+      "line": "mov     dword ptr (loc_438281+3)[esi], 0"
+    },
+    {
+      "func": "0x424ad0",
+      "at": "0x424b05",
+      "line": "mov     dword ptr (loc_43827F+1)[esi], 0"
+    },
+    {
+      "func": "0x4256b0",
+      "at": "0x425724",
+      "line": "mov     dword ptr [ebx+43843Ch], 0"
+    },
+    {
+      "func": "0x4256b0",
+      "at": "0x42572e",
+      "line": "mov     byte ptr [ebx+438438h], 2"
+    },
+    {
+      "func": "0x4264d0",
+      "at": "0x426568",
+      "line": "mov     eax, [esi+438298h]"
+    },
+    {
+      "func": "0x426b20",
+      "at": "0x426c35",
+      "line": "mov     eax, [esi+438298h]"
+    },
+    {
+      "func": "0x426d20",
+      "at": "0x426d76",
+      "line": "mov     dword ptr [esi+43843Ch], 0"
+    },
+    {
+      "func": "0x426d20",
+      "at": "0x426d83",
+      "line": "mov     [esi+438438h], al"
+    },
+    {
+      "func": "0x426d20",
+      "at": "0x426db7",
+      "line": "mov     eax, [esi+438298h]"
+    },
+    {
+      "func": "0x426e40",
+      "at": "0x426e67",
+      "line": "mov     edx, [ecx+438298h]"
+    },
+    {
+      "func": "0x426ef0",
+      "at": "0x426f3e",
+      "line": "mov     byte ptr [esi+438438h], 1"
+    },
+    {
+      "func": "0x426ef0",
+      "at": "0x426f45",
+      "line": "mov     [esi+43843Ch], ebp"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427c8a",
+      "line": "mov     eax, [ebp+438444h]"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427ca4",
+      "line": "mov     eax, [ebp+438440h]"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427cbc",
+      "line": "mov     edx, [ebp+43844Ch]"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427ccd",
+      "line": "mov     [ebp+43844Ch], edx"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427cd9",
+      "line": "fadd    dword ptr [ebp+438448h]"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427cdf",
+      "line": "fstp    dword ptr [ebp+438448h]"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427cf9",
+      "line": "fdivr   dword ptr [ebp+438448h]"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427cff",
+      "line": "fst     dword ptr [ebp+438450h]"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427d12",
+      "line": "mov     dword ptr ss:loc_438450[ebp], 3F800000h"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427d1c",
+      "line": "fld     dword ptr [ebp+438450h]"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427d2f",
+      "line": "mov     edx, [ebp+438454h]"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427d38",
+      "line": "mov     [ebp+438454h], edx"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427d79",
+      "line": "mov     dword ptr [ebp+438454h], 0"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427d85",
+      "line": "mov     eax, [ebp+438454h]"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427d8c",
+      "line": "mov     [ebp+438454h], eax"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427d94",
+      "line": "mov     dword ptr [ebp+438454h], 0"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427da0",
+      "line": "mov     [ebp+43844Ch], eax"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427da6",
+      "line": "mov     [ebp+438448h], eax"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427db0",
+      "line": "mov     [ebp+438444h], edi"
+    },
+    {
+      "func": "0x427c50",
+      "at": "0x427db6",
+      "line": "mov     [ebp+438440h], eax"
+    }
+  ]
+}

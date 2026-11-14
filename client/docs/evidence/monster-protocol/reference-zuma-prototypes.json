@@ -1,0 +1,47 @@
+{
+  "scope": "Reference-name and library/group semantic mapping; original FLD_APPR rows are not present",
+  "reference": {
+    "file": "reference/LegendOfMir3_Src/LegendOfMir3_Server/GameSvr/ObjectMonster.cpp",
+    "sha256": "fdb185c9c49efa405d628ab68fa9da1d40795a419929abaa43b0efd6bfe9905e",
+    "line": 1565,
+    "text": "\tstatic SlaveList[MaxSlaveList] = { 143/*마궁사*/, 145/*주마신장*/, 148/* 주마호법 */, 126/*쐐기나방*/ };"
+  },
+  "render_reference": {
+    "file": "reference/Zircon/Client/Models/MonsterObject.cs",
+    "sha256": "fa5d1441528308771d7814ee75e5bb263ec6aa3491bc52e24c49c192383979e3"
+  },
+  "bindings": [
+    {
+      "database_index": 143,
+      "korean_comment": "마궁사",
+      "zircon_image": "ZumaSharpShooter",
+      "library": "Mon_9",
+      "group": 2,
+      "shape": 82
+    },
+    {
+      "database_index": 145,
+      "korean_comment": "주마신장",
+      "zircon_image": "ZumaFanatic",
+      "library": "Mon_9",
+      "group": 3,
+      "shape": 83
+    },
+    {
+      "database_index": 148,
+      "korean_comment": "주마호법",
+      "zircon_image": "ZumaGuardian",
+      "library": "Mon_9",
+      "group": 4,
+      "shape": 84
+    },
+    {
+      "database_index": 126,
+      "korean_comment": "쐐기나방",
+      "zircon_image": "WedgeMoth",
+      "library": "Mon_8",
+      "group": 5,
+      "shape": 75
+    }
+  ]
+}
