@@ -15,6 +15,7 @@
 #include "hud/human_actions.hpp"
 #include "hud/melee_cooldown.hpp"
 #include "hud/local_action_clock.hpp"
+#include "hud/action_prediction.hpp"
 #include "hud/scene_human_queue.hpp"
 #include "hud/human_life.hpp"
 #include "hud/ground_items.hpp"
@@ -585,6 +586,7 @@ private:
     mir3::HumanActionClock player_action;
     mir3::MeleeCooldown melee_cooldown;
     mir3::LocalActionClock local_action_clock;
+    mir3::ActionPrediction action_prediction;
     struct PendingLocalAction {
         bool movement;
         godot::Vector2i origin,destination;

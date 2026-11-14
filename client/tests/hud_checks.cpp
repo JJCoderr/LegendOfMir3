@@ -21,6 +21,7 @@
 #include "quick_items_checks.hpp"
 #include "melee_cooldown_checks.hpp"
 #include "local_action_clock_checks.hpp"
+#include "action_reply_checks.hpp"
 #include "item_layout_checks.hpp"
 #include "chat_submission_checks.hpp"
 #include "chat_shortcuts_checks.hpp"
@@ -59,6 +60,7 @@ int main(int argc,char** argv) {
             std::cout<<"ITEM_LAYOUT_ORIGINAL_OK "<<item_layout_original_checks(argv[2])<<"\n";return 0;
         }
         check(argc==2,"resource root required");
+        if(std::filesystem::path(argv[1])=="--action-reply") {action_reply_checks();std::cout<<"ACTION_REPLY_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--local-action-clock") {local_action_clock_checks();std::cout<<"LOCAL_ACTION_CLOCK_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--melee-cooldown") {melee_cooldown_checks();std::cout<<"MELEE_COOLDOWN_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--weather") {weather_checks();std::cout<<"WEATHER_MODEL_OK\n";return 0;}

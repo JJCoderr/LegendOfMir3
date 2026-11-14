@@ -21,6 +21,8 @@ func run() -> void:
 	hud.set_meta("options_path",options_path)
 	hud.set_connection_enabled(false)
 	root.add_child(hud)
+	# 本用例只检查动作本身；模拟服务器逐次确认。
+	hud.client_packet_ready.connect(func(_packet: PackedByteArray): hud.apply_game_message("+GOOD".to_ascii_buffer()))
 	await settle()
 	hud.set_character_vitals(100,100,0,0,0,100)
 	if gate_case:

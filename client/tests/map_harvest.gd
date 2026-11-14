@@ -28,6 +28,8 @@ func run() -> void:
 	hud.set_meta("show_terrain",true)
 	hud.set_connection_enabled(false)
 	root.add_child(hud)
+	# 本用例只检查动作本身；模拟服务器逐次确认。
+	hud.client_packet_ready.connect(func(_packet: PackedByteArray): hud.apply_game_message("+GOOD".to_ascii_buffer()))
 	await settle()
 	var origin: Vector2i=hud.hud_snapshot().player_cell
 	var packets: Array[PackedByteArray]=[]

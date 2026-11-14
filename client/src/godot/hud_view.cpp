@@ -576,6 +576,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["character_hand_weight"]=Vector2i(model.hand_weight[0],model.hand_weight[1]);
     result["melee_speed"]=melee_cooldown.speed;
     result["local_action_pending"]=pending_local_action.has_value();
+    result["action_reply_pending"]=action_prediction.waiting;
     result["local_action_wait_ms"]=pending_local_action?pending_local_action->wait_ms:0;
     result["melee_interval_ms"]=mir3::MeleeCooldown::interval(model.level,melee_cooldown.speed,model.hand_weight[0],model.hand_weight[1]);
     result["character_bonuses"]=Vector2i(model.status_bonus_percent[0],model.status_bonus_percent[1]);
@@ -1193,7 +1194,7 @@ Vector2i Mir3HudView::player_pixel() const {
 }
 
 void Mir3HudView::start_map_step(Vector2i destination) {
-    if (pending_local_action) return;
+    if (pending_local_action || action_prediction.waiting) return;
     const auto delta=destination-player_cell;
     const mir3::MapCell direction{(delta.x>0)-(delta.x<0),(delta.y>0)-(delta.y<0)};
     const int facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),direction)-mir3::map_directions.begin());
@@ -1204,7 +1205,7 @@ void Mir3HudView::start_map_step(Vector2i destination) {
 }
 
 void Mir3HudView::request_melee_action(int facing,int opcode) {
-    if (pending_local_action) return;
+    if (pending_local_action || action_prediction.waiting) return;
     const auto now=std::uint32_t(GetTickCount());
     if (!melee_cooldown.accept(now,model.level,model.hand_weight[0],model.hand_weight[1])) return;
     map_route.clear();
@@ -1229,6 +1230,7 @@ void Mir3HudView::advance_local_action() {
     if (mir3::LocalActionClock::remaining(now,*pending.waiting_since,pending.wait_ms)) return;
     const auto action=pending;
     pending_local_action.reset(); // 先消费，再发信号，防止回调重复执行。
+    action_prediction.begin({player_cell.x,player_cell.y},player_facing);
     player_facing=action.facing;
     player_harvest_impact=false;
     if (action.movement) {
@@ -1250,7 +1252,7 @@ void Mir3HudView::advance_local_action() {
 }
 
 bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
-    if (!terrain_ready || pending_local_action) return false;
+    if (!terrain_ready || pending_local_action || action_prediction.waiting) return false;
     const auto start=walk_frame>=0?step_destination:player_cell;
     map_route=terrain.route({start.x,start.y},{destination.x,destination.y},
         [this](mir3::MapCell cell) { return scene_occupied(Vector2i(cell[0],cell[1])); });
@@ -2903,6 +2905,7 @@ bool Mir3HudView::set_local_actor_identity(int actor) {
     if (actor<=0 || scene_humans.contains(actor) || scene_npcs.contains(actor) || scene_chickens.contains(actor)) return false;
     if (local_actor_identity!=actor) {
         player_light_attribute=0;melee_cooldown={};local_action_clock={};pending_local_action.reset();
+        action_prediction={};
     }
     local_actor_identity=actor;
     queue_redraw();
@@ -3731,7 +3734,7 @@ bool Mir3HudView::merchant_pointer(Vector2 pointer) {
 }
 
 void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
-    if (pending_local_action || map_input_delay.active() || walk_frame>=0 || !spell_pointer_available()) return;
+    if (pending_local_action || action_prediction.waiting || map_input_delay.active() || walk_frame>=0 || !spell_pointer_available()) return;
     if (!player_action.finished() && player_action.action()!=7) return;
     const auto p=inventory_cursor;
     const auto camera=map_camera();
@@ -3788,6 +3791,7 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
         map_route.clear();
         player_harvest_impact=false;
         player_action.start(8);
+        action_prediction.begin({player_cell.x,player_cell.y},player_facing);
         const auto position=std::uint32_t(player_cell.x)|(std::uint32_t(player_cell.y)<<16);
         send_client_packet(mir3::protocol::CM_SITDOWN,position,String(),std::uint32_t(player_facing)<<16);
         if (corpse) send_client_packet(mir3::protocol::CM_BUTCH,corpse,String(),position,player_facing);
@@ -3874,7 +3878,7 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
 
 void Mir3HudView::advance_map_step(double delta) {
     if (pending_local_action) return;
-    if (walk_frame<0 && !map_route.empty() && player_action.finished()) {
+    if (walk_frame<0 && !map_route.empty() && player_action.finished() && !action_prediction.waiting) {
         const auto [x,y]=map_route.front();
         map_route.pop_front();
         if(!terrain.walkable(x,y)) {map_route.clear();return;}
@@ -4288,6 +4292,7 @@ void Mir3HudView::clear_game_scene() {
     terrain_ready=false;terrain=mir3::MapTerrain{};terrain_frames.clear();current_map_id=String();
     target_focus.clear();local_actor_identity=0;player_light_attribute=0;exit_guard={};melee_cooldown={};
     pending_local_action.reset();local_action_clock={};
+    action_prediction={};
     login_actor_pending.reset();login_actor_extra={};server_ability.reset();server_sub_ability={};weapon_training=0;
     guild_overview={};guild_overview_started=false;guild_manager=false;guild_name=String();
     for (auto& page:guild_pages) page.clear();
@@ -5085,6 +5090,19 @@ void Mir3HudView::advance_level_effects(double milliseconds) {
 
 bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
+    const auto reply=mir3::parse_action_reply({reinterpret_cast<const char*>(encoded.ptr()),std::size_t(encoded.size())});
+    if (reply==mir3::ActionReply::good) { action_prediction.confirm();return true; }
+    if (reply==mir3::ActionReply::fail) {
+        if (const auto origin=action_prediction.reject(model.max_hp && model.hp==0)) {
+            pending_local_action.reset();map_route.clear();
+            player_cell=step_origin=step_destination=Vector2i(origin->cell[0],origin->cell[1]);
+            player_facing=origin->facing;walk_frame=-1;movement_ms=0;
+            player_action={};player_harvest_impact=false;player_idle.reset();
+            set_minimap_position(player_cell.x,player_cell.y);
+            queue_redraw();
+        }
+        return true;
+    }
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
     using RepairPhase=MerchantService::Phase;
@@ -6661,6 +6679,7 @@ void Mir3HudView::_process(double delta) {
         exit_layer->queue_redraw();
     }
     advance_level_effects(delta*1000);
+    action_prediction.advance(std::uint32_t(delta*1000));
     const bool advancing_action=!player_action.finished();
     const int previous_action_frame=player_action.frame();
     if (walk_frame>=0) { player_action={};player_harvest_impact=false; }
@@ -6880,7 +6899,6 @@ void Mir3HudView::_process(double delta) {
         ++npc_dialogue_arrow_frame;
     }
     if (chat_input && chat_input->has_focus()) map_pointer_button=0;
-    const bool moving=walk_frame>=0;
     advance_map_step(delta);
     for (auto& [actor,monster]:scene_chickens)
         if (monster.shape==141 || monster.shape==184 || monster.action_overlay) sync_monster_action_overlay(actor,monster);
@@ -6892,7 +6910,7 @@ void Mir3HudView::_process(double delta) {
         });
         queue_redraw();
     }
-    if (map_pointer_button==MOUSE_BUTTON_RIGHT && moving && walk_frame<0 && map_route.empty()) {
+    if (map_pointer_button==MOUSE_BUTTON_RIGHT && walk_frame<0 && map_route.empty()) {
         step_toward_pointer(model.hp>=10);
     } else if (map_pointer_button==MOUSE_BUTTON_LEFT) {
         map_pointer_seconds+=delta;
@@ -9925,6 +9943,7 @@ bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn,int ambien
     clear_map_events();clear_level_effects();player_action={};player_harvest_impact=false;
     terrain=std::move(next);terrain_ready=true;
     pending_local_action.reset();
+    action_prediction={};
     scene_ambient.enter(static_cast<std::uint16_t>(ambient_mode));
     current_map_id=map_id;
     map_input_delay.enter();

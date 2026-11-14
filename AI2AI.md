@@ -45,3 +45,7 @@ IDA 数据库名为 `mir3-map-review`，本机 MCP 地址为 `http://127.0.0.1:1
 ## 本地共用动作等待批次
 
 已实现LocalActionClock与单个待执行动作：移动600毫秒准入后进入共用等待，普攻/矿镐通过频率门禁后进入共用等待。419B40参数在进入等待时固定，时间条件到期只执行一次，移动包使用准入时间，攻击包使用实际出招时间。独立模型local-action-clock及melee-cooldown通过；Godot local_action_clock.gd及melee_cooldown.gd通过。跑动用例最初误选北侧障碍，读取原始0.map核实后改用南侧连续可走格，仅重跑相关短用例。截图local-action-walk.png和local-action-run.png。技能移动延迟、服务器纠偏与状态字段剩余项见TODO。
+
+## 本地动作确认批次
+
+4282C0的+前缀控制包转427C50；GOOD清等待，FAIL调用415E60恢复发起位置与方向。已接入ActionPrediction、输入门禁、8秒严格超时及换图清理。action_reply.gd故意不自动确认，测试预测位移、等待门禁、拒绝回滚、确认不截断动画及地图清理；模型检查包含8000/8001边界。local_action_clock.gd和melee_cooldown.gd回归通过。旧melee_input/map_harvest用例也显式模拟GOOD，未启动长场景。首轮固定0.16秒断言过早，改为等待实际位移状态后通过。截图action-reply-rollback.png。实服及二进制纠偏仍待完成。
