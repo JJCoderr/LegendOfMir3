@@ -2264,7 +2264,7 @@ func run() -> void:
 		click_at(Vector2(330, 280), false)
 		if not check(purchases.size() == 2 and npc_packets.back().substr(2, 16) == "<\\<<<KT?@NX<<<<<", "double-click buys exactly once using the clicked instance"): return
 		if not await capture("bichon-merchant-offer-double-click"): return
-		if not check(hud.apply_npc_message("bsp<<=IB<<<<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().inventory_gold == 125, "650 applies server gold balance"): return
+		if not check(hud.apply_npc_message(scene_packet(Mir3HudView.SM_BUYITEM_SUCCESS,125,0,0,0), PackedByteArray([18,52,86,120])) and hud.hud_snapshot().inventory_gold == 125, "650 applies server gold balance"): return
 		if not check(not hud.apply_inventory_add(Mir3HudView.SM_BUYITEM_SUCCESS, 301, 1, 10001, "Red potion", 0, 3), "gold reply is not an item addition"): return
 		if not check(hud.apply_inventory_add(Mir3HudView.SM_ADDITEM, 301, 1, 10001, "Red potion", 0, 3), "200 places purchased item in bag"): return
 		key(KEY_W)
@@ -2283,7 +2283,7 @@ func run() -> void:
 		click_at(pickup, false)
 		if not check(hud.hud_snapshot().held_inventory_icon != 301, "put purchased item back before continuing shop tests"): return
 		key(KEY_W)
-		if not check(not hud.apply_npc_message("b\\L<<=IB<<<<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.apply_npc_message("b\\D<<=IB<<<<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "651 maps known purchase failure"): return
+		if not check(not hud.apply_npc_message(scene_packet(Mir3HudView.SM_BUYITEM_FAIL,4,0,0,0), PackedByteArray([18,52,86,120])) and hud.apply_npc_message(scene_packet(Mir3HudView.SM_BUYITEM_FAIL,2,0,0,0), PackedByteArray([18,52,86,120])), "651 maps known purchase failure"): return
 		if not check(hud.hud_snapshot().group_request == 1438 and hud.hud_snapshot().inventory_gold == 125, "failure opens original caption without changing gold"): return
 		if not await capture("bichon-merchant-purchase-failed"): return
 		key(KEY_ENTER)

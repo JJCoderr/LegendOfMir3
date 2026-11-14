@@ -1031,7 +1031,7 @@ bool Mir3HudView::apply_npc_message(PackedByteArray encoded,PackedByteArray key)
         return apply_shop_offers(shop_actor,shop_selected,names,icons,prices,identifiers,offset);
     }
     if (opcode==mir3::protocol::SM_BUYITEM_SUCCESS || opcode==mir3::protocol::SM_BUYITEM_FAIL)
-        return encoded.size()==header_size && apply_shop_purchase_reply(opcode,first_parameter);
+        return encoded.size()==header_size && apply_shop_purchase_reply(opcode,actor);
     if (actor>INT_MAX) return false;
     return apply_npc_body(opcode,static_cast<int>(actor),first_parameter,encoded.slice(header_size));
 }
@@ -1245,9 +1245,17 @@ void Mir3HudView::close_npc_dialogue() {
 }
 
 bool Mir3HudView::apply_shop_purchase_reply(int identifier,int64_t value) {
+    const auto remove_selected_offer=[&] {
+        if(!shop_show_offers || shop_offer_loading || shop_offer_index<0 || shop_offer_index>=int(shop_offers.size()))
+            return;
+        shop_offers.erase(shop_offers.begin()+shop_offer_index);
+        if(shop_offer_index>=int(shop_offers.size())) shop_offer_index=-1;
+    };
     if (identifier==mir3::protocol::SM_BUYITEM_SUCCESS && value>=0 && value<=UINT32_MAX) {
         inventory_gold=static_cast<std::uint32_t>(value);
+        remove_selected_offer();
     } else if (identifier==mir3::protocol::SM_BUYITEM_FAIL && value>=1 && value<=3) {
+        if(value==1) remove_selected_offer();
         open_group_dialog(1436+static_cast<int>(value));
     } else return false;
     queue_redraw();
