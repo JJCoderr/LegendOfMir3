@@ -369,8 +369,8 @@
         }
       ],
       "name": "比奇县",
-      "family": "!Lv2_Bichon",
-      "family_name": "比奇县"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "01",
@@ -667,8 +667,8 @@
         }
       ],
       "name": "边境城市",
-      "family": "!Lv1_Kugkyung",
-      "family_name": "边境城市"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "02",
@@ -965,8 +965,8 @@
         }
       ],
       "name": "银杏山谷",
-      "family": "!Lv1_Eunhang",
-      "family_name": "银杏山谷"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "1",
@@ -1263,8 +1263,8 @@
         }
       ],
       "name": "道馆",
-      "family": "!Lv1_DoGwan",
-      "family_name": "道馆"
+      "family": "dogwan",
+      "family_name": "道馆·沃玛神殿"
     },
     {
       "map": "12",
@@ -1473,8 +1473,8 @@
         }
       ],
       "name": "灌木林",
-      "family": "!Lv8_PantomWood",
-      "family_name": "灌木林"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "122",
@@ -1683,8 +1683,8 @@
         }
       ],
       "name": "灌木林",
-      "family": "!Lv8_PantomWood",
-      "family_name": "灌木林"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "125",
@@ -1893,8 +1893,8 @@
         }
       ],
       "name": "灌木林",
-      "family": "!Lv8_PantomWood",
-      "family_name": "灌木林"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "2",
@@ -2175,7 +2175,7 @@
         }
       ],
       "name": "毒蛇山谷",
-      "family": "!Lv3_SnakeVally",
+      "family": "snake",
       "family_name": "毒蛇山谷"
     },
     {
@@ -2421,8 +2421,8 @@
         }
       ],
       "name": "绿洲",
-      "family": "!Lv8_Oasis",
-      "family_name": "绿洲"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "41",
@@ -2788,8 +2788,8 @@
         }
       ],
       "name": "诺玛村庄",
-      "family": "!Lv8_Desert",
-      "family_name": "诺玛村庄"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "42",
@@ -3096,8 +3096,8 @@
         }
       ],
       "name": "沙漠",
-      "family": "!Lv8_Desert",
-      "family_name": "诺玛村庄"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "43",
@@ -3480,8 +3480,8 @@
         }
       ],
       "name": "沙漠",
-      "family": "!Lv8_Desert",
-      "family_name": "诺玛村庄"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "44",
@@ -3847,8 +3847,8 @@
         }
       ],
       "name": "沙漠",
-      "family": "!Lv8_Desert",
-      "family_name": "诺玛村庄"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "5",
@@ -3867,8 +3867,8 @@
         }
       ],
       "name": "沙漠土城",
-      "family": "!Lv1_SamakCastle",
-      "family_name": "沙漠土城"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "6",
@@ -4101,8 +4101,8 @@
         }
       ],
       "name": "沙漠",
-      "family": "!Lv8_Desert",
-      "family_name": "诺玛村庄"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "71",
@@ -4158,8 +4158,8 @@
         }
       ],
       "name": "沙漠",
-      "family": "沙漠",
-      "family_name": "沙漠"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "72",
@@ -4215,8 +4215,8 @@
         }
       ],
       "name": "沙漠",
-      "family": "沙漠",
-      "family_name": "沙漠"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "73",
@@ -4272,8 +4272,8 @@
         }
       ],
       "name": "沙漠",
-      "family": "沙漠",
-      "family_name": "沙漠"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "74",
@@ -4390,8 +4390,8 @@
         }
       ],
       "name": "盟重县",
-      "family": "!Lv2_Mongchon",
-      "family_name": "盟重县"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "75",
@@ -4508,8 +4508,8 @@
         }
       ],
       "name": "石阁庙",
-      "family": "!Lv2_Mongchon",
-      "family_name": "盟重县"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "76",
@@ -4565,8 +4565,8 @@
         }
       ],
       "name": "沙漠",
-      "family": "沙漠",
-      "family_name": "沙漠"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "77",
@@ -4622,8 +4622,8 @@
         }
       ],
       "name": "沙漠",
-      "family": "沙漠",
-      "family_name": "沙漠"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "78",
@@ -4679,8 +4679,8 @@
         }
       ],
       "name": "沙漠",
-      "family": "沙漠",
-      "family_name": "沙漠"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "8",
@@ -4759,7 +4759,7 @@
         }
       ],
       "name": "潘夜岛",
-      "family": "!Lv6_HalfNight",
+      "family": "panya",
       "family_name": "潘夜岛"
     },
     {
@@ -5028,8 +5028,8 @@
         }
       ],
       "name": "失乐园",
-      "family": "!Lv10_Silnakwon",
-      "family_name": "失乐园"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "B115_001",
@@ -5111,8 +5111,8 @@
         }
       ],
       "name": "矿石空间",
-      "family": "矿石空间",
-      "family_name": "矿石空间"
+      "family": "special",
+      "family_name": "特殊任务区域"
     },
     {
       "map": "B139_001",
@@ -5139,8 +5139,8 @@
         }
       ],
       "name": "暗黑封印",
-      "family": "暗黑封印",
-      "family_name": "暗黑封印"
+      "family": "special",
+      "family_name": "特殊任务区域"
     },
     {
       "map": "D001",
@@ -5259,8 +5259,8 @@
         }
       ],
       "name": "半兽洞穴1层",
-      "family": "!Lv4_SkeletonCave",
-      "family_name": "半兽洞穴"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D002",
@@ -5410,8 +5410,8 @@
         }
       ],
       "name": "半兽洞穴2层",
-      "family": "!Lv4_SkeletonCave",
-      "family_name": "半兽洞穴"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D003",
@@ -5590,8 +5590,8 @@
         }
       ],
       "name": "半兽洞穴3层",
-      "family": "!Lv4_SkeletonCave",
-      "family_name": "半兽洞穴"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D011",
@@ -5710,8 +5710,8 @@
         }
       ],
       "name": "天然洞穴1层",
-      "family": "!Lv4_SkeletonCave",
-      "family_name": "半兽洞穴"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D012",
@@ -5875,8 +5875,8 @@
         }
       ],
       "name": "天然洞穴2层",
-      "family": "!Lv4_SkeletonCave",
-      "family_name": "半兽洞穴"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D021",
@@ -5915,8 +5915,8 @@
         }
       ],
       "name": "沃玛神殿入口",
-      "family": "!Lv6_WooMaPalace",
-      "family_name": "沃玛神殿入口"
+      "family": "dogwan",
+      "family_name": "道馆·沃玛神殿"
     },
     {
       "map": "D022",
@@ -6122,8 +6122,8 @@
         }
       ],
       "name": "沃玛神殿1层",
-      "family": "!Lv6_WooMaPalace",
-      "family_name": "沃玛神殿入口"
+      "family": "dogwan",
+      "family_name": "道馆·沃玛神殿"
     },
     {
       "map": "D022_001",
@@ -6170,8 +6170,8 @@
         }
       ],
       "name": "沃玛神殿1层",
-      "family": "沃玛神殿",
-      "family_name": "沃玛神殿"
+      "family": "dogwan",
+      "family_name": "道馆·沃玛神殿"
     },
     {
       "map": "D023",
@@ -6395,8 +6395,8 @@
         }
       ],
       "name": "沃玛神殿2层",
-      "family": "!Lv6_WooMaPalace",
-      "family_name": "沃玛神殿入口"
+      "family": "dogwan",
+      "family_name": "道馆·沃玛神殿"
     },
     {
       "map": "D024",
@@ -6573,8 +6573,8 @@
         }
       ],
       "name": "沃玛神殿",
-      "family": "沃玛神殿",
-      "family_name": "沃玛神殿"
+      "family": "dogwan",
+      "family_name": "道馆·沃玛神殿"
     },
     {
       "map": "D032",
@@ -6799,8 +6799,8 @@
         }
       ],
       "name": "沃玛神殿1层",
-      "family": "!Lv6_WooMaPalace",
-      "family_name": "沃玛神殿入口"
+      "family": "dogwan",
+      "family_name": "道馆·沃玛神殿"
     },
     {
       "map": "D033",
@@ -7043,8 +7043,8 @@
         }
       ],
       "name": "沃玛神殿2层",
-      "family": "!Lv6_WooMaPalace",
-      "family_name": "沃玛神殿入口"
+      "family": "dogwan",
+      "family_name": "道馆·沃玛神殿"
     },
     {
       "map": "D042",
@@ -7250,8 +7250,8 @@
         }
       ],
       "name": "沃玛神殿1层",
-      "family": "!Lv6_WooMaPalace",
-      "family_name": "沃玛神殿入口"
+      "family": "dogwan",
+      "family_name": "道馆·沃玛神殿"
     },
     {
       "map": "D043",
@@ -7475,8 +7475,8 @@
         }
       ],
       "name": "沃玛神殿2层",
-      "family": "!Lv6_WooMaPalace",
-      "family_name": "沃玛神殿入口"
+      "family": "dogwan",
+      "family_name": "道馆·沃玛神殿"
     },
     {
       "map": "D052",
@@ -7501,8 +7501,8 @@
         }
       ],
       "name": "沃玛神殿1层",
-      "family": "沃玛神殿",
-      "family_name": "沃玛神殿"
+      "family": "dogwan",
+      "family_name": "道馆·沃玛神殿"
     },
     {
       "map": "D053",
@@ -7527,8 +7527,8 @@
         }
       ],
       "name": "沃玛神殿2层",
-      "family": "沃玛神殿",
-      "family_name": "沃玛神殿"
+      "family": "dogwan",
+      "family_name": "道馆·沃玛神殿"
     },
     {
       "map": "D1001",
@@ -7691,8 +7691,8 @@
         }
       ],
       "name": "赤月山谷1层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D1002",
@@ -7855,8 +7855,8 @@
         }
       ],
       "name": "赤月山谷2层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D10031",
@@ -8019,8 +8019,8 @@
         }
       ],
       "name": "赤月山谷3层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D10032",
@@ -8183,8 +8183,8 @@
         }
       ],
       "name": "赤月山谷3层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D1004",
@@ -8347,8 +8347,8 @@
         }
       ],
       "name": "赤月山谷4层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D10051",
@@ -8511,8 +8511,8 @@
         }
       ],
       "name": "赤月山谷5层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D10052",
@@ -8675,8 +8675,8 @@
         }
       ],
       "name": "赤月山谷5层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D1011",
@@ -8801,8 +8801,8 @@
         }
       ],
       "name": "赤月山谷1层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D1012",
@@ -8927,8 +8927,8 @@
         }
       ],
       "name": "赤月山谷2层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D10131",
@@ -9072,8 +9072,8 @@
         }
       ],
       "name": "赤月山谷3层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D10132",
@@ -9236,8 +9236,8 @@
         }
       ],
       "name": "赤月山谷3层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D1014",
@@ -9400,8 +9400,8 @@
         }
       ],
       "name": "赤月山谷4层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D10151",
@@ -9547,8 +9547,8 @@
         }
       ],
       "name": "赤月山谷5层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D10152",
@@ -9694,8 +9694,8 @@
         }
       ],
       "name": "赤月山谷5层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D10162",
@@ -9830,8 +9830,8 @@
         }
       ],
       "name": "赤月恶魔洞穴",
-      "family": "赤月恶魔洞穴",
-      "family_name": "赤月恶魔洞穴"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D1021",
@@ -9888,8 +9888,8 @@
         }
       ],
       "name": "赤月山谷1层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D1022",
@@ -9946,8 +9946,8 @@
         }
       ],
       "name": "赤月山谷2层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D10231",
@@ -10023,8 +10023,8 @@
         }
       ],
       "name": "赤月山谷3层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D10232",
@@ -10119,8 +10119,8 @@
         }
       ],
       "name": "赤月山谷3层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D1024",
@@ -10215,8 +10215,8 @@
         }
       ],
       "name": "赤月山谷4层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D10251",
@@ -10294,8 +10294,8 @@
         }
       ],
       "name": "赤月山谷5层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D10252",
@@ -10373,8 +10373,8 @@
         }
       ],
       "name": "赤月山谷5层",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "D1101",
@@ -10561,8 +10561,8 @@
         }
       ],
       "name": "潘夜神殿1层",
-      "family": "!Lv10_HalfNightWoomaPalace",
-      "family_name": "潘夜神殿"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D1102",
@@ -10749,8 +10749,8 @@
         }
       ],
       "name": "潘夜神殿2层",
-      "family": "!Lv10_HalfNightWoomaPalace",
-      "family_name": "潘夜神殿"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D11031",
@@ -10937,8 +10937,8 @@
         }
       ],
       "name": "潘夜神殿3层西部",
-      "family": "!Lv10_HalfNightWoomaPalace",
-      "family_name": "潘夜神殿"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D11032",
@@ -11035,8 +11035,8 @@
         }
       ],
       "name": "潘夜神殿3层东部",
-      "family": "!Lv10_HalfNightWoomaPalace",
-      "family_name": "潘夜神殿"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D1104",
@@ -11271,8 +11271,8 @@
         }
       ],
       "name": "潘夜神殿4层",
-      "family": "!Lv10_HalfNightWoomaPalace",
-      "family_name": "潘夜神殿"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D1105",
@@ -11503,8 +11503,8 @@
         }
       ],
       "name": "潘夜神殿5层",
-      "family": "!Lv10_HalfNightWoomaPalace",
-      "family_name": "潘夜神殿"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D1111",
@@ -11735,8 +11735,8 @@
         }
       ],
       "name": "潘夜神殿4层",
-      "family": "!Lv10_HalfNightWoomaPalace",
-      "family_name": "潘夜神殿"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D1112",
@@ -11971,8 +11971,8 @@
         }
       ],
       "name": "潘夜神殿5层",
-      "family": "!Lv10_HalfNightWoomaPalace",
-      "family_name": "潘夜神殿"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D1113",
@@ -12203,8 +12203,8 @@
         }
       ],
       "name": "潘夜神殿6层",
-      "family": "!Lv10_HalfNightWoomaPalace",
-      "family_name": "潘夜神殿"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D11141",
@@ -12431,8 +12431,8 @@
         }
       ],
       "name": "潘夜神殿7层西部",
-      "family": "!Lv10_HalfNightWoomaPalace",
-      "family_name": "潘夜神殿"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D11142",
@@ -12663,8 +12663,8 @@
         }
       ],
       "name": "潘夜神殿7层东部",
-      "family": "!Lv10_HalfNightWoomaPalace",
-      "family_name": "潘夜神殿"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D1115",
@@ -12899,8 +12899,8 @@
         }
       ],
       "name": "潘夜神殿8层",
-      "family": "!Lv10_HalfNightWoomaPalace",
-      "family_name": "潘夜神殿"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D1116",
@@ -13011,8 +13011,8 @@
         }
       ],
       "name": "潘夜神殿",
-      "family": "潘夜神殿",
-      "family_name": "潘夜神殿"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D1201",
@@ -13053,8 +13053,8 @@
         }
       ],
       "name": "罪孽洞穴1层",
-      "family": "罪孽洞穴",
-      "family_name": "罪孽洞穴"
+      "family": "exile",
+      "family_name": "流放岛·罪孽洞穴"
     },
     {
       "map": "D1202",
@@ -13095,8 +13095,8 @@
         }
       ],
       "name": "罪孽洞穴2层",
-      "family": "罪孽洞穴",
-      "family_name": "罪孽洞穴"
+      "family": "exile",
+      "family_name": "流放岛·罪孽洞穴"
     },
     {
       "map": "D12031",
@@ -13137,8 +13137,8 @@
         }
       ],
       "name": "罪孽洞穴3层西部",
-      "family": "罪孽洞穴",
-      "family_name": "罪孽洞穴"
+      "family": "exile",
+      "family_name": "流放岛·罪孽洞穴"
     },
     {
       "map": "D12032",
@@ -13179,8 +13179,8 @@
         }
       ],
       "name": "罪孽洞穴3层东部",
-      "family": "罪孽洞穴",
-      "family_name": "罪孽洞穴"
+      "family": "exile",
+      "family_name": "流放岛·罪孽洞穴"
     },
     {
       "map": "D1204",
@@ -13221,8 +13221,8 @@
         }
       ],
       "name": "罪孽洞穴4层",
-      "family": "罪孽洞穴",
-      "family_name": "罪孽洞穴"
+      "family": "exile",
+      "family_name": "流放岛·罪孽洞穴"
     },
     {
       "map": "D1205",
@@ -13263,8 +13263,8 @@
         }
       ],
       "name": "罪孽洞穴5层",
-      "family": "罪孽洞穴",
-      "family_name": "罪孽洞穴"
+      "family": "exile",
+      "family_name": "流放岛·罪孽洞穴"
     },
     {
       "map": "D1211",
@@ -13401,8 +13401,8 @@
         }
       ],
       "name": "潘夜石窟1层",
-      "family": "!Lv7_HalfNightSkeletonCave",
-      "family_name": "潘夜石窟"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D12121",
@@ -13558,8 +13558,8 @@
         }
       ],
       "name": "潘夜石窟2层西部",
-      "family": "!Lv7_HalfNightSkeletonCave",
-      "family_name": "潘夜石窟"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D1213",
@@ -13715,8 +13715,8 @@
         }
       ],
       "name": "潘夜石窟3层",
-      "family": "!Lv7_HalfNightSkeletonCave",
-      "family_name": "潘夜石窟"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D1214",
@@ -13872,8 +13872,8 @@
         }
       ],
       "name": "潘夜石窟4层",
-      "family": "!Lv7_HalfNightSkeletonCave",
-      "family_name": "潘夜石窟"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D1215",
@@ -14047,8 +14047,8 @@
         }
       ],
       "name": "潘夜石窟5层",
-      "family": "!Lv7_HalfNightSkeletonCave",
-      "family_name": "潘夜石窟"
+      "family": "panya",
+      "family_name": "潘夜岛"
     },
     {
       "map": "D1301",
@@ -14170,8 +14170,8 @@
         }
       ],
       "name": "东部银杏废矿1层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1302",
@@ -14293,8 +14293,8 @@
         }
       ],
       "name": "东部银杏废矿2层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1303",
@@ -14417,8 +14417,8 @@
         }
       ],
       "name": "东部银杏废矿3层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1304",
@@ -14541,8 +14541,8 @@
         }
       ],
       "name": "东部银杏废矿4层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1305",
@@ -14665,8 +14665,8 @@
         }
       ],
       "name": "东部银杏废矿5层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1311",
@@ -14788,8 +14788,8 @@
         }
       ],
       "name": "北部银杏废矿1层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1312",
@@ -14912,8 +14912,8 @@
         }
       ],
       "name": "北部银杏废矿2层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1313",
@@ -15035,8 +15035,8 @@
         }
       ],
       "name": "北部银杏废矿3层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1314",
@@ -15159,8 +15159,8 @@
         }
       ],
       "name": "北部银杏废矿4层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1315",
@@ -15283,8 +15283,8 @@
         }
       ],
       "name": "北部银杏废矿5层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1321",
@@ -15406,8 +15406,8 @@
         }
       ],
       "name": "西部银杏废矿1层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1322",
@@ -15530,8 +15530,8 @@
         }
       ],
       "name": "西部银杏废矿2层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1323",
@@ -15654,8 +15654,8 @@
         }
       ],
       "name": "西部银杏废矿3层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1324",
@@ -15778,8 +15778,8 @@
         }
       ],
       "name": "西部银杏废矿4层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1325",
@@ -15902,8 +15902,8 @@
         }
       ],
       "name": "西部银杏废矿5层",
-      "family": "!Lv5_FleaCave",
-      "family_name": "东部银杏废矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1405",
@@ -15942,8 +15942,8 @@
         }
       ],
       "name": "东部石矿",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1411",
@@ -15966,8 +15966,8 @@
         }
       ],
       "name": "北部石矿1层",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1412",
@@ -15990,8 +15990,8 @@
         }
       ],
       "name": "北部石矿2层",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1413",
@@ -16014,8 +16014,8 @@
         }
       ],
       "name": "北部石矿3层",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1414",
@@ -16038,8 +16038,8 @@
         }
       ],
       "name": "北部石矿4层",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1415",
@@ -16062,8 +16062,8 @@
         }
       ],
       "name": "北部石矿5层",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1421",
@@ -16102,8 +16102,8 @@
         }
       ],
       "name": "西部石矿1层",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1422",
@@ -16142,8 +16142,8 @@
         }
       ],
       "name": "西部石矿2层",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1423",
@@ -16182,8 +16182,8 @@
         }
       ],
       "name": "西部石矿3层",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1424",
@@ -16222,8 +16222,8 @@
         }
       ],
       "name": "西部石矿4层",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1425",
@@ -16262,8 +16262,8 @@
         }
       ],
       "name": "西部石矿5层",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D1500",
@@ -16394,8 +16394,8 @@
         }
       ],
       "name": "真天宫地下1层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15011",
@@ -16526,8 +16526,8 @@
         }
       ],
       "name": "真天宫西馆1层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15012",
@@ -16712,8 +16712,8 @@
         }
       ],
       "name": "真天宫南馆1层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15013",
@@ -16844,8 +16844,8 @@
         }
       ],
       "name": "真天宫东馆1层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15014",
@@ -16995,8 +16995,8 @@
         }
       ],
       "name": "真天宫北馆1层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15021",
@@ -17146,8 +17146,8 @@
         }
       ],
       "name": "真天宫西馆2层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15022",
@@ -17297,8 +17297,8 @@
         }
       ],
       "name": "真天宫南馆2层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15023",
@@ -17448,8 +17448,8 @@
         }
       ],
       "name": "真天宫东馆2层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15024",
@@ -17634,8 +17634,8 @@
         }
       ],
       "name": "真天宫北馆2层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15032",
@@ -17820,8 +17820,8 @@
         }
       ],
       "name": "真天宫南馆3层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15033",
@@ -17951,8 +17951,8 @@
         }
       ],
       "name": "真天宫东馆3层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15034",
@@ -18119,8 +18119,8 @@
         }
       ],
       "name": "真天宫北馆3层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15043",
@@ -18286,8 +18286,8 @@
         }
       ],
       "name": "真天宫北馆4层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15044",
@@ -18472,8 +18472,8 @@
         }
       ],
       "name": "真天宫北馆4层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15054",
@@ -18658,8 +18658,8 @@
         }
       ],
       "name": "真天宫北馆5层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D1506",
@@ -18836,8 +18836,8 @@
         }
       ],
       "name": "真天宫",
-      "family": "真天宫",
-      "family_name": "真天宫"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D1510",
@@ -18933,8 +18933,8 @@
         }
       ],
       "name": "黑度宫1层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15111",
@@ -19065,8 +19065,8 @@
         }
       ],
       "name": "黑度宫2层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D15112",
@@ -19197,8 +19197,8 @@
         }
       ],
       "name": "黑度宫2层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D1512",
@@ -19313,8 +19313,8 @@
         }
       ],
       "name": "黑度宫3层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D1513",
@@ -19480,8 +19480,8 @@
         }
       ],
       "name": "黑度宫4层",
-      "family": "!Lv11_SilnakCave",
-      "family_name": "真天宫地下"
+      "family": "paradise",
+      "family_name": "失乐园·真天宫"
     },
     {
       "map": "D1601",
@@ -19510,8 +19510,8 @@
         }
       ],
       "name": "诺玛遗址1层",
-      "family": "诺玛遗址",
-      "family_name": "诺玛遗址"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "D1602",
@@ -19540,8 +19540,8 @@
         }
       ],
       "name": "诺玛遗址2层",
-      "family": "诺玛遗址",
-      "family_name": "诺玛遗址"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "D16031",
@@ -19570,8 +19570,8 @@
         }
       ],
       "name": "诺玛遗址3层",
-      "family": "诺玛遗址",
-      "family_name": "诺玛遗址"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "D16032",
@@ -19600,8 +19600,8 @@
         }
       ],
       "name": "诺玛遗址3层",
-      "family": "诺玛遗址",
-      "family_name": "诺玛遗址"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "D16033",
@@ -19630,8 +19630,8 @@
         }
       ],
       "name": "诺玛遗址3层",
-      "family": "诺玛遗址",
-      "family_name": "诺玛遗址"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "D16034",
@@ -19660,8 +19660,8 @@
         }
       ],
       "name": "诺玛遗址3层",
-      "family": "诺玛遗址",
-      "family_name": "诺玛遗址"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "D1604",
@@ -19690,8 +19690,8 @@
         }
       ],
       "name": "诺玛遗址4层",
-      "family": "诺玛遗址",
-      "family_name": "诺玛遗址"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "D1605",
@@ -19720,8 +19720,8 @@
         }
       ],
       "name": "诺玛遗址5层",
-      "family": "诺玛遗址",
-      "family_name": "诺玛遗址"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "D1606",
@@ -19840,8 +19840,8 @@
         }
       ],
       "name": "诺玛勇士墓穴",
-      "family": "诺玛勇士墓穴",
-      "family_name": "诺玛勇士墓穴"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "D400_001",
@@ -19864,8 +19864,8 @@
         }
       ],
       "name": "神圣战甲术空间",
-      "family": "神圣战甲术空间",
-      "family_name": "神圣战甲术空间"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D401",
@@ -20023,8 +20023,8 @@
         }
       ],
       "name": "废矿矿山入口",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D401_001",
@@ -20060,8 +20060,8 @@
         }
       ],
       "name": "尸王房",
-      "family": "尸王房",
-      "family_name": "尸王房"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D402",
@@ -20219,8 +20219,8 @@
         }
       ],
       "name": "废矿东部洞穴",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D402_001",
@@ -20256,8 +20256,8 @@
         }
       ],
       "name": "尸王房",
-      "family": "尸王房",
-      "family_name": "尸王房"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D403",
@@ -20433,8 +20433,8 @@
         }
       ],
       "name": "地下1层采矿所",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D403_001",
@@ -20470,8 +20470,8 @@
         }
       ],
       "name": "尸王房",
-      "family": "尸王房",
-      "family_name": "尸王房"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D404",
@@ -20633,8 +20633,8 @@
         }
       ],
       "name": "地下2层采矿所",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D404_001",
@@ -20670,8 +20670,8 @@
         }
       ],
       "name": "尸王房",
-      "family": "尸王房",
-      "family_name": "尸王房"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D405",
@@ -20851,8 +20851,8 @@
         }
       ],
       "name": "矿石储藏所",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D405_001",
@@ -20888,8 +20888,8 @@
         }
       ],
       "name": "尸王房",
-      "family": "尸王房",
-      "family_name": "尸王房"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D406",
@@ -21069,8 +21069,8 @@
         }
       ],
       "name": "废矿南部洞穴",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D406_001",
@@ -21106,8 +21106,8 @@
         }
       ],
       "name": "尸王房",
-      "family": "尸王房",
-      "family_name": "尸王房"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D411",
@@ -21189,8 +21189,8 @@
         }
       ],
       "name": "地下1层第一间房",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D412",
@@ -21272,8 +21272,8 @@
         }
       ],
       "name": "天桥2",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D413",
@@ -21355,8 +21355,8 @@
         }
       ],
       "name": "地下1层第二间房",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D415",
@@ -21438,8 +21438,8 @@
         }
       ],
       "name": "天桥1",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D416",
@@ -21521,8 +21521,8 @@
         }
       ],
       "name": "天桥3",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "D420_001",
@@ -21545,8 +21545,8 @@
         }
       ],
       "name": "神圣战甲术空间",
-      "family": "神圣战甲术空间",
-      "family_name": "神圣战甲术空间"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "D421",
@@ -21690,8 +21690,8 @@
         }
       ],
       "name": "矿山1层",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "D422",
@@ -21835,8 +21835,8 @@
         }
       ],
       "name": "矿山2层",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "D431",
@@ -21941,8 +21941,8 @@
         }
       ],
       "name": "北部矿山入口",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "D431_001",
@@ -21978,8 +21978,8 @@
         }
       ],
       "name": "尸王房",
-      "family": "尸王房",
-      "family_name": "尸王房"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "D432",
@@ -22084,8 +22084,8 @@
         }
       ],
       "name": "北部矿山东面洞穴",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "D432_001",
@@ -22121,8 +22121,8 @@
         }
       ],
       "name": "尸王房",
-      "family": "尸王房",
-      "family_name": "尸王房"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "D433",
@@ -22191,8 +22191,8 @@
         }
       ],
       "name": "北部地下1层采矿所",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "D434",
@@ -22277,8 +22277,8 @@
         }
       ],
       "name": "北部地下2层采矿所",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "D435",
@@ -22363,8 +22363,8 @@
         }
       ],
       "name": "北部矿石储藏所",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "D436",
@@ -22433,8 +22433,8 @@
         }
       ],
       "name": "北部废矿南面洞穴",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "D451",
@@ -22503,8 +22503,8 @@
         }
       ],
       "name": "南部矿山1层",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "D452",
@@ -22573,8 +22573,8 @@
         }
       ],
       "name": "南部矿山2层",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "D501",
@@ -22699,7 +22699,7 @@
         }
       ],
       "name": "祖玛神殿1层",
-      "family": "!Lv10_ZumaPalace",
+      "family": "zuma",
       "family_name": "祖玛神殿"
     },
     {
@@ -22839,7 +22839,7 @@
         }
       ],
       "name": "祖玛神殿2层",
-      "family": "!Lv10_ZumaPalace",
+      "family": "zuma",
       "family_name": "祖玛神殿"
     },
     {
@@ -23103,7 +23103,7 @@
         }
       ],
       "name": "祖玛神殿3层",
-      "family": "!Lv10_ZumaPalace",
+      "family": "zuma",
       "family_name": "祖玛神殿"
     },
     {
@@ -23335,7 +23335,7 @@
         }
       ],
       "name": "祖玛神殿4层",
-      "family": "!Lv10_ZumaPalace",
+      "family": "zuma",
       "family_name": "祖玛神殿"
     },
     {
@@ -23553,7 +23553,7 @@
         }
       ],
       "name": "祖玛神殿5层",
-      "family": "!Lv10_ZumaPalace",
+      "family": "zuma",
       "family_name": "祖玛神殿"
     },
     {
@@ -23755,7 +23755,7 @@
         }
       ],
       "name": "祖玛神殿6层",
-      "family": "!Lv10_ZumaPalace",
+      "family": "zuma",
       "family_name": "祖玛神殿"
     },
     {
@@ -23957,7 +23957,7 @@
         }
       ],
       "name": "祖玛神殿6层",
-      "family": "!Lv10_ZumaPalace",
+      "family": "zuma",
       "family_name": "祖玛神殿"
     },
     {
@@ -24159,7 +24159,7 @@
         }
       ],
       "name": "祖玛神殿6层",
-      "family": "!Lv10_ZumaPalace",
+      "family": "zuma",
       "family_name": "祖玛神殿"
     },
     {
@@ -24361,8 +24361,8 @@
         }
       ],
       "name": "祖玛教主宫廷",
-      "family": "祖玛教主宫廷",
-      "family_name": "祖玛教主宫廷"
+      "family": "zuma",
+      "family_name": "祖玛神殿"
     },
     {
       "map": "D60011",
@@ -24514,8 +24514,8 @@
         }
       ],
       "name": "绝命谷1层南部",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D60012",
@@ -24665,8 +24665,8 @@
         }
       ],
       "name": "绝命谷1层西部",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D60013",
@@ -24820,8 +24820,8 @@
         }
       ],
       "name": "绝命谷1层北部",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D60021",
@@ -24960,8 +24960,8 @@
         }
       ],
       "name": "绝命谷2层西部",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D60022",
@@ -25111,8 +25111,8 @@
         }
       ],
       "name": "绝命谷2层北部",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D6004",
@@ -25262,8 +25262,8 @@
         }
       ],
       "name": "绝命谷3层",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D6011",
@@ -25397,8 +25397,8 @@
         }
       ],
       "name": "万年谷",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D6012",
@@ -25532,8 +25532,8 @@
         }
       ],
       "name": "万年原谷",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D60131",
@@ -25618,8 +25618,8 @@
         }
       ],
       "name": "万年谷中部",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D60132",
@@ -25704,8 +25704,8 @@
         }
       ],
       "name": "万年谷南部",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D60133",
@@ -25790,8 +25790,8 @@
         }
       ],
       "name": "万年谷西部",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D60134",
@@ -25876,8 +25876,8 @@
         }
       ],
       "name": "万年谷北部",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D60135",
@@ -25962,8 +25962,8 @@
         }
       ],
       "name": "万年谷东部",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D6014",
@@ -26099,8 +26099,8 @@
         }
       ],
       "name": "万年独孤关",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D6015",
@@ -26250,8 +26250,8 @@
         }
       ],
       "name": "生死关",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D6021",
@@ -26437,8 +26437,8 @@
         }
       ],
       "name": "虫峡谷1层",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D6022",
@@ -26624,8 +26624,8 @@
         }
       ],
       "name": "虫峡谷2层",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D6023",
@@ -26811,8 +26811,8 @@
         }
       ],
       "name": "虫峡谷3层",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D6024",
@@ -26998,8 +26998,8 @@
         }
       ],
       "name": "虫峡谷4层",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D6025",
@@ -27185,8 +27185,8 @@
         }
       ],
       "name": "虫峡谷5层",
-      "family": "!Lv7_CentipedeCave",
-      "family_name": "绝命谷"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D711",
@@ -27273,8 +27273,8 @@
         }
       ],
       "name": "石阁1层",
-      "family": "!Lv7_SukGakCave",
-      "family_name": "石阁"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D712",
@@ -27373,8 +27373,8 @@
         }
       ],
       "name": "石阁2层",
-      "family": "!Lv7_SukGakCave",
-      "family_name": "石阁"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D713",
@@ -27502,8 +27502,8 @@
         }
       ],
       "name": "石阁3层",
-      "family": "!Lv7_SukGakCave",
-      "family_name": "石阁"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D714",
@@ -27631,8 +27631,8 @@
         }
       ],
       "name": "石阁4层",
-      "family": "!Lv7_SukGakCave",
-      "family_name": "石阁"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D715",
@@ -27774,8 +27774,8 @@
         }
       ],
       "name": "石阁5层",
-      "family": "!Lv7_SukGakCave",
-      "family_name": "石阁"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D716",
@@ -27852,8 +27852,8 @@
         }
       ],
       "name": "石阁6层",
-      "family": "!Lv7_SukGakCave",
-      "family_name": "石阁"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D717",
@@ -27964,8 +27964,8 @@
         }
       ],
       "name": "石阁7层",
-      "family": "!Lv7_SukGakCave",
-      "family_name": "石阁"
+      "family": "mongchon",
+      "family_name": "盟重·石阁·虫谷"
     },
     {
       "map": "D8001",
@@ -28139,8 +28139,8 @@
         }
       ],
       "name": "南部蚂蚁洞穴1层4",
-      "family": "!Lv6_AntCave",
-      "family_name": "南部蚂蚁洞穴"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "D8002",
@@ -28295,8 +28295,8 @@
         }
       ],
       "name": "南部蚂蚁洞穴1层1",
-      "family": "!Lv6_AntCave",
-      "family_name": "南部蚂蚁洞穴"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "D8003",
@@ -28451,8 +28451,8 @@
         }
       ],
       "name": "南部蚂蚁洞穴1层2",
-      "family": "!Lv6_AntCave",
-      "family_name": "南部蚂蚁洞穴"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "D8004",
@@ -28607,8 +28607,8 @@
         }
       ],
       "name": "南部蚂蚁洞穴1层3",
-      "family": "!Lv6_AntCave",
-      "family_name": "南部蚂蚁洞穴"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "D8101",
@@ -28763,8 +28763,8 @@
         }
       ],
       "name": "北部蚂蚁洞穴1层4",
-      "family": "!Lv6_AntCave",
-      "family_name": "南部蚂蚁洞穴"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "D8102",
@@ -28919,8 +28919,8 @@
         }
       ],
       "name": "北部蚂蚁洞穴1层1",
-      "family": "!Lv6_AntCave",
-      "family_name": "南部蚂蚁洞穴"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "D8103",
@@ -29075,8 +29075,8 @@
         }
       ],
       "name": "北部蚂蚁洞穴1层2",
-      "family": "!Lv6_AntCave",
-      "family_name": "南部蚂蚁洞穴"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "D8104",
@@ -29231,8 +29231,8 @@
         }
       ],
       "name": "北部蚂蚁洞穴1层3",
-      "family": "!Lv6_AntCave",
-      "family_name": "南部蚂蚁洞穴"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "D8201",
@@ -29387,8 +29387,8 @@
         }
       ],
       "name": "东部蚂蚁洞穴1层4",
-      "family": "!Lv6_AntCave",
-      "family_name": "南部蚂蚁洞穴"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "D8202",
@@ -29543,8 +29543,8 @@
         }
       ],
       "name": "东部蚂蚁洞穴1层1",
-      "family": "!Lv6_AntCave",
-      "family_name": "南部蚂蚁洞穴"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "D8203",
@@ -29699,8 +29699,8 @@
         }
       ],
       "name": "东部蚂蚁洞穴1层2",
-      "family": "!Lv6_AntCave",
-      "family_name": "南部蚂蚁洞穴"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "D8204",
@@ -29855,8 +29855,8 @@
         }
       ],
       "name": "东部蚂蚁洞穴1层3",
-      "family": "!Lv6_AntCave",
-      "family_name": "南部蚂蚁洞穴"
+      "family": "desert",
+      "family_name": "沙漠·绿洲"
     },
     {
       "map": "D901",
@@ -30083,8 +30083,8 @@
         }
       ],
       "name": "神舰地下三层",
-      "family": "!Lv12_SinGiSun",
-      "family_name": "神舰地下"
+      "family": "ship",
+      "family_name": "神舰"
     },
     {
       "map": "D9021",
@@ -30276,8 +30276,8 @@
         }
       ],
       "name": "神舰地下二层",
-      "family": "!Lv12_SinGiSun",
-      "family_name": "神舰地下"
+      "family": "ship",
+      "family_name": "神舰"
     },
     {
       "map": "D90212",
@@ -30300,8 +30300,8 @@
         }
       ],
       "name": "机械室",
-      "family": "!Lv12_SinGiSun",
-      "family_name": "神舰地下"
+      "family": "ship",
+      "family_name": "神舰"
     },
     {
       "map": "D9022",
@@ -30598,8 +30598,8 @@
         }
       ],
       "name": "神舰地下二层",
-      "family": "!Lv12_SinGiSun",
-      "family_name": "神舰地下"
+      "family": "ship",
+      "family_name": "神舰"
     },
     {
       "map": "D90222",
@@ -30624,8 +30624,8 @@
         }
       ],
       "name": "厨房",
-      "family": "!Lv12_SinGiSun",
-      "family_name": "神舰地下"
+      "family": "ship",
+      "family_name": "神舰"
     },
     {
       "map": "D90223",
@@ -30648,8 +30648,8 @@
         }
       ],
       "name": "士兵食堂",
-      "family": "!Lv12_SinGiSun",
-      "family_name": "神舰地下"
+      "family": "ship",
+      "family_name": "神舰"
     },
     {
       "map": "D903",
@@ -30884,8 +30884,8 @@
         }
       ],
       "name": "神舰地下一层",
-      "family": "!Lv12_SinGiSun",
-      "family_name": "神舰地下"
+      "family": "ship",
+      "family_name": "神舰"
     },
     {
       "map": "D9031",
@@ -30910,8 +30910,8 @@
         }
       ],
       "name": "参谋室",
-      "family": "!Lv12_SinGiSun",
-      "family_name": "神舰地下"
+      "family": "ship",
+      "family_name": "神舰"
     },
     {
       "map": "D9032",
@@ -30936,8 +30936,8 @@
         }
       ],
       "name": "长官食堂",
-      "family": "!Lv12_SinGiSun",
-      "family_name": "神舰地下"
+      "family": "ship",
+      "family_name": "神舰"
     },
     {
       "map": "D904",
@@ -31034,8 +31034,8 @@
         }
       ],
       "name": "调控室",
-      "family": "调控室",
-      "family_name": "调控室"
+      "family": "ship",
+      "family_name": "神舰"
     },
     {
       "map": "E001",
@@ -31142,8 +31142,8 @@
         }
       ],
       "name": "半兽天然洞穴",
-      "family": "半兽天然洞穴",
-      "family_name": "半兽天然洞穴"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "E002",
@@ -31250,8 +31250,8 @@
         }
       ],
       "name": "半兽天然洞穴",
-      "family": "半兽天然洞穴",
-      "family_name": "半兽天然洞穴"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "E402",
@@ -31433,8 +31433,8 @@
         }
       ],
       "name": "连接通路",
-      "family": "连接通路",
-      "family_name": "连接通路"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "d1021",
@@ -31509,8 +31509,8 @@
         }
       ],
       "name": "d1021",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "d1022",
@@ -31585,8 +31585,8 @@
         }
       ],
       "name": "d1022",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "d10231",
@@ -31661,8 +31661,8 @@
         }
       ],
       "name": "d10231",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "d10232",
@@ -31737,8 +31737,8 @@
         }
       ],
       "name": "d10232",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "d1024",
@@ -31813,8 +31813,8 @@
         }
       ],
       "name": "d1024",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "d10251",
@@ -31889,8 +31889,8 @@
         }
       ],
       "name": "d10251",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "d10252",
@@ -31949,8 +31949,8 @@
         }
       ],
       "name": "d10252",
-      "family": "!Lv9_BloodGreatCave",
-      "family_name": "赤月山谷"
+      "family": "phantom",
+      "family_name": "灌木林·赤月山谷"
     },
     {
       "map": "d1405",
@@ -32046,8 +32046,8 @@
         }
       ],
       "name": "d1405",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "d1411",
@@ -32143,8 +32143,8 @@
         }
       ],
       "name": "d1411",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "d1412",
@@ -32240,8 +32240,8 @@
         }
       ],
       "name": "d1412",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "d1413",
@@ -32323,8 +32323,8 @@
         }
       ],
       "name": "d1413",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "d1414",
@@ -32406,8 +32406,8 @@
         }
       ],
       "name": "d1414",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "d1415",
@@ -32503,8 +32503,8 @@
         }
       ],
       "name": "d1415",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "d1421",
@@ -32600,8 +32600,8 @@
         }
       ],
       "name": "d1421",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "d1422",
@@ -32697,8 +32697,8 @@
         }
       ],
       "name": "d1422",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "d1423",
@@ -32780,8 +32780,8 @@
         }
       ],
       "name": "d1423",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "d1424",
@@ -32863,8 +32863,8 @@
         }
       ],
       "name": "d1424",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "d1425",
@@ -32960,8 +32960,8 @@
         }
       ],
       "name": "d1425",
-      "family": "!Lv5_MisukCave",
-      "family_name": "东部石矿"
+      "family": "bichon",
+      "family_name": "比奇地区"
     },
     {
       "map": "d1601",
@@ -33151,8 +33151,8 @@
         }
       ],
       "name": "d1601",
-      "family": "!Lv13_numavestiges",
-      "family_name": "d1601"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "d1602",
@@ -33342,8 +33342,8 @@
         }
       ],
       "name": "d1602",
-      "family": "!Lv13_numavestiges",
-      "family_name": "d1601"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "d16031",
@@ -33533,8 +33533,8 @@
         }
       ],
       "name": "d16031",
-      "family": "!Lv13_numavestiges",
-      "family_name": "d1601"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "d16032",
@@ -33724,8 +33724,8 @@
         }
       ],
       "name": "d16032",
-      "family": "!Lv13_numavestiges",
-      "family_name": "d1601"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "d16033",
@@ -33915,8 +33915,8 @@
         }
       ],
       "name": "d16033",
-      "family": "!Lv13_numavestiges",
-      "family_name": "d1601"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "d16034",
@@ -34106,8 +34106,8 @@
         }
       ],
       "name": "d16034",
-      "family": "!Lv13_numavestiges",
-      "family_name": "d1601"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "d1604",
@@ -34297,8 +34297,8 @@
         }
       ],
       "name": "d1604",
-      "family": "!Lv13_numavestiges",
-      "family_name": "d1601"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "d1605",
@@ -34488,8 +34488,8 @@
         }
       ],
       "name": "d1605",
-      "family": "!Lv13_numavestiges",
-      "family_name": "d1601"
+      "family": "noma",
+      "family_name": "诺玛地区"
     },
     {
       "map": "d431",
@@ -34585,8 +34585,8 @@
         }
       ],
       "name": "d431",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "d432",
@@ -34682,8 +34682,8 @@
         }
       ],
       "name": "d432",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "d433",
@@ -34779,8 +34779,8 @@
         }
       ],
       "name": "d433",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "d434",
@@ -34862,8 +34862,8 @@
         }
       ],
       "name": "d434",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "d435",
@@ -34945,8 +34945,8 @@
         }
       ],
       "name": "d435",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "d436",
@@ -35028,8 +35028,8 @@
         }
       ],
       "name": "d436",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "d441",
@@ -35111,8 +35111,8 @@
         }
       ],
       "name": "d441",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "d442",
@@ -35194,8 +35194,8 @@
         }
       ],
       "name": "d442",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "d443",
@@ -35277,8 +35277,8 @@
         }
       ],
       "name": "d443",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "d445",
@@ -35360,8 +35360,8 @@
         }
       ],
       "name": "d445",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "d446",
@@ -35443,8 +35443,8 @@
         }
       ],
       "name": "d446",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "d451",
@@ -35526,8 +35526,8 @@
         }
       ],
       "name": "d451",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     },
     {
       "map": "d452",
@@ -35609,8 +35609,8 @@
         }
       ],
       "name": "d452",
-      "family": "!Lv5_ZombieCave",
-      "family_name": "废矿矿山入口"
+      "family": "snake",
+      "family_name": "毒蛇山谷"
     }
   ],
   "mdf_sha256": "2959acf39f55dc3e4395b861f9a174b2aecfd0b8ec9ee571d822d88c66f68c19",
@@ -35672,5 +35672,6 @@
       222,
       26
     ]
-  ]
+  ],
+  "grouping_source": "group_monster_maps.py: explicit display regions; same-package Mapinfo entrances and dungeon series"
 }

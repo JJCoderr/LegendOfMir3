@@ -7,6 +7,9 @@ var showcase_report: Array = []
 var showcase_index := 0
 var showcase_total := 0
 var showcase_rng := RandomNumberGenerator.new()
+var hit_skills: Array[int] = []
+var hit_skill_bag: Array[int] = []
+var last_hit_skill := -1
 const SHOWCASE_ORIGIN := Vector2i(425,370)
 
 func run() -> void:
@@ -53,6 +56,17 @@ func run() -> void:
 		label.add_theme_color_override("font_color",input.get_theme_color("font_color"))
 		row.add_child(label)
 	await settle()
+	showcase_rng.randomize()
+	hud.set_local_actor_identity(77)
+	# 从技能全集数据选择实际有施放资源的项目，不把被动/空资源伪装成魔法。
+	var skill_catalog: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://../tests/skill_common_cases.json"))
+	for skill in skill_catalog.cases:
+		if skill.reply=="effect" and skill.magic!=null and int(skill.magic[1])>int(skill.magic[0]):
+			hit_skills.append(int(skill.id))
+	# 独立专项验证的技能（普通技能表以外）。
+	for skill in [1,9,10,53,73,110,113,150]:
+		if not skill in hit_skills: hit_skills.append(skill)
+	print("MONSTER_HIT_SKILL_POOL ",hit_skills)
 	if scenario=="maps":
 		await showcase_maps()
 		return
@@ -93,17 +107,21 @@ func showcase_maps() -> void:
 		if arg.begins_with("--start-index="): start_index=maxi(1,int(arg.get_slice("=",1)))
 	var catalog: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://../tests/monster_maps.json"))
 	var groups: Array = []
-	# 按服务端刷怪系列归并大图与子图，外观在同系列内去重。
+	# 按显式区域归并大图、楼层、侧室和首领房，外观在区域内去重。
 	var families := {}
 	for entry in catalog.maps:
 		var family: String=entry.family
 		if not families.has(family):
 			families[family]=groups.size()
-			groups.append({"maps":[],"name":entry.get("family_name",entry.name),"monsters":[],"shapes":[]})
+			groups.append({"maps":[],"name":entry.get("family_name",entry.name),"monsters":[],"shapes":[],"unavailable":[]})
 		var group: Dictionary=groups[families[family]]
 		group.maps.append(entry.map)
 		for monster in entry.monsters:
-			if not monster.available or int(monster.shape) in group.shapes: continue
+			if not monster.available:
+				group.unavailable.append({"map":entry.map,"name":monster.name,"shape":monster.shape,
+					"spawn_source":monster.spawn_source,"reason":"unresolved_shape" if monster.shape==null else "unsupported_shape"})
+				continue
+			if int(monster.shape) in group.shapes: continue
 			group.shapes.append(int(monster.shape))
 			group.monsters.append(monster)
 	if not selected_map.is_empty():
@@ -120,11 +138,13 @@ func showcase_maps() -> void:
 func showcase_map_group(group: Dictionary) -> bool:
 	if not check(hud.change_map("0","比奇省",SHOWCASE_ORIGIN,1),"清理上一组怪物与特效"): return false
 	if not check(hud.hud_snapshot().scene_monster_shapes.is_empty(),"切组清除旧怪物"): return false
-	var report := {"family":group.name,"maps":group.maps,"seed":145+showcase_index,"actors":[],"missing":[]}
+	# 每轮地图独立随机；不沿用上一轮剩余的技能顺序。
+	showcase_rng.randomize()
+	hit_skill_bag.clear()
+	var report := {"family":group.name,"maps":group.maps,"rng_state":showcase_rng.state,"actors":[],"missing":group.unavailable.duplicate(true)}
 	showcase_report.append(report)
 	var item := {"name":group.name,"shape":-1}
 	var actors: Array = []
-	showcase_rng.seed=145+showcase_index
 	var occupied: Array[Vector2i] = []
 	var camera: Vector2i=hud.hud_snapshot().map_camera_pixel
 	var index := 0
@@ -158,7 +178,7 @@ func showcase_map_group(group: Dictionary) -> bool:
 	await settle(1.2)
 	if not await capture("monster-map-%s-birth" % group.maps[0]): return false
 	show_phase(item,"行走")
-	# 固定种子的独立随机游走；包接收端验证阻挡，展示层限制可视范围与占位。
+	# 独立随机游走；包接收端验证阻挡，展示层限制可视范围与占位。
 	var directions := [Vector2i(0,-1),Vector2i(1,-1),Vector2i(1,0),Vector2i(1,1),Vector2i(0,1),Vector2i(-1,1),Vector2i(-1,0),Vector2i(-1,-1)]
 	for step in range(4):
 		for actor in actors:
@@ -199,19 +219,45 @@ func showcase_map_group(group: Dictionary) -> bool:
 	if not await capture("monster-map-%s-attack" % group.maps[0]): return false
 	await settle(2.3)
 	show_phase(item,"被攻击")
-	# 每只只受击一次，独立随机附带一种原版命中效果，不轮播。
+	# 本地图技能池整轮无重复；跨地图相邻也不重复。
 	for actor in actors:
-		actor.hit_variant=showcase_rng.randi_range(0,7)
-		actor.struck_accepted=hud.apply_game_message(monster_packet(Mir3HudView.SM_HIT,actor.actor,Vector2i(70,100),30,actor.shape,actor.hit_variant))
+		if hit_skill_bag.is_empty():
+			hit_skill_bag.assign(hit_skills)
+			for i in range(hit_skill_bag.size()-1,0,-1):
+				var j := showcase_rng.randi_range(0,i)
+				var saved := hit_skill_bag[i]
+				hit_skill_bag[i]=hit_skill_bag[j]
+				hit_skill_bag[j]=saved
+			if hit_skill_bag.back()==last_hit_skill:
+				var saved := hit_skill_bag[0]
+				hit_skill_bag[0]=hit_skill_bag.back()
+				hit_skill_bag[hit_skill_bag.size()-1]=saved
+		actor.hit_skill=hit_skill_bag.pop_back()
+		last_hit_skill=actor.hit_skill
+		var magic := game_reply(Mir3HudView.SM_MAGICFIRE,77,actor.cell.x,actor.cell.y,actor.hit_skill)
+		var target_body := PackedByteArray()
+		target_body.resize(4)
+		target_body.encode_u32(0,actor.actor)
+		magic.append_array(encode_scene_bytes(target_body))
+		if not check(hud.apply_game_message(magic),"随机技能回包入队"): return false
+		actor.struck_accepted=hud.apply_game_message(monster_packet(Mir3HudView.SM_HIT,actor.actor,Vector2i(70,100),30,actor.shape))
+		actor.struck_at=Time.get_ticks_msec()
+		actor.death_delay=showcase_rng.randf_range(0.3,2.0)
+		actor.death_at=actor.struck_at+int(actor.death_delay*1000.0)
 	await settle(0.2)
 	if not await capture("monster-map-%s-struck" % group.maps[0]): return false
-	await settle(0.6)
 	for actor in actors:
 		if actor.struck_accepted:
 			if not check(hud.hud_snapshot().scene_health_values[actor.actor][0]==70,"受击后生命为70"): return false
-	show_phase(item,"全组死亡及死亡魔法 → 尸体驻留")
-	for actor in actors:
+	show_phase(item,"随机死亡及死亡魔法 → 尸体驻留")
+	var death_order: Array=actors.duplicate()
+	death_order.sort_custom(func(a,b): return a.death_at<b.death_at)
+	for actor in death_order:
+		# 以本怪物受击为起点，两秒内发送死亡，不叠加独立死亡阶段等待。
+		while Time.get_ticks_msec()<actor.death_at:
+			await process_frame
 		actor.death_accepted=hud.apply_game_message(monster_packet(Mir3HudView.SM_27,actor.actor,actor.cell,4,actor.shape))
+		actor.death_sent_after_ms=Time.get_ticks_msec()-actor.struck_at
 	await settle(0.35)
 	if not await capture("monster-map-%s-death" % group.maps[0]): return false
 	await settle(3.0)
@@ -337,6 +383,9 @@ func run_regression() -> void:
 	cut_at(hud.hud_snapshot().scene_human_bounds[5].get_center())
 	if not check(packets.size()==1 and decode_request(packets[0]).decode_u16(4)==Mir3HudView.CM_SITDOWN,
 		"活体只触发蹲姿"): return
+	# 首次预测蹲姿必须收到本地确认，随后才允许第二次割肉操作。
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_SITDOWN,77,origin.x,origin.y,
+		decode_request(packets[0]).decode_u16(8))),"确认首次本地蹲姿"): return
 	await settle(1.0)
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_SITDOWN,5,cell.x,cell.y,4)),"远端蹲姿回包入队"): return
 	await settle()
