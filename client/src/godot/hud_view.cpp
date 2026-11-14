@@ -1217,6 +1217,8 @@ void Mir3HudView::emit_npc_packet(int identifier,int actor,const String& body,st
 }
 
 void Mir3HudView::close_shop() {
+    storage_list=false;storage_pending=0;
+    if(group_request==1706 || group_request==1707) finish_group_dialog(false);
     shop_scroll_fraction=0;
     if (group_request==110) finish_group_dialog(false);
     shop_bulk_index=-1;
@@ -1291,6 +1293,7 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body,bool wire_for
     }
     if (wire_format && !remaining.empty()) return false;
     if (group_request==110) finish_group_dialog(false);
+    storage_list=false;storage_pending=0;
     shop_goods=std::move(goods);
     shop_scroll_fraction=0;
     shop_bulk_index=-1;
@@ -1376,18 +1379,20 @@ void Mir3HudView::draw_shop() {
         if (shop_pressed==-2) sprite(1266,{358,shop_top+163});
         if (shop_pressed==-3) sprite(1269,{316,shop_top+163});
         if (shop_pressed==-4) sprite(1271,{406,shop_top+163});
-        for (int row=0;row<std::min(12,int(shop_offers.size()));++row) {
-            const auto& offer=shop_offers[row];
+        for (int row=0;row<12;++row) {
+            const int index=row+(storage_list?12*shop_offer_page:0);
+            if(index>=int(shop_offers.size())) break;
+            const auto& offer=shop_offers[index];
             const auto cell=rect(shop_offer_cell(row));
             const auto icon=item_frame(offer.icon);
             if (icon.is_valid()) {
-                if (row==shop_offer_index) {
+                if (index==shop_offer_index) {
                     legacy_rect(cell,Color(50.f/255,150.f/255,150.f/255,1.f/255));
                     paint_canvas->draw_rect(cell,Color(180.f/255,180.f/255,180.f/255),false);
                 }
                 // 0x442200 draws native-size icons around (19,19) in the 38px grid.
                 paint_canvas->draw_texture(icon,cell.position+Vector2(19-icon->get_width()/2,19-icon->get_height()/2));
-                const auto price=std::to_string(offer.price);
+                const auto price=std::to_string(storage_list?offer.count:offer.price);
                 const auto bounds=shop_offer_cell(row);
                 text(price,{bounds[0]-1,bounds[1]+20,35,15},0x0a0a0a,mir3::TextFont::skill_level);
                 text(price,{bounds[0],bounds[1]+21,35,15},0xffffff,mir3::TextFont::skill_level);
@@ -1452,7 +1457,20 @@ void Mir3HudView::draw_shop_requirement(const ShopGood& good,int x,int y,int wid
     }
 }
 
+void Mir3HudView::withdraw_storage(int quantity) {
+    if(!storage_list || storage_pending || shop_offer_index<0 || shop_offer_index>=int(shop_offers.size())) return;
+    const auto& offer=shop_offers[shop_offer_index];
+    if(!quantity && offer.stack_mode>=2 && offer.count>1) {
+        open_group_dialog(1707);
+        return;
+    }
+    if(quantity<0 || quantity>offer.count) return;
+    storage_pending=offer.id;
+    send_client_packet(mir3::protocol::CM_USERTAKEBACKSTORAGEITEM,shop_actor,String::utf8(offer.name.c_str()),offer.id,std::uint16_t(quantity));
+}
+
 void Mir3HudView::buy_shop_offer(int index) {
+    if(storage_list) {withdraw_storage();return;}
     if (shop_offer_loading) return;
     const auto& offer=shop_offers[index];
     const auto name=String::utf8(offer.name.c_str());
@@ -1550,6 +1568,9 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
             open_shop_category();
         } else if (activate==confirm_button && details && shop_offer_index>=0 && shop_offer_index<int(shop_offers.size())) {
             buy_shop_offer(shop_offer_index);
+        } else if((activate==-3 || activate==-4) && storage_list && !storage_pending) {
+            shop_offer_page=std::clamp(shop_offer_page+(activate==-3?-1:1),0,std::max(0,(int(shop_offers.size())-1)/12));
+            shop_offer_index=-1;
         } else if ((activate==-3 || activate==-4) && shop_selected>=0 && !shop_offer_loading) {
             // 0x478850 requests a server page with a ten-item offset.
             const int page=std::clamp(shop_offer_page+(activate==-3?-1:1),0,65535/10);
@@ -1568,7 +1589,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
     bool offer_cell=false;
     if (details) {
         for (int i=0;i<12;++i) {
-            if (rect(shop_offer_cell(i)).has_point(pointer)) { row=i; offer_cell=true; break; }
+            if (rect(shop_offer_cell(i)).has_point(pointer)) { row=i+(storage_list?12*shop_offer_page:0); offer_cell=true; break; }
         }
     }
     if (!offer_cell) {
@@ -1637,6 +1658,7 @@ bool Mir3HudView::shop_scroll_input(int kind,Vector2 pointer) {
 }
 
 void Mir3HudView::close_shop_offers() {
+    if(storage_list) {close_shop();queue_redraw();return;}
     if (shop_bulk_index>=0) {
         shop_bulk_index=-1;
         queue_redraw();
@@ -3184,20 +3206,99 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (!header) return false;
     using RepairPhase=MerchantService::Phase;
     switch(header->opcode) {
+    case mir3::protocol::SM_STORAGE_OPEN:
     case mir3::protocol::SM_SENDUSERSELL:
     case mir3::protocol::SM_OPEN_REPAIR:
         if(encoded.size()!=16 || !header->recognition) return false;
+        if(header->opcode==mir3::protocol::SM_STORAGE_OPEN) close_shop();
         merchant_service={};
+        merchant_service.storage=header->opcode==mir3::protocol::SM_STORAGE_OPEN;
         merchant_service.actor=header->recognition;
         merchant_service.selling=header->opcode==mir3::protocol::SM_SENDUSERSELL;
         if(!inventory.visible) toggle_inventory();
         raise_panel(Panel::inventory);
         queue_redraw();
         return true;
+    case mir3::protocol::SM_STORAGE_LIST: {
+        if(!header->recognition || header->recognition>INT_MAX) return false;
+        std::string_view remaining(reinterpret_cast<const char*>(encoded.ptr()+16),encoded.size()-16);
+        std::vector<ShopOffer> records;
+        for(unsigned i=0;i<header->parameters[2];++i) {
+            const auto end=remaining.find('/');
+            if(end==remaining.npos || end!=134) return false;
+            const auto data=mir3::decode_six_bit(reinterpret_cast<const std::uint8_t*>(remaining.data()),end);
+            if(!data || data->size()!=100) return false;
+            const auto b=[&](int n){return std::uint32_t(std::uint8_t((*data)[n]));};
+            const auto name=data->find(char(0));
+            if(!name || name>=30) return false;
+            const auto id=b(62)|(b(63)<<8)|(b(64)<<16)|(b(65)<<24);
+            if(!id) return false;
+            records.push_back({mir3::ansi_to_utf8(std::string_view(*data).substr(0,name)),
+                int(b(36)|(b(37)<<8)),0,id,int(b(71)|(b(72)<<8)),int(b(61))});
+            remaining.remove_prefix(end+1);
+        }
+        if(!remaining.empty()) return false;
+        close_shop();
+        merchant_service={};
+        shop_actor=int(header->recognition);
+        shop_offers=std::move(records);
+        storage_list=shop_show_offers=true;
+        shop_offer_index=shop_offers.empty()?-1:0;
+        queue_redraw();
+        return true;
+    }
+    case mir3::protocol::SM_STORAGE_DEPOSIT_OK:
+    case mir3::protocol::SM_STORAGE_FULL:
+    case mir3::protocol::SM_STORAGE_DEPOSIT_FAIL:
+        if(encoded.size()!=16) return false;
+        if(!merchant_service.storage || merchant_service.phase!=RepairPhase::paying) return true;
+        if(header->opcode==mir3::protocol::SM_STORAGE_DEPOSIT_OK) {
+            const int remaining=header->parameters[0];
+            for(int i=0;i<int(bag.items.size());++i) {
+                auto& item=bag.items[i];
+                if(!item || item.make_index!=merchant_service.item || item.name!=merchant_service.name) continue;
+                if(remaining) {
+                    item.set_count(remaining);
+                    quick_items.update_count(item.name,remaining);
+                } else {
+                    quick_items.remove(item.name);
+                    bag.take(i);
+                }
+                break;
+            }
+            auto caption=message(header->parameters[1]?1447:1448);
+            if(auto at=caption.find("%s");at!=std::string::npos) caption.replace(at,2,merchant_service.name);
+            if(auto at=caption.find("%d");at!=std::string::npos) caption.replace(at,2,std::to_string(header->parameters[1]));
+            post_chat(String::utf8(caption.c_str()),11861940,0);
+        } else open_group_dialog(header->opcode==mir3::protocol::SM_STORAGE_FULL?1449:1450);
+        merchant_service.phase=RepairPhase::choosing;
+        queue_redraw();
+        return true;
+    case mir3::protocol::SM_STORAGE_WITHDRAW_OK:
+    case mir3::protocol::SM_STORAGE_WITHDRAW_FAIL:
+    case mir3::protocol::SM_STORAGE_BAG_FULL: {
+        if(encoded.size()!=16) return false;
+        if(!storage_list || !storage_pending) return true;
+        const auto item=std::ranges::find(shop_offers,std::exchange(storage_pending,0u),&ShopOffer::id);
+        if(header->opcode==mir3::protocol::SM_STORAGE_WITHDRAW_OK && item!=shop_offers.end()) {
+            const auto quantity=header->parameters[1];
+            if(quantity) for(auto& bag_item:bag.items)
+                if(bag_item && bag_item.make_index==item->id) { bag_item.set_count(quantity);break; }
+            if(header->parameters[0]) item->count=header->parameters[0];
+            else {
+                shop_offers.erase(item);
+                shop_offer_index=-1;
+                shop_offer_page=std::min(shop_offer_page,std::max(0,(int(shop_offers.size())-1)/12));
+            }
+        } else if(header->opcode!=mir3::protocol::SM_STORAGE_WITHDRAW_OK)
+            open_group_dialog(header->opcode==mir3::protocol::SM_STORAGE_WITHDRAW_FAIL?1445:1446);
+        queue_redraw();
+        return true;
+    }
     case mir3::protocol::SM_SENDBUYPRICE:
     case mir3::protocol::SM_REPAIR_QUOTE:
         if(encoded.size()!=16) return false;
-        if(merchant_service.actor && merchant_service.phase==RepairPhase::quoting &&
+        if(merchant_service.actor && merchant_service.phase==RepairPhase::quoting && !merchant_service.storage &&
                 merchant_service.selling==(header->opcode==mir3::protocol::SM_SENDBUYPRICE)) {
             merchant_service.price=header->recognition;
             merchant_service.phase=merchant_service.price?RepairPhase::quoted:RepairPhase::choosing;
@@ -3236,7 +3337,7 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     case mir3::protocol::SM_REPAIR_OK:
     case mir3::protocol::SM_REPAIR_FAIL:
         if(encoded.size()!=16) return false;
-        if(merchant_service.actor && merchant_service.phase==RepairPhase::paying && !merchant_service.selling) {
+        if(merchant_service.actor && merchant_service.phase==RepairPhase::paying && !merchant_service.selling && !merchant_service.storage) {
             if(header->opcode==mir3::protocol::SM_REPAIR_OK) {
                 inventory_gold=header->recognition;
                 for(auto& item:bag.items) if(item && item.make_index==merchant_service.item && item.name==merchant_service.name) {
@@ -5217,9 +5318,9 @@ void Mir3HudView::draw_inventory() {
     const auto skin=frame(1220);
     if (skin.is_valid())
         sprite(1220,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
-    text(message(merchant_service.actor?(merchant_service.selling?1703:1702):1701),{x+12,y+20,74,16},0xF8DCFA);
+    text(message(merchant_service.actor?(merchant_service.storage?1704:merchant_service.selling?1703:1702):1701),{x+12,y+20,74,16},0xF8DCFA);
     if(merchant_service.actor) {
-        sprite((merchant_service.selling?1229:1227)-int(merchant_service.pressed),{x+198,y+401});
+        sprite((merchant_service.storage?1231:merchant_service.selling?1229:1227)-int(merchant_service.pressed),{x+198,y+401});
         if(merchant_service.price) {
             auto caption=message(merchant_service.selling && merchant_service.stack?1451:1452);
             if(const auto at=caption.find("%d");at!=std::string::npos)
@@ -5287,13 +5388,13 @@ void Mir3HudView::confirm_merchant_service(int quantity) {
         merchant_service.price=0;
         return;
     }
-    if(merchant_service.selling && current->stack_mode>=2 && current->count>1 && !quantity) {
-        open_group_dialog(1705);
+    if((merchant_service.selling || merchant_service.storage) && current->stack_mode>=2 && current->count>1 && !quantity) {
+        open_group_dialog(merchant_service.storage?1706:1705);
         return;
     }
     if(quantity<0 || quantity>current->count) return;
     merchant_service.phase=Phase::paying;
-    send_client_packet(merchant_service.selling?mir3::protocol::CM_USERSELLITEM:mir3::protocol::CM_USERREPAIRITEM,
+    send_client_packet(merchant_service.storage?mir3::protocol::CM_USERSTORAGEITEM:merchant_service.selling?mir3::protocol::CM_USERSELLITEM:mir3::protocol::CM_USERREPAIRITEM,
         merchant_service.actor,String::utf8(merchant_service.name.c_str()),merchant_service.item,std::uint16_t(quantity));
 }
 
@@ -5303,7 +5404,7 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
     const auto close=frame(1221);
     const bool on_close=close.is_valid() && Rect2(x+242,y+423,close->get_width(),close->get_height()).has_point(position);
     const bool inside=Rect2(x,y,w,h).has_point(position);
-    const auto repair_button=frame(merchant_service.selling?1229:1227);
+    const auto repair_button=frame(merchant_service.storage?1231:merchant_service.selling?1229:1227);
     const bool on_repair=merchant_service.actor && repair_button.is_valid() &&
         Rect2(Vector2(x+198,y+401),repair_button->get_size()).has_point(position);
     if(on_repair || merchant_service.pressed) {
@@ -5344,7 +5445,8 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
                     merchant_service.name=item.name;
                     merchant_service.stack=item.stack_mode>=2;
                     merchant_service.price=0;
-                    merchant_service.phase=Phase::quoting;
+                    merchant_service.phase=merchant_service.storage?Phase::quoted:Phase::quoting;
+                    if(!merchant_service.storage)
                     send_client_packet(merchant_service.selling?mir3::protocol::CM_MERCHANTQUERYSELLPRICE:mir3::protocol::CM_MERCHANTQUERYREPAIRCOST,merchant_service.actor,String::utf8(item.name.c_str()),item.make_index);
                 }
             } else if (consumed && trade_return_slot>=0) {
@@ -6344,7 +6446,7 @@ void Mir3HudView::handle_exit_confirmation(int dialog_id) {
 }
 
 bool Mir3HudView::dialog_is_alert() const {
-    return group_request==1455 || group_request==1457 || group_request==1427 || group_request==1434 || group_request==1414 || (group_request>=1473 && group_request<=1507) || (group_request>=1437 && group_request<=1439) || group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
+    return (group_request>=1445 && group_request<=1450) || group_request==1455 || group_request==1457 || group_request==1427 || group_request==1434 || group_request==1414 || (group_request>=1473 && group_request<=1507) || (group_request>=1437 && group_request<=1439) || group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
 }
 
 bool Mir3HudView::dialog_has_input() const {
@@ -6395,13 +6497,15 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
         }
         return;
     }
-    if(request==1705) {
+    if(request==1705 || request==1706 || request==1707) {
         if(!confirm) return;
         const auto input=name.utf8();
         const std::string_view digits(input.get_data(),input.length());
         const auto end=digits.data()+digits.size();
         int quantity=0;
-        if(digits=="*") {
+        if(digits=="*" && request==1707 && shop_offer_index>=0 && shop_offer_index<int(shop_offers.size())) {
+            quantity=shop_offers[shop_offer_index].count;
+        } else if(digits=="*") {
             const auto current=std::ranges::find_if(bag.items,[&](const auto& item) {
                 return item && item.make_index==merchant_service.item && item.name==merchant_service.name;
             });
@@ -6410,7 +6514,10 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
             const auto parsed=std::from_chars(digits.data(),end,quantity);
             if(parsed.ec!=std::errc{} || parsed.ptr!=end) return;
         }
-        if(quantity>0) confirm_merchant_service(quantity);
+        if(quantity>0) {
+            if(request==1707) withdraw_storage(quantity);
+            else confirm_merchant_service(quantity);
+        }
         return;
     }
     if (request==1307) {
@@ -6486,7 +6593,7 @@ void Mir3HudView::draw_group_dialog() {
     }
     auto prompt=group_request==mir3::protocol::CM_MERCHANTDLGSELECT?npc_dialogue_prompt:
         group_request==mir3::protocol::CM_GUILDDELMEMBER?"'"+std::string(guild_name.utf8().get_data())+"' "+message(4001):
-        message(group_request==1705?1705:group_request==mir3::protocol::CM_GUILDADDMEMBER?1426:group_request==110?2302:group_request==1307?1307:group_request==mir3::protocol::CM_TRADE_GOLD?1304:group_request==mir3::protocol::CM_GUILDBREAKALLY?4002:group_request==mir3::protocol::CM_DELGROUPMEMBER?1606:1605);
+        message((group_request>=1705 && group_request<=1707)?group_request:group_request==mir3::protocol::CM_GUILDADDMEMBER?1426:group_request==110?2302:group_request==1307?1307:group_request==mir3::protocol::CM_TRADE_GOLD?1304:group_request==mir3::protocol::CM_GUILDBREAKALLY?4002:group_request==mir3::protocol::CM_DELGROUPMEMBER?1606:1605);
     if(group_request==mir3::protocol::CM_GUILDADDMEMBER) if(auto at=prompt.find("%s");at!=std::string::npos) prompt.replace(at,2,guild_name.utf8().get_data());
     if (dialog_has_input()) text(prompt,{x+43,y+84,278,75},0xc8faff,mir3::TextFont::dialog);
     else text(message(group_request==109?2636:1065),{x+23,y+84,308,95},0xc8faff,mir3::TextFont::dialog);

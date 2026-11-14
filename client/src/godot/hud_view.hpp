@@ -291,7 +291,7 @@ private:
         std::uint32_t actor=0,item=0,price=0;
         std::string name;
         Phase phase=Phase::choosing;
-        bool pressed=false,selling=false,stack=false;
+        bool pressed=false,selling=false,stack=false,storage=false;
     } merchant_service;
     void confirm_merchant_service(int quantity=0);
     mir3::DraggablePanel guild{{102,22,594,444}};
@@ -656,8 +656,11 @@ private:
     int shop_offer_page=0;
     bool shop_offer_loading=false;
     bool shop_show_offers=false;
-    struct ShopOffer { std::string name; int icon, price; std::uint32_t id; };
+    struct ShopOffer { std::string name; int icon, price; std::uint32_t id; int count=0,stack_mode=0; };
     std::vector<ShopOffer> shop_offers;
+    bool storage_list=false;
+    std::uint32_t storage_pending=0;
+    void withdraw_storage(int quantity=0);
     int shop_selected=-1;
     int shop_bulk_index=-1;
     int shop_highlighted=-1;
