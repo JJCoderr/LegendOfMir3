@@ -7,3 +7,5 @@
 Godot资源生命周期：[音频退出清理](../client/docs/evidence/audio-cleanup.md)。这类修复只处理适配层资源所有权，不改变已确认的原版音效行为。
 
 本地战斗反馈：[受击队列、血量与动作](../client/docs/evidence/local-struck.md)。
+
+采集动作：[12/637回包与本地/远端差异](../client/docs/evidence/butch-reply.md)。

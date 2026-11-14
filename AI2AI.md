@@ -66,3 +66,9 @@ IDA 数据库名为 `mir3-map-review`，本机 MCP 地址为 `http://127.0.0.1:1
 
 - [x] 31/1309完整原包、本地FIFO、血量与伤害提示、徒步/骑乘动作、等级节拍、命中特效与来源音效、1309复制31、旧31折叠、500ms过滤及致死例外、尸体保持；local_struck及local_life定向验收通过，截图local-struck-standing/mounted.png。证据见client/docs/evidence/local-struck.md。
 - [ ] 实服时序、原版同状态像素和全部命中特效变体覆盖；完整场景测试待全部模块完成。
+
+
+## 采集蹲姿回包
+
+- [x] 637与12远端FIFO、坐标/朝向/蹲姿、正文忽略、骑乘及尸体分支；本地两类回包仅排队消费，不打断移动或代替GOOD。纠正旧文档虚表偏移及637特效归属错误；butch_reply独立验收约5秒通过，截图butch-reply-crouch.png，证据见client/docs/evidence/butch-reply.md。
+- [ ] 实服采集产物与原版同状态像素验收；637本身不负责生成物品或武器特效。

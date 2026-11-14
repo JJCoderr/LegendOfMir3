@@ -68,10 +68,10 @@ Windows Release 构建通过。map_harvest.gd 使用离线协议回放，校验�
 ```text
 Alt 左键 → 播放动作8，发送 CM_SITDOWN，坐标放入识别字
 指针命中相邻尸体 → 追加 CM_BUTCH，识别字为尸体 ID，参数为玩家 X、Y、朝向
-收到 SM_SITDOWN → 自身或远端人物进入动作8
+收到 SM_SITDOWN/SM_BUTCH → 远端人物排队进入动作8；本地队列仅消费消息，不重放动作
 ```
 
-413F90 将 12 和 637 送到虚表 +176，但不同人物类的实现有差别。远端人物表指向 412FF0，该函数还会从正文取四字节并尝试生成 MAGIC 效果。可验证的空正文蹲姿已接通。带正文的 637 效果、动物尸体资源和最终掉肉仍待核对。Windows Release、map_butch.gd 和 map_harvest.gd 通过，截图 map-butch-crouch.png 使用离线人物尸体。
+413F90将12和637送到虚表+176。2026-11-14复核纠正旧记录：远端虚表基址4AF4A0，+176即4AF550，指向413F60，不是412FF0。该函数仅取包坐标和朝向并设置动作8，不读取正文或创建MAGIC效果。本地415AD0没有12/637动作分支，消息排队后仅被消费。历史map_butch.gd和map_harvest.gd截图只证明当时局部行为；纠正后的独立验收见butch-reply.md。
 
 ## 鸡死亡、割肉与骨架
 
@@ -84,7 +84,7 @@ Alt 左键 → 播放动作8，发送 CM_SITDOWN，坐标放入识别字
 33 → 显示同方向骨架 → 退出割肉目标判定
 ```
 
-Release 构建、map_butch.gd 和 map_harvest.gd 通过。离线用类型3、形状20的协议正文从死亡包建立尸体，再验证骨架覆盖及发包差异。截图为 map-butch-chicken.png 和 map-butch-skeleton.png。活鸡的完整网络动作队列归属 F07，肉品发放与 637 效果仍需联调。
+Release 构建、map_butch.gd 和 map_harvest.gd 通过。离线用类型3、形状20的协议正文从死亡包建立尸体，再验证骨架覆盖及发包差异。截图为 map-butch-chicken.png 和 map-butch-skeleton.png。活鸡的完整网络动作队列归属 F07，肉品发放仍需实服联调；637蹲姿回包见后续butch-reply.md。
 
 ## 普通左键撞墙挖矿
 
@@ -98,7 +98,7 @@ Release 构建、map_butch.gd 和 map_harvest.gd 通过。离线用类型3、形
 
 离线验收使用比奇原图坐标 (476,363)，东侧与南侧均阻挡。角色面朝南，左键点击东侧，验证保留南向、原地挥击及发包。Release、map_harvest.gd 和 map_butch.gd 通过，截图 map-harvest-wall.png。
 
-补查 637 所走的 412FF0 → 4495D0 → 46EF60，按观察者武器外观加383查找 MAGIC。当前目标客户端的 MInfo.dat 无 383–399 号效果记录，当前验收场景的空手和矿镐对应 383、390，均缺少定义。待实服包确认其他武器外观及正文语义。
+旧记录曾将412FF0的武器外观加383效果归入637，现撤销该归属：412FF0在远端虚表+168（4AF548），637实际调用+176。不能以383–399资源缺失作为637待实现特效的依据。
 
 ## 鸡入场至割肉的协议回放
 

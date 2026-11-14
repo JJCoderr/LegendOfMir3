@@ -19,7 +19,7 @@ struct SceneHumanMessage {
     bool harvest=false;
     static bool accepts(int opcode) {
         switch (opcode) {
-        case mir3::protocol::SM_SITDOWN:
+        case mir3::protocol::SM_SITDOWN: case mir3::protocol::SM_BUTCH:
         case mir3::protocol::SM_ACTOR_LIGHT: case mir3::protocol::SM_STRUCK: case mir3::protocol::SM_BUMP: case mir3::protocol::SM_TURN: case mir3::protocol::SM_WALK: case mir3::protocol::SM_RUN: case mir3::protocol::SM_HIT: case mir3::protocol::SM_HIT2: case mir3::protocol::SM_DEATH: case mir3::protocol::SM_NOWDEATH: case mir3::protocol::SM_REVIVE: case mir3::protocol::SM_REVIVE_REFRESH:
         case mir3::protocol::SM_HUMAN_CAST: case mir3::protocol::SM_HUMAN_CAST_ALT: case mir3::protocol::SM_HUMAN_ACTION18: case mir3::protocol::SM_HUMAN_STRUCK: case mir3::protocol::SM_HUMAN_ATTACK: return true;
         default: return false;

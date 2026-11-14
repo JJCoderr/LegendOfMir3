@@ -2929,6 +2929,13 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
     if (local_actor_identity && actor==local_actor_identity &&
+        (opcode==mir3::protocol::SM_SITDOWN || opcode==mir3::protocol::SM_BUTCH)) {
+        // 415AD0没有12/637动作分支，但仍按FIFO逐条消费，不能中断本地预测动作。
+        if (local_actor_messages.size()>=64) return false;
+        local_actor_messages.push_back({{opcode,0,{}},{},0});
+        return true;
+    }
+    if (local_actor_identity && actor==local_actor_identity &&
         (opcode==mir3::protocol::SM_STRUCK || opcode==mir3::protocol::SM_HUMAN_STRUCK)) {
         if (encoded.size()!=38 || local_actor_messages.size()>=64) return false;
         const auto body=mir3::decode_six_bit(encoded.ptr()+16,22);
@@ -3284,18 +3291,6 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         const int variant=std::uint8_t((*body)[14])|(int(std::uint8_t((*body)[15]))<<8);
         return receive_monster_action(actor,SceneChicken::Hit{monster_feature_shape(*body),variant,p});
     }
-    if (opcode==mir3::protocol::SM_SITDOWN && local_actor_identity && actor==local_actor_identity) {
-        if (encoded.size()!=16 || (p[2]&255)>=8 || !terrain.walkable(p[0],p[1])) return false;
-        if (player_life.dead || player_mount || model.hp==0) return true;
-        pending_local_action.reset();
-        player_cell=Vector2i(p[0],p[1]);
-        player_facing=p[2]&255;
-        walk_frame=-1;movement_ms=0;map_route.clear();
-        player_harvest_impact=false;
-        if (player_action.finished() || player_action.action()!=8) player_action.start(8);
-        queue_redraw();
-        return true;
-    }
     if (opcode==mir3::protocol::SM_HIT2 && local_actor_identity && actor==local_actor_identity) {
         if (encoded.size()>17 || (p[2]&255)>=8) return false;
         if (player_life.dead) return true;
@@ -3515,7 +3510,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     } else if(opcode==mir3::protocol::SM_HIT2) {
         if(size>1) return false;
         message.harvest=size==1 && encoded[16]!=0;
-    } else if(size) return false;
+    } else if(size && opcode!=mir3::protocol::SM_SITDOWN && opcode!=mir3::protocol::SM_BUTCH) return false;
     if (opcode!=mir3::protocol::SM_HUMAN_STRUCK && opcode!=mir3::protocol::SM_STRUCK && !terrain.walkable(message.x,message.y)) return false;
     return found->second.messages.push(message);
 }
@@ -3580,6 +3575,13 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     const Vector2i cell(next->x,next->y);
     if (next->opcode==mir3::protocol::SM_ACTOR_LIGHT) { human.light_attribute=next->light_attribute;queue_redraw();return true; }
     if (next->opcode==mir3::protocol::SM_STRUCK) { apply_actor_health_record(actor,*next);return true; }
+    // 413F90虚表+176 -> 413F60：12/637仅坐标、朝向及动作8，正文不使用。
+    if (next->opcode==mir3::protocol::SM_SITDOWN || next->opcode==mir3::protocol::SM_BUTCH) {
+        human.cell=cell;human.facing=next->facing;
+        human.harvest=false;human.action_flags=0;human.idle.reset();
+        if (!human.life.dead) human.action.start(8,catch_up);
+        queue_redraw();return true;
+    }
     // Dead actors only accept standing/revival feature refreshes.
     const bool refresh=next->opcode==mir3::protocol::SM_TURN || next->opcode==mir3::protocol::SM_REVIVE || next->opcode==mir3::protocol::SM_REVIVE_REFRESH;
     if (next->appearance && (!human.life.dead || refresh) && !apply_scene_appearance(actor,*next->appearance)) return true;
@@ -3940,6 +3942,7 @@ void Mir3HudView::process_local_actor_message() {
         (!player_action.finished() && player_action.action()!=7 && !(player_life.dead && !player_life.dying))) return;
     const auto message=local_actor_messages.front();
     local_actor_messages.pop_front();
+    if (message.motion.opcode==mir3::protocol::SM_SITDOWN || message.motion.opcode==mir3::protocol::SM_BUTCH) return;
     if (message.hit) {
         const auto& appearance=message.appearance;
         const auto& hp=*message.hit->health;
