@@ -124,6 +124,62 @@ func run_local_mount() -> void:
 	print("LOCAL_MOUNT_OK")
 	quit()
 
+func run_scene_feature() -> void:
+	var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
+	var body := PackedByteArray()
+	body.resize(21)
+	body[0]=1
+	body[1]=2
+	body[2]=1
+	body[3]=65
+	body[16]=2
+	hud.apply_scene_human_action(5,14,4)
+	if not check(hud.queue_scene_human_state(5,10,cell,4,body) and hud.hud_snapshot().scene_human_bodies[5] == Vector2i(0,0), "queued appearance waits for current action"): return
+	body[0]=0
+	if not await wait_human_state(-1,0): return
+	var state: Dictionary = hud.hud_snapshot()
+	if not check(state.scene_human_bodies[5] == Vector2i(1,1) and state.scene_human_mounts[5] == 2 and state.scene_human_attachments[5] == Vector2i(1,2), "dequeue restores saved female mounted appearance"): return
+	if not await capture("bichon-feature-mounted"): return
+	body.resize(16)
+	body[0]=1
+	body[1]=4
+	body[2]=2
+	body[3]=130
+	if not check(hud.queue_scene_human_state(5,1309,Vector2i(-1,-1),7,body,2), "queue hit feature"): return
+	if not await wait_human_state(32,0): return
+	state = hud.hud_snapshot()
+	if not check(state.scene_human_bodies[5] == Vector2i(1,2) and state.scene_human_mounts[5] == 2 and state.scene_human_attachments[5] == Vector2i(2,4) and state.scene_human_facings[5] == 4, "hit updates appearance before selecting mounted action and retains direction"): return
+	if not await capture("bichon-feature-hit"): return
+	body[0]=0
+	body[1]=255
+	body[2]=1
+	body[3]=63
+	if not check(not hud.queue_scene_human_state(5,10,cell,4,body) and not hud.queue_scene_human_state(5,1316,cell,4,body), "standing and revival require extended feature"): return
+	hud.queue_scene_human_state(5,11,cell,4,body)
+	if not await wait_human_state(-1,0): return
+	state = hud.hud_snapshot()
+	if not check(state.scene_human_mounts[5] == 0 and state.scene_human_bodies[5] == Vector2i(0,1) and state.scene_human_attachments[5] == Vector2i.ZERO, "base state clears mount and normalizes invalid shapes"): return
+	body[0]=2
+	if not check(not hud.queue_scene_human_state(5,10,cell,4,body) and not hud.queue_scene_human_state(5,14,cell,4,body) and not hud.queue_scene_human_state(9999,10,cell,4,body) and hud.hud_snapshot().scene_human_pending[5] == 0, "invalid features do not pollute queue"): return
+	body.resize(15)
+	if not check(not hud.queue_scene_human_state(5,10,cell,4,body), "short feature rejected"): return
+	body.resize(21)
+	body[0]=1
+	body[1]=1
+	body[2]=1
+	body[3]=65
+	body[16]=1
+	hud.apply_scene_human_life(5,32,cell,4)
+	hud.queue_scene_human_state(5,1316,cell,4,body)
+	await process_frame
+	await process_frame
+	if not check(not hud.hud_snapshot().scene_human_life[5].dead and hud.hud_snapshot().scene_human_bodies[5] == Vector2i(1,1) and hud.hud_snapshot().scene_human_mounts[5] == 1, "revival feature applies with lifecycle"): return
+	hud.remove_scene_actor(5)
+	await process_frame
+	await process_frame
+	print("PASS scene human feature")
+	quit()
+
 func run_scene_combat() -> void:
 	var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
 	if not check(hud.set_scene_human_body(5,0,1) and hud.set_scene_human_attachments(5,1,1) and hud.apply_scene_human_action(5,14,4), "begin combat stance"): return
@@ -502,6 +558,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--scene-feature"):
+		await run_scene_feature()
+		return
 	if OS.get_cmdline_user_args().has("--scene-combat"):
 		await run_scene_combat()
 		return
@@ -658,7 +717,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

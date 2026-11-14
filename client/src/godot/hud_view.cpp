@@ -111,6 +111,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_scene_human_attachments","actor","hair","weapon"),&Mir3HudView::set_scene_human_attachments);
     ClassDB::bind_method(D_METHOD("set_player_body","type","clothing"),&Mir3HudView::set_player_body);
     ClassDB::bind_method(D_METHOD("apply_scene_human_life","actor","opcode","cell","facing"),&Mir3HudView::apply_scene_human_life);
+    ClassDB::bind_method(D_METHOD("queue_scene_human_state","actor","opcode","cell","facing","body","hit_weapon"),&Mir3HudView::queue_scene_human_state,DEFVAL(0));
     ClassDB::bind_method(D_METHOD("queue_scene_human_message","actor","opcode","cell","facing","hit_weapon","flags"),&Mir3HudView::queue_scene_human_message,DEFVAL(0),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_scene_human_action","actor","opcode","facing","hit_weapon"),&Mir3HudView::apply_scene_human_action,DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_scene_human_stand","actor","cell","facing"),&Mir3HudView::apply_scene_human_stand);
@@ -1884,6 +1885,40 @@ bool Mir3HudView::apply_scene_human_life(int actor,int opcode,Vector2i cell,int 
     return true;
 }
 
+bool Mir3HudView::queue_scene_human_state(int actor,int opcode,Vector2i cell,int facing,const PackedByteArray& body,int hit_weapon) {
+    switch (opcode) {
+    case 7: case 10: case 11: case 13: case 1309: case 1316: case 1321: break;
+    default: return false;
+    }
+    const auto found=scene_humans.find(actor);
+    if (found==scene_humans.end() || (opcode!=1309 && !terrain.walkable(cell.x,cell.y))) return false;
+    if ((opcode==10 || opcode==1316 || opcode==1321) && body.size()!=21) return false;
+    const auto appearance=mir3::HumanAppearance::parse({body.ptr(),static_cast<std::size_t>(body.size())},opcode==1309);
+    if (!appearance) return false;
+    return found->second.messages.push({opcode,cell.x,cell.y,facing,hit_weapon,appearance->flags,appearance});
+}
+
+bool Mir3HudView::apply_scene_appearance(int actor,const mir3::HumanAppearance& appearance) {
+    auto& human=scene_humans.at(actor);
+    const int mount=appearance.mount.value_or(human.mount_shape);
+    const auto* body=human_body(appearance.type,appearance.clothing);
+    if (!body || (mount && (!human_body(appearance.type,appearance.clothing,true) || !horse_frame(mount,2320))) ||
+        (appearance.weapon && weapon_order.size()!=2640)) return false;
+    human.type=appearance.type;
+    human.clothing=appearance.clothing;
+    human.hair=appearance.hair;
+    human.weapon=appearance.weapon;
+    human.profession=appearance.profession;
+    human.mount_shape=mount;
+    human.bounds=Rect2();
+    human.idle.reset();
+    std::copy_n(body->standing.begin()+human.facing*10,human.frames.size(),human.frames.begin());
+    if (!human.life.dead && target_is_human && hovered_target==actor)
+        set_hovered_human(actor,human.type,human.profession,human.name);
+    queue_redraw();
+    return true;
+}
+
 bool Mir3HudView::queue_scene_human_message(int actor,int opcode,Vector2i cell,int facing,int hit_weapon,std::int64_t flags) {
     const auto it=scene_humans.find(actor);
     if (it==scene_humans.end() || flags<0 || flags>0xFFFFFFFFLL ||
@@ -1898,6 +1933,9 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     if (!next) return false;
     bool accepted=false;
     const Vector2i cell(next->x,next->y);
+    // Dead actors only accept standing/revival feature refreshes.
+    const bool refresh=next->opcode==10 || next->opcode==1316 || next->opcode==1321;
+    if (next->appearance && (!human.life.dead || refresh) && !apply_scene_appearance(actor,*next->appearance)) return true;
     if (next->opcode==32 || next->opcode==34 || next->opcode==1316 || next->opcode==1321) {
         accepted=apply_scene_human_life(actor,next->opcode,cell,next->facing);
         if (accepted && human.life.dying) human.action.start(19,catch_up);

@@ -22,6 +22,25 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--scene-feature") {
+            std::vector<std::uint8_t> bytes(21,0);
+            bytes[0]=1;bytes[1]=2;bytes[2]=3;bytes[3]=129;bytes[7]=8;bytes[16]=2;
+            auto feature=mir3::HumanAppearance::parse(bytes,false);
+            check(feature && feature->type==1 && feature->weapon==2 && feature->clothing==3 && feature->hair==1 && feature->profession==2 && feature->mount==2 && feature->flags==0x08000000,"decoded feature fields");
+            check(!mir3::HumanAppearance::parse(bytes,true)->mount,"hit preserves mount at dequeue");
+            bytes.resize(16);check(mir3::HumanAppearance::parse(bytes,false)->mount==0,"base movement state clears mount");
+            bytes[1]=255;bytes[3]=255;
+            feature=mir3::HumanAppearance::parse(bytes,false);
+            check(feature && feature->weapon==0 && feature->hair==0 && feature->profession==3,"normalize packed appearance");
+            bytes[0]=2;check(!mir3::HumanAppearance::parse(bytes,false),"invalid sex rejected");
+            bytes[0]=0;bytes[2]=9;check(!mir3::HumanAppearance::parse(bytes,false),"invalid clothing rejected");
+            bytes.resize(15);check(!mir3::HumanAppearance::parse(bytes,false),"truncated body rejected");
+            mir3::SceneHumanQueue queue;
+            queue.push({10,1,2,4,0,0,feature});feature->clothing=0;
+            check(queue.take()->appearance->clothing==3,"queued feature is a value snapshot");
+            std::cout << "SCENE_FEATURE_MODEL_OK\n";
+            return 0;
+        }
         if (std::filesystem::path(argv[1])=="--scene-combat") {
             mir3::CombatStance stance;
             check(stance.idle_action(false)==0 && stance.idle_action(true)==29,"normal and mounted standing");

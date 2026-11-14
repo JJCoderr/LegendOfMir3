@@ -2,12 +2,14 @@
 #include <cstdint>
 #include <deque>
 #include <optional>
+#include "human_appearance.hpp"
 namespace mir3 {
 // Decoded subset of the original actor queue (0x481A30 / 0x413F90).
 // Wire header/body decoding and appearance updates remain in the transport layer.
 struct SceneHumanMessage {
     int opcode=0,x=0,y=0,facing=0,hit_weapon=0;
     std::uint32_t flags=0;
+    std::optional<HumanAppearance> appearance;
     static bool accepts(int opcode) {
         switch (opcode) {
         case 7: case 10: case 11: case 13: case 14: case 15: case 32: case 34: case 1316: case 1321:
