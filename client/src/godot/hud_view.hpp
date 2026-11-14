@@ -503,7 +503,7 @@ private:
     mir3::EffectCatalog effect_catalog;
     mir3::WilArchive event_archive;
     std::map<int,MapActorFrame> ground_event_frames;
-    struct GroundEvent { godot::Vector2i cell; int frame; double age=0; bool hidden=false; };
+    struct GroundEvent { godot::Vector2i cell; int frame; double age=0; bool hidden=false; double lifetime=65535; float opacity=1.f; };
     std::map<std::uint32_t,GroundEvent> ground_events;
     std::map<int,MapActorFrame> event_frames;
     struct MapEvent {
@@ -515,6 +515,7 @@ private:
         double elapsed=0;
         godot::Sprite2D* secondary=nullptr;
         bool ending=false;
+        int remaining_ms=-1, tint=255;
     };
     std::map<std::uint32_t,MapEvent> map_events;
     void advance_map_events(double milliseconds);

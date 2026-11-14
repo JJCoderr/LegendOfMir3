@@ -53,6 +53,18 @@ func run() -> void:
 	await create_timer(0.06).timeout
 	hud.set_process(false)
 	if not check(not hud.hud_snapshot().map_event_frames.has(701),"下一次地图更新清除地表图"): return
+	var hide_ice := game_reply(Mir3HudView.SM_HIDEEVENT,123,0,0,0)
+	if not check(hud.apply_game_message(hide_ice),"隐藏触发残留"): return
+	var tail: int = hud.hud_snapshot().map_event_frames[123]
+	if not check(tail>=2450 and tail<=2490 and (tail-2450)%10==0
+		and hud.hud_snapshot().map_ground_event_count==2,"生成原版残留动画和地表图"): return
+	if not check(hud.apply_game_message(hide_ice) and hud.hud_snapshot().map_event_frames[123]==tail
+		and hud.hud_snapshot().map_ground_event_count==2,"重复隐藏保留原残留"): return
+	hud.set_process(true)
+	await create_timer(0.2).timeout
+	hud.set_process(false)
+	if not check(hud.hud_snapshot().map_event_frames[123]>tail,"残留动画独立推进"): return
+	if not await capture("map-event-ice-aftermath"): return
 	if not check(hud.change_map("0","比奇省",origin) and hud.hud_snapshot().map_event_count==0,"切图移除剩余效果"): return
 	hud.queue_free()
 	await create_timer(0.1).timeout

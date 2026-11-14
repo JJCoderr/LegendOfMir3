@@ -372,7 +372,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["map_event_count"]=int(map_events.size()+ground_events.size());
     Dictionary event_states;
     for(const auto& [id,event]:map_events) event_states[int64_t(id)]=event.frame;
-    for(const auto& [id,event]:ground_events) event_states[int64_t(id)]=event.frame;
+    for(const auto& [id,event]:ground_events) if(!event_states.has(int64_t(id))) event_states[int64_t(id)]=event.frame;
+    result["map_ground_event_count"]=int(ground_events.size());
     result["map_event_frames"]=event_states;
     result["player_level_action"]=!player_level_action.finished();
     result["gold_sound_count"]=gold_sound_count;
@@ -712,7 +713,7 @@ void Mir3HudView::_ready() {
     if(weather_archive.open(resource_root/"Data"/"ProgUse")) {
         if(const auto source=weather_archive.frame(500)) snow_texture=texture(source->pixels.rgba,source->width,source->height);
     }
-    for(const int id:{210,230}) {
+    for(const int id:{210,220,230}) {
         if(const auto source=weather_archive.frame(id))
             ground_event_frames.emplace(id,MapActorFrame{
                 texture(source->pixels.rgba,source->width,source->height),
@@ -2272,10 +2273,27 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     const auto& p=header->parameters;
     if(opcode==mir3::protocol::SM_HIDEEVENT) {
         if(encoded.size()!=16) return false;
-        if(const auto ground=ground_events.find(header->recognition);ground!=ground_events.end()) ground->second.hidden=true;
+        if(const auto ground=ground_events.find(header->recognition);ground!=ground_events.end() && ground->second.frame!=220)
+            ground->second.hidden=true;
         const auto event=map_events.find(header->recognition);
         if(event!=map_events.end()) {
-            if(event->second.secondary) event->second.ending=true;
+            auto& visual=event->second;
+            if(visual.resource->id==22) {
+                const int duration=weather.between(20000,30000);
+                const auto* tail=effect_catalog.find(mir3::EffectCatalog::Section::magic,weather.between(330,334));
+                if(tail && tail->library==81 && tail->end>tail->first && tail->interval) {
+                    visual.resource=tail;
+                    visual.frame=tail->first;
+                    visual.elapsed=0;
+                    visual.remaining_ms=duration;
+                    visual.sprite->set_modulate(Color(1,1,1));
+                    ground_events.emplace(header->recognition,GroundEvent{visual.cell,220,0,false,double(duration)+800,180.f/255});
+                    advance_map_events(0);
+                    return true;
+                }
+            }
+            if(visual.secondary) visual.ending=true;
+            else if(visual.remaining_ms>=0) return true;
             else {
                 event->second.copy->hide();
                 event->second.copy->queue_free();
@@ -2839,7 +2857,7 @@ void Mir3HudView::draw_terrain() {
         const auto image=ground_event_frames.find(event.frame);
         if(image==ground_event_frames.end()) continue;
         const auto position=Vector2(event.cell.x*48-camera.x,event.cell.y*32-camera.y)+image->second.offset;
-        paint_canvas->draw_texture(image->second.image,position);
+        paint_canvas->draw_texture(image->second.image,position,Color(1,1,1,event.opacity));
     }
     const auto draw_scene_actor=[&](SceneActor& npc,int interval) {
         const auto& selected=npc.frames[tick/interval%4];
@@ -3261,6 +3279,19 @@ void Mir3HudView::advance_map_events(double milliseconds) {
     const auto camera=map_camera();
     for(auto& [id,event]:map_events) {
         event.elapsed+=milliseconds;
+        if(event.remaining_ms>=0) {
+            event.remaining_ms=std::max(0,event.remaining_ms-int(milliseconds));
+            if(!event.remaining_ms) {
+                event.tint=std::max(0,event.tint-5);
+                const float tint=event.tint/255.f;
+                event.sprite->set_modulate(Color(tint,tint,tint));
+                if(!event.tint) {
+                    event.copy->hide();
+                    event.copy->queue_free();
+                    continue;
+                }
+            }
+        }
         if(event.elapsed>event.resource->interval) {
             event.elapsed=0;
             ++event.frame;
@@ -3303,7 +3334,7 @@ void Mir3HudView::advance_map_events(double milliseconds) {
     }
     std::erase_if(map_events,[](const auto& pair) {
         const auto& event=pair.second;
-        return event.ending && event.frame>=110;
+        return !event.tint || (event.ending && event.frame>=110);
     });
 }
 
@@ -5047,7 +5078,7 @@ void Mir3HudView::_process(double delta) {
     if(!ground_events.empty()) {
         for(auto& [id,event]:ground_events) event.age+=delta*1000;
         std::erase_if(ground_events,[](const auto& entry) {
-            return entry.second.hidden || entry.second.age>65535;
+            return entry.second.hidden || entry.second.age>entry.second.lifetime;
         });
         queue_redraw();
     }
