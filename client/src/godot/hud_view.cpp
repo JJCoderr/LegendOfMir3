@@ -347,6 +347,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     }
     result["level_effects"]=level_states;
     result["player_level_action"]=!player_level_action.finished();
+    result["gold_sound_count"]=gold_sound_count;
     result["weapon_training"]=weapon_training;
     result["character_experience"]=int64_t(model.experience);result["character_next_experience"]=int64_t(model.next_experience);
     result["character_hp"]=Vector2i(model.hp,model.max_hp);
@@ -504,6 +505,13 @@ void Mir3HudView::_ready() {
         add_child(hud_sound);
         sync_hud_sound();
     }
+    const auto gold_file=sound_list.file(106);
+    if (!gold_file.empty()) {
+        const auto stream=AudioStreamWAV::load_from_file(audio_root.path_join(String::utf8(gold_file.c_str())));
+        if (stream.is_valid()) {
+            gold_sound=memnew(AudioStreamPlayer);gold_sound->set_stream(stream);add_child(gold_sound);sync_hud_sound();
+        }
+    }
     portrait_directory=ProjectSettings::get_singleton()->globalize_path(String(get_meta("portrait_directory",root)));
     const auto resource_root=std::filesystem::u8path(root.utf8().get_data());
     if (bool(get_meta("show_terrain",true)) && terrain.open(resource_root/"Map"/"0.map")) {
@@ -645,7 +653,7 @@ void Mir3HudView::_exit_tree() {
     const auto stop=[](AudioStreamPlayer* player) {
         if (player) { player->stop();player->set_stream(Ref<AudioStream>()); }
     };
-    stop(login_movie_audio);stop(map_music);stop(hud_sound);
+    stop(login_movie_audio);stop(map_music);stop(hud_sound);stop(gold_sound);
     for (auto& [file,player]:login_effects) stop(player);
     while (!actor_sounds.empty()) remove_actor_sound(actor_sounds.begin()->first);
     if (footstep_bus==StringName()) return;
@@ -2741,6 +2749,7 @@ void Mir3HudView::clear_game_scene() {
     if (map_music) { map_music->stop();map_music->set_stream(Ref<AudioStream>()); }
     if (footstep_sound) footstep_sound->stop();
     if (hud_sound) hud_sound->stop();
+    if (gold_sound) gold_sound->stop();
     while (!actor_sounds.empty()) remove_actor_sound(actor_sounds.begin()->first);
     chat_input->release_focus();chat_input->hide();
     scene_light_layer->hide();hud_base->hide();hud_copy->hide();hud_decoration->hide();hud_tail->hide();exit_layer->hide();
@@ -2935,7 +2944,7 @@ bool Mir3HudView::receive_level_up(const mir3::ReceiveHeader& header) {
         play_actor_sound(actor,mir3::LevelUpEffect::sound_id,cell);
         advance_level_effects(0);
     }
-    if (local) post_chat(String::utf8(message(1469).c_str()),11861940,0);
+    if (local) post_chat(String::utf8(message(1469).c_str()),mir3::chat_palette(2),mir3::chat_palette(7));
     queue_redraw();return true;
 }
 void Mir3HudView::advance_level_effects(double milliseconds) {
@@ -2958,6 +2967,12 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    if (const auto value=mir3::GoldChange::parse(*header)) {
+        if (gold_sound && audio_options.effects_enabled) { gold_sound->play();++gold_sound_count; }
+        if (value->gain(inventory_gold)>0)
+            chat_history.post(value->caption(message(1471),inventory_gold),mir3::chat_palette(2),mir3::chat_palette(7));
+        inventory_gold=value->balance;queue_redraw();return true;
+    }
     if (header->opcode==mir3::protocol::SM_LEVELUP) return receive_level_up(*header);
     if (const auto value=mir3::ActorExperience::parse(*header)) {
         model.experience=value->total;weapon_training=value->apply_training(weapon_training);
@@ -6146,6 +6161,10 @@ void Mir3HudView::play_actor_sound(int actor,int sample,Vector2i cell) {
 }
 
 void Mir3HudView::sync_hud_sound() {
+    if (gold_sound) {
+        gold_sound->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
+        if (!audio_options.effects_enabled) gold_sound->stop();
+    }
     for (auto& [file,player]:login_effects) {
         player->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
         if (!audio_options.effects_enabled) player->stop();

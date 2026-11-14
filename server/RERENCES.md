@@ -189,3 +189,6 @@ IDA 0x47C920构造100、recognition及三WORD参数均0，正文`%s/%d`使用全
 
 ## 升级消息
 按原版4282C0：SM_LEVELUP参数三0表示本地，recognition为经验、参数一低字节为等级；参数三1表示远端，recognition为人物ID，不更新本地属性。客户端依据原版独立恢复特效422与末帧光尾，见client/docs/evidence/level-up.md。
+
+## 金币更新
+SM_GOLDCHANGED recognition为DWORD余额，其他参数无效；客户端42AE12减旧值，随后单独CMP结果，差值为有符号32位回绕。每次回包请求106音效，仅正差显示收入提示。详见client/docs/evidence/gold-change.md。

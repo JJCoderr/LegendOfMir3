@@ -2,6 +2,7 @@
 #include "protocol/actor_ability.hpp"
 #include "protocol/actor_increments.hpp"
 #include "protocol/actor_experience.hpp"
+#include "protocol/gold_change.hpp"
 #include "hud/level_up_effect.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"
@@ -242,6 +243,8 @@ private:
     void load_options();
     void save_options();
     godot::AudioStreamPlayer* hud_sound=nullptr;
+    godot::AudioStreamPlayer* gold_sound=nullptr;
+    unsigned gold_sound_count=0;
     void sync_hud_sound();
     godot::AudioStreamPlayer* map_music=nullptr;
     godot::AudioStreamPlayer* footstep_sound=nullptr;

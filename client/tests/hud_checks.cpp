@@ -3,6 +3,7 @@
 #include "protocol/actor_ability.hpp"
 #include "protocol/actor_increments.hpp"
 #include "protocol/actor_experience.hpp"
+#include "protocol/gold_change.hpp"
 #include "hud/level_up_effect.hpp"
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
@@ -40,6 +41,16 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        // 测试内容：金币余额全DWORD、增减/重复、差值回绕边界、消息类型和原文案占位替换。
+        if (std::filesystem::path(argv[1])=="--gold-change") {
+            const auto value=mir3::GoldChange::parse({350,mir3::protocol::SM_GOLDCHANGED,{}});
+            check(value && value->gain(100)==250 && value->gain(350)==0 && value->gain(400)==-50,"gold difference");
+            check(value->caption("Gold %d",100)=="Gold 250","gold caption");
+            check(mir3::GoldChange{0}.gain(0xffffffff)==1,"gold wraps to positive one");
+            check(mir3::GoldChange{0x80000000}.gain(0)==INT32_MIN,"signed difference boundary");
+            check(!mir3::GoldChange::parse({0,mir3::protocol::SM_ABILITY,{}}),"wrong gold message");
+            std::cout << "GOLD_CHANGE_MODEL_OK\n";return 0;
+        }
         // 测试内容：升级资源列映射、严格帧间隔、丢弃超时余量、末帧光尾收缩和最终结束。
         if (std::filesystem::path(argv[1])=="--level-up") {
             auto r=mir3::EffectResource::from_columns({2020,2030,80,137,422,3,4,100,150,200,150,200,250,240,180,100,2,1,0});
