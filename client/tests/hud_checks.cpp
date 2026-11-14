@@ -1,4 +1,4 @@
-// 测试内容：角色列表协议、选中及翻页动画、界面模型、选项确认与聊天联动、场景消息、人物行为、地图及资源解析。
+// 测试内容：角色查询与进入请求、失败提示、角色列表协议、选中及翻页动画、界面模型、选项确认与聊天联动、场景消息、人物行为、地图及资源解析。
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
 #include "hud/exit_transition.hpp"
@@ -35,6 +35,30 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--selection-requests") {
+            mir3::SelectionSession session;
+            check(session.configure("account",-123) && session.query_body()=="account/-123" && session.start_body("Hero")=="account/Hero","查询及进入正文顺序，编号有符号格式");
+            check(!session.configure("invalid/name",1) && !session.configure("",1) && !session.configure(std::string(28,'a'),1) && !session.configure("other",INT64_MAX) && session.account=="account" && session.number==-123,"无效会话原子拒绝");
+            mir3::SendMessages sender;
+            for (int opcode:{100,103}) {
+                const auto packet=sender.packet(opcode,0,0,0,opcode==100?session.query_body():session.start_body("Hero"));
+                const auto header=mir3::ReceiveHeader::decode_plain({reinterpret_cast<const std::uint8_t*>(packet.data()+2),16});
+                const auto body=mir3::decode_six_bit(reinterpret_cast<const std::uint8_t*>(packet.data()+18),packet.size()-19);
+                check(header && header->opcode==opcode && header->recognition==0 && header->parameters==std::array<std::uint16_t,3>{0,0,0},"普通请求头参数全部为零");
+                check(body && *body==(opcode==100?"account/-123":"account/Hero"),"查询和进入分别编码正文");
+            }
+            const auto fields=sender.packet(520,0x12345678,0xabcdef01,0x2345);
+            const auto plain=mir3::ReceiveHeader::decode_plain({reinterpret_cast<const std::uint8_t*>(fields.data()+2),16});
+            check(plain && plain->recognition==0x12345678 && plain->opcode==520 && plain->parameters==std::array<std::uint16_t,3>{0xef01,0xabcd,0x2345},"普通消息头全部字段按小端读取，无场景密钥异或");
+            mir3::SelectionNotice notice;
+            for (int opcode:{526,527,528}) {
+                notice.show(mir3::SelectionNotice::reply_message(opcode));
+                check(notice.message==(opcode==526?221:(opcode==527?220:222)) && !notice.pressed,"进入失败回包映射原版提示");
+                notice.pressed=true;notice.close();check(!notice.message && !notice.pressed,"提示关闭清理按下状态");
+            }
+            check(!mir3::SelectionNotice::reply_message(525),"进入成功不误当失败提示");
+            std::cout << "SELECTION_REQUESTS_MODEL_OK\n";return 0;
+        }
         if (std::filesystem::path(argv[1])=="--selection-list") {
             std::vector<std::uint8_t> canvas(640*480*4,0);
             mir3::WilFrame pixel;pixel.width=1;pixel.height=1;pixel.offset_x=-1;pixel.offset_y=2;

@@ -87,6 +87,8 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("client_packet_ready",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"packet")));
     ADD_SIGNAL(MethodInfo("game_connection_close_requested"));
     ADD_SIGNAL(MethodInfo("character_selection_connection_requested"));
+    ClassDB::bind_method(D_METHOD("set_selection_session","account","number"),&Mir3HudView::set_selection_session);
+    ClassDB::bind_method(D_METHOD("request_selection_list"),&Mir3HudView::request_selection_list);
     ClassDB::bind_method(D_METHOD("apply_selection_message","message"),&Mir3HudView::apply_selection_message);
     ADD_SIGNAL(MethodInfo("npc_request",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"actor"),
         PropertyInfo(Variant::STRING,"body")));
@@ -381,7 +383,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["exit_brightness"]=exit_transition.brightness();
     result["selection_connecting"]=character_selection.visible && character_selection.connecting;
     result["selection_count"]=character_selection.count;result["selection_selected"]=character_selection.selected;
-    result["selection_page"]=character_selection.page;result["selection_empty_alert"]=selection_empty_alert;
+    result["selection_page"]=character_selection.page;result["selection_empty_alert"]=selection_notice.message==219;result["selection_notice"]=selection_notice.message;
     Array selection_roles;
     for (int i=0;i<character_selection.count;++i) {
         const auto& role=character_selection.roles[i];Dictionary entry;
@@ -2636,7 +2638,7 @@ void Mir3HudView::enter_character_selection() {
     chat_input->release_focus();chat_input->hide();
     scene_light_layer->hide();hud_base->hide();hud_copy->hide();hud_decoration->hide();hud_tail->hide();exit_layer->hide();
     character_selection={};character_selection.visible=true;
-    selection_pending.reset();selection_elapsed=0;selection_fraction_ms=0;selection_empty_alert=false;selection_alert_pressed=false;selection_bounds={};
+    selection_pending.reset();selection_pending_notice=0;selection_elapsed=0;selection_fraction_ms=0;selection_notice.close();selection_bounds={};
     outgoing_messages.sequence=0;
     get_window()->set_content_scale_size(Vector2i(640,480));
     get_window()->set_size(Vector2i(640,480));
@@ -2653,12 +2655,33 @@ const mir3::WilFrame* Mir3HudView::selection_source(int index) {
     return &selection_sources.emplace(index,std::move(*source)).first->second;
 }
 
+bool Mir3HudView::set_selection_session(String account,int64_t number) {
+    const auto utf8=account.utf8();
+    return selection_session.configure(mir3::utf8_to_ansi({utf8.get_data(),std::size_t(utf8.length())}),number);
+}
+
+bool Mir3HudView::request_selection_list() {
+    if (!character_selection.visible || selection_session.account.empty()) return false;
+    selection_elapsed=0;selection_fraction_ms=0;selection_pending.reset();selection_pending_notice=0;
+    character_selection.connecting=true;selection_notice.close();
+    send_client_packet(100,0,String::utf8(mir3::ansi_to_utf8(selection_session.query_body()).c_str()));
+    queue_redraw();return true;
+}
+
 bool Mir3HudView::apply_selection_message(PackedByteArray message) {
     if (!character_selection.visible) return false;
+    const auto header=mir3::ReceiveHeader::decode_plain({message.ptr(),std::size_t(message.size())});
+    if (!header) return false;
+    if (const int notice=mir3::SelectionNotice::reply_message(header->opcode)) {
+        if (selection_pending) selection_pending_notice=notice;
+        else { character_selection.connecting=false;selection_notice.show(notice); }
+        queue_redraw();return true;
+    }
     auto next=character_selection;
     if (!next.receive({message.ptr(),std::size_t(message.size())})) return false;
+    selection_pending_notice=0;
     if (selection_elapsed<500) selection_pending=std::move(next);
-    else { character_selection=std::move(next);selection_empty_alert=character_selection.count==0;selection_bounds={}; }
+    else { character_selection=std::move(next);selection_notice.show(character_selection.count==0?219:0);selection_bounds={}; }
     queue_redraw();return true;
 }
 
@@ -2667,20 +2690,26 @@ void Mir3HudView::selection_input(const Ref<InputEvent>& event) {
     if (motion.is_valid()) { selection_pointer=motion->get_position();queue_redraw();return; }
     if (character_selection.connecting) return;
     const Ref<InputEventKey> key=event;
-    if (selection_empty_alert && key.is_valid() && key->is_pressed() && (key->get_keycode()==KEY_ENTER || key->get_keycode()==KEY_ESCAPE)) {
-        selection_empty_alert=false;selection_alert_pressed=false;queue_redraw();return;
+    if (selection_notice.message && key.is_valid() && key->is_pressed() && (key->get_keycode()==KEY_ENTER || key->get_keycode()==KEY_ESCAPE)) {
+        selection_notice.close();queue_redraw();return;
     }
     const Ref<InputEventMouseButton> mouse=event;
     if (mouse.is_null() || mouse->get_button_index()!=MOUSE_BUTTON_LEFT) return;
     const auto pos=mouse->get_position();selection_pointer=pos;
-    if (selection_empty_alert) {
+    if (selection_notice.message) {
         const auto button=frame(1243);
         const bool hit=button.is_valid() && Rect2(Vector2(277,298),button->get_size()).has_point(pos);
-        if (mouse->is_pressed()) selection_alert_pressed=hit;
-        else { if (hit) selection_empty_alert=false;selection_alert_pressed=false; }
+        if (mouse->is_pressed()) selection_notice.pressed=hit;
+        else { if (hit) selection_notice.close();selection_notice.pressed=false; }
     } else if (mouse->is_pressed()) {
         for (int i=character_selection.page*2;i<std::min(character_selection.count,character_selection.page*2+2);++i)
             if (selection_bounds[i].has_point(pos)) { character_selection.select(i);break; }
+    } else if (Rect2(Vector2(259,49),selection_frames.at(56)->get_size()).has_point(pos)) {
+        if (character_selection.selected<0) selection_notice.show(230);
+        else if (!selection_session.account.empty()) {
+            const auto& role=character_selection.roles[character_selection.selected];
+            send_client_packet(103,0,String::utf8(mir3::ansi_to_utf8(selection_session.start_body(role.name)).c_str()));
+        }
     } else if (character_selection.count>2) {
         const auto right=frame(1153),left=frame(1150);
         if (right.is_valid() && Rect2(Vector2(550,400),right->get_size()).has_point(pos)) character_selection.turn_page(1);
@@ -2725,9 +2754,9 @@ void Mir3HudView::draw_character_selection() {
     if (character_selection.connecting) {
         sprite(1248,{155,150});
         text(message(200),{178,234,308,95},0xc8faff,mir3::TextFont::dialog);
-    } else if (selection_empty_alert) {
-        sprite(1240,{140,110});sprite(selection_alert_pressed?1244:1243,{277,298});
-        text(message(219),{163,194,308,95},0xc8faff,mir3::TextFont::dialog);
+    } else if (selection_notice.message) {
+        sprite(1240,{140,110});sprite(selection_notice.pressed?1244:1243,{277,298});
+        text(message(selection_notice.message),{163,194,308,95},0xc8faff,mir3::TextFont::dialog);
     }
 }
 
@@ -3066,7 +3095,7 @@ void Mir3HudView::_process(double delta) {
         selection_elapsed=std::min(500u,selection_elapsed+ms);
         if (selection_pending && selection_elapsed>=500) {
             character_selection=std::move(*selection_pending);selection_pending.reset();
-            selection_empty_alert=character_selection.count==0;selection_bounds={};
+            selection_notice.show(selection_pending_notice?selection_pending_notice:(character_selection.count==0?219:0));selection_pending_notice=0;selection_bounds={};
         }
         if (!character_selection.connecting) {
             for (int i=character_selection.page*2;i<std::min(character_selection.count,character_selection.page*2+2);++i) {

@@ -25,6 +25,15 @@ struct ReceiveHeader {
     std::uint32_t recognition=0;
     std::uint16_t opcode=0;
     std::array<std::uint16_t,3> parameters{};
+    // 0x47D890: login/selection headers have no scene permutation or key.
+    static std::optional<ReceiveHeader> decode_plain(std::span<const std::uint8_t> message) {
+        if (message.size()<encoded_size) return {};
+        const auto bytes=decode_six_bit(message.data(),encoded_size);
+        if (!bytes || bytes->size()!=12) return {};
+        const auto b=[&](int i) { return std::uint32_t(std::uint8_t((*bytes)[i])); };
+        return ReceiveHeader{b(0)|(b(1)<<8)|(b(2)<<16)|(b(3)<<24),std::uint16_t(b(4)|(b(5)<<8)),
+            {std::uint16_t(b(6)|(b(7)<<8)),std::uint16_t(b(8)|(b(9)<<8)),std::uint16_t(b(10)|(b(11)<<8))}};
+    }
     // 0x47D890 and 0x428308..0x428399, already-framed receive message.
     static std::optional<ReceiveHeader> decode(std::span<const std::uint8_t> message,std::span<const std::uint8_t> key) {
         if (message.size()<16 || key.size()!=4) return {};

@@ -6,6 +6,26 @@
 #include <cerrno>
 #include <string_view>
 namespace mir3 {
+struct SelectionNotice {
+    int message=0;
+    bool pressed=false;
+    void show(int id) { message=id;pressed=false; }
+    void close() { show(0); }
+    static int reply_message(int opcode) {
+        switch (opcode) { case 526:return 221;case 527:return 220;case 528:return 222;default:return 0; }
+    }
+};
+struct SelectionSession {
+    std::string account;
+    std::int32_t number=0;
+    bool configure(std::string name,std::int64_t session) {
+        // 全局账号槽4B9820至4B983C有28字节；避免原版固定缓冲越界。
+        if (name.empty() || name.size()>27 || name.find('/')!=std::string::npos || name.find(char(0))!=std::string::npos || session<INT32_MIN || session>INT32_MAX) return false;
+        account=std::move(name);number=std::int32_t(session);return true;
+    }
+    std::string query_body() const { return account+"/"+std::to_string(number); }
+    std::string start_body(std::string_view role) const { return account+"/"+std::string(role); }
+};
 struct SelectionRole {
     std::string name;
     std::uint8_t profession=0,gender=0,level=0,action=0;
@@ -66,13 +86,10 @@ struct CharacterSelectionPage {
         next.selected=next.count?0:-1;next.connecting=false;*this=std::move(next);return true;
     }
     bool receive(std::span<const std::uint8_t> message) {
-        if (message.size()<16) return false;
-        const auto header=decode_six_bit(message.data(),16);
+        const auto header=ReceiveHeader::decode_plain(message);
+        if (!header || header->opcode!=520) return false;
         const auto body=decode_six_bit(message.data()+16,message.size()-16);
-        if (!header || header->size()!=12 || !body) return false;
-        const auto b=[&](int i) { return std::uint32_t(std::uint8_t((*header)[i])); };
-        if ((b(4)|(b(5)<<8))!=520) return false;
-        return receive_list(b(0)|(b(1)<<8)|(b(2)<<16)|(b(3)<<24),*body);
+        return body && receive_list(header->recognition,*body);
     }
     bool select(int index) {
         if (connecting || index<page*2 || index>=page*2+2 || index>=count || index==selected) return false;

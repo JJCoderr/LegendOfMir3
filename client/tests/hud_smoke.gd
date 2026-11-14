@@ -3,6 +3,7 @@
 # - 选项交互：普通、悬停及按下帧，跨按钮移动、释放落点触发与关闭重开清理。
 # - 选项原包：1401 位掩码、重复确认、聊天拒绝联动、攻击模式与非法消息。
 # - 选项窗口：完整文字和开关、七类服务器命令、攻击模式、确认状态与本地持久化。
+# - 角色请求：100查询、103进入、等待门禁、526～528失败提示及未选择角色提示。
 # - 角色选择：520回包、连接等待、角色分层显示、信息框、选择与翻页、空列表及非法消息拒绝。
 # - 退出过渡：整屏乘法变暗、离场清理、单次关闭/重连通知及640×480角色选择连接页。
 # - 退出限制：近期动作阻止窗口、确认二次检查、死亡豁免、拒绝提示与非法状态拒绝。
@@ -181,6 +182,55 @@ func selection_packet(count: int, body: String) -> PackedByteArray:
 	packet.append_array(encode_scene_bytes(body.to_ascii_buffer()))
 	return packet
 
+func expected_selection_request(opcode: int, sequence: int, body: String) -> PackedByteArray:
+	var result := ("#"+str(sequence)).to_ascii_buffer()
+	result.append_array(encode_scene_bytes(PackedByteArray([0,0,0,0,opcode&255,(opcode>>8)&255,0,0,0,0,0,0])))
+	result.append_array(encode_scene_bytes(body.to_ascii_buffer()))
+	result.append(33)
+	return result
+
+func run_selection_requests() -> void:
+	var packets: Array[PackedByteArray] = []
+	hud.client_packet_ready.connect(func(packet: PackedByteArray): packets.append(packet))
+	if not check(not hud.request_selection_list(), "缺少账号会话时不发送查询"): return
+	if not check(hud.set_selection_session("account",-123) and not hud.set_selection_session("invalid/name",1), "会话配置及非法账号拒绝"): return
+	if not check(hud.request_selection_list() and packets.size()==1 and packets[0]==expected_selection_request(100,1,"account/-123"), "100查询完整包及正文"): return
+	click_at(Vector2(280,60),false)
+	if not check(packets.size()==1 and hud.hud_snapshot().selection_connecting, "等待列表时开始按钮不发送"): return
+	if not check(hud.apply_selection_message(selection_packet(1,"Hero/0/x/10/0")) and hud.hud_snapshot().selection_connecting, "重新查询重置500毫秒等待"): return
+	var deadline := Time.get_ticks_msec()+1000
+	while hud.hud_snapshot().selection_connecting and Time.get_ticks_msec()<deadline:
+		await process_frame
+	if not check(not hud.hud_snapshot().selection_connecting, "查询等待期满"): return
+	click_at(Vector2(280,60),false)
+	if not check(packets.size()==2 and packets[1]==expected_selection_request(103,2,"account/Hero") and not hud.hud_snapshot().selection_connecting, "开始按钮依释放落点发送103且不额外显示等待"): return
+	for opcode in [526,527,528]:
+		var reply := encode_scene_bytes(PackedByteArray([0,0,0,0,opcode&255,(opcode>>8)&255,0,0,0,0,0,0]))
+		if not check(hud.apply_selection_message(reply) and hud.hud_snapshot().selection_notice=={526:221,527:220,528:222}[opcode], "服务器失败回包显示对应原版提示"): return
+		click_at(Vector2(280,60),false)
+		if not check(packets.size()==2, "失败提示阻挡底层开始按钮"): return
+		await process_frame
+		if opcode==526 and not await capture("character-selection-start-failed",Vector2i(640,480)): return
+		key(KEY_ESCAPE)
+		if not check(hud.hud_snapshot().selection_notice==0, "关闭失败提示"): return
+	if not check(hud.apply_selection_message(selection_packet(0,"")), "空列表回复"): return
+	key(KEY_ENTER)
+	click_at(Vector2(280,60),false)
+	if not check(hud.hud_snapshot().selection_notice==230 and packets.size()==2, "没有角色时显示230而不发送103"): return
+	await process_frame
+	if not await capture("character-selection-no-role",Vector2i(640,480)): return
+	key(KEY_ENTER)
+	if not check(hud.request_selection_list() and packets.size()==3, "再次查询"): return
+	if not check(hud.apply_selection_message(selection_packet(1,"Ordered/1/x/12/0")), "延迟列表入队"): return
+	var late_error := encode_scene_bytes(PackedByteArray([0,0,0,0,14,2,0,0,0,0,0,0]))
+	if not check(hud.apply_selection_message(late_error) and hud.hud_snapshot().selection_connecting and hud.hud_snapshot().selection_notice==0, "后续错误不越过列表最短等待"): return
+	deadline = Time.get_ticks_msec()+1000
+	while hud.hud_snapshot().selection_connecting and Time.get_ticks_msec()<deadline:
+		await process_frame
+	if not check(hud.hud_snapshot().selection_roles[0].name=="Ordered" and hud.hud_snapshot().selection_notice==221, "延迟列表先落地，随后错误提示保留"): return
+	print("SELECTION_REQUESTS_UI_OK")
+	quit()
+
 func run_selection_list() -> void:
 	key(KEY_X,0,true)
 	key(KEY_ENTER)
@@ -208,6 +258,9 @@ func run_selection_list() -> void:
 			var color := rendered.get_pixel(x,y)
 			if color.r+color.g+color.b<1.5: dark_pixels+=1
 	if not check(dark_pixels>2000, "角色选择背景实际绘制到视口，避免仅验证状态"): return
+	if OS.get_cmdline_user_args().has("--selection-requests"):
+		await run_selection_requests()
+		return
 	if not await capture("character-selection-first-page",Vector2i(640,480)): return
 	var bounds: Rect2 = state.selection_roles[1].bounds
 	var pos := Vector2(bounds.end.x-3,bounds.get_center().y)
@@ -1374,7 +1427,7 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
-	if OS.get_cmdline_user_args().has("--selection-list"):
+	if OS.get_cmdline_user_args().has("--selection-list") or OS.get_cmdline_user_args().has("--selection-requests"):
 		await run_selection_list()
 		return
 	if OS.get_cmdline_user_args().has("--exit-transition"):
@@ -1581,7 +1634,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light") or OS.get_cmdline_user_args().has("--map-wire") or OS.get_cmdline_user_args().has("--map-input") or OS.get_cmdline_user_args().has("--options-panel") or OS.get_cmdline_user_args().has("--options-wire") or OS.get_cmdline_user_args().has("--options-input") or OS.get_cmdline_user_args().has("--exit-dialog") or OS.get_cmdline_user_args().has("--exit-request") or OS.get_cmdline_user_args().has("--exit-guard") or OS.get_cmdline_user_args().has("--exit-transition") or OS.get_cmdline_user_args().has("--selection-list"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light") or OS.get_cmdline_user_args().has("--map-wire") or OS.get_cmdline_user_args().has("--map-input") or OS.get_cmdline_user_args().has("--options-panel") or OS.get_cmdline_user_args().has("--options-wire") or OS.get_cmdline_user_args().has("--options-input") or OS.get_cmdline_user_args().has("--exit-dialog") or OS.get_cmdline_user_args().has("--exit-request") or OS.get_cmdline_user_args().has("--exit-guard") or OS.get_cmdline_user_args().has("--exit-transition") or OS.get_cmdline_user_args().has("--selection-list") or OS.get_cmdline_user_args().has("--selection-requests"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

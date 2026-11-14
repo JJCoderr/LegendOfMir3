@@ -80,6 +80,8 @@ public:
     bool apply_minimap_reply(int map_number);
     void apply_minimap_unavailable();
     void handle_exit_confirmation(int dialog_id);
+    bool set_selection_session(godot::String account,int64_t number);
+    bool request_selection_list();
     bool apply_selection_message(godot::PackedByteArray message);
     bool set_local_exit_state(int action,godot::PackedInt64Array ticks);
     bool apply_trade_offer_reply(int identifier,int accepted_count=0);
@@ -456,7 +458,9 @@ private:
     std::array<godot::Rect2,4> selection_bounds;
     std::uint32_t selection_elapsed=0;
     double selection_fraction_ms=0;
-    bool selection_empty_alert=false,selection_alert_pressed=false;
+    mir3::SelectionNotice selection_notice;
+    mir3::SelectionSession selection_session;
+    int selection_pending_notice=0;
     godot::Vector2 selection_pointer;
     const mir3::WilFrame* selection_source(int index);
     void selection_input(const godot::Ref<godot::InputEvent>& event);
