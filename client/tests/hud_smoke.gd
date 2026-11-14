@@ -124,6 +124,55 @@ func run_local_mount() -> void:
 	print("LOCAL_MOUNT_OK")
 	quit()
 
+func wait_human_state(action: int, pending: int) -> bool:
+	var deadline := Time.get_ticks_msec() + 2500
+	while Time.get_ticks_msec() < deadline:
+		await process_frame
+		var state: Dictionary = hud.hud_snapshot()
+		if state.scene_human_actions[5].x == action and state.scene_human_pending[5] == pending:
+			return true
+	return check(false, "queued human state " + str(action) + "/" + str(pending))
+
+func run_scene_queue() -> void:
+	var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
+	if not check(hud.set_scene_human_body(5,0,1) and hud.set_scene_human_attachments(5,1,1) and hud.apply_scene_human_action(5,14,4), "begin active attack"): return
+	if not check(hud.queue_scene_human_message(5,11,cell,4)
+		and hud.queue_scene_human_message(5,14,cell,6)
+		and hud.queue_scene_human_message(5,1309,Vector2i(-1,-1),0,2)
+		and hud.queue_scene_human_message(5,10,cell,2), "queue move attack hit stand"): return
+	if not check(hud.hud_snapshot().scene_human_actions[5].x == 9 and hud.hud_snapshot().scene_human_facings[5] == 4 and hud.hud_snapshot().scene_human_pending[5] == 4, "enqueue does not interrupt active animation"): return
+	if not check(not hud.queue_scene_human_message(9999,14,cell,0)
+		and not hud.queue_scene_human_message(5,999,cell,0)
+		and not hud.queue_scene_human_message(5,14,Vector2i(-1,-1),0)
+		and not hud.queue_scene_human_message(5,14,cell,8)
+		and not hud.queue_scene_human_message(5,14,cell,0,0,-1)
+		and hud.hud_snapshot().scene_human_pending[5] == 4, "invalid messages preserve queue"): return
+	if not await wait_human_state(-1,3): return
+	if not check(hud.hud_snapshot().scene_human_catchup[5], "movement catches up with backlog"): return
+	var frames: Array[int] = []
+	while hud.hud_snapshot().scene_human_pending[5] == 3:
+		var value: int = hud.hud_snapshot().scene_human_movement[5]
+		if value >= 0 and not frames.has(value): frames.append(value)
+		await process_frame
+	if not check(frames == [0,2,4] and hud.hud_snapshot().scene_human_cells[5] == cell, "catch-up skips frames and commits destination"): return
+	if not await wait_human_state(9,2): return
+	if not check(hud.hud_snapshot().scene_human_catchup[5] and hud.hud_snapshot().scene_human_facings[5] == 6, "queued attack uses direction and backlog"): return
+	if not await capture("bichon-queued-attack"): return
+	if not await wait_human_state(15,1): return
+	if not check(not hud.hud_snapshot().scene_human_catchup[5] and hud.hud_snapshot().scene_human_facings[5] == 6, "hit retains facing without backlog acceleration"): return
+	if not await capture("bichon-queued-hit"): return
+	if not await wait_human_state(-1,0): return
+	if not check(hud.hud_snapshot().scene_human_facings[5] == 2, "standing follows hit"): return
+	hud.queue_scene_human_message(5,1307,cell,7)
+	if not await wait_human_state(16,0): return
+	if not check(hud.hud_snapshot().scene_human_facings[5] == 2, "1307 preserves actor direction"): return
+	hud.queue_scene_human_message(5,14,cell,4)
+	if not check(hud.remove_scene_actor(5) and hud.set_scene_human(5,cell,4,1,"比奇旅人") and hud.hud_snapshot().scene_human_pending[5] == 0, "actor ID reuse does not revive old queue"): return
+	await process_frame
+	await process_frame
+	print("PASS scene human queue")
+	quit()
+
 func wait_actor_sound(sample: int, previous: int) -> bool:
 	var deadline := Time.get_ticks_msec() + 1800
 	while Time.get_ticks_msec() < deadline:
@@ -358,6 +407,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--scene-queue"):
+		await run_scene_queue()
+		return
 	if OS.get_cmdline_user_args().has("--scene-audio"):
 		await run_scene_audio()
 		return
@@ -505,7 +557,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

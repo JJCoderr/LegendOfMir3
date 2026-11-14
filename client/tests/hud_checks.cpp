@@ -1,6 +1,7 @@
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/human_actions.hpp"
+#include "hud/scene_human_queue.hpp"
 #include "resources/sound_list.hpp"
 #include "hud/scene_name.hpp"
 #include "hud/scene_health.hpp"
@@ -18,6 +19,24 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--scene-queue") {
+            mir3::SceneHumanQueue queue;
+            check(!queue.take() && !queue.catching_up(),"empty queue");
+            check(!queue.push({99}) && !queue.push({14,0,0,8}) && !queue.push({1309,0,0,0,50}),"invalid decoded records rejected");
+            check(queue.push({11,1,2,4}) && queue.push({14,3,4,2}) && !queue.catching_up(),"two records do not catch up");
+            check(queue.push({1309}) && queue.catching_up(),"three records enable catch-up before dequeue");
+            check(queue.take()->opcode==11 && !queue.catching_up() && queue.take()->opcode==14 && queue.take()->opcode==1309,"FIFO preserves distinct actions");
+            mir3::HumanActionClock clock;
+            clock.start(9,true);clock.advance(85);check(clock.frame()==0,"first catch-up interval remains full length");
+            clock.advance(1);clock.advance(42);check(clock.frame()==1,"halved interval still strict");
+            clock.advance(1);check(clock.frame()==2,"catch-up halves after first frame");
+            clock.start(15);clock.advance(200,0x08000000);check(clock.frame()==0,"slow flag doubles finite action interval");
+            clock.advance(1,0x08000000);check(clock.frame()==1,"slow action advances past boundary");
+            for (int i=0;i<99999;++i) check(queue.push({10}),"queue capacity");
+            check(!queue.push({10}) && queue.size()==99999,"sentinel capacity enforced");
+            std::cout << "SCENE_QUEUE_MODEL_OK\n";
+            return 0;
+        }
         if (std::filesystem::path(argv[1])=="--scene-actions") {
             std::vector<std::uint8_t> index(58+32,0);
             index[54]=2;index[58]=140;index[74]=141;

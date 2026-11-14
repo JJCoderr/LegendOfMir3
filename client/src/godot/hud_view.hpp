@@ -2,6 +2,7 @@
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"
 #include "hud/human_actions.hpp"
+#include "hud/scene_human_queue.hpp"
 #include "resources/sound_list.hpp"
 #include "hud/scene_name.hpp"
 #include "hud/scene_health.hpp"
@@ -95,6 +96,8 @@ public:
     bool set_player_attachments(int hair,int weapon);
     bool set_scene_human_attachments(int actor,int hair,int weapon);
     bool set_player_body(int type,int clothing);
+    bool queue_scene_human_message(int actor,int opcode,godot::Vector2i cell,int facing,int hit_weapon=0,std::int64_t flags=0);
+    bool dispatch_scene_human_message(int actor);
     bool apply_scene_human_action(int actor,int opcode,int facing,int hit_weapon=0);
     bool apply_scene_human_stand(int actor,godot::Vector2i cell,int facing);
     bool apply_scene_human_step(int actor,int opcode,godot::Vector2i destination,int facing);
@@ -354,10 +357,15 @@ private:
         mir3::HumanIdleClock idle;
         mir3::HumanActionClock action;
         int hit_weapon=0;
+        mir3::SceneHumanQueue messages;
+        bool catching_up=false;
+        std::uint32_t action_flags=0;
+        unsigned slow_ticks=0;
         double movement_ms=0;
         godot::Vector2i step_origin, step_destination;
     };
     std::map<int,SceneHuman> scene_humans;
+    double scene_movement_ms=0;
     mir3::WilArchive map_chickens;
     void update_scene_target(godot::Vector2 pointer);
     bool scene_occupied(godot::Vector2i cell) const;
