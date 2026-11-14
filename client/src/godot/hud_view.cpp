@@ -381,6 +381,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["expanded"]=model.layout.expanded;
     result["quest_first"]=quest.first;
     result["quest_selected"]=quest.selected;
+    result["quest_detail_rows"]=quest.detail_rows();
+    const auto quest_description=quest.description();
+    result["quest_description"]=quest_description.empty()?String():String::utf8(quest_description.data(),quest_description.size());
     PackedStringArray quest_titles;
     PackedInt32Array quest_completion;
     for(const auto& entry:quest.entries) {
@@ -3167,6 +3170,40 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    if(header->opcode==mir3::protocol::SM_QUEST_CHILDREN || header->opcode==mir3::protocol::SM_QUEST_CHILD_TEXT) {
+        constexpr auto offset=mir3::ReceiveHeader::encoded_size;
+        const std::span<const std::uint8_t> body{encoded.ptr()+offset,std::size_t(encoded.size()-offset)};
+        const auto parent=std::ranges::find_if(quest.entries,[&](const auto& entry) {
+            return entry.wire && entry.wire->id==header->parameters[2];
+        });
+        if(parent==quest.entries.end()) {
+            if(!quest.list_initialized && header->opcode==mir3::protocol::SM_QUEST_CHILDREN)
+                send_client_packet(mir3::protocol::CM_QUERYQUESTLIST,0,String());
+            return true;
+        }
+        if(header->opcode==mir3::protocol::SM_QUEST_CHILDREN) {
+            auto records=mir3::decode_quest_list(*header,body);
+            if(!records || records->empty()) return false;
+            for(auto& record:*records) record.title=mir3::ansi_to_utf8(record.title);
+            parent->children=std::move(*records);
+            parent->children_loaded=true;
+            if(quest.description_parent==parent-quest.entries.begin()) {
+                quest.description_child=-1;
+                quest.description_first=0;
+            }
+            quest.scroll(0);
+        } else {
+            if(body.size()>1366) return false;
+            const auto decoded=mir3::decode_six_bit(body.data(),body.size());
+            if(!decoded) return false;
+            const auto ansi=std::string_view(*decoded).substr(0,decoded->find(char(0)));
+            if(ansi.size()>1023) return false;
+            const auto child=std::ranges::find(parent->children,int(header->parameters[0]),&mir3::QuestRecord::id);
+            if(child!=parent->children.end()) child->summary=mir3::ansi_to_utf8(ansi);
+        }
+        queue_redraw();
+        return true;
+    }
     if(header->opcode==mir3::protocol::SM_QUEST_LIST || header->opcode==mir3::protocol::SM_QUEST_ADDED) {
         constexpr auto offset=mir3::ReceiveHeader::encoded_size;
         auto records=mir3::decode_quest_list(*header,{encoded.ptr()+offset,std::size_t(encoded.size()-offset)});
@@ -4777,7 +4814,12 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     if (covers_wheel(quest) && !panel_covered(Panel::quest,button->get_position()) && button->is_pressed()) {
         const auto index=button->get_button_index();
         if (index==MOUSE_BUTTON_WHEEL_UP || index==MOUSE_BUTTON_WHEEL_DOWN) {
-            quest.scroll(index==MOUSE_BUTTON_WHEEL_UP?-1:1);
+            const int delta=index==MOUSE_BUTTON_WHEEL_UP?-1:1;
+            const auto [x,y,w,h]=quest.rect;
+            const auto position=button->get_position();
+            if(Rect2(x+80,y+310,170,70).has_point(position) && !quest.description().empty())
+                quest.description_first=std::clamp(quest.description_first+delta,0,3);
+            if(position.y<=y+310) quest.scroll(delta);
             get_viewport()->set_input_as_handled();
             queue_redraw();
             return;
@@ -6954,11 +6996,16 @@ void Mir3HudView::draw_quest() {
                 text(quest.entries[index].title,{x+65,top,200,15},
                     quest.title_color(index),mir3::TextFont::normal,false);
             } else {
-                const auto& detail=quest.entries[quest.expanded].details[line-quest.expanded-1];
+                const auto& entry=quest.entries[quest.expanded];
+                const int child=line-quest.expanded-1;
+                const auto& detail=entry.wire?entry.children[child].title:entry.details[child];
                 text(detail,{x+75,top,190,15},quest.title_color(quest.expanded),mir3::TextFont::normal,false);
             }
         }
     }
+    const auto description=mir3::wrap_quest_detail(quest.description());
+    for(int row=0;row<3 && row+quest.description_first<int(description.size());++row)
+        text(description[row+quest.description_first],{x+84,y+347+15*row,165,15},0x7d0000,mir3::TextFont::normal,false);
     for (int index=0;index<int(quest.buttons.size());++index) {
         const auto [id,left,top]=quest.buttons[index];
         sprite(id+(index==quest.pressed),{x+left,y+top});
@@ -6995,7 +7042,23 @@ bool Mir3HudView::quest_pointer(int kind,Vector2 position) {
         quest.begin_drag(int(position.x),int(position.y),hit>=0 || in_list);
         if (in_list) {
             const int index=quest.entry_at(quest.first+row);
-            if (index>=0) quest.selected=index;
+            if(index>=0) {
+                quest.selected=index;
+                quest.description_parent=index;
+                quest.description_child=-1;
+                quest.description_first=0;
+            } else if(quest.expanded>=0 && quest.first+row>quest.expanded) {
+                const auto& entry=quest.entries[quest.expanded];
+                const int child=quest.first+row-quest.expanded-1;
+                if(entry.wire && child<int(entry.children.size())) {
+                    quest.description_parent=quest.expanded;
+                    quest.description_child=child;
+                    quest.description_first=0;
+                    const auto& item=entry.children[child];
+                    if(item.summary.empty())
+                        send_client_packet(mir3::protocol::CM_QUERYQUESTCHILDTEXT,item.id,String(),0,std::uint16_t(entry.wire->id));
+                }
+            }
         }
     } else if (kind==1) {
         captured=quest.move_drag(int(position.x),int(position.y)) || quest.pressed>=0;
@@ -7011,7 +7074,10 @@ bool Mir3HudView::quest_pointer(int kind,Vector2 position) {
                 quest.scroll(0);
                 auto& entry=quest.entries[quest.selected];
                 using Detail=mir3::QuestPanel::Entry::Detail;
-                if (entry.detail==Detail::idle) {
+                if(entry.wire) {
+                    if(!entry.children_loaded)
+                        send_client_packet(mir3::protocol::CM_QUERYQUESTCHILDREN,0,String(),0,std::uint16_t(entry.wire->id));
+                } else if (entry.detail==Detail::idle) {
                     entry.detail=Detail::pending;
                     emit_signal("quest_detail_requested",quest.selected);
                 }

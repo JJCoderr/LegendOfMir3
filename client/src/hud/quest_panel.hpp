@@ -19,6 +19,8 @@ struct QuestPanel : DraggablePanel {
         enum class Detail { idle, pending, received };
         Detail detail=Detail::idle;
         std::optional<QuestRecord> wire;
+        std::vector<QuestRecord> children;
+        bool children_loaded=false;
     };
     std::vector<Entry> entries;
     bool list_initialized=false;
@@ -26,6 +28,8 @@ struct QuestPanel : DraggablePanel {
     void reset_list_view() {
         selected=expanded=-1;
         first=0;
+        description_parent=description_child=-1;
+        description_first=0;
         scroll_captured=false;
     }
 
@@ -53,7 +57,19 @@ struct QuestPanel : DraggablePanel {
     static constexpr int scroll_x=272, scroll_top=160, scroll_travel=182;
     bool scroll_captured=false;
 
-    int detail_rows() const { return expanded>=0?int(entries[expanded].details.size()):0; }
+    int description_parent=-1,description_child=-1,description_first=0;
+    int detail_rows() const {
+        if(expanded<0) return 0;
+        const auto& entry=entries[expanded];
+        return int(entry.wire?entry.children.size():entry.details.size());
+    }
+    std::string_view description() const {
+        if(description_parent<0 || description_parent>=int(entries.size())) return {};
+        const auto& entry=entries[description_parent];
+        if(description_child<0) return entry.wire?std::string_view(entry.wire->summary):std::string_view{};
+        if(description_child>=int(entry.children.size())) return {};
+        return entry.children[description_child].summary;
+    }
     int last_row() const { return std::max(0,int(entries.size())-1)+detail_rows(); }
     int entry_at(int row) const {
         if (expanded>=0 && row>expanded) {

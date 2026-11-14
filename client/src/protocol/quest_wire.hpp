@@ -16,7 +16,8 @@ struct QuestRecord {
 inline std::optional<std::vector<QuestRecord>> decode_quest_list(
         const ReceiveHeader& header,std::span<const std::uint8_t> body) {
     const bool full=header.opcode==protocol::SM_QUEST_LIST;
-    const auto count=header.parameters[full?0:2];
+    const bool children=header.opcode==protocol::SM_QUEST_CHILDREN;
+    const auto count=header.parameters[full || children?0:2];
     if(body.size()>10922) return {};
     const auto decoded=decode_six_bit(body.data(),body.size());
     if(!decoded || decoded->size()>8191) return {};
@@ -42,7 +43,7 @@ inline std::optional<std::vector<QuestRecord>> decode_quest_list(
         QuestRecord record;
         int completed=0;
         if(!number(take(),record.id)) return {};
-        const auto title=take(!full && i+1==count);
+        const auto title=take(!full && !children && i+1==count);
         if(!title || title->empty() || title->size()>511) return {};
         record.title=*title;
         if(full) {
