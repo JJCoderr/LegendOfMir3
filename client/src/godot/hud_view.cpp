@@ -3006,6 +3006,8 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    if (header->opcode==mir3::protocol::SM_EAT_OK || header->opcode==mir3::protocol::SM_EAT_FAIL)
+        return apply_inventory_use_reply(header->opcode,header->parameters[0]);
     if (header->opcode==mir3::protocol::SM_TAKEON_OK || header->opcode==mir3::protocol::SM_TAKEON_FAIL ||
         header->opcode==mir3::protocol::SM_TAKEOFF_OK || header->opcode==mir3::protocol::SM_TAKEOFF_FAIL) {
         if (!apply_equipment_reply(header->opcode)) return false;
@@ -4741,8 +4743,12 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
                 if (equipment.takeoff(bag)) emit_equipment_request();
             } else if (consumed && !equipment.pending) {
                 const auto tick=static_cast<std::uint32_t>(now);
-                const int action=bag.release_action(int(position.x),int(position.y),x,y,tick);
-                if (action==1) emit_signal("inventory_use_requested",int64_t(bag.held.make_index),int64_t(tick),String::utf8(bag.held.name.c_str()));
+                const int action=bag.release_action(int(position.x),int(position.y),x,y,tick,bag.held && bag.held.name==message(1050));
+                if (action==1) {
+                    const auto name=String::utf8(bag.held.name.c_str());
+                    emit_signal("inventory_use_requested",int64_t(bag.held.make_index),int64_t(tick),name);
+                    send_client_packet(mir3::protocol::CM_EAT,bag.held.make_index,name,std::uint16_t(tick),std::uint16_t(tick>>16));
+                }
                 if (action==2) post_chat(String::utf8(message(1051).c_str()),11861940,0);
             }
         }
@@ -4955,8 +4961,17 @@ bool Mir3HudView::add_inventory_item(int icon,int count,int slot,int64_t make_in
 
 bool Mir3HudView::apply_inventory_use_reply(int identifier,int remaining) {
     if (remaining<0 || remaining>65535) return false;
+    const auto used=bag.held;
     if (!bag.apply_use_reply(identifier,remaining,inventory.rect[0],inventory.rect[1],
                              int(inventory_cursor.x),int(inventory_cursor.y))) return false;
+    if (identifier==mir3::protocol::SM_EAT_OK) {
+        auto name=used.name;
+        for (int i=0;i<10;++i) if (name==message(1409)+std::to_string(i)) { name=message(1409);break; }
+        auto caption=message(1464);
+        if (const auto at=caption.find("%s");at!=std::string::npos) caption.replace(at,2,name);
+        post_chat(String::utf8(caption.c_str()),mir3::chat_palette(2),mir3::chat_palette(7));
+        if (used.std_mode<=2) play_login_sound(sound_list.file(used.std_mode==0?108:107),false);
+    } else if (used.std_mode==51) open_group_dialog(1414);
     queue_redraw();
     return true;
 }
@@ -5661,7 +5676,7 @@ void Mir3HudView::handle_exit_confirmation(int dialog_id) {
 }
 
 bool Mir3HudView::dialog_is_alert() const {
-    return (group_request>=1473 && group_request<=1507) || (group_request>=1437 && group_request<=1439) || group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
+    return group_request==1414 || (group_request>=1473 && group_request<=1507) || (group_request>=1437 && group_request<=1439) || group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
 }
 
 bool Mir3HudView::dialog_has_input() const {

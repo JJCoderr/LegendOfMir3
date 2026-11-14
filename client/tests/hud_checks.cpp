@@ -47,6 +47,24 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        // 测试内容：物品使用禁止条件、待确认锁定、数量和原始记录同步、末件删除及失败恢复。
+        if (std::filesystem::path(argv[1])=="--inventory-use") {
+            using namespace mir3::protocol;
+            mir3::InventoryGrid bag;
+            mir3::BagItem item{-1,301,3,1,1,1,100,"Stack",3};
+            bag.held=item;bag.held_slot=0;bag.last_release=100;
+            check(!bag.release_action(36,79,0,0,101,true) && bag.held && !bag.pending_use,"prohibited item stays held");
+            check(bag.release_action(36,79,0,0,102)==1 && bag.pending_use,"use request");
+            check(!bag.release_action(36,79,0,0,103) && bag.pending_use,"pending blocks repeated use");
+            check(!bag.apply_use_reply(SM_TAKEON_OK,2,0,0),"wrong reply");
+            check(bag.apply_use_reply(SM_EAT_OK,257,0,0) && bag.items[0].count==257 && bag.items[0].server_record[71]==1 && bag.items[0].server_record[72]==1,"authoritative count and raw word");
+            bag.held=bag.take(0);bag.pending_use=true;
+            check(bag.apply_use_reply(SM_EAT_FAIL,0,0,0) && bag.items[0].count==257,"failure preserves quantity");
+            bag.held=bag.take(0);bag.held.set_count(1);bag.insert(bag.held);bag.pending_use=true;
+            check(bag.apply_use_reply(SM_EAT_OK,9,0,0) && !bag.held && !bag.items[0],"last stack removes matching copy regardless of reply count");
+            check(!bag.apply_use_reply(SM_EAT_OK,0,0,0),"duplicate reply ignored");
+            std::cout << "INVENTORY_USE_MODEL_OK\n";return 0;
+        }
         // 测试内容：穿戴失败恢复、成功不模拟背包返还、脱下成功等待独立新增包及错序重复确认拒绝。
         if (std::filesystem::path(argv[1])=="--equipment-actions") {
             using namespace mir3::protocol;

@@ -13,6 +13,9 @@ struct BagItem {
     std::string name;
     int stack_mode=0;
     std::array<std::uint8_t,100> server_record{};
+    void set_count(int value) {
+        count=value;server_record[71]=std::uint8_t(value);server_record[72]=std::uint8_t(value>>8);
+    }
     explicit operator bool() const { return icon >= 0; }
 };
 class InventoryGrid {
@@ -115,10 +118,11 @@ public:
     }
     // 0x441310, normal bag source only. 1=request ready, 2=cooldown notice,
     // 0=ordinary release. A denied rapid click still follows the placement path.
-    int release_action(int x, int y, int ox, int oy, std::uint32_t now) {
+    int release_action(int x, int y, int ox, int oy, std::uint32_t now,bool use_prohibited=false) {
         if (pending_use) { last_release = now; return 0; }
         int result = 0;
         if (held && held.make_index && now-last_release < 300) {
+            if (use_prohibited) { last_release=now;return 0; }
             const auto elapsed = now-last_use;
             const bool medicine = held.std_mode == 0 || held.std_mode == 3;
             const bool allowed = !medicine || elapsed > 2000 ||
@@ -151,8 +155,8 @@ public:
                 }
             } else {
                 // 0x441DD0 updates bag copies by makeIndex before restoring held.
-                for (auto& item : items) if (item && item.make_index == held.make_index) item.count = remaining;
-                held.count = remaining;
+                for (auto& item : items) if (item && item.make_index == held.make_index) item.set_count(remaining);
+                held.set_count(remaining);
                 restore = true;
             }
         }

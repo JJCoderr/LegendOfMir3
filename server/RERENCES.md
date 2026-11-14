@@ -216,3 +216,6 @@ SM_RIDEHORSE recognition低字节为本地骑乘形状，客户端确认后才�
 
 ## 穿脱请求与返还
 1003/1004 recognition为物品编号，参数一槽位，正文ANSI名称；1124 recognition槽位、无正文。615/619不会自行增加背包，必须由200发送实际返还物品，允许先于或后于确认。成功recognition为基础人物外观；详见client/docs/evidence/equipment-actions.md。
+
+## 物品使用原包
+CM_EAT recognition=MakeIndex，参数一计时低WORD、参数二0、参数三计时高WORD，正文ANSI名称。SM_EAT_OK参数一为服务器剩余数量，SM_EAT_FAIL恢复普通背包物品。数量规则、提示和特殊物品见client/docs/evidence/inventory-use-wire.md。

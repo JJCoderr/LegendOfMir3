@@ -59,5 +59,7 @@ func run() -> void:
 	await settle()
 	if not await capture("inventory-wire-updated"): return
 	if not check(hud.apply_game_message(packet(Mir3HudView.SM_BAGITEMS,[])) and hud.hud_snapshot().bag_records.is_empty(),"空列表清除背包"): return
+	hud.queue_free()
+	await create_timer(0.1).timeout
 	print("INVENTORY_WIRE_UI_OK")
 	quit()
