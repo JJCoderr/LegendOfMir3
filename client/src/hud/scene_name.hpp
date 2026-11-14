@@ -1,4 +1,5 @@
 #pragma once
+#include "protocol/message_ids.hpp"
 #include <array>
 #include <string>
 #include <string_view>
@@ -20,8 +21,8 @@ struct SceneName {
         }
     }
     bool update(int opcode,std::uint8_t index,std::string_view ansi) {
-        if (opcode!=42 && opcode!=656) return false;
-        if (opcode==42) {
+        if (opcode!=mir3::protocol::SM_USERNAME && opcode!=mir3::protocol::SM_CHANGENAMECOLOR) return false;
+        if (opcode==mir3::protocol::SM_USERNAME) {
             std::array<std::string,3> parsed;
             ansi=ansi.substr(0,ansi.find(char(0)));
             for (auto& line:parsed) {

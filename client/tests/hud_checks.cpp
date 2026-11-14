@@ -1,4 +1,5 @@
 // 测试内容：角色查询与进入请求、失败提示、角色列表协议、选中及翻页动画、界面模型、选项确认与聊天联动、场景消息、人物行为、地图及资源解析。
+#include "protocol/message_ids.hpp"
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
 #include "hud/exit_transition.hpp"
@@ -40,23 +41,23 @@ int main(int argc,char** argv) {
             check(session.configure("account",-123) && session.query_body()=="account/-123" && session.start_body("Hero")=="account/Hero","查询及进入正文顺序，编号有符号格式");
             check(!session.configure("invalid/name",1) && !session.configure("",1) && !session.configure(std::string(28,'a'),1) && !session.configure("other",INT64_MAX) && session.account=="account" && session.number==-123,"无效会话原子拒绝");
             mir3::SendMessages sender;
-            for (int opcode:{100,103}) {
-                const auto packet=sender.packet(opcode,0,0,0,opcode==100?session.query_body():session.start_body("Hero"));
+            for (int opcode:{mir3::protocol::CM_QUERYCHR,mir3::protocol::CM_SELCHR}) {
+                const auto packet=sender.packet(opcode,0,0,0,opcode==mir3::protocol::CM_QUERYCHR?session.query_body():session.start_body("Hero"));
                 const auto header=mir3::ReceiveHeader::decode_plain({reinterpret_cast<const std::uint8_t*>(packet.data()+2),16});
                 const auto body=mir3::decode_six_bit(reinterpret_cast<const std::uint8_t*>(packet.data()+18),packet.size()-19);
                 check(header && header->opcode==opcode && header->recognition==0 && header->parameters==std::array<std::uint16_t,3>{0,0,0},"普通请求头参数全部为零");
-                check(body && *body==(opcode==100?"account/-123":"account/Hero"),"查询和进入分别编码正文");
+                check(body && *body==(opcode==mir3::protocol::CM_QUERYCHR?"account/-123":"account/Hero"),"查询和进入分别编码正文");
             }
-            const auto fields=sender.packet(520,0x12345678,0xabcdef01,0x2345);
+            const auto fields=sender.packet(mir3::protocol::SM_QUERYCHR,0x12345678,0xabcdef01,0x2345);
             const auto plain=mir3::ReceiveHeader::decode_plain({reinterpret_cast<const std::uint8_t*>(fields.data()+2),16});
-            check(plain && plain->recognition==0x12345678 && plain->opcode==520 && plain->parameters==std::array<std::uint16_t,3>{0xef01,0xabcd,0x2345},"普通消息头全部字段按小端读取，无场景密钥异或");
+            check(plain && plain->recognition==0x12345678 && plain->opcode==mir3::protocol::SM_QUERYCHR && plain->parameters==std::array<std::uint16_t,3>{0xef01,0xabcd,0x2345},"普通消息头全部字段按小端读取，无场景密钥异或");
             mir3::SelectionNotice notice;
-            for (int opcode:{526,527,528}) {
+            for (int opcode:{mir3::protocol::SM_STARTFAIL,mir3::protocol::SM_QUERYCHR_FAIL,mir3::protocol::SM_OUTOFCONNECTION}) {
                 notice.show(mir3::SelectionNotice::reply_message(opcode));
-                check(notice.message==(opcode==526?221:(opcode==527?220:222)) && !notice.pressed,"进入失败回包映射原版提示");
+                check(notice.message==(opcode==mir3::protocol::SM_STARTFAIL?221:(opcode==mir3::protocol::SM_QUERYCHR_FAIL?220:222)) && !notice.pressed,"进入失败回包映射原版提示");
                 notice.pressed=true;notice.close();check(!notice.message && !notice.pressed,"提示关闭清理按下状态");
             }
-            check(!mir3::SelectionNotice::reply_message(525),"进入成功不误当失败提示");
+            check(!mir3::SelectionNotice::reply_message(mir3::protocol::SM_STARTPLAY),"进入成功不误当失败提示");
             std::cout << "SELECTION_REQUESTS_MODEL_OK\n";return 0;
         }
         if (std::filesystem::path(argv[1])=="--selection-list") {
@@ -74,7 +75,7 @@ int main(int argc,char** argv) {
             check(canvas[offset]==248,"透明像素保留背景");
             mir3::CharacterSelectionPage page;
             mir3::SendMessages sender;
-            const auto packet=sender.packet(520,4,0,0,"*One/0/ignored/24/0/Two/1/x/31/1/Three/2/y/256/0/Four/2/z/55/1/");
+            const auto packet=sender.packet(mir3::protocol::SM_QUERYCHR,4,0,0,"*One/0/ignored/24/0/Two/1/x/31/1/Three/2/y/256/0/Four/2/z/55/1/");
             const auto bytes=std::span(reinterpret_cast<const std::uint8_t*>(packet.data()+2),packet.size()-3);
             check(page.receive(bytes) && page.count==4 && page.selected==0 && page.page==0 && !page.connecting,"520普通消息头、四槽位及默认选中");
             check(page.roles[0].name=="One" && page.roles[0].x==250 && page.roles[1].x==350 && page.roles[1].y==250,"星号跳过及双角色坐标");
@@ -94,7 +95,7 @@ int main(int argc,char** argv) {
             for (auto body:{"bad", "Name/3/x/1/0", "Name/0/x/1/2", "Name/0/x/99999999999999999999999/0", "/0/x/1/0"})
                 check(!page.receive_list(1,body) && page.count==4 && page.selected==2 && page.roles[0].name==old_name,"畸形列表原子拒绝");
             check(!page.receive(bytes.first(15)) && page.count==4,"截断头不清理现有列表");
-            const auto wrong=sender.packet(521,1,0,0,"Name/0/x/1/0");
+            const auto wrong=sender.packet(mir3::protocol::SM_NEWCHR_SUCCESS,1,0,0,"Name/0/x/1/0");
             check(!page.receive({reinterpret_cast<const std::uint8_t*>(wrong.data()+2),wrong.size()-3}),"非520回包不作为列表");
             check(page.receive_list(1,"Single/1//33/0") && page.roles[0].x==300 && page.roles[0].y==210 && !page.turn_page(1),"单角色居中、末尾斜杠可省略");
             check(page.receive_list(5,"A/0/x/1/0/B/0/x/1/0/C/0/x/1/0/D/0/x/1/0/ignored") && page.count==4,"超过四角色只取前四条");
@@ -132,16 +133,16 @@ int main(int argc,char** argv) {
         }
         if (std::filesystem::path(argv[1])=="--exit-request") {
             mir3::SendMessages sender;
-            const auto logout=sender.packet(1009);
+            const auto logout=sender.packet(mir3::protocol::CM_LOGOUT);
             const auto raw=mir3::decode_six_bit(reinterpret_cast<const std::uint8_t*>(logout.data()+2),16);
             check(logout.size()==19 && logout.substr(0,2)=="#1" && logout.back()=='!' && raw && raw->size()==12,"退出请求只有带边界的编码头");
             for (int i=0;i<12;++i) check(std::uint8_t((*raw)[i])==(i==4?0xf1:(i==5?3:0)),"1009头其余字段全部为零");
-            const auto npc=sender.packet(1011,0x12345678,0xabcdef01,0x2345,std::string_view("abc\0ignored",11));
+            const auto npc=sender.packet(mir3::protocol::CM_MERCHANTDLGSELECT,0x12345678,0xabcdef01,0x2345,std::string_view("abc\0ignored",11));
             const auto nh=mir3::decode_six_bit(reinterpret_cast<const std::uint8_t*>(npc.data()+2),16);
             const auto body=mir3::decode_six_bit(reinterpret_cast<const std::uint8_t*>(npc.data()+18),npc.size()-19);
             check(npc[1]=='2' && nh && std::uint8_t((*nh)[0])==0x78 && std::uint8_t((*nh)[9])==0xab && std::uint8_t((*nh)[11])==0x23 && body && *body=="abc","NPC与退出共用序号，字段和正文编码保持");
-            for (int i=3;i<=9;++i) check(sender.packet(1009)[1]=='0'+i,"序号依次增长");
-            check(sender.packet(1009)[1]=='1',"序号九后回一");
+            for (int i=3;i<=9;++i) check(sender.packet(mir3::protocol::CM_LOGOUT)[1]=='0'+i,"序号依次增长");
+            check(sender.packet(mir3::protocol::CM_LOGOUT)[1]=='1',"序号九后回一");
             std::cout << "EXIT_REQUEST_MODEL_OK\n";return 0;
         }
         if (std::filesystem::path(argv[1])=="--options-input") {
@@ -193,13 +194,13 @@ int main(int argc,char** argv) {
             std::cout << "MAP_INPUT_MODEL_OK\n";return 0;
         }
         if (std::filesystem::path(argv[1])=="--map-wire") {
-            const auto message=mir3::MapChangeMessage::parse(634,{312,310,0x0301},"01");
+            const auto message=mir3::MapChangeMessage::parse(mir3::protocol::SM_CHANGEMAP,{312,310,0x0301},"01");
             check(message && message->x==312 && message->y==310 && message->ambient==1 && message->series==3,"地图消息独立解析坐标、亮度及地图状态");
-            check(mir3::MapChangeMessage::parse(51,{0,0,0},std::string("0\0ignored",9))->map_id=="0","地图文件名按 NUL 终止");
+            check(mir3::MapChangeMessage::parse(mir3::protocol::SM_NEWMAP,{0,0,0},std::string("0\0ignored",9))->map_id=="0","地图文件名按 NUL 终止");
             for (const auto* id:{"","../0","a/b","a\\b","G:0","0.map"})
-                check(!mir3::MapChangeMessage::parse(51,{0,0,0},id),"拒绝空编号、路径及扩展名");
+                check(!mir3::MapChangeMessage::parse(mir3::protocol::SM_NEWMAP,{0,0,0},id),"拒绝空编号、路径及扩展名");
             check(mir3::valid_map_id("A_01-2") && mir3::valid_map_id(std::string(64,'a')) && !mir3::valid_map_id(std::string(65,'a')),"地图编号字符和长度边界");
-            check(!mir3::MapChangeMessage::parse(54,{0,0,0},"0"),"名称消息不能作为地图切换");
+            check(!mir3::MapChangeMessage::parse(mir3::protocol::SM_MAPDESCRIPTION,{0,0,0},"0"),"名称消息不能作为地图切换");
             std::cout << "MAP_WIRE_MODEL_OK\n";return 0;
         }
         if (std::filesystem::path(argv[1])=="--scene-light") {
@@ -224,7 +225,7 @@ int main(int argc,char** argv) {
             check(mir3::SceneLight::actor(0,0,8,true).outer_radius_cells==10 && mir3::SceneLight::actor(0,0,8,false).outer_radius_cells==8,"attribute 8 radius distinction");
             check(mir3::SceneLight::actor(0,0,255,true).outer_radius_cells==14 && mir3::SceneLight::actor(0,0,255,false).outer_radius_cells==10,"other byte attributes use bright fallback");
             mir3::SceneHumanQueue queue;
-            mir3::SceneHumanMessage update;update.opcode=807;update.light_attribute=8;
+            mir3::SceneHumanMessage update;update.opcode=mir3::protocol::SM_ACTOR_LIGHT;update.light_attribute=8;
             check(queue.push(update),"light update joins actor queue");
             update.light_attribute=256;check(!queue.push(update),"reject invalid light byte");
             queue.push({31});check(queue.fold_health().size()==1 && queue.size()==1 && queue.take()->light_attribute==8,"health folding preserves light records");
@@ -242,23 +243,24 @@ int main(int argc,char** argv) {
         }
         if (std::filesystem::path(argv[1])=="--scene-text") {
             check(mir3::chat_palette(5)==16750230 && mir3::chat_palette(6)==0x50ffff && mir3::chat_palette(7)==33023,"1.45 chat palette differs from reference source");
-            check(mir3::chat_palette(255)==0 && mir3::chat_opcode(40) && mir3::chat_opcode(1501) && mir3::chat_opcode(104) && !mir3::chat_opcode(42),"chat dispatch classification");
+            check(mir3::chat_palette(255)==0 && mir3::chat_opcode(mir3::protocol::SM_HEAR) && mir3::chat_opcode(mir3::protocol::SM_MONSTERSAY) && mir3::chat_opcode(mir3::protocol::SM_GUILDMESSAGE) && !mir3::chat_opcode(42),"chat dispatch classification");
             std::cout << "SCENE_TEXT_MODEL_OK\n";
             return 0;
         }
         if (std::filesystem::path(argv[1])=="--scene-wire") {
-            const std::string wire="Ex\\Zn?My<AT<<<<<";
+            // 原版428308：偏移4先异或k2；偏移7不参与密钥异或。
+            const std::string wire="Ex\\ZnBEy<<<<<<<<";
             const std::array<std::uint8_t,4> key{18,52,86,120};
             const auto header=mir3::ReceiveHeader::decode({reinterpret_cast<const std::uint8_t*>(wire.data()),wire.size()},key);
-            check(header && header->recognition==5 && header->opcode==53 && header->parameters==std::array<std::uint16_t,3>{200,30,200},"fixed permuted keyed header fixture");
+            check(header && header->recognition==5 && header->opcode==mir3::protocol::SM_HEALTHSPELLCHANGED && header->parameters==std::array<std::uint16_t,3>{200,30,200},"fixed permuted keyed header fixture");
             const std::array<std::uint8_t,2> bad{60,61};
             check(!mir3::decode_six_bit(bad.data(),bad.size()),"reject nonzero six-bit padding");
             check(!mir3::ReceiveHeader::decode({},key),"reject truncated header");
             mir3::SceneHumanQueue queue;
-            mir3::SceneHumanMessage hp{31};hp.health=std::array<std::uint16_t,3>{100,200,0};
+            mir3::SceneHumanMessage hp{mir3::protocol::SM_STRUCK};hp.health=std::array<std::uint16_t,3>{100,200,0};
             queue.push(hp);check(queue.fold_health().empty(),"single health record stays ordered");
             queue.push({14});queue.push(hp);
-            check(queue.fold_health().size()==2 && queue.size()==1 && queue.take()->opcode==14,"fold only health records while preserving actions");
+            check(queue.fold_health().size()==2 && queue.size()==1 && queue.take()->opcode==mir3::protocol::SM_HIT,"fold only health records while preserving actions");
             std::cout << "SCENE_WIRE_MODEL_OK\n";
             return 0;
         }
@@ -316,7 +318,7 @@ int main(int argc,char** argv) {
             check(!queue.push({99}) && !queue.push({14,0,0,8}) && !queue.push({1309,0,0,0,50}),"invalid decoded records rejected");
             check(queue.push({11,1,2,4}) && queue.push({14,3,4,2}) && !queue.catching_up(),"two records do not catch up");
             check(queue.push({1309}) && queue.catching_up(),"three records enable catch-up before dequeue");
-            check(queue.take()->opcode==11 && !queue.catching_up() && queue.take()->opcode==14 && queue.take()->opcode==1309,"FIFO preserves distinct actions");
+            check(queue.take()->opcode==mir3::protocol::SM_WALK && !queue.catching_up() && queue.take()->opcode==mir3::protocol::SM_HIT && queue.take()->opcode==mir3::protocol::SM_HUMAN_STRUCK,"FIFO preserves distinct actions");
             mir3::HumanActionClock clock;
             clock.start(9,true);clock.advance(85);check(clock.frame()==0,"first catch-up interval remains full length");
             clock.advance(1);clock.advance(42);check(clock.frame()==1,"halved interval still strict");

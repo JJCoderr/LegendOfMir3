@@ -1,4 +1,5 @@
 #pragma once
+#include "protocol/message_ids.hpp"
 #include <array>
 #include "damage_numbers.hpp"
 #include <cstdint>
@@ -16,8 +17,8 @@ struct SceneHealth {
     }
     static int width(std::uint8_t value) { return int(double(value)*double(0.01f)*36.0); }
     bool apply(int opcode,int hp,int mp,int max_hp) {
-        if ((opcode!=53 && opcode!=1312) || hp<0 || hp>65535 || mp<0 || mp>65535 || max_hp<0 || max_hp>65535) return false;
-        if (opcode==53) { current=hp;mana=mp;maximum=max_hp; }
+        if ((opcode!=mir3::protocol::SM_HEALTHSPELLCHANGED && opcode!=mir3::protocol::SM_HEALTH_PERCENT) || hp<0 || hp>65535 || mp<0 || mp>65535 || max_hp<0 || max_hp>65535) return false;
+        if (opcode==mir3::protocol::SM_HEALTHSPELLCHANGED) { current=hp;mana=mp;maximum=max_hp; }
         else { registration_fields={std::uint16_t(hp),std::uint16_t(mp),std::uint16_t(max_hp)};registered=true;age_ms=0; }
         return true;
     }

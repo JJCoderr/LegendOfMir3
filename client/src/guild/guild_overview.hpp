@@ -1,4 +1,5 @@
 #pragma once
+#include "protocol/message_ids.hpp"
 #include <string>
 #include <string_view>
 #include <utility>
@@ -16,7 +17,7 @@ struct GuildOverview {
     std::vector<GuildLine> overview;
     std::vector<std::string> editable;
     bool receive_continuation(const GuildReply& reply) {
-        if ((reply.identifier!=773 && reply.identifier!=774) || reply.ansi.size()>8191) return false;
+        if ((reply.identifier!=mir3::protocol::SM_GUILD_OVERVIEW && reply.identifier!=mir3::protocol::SM_GUILD_OVERVIEW_UPDATE) || reply.ansi.size()>8191) return false;
         std::string_view text=reply.ansi;text=text.substr(0,text.find(char(0)));
         GuildOverview next=*this;
         std::size_t cursor=0;
@@ -45,7 +46,7 @@ struct GuildOverview {
         *this=std::move(next);return true;
     }
     bool receive(const GuildReply& reply) {
-        if (reply.identifier!=753 || reply.ansi.size()>8191) return false;
+        if (reply.identifier!=mir3::protocol::SM_OPENGUILDDLG || reply.ansi.size()>8191) return false;
         std::string_view text=reply.ansi;
         text=text.substr(0,text.find(char(0)));
         const auto first=text.find('\r');if (first==text.npos || first>63) return false;

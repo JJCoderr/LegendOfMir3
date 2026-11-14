@@ -1,7 +1,9 @@
+#include "protocol/message_ids.hpp"
 #include "hud/selection_pixels.hpp"
 #include "chat/scene_chat.hpp"
 #include "protocol/receive_message.hpp"
 #include <godot_cpp/classes/resource_loader.hpp>
+#include <godot_cpp/classes/os.hpp>
 #include "hud/sound_position.hpp"
 #include <godot_cpp/classes/audio_server.hpp>
 #include <godot_cpp/classes/audio_effect_panner.hpp>
@@ -56,6 +58,10 @@ std::uint64_t ticks_msec() {
 }
 }
 void Mir3HudView::_bind_methods() {
+#define MIR3_MESSAGE(name,value) ClassDB::bind_integer_constant(get_class_static(),StringName(),#name,mir3::protocol::name);
+#include "protocol/message_ids.inc"
+#undef MIR3_MESSAGE
+
     ADD_SIGNAL(MethodInfo("pickup_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::VECTOR2I,"cell")));
     ClassDB::bind_method(D_METHOD("set_hud_decoration","state"),&Mir3HudView::set_hud_decoration);
     ClassDB::bind_method(D_METHOD("apply_inventory_add","identifier","icon","count","make_index","name","std_mode","stack_mode"),&Mir3HudView::apply_inventory_add);
@@ -87,6 +93,15 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("client_packet_ready",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"packet")));
     ADD_SIGNAL(MethodInfo("game_connection_close_requested"));
     ADD_SIGNAL(MethodInfo("character_selection_connection_requested"));
+    ClassDB::bind_method(D_METHOD("open_login"),&Mir3HudView::open_login);
+    ClassDB::bind_method(D_METHOD("open_server_groups"),&Mir3HudView::open_server_groups);
+    ClassDB::bind_method(D_METHOD("set_connection_enabled","enabled"),&Mir3HudView::set_connection_enabled);
+    ClassDB::bind_method(D_METHOD("apply_login_message","message"),&Mir3HudView::apply_login_message);
+    ClassDB::bind_method(D_METHOD("apply_game_message","message"),&Mir3HudView::apply_game_message);
+    ADD_SIGNAL(MethodInfo("login_connection_requested",PropertyInfo(Variant::STRING,"host"),PropertyInfo(Variant::INT,"port")));
+    ADD_SIGNAL(MethodInfo("login_connection_close_requested"));
+    ADD_SIGNAL(MethodInfo("selection_endpoint_ready",PropertyInfo(Variant::STRING,"host"),PropertyInfo(Variant::INT,"port")));
+    ADD_SIGNAL(MethodInfo("login_url_requested",PropertyInfo(Variant::STRING,"url")));
     ClassDB::bind_method(D_METHOD("set_selection_session","account","number"),&Mir3HudView::set_selection_session);
     ClassDB::bind_method(D_METHOD("request_selection_list"),&Mir3HudView::request_selection_list);
     ClassDB::bind_method(D_METHOD("apply_selection_message","message"),&Mir3HudView::apply_selection_message);
@@ -377,13 +392,20 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["portrait_count"]=int64_t(portrait_picker.names.size());
     result["portrait_first"]=portrait_picker.first;
     result["portrait_selected"]=portrait_picker.selected;
-    result["client_page"]=character_selection.visible?2:3;
+    result["client_page"]=server_groups.visible?0:(login_visible?1:(character_selection.visible?2:3));
+    result["server_group_count"]=int(server_groups.groups.size());result["server_group_selected"]=server_groups.selected;
+    result["server_group_first"]=server_groups.first;result["login_movie_active"]=login_movie_purpose!=LoginMoviePurpose::none;
+    result["login_phase"]=int(login_flow.phase);result["login_field"]=login_flow.field;
+    result["login_notice"]=login_flow.notice.message;result["login_editor_visible"]=login_visible && login_flow.editor_visible && !login_flow.notice.message;
+    result["login_server_count"]=int(login_flow.servers.size());
     result["exit_transition_active"]=exit_transition.active;
     result["exit_transition_ms"]=int64_t(exit_transition.elapsed);
     result["exit_brightness"]=exit_transition.brightness();
     result["selection_connecting"]=character_selection.visible && character_selection.connecting;
     result["selection_count"]=character_selection.count;result["selection_selected"]=character_selection.selected;
     result["selection_page"]=character_selection.page;result["selection_empty_alert"]=selection_notice.message==219;result["selection_notice"]=selection_notice.message;
+    result["creation_visible"]=character_creation.visible;result["creation_profession"]=character_creation.profession;result["creation_gender"]=character_creation.selected;
+    result["selection_delete_visible"]=selection_delete.visible;result["selection_delete_selected"]=selection_delete.selected;
     Array selection_roles;
     for (int i=0;i<character_selection.count;++i) {
         const auto& role=character_selection.roles[i];Dictionary entry;
@@ -591,16 +613,26 @@ void Mir3HudView::_ready() {
         auto image=frame(mir3::HudLayout::buttons[i][0]);
         if (image.is_valid()) model.button_sizes[i]={image->get_width(),image->get_height()};
     }
+    if (!bool(get_meta("offline_preview",false))) {
+        if (!open_server_groups() && !open_login()) UtilityFunctions::push_error("Cannot load login configuration or interface resources.");
+        return;
+    }
     UtilityFunctions::print("HUD ready: 800x600; original WIL resources; C++ MVC.");
     // A restored map request can receive a synchronous reply, so dispatch it
     // after the map archives and the HUD have been initialized.
     if (terrain_ready)
         set_map_location(String::utf8("\xe6\xaf\x94\xe5\xa5\x87\xe7\x9c\x81"),player_cell.x,player_cell.y);
     else if (portrait_map_pending)
-        emit_signal("minimap_requested",1033);
+        emit_signal("minimap_requested",mir3::protocol::CM_MINIMAP);
     queue_redraw();
 }
 void Mir3HudView::_exit_tree() {
+    connection.close();login_movie.close();
+    const auto stop=[](AudioStreamPlayer* player) {
+        if (player) { player->stop();player->set_stream(Ref<AudioStream>()); }
+    };
+    stop(login_movie_audio);stop(map_music);stop(hud_sound);
+    for (auto& [file,player]:login_effects) stop(player);
     while (!actor_sounds.empty()) remove_actor_sound(actor_sounds.begin()->first);
     if (footstep_bus==StringName()) return;
     footstep_sound->stop();
@@ -674,7 +706,7 @@ void Mir3HudView::set_hovered_target(std::uint32_t actor,int type,int shape,bool
         if (changed && cell.x>=0 && cell.x<=65535 && cell.y>=0 && cell.y<=65535) {
             const auto& attributes=target_attributes_by_actor.try_emplace(actor).first->second;
             if (attributes.icon==-1)
-                emit_signal("target_attributes_requested",1047,actor,cell);
+                emit_signal("target_attributes_requested",mir3::protocol::CM_TARGET_ATTRIBUTES,actor,cell);
         }
     }
     queue_redraw();
@@ -710,7 +742,7 @@ void Mir3HudView::set_hovered_human(std::uint32_t actor,int type,int profession,
     if (!name.is_empty() && target_portrait_query_name!=name) {
         target_portrait_query_name=name;
         // 0x47D3A0 queries the character name. The actor is local reply context.
-        emit_signal("target_portrait_requested",1152,actor,name);
+        emit_signal("target_portrait_requested",mir3::protocol::CM_TARGET_PORTRAIT,actor,name);
     }
     queue_redraw();
 }
@@ -801,17 +833,17 @@ bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
 }
 
 bool Mir3HudView::apply_npc_message(PackedByteArray encoded,PackedByteArray key) {
-    if (character_selection.visible) return false;
+    if (server_groups.visible || login_visible || character_selection.visible) return false;
     constexpr int header_size=16;
     if (key.size()!=4 || encoded.size()<header_size || encoded.size()>header_size+(10240*4+2)/3) return false;
     const auto header=mir3::decode_six_bit(encoded.ptr(),header_size);
     if (!header) return false;
     const auto b=[&](int index) { return std::uint32_t(std::uint8_t((*header)[index])); };
     // 0x428308..0x428399 reconstructs these fields using the connection key.
-    const int opcode=(b(0)^key[0])|((b(4)^key[1])<<8);
-    const auto actor=(b(5)^key[3])|((b(7)^key[2])<<8)|(b(9)<<16)|(b(11)<<24);
+    const int opcode=(b(0)^key[0])|((b(4)^key[2]^key[1])<<8);
+    const auto actor=(b(5)^key[3])|(b(7)<<8)|(b(9)<<16)|(b(11)<<24);
     const int first_parameter=b(1)|(b(6)<<8);
-    if (opcode==652) {
+    if (opcode==mir3::protocol::SM_SENDDETAILGOODSLIST) {
         // 0x42A8B6 / 0x4796A0: count and offset precede a nested six-bit item list.
         const int offset=b(2)|(b(8)<<8);
         if (first_parameter>255 || shop_selected<0) return false;
@@ -839,15 +871,15 @@ bool Mir3HudView::apply_npc_message(PackedByteArray encoded,PackedByteArray key)
         if (!remaining.empty()) return false;
         return apply_shop_offers(shop_actor,shop_selected,names,icons,prices,identifiers,offset);
     }
-    if (opcode==650 || opcode==651)
+    if (opcode==mir3::protocol::SM_BUYITEM_SUCCESS || opcode==mir3::protocol::SM_BUYITEM_FAIL)
         return encoded.size()==header_size && apply_shop_purchase_reply(opcode,first_parameter);
     if (actor>INT_MAX) return false;
     return apply_npc_body(opcode,static_cast<int>(actor),first_parameter,encoded.slice(header_size));
 }
 
 bool Mir3HudView::apply_npc_body(int opcode,int actor,int count,PackedByteArray encoded) {
-    if (opcode==644) return encoded.is_empty() && apply_npc_dialogue(opcode,actor,String());
-    const int limit=opcode==643?8192:opcode==645?10240:0;
+    if (opcode==mir3::protocol::SM_MERCHANTDLGCLOSE) return encoded.is_empty() && apply_npc_dialogue(opcode,actor,String());
+    const int limit=opcode==mir3::protocol::SM_MERCHANTSAY?8192:opcode==mir3::protocol::SM_SENDGOODSLIST?10240:0;
     if (!limit || encoded.size()>(limit*4+2)/3) return false;
 
     const auto decoded=mir3::decode_six_bit(encoded.ptr(),encoded.size());
@@ -855,15 +887,15 @@ bool Mir3HudView::apply_npc_body(int opcode,int actor,int count,PackedByteArray 
     const auto& ansi=*decoded;
     const auto end=ansi.find(char(0));
     const auto body=String::utf8(mir3::ansi_to_utf8(std::string_view(ansi).substr(0,end)).c_str());
-    return opcode==643?apply_npc_dialogue(opcode,actor,body):apply_shop_goods(actor,count,body,true);
+    return opcode==mir3::protocol::SM_MERCHANTSAY?apply_npc_dialogue(opcode,actor,body):apply_shop_goods(actor,count,body,true);
 }
 
 bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
-    if (opcode==644) {
+    if (opcode==mir3::protocol::SM_MERCHANTDLGCLOSE) {
         close_npc_dialogue();
         return true;
     } else {
-        if (opcode!=643 || actor<=0) return false;
+        if (opcode!=mir3::protocol::SM_MERCHANTSAY || actor<=0) return false;
         const auto utf8=body.utf8();
         const std::string_view message(utf8.get_data(),utf8.length());
         if (message.size()>8192*4 || mir3::utf8_to_ansi(message).size()>8192) return false;
@@ -960,6 +992,54 @@ bool Mir3HudView::apply_npc_dialogue(int opcode,int actor,String body) {
     return true;
 }
 
+void Mir3HudView::set_connection_enabled(bool enabled) {
+    connection_enabled=enabled;
+    if (!enabled) { connection.close();connection_failed=false;connection_retry_at=0; }
+}
+
+void Mir3HudView::connect_page(ConnectionPage page,const mir3::LoginEndpoint& endpoint) {
+    connection.close();connection_page=page;connection_endpoint=endpoint;
+    connection_failed=false;connection_retry_at=0;outgoing_messages.sequence=0;
+    if (connection_enabled) connection_failed=!connection.open(String::utf8(endpoint.host.c_str()),endpoint.port);
+}
+
+void Mir3HudView::poll_connection(double delta) {
+    if (!connection_enabled) return;
+    if (connection_retry_at) {
+        if (ticks_msec()>=connection_retry_at) {
+            connection_retry_at=0;
+            connection_failed=!connection.open(String::utf8(connection_endpoint.host.c_str()),connection_endpoint.port);
+        }
+        return;
+    }
+    if (connection_failed) {
+        connection_failed=false;
+        // 0x47C430：系统Yes/No框；确认后等待2000ms重连，取消退出。
+        const auto caption=mir3::utf8_to_ansi(message(132));
+        const int answer=MessageBoxA(GetActiveWindow(),caption.c_str(),"Legend Of Mir 3",MB_YESNO);
+        if (answer==IDYES) connection_retry_at=ticks_msec()+2000;
+        else get_tree()->quit();
+        return;
+    }
+    const auto page=connection_page;
+    auto result=connection.poll();
+    if (result.failed) { connection_failed=true;return; }
+    if (result.opened && page==ConnectionPage::selection) request_selection_list();
+    else if (result.opened && page==ConnectionPage::game) {
+        game_connection={};
+        const auto packet=outgoing_messages.game_authentication(selection_session.account,game_entry.role,selection_session.number);
+        PackedByteArray bytes;bytes.resize(packet.size());std::copy(packet.begin(),packet.end(),bytes.ptrw());
+        connection.send(bytes);emit_signal("client_packet_ready",bytes);
+    }
+    for (const auto& payload:result.messages) {
+        if (page!=connection_page) break;
+        PackedByteArray bytes;bytes.resize(payload.size());std::copy(payload.begin(),payload.end(),bytes.ptrw());
+        if (page==ConnectionPage::login) apply_login_message(bytes);
+        else if (page==ConnectionPage::selection) apply_selection_message(bytes);
+        else if (page==ConnectionPage::game) apply_game_message(bytes);
+    }
+}
+
 PackedByteArray Mir3HudView::send_client_packet(int identifier,int actor,const String& body,std::uint32_t instance,std::uint16_t quantity) {
     const auto utf8=body.utf8();
     const auto ansi=mir3::utf8_to_ansi({utf8.get_data(),static_cast<std::size_t>(utf8.length())});
@@ -967,6 +1047,7 @@ PackedByteArray Mir3HudView::send_client_packet(int identifier,int actor,const S
     PackedByteArray bytes;
     bytes.resize(packet.size());
     std::copy(packet.begin(),packet.end(),bytes.ptrw());
+    if (connection_enabled) connection.send(bytes);
     emit_signal("client_packet_ready",bytes);
     return bytes;
 }
@@ -993,7 +1074,7 @@ void Mir3HudView::close_shop() {
 }
 
 void Mir3HudView::close_npc_dialogue() {
-    if (group_request==1011) finish_group_dialog(false);
+    if (group_request==mir3::protocol::CM_MERCHANTDLGSELECT) finish_group_dialog(false);
     close_shop();
     npc_dialogue_actor=0;
     npc_dialogue_rows.clear();
@@ -1004,9 +1085,9 @@ void Mir3HudView::close_npc_dialogue() {
 }
 
 bool Mir3HudView::apply_shop_purchase_reply(int identifier,int64_t value) {
-    if (identifier==650 && value>=0 && value<=UINT32_MAX) {
+    if (identifier==mir3::protocol::SM_BUYITEM_SUCCESS && value>=0 && value<=UINT32_MAX) {
         inventory_gold=static_cast<std::uint32_t>(value);
-    } else if (identifier==651 && value>=1 && value<=3) {
+    } else if (identifier==mir3::protocol::SM_BUYITEM_FAIL && value>=1 && value<=3) {
         open_group_dialog(1436+static_cast<int>(value));
     } else return false;
     queue_redraw();
@@ -1209,8 +1290,8 @@ void Mir3HudView::buy_shop_offer(int index) {
     const auto name=String::utf8(offer.name.c_str());
     const auto instance=offer.id;
     const int actor=shop_actor;
-    emit_signal("shop_purchase_requested",1014,actor,name);
-    emit_npc_packet(1014,actor,name,instance);
+    emit_signal("shop_purchase_requested",mir3::protocol::CM_USERBUYITEM,actor,name);
+    emit_npc_packet(mir3::protocol::CM_USERBUYITEM,actor,name,instance);
 }
 
 void Mir3HudView::open_shop_category() {
@@ -1237,16 +1318,16 @@ void Mir3HudView::open_shop_category() {
     const int index=shop_selected;
     const auto name=String::utf8(shop_goods[index].name.c_str());
     emit_signal("shop_good_requested",actor,index,name);
-    emit_signal("npc_request",1015,actor,name);
-    emit_npc_packet(1015,actor,name);
+    emit_signal("npc_request",mir3::protocol::CM_USERGETDETAILITEM,actor,name);
+    emit_npc_packet(mir3::protocol::CM_USERGETDETAILITEM,actor,name);
 }
 
 void Mir3HudView::buy_shop_bulk(std::uint16_t quantity) {
     const auto& good=shop_goods[shop_bulk_index];
     const auto item=String::utf8(good.name.c_str());
     const int actor=shop_actor;
-    emit_npc_packet(1014,actor,item,good.stock,quantity);
-    emit_signal("shop_purchase_requested",1014,actor,item);
+    emit_npc_packet(mir3::protocol::CM_USERBUYITEM,actor,item,good.stock,quantity);
+    emit_signal("shop_purchase_requested",mir3::protocol::CM_USERBUYITEM,actor,item);
 }
 
 bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
@@ -1308,7 +1389,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
                 shop_offer_page=page;
                 shop_offer_loading=true;
                 const auto name=String::utf8(shop_goods[shop_selected].name.c_str());
-                emit_npc_packet(1015,shop_actor,name,std::uint32_t(10*page));
+                emit_npc_packet(mir3::protocol::CM_USERGETDETAILITEM,shop_actor,name,std::uint32_t(10*page));
             }
         }
         get_viewport()->set_input_as_handled();
@@ -1509,9 +1590,9 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
             }
             npc_dialogue_prompt_command=item->command;
             npc_dialogue_prompt_actor=actor;
-            open_group_dialog(1011);
+            open_group_dialog(mir3::protocol::CM_MERCHANTDLGSELECT);
             const std::string_view script_command=item->command;
-            if (script_command.starts_with("@@*") && group_request==1011) {
+            if (script_command.starts_with("@@*") && group_request==mir3::protocol::CM_MERCHANTDLGSELECT) {
                 chat_input->set_secret_character("*");
                 chat_input->set_secret(true);
                 // 0x4612E7: storage-password commands optionally carry a byte limit before '_'.
@@ -1532,8 +1613,8 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
             queue_redraw();
         } else {
             emit_signal("npc_dialogue_action",actor,command);
-            emit_signal("npc_request",1011,actor,command);
-            emit_npc_packet(1011,actor,command);
+            emit_signal("npc_request",mir3::protocol::CM_MERCHANTDLGSELECT,actor,command);
+            emit_npc_packet(mir3::protocol::CM_MERCHANTDLGSELECT,actor,command);
         }
     }
     if (!inside && pressed<0) return false;
@@ -1548,9 +1629,9 @@ bool Mir3HudView::apply_scene_health(int actor,int opcode,int current,int mana,i
     const int previous=actor==0?model.hp:health.current;
     if (!health.apply(opcode,current,mana,maximum)) return false;
     health.damage.enabled=damage_numbers;
-    if (opcode==53) health.damage.changed(previous,current);
+    if (opcode==mir3::protocol::SM_HEALTHSPELLCHANGED) health.damage.changed(previous,current);
     scene_health.insert_or_assign(actor,health);
-    if (actor==0 && opcode==53) { model.hp=current;model.max_hp=maximum;model.mp=mana; }
+    if (actor==0 && opcode==mir3::protocol::SM_HEALTHSPELLCHANGED) { model.hp=current;model.max_hp=maximum;model.mp=mana; }
     queue_redraw();
     return true;
 }
@@ -1943,10 +2024,10 @@ const Mir3HudView::MapActorFrame* Mir3HudView::human_action_frame(int type,int c
 
 bool Mir3HudView::apply_scene_human_life(int actor,int opcode,Vector2i cell,int facing) {
     const auto it=scene_humans.find(actor);
-    if (it==scene_humans.end() || (opcode!=32 && opcode!=34 && opcode!=1316 && opcode!=1321) ||
+    if (it==scene_humans.end() || (opcode!=mir3::protocol::SM_DEATH && opcode!=mir3::protocol::SM_NOWDEATH && opcode!=mir3::protocol::SM_REVIVE && opcode!=mir3::protocol::SM_REVIVE_REFRESH) ||
         facing<0 || facing>=8 || !terrain.walkable(cell.x,cell.y)) return false;
     auto& human=it->second;
-    const bool revive=opcode==1316 || opcode==1321;
+    const bool revive=opcode==mir3::protocol::SM_REVIVE || opcode==mir3::protocol::SM_REVIVE_REFRESH;
     if (!revive) {
         for (int i=0;i<10;++i)
             if (!human_action_frame(human.type,human.clothing,mir3::HumanActions::frame(19,facing,i))) return false;
@@ -1954,7 +2035,7 @@ bool Mir3HudView::apply_scene_human_life(int actor,int opcode,Vector2i cell,int 
     apply_scene_human_stand(actor,cell,facing);
     if (revive) { human.life.revive(); human.combat.clear(); }
     else {
-        if (human.life.die(opcode==34)) human.action.start(19);
+        if (human.life.die(opcode==mir3::protocol::SM_NOWDEATH)) human.action.start(19);
         if (hovered_target==static_cast<std::uint32_t>(actor)) set_hovered_target(0,0,0,false,0,0,0,0);
         target_focus.remove(actor);
     }
@@ -1971,17 +2052,17 @@ bool Mir3HudView::set_local_actor_identity(int actor) {
 }
 
 bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray key) {
-    if (character_selection.visible) return false;
+    if (server_groups.visible || login_visible || character_selection.visible) return false;
     if (encoded.size()<16 || encoded.size()>1039) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),static_cast<std::size_t>(encoded.size())},
         {key.ptr(),static_cast<std::size_t>(key.size())});
-    if (!header || (header->recognition>INT_MAX && header->opcode!=51 && header->opcode!=634 && header->opcode!=54 && header->opcode!=1401)) return false;
+    if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS)) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
-    if (opcode==51 || opcode==634 || opcode==54) {
+    if (opcode==mir3::protocol::SM_NEWMAP || opcode==mir3::protocol::SM_CHANGEMAP || opcode==mir3::protocol::SM_MAPDESCRIPTION) {
         const auto decoded=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
         if (!decoded) return false;
-        if (opcode==54) {
+        if (opcode==mir3::protocol::SM_MAPDESCRIPTION) {
             const auto ansi=decoded->substr(0,decoded->find(char(0)));
             if (ansi.size()>259) return false;
             // 0x4282C0: description changes do not reset the map or its overlays.
@@ -1992,13 +2073,13 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         if (!message || map_changes.size()>=99999) return false;
         map_changes.push_back(*message);return true;
     }
-    if (opcode==1401) {
+    if (opcode==mir3::protocol::SM_CLIENT_OPTIONS) {
         if (encoded.size()!=16) return false;
         const auto changed=system_options.receive(header->recognition,p[0]);
         reception_buttons.receive_options(changed,rejected_chat);
         queue_redraw();return true;
     }
-    if (opcode==807) {
+    if (opcode==mir3::protocol::SM_ACTOR_LIGHT) {
         if (encoded.size()!=16 || actor<=0) return false;
         const unsigned light=p[2]>>8;
         if (actor==local_actor_identity) {
@@ -2007,21 +2088,21 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         const auto human=scene_humans.find(actor);
         if (human==scene_humans.end()) return false;
         mir3::SceneHumanMessage message;
-        message.opcode=807;message.light_attribute=light;
+        message.opcode=mir3::protocol::SM_ACTOR_LIGHT;message.light_attribute=light;
         return human->second.messages.push(message);
     }
-    if (opcode==46) {
+    if (opcode==mir3::protocol::SM_DAYCHANGING) {
         if (encoded.size()!=16) return false;
         scene_ambient.update(p[2]);
         queue_redraw();
         return true;
     }
     const int size=encoded.size()-16;
-    if (opcode==611) {
+    if (opcode==mir3::protocol::SM_ITEMHIDE) {
         if (size) return false;
         ground_items.hide(actor);ground_bounds.erase(actor);queue_redraw();return true;
     }
-    if (opcode==610) {
+    if (opcode==mir3::protocol::SM_ITEMSHOW) {
         if (!terrain_ready || actor<=0 || !terrain.contains(p[0],p[1])) return false;
         const auto decoded=mir3::decode_six_bit(encoded.ptr()+16,size);
         if (!decoded) return false;
@@ -2036,40 +2117,40 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         if (accepted) queue_redraw();
         return accepted;
     }
-    if (opcode==30 || opcode==633) {
+    if (opcode==mir3::protocol::SM_DISAPPEAR || opcode==mir3::protocol::SM_CLEAROBJECTS) {
         if (size || scene_removals.size()>=99999) return false;
-        if (opcode==633) scene_clear_pending=true;
+        if (opcode==mir3::protocol::SM_CLEAROBJECTS) scene_clear_pending=true;
         else if (actor>0) scene_removals.push_back(actor);
         return true;
     }
-    if (opcode==656) return size==0 && apply_scene_name(actor,opcode,p[0]&255,String());
-    if (opcode==42 || mir3::chat_opcode(opcode)) {
+    if (opcode==mir3::protocol::SM_CHANGENAMECOLOR) return size==0 && apply_scene_name(actor,opcode,p[0]&255,String());
+    if (opcode==mir3::protocol::SM_USERNAME || mir3::chat_opcode(opcode)) {
         const auto decoded=mir3::decode_six_bit(encoded.ptr()+16,size);
         if (!decoded) return false;
         const auto ansi=std::string_view(*decoded).substr(0,decoded->find(char(0)));
-        if (opcode!=42 && ansi.size()>259) return false;
+        if (opcode!=mir3::protocol::SM_USERNAME && ansi.size()>259) return false;
         const auto text=String::utf8(mir3::ansi_to_utf8(ansi).c_str());
-        if (opcode==42) return apply_scene_name(actor,opcode,p[0]&255,text);
+        if (opcode==mir3::protocol::SM_USERNAME) return apply_scene_name(actor,opcode,p[0]&255,text);
         // 1.45 0x42F380: log once, only 40/1501 also update actor speech.
-        if (opcode==40 || opcode==1501) {
+        if (opcode==mir3::protocol::SM_HEAR || opcode==mir3::protocol::SM_MONSTERSAY) {
             const bool present=actor==0 || scene_humans.contains(actor) || scene_npcs.contains(actor) || scene_chickens.contains(actor);
             if (present && !apply_scene_speech(actor,opcode,text)) return false;
         }
-        post_chat(text,mir3::chat_palette(opcode==104?4:p[0]&255),mir3::chat_palette(opcode==104?0:p[1]&255));
+        post_chat(text,mir3::chat_palette(opcode==mir3::protocol::SM_GUILDMESSAGE?4:p[0]&255),mir3::chat_palette(opcode==mir3::protocol::SM_GUILDMESSAGE?0:p[1]&255));
         return true;
     }
-    if (opcode==53 || opcode==1312) return size==0 && apply_scene_health(actor,opcode,p[0],p[1],p[2]);
+    if (opcode==mir3::protocol::SM_HEALTHSPELLCHANGED || opcode==mir3::protocol::SM_HEALTH_PERCENT) return size==0 && apply_scene_health(actor,opcode,p[0],p[1],p[2]);
     const auto found=scene_humans.find(actor);
     if (found==scene_humans.end() || !mir3::SceneHumanMessage::accepts(opcode)) return false;
-    mir3::SceneHumanMessage message{opcode,p[0],p[1],opcode==1309 || opcode==31?0:p[2]&255};
-    if (opcode==31) {
+    mir3::SceneHumanMessage message{opcode,p[0],p[1],opcode==mir3::protocol::SM_HUMAN_STRUCK || opcode==mir3::protocol::SM_STRUCK?0:p[2]&255};
+    if (opcode==mir3::protocol::SM_STRUCK) {
         if (size) return false;
         message.health=p;
-    } else if (opcode==7 || opcode==10 || opcode==11 || opcode==13 || opcode==1309 || opcode==1316 || opcode==1321) {
-        const bool required=opcode==10 || opcode==1309 || opcode==1316 || opcode==1321;
+    } else if (opcode==mir3::protocol::SM_BUMP || opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_WALK || opcode==mir3::protocol::SM_RUN || opcode==mir3::protocol::SM_HUMAN_STRUCK || opcode==mir3::protocol::SM_REVIVE || opcode==mir3::protocol::SM_REVIVE_REFRESH) {
+        const bool required=opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_HUMAN_STRUCK || opcode==mir3::protocol::SM_REVIVE || opcode==mir3::protocol::SM_REVIVE_REFRESH;
         if (size || required) {
             if (size!=22 && size!=29) return false;
-            if ((opcode==10 || opcode==1316 || opcode==1321) && size!=29) return false;
+            if ((opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_REVIVE || opcode==mir3::protocol::SM_REVIVE_REFRESH) && size!=29) return false;
             auto body=mir3::decode_six_bit(encoded.ptr()+16,22);
             if (!body || body->size()!=16) return false;
             if (size==29) {
@@ -2077,10 +2158,10 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
                 if (!extra || extra->size()!=5) return false;
                 *body+=*extra;
             }
-            message.appearance=mir3::HumanAppearance::parse({reinterpret_cast<const std::uint8_t*>(body->data()),body->size()},opcode==1309);
+            message.appearance=mir3::HumanAppearance::parse({reinterpret_cast<const std::uint8_t*>(body->data()),body->size()},opcode==mir3::protocol::SM_HUMAN_STRUCK);
             if (!message.appearance) return false;
             message.flags=message.appearance->flags;
-            if (opcode==1309) {
+            if (opcode==mir3::protocol::SM_HUMAN_STRUCK) {
                 message.health=p;
                 for (int i=0;i<4;++i) message.hit_source|=std::uint32_t(std::uint8_t((*body)[8+i]))<<(8*i);
             }
@@ -2090,7 +2171,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         // Reject it until that effect is implemented rather than silently drop it.
         return false;
     }
-    if (opcode!=1309 && opcode!=31 && !terrain.walkable(message.x,message.y)) return false;
+    if (opcode!=mir3::protocol::SM_HUMAN_STRUCK && opcode!=mir3::protocol::SM_STRUCK && !terrain.walkable(message.x,message.y)) return false;
     return found->second.messages.push(message);
 }
 
@@ -2100,19 +2181,19 @@ void Mir3HudView::apply_actor_health_record(int actor,const mir3::SceneHumanMess
     const auto& p=*message.health;
     health.current=p[0];health.maximum=p[1];
     health.damage.enabled=damage_numbers;
-    if (message.opcode==1309) health.damage.push(-int(p[2]));
+    if (message.opcode==mir3::protocol::SM_HUMAN_STRUCK) health.damage.push(-int(p[2]));
     queue_redraw();
 }
 
 bool Mir3HudView::queue_scene_human_state(int actor,int opcode,Vector2i cell,int facing,const PackedByteArray& body,int hit_weapon) {
     switch (opcode) {
-    case 7: case 10: case 11: case 13: case 1309: case 1316: case 1321: break;
+    case mir3::protocol::SM_BUMP: case mir3::protocol::SM_TURN: case mir3::protocol::SM_WALK: case mir3::protocol::SM_RUN: case mir3::protocol::SM_HUMAN_STRUCK: case mir3::protocol::SM_REVIVE: case mir3::protocol::SM_REVIVE_REFRESH: break;
     default: return false;
     }
     const auto found=scene_humans.find(actor);
-    if (found==scene_humans.end() || (opcode!=1309 && !terrain.walkable(cell.x,cell.y))) return false;
-    if ((opcode==10 || opcode==1316 || opcode==1321) && body.size()!=21) return false;
-    const auto appearance=mir3::HumanAppearance::parse({body.ptr(),static_cast<std::size_t>(body.size())},opcode==1309);
+    if (found==scene_humans.end() || (opcode!=mir3::protocol::SM_HUMAN_STRUCK && !terrain.walkable(cell.x,cell.y))) return false;
+    if ((opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_REVIVE || opcode==mir3::protocol::SM_REVIVE_REFRESH) && body.size()!=21) return false;
+    const auto appearance=mir3::HumanAppearance::parse({body.ptr(),static_cast<std::size_t>(body.size())},opcode==mir3::protocol::SM_HUMAN_STRUCK);
     if (!appearance) return false;
     return found->second.messages.push({opcode,cell.x,cell.y,facing,hit_weapon,appearance->flags,appearance});
 }
@@ -2141,7 +2222,7 @@ bool Mir3HudView::apply_scene_appearance(int actor,const mir3::HumanAppearance& 
 bool Mir3HudView::queue_scene_human_message(int actor,int opcode,Vector2i cell,int facing,int hit_weapon,std::int64_t flags) {
     const auto it=scene_humans.find(actor);
     if (it==scene_humans.end() || flags<0 || flags>0xFFFFFFFFLL ||
-        (opcode!=1309 && !terrain.walkable(cell.x,cell.y))) return false;
+        (opcode!=mir3::protocol::SM_HUMAN_STRUCK && !terrain.walkable(cell.x,cell.y))) return false;
     return it->second.messages.push({opcode,cell.x,cell.y,facing,hit_weapon,static_cast<std::uint32_t>(flags)});
 }
 
@@ -2152,28 +2233,28 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     if (!next) return false;
     bool accepted=false;
     const Vector2i cell(next->x,next->y);
-    if (next->opcode==807) { human.light_attribute=next->light_attribute;queue_redraw();return true; }
-    if (next->opcode==31) { apply_actor_health_record(actor,*next);return true; }
+    if (next->opcode==mir3::protocol::SM_ACTOR_LIGHT) { human.light_attribute=next->light_attribute;queue_redraw();return true; }
+    if (next->opcode==mir3::protocol::SM_STRUCK) { apply_actor_health_record(actor,*next);return true; }
     // Dead actors only accept standing/revival feature refreshes.
-    const bool refresh=next->opcode==10 || next->opcode==1316 || next->opcode==1321;
+    const bool refresh=next->opcode==mir3::protocol::SM_TURN || next->opcode==mir3::protocol::SM_REVIVE || next->opcode==mir3::protocol::SM_REVIVE_REFRESH;
     if (next->appearance && (!human.life.dead || refresh) && !apply_scene_appearance(actor,*next->appearance)) return true;
-    if (next->opcode==32 || next->opcode==34 || next->opcode==1316 || next->opcode==1321) {
+    if (next->opcode==mir3::protocol::SM_DEATH || next->opcode==mir3::protocol::SM_NOWDEATH || next->opcode==mir3::protocol::SM_REVIVE || next->opcode==mir3::protocol::SM_REVIVE_REFRESH) {
         accepted=apply_scene_human_life(actor,next->opcode,cell,next->facing);
         if (accepted && human.life.dying) human.action.start(19,catch_up);
-    } else if (next->opcode==10) accepted=apply_scene_human_stand(actor,cell,next->facing);
+    } else if (next->opcode==mir3::protocol::SM_TURN) accepted=apply_scene_human_stand(actor,cell,next->facing);
     else if (human.life.dead) return true; // dead actors drain ordinary records without acting
-    else if (next->opcode==7 || next->opcode==11 || next->opcode==13)
+    else if (next->opcode==mir3::protocol::SM_BUMP || next->opcode==mir3::protocol::SM_WALK || next->opcode==mir3::protocol::SM_RUN)
         accepted=apply_scene_human_step(actor,next->opcode,cell,next->facing);
     else {
         int hit_weapon=next->hit_weapon;
-        if (next->opcode==1309 && next->health) {
+        if (next->opcode==mir3::protocol::SM_HUMAN_STRUCK && next->health) {
             apply_actor_health_record(actor,*next);
             if ((*next->health)[2]==0) return true; // miss updates HP but does not interrupt with hit animation
             if (const auto source=scene_humans.find(next->hit_source);source!=scene_humans.end()) hit_weapon=source->second.weapon;
         }
         accepted=apply_scene_human_action(actor,next->opcode,next->facing,hit_weapon);
         if (accepted) {
-            if (next->opcode!=1309) human.cell=cell;
+            if (next->opcode!=mir3::protocol::SM_HUMAN_STRUCK) human.cell=cell;
             human.action.start(human.action.action(),catch_up);
         }
     }
@@ -2192,15 +2273,15 @@ bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing,int h
     if (human.movement_frame>=0 || human.life.dead) return false;
     int action=-1;
     switch (opcode) {
-    case 14: case 15: action=mir3::HumanActions::weapon_attack(human.weapon); break;
-    case 1306: action=17; break;
-    case 1307: action=16; facing=human.facing; break;
-    case 1308: action=18; break;
-    case 1319: action=9; break;
-    case 1309: action=human.mount_shape?32:15; facing=human.facing; break;
+    case mir3::protocol::SM_HIT: case mir3::protocol::SM_HIT2: action=mir3::HumanActions::weapon_attack(human.weapon); break;
+    case mir3::protocol::SM_HUMAN_CAST: action=17; break;
+    case mir3::protocol::SM_HUMAN_CAST_ALT: action=16; facing=human.facing; break;
+    case mir3::protocol::SM_HUMAN_ACTION18: action=18; break;
+    case mir3::protocol::SM_HUMAN_ATTACK: action=9; break;
+    case mir3::protocol::SM_HUMAN_STRUCK: action=human.mount_shape?32:15; facing=human.facing; break;
     default: return false;
     }
-    if (human.mount_shape && opcode!=1309) return false;
+    if (human.mount_shape && opcode!=mir3::protocol::SM_HUMAN_STRUCK) return false;
     for (int i=0;i<mir3::HumanActions::table[action].count;++i)
         if (!human_action_frame(human.type,human.clothing,mir3::HumanActions::frame(action,facing,i))) return false;
     human.facing=facing;
@@ -2208,7 +2289,7 @@ bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing,int h
     human.catching_up=false;
     human.action_flags=0;
     human.hit_weapon=hit_weapon;
-    if (opcode!=1309) human.combat.attack();
+    if (opcode!=mir3::protocol::SM_HUMAN_STRUCK) human.combat.attack();
     human.idle.reset();
     queue_redraw();
     return true;
@@ -2239,19 +2320,19 @@ bool Mir3HudView::apply_scene_human_stand(int actor,Vector2i cell,int facing) {
 
 bool Mir3HudView::apply_scene_human_step(int actor,int opcode,Vector2i destination,int facing) {
     auto entry=scene_humans.find(actor);
-    if (entry==scene_humans.end() || (opcode!=7 && opcode!=11 && opcode!=13) || facing<0 || facing>=8 ||
+    if (entry==scene_humans.end() || (opcode!=mir3::protocol::SM_BUMP && opcode!=mir3::protocol::SM_WALK && opcode!=mir3::protocol::SM_RUN) || facing<0 || facing>=8 ||
         !terrain.walkable(destination.x,destination.y)) return false;
     auto& human=entry->second;
     if (human.life.dead) return false;
-    if (opcode==7) {
+    if (opcode==mir3::protocol::SM_BUMP) {
         for (int i=0;i<6;++i)
             if (!human_action_frame(human.type,human.clothing,mir3::HumanActions::frame(23,facing,i))) return false;
         for (int i=0;i<3;++i)
             if (!human_action_frame(human.type,human.clothing,mir3::HumanActions::frame(7,facing,i))) return false;
     }
-    human.bump=opcode==7;
+    human.bump=opcode==mir3::protocol::SM_BUMP;
     // 0x453450 derives the step origin from the server destination and facing.
-    const int distance=opcode==13?(human.mount_shape?3:2):1;
+    const int distance=opcode==mir3::protocol::SM_RUN?(human.mount_shape?3:2):1;
     const auto [dx,dy]=mir3::map_directions[facing];
     human.facing=facing;
     human.step_origin=destination-Vector2i(dx,dy)*distance;
@@ -2329,8 +2410,8 @@ bool Mir3HudView::merchant_pointer(Vector2 pointer) {
         if (std::max(std::abs(delta.x),std::abs(delta.y))<=2) {
             const int actor=hit->first;
             emit_signal("npc_dialogue_requested",actor);
-            emit_signal("npc_request",1010,actor,String());
-            emit_npc_packet(1010,actor,String());
+            emit_signal("npc_request",mir3::protocol::CM_CLICKNPC,actor,String());
+            emit_npc_packet(mir3::protocol::CM_CLICKNPC,actor,String());
         }
     }
     return true;
@@ -2347,7 +2428,7 @@ void Mir3HudView::step_toward_pointer(bool run) {
     const int dy=std::abs(delta.x)>2 && std::abs(delta.y)<=1?0:(delta.y>0)-(delta.y<0);
     if (target==player_cell) {
         if (map_pointer_button==MOUSE_BUTTON_LEFT && map_route.empty())
-            emit_signal("pickup_requested",1001,player_cell);
+            emit_signal("pickup_requested",mir3::protocol::CM_PICKUP,player_cell);
         return;
     }
     if (map_pointer_button==MOUSE_BUTTON_RIGHT && std::max(std::abs(delta.x),std::abs(delta.y))==1) {
@@ -2598,6 +2679,10 @@ void Mir3HudView::draw_scene_lighting() {
 }
 
 void Mir3HudView::draw_exit_transition() {
+    if (login_visible && login_flow.phase==mir3::LoginFlow::Phase::leaving) {
+        const float value=login_flow.brightness();
+        exit_layer->draw_rect(Rect2(0,0,640,480),Color(value,value,value));return;
+    }
     if (!exit_transition.active || character_selection.visible) return;
     const float value=exit_transition.brightness();
     exit_layer->draw_rect(Rect2(0,0,800,600),Color(value,value,value));
@@ -2607,7 +2692,7 @@ bool Mir3HudView::prepare_character_selection() {
     if (!selection_frames.empty()) return true;
     if (!selection_archive.open(std::filesystem::u8path(actor_resource_root.path_join("Interface1c").utf8().get_data()))) return false;
     std::map<int,Ref<ImageTexture>> loaded_frames;
-    for (int index:{50,52,54,56,58}) {
+    for (int index:{50,51,52,53,54,55,56,57,58}) {
         const auto source=selection_archive.frame(index);
         if (!source) return false;
         loaded_frames.emplace(index,texture(source->pixels.rgba,source->width,source->height));
@@ -2616,7 +2701,9 @@ bool Mir3HudView::prepare_character_selection() {
     selection_frames=std::move(loaded_frames);return true;
 }
 
-void Mir3HudView::enter_character_selection() {
+void Mir3HudView::clear_game_scene() {
+    login_audio.enter(mir3::LoginAudio::Page::none);
+    for (auto& [file,player]:login_effects) player->stop();
     cancel_pointer_interactions();
     while (!scene_humans.empty()) remove_scene_actor(scene_humans.begin()->first);
     while (!scene_npcs.empty()) remove_scene_actor(scene_npcs.begin()->first);
@@ -2627,6 +2714,7 @@ void Mir3HudView::enter_character_selection() {
     map_route.clear();walk_frame=-1;movement_ms=0;
     terrain_ready=false;terrain=mir3::MapTerrain{};terrain_frames.clear();current_map_id=String();
     target_focus.clear();local_actor_identity=0;player_light_attribute=0;exit_guard={};
+    login_actor_pending.reset();login_actor_extra={};
     group_request=0;npc_dialogue_actor=0;shop_actor=0;
     inventory.visible=status.visible=skills.visible=group.visible=guild.visible=false;
     options.visible=portrait_panel.visible=mount.visible=quest.visible=trade.visible=false;
@@ -2637,14 +2725,469 @@ void Mir3HudView::enter_character_selection() {
     while (!actor_sounds.empty()) remove_actor_sound(actor_sounds.begin()->first);
     chat_input->release_focus();chat_input->hide();
     scene_light_layer->hide();hud_base->hide();hud_copy->hide();hud_decoration->hide();hud_tail->hide();exit_layer->hide();
+}
+
+void Mir3HudView::load_login_announcement() {
+    login_announcement={};announcement_images.clear();
+    const auto path=actor_resource_root.get_base_dir().path_join("Notice.ntc");
+    if (!FileAccess::file_exists(path)) return;
+    const auto bytes=FileAccess::get_file_as_bytes(path);
+    const auto measure=[](std::string_view ansi,int points,bool bold) {
+        return mir3::raster_text(mir3::ansi_to_utf8(ansi),512,128,false,mir3::TextFont::normal,{},false,points,bold?700:400).text_width;
+    };
+    if (!login_announcement.load({bytes.ptr(),std::size_t(bytes.size())},measure)) return;
+    for (const auto& row:login_announcement.rows) {
+        const auto bitmap=mir3::raster_text(mir3::ansi_to_utf8(row.ansi),224,128,false,mir3::TextFont::normal,{},false,row.points,row.bold?700:400);
+        announcement_images.push_back({texture(bitmap.rgba,224,128),bitmap.text_width,bitmap.text_height});
+    }
+}
+
+void Mir3HudView::draw_login_announcement() {
+    if (login_announcement.rows.empty()) return;
+    legacy_rect(Rect2(18,115,234,238),Color(75.f/255,50.f/255,0,100.f/255));
+    constexpr unsigned border=3296100;
+    draw_rect(Rect2(18,115,234,238),Color((border&255)/255.f,((border>>8)&255)/255.f,((border>>16)&255)/255.f),false);
+    for (int i=0;i<int(login_announcement.rows.size());++i) {
+        const int y=120+14*i+login_announcement.offset;
+        if (y<120 || y+14>=353) continue;
+        const auto& row=login_announcement.rows[i];const auto& image=announcement_images[i];
+        const auto color=[](unsigned value) { return Color((value&255)/255.f,((value>>8)&255)/255.f,((value>>16)&255)/255.f); };
+        const auto background=mir3::chat_palette(row.background);
+        if (background) draw_rect(Rect2(23,y,image.width,image.height),color(background));
+        if (image.image.is_valid()) draw_texture(image.image,Vector2(23,y),color(mir3::chat_palette(row.foreground)));
+    }
+}
+
+void Mir3HudView::play_login_sound(std::string_view file,bool loop) {
+    if (file.empty() || !audio_options.effects_enabled) return;
+    const std::string name(file);
+    auto found=login_effects.find(name);
+    if (found==login_effects.end()) {
+        const auto path=audio_root.path_join(String::utf8(name.c_str()));
+        if (!FileAccess::file_exists(path)) return;
+        const auto stream=AudioStreamWAV::load_from_file(path);
+        if (stream.is_null()) return;
+        if (loop) {
+            stream->set_loop_mode(AudioStreamWAV::LOOP_FORWARD);
+            stream->set_loop_begin(0);
+            stream->set_loop_end(int(stream->get_data().size())/(stream->is_stereo()?2:1)/(stream->get_format()==AudioStreamWAV::FORMAT_16_BITS?2:1));
+        }
+        auto* player=memnew(AudioStreamPlayer);player->set_stream(stream);add_child(player);
+        found=login_effects.emplace(name,player).first;
+    }
+    found->second->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
+    found->second->play();
+}
+
+void Mir3HudView::advance_login_audio(std::uint32_t ms) {
+    const auto file=login_audio.advance(ms);if (file.empty()) return;
+    if (file.ends_with(".wav")) { play_login_sound(file,true);return; }
+    if (!map_music || !audio_options.music_enabled) return;
+    const auto path=audio_root.path_join(String::utf8(file.data(),file.size()));
+    if (!FileAccess::file_exists(path)) return;
+    const auto stream=AudioStreamMP3::load_from_file(path);
+    if (stream.is_null()) return;
+    stream->set_loop(true);map_music->set_stream(stream);
+    map_music->set_volume_db(mir3::AudioOptions::volume(audio_options.music_level)/100.f);map_music->play();
+}
+
+void Mir3HudView::start_login_movie(LoginMoviePurpose purpose,const char* filename,bool reverse) {
+    login_movie_purpose=purpose;login_movie_surface.unref();
+    login_audio.enter(mir3::LoginAudio::Page::none);
+    if (map_music) map_music->stop();
+    if (login_movie_audio) login_movie_audio->stop();
+    if (purpose==LoginMoviePurpose::create) play_login_sound("CreateChr.wav");
+    else if (purpose==LoginMoviePurpose::enter_game) play_login_sound("StartGame.wav");
+    chat_input->release_focus();chat_input->hide();
+    const auto path=std::filesystem::u8path(actor_resource_root.utf8().get_data())/filename;
+    if (login_movie.open(path,reverse)) {
+        login_movie_surface=texture(login_movie.pixels(),login_movie.width(),login_movie.height());
+        const auto& audio=login_movie.audio();
+        if (!audio.pcm.empty() && audio_options.effects_enabled) {
+            if (!login_movie_audio) { login_movie_audio=memnew(AudioStreamPlayer);add_child(login_movie_audio); }
+            Ref<AudioStreamWAV> stream;stream.instantiate();
+            stream->set_format(audio.bits==8?AudioStreamWAV::FORMAT_8_BITS:AudioStreamWAV::FORMAT_16_BITS);
+            stream->set_stereo(audio.channels==2);stream->set_mix_rate(audio.rate);
+            PackedByteArray pcm;pcm.resize(audio.pcm.size());std::copy(audio.pcm.begin(),audio.pcm.end(),pcm.ptrw());
+            // Godot的8位PCM为有符号，AVI PCM为无符号。
+            if (audio.bits==8) for (int64_t i=0;i<pcm.size();++i) pcm.set(i,pcm[i]^0x80);
+            stream->set_data(pcm);login_movie_audio->set_stream(stream);
+            login_movie_audio->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);login_movie_audio->play();
+        }
+    }
+    queue_redraw();
+}
+
+void Mir3HudView::advance_login_movie(double delta) {
+    if (login_movie_purpose==LoginMoviePurpose::none) return;
+    if (login_movie.advance(delta*1000)) login_movie_surface=texture(login_movie.pixels(),login_movie.width(),login_movie.height());
+    if (login_movie.playing()) { queue_redraw();return; }
+    const auto purpose=login_movie_purpose;login_movie_purpose=LoginMoviePurpose::none;
+    login_movie.close();login_movie_surface.unref();if (login_movie_audio) login_movie_audio->stop();
+    if (purpose==LoginMoviePurpose::opening) { sync_login_editor();login_audio.enter(mir3::LoginAudio::Page::credentials); }
+    else if (purpose==LoginMoviePurpose::create) show_character_creation();
+    else if (purpose==LoginMoviePurpose::enter_game) finish_game_entry();
+    else { login_audio.enter(mir3::LoginAudio::Page::selection);if (character_selection.selected>=0) character_selection.roles[character_selection.selected].start(1); }
+    queue_redraw();
+}
+
+void Mir3HudView::finish_game_entry() {
+    if (!game_entry.finish_transition()) return;
+    clear_game_scene();character_selection.visible=false;character_creation.close();selection_notice.close();
+    login_visible=false;login_flow.previous_endpoint=login_flow.endpoint;login_flow.endpoint=game_entry.endpoint;
+    game_connection={};
+    get_window()->set_content_scale_size(Vector2i(800,600));get_window()->set_size(Vector2i(800,600));
+    scene_light_layer->show();hud_base->show();hud_copy->show();hud_decoration->show();hud_tail->show();
+    connect_page(ConnectionPage::game,game_entry.endpoint);queue_redraw();
+}
+
+bool Mir3HudView::apply_login_actor() {
+    if (!login_actor_pending || !terrain_ready) return false;
+    const auto actor=*login_actor_pending;const auto& appearance=actor.appearance;
+    if (!terrain.walkable(actor.x,actor.y)) return false;
+    const int mount=appearance.mount.value_or(0);
+    const auto* body=human_body(appearance.type,appearance.clothing);
+    if (!body || (mount && (!human_body(appearance.type,appearance.clothing,true) || !horse_frame(mount,2320))) ||
+        (appearance.weapon && weapon_order.size()!=2640)) return false;
+    player_mount=0;set_player_body(appearance.type,appearance.clothing);
+    set_player_mount(mount);set_player_attachments(appearance.hair,appearance.weapon);
+    player_cell=Vector2i(actor.x,actor.y);player_facing=actor.facing;player_light_attribute=actor.light;
+    player_idle.reset();map_route.clear();walk_frame=-1;movement_ms=0;
+    model.profession=appearance.profession;model.appearance=appearance.type;
+    set_character_identity(String::utf8(mir3::ansi_to_utf8(game_entry.role).c_str()),String(),String(),String());
+    set_minimap_position(actor.x,actor.y);
+    login_actor_extra=actor.extra;login_actor_pending.reset();
+    send_client_packet(mir3::protocol::CM_QUERYBAGITEMS,0,String());queue_redraw();return true;
+}
+
+void Mir3HudView::process_map_changes() {
+    // Snapshot the count: synchronous signal callbacks enqueue for the next update.
+    const auto maps_to_process=map_changes.size();
+    for (std::size_t i=0;i<maps_to_process;++i) {
+        const auto message=std::move(map_changes.front());map_changes.pop_front();
+        const auto id=String::utf8(message.map_id.c_str());
+        const auto name=model.map_name.empty()?id:String::utf8(model.map_name.c_str());
+        const bool success=change_map(id,name,Vector2i(message.x,message.y),message.ambient);
+        if (success) map_series=message.series;
+        emit_signal("map_change_finished",message.opcode,id,success);
+    }
+
+}
+
+bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
+    if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
+    const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
+    if (!header) return false;
+    if (header->opcode==mir3::protocol::SM_LOGON) {
+        const auto actor=mir3::LoginActor::parse(*header,{encoded.ptr()+16,std::size_t(encoded.size()-16)});
+        if (!actor) return false;
+        login_actor_pending=*actor;set_local_actor_identity(int(actor->identity));
+        apply_login_actor();return true;
+    }
+    if (header->opcode==mir3::protocol::SM_DECODEKEY) {
+        const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
+        if (!body) return false;
+        const auto response=mir3::GameConnection::challenge_response(std::uint32_t(local_actor_identity),
+            [](int low,int high) { return int(UtilityFunctions::randi_range(low,high)); });
+        send_client_packet(mir3::protocol::CM_DECODEKEY_RESPONSE,0,String::utf8(response.c_str(),response.size()));
+        return game_connection.change_key(*body);
+    }
+    PackedByteArray key;key.resize(4);std::copy(game_connection.key.begin(),game_connection.key.end(),key.ptrw());
+    const bool accepted=apply_scene_message(encoded,key) || apply_npc_message(encoded,key);
+    // 42EC70：公共队列中的换图先完成，随后的人物包才能使用新地图。
+    if (accepted && (header->opcode==mir3::protocol::SM_NEWMAP || header->opcode==mir3::protocol::SM_CHANGEMAP)) {
+        process_map_changes();apply_login_actor();
+    }
+    return accepted;
+}
+
+void Mir3HudView::enter_character_selection() {
+    const bool from_login=login_visible;
+    clear_game_scene();login_visible=false;
+    chat_input->set_text("");chat_input->set_secret(false);chat_input->set_byte_limit(mir3::ChatInputSpec::limit);
+    character_creation={};creation_bounds={};
     character_selection={};character_selection.visible=true;
+    login_audio.enter(mir3::LoginAudio::Page::selection);
     selection_pending.reset();selection_pending_notice=0;selection_elapsed=0;selection_fraction_ms=0;selection_notice.close();selection_bounds={};
     outgoing_messages.sequence=0;
     get_window()->set_content_scale_size(Vector2i(640,480));
     get_window()->set_size(Vector2i(640,480));
     queue_redraw();
-    emit_signal("game_connection_close_requested");
+    if (from_login) {
+        emit_signal("login_connection_close_requested");
+        emit_signal("selection_endpoint_ready",String::utf8(login_flow.endpoint.host.c_str()),login_flow.endpoint.port);
+    } else emit_signal("game_connection_close_requested");
     emit_signal("character_selection_connection_requested");
+    if (from_login) connect_page(ConnectionPage::selection,login_flow.endpoint);
+    else if (!login_flow.previous_endpoint.host.empty()) connect_page(ConnectionPage::selection,login_flow.previous_endpoint);
+}
+
+bool Mir3HudView::open_server_groups() {
+    if (!loaded) return false;
+    const auto data=std::filesystem::u8path(actor_resource_root.utf8().get_data());
+    mir3::ServerGroups next;if (!next.load(data.parent_path()/"SelLogin.ini")) return false;
+    if (!server_group_archive.open(data/"LoginInterface")) return false;
+    std::map<int,Ref<ImageTexture>> images;
+    for (int id:{0,1,3,4,7,8,11,12,13,15}) {
+        const auto source=server_group_archive.frame(id);
+        if (!source) { if (id==1) continue;return false; }
+        images[id]=texture(source->pixels.rgba,source->width,source->height);
+        if (id==1) server_glow_offset=Vector2i(source->offset_x,source->offset_y);
+    }
+    clear_game_scene();connection.close();connection_page=ConnectionPage::none;
+    connection_failed=false;connection_retry_at=0;
+    login_movie.close();login_movie_purpose=LoginMoviePurpose::none;
+    login_visible=false;character_selection.visible=false;
+    server_groups=std::move(next);server_group_frames=std::move(images);
+    server_group_exit_pressed=server_group_scroll_drag=false;server_group_pointer=Vector2(-1,-1);
+    server_group_scroll_tick=ticks_msec();
+    if (!server_glow) {
+        server_glow=memnew(Node2D);add_child(server_glow);
+        Ref<Shader> shader;shader.instantiate();shader->set_code("shader_type canvas_item; render_mode unshaded, blend_add;");
+        Ref<ShaderMaterial> material;material.instantiate();material->set_shader(shader);server_glow->set_material(material);
+        server_glow->connect("draw",callable_mp(this,&Mir3HudView::draw_server_group_glow));
+    }
+    server_glow->show();get_window()->set_content_scale_size(Vector2i(800,600));get_window()->set_size(Vector2i(800,600));
+    queue_redraw();return true;
+}
+
+void Mir3HudView::draw_server_group_glow() {
+    if (!server_groups.visible || server_groups.selected<0 || !server_group_frames.contains(1)) return;
+    const auto& group=server_groups.groups[server_groups.selected];
+    server_glow->draw_texture(server_group_frames.at(1),Vector2(group.x-55,group.y-120)+server_glow_offset);
+}
+
+void Mir3HudView::draw_server_groups() {
+    paint_canvas=this;draw_texture(server_group_frames.at(0),Vector2());
+    draw_texture(server_group_frames.at(server_group_exit_pressed?4:3),Vector2(760,13));
+    for (int i=0;i<int(server_groups.groups.size());++i) {
+        const auto& group=server_groups.groups[i];if (!group.x && !group.y) continue;
+        const auto label=mir3::ansi_to_utf8(group.label);
+        for (const auto d:std::array<Vector2i,4>{{{-1,0},{1,0},{0,-1},{0,1}}})
+            text(label,{group.x+5+d.x,group.y+25+d.y,260,16},0,mir3::TextFont::normal,false);
+        text(label,{group.x+5,group.y+25,260,16},15790320,mir3::TextFont::normal,false);
+        const bool selected=server_groups.selected==i;
+        const int frame=selected?13:Rect2(group.x,group.y,33,21).has_point(server_group_pointer)?12:11;
+        draw_texture(server_group_frames.at(frame),Vector2(group.x-(selected?3:0),group.y-(selected?3:0)));
+    }
+    if (server_groups.selected>=0) {
+        const auto& group=server_groups.groups[server_groups.selected];
+        text(mir3::ansi_to_utf8(group.title),{28,20,172,15},16448250,mir3::TextFont::normal,true);
+        for (int row=0;row<20 && server_groups.first+row<int(group.servers.size());++row) {
+            const auto& server=group.servers[server_groups.first+row];if (server.caption=="empty") continue;
+            const Rect2 bounds(10,70+25*row,190,15);
+            draw_texture(server_group_frames.at(bounds.has_point(server_group_pointer)?8:7),bounds.position+Vector2(7,-5));
+            text(mir3::ansi_to_utf8(server.caption),{10,70+25*row,190,15},16448250,mir3::TextFont::normal,true);
+        }
+        const float ratio=group.servers.size()>1?float(server_groups.first)/float(group.servers.size()-1):0;
+        draw_texture(server_group_frames.at(15),Vector2(204,84+int(447*ratio)));
+    } else draw_texture(server_group_frames.at(15),Vector2(204,84));
+    server_glow->queue_redraw();
+}
+
+void Mir3HudView::server_groups_input(const Ref<InputEvent>& event) {
+    const auto scroll=[&](float y) {
+        if (server_groups.selected<0) return;
+        const int count=int(server_groups.groups[server_groups.selected].servers.size());
+        const float span=447+server_group_frames.at(15)->get_height();
+        server_groups.first=std::clamp(int(count*std::clamp((y-84)/span,0.f,1.f)),0,std::max(0,count-1));
+    };
+    const Ref<InputEventMouseMotion> motion=event;
+    if (motion.is_valid()) {
+        server_group_pointer=motion->get_position();if (server_group_scroll_drag) scroll(server_group_pointer.y);
+        queue_redraw();return;
+    }
+    const Ref<InputEventMouseButton> mouse=event;if (mouse.is_null()) return;
+    const auto at=mouse->get_position();server_group_pointer=at;
+    if (mouse->is_pressed() && (mouse->get_button_index()==MOUSE_BUTTON_WHEEL_UP || mouse->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN)) {
+        server_groups.scroll(mouse->get_button_index()==MOUSE_BUTTON_WHEEL_UP?-1:1);queue_redraw();return;
+    }
+    if (mouse->get_button_index()!=MOUSE_BUTTON_LEFT) return;
+    const bool exit_hit=Rect2(Vector2(760,13),server_group_frames.at(3)->get_size()).has_point(at);
+    if (!mouse->is_pressed()) {
+        server_group_scroll_drag=false;server_group_exit_pressed=false;
+        if (exit_hit) get_tree()->quit();queue_redraw();return;
+    }
+    for (int i=0;i<int(server_groups.groups.size());++i) {
+        const auto& group=server_groups.groups[i];
+        if (Rect2(group.x,group.y,40,40).has_point(at)) server_groups.choose_group(i);
+    }
+    if (server_groups.selected>=0) {
+        for (int row=0;row<20;++row) if (Rect2(10,70+25*row,190,15).has_point(at)) {
+            if (const auto config=server_groups.login(row)) { open_configured_login(*config);return; }
+        }
+        const auto size=server_group_frames.at(15)->get_size();
+        const int count=int(server_groups.groups[server_groups.selected].servers.size());
+        const float ratio=count>1?float(server_groups.first)/(count-1):0;
+        if (Rect2(204,84,size.x,447+size.y).has_point(at) && ticks_msec()-server_group_scroll_tick>10) {
+            if (Rect2(Vector2(204,84+int(447*ratio)),size).has_point(at)) server_group_scroll_drag=true;
+            else if (count) {
+                const float next=std::clamp(ratio+(at.y<84+int(447*ratio)+15?-10.f:10.f)/count,0.f,1.f);
+                server_groups.first=std::min(count-1,int(count*next));
+            }
+            server_group_scroll_tick=ticks_msec();
+        }
+    }
+    server_group_exit_pressed=exit_hit;queue_redraw();
+}
+
+bool Mir3HudView::open_login() {
+    if (!loaded || !prepare_character_selection()) return false;
+    mir3::LoginConfig configured;
+    const auto root=std::filesystem::u8path(actor_resource_root.utf8().get_data()).parent_path();
+    if (!configured.load(root/"Mir3.ini")) return false;
+    return open_configured_login(std::move(configured));
+}
+
+bool Mir3HudView::open_configured_login(mir3::LoginConfig configured) {
+    if (!loaded || !prepare_character_selection()) return false;
+    server_groups.visible=false;if (server_glow) server_glow->hide();
+    for (const int index:{0,2,10,11,12,13,14,15,16,17}) {
+        const auto source=selection_source(index);if (!source) return false;
+        selection_frames[index]=texture(source->pixels.rgba,source->width,source->height);
+    }
+    clear_game_scene();character_selection.visible=false;character_creation.close();selection_delete.close();selection_notice.close();
+    selection_pending.reset();selection_pending_notice=0;exit_transition={};
+    load_login_announcement();
+    login_config=std::move(configured);login_flow={};login_flow.servers=login_config.servers;login_flow.endpoint=login_config.gateway;
+    login_visible=true;login_fraction_ms=0;login_notice_pressed=false;login_buttons={};outgoing_messages.sequence=0;
+    int max_width=0,max_height=0;
+    for (const auto& server:login_flow.servers) {
+        const auto measure=mir3::raster_text(mir3::ansi_to_utf8(server.caption),600,30,false,mir3::TextFont::normal);
+        max_width=std::max(max_width,measure.text_width);max_height=std::max(max_height,measure.text_height);
+    }
+    const int row_height=max_height+20;
+    login_server_box=Rect2(20,60,max_width+90,row_height*login_flow.servers.size()+20);
+    login_server_bounds.clear();
+    for (int i=0;i<int(login_flow.servers.size());++i) login_server_bounds.emplace_back(20,70+i*row_height,max_width+90,row_height);
+    get_window()->set_content_scale_size(Vector2i(640,480));get_window()->set_size(Vector2i(640,480));
+    sync_login_editor();queue_redraw();
+    emit_signal("login_connection_requested",String::utf8(login_flow.endpoint.host.c_str()),login_flow.endpoint.port);
+    connect_page(ConnectionPage::login,login_flow.endpoint);
+    start_login_movie(LoginMoviePurpose::opening,"wemade.dat");
+    return true;
+}
+
+void Mir3HudView::sync_login_editor() {
+    if (!login_visible) return;
+    if (login_flow.phase!=mir3::LoginFlow::Phase::credentials || !login_flow.editor_visible || login_flow.notice.message) {
+        chat_input->release_focus();chat_input->hide();return;
+    }
+    chat_input->set_byte_limit(24);chat_input->set_secret_character("*");chat_input->set_secret(login_flow.field==1);
+    chat_input->set_position(Vector2(login_flow.field==1?326:128,440));chat_input->set_size(Vector2(99,14));
+    chat_input->show();chat_input->focus_chat(String::utf8(mir3::ansi_to_utf8(login_flow.editor_text()).c_str()),true);
+    chat_input->select_all();
+}
+
+void Mir3HudView::send_login_request(const mir3::LoginRequest& request) {
+    send_client_packet(request.opcode,0,String::utf8(mir3::ansi_to_utf8(request.body).c_str()));
+}
+
+bool Mir3HudView::apply_login_message(PackedByteArray message) {
+    if (!login_visible || !login_flow.receive({message.ptr(),std::size_t(message.size())})) return false;
+    if (login_flow.phase==mir3::LoginFlow::Phase::leaving) {
+        selection_session.configure(login_flow.account_name(),login_flow.session);
+        exit_layer->show();exit_layer->queue_redraw();
+    }
+    sync_login_editor();queue_redraw();return true;
+}
+
+void Mir3HudView::finish_login_exit(const String& url) {
+    emit_signal("login_url_requested",url);
+    // 自动化场景只观察请求，不启动外部浏览器或结束测试进程。
+    if (bool(get_meta("offline_preview",false))) return;
+    OS::get_singleton()->shell_open(url);
+    get_tree()->quit();
+}
+
+void Mir3HudView::login_input(const Ref<InputEvent>& event) {
+    const Ref<InputEventMouseMotion> motion=event;
+    if (motion.is_valid()) { login_pointer=motion->get_position();queue_redraw();return; }
+    if (login_flow.phase==mir3::LoginFlow::Phase::leaving) return;
+    const Ref<InputEventKey> key=event;
+    const Ref<InputEventMouseButton> mouse=event;
+    if (login_flow.notice.message) {
+        bool close=key.is_valid() && key->is_pressed() && (key->get_keycode()==KEY_ENTER || key->get_keycode()==KEY_SPACE);
+        if (mouse.is_valid() && mouse->get_button_index()==MOUSE_BUTTON_LEFT) {
+            const bool hit=Rect2(Vector2(277,298),frame(1243)->get_size()).has_point(mouse->get_position());
+            if (mouse->is_pressed()) login_notice_pressed=hit;
+            else { close=hit;login_notice_pressed=false; }
+        }
+        if (close) { login_flow.close_notice();sync_login_editor(); }
+        queue_redraw();return;
+    }
+    if (login_flow.phase==mir3::LoginFlow::Phase::credentials) {
+        const auto editor=[&]() { const auto utf8=chat_input->limited_text().utf8();return mir3::utf8_to_ansi({utf8.get_data(),std::size_t(utf8.length())}); };
+        if (key.is_valid() && key->is_pressed()) {
+            if (key->get_keycode()==KEY_TAB) { login_flow.change_field(!login_flow.field,editor());sync_login_editor(); }
+            else if (key->get_keycode()==KEY_ENTER) {
+                const auto request=login_flow.submit(false,editor());sync_login_editor();if (request) send_login_request(*request);
+            }
+        }
+        if (mouse.is_valid() && mouse->get_button_index()==MOUSE_BUTTON_LEFT) {
+            const auto pos=mouse->get_position();login_pointer=pos;
+            const std::array<Vector2i,4> origins{{{459,436},{139,379},{279,379},{439,379}}};
+            int hit=-1;for (int i=0;i<4;++i) if (Rect2(origins[i],selection_frames.at(10+i*2)->get_size()).has_point(pos)) hit=i;
+            if (mouse->is_pressed()) {
+                if (Rect2(128,440,99,14).has_point(pos)) { login_flow.change_field(0,editor());sync_login_editor(); }
+                else if (Rect2(326,440,99,14).has_point(pos)) { login_flow.change_field(1,editor());sync_login_editor(); }
+                else if (hit>=0) login_buttons[hit]=2;
+            } else {
+                login_buttons={};
+                if (hit>=0 && hud_sound) hud_sound->play();
+                if (hit==0) { const auto request=login_flow.submit(true,editor());sync_login_editor();if (request) send_login_request(*request); }
+                else if (hit==1 || hit==2) finish_login_exit(String::utf8(mir3::ansi_to_utf8(hit==1?login_config.account_url:login_config.password_url).c_str()));
+                else if (hit==3) finish_login_exit(String::utf8(message(1077).c_str()));
+            }
+        }
+    } else if (mouse.is_valid() && mouse->get_button_index()==MOUSE_BUTTON_LEFT) {
+        int hit=-1;for (int i=0;i<int(login_server_bounds.size());++i) if (login_server_bounds[i].has_point(mouse->get_position())) hit=i;
+        if (mouse->is_pressed()) login_flow.press_server(hit);
+        else if (const auto request=login_flow.release_server(hit)) send_login_request(*request);
+    }
+    queue_redraw();
+}
+
+void Mir3HudView::draw_login() {
+    paint_canvas=this;draw_rect(Rect2(0,0,640,480),Color(0,0,0));
+    draw_texture(selection_frames.at(0),Vector2(0,60));
+    if (login_flow.phase==mir3::LoginFlow::Phase::credentials) {
+        draw_login_announcement();
+        legacy_rect(Rect2(0,372,640,48),Color(50.f/255,50.f/255,60.f/255,100.f/255));
+        draw_rect(Rect2(0,372,640,48),Color(100.f/255,100.f/255,100.f/255),false);
+        const std::array<Vector2i,4> origins{{{459,436},{139,379},{279,379},{439,379}}};
+        for (int i=0;i<4;++i) draw_texture(selection_frames.at(10+i*2+(login_buttons[i]==2?1:0)),origins[i]);
+        const Rect2 login_bounds(origins[0],selection_frames.at(10)->get_size());
+        if (login_bounds.has_point(login_pointer)) {
+            legacy_rect(login_bounds,Color(150.f/255,100.f/255,50.f/255,50.f/255));
+            draw_rect(login_bounds,Color(200.f/255,150.f/255,100.f/255),false);
+        }
+        draw_texture(selection_frames.at(2),Vector2(100,436));
+        const auto inactive_text=[](std::string ansi) {
+            const auto width=[&]() { return mir3::raster_text(mir3::ansi_to_utf8(ansi),400,20,false,mir3::TextFont::normal).text_width; };
+            if (width()>100) while (!ansi.empty() && width()>=100) ansi.pop_back();
+            return mir3::ansi_to_utf8(ansi);
+        };
+        if (login_flow.field!=1) text(inactive_text(login_flow.password_mask()),{326,440,100,14},0xffffff,mir3::TextFont::normal,false);
+        if (login_flow.field!=0) text(inactive_text(login_flow.account_name()),{128,440,100,14},0xffffff,mir3::TextFont::normal,false);
+    } else {
+        legacy_rect(login_server_box,Color(100.f/255,100.f/255,100.f/255,120.f/255));
+        draw_rect(login_server_box,Color(150.f/255,150.f/255,150.f/255),false);
+        for (int i=0;i<int(login_flow.servers.size());++i) {
+            const auto& server=login_flow.servers[i];const auto bounds=login_server_bounds[i];
+            const bool chosen=login_flow.pressed_server==i,hover=login_flow.pressed_server==-1 && bounds.has_point(login_pointer);
+            if (chosen || hover) { legacy_rect(bounds,chosen?Color(1,100.f/255,100.f/255,50.f/255):Color(100.f/255,100.f/255,100.f/255,50.f/255));draw_rect(bounds,chosen?Color(1,100.f/255,100.f/255):Color(100.f/255,100.f/255,200.f/255),false); }
+            auto caption=mir3::ansi_to_utf8(server.caption);if (server.load>=1 && server.load<=3) caption+=" ("+message(125+server.load)+")";
+            text(caption,{int(bounds.position.x)+20,int(bounds.position.y)+10,600,20},chosen?0x6464ff:(hover?0xff0000:0x1e1e1e),mir3::TextFont::normal,false);
+        }
+        for (int i=0;i<3;++i) text(message(129+i),{40+200*i,440,180,16},3328200,mir3::TextFont::normal,false);
+    }
+    if (login_flow.notice.message) {
+        sprite(1240,{140,110});sprite(login_notice_pressed?1244:1243,{277,298});
+        auto caption=message(login_flow.notice.message);
+        if (login_flow.notice.argument) { const auto marker=caption.find("%d");if (marker!=std::string::npos) caption.replace(marker,2,std::to_string(*login_flow.notice.argument)); }
+        text(caption,{163,194,308,95},0xc8faff,mir3::TextFont::dialog);
+    }
 }
 
 const mir3::WilFrame* Mir3HudView::selection_source(int index) {
@@ -2655,6 +3198,164 @@ const mir3::WilFrame* Mir3HudView::selection_source(int index) {
     return &selection_sources.emplace(index,std::move(*source)).first->second;
 }
 
+void Mir3HudView::update_creation_description() {
+    creation_description.clear();
+    const String source=String::utf8(message(216+character_creation.profession).c_str());
+    String line;
+    for (int i=0;i<source.length();++i) {
+        line+=source.substr(i,1);const auto bytes=line.utf8();
+        const auto size=mir3::raster_text({bytes.get_data(),std::size_t(bytes.length())},500,16,false,mir3::TextFont::normal);
+        if (size.text_width>=430 || i+1==source.length()) { creation_description.emplace_back(bytes.get_data(),bytes.length());line=String(); }
+    }
+    const auto background=selection_source(80);
+    creation_backdrop.clear();
+    if (!background || background->width!=640 || background->height!=480) return;
+    creation_backdrop=background->pixels.rgba;
+    const int height=18*(int(creation_description.size())+1)+20;
+    mir3::selection_rectangle(creation_backdrop,100,15,450,height,0x323232,50);
+    mir3::selection_rectangle(creation_backdrop,100,15,450,1,0x969696,255);
+    mir3::selection_rectangle(creation_backdrop,100,15,1,height,0x969696,255);
+    mir3::selection_rectangle(creation_backdrop,549,15,1,height,0x969696,255);
+    mir3::selection_rectangle(creation_backdrop,100,14+height,450,1,0x969696,255);
+    const auto title=message(211+character_creation.selected)+message(213+character_creation.profession);
+    constexpr std::array<unsigned,3> colors{0x96c8fa,11184890,0x96dc96};
+    const auto title_bitmap=mir3::raster_text(title,430,18,false,mir3::TextFont::gold,messages.get(1074));
+    // 486D60使用选角槽5180索引创建槽，空选角时落在已清零的前置控件区。
+    const int title_job=character_selection.selected>=0 && character_selection.selected<2?
+        character_creation.roles[character_selection.selected].profession:0;
+    mir3::selection_text(creation_backdrop,title_bitmap.rgba,110,25,430,18,colors[title_job]);
+    for (int i=0;i<int(creation_description.size());++i) {
+        const auto bitmap=mir3::raster_text(creation_description[i],430,18,false,mir3::TextFont::normal,messages.get(1074));
+        mir3::selection_text(creation_backdrop,bitmap.rgba,110,50+i*18,430,18,16775930);
+    }
+
+}
+
+void Mir3HudView::open_character_creation() {
+    if (character_selection.count>=2) { selection_notice.show(226);queue_redraw();return; }
+    start_login_movie(LoginMoviePurpose::create,"CreateChr.dat");
+}
+
+void Mir3HudView::show_character_creation() {
+    for (int id:{80,81,82,85,86,87,88,89,90,91,92,93,94,95,96,97,98}) {
+        const auto source=selection_source(id);if (!source) return;
+        selection_frames[id]=texture(source->pixels.rgba,source->width,source->height);
+    }
+    selection_notice.close();character_creation.open();creation_bounds={};update_creation_description();
+    login_audio.enter(mir3::LoginAudio::Page::creation);
+    chat_input->set_secret(false);chat_input->set_byte_limit(13);
+    chat_input->set_position(Vector2(288,405));chat_input->set_size(Vector2(75,13));
+    chat_input->show();chat_input->focus_chat("",true);queue_redraw();
+}
+
+void Mir3HudView::close_character_creation() {
+    character_creation.close();chat_input->set_text("");chat_input->release_focus();chat_input->hide();
+    chat_input->set_secret(false);chat_input->set_byte_limit(mir3::ChatInputSpec::limit);
+    queue_redraw();
+}
+
+void Mir3HudView::close_selection_notice() {
+    selection_notice.close();
+    if (character_creation.visible) { chat_input->show();chat_input->focus_chat("",true); }
+    queue_redraw();
+}
+
+void Mir3HudView::submit_character_creation() {
+    if (!character_creation.visible || selection_notice.message) return;
+    const auto bytes=chat_input->get_text().utf8();
+    const auto name=mir3::utf8_to_ansi({bytes.get_data(),std::size_t(bytes.length())});
+    if (name.empty()) return;
+    if (const int error=mir3::CreateCharacterPage::name_error(name)) {
+        selection_notice.show(error);chat_input->release_focus();chat_input->hide();queue_redraw();return;
+    }
+    if (const auto body=character_creation.request(selection_session.account,name))
+        send_client_packet(mir3::protocol::CM_NEWCHR,0,String::utf8(mir3::ansi_to_utf8(*body).c_str()));
+}
+
+void Mir3HudView::creation_input(const Ref<InputEvent>& event) {
+    const Ref<InputEventKey> key=event;
+    if (key.is_valid() && key->is_pressed() && key->get_keycode()==KEY_ENTER) { submit_character_creation();return; }
+    const std::array<Vector2i,5> origins{{{266,419},{308,419},{352,419},{450,444},{491,444}}};
+    constexpr std::array<int,5> normal{91,94,97,85,88};
+    const auto hit_at=[&](Vector2 pos) { for (int i=0;i<5;++i) if (Rect2(origins[i],selection_frames.at(normal[i])->get_size()).has_point(pos)) return i;return -1; };
+    const Ref<InputEventMouseMotion> motion=event;
+    if (motion.is_valid()) {
+        const int hit=hit_at(motion->get_position());
+        for (int i=0;i<5;++i) if (character_creation.buttons[i]!=2) character_creation.buttons[i]=i==hit?1:0;
+        queue_redraw();return;
+    }
+    const Ref<InputEventMouseButton> mouse=event;
+    if (mouse.is_null() || mouse->get_button_index()!=MOUSE_BUTTON_LEFT) return;
+    const auto pos=mouse->get_position();const int hit=hit_at(pos);
+    if (mouse->is_pressed()) {
+        for (int i=0;i<2;++i) if (creation_bounds[i].has_point(pos) && character_creation.select(i)) update_creation_description();
+        if (hit>=0) character_creation.buttons[hit]=2;
+    } else {
+        if (Rect2(294,404,77,15).has_point(pos)) chat_input->grab_focus();
+        character_creation.buttons={};
+        if (hit>=0 && hud_sound) hud_sound->play();
+        if (hit>=0 && hit<3) { character_creation.set_profession(hit);update_creation_description(); }
+        else if (hit==3) submit_character_creation();
+        else if (hit==4) { close_character_creation();start_login_movie(LoginMoviePurpose::return_selection,"CreateChr.dat",true);request_selection_list(); }
+    }
+    queue_redraw();
+}
+
+void Mir3HudView::draw_character_creation() {
+    const auto background=selection_source(80);if (!background || background->width!=640 || background->height!=480) return;
+    if (creation_backdrop.size()!=640*480*4) return;
+    auto pixels=creation_backdrop;
+    for (int i=0;i<2;++i) {
+        const auto& role=character_creation.roles[i];
+        if (const auto shadow=selection_source(role.frame+20)) mir3::selection_blit(pixels,*shadow,role.x,role.y,mir3::SelectionBlend::shadow);
+        const auto body=selection_source(i==character_creation.selected?role.frame:role.first_frame());
+        if (body) mir3::selection_blit(pixels,*body,role.x,role.y,i==character_creation.selected?mir3::SelectionBlend::normal:mir3::SelectionBlend::inactive);
+        if (i==character_creation.selected) if (const auto light=selection_source(role.frame+40)) mir3::selection_blit(pixels,*light,role.x,role.y,mir3::SelectionBlend::additive);
+    }
+    if (const auto shadow=selection_source(82)) { auto positioned=*shadow;positioned.offset_x=positioned.offset_y=0;mir3::selection_blit(pixels,positioned,201,434,mir3::SelectionBlend::shadow); }
+    selection_surface=texture(pixels,640,480);draw_texture(selection_surface,Vector2());
+    draw_texture(selection_frames.at(81),Vector2(247,384));
+    const std::array<Vector2i,5> origins{{{266,419},{308,419},{352,419},{450,444},{491,444}}};
+    constexpr std::array<std::array<int,3>,5> frames{{{91,92,93},{94,95,96},{97,98,98},{85,86,87},{88,89,90}}};
+    for (int i=0;i<5;++i) draw_texture(selection_frames.at(frames[i][character_creation.buttons[i]]),origins[i]);
+    draw_rect(Rect2(287,404,77,15),Color(120.f/255,90.f/255,60.f/255),false);
+    const std::array<Vector2i,5> anchors{{{289,438},{332,438},{376,438},{469,458},{510,458}}};
+    for (int i=0;i<5;++i) {
+        if (!Rect2(origins[i],selection_frames.at(frames[i][0])->get_size()).has_point(selection_pointer)) continue;
+        const auto caption=message(201+i);
+        const int width=6*int(mir3::utf8_to_ansi(caption).size());
+        const int x=anchors[i].x+10,y=anchors[i].y+2;
+        const Rect2 bounds(x,y,width,15);
+        legacy_rect(bounds,Color(125.f/255,125.f/255,75.f/255,50.f/255));
+        draw_rect(bounds,Color(180.f/255,180.f/255,120.f/255),false);
+        for (const auto offset:std::array<Vector2i,4>{{{1,2},{3,2},{2,1},{2,3}}})
+            text(caption,{x+offset.x,y+offset.y,width+4,16},1644825,mir3::TextFont::normal,false);
+        text(caption,{x+2,y+2,width+4,16},11862015,mir3::TextFont::normal,false);
+        break;
+    }
+}
+
+void Mir3HudView::open_selection_delete() {
+    if (character_selection.selected<0) { selection_notice.show(227);queue_redraw();return; }
+    selection_notice.close();selection_delete.open();
+    chat_input->set_secret(false);chat_input->set_byte_limit(90);
+    chat_input->set_position(Vector2(164,338));chat_input->set_size(Vector2(309,15));
+    chat_input->show();chat_input->focus_chat("",true);queue_redraw();
+}
+
+void Mir3HudView::finish_selection_delete(bool confirm) {
+    if (!selection_delete.visible) return;
+    const auto input=chat_input->limited_text();
+    selection_delete.close();chat_input->focus_chat("",true);chat_input->release_focus();chat_input->hide();
+    chat_input->set_byte_limit(mir3::ChatInputSpec::limit);chat_input->layout(model.layout.expanded);
+    if (confirm && character_selection.selected>=0 && !selection_session.account.empty()) {
+        const auto& role=character_selection.roles[character_selection.selected];
+        send_client_packet(mir3::protocol::CM_DELCHR,0,String::utf8(mir3::ansi_to_utf8(role.name).c_str())+"/"+input);
+        request_selection_list();
+    }
+    queue_redraw();
+}
+
 bool Mir3HudView::set_selection_session(String account,int64_t number) {
     const auto utf8=account.utf8();
     return selection_session.configure(mir3::utf8_to_ansi({utf8.get_data(),std::size_t(utf8.length())}),number);
@@ -2662,9 +3363,10 @@ bool Mir3HudView::set_selection_session(String account,int64_t number) {
 
 bool Mir3HudView::request_selection_list() {
     if (!character_selection.visible || selection_session.account.empty()) return false;
+    if (selection_delete.visible) finish_selection_delete(false);
     selection_elapsed=0;selection_fraction_ms=0;selection_pending.reset();selection_pending_notice=0;
     character_selection.connecting=true;selection_notice.close();
-    send_client_packet(100,0,String::utf8(mir3::ansi_to_utf8(selection_session.query_body()).c_str()));
+    send_client_packet(mir3::protocol::CM_QUERYCHR,0,String::utf8(mir3::ansi_to_utf8(selection_session.query_body()).c_str()));
     queue_redraw();return true;
 }
 
@@ -2672,44 +3374,107 @@ bool Mir3HudView::apply_selection_message(PackedByteArray message) {
     if (!character_selection.visible) return false;
     const auto header=mir3::ReceiveHeader::decode_plain({message.ptr(),std::size_t(message.size())});
     if (!header) return false;
+    if (header->opcode==mir3::protocol::SM_STARTPLAY) {
+        const auto name=character_selection.selected>=0?character_selection.roles[character_selection.selected].name:std::string{};
+        if (!game_entry.receive({message.ptr(),std::size_t(message.size())},name)) return false;
+        if (map_music) map_music->stop();
+        start_login_movie(LoginMoviePurpose::enter_game,"StartGame.dat");return true;
+    }
+    if (header->opcode==mir3::protocol::SM_NEWCHR_SUCCESS) {
+        close_character_creation();start_login_movie(LoginMoviePurpose::return_selection,"CreateChr.dat",true);return request_selection_list();
+    }
+    if (header->opcode==mir3::protocol::SM_NEWCHR_FAIL) {
+        selection_notice.show(mir3::CreateCharacterPage::failure_message(header->recognition));
+        chat_input->release_focus();chat_input->hide();queue_redraw();return true;
+    }
+    if (header->opcode==mir3::protocol::SM_DELCHR_SUCCESS || header->opcode==mir3::protocol::SM_DELCHR_FAIL) return request_selection_list();
     if (const int notice=mir3::SelectionNotice::reply_message(header->opcode)) {
         if (selection_pending) selection_pending_notice=notice;
-        else { character_selection.connecting=false;selection_notice.show(notice); }
+        else { if (selection_delete.visible) finish_selection_delete(false);character_selection.connecting=false;selection_notice.show(notice); }
         queue_redraw();return true;
     }
     auto next=character_selection;
     if (!next.receive({message.ptr(),std::size_t(message.size())})) return false;
     selection_pending_notice=0;
     if (selection_elapsed<500) selection_pending=std::move(next);
-    else { character_selection=std::move(next);selection_notice.show(character_selection.count==0?219:0);selection_bounds={}; }
+    else { if (selection_delete.visible) finish_selection_delete(false);character_selection=std::move(next);selection_notice.show(character_selection.count==0?219:0);selection_bounds={}; }
     queue_redraw();return true;
 }
 
 void Mir3HudView::selection_input(const Ref<InputEvent>& event) {
     const Ref<InputEventMouseMotion> motion=event;
-    if (motion.is_valid()) { selection_pointer=motion->get_position();queue_redraw();return; }
+    if (motion.is_valid()) {
+        selection_pointer=motion->get_position();
+        if (character_creation.visible && !selection_notice.message) creation_input(event);
+        queue_redraw();return;
+    }
     if (character_selection.connecting) return;
     const Ref<InputEventKey> key=event;
-    if (selection_notice.message && key.is_valid() && key->is_pressed() && (key->get_keycode()==KEY_ENTER || key->get_keycode()==KEY_ESCAPE)) {
-        selection_notice.close();queue_redraw();return;
+    if (selection_delete.visible) {
+        if (key.is_valid() && key->is_pressed()) {
+            if (key->get_keycode()==KEY_TAB) selection_delete.tab();
+            else if (key->get_keycode()==KEY_ENTER || key->get_keycode()==KEY_SPACE) finish_selection_delete(selection_delete.selected==0);
+        }
+        const Ref<InputEventMouseButton> button=event;
+        if (button.is_valid() && button->get_button_index()==MOUSE_BUTTON_LEFT) {
+            int hit=-1;
+            for (const int i:{0,2}) {
+                const auto icon=frame(i==0?1241:1245);
+                if (icon.is_valid() && Rect2(Vector2(i==0?181:374,298),icon->get_size()).has_point(button->get_position())) hit=i;
+            }
+            if (button->is_pressed()) { selection_delete.pressed=hit;if (hit>=0) selection_delete.selected=hit; }
+            else { selection_delete.pressed=-1;if (hit>=0) finish_selection_delete(hit==0); }
+        }
+        queue_redraw();return;
     }
+    if (selection_notice.message && key.is_valid() && key->is_pressed() && (key->get_keycode()==KEY_ENTER || key->get_keycode()==KEY_SPACE)) {
+        close_selection_notice();return;
+    }
+    if (character_creation.visible && !selection_notice.message) { creation_input(event);return; }
     const Ref<InputEventMouseButton> mouse=event;
     if (mouse.is_null() || mouse->get_button_index()!=MOUSE_BUTTON_LEFT) return;
     const auto pos=mouse->get_position();selection_pointer=pos;
+    if (!mouse->is_pressed()) {
+        selection_pressed=-1;
+        if (!selection_notice.message && hud_sound) {
+            const std::array<Vector2i,4> origins{{{440,93},{79,243},{259,49},{28,438}}};
+            bool hit=false;
+            for (int i=0;i<4;++i) hit|=Rect2(origins[i],selection_frames.at(52+2*i)->get_size()).has_point(pos);
+            if (character_selection.count>2) {
+                hit|=!character_selection.page && Rect2(Vector2(550,400),frame(1153)->get_size()).has_point(pos);
+                hit|=character_selection.page && Rect2(Vector2(500,400),frame(1150)->get_size()).has_point(pos);
+            }
+            if (hit) hud_sound->play();
+        }
+    }
     if (selection_notice.message) {
         const auto button=frame(1243);
         const bool hit=button.is_valid() && Rect2(Vector2(277,298),button->get_size()).has_point(pos);
         if (mouse->is_pressed()) selection_notice.pressed=hit;
-        else { if (hit) selection_notice.close();selection_notice.pressed=false; }
+        else { if (hit) close_selection_notice();selection_notice.pressed=false; }
     } else if (mouse->is_pressed()) {
+        const std::array<Vector2i,4> origins{{{440,93},{79,243},{259,49},{28,438}}};
+        selection_pressed=-1;
+        for (int i=0;i<4;++i)
+            if (Rect2(origins[i],selection_frames.at(52+2*i)->get_size()).has_point(pos)) selection_pressed=i;
+        if (character_selection.count>2) {
+            if (!character_selection.page && Rect2(Vector2(550,400),frame(1153)->get_size()).has_point(pos)) selection_pressed=4;
+            if (character_selection.page && Rect2(Vector2(500,400),frame(1150)->get_size()).has_point(pos)) selection_pressed=5;
+        }
         for (int i=character_selection.page*2;i<std::min(character_selection.count,character_selection.page*2+2);++i)
             if (selection_bounds[i].has_point(pos)) { character_selection.select(i);break; }
+    } else if (Rect2(Vector2(440,93),selection_frames.at(52)->get_size()).has_point(pos)) {
+        open_character_creation();
+    } else if (Rect2(Vector2(79,243),selection_frames.at(54)->get_size()).has_point(pos)) {
+        open_selection_delete();
     } else if (Rect2(Vector2(259,49),selection_frames.at(56)->get_size()).has_point(pos)) {
         if (character_selection.selected<0) selection_notice.show(230);
         else if (!selection_session.account.empty()) {
             const auto& role=character_selection.roles[character_selection.selected];
-            send_client_packet(103,0,String::utf8(mir3::ansi_to_utf8(selection_session.start_body(role.name)).c_str()));
+            send_client_packet(mir3::protocol::CM_SELCHR,0,String::utf8(mir3::ansi_to_utf8(selection_session.start_body(role.name)).c_str()));
         }
+    } else if (Rect2(Vector2(28,438),selection_frames.at(58)->get_size()).has_point(pos)) {
+        finish_login_exit(String::utf8(message(1077).c_str()));
     } else if (character_selection.count>2) {
         const auto right=frame(1153),left=frame(1150);
         if (right.is_valid() && Rect2(Vector2(550,400),right->get_size()).has_point(pos)) character_selection.turn_page(1);
@@ -2720,6 +3485,14 @@ void Mir3HudView::selection_input(const Ref<InputEvent>& event) {
 
 void Mir3HudView::draw_character_selection() {
     paint_canvas=this;
+    if (character_creation.visible) {
+        draw_character_creation();
+        if (selection_notice.message) {
+            sprite(1240,{140,110});sprite(selection_notice.pressed?1244:1243,{277,298});
+            text(message(selection_notice.message),{163,194,308,95},0xc8faff,mir3::TextFont::dialog);
+        }
+        return;
+    }
     const auto background=selection_source(50);
     if (!background || background->width!=640 || background->height!=480) return;
     auto pixels=background->pixels.rgba;
@@ -2734,10 +3507,18 @@ void Mir3HudView::draw_character_selection() {
     selection_surface=texture(pixels,640,480);
     draw_texture(selection_surface,Vector2());
     constexpr std::array<mir3::HudLayout::Point,4> positions{{{440,93},{79,243},{259,49},{28,438}}};
-    for (int i=0;i<4;++i) draw_texture(selection_frames.at(52+i*2),point(positions[i]));
+    for (int i=0;i<4;++i) {
+        const auto normal=selection_frames.at(52+i*2);
+        const Rect2 bounds(point(positions[i]),normal->get_size());
+        draw_texture(selection_frames.at(52+i*2-(selection_pressed==i?1:0)),point(positions[i]));
+        if (bounds.has_point(selection_pointer)) {
+            legacy_rect(bounds,Color(150.f/255,100.f/255,50.f/255,50.f/255));
+            draw_rect(bounds,Color(200.f/255,150.f/255,100.f/255),false);
+        }
+    }
     if (character_selection.count>2) {
-        sprite(character_selection.page?1155:1153,{550,400});
-        sprite(character_selection.page?1150:1152,{500,400});
+        sprite(character_selection.page?1155:(selection_pressed==4?1154:1153),{550,400});
+        sprite(character_selection.page?(selection_pressed==5?1151:1150):1152,{500,400});
     }
     if (character_selection.selected>=0) {
         const auto& role=character_selection.roles[character_selection.selected];
@@ -2745,7 +3526,7 @@ void Mir3HudView::draw_character_selection() {
         const auto measure=[&](const std::string& value) { return mir3::raster_text(value,500,16,false,mir3::TextFont::selection,messages.get(1074)).text_width; };
         const int width=std::max(measure(name),measure(job))+20;
         const Rect2 box(79,108,width,70);
-        draw_rect(box,Color(50.f/255,50.f/255,25.f/255,100.f/255));
+        legacy_rect(box,Color(50.f/255,50.f/255,25.f/255,100.f/255));
         draw_rect(box,Color(100.f/255,100.f/255,80.f/255),false);
         text(name,{89,118,width-20,16},0x96c8ff,mir3::TextFont::selection);
         text(level,{89,138,width-20,16},0x96f096,mir3::TextFont::selection);
@@ -2754,6 +3535,11 @@ void Mir3HudView::draw_character_selection() {
     if (character_selection.connecting) {
         sprite(1248,{155,150});
         text(message(200),{178,234,308,95},0xc8faff,mir3::TextFont::dialog);
+    } else if (selection_delete.visible) {
+        sprite(1240,{140,110});
+        sprite(selection_delete.pressed==0?1242:1241,{181,298});
+        sprite(selection_delete.pressed==2?1246:1245,{374,298});
+        text(message(228),{183,194,278,75},0xc8faff,mir3::TextFont::dialog);
     } else if (selection_notice.message) {
         sprite(1240,{140,110});sprite(selection_notice.pressed?1244:1243,{277,298});
         text(message(selection_notice.message),{163,194,308,95},0xc8faff,mir3::TextFont::dialog);
@@ -2763,6 +3549,13 @@ void Mir3HudView::draw_character_selection() {
 void Mir3HudView::_draw() {
     using Layout=mir3::HudLayout;
     if (!loaded) return;
+    if (server_groups.visible) { draw_server_groups();return; }
+    if (login_movie_purpose!=LoginMoviePurpose::none) {
+        draw_rect(Rect2(0,0,640,480),Color(0,0,0));
+        if (login_movie_surface.is_valid()) draw_texture_rect(login_movie_surface,Rect2(0,0,640,480),false);
+        return;
+    }
+    if (login_visible) { draw_login();return; }
     if (character_selection.visible) { draw_character_selection();return; }
     draw_terrain();
     scene_light_layer->queue_redraw();
@@ -3090,12 +3883,37 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
+    if (server_groups.visible) return;
+    poll_connection(delta);
+    if (connection_retry_at) return;
+    if (login_movie_purpose!=LoginMoviePurpose::none) { advance_login_movie(delta);return; }
+    if (login_visible) {
+        login_fraction_ms+=delta*1000;const auto ms=std::uint32_t(login_fraction_ms);login_fraction_ms-=ms;
+        advance_login_audio(ms);
+        if (login_flow.phase==mir3::LoginFlow::Phase::credentials) login_announcement.advance(ms);
+        if (login_flow.advance(ms)) enter_character_selection();
+        else if (login_flow.phase==mir3::LoginFlow::Phase::leaving) exit_layer->queue_redraw();
+        queue_redraw();return;
+    }
     if (character_selection.visible) {
         selection_fraction_ms+=delta*1000;const auto ms=std::uint32_t(selection_fraction_ms);selection_fraction_ms-=ms;
+        advance_login_audio(ms);
         selection_elapsed=std::min(500u,selection_elapsed+ms);
         if (selection_pending && selection_elapsed>=500) {
+            if (selection_delete.visible) finish_selection_delete(false);
             character_selection=std::move(*selection_pending);selection_pending.reset();
             selection_notice.show(selection_pending_notice?selection_pending_notice:(character_selection.count==0?219:0));selection_pending_notice=0;selection_bounds={};
+        }
+        if (character_creation.visible) {
+            for (int i=0;i<2;++i) {
+                const auto& role=character_creation.roles[i];
+                if (std::uint16_t(role.elapsed+ms)>120) if (const auto source=selection_source(role.frame+1))
+                    creation_bounds[i]=Rect2(role.x+source->offset_x,role.y+source->offset_y,source->width,source->height);
+            }
+            const auto& selected=character_creation.roles[character_creation.selected];
+            if (std::uint16_t(selected.elapsed+ms)>120 && selected.frame==selected.first_frame())
+                play_login_sound(mir3::LoginAudio::voice(true,selected.profession,selected.gender));
+            character_creation.advance(ms);queue_redraw();return;
         }
         if (!character_selection.connecting) {
             for (int i=character_selection.page*2;i<std::min(character_selection.count,character_selection.page*2+2);++i) {
@@ -3107,6 +3925,11 @@ void Mir3HudView::_process(double delta) {
                 }
             }
         }
+        if (!character_selection.connecting) for (int i=character_selection.page*2;i<std::min(character_selection.count,character_selection.page*2+2);++i) {
+            const auto& role=character_selection.roles[i];
+            if (role.action==1 && role.frame==role.first_frame() && std::uint16_t(role.elapsed+ms)>120)
+                play_login_sound(mir3::LoginAudio::voice(false,role.profession,role.gender));
+        }
         character_selection.advance(ms);queue_redraw();return;
     }
     if (exit_transition.active) {
@@ -3117,17 +3940,9 @@ void Mir3HudView::_process(double delta) {
         exit_layer->queue_redraw();
     }
     map_input_delay.advance(delta*1000);
-    // Snapshot the count: synchronous signal callbacks enqueue for the next update.
-    const auto maps_to_process=map_changes.size();
-    for (std::size_t i=0;i<maps_to_process;++i) {
-        const auto message=std::move(map_changes.front());map_changes.pop_front();
-        const auto id=String::utf8(message.map_id.c_str());
-        const auto name=model.map_name.empty()?id:String::utf8(model.map_name.c_str());
-        const bool success=change_map(id,name,Vector2i(message.x,message.y),message.ambient);
-        if (success) map_series=message.series;
-        emit_signal("map_change_finished",message.opcode,id,success);
-    }
+    process_map_changes();
 
+    apply_login_actor();
     if (scene_ambient.fading) { scene_ambient.advance(delta*1000);queue_redraw(); }
     // Default object messages are processed outside each actor's animation queue.
     if (scene_clear_pending) {
@@ -3255,7 +4070,37 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     paint_canvas->draw_polygon(vertices,colors,uv);
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
-    if (character_selection.visible) { selection_input(event);get_viewport()->set_input_as_handled();return; }
+    if (server_groups.visible) { server_groups_input(event);get_viewport()->set_input_as_handled();return; }
+    if (connection_retry_at || login_movie_purpose!=LoginMoviePurpose::none) { get_viewport()->set_input_as_handled();return; }
+    if (login_visible) {
+        login_input(event);
+        if (login_flow.phase==mir3::LoginFlow::Phase::credentials && !login_flow.notice.message && login_flow.editor_visible) {
+            const Ref<InputEventKey> key=event;
+            if (key.is_valid() && key->get_keycode()!=KEY_ENTER && key->get_keycode()!=KEY_TAB && key->get_keycode()!=KEY_ESCAPE) return;
+            const Ref<InputEventMouseButton> mouse=event;
+            if (mouse.is_valid() && Rect2(chat_input->get_position(),chat_input->get_size()).has_point(mouse->get_position())) return;
+        }
+        get_viewport()->set_input_as_handled();return;
+    }
+    if (character_selection.visible) {
+        selection_input(event);
+        if (character_creation.visible && !selection_notice.message && chat_input->has_focus()) {
+            const Ref<InputEventKey> name_key=event;
+            if (name_key.is_valid() && name_key->get_keycode()!=KEY_ENTER && name_key->get_keycode()!=KEY_ESCAPE) return;
+            const Ref<InputEventMouseButton> name_mouse=event;
+            if (name_mouse.is_valid() && Rect2(Vector2(288,405),Vector2(75,13)).has_point(name_mouse->get_position())) return;
+        }
+        if (selection_delete.visible && chat_input->has_focus()) {
+            const Ref<InputEventKey> input_key=event;
+            if (input_key.is_valid()) {
+                const auto code=input_key->get_keycode();
+                if (code!=KEY_ENTER && code!=KEY_SPACE && code!=KEY_TAB && code!=KEY_ESCAPE) return;
+            }
+            const Ref<InputEventMouseButton> input_mouse=event;
+            if (input_mouse.is_valid() && Rect2(Vector2(164,338),Vector2(309,15)).has_point(input_mouse->get_position())) return;
+        }
+        get_viewport()->set_input_as_handled();return;
+    }
     const Ref<InputEventMouseButton> button=event;
     const bool left_released=button.is_valid() && button->get_button_index()==MOUSE_BUTTON_LEFT && !button->is_pressed();
     if (left_released && portrait_entry_pressed) {
@@ -3619,7 +4464,7 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
                     trade_return_pending=true;
                     trade_return_bag_slot=slot;
                     trade_return_bag_pointer=Vector2i(int(position.x)-x,int(position.y)-y);
-                    emit_signal("trade_offer_requested",1027,int64_t(item.make_index),String::utf8(item.name.c_str()),item.count);
+                    emit_signal("trade_offer_requested",mir3::protocol::CM_TRADE_REMOVE_ITEM,int64_t(item.make_index),String::utf8(item.name.c_str()),item.count);
                 }
             } else if (consumed && !equipment.pending && bag.held_equipment_slot>=0) {
                 if (equipment.takeoff(bag)) emit_equipment_request();
@@ -3647,7 +4492,7 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
 }
 
 void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
-    if (character_selection.visible) { get_viewport()->set_input_as_handled();return; }
+    if (login_visible || character_selection.visible) { get_viewport()->set_input_as_handled();return; }
     Ref<InputEventKey> key=event;
     if (key.is_null() || !key->is_pressed() || key->is_echo()) return;
     if (guild_edit && guild_edit->has_focus()) return;
@@ -3763,7 +4608,7 @@ Ref<ImageTexture> Mir3HudView::item_frame(int id) {
 
 bool Mir3HudView::apply_inventory_add(int identifier,int icon,int count,int64_t make_index,String name,int std_mode,int stack_mode) {
     // Message 200 inserts an already decoded item using the normal bag placement path.
-    if (identifier!=200 || count<0 || count>65535 || make_index<=0 ||
+    if (identifier!=mir3::protocol::SM_ADDITEM || count<0 || count>65535 || make_index<=0 ||
         std_mode<0 || std_mode>255 || stack_mode<0 || stack_mode>255) return false;
     return add_inventory_item(icon,count,-1,make_index,name,std_mode,stack_mode);
 }
@@ -4137,8 +4982,8 @@ bool Mir3HudView::set_learned_skill(int id,int level,int key,int experience,int 
 }
 
 bool Mir3HudView::apply_skill_records(int identifier,int count,PackedByteArray records) {
-    const bool full=identifier==211;
-    if ((!full && (identifier!=210 || count!=1)) || count<0 || count>255 || records.size()!=74*count) return false;
+    const bool full=identifier==mir3::protocol::SM_SENDMYMAGIC;
+    if ((!full && (identifier!=mir3::protocol::SM_ADDMAGIC || count!=1)) || count<0 || count>255 || records.size()!=74*count) return false;
     // The transport supplies fixed-size records after decoding each wire segment.
     auto next=skills.learned;
     auto bindings=skills.bindings;
@@ -4451,14 +5296,14 @@ bool Mir3HudView::check_exit_allowed() {
 }
 
 void Mir3HudView::handle_exit_confirmation(int dialog_id) {
-    if (character_selection.visible) return;
+    if (login_visible || character_selection.visible) return;
     if ((dialog_id==101 || dialog_id==109) && !check_exit_allowed()) return;
     // 0x4256B0 / 0x47BE10: game logout sends an empty 1009; it is not WM_DESTROY.
     if (dialog_id==101) {
         if (!prepare_character_selection()) {
             UtilityFunctions::push_error("Cannot read original character selection resources.");return;
         }
-        send_client_packet(1009,0,String());
+        send_client_packet(mir3::protocol::CM_LOGOUT,0,String());
         exit_transition.begin();exit_fraction_ms=0;exit_layer->queue_redraw();
     }
     if (dialog_id==109) get_tree()->quit();
@@ -4480,7 +5325,7 @@ void Mir3HudView::open_group_dialog(int action) {
     cancel_pointer_interactions();
     const int w=skin->get_width(),h=skin->get_height();
     group_dialog={400-w/2,246-h/2,w,h};
-    group_request=action<=3?1019+action:action;
+    group_request=action<=3?mir3::protocol::CM_GROUPMODE+action:action;
     group_selected=0;
     group_dialog_pressed=-1;
     queue_redraw();
@@ -4493,7 +5338,7 @@ void Mir3HudView::open_group_dialog(int action) {
 void Mir3HudView::finish_group_dialog(bool confirm) {
     const int request=group_request;
     const bool has_input=dialog_has_input();
-    const String name=has_input?(request==1011?chat_input->limited_text():chat_input->get_text()):String();
+    const String name=has_input?(request==mir3::protocol::CM_MERCHANTDLGSELECT?chat_input->limited_text():chat_input->get_text()):String();
     group_request=0;
     group_dialog_pressed=-1;
     if (has_input) {
@@ -4504,15 +5349,15 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
         chat_input->layout(model.layout.expanded);
     }
     queue_redraw();
-    if (request==1011) {
+    if (request==mir3::protocol::CM_MERCHANTDLGSELECT) {
         const auto command=String::utf8(npc_dialogue_prompt_command.c_str())+"\r"+name;
         const int actor=std::exchange(npc_dialogue_prompt_actor,0);
         npc_dialogue_prompt.clear();
         npc_dialogue_prompt_command.clear();
         if (confirm && actor && actor==npc_dialogue_actor) {
             emit_signal("npc_dialogue_action",actor,command);
-            emit_signal("npc_request",1011,actor,command);
-            emit_npc_packet(1011,actor,command);
+            emit_signal("npc_request",mir3::protocol::CM_MERCHANTDLGSELECT,actor,command);
+            emit_npc_packet(mir3::protocol::CM_MERCHANTDLGSELECT,actor,command);
         }
         return;
     }
@@ -4548,7 +5393,7 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
         return;
     }
     if (!has_input || name.is_empty()) return;
-    if (request==1029) {
+    if (request==mir3::protocol::CM_TRADE_GOLD) {
         const auto utf8=name.utf8();
         const std::string_view digits(utf8.get_data());
         std::uint32_t amount=0;
@@ -4557,12 +5402,12 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
         if (trade.visible && !trade_confirmed && !trade_gold_pending && !trade_gold[0] &&
             parsed.ec==std::errc{} && parsed.ptr==end && amount>0 && amount<=inventory_gold) {
             trade_gold_pending=true;
-            emit_signal("trade_gold_requested",1029,int64_t(amount));
+            emit_signal("trade_gold_requested",mir3::protocol::CM_TRADE_GOLD,int64_t(amount));
         }
-    } else if (request==1039) {
+    } else if (request==mir3::protocol::CM_GUILDDELMEMBER) {
         emit_signal("guild_member_removal_requested",name);
         emit_signal("guild_members_requested");
-    } else if (request==1045) {
+    } else if (request==mir3::protocol::CM_GUILDBREAKALLY) {
         chat_requested(String::utf8(message(4016).c_str())+name);
         emit_signal("guild_overview_requested");
     } else {
@@ -4578,9 +5423,9 @@ void Mir3HudView::draw_group_dialog() {
         sprite(1243+(group_dialog_pressed==0),{x+137,y+188});
         return;
     }
-    const auto prompt=group_request==1011?npc_dialogue_prompt:
-        group_request==1039?"'"+std::string(guild_name.utf8().get_data())+"' "+message(4001):
-        message(group_request==110?2302:group_request==1307?1307:group_request==1029?1304:group_request==1045?4002:group_request==1022?1606:1605);
+    const auto prompt=group_request==mir3::protocol::CM_MERCHANTDLGSELECT?npc_dialogue_prompt:
+        group_request==mir3::protocol::CM_GUILDDELMEMBER?"'"+std::string(guild_name.utf8().get_data())+"' "+message(4001):
+        message(group_request==110?2302:group_request==1307?1307:group_request==mir3::protocol::CM_TRADE_GOLD?1304:group_request==mir3::protocol::CM_GUILDBREAKALLY?4002:group_request==mir3::protocol::CM_DELGROUPMEMBER?1606:1605);
     if (dialog_has_input()) text(prompt,{x+43,y+84,278,75},0xc8faff,mir3::TextFont::dialog);
     else text(message(group_request==109?2636:1065),{x+23,y+84,308,95},0xc8faff,mir3::TextFont::dialog);
     for (const int index:{0,2}) {
@@ -4653,7 +5498,7 @@ bool Mir3HudView::group_dialog_input(const Ref<InputEvent>& event) {
 bool Mir3HudView::apply_guild_overview_reply(int identifier,PackedByteArray body) {
     if (body.is_empty() || body.size()>8191) return false;
     const mir3::GuildReply reply{identifier,std::string(reinterpret_cast<const char*>(body.ptr()),body.size())};
-    const bool initial=identifier==753;
+    const bool initial=identifier==mir3::protocol::SM_OPENGUILDDLG;
     if (initial ? !guild_overview.receive(reply) :
         !guild_overview_started || !guild_overview.receive_continuation(reply)) return false;
 
@@ -4754,8 +5599,8 @@ bool Mir3HudView::guild_pointer(int kind,Vector2 point) {
                 if (hit==2) emit_signal("guild_members_requested");
                 if (mir3::GuildLayout::denial(hit,guild_manager)==4000) open_group_dialog(4000);
                 else if (hit==4 || hit==7) open_guild_editor(hit==4);
-                else if (hit==5) open_group_dialog(1039);
-                else if (hit==8) open_group_dialog(1045);
+                else if (hit==5) open_group_dialog(mir3::protocol::CM_GUILDDELMEMBER);
+                else if (hit==8) open_group_dialog(mir3::protocol::CM_GUILDBREAKALLY);
             }
         }
     }
@@ -5183,6 +6028,14 @@ void Mir3HudView::play_actor_sound(int actor,int sample,Vector2i cell) {
 }
 
 void Mir3HudView::sync_hud_sound() {
+    for (auto& [file,player]:login_effects) {
+        player->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
+        if (!audio_options.effects_enabled) player->stop();
+    }
+    if (login_movie_audio) {
+        login_movie_audio->set_volume_db(mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
+        if (!audio_options.effects_enabled) login_movie_audio->stop();
+    }
     for (auto& [actor,sound]:actor_sounds) {
         auto* audio=AudioServer::get_singleton();
         const int bus=audio->get_bus_index(sound.bus);
@@ -5405,7 +6258,7 @@ bool Mir3HudView::mount_pointer(int kind,Vector2 position) {
 }
 
 void Mir3HudView::toggle_minimap(std::uint64_t cooldown) {
-    if (minimap.toggle(ticks_msec(),cooldown)) emit_signal("minimap_requested",1033);
+    if (minimap.toggle(ticks_msec(),cooldown)) emit_signal("minimap_requested",mir3::protocol::CM_MINIMAP);
     queue_redraw();
 }
 
@@ -5440,7 +6293,7 @@ void Mir3HudView::toggle_portrait_map() {
     portrait_map_mode=!portrait_map_mode;
     portrait_map_pending=portrait_map_mode;
     portrait_map_visible=false;
-    if (portrait_map_pending) emit_signal("minimap_requested",1033);
+    if (portrait_map_pending) emit_signal("minimap_requested",mir3::protocol::CM_MINIMAP);
     const auto path=options_path.utf16();
     if (!WritePrivateProfileStringW(L"Options",L"InformationMode",portrait_map_mode?L"1":L"0",
             reinterpret_cast<const wchar_t*>(path.get_data())))
@@ -5484,14 +6337,14 @@ void Mir3HudView::draw_portrait_map() {
 
 void Mir3HudView::send_trade_offer(int count) {
     trade_offer_count=count;
-    emit_signal("trade_offer_requested",1026,int64_t(bag.held.make_index),String::utf8(bag.held.name.c_str()),count);
+    emit_signal("trade_offer_requested",mir3::protocol::CM_TRADE_ADD_ITEM,int64_t(bag.held.make_index),String::utf8(bag.held.name.c_str()),count);
 }
 
 bool Mir3HudView::apply_trade_offer_reply(int identifier,int accepted_count) {
-    if (identifier==677 || identifier==678) {
+    if (identifier==mir3::protocol::SM_TRADE_REMOVE_OK || identifier==mir3::protocol::SM_TRADE_REMOVE_FAIL) {
         if (!trade_return_pending) return false;
         auto& item=trade_items[0][trade_return_slot];
-        if (identifier==677) {
+        if (identifier==mir3::protocol::SM_TRADE_REMOVE_OK) {
             if (!bag.restore_trade_item(item,trade_return_bag_slot,trade_return_bag_pointer.x,trade_return_bag_pointer.y)) {
                 bag.held=item;
                 bag.held_slot=-1;
@@ -5503,8 +6356,8 @@ bool Mir3HudView::apply_trade_offer_reply(int identifier,int accepted_count) {
         queue_redraw();
         return true;
     }
-    if (trade_pending_slot<0 || !trade_offer_count || (identifier!=675 && identifier!=676)) return false;
-    if (identifier==675) {
+    if (trade_pending_slot<0 || !trade_offer_count || (identifier!=mir3::protocol::SM_TRADE_ADD_OK && identifier!=mir3::protocol::SM_TRADE_ADD_FAIL)) return false;
+    if (identifier==mir3::protocol::SM_TRADE_ADD_OK) {
         if (!bag.held || accepted_count<0 ||
             accepted_count>trade_offer_count || trade_offer_count>bag.held.count) return false;
         const int count=accepted_count?accepted_count:trade_offer_count;
@@ -5555,13 +6408,13 @@ bool Mir3HudView::set_trade_item(int side,int slot,int icon,int count,int64_t ma
 
 bool Mir3HudView::apply_trade_gold_reply(int identifier,int64_t amount,int low_word,int high_word) {
     if (!trade.visible || amount<0 || amount>UINT32_MAX) return false;
-    if (identifier==684) {
+    if (identifier==mir3::protocol::SM_TRADE_GOLD) {
         if (low_word<0 || low_word>UINT16_MAX || high_word<0 || high_word>UINT16_MAX) return false;
         trade_gold[0]=static_cast<std::uint32_t>(amount);
         inventory_gold=std::uint32_t(low_word) | (std::uint32_t(high_word)<<16);
         trade_gold_pending=false;
         trade_gold_debited=amount>0;
-    } else if (identifier==686) {
+    } else if (identifier==mir3::protocol::SM_TRADE_PEER_GOLD) {
         trade_gold[1]=static_cast<std::uint32_t>(amount);
     } else return false;
     queue_redraw();
@@ -5615,12 +6468,12 @@ bool Mir3HudView::apply_trade_cancel(int64_t balance) {
 bool Mir3HudView::open_trade(String partner) {
     if (partner.is_empty()) {
         if (trade_pending_slot>=0) {
-            if (trade_offer_count) apply_trade_offer_reply(676);
+            if (trade_offer_count) apply_trade_offer_reply(mir3::protocol::SM_TRADE_ADD_FAIL);
             else trade_pending_slot=-1;
         }
         if (trade.visible) trade.toggle();
         trade_confirm_pressed=false;
-        if (group_request==1307 || group_request==1029) finish_group_dialog(false);
+        if (group_request==1307 || group_request==mir3::protocol::CM_TRADE_GOLD) finish_group_dialog(false);
         trade_offer_count=0;
         trade_confirmed=false;
         trade_gold_pending=false;
@@ -5711,14 +6564,14 @@ bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
         trade_confirm_pressed=false;
         if (activate) {
             trade_confirmed=true;
-            emit_signal("trade_requested",1030,String());
+            emit_signal("trade_requested",mir3::protocol::CM_TRADE_CONFIRM,String());
         }
         const auto [x,y,w,h]=trade.rect;
         const Rect2 local_grid(x+14,y+56,190,190);
         if (!captured && !trade_confirmed && trade_pending_slot<0 && trade_return_slot<0 &&
             !bag.held && !trade_gold_pending && !trade_gold[0] && inventory_gold &&
             Rect2(x+34,y+270,122,34).has_point(position)) {
-            open_group_dialog(1029);
+            open_group_dialog(mir3::protocol::CM_TRADE_GOLD);
         }
         if (!captured && !trade_confirmed && trade_pending_slot<0 && !trade_return_pending &&
             !bag.held && local_grid.has_point(position)) {
@@ -5783,18 +6636,18 @@ bool Mir3HudView::request_trade() {
     const auto [dx,dy]=directions[trade_direction];
     if (std::int64_t(trade_actor_cell.x)!=std::int64_t(model.map_x)+dx ||
         std::int64_t(trade_actor_cell.y)!=std::int64_t(model.map_y)+dy) return false;
-    emit_signal("trade_requested",1025,trade_actor_name);
+    emit_signal("trade_requested",mir3::protocol::CM_TRADE_CANCEL,trade_actor_name);
     return true;
 }
 
 bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn,int ambient_mode) {
     // Decode into a temporary map: failure must not destroy the live scene.
-    if (ambient_mode<0 || ambient_mode>255 || !terrain_ready || name.is_empty() ||
+    if (ambient_mode<0 || ambient_mode>255 || !loaded || name.is_empty() ||
         !mir3::valid_map_id(map_id.utf8().get_data())) return false;
     mir3::MapTerrain next;
     if (!next.open(std::filesystem::u8path(map_directory.path_join(map_id+".map").utf8().get_data())) ||
         !next.walkable(spawn.x,spawn.y)) return false;
-    terrain=std::move(next);
+    terrain=std::move(next);terrain_ready=true;
     scene_ambient.enter(static_cast<std::uint8_t>(ambient_mode));
     current_map_id=map_id;
     map_input_delay.enter();
@@ -5863,7 +6716,7 @@ void Mir3HudView::reset_map_overlays() {
     minimap_image.unref();
     portrait_map_visible=false;
     portrait_map_pending=portrait_map_mode;
-    if (refresh || portrait_map_pending) emit_signal("minimap_requested",1033);
+    if (refresh || portrait_map_pending) emit_signal("minimap_requested",mir3::protocol::CM_MINIMAP);
 }
 
 void Mir3HudView::set_minimap_position(int x,int y) {

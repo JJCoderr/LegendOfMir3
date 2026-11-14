@@ -1,4 +1,5 @@
 #pragma once
+#include "protocol/message_ids.hpp"
 #include <array>
 #include <utility>
 #include <cstdint>
@@ -139,9 +140,9 @@ public:
     // 0x4282C0, normal bag source. No client decrement: the reply supplies the
     // remaining quantity for mode3. Ordinary items are removed as a whole.
     bool apply_use_reply(int identifier, int remaining, int ox, int oy, int mouse_x = 0, int mouse_y = 0) {
-        if (!pending_use || !held || (identifier != 635 && identifier != 636)) return false;
-        bool restore = !(identifier == 635);
-        if ((identifier == 635) && held.stack_mode == 3) {
+        if (!pending_use || !held || (identifier != mir3::protocol::SM_EAT_OK && identifier != mir3::protocol::SM_EAT_FAIL)) return false;
+        bool restore = !(identifier == mir3::protocol::SM_EAT_OK);
+        if ((identifier == mir3::protocol::SM_EAT_OK) && held.stack_mode == 3) {
             if (held.count <= 1) {
                 // 0x440C00 removes first record matching makeIndex AND name.
                 for (int i=0;i<capacity;++i) if (items[i] && items[i].make_index == held.make_index && items[i].name == held.name) {

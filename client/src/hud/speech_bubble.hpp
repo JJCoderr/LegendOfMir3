@@ -1,11 +1,12 @@
 #pragma once
+#include "protocol/message_ids.hpp"
 #include <array>
 #include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
 namespace mir3 {
-struct SpeechReply { int identifier=40; std::uint32_t actor_id=0; std::string text; }; // decoded UTF-8 adapter
+struct SpeechReply { int identifier=mir3::protocol::SM_HEAR; std::uint32_t actor_id=0; std::string text; }; // decoded UTF-8 adapter
 struct SpeechLine { std::string text; int width=0; };
 std::vector<SpeechLine> wrap_speech(std::string_view text);
 struct SpeechBubble {
@@ -14,7 +15,7 @@ struct SpeechBubble {
     double elapsed=0;
     bool receive(const SpeechReply& reply) {
         // 0x42F380 only40/1501 populate actor text; other channels log only.
-        if (reply.actor_id!=actor_id || (reply.identifier!=40 && reply.identifier!=1501)) return false;
+        if (reply.actor_id!=actor_id || (reply.identifier!=mir3::protocol::SM_HEAR && reply.identifier!=mir3::protocol::SM_MONSTERSAY)) return false;
         auto wrapped=wrap_speech(reply.text);
         if (!reply.text.empty() && wrapped.empty()) return false;
         lines=std::move(wrapped);elapsed=0;return true;

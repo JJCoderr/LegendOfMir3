@@ -20,6 +20,9 @@
 #include "hud/exit_guard.hpp"
 #include "hud/exit_transition.hpp"
 #include "hud/character_selection.hpp"
+#include "hud/create_character.hpp"
+#include "resources/login_config.hpp"
+#include "hud/server_groups.hpp"
 #include "hud/portrait_picker.hpp"
 #include "resources/map_terrain.hpp"
 #include "protocol/map_message.hpp"
@@ -39,6 +42,13 @@
 #include "chat/chat_history.hpp"
 #include "chat/chat_reception.hpp"
 #include "chat_input_view.hpp"
+#include "client_connection.hpp"
+#include "resources/legacy_movie.hpp"
+#include "hud/game_entry.hpp"
+#include "hud/login_audio.hpp"
+#include "hud/login_announcement.hpp"
+#include "protocol/game_connection.hpp"
+#include "protocol/login_actor.hpp"
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/back_buffer_copy.hpp>
 #include <godot_cpp/classes/sprite2d.hpp>
@@ -55,6 +65,8 @@ class Mir3HudView : public godot::Node2D {
     GDCLASS(Mir3HudView,godot::Node2D)
 public:
     void _ready() override;
+    void set_connection_enabled(bool enabled);
+    bool open_server_groups();
     void _exit_tree() override;
     void _draw() override;
     void _process(double delta) override;
@@ -80,6 +92,8 @@ public:
     bool apply_minimap_reply(int map_number);
     void apply_minimap_unavailable();
     void handle_exit_confirmation(int dialog_id);
+    bool open_login();
+    bool apply_login_message(godot::PackedByteArray message);
     bool set_selection_session(godot::String account,int64_t number);
     bool request_selection_list();
     bool apply_selection_message(godot::PackedByteArray message);
@@ -448,6 +462,55 @@ private:
     mir3::HudLayout::Rect npc_dialogue_text_bounds(const NpcDialogueRow& row) const;
     int npc_dialogue_option_at(godot::Vector2 pointer) const;
     godot::Vector2i npc_dialogue_origin;
+    mir3::LoginConfig login_config;
+    mir3::LoginFlow login_flow;
+    bool login_visible=false,login_notice_pressed=false;
+    double login_fraction_ms=0;
+    std::array<unsigned char,4> login_buttons{};
+    godot::Vector2 login_pointer;
+    std::vector<godot::Rect2> login_server_bounds;
+    godot::Rect2 login_server_box;
+    enum class LoginMoviePurpose { none,opening,create,return_selection,enter_game };
+    LoginMoviePurpose login_movie_purpose=LoginMoviePurpose::none;
+    mir3::LegacyMovie login_movie;
+    godot::Ref<godot::ImageTexture> login_movie_surface;
+    godot::AudioStreamPlayer* login_movie_audio=nullptr;
+    void start_login_movie(LoginMoviePurpose purpose,const char* filename,bool reverse=false);
+    void advance_login_movie(double delta);
+    void finish_game_entry();
+    mir3::LoginAnnouncement login_announcement;
+    struct AnnouncementImage { godot::Ref<godot::ImageTexture> image;int width=0,height=0; };
+    std::vector<AnnouncementImage> announcement_images;
+    void load_login_announcement();
+    void draw_login_announcement();
+    mir3::LoginAudio login_audio;
+    std::map<std::string,godot::AudioStreamPlayer*> login_effects;
+    void play_login_sound(std::string_view file,bool loop=false);
+    void advance_login_audio(std::uint32_t ms);
+    mir3::GameEntry game_entry;
+    mir3::GameConnection game_connection;
+    std::optional<mir3::LoginActor> login_actor_pending;
+    std::array<std::uint8_t,16> login_actor_extra{};
+    bool apply_login_actor();
+    bool apply_game_message(const godot::PackedByteArray& message);
+    void process_map_changes();
+    mir3::ServerGroups server_groups;
+    mir3::WilArchive server_group_archive;
+    std::map<int,godot::Ref<godot::ImageTexture>> server_group_frames;
+    godot::Vector2 server_group_pointer;
+    godot::Vector2i server_glow_offset;
+    godot::Node2D* server_glow=nullptr;
+    bool server_group_exit_pressed=false,server_group_scroll_drag=false;
+    std::uint64_t server_group_scroll_tick=0;
+    bool open_configured_login(mir3::LoginConfig configured);
+    void draw_server_groups();
+    void draw_server_group_glow();
+    void server_groups_input(const godot::Ref<godot::InputEvent>& event);
+    void clear_game_scene();
+    void sync_login_editor();
+    void draw_login();
+    void login_input(const godot::Ref<godot::InputEvent>& event);
+    void send_login_request(const mir3::LoginRequest& request);
     mir3::ExitTransition exit_transition;
     mir3::CharacterSelectionPage character_selection;
     double exit_fraction_ms=0;
@@ -459,9 +522,26 @@ private:
     std::uint32_t selection_elapsed=0;
     double selection_fraction_ms=0;
     mir3::SelectionNotice selection_notice;
+    mir3::CreateCharacterPage character_creation;
+    std::array<godot::Rect2,2> creation_bounds;
+    std::vector<std::string> creation_description;
+    std::vector<std::uint8_t> creation_backdrop;
+    void open_character_creation();
+    void show_character_creation();
+    void close_character_creation();
+    void submit_character_creation();
+    void update_creation_description();
+    void draw_character_creation();
+    void creation_input(const godot::Ref<godot::InputEvent>& event);
+    void close_selection_notice();
+    mir3::DeleteCharacterDialog selection_delete;
+    void open_selection_delete();
+    void finish_selection_delete(bool confirm);
     mir3::SelectionSession selection_session;
     int selection_pending_notice=0;
     godot::Vector2 selection_pointer;
+    int selection_pressed=-1;
+    void finish_login_exit(const godot::String& url);
     const mir3::WilFrame* selection_source(int index);
     void selection_input(const godot::Ref<godot::InputEvent>& event);
 
@@ -473,6 +553,14 @@ private:
     void draw_exit_transition();
     mir3::ExitGuard exit_guard;
     bool check_exit_allowed();
+    enum class ConnectionPage { none,login,selection,game };
+    mir3::ClientConnection connection;
+    mir3::LoginEndpoint connection_endpoint;
+    ConnectionPage connection_page=ConnectionPage::none;
+    bool connection_enabled=true,connection_failed=false;
+    std::uint64_t connection_retry_at=0;
+    void connect_page(ConnectionPage page,const mir3::LoginEndpoint& endpoint);
+    void poll_connection(double delta);
     mir3::SendMessages outgoing_messages;
     godot::PackedByteArray send_client_packet(int identifier,int actor,const godot::String& body,std::uint32_t instance=0,std::uint16_t quantity=0);
     void emit_npc_packet(int identifier,int actor,const godot::String& body,std::uint32_t instance=0,std::uint16_t quantity=0);

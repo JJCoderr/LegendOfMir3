@@ -163,7 +163,7 @@ func encode_scene_bytes(bytes: PackedByteArray) -> PackedByteArray:
 	return result
 
 func scene_packet(opcode: int, actor: int, a: int, b: int, c: int, body: PackedByteArray = PackedByteArray()) -> PackedByteArray:
-	var raw := PackedByteArray([(opcode & 255)^18,a&255,b&255,c&255,((opcode>>8)&255)^52,(actor&255)^120,(a>>8)&255,((actor>>8)&255)^86,(b>>8)&255,(actor>>16)&255,(c>>8)&255,(actor>>24)&255])
+	var raw := PackedByteArray([(opcode & 255)^18,a&255,b&255,c&255,((opcode>>8)&255)^52^86,(actor&255)^120,(a>>8)&255,((actor>>8)&255),(b>>8)&255,(actor>>16)&255,(c>>8)&255,(actor>>24)&255])
 	var result := encode_scene_bytes(raw)
 	if body.size() == 21:
 		result.append_array(encode_scene_bytes(body.slice(0,16)))
@@ -177,7 +177,7 @@ func scene_text_packet(opcode: int, actor: int, foreground: int, background: int
 	return packet
 
 func selection_packet(count: int, body: String) -> PackedByteArray:
-	var header := PackedByteArray([count&255,(count>>8)&255,(count>>16)&255,(count>>24)&255,8,2,0,0,0,0,0,0])
+	var header := PackedByteArray([count&255,(count>>8)&255,(count>>16)&255,(count>>24)&255,Mir3HudView.SM_QUERYCHR&255,Mir3HudView.SM_QUERYCHR>>8,0,0,0,0,0,0])
 	var packet := encode_scene_bytes(header)
 	packet.append_array(encode_scene_bytes(body.to_ascii_buffer()))
 	return packet
@@ -194,7 +194,7 @@ func run_selection_requests() -> void:
 	hud.client_packet_ready.connect(func(packet: PackedByteArray): packets.append(packet))
 	if not check(not hud.request_selection_list(), "缺少账号会话时不发送查询"): return
 	if not check(hud.set_selection_session("account",-123) and not hud.set_selection_session("invalid/name",1), "会话配置及非法账号拒绝"): return
-	if not check(hud.request_selection_list() and packets.size()==1 and packets[0]==expected_selection_request(100,1,"account/-123"), "100查询完整包及正文"): return
+	if not check(hud.request_selection_list() and packets.size()==1 and packets[0]==expected_selection_request(Mir3HudView.CM_QUERYCHR,1,"account/-123"), "100查询完整包及正文"): return
 	click_at(Vector2(280,60),false)
 	if not check(packets.size()==1 and hud.hud_snapshot().selection_connecting, "等待列表时开始按钮不发送"): return
 	if not check(hud.apply_selection_message(selection_packet(1,"Hero/0/x/10/0")) and hud.hud_snapshot().selection_connecting, "重新查询重置500毫秒等待"): return
@@ -203,15 +203,15 @@ func run_selection_requests() -> void:
 		await process_frame
 	if not check(not hud.hud_snapshot().selection_connecting, "查询等待期满"): return
 	click_at(Vector2(280,60),false)
-	if not check(packets.size()==2 and packets[1]==expected_selection_request(103,2,"account/Hero") and not hud.hud_snapshot().selection_connecting, "开始按钮依释放落点发送103且不额外显示等待"): return
-	for opcode in [526,527,528]:
+	if not check(packets.size()==2 and packets[1]==expected_selection_request(Mir3HudView.CM_SELCHR,2,"account/Hero") and not hud.hud_snapshot().selection_connecting, "开始按钮依释放落点发送103且不额外显示等待"): return
+	for opcode in [Mir3HudView.SM_STARTFAIL,Mir3HudView.SM_QUERYCHR_FAIL,Mir3HudView.SM_OUTOFCONNECTION]:
 		var reply := encode_scene_bytes(PackedByteArray([0,0,0,0,opcode&255,(opcode>>8)&255,0,0,0,0,0,0]))
 		if not check(hud.apply_selection_message(reply) and hud.hud_snapshot().selection_notice=={526:221,527:220,528:222}[opcode], "服务器失败回包显示对应原版提示"): return
 		click_at(Vector2(280,60),false)
 		if not check(packets.size()==2, "失败提示阻挡底层开始按钮"): return
 		await process_frame
-		if opcode==526 and not await capture("character-selection-start-failed",Vector2i(640,480)): return
-		key(KEY_ESCAPE)
+		if opcode==Mir3HudView.SM_STARTFAIL and not await capture("character-selection-start-failed",Vector2i(640,480)): return
+		key(KEY_ENTER)
 		if not check(hud.hud_snapshot().selection_notice==0, "关闭失败提示"): return
 	if not check(hud.apply_selection_message(selection_packet(0,"")), "空列表回复"): return
 	key(KEY_ENTER)
@@ -344,7 +344,7 @@ func run_exit_transition() -> void:
 	click_at(Vector2(470,105),false)
 	await create_timer(0.1).timeout
 	if not check(hud.hud_snapshot().group_request==0 and events.size()==2, "无按钮连接提示阻止旧游戏快捷键和底层按钮"): return
-	if not check(not hud.apply_scene_message(scene_packet(1401,0,0,0,0),PackedByteArray([18,52,86,120])), "角色选择页拒绝旧游戏连接消息"): return
+	if not check(not hud.apply_scene_message(scene_packet(Mir3HudView.SM_CLIENT_OPTIONS,0,0,0,0),PackedByteArray([18,52,86,120])), "角色选择页拒绝旧游戏连接消息"): return
 	hud.handle_exit_confirmation(101)
 	if not check(not hud.hud_snapshot().exit_transition_active, "离场后不能从旧游戏确认入口重新启动过渡"): return
 	print("PASS 退出过渡：全屏变暗、离场清理、640×480角色选择页")
@@ -485,22 +485,22 @@ func run_options_input() -> void:
 func run_options_wire() -> void:
 	var key_bytes := PackedByteArray([18,52,86,120])
 	key(KEY_N)
-	if not check(hud.apply_scene_message(scene_packet(1401,0xcf800000,4,99,88),key_bytes), "最高位选项原包不被当作非法人物编号"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_CLIENT_OPTIONS,0xcf800000,4,99,88),key_bytes), "最高位选项原包不被当作非法人物编号"): return
 	var state: Dictionary = hud.hud_snapshot()
 	if not check(state.option_confirmed==PackedByteArray([1,1,1,1,1,1,1]) and state.option_attack_mode==4, "七项掩码和第一参数模式映射"): return
 	if not check(state.rejected_chat==PackedInt32Array([1,1,1]) and state.reception_frames==PackedInt32Array([1338,1340,-1]), "原包同步底栏图标及原版聊天变量副作用"): return
 	click_at(Vector2(336,210),true)
 	click_at(Vector2(336,210),false)
-	if not check(hud.apply_scene_message(scene_packet(1401,0xcf800000,2,0,0),key_bytes), "重复确认包正常接收"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_CLIENT_OPTIONS,0xcf800000,2,0,0),key_bytes), "重复确认包正常接收"): return
 	state=hud.hud_snapshot()
 	if not check(state.option_displayed[0]==0 and state.option_confirmed[0]==1 and state.option_attack_mode==2, "重复确认保留预测显示同时更新模式"): return
 	if not await capture("options-wire-prediction"): return
-	var malformed := scene_packet(1401,0,0,0,0,PackedByteArray([1]))
+	var malformed := scene_packet(Mir3HudView.SM_CLIENT_OPTIONS,0,0,0,0,PackedByteArray([1]))
 	if not check(not hud.apply_scene_message(malformed,key_bytes) and hud.hud_snapshot().option_attack_mode==2, "带多余载荷原包拒绝且不部分更新"): return
-	if not check(hud.apply_scene_message(scene_packet(1401,0,1,0,0),key_bytes), "接收全部关闭确认"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_CLIENT_OPTIONS,0,1,0,0),key_bytes), "接收全部关闭确认"): return
 	state=hud.hud_snapshot()
 	if not check(state.option_confirmed==PackedByteArray([0,0,0,0,0,0,0]) and state.rejected_chat==PackedInt32Array([0,0,0]) and state.reception_frames==PackedInt32Array([-1,-1,1342]), "清除确认位并按原版顺序更新聊天"): return
-	if not check(hud.apply_scene_message(scene_packet(1401,0x00800000,3,0,0),key_bytes), "独立更新所有人聊天"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_CLIENT_OPTIONS,0x00800000,3,0,0),key_bytes), "独立更新所有人聊天"): return
 	state=hud.hud_snapshot()
 	if not check(state.rejected_chat==PackedInt32Array([0,1,1]) and state.reception_frames==PackedInt32Array([-1,-1,-1]), "所有人聊天交叉写行会变量但保留行会图标"): return
 	if not await capture("options-wire-confirmed"): return
@@ -568,6 +568,8 @@ func run_options_panel() -> void:
 	await process_frame
 	await process_frame
 	var restored: Node = load("res://main.tscn").instantiate()
+	restored.set_meta("offline_preview",true)
+	restored.set_connection_enabled(false)
 	restored.set_meta("options_path",saved_path)
 	root.add_child(restored)
 	var reloaded: Dictionary = restored.hud_snapshot()
@@ -636,10 +638,10 @@ func run_map_wire() -> void:
 	hud.map_change_finished.connect(func(op: int, id: String, success: bool): completed.append([op,id,success]))
 	var origin: Vector2i = hud.hud_snapshot().player_cell
 	hud.set_local_actor_identity(100)
-	var packet := scene_packet(51,100,312,310,0x0201)
+	var packet := scene_packet(Mir3HudView.SM_NEWMAP,100,312,310,0x0201)
 	packet.append_array(encode_scene_bytes("01".to_ascii_buffer()))
 	if not check(hud.apply_scene_message(packet,keys) and hud.hud_snapshot().map_id=="0" and hud.hud_snapshot().pending_map_changes==1, "51 入队后尚未立即切图"): return
-	var description := scene_text_packet(54,0,0,0,PackedByteArray([178,226,202,212,181,216,205,188]))
+	var description := scene_text_packet(Mir3HudView.SM_MAPDESCRIPTION,0,0,0,PackedByteArray([178,226,202,212,181,216,205,188]))
 	if not check(hud.apply_scene_message(description,keys) and hud.hud_snapshot().map_name=="测试地图", "54 独立更新中文地图名称"): return
 	await process_frame
 	await process_frame
@@ -647,26 +649,26 @@ func run_map_wire() -> void:
 	if not check(hud.hud_snapshot().scene_ambient_mode==1 and hud.hud_snapshot().map_series==2 and hud.hud_snapshot().player_cell==Vector2i(312,310), "亮度低字节与地图状态高字节互不混用"): return
 	if not await capture("map-wire-arrival"): return
 	for bad in ["", "../0", "0.map"]:
-		var invalid := scene_packet(634,100,413,410,0)
+		var invalid := scene_packet(Mir3HudView.SM_CHANGEMAP,100,413,410,0)
 		invalid.append_array(encode_scene_bytes(bad.to_ascii_buffer()))
 		if not check(not hud.apply_scene_message(invalid,keys), "拒绝空编号和路径型地图编号"): return
-	var missing := scene_packet(634,100,413,410,0)
+	var missing := scene_packet(Mir3HudView.SM_CHANGEMAP,100,413,410,0)
 	missing.append_array(encode_scene_bytes("missing_map_987654".to_ascii_buffer()))
 	if not check(hud.apply_scene_message(missing,keys), "合法消息可以排队等待资源加载"): return
 	await process_frame
 	await process_frame
 	if not check(completed.back()==[634,"missing_map_987654",false] and hud.hud_snapshot().map_id=="01" and hud.hud_snapshot().map_series==2, "加载失败通知与消息接收成功区分，原场景保留"): return
-	var back := scene_packet(634,100,origin.x,origin.y,0)
+	var back := scene_packet(Mir3HudView.SM_CHANGEMAP,100,origin.x,origin.y,0)
 	back.append_array(encode_scene_bytes("0".to_ascii_buffer()))
 	hud.apply_scene_message(back,keys)
 	await process_frame
 	await process_frame
 	if not check(hud.set_scene_human(5,origin+Vector2i(-2,1),4,1,"比奇旅人") and hud.set_scene_npc(2,Vector2i(413,409),110), "切图后加入人物及 NPC"): return
 	if not check(hud.apply_npc_dialogue(643,2,"老黄/<购买药品/@buy>"), "显示名称更新前打开 NPC 对话"): return
-	var rename := scene_text_packet(54,0,0,0,PackedByteArray([177,200,198,230,202,161]))
+	var rename := scene_text_packet(Mir3HudView.SM_MAPDESCRIPTION,0,0,0,PackedByteArray([177,200,198,230,202,161]))
 	if not check(hud.apply_scene_message(rename,keys), "54 更新为比奇省名称"): return
 	if not check(hud.hud_snapshot().map_name=="比奇省" and hud.hud_snapshot().scene_human_cells.has(5) and hud.hud_snapshot().npc_dialogue_actor==2, "54 不清理人物或关闭对话"): return
-	var excessive := scene_text_packet(54,0,0,0,"x".repeat(260).to_ascii_buffer())
+	var excessive := scene_text_packet(Mir3HudView.SM_MAPDESCRIPTION,0,0,0,"x".repeat(260).to_ascii_buffer())
 	if not check(not hud.apply_scene_message(excessive,keys) and hud.hud_snapshot().map_name=="比奇省", "拒绝超出名称缓冲区的载荷"): return
 	if not await capture("map-wire-description"): return
 	hud.queue_free()
@@ -678,7 +680,7 @@ func run_map_wire() -> void:
 func run_actor_light() -> void:
 	var keys := PackedByteArray([18,52,86,120])
 	if not check(hud.change_map("01","地图 01",Vector2i(312,310),1), "night map for actor lights"): return
-	if not check(not hud.apply_scene_message(scene_packet(807,100,0,0,512),keys), "unbound local identity is rejected"): return
+	if not check(not hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,100,0,0,512),keys), "unbound local identity is rejected"): return
 	if not check(hud.set_local_actor_identity(100), "bind real local identity"): return
 	if not check(not hud.set_scene_human(100,Vector2i(312,310),4,1,"duplicate"), "local identity cannot become remote actor"): return
 	hud.set_process(false)
@@ -688,7 +690,7 @@ func run_actor_light() -> void:
 	var original: PackedColorArray = hud.hud_snapshot().scene_light_samples
 	if not await capture("actor-light-unequipped"): return
 	var position: Vector2i = hud.hud_snapshot().player_cell
-	if not check(hud.apply_scene_message(scene_packet(807,100,9999,9999,2*256+7),keys), "807 reads high byte and ignores position/direction"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,100,9999,9999,2*256+7),keys), "807 reads high byte and ignores position/direction"): return
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
@@ -698,10 +700,10 @@ func run_actor_light() -> void:
 		if lit[i].get_luminance()>original[i].get_luminance()+0.01: brighter += 1
 	if not check(brighter>20 and hud.hud_snapshot().player_cell==position and hud.hud_snapshot().player_light_attribute==2, "equipment light expands actual grid without moving player"): return
 	if not await capture("actor-light-equipped"): return
-	var malformed := scene_packet(807,100,0,0,0)
+	var malformed := scene_packet(Mir3HudView.SM_ACTOR_LIGHT,100,0,0,0)
 	malformed.append(60)
 	if not check(not hud.apply_scene_message(malformed,keys) and hud.hud_snapshot().player_light_attribute==2, "malformed light update has no side effects"): return
-	if not check(hud.apply_scene_message(scene_packet(807,100,0,0,0),keys), "remove equipment light"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,100,0,0,0),keys), "remove equipment light"): return
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
@@ -711,18 +713,18 @@ func run_actor_light() -> void:
 	if not check(hud.set_scene_human(5,Vector2i(411,411),4,1,"持灯旅人"), "remote light actor"): return
 	if not check(not hud.set_local_actor_identity(5) and hud.hud_snapshot().local_actor_identity==100, "reject identity conflict without changing binding"): return
 	if not check(hud.apply_scene_human_action(5,1307,4,0), "remote cast delays queued light"): return
-	if not check(hud.apply_scene_message(scene_packet(807,5,0,0,8*256),keys) and hud.hud_snapshot().scene_human_lights[5]==0, "remote light waits for action queue"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,5,0,0,8*256),keys) and hud.hud_snapshot().scene_human_lights[5]==0, "remote light waits for action queue"): return
 	var deadline := Time.get_ticks_msec()+2200
 	while hud.hud_snapshot().scene_human_lights[5]!=8 and Time.get_ticks_msec()<deadline:
 		await process_frame
 	if not check(hud.hud_snapshot().scene_human_lights[5]==8, "remote queued light applied"): return
 	if not await capture("actor-light-remote"): return
-	hud.apply_scene_message(scene_packet(807,5,0,0,2*256),keys)
+	hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,5,0,0,2*256),keys)
 	hud.remove_scene_actor(5)
 	hud.set_scene_human(5,Vector2i(411,411),4,1,"新人物")
 	await process_frame
 	if not check(hud.hud_snapshot().scene_human_lights[5]==0, "removed identity discards queued light"): return
-	hud.apply_scene_message(scene_packet(807,100,0,0,8*256),keys)
+	hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,100,0,0,8*256),keys)
 	hud.change_map("0","比奇省",Vector2i(413,410),1)
 	if not check(hud.hud_snapshot().player_light_attribute==8, "map change preserves local equipment light"): return
 	hud.set_local_actor_identity(101)
@@ -771,10 +773,10 @@ func run_scene_light() -> void:
 	if not await capture("scene-light-night-dialogue"): return
 	if not check(hud.change_map("0","比奇省",origin,2) and hud.hud_snapshot().scene_ambient == 85, "dawn entry"): return
 	if not await capture("scene-light-dawn"): return
-	var bad := scene_packet(46,0,0,0,1)
+	var bad := scene_packet(Mir3HudView.SM_DAYCHANGING,0,0,0,1)
 	bad.append(60)
 	if not check(not hud.apply_scene_message(bad,keys) and not hud.hud_snapshot().scene_ambient_fading, "reject daylight payload without mutation"): return
-	if not check(hud.apply_scene_message(scene_packet(46,0,222,111,1),keys), "receive original third-parameter light mode"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_DAYCHANGING,0,222,111,1),keys), "receive original third-parameter light mode"): return
 	if not check(hud.hud_snapshot().scene_ambient == 85 and hud.hud_snapshot().scene_ambient_fading, "46 schedules gradual change"): return
 	hud.set_process(true)
 	await create_timer(0.25).timeout
@@ -795,7 +797,7 @@ func run_map_change() -> void:
 	key(KEY_V)
 	if not check(hud.apply_minimap_reply(1001), "seed minimap"): return
 	var origin: Vector2i = hud.hud_snapshot().player_cell
-	var packet := scene_packet(610,101,origin.x,origin.y,1)
+	var packet := scene_packet(Mir3HudView.SM_ITEMSHOW,101,origin.x,origin.y,1)
 	packet.append_array(encode_scene_bytes("Old map drop".to_ascii_buffer()))
 	if not check(hud.apply_scene_message(packet,keys), "seed old map item"): return
 	if not check(hud.apply_npc_dialogue(643,2,"老黄/<购买药品/@buy>"), "seed NPC dialogue"): return
@@ -817,7 +819,7 @@ func run_map_change() -> void:
 	if not await capture("map-change-arrival"): return
 	if not check(hud.change_map("0","比奇省",origin), "return to original map"): return
 	if not check(hud.set_scene_human(5,origin+Vector2i(-2,1),4,1,"重入前人物"), "seed same-map actor"): return
-	hud.apply_scene_message(scene_packet(30,5,0,0,0),keys)
+	hud.apply_scene_message(scene_packet(Mir3HudView.SM_DISAPPEAR,5,0,0,0),keys)
 	hud.walk_to_map_cell(origin+Vector2i(1,1))
 	if not check(hud.change_map("0","比奇省",origin), "same-map same-name reentry"): return
 	if not check(hud.hud_snapshot().scene_human_cells.is_empty() and hud.hud_snapshot().route_destination == Vector2i(-1,-1), "same-map reset clears objects and route"): return
@@ -844,13 +846,13 @@ func run_ground_items() -> void:
 			break
 	hud.walk_to_map_cell(player)
 	if not check(cell != player,"choose visible reachable ground cell"): return
-	var packet := scene_packet(610,101,cell.x,cell.y,1)
+	var packet := scene_packet(Mir3HudView.SM_ITEMSHOW,101,cell.x,cell.y,1)
 	packet.append_array(encode_scene_bytes(PackedByteArray([178, 226, 202, 212, 181, 244, 194, 228, 206, 239])))
 	if not check(hud.apply_scene_message(packet,keys), "load Ground.wil item through 610"): return
-	var second := scene_packet(610,102,cell.x,cell.y,2)
+	var second := scene_packet(Mir3HudView.SM_ITEMSHOW,102,cell.x,cell.y,2)
 	second.append_array(encode_scene_bytes("Second item".to_ascii_buffer()))
 	if not check(hud.apply_scene_message(second,keys), "same-cell second item"): return
-	var duplicate := scene_packet(610,101,player.x,player.y,1)
+	var duplicate := scene_packet(Mir3HudView.SM_ITEMSHOW,101,player.x,player.y,1)
 	duplicate.append_array(encode_scene_bytes("Ignored".to_ascii_buffer()))
 	if not check(hud.apply_scene_message(duplicate,keys) and hud.hud_snapshot().ground_item_cells[101] == cell, "duplicate 610 does not replace drop"): return
 	await process_frame
@@ -882,14 +884,14 @@ func run_ground_items() -> void:
 	click_at(self_point,false)
 	key(KEY_ESCAPE)
 	if not check(pickups.size() == 1, "dialogue occlusion blocks ground pickup"): return
-	if not check(hud.apply_scene_message(scene_packet(611,101,0,0,0),keys), "hide one ground identity"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_ITEMHIDE,101,0,0,0),keys), "hide one ground identity"): return
 	hover.position = Vector2(cell.x*48-camera.x+24,cell.y*32-camera.y+16)
 	root.push_input(hover,true)
 	await process_frame
 	await process_frame
 	if not check(not hud.hud_snapshot().ground_item_cells.has(101) and hud.hud_snapshot().displayed_ground_item == 102, "hide reveals next same-cell item name"): return
 	if not await capture("bichon-ground-item-removed"): return
-	hud.apply_scene_message(scene_packet(611,102,0,0,0),keys)
+	hud.apply_scene_message(scene_packet(Mir3HudView.SM_ITEMHIDE,102,0,0,0),keys)
 	if not check(hud.hud_snapshot().ground_item_cells.is_empty(), "remove final ground item"): return
 	print("PASS ground items")
 	quit()
@@ -898,30 +900,30 @@ func run_scene_text() -> void:
 	var keys := PackedByteArray([18,52,86,120])
 	var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
 	var start_lines: int = hud.hud_snapshot().chat_compact_count
-	if not check(hud.apply_scene_message(scene_text_packet(42,5,255,0,PackedByteArray([208, 208, 187, 225, 211, 194, 202, 191, 13, 177, 200, 198, 230, 202, 216, 206, 192, 13, 211, 194, 213, 223, 47, 206, 178, 215, 186])),keys) and hud.apply_scene_message(scene_packet(656,5,505,0,0),keys), "wire ANSI three-line identity and color update"): return
+	if not check(hud.apply_scene_message(scene_text_packet(Mir3HudView.SM_USERNAME,5,255,0,PackedByteArray([208, 208, 187, 225, 211, 194, 202, 191, 13, 177, 200, 198, 230, 202, 216, 206, 192, 13, 211, 194, 213, 223, 47, 206, 178, 215, 186])),keys) and hud.apply_scene_message(scene_packet(Mir3HudView.SM_CHANGENAMECOLOR,5,505,0,0),keys), "wire ANSI three-line identity and color update"): return
 	var hover := InputEventMouseMotion.new()
 	hover.position = hud.hud_snapshot().scene_human_bounds[5].get_center()
 	root.push_input(hover,true)
 	await process_frame
 	await process_frame
 	if not check(hud.hud_snapshot().displayed_name_actor == 5 and hud.hud_snapshot().displayed_name_color == 255, "color-only message uses low byte and preserves identity"): return
-	if not check(hud.apply_scene_message(scene_text_packet(40,5,6,1,PackedByteArray([177, 200, 198, 230, 188, 175, 186, 207, 163, 172, 215, 188, 177, 184, 179, 246, 183, 162, 161, 163])),keys), "wire public speech"): return
+	if not check(hud.apply_scene_message(scene_text_packet(Mir3HudView.SM_HEAR,5,6,1,PackedByteArray([177, 200, 198, 230, 188, 175, 186, 207, 163, 172, 215, 188, 177, 184, 179, 246, 183, 162, 161, 163])),keys), "wire public speech"): return
 	await process_frame
 	await process_frame
 	var state: Dictionary = hud.hud_snapshot()
 	if not check(state.speech_bounds.has(5) and state.chat_compact_count == start_lines+1 and state.chat_last_text == "比奇集合，准备出发。" and state.chat_last_foreground == 0x50ffff and state.chat_last_background == 657930, "ANSI chat appears once in history and overhead with original palette"): return
 	if not await capture("bichon-wire-name-speech"): return
-	if not check(hud.apply_scene_message(scene_text_packet(104,9999,3,5,"Guild notice".to_ascii_buffer()),keys), "absent actor guild message still logs"): return
+	if not check(hud.apply_scene_message(scene_text_packet(Mir3HudView.SM_GUILDMESSAGE,9999,3,5,"Guild notice".to_ascii_buffer()),keys), "absent actor guild message still logs"): return
 	if not check(hud.hud_snapshot().chat_last_foreground == 65280 and hud.hud_snapshot().chat_last_background == 0 and not hud.hud_snapshot().speech_bounds.has(9999), "guild fixed colors and no invented actor"): return
-	if not check(hud.apply_scene_message(scene_text_packet(1501,2,2,0,PackedByteArray([187, 182, 211, 173, 192, 180, 181, 189, 177, 200, 198, 230, 161, 163])),keys), "NPC speech wire path"): return
-	var malformed := scene_packet(656,5,255,0,0)
+	if not check(hud.apply_scene_message(scene_text_packet(Mir3HudView.SM_MONSTERSAY,2,2,0,PackedByteArray([187, 182, 211, 173, 192, 180, 181, 189, 177, 200, 198, 230, 161, 163])),keys), "NPC speech wire path"): return
+	var malformed := scene_packet(Mir3HudView.SM_CHANGENAMECOLOR,5,255,0,0)
 	malformed.append(60)
-	if not check(not hud.apply_scene_message(malformed,keys) and not hud.apply_scene_message(scene_text_packet(40,5,2,0,"x".repeat(260).to_ascii_buffer()),keys), "reject malformed color and oversized speech"): return
+	if not check(not hud.apply_scene_message(malformed,keys) and not hud.apply_scene_message(scene_text_packet(Mir3HudView.SM_HEAR,5,2,0,"x".repeat(260).to_ascii_buffer()),keys), "reject malformed color and oversized speech"): return
 	hud.apply_scene_health(5,53,90,10,100)
 	hud.apply_scene_health(5,1312,0,0,0)
 	hud.apply_scene_human_action(5,14,4)
 	hud.queue_scene_human_message(5,14,cell,6)
-	if not check(hud.apply_scene_message(scene_packet(30,5,0,0,0),keys) and hud.apply_scene_message(scene_packet(30,5,0,0,0),keys), "duplicate disappear accepted for default queue"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_DISAPPEAR,5,0,0,0),keys) and hud.apply_scene_message(scene_packet(Mir3HudView.SM_DISAPPEAR,5,0,0,0),keys), "duplicate disappear accepted for default queue"): return
 	await process_frame
 	await process_frame
 	state = hud.hud_snapshot()
@@ -931,7 +933,7 @@ func run_scene_text() -> void:
 	hud.apply_npc_dialogue(643,2,"npc/Hello")
 	var player: Vector2i = hud.hud_snapshot().player_cell
 	var history: int = hud.hud_snapshot().chat_compact_count
-	if not check(hud.apply_scene_message(scene_packet(633,0,0,0,0),keys), "clear scene objects"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_CLEAROBJECTS,0,0,0,0),keys), "clear scene objects"): return
 	await process_frame
 	await process_frame
 	state = hud.hud_snapshot()
@@ -943,16 +945,16 @@ func run_scene_text() -> void:
 func run_scene_wire() -> void:
 	var key_bytes := PackedByteArray([18,52,86,120])
 	var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
-	if not check(hud.apply_npc_message(scene_packet(643,2,0,0,0,"npc/Hello".to_ascii_buffer()),key_bytes) and hud.apply_npc_message(scene_packet(644,2,0,0,0),key_bytes), "shared decoder preserves NPC message path"): return
-	if not check(hud.apply_scene_message(scene_packet(53,5,200,30,200),key_bytes) and hud.apply_scene_message(scene_packet(1312,5,1,2,3),key_bytes), "wire health and registration"): return
-	hud.apply_scene_message(scene_packet(14,5,cell.x,cell.y,4),key_bytes)
+	if not check(hud.apply_npc_message(scene_packet(Mir3HudView.SM_MERCHANTSAY,2,0,0,0,"npc/Hello".to_ascii_buffer()),key_bytes) and hud.apply_npc_message(scene_packet(Mir3HudView.SM_MERCHANTDLGCLOSE,2,0,0,0),key_bytes), "shared decoder preserves NPC message path"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_HEALTHSPELLCHANGED,5,200,30,200),key_bytes) and hud.apply_scene_message(scene_packet(Mir3HudView.SM_HEALTH_PERCENT,5,1,2,3),key_bytes), "wire health and registration"): return
+	hud.apply_scene_message(scene_packet(Mir3HudView.SM_HIT,5,cell.x,cell.y,4),key_bytes)
 	var body := PackedByteArray()
 	body.resize(21)
 	body[0]=1
 	body[1]=1
 	body[2]=1
 	body[3]=65
-	if not check(hud.apply_scene_message(scene_packet(31,5,190,220,0),key_bytes) and hud.apply_scene_message(scene_packet(10,5,cell.x,cell.y,4,body),key_bytes), "queue raw HP and extended standing messages"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_STRUCK,5,190,220,0),key_bytes) and hud.apply_scene_message(scene_packet(Mir3HudView.SM_TURN,5,cell.x,cell.y,4,body),key_bytes), "queue raw HP and extended standing messages"): return
 	await process_frame
 	await process_frame
 	if not check(hud.hud_snapshot().scene_health_values[5] == PackedInt32Array([190,30,220]) and hud.hud_snapshot().scene_human_actions[5].x == 9 and hud.hud_snapshot().scene_damage_frames.is_empty(), "HP fold bypasses active animation without generating damage"): return
@@ -960,29 +962,29 @@ func run_scene_wire() -> void:
 	if not check(hud.hud_snapshot().scene_human_bodies[5] == Vector2i(1,1), "separately encoded feature extension decodes"): return
 	body.resize(16)
 	body[8]=5
-	if not check(hud.apply_scene_message(scene_packet(1309,5,160,220,12,body),key_bytes), "raw hit with explicit damage amount"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_HUMAN_STRUCK,5,160,220,12,body),key_bytes), "raw hit with explicit damage amount"): return
 	if not await wait_human_state(15,0): return
 	if not await capture("bichon-wire-hit"): return
 	if not check(hud.hud_snapshot().scene_health_values[5][0] == 160 and hud.hud_snapshot().scene_damage_frames[5] == PackedInt32Array([1800,1791,1792]), "damage uses packet amount twelve rather than HP difference thirty"): return
 	if not await wait_human_state(-1,0): return
-	hud.apply_scene_message(scene_packet(1309,5,160,220,0,body),key_bytes)
+	hud.apply_scene_message(scene_packet(Mir3HudView.SM_HUMAN_STRUCK,5,160,220,0,body),key_bytes)
 	await process_frame
 	await process_frame
 	if not check(hud.hud_snapshot().scene_human_actions[5].x == -1 and hud.hud_snapshot().scene_damage_frames[5].has(1850), "miss creates miss glyph without hit animation"): return
-	var invalid := scene_packet(10,5,cell.x,cell.y,4,body)
-	if not check(not hud.apply_scene_message(invalid,key_bytes) and not hud.apply_scene_message(invalid.slice(0,15),key_bytes) and not hud.apply_scene_message(scene_packet(14,9999,cell.x,cell.y,4),key_bytes) and not hud.apply_scene_message(scene_packet(14,5,cell.x,cell.y,8),key_bytes) and not hud.apply_scene_message(scene_packet(14,5,cell.x,cell.y,4),PackedByteArray([0])), "reject malformed header body actor direction and key"): return
-	hud.apply_scene_message(scene_packet(32,5,cell.x,cell.y,4),key_bytes)
+	var invalid := scene_packet(Mir3HudView.SM_TURN,5,cell.x,cell.y,4,body)
+	if not check(not hud.apply_scene_message(invalid,key_bytes) and not hud.apply_scene_message(invalid.slice(0,15),key_bytes) and not hud.apply_scene_message(scene_packet(Mir3HudView.SM_HIT,9999,cell.x,cell.y,4),key_bytes) and not hud.apply_scene_message(scene_packet(Mir3HudView.SM_HIT,5,cell.x,cell.y,8),key_bytes) and not hud.apply_scene_message(scene_packet(Mir3HudView.SM_HIT,5,cell.x,cell.y,4),PackedByteArray([0])), "reject malformed header body actor direction and key"): return
+	hud.apply_scene_message(scene_packet(Mir3HudView.SM_DEATH,5,cell.x,cell.y,4),key_bytes)
 	await process_frame
 	await process_frame
 	if not check(hud.hud_snapshot().scene_human_life[5].dead, "raw corpse message"): return
 	body.resize(21)
-	hud.apply_scene_message(scene_packet(1316,5,cell.x,cell.y,4,body),key_bytes)
+	hud.apply_scene_message(scene_packet(Mir3HudView.SM_REVIVE,5,cell.x,cell.y,4,body),key_bytes)
 	await process_frame
 	await process_frame
 	if not check(not hud.hud_snapshot().scene_human_life[5].dead, "raw revival message"): return
 	await create_timer(0.65).timeout
 	body[16]=1
-	if not check(hud.apply_scene_message(scene_packet(13,5,cell.x,cell.y,4,body),key_bytes), "raw mounted run accepted"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_RUN,5,cell.x,cell.y,4,body),key_bytes), "raw mounted run accepted"): return
 	await process_frame
 	await process_frame
 	if not check(hud.hud_snapshot().scene_human_mounts[5] == 1 and hud.hud_snapshot().scene_human_movement[5] >= 0, "raw movement applies mounted feature before choosing movement"): return
@@ -1629,6 +1631,8 @@ func run_scene_actor_removal() -> void:
 
 func run() -> void:
 	hud = load("res://main.tscn").instantiate()
+	hud.set_meta("offline_preview",true)
+	hud.set_connection_enabled(false)
 	root.size = Vector2i(800, 600)
 	Input.use_accumulated_input = false
 	if OS.get_cmdline_user_args().has("--local-mount"):
@@ -1892,6 +1896,8 @@ func run() -> void:
 			and hud.hud_snapshot().walk_frame == -1, "distant merchant click neither sends a request nor walks"): return
 		if not await capture("bichon-merchant-out-of-range"): return
 		var merchant_hud: Node = load("res://main.tscn").instantiate()
+		merchant_hud.set_meta("offline_preview",true)
+		merchant_hud.set_connection_enabled(false)
 		merchant_hud.set_meta("options_path", options_file)
 		merchant_hud.set_meta("map_spawn_cell", Vector2i(413, 410))
 		merchant_hud.set_meta("map_camera_cell", Vector2i(404, 402))
@@ -1922,7 +1928,7 @@ func run() -> void:
 		var dialogue_actions: Array = []
 		hud.npc_dialogue_action.connect(func(actor: int, command: String): dialogue_actions.append([actor, command]))
 		var script := "老黄/要买点什么？" + char(92) + "<购买药品/@buy>" + char(92) + "<离开/@exit>"
-		if not check(hud.apply_npc_message("`\\<<<>=B<?H<<<<<lHzwm^{NfhGniZKFhhJpdwyXKGbvlkGNfXVsGp=^YS`zS?o<vwzfGp=aZBapK\\".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "decode merchant dialogue reply"): return
+		if not check(hud.apply_npc_message("`\\<<<=IB<<<<<<<<lHzwm^{NfhGniZKFhhJpdwyXKGbvlkGNfXVsGp=^YS`zS?o<vwzfGp=aZBapK\\".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "decode merchant dialogue reply"): return
 		if not await capture("bichon-merchant-dialogue"): return
 		var close_hover := InputEventMouseMotion.new()
 		close_hover.position = Vector2(350, 186)
@@ -2105,7 +2111,7 @@ func run() -> void:
 		if not check(hud.apply_npc_dialogue(643, 2, script), "reopen NPC dialogue for shop reply"): return
 		var goods_requests: Array = []
 		hud.shop_good_requested.connect(func(actor: int, index: int, name: String): goods_requests.append([actor, index, name]))
-		if not check(hud.apply_npc_message("a<D<<>=B<?H<<<<<PbQ`DC=kYBakW^xmGoDlGoPkHo<mGo<kH>y>WCQaDC=kYBakW^xlGoDqGoLkHo<nGo<kH>x".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "645 goods list with original icon fields"): return
+		if not check(hud.apply_npc_message("a<D<<=IB<<<<<<<<PbQ`DC=kYBakW^xmGoDlGoPkHo<mGo<kH>y>WCQaDC=kYBakW^xlGoDqGoLkHo<nGo<kH>x".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "645 goods list with original icon fields"): return
 		if not check(not hud.apply_shop_goods(2, 1, "Broken/1/"), "reject truncated goods list"): return
 		if not await capture("bichon-merchant-goods"): return
 		click_at(Vector2(45, 285), true)
@@ -2173,7 +2179,7 @@ func run() -> void:
 		goods_requests.pop_back()
 		if not check(hud.apply_shop_goods(2, 10, stock_list), "reset shop list before alert interrupts dragging"): return
 		click_at(Vector2(265, 261), true)
-		if not check(hud.apply_shop_purchase_reply(651, 1), "open purchase alert during shop drag"): return
+		if not check(hud.apply_shop_purchase_reply(Mir3HudView.SM_BUYITEM_FAIL, 1), "open purchase alert during shop drag"): return
 		click_at(Vector2(265, 450), false)
 		key(KEY_ENTER)
 		root.push_input(shop_drag, true)
@@ -2207,7 +2213,7 @@ func run() -> void:
 		var prices := PackedInt32Array([20])
 		var ids := PackedInt64Array([10001])
 		if not check(not hud.apply_shop_offers(2, 8, names, icons, prices, ids), "ignore stale goods details"): return
-		var offer_packet := "cL@<<>=@<?H<<<<<PBEMT@M?KRiULbAgQqlxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxMpm<K?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?mIMRlxK?lxKA<xK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lk".to_ascii_buffer()
+		var offer_packet := "cL@<<=I@<<<<<<<<PBEMT@M?KRiULbAgQqlxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxMpm<K?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?mIMRlxK?lxKA<xK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lxK?lk".to_ascii_buffer()
 		var offer_key := PackedByteArray([17, 34, 51, 68])
 		if not check(not hud.apply_npc_message(offer_packet.slice(0, -2), offer_key), "reject truncated encoded 652 offer"): return
 		if not check(hud.apply_npc_message(offer_packet, offer_key), "decode nested 652 offer from wire packet"): return
@@ -2230,7 +2236,7 @@ func run() -> void:
 		click_at(Vector2(330, 280), false)
 		if not check(offer_selections.is_empty(), "old offer cells cannot be selected while loading another page"): return
 		if not await capture("bichon-merchant-offers-awaiting-page"): return
-		var next_offer_packet := "cL@F<>=@<?H<<<<<".to_ascii_buffer() + offer_packet.slice(16)
+		var next_offer_packet := "cL@F<=I@<<<<<<<<".to_ascii_buffer() + offer_packet.slice(16)
 		if not check(not hud.apply_npc_message(offer_packet, offer_key), "ignore previous page packet while next page is requested"): return
 		if not check(hud.apply_npc_message(next_offer_packet, offer_key), "apply encoded next offer page at offset ten"): return
 		if not await capture("bichon-merchant-offers-page-reply"): return
@@ -2257,12 +2263,12 @@ func run() -> void:
 		click_at(Vector2(330, 280), false)
 		if not check(purchases.size() == 2 and npc_packets.back().substr(2, 16) == "<\\<<<KT?@NX<<<<<", "double-click buys exactly once using the clicked instance"): return
 		if not await capture("bichon-merchant-offer-double-click"): return
-		if not check(hud.apply_npc_message("bsp<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().inventory_gold == 125, "650 applies server gold balance"): return
-		if not check(not hud.apply_inventory_add(650, 301, 1, 10001, "Red potion", 0, 3), "gold reply is not an item addition"): return
-		if not check(hud.apply_inventory_add(200, 301, 1, 10001, "Red potion", 0, 3), "200 places purchased item in bag"): return
+		if not check(hud.apply_npc_message("bsp<<=IB<<<<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().inventory_gold == 125, "650 applies server gold balance"): return
+		if not check(not hud.apply_inventory_add(Mir3HudView.SM_BUYITEM_SUCCESS, 301, 1, 10001, "Red potion", 0, 3), "gold reply is not an item addition"): return
+		if not check(hud.apply_inventory_add(Mir3HudView.SM_ADDITEM, 301, 1, 10001, "Red potion", 0, 3), "200 places purchased item in bag"): return
 		key(KEY_W)
 		if not check(hud.hud_snapshot().inventory_visible, "open bag after purchase"): return
-		if not check(not hud.apply_npc_message("bl<<<>=B<?H<<<<<Z<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().inventory_gold == 125, "unexpected body cannot overwrite balance"): return
+		if not check(not hud.apply_npc_message("bl<<<=IB<<<<<<<<Z<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().inventory_gold == 125, "unexpected body cannot overwrite balance"): return
 		if not await capture("bichon-merchant-purchased-item"): return
 		var pickup := Vector2(hud.hud_snapshot().inventory_position) + Vector2(30, 75)
 		click_at(pickup, true)
@@ -2276,7 +2282,7 @@ func run() -> void:
 		click_at(pickup, false)
 		if not check(hud.hud_snapshot().held_inventory_icon != 301, "put purchased item back before continuing shop tests"): return
 		key(KEY_W)
-		if not check(not hud.apply_npc_message("b\\L<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.apply_npc_message("b\\D<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "651 maps known purchase failure"): return
+		if not check(not hud.apply_npc_message("b\\L<<=IB<<<<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.apply_npc_message("b\\D<<=IB<<<<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])), "651 maps known purchase failure"): return
 		if not check(hud.hud_snapshot().group_request == 1438 and hud.hud_snapshot().inventory_gold == 125, "failure opens original caption without changing gold"): return
 		if not await capture("bichon-merchant-purchase-failed"): return
 		key(KEY_ENTER)
@@ -2360,7 +2366,7 @@ func run() -> void:
 		click_at(Vector2(380, 296), false)
 		if not check(hud.hud_snapshot().group_request == 110, "reopen bulk quantity before server closes shop"): return
 		npc_input.text = "5"
-		if not check(hud.apply_npc_message("aL<<<>=B<?H<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
+		if not check(hud.apply_npc_message("aL<<<=IB<<<<<<<<".to_ascii_buffer(), PackedByteArray([17, 34, 51, 68])) and hud.hud_snapshot().npc_dialogue_actor == 0, "merchant close reply dismisses dialogue"): return
 		if not check(hud.hud_snapshot().group_request == 0 and npc_input.text.is_empty() and not npc_input.has_focus() and purchases.size() == before_bulk_cancel, "server close clears pending bulk quantity"): return
 		if not await capture("bichon-merchant-bulk-server-closed"): return
 		if not check(not hud.apply_shop_goods(2, 10, stock_list), "late goods reply cannot reopen closed merchant"): return
@@ -2806,6 +2812,8 @@ func run() -> void:
 		if not check(root.get_texture().get_image().get_pixelv(marker_pixel) == green,
 			"portrait map player marker returns after the hidden phase"): return
 	var restored_map_hud: Node = load("res://main.tscn").instantiate()
+	restored_map_hud.set_meta("offline_preview",true)
+	restored_map_hud.set_connection_enabled(false)
 	restored_map_hud.set_meta("options_path", options_file)
 	var restored_map_requests: Array[int] = []
 	restored_map_hud.minimap_requested.connect(func(id: int):
@@ -2874,7 +2882,7 @@ func run() -> void:
 	click_at(overlap_cell, false)
 	click_at(overlap_cell, true)
 	click_at(overlap_cell, false)
-	if not check(hud.apply_inventory_use_reply(635, 0), "remove minimap test item"): return
+	if not check(hud.apply_inventory_use_reply(Mir3HudView.SM_EAT_OK, 0), "remove minimap test item"): return
 	if not await capture("inventory-empty"): return
 	if not check(hud.add_inventory_item(5, 3, 0) and hud.add_inventory_item(1043, 1, 14) and hud.add_inventory_item(15, 1, 54), "inventory fixtures"): return
 	if not await capture("inventory-items"): return
@@ -2906,12 +2914,12 @@ func run() -> void:
 	click_at(Vector2(665, 75), false)
 	if not check(use_requests == [12345] and hud.hud_snapshot().inventory_use_pending, "rapid release requests use"): return
 	click_at(Vector2(665, 75), false)
-	if not check(use_requests.size() == 1 and not hud.apply_inventory_use_reply(634, 2), "pending use and invalid reply"): return
-	if not check(hud.apply_inventory_use_reply(635, 2) and not hud.hud_snapshot().inventory_use_pending, "accepted stack returns to bag"): return
+	if not check(use_requests.size() == 1 and not hud.apply_inventory_use_reply(Mir3HudView.SM_CHANGEMAP, 2), "pending use and invalid reply"): return
+	if not check(hud.apply_inventory_use_reply(Mir3HudView.SM_EAT_OK, 2) and not hud.hud_snapshot().inventory_use_pending, "accepted stack returns to bag"): return
 	if not await capture("inventory-use-reply"): return
 	click_at(Vector2(665, 75), false)
 	click_at(Vector2(665, 75), false)
-	if not check(use_requests.size() == 2 and hud.apply_inventory_use_reply(636, 0), "failed use restores item"): return
+	if not check(use_requests.size() == 2 and hud.apply_inventory_use_reply(Mir3HudView.SM_EAT_FAIL, 0), "failed use restores item"): return
 	click_at(Vector2(530, 25), true)
 	var drag := InputEventMouseMotion.new()
 	drag.position = Vector2(450, 155)
@@ -2996,14 +3004,14 @@ func run() -> void:
 	if not await capture("character-equipment-preview"): return
 	click_at(Vector2(180, 100), false)
 	if not check(equipment_requests == [Vector2i(1003, 3)] and hud.hud_snapshot().equipment_pending, "equip request"): return
-	if not check(not hud.apply_equipment_reply(619) and hud.apply_equipment_reply(615), "equip response"): return
+	if not check(not hud.apply_equipment_reply(Mir3HudView.SM_TAKEOFF_OK) and hud.apply_equipment_reply(Mir3HudView.SM_TAKEON_OK), "equip response"): return
 	if not await capture("character-equipment"): return
 	click_at(Vector2(180, 100), false)
 	click_at(Vector2(465, 170), false)
-	if not check(equipment_requests == [Vector2i(1003, 3), Vector2i(1004, 3)] and hud.apply_equipment_reply(620), "failed takeoff restores equipment"): return
+	if not check(equipment_requests == [Vector2i(1003, 3), Vector2i(1004, 3)] and hud.apply_equipment_reply(Mir3HudView.SM_TAKEOFF_FAIL), "failed takeoff restores equipment"): return
 	click_at(Vector2(180, 100), false)
 	click_at(Vector2(465, 170), false)
-	if not check(equipment_requests.size() == 3 and hud.apply_equipment_reply(619), "takeoff returns item"): return
+	if not check(equipment_requests.size() == 3 and hud.apply_equipment_reply(Mir3HudView.SM_TAKEOFF_OK), "takeoff returns item"): return
 	key(KEY_ESCAPE)
 	key(KEY_ESCAPE)
 	await process_frame
@@ -3146,10 +3154,10 @@ func run() -> void:
 	record[5] = 2
 	record[4] = 65
 	record[8] = 65
-	if not check(not hud.apply_skill_records(211, 2, record), "truncated skill list rejected"): return
-	if not check(hud.apply_skill_records(211, 1, record) and hud.hud_snapshot().skill_tab == 1, "211 replaces list and selects first populated category"): return
+	if not check(not hud.apply_skill_records(Mir3HudView.SM_SENDMYMAGIC, 2, record), "truncated skill list rejected"): return
+	if not check(hud.apply_skill_records(Mir3HudView.SM_SENDMYMAGIC, 1, record) and hud.hud_snapshot().skill_tab == 1, "211 replaces list and selects first populated category"): return
 	record[6] = 5
-	if not check(hud.apply_skill_records(210, 1, record) and hud.hud_snapshot().skill_tab == 1, "210 adds skill while retaining active category"): return
+	if not check(hud.apply_skill_records(Mir3HudView.SM_ADDMAGIC, 1, record) and hud.hud_snapshot().skill_tab == 1, "210 adds skill while retaining active category"): return
 	if not await capture("magic-list-reply"): return
 	var refreshed_popup := popup_event.duplicate() as InputEventMouseButton
 	refreshed_popup.position = Vector2(385, 86)
@@ -3176,7 +3184,7 @@ func run() -> void:
 	for i in 15: crowded_records.append_array(record)
 	record[6] = 5
 	crowded_records.append_array(record)
-	if not check(hud.apply_skill_records(211, 16, crowded_records) and hud.apply_skill_progress(5, 10, 1), "retain skills beyond display limit"): return
+	if not check(hud.apply_skill_records(Mir3HudView.SM_SENDMYMAGIC, 16, crowded_records) and hud.apply_skill_progress(5, 10, 1), "retain skills beyond display limit"): return
 	if not await capture("magic-visible-limit"): return
 	if not check(hud.apply_skill_removal(1), "remove one visible record"): return
 	if not check(hud.apply_skill_progress(5, 0xffffffff, 1), "accept full DWORD experience"): return
@@ -3522,6 +3530,8 @@ func run() -> void:
 	if not check(hud.hud_snapshot().music_level == -50, "focus loss retains last dragged music level"): return
 	if not await capture("system-options-volume-after-focus-loss"): return
 	var saved_during_drag: Node = load("res://main.tscn").instantiate()
+	saved_during_drag.set_meta("offline_preview",true)
+	saved_during_drag.set_connection_enabled(false)
 	saved_during_drag.set_meta("options_path", options_file)
 	root.add_child(saved_during_drag)
 	var saved_level: int = saved_during_drag.hud_snapshot().music_level
@@ -3538,6 +3548,8 @@ func run() -> void:
 	click_at(Vector2(595, 447), false)
 	if not check(not hud.hud_snapshot().options_visible, "options close"): return
 	var reloaded: Node = load("res://main.tscn").instantiate()
+	reloaded.set_meta("offline_preview",true)
+	reloaded.set_connection_enabled(false)
 	reloaded.set_meta("options_path", options_file)
 	root.add_child(reloaded)
 	var persisted: Dictionary = reloaded.hud_snapshot()
@@ -3846,7 +3858,7 @@ func run() -> void:
 	if not check(hud.hud_snapshot().held_inventory_icon == 301 and not hud.hud_snapshot().equipment_pending, "pending trade locks held item across windows"): return
 	if not await capture("hud-trade-pending-equipment"): return
 	key(KEY_Q)
-	if not check(hud.apply_trade_offer_reply(675) and hud.hud_snapshot().held_inventory_icon == -1, "offer reply transfers item into local trade grid"): return
+	if not check(hud.apply_trade_offer_reply(Mir3HudView.SM_TRADE_ADD_OK) and hud.hud_snapshot().held_inventory_icon == -1, "offer reply transfers item into local trade grid"): return
 	if not await capture("hud-trade-offer-accepted"): return
 	click_at(Vector2(70, 75), true)
 	click_at(Vector2(70, 75), false)
@@ -3858,7 +3870,7 @@ func run() -> void:
 	click_at(trade_pickup, true)
 	click_at(trade_pickup, false)
 	if not check(offers[-1] == [1027, 98765, "Trade potion", 1], "placing selected offer in bag sends return request"): return
-	if not check(hud.apply_trade_offer_reply(677) and not hud.apply_trade_offer_reply(677), "return acknowledgement applies once"): return
+	if not check(hud.apply_trade_offer_reply(Mir3HudView.SM_TRADE_REMOVE_OK) and not hud.apply_trade_offer_reply(Mir3HudView.SM_TRADE_REMOVE_OK), "return acknowledgement applies once"): return
 	if not await capture("hud-trade-item-returned"): return
 	if not check(hud.set_trade_item(0, 1, 301, 1, 98767, "Removed offer"), "populate local offer for removal"): return
 	click_at(Vector2(70, 75), true)
@@ -3878,11 +3890,11 @@ func run() -> void:
 	click_at(Vector2(70, 75), true)
 	click_at(Vector2(70, 75), false)
 	if not check(hud.hud_snapshot().group_request == 1307, "stack opens quantity dialog"): return
-	if not check(not hud.apply_trade_offer_reply(676) and hud.hud_snapshot().held_inventory_icon == 301,
+	if not check(not hud.apply_trade_offer_reply(Mir3HudView.SM_TRADE_ADD_FAIL) and hud.hud_snapshot().held_inventory_icon == 301,
 		"rejection without an outstanding offer preserves the item and quantity input"): return
 	if not await capture("hud-trade-quantity-before-offer"): return
 	key(0, 57)
-	if not check(hud.apply_shop_purchase_reply(651, 1) and hud.hud_snapshot().group_request == 1437,
+	if not check(hud.apply_shop_purchase_reply(Mir3HudView.SM_BUYITEM_FAIL, 1) and hud.hud_snapshot().group_request == 1437,
 		"purchase alert replaces trade quantity dialog"): return
 	if not check(not input.has_focus() and input.text.is_empty() and input.position == Vector2(185, 575),
 		"replacement alert restores chat input bounds and clears quantity"): return
@@ -3894,14 +3906,14 @@ func run() -> void:
 	key(0, 50)
 	if not await capture("hud-trade-stack-quantity"): return
 	key(KEY_ENTER)
-	if not check(offers[-1] == [1026, 98766, "Trade stack", 2] and not hud.apply_trade_offer_reply(675, 3), "send selected quantity and reject excess acknowledgement"): return
-	if not check(hud.apply_trade_offer_reply(675, 2) and hud.hud_snapshot().held_inventory_icon == -1, "split offer restores remainder"): return
+	if not check(offers[-1] == [1026, 98766, "Trade stack", 2] and not hud.apply_trade_offer_reply(Mir3HudView.SM_TRADE_ADD_OK, 3), "send selected quantity and reject excess acknowledgement"): return
+	if not check(hud.apply_trade_offer_reply(Mir3HudView.SM_TRADE_ADD_OK, 2) and hud.hud_snapshot().held_inventory_icon == -1, "split offer restores remainder"): return
 	if not await capture("hud-trade-stack-split"): return
 	click_at(Vector2(70, 75), true)
 	click_at(Vector2(70, 75), false)
 	click_at(trade_pickup, true)
 	click_at(trade_pickup, false)
-	if not check(offers[-1] == [1027, 98766, "Trade stack", 2] and hud.apply_trade_offer_reply(677), "return split quantity"): return
+	if not check(offers[-1] == [1027, 98766, "Trade stack", 2] and hud.apply_trade_offer_reply(Mir3HudView.SM_TRADE_REMOVE_OK), "return split quantity"): return
 	if not await capture("hud-trade-stack-merged"): return
 	if not check(hud.set_trade_item(0, 30, 301, 3), "apply trade item below first page"): return
 	if not check(hud.set_trade_item(0, 27, 1043, 2), "apply tall trade item above scrolled page"): return

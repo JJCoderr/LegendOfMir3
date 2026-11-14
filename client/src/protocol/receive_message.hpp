@@ -1,4 +1,5 @@
 #pragma once
+#include "default_message.hpp"
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -29,10 +30,10 @@ struct ReceiveHeader {
     static std::optional<ReceiveHeader> decode_plain(std::span<const std::uint8_t> message) {
         if (message.size()<encoded_size) return {};
         const auto bytes=decode_six_bit(message.data(),encoded_size);
-        if (!bytes || bytes->size()!=12) return {};
-        const auto b=[&](int i) { return std::uint32_t(std::uint8_t((*bytes)[i])); };
-        return ReceiveHeader{b(0)|(b(1)<<8)|(b(2)<<16)|(b(3)<<24),std::uint16_t(b(4)|(b(5)<<8)),
-            {std::uint16_t(b(6)|(b(7)<<8)),std::uint16_t(b(8)|(b(9)<<8)),std::uint16_t(b(10)|(b(11)<<8))}};
+        if (!bytes) return {};
+        const auto header=protocol::DefaultMessage::decode({reinterpret_cast<const std::uint8_t*>(bytes->data()),bytes->size()});
+        if (!header) return {};
+        return ReceiveHeader{header->recognition,header->identifier,header->parameters};
     }
     // 0x47D890 and 0x428308..0x428399, already-framed receive message.
     static std::optional<ReceiveHeader> decode(std::span<const std::uint8_t> message,std::span<const std::uint8_t> key) {
@@ -40,8 +41,8 @@ struct ReceiveHeader {
         const auto bytes=decode_six_bit(message.data(),16);
         if (!bytes || bytes->size()!=12) return {};
         const auto b=[&](int i) { return std::uint32_t(std::uint8_t((*bytes)[i])); };
-        return ReceiveHeader{(b(5)^key[3])|((b(7)^key[2])<<8)|(b(9)<<16)|(b(11)<<24),
-            std::uint16_t((b(0)^key[0])|((b(4)^key[1])<<8)),
+        return ReceiveHeader{(b(5)^key[3])|(b(7)<<8)|(b(9)<<16)|(b(11)<<24),
+            std::uint16_t((b(0)^key[0])|((b(4)^key[2]^key[1])<<8)),
             {std::uint16_t(b(1)|(b(6)<<8)),std::uint16_t(b(2)|(b(8)<<8)),std::uint16_t(b(3)|(b(10)<<8))}};
     }
 };

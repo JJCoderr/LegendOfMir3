@@ -1,4 +1,5 @@
 #pragma once
+#include "protocol/message_ids.hpp"
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -17,7 +18,7 @@ struct MapChangeMessage {
     std::uint8_t ambient,series;
     std::string map_id;
     static std::optional<MapChangeMessage> parse(int opcode,const std::array<std::uint16_t,3>& parameters,std::string body) {
-        if (opcode!=51 && opcode!=634) return {};
+        if (opcode!=mir3::protocol::SM_NEWMAP && opcode!=mir3::protocol::SM_CHANGEMAP) return {};
         // Original decoder consumes an ANSI NUL-terminated map filename.
         body.resize(body.find(char(0))==std::string::npos?body.size():body.find(char(0)));
         if (!valid_map_id(body)) return {};

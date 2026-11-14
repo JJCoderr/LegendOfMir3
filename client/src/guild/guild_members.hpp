@@ -1,4 +1,5 @@
 #pragma once
+#include "protocol/message_ids.hpp"
 #include "guild_overview.hpp"
 #include <algorithm>
 #include <cstdlib>
@@ -10,7 +11,7 @@ struct GuildMembers {
     std::vector<GuildLine> members;
     std::vector<std::string> editable_members;
     bool receive(const GuildReply& reply,bool manager) {
-        if ((reply.identifier!=756 && reply.identifier!=775 && reply.identifier!=776) || reply.ansi.size()>8191) return false;
+        if ((reply.identifier!=mir3::protocol::SM_SENDGUILDMEMBERLIST && reply.identifier!=mir3::protocol::SM_GUILD_MEMBERS_UPDATE && reply.identifier!=mir3::protocol::SM_GUILD_MEMBERS_REFRESH) || reply.ansi.size()>8191) return false;
         std::string_view text=reply.ansi;text=text.substr(0,text.find(char(0)));
         std::vector<GuildLine> rows{{4003,{}},{0," "},{4007,{}}};
         std::vector<std::string> editing;

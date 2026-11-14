@@ -1,4 +1,5 @@
 #pragma once
+#include "protocol/message_ids.hpp"
 #include "inventory/inventory_grid.hpp"
 
 namespace mir3 {
@@ -96,7 +97,7 @@ struct EquipmentState {
                 }
                 slots[destination]=bag.held;
                 bag.held={};bag.held_equipment_slot=-1;
-                request={1124,slot,0,{}};last_reply=0;
+                request={mir3::protocol::CM_EQUIPMENT_QUICK_ACTION,slot,0,{}};last_reply=0;
                 quick_request_ready=true; // not a pending1003/1004 transaction
                 return true;
             }
@@ -119,20 +120,20 @@ struct EquipmentState {
         incoming=bag.held; // 0x476690 pending record at panel+38272
         bag.held=slots[slot]; slots[slot]={};
         bag.held_equipment_slot=bag.held ? slot : -1;
-        request={1003,slot,incoming.make_index,incoming.name}; pending=true;last_reply=0;
+        request={mir3::protocol::CM_TAKEONITEM,slot,incoming.make_index,incoming.name}; pending=true;last_reply=0;
         return true;
     }
     bool takeoff(InventoryGrid& bag) { // bag0x441310 -> 0x47BE40(1004)
         if (pending || !bag.held || bag.held_equipment_slot<0) return false;
-        request={1004,bag.held_equipment_slot,bag.held.make_index,bag.held.name};
+        request={mir3::protocol::CM_TAKEOFFITEM,bag.held_equipment_slot,bag.held.make_index,bag.held.name};
         pending=true;last_reply=0;return true;
     }
     bool reply(int id,InventoryGrid& bag) {
         if (!pending) return false;
-        if (request.identifier==1003) {
-            if (id!=615 && id!=616) return false;
+        if (request.identifier==mir3::protocol::CM_TAKEONITEM) {
+            if (id!=mir3::protocol::SM_TAKEON_OK && id!=mir3::protocol::SM_TAKEON_FAIL) return false;
             BagItem returned;
-            if (id==615) {
+            if (id==mir3::protocol::SM_TAKEON_OK) {
                 slots[request.slot]=incoming; // 0x4766F0
                 returned=bag.held; // mock add-item delivery for replaced equipment
             } else {
@@ -143,8 +144,8 @@ struct EquipmentState {
             // Local capacity protection: never silently discard a returned item.
             if (returned && !bag.insert(returned)) bag.held=returned;
         } else {
-            if (id!=619 && id!=620) return false;
-            if (id==619) {
+            if (id!=mir3::protocol::SM_TAKEOFF_OK && id!=mir3::protocol::SM_TAKEOFF_FAIL) return false;
+            if (id==mir3::protocol::SM_TAKEOFF_OK) {
                 const auto returned=bag.held;
                 bag.held={};
                 if (!bag.insert(returned)) bag.held=returned; // mock add-item delivery

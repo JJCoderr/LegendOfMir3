@@ -1,4 +1,5 @@
 #pragma once
+#include "protocol/message_ids.hpp"
 #include <cstdint>
 #include <deque>
 #include <optional>
@@ -17,8 +18,8 @@ struct SceneHumanMessage {
     int light_attribute=-1;
     static bool accepts(int opcode) {
         switch (opcode) {
-        case 807: case 31: case 7: case 10: case 11: case 13: case 14: case 15: case 32: case 34: case 1316: case 1321:
-        case 1306: case 1307: case 1308: case 1309: case 1319: return true;
+        case mir3::protocol::SM_ACTOR_LIGHT: case mir3::protocol::SM_STRUCK: case mir3::protocol::SM_BUMP: case mir3::protocol::SM_TURN: case mir3::protocol::SM_WALK: case mir3::protocol::SM_RUN: case mir3::protocol::SM_HIT: case mir3::protocol::SM_HIT2: case mir3::protocol::SM_DEATH: case mir3::protocol::SM_NOWDEATH: case mir3::protocol::SM_REVIVE: case mir3::protocol::SM_REVIVE_REFRESH:
+        case mir3::protocol::SM_HUMAN_CAST: case mir3::protocol::SM_HUMAN_CAST_ALT: case mir3::protocol::SM_HUMAN_ACTION18: case mir3::protocol::SM_HUMAN_STRUCK: case mir3::protocol::SM_HUMAN_ATTACK: return true;
         default: return false;
         }
     }
@@ -26,7 +27,7 @@ struct SceneHumanMessage {
 class SceneHumanQueue {
 public:
     bool push(SceneHumanMessage message) {
-        if (message.opcode==807 && (message.light_attribute<0 || message.light_attribute>255)) return false;
+        if (message.opcode==mir3::protocol::SM_ACTOR_LIGHT && (message.light_attribute<0 || message.light_attribute>255)) return false;
         if (!SceneHumanMessage::accepts(message.opcode) || message.facing<0 || message.facing>=8 ||
             message.hit_weapon<0 || message.hit_weapon>=50 || pending.size()>=99999) return false;
         pending.push_back(message);
@@ -38,7 +39,7 @@ public:
         std::vector<SceneHumanMessage> updates;
         if (pending.size()<2) return updates;
         for (auto it=pending.begin();it!=pending.end();) {
-            if (it->opcode==31) { updates.push_back(*it);it=pending.erase(it); }
+            if (it->opcode==mir3::protocol::SM_STRUCK) { updates.push_back(*it);it=pending.erase(it); }
             else ++it;
         }
         return updates;

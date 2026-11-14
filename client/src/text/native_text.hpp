@@ -20,7 +20,7 @@ struct DescriptionRow { std::string text; int width=0; bool title=false; };
 std::vector<DescriptionRow> wrap_skill_description(const std::vector<std::string>& lines);
 enum class TextFont { normal, level, gold, character_name, dialog, skill_level, skill_title, npc_link, localized_normal, selection };
 NativeText raster_text(std::string_view utf8, int width, int height, bool centered,
-    TextFont font, std::string_view localized_face = {}, bool inverted_vertical = false);
+    TextFont font, std::string_view localized_face = {}, bool inverted_vertical = false, int points_override = 0, int weight_override = 0);
 std::string utf8_to_ansi(std::string_view text);
 std::string ansi_to_utf8(std::string_view text);
 }

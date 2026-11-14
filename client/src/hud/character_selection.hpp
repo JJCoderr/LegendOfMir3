@@ -1,4 +1,5 @@
 #pragma once
+#include "protocol/message_ids.hpp"
 #include "protocol/receive_message.hpp"
 #include <algorithm>
 #include <array>
@@ -12,7 +13,7 @@ struct SelectionNotice {
     void show(int id) { message=id;pressed=false; }
     void close() { show(0); }
     static int reply_message(int opcode) {
-        switch (opcode) { case 526:return 221;case 527:return 220;case 528:return 222;default:return 0; }
+        switch (opcode) { case mir3::protocol::SM_STARTFAIL:return 221;case mir3::protocol::SM_QUERYCHR_FAIL:return 220;case mir3::protocol::SM_OUTOFCONNECTION:return 222;default:return 0; }
     }
 };
 struct SelectionSession {
@@ -25,6 +26,13 @@ struct SelectionSession {
     }
     std::string query_body() const { return account+"/"+std::to_string(number); }
     std::string start_body(std::string_view role) const { return account+"/"+std::string(role); }
+};
+struct DeleteCharacterDialog {
+    bool visible=false;
+    int selected=0,pressed=-1;
+    void open() { visible=true;selected=0;pressed=-1; }
+    void close() { visible=false;selected=0;pressed=-1; }
+    void tab() { if (visible) selected=selected==0?2:0; }
 };
 struct SelectionRole {
     std::string name;
@@ -87,7 +95,7 @@ struct CharacterSelectionPage {
     }
     bool receive(std::span<const std::uint8_t> message) {
         const auto header=ReceiveHeader::decode_plain(message);
-        if (!header || header->opcode!=520) return false;
+        if (!header || header->opcode!=mir3::protocol::SM_QUERYCHR) return false;
         const auto body=decode_six_bit(message.data()+16,message.size()-16);
         return body && receive_list(header->recognition,*body);
     }

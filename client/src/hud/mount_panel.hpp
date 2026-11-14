@@ -1,4 +1,5 @@
 #pragma once
+#include "protocol/message_ids.hpp"
 #include "inventory/inventory_panel.hpp"
 
 namespace mir3 {
@@ -13,7 +14,7 @@ struct MountPanel : DraggablePanel {
     std::uint8_t shape=0;
 
     bool apply_reply(int identifier,std::uint32_t recognition) {
-        if (identifier!=1300) return false;
+        if (identifier!=mir3::protocol::SM_RIDEHORSE) return false;
         // 0x4282C0 case 1300 copies the low recognition byte into the rider state.
         shape=static_cast<std::uint8_t>(recognition);
         return true;
