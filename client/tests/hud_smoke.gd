@@ -3906,15 +3906,15 @@ func run() -> void:
 	key(0, 50)
 	if not await capture("hud-trade-stack-quantity"): return
 	key(KEY_ENTER)
-	if not check(offers[-1] == [1026, 98766, "Trade stack", 2] and not hud.apply_trade_offer_reply(Mir3HudView.SM_TRADE_ADD_OK, 3), "send selected quantity and reject excess acknowledgement"): return
-	if not check(hud.apply_trade_offer_reply(Mir3HudView.SM_TRADE_ADD_OK, 2) and hud.hud_snapshot().held_inventory_icon == -1, "split offer restores remainder"): return
+	if not check(offers[-1] == [1026, 98766, "Trade stack", 2] and not hud.apply_trade_offer_reply(Mir3HudView.SM_TRADE_ADD_OK, 5), "send selected quantity and reject excess acknowledgement"): return
+	if not check(hud.apply_trade_offer_reply(Mir3HudView.SM_TRADE_ADD_OK, 3, 98767) and hud.hud_snapshot().held_inventory_icon == -1, "split offer restores remainder"): return
 	if not await capture("hud-trade-stack-split"): return
 	click_at(Vector2(70, 75), true)
 	click_at(Vector2(70, 75), false)
 	click_at(trade_pickup, true)
 	click_at(trade_pickup, false)
-	if not check(offers[-1] == [1027, 98766, "Trade stack", 2] and hud.apply_trade_offer_reply(Mir3HudView.SM_TRADE_REMOVE_OK), "return split quantity"): return
-	if not await capture("hud-trade-stack-merged"): return
+	if not check(offers[-1] == [1027, 98767, "Trade stack", 2] and hud.apply_trade_offer_reply(Mir3HudView.SM_TRADE_REMOVE_OK), "return split quantity"): return
+	if not await capture("hud-trade-stack-return-deduplicated"): return
 	if not check(hud.set_trade_item(0, 30, 301, 3), "apply trade item below first page"): return
 	if not check(hud.set_trade_item(0, 27, 1043, 2), "apply tall trade item above scrolled page"): return
 	click_at(Vector2(211, 170), true)
@@ -3945,9 +3945,8 @@ func run() -> void:
 	if not check(not hud.apply_trade_cancel(), "duplicate trade cancellation ignored"): return
 	if not await capture("hud-trade-cancelled"): return
 	if not check(hud.open_trade("比奇旅人") and hud.set_trade_item(1, 0, 301, 1), "open trade for settlement"): return
-	if not check(not hud.apply_trade_complete(19320) and hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_gold == 0, "incomplete received item preserves trade and balance"): return
 	if not check(hud.set_trade_item(1, 0, 301, 1, 87654, "Received potion", 0, 0), "apply received item identity"): return
-	if not check(hud.apply_trade_complete(19320) and not hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_gold == 19320, "settle received item and authoritative balance"): return
+	if not check(hud.apply_trade_complete(19320) and not hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_gold == 19320, "complete clears display; received items use independent delivery"): return
 	if not check(not hud.apply_trade_complete(19320), "duplicate settlement ignored"): return
 	if not await capture("hud-trade-completed"): return
 	var gold_requests: Array[Vector2i] = []
@@ -3974,8 +3973,7 @@ func run() -> void:
 	var gold_snapshot: Dictionary = hud.hud_snapshot()
 	if not check(gold_snapshot.trade_gold_local == 12500 and gold_snapshot.trade_gold_remote == 3420 and gold_snapshot.inventory_gold == 6820, "gold reply updates both visible totals"): return
 	if not await capture("hud-trade-gold-reply"): return
-	if not check(not hud.apply_trade_cancel() and hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_gold == 6820, "await reconciled balance after gold cancellation"): return
-	if not check(hud.apply_trade_cancel(19320) and not hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_gold == 19320, "cancel restores authoritative balance"): return
+	if not check(hud.apply_trade_cancel() and not hud.hud_snapshot().trade_visible and hud.hud_snapshot().inventory_gold == 19320, "cancel restores authoritative balance"): return
 	if not await capture("hud-trade-gold-refund"): return
 	var exit_requests: Array[int] = []
 	hud.exit_confirmed.disconnect(hud.handle_exit_confirmation)

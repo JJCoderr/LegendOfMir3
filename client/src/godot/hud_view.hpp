@@ -41,6 +41,7 @@
 #include "hud/target_portrait.hpp"
 #include "inventory/inventory_panel.hpp"
 #include "inventory/inventory_grid.hpp"
+#include "inventory/trade_grid.hpp"
 #include "status/equipment.hpp"
 #include "status/element_attributes.hpp"
 #include "guild/guild_layout.hpp"
@@ -108,7 +109,7 @@ public:
     bool request_selection_list();
     bool apply_selection_message(godot::PackedByteArray message);
     bool set_local_exit_state(int action,godot::PackedInt64Array ticks);
-    bool apply_trade_offer_reply(int identifier,int accepted_count=0);
+    bool apply_trade_offer_reply(int identifier,int remaining=0,int64_t new_index=0);
     bool set_trade_item(int side,int slot,int icon,int count,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     bool apply_trade_gold_reply(int identifier,int64_t amount,int low_word,int high_word);
     bool set_trade_gold(int64_t local,int64_t remote);
@@ -190,6 +191,7 @@ private:
     std::array<std::uint32_t,2> trade_gold{};
     std::array<std::array<mir3::BagItem,200>,2> trade_items;
     void send_trade_offer(int count);
+    bool apply_trade_wire(const mir3::ReceiveHeader& header,std::span<const std::uint8_t> body);
     int trade_offer_count=0;
     int trade_pending_slot=-1, trade_return_slot=-1;
     bool trade_return_pending=false;

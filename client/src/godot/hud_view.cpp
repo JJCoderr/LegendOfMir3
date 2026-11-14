@@ -190,7 +190,7 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("trade_gold_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"amount")));
     ADD_SIGNAL(MethodInfo("trade_offer_requested",PropertyInfo(Variant::INT,"identifier"),
         PropertyInfo(Variant::INT,"make_index"),PropertyInfo(Variant::STRING,"name"),PropertyInfo(Variant::INT,"count")));
-    ClassDB::bind_method(D_METHOD("apply_trade_offer_reply","identifier","accepted_count"),&Mir3HudView::apply_trade_offer_reply,DEFVAL(0));
+    ClassDB::bind_method(D_METHOD("apply_trade_offer_reply","identifier","remaining","new_index"),&Mir3HudView::apply_trade_offer_reply,DEFVAL(0),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("set_trade_item","side","slot","icon","count","make_index","name","std_mode","stack_mode"),&Mir3HudView::set_trade_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_trade_gold_reply","identifier","amount","low_word","high_word"),&Mir3HudView::apply_trade_gold_reply,DEFVAL(0),DEFVAL(0));
     ClassDB::bind_method(D_METHOD("set_trade_gold","local","remote"),&Mir3HudView::set_trade_gold);
@@ -368,6 +368,13 @@ Dictionary Mir3HudView::hud_snapshot() const {
         trade_item_counts.append(count);
     }
     result["trade_item_counts"]=trade_item_counts;
+    Array trade_records;
+    for(int side=0;side<2;++side) for(int slot=0;slot<200;++slot) if(trade_items[side][slot]) {
+        const auto& item=trade_items[side][slot];Dictionary row;
+        row["side"]=side;row["slot"]=slot;row["id"]=int64_t(item.make_index);row["name"]=String::utf8(item.name.c_str());row["count"]=item.count;
+        trade_records.append(row);
+    }
+    result["trade_records"]=trade_records;
     result["trade_partner"]=trade_partner;
     result["shop_goods_count"]=int(shop_goods.size());result["shop_offers_count"]=int(shop_offers.size());
     result["shop_offer_loading"]=shop_offer_loading;
@@ -3025,6 +3032,16 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    switch(header->opcode) {
+    case mir3::protocol::SM_TRADE_OPEN:case mir3::protocol::SM_TRADE_OPEN_FAIL:
+    case mir3::protocol::SM_TRADE_ADD_OK:case mir3::protocol::SM_TRADE_ADD_FAIL:
+    case mir3::protocol::SM_TRADE_REMOVE_OK:case mir3::protocol::SM_TRADE_REMOVE_FAIL:
+    case mir3::protocol::SM_TRADE_CANCELLED:case mir3::protocol::SM_TRADE_PEER_ADD:
+    case mir3::protocol::SM_TRADE_PEER_REMOVE:case mir3::protocol::SM_TRADE_GOLD:
+    case mir3::protocol::SM_TRADE_PEER_GOLD:case mir3::protocol::SM_TRADE_COMPLETE:
+        return apply_trade_wire(*header,{encoded.ptr()+16,std::size_t(encoded.size()-16)});
+    default:break;
+    }
     if (header->opcode==mir3::protocol::SM_EAT_OK || header->opcode==mir3::protocol::SM_EAT_FAIL)
         return apply_inventory_use_reply(header->opcode,header->parameters[0]);
     if (header->opcode==mir3::protocol::SM_TAKEON_OK || header->opcode==mir3::protocol::SM_TAKEON_FAIL ||
@@ -4757,6 +4774,7 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
                     trade_return_bag_slot=slot;
                     trade_return_bag_pointer=Vector2i(int(position.x)-x,int(position.y)-y);
                     emit_signal("trade_offer_requested",mir3::protocol::CM_TRADE_REMOVE_ITEM,int64_t(item.make_index),String::utf8(item.name.c_str()),item.count);
+                    send_client_packet(mir3::protocol::CM_TRADE_REMOVE_ITEM,item.make_index,String::utf8(item.name.c_str()));
                 }
             } else if (consumed && !equipment.pending && bag.held_equipment_slot>=0) {
                 if (equipment.takeoff(bag)) emit_equipment_request();
@@ -5695,7 +5713,7 @@ void Mir3HudView::handle_exit_confirmation(int dialog_id) {
 }
 
 bool Mir3HudView::dialog_is_alert() const {
-    return group_request==1414 || (group_request>=1473 && group_request<=1507) || (group_request>=1437 && group_request<=1439) || group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
+    return group_request==1434 || group_request==1414 || (group_request>=1473 && group_request<=1507) || (group_request>=1437 && group_request<=1439) || group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
 }
 
 bool Mir3HudView::dialog_has_input() const {
@@ -5788,6 +5806,7 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
             parsed.ec==std::errc{} && parsed.ptr==end && amount>0 && amount<=inventory_gold) {
             trade_gold_pending=true;
             emit_signal("trade_gold_requested",mir3::protocol::CM_TRADE_GOLD,int64_t(amount));
+            send_client_packet(mir3::protocol::CM_TRADE_GOLD,amount,String());
         }
     } else if (request==mir3::protocol::CM_GUILDDELMEMBER) {
         emit_signal("guild_member_removal_requested",name);
@@ -6740,53 +6759,93 @@ void Mir3HudView::draw_portrait_map() {
         paint_canvas->draw_rect(Rect2(player,Vector2(4,4)).grow(-0.5),green,false);
 }
 
+bool Mir3HudView::apply_trade_wire(const mir3::ReceiveHeader& header,std::span<const std::uint8_t> body) {
+    using namespace mir3::protocol;
+    if(header.opcode==SM_TRADE_OPEN_FAIL) {open_group_dialog(1434);return true;}
+    if(header.opcode==SM_TRADE_OPEN) {
+        if(trade.visible) {
+            if(!inventory.visible) {inventory.rect[0]=518;inventory.rect[1]=0;toggle_inventory();}
+            return true;
+        }
+        const auto name=mir3::decode_six_bit(body.data(),body.size());
+        if(!name || name->empty() || name->size()>60 || name->find(char(0))!=std::string::npos) return false;
+        return open_trade(String::utf8(mir3::ansi_to_utf8(*name).c_str()));
+    }
+    if(!trade.visible) return false;
+    if(header.opcode==SM_TRADE_ADD_OK || header.opcode==SM_TRADE_ADD_FAIL ||
+        header.opcode==SM_TRADE_REMOVE_OK || header.opcode==SM_TRADE_REMOVE_FAIL)
+        return apply_trade_offer_reply(header.opcode,header.parameters[0],header.recognition);
+    if(header.opcode==SM_TRADE_CANCELLED) return apply_trade_cancel(-1);
+    if(header.opcode==SM_TRADE_COMPLETE) return apply_trade_complete(inventory_gold);
+    if(header.opcode==SM_TRADE_GOLD || header.opcode==SM_TRADE_PEER_GOLD) {
+        if(!apply_trade_gold_reply(header.opcode,header.recognition,header.parameters[0],header.parameters[1])) return false;
+        play_login_sound(sound_list.file(106),false);return true;
+    }
+    const auto decoded=mir3::decode_six_bit(body.data(),body.size());
+    if(!decoded || decoded->size()!=100) return false;
+    mir3::InventoryRecord record;std::copy(decoded->begin(),decoded->end(),record.raw.begin());
+    if(record.name().empty()) return false;
+    const auto sprite=item_frame(record.icon());if(sprite.is_null()) return false;
+    const auto [width,height]=mir3::InventoryGrid::dimensions(sprite->get_width(),sprite->get_height());
+    mir3::BagItem item{mir3::EquipmentState::category(record.mode()),record.icon(),record.count(),width,height,
+        record.mode(),record.identity(),mir3::ansi_to_utf8(record.name()),record.stack_mode(),record.raw};
+    auto next=trade_items[1];
+    if(header.opcode==SM_TRADE_PEER_ADD) {
+        if(mir3::TradeGrid::insert(next,item)<0) return false;
+    } else if(header.opcode==SM_TRADE_PEER_REMOVE) {
+        for(auto& other:next) if(other && other.make_index==item.make_index && other.name==item.name) {other={};break;}
+    } else return false;
+    trade_items[1]=std::move(next);play_item_sound(item);
+    auto caption=message(header.opcode==SM_TRADE_PEER_ADD?1435:1436);
+    if(const auto at=caption.find("%s");at!=std::string::npos) caption.replace(at,2,item.name);
+    post_chat(String::utf8(caption.c_str()),mir3::chat_palette(2),mir3::chat_palette(7));
+    queue_redraw();return true;
+}
+
 void Mir3HudView::send_trade_offer(int count) {
     trade_offer_count=count;
     emit_signal("trade_offer_requested",mir3::protocol::CM_TRADE_ADD_ITEM,int64_t(bag.held.make_index),String::utf8(bag.held.name.c_str()),count);
+    send_client_packet(mir3::protocol::CM_TRADE_ADD_ITEM,bag.held.make_index,String::utf8(bag.held.name.c_str()),0,std::uint16_t(count));
 }
 
-bool Mir3HudView::apply_trade_offer_reply(int identifier,int accepted_count) {
+bool Mir3HudView::apply_trade_offer_reply(int identifier,int remaining,int64_t new_index) {
+    if (!trade.visible) return false;
+    auto next_bag=bag;auto next_items=trade_items[0];
+    mir3::BagItem sound_item;
     if (identifier==mir3::protocol::SM_TRADE_REMOVE_OK || identifier==mir3::protocol::SM_TRADE_REMOVE_FAIL) {
-        if (!trade_return_pending) return false;
-        auto& item=trade_items[0][trade_return_slot];
+        if (!trade_return_pending || trade_return_slot<0 || !next_items[trade_return_slot]) return false;
+        const auto item=next_items[trade_return_slot];sound_item=item;next_items[trade_return_slot]={};
         if (identifier==mir3::protocol::SM_TRADE_REMOVE_OK) {
-            if (!bag.restore_trade_item(item,trade_return_bag_slot,trade_return_bag_pointer.x,trade_return_bag_pointer.y)) {
-                bag.held=item;
-                bag.held_slot=-1;
+            bool exists=false;
+            if(item.stack_mode>=2) for(const auto& other:next_bag.items) if(other && other.name==item.name) {exists=true;break;}
+            if(item.name!=message(1050) && !exists && !next_bag.insert(item)) return false;
+        } else if(mir3::TradeGrid::insert(next_items,item)<0) return false;
+        trade_return_slot=-1;trade_return_pending=false;
+    } else {
+        if (trade_pending_slot<0 || !trade_offer_count || !next_bag.held ||
+            (identifier!=mir3::protocol::SM_TRADE_ADD_OK && identifier!=mir3::protocol::SM_TRADE_ADD_FAIL)) return false;
+        sound_item=next_bag.held;
+        if(identifier==mir3::protocol::SM_TRADE_ADD_OK) {
+            if(remaining<0 || (remaining && remaining>=next_bag.held.count) || new_index<0 || new_index>UINT32_MAX) return false;
+            auto offered=next_bag.held;
+            if(remaining) {
+                offered.set_count(offered.count-remaining);offered.make_index=std::uint32_t(new_index);
+                for(int i=0;i<4;++i) offered.server_record[62+i]=std::uint8_t(offered.make_index>>(8*i));
+                next_bag.held.set_count(remaining);
+                if(!next_bag.insert(next_bag.held)) return false;
             }
-            item={};
-        }
-        trade_return_slot=-1;
-        trade_return_pending=false;
-        queue_redraw();
-        return true;
+            if(mir3::TradeGrid::insert(next_items,offered,trade_pending_slot)<0) return false;
+        } else if(!next_bag.insert(next_bag.held)) return false;
+        next_bag.held={};next_bag.held_slot=-1;trade_pending_slot=-1;trade_offer_count=0;
     }
-    if (trade_pending_slot<0 || !trade_offer_count || (identifier!=mir3::protocol::SM_TRADE_ADD_OK && identifier!=mir3::protocol::SM_TRADE_ADD_FAIL)) return false;
-    if (identifier==mir3::protocol::SM_TRADE_ADD_OK) {
-        if (!bag.held || accepted_count<0 ||
-            accepted_count>trade_offer_count || trade_offer_count>bag.held.count) return false;
-        const int count=accepted_count?accepted_count:trade_offer_count;
-        auto offered=bag.held;
-        offered.count=count;
-        trade_items[0][trade_pending_slot]=std::move(offered);
-        bag.held.count-=count;
-        if (bag.held.count==0 || bag.insert(bag.held)) {
-            bag.held={};
-            bag.held_slot=-1;
-        }
-    } else if (bag.insert(bag.held)) {
-        bag.held={};
-        bag.held_slot=-1;
-    }
-    trade_pending_slot=-1;
-    trade_offer_count=0;
-    queue_redraw();
-    return true;
+    bag=std::move(next_bag);trade_items[0]=std::move(next_items);
+    play_item_sound(sound_item); // 分堆路径4410D0也调用43ED40。
+    queue_redraw();return true;
 }
 
 bool Mir3HudView::set_trade_item(int side,int slot,int icon,int count,int64_t make_index,String name,int std_mode,int stack_mode) {
     if (!trade.visible || side<0 || side>=2 || slot<0 || slot>=200 || icon< -1 || count<0 || make_index<0 || make_index>UINT32_MAX) return false;
-    auto& item=trade_items[side][slot];
+    auto item=trade_items[side][slot];
     if (icon<0) item={};
     else {
         const auto image=item_frame(icon);
@@ -6803,6 +6862,9 @@ bool Mir3HudView::set_trade_item(int side,int slot,int icon,int count,int64_t ma
         item.width=width;
         item.height=height;
     }
+    auto grid=trade_items[side];grid[slot]={};
+    if(item && (mir3::TradeGrid::count(grid)>=12 || !mir3::TradeGrid::fits(grid,slot,item))) return false;
+    trade_items[side][slot]=item;
     if (side==0 && slot==trade_return_slot && !item) {
         trade_return_slot=-1;
         trade_return_pending=false;
@@ -6834,39 +6896,25 @@ bool Mir3HudView::set_trade_gold(int64_t local,int64_t remote) {
 }
 
 bool Mir3HudView::apply_trade_complete(int64_t balance) {
-    if (!trade.visible || balance<0 || balance>UINT32_MAX ||
-        trade_pending_slot>=0 || trade_return_pending) return false;
-
-    auto received=bag;
-    for (const auto& item:trade_items[1]) {
-        if (item && (!item.make_index || !received.insert(item))) return false;
-    }
-    bag=std::move(received);
-    inventory_gold=static_cast<std::uint32_t>(balance);
-    trade_items={};
+    if (!trade.visible || balance<0 || balance>UINT32_MAX || trade_pending_slot>=0 || trade_return_pending) return false;
+    // 687只清交易；物品和余额通过独立权威消息更新，不复制对方展示物品。
+    inventory_gold=std::uint32_t(balance);trade_items={};
     return open_trade(String());
 }
 
 bool Mir3HudView::apply_trade_cancel(int64_t balance) {
     if (!trade.visible || balance< -1 || balance>UINT32_MAX) return false;
-    // 687 has no balance in its handler. Reconcile reserved gold with a
-    // session balance instead of adding an offer to a possibly newer total.
-    if (balance<0 && trade_gold_debited) return false;
-    // Apply the 687 return and close together. If the inventory snapshot is
-    // full, leave the offer intact so the session can reconcile and retry.
     auto restored=bag;
-    for (const auto& item:trade_items[0]) {
-        if (item && !restored.restore_trade_item(item)) return false;
-    }
-    if (trade_pending_slot>=0) {
-        if (!restored.insert(restored.held)) return false;
-        restored.held={};
-        restored.held_slot=-1;
-        trade_pending_slot=-1;
+    for(const auto& item:trade_items[0]) if(item && item.stack_mode<2 && !restored.insert(item)) return false;
+    if(trade_pending_slot>=0 && restored.held) {
+        bool exists=false;
+        if(restored.held.stack_mode>=2) for(const auto& item:restored.items) if(item && item.name==restored.held.name) {exists=true;break;}
+        if(!exists && restored.held.name!=message(1050) && !restored.insert(restored.held)) return false;
+        restored.held={};restored.held_slot=-1;
     }
     bag=std::move(restored);
-    if (balance>=0) inventory_gold=static_cast<std::uint32_t>(balance);
-    trade_items={};
+    inventory_gold=balance<0?inventory_gold+trade_gold[0]:std::uint32_t(balance);
+    trade_pending_slot=-1;trade_items={};
     return open_trade(String());
 }
 
@@ -6879,7 +6927,7 @@ bool Mir3HudView::open_trade(String partner) {
         if (trade.visible) trade.toggle();
         trade_confirm_pressed=false;
         if (group_request==1307 || group_request==mir3::protocol::CM_TRADE_GOLD) finish_group_dialog(false);
-        trade_offer_count=0;
+        trade_offer_count=0;trade_partner=String();
         trade_confirmed=false;
         trade_gold_pending=false;
         trade_gold_debited=false;
@@ -6970,6 +7018,7 @@ bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
         if (activate) {
             trade_confirmed=true;
             emit_signal("trade_requested",mir3::protocol::CM_TRADE_CONFIRM,String());
+            send_client_packet(mir3::protocol::CM_TRADE_CONFIRM,0,String());
         }
         const auto [x,y,w,h]=trade.rect;
         const Rect2 local_grid(x+14,y+56,190,190);
@@ -6998,7 +7047,7 @@ bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
             const int row=trade_scroll.first[0]+(int(position.y)-y-56)/38;
             const int slot=row*5+column;
             const auto& held=bag.held;
-            bool fits=column+held.width<=5 && row+held.height<=40;
+            bool fits=mir3::TradeGrid::count(trade_items[0])<12 && column+held.width<=5 && row+held.height<=40;
             bool occupied=false;
             for (int index=0;index<200;++index) {
                 const auto& item=trade_items[0][index];
@@ -7041,7 +7090,8 @@ bool Mir3HudView::request_trade() {
     const auto [dx,dy]=directions[trade_direction];
     if (std::int64_t(trade_actor_cell.x)!=std::int64_t(model.map_x)+dx ||
         std::int64_t(trade_actor_cell.y)!=std::int64_t(model.map_y)+dy) return false;
-    emit_signal("trade_requested",mir3::protocol::CM_TRADE_CANCEL,trade_actor_name);
+    emit_signal("trade_requested",mir3::protocol::CM_TRADE_REQUEST,trade_actor_name);
+    send_client_packet(mir3::protocol::CM_TRADE_REQUEST,0,trade_actor_name);
     return true;
 }
 

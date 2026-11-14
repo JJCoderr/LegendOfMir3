@@ -17,6 +17,7 @@
 #include "hud/selection_pixels.hpp"
 #include "inventory/inventory_grid.hpp"
 #include "status/equipment.hpp"
+#include "inventory/trade_grid.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/ground_items.hpp"
 #include "hud/scene_lighting.hpp"
@@ -47,6 +48,19 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        // 测试内容：交易每方12件限制、指定锚点回退、跨格占位冲突及5列40行边界。
+        if (std::filesystem::path(argv[1])=="--trade-grid") {
+            mir3::TradeGrid::Items items;
+            mir3::BagItem wide{-1,1,1,2,3,5,1,"Wide",0};
+            check(mir3::TradeGrid::insert(items,wide,4)==0,"invalid requested position falls back");
+            check(!mir3::TradeGrid::fits(items,6,wide),"overlap with non-anchor cell");
+            check(mir3::TradeGrid::insert(items,wide,4)==2,"first fit skips occupied rectangle");
+            mir3::BagItem small{-1,2,1,1,1,1,2,"Small",0};
+            for(int i=0;i<10;++i) check(mir3::TradeGrid::insert(items,small)>=0,"fill twelve record slots");
+            check(mir3::TradeGrid::count(items)==12 && mir3::TradeGrid::insert(items,small)<0,"twelve items independent of empty cells");
+            check(!mir3::TradeGrid::fits(items,195,wide) && !mir3::TradeGrid::fits(items,200,small),"last row bounds");
+            std::cout << "TRADE_GRID_MODEL_OK\n";return 0;
+        }
         // 测试内容：物品使用禁止条件、待确认锁定、数量和原始记录同步、末件删除及失败恢复。
         if (std::filesystem::path(argv[1])=="--inventory-use") {
             using namespace mir3::protocol;
