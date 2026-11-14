@@ -9,7 +9,9 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 # 每项只登记已有验收，避免把尚未实现的用例当作通过。
-COMMON_SKILLS = tuple(int(c["id"]) for c in json.loads((ROOT / "tests" / "skill_common_cases.json").read_text(encoding="utf-8"))["cases"])
+COMMON_CASES = json.loads((ROOT / "tests" / "skill_common_cases.json").read_text(encoding="utf-8"))["cases"]
+COMMON_SKILLS = tuple(int(c["id"]) for c in COMMON_CASES)
+IMPACT_SKILLS = tuple(int(c["id"]) for c in COMMON_CASES if c["projectile"] and c["explosion"] is not None)
 SUITES = {
     "skills": {
         "models": (["--spell", "--skill-wire", "--action-reply"], None),
@@ -24,6 +26,8 @@ SUITES = {
         "common": (["--spell-common"], "spell_common.gd"),
         "passive": ([], "spell_passive.gd"),
         "special": (["--spell-special"], "spell_special.gd"),
+        "impact": ([], "spell_impact.gd"),
+        "target-loss": ([], "spell_target_loss.gd"),
         "melee": (["--spell-melee"], "melee_spells.gd"),
         "particle-model": (["--spell-particles"], None),
         "sound": (["--spell-sound"], "spell_sound.gd"),
@@ -54,7 +58,7 @@ def main():
     parser.add_argument("--suite", choices=SUITES, default="skills", help="子系统测试集")
     parser.add_argument("--case", action="append", help="子集名称，可重复指定；--list查看")
     parser.add_argument("--skill", type=int, choices=SKILLS, help="仅运行对应技能")
-    parser.add_argument("--skills", help="编号集合，逗号分隔；支持--case melee、common、enchantment或special")
+    parser.add_argument("--skills", help="编号集合，逗号分隔；支持--case melee、common、enchantment、special、impact或target-loss")
     parser.add_argument("--screenshots", action="store_true", help="保存真实视口截图")
     parser.add_argument("--godot", default=os.environ.get("MIR3_GODOT_EXECUTABLE"))
     parser.add_argument("--checks", help="hud_checks程序的路径")
@@ -79,6 +83,10 @@ def main():
             allowed = ["passive"]
         if args.skill in COMMON_SKILLS:
             allowed = ["common"]
+        if args.skill in (5,13,37,38,39,40,41,67):
+            allowed.append("target-loss")
+        if args.skill in IMPACT_SKILLS:
+            allowed.append("impact")
         if args.skill in (36, 74, 104, 107, 108):
             allowed.append("special")
         if args.skill in (7, 12, 25, 26, 34, 35, 103):
@@ -95,9 +103,9 @@ def main():
             parser.error("所选子集不支持该技能编号筛选")
         cases = args.case or allowed
     if args.skills:
-        if args.suite != "skills" or cases not in (["melee"], ["common"], ["enchantment"], ["special"]) or args.skill is not None:
-            parser.error("--skills当前用于--suite skills --case melee、common、enchantment或special，不能与--skill并用")
-        selection_ids = {"common": COMMON_SKILLS, "enchantment": range(408,415), "melee": (7,12,25,26,34,35,103), "special": (36,74,104,107,108)}[cases[0]]
+        if args.suite != "skills" or cases not in (["melee"], ["common"], ["enchantment"], ["special"], ["impact"], ["target-loss"]) or args.skill is not None:
+            parser.error("--skills当前用于--suite skills --case melee、common、enchantment、special、impact或target-loss，不能与--skill并用")
+        selection_ids = {"common": COMMON_SKILLS, "enchantment": range(408,415), "melee": (7,12,25,26,34,35,103), "special": (36,74,104,107,108), "impact": IMPACT_SKILLS, "target-loss": (5,13,37,38,39,40,41,67)}[cases[0]]
         selected = args.skills.split(",")
         if not selected or any(not n.isdecimal() or int(n) not in selection_ids for n in selected):
             parser.error("--skills包含无效技能编号")
