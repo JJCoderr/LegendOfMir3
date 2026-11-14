@@ -49,7 +49,7 @@ class SkillSelectionTests(unittest.TestCase):
         self.assertEqual(sum("--script" in c for c in commands), 1)
         graphic = next(c for c in commands if "--script" in c)
         plan = json.loads(next(a[7:] for a in graphic if a.startswith("--plan=")))
-        self.assertEqual(len(plan), 16)
+        self.assertEqual(len(plan), 18)
         self.assertTrue(all(item["args"] == [] for item in plan))
         self.assertTrue(all(not any(a.startswith(("--skill=", "--skills=")) for a in c) for c in commands))
         self.assertIn("TEST_SUITE_ALL_OK", output)
@@ -74,6 +74,24 @@ class SkillSelectionTests(unittest.TestCase):
         graphic = next(c for c in commands if "--script" in c)
         plan = json.loads(next(a[7:] for a in graphic if a.startswith("--plan=")))
         self.assertEqual([item["case"] for item in plan], ["common", "stationary", "summon"])
+
+    def test_outcomes_route_for_each_skill(self):
+        # 单技能必须自动带上后续结果，不依赖手工选择场景。
+        for scene, ids in (("summon", (17,30,105)), ("persistent", (16,22)), ("displacement", (8,21,104))):
+            for skill in ids:
+                with self.subTest(skill=skill):
+                    _, commands, _ = self.invoke("--skill", str(skill))
+                    graphic = next(c for c in commands if "--script" in c)
+                    plan = json.loads(next(a[7:] for a in graphic if a.startswith("--plan=")))
+                    outcome = next(item for item in plan if item["case"] == scene)
+                    self.assertEqual(outcome["args"], [f"--skills={skill}"])
+
+    def test_summon_filter_does_not_add_other_pets(self):
+        # 只选骷髅时不能顺带执行神兽；混选时也只保留召唤适用编号。
+        _, commands, _ = self.invoke("--skills", "17,22,105")
+        graphic = next(c for c in commands if "--script" in c)
+        plan = json.loads(next(a[7:] for a in graphic if a.startswith("--plan=")))
+        self.assertEqual(next(item["args"] for item in plan if item["case"] == "summon"), ["--skills=17,105"])
 
 
 if __name__ == "__main__":

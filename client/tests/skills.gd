@@ -10,52 +10,122 @@ var suite_failed := false
 func skill_arguments() -> PackedStringArray:
     return active_arguments
 
-# 召唤神兽：施法请求不等于怪物创建；使用原协议入场消息覆盖之前漏测的可见怪物。
-func run_summon() -> void:
-    const SUMMON_SHINSU := 30
-    const SHINSU_SHAPE := 90 # 原版 Mon-10 第0组，见46F7A4的外观索引。
+# 后续消息专项：不替服务端计算技能结果，只验客户端收到结果后能完整呈现和清理。
+var outcome_origin := Vector2i()
+var outcome_target := Vector2i()
+
+func outcome_ids(available: Array) -> Array:
+    for argument in skill_arguments():
+        if argument.begins_with("--skill=") or argument.begins_with("--skills="):
+            var values := argument.split("=",true,1)[1].split(",")
+            if not check(Array(values).all(func(v): return v.is_valid_int() and int(v) in available), "后续效果技能筛选有效"): return []
+            return Array(values).map(func(v): return int(v))
+    return available
+
+func prepare_outcome(skill: int) -> bool:
     Input.use_accumulated_input = false
     hud = load("res://main.tscn").instantiate()
     hud.set_meta("offline_preview", true)
-    hud.set_meta("options_path", "user://summon-%d.ini" % OS.get_process_id())
+    hud.set_meta("options_path", "user://skill-outcome-%d.ini" % OS.get_process_id())
     hud.set_connection_enabled(false)
     root.add_child(hud)
     await settle()
     hud.set_local_actor_identity(77)
     hud.set_character_vitals(100,100,200,200,0,100)
-    var origin: Vector2i = hud.hud_snapshot().player_cell + Vector2i(0,2)
-    var pet_cell := origin + Vector2i(0,4)
-    if not check(hud.change_map("0","比奇省",origin,1), "准备召唤场景"): return
+    outcome_origin = hud.hud_snapshot().player_cell + Vector2i(0,2)
+    outcome_target = outcome_origin + Vector2i(0,4)
+    if not check(hud.change_map("0","比奇省",outcome_origin,1), "准备后续效果场景"): return false
     var learned := game_reply(Mir3HudView.SM_SENDMYMAGIC,0,0,0,1)
-    learned.append_array(skill_record(SUMMON_SHINSU,49))
-    learned.append(47)
-    if not check(hud.apply_game_message(learned), "学习召唤神兽并绑定F1"): return
+    learned.append_array(skill_record(skill,49)); learned.append(47)
+    if not check(hud.apply_game_message(learned), "学习技能并绑定F1"): return false
     var packets: Array[PackedByteArray] = []
     hud.client_packet_ready.connect(func(packet: PackedByteArray):
         packets.append(packet)
         hud.apply_game_message("+GOOD".to_ascii_buffer()))
-    if not check(await wait_until(func(s): return s.map_left_delay_ms==0), "召唤输入门控结束"): return
+    if not check(await wait_until(func(s): return s.map_left_delay_ms==0), "输入门控结束"): return false
     key(KEY_F1)
-    if not check(packets.size()==1 and decode_request(packets[0]).decode_u16(8)==SUMMON_SHINSU, "发出30号施法请求"): return
-    if not check(await wait_until(func(s): return s.player_action==-1), "召唤起手结束"): return
-    if not check(hud.apply_game_message(magic_reply(SUMMON_SHINSU,pet_cell)), "接收召唤技能效果回包"): return
-    if not check(not hud.hud_snapshot().scene_chicken_cells.has(130), "仅施法回包不能凭空生成神兽"): return
-    # 离线验收注入服务器应发送的角色入场包；不实现服务端召唤或伤害结算。
-    var feature := PackedByteArray()
-    feature.resize(16)
-    feature[0] = 3
-    feature.encode_u16(2,SHINSU_SHAPE)
-    var entry := game_reply(Mir3HudView.SM_DIGUP,130,pet_cell.x,pet_cell.y,0)
-    entry.append_array(encode_scene_bytes(feature))
-    if not check(hud.apply_game_message(entry), "神兽通过怪物入场协议创建"): return
-    if not check(await wait_until(func(s): return s.scene_chicken_bounds.has(130) and s.scene_chicken_bounds[130].has_area()), "神兽原资源身体可见"): return
-    if not check(hud.hud_snapshot().scene_chicken_cells[130]==pet_cell, "神兽落在入场包指定格"): return
-    await settle(0.3)
-    if not await capture("skill-summon-30-shinsu"): return
-    if not check(hud.change_map("0","比奇省",origin,1) and not hud.hud_snapshot().scene_chicken_cells.has(130), "换图释放召唤物"): return
-    hud.queue_free()
-    await settle()
-    print("SKILL_SUMMON_UI_OK 30")
+    if not check(packets.size()==1 and decode_request(packets[0]).decode_u16(8)==skill, "施法请求技能编号正确"): return false
+    if not check(await wait_until(func(s): return s.player_action==-1,4000), "起手结束"): return false
+    if not check(hud.apply_game_message(magic_reply(skill,outcome_target)), "接收技能效果回包"): return false
+    return true
+
+# 17普通骷髅、30神兽、105高级召唤：外观由服务器入场包决定，105不凭名称推断专属外观。
+func run_summon() -> void:
+    for skill in outcome_ids([17,30,105]):
+        if not await prepare_outcome(skill): return
+        var shape: int = 90 if skill==30 else 32
+        const PET := 130
+        if not check(not hud.hud_snapshot().scene_chicken_cells.has(PET), "施法回包不能凭空生成召唤物"): return
+        var feature := PackedByteArray(); feature.resize(16)
+        feature[0]=3; feature.encode_u16(2,shape)
+        var entry := game_reply(Mir3HudView.SM_DIGUP,PET,outcome_target.x,outcome_target.y,0)
+        entry.append_array(encode_scene_bytes(feature))
+        if not check(hud.apply_game_message(entry), "召唤物通过入场协议创建"): return
+        if not check(await wait_until(func(s): return s.scene_chicken_bounds.has(PET) and s.scene_chicken_bounds[PET].has_area()), "召唤物原资源身体可见"): return
+        if not check(hud.hud_snapshot().scene_monster_shapes[PET]==shape and hud.hud_snapshot().scene_chicken_cells[PET]==outcome_target, "外观和位置来自入场包"): return
+        var count: int = hud.hud_snapshot().scene_chicken_cells.size()
+        if not check(hud.apply_game_message(entry), "重复入场包"): return
+        await settle()
+        if not check(hud.hud_snapshot().scene_chicken_cells.size()==count, "重复入场不创建第二只召唤物"): return
+        if not await capture("skill-summon-%d" % skill): return
+        var moved := outcome_target + Vector2i(2,0)
+        var turn := game_reply(Mir3HudView.SM_TURN,PET,moved.x,moved.y,2)
+        turn.append_array(encode_scene_bytes(feature))
+        if not check(hud.apply_game_message(turn), "召唤物后续移动原包"): return
+        if not check(await wait_until(func(s): return s.scene_chicken_cells[PET]==moved and s.scene_chicken_steps[PET]==-1), "召唤物移动到服务器落点"): return
+        if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_DISAPPEAR,PET,0,0,0)), "召唤物离场原包"): return
+        if not check(await wait_until(func(s): return not s.scene_chicken_cells.has(PET)), "离场释放召唤物"): return
+        if not check(hud.apply_game_message(entry), "同编号重新入场"): return
+        if not check(await wait_until(func(s): return s.scene_chicken_cells.has(PET)), "重新入场恢复召唤物"): return
+        if not check(hud.change_map("0","比奇省",outcome_origin,1) and not hud.hud_snapshot().scene_chicken_cells.has(PET), "换图释放召唤物"): return
+        hud.queue_free(); await settle()
+        print("SKILL_SUMMON_UI_OK ",skill)
+
+# 困魔咒/火墙：普通技能回包不创建持续地面效果，实际由SHOWEVENT/HIDEEVENT控制。
+func run_persistent() -> void:
+    for skill in outcome_ids([16,22]):
+        if not await prepare_outcome(skill): return
+        const EVENT := 730
+        if not check(hud.hud_snapshot().map_event_count==0, "技能回包不代替持续事件"): return
+        var event := game_reply(Mir3HudView.SM_SHOWEVENT,EVENT,4 if skill==16 else 5,outcome_target.x,outcome_target.y)
+        event.append_array(encode_scene_bytes(PackedByteArray([0,0,0,0])))
+        if not check(hud.apply_game_message(event), "服务器创建持续地面事件"): return
+        if not check(await wait_until(func(s): return s.map_event_frames.has(EVENT)), "持续效果进入帧推进"): return
+        if not check(hud.apply_game_message(event) and hud.hud_snapshot().map_event_count==1, "重复编号不叠加地面效果"): return
+        await settle(0.8)
+        var frame: int= hud.hud_snapshot().map_event_frames[EVENT]
+        if not check(frame >= (640 if skill==16 else 920) and frame < (650 if skill==16 else 925), "持续循环使用对应技能帧段"): return
+        if not await capture("skill-persistent-%d" % skill): return
+        if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_HIDEEVENT,EVENT,0,0,0)), "服务器停止持续事件"): return
+        if skill==16:
+            if not check(await wait_until(func(s): return not s.map_event_frames.has(EVENT)), "困魔咒停止后消失"): return
+        else:
+            frame=hud.hud_snapshot().map_event_frames[EVENT]
+            if not check(frame>=2450 and frame<=2490 and hud.hud_snapshot().map_ground_event_count==1, "火墙停止后保留余烬而非立即删除"): return
+            if not await capture("skill-persistent-22-embers"): return
+        if not check(hud.change_map("0","比奇省",outcome_origin,1) and hud.hud_snapshot().map_event_count==0 and hud.hud_snapshot().map_ground_event_count==0, "换图清除持续效果及余烬"): return
+        hud.queue_free(); await settle()
+        print("SKILL_PERSISTENT_UI_OK ",skill)
+
+# 抗拒火环的受击者由强制位移包驱动；传送/换位由服务器地图落点驱动，施法成功不自行位移。
+func run_displacement() -> void:
+    for skill in outcome_ids([8,21,104]):
+        if not await prepare_outcome(skill): return
+        if not check(hud.hud_snapshot().player_cell==outcome_origin, "施法确认不自行改写位置"): return
+        if skill==8:
+            # 接收端退步：结果由服务器落点决定，不在测试中替服务器选择受击对象。
+            var destination := outcome_origin+Vector2i(0,1)
+            if not check(hud.apply_game_message(motion_reply(Mir3HudView.SM_BACKSTEP,77,destination,4)), "接收端退步回包"): return
+            if not check(await wait_until(func(s): return s.player_cell==destination and s.forced_motion_opcode==0 and s.walk_frame==-1), "退步结束并保持服务器落点"): return
+        else:
+            var packet := game_reply(Mir3HudView.SM_CHANGEMAP,77,outcome_target.x,outcome_target.y,1)
+            packet.append_array(encode_scene_bytes("0".to_ascii_buffer()))
+            if not check(hud.apply_game_message(packet), "接收服务器传送落点"): return
+            if not check(await wait_until(func(s): return s.player_cell==outcome_target and s.map_id=="0"), "地图内传送到指定格"): return
+            if not check(hud.hud_snapshot().spell_effects.is_empty() and not hud.hud_snapshot().action_reply_pending, "传送清理原施法和等待状态"): return
+        if not await capture("skill-displacement-%d" % skill): return
+        hud.queue_free(); await settle()
+        print("SKILL_DISPLACEMENT_UI_OK ",skill)
 
 func check(condition: bool, label: String) -> bool:
     if not condition:

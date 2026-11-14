@@ -5,6 +5,8 @@
   python client/tests/run_tests.py skills --skill 47  # 单技能的适用场景
   python client/tests/run_tests.py skills --skills 3,47,48,410  # 混选、去重
   python client/tests/run_tests.py skills common --skills 47,48  # 仅共用施法场景
+  python client/tests/run_tests.py skills summon --skill 17  # 骷髅实体入场、位置更新、离场与清理
+  python client/tests/run_tests.py skills persistent --skills 16,22  # 持续地面效果及火墙余烬
   python client/tests/run_tests.py skills --list  # 场景与技能编号
   python client/tests/run_tests.py equipment  # 装备全集
   python client/tests/run_tests.py map-events  # 地图事件全集
@@ -16,8 +18,14 @@
 
 本轮验收范围：Windows 客户端技能；用户已明确不要求原版同状态对照。
 服务端、ASPack 和其他平台实机验证留在后续，不作为本轮完成条件。
-全集记录：client/build/c23-merged-full.log（模型与15个图形场景通过）。
-退出音乐对象清理修复后：client/build/c23-merged-cleanup.log（三场景复测无警告）。
+后续结果审计：17/30/105 接入怪物实体生命周期；16/22 接入持续地图事件；
+8 接收端退步、21/104 接收服务器传送落点。回包由离线夹具提供，不验证服务端判定。
+105 使用包内 shape=32 验证外观驱动，不声称该技能固定召唤此形态。
+召唤的移动阶段验证位置更新包，不代表已覆盖宠物 AI、攻击或服务器归属。
+18/19 隐身、31 护盾、2/29 治疗、77 回生的现有声光测试不等于状态结果验收；
+这些技能与状态/生命消息的对应关系仍需证据，不能根据技能名称伪造映射。
+63/64/78/121 的抑制或忽略分发也不能视为完整玩法结果已验收。
+本轮全集日志：client/build/skill-outcomes-full.log（18 个图形场景及共享模型）。
 """
 import argparse
 import json
@@ -51,6 +59,8 @@ SUITES = {
         "target-loss": ([], "skills.gd"),
         "stationary": ([], "skills.gd"),
         "summon": ([], "skills.gd"),
+        "persistent": ([], "skills.gd"),
+        "displacement": ([], "skills.gd"),
         "melee": (["--spell-melee"], "skills.gd"),
         "particle-model": (["--spell-particles"], None),
         "sound": (["--spell-sound"], "skills.gd"),
@@ -87,8 +97,12 @@ def skill_cases(skill):
         allowed.append("target-loss")
     if skill in STATIONARY_SKILLS:
         allowed.append("stationary")
-    if skill == 30:
-        allowed.append("summon")  # 神兽必须由怪物入场消息创建，不能只测施法回包。
+    if skill in (17,30,105):
+        allowed.append("summon")  # 召唤必须覆盖怪物入场、移动、离场，不能只测施法回包。
+    if skill in (16,22):
+        allowed.append("persistent")  # 困魔咒/火墙持续事件及停止后的清理。
+    if skill in (8,21,104):
+        allowed.append("displacement")  # 受击位移、传送/换位后的实际位置。
     if skill in IMPACT_SKILLS:
         allowed.append("impact")
     if skill in (36, 74, 104, 107, 108):
@@ -106,7 +120,7 @@ def skill_cases(skill):
     return allowed
 
 
-BATCH_CASES = {"common", "enchantment", "melee", "special", "impact", "target-loss", "stationary"}
+BATCH_CASES = {"common", "enchantment", "melee", "special", "impact", "target-loss", "stationary", "summon", "persistent", "displacement"}
 
 
 def main():
