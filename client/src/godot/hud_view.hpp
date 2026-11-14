@@ -500,7 +500,9 @@ private:
     godot::Vector2i player_cell{475,360}, step_origin{}, step_destination{};
     int walk_frame=-1, player_facing=4;
     mir3::HumanIdleClock player_idle;
-    mir3::HumanActionClock player_level_action;
+    mir3::HumanActionClock player_action;
+    bool player_harvest_impact=false;
+    bool map_shift_pressed=false;
     mir3::EffectCatalog effect_catalog;
     mir3::WilArchive event_archive;
     std::map<int,MapActorFrame> ground_event_frames;
@@ -553,7 +555,7 @@ private:
     double movement_ms=0;
     int map_pointer_button=0;
     double map_pointer_seconds=0;
-    void step_toward_pointer(bool run=false);
+    void step_toward_pointer(bool run=false,bool force_attack=false);
     bool merchant_pointer(godot::Vector2 pointer);
     bool apply_npc_message(godot::PackedByteArray encoded,godot::PackedByteArray key);
     bool apply_npc_body(int opcode,int actor,int count,godot::PackedByteArray encoded);
