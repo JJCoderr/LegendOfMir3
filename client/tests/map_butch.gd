@@ -101,9 +101,19 @@ func run() -> void:
 	if not await capture("map-chicken-queue"): return
 	await settle(2.2)
 	if not check(hud.hud_snapshot().scene_chicken_steps[6]==-1,"连续动作全部结束"): return
-	var health := game_reply(Mir3HudView.SM_WALK,6,10,0,10)
+	var health := game_reply(Mir3HudView.SM_WALK,6,10,3,10)
 	if not check(hud.apply_game_message(health) and hud.hud_snapshot().scene_health_values[6][2]==10
 		and hud.hud_snapshot().scene_chicken_steps[6]==-1,"怪物11只更新血量"): return
+	var register_bar := game_reply(Mir3HudView.SM_HEALTH_PERCENT,6,0,0,0)
+	if not check(hud.apply_game_message(register_bar),"用原包登记怪物血条"): return
+	var health_delta := game_reply(Mir3HudView.SM_WALK,6,5,2,10)
+	if not check(hud.apply_game_message(health_delta) and hud.hud_snapshot().scene_health_values[6]==PackedInt32Array([5,2,10]),
+		"生命和第二数值字段随回包更新"): return
+	await settle()
+	if not check(hud.hud_snapshot().scene_health_bounds[6].size.x==17 and hud.hud_snapshot().scene_damage_frames.has(6),
+		"注册血条显示半血并绘制生命差值"): return
+	if not await capture("map-chicken-health"): return
+	await settle(1.0)
 	var miss := game_reply(Mir3HudView.SM_HUMAN_STRUCK,6,10,10,0)
 	miss.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(miss) and hud.hud_snapshot().scene_chicken_struck[6]==-1,

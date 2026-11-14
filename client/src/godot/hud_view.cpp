@@ -2397,7 +2397,11 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (opcode==mir3::protocol::SM_WALK && scene_chickens.contains(actor)) {
         if (encoded.size()!=16) return false;
         auto& health=scene_health[actor];
-        health.current=p[0];health.maximum=p[2];
+        if (health.current) {
+            health.damage.enabled=damage_numbers;
+            health.damage.changed(health.current,p[0]);
+        }
+        health.current=p[0];health.mana=p[1];health.maximum=p[2];
         queue_redraw();
         return true;
     }
