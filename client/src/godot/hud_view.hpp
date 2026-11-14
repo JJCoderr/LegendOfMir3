@@ -4,6 +4,7 @@
 #include "hud/human_actions.hpp"
 #include "hud/scene_human_queue.hpp"
 #include "hud/human_life.hpp"
+#include "hud/ground_items.hpp"
 #include "hud/combat_stance.hpp"
 #include "resources/sound_list.hpp"
 #include "hud/scene_name.hpp"
@@ -87,6 +88,7 @@ public:
     void draw_scene_speech();
     bool apply_scene_name(int actor,int opcode,int color,godot::String value);
     void draw_scene_name();
+    void draw_ground_name();
     bool set_scene_npc(int actor,godot::Vector2i cell,int first_frame);
     bool set_scene_chicken(int actor,godot::Vector2i cell);
     bool set_scene_human(int actor,godot::Vector2i cell,int facing,int profession,godot::String name);
@@ -317,6 +319,11 @@ private:
     bool animated_map_objects=false;
     struct MapActorFrame { godot::Ref<godot::ImageTexture> image; godot::Vector2 offset; std::vector<std::uint8_t> regions; };
     mir3::WilArchive map_human, map_female, map_npc, map_horse;
+    mir3::GroundItems ground_items;
+    mir3::WilArchive ground_archive;
+    std::map<int,MapActorFrame> ground_frames;
+    std::map<int,godot::Rect2> ground_bounds;
+    int displayed_ground_item=0;
     std::map<int,MapActorFrame> horse_frames;
     const MapActorFrame* horse_frame(int shape,int motion_frame);
     struct HumanBody {

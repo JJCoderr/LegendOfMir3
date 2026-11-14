@@ -1,5 +1,6 @@
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
+#include "hud/ground_items.hpp"
 #include "protocol/receive_message.hpp"
 #include "chat/scene_chat.hpp"
 #include "hud/human_actions.hpp"
@@ -24,6 +25,16 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--ground-items") {
+            mir3::GroundItems items;
+            check(items.show({1,10,20,1,"first"}) && items.show({2,10,20,2,"second"}),"multiple drops share a cell");
+            check(items.show({1,30,40,3,"changed"}) && items.items.size()==2 && items.items[0].name=="first" && items.items[0].x==10,"duplicate identity is ignored");
+            check(!items.show({3,1,2,0,std::string(40,'x')}),"ground name fits original 40-byte buffer");
+            check(mir3::GroundItems::image_offset(17,9)==std::array<int,2>{16,12},"center image using integer halves");
+            items.hide(1);items.hide(1);check(items.items.size()==1 && items.items[0].id==2,"idempotent remove retains other drop");
+            std::cout << "GROUND_ITEMS_MODEL_OK\n";
+            return 0;
+        }
         if (std::filesystem::path(argv[1])=="--scene-text") {
             check(mir3::chat_palette(5)==16750230 && mir3::chat_palette(6)==0x50ffff && mir3::chat_palette(7)==33023,"1.45 chat palette differs from reference source");
             check(mir3::chat_palette(255)==0 && mir3::chat_opcode(40) && mir3::chat_opcode(1501) && mir3::chat_opcode(104) && !mir3::chat_opcode(42),"chat dispatch classification");

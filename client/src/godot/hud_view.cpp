@@ -54,6 +54,7 @@ std::uint64_t ticks_msec() {
 }
 }
 void Mir3HudView::_bind_methods() {
+    ADD_SIGNAL(MethodInfo("pickup_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::VECTOR2I,"cell")));
     ClassDB::bind_method(D_METHOD("set_hud_decoration","state"),&Mir3HudView::set_hud_decoration);
     ClassDB::bind_method(D_METHOD("apply_inventory_add","identifier","icon","count","make_index","name","std_mode","stack_mode"),&Mir3HudView::apply_inventory_add);
     ClassDB::bind_method(D_METHOD("add_inventory_item","icon","count","slot","make_index","name","std_mode","stack_mode"),&Mir3HudView::add_inventory_item,DEFVAL(0),DEFVAL(String()),DEFVAL(40),DEFVAL(0));
@@ -215,6 +216,12 @@ Dictionary Mir3HudView::hud_snapshot() const {
         actor_health_values[actor]=values;
     }
     result["scene_health_values"]=actor_health_values;
+    Dictionary item_bounds, item_cells;
+    for (const auto& [id,bounds]:ground_bounds) item_bounds[id]=bounds;
+    for (const auto& item:ground_items.items) item_cells[item.id]=Vector2i(item.x,item.y);
+    result["ground_item_bounds"]=item_bounds;
+    result["ground_item_cells"]=item_cells;
+    result["displayed_ground_item"]=displayed_ground_item;
     Dictionary human_bounds;
     Dictionary human_cells;
     Dictionary human_idle_frames;
@@ -437,6 +444,7 @@ void Mir3HudView::_ready() {
             if (const auto frame=progress.frame(3)) health_fill=texture(frame->pixels.rgba,frame->width,frame->height);
         }
         scene_health.try_emplace(0);
+        ground_archive.open(resource_root/"Data"/"Ground");
         map_horse.open(resource_root/"Data"/"Horse");
         map_female.open(resource_root/"Data"/"WM-Hum");
         human_bodies.emplace(std::pair{0,0},HumanBody{map_human_frames,map_walk_frames,map_run_frames});
@@ -1596,6 +1604,24 @@ bool Mir3HudView::apply_scene_name(int actor,int opcode,int color,String value) 
     return true;
 }
 
+void Mir3HudView::draw_ground_name() {
+    displayed_ground_item=0;
+    if (!terrain_ready || !spell_pointer_available()) return;
+    const auto camera=map_camera();
+    const Vector2i cell(int(inventory_cursor.x+camera.x)/48,int(inventory_cursor.y+camera.y)/32);
+    for (const auto& item:ground_items.items) {
+        if (item.x!=cell.x || item.y!=cell.y || !ground_bounds.contains(item.id)) continue;
+        const auto caption=mir3::ansi_to_utf8(item.name);
+        const int width=mir3::raster_text(caption,800,15,false,mir3::TextFont::normal).text_width;
+        const int x=item.x*48-camera.x+24-width/2,y=item.y*32-camera.y-4;
+        legacy_rect(Rect2(x,y+1,width,15),Color(0,0,0,0.5f));
+        text(caption,{x-1,y+1,width,15},0,mir3::TextFont::normal,false);
+        text(caption,{x,y,width,15},0x7dffff,mir3::TextFont::normal,false);
+        displayed_ground_item=item.id;
+        break;
+    }
+}
+
 void Mir3HudView::draw_scene_name() {
     displayed_name_actor=-1;
     displayed_name_bounds=Rect2();
@@ -1887,6 +1913,25 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
     const int size=encoded.size()-16;
+    if (opcode==611) {
+        if (size) return false;
+        ground_items.hide(actor);ground_bounds.erase(actor);queue_redraw();return true;
+    }
+    if (opcode==610) {
+        if (!terrain_ready || actor<=0 || !terrain.contains(p[0],p[1])) return false;
+        const auto decoded=mir3::decode_six_bit(encoded.ptr()+16,size);
+        if (!decoded) return false;
+        const auto name=decoded->substr(0,decoded->find(char(0)));
+        if (name.size()>39) return false;
+        if (!ground_frames.contains(p[2])) {
+            const auto source=ground_archive.frame(p[2]);
+            if (!source) return false;
+            ground_frames.emplace(p[2],MapActorFrame{texture(source->pixels.rgba,source->width,source->height),{},source->pixels.regions});
+        }
+        const bool accepted=ground_items.show({actor,p[0],p[1],p[2],name});
+        if (accepted) queue_redraw();
+        return accepted;
+    }
     if (opcode==30 || opcode==633) {
         if (size || scene_removals.size()>=99999) return false;
         if (opcode==633) scene_clear_pending=true;
@@ -2195,7 +2240,11 @@ void Mir3HudView::step_toward_pointer(bool run) {
     // 0x417E10 chooses one step along the cursor heading.
     const int dx=std::abs(delta.y)>2 && std::abs(delta.x)<=1?0:(delta.x>0)-(delta.x<0);
     const int dy=std::abs(delta.x)>2 && std::abs(delta.y)<=1?0:(delta.y>0)-(delta.y<0);
-    if (target==player_cell) return;
+    if (target==player_cell) {
+        if (map_pointer_button==MOUSE_BUTTON_LEFT && map_route.empty())
+            emit_signal("pickup_requested",1001,player_cell);
+        return;
+    }
     if (map_pointer_button==MOUSE_BUTTON_RIGHT && std::max(std::abs(delta.x),std::abs(delta.y))==1) {
         const mir3::MapCell heading{dx,dy};
         player_facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),heading)-mir3::map_directions.begin());
@@ -2323,11 +2372,21 @@ void Mir3HudView::draw_terrain() {
         paint_canvas->draw_texture(frame.image,position);
         animated_map_objects=true;
     };
+    ground_bounds.clear();
     auto object=tall_objects.begin();
     for (int row=-4;row<31;++row) {
         while (object!=tall_objects.end() && object->row==row) {
             paint_canvas->draw_texture(object->image,object->position);
             ++object;
+        }
+        for (const auto& item:ground_items.items) {
+            if (item.y!=start_y+row || item.x<start_x-5 || item.x>=start_x+21) continue;
+            const auto& frame=ground_frames.at(item.looks);
+            const auto offset=mir3::GroundItems::image_offset(frame.image->get_width(),frame.image->get_height());
+            const Vector2 position(item.x*48-camera.x+offset[0],item.y*32-camera.y+offset[1]);
+            paint_canvas->draw_texture(frame.image,position+Vector2(1,1),Color(0,0,0,0.5f));
+            paint_canvas->draw_texture(frame.image,position);
+            ground_bounds[item.id]=Rect2(position,frame.image->get_size());
         }
         for (auto& [actor,npc]:scene_npcs)
             if (start_y+row==npc.cell.y) draw_scene_actor(npc,200);
@@ -2396,6 +2455,7 @@ void Mir3HudView::_draw() {
     if (!loaded) return;
     draw_terrain();
     draw_scene_name();
+    draw_ground_name();
     draw_scene_speech();
     draw_scene_health();
     if (!model.layout.expanded) {

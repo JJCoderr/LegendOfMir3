@@ -40,6 +40,7 @@ public:
         return {tiles[at],tiles[at+1]|(tiles[at+2]<<8)};
     }
 
+    bool contains(int x,int y) const { return x>=0 && y>=0 && x<width && y<height; }
     bool walkable(int x,int y) const {
         return x>=0 && y>=0 && x<width && y<height &&
             (tiles[cell_start+(std::size_t(x)*height+y)*14]&1)!=0;

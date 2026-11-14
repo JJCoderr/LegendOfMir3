@@ -151,6 +151,67 @@ func scene_text_packet(opcode: int, actor: int, foreground: int, background: int
 	packet.append_array(encode_scene_bytes(body))
 	return packet
 
+func run_ground_items() -> void:
+	var keys := PackedByteArray([18,52,86,120])
+	var player: Vector2i = hud.hud_snapshot().player_cell
+	var cell := player
+	for offset in [Vector2i(1,1),Vector2i(2,1),Vector2i(1,2),Vector2i(0,2)]:
+		hud.walk_to_map_cell(player+offset)
+		if hud.hud_snapshot().route_destination == player+offset:
+			cell = player+offset
+			break
+	hud.walk_to_map_cell(player)
+	if not check(cell != player,"choose visible reachable ground cell"): return
+	var packet := scene_packet(610,101,cell.x,cell.y,1)
+	packet.append_array(encode_scene_bytes(PackedByteArray([178, 226, 202, 212, 181, 244, 194, 228, 206, 239])))
+	if not check(hud.apply_scene_message(packet,keys), "load Ground.wil item through 610"): return
+	var second := scene_packet(610,102,cell.x,cell.y,2)
+	second.append_array(encode_scene_bytes("Second item".to_ascii_buffer()))
+	if not check(hud.apply_scene_message(second,keys), "same-cell second item"): return
+	var duplicate := scene_packet(610,101,player.x,player.y,1)
+	duplicate.append_array(encode_scene_bytes("Ignored".to_ascii_buffer()))
+	if not check(hud.apply_scene_message(duplicate,keys) and hud.hud_snapshot().ground_item_cells[101] == cell, "duplicate 610 does not replace drop"): return
+	await process_frame
+	await process_frame
+	var bounds: Rect2 = hud.hud_snapshot().ground_item_bounds[101]
+	var camera: Vector2i = hud.hud_snapshot().map_camera_pixel
+	var expected := Vector2(cell.x*48-camera.x+24-floor(bounds.size.x/2),cell.y*32-camera.y+16-floor(bounds.size.y/2))
+	if not check(bounds.has_area() and bounds.position == expected, "ground image centered without WIL offsets"): return
+	var hover := InputEventMouseMotion.new()
+	hover.position = Vector2(cell.x*48-camera.x+24,cell.y*32-camera.y+16)
+	root.push_input(hover,true)
+	await process_frame
+	await process_frame
+	if not check(hud.hud_snapshot().displayed_ground_item == 101, "first drop in cell owns name hint"): return
+	if not await capture("bichon-ground-items"): return
+	hud.walk_to_map_cell(cell)
+	if not check(hud.hud_snapshot().route_destination == cell, "ground item does not block movement"): return
+	hud.walk_to_map_cell(player)
+	var pickups: Array = []
+	hud.pickup_requested.connect(func(identifier: int, target: Vector2i): pickups.append([identifier,target]))
+	var self_point := Vector2(player.x*48-camera.x+24,player.y*32-camera.y+16)
+	hover.position = self_point
+	root.push_input(hover,true)
+	click_at(self_point,true)
+	click_at(self_point,false)
+	if not check(pickups == [[1001,player]] and hud.hud_snapshot().ground_item_cells.size() == 2, "current-cell pickup emits request without client-side loot or removal"): return
+	key(KEY_N)
+	click_at(self_point,true)
+	click_at(self_point,false)
+	key(KEY_ESCAPE)
+	if not check(pickups.size() == 1, "dialogue occlusion blocks ground pickup"): return
+	if not check(hud.apply_scene_message(scene_packet(611,101,0,0,0),keys), "hide one ground identity"): return
+	hover.position = Vector2(cell.x*48-camera.x+24,cell.y*32-camera.y+16)
+	root.push_input(hover,true)
+	await process_frame
+	await process_frame
+	if not check(not hud.hud_snapshot().ground_item_cells.has(101) and hud.hud_snapshot().displayed_ground_item == 102, "hide reveals next same-cell item name"): return
+	if not await capture("bichon-ground-item-removed"): return
+	hud.apply_scene_message(scene_packet(611,102,0,0,0),keys)
+	if not check(hud.hud_snapshot().ground_item_cells.is_empty(), "remove final ground item"): return
+	print("PASS ground items")
+	quit()
+
 func run_scene_text() -> void:
 	var keys := PackedByteArray([18,52,86,120])
 	var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
@@ -684,6 +745,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--ground-items"):
+		await run_ground_items()
+		return
 	if OS.get_cmdline_user_args().has("--scene-text"):
 		await run_scene_text()
 		return
@@ -849,7 +913,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()
