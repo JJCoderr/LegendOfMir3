@@ -309,14 +309,19 @@ func run() -> void:
 	await settle(0.9)
 	if not check(hud.hud_snapshot().scene_monster_shapes[9]==119 and hud.hud_snapshot().scene_chicken_steps[9]==-1,
 		"后退结束后，同格转向恢复猪外观"): return
+	var oma_appearance := game_reply(Mir3HudView.SM_FEATURECHANGED,9,0,0,0)
+	oma_appearance.append_array(encode_scene_bytes(transform_feature))
+	if not check(hud.apply_game_message(oma_appearance) and hud.hud_snapshot().scene_monster_shapes[9]==23,
+		"死亡前对象显示半兽人"): return
 	var pig_death := game_reply(Mir3HudView.SM_DEATH,9,cell.x,cell.y,6)
 	pig_death.append_array(encode_scene_bytes(feature))
-	if not check(hud.apply_game_message(pig_death),"显示猪尸体"): return
+	if not check(hud.apply_game_message(pig_death) and hud.hud_snapshot().scene_monster_shapes[9]==119,
+		"已死亡包先应用猪外观再显示尸体"): return
 	await settle()
 	cut_at(hud.hud_snapshot().scene_chicken_bounds[9].get_center())
 	if not check(packets.size()==before_oma+3 and decode_request(packets.back()).decode_u32(0)==9,
 		"猪尸体发送对应编号的割肉请求"): return
-	if not await capture("map-butch-pig"): return
+	if not await capture("map-pig-death-transform"): return
 	hud.queue_free()
 	await settle()
 	print("MAP_BUTCH_UI_OK")

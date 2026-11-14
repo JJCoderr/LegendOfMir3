@@ -2422,14 +2422,19 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         }
         if (chicken_death && (scene_chickens.contains(actor) || chicken_feature)) {
             const int facing=p[2]&255;
-            if (facing>=8 || !terrain.walkable(p[0],p[1]) || (encoded.size()!=16 && !chicken_feature)) return false;
+            if (facing>=8 || !terrain.walkable(p[0],p[1]) ||
+                (encoded.size()!=16 && (!chicken_feature || body->size()!=16))) return false;
             const bool skeleton=opcode==mir3::protocol::SM_SKELETON;
             const int shape=chicken_feature?(*body)[2]:scene_chickens.at(actor).shape;
-            if (scene_chickens.contains(actor) && scene_chickens.at(actor).shape!=shape) return false;
-            const int base=(skeleton?880:320)+10*facing;
             const int frames=skeleton?1:10;
-            for (int i=0;i<frames;++i) if (!monster_frame(shape,base+i)) return false;
             const Vector2i cell(p[0],p[1]);
+            // 4093B0 refreshes the feature before selecting death or skeleton.
+            if (const auto existing=scene_chickens.find(actor);existing!=scene_chickens.end()) {
+                if (!refresh_monster_shape(existing->second,shape,skeleton?880:320,facing)) return false;
+            } else {
+                const int base=(skeleton?880:320)+10*facing;
+                for (int i=0;i<frames;++i) if (!monster_frame(shape,base+i)) return false;
+            }
             if (!scene_chickens.contains(actor) && !place_scene_chicken(actor,cell,facing,shape)) return false;
             auto& chicken=scene_chickens.at(actor);
             chicken.cell=cell;
@@ -2437,7 +2442,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
             chicken.walk_frame=-1;
             chicken.struck_frame=-1;
             chicken.turns.clear();
-            if (chicken.death_frame<0 || skeleton) {
+            if (chicken.death_frame<0 || opcode!=mir3::protocol::SM_NOWDEATH) {
                 chicken.death_frame=opcode==mir3::protocol::SM_NOWDEATH?0:frames-1;
                 chicken.death_ms=0;
                 chicken.skeleton=skeleton;
