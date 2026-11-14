@@ -823,3 +823,6 @@ Features.md将功能细项及验收口径直接并入原48个模块的同一表�
 
 ### C23：47/48 原目录资源核对（2026-11-14）
 逐字节比对原安装目录与当前资源的 MInfo、SoundList、Mon-4/MagicEx WIL/WIX，六文件一致；47 的 SPELL/MAGIC 共 30 帧、48 共 16 帧索引均为零，排除复制漏帧。证据见 client/docs/evidence/c23-empty-resource-proof.md。运行时改写与原版同状态视觉核对仍未完成，未重复技能测试，未改服务端。
+
+### C23 集中验收及换图声音修复（2026-11-14）
+首次全集在68项共用路径全部通过后，收尾发现本地142号声音记录残留。36/123双技能复现，change_map补remove_actor_sound(0)后复测通过；其余被动、特殊、命中、目标丢失、定点、近战、声音子集续跑全部通过。详见client/docs/evidence/c23-concentrated-acceptance.md。尚无修复后无中断全集成功，原版同状态对照仍待；ASPack和服务端未动。

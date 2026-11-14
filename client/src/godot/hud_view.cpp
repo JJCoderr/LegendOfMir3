@@ -10836,6 +10836,8 @@ bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn,int ambien
     if (!next.open(std::filesystem::u8path(map_directory.path_join(map_id+".map").utf8().get_data())) ||
         !next.walkable(spawn.x,spawn.y)) return false;
     clear_map_events();clear_level_effects();player_action={};player_spell={};active_spell=0;player_harvest_impact=false;
+    // 本地人物不经过 remove_scene_actor，换图时也必须释放其动作声道。
+    remove_actor_sound(0);
     terrain=std::move(next);terrain_ready=true;
     pending_local_action.reset();
     action_prediction={};

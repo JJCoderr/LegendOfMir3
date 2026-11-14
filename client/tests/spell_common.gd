@@ -88,7 +88,9 @@ func run() -> void:
         var remote_action := 2 if int(c.action)==2 and id!=30 else 3
         if not check(await wait_until(func(s): return s.scene_human_actions[88].x==remote_action),"远端逐技能动作路由"): return
         print("COMMON_CASE_OK %d" % id)
-    hud.change_map("0","比奇省",origin,1)
+    if not check(hud.change_map("0","比奇省",origin,1),"批次离场换图成功"): return
+    if not hud.hud_snapshot().scene_actor_sounds.is_empty():
+        print("COMMON_EXIT_REMAINING_SOUNDS "+str(hud.hud_snapshot().scene_actor_sounds))
     if not check(hud.hud_snapshot().spell_effects.is_empty() and hud.hud_snapshot().scene_actor_sounds.is_empty(),"批次离场释放技能效果与声音"): return
     hud.queue_free()
     await settle()
