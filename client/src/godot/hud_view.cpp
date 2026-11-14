@@ -536,6 +536,9 @@ void Mir3HudView::_ready() {
         UtilityFunctions::push_error("Missing resource_path.cfg; configure the client with CMake."); return;
     }
     String root=config->get_value("resources","root","");
+    item_layout_directory=ProjectSettings::get_singleton()->globalize_path(String(get_meta("item_layout_directory",config->get_value("storage","item_layout_directory","user://Data"))));
+    // 离线测试须显式指定独立目录，避免写入玩家布局。
+    if(bool(get_meta("offline_preview",false)) && !has_meta("item_layout_directory")) item_layout_directory=String();
     loaded=archive.open(std::filesystem::u8path(root.utf8().get_data())/"Data"/"GameInter");
     if (!loaded || frame(1160).is_null()) {
         loaded=false; UtilityFunctions::push_error("Cannot read original GameInter WIL/WIX resources."); return;
@@ -706,6 +709,7 @@ void Mir3HudView::_ready() {
     queue_redraw();
 }
 void Mir3HudView::_exit_tree() {
+    if(!login_visible && !character_selection.visible && !exit_transition.active) save_item_layout();
     connection.close();login_movie.close();
     const auto stop=[](AudioStreamPlayer* player) {
         if (player) { player->stop();player->set_stream(Ref<AudioStream>()); }
@@ -5029,6 +5033,36 @@ Ref<ImageTexture> Mir3HudView::item_frame(int id) {
     return item_frames.emplace(id,texture(decoded->pixels.rgba,decoded->width,decoded->height)).first->second;
 }
 
+String Mir3HudView::item_layout_file() const {
+    if(item_layout_directory.is_empty() || character_name.is_empty()) return String();
+    // 角色名只作为文件名，不能让远端名称跳出配置目录。
+    if(character_name=="." || character_name=="..") return String();
+    for(const auto token:{"/","\\",":","*","?","\"","<",">","|"}) if(character_name.contains(token)) return String();
+    return item_layout_directory.path_join(character_name+String(".itms"));
+}
+
+void Mir3HudView::save_item_layout() {
+    const auto path=item_layout_file();
+    if(path.is_empty()) return;
+    std::error_code error;
+    std::filesystem::create_directories(std::filesystem::u8path(item_layout_directory.utf8().get_data()),error);
+    if(error) {UtilityFunctions::push_warning("Cannot create item layout directory.");return;}
+    const auto data=mir3::ItemLayout::encode(bag,quick_items);
+    const auto file=FileAccess::open(path,FileAccess::WRITE);
+    if(file.is_null()) {UtilityFunctions::push_warning("Cannot save item layout: ",path);return;}
+    PackedByteArray bytes;bytes.resize(data.size());std::copy(data.begin(),data.end(),bytes.ptrw());
+    file->store_buffer(bytes);file->flush();
+}
+
+void Mir3HudView::restore_item_layout(mir3::InventoryGrid& items,mir3::QuickItems& references) {
+    const auto path=item_layout_file();
+    if(path.is_empty() || !FileAccess::file_exists(path)) return;
+    const auto file=FileAccess::open(path,FileAccess::READ);
+    if(file.is_null() || file->get_length()!=mir3::ItemLayout::file_size) return;
+    const auto bytes=file->get_buffer(mir3::ItemLayout::file_size);
+    mir3::ItemLayout::restore({bytes.ptr(),std::size_t(bytes.size())},items,references);
+}
+
 bool Mir3HudView::apply_inventory_wire(const mir3::ReceiveHeader& header,std::span<const std::uint8_t> body) {
     using namespace mir3::protocol;
     const auto decoded=mir3::InventoryWire::parse(header,body);
@@ -5063,6 +5097,7 @@ bool Mir3HudView::apply_inventory_wire(const mir3::ReceiveHeader& header,std::sp
                 break;
             }
     }
+    if(header.opcode==SM_BAGITEMS) restore_item_layout(next,quick_items);
     bag=std::move(next);equipment.slots=std::move(equipped);
     if (header.opcode==SM_ADDITEM || header.opcode==SM_UPDATEITEM) {
         const auto& record=decoded->records.front();
@@ -5826,6 +5861,7 @@ void Mir3HudView::handle_exit_confirmation(int dialog_id) {
             UtilityFunctions::push_error("Cannot read original character selection resources.");return;
         }
         send_client_packet(mir3::protocol::CM_LOGOUT,0,String());
+        save_item_layout();
         exit_transition.begin();exit_fraction_ms=0;exit_layer->queue_redraw();
     }
     if (dialog_id==109) get_tree()->quit();

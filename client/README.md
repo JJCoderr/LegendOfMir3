@@ -60,3 +60,7 @@ Godot_v4.7.2-stable_win64_console.exe --path client/godot --script ../tests/hud_
 ### 当前实现范围与联调追踪
 
 本文前面的迁移说明保留了早期阶段记录（例如“尚未显示地图”），不能代表当前范围。当前已接入比奇地图、人物/NPC、多个对话框及场景动作；完整待办以 [客户端 TODO](TODO.md) 与 [服务端 TODO](../server/TODO.md) 为准。各模块的显示接口完成不等于真实服务端联调完成。人物队列入口及定向验证见 [队列证据](docs/evidence/scene-human-queue.md)。
+
+### 角色物品布局
+
+CMake变量`MIR3_ITEM_LAYOUT_DIRECTORY`配置可写布局目录，默认`user://Data`，生成至resource_path.cfg的`storage/item_layout_directory`。每个角色保存独立的`.itms`，与原版163392字节格式兼容。原始WIL资源仍从`MIR3_RESOURCE_ROOT`读取，不复制、不写入资源目录。确认退出角色或关闭游戏时保存；收到完整背包后恢复格位与快捷引用，物品数量以服务器为准。证据及测试见[物品布局](docs/evidence/item-layout.md)。

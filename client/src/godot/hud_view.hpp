@@ -42,6 +42,7 @@
 #include "inventory/inventory_panel.hpp"
 #include "inventory/inventory_grid.hpp"
 #include "inventory/quick_items.hpp"
+#include "inventory/item_layout.hpp"
 #include "inventory/trade_grid.hpp"
 #include "status/equipment.hpp"
 #include "status/element_attributes.hpp"
@@ -345,6 +346,11 @@ private:
     bool status_pointer(int kind,godot::Vector2 position);
     mir3::InventoryGrid bag;
     mir3::QuickItems quick_items;
+    godot::String item_layout_directory;
+    godot::String item_layout_file() const;
+    void save_item_layout();
+    void restore_item_layout(mir3::InventoryGrid& items,mir3::QuickItems& references);
+
     mir3::DraggablePanel quick_panel{{73,413,280,48}};
     bool quick_close_pressed=false;
     void toggle_quick();
