@@ -625,7 +625,7 @@ func run_map_input() -> void:
 		if hud.hud_snapshot().walk_frame>=0:
 			right_started = true
 			break
-	if not check(right_started and hud.hud_snapshot().map_left_delay_ms>0, "右键移动不受普通左键按下延迟限制"): return
+	if not check(not right_started and hud.hud_snapshot().map_left_delay_ms>0, "原版右键角色移动也受共用动作延迟限制"): return
 	hud.queue_free()
 	await process_frame
 	await process_frame

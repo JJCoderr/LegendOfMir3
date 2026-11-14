@@ -74,6 +74,7 @@ func run() -> void:
 	if not check(packets.size()==before,"步行时下马不发送"): return
 	click(Vector2(25,240))
 	if not expect("@骑马"): return
+	await settle(0.31)
 	if not check(hud.hud_snapshot().mount_shape==0,"骑马请求等待确认"): return
 	if not check(hud.apply_mount_reply(Mir3HudView.SM_RIDEHORSE,2),"已解码骑乘确认入口"): return
 	before=packets.size()
@@ -82,6 +83,7 @@ func run() -> void:
 	for i in range(3):
 		click(Vector2(85+57*i,240))
 		if not expect(["@下马","@包马","@下马"][i]): return
+		await settle(0.31)
 	if not check(hud.hud_snapshot().mount_shape==2,"请求不能伪造下马结果"): return
 	await settle()
 	if not await capture("ui-commands-mount"): return

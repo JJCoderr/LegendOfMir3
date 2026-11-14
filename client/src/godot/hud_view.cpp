@@ -299,6 +299,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["scene_human_bounds"]=human_bounds;
     result["scene_human_cells"]=human_cells;
     result["player_idle_frame"]=player_idle.frame();
+    result["player_facing"]=player_facing;
     result["npc_dialogue_actor"]=npc_dialogue_actor;
     result["local_actor_identity"]=local_actor_identity;
     result["player_light_attribute"]=player_light_attribute;
@@ -2443,7 +2444,7 @@ bool Mir3HudView::merchant_pointer(Vector2 pointer) {
 }
 
 void Mir3HudView::step_toward_pointer(bool run) {
-    if (walk_frame>=0 || !spell_pointer_available()) return;
+    if (map_input_delay.active() || walk_frame>=0 || !spell_pointer_available()) return;
     const auto p=inventory_cursor;
     const auto camera=map_camera();
     const Vector2i target(int(p.x+camera.x)/48,int(p.y+camera.y)/32);
@@ -2742,6 +2743,7 @@ void Mir3HudView::clear_game_scene() {
     ground_items.items.clear();ground_bounds.clear();displayed_ground_item=-1;
     scene_speech.clear();speech_bounds.clear();scene_health.clear();scene_health_bounds.clear();scene_damage_glyphs.clear();
     map_route.clear();walk_frame=-1;movement_ms=0;
+    map_input_delay={};player_mount=0;mount.shape=0;
     terrain_ready=false;terrain=mir3::MapTerrain{};terrain_frames.clear();current_map_id=String();
     target_focus.clear();local_actor_identity=0;player_light_attribute=0;exit_guard={};
     login_actor_pending.reset();login_actor_extra={};server_ability.reset();server_sub_ability={};weapon_training=0;
@@ -2888,7 +2890,7 @@ bool Mir3HudView::apply_login_actor() {
     if (!body || (mount && (!human_body(appearance.type,appearance.clothing,true) || !horse_frame(mount,2320))) ||
         (appearance.weapon && weapon_order.size()!=2640)) return false;
     player_mount=0;set_player_body(appearance.type,appearance.clothing);
-    set_player_mount(mount);set_player_attachments(appearance.hair,appearance.weapon);
+    set_player_mount(mount);this->mount.shape=std::uint8_t(mount);set_player_attachments(appearance.hair,appearance.weapon);
     player_cell=Vector2i(actor.x,actor.y);player_facing=actor.facing;player_light_attribute=actor.light;
     player_idle.reset();map_route.clear();walk_frame=-1;movement_ms=0;
     model.profession=appearance.profession;model.appearance=appearance.type;
@@ -2973,6 +2975,7 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    if (header->opcode==mir3::protocol::SM_RIDEHORSE) return apply_mount_reply(header->opcode,header->recognition);
     switch (header->opcode) {
     case mir3::protocol::SM_OPENGUILDDLG:
     case mir3::protocol::SM_GUILD_OVERVIEW:
@@ -4682,7 +4685,7 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         const int slot=code-KEY_F1+1;
         if (!bind_skill_at_cursor(slot)) {
             const int id=bound_skill(slot);
-            if (id && spell_pointer_available()) emit_signal("spell_key_requested",slot,id,inventory_cursor);
+            if (id && !map_input_delay.active() && !player_mount && spell_pointer_available()) emit_signal("spell_key_requested",slot,id,inventory_cursor);
         }
         get_viewport()->set_input_as_handled();
         return;
@@ -6394,7 +6397,14 @@ bool Mir3HudView::quest_pointer(int kind,Vector2 position) {
 
 bool Mir3HudView::apply_mount_reply(int identifier,int64_t recognition) {
     if (recognition<0 || recognition>UINT32_MAX) return false;
-    return mount.apply_reply(identifier,static_cast<std::uint32_t>(recognition));
+    if (!mount.apply_reply(identifier,static_cast<std::uint32_t>(recognition))) return false;
+    // 4282C0/1300：更新外观后强制29或0，保留方向并重置动作计时。
+    player_mount=mount.shape;
+    if (terrain_ready && player_mount) human_body(player_type,player_clothing,true);
+    walk_frame=-1;movement_ms=0;map_route.clear();
+    step_origin=step_destination=player_cell;
+    player_level_action={};player_idle.reset();
+    queue_redraw();return true;
 }
 
 void Mir3HudView::toggle_mount() {
@@ -6443,8 +6453,10 @@ bool Mir3HudView::mount_pointer(int kind,Vector2 position) {
         if (activate) {
             if (hud_sound && audio_options.effects_enabled) hud_sound->play();
             if (hit==0) toggle_mount();
-            else if (const int command=mount.command(hit);command!=0)
+            else if (const int command=mount.command(hit);command!=0) {
                 send_chat_command(String::utf8(message(command).c_str()));
+                map_input_delay.mount_command();
+            }
         }
     }
     if (!inside && !captured) return false;

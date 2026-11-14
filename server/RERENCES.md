@@ -201,3 +201,6 @@ CM_GROUPMODE参数一为允许标志；创建/增加/删除成员使用独立正
 
 ## 界面命令
 选项、聊天拒绝、骑马及解除联盟采用CM_SAY零头参数+ANSI正文，保留原资源空格。收到命令后需由状态回包确认，客户端只预测部分按钮。界面命令与输入框本地指令分流依据见client/docs/evidence/ui-chat-commands.md。
+
+## 骑乘确认
+SM_RIDEHORSE recognition低字节为本地骑乘形状，客户端确认后才更新人物外观并进入29/0待机，保持方向。窗口命令产生300ms动作限制；其它参数不参与该原分支。详见client/docs/evidence/mount-wire.md。

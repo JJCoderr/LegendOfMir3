@@ -315,6 +315,9 @@ int main(int argc,char** argv) {
             delay.enter();delay.advance(900);delay.enter();check(delay.remaining_ms==1500,"连续换图重新计时");
             delay.advance(-1);check(delay.remaining_ms==1500,"无效时间不能延长或提前解除");
             delay.advance(2000);check(!delay.active() && delay.remaining_ms==0,"长帧钳制到解除状态");
+            delay.enter();delay.mount_command();check(delay.remaining_ms==300,"骑马命令覆盖共用延迟");
+            delay.advance(299);check(delay.active(),"骑马299ms仍锁");
+            delay.advance(1);check(!delay.active(),"骑马300ms边界解除");
             std::cout << "MAP_INPUT_MODEL_OK\n";return 0;
         }
         if (std::filesystem::path(argv[1])=="--map-wire") {
