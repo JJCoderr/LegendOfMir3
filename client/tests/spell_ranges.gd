@@ -47,6 +47,8 @@ func run() -> void:
 			elif not check(state.scene_actor_sounds.is_empty(),"空或缺失的创建音效记录保持静音"): return
 			await settle(0.25)
 			if skill==RangeSkill.LIGHTNING and not check(hud.hud_snapshot().spell_particle_count>0,"336零间隔尾迹触发可见粒子"): return
+			if skill==RangeSkill.ICE_WAVE:
+				if not check(await wait_until(func(s): return s.map_event_particle_count>0),"冰波发射共享光点与碎片"): return
 			if offset.y==0 and not await capture("skill-range-%d" % skill): return
 	hud.change_map("0","比奇省",origin,1)
 	if not check(hud.hud_snapshot().spell_effects.is_empty() and hud.hud_snapshot().spell_particle_count==0,"范围技能离场清空"): return

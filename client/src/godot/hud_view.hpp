@@ -715,14 +715,6 @@ private:
     void sync_monster_action_overlay(int actor,SceneChicken& monster,bool restart=false);
     void play_monster_death_effect(int actor,const SceneChicken& monster);
     bool play_monster_ranged_attack(const SceneChicken& monster,const SceneChicken::Attack& attack);
-    struct EventParticle {
-        godot::Vector2 position,velocity,acceleration;
-        int age=0,life=0,interval=0,frame_clock=0,frame=0;
-        float size=0,mass=1;
-        godot::Color tint;
-        bool shrinking=false;
-    };
-    std::vector<EventParticle> event_particles;
     mir3::SpellParticlePool spell_particles;
     godot::Node2D* spell_particle_layer=nullptr;
     std::vector<godot::RID> spell_particle_items;

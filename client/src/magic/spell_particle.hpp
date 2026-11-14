@@ -4,10 +4,9 @@
 #include <cstdint>
 
 namespace mir3 {
-// 技能150使用两个原版粒子池：468A90火星、46A770光点。
-// 与冰系地表粒子的尺寸、颜色和推进规则分开保存。
+// 150、336及冰系共用原版三类池；各发射器保留独立初始参数。
 struct SpellParticle {
-    enum class Kind { spark, glow, lightning_glow, lightning_fragment };
+    enum class Kind { spark, glow, lightning_glow, lightning_fragment, ice_glow, ice_fragment };
     Kind kind=Kind::spark;
     std::array<float,2> position{},velocity{},acceleration{};
     std::array<std::uint8_t,3> initial_color{},color{};
@@ -19,6 +18,21 @@ struct SpellParticle {
         SpellParticle particle;
         particle.kind=kind;
         particle.position=position;
+        // 46A5D0 / 468000：冰波和类型9退场共用光点、碎片池。
+        if (kind==Kind::ice_glow || kind==Kind::ice_fragment) {
+            const bool fragment=kind==Kind::ice_fragment;
+            particle.velocity[1]=float(fragment?random.between(-180,-50):random.between(-120,-80));
+            particle.velocity[0]=float(fragment?random.between(-75,75):random.between(-12,12));
+            particle.life=fragment?random.between(800,1200):random.between(300,600);
+            particle.mass=fragment?1.f:1000.f;
+            const float fraction=fragment?float(random.random()%1000)*0.001f:0.f;
+            particle.initial_size=particle.size=float(fragment?random.between(2,10):random.between(10,30))+fraction;
+            particle.initial_color={std::uint8_t(fragment?random.between(50,100):random.between(100,150)),
+                std::uint8_t(fragment?random.between(100,200):random.between(150,200)),
+                std::uint8_t(fragment?random.between(200,255):random.between(255,255))};
+            particle.color=particle.initial_color;particle.interval=random.between(200,300);
+            return particle;
+        }
         // 44CDA0的336首帧：46AAB0一枚扩张光点，467D40二十一枚碎片。
         if (kind==Kind::lightning_glow || kind==Kind::lightning_fragment) {
             if (kind==Kind::lightning_glow) {
@@ -63,24 +77,24 @@ struct SpellParticle {
         age+=milliseconds;
         if (age>life) return false;
         frame_clock+=milliseconds;
-        // 两个池均只有一张贴图，计时器回零但不切换到冰系的后续帧。
-        if (frame_clock>interval) {frame_clock=0;frame=kind==Kind::lightning_fragment?(frame+1)%4:0;}
+        // 光点与火星各一张贴图，碎片在520至523之间循环。
+        if (frame_clock>interval) {frame_clock=0;frame=fragment()?(frame+1)%4:0;}
         life=std::max(life,1);
         const double progress=double(age)/life;
-        if (kind==Kind::glow || kind==Kind::lightning_glow) {
+        if (glow()) {
             size=float((progress*7.0+1.0)*initial_size);
             velocity[0]+=float(random.between(-1,1));
         }
-        if (kind==Kind::lightning_fragment) {mass+=3;size=float(initial_size*(1-progress));}
+        if (fragment()) {mass+=3;size=float(initial_size*(1-progress));}
         // 4691D4 / 469BC2：反编译遗漏了乘年龄比例和减法，实际RGB线性衰减。
-        if (kind!=Kind::lightning_fragment)
+        if (!fragment())
             for (unsigned channel=0;channel<3;++channel)
                 color[channel]=std::uint8_t(int(initial_color[channel]-progress*initial_color[channel]));
         const float step=float(double(std::max(1,milliseconds/17))*double(0.02f));
         for (unsigned axis=0;axis<2;++axis) {
             // 4653A0先写float阻力，465400累积加速度，再推进速度及位置。
             const float drag=-(velocity[axis]*-0.05f);
-            const float force=axis==1?(kind==Kind::lightning_fragment?200.f:1000.f):kind==Kind::spark?100.f:0.f;
+            const float force=axis==1?(fragment()?200.f:1000.f):kind==Kind::spark?100.f:0.f;
             acceleration[axis]=float((double(drag)+force)/mass+acceleration[axis]);
             velocity[axis]=float(double(acceleration[axis])*step+velocity[axis]);
             position[axis]=float(double(velocity[axis])*step+position[axis]);
@@ -88,7 +102,9 @@ struct SpellParticle {
         return true;
     }
 
-    bool glow() const {return kind==Kind::glow || kind==Kind::lightning_glow;}
+    bool fragment() const {return kind==Kind::lightning_fragment || kind==Kind::ice_fragment;}
+    bool ice() const {return kind==Kind::ice_glow || kind==Kind::ice_fragment;}
+    bool glow() const {return kind==Kind::glow || kind==Kind::lightning_glow || kind==Kind::ice_glow;}
     int resource_frame() const { return glow()?530:520+frame; }
 };
 }

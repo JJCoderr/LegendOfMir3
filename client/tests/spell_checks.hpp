@@ -54,7 +54,34 @@ inline void spell_lightning_checks() {
     require(pool.count()==0,"换图清理336粒子");
 }
 
+// 冰波、类型9退场与疾光电影共用两个池，满池不覆盖，空槽优先复用。
+inline void spell_shared_particle_checks() {
+    using namespace mir3;
+    const auto require=[](bool ok,const char* message) { if(!ok) throw std::runtime_error(message); };
+    SnowWeather random;
+    SpellParticlePool pool;
+    pool.emit_ice({100,200},random);
+    require(pool.count()==3 && pool.ice_count()==3,"冰系每次一光点和两碎片");
+    require(pool.glows[0]->resource_frame()==530 && pool.fragments[0]->position[1]==216,"共享光点资源530及碎片16像素偏移");
+    const auto size=pool.glows[0]->size;
+    const auto color=pool.fragments[0]->color;
+    pool.advance(100,random);
+    require(pool.glows[0]->size>size && pool.fragments[0]->mass==4 && pool.fragments[0]->color==color,"光点扩张衰减与碎片恒色增重");
+    for(int i=0;i<500;++i) pool.emit_ice({100,200},random);
+    require(pool.count()==1501,"冰碎片共享1000上限，光点独立计数");
+    pool.emit_lightning({0,0},random);
+    require(pool.count()==1502 && pool.fragments[0]->ice(),"碎片满池后闪电仅增加光点，不覆盖冰碎片");
+    for(int i=0;i<600;++i) pool.emit({0,0},random);
+    require(pool.count()==3000,"150与冰系及闪电共享三池各1000容量");
+    pool.glows[7].reset();pool.fragments[3].reset();
+    pool.emit_lightning({0,0},random);
+    require(pool.count()==3000 && !pool.glows[7]->ice() && !pool.fragments[3]->ice(),"混合发射复用首个空槽");
+    pool.advance(1601,random);
+    require(pool.count()==0,"混合粒子超过寿命全部释放");
+}
+
 inline void spell_checks() {
+    spell_shared_particle_checks();
     spell_sound_checks();
     spell_weapon_color_checks();
     spell_lightning_checks();

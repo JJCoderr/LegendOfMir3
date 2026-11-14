@@ -49,3 +49,13 @@ python client/tests/run_tests.py --suite skills --case sound --skill 53
 ```sh
 python3 client/tests/run_tests.py --suite skills --build-dir client/build-linux --godot /usr/bin/godot --screenshots
 ```
+
+
+共享粒子池模型可单独验收；涉及地图事件共用路径时只追加该子系统：
+
+```sh
+python client/tests/run_tests.py --suite skills --case particle-model
+python client/tests/run_tests.py --suite map-events --screenshots
+```
+
+particle-model验证冰系/150/336混合容量、首空槽复用和生命周期，默认技能全集的模型检查也包含它。map-events当前登记持续事件、类型9退场、冰系残留与切图清理，不代表整个地图子系统已全覆盖。

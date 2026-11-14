@@ -18,8 +18,10 @@ SUITES = {
         "cast-correction": ([], "spell_correction.gd"),
         "ranges": ([], "spell_ranges.gd"),
         "lightning-model": (["--spell-lightning"], None),
+        "particle-model": (["--spell-particles"], None),
         "sound": (["--spell-sound"], "spell_sound.gd"),
     },
+    "map-events": {"effects": ([], "map_events.gd")},
     "equipment": {
         "wire": (["--equipment-wire"], "equipment_wire.gd"),
         "actions": (["--equipment-actions"], "equipment_actions.gd"),
@@ -89,7 +91,7 @@ def main():
         models, script = suite[case]
         # skills/models的--spell已包含颜色、闪电与声道模型，全量时不重复执行。
         commands = [[checks, model] for model in models
-                    if not (args.suite == "skills" and "models" in cases and model in ("--spell-weapon-color", "--spell-lightning", "--spell-sound"))]
+                    if not (args.suite == "skills" and "models" in cases and model in ("--spell-weapon-color", "--spell-lightning", "--spell-sound", "--spell-particles"))]
         if script:
             command = [godot, "--path", str(ROOT / "godot"), "--script", str(ROOT / "tests" / script), "--"]
             if args.skill is not None:

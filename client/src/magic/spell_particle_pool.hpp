@@ -3,12 +3,30 @@
 #include <optional>
 
 namespace mir3 {
-// 421BDA / 421BF7分别以1000初始化两个池。按第一个空槽分配，保留绘制顺序。
+// 421BDA / 421BF7 / 421C14：三个池各1000，按第一个空槽分配。
 class SpellParticlePool {
 public:
     static constexpr unsigned capacity=1000;
     using Slots=std::array<std::optional<SpellParticle>,capacity>;
     Slots sparks{},glows{},fragments{};
+
+    template<class Random>
+    void emit_ice(std::array<float,2> screen_position,Random& random) {
+        for (auto& slot:glows) if (!slot) {slot=SpellParticle::create(SpellParticle::Kind::ice_glow,screen_position,random);break;}
+        screen_position[1]+=16;
+        unsigned count=0;
+        for (auto& slot:fragments) if (!slot) {
+            slot=SpellParticle::create(SpellParticle::Kind::ice_fragment,screen_position,random);
+            if (++count==2) break;
+        }
+    }
+
+    unsigned ice_count() const {
+        unsigned result=0;
+        for (const auto* slots:{&glows,&fragments})
+            for (const auto& slot:*slots) result+=slot && slot->ice();
+        return result;
+    }
 
     template<class Random>
     void emit_lightning(std::array<float,2> screen_position,Random& random) {
