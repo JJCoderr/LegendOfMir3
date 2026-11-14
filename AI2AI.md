@@ -90,3 +90,9 @@ IDA 数据库名为 `mir3-map-review`，本机 MCP 地址为 `http://127.0.0.1:1
 
 - [x] 身体WIL阴影元数据、49/50投影、武器奇数行剪切、坐骑独立影、尸体平影和ShadowBlend的13/32混合；human_shadow像素/图层验收及human_status_visual回归通过，约7秒。截图human-shadow-weapon/mounted/corpse-1.png；证据见client/docs/evidence/human-shadow.md。
 - [ ] 更多外观资源、边界裁剪及原版同状态逐像素验收。
+
+
+## 特殊武器46光效
+
+- [x] 男女原版MonMagicEx4帧组、随动作取帧、武器前后层同步混合、蓝色场景光、换装及骑乘清理；weapon_glow独立验收和human_shadow回归通过，约7秒。截图weapon-glow-male-female/attack.png；证据见client/docs/evidence/weapon-glow.md。
+- [ ] 各方向全动作资源、原版同状态像素和实服外观下发验收；其他装备光效继续核对。

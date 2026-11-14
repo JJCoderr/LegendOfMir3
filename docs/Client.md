@@ -15,3 +15,5 @@ Godot资源生命周期：[音频退出清理](../client/docs/evidence/audio-cle
 人物状态表现：[颜色优先级、图层混合与外观状态同步](../client/docs/evidence/human-status-visual.md)。
 
 人物阴影：[身体资源投影、武器及坐骑独立阴影](../client/docs/evidence/human-shadow.md)。
+
+特殊武器：[外观46动作光效与蓝色场景光源](../client/docs/evidence/weapon-glow.md)。

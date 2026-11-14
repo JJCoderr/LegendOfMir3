@@ -370,6 +370,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["player_bounds"]=player_bounds;
     Array shadows;for (const auto& bounds:human_shadow_bounds) shadows.push_back(bounds);
     result["human_shadow_bounds"]=shadows;
+    Array glows;for (int frame:drawn_weapon_glow_frames) glows.push_back(frame);
+    result["weapon_glow_frames"]=glows;
+    result["weapon_glow_light_count"]=int(weapon_glow_lights.size());
     Dictionary bubbles, bubble_lines;
     for (const auto& [actor,bounds]:speech_bounds) bubbles[actor]=bounds;
     for (const auto& [actor,bubble]:scene_speech) {
@@ -2824,11 +2827,40 @@ void Mir3HudView::draw_human_layers(const MapActorFrame& body,Vector2 anchor,int
     };
     // LegendOfMir3_Src Actor.cpp: weapon behind, body, hair, weapon in front.
     const bool behind=motion_frame>=0 && motion_frame<weapon_order.size() && weapon_order[motion_frame]!=0;
+    const auto draw_weapon=[&]() {
+        draw(weapon_frame);
+        if (weapon==46 && weapon_frame && weapon_frame->image.is_valid()) draw_weapon_glow(anchor,type,motion_frame);
+    };
     if (mount_shape) draw(horse_frame(mount_shape,motion_frame));
-    if (behind) draw(weapon_frame);
+    if (behind) draw_weapon();
     draw(&body,true);
     draw(hair_frame,true);
-    if (!behind) draw(weapon_frame);
+    if (!behind) draw_weapon();
+}
+
+void Mir3HudView::draw_weapon_glow(Vector2 anchor,int type,int motion_frame) {
+    // 414870 -> 415160：库148；光效与武器层同步，光源在缺少某帧时仍产生。
+    const int index=(type?3900:1900)+motion_frame;
+    weapon_glow_lights.push_back(anchor+Vector2(24,16));
+    if (!monster_effect_archives.contains(148)) {
+        mir3::WilArchive archive;
+        if (!archive.open(std::filesystem::u8path(actor_resource_root.utf8().get_data())/"MonMagicEx4")) return;
+        monster_effect_archives.emplace(148,std::move(archive));
+    }
+    auto found=weapon_glow_frames.find(index);
+    if (found==weapon_glow_frames.end()) {
+        const auto frame=monster_effect_archives.at(148).frame(index);
+        if (!frame) return;
+        found=weapon_glow_frames.emplace(index,MapActorFrame{texture(frame->pixels.rgba,frame->width,frame->height),
+            Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions}).first;
+    }
+    if (weapon_glow_mix.is_null()) {
+        weapon_glow_mix.instantiate();
+        weapon_glow_mix->set_shader(ResourceLoader::get_singleton()->load("res://level_effect.gdshader"));
+        weapon_glow_mix->set_shader_parameter("effect_blend",2);
+    }
+    draw_terrain_texture(found->second.image,anchor+found->second.offset,Color(1,1,1),0,true);
+    drawn_weapon_glow_frames.push_back(index);
 }
 
 const Mir3HudView::MapActorFrame* Mir3HudView::project_weapon_shadow(const MapActorFrame& frame) {
@@ -4132,10 +4164,11 @@ void Mir3HudView::advance_map_step(double delta) {
     queue_redraw();
 }
 
-void Mir3HudView::draw_terrain_texture(const Ref<ImageTexture>& image,Vector2 position,Color modulate,int rgb565_weight) {
+void Mir3HudView::draw_terrain_texture(const Ref<ImageTexture>& image,Vector2 position,Color modulate,int rgb565_weight,bool weapon_glow) {
     auto* renderer=RenderingServer::get_singleton();
+    const bool blend=rgb565_weight || weapon_glow;
     // Keep opaque draws batched, with a fresh screen copy at each translucent sprite.
-    if (!terrain_draw_batch.is_valid() || rgb565_weight) {
+    if (!terrain_draw_batch.is_valid() || blend) {
         if (terrain_draw_count==terrain_draw_items.size()) {
             auto item=renderer->canvas_item_create();
             renderer->canvas_item_set_parent(item,terrain_layer->get_canvas_item());
@@ -4144,14 +4177,14 @@ void Mir3HudView::draw_terrain_texture(const Ref<ImageTexture>& image,Vector2 po
         }
         terrain_draw_batch=terrain_draw_items[terrain_draw_count++];
         renderer->canvas_item_set_visible(terrain_draw_batch,true);
-        renderer->canvas_item_set_use_parent_material(terrain_draw_batch,!rgb565_weight);
-        renderer->canvas_item_set_copy_to_backbuffer(terrain_draw_batch,rgb565_weight!=0,
-            rgb565_weight?Rect2(position,image->get_size()):Rect2());
+        renderer->canvas_item_set_use_parent_material(terrain_draw_batch,!blend);
+        renderer->canvas_item_set_copy_to_backbuffer(terrain_draw_batch,blend,
+            blend?Rect2(position,image->get_size()):Rect2());
         renderer->canvas_item_set_material(terrain_draw_batch,
-            rgb565_weight==8?monster_body_mix->get_rid():rgb565_weight?monster_shadow_mix->get_rid():RID());
+            weapon_glow?weapon_glow_mix->get_rid():rgb565_weight==8?monster_body_mix->get_rid():rgb565_weight?monster_shadow_mix->get_rid():RID());
     }
     renderer->canvas_item_add_texture_rect(terrain_draw_batch,Rect2(position,image->get_size()),image->get_rid(),false,modulate);
-    if (rgb565_weight) terrain_draw_batch=RID();
+    if (blend) terrain_draw_batch=RID();
 }
 
 void Mir3HudView::draw_terrain() {
@@ -4166,6 +4199,7 @@ void Mir3HudView::draw_terrain() {
     }
     player_bounds=Rect2();
     human_shadow_bounds.clear();
+    weapon_glow_lights.clear();drawn_weapon_glow_frames.clear();
     animated_map_objects=false;
     for (auto& [actor,npc]:scene_npcs) npc.bounds=Rect2();
     for (auto& [actor,chicken]:scene_chickens) {
@@ -4441,6 +4475,8 @@ void Mir3HudView::draw_scene_lighting() {
         if (animal.death_frame>=0 || animal.buried || !animal.bounds.has_area()) continue;
         grid.add(mir3::SceneLight::actor(int(animal.anchor.x)+24,int(animal.anchor.y)+16,animal.light_attribute,false));
     }
+    for (const auto position:weapon_glow_lights)
+        grid.add({int(position.x),int(position.y),2,{40,40,250},5,{40,40,250}});
     const auto color=[&](int i) {
         const auto& c=grid.samples[i];return Color(c[0]/255.f,c[1]/255.f,c[2]/255.f);
     };

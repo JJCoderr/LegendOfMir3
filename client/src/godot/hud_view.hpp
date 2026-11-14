@@ -460,6 +460,10 @@ private:
     const MapActorFrame* horse_shadow_frame(int motion_frame);
     std::map<std::uint64_t,MapActorFrame> weapon_shadows;
     std::vector<godot::Rect2> human_shadow_bounds;
+    void draw_weapon_glow(godot::Vector2 anchor,int type,int motion_frame);
+    std::map<int,MapActorFrame> weapon_glow_frames;
+    std::vector<godot::Vector2> weapon_glow_lights;
+    std::vector<int> drawn_weapon_glow_frames;
     std::array<MapActorFrame,80> map_human_frames, map_walk_frames, map_run_frames;
     std::map<int,mir3::SceneHealth> scene_health;
     std::map<int,godot::Rect2> scene_health_bounds;
@@ -878,12 +882,13 @@ private:
     godot::Vector2i map_camera() const;
     void draw_terrain();
     void draw_terrain_texture(const godot::Ref<godot::ImageTexture>& image,godot::Vector2 position,
-        godot::Color modulate=godot::Color(1,1,1),int rgb565_weight=0);
+        godot::Color modulate=godot::Color(1,1,1),int rgb565_weight=0,bool weapon_glow=false);
     std::vector<godot::RID> terrain_draw_items;
     godot::Node2D* terrain_layer=nullptr;
     std::size_t terrain_draw_count=0;
     godot::RID terrain_draw_batch;
     godot::Ref<godot::ShaderMaterial> monster_shadow_mix,monster_body_mix;
+    godot::Ref<godot::ShaderMaterial> weapon_glow_mix;
     void draw_hud_tail();
     void set_hud_decoration(godot::Vector4i state);
     godot::Node2D* paint_canvas=this;
