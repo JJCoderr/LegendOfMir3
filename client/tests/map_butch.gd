@@ -20,7 +20,7 @@ func run() -> void:
 	await settle()
 	var origin: Vector2i=hud.hud_snapshot().player_cell
 	var cell := origin
-	for offset in [Vector2i(1,0),Vector2i(-1,0),Vector2i(0,1),Vector2i(0,-1)]:
+	for offset in [Vector2i(0,1)]:
 		if hud.set_scene_human(5,origin+offset,4,1,"目标"):
 			cell=origin+offset
 			break
@@ -68,14 +68,18 @@ func run() -> void:
 	if not check(living.has_area(),"活鸡在地图上绘制"): return
 	if not await capture("map-butch-live-chicken"): return
 	# 怪物的 SM_TURN 带新格坐标时触发行动1。重放往返两步，验证排队。
-	var outward := game_reply(Mir3HudView.SM_STRUCK,6,origin.x,origin.y,2 if cell.x>origin.x else 6)
+	var outward := game_reply(Mir3HudView.SM_STRUCK,6,origin.x,origin.y,4)
 	outward.append_array(encode_scene_bytes(feature))
-	var returning := game_reply(Mir3HudView.SM_TURN,6,cell.x,cell.y,2 if cell.x>origin.x else 6)
+	var returning := game_reply(Mir3HudView.SM_TURN,6,cell.x,cell.y,4)
 	returning.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(outward) and hud.apply_game_message(returning)
 		and hud.hud_snapshot().scene_chicken_steps[6]==0
 		and hud.hud_snapshot().scene_chicken_cells[6]==origin,"先面向原侧后退，随后移动留在队列"): return
 	await settle(0.25)
+	var retreat: Dictionary=hud.hud_snapshot()
+	var frame: int=retreat.scene_chicken_steps[6]
+	if not check(frame>=1 and retreat.scene_chicken_pixels[6]==cell*Vector2i(48,32)-Vector2i(0,int(32.0*(frame+1)/6)),
+		"纵向推退按原版整数除法计算世界像素"): return
 	if not await capture("map-chicken-backstep"): return
 	await settle(0.75)
 	if not check(hud.hud_snapshot().scene_chicken_cells[6]==cell and hud.hud_snapshot().scene_chicken_steps[6]>=0,

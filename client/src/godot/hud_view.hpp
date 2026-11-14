@@ -474,6 +474,12 @@ private:
         int walk_frame=-1;
         int struck_frame=-1;
         godot::Vector2i walk_origin;
+        godot::Vector2i walk_pixel() const {
+            const auto direction=cell-walk_origin;
+            const int step=walk_frame+1;
+            const int y=direction.x==0?32*step/6:5*step;
+            return walk_origin*godot::Vector2i(48,32)+direction*godot::Vector2i(8*step,y);
+        }
         bool skeleton=false;
         double death_ms=0, walk_ms=0, struck_ms=0;
         struct Turn { godot::Vector2i cell; int facing; unsigned light; bool backward; };

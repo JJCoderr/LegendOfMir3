@@ -237,15 +237,17 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary chicken_bounds;
     for (const auto& [actor,chicken]:scene_chickens) chicken_bounds[actor]=chicken.bounds;
     result["scene_chicken_bounds"]=chicken_bounds;
-    Dictionary chicken_cells, chicken_steps, chicken_struck;
+    Dictionary chicken_cells, chicken_steps, chicken_struck, chicken_pixels;
     for (const auto& [actor,chicken]:scene_chickens) {
         chicken_cells[actor]=chicken.cell;
         chicken_steps[actor]=chicken.walk_frame;
         chicken_struck[actor]=chicken.struck_frame;
+        chicken_pixels[actor]=chicken.walk_frame<0?chicken.cell*Vector2i(48,32):chicken.walk_pixel();
     }
     result["scene_chicken_cells"]=chicken_cells;
     result["scene_chicken_steps"]=chicken_steps;
     result["scene_chicken_struck"]=chicken_struck;
+    result["scene_chicken_pixels"]=chicken_pixels;
     Dictionary actor_health_values;
     for (const auto& [actor,health]:scene_health) {
         PackedInt32Array values;
@@ -3158,9 +3160,8 @@ void Mir3HudView::draw_terrain() {
         for (auto& [actor,chicken]:scene_chickens) {
             if (start_y+row!=chicken.cell.y) continue;
             if (chicken.walk_frame>=0) {
-                const auto remaining=(chicken.walk_origin-chicken.cell)*(5-chicken.walk_frame);
                 draw_scene_actor(chicken,180,chicken_frame(chicken.frame_base()+80+10*chicken.facing+chicken.walk_frame),
-                    remaining*Vector2i(8,5));
+                    chicken.walk_pixel()-chicken.cell*Vector2i(48,32));
                 continue;
             }
             const int base=(chicken.skeleton?880:320)+10*chicken.facing;
