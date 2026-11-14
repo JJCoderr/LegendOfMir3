@@ -28,7 +28,7 @@ func run() -> void:
             if not check(await wait_until(func(s): return s.spell_effects.any(func(e): return e.skill==74 and e.stage==1)),"74进入移动阶段"): return
             var moving: Dictionary=hud.hud_snapshot().spell_effects.filter(func(e): return e.skill==74)[0]
             if not check(moving.cell==target and moving.stage_offset==Vector2i(0,10) and moving.first==1980 and moving.end==1995,"74固定目标格和10像素偏移、原帧段"): return
-            hud.set_scene_human(89,target+Vector2i(1,0),0,0,"移动目标")
+            if not check(hud.set_scene_human(89,target+Vector2i(0,2),0,0,"移动目标"),"确认74目标实际换格"): return
             await settle(0.2)
             moving=hud.hud_snapshot().spell_effects.filter(func(e): return e.skill==74)[0]
             if not check(moving.cell==target and moving.stage_offset==Vector2i(0,10),"74不跟随目标移动或套用73轨迹"): return

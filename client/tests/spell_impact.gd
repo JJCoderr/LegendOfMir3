@@ -32,7 +32,7 @@ func run() -> void:
         var before := voice_count(sample)
         if not check(hud.apply_game_message(magic_reply(id,target,89)),"创建弹道原包"): return
         if not check(await wait_until(func(s): return s.spell_effects.any(func(e): return e.skill==id and e.projectile)),"弹道实际进入飞行"): return
-        hud.set_scene_human(89,moved,0,0,"移动后的目标")
+        if not check(hud.set_scene_human(89,moved,0,0,"移动后的目标"),"确认目标移动成功"): return
         if not check(await wait_until(func(s): return s.spell_effects.any(func(e): return e.skill==id and not e.projectile and e.first==int(c.explosion[0])),3000),"飞行切换独立命中资源"): return
         var impact: Dictionary=hud.hud_snapshot().spell_effects.filter(func(e): return e.skill==id)[0]
         if not check(impact.cell==(moved if c.track else target) and impact.target_actor==(89 if c.track else 0),"逐技能跟随或固定落点"): return

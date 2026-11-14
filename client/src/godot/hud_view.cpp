@@ -583,6 +583,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
             state["emits_light"]=event.emits_light;
             state["ground_wave"]=event.ground_wave;
             state["cell"]=event.cell;
+            state["world_position"]=event.projectile?event.projectile->position:
+                event.follow_position.value_or(Vector2(event.cell*Vector2i(48,32)));
             state["stage"]=event.staged_spell?int(event.staged_spell->stage):-1;
             if (event.staged_spell) state["stage_offset"]=Vector2i(event.staged_spell->offset[0],event.staged_spell->offset[1]);
             spell_states.append(state);

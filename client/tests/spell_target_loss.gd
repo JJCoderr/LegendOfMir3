@@ -17,14 +17,14 @@ func run() -> void:
     var target := origin+Vector2i(0,4)
     for id in ids:
         hud.change_map("0","比奇省",origin,1)
-        hud.set_scene_human(89,target,0,0,"将消失的目标")
+        if not check(hud.set_scene_human(89,target,0,0,"将消失的目标"),"确认原目标创建"): return
         var sample: int=id*10+10002
         var before := voice_count(sample)
         hud.apply_game_message(magic_reply(id,target,89))
         if not check(await wait_until(func(s): return s.spell_effects.any(func(e): return e.skill==id and e.projectile)),"目标丢失前已有弹道"): return
         if not check(hud.remove_scene_actor(89),"移除原目标"): return
         # 同编号新对象出现不能被失去引用的旧弹道重新绑定。
-        hud.set_scene_human(89,origin+Vector2i(2,0),0,0,"重新出现的编号")
+        if not check(hud.set_scene_human(89,target+Vector2i(2,0),0,0,"重新出现的编号"),"确认同编号目标重新创建"): return
         if id==38:
             if not check(await wait_until(func(s): return s.spell_effects.any(func(e): return e.skill==id and not e.projectile)),"38不使用三秒空飞，转静默命中"): return
         else:
