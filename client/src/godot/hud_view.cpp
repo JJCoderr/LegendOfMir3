@@ -2258,6 +2258,15 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS && header->opcode!=mir3::protocol::SM_DAYCHANGING)) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
+    if(opcode==mir3::protocol::SM_OPENDOOR_OK || opcode==mir3::protocol::SM_CLOSEDOOR ||
+            opcode==mir3::protocol::SM_OPENDOOR_LOCK) {
+        if(encoded.size()!=16) return false;
+        if(opcode==mir3::protocol::SM_OPENDOOR_LOCK)
+            post_chat(String::utf8(message(1472).c_str()),11861940,0);
+        else if(terrain.update_door(p[0],p[1],opcode==mir3::protocol::SM_OPENDOOR_OK))
+            queue_redraw();
+        return true;
+    }
     if (opcode==mir3::protocol::SM_NEWMAP || opcode==mir3::protocol::SM_CHANGEMAP || opcode==mir3::protocol::SM_MAPDESCRIPTION) {
         const auto decoded=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
         if (!decoded) return false;
@@ -2645,6 +2654,14 @@ void Mir3HudView::step_toward_pointer(bool run) {
     };
     auto destination=player_cell+Vector2i(dx,dy);
     const auto second=destination+Vector2i(dx,dy);
+    const auto request_door=[this](Vector2i cell) {
+        if(!terrain.door_closed(cell.x,cell.y)) return false;
+        const auto coordinates=std::uint32_t(cell.x)|(std::uint32_t(cell.y)<<16);
+        send_client_packet(mir3::protocol::CM_OPENDOOR,terrain.door_id(cell.x,cell.y),String(),coordinates);
+        return true;
+    };
+    if(request_door(destination)) return;
+    if(run && traversable(destination)) request_door(second);
     if (run && traversable(destination) && traversable(second)) {
         const auto third=second+Vector2i(dx,dy);
         if (!player_mount || traversable(third)) destination=player_mount?third:second;
@@ -2672,6 +2689,7 @@ void Mir3HudView::advance_map_step(double delta) {
     if (walk_frame<0 && !map_route.empty()) {
         const auto [x,y]=map_route.front();
         map_route.pop_front();
+        if(!terrain.walkable(x,y)) {map_route.clear();return;}
         start_map_step({x,y});
         return;
     }

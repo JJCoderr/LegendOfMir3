@@ -48,9 +48,27 @@ public:
     }
 
     bool contains(int x,int y) const { return x>=0 && y>=0 && x<width && y<height; }
+    int door_id(int x,int y) const {
+        if(!contains(x,y)) return 0;
+        const auto door=tiles[cell_index(x,y)+9];
+        return door&128?door&127:0;
+    }
+    bool door_closed(int x,int y) const {
+        return door_id(x,y)!=0 && !(tiles[cell_index(x,y)+11]&128);
+    }
+    bool update_door(int x,int y,bool open) {
+        const int id=door_id(x,y);
+        if(!id) return false;
+        for(int cy=std::max(0,y-8);cy<std::min(height,y+10);++cy)
+            for(int cx=std::max(0,x-8);cx<std::min(width,x+10);++cx) {
+                const auto at=cell_index(cx,cy);
+                if((tiles[at+9]&127)==id)
+                    tiles[at+11]=std::uint8_t((tiles[at+11]&127)|(open?128:0));
+            }
+        return true;
+    }
     bool walkable(int x,int y) const {
-        return x>=0 && y>=0 && x<width && y<height &&
-            (tiles[cell_start+(std::size_t(x)*height+y)*14]&1)!=0;
+        return contains(x,y) && (tiles[cell_index(x,y)]&1)!=0 && !door_closed(x,y);
     }
 
     template<class Occupied>
@@ -114,10 +132,13 @@ public:
         if (x<0 || y<0 || x>=width || y>=height || layer<0 || layer>1) return {};
         const auto at=cell_start+(std::size_t(x)*height+y)*14;
         const auto frame=at+5+2*layer;
-        return {tiles[at+4-layer],tiles[frame]|(tiles[frame+1]<<8),tiles[at+1+layer]};
+        int id=tiles[frame]|(tiles[frame+1]<<8);
+        if(id!=65535 && (tiles[at+9]&127) && (tiles[at+11]&128)) id+=tiles[at+11]&127;
+        return {tiles[at+4-layer],id,tiles[at+1+layer]};
     }
 
 private:
+    std::size_t cell_index(int x,int y) const { return cell_start+(std::size_t(x)*height+y)*14; }
     std::size_t cell_start=0;
     int width=0,height=0;
     std::vector<std::uint8_t> tiles;
