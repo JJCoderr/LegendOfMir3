@@ -13,8 +13,9 @@
 - [ ] Linux、Android、iOS、Web 的构建、字体和输入适配（Windows 优先）。
 
 ## 主界面与对话框
+- [x] 101确认生成1009；NPC与会话请求共享C++编码器/序号及client_packet_ready，--exit-request验证，见 docs/evidence/send-messages.md。
 - [x] 退出窗口独立 --exit-dialog 基线：快捷键、底栏入口、取消/确认与信号；原版证据见 docs/evidence/exit-flow.md。
-- [ ] 退出八秒限制及确认二次检查、时间字段/豁免含义、1009发送、状态2消费和返回页面；当前101默认处理为空，不能视为注销完成。
+- [ ] 退出八秒限制及确认二次检查、时间字段/豁免含义、本地缓存保存、1009真实发送、状态2消费和返回页面；生成请求不能视为注销完成。
 - [x] 选项开关普通/悬停/按下帧、关闭与模式按下帧、释放落点触发、状态包复位及关闭/失焦清理；--options-input，见 docs/evidence/options-input.md。
 - [x] 选项窗口补齐原版文字、开关、七类命令与攻击方式请求；确认/预测状态分离、本地保存、怪物标记与玩家照片效果，--options-panel 定向验证，见 docs/evidence/options-panel.md。
 - [x] 1401 选项原始确认包、变化位更新、重复包保留预测、攻击模式及原版聊天拒绝变量/底栏联动；--options-wire，见 docs/evidence/options-wire.md。

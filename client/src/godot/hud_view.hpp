@@ -20,6 +20,7 @@
 #include "hud/portrait_picker.hpp"
 #include "resources/map_terrain.hpp"
 #include "protocol/map_message.hpp"
+#include "protocol/send_message.hpp"
 #include "hud/map_input_delay.hpp"
 #include "hud/target_portrait.hpp"
 #include "inventory/inventory_panel.hpp"
@@ -440,7 +441,8 @@ private:
     mir3::HudLayout::Rect npc_dialogue_text_bounds(const NpcDialogueRow& row) const;
     int npc_dialogue_option_at(godot::Vector2 pointer) const;
     godot::Vector2i npc_dialogue_origin;
-    unsigned npc_sequence=0;
+    mir3::SendMessages outgoing_messages;
+    godot::PackedByteArray send_client_packet(int identifier,int actor,const godot::String& body,std::uint32_t instance=0,std::uint16_t quantity=0);
     void emit_npc_packet(int identifier,int actor,const godot::String& body,std::uint32_t instance=0,std::uint16_t quantity=0);
     void close_shop();
     void close_npc_dialogue();

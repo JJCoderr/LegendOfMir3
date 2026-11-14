@@ -5,6 +5,7 @@
 #include "hud/ground_items.hpp"
 #include "hud/scene_lighting.hpp"
 #include "protocol/receive_message.hpp"
+#include "protocol/send_message.hpp"
 #include "protocol/map_message.hpp"
 #include "hud/map_input_delay.hpp"
 #include "chat/scene_chat.hpp"
@@ -30,6 +31,20 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--exit-request") {
+            mir3::SendMessages sender;
+            const auto logout=sender.packet(1009);
+            const auto raw=mir3::decode_six_bit(reinterpret_cast<const std::uint8_t*>(logout.data()+2),16);
+            check(logout.size()==19 && logout.substr(0,2)=="#1" && logout.back()=='!' && raw && raw->size()==12,"退出请求只有带边界的编码头");
+            for (int i=0;i<12;++i) check(std::uint8_t((*raw)[i])==(i==4?0xf1:(i==5?3:0)),"1009头其余字段全部为零");
+            const auto npc=sender.packet(1011,0x12345678,0xabcdef01,0x2345,std::string_view("abc\0ignored",11));
+            const auto nh=mir3::decode_six_bit(reinterpret_cast<const std::uint8_t*>(npc.data()+2),16);
+            const auto body=mir3::decode_six_bit(reinterpret_cast<const std::uint8_t*>(npc.data()+18),npc.size()-19);
+            check(npc[1]=='2' && nh && std::uint8_t((*nh)[0])==0x78 && std::uint8_t((*nh)[9])==0xab && std::uint8_t((*nh)[11])==0x23 && body && *body=="abc","NPC与退出共用序号，字段和正文编码保持");
+            for (int i=3;i<=9;++i) check(sender.packet(1009)[1]=='0'+i,"序号依次增长");
+            check(sender.packet(1009)[1]=='1',"序号九后回一");
+            std::cout << "EXIT_REQUEST_MODEL_OK\n";return 0;
+        }
         if (std::filesystem::path(argv[1])=="--options-input") {
             mir3::SystemOptions options;
             check(options.toggle_frame(7,true)==1292 && options.toggle_frame(7,false)==1295,"普通开关帧对应原版");
