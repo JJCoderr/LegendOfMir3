@@ -339,6 +339,14 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["target_hp_width"]=!model.layout.expanded && target_focus.displayed() && !target_is_human && target_portrait.is_valid()?target_vitals.bar_width():0;
     result["target_custom_portrait"]=!model.layout.expanded && target_focus.displayed() && system_options.user_photos && target_custom_portrait.is_valid();
     result["character_shared_hp"]=model.shared_hp();
+    Array level_states;
+    for (const auto& effect:level_effects) {
+        Dictionary state;state["frame"]=int(effect.playback.frame);state["phase"]=int(effect.playback.phase);
+        state["cell"]=Vector2i(effect.playback.cell_x,effect.playback.cell_y);
+        state["radii"]=Vector2i(effect.playback.inner_radius,effect.playback.outer_radius);level_states.append(state);
+    }
+    result["level_effects"]=level_states;
+    result["player_level_action"]=!player_level_action.finished();
     result["weapon_training"]=weapon_training;
     result["character_experience"]=int64_t(model.experience);result["character_next_experience"]=int64_t(model.next_experience);
     result["character_hp"]=Vector2i(model.hp,model.max_hp);
@@ -476,6 +484,9 @@ void Mir3HudView::_ready() {
     }
     map_directory=root.path_join("Map");
     actor_resource_root=root.path_join("Data");
+    const auto effect_file=FileAccess::get_file_as_bytes(root.path_join("MInfo.dat"));
+    effect_catalog.load({effect_file.ptr(),std::size_t(effect_file.size())});
+    level_archive.open(std::filesystem::u8path(actor_resource_root.utf8().get_data())/"MagicEx");
     weapon_order=FileAccess::get_file_as_bytes(root.path_join("Weapon.ord"));
     audio_root=root.path_join("Sound");
     const auto sound_index=FileAccess::get_file_as_bytes(root.path_join("SoundList.wwl"));
@@ -584,6 +595,7 @@ void Mir3HudView::_ready() {
     scene_light_layer->set_material(light_material);
     add_child(scene_light_layer);
     scene_light_layer->connect("draw",callable_mp(this,&Mir3HudView::draw_scene_lighting));
+    level_layer=memnew(Node2D);add_child(level_layer);
     hud_base=memnew(Node2D);
     hud_base->set_material(material);
     add_child(hud_base);
@@ -2625,13 +2637,16 @@ void Mir3HudView::draw_terrain() {
             const auto* body=human_body(player_type,player_clothing,player_mount!=0);
             const bool running=std::max(std::abs(step.x),std::abs(step.y))>1;
             const auto& movement=running?body->running:body->walking;
-            const auto& actor=walk_frame>=0?movement[player_facing*10+walk_frame]:
-                body->standing[player_facing*10+player_idle.frame()];
+            const auto* level_pose=player_level_action.finished()?nullptr:human_action_frame(player_type,player_clothing,
+                mir3::HumanActions::frame(7,4,player_level_action.frame()));
+            const auto& actor=level_pose?*level_pose:(walk_frame>=0?movement[player_facing*10+walk_frame]:
+                body->standing[player_facing*10+player_idle.frame()]);
             if (actor.image.is_valid()) {
                 player_bounds=Rect2(Vector2(pixel-camera)+actor.offset,actor.image->get_size());
                 draw_human_layers(actor,Vector2(pixel-camera),player_type,player_hair,player_weapon,
+                    level_pose?mir3::HumanActions::frame(7,4,player_level_action.frame()):
                     (player_mount?(walk_frame>=0?(running?2480:2400):2320):(walk_frame>=0?(running?1760:1680):0))+
-                    player_facing*10+(walk_frame>=0?walk_frame:player_idle.frame()),player_clothing_dye,player_hair_dye,player_mount);
+                    player_facing*10+(walk_frame>=0?walk_frame:player_idle.frame()),player_clothing_dye,player_hair_dye,level_pose?0:player_mount);
                 animated_map_objects=true;
             }
         }
@@ -2651,6 +2666,7 @@ void Mir3HudView::draw_scene_lighting() {
         for (int x=camera.x/48-20;x<=camera.x/48+37;++x)
             if (const auto packed=terrain.light(x,y))
                 grid.add({x*48-camera.x,y*32-camera.y,0,{},radii[packed>>14],colors[(packed>>4)&255]});
+    if (magic_light) for (const auto& effect:level_effects) grid.add(effect.playback.light(camera.x,camera.y));
     const auto local=player_pixel()-camera;
     grid.add(mir3::SceneLight::actor(local.x,local.y,player_light_attribute,true));
     for (const auto& [id,human]:scene_humans) {
@@ -2704,6 +2720,7 @@ bool Mir3HudView::prepare_character_selection() {
 }
 
 void Mir3HudView::clear_game_scene() {
+    clear_level_effects();player_level_action={};
     login_audio.enter(mir3::LoginAudio::Page::none);
     for (auto& [file,player]:login_effects) player->stop();
     cancel_pointer_interactions();
@@ -2880,10 +2897,68 @@ void Mir3HudView::process_map_changes() {
 
 }
 
+const Mir3HudView::MapActorFrame* Mir3HudView::level_frame(int index) {
+    if (const auto it=level_frames.find(index);it!=level_frames.end()) return &it->second;
+    const auto decoded=level_archive.frame(index);if (!decoded) return nullptr;
+    return &level_frames.emplace(index,MapActorFrame{texture(decoded->pixels.rgba,decoded->width,decoded->height),
+        Vector2(decoded->offset_x,decoded->offset_y),decoded->pixels.regions}).first->second;
+}
+void Mir3HudView::clear_level_effects() {
+    for (auto& effect:level_effects) { effect.copy->hide();effect.copy->queue_free(); }
+    level_effects.clear();
+}
+bool Mir3HudView::receive_level_up(const mir3::ReceiveHeader& header) {
+    const bool local=header.parameters[2]==0;
+    if (!local && header.parameters[2]!=1) return true; // 原版忽略其余分支。
+    Vector2i cell=player_cell;
+    int actor=0;
+    if (local) {
+        model.level=std::uint8_t(header.parameters[0]);model.experience=header.recognition;
+        player_facing=4;walk_frame=-1;movement_ms=0;map_route.clear();player_level_action.start(7);
+    } else {
+        if (header.recognition>INT_MAX) return true;
+        actor=int(header.recognition);
+        const auto it=scene_humans.find(actor);if (it==scene_humans.end()) return true;
+        auto& human=it->second;cell=human.cell;human.facing=4;
+        human.movement_frame=-1;human.movement_ms=0;human.bump=false;human.action.start(7);
+    }
+    const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::magic,mir3::LevelUpEffect::resource_id);
+    if (resource && resource->library==137 && resource->blend==2 && resource->end>resource->first) {
+        auto* copy=memnew(BackBufferCopy);copy->set_copy_mode(BackBufferCopy::COPY_MODE_VIEWPORT);
+        level_layer->add_child(copy);
+        auto* sprite=memnew(Sprite2D);sprite->set_centered(false);copy->add_child(sprite);
+        Ref<ShaderMaterial> material;material.instantiate();
+        material->set_shader(ResourceLoader::get_singleton()->load("res://level_effect.gdshader"));
+        sprite->set_material(material);
+        sprite->set_modulate(Color(resource->tint[0]/255.f,resource->tint[1]/255.f,resource->tint[2]/255.f,1));
+        level_effects.push_back({mir3::LevelUpEffect(*resource,cell.x,cell.y),copy,sprite});
+        play_actor_sound(actor,mir3::LevelUpEffect::sound_id,cell);
+        advance_level_effects(0);
+    }
+    if (local) post_chat(String::utf8(message(1469).c_str()),11861940,0);
+    queue_redraw();return true;
+}
+void Mir3HudView::advance_level_effects(double milliseconds) {
+    const auto camera=map_camera();
+    for (auto& effect:level_effects) {
+        effect.playback.advance(std::uint32_t(milliseconds));
+        if (effect.playback.phase==mir3::LevelUpEffect::Phase::finished) { effect.copy->hide();effect.copy->queue_free();continue; }
+        const auto* frame=level_frame(int(effect.playback.frame));
+        effect.sprite->set_visible(frame!=nullptr);
+        if (frame) {
+            effect.sprite->set_texture(frame->image);
+            effect.sprite->set_position(Vector2(effect.playback.cell_x*48-camera.x,effect.playback.cell_y*32-camera.y)+frame->offset);
+        }
+    }
+    std::erase_if(level_effects,[](const auto& effect) {return effect.playback.phase==mir3::LevelUpEffect::Phase::finished;});
+    if (!level_effects.empty()) queue_redraw();
+}
+
 bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    if (header->opcode==mir3::protocol::SM_LEVELUP) return receive_level_up(*header);
     if (const auto value=mir3::ActorExperience::parse(*header)) {
         model.experience=value->total;weapon_training=value->apply_training(weapon_training);
         if (value->extra_notice) chat_history.post(message(1513),mir3::chat_palette(2),mir3::chat_palette(3));
@@ -3978,6 +4053,9 @@ void Mir3HudView::_process(double delta) {
         if (exit_transition.advance(elapsed)) { enter_character_selection();return; }
         exit_layer->queue_redraw();
     }
+    advance_level_effects(delta*1000);
+    if (walk_frame>=0) player_level_action={};
+    player_level_action.advance(std::uint32_t(delta*1000));
     map_input_delay.advance(delta*1000);
     process_map_changes();
 
@@ -6686,6 +6764,7 @@ bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn,int ambien
     mir3::MapTerrain next;
     if (!next.open(std::filesystem::u8path(map_directory.path_join(map_id+".map").utf8().get_data())) ||
         !next.walkable(spawn.x,spawn.y)) return false;
+    clear_level_effects();player_level_action={};
     terrain=std::move(next);terrain_ready=true;
     scene_ambient.enter(static_cast<std::uint8_t>(ambient_mode));
     current_map_id=map_id;

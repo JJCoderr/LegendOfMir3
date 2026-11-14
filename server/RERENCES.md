@@ -186,3 +186,6 @@ IDA 0x47C920构造100、recognition及三WORD参数均0，正文`%s/%d`使用全
 
 ## 经验获得
 原版4282C0 case 44和401430已核对，复用mir3_1.45中的经验/提示功能，消息使用SM_WINEXP定义。详细字段及升级待办见client/docs/evidence/actor-experience.md。
+
+## 升级消息
+按原版4282C0：SM_LEVELUP参数三0表示本地，recognition为经验、参数一低字节为等级；参数三1表示远端，recognition为人物ID，不更新本地属性。客户端依据原版独立恢复特效422与末帧光尾，见client/docs/evidence/level-up.md。

@@ -3,6 +3,7 @@
 #include "protocol/actor_ability.hpp"
 #include "protocol/actor_increments.hpp"
 #include "protocol/actor_experience.hpp"
+#include "hud/level_up_effect.hpp"
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
 #include "hud/exit_transition.hpp"
@@ -39,6 +40,22 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        // 测试内容：升级资源列映射、严格帧间隔、丢弃超时余量、末帧光尾收缩和最终结束。
+        if (std::filesystem::path(argv[1])=="--level-up") {
+            auto r=mir3::EffectResource::from_columns({2020,2030,80,137,422,3,4,100,150,200,150,200,250,240,180,100,2,1,0});
+            check(r.id==422 && r.library==137 && r.tint[1]==180 && r.blend==2,"original resource fields");
+            mir3::LevelUpEffect effect(r,475,360);
+            effect.advance(80);check(effect.frame==2020,"strict frame boundary");
+            effect.advance(1);check(effect.frame==2021,"first frame transition");
+            effect.advance(500);check(effect.frame==2022,"one step per update");
+            for (int i=0;i<8;++i) effect.advance(81);
+            check(effect.frame==2029 && effect.phase==mir3::LevelUpEffect::Phase::shrinking,"last frame stays during light tail");
+            for (int i=0;i<20 && effect.phase!=mir3::LevelUpEffect::Phase::finished;++i) effect.advance(51);
+            check(effect.phase==mir3::LevelUpEffect::Phase::finished,"light tail ends");
+            const auto light=mir3::LevelUpEffect(r,475,360).light(475*48,360*32);
+            check(light.x==24 && light.y==16 && light.inner_radius==3 && light.outer_radius_cells==4,"light center and radii");
+            std::cout << "LEVEL_UP_MODEL_OK\n";return 0;
+        }
         // 测试内容：经验无符号总量、修炼累加回绕/覆盖/零值、两种提示格式和错误类型拒绝。
         if (std::filesystem::path(argv[1])=="--actor-experience") {
             const auto gained=mir3::ActorExperience::parse({0xfedcba98,mir3::protocol::SM_WINEXP,{123,7,0xff00}});

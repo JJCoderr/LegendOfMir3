@@ -2,6 +2,7 @@
 #include "protocol/actor_ability.hpp"
 #include "protocol/actor_increments.hpp"
 #include "protocol/actor_experience.hpp"
+#include "hud/level_up_effect.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"
 #include "hud/human_actions.hpp"
@@ -440,6 +441,22 @@ private:
     godot::Vector2i player_cell{475,360}, step_origin{}, step_destination{};
     int walk_frame=-1, player_facing=4;
     mir3::HumanIdleClock player_idle;
+    mir3::HumanActionClock player_level_action;
+    mir3::EffectCatalog effect_catalog;
+    mir3::WilArchive level_archive;
+    std::map<int,MapActorFrame> level_frames;
+    godot::Node2D* level_layer=nullptr;
+    struct LevelVisual {
+        mir3::LevelUpEffect playback;
+        godot::BackBufferCopy* copy=nullptr;
+        godot::Sprite2D* sprite=nullptr;
+    };
+    std::vector<LevelVisual> level_effects;
+    bool receive_level_up(const mir3::ReceiveHeader& header);
+    void advance_level_effects(double milliseconds);
+    void clear_level_effects();
+    const MapActorFrame* level_frame(int index);
+
     std::optional<mir3::ActorAbility> server_ability;
     mir3::ActorSubAbility server_sub_ability;
     std::uint16_t weapon_training=0;
