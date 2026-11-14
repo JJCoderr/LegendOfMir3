@@ -1,12 +1,3 @@
-[submodule "reference/legendOfMir2_src"]
-	path = reference/legendOfMir2_src
-	url = https://github.com/etorth/legendOfMir2_src.git
-[submodule "reference/LegendOfMir3_Src"]
-	path = reference/LegendOfMir3_Src
-	url = https://github.com/tensafe/LegendOfMir3_Src.git
-[submodule "reference/mir2x"]
-	path = reference/mir2x
-	url = https://github.com/thexinchen/mir2x.git
 [submodule "reference/Zircon"]
 	path = reference/Zircon
 	url = https://github.com/Suprcode/Zircon.git

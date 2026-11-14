@@ -1,14 +1,9 @@
 # 光通传奇3
 使用GODOT复刻光通传奇3 v1.45版本。 包括客户端和服务器端。 私服包括网络家园,传奇学院,宝藏传奇
 
-## 开源代码
-分析各个开源代码的游戏逻辑，并按模块功能记录。 
-优先参考Zircon等前面3个原版的游戏逻辑。 不要分析ZIRCON等1.45客户端中不存在的怪物和魔法。
-
+参考代码:
 1. https://github.com/tensafe/LegendOfMir3_Src ，应该是最初的C++版本
-2. https://github.com/etorth/legendOfMir2_src ，lomcn，来源于https://www.lomcn.net/forum/threads/maybe-useful.94024/#post-1033272，20030515f client
 3. https://github.com/Suprcode/Zircon， 韩版的传奇3复刻版，使用C#
-4. https://github.com/etorth/mir2x, 一个C++版本，完成度还行。 https://github.com/thexinchen/mir2x，使用GODOT以及IMGUI更改过客户端。 客户端在https://github.com/etorth/CBWCQ3
 
 ## 约束
 0. 优先使用IDA分析原版行为和逻辑，有不清晰的地方可以参考几个开源实现。 但优先原版。
@@ -34,9 +29,8 @@
 3. 字体，坐标，大小，行为要与原版一致。 可以通过IDA进行分析。
 4. 采用MVC框架，对话框采用struct定义显示的内容，以便做测试。 一个对话框的逻辑对应一个类，整个主界面逻辑都放到一个cpp文件中。
 5. 只能解析资源文件，而不是解压。 客户端代码放入client。
-6. 可以参考mir2x的GODOT客户端，作为初步实现。 比如对话框，怪物，技能等等，再参照原版的实现。
-7. 闭环不要切的太碎，导致反复测试，影响速度。 比如怪物，技能等等，需要完整模块连续实现后再集中验收。
-8. 如果Mir3.exe中找不到资源或者逻辑等，还可以查找宝藏传奇3.exe，以及脱壳后的KingMir3.dll，MyMir3.dll等等
+6. 闭环不要切的太碎，导致反复测试，影响速度。 比如怪物，技能等等，需要完整模块连续实现后再集中验收。
+7. 如果Mir3.exe中找不到资源或者逻辑等，还可以查找宝藏传奇3.exe，以及脱壳后的KingMir3.dll，MyMir3.dll等等
 
 ### 怪物子系统
 1. 需要完成特殊怪物的游戏逻辑。可以参考参考工程里面的。
