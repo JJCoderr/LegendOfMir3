@@ -43,6 +43,7 @@
 #include "inventory/inventory_grid.hpp"
 #include "inventory/quick_items.hpp"
 #include "inventory/item_layout.hpp"
+#include "chat/chat_submission.hpp"
 #include "inventory/trade_grid.hpp"
 #include "status/equipment.hpp"
 #include "status/element_attributes.hpp"
@@ -272,6 +273,11 @@ private:
     godot::String audio_root,music_file;
     godot::PackedByteArray music_table;
     godot::String options_path;
+    mir3::ChatSubmission chat_submission;
+    godot::String chat_storage_key;
+    godot::String chat_history_file(bool phrases) const;
+    void save_chat_shortcuts(bool phrases);
+    void load_chat_shortcuts();
     void draw_options();
     bool options_pointer(int kind,godot::Vector2 point);
     mir3::InventoryPanel inventory;

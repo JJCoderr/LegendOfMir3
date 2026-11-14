@@ -56,8 +56,8 @@ String Mir3ChatInput::limited_text() const {
 void Mir3ChatInput::submitted(String value) {
     const auto utf8=value.utf8();
     const auto accepted=model.set({utf8.get_data(),static_cast<std::size_t>(utf8.length())});
-    if (!accepted.empty()) emit_signal("chat_requested",String::utf8(accepted.c_str()));
     model.set("");set_text("");release_focus();
+    if (!accepted.empty()) emit_signal("chat_requested",String::utf8(accepted.c_str()));
 }
 void Mir3ChatInput::_gui_input(const Ref<InputEvent>& event) {
     Ref<InputEventKey> key=event;

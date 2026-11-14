@@ -521,6 +521,12 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["equipment_pending"]=equipment.pending;
     result["held_inventory_icon"]=bag.held.icon;
     result["inventory_row"]=inventory.row;
+    result["chat_save_enabled"]=chat_submission.save_chat;result["snow_enabled"]=chat_submission.snow;
+    result["private_chat_prefix"]=String::utf8(chat_submission.private_prefix.c_str());
+    PackedStringArray contacts,phrases;
+    for(const auto& item:chat_submission.contacts) contacts.append(String::utf8(item.c_str()));
+    for(const auto& item:chat_submission.phrases) phrases.append(String::utf8(item.c_str()));
+    result["private_chat_contacts"]=contacts;result["quick_chat_phrases"]=phrases;
     result["chat_mode"]=chat_input?chat_input->mode.mode:0;
     PackedInt32Array frames,hints,rejected;
     for (int i=0;i<3;++i) { frames.push_back(reception_buttons.frames[i]);hints.push_back(reception_buttons.hints[i]);rejected.push_back(rejected_chat[i]); }
@@ -2810,7 +2816,7 @@ void Mir3HudView::clear_game_scene() {
     for (auto& category:skills.learned) category.clear();
     skills.bindings.fill(0);skills.selected.fill(-1);skills.tab=0;skills.scroll=0;
     skill_key_menu={};skill_menu_target=0;skill_shortcuts_visible=false;
-    group_request=0;group_members.clear();group_allow=false;
+    group_request=0;group_members.clear();group_allow=false;chat_submission.clear_history();chat_storage_key=String();
     // 421E80 -> 4217E0 -> 4355C0/435180：离场重建物品窗口和持有记录。
     quick_items={};quick_panel=mir3::DraggablePanel{{73,413,280,48}};quick_close_pressed=false;
     bag={};equipment={};inventory.row=0;inventory_cursor=Vector2(-1,-1);
@@ -4069,10 +4075,61 @@ bool Mir3HudView::scroll_input(int kind,Vector2 position) {
     return consumed;
 }
 std::string Mir3HudView::message(int id) const { return mir3::ansi_to_utf8(messages.get(id)); }
-void Mir3HudView::chat_requested(String value) { emit_signal("chat_requested",value); }
+String Mir3HudView::chat_history_file(bool phrases) const {
+    const auto base=item_layout_file();
+    if(base.is_empty()) return String();
+    const auto server=String::utf8(mir3::ansi_to_utf8(login_flow.selected_server).c_str());
+    for(const auto token:{"/","\\",":","*","?","\"","<",">","|"}) if(server.contains(token)) return String();
+    return base.get_basename()+String("(")+server+String(phrases?").mlt":").slt");
+}
+
+void Mir3HudView::save_chat_shortcuts(bool phrases) {
+    const auto path=chat_history_file(phrases);if(path.is_empty()) return;
+    std::error_code error;
+    std::filesystem::create_directories(std::filesystem::u8path(item_layout_directory.utf8().get_data()),error);
+    if(error) return;
+    const auto file=FileAccess::open(path,FileAccess::WRITE);if(file.is_null()) return;
+    std::string contents;
+    for(const auto& value:phrases?chat_submission.phrases:chat_submission.contacts) contents+=mir3::utf8_to_ansi(value)+"/";
+    PackedByteArray bytes;bytes.resize(contents.size());std::copy(contents.begin(),contents.end(),bytes.ptrw());file->store_buffer(bytes);
+}
+
+void Mir3HudView::load_chat_shortcuts() {
+    const auto key=chat_history_file(false);if(key.is_empty() || key==chat_storage_key) return;
+    chat_storage_key=key;chat_submission.clear_history();
+    for(bool phrases:{false,true}) {
+        const auto path=chat_history_file(phrases);if(!FileAccess::file_exists(path)) continue;
+        const auto file=FileAccess::open(path,FileAccess::READ);if(file.is_null() || file->get_length()>10240) continue;
+        const auto bytes=file->get_buffer(file->get_length());
+        const std::string contents(reinterpret_cast<const char*>(bytes.ptr()),bytes.size());
+        auto& values=phrases?chat_submission.phrases:chat_submission.contacts;
+        std::size_t start=0;
+        while(values.size()<10) {
+            const auto end=contents.find('/',start);if(end==std::string::npos) break;
+            if(end-start>1023) break;
+            values.push_back(mir3::ansi_to_utf8(std::string_view(contents).substr(start,end-start)));start=end+1;
+        }
+    }
+}
+
+void Mir3HudView::chat_requested(String value) {
+    if(login_visible || character_selection.visible || server_groups.visible) return;
+    emit_signal("chat_requested",value);
+    const auto utf8=value.utf8();
+    const auto action=chat_submission.submit({utf8.get_data(),std::size_t(utf8.length())},guild_manager,
+        message(1425),message(1418),message(1428),message(1419));
+    if(action.dialog) {
+        open_group_dialog(action.dialog==1426?mir3::protocol::CM_GUILDADDMEMBER:1427);return;
+    }
+    if(action.contacts_changed) save_chat_shortcuts(false);
+    if(action.phrases_changed) save_chat_shortcuts(true);
+    if(action.private_echo) post_chat(value,mir3::chat_palette(5),mir3::chat_palette(0));
+    if(action.delay) map_input_delay.mount_command();
+    if(action.send) send_client_packet(mir3::protocol::CM_SAY,0,value);
+}
 void Mir3HudView::send_chat_command(String value) {
     // 0x47CA80：界面命令直接发送；不经过0x427400的输入框本地指令分支。
-    chat_requested(value);
+    emit_signal("chat_requested",value);
     send_client_packet(mir3::protocol::CM_SAY,0,value);
 }
 bool Mir3HudView::update_chat_rejection(int channel,bool rejected) {
@@ -5868,7 +5925,7 @@ void Mir3HudView::handle_exit_confirmation(int dialog_id) {
 }
 
 bool Mir3HudView::dialog_is_alert() const {
-    return group_request==1434 || group_request==1414 || (group_request>=1473 && group_request<=1507) || (group_request>=1437 && group_request<=1439) || group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
+    return group_request==1427 || group_request==1434 || group_request==1414 || (group_request>=1473 && group_request<=1507) || (group_request>=1437 && group_request<=1439) || group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
 }
 
 bool Mir3HudView::dialog_has_input() const {
@@ -5963,6 +6020,8 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
             emit_signal("trade_gold_requested",mir3::protocol::CM_TRADE_GOLD,int64_t(amount));
             send_client_packet(mir3::protocol::CM_TRADE_GOLD,amount,String());
         }
+    } else if (request==mir3::protocol::CM_GUILDADDMEMBER) {
+        send_client_packet(request,0,name);
     } else if (request==mir3::protocol::CM_GUILDDELMEMBER) {
         emit_signal("guild_member_removal_requested",name);
         send_client_packet(mir3::protocol::CM_GUILDDELMEMBER,0,name);
@@ -5988,9 +6047,10 @@ void Mir3HudView::draw_group_dialog() {
         sprite(1243+(group_dialog_pressed==0),{x+137,y+188});
         return;
     }
-    const auto prompt=group_request==mir3::protocol::CM_MERCHANTDLGSELECT?npc_dialogue_prompt:
+    auto prompt=group_request==mir3::protocol::CM_MERCHANTDLGSELECT?npc_dialogue_prompt:
         group_request==mir3::protocol::CM_GUILDDELMEMBER?"'"+std::string(guild_name.utf8().get_data())+"' "+message(4001):
-        message(group_request==110?2302:group_request==1307?1307:group_request==mir3::protocol::CM_TRADE_GOLD?1304:group_request==mir3::protocol::CM_GUILDBREAKALLY?4002:group_request==mir3::protocol::CM_DELGROUPMEMBER?1606:1605);
+        message(group_request==mir3::protocol::CM_GUILDADDMEMBER?1426:group_request==110?2302:group_request==1307?1307:group_request==mir3::protocol::CM_TRADE_GOLD?1304:group_request==mir3::protocol::CM_GUILDBREAKALLY?4002:group_request==mir3::protocol::CM_DELGROUPMEMBER?1606:1605);
+    if(group_request==mir3::protocol::CM_GUILDADDMEMBER) if(auto at=prompt.find("%s");at!=std::string::npos) prompt.replace(at,2,guild_name.utf8().get_data());
     if (dialog_has_input()) text(prompt,{x+43,y+84,278,75},0xc8faff,mir3::TextFont::dialog);
     else text(message(group_request==109?2636:1065),{x+23,y+84,308,95},0xc8faff,mir3::TextFont::dialog);
     for (const int index:{0,2}) {
@@ -7438,6 +7498,7 @@ void Mir3HudView::set_character_identity(String name,String secondary,String ter
     character_secondary=secondary;
     character_tertiary=tertiary;
     character_badge=badge;
+    load_chat_shortcuts();
     queue_redraw();
 }
 

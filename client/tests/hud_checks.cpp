@@ -20,6 +20,7 @@
 #include "inventory/trade_grid.hpp"
 #include "quick_items_checks.hpp"
 #include "item_layout_checks.hpp"
+#include "chat_submission_checks.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/ground_items.hpp"
 #include "hud/scene_lighting.hpp"
@@ -53,6 +54,7 @@ int main(int argc,char** argv) {
             std::cout<<"ITEM_LAYOUT_ORIGINAL_OK "<<item_layout_original_checks(argv[2])<<"\n";return 0;
         }
         check(argc==2,"resource root required");
+        if(std::filesystem::path(argv[1])=="--chat-submission") {chat_submission_checks();std::cout<<"CHAT_SUBMISSION_MODEL_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--item-layout") {item_layout_checks();std::cout<<"ITEM_LAYOUT_MODEL_OK\n";return 0;}
         if (std::filesystem::path(argv[1])=="--quick-items") { quick_items_checks();std::cout<<"QUICK_ITEMS_CHECKS_OK\n";return 0; }
         // 测试内容：交易每方12件限制、指定锚点回退、跨格占位冲突及5列40行边界。
