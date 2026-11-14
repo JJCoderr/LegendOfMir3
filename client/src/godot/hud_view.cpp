@@ -1015,11 +1015,11 @@ void Mir3HudView::_exit_tree() {
     const auto stop=[](AudioStreamPlayer* player) {
         if (player) { player->stop();player->set_stream(Ref<AudioStream>()); }
     };
-    stop(login_movie_audio);stop(map_music);stop(hud_sound);stop(gold_sound);
+    stop(login_movie_audio);stop(map_music);stop(hud_sound);stop(gold_sound);stop(footstep_sound);
     for (auto& [file,player]:login_effects) stop(player);
     while (!actor_sounds.empty()) remove_actor_sound(actor_sounds.begin()->first);
     if (footstep_bus==StringName()) return;
-    footstep_sound->stop();
+    footstep_sound->set_bus("Master");
     auto* audio=AudioServer::get_singleton();
     const int bus=audio->get_bus_index(footstep_bus);
     if (bus>=0) audio->remove_bus(bus);
@@ -9290,6 +9290,8 @@ void Mir3HudView::remove_actor_sound(int actor) {
     auto found=actor_sounds.find(actor);
     if (found==actor_sounds.end()) return;
     found->second.player->stop();
+    found->second.player->set_stream(Ref<AudioStream>());
+    found->second.player->set_bus("Master");
     found->second.player->queue_free();
     auto* audio=AudioServer::get_singleton();
     const int bus=audio->get_bus_index(found->second.bus);

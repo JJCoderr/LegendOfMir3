@@ -57,3 +57,6 @@ IDA 数据库名为 `mir3-map-review`，本机 MCP 地址为 `http://127.0.0.1:1
 ## 本地角色死亡批次
 
 本地32/34已按415AD0/412000进入与位移共用的local_actor_messages队列。player_life保存尸体状态，动作19末帧将HP置零，死亡时保留骑乘字段但不画马。53本地身份转场景健康索引0；回血不解除死亡，尸体下一更新继续HP归零。1316不是本地复活，1321死后刷新推导锚点/外观但保持尸体不走动；50重新入场即使身份相同也重置死亡和残留动作。共享HumanLife模型检查及local_life、forced_motion一次集中验收通过，约9秒；位移用例退出再次出现2项ObjectDB提示，未宣称已修复。
+
+
+2026-11-14：完成Godot音频退出清理，脚步及角色声音停止后解除流引用、切回Master并移除专用总线。播放中退出弱引用验收与原forced_motion复现用例通过，未出现ObjectDB泄漏。仅执行相关短用例；全场景测试留到全部功能完成后。证据见client/docs/evidence/audio-cleanup.md。

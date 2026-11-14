@@ -1,0 +1,7 @@
+# 原版客户端行为与Godot实现记录
+
+按当前AGENTS.md维护客户端逻辑。既有逻辑记录保留在[Game.md](Game.md)，各子系统的地址证据、伪代码与验收范围见[客户端TODO](../client/TODO.md)及[模块索引](../client/docs/evidence/client-module-inventory.md)。
+
+本地动作相关专题：[频率及共用等待](../client/docs/evidence/map-input.md)、[服务器确认与拒绝](../client/docs/evidence/action-reply.md)、[服务器位移](../client/docs/evidence/forced-motion.md)、[死亡及重新入场](../client/docs/evidence/local-life.md)。
+
+Godot资源生命周期：[音频退出清理](../client/docs/evidence/audio-cleanup.md)。这类修复只处理适配层资源所有权，不改变已确认的原版音效行为。

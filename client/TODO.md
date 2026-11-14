@@ -316,3 +316,6 @@
 
 - [x] 本地32/34死亡消息与服务器位移共用FIFO、死亡动画及末帧尸体、骑乘死亡不绘马、死后输入与FAIL限制、53本地身份生命数值同步、同身份50重新入场清理死亡状态。local_life独立用例及forced_motion回归通过，截图local-life-dying/corpse/reentered.png。
 - [ ] 其他本地复活入口、死亡与技能/受击队列统一及实服验收。位移回归退出再次出现2项ObjectDB未释放提示，资源清理问题仍未解决。
+
+
+2026-11-14：完成Godot音频退出清理，脚步及角色声音停止后解除流引用、切回Master并移除专用总线。播放中退出弱引用验收与原forced_motion复现用例通过，未出现ObjectDB泄漏。仅执行相关短用例；全场景测试留到全部功能完成后。证据见client/docs/evidence/audio-cleanup.md。
