@@ -373,6 +373,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary event_states;
     for(const auto& [id,event]:map_events) event_states[int64_t(id)]=event.frame;
     for(const auto& [id,event]:ground_events) if(!event_states.has(int64_t(id))) event_states[int64_t(id)]=event.frame;
+    result["map_event_particle_count"]=int(event_particles.size());
+    result["map_event_mark_count"]=int(event_marks.size());
     result["map_ground_event_count"]=int(ground_events.size());
     result["map_event_frames"]=event_states;
     result["player_level_action"]=!player_level_action.finished();
@@ -713,7 +715,7 @@ void Mir3HudView::_ready() {
     if(weather_archive.open(resource_root/"Data"/"ProgUse")) {
         if(const auto source=weather_archive.frame(500)) snow_texture=texture(source->pixels.rgba,source->width,source->height);
     }
-    for(const int id:{210,220,230}) {
+    for(const int id:{210,220,230,260,520,521,522,523}) {
         if(const auto source=weather_archive.frame(id))
             ground_event_frames.emplace(id,MapActorFrame{
                 texture(source->pixels.rgba,source->width,source->height),
@@ -2859,6 +2861,21 @@ void Mir3HudView::draw_terrain() {
         const auto position=Vector2(event.cell.x*48-camera.x,event.cell.y*32-camera.y)+image->second.offset;
         paint_canvas->draw_texture(image->second.image,position,Color(1,1,1,event.opacity));
     }
+    for(const auto& [cell,event]:event_marks) {
+        const auto image=ground_event_frames.find(event.frame);
+        if(event.age<=0 || image==ground_event_frames.end()) continue;
+        const auto position=Vector2(event.cell.x*48-camera.x,event.cell.y*32-camera.y)+image->second.offset;
+        paint_canvas->draw_texture(image->second.image,position,Color(1,1,1,event.opacity));
+    }
+    for(const auto& particle:event_particles) {
+        const auto image=ground_event_frames.find(particle.frame+520);
+        if(image==ground_event_frames.end()) continue;
+        const float size=particle.shrinking?particle.size*(1.f-float(particle.age)/particle.life):particle.size;
+        if(size<=0) continue;
+        const Vector2 extent(size,size);
+        paint_canvas->draw_texture_rect(image->second.image,
+            Rect2(particle.position-Vector2(camera)-extent*0.5f,extent),false,particle.tint);
+    }
     const auto draw_scene_actor=[&](SceneActor& npc,int interval) {
         const auto& selected=npc.frames[tick/interval%4];
         const auto& frame=selected.image.is_valid()?selected:npc.frames.front();
@@ -3268,6 +3285,8 @@ const Mir3HudView::MapActorFrame* Mir3HudView::level_frame(int index) {
 }
 void Mir3HudView::clear_map_events() {
     ground_events.clear();
+    event_particles.clear();
+    event_marks.clear();
     for(auto& [id,event]:map_events) {
         event.copy->hide();
         event.copy->queue_free();
@@ -3275,9 +3294,68 @@ void Mir3HudView::clear_map_events() {
     map_events.clear();
 }
 
+void Mir3HudView::emit_event_particles(Vector2i cell) {
+    const Vector2 base(cell.x*48+24,cell.y*32);
+    const auto spawn=[&](bool shrinking) {
+        if(event_particles.size()>=2000) return;
+        EventParticle particle;
+        particle.shrinking=shrinking;
+        particle.position=base+Vector2(0,shrinking?16:0);
+        const float vy=float(shrinking?weather.between(-180,-50):weather.between(-120,-80));
+        particle.velocity=Vector2(shrinking?weather.between(-75,75):weather.between(-12,12),vy);
+        particle.life=shrinking?weather.between(800,1200):weather.between(300,600);
+        if(shrinking) {
+            const float fraction=float(weather.random()%1000)*0.001f;
+            particle.size=weather.between(2,10)+fraction;
+            const int red=weather.between(50,100),green=weather.between(100,200),blue=weather.between(200,255);
+            particle.tint=Color(red/255.f,green/255.f,blue/255.f);
+        } else {
+            particle.mass=1000;
+            particle.size=weather.between(10,30);
+            const int red=weather.between(100,150),green=weather.between(150,200),blue=weather.between(255,255);
+            particle.tint=Color(red/255.f,green/255.f,blue/255.f);
+        }
+        particle.interval=weather.between(200,300);
+        event_particles.push_back(particle);
+    };
+    spawn(false);
+    spawn(true);
+    spawn(true);
+}
+
 void Mir3HudView::advance_map_events(double milliseconds) {
     const auto camera=map_camera();
+    const int ms=int(milliseconds);
+    if(ms>0) {
+        const float step=float(std::max(1,ms/17))*0.02f;
+        for(auto& particle:event_particles) {
+            particle.age+=ms;
+            if(particle.age>particle.life) continue;
+            if(particle.shrinking) {
+                particle.mass+=3;
+                particle.frame_clock+=ms;
+                if(particle.frame_clock>particle.interval) {
+                    particle.frame_clock=0;
+                    particle.frame=(particle.frame+1)%4;
+                }
+            }
+            const auto force=particle.shrinking?Vector2(0,200):Vector2(100,1000);
+            particle.acceleration+=(force+particle.velocity*0.05f)/particle.mass;
+            particle.velocity+=particle.acceleration*step;
+            particle.position+=particle.velocity*step;
+        }
+        std::erase_if(event_particles,[](const auto& particle){return particle.age>particle.life;});
+        for(auto& [cell,mark]:event_marks) mark.age+=milliseconds;
+        std::erase_if(event_marks,[](const auto& entry){return entry.second.age>entry.second.lifetime;});
+        queue_redraw();
+    }
     for(auto& [id,event]:map_events) {
+        if(ms>0 && event.secondary && terrain.base_walkable(event.cell.x,event.cell.y)) {
+            if(event.frame>=101 && event.frame<106) emit_event_particles(event.cell);
+            if(event.frame>=107)
+                event_marks.insert_or_assign({event.cell.x,event.cell.y},
+                    GroundEvent{event.cell,260,0,false,3000,180.f/255});
+        }
         event.elapsed+=milliseconds;
         if(event.remaining_ms>=0) {
             event.remaining_ms=std::max(0,event.remaining_ms-int(milliseconds));
@@ -5074,7 +5152,7 @@ void Mir3HudView::_process(double delta) {
     if (chat_input && chat_input->has_focus()) map_pointer_button=0;
     const bool moving=walk_frame>=0;
     advance_map_step(delta);
-    if(!map_events.empty()) advance_map_events(delta*1000);
+    if(!map_events.empty() || !event_particles.empty() || !event_marks.empty()) advance_map_events(delta*1000);
     if(!ground_events.empty()) {
         for(auto& [id,event]:ground_events) event.age+=delta*1000;
         std::erase_if(ground_events,[](const auto& entry) {

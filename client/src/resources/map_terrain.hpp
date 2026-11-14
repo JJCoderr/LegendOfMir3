@@ -67,8 +67,9 @@ public:
             }
         return true;
     }
+    bool base_walkable(int x,int y) const { return contains(x,y) && (tiles[cell_index(x,y)]&1)!=0; }
     bool walkable(int x,int y) const {
-        return contains(x,y) && (tiles[cell_index(x,y)]&1)!=0 && !door_closed(x,y);
+        return base_walkable(x,y) && !door_closed(x,y);
     }
 
     template<class Occupied>

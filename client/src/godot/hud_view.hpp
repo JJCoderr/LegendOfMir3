@@ -518,6 +518,16 @@ private:
         int remaining_ms=-1, tint=255;
     };
     std::map<std::uint32_t,MapEvent> map_events;
+    struct EventParticle {
+        godot::Vector2 position,velocity,acceleration;
+        int age=0,life=0,interval=0,frame_clock=0,frame=0;
+        float size=0,mass=1;
+        godot::Color tint;
+        bool shrinking=false;
+    };
+    std::vector<EventParticle> event_particles;
+    std::map<std::pair<int,int>,GroundEvent> event_marks;
+    void emit_event_particles(godot::Vector2i cell);
     void advance_map_events(double milliseconds);
     void clear_map_events();
     mir3::WilArchive level_archive;

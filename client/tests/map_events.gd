@@ -27,7 +27,7 @@ func run() -> void:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	if not check(active.get_data()!=root.get_texture().get_image().get_region(Rect2i(220,150,310,120)).get_data(),"隐藏改变真实地图像素"): return
-	var layered := show_event(456,9,origin+Vector2i(-2,0))
+	var layered := show_event(456,9,origin)
 	if not check(hud.apply_game_message(layered) and hud.hud_snapshot().map_event_frames[456]==90,"类型9从首帧启动"): return
 	hud.set_process(true)
 	await create_timer(0.95).timeout
@@ -37,9 +37,15 @@ func run() -> void:
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_HIDEEVENT,456,0,0,0))
 		and hud.hud_snapshot().map_event_count==2,"隐藏保留退出动画"): return
 	hud.set_process(true)
-	await create_timer(0.95).timeout
+	await create_timer(0.33).timeout
+	hud.set_process(false)
+	if not check(hud.hud_snapshot().map_event_particle_count>0,"退场段在可走格产生粒子"): return
+	if not await capture("map-event-layered-particles"): return
+	hud.set_process(true)
+	await create_timer(0.62).timeout
 	hud.set_process(false)
 	if not check(not hud.hud_snapshot().map_event_frames.has(456),"退出动画结束释放类型9"): return
+	if not check(hud.hud_snapshot().map_event_mark_count==1,"尾段留下地表印记"): return
 	if not check(hud.apply_game_message(show_event(700,3,origin+Vector2i(-2,1)))
 		and hud.apply_game_message(show_event(701,6,origin+Vector2i(2,1))),"创建原版地表图"): return
 	hud.set_process(true)
@@ -65,7 +71,7 @@ func run() -> void:
 	hud.set_process(false)
 	if not check(hud.hud_snapshot().map_event_frames[123]>tail,"残留动画独立推进"): return
 	if not await capture("map-event-ice-aftermath"): return
-	if not check(hud.change_map("0","比奇省",origin) and hud.hud_snapshot().map_event_count==0,"切图移除剩余效果"): return
+	if not check(hud.change_map("0","比奇省",origin) and hud.hud_snapshot().map_event_count==0 and hud.hud_snapshot().map_event_mark_count==0 and hud.hud_snapshot().map_event_particle_count==0,"切图移除剩余效果"): return
 	hud.queue_free()
 	await create_timer(0.1).timeout
 	print("MAP_EVENT_UI_OK")
