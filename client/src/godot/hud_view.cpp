@@ -2827,7 +2827,8 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
             return npc.second.bounds.has_point(p);
         })) {
         const auto blocked=[this](mir3::MapCell direction) {
-            return !terrain.walkable(player_cell.x+direction[0],player_cell.y+direction[1]);
+            const auto cell=player_cell+Vector2i(direction[0],direction[1]);
+            return !terrain.walkable(cell.x,cell.y) || scene_occupied(cell);
         };
         const mir3::MapCell heading{dx,dy};
         const bool same_cell=target==player_cell;
