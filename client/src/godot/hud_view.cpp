@@ -2326,9 +2326,18 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     const auto& p=header->parameters;
     const bool chicken_death=opcode==mir3::protocol::SM_DEATH || opcode==mir3::protocol::SM_NOWDEATH ||
         opcode==mir3::protocol::SM_SKELETON;
-    if ((chicken_death || opcode==mir3::protocol::SM_TURN) && actor>0 && actor!=local_actor_identity) {
+    if ((chicken_death || opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_DIGUP) &&
+        actor>0 && actor!=local_actor_identity) {
         const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
         const bool chicken_feature=body && body->size()>=8 && (*body)[0]==3 && (*body)[2]==20 && (*body)[3]==0;
+        if (opcode==mir3::protocol::SM_DIGUP && chicken_feature) {
+            const int facing=p[2]&255;
+            if (body->size()!=16 || facing>=8 || !terrain.walkable(p[0],p[1])) return false;
+            if (const auto it=scene_chickens.find(actor);it!=scene_chickens.end() && it->second.death_frame>=0)
+                return true;
+            // 4085A0 sets monster action 0 at the coordinates from packet 20.
+            return place_scene_chicken(actor,Vector2i(p[0],p[1]),facing);
+        }
         if (opcode==mir3::protocol::SM_TURN && chicken_feature) {
             const int facing=p[2]&255;
             if (facing>=8) return false;

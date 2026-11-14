@@ -58,9 +58,11 @@ func run() -> void:
 	feature.resize(16)
 	feature[0]=3
 	feature[2]=20
-	var stand := game_reply(Mir3HudView.SM_TURN,6,cell.x,cell.y,6)
+	var stand := game_reply(Mir3HudView.SM_DIGUP,6,cell.x,cell.y,6)
 	stand.append_array(encode_scene_bytes(feature))
-	if not check(hud.apply_game_message(stand),"原始站立包创建活鸡"): return
+	if not check(not hud.apply_game_message(stand.slice(0,27)),"拒绝正文截断的入场包"): return
+	if not check(hud.apply_game_message(stand) and hud.hud_snapshot().scene_chicken_steps[6]==-1,
+		"怪物20按原坐标入场并站立"): return
 	await settle()
 	var living: Rect2=hud.hud_snapshot().scene_chicken_bounds[6]
 	if not check(living.has_area(),"活鸡在地图上绘制"): return
