@@ -1,6 +1,6 @@
 # 开发交接记录
 
-更新日期：2026-11-14。
+更新日期：2026-11-15。
 
 ## 文档分工与当前工作入口
 
@@ -37,6 +37,15 @@
 魔法模块可优先核对旧工程的`spell_animation.hpp`、`spell_color.hpp`、`spell_light.hpp`、`spell_effect.gdshader`、`spell_request.hpp`、`world_spell_message.hpp`，及`analysis/spell-render.md`、`analysis/spell-integration.md`。这些已有原版地址证据和明确的未覆盖边界，可减少从零恢复。当前主线程的`client/src/magic`及`skill-casting.md`已有在途修改，本次未覆盖或迁移这些代码；后续先对照现状，仅补缺失部分。
 
 本次仅调整交接执行方式，未启动构建/游戏测试，也未提交当前共享工作区。实际加速效果待下一完整模块计时验证。
+
+## 2026-11-15 客户端技能系统交接（C22、C23）
+
+- 验收由 `client/tests/run_tests.py` 的 `skills` 子命令统一调度，共享模型和 18 个 Godot 图形场景。技能图形实现集中在 `client/tests/skills.gd`，在同一进程切换场景并保持背景音乐连续。技能范围与行为口径见 Features，逐技能资源参数见 `docs/Skills.md`。
+- 覆盖技能绑定、施法与超时纠偏、附魔颜色、范围与命中、目标丢失和定点效果。17/30/105 验证召唤实体入场、位置更新与清理，16/22 验证持续地面效果及火墙余烬，8/21/104 验证接收端位移。隐身、护盾、治疗、回生的完整状态结果仍待验收，实服联调另行处理。
+- 从仓库根目录执行 `python client/tests/run_tests.py skills --screenshots --MP4` 跑全集。可用 `skills --skill 17` 选择单技能，或 `skills common --skills 2,17,22` 限定通用施法场景。Windows 可用 `--godot` 指定 Godot console。MP4 使用 FFmpeg，默认写入 `client/build/videos`，截图位于 `client/build/screenshots`。
+- 当前验收画面在比奇，左上角显示进度、测试分组、技能名称、编号与阶段，背景不透明度为 40%。远端施法者在主角右侧三格。提交 `a2fb57f` 将录制画质提高到 H.264 800×600 / 15 fps、CRF 24、码率上限 1600 kbps，并为召唤等结果用例显式设置地面目标后触发 F1。
+- 本轮证据：`client/build/skill-top-left-full.log` 记录 13 个图形场景通过，随后在召唤场景的施法请求断言中断。设置目标后，`skill-followup-{summon,persistent,displacement,melee,sound}.log` 分别记录其余五个场景的定向复测通过。中断录像 `client/build/videos/skills-20261115-001533.mp4` 约 21.76 MiB。
+- 最新代码的连续全集仍待确认。`client/build/skill-top-left-full-retry.log` 在施法场景中途退出，缺少图形集合完成标志，但 Python 打印了全集通过。下次验收须同时核对所有计划场景的完成记录与 `SKILLS_COLLECTION_OK scenarios=18`。入口后续应在缺少完成标志时返回失败，避免把提前退出记为通过。
 
 ## 当前进度与证据入口
 
