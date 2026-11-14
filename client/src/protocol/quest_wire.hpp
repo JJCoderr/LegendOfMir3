@@ -14,9 +14,10 @@ struct QuestRecord {
 };
 
 inline std::optional<std::vector<QuestRecord>> decode_quest_list(
-        const ReceiveHeader& header,std::span<const std::uint8_t> body) {
+        const ReceiveHeader& header,std::span<const std::uint8_t> body,int* parent_id=nullptr) {
     const bool full=header.opcode==protocol::SM_QUEST_LIST;
     const bool children=header.opcode==protocol::SM_QUEST_CHILDREN;
+    const bool child_added=header.opcode==protocol::SM_QUEST_CHILD_ADDED;
     const auto count=header.parameters[full || children?0:2];
     if(body.size()>10922) return {};
     const auto decoded=decode_six_bit(body.data(),body.size());
@@ -37,20 +38,24 @@ inline std::optional<std::vector<QuestRecord>> decode_quest_list(
         const auto result=std::from_chars(field->data(),end,value);
         return result.ec==std::errc{} && result.ptr==end;
     };
+    if(child_added && (!parent_id || !number(take(),*parent_id))) return {};
     std::vector<QuestRecord> list;
     list.reserve(count);
     for(unsigned i=0;i<count;++i) {
         QuestRecord record;
         int completed=0;
         if(!number(take(),record.id)) return {};
-        const auto title=take(!full && !children && i+1==count);
+        const auto title=take(!full && !children && !child_added && i+1==count);
         if(!title || title->empty() || title->size()>511) return {};
         record.title=*title;
-        if(full) {
-            if(!number(take(),record.child_count) || record.child_count<0) return {};
-            const bool has_summary=rest.find('/')!=rest.npos;
-            if(!number(take(i+1==count),completed)) return {};
-            record.completed=completed!=0;
+        if(full || child_added) {
+            bool has_summary=child_added;
+            if(full) {
+                if(!number(take(),record.child_count) || record.child_count<0) return {};
+                has_summary=rest.find('/')!=rest.npos;
+                if(!number(take(i+1==count),completed)) return {};
+                record.completed=completed!=0;
+            }
             if(has_summary) {
                 const auto summary=take(i+1==count);
                 if(!summary || summary->size()>1023) return {};

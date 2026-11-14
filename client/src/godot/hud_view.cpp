@@ -3170,6 +3170,35 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    if(header->opcode==mir3::protocol::SM_QUEST_CHILD_ADDED) {
+        constexpr auto offset=mir3::ReceiveHeader::encoded_size;
+        int parent_id=0;
+        auto records=mir3::decode_quest_list(*header,{encoded.ptr()+offset,std::size_t(encoded.size()-offset)},&parent_id);
+        if(!records || records->empty()) return false;
+        post_chat(String::utf8(message(1432).c_str()),mir3::chat_palette(2),mir3::chat_palette(3));
+        if(!quest.list_initialized) {
+            send_client_packet(mir3::protocol::CM_QUERYQUESTLIST,0,String());
+            return true;
+        }
+        const auto parent=std::ranges::find_if(quest.entries,[&](const auto& entry) {
+            return entry.wire && entry.wire->id==parent_id;
+        });
+        if(parent==quest.entries.end()) return true;
+        const auto duplicate_parent=std::ranges::find_if(quest.entries,[&](const auto& entry) {
+            return entry.wire && entry.wire->id==header->parameters[0];
+        });
+        for(auto& record:*records) {
+            if(duplicate_parent!=quest.entries.end() &&
+                    std::ranges::find(duplicate_parent->children,record.id,&mir3::QuestRecord::id)!=duplicate_parent->children.end()) break;
+            record.title=mir3::ansi_to_utf8(record.title);
+            record.summary=mir3::ansi_to_utf8(record.summary);
+            record.completed=parent->completed;
+            parent->children.push_back(std::move(record));
+            parent->children_loaded=true;
+        }
+        queue_redraw();
+        return true;
+    }
     if(header->opcode==mir3::protocol::SM_QUEST_CHILDREN || header->opcode==mir3::protocol::SM_QUEST_CHILD_TEXT) {
         constexpr auto offset=mir3::ReceiveHeader::encoded_size;
         const std::span<const std::uint8_t> body{encoded.ptr()+offset,std::size_t(encoded.size()-offset)};

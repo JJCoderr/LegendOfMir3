@@ -1,4 +1,4 @@
-# 测试内容：父任务展开、子列表与描述原包、迟到正文归属、空正文重试及缓存复用。
+# 测试内容：父任务展开、子列表与描述原包、迟到正文归属、空正文重试及缓存复用、增量及内联描述。
 extends "quest_wire.gd"
 
 func press_quest(point: Vector2) -> void:
@@ -40,6 +40,18 @@ func run() -> void:
 	if not await capture("quest-wire-child-description"): return
 	press_quest(Vector2(90,128))
 	if not check(hud.hud_snapshot().quest_description=="Inspect the north gate." and packets.size()==4,"点击其他子任务显示已缓存正文"): return
+	var increment := quest_reply(Mir3HudView.SM_QUEST_CHILD_ADDED,
+		"30/22/Report to the captain/Return to the city/23/Collect supplies//".to_ascii_buffer(),30,2)
+	if not check(hud.apply_game_message(increment) and hud.hud_snapshot().quest_detail_rows==4,"追加子任务及内联正文"): return
+	if not check(hud.hud_snapshot().quest_description=="Inspect the north gate.","增量保留选中正文"): return
+	press_quest(Vector2(90,143))
+	if not check(hud.hud_snapshot().quest_description=="Return to the city" and packets.size()==4,"内联正文无需再查询"): return
+	var duplicate := quest_reply(Mir3HudView.SM_QUEST_CHILD_ADDED,
+		"30/22/Repeat//24/Unreachable//".to_ascii_buffer(),30,2)
+	if not check(hud.apply_game_message(duplicate) and hud.hud_snapshot().quest_detail_rows==4,"首个重复编号停止追加"): return
+	var truncated := quest_reply(Mir3HudView.SM_QUEST_CHILD_ADDED,"30/25/Incomplete".to_ascii_buffer(),30,1)
+	if not check(not hud.apply_game_message(truncated) and hud.hud_snapshot().quest_detail_rows==4,"截断增量保持已有子任务"): return
+	if not await capture("quest-wire-child-increment"): return
 	hud.queue_free()
 	await create_timer(0.1).timeout
 	print("QUEST_DETAILS_UI_OK")
