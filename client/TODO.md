@@ -337,3 +337,9 @@
 
 - [x] 801/807/808本地及远端状态DWORD、int16速度FIFO；bit1血条校验；1100低字节即时灯光和1101即时血条校验刷新，纠正807旧灯光误判。独立actor_status、普攻门禁回归及scene-light模型通过；截图actor-status-bar-restored/local-light.png。证据见client/docs/evidence/actor-status.md。
 - [ ] 其余状态位消费者、外观包生产者、实服和逐像素对照；G06仍未全部完成。
+
+
+## 人物状态颜色
+
+- [x] 人物身体/头发/武器/坐骑状态颜色、七种优先级、8/32半透明、原WIL区域染色；本地入场/位移/死亡及远端普通外观状态同步，受击保留已有状态。human_status_visual像素与消息断言、actor_status回归通过，截图human-status-green/translucent/corpse.png。证据见client/docs/evidence/human-status-visual.md。
+- [ ] 其他状态位玩法限制、人物阴影、特殊装备光效及原版逐像素对照。

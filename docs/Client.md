@@ -11,3 +11,5 @@ Godot资源生命周期：[音频退出清理](../client/docs/evidence/audio-cle
 采集动作：[12/637回包与本地/远端差异](../client/docs/evidence/butch-reply.md)。
 
 角色状态消息：[801/807/808排队更新与1100/1101即时入口](../client/docs/evidence/actor-status.md)。
+
+人物状态表现：[颜色优先级、图层混合与外观状态同步](../client/docs/evidence/human-status-visual.md)。

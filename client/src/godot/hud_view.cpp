@@ -175,7 +175,7 @@ int monster_feature_shape(std::string_view feature) {
     return std::uint8_t(feature[2])|(int(std::uint8_t(feature[3]))<<8);
 }
 
-int monster_status_color(std::uint32_t flags) {
+int actor_status_color(std::uint32_t flags) {
     // 405C40 resolves overlapping status masks in this priority order.
     if (flags&0x00020000u) return 1;
     if (flags&0x80000000u) return 2016;
@@ -393,14 +393,14 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary chicken_bounds;
     for (const auto& [actor,chicken]:scene_chickens) chicken_bounds[actor]=chicken.bounds;
     result["scene_chicken_bounds"]=chicken_bounds;
-    Dictionary chicken_cells, chicken_steps, chicken_walk_poses, chicken_struck, chicken_pixels, monster_shapes, monster_burrow_frames, monster_attack_frames, monster_attack_actions, monster_death_frames, monster_body_dyes, monster_status_colors;
+    Dictionary chicken_cells, chicken_steps, chicken_walk_poses, chicken_struck, chicken_pixels, monster_shapes, monster_burrow_frames, monster_attack_frames, monster_attack_actions, monster_death_frames, monster_body_dyes, actor_status_colors;
     for (const auto& [actor,chicken]:scene_chickens) {
         chicken_cells[actor]=chicken.cell;
         chicken_steps[actor]=chicken.walk_frame;
         chicken_walk_poses[actor]=chicken.walk_pose();
         monster_shapes[actor]=chicken.shape;
         monster_body_dyes[actor]=monster_body_dye(chicken.shape);
-        monster_status_colors[actor]=monster_status_color(chicken.status_flags);
+        actor_status_colors[actor]=actor_status_color(chicken.status_flags);
         monster_burrow_frames[actor]=chicken.burrow_frame;
         monster_attack_frames[actor]=chicken.attack_frame;
         monster_attack_actions[actor]=chicken.attack_frame>=0?chicken.attack_action:0;
@@ -413,7 +413,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["scene_monster_walk_poses"]=chicken_walk_poses;
     result["scene_monster_shapes"]=monster_shapes;
     result["scene_monster_body_dyes"]=monster_body_dyes;
-    result["scene_monster_status_colors"]=monster_status_colors;
+    result["scene_monster_status_colors"]=actor_status_colors;
     result["scene_monster_burrow_frames"]=monster_burrow_frames;
     result["scene_monster_attack_frames"]=monster_attack_frames;
     result["scene_monster_attack_actions"]=monster_attack_actions;
@@ -576,6 +576,10 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["character_hand_weight"]=Vector2i(model.hand_weight[0],model.hand_weight[1]);
     result["melee_speed"]=melee_cooldown.speed;
     result["player_status_flags"]=int64_t(player_status_flags);
+    result["player_status_color"]=actor_status_color(player_status_flags);
+    Dictionary human_colors;
+    for (const auto& [id,human]:scene_humans) human_colors[id]=actor_status_color(human.action_flags);
+    result["scene_human_status_colors"]=human_colors;
     Dictionary human_status;
     for (const auto& [id,human]:scene_humans) human_status[id]=Vector2i(human.action_flags,human.attack_speed);
     result["scene_human_status"]=human_status;
@@ -2723,7 +2727,7 @@ const Mir3HudView::MapActorFrame* Mir3HudView::horse_frame(int shape,int motion_
     if (const auto found=horse_frames.find(index);found!=horse_frames.end()) return &found->second;
     const auto source=map_horse.frame(index);
     if (!source) return nullptr;
-    MapActorFrame frame{texture(source->pixels.rgba,source->width,source->height),Vector2(source->offset_x,source->offset_y)};
+    MapActorFrame frame{texture(source->pixels.rgba,source->width,source->height),Vector2(source->offset_x,source->offset_y),source->pixels.regions};
     return &horse_frames.emplace(index,std::move(frame)).first->second;
 }
 
@@ -2797,11 +2801,13 @@ Ref<ImageTexture> Mir3HudView::dyed_frame(const MapActorFrame& frame,int clothin
     return dyed_frames.emplace(key,image).first->second;
 }
 
-void Mir3HudView::draw_human_layers(const MapActorFrame& body,Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape,float opacity) {
+void Mir3HudView::draw_human_layers(const MapActorFrame& body,Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape,float opacity,int status_color) {
     const auto* hair_frame=attachment_frame(type,hair,false,motion_frame);
     const auto* weapon_frame=motion_frame>=2000?nullptr:attachment_frame(type,weapon,true,motion_frame);
     const auto draw=[&](const MapActorFrame* frame,bool tint=false) {
-        if (frame && frame->image.is_valid()) draw_terrain_texture(tint?dyed_frame(*frame,clothing_dye,hair_dye):frame->image,anchor+frame->offset,Color(1,1,1,opacity));
+        if (frame && frame->image.is_valid())
+            draw_terrain_texture(dyed_frame(*frame,tint?clothing_dye:65535,tint?hair_dye:65535,status_color),
+                anchor+frame->offset,Color(1,1,1,status_color==1?1.f:opacity),status_color==1?8:0);
     };
     // LegendOfMir3_Src Actor.cpp: weapon behind, body, hair, weapon in front.
     const bool behind=motion_frame>=0 && motion_frame<weapon_order.size() && weapon_order[motion_frame]!=0;
@@ -3612,7 +3618,11 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     }
     if (accepted) {
         human.catching_up=catch_up;
-        if (next->appearance || next->flags) human.action_flags=next->flags;
+        // 412500只更新基础外观；受击正文中的状态位置不能覆盖已有状态。
+        if (next->opcode!=mir3::protocol::SM_HUMAN_STRUCK && (next->appearance || next->flags)) {
+            human.action_flags=next->flags;
+            if (next->appearance) update_actor_bar_status(actor,(next->flags&2)!=0);
+        }
         human.harvest=next->harvest;
     }
     return true; // consume at most one record per update, including rejected state
@@ -3990,6 +4000,8 @@ void Mir3HudView::process_local_actor_message() {
     set_player_mount(shape);mount.shape=std::uint8_t(shape);
     model.profession=appearance.profession;model.appearance=appearance.type;
     player_light_attribute=message.light;
+    player_status_flags=appearance.flags;
+    update_actor_bar_status(0,(player_status_flags&2)!=0);
     if (player_life.dead && !death) {
         const auto origin=message.motion.origin();
         player_cell=step_origin=step_destination=Vector2i(origin[0],origin[1]);
@@ -4202,7 +4214,7 @@ void Mir3HudView::draw_terrain() {
         for (auto& [actor,chicken]:scene_chickens) {
             if (start_y+row!=chicken.cell.y || chicken.buried) continue;
             const auto dye=monster_body_dye(chicken.shape);
-            const int status_color=monster_status_color(chicken.status_flags);
+            const int status_color=actor_status_color(chicken.status_flags);
             const auto draw_monster=[&](const MapActorFrame& body,Vector2i offset,const MapActorFrame* shadow) {
                 draw_scene_actor(chicken,180,&body,offset,dye,status_color,shadow);
                 // 40ECB0 centers the pointer bounds within the current sprite.
@@ -4255,7 +4267,7 @@ void Mir3HudView::draw_terrain() {
                 const auto position=Vector2(human.cell.x*48-camera.x,human.cell.y*32-camera.y)+frame.offset;
                 human.anchor=position-frame.offset;
                 human.bounds=Rect2(position,frame.image->get_size());
-                draw_human_layers(frame,position-frame.offset,human.type,human.hair,human.weapon,motion,human.clothing_dye,human.hair_dye,human.life.dead?0:human.mount_shape,human.life.opacity());
+                draw_human_layers(frame,position-frame.offset,human.type,human.hair,human.weapon,motion,human.clothing_dye,human.hair_dye,human.life.dead?0:human.mount_shape,human.life.opacity(),actor_status_color(human.action_flags));
                 animated_map_objects=true;
                 continue;
             }
@@ -4275,7 +4287,7 @@ void Mir3HudView::draw_terrain() {
             human.anchor=position-frame.offset;
             human.bounds=Rect2(position,frame.image->get_size());
             draw_human_layers(frame,position-frame.offset,human.type,human.hair,human.weapon,
-                (human.bump?1840:human.mount_shape?(human.step_distance>1?2480:2400):(human.step_distance>1?1760:1680))+human.facing*10+human.movement_frame,human.clothing_dye,human.hair_dye,human.bump?0:human.mount_shape,human.life.opacity());
+                (human.bump?1840:human.mount_shape?(human.step_distance>1?2480:2400):(human.step_distance>1?1760:1680))+human.facing*10+human.movement_frame,human.clothing_dye,human.hair_dye,human.bump?0:human.mount_shape,human.life.opacity(),actor_status_color(human.action_flags));
             animated_map_objects=true;
         }
         const auto pixel=player_pixel();
@@ -4297,7 +4309,7 @@ void Mir3HudView::draw_terrain() {
                     action_pose?(forced_pose>=0?forced_pose:mir3::HumanActions::frame(player_action.action(),player_facing,player_action.frame())):
                     (player_mount?(walk_frame>=0?(running?2480:2400):2320):(walk_frame>=0?(running?1760:1680):0))+
                     player_facing*10+(walk_frame>=0?walk_frame:player_idle.frame()),player_clothing_dye,player_hair_dye,
-                    player_life.dead || (action_pose && !(forced_motion && forced_motion->walking()))?0:player_mount);
+                    player_life.dead || (action_pose && !(forced_motion && forced_motion->walking()))?0:player_mount,1.f,actor_status_color(player_status_flags));
                 animated_map_objects=true;
             }
         }
@@ -4619,6 +4631,8 @@ bool Mir3HudView::apply_login_actor() {
     player_mount=0;set_player_body(appearance.type,appearance.clothing);
     set_player_mount(mount);this->mount.shape=std::uint8_t(mount);set_player_attachments(appearance.hair,appearance.weapon);
     player_cell=Vector2i(actor.x,actor.y);player_facing=actor.facing;player_light_attribute=actor.light;
+    player_status_flags=appearance.flags;
+    update_actor_bar_status(0,(player_status_flags&2)!=0);
     player_idle.reset();map_route.clear();walk_frame=-1;movement_ms=0;
     model.profession=appearance.profession;model.appearance=appearance.type;
     set_character_identity(String::utf8(mir3::ansi_to_utf8(game_entry.role).c_str()),String(),String(),String());

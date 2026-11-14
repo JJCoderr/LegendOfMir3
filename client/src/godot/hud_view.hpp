@@ -455,7 +455,7 @@ private:
     std::map<std::string,mir3::WilArchive> attachment_archives;
     std::map<std::pair<std::string,int>,MapActorFrame> attachment_frames;
     const MapActorFrame* attachment_frame(int type,int shape,bool weapon,int motion_frame);
-    void draw_human_layers(const MapActorFrame& body,godot::Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape=0,float opacity=1.f);
+    void draw_human_layers(const MapActorFrame& body,godot::Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape=0,float opacity=1.f,int status_color=65535);
     std::array<MapActorFrame,80> map_human_frames, map_walk_frames, map_run_frames;
     std::map<int,mir3::SceneHealth> scene_health;
     std::map<int,godot::Rect2> scene_health_bounds;
