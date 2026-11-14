@@ -1,6 +1,7 @@
 #pragma once
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"
+#include "hud/human_actions.hpp"
 #include "hud/scene_name.hpp"
 #include "hud/scene_health.hpp"
 #include "hud/speech_bubble.hpp"
@@ -93,6 +94,7 @@ public:
     bool set_player_attachments(int hair,int weapon);
     bool set_scene_human_attachments(int actor,int hair,int weapon);
     bool set_player_body(int type,int clothing);
+    bool apply_scene_human_action(int actor,int opcode,int facing);
     bool apply_scene_human_stand(int actor,godot::Vector2i cell,int facing);
     bool apply_scene_human_step(int actor,int opcode,godot::Vector2i destination,int facing);
     bool remove_scene_actor(int actor);
@@ -303,6 +305,8 @@ private:
     std::map<std::pair<int,int>,HumanBody> human_bodies;
     std::map<std::pair<int,int>,HumanBody> riding_bodies;
     const HumanBody* human_body(int type,int clothing,bool riding=false);
+    std::map<std::tuple<int,int,int>,MapActorFrame> human_action_frames;
+    const MapActorFrame* human_action_frame(int type,int clothing,int frame);
     int player_mount=0;
     int player_type=0, player_clothing=0, player_hair=0, player_weapon=0;
     int player_clothing_dye=65535, player_hair_dye=65535;
@@ -338,6 +342,7 @@ private:
         godot::String name;
         int facing=0, movement_frame=-1, step_distance=0;
         mir3::HumanIdleClock idle;
+        mir3::HumanActionClock action;
         double movement_ms=0;
         godot::Vector2i step_origin, step_destination;
     };

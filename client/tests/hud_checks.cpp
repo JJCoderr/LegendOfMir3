@@ -1,5 +1,6 @@
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
+#include "hud/human_actions.hpp"
 #include "hud/scene_name.hpp"
 #include "hud/scene_health.hpp"
 #include "chat/chat_reception.hpp"
@@ -16,6 +17,23 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--scene-actions") {
+            mir3::HumanActionClock clock;
+            for (int action: {9,10,13,15,16,17,18,32}) {
+                clock.start(action);
+                const auto info=mir3::HumanActions::table[action];
+                clock.advance(info.interval_ms);
+                check(clock.frame()==0,"strict interval boundary");
+                clock.advance(1);check(clock.frame()==1,"first increment");
+                clock.advance(10000);check(clock.frame()==2,"one increment per update");
+                for (int i=2;i<info.count;++i) clock.advance(info.interval_ms+1);
+                check(clock.finished(),"exclusive end completes finite action");
+            }
+            check(mir3::HumanActions::weapon_attack(2)==13 && mir3::HumanActions::weapon_attack(4)==10 && mir3::HumanActions::weapon_attack(1)==9,"weapon groups");
+            check(mir3::HumanActions::frame(32,7,2)==2632,"mounted hit frame bank");
+            std::cout << "SCENE_ACTIONS_MODEL_OK\n";
+            return 0;
+        }
         if (std::filesystem::path(argv[1])=="--scene-damage") {
             mir3::DamageNumbers numbers;
             numbers.changed(0,100);check(numbers.cursor==0,"initial HP does not create healing digits");

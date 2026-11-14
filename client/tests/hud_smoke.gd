@@ -124,6 +124,28 @@ func run_local_mount() -> void:
 	print("LOCAL_MOUNT_OK")
 	quit()
 
+func run_scene_actions() -> void:
+	if not check(hud.set_scene_human_body(5, 0, 1) and hud.set_scene_human_attachments(5, 1, 2), "load action appearance"): return
+	for pair in [[2, 13], [4, 10], [1, 9]]:
+		hud.set_scene_human_attachments(5, 1, pair[0])
+		if not check(hud.apply_scene_human_action(5, 14, 4) and hud.hud_snapshot().scene_human_actions[5].x == pair[1], "weapon attack group"): return
+		await create_timer(0.12).timeout
+		if pair[0] == 1:
+			if not await capture("bichon-human-attack"): return
+		await create_timer(0.65).timeout
+		if not check(hud.hud_snapshot().scene_human_actions[5].x == -1, "attack restores standing"): return
+	for pair in [[1306,17], [1307,16], [1308,18], [1319,9], [1309,15]]:
+		if not check(hud.apply_scene_human_action(5, pair[0], 2) and hud.hud_snapshot().scene_human_actions[5].x == pair[1], "decoded action mapping"): return
+	if not check(not hud.apply_scene_human_action(9999,14,0) and not hud.apply_scene_human_action(5,999,0) and not hud.apply_scene_human_action(5,14,8), "reject invalid actions"): return
+	hud.set_scene_human_mount(5, 1)
+	if not check(hud.apply_scene_human_action(5,1309,7) and hud.hud_snapshot().scene_human_actions[5].x == 32 and hud.hud_snapshot().scene_human_facings[5] == 2, "mounted hit retains facing"): return
+	await create_timer(0.11).timeout
+	if not await capture("bichon-rider-hit"): return
+	await create_timer(0.35).timeout
+	if not check(hud.hud_snapshot().scene_human_actions[5].x == -1 and hud.hud_snapshot().scene_human_mounts[5] == 1, "hit restores mounted standing"): return
+	print("PASS scene human actions")
+	quit()
+
 func run_scene_damage() -> void:
 	if not check(hud.apply_scene_health(0, 53, 200, 0, 200) and hud.apply_scene_health(5, 53, 200, 0, 200), "initialize actor health without digits"): return
 	if not check(hud.apply_scene_health(0, 53, 50, 0, 200)
@@ -279,6 +301,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--scene-actions"):
+		await run_scene_actions()
+		return
 	if OS.get_cmdline_user_args().has("--scene-damage"):
 		await run_scene_damage()
 		return
@@ -420,7 +445,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()
