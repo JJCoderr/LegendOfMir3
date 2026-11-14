@@ -588,14 +588,15 @@ private:
     mir3::MeleeCooldown melee_cooldown;
     mir3::LocalActionClock local_action_clock;
     mir3::ActionPrediction action_prediction;
-    struct ForcedMotionMessage {
+    mir3::HumanLife player_life;
+    struct LocalActorMessage {
         mir3::ForcedMotion motion;
         mir3::HumanAppearance appearance;
         unsigned light;
     };
-    std::deque<ForcedMotionMessage> forced_motions;
+    std::deque<LocalActorMessage> local_actor_messages;
     std::optional<mir3::ForcedMotion> forced_motion;
-    void begin_forced_motion();
+    void process_local_actor_message();
     struct PendingLocalAction {
         bool movement;
         godot::Vector2i origin,destination;

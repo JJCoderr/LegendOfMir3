@@ -577,8 +577,10 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["melee_speed"]=melee_cooldown.speed;
     result["local_action_pending"]=pending_local_action.has_value();
     result["action_reply_pending"]=action_prediction.waiting;
+    result["player_dead"]=player_life.dead;
+    result["player_dying"]=player_life.dying;
     result["forced_motion_opcode"]=forced_motion?forced_motion->opcode:0;
-    result["forced_motion_queue"]=int(forced_motions.size());
+    result["forced_motion_queue"]=int(local_actor_messages.size());
     result["local_action_wait_ms"]=pending_local_action?pending_local_action->wait_ms:0;
     result["melee_interval_ms"]=mir3::MeleeCooldown::interval(model.level,melee_cooldown.speed,model.hand_weight[0],model.hand_weight[1]);
     result["character_bonuses"]=Vector2i(model.status_bonus_percent[0],model.status_bonus_percent[1]);
@@ -1197,7 +1199,7 @@ Vector2i Mir3HudView::player_pixel() const {
 }
 
 void Mir3HudView::start_map_step(Vector2i destination) {
-    if (pending_local_action || action_prediction.waiting || !forced_motions.empty()) return;
+    if (player_life.dead || pending_local_action || action_prediction.waiting || !local_actor_messages.empty()) return;
     const auto delta=destination-player_cell;
     const mir3::MapCell direction{(delta.x>0)-(delta.x<0),(delta.y>0)-(delta.y<0)};
     const int facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),direction)-mir3::map_directions.begin());
@@ -1208,7 +1210,7 @@ void Mir3HudView::start_map_step(Vector2i destination) {
 }
 
 void Mir3HudView::request_melee_action(int facing,int opcode) {
-    if (pending_local_action || action_prediction.waiting) return;
+    if (player_life.dead || pending_local_action || action_prediction.waiting) return;
     const auto now=std::uint32_t(GetTickCount());
     if (!melee_cooldown.accept(now,model.level,model.hand_weight[0],model.hand_weight[1])) return;
     map_route.clear();
@@ -1256,7 +1258,7 @@ void Mir3HudView::advance_local_action() {
 }
 
 bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
-    if (!terrain_ready || pending_local_action || action_prediction.waiting || !forced_motions.empty()) return false;
+    if (player_life.dead || !terrain_ready || pending_local_action || action_prediction.waiting || !local_actor_messages.empty()) return false;
     const auto start=walk_frame>=0?step_destination:player_cell;
     map_route=terrain.route({start.x,start.y},{destination.x,destination.y},
         [this](mir3::MapCell cell) { return scene_occupied(Vector2i(cell[0],cell[1])); });
@@ -2910,7 +2912,8 @@ bool Mir3HudView::set_local_actor_identity(int actor) {
     if (local_actor_identity!=actor) {
         player_light_attribute=0;melee_cooldown={};local_action_clock={};pending_local_action.reset();
         action_prediction={};
-        forced_motions.clear();forced_motion.reset();
+        local_actor_messages.clear();forced_motion.reset();
+        player_life={};
     }
     local_actor_identity=actor;
     queue_redraw();
@@ -2925,18 +2928,19 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_REVIVE_REFRESH && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS && header->opcode!=mir3::protocol::SM_DAYCHANGING && header->opcode!=mir3::protocol::SM_SHOWEVENT && header->opcode!=mir3::protocol::SM_HIDEEVENT)) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
-    if (mir3::ForcedMotion::accepts(opcode) && local_actor_identity &&
+    const bool local_death=opcode==mir3::protocol::SM_DEATH || opcode==mir3::protocol::SM_NOWDEATH;
+    if ((mir3::ForcedMotion::accepts(opcode) || local_death) && local_actor_identity &&
             (actor==local_actor_identity || opcode==mir3::protocol::SM_REVIVE_REFRESH)) {
-        if (encoded.size()!=45 || (p[2]&255)>=8 || forced_motions.size()>=64) return false;
+        if ((encoded.size()!=45 && !(local_death && encoded.size()==38)) || (p[2]&255)>=8 || local_actor_messages.size()>=64) return false;
         const auto base=mir3::decode_six_bit(encoded.ptr()+16,22);
-        const auto extra=mir3::decode_six_bit(encoded.ptr()+38,7);
+        const auto extra=encoded.size()==45?mir3::decode_six_bit(encoded.ptr()+38,7):std::optional<std::string>(std::string(5,0));
         if (!base || base->size()!=16 || !extra || extra->size()!=5) return false;
         const auto body=*base+*extra;
         const auto appearance=mir3::HumanAppearance::parse({reinterpret_cast<const std::uint8_t*>(body.data()),body.size()},false);
         const mir3::ForcedMotion motion{opcode,p[2]&255,{p[0],p[1]}};
         const auto origin=motion.origin();
-        if (!appearance || !terrain.contains(p[0],p[1]) || !terrain.contains(origin[0],origin[1])) return false;
-        forced_motions.push_back({motion,*appearance,unsigned(p[2]>>8)});
+        if (!appearance || !terrain.contains(p[0],p[1]) || (!local_death && !terrain.contains(origin[0],origin[1]))) return false;
+        local_actor_messages.push_back({motion,*appearance,unsigned(p[2]>>8)});
         return true;
     }
     // 40D8C0虚表+116 -> 411BA0，参数3是有符号攻击速度。
@@ -3248,7 +3252,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     }
     if (opcode==mir3::protocol::SM_SITDOWN && local_actor_identity && actor==local_actor_identity) {
         if (encoded.size()!=16 || (p[2]&255)>=8 || !terrain.walkable(p[0],p[1])) return false;
-        if (player_mount || model.hp==0) return true;
+        if (player_life.dead || player_mount || model.hp==0) return true;
         pending_local_action.reset();
         player_cell=Vector2i(p[0],p[1]);
         player_facing=p[2]&255;
@@ -3260,6 +3264,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     }
     if (opcode==mir3::protocol::SM_HIT2 && local_actor_identity && actor==local_actor_identity) {
         if (encoded.size()>17 || (p[2]&255)>=8) return false;
+        if (player_life.dead) return true;
         if (player_action.finished() || player_action.action()!=mir3::HumanActions::weapon_attack(player_weapon) ||
             player_facing!=(p[2]&255) || player_action.frame()>=3) {
             walk_frame=-1;movement_ms=0;map_route.clear();
@@ -3445,7 +3450,8 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         post_chat(text,mir3::chat_palette(opcode==mir3::protocol::SM_GUILDMESSAGE?4:p[0]&255),mir3::chat_palette(opcode==mir3::protocol::SM_GUILDMESSAGE?0:p[1]&255));
         return true;
     }
-    if (opcode==mir3::protocol::SM_HEALTHSPELLCHANGED || opcode==mir3::protocol::SM_HEALTH_PERCENT) return size==0 && apply_scene_health(actor,opcode,p[0],p[1],p[2]);
+    if (opcode==mir3::protocol::SM_HEALTHSPELLCHANGED || opcode==mir3::protocol::SM_HEALTH_PERCENT)
+        return size==0 && apply_scene_health(local_actor_identity && actor==local_actor_identity?0:actor,opcode,p[0],p[1],p[2]);
     const auto found=scene_humans.find(actor);
     if (found==scene_humans.end() || !mir3::SceneHumanMessage::accepts(opcode)) return false;
     mir3::SceneHumanMessage message{opcode,p[0],p[1],opcode==mir3::protocol::SM_HUMAN_STRUCK || opcode==mir3::protocol::SM_STRUCK?0:p[2]&255};
@@ -3753,7 +3759,7 @@ bool Mir3HudView::merchant_pointer(Vector2 pointer) {
 }
 
 void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
-    if (pending_local_action || action_prediction.waiting || !forced_motions.empty() || map_input_delay.active() || walk_frame>=0 || !spell_pointer_available()) return;
+    if (player_life.dead || pending_local_action || action_prediction.waiting || !local_actor_messages.empty() || map_input_delay.active() || walk_frame>=0 || !spell_pointer_available()) return;
     if (!player_action.finished() && player_action.action()!=7) return;
     const auto p=inventory_cursor;
     const auto camera=map_camera();
@@ -3895,13 +3901,14 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
     start_map_step(destination);
 }
 
-void Mir3HudView::begin_forced_motion() {
-    if (forced_motions.empty() || pending_local_action || walk_frame>=0 ||
-        (!player_action.finished() && player_action.action()!=7)) return;
-    const auto message=forced_motions.front();
-    forced_motions.pop_front();
+void Mir3HudView::process_local_actor_message() {
+    if (local_actor_messages.empty() || pending_local_action || walk_frame>=0 ||
+        (!player_action.finished() && player_action.action()!=7 && !(player_life.dead && !player_life.dying))) return;
+    const auto message=local_actor_messages.front();
+    local_actor_messages.pop_front();
+    const bool death=message.motion.opcode==mir3::protocol::SM_DEATH || message.motion.opcode==mir3::protocol::SM_NOWDEATH;
     const auto& appearance=message.appearance;
-    const bool keep_mount=message.motion.opcode==mir3::protocol::SM_RUSH || message.motion.opcode==mir3::protocol::SM_BUMP;
+    const bool keep_mount=death || message.motion.opcode==mir3::protocol::SM_RUSH || message.motion.opcode==mir3::protocol::SM_BUMP;
     const int shape=keep_mount?player_mount:appearance.mount.value_or(0);
     if (!human_body(appearance.type,appearance.clothing) || !human_body(appearance.type,appearance.clothing,shape!=0) ||
         (shape && !horse_frame(shape,2320))) return;
@@ -3910,6 +3917,26 @@ void Mir3HudView::begin_forced_motion() {
     set_player_mount(shape);mount.shape=std::uint8_t(shape);
     model.profession=appearance.profession;model.appearance=appearance.type;
     player_light_attribute=message.light;
+    if (player_life.dead && !death) {
+        const auto origin=message.motion.origin();
+        player_cell=step_origin=step_destination=Vector2i(origin[0],origin[1]);
+        player_facing=message.motion.facing;walk_frame=-1;movement_ms=0;
+        pending_local_action.reset();forced_motion.reset();map_route.clear();player_action={};
+        if (message.motion.walking()) action_prediction.confirm();
+        set_minimap_position(player_cell.x,player_cell.y);
+        queue_redraw();return;
+    }
+    if (death) {
+        pending_local_action.reset();forced_motion.reset();map_route.clear();
+        walk_frame=-1;movement_ms=0;player_harvest_impact=false;
+        player_cell=step_origin=step_destination=Vector2i(message.motion.destination[0],message.motion.destination[1]);
+        player_facing=message.motion.facing;
+        if (player_life.die(message.motion.opcode==mir3::protocol::SM_NOWDEATH)) player_action.start(19);
+        else {player_action={};model.hp=0;}
+        if (scene_health.contains(0)) scene_health.at(0).empty_bar=true;
+        set_minimap_position(player_cell.x,player_cell.y);
+        queue_redraw();return;
+    }
     forced_motion=message.motion;
     const auto origin=forced_motion->origin();
     player_cell=step_origin=Vector2i(origin[0],origin[1]);
@@ -3924,7 +3951,7 @@ void Mir3HudView::begin_forced_motion() {
 
 void Mir3HudView::advance_map_step(double delta) {
     if (pending_local_action) return;
-    if (walk_frame<0 && !map_route.empty() && forced_motions.empty() && player_action.finished() && !action_prediction.waiting) {
+    if (!player_life.dead && walk_frame<0 && !map_route.empty() && local_actor_messages.empty() && player_action.finished() && !action_prediction.waiting) {
         const auto [x,y]=map_route.front();
         map_route.pop_front();
         if(!terrain.walkable(x,y)) {map_route.clear();return;}
@@ -4181,10 +4208,11 @@ void Mir3HudView::draw_terrain() {
         const auto pixel=player_pixel();
         if (start_y+row==int(std::round(pixel.y/32.0))) {
             const auto step=step_destination-step_origin;
-            const auto* body=human_body(player_type,player_clothing,player_mount!=0);
+            const auto* body=human_body(player_type,player_clothing,player_mount!=0 && !player_life.dead);
             const bool running=std::max(std::abs(step.x),std::abs(step.y))>1;
             const auto& movement=running?body->running:body->walking;
-            const int forced_pose=forced_motion && walk_frame>=0?forced_motion->pose(walk_frame,player_mount!=0):-1;
+            const int forced_pose=player_life.dead?mir3::HumanActions::frame(19,player_facing,player_life.dying?player_action.frame():9):
+                forced_motion && walk_frame>=0?forced_motion->pose(walk_frame,player_mount!=0):-1;
             const auto* action_pose=forced_pose>=0?human_action_frame(player_type,player_clothing,forced_pose):
                 player_action.finished()?nullptr:human_action_frame(player_type,player_clothing,
                     mir3::HumanActions::frame(player_action.action(),player_facing,player_action.frame()));
@@ -4196,7 +4224,7 @@ void Mir3HudView::draw_terrain() {
                     action_pose?(forced_pose>=0?forced_pose:mir3::HumanActions::frame(player_action.action(),player_facing,player_action.frame())):
                     (player_mount?(walk_frame>=0?(running?2480:2400):2320):(walk_frame>=0?(running?1760:1680):0))+
                     player_facing*10+(walk_frame>=0?walk_frame:player_idle.frame()),player_clothing_dye,player_hair_dye,
-                    action_pose && !(forced_motion && forced_motion->walking())?0:player_mount);
+                    player_life.dead || (action_pose && !(forced_motion && forced_motion->walking()))?0:player_mount);
                 animated_map_objects=true;
             }
         }
@@ -4353,7 +4381,8 @@ void Mir3HudView::clear_game_scene() {
     target_focus.clear();local_actor_identity=0;player_light_attribute=0;exit_guard={};melee_cooldown={};
     pending_local_action.reset();local_action_clock={};
     action_prediction={};
-    forced_motions.clear();forced_motion.reset();
+    local_actor_messages.clear();forced_motion.reset();
+    player_life={};
     login_actor_pending.reset();login_actor_extra={};server_ability.reset();server_sub_ability={};weapon_training=0;
     guild_overview={};guild_overview_started=false;guild_manager=false;guild_name=String();
     for (auto& page:guild_pages) page.clear();
@@ -4512,6 +4541,8 @@ bool Mir3HudView::apply_login_actor() {
     const auto* body=human_body(appearance.type,appearance.clothing);
     if (!body || (mount && (!human_body(appearance.type,appearance.clothing,true) || !horse_frame(mount,2320))) ||
         (appearance.weapon && weapon_order.size()!=2640)) return false;
+    player_life={};player_action={};action_prediction={};pending_local_action.reset();
+    local_actor_messages.clear();forced_motion.reset();
     player_mount=0;set_player_body(appearance.type,appearance.clothing);
     set_player_mount(mount);this->mount.shape=std::uint8_t(mount);set_player_attachments(appearance.hair,appearance.weapon);
     player_cell=Vector2i(actor.x,actor.y);player_facing=actor.facing;player_light_attribute=actor.light;
@@ -5154,7 +5185,7 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     const auto reply=mir3::parse_action_reply({reinterpret_cast<const char*>(encoded.ptr()),std::size_t(encoded.size())});
     if (reply==mir3::ActionReply::good) { action_prediction.confirm();return true; }
     if (reply==mir3::ActionReply::fail) {
-        if (const auto origin=action_prediction.reject(model.max_hp && model.hp==0)) {
+        if (const auto origin=action_prediction.reject(player_life.dead || (model.max_hp && model.hp==0))) {
             pending_local_action.reset();map_route.clear();
             forced_motion.reset();
             player_cell=step_origin=step_destination=Vector2i(origin->cell[0],origin->cell[1]);
@@ -6746,6 +6777,16 @@ void Mir3HudView::_process(double delta) {
     const int previous_action_frame=player_action.frame();
     if (walk_frame>=0) { player_action={};player_harvest_impact=false; }
     player_action.advance(std::uint32_t(delta*1000));
+    if (player_life.dying && player_action.frame()>=9) {
+        player_life.dying=false;model.hp=0;
+        if (scene_health.contains(0)) scene_health.at(0).current=0;
+        queue_redraw();
+    }
+    if (player_life.dead && !player_life.dying && model.hp) {
+        model.hp=0;
+        if (scene_health.contains(0)) scene_health.at(0).current=0;
+        queue_redraw();
+    }
     if (advancing_action && player_action.frame()!=previous_action_frame) {
         if (const int sound=mir3::HumanActions::frame_sound(player_action.action(),player_action.frame(),player_weapon,0,player_clothing,player_type))
             play_actor_sound(0,sound,player_cell);
@@ -6760,7 +6801,7 @@ void Mir3HudView::_process(double delta) {
     update_weather_layers();
 
     apply_login_actor();
-    begin_forced_motion();
+    process_local_actor_message();
     advance_local_action();
     scene_movement_ms+=delta*1000;
     const bool scene_movement_tick=scene_movement_ms>95;
@@ -10007,7 +10048,7 @@ bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn,int ambien
     terrain=std::move(next);terrain_ready=true;
     pending_local_action.reset();
     action_prediction={};
-    forced_motions.clear();forced_motion.reset();
+    local_actor_messages.clear();forced_motion.reset();
     scene_ambient.enter(static_cast<std::uint16_t>(ambient_mode));
     current_map_id=map_id;
     map_input_delay.enter();
