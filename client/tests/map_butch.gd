@@ -67,6 +67,12 @@ func run() -> void:
 	var living: Rect2=hud.hud_snapshot().scene_chicken_bounds[6]
 	if not check(living.has_area(),"活鸡在地图上绘制"): return
 	if not await capture("map-butch-live-chicken"): return
+	for i in range(4200):
+		if hud.hud_snapshot().scene_actor_sounds.get(6,{}).get("sample")==401: break
+		await process_frame
+	if not check(hud.hud_snapshot().scene_actor_sounds.get(6,{}).get("sample")==401,
+		"站立动作触发原版鸡叫声"): return
+	if not await capture("map-chicken-idle-call"): return
 	# 怪物的 SM_TURN 带新格坐标时触发行动1。重放往返两步，验证排队。
 	var outward := game_reply(Mir3HudView.SM_STRUCK,6,origin.x,origin.y,4)
 	outward.append_array(encode_scene_bytes(feature))
@@ -134,6 +140,7 @@ func run() -> void:
 	if not check(hud.hud_snapshot().scene_chicken_struck[6]==-1,"受击动作结束"): return
 	if not check(hud.hud_snapshot().scene_actor_sounds.get(6,{}).get("sample")==404,
 		"受击动作播放原版鸡叫声"): return
+	var sounds_before_death: int=hud.hud_snapshot().scene_actor_sounds[6].count
 	var death := game_reply(Mir3HudView.SM_HUMAN_STRUCK,6,0,10,6)
 	death.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(death) and hud.hud_snapshot().scene_health_values[6][0]==0,
@@ -142,7 +149,7 @@ func run() -> void:
 	var early: Rect2=hud.hud_snapshot().scene_chicken_bounds[6]
 	await settle(1.65)
 	if not check(hud.hud_snapshot().scene_actor_sounds.get(6,{}).get("sample")==405
-		and hud.hud_snapshot().scene_actor_sounds[6].count==2,"死亡只播放资源表存在的样本"): return
+		and hud.hud_snapshot().scene_actor_sounds[6].count==sounds_before_death+1,"死亡只播放资源表存在的样本"): return
 	var corpse: Rect2=hud.hud_snapshot().scene_chicken_bounds[6]
 	if not check(corpse.has_area() and corpse!=early,"鸡死亡动画停在尸体帧"): return
 	cut_at(corpse.get_center())

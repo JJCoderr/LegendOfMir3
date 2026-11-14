@@ -2056,6 +2056,8 @@ bool Mir3HudView::place_scene_chicken(int actor,Vector2i cell,int facing,int sha
     chicken.facing=facing;
     chicken.shape=shape;
     chicken.light_attribute=light;
+    if (const auto previous=scene_chickens.find(actor);previous!=scene_chickens.end())
+        chicken.called=previous->second.called;
     // 405E50 and 46EFA0: type 3 / shapes 20–21, action 0.
     for (int i=0;i<4;++i) {
         const auto* frame=chicken_frame((shape-20)*1000+facing*10+i);
@@ -2065,6 +2067,12 @@ bool Mir3HudView::place_scene_chicken(int actor,Vector2i cell,int facing,int sha
     scene_chickens.insert_or_assign(actor,std::move(chicken));
     queue_redraw();
     return true;
+}
+
+void Mir3HudView::play_animal_call(int actor,SceneChicken& animal) {
+    if (weather.random()%(animal.called?25:3)!=0) return;
+    animal.called=true;
+    play_actor_sound(actor,10*animal.shape+201,animal.cell);
 }
 
 const Mir3HudView::MapActorFrame* Mir3HudView::chicken_frame(int id) {
@@ -3173,7 +3181,7 @@ void Mir3HudView::draw_terrain() {
             const int base=(chicken.skeleton?880:320)+10*chicken.facing;
             const auto* pose=chicken.death_frame>=0?chicken_frame(chicken.frame_base()+base+chicken.death_frame):
                 chicken.struck_frame>=0?chicken_frame(chicken.frame_base()+240+10*chicken.facing+chicken.struck_frame):
-                chicken_frame(chicken.frame_base()+10*chicken.facing+tick/300%4);
+                chicken_frame(chicken.frame_base()+10*chicken.facing+chicken.idle_frame);
             draw_scene_actor(chicken,180,pose);
         }
         for (auto& [actor,human]:scene_humans) {
@@ -5393,9 +5401,12 @@ void Mir3HudView::_process(double delta) {
             if (chicken.walk_ms>chicken.walk_interval) {
                 chicken.walk_ms=0;
                 ++chicken.walk_frame;
+                if (chicken.walk_frame==1) play_animal_call(actor,chicken);
                 if (chicken.walk_frame==1 && chicken.walk_catch_up) chicken.walk_interval/=2;
                 if (chicken.walk_frame>=6) {
                     chicken.walk_frame=-1;
+                    chicken.idle_frame=0;
+                    chicken.idle_ms=0;
                 }
                 queue_redraw();
             }
@@ -5406,6 +5417,15 @@ void Mir3HudView::_process(double delta) {
             chicken.turns.pop_front();
             if (move_scene_chicken(actor,cell,facing,light,backward) && chicken.walk_frame==0)
                 chicken.walk_catch_up=catch_up;
+        }
+        if (chicken.death_frame<0 && chicken.walk_frame<0 && chicken.struck_frame<0) {
+            chicken.idle_ms+=delta*1000;
+            if (chicken.idle_ms>300) {
+                chicken.idle_ms=0;
+                chicken.idle_frame=(chicken.idle_frame+1)%4;
+                if (chicken.idle_frame==1) play_animal_call(actor,chicken);
+                queue_redraw();
+            }
         }
         if (chicken.death_frame<0 || chicken.death_frame>=9 || chicken.skeleton) continue;
         chicken.death_ms+=delta*1000;

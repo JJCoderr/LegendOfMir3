@@ -468,6 +468,9 @@ private:
     std::map<int,SceneActor> scene_npcs;
     struct SceneChicken : SceneActor {
         int shape=20;
+        int idle_frame=0;
+        double idle_ms=0;
+        bool called=false;
         unsigned light_attribute=0;
         int frame_base() const { return (shape-20)*1000; }
         int facing=6, death_frame=-1;
@@ -492,6 +495,7 @@ private:
     const MapActorFrame* chicken_frame(int id);
     bool place_scene_chicken(int actor,godot::Vector2i cell,int facing,int shape=20,unsigned light=0);
     bool move_scene_chicken(int actor,godot::Vector2i cell,int facing,unsigned light,bool backward=false);
+    void play_animal_call(int actor,SceneChicken& animal);
     struct SceneHuman : SceneActor {
         int profession=0, type=0, clothing=0, hair=0, weapon=0;
         int clothing_dye=65535, hair_dye=65535, mount_shape=0;
