@@ -40,6 +40,19 @@ func run() -> void:
 	await create_timer(0.95).timeout
 	hud.set_process(false)
 	if not check(not hud.hud_snapshot().map_event_frames.has(456),"退出动画结束释放类型9"): return
+	if not check(hud.apply_game_message(show_event(700,3,origin+Vector2i(-2,1)))
+		and hud.apply_game_message(show_event(701,6,origin+Vector2i(2,1))),"创建原版地表图"): return
+	hud.set_process(true)
+	await create_timer(0.06).timeout
+	hud.set_process(false)
+	if not check(hud.hud_snapshot().map_event_frames[700]==230 and hud.hud_snapshot().map_event_frames[701]==210,"类型与ProgUse图号"): return
+	if not await capture("map-events-ground"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_HIDEEVENT,701,0,0,0))
+		and hud.hud_snapshot().map_event_frames.has(701),"隐藏后等待地图更新"): return
+	hud.set_process(true)
+	await create_timer(0.06).timeout
+	hud.set_process(false)
+	if not check(not hud.hud_snapshot().map_event_frames.has(701),"下一次地图更新清除地表图"): return
 	if not check(hud.change_map("0","比奇省",origin) and hud.hud_snapshot().map_event_count==0,"切图移除剩余效果"): return
 	hud.queue_free()
 	await create_timer(0.1).timeout

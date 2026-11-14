@@ -502,6 +502,9 @@ private:
     mir3::HumanActionClock player_level_action;
     mir3::EffectCatalog effect_catalog;
     mir3::WilArchive event_archive;
+    std::map<int,MapActorFrame> ground_event_frames;
+    struct GroundEvent { godot::Vector2i cell; int frame; double age=0; bool hidden=false; };
+    std::map<std::uint32_t,GroundEvent> ground_events;
     std::map<int,MapActorFrame> event_frames;
     struct MapEvent {
         const mir3::EffectResource* resource;

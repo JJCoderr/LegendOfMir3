@@ -24,3 +24,9 @@ Windows Release、map_events、map_door、level_up 通过。定向渲染截图�
 ```
 
 类型9经 Windows Release 构建及 map_events 和 level_up 定向验证，截图 map-event-layered.png。
+
+## 类型3/6的地表图
+
+804 分别创建 ProgUse 230/210，延迟为0，寿命为无符号 FFFF 且采用普通透明绘制。421FF0 将仍有效的记录放入地图格的地表绘制列表，425130 仅在年龄严格大于延迟时绘制。805 只把寿命置零，随下一次场景更新移除。414220/416E70 的相关人物动作会将类型3的图号加一并限制在234，该动作的接入保留在采集待办。
+
+Windows Release、map_events.gd 和 --ground-items 回归通过，实际截图 map-events-ground.png。
