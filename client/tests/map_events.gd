@@ -1,4 +1,4 @@
-# 测试内容：持续地面事件显示、画面像素、重复编号、隐藏和切图清理。
+# 测试内容：持续地面事件显示、画面像素、重复编号、隐藏、类型9驻留与退场及切图清理。
 extends "login_smoke.gd"
 
 func show_event(id: int, kind: int, cell: Vector2i) -> PackedByteArray:
@@ -27,6 +27,19 @@ func run() -> void:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	if not check(active.get_data()!=root.get_texture().get_image().get_region(Rect2i(220,150,310,120)).get_data(),"隐藏改变真实地图像素"): return
+	var layered := show_event(456,9,origin+Vector2i(-2,0))
+	if not check(hud.apply_game_message(layered) and hud.hud_snapshot().map_event_frames[456]==90,"类型9从首帧启动"): return
+	hud.set_process(true)
+	await create_timer(0.95).timeout
+	hud.set_process(false)
+	if not check(hud.hud_snapshot().map_event_frames[456]==100,"类型9驻留帧"): return
+	if not await capture("map-event-layered"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_HIDEEVENT,456,0,0,0))
+		and hud.hud_snapshot().map_event_count==2,"隐藏保留退出动画"): return
+	hud.set_process(true)
+	await create_timer(0.95).timeout
+	hud.set_process(false)
+	if not check(not hud.hud_snapshot().map_event_frames.has(456),"退出动画结束释放类型9"): return
 	if not check(hud.change_map("0","比奇省",origin) and hud.hud_snapshot().map_event_count==0,"切图移除剩余效果"): return
 	hud.queue_free()
 	await create_timer(0.1).timeout

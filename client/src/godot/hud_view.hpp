@@ -510,6 +510,8 @@ private:
         godot::Sprite2D* sprite;
         int frame;
         double elapsed=0;
+        godot::Sprite2D* secondary=nullptr;
+        bool ending=false;
     };
     std::map<std::uint32_t,MapEvent> map_events;
     void advance_map_events(double milliseconds);

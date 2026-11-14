@@ -370,6 +370,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     }
     result["level_effects"]=level_states;
     result["map_event_count"]=int(map_events.size());
+    Dictionary event_states;
+    for(const auto& [id,event]:map_events) event_states[int64_t(id)]=event.frame;
+    result["map_event_frames"]=event_states;
     result["player_level_action"]=!player_level_action.finished();
     result["gold_sound_count"]=gold_sound_count;
     result["weapon_training"]=weapon_training;
@@ -2264,19 +2267,23 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         if(encoded.size()!=16) return false;
         const auto event=map_events.find(header->recognition);
         if(event!=map_events.end()) {
-            event->second.copy->hide();
-            event->second.copy->queue_free();
-            map_events.erase(event);
+            if(event->second.secondary) event->second.ending=true;
+            else {
+                event->second.copy->hide();
+                event->second.copy->queue_free();
+                map_events.erase(event);
+            }
         }
         return true;
     }
     if(opcode==mir3::protocol::SM_SHOWEVENT) {
         const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
         if(!body || body->size()!=4 || !terrain.contains(p[1],p[2])) return false;
-        if(p[0]!=4 && p[0]!=5) return false;
+        if(p[0]!=4 && p[0]!=5 && p[0]!=9) return false;
         if(map_events.contains(header->recognition)) return true;
-        const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::magic,p[0]==4?16:22);
-        if(!resource || resource->library!=81 || resource->end<=resource->first || !resource->interval) return false;
+        const bool layered=p[0]==9;
+        const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::magic,layered?140:p[0]==4?16:22);
+        if(!resource || resource->library!=(layered?137:81) || resource->end<=resource->first || !resource->interval) return false;
         auto* copy=memnew(BackBufferCopy);
         copy->set_copy_mode(BackBufferCopy::COPY_MODE_VIEWPORT);
         level_layer->add_child(copy);
@@ -2286,10 +2293,21 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         Ref<ShaderMaterial> material;
         material.instantiate();
         material->set_shader(ResourceLoader::get_singleton()->load("res://level_effect.gdshader"));
+        const auto tint=Color(resource->tint[0]/255.f,resource->tint[1]/255.f,resource->tint[2]/255.f);
         sprite->set_material(material);
-        sprite->set_modulate(Color(resource->tint[0]/255.f,resource->tint[1]/255.f,resource->tint[2]/255.f));
-        const int frame=resource->first+weather.between(1,8)%(resource->end-resource->first);
-        map_events.emplace(header->recognition,MapEvent{resource,{p[1],p[2]},copy,sprite,frame});
+        sprite->set_modulate(tint);
+        const int frame=layered?resource->first:resource->first+weather.between(1,8)%(resource->end-resource->first);
+        auto& event=map_events.emplace(header->recognition,MapEvent{resource,{p[1],p[2]},copy,sprite,frame}).first->second;
+        if(layered) {
+            auto* secondary_copy=memnew(BackBufferCopy);
+            secondary_copy->set_copy_mode(BackBufferCopy::COPY_MODE_VIEWPORT);
+            copy->add_child(secondary_copy);
+            event.secondary=memnew(Sprite2D);
+            event.secondary->set_centered(false);
+            event.secondary->set_material(material);
+            event.secondary->set_modulate(tint);
+            secondary_copy->add_child(event.secondary);
+        }
         advance_map_events(0);
         return true;
     }
@@ -3225,7 +3243,30 @@ void Mir3HudView::advance_map_events(double milliseconds) {
         event.elapsed+=milliseconds;
         if(event.elapsed>event.resource->interval) {
             event.elapsed=0;
-            if(++event.frame>=int(event.resource->end)) event.frame=event.resource->first;
+            ++event.frame;
+            if(event.secondary) {
+                if(!event.ending && event.frame>=99) event.frame=100;
+                if(event.ending && event.frame>=110) {
+                    event.copy->hide();
+                    event.copy->queue_free();
+                    continue;
+                }
+            } else if(event.frame>=int(event.resource->end)) event.frame=event.resource->first;
+        }
+        if(event.secondary) {
+            const auto anchor=Vector2(event.cell.x*48-camera.x,event.cell.y*32-camera.y);
+            const auto update_sprite=[this](Sprite2D* view,int id,Vector2 position) {
+                const auto* image=level_frame(id);
+                view->set_visible(image!=nullptr);
+                if(image) {
+                    view->set_texture(image->image);
+                    view->set_position(position+image->offset);
+                }
+            };
+            update_sprite(event.sprite,event.frame,anchor);
+            if(event.frame<=100) update_sprite(event.secondary,event.frame+20,anchor+Vector2(12,8));
+            else event.secondary->hide();
+            continue;
         }
         auto found=event_frames.find(event.frame);
         if(found==event_frames.end()) {
@@ -3240,6 +3281,10 @@ void Mir3HudView::advance_map_events(double milliseconds) {
             event.sprite->set_position(Vector2(event.cell.x*48-camera.x,event.cell.y*32-camera.y)+found->second.offset);
         }
     }
+    std::erase_if(map_events,[](const auto& pair) {
+        const auto& event=pair.second;
+        return event.ending && event.frame>=110;
+    });
 }
 
 void Mir3HudView::clear_level_effects() {
