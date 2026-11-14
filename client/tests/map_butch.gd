@@ -50,6 +50,37 @@ func run() -> void:
 		"本地蹲姿回包"): return
 	hud.set_process(false)
 	if not await capture("map-butch-crouch"): return
+	hud.set_process(true)
+	await settle(1.0)
+	hud.remove_scene_actor(5)
+	var feature := PackedByteArray()
+	feature.resize(16)
+	feature[0]=3
+	feature[2]=20
+	var death := game_reply(Mir3HudView.SM_NOWDEATH,6,cell.x,cell.y,6)
+	death.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(death),"用带鸡外观的死亡原包创建动物尸体"): return
+	await settle()
+	var early: Rect2=hud.hud_snapshot().scene_chicken_bounds[6]
+	await settle(1.65)
+	var corpse: Rect2=hud.hud_snapshot().scene_chicken_bounds[6]
+	if not check(corpse.has_area() and corpse!=early,"鸡死亡动画停在尸体帧"): return
+	cut_at(corpse.get_center())
+	if not check(packets.size()==5 and decode_request(packets[4]).decode_u32(0)==6,"割肉请求以鸡尸体为目标"): return
+	hud.set_process(false)
+	if not await capture("map-butch-chicken"): return
+	hud.set_process(true)
+	await settle(1.0)
+	var skeleton := game_reply(Mir3HudView.SM_SKELETON,6,cell.x,cell.y,6)
+	skeleton.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(skeleton),"骨架回包替换鸡尸体"): return
+	await settle()
+	var bones: Rect2=hud.hud_snapshot().scene_chicken_bounds[6]
+	if not check(bones.has_area() and bones!=corpse,"骨架使用独立资源帧"): return
+	cut_at(bones.get_center())
+	if not check(packets.size()==6 and decode_request(packets[5]).decode_u16(4)==Mir3HudView.CM_SITDOWN,
+		"骨架只触发蹲姿"): return
+	if not await capture("map-butch-skeleton"): return
 	hud.queue_free()
 	await settle()
 	print("MAP_BUTCH_UI_OK")

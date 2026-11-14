@@ -466,7 +466,14 @@ private:
         godot::Rect2 bounds;
     };
     std::map<int,SceneActor> scene_npcs;
-    std::map<int,SceneActor> scene_chickens;
+    struct SceneChicken : SceneActor {
+        int facing=6, death_frame=-1;
+        bool skeleton=false;
+        double death_ms=0;
+    };
+    std::map<int,SceneChicken> scene_chickens;
+    std::map<int,MapActorFrame> chicken_frames;
+    const MapActorFrame* chicken_frame(int id);
     struct SceneHuman : SceneActor {
         int profession=0, type=0, clothing=0, hair=0, weapon=0;
         int clothing_dye=65535, hair_dye=65535, mount_shape=0;

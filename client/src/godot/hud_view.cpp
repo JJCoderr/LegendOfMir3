@@ -2026,24 +2026,35 @@ bool Mir3HudView::set_scene_npc(int actor,Vector2i cell,int first_frame) {
 
 bool Mir3HudView::scene_occupied(Vector2i cell) const {
     const auto occupies=[cell](const auto& actor) { return actor.second.cell==cell; };
-    return std::ranges::any_of(scene_npcs,occupies) || std::ranges::any_of(scene_chickens,occupies) ||
+    return std::ranges::any_of(scene_npcs,occupies) ||
+        std::ranges::any_of(scene_chickens,[cell](const auto& actor) {
+            return actor.second.death_frame<0 && actor.second.cell==cell;
+        }) ||
         std::ranges::any_of(scene_humans,[cell](const auto& actor) { return !actor.second.life.dead && actor.second.cell==cell; });
 }
 
 bool Mir3HudView::set_scene_chicken(int actor,Vector2i cell) {
     if (actor==local_actor_identity) return false;
     if (!terrain_ready || actor<=0 || scene_npcs.contains(actor) || scene_humans.contains(actor) || !terrain.walkable(cell.x,cell.y)) return false;
-    SceneActor chicken{};
+    SceneChicken chicken{};
     chicken.cell=cell;
     // mir3_1.45 MockServer::sprite_frame uses the four west-facing Mon-3 frames.
     for (int i=0;i<4;++i) {
-        const auto frame=map_chickens.frame(60+i);
+        const auto* frame=chicken_frame(60+i);
         if (!frame) return false;
-        chicken.frames[i]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions};
+        chicken.frames[i]=*frame;
     }
     scene_chickens.insert_or_assign(actor,std::move(chicken));
     queue_redraw();
     return true;
+}
+
+const Mir3HudView::MapActorFrame* Mir3HudView::chicken_frame(int id) {
+    if (const auto it=chicken_frames.find(id);it!=chicken_frames.end()) return &it->second;
+    const auto frame=map_chickens.frame(id);
+    if (!frame) return nullptr;
+    return &chicken_frames.emplace(id,MapActorFrame{texture(frame->pixels.rgba,frame->width,frame->height),
+        Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions}).first->second;
 }
 
 const Mir3HudView::MapActorFrame* Mir3HudView::attachment_frame(int type,int shape,bool weapon,int motion_frame) {
@@ -2274,6 +2285,34 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS && header->opcode!=mir3::protocol::SM_DAYCHANGING && header->opcode!=mir3::protocol::SM_SHOWEVENT && header->opcode!=mir3::protocol::SM_HIDEEVENT)) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
+    const bool chicken_death=opcode==mir3::protocol::SM_DEATH || opcode==mir3::protocol::SM_NOWDEATH ||
+        opcode==mir3::protocol::SM_SKELETON;
+    if (chicken_death && actor>0 && actor!=local_actor_identity) {
+        const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
+        const bool chicken_feature=body && body->size()>=8 && (*body)[0]==3 && (*body)[2]==20 && (*body)[3]==0;
+        if (scene_chickens.contains(actor) || chicken_feature) {
+            const int facing=p[2]&255;
+            if (facing>=8 || !terrain.walkable(p[0],p[1]) || (encoded.size()!=16 && !chicken_feature)) return false;
+            const bool skeleton=opcode==mir3::protocol::SM_SKELETON;
+            const int base=(skeleton?880:320)+10*facing;
+            const int frames=skeleton?1:10;
+            for (int i=0;i<frames;++i) if (!chicken_frame(base+i)) return false;
+            const Vector2i cell(p[0],p[1]);
+            if (!scene_chickens.contains(actor) && !set_scene_chicken(actor,cell)) return false;
+            auto& chicken=scene_chickens.at(actor);
+            chicken.cell=cell;
+            chicken.facing=facing;
+            if (chicken.death_frame<0 || skeleton) {
+                chicken.death_frame=opcode==mir3::protocol::SM_NOWDEATH?0:frames-1;
+                chicken.death_ms=0;
+                chicken.skeleton=skeleton;
+            }
+            update_scene_target(inventory_cursor);
+            target_focus.remove(actor);
+            queue_redraw();
+            return true;
+        }
+    }
     if (opcode==mir3::protocol::SM_SITDOWN && local_actor_identity && actor==local_actor_identity) {
         if (encoded.size()!=16 || (p[2]&255)>=8 || !terrain.walkable(p[0],p[1])) return false;
         if (player_mount || model.hp==0) return true;
@@ -2698,7 +2737,8 @@ void Mir3HudView::update_scene_target(Vector2 pointer) {
     const auto pick=[pointer](const auto& actors) {
         auto hit=actors.end();
         for (auto it=actors.begin();it!=actors.end();++it)
-            if (it->second.bounds.has_point(pointer) && (hit==actors.end() || it->second.cell.y>=hit->second.cell.y))
+            if (it->second.death_frame<0 && it->second.bounds.has_point(pointer) &&
+                (hit==actors.end() || it->second.cell.y>=hit->second.cell.y))
                 hit=it;
         return hit;
     };
@@ -2756,6 +2796,12 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
         if (player_mount || model.hp==0) return;
         int corpse=0;
         if (!hovered_target) {
+            for (const auto& [actor,chicken]:scene_chickens) {
+                const auto distance=chicken.cell-player_cell;
+                if (chicken.death_frame>=0 && !chicken.skeleton && chicken.bounds.has_point(p) &&
+                    std::max(std::abs(distance.x),std::abs(distance.y))<=1)
+                    corpse=actor;
+            }
             for (const auto& [actor,human]:scene_humans) {
                 const auto distance=human.cell-player_cell;
                 if (human.life.dead && human.bounds.has_point(p) &&
@@ -2953,9 +2999,9 @@ void Mir3HudView::draw_terrain() {
         paint_canvas->draw_texture_rect(image->second.image,
             Rect2(particle.position-Vector2(camera)-extent*0.5f,extent),false,particle.tint);
     }
-    const auto draw_scene_actor=[&](SceneActor& npc,int interval) {
+    const auto draw_scene_actor=[&](SceneActor& npc,int interval,const MapActorFrame* pose=nullptr) {
         const auto& selected=npc.frames[tick/interval%4];
-        const auto& frame=selected.image.is_valid()?selected:npc.frames.front();
+        const auto& frame=pose?*pose:selected.image.is_valid()?selected:npc.frames.front();
         if (npc.cell.x<start_x-5 || npc.cell.x>=start_x+21) return;
         const auto position=Vector2(npc.cell.x*48-camera.x,npc.cell.y*32-camera.y)+frame.offset;
         npc.anchor=position-frame.offset;
@@ -2981,8 +3027,12 @@ void Mir3HudView::draw_terrain() {
         }
         for (auto& [actor,npc]:scene_npcs)
             if (start_y+row==npc.cell.y) draw_scene_actor(npc,200);
-        for (auto& [actor,chicken]:scene_chickens)
-            if (start_y+row==chicken.cell.y) draw_scene_actor(chicken,180);
+        for (auto& [actor,chicken]:scene_chickens) {
+            if (start_y+row!=chicken.cell.y) continue;
+            const int base=(chicken.skeleton?880:320)+10*chicken.facing;
+            const auto* pose=chicken.death_frame<0?nullptr:chicken_frame(base+chicken.death_frame);
+            draw_scene_actor(chicken,180,pose);
+        }
         for (auto& [actor,human]:scene_humans) {
             if (human.movement_frame<0) {
                 if (start_y+row!=human.cell.y || human.cell.x<start_x-5 || human.cell.x>=start_x+21) continue;
@@ -5164,6 +5214,15 @@ void Mir3HudView::_process(double delta) {
     update_weather_layers();
 
     apply_login_actor();
+    for (auto& [actor,chicken]:scene_chickens) {
+        if (chicken.death_frame<0 || chicken.death_frame>=9 || chicken.skeleton) continue;
+        chicken.death_ms+=delta*1000;
+        if (chicken.death_ms>150) {
+            chicken.death_ms=0;
+            ++chicken.death_frame;
+            queue_redraw();
+        }
+    }
     if (scene_ambient.fading) { scene_ambient.advance(delta*1000);queue_redraw(); }
     // Default object messages are processed outside each actor's animation queue.
     if (scene_clear_pending) {
