@@ -7,7 +7,7 @@
 namespace mir3 {
 // 427400输入框分派；界面按钮不经过这里。
 struct ChatSubmission {
-    bool save_chat=false,snow=false;
+    bool save_chat=false,snow=true;
     bool control_down=false,alt_down=false;
     int contact_selected=0,phrase_selected=0;
     std::string private_prefix;

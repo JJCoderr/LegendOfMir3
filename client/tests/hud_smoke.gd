@@ -776,7 +776,7 @@ func run_scene_light() -> void:
 	var bad := scene_packet(Mir3HudView.SM_DAYCHANGING,0,0,0,1)
 	bad.append(60)
 	if not check(not hud.apply_scene_message(bad,keys) and not hud.hud_snapshot().scene_ambient_fading, "reject daylight payload without mutation"): return
-	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_DAYCHANGING,0,222,111,1),keys), "receive original third-parameter light mode"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_DAYCHANGING,0,222,1,0),keys), "receive original second-parameter light mode"): return
 	if not check(hud.hud_snapshot().scene_ambient == 85 and hud.hud_snapshot().scene_ambient_fading, "46 schedules gradual change"): return
 	hud.set_process(true)
 	await create_timer(0.25).timeout

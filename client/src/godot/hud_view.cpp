@@ -312,6 +312,14 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["scene_ambient_fading"]=scene_ambient.fading;
     result["pending_map_changes"]=int(map_changes.size());
     result["map_series"]=map_series;
+    result["weather_snow"]=weather.snow;result["weather_fog"]=weather.fog;result["weather_other"]=weather.other;
+    result["snow_particle_count"]=weather.active;result["weather_fog_frame"]=weather.fog_frame;
+    result["weather_fog_position"]=Vector2(weather.fog_x,weather.fog_y);
+    result["snow_resource_loaded"]=snow_texture.is_valid();
+    result["fog_resource_loaded"]=fog_sprite && fog_sprite->get_texture().is_valid();
+    if(weather.active) for(const auto& p:weather.particles) if(p.active) {
+        result["snow_first_position"]=Vector2(p.x,p.y);result["snow_first_age"]=p.age;break;
+    }
     result["map_left_delay_ms"]=map_input_delay.remaining_ms;
     result["map_id"]=current_map_id;
     result["map_name"]=String::utf8(model.map_name.c_str());
@@ -668,6 +676,22 @@ void Mir3HudView::_ready() {
     Ref<Shader> shader;shader.instantiate();
     shader->set_code("shader_type canvas_item; render_mode unshaded, blend_premul_alpha; varying vec4 source_modulate; void vertex() { source_modulate=COLOR; } void fragment() { if (UV.x < -1.0) { COLOR=source_modulate*texture(TEXTURE,UV+vec2(2.0)); } else { COLOR.rgb *= COLOR.a; } }");
     Ref<ShaderMaterial> material;material.instantiate();material->set_shader(shader);set_material(material);
+    mir3::WilArchive weather_archive;
+    if(weather_archive.open(resource_root/"Data"/"ProgUse")) {
+        if(const auto source=weather_archive.frame(500)) snow_texture=texture(source->pixels.rgba,source->width,source->height);
+    }
+    fog_copy=memnew(BackBufferCopy);fog_copy->set_copy_mode(BackBufferCopy::COPY_MODE_VIEWPORT);add_child(fog_copy);
+    fog_sprite=memnew(Sprite2D);fog_sprite->set_centered(false);fog_copy->add_child(fog_sprite);
+    if(const auto source=weather_archive.frame(550)) fog_sprite->set_texture(texture(source->pixels.rgba,source->width,source->height));
+    Ref<ShaderMaterial> fog_material;fog_material.instantiate();
+    fog_material->set_shader(ResourceLoader::get_singleton()->load("res://level_effect.gdshader"));fog_sprite->set_material(fog_material);
+    fog_sprite->set_modulate(Color(100.f/255,200.f/255,200.f/255));fog_copy->hide();
+    snow_layer=memnew(Node2D);snow_layer->set_name("SnowWeather");add_child(snow_layer);
+    Ref<Shader> snow_shader;snow_shader.instantiate();
+    snow_shader->set_code("shader_type canvas_item; render_mode unshaded, blend_premul_alpha; varying vec3 tint; void vertex(){tint=COLOR.rgb;} void fragment(){vec4 s=texture(TEXTURE,UV); COLOR=vec4(s.rgb*tint*s.a,s.a/255.0);}");
+    Ref<ShaderMaterial> snow_material;snow_material.instantiate();snow_material->set_shader(snow_shader);snow_layer->set_material(snow_material);
+    snow_layer->connect("draw",callable_mp(this,&Mir3HudView::draw_snow));
+    weather.random_state=std::uint32_t(ticks_msec());
     scene_light_layer=memnew(Node2D);
     Ref<Shader> light_shader;light_shader.instantiate();
     light_shader->set_code("shader_type canvas_item; render_mode unshaded, blend_mul;");
@@ -2151,7 +2175,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (encoded.size()<mir3::ReceiveHeader::encoded_size || encoded.size()>mir3::ReceiveHeader::encoded_size+mir3::ChatLog::max_encoded_text) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),static_cast<std::size_t>(encoded.size())},
         {key.ptr(),static_cast<std::size_t>(key.size())});
-    if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS)) return false;
+    if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS && header->opcode!=mir3::protocol::SM_DAYCHANGING)) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
     if (opcode==mir3::protocol::SM_NEWMAP || opcode==mir3::protocol::SM_CHANGEMAP || opcode==mir3::protocol::SM_MAPDESCRIPTION) {
@@ -2188,7 +2212,8 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     }
     if (opcode==mir3::protocol::SM_DAYCHANGING) {
         if (encoded.size()!=16) return false;
-        scene_ambient.update(p[2]);
+        scene_ambient.update(p[1]);
+        weather.select(p[2]);update_weather_layers();
         queue_redraw();
         return true;
     }
@@ -2736,6 +2761,28 @@ void Mir3HudView::draw_terrain() {
     }
 }
 
+void Mir3HudView::update_weather_layers() {
+    if(!snow_layer || !fog_copy) return;
+    const bool visible=terrain_ready && !login_visible && !server_groups.visible && !character_selection.visible && login_movie_purpose==LoginMoviePurpose::none;
+    snow_layer->set_visible(visible && chat_submission.snow && weather.snow);
+    fog_copy->set_visible(visible && chat_submission.snow && weather.fog);
+    if(const auto image=fog_sprite->get_texture();image.is_valid()) {
+        fog_sprite->set_position(Vector2(-1600+weather.fog_x,-300-weather.fog_y));
+        fog_sprite->set_scale(Vector2(4000,1200)/image->get_size());
+    }
+    snow_layer->queue_redraw();
+}
+void Mir3HudView::draw_snow() {
+    if(snow_texture.is_null() || !terrain_ready || !weather.snow || !chat_submission.snow) return;
+    const PackedVector2Array uv{Vector2(1,1),Vector2(1,0),Vector2(0,0),Vector2(0,1)};
+    for(const auto& p:weather.particles) if(p.active) {
+        const float half=p.size*0.5f;
+        PackedVector2Array vertices{Vector2(p.x-half,p.y-half),Vector2(p.x+half,p.y-half),Vector2(p.x+half,p.y+half),Vector2(p.x-half,p.y+half)};
+        PackedColorArray colors;colors.push_back(Color(p.rgb[0]/255.f,p.rgb[1]/255.f,p.rgb[2]/255.f));
+        snow_layer->draw_polygon(vertices,colors,uv,snow_texture);
+    }
+}
+
 void Mir3HudView::draw_scene_lighting() {
     scene_light_samples.clear();
     if (!terrain_ready || scene_ambient.level()==255) return;
@@ -2811,6 +2858,7 @@ void Mir3HudView::clear_game_scene() {
     while (!scene_npcs.empty()) remove_scene_actor(scene_npcs.begin()->first);
     while (!scene_chickens.empty()) remove_scene_actor(scene_chickens.begin()->first);
     scene_removals.clear();scene_clear_pending=false;map_changes.clear();
+    weather.select(0);weather.particles={};weather.active=0;update_weather_layers();
     ground_items.items.clear();ground_bounds.clear();displayed_ground_item=-1;
     scene_speech.clear();speech_bounds.clear();scene_health.clear();scene_health_bounds.clear();scene_damage_glyphs.clear();
     map_route.clear();walk_frame=-1;movement_ms=0;
@@ -2845,7 +2893,7 @@ void Mir3HudView::clear_game_scene() {
     if (gold_sound) gold_sound->stop();
     while (!actor_sounds.empty()) remove_actor_sound(actor_sounds.begin()->first);
     chat_input->release_focus();chat_input->hide();
-    scene_light_layer->hide();hud_base->hide();hud_copy->hide();hud_decoration->hide();hud_tail->hide();exit_layer->hide();
+    scene_light_layer->hide();snow_layer->hide();fog_copy->hide();hud_base->hide();hud_copy->hide();hud_decoration->hide();hud_tail->hide();exit_layer->hide();
 }
 
 void Mir3HudView::load_login_announcement() {
@@ -2993,7 +3041,7 @@ void Mir3HudView::process_map_changes() {
         const auto id=String::utf8(message.map_id.c_str());
         const auto name=model.map_name.empty()?id:String::utf8(model.map_name.c_str());
         const bool success=change_map(id,name,Vector2i(message.x,message.y),message.ambient);
-        if (success) map_series=message.series;
+        if (success) {map_series=message.series;weather.select(message.series,true);update_weather_layers();}
         emit_signal("map_change_finished",message.opcode,id,success);
     }
 
@@ -4187,6 +4235,7 @@ void Mir3HudView::chat_requested(String value) {
     if(action.dialog) {
         open_group_dialog(action.dialog==1426?mir3::protocol::CM_GUILDADDMEMBER:1427);return;
     }
+    update_weather_layers();
     if(action.contacts_changed) save_chat_shortcuts(false);
     if(action.phrases_changed) save_chat_shortcuts(true);
     if(action.private_echo) post_chat(value,mir3::chat_palette(5),mir3::chat_palette(0));
@@ -4388,6 +4437,8 @@ void Mir3HudView::_process(double delta) {
     player_level_action.advance(std::uint32_t(delta*1000));
     map_input_delay.advance(delta*1000);
     process_map_changes();
+    if(terrain_ready) weather.advance(int(delta*1000),chat_submission.snow);
+    update_weather_layers();
 
     apply_login_actor();
     if (scene_ambient.fading) { scene_ambient.advance(delta*1000);queue_redraw(); }
@@ -7398,7 +7449,7 @@ bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn,int ambien
     scene_ambient.enter(static_cast<std::uint8_t>(ambient_mode));
     current_map_id=map_id;
     map_input_delay.enter();
-    map_series=0;
+    map_series=0;weather.select(0,true);update_weather_layers();
     while (!scene_humans.empty()) remove_scene_actor(scene_humans.begin()->first);
     while (!scene_npcs.empty()) remove_scene_actor(scene_npcs.begin()->first);
     while (!scene_chickens.empty()) remove_scene_actor(scene_chickens.begin()->first);

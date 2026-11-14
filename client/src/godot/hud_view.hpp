@@ -51,6 +51,7 @@
 #include "guild/guild_layout.hpp"
 #include "guild/guild_overview.hpp"
 #include "magic/skill_panel.hpp"
+#include "hud/snow_weather.hpp"
 #include "resources/wil_archive.hpp"
 #include "resources/messages.hpp"
 #include "text/native_text.hpp"
@@ -397,6 +398,13 @@ private:
     godot::String map_directory, current_map_id="0";
     std::deque<mir3::MapChangeMessage> map_changes;
     int map_series=0;
+    mir3::SnowWeather weather;
+    godot::Node2D* snow_layer=nullptr;
+    godot::BackBufferCopy* fog_copy=nullptr;
+    godot::Sprite2D* fog_sprite=nullptr;
+    godot::Ref<godot::ImageTexture> snow_texture;
+    void draw_snow();
+    void update_weather_layers();
     mir3::MapInputDelay map_input_delay;
     mir3::MapTerrain terrain;
     std::array<mir3::WilArchive,75> terrain_archives;

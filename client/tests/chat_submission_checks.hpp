@@ -8,7 +8,7 @@ inline void chat_submission_checks() {
     auto require=[](bool value,const char* text){if(!value) throw std::runtime_error(text);};
     require(!submit("").send && submit("hello").send,"ordinary dispatch");
     require(submit("add").dialog==1427 && submit("add",true).dialog==1426,"guild rights");
-    require(submit("@chatsave").send && model.save_chat && submit("@snow").send && model.snow,"local flags still send");
+    require(submit("@chatsave").send && model.save_chat && submit("@snow").send && !model.snow,"local flags still send");
     submit("@chatsave");require(!model.save_chat,"toggle exact command");
     auto result=submit("/Bob hello");require(result.send && result.private_echo && model.private_prefix=="/Bob " && model.contacts[0]=="Bob ","private prefix");
     require(!submit("/Bob another").contacts_changed && model.contacts.size()==1,"repeat does not reorder history");

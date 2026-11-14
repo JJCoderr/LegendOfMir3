@@ -24,7 +24,7 @@
 
 51/634 的 recognition 不用作远端人物存在性判断，也不自动绑定本地人物身份。文件编号按 NUL 终止，当前允许 1..64 个 ASCII 字母、数字、下划线或短横线；资源路径为配置根目录下 Map/<编号>.map。54 按 NUL 截取后最多 259 个 ANSI 字节；转换为 UTF-8 供 HUD 显示，空名称允许，不关闭对话或刷新小地图。
 
-地图请求在 `_process` 中按已排队顺序交给 change_map。地图文件缺失或出生格非法时保留当前场景；`apply_scene_message` 返回 true 只表示编码和结构正确、消息已入队。最终结果由 `map_change_finished(opcode,map_id,success)` 通知。成功后保存高字节 map_series；高字节相关视觉/地图限制尚未实现。54 独立更新 model.map_name，切图不会以文件编号覆盖已收到的显示名。
+地图请求在 `_process` 中按已排队顺序交给 change_map。地图文件缺失或出生格非法时保留当前场景；`apply_scene_message` 返回 true 只表示编码和结构正确、消息已入队。最终结果由 `map_change_finished(opcode,map_id,success)` 通知。成功后保存高字节 map_series；高字节1/2的雪雾效果已在weather.md恢复，天气3仍待恢复。54 独立更新 model.map_name，切图不会以文件编号覆盖已收到的显示名。
 
 公共地图队列当前独立于已有即时对象入口；后续必须统一真实接收批次中的入场/离场/人物创建顺序。不能把本接口测试视作完整公共消息调度、初次登录人物创建或服务器视野联调完成。
 

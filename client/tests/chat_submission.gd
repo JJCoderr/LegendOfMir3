@@ -36,7 +36,7 @@ func run() -> void:
 	if not check(hud.hud_snapshot().quick_chat_phrases==PackedStringArray(["集合"]) and hud.hud_snapshot().private_chat_contacts==PackedStringArray(["Bob "]),"原版历史重新加载"): return
 	submit("@chatsave")
 	submit("@snow")
-	if not check(packets.size()==4 and hud.hud_snapshot().chat_save_enabled and hud.hud_snapshot().snow_enabled,"本地开关仍发送命令"): return
+	if not check(packets.size()==4 and hud.hud_snapshot().chat_save_enabled and not hud.hud_snapshot().snow_enabled,"本地开关仍发送命令"): return
 	submit("@骑马")
 	var expected := ("#5").to_ascii_buffer()
 	expected.append_array(encode_scene_bytes(PackedByteArray([0,0,0,0,Mir3HudView.CM_SAY&255,Mir3HudView.CM_SAY>>8,0,0,0,0,0,0])))
