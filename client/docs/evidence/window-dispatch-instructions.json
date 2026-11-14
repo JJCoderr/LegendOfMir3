@@ -1,0 +1,742 @@
+[
+  {
+    "address": "0x436a30",
+    "instruction": "sub     esp, 24h"
+  },
+  {
+    "address": "0x436a33",
+    "instruction": "push    ebx"
+  },
+  {
+    "address": "0x436a34",
+    "instruction": "push    esi"
+  },
+  {
+    "address": "0x436a35",
+    "instruction": "mov     esi, ecx"
+  },
+  {
+    "address": "0x436a37",
+    "instruction": "mov     eax, [esi+0C60h]"
+  },
+  {
+    "address": "0x436a3d",
+    "instruction": "mov     ecx, [esi+0C5Ch]"
+  },
+  {
+    "address": "0x436a43",
+    "instruction": "add     eax, 64h ; 'd'"
+  },
+  {
+    "address": "0x436a46",
+    "instruction": "add     ecx, 217h"
+  },
+  {
+    "address": "0x436a4c",
+    "instruction": "push    eax"
+  },
+  {
+    "address": "0x436a4d",
+    "instruction": "push    ecx"
+  },
+  {
+    "address": "0x436a4e",
+    "instruction": "lea     ecx, [esi+6960h]"
+  },
+  {
+    "address": "0x436a54",
+    "instruction": "call    sub_41FD20"
+  },
+  {
+    "address": "0x436a59",
+    "instruction": "mov     eax, [esi+0E70h]"
+  },
+  {
+    "address": "0x436a5f",
+    "instruction": "xor     ebx, ebx"
+  },
+  {
+    "address": "0x436a61",
+    "instruction": "cmp     eax, ebx"
+  },
+  {
+    "address": "0x436a63",
+    "instruction": "jz      loc_436D57"
+  },
+  {
+    "address": "0x436a69",
+    "instruction": "mov     edx, [esi+0E60h]"
+  },
+  {
+    "address": "0x436a6f",
+    "instruction": "mov     [esi+0E6Ch], ebx"
+  },
+  {
+    "address": "0x436a75",
+    "instruction": "mov     [esi+0E64h], edx"
+  },
+  {
+    "address": "0x436a7b",
+    "instruction": "mov     eax, [esi+0E70h]"
+  },
+  {
+    "address": "0x436a81",
+    "instruction": "cmp     eax, ebx"
+  },
+  {
+    "address": "0x436a83",
+    "instruction": "push    edi"
+  },
+  {
+    "address": "0x436a84",
+    "instruction": "mov     [esp+30h+var_24], 1"
+  },
+  {
+    "address": "0x436a8c",
+    "instruction": "mov     [esp+30h+var_20], 0B9h"
+  },
+  {
+    "address": "0x436a94",
+    "instruction": "mov     [esp+30h+var_1C], 23Fh"
+  },
+  {
+    "address": "0x436a9c",
+    "instruction": "mov     [esp+30h+var_18], 211h"
+  },
+  {
+    "address": "0x436aa4",
+    "instruction": "mov     [esp+30h+var_14], 24Eh"
+  },
+  {
+    "address": "0x436aac",
+    "instruction": "jle     loc_436CD4"
+  },
+  {
+    "address": "0x436ab2",
+    "instruction": "push    ebp"
+  },
+  {
+    "address": "0x436ab3",
+    "instruction": "mov     ebp, dword_4AF240"
+  },
+  {
+    "address": "0x436ab9",
+    "instruction": "mov     edi, [esi+0E64h]"
+  },
+  {
+    "address": "0x436abf",
+    "instruction": "xor     eax, eax"
+  },
+  {
+    "address": "0x436ac1",
+    "instruction": "mov     ecx, [edi]"
+  },
+  {
+    "address": "0x436ac3",
+    "instruction": "cmp     ecx, 16h; switch 23 cases"
+  },
+  {
+    "address": "0x436ac6",
+    "instruction": "ja      def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436acc",
+    "instruction": "jmp     jpt_436ACC[ecx*4]; switch jump"
+  },
+  {
+    "address": "0x436ad3",
+    "instruction": "lea     ecx, [esi+7300h]; jumptable 00436ACC case 0"
+  },
+  {
+    "address": "0x436ad9",
+    "instruction": "call    sub_43FB10"
+  },
+  {
+    "address": "0x436ade",
+    "instruction": "lea     eax, [esi+7318h]"
+  },
+  {
+    "address": "0x436ae4",
+    "instruction": "jmp     def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436ae9",
+    "instruction": "lea     ecx, [esi+2AB4Ch]; jumptable 00436ACC case 1"
+  },
+  {
+    "address": "0x436aef",
+    "instruction": "call    sub_470E60"
+  },
+  {
+    "address": "0x436af4",
+    "instruction": "lea     eax, [esi+2AB64h]"
+  },
+  {
+    "address": "0x436afa",
+    "instruction": "jmp     def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436aff",
+    "instruction": "lea     ecx, [esi+34EC4h]; jumptable 00436ACC case 2"
+  },
+  {
+    "address": "0x436b05",
+    "instruction": "call    sub_478000"
+  },
+  {
+    "address": "0x436b0a",
+    "instruction": "lea     eax, [esi+34EDCh]"
+  },
+  {
+    "address": "0x436b10",
+    "instruction": "jmp     def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436b15",
+    "instruction": "lea     ecx, [esi+356B8h]; jumptable 00436ACC case 3"
+  },
+  {
+    "address": "0x436b1b",
+    "instruction": "call    sub_41C960"
+  },
+  {
+    "address": "0x436b20",
+    "instruction": "lea     eax, [esi+356D0h]"
+  },
+  {
+    "address": "0x436b26",
+    "instruction": "jmp     def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436b2b",
+    "instruction": "lea     ecx, [esi+48C9Ch]; jumptable 00436ACC case 4"
+  },
+  {
+    "address": "0x436b31",
+    "instruction": "call    sub_432A40"
+  },
+  {
+    "address": "0x436b36",
+    "instruction": "lea     eax, [esi+48CB4h]"
+  },
+  {
+    "address": "0x436b3c",
+    "instruction": "jmp     def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436b41",
+    "instruction": "lea     ecx, [esi+4A458h]; jumptable 00436ACC case 6"
+  },
+  {
+    "address": "0x436b47",
+    "instruction": "call    sub_431CC0"
+  },
+  {
+    "address": "0x436b4c",
+    "instruction": "lea     eax, [esi+4A470h]"
+  },
+  {
+    "address": "0x436b52",
+    "instruction": "jmp     def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436b57",
+    "instruction": "lea     ecx, [esi+4A84Ch]; jumptable 00436ACC case 7"
+  },
+  {
+    "address": "0x436b5d",
+    "instruction": "call    sub_47A670"
+  },
+  {
+    "address": "0x436b62",
+    "instruction": "lea     eax, [esi+4A864h]"
+  },
+  {
+    "address": "0x436b68",
+    "instruction": "jmp     def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436b6d",
+    "instruction": "lea     ecx, [esi+54188h]; jumptable 00436ACC case 8"
+  },
+  {
+    "address": "0x436b73",
+    "instruction": "call    sub_41B620"
+  },
+  {
+    "address": "0x436b78",
+    "instruction": "lea     eax, [esi+541A0h]"
+  },
+  {
+    "address": "0x436b7e",
+    "instruction": "jmp     def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436b83",
+    "instruction": "lea     ecx, [esi+54AECh]; jumptable 00436ACC case 9"
+  },
+  {
+    "address": "0x436b89",
+    "instruction": "call    sub_4602B0"
+  },
+  {
+    "address": "0x436b8e",
+    "instruction": "lea     eax, [esi+54B04h]"
+  },
+  {
+    "address": "0x436b94",
+    "instruction": "jmp     def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436b99",
+    "instruction": "lea     ecx, [esi+550A8h]; jumptable 00436ACC case 11"
+  },
+  {
+    "address": "0x436b9f",
+    "instruction": "call    sub_46BDC0"
+  },
+  {
+    "address": "0x436ba4",
+    "instruction": "lea     eax, [esi+550C0h]"
+  },
+  {
+    "address": "0x436baa",
+    "instruction": "jmp     def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436baf",
+    "instruction": "lea     ecx, [esi+55334h]; jumptable 00436ACC case 12"
+  },
+  {
+    "address": "0x436bb5",
+    "instruction": "call    sub_462850"
+  },
+  {
+    "address": "0x436bba",
+    "instruction": "lea     eax, [esi+5534Ch]"
+  },
+  {
+    "address": "0x436bc0",
+    "instruction": "jmp     def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436bc5",
+    "instruction": "lea     ecx, [esi+5629Ch]; jumptable 00436ACC case 13"
+  },
+  {
+    "address": "0x436bcb",
+    "instruction": "call    sub_434850"
+  },
+  {
+    "address": "0x436bd0",
+    "instruction": "lea     eax, [esi+562B4h]"
+  },
+  {
+    "address": "0x436bd6",
+    "instruction": "jmp     def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436bdb",
+    "instruction": "lea     ecx, [esi+56674h]; jumptable 00436ACC case 14"
+  },
+  {
+    "address": "0x436be1",
+    "instruction": "call    sub_44EA70"
+  },
+  {
+    "address": "0x436be6",
+    "instruction": "lea     eax, [esi+5668Ch]"
+  },
+  {
+    "address": "0x436bec",
+    "instruction": "jmp     def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436bf1",
+    "instruction": "lea     ecx, [esi+57538h]; jumptable 00436ACC case 15"
+  },
+  {
+    "address": "0x436bf7",
+    "instruction": "call    sub_45EF10"
+  },
+  {
+    "address": "0x436bfc",
+    "instruction": "lea     eax, [esi+57550h]"
+  },
+  {
+    "address": "0x436c02",
+    "instruction": "jmp     short def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436c04",
+    "instruction": "lea     ecx, [esi+5770Ch]; jumptable 00436ACC case 16"
+  },
+  {
+    "address": "0x436c0a",
+    "instruction": "call    sub_419F80"
+  },
+  {
+    "address": "0x436c0f",
+    "instruction": "lea     eax, [esi+57724h]"
+  },
+  {
+    "address": "0x436c15",
+    "instruction": "jmp     short def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436c17",
+    "instruction": "lea     ecx, [esi+5C168h]; jumptable 00436ACC case 18"
+  },
+  {
+    "address": "0x436c1d",
+    "instruction": "call    sub_46E6E0"
+  },
+  {
+    "address": "0x436c22",
+    "instruction": "lea     eax, [esi+5C180h]"
+  },
+  {
+    "address": "0x436c28",
+    "instruction": "jmp     short def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436c2a",
+    "instruction": "lea     ecx, [esi+5C4E8h]; jumptable 00436ACC case 19"
+  },
+  {
+    "address": "0x436c30",
+    "instruction": "call    sub_4546F0"
+  },
+  {
+    "address": "0x436c35",
+    "instruction": "lea     eax, [esi+5C500h]"
+  },
+  {
+    "address": "0x436c3b",
+    "instruction": "jmp     short def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436c3d",
+    "instruction": "lea     ecx, [esi+5D910h]; jumptable 00436ACC case 20"
+  },
+  {
+    "address": "0x436c43",
+    "instruction": "call    sub_456960"
+  },
+  {
+    "address": "0x436c48",
+    "instruction": "lea     eax, [esi+5D928h]"
+  },
+  {
+    "address": "0x436c4e",
+    "instruction": "jmp     short def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436c50",
+    "instruction": "lea     ecx, [esi+5E7E8h]; jumptable 00436ACC case 21"
+  },
+  {
+    "address": "0x436c56",
+    "instruction": "call    sub_458640"
+  },
+  {
+    "address": "0x436c5b",
+    "instruction": "lea     eax, [esi+5E800h]"
+  },
+  {
+    "address": "0x436c61",
+    "instruction": "jmp     short def_436ACC; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436c63",
+    "instruction": "lea     ecx, [esi+6106Ch]; jumptable 00436ACC case 22"
+  },
+  {
+    "address": "0x436c69",
+    "instruction": "call    sub_41E790"
+  },
+  {
+    "address": "0x436c6e",
+    "instruction": "lea     eax, [esi+61084h]"
+  },
+  {
+    "address": "0x436c74",
+    "instruction": "cmp     dword ptr [edi], 8; jumptable 00436ACC default case, cases 5,10,17"
+  },
+  {
+    "address": "0x436c77",
+    "instruction": "jz      short loc_436C92"
+  },
+  {
+    "address": "0x436c79",
+    "instruction": "push    eax"
+  },
+  {
+    "address": "0x436c7a",
+    "instruction": "lea     eax, [esp+38h+var_20]"
+  },
+  {
+    "address": "0x436c7e",
+    "instruction": "lea     ecx, [esp+38h+var_10]"
+  },
+  {
+    "address": "0x436c82",
+    "instruction": "push    eax"
+  },
+  {
+    "address": "0x436c83",
+    "instruction": "push    ecx"
+  },
+  {
+    "address": "0x436c84",
+    "instruction": "call    ebp ; dword_4AF240"
+  },
+  {
+    "address": "0x436c86",
+    "instruction": "test    eax, eax"
+  },
+  {
+    "address": "0x436c88",
+    "instruction": "jz      short loc_436C92"
+  },
+  {
+    "address": "0x436c8a",
+    "instruction": "mov     [esp+34h+var_24], 0"
+  },
+  {
+    "address": "0x436c92",
+    "instruction": "mov     eax, [esi+0E64h]"
+  },
+  {
+    "address": "0x436c98",
+    "instruction": "test    eax, eax"
+  },
+  {
+    "address": "0x436c9a",
+    "instruction": "jz      short loc_436CC2"
+  },
+  {
+    "address": "0x436c9c",
+    "instruction": "mov     eax, [eax+4]"
+  },
+  {
+    "address": "0x436c9f",
+    "instruction": "test    eax, eax"
+  },
+  {
+    "address": "0x436ca1",
+    "instruction": "jz      short loc_436CC2"
+  },
+  {
+    "address": "0x436ca3",
+    "instruction": "mov     ecx, [esi+0E70h]"
+  },
+  {
+    "address": "0x436ca9",
+    "instruction": "mov     [esi+0E64h], eax"
+  },
+  {
+    "address": "0x436caf",
+    "instruction": "mov     eax, [esi+0E6Ch]"
+  },
+  {
+    "address": "0x436cb5",
+    "instruction": "cmp     eax, ecx"
+  },
+  {
+    "address": "0x436cb7",
+    "instruction": "jge     short loc_436CBC"
+  },
+  {
+    "address": "0x436cb9",
+    "instruction": "lea     ecx, [eax+1]"
+  },
+  {
+    "address": "0x436cbc",
+    "instruction": "mov     [esi+0E6Ch], ecx"
+  },
+  {
+    "address": "0x436cc2",
+    "instruction": "mov     eax, [esi+0E70h]"
+  },
+  {
+    "address": "0x436cc8",
+    "instruction": "inc     ebx"
+  },
+  {
+    "address": "0x436cc9",
+    "instruction": "cmp     ebx, eax"
+  },
+  {
+    "address": "0x436ccb",
+    "instruction": "jl      loc_436AB9"
+  },
+  {
+    "address": "0x436cd1",
+    "instruction": "pop     ebp"
+  },
+  {
+    "address": "0x436cd2",
+    "instruction": "jmp     short loc_436CD8"
+  },
+  {
+    "address": "0x436cd4",
+    "instruction": "mov     edi, [esp+30h+var_24]"
+  },
+  {
+    "address": "0x436cd8",
+    "instruction": "mov     edx, [edi]"
+  },
+  {
+    "address": "0x436cda",
+    "instruction": "mov     [esi+617D4h], edx"
+  },
+  {
+    "address": "0x436ce0",
+    "instruction": "mov     eax, dword_824740"
+  },
+  {
+    "address": "0x436ce5",
+    "instruction": "mov     ecx, dword_82473C"
+  },
+  {
+    "address": "0x436ceb",
+    "instruction": "push    eax"
+  },
+  {
+    "address": "0x436cec",
+    "instruction": "push    ecx"
+  },
+  {
+    "address": "0x436ced",
+    "instruction": "mov     ecx, esi"
+  },
+  {
+    "address": "0x436cef",
+    "instruction": "call    sub_43A840"
+  },
+  {
+    "address": "0x436cf4",
+    "instruction": "cmp     eax, 7; switch 8 cases"
+  },
+  {
+    "address": "0x436cf7",
+    "instruction": "pop     edi"
+  },
+  {
+    "address": "0x436cf8",
+    "instruction": "ja      short def_436CFA; jumptable 00436CFA default case, cases 4-6"
+  },
+  {
+    "address": "0x436cfa",
+    "instruction": "jmp     jpt_436CFA[eax*4]; switch jump"
+  },
+  {
+    "address": "0x436d01",
+    "instruction": "lea     ecx, [esi+7300h]; jumptable 00436CFA case 0"
+  },
+  {
+    "address": "0x436d07",
+    "instruction": "call    sub_440B30"
+  },
+  {
+    "address": "0x436d0c",
+    "instruction": "jmp     short def_436CFA; jumptable 00436CFA default case, cases 4-6"
+  },
+  {
+    "address": "0x436d0e",
+    "instruction": "lea     ecx, [esi+2AB4Ch]; jumptable 00436CFA case 1"
+  },
+  {
+    "address": "0x436d14",
+    "instruction": "call    sub_4761E0"
+  },
+  {
+    "address": "0x436d19",
+    "instruction": "jmp     short def_436CFA; jumptable 00436CFA default case, cases 4-6"
+  },
+  {
+    "address": "0x436d1b",
+    "instruction": "lea     ecx, [esi+356B8h]; jumptable 00436CFA case 3"
+  },
+  {
+    "address": "0x436d21",
+    "instruction": "call    sub_41D640"
+  },
+  {
+    "address": "0x436d26",
+    "instruction": "jmp     short def_436CFA; jumptable 00436CFA default case, cases 4-6"
+  },
+  {
+    "address": "0x436d28",
+    "instruction": "lea     ecx, [esi+4A84Ch]; jumptable 00436CFA case 7"
+  },
+  {
+    "address": "0x436d2e",
+    "instruction": "call    sub_47B0E0"
+  },
+  {
+    "address": "0x436d33",
+    "instruction": "jmp     short def_436CFA; jumptable 00436CFA default case, cases 4-6"
+  },
+  {
+    "address": "0x436d35",
+    "instruction": "lea     ecx, [esi+34EC4h]; jumptable 00436CFA case 2"
+  },
+  {
+    "address": "0x436d3b",
+    "instruction": "call    sub_4784F0"
+  },
+  {
+    "address": "0x436d40",
+    "instruction": "mov     eax, [esp+2Ch+var_24]; jumptable 00436CFA default case, cases 4-6"
+  },
+  {
+    "address": "0x436d44",
+    "instruction": "test    eax, eax"
+  },
+  {
+    "address": "0x436d46",
+    "instruction": "jnz     short loc_436D57"
+  },
+  {
+    "address": "0x436d48",
+    "instruction": "mov     edx, dword_8FB92C"
+  },
+  {
+    "address": "0x436d4e",
+    "instruction": "push    0"
+  },
+  {
+    "address": "0x436d50",
+    "instruction": "push    edx"
+  },
+  {
+    "address": "0x436d51",
+    "instruction": "call    dword_4AF2A0"
+  },
+  {
+    "address": "0x436d57",
+    "instruction": "pop     esi"
+  },
+  {
+    "address": "0x436d58",
+    "instruction": "pop     ebx"
+  },
+  {
+    "address": "0x436d59",
+    "instruction": "add     esp, 24h"
+  },
+  {
+    "address": "0x436d5c",
+    "instruction": "retn"
+  },
+  {
+    "address": "0x436d5d",
+    "instruction": "align 10h"
+  },
+  {
+    "address": "0x436d60",
+    "instruction": "dd offset loc_436AD3; jump table for switch statement"
+  }
+]
