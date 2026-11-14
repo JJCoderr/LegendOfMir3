@@ -95,6 +95,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_npc_dialogue","opcode","actor","body"),&Mir3HudView::apply_npc_dialogue);
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
+    ClassDB::bind_method(D_METHOD("apply_scene_name","actor","opcode","color","value"),&Mir3HudView::apply_scene_name);
     ClassDB::bind_method(D_METHOD("set_scene_npc","actor","cell","first_frame"),&Mir3HudView::set_scene_npc);
     ClassDB::bind_method(D_METHOD("set_scene_chicken","actor","cell"),&Mir3HudView::set_scene_chicken);
     ClassDB::bind_method(D_METHOD("set_scene_human","actor","cell","facing","profession","name"),&Mir3HudView::set_scene_human);
@@ -168,6 +169,13 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["ready"]=loaded;
     result["character_level"]=model.level;
     result["terrain_ready"]=terrain_ready;
+    result["displayed_name_actor"]=displayed_name_actor;
+    result["displayed_name_bounds"]=displayed_name_bounds;
+    result["displayed_name_color"]=scene_names.contains(displayed_name_actor)?scene_names.at(displayed_name_actor).color:0xffffff;
+    result["player_bounds"]=player_bounds;
+    Dictionary npc_bounds;
+    for (const auto& [actor,npc]:scene_npcs) npc_bounds[actor]=npc.bounds;
+    result["scene_npc_bounds"]=npc_bounds;
     Dictionary chicken_bounds;
     for (const auto& [actor,chicken]:scene_chickens) chicken_bounds[actor]=chicken.bounds;
     result["scene_chicken_bounds"]=chicken_bounds;
@@ -1414,6 +1422,55 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
     return true;
 }
 
+bool Mir3HudView::apply_scene_name(int actor,int opcode,int color,String value) {
+    if (color<0 || color>255 || (!scene_humans.contains(actor) && !scene_npcs.contains(actor) && !scene_chickens.contains(actor))) return false;
+    auto identity=scene_names.contains(actor)?scene_names.at(actor):mir3::SceneName{};
+    const auto ansi=mir3::utf8_to_ansi(value.utf8().get_data());
+    if (!identity.update(opcode,static_cast<std::uint8_t>(color),ansi)) return false;
+    scene_names.insert_or_assign(actor,std::move(identity));
+    if (auto human=scene_humans.find(actor);human!=scene_humans.end())
+        human->second.name=String::utf8(mir3::ansi_to_utf8(scene_names.at(actor).lines[0]).c_str());
+    queue_redraw();
+    return true;
+}
+
+void Mir3HudView::draw_scene_name() {
+    displayed_name_actor=-1;
+    displayed_name_bounds=Rect2();
+    if (!spell_pointer_available()) return;
+    Vector2 anchor;
+    const auto pick=[&](const auto& actors) {
+        for (const auto& [actor,value]:actors) {
+            if (!value.bounds.has_point(inventory_cursor)) continue;
+            if (displayed_name_actor>=0 && value.anchor.y<anchor.y) continue;
+            displayed_name_actor=actor;
+            anchor=value.anchor;
+        }
+    };
+    pick(scene_npcs);pick(scene_chickens);pick(scene_humans);
+    mir3::SceneName local;
+    const mir3::SceneName* identity=nullptr;
+    if (player_bounds.has_point(inventory_cursor) && (displayed_name_actor<0 || player_pixel().y-map_camera().y>=anchor.y)) {
+        displayed_name_actor=0;
+        anchor=Vector2(player_pixel()-map_camera());
+        local.lines={mir3::utf8_to_ansi(character_name.utf8().get_data()),mir3::utf8_to_ansi(character_secondary.utf8().get_data()),mir3::utf8_to_ansi(character_tertiary.utf8().get_data())};
+        identity=&local;
+    } else if (const auto found=scene_names.find(displayed_name_actor);found!=scene_names.end()) identity=&found->second;
+    if (!identity || identity->lines[0].empty()) { displayed_name_actor=-1; return; }
+    for (int line=0;line<3;++line) {
+        const auto caption=mir3::ansi_to_utf8(identity->lines[line]);
+        if (caption.empty()) continue;
+        const auto measured=mir3::raster_text(caption,800,15,false,mir3::TextFont::normal);
+        const auto r=mir3::SceneName::rect(int(anchor.x),int(anchor.y),measured.text_width,line);
+        displayed_name_bounds=displayed_name_bounds.has_area()?displayed_name_bounds.merge(rect(r)):rect(r);
+        for (const auto [x,y]:std::array<std::array<int,2>,4>{{{-1,-1},{1,-1},{-1,1},{1,1}}}) {
+            auto outline=r;outline[0]+=x;outline[1]+=y;
+            text(caption,outline,0x0a0a0a,mir3::TextFont::normal,true);
+        }
+        text(caption,r,identity->color,mir3::TextFont::normal,true);
+    }
+}
+
 bool Mir3HudView::set_scene_npc(int actor,Vector2i cell,int first_frame) {
     if (!terrain_ready || actor<=0 || scene_chickens.contains(actor) || scene_humans.contains(actor) || first_frame<0 || first_frame>65532) return false;
     SceneActor npc{};
@@ -1621,6 +1678,9 @@ bool Mir3HudView::set_scene_human(int actor,Vector2i cell,int facing,int profess
     human.name=std::move(name);
     std::copy_n(human_body(human.type,human.clothing)->standing.begin()+facing*10,human.frames.size(),human.frames.begin());
     if (human.frames.front().image.is_null()) return false;
+    mir3::SceneName identity;
+    if (!identity.update(42,255,mir3::utf8_to_ansi(human.name.utf8().get_data()))) return false;
+    scene_names.insert_or_assign(actor,std::move(identity));
     scene_humans.insert_or_assign(actor,std::move(human));
     queue_redraw();
     return true;
@@ -1668,6 +1728,7 @@ bool Mir3HudView::apply_scene_human_step(int actor,int opcode,Vector2i destinati
 bool Mir3HudView::remove_scene_actor(int actor) {
     if (!scene_npcs.erase(actor) && !scene_chickens.erase(actor) && !scene_humans.erase(actor)) return false;
     const auto id=static_cast<std::uint32_t>(actor);
+    scene_names.erase(actor);
     target_attributes_by_actor.erase(id);
     if (hovered_target==id) hovered_target=0;
     target_focus.remove(id);
@@ -1821,6 +1882,7 @@ void Mir3HudView::draw_terrain() {
         if (const auto image=terrain_texture(package,id);image.is_valid())
             paint_canvas->draw_texture(image,offset+Vector2(96*column,64*row));
     }
+    player_bounds=Rect2();
     animated_map_objects=false;
     for (auto& [actor,npc]:scene_npcs) npc.bounds=Rect2();
     for (auto& [actor,chicken]:scene_chickens) chicken.bounds=Rect2();
@@ -1852,6 +1914,7 @@ void Mir3HudView::draw_terrain() {
         const auto& frame=selected.image.is_valid()?selected:npc.frames.front();
         if (npc.cell.x<start_x-5 || npc.cell.x>=start_x+21) return;
         const auto position=Vector2(npc.cell.x*48-camera.x,npc.cell.y*32-camera.y)+frame.offset;
+        npc.anchor=position-frame.offset;
         npc.bounds=Rect2(position,frame.image->get_size());
         paint_canvas->draw_texture(frame.image,position);
         animated_map_objects=true;
@@ -1873,6 +1936,7 @@ void Mir3HudView::draw_terrain() {
                 const auto& frame=body->standing[human.facing*10+human.idle.frame()];
                 if (frame.image.is_null()) continue;
                 const auto position=Vector2(human.cell.x*48-camera.x,human.cell.y*32-camera.y)+frame.offset;
+                human.anchor=position-frame.offset;
                 human.bounds=Rect2(position,frame.image->get_size());
                 draw_human_layers(frame,position-frame.offset,human.type,human.hair,human.weapon,(human.mount_shape?2320:0)+human.facing*10+human.idle.frame(),human.clothing_dye,human.hair_dye,human.mount_shape);
                 animated_map_objects=true;
@@ -1890,6 +1954,7 @@ void Mir3HudView::draw_terrain() {
                 human.cell.y*32+y_step*offset_frames);
             if (start_y+row!=int(std::round(pixel.y/32.0))) continue;
             const auto position=Vector2(pixel-camera)+frame.offset;
+            human.anchor=position-frame.offset;
             human.bounds=Rect2(position,frame.image->get_size());
             draw_human_layers(frame,position-frame.offset,human.type,human.hair,human.weapon,
                 (human.mount_shape?(human.step_distance>1?2480:2400):(human.step_distance>1?1760:1680))+human.facing*10+human.movement_frame,human.clothing_dye,human.hair_dye,human.mount_shape);
@@ -1904,6 +1969,7 @@ void Mir3HudView::draw_terrain() {
             const auto& actor=walk_frame>=0?movement[player_facing*10+walk_frame]:
                 body->standing[player_facing*10+player_idle.frame()];
             if (actor.image.is_valid()) {
+                player_bounds=Rect2(Vector2(pixel-camera)+actor.offset,actor.image->get_size());
                 draw_human_layers(actor,Vector2(pixel-camera),player_type,player_hair,player_weapon,
                     (player_mount?(walk_frame>=0?(running?2480:2400):2320):(walk_frame>=0?(running?1760:1680):0))+
                     player_facing*10+(walk_frame>=0?walk_frame:player_idle.frame()),player_clothing_dye,player_hair_dye,player_mount);
@@ -1917,6 +1983,7 @@ void Mir3HudView::_draw() {
     using Layout=mir3::HudLayout;
     if (!loaded) return;
     draw_terrain();
+    draw_scene_name();
     if (!model.layout.expanded) {
         sprite(1490,Layout::image_position(Layout::Image::portrait));
         const auto origin=point(Layout::image_position(Layout::Image::portrait));

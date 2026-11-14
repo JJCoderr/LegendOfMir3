@@ -141,6 +141,42 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--scene-names"):
+		if not check(hud.apply_scene_name(5, 42, 255, "比奇旅人\r比奇行会\r武士/ignored")
+			and hud.apply_scene_name(2, 42, 251, "比奇商人"), "apply human and NPC names"): return
+		if not await capture("bichon-human-name"): return
+		if not check(hud.hud_snapshot().displayed_name_actor == 5
+			and hud.hud_snapshot().displayed_name_bounds.size.y == 45, "hover displays three identity lines"): return
+		if not check(hud.apply_scene_name(5, 656, 249, "ignored")
+			and not hud.apply_scene_name(5, 42, 255, "a".repeat(64)), "color-only and rejected oversized update"): return
+		if not await capture("bichon-human-name-red"): return
+		if not check(hud.hud_snapshot().displayed_name_color == 255, "name color keeps original COLORREF mapping"): return
+		var npc_rect: Rect2 = hud.hud_snapshot().scene_npc_bounds[2]
+		hover.position = npc_rect.position + Vector2(npc_rect.size.x / 2, 2)
+		root.push_input(hover.duplicate(), true)
+		if not await capture("bichon-npc-name"): return
+		if not check(hud.hud_snapshot().displayed_name_actor == 2, "hover switches to the NPC identity"): return
+		hud.set_character_identity("本地武士", "本地行会", "", "")
+		hover.position = hud.hud_snapshot().player_bounds.get_center()
+		root.push_input(hover.duplicate(), true)
+		if not await capture("bichon-player-name"): return
+		if not check(hud.hud_snapshot().displayed_name_actor == 0, "local player identity uses current actor bounds"): return
+		hover.position = hud.hud_snapshot().scene_human_bounds[5].get_center()
+		root.push_input(hover.duplicate(), true)
+		var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
+		if not check(hud.apply_scene_human_step(5, 11, cell + Vector2i.RIGHT, 2), "move named human"): return
+		await create_timer(0.25).timeout
+		hover.position = hud.hud_snapshot().scene_human_bounds[5].get_center()
+		root.push_input(hover.duplicate(), true)
+		if not await capture("bichon-human-name-moving"): return
+		if not check(hud.hud_snapshot().displayed_name_actor == 5, "moving name follows current actor bounds"): return
+		if not check(hud.remove_scene_actor(5), "remove named human"): return
+		if not await capture("bichon-name-removed"): return
+		if not check(hud.hud_snapshot().displayed_name_actor == -1
+			and not hud.apply_scene_name(5, 42, 255, "stale"), "removed actor cannot retain or receive names"): return
+		print("SCENE_NAMES_OK")
+		quit()
+		return
 	if OS.get_cmdline_user_args().has("--scene-human-body"):
 		if not check(hud.set_player_body(0, 1) and hud.set_scene_human_body(5, 1, 1),
 			"load male and female clothing from the original archives"): return
@@ -270,7 +306,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

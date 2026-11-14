@@ -1,5 +1,6 @@
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
+#include "hud/scene_name.hpp"
 #include "chat/chat_reception.hpp"
 #include "resources/wil_archive.hpp"
 #include "resources/messages.hpp"
@@ -14,6 +15,16 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--scene-names") {
+            mir3::SceneName name;
+            check(name.update(42,255,"name\rguild\rtitle/suffix"),"three-line identity");
+            check(name.lines==std::array<std::string,3>{"name","guild","title"},"CR lines and trailing slash suffix");
+            check(name.update(656,249,"ignored") && name.color==255 && name.lines[0]=="name","color-only update preserves text");
+            check(!name.update(42,255,std::string(64,'a')) && name.lines[0]=="name" && name.color==255,"oversized identity is atomic");
+            check(mir3::SceneName::rect(100,200,25,0)==std::array<int,4>{111,170,25,15},"odd-width endpoint rounding");
+            std::cout << "SCENE_NAMES_MODEL_OK\n";
+            return 0;
+        }
         if (std::filesystem::path(argv[1])=="--actor-dyes") {
             std::vector<std::uint8_t> rgba{248,252,248,0, 248,252,248,255, 248,252,248,255, 248,252,248,255};
             const std::array<std::uint8_t,4> regions{0,1,2,3};
