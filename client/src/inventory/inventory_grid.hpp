@@ -27,6 +27,7 @@ public:
     BagItem held;
     int held_slot = -1;
     int held_equipment_slot = -1;
+    int held_quick_slot = -1;
     bool pending_use=false;
     std::uint32_t last_release=0,last_use=0;
     int scroll_row = 0;
@@ -105,6 +106,7 @@ public:
     bool release(int mouse_x, int mouse_y, int origin_x, int origin_y) {
         const int slot = slot_at(mouse_x,mouse_y,origin_x,origin_y);
         if (slot < 0) return false;
+        if (held_quick_slot>=0) { held={};held_slot=-1;held_quick_slot=-1;return true; }
         const int id = item_at(slot);
         if (!held) {
             if (id >= 0) { held = take(id); held_slot = slot; } // 0x440F90

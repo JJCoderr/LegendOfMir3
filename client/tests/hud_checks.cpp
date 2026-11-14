@@ -18,6 +18,7 @@
 #include "inventory/inventory_grid.hpp"
 #include "status/equipment.hpp"
 #include "inventory/trade_grid.hpp"
+#include "quick_items_checks.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/ground_items.hpp"
 #include "hud/scene_lighting.hpp"
@@ -48,6 +49,7 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--quick-items") { quick_items_checks();std::cout<<"QUICK_ITEMS_CHECKS_OK\n";return 0; }
         // 测试内容：交易每方12件限制、指定锚点回退、跨格占位冲突及5列40行边界。
         if (std::filesystem::path(argv[1])=="--trade-grid") {
             mir3::TradeGrid::Items items;

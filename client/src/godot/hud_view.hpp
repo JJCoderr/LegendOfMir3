@@ -41,6 +41,7 @@
 #include "hud/target_portrait.hpp"
 #include "inventory/inventory_panel.hpp"
 #include "inventory/inventory_grid.hpp"
+#include "inventory/quick_items.hpp"
 #include "inventory/trade_grid.hpp"
 #include "status/equipment.hpp"
 #include "status/element_attributes.hpp"
@@ -334,8 +335,8 @@ private:
     godot::Vector2 status_body_offset;
     void draw_status();
     void toggle_status();
-    enum class Panel { group, skills, status, inventory, guild, options, portrait, mount, quest, trade };
-    std::array<Panel,10> panel_order{Panel::group,Panel::skills,Panel::status,Panel::inventory,Panel::guild,Panel::options,Panel::portrait,Panel::mount,Panel::quest,Panel::trade};
+    enum class Panel { group, skills, status, inventory, guild, options, portrait, mount, quest, trade, quick };
+    std::array<Panel,11> panel_order{Panel::group,Panel::skills,Panel::status,Panel::inventory,Panel::guild,Panel::options,Panel::portrait,Panel::mount,Panel::quest,Panel::trade,Panel::quick};
     void raise_panel(Panel panel);
     const mir3::DraggablePanel& panel_state(Panel panel) const;
     bool panel_covered(Panel panel,godot::Vector2 point) const;
@@ -343,6 +344,16 @@ private:
     bool panel_pointer(int kind,godot::Vector2 position,bool captured_only=false);
     bool status_pointer(int kind,godot::Vector2 position);
     mir3::InventoryGrid bag;
+    mir3::QuickItems quick_items;
+    mir3::DraggablePanel quick_panel{{73,413,280,48}};
+    bool quick_close_pressed=false;
+    void toggle_quick();
+    void draw_quick();
+    int quick_slot_at(godot::Vector2 position) const;
+    bool quick_pointer(int kind,godot::Vector2 position);
+    void activate_quick(int slot,bool mouse=false);
+    void quick_notice(int resource,int slot,const std::string& name);
+
     mir3::EquipmentState equipment;
     mir3::WilArchive equipment_archive;
     void emit_equipment_request();

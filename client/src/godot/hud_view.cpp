@@ -509,6 +509,15 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["inventory_visible"]=inventory.visible;
     result["inventory_position"]=Vector2i(inventory.rect[0],inventory.rect[1]);
     result["inventory_use_pending"]=bag.pending_use;
+    result["quick_visible"]=quick_panel.visible;
+    result["quick_position"]=Vector2i(quick_panel.rect[0],quick_panel.rect[1]);
+    result["held_quick_slot"]=bag.held_quick_slot;
+    Array quick_records;
+    for(int i=0;i<6;++i) if(const auto& item=quick_items.slots[i];item) {
+        Dictionary entry;entry["slot"]=i;entry["id"]=int64_t(item.make_index);
+        entry["name"]=String::utf8(item.name.c_str());entry["count"]=item.count;quick_records.append(entry);
+    }
+    result["quick_records"]=quick_records;
     result["equipment_pending"]=equipment.pending;
     result["held_inventory_icon"]=bag.held.icon;
     result["inventory_row"]=inventory.row;
@@ -2799,6 +2808,7 @@ void Mir3HudView::clear_game_scene() {
     skill_key_menu={};skill_menu_target=0;skill_shortcuts_visible=false;
     group_request=0;group_members.clear();group_allow=false;
     // 421E80 -> 4217E0 -> 4355C0/435180：离场重建物品窗口和持有记录。
+    quick_items={};quick_panel=mir3::DraggablePanel{{73,413,280,48}};quick_close_pressed=false;
     bag={};equipment={};inventory.row=0;inventory_cursor=Vector2(-1,-1);
     inventory_gold=0;trade_gold={};trade_gold_pending=false;trade_gold_debited=false;
     for (auto& side:trade_items) for (auto& item:side) item={};
@@ -3952,6 +3962,7 @@ void Mir3HudView::draw_hud_tail() {
         case Panel::mount: draw_mount(); break;
         case Panel::quest: draw_quest(); break;
         case Panel::trade: draw_trade(); break;
+        case Panel::quick: draw_quick(); break;
         }
     }
     draw_minimap();
@@ -4543,7 +4554,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     }
     if (button.is_valid() && button->is_pressed() && (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) && rect(mir3::HudLayout::chat_frame(model.layout.expanded)).has_point(button->get_position()) &&
         !covers_wheel(portrait_panel) && !covers_wheel(options) && !covers_wheel(guild) && !covers_wheel(group) && !covers_wheel(skills) &&
-        !covers_wheel(status) && !covers_wheel(inventory) && !covers_wheel(mount) && !covers_wheel(quest) && !covers_wheel(trade)) {
+        !covers_wheel(status) && !covers_wheel(inventory) && !covers_wheel(mount) && !covers_wheel(quest) && !covers_wheel(trade) && !covers_wheel(quick_panel)) {
         chat_history.scroll(model.layout.expanded).wheel(button->get_button_index()==MOUSE_BUTTON_WHEEL_UP?1:-1,int(chat_history.lines(model.layout.expanded).size()),model.layout.expanded);
         get_viewport()->set_input_as_handled();queue_redraw();return;
     }
@@ -4563,6 +4574,9 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
         if (kind==2 && chat_history.scroll(model.layout.expanded).captured() && scroll_input(kind,p)) return;
         if (kind==2 && panel_pointer(kind,p,true)) return;
         if (shop_input(kind,p,button->is_double_click()) || npc_dialogue_input(kind,p) || skill_menu_input(kind,p,button->is_double_click())) return;
+        if (kind==0 && button->is_double_click() && quick_panel.visible && !panel_covered(Panel::quick,p) && quick_slot_at(p)>=0) {
+            activate_quick(quick_slot_at(p),true);get_viewport()->set_input_as_handled();return;
+        }
         if (minimap_pointer(kind,p,button->is_ctrl_pressed()) || panel_pointer(kind,p) || scroll_input(kind,p)) return;
         const auto entry=frame(mir3::HudLayout::portrait_entry_frame(false));
         const auto anchor=mir3::HudLayout::portrait_entry_position;
@@ -4658,6 +4672,7 @@ void Mir3HudView::cancel_pointer_interactions() {
     shop_scroll_dragging=false;
     minimap.dragging=false;
     minimap.release_captured=false;
+    quick_panel.end_drag();quick_close_pressed=false;
     trade.end_drag();
     trade_scroll.captured=-1;
     trade_confirm_pressed=false;
@@ -4690,6 +4705,91 @@ void Mir3HudView::cancel_pointer_interactions() {
     inventory.scroll.captured=false;
     chat_history.input(2,0,0,false,0,0,0);
     chat_history.input(2,0,0,true,0,0,0);
+}
+
+void Mir3HudView::toggle_quick() {
+    if(frame(1210).is_null()) return;
+    quick_panel.toggle();quick_close_pressed=false;
+    if(quick_panel.visible) raise_panel(Panel::quick);
+    controller.cancel();queue_redraw();
+}
+
+int Mir3HudView::quick_slot_at(Vector2 position) const {
+    const auto [x,y,w,h]=quick_panel.rect;
+    for(int i=0;i<6;++i) if(Rect2(x+17+42*i,y+6,38,38).has_point(position)) return i;
+    return -1;
+}
+
+void Mir3HudView::draw_quick() {
+    const auto [x,y,w,h]=quick_panel.rect;
+    const auto skin=frame(1210);
+    if(skin.is_valid()) sprite(1210,{x-(skin->get_width()-w)/2,y-(skin->get_height()-h)/2});
+    sprite(quick_close_pressed?1212:1211,{x+264,y+32});
+    for(int i=0;i<6;++i) if(const auto& item=quick_items.slots[i];item) {
+        const auto icon=item_frame(item.icon);
+        if(icon.is_valid()) paint_canvas->draw_texture(icon,Vector2(x+17+42*i+19-icon->get_width()/2,y+6+19-icon->get_height()/2));
+        if(item.stack_mode>=2 && item.count>0) {
+            const int offset=int(5*(5-std::log10(double(item.count))));
+            text(std::to_string(item.count),{x+17+42*i+offset,y+6+23,38,16},0xffffff,mir3::TextFont::normal,false);
+        }
+    }
+}
+
+void Mir3HudView::quick_notice(int resource,int slot,const std::string& name) {
+    if(resource<=0) return;
+    auto caption=message(resource);
+    if(auto at=caption.find("%s");at!=std::string::npos) caption.replace(at,2,name);
+    if(auto at=caption.find("%d");at!=std::string::npos) caption.replace(at,2,std::to_string(slot+1));
+    post_chat(String::utf8(caption.c_str()),11861940,0);
+}
+
+void Mir3HudView::activate_quick(int slot,bool mouse) {
+    if(equipment.pending || trade_pending_slot>=0 || trade_return_slot>=0) return;
+    const auto tick=std::uint32_t(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+    const auto before=bag.held;
+    const auto result=mouse?quick_items.mouse_activate(slot,bag,tick,message(1050)):quick_items.activate(slot,bag,tick,message(1050));
+    quick_notice(result.binding_notice,slot,before.name);
+    quick_notice(result.notice,slot,before.name);
+    if(result.request) {
+        const auto name=String::utf8(bag.held.name.c_str());
+        emit_signal("inventory_use_requested",int64_t(bag.held.make_index),int64_t(tick),name);
+        send_client_packet(mir3::protocol::CM_EAT,bag.held.make_index,name,std::uint16_t(tick),std::uint16_t(tick>>16));
+    }
+    queue_redraw();
+}
+
+bool Mir3HudView::quick_pointer(int kind,Vector2 position) {
+    if(!quick_panel.visible) return false;
+    const auto [x,y,w,h]=quick_panel.rect;
+    const auto close=frame(1211);
+    const bool on_close=close.is_valid() && Rect2(x+264,y+32,close->get_width(),close->get_height()).has_point(position);
+    const bool inside=rect(quick_panel.rect).has_point(position);
+    const int slot=quick_slot_at(position);
+    bool consumed=false;
+    if(kind==0 && inside) {
+        raise_panel(Panel::quick);quick_close_pressed=on_close;
+        quick_panel.begin_drag(int(position.x),int(position.y),on_close || slot>=0);
+    } else if(kind==1) consumed=quick_panel.move_drag(int(position.x),int(position.y));
+    else if(kind==2) {
+        const bool closing=quick_close_pressed && on_close;
+        if(!quick_panel.dragging && !quick_close_pressed && slot>=0 && !equipment.pending && trade_pending_slot<0) {
+            if(trade_return_slot>=0) {
+                // 41A8A0 -> 41DB70：交易来源放回交易栏，只取消持有，不绑定快捷栏。
+                if(!trade_return_pending) {play_item_sound(trade_items[0][trade_return_slot]);trade_return_slot=-1;}
+            } else {
+                const auto sound=bag.held?bag.held:quick_items.slots[slot];
+                const int result=quick_items.release(slot,bag,message(1050));
+                quick_notice(result,slot,sound.name);
+                if(result==0 || result==1068) play_item_sound(sound);
+            }
+            consumed=true;
+        }
+        consumed=quick_panel.end_drag() || quick_close_pressed || consumed;
+        quick_close_pressed=false;
+        if(closing) toggle_quick();
+    }
+    if(!inside && !consumed) return false;
+    controller.cancel();get_viewport()->set_input_as_handled();queue_redraw();return true;
 }
 
 void Mir3HudView::draw_inventory() {
@@ -4820,6 +4920,10 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
         get_viewport()->set_input_as_handled();
         return;
     }
+    if (code==KEY_Z) { toggle_quick();get_viewport()->set_input_as_handled();return; }
+    if (code>=KEY_1 && code<=KEY_6 && !(key->is_shift_pressed() && code<=KEY_2)) {
+        activate_quick(int(code-KEY_1));get_viewport()->set_input_as_handled();return;
+    }
     if (code==KEY_R) {
         scroll_input(2,inventory_cursor);
         model.layout.toggle();
@@ -4887,6 +4991,7 @@ void Mir3HudView::_unhandled_key_input(const Ref<InputEvent>& event) {
             case Panel::mount: toggle_mount();break;
             case Panel::quest: toggle_quest();break;
             case Panel::trade: break;
+            case Panel::quick: toggle_quick();break;
             }
             get_viewport()->set_input_as_handled();
             return;
@@ -4999,14 +5104,26 @@ bool Mir3HudView::add_inventory_item(int icon,int count,int slot,int64_t make_in
 bool Mir3HudView::apply_inventory_use_reply(int identifier,int remaining) {
     if (remaining<0 || remaining>65535) return false;
     const auto used=bag.held;
-    if (!bag.apply_use_reply(identifier,remaining,inventory.rect[0],inventory.rect[1],
+    const bool from_quick=bag.held_quick_slot>=0;
+    if (from_quick) {
+        if(!quick_items.reply(identifier,remaining,bag)) return false;
+    } else if (!bag.apply_use_reply(identifier,remaining,inventory.rect[0],inventory.rect[1],
                              int(inventory_cursor.x),int(inventory_cursor.y))) return false;
     if (identifier==mir3::protocol::SM_EAT_OK) {
+        if(used.stack_mode==3 && !from_quick) {
+            if(used.count<=1) quick_items.remove(used.name);else quick_items.update_count(used.name,remaining);
+        }
         auto name=used.name;
         for (int i=0;i<10;++i) if (name==message(1409)+std::to_string(i)) { name=message(1409);break; }
         auto caption=message(1464);
         if (const auto at=caption.find("%s");at!=std::string::npos) caption.replace(at,2,name);
         post_chat(String::utf8(caption.c_str()),mir3::chat_palette(2),mir3::chat_palette(7));
+        if(from_quick) {
+            auto extra=message(remaining?1467:1468);
+            if(auto at=extra.find("%s");at!=std::string::npos) extra.replace(at,2,used.name);
+            if(auto at=extra.find("%d");at!=std::string::npos) extra.replace(at,2,std::to_string(remaining));
+            post_chat(String::utf8(extra.c_str()),mir3::chat_palette(2),mir3::chat_palette(7));
+        }
         if (used.std_mode<=2) play_login_sound(sound_list.file(used.std_mode==0?108:107),false);
     } else if (used.std_mode==51) open_group_dialog(1414);
     queue_redraw();
@@ -5182,6 +5299,7 @@ bool Mir3HudView::panel_pointer(int kind,Vector2 position,bool captured_only) {
     if (kind==1 && options.visible && !rect(options.rect).has_point(position) && !options.dragging && audio_drag<0) {
         system_options.cancel_buttons();queue_redraw();
     }
+    if (quick_panel.dragging || quick_close_pressed) return quick_pointer(kind,position);
     if (trade.dragging || trade_confirm_pressed || trade_scroll.captured>=0) return trade_pointer(kind,position);
     if (quest.dragging || quest.pressed>=0 || quest.scroll_captured) return quest_pointer(kind,position);
     if (mount.dragging || mount.pressed>=0) return mount_pointer(kind,position);
@@ -5207,6 +5325,7 @@ bool Mir3HudView::panel_pointer(int kind,Vector2 position,bool captured_only) {
         case Panel::mount: if (mount_pointer(kind,position)) return true; break;
         case Panel::quest: if (quest_pointer(kind,position)) return true; break;
         case Panel::trade: if (trade_pointer(kind,position)) return true; break;
+        case Panel::quick: if (quick_pointer(kind,position)) return true; break;
         }
     }
     return false;
@@ -6839,6 +6958,9 @@ bool Mir3HudView::apply_trade_offer_reply(int identifier,int remaining,int64_t n
         next_bag.held={};next_bag.held_slot=-1;trade_pending_slot=-1;trade_offer_count=0;
     }
     bag=std::move(next_bag);trade_items[0]=std::move(next_items);
+    if(identifier==mir3::protocol::SM_TRADE_ADD_OK) {
+        if(remaining) quick_items.update_count(sound_item.name,remaining);else quick_items.remove(sound_item.name);
+    }
     play_item_sound(sound_item); // 分堆路径4410D0也调用43ED40。
     queue_redraw();return true;
 }
@@ -6898,6 +7020,11 @@ bool Mir3HudView::set_trade_gold(int64_t local,int64_t remote) {
 bool Mir3HudView::apply_trade_complete(int64_t balance) {
     if (!trade.visible || balance<0 || balance>UINT32_MAX || trade_pending_slot>=0 || trade_return_pending) return false;
     // 687只清交易；物品和余额通过独立权威消息更新，不复制对方展示物品。
+    for(const auto& side:trade_items) for(const auto& item:side) if(item && item.stack_mode>2) {
+        bool exists=false;
+        for(const auto& owned:bag.items) if(owned && owned.icon==item.icon) {exists=true;break;}
+        if(!exists) quick_items.remove(item.name);
+    }
     inventory_gold=std::uint32_t(balance);trade_items={};
     return open_trade(String());
 }
@@ -7041,7 +7168,7 @@ bool Mir3HudView::trade_pointer(int kind,Vector2 position) {
             }
         }
         if (!captured && !trade_confirmed && trade_pending_slot<0 && trade_return_slot<0 && bag.held &&
-            bag.held.make_index && bag.held_equipment_slot<0 && !bag.pending_use && !equipment.pending &&
+            bag.held.make_index && bag.held_equipment_slot<0 && bag.held_quick_slot<0 && !bag.pending_use && !equipment.pending &&
             Rect2(x+14,y+56,190,190).has_point(position)) {
             const int column=(int(position.x)-x-14)/38;
             const int row=trade_scroll.first[0]+(int(position.y)-y-56)/38;
@@ -7579,6 +7706,7 @@ const mir3::DraggablePanel& Mir3HudView::panel_state(Panel panel) const {
     case Panel::mount: return mount;
     case Panel::quest: return quest;
     case Panel::trade: return trade;
+    case Panel::quick: return quick_panel;
     }
     return inventory;
 }
