@@ -2,27 +2,30 @@
 使用GODOT复刻光通传奇3 v1.45版本。 包括客户端和服务器端。 私服包括网络家园,传奇学院,宝藏传奇
 
 ## 开源代码
-分析各个开源代码的游戏逻辑，并按模块功能记录。 优先参考Zircon。 
+分析各个开源代码的游戏逻辑，并按模块功能记录。 
+优先参考Zircon等前面3个原版的游戏逻辑。 
 
 1. https://github.com/tensafe/LegendOfMir3_Src ，应该是最初的C++版本
 2. https://github.com/etorth/legendOfMir2_src ，lomcn，来源于https://www.lomcn.net/forum/threads/maybe-useful.94024/#post-1033272，20030515f client
 3. https://github.com/Suprcode/Zircon， 韩版的传奇3复刻版，使用C#
+4. https://github.com/etorth/mir2x, 一个C++版本，完成度还行。 https://github.com/thexinchen/mir2x，使用GODOT以及IMGUI更改过客户端。 客户端在https://github.com/etorth/CBWCQ3
 
 ## 约束
 0. 优先使用IDA分析原版行为和逻辑，有不清晰的地方可以参考几个开源实现。 但优先原版。
 1. 采用C++23标准，采用CMAKE管理工程。
 2. Features.md统一维护客户端与服务端配套功能的详细清单、行为边界和验收口径，发现缺失功能先补入该文件。
-3. 每个子系统需要独立的测试集，并中文注释测试内容。
+3. 每个子系统需要一个独立的测试集，并中文注释测试内容。 但又可以选择其中的一个子集进行单独验证。
 4. 消息、技能、装备等等不能使用硬编码，需要采用枚举或者宏定义。 名称可以参考开源工程中的定义，包括结构体定义。
 
 ## 客户端
 目标：将原版的客户端改为GODOT实现。 需要与原版的行为和逻辑一致，但不追求代码一致。 还需将原版游戏逻辑记录到文档Client.md中。
 
-1. GODOT做客户端，C++做游戏逻辑引擎，而不是GDScripts。 
+1. GODOT做客户端，C++做游戏逻辑引擎，而不是GDScripts。 C++做对象定义，行为等等，而GODOT只做呈现。
 2. 客户端支持WINDOWS,LINUX,ANDROID,IOS,WEB -- 先在WINDOWS下完成再考虑其他客户端。
 3. 字体，坐标，大小，行为要与原版一致。 可以通过IDA进行分析。
 4. 采用MVC框架，对话框采用struct定义显示的内容，以便做测试。 一个对话框的逻辑对应一个类，整个主界面逻辑都放到一个cpp文件中。
 5. 只能解析资源文件，而不是解压。 客户端代码放入client。
+6. 可以参考mir2x的GODOT客户端，作为初步实现。 比如对话框，怪物，技能等等，再参照原版的实现。
 
 ## 服务器端
 
