@@ -6,6 +6,7 @@
 #include "protocol/gold_change.hpp"
 #include "protocol/group_message.hpp"
 #include "protocol/guild_notice.hpp"
+#include "protocol/skill_wire.hpp"
 #include "hud/level_up_effect.hpp"
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
@@ -43,6 +44,28 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        // 测试内容：技能独立编码记录、列表计数低字节、分隔符、截断拒绝及空列表。
+        if (std::filesystem::path(argv[1])=="--skill-wire") {
+            using namespace mir3::protocol;
+            std::string raw(74,0);raw[4]='A';raw[6]=5;
+            // 独立构造含NUL的固定记录编码。
+            std::string encoded;unsigned accumulator=0;int bits=0;
+            for (unsigned char byte:raw) { accumulator=(accumulator<<8)|byte;bits+=8;
+                while(bits>=6) {bits-=6;encoded+=char(60+((accumulator>>bits)&63));} }
+            if(bits) encoded+=char(60+((accumulator<<(6-bits))&63));
+            const auto parse=[](mir3::ReceiveHeader h,const std::string& body) {
+                return mir3::SkillWire::parse(h,{reinterpret_cast<const std::uint8_t*>(body.data()),body.size()});
+            };
+            check(parse({0,SM_ADDMAGIC,{}},encoded)->records.size()==74,"single decoded record");
+            const auto list=parse({0,SM_SENDMYMAGIC,{0,0,0xab02}},encoded+"/"+encoded+"/ignored");
+            check(list && list->count==2 && list->records.size()==148,"count low byte and separately padded segments");
+            check(!parse({0,SM_SENDMYMAGIC,{0,0,2}},encoded+"/"),"missing list segment");
+            check(!parse({0,SM_SENDMYMAGIC,{0,0,1}},encoded),"missing terminator");
+            check(!parse({0,SM_ADDMAGIC,{}},encoded.substr(1)),"truncated record");
+            check(parse({0,SM_SENDMYMAGIC,{}},"ignored")->records.empty(),"empty list ignores tail");
+            check(!parse({0,SM_ABILITY,{}},encoded),"unrelated message");
+            std::cout << "SKILL_WIRE_MODEL_OK\n";return 0;
+        }
         // 测试内容：行会失败原因、联盟同分支、增删成功后的成员刷新及未知原因忽略。
         if (std::filesystem::path(argv[1])=="--guild-wire") {
             using namespace mir3::protocol;

@@ -204,3 +204,6 @@ CM_GROUPMODE参数一为允许标志；创建/增加/删除成员使用独立正
 
 ## 骑乘确认
 SM_RIDEHORSE recognition低字节为本地骑乘形状，客户端确认后才更新人物外观并进入29/0待机，保持方向。窗口命令产生300ms动作限制；其它参数不参与该原分支。详见client/docs/evidence/mount-wire.md。
+
+## 技能同步与快捷键
+211参数三低字节为计数，每条74字节各自六位编码后追加斜杠；210为单条编码。640以recognition定位技能，参数一低字节等级、参数二三组合DWORD经验。1008 recognition为完整技能ID、参数一为快捷字符或0。详见client/docs/evidence/skill-wire.md。

@@ -460,6 +460,15 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["skills_visible"]=skills.visible;
     result["skill_tab"]=skills.tab;
     result["skill_scroll"]=skills.scroll;
+    Array learned_skills;
+    for (const auto& category:skills.learned) for (const auto& skill:category) {
+        Dictionary entry;entry["id"]=skill.id;entry["level"]=skill.level;entry["key"]=skill.key;
+        entry["experience"]=int64_t(skill.experience);entry["required"]=skill.required;
+        learned_skills.append(entry);
+    }
+    result["learned_skills"]=learned_skills;
+    PackedInt32Array skill_bindings;for (const int id:skills.bindings) skill_bindings.append(id);
+    result["skill_bindings"]=skill_bindings;
     result["status_visible"]=status.visible;
     result["status_position"]=Vector2i(status.rect[0],status.rect[1]);
     result["inventory_visible"]=inventory.visible;
@@ -2750,6 +2759,9 @@ void Mir3HudView::clear_game_scene() {
     guild_overview={};guild_overview_started=false;guild_manager=false;guild_name=String();
     for (auto& page:guild_pages) page.clear();
     for (auto& editable:guild_editable) editable.clear();
+    for (auto& category:skills.learned) category.clear();
+    skills.bindings.fill(0);skills.selected.fill(-1);skills.tab=0;skills.scroll=0;
+    skill_key_menu={};skill_menu_target=0;skill_shortcuts_visible=false;
     group_request=0;group_members.clear();group_allow=false;npc_dialogue_actor=0;shop_actor=0;
     inventory.visible=status.visible=skills.visible=group.visible=guild.visible=false;
     options.visible=portrait_panel.visible=mount.visible=quest.visible=trade.visible=false;
@@ -2975,6 +2987,17 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    if (header->opcode==mir3::protocol::SM_ADDMAGIC || header->opcode==mir3::protocol::SM_SENDMYMAGIC) {
+        const auto wire=mir3::SkillWire::parse(*header,{encoded.ptr()+16,std::size_t(encoded.size()-16)});
+        if (!wire) return false;
+        PackedByteArray records;records.resize(wire->records.size());
+        std::copy(wire->records.begin(),wire->records.end(),records.ptrw());
+        return apply_skill_records(header->opcode,wire->count,records);
+    }
+    if (header->opcode==mir3::protocol::SM_DELMAGIC)
+        return apply_skill_removal(header->recognition);
+    if (header->opcode==mir3::protocol::SM_MAGIC_LVEXP)
+        return apply_skill_progress(header->recognition,std::uint32_t(header->parameters[1])|(std::uint32_t(header->parameters[2])<<16),header->parameters[0]&255);
     if (header->opcode==mir3::protocol::SM_RIDEHORSE) return apply_mount_reply(header->opcode,header->recognition);
     switch (header->opcode) {
     case mir3::protocol::SM_OPENGUILDDLG:
@@ -5283,6 +5306,7 @@ void Mir3HudView::bind_skill(int id,int key) {
         if (!skill.id || skill.key!=key) continue;
         skill.key=0;
         emit_signal("skill_key_requested",skill.id,0);
+        send_client_packet(mir3::protocol::CM_MAGICKEYCHANGE,skill.id,String());
     }
     for (auto& skill:skills.learned[mir3::SkillLayout::category(id)]) {
         if (!skill.id || skill.id!=id) continue;
@@ -5291,6 +5315,7 @@ void Mir3HudView::bind_skill(int id,int key) {
         skills.bindings[key]=skill.id&255;
         const int legacy_key=key<=9?'0'+key:'A'+key-10;
         emit_signal("skill_key_requested",skill.id,legacy_key);
+        send_client_packet(mir3::protocol::CM_MAGICKEYCHANGE,skill.id,String(),legacy_key);
         break;
     }
     queue_redraw();
