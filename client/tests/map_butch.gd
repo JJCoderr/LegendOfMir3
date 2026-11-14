@@ -245,10 +245,19 @@ func run() -> void:
 	feature[2]=119
 	var pig := game_reply(Mir3HudView.SM_DIGUP,9,cell.x,cell.y,6)
 	pig.append_array(encode_scene_bytes(feature))
+	# GBK「猪」，斜杠后的单字节是原版名称颜色索引。
+	pig.append_array(encode_scene_bytes(PackedByteArray([0xd6,0xed,47,249])))
 	if not check(hud.apply_game_message(pig),"跨资源库加载猪"): return
 	await settle()
 	var pig_live: Rect2=hud.hud_snapshot().scene_chicken_bounds[9]
 	if not check(pig_live.has_area() and pig_live!=oma_live,"猪显示独立原版资源"): return
+	var hover_pig := InputEventMouseMotion.new()
+	hover_pig.position=pig_live.get_center()
+	root.push_input(hover_pig,true)
+	await settle()
+	if not check(hud.hud_snapshot().displayed_name_actor==9 and hud.hud_snapshot().displayed_name_color==255,
+		"悬停显示入场包中的名称颜色"): return
+	if not await capture("map-pig-name"): return
 	var pig_walk := game_reply(Mir3HudView.SM_TURN,9,origin.x,origin.y,0)
 	pig_walk.append_array(encode_scene_bytes(feature))
 	if not check(hud.apply_game_message(pig_walk) and hud.hud_snapshot().scene_chicken_steps[9]==0,"猪进入行走动作"): return

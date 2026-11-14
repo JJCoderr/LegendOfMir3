@@ -2354,29 +2354,35 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         opcode==mir3::protocol::SM_SKELETON;
     if ((chicken_death || opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_DIGUP) &&
         actor>0 && actor!=local_actor_identity) {
-        const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
+        const auto body=mir3::decode_six_bit(encoded.ptr()+16,std::min<std::int64_t>(22,encoded.size()-16));
         const bool chicken_feature=body && body->size()>=8 && (*body)[0]==3 &&
             ((*body)[2]==20 || (*body)[2]==21 || (*body)[2]==23 || (*body)[2]==119) && (*body)[3]==0;
-        if (chicken_feature && (opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_DIGUP) &&
-            (opcode!=mir3::protocol::SM_DIGUP || body->size()==16) && (p[2]&255)<8 &&
-            terrain.walkable(p[0],p[1]) &&
-            (scene_clear_pending || std::ranges::find(scene_removals,actor)!=scene_removals.end()))
-            apply_scene_removals();
-        if (opcode==mir3::protocol::SM_DIGUP && chicken_feature) {
+        if (chicken_feature && !chicken_death) {
             const int facing=p[2]&255;
             if (body->size()!=16 || facing>=8 || !terrain.walkable(p[0],p[1])) return false;
-            if (const auto it=scene_chickens.find(actor);it!=scene_chickens.end() && it->second.death_frame>=0)
+            std::optional<mir3::SceneName> name;
+            if (opcode==mir3::protocol::SM_DIGUP && encoded.size()>38) {
+                const auto decoded=mir3::decode_six_bit(encoded.ptr()+38,encoded.size()-38);
+                if (!decoded || decoded->size()>64) return false;
+                std::string_view ansi(*decoded);
+                ansi=ansi.substr(0,ansi.find(char(0)));
+                unsigned color=255;
+                if (const auto slash=ansi.rfind('/');slash!=ansi.npos && slash+2==ansi.size())
+                    color=std::uint8_t(ansi.back());
+                name.emplace();
+                if (!name->update(mir3::protocol::SM_USERNAME,color,ansi)) return false;
+            }
+            if (scene_clear_pending || std::ranges::find(scene_removals,actor)!=scene_removals.end())
+                apply_scene_removals();
+            const auto existing=scene_chickens.find(actor);
+            if (existing!=scene_chickens.end() && existing->second.death_frame>=0)
                 return true;
-            // 4085A0 sets monster action 0 at the coordinates from packet 20.
-            return place_scene_chicken(actor,Vector2i(p[0],p[1]),facing,(*body)[2],p[2]>>8);
-        }
-        if (opcode==mir3::protocol::SM_TURN && chicken_feature) {
-            if (scene_chickens.contains(actor) && scene_chickens.at(actor).shape!=(*body)[2]) return false;
-            const int facing=p[2]&255;
-            if (facing>=8) return false;
             const Vector2i cell(p[0],p[1]);
-            return scene_chickens.contains(actor)?move_scene_chicken(actor,cell,facing,p[2]>>8):
-                place_scene_chicken(actor,cell,facing,(*body)[2],p[2]>>8);
+            if (opcode==mir3::protocol::SM_TURN && existing!=scene_chickens.end())
+                return existing->second.shape==(*body)[2] && move_scene_chicken(actor,cell,facing,p[2]>>8);
+            if (!place_scene_chicken(actor,cell,facing,(*body)[2],p[2]>>8)) return false;
+            if (name) scene_names.insert_or_assign(actor,std::move(*name));
+            return true;
         }
         if (chicken_death && (scene_chickens.contains(actor) || chicken_feature)) {
             const int facing=p[2]&255;
