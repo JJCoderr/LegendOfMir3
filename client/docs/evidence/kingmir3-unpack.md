@@ -30,3 +30,7 @@ client/build/unpack-venv/Scripts/python.exe client/tools/analysis/rebuild_king.p
 脚本对原样本SHA256设硬门槛；只支持已验证布局，未知加载API立即报错，未到原代码则失败。导入桩地址仅用于模拟，分析PE的原IAT已改回名称/序号导入。脚本和证据提交，二进制/内存快照/虚拟环境留在忽略的build目录。
 
 边界：这是已验证可供IDA分析的副本，不是已验证可替换运行的DLL。重定位目录虽可读取，但未做异基址加载/TLS/异常链及原程序运行验收；不得声明完整可运行脱壳。后续首先追踪线程Execute及消息/人物信息分发，与未决技能逐项关联。
+
+## 导出后续追踪
+
+4A92A8的线程Execute指向4A9350（类名TWgCheck），循环Sleep(0x6D60)，枚举进程及模块，解析GetMsgProcess加入的逗号分隔规则，比较模块名、导出函数存在性和指定偏移的内容，触发回调/终止线程。GetCharInfo经4A85D8构造流并编码，GetCharInfoEx经4A8710反向解码；SetCharInfo遍历PE导出名并返回地址/RVA。证据为ida-dispatch.txt及这些导出反编译。已追踪路径未显示MInfo加载、技能范围或声光分发；这是局部职责结论，不能扩展为整个DLL不含补丁。后续技能差异优先返回原版确定的分支，不继续无目标遍历本DLL。

@@ -21,6 +21,7 @@ SUITES = {
         "ranges": ([], "spell_ranges.gd"),
         "lightning-model": (["--spell-lightning"], None),
         "common": (["--spell-common"], "spell_common.gd"),
+        "passive": ([], "spell_passive.gd"),
         "melee": (["--spell-melee"], "melee_spells.gd"),
         "particle-model": (["--spell-particles"], None),
         "sound": (["--spell-sound"], "spell_sound.gd"),
@@ -31,7 +32,7 @@ SUITES = {
         "actions": (["--equipment-actions"], "equipment_actions.gd"),
     },
 }
-SKILLS = (1, 7, 9, 10, 12, 25, 26, 27, 34, 35, 103, 53, 73, 110, 113, 150, *range(408, 415), *COMMON_SKILLS)
+SKILLS = (1, 3, 4, 7, 9, 10, 12, 25, 26, 27, 34, 35, 103, 53, 73, 110, 113, 150, *range(408, 415), *COMMON_SKILLS)
 
 
 def executable(explicit, candidates):
@@ -72,6 +73,8 @@ def main():
         parser.error(f"无效子集；可选：{', '.join(suite)}")
     if args.skill is not None:
         allowed = ["casting"] + (["enchantment"] if args.skill >= 408 else [])
+        if args.skill in (3, 4):
+            allowed = ["passive"]
         if args.skill in COMMON_SKILLS:
             allowed = ["common"]
         if args.skill in (7, 12, 25, 26, 34, 35, 103):
