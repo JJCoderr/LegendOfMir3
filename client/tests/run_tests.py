@@ -51,7 +51,7 @@ def main():
     parser.add_argument("--suite", choices=SUITES, default="skills", help="子系统测试集")
     parser.add_argument("--case", action="append", help="子集名称，可重复指定；--list查看")
     parser.add_argument("--skill", type=int, choices=SKILLS, help="仅运行对应技能")
-    parser.add_argument("--skills", help="编号集合，逗号分隔；支持--case melee或common")
+    parser.add_argument("--skills", help="编号集合，逗号分隔；支持--case melee、common或enchantment")
     parser.add_argument("--screenshots", action="store_true", help="保存真实视口截图")
     parser.add_argument("--godot", default=os.environ.get("MIR3_GODOT_EXECUTABLE"))
     parser.add_argument("--checks", help="hud_checks程序的路径")
@@ -88,9 +88,9 @@ def main():
             parser.error("所选子集不支持该技能编号筛选")
         cases = args.case or allowed
     if args.skills:
-        if args.suite != "skills" or cases not in (["melee"], ["common"]) or args.skill is not None:
-            parser.error("--skills当前用于--suite skills --case melee或common，不能与--skill并用")
-        selection_ids = COMMON_SKILLS if cases == ["common"] else (7,12,25,26,34,35,103)
+        if args.suite != "skills" or cases not in (["melee"], ["common"], ["enchantment"]) or args.skill is not None:
+            parser.error("--skills当前用于--suite skills --case melee、common或enchantment，不能与--skill并用")
+        selection_ids = COMMON_SKILLS if cases == ["common"] else (range(408,415) if cases == ["enchantment"] else (7,12,25,26,34,35,103))
         selected = args.skills.split(",")
         if not selected or any(not n.isdecimal() or int(n) not in selection_ids for n in selected):
             parser.error("--skills包含无效技能编号")

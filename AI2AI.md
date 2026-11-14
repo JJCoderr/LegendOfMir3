@@ -783,3 +783,6 @@ Features.md将功能细项及验收口径直接并入原48个模块的同一表�
 
 - [x] 新增68项原版独立期望及common模型/图形子集，Python支持单技能与集合；68项分批续跑通过，代表截图已查看。47/48原起手资源空帧保留，不伪造贴图。
 - [ ] 特殊分支、原版同状态对照与最终全集仍待完成；93项口径见c23-remaining.md，68项仅标共用路径通过。服务端未动。
+
+- [x] 六项本地附魔原包/选色/BUMP清理定向通过，扩展enchantment集合筛选，410未重测。颜色截图辨识度不足，保留原版同状态视觉门槛。
+- 补充DLL：IDA mir3-king-skills已读到GetCharInfo/GetCharInfoEx/SetCharInfo/GetMsgProcess/RegMsgProcess导出；入口0x4E6001仍为ASPack跳转桩，不能据此推断技能补丁不存在。mir3-treasure-entry开库已完成（先前只是观察超时）。脱壳尚未完成。

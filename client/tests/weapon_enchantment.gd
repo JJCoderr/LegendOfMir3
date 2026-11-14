@@ -21,10 +21,10 @@ func run() -> void:
 	Input.use_accumulated_input=false
 	var ids := [408,409,410,411,412,413,414]
 	for argument in OS.get_cmdline_user_args():
-		if argument.begins_with("--skill="):
-			var value := argument.trim_prefix("--skill=")
-			if not check(value.is_valid_int() and int(value) in ids,"本地附魔编号必须在408至414"): return
-			ids=[int(value)]
+		if argument.begins_with("--skill=") or argument.begins_with("--skills="):
+			var values := argument.split("=",true,1)[1].split(",")
+			if not check(Array(values).all(func(n): return n.is_valid_int() and int(n) in ids),"本地附魔编号必须在408至414"): return
+			ids=Array(values).map(func(n): return int(n))
 	hud=load("res://main.tscn").instantiate()
 	hud.set_meta("offline_preview",true)
 	hud.set_meta("options_path","user://weapon-enchantment-%d.ini" % OS.get_process_id())
