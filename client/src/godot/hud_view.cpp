@@ -1958,7 +1958,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (encoded.size()<16 || encoded.size()>1039) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),static_cast<std::size_t>(encoded.size())},
         {key.ptr(),static_cast<std::size_t>(key.size())});
-    if (!header || (header->recognition>INT_MAX && header->opcode!=51 && header->opcode!=634 && header->opcode!=54)) return false;
+    if (!header || (header->recognition>INT_MAX && header->opcode!=51 && header->opcode!=634 && header->opcode!=54 && header->opcode!=1401)) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
     if (opcode==51 || opcode==634 || opcode==54) {
@@ -1974,6 +1974,12 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         const auto message=mir3::MapChangeMessage::parse(opcode,p,*decoded);
         if (!message || map_changes.size()>=99999) return false;
         map_changes.push_back(*message);return true;
+    }
+    if (opcode==1401) {
+        if (encoded.size()!=16) return false;
+        const auto changed=system_options.receive(header->recognition,p[0]);
+        reception_buttons.receive_options(changed,rejected_chat);
+        queue_redraw();return true;
     }
     if (opcode==807) {
         if (encoded.size()!=16 || actor<=0) return false;

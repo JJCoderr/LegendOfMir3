@@ -1,5 +1,6 @@
 # 测试内容（本文件仅为测试脚本，客户端业务逻辑位于 C++）：
 # - 主界面：底栏按钮、计量条、人物与目标头像、属性数值、提示文字及界面布局。
+# - 选项原包：1401 位掩码、重复确认、聊天拒绝联动、攻击模式与非法消息。
 # - 选项窗口：完整文字和开关、七类服务器命令、攻击模式、确认状态与本地持久化。
 # - 对话框：背包、人物装备、技能、组队、行会、任务、骑马、交易、NPC 对话和商店。
 # - 聊天与选项：聊天输入和显示、接收过滤、键盘快捷键、声音设置及设置保存。
@@ -167,6 +168,31 @@ func scene_text_packet(opcode: int, actor: int, foreground: int, background: int
 	var packet := scene_packet(opcode,actor,foreground,background,0)
 	packet.append_array(encode_scene_bytes(body))
 	return packet
+
+func run_options_wire() -> void:
+	var key_bytes := PackedByteArray([18,52,86,120])
+	key(KEY_N)
+	if not check(hud.apply_scene_message(scene_packet(1401,0xcf800000,4,99,88),key_bytes), "最高位选项原包不被当作非法人物编号"): return
+	var state: Dictionary = hud.hud_snapshot()
+	if not check(state.option_confirmed==PackedByteArray([1,1,1,1,1,1,1]) and state.option_attack_mode==4, "七项掩码和第一参数模式映射"): return
+	if not check(state.rejected_chat==PackedInt32Array([1,1,1]) and state.reception_frames==PackedInt32Array([1338,1340,-1]), "原包同步底栏图标及原版聊天变量副作用"): return
+	click_at(Vector2(336,210),true)
+	click_at(Vector2(336,210),false)
+	if not check(hud.apply_scene_message(scene_packet(1401,0xcf800000,2,0,0),key_bytes), "重复确认包正常接收"): return
+	state=hud.hud_snapshot()
+	if not check(state.option_displayed[0]==0 and state.option_confirmed[0]==1 and state.option_attack_mode==2, "重复确认保留预测显示同时更新模式"): return
+	if not await capture("options-wire-prediction"): return
+	var malformed := scene_packet(1401,0,0,0,0,PackedByteArray([1]))
+	if not check(not hud.apply_scene_message(malformed,key_bytes) and hud.hud_snapshot().option_attack_mode==2, "带多余载荷原包拒绝且不部分更新"): return
+	if not check(hud.apply_scene_message(scene_packet(1401,0,1,0,0),key_bytes), "接收全部关闭确认"): return
+	state=hud.hud_snapshot()
+	if not check(state.option_confirmed==PackedByteArray([0,0,0,0,0,0,0]) and state.rejected_chat==PackedInt32Array([0,0,0]) and state.reception_frames==PackedInt32Array([-1,-1,1342]), "清除确认位并按原版顺序更新聊天"): return
+	if not check(hud.apply_scene_message(scene_packet(1401,0x00800000,3,0,0),key_bytes), "独立更新所有人聊天"): return
+	state=hud.hud_snapshot()
+	if not check(state.rejected_chat==PackedInt32Array([0,1,1]) and state.reception_frames==PackedInt32Array([-1,-1,-1]), "所有人聊天交叉写行会变量但保留行会图标"): return
+	if not await capture("options-wire-confirmed"): return
+	print("PASS 选项原包：掩码、预测保留、模式与聊天联动")
+	quit()
 
 func run_options_panel() -> void:
 	var commands: Array = []
@@ -1088,6 +1114,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--options-wire"):
+		await run_options_wire()
+		return
 	if OS.get_cmdline_user_args().has("--options-panel"):
 		await run_options_panel()
 		return
@@ -1274,7 +1303,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light") or OS.get_cmdline_user_args().has("--map-wire") or OS.get_cmdline_user_args().has("--map-input") or OS.get_cmdline_user_args().has("--options-panel"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light") or OS.get_cmdline_user_args().has("--map-wire") or OS.get_cmdline_user_args().has("--map-input") or OS.get_cmdline_user_args().has("--options-panel") or OS.get_cmdline_user_args().has("--options-wire"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

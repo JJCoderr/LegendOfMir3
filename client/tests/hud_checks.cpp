@@ -1,3 +1,4 @@
+// 测试内容：界面模型、选项确认与聊天联动、场景消息、人物行为、地图及资源解析。
 #include "hud/system_options.hpp"
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
@@ -29,6 +30,23 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--options-wire") {
+            mir3::SystemOptions options;
+            mir3::ChatReceptionButtons buttons;
+            std::array<bool,3> rejected{};
+            check(options.receive(0xCF800000u,4)==0x7f,"七个掩码包含最高位且顺序对应窗口");
+            buttons.receive_options(0x7f,rejected);
+            check(rejected==std::array{true,true,true} && buttons.frames==std::array{1338,1340,-1},"原版全部开启时的聊天侧效应");
+            options.request(0);
+            check(options.receive(0xCF800000u,2)==0 && !options.displayed[0] && options.confirmed[0] && options.attack_mode==2,"重复位不撤销预测但更新模式");
+            const auto changed=options.receive(0,0);
+            buttons.receive_options(changed,rejected);
+            check(changed==0x7f && rejected==std::array{false,false,false} && buttons.frames==std::array{-1,-1,1342},"全部关闭按原版顺序更新");
+            buttons.receive_options(options.receive(0x00800000u,65535),rejected);
+            check(rejected==std::array{false,true,true} && buttons.frames[1]==-1 && options.attack_mode==65535,"所有人聊天交叉写行会变量但不改行会图标，模式保留WORD");
+            check(options.receive(0x30800001u,1)==0,"无关标志不修改七项确认");
+            std::cout << "OPTIONS_WIRE_MODEL_OK\n";return 0;
+        }
         if (std::filesystem::path(argv[1])=="--options-panel") {
             mir3::SystemOptions options;
             check(options.show_mon && options.force_attack && options.user_photos && !options.shadow_blend,"原版新增本地设置默认值");
