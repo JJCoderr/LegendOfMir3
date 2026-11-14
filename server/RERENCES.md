@@ -234,3 +234,6 @@ CM_EAT recognition=MakeIndex，参数一计时低WORD、参数二0、参数三�
 
 ## 输入框聊天发送
 427400分派、436F10私聊前缀、437350/4379D0去重十项、437680/437DD0读取和4377F0/437F40写入历史；4876D0与404D80确认角色名/服务器名。参考Define.h的CM_GUILDADDMEMBER命名；详细实现边界与定向验证见client/docs/evidence/chat-submission.md。历史菜单、日志/雪花消费者和真实服务端时序仍待完成。
+
+## 聊天历史菜单
+47B430数字键转发、43D760上下键、437210/437240及4378B0/4378E0选中与填入、4373E0/437A60绘制；435180初始化独立选中索引。详见client/docs/evidence/chat-shortcuts.md。菜单只填入文本，Enter继续使用既有CM_SAY分派，不新增协议。

@@ -278,6 +278,8 @@ private:
     godot::String chat_history_file(bool phrases) const;
     void save_chat_shortcuts(bool phrases);
     void load_chat_shortcuts();
+    bool chat_shortcut_input(const godot::Ref<godot::InputEvent>& event);
+    void draw_chat_shortcuts();
     void draw_options();
     bool options_pointer(int kind,godot::Vector2 point);
     mir3::InventoryPanel inventory;

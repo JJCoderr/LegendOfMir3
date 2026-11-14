@@ -2,11 +2,14 @@
 #include <algorithm>
 #include <string>
 #include <string_view>
+#include <optional>
 #include <vector>
 namespace mir3 {
 // 427400输入框分派；界面按钮不经过这里。
 struct ChatSubmission {
     bool save_chat=false,snow=false;
+    bool control_down=false,alt_down=false;
+    int contact_selected=0,phrase_selected=0;
     std::string private_prefix;
     std::vector<std::string> contacts,phrases;
     struct Result {bool send=false,private_echo=false,delay=false,contacts_changed=false,phrases_changed=false;int dialog=0;};
@@ -30,6 +33,15 @@ struct ChatSubmission {
         result.delay=input==mount || input==unmount || input==recall;
         result.send=true;return result;
     }
-    void clear_history() {private_prefix.clear();contacts.clear();phrases.clear();}
+    std::optional<std::string> select(bool phrase,int value,bool relative) {
+        const auto& values=phrase?phrases:contacts;
+        auto& selected=phrase?phrase_selected:contact_selected;
+        if(relative) selected=value<0?std::max(0,selected-1):std::min(int(values.size())-1,selected+1);
+        else if(value>=0 && value<int(values.size())) selected=value;
+        if(selected<0 || selected>=int(values.size())) return {};
+        if(!phrase) private_prefix="/"+values[selected];
+        return phrase?values[selected]:private_prefix;
+    }
+    void clear_history() {private_prefix.clear();contacts.clear();phrases.clear();contact_selected=phrase_selected=0;control_down=alt_down=false;}
 };
 }

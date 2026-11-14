@@ -522,6 +522,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["held_inventory_icon"]=bag.held.icon;
     result["inventory_row"]=inventory.row;
     result["chat_save_enabled"]=chat_submission.save_chat;result["snow_enabled"]=chat_submission.snow;
+    result["chat_contacts_visible"]=chat_submission.control_down && chat_input && chat_input->has_focus() && !group_request && !guild_editor.visible && !chat_submission.contacts.empty();
+    result["chat_phrases_visible"]=chat_submission.alt_down && chat_input && chat_input->has_focus() && !group_request && !guild_editor.visible && !chat_submission.phrases.empty();
+    result["chat_contact_selected"]=chat_submission.contact_selected;result["chat_phrase_selected"]=chat_submission.phrase_selected;
     result["private_chat_prefix"]=String::utf8(chat_submission.private_prefix.c_str());
     PackedStringArray contacts,phrases;
     for(const auto& item:chat_submission.contacts) contacts.append(String::utf8(item.c_str()));
@@ -4010,6 +4013,7 @@ void Mir3HudView::draw_hud_tail() {
             }
         }
     }
+    draw_chat_shortcuts();
     if (group_request) draw_group_dialog();
     button_hint();
     const auto& held=trade.visible && trade_return_slot>=0?trade_items[0][trade_return_slot]:bag.held;
@@ -4075,6 +4079,49 @@ bool Mir3HudView::scroll_input(int kind,Vector2 position) {
     return consumed;
 }
 std::string Mir3HudView::message(int id) const { return mir3::ansi_to_utf8(messages.get(id)); }
+bool Mir3HudView::chat_shortcut_input(const Ref<InputEvent>& event) {
+    const Ref<InputEventKey> key=event;if(key.is_null()) return false;
+    const auto code=key->get_keycode()!=KEY_NONE?key->get_keycode():key->get_physical_keycode();
+    chat_submission.control_down=code==KEY_CTRL?key->is_pressed():key->is_ctrl_pressed();
+    chat_submission.alt_down=code==KEY_ALT?key->is_pressed():key->is_alt_pressed();
+    queue_redraw();
+    if(!key->is_pressed() || !chat_input || !chat_input->has_focus() || group_request || guild_editor.visible ||
+       (!chat_submission.control_down && !chat_submission.alt_down)) return false;
+    const bool phrase=!chat_submission.control_down;
+    const bool relative=code==KEY_UP || code==KEY_DOWN;
+    int index=-1;
+    if(code>=KEY_1 && code<=KEY_9) index=int(code-KEY_1);
+    else if(code==KEY_0) index=9;
+    if(!relative && index<0) return false;
+    const auto value=chat_submission.select(phrase,relative?(code==KEY_UP?-1:1):index,relative);
+    if(value) chat_input->focus_chat(String::utf8(value->c_str()),true);
+    get_viewport()->set_input_as_handled();return true;
+}
+
+void Mir3HudView::draw_chat_shortcuts() {
+    if(!chat_input || !chat_input->has_focus() || group_request || guild_editor.visible) return;
+    const int top=model.layout.expanded?365:405;
+    for(bool phrase:{false,true}) {
+        const auto& values=phrase?chat_submission.phrases:chat_submission.contacts;
+        if(values.empty() || !(phrase?chat_submission.alt_down:chat_submission.control_down)) continue;
+        const int width=phrase && !model.layout.expanded?100:99;
+        const Rect2 bounds(183,top,width,165);
+        legacy_rect(bounds,phrase?Color(150.f/255,150.f/255,50.f/255,180.f/255):Color(200.f/255,100.f/255,0,180.f/255));
+        paint_canvas->draw_rect(bounds.grow(-0.5),Color(0,0,0),false);
+        for(int i=0;i<int(values.size());++i) {
+            if(i==(phrase?chat_submission.phrase_selected:chat_submission.contact_selected))
+                legacy_rect(Rect2(184,top+2+16*i,width-2,16),phrase?Color(50.f/255,50.f/255,200.f/255,120.f/255):Color(1,0,0,120.f/255));
+            auto caption=values[i];
+            if(phrase && mir3::raster_text(caption,1,1,false,mir3::TextFont::normal).text_width>358) {
+                auto ansi=mir3::utf8_to_ansi(caption);ansi=ansi.substr(0,58)+"...";caption=mir3::ansi_to_utf8(ansi);
+            }
+            // 原版TextOut不裁剪到99像素面板，长短语可以向右延伸。
+            text(caption,{187,top+4+16*i,600,16},657930,mir3::TextFont::normal,false);
+            text(caption,{188,top+5+16*i,600,16},0xffffff,mir3::TextFont::normal,false);
+        }
+    }
+}
+
 String Mir3HudView::chat_history_file(bool phrases) const {
     const auto base=item_layout_file();
     if(base.is_empty()) return String();
@@ -4513,6 +4560,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             return;
         }
     }
+    if(chat_shortcut_input(event)) return;
     if (group_request && group_dialog_input(event)) return;
     if (map_input_delay.active() && button.is_valid() && button->get_button_index()==MOUSE_BUTTON_LEFT && button->is_pressed()) {
         get_viewport()->set_input_as_handled();return;
@@ -4717,6 +4765,7 @@ void Mir3HudView::_notification(int what) {
         queue_redraw();
     }
     if (what==NOTIFICATION_APPLICATION_FOCUS_OUT || what==NOTIFICATION_WM_WINDOW_FOCUS_OUT) {
+        chat_submission.control_down=chat_submission.alt_down=false;
         cancel_pointer_interactions();
         inventory_cursor=Vector2(-1,-1);
         queue_redraw();
