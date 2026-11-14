@@ -5,6 +5,7 @@
 #include "protocol/actor_experience.hpp"
 #include "protocol/gold_change.hpp"
 #include "protocol/group_message.hpp"
+#include "protocol/guild_notice.hpp"
 #include "hud/level_up_effect.hpp"
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
@@ -42,6 +43,26 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        // 测试内容：行会失败原因、联盟同分支、增删成功后的成员刷新及未知原因忽略。
+        if (std::filesystem::path(argv[1])=="--guild-wire") {
+            using namespace mir3::protocol;
+            const auto notice=[](int opcode,int reason) { return mir3::GuildNotice::parse({std::uint32_t(reason),std::uint16_t(opcode),{}}); };
+            check(notice(SM_OPENGUILDDLG_FAIL,0)->message==1473,"open failure");
+            check(notice(SM_GUILDADDMEMBER_OK,0)->message==1474 && notice(SM_GUILDADDMEMBER_OK,0)->refresh_members,"add success refresh");
+            check(notice(SM_GUILDDELMEMBER_OK,0)->refresh_members && notice(SM_GUILDDELMEMBER_OK,0)->message==0,"delete success silent refresh");
+            for (int i=1;i<=5;++i) check(notice(SM_GUILDADDMEMBER_FAIL,i)->message==1474+i,"add failure");
+            for (int i=1;i<=4;++i) check(notice(SM_GUILDDELMEMBER_FAIL,i)->message==(i==1?1475:1478+i),"delete failure");
+            for (int i=2;i<=7;++i) check(notice(SM_GUILDRANKUPDATE_FAIL,-i)->message==1481+i,"rank failure");
+            for (int opcode:{SM_GUILDMAKEALLY_OK,SM_GUILDMAKEALLY_FAIL})
+                for (int i=1;i<=4;++i) check(notice(opcode,-i)->message==1488+i,"alliance shared cases");
+            for (int opcode:{SM_GUILDBREAKALLY_OK,SM_GUILDBREAKALLY_FAIL})
+                for (int i=1;i<=3;++i) check(notice(opcode,-i)->message==(i==1?1489:1491+i),"break alliance shared cases");
+            check(notice(SM_BUILDGUILD_OK,0)->message==1504,"build guild success");
+            for (int i=1;i<=3;++i) check(notice(SM_BUILDGUILD_FAIL,-i)->message==1504+i,"build failure");
+            check(notice(SM_GUILDRANKUPDATE_FAIL,-1)->message==0 && notice(SM_GUILDMAKEALLY_OK,0)->message==0,"unknown reason ignored");
+            check(!notice(SM_GROUPCANCEL,0),"unrelated opcode");
+            std::cout << "GUILD_WIRE_MODEL_OK\n";return 0;
+        }
         // 测试内容：组队失败原因全映射、未知原因忽略、成员尾字段及名字长度边界、非法编码拒绝。
         if (std::filesystem::path(argv[1])=="--group-wire") {
             using namespace mir3::protocol;

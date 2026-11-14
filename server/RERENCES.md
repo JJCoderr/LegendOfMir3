@@ -195,3 +195,6 @@ SM_GOLDCHANGED recognition为DWORD余额，其他参数无效；客户端42AE12�
 
 ## 组队消息约定
 CM_GROUPMODE参数一为允许标志；创建/增加/删除成员使用独立正文。SM_CREATEGROUP_OK设允许；失败原因使用recognition有符号负数，详见client/docs/evidence/group-wire.md。SM_GROUPMEMBERS正文每个名字以斜杠结束；SM_GROUPCANCEL仅清空名单。
+
+## 行会协议联调依据
+原版F键/底栏请求CM_GUILDHOME；主页回包753、续包773/774，成员756/775/776。公告和封号正文使用ANSI及CR；成员增删成功触发客户端再次查询。联盟OK/FAIL共享负数原因提示分支，不可只按消息名判断结果。详情client/docs/evidence/guild-wire.md。
