@@ -305,3 +305,6 @@ IDA 404D80：注册/找回按钮在鼠标释放命中时读取配置URL，ShellE
 
 ## 背包物品使用
 核对4418D0、47C0E0汇编、635/636分支及43EED0，确认计时分拆、数量权威更新、栗子提示规范化、金币禁用和模式51失败弹框。实现与验证详见client/docs/evidence/inventory-use-wire.md。
+
+## 物品会话清理
+实时核对421E80、4217E0、4355C0、435180和4214A0，原版离场初始化物品窗口及持有记录。当前clear_game_scene补齐背包/装备/交易/商店数据清理；43EC60布局保存独立待办。详见client/docs/evidence/item-session.md。

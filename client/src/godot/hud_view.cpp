@@ -362,6 +362,15 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["quest_selected"]=quest.selected;
     result["trade_scroll"]=Vector2i(trade_scroll.first[0],trade_scroll.first[1]);
     result["trade_gold_pending"]=trade_gold_pending;
+    PackedInt32Array trade_item_counts;
+    for (const auto& side:trade_items) {
+        int count=0;for (const auto& item:side) if (item) ++count;
+        trade_item_counts.append(count);
+    }
+    result["trade_item_counts"]=trade_item_counts;
+    result["trade_partner"]=trade_partner;
+    result["shop_goods_count"]=int(shop_goods.size());result["shop_offers_count"]=int(shop_offers.size());
+    result["shop_offer_loading"]=shop_offer_loading;
     result["trade_gold_local"]=int64_t(trade_gold[0]);
     result["trade_gold_remote"]=int64_t(trade_gold[1]);
     result["inventory_gold"]=int64_t(inventory_gold);
@@ -2781,7 +2790,17 @@ void Mir3HudView::clear_game_scene() {
     for (auto& category:skills.learned) category.clear();
     skills.bindings.fill(0);skills.selected.fill(-1);skills.tab=0;skills.scroll=0;
     skill_key_menu={};skill_menu_target=0;skill_shortcuts_visible=false;
-    group_request=0;group_members.clear();group_allow=false;npc_dialogue_actor=0;shop_actor=0;
+    group_request=0;group_members.clear();group_allow=false;
+    // 421E80 -> 4217E0 -> 4355C0/435180：离场重建物品窗口和持有记录。
+    bag={};equipment={};inventory.row=0;inventory_cursor=Vector2(-1,-1);
+    inventory_gold=0;trade_gold={};trade_gold_pending=false;trade_gold_debited=false;
+    for (auto& side:trade_items) for (auto& item:side) item={};
+    trade_scroll={};trade_partner=String();trade_offer_count=0;
+    trade_pending_slot=trade_return_slot=trade_return_bag_slot=-1;
+    trade_return_pending=false;trade_return_bag_pointer={};trade_confirmed=false;trade_confirm_pressed=false;
+    trade_actor_name=String();trade_actor_cell={};trade_actor_type=-1;trade_actor_dead=false;trade_direction=0;
+    close_npc_dialogue();shop_offer_index=-1;shop_offer_page=0;shop_offer_loading=false;
+    last_merchant_request=0;merchant_click_captured=false;
     inventory.visible=status.visible=skills.visible=group.visible=guild.visible=false;
     options.visible=portrait_panel.visible=mount.visible=quest.visible=trade.visible=false;
     minimap.visible=false;

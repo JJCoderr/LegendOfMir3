@@ -219,3 +219,6 @@ SM_RIDEHORSE recognition低字节为本地骑乘形状，客户端确认后才�
 
 ## 物品使用原包
 CM_EAT recognition=MakeIndex，参数一计时低WORD、参数二0、参数三计时高WORD，正文ANSI名称。SM_EAT_OK参数一为服务器剩余数量，SM_EAT_FAIL恢复普通背包物品。数量规则、提示和特殊物品见client/docs/evidence/inventory-use-wire.md。
+
+## 离场后物品重新同步
+客户端按原版离场重新初始化物品窗口和事务状态，不把旧交易物品作为结算返还。新角色需要重新下发权威背包、装备及余额；当前页面拒绝旧原包，待确认清空后迟到确认不能恢复物品。证据见client/docs/evidence/item-session.md。
