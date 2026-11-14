@@ -9,3 +9,5 @@ Godot资源生命周期：[音频退出清理](../client/docs/evidence/audio-cle
 本地战斗反馈：[受击队列、血量与动作](../client/docs/evidence/local-struck.md)。
 
 采集动作：[12/637回包与本地/远端差异](../client/docs/evidence/butch-reply.md)。
+
+角色状态消息：[801/807/808排队更新与1100/1101即时入口](../client/docs/evidence/actor-status.md)。

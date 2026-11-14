@@ -511,10 +511,10 @@ int main(int argc,char** argv) {
             check(mir3::SceneLight::actor(0,0,8,true).outer_radius_cells==10 && mir3::SceneLight::actor(0,0,8,false).outer_radius_cells==8,"attribute 8 radius distinction");
             check(mir3::SceneLight::actor(0,0,255,true).outer_radius_cells==14 && mir3::SceneLight::actor(0,0,255,false).outer_radius_cells==10,"other byte attributes use bright fallback");
             mir3::SceneHumanQueue queue;
-            mir3::SceneHumanMessage update;update.opcode=mir3::protocol::SM_ACTOR_LIGHT;update.light_attribute=8;
-            check(queue.push(update),"light update joins actor queue");
-            update.light_attribute=256;check(!queue.push(update),"reject invalid light byte");
-            queue.push({31});check(queue.fold_health().size()==1 && queue.size()==1 && queue.take()->light_attribute==8,"health folding preserves light records");
+            mir3::SceneHumanMessage update;update.opcode=mir3::protocol::SM_ACTOR_STATUS;update.status_speed=-1;update.flags=2;
+            check(queue.push(update),"status update joins actor queue");
+            update.opcode=mir3::protocol::SM_ACTOR_LIGHT;check(!queue.push(update),"immediate light does not join actor queue");
+            queue.push({31});check(queue.fold_health().size()==1 && queue.size()==1 && queue.take()->status_speed==-1,"health folding preserves status records");
             std::cout << "SCENE_LIGHT_MODEL_OK\n";return 0;
         }
         if (std::filesystem::path(argv[1])=="--ground-items") {

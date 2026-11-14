@@ -548,7 +548,7 @@ private:
     bool apply_monster_entry(int actor,const SceneChicken::Entry& entry);
     bool apply_monster_action(int actor,const SceneChicken::Action& action);
     bool receive_monster_action(int actor,SceneChicken::Action action);
-    void update_monster_bar_status(int actor,bool status_bit);
+    void update_actor_bar_status(int actor,bool status_bit);
     bool refresh_monster_shape(SceneChicken& monster,int shape,int action=-1,int facing=-1);
     void play_animal_call(int actor,SceneChicken& animal);
     struct SceneHuman : SceneActor {
@@ -559,6 +559,7 @@ private:
         mir3::HumanIdleClock idle;
         mir3::HumanActionClock action;
         int hit_weapon=0;
+        std::int16_t attack_speed=0;
         mir3::SceneHumanQueue messages;
         mir3::HumanLife life;
         mir3::CombatStance combat;
@@ -595,12 +596,14 @@ private:
         unsigned light;
         std::optional<mir3::SceneHumanMessage> hit;
         unsigned hit_variant=0;
+        std::optional<mir3::SceneHumanMessage> status;
     };
     std::deque<LocalActorMessage> local_actor_messages;
     std::optional<mir3::ForcedMotion> forced_motion;
     std::uint32_t local_struck_tick=0;
     std::uint8_t local_folded_hits=0;
     int local_hit_weapon=0;
+    std::uint32_t player_status_flags=0;
     void process_local_actor_message();
     struct PendingLocalAction {
         bool movement;

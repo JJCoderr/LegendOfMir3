@@ -575,6 +575,10 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["character_wear_weight"]=Vector2i(model.wear_weight[0],model.wear_weight[1]);
     result["character_hand_weight"]=Vector2i(model.hand_weight[0],model.hand_weight[1]);
     result["melee_speed"]=melee_cooldown.speed;
+    result["player_status_flags"]=int64_t(player_status_flags);
+    Dictionary human_status;
+    for (const auto& [id,human]:scene_humans) human_status[id]=Vector2i(human.action_flags,human.attack_speed);
+    result["scene_human_status"]=human_status;
     result["local_action_pending"]=pending_local_action.has_value();
     result["action_reply_pending"]=action_prediction.waiting;
     result["player_dead"]=player_life.dead;
@@ -2405,7 +2409,7 @@ bool Mir3HudView::refresh_monster_shape(SceneChicken& monster,int shape,int acti
     return true;
 }
 
-void Mir3HudView::update_monster_bar_status(int actor,bool status_bit) {
+void Mir3HudView::update_actor_bar_status(int actor,bool status_bit) {
     auto& health=scene_health[actor];
     health.status_tick=status_bit?std::uint32_t(ticks_msec()):0;
     if (status_bit) health.saved_tick=health.status_tick;
@@ -2423,7 +2427,7 @@ bool Mir3HudView::move_scene_chicken(int actor,SceneChicken::Turn turn) {
     if (!walking) {
         chicken.facing=facing;
         chicken.light_attribute=light;
-        update_monster_bar_status(actor,(status&2)!=0);
+        update_actor_bar_status(actor,(status&2)!=0);
         queue_redraw();
         return true;
     }
@@ -2436,7 +2440,7 @@ bool Mir3HudView::move_scene_chicken(int actor,SceneChicken::Turn turn) {
     chicken.walk_frame=0;
     chicken.walking_backward=backward;
     chicken.skip_movement_tick=false;
-    update_monster_bar_status(actor,(status&2)!=0);
+    update_actor_bar_status(actor,(status&2)!=0);
     chicken.walk_catch_up=false;
     queue_redraw();
     return true;
@@ -2595,7 +2599,7 @@ bool Mir3HudView::apply_monster_action(int actor,const SceneChicken::Action& act
     if (const auto* entry=std::get_if<SceneChicken::Entry>(&action)) return apply_monster_entry(actor,*entry);
     if (const auto* status=std::get_if<SceneChicken::BarStatus>(&action)) {
         scene_chickens.at(actor).status_flags=status->flags;
-        update_monster_bar_status(actor,(status->flags&2)!=0);
+        update_actor_bar_status(actor,(status->flags&2)!=0);
         return true;
     }
     if (const auto* attack=std::get_if<SceneChicken::Attack>(&action)) {
@@ -2652,7 +2656,7 @@ bool Mir3HudView::apply_monster_entry(int actor,const SceneChicken::Entry& entry
     }
     scene_chickens.at(actor).hidden_pose=entry.hidden_pose;
     scene_chickens.at(actor).status_flags=entry.status;
-    update_monster_bar_status(actor,(entry.status&2)!=0);
+    update_actor_bar_status(actor,(entry.status&2)!=0);
     if (entry.name) scene_names.insert_or_assign(actor,*entry.name);
     if (entry.appearance_sound) play_actor_sound(actor,109,entry.cell);
     return true;
@@ -2913,7 +2917,7 @@ bool Mir3HudView::set_local_actor_identity(int actor) {
         player_light_attribute=0;melee_cooldown={};local_action_clock={};pending_local_action.reset();
         action_prediction={};
         local_actor_messages.clear();forced_motion.reset();
-        player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;
+        player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;player_status_flags=0;
     }
     local_actor_identity=actor;
     queue_redraw();
@@ -2984,12 +2988,19 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         local_actor_messages.push_back({motion,*appearance,unsigned(p[2]>>8)});
         return true;
     }
-    // 40D8C0虚表+116 -> 411BA0，参数3是有符号攻击速度。
-    if ((opcode==mir3::protocol::SM_801 || opcode==mir3::protocol::SM_808) &&
-            local_actor_identity && actor==local_actor_identity) {
+    // 413F90/415AD0虚表+116 -> 411BA0：排队更新状态DWORD和有符号攻击速度。
+    if ((opcode==mir3::protocol::SM_801 || opcode==mir3::protocol::SM_ACTOR_STATUS || opcode==mir3::protocol::SM_808) &&
+            ((local_actor_identity && actor==local_actor_identity) || scene_humans.contains(actor))) {
         if (encoded.size()!=16) return false;
-        melee_cooldown.speed=std::int16_t(p[2]);
-        return true;
+        mir3::SceneHumanMessage status;
+        status.opcode=opcode;status.flags=std::uint32_t(p[0])|(std::uint32_t(p[1])<<16);
+        status.status_speed=std::int16_t(p[2]);
+        if (actor==local_actor_identity) {
+            if (local_actor_messages.size()>=64) return false;
+            LocalActorMessage message{{opcode,0,{}},{},0};message.status=status;
+            local_actor_messages.push_back(message);return true;
+        }
+        return scene_humans.at(actor).messages.push(status);
     }
     const bool chicken_death=opcode==mir3::protocol::SM_27 ||
         opcode==mir3::protocol::SM_DEATH || opcode==mir3::protocol::SM_NOWDEATH ||
@@ -3003,7 +3014,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         return receive_monster_action(actor,SceneChicken::ReverseBurrow{Vector2i(p[0],p[1])});
     }
     const bool monster_status_packet=opcode==mir3::protocol::SM_801 ||
-        opcode==mir3::protocol::SM_ACTOR_LIGHT || opcode==mir3::protocol::SM_808;
+        opcode==mir3::protocol::SM_ACTOR_STATUS || opcode==mir3::protocol::SM_808;
     const auto monster_status=std::uint32_t(p[0])|(std::uint32_t(p[1])<<16);
     const bool monster_initial_packet=opcode==mir3::protocol::SM_BACKSTEP ||
         opcode==mir3::protocol::SM_WALK || opcode==mir3::protocol::SM_RUN || monster_status_packet;
@@ -3077,15 +3088,19 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
             return true;
         }
     }
-    // Immediate monster virtual calls: 1100 applies light, 1101 refreshes the bar token.
-    if (scene_chickens.contains(actor)) {
+    // 4282C0虚表+52/+56：所有已存在角色即时更新，与动作队列无关。
+    if (scene_chickens.contains(actor) || scene_humans.contains(actor) || (local_actor_identity && actor==local_actor_identity)) {
         if (opcode==mir3::protocol::SM_OPENHEALTH) {
-            scene_chickens.at(actor).light_attribute=p[0]&255;
+            if (encoded.size()!=16) return false;
+            if (actor==local_actor_identity) player_light_attribute=p[0]&255;
+            else if (scene_humans.contains(actor)) scene_humans.at(actor).light_attribute=p[0]&255;
+            else scene_chickens.at(actor).light_attribute=p[0]&255;
             queue_redraw();
             return true;
         }
         if (opcode==mir3::protocol::SM_CLOSEHEALTH) {
-            update_monster_bar_status(actor,true);
+            if (encoded.size()!=16) return false;
+            update_actor_bar_status(actor==local_actor_identity?0:actor,true);
             return true;
         }
     }
@@ -3251,7 +3266,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         return apply_scene_name(actor,mir3::protocol::SM_CHANGENAMECOLOR,p[0]&255,String());
     // 4282C0 dispatches monster 41 to slot +60 (407C50), clearing only the current token.
     if (opcode==mir3::protocol::SM_FEATURECHANGED && scene_chickens.contains(actor)) {
-        update_monster_bar_status(actor,false);
+        update_actor_bar_status(actor,false);
         return true;
     }
     // Monster 42 uses slot +40 (407B70), which applies the feature immediately.
@@ -3263,7 +3278,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
             const int shape=monster_feature_shape(*body);
             if (!refresh_monster_shape(monster,shape)) return false;
             monster.status_flags=monster_feature_status(*body);
-            update_monster_bar_status(actor,(monster.status_flags&2)!=0);
+            update_actor_bar_status(actor,(monster.status_flags&2)!=0);
             return true;
         }
         return false;
@@ -3402,19 +3417,6 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         const auto changed=system_options.receive(header->recognition,p[0]);
         reception_buttons.receive_options(changed,rejected_chat);
         queue_redraw();return true;
-    }
-    if (opcode==mir3::protocol::SM_ACTOR_LIGHT) {
-        if (encoded.size()!=16 || actor<=0) return false;
-        const unsigned light=p[2]>>8;
-        if (actor==local_actor_identity) {
-            melee_cooldown.speed=std::int16_t(p[2]);
-            player_light_attribute=light;queue_redraw();return true;
-        }
-        const auto human=scene_humans.find(actor);
-        if (human==scene_humans.end()) return false;
-        mir3::SceneHumanMessage message;
-        message.opcode=mir3::protocol::SM_ACTOR_LIGHT;message.light_attribute=light;
-        return human->second.messages.push(message);
     }
     if (opcode==mir3::protocol::SM_DAYCHANGING) {
         if (encoded.size()!=16) return false;
@@ -3573,12 +3575,15 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     if (!next) return false;
     bool accepted=false;
     const Vector2i cell(next->x,next->y);
-    if (next->opcode==mir3::protocol::SM_ACTOR_LIGHT) { human.light_attribute=next->light_attribute;queue_redraw();return true; }
+    if (next->status_speed) {
+        human.attack_speed=*next->status_speed;human.action_flags=next->flags;
+        update_actor_bar_status(actor,(next->flags&2)!=0);return true;
+    }
     if (next->opcode==mir3::protocol::SM_STRUCK) { apply_actor_health_record(actor,*next);return true; }
     // 413F90虚表+176 -> 413F60：12/637仅坐标、朝向及动作8，正文不使用。
     if (next->opcode==mir3::protocol::SM_SITDOWN || next->opcode==mir3::protocol::SM_BUTCH) {
         human.cell=cell;human.facing=next->facing;
-        human.harvest=false;human.action_flags=0;human.idle.reset();
+        human.harvest=false;human.idle.reset();
         if (!human.life.dead) human.action.start(8,catch_up);
         queue_redraw();return true;
     }
@@ -3607,7 +3612,7 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     }
     if (accepted) {
         human.catching_up=catch_up;
-        human.action_flags=next->flags;
+        if (next->appearance || next->flags) human.action_flags=next->flags;
         human.harvest=next->harvest;
     }
     return true; // consume at most one record per update, including rejected state
@@ -3636,7 +3641,6 @@ bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing,int h
     human.facing=facing;
     human.action.start(action);
     human.catching_up=false;
-    human.action_flags=0;
     human.harvest=false;
     human.hit_weapon=hit_weapon;
     if (opcode!=mir3::protocol::SM_HUMAN_STRUCK && opcode!=mir3::protocol::SM_SITDOWN) human.combat.attack();
@@ -3661,7 +3665,6 @@ bool Mir3HudView::apply_scene_human_stand(int actor,Vector2i cell,int facing) {
     human.idle.reset();
     human.action=mir3::HumanActionClock{};
     human.catching_up=false;
-    human.action_flags=0;
     human.harvest=false;
     human.bounds=Rect2();
     std::copy_n(human_body(human.type,human.clothing)->standing.begin()+facing*10,human.frames.size(),human.frames.begin());
@@ -3692,7 +3695,6 @@ bool Mir3HudView::apply_scene_human_step(int actor,int opcode,Vector2i destinati
     human.idle.reset();
     human.action=mir3::HumanActionClock{};
     human.catching_up=false;
-    human.action_flags=0;
     human.harvest=false;
     human.movement_frame=0;
     human.movement_ms=0;
@@ -3943,6 +3945,11 @@ void Mir3HudView::process_local_actor_message() {
     const auto message=local_actor_messages.front();
     local_actor_messages.pop_front();
     if (message.motion.opcode==mir3::protocol::SM_SITDOWN || message.motion.opcode==mir3::protocol::SM_BUTCH) return;
+    if (message.status) {
+        player_status_flags=message.status->flags;
+        melee_cooldown.speed=*message.status->status_speed;
+        update_actor_bar_status(0,(player_status_flags&2)!=0);return;
+    }
     if (message.hit) {
         const auto& appearance=message.appearance;
         const auto& hp=*message.hit->health;
@@ -4448,7 +4455,7 @@ void Mir3HudView::clear_game_scene() {
     pending_local_action.reset();local_action_clock={};
     action_prediction={};
     local_actor_messages.clear();forced_motion.reset();
-    player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;
+    player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;player_status_flags=0;
     login_actor_pending.reset();login_actor_extra={};server_ability.reset();server_sub_ability={};weapon_training=0;
     guild_overview={};guild_overview_started=false;guild_manager=false;guild_name=String();
     for (auto& page:guild_pages) page.clear();
@@ -4607,7 +4614,7 @@ bool Mir3HudView::apply_login_actor() {
     const auto* body=human_body(appearance.type,appearance.clothing);
     if (!body || (mount && (!human_body(appearance.type,appearance.clothing,true) || !horse_frame(mount,2320))) ||
         (appearance.weapon && weapon_order.size()!=2640)) return false;
-    player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;player_action={};action_prediction={};pending_local_action.reset();
+    player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;player_status_flags=0;player_action={};action_prediction={};pending_local_action.reset();
     local_actor_messages.clear();forced_motion.reset();
     player_mount=0;set_player_body(appearance.type,appearance.clothing);
     set_player_mount(mount);this->mount.shape=std::uint8_t(mount);set_player_attachments(appearance.hair,appearance.weapon);

@@ -690,7 +690,7 @@ func run_actor_light() -> void:
 	var original: PackedColorArray = hud.hud_snapshot().scene_light_samples
 	if not await capture("actor-light-unequipped"): return
 	var position: Vector2i = hud.hud_snapshot().player_cell
-	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,100,9999,9999,2*256+7),keys), "807 reads high byte and ignores position/direction"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,100,2,9999,7),keys), "1100 reads first parameter low byte and ignores position/direction"): return
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
@@ -713,18 +713,18 @@ func run_actor_light() -> void:
 	if not check(hud.set_scene_human(5,Vector2i(411,411),4,1,"持灯旅人"), "remote light actor"): return
 	if not check(not hud.set_local_actor_identity(5) and hud.hud_snapshot().local_actor_identity==100, "reject identity conflict without changing binding"): return
 	if not check(hud.apply_scene_human_action(5,1307,4,0), "remote cast delays queued light"): return
-	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,5,0,0,8*256),keys) and hud.hud_snapshot().scene_human_lights[5]==0, "remote light waits for action queue"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,5,8,0,0),keys) and hud.hud_snapshot().scene_human_lights[5]==8, "remote light applies immediately during action"): return
 	var deadline := Time.get_ticks_msec()+2200
 	while hud.hud_snapshot().scene_human_lights[5]!=8 and Time.get_ticks_msec()<deadline:
 		await process_frame
-	if not check(hud.hud_snapshot().scene_human_lights[5]==8, "remote queued light applied"): return
+	if not check(hud.hud_snapshot().scene_human_lights[5]==8, "remote immediate light applied"): return
 	if not await capture("actor-light-remote"): return
-	hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,5,0,0,2*256),keys)
+	hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,5,2,0,0),keys)
 	hud.remove_scene_actor(5)
 	hud.set_scene_human(5,Vector2i(411,411),4,1,"新人物")
 	await process_frame
-	if not check(hud.hud_snapshot().scene_human_lights[5]==0, "removed identity discards queued light"): return
-	hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,100,0,0,8*256),keys)
+	if not check(hud.hud_snapshot().scene_human_lights[5]==0, "removed identity discards old light"): return
+	hud.apply_scene_message(scene_packet(Mir3HudView.SM_ACTOR_LIGHT,100,8,0,0),keys)
 	hud.change_map("0","比奇省",Vector2i(413,410),1)
 	if not check(hud.hud_snapshot().player_light_attribute==8, "map change preserves local equipment light"): return
 	hud.set_local_actor_identity(101)
@@ -732,7 +732,7 @@ func run_actor_light() -> void:
 	hud.queue_free()
 	await process_frame
 	await process_frame
-	print("PASS actor lights: identity, 807, equipment, queue and lifecycle")
+	print("PASS actor lights: identity, 1100, equipment, immediate update and lifecycle")
 	quit()
 
 func run_scene_light() -> void:

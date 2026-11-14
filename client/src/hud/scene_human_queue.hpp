@@ -17,10 +17,12 @@ struct SceneHumanMessage {
     std::uint32_t hit_source=0;
     int light_attribute=-1;
     bool harvest=false;
+    std::optional<std::int16_t> status_speed;
     static bool accepts(int opcode) {
         switch (opcode) {
         case mir3::protocol::SM_SITDOWN: case mir3::protocol::SM_BUTCH:
-        case mir3::protocol::SM_ACTOR_LIGHT: case mir3::protocol::SM_STRUCK: case mir3::protocol::SM_BUMP: case mir3::protocol::SM_TURN: case mir3::protocol::SM_WALK: case mir3::protocol::SM_RUN: case mir3::protocol::SM_HIT: case mir3::protocol::SM_HIT2: case mir3::protocol::SM_DEATH: case mir3::protocol::SM_NOWDEATH: case mir3::protocol::SM_REVIVE: case mir3::protocol::SM_REVIVE_REFRESH:
+        case mir3::protocol::SM_801: case mir3::protocol::SM_ACTOR_STATUS: case mir3::protocol::SM_808:
+        case mir3::protocol::SM_STRUCK: case mir3::protocol::SM_BUMP: case mir3::protocol::SM_TURN: case mir3::protocol::SM_WALK: case mir3::protocol::SM_RUN: case mir3::protocol::SM_HIT: case mir3::protocol::SM_HIT2: case mir3::protocol::SM_DEATH: case mir3::protocol::SM_NOWDEATH: case mir3::protocol::SM_REVIVE: case mir3::protocol::SM_REVIVE_REFRESH:
         case mir3::protocol::SM_HUMAN_CAST: case mir3::protocol::SM_HUMAN_CAST_ALT: case mir3::protocol::SM_HUMAN_ACTION18: case mir3::protocol::SM_HUMAN_STRUCK: case mir3::protocol::SM_HUMAN_ATTACK: return true;
         default: return false;
         }
@@ -29,7 +31,6 @@ struct SceneHumanMessage {
 class SceneHumanQueue {
 public:
     bool push(SceneHumanMessage message) {
-        if (message.opcode==mir3::protocol::SM_ACTOR_LIGHT && (message.light_attribute<0 || message.light_attribute>255)) return false;
         if (!SceneHumanMessage::accepts(message.opcode) || message.facing<0 || message.facing>=8 ||
             message.hit_weapon<0 || message.hit_weapon>=50 || pending.size()>=99999) return false;
         pending.push_back(message);

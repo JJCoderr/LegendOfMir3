@@ -72,3 +72,9 @@ IDA 数据库名为 `mir3-map-review`，本机 MCP 地址为 `http://127.0.0.1:1
 
 - [x] 637与12远端FIFO、坐标/朝向/蹲姿、正文忽略、骑乘及尸体分支；本地两类回包仅排队消费，不打断移动或代替GOOD。纠正旧文档虚表偏移及637特效归属错误；butch_reply独立验收约5秒通过，截图butch-reply-crouch.png，证据见client/docs/evidence/butch-reply.md。
 - [ ] 实服采集产物与原版同状态像素验收；637本身不负责生成物品或武器特效。
+
+
+## 人物状态与即时灯光消息
+
+- [x] 801/807/808本地及远端状态DWORD、int16速度FIFO；bit1血条校验；1100低字节即时灯光和1101即时血条校验刷新，纠正807旧灯光误判。独立actor_status、普攻门禁回归及scene-light模型通过；截图actor-status-bar-restored/local-light.png。证据见client/docs/evidence/actor-status.md。
+- [ ] 其余状态位消费者、外观包生产者、实服和逐像素对照；G06仍未全部完成。

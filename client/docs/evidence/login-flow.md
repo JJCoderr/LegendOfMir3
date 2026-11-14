@@ -106,7 +106,7 @@ GameConnection消费者使用当前密钥处理1330，发送1150身份响应，�
 
 ## 协议消息具名定义（用户要求，2026-11-14）
 
-统一协议名参考reference/LegendOfMir3_Src/LegendOfMir3_Client/Common/Protocol.h（登录/选角）、同目录Define.h及LegendOfMir3_Server/Def/Protocol.h（游戏），并比对reference/legendOfMir2_src/Mir3EIClientDev/Mir3EIClient/Define.h。例如CM_IDPASSWORD=2001、CM_QUERYCHR=100、CM_SELCHR=103、SM_PASSOK_SELECTSERVER=529、SM_SELECTSERVER_OK=530、SM_LOGON=50、CM_QUERYBAGITEMS=81；后者表明此前“81入场确认”的宽泛描述应具体为请求背包。较新参考定义SM_DECODEKEY=1330，SM_807和SM_1401仍以数字命名，本工程按已恢复功能命名为SM_ACTOR_LIGHT和SM_CLIENT_OPTIONS。开源命名仅用于可读性，实际1.45消息值仍以已有IDA证据为准；同值异名保留在定义表，业务选用清晰的规范名。CM_LOGOUT=1009、CM_DECODEKEY_RESPONSE=1150等参考缺失项明确是本工程按原版恢复后命名。
+统一协议名参考reference/LegendOfMir3_Src/LegendOfMir3_Client/Common/Protocol.h（登录/选角）、同目录Define.h及LegendOfMir3_Server/Def/Protocol.h（游戏），并比对reference/legendOfMir2_src/Mir3EIClientDev/Mir3EIClient/Define.h。例如CM_IDPASSWORD=2001、CM_QUERYCHR=100、CM_SELCHR=103、SM_PASSOK_SELECTSERVER=529、SM_SELECTSERVER_OK=530、SM_LOGON=50、CM_QUERYBAGITEMS=81；后者表明此前“81入场确认”的宽泛描述应具体为请求背包。较新参考定义SM_DECODEKEY=1330，SM_807和SM_1401仍以数字命名，本工程按已恢复功能命名为SM_ACTOR_STATUS和SM_CLIENT_OPTIONS（807旧灯光命名已由actor-status.md纠正）。开源命名仅用于可读性，实际1.45消息值仍以已有IDA证据为准；同值异名保留在定义表，业务选用清晰的规范名。CM_LOGOUT=1009、CM_DECODEKEY_RESPONSE=1150等参考缺失项明确是本工程按原版恢复后命名。
 
 消息号集中存放于protocol/message_ids.inc，由message_ids.hpp提供C++枚举，Godot类导出同一表供测试引用，避免C++与测试各维护一份数字。协议号与CmList文字索引、资源帧号、动画动作号、UI控件索引分开处理，不做全局数字替换。
 

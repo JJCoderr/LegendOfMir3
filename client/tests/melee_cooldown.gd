@@ -35,8 +35,9 @@ func run() -> void:
 	await settle(0.55)
 	attack_click(bounds.get_center())
 	if not check(packets.size()==2,"期满恢复且拒绝点击未延长冷却"): return
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_801,77,0,0,65535))
-		and hud.hud_snapshot().melee_speed==-1 and hud.hud_snapshot().melee_interval_ms==1446,
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_801,77,0,0,65535)),"速度消息入队"): return
+	await settle(0.7)
+	if not check(hud.hud_snapshot().melee_speed==-1 and hud.hud_snapshot().melee_interval_ms==1446,
 		"原包速度WORD按负数解释"): return
 	hud.set_character_load_bonuses(Vector2i.ZERO,Vector2i(2,1),Vector2i.ZERO)
 	if not check(hud.hud_snapshot().melee_interval_ms==2946,"超重增加1500毫秒"): return
@@ -44,6 +45,7 @@ func run() -> void:
 	attack_click(bounds.get_center())
 	if not check(packets.size()==2,"超重时原间隔结束仍不可攻击"): return
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_808,77,0,0,100)),"更新速度回包"): return
+	await settle(0.03)
 	hud.set_character_load_bonuses(Vector2i.ZERO,Vector2i(1,1),Vector2i.ZERO)
 	attack_click(bounds.get_center())
 	if not check(packets.size()==3 and hud.hud_snapshot().melee_interval_ms==600,"实时属性解除限频"): return
