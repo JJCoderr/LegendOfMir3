@@ -1,6 +1,7 @@
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/human_actions.hpp"
+#include "resources/sound_list.hpp"
 #include "hud/scene_name.hpp"
 #include "hud/scene_health.hpp"
 #include "chat/chat_reception.hpp"
@@ -18,6 +19,14 @@ int main(int argc,char** argv) {
     try {
         check(argc==2,"resource root required");
         if (std::filesystem::path(argv[1])=="--scene-actions") {
+            std::vector<std::uint8_t> index(58+32,0);
+            index[54]=2;index[58]=140;index[74]=141;
+            const std::string first="m34-1.wav",second="m35-1.wav";
+            std::copy(first.begin(),first.end(),index.begin()+60);
+            std::copy(second.begin(),second.end(),index.begin()+76);
+            mir3::SoundList list;
+            check(list.parse(index) && list.file(140)==first && list.file(141)==second && list.file(999).empty(),"sound IDs resolve mapped filenames");
+            index.pop_back();check(!list.parse(index) && list.file(140)==first,"truncated index preserves previous mapping");
             mir3::HumanActionClock clock;
             for (int action: {9,10,13,15,16,17,18,32}) {
                 clock.start(action);
@@ -31,6 +40,11 @@ int main(int argc,char** argv) {
             }
             check(mir3::HumanActions::weapon_attack(2)==13 && mir3::HumanActions::weapon_attack(4)==10 && mir3::HumanActions::weapon_attack(1)==9,"weapon groups");
             check(mir3::HumanActions::frame(32,7,2)==2632,"mounted hit frame bank");
+            check(mir3::HumanActions::frame_sound(9,1,2,0,0,0)==0 && mir3::HumanActions::frame_sound(9,2,2,0,0,0)==56,"swing sound only on frame two");
+            check(mir3::HumanActions::frame_sound(15,1,1,2,3,0)==82,"hit source weapon and armour select impact");
+            check(mir3::HumanActions::frame_sound(15,2,1,2,3,0)==138 && mir3::HumanActions::frame_sound(15,2,1,2,3,1)==139,"sex selects hurt voice");
+            check(mir3::HumanActions::frame_sound(17,1,0,0,0,0)==140 && mir3::HumanActions::frame_sound(16,1,0,0,0,0)==141,"special action sounds");
+            check(mir3::HumanActions::frame_sound(32,1,0,0,0,0)==0,"mounted hit does not reuse ordinary hit sounds without evidence");
             std::cout << "SCENE_ACTIONS_MODEL_OK\n";
             return 0;
         }

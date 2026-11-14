@@ -2,6 +2,7 @@
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"
 #include "hud/human_actions.hpp"
+#include "resources/sound_list.hpp"
 #include "hud/scene_name.hpp"
 #include "hud/scene_health.hpp"
 #include "hud/speech_bubble.hpp"
@@ -94,7 +95,7 @@ public:
     bool set_player_attachments(int hair,int weapon);
     bool set_scene_human_attachments(int actor,int hair,int weapon);
     bool set_player_body(int type,int clothing);
-    bool apply_scene_human_action(int actor,int opcode,int facing);
+    bool apply_scene_human_action(int actor,int opcode,int facing,int hit_weapon=0);
     bool apply_scene_human_stand(int actor,godot::Vector2i cell,int facing);
     bool apply_scene_human_step(int actor,int opcode,godot::Vector2i destination,int facing);
     bool remove_scene_actor(int actor);
@@ -201,7 +202,16 @@ private:
     godot::AudioStreamPlayer* map_music=nullptr;
     godot::AudioStreamPlayer* footstep_sound=nullptr;
     std::map<int,godot::Ref<godot::AudioStreamWAV>> movement_sounds;
+    mir3::SoundList sound_list;
     int last_movement_sound=0;
+    struct ActorSound {
+        godot::AudioStreamPlayer* player=nullptr;
+        godot::StringName bus;
+        int sample=0, count=0, volume=0, pan=0;
+    };
+    std::map<int,ActorSound> actor_sounds;
+    void play_actor_sound(int actor,int sample,godot::Vector2i cell);
+    void remove_actor_sound(int actor);
     godot::StringName footstep_bus;
     godot::String audio_root,music_file;
     godot::PackedByteArray music_table;
@@ -343,6 +353,7 @@ private:
         int facing=0, movement_frame=-1, step_distance=0;
         mir3::HumanIdleClock idle;
         mir3::HumanActionClock action;
+        int hit_weapon=0;
         double movement_ms=0;
         godot::Vector2i step_origin, step_destination;
     };

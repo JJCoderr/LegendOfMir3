@@ -124,6 +124,63 @@ func run_local_mount() -> void:
 	print("LOCAL_MOUNT_OK")
 	quit()
 
+func wait_actor_sound(sample: int, previous: int) -> bool:
+	var deadline := Time.get_ticks_msec() + 1800
+	while Time.get_ticks_msec() < deadline:
+		await process_frame
+		var sounds: Dictionary = hud.hud_snapshot().scene_actor_sounds
+		if sounds.has(5) and sounds[5].count > previous and sounds[5].sample == sample:
+			return check(sounds[5].playing, "original WAV starts playing")
+	return check(false, "expected actor sound " + str(sample))
+
+func run_scene_audio() -> void:
+	if not check(hud.set_scene_human_attachments(5,1,2) and hud.apply_scene_human_action(5,14,4), "start weapon swing"): return
+	if not await wait_actor_sound(56,0): return
+	if not await capture("bichon-human-action-sound"): return
+	var count: int = hud.hud_snapshot().scene_actor_sounds[5].count
+	if not check(hud.set_scene_human_body(5,0,3) and hud.apply_scene_human_action(5,1309,4,2), "armoured hit with source weapon"): return
+	if not await wait_actor_sound(82,count): return
+	if not await wait_actor_sound(138,count+1): return
+	count = hud.hud_snapshot().scene_actor_sounds[5].count
+	if not check(hud.set_scene_human_body(5,1,1) and hud.apply_scene_human_action(5,1309,4,1), "female hit"): return
+	if not await wait_actor_sound(70,count): return
+	if not await wait_actor_sound(139,count+1): return
+	for pair in [[1306,140],[1307,141]]:
+		count = hud.hud_snapshot().scene_actor_sounds[5].count
+		hud.apply_scene_human_action(5,pair[0],4)
+		if pair[1] == 141:
+			# Original SoundList maps 141 to m35-1.wav, absent in this resource set.
+			await create_timer(0.2).timeout
+			if not check(hud.hud_snapshot().scene_actor_sounds[5].count == count, "missing original sound does not substitute another sample"): return
+		else:
+			if not await wait_actor_sound(pair[1],count): return
+	key(KEY_N)
+	click_at(Vector2(580,180),false)
+	key(KEY_N)
+	count = hud.hud_snapshot().scene_actor_sounds[5].count
+	hud.apply_scene_human_action(5,14,4)
+	await create_timer(0.65).timeout
+	if not check(hud.hud_snapshot().scene_actor_sounds[5].count == count and not hud.hud_snapshot().scene_actor_sounds[5].playing, "mute suppresses action sounds"): return
+	key(KEY_N)
+	click_at(Vector2(580,180),false)
+	key(KEY_N)
+	var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
+	if not check(hud.apply_scene_human_step(5,11,cell,4), "remote footstep"): return
+	if not await wait_actor_sound(1,count): return
+	hud.apply_scene_human_stand(5,cell,4)
+	hud.set_scene_human_mount(5,1)
+	count = hud.hud_snapshot().scene_actor_sounds[5].count
+	hud.apply_scene_human_step(5,11,cell,4)
+	if not await wait_actor_sound(33,count): return
+	if not await wait_actor_sound(34,count+1): return
+	if not await capture("bichon-remote-hoof-sound"): return
+	var buses := AudioServer.bus_count
+	if not check(hud.remove_scene_actor(5) and not hud.hud_snapshot().scene_actor_sounds.has(5) and AudioServer.bus_count == buses-1, "actor removal releases sound channel"): return
+	await process_frame
+	await process_frame
+	print("PASS scene actor audio")
+	quit()
+
 func run_scene_actions() -> void:
 	if not check(hud.set_scene_human_body(5, 0, 1) and hud.set_scene_human_attachments(5, 1, 2), "load action appearance"): return
 	for pair in [[2, 13], [4, 10], [1, 9]]:
@@ -301,6 +358,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--scene-audio"):
+		await run_scene_audio()
+		return
 	if OS.get_cmdline_user_args().has("--scene-actions"):
 		await run_scene_actions()
 		return
@@ -445,7 +505,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

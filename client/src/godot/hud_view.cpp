@@ -110,7 +110,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_player_attachments","hair","weapon"),&Mir3HudView::set_player_attachments);
     ClassDB::bind_method(D_METHOD("set_scene_human_attachments","actor","hair","weapon"),&Mir3HudView::set_scene_human_attachments);
     ClassDB::bind_method(D_METHOD("set_player_body","type","clothing"),&Mir3HudView::set_player_body);
-    ClassDB::bind_method(D_METHOD("apply_scene_human_action","actor","opcode","facing"),&Mir3HudView::apply_scene_human_action);
+    ClassDB::bind_method(D_METHOD("apply_scene_human_action","actor","opcode","facing","hit_weapon"),&Mir3HudView::apply_scene_human_action,DEFVAL(0));
     ClassDB::bind_method(D_METHOD("apply_scene_human_stand","actor","cell","facing"),&Mir3HudView::apply_scene_human_stand);
     ClassDB::bind_method(D_METHOD("apply_scene_human_step","actor","opcode","destination","facing"),&Mir3HudView::apply_scene_human_step);
     ClassDB::bind_method(D_METHOD("remove_scene_actor","actor"),&Mir3HudView::remove_scene_actor);
@@ -247,6 +247,15 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["map_step_origin"]=step_origin;
     result["map_step_destination"]=step_destination;
     result["last_movement_sound"]=last_movement_sound;
+    Dictionary actor_audio;
+    for (const auto& [actor,sound]:actor_sounds) {
+        Dictionary entry;
+        entry["sample"]=sound.sample; entry["count"]=sound.count;
+        entry["volume"]=sound.volume; entry["pan"]=sound.pan;
+        entry["playing"]=sound.player->is_playing();
+        actor_audio[actor]=entry;
+    }
+    result["scene_actor_sounds"]=actor_audio;
     result["character_portrait"]=model.portrait_frame();
     result["target_portrait"]=model.layout.expanded || !target_focus.displayed() || target_portrait.is_null()?-1:target_frame;
     result["target_hp_width"]=!model.layout.expanded && target_focus.displayed() && !target_is_human && target_portrait.is_valid()?target_vitals.bar_width():0;
@@ -346,6 +355,9 @@ void Mir3HudView::_ready() {
     actor_resource_root=root.path_join("Data");
     weapon_order=FileAccess::get_file_as_bytes(root.path_join("Weapon.ord"));
     audio_root=root.path_join("Sound");
+    const auto sound_index=FileAccess::get_file_as_bytes(root.path_join("SoundList.wwl"));
+    if (!sound_list.parse({sound_index.ptr(),static_cast<std::size_t>(sound_index.size())}))
+        UtilityFunctions::push_warning("Cannot parse SoundList.wwl");
     music_table=FileAccess::get_file_as_bytes(root.path_join("BgmList.wwl"));
     map_music=memnew(AudioStreamPlayer);
     map_music->set_name("MapMusic");
@@ -473,6 +485,7 @@ void Mir3HudView::_ready() {
     queue_redraw();
 }
 void Mir3HudView::_exit_tree() {
+    while (!actor_sounds.empty()) remove_actor_sound(actor_sounds.begin()->first);
     if (footstep_bus==StringName()) return;
     footstep_sound->stop();
     auto* audio=AudioServer::get_singleton();
@@ -1831,9 +1844,9 @@ const Mir3HudView::MapActorFrame* Mir3HudView::human_action_frame(int type,int c
         Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions}).first->second;
 }
 
-bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing) {
+bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing,int hit_weapon) {
     const auto it=scene_humans.find(actor);
-    if (it==scene_humans.end() || facing<0 || facing>=8) return false;
+    if (it==scene_humans.end() || facing<0 || facing>=8 || hit_weapon<0 || hit_weapon>=50) return false;
     auto& human=it->second;
     // Decoded presentation adapter; caller retains messages while movement is active.
     if (human.movement_frame>=0) return false;
@@ -1852,6 +1865,7 @@ bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing) {
         if (!human_action_frame(human.type,human.clothing,mir3::HumanActions::frame(action,facing,i))) return false;
     human.facing=facing;
     human.action.start(action);
+    human.hit_weapon=hit_weapon;
     human.idle.reset();
     queue_redraw();
     return true;
@@ -1901,6 +1915,7 @@ bool Mir3HudView::apply_scene_human_step(int actor,int opcode,Vector2i destinati
 bool Mir3HudView::remove_scene_actor(int actor) {
     if (!scene_npcs.erase(actor) && !scene_chickens.erase(actor) && !scene_humans.erase(actor)) return false;
     const auto id=static_cast<std::uint32_t>(actor);
+    remove_actor_sound(actor);
     scene_damage_glyphs.erase(actor);
     scene_health.erase(actor);
     scene_health_bounds.erase(actor);
@@ -2496,7 +2511,11 @@ void Mir3HudView::_process(double delta) {
     for (auto& [actor,human]:scene_humans) {
         if (human.movement_frame<0) {
             if (!human.action.finished()) {
+                const int previous=human.action.frame();
                 human.action.advance(static_cast<std::uint32_t>(delta*1000));
+                if (previous!=human.action.frame())
+                    play_actor_sound(actor,mir3::HumanActions::frame_sound(human.action.action(),human.action.frame(),
+                        human.weapon,human.hit_weapon,human.clothing,human.type),human.cell);
                 if (human.action.finished()) human.idle.reset();
                 queue_redraw();
             } else human.idle.advance(delta*1000);
@@ -2506,6 +2525,8 @@ void Mir3HudView::_process(double delta) {
         if (human.movement_ms<=(human.mount_shape?100:(human.step_distance==2?120:90))) continue;
         human.movement_ms=0;
         ++human.movement_frame;
+        const int movement_action=human.mount_shape?(human.step_distance>1?31:30):(human.step_distance>1?22:21);
+        play_actor_sound(actor,mir3::HumanActions::movement_sound(movement_action,human.movement_frame),human.cell);
         if (human.movement_frame==(human.facing==7?4:1)) human.cell=human.step_destination;
         if (human.movement_frame==6) human.movement_frame=-1;
         queue_redraw();
@@ -4324,7 +4345,67 @@ void Mir3HudView::save_options() {
     if (!saved) UtilityFunctions::push_warning("Could not save system options to ",options_path);
 }
 
+void Mir3HudView::remove_actor_sound(int actor) {
+    auto found=actor_sounds.find(actor);
+    if (found==actor_sounds.end()) return;
+    found->second.player->stop();
+    found->second.player->queue_free();
+    auto* audio=AudioServer::get_singleton();
+    const int bus=audio->get_bus_index(found->second.bus);
+    if (bus>=0) audio->remove_bus(bus);
+    actor_sounds.erase(found);
+}
+
+void Mir3HudView::play_actor_sound(int actor,int sample,Vector2i cell) {
+    if (!sample || !audio_options.effects_enabled) return;
+    const auto camera=map_camera();
+    const auto mix=mir3::SoundPosition::from_view(cell.x*48-camera.x,cell.y*32-camera.y);
+    const int volume=mix.volume+mir3::AudioOptions::volume(audio_options.effects_level);
+    if (volume<=-10000) return;
+    auto stream=movement_sounds.find(sample);
+    if (stream==movement_sounds.end()) {
+        const auto name=sound_list.file(sample);
+        if (name.empty()) return;
+        const auto path=audio_root.path_join(String::utf8(name.c_str()));
+        if (!FileAccess::file_exists(path)) return;
+        stream=movement_sounds.emplace(sample,AudioStreamWAV::load_from_file(path)).first;
+    }
+    if (stream->second.is_null()) return;
+    auto* audio=AudioServer::get_singleton();
+    auto& sound=actor_sounds[actor];
+    if (!sound.player) {
+        sound.player=memnew(AudioStreamPlayer);
+        add_child(sound.player);
+        sound.bus=String("Mir3Actor")+String::num_uint64(get_instance_id())+"_"+String::num_int64(actor);
+        const int bus=audio->get_bus_count();
+        audio->add_bus(bus);
+        audio->set_bus_name(bus,sound.bus);
+        Ref<AudioEffectPanner> panner;
+        panner.instantiate();
+        audio->add_bus_effect(bus,panner);
+        sound.player->set_bus(sound.bus);
+    }
+    const int bus=audio->get_bus_index(sound.bus);
+    const Ref<AudioEffectPanner> panner=audio->get_bus_effect(bus,0);
+    sound.pan=mix.pan*(audio_options.reverse_pan?-1:1);
+    const float magnitude=1.f-std::pow(10.f,-std::abs(sound.pan)/2000.f);
+    panner->set_pan((sound.pan<0?-1.f:1.f)*magnitude);
+    audio->set_bus_volume_db(bus,mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
+    sound.player->set_volume_db(mix.volume/100.f);
+    sound.player->set_stream(stream->second);
+    sound.player->play();
+    sound.sample=sample;
+    sound.volume=volume;
+    ++sound.count;
+}
+
 void Mir3HudView::sync_hud_sound() {
+    for (auto& [actor,sound]:actor_sounds) {
+        auto* audio=AudioServer::get_singleton();
+        const int bus=audio->get_bus_index(sound.bus);
+        if (bus>=0) audio->set_bus_volume_db(bus,mir3::AudioOptions::volume(audio_options.effects_level)/100.f);
+        if (!audio_options.effects_enabled) sound.player->stop();
+    }
     if (footstep_sound) {
         auto* audio=AudioServer::get_singleton();
         const int bus=audio->get_bus_index(footstep_bus);

@@ -60,3 +60,8 @@
 ## 使用与验证边界
 
 本轮为源码导航与代表性路径分析，没有构建或运行该参考工程。表中入口已核对存在；不能据此宣称整套逻辑与 1.45 一致。读取目标函数及直接调用者后，再迁移到 `client` 的对应功能模块。只验证本次影响的显示和行为，相关功能成组完成后统一截图与提交。
+
+
+### 声音索引补充：SoundList.wwl
+
+`LegendOfMir3_Client/Sound/TypeDef.h` 定义 pack(1) 的 WAVELISTHEADER（58 字节：Title[40]、TargetDir[10]、FieldCount DWORD、ListCount DWORD）和 WAVELIST（16 字节：ID short、Des[14]）。`Sound/MirSound.cpp` 的 ReadWavFileList 按 ListCount 读取，跳过 ID 0 的说明行，并裁去 wav 后残留内容。音效 ID 不是文件名，宝藏资源中 140→m34-1.wav、141→m35-1.wav；后者当前资源未提供。客户端已按此格式解析动作音效索引，不能以拼接编号文件名替代全部映射。

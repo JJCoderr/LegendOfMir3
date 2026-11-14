@@ -33,6 +33,13 @@ struct HumanActions {
         default: return 57;
         }
     }
+    // 0x410B20: sound is dispatched only when entering a new relative frame.
+    static int frame_sound(int action,int frame,int weapon,int hit_weapon,int clothing,int type) {
+        if (frame==1 && (action==16 || action==17)) return action==17?140:141;
+        if (frame==2 && action>=9 && action<=14) return weapon_swing_sound(weapon);
+        if (action==15) return hit_sound(frame,hit_weapon,clothing,type);
+        return 0;
+    }
     // 0x410DF0, called after the first increment and before cell commit.
     static constexpr int movement_sound(int action,int relative) {
         if (action==31) return relative==3?35:0;
