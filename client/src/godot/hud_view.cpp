@@ -3674,7 +3674,13 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
     if (!player_action.finished() && player_action.action()!=7) return;
     const auto p=inventory_cursor;
     const auto camera=map_camera();
-    const Vector2i target(int(p.x+camera.x)/48,int(p.y+camera.y)/32);
+    Vector2i target(int(p.x+camera.x)/48,int(p.y+camera.y)/32);
+    const bool left_click=map_pointer_button==MOUSE_BUTTON_LEFT;
+    const bool ranged_weapon=player_weapon>=34 && player_weapon<=37;
+    const auto monster=scene_chickens.find(hovered_target);
+    const bool monster_target=left_click && !cut && !ranged_weapon && monster!=scene_chickens.end() &&
+        monster->second.death_frame<0 && !monster->second.buried && monster->second.burrow_frame<0;
+    if (monster_target) target=monster->second.cell;
     const auto delta=target-player_cell;
     // 0x417E10 chooses one step along the cursor heading.
     const int dx=std::abs(delta.y)>2 && std::abs(delta.x)<=1?0:(delta.x>0)-(delta.x<0);
@@ -3709,6 +3715,23 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
         queue_redraw();
         return;
     }
+    if (left_click && model.hp>0 && !player_mount && !ranged_weapon &&
+        ((monster_target && std::max(std::abs(delta.x),std::abs(delta.y))==1) ||
+         (force_attack && (monster_target || (!hovered_target && player_weapon!=7))))) {
+        const mir3::MapCell heading{dx,dy};
+        if (target!=player_cell)
+            player_facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),heading)-mir3::map_directions.begin());
+        map_route.clear();
+        player_harvest_impact=false;
+        player_action.start(mir3::HumanActions::weapon_attack(player_weapon));
+        const auto tick=std::uint32_t(GetTickCount());
+        const auto position=std::uint32_t(player_cell.x)|(std::uint32_t(player_cell.y)<<16);
+        const auto parameters=(tick&0xffffu)|(std::uint32_t(player_facing)<<16);
+        send_client_packet(mir3::protocol::CM_HIT,position,String(),parameters,tick>>16);
+        queue_redraw();
+        return;
+    }
+    if (monster_target && std::max(std::abs(delta.x),std::abs(delta.y))==1) return;
     if (map_pointer_button==MOUSE_BUTTON_LEFT && player_weapon==7 && !player_mount && model.hp>0 &&
         !hovered_target && std::none_of(scene_npcs.begin(),scene_npcs.end(),[p](const auto& npc) {
             return npc.second.bounds.has_point(p);
@@ -3762,6 +3785,7 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
         const auto third=second+Vector2i(dx,dy);
         if (!player_mount || traversable(third)) destination=player_mount?third:second;
     }
+    if (!traversable(destination) && monster_target) return;
     if (!traversable(destination)) {
         destination=player_cell;
         int best_distance=100;
