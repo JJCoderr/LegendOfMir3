@@ -128,17 +128,20 @@ struct EquipmentState {
         request={mir3::protocol::CM_TAKEOFFITEM,bag.held_equipment_slot,bag.held.make_index,bag.held.name};
         pending=true;last_reply=0;return true;
     }
+    void restore_slot(int target,const BagItem& item) {
+        if (!slots[target]) { slots[target]=item;return; }
+        for (auto& slot:slots) if (!slot) { slot=item;return; }
+    }
     bool reply(int id,InventoryGrid& bag) {
         if (!pending) return false;
         if (request.identifier==mir3::protocol::CM_TAKEONITEM) {
             if (id!=mir3::protocol::SM_TAKEON_OK && id!=mir3::protocol::SM_TAKEON_FAIL) return false;
             BagItem returned;
             if (id==mir3::protocol::SM_TAKEON_OK) {
-                slots[request.slot]=incoming; // 0x4766F0
-                returned=bag.held; // mock add-item delivery for replaced equipment
+                restore_slot(request.slot,incoming); // 0x4766F0；被替换物品由独立200回包返还
             } else {
                 returned=incoming; // 616 auto-placement, not source slot
-                if (bag.held) slots[request.slot]=bag.held;
+                if (bag.held) restore_slot(request.slot,bag.held);
             }
             incoming={};bag.held={};
             // Local capacity protection: never silently discard a returned item.
@@ -146,11 +149,9 @@ struct EquipmentState {
         } else {
             if (id!=mir3::protocol::SM_TAKEOFF_OK && id!=mir3::protocol::SM_TAKEOFF_FAIL) return false;
             if (id==mir3::protocol::SM_TAKEOFF_OK) {
-                const auto returned=bag.held;
-                bag.held={};
-                if (!bag.insert(returned)) bag.held=returned; // mock add-item delivery
+                bag.held={}; // 619只清除持有物品；背包增加等待独立200消息
             } else {
-                slots[request.slot]=bag.held; // 620 -> 0x476630
+                restore_slot(request.slot,bag.held); // 620 -> 0x476630
                 bag.held={};
             }
         }

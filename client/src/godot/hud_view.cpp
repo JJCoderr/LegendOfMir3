@@ -3006,6 +3006,20 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    if (header->opcode==mir3::protocol::SM_TAKEON_OK || header->opcode==mir3::protocol::SM_TAKEON_FAIL ||
+        header->opcode==mir3::protocol::SM_TAKEOFF_OK || header->opcode==mir3::protocol::SM_TAKEOFF_FAIL) {
+        if (!apply_equipment_reply(header->opcode)) return false;
+        if (header->opcode==mir3::protocol::SM_TAKEON_OK || header->opcode==mir3::protocol::SM_TAKEOFF_OK) {
+            std::array<std::uint8_t,16> feature{};
+            for (int i=0;i<4;++i) feature[i]=std::uint8_t(header->recognition>>(8*i));
+            if (const auto appearance=mir3::HumanAppearance::parse(feature,false)) {
+                set_player_body(appearance->type,appearance->clothing);
+                set_player_attachments(appearance->hair,appearance->weapon);
+                model.profession=appearance->profession;
+            }
+        }
+        return true;
+    }
     if (header->opcode==mir3::protocol::SM_SENDUSEITEMS) {
         const auto decoded=mir3::EquipmentWire::parse(*header,{encoded.ptr()+16,std::size_t(encoded.size()-16)});
         if (!decoded) return false;
@@ -4904,15 +4918,8 @@ bool Mir3HudView::apply_inventory_wire(const mir3::ReceiveHeader& header,std::sp
     bag=std::move(next);equipment.slots=std::move(equipped);
     if (header.opcode==SM_ADDITEM || header.opcode==SM_UPDATEITEM) {
         const auto& record=decoded->records.front();
-        int sample=118;
-        switch(record.mode()) {
-        case 0:sample=108;break;case 5:case 6:sample=111;break;
-        case 10:case 11:sample=112;break;case 15:sample=116;break;
-        case 19:case 20:case 21:sample=115;break;case 22:case 23:sample=113;break;
-        case 24:case 26:sample=(record.name().find(messages.get(2641))!=std::string::npos || record.name().find(messages.get(2642))!=std::string::npos)?117:114;break;
-        case 31:sample=record.raw[31]<106?108:118;break;
-        }
-        play_login_sound(sound_list.file(sample),false);
+        mir3::BagItem sound_item;sound_item.std_mode=record.mode();sound_item.name=mir3::ansi_to_utf8(record.name());
+        sound_item.server_record=record.raw;play_item_sound(sound_item);
     }
     if (header.opcode==SM_ADDITEM || header.opcode==SM_DELITEM) {
         const auto& record=decoded->records.front();
@@ -5276,13 +5283,33 @@ bool Mir3HudView::skill_pointer(int kind,Vector2 position) {
     return true;
 }
 
+void Mir3HudView::play_item_sound(const mir3::BagItem& item) {
+    int sample=118;
+    switch(item.std_mode) {
+    case 0:sample=108;break;case 5:case 6:sample=111;break;
+    case 10:case 11:sample=112;break;case 15:sample=116;break;
+    case 19:case 20:case 21:sample=115;break;case 22:case 23:sample=113;break;
+    case 24:case 26:sample=(item.name.find(message(2641))!=std::string::npos || item.name.find(message(2642))!=std::string::npos)?117:114;break;
+    case 31:sample=item.server_record[31]<106?108:118;break;
+    }
+    play_login_sound(sound_list.file(sample),false);
+}
+
 void Mir3HudView::emit_equipment_request() {
     const auto& request=equipment.request;
     emit_signal("equipment_requested",request.identifier,request.slot,int64_t(request.make_index),String::utf8(request.name.c_str()));
+    if (request.identifier==mir3::protocol::CM_EQUIPMENT_QUICK_ACTION)
+        send_client_packet(request.identifier,request.slot,String());
+    else
+        send_client_packet(request.identifier,request.make_index,String::utf8(request.name.c_str()),request.slot);
 }
 
 bool Mir3HudView::apply_equipment_reply(int identifier) {
+    const auto incoming=equipment.incoming,held=bag.held;
     if (!equipment.reply(identifier,bag)) return false;
+    if (identifier==mir3::protocol::SM_TAKEON_OK || identifier==mir3::protocol::SM_TAKEON_FAIL) play_item_sound(incoming);
+    else if (held) play_item_sound(held);
+    if (identifier==mir3::protocol::SM_TAKEON_FAIL && held) play_item_sound(held);
     queue_redraw();
     return true;
 }

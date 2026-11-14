@@ -344,6 +344,7 @@ private:
     mir3::EquipmentState equipment;
     mir3::WilArchive equipment_archive;
     void emit_equipment_request();
+    void play_item_sound(const mir3::BagItem& item);
     std::map<int,std::pair<godot::Ref<godot::ImageTexture>,godot::Vector2>> equipment_frames;
     mir3::WilArchive item_archive;
     std::map<int,godot::Ref<godot::ImageTexture>> item_frames;

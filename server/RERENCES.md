@@ -213,3 +213,6 @@ SM_RIDEHORSE recognition低字节为本地骑乘形状，客户端确认后才�
 
 ## 装备与耐久协议
 621使用ASCII槽位/编码记录/成对正文，最大12条且头计数不参与；客户端不会清空未出现槽位。642参数一槽位、recognition当前耐久、参数二最大耐久；当前耐久低WORD存储，完整有符号值按原版取整判断提示。详见client/docs/evidence/equipment-wire.md。
+
+## 穿脱请求与返还
+1003/1004 recognition为物品编号，参数一槽位，正文ANSI名称；1124 recognition槽位、无正文。615/619不会自行增加背包，必须由200发送实际返还物品，允许先于或后于确认。成功recognition为基础人物外观；详见client/docs/evidence/equipment-actions.md。

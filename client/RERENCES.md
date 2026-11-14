@@ -299,3 +299,6 @@ IDA 404D80：注册/找回按钮在鼠标释放命中时读取配置URL，ShellE
 
 ## 装备列表与耐久
 实时核对4282C0的621/642，及4017A0汇编、0.5常量和49FE1C截断转换。列表逐槽覆盖且不清空未出现的槽位；耐久低WORD存储但完整recognition参与提示判断。详见client/docs/evidence/equipment-wire.md。
+
+## 穿脱装备事务
+核对47BE40、47C120、476690/4766F0/476630、414650/4064B0及四种确认分支，移除成功时模拟背包新增，改由独立200交付；请求、基础人物外观和原音效接入。详见client/docs/evidence/equipment-actions.md。

@@ -3011,7 +3011,7 @@ func run() -> void:
 	if not check(equipment_requests == [Vector2i(1003, 3), Vector2i(1004, 3)] and hud.apply_equipment_reply(Mir3HudView.SM_TAKEOFF_FAIL), "failed takeoff restores equipment"): return
 	click_at(Vector2(180, 100), false)
 	click_at(Vector2(465, 170), false)
-	if not check(equipment_requests.size() == 3 and hud.apply_equipment_reply(Mir3HudView.SM_TAKEOFF_OK), "takeoff returns item"): return
+	if not check(equipment_requests.size() == 3 and hud.apply_equipment_reply(Mir3HudView.SM_TAKEOFF_OK), "takeoff confirmation clears held item; bag delivery is separate"): return
 	key(KEY_ESCAPE)
 	key(KEY_ESCAPE)
 	await process_frame

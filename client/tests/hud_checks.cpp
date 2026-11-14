@@ -16,6 +16,7 @@
 #include "hud/character_selection.hpp"
 #include "hud/selection_pixels.hpp"
 #include "inventory/inventory_grid.hpp"
+#include "status/equipment.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/ground_items.hpp"
 #include "hud/scene_lighting.hpp"
@@ -46,6 +47,27 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        // 测试内容：穿戴失败恢复、成功不模拟背包返还、脱下成功等待独立新增包及错序重复确认拒绝。
+        if (std::filesystem::path(argv[1])=="--equipment-actions") {
+            using namespace mir3::protocol;
+            mir3::InventoryGrid bag;mir3::EquipmentState equipment;
+            mir3::BagItem old_item{3,1520,1,1,1,20,100,"Old",0};
+            mir3::BagItem new_item{3,1520,1,1,1,20,200,"New",0};
+            equipment.slots[3]=old_item;bag.held=new_item;
+            check(equipment.release(3,bag) && equipment.pending && bag.held.make_index==100,"replacement pending");
+            check(!equipment.reply(SM_TAKEOFF_OK,bag) && equipment.pending,"wrong confirmation preserves pending");
+            check(equipment.reply(SM_TAKEON_FAIL,bag) && equipment.slots[3].make_index==100 && bag.items[0].make_index==200,"failed replacement restores both");
+            bag.held=bag.take(0);equipment.release(3,bag);
+            check(bag.insert(old_item),"server add before confirmation");
+            check(equipment.reply(SM_TAKEON_OK,bag) && equipment.slots[3].make_index==200 && !bag.items[1] && !bag.held,"successful replacement does not duplicate independent add");
+            equipment.release(3,bag);check(equipment.takeoff(bag),"takeoff request");
+            check(equipment.reply(SM_TAKEOFF_FAIL,bag) && equipment.slots[3].make_index==200,"takeoff failure restores slot");
+            equipment.release(3,bag);equipment.takeoff(bag);
+            check(equipment.reply(SM_TAKEOFF_OK,bag) && !bag.held && !equipment.slots[3] && !bag.items[1],"takeoff success awaits server add");
+            check(!equipment.reply(SM_TAKEOFF_OK,bag),"duplicate confirmation ignored");
+            check(bag.insert(new_item) && bag.items[1].make_index==200,"independent add delivers returned item");
+            std::cout << "EQUIPMENT_ACTIONS_MODEL_OK\n";return 0;
+        }
         // 测试内容：背包100字节布局、完整计数、逐条编码及尾分隔符、未知消息和畸形包拒绝。
         if (std::filesystem::path(argv[1])=="--inventory-wire" || std::filesystem::path(argv[1])=="--equipment-wire") {
             using namespace mir3::protocol;
