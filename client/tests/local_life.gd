@@ -58,9 +58,14 @@ func run() -> void:
 		and hud.hud_snapshot().player_cell==origin,"同一身份重新入场清除死亡和残留动作"): return
 	hud.apply_game_message(game_reply(Mir3HudView.SM_HEALTHSPELLCHANGED,77,100,10,100))
 	if not await capture("local-life-reentered"): return
-	hud.apply_game_message(death_reply(Mir3HudView.SM_DEATH,origin,0))
+	# 424994 在每帧检查坐标，服务器直接重定位也会关闭对话。
+	if not check(hud.apply_npc_dialogue(Mir3HudView.SM_MERCHANTSAY,2,"/对话"),"打开NPC对话"): return
+	var corpse_cell := origin+Vector2i(6,0)
+	hud.apply_game_message(death_reply(Mir3HudView.SM_DEATH,corpse_cell,0))
 	await settle(0.05)
 	if not check(hud.hud_snapshot().player_dead and not hud.hud_snapshot().player_dying,"32直接固定尸体"): return
+	if not check(hud.hud_snapshot().player_cell==corpse_cell and hud.hud_snapshot().npc_dialogue_actor==0,
+		"跨出五格的服务器重定位关闭NPC对话"): return
 	hud.apply_game_message(death_reply(Mir3HudView.SM_NOWDEATH,origin,0))
 	await settle(0.05)
 	if not check(not hud.hud_snapshot().player_dying,"重复死亡不重播倒地"): return

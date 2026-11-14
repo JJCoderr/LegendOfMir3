@@ -38,6 +38,11 @@ func run() -> void:
 		storage.append_array(item_record(300+id if id<12 else 33,"Potion",301,3))
 		storage.append(47)
 	if not check(hud.apply_game_message(storage) and hud.hud_snapshot().shop_offers_count==13,"原包仓库记录"): return
+	# 704 刷新已打开的仓库时沿用原商人，随后取回包仍发给 91。
+	var refresh := game_reply(Mir3HudView.SM_STORAGE_LIST,0,0,0,13)
+	refresh.append_array(storage.slice(16))
+	if not check(hud.apply_game_message(refresh) and hud.hud_snapshot().shop_offers_count==13,
+		"仓库刷新不要求再次携带商人编号"): return
 	if not await capture("npc-storage-list"): return
 	tap(Vector2(135,399))
 	if not check(hud.hud_snapshot().shop_storage_page==2,"第13项位于第二页"): return
@@ -59,14 +64,32 @@ func run() -> void:
 	hud.get_node("ChatInput").text="1"
 	key(KEY_ENTER)
 	if not check(storage_packets.size()==4,"背包满后可重试"): return
+	if not check(hud.apply_game_message(refresh),"取回回包前刷新仓库列表"): return
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_STORAGE_WITHDRAW_OK,0,2,4,0)) and hud.hud_snapshot().shop_offers_count==13 and hud.hud_snapshot().bag_records[0].count==4,"部分取回同步两侧数量"): return
+	tap(Vector2(135,399))
+	tap(Vector2(35,280))
 	tap(Vector2(87,399))
 	if not check(hud.hud_snapshot().group_request==1707,"剩余两件可继续取回"): return
 	hud.get_node("ChatInput").text="*"
 	key(KEY_ENTER)
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_STORAGE_WITHDRAW_OK,0,0,6,0)) and hud.hud_snapshot().shop_offers_count==12,"取回全部移除仓库项"): return
 	if not check(hud.hud_snapshot().shop_storage_page==1,"末页清空后回到有效页"): return
+	var stack_update := game_reply(Mir3HudView.SM_INVENTITEM,33,9,0,0)
+	if not check(hud.apply_game_message(stack_update) and hud.hud_snapshot().bag_records[0].count==9,
+		"1313按编号更新背包数量"): return
+	if not check(hud.hud_snapshot().chat_last_text.contains("Potion") and hud.hud_snapshot().chat_last_text.contains("3"),
+		"堆叠增加时提示物品名与增加量"): return
 	if not await capture("npc-storage-withdraw"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_MERCHANTDLGCLOSE,91,0,0,0)),"关闭仓库"): return
+	# 702、703、706、707 直接显示提示，不读取窗口状态。
+	for reply in [[Mir3HudView.SM_STORAGE_FULL,1449],[Mir3HudView.SM_STORAGE_DEPOSIT_FAIL,1450],
+		[Mir3HudView.SM_STORAGE_WITHDRAW_FAIL,1445],[Mir3HudView.SM_STORAGE_BAG_FULL,1446]]:
+		if not check(hud.apply_game_message(game_reply(reply[0],0,0,0,0))
+			and hud.hud_snapshot().group_request==reply[1] and hud.hud_snapshot().shop_offers_count==0,
+			"关窗后显示对应的仓库失败提示"): return
+		key(KEY_ENTER)
+	await process_frame
+	if not check(hud.apply_game_message(storage) and hud.hud_snapshot().shop_offers_count==13,"离场前重新打开仓库"): return
 	hud.open_login()
 	if not check(hud.hud_snapshot().shop_offers_count==0,"离场清理仓库"): return
 	hud.queue_free()

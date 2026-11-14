@@ -26,24 +26,33 @@ func run() -> void:
 	hud.client_packet_ready.connect(func(bytes: PackedByteArray): packets.append(bytes))
 	if not check(hud.apply_game_message(packet(Mir3HudView.SM_BAGITEMS,[item_record(0x12345678,"Sword",1043,1,5,0)])),"加载原包物品"): return
 	var open := game_reply(Mir3HudView.SM_OPEN_REPAIR,91,0,0,0)
-	if not check(hud.apply_game_message(open),"接收商人修理入口"): return
+	key(KEY_W)
+	click_at(Vector2(530,25),true)
+	var drag := InputEventMouseMotion.new()
+	drag.position=Vector2(450,100)
+	root.push_input(drag,true)
+	click_at(drag.position,false)
+	if not check(hud.hud_snapshot().inventory_position==Vector2i(438,75),"拖动普通背包"): return
+	if not check(hud.apply_game_message(open) and hud.hud_snapshot().inventory_position==Vector2i(519,0),
+		"修理回包将已打开背包移回原版位置"): return
 	var row: Dictionary = hud.hud_snapshot().bag_records[0]
 	var slot: int = row.anchor
-	var cell := Vector2(518+25+slot%6*38,70+int(slot/6)*38)
+	var cell := Vector2(519+25+slot%6*38,70+int(slot/6)*38)
 	var confirm := Vector2(720,405)
 	repair_click(cell)
 	repair_click(confirm)
 	if not check(packets.size()==1 and packets[0]==repair_request(Mir3HudView.CM_MERCHANTQUERYREPAIRCOST,1),"等待报价期间只发1024"): return
+	var quote := game_reply(Mir3HudView.SM_REPAIR_QUOTE,120,0,0,0)
+	if not check(hud.apply_game_message(quote),"收到可付款报价"): return
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_REPAIR_QUOTE,0,0,0,0)),"零报价"): return
 	repair_click(confirm)
-	if not check(packets.size()==1,"零报价不能付款"): return
-	repair_click(cell)
-	var quote := game_reply(Mir3HudView.SM_REPAIR_QUOTE,120,0,0,0)
-	if not check(hud.apply_game_message(quote),"有效报价"): return
+	if not check(packets.size()==1,"零报价覆盖旧报价并禁止付款"): return
+	if not check(hud.apply_game_message(quote),"同一物品再次收到有效报价"): return
 	if not await capture("npc-repair-quote"): return
 	repair_click(confirm)
 	repair_click(confirm)
-	if not check(packets.size()==3 and packets[-1]==repair_request(Mir3HudView.CM_USERREPAIRITEM,3),"确认只发送一次1023"): return
+	if not check(packets.size()==2 and packets[-1]==repair_request(Mir3HudView.CM_USERREPAIRITEM,2),
+		"无需重新选物即可按新报价付款且只发送一次1023"): return
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_REPAIR_FAIL,0,0,0,0)) and hud.hud_snapshot().group_request==1457,"失败提示"): return
 	key(KEY_ENTER)
 	repair_click(cell)
@@ -74,6 +83,20 @@ func run() -> void:
 	if not check(packets.size()==sent+3,"释放到窗口外取消锤子按压且可重选"): return
 	if not check(hud.apply_game_message(quote),"重新取得共用报价"): return
 	if not await capture("npc-special-repair-quote"): return
+	var close := game_reply(Mir3HudView.SM_MERCHANTDLGCLOSE,91,0,0,0)
+	if not check(hud.apply_game_message(close) and not hud.hud_snapshot().inventory_visible,
+		"关闭商人对话时收起修理背包"): return
+	key(KEY_W)
+	if not check(hud.hud_snapshot().inventory_visible and hud.apply_game_message(close)
+		and hud.hud_snapshot().inventory_visible,"关闭商人对话保留普通背包"): return
+	# 42AB37 与 42AB9A 在服务窗口关闭后仍同步余额或弹出失败提示。
+	var late_success := game_reply(Mir3HudView.SM_REPAIR_OK,760,3000,6000,0)
+	if not check(hud.apply_game_message(late_success) and hud.hud_snapshot().inventory_gold==760
+		and hud.hud_snapshot().bag_records[0].durability==5500,"迟到修理成功只同步余额"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_REPAIR_FAIL,0,0,0,0))
+		and hud.hud_snapshot().group_request==1457,"迟到修理失败仍显示提示"): return
+	key(KEY_ENTER)
+	await process_frame
 	hud.queue_free()
 	await create_timer(0.1).timeout
 	print("NPC_REPAIR_UI_OK")

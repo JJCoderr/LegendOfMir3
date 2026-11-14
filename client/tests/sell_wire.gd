@@ -39,7 +39,8 @@ func run() -> void:
 	key(KEY_ESCAPE)
 	if not check(sell_packets.size()==1,"取消不发送出售"): return
 	sell_click(confirm)
-	hud.get_node("ChatInput").text="2"
+	# 4256B0 允许数字前的空白，读取数字前缀后再校验数量。
+	hud.get_node("ChatInput").text=" 2件"
 	key(KEY_ENTER)
 	if not check(sell_packets[-1]==request_bytes(Mir3HudView.CM_USERSELLITEM,2,2),"第三字段发送数量"): return
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_USERSELLITEM_FAIL,0,0,0,0)),"失败回包"): return
@@ -61,6 +62,31 @@ func run() -> void:
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_SELL_STACK_OK,600,0,3,0)),"出售全部"): return
 	if not check(hud.hud_snapshot().bag_records.is_empty() and hud.hud_snapshot().inventory_gold==600,"移除原物品并更新金币"): return
 	if not await capture("npc-sell-success"): return
+	if not check(hud.apply_game_message(packet(Mir3HudView.SM_BAGITEMS,[item_record(33,"Potion",301,5)]))
+		and hud.apply_game_message(game_reply(Mir3HudView.SM_MERCHANTDLGCLOSE,91,0,0,0)),"关窗前恢复背包夹具"): return
+	for reply in [[Mir3HudView.SM_USERSELLITEM_OK,660],[Mir3HudView.SM_SELL_STACK_OK,720]]:
+		if not check(hud.apply_game_message(game_reply(reply[0],reply[1],2,1,0))
+			and hud.hud_snapshot().inventory_gold==reply[1] and hud.hud_snapshot().bag_records[0].count==5,
+			"关窗后出售成功同步余额并保留物品"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_USERSELLITEM_FAIL,0,0,0,0))
+		and hud.hud_snapshot().group_request==1455,"关窗后普通出售失败仍提示"): return
+	key(KEY_ENTER)
+	if not check(hud.apply_game_message(packet(Mir3HudView.SM_BAGITEMS,[item_record(33,"Potion",301,1,0,0)])),
+		"加载普通可绑定物品"): return
+	key(KEY_W)
+	key(KEY_Z)
+	click_at(Vector2(543,70),false)
+	await settle(0.35)
+	click_at(Vector2(hud.hud_snapshot().quick_position)+Vector2(36,25),false)
+	if not check(hud.hud_snapshot().quick_records.size()==1,"绑定普通物品到快捷栏"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_SENDUSERSELL,91,0,0,0)),"重新打开出售"): return
+	sell_click(cell)
+	if not check(hud.apply_game_message(quote),"收到普通物品报价"): return
+	sell_click(confirm)
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_USERSELLITEM_OK,780,0,0,0))
+		and hud.hud_snapshot().bag_records.is_empty() and hud.hud_snapshot().quick_records.size()==1,
+		"普通出售回包清背包并保留快捷引用"): return
+	await process_frame
 	hud.queue_free()
 	await create_timer(0.1).timeout
 	print("NPC_SELL_UI_OK")

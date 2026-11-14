@@ -535,6 +535,9 @@ int main(int argc,char** argv) {
             check(items.show({1,30,40,3,"changed"}) && items.items.size()==2 && items.items[0].name=="first" && items.items[0].x==10,"duplicate identity is ignored");
             check(!items.show({3,1,2,0,std::string(40,'x')}),"ground name fits original 40-byte buffer");
             check(mir3::GroundItems::image_offset(17,9)==std::array<int,2>{16,12},"center image using integer halves");
+            check(mir3::GroundItems::sparkle_delay(5,5)==3000 &&
+                mir3::GroundItems::sparkle_delay(5,4005)==7000 &&
+                mir3::GroundItems::sparkle_delay(4006,5)==3000,"sparkle delay uses symmetric CRT-roll difference and inclusive range");
             items.hide(1);items.hide(1);check(items.items.size()==1 && items.items[0].id==2,"idempotent remove retains other drop");
             std::cout << "GROUND_ITEMS_MODEL_OK\n";
             return 0;

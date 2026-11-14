@@ -27,15 +27,22 @@ func run() -> void:
 		payload.append_array(item_record(id,"Potion",301))
 		payload.append(47)
 	offers.append_array(encode_scene_bytes(payload))
+	# 47974D 以回复偏移为准，即使该页为空。
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_SENDDETAILGOODSLIST,91,0,20,0))
+		and hud.hud_snapshot().shop_offers_count==0,"接受非请求偏移的空详情页"): return
+	buy_click(Vector2(334,399))
+	var page_header := PackedByteArray([91,0,0,0,Mir3HudView.CM_USERGETDETAILITEM&255,Mir3HudView.CM_USERGETDETAILITEM>>8,10,0,0,0,0,0])
+	if not check(buy_packets.size()==2 and buy_packets.back().slice(2,18)==encode_scene_bytes(page_header),
+		"上一页从回复指定的第二页发出偏移10请求"): return
 	if not check(hud.apply_game_message(offers) and hud.hud_snapshot().shop_offers_count==3,"解析嵌套商品详情"): return
 	var confirm := Vector2(378,399)
 	buy_click(Vector2(368,280))
 	buy_click(confirm)
-	var expected := "#2".to_ascii_buffer()
+	var expected := "#3".to_ascii_buffer()
 	expected.append_array(encode_scene_bytes(PackedByteArray([91,0,0,0,Mir3HudView.CM_USERBUYITEM&255,Mir3HudView.CM_USERBUYITEM>>8,0x12,0x27,0,0,0,0])))
 	expected.append_array(encode_scene_bytes("Potion".to_ascii_buffer()))
 	expected.append(33)
-	if not check(buy_packets.size()==2 and buy_packets[-1]==expected,"确认发送选中编号"): return
+	if not check(buy_packets.size()==3 and buy_packets[-1]==expected,"确认发送选中编号"): return
 	var success := game_reply(Mir3HudView.SM_BUYITEM_SUCCESS,0x12345678,7,0,0)
 	if not check(hud.apply_game_message(success),"识别号携带完整余额"): return
 	var state: Dictionary = hud.hud_snapshot()
@@ -50,8 +57,16 @@ func run() -> void:
 	key(KEY_ENTER)
 	key(KEY_W)
 	if not await capture("npc-buy-stock-and-bag"): return
-	hud.apply_npc_dialogue(Mir3HudView.SM_MERCHANTDLGCLOSE,91,"")
+	buy_click(Vector2(335,280))
+	buy_click(Vector2(427,399))
+	if not check(hud.hud_snapshot().shop_offer_loading,"关闭前已请求下一页"): return
+	if not check(hud.apply_game_message(success) and hud.hud_snapshot().shop_offers_count==0
+		and hud.hud_snapshot().shop_offer_loading,"等待下一页时仍移除原页面的选中条目"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_MERCHANTDLGCLOSE,91,0,0,0))
+		and not hud.hud_snapshot().shop_offer_loading,"关闭回包清除交易页等待状态"): return
+	if not check(not hud.apply_game_message(offers),"关闭后丢弃迟到的详情页"): return
 	if not check(hud.apply_game_message(success) and hud.hud_snapshot().shop_offers_count==0,"关闭后回包不会恢复旧窗口"): return
+	await process_frame
 	hud.queue_free()
 	await create_timer(0.1).timeout
 	print("NPC_BUY_UI_OK")

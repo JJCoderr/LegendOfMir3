@@ -29,70 +29,76 @@ std::optional<bool> Mir3HudView::apply_monster_wire(int opcode,int actor,
     const int facing=p[2]&255;
     const unsigned light=p[2]>>8;
     if (!exists) {
-        if (!feature || facing>=8 || !terrain.walkable(cell.x,cell.y) || !place_scene_chicken(actor,cell,0,shape)) return false;
+        // 42EABB -> 4061E7/4061F3 initializes the position from the packet.
+        // The constructor supplies direction 0. Opcode 13 never consumes the packet direction.
+        if (!feature || (opcode!=SM_RUN && facing>=8) ||
+            !place_scene_chicken(actor,cell,0,shape)) return false;
     }
     auto& monster=scene_chickens.at(actor);
+    if (!exists) monster.appearance_duration_ms=SceneChicken::arrival_appearance_ms;
     const auto entry=[&](bool appearance) {
         SceneChicken::Entry value{cell,facing,shape,light,status,appearance,std::nullopt,
             mir3::MonsterBehavior::for_shape(shape).dormant(status),opcode==SM_REVIVE};
         if (encoded.size()>38) {
             const auto name=mir3::decode_six_bit(encoded.ptr()+38,encoded.size()-38);
             if (name) {
-                value.name.emplace();
-                // 4085A0 -> strrchr('/') -> atoi -> BYTE palette index.
+                // 4085A0/407CC0 write the palette only when the name has a suffix.
                 const auto slash=name->rfind('/');
+                value.preserve_name_color=slash==std::string::npos;
                 const auto color=slash==std::string::npos?255:
                     static_cast<unsigned char>(std::strtol(name->c_str()+slash+1,nullptr,10));
-                value.name->update(SM_USERNAME,color,*name);
+                mir3::SceneName identity;
+                if (identity.update(SM_USERNAME,color,*name)) value.name=std::move(identity);
             }
         }
         return value;
     };
+    const auto enqueue=[&](SceneChicken::Action action) { return receive_monster_action(actor,std::move(action),exists); };
     switch (opcode) {
     case SM_TURN: case SM_REVIVE: // 10/1316 -> +72 -> 4085A0: entry/standing refresh.
         if (!feature || facing>=8) return false;
-        return receive_monster_action(actor,entry(false));
+        return enqueue(entry(false));
     case SM_WALK: case SM_BACKSTEP: // 11 -> 4082F0, 9 -> 409500.
         if (!feature || facing>=8) return false;
-        return receive_monster_action(actor,SceneChicken::Turn{cell,facing,shape,light,opcode==SM_BACKSTEP,status,true});
+        return enqueue(SceneChicken::Turn{cell,facing,shape,light,opcode==SM_BACKSTEP,status,true});
     case SM_RUN: return true; // whitelist permits creation, but ordinary monster queue has no 13 branch.
     case SM_HIT: // 14 -> +100 -> 40CBF0.
         if (facing>=8) return false;
-        return receive_monster_action(actor,SceneChicken::Attack{cell,facing,std::nullopt});
+        return enqueue(SceneChicken::Attack{cell,facing,std::nullopt});
     case SM_DIGUP: // 20 -> +76 -> 408720.
         if (!feature || facing>=8) return false;
-        return receive_monster_action(actor,SceneChicken::Burrow{cell,facing,shape,light,status});
+        return enqueue(SceneChicken::Burrow{cell,facing,shape,light,status});
     case SM_DIGDOWN: // 21 -> +80 -> 408B70.
-        return receive_monster_action(actor,SceneChicken::ReverseBurrow{cell});
+        return enqueue(SceneChicken::ReverseBurrow{cell});
     case SM_FLYAXE: { // 22 -> +104 -> 40B0A0: WORD x/y + DWORD target.
         const auto target=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
         if (!target || target->size()!=8 || facing>=8) return false;
         const auto word=[&](int i){ return std::uint8_t((*target)[i])|(int(std::uint8_t((*target)[i+1]))<<8); };
         std::uint32_t id=0;
         for (int i=0;i<4;++i) id|=std::uint32_t(std::uint8_t((*target)[4+i]))<<(8*i);
-        return receive_monster_action(actor,SceneChicken::Attack{cell,facing,Vector2i(word(0),word(2)),id});
+        return enqueue(SceneChicken::Attack{cell,facing,Vector2i(word(0),word(2)),id});
     }
     case SM_LIGHTING: // 23 -> +108 -> 409DB0; participates in the normal queue.
         if (encoded.size()!=38 || facing>=8) return false;
-        return receive_monster_action(actor,SceneChicken::SpecialAttack{p,encoded});
+        return enqueue(SceneChicken::SpecialAttack{p,encoded});
     case SM_27: // +88 -> 4094A0: rise/revive, never death.
-        if (!feature || facing>=8) return false;
-        return receive_monster_action(actor,SceneChicken::Rise{cell,facing,shape,light,status});
+        if (!feature || facing>=8 || !terrain.contains(cell.x,cell.y)) return false;
+        return enqueue(SceneChicken::Rise{cell,facing,shape,light,status});
     case SM_STRUCK: case SM_HUMAN_STRUCK: { // 31/1309 -> +96 -> 409600.
         if (!feature) return false;
         const int variant=std::uint8_t((*body)[14])|(int(std::uint8_t((*body)[15]))<<8);
         const SceneChicken::Hit hit{shape,variant,p};
-        if (opcode==SM_HUMAN_STRUCK) return receive_monster_action(actor,SceneChicken::RelayedHit{hit});
-        return receive_monster_action(actor,hit);
+        if (opcode==SM_HUMAN_STRUCK) return enqueue(SceneChicken::RelayedHit{hit});
+        return enqueue(hit);
     }
     case SM_DEATH: case SM_SKELETON: case SM_NOWDEATH: // 32/33/34 -> +84 -> 4093B0.
         if (!feature || facing>=8) return false;
-        return receive_monster_action(actor,SceneChicken::Death{cell,facing,shape,opcode,light,status});
+        return enqueue(SceneChicken::Death{cell,facing,shape,opcode,light,status});
     case SM_801: case SM_ACTOR_STATUS: case SM_808:
         if (!feature || facing>=8) return false;
-        return receive_monster_action(actor,SceneChicken::Transfer{opcode,entry(true)});
+        return enqueue(SceneChicken::Transfer{opcode,entry(true)});
     case SM_800: case SM_806:
-        return receive_monster_action(actor,SceneChicken::Transfer{opcode,std::nullopt});
+        return enqueue(SceneChicken::Transfer{opcode,std::nullopt});
     case SM_CHARSTATUSCHANGE: // 657 -> +112 -> 407C60: immediate state DWORD.
         monster.status_flags=std::uint32_t(p[0])|(std::uint32_t(p[1])<<16);
         update_actor_bar_status(actor,(monster.status_flags&2)!=0);
@@ -116,7 +122,7 @@ std::optional<bool> Mir3HudView::apply_monster_wire(int opcode,int actor,
         return refresh_monster_shape(monster,int(packed>>16));
     }
     case SM_1317:
-        return receive_monster_action(actor,SceneChicken::Attack{monster.cell,monster.facing,std::nullopt,0,6});
+        return enqueue(SceneChicken::Attack{monster.cell,monster.facing,std::nullopt,0,6});
     default: return std::nullopt;
     }
 }

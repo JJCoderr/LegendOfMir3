@@ -22,10 +22,15 @@ struct SceneHumanMessage {
     std::optional<std::uint16_t> spell;
     std::optional<SpellReply> spell_reply;
     std::uint8_t weapon_element=7;
+    std::optional<std::string> transfer_name;
+    std::optional<std::uint16_t> hit_variant;
     static bool accepts(int opcode) {
         switch (opcode) {
         case mir3::protocol::SM_SITDOWN: case mir3::protocol::SM_BUTCH: case mir3::protocol::SM_SPELL:
         case mir3::protocol::SM_MAGICFIRE: case mir3::protocol::SM_MAGICFIRE_LIST:
+        case mir3::protocol::SM_BACKSTEP: case mir3::protocol::SM_DIGUP:
+        case mir3::protocol::SM_27: case mir3::protocol::SM_SKELETON:
+        case mir3::protocol::SM_800: case mir3::protocol::SM_806:
         case mir3::protocol::SM_801: case mir3::protocol::SM_ACTOR_STATUS: case mir3::protocol::SM_808:
         case mir3::protocol::SM_STRUCK: case mir3::protocol::SM_BUMP: case mir3::protocol::SM_TURN: case mir3::protocol::SM_WALK: case mir3::protocol::SM_RUN: case mir3::protocol::SM_HIT: case mir3::protocol::SM_HIT2: case mir3::protocol::SM_DEATH: case mir3::protocol::SM_NOWDEATH: case mir3::protocol::SM_REVIVE: case mir3::protocol::SM_REVIVE_REFRESH:
         case mir3::protocol::SM_HUMAN_CAST: case mir3::protocol::SM_HUMAN_CAST_ALT: case mir3::protocol::SM_HUMAN_ACTION18: case mir3::protocol::SM_HUMAN_STRUCK: case mir3::protocol::SM_HUMAN_ATTACK: return true;

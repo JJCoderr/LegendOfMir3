@@ -651,7 +651,13 @@ func run_map_input() -> void:
 	if not check(hud.hud_snapshot().map_left_delay_ms==0, "真实帧计时期满解除延迟"): return
 	click_at(self_point,true)
 	click_at(self_point,false)
-	if not check(pickups==[[1001,origin]], "期满后恢复拾取且之前点击不补发"): return
+	if not check(pickups.is_empty(), "空地不发拾取请求"): return
+	var pickup_keys := PackedByteArray([18,52,86,120])
+	var drop := scene_packet(Mir3HudView.SM_ITEMSHOW,103,origin.x,origin.y,1,"Potion".to_ascii_buffer())
+	if not check(hud.apply_scene_message(drop,pickup_keys),"脚下放置拾取夹具"): return
+	click_at(self_point,true)
+	click_at(self_point,false)
+	if not check(pickups==[[1000,origin]], "期满后恢复拾取且之前点击不补发"): return
 	click_at(npc.get_center(),true)
 	click_at(npc.get_center(),false)
 	if not check(conversations==[2], "期满后恢复 NPC 请求"): return
@@ -887,6 +893,8 @@ func run_ground_items() -> void:
 			break
 	hud.walk_to_map_cell(player)
 	if not check(cell != player,"choose visible reachable ground cell"): return
+	await RenderingServer.frame_post_draw
+	var before_drop := root.get_texture().get_image()
 	var packet := scene_packet(Mir3HudView.SM_ITEMSHOW,101,cell.x,cell.y,1)
 	packet.append_array(encode_scene_bytes(PackedByteArray([178, 226, 202, 212, 181, 244, 194, 228, 206, 239])))
 	if not check(hud.apply_scene_message(packet,keys), "load Ground.wil item through 610"): return
@@ -902,24 +910,52 @@ func run_ground_items() -> void:
 	var camera: Vector2i = hud.hud_snapshot().map_camera_pixel
 	var expected := Vector2(cell.x*48-camera.x+24-floor(bounds.size.x/2),cell.y*32-camera.y+16-floor(bounds.size.y/2))
 	if not check(bounds.has_area() and bounds.position == expected, "ground image centered without WIL offsets"): return
+	await RenderingServer.frame_post_draw
+	var combined: Rect2 = bounds.merge(hud.hud_snapshot().ground_item_bounds[102])
+	var bottom_edge := Rect2i(Vector2i(int(combined.position.x),int(combined.end.y)),
+		Vector2i(int(combined.size.x)+1,1))
+	var right_edge := Rect2i(Vector2i(int(combined.end.x),int(combined.position.y)),
+		Vector2i(1,int(combined.size.y)))
+	var after_drop := root.get_texture().get_image()
+	if not check(after_drop.get_region(bottom_edge).get_data() == before_drop.get_region(bottom_edge).get_data()
+			and after_drop.get_region(right_edge).get_data() == before_drop.get_region(right_edge).get_data(),
+		"掉落物边缘没有额外的偏移阴影"): return
+	var lower_sprite := Rect2i(Vector2i(bounds.position)+Vector2i(0,int(bounds.size.y/2)),
+		Vector2i(int(bounds.size.x),int(ceil(bounds.size.y/2))))
+	var before_hover := root.get_texture().get_image().get_region(lower_sprite).get_data()
+	var second_label_rect := Rect2i(cell*Vector2i(48,32)-camera+Vector2i(0,-20),Vector2i(48,15))
+	var before_second_label := root.get_texture().get_image().get_region(second_label_rect).get_data()
 	var hover := InputEventMouseMotion.new()
 	hover.position = Vector2(cell.x*48-camera.x+24,cell.y*32-camera.y+16)
 	root.push_input(hover,true)
 	await process_frame
 	await process_frame
 	if not check(hud.hud_snapshot().displayed_ground_item == 101, "first drop in cell owns name hint"): return
+	await RenderingServer.frame_post_draw
+	if not check(root.get_texture().get_image().get_region(lower_sprite).get_data()!=before_hover,
+		"悬停地面格会高亮掉落物本体"): return
+	if not check(root.get_texture().get_image().get_region(second_label_rect).get_data()!=before_second_label,
+		"同格第二个名称在上一行绘制"): return
 	if not await capture("bichon-ground-items"): return
 	hud.walk_to_map_cell(cell)
 	if not check(hud.hud_snapshot().route_destination == cell, "ground item does not block movement"): return
 	hud.walk_to_map_cell(player)
 	var pickups: Array = []
 	hud.pickup_requested.connect(func(identifier: int, target: Vector2i): pickups.append([identifier,target]))
+	var pickup_packets: Array[PackedByteArray] = []
+	hud.client_packet_ready.connect(func(bytes: PackedByteArray): pickup_packets.append(bytes))
+	var underfoot := scene_packet(Mir3HudView.SM_ITEMSHOW,103,player.x,player.y,1,"Potion".to_ascii_buffer())
+	if not check(hud.apply_scene_message(underfoot,keys),"建立脚下掉落物"): return
 	var self_point := Vector2(player.x*48-camera.x+24,player.y*32-camera.y+16)
 	hover.position = self_point
 	root.push_input(hover,true)
 	click_at(self_point,true)
 	click_at(self_point,false)
-	if not check(pickups == [[1001,player]] and hud.hud_snapshot().ground_item_cells.size() == 2, "current-cell pickup emits request without client-side loot or removal"): return
+	if not check(pickups == [[1000,player]] and hud.hud_snapshot().ground_item_cells.size() == 3, "current-cell pickup emits request without client-side loot or removal"): return
+	var pickup_header := PackedByteArray([0,0,0,0,232,3,player.x&255,player.x>>8,player.y&255,player.y>>8,0,0])
+	if not check(pickup_packets.size()==1 and pickup_packets[0].slice(2,18)==encode_scene_bytes(pickup_header),
+		"拾取请求包含 1000、零识别号和脚下坐标"): return
+	hud.apply_scene_message(scene_packet(Mir3HudView.SM_ITEMHIDE,103,0,0,0),keys)
 	key(KEY_N)
 	click_at(self_point,true)
 	click_at(self_point,false)
@@ -934,6 +970,61 @@ func run_ground_items() -> void:
 	if not await capture("bichon-ground-item-removed"): return
 	hud.apply_scene_message(scene_packet(Mir3HudView.SM_ITEMHIDE,102,0,0,0),keys)
 	if not check(hud.hud_snapshot().ground_item_cells.is_empty(), "remove final ground item"): return
+	# 610 先登记掉落物，贴图缺失不影响脚下的拾取路径。
+	var missing_frame := scene_packet(Mir3HudView.SM_ITEMSHOW,104,player.x,player.y,65535,"Unknown".to_ascii_buffer())
+	if not check(hud.apply_scene_message(missing_frame,keys),"接受缺少地面贴图的掉落物"): return
+	hover.position=self_point
+	root.push_input(hover,true)
+	await process_frame
+	await RenderingServer.frame_post_draw
+	if not check(hud.hud_snapshot().ground_item_cells.has(104) and not hud.hud_snapshot().ground_item_bounds.has(104),
+		"缺图掉落保留场景记录且没有绘制边界"): return
+	if not check(hud.hud_snapshot().displayed_ground_item==104,"缺图掉落仍显示名称"): return
+	click_at(self_point,true)
+	click_at(self_point,false)
+	if not check(pickups.size()==2 and pickup_packets.size()==2,"仍可拾取缺图掉落物"): return
+	if not check(not hud.hud_snapshot().ground_item_sparkles.has(104),"入场时尚未闪光"): return
+	var visual_drop := scene_packet(Mir3HudView.SM_ITEMSHOW,105,cell.x,cell.y,65535,"Unknown".to_ascii_buffer())
+	if not check(hud.apply_scene_message(visual_drop,keys),"准备远离角色的闪光像素夹具"): return
+	await RenderingServer.frame_post_draw
+	var sparkle_rect := Rect2i(cell*Vector2i(48,32)-camera+Vector2i(8,0),Vector2i(32,32))
+	var background := root.get_texture().get_image().get_region(sparkle_rect).get_data()
+	var sparkle_deadline := Time.get_ticks_msec()+8000
+	while not hud.hud_snapshot().ground_item_sparkles.has(105) and Time.get_ticks_msec()<sparkle_deadline:
+		await process_frame
+	var sparkle_frame: int=hud.hud_snapshot().ground_item_sparkles.get(105,-1)
+	if not check(sparkle_frame>=40 and sparkle_frame<=48,"到时使用原版 ProgUse 闪光帧"): return
+	await RenderingServer.frame_post_draw
+	if not check(root.get_texture().get_image().get_region(sparkle_rect).get_data()!=background,
+		"闪光改变实际画面像素"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_ITEMHIDE,104,0,0,0),keys)
+		and not hud.hud_snapshot().ground_item_sparkles.has(104),"掉落移除同时停止闪光"): return
+	hud.apply_scene_message(scene_packet(Mir3HudView.SM_ITEMHIDE,105,0,0,0),keys)
+	for id in range(1000,1100):
+		if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_ITEMSHOW,id,cell.x,cell.y,65535),keys),
+			"缺图物品也占同格掉落槽"): return
+	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_ITEMSHOW,1100,cell.x,cell.y,1),keys),
+		"登记第 101 件同格掉落"): return
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var crowded: Dictionary = hud.hud_snapshot()
+	if not check(crowded.ground_item_cells.has(1100) and not crowded.ground_item_bounds.has(1100),
+		"第 101 件掉落保留登记但暂时不绘制"): return
+	hud.apply_scene_message(scene_packet(Mir3HudView.SM_ITEMHIDE,1000,0,0,0),keys)
+	await process_frame
+	await RenderingServer.frame_post_draw
+	if not check(hud.hud_snapshot().ground_item_bounds.has(1100),"同格空出槽后绘制下一件掉落"): return
+	var edge_offsets: Array[Vector2i] = [Vector2i(-24,0),Vector2i(23,0),Vector2i(0,-24),Vector2i(0,23),
+		Vector2i(-25,0),Vector2i(24,0),Vector2i(0,-25),Vector2i(0,24)]
+	for index in range(edge_offsets.size()):
+		var target := player+edge_offsets[index]
+		if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_ITEMSHOW,2000+index,target.x,target.y,1),keys),
+			"登记保留范围边缘的掉落"): return
+	await process_frame
+	await process_frame
+	var retained: Dictionary = hud.hud_snapshot().ground_item_cells
+	for id in range(2000,2008):
+		if not check(retained.has(id) == (id<2004),"按原版半开矩形清理远处掉落"): return
 	print("PASS ground items")
 	quit()
 
@@ -996,6 +1087,8 @@ func run_scene_wire() -> void:
 	body[2]=1
 	body[3]=65
 	if not check(hud.apply_scene_message(scene_packet(Mir3HudView.SM_STRUCK,5,190,220,0),key_bytes) and hud.apply_scene_message(scene_packet(Mir3HudView.SM_TURN,5,cell.x,cell.y,4,body),key_bytes), "queue raw HP and extended standing messages"): return
+	if not check(hud.hud_snapshot().scene_health_values[5][0]==190 and hud.hud_snapshot().scene_human_pending[5]==2,
+		"route folds old HP before appending and preserves actions"): return
 	await process_frame
 	await process_frame
 	if not check(hud.hud_snapshot().scene_health_values[5] == PackedInt32Array([190,30,220]) and hud.hud_snapshot().scene_human_actions[5].x == 9 and hud.hud_snapshot().scene_damage_frames.is_empty(), "HP fold bypasses active animation without generating damage"): return
@@ -1348,6 +1441,7 @@ func run_scene_damage() -> void:
 func run_scene_health() -> void:
 	if not check(hud.apply_scene_health(0, 53, 50, 20, 100)
 		and hud.apply_scene_health(5, 53, 75, 10, 100), "apply local and remote health"): return
+	await RenderingServer.frame_post_draw
 	if not await capture("bichon-local-health"): return
 	if not check(hud.hud_snapshot().scene_health_bounds[0].size.x == 17
 		and not hud.hud_snapshot().scene_health_bounds.has(5), "remote bar requires registration"): return
@@ -1359,6 +1453,7 @@ func run_scene_health() -> void:
 			break
 	if not check(chicken_loaded and hud.apply_scene_health(8, 53, 25, 0, 100)
 		and hud.apply_scene_health(8, 1312, 0, 0, 0), "register monster health"): return
+	await RenderingServer.frame_post_draw
 	if not await capture("bichon-human-health"): return
 	if not check(hud.hud_snapshot().scene_health_bounds[8].size.x == 8, "monster bar uses the same original percentage scale"): return
 	if not check(hud.remove_scene_actor(8), "remove registered monster"): return
@@ -1371,6 +1466,7 @@ func run_scene_health() -> void:
 	if not check(not hud.hud_snapshot().scene_health_bounds.has(5), "mismatched status hides bar"): return
 	if not check(hud.set_scene_health_flags(5, 2, 2, false, true)
 		and hud.set_scene_human_mount(5, 1), "restore raised rider health display"): return
+	await RenderingServer.frame_post_draw
 	if not await capture("bichon-rider-health"): return
 	if not check(hud.hud_snapshot().scene_health_bounds[5].position.y == bar.position.y - 24, "raised human health shifts 24 pixels"): return
 	var state: Dictionary = hud.hud_snapshot()
@@ -1670,6 +1766,17 @@ func run_scene_actor_removal() -> void:
 	print("SCENE_ACTOR_REMOVAL_OK")
 	quit()
 
+func acknowledge_offline_walk(_packet: PackedByteArray) -> void:
+	var state: Dictionary = hud.hud_snapshot()
+	if state.walk_frame >= 0 and state.action_reply_pending:
+		hud.call_deferred("apply_game_message", "+GOOD".to_ascii_buffer())
+
+func wait_for_walk_start() -> bool:
+	var deadline := Time.get_ticks_msec() + 1000
+	while hud.hud_snapshot().walk_frame < 0 and Time.get_ticks_msec() < deadline:
+		await process_frame
+	return hud.hud_snapshot().walk_frame == 0
+
 func run() -> void:
 	hud = load("res://main.tscn").instantiate()
 	hud.set_meta("offline_preview",true)
@@ -1698,6 +1805,8 @@ func run() -> void:
 	await process_frame
 	if not check(hud.hud_snapshot().ready, "original resource loading"): return
 	if OS.get_cmdline_user_args().has("--terrain"):
+		# 地图回归禁用连接，模拟服务端对预测走步的确认。
+		hud.client_packet_ready.connect(acknowledge_offline_walk)
 		if not check(hud.hud_snapshot().terrain_ready, "Bichon terrain loaded"): return
 		var idle_frames := {}
 		var idle_deadline := Time.get_ticks_msec() + 1600
@@ -1836,7 +1945,8 @@ func run() -> void:
 		blocked_step.pressed = false
 		root.push_input(blocked_step, true)
 		var detour_deadline := Time.get_ticks_msec() + 2000
-		while hud.hud_snapshot().walk_frame >= 0 and Time.get_ticks_msec() < detour_deadline:
+		while Time.get_ticks_msec() < detour_deadline:
+			if hud.hud_snapshot().player_cell != Vector2i(475, 360) and hud.hud_snapshot().walk_frame == -1: break
 			await process_frame
 		if not check(hud.hud_snapshot().player_cell == Vector2i(475, 361) and hud.hud_snapshot().walk_frame == -1, "blocked heading takes last equally close traversable neighbor"): return
 		if not await capture("bichon-blocked-heading"): return
@@ -1846,7 +1956,7 @@ func run() -> void:
 		run.button_index = MOUSE_BUTTON_RIGHT
 		run.pressed = true
 		root.push_input(run, true)
-		if not check(hud.hud_snapshot().walk_frame == 0 and not hud.hud_snapshot().map_running, "right press starts with a walk"): return
+		if not check(await wait_for_walk_start() and not hud.hud_snapshot().map_running, "right press starts with a walk"): return
 		var run_deadline := Time.get_ticks_msec() + 2500
 		while not hud.hud_snapshot().map_running and Time.get_ticks_msec() < run_deadline:
 			await process_frame
@@ -1874,7 +1984,7 @@ func run() -> void:
 		var modal_walk := held_walk.duplicate() as InputEventMouseButton
 		modal_walk.pressed = true
 		root.push_input(modal_walk, true)
-		if not check(hud.hud_snapshot().walk_frame == 0, "start held walk before modal"): return
+		if not check(await wait_for_walk_start(), "start held walk before modal"): return
 		key(KEY_Q, 0, true)
 		if not check(hud.hud_snapshot().group_request == 109, "open exit confirmation during held walk"): return
 		if not await capture("bichon-exit-during-walk"): return
@@ -1892,7 +2002,7 @@ func run() -> void:
 		var chat_walk := modal_walk.duplicate() as InputEventMouseButton
 		chat_walk.pressed = true
 		root.push_input(chat_walk, true)
-		if not check(hud.hud_snapshot().walk_frame == 0, "start held walk before chat"): return
+		if not check(await wait_for_walk_start(), "start held walk before chat"): return
 		key(KEY_ENTER)
 		var terrain_chat: LineEdit = hud.get_node("ChatInput")
 		if not check(terrain_chat.has_focus(), "open chat during held walk"): return
@@ -1911,7 +2021,7 @@ func run() -> void:
 		var npc_walk := chat_walk.duplicate() as InputEventMouseButton
 		npc_walk.pressed = true
 		root.push_input(npc_walk, true)
-		if not check(hud.hud_snapshot().walk_frame == 0, "start held walk before NPC dialogue"): return
+		if not check(await wait_for_walk_start(), "start held walk before NPC dialogue"): return
 		if not check(hud.apply_npc_dialogue(643, 2, "老黄/<购买药品/@buy>"), "open NPC dialogue during held walk"): return
 		if not await capture("bichon-npc-during-walk"): return
 		await create_timer(0.85).timeout
@@ -1946,6 +2056,7 @@ func run() -> void:
 		hud.queue_free()
 		hud = merchant_hud
 		root.add_child(hud)
+		hud.client_packet_ready.connect(acknowledge_offline_walk)
 		var merchant_requests: Array[int] = []
 		var npc_protocol: Array = []
 		var npc_packets: Array[String] = []
@@ -2278,13 +2389,13 @@ func run() -> void:
 		if not check(offer_selections.is_empty(), "old offer cells cannot be selected while loading another page"): return
 		if not await capture("bichon-merchant-offers-awaiting-page"): return
 		var next_offer_packet := "cL@F<=I@<<<<<<<<".to_ascii_buffer() + offer_packet.slice(16)
-		if not check(not hud.apply_npc_message(offer_packet, offer_key), "ignore previous page packet while next page is requested"): return
+		if not check(hud.apply_npc_message(offer_packet, offer_key), "server reply can restore the first page during a request"): return
 		if not check(hud.apply_npc_message(next_offer_packet, offer_key), "apply encoded next offer page at offset ten"): return
 		if not await capture("bichon-merchant-offers-page-reply"): return
 		click_at(Vector2(334, 399), true)
 		click_at(Vector2(334, 399), false)
 		if not check(npc_packets.back().substr(2, 16) == "<\\<<<KX?<<<<<<<<", "previous offer page requests offset zero"): return
-		if not check(not hud.apply_npc_message(next_offer_packet, offer_key), "ignore delayed next page when returning to first page"): return
+		if not check(hud.apply_npc_message(next_offer_packet, offer_key), "server reply sets the page even if its offset differs from the request"): return
 		if not check(hud.apply_npc_message(offer_packet, offer_key), "apply encoded first page reply"): return
 		click_at(Vector2(330, 280), true)
 		click_at(Vector2(330, 280), false)
@@ -2385,7 +2496,8 @@ func run() -> void:
 		click_at(Vector2(380, 296), true)
 		click_at(Vector2(380, 296), false)
 		if not check(hud.hud_snapshot().group_request == 110, "bulk purchase opens quantity input"): return
-		npc_input.text = "3"
+		# 42590A 接受十进制前缀。
+		npc_input.text = " 3件"
 		if not await capture("bichon-merchant-bulk-quantity"): return
 		key(KEY_ENTER)
 		if not check(npc_packets.back().substr(2, 16) == "<\\<<<KT?=L<<<<H<", "bulk purchase includes item key and quantity"): return
@@ -2462,6 +2574,7 @@ func run() -> void:
 		if not check(human_bounds.has_area() and hud.hud_snapshot().target_portrait == 652,
 			"hovering the remote human displays the matching profession portrait"): return
 		if not await capture("bichon-remote-human"): return
+		print("HUD_TERRAIN_SMOKE_OK")
 		quit()
 		return
 	for i in 20:
@@ -3758,7 +3871,9 @@ func run() -> void:
 	for point in [Vector2(25, 240), Vector2(85, 240), Vector2(140, 240), Vector2(200, 240)]:
 		click_at(point, true)
 		click_at(point, false)
-	if not check(requests.slice(before_mount) == ["@骑马", "@下马", "@包马", "@下马"], "original mounted and visibility commands"): return
+		# 434910 starts the shared 300 ms input delay after a mount command.
+		await create_timer(0.32).timeout
+	if not check(requests.slice(before_mount) == ["@骑马", "@下马", "@包马", "@下马"], "original mounted and visibility commands: %s" % str(requests.slice(before_mount))): return
 	if not check(hud.hud_snapshot().mount_shape == 2, "dismount waits for acknowledgement"): return
 	if not check(hud.apply_mount_reply(1300, 0x12340000) and hud.hud_snapshot().mount_shape == 0, "dismount reply clears shape"): return
 	click_at(Vector2(250, 288), true)

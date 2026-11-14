@@ -153,6 +153,8 @@ public:
     bool apply_scene_name(int actor,int opcode,int color,godot::String value);
     void draw_scene_name();
     void draw_ground_name();
+    void draw_world_overlays();
+    void draw_ground_sparkles();
     bool set_scene_npc(int actor,godot::Vector2i cell,int first_frame);
     bool set_scene_chicken(int actor,godot::Vector2i cell);
     bool set_scene_human(int actor,godot::Vector2i cell,int facing,int profession,godot::String name);
@@ -171,6 +173,7 @@ public:
     bool apply_scene_appearance(int actor,const mir3::HumanAppearance& appearance);
     bool queue_scene_human_message(int actor,int opcode,godot::Vector2i cell,int facing,int hit_weapon=0,std::int64_t flags=0);
     bool dispatch_scene_human_message(int actor);
+    bool enqueue_scene_human_message(int actor,mir3::SceneHumanMessage message);
     bool apply_scene_human_action(int actor,int opcode,int facing,int hit_weapon=0);
     bool apply_scene_human_stand(int actor,godot::Vector2i cell,int facing);
     bool apply_scene_human_step(int actor,int opcode,godot::Vector2i destination,int facing);
@@ -312,7 +315,7 @@ private:
     bool options_pointer(int kind,godot::Vector2 point);
     mir3::InventoryPanel inventory;
     struct MerchantService {
-        enum class Phase { choosing, quoting, quoted, paying };
+        enum class Phase { choosing, quoting, unavailable, quoted, paying };
         std::uint32_t actor=0,item=0,price=0;
         std::string name;
         Phase phase=Phase::choosing;
@@ -389,6 +392,8 @@ private:
     bool panel_pointer(int kind,godot::Vector2 position,bool captured_only=false);
     bool status_pointer(int kind,godot::Vector2 position);
     mir3::InventoryGrid bag;
+    mir3::BagItem pending_drop;
+    bool held_gold=false;
     mir3::QuickItems quick_items;
     godot::String item_layout_directory;
     godot::String item_layout_file() const;
@@ -408,6 +413,7 @@ private:
     mir3::WilArchive equipment_archive;
     void emit_equipment_request();
     void play_item_sound(const mir3::BagItem& item);
+    void update_bag_stack_count(std::uint32_t instance,int quantity,bool remove_when_empty=false);
     std::map<int,std::pair<godot::Ref<godot::ImageTexture>,godot::Vector2>> equipment_frames;
     mir3::WilArchive item_archive;
     std::map<int,godot::Ref<godot::ImageTexture>> item_frames;
@@ -424,7 +430,7 @@ private:
     unsigned player_light_attribute=0;
     mir3::SceneAmbient scene_ambient;
     godot::PackedColorArray scene_light_samples;
-    godot::Node2D *scene_light_layer=nullptr, *hud_base=nullptr;
+    godot::Node2D *scene_light_layer=nullptr, *world_overlay_layer=nullptr, *hud_base=nullptr;
     void draw_scene_lighting();
     void draw_hud_base();
     void reset_map_overlays();
@@ -448,10 +454,12 @@ private:
     bool animated_map_objects=false;
     struct MapActorFrame { godot::Ref<godot::ImageTexture> image; godot::Vector2 offset; std::vector<std::uint8_t> regions;
         int shadow_mode=48; godot::Vector2 shadow_offset{}; };
-    mir3::WilArchive map_human, map_female, map_npc, map_horse;
+    mir3::WilArchive map_human, map_female, map_npc, map_flag, map_horse;
     mir3::GroundItems ground_items;
     mir3::WilArchive ground_archive;
     std::map<int,MapActorFrame> ground_frames;
+    std::array<godot::Ref<godot::ImageTexture>,10> ground_sparkles;
+    godot::Node2D* ground_sparkle_layer=nullptr;
     std::map<int,godot::Rect2> ground_bounds;
     int displayed_ground_item=0;
     std::map<int,MapActorFrame> horse_frames;
@@ -468,13 +476,13 @@ private:
     int player_type=0, player_clothing=0, player_hair=0, player_weapon=0;
     int player_clothing_dye=65535, player_hair_dye=65535;
     std::map<std::tuple<std::uint64_t,int,int>,godot::Ref<godot::ImageTexture>> dyed_frames;
-    godot::Ref<godot::ImageTexture> dyed_frame(const MapActorFrame& frame,int clothing,int hair,int status_color=65535);
+    godot::Ref<godot::ImageTexture> dyed_frame(const MapActorFrame& frame,int clothing,int hair,int status_color=65535,bool highlight_status=true);
     godot::String actor_resource_root;
     godot::PackedByteArray weapon_order;
     std::map<std::string,mir3::WilArchive> attachment_archives;
     std::map<std::pair<std::string,int>,MapActorFrame> attachment_frames;
     const MapActorFrame* attachment_frame(int type,int shape,bool weapon,int motion_frame);
-    void draw_human_layers(const MapActorFrame& body,godot::Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape=0,float opacity=1.f,int status_color=65535,bool corpse=false);
+    void draw_human_layers(const MapActorFrame& body,godot::Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape=0,float opacity=1.f,int status_color=65535,bool corpse=false,bool highlighted=false,int appearance_weight=-1);
     const MapActorFrame* project_weapon_shadow(const MapActorFrame& frame);
     const MapActorFrame* horse_shadow_frame(int motion_frame);
     std::map<std::uint64_t,MapActorFrame> weapon_shadows;
@@ -501,7 +509,22 @@ private:
         std::array<MapActorFrame,4> frames;
         godot::Rect2 bounds;
     };
-    std::map<int,SceneActor> scene_npcs;
+    struct SceneNpc : SceneActor {
+        std::vector<MapActorFrame> standing;
+        std::vector<MapActorFrame> idle_after_refresh;
+        int idle_interval=300;
+        int standing_interval=200;
+        double standing_elapsed=0;
+        double arrival_ms=-1;
+        int appearance_duration_ms=300;
+        unsigned light_attribute=0;
+        std::size_t standing_frame=0;
+        bool fallback_to_first_frame=false;
+    };
+    std::map<int,SceneNpc> scene_npcs;
+    bool place_scene_npc(int actor,godot::Vector2i cell,int first_frame,int count,int interval,
+        bool fallback_to_first_frame=false,bool flag=false,int idle_first=-1,int idle_count=0,int idle_interval=300,
+        bool revive=false);
     struct SceneChicken : SceneActor {
         godot::Rect2 target_bounds;
         int shape=20;
@@ -520,8 +543,16 @@ private:
         bool walk_catch_up=false, walking_backward=false;
         bool skip_movement_tick=false;
         std::uint32_t status_flags=0;
-        // 4085A0 / 40E7F0：1316出队后开始600ms显现，独立于动作帧。
-        double revive_elapsed_ms=-1;
+        static constexpr int arrival_appearance_ms=300; // 42E9A0
+        static constexpr int revive_appearance_ms=600; // 4085A0
+        int appearance_duration_ms=0;
+        double appearance_elapsed_ms=0;
+        int appearance_weight(bool highlighted) const {
+            if (!appearance_duration_ms) return -1;
+            // 40ECB0 uses the integer frame clock and resets an out-of-range weight to zero.
+            const int weight=31*int(appearance_elapsed_ms)/appearance_duration_ms+(highlighted?5:0);
+            return weight>31?0:weight;
+        }
         bool slowed() const { return (status_flags & 0x08000000u)!=0; }
         int struck_frame=-1;
         int attack_frame=-1, attack_interval=120;
@@ -557,7 +588,7 @@ private:
             std::uint32_t target_actor=0;
             int action_override=0;
         };
-        struct Entry { godot::Vector2i cell; int facing,shape; unsigned light; std::uint32_t status; bool appearance_sound; std::optional<mir3::SceneName> name; bool hidden_pose=false; bool revive=false; };
+        struct Entry { godot::Vector2i cell; int facing,shape; unsigned light; std::uint32_t status; bool appearance_sound; std::optional<mir3::SceneName> name; bool hidden_pose=false; bool revive=false; bool preserve_name_color=false; };
         struct BarStatus { std::uint32_t flags; };
         struct Health { std::array<std::uint16_t,3> values; };
         struct RelayedHit { Hit hit; };
@@ -579,9 +610,9 @@ private:
     bool apply_monster_burrow(int actor,SceneChicken::Burrow burrow);
     bool apply_monster_entry(int actor,const SceneChicken::Entry& entry);
     bool apply_monster_action(int actor,const SceneChicken::Action& action);
-    bool receive_monster_action(int actor,SceneChicken::Action action);
+    bool receive_monster_action(int actor,SceneChicken::Action action,bool from_wire=false);
     void update_actor_bar_status(int actor,bool status_bit);
-    bool refresh_monster_shape(SceneChicken& monster,int shape,int action=-1,int facing=-1);
+    bool refresh_monster_shape(SceneChicken& monster,int shape);
     void play_animal_call(int actor,SceneChicken& animal);
     struct HumanSpellVisual {
         int skill=0,direction=0;
@@ -590,6 +621,16 @@ private:
         bool weapon=false;
     };
     struct SceneHuman : SceneActor {
+        std::optional<std::uint8_t> last_monster_hit_shape;
+        double arrival_ms=-1;
+        static constexpr int arrival_duration_ms=300;
+        static constexpr int revive_duration_ms=600;
+        int appearance_duration_ms=arrival_duration_ms;
+        int arrival_weight(bool highlighted) const {
+            if (arrival_ms<0) return -1;
+            const int weight=31*int(arrival_ms)/appearance_duration_ms+(highlighted?5:0);
+            return weight>31?0:weight;
+        }
         HumanSpellVisual spell;
         int profession=0, type=0, clothing=0, hair=0, weapon=0;
         int clothing_dye=65535, hair_dye=65535, mount_shape=0;
@@ -603,7 +644,11 @@ private:
         mir3::HumanLife life;
         mir3::CombatStance combat;
         unsigned light_attribute=0;
-        bool bump=false;
+        bool bump=false,backstep=false;
+        int movement_commit_frame() const {
+            // 406750 sets the threshold before 411EA0 reverses the movement direction.
+            return facing==7?4:1;
+        }
         bool catching_up=false;
         std::uint32_t action_flags=0;
         bool harvest=false;
@@ -651,6 +696,7 @@ private:
     std::uint32_t local_struck_tick=0;
     std::uint8_t local_folded_hits=0;
     int local_hit_weapon=0;
+    std::optional<std::uint8_t> local_last_monster_hit_shape;
     std::uint32_t player_status_flags=0;
     void process_local_actor_message();
     struct PendingLocalAction {
@@ -663,6 +709,7 @@ private:
     std::optional<PendingLocalAction> pending_local_action;
     void request_melee_action(int facing,int opcode);
     void advance_local_action();
+    bool request_map_door(godot::Vector2i cell);
     bool player_harvest_impact=false;
     bool map_shift_pressed=false;
     mir3::EffectCatalog effect_catalog;
@@ -714,6 +761,9 @@ private:
     std::uint64_t harvest_effect_id=std::uint64_t{1}<<32;
     void show_harvest_impact(godot::Vector2i cell);
     void show_map_impact(int effect,godot::Vector2i cell);
+    void show_following_hit_effect(int effect,int actor,godot::Vector2i cell);
+    void show_source_hit_effect(int actor,godot::Vector2i cell,std::uint32_t source_id,
+        std::optional<std::uint8_t>& last_monster_shape);
     void show_player_magic(mir3::SkillId skill,godot::Vector2i source,godot::Vector2i target,std::uint32_t target_actor);
     void play_spell_reply(int actor,const mir3::SpellReply& reply);
     void show_ground_magic(mir3::MagicEffectId effect,godot::Vector2i source,godot::Vector2i target,int facing=-1);
@@ -940,7 +990,7 @@ private:
     godot::Node2D* terrain_layer=nullptr;
     std::size_t terrain_draw_count=0;
     godot::RID terrain_draw_batch;
-    godot::Ref<godot::ShaderMaterial> monster_shadow_mix,monster_body_mix;
+    godot::Ref<godot::ShaderMaterial> monster_shadow_mix,monster_body_mix,actor_highlight;
     std::array<godot::Ref<godot::ShaderMaterial>,32> monster_appearance_mix;
     godot::Ref<godot::ShaderMaterial> monster_tint_appearance_mix;
     mir3::ZumaAi monster_ai;
@@ -958,6 +1008,7 @@ private:
     mir3::PortraitFocus target_focus;
     mir3::TargetPortraitVitals target_vitals;
     std::uint32_t hovered_target=0;
+    std::uint32_t locked_spell_actor=0;
     int target_frame=-1, target_badge=-1;
     bool target_is_human=false;
     bool target_special_shape=false;

@@ -151,9 +151,13 @@ int monster_projectile_direction(Vector2 delta,bool eight_directions) {
     const int count=eight_directions?8:16;
     const int quadrant=delta.x<0?(delta.y<0?3:2):(delta.y<0?0:1);
     const double leading=(quadrant%2)?std::abs(delta.x):std::abs(delta.y);
-    const double cosine=leading/delta.length();
+    // The original tables contain rounded float constants, not exact cosines.
+    constexpr std::array<float,8> thresholds{
+        1.f,0.980785f,0.923880f,0.831470f,0.707107f,0.555570f,0.382683f,0.195090f};
+    const double cosine=leading/std::hypot(double(delta.x),double(delta.y));
+    const int stride=eight_directions?2:1;
     int slot=0;
-    while (slot<count/2 && cosine<=std::cos(slot*3.141592653589793/count)) ++slot;
+    while (slot<count/2 && cosine<=thresholds[slot*stride]) ++slot;
     return (quadrant*(count/4)+slot/2)%count;
 }
 
@@ -377,6 +381,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["displayed_name_actor"]=displayed_name_actor;
     result["displayed_name_bounds"]=displayed_name_bounds;
     result["displayed_name_color"]=scene_names.contains(displayed_name_actor)?scene_names.at(displayed_name_actor).color:0xffffff;
+    result["displayed_name_text"]=scene_names.contains(displayed_name_actor)?
+        String::utf8(mir3::ansi_to_utf8(scene_names.at(displayed_name_actor).lines[0]).c_str()):String();
     result["player_bounds"]=player_bounds;
     Array shadows;for (const auto& bounds:human_shadow_bounds) shadows.push_back(bounds);
     result["human_shadow_bounds"]=shadows;
@@ -395,26 +401,45 @@ Dictionary Mir3HudView::hud_snapshot() const {
     Dictionary bars;
     for (const auto& [actor,bounds]:scene_health_bounds) bars[actor]=bounds;
     result["scene_health_bounds"]=bars;
-    Dictionary damage_frames;
+    Dictionary damage_frames, damage_positions;
     for (const auto& [actor,glyphs]:scene_damage_glyphs) {
         PackedInt32Array frames;
         for (const auto& glyph:glyphs) frames.push_back(glyph.frame);
         damage_frames[actor]=frames;
+        if (!glyphs.empty()) damage_positions[actor]=Vector2i(glyphs.front().x,glyphs.front().y);
     }
     result["scene_damage_frames"]=damage_frames;
-    Dictionary npc_bounds;
-    for (const auto& [actor,npc]:scene_npcs) npc_bounds[actor]=npc.bounds;
+    result["scene_damage_positions"]=damage_positions;
+    Dictionary npc_bounds, npc_standing, npc_standing_frames, npc_arrival;
+    for (const auto& [actor,npc]:scene_npcs) {
+        npc_bounds[actor]=npc.bounds;
+        npc_standing[actor]=Vector2i(int(npc.standing.size()),npc.standing_interval);
+        npc_standing_frames[actor]=int(npc.standing_frame);
+        npc_arrival[actor]=npc.arrival_ms;
+    }
     result["scene_npc_bounds"]=npc_bounds;
+    result["scene_npc_standing"]=npc_standing;
+    result["scene_npc_standing_frames"]=npc_standing_frames;
+    result["scene_npc_arrival_ms"]=npc_arrival;
     Dictionary chicken_bounds, monster_facings, monster_reverse_burrows;
-    Dictionary monster_revive_elapsed;
+    Dictionary monster_revive_elapsed, monster_appearance_elapsed, monster_appearance_weight;
     for (const auto& [actor,chicken]:scene_chickens) {
         monster_facings[actor]=chicken.facing;
         monster_reverse_burrows[actor]=chicken.reverse_burrow;
-        monster_revive_elapsed[actor]=chicken.revive_elapsed_ms;
+        monster_revive_elapsed[actor]=chicken.appearance_duration_ms==SceneChicken::revive_appearance_ms?
+            chicken.appearance_elapsed_ms:-1;
+        monster_appearance_elapsed[actor]=chicken.appearance_duration_ms>0?chicken.appearance_elapsed_ms:-1;
+        monster_appearance_weight[actor]=chicken.appearance_weight(hovered_target==std::uint32_t(actor) || locked_spell_actor==std::uint32_t(actor));
     }
     result["scene_monster_facings"]=monster_facings;
+    Dictionary monster_lights;
+    for (const auto& [actor,chicken]:scene_chickens) monster_lights[actor]=chicken.light_attribute;
+    result["scene_monster_lights"]=monster_lights;
     result["scene_monster_reverse_burrows"]=monster_reverse_burrows;
     result["scene_monster_revive_elapsed_ms"]=monster_revive_elapsed;
+    result["scene_monster_appearance_elapsed_ms"]=monster_appearance_elapsed;
+    result["scene_monster_appearance_weight"]=monster_appearance_weight;
+    result["locked_spell_actor"]=locked_spell_actor;
     for (const auto& [actor,chicken]:scene_chickens) chicken_bounds[actor]=chicken.bounds;
     result["scene_chicken_bounds"]=chicken_bounds;
     Dictionary chicken_cells, chicken_steps, chicken_walk_poses, chicken_struck, chicken_pixels, monster_shapes, monster_burrow_frames, monster_attack_frames, monster_attack_actions, monster_death_frames, monster_body_dyes, actor_status_colors, monster_dormant;
@@ -453,11 +478,16 @@ Dictionary Mir3HudView::hud_snapshot() const {
         actor_health_values[actor]=values;
     }
     result["scene_health_values"]=actor_health_values;
-    Dictionary item_bounds, item_cells;
+    Dictionary item_bounds, item_cells, item_sparkles;
     for (const auto& [id,bounds]:ground_bounds) item_bounds[id]=bounds;
-    for (const auto& item:ground_items.items) item_cells[item.id]=Vector2i(item.x,item.y);
+    for (const auto& item:ground_items.items) {
+        item_cells[item.id]=Vector2i(item.x,item.y);
+        if (item.sparkle_frame>=0 && ground_sparkles[item.sparkle_frame].is_valid())
+            item_sparkles[item.id]=40+item.sparkle_frame;
+    }
     result["ground_item_bounds"]=item_bounds;
     result["ground_item_cells"]=item_cells;
+    result["ground_item_sparkles"]=item_sparkles;
     result["displayed_ground_item"]=displayed_ground_item;
     Dictionary human_bounds;
     Dictionary human_cells;
@@ -506,7 +536,13 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["scene_human_catchup"]=human_catchup;
     result["scene_human_facings"]=human_facings;
     result["scene_human_bounds"]=human_bounds;
+    Dictionary human_anchors;
+    for (const auto& [actor,human]:scene_humans) human_anchors[actor]=human.anchor;
+    result["scene_human_anchors"]=human_anchors;
     result["scene_human_cells"]=human_cells;
+    Dictionary human_arrival;
+    for (const auto& [actor,human]:scene_humans) human_arrival[actor]=human.arrival_ms;
+    result["scene_human_arrival_ms"]=human_arrival;
     result["player_idle_frame"]=player_idle.frame();
     result["player_facing"]=player_facing;
     result["npc_dialogue_actor"]=npc_dialogue_actor;
@@ -588,11 +624,18 @@ Dictionary Mir3HudView::hud_snapshot() const {
             Dictionary state;
             state["skill"]=int(event.resource->id);state["frame"]=event.frame;
             state["library"]=int(event.resource->library);
+            state["sprite_visible"]=event.sprite && event.sprite->is_visible_in_tree() && event.sprite->get_texture().is_valid();
             state["first"]=int(event.resource->first);state["end"]=int(event.resource->end);
             state["interval"]=int(event.resource->interval);state["frame_offset"]=event.frame_offset;
+            state["animation_elapsed_ms"]=event.elapsed;
             state["repeat"]=!event.one_shot;
             state["target_actor"]=int64_t(event.projectile?event.projectile->target_actor:event.follow_actor);
+            state["attached_actor"]=event.attached_actor;
             state["projectile"]=event.projectile.has_value();state["delay"]=event.delay_ms;
+            if (event.projectile) {
+                state["velocity"]=event.projectile->velocity;
+                state["destination"]=event.projectile->destination;
+            }
             state["light_tail"]=event.light_tail;
             state["emits_light"]=event.emits_light;
             state["ground_wave"]=event.ground_wave;
@@ -823,7 +866,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     }
     result["quick_records"]=quick_records;
     result["equipment_pending"]=equipment.pending;
-    result["held_inventory_icon"]=bag.held.icon;
+    result["held_inventory_icon"]=held_gold?124:bag.held.icon;
     result["inventory_row"]=inventory.row;
     result["chat_save_enabled"]=chat_submission.save_chat;result["snow_enabled"]=chat_submission.snow;
     result["chat_contacts_visible"]=chat_submission.control_down && chat_input && chat_input->has_focus() && !group_request && !guild_editor.visible && !chat_submission.contacts.empty();
@@ -919,6 +962,8 @@ void Mir3HudView::_ready() {
         if (progress.open(resource_root/"Data"/"ProgUse")) {
             if (const auto frame=progress.frame(2)) health_border=texture(frame->pixels.rgba,frame->width,frame->height);
             if (const auto frame=progress.frame(3)) health_fill=texture(frame->pixels.rgba,frame->width,frame->height);
+            for (int i=0;i<int(ground_sparkles.size());++i)
+                if (const auto frame=progress.frame(40+i)) ground_sparkles[i]=texture(frame->pixels.rgba,frame->width,frame->height);
         }
         scene_health.try_emplace(0);
         ground_archive.open(resource_root/"Data"/"Ground");
@@ -926,6 +971,7 @@ void Mir3HudView::_ready() {
         map_female.open(resource_root/"Data"/"WM-Hum");
         human_bodies.emplace(std::pair{0,0},HumanBody{map_human_frames,map_walk_frames,map_run_frames});
         map_npc.open(resource_root/"Data"/"NPC");
+        map_flag.open(resource_root/"Data"/"Flag");
         set_scene_npc(2,Vector2i(413,409),110);
         for (const int sample:{1,33,34,35})
             movement_sounds.emplace(sample,AudioStreamWAV::load_from_file(audio_root.path_join(String::num_int64(sample)+".wav")));
@@ -981,6 +1027,9 @@ void Mir3HudView::_ready() {
     monster_body_mix.instantiate();
     monster_body_mix->set_shader(monster_mix);
     monster_body_mix->set_shader_parameter("source_weight",8.0);
+    actor_highlight.instantiate();
+    actor_highlight->set_shader(monster_mix);
+    actor_highlight->set_shader_parameter("highlight_opaque",true);
     for (int weight=0;weight<32;++weight) {
         monster_appearance_mix[weight].instantiate();
         monster_appearance_mix[weight]->set_shader(monster_mix);
@@ -1042,6 +1091,21 @@ void Mir3HudView::_ready() {
         particle_material->set_shader(ResourceLoader::get_singleton()->load("res://spell_particle.gdshader"));
         particle_material->set_shader_parameter("glow",i==1);
     }
+    // 42499C renders ground sparkles after world labels and before the interface.
+    world_overlay_layer=memnew(Node2D);
+    world_overlay_layer->set_material(material);
+    add_child(world_overlay_layer);
+    world_overlay_layer->connect("draw",callable_mp(this,&Mir3HudView::draw_world_overlays));
+    ground_sparkle_layer=memnew(Node2D);
+    Ref<Shader> sparkle_shader;sparkle_shader.instantiate();
+    // 49294C/492956 use ONE and INVSRCALPHA for the ground sparkle draw.
+    // 424D02 and 49291C modulate texture alpha by the material's 1/255 before ONE/INVSRCALPHA blending.
+    sparkle_shader->set_code("shader_type canvas_item; render_mode unshaded, blend_premul_alpha; void fragment(){ COLOR.a /= 255.0; }");
+    Ref<ShaderMaterial> sparkle_material;sparkle_material.instantiate();
+    sparkle_material->set_shader(sparkle_shader);
+    ground_sparkle_layer->set_material(sparkle_material);
+    add_child(ground_sparkle_layer);
+    ground_sparkle_layer->connect("draw",callable_mp(this,&Mir3HudView::draw_ground_sparkles));
     hud_base=memnew(Node2D);
     hud_base->set_material(material);
     add_child(hud_base);
@@ -1362,8 +1426,29 @@ void Mir3HudView::advance_local_action() {
     const auto tick=action.movement?local_action_clock.move_admitted:now;
     const auto position=std::uint32_t(action.destination.x)|(std::uint32_t(action.destination.y)<<16);
     const auto parameters=(tick&0xffffu)|(std::uint32_t(action.facing)<<16);
+    if (action.movement && action.opcode==mir3::protocol::CM_WALK) {
+        // 41603D scans the eight neighbors of the walking destination in direction order.
+        for (const auto [x,y]:mir3::map_directions)
+            if (request_map_door(action.destination+Vector2i(x,y))) break;
+    } else if (action.movement && action.opcode==mir3::protocol::CM_RUN) {
+        // 4161AF starts at the first step and checks each ray up to the run length.
+        const auto [dx,dy]=mir3::map_directions[action.facing];
+        const auto first=action.origin+Vector2i(dx,dy);
+        const auto delta=action.destination-action.origin;
+        const int distance=std::max(std::abs(delta.x),std::abs(delta.y));
+        for (const auto [x,y]:mir3::map_directions)
+            for (int step=1;step<=distance;++step)
+                if (request_map_door(first+Vector2i(x,y)*step)) break;
+    }
     send_client_packet(action.opcode,position,String(),parameters,tick>>16);
     queue_redraw();
+}
+
+bool Mir3HudView::request_map_door(Vector2i cell) {
+    if (!terrain.door_closed(cell.x,cell.y)) return false;
+    const auto coordinates=std::uint32_t(cell.x)|(std::uint32_t(cell.y)<<16);
+    send_client_packet(mir3::protocol::CM_OPENDOOR,terrain.door_id(cell.x,cell.y),String(),coordinates);
+    return true;
 }
 
 bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
@@ -1611,6 +1696,9 @@ void Mir3HudView::close_shop() {
     shop_selected=-1;
     shop_highlighted=-1;
     shop_offers.clear();
+    shop_offer_index=-1;
+    shop_offer_page=0;
+    shop_offer_loading=false;
     shop_show_offers=false;
     shop_pressed=-1;
     shop_category_first=0;
@@ -1618,10 +1706,13 @@ void Mir3HudView::close_shop() {
 }
 
 void Mir3HudView::close_npc_dialogue() {
+    // 424B37 closes the inventory when it is in a merchant service mode.
+    if (inventory.visible && merchant_service.actor) toggle_inventory();
     merchant_service={};
-    if (group_request==mir3::protocol::CM_MERCHANTDLGSELECT) finish_group_dialog(false);
+    if (group_request==mir3::protocol::CM_MERCHANTDLGSELECT || group_request==1705) finish_group_dialog(false);
     close_shop();
     npc_dialogue_actor=0;
+    npc_dialogue_origin={};
     npc_dialogue_rows.clear();
     npc_dialogue_pressed=-1;
     npc_dialogue_close_pressed=false;
@@ -1631,7 +1722,8 @@ void Mir3HudView::close_npc_dialogue() {
 
 bool Mir3HudView::apply_shop_purchase_reply(int identifier,int64_t value) {
     const auto remove_selected_offer=[&] {
-        if(!shop_show_offers || shop_offer_loading || shop_offer_index<0 || shop_offer_index>=int(shop_offers.size()))
+        // 478750 removes the selected row from the retained list, including during page requests.
+        if(!shop_show_offers || shop_offer_index<0 || shop_offer_index>=int(shop_offers.size()))
             return;
         shop_offers.erase(shop_offers.begin()+shop_offer_index);
         if(shop_offer_index>=int(shop_offers.size())) shop_offer_index=-1;
@@ -1685,7 +1777,9 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body,bool wire_for
     shop_actor=actor;
     shop_selected=-1;
     shop_offers.clear();
+    shop_offer_index=-1;
     shop_offer_page=0;
+    shop_offer_loading=false;
     shop_category_first=0;
     shop_show_offers=false;
     shop_pressed=-1;
@@ -1696,7 +1790,7 @@ bool Mir3HudView::apply_shop_goods(int actor,int count,String body,bool wire_for
 bool Mir3HudView::apply_shop_offers(int actor,int index,PackedStringArray names,PackedInt32Array icons,
         PackedInt32Array prices,PackedInt64Array identifiers,int offset) {
     if (!shop_actor || actor!=shop_actor || index<0 || index!=shop_selected ||
-        (offset!=-1 && offset!=10*shop_offer_page) ||
+        offset< -1 || offset>65535 ||
         names.size()!=icons.size() || names.size()!=prices.size() || names.size()!=identifiers.size() ||
         names.size()>255) return false;
     std::vector<ShopOffer> offers;
@@ -1710,7 +1804,9 @@ bool Mir3HudView::apply_shop_offers(int actor,int index,PackedStringArray names,
     shop_bulk_index=-1;
     shop_offer_index=shop_offers.empty()?-1:0;
     shop_offer_loading=false;
-    if (!shop_show_offers) shop_offer_page=0;
+    // 47974D sets the displayed page from the reply's item offset.
+    if (offset>=0) shop_offer_page=offset/10;
+    else if (!shop_show_offers) shop_offer_page=0;
     shop_show_offers=true;
     shop_pressed=-1;
     queue_redraw();
@@ -2205,7 +2301,8 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
 }
 
 bool Mir3HudView::apply_scene_health(int actor,int opcode,int current,int mana,int maximum) {
-    if (!terrain_ready || (actor!=0 && !scene_humans.contains(actor) && !scene_chickens.contains(actor))) return false;
+    if (!terrain_ready || (actor!=0 && !scene_humans.contains(actor) && !scene_chickens.contains(actor) &&
+            !(opcode==mir3::protocol::SM_HEALTH_PERCENT && scene_npcs.contains(actor)))) return false;
     auto health=scene_health.contains(actor)?scene_health.at(actor):mir3::SceneHealth{};
     const int previous=actor==0?model.hp:health.current;
     if (!health.apply(opcode,current,mana,maximum)) return false;
@@ -2327,16 +2424,24 @@ void Mir3HudView::draw_ground_name() {
     if (!terrain_ready || !spell_pointer_available()) return;
     const auto camera=map_camera();
     const Vector2i cell(int(inventory_cursor.x+camera.x)/48,int(inventory_cursor.y+camera.y)/32);
+    const auto coin_name=messages.get(1409);
+    int y=cell.y*32-camera.y-4;
+    int rows=0;
     for (const auto& item:ground_items.items) {
-        if (item.x!=cell.x || item.y!=cell.y || !ground_bounds.contains(item.id)) continue;
+        if (item.x!=cell.x || item.y!=cell.y) continue;
         const auto caption=mir3::ansi_to_utf8(item.name);
         const int width=mir3::raster_text(caption,800,15,false,mir3::TextFont::normal).text_width;
-        const int x=item.x*48-camera.x+24-width/2,y=item.y*32-camera.y-4;
-        legacy_rect(Rect2(x,y+1,width,15),Color(0,0,0,0.5f));
-        text(caption,{x-1,y+1,width,15},0,mir3::TextFont::normal,false);
-        text(caption,{x,y,width,15},0x7dffff,mir3::TextFont::normal,false);
-        displayed_ground_item=item.id;
-        break;
+        const int x=item.x*48-camera.x+24-width/2;
+        // 423A27/423B31 draw a brown label panel and stack subsequent labels upward.
+        legacy_rect(Rect2(x,y,width,15),Color(80.f/255,60.f/255,40.f/255,150.f/255));
+        const bool coin_variant=!coin_name.empty() && item.name.size()==coin_name.size()+1 &&
+            item.name.starts_with(coin_name) && item.name.back()>='0' && item.name.back()<='9';
+        const auto label=coin_variant?mir3::ansi_to_utf8(coin_name):caption;
+        text(label,{x-1,y+2,width,15},0,mir3::TextFont::normal,false);
+        text(label,{x,y+1,width,15},0x7dffff,mir3::TextFont::normal,false);
+        if (!rows) displayed_ground_item=item.id;
+        if (coin_variant || ++rows==mir3::GroundItems::cell_capacity) break;
+        y-=16;
     }
 }
 
@@ -2388,15 +2493,43 @@ void Mir3HudView::draw_scene_name() {
     displayed_name_bounds=draw_name(identity,anchor);
 }
 bool Mir3HudView::set_scene_npc(int actor,Vector2i cell,int first_frame) {
+    return place_scene_npc(actor,cell,first_frame,4,200,true);
+}
+
+bool Mir3HudView::place_scene_npc(int actor,Vector2i cell,int first_frame,int count,int interval,
+        bool fallback_to_first_frame,bool flag,int idle_first,int idle_count,int idle_interval,bool revive) {
     if (actor==local_actor_identity) return false;
-    if (!terrain_ready || actor<=0 || scene_chickens.contains(actor) || scene_humans.contains(actor) || first_frame<0 || first_frame>65532) return false;
-    SceneActor npc{};
+    if (!terrain_ready || actor<=0 || scene_chickens.contains(actor) || scene_humans.contains(actor) || first_frame<0 || first_frame>65536-count) return false;
+    SceneNpc npc{};
     npc.cell=cell;
-    for (int i=0;i<int(npc.frames.size());++i) {
-        if (const auto frame=map_npc.frame(first_frame+i))
-            npc.frames[i]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions,frame->shadow_mode,Vector2(frame->shadow_x,frame->shadow_y)};
+    npc.standing.resize(count);
+    npc.standing_interval=interval;
+    npc.fallback_to_first_frame=fallback_to_first_frame;
+    if (!fallback_to_first_frame) {
+        // 42EDC7 routes existing objects without running the arrival constructor.
+        const auto previous=scene_npcs.find(actor);
+        npc.arrival_ms=revive || previous==scene_npcs.end()?0:previous->second.arrival_ms;
+        // 4102D4 starts a 600 ms appearance transition on SM_REVIVE.
+        if (revive) npc.appearance_duration_ms=600;
+        else if (previous!=scene_npcs.end()) npc.appearance_duration_ms=previous->second.appearance_duration_ms;
     }
-    if (npc.frames.front().image.is_null()) return false;
+    const auto load_frames=[&](auto& frames,int first) {
+        for (int i=0;i<int(frames.size());++i)
+            if (const auto frame=(flag?map_flag:map_npc).frame(first+i))
+                frames[i]={texture(frame->pixels.rgba,frame->width,frame->height),Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions,frame->shadow_mode,Vector2(frame->shadow_x,frame->shadow_y)};
+    };
+    load_frames(npc.standing,first_frame);
+    npc.idle_after_refresh.resize(idle_count);
+    npc.idle_interval=idle_interval;
+    if (idle_count) load_frames(npc.idle_after_refresh,idle_first);
+    if (fallback_to_first_frame && npc.standing.front().image.is_null()) return false;
+    std::erase_if(map_events,[actor](const auto& entry) {
+        const auto& effect=entry.second;
+        if (effect.attached_actor!=actor || effect.resource->id!=607) return false;
+        effect.copy->hide();
+        effect.copy->queue_free();
+        return true;
+    });
     scene_npcs.insert_or_assign(actor,std::move(npc));
     queue_redraw();
     return true;
@@ -2406,31 +2539,38 @@ bool Mir3HudView::scene_occupied(Vector2i cell) const {
     const auto occupies=[cell](const auto& actor) { return actor.second.cell==cell; };
     return std::ranges::any_of(scene_npcs,occupies) ||
         std::ranges::any_of(scene_chickens,[cell](const auto& actor) {
-            return actor.second.death_frame<0 && !actor.second.buried && actor.second.cell==cell;
+            const auto& monster=actor.second;
+            if (monster.death_frame>=0 || monster.buried) return false;
+            const auto offset=cell-monster.cell;
+            const bool left_gate=monster.shape==530 || monster.shape==531;
+            const bool right_gate=monster.shape==532 || monster.shape==533 || monster.shape==538;
+            if (!left_gate && !right_gate) return offset==Vector2i();
+            // 4536EB tests the occupied tiles of the gate in its current pose.
+            if (monster.facing==7)
+                return offset==Vector2i(0,-2) || offset==Vector2i(left_gate?1:-1,-1);
+            if (monster.facing>=4) return false;
+            if (offset==Vector2i() || offset==Vector2i(0,-1)) return true;
+            if (left_gate) return offset==Vector2i(-1,0) || offset==Vector2i(1,-1);
+            return offset==Vector2i(-1,-1) || offset==Vector2i(1,0) || offset==Vector2i(1,1) ||
+                (monster.shape==538 && offset==Vector2i(2,1));
         }) ||
         std::ranges::any_of(scene_humans,[cell](const auto& actor) { return !actor.second.life.dead && actor.second.cell==cell; });
 }
 
 bool Mir3HudView::set_scene_chicken(int actor,Vector2i cell) {
-    return place_scene_chicken(actor,cell,6);
+    return terrain.walkable(cell.x,cell.y) && place_scene_chicken(actor,cell,6);
 }
 
 bool Mir3HudView::place_scene_chicken(int actor,Vector2i cell,int facing,int shape,unsigned light) {
     if (actor==local_actor_identity) return false;
-    if (!terrain_ready || actor<=0 || scene_npcs.contains(actor) || scene_humans.contains(actor) || !terrain.walkable(cell.x,cell.y)) return false;
+    if (!terrain_ready || actor<=0 || scene_npcs.contains(actor) || scene_humans.contains(actor) || !terrain.contains(cell.x,cell.y)) return false;
     SceneChicken chicken{};
     chicken.cell=cell;
     chicken.facing=facing;
-    chicken.shape=shape;
+    if (!refresh_monster_shape(chicken,shape)) return false;
     chicken.light_attribute=light;
     if (const auto previous=scene_chickens.find(actor);previous!=scene_chickens.end())
         chicken.called=previous->second.called;
-    // 405E50 and 46EFA0: type 3 / shapes 20–21, action 0.
-    for (int i=0;i<monster_idle_motion(shape).frames;++i) {
-        const auto* frame=monster_frame(shape,0,facing,i);
-        if (!frame) return false;
-        chicken.frames[i]=*frame;
-    }
     scene_chickens.insert_or_assign(actor,std::move(chicken));
     monster_ai.actors.erase(actor);
     queue_redraw();
@@ -2502,22 +2642,13 @@ const Mir3HudView::MapActorFrame* Mir3HudView::project_monster_shadow(const MapA
         texture(rgba,projected_width,projected_height),flat?body.offset+Vector2(3,2):body.shadow_offset,{}}).first->second;
 }
 
-bool Mir3HudView::refresh_monster_shape(SceneChicken& monster,int shape,int /*action*/,int facing) {
-    const int direction=facing<0?monster.facing:facing;
-    const auto idle=monster_idle_motion(shape);
-    // 406750 selects actions without preloading every frame. 40ECB0 returns
-    // without drawing when 491C70 cannot load a frame; it does not reject the
-    // network action (e.g. shape 186 has an empty final death frame).
+bool Mir3HudView::refresh_monster_shape(SceneChicken& monster,int shape) {
+    // 4064B0 validates the feature. 40ECB0 loads the current frame at draw time.
+    const int library=shape<2000?(88+shape/10)&255:((shape-2000)/100-121)&255;
+    if (shape<0 || library>=150) return false;
     if (monster.shape!=shape) {
-        for (int i=0;i<idle.frames;++i)
-            if (!monster_frame(shape,0,direction,i)) return false;
-    }
-    if (monster.shape!=shape || (facing>=0 && facing!=monster.facing)) {
         monster.shape=shape;
-        monster.frames={};
-        monster.idle_frame%=idle.frames;
-        for (int i=0;i<idle.frames;++i)
-            if (const auto* frame=monster_frame(shape,0,direction,i)) monster.frames[i]=*frame;
+        monster.idle_frame%=monster_idle_motion(shape).frames;
     }
     return true;
 }
@@ -2531,11 +2662,10 @@ void Mir3HudView::update_actor_bar_status(int actor,bool status_bit) {
 
 bool Mir3HudView::move_scene_chicken(int actor,SceneChicken::Turn turn) {
     const auto [cell,facing,shape,light,backward,status,force_walk]=turn;
-    if (!terrain.walkable(cell.x,cell.y)) return false;
     auto& chicken=scene_chickens.at(actor);
     if (chicken.death_frame>=0 || chicken.buried || chicken.burrow_frame>=0) return true;
     const bool walking=cell!=chicken.cell || backward || force_walk;
-    if (!refresh_monster_shape(chicken,shape,walking?80:0,facing)) return false;
+    if (!refresh_monster_shape(chicken,shape)) return false;
     chicken.status_flags=status;
     if (!walking) {
         chicken.facing=facing;
@@ -2563,17 +2693,20 @@ bool Mir3HudView::apply_monster_hit(int actor,const SceneChicken::Hit& hit) {
     auto& chicken=scene_chickens.at(actor);
     const auto& p=hit.health;
     const int shape=hit.shape;
-    if (chicken.death_frame<0) {
-        const int action=!p[0]?320:p[2]?240:-1;
-        if (!refresh_monster_shape(chicken,shape,action)) return false;
-    }
+    if (!refresh_monster_shape(chicken,shape)) return false;
     mir3::SceneHumanMessage message{};
     message.opcode=mir3::protocol::SM_HUMAN_STRUCK;
     message.health=p;
     apply_actor_health_record(actor,message);
-    if (chicken.death_frame>=0 || chicken.buried) return true;
+    if (chicken.death_frame>=0) {
+        // 40975C selects struck for nonzero damage; 40DAC0 then restores the corpse.
+        if (p[2]) chicken.skeleton=false;
+        if (!chicken.skeleton) chicken.death_frame=monster_death_motion(chicken.shape).frames-1;
+        return true;
+    }
+    if (chicken.buried) return true;
     if (p[2]) {
-        if (hit.variant<=65535-400) show_map_impact(400+hit.variant,chicken.cell);
+        if (hit.variant<=65535-400) show_following_hit_effect(400+hit.variant,actor,chicken.cell);
     }
     if (!p[0]) {
         chicken.walk_frame=-1;
@@ -2605,7 +2738,7 @@ bool Mir3HudView::apply_monster_death(int actor,const SceneChicken::Death& death
     const int frames=skeleton?1:monster_death_motion(shape).frames;
     // 4093B0 refreshes the feature before selecting death or skeleton.
     if (const auto existing=scene_chickens.find(actor);existing!=scene_chickens.end()) {
-        if (!refresh_monster_shape(existing->second,shape,skeleton?880:320,facing)) return false;
+        if (!refresh_monster_shape(existing->second,shape)) return false;
     } else {
         const int base=skeleton?880:320;
         for (int i=0;i<frames;++i) if (!monster_frame(shape,base,facing,i)) return false;
@@ -2623,13 +2756,12 @@ bool Mir3HudView::apply_monster_death(int actor,const SceneChicken::Death& death
     chicken.light_attribute=light;
     if (auto health=scene_health.find(actor);health!=scene_health.end()) health->second.empty_bar=true;
     const bool animated=opcode==mir3::protocol::SM_NOWDEATH;
-    if (chicken.death_frame<0 || !animated || chicken.skeleton || chicken.death_frame>=frames) {
-        chicken.death_frame=animated?0:frames-1;
-        chicken.death_ms=0;
-        chicken.death_catch_up=false;
-        chicken.skeleton=skeleton;
-        if (animated) play_monster_death_effect(actor,chicken);
-    }
+    // 40947A selects action 4 for opcode 34. If already dead, 40DAC0 selects its last frame.
+    chicken.death_frame=animated && chicken.death_frame<0?0:frames-1;
+    chicken.death_ms=0;
+    chicken.death_catch_up=false;
+    chicken.skeleton=skeleton;
+    if (animated) play_monster_death_effect(actor,chicken);
     update_scene_target(inventory_cursor);
     target_focus.remove(actor);
     queue_redraw();
@@ -2779,11 +2911,11 @@ Dictionary Mir3HudView::monster_behavior_profile(int shape) {
 
 bool Mir3HudView::apply_monster_burrow(int actor,SceneChicken::Burrow burrow) {
     auto& monster=scene_chickens.at(actor);
-    if (!terrain.walkable(burrow.cell.x,burrow.cell.y)) return false;
+    if (!terrain.contains(burrow.cell.x,burrow.cell.y)) return false;
     if (monster.death_frame>=0 || monster.buried) return true;
     const int shape=burrow.shape>=0?burrow.shape:monster.shape;
     const int facing=shape==31 || shape==85 || (shape>=530 && shape<=533)?0:burrow.facing;
-    if (!refresh_monster_shape(monster,shape,0,facing)) return false;
+    if (!refresh_monster_shape(monster,shape)) return false;
     monster.cell=burrow.cell;
     monster.facing=facing;
     if (burrow.status) { monster.status_flags=*burrow.status;update_actor_bar_status(actor,(*burrow.status&2)!=0); }
@@ -2848,7 +2980,7 @@ bool Mir3HudView::apply_monster_action(int actor,const SceneChicken::Action& act
     if (const auto* rise=std::get_if<SceneChicken::Rise>(&action)) {
         auto& monster=scene_chickens.at(actor);
         const int shape=rise->shape>=0?rise->shape:monster.shape;
-        if (!refresh_monster_shape(monster,shape,0,rise->facing)) return false;
+        if (!refresh_monster_shape(monster,shape)) return false;
         monster.cell=rise->cell;
         monster.facing=rise->facing;
         if (rise->status) { monster.status_flags=*rise->status;update_actor_bar_status(actor,(*rise->status&2)!=0); }
@@ -2911,13 +3043,13 @@ bool Mir3HudView::apply_monster_action(int actor,const SceneChicken::Action& act
 
 bool Mir3HudView::apply_monster_entry(int actor,const SceneChicken::Entry& entry) {
     const auto existing=scene_chickens.find(actor);
-    if (existing!=scene_chickens.end() && existing->second.death_frame>=0 && !entry.revive) return true;
     if (existing==scene_chickens.end()) {
         if (!place_scene_chicken(actor,entry.cell,entry.facing,entry.shape,entry.light)) return false;
     } else {
         auto& monster=existing->second;
-        if (!terrain.walkable(entry.cell.x,entry.cell.y) ||
-            !refresh_monster_shape(monster,entry.shape,0,entry.facing)) return false;
+        // 4085B4 and 407CEF apply the server position independently of walkability.
+        if (!terrain.contains(entry.cell.x,entry.cell.y) ||
+            !refresh_monster_shape(monster,entry.shape)) return false;
         monster.cell=entry.cell;
         monster.facing=entry.facing;
         monster.light_attribute=entry.light;
@@ -2929,21 +3061,48 @@ bool Mir3HudView::apply_monster_entry(int actor,const SceneChicken::Entry& entry
             monster.death_frame=-1;
             monster.death_ms=0;
             monster.skeleton=false;
+        } else if (monster.death_frame>=0) {
+            // 4085A0 and 407CC0 retain the corpse flag on ordinary refresh.
+            // 40DA8A then selects the last frame of action 4.
+            monster.skeleton=false;
+            monster.death_frame=monster_death_motion(monster.shape).frames-1;
+            monster.death_ms=0;
         }
     }
     scene_chickens.at(actor).hidden_pose=entry.hidden_pose;
-    if (entry.revive) scene_chickens.at(actor).revive_elapsed_ms=0;
+    if (entry.revive) {
+        auto& monster=scene_chickens.at(actor);
+        monster.appearance_duration_ms=SceneChicken::revive_appearance_ms;
+        monster.appearance_elapsed_ms=0;
+    }
     scene_chickens.at(actor).status_flags=entry.status;
     update_actor_bar_status(actor,(entry.status&2)!=0);
-    if (entry.name) scene_names.insert_or_assign(actor,*entry.name);
+    if (entry.name) {
+        auto& name=scene_names[actor];
+        const auto color=name.color;
+        name=*entry.name;
+        if (entry.preserve_name_color) name.color=color;
+    }
     if (entry.appearance_sound) play_actor_sound(actor,109,entry.cell);
     return true;
 }
 
-bool Mir3HudView::receive_monster_action(int actor,SceneChicken::Action action) {
+bool Mir3HudView::receive_monster_action(int actor,SceneChicken::Action action,bool from_wire) {
     auto& monster=scene_chickens.at(actor);
+    // 4082F0 and 409500 derive the animation origin with 453450.
     if (const auto* turn=std::get_if<SceneChicken::Turn>(&action);
-        turn && !terrain.walkable(turn->cell.x,turn->cell.y)) return false;
+        turn && !terrain.contains(turn->cell.x,turn->cell.y)) return false;
+    // 42EDC7 -> 40D7F0: fold prior 31s before appending an outside message.
+    if (from_wire && monster.actions.size()>1) {
+        std::erase_if(monster.actions,[&](const SceneChicken::Action& queued) {
+            const auto* hit=std::get_if<SceneChicken::Hit>(&queued);
+            if (!hit) return false;
+            mir3::SceneHumanMessage health{mir3::protocol::SM_STRUCK};
+            health.health=hit->health;
+            apply_actor_health_record(actor,health);
+            return true;
+        });
+    }
     if (monster.walk_frame>=0 || monster.struck_frame>=0 || monster.burrow_frame>=0 || monster.attack_frame>=0 ||
         (monster.death_frame>=0 && monster.death_frame<monster_death_motion(monster.shape).frames-1 && !monster.skeleton) ||
         !monster.actions.empty()) {
@@ -3041,10 +3200,10 @@ bool Mir3HudView::set_scene_human_dyes(int actor,int clothing,int hair) {
     return true;
 }
 
-Ref<ImageTexture> Mir3HudView::dyed_frame(const MapActorFrame& frame,int clothing,int hair,int status_color) {
+Ref<ImageTexture> Mir3HudView::dyed_frame(const MapActorFrame& frame,int clothing,int hair,int status_color,bool highlight_status) {
     const bool status_tint=status_color!=65535 && status_color!=1;
     if ((!status_tint && clothing==65535 && hair==65535) || frame.regions.empty()) return frame.image;
-    const auto key=std::tuple{std::uint64_t(frame.image->get_instance_id()),status_tint?-1:clothing,status_tint?status_color:hair};
+    const auto key=std::tuple{std::uint64_t(frame.image->get_instance_id()),status_tint?(highlight_status?-1:-2):clothing,status_tint?status_color:hair};
     if (const auto found=dyed_frames.find(key);found!=dyed_frames.end()) return found->second;
     auto pixels=frame.image->get_image()->get_data();
     if (status_tint) {
@@ -3054,12 +3213,12 @@ Ref<ImageTexture> Mir3HudView::dyed_frame(const MapActorFrame& frame,int clothin
             auto* pixel=rgba+4*index;
             if (status_color==0) {
                 const int gray=(pixel[0]/8+pixel[1]/8+pixel[2]/8)/3;
-                const auto intensity=std::min(31,gray+gray*3/5);
+                const auto intensity=std::min(31,gray+(highlight_status?gray*3/5:0));
                 pixel[0]=pixel[1]=pixel[2]=std::uint8_t(intensity*8);
             } else {
-                const auto channel=[](int source,int color,int maximum) {
+                const auto channel=[highlight_status](int source,int color,int maximum) {
                     const double base=double(source)*color/maximum;
-                    return std::min(maximum,int(base)+int(base*double(0.6f)));
+                    return std::min(maximum,int(base)+(highlight_status?int(base*double(0.6f)):0));
                 };
                 pixel[0]=std::uint8_t(8*channel(pixel[0]/8,status_color>>11,31));
                 pixel[1]=std::uint8_t(4*channel(pixel[1]/4,(status_color>>5)&63,63));
@@ -3074,7 +3233,7 @@ Ref<ImageTexture> Mir3HudView::dyed_frame(const MapActorFrame& frame,int clothin
     return dyed_frames.emplace(key,image).first->second;
 }
 
-void Mir3HudView::draw_human_layers(const MapActorFrame& body,Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape,float opacity,int status_color,bool corpse) {
+void Mir3HudView::draw_human_layers(const MapActorFrame& body,Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape,float opacity,int status_color,bool corpse,bool highlighted,int appearance_weight) {
     const auto* hair_frame=attachment_frame(type,hair,false,motion_frame);
     const auto* weapon_frame=motion_frame>=2000?nullptr:attachment_frame(type,weapon,true,motion_frame);
     // 414870：武器影、坐骑独立影、身体资源投影均先于人物彩色图层。
@@ -3082,27 +3241,34 @@ void Mir3HudView::draw_human_layers(const MapActorFrame& body,Vector2 anchor,int
         if (!frame || frame->image.is_null()) return;
         const auto position=anchor+frame->offset;
         draw_terrain_texture(frame->image,position,Color(1,1,1),
-            system_options.shadow_blend || status_color==1 || opacity<1.f?13:0);
+            system_options.shadow_blend || status_color==1 || opacity<1.f || appearance_weight>=0?13:0);
         human_shadow_bounds.emplace_back(position,frame->image->get_size());
     };
     if (weapon_frame && motion_frame/80!=8 && !corpse) shadow(project_weapon_shadow(*weapon_frame));
     if (mount_shape && motion_frame>=2320) shadow(horse_shadow_frame(motion_frame));
     shadow(project_monster_shadow(body,corpse));
-    const auto draw=[&](const MapActorFrame* frame,bool tint=false) {
-        if (frame && frame->image.is_valid())
-            draw_terrain_texture(dyed_frame(*frame,tint?clothing_dye:65535,tint?hair_dye:65535,status_color),
-                anchor+frame->offset,Color(1,1,1,status_color==1?1.f:opacity),status_color==1?8:0);
+    const auto draw=[&](const MapActorFrame* frame,bool tint,int layer_weight) {
+        if (frame && frame->image.is_valid()) {
+            Ref<ShaderMaterial> appearance;
+            if (appearance_weight>=0 && status_color!=1)
+                appearance=status_color==65535?monster_appearance_mix[layer_weight]:monster_tint_appearance_mix;
+            else if (highlighted && status_color==65535 && opacity==1.f)
+                appearance=actor_highlight;
+            draw_terrain_texture(dyed_frame(*frame,tint?clothing_dye:65535,tint?hair_dye:65535,status_color,highlighted),
+                anchor+frame->offset,Color(1,1,1,status_color==1?1.f:opacity),status_color==1?8:0,false,
+                appearance);
+        }
     };
     // LegendOfMir3_Src Actor.cpp: weapon behind, body, hair, weapon in front.
     const bool behind=motion_frame>=0 && motion_frame<weapon_order.size() && weapon_order[motion_frame]!=0;
     const auto draw_weapon=[&]() {
-        draw(weapon_frame);
+        draw(weapon_frame,false,behind?10:22); // 414F90 / 4150F5
         if (weapon==46 && weapon_frame && weapon_frame->image.is_valid()) draw_weapon_glow(anchor,type,motion_frame);
     };
-    if (mount_shape) draw(horse_frame(mount_shape,motion_frame));
+    if (mount_shape) draw(horse_frame(mount_shape,motion_frame),false,appearance_weight);
     if (behind) draw_weapon();
-    draw(&body,true);
-    draw(hair_frame,true);
+    draw(&body,true,appearance_weight);
+    draw(hair_frame,true,20); // 41506F
     if (!behind) draw_weapon();
 }
 
@@ -3210,7 +3376,7 @@ bool Mir3HudView::set_scene_human_body(int actor,int type,int clothing) {
 bool Mir3HudView::set_scene_human(int actor,Vector2i cell,int facing,int profession,String name) {
     if (actor==local_actor_identity) return false;
     if (!terrain_ready || actor<=0 || facing<0 || facing>=8 || profession<0 || profession>2 ||
-        scene_npcs.contains(actor) || scene_chickens.contains(actor) || !terrain.walkable(cell.x,cell.y)) return false;
+        scene_npcs.contains(actor) || scene_chickens.contains(actor) || !terrain.contains(cell.x,cell.y)) return false;
     SceneHuman human{};
     human.cell=cell;
     human.facing=facing;
@@ -3238,7 +3404,7 @@ const Mir3HudView::MapActorFrame* Mir3HudView::human_action_frame(int type,int c
 bool Mir3HudView::apply_scene_human_life(int actor,int opcode,Vector2i cell,int facing) {
     const auto it=scene_humans.find(actor);
     if (it==scene_humans.end() || (opcode!=mir3::protocol::SM_DEATH && opcode!=mir3::protocol::SM_NOWDEATH && opcode!=mir3::protocol::SM_REVIVE && opcode!=mir3::protocol::SM_REVIVE_REFRESH) ||
-        facing<0 || facing>=8 || !terrain.walkable(cell.x,cell.y)) return false;
+        facing<0 || facing>=8 || !terrain.contains(cell.x,cell.y)) return false;
     auto& human=it->second;
     const bool revive=opcode==mir3::protocol::SM_REVIVE || opcode==mir3::protocol::SM_REVIVE_REFRESH;
     if (!revive) {
@@ -3246,7 +3412,12 @@ bool Mir3HudView::apply_scene_human_life(int actor,int opcode,Vector2i cell,int 
             if (!human_action_frame(human.type,human.clothing,mir3::HumanActions::frame(19,facing,i))) return false;
     }
     apply_scene_human_stand(actor,cell,facing);
-    if (revive) { human.life.revive(); human.combat.clear(); }
+    if (revive) {
+        human.life.revive();
+        human.combat.clear();
+        human.arrival_ms=0;
+        human.appearance_duration_ms=SceneHuman::revive_duration_ms; // 4123C2
+    }
     else {
         if (human.life.die(opcode==mir3::protocol::SM_NOWDEATH)) human.action.start(19);
         if (hovered_target==static_cast<std::uint32_t>(actor)) set_hovered_target(0,0,0,false,0,0,0,0);
@@ -3262,7 +3433,7 @@ bool Mir3HudView::set_local_actor_identity(int actor) {
         player_light_attribute=0;melee_cooldown={};local_action_clock={};spell_timing={};melee_spells={};player_melee_sound=0;active_spell=0;player_spell={};pending_local_action.reset();
         action_prediction={};
         local_actor_messages.clear();forced_motion.reset();
-        player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;player_status_flags=0;
+        player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;local_last_monster_hit_shape.reset();player_status_flags=0;
     }
     local_actor_identity=actor;
     queue_redraw();
@@ -3386,7 +3557,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         const auto found=scene_humans.find(actor);
         if (found==scene_humans.end()) return false;
         mir3::SceneHumanMessage message;message.opcode=opcode;message.spell_reply=*reply;
-        return found->second.messages.push(std::move(message));
+        return enqueue_scene_human_message(actor,std::move(message));
     }
     if (local_actor_identity && actor==local_actor_identity &&
         (opcode==mir3::protocol::SM_SITDOWN || opcode==mir3::protocol::SM_BUTCH)) {
@@ -3444,8 +3615,10 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         local_actor_messages.push_back({motion,*appearance,unsigned(p[2]>>8)});
         return true;
     }
-    // 413F90/415AD0虚表+116 -> 411BA0：排队更新状态DWORD和有符号攻击速度。
-    if ((opcode==mir3::protocol::SM_801 || opcode==mir3::protocol::SM_ACTOR_STATUS || opcode==mir3::protocol::SM_808) &&
+    const bool human_transfer=opcode==mir3::protocol::SM_801 || opcode==mir3::protocol::SM_ACTOR_STATUS || opcode==mir3::protocol::SM_808;
+    // 413F90 +116 -> 411BA0. Extended records can also supply the creation feature.
+    if (human_transfer &&
+            (encoded.size()==16 || (local_actor_identity && actor==local_actor_identity)) &&
             ((local_actor_identity && actor==local_actor_identity) || scene_humans.contains(actor))) {
         if (encoded.size()!=16) return false;
         mir3::SceneHumanMessage status;
@@ -3456,9 +3629,94 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
             LocalActorMessage message{{opcode,0,{}},{},0};message.status=status;
             local_actor_messages.push_back(message);return true;
         }
-        return scene_humans.at(actor).messages.push(status);
+        return enqueue_scene_human_message(actor,std::move(status));
+    }
+    // 42E9A0 constructs type 4 and 5 actors from these entry messages.
+    const bool npc_entry=opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_BACKSTEP ||
+        opcode==mir3::protocol::SM_WALK || opcode==mir3::protocol::SM_RUN || opcode==mir3::protocol::SM_DIGUP ||
+        opcode==mir3::protocol::SM_27 || opcode==mir3::protocol::SM_DEATH || opcode==mir3::protocol::SM_SKELETON ||
+        opcode==mir3::protocol::SM_801 || opcode==mir3::protocol::SM_ACTOR_STATUS || opcode==mir3::protocol::SM_808;
+    const bool npc_revive=opcode==mir3::protocol::SM_REVIVE && scene_npcs.contains(actor);
+    if ((npc_entry || npc_revive) && encoded.size()>=38 && actor!=local_actor_identity) {
+        const auto feature=mir3::decode_six_bit(encoded.ptr()+16,22);
+        const bool npc_feature=feature && feature->size()==16 && ((*feature)[0]==4 || (*feature)[0]==5);
+        if (npc_feature && npc_entry && (scene_clear_pending || !scene_removals.empty())) apply_scene_removals();
+        const bool refresh=scene_npcs.contains(actor);
+        const bool place_npc=npc_feature && (!refresh || opcode==mir3::protocol::SM_TURN || npc_revive);
+        const Vector2i cell(p[0],p[1]);
+        const auto place_wire_npc=[&](int first,int count,int interval,bool flag=false,
+                int idle_first=-1,int idle_count=0,int idle_interval=300) {
+            if (!place_scene_npc(actor,cell,first,count,interval,false,flag,idle_first,idle_count,idle_interval,npc_revive))
+                return false;
+            // 4057BF starts at zero. 4102C2 applies the high byte on refresh.
+            if (refresh) {
+                scene_npcs.at(actor).light_attribute=p[2]>>8;
+                // 410352 reads the flags after the first four feature bytes.
+                update_actor_bar_status(actor,((*feature)[4]&2)!=0);
+            }
+            // 41030D decodes the optional name after the 22 encoded feature bytes on refresh.
+            if (refresh && encoded.size()>38) {
+                const auto name=mir3::decode_six_bit(encoded.ptr()+38,encoded.size()-38);
+                if (name && name->size()<=64) {
+                    const auto ansi=std::string_view(*name).substr(0,name->find('\0'));
+                    const auto slash=ansi.rfind('/');
+                    const auto previous=scene_names.find(actor);
+                    const auto index=slash==ansi.npos?255:std::uint8_t(std::strtol(name->c_str()+slash+1,nullptr,10));
+                    mir3::SceneName identity;
+                    if (identity.update(mir3::protocol::SM_USERNAME,index,ansi)) {
+                        if (slash==ansi.npos && previous!=scene_names.end()) identity.color=previous->second.color;
+                        scene_names.insert_or_assign(actor,std::move(identity));
+                    }
+                }
+            }
+            return true;
+        };
+        if (place_npc && (*feature)[0]==4) {
+            // 406073 uses feature byte 1 and a 100-frame stride in Flag.
+            const int shape=std::uint8_t((*feature)[1]);
+            return terrain.contains(p[0],p[1]) &&
+                place_wire_npc(100*shape,shape==10?10:4,shape==10?150:300,true);
+        }
+        if (place_npc) {
+            // 4061AE nests the ten-frame direction stride inside a 100-frame shape stride.
+            const int shape=std::uint8_t((*feature)[2]);
+            int count=4, interval=300;
+            switch (shape) { // 46F3B0, standing (action 0)
+            case 51: case 52: case 53: case 54: case 55: case 59: case 64: case 65:
+                count=1; break;
+            case 56: case 57: count=12; interval=80; break;
+            case 87: count=10; interval=150; break;
+            }
+            if (shape>=100 || !terrain.contains(p[0],p[1]) || (refresh && (p[2]&255)>=8)) return false;
+            if (refresh && shape!=87) {
+                // 410399 selects action 1. 406750 folds some shapes back to action 0.
+                const int direction=(shape==40 || count!=4)?0:(p[2]&255)%3;
+                const bool idle_only=count!=4 || shape==24 || shape==25 || shape==34 || shape==35 ||
+                    (shape>=43 && shape<=50) || shape==58 || shape==69 || shape==76 ||
+                    shape==80 || (shape>=82 && shape<=86);
+                const int first=100*shape+10*direction;
+                if (idle_only) return place_wire_npc(first,count,interval);
+                const bool shared=shape==19 || shape==88 || shape==89;
+                const int action_frames=shared?4:shape==27?6:shape==28?9:10;
+                return place_wire_npc(first+(shared?0:30),action_frames,300,false,first,count,interval);
+            }
+            if (!place_wire_npc(100*shape,count,interval)) return false;
+            if (refresh && shape==87) {
+                // 406D03 binds spell 607 to the NPC and uses direction modulo three.
+                show_scene_effect(mir3::EffectCatalog::Section::spell,607,cell,10*((p[2]&255)%3),0,actor,
+                    std::nullopt,MonsterEffectPose::idle);
+                play_actor_sound(actor,16070,cell);
+            }
+            return true;
+        }
     }
     if (const auto monster_result=apply_monster_wire(opcode,actor,p,encoded)) return *monster_result;
+    if (scene_npcs.contains(actor) && (opcode==mir3::protocol::SM_OPENHEALTH || opcode==mir3::protocol::SM_CLOSEHEALTH)) {
+        if (encoded.size()!=16) return false;
+        // NPC vtable +52/+56 uses 407C20/407C50. 4247AF omits NPCs from bar drawing.
+        update_actor_bar_status(actor,opcode==mir3::protocol::SM_OPENHEALTH);
+        return true;
+    }
     // 4282C0虚表+52/+56：所有已存在角色即时更新，与动作队列无关。
     if (scene_chickens.contains(actor) || scene_humans.contains(actor) || (local_actor_identity && actor==local_actor_identity)) {
         if (opcode==mir3::protocol::SM_OPENHEALTH) {
@@ -3604,18 +3862,34 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         if (!terrain_ready || actor<=0 || !terrain.contains(p[0],p[1])) return false;
         const auto decoded=mir3::decode_six_bit(encoded.ptr()+16,size);
         if (!decoded) return false;
-        const auto name=decoded->substr(0,decoded->find(char(0)));
+        auto name=decoded->substr(0,decoded->find(char(0)));
+        int stack_mode=0;
+        // 429869 splits the optional stack mode from the ground name at the first slash.
+        if (const auto slash=name.find('/');slash!=name.npos) {
+            stack_mode=std::strtol(name.c_str(),nullptr,10);
+            name.erase(0,slash+1);
+        }
         if (name.size()>39) return false;
         if (!ground_frames.contains(p[2])) {
             const auto source=ground_archive.frame(p[2]);
-            if (!source) return false;
-            ground_frames.emplace(p[2],MapActorFrame{texture(source->pixels.rgba,source->width,source->height),{},source->pixels.regions});
+            auto& frame=ground_frames[p[2]];
+            if (source) frame={texture(source->pixels.rgba,source->width,source->height),{},source->pixels.regions};
         }
-        const bool accepted=ground_items.show({actor,p[0],p[1],p[2],name});
-        if (accepted) queue_redraw();
+        const auto previous_count=ground_items.items.size();
+        const bool accepted=ground_items.show({actor,p[0],p[1],p[2],name,stack_mode});
+        if (ground_items.items.size()!=previous_count) {
+            auto& item=ground_items.items.back();
+            item.sparkle_started_tick=GetTickCount();
+            // 401710 takes the absolute difference between two calls to the CRT PRNG at 49FDAE.
+            const int first_roll=std::rand();
+            item.sparkle_delay_ms=mir3::GroundItems::sparkle_delay(first_roll,std::rand());
+            queue_redraw();
+        }
         return accepted;
     }
-    if (opcode==mir3::protocol::SM_DISAPPEAR || opcode==mir3::protocol::SM_CLEAROBJECTS) {
+    // 4282C0 routes all four headers through 42C154 to the 42E780 removal queue.
+    if (opcode==mir3::protocol::SM_29 || opcode==mir3::protocol::SM_DISAPPEAR ||
+        opcode==mir3::protocol::SM_803 || opcode==mir3::protocol::SM_CLEAROBJECTS) {
         if (size || scene_removals.size()>=99999) return false;
         if (opcode==mir3::protocol::SM_CLEAROBJECTS) scene_clear_pending=true;
         else if (actor>0) scene_removals.push_back(actor);
@@ -3652,44 +3926,113 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     }
     if (opcode==mir3::protocol::SM_HEALTHSPELLCHANGED || opcode==mir3::protocol::SM_HEALTH_PERCENT)
         return size==0 && apply_scene_health(local_actor_identity && actor==local_actor_identity?0:actor,opcode,p[0],p[1],p[2]);
-    const auto found=scene_humans.find(actor);
-    if (found==scene_humans.end() || !mir3::SceneHumanMessage::accepts(opcode)) return false;
+    auto found=scene_humans.find(actor);
+    const bool backstep=opcode==mir3::protocol::SM_BACKSTEP;
+    const bool transfer=opcode==mir3::protocol::SM_800 || opcode==mir3::protocol::SM_806;
+    const bool named_entry=transfer || opcode==mir3::protocol::SM_TURN ||
+        opcode==mir3::protocol::SM_REVIVE || opcode==mir3::protocol::SM_REVIVE_REFRESH;
+    const bool death=opcode==mir3::protocol::SM_DEATH || opcode==mir3::protocol::SM_NOWDEATH;
+    const bool spawn_without_action=opcode==mir3::protocol::SM_DIGUP || opcode==mir3::protocol::SM_27 ||
+        opcode==mir3::protocol::SM_SKELETON;
+    const bool creates_human=backstep || opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_WALK ||
+        opcode==mir3::protocol::SM_RUN || opcode==mir3::protocol::SM_DEATH || spawn_without_action || human_transfer;
+    if ((backstep && size!=29) || (transfer && size<29)) return false;
+    if (!mir3::SceneHumanMessage::accepts(opcode) ||
+        (found==scene_humans.end() && !creates_human)) return false;
     mir3::SceneHumanMessage message{opcode,p[0],p[1],opcode==mir3::protocol::SM_HUMAN_STRUCK || opcode==mir3::protocol::SM_STRUCK?0:p[2]&255};
     message.weapon_element=std::uint8_t(p[2]>>8);
+    // Remote walking and running share the header light update at 4120C4 / 412214.
+    if (backstep || death || named_entry || opcode==mir3::protocol::SM_WALK ||
+        opcode==mir3::protocol::SM_RUN) message.light_attribute=p[2]>>8;
     if (opcode==mir3::protocol::SM_SPELL) {
         // 413C80：正文是原始十进制技能文本，不是六位编码后的外观记录。
         const std::string text(reinterpret_cast<const char*>(encoded.ptr()+16),size);
         message.spell=static_cast<std::uint16_t>(std::strtol(text.c_str(),nullptr,10));
         message.facing=0; // 出队时按当前角色格与目标格求方向。
-    } else if (opcode==mir3::protocol::SM_STRUCK) {
+    } else if (opcode==mir3::protocol::SM_STRUCK && !size) {
         if (size) return false;
         message.health=p;
-    } else if (opcode==mir3::protocol::SM_BUMP || opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_WALK || opcode==mir3::protocol::SM_RUN || opcode==mir3::protocol::SM_HUMAN_STRUCK || opcode==mir3::protocol::SM_REVIVE || opcode==mir3::protocol::SM_REVIVE_REFRESH) {
+    } else if ((creates_human && !spawn_without_action) || death || transfer || opcode==mir3::protocol::SM_BUMP || opcode==mir3::protocol::SM_STRUCK || opcode==mir3::protocol::SM_HUMAN_STRUCK || opcode==mir3::protocol::SM_REVIVE || opcode==mir3::protocol::SM_REVIVE_REFRESH ||
+        (spawn_without_action && size==29)) {
         const bool required=opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_HUMAN_STRUCK || opcode==mir3::protocol::SM_REVIVE || opcode==mir3::protocol::SM_REVIVE_REFRESH;
         if (size || required) {
-            if (size!=22 && size!=29) return false;
-            if ((opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_REVIVE || opcode==mir3::protocol::SM_REVIVE_REFRESH) && size!=29) return false;
+            if (size!=22 && size!=29 && !named_entry) return false;
+            if (human_transfer && size!=29) return false;
+            if ((opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_REVIVE || opcode==mir3::protocol::SM_REVIVE_REFRESH) && size<29) return false;
             auto body=mir3::decode_six_bit(encoded.ptr()+16,22);
             if (!body || body->size()!=16) return false;
-            if (size==29) {
+            if (size>=29) {
                 const auto extra=mir3::decode_six_bit(encoded.ptr()+38,7);
                 if (!extra || extra->size()!=5) return false;
                 *body+=*extra;
             }
-            message.appearance=mir3::HumanAppearance::parse({reinterpret_cast<const std::uint8_t*>(body->data()),body->size()},opcode==mir3::protocol::SM_HUMAN_STRUCK);
+            const bool hit=opcode==mir3::protocol::SM_HUMAN_STRUCK || opcode==mir3::protocol::SM_STRUCK;
+            if (hit && size!=22) return false;
+            message.appearance=mir3::HumanAppearance::parse({reinterpret_cast<const std::uint8_t*>(body->data()),body->size()},hit);
             if (!message.appearance) return false;
+            // 4120A0 / 4121F0 read the mount from the separate extension.
+            if (size==22 && (opcode==mir3::protocol::SM_WALK || opcode==mir3::protocol::SM_RUN))
+                message.appearance->mount.reset();
             message.flags=message.appearance->flags;
-            if (opcode==mir3::protocol::SM_HUMAN_STRUCK) {
+            if (named_entry && size>29) {
+                message.transfer_name=mir3::decode_six_bit(encoded.ptr()+45,size-29);
+                if (!message.transfer_name) return false;
+            }
+            if (hit) {
                 message.health=p;
+                message.hit_variant=std::uint8_t((*body)[14])|(std::uint16_t(std::uint8_t((*body)[15]))<<8);
                 for (int i=0;i<4;++i) message.hit_source|=std::uint32_t(std::uint8_t((*body)[8+i]))<<(8*i);
             }
         }
     } else if(opcode==mir3::protocol::SM_HIT2) {
         if(size>1) return false;
         message.harvest=size==1 && encoded[16]!=0;
-    } else if(size && opcode!=mir3::protocol::SM_SITDOWN && opcode!=mir3::protocol::SM_BUTCH) return false;
-    if (opcode!=mir3::protocol::SM_SPELL && opcode!=mir3::protocol::SM_HUMAN_STRUCK && opcode!=mir3::protocol::SM_STRUCK && !terrain.walkable(message.x,message.y)) return false;
-    return found->second.messages.push(message);
+    } else if(size && !spawn_without_action && opcode!=mir3::protocol::SM_SITDOWN && opcode!=mir3::protocol::SM_BUTCH) return false;
+    const bool server_step=backstep || opcode==mir3::protocol::SM_WALK || opcode==mir3::protocol::SM_RUN;
+    // 41419D dispatches these attacks to 412C80, which writes the packet coordinates.
+    const bool server_attack=opcode==mir3::protocol::SM_HIT || opcode==mir3::protocol::SM_HIT2 ||
+        opcode==mir3::protocol::SM_FIREHIT || opcode==mir3::protocol::SM_POWERHIT ||
+        opcode==mir3::protocol::SM_LONGHIT || opcode==mir3::protocol::SM_WIDEHIT ||
+        opcode==mir3::protocol::SM_WIDEHIT2 || opcode==mir3::protocol::SM_HUMAN_ATTACK;
+    const bool server_position=named_entry || server_step || death || server_attack ||
+        opcode==mir3::protocol::SM_SITDOWN || opcode==mir3::protocol::SM_BUTCH;
+    if (server_position && !terrain.contains(message.x,message.y)) return false;
+    if (!server_position && !spawn_without_action && opcode!=mir3::protocol::SM_SPELL &&
+        opcode!=mir3::protocol::SM_HUMAN_STRUCK && opcode!=mir3::protocol::SM_STRUCK &&
+        !terrain.walkable(message.x,message.y)) return false;
+    const bool full_creation_feature=size==29 || (named_entry && size>29);
+    if (human_transfer) {
+        message.flags=std::uint32_t(p[0])|(std::uint32_t(p[1])<<16);
+        message.status_speed=std::int16_t(p[2]);
+        message.facing=0;
+    }
+    if (creates_human && full_creation_feature && (scene_clear_pending || !scene_removals.empty())) {
+        apply_scene_removals();
+        found=scene_humans.find(actor);
+    }
+    if (found!=scene_humans.end()) return enqueue_scene_human_message(actor,std::move(message));
+    // 42E9A0 requires both feature blocks to initialize an unknown human.
+    if (!full_creation_feature || !message.appearance || (!spawn_without_action && message.facing>=8)) return false;
+    if (!set_scene_human(actor,{message.x,message.y},0,0,String())) return false;
+    if (!apply_scene_appearance(actor,*message.appearance)) {
+        remove_scene_actor(actor);
+        return false;
+    }
+    auto& human=scene_humans.at(actor);
+    human.arrival_ms=0;
+    human.action_flags=message.appearance->flags;
+    if (spawn_without_action) message.facing=0;
+    return human.messages.push(message);
+}
+
+bool Mir3HudView::enqueue_scene_human_message(int actor,mir3::SceneHumanMessage message) {
+    auto& queue=scene_humans.at(actor).messages;
+    // 42EDC7 folds pending 31 records before appending a routed message.
+    for (auto& update:queue.fold_health()) {
+        update.hit_variant.reset();
+        apply_actor_health_record(actor,update);
+    }
+    return queue.push(std::move(message));
 }
 
 void Mir3HudView::apply_actor_health_record(int actor,const mir3::SceneHumanMessage& message) {
@@ -3698,7 +4041,14 @@ void Mir3HudView::apply_actor_health_record(int actor,const mir3::SceneHumanMess
     const auto& p=*message.health;
     health.current=p[0];health.maximum=p[1];health.empty_bar=false;
     health.damage.enabled=damage_numbers;
-    if (message.opcode==mir3::protocol::SM_HUMAN_STRUCK && (actor!=0 || !player_life.dead)) health.damage.push(-int(p[2]));
+    const auto remote=scene_humans.find(actor);
+    const bool remote_dead=remote!=scene_humans.end() && remote->second.life.dead;
+    const auto monster=scene_chickens.find(actor);
+    const bool monster_death_action=monster!=scene_chickens.end() &&
+        monster->second.death_frame>=0 && !monster->second.skeleton;
+    if (!remote_dead && !monster_death_action && (message.opcode==mir3::protocol::SM_HUMAN_STRUCK ||
+        (actor!=0 && message.opcode==mir3::protocol::SM_STRUCK && message.hit_variant)) &&
+        (actor!=0 || !player_life.dead)) health.damage.push(-int(p[2]));
     queue_redraw();
 }
 
@@ -3748,6 +4098,15 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     const bool catch_up=human.messages.catching_up(); // sampled before dequeue
     const auto next=human.messages.take();
     if (!next) return false;
+    // 414130 handles the hit, then appends a copy as opcode 31.
+    if (next->opcode==mir3::protocol::SM_HUMAN_STRUCK && next->hit_variant) {
+        auto relay=*next;
+        relay.opcode=mir3::protocol::SM_STRUCK;
+        human.messages.push(std::move(relay));
+    }
+    // 413F90 drains these records without an action for human objects.
+    if (next->opcode==mir3::protocol::SM_DIGUP || next->opcode==mir3::protocol::SM_27 ||
+        next->opcode==mir3::protocol::SM_SKELETON) return true;
     bool accepted=false;
     const Vector2i cell(next->x,next->y);
     if (next->spell_reply) { play_spell_reply(actor,*next->spell_reply);return true; }
@@ -3773,7 +4132,38 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
         human.attack_speed=*next->status_speed;human.action_flags=next->flags;
         update_actor_bar_status(actor,(next->flags&2)!=0);return true;
     }
-    if (next->opcode==mir3::protocol::SM_STRUCK) { apply_actor_health_record(actor,*next);return true; }
+    const auto apply_entry_name=[&] {
+        if (next->transfer_name) {
+            const auto name=std::string_view(*next->transfer_name).substr(0,next->transfer_name->find('\0'));
+            const auto slash=name.rfind('/');
+            const auto previous=scene_names.find(actor);
+            mir3::SceneName identity;
+            const auto palette=slash==name.npos?255:static_cast<std::uint8_t>(std::strtol(next->transfer_name->c_str()+slash+1,nullptr,10));
+            if (identity.update(mir3::protocol::SM_USERNAME,palette,name)) {
+                if (slash==name.npos && previous!=scene_names.end()) identity.color=previous->second.color;
+                human.name=String::utf8(mir3::ansi_to_utf8(identity.lines[0]).c_str());
+                scene_names.insert_or_assign(actor,std::move(identity));
+            }
+        }
+    };
+    // 4140E3 -> human vtable +120 -> 4117D0.
+    if (next->opcode==mir3::protocol::SM_800 || next->opcode==mir3::protocol::SM_806) {
+        if (!next->appearance || !apply_scene_appearance(actor,*next->appearance) ||
+            !apply_scene_human_stand(actor,cell,next->facing)) return true;
+        human.action_flags=next->flags;
+        human.light_attribute=next->light_attribute;
+        apply_entry_name();
+        update_actor_bar_status(actor,(next->flags&2)!=0);
+        play_actor_sound(actor,109,cell);
+        return true;
+    }
+    if (next->opcode==mir3::protocol::SM_STRUCK && !next->hit_variant) { apply_actor_health_record(actor,*next);return true; }
+    // 412568–412585 update HP even when the corpse skips the ordinary hit effect.
+    if (human.life.dead && next->hit_variant && next->health) {
+        apply_actor_health_record(actor,*next);
+        show_source_hit_effect(actor,human.cell,next->hit_source,human.last_monster_hit_shape);
+        return true;
+    }
     // 413F90虚表+176 -> 413F60：12/637仅坐标、朝向及动作8，正文不使用。
     if (next->opcode==mir3::protocol::SM_SITDOWN || next->opcode==mir3::protocol::SM_BUTCH) {
         human.cell=cell;human.facing=next->facing;
@@ -3783,24 +4173,40 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     }
     // Dead actors only accept standing/revival feature refreshes.
     const bool refresh=next->opcode==mir3::protocol::SM_TURN || next->opcode==mir3::protocol::SM_REVIVE || next->opcode==mir3::protocol::SM_REVIVE_REFRESH;
-    if (next->appearance && (!human.life.dead || refresh) && !apply_scene_appearance(actor,*next->appearance)) return true;
+    const bool death=next->opcode==mir3::protocol::SM_DEATH || next->opcode==mir3::protocol::SM_NOWDEATH;
+    if (next->appearance && (!human.life.dead || refresh || death)) {
+        auto appearance=*next->appearance;
+        if (death) appearance.mount.reset(); // 411700
+        if (!apply_scene_appearance(actor,appearance)) return true;
+    }
     if (next->opcode==mir3::protocol::SM_DEATH || next->opcode==mir3::protocol::SM_NOWDEATH || next->opcode==mir3::protocol::SM_REVIVE || next->opcode==mir3::protocol::SM_REVIVE_REFRESH) {
         accepted=apply_scene_human_life(actor,next->opcode,cell,next->facing);
+        if (accepted && next->light_attribute>=0) human.light_attribute=next->light_attribute;
+        if (accepted && !death) apply_entry_name();
         if (accepted && human.life.dying) human.action.start(19,catch_up);
-    } else if (next->opcode==mir3::protocol::SM_TURN) accepted=apply_scene_human_stand(actor,cell,next->facing);
+    } else if (next->opcode==mir3::protocol::SM_TURN) {
+        accepted=apply_scene_human_stand(actor,cell,next->facing);
+        if (accepted) {
+            if (next->light_attribute>=0) human.light_attribute=next->light_attribute;
+            apply_entry_name();
+        }
+    }
     else if (human.life.dead) return true; // dead actors drain ordinary records without acting
-    else if (next->opcode==mir3::protocol::SM_BUMP || next->opcode==mir3::protocol::SM_WALK || next->opcode==mir3::protocol::SM_RUN)
+    else if (next->opcode==mir3::protocol::SM_BACKSTEP || next->opcode==mir3::protocol::SM_BUMP || next->opcode==mir3::protocol::SM_WALK || next->opcode==mir3::protocol::SM_RUN) {
         accepted=apply_scene_human_step(actor,next->opcode,cell,next->facing);
-    else {
+        if (accepted && next->light_attribute>=0) human.light_attribute=next->light_attribute;
+    } else {
         int hit_weapon=next->hit_weapon;
-        if (next->opcode==mir3::protocol::SM_HUMAN_STRUCK && next->health) {
+        if ((next->opcode==mir3::protocol::SM_HUMAN_STRUCK || next->opcode==mir3::protocol::SM_STRUCK) && next->health) {
             apply_actor_health_record(actor,*next);
+            show_source_hit_effect(actor,human.cell,next->hit_source,human.last_monster_hit_shape);
             if ((*next->health)[2]==0) return true; // miss updates HP but does not interrupt with hit animation
+            if (next->hit_variant && *next->hit_variant<=65535-400) show_following_hit_effect(400+*next->hit_variant,actor,human.cell);
             if (const auto source=scene_humans.find(next->hit_source);source!=scene_humans.end()) hit_weapon=source->second.weapon;
         }
         accepted=apply_scene_human_action(actor,next->opcode,next->facing,hit_weapon);
         if (accepted) {
-            if (next->opcode!=mir3::protocol::SM_HUMAN_STRUCK) human.cell=cell;
+            if (next->opcode!=mir3::protocol::SM_HUMAN_STRUCK && next->opcode!=mir3::protocol::SM_STRUCK) human.cell=cell;
             human.action.start(human.action.action(),catch_up);
             int effect=0;
             switch (next->opcode) {
@@ -3827,7 +4233,7 @@ bool Mir3HudView::dispatch_scene_human_message(int actor) {
     if (accepted) {
         human.catching_up=catch_up;
         // 412500只更新基础外观；受击正文中的状态位置不能覆盖已有状态。
-        if (next->opcode!=mir3::protocol::SM_HUMAN_STRUCK && (next->appearance || next->flags)) {
+        if (next->opcode!=mir3::protocol::SM_HUMAN_STRUCK && next->opcode!=mir3::protocol::SM_STRUCK && (next->appearance || next->flags)) {
             human.action_flags=next->flags;
             if (next->appearance) update_actor_bar_status(actor,(next->flags&2)!=0);
         }
@@ -3854,10 +4260,10 @@ bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing,int h
     case mir3::protocol::SM_HUMAN_ACTION16: action=16; facing=human.facing; break;
     case mir3::protocol::SM_HUMAN_ACTION18: action=18; break;
     case mir3::protocol::SM_HUMAN_ATTACK: action=9; break;
-    case mir3::protocol::SM_HUMAN_STRUCK: action=human.mount_shape?32:15; facing=human.facing; break;
+    case mir3::protocol::SM_STRUCK: case mir3::protocol::SM_HUMAN_STRUCK: action=human.mount_shape?32:15; facing=human.facing; break;
     default: return false;
     }
-    if (human.mount_shape && opcode!=mir3::protocol::SM_HUMAN_STRUCK) return false;
+    if (human.mount_shape && opcode!=mir3::protocol::SM_HUMAN_STRUCK && opcode!=mir3::protocol::SM_STRUCK) return false;
     for (int i=0;i<mir3::HumanActions::table[action].count;++i)
         if (!human_action_frame(human.type,human.clothing,mir3::HumanActions::frame(action,facing,i))) return false;
     human.facing=facing;
@@ -3865,7 +4271,7 @@ bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing,int h
     human.catching_up=false;
     human.harvest=false;
     human.hit_weapon=hit_weapon;
-    if (opcode!=mir3::protocol::SM_HUMAN_STRUCK && opcode!=mir3::protocol::SM_SITDOWN) human.combat.attack();
+    if (opcode!=mir3::protocol::SM_HUMAN_STRUCK && opcode!=mir3::protocol::SM_STRUCK && opcode!=mir3::protocol::SM_SITDOWN) human.combat.attack();
     human.idle.reset();
     queue_redraw();
     return true;
@@ -3873,7 +4279,7 @@ bool Mir3HudView::apply_scene_human_action(int actor,int opcode,int facing,int h
 
 bool Mir3HudView::apply_scene_human_stand(int actor,Vector2i cell,int facing) {
     const auto entry=scene_humans.find(actor);
-    if (entry==scene_humans.end() || facing<0 || facing>=8 || !terrain.walkable(cell.x,cell.y)) return false;
+    if (entry==scene_humans.end() || facing<0 || facing>=8 || !terrain.contains(cell.x,cell.y)) return false;
     auto& human=entry->second;
     // Standing state does not revive a dead actor.
     if (human.life.dead) human.life.dying=false;
@@ -3896,8 +4302,8 @@ bool Mir3HudView::apply_scene_human_stand(int actor,Vector2i cell,int facing) {
 
 bool Mir3HudView::apply_scene_human_step(int actor,int opcode,Vector2i destination,int facing) {
     auto entry=scene_humans.find(actor);
-    if (entry==scene_humans.end() || (opcode!=mir3::protocol::SM_BUMP && opcode!=mir3::protocol::SM_WALK && opcode!=mir3::protocol::SM_RUN) || facing<0 || facing>=8 ||
-        !terrain.walkable(destination.x,destination.y)) return false;
+    if (entry==scene_humans.end() || (opcode!=mir3::protocol::SM_BACKSTEP && opcode!=mir3::protocol::SM_BUMP && opcode!=mir3::protocol::SM_WALK && opcode!=mir3::protocol::SM_RUN) || facing<0 || facing>=8 ||
+        !terrain.contains(destination.x,destination.y)) return false;
     auto& human=entry->second;
     if (human.life.dead) return false;
     if (opcode==mir3::protocol::SM_BUMP) {
@@ -3907,9 +4313,10 @@ bool Mir3HudView::apply_scene_human_step(int actor,int opcode,Vector2i destinati
             if (!human_action_frame(human.type,human.clothing,mir3::HumanActions::frame(7,facing,i))) return false;
     }
     human.bump=opcode==mir3::protocol::SM_BUMP;
+    human.backstep=opcode==mir3::protocol::SM_BACKSTEP;
     // 0x453450 derives the step origin from the server destination and facing.
     const int distance=opcode==mir3::protocol::SM_RUN?(human.mount_shape?3:2):1;
-    const auto [dx,dy]=mir3::map_directions[facing];
+    const auto [dx,dy]=mir3::map_directions[human.backstep?(facing+4)%8:facing];
     human.facing=facing;
     human.step_origin=destination-Vector2i(dx,dy)*distance;
     human.step_destination=destination;
@@ -3928,18 +4335,35 @@ bool Mir3HudView::apply_scene_human_step(int actor,int opcode,Vector2i destinati
 }
 
 bool Mir3HudView::remove_scene_actor(int actor) {
+    const auto monster=scene_chickens.find(actor);
+    const auto human=scene_humans.find(actor);
+    const auto npc=scene_npcs.find(actor);
+    std::optional<Vector2i> last_cell;
+    if (monster!=scene_chickens.end()) last_cell=monster->second.cell;
+    else if (human!=scene_humans.end()) last_cell=human->second.cell;
+    else if (npc!=scene_npcs.end()) last_cell=npc->second.cell;
     const bool monster_removed=scene_chickens.erase(actor)!=0;
     monster_ai.actors.erase(actor);
     if (!monster_removed && !scene_npcs.erase(actor) && !scene_humans.erase(actor)) return false;
     const auto id=static_cast<std::uint32_t>(actor);
     for (auto& [event_id,event]:map_events) {
-        if (event.projectile && event.projectile->target_actor==id)
+        if (event.projectile && event.projectile->target_actor==id) {
+            // 44BE36 reconstructs the impact position from the last target tile.
+            if (last_cell) event.projectile->destination=Vector2(*last_cell*Vector2i(48,32));
             event.projectile->target_actor=0;
-        if (event.follow_actor==id) event.follow_actor=0;
+        }
+        if (event.follow_actor==id) {
+            event.follow_actor=0;
+            // 44BDB7 falls back to the last target tile once the target is gone.
+            if (last_cell) {
+                event.cell=*last_cell;
+                event.follow_position.reset();
+            }
+        }
     }
-    std::erase_if(map_events,[actor,monster_removed](const auto& entry) {
+    std::erase_if(map_events,[actor](const auto& entry) {
         const auto& event=entry.second;
-        if (!monster_removed || event.attached_actor!=actor) return false;
+        if (event.attached_actor!=actor) return false;
         event.copy->hide();
         event.copy->queue_free();
         return true;
@@ -3953,6 +4377,7 @@ bool Mir3HudView::remove_scene_actor(int actor) {
     speech_bounds.erase(actor);
     target_attributes_by_actor.erase(id);
     if (hovered_target==id) hovered_target=0;
+    if (locked_spell_actor==id) locked_spell_actor=0;
     target_focus.remove(id);
     if (npc_dialogue_actor==actor) close_npc_dialogue();
     queue_redraw();
@@ -4123,8 +4548,26 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
         }
     }
     if (target==player_cell) {
-        if (map_pointer_button==MOUSE_BUTTON_LEFT && map_route.empty())
+        const auto ground=std::ranges::find_if(ground_items.items,[&](const auto& item) {
+            return item.x==player_cell.x && item.y==player_cell.y;
+        });
+        if (map_pointer_button==MOUSE_BUTTON_LEFT && map_route.empty() && ground!=ground_items.items.end()) {
+            const auto gold=messages.get(1050);
+            const bool is_gold=gold.size()>=4 && ground->name.compare(0,4,gold,0,4)==0;
+            // 426918/4411A0 compares the original ground-look WORD at record offset 48.
+            if (std::ranges::all_of(bag.items,[](const auto& item) { return bool(item); }) &&
+                    ((!is_gold && ground->stack_mode<2) ||
+                        (ground->stack_mode>=2 && std::ranges::none_of(bag.items,[&](const auto& item) {
+                            return (item.server_record[48]|(int(item.server_record[49])<<8))==ground->looks;
+                        })))) {
+                post_chat(String::utf8(message(1417).c_str()),11861940,0);
+                return;
+            }
+            // 426974 → 47C1C0 sends the ground cell as two WORDs with recognition zero.
+            const auto position=std::uint32_t(player_cell.x)|(std::uint32_t(player_cell.y)<<16);
+            send_client_packet(mir3::protocol::CM_PICKUP,0,String(),position);
             emit_signal("pickup_requested",mir3::protocol::CM_PICKUP,player_cell);
+        }
         return;
     }
     if (map_pointer_button==MOUSE_BUTTON_RIGHT && std::max(std::abs(delta.x),std::abs(delta.y))==1) {
@@ -4138,14 +4581,8 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
     };
     auto destination=player_cell+Vector2i(dx,dy);
     const auto second=destination+Vector2i(dx,dy);
-    const auto request_door=[this](Vector2i cell) {
-        if(!terrain.door_closed(cell.x,cell.y)) return false;
-        const auto coordinates=std::uint32_t(cell.x)|(std::uint32_t(cell.y)<<16);
-        send_client_packet(mir3::protocol::CM_OPENDOOR,terrain.door_id(cell.x,cell.y),String(),coordinates);
-        return true;
-    };
-    if(request_door(destination)) return;
-    if(run && traversable(destination)) request_door(second);
+    if(request_map_door(destination)) return;
+    if(run && traversable(destination)) request_map_door(second);
     if (run && traversable(destination) && traversable(second)) {
         const auto third=second+Vector2i(dx,dy);
         if (!player_mount || traversable(third)) destination=player_mount?third:second;
@@ -4199,8 +4636,9 @@ void Mir3HudView::process_local_actor_message() {
             player_spell={};
             player_action.start(player_mount?32:15);
             player_harvest_impact=false;
-            show_map_impact(400+message.hit_variant,player_cell);
+            show_following_hit_effect(400+message.hit_variant,local_actor_identity,player_cell);
         }
+        show_source_hit_effect(local_actor_identity,player_cell,message.hit->hit_source,local_last_monster_hit_shape);
         player_action.set_interval(std::max(80,200-3*int(std::uint8_t(model.level)))+
             (message.hit_variant?15*local_folded_hits:0));
         if (message.hit_variant) local_struck_tick=std::uint32_t(ticks_msec());
@@ -4308,9 +4746,6 @@ void Mir3HudView::advance_map_step(double delta) {
     const int direction=forced_motion?forced_motion->direction():player_facing;
     if (walk_frame>=(direction==7?4:1) && player_cell!=step_destination) {
         player_cell=step_destination;
-        const auto distance=player_cell-npc_dialogue_origin;
-        if (npc_dialogue_actor && std::max(std::abs(distance.x),std::abs(distance.y))>5)
-            close_npc_dialogue();
         set_minimap_position(player_cell.x,player_cell.y);
     }
     if (walk_frame>=6) {walk_frame=-1;forced_motion.reset();}
@@ -4397,6 +4832,8 @@ void Mir3HudView::draw_terrain_texture(const Ref<ImageTexture>& image,Vector2 po
 void Mir3HudView::draw_terrain() {
     if (!terrain_ready) return;
     const auto camera=map_camera();
+    const bool ground_hover=spell_pointer_available();
+    const Vector2i ground_hover_cell(int(inventory_cursor.x+camera.x)/48,int(inventory_cursor.y+camera.y)/32);
     const int start_x=(camera.x/96)*2,start_y=(camera.y/64)*2;
     const Vector2 offset(start_x*48-camera.x,start_y*32-camera.y);
     for (int row=0;row<10;++row) for (int column=0;column<10;++column) {
@@ -4452,7 +4889,8 @@ void Mir3HudView::draw_terrain() {
         draw_terrain_texture(image->second.image,position,Color(1,1,1,event.opacity));
     }
     const auto draw_scene_actor=[&](SceneActor& npc,int interval,const MapActorFrame* pose=nullptr,
-            Vector2i offset={},int dye=65535,int status_color=65535,const MapActorFrame* shadow=nullptr,int appearance_weight=-1) {
+            Vector2i offset={},int dye=65535,int status_color=65535,const MapActorFrame* shadow=nullptr,int appearance_weight=-1,
+            bool highlighted=false) {
         const auto& selected=npc.frames[tick/interval%4];
         const auto& frame=pose?*pose:selected.image.is_valid()?selected:npc.frames.front();
         if (npc.cell.x<start_x-5 || npc.cell.x>=start_x+21) return;
@@ -4467,7 +4905,9 @@ void Mir3HudView::draw_terrain() {
         Ref<ShaderMaterial> appearance;
         if (appearance_weight>=0 && status_color!=1)
             appearance=status_color==65535?monster_appearance_mix[appearance_weight]:monster_tint_appearance_mix;
-        draw_terrain_texture(dyed_frame(frame,dye,65535,status_color),
+        else if (highlighted && status_color==65535)
+            appearance=actor_highlight;
+        draw_terrain_texture(dyed_frame(frame,dye,65535,status_color,highlighted),
             position,Color(1,1,1),status_color==1?8:0,false,appearance);
         animated_map_objects=true;
     };
@@ -4478,24 +4918,42 @@ void Mir3HudView::draw_terrain() {
             draw_terrain_texture(object->image,object->position);
             ++object;
         }
+        constexpr int first_ground_column=-5, past_last_ground_column=21;
+        std::array<int,past_last_ground_column-first_ground_column> ground_counts{};
         for (const auto& item:ground_items.items) {
-            if (item.y!=start_y+row || item.x<start_x-5 || item.x>=start_x+21) continue;
+            const int column=item.x-start_x;
+            if (item.y!=start_y+row || column<first_ground_column || column>=past_last_ground_column) continue;
+            // 42288D assigns the first 100 records to the cell before any sprite lookup.
+            auto& count=ground_counts[column-first_ground_column];
+            if (count==mir3::GroundItems::cell_capacity) continue;
+            ++count;
             const auto& frame=ground_frames.at(item.looks);
+            if (frame.image.is_null()) continue;
             const auto offset=mir3::GroundItems::image_offset(frame.image->get_width(),frame.image->get_height());
             const Vector2 position(item.x*48-camera.x+offset[0],item.y*32-camera.y+offset[1]);
-            draw_terrain_texture(frame.image,position+Vector2(1,1),Color(0,0,0,0.5f));
-            draw_terrain_texture(frame.image,position);
+            // 4253ED passes mode 15, so 48F4AB leaves the destination coordinates at (0,0).
+            // 42541C selects the same opaque highlight blitter as hovered actors.
+            const bool highlighted=ground_hover && Vector2i(item.x,item.y)==ground_hover_cell;
+            draw_terrain_texture(frame.image,position,Color(1,1,1),0,false,
+                highlighted?actor_highlight:Ref<ShaderMaterial>());
             ground_bounds[item.id]=Rect2(position,frame.image->get_size());
         }
         for (auto& [actor,npc]:scene_npcs)
-            if (start_y+row==npc.cell.y) draw_scene_actor(npc,200);
+            if (start_y+row==npc.cell.y) {
+                const auto& selected=npc.standing[npc.standing_frame];
+                const int weight=npc.arrival_ms<0?-1:int(31*npc.arrival_ms/npc.appearance_duration_ms);
+                if (selected.image.is_valid())
+                    draw_scene_actor(npc,npc.standing_interval,&selected,{},65535,65535,nullptr,weight);
+                else if (npc.fallback_to_first_frame) draw_scene_actor(npc,npc.standing_interval,&npc.standing.front());
+            }
         for (auto& [actor,chicken]:scene_chickens) {
             if (start_y+row!=chicken.cell.y || chicken.buried) continue;
             const auto dye=monster_body_dye(chicken.shape);
             const int status_color=actor_status_color(chicken.status_flags);
             const auto draw_monster=[&](const MapActorFrame& body,Vector2i offset,const MapActorFrame* shadow) {
-                const int appearance=chicken.revive_elapsed_ms<0?-1:int(31*chicken.revive_elapsed_ms/600);
-                draw_scene_actor(chicken,180,&body,offset,dye,status_color,shadow,appearance);
+                const bool highlighted=hovered_target==std::uint32_t(actor) || locked_spell_actor==std::uint32_t(actor);
+                const int appearance=chicken.appearance_weight(highlighted);
+                draw_scene_actor(chicken,180,&body,offset,dye,status_color,shadow,appearance,highlighted);
                 // 40ECB0 centers the pointer bounds within the current sprite.
                 const auto full_size=Vector2i(chicken.bounds.size);
                 const Vector2i excess(std::max(0,full_size.x-58),std::max(0,full_size.y-40));
@@ -4531,6 +4989,7 @@ void Mir3HudView::draw_terrain() {
                 draw_monster(*pose,{},shadow_frame(*pose,action,facing,relative));
         }
         for (auto& [actor,human]:scene_humans) {
+            const bool highlighted=hovered_target==std::uint32_t(actor) || locked_spell_actor==std::uint32_t(actor);
             if (human.movement_frame<0) {
                 if (start_y+row!=human.cell.y || human.cell.x<start_x-5 || human.cell.x>=start_x+21) continue;
                 const auto* body=human_body(human.type,human.clothing,human.mount_shape!=0);
@@ -4546,28 +5005,33 @@ void Mir3HudView::draw_terrain() {
                 const auto position=Vector2(human.cell.x*48-camera.x,human.cell.y*32-camera.y)+frame.offset;
                 human.anchor=position-frame.offset;
                 human.bounds=Rect2(position,frame.image->get_size());
-                draw_human_layers(frame,position-frame.offset,human.type,human.hair,human.weapon,motion,human.clothing_dye,human.hair_dye,human.life.dead?0:human.mount_shape,human.life.opacity(),actor_status_color(human.action_flags),human.life.dead && !human.life.dying);
+                draw_human_layers(frame,position-frame.offset,human.type,human.hair,human.weapon,motion,human.clothing_dye,human.hair_dye,human.life.dead?0:human.mount_shape,human.life.opacity(),actor_status_color(human.action_flags),human.life.dead && !human.life.dying,highlighted,human.arrival_weight(highlighted));
                 if (!human.life.dead) draw_human_spell(human.spell,human.action,position-frame.offset);
                 animated_map_objects=true;
                 continue;
             }
             const auto* body=human_body(human.type,human.clothing,human.mount_shape!=0);
             const auto& frames=human.step_distance>1?body->running:body->walking;
-            const auto* selected=human.bump?human_action_frame(human.type,human.clothing,1840+human.facing*10+human.movement_frame):&frames[human.facing*10+human.movement_frame];
+            const int forced_pose=human.backstep?mir3::HumanActions::frame(5,human.facing,0):
+                human.bump?1840+human.facing*10+human.movement_frame:-1;
+            const auto* selected=forced_pose>=0?human_action_frame(human.type,human.clothing,forced_pose):&frames[human.facing*10+human.movement_frame];
             if (!selected || selected->image.is_null()) continue;
             const auto& frame=*selected;
             const auto step=human.step_destination-human.step_origin;
-            const bool committed=human.movement_frame>=(human.facing==7?4:1);
+            const bool committed=human.movement_frame>=human.movement_commit_frame();
             const int offset_frames=committed?human.movement_frame-5:human.movement_frame+1;
-            const int y_step=committed && human.facing%2!=0?32*step.y/6:5*step.y;
+            // 407120 truncates the per-cell vertical step before applying run distance.
+            // 4075B0 divides after multiplying the pre-commit backstep offset.
+            const int y_offset=human.backstep && !committed?32*step.y*offset_frames/6:
+                (32/6)*step.y*offset_frames;
             const Vector2i pixel(human.cell.x*48+step.x*8*offset_frames,
-                human.cell.y*32+y_step*offset_frames);
+                human.cell.y*32+y_offset);
             if (start_y+row!=int(std::round(pixel.y/32.0))) continue;
             const auto position=Vector2(pixel-camera)+frame.offset;
             human.anchor=position-frame.offset;
             human.bounds=Rect2(position,frame.image->get_size());
             draw_human_layers(frame,position-frame.offset,human.type,human.hair,human.weapon,
-                (human.bump?1840:human.mount_shape?(human.step_distance>1?2480:2400):(human.step_distance>1?1760:1680))+human.facing*10+human.movement_frame,human.clothing_dye,human.hair_dye,human.bump?0:human.mount_shape,human.life.opacity(),actor_status_color(human.action_flags),human.life.dead && !human.life.dying);
+                forced_pose>=0?forced_pose:(human.mount_shape?(human.step_distance>1?2480:2400):(human.step_distance>1?1760:1680))+human.facing*10+human.movement_frame,human.clothing_dye,human.hair_dye,forced_pose>=0?0:human.mount_shape,human.life.opacity(),actor_status_color(human.action_flags),human.life.dead && !human.life.dying,highlighted,human.arrival_weight(highlighted));
             animated_map_objects=true;
         }
         const auto pixel=player_pixel();
@@ -4681,6 +5145,11 @@ void Mir3HudView::draw_scene_lighting() {
         if (human.life.dead || !human.bounds.has_area()) continue;
         grid.add(mir3::SceneLight::actor(int(human.anchor.x)+24,int(human.anchor.y)+16,human.light_attribute,false));
     }
+    // 4255E2 adds light after drawing a visible type 4 or 5 NPC.
+    for (const auto& [id,npc]:scene_npcs) {
+        if (!npc.bounds.has_area()) continue;
+        grid.add(mir3::SceneLight::actor(int(npc.anchor.x)+24,int(npc.anchor.y)+16,npc.light_attribute,false));
+    }
     for (const auto& [id,animal]:scene_chickens) {
         if (animal.death_frame>=0 || animal.buried || !animal.bounds.has_area()) continue;
         grid.add(mir3::SceneLight::actor(int(animal.anchor.x)+24,int(animal.anchor.y)+16,animal.light_attribute,false));
@@ -4753,7 +5222,7 @@ void Mir3HudView::clear_game_scene() {
     pending_local_action.reset();local_action_clock={};spell_timing={};melee_spells={};player_melee_sound=0;active_spell=0;player_spell={};
     action_prediction={};
     local_actor_messages.clear();forced_motion.reset();
-    player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;player_status_flags=0;
+    player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;local_last_monster_hit_shape.reset();player_status_flags=0;
     login_actor_pending.reset();login_actor_extra={};server_ability.reset();server_sub_ability={};weapon_training=0;
     guild_overview={};guild_overview_started=false;guild_manager=false;guild_name=String();
     for (auto& page:guild_pages) page.clear();
@@ -4764,14 +5233,14 @@ void Mir3HudView::clear_game_scene() {
     group_request=0;group_members.clear();group_allow=false;chat_submission.clear_history();chat_storage_key=String();
     // 421E80 -> 4217E0 -> 4355C0/435180：离场重建物品窗口和持有记录。
     quick_items={};quick_panel=mir3::DraggablePanel{{73,413,280,48}};quick_close_pressed=false;
-    bag={};equipment={};inventory.row=0;inventory_cursor=Vector2(-1,-1);
+    bag={};pending_drop={};held_gold=false;equipment={};inventory.row=0;inventory_cursor=Vector2(-1,-1);
     inventory_gold=0;trade_gold={};trade_gold_pending=false;trade_gold_debited=false;
     for (auto& side:trade_items) for (auto& item:side) item={};
     trade_scroll={};trade_partner=String();trade_offer_count=0;
     trade_pending_slot=trade_return_slot=trade_return_bag_slot=-1;
     trade_return_pending=false;trade_return_bag_pointer={};trade_confirmed=false;trade_confirm_pressed=false;
     trade_actor_name=String();trade_actor_cell={};trade_actor_type=-1;trade_actor_dead=false;trade_direction=0;
-    close_npc_dialogue();shop_offer_index=-1;shop_offer_page=0;shop_offer_loading=false;
+    close_npc_dialogue();
     last_merchant_request=0;merchant_click_captured=false;
     inventory.visible=status.visible=skills.visible=group.visible=guild.visible=false;
     quest={};
@@ -4783,7 +5252,7 @@ void Mir3HudView::clear_game_scene() {
     if (gold_sound) gold_sound->stop();
     while (!actor_sounds.empty()) remove_actor_sound(actor_sounds.begin()->first);
     chat_input->release_focus();chat_input->hide();
-    scene_light_layer->hide();snow_layer->hide();fog_copy->hide();rain_copy->hide();hud_base->hide();hud_copy->hide();hud_decoration->hide();hud_tail->hide();exit_layer->hide();
+    scene_light_layer->hide();world_overlay_layer->hide();snow_layer->hide();fog_copy->hide();rain_copy->hide();hud_base->hide();hud_copy->hide();hud_decoration->hide();hud_tail->hide();exit_layer->hide();
 }
 
 void Mir3HudView::load_login_announcement() {
@@ -4900,7 +5369,7 @@ void Mir3HudView::finish_game_entry() {
     set_character_combat(Vector2i(),Vector2i(),Vector2i(),Vector2i(),Vector2i());
     set_character_load_bonuses(Vector2i(),Vector2i(),Vector2i());
     get_window()->set_content_scale_size(Vector2i(800,600));get_window()->set_size(Vector2i(800,600));
-    scene_light_layer->show();hud_base->show();hud_copy->show();hud_decoration->show();hud_tail->show();
+    scene_light_layer->show();world_overlay_layer->show();hud_base->show();hud_copy->show();hud_decoration->show();hud_tail->show();
     connect_page(ConnectionPage::game,game_entry.endpoint);queue_redraw();
 }
 
@@ -4912,7 +5381,7 @@ bool Mir3HudView::apply_login_actor() {
     const auto* body=human_body(appearance.type,appearance.clothing);
     if (!body || (mount && (!human_body(appearance.type,appearance.clothing,true) || !horse_frame(mount,2320))) ||
         (appearance.weapon && weapon_order.size()!=2640)) return false;
-    player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;player_status_flags=0;player_action={};action_prediction={};pending_local_action.reset();
+    player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;local_last_monster_hit_shape.reset();player_status_flags=0;player_action={};action_prediction={};pending_local_action.reset();
     spell_timing={};active_spell=0;player_spell={};
     local_actor_messages.clear();forced_motion.reset();
     player_mount=0;set_player_body(appearance.type,appearance.clothing);
@@ -4956,6 +5425,30 @@ void Mir3HudView::show_harvest_impact(Vector2i cell) {
         }
     }
     show_map_impact(335,cell);
+}
+
+void Mir3HudView::show_following_hit_effect(int effect,int actor,Vector2i cell) {
+    const auto event_id=harvest_effect_id;
+    show_map_impact(effect,cell);
+    if (const auto event=map_events.find(event_id);event!=map_events.end())
+        event->second.follow_actor=actor;
+}
+
+void Mir3HudView::show_source_hit_effect(int actor,Vector2i cell,std::uint32_t source_id,
+        std::optional<std::uint8_t>& last_monster_shape) {
+    // 412781–4127E8 replace the cached feature only if the source resolves.
+    if (const auto source=scene_chickens.find(source_id);source!=scene_chickens.end())
+        last_monster_shape=std::uint8_t(source->second.shape);
+    else if ((local_actor_identity && source_id==std::uint32_t(local_actor_identity)) ||
+        scene_humans.contains(source_id) || scene_npcs.contains(source_id))
+        last_monster_shape.reset();
+    if (!last_monster_shape) return;
+    switch (*last_monster_shape) {
+    case 2: show_following_hit_effect(500,actor,cell);break;
+    case 67: show_following_hit_effect(523,actor,cell);break;
+    case 104: show_following_hit_effect(542,actor,cell);break;
+    case 150: show_following_hit_effect(574,actor,cell);break;
+    }
 }
 
 void Mir3HudView::show_map_impact(int effect,Vector2i cell) {
@@ -5029,7 +5522,7 @@ void Mir3HudView::play_monster_attack_effect(int actor,const SceneChicken& monst
 void Mir3HudView::play_monster_death_effect(int actor,const SceneChicken& monster) {
     // 408C10 chooses a stationary effect or attaches SPELL frames to the death pose.
     using Section=mir3::EffectCatalog::Section;
-    int effect=0;
+    int effect=0, delay=0;
     switch (monster.shape) {
     case 4: effect=531; break;
     case 5: case 6: case 11: case 19: effect=526; break;
@@ -5042,11 +5535,14 @@ void Mir3HudView::play_monster_death_effect(int actor,const SceneChicken& monste
     case 120: effect=533; break;
     case 164: effect=589; break;
     case 182: case 185: effect=605; break;
-    case 184: effect=602; break;
-    case 186: effect=610; break;
+    case 184: effect=602; delay=800; break;
+    case 186: effect=610; delay=800; break;
     default: break;
     }
-    if (effect) show_scene_effect(Section::magic,effect,monster.cell);
+    // 408C10 passes the delay to 4495D0; 44A500 suppresses drawing until it elapses.
+    // 449AF5 and 449B77 shift both frame bounds for 602 and 605.
+    if (effect) show_scene_effect(Section::magic,effect,monster.cell,
+        (effect==602 || effect==605)?10*monster.facing:0,delay);
     constexpr std::pair<int,int> overlays[]={{130,547},{131,549},{138,553},{140,557},
         {142,556},{143,556},{144,556},{159,582},{160,583},{161,586}};
     for (const auto& [shape,overlay]:overlays) {
@@ -5094,7 +5590,7 @@ bool Mir3HudView::play_monster_ranged_attack(const SceneChicken& monster,const S
             const auto endpoint=monster.cell+offsets[monster.facing]+spread[index];
             const auto destination=Vector2(endpoint*Vector2i(48,32));
             show_scene_effect(Section::magic,595,monster.cell,
-                10*monster_projectile_direction(destination-start,true),index*70,0,
+                10*monster_projectile_direction(Vector2(endpoint-monster.cell),true),index*70,0,
                 MonsterProjectile{start,destination,0,595});
         }
         return true;
@@ -5113,7 +5609,9 @@ bool Mir3HudView::play_monster_ranged_attack(const SceneChicken& monster,const S
     else {
         const auto destination=Vector2(target*Vector2i(48,32));
         const bool eight=effect==520 || effect==578 || effect==593;
-        const int offset=effect==544 || effect==545?0:10*monster_projectile_direction(destination-start,eight);
+        // 4495D0 selects projectile frames from tile coordinates, before pixel scaling.
+        const int offset=effect==544 || effect==545?0:
+            10*monster_projectile_direction(Vector2(target-monster.cell),eight);
         show_scene_effect(Section::magic,effect,monster.cell,offset,delay,0,
             MonsterProjectile{start,destination,target_actor,effect});
     }
@@ -5322,10 +5820,7 @@ void Mir3HudView::show_scene_effect(mir3::EffectCatalog::Section section,int eff
     event.attached_actor=attached_actor;
     event.attached_pose=attached_pose;
     if (projectile) {
-        const auto delta=projectile->destination-projectile->position;
-        const double dominant=std::max(std::abs(delta.x),std::abs(delta.y));
-        const auto velocity=delta*(500.0/std::max(1.0,dominant));
-        projectile->velocity=Vector2(std::trunc(velocity.x),std::trunc(velocity.y));
+        projectile->velocity=spell_initial_velocity(projectile->destination-projectile->position);
     }
     event.projectile=projectile;
     // 4495D0 leaves the light flag enabled for these independent effects.
@@ -5435,6 +5930,7 @@ void Mir3HudView::advance_map_events(double milliseconds) {
         }
         if (event.attached_actor) {
             const auto monster=scene_chickens.find(event.attached_actor);
+            const auto npc=scene_npcs.find(event.attached_actor);
             int pose=-1;
             if (monster!=scene_chickens.end()) {
                 const auto& actor=monster->second;
@@ -5455,16 +5951,17 @@ void Mir3HudView::advance_map_events(double milliseconds) {
                 case MonsterEffectPose::skeleton: pose=actor.skeleton?0:-1; break;
                 }
             }
+            if (npc!=scene_npcs.end()) pose=int(npc->second.standing_frame);
             if (pose<0) {
                 event.frame=int(event.resource->end)+event.frame_offset;
                 event.copy->hide();
                 event.copy->queue_free();
                 continue;
             }
-            event.cell=monster->second.cell;
+            event.cell=monster!=scene_chickens.end()?monster->second.cell:npc->second.cell;
             event.frame=int(event.resource->first)+event.frame_offset+pose;
             if (event.frame>=int(event.resource->end)+event.frame_offset &&
-                monster->second.action_overlay==id)
+                monster!=scene_chickens.end() && monster->second.action_overlay==id)
                 event.frame=int(event.resource->end)+event.frame_offset-1;
             if (event.frame>=int(event.resource->end)+event.frame_offset) {
                 event.copy->hide();
@@ -5548,28 +6045,25 @@ void Mir3HudView::advance_map_events(double milliseconds) {
                     flight.destination=Vector2(monster->second.walk_frame>=0?monster->second.walk_pixel():
                         monster->second.cell*Vector2i(48,32));
                 else if (const auto human=scene_humans.find(actor);human!=scene_humans.end())
-                    flight.destination=event.spell_effect && human->second.bounds.has_area()?
+                    flight.destination=human->second.bounds.has_area()?
                         human->second.anchor+Vector2(camera):Vector2(human->second.cell*Vector2i(48,32));
                 else if (const auto npc=scene_npcs.find(actor);npc!=scene_npcs.end())
                     flight.destination=Vector2(npc->second.cell*Vector2i(48,32));
                 else if (actor==static_cast<std::uint32_t>(local_actor_identity))
-                    flight.destination=Vector2(event.spell_effect?player_pixel():player_cell*Vector2i(48,32));
+                    flight.destination=Vector2(player_pixel());
                 else following=false;
             }
             if (!following && event.spell_effect) flight.target_actor=0;
             if (following) {
-                const auto position=event.spell_effect?
-                    Vector2(std::trunc(flight.position.x),std::trunc(flight.position.y)):flight.position.round();
+                const auto position=Vector2(std::trunc(flight.position.x),std::trunc(flight.position.y));
                 const auto delta=flight.destination-position;
                 const int dominant=std::max(1,int(std::max(std::abs(delta.x),std::abs(delta.y))));
                 flight.velocity=delta*(500/dominant);
             }
-            if (event.spell_effect) {
-                // 44B7E0每次存回32位float，不能让宿主Vector2的精度改变累积弹道。
-                constexpr double step=double(0.0011111111380159855f);
-                flight.position=Vector2(float(double(flight.velocity.x)*step*flight_ms+float(flight.position.x)),
-                    float(double(flight.velocity.y)*step*flight_ms+float(flight.position.y)));
-            } else flight.position+=flight.velocity*(flight_ms/900.0);
+            // 44B7E0 uses the same float accumulator for both projectile sources.
+            constexpr double step=double(0.0011111111380159855f);
+            flight.position=Vector2(float(double(flight.velocity.x)*step*flight_ms+float(flight.position.x)),
+                float(double(flight.velocity.y)*step*flight_ms+float(flight.position.y)));
             const auto pixel=Vector2(std::trunc(flight.position.x),std::trunc(flight.position.y));
             const auto distance=(flight.destination-pixel).abs();
             const bool approaching=distance.x<flight.previous_distance.x || distance.y<flight.previous_distance.y;
@@ -5580,37 +6074,24 @@ void Mir3HudView::advance_map_events(double milliseconds) {
             const bool timeout_flight=event.spell_effect && !following && flight.untargeted_timeout;
             if (!timeout_flight && ((flight_ms>0 && !approaching) || (distance.x<=15 && distance.y<=15))) {
                 const auto target=Vector2i((flight.destination/Vector2(48,32)).round());
-                if (event.spell_effect) {
-                    const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::explosion,flight.effect);
-                    if (!resource || (!event.orbit && (resource->end<=resource->first || !resource->interval)) ||
-                        !prepare_effect_library(resource->library)) {
-                        event.copy->hide();event.copy->queue_free();continue;
-                    }
-                    // 44B7E0在原对象内换资源，命中当帧显示爆炸首帧，计时不清零。
-                    event.resource=resource;event.frame=int(resource->first);event.frame_offset=0;
-                    event.cell=target;event.follow_actor=following?actor:0;
-                    event.follow_position=flight.destination;event.one_shot=true;
-                    if (following) play_spell_sound(10*flight.effect+10002,target);
-                    Ref<ShaderMaterial> material=event.sprite->get_material();
-                    material->set_shader_parameter("effect_blend",int(resource->blend));
-                    material->set_shader_parameter("effect_opacity",resource->opacity/255.f);
-                    event.sprite->set_modulate(Color(resource->tint[0]/255.f,resource->tint[1]/255.f,resource->tint[2]/255.f));
-                    event.projectile.reset();
-                    spell_impact=true;
-                } else {
-                    const auto impact_id=harvest_effect_id;
-                    show_scene_effect(mir3::EffectCatalog::Section::explosion,flight.effect,target);
-                    if (const auto impact=map_events.find(impact_id);impact!=map_events.end()) {
-                        impact->second.follow_actor=following?actor:0;
-                        impact->second.follow_position=flight.destination;
-                        if (following || flight.effect==594)
-                            play_actor_sound(0,10*flight.effect+10002,target);
-                    }
-                    event.frame=int(event.resource->end)+event.frame_offset;
-                    event.copy->hide();
-                    event.copy->queue_free();
-                    continue;
+                const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::explosion,flight.effect);
+                if (!resource || (!event.orbit && (resource->end<=resource->first || !resource->interval)) ||
+                    !prepare_effect_library(resource->library)) {
+                    event.copy->hide();event.copy->queue_free();continue;
                 }
+                // 44B7E0 swaps resources in place and retains the animation timer.
+                event.resource=resource;event.frame=int(resource->first);event.frame_offset=0;
+                event.cell=target;event.follow_actor=following?actor:0;
+                event.follow_position=flight.destination;event.one_shot=true;
+                if (event.spell_effect && following) play_spell_sound(10*flight.effect+10002,target);
+                if (!event.spell_effect && (following || flight.effect==594))
+                    play_actor_sound(0,10*flight.effect+10002,target);
+                Ref<ShaderMaterial> material=event.sprite->get_material();
+                material->set_shader_parameter("effect_blend",int(resource->blend));
+                material->set_shader_parameter("effect_opacity",resource->opacity/255.f);
+                event.sprite->set_modulate(Color(resource->tint[0]/255.f,resource->tint[1]/255.f,resource->tint[2]/255.f));
+                event.projectile.reset();
+                spell_impact=true;
             }
             if (!spell_impact) flight.previous_distance=distance;
             if (!spell_impact && event.orbit && ms>0) {
@@ -5659,7 +6140,7 @@ void Mir3HudView::advance_map_events(double milliseconds) {
         }
         const int interval=event.ground_wave && event.resource->id==9 && event.frame>=1925 &&
             terrain.base_walkable(event.cell.x,event.cell.y)?80:event.resource->interval;
-        if(!event.spell_effect && !event.staged_spell && !event.light_tail && event.elapsed>interval) {
+        if(!spell_impact && !event.spell_effect && !event.staged_spell && !event.light_tail && event.elapsed>interval) {
             event.elapsed=0;
             const int previous_frame=event.frame++;
             if (event.ground_wave && event.resource->id==int(mir3::MagicEffectId::lightning_trail) && previous_frame==int(event.resource->first)) {
@@ -5861,6 +6342,29 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (!header) return false;
     using RepairPhase=MerchantService::Phase;
     switch(header->opcode) {
+    case mir3::protocol::SM_DROPITEM_SUCCESS:
+        if(encoded.size()!=16) return false;
+        pending_drop={};
+        return true;
+    case mir3::protocol::SM_DROPITEM_FAIL: {
+        const auto name=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
+        if(!name || name->empty() || name->size()>15) return false;
+        if(!pending_drop || pending_drop.make_index!=header->recognition ||
+                mir3::ansi_to_utf8(std::string_view(*name).substr(0,name->find('\0')))!=pending_drop.name) return true;
+        // 429785 restores a rejected ordinary drop to the bag.
+        if (!bag.insert(pending_drop)) {
+            if (bag.held) return false;
+            bag.held=pending_drop;
+            bag.held_slot=-1;
+        }
+        pending_drop={};
+        queue_redraw();
+        return true;
+    }
+    case mir3::protocol::SM_INVENTITEM:
+        if(encoded.size()!=16) return false;
+        update_bag_stack_count(header->recognition,header->parameters[0]);
+        return true;
     case mir3::protocol::SM_STORAGE_OPEN:
     case mir3::protocol::SM_SENDUSERSELL:
     case mir3::protocol::SM_OPEN_REPAIR:
@@ -5871,11 +6375,16 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
         merchant_service.actor=header->recognition;
         merchant_service.selling=header->opcode==mir3::protocol::SM_SENDUSERSELL;
         if(!inventory.visible) toggle_inventory();
+        // 4282C0 positions the service inventory at (519, 0) even if it was open.
+        inventory.rect[0]=519;
+        inventory.rect[1]=0;
         raise_panel(Panel::inventory);
         queue_redraw();
         return true;
     case mir3::protocol::SM_STORAGE_LIST: {
-        if(!header->recognition || header->recognition>INT_MAX) return false;
+        // 4282C0 binds the merchant at LABEL_436 only when opening the shop window.
+        if(!storage_list && (!header->recognition || header->recognition>INT_MAX)) return false;
+        const int actor=storage_list?shop_actor:int(header->recognition);
         std::string_view remaining(reinterpret_cast<const char*>(encoded.ptr()+16),encoded.size()-16);
         std::vector<ShopOffer> records;
         for(unsigned i=0;i<header->parameters[2];++i) {
@@ -5893,11 +6402,13 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
             remaining.remove_prefix(end+1);
         }
         if(!remaining.empty()) return false;
+        const auto pending_withdrawal=storage_list?storage_pending:0u;
         close_shop();
         merchant_service={};
-        shop_actor=int(header->recognition);
+        shop_actor=actor;
         shop_offers=std::move(records);
         storage_list=shop_show_offers=true;
+        storage_pending=pending_withdrawal;
         shop_offer_index=shop_offers.empty()?-1:0;
         queue_redraw();
         return true;
@@ -5906,26 +6417,16 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     case mir3::protocol::SM_STORAGE_FULL:
     case mir3::protocol::SM_STORAGE_DEPOSIT_FAIL:
         if(encoded.size()!=16) return false;
+        if(header->opcode!=mir3::protocol::SM_STORAGE_DEPOSIT_OK)
+            open_group_dialog(header->opcode==mir3::protocol::SM_STORAGE_FULL?1449:1450);
         if(!merchant_service.storage || merchant_service.phase!=RepairPhase::paying) return true;
         if(header->opcode==mir3::protocol::SM_STORAGE_DEPOSIT_OK) {
-            const int remaining=header->parameters[0];
-            for(int i=0;i<int(bag.items.size());++i) {
-                auto& item=bag.items[i];
-                if(!item || item.make_index!=merchant_service.item || item.name!=merchant_service.name) continue;
-                if(remaining) {
-                    item.set_count(remaining);
-                    quick_items.update_count(item.name,remaining);
-                } else {
-                    quick_items.remove(item.name);
-                    bag.take(i);
-                }
-                break;
-            }
             auto caption=message(header->parameters[1]?1447:1448);
             if(auto at=caption.find("%s");at!=std::string::npos) caption.replace(at,2,merchant_service.name);
             if(auto at=caption.find("%d");at!=std::string::npos) caption.replace(at,2,std::to_string(header->parameters[1]));
             post_chat(String::utf8(caption.c_str()),11861940,0);
-        } else open_group_dialog(header->opcode==mir3::protocol::SM_STORAGE_FULL?1449:1450);
+            update_bag_stack_count(merchant_service.item,header->parameters[0],true);
+        }
         merchant_service.phase=RepairPhase::choosing;
         queue_redraw();
         return true;
@@ -5933,34 +6434,35 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     case mir3::protocol::SM_STORAGE_WITHDRAW_FAIL:
     case mir3::protocol::SM_STORAGE_BAG_FULL: {
         if(encoded.size()!=16) return false;
+        if(header->opcode!=mir3::protocol::SM_STORAGE_WITHDRAW_OK)
+            open_group_dialog(header->opcode==mir3::protocol::SM_STORAGE_WITHDRAW_FAIL?1445:1446);
         if(!storage_list || !storage_pending) return true;
-        const auto item=std::ranges::find(shop_offers,std::exchange(storage_pending,0u),&ShopOffer::id);
-        if(header->opcode==mir3::protocol::SM_STORAGE_WITHDRAW_OK && item!=shop_offers.end()) {
+        const auto instance=std::exchange(storage_pending,0u);
+        if(header->opcode==mir3::protocol::SM_STORAGE_WITHDRAW_OK) {
             const auto quantity=header->parameters[1];
-            if(quantity) for(auto& bag_item:bag.items)
-                if(bag_item && bag_item.make_index==item->id) {
-                    bag_item.set_count(quantity);
-                    quick_items.update_count(bag_item.name,quantity);
-                    break;
-                }
-            if(header->parameters[0]) item->count=header->parameters[0];
-            else {
+            if(quantity) update_bag_stack_count(instance,quantity);
+            const auto item=std::ranges::find(shop_offers,instance,&ShopOffer::id);
+            if(item!=shop_offers.end() && header->parameters[0]) item->count=header->parameters[0];
+            else if(item!=shop_offers.end()) {
                 shop_offers.erase(item);
                 shop_offer_index=-1;
                 shop_offer_page=std::min(shop_offer_page,std::max(0,(int(shop_offers.size())-1)/12));
             }
-        } else if(header->opcode!=mir3::protocol::SM_STORAGE_WITHDRAW_OK)
-            open_group_dialog(header->opcode==mir3::protocol::SM_STORAGE_WITHDRAW_FAIL?1445:1446);
+        }
         queue_redraw();
         return true;
     }
     case mir3::protocol::SM_SENDBUYPRICE:
     case mir3::protocol::SM_REPAIR_QUOTE:
         if(encoded.size()!=16) return false;
-        if(merchant_service.actor && merchant_service.phase==RepairPhase::quoting && !merchant_service.storage &&
+        // 42A9BF/42AAEC replace the current service quote when another price arrives.
+        if(merchant_service.actor && !merchant_service.storage &&
+                (merchant_service.phase==RepairPhase::quoting || merchant_service.phase==RepairPhase::quoted ||
+                    merchant_service.phase==RepairPhase::unavailable) &&
                 merchant_service.selling==(header->opcode==mir3::protocol::SM_SENDBUYPRICE)) {
             merchant_service.price=header->recognition;
-            merchant_service.phase=merchant_service.price?RepairPhase::quoted:RepairPhase::choosing;
+            // 42AB20 disables confirmation but preserves the selected item.
+            merchant_service.phase=merchant_service.price?RepairPhase::quoted:RepairPhase::unavailable;
             queue_redraw();
         }
         return true;
@@ -5969,25 +6471,29 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     case mir3::protocol::SM_USERSELLITEM_FAIL:
     case mir3::protocol::SM_SELL_STACK_FAIL: {
         if(encoded.size()!=16) return false;
-        if(!merchant_service.actor || !merchant_service.selling || merchant_service.phase!=RepairPhase::paying) return true;
         const bool stack=header->opcode==mir3::protocol::SM_SELL_STACK_OK;
-        if(stack || header->opcode==mir3::protocol::SM_USERSELLITEM_OK) {
-            inventory_gold=header->recognition;
-            const int remaining=stack?header->parameters[0]:0;
-            for(int i=0;i<int(bag.items.size());++i) {
-                auto& item=bag.items[i];
-                if(!item || item.make_index!=merchant_service.item || item.name!=merchant_service.name) continue;
-                if(remaining) item.set_count(remaining);
-                else bag.take(i);
-                if(remaining) quick_items.update_count(merchant_service.name,remaining);
-                else quick_items.remove(merchant_service.name);
-                break;
-            }
+        const bool success=stack || header->opcode==mir3::protocol::SM_USERSELLITEM_OK;
+        // 648 and 1314 update the balance before checking the service window. 649 always prompts.
+        if(success) inventory_gold=header->recognition;
+        if(header->opcode==mir3::protocol::SM_USERSELLITEM_FAIL) open_group_dialog(1455);
+        if(!merchant_service.actor || !merchant_service.selling || merchant_service.phase!=RepairPhase::paying) {
+            if(success) queue_redraw();
+            return true;
+        }
+        if(success) {
             auto caption=message(stack?1454:1453);
             if(auto at=caption.find("%s");at!=std::string::npos) caption.replace(at,2,merchant_service.name);
             if(auto at=caption.find("%d");at!=std::string::npos) caption.replace(at,2,std::to_string(header->parameters[1]));
             post_chat(String::utf8(caption.c_str()),11861940,0);
-        } else if(header->opcode==mir3::protocol::SM_USERSELLITEM_FAIL) open_group_dialog(1455);
+            if (stack) update_bag_stack_count(merchant_service.item,header->parameters[0],true);
+            else {
+                // 42AA6F clears only the bag slot on ordinary sale success.
+                const auto item=std::ranges::find_if(bag.items,[&](const auto& entry) {
+                    return entry && entry.make_index==merchant_service.item;
+                });
+                if (item!=bag.items.end()) bag.take(int(item-bag.items.begin()));
+            }
+        }
         merchant_service.phase=RepairPhase::choosing;
         merchant_service.price=0;
         queue_redraw();
@@ -5996,9 +6502,11 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     case mir3::protocol::SM_REPAIR_OK:
     case mir3::protocol::SM_REPAIR_FAIL:
         if(encoded.size()!=16) return false;
+        // 42AB37 updates the balance before testing the repair window; 42AB9A always opens the failure prompt.
+        if(header->opcode==mir3::protocol::SM_REPAIR_OK) inventory_gold=header->recognition;
+        else open_group_dialog(1457);
         if(merchant_service.actor && merchant_service.phase==RepairPhase::paying && !merchant_service.selling && !merchant_service.storage) {
             if(header->opcode==mir3::protocol::SM_REPAIR_OK) {
-                inventory_gold=header->recognition;
                 for(auto& item:bag.items) if(item && item.make_index==merchant_service.item && item.name==merchant_service.name) {
                     for(int field=0;field<2;++field) {
                         const auto value=header->parameters[field];
@@ -6008,11 +6516,11 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
                     break;
                 }
                 post_chat(String::utf8(message(1456).c_str()),11861940,0);
-            } else open_group_dialog(1457);
+            }
             merchant_service.phase=RepairPhase::choosing;
             merchant_service.price=0;
-            queue_redraw();
         }
+        queue_redraw();
         return true;
     default:break;
     }
@@ -6920,6 +7428,7 @@ void Mir3HudView::draw_character_selection() {
 void Mir3HudView::_draw() {
     using Layout=mir3::HudLayout;
     if (!loaded) return;
+    ground_sparkle_layer->queue_redraw();
     auto* renderer=RenderingServer::get_singleton();
     for (std::size_t index=0;index<terrain_draw_count;++index) {
         renderer->canvas_item_clear(terrain_draw_items[index]);
@@ -6937,16 +7446,35 @@ void Mir3HudView::_draw() {
     if (character_selection.visible) { draw_character_selection();return; }
     draw_terrain();
     scene_light_layer->queue_redraw();
+    world_overlay_layer->queue_redraw();
     hud_base->queue_redraw();
+}
+
+void Mir3HudView::draw_ground_sparkles() {
+    if (!terrain_ready || login_visible || character_selection.visible || server_groups.visible ||
+            login_movie_purpose!=LoginMoviePurpose::none) return;
+    const auto camera=map_camera();
+    for (const auto& item:ground_items.items) {
+        if (item.sparkle_frame<0) continue;
+        const auto& image=ground_sparkles[item.sparkle_frame];
+        const Vector2 position(item.x*48-camera.x+8,item.y*32-camera.y);
+        // 424C48 uses a cell anchor; 47F3F0 draws a quad sized from the frame, clipped by the device viewport.
+        if (image.is_valid()) ground_sparkle_layer->draw_texture(image,position);
+    }
+}
+
+void Mir3HudView::draw_world_overlays() {
+    paint_canvas=world_overlay_layer;
+    draw_scene_name();
+    draw_ground_name();
+    draw_scene_speech();
+    draw_scene_health();
+    paint_canvas=this;
 }
 
 void Mir3HudView::draw_hud_base() {
     using Layout=mir3::HudLayout;
     paint_canvas=hud_base;
-    draw_scene_name();
-    draw_ground_name();
-    draw_scene_speech();
-    draw_scene_health();
     if (!model.layout.expanded) {
         sprite(1490,Layout::image_position(Layout::Image::portrait));
         const auto origin=point(Layout::image_position(Layout::Image::portrait));
@@ -7072,8 +7600,8 @@ void Mir3HudView::draw_hud_tail() {
     if (group_request) draw_group_dialog();
     button_hint();
     const auto& held=trade.visible && trade_return_slot>=0?trade_items[0][trade_return_slot]:bag.held;
-    if (held && Rect2(0,0,800,600).has_point(inventory_cursor)) {
-        const auto icon=item_frame(held.icon);
+    if ((held || held_gold) && Rect2(0,0,800,600).has_point(inventory_cursor)) {
+        const auto icon=item_frame(held_gold?124:held.icon);
         if (icon.is_valid()) paint_canvas->draw_texture(icon,(inventory_cursor-icon->get_size()*0.5).floor());
     }
     paint_canvas=this;
@@ -7472,9 +8000,12 @@ void Mir3HudView::_process(double delta) {
     const bool scene_movement_tick=scene_movement_ms>95;
     if (scene_movement_tick) scene_movement_ms=0;
     for (auto& [actor,chicken]:scene_chickens) {
-        if (chicken.revive_elapsed_ms>=0) {
-            chicken.revive_elapsed_ms+=delta*1000;
-            if (chicken.revive_elapsed_ms>=600) chicken.revive_elapsed_ms=-1;
+        if (chicken.appearance_duration_ms>0) {
+            chicken.appearance_elapsed_ms+=delta*1000;
+            if (chicken.appearance_elapsed_ms>=chicken.appearance_duration_ms) {
+                chicken.appearance_duration_ms=0;
+                chicken.appearance_elapsed_ms=0;
+            }
             queue_redraw();
         }
         if (chicken.burrow_frame>=0) {
@@ -7585,6 +8116,18 @@ void Mir3HudView::_process(double delta) {
     if (scene_ambient.fading) { scene_ambient.advance(delta*1000);queue_redraw(); }
     // Default object messages are processed outside each actor's animation queue.
     apply_scene_removals();
+    if (locked_spell_actor) {
+        // 415F50 / 453320 center the 24x24 list on the logical player cell.
+        const Rect2i actor_list(player_cell-Vector2i(12,12),Vector2i(24,24));
+        const auto monster=scene_chickens.find(locked_spell_actor);
+        const auto human=scene_humans.find(locked_spell_actor);
+        const bool present=(monster!=scene_chickens.end() && actor_list.has_point(monster->second.cell)) ||
+            (human!=scene_humans.end() && actor_list.has_point(human->second.cell));
+        if (!present) {
+            locked_spell_actor=0;
+            queue_redraw();
+        }
+    }
 
     for (auto& [actor,health]:scene_health) {
         const bool registered=health.registered;
@@ -7598,7 +8141,11 @@ void Mir3HudView::_process(double delta) {
         queue_redraw();
     }
     for (auto& [actor,human]:scene_humans) {
-        for (const auto& update:human.messages.fold_health()) apply_actor_health_record(actor,update);
+        if (human.arrival_ms>=0) {
+            human.arrival_ms+=delta*1000;
+            if (human.arrival_ms>=human.appearance_duration_ms) human.arrival_ms=-1;
+            queue_redraw();
+        }
         human.life.advance(delta*1000);
         if (human.combat.advance(delta*1000)) human.idle.reset();
         if (human.life.dying) {
@@ -7650,15 +8197,17 @@ void Mir3HudView::_process(double delta) {
                 human.action.start(7);
                 human.idle.reset();
                 human.bump=false;
-            } else if (human.movement_frame>=(human.facing==7?4:1)) human.cell=human.step_destination;
+            } else if (human.movement_frame>=human.movement_commit_frame()) human.cell=human.step_destination;
             queue_redraw();
             continue;
         }
-        ++human.movement_frame;
+        human.movement_frame+=human.backstep?2:1;
         const int movement_action=human.mount_shape?(human.step_distance>1?31:30):(human.step_distance>1?22:21);
-        play_actor_sound(actor,mir3::HumanActions::movement_sound(movement_action,human.movement_frame),human.cell);
-        human.movement_frame+=int(human.catching_up);
-        if (human.movement_frame>=(human.facing==7?4:1)) human.cell=human.step_destination;
+        if (!human.backstep) {
+            play_actor_sound(actor,mir3::HumanActions::movement_sound(movement_action,human.movement_frame),human.cell);
+            human.movement_frame+=int(human.catching_up);
+        }
+        if (human.movement_frame>=human.movement_commit_frame()) human.cell=human.step_destination;
         if (human.movement_frame>=6) {
             human.movement_frame=-1;
             human.idle.reset();
@@ -7685,8 +8234,53 @@ void Mir3HudView::_process(double delta) {
     }
     if (chat_input && chat_input->has_focus()) map_pointer_button=0;
     advance_map_step(delta);
+    // 42201F–422049 and 42281B prune the registered drops with a half-open player-centered RECT.
+    if (std::erase_if(ground_items.items,[this](const auto& item) {
+            const auto offset=Vector2i(item.x,item.y)-player_cell;
+            return offset.x<-24 || offset.x>=24 || offset.y<-24 || offset.y>=24;
+        })) queue_redraw();
+    const auto sparkle_tick=std::uint32_t(GetTickCount());
+    for (auto& item:ground_items.items) {
+        if (sparkle_tick-item.sparkle_started_tick<=std::uint32_t(item.sparkle_delay_ms)) continue;
+        if (item.sparkle_frame<0) item.sparkle_frame=0;
+        item.sparkle_elapsed_ms+=delta*1000;
+        if (item.sparkle_elapsed_ms>100) {
+            item.sparkle_elapsed_ms=0;
+            if (++item.sparkle_frame==int(ground_sparkles.size())) {
+                item.sparkle_started_tick=sparkle_tick;
+                item.sparkle_frame=-1;
+            }
+        }
+        ground_sparkle_layer->queue_redraw();
+    }
+    // 42495A–424994 checks the current coordinates every frame, including server corrections.
+    if (npc_dialogue_actor && npc_dialogue_origin.x && npc_dialogue_origin.y) {
+        const auto distance=player_cell-npc_dialogue_origin;
+        if (std::max(std::abs(distance.x),std::abs(distance.y))>5) close_npc_dialogue();
+    }
     for (auto& [actor,monster]:scene_chickens)
         if (monster.shape==141 || monster.shape==184 || monster.action_overlay) sync_monster_action_overlay(actor,monster);
+    for (auto& [actor,npc]:scene_npcs) {
+        if (npc.arrival_ms>=0) {
+            npc.arrival_ms+=delta*1000;
+            if (npc.arrival_ms>=npc.appearance_duration_ms) npc.arrival_ms=-1;
+            queue_redraw();
+        }
+        if (npc.standing.size()<=1) continue;
+        npc.standing_elapsed+=delta*1000;
+        // 40E86F advances once and discards the elapsed interval.
+        if (npc.standing_elapsed>npc.standing_interval) {
+            npc.standing_elapsed=0;
+            if (++npc.standing_frame==npc.standing.size()) {
+                npc.standing_frame=0;
+                if (!npc.idle_after_refresh.empty()) {
+                    npc.standing=std::move(npc.idle_after_refresh);
+                    npc.standing_interval=npc.idle_interval;
+                }
+            }
+            queue_redraw();
+        }
+    }
     if(!map_events.empty() || !event_marks.empty() || spell_particles.count()) advance_map_events(delta*1000);
     if(!ground_events.empty()) {
         for(auto& [id,event]:ground_events) event.age+=delta*1000;
@@ -7972,6 +8566,33 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
             emit_signal("hud_action",action);
         }
         if (!captured && kind==0 && terrain_ready && spell_pointer_available()) {
+            if (held_gold) {
+                if (!map_input_delay.active()) {
+                    held_gold=false;
+                    open_group_dialog(102);
+                }
+                get_viewport()->set_input_as_handled();
+                return;
+            }
+            if (bag.held && bag.held.make_index && bag.held_equipment_slot<0 && bag.held_quick_slot<0 &&
+                    !bag.pending_use && !equipment.pending && bag.held.name!=message(1050)) {
+                if (!pending_drop && !map_input_delay.active()) {
+                    if (bag.held.stack_mode>=2 && bag.held.count>1) {
+                        open_group_dialog(104);
+                        get_viewport()->set_input_as_handled();
+                        return;
+                    }
+                    // 42677D / 47C0E0 passes the item identity and clock as two separated WORDs.
+                    pending_drop=std::exchange(bag.held,{});
+                    bag.held_slot=-1;
+                    const auto tick=std::uint32_t(GetTickCount());
+                    send_client_packet(mir3::protocol::CM_DROPITEM,int(pending_drop.make_index),
+                        String::utf8(pending_drop.name.c_str()),tick&0xffff,std::uint16_t(tick>>16));
+                    queue_redraw();
+                }
+                get_viewport()->set_input_as_handled();
+                return;
+            }
             if (merchant_pointer(p)) {
                 map_pointer_button=0;
                 merchant_click_captured=true;
@@ -8228,6 +8849,16 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
     const auto close=frame(1221);
     const bool on_close=close.is_valid() && Rect2(x+242,y+423,close->get_width(),close->get_height()).has_point(position);
     const bool inside=Rect2(x,y,w,h).has_point(position);
+    // 441230 / 441050 lifts the gold icon from its inventory rectangle.
+    if (Rect2(x+15,y+390,42,27).has_point(position)) {
+        if (kind==2 && !inventory.dragging && !bag.held && !held_gold) {
+            held_gold=true;
+            if (gold_sound && audio_options.effects_enabled) { gold_sound->play();++gold_sound_count; }
+            queue_redraw();
+        }
+        get_viewport()->set_input_as_handled();
+        return true;
+    }
     const auto repair_button=frame(merchant_service.storage?1231:merchant_service.selling?1229:1227);
     const bool on_repair=merchant_service.actor && repair_button.is_valid() &&
         Rect2(Vector2(x+198,y+401),repair_button->get_size()).has_point(position);
@@ -8260,6 +8891,10 @@ bool Mir3HudView::inventory_pointer(int kind,Vector2 position) {
             bag.scroll_row=inventory.row;
             const int slot=bag.slot_at(int(position.x),int(position.y),x,y);
             consumed=slot>=0;
+            if (consumed && held_gold) {
+                get_viewport()->set_input_as_handled();
+                return true;
+            }
             if(consumed && merchant_service.actor) {
                 using Phase=MerchantService::Phase;
                 const int item_index=bag.item_at(slot);
@@ -8524,7 +9159,8 @@ bool Mir3HudView::apply_inventory_wire(const mir3::ReceiveHeader& header,std::sp
         auto caption=message(resource);
         if (const auto at=caption.find("%s");at!=std::string::npos) caption.replace(at,2,mir3::ansi_to_utf8(record.name()));
         if (const auto at=caption.find("%d");at!=std::string::npos) caption.replace(at,2,std::to_string(record.count()));
-        post_chat(String::utf8(caption.c_str()),mir3::chat_palette(2),mir3::chat_palette(7));
+        // Both 200 and 202 pass 0xB4FFB4 to the original system chat routine.
+        post_chat(String::utf8(caption.c_str()),11861940,0);
     }
     queue_redraw();return true;
 }
@@ -8901,6 +9537,36 @@ bool Mir3HudView::skill_pointer(int kind,Vector2 position) {
     return true;
 }
 
+void Mir3HudView::update_bag_stack_count(std::uint32_t instance,int quantity,bool remove_when_empty) {
+    // 441DF8 updates the item held by the cursor even when its bag slot is empty.
+    if ((!remove_when_empty || quantity) && bag.held && bag.held_quick_slot<0 && bag.held.make_index==instance) {
+        bag.held.set_count(quantity);
+        queue_redraw();
+    }
+    for (int i=0;i<int(bag.items.size());++i) {
+        auto& item=bag.items[i];
+        if (!item || item.make_index!=instance) continue;
+        if (!quantity && remove_when_empty) {
+            quick_items.remove(item.name);
+            bag.take(i);
+            queue_redraw();
+            return;
+        }
+        // 441E33 reports increases and plays the normal item sound.
+        if (quantity>item.count) {
+            auto caption=message(1707);
+            if (const auto at=caption.find("%s");at!=std::string::npos) caption.replace(at,2,item.name);
+            if (const auto at=caption.find("%d");at!=std::string::npos) caption.replace(at,2,std::to_string(quantity-item.count));
+            post_chat(String::utf8(caption.c_str()),11861940,0);
+            play_item_sound(item);
+        }
+        item.set_count(quantity);
+        quick_items.update_count(item.name,quantity);
+        queue_redraw();
+        break;
+    }
+}
+
 void Mir3HudView::play_item_sound(const mir3::BagItem& item) {
     int sample=118;
     switch(item.std_mode) {
@@ -9165,8 +9831,33 @@ void Mir3HudView::request_skill_cast(int slot,bool repeat) {
     int target_type=-1;
     if (const auto human=scene_humans.find(hovered_target);human!=scene_humans.end()) {
         target=human->second.cell;target_actor=hovered_target;target_type=human->second.type;
+        const auto name=scene_names.find(hovered_target);
+        constexpr auto lockable_name_color=27631u; // 427014, original palette index 69.
+        if (name!=scene_names.end() && name->second.color==lockable_name_color &&
+            ((target_type==0 && !human->second.life.dead) || target_type==1)) {
+            locked_spell_actor=hovered_target;
+        }
     } else if (const auto monster=scene_chickens.find(hovered_target);monster!=scene_chickens.end()) {
         target=monster->second.cell;target_actor=hovered_target;target_type=3;
+        // 42610D / 427016 remember the current monster for subsequent skill keys.
+        locked_spell_actor=hovered_target;
+        queue_redraw();
+    } else if (locked_spell_actor) {
+        using mir3::SkillId;
+        // 430050 allows reuse only for these bound skill IDs.
+        switch (static_cast<SkillId>(id)) {
+        case SkillId::fireball: case SkillId::fireball2: case SkillId::amyounsul:
+        case SkillId::lightening: case SkillId::firecharm: case SkillId::tamming: case SkillId::killundead:
+        case SkillId::original_37: case SkillId::original_38: case SkillId::original_39: case SkillId::original_40:
+        case SkillId::original_41: case SkillId::original_67: case SkillId::original_74:
+            if (const auto human=scene_humans.find(locked_spell_actor);human!=scene_humans.end()) {
+                target=human->second.cell;target_actor=locked_spell_actor;target_type=human->second.type;
+            } else if (const auto monster=scene_chickens.find(locked_spell_actor);monster!=scene_chickens.end()) {
+                target=monster->second.cell;target_actor=locked_spell_actor;target_type=3;
+            }
+            break;
+        default: break;
+        }
     }
     const auto delta=target-player_cell;
     const mir3::MapCell direction{
@@ -9440,11 +10131,36 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
         }
         return;
     }
+    if (request==102) {
+        if (!confirm) return;
+        const auto utf8=name.utf8();
+        const auto amount=std::strtol(utf8.get_data(),nullptr,10);
+        // 4257FF requires an amount strictly below the balance; 653 supplies the new balance.
+        if (amount>0 && std::uint32_t(amount)<inventory_gold)
+            send_client_packet(mir3::protocol::CM_DROPGOLD,int(amount),String());
+        return;
+    }
+    if (request==104) {
+        if (!confirm || pending_drop || !bag.held || bag.held.stack_mode<2 || bag.held.count<=1) return;
+        const auto input=name.utf8();
+        const long requested=name.is_empty() || name=="*"?bag.held.count:std::strtol(input.get_data(),nullptr,10);
+        const int quantity=int(std::min(requested,100L));
+        if (quantity<=0 || quantity>bag.held.count) return;
+        const auto instance=bag.held.make_index;
+        const auto item_name=String::utf8(bag.held.name.c_str());
+        // 4259DF puts the original stack back for a partial drop; 1313 supplies the new count.
+        if (quantity<bag.held.count) {
+            if (!bag.insert(bag.held)) return;
+            bag.held={};
+        } else pending_drop=std::exchange(bag.held,{});
+        bag.held_slot=-1;
+        send_client_packet(mir3::protocol::CM_DROP_STACK,int(instance),item_name,0,std::uint16_t(quantity));
+        return;
+    }
     if(request==1705 || request==1706 || request==1707) {
         if(!confirm) return;
         const auto input=name.utf8();
         const std::string_view digits(input.get_data(),input.length());
-        const auto end=digits.data()+digits.size();
         int quantity=0;
         if(digits=="*" && request==1707 && shop_offer_index>=0 && shop_offer_index<int(shop_offers.size())) {
             quantity=shop_offers[shop_offer_index].count;
@@ -9454,8 +10170,10 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
             });
             if(current!=bag.items.end()) quantity=current->count;
         } else {
-            const auto parsed=std::from_chars(digits.data(),end,quantity);
-            if(parsed.ec!=std::errc{} || parsed.ptr!=end) return;
+            // 4256B0's quantity handlers consume the decimal prefix before checking the stack size.
+            const auto parsed=std::strtol(input.get_data(),nullptr,10);
+            if(parsed<=0 || parsed>UINT16_MAX) return;
+            quantity=int(parsed);
         }
         if(quantity>0) {
             if(request==1707) withdraw_storage(quantity);
@@ -9478,13 +10196,9 @@ void Mir3HudView::finish_group_dialog(bool confirm) {
     if (request==110) {
         if (!confirm || shop_bulk_index<0) return;
         const auto utf8=name.utf8();
-        const std::string_view digits(utf8.get_data(),utf8.length());
-        unsigned quantity=1;
-        const auto end=digits.data()+digits.size();
-        if (!digits.empty()) {
-            const auto parsed=std::from_chars(digits.data(),end,quantity);
-            if (parsed.ec!=std::errc{} || parsed.ptr!=end || quantity==0 || quantity>65535) return;
-        }
+        // 42590A reads the decimal prefix on the bulk purchase path.
+        const long quantity=name.is_empty()?1:std::strtol(utf8.get_data(),nullptr,10);
+        if (quantity<=0 || quantity>UINT16_MAX) return;
         buy_shop_bulk(static_cast<std::uint16_t>(quantity));
         return;
     }
@@ -9536,7 +10250,7 @@ void Mir3HudView::draw_group_dialog() {
     }
     auto prompt=group_request==mir3::protocol::CM_MERCHANTDLGSELECT?npc_dialogue_prompt:
         group_request==mir3::protocol::CM_GUILDDELMEMBER?"'"+std::string(guild_name.utf8().get_data())+"' "+message(4001):
-        message(group_request==1707?2301:(group_request==1705 || group_request==1706)?group_request:group_request==mir3::protocol::CM_GUILDADDMEMBER?1426:group_request==110?2302:group_request==1307?1307:group_request==mir3::protocol::CM_TRADE_GOLD?1304:group_request==mir3::protocol::CM_GUILDBREAKALLY?4002:group_request==mir3::protocol::CM_DELGROUPMEMBER?1606:1605);
+        message(group_request==102?1415:group_request==104?1416:group_request==1707?2301:(group_request==1705 || group_request==1706)?group_request:group_request==mir3::protocol::CM_GUILDADDMEMBER?1426:group_request==110?2302:group_request==1307?1307:group_request==mir3::protocol::CM_TRADE_GOLD?1304:group_request==mir3::protocol::CM_GUILDBREAKALLY?4002:group_request==mir3::protocol::CM_DELGROUPMEMBER?1606:1605);
     if(group_request==mir3::protocol::CM_GUILDADDMEMBER) if(auto at=prompt.find("%s");at!=std::string::npos) prompt.replace(at,2,guild_name.utf8().get_data());
     if (dialog_has_input()) text(prompt,{x+43,y+84,278,75},0xc8faff,mir3::TextFont::dialog);
     else text(message(group_request==109?2636:1065),{x+23,y+84,308,95},0xc8faff,mir3::TextFont::dialog);
@@ -10937,6 +11651,7 @@ void Mir3HudView::reset_map_overlays() {
     close_npc_dialogue();
     trade_actor_name=String();
     hovered_target=0;
+    locked_spell_actor=0;
     target_focus.clear();
     target_attributes_by_actor.clear();
 

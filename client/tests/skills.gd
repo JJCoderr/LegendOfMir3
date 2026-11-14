@@ -480,8 +480,13 @@ func run_casting() -> void:
         key(KEY_F1)
         if not check(packets.is_empty(),"MP低于门槛时不发施法请求"): return
         hud.set_character_vitals(100,100,20,200,0,100)
+        var locked_actor := 99001
+        if not check(hud.set_scene_chicken(locked_actor,target),"建立技能锁定目标"): return
+        hud.set_hovered_target(locked_actor,3,20,false,0,0,0,0,target)
         key(KEY_F1)
         if not check(packets.size()==1 and hud.hud_snapshot().player_action==2,"F1仅发一个请求并进入定向起手"): return
+        hud.set_hovered_target(0,0,0,false,0,0,0,0,Vector2i.ZERO)
+        if not check(hud.hud_snapshot().locked_spell_actor==locked_actor,"移开鼠标后保留技能目标"): return
         var request := decode_request(packets[0])
         if not check(request.decode_u16(4)==Mir3HudView.CM_SPELL and request.decode_u16(8)==Skill.FIREBALL,
             "请求使用3017且技能编号位置正确"): return
@@ -493,6 +498,305 @@ func run_casting() -> void:
         if not await capture("skill-casting-start"): return
         if not check(hud.apply_game_message("+FAIL".to_ascii_buffer()) and hud.hud_snapshot().player_cell==origin,
             "失败回包恢复预测原点"): return
+        var away := origin+Vector2i(-2,0)
+        mouse.position=Vector2(away*Vector2i(48,32)-hud.hud_snapshot().map_camera_pixel)+Vector2(1,1)
+        root.push_input(mouse,true)
+        var deadline := Time.get_ticks_msec()+4500
+        while packets.size()==1 and Time.get_ticks_msec()<deadline:
+            await settle(0.05)
+            key(KEY_F1)
+        if not check(packets.size()==2,"冷却结束后发出第二个火球请求"): return
+        var locked_request := decode_request(packets.back())
+        if not check(Vector2i(locked_request.decode_u16(0),locked_request.decode_u16(2))==target
+            and (locked_request.decode_u16(6)|(locked_request.decode_u16(10)<<16))==locked_actor,
+            "鼠标移开后请求仍携带锁定怪物的坐标与完整ID"): return
+        if not check(hud.apply_game_message("+FAIL".to_ascii_buffer()),"结束第二次起手预测"): return
+        # 原版以玩家格减12为起点，右边界+12不纳入24格列表。
+        for offset in [11,12]:
+            var moved := false
+            for dy in range(-6,7):
+                if hud.set_scene_chicken(locked_actor,origin+Vector2i(offset,dy)):
+                    moved=true
+                    break
+            if not check(moved,"找到技能锁定边界的可行走格"): return
+            await process_frame
+            await process_frame
+            if not check(hud.hud_snapshot().locked_spell_actor==(locked_actor if offset==11 else 0),
+                "技能锁定在+11保留，在+12清除"): return
+        if not check(hud.remove_scene_actor(locked_actor),"清理边界测试怪物"): return
+        var human_actor := 99002
+        var arrive := game_reply(Mir3HudView.SM_TURN,human_actor,target.x,target.y,4)
+        var appearance := PackedByteArray()
+        appearance.resize(21)
+        arrive.append_array(encode_scene_bytes(appearance.slice(0,16)))
+        arrive.append_array(encode_scene_bytes(appearance.slice(16)))
+        var named_arrive := game_reply(Mir3HudView.SM_TURN,human_actor,target.x,target.y,4|(11<<8))
+        named_arrive.append_array(arrive.slice(16))
+        named_arrive.append_array(encode_scene_bytes("Arrival/69".to_ascii_buffer()))
+        if not check(hud.apply_game_message(named_arrive) and hud.hud_snapshot().scene_human_arrival_ms[human_actor]==0,
+            "陌生人物站立包创建对象并启动显现"): return
+        await settle(0.12)
+        var arrival: float=hud.hud_snapshot().scene_human_arrival_ms[human_actor]
+        if not check(arrival>0 and arrival<300,"人物显现计时正在推进"): return
+        if not check(hud.hud_snapshot().scene_human_lights[human_actor]==11,"站立包出队写入光属性"): return
+        if not check(hud.apply_game_message(arrive) and hud.hud_snapshot().scene_human_arrival_ms[human_actor]==arrival,
+            "已有对象站立刷新保留显现进度"): return
+        if not check(await wait_until(func(s): return s.scene_human_arrival_ms[human_actor]==-1),"人物达到300毫秒后结束显现"): return
+        for palette in [255,69,0]:
+            if palette!=0:
+                if not check(hud.apply_scene_name(human_actor,Mir3HudView.SM_CHANGENAMECOLOR,palette,""),"设置人物名称色"): return
+                hud.set_hovered_human(human_actor,0,0,"锁定人物")
+            else:
+                hud.set_hovered_target(0,0,0,false,0,0,0,0,Vector2i.ZERO)
+                root.push_input(mouse,true)
+            var previous_count := packets.size()
+            var cast_deadline := Time.get_ticks_msec()+4500
+            while packets.size()==previous_count and Time.get_ticks_msec()<cast_deadline:
+                await settle(0.05)
+                key(KEY_F1)
+            if not check(packets.size()==previous_count+1,"发出人物目标火球请求"): return
+            var human_request := decode_request(packets.back())
+            if not check((human_request.decode_u16(6)|(human_request.decode_u16(10)<<16))==human_actor,
+                "人物悬停或锁定均携带完整目标编号"): return
+            if not check(hud.hud_snapshot().locked_spell_actor==(0 if palette==255 else human_actor),
+                "白名不锁定，69号名称色可锁定并复用"): return
+            if not check(hud.apply_game_message("+FAIL".to_ascii_buffer()),"结束人物目标起手预测"): return
+            if palette==69 and not await capture("skill-locked-human-highlight"): return
+        if not check(hud.remove_scene_actor(human_actor) and hud.hud_snapshot().locked_spell_actor==0,"移除人物清除锁定"): return
+        var blocked_stand := game_reply(Mir3HudView.SM_TURN,human_actor,474,360,2)
+        blocked_stand.append_array(arrive.slice(16))
+        if not check(hud.apply_game_message(blocked_stand),"站立包在阻挡格创建远端人物"): return
+        if not check(await wait_until(func(s):
+            return s.scene_human_cells[human_actor]==Vector2i(474,360) and s.scene_human_facings[human_actor]==2),
+            "站立包应用服务器坐标及朝向"): return
+        if not check(hud.remove_scene_actor(human_actor),"清理阻挡格入场人物"): return
+        for opcode in [Mir3HudView.SM_WALK,Mir3HudView.SM_RUN,Mir3HudView.SM_BACKSTEP]:
+            var move := game_reply(opcode,human_actor,target.x,target.y,2|(11<<8))
+            move.append_array(arrive.slice(16,38))
+            if not check(not hud.apply_game_message(move) and not hud.hud_snapshot().scene_human_cells.has(human_actor),
+                "陌生人物缺少第二段外观时不创建"): return
+            move.append_array(arrive.slice(38))
+            if not check(hud.apply_game_message(move) and hud.hud_snapshot().scene_human_arrival_ms[human_actor]==0,
+                "陌生人物移动包创建对象并启动显现"): return
+            if not check(hud.hud_snapshot().scene_human_lights[human_actor]==0,"入队时未改写远端光属性"): return
+            if not check(await wait_until(func(s): return s.scene_human_movement[human_actor]>=0),"原移动消息出队播放"): return
+            if not check(hud.hud_snapshot().scene_human_lights[human_actor]==11,"远端移动出队同步光属性"): return
+            if opcode==Mir3HudView.SM_BACKSTEP:
+                if not check(hud.hud_snapshot().scene_human_cells[human_actor]==target+Vector2i(1,0)
+                    and hud.hud_snapshot().scene_human_facings[human_actor]==2
+                    and hud.hud_snapshot().scene_human_lights[human_actor]==11,"后退出队更新光属性并保留朝向"): return
+            if not check(await wait_until(func(s): return s.scene_human_movement[human_actor]<0 and s.scene_human_cells[human_actor]==target),
+                "新人物移动到包内目的格"): return
+            if not check(hud.remove_scene_actor(human_actor),"清理新入场移动人物"): return
+            var blocked_cell := Vector2i(474,360)
+            var blocked_move := game_reply(opcode,human_actor,blocked_cell.x,blocked_cell.y,2|(11<<8))
+            blocked_move.append_array(arrive.slice(16))
+            if not check(hud.apply_game_message(blocked_move),"阻挡格上的首次移动包可创建远端人物"): return
+            if not check(await wait_until(func(s):
+                return (s.scene_human_pending[human_actor]==0 and s.scene_human_movement[human_actor]<0
+                    and s.scene_human_cells[human_actor]==blocked_cell)),
+                "远端人物完成服务器指定的阻挡格移动"): return
+            if not check(hud.remove_scene_actor(human_actor),"清理阻挡格中的远端人物"): return
+        if not check(hud.set_scene_human(human_actor,target,2,0,"骑乘移动"),"建立远端骑乘测试人物"): return
+        var diagonal_backstep := game_reply(Mir3HudView.SM_BACKSTEP,human_actor,target.x,target.y,7)
+        diagonal_backstep.append_array(arrive.slice(16))
+        if not check(hud.apply_game_message(diagonal_backstep),"接收朝向7的斜向后退"): return
+        if not check(await wait_until(func(s): return s.scene_human_movement[human_actor]==2),"斜向后退推进至子帧2"): return
+        if not check(hud.hud_snapshot().scene_human_cells[human_actor]==target-Vector2i(1,1),"绘制朝向7在子帧2保留起点"): return
+        await RenderingServer.frame_post_draw
+        var before_commit: Vector2=hud.hud_snapshot().scene_human_bounds[human_actor].position
+        if not check(await wait_until(func(s): return s.scene_human_movement[human_actor]==4),"斜向后退推进至子帧4"): return
+        if not check(hud.hud_snapshot().scene_human_cells[human_actor]==target,"绘制朝向7在子帧4提交目的格"): return
+        await RenderingServer.frame_post_draw
+        var after_commit: Vector2=hud.hud_snapshot().scene_human_bounds[human_actor].position
+        if not check(after_commit-before_commit==Vector2(16,11),"斜向后退提交前后按原版整数顺序插值"): return
+        if not check(await wait_until(func(s): return s.scene_human_movement[human_actor]<0),"斜向后退结束"): return
+        for mount_shape in [1,0]:
+            var mounted_run := game_reply(Mir3HudView.SM_RUN,human_actor,target.x,target.y,7)
+            var extension := PackedByteArray([mount_shape,0,0,0,0])
+            mounted_run.append_array(arrive.slice(16,38))
+            mounted_run.append_array(encode_scene_bytes(extension))
+            if not check(hud.apply_game_message(mounted_run),"坐骑外观与跑步一起入队"): return
+            if not check(await wait_until(func(s): return s.scene_human_movement[human_actor]>=0),"骑乘测试跑步出队"): return
+            var state: Dictionary=hud.hud_snapshot()
+            var distance := 3 if mount_shape else 2
+            if not check(state.scene_human_mounts[human_actor]==mount_shape
+                and state.scene_human_cells[human_actor]==target+Vector2i(distance,distance),"按包内坐骑外观计算跑步起点"): return
+            if not check(await wait_until(func(s): return s.scene_human_movement[human_actor]==2),"斜跑绘制子帧2"): return
+            await RenderingServer.frame_post_draw
+            var run_before: Vector2=hud.hud_snapshot().scene_human_anchors[human_actor]
+            if not check(await wait_until(func(s): return s.scene_human_movement[human_actor]==4),"斜跑绘制子帧4"): return
+            await RenderingServer.frame_post_draw
+            var run_after: Vector2=hud.hud_snapshot().scene_human_anchors[human_actor]
+            # 绘制锚点不受跑步换帧时精灵自身偏移的影响。
+            if not check(run_after-run_before==Vector2(-16,-12)*distance,"斜跑纵向先除6再乘移动距离"): return
+            if not check(await wait_until(func(s): return s.scene_human_movement[human_actor]<0),"跑步到达目的格"): return
+            if mount_shape:
+                var short_run := mounted_run.slice(0,38)
+                if not check(hud.apply_game_message(short_run),"已有骑乘人物接收基础外观包"): return
+                if not check(await wait_until(func(s): return s.scene_human_movement[human_actor]>=0),"基础外观跑步出队"): return
+                if not check(hud.hud_snapshot().scene_human_mounts[human_actor]==1,"缺少扩展段时保留已有坐骑"): return
+                if not check(await wait_until(func(s): return s.scene_human_movement[human_actor]<0),"基础外观跑步结束"): return
+        if not check(hud.remove_scene_actor(human_actor),"清理骑乘测试人物"): return
+        # 413F90 在出队前检查队长，411480 只给普通走跑增加额外子帧。
+        for queued in [[Mir3HudView.SM_WALK,2,[0,1,2,3,4,5]],
+            [Mir3HudView.SM_WALK,3,[0,2,4]],[Mir3HudView.SM_BACKSTEP,3,[0,2,4]]]:
+            if not check(hud.set_scene_human(human_actor,target,2,0,"追帧人物"),"建立追帧对象"): return
+            var motion := game_reply(queued[0],human_actor,target.x,target.y,2)
+            motion.append_array(arrive.slice(16))
+            if not check(hud.apply_game_message(motion),"移动消息进入追帧队列"): return
+            for i in range(queued[1]-1):
+                if not check(hud.apply_game_message(arrive),"站立消息形成队列积压"): return
+            var frames: Array[int]=[]
+            var motion_deadline := Time.get_ticks_msec()+2000
+            while Time.get_ticks_msec()<motion_deadline:
+                var frame: int=hud.hud_snapshot().scene_human_movement[human_actor]
+                if frame<0 and not frames.is_empty(): break
+                if frame>=0 and not frames.has(frame): frames.append(frame)
+                await process_frame
+            if not check(frames==queued[2],"验证队列阈值和后退固定步幅，实际子帧 %s" % str(frames)): return
+            if not check(hud.hud_snapshot().scene_human_cells[human_actor]==target,"追帧到达目的格"): return
+            if not check(hud.remove_scene_actor(human_actor),"清理追帧人物"): return
+        # 两个对象同帧出队，使用同一地图节拍比较减速与普通移动。
+        var normal_actor := human_actor+1
+        if not check(hud.set_scene_human(human_actor,target,2,0,"减速人物")
+            and hud.set_scene_human(normal_actor,target,2,0,"普通人物"),"建立移动节拍对照对象"): return
+        var slow_feature := appearance.duplicate()
+        slow_feature.encode_u32(4,0x08000000)
+        var slowed_walk := game_reply(Mir3HudView.SM_WALK,human_actor,target.x,target.y,2)
+        slowed_walk.append_array(encode_scene_bytes(slow_feature.slice(0,16)))
+        slowed_walk.append_array(arrive.slice(38))
+        var normal_walk := game_reply(Mir3HudView.SM_WALK,normal_actor,target.x,target.y,2)
+        normal_walk.append_array(arrive.slice(16))
+        if not check(hud.apply_game_message(slowed_walk) and hud.apply_game_message(normal_walk),"同帧提交移动包"): return
+        for tick in range(1,6):
+            if not check(await wait_until(func(s): return s.scene_human_movement[normal_actor]==tick),"普通人物推进第%d拍" % tick): return
+            @warning_ignore("integer_division")
+            var slow_frame := tick/2
+            if not check(hud.hud_snapshot().scene_human_movement[human_actor]==slow_frame,"减速人物跳过奇数拍"): return
+        var slow_arrived := func(s): return s.scene_human_movement[human_actor]<0 and s.scene_human_cells[human_actor]==target
+        if not check(await wait_until(slow_arrived),"减速人物最终到达目的格"): return
+        hud.remove_scene_actor(human_actor)
+        hud.remove_scene_actor(normal_actor)
+        var corpse := game_reply(Mir3HudView.SM_DEATH,human_actor,474,360,4|(11<<8))
+        corpse.append_array(arrive.slice(16,38))
+        if not check(not hud.apply_game_message(corpse),"陌生尸体需要完整外观才能创建"): return
+        corpse.append_array(arrive.slice(38))
+        if not check(hud.apply_game_message(corpse) and hud.hud_snapshot().scene_human_arrival_ms[human_actor]==0,
+            "陌生人物尸体包启动入场显现"): return
+        if not check(await wait_until(func(s): return s.scene_human_life[human_actor].dead),"尸体消息出队"): return
+        var life: Dictionary=hud.hud_snapshot().scene_human_life[human_actor]
+        if not check(not life.dying and life.frame==9 and hud.hud_snapshot().scene_human_lights[human_actor]==11
+            and hud.hud_snapshot().scene_human_cells[human_actor]==Vector2i(474,360),
+            "尸体在服务器指定的阻挡格直接使用死亡末帧"): return
+        var revive := game_reply(Mir3HudView.SM_REVIVE,human_actor,474,360,4|(12<<8))
+        revive.append_array(arrive.slice(16))
+        revive.append_array(encode_scene_bytes("Revived/69".to_ascii_buffer()))
+        if not check(hud.apply_game_message(revive) and hud.hud_snapshot().scene_human_life[human_actor].dead,
+            "复活先入队，尚未清除尸体"): return
+        if not check(await wait_until(func(s): return not s.scene_human_life[human_actor].dead),
+            "复活出队后清除尸体"): return
+        if not check(hud.hud_snapshot().scene_human_lights[human_actor]==12
+            and hud.hud_snapshot().scene_human_cells[human_actor]==Vector2i(474,360),"复活应用阻挡格坐标和光属性"): return
+        if not check(await wait_until(func(s): return s.scene_human_arrival_ms[human_actor]>=320),
+            "人物复活显现在300毫秒后仍持续"): return
+        if not check(await wait_until(func(s): return s.scene_human_arrival_ms[human_actor]==-1),
+            "人物复活显现最终结束"): return
+        if not check(hud.remove_scene_actor(human_actor),"清理入场尸体"): return
+        # 34在已有对象上启动死亡动作，并立即采用包坐标与光属性。
+        if not check(hud.set_scene_human(human_actor,target,2,0,"Animated"),"建立死亡动画对象"): return
+        var death_animation := game_reply(Mir3HudView.SM_NOWDEATH,human_actor,474,360,6|(13<<8))
+        death_animation.append_array(arrive.slice(16))
+        if not check(hud.apply_game_message(death_animation),"接收指向阻挡格的34号包"): return
+        if not check(await wait_until(func(s):
+            return (s.scene_human_life[human_actor].dying and s.scene_human_cells[human_actor]==Vector2i(474,360)
+                and s.scene_human_facings[human_actor]==6 and s.scene_human_lights[human_actor]==13)),
+            "34出队后在包指定位置播放死亡动作"): return
+        if not check(await wait_until(func(s):
+            return s.scene_human_life[human_actor].dead and not s.scene_human_life[human_actor].dying),
+            "34完成死亡动画"): return
+        if not check(hud.remove_scene_actor(human_actor),"清理死亡动画对象"): return
+        for opcode in [Mir3HudView.SM_SITDOWN,Mir3HudView.SM_BUTCH]:
+            if not check(hud.set_scene_human(human_actor,target,2,0,"Crouch"),"建立远端蹲姿对象"): return
+            if not check(hud.apply_game_message(game_reply(opcode,human_actor,474,360,6)),
+                "接收指向阻挡格的蹲姿包"): return
+            if not check(await wait_until(func(s):
+                return (s.scene_human_cells[human_actor]==Vector2i(474,360)
+                    and s.scene_human_facings[human_actor]==6 and s.scene_human_actions[human_actor].x==8)),
+                "蹲姿包应用服务器坐标与动作8"): return
+            if not check(hud.remove_scene_actor(human_actor),"清理远端蹲姿对象"): return
+        for opcode in [Mir3HudView.SM_HIT,Mir3HudView.SM_HIT2,Mir3HudView.SM_FIREHIT,
+            Mir3HudView.SM_POWERHIT,Mir3HudView.SM_LONGHIT,Mir3HudView.SM_WIDEHIT,
+            Mir3HudView.SM_WIDEHIT2,Mir3HudView.SM_HUMAN_ATTACK]:
+            if not check(hud.set_scene_human(human_actor,target,2,0,"Attack"),"建立远端攻击对象"): return
+            if not check(hud.apply_game_message(game_reply(opcode,human_actor,474,360,6)),
+                "接受指向阻挡格的%d号攻击包" % opcode): return
+            if not check(await wait_until(func(s):
+                return (s.scene_human_cells[human_actor]==Vector2i(474,360)
+                    and s.scene_human_facings[human_actor]==6 and s.scene_human_actions[human_actor].x>=0)),
+                "%d号攻击应用包坐标和朝向" % opcode): return
+            if not check(hud.remove_scene_actor(human_actor),"清理远端攻击对象"): return
+        for opcode in [Mir3HudView.SM_DIGUP,Mir3HudView.SM_27,Mir3HudView.SM_SKELETON]:
+            var spawn := game_reply(opcode,human_actor,target.x,target.y,4)
+            spawn.append_array(arrive.slice(16))
+            if not check(hud.apply_game_message(spawn) and hud.hud_snapshot().scene_human_arrival_ms[human_actor]==0,
+                "消息%d允许陌生人物显现" % opcode): return
+            if not check(await wait_until(func(s): return s.scene_human_pending[human_actor]==0),"人物队列消费入场消息"): return
+            var state: Dictionary=hud.hud_snapshot()
+            if not check(not state.scene_human_life[human_actor].dead and state.scene_human_actions[human_actor].x==-1
+                and state.scene_human_facings[human_actor]==0,"仅创建的人物保持初始化站姿"): return
+            if not check(hud.remove_scene_actor(human_actor),"清理仅创建的人物"): return
+        for opcode in [Mir3HudView.SM_801,Mir3HudView.SM_ACTOR_STATUS,Mir3HudView.SM_808]:
+            var transfer := game_reply(opcode,human_actor,target.x,target.y,4|(11<<8))
+            var transfer_feature := appearance.duplicate()
+            transfer_feature[0]=1
+            transfer.append_array(encode_scene_bytes(transfer_feature.slice(0,16)))
+            transfer.append_array(encode_scene_bytes(transfer_feature.slice(16)))
+            if not check(hud.apply_game_message(transfer) and hud.hud_snapshot().scene_human_arrival_ms[human_actor]==0,
+                "扩展传送包创建并显现人物"): return
+            if not check(await wait_until(func(s): return s.scene_human_pending[human_actor]==0),"传送包出队"): return
+            var state: Dictionary=hud.hud_snapshot()
+            if not check(state.scene_human_facings[human_actor]==0 and state.scene_human_lights[human_actor]==0
+                and state.scene_human_bodies[human_actor].x==1,"创建使用包内外观，状态分派保留初始化朝向和光属性"): return
+            if not check(hud.apply_game_message(transfer),"已有对象也接收扩展传送包"): return
+            if not check(hud.remove_scene_actor(human_actor),"清理传送人物"): return
+        for opcode in [Mir3HudView.SM_800,Mir3HudView.SM_806]:
+            var transfer := game_reply(opcode,human_actor,target.x,target.y,4|(11<<8))
+            transfer.append_array(arrive.slice(16))
+            transfer.append_array(encode_scene_bytes("Transfer/69".to_ascii_buffer()))
+            if not check(not hud.apply_game_message(transfer),"800与806需要已有对象"): return
+            if not check(hud.set_scene_human(human_actor,origin,0,0,"Before"),"建立待传送人物"): return
+            if not check(hud.apply_game_message(transfer),"完整传送包入队"): return
+            if not check(await wait_until(func(s): return s.scene_human_pending[human_actor]==0),"传送出队"): return
+            var state: Dictionary=hud.hud_snapshot()
+            if not check(state.scene_human_cells[human_actor]==target and state.scene_human_facings[human_actor]==4
+                and state.scene_human_lights[human_actor]==11,"传送更新目的格、朝向与光属性"): return
+            if not check(await wait_until(func(s): return s.scene_human_bounds[human_actor].has_area()),"传送后人物已绘制"): return
+            var name_hover := InputEventMouseMotion.new()
+            name_hover.position=hud.hud_snapshot().scene_human_bounds[human_actor].get_center()
+            root.push_input(name_hover,true)
+            var name_visible := func(s): return s.displayed_name_actor==human_actor and s.displayed_name_bounds.has_area()
+            if not check(await wait_until(name_visible),"传送人物头顶名称已绘制"): return
+            state=hud.hud_snapshot()
+            if not check(state.displayed_name_color==27631 and state.displayed_name_text=="Transfer",
+                "传送名称去掉颜色后缀并以69号颜色绘制"): return
+            var rename := game_reply(opcode,human_actor,target.x,target.y,4|(11<<8))
+            rename.append_array(arrive.slice(16))
+            rename.append_array(encode_scene_bytes("Renamed".to_ascii_buffer()))
+            if not check(hud.apply_game_message(rename),"传送刷新接收无颜色后缀的新名称"): return
+            if not check(await wait_until(func(s):
+                return s.displayed_name_actor==human_actor and s.displayed_name_text=="Renamed"),
+                "传送刷新绘制新名称"): return
+            if not check(hud.hud_snapshot().displayed_name_color==27631,"传送刷新沿用已有名称颜色"): return
+            # 比奇阻挡格由服务器传送时仍可作为人物站立坐标。
+            var blocked := Vector2i(474,360)
+            if not check(not hud.set_scene_chicken(human_actor+1,blocked),"确认传送目标格不可行走"): return
+            var blocked_transfer := game_reply(opcode,human_actor,blocked.x,blocked.y,4|(11<<8))
+            blocked_transfer.append_array(arrive.slice(16))
+            if not check(hud.apply_game_message(blocked_transfer),"接受指向阻挡格的传送包"): return
+            if not check(await wait_until(func(s): return s.scene_human_cells[human_actor]==blocked),
+                "传送出队后站在服务器坐标"): return
+            if not check(hud.remove_scene_actor(human_actor),"清理远端传送人物"): return
     if selected(Skill.ORBIT):
         # 直接注入技能效果，单独验收表现，不重复等待每个技能的快捷键冷却。
         if not check(hud.apply_game_message(magic_reply(Skill.ORBIT,target)),"150回包进入队列"): return
@@ -521,11 +825,20 @@ func run_casting() -> void:
         if not check(hud.hud_snapshot().map_event_count==0,"地表技能换图无残留"): return
         # 远端起手与效果按同一人物队列执行；638必须等待起手动作完成。
         if not check(hud.set_scene_human(88,remote,0,0,"施法验收"),"准备远端施法者"): return
-        var start := game_reply(Mir3HudView.SM_SPELL,88,target.x,target.y,0)
+        var blocked_aim := Vector2i(474,360)
+        var start := game_reply(Mir3HudView.SM_SPELL,88,blocked_aim.x,blocked_aim.y,0)
         start.append_array(str(Skill.FIREBALL).to_ascii_buffer())
         if not check(hud.apply_game_message(start),"远端原始十进制起手入队"): return
         if not check(await wait_until(func(s): return s.scene_human_actions[88].x==2),"远端启动定向动作"): return
-        if not check(hud.hud_snapshot().scene_human_cells[88]==remote,"起手目标坐标不移动施法者"): return
+        var aimed: Dictionary=hud.hud_snapshot()
+        var delta := blocked_aim-remote
+        var x := signi(delta.x) if absi(delta.y)<=2 or absi(delta.x)>1 else 0
+        var y := signi(delta.y) if absi(delta.x)<=2 or absi(delta.y)>1 else 0
+        var directions := [Vector2i(0,-1),Vector2i(1,-1),Vector2i(1,0),Vector2i(1,1),
+            Vector2i(0,1),Vector2i(-1,1),Vector2i(-1,0),Vector2i(-1,-1)]
+        var heading := 4 if delta==Vector2i.ZERO else directions.find(Vector2i(x,y))
+        if not check(aimed.scene_human_cells[88]==remote and aimed.scene_human_facings[88]==heading,
+            "起手按阻挡格求朝向并保留施法者位置"): return
         if not check(hud.apply_game_message(magic_reply(Skill.FIREBALL,origin,77,88)),"远端638效果入队"): return
         if not check(hud.hud_snapshot().map_event_count==0 and hud.hud_snapshot().scene_human_pending[88]==1,
             "638等待当前远端起手结束"): return
@@ -590,7 +903,8 @@ func run_casting() -> void:
         if not check(hud.hud_snapshot().action_reply_pending,"施法进入等待确认"): return
         await settle(1.3)
         if not check(hud.hud_snapshot().action_reply_pending,"起手结束仍等待服务器"): return
-        if not check(await wait_until(func(s): return not s.action_reply_pending,7500),"八秒超时解除施法等待"): return
+        # C++逐帧将delta截断为整数毫秒，墙钟等待需给累计截断留余量。
+        if not check(await wait_until(func(s): return not s.action_reply_pending,10500),"八秒超时解除施法等待"): return
         if not await capture("skill-casting-timeout"): return
         hud.apply_game_message("+FAIL".to_ascii_buffer())
         if not check(hud.hud_snapshot().player_cell==origin,"迟到拒绝恢复保存的施法原点"): return

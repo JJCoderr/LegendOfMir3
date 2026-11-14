@@ -13,7 +13,8 @@ struct SceneHealth {
     bool registered=false, excluded=false, raised=false, empty_bar=false;
     double age_ms=0;
     static std::uint8_t percent(unsigned current,unsigned maximum) {
-        return static_cast<std::uint8_t>(static_cast<unsigned>(maximum?double(current)/maximum*100.0:0));
+        // Compute the truncated percentage without intermediate double rounding.
+        return static_cast<std::uint8_t>(maximum?std::uint64_t(current)*100/maximum:0);
     }
     static int width(std::uint8_t value) { return int(double(value)*double(0.01f)*36.0); }
     bool apply(int opcode,int hp,int mp,int max_hp) {
