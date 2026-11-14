@@ -24,6 +24,7 @@
 #include "hud/combat_stance.hpp"
 #include "resources/sound_list.hpp"
 #include "magic/spell_sound_voices.hpp"
+#include "magic/melee_spells.hpp"
 #include "hud/scene_name.hpp"
 #include "hud/scene_health.hpp"
 #include "hud/speech_bubble.hpp"
@@ -619,6 +620,8 @@ private:
     mir3::MeleeCooldown melee_cooldown;
     mir3::LocalActionClock local_action_clock;
     mir3::SpellTiming spell_timing;
+    mir3::MeleeSpells melee_spells;
+    int player_melee_sound=0;
     int active_spell=0;
     HumanSpellVisual player_spell;
     std::map<std::pair<int,int>,godot::Ref<godot::ShaderMaterial>> human_spell_materials;

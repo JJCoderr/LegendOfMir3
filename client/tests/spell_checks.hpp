@@ -10,6 +10,7 @@
 #include "hud/snow_weather.hpp"
 #include <stdexcept>
 #include "spell_sound_checks.hpp"
+#include "melee_spell_checks.hpp"
 
 // 定向验收：协议字段独立性、DWORD冷却边界、人物循环动作、特殊阶段及粒子生命周期。
 inline void spell_weapon_color_checks() {
@@ -81,6 +82,7 @@ inline void spell_shared_particle_checks() {
 }
 
 inline void spell_checks() {
+    melee_spell_checks();
     spell_shared_particle_checks();
     spell_sound_checks();
     spell_weapon_color_checks();

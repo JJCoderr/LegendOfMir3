@@ -59,3 +59,13 @@ python client/tests/run_tests.py --suite map-events --screenshots
 ```
 
 particle-model验证冰系/150/336混合容量、首空槽复用和生命周期，默认技能全集的模型检查也包含它。map-events当前登记持续事件、类型9退场、冰系残留与切图清理，不代表整个地图子系统已全覆盖。
+
+
+特殊近战7/12/25/26/34/35/103已登记melee子集，同时验证本地状态和远端原包。可单项或在一轮客户端中验证指定集合：
+
+```sh
+python client/tests/run_tests.py --suite skills --case melee --skill 26 --screenshots
+python client/tests/run_tests.py --suite skills --case melee --skills 25,26,34,35,103 --screenshots
+```
+
+--skills目前仅支持melee，适用于失败修正后续跑尚未通过的编号；未知编号失败。默认技能全集包含整个近战批次。

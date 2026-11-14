@@ -1289,7 +1289,7 @@ void Mir3HudView::advance_local_action() {
             mir3::MeleeCooldown::interval(model.level,melee_cooldown.speed,model.hand_weight[0],model.hand_weight[1]));
     }
     if (mir3::LocalActionClock::remaining(now,*pending.waiting_since,pending.wait_ms)) return;
-    const auto action=pending;
+    auto action=pending;
     pending_local_action.reset(); // 先消费，再发信号，防止回调重复执行。
     forced_motion.reset();
     action_prediction.begin({player_cell.x,player_cell.y},player_facing);
@@ -1304,13 +1304,24 @@ void Mir3HudView::advance_local_action() {
         player_action={};
     } else {
         local_action_clock.attacked=now;
-        player_action.start(mir3::HumanActions::weapon_attack(action.weapon));
+        const auto step=mir3::map_directions[action.facing];
+        const auto distant=player_cell+Vector2i(step[0],step[1])*2;
+        const auto at_distant=[&](const auto& entry) {return entry.second.cell==distant;};
+        const bool distant_actor=(std::any_of(scene_humans.begin(),scene_humans.end(),at_distant) ||
+             std::any_of(scene_chickens.begin(),scene_chickens.end(),at_distant) ||
+             std::any_of(scene_npcs.begin(),scene_npcs.end(),at_distant));
+        mir3::MeleeSpells::Attack selected{0,action.opcode,mir3::HumanActions::weapon_attack(action.weapon),action.facing,0};
+        if (action.opcode==mir3::protocol::CM_HIT)
+            selected=melee_spells.select(action.weapon,action.facing,model.mp,distant_actor,player_type);
+        action.opcode=selected.opcode;
+        player_melee_sound=selected.sound;
+        player_action.start(selected.action);
         player_spell={};
         // 415F90普通挥击使用装备槽原包选择附魔，40DB10再确定颜色优先级。
         const auto& weapon=equipment.slots[1];
-        const int effect=weapon?mir3::SpellColor::local_weapon_effect(weapon.server_record):0;
+        const int effect=selected.skill?selected.skill:weapon?mir3::SpellColor::local_weapon_effect(weapon.server_record):0;
         if (const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::spell,std::uint16_t(effect));effect && resource) {
-            player_spell={effect,action.facing};
+            player_spell={effect,selected.facing};
             player_spell.weapon=true;
             player_spell.tint=mir3::SpellColor::local_weapon_color(weapon.server_record,elements.attack_words,resource->tint);
             play_spell_sound(10*(effect+1000),player_cell);
@@ -3044,7 +3055,7 @@ bool Mir3HudView::apply_scene_human_life(int actor,int opcode,Vector2i cell,int 
 bool Mir3HudView::set_local_actor_identity(int actor) {
     if (actor<=0 || scene_humans.contains(actor) || scene_npcs.contains(actor) || scene_chickens.contains(actor)) return false;
     if (local_actor_identity!=actor) {
-        player_light_attribute=0;melee_cooldown={};local_action_clock={};spell_timing={};active_spell=0;player_spell={};pending_local_action.reset();
+        player_light_attribute=0;melee_cooldown={};local_action_clock={};spell_timing={};melee_spells={};player_melee_sound=0;active_spell=0;player_spell={};pending_local_action.reset();
         action_prediction={};
         local_actor_messages.clear();forced_motion.reset();
         player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;player_status_flags=0;
@@ -4700,7 +4711,7 @@ void Mir3HudView::clear_game_scene() {
     map_input_delay={};player_mount=0;mount.shape=0;
     terrain_ready=false;terrain=mir3::MapTerrain{};terrain_frames.clear();current_map_id=String();
     target_focus.clear();local_actor_identity=0;player_light_attribute=0;exit_guard={};melee_cooldown={};
-    pending_local_action.reset();local_action_clock={};spell_timing={};active_spell=0;player_spell={};
+    pending_local_action.reset();local_action_clock={};spell_timing={};melee_spells={};player_melee_sound=0;active_spell=0;player_spell={};
     action_prediction={};
     local_actor_messages.clear();forced_motion.reset();
     player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;player_status_flags=0;
@@ -5792,6 +5803,7 @@ void Mir3HudView::advance_level_effects(double milliseconds) {
 
 bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
+    if (melee_spells.receive({reinterpret_cast<const char*>(encoded.ptr()),std::size_t(encoded.size())})) return true;
     const auto reply=mir3::parse_action_reply({reinterpret_cast<const char*>(encoded.ptr()),std::size_t(encoded.size())});
     if (reply==mir3::ActionReply::good) { action_prediction.confirm();return true; }
     if (reply==mir3::ActionReply::fail) {
@@ -7399,7 +7411,10 @@ void Mir3HudView::_process(double delta) {
         queue_redraw();
     }
     if (advancing_action && player_action.frame()!=previous_action_frame) {
-        if (const int sound=mir3::HumanActions::frame_sound(player_action.action(),player_action.frame(),player_weapon,local_hit_weapon,player_clothing,player_type))
+        if (player_action.frame()==1 && player_melee_sound &&
+            ((player_action.action()>=9 && player_action.action()<=14) || player_action.action()==16 || player_action.action()==17)) {
+            play_spell_sound(player_melee_sound,player_cell);player_melee_sound=0;
+        } else if (const int sound=mir3::HumanActions::frame_sound(player_action.action(),player_action.frame(),player_weapon,local_hit_weapon,player_clothing,player_type))
             play_actor_sound(0,sound,player_cell);
         if (player_harvest_impact && player_action.frame()==3) {
             player_harvest_impact=false;
@@ -7557,9 +7572,14 @@ void Mir3HudView::_process(double delta) {
                     human.harvest=false;
                     show_harvest_impact(human.cell);
                 }
-                if (previous!=human.action.frame())
-                    play_actor_sound(actor,mir3::HumanActions::frame_sound(human.action.action(),human.action.frame(),
+                if (previous!=human.action.frame()) {
+                    const bool melee_action=(human.action.action()>=9 && human.action.action()<=14) || human.action.action()==16 || human.action.action()==17;
+                    const int melee_sound=human.spell.weapon && melee_action && human.action.frame()==1?
+                        mir3::MeleeSpells::frame_sound(human.spell.skill,human.type):0;
+                    if (melee_sound) play_spell_sound(melee_sound,human.cell);
+                    else play_actor_sound(actor,mir3::HumanActions::frame_sound(human.action.action(),human.action.frame(),
                         human.weapon,human.hit_weapon,human.clothing,human.type),human.cell);
+                }
                 queue_redraw();
                 if (!human.action.finished()) continue;
                 human.idle.reset();
