@@ -5079,6 +5079,7 @@ void Mir3HudView::cancel_pointer_interactions() {
     status.end_drag();
     status_close_pressed=false;
     inventory.end_drag();
+    repair.pressed=false;
     inventory.close_pressed=false;
     inventory.scroll.captured=false;
     chat_history.input(2,0,0,false,0,0,0);
@@ -5182,7 +5183,7 @@ void Mir3HudView::draw_inventory() {
             auto caption=message(1452);
             if(const auto at=caption.find("%d");at!=std::string::npos)
                 caption.replace(at,2,std::to_string(repair.price));
-            text(caption,{x+16,y+366,222,19},0xF8DCFA);
+            text(caption,{x+70,y+423,85,14},0xF8DCFA);
         }
     }
     const auto weight=message(2501)+": "+std::to_string(model.weight)+" / "+std::to_string(model.max_weight);
@@ -5227,6 +5228,7 @@ void Mir3HudView::toggle_inventory() {
     inventory.toggle();
     if(!inventory.visible) repair={};
     if (inventory.visible) raise_panel(Panel::inventory);
+    repair.pressed=false;
     inventory.close_pressed=false;
     inventory.scroll.captured=false;
     controller.cancel();
@@ -5759,7 +5761,7 @@ bool Mir3HudView::panel_pointer(int kind,Vector2 position,bool captured_only) {
     if (options.dragging || audio_drag>=0) return options_pointer(kind,position);
     if (guild.dragging || guild_scroll.captured || guild_layout.pressed>=0) return guild_pointer(kind,position);
     if (status.dragging || status_close_pressed) return status_pointer(kind,position);
-    if (inventory.dragging || inventory.close_pressed || inventory.scroll.captured)
+    if (repair.pressed || inventory.dragging || inventory.close_pressed || inventory.scroll.captured)
         return inventory_pointer(kind,position);
     if (skills.dragging || skills.pressed>=0 || skills.scroll_captured) return skill_pointer(kind,position);
     if (group.dragging || group_pressed>=0) return group_pointer(kind,position);
@@ -6285,7 +6287,7 @@ void Mir3HudView::handle_exit_confirmation(int dialog_id) {
 }
 
 bool Mir3HudView::dialog_is_alert() const {
-    return group_request==1427 || group_request==1434 || group_request==1414 || (group_request>=1473 && group_request<=1507) || (group_request>=1437 && group_request<=1439) || group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
+    return group_request==1457 || group_request==1427 || group_request==1434 || group_request==1414 || (group_request>=1473 && group_request<=1507) || (group_request>=1437 && group_request<=1439) || group_request==4000 || group_request==4017 || group_request==4714 || group_request==4716;
 }
 
 bool Mir3HudView::dialog_has_input() const {

@@ -2,6 +2,7 @@
 extends "inventory_wire.gd"
 
 var packets: Array[PackedByteArray] = []
+var repair_actions: Array = []
 
 func repair_click(position: Vector2) -> void:
 	click_at(position,true)
@@ -60,6 +61,19 @@ func run() -> void:
 	var sent := packets.size()
 	repair_click(confirm)
 	if not check(packets.size()==sent,"重新开窗没有旧报价"): return
+	hud.npc_dialogue_action.connect(func(actor: int, command: String): repair_actions.append([actor,command]))
+	if not check(hud.apply_npc_dialogue(Mir3HudView.SM_MERCHANTSAY,91,"Smith/<Special repair/@SPECIALREPAIR>"),"商人特修链接"): return
+	repair_click(Vector2(45,48))
+	if not check(repair_actions==[[91,"@SPECIALREPAIR"]] and packets.size()==sent+1,"特修脚本命令经商人消息发送"): return
+	if not check(hud.apply_game_message(open),"特修脚本使用共用修理窗口"): return
+	repair_click(cell)
+	if not check(hud.apply_game_message(quote),"特修脚本可返回共用报价"): return
+	click_at(confirm,true)
+	click_at(Vector2(400,300),false)
+	repair_click(cell)
+	if not check(packets.size()==sent+3,"释放到窗口外取消锤子按压且可重选"): return
+	if not check(hud.apply_game_message(quote),"重新取得共用报价"): return
+	if not await capture("npc-special-repair-quote"): return
 	hud.queue_free()
 	await create_timer(0.1).timeout
 	print("NPC_REPAIR_UI_OK")

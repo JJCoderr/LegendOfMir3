@@ -12,3 +12,8 @@
 客户端按服务器报价判断当前物品可否修理。特殊修理的 NPC 脚本入口和实服报价差异待核对。
 
 Windows Release 与 `repair_wire.gd`、`inventory_wire.gd`、`npc_wire.gd` 已验收。报价按钮坐标 (198,401) 来自 43FE8D–43FEA9。比奇省报价和成功截图为 `npc-repair-quote.png`、`npc-repair-success.png`。修理用例退出时 Godot 报告两个 ObjectDB 实例。
+
+## 特修入口和窗口细节
+
+原客户端 4610D0 对普通 NPC 链接发送 1011，把脚本命令原样交给商人。已检查的 668–671 修理分派没有普通/特殊标志。旧 C++ 参考的 NPCWnd.h 声明 `@SPECIALREPAIR`，该命令是否可用及报价由目标商人脚本决定。Godot 集成用例由这个链接进入，随后注入共用修理回包。
+43FFD5–440024 将报价放在背包相对矩形 (70,423)–(155,437)。670 的 420540 调用为无输入提示。
