@@ -66,7 +66,7 @@ func record_mp4_frame() -> void:
 	if available>0: send_mp4(2,mp4_capture.get_buffer(available).to_byte_array())
 	var expected := int((Time.get_ticks_usec()-mp4_started)*15/1000000)+1
 	if expected<=mp4_frames: return
-	var picture := root.get_texture().get_image().save_jpg_to_buffer(0.8)
+	var picture := root.get_texture().get_image().save_jpg_to_buffer(0.95)
 	# 偶发加载停顿补帧，保持视频时长与真实时间/音轨一致。
 	while mp4_frames<expected:
 		send_mp4(1,picture)

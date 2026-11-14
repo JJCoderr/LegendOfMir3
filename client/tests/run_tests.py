@@ -14,7 +14,7 @@
   python client/tests/run_tests.py map-events  # 地图事件全集
 
 --godot/--checks 指定程序；也可设置 MIR3_GODOT_EXECUTABLE。
---MP4 可选录制：H.264 800×600/15fps，CRF30/900kbps上限，AAC 48kbps；仅捕获游戏视口与混音。
+--MP4 可选录制：H.264 800×600/15fps，CRF24/1600kbps上限，AAC 48kbps；仅捕获游戏视口与混音。
 需要PATH中的ffmpeg、--ffmpeg路径或python -m pip install imageio-ffmpeg；不启用则无录制开销。
 输出默认build/videos，不覆盖已有文件；多场景子系统指定路径时按场景追加文件名。
 技能图形用例在同一进程运行，背景音乐持续播放，技能声效保留。
@@ -163,9 +163,9 @@ def run_graphics(command, args, label):
         video, audio = folder / "video.mp4", folder / "audio.f32"
         listener.bind(("127.0.0.1",0)); listener.listen(1); listener.settimeout(0.25)
         stop = threading.Event()
-        # H.264上限约0.9Mb/s，加AAC音轨；800x600/15fps，约7MB/分钟以内。
+        # H.264上限约1.6Mb/s，加AAC音轨；800x600/15fps，约12MB/分钟以内。
         with (folder / "encoder.log").open("wb") as errors:
-            process = subprocess.Popen([encoder,"-hide_banner","-loglevel","error","-f","image2pipe","-vcodec","mjpeg","-framerate","15","-i","pipe:0","-vf","scale=800:600:force_original_aspect_ratio=decrease,pad=800:600:(ow-iw)/2:(oh-ih)/2","-an","-c:v","libx264","-preset","veryfast","-crf","30","-maxrate","900k","-bufsize","1800k","-pix_fmt","yuv420p",str(video)],stdin=subprocess.PIPE,stderr=errors)
+            process = subprocess.Popen([encoder,"-hide_banner","-loglevel","error","-f","image2pipe","-vcodec","mjpeg","-framerate","15","-i","pipe:0","-vf","scale=800:600:force_original_aspect_ratio=decrease,pad=800:600:(ow-iw)/2:(oh-ih)/2","-an","-c:v","libx264","-preset","veryfast","-crf","24","-maxrate","1600k","-bufsize","3200k","-pix_fmt","yuv420p",str(video)],stdin=subprocess.PIPE,stderr=errors)
             def receive():
                 try:
                     connection = None

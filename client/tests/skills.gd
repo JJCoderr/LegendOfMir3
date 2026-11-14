@@ -56,12 +56,12 @@ func setup_showcase() -> void:
     root.add_child(overlay)
     var panel := PanelContainer.new()
     var backdrop := StyleBoxFlat.new()
-    backdrop.bg_color = Color(0,0,0,0.15)
+    backdrop.bg_color = Color(0,0,0,0.40)
     panel.add_theme_stylebox_override("panel",backdrop)
-    panel.position = Vector2(8,8)
     panel.size = Vector2(520,30)
     panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
     overlay.add_child(panel)
+    panel.position = Vector2(8,8)
     var row := HBoxContainer.new()
     row.mouse_filter = Control.MOUSE_FILTER_IGNORE
     panel.add_child(row)
@@ -123,6 +123,9 @@ func prepare_outcome(skill: int) -> bool:
         packets.append(packet)
         hud.apply_game_message("+GOOD".to_ascii_buffer()))
     if not check(await wait_until(func(s): return s.map_left_delay_ms==0), "输入门控结束"): return false
+    var pointer := InputEventMouseMotion.new()
+    pointer.position = Vector2(outcome_target*Vector2i(48,32)-hud.hud_snapshot().map_camera_pixel)+Vector2(1,1)
+    root.push_input(pointer,true)
     key(KEY_F1)
     if not check(packets.size()==1 and decode_request(packets[0]).decode_u16(8)==skill, "施法请求技能编号正确"): return false
     if not check(await wait_until(func(s): return s.player_action==-1,4000), "起手结束"): return false
