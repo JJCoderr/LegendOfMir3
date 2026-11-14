@@ -673,8 +673,12 @@ private:
     void draw_shop_requirement(const ShopGood& good,int x,int y,int width);
     void close_shop_offers();
     static constexpr int shop_top=225;
+    int shop_window_top() const { return storage_list?234:shop_top; }
+    int shop_window_left() const { return storage_list?-292:0; }
+    int shop_window_height() const { return storage_list?205:224; }
     int shop_width() const { return shop_bulk_index>=0?516:shop_show_offers?488:292; }
-    static mir3::HudLayout::Rect shop_offer_cell(int cell) {
+    mir3::HudLayout::Rect shop_offer_cell(int cell) const {
+        if(storage_list) return {22+38*(cell%4),266+38*(cell/4),37,37};
         return {315+38*(cell%4),shop_top+42+38*(cell/4),35,35};
     }
     static constexpr int shop_goods_rows=4, shop_goods_pitch=42, shop_goods_row_top=16;

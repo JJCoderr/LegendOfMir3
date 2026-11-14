@@ -35,23 +35,29 @@ func run() -> void:
 	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_STORAGE_DEPOSIT_OK,0,3,2,0)) and hud.hud_snapshot().bag_records[0].count==3,"存入成功保持剩余物品"): return
 	var storage := game_reply(Mir3HudView.SM_STORAGE_LIST,91,0,0,13)
 	for id in range(13):
-		storage.append_array(item_record(300+id,"Potion",301,3))
+		storage.append_array(item_record(300+id if id<12 else 33,"Potion",301,3))
 		storage.append(47)
 	if not check(hud.apply_game_message(storage) and hud.hud_snapshot().shop_offers_count==13,"原包仓库记录"): return
 	if not await capture("npc-storage-list"): return
-	tap(Vector2(427,399))
-	tap(Vector2(330,280))
-	tap(Vector2(378,399))
+	tap(Vector2(135,399))
+	tap(Vector2(35,280))
+	tap(Vector2(87,399))
 	if not check(hud.hud_snapshot().group_request==1707 and storage_packets.size()==2,"本地翻页与取回数量"): return
-	hud.get_node("ChatInput").text="*"
+	hud.get_node("ChatInput").text="1"
 	key(KEY_ENTER)
 	var expected := "#3".to_ascii_buffer()
 	var op := Mir3HudView.CM_USERTAKEBACKSTORAGEITEM
-	expected.append_array(encode_scene_bytes(PackedByteArray([91,0,0,0,op&255,op>>8,56,1,0,0,3,0])))
+	expected.append_array(encode_scene_bytes(PackedByteArray([91,0,0,0,op&255,op>>8,33,0,0,0,1,0])))
 	expected.append_array(encode_scene_bytes("Potion".to_ascii_buffer()))
 	expected.append(33)
 	if not check(storage_packets.size()==3 and storage_packets[-1]==expected,"第二页物品完整取回包"): return
-	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_STORAGE_WITHDRAW_OK,0,0,0,0)) and hud.hud_snapshot().shop_offers_count==12,"取回移除仓库项"): return
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_STORAGE_WITHDRAW_OK,0,2,4,0)) and hud.hud_snapshot().shop_offers_count==13 and hud.hud_snapshot().bag_records[0].count==4,"部分取回同步两侧数量"): return
+	tap(Vector2(87,399))
+	if not check(hud.hud_snapshot().group_request==1707,"剩余两件可继续取回"): return
+	hud.get_node("ChatInput").text="*"
+	key(KEY_ENTER)
+	if not check(hud.apply_game_message(game_reply(Mir3HudView.SM_STORAGE_WITHDRAW_OK,0,0,6,0)) and hud.hud_snapshot().shop_offers_count==12,"取回全部移除仓库项"): return
+	if not await capture("npc-storage-withdraw"): return
 	hud.open_login()
 	if not check(hud.hud_snapshot().shop_offers_count==0,"离场清理仓库"): return
 	hud.queue_free()

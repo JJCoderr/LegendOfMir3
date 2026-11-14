@@ -1339,12 +1339,13 @@ void Mir3HudView::draw_shop() {
     // 0x479410 positions the goods window below the NPC dialogue.
     const auto skin=frame(shop_bulk_index>=0?1262:shop_show_offers?1261:1260);
     if (skin.is_valid())
-        paint_canvas->draw_texture(skin,Vector2((shop_width()-skin->get_width())/2,shop_top+(224-skin->get_height())/2));
+        paint_canvas->draw_texture(skin,Vector2(shop_window_left()+(shop_width()-skin->get_width())/2,shop_window_top()+(shop_window_height()-skin->get_height())/2));
     const int last=std::max(0,int(shop_goods.size())-1);
     // 0x47776B draws frame 1225 at (260,32), with 85 pixels of travel.
     if (last>0) sprite(1225,{260,shop_top+32+int(std::lround(85.0*shop_scroll_fraction))});
     // 0x478000 repositions the controls after the shop changes modes.
-    if (shop_pressed==-5 && shop_show_offers) sprite(1222,{449,shop_top+159});
+    const int detail_x=shop_window_left(),detail_y=storage_list?388:shop_top+163;
+    if (shop_pressed==-5 && shop_show_offers) sprite(1222,{detail_x+449,detail_y-4});
     if (shop_pressed==-7) sprite(1222,{258,shop_top+183});
     if (shop_pressed==-6) sprite(1264,{106,shop_top+186});
     if (shop_bulk_index>=0) {
@@ -1375,10 +1376,10 @@ void Mir3HudView::draw_shop() {
     if (shop_show_offers) {
         // 0x477780: 652 acknowledges the page; the request path displays an ellipsis.
         text(shop_offer_loading?"...":std::to_string(shop_offer_page),
-            {310,shop_top-3,163,44},0x96c8ff);
-        if (shop_pressed==-2) sprite(1266,{358,shop_top+163});
-        if (shop_pressed==-3) sprite(1269,{316,shop_top+163});
-        if (shop_pressed==-4) sprite(1271,{406,shop_top+163});
+            {detail_x+310,shop_window_top()-3,163,44},0x96c8ff);
+        if (shop_pressed==-2) sprite(1266,{detail_x+358,detail_y});
+        if (shop_pressed==-3) sprite(1269,{detail_x+316,detail_y});
+        if (shop_pressed==-4) sprite(1271,{detail_x+406,detail_y});
         for (int row=0;row<12;++row) {
             const int index=row+(storage_list?12*shop_offer_page:0);
             if(index>=int(shop_offers.size())) break;
@@ -1464,6 +1465,7 @@ void Mir3HudView::withdraw_storage(int quantity) {
         open_group_dialog(1707);
         return;
     }
+    if(!quantity && offer.stack_mode>=2) quantity=1;
     if(quantity<0 || quantity>offer.count) return;
     storage_pending=offer.id;
     send_client_packet(mir3::protocol::CM_USERTAKEBACKSTORAGEITEM,shop_actor,String::utf8(offer.name.c_str()),offer.id,std::uint16_t(quantity));
@@ -1519,7 +1521,8 @@ void Mir3HudView::buy_shop_bulk(std::uint16_t quantity) {
 bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
     if (!shop_actor) return false;
     if (shop_scroll_input(kind,pointer)) return true;
-    const bool inside=Rect2(0,shop_top,shop_width(),224).has_point(pointer);
+    const bool inside=Rect2(shop_window_left(),shop_window_top(),shop_width(),shop_window_height()).has_point(pointer);
+    const int detail_x=shop_window_left(),detail_y=storage_list?388:shop_top+163;
     const bool details=shop_show_offers;
     constexpr int confirm_button=-2;
     constexpr int category_button=-6;
@@ -1527,8 +1530,8 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
     const auto close_icon=frame(1221);
     if (close_icon.is_valid()) {
         // 0x478850 checks the list close button even in mode 1 (detail grid).
-        if (Rect2(Vector2(258,shop_top+183),close_icon->get_size()).has_point(pointer)) control=-7;
-        else if (details && Rect2(Vector2(449,shop_top+159),close_icon->get_size()).has_point(pointer)) control=-5;
+        if (!storage_list && Rect2(Vector2(258,shop_top+183),close_icon->get_size()).has_point(pointer)) control=-7;
+        else if (details && Rect2(Vector2(detail_x+449,detail_y-4),close_icon->get_size()).has_point(pointer)) control=-5;
         else if (shop_bulk_index>=0 && Rect2(Vector2(475,shop_top+56),close_icon->get_size()).has_point(pointer)) control=-5;
     }
     if (shop_bulk_index>=0 && !control) {
@@ -1538,13 +1541,13 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
     if (details && !control) {
         for (const auto& spec:std::array{std::array{confirm_button,1265,358},std::array{-3,1268,316},std::array{-4,1270,406}}) {
             const auto image=frame(spec[1]);
-            if (image.is_valid() && Rect2(Vector2(spec[2],shop_top+163),image->get_size()).has_point(pointer)) {
+            if (image.is_valid() && Rect2(Vector2(detail_x+spec[2],detail_y),image->get_size()).has_point(pointer)) {
                 control=spec[0];
                 break;
             }
         }
     }
-    if (!control) {
+    if (!control && !storage_list) {
         const auto confirm=frame(1263);
         if (confirm.is_valid() && Rect2(Vector2(106,shop_top+186),confirm->get_size()).has_point(pointer))
             control=category_button;
@@ -1592,7 +1595,7 @@ bool Mir3HudView::shop_input(int kind,Vector2 pointer,bool double_click) {
             if (rect(shop_offer_cell(i)).has_point(pointer)) { row=i+(storage_list?12*shop_offer_page:0); offer_cell=true; break; }
         }
     }
-    if (!offer_cell) {
+    if (!offer_cell && !storage_list) {
         // 0x4770B4 / 0x4785A0: icon and text are separate hit rectangles.
         for (int i=0;i<shop_goods_rows;++i) {
             const int y=shop_top+shop_goods_row_top+shop_goods_pitch*i;
@@ -1699,7 +1702,7 @@ void Mir3HudView::draw_npc_dialogue() {
         if (npc_dialogue_first<npc_dialogue_scroll_limit && npc_dialogue_down_lit)
             sprite(npc_dialogue_arrow_pressed==1?1356:1355,{183,bottom-30});
     }
-    const int focused=shop_actor && Rect2(0,shop_top,shop_width(),224).has_point(inventory_cursor)?-1:npc_dialogue_option_at(inventory_cursor);
+    const int focused=shop_actor && Rect2(shop_window_left(),shop_window_top(),shop_width(),shop_window_height()).has_point(inventory_cursor)?-1:npc_dialogue_option_at(inventory_cursor);
     for (const auto& row:npc_dialogue_rows) {
         if (row.bounds[1]<npc_dialogue_first || row.bounds[1]>npc_dialogue_first+21) continue;
         const bool clickable=!row.command.empty();
@@ -3283,7 +3286,11 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
         if(header->opcode==mir3::protocol::SM_STORAGE_WITHDRAW_OK && item!=shop_offers.end()) {
             const auto quantity=header->parameters[1];
             if(quantity) for(auto& bag_item:bag.items)
-                if(bag_item && bag_item.make_index==item->id) { bag_item.set_count(quantity);break; }
+                if(bag_item && bag_item.make_index==item->id) {
+                    bag_item.set_count(quantity);
+                    quick_items.update_count(bag_item.name,quantity);
+                    break;
+                }
             if(header->parameters[0]) item->count=header->parameters[0];
             else {
                 shop_offers.erase(item);
@@ -4610,7 +4617,7 @@ void Mir3HudView::button_hint() {
     if (group_request || (guild_editor.visible && rect(guild_editor.rect).has_point(inventory_cursor))) return;
     int hint=-1;
     Vector2 anchor;
-    bool panel_hit=shop_actor && Rect2(0,shop_top,shop_width(),224).has_point(inventory_cursor);
+    bool panel_hit=shop_actor && Rect2(shop_window_left(),shop_window_top(),shop_width(),shop_window_height()).has_point(inventory_cursor);
     if (!panel_hit && npc_dialogue_actor && rect(npc_dialogue_bounds()).has_point(inventory_cursor)) {
         panel_hit=true;
         // 0x45FDD0 configures the close button with CMList 1052.
@@ -4987,7 +4994,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     };
     if (shop_actor && button.is_valid() && button->is_pressed() &&
         (button->get_button_index()==MOUSE_BUTTON_WHEEL_UP || button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN) &&
-        Rect2(0,shop_top,shop_width(),224).has_point(button->get_position())) {
+        Rect2(shop_window_left(),shop_window_top(),shop_width(),shop_window_height()).has_point(button->get_position())) {
         // 0x43D310 / 0x43D490 dispatch by the window under the pointer, including its frame.
         const int direction=button->get_button_index()==MOUSE_BUTTON_WHEEL_DOWN?1:-1;
         const int last=std::max(0,int(shop_goods.size())-1);
@@ -5001,7 +5008,7 @@ void Mir3HudView::_input(const Ref<InputEvent>& event) {
     // 0x43D310 / 0x43D490 route the wheel to the NPC panel under the cursor.
     if (npc_dialogue_actor && button.is_valid() && button->is_pressed() &&
         rect(npc_dialogue_bounds()).has_point(button->get_position()) &&
-        !(shop_actor && Rect2(0,shop_top,shop_width(),224).has_point(button->get_position()))) {
+        !(shop_actor && Rect2(shop_window_left(),shop_window_top(),shop_width(),shop_window_height()).has_point(button->get_position()))) {
         const auto index=button->get_button_index();
         if (index==MOUSE_BUTTON_WHEEL_UP || index==MOUSE_BUTTON_WHEEL_DOWN) {
             const int delta=index==MOUSE_BUTTON_WHEEL_UP?-1:1;
@@ -5392,6 +5399,7 @@ void Mir3HudView::confirm_merchant_service(int quantity) {
         open_group_dialog(merchant_service.storage?1706:1705);
         return;
     }
+    if(!quantity && merchant_service.storage && current->stack_mode>=2) quantity=1;
     if(quantity<0 || quantity>current->count) return;
     merchant_service.phase=Phase::paying;
     send_client_packet(merchant_service.storage?mir3::protocol::CM_USERSTORAGEITEM:merchant_service.selling?mir3::protocol::CM_USERSELLITEM:mir3::protocol::CM_USERREPAIRITEM,
@@ -6290,7 +6298,7 @@ bool Mir3HudView::skill_menu_input(int kind,Vector2 point,bool double_click) {
 bool Mir3HudView::spell_pointer_available() const {
     using Layout=mir3::HudLayout;
     const auto pointer=inventory_cursor;
-    if (minimap.visible || group_request || (shop_actor && Rect2(0,shop_top,shop_width(),224).has_point(pointer)) || (npc_dialogue_actor && rect(npc_dialogue_bounds()).has_point(pointer)) || !Rect2(0,0,800,Layout::origin[1]).has_point(pointer) ||
+    if (minimap.visible || group_request || (shop_actor && Rect2(shop_window_left(),shop_window_top(),shop_width(),shop_window_height()).has_point(pointer)) || (npc_dialogue_actor && rect(npc_dialogue_bounds()).has_point(pointer)) || !Rect2(0,0,800,Layout::origin[1]).has_point(pointer) ||
         rect(Layout::chat_frame(model.layout.expanded)).has_point(pointer)) return false;
     if (guild_editor.visible && rect(guild_editor.rect).has_point(pointer)) return false;
     for (const auto panel:panel_order) {
@@ -6593,7 +6601,7 @@ void Mir3HudView::draw_group_dialog() {
     }
     auto prompt=group_request==mir3::protocol::CM_MERCHANTDLGSELECT?npc_dialogue_prompt:
         group_request==mir3::protocol::CM_GUILDDELMEMBER?"'"+std::string(guild_name.utf8().get_data())+"' "+message(4001):
-        message((group_request>=1705 && group_request<=1707)?group_request:group_request==mir3::protocol::CM_GUILDADDMEMBER?1426:group_request==110?2302:group_request==1307?1307:group_request==mir3::protocol::CM_TRADE_GOLD?1304:group_request==mir3::protocol::CM_GUILDBREAKALLY?4002:group_request==mir3::protocol::CM_DELGROUPMEMBER?1606:1605);
+        message(group_request==1707?2301:(group_request==1705 || group_request==1706)?group_request:group_request==mir3::protocol::CM_GUILDADDMEMBER?1426:group_request==110?2302:group_request==1307?1307:group_request==mir3::protocol::CM_TRADE_GOLD?1304:group_request==mir3::protocol::CM_GUILDBREAKALLY?4002:group_request==mir3::protocol::CM_DELGROUPMEMBER?1606:1605);
     if(group_request==mir3::protocol::CM_GUILDADDMEMBER) if(auto at=prompt.find("%s");at!=std::string::npos) prompt.replace(at,2,guild_name.utf8().get_data());
     if (dialog_has_input()) text(prompt,{x+43,y+84,278,75},0xc8faff,mir3::TextFont::dialog);
     else text(message(group_request==109?2636:1065),{x+23,y+84,308,95},0xc8faff,mir3::TextFont::dialog);
@@ -8388,7 +8396,7 @@ bool Mir3HudView::panel_covered(Panel panel,Vector2 point) const {
         return state.visible && rect(state.rect).has_point(point);
     };
     if (covers(guild_editor) || group_request || (minimap.visible && rect(minimap.bounds()).has_point(point)) ||
-        (shop_actor && Rect2(0,shop_top,shop_width(),224).has_point(point)) ||
+        (shop_actor && Rect2(shop_window_left(),shop_window_top(),shop_width(),shop_window_height()).has_point(point)) ||
         (npc_dialogue_actor && rect(npc_dialogue_bounds()).has_point(point)))
         return true;
     for (auto it=panel_order.rbegin();it!=panel_order.rend() && *it!=panel;++it)
