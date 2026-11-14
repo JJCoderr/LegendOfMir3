@@ -6,6 +6,7 @@
 #include "protocol/group_message.hpp"
 #include "protocol/guild_notice.hpp"
 #include "protocol/skill_wire.hpp"
+#include "protocol/inventory_wire.hpp"
 #include "hud/level_up_effect.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"
@@ -669,6 +670,7 @@ private:
     Mir3ChatInput* chat_input=nullptr;
     void chat_requested(godot::String value);
     void send_chat_command(godot::String value);
+    bool apply_inventory_wire(const mir3::ReceiveHeader& header,std::span<const std::uint8_t> body);
     bool loaded=false;
     std::map<int,godot::Ref<godot::ImageTexture>> frames;
     std::map<int,godot::Ref<godot::ImageTexture>> portrait_frames;

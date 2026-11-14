@@ -207,3 +207,6 @@ SM_RIDEHORSE recognition低字节为本地骑乘形状，客户端确认后才�
 
 ## 技能同步与快捷键
 211参数三低字节为计数，每条74字节各自六位编码后追加斜杠；210为单条编码。640以recognition定位技能，参数一低字节等级、参数二三组合DWORD经验。1008 recognition为完整技能ID、参数一为快捷字符或0。详见client/docs/evidence/skill-wire.md。
+
+## 背包原包布局
+200/202/203正文为独立六位编码100字节记录；201每条独立编码并附斜杠，参数三完整WORD为计数。MakeIndex在62、数量WORD在71，203是更新。原客户端布局优先于早期开源结构，详见client/docs/evidence/inventory-wire.md。

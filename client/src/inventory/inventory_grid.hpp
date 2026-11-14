@@ -12,6 +12,7 @@ struct BagItem {
     std::uint32_t make_index=0;
     std::string name;
     int stack_mode=0;
+    std::array<std::uint8_t,100> server_record{};
     explicit operator bool() const { return icon >= 0; }
 };
 class InventoryGrid {

@@ -7,6 +7,7 @@
 #include "protocol/group_message.hpp"
 #include "protocol/guild_notice.hpp"
 #include "protocol/skill_wire.hpp"
+#include "protocol/inventory_wire.hpp"
 #include "hud/level_up_effect.hpp"
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
@@ -44,6 +45,36 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        // 测试内容：背包100字节布局、完整计数、逐条编码及尾分隔符、未知消息和畸形包拒绝。
+        if (std::filesystem::path(argv[1])=="--inventory-wire") {
+            using namespace mir3::protocol;
+            std::string raw(100,0);raw.replace(0,4,"Item");raw[30]=5;raw[36]=char(0x13);raw[37]=4;
+            raw[61]=3;raw[62]=char(0xef);raw[63]=char(0xcd);raw[64]=char(0xab);raw[65]=char(0x89);
+            raw[66]=12;raw[71]=9;raw[72]=1;raw[99]=char(0xa5);
+            std::string encoded;unsigned accumulator=0;int bits=0;
+            for (unsigned char byte:raw) { accumulator=(accumulator<<8)|byte;bits+=8;
+                while(bits>=6) {bits-=6;encoded+=char(60+((accumulator>>bits)&63));} }
+            if(bits) encoded+=char(60+((accumulator<<(6-bits))&63));
+            const auto parse=[](mir3::ReceiveHeader h,const std::string& body) {
+                return mir3::InventoryWire::parse(h,{reinterpret_cast<const std::uint8_t*>(body.data()),body.size()});
+            };
+            for (int opcode:{SM_ADDITEM,SM_DELITEM,SM_UPDATEITEM}) {
+                auto value=parse({0,std::uint16_t(opcode),{}},encoded);
+                check(value && value->records.size()==1,"single item");const auto& row=value->records.front();
+                check(row.identity()==0x89abcdef && row.name()=="Item" && row.icon()==1043 && row.count()==265 &&
+                    row.mode()==5 && row.stack_mode()==3 && row.word(66)==12 && row.raw[99]==0xa5,"100-byte original layout");
+            }
+            check(parse({0,SM_BAGITEMS,{0,0,2}},encoded+"/"+encoded+"/tail")->records.size()==2,"segmented list");
+            check(!parse({0,SM_BAGITEMS,{0,0,0x101}},encoded+"/"),"count uses full word");
+            check(!parse({0,SM_BAGITEMS,{0,0,2}},encoded+"/"),"truncated list");
+            check(!parse({0,SM_BAGITEMS,{0,0,1}},encoded),"missing slash");
+            check(!parse({0,SM_ADDITEM,{}},encoded.substr(1)),"truncated item");
+            check(!parse({0,SM_ADDITEM,{}},encoded+"/"),"single has no separator");
+            check(parse({0,SM_BAGITEMS,{}},"")->records.empty(),"empty full list");
+            check(parse({0,SM_BAGITEMS,{}},encoded+"/")->records.size()==1,"original do-while zero count");
+            check(!parse({0,SM_ABILITY,{}},encoded),"unrelated message");
+            std::cout << "INVENTORY_WIRE_MODEL_OK\n";return 0;
+        }
         // 测试内容：技能独立编码记录、列表计数低字节、分隔符、截断拒绝及空列表。
         if (std::filesystem::path(argv[1])=="--skill-wire") {
             using namespace mir3::protocol;
