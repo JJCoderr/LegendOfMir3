@@ -19,6 +19,7 @@
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
 #include "hud/exit_transition.hpp"
+#include "hud/character_selection.hpp"
 #include "hud/portrait_picker.hpp"
 #include "resources/map_terrain.hpp"
 #include "protocol/map_message.hpp"
@@ -79,6 +80,7 @@ public:
     bool apply_minimap_reply(int map_number);
     void apply_minimap_unavailable();
     void handle_exit_confirmation(int dialog_id);
+    bool apply_selection_message(godot::PackedByteArray message);
     bool set_local_exit_state(int action,godot::PackedInt64Array ticks);
     bool apply_trade_offer_reply(int identifier,int accepted_count=0);
     bool set_trade_item(int side,int slot,int icon,int count,int64_t make_index,godot::String name,int std_mode,int stack_mode);
@@ -448,6 +450,17 @@ private:
     mir3::CharacterSelectionPage character_selection;
     double exit_fraction_ms=0;
     mir3::WilArchive selection_archive;
+    std::map<int,mir3::WilFrame> selection_sources;
+    godot::Ref<godot::ImageTexture> selection_surface;
+    std::optional<mir3::CharacterSelectionPage> selection_pending;
+    std::array<godot::Rect2,4> selection_bounds;
+    std::uint32_t selection_elapsed=0;
+    double selection_fraction_ms=0;
+    bool selection_empty_alert=false,selection_alert_pressed=false;
+    godot::Vector2 selection_pointer;
+    const mir3::WilFrame* selection_source(int index);
+    void selection_input(const godot::Ref<godot::InputEvent>& event);
+
     std::map<int,godot::Ref<godot::ImageTexture>> selection_frames;
     godot::Node2D* exit_layer=nullptr;
     bool prepare_character_selection();

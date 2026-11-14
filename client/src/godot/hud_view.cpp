@@ -1,3 +1,4 @@
+#include "hud/selection_pixels.hpp"
 #include "chat/scene_chat.hpp"
 #include "protocol/receive_message.hpp"
 #include <godot_cpp/classes/resource_loader.hpp>
@@ -86,6 +87,7 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("client_packet_ready",PropertyInfo(Variant::PACKED_BYTE_ARRAY,"packet")));
     ADD_SIGNAL(MethodInfo("game_connection_close_requested"));
     ADD_SIGNAL(MethodInfo("character_selection_connection_requested"));
+    ClassDB::bind_method(D_METHOD("apply_selection_message","message"),&Mir3HudView::apply_selection_message);
     ADD_SIGNAL(MethodInfo("npc_request",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::INT,"actor"),
         PropertyInfo(Variant::STRING,"body")));
     ADD_SIGNAL(MethodInfo("npc_dialogue_requested",PropertyInfo(Variant::INT,"actor")));
@@ -378,6 +380,16 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["exit_transition_ms"]=int64_t(exit_transition.elapsed);
     result["exit_brightness"]=exit_transition.brightness();
     result["selection_connecting"]=character_selection.visible && character_selection.connecting;
+    result["selection_count"]=character_selection.count;result["selection_selected"]=character_selection.selected;
+    result["selection_page"]=character_selection.page;result["selection_empty_alert"]=selection_empty_alert;
+    Array selection_roles;
+    for (int i=0;i<character_selection.count;++i) {
+        const auto& role=character_selection.roles[i];Dictionary entry;
+        entry["name"]=String::utf8(mir3::ansi_to_utf8(role.name).c_str());entry["frame"]=role.frame;
+        entry["action"]=role.action;entry["position"]=Vector2i(role.x,role.y);entry["bounds"]=selection_bounds[i];
+        selection_roles.append(entry);
+    }
+    result["selection_roles"]=selection_roles;
     result["exit_clock"]=int64_t(GetTickCount());
     result["exit_allowed"]=exit_guard.allowed(GetTickCount());
     result["exit_action"]=int(exit_guard.action);
@@ -2623,7 +2635,8 @@ void Mir3HudView::enter_character_selection() {
     while (!actor_sounds.empty()) remove_actor_sound(actor_sounds.begin()->first);
     chat_input->release_focus();chat_input->hide();
     scene_light_layer->hide();hud_base->hide();hud_copy->hide();hud_decoration->hide();hud_tail->hide();exit_layer->hide();
-    character_selection.visible=true;character_selection.connecting=true;
+    character_selection={};character_selection.visible=true;
+    selection_pending.reset();selection_elapsed=0;selection_fraction_ms=0;selection_empty_alert=false;selection_alert_pressed=false;selection_bounds={};
     outgoing_messages.sequence=0;
     get_window()->set_content_scale_size(Vector2i(640,480));
     get_window()->set_size(Vector2i(640,480));
@@ -2632,14 +2645,89 @@ void Mir3HudView::enter_character_selection() {
     emit_signal("character_selection_connection_requested");
 }
 
+const mir3::WilFrame* Mir3HudView::selection_source(int index) {
+    auto found=selection_sources.find(index);
+    if (found!=selection_sources.end()) return &found->second;
+    auto source=selection_archive.frame(index);
+    if (!source) return nullptr;
+    return &selection_sources.emplace(index,std::move(*source)).first->second;
+}
+
+bool Mir3HudView::apply_selection_message(PackedByteArray message) {
+    if (!character_selection.visible) return false;
+    auto next=character_selection;
+    if (!next.receive({message.ptr(),std::size_t(message.size())})) return false;
+    if (selection_elapsed<500) selection_pending=std::move(next);
+    else { character_selection=std::move(next);selection_empty_alert=character_selection.count==0;selection_bounds={}; }
+    queue_redraw();return true;
+}
+
+void Mir3HudView::selection_input(const Ref<InputEvent>& event) {
+    const Ref<InputEventMouseMotion> motion=event;
+    if (motion.is_valid()) { selection_pointer=motion->get_position();queue_redraw();return; }
+    if (character_selection.connecting) return;
+    const Ref<InputEventKey> key=event;
+    if (selection_empty_alert && key.is_valid() && key->is_pressed() && (key->get_keycode()==KEY_ENTER || key->get_keycode()==KEY_ESCAPE)) {
+        selection_empty_alert=false;selection_alert_pressed=false;queue_redraw();return;
+    }
+    const Ref<InputEventMouseButton> mouse=event;
+    if (mouse.is_null() || mouse->get_button_index()!=MOUSE_BUTTON_LEFT) return;
+    const auto pos=mouse->get_position();selection_pointer=pos;
+    if (selection_empty_alert) {
+        const auto button=frame(1243);
+        const bool hit=button.is_valid() && Rect2(Vector2(277,298),button->get_size()).has_point(pos);
+        if (mouse->is_pressed()) selection_alert_pressed=hit;
+        else { if (hit) selection_empty_alert=false;selection_alert_pressed=false; }
+    } else if (mouse->is_pressed()) {
+        for (int i=character_selection.page*2;i<std::min(character_selection.count,character_selection.page*2+2);++i)
+            if (selection_bounds[i].has_point(pos)) { character_selection.select(i);break; }
+    } else if (character_selection.count>2) {
+        const auto right=frame(1153),left=frame(1150);
+        if (right.is_valid() && Rect2(Vector2(550,400),right->get_size()).has_point(pos)) character_selection.turn_page(1);
+        else if (left.is_valid() && Rect2(Vector2(500,400),left->get_size()).has_point(pos)) character_selection.turn_page(0);
+    }
+    queue_redraw();
+}
+
 void Mir3HudView::draw_character_selection() {
     paint_canvas=this;
-    draw_texture(selection_frames.at(50),Vector2());
+    const auto background=selection_source(50);
+    if (!background || background->width!=640 || background->height!=480) return;
+    auto pixels=background->pixels.rgba;
+    for (int i=character_selection.page*2;i<std::min(character_selection.count,character_selection.page*2+2);++i) {
+        const auto& role=character_selection.roles[i];
+        if (const auto source=selection_source(role.frame+20)) mir3::selection_blit(pixels,*source,role.x,role.y,mir3::SelectionBlend::shadow);
+        if (const auto source=selection_source(role.frame)) {
+            mir3::selection_blit(pixels,*source,role.x,role.y,role.action?mir3::SelectionBlend::normal:mir3::SelectionBlend::inactive);
+        }
+        if (const auto source=selection_source(role.frame+40)) mir3::selection_blit(pixels,*source,role.x,role.y,mir3::SelectionBlend::additive);
+    }
+    selection_surface=texture(pixels,640,480);
+    draw_texture(selection_surface,Vector2());
     constexpr std::array<mir3::HudLayout::Point,4> positions{{{440,93},{79,243},{259,49},{28,438}}};
     for (int i=0;i<4;++i) draw_texture(selection_frames.at(52+i*2),point(positions[i]));
+    if (character_selection.count>2) {
+        sprite(character_selection.page?1155:1153,{550,400});
+        sprite(character_selection.page?1150:1152,{500,400});
+    }
+    if (character_selection.selected>=0) {
+        const auto& role=character_selection.roles[character_selection.selected];
+        const auto name=message(206)+"   "+mir3::ansi_to_utf8(role.name),level=message(207)+"   "+std::to_string(role.level),job=message(208+role.profession);
+        const auto measure=[&](const std::string& value) { return mir3::raster_text(value,500,16,false,mir3::TextFont::selection,messages.get(1074)).text_width; };
+        const int width=std::max(measure(name),measure(job))+20;
+        const Rect2 box(79,108,width,70);
+        draw_rect(box,Color(50.f/255,50.f/255,25.f/255,100.f/255));
+        draw_rect(box,Color(100.f/255,100.f/255,80.f/255),false);
+        text(name,{89,118,width-20,16},0x96c8ff,mir3::TextFont::selection);
+        text(level,{89,138,width-20,16},0x96f096,mir3::TextFont::selection);
+        text(job,{89,158,width-20,16},0xafffff,mir3::TextFont::selection);
+    }
     if (character_selection.connecting) {
         sprite(1248,{155,150});
         text(message(200),{178,234,308,95},0xc8faff,mir3::TextFont::dialog);
+    } else if (selection_empty_alert) {
+        sprite(1240,{140,110});sprite(selection_alert_pressed?1244:1243,{277,298});
+        text(message(219),{163,194,308,95},0xc8faff,mir3::TextFont::dialog);
     }
 }
 
@@ -2973,7 +3061,25 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
-    if (character_selection.visible) return;
+    if (character_selection.visible) {
+        selection_fraction_ms+=delta*1000;const auto ms=std::uint32_t(selection_fraction_ms);selection_fraction_ms-=ms;
+        selection_elapsed=std::min(500u,selection_elapsed+ms);
+        if (selection_pending && selection_elapsed>=500) {
+            character_selection=std::move(*selection_pending);selection_pending.reset();
+            selection_empty_alert=character_selection.count==0;selection_bounds={};
+        }
+        if (!character_selection.connecting) {
+            for (int i=character_selection.page*2;i<std::min(character_selection.count,character_selection.page*2+2);++i) {
+                const auto& role=character_selection.roles[i];
+                if (std::uint16_t(role.elapsed+ms)>120) {
+                    // 原版在推进帧后、动作末帧转换前更新矩形；选择动作本身不立即更新。
+                    if (const auto source=selection_source(role.frame+1))
+                        selection_bounds[i]=Rect2(role.x+source->offset_x,role.y+source->offset_y,source->width,source->height);
+                }
+            }
+        }
+        character_selection.advance(ms);queue_redraw();return;
+    }
     if (exit_transition.active) {
         exit_fraction_ms+=delta*1000;
         const auto elapsed=static_cast<std::uint32_t>(exit_fraction_ms);
@@ -3120,7 +3226,7 @@ void Mir3HudView::legacy_rect(Rect2 bounds,Color color) {
     paint_canvas->draw_polygon(vertices,colors,uv);
 }
 void Mir3HudView::_input(const Ref<InputEvent>& event) {
-    if (character_selection.visible) { get_viewport()->set_input_as_handled();return; }
+    if (character_selection.visible) { selection_input(event);get_viewport()->set_input_as_handled();return; }
     const Ref<InputEventMouseButton> button=event;
     const bool left_released=button.is_valid() && button->get_button_index()==MOUSE_BUTTON_LEFT && !button->is_pressed();
     if (left_released && portrait_entry_pressed) {

@@ -13,8 +13,4 @@ struct ExitTransition {
     }
     float brightness() const { return active?float((255.0-double(elapsed)*double(0.1f))*double(1.f/255.f)):1.f; }
 };
-struct CharacterSelectionPage {
-    bool visible=false,connecting=true;
-    static constexpr int width=640,height=480;
-};
 }

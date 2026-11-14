@@ -120,7 +120,7 @@ NativeText raster_text(std::string_view utf8, int width, int height, bool center
     const char normal_face[] = {char(0xcb), char(0xce), char(0xcc), char(0xe5), 0};
     const char level_face[] = {char(0xb1), char(0xbc), char(0xb8), char(0xb2), 0};
     const std::string caption_face(localized_face);
-    const bool use_caption_face = font == TextFont::gold || font == TextFont::localized_normal;
+    const bool use_caption_face = font == TextFont::gold || font == TextFont::localized_normal || font == TextFont::selection;
     if (font == TextFont::gold && caption_face.empty()) return result;
     const int points = (font == TextFont::gold || font == TextFont::skill_title) ? 10 : ((font == TextFont::level || font == TextFont::skill_level) ? 8 : 9);
     surface.font = CreateFontA(-MulDiv(points, result.dpi, 72), 0, 0, 0,

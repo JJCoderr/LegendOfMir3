@@ -1,7 +1,9 @@
-// 测试内容：界面模型、选项确认与聊天联动、场景消息、人物行为、地图及资源解析。
+// 测试内容：角色列表协议、选中及翻页动画、界面模型、选项确认与聊天联动、场景消息、人物行为、地图及资源解析。
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
 #include "hud/exit_transition.hpp"
+#include "hud/character_selection.hpp"
+#include "hud/selection_pixels.hpp"
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/ground_items.hpp"
@@ -33,6 +35,54 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--selection-list") {
+            std::vector<std::uint8_t> canvas(640*480*4,0);
+            mir3::WilFrame pixel;pixel.width=1;pixel.height=1;pixel.offset_x=-1;pixel.offset_y=2;
+            pixel.pixels.rgba={248,0,0,255};
+            mir3::selection_blit(canvas,pixel,1,0,mir3::SelectionBlend::inactive);
+            const auto offset=640*2*4;
+            check(canvas[offset]==128 && canvas[offset+1]==128 && canvas[offset+2]==128,"未选中灰度按565通道与0.6增强截断");
+            mir3::selection_blit(canvas,pixel,1,0,mir3::SelectionBlend::shadow);
+            check(canvas[offset]==184 && canvas[offset+1]==64 && canvas[offset+2]==64,"阴影逐565通道50混合并截断");
+            mir3::selection_blit(canvas,pixel,1,0,mir3::SelectionBlend::additive);
+            check(canvas[offset]==248 && canvas[offset+1]==64 && canvas[offset+2]==64,"光效加色饱和及帧偏移");
+            pixel.pixels.rgba[3]=0;mir3::selection_blit(canvas,pixel,1,0,mir3::SelectionBlend::normal);
+            check(canvas[offset]==248,"透明像素保留背景");
+            mir3::CharacterSelectionPage page;
+            mir3::SendMessages sender;
+            const auto packet=sender.packet(520,4,0,0,"*One/0/ignored/24/0/Two/1/x/31/1/Three/2/y/256/0/Four/2/z/55/1/");
+            const auto bytes=std::span(reinterpret_cast<const std::uint8_t*>(packet.data()+2),packet.size()-3);
+            check(page.receive(bytes) && page.count==4 && page.selected==0 && page.page==0 && !page.connecting,"520普通消息头、四槽位及默认选中");
+            check(page.roles[0].name=="One" && page.roles[0].x==250 && page.roles[1].x==350 && page.roles[1].y==250,"星号跳过及双角色坐标");
+            check(page.roles[2].level==0 && page.roles[3].gender==1,"等级写入BYTE与性别字段");
+            check(page.roles[0].frame==260 && page.roles[1].frame==1100 && page.roles[2].frame==1460,"职业性别动作帧表");
+            page.advance(120);check(page.roles[0].frame==260,"120毫秒仍不推进");
+            page.advance(1);check(page.roles[0].frame==261 && page.roles[0].elapsed==0,"121毫秒前进一帧并清零");
+            page.advance(1000);check(page.roles[0].frame==262 && page.roles[2].frame==1460,"长帧不追赶且隐藏页不推进");
+            check(page.select(1) && page.roles[0].action==3 && page.roles[1].action==1,"按下新角色触发选中及取消动画");
+            page.advance(121);const int selected_frame=page.roles[1].frame;
+            check(!page.select(1) && page.roles[1].frame==selected_frame && !page.select(2),"重复选择及隐藏角色不改变动画");
+            for (int i=0;i<20;++i) page.advance(121);
+            check(page.roles[0].action==0 && page.roles[1].action==2,"取消转待机、选中转循环");
+            check(page.turn_page(1) && page.selected==2 && page.roles[1].action==0,"翻页取消旧角色并选择第三槽");
+            check(page.select(3) && page.turn_page(0) && page.selected==0 && page.turn_page(1) && page.selected==2,"翻页总选择当前页首槽");
+            const auto old_name=page.roles[0].name;
+            for (auto body:{"bad", "Name/3/x/1/0", "Name/0/x/1/2", "Name/0/x/99999999999999999999999/0", "/0/x/1/0"})
+                check(!page.receive_list(1,body) && page.count==4 && page.selected==2 && page.roles[0].name==old_name,"畸形列表原子拒绝");
+            check(!page.receive(bytes.first(15)) && page.count==4,"截断头不清理现有列表");
+            const auto wrong=sender.packet(521,1,0,0,"Name/0/x/1/0");
+            check(!page.receive({reinterpret_cast<const std::uint8_t*>(wrong.data()+2),wrong.size()-3}),"非520回包不作为列表");
+            check(page.receive_list(1,"Single/1//33/0") && page.roles[0].x==300 && page.roles[0].y==210 && !page.turn_page(1),"单角色居中、末尾斜杠可省略");
+            check(page.receive_list(5,"A/0/x/1/0/B/0/x/1/0/C/0/x/1/0/D/0/x/1/0/ignored") && page.count==4,"超过四角色只取前四条");
+            for (int job=0;job<3;++job) for (int gender=0;gender<2;++gender) for (int action=0;action<5;++action) {
+                mir3::SelectionRole role;role.profession=job;role.gender=gender;role.start(action);
+                check(role.first_frame()==200+60*(action+5*(gender+job*2)),"全部职业性别动作首帧");
+                role.frame=role.last_frame();role.advance(121);
+                check(role.action==(action==1?2:(action==3?0:action)) && role.frame==role.first_frame(),"全部动作末帧衔接");
+            }
+            check(page.receive_list(0,"") && page.count==0 && page.selected==-1 && !page.roles[0].occupied,"空列表清理槽位");
+            std::cout << "SELECTION_LIST_MODEL_OK\n";return 0;
+        }
         if (std::filesystem::path(argv[1])=="--exit-transition") {
             mir3::ExitTransition transition;
             check(!transition.advance(3000) && transition.brightness()==1,"未开始时不离场");
