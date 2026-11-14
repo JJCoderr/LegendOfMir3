@@ -97,7 +97,7 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_npc_body","opcode","actor","count","encoded"),&Mir3HudView::apply_npc_body);
     ClassDB::bind_method(D_METHOD("apply_npc_dialogue","opcode","actor","body"),&Mir3HudView::apply_npc_dialogue);
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
-    ClassDB::bind_method(D_METHOD("change_map","map_id","name","spawn"),&Mir3HudView::change_map);
+    ClassDB::bind_method(D_METHOD("change_map","map_id","name","spawn","ambient_mode"),&Mir3HudView::change_map,DEFVAL(0));
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
     ClassDB::bind_method(D_METHOD("apply_scene_health","actor","opcode","current","mana","maximum"),&Mir3HudView::apply_scene_health);
     ClassDB::bind_method(D_METHOD("set_scene_health_flags","actor","status_tick","saved_tick","excluded","raised"),&Mir3HudView::set_scene_health_flags);
@@ -273,6 +273,10 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["scene_human_cells"]=human_cells;
     result["player_idle_frame"]=player_idle.frame();
     result["npc_dialogue_actor"]=npc_dialogue_actor;
+    result["scene_light_samples"]=scene_light_samples;
+    result["scene_ambient"]=scene_ambient.level();
+    result["scene_ambient_mode"]=scene_ambient.mode;
+    result["scene_ambient_fading"]=scene_ambient.fading;
     result["map_id"]=current_map_id;
     result["map_name"]=String::utf8(model.map_name.c_str());
     result["player_cell"]=player_cell;
@@ -500,6 +504,17 @@ void Mir3HudView::_ready() {
     Ref<Shader> shader;shader.instantiate();
     shader->set_code("shader_type canvas_item; render_mode unshaded, blend_premul_alpha; varying vec4 source_modulate; void vertex() { source_modulate=COLOR; } void fragment() { if (UV.x < -1.0) { COLOR=source_modulate*texture(TEXTURE,UV+vec2(2.0)); } else { COLOR.rgb *= COLOR.a; } }");
     Ref<ShaderMaterial> material;material.instantiate();material->set_shader(shader);set_material(material);
+    scene_light_layer=memnew(Node2D);
+    Ref<Shader> light_shader;light_shader.instantiate();
+    light_shader->set_code("shader_type canvas_item; render_mode unshaded, blend_mul;");
+    Ref<ShaderMaterial> light_material;light_material.instantiate();light_material->set_shader(light_shader);
+    scene_light_layer->set_material(light_material);
+    add_child(scene_light_layer);
+    scene_light_layer->connect("draw",callable_mp(this,&Mir3HudView::draw_scene_lighting));
+    hud_base=memnew(Node2D);
+    hud_base->set_material(material);
+    add_child(hud_base);
+    hud_base->connect("draw",callable_mp(this,&Mir3HudView::draw_hud_base));
     hud_copy=memnew(BackBufferCopy);
     hud_copy->set_copy_mode(BackBufferCopy::COPY_MODE_VIEWPORT);
     add_child(hud_copy);
@@ -1916,6 +1931,12 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (!header || header->recognition>INT_MAX) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
+    if (opcode==46) {
+        if (encoded.size()!=16) return false;
+        scene_ambient.update(p[2]);
+        queue_redraw();
+        return true;
+    }
     const int size=encoded.size()-16;
     if (opcode==611) {
         if (size) return false;
@@ -2454,10 +2475,59 @@ void Mir3HudView::draw_terrain() {
     }
 }
 
+void Mir3HudView::draw_scene_lighting() {
+    scene_light_samples.clear();
+    if (!terrain_ready || scene_ambient.level()==255) return;
+    mir3::SceneLightGrid grid(scene_ambient.level());
+    const auto camera=map_camera();
+    constexpr std::array radii{4,8,12,20};
+    constexpr std::array<mir3::SceneLight::Rgb,10> colors{{
+        {173,198,214},{90,140,165},{41,57,115},{222,198,99},{41,115,49},
+        {255,255,255},{255,255,255},{255,255,255},{255,255,255},{255,255,255}}};
+    for (int y=camera.y/32-20;y<=camera.y/32+38;++y)
+        for (int x=camera.x/48-20;x<=camera.x/48+37;++x)
+            if (const auto packed=terrain.light(x,y))
+                grid.add({x*48-camera.x,y*32-camera.y,0,{},radii[packed>>14],colors[(packed>>4)&255]});
+    const auto local=player_pixel()-camera;
+    grid.add(mir3::SceneLight::actor(local.x,local.y,0,true));
+    for (const auto& [id,human]:scene_humans) {
+        if (human.life.dead || !human.bounds.has_area()) continue;
+        grid.add(mir3::SceneLight::actor(int(human.anchor.x)+24,int(human.anchor.y)+16,0,false));
+    }
+    const auto color=[&](int i) {
+        const auto& c=grid.samples[i];return Color(c[0]/255.f,c[1]/255.f,c[2]/255.f);
+    };
+    for (int i=0;i<18*19;++i) scene_light_samples.push_back(color(i));
+    const auto triangle=[&](Vector2 a,Vector2 b,Vector2 c,Color ca,Color cb,Color cc) {
+        PackedVector2Array points;points.push_back(a);points.push_back(b);points.push_back(c);
+        PackedColorArray colors;colors.push_back(ca);colors.push_back(cb);colors.push_back(cc);
+        scene_light_layer->draw_polygon(points,colors);
+    };
+    // Full grid; opaque HUD is drawn afterwards, so no clipped cell changes its diagonal.
+    for (int y=0;y<18;++y) for (int x=0;x<17;++x) {
+        const int i=y*18+x;
+        const Vector2 a(x*48,y*32),b((x+1)*48,y*32),c((x+1)*48,(y+1)*32),d(x*48,(y+1)*32);
+        if (grid.diagonals[y*17+x]) {
+            triangle(a,b,c,color(i),color(i+1),color(i+19));
+            triangle(a,c,d,color(i),color(i+19),color(i+18));
+        } else {
+            triangle(a,b,d,color(i),color(i+1),color(i+18));
+            triangle(b,c,d,color(i+1),color(i+19),color(i+18));
+        }
+    }
+}
+
 void Mir3HudView::_draw() {
     using Layout=mir3::HudLayout;
     if (!loaded) return;
     draw_terrain();
+    scene_light_layer->queue_redraw();
+    hud_base->queue_redraw();
+}
+
+void Mir3HudView::draw_hud_base() {
+    using Layout=mir3::HudLayout;
+    paint_canvas=hud_base;
     draw_scene_name();
     draw_ground_name();
     draw_scene_speech();
@@ -2521,6 +2591,7 @@ void Mir3HudView::_draw() {
     }
     buttons();
     hud_tail->queue_redraw();
+    paint_canvas=this;
 }
 
 void Mir3HudView::draw_hud_tail() {
@@ -2775,6 +2846,7 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
+    if (scene_ambient.fading) { scene_ambient.advance(delta*1000);queue_redraw(); }
     // Default object messages are processed outside each actor's animation queue.
     if (scene_clear_pending) {
         while (!scene_humans.empty()) remove_scene_actor(scene_humans.begin()->first);
@@ -5331,9 +5403,9 @@ bool Mir3HudView::request_trade() {
     return true;
 }
 
-bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn) {
+bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn,int ambient_mode) {
     // Decode into a temporary map: failure must not destroy the live scene.
-    if (!terrain_ready || map_id.is_empty() || name.is_empty() || map_id.length()>64) return false;
+    if (ambient_mode<0 || ambient_mode>255 || !terrain_ready || map_id.is_empty() || name.is_empty() || map_id.length()>64) return false;
     for (int i=0;i<map_id.length();++i) {
         const auto c=map_id[i];
         if (!((c>='0' && c<='9') || (c>='A' && c<='Z') || (c>='a' && c<='z') || c=='_' || c=='-')) return false;
@@ -5342,6 +5414,7 @@ bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn) {
     if (!next.open(std::filesystem::u8path(map_directory.path_join(map_id+".map").utf8().get_data())) ||
         !next.walkable(spawn.x,spawn.y)) return false;
     terrain=std::move(next);
+    scene_ambient.enter(static_cast<std::uint8_t>(ambient_mode));
     current_map_id=map_id;
     while (!scene_humans.empty()) remove_scene_actor(scene_humans.begin()->first);
     while (!scene_npcs.empty()) remove_scene_actor(scene_npcs.begin()->first);

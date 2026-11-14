@@ -5,6 +5,7 @@
 #include "hud/scene_human_queue.hpp"
 #include "hud/human_life.hpp"
 #include "hud/ground_items.hpp"
+#include "hud/scene_lighting.hpp"
 #include "hud/combat_stance.hpp"
 #include "resources/sound_list.hpp"
 #include "hud/scene_name.hpp"
@@ -314,7 +315,12 @@ private:
     bool inventory_pointer(int kind,godot::Vector2 position);
     mir3::HudController controller{model};
     mir3::WilArchive archive;
-    bool change_map(godot::String map_id,godot::String name,godot::Vector2i spawn);
+    bool change_map(godot::String map_id,godot::String name,godot::Vector2i spawn,int ambient_mode=0);
+    mir3::SceneAmbient scene_ambient;
+    godot::PackedColorArray scene_light_samples;
+    godot::Node2D *scene_light_layer=nullptr, *hud_base=nullptr;
+    void draw_scene_lighting();
+    void draw_hud_base();
     void reset_map_overlays();
     godot::String map_directory, current_map_id="0";
     mir3::MapTerrain terrain;

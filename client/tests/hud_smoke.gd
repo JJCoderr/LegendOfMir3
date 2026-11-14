@@ -151,6 +151,61 @@ func scene_text_packet(opcode: int, actor: int, foreground: int, background: int
 	packet.append_array(encode_scene_bytes(body))
 	return packet
 
+func run_scene_light() -> void:
+	var keys := PackedByteArray([18,52,86,120])
+	var origin: Vector2i = hud.hud_snapshot().player_cell
+	if not check(hud.change_map("0","比奇省",origin,0), "daylight entry"): return
+	hud.set_process(false)
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var day := root.get_texture().get_image()
+	if not await capture("scene-light-day"): return
+	if not check(hud.change_map("0","比奇省",origin,1), "night entry"): return
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var night := root.get_texture().get_image()
+	var samples: PackedColorArray = hud.hud_snapshot().scene_light_samples
+	var matched := 0
+	var dimmed := 0
+	var colored := 0
+	for row in range(1,12):
+		for column in range(1,16):
+			var tint: Color = samples[row*18+column]
+			var original := day.get_pixel(column*48,row*32)
+			var actual := night.get_pixel(column*48,row*32)
+			var expected := original*tint
+			if abs(actual.r-expected.r)<0.035 and abs(actual.g-expected.g)<0.035 and abs(actual.b-expected.b)<0.035:
+				matched += 1
+			if tint.get_luminance()<0.7: dimmed += 1
+			if abs(tint.r-tint.b)>0.05: colored += 1
+	if not check(matched > 140 and dimmed > 15 and colored > 15, "RGB multiplication matches grid; static colored lamps and dark regions coexist"): return
+	if not check(day.get_region(Rect2i(540,480,250,110)).get_data() == night.get_region(Rect2i(540,480,250,110)).get_data(), "HUD remains unshaded"): return
+	if not await capture("scene-light-night"): return
+	if not check(hud.set_scene_npc(2,Vector2i(413,409),110), "night scene NPC"): return
+	if not check(hud.set_scene_human(5,origin+Vector2i(-2,1),4,1,"比奇旅人"), "night scene remote human"): return
+	if not check(hud.apply_npc_dialogue(643,2,"老黄/<购买药品/@buy>"), "night dialogue opens above illumination"): return
+	if not await capture("scene-light-night-dialogue"): return
+	if not check(hud.change_map("0","比奇省",origin,2) and hud.hud_snapshot().scene_ambient == 85, "dawn entry"): return
+	if not await capture("scene-light-dawn"): return
+	var bad := scene_packet(46,0,0,0,1)
+	bad.append(60)
+	if not check(not hud.apply_scene_message(bad,keys) and not hud.hud_snapshot().scene_ambient_fading, "reject daylight payload without mutation"): return
+	if not check(hud.apply_scene_message(scene_packet(46,0,222,111,1),keys), "receive original third-parameter light mode"): return
+	if not check(hud.hud_snapshot().scene_ambient == 85 and hud.hud_snapshot().scene_ambient_fading, "46 schedules gradual change"): return
+	hud.set_process(true)
+	await create_timer(0.25).timeout
+	var level: int = hud.hud_snapshot().scene_ambient
+	if not check(level < 85 and level >= 80, "real clock advances half-unit light fade"): return
+	if not check(hud.change_map("0","比奇省",origin,0), "map entry replaces fade"): return
+	if not check(not hud.hud_snapshot().scene_ambient_fading and hud.hud_snapshot().scene_ambient == 255, "old fade cleared"): return
+	hud.queue_free()
+	await process_frame
+	await process_frame
+	print("PASS scene light: entry, original 46 fade, multiplication and HUD isolation")
+	quit()
+
 func run_map_change() -> void:
 	var keys := PackedByteArray([18,52,86,120])
 	var requests: Array = []
@@ -790,6 +845,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--scene-light"):
+		await run_scene_light()
+		return
 	if OS.get_cmdline_user_args().has("--map-change"):
 		await run_map_change()
 		return
@@ -961,7 +1019,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

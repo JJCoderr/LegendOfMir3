@@ -1,6 +1,7 @@
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/ground_items.hpp"
+#include "hud/scene_lighting.hpp"
 #include "protocol/receive_message.hpp"
 #include "chat/scene_chat.hpp"
 #include "hud/human_actions.hpp"
@@ -25,6 +26,26 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--scene-light") {
+            mir3::SceneAmbient light;
+            light.update(2);light.advance(49);check(light.half_level==510,"timer waits 50ms");
+            light.advance(1);check(light.half_level==509 && light.level()==254,"half-unit timer step truncates");
+            light.advance(25);light.update(2);light.advance(25);
+            check(light.half_level==508,"same mode does not restart timer");
+            light.advance(50000);check(light.level()==85 && !light.fading,"dawn transition clamps at endpoint");
+            light.update(1);light.advance(100);check(light.level()==84,"fade toward night");
+            light.enter(0);light.advance(1000);check(light.level()==255 && !light.fading,"entry cancels pending fade");
+            light.enter(200);check(light.level()==10,"unknown entry fallback");
+            light.update(201);light.advance(1000);check(light.level()==0,"unknown update fallback");
+            auto actor=mir3::SceneLight::actor(40,3,0,true);
+            check(actor.sample(1,1)==mir3::SceneLight::Rgb{100,100,100},"actor light center includes original bias");
+            check(actor.sample(17,18)==mir3::SceneLight::Rgb{},"out-of-radius vertex stays dark");
+            mir3::SceneLightGrid grid(15);grid.add(actor);
+            check(grid.samples[19]==mir3::SceneLight::Rgb{115,115,115},"ambient plus actor contribution");
+            grid.add(actor);grid.add(actor);check(grid.samples[19][0]==255,"additive lamps saturate");
+            check(actor.diagonal_top_left_to_bottom_right(2,0) && !actor.diagonal_top_left_to_bottom_right(2,2),"original light triangle quadrants");
+            std::cout << "SCENE_LIGHT_MODEL_OK\n";return 0;
+        }
         if (std::filesystem::path(argv[1])=="--ground-items") {
             mir3::GroundItems items;
             check(items.show({1,10,20,1,"first"}) && items.show({2,10,20,2,"second"}),"multiple drops share a cell");

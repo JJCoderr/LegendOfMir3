@@ -23,3 +23,14 @@
 选择：提供独立的已解码 change_map(map_id, name, spawn) 入口，以旧 Godot 的先校验后切换为基础，复用现有资源解析器和人物移除逻辑；每次成功切换（包括同图重入）清远端对象、掉落、路径、临时提示、NPC 对话和小地图内容。失败不改变原场景。资源仍从配置根目录读取，地图编号只接受文件名，不接受路径。显示名称更新仍是独立接口。原版雾色、输入锁/淡入和真实换图包接入继续待办，不声称该接口已完整复刻网络换图。
 
 验证：Release 构建；Godot --map-change --screenshots 单场景覆盖不存在/路径型地图编号、越界及阻挡落点失败保留现场、0→01→0 真地图切换、同图同名重入、小地图失效/重请求、旧移除队列不能删除新图同 ID 人物。截图 map-change-before/arrival/return.png 位于 build/screenshots。未跑无关场景。
+
+## 环境亮度与场景照明（实现前记录，2026-11-14）
+
+- 旧 mir3_1.45/gameplay.cpp::apply_ambient_mode / receive_ambient_update / update：既有 0x42EE00、0x429213、0x425E10 分析，入场模式 0/1/2 对应 255/15/85；46 使用第三参数，50ms 增减 0.5，入场未知模式为 10、渐变未知目标为 0。保留这一区别，不混用早期参考字段。
+- 同项目 spell_light.hpp（0x448C30、0x40EB70）及 extension.cpp::scene_lighting：18×19 顶点、48×32 格、灯中心偏移 +8/+29、半径与颜色线性衰减、饱和相加、三角形对角线；gameplay.cpp::map_light 使用地图格 +12 的灯字及颜色/半径表。world.gd::_draw_world_spell_light 在场景与覆盖文字之间进行 RGB 相乘。本批按功能迁移 C++，不引入旧 MockServer 或 GDScript 业务。
+- LegendOfMir3_Src GameProc.cpp::SM_DAYCHANGING 使用 wParam/wTag，并设置 50ms 定时器；换图雾色 240/10/50，与目标旧分析 255/15/85 不同。
+- legendOfMir2_src Mir3EIClient/GameProcess/GameProc.cpp 同源 SM_DAYCHANGING/ChangeLightColor；不能作为目标 1.45 参数布局的替代证据。
+- Zircon Client/Scenes/Views/MapControl.cs::Light.UpdateAmbientLight 使用独立照明层，Night=15、Twilight=100、Light=255，默认乘 DayTime；只参考场景/界面分层，不沿用其暮色值。
+- mir2x client/src 的 processrun 绘制与 light 搜索未定位对应原版昼夜网格实现；无可复用证据，不以特效类 LightBolt 的名字推断环境算法。
+
+选择：独立 C++ 环境状态与灯网格模型，支持 46 原始消息渐变、change_map 入场模式、静态地图灯及默认人物灯；GPU 使用场景 RGB 乘法，HUD/名称/对话在照明后绘制。装备灯属性与法术光源仍需接消息/特效模块，不能标记完整夜景已还原。

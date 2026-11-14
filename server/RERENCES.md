@@ -20,3 +20,11 @@
 - 旧 mir3_1.45/gameplay.cpp::cross_exit 使用 MockServer::enter_region，不能据此实现生产服务端换图包。
 
 当前只实现客户端已解码切换入口和资源/场景生命周期；真实角色识别号、网关帧、地图文件名/显示名分包、视野重建顺序、换图失败与实例生命周期需要实服联调。客户端不自行推断传送门或服务器落点。
+
+## 环境亮度（实现前记录，2026-11-14）
+
+- 两套早期 C++ ObjectPlayer.cpp::RM_DAYCHANGING 发送 SM_DAYCHANGING(0, m_btBright, DayBright(), 0)，与旧 1.45 客户端分析的第三参数读法不同；真实服务端版本必须验证，不能直接套字段。
+- Zircon ServerLibrary/Models/PlayerObject.cs 入场数据含 SEnvir.DayTime，地图 LightSetting 另行控制照明；不是目标协议。
+- mir2x 未找到可替代目标 46 昼夜包的证据。旧 mir3_1.45 MockServer 的 120 秒循环只是离线演示，不移植自动时间循环。
+
+客户端按旧目标分析消费 46 第三参数；入场亮度由已解码 change_map 参数传入。真实服务端字段、地图初始设置、人物装备灯属性和特效光源仍待联调。

@@ -40,6 +40,13 @@ public:
         return {tiles[at],tiles[at+1]|(tiles[at+2]<<8)};
     }
 
+    unsigned light(int x,int y) const {
+        if (!contains(x,y)) return 0;
+        const auto at=cell_start+(std::size_t(x)*height+y)*14+12;
+        const unsigned packed=tiles[at]|(unsigned(tiles[at+1])<<8);
+        return ((packed>>4)&255)<10?packed:0;
+    }
+
     bool contains(int x,int y) const { return x>=0 && y>=0 && x<width && y<height; }
     bool walkable(int x,int y) const {
         return x>=0 && y>=0 && x<width && y<height &&
