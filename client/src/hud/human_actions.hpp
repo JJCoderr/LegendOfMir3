@@ -132,6 +132,7 @@ public:
         }
     }
     bool finished() const { return selected<0 || selected>=33 || current>=HumanActions::table[selected].count; }
+    void set_interval(std::uint32_t milliseconds) { interval_override=milliseconds; }
     int action() const { return selected; }
     int frame() const { return finished() ? (selected>=0 && selected<33 ? HumanActions::table[selected].count-1 : 0) : current; }
 private:

@@ -593,9 +593,14 @@ private:
         mir3::ForcedMotion motion;
         mir3::HumanAppearance appearance;
         unsigned light;
+        std::optional<mir3::SceneHumanMessage> hit;
+        unsigned hit_variant=0;
     };
     std::deque<LocalActorMessage> local_actor_messages;
     std::optional<mir3::ForcedMotion> forced_motion;
+    std::uint32_t local_struck_tick=0;
+    std::uint8_t local_folded_hits=0;
+    int local_hit_weapon=0;
     void process_local_actor_message();
     struct PendingLocalAction {
         bool movement;

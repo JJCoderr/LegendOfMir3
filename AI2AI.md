@@ -60,3 +60,9 @@ IDA 数据库名为 `mir3-map-review`，本机 MCP 地址为 `http://127.0.0.1:1
 
 
 2026-11-14：完成Godot音频退出清理，脚步及角色声音停止后解除流引用、切回Master并移除专用总线。播放中退出弱引用验收与原forced_motion复现用例通过，未出现ObjectDB泄漏。仅执行相关短用例；全场景测试留到全部功能完成后。证据见client/docs/evidence/audio-cleanup.md。
+
+
+## 本地角色受击
+
+- [x] 31/1309完整原包、本地FIFO、血量与伤害提示、徒步/骑乘动作、等级节拍、命中特效与来源音效、1309复制31、旧31折叠、500ms过滤及致死例外、尸体保持；local_struck及local_life定向验收通过，截图local-struck-standing/mounted.png。证据见client/docs/evidence/local-struck.md。
+- [ ] 实服时序、原版同状态像素和全部命中特效变体覆盖；完整场景测试待全部模块完成。

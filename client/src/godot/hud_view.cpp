@@ -2913,7 +2913,7 @@ bool Mir3HudView::set_local_actor_identity(int actor) {
         player_light_attribute=0;melee_cooldown={};local_action_clock={};pending_local_action.reset();
         action_prediction={};
         local_actor_messages.clear();forced_motion.reset();
-        player_life={};
+        player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;
     }
     local_actor_identity=actor;
     queue_redraw();
@@ -2928,6 +2928,40 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_REVIVE_REFRESH && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS && header->opcode!=mir3::protocol::SM_DAYCHANGING && header->opcode!=mir3::protocol::SM_SHOWEVENT && header->opcode!=mir3::protocol::SM_HIDEEVENT)) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
+    if (local_actor_identity && actor==local_actor_identity &&
+        (opcode==mir3::protocol::SM_STRUCK || opcode==mir3::protocol::SM_HUMAN_STRUCK)) {
+        if (encoded.size()!=38 || local_actor_messages.size()>=64) return false;
+        const auto body=mir3::decode_six_bit(encoded.ptr()+16,22);
+        if (!body || body->size()!=16) return false;
+        const auto appearance=mir3::HumanAppearance::parse({reinterpret_cast<const std::uint8_t*>(body->data()),body->size()},true);
+        if (!appearance) return false;
+        mir3::SceneHumanMessage hit{opcode};
+        hit.health=p;
+        for (int i=0;i<4;++i) hit.hit_source|=std::uint32_t(std::uint8_t((*body)[8+i]))<<(8*i);
+        const unsigned variant=std::uint8_t((*body)[14])|(unsigned(std::uint8_t((*body)[15]))<<8);
+        if (opcode==mir3::protocol::SM_STRUCK) {
+            // 42EC70：特殊受击后的500ms内，非致死31只同步生命数值。
+            if (std::uint32_t(ticks_msec())-local_struck_tick<500) {
+                model.hp=p[0];model.max_hp=p[1];
+                if (p[0]) { queue_redraw();return true; }
+            }
+            // 40D7F0：仅当队长大于1时，折叠已排队的31，保留其他消息顺序。
+            local_folded_hits=0;
+            if (local_actor_messages.size()>1) {
+                for (auto it=local_actor_messages.begin();it!=local_actor_messages.end();) {
+                    if (it->hit && it->motion.opcode==mir3::protocol::SM_STRUCK) {
+                        const auto& hp=*it->hit->health;
+                        model.hp=hp[0];model.max_hp=hp[1];
+                        apply_actor_health_record(0,*it->hit);
+                        ++local_folded_hits;
+                        it=local_actor_messages.erase(it);
+                    } else ++it;
+                }
+            }
+        }
+        local_actor_messages.push_back({{opcode,player_facing,{player_cell.x,player_cell.y}},*appearance,0,hit,variant});
+        return true;
+    }
     const bool local_death=opcode==mir3::protocol::SM_DEATH || opcode==mir3::protocol::SM_NOWDEATH;
     if ((mir3::ForcedMotion::accepts(opcode) || local_death) && local_actor_identity &&
             (actor==local_actor_identity || opcode==mir3::protocol::SM_REVIVE_REFRESH)) {
@@ -3492,7 +3526,7 @@ void Mir3HudView::apply_actor_health_record(int actor,const mir3::SceneHumanMess
     const auto& p=*message.health;
     health.current=p[0];health.maximum=p[1];health.empty_bar=false;
     health.damage.enabled=damage_numbers;
-    if (message.opcode==mir3::protocol::SM_HUMAN_STRUCK) health.damage.push(-int(p[2]));
+    if (message.opcode==mir3::protocol::SM_HUMAN_STRUCK && (actor!=0 || !player_life.dead)) health.damage.push(-int(p[2]));
     queue_redraw();
 }
 
@@ -3906,6 +3940,35 @@ void Mir3HudView::process_local_actor_message() {
         (!player_action.finished() && player_action.action()!=7 && !(player_life.dead && !player_life.dying))) return;
     const auto message=local_actor_messages.front();
     local_actor_messages.pop_front();
+    if (message.hit) {
+        const auto& appearance=message.appearance;
+        const auto& hp=*message.hit->health;
+        model.hp=hp[0];model.max_hp=hp[1];
+        apply_actor_health_record(0,*message.hit);
+        if (!player_life.dead && damage_numbers && message.motion.opcode==mir3::protocol::SM_STRUCK)
+            scene_health[0].damage.push(-int(hp[2]));
+        set_player_body(appearance.type,appearance.clothing);
+        set_player_attachments(appearance.hair,appearance.weapon);
+        model.profession=appearance.profession;model.appearance=appearance.type;
+        if (message.hit->hit_source==std::uint32_t(local_actor_identity)) local_hit_weapon=player_weapon;
+        else if (const auto source=scene_humans.find(message.hit->hit_source);source!=scene_humans.end())
+            local_hit_weapon=source->second.weapon;
+        if (!player_life.dead && hp[2]) {
+            player_action.start(player_mount?32:15);
+            player_harvest_impact=false;
+            show_map_impact(400+message.hit_variant,player_cell);
+        }
+        player_action.set_interval(std::max(80,200-3*int(std::uint8_t(model.level)))+
+            (message.hit_variant?15*local_folded_hits:0));
+        if (message.hit_variant) local_struck_tick=std::uint32_t(ticks_msec());
+        if (message.motion.opcode==mir3::protocol::SM_HUMAN_STRUCK) {
+            auto duplicate=message;
+            duplicate.motion.opcode=mir3::protocol::SM_STRUCK;
+            duplicate.hit->opcode=mir3::protocol::SM_STRUCK;
+            local_actor_messages.push_back(duplicate);
+        }
+        queue_redraw();return;
+    }
     const bool death=message.motion.opcode==mir3::protocol::SM_DEATH || message.motion.opcode==mir3::protocol::SM_NOWDEATH;
     const auto& appearance=message.appearance;
     const bool keep_mount=death || message.motion.opcode==mir3::protocol::SM_RUSH || message.motion.opcode==mir3::protocol::SM_BUMP;
@@ -4382,7 +4445,7 @@ void Mir3HudView::clear_game_scene() {
     pending_local_action.reset();local_action_clock={};
     action_prediction={};
     local_actor_messages.clear();forced_motion.reset();
-    player_life={};
+    player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;
     login_actor_pending.reset();login_actor_extra={};server_ability.reset();server_sub_ability={};weapon_training=0;
     guild_overview={};guild_overview_started=false;guild_manager=false;guild_name=String();
     for (auto& page:guild_pages) page.clear();
@@ -4541,7 +4604,7 @@ bool Mir3HudView::apply_login_actor() {
     const auto* body=human_body(appearance.type,appearance.clothing);
     if (!body || (mount && (!human_body(appearance.type,appearance.clothing,true) || !horse_frame(mount,2320))) ||
         (appearance.weapon && weapon_order.size()!=2640)) return false;
-    player_life={};player_action={};action_prediction={};pending_local_action.reset();
+    player_life={};local_struck_tick=0;local_folded_hits=0;local_hit_weapon=0;player_action={};action_prediction={};pending_local_action.reset();
     local_actor_messages.clear();forced_motion.reset();
     player_mount=0;set_player_body(appearance.type,appearance.clothing);
     set_player_mount(mount);this->mount.shape=std::uint8_t(mount);set_player_attachments(appearance.hair,appearance.weapon);
@@ -6788,7 +6851,7 @@ void Mir3HudView::_process(double delta) {
         queue_redraw();
     }
     if (advancing_action && player_action.frame()!=previous_action_frame) {
-        if (const int sound=mir3::HumanActions::frame_sound(player_action.action(),player_action.frame(),player_weapon,0,player_clothing,player_type))
+        if (const int sound=mir3::HumanActions::frame_sound(player_action.action(),player_action.frame(),player_weapon,local_hit_weapon,player_clothing,player_type))
             play_actor_sound(0,sound,player_cell);
         if (player_harvest_impact && player_action.frame()==3) {
             player_harvest_impact=false;
