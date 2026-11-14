@@ -136,6 +136,23 @@ func run() -> void:
 	if not check(packets.size()==6 and decode_request(packets[5]).decode_u16(4)==Mir3HudView.CM_SITDOWN,
 		"骨架只触发蹲姿"): return
 	if not await capture("map-butch-skeleton"): return
+	# 形状21与鸡共用动作规则，在 Mon-3 取下一组图像。
+	hud.remove_scene_actor(6)
+	await settle(0.9)
+	feature[2]=21
+	var deer := game_reply(Mir3HudView.SM_DIGUP,7,cell.x,cell.y,6)
+	deer.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(deer),"鹿按原版外观入场"): return
+	await settle()
+	if not check(hud.hud_snapshot().scene_chicken_bounds[7].size.y>living.size.y,"鹿使用自己的站立图"): return
+	if not await capture("map-butch-deer-live"): return
+	var deer_death := game_reply(Mir3HudView.SM_DEATH,7,cell.x,cell.y,6)
+	deer_death.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(deer_death),"鹿直接显示尸体末帧"): return
+	await settle()
+	cut_at(hud.hud_snapshot().scene_chicken_bounds[7].get_center())
+	if not check(packets.size()==8 and decode_request(packets[7]).decode_u32(0)==7,"鹿尸体成为割肉目标"): return
+	if not await capture("map-butch-deer"): return
 	hud.queue_free()
 	await settle()
 	print("MAP_BUTCH_UI_OK")
