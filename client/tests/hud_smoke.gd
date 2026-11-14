@@ -1,5 +1,6 @@
 # 测试内容（本文件仅为测试脚本，客户端业务逻辑位于 C++）：
 # - 主界面：底栏按钮、计量条、人物与目标头像、属性数值、提示文字及界面布局。
+# - 选项交互：普通、悬停及按下帧，跨按钮移动、释放落点触发与关闭重开清理。
 # - 选项原包：1401 位掩码、重复确认、聊天拒绝联动、攻击模式与非法消息。
 # - 选项窗口：完整文字和开关、七类服务器命令、攻击模式、确认状态与本地持久化。
 # - 对话框：背包、人物装备、技能、组队、行会、任务、骑马、交易、NPC 对话和商店。
@@ -168,6 +169,53 @@ func scene_text_packet(opcode: int, actor: int, foreground: int, background: int
 	var packet := scene_packet(opcode,actor,foreground,background,0)
 	packet.append_array(encode_scene_bytes(body))
 	return packet
+
+func run_options_input() -> void:
+	key(KEY_N)
+	var point := Vector2(336,90)
+	var move := InputEventMouseMotion.new()
+	move.position=point
+	root.push_input(move,true)
+	if not check(hud.hud_snapshot().option_button_states[7]==1, "开关悬停状态"): return
+	if not await capture("options-input-hover"): return
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var hover_pixels := root.get_texture().get_image().get_region(Rect2i(331,85,45,16)).get_data()
+	click_at(point,true)
+	if not check(hud.hud_snapshot().option_button_states[7]==2 and hud.hud_snapshot().option_show_mon, "按下显示按下帧但不切换设置"): return
+	if not await capture("options-input-pressed"): return
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	if not check(root.get_texture().get_image().get_region(Rect2i(331,85,45,16)).get_data()!=hover_pixels, "实际视口中悬停与按下帧不同"): return
+	move.position=Vector2(580,300)
+	root.push_input(move,true)
+	if not check(hud.hud_snapshot().option_button_states[7]==2 and hud.hud_snapshot().option_button_states[19]==1, "窗口内移开保留原按钮按下态"): return
+	click_at(point,false)
+	if not check(not hud.hud_snapshot().option_show_mon and hud.hud_snapshot().option_button_states[7]==0, "释放时切换并复位"): return
+	click_at(point,false)
+	if not check(hud.hud_snapshot().option_show_mon, "原版释放落点触发无需此前按下"): return
+	click_at(Vector2(580,300),true)
+	if not check(hud.hud_snapshot().option_button_states[19]==2, "攻击模式箭头按下态"): return
+	if not await capture("options-input-arrow"): return
+	move.position=Vector2(700,400)
+	root.push_input(move,true)
+	if not check(hud.hud_snapshot().option_button_states[19]==0, "移出窗口清理按钮状态"): return
+	click_at(Vector2(700,400),false)
+	click_at(Vector2(600,455),true)
+	if not check(hud.hud_snapshot().option_button_states[0]==2, "关闭按钮使用按下帧"): return
+	click_at(Vector2(600,455),false)
+	if not check(not hud.hud_snapshot().options_visible, "关闭按钮释放关闭窗口"): return
+	key(KEY_N)
+	if not check(hud.hud_snapshot().option_button_states==PackedInt32Array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]), "重开窗口没有残留按下状态"): return
+	if not await capture("options-input-idle"): return
+	move=null
+	hud.queue_free()
+	await process_frame
+	await process_frame
+	print("PASS 选项交互：普通、悬停、按下及释放规则")
+	quit()
 
 func run_options_wire() -> void:
 	var key_bytes := PackedByteArray([18,52,86,120])
@@ -1114,6 +1162,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--options-input"):
+		await run_options_input()
+		return
 	if OS.get_cmdline_user_args().has("--options-wire"):
 		await run_options_wire()
 		return
@@ -1303,7 +1354,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light") or OS.get_cmdline_user_args().has("--map-wire") or OS.get_cmdline_user_args().has("--map-input") or OS.get_cmdline_user_args().has("--options-panel") or OS.get_cmdline_user_args().has("--options-wire"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light") or OS.get_cmdline_user_args().has("--map-wire") or OS.get_cmdline_user_args().has("--map-input") or OS.get_cmdline_user_args().has("--options-panel") or OS.get_cmdline_user_args().has("--options-wire") or OS.get_cmdline_user_args().has("--options-input"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

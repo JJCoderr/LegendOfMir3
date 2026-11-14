@@ -374,6 +374,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["option_shadow_blend"]=system_options.shadow_blend;
     result["option_user_photos"]=system_options.user_photos;
     result["option_attack_mode"]=system_options.attack_mode;
+    PackedInt32Array option_buttons;
+    for (auto state:system_options.button_states) option_buttons.push_back(state);
+    result["option_button_states"]=option_buttons;
     PackedByteArray confirmed_options,displayed_options;
     for (int i=0;i<7;++i) { confirmed_options.push_back(system_options.confirmed[i]);displayed_options.push_back(system_options.displayed[i]); }
     result["option_confirmed"]=confirmed_options;result["option_displayed"]=displayed_options;
@@ -3309,6 +3312,7 @@ void Mir3HudView::cancel_pointer_interactions() {
     portrait_pressed=-1;
     portrait_picker.scrolling=false;
     options.end_drag();
+    system_options.cancel_buttons();
     audio_drag=-1;
     guild.end_drag();
     guild_layout.pressed=-1;
@@ -3744,6 +3748,9 @@ bool Mir3HudView::status_pointer(int kind,Vector2 position) {
 }
 
 bool Mir3HudView::panel_pointer(int kind,Vector2 position,bool captured_only) {
+    if (kind==1 && options.visible && !rect(options.rect).has_point(position) && !options.dragging && audio_drag<0) {
+        system_options.cancel_buttons();queue_redraw();
+    }
     if (trade.dragging || trade_confirm_pressed || trade_scroll.captured>=0) return trade_pointer(kind,position);
     if (quest.dragging || quest.pressed>=0 || quest.scroll_captured) return quest_pointer(kind,position);
     if (mount.dragging || mount.pressed>=0) return mount_pointer(kind,position);
@@ -4703,6 +4710,7 @@ void Mir3HudView::toggle_options() {
     if (frame(1290).is_null()) return;
     options.toggle();
     if (options.visible) raise_panel(Panel::options);
+    system_options.cancel_buttons();
     audio_drag=-1;
     controller.cancel();
     queue_redraw();
@@ -4713,20 +4721,25 @@ bool Mir3HudView::apply_options_state(PackedByteArray flags,int attack_mode) {
     for (int i=0;i<7;++i) if (flags[i]>1) return false;
     for (int i=0;i<7;++i) system_options.confirmed[i]=system_options.displayed[i]=flags[i]!=0;
     system_options.attack_mode=attack_mode;
+    system_options.cancel_buttons();
     queue_redraw();return true;
 }
 
 void Mir3HudView::draw_options() {
     const int x=options.rect[0],y=options.rect[1];
     sprite(1290,{x,y});
+    const auto draw_toggle=[&](int index,bool value,mir3::HudLayout::Point position) {
+        if (system_options.button_states[index]==1) sprite(value?1293:1294,position);
+        sprite(system_options.toggle_frame(index,value),position);
+    };
     for (int i=0;i<2;++i) {
         const bool enabled=i==0?audio_options.music_enabled:audio_options.effects_enabled;
         const int level=i==0?audio_options.music_level:audio_options.effects_level;
-        sprite(enabled?1293:1294,{x+430,y+85+60*i});
+        draw_toggle(1+i,enabled,{x+430,y+85+60*i});
         sprite(1291,{x+276+mir3::AudioOptions::knob_from_level(level),y+118+60*i});
     }
-    sprite(audio_options.reverse_pan?1293:1294,{x+430,y+205});
-    sprite(1221,{x+448,y+415});
+    draw_toggle(3,audio_options.reverse_pan,{x+430,y+205});
+    sprite(system_options.button_states[0]==2?1222:1221,{x+448,y+415});
     // 0x462850 draws the audio captions after their controls.
     text(message(2104),{x+60,y+30,390,15},0xf8fafa);
     for (int i=0;i<3;++i)
@@ -4734,12 +4747,12 @@ void Mir3HudView::draw_options() {
     for (int i=0;i<10;++i)
         text(message(2105+i),{x+20,y+62+30*i,155,15},0x0096ff);
     const std::array local{system_options.show_mon,system_options.force_attack,magic_light,damage_numbers};
-    for (int i=0;i<4;++i) sprite(local[i]?1293:1294,{x+186,y+55+30*i});
-    for (int i=0;i<7;++i) sprite(system_options.displayed[i]?1293:1294,
+    for (int i=0;i<4;++i) draw_toggle(7+i,local[i],{x+186,y+55+30*i});
+    for (int i=0;i<7;++i) draw_toggle(i<4?11+i:(i<6?12+i:18),system_options.displayed[i],
         {x+system_options.toggle_x[i],y+system_options.toggle_y[i]});
-    sprite(system_options.shadow_blend?1293:1294,{x+430,y+235});
-    sprite(system_options.user_photos?1293:1294,{x+430,y+295});
-    sprite(1296,{x+430,y+265});
+    draw_toggle(4,system_options.shadow_blend,{x+430,y+235});
+    draw_toggle(20,system_options.user_photos,{x+430,y+295});
+    sprite(system_options.button_states[19]==2?1297:1296,{x+430,y+265});
     text(message(2115),{x+266,y+59,156,21},0x0096ff);
     text(message(2103),{x+266,y+239,156,21},0x0096ff);
     text(message(2116+system_options.attack_mode),{x+266,y+269,156,21},0x0096ff);
@@ -4751,11 +4764,33 @@ bool Mir3HudView::options_pointer(int kind,Vector2 point) {
     const Vector2 local=point-Vector2(options.rect[0],options.rect[1]);
     const bool inside=rect(options.rect).has_point(point);
     const bool captured=options.dragging || audio_drag>=0;
-    if (!inside && !captured) return false;
+    if (!inside && !captured) {
+        system_options.cancel_buttons();queue_redraw();return false;
+    }
     const auto hit=[&](int id,int x,int y) {
         const auto image=frame(id);
         return image.is_valid() && Rect2(Vector2(x,y),image->get_size()).has_point(local);
     };
+    int button=-1;
+    if (hit(1221,448,415)) button=0;
+    for (int i=0;i<2;++i) {
+        if (hit(1292,430,85+60*i)) button=1+i;
+        const int level=i==0?audio_options.music_level:audio_options.effects_level;
+        if (hit(1291,276+mir3::AudioOptions::knob_from_level(level),118+60*i)) button=5+i;
+    }
+    if (hit(1292,430,205)) button=3;
+    if (hit(1292,430,235)) button=4;
+    for (int i=0;i<4;++i) if (hit(1292,186,55+30*i)) button=7+i;
+    for (int i=0;i<7;++i) if (hit(1292,system_options.toggle_x[i],system_options.toggle_y[i]))
+        button=i<4?11+i:(i<6?12+i:18);
+    if (hit(1296,430,265)) button=19;
+    if (hit(1292,430,295)) button=20;
+    if (kind==0) system_options.press(button);
+    if (kind==1 && !captured) system_options.motion(button);
+    if (kind==2) system_options.release(button);
+    if (hud_sound && audio_options.effects_enabled &&
+        ((kind==0 && (button==5 || button==6)) ||
+         (kind==2 && !captured && button>=0 && button!=5 && button!=6))) hud_sound->play();
     bool changed=false;
     if (audio_drag>=0) {
         if (kind==1) {

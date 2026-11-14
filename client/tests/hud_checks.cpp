@@ -30,6 +30,17 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--options-input") {
+            mir3::SystemOptions options;
+            check(options.toggle_frame(7,true)==1292 && options.toggle_frame(7,false)==1295,"普通开关帧对应原版");
+            options.motion(7);check(options.button_states[7]==1,"鼠标命中产生悬停态");
+            options.press(7);options.motion(19);
+            check(options.button_states[7]==2 && options.button_states[19]==1 && options.toggle_frame(7,true)==1295,"按下态保留且绘制反向普通帧");
+            options.release(19);check(options.button_states[7]==0 && options.button_states[19]==0,"释放依原版遍历顺序复位");
+            options.press(11);options.receive(0x40000000,0);check(options.button_states[11]==0,"状态包换帧会复位对应按钮");
+            options.press(20);options.cancel_buttons();check(options.button_states[20]==0,"取消交互清除所有按钮状态");
+            std::cout << "OPTIONS_INPUT_MODEL_OK\n";return 0;
+        }
         if (std::filesystem::path(argv[1])=="--options-wire") {
             mir3::SystemOptions options;
             mir3::ChatReceptionButtons buttons;
