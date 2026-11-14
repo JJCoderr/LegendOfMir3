@@ -286,6 +286,13 @@ private:
     void draw_options();
     bool options_pointer(int kind,godot::Vector2 point);
     mir3::InventoryPanel inventory;
+    struct Repair {
+        enum class Phase { choosing, quoting, quoted, paying };
+        std::uint32_t actor=0,item=0,price=0;
+        std::string name;
+        Phase phase=Phase::choosing;
+        bool pressed=false;
+    } repair;
     mir3::DraggablePanel guild{{102,22,594,444}};
     mir3::GuildLayout guild_layout;
     mir3::GuildScroll guild_scroll;
