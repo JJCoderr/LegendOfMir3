@@ -2,6 +2,7 @@
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"
 #include "hud/scene_name.hpp"
+#include "hud/scene_health.hpp"
 #include "hud/speech_bubble.hpp"
 #include "hud/minimap.hpp"
 #include "hud/mount_panel.hpp"
@@ -74,6 +75,9 @@ public:
     bool open_trade(godot::String partner);
     void set_trade_context(int direction,godot::Vector2i cell,int actor_type,bool dead,godot::String name);
     void set_map_location(godot::String name,int x,int y);
+    bool apply_scene_health(int actor,int opcode,int current,int mana,int maximum);
+    bool set_scene_health_flags(int actor,int64_t status_tick,int64_t saved_tick,bool excluded,bool raised);
+    void draw_scene_health();
     bool apply_scene_speech(int actor,int opcode,godot::String value);
     void draw_scene_speech();
     bool apply_scene_name(int actor,int opcode,int color,godot::String value);
@@ -311,6 +315,9 @@ private:
     const MapActorFrame* attachment_frame(int type,int shape,bool weapon,int motion_frame);
     void draw_human_layers(const MapActorFrame& body,godot::Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape=0);
     std::array<MapActorFrame,80> map_human_frames, map_walk_frames, map_run_frames;
+    std::map<int,mir3::SceneHealth> scene_health;
+    std::map<int,godot::Rect2> scene_health_bounds;
+    godot::Ref<godot::ImageTexture> health_border, health_fill;
     std::map<int,mir3::SpeechBubble> scene_speech;
     std::map<int,godot::Rect2> speech_bounds;
     std::map<int,mir3::SceneName> scene_names;

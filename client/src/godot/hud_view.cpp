@@ -95,6 +95,8 @@ void Mir3HudView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("apply_npc_dialogue","opcode","actor","body"),&Mir3HudView::apply_npc_dialogue);
     ClassDB::bind_method(D_METHOD("walk_to_map_cell","destination"),&Mir3HudView::walk_to_map_cell);
     ClassDB::bind_method(D_METHOD("set_map_location","name","x","y"),&Mir3HudView::set_map_location);
+    ClassDB::bind_method(D_METHOD("apply_scene_health","actor","opcode","current","mana","maximum"),&Mir3HudView::apply_scene_health);
+    ClassDB::bind_method(D_METHOD("set_scene_health_flags","actor","status_tick","saved_tick","excluded","raised"),&Mir3HudView::set_scene_health_flags);
     ClassDB::bind_method(D_METHOD("apply_scene_speech","actor","opcode","value"),&Mir3HudView::apply_scene_speech);
     ClassDB::bind_method(D_METHOD("apply_scene_name","actor","opcode","color","value"),&Mir3HudView::apply_scene_name);
     ClassDB::bind_method(D_METHOD("set_scene_npc","actor","cell","first_frame"),&Mir3HudView::set_scene_npc);
@@ -183,6 +185,9 @@ Dictionary Mir3HudView::hud_snapshot() const {
     }
     result["speech_bounds"]=bubbles;
     result["speech_lines"]=bubble_lines;
+    Dictionary bars;
+    for (const auto& [actor,bounds]:scene_health_bounds) bars[actor]=bounds;
+    result["scene_health_bounds"]=bars;
     Dictionary npc_bounds;
     for (const auto& [actor,npc]:scene_npcs) npc_bounds[actor]=npc.bounds;
     result["scene_npc_bounds"]=npc_bounds;
@@ -368,6 +373,12 @@ void Mir3HudView::_ready() {
         load_actor(map_human,map_human_frames,"M-Hum",0);
         load_actor(map_human,map_walk_frames,nullptr,1680);
         load_actor(map_human,map_run_frames,nullptr,1760);
+        mir3::WilArchive progress;
+        if (progress.open(resource_root/"Data"/"ProgUse")) {
+            if (const auto frame=progress.frame(2)) health_border=texture(frame->pixels.rgba,frame->width,frame->height);
+            if (const auto frame=progress.frame(3)) health_fill=texture(frame->pixels.rgba,frame->width,frame->height);
+        }
+        scene_health.try_emplace(0);
         map_horse.open(resource_root/"Data"/"Horse");
         map_female.open(resource_root/"Data"/"WM-Hum");
         human_bodies.emplace(std::pair{0,0},HumanBody{map_human_frames,map_walk_frames,map_run_frames});
@@ -1432,6 +1443,54 @@ bool Mir3HudView::npc_dialogue_input(int kind,Vector2 pointer) {
     return true;
 }
 
+bool Mir3HudView::apply_scene_health(int actor,int opcode,int current,int mana,int maximum) {
+    if (!terrain_ready || (actor!=0 && !scene_humans.contains(actor) && !scene_chickens.contains(actor))) return false;
+    auto health=scene_health.contains(actor)?scene_health.at(actor):mir3::SceneHealth{};
+    if (!health.apply(opcode,current,mana,maximum)) return false;
+    scene_health.insert_or_assign(actor,health);
+    if (actor==0 && opcode==53) { model.hp=current;model.max_hp=maximum;model.mp=mana; }
+    queue_redraw();
+    return true;
+}
+
+bool Mir3HudView::set_scene_health_flags(int actor,int64_t status_tick,int64_t saved_tick,bool excluded,bool raised) {
+    if (!terrain_ready || status_tick<0 || status_tick>UINT32_MAX || saved_tick<0 || saved_tick>UINT32_MAX ||
+        (actor!=0 && !scene_humans.contains(actor) && !scene_chickens.contains(actor))) return false;
+    auto& health=scene_health[actor];
+    health.status_tick=static_cast<std::uint32_t>(status_tick);
+    health.saved_tick=static_cast<std::uint32_t>(saved_tick);
+    health.excluded=excluded;
+    health.raised=raised;
+    queue_redraw();
+    return true;
+}
+
+void Mir3HudView::draw_scene_health() {
+    scene_health_bounds.clear();
+    if (health_border.is_null() || health_fill.is_null()) return;
+    for (const auto& [actor,health]:scene_health) {
+        if (!health.visible(actor==0)) continue;
+        Vector2 anchor;
+        const bool human=actor==0 || scene_humans.contains(actor);
+        if (actor==0) {
+            if (!player_bounds.has_area()) continue;
+            anchor=Vector2(player_pixel()-map_camera());
+        } else {
+            const SceneActor* source=nullptr;
+            if (const auto it=scene_humans.find(actor);it!=scene_humans.end()) source=&it->second;
+            else if (const auto it=scene_chickens.find(actor);it!=scene_chickens.end()) source=&it->second;
+            if (!source || !source->bounds.has_area()) continue;
+            anchor=source->anchor;
+        }
+        const auto position=anchor+Vector2(7,human && health.raised?-80:-56);
+        const auto percent=actor==0?mir3::SceneHealth::percent(model.hp,model.max_hp):mir3::SceneHealth::percent(health.current,health.maximum);
+        const int width=mir3::SceneHealth::width(percent);
+        paint_canvas->draw_texture(health_border,position);
+        scene_health_bounds[actor]=Rect2(position,Vector2(width,4));
+        if (width>0) paint_canvas->draw_texture_rect_region(health_fill,Rect2(position,Vector2(width,4)),Rect2(0,0,width,4));
+    }
+}
+
 bool Mir3HudView::apply_scene_speech(int actor,int opcode,String value) {
     if (!terrain_ready || (actor!=0 && !scene_humans.contains(actor) && !scene_npcs.contains(actor) && !scene_chickens.contains(actor))) return false;
     auto bubble=scene_speech.contains(actor)?scene_speech.at(actor):mir3::SpeechBubble{};
@@ -1778,6 +1837,8 @@ bool Mir3HudView::apply_scene_human_step(int actor,int opcode,Vector2i destinati
 bool Mir3HudView::remove_scene_actor(int actor) {
     if (!scene_npcs.erase(actor) && !scene_chickens.erase(actor) && !scene_humans.erase(actor)) return false;
     const auto id=static_cast<std::uint32_t>(actor);
+    scene_health.erase(actor);
+    scene_health_bounds.erase(actor);
     scene_names.erase(actor);
     scene_speech.erase(actor);
     speech_bounds.erase(actor);
@@ -2037,6 +2098,7 @@ void Mir3HudView::_draw() {
     draw_terrain();
     draw_scene_name();
     draw_scene_speech();
+    draw_scene_health();
     if (!model.layout.expanded) {
         sprite(1490,Layout::image_position(Layout::Image::portrait));
         const auto origin=point(Layout::image_position(Layout::Image::portrait));
@@ -2350,6 +2412,11 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
+    for (auto& [actor,health]:scene_health) {
+        const bool registered=health.registered;
+        health.advance(delta*1000);
+        if (registered && !health.registered) queue_redraw();
+    }
     for (auto it=scene_speech.begin();it!=scene_speech.end();) {
         it->second.advance(delta*1000);
         if (it->second.lines.empty()) it=scene_speech.erase(it);

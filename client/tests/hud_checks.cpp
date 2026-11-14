@@ -1,6 +1,7 @@
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/scene_name.hpp"
+#include "hud/scene_health.hpp"
 #include "chat/chat_reception.hpp"
 #include "resources/wil_archive.hpp"
 #include "resources/messages.hpp"
@@ -15,6 +16,19 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--scene-health") {
+            mir3::SceneHealth health;
+            check(health.apply(53,75,20,100) && !health.visible(),"health alone does not register remote bar");
+            check(health.apply(1312,1,2,3) && health.current==75 && health.visible(),"registration preserves health");
+            check(mir3::SceneHealth::width(50)==17 && mir3::SceneHealth::width(100)==35,"original float truncation");
+            check(mir3::SceneHealth::percent(300,100)==44 && mir3::SceneHealth::percent(5,0)==0,"low-byte percentage and zero maximum");
+            health.advance(4999);check(health.visible(),"bar persists before deadline");
+            health.advance(1);check(!health.visible() && health.visible(true),"5000ms expiry does not affect local visibility");
+            health.excluded=true;check(!health.visible(true),"exclusion hides local bar too");
+            check(!health.apply(53,-1,0,0) && health.current==75,"invalid health remains atomic");
+            std::cout << "SCENE_HEALTH_MODEL_OK\n";
+            return 0;
+        }
         if (std::filesystem::path(argv[1])=="--scene-names") {
             mir3::SceneName name;
             check(name.update(42,255,"name\rguild\rtitle/suffix"),"three-line identity");

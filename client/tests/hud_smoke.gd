@@ -141,6 +141,49 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--scene-health"):
+		if not check(hud.apply_scene_health(0, 53, 50, 20, 100)
+			and hud.apply_scene_health(5, 53, 75, 10, 100), "apply local and remote health"): return
+		if not await capture("bichon-local-health"): return
+		if not check(hud.hud_snapshot().scene_health_bounds[0].size.x == 17
+			and not hud.hud_snapshot().scene_health_bounds.has(5), "remote bar requires registration"): return
+		if not check(hud.apply_scene_health(5, 1312, 1, 2, 3), "register remote health display"): return
+		var chicken_loaded := false
+		for offset in [Vector2i(2, 2), Vector2i(3, 1), Vector2i(-2, 3)]:
+			if hud.set_scene_chicken(8, hud.hud_snapshot().player_cell + offset):
+				chicken_loaded = true
+				break
+		if not check(chicken_loaded and hud.apply_scene_health(8, 53, 25, 0, 100)
+			and hud.apply_scene_health(8, 1312, 0, 0, 0), "register monster health"): return
+		if not await capture("bichon-human-health"): return
+		if not check(hud.hud_snapshot().scene_health_bounds[8].size.x == 8, "monster bar uses the same original percentage scale"): return
+		if not check(hud.remove_scene_actor(8), "remove registered monster"): return
+
+		var bar: Rect2 = hud.hud_snapshot().scene_health_bounds[5]
+		if not check(bar.size.x == 26, "registration does not overwrite actual health"): return
+		if not check(hud.set_scene_health_flags(5, 1, 2, false, false), "set mismatched actor status"): return
+		await process_frame
+		await process_frame
+		if not check(not hud.hud_snapshot().scene_health_bounds.has(5), "mismatched status hides bar"): return
+		if not check(hud.set_scene_health_flags(5, 2, 2, false, true)
+			and hud.set_scene_human_mount(5, 1), "restore raised rider health display"): return
+		if not await capture("bichon-rider-health"): return
+		if not check(hud.hud_snapshot().scene_health_bounds[5].position.y == bar.position.y - 24, "raised human health shifts 24 pixels"): return
+		var state: Dictionary = hud.hud_snapshot()
+		if not check(hud.apply_scene_human_step(5, 11, state.scene_human_cells[5] + Vector2i.RIGHT, 2), "move registered rider"): return
+		await create_timer(0.25).timeout
+		if not await capture("bichon-moving-health"): return
+		if not check(hud.hud_snapshot().scene_health_bounds[5].position.x > bar.position.x, "bar follows current movement position"): return
+		await create_timer(5.1).timeout
+		if not await capture("bichon-health-expired"): return
+		if not check(not hud.hud_snapshot().scene_health_bounds.has(5)
+			and hud.hud_snapshot().scene_health_bounds.has(0), "remote expires while local bar persists"): return
+		if not check(hud.apply_scene_health(5, 1312, 0, 0, 0)
+			and hud.remove_scene_actor(5)
+			and not hud.apply_scene_health(5, 53, 1, 0, 1), "departure removes health registration"): return
+		print("SCENE_HEALTH_OK")
+		quit()
+		return
 	if OS.get_cmdline_user_args().has("--scene-speech"):
 		if not check(hud.apply_scene_speech(0, 40, "  比奇城见  ")
 			and hud.apply_scene_speech(5, 1501, "比奇城的商人正在出售武器和防具，请到城中寻找他们。")
@@ -332,7 +375,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()
