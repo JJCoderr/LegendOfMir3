@@ -786,3 +786,8 @@ Features.md将功能细项及验收口径直接并入原48个模块的同一表�
 
 - [x] 六项本地附魔原包/选色/BUMP清理定向通过，扩展enchantment集合筛选，410未重测。颜色截图辨识度不足，保留原版同状态视觉门槛。
 - 补充DLL：IDA mir3-king-skills已读到GetCharInfo/GetCharInfoEx/SetCharInfo/GetMsgProcess/RegMsgProcess导出；入口0x4E6001仍为ASPack跳转桩，不能据此推断技能补丁不存在。mir3-treasure-entry开库已完成（先前只是观察超时）。脱壳尚未完成。
+
+## KingMir3补充证据解锁（2026-11-14）
+
+- [x] 模拟ASPack加载桩并重建分析副本，476导入槽/21导出；IDA识别5176函数，GetMsgProcess和入口可反编译，两次输出哈希一致，原件未变。脚本与指纹见client/docs/evidence/kingmir3-unpack.md。
+- [ ] 线程执行/技能补丁关联尚未核对；副本未验证能替换运行，C23视觉与最终全集门槛不变。
