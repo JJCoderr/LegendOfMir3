@@ -168,6 +168,22 @@ func run() -> void:
 	await settle()
 	if not check(hud.hud_snapshot().scene_light_samples==night,"鹿死亡后移除活动光源"): return
 	if not await capture("map-deer-light-out"): return
+	# 同一批网络消息内重用对象编号。新鹿应在处理旧离场后留在图中。
+	var gone := game_reply(Mir3HudView.SM_DISAPPEAR,7,0,0,0)
+	if not check(hud.apply_game_message(gone) and hud.apply_game_message(lit_deer),
+		"同帧先离场再入场"): return
+	await settle()
+	if not check(hud.hud_snapshot().scene_chicken_bounds.has(7)
+		and hud.hud_snapshot().scene_light_samples==lit,"编号重用后活鹿及光源保留"): return
+	var clear := game_reply(Mir3HudView.SM_CLEAROBJECTS,0,0,0,0)
+	if not check(hud.apply_game_message(clear) and hud.apply_game_message(lit_deer),"同帧先清场再入场"): return
+	await settle()
+	if not check(hud.hud_snapshot().scene_light_samples==lit,"清场之后的新对象保留"): return
+	if not await capture("map-deer-reentry"): return
+	if not check(hud.apply_game_message(gone),"再次离场"): return
+	await settle()
+	if not check(not hud.hud_snapshot().scene_chicken_bounds.has(7)
+		and hud.hud_snapshot().scene_light_samples==night,"最终离场移除对象和光源"): return
 	hud.queue_free()
 	await settle()
 	print("MAP_BUTCH_UI_OK")

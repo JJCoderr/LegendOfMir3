@@ -2334,6 +2334,11 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         actor>0 && actor!=local_actor_identity) {
         const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
         const bool chicken_feature=body && body->size()>=8 && (*body)[0]==3 && ((*body)[2]==20 || (*body)[2]==21) && (*body)[3]==0;
+        if (chicken_feature && (opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_DIGUP) &&
+            (opcode!=mir3::protocol::SM_DIGUP || body->size()==16) && (p[2]&255)<8 &&
+            terrain.walkable(p[0],p[1]) &&
+            (scene_clear_pending || std::ranges::find(scene_removals,actor)!=scene_removals.end()))
+            apply_scene_removals();
         if (opcode==mir3::protocol::SM_DIGUP && chicken_feature) {
             const int facing=p[2]&255;
             if (body->size()!=16 || facing>=8 || !terrain.walkable(p[0],p[1])) return false;
@@ -2835,6 +2840,17 @@ bool Mir3HudView::remove_scene_actor(int actor) {
     if (npc_dialogue_actor==actor) close_npc_dialogue();
     queue_redraw();
     return true;
+}
+
+void Mir3HudView::apply_scene_removals() {
+    if (scene_clear_pending) {
+        while (!scene_humans.empty()) remove_scene_actor(scene_humans.begin()->first);
+        while (!scene_npcs.empty()) remove_scene_actor(scene_npcs.begin()->first);
+        while (!scene_chickens.empty()) remove_scene_actor(scene_chickens.begin()->first);
+        scene_clear_pending=false;
+    }
+    for (const int actor:scene_removals) remove_scene_actor(actor);
+    scene_removals.clear();
 }
 
 void Mir3HudView::update_scene_target(Vector2 pointer) {
@@ -5385,14 +5401,7 @@ void Mir3HudView::_process(double delta) {
     }
     if (scene_ambient.fading) { scene_ambient.advance(delta*1000);queue_redraw(); }
     // Default object messages are processed outside each actor's animation queue.
-    if (scene_clear_pending) {
-        while (!scene_humans.empty()) remove_scene_actor(scene_humans.begin()->first);
-        while (!scene_npcs.empty()) remove_scene_actor(scene_npcs.begin()->first);
-        while (!scene_chickens.empty()) remove_scene_actor(scene_chickens.begin()->first);
-        scene_clear_pending=false;
-    }
-    for (const int actor:scene_removals) remove_scene_actor(actor);
-    scene_removals.clear();
+    apply_scene_removals();
 
     for (auto& [actor,health]:scene_health) {
         const bool registered=health.registered;

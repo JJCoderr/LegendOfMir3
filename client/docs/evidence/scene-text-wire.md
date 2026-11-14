@@ -9,3 +9,6 @@ apply_scene_message 现在分发 42 名称、656 改色、40/1501 公开/NPC 气
 验证：Release CMake，hud_checks --scene-text 检查 1.45 调色板与消息分类；Godot --scene-text 注入 GBK 中文三行名称/发言、改色、缺席对象行会消息、NPC 发言、畸形载荷、重复离场、ID 重用、清场后本地气泡/聊天保留及 NPC 对话关闭。截图 bichon-wire-name-speech.png 与 bichon-wire-clear-scene.png 来自实际视口。测试无需全场景回归。
 
 仍未启动真实服务器，也未接入本地角色真实网络 ID 映射；0 仅是本地显示适配 ID。默认消息处理的精确原版阶段、其他对象类别的生命周期仍需补齐。
+## 动物同帧重新入场
+
+4282C0 将 30 和 633 投入无正文默认队列。Godot 保留逐帧消费路径。当随后收到可建立动物的有效入场包时，如存在针对该编号的移除或前置清场，先处理这些默认消息，再以新包创建对象。离线重放覆盖 30 和 633 后同帧复用鹿编号，并检查尸体状态清除、新光源保留以及最终离场。Release、map_butch.gd 和 hud_smoke.gd --scene-text 通过。原版默认队列的精确调度仍待实机对照。
