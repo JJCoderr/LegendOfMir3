@@ -124,6 +124,59 @@ func run_local_mount() -> void:
 	print("LOCAL_MOUNT_OK")
 	quit()
 
+func run_scene_life() -> void:
+	var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
+	if not check(hud.set_scene_human_body(5,0,1) and hud.set_scene_human_attachments(5,1,1), "load death appearance"): return
+	hud.walk_to_map_cell(cell)
+	if not check(hud.hud_snapshot().route_destination != cell, "living human redirects path to adjacent cell"): return
+	hud.walk_to_map_cell(hud.hud_snapshot().player_cell)
+	if not check(not hud.apply_scene_human_life(9999,34,cell,4) and not hud.apply_scene_human_life(5,34,cell,8), "invalid death is rejected"): return
+	hud.queue_scene_human_message(5,34,cell,4)
+	await process_frame
+	await process_frame
+	if not check(hud.hud_snapshot().scene_human_life[5].dying, "queued death begins animation"): return
+	if not await wait_actor_sound(144,0): return
+	if not await capture("bichon-human-dying"): return
+	var deadline := Time.get_ticks_msec() + 2200
+	while hud.hud_snapshot().scene_human_life[5].dying and Time.get_ticks_msec() < deadline: await process_frame
+	if not check(hud.hud_snapshot().scene_human_life[5].dead and hud.hud_snapshot().scene_human_life[5].frame == 9, "death holds final frame"): return
+	if not await capture("bichon-human-corpse"): return
+	var hover := InputEventMouseMotion.new()
+	hover.position = hud.hud_snapshot().scene_human_bounds[5].get_center()
+	root.push_input(hover,true)
+	if not check(hud.hud_snapshot().target_portrait != 652, "corpse is not selected as live human"): return
+	var sounds: int = hud.hud_snapshot().scene_actor_sounds[5].count
+	hud.queue_scene_human_message(5,34,cell,4)
+	hud.queue_scene_human_message(5,14,cell,4)
+	hud.queue_scene_human_message(5,10,cell,6)
+	for i in range(5): await process_frame
+	if not check(hud.hud_snapshot().scene_human_life[5].dead and not hud.hud_snapshot().scene_human_life[5].dying and hud.hud_snapshot().scene_human_pending[5] == 0 and hud.hud_snapshot().scene_actor_sounds[5].count == sounds, "duplicate death and ordinary messages do not revive or replay"): return
+	if not check(hud.walk_to_map_cell(cell) and hud.hud_snapshot().route_destination == cell, "corpse no longer blocks path"): return
+	# Replace the route before the next process update to keep the scene fixed.
+	hud.walk_to_map_cell(hud.hud_snapshot().player_cell)
+	hud.queue_scene_human_message(5,1316,cell,4)
+	await process_frame
+	await process_frame
+	if not check(not hud.hud_snapshot().scene_human_life[5].dead and hud.hud_snapshot().scene_human_life[5].opacity < 1, "revival clears death and starts fade"): return
+	await create_timer(0.25).timeout
+	if not await capture("bichon-human-reviving"): return
+	await create_timer(0.5).timeout
+	hud.walk_to_map_cell(cell)
+	if not check(hud.hud_snapshot().scene_human_life[5].opacity == 1 and hud.hud_snapshot().route_destination != cell, "revival completes and restores obstruction"): return
+	hud.walk_to_map_cell(hud.hud_snapshot().player_cell)
+	hud.set_scene_human_body(5,1,1)
+	hud.apply_scene_human_life(5,34,cell,4)
+	if not await wait_actor_sound(145,sounds): return
+	hud.apply_scene_human_life(5,32,cell,4)
+	if not check(hud.hud_snapshot().scene_human_life[5].frame == 9 and not hud.hud_snapshot().scene_human_life[5].dying, "32 immediately selects corpse frame"): return
+	hud.apply_scene_human_life(5,1321,cell,4)
+	if not check(not hud.hud_snapshot().scene_human_life[5].dead, "1321 revives too"): return
+	hud.remove_scene_actor(5)
+	await process_frame
+	await process_frame
+	print("PASS scene human life")
+	quit()
+
 func wait_human_state(action: int, pending: int) -> bool:
 	var deadline := Time.get_ticks_msec() + 2500
 	while Time.get_ticks_msec() < deadline:
@@ -407,6 +460,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--scene-life"):
+		await run_scene_life()
+		return
 	if OS.get_cmdline_user_args().has("--scene-queue"):
 		await run_scene_queue()
 		return
@@ -557,7 +613,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

@@ -2,6 +2,7 @@
 #include "hud/hud_model.hpp"
 #include "hud/human_actions.hpp"
 #include "hud/scene_human_queue.hpp"
+#include "hud/human_life.hpp"
 #include "resources/sound_list.hpp"
 #include "hud/scene_name.hpp"
 #include "hud/scene_health.hpp"
@@ -19,6 +20,20 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--scene-life") {
+            mir3::HumanLife life;
+            check(life.opacity()==1 && !life.dead,"initial live state");
+            check(life.die(true) && life.dead && life.dying,"animated death");
+            check(!life.die(true) && !life.dying,"duplicate death does not replay");
+            life.revive();check(!life.dead && !life.dying && life.opacity()==0,"revival starts transparent");
+            life.advance(300);check(life.opacity()==15.f/32,"original quantized fade");
+            life.advance(299);check(life.opacity()==30.f/32,"fade before endpoint");
+            life.advance(1);check(life.opacity()==1,"600ms fully opaque");
+            check(!life.die(false) && life.dead,"immediate corpse");
+            check(mir3::SceneHumanMessage::accepts(32) && mir3::SceneHumanMessage::accepts(34) && mir3::SceneHumanMessage::accepts(1316) && mir3::SceneHumanMessage::accepts(1321),"lifecycle queue messages");
+            std::cout << "SCENE_LIFE_MODEL_OK\n";
+            return 0;
+        }
         if (std::filesystem::path(argv[1])=="--scene-queue") {
             mir3::SceneHumanQueue queue;
             check(!queue.take() && !queue.catching_up(),"empty queue");

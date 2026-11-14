@@ -3,6 +3,7 @@
 #include "hud/human_idle.hpp"
 #include "hud/human_actions.hpp"
 #include "hud/scene_human_queue.hpp"
+#include "hud/human_life.hpp"
 #include "resources/sound_list.hpp"
 #include "hud/scene_name.hpp"
 #include "hud/scene_health.hpp"
@@ -96,6 +97,7 @@ public:
     bool set_player_attachments(int hair,int weapon);
     bool set_scene_human_attachments(int actor,int hair,int weapon);
     bool set_player_body(int type,int clothing);
+    bool apply_scene_human_life(int actor,int opcode,godot::Vector2i cell,int facing);
     bool queue_scene_human_message(int actor,int opcode,godot::Vector2i cell,int facing,int hit_weapon=0,std::int64_t flags=0);
     bool dispatch_scene_human_message(int actor);
     bool apply_scene_human_action(int actor,int opcode,int facing,int hit_weapon=0);
@@ -330,7 +332,7 @@ private:
     std::map<std::string,mir3::WilArchive> attachment_archives;
     std::map<std::pair<std::string,int>,MapActorFrame> attachment_frames;
     const MapActorFrame* attachment_frame(int type,int shape,bool weapon,int motion_frame);
-    void draw_human_layers(const MapActorFrame& body,godot::Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape=0);
+    void draw_human_layers(const MapActorFrame& body,godot::Vector2 anchor,int type,int hair,int weapon,int motion_frame,int clothing_dye,int hair_dye,int mount_shape=0,float opacity=1.f);
     std::array<MapActorFrame,80> map_human_frames, map_walk_frames, map_run_frames;
     std::map<int,mir3::SceneHealth> scene_health;
     std::map<int,godot::Rect2> scene_health_bounds;
@@ -358,6 +360,7 @@ private:
         mir3::HumanActionClock action;
         int hit_weapon=0;
         mir3::SceneHumanQueue messages;
+        mir3::HumanLife life;
         bool catching_up=false;
         std::uint32_t action_flags=0;
         unsigned slow_ticks=0;

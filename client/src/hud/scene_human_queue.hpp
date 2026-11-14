@@ -10,7 +10,7 @@ struct SceneHumanMessage {
     std::uint32_t flags=0;
     static bool accepts(int opcode) {
         switch (opcode) {
-        case 10: case 11: case 13: case 14: case 15:
+        case 10: case 11: case 13: case 14: case 15: case 32: case 34: case 1316: case 1321:
         case 1306: case 1307: case 1308: case 1309: case 1319: return true;
         default: return false;
         }
