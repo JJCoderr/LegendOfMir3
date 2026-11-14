@@ -1,6 +1,7 @@
 // 测试内容：角色查询与进入请求、失败提示、角色列表协议、选中及翻页动画、界面模型、选项确认与聊天联动、场景消息、人物行为、地图及资源解析。
 #include "protocol/message_ids.hpp"
 #include "protocol/actor_ability.hpp"
+#include "protocol/actor_increments.hpp"
 #include "hud/system_options.hpp"
 #include "hud/exit_guard.hpp"
 #include "hud/exit_transition.hpp"
@@ -37,6 +38,19 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        // 测试内容：负重及附加能力头字段、有效位截取、零值及错误消息类型拒绝。
+        if (std::filesystem::path(argv[1])=="--actor-increments") {
+            const auto weight=mir3::ActorWeightChange::parse({0xabcd1234,mir3::protocol::SM_WEIGHTCHANGED,{0xef81,0xcdfe,0xffff}});
+            check(weight && weight->weight==0x1234 && weight->wear==129 && weight->hand==254,"actor increment vector 1");
+            const auto sub=mir3::ActorSubAbility::parse({0xabcdefab,mir3::protocol::SM_SUBABILITY,{0x8007,0xfe81,0x09ff}});
+            check(sub && sub->anti_magic==171 && sub->hit_point==7 && sub->speed_point==128,"actor increment vector 2");
+            check(sub->anti_poison==129 && sub->poison_recover==254 && sub->health_recover==255 && sub->spell_recover==9,"actor increment vector 3");
+            const auto zero=mir3::ActorSubAbility::parse({0,mir3::protocol::SM_SUBABILITY,{}});
+            check(zero && zero->hit_point==0 && zero->speed_point==0,"actor increment vector 4");
+            check(!mir3::ActorSubAbility::parse({0,mir3::protocol::SM_ABILITY,{}}),"actor increment vector 5");
+            check(!mir3::ActorWeightChange::parse({0,mir3::protocol::SM_SUBABILITY,{}}),"actor increment vector 6");
+            std::cout << "ACTOR_INCREMENTS_MODEL_OK\n";return 0;
+        }
         if (std::filesystem::path(argv[1])=="--actor-ability") {
             // 测试内容：63字节能力固定向量、无符号金币、核心字段和元素顺序、非法长度及职业拒绝。
             const std::string encoded=R"WIRE(FlDC<l\FCLPM=mYZ<S\<y<Cl<H?P<L><B\T<U<?v<<xZ=ll=<l<<<\P?\<O{=L`B>\@<[t?{<lL><Cv={\PB)WIRE";

@@ -180,3 +180,6 @@ IDA 0x47C920构造100、recognition及三WORD参数均0，正文`%s/%d`使用全
 
 ## 人物属性消息恢复（实现前分析，2026-11-14）
 42F5A0和4390E0确认SM_ABILITY的63字节正文、金币与职业、核心35字节能力字段；参考较新Mir3EIClient的ACTORABILITY顺序，早期源码不同不可混用。详细地址和未确认字段见client/docs/evidence/actor-ability.md。当前已接草稿，尚未测试或提交。
+
+## 负重及附加能力增量
+已核对原版4282C0/429F8A、42F650和4710F0；字段对应Mir3EIClient ACTORSUBABILITY，消息使用共用SM_WEIGHTCHANGED/SM_SUBABILITY定义。详见client/docs/evidence/actor-increments.md。

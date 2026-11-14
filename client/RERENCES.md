@@ -262,3 +262,6 @@ IDA 404D80：注册/找回按钮在鼠标释放命中时读取配置URL，ShellE
 
 ## 人物属性消息恢复（实现前分析，2026-11-14）
 42F5A0和4390E0确认SM_ABILITY的63字节正文、金币与职业、核心35字节能力字段；参考较新Mir3EIClient的ACTORABILITY顺序，早期源码不同不可混用。详细地址和未确认字段见client/docs/evidence/actor-ability.md。4710F0进一步确认七系攻击高字节、强弱元素有符号可见性。已完成原子接入、旧值清理、独立协议向量与实际视口定向验证；未确认头字段仍保留原值。
+
+## 负重及附加能力增量
+已核对原版4282C0/429F8A、42F650和4710F0；字段对应Mir3EIClient ACTORSUBABILITY，消息使用共用SM_WEIGHTCHANGED/SM_SUBABILITY定义。详见client/docs/evidence/actor-increments.md。

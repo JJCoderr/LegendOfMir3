@@ -2715,7 +2715,7 @@ void Mir3HudView::clear_game_scene() {
     map_route.clear();walk_frame=-1;movement_ms=0;
     terrain_ready=false;terrain=mir3::MapTerrain{};terrain_frames.clear();current_map_id=String();
     target_focus.clear();local_actor_identity=0;player_light_attribute=0;exit_guard={};
-    login_actor_pending.reset();login_actor_extra={};server_ability.reset();
+    login_actor_pending.reset();login_actor_extra={};server_ability.reset();server_sub_ability={};
     group_request=0;npc_dialogue_actor=0;shop_actor=0;
     inventory.visible=status.visible=skills.visible=group.visible=guild.visible=false;
     options.visible=portrait_panel.visible=mount.visible=quest.visible=trade.visible=false;
@@ -2883,6 +2883,14 @@ bool Mir3HudView::apply_game_message(const PackedByteArray& encoded) {
     if (server_groups.visible || login_visible || character_selection.visible || login_movie_purpose!=LoginMoviePurpose::none) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),std::size_t(encoded.size())},game_connection.key);
     if (!header) return false;
+    if (const auto value=mir3::ActorWeightChange::parse(*header)) {
+        model.weight=value->weight;model.wear_weight[0]=value->wear;model.hand_weight[0]=value->hand;
+        queue_redraw();return true;
+    }
+    if (const auto value=mir3::ActorSubAbility::parse(*header)) {
+        server_sub_ability=*value;model.status_bonus_percent={value->hit_point,value->speed_point};
+        queue_redraw();return true;
+    }
     if (header->opcode==mir3::protocol::SM_ABILITY) {
         const auto value=mir3::ActorAbility::parse(*header,{encoded.ptr()+16,std::size_t(encoded.size()-16)});
         if (!value) return false;
