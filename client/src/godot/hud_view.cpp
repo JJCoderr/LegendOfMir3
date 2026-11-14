@@ -575,6 +575,8 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["character_wear_weight"]=Vector2i(model.wear_weight[0],model.wear_weight[1]);
     result["character_hand_weight"]=Vector2i(model.hand_weight[0],model.hand_weight[1]);
     result["melee_speed"]=melee_cooldown.speed;
+    result["local_action_pending"]=pending_local_action.has_value();
+    result["local_action_wait_ms"]=pending_local_action?pending_local_action->wait_ms:0;
     result["melee_interval_ms"]=mir3::MeleeCooldown::interval(model.level,melee_cooldown.speed,model.hand_weight[0],model.hand_weight[1]);
     result["character_bonuses"]=Vector2i(model.status_bonus_percent[0],model.status_bonus_percent[1]);
     result["expanded"]=model.layout.expanded;
@@ -1191,18 +1193,64 @@ Vector2i Mir3HudView::player_pixel() const {
 }
 
 void Mir3HudView::start_map_step(Vector2i destination) {
+    if (pending_local_action) return;
     const auto delta=destination-player_cell;
     const mir3::MapCell direction{(delta.x>0)-(delta.x<0),(delta.y>0)-(delta.y<0)};
-    player_facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),direction)-mir3::map_directions.begin());
-    step_origin=player_cell;
-    step_destination=destination;
-    walk_frame=0;
-    movement_ms=0;
+    const int facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),direction)-mir3::map_directions.begin());
+    const bool running=std::max(std::abs(delta.x),std::abs(delta.y))>1;
+    pending_local_action=PendingLocalAction{true,player_cell,destination,facing,player_weapon,
+        running?mir3::protocol::CM_RUN:mir3::protocol::CM_WALK,{}};
+    advance_local_action();
+}
+
+void Mir3HudView::request_melee_action(int facing,int opcode) {
+    if (pending_local_action) return;
+    const auto now=std::uint32_t(GetTickCount());
+    if (!melee_cooldown.accept(now,model.level,model.hand_weight[0],model.hand_weight[1])) return;
+    map_route.clear();
+    pending_local_action=PendingLocalAction{false,player_cell,player_cell,facing,player_weapon,opcode,{}};
+    advance_local_action();
+}
+
+void Mir3HudView::advance_local_action() {
+    if (!pending_local_action) return;
+    const auto now=std::uint32_t(GetTickCount());
+    auto& pending=*pending_local_action;
+    if (!terrain_ready || player_cell!=pending.origin || (model.max_hp && model.hp==0)) {
+        pending_local_action.reset();
+        return;
+    }
+    if (!pending.waiting_since) {
+        if (pending.movement && !local_action_clock.admit_move(now)) return;
+        pending.waiting_since=now;
+        pending.wait_ms=local_action_clock.shared_wait(now,
+            mir3::MeleeCooldown::interval(model.level,melee_cooldown.speed,model.hand_weight[0],model.hand_weight[1]));
+    }
+    if (mir3::LocalActionClock::remaining(now,*pending.waiting_since,pending.wait_ms)) return;
+    const auto action=pending;
+    pending_local_action.reset(); // 先消费，再发信号，防止回调重复执行。
+    player_facing=action.facing;
+    player_harvest_impact=false;
+    if (action.movement) {
+        local_action_clock.moved=now;
+        step_origin=action.origin;
+        step_destination=action.destination;
+        walk_frame=0;
+        movement_ms=0;
+        player_action={};
+    } else {
+        local_action_clock.attacked=now;
+        player_action.start(mir3::HumanActions::weapon_attack(action.weapon));
+    }
+    const auto tick=action.movement?local_action_clock.move_admitted:now;
+    const auto position=std::uint32_t(action.destination.x)|(std::uint32_t(action.destination.y)<<16);
+    const auto parameters=(tick&0xffffu)|(std::uint32_t(action.facing)<<16);
+    send_client_packet(action.opcode,position,String(),parameters,tick>>16);
     queue_redraw();
 }
 
 bool Mir3HudView::walk_to_map_cell(Vector2i destination) {
-    if (!terrain_ready) return false;
+    if (!terrain_ready || pending_local_action) return false;
     const auto start=walk_frame>=0?step_destination:player_cell;
     map_route=terrain.route({start.x,start.y},{destination.x,destination.y},
         [this](mir3::MapCell cell) { return scene_occupied(Vector2i(cell[0],cell[1])); });
@@ -2853,7 +2901,9 @@ bool Mir3HudView::apply_scene_human_life(int actor,int opcode,Vector2i cell,int 
 
 bool Mir3HudView::set_local_actor_identity(int actor) {
     if (actor<=0 || scene_humans.contains(actor) || scene_npcs.contains(actor) || scene_chickens.contains(actor)) return false;
-    if (local_actor_identity!=actor) { player_light_attribute=0;melee_cooldown={}; }
+    if (local_actor_identity!=actor) {
+        player_light_attribute=0;melee_cooldown={};local_action_clock={};pending_local_action.reset();
+    }
     local_actor_identity=actor;
     queue_redraw();
     return true;
@@ -3177,6 +3227,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (opcode==mir3::protocol::SM_SITDOWN && local_actor_identity && actor==local_actor_identity) {
         if (encoded.size()!=16 || (p[2]&255)>=8 || !terrain.walkable(p[0],p[1])) return false;
         if (player_mount || model.hp==0) return true;
+        pending_local_action.reset();
         player_cell=Vector2i(p[0],p[1]);
         player_facing=p[2]&255;
         walk_frame=-1;movement_ms=0;map_route.clear();
@@ -3680,7 +3731,7 @@ bool Mir3HudView::merchant_pointer(Vector2 pointer) {
 }
 
 void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
-    if (map_input_delay.active() || walk_frame>=0 || !spell_pointer_available()) return;
+    if (pending_local_action || map_input_delay.active() || walk_frame>=0 || !spell_pointer_available()) return;
     if (!player_action.finished() && player_action.action()!=7) return;
     const auto p=inventory_cursor;
     const auto camera=map_camera();
@@ -3746,18 +3797,11 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
     if (left_click && model.hp>0 && !player_mount && !ranged_weapon &&
         ((melee_target && std::max(std::abs(delta.x),std::abs(delta.y))==1) ||
          (force_attack && (melee_target || (!hovered_target && player_weapon!=7))))) {
-        const auto tick=std::uint32_t(GetTickCount());
-        if (!melee_cooldown.accept(tick,model.level,model.hand_weight[0],model.hand_weight[1])) return;
         const mir3::MapCell heading{dx,dy};
+        int facing=player_facing;
         if (target!=player_cell)
-            player_facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),heading)-mir3::map_directions.begin());
-        map_route.clear();
-        player_harvest_impact=false;
-        player_action.start(mir3::HumanActions::weapon_attack(player_weapon));
-        const auto position=std::uint32_t(player_cell.x)|(std::uint32_t(player_cell.y)<<16);
-        const auto parameters=(tick&0xffffu)|(std::uint32_t(player_facing)<<16);
-        send_client_packet(mir3::protocol::CM_HIT,position,String(),parameters,tick>>16);
-        queue_redraw();
+            facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),heading)-mir3::map_directions.begin());
+        request_melee_action(facing,mir3::protocol::CM_HIT);
         return;
     }
     if (melee_target && std::max(std::abs(delta.x),std::abs(delta.y))==1) return;
@@ -3773,17 +3817,10 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
         const bool same_cell=target==player_cell;
         const auto facing=mir3::map_directions[player_facing];
         if (force_attack || (!same_cell && blocked(heading) && blocked(facing))) {
-            const auto tick=std::uint32_t(GetTickCount());
-            if (!melee_cooldown.accept(tick,model.level,model.hand_weight[0],model.hand_weight[1])) return;
+            int facing=player_facing;
             if (force_attack && !same_cell)
-                player_facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),heading)-mir3::map_directions.begin());
-            map_route.clear();
-            player_harvest_impact=false;
-            player_action.start(mir3::HumanActions::weapon_attack(player_weapon));
-            const auto position=std::uint32_t(player_cell.x)|(std::uint32_t(player_cell.y)<<16);
-            const auto parameters=(tick&0xffffu)|(std::uint32_t(player_facing)<<16);
-            send_client_packet(mir3::protocol::CM_FORCEHIT,position,String(),parameters,tick>>16);
-            queue_redraw();
+                facing=int(std::find(mir3::map_directions.begin(),mir3::map_directions.end(),heading)-mir3::map_directions.begin());
+            request_melee_action(facing,mir3::protocol::CM_FORCEHIT);
             return;
         }
     }
@@ -3836,7 +3873,8 @@ void Mir3HudView::step_toward_pointer(bool run,bool force_attack,bool cut) {
 }
 
 void Mir3HudView::advance_map_step(double delta) {
-    if (walk_frame<0 && !map_route.empty()) {
+    if (pending_local_action) return;
+    if (walk_frame<0 && !map_route.empty() && player_action.finished()) {
         const auto [x,y]=map_route.front();
         map_route.pop_front();
         if(!terrain.walkable(x,y)) {map_route.clear();return;}
@@ -4249,6 +4287,7 @@ void Mir3HudView::clear_game_scene() {
     map_input_delay={};player_mount=0;mount.shape=0;
     terrain_ready=false;terrain=mir3::MapTerrain{};terrain_frames.clear();current_map_id=String();
     target_focus.clear();local_actor_identity=0;player_light_attribute=0;exit_guard={};melee_cooldown={};
+    pending_local_action.reset();local_action_clock={};
     login_actor_pending.reset();login_actor_extra={};server_ability.reset();server_sub_ability={};weapon_training=0;
     guild_overview={};guild_overview_started=false;guild_manager=false;guild_name=String();
     for (auto& page:guild_pages) page.clear();
@@ -6640,6 +6679,7 @@ void Mir3HudView::_process(double delta) {
     update_weather_layers();
 
     apply_login_actor();
+    advance_local_action();
     scene_movement_ms+=delta*1000;
     const bool scene_movement_tick=scene_movement_ms>95;
     if (scene_movement_tick) scene_movement_ms=0;
@@ -9384,6 +9424,7 @@ bool Mir3HudView::quest_pointer(int kind,Vector2 position) {
 bool Mir3HudView::apply_mount_reply(int identifier,int64_t recognition) {
     if (recognition<0 || recognition>UINT32_MAX) return false;
     if (!mount.apply_reply(identifier,static_cast<std::uint32_t>(recognition))) return false;
+    pending_local_action.reset();
     // 4282C0/1300：更新外观后强制29或0，保留方向并重置动作计时。
     player_mount=mount.shape;
     if (terrain_ready && player_mount) human_body(player_type,player_clothing,true);
@@ -9883,6 +9924,7 @@ bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn,int ambien
         !next.walkable(spawn.x,spawn.y)) return false;
     clear_map_events();clear_level_effects();player_action={};player_harvest_impact=false;
     terrain=std::move(next);terrain_ready=true;
+    pending_local_action.reset();
     scene_ambient.enter(static_cast<std::uint16_t>(ambient_mode));
     current_map_id=map_id;
     map_input_delay.enter();

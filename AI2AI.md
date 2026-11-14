@@ -41,3 +41,7 @@ IDA 数据库名为 `mir3-map-review`，本机 MCP 地址为 `http://127.0.0.1:1
 ## 普攻频率门禁批次
 
 已接通417C40准入门禁，见client/src/hud/melee_cooldown.hpp。速度由本地801/807/808参数3按有符号WORD读取，等级及手持重量取现有角色模型。普通近战与挖矿共用最近获准时间，换角色或退出游戏清零。hud_checks --melee-cooldown及melee_cooldown.gd一次集中验收通过，总耗时约6秒。截图melee-cooldown-attack.png。现有近战/采矿脚本的点击等待调整到原版间隔；未启动这些长脚本。后续仍需完成419B40共用动作等待及服务端反馈，G01保持未完成。
+
+## 本地共用动作等待批次
+
+已实现LocalActionClock与单个待执行动作：移动600毫秒准入后进入共用等待，普攻/矿镐通过频率门禁后进入共用等待。419B40参数在进入等待时固定，时间条件到期只执行一次，移动包使用准入时间，攻击包使用实际出招时间。独立模型local-action-clock及melee-cooldown通过；Godot local_action_clock.gd及melee_cooldown.gd通过。跑动用例最初误选北侧障碍，读取原始0.map核实后改用南侧连续可走格，仅重跑相关短用例。截图local-action-walk.png和local-action-run.png。技能移动延迟、服务器纠偏与状态字段剩余项见TODO。

@@ -14,6 +14,7 @@
 #include "hud/human_idle.hpp"
 #include "hud/human_actions.hpp"
 #include "hud/melee_cooldown.hpp"
+#include "hud/local_action_clock.hpp"
 #include "hud/scene_human_queue.hpp"
 #include "hud/human_life.hpp"
 #include "hud/ground_items.hpp"
@@ -583,6 +584,17 @@ private:
     mir3::HumanIdleClock player_idle;
     mir3::HumanActionClock player_action;
     mir3::MeleeCooldown melee_cooldown;
+    mir3::LocalActionClock local_action_clock;
+    struct PendingLocalAction {
+        bool movement;
+        godot::Vector2i origin,destination;
+        int facing,weapon,opcode;
+        std::optional<std::uint32_t> waiting_since;
+        std::uint32_t wait_ms=0;
+    };
+    std::optional<PendingLocalAction> pending_local_action;
+    void request_melee_action(int facing,int opcode);
+    void advance_local_action();
     bool player_harvest_impact=false;
     bool map_shift_pressed=false;
     mir3::EffectCatalog effect_catalog;
