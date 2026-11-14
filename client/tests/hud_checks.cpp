@@ -1,6 +1,7 @@
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
 #include "protocol/receive_message.hpp"
+#include "chat/scene_chat.hpp"
 #include "hud/human_actions.hpp"
 #include "hud/scene_human_queue.hpp"
 #include "hud/human_life.hpp"
@@ -23,6 +24,12 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--scene-text") {
+            check(mir3::chat_palette(5)==16750230 && mir3::chat_palette(6)==0x50ffff && mir3::chat_palette(7)==33023,"1.45 chat palette differs from reference source");
+            check(mir3::chat_palette(255)==0 && mir3::chat_opcode(40) && mir3::chat_opcode(1501) && mir3::chat_opcode(104) && !mir3::chat_opcode(42),"chat dispatch classification");
+            std::cout << "SCENE_TEXT_MODEL_OK\n";
+            return 0;
+        }
         if (std::filesystem::path(argv[1])=="--scene-wire") {
             const std::string wire="Ex\\Zn?My<AT<<<<<";
             const std::array<std::uint8_t,4> key{18,52,86,120};

@@ -1,3 +1,4 @@
+#include "chat/scene_chat.hpp"
 #include "protocol/receive_message.hpp"
 #include <godot_cpp/classes/resource_loader.hpp>
 #include "hud/sound_position.hpp"
@@ -324,6 +325,12 @@ Dictionary Mir3HudView::hud_snapshot() const {
     const auto [attack_frame,attack_min,attack_max]=model.stat(1);
     result["hud_defence"]=Vector2i(defence_min,defence_max);
     result["hud_attack"]=Vector2i(attack_min,attack_max);
+    if (!chat_history.lines(false).empty()) {
+        const auto& line=chat_history.lines(false).back();
+        result["chat_last_text"]=String::utf8(line.text.c_str());
+        result["chat_last_foreground"]=line.foreground;
+        result["chat_last_background"]=line.background;
+    }
     result["chat_compact_count"]=int(chat_history.lines(false).size());
     result["chat_expanded_count"]=int(chat_history.lines(true).size());
     result["chat_compact_first"]=chat_history.first(false);
@@ -1880,6 +1887,28 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
     const int size=encoded.size()-16;
+    if (opcode==30 || opcode==633) {
+        if (size || scene_removals.size()>=99999) return false;
+        if (opcode==633) scene_clear_pending=true;
+        else if (actor>0) scene_removals.push_back(actor);
+        return true;
+    }
+    if (opcode==656) return size==0 && apply_scene_name(actor,opcode,p[0]&255,String());
+    if (opcode==42 || mir3::chat_opcode(opcode)) {
+        const auto decoded=mir3::decode_six_bit(encoded.ptr()+16,size);
+        if (!decoded) return false;
+        const auto ansi=std::string_view(*decoded).substr(0,decoded->find(char(0)));
+        if (opcode!=42 && ansi.size()>259) return false;
+        const auto text=String::utf8(mir3::ansi_to_utf8(ansi).c_str());
+        if (opcode==42) return apply_scene_name(actor,opcode,p[0]&255,text);
+        // 1.45 0x42F380: log once, only 40/1501 also update actor speech.
+        if (opcode==40 || opcode==1501) {
+            const bool present=actor==0 || scene_humans.contains(actor) || scene_npcs.contains(actor) || scene_chickens.contains(actor);
+            if (present && !apply_scene_speech(actor,opcode,text)) return false;
+        }
+        post_chat(text,mir3::chat_palette(opcode==104?4:p[0]&255),mir3::chat_palette(opcode==104?0:p[1]&255));
+        return true;
+    }
     if (opcode==53 || opcode==1312) return size==0 && apply_scene_health(actor,opcode,p[0],p[1],p[2]);
     const auto found=scene_humans.find(actor);
     if (found==scene_humans.end() || !mir3::SceneHumanMessage::accepts(opcode)) return false;
@@ -2682,6 +2711,16 @@ void Mir3HudView::button_hint() {
     text(caption,bounds,0);
 }
 void Mir3HudView::_process(double delta) {
+    // Default object messages are processed outside each actor's animation queue.
+    if (scene_clear_pending) {
+        while (!scene_humans.empty()) remove_scene_actor(scene_humans.begin()->first);
+        while (!scene_npcs.empty()) remove_scene_actor(scene_npcs.begin()->first);
+        while (!scene_chickens.empty()) remove_scene_actor(scene_chickens.begin()->first);
+        scene_clear_pending=false;
+    }
+    for (const int actor:scene_removals) remove_scene_actor(actor);
+    scene_removals.clear();
+
     for (auto& [actor,health]:scene_health) {
         const bool registered=health.registered;
         health.advance(delta*1000);

@@ -146,6 +146,57 @@ func scene_packet(opcode: int, actor: int, a: int, b: int, c: int, body: PackedB
 	else: result.append_array(encode_scene_bytes(body))
 	return result
 
+func scene_text_packet(opcode: int, actor: int, foreground: int, background: int, body: PackedByteArray) -> PackedByteArray:
+	var packet := scene_packet(opcode,actor,foreground,background,0)
+	packet.append_array(encode_scene_bytes(body))
+	return packet
+
+func run_scene_text() -> void:
+	var keys := PackedByteArray([18,52,86,120])
+	var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
+	var start_lines: int = hud.hud_snapshot().chat_compact_count
+	if not check(hud.apply_scene_message(scene_text_packet(42,5,255,0,PackedByteArray([208, 208, 187, 225, 211, 194, 202, 191, 13, 177, 200, 198, 230, 202, 216, 206, 192, 13, 211, 194, 213, 223, 47, 206, 178, 215, 186])),keys) and hud.apply_scene_message(scene_packet(656,5,505,0,0),keys), "wire ANSI three-line identity and color update"): return
+	var hover := InputEventMouseMotion.new()
+	hover.position = hud.hud_snapshot().scene_human_bounds[5].get_center()
+	root.push_input(hover,true)
+	await process_frame
+	await process_frame
+	if not check(hud.hud_snapshot().displayed_name_actor == 5 and hud.hud_snapshot().displayed_name_color == 255, "color-only message uses low byte and preserves identity"): return
+	if not check(hud.apply_scene_message(scene_text_packet(40,5,6,1,PackedByteArray([177, 200, 198, 230, 188, 175, 186, 207, 163, 172, 215, 188, 177, 184, 179, 246, 183, 162, 161, 163])),keys), "wire public speech"): return
+	await process_frame
+	await process_frame
+	var state: Dictionary = hud.hud_snapshot()
+	if not check(state.speech_bounds.has(5) and state.chat_compact_count == start_lines+1 and state.chat_last_text == "比奇集合，准备出发。" and state.chat_last_foreground == 0x50ffff and state.chat_last_background == 657930, "ANSI chat appears once in history and overhead with original palette"): return
+	if not await capture("bichon-wire-name-speech"): return
+	if not check(hud.apply_scene_message(scene_text_packet(104,9999,3,5,"Guild notice".to_ascii_buffer()),keys), "absent actor guild message still logs"): return
+	if not check(hud.hud_snapshot().chat_last_foreground == 65280 and hud.hud_snapshot().chat_last_background == 0 and not hud.hud_snapshot().speech_bounds.has(9999), "guild fixed colors and no invented actor"): return
+	if not check(hud.apply_scene_message(scene_text_packet(1501,2,2,0,PackedByteArray([187, 182, 211, 173, 192, 180, 181, 189, 177, 200, 198, 230, 161, 163])),keys), "NPC speech wire path"): return
+	var malformed := scene_packet(656,5,255,0,0)
+	malformed.append(60)
+	if not check(not hud.apply_scene_message(malformed,keys) and not hud.apply_scene_message(scene_text_packet(40,5,2,0,"x".repeat(260).to_ascii_buffer()),keys), "reject malformed color and oversized speech"): return
+	hud.apply_scene_health(5,53,90,10,100)
+	hud.apply_scene_health(5,1312,0,0,0)
+	hud.apply_scene_human_action(5,14,4)
+	hud.queue_scene_human_message(5,14,cell,6)
+	if not check(hud.apply_scene_message(scene_packet(30,5,0,0,0),keys) and hud.apply_scene_message(scene_packet(30,5,0,0,0),keys), "duplicate disappear accepted for default queue"): return
+	await process_frame
+	await process_frame
+	state = hud.hud_snapshot()
+	if not check(not state.scene_human_bounds.has(5) and not state.scene_human_pending.has(5) and not state.speech_bounds.has(5) and not state.scene_health_values.has(5) and state.scene_npc_bounds.has(2), "disappear clears only intended actor and associated state"): return
+	if not check(hud.set_scene_human(5,cell,4,1,"新旅人") and hud.hud_snapshot().scene_human_pending[5] == 0, "reused ID starts without old messages"): return
+	hud.apply_scene_speech(0,40,"我还在这里")
+	hud.apply_npc_dialogue(643,2,"npc/Hello")
+	var player: Vector2i = hud.hud_snapshot().player_cell
+	var history: int = hud.hud_snapshot().chat_compact_count
+	if not check(hud.apply_scene_message(scene_packet(633,0,0,0,0),keys), "clear scene objects"): return
+	await process_frame
+	await process_frame
+	state = hud.hud_snapshot()
+	if not check(state.scene_human_bounds.is_empty() and state.scene_npc_bounds.is_empty() and state.scene_chicken_bounds.is_empty() and state.player_cell == player and state.speech_bounds.has(0) and state.chat_compact_count == history and state.npc_dialogue_actor == 0, "clear removes remote objects and NPC window while preserving player and history"): return
+	if not await capture("bichon-wire-clear-scene"): return
+	print("PASS scene text and removal")
+	quit()
+
 func run_scene_wire() -> void:
 	var key_bytes := PackedByteArray([18,52,86,120])
 	var cell: Vector2i = hud.hud_snapshot().scene_human_cells[5]
@@ -633,6 +684,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--scene-text"):
+		await run_scene_text()
+		return
 	if OS.get_cmdline_user_args().has("--scene-wire"):
 		await run_scene_wire()
 		return
@@ -795,7 +849,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

@@ -376,6 +376,8 @@ private:
     };
     std::map<int,SceneHuman> scene_humans;
     double scene_movement_ms=0;
+    std::vector<int> scene_removals;
+    bool scene_clear_pending=false;
     mir3::WilArchive map_chickens;
     void update_scene_target(godot::Vector2 pointer);
     bool scene_occupied(godot::Vector2i cell) const;
