@@ -239,6 +239,29 @@ func run() -> void:
 	cut_at(oma_body.get_center())
 	if not check(oma_body.has_area() and oma_body!=oma_live and packets.size()==before_oma+1
 		and decode_request(packets.back()).decode_u16(4)==Mir3HudView.CM_SITDOWN,"半兽人尸体不发送割肉请求"): return
+	hud.remove_scene_actor(8)
+	await settle(0.9)
+	# 猪在 Mon-12 的第十组，验证另一资源库及割肉请求。
+	feature[2]=119
+	var pig := game_reply(Mir3HudView.SM_DIGUP,9,cell.x,cell.y,6)
+	pig.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(pig),"跨资源库加载猪"): return
+	await settle()
+	var pig_live: Rect2=hud.hud_snapshot().scene_chicken_bounds[9]
+	if not check(pig_live.has_area() and pig_live!=oma_live,"猪显示独立原版资源"): return
+	var pig_walk := game_reply(Mir3HudView.SM_TURN,9,origin.x,origin.y,0)
+	pig_walk.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(pig_walk) and hud.hud_snapshot().scene_chicken_steps[9]==0,"猪进入行走动作"): return
+	if not await capture("map-pig-walk"): return
+	await settle(0.9)
+	var pig_death := game_reply(Mir3HudView.SM_DEATH,9,cell.x,cell.y,6)
+	pig_death.append_array(encode_scene_bytes(feature))
+	if not check(hud.apply_game_message(pig_death),"显示猪尸体"): return
+	await settle()
+	cut_at(hud.hud_snapshot().scene_chicken_bounds[9].get_center())
+	if not check(packets.size()==before_oma+3 and decode_request(packets.back()).decode_u32(0)==9,
+		"猪尸体发送对应编号的割肉请求"): return
+	if not await capture("map-butch-pig"): return
 	hud.queue_free()
 	await settle()
 	print("MAP_BUTCH_UI_OK")

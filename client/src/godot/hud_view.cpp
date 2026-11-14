@@ -676,7 +676,6 @@ void Mir3HudView::_ready() {
         map_female.open(resource_root/"Data"/"WM-Hum");
         human_bodies.emplace(std::pair{0,0},HumanBody{map_human_frames,map_walk_frames,map_run_frames});
         map_npc.open(resource_root/"Data"/"NPC");
-        map_chickens.open(resource_root/"Data"/"Mon-3");
         set_scene_npc(2,Vector2i(413,409),110);
         for (const int sample:{1,33,34,35})
             movement_sounds.emplace(sample,AudioStreamWAV::load_from_file(audio_root.path_join(String::num_int64(sample)+".wav")));
@@ -2060,7 +2059,7 @@ bool Mir3HudView::place_scene_chicken(int actor,Vector2i cell,int facing,int sha
         chicken.called=previous->second.called;
     // 405E50 and 46EFA0: type 3 / shapes 20–21, action 0.
     for (int i=0;i<4;++i) {
-        const auto* frame=chicken_frame((shape-20)*1000+facing*10+i);
+        const auto* frame=monster_frame(shape,facing*10+i);
         if (!frame) return false;
         chicken.frames[i]=*frame;
     }
@@ -2075,11 +2074,22 @@ void Mir3HudView::play_animal_call(int actor,SceneChicken& animal) {
     play_actor_sound(actor,10*animal.shape+201,animal.cell);
 }
 
-const Mir3HudView::MapActorFrame* Mir3HudView::chicken_frame(int id) {
-    if (const auto it=chicken_frames.find(id);it!=chicken_frames.end()) return &it->second;
-    const auto frame=map_chickens.frame(id);
+const Mir3HudView::MapActorFrame* Mir3HudView::monster_frame(int shape,int relative) {
+    // 405E50: ordinary monster archives group ten shapes, 1000 slots per shape.
+    const int library=shape/10+1;
+    const int id=shape%10*1000+relative;
+    const auto key=std::pair{library,id};
+    if (const auto it=monster_frames.find(key);it!=monster_frames.end()) return &it->second;
+    auto archive=monster_archives.find(library);
+    if (archive==monster_archives.end()) {
+        const auto path=std::filesystem::u8path(actor_resource_root.utf8().get_data())/("Mon-"+std::to_string(library));
+        mir3::WilArchive candidate;
+        if (!candidate.open(path)) return nullptr;
+        archive=monster_archives.emplace(library,std::move(candidate)).first;
+    }
+    const auto frame=archive->second.frame(id);
     if (!frame) return nullptr;
-    return &chicken_frames.emplace(id,MapActorFrame{texture(frame->pixels.rgba,frame->width,frame->height),
+    return &monster_frames.emplace(key,MapActorFrame{texture(frame->pixels.rgba,frame->width,frame->height),
         Vector2(frame->offset_x,frame->offset_y),frame->pixels.regions}).first->second;
 }
 
@@ -2098,7 +2108,7 @@ bool Mir3HudView::move_scene_chicken(int actor,Vector2i cell,int facing,unsigned
         queue_redraw();
         return true;
     }
-    for (int i=0;i<6;++i) if (!chicken_frame(chicken.frame_base()+80+10*facing+i)) return false;
+    for (int i=0;i<6;++i) if (!monster_frame(chicken.shape,80+10*facing+i)) return false;
     const auto direction=mir3::map_directions[backward?(facing+4)%8:facing];
     chicken.walk_origin=cell-Vector2i(direction[0],direction[1]);
     chicken.cell=cell;
@@ -2346,7 +2356,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         actor>0 && actor!=local_actor_identity) {
         const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
         const bool chicken_feature=body && body->size()>=8 && (*body)[0]==3 &&
-            ((*body)[2]==20 || (*body)[2]==21 || (*body)[2]==23) && (*body)[3]==0;
+            ((*body)[2]==20 || (*body)[2]==21 || (*body)[2]==23 || (*body)[2]==119) && (*body)[3]==0;
         if (chicken_feature && (opcode==mir3::protocol::SM_TURN || opcode==mir3::protocol::SM_DIGUP) &&
             (opcode!=mir3::protocol::SM_DIGUP || body->size()==16) && (p[2]&255)<8 &&
             terrain.walkable(p[0],p[1]) &&
@@ -2374,9 +2384,9 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
             const bool skeleton=opcode==mir3::protocol::SM_SKELETON;
             const int shape=chicken_feature?(*body)[2]:scene_chickens.at(actor).shape;
             if (scene_chickens.contains(actor) && scene_chickens.at(actor).shape!=shape) return false;
-            const int base=(shape-20)*1000+(skeleton?880:320)+10*facing;
+            const int base=(skeleton?880:320)+10*facing;
             const int frames=skeleton?1:10;
-            for (int i=0;i<frames;++i) if (!chicken_frame(base+i)) return false;
+            for (int i=0;i<frames;++i) if (!monster_frame(shape,base+i)) return false;
             const Vector2i cell(p[0],p[1]);
             if (!scene_chickens.contains(actor) && !place_scene_chicken(actor,cell,facing,shape)) return false;
             auto& chicken=scene_chickens.at(actor);
@@ -2419,7 +2429,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
         if (!body || body->size()!=16 || (*body)[0]!=3 || (*body)[2]!=scene_chickens.at(actor).shape || (*body)[3]!=0) return false;
         auto& chicken=scene_chickens.at(actor);
         if (chicken.death_frame<0 && p[0] && p[2]) {
-            for (int i=0;i<2;++i) if (!chicken_frame(chicken.frame_base()+240+10*chicken.facing+i)) return false;
+            for (int i=0;i<2;++i) if (!monster_frame(chicken.shape,240+10*chicken.facing+i)) return false;
         }
         mir3::SceneHumanMessage hit{};
         hit.opcode=opcode;
@@ -2431,7 +2441,7 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
             if (variant<=65535-400) show_map_impact(400+variant,chicken.cell);
         }
         if (!p[0]) {
-            for (int i=0;i<10;++i) if (!chicken_frame(chicken.frame_base()+320+10*chicken.facing+i)) return false;
+            for (int i=0;i<10;++i) if (!monster_frame(chicken.shape,320+10*chicken.facing+i)) return false;
             chicken.walk_frame=-1;
             chicken.struck_frame=-1;
             chicken.turns.clear();
@@ -3175,14 +3185,14 @@ void Mir3HudView::draw_terrain() {
         for (auto& [actor,chicken]:scene_chickens) {
             if (start_y+row!=chicken.cell.y) continue;
             if (chicken.walk_frame>=0) {
-                draw_scene_actor(chicken,180,chicken_frame(chicken.frame_base()+80+10*chicken.facing+chicken.walk_frame),
+                draw_scene_actor(chicken,180,monster_frame(chicken.shape,80+10*chicken.facing+chicken.walk_frame),
                     chicken.walk_pixel()-chicken.cell*Vector2i(48,32));
                 continue;
             }
             const int base=(chicken.skeleton?880:320)+10*chicken.facing;
-            const auto* pose=chicken.death_frame>=0?chicken_frame(chicken.frame_base()+base+chicken.death_frame):
-                chicken.struck_frame>=0?chicken_frame(chicken.frame_base()+240+10*chicken.facing+chicken.struck_frame):
-                chicken_frame(chicken.frame_base()+10*chicken.facing+chicken.idle_frame);
+            const auto* pose=chicken.death_frame>=0?monster_frame(chicken.shape,base+chicken.death_frame):
+                chicken.struck_frame>=0?monster_frame(chicken.shape,240+10*chicken.facing+chicken.struck_frame):
+                monster_frame(chicken.shape,10*chicken.facing+chicken.idle_frame);
             draw_scene_actor(chicken,180,pose);
         }
         for (auto& [actor,human]:scene_humans) {

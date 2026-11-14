@@ -472,8 +472,7 @@ private:
         double idle_ms=0;
         bool called=false;
         unsigned light_attribute=0;
-        int frame_base() const { return (shape-20)*1000; }
-        bool can_be_butchered() const { return shape==20 || shape==21; }
+        bool can_be_butchered() const { return shape==20 || shape==21 || shape==119; }
         int facing=6, death_frame=-1;
         int walk_frame=-1;
         int walk_interval=130;
@@ -492,8 +491,9 @@ private:
         std::deque<Turn> turns;
     };
     std::map<int,SceneChicken> scene_chickens;
-    std::map<int,MapActorFrame> chicken_frames;
-    const MapActorFrame* chicken_frame(int id);
+    std::map<std::pair<int,int>,MapActorFrame> monster_frames;
+    std::map<int,mir3::WilArchive> monster_archives;
+    const MapActorFrame* monster_frame(int shape,int relative);
     bool place_scene_chicken(int actor,godot::Vector2i cell,int facing,int shape=20,unsigned light=0);
     bool move_scene_chicken(int actor,godot::Vector2i cell,int facing,unsigned light,bool backward=false);
     void play_animal_call(int actor,SceneChicken& animal);
@@ -522,7 +522,6 @@ private:
     std::vector<int> scene_removals;
     bool scene_clear_pending=false;
     void apply_scene_removals();
-    mir3::WilArchive map_chickens;
     void update_scene_target(godot::Vector2 pointer);
     bool scene_occupied(godot::Vector2i cell) const;
     godot::Ref<godot::ImageTexture> terrain_texture(int package,int id);
