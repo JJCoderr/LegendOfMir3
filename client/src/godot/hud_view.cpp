@@ -369,6 +369,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
         state["radii"]=Vector2i(effect.playback.inner_radius,effect.playback.outer_radius);level_states.append(state);
     }
     result["level_effects"]=level_states;
+    result["map_event_count"]=int(map_events.size());
     result["player_level_action"]=!player_level_action.finished();
     result["gold_sound_count"]=gold_sound_count;
     result["weapon_training"]=weapon_training;
@@ -593,6 +594,7 @@ void Mir3HudView::_ready() {
     actor_resource_root=root.path_join("Data");
     const auto effect_file=FileAccess::get_file_as_bytes(root.path_join("MInfo.dat"));
     effect_catalog.load({effect_file.ptr(),std::size_t(effect_file.size())});
+    event_archive.open(std::filesystem::u8path(actor_resource_root.utf8().get_data())/"Magic");
     level_archive.open(std::filesystem::u8path(actor_resource_root.utf8().get_data())/"MagicEx");
     weapon_order=FileAccess::get_file_as_bytes(root.path_join("Weapon.ord"));
     audio_root=root.path_join("Sound");
@@ -2255,9 +2257,42 @@ bool Mir3HudView::apply_scene_message(PackedByteArray encoded,PackedByteArray ke
     if (encoded.size()<mir3::ReceiveHeader::encoded_size || encoded.size()>mir3::ReceiveHeader::encoded_size+mir3::ChatLog::max_encoded_text) return false;
     const auto header=mir3::ReceiveHeader::decode({encoded.ptr(),static_cast<std::size_t>(encoded.size())},
         {key.ptr(),static_cast<std::size_t>(key.size())});
-    if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS && header->opcode!=mir3::protocol::SM_DAYCHANGING)) return false;
+    if (!header || (header->recognition>INT_MAX && header->opcode!=mir3::protocol::SM_NEWMAP && header->opcode!=mir3::protocol::SM_CHANGEMAP && header->opcode!=mir3::protocol::SM_MAPDESCRIPTION && header->opcode!=mir3::protocol::SM_CLIENT_OPTIONS && header->opcode!=mir3::protocol::SM_DAYCHANGING && header->opcode!=mir3::protocol::SM_SHOWEVENT && header->opcode!=mir3::protocol::SM_HIDEEVENT)) return false;
     const int actor=header->recognition, opcode=header->opcode;
     const auto& p=header->parameters;
+    if(opcode==mir3::protocol::SM_HIDEEVENT) {
+        if(encoded.size()!=16) return false;
+        const auto event=map_events.find(header->recognition);
+        if(event!=map_events.end()) {
+            event->second.copy->hide();
+            event->second.copy->queue_free();
+            map_events.erase(event);
+        }
+        return true;
+    }
+    if(opcode==mir3::protocol::SM_SHOWEVENT) {
+        const auto body=mir3::decode_six_bit(encoded.ptr()+16,encoded.size()-16);
+        if(!body || body->size()!=4 || !terrain.contains(p[1],p[2])) return false;
+        if(p[0]!=4 && p[0]!=5) return false;
+        if(map_events.contains(header->recognition)) return true;
+        const auto* resource=effect_catalog.find(mir3::EffectCatalog::Section::magic,p[0]==4?16:22);
+        if(!resource || resource->library!=81 || resource->end<=resource->first || !resource->interval) return false;
+        auto* copy=memnew(BackBufferCopy);
+        copy->set_copy_mode(BackBufferCopy::COPY_MODE_VIEWPORT);
+        level_layer->add_child(copy);
+        auto* sprite=memnew(Sprite2D);
+        sprite->set_centered(false);
+        copy->add_child(sprite);
+        Ref<ShaderMaterial> material;
+        material.instantiate();
+        material->set_shader(ResourceLoader::get_singleton()->load("res://level_effect.gdshader"));
+        sprite->set_material(material);
+        sprite->set_modulate(Color(resource->tint[0]/255.f,resource->tint[1]/255.f,resource->tint[2]/255.f));
+        const int frame=resource->first+weather.between(1,8)%(resource->end-resource->first);
+        map_events.emplace(header->recognition,MapEvent{resource,{p[1],p[2]},copy,sprite,frame});
+        advance_map_events(0);
+        return true;
+    }
     if(opcode==mir3::protocol::SM_OPENDOOR_OK || opcode==mir3::protocol::SM_CLOSEDOOR ||
             opcode==mir3::protocol::SM_OPENDOOR_LOCK) {
         if(encoded.size()!=16) return false;
@@ -2971,7 +3006,7 @@ bool Mir3HudView::prepare_character_selection() {
 }
 
 void Mir3HudView::clear_game_scene() {
-    clear_level_effects();player_level_action={};
+    clear_map_events();clear_level_effects();player_level_action={};
     login_audio.enter(mir3::LoginAudio::Page::none);
     for (auto& [file,player]:login_effects) player->stop();
     cancel_pointer_interactions();
@@ -3176,6 +3211,37 @@ const Mir3HudView::MapActorFrame* Mir3HudView::level_frame(int index) {
     return &level_frames.emplace(index,MapActorFrame{texture(decoded->pixels.rgba,decoded->width,decoded->height),
         Vector2(decoded->offset_x,decoded->offset_y),decoded->pixels.regions}).first->second;
 }
+void Mir3HudView::clear_map_events() {
+    for(auto& [id,event]:map_events) {
+        event.copy->hide();
+        event.copy->queue_free();
+    }
+    map_events.clear();
+}
+
+void Mir3HudView::advance_map_events(double milliseconds) {
+    const auto camera=map_camera();
+    for(auto& [id,event]:map_events) {
+        event.elapsed+=milliseconds;
+        if(event.elapsed>event.resource->interval) {
+            event.elapsed=0;
+            if(++event.frame>=int(event.resource->end)) event.frame=event.resource->first;
+        }
+        auto found=event_frames.find(event.frame);
+        if(found==event_frames.end()) {
+            if(const auto source=event_archive.frame(event.frame))
+                found=event_frames.emplace(event.frame,MapActorFrame{
+                    texture(source->pixels.rgba,source->width,source->height),
+                    Vector2(source->offset_x,source->offset_y),{}}).first;
+        }
+        event.sprite->set_visible(found!=event_frames.end());
+        if(found!=event_frames.end()) {
+            event.sprite->set_texture(found->second.image);
+            event.sprite->set_position(Vector2(event.cell.x*48-camera.x,event.cell.y*32-camera.y)+found->second.offset);
+        }
+    }
+}
+
 void Mir3HudView::clear_level_effects() {
     for (auto& effect:level_effects) { effect.copy->hide();effect.copy->queue_free(); }
     level_effects.clear();
@@ -4912,6 +4978,7 @@ void Mir3HudView::_process(double delta) {
     if (chat_input && chat_input->has_focus()) map_pointer_button=0;
     const bool moving=walk_frame>=0;
     advance_map_step(delta);
+    if(!map_events.empty()) advance_map_events(delta*1000);
     if (map_pointer_button==MOUSE_BUTTON_RIGHT && moving && walk_frame<0 && map_route.empty()) {
         step_toward_pointer(model.hp>=10);
     } else if (map_pointer_button==MOUSE_BUTTON_LEFT) {
@@ -7932,7 +7999,7 @@ bool Mir3HudView::change_map(String map_id,String name,Vector2i spawn,int ambien
     mir3::MapTerrain next;
     if (!next.open(std::filesystem::u8path(map_directory.path_join(map_id+".map").utf8().get_data())) ||
         !next.walkable(spawn.x,spawn.y)) return false;
-    clear_level_effects();player_level_action={};
+    clear_map_events();clear_level_effects();player_level_action={};
     terrain=std::move(next);terrain_ready=true;
     scene_ambient.enter(static_cast<std::uint16_t>(ambient_mode));
     current_map_id=map_id;

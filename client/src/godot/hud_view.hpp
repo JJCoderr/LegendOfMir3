@@ -501,6 +501,19 @@ private:
     mir3::HumanIdleClock player_idle;
     mir3::HumanActionClock player_level_action;
     mir3::EffectCatalog effect_catalog;
+    mir3::WilArchive event_archive;
+    std::map<int,MapActorFrame> event_frames;
+    struct MapEvent {
+        const mir3::EffectResource* resource;
+        godot::Vector2i cell;
+        godot::BackBufferCopy* copy;
+        godot::Sprite2D* sprite;
+        int frame;
+        double elapsed=0;
+    };
+    std::map<std::uint32_t,MapEvent> map_events;
+    void advance_map_events(double milliseconds);
+    void clear_map_events();
     mir3::WilArchive level_archive;
     std::map<int,MapActorFrame> level_frames;
     godot::Node2D* level_layer=nullptr;
