@@ -15,13 +15,16 @@ SUITES = {
         "casting": ([], "skill_casting.gd"),
         "enchantment": (["--spell-weapon-color"], "weapon_enchantment.gd"),
         "correction": ([], "forced_motion.gd"),
+        "cast-correction": ([], "spell_correction.gd"),
+        "ranges": ([], "spell_ranges.gd"),
+        "lightning-model": (["--spell-lightning"], None),
     },
     "equipment": {
         "wire": (["--equipment-wire"], "equipment_wire.gd"),
         "actions": (["--equipment-actions"], "equipment_actions.gd"),
     },
 }
-SKILLS = (1, 27, 73, 110, 113, 150, *range(408, 415))
+SKILLS = (1, 9, 10, 27, 53, 73, 110, 113, 150, *range(408, 415))
 
 
 def executable(explicit, candidates):
@@ -61,6 +64,12 @@ def main():
         parser.error(f"无效子集；可选：{', '.join(suite)}")
     if args.skill is not None:
         allowed = ["casting"] + (["enchantment"] if args.skill >= 408 else [])
+        if args.skill == 1:
+            allowed.append("cast-correction")
+        if args.skill in (9, 10, 53):
+            allowed = ["ranges"]
+            if args.skill == 10:
+                allowed.insert(0, "lightning-model")
         if args.case and any(case not in allowed for case in cases):
             parser.error("所选子集不支持该技能编号筛选")
         cases = args.case or allowed
@@ -75,9 +84,9 @@ def main():
         godot = executable(args.godot, ["godot", "godot4", "Godot_v4.7.2-stable_win64_console.exe"])
     for case in cases:
         models, script = suite[case]
-        # skills/models的--spell已包含颜色模型，全量时不再重复执行。
+        # skills/models的--spell已包含颜色与闪电模型，全量时不重复执行。
         commands = [[checks, model] for model in models
-                    if not (args.suite == "skills" and "models" in cases and model == "--spell-weapon-color")]
+                    if not (args.suite == "skills" and "models" in cases and model in ("--spell-weapon-color", "--spell-lightning"))]
         if script:
             command = [godot, "--path", str(ROOT / "godot"), "--script", str(ROOT / "tests" / script), "--"]
             if args.skill is not None:

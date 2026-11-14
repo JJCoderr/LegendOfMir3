@@ -12,7 +12,7 @@ cmake --build client/build --config Release --target mir3_client hud_checks --pa
 python client/tests/run_tests.py --suite skills --skill 110 --screenshots
 ```
 
-当前有独立断言的编号：1、27、73、110、113、150，以及七系附魔效果408至414。1包含起手、远端回包、超时和拒绝恢复；其他编号只运行对应表现或位移用例。未知编号返回失败，不允许空跑通过。后续新增逐技能用例必须同时加入筛选列表和默认全量路径。
+当前有独立断言的编号：1、9、10、27、53、73、110、113、150，以及七系附魔效果408至414。1包含起手、远端回包、超时、碰撞与拒绝恢复；9/10/53包含逐格范围、段间延迟、资源光源、实际声音表和离场清理，10还包含336粒子模型。其他编号运行对应表现或位移用例。未知编号返回失败，不允许空跑通过。后续新增逐技能用例必须同时加入筛选列表和默认全量路径。
 
 开发和调试时仅运行本次修改影响的单技能用例，不重复跑此前已通过且未受影响的技能。技能子系统最终完成后集中运行一次全量，不传`--skill`或`--case`：
 
@@ -26,6 +26,8 @@ python client/tests/run_tests.py --suite skills --screenshots
 
 ```sh
 python client/tests/run_tests.py --suite skills --case enchantment --skill 410 --screenshots
+python client/tests/run_tests.py --suite skills --case cast-correction --skill 1 --screenshots
+python client/tests/run_tests.py --suite skills --skill 10 --screenshots
 python client/tests/run_tests.py --suite skills --list
 python client/tests/run_tests.py --suite equipment --list
 ```

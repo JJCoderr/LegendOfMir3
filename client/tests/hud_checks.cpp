@@ -64,6 +64,7 @@ int main(int argc,char** argv) {
         check(argc==2,"resource root required");
         if(std::filesystem::path(argv[1])=="--spell") {spell_checks();std::cout<<"SPELL_MODEL_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--spell-weapon-color") {spell_weapon_color_checks();std::cout<<"SPELL_WEAPON_COLOR_OK\n";return 0;}
+        if(std::filesystem::path(argv[1])=="--spell-lightning") {spell_lightning_checks();std::cout<<"SPELL_LIGHTNING_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--forced-motion") {forced_motion_checks();std::cout<<"FORCED_MOTION_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--action-reply") {action_reply_checks();std::cout<<"ACTION_REPLY_OK\n";return 0;}
         if(std::filesystem::path(argv[1])=="--local-action-clock") {local_action_clock_checks();std::cout<<"LOCAL_ACTION_CLOCK_OK\n";return 0;}

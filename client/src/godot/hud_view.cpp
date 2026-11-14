@@ -5255,7 +5255,8 @@ void Mir3HudView::show_scene_effect(mir3::EffectCatalog::Section section,int eff
         int frame_offset,int delay_ms,int attached_actor,std::optional<MonsterProjectile> projectile,
         MonsterEffectPose attached_pose) {
     const auto* resource=effect_catalog.find(section,effect);
-    const bool particle_only=section!=mir3::EffectCatalog::Section::spell && effect==int(mir3::SkillId::original_150);
+    const bool particle_only=section!=mir3::EffectCatalog::Section::spell &&
+        (effect==int(mir3::SkillId::original_150) || effect==int(mir3::MagicEffectId::lightning_trail));
     if (!resource || (!particle_only && (resource->end<=resource->first || !resource->interval)) || !prepare_effect_library(resource->library)) return;
     auto* copy=memnew(BackBufferCopy);
     copy->set_copy_mode(BackBufferCopy::COPY_MODE_VIEWPORT);
@@ -5312,7 +5313,7 @@ void Mir3HudView::sync_spell_particles() {
     if (!spell_particle_layer) return;
     auto* renderer=RenderingServer::get_singleton();
     std::size_t used=0;
-    for (const auto* slots:{&spell_particles.sparks,&spell_particles.glows}) {
+    for (const auto* slots:{&spell_particles.sparks,&spell_particles.glows,&spell_particles.fragments}) {
         for (const auto& slot:*slots) {
             if (!slot) continue;
             const auto& particle=*slot;
@@ -5330,7 +5331,7 @@ void Mir3HudView::sync_spell_particles() {
             const Vector2 extent(particle.size,particle.size);
             const Rect2 bounds(Vector2(particle.position[0],particle.position[1])-extent*0.5f,extent);
             renderer->canvas_item_set_copy_to_backbuffer(item,true,bounds);
-            renderer->canvas_item_set_material(item,spell_particle_materials[particle.kind==mir3::SpellParticle::Kind::glow?1:0]->get_rid());
+            renderer->canvas_item_set_material(item,spell_particle_materials[particle.glow()?1:0]->get_rid());
             const auto& tint=particle.color;
             renderer->canvas_item_add_texture_rect(item,bounds,image->second.image->get_rid(),false,
                 Color(tint[0]/255.f,tint[1]/255.f,tint[2]/255.f));
@@ -5655,6 +5656,10 @@ void Mir3HudView::advance_map_events(double milliseconds) {
         if(!event.spell_effect && !event.staged_spell && !event.light_tail && event.elapsed>interval) {
             event.elapsed=0;
             const int previous_frame=event.frame++;
+            if (event.ground_wave && event.resource->id==int(mir3::MagicEffectId::lightning_trail) && previous_frame==int(event.resource->first)) {
+                const auto pixel=event.cell*Vector2i(48,32)-camera+Vector2i(24,-16);
+                spell_particles.emit_lightning({float(pixel.x),float(pixel.y)},weather);
+            }
             if (event.ground_wave && (event.resource->id==int(mir3::MagicEffectId::fire_wave) ||
                 event.resource->id==int(mir3::MagicEffectId::ice_wave))) {
                 const bool fire=event.resource->id==int(mir3::MagicEffectId::fire_wave);
@@ -5716,6 +5721,9 @@ void Mir3HudView::advance_map_events(double milliseconds) {
         }
         auto world=event.projectile?event.projectile->position:
             event.follow_position.value_or(Vector2(event.cell*Vector2i(48,32)));
+        if (event.ground_wave && event.resource->id==int(mir3::MagicEffectId::lightning_trail)) {
+            event.sprite->hide();continue; // 44CDA0仅触发粒子，不调用普通WIL贴图绘制。
+        }
         if ((event.staged_spell || event.spell_effect) && event.light_tail) {
             if (event.spell_effect && !event.emits_light) {
                 event.copy->hide();event.copy->queue_free();continue;

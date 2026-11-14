@@ -33,8 +33,29 @@ inline void spell_weapon_color_checks() {
     require(SpellColor::local_weapon_effect(record)==0,"非法元素不能越界访问调色板");
 }
 
+// 疾光电影336：每格1光点+21碎片，独立寿命和离场清理。
+inline void spell_lightning_checks() {
+    using namespace mir3;
+    const auto require=[](bool ok,const char* message) { if(!ok) throw std::runtime_error(message); };
+    SnowWeather random;
+    SpellParticlePool pool;
+    pool.emit_lightning({100,200},random);
+    require(pool.count()==22 && pool.glows[0] && pool.fragments[20] && !pool.fragments[21],"336每次生成一光点及二十一碎片");
+    require(pool.glows[0]->size==18 && pool.glows[0]->life==1000 && pool.glows[0]->mass==10000,"光点初始尺寸寿命质量符合46AAB0");
+    require(pool.fragments[0]->size>=2 && pool.fragments[0]->size<3 && pool.fragments[0]->mass==10,"碎片尺寸质量符合467D40");
+    const auto color=pool.fragments[0]->color;
+    const auto size=pool.fragments[0]->size;
+    pool.advance(100,random);
+    require(pool.glows[0]->size>18 && pool.fragments[0]->size<size && pool.fragments[0]->color==color,"光点扩张、碎片收缩且不改色");
+    pool.advance(1601,random);
+    require(pool.count()==0,"336粒子寿命结束释放");
+    pool.emit_lightning({0,0},random);pool.clear();
+    require(pool.count()==0,"换图清理336粒子");
+}
+
 inline void spell_checks() {
     spell_weapon_color_checks();
+    spell_lightning_checks();
     using namespace mir3;
     const auto require=[](bool ok,const char* message) { if(!ok) throw std::runtime_error(message); };
     const SpellRequest request{std::uint16_t(SkillId::fireball),123,456,0x89abcdef,0x80000000};
