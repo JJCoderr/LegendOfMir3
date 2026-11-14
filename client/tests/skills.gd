@@ -15,6 +15,13 @@ var showcase_label: Label
 var progress_label: Label
 var transition_image: TextureRect
 var showcase_names: Dictionary = {}
+const SHOWCASE_GROUPS := {
+    "bindings":"技能绑定", "casting":"施法", "enchantment":"附魔", "enchantment-visual":"附魔颜色",
+    "correction":"位移纠偏", "cast-correction":"施法纠偏", "ranges":"范围", "common":"施法",
+    "passive":"被动", "special":"特殊技能", "impact":"命中", "target-loss":"目标丢失",
+    "stationary":"定点效果", "summon":"召唤", "persistent":"持续效果", "displacement":"位移",
+    "melee":"近战", "sound":"音效"
+}
 var showcase_case := ""
 var showcase_total := 0
 var showcase_seen := {}
@@ -24,7 +31,7 @@ func show_skill(id: int, phase: String = "技能展示") -> void:
     if is_instance_valid(showcase_label):
         showcase_seen["%d/%d" % [showcase_index,id]] = true
         progress_label.text = "(%d/%d)" % [showcase_seen.size(),showcase_total]
-        showcase_label.text = "%s（%d）· %s" % [showcase_names.get(str(id),"未命名技能"),id,phase]
+        showcase_label.text = "【%s｜%s】%s（%d）· %s" % [showcase_case,SHOWCASE_GROUPS.get(showcase_case,"技能"),showcase_names.get(str(id),"未命名技能"),id,phase]
 
 func release_test_hud() -> void:
     # HUD 销毁后的等待帧保留上一幅地图，避免露出窗口默认灰色清屏。
@@ -48,9 +55,11 @@ func setup_showcase() -> void:
     overlay.layer = 100
     root.add_child(overlay)
     var panel := PanelContainer.new()
-    panel.add_theme_stylebox_override("panel",StyleBoxEmpty.new())
+    var backdrop := StyleBoxFlat.new()
+    backdrop.bg_color = Color(0,0,0,0.15)
+    panel.add_theme_stylebox_override("panel",backdrop)
     panel.position = Vector2(8,8)
-    panel.size = Vector2(520,60)
+    panel.size = Vector2(520,30)
     panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
     overlay.add_child(panel)
     var row := HBoxContainer.new()
@@ -246,8 +255,8 @@ func run() -> void:
         var method := "run_" + str(item["case"]).replace("-", "_")
         if not check(has_method(method), "有效技能场景：" + method): return
         active_arguments = PackedStringArray(item["args"])
-        showcase_case = "技能专项：" + str(item["case"])
-        showcase_label.text = showcase_case + " · 准备场景"
+        showcase_case = str(item["case"])
+        showcase_label.text = "【%s｜%s】准备场景" % [showcase_case,SHOWCASE_GROUPS.get(showcase_case,"技能")]
         # 技能绑定的换会话断言会切换到 640×480 登录页；下一场景恢复地图视口。
         root.content_scale_size = Vector2i(800,600)
         root.size = Vector2i(800,600)
@@ -812,6 +821,7 @@ func begin_fireball(origin: Vector2i) -> bool:
     return hud.hud_snapshot().action_reply_pending and hud.hud_snapshot().player_action==2
 
 func run_cast_correction() -> void:
+    show_skill(Skill.FIREBALL,"施法纠偏")
     Input.use_accumulated_input=false
     hud=load("res://main.tscn").instantiate()
     hud.set_meta("offline_preview",true)
@@ -1016,7 +1026,7 @@ func run_common() -> void:
         if not check(await wait_until(func(s): return s.spell_effects.is_empty(),7000),"本地效果释放后再展示远端施法"): return
         show_skill(id,"远端施法")
         # 远端起手复用同资源，但30号明确使用动作3。
-        if not check(hud.set_scene_human(88,origin+Vector2i(-3,0),0,0,"远端施法者"),"准备远端人物"): return
+        if not check(hud.set_scene_human(88,origin+Vector2i(3,0),0,0,"远端施法者"),"准备远端人物"): return
         var start := game_reply(Mir3HudView.SM_SPELL,88,target.x,target.y,0)
         start.append_array(str(id).to_ascii_buffer())
         if not check(hud.apply_game_message(start),"远端十进制技能起手"): return
