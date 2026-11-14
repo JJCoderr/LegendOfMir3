@@ -1,3 +1,4 @@
+#include "hud/system_options.hpp"
 #include "inventory/inventory_grid.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/ground_items.hpp"
@@ -28,6 +29,16 @@ int main(int argc,char** argv) {
 #endif
     try {
         check(argc==2,"resource root required");
+        if (std::filesystem::path(argv[1])=="--options-panel") {
+            mir3::SystemOptions options;
+            check(options.show_mon && options.force_attack && options.user_photos && !options.shadow_blend,"原版新增本地设置默认值");
+            options.confirmed[0]=true;
+            check(options.request(0)==2123 && !options.displayed[0] && options.confirmed[0],"请求只预测显示而不改变确认值");
+            check(options.request(0)==2123 && !options.displayed[0],"重复请求仍依据确认值");
+            for(int i=1;i<7;++i) check(options.request(i)==2123+i,"选项命令索引对应原版");
+            check(options.request(-1)==-1 && options.request(7)==-1,"非法索引不产生命令");
+            std::cout << "OPTIONS_PANEL_MODEL_OK\n";return 0;
+        }
         if (std::filesystem::path(argv[1])=="--map-input") {
             mir3::MapInputDelay delay;
             check(!delay.active(),"未换图时左键不延迟");

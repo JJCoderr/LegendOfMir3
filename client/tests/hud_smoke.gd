@@ -1,5 +1,6 @@
 # 测试内容（本文件仅为测试脚本，客户端业务逻辑位于 C++）：
 # - 主界面：底栏按钮、计量条、人物与目标头像、属性数值、提示文字及界面布局。
+# - 选项窗口：完整文字和开关、七类服务器命令、攻击模式、确认状态与本地持久化。
 # - 对话框：背包、人物装备、技能、组队、行会、任务、骑马、交易、NPC 对话和商店。
 # - 聊天与选项：聊天输入和显示、接收过滤、键盘快捷键、声音设置及设置保存。
 # - 小地图：资源回包、显示与关闭、坐标、标记、拖动、透明度及头像区域地图。
@@ -166,6 +167,77 @@ func scene_text_packet(opcode: int, actor: int, foreground: int, background: int
 	var packet := scene_packet(opcode,actor,foreground,background,0)
 	packet.append_array(encode_scene_bytes(body))
 	return packet
+
+func run_options_panel() -> void:
+	var commands: Array = []
+	hud.chat_requested.connect(func(value: String): commands.append(value))
+	var flags := PackedByteArray([1,0,1,0,1,0,1])
+	if not check(hud.apply_options_state(flags,4), "应用独立的服务器选项状态"): return
+	key(KEY_N)
+	if not check(hud.hud_snapshot().options_visible, "显示完整选项窗口"): return
+	if not await capture("options-panel-complete"): return
+	var portrait := Image.create(82,94,false,Image.FORMAT_RGB8)
+	portrait.fill(Color(0.2,0.5,0.8))
+	if not check(hud.apply_target_portrait(5,portrait.save_jpg_to_buffer()) and hud.hud_snapshot().target_custom_portrait, "玩家照片开启时显示自定义头像"): return
+	var expected := ["@拒绝回生术","@拒绝天地合一","@拒绝交易","@拒绝私聊","@拒绝行会聊天","@加入行会","@拒绝所有人聊天"]
+	for i in 7:
+		var point := Vector2(145+186+5,30+175+30*i+5) if i<6 else Vector2(145+430+5,30+55+5)
+		click_at(point,true)
+		click_at(point,false)
+		if not check(commands.back()==expected[i] and hud.hud_snapshot().option_confirmed==flags, "命令来自原资源且不自行确认状态"): return
+	click_at(Vector2(336,210),true)
+	click_at(Vector2(336,210),false)
+	if not check(hud.hud_snapshot().option_displayed[0]==0 and hud.hud_snapshot().option_confirmed[0]==1, "重复点击保持按确认状态预测"): return
+	click_at(Vector2(580,300),true)
+	click_at(Vector2(580,300),false)
+	if not check(commands.back()=="@攻击方式" and hud.hud_snapshot().option_attack_mode==4, "攻击模式只发命令等待回包"): return
+	for point in [Vector2(336,90),Vector2(336,120),Vector2(580,270),Vector2(580,330)]:
+		click_at(point,true)
+		click_at(point,false)
+	var state: Dictionary = hud.hud_snapshot()
+	if not check(not state.option_show_mon and not state.option_force_attack and state.option_shadow_blend and not state.option_user_photos, "新增本地设置可独立切换"): return
+	if not check(not state.target_custom_portrait and state.target_portrait>=0, "玩家照片关闭后回退标准头像"): return
+	if not check(not hud.apply_options_state(PackedByteArray([1,2,1,0,1,0,1]),2) and hud.hud_snapshot().option_attack_mode==4, "非法回包不部分修改选项"): return
+	if not check(hud.apply_options_state(PackedByteArray([0,1,0,1,0,1,0]),1), "服务器确认覆盖预测显示"): return
+	if not await capture("options-panel-updated"): return
+	key(KEY_N)
+	key(KEY_V)
+	if not check(hud.apply_minimap_reply(1001), "显示原版小地图验证怪物标记"): return
+	hud.set_minimap_markers(PackedVector2Array([Vector2(418,410)]),PackedVector2Array(),PackedVector2Array())
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var map_bounds: Rect2 = hud.hud_snapshot().minimap_bounds
+	var count_yellow := func(image: Image) -> int:
+		var count := 0
+		for y in range(int(map_bounds.position.y),int(map_bounds.end.y)):
+			for x in range(int(map_bounds.position.x),int(map_bounds.end.x)):
+				var color := image.get_pixel(x,y)
+				if color.r>0.98 and color.g>0.98 and color.b<0.02: count += 1
+		return count
+	var hidden_count: int = count_yellow.call(root.get_texture().get_image())
+	key(KEY_N)
+	click_at(Vector2(336,90),true)
+	click_at(Vector2(336,90),false)
+	await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
+	if not check(count_yellow.call(root.get_texture().get_image())>hidden_count, "小地图标示怪物选项控制实际黄色标记绘制"): return
+	click_at(Vector2(336,90),true)
+	click_at(Vector2(336,90),false)
+	var saved_path: String = hud.get_meta("options_path")
+	hud.queue_free()
+	await process_frame
+	await process_frame
+	var restored: Node = load("res://main.tscn").instantiate()
+	restored.set_meta("options_path",saved_path)
+	root.add_child(restored)
+	var reloaded: Dictionary = restored.hud_snapshot()
+	if not check(not reloaded.option_show_mon and not reloaded.option_force_attack and reloaded.option_shadow_blend and not reloaded.option_user_photos, "本地设置重新加载后保持"): return
+	restored.queue_free()
+	await process_frame
+	await process_frame
+	print("PASS 选项窗口：完整控件、命令、确认状态及本地设置")
+	quit()
 
 func run_map_input() -> void:
 	var origin: Vector2i = hud.hud_snapshot().player_cell
@@ -1016,6 +1088,9 @@ func run_scene_actor_removal() -> void:
 	hover.position = bounds.get_center()
 	root.push_input(hover, true)
 	if not check(bounds.has_area() and hud.hud_snapshot().target_portrait == 652, "hover acquires the remote human"): return
+	if OS.get_cmdline_user_args().has("--options-panel"):
+		await run_options_panel()
+		return
 	if OS.get_cmdline_user_args().has("--map-input"):
 		await run_map_input()
 		return
@@ -1199,7 +1274,7 @@ func run() -> void:
 	if OS.get_cmdline_user_args().has("--local-mount"):
 		await run_local_mount()
 		return
-	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light") or OS.get_cmdline_user_args().has("--map-wire") or OS.get_cmdline_user_args().has("--map-input"):
+	if OS.get_cmdline_user_args().has("--scene-actor-removal") or OS.get_cmdline_user_args().has("--scene-human-step") or OS.get_cmdline_user_args().has("--scene-names") or OS.get_cmdline_user_args().has("--scene-speech") or OS.get_cmdline_user_args().has("--scene-health") or OS.get_cmdline_user_args().has("--scene-damage") or OS.get_cmdline_user_args().has("--scene-actions") or OS.get_cmdline_user_args().has("--scene-audio") or OS.get_cmdline_user_args().has("--scene-queue") or OS.get_cmdline_user_args().has("--scene-life") or OS.get_cmdline_user_args().has("--scene-combat") or OS.get_cmdline_user_args().has("--scene-feature") or OS.get_cmdline_user_args().has("--scene-wire") or OS.get_cmdline_user_args().has("--scene-text") or OS.get_cmdline_user_args().has("--ground-items") or OS.get_cmdline_user_args().has("--map-change") or OS.get_cmdline_user_args().has("--scene-light") or OS.get_cmdline_user_args().has("--actor-light") or OS.get_cmdline_user_args().has("--map-wire") or OS.get_cmdline_user_args().has("--map-input") or OS.get_cmdline_user_args().has("--options-panel"):
 		await run_scene_actor_removal()
 		return
 	var options_file := "user://smoke-options-%d.ini" % OS.get_process_id()

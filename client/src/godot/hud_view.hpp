@@ -16,6 +16,7 @@
 #include "hud/quest_panel.hpp"
 #include "hud/trade_scroll.hpp"
 #include "hud/audio_options.hpp"
+#include "hud/system_options.hpp"
 #include "hud/portrait_picker.hpp"
 #include "resources/map_terrain.hpp"
 #include "protocol/map_message.hpp"
@@ -207,6 +208,8 @@ private:
     void close_portrait_picker();
     mir3::DraggablePanel options{{145,30,510,468}};
     mir3::AudioOptions audio_options;
+    mir3::SystemOptions system_options;
+    bool apply_options_state(godot::PackedByteArray flags,int attack_mode);
     bool magic_light=true,damage_numbers=true;
     int audio_drag=-1;
     void toggle_options();

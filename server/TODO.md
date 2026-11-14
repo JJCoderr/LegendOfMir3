@@ -43,3 +43,5 @@
 地图原包接入更新：客户端现支持 51/634 入队、54 独立名称以及 map_change_finished 加载结果；仍需接网关、初次登录人物、完整公共消息顺序和地图状态效果。字段与 IDA 证据见 ../client/docs/evidence/map-wire.md。
 
 换图交互：客户端已按目标证据处理 1500ms 普通左键按下延迟；不当作服务端保护时间，不产生额外请求。完整入场联调仍待完成。
+
+选项联调：客户端七类设置及攻击方式通过 chat_requested 发出 CmList 原文命令，apply_options_state 是独立解码后确认入口。原始状态包映射、拒绝提示与客户端确认字段同步尚未核验；服务端仍须校验并确认，不能把预测显示当作状态修改成功。详见 ../client/docs/evidence/options-panel.md。

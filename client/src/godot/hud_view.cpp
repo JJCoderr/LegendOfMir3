@@ -176,6 +176,7 @@ void Mir3HudView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("trade_requested",PropertyInfo(Variant::INT,"identifier"),PropertyInfo(Variant::STRING,"name")));
     ADD_SIGNAL(MethodInfo("exit_confirmed",PropertyInfo(Variant::INT,"dialog_id")));
     ADD_SIGNAL(MethodInfo("hud_action",PropertyInfo(Variant::INT,"button")));
+    ClassDB::bind_method(D_METHOD("apply_options_state","flags","attack_mode"),&Mir3HudView::apply_options_state);
     ADD_SIGNAL(MethodInfo("chat_requested",PropertyInfo(Variant::STRING,"text")));
 }
 Dictionary Mir3HudView::hud_snapshot() const {
@@ -312,7 +313,7 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["character_portrait"]=model.portrait_frame();
     result["target_portrait"]=model.layout.expanded || !target_focus.displayed() || target_portrait.is_null()?-1:target_frame;
     result["target_hp_width"]=!model.layout.expanded && target_focus.displayed() && !target_is_human && target_portrait.is_valid()?target_vitals.bar_width():0;
-    result["target_custom_portrait"]=!model.layout.expanded && target_focus.displayed() && target_custom_portrait.is_valid();
+    result["target_custom_portrait"]=!model.layout.expanded && target_focus.displayed() && system_options.user_photos && target_custom_portrait.is_valid();
     result["character_shared_hp"]=model.shared_hp();
     result["character_hp"]=Vector2i(model.hp,model.max_hp);
     result["character_mp"]=Vector2i(model.mp,model.max_mp);
@@ -368,6 +369,14 @@ Dictionary Mir3HudView::hud_snapshot() const {
     result["portrait_first"]=portrait_picker.first;
     result["portrait_selected"]=portrait_picker.selected;
     result["options_visible"]=options.visible;
+    result["option_show_mon"]=system_options.show_mon;
+    result["option_force_attack"]=system_options.force_attack;
+    result["option_shadow_blend"]=system_options.shadow_blend;
+    result["option_user_photos"]=system_options.user_photos;
+    result["option_attack_mode"]=system_options.attack_mode;
+    PackedByteArray confirmed_options,displayed_options;
+    for (int i=0;i<7;++i) { confirmed_options.push_back(system_options.confirmed[i]);displayed_options.push_back(system_options.displayed[i]); }
+    result["option_confirmed"]=confirmed_options;result["option_displayed"]=displayed_options;
     result["music_enabled"]=audio_options.music_enabled;
     result["reverse_pan"]=audio_options.reverse_pan;
     result["magic_light"]=magic_light;
@@ -2591,7 +2600,7 @@ void Mir3HudView::draw_hud_base() {
             paint_canvas->draw_texture(portrait,origin);
         }
         if (target_focus.displayed()) {
-            if (target_custom_portrait.is_valid())
+            if (system_options.user_photos && target_custom_portrait.is_valid())
                 paint_canvas->draw_texture_rect(target_custom_portrait,rect(Layout::custom_portrait_rect(true)),false);
             else if (target_portrait.is_valid())
                 paint_canvas->draw_texture(target_portrait,origin);
@@ -4693,6 +4702,14 @@ void Mir3HudView::toggle_options() {
     queue_redraw();
 }
 
+bool Mir3HudView::apply_options_state(PackedByteArray flags,int attack_mode) {
+    if (flags.size()!=7 || attack_mode<0 || attack_mode>4) return false;
+    for (int i=0;i<7;++i) if (flags[i]>1) return false;
+    for (int i=0;i<7;++i) system_options.confirmed[i]=system_options.displayed[i]=flags[i]!=0;
+    system_options.attack_mode=attack_mode;
+    queue_redraw();return true;
+}
+
 void Mir3HudView::draw_options() {
     const int x=options.rect[0],y=options.rect[1];
     sprite(1290,{x,y});
@@ -4708,10 +4725,19 @@ void Mir3HudView::draw_options() {
     text(message(2104),{x+60,y+30,390,15},0xf8fafa);
     for (int i=0;i<3;++i)
         text(message(2100+i),{x+266,y+89+60*i,156,21},0x0096ff);
-    sprite(damage_numbers?1293:1294,{x+186,y+145});
-    text(message(2108),{x+20,y+152,155,15},0x0096ff);
-    sprite(magic_light?1293:1294,{x+186,y+115});
-    text(message(2107),{x+20,y+122,155,15},0x0096ff);
+    for (int i=0;i<10;++i)
+        text(message(2105+i),{x+20,y+62+30*i,155,15},0x0096ff);
+    const std::array local{system_options.show_mon,system_options.force_attack,magic_light,damage_numbers};
+    for (int i=0;i<4;++i) sprite(local[i]?1293:1294,{x+186,y+55+30*i});
+    for (int i=0;i<7;++i) sprite(system_options.displayed[i]?1293:1294,
+        {x+system_options.toggle_x[i],y+system_options.toggle_y[i]});
+    sprite(system_options.shadow_blend?1293:1294,{x+430,y+235});
+    sprite(system_options.user_photos?1293:1294,{x+430,y+295});
+    sprite(1296,{x+430,y+265});
+    text(message(2115),{x+266,y+59,156,21},0x0096ff);
+    text(message(2103),{x+266,y+239,156,21},0x0096ff);
+    text(message(2116+system_options.attack_mode),{x+266,y+269,156,21},0x0096ff);
+    text(message(2130),{x+266,y+300,156,20},0x0096ff);
 }
 
 bool Mir3HudView::options_pointer(int kind,Vector2 point) {
@@ -4746,8 +4772,24 @@ bool Mir3HudView::options_pointer(int kind,Vector2 point) {
             control=true;
             if (kind==2) { value=!value;changed=true; }
         };
-        toggle(magic_light,186,115);
-        toggle(damage_numbers,186,145);
+        const auto local_toggle=[&](bool& value,int x,int y,int enabled_message,int disabled_message) {
+            const bool previous=value;toggle(value,x,y);
+            if (value!=previous && enabled_message)
+                post_chat(String::utf8(message(value?enabled_message:disabled_message).c_str()),mir3::chat_palette(2),mir3::chat_palette(7));
+        };
+        local_toggle(system_options.show_mon,186,55,2646,2647);
+        local_toggle(system_options.force_attack,186,85,1515,1516);
+        local_toggle(magic_light,186,115,1518,1517);
+        local_toggle(damage_numbers,186,145,2122,2121);
+        local_toggle(system_options.shadow_blend,430,235,0,0);
+        local_toggle(system_options.user_photos,430,295,2132,2131);
+        for (int i=0;i<7;++i) if (hit(1292,system_options.toggle_x[i],system_options.toggle_y[i])) {
+            control=true;
+            if (kind==2) chat_requested(String::utf8(message(system_options.request(i)).c_str()));
+        }
+        if (hit(1296,430,265)) {
+            control=true;if (kind==2) chat_requested(String::utf8(message(1422).c_str()));
+        }
         toggle(audio_options.reverse_pan,430,205);
         for (int i=0;i<2;++i) {
             toggle(i==0?audio_options.music_enabled:audio_options.effects_enabled,430,85+60*i);
@@ -4784,6 +4826,10 @@ void Mir3HudView::load_options() {
     audio_options.reverse_pan=read(L"ReversePan",0)==1;
     audio_options.music_level=mir3::AudioOptions::normalized_level(read(L"BGMLevel",0));
     audio_options.effects_level=mir3::AudioOptions::normalized_level(read(L"EffectSoundLevel",0));
+    system_options.show_mon=read(L"ShowMon",1)!=0;
+    system_options.force_attack=read(L"AttackUser",1)!=0;
+    system_options.shadow_blend=read(L"ShadowBlend",0)!=0;
+    system_options.user_photos=read(L"UserPic",1)!=0;
     magic_light=read(L"MagicLight",1)!=0;
     damage_numbers=read(L"BloodNum",1)!=0;
     portrait_map_mode=read(L"InformationMode",0)!=0;
@@ -4802,6 +4848,10 @@ void Mir3HudView::save_options() {
     saved=write(L"ReversePan",audio_options.reverse_pan) && saved;
     saved=write(L"BGMLevel",audio_options.music_level) && saved;
     saved=write(L"EffectSoundLevel",audio_options.effects_level) && saved;
+    saved=write(L"ShowMon",system_options.show_mon) && saved;
+    saved=write(L"AttackUser",system_options.force_attack) && saved;
+    saved=write(L"ShadowBlend",system_options.shadow_blend) && saved;
+    saved=write(L"UserPic",system_options.user_photos) && saved;
     saved=write(L"MagicLight",magic_light) && saved;
     saved=write(L"BloodNum",damage_numbers) && saved;
     if (!saved) UtilityFunctions::push_warning("Could not save system options to ",options_path);
@@ -5591,7 +5641,7 @@ void Mir3HudView::draw_minimap() {
             if (area.has_area()) paint_canvas->draw_rect(area,color);
         }
     };
-    draw_markers(minimap.type_five_actors,Color(1,1,0),false);
+    if (system_options.show_mon) draw_markers(minimap.type_five_actors,Color(1,1,0),false);
     draw_markers(minimap.nearby_green,Color(100.f/255,250.f/255,100.f/255),true);
     draw_markers(minimap.nearby_orange,Color(250.f/255,150.f/255,50.f/255),true);
     if (ticks_msec()%801<500) {
