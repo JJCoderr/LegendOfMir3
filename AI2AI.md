@@ -84,3 +84,9 @@ IDA 数据库名为 `mir3-map-review`，本机 MCP 地址为 `http://127.0.0.1:1
 
 - [x] 人物身体/头发/武器/坐骑状态颜色、七种优先级、8/32半透明、原WIL区域染色；本地入场/位移/死亡及远端普通外观状态同步，受击保留已有状态。human_status_visual像素与消息断言、actor_status回归通过，截图human-status-green/translucent/corpse.png。证据见client/docs/evidence/human-status-visual.md。
 - [ ] 其他状态位玩法限制、人物阴影、特殊装备光效及原版逐像素对照。
+
+
+## 人物阴影
+
+- [x] 身体WIL阴影元数据、49/50投影、武器奇数行剪切、坐骑独立影、尸体平影和ShadowBlend的13/32混合；human_shadow像素/图层验收及human_status_visual回归通过，约7秒。截图human-shadow-weapon/mounted/corpse-1.png；证据见client/docs/evidence/human-shadow.md。
+- [ ] 更多外观资源、边界裁剪及原版同状态逐像素验收。
