@@ -1,0 +1,29 @@
+{
+  "commit": "5140eef5e03dd9388851423171ccbc80c8556848",
+  "source": "https://github.com/tensafe/LegendOfMir3_Src",
+  "files": {
+    "ObjectMonster.cpp": "fdb185c9c49efa405d628ab68fa9da1d40795a419929abaa43b0efd6bfe9905e",
+    "ObjectMonster.h": "a72b8026b6843d9d13cf22f067b216e7d690b9e01c6a084dbb731ddd2a7ea43f",
+    "ProcessMonster.cpp": "6e92d452b3bab2acc8a123680fb2de954fff5fa4ab473c73ffdfc1c18befc21e",
+    "create_tbl_monster.sql": "aef9f273eba38994b27536b96a5fb0de7ae191315f4bace19488684ab3d790d2"
+  },
+  "header_encoding": "cp949",
+  "queen": {
+    "symbol": "_MONSTER_BEEQUEEN",
+    "value": 124,
+    "comment": "비막원충"
+  },
+  "child": {
+    "symbol": "_MONSTER_BEE",
+    "value": 125,
+    "comment": "비막충",
+    "lookup": "g_pMonRaceInfo[_MONSTER_BEE]"
+  },
+  "factory": "AddCreature switches on g_pMonRaceInfo[nMonRace].wRaceIndex; numeric 125 has no dedicated case, but row 125 may specify another wRaceIndex. Actual child behavior remains unconfirmed.",
+  "database": "create_tbl_monster.sql defines schema only; no FLD_APPR rows",
+  "world_fixture_shapes": [
+    73,
+    74
+  ],
+  "mapping_confirmed": false
+}

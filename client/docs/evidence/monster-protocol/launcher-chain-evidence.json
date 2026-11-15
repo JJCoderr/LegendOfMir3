@@ -1,0 +1,32 @@
+{
+  "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "py_eval",
+      "arguments": {
+        "code": "import ida_nalt,idautils,ida_funcs,json\nimports=[]\ndef cb(ea,name,ordinal,imports=imports,idautils=idautils,ida_funcs=ida_funcs):\n if name and any(k in name.lower() for k in ['shell','loadlibrary','createprocess']): imports.append({'address':hex(ea),'name':name,'xrefs':[{'address':hex(x.frm),'function':hex(ida_funcs.get_func(x.frm).start_ea) if ida_funcs.get_func(x.frm) else None} for x in idautils.XrefsTo(ea)]})\n return True\nfor i in range(ida_nalt.get_import_module_qty()): ida_nalt.enum_import_names(i,cb)\nstrings=[{'address':hex(s.ea),'text':str(s),'refs':[hex(x.frm) for x in idautils.XrefsTo(s.ea)]} for s in idautils.Strings() if any(k in str(s).lower() for k in ['mir3','kingmir','.exe','.dll'])]\nprint(json.dumps({'input':ida_nalt.get_input_file_path(),'imports':imports,'strings':strings}))",
+        "database": "baozang-launcher-integration"
+      }
+    }
+  },
+  "response": {
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"result\":\"None\",\"stdout\":\"{\\\"input\\\": \\\"G:\\\\\\\\mir3\\\\\\\\Mir3\\\\\\\\client\\\\\\\\build\\\\\\\\baozang-launcher.exe\\\", \\\"imports\\\": [{\\\"address\\\": \\\"0x401210\\\", \\\"name\\\": \\\"rtcShell\\\", \\\"xrefs\\\": []}], \\\"strings\\\": [{\\\"address\\\": \\\"0x407698\\\", \\\"text\\\": \\\"VB5!6&vb6chs.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x40dfb3\\\", \\\"text\\\": \\\"ieframe.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x413ccc\\\", \\\"text\\\": \\\"VBA6.DLL\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x414e4c\\\", \\\"text\\\": \\\"user32.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x415488\\\", \\\"text\\\": \\\"advapi32.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x4154e8\\\", \\\"text\\\": \\\"wtsapi32.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x4156b8\\\", \\\"text\\\": \\\"shell32.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x415888\\\", \\\"text\\\": \\\"mpr.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x415c1c\\\", \\\"text\\\": \\\"RasApi32.DLL\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x415d14\\\", \\\"text\\\": \\\"WinInet.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x416050\\\", \\\"text\\\": \\\"ole32.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x416180\\\", \\\"text\\\": \\\"winmm.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x417460\\\", \\\"text\\\": \\\"DYSHL3.DLL\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x4174f0\\\", \\\"text\\\": \\\"Mymir3.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x419a48\\\", \\\"text\\\": \\\"wsock32.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x41a354\\\", \\\"text\\\": \\\"ws2_32.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x41b1ec\\\", \\\"text\\\": \\\"IPHLPAPI.DLL\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x41bdd8\\\", \\\"text\\\": \\\"ntdll.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x41be3c\\\", \\\"text\\\": \\\"kernel32.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x41c0a4\\\", \\\"text\\\": \\\"psapi.dll\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x41fecc\\\", \\\"text\\\": \\\"C:\\\\\\\\WINDOWS\\\\\\\\system32\\\\\\\\MSVBVM60.DLL\\\\\\\\3\\\", \\\"refs\\\": []}, {\\\"address\\\": \\\"0x4ef484\\\", \\\"text\\\": \\\"MSVBVM60.DLL\\\", \\\"refs\\\": []}]}\\n\",\"stderr\":\"\"}"
+        }
+      ],
+      "structuredContent": {
+        "result": "None",
+        "stdout": "{\"input\": \"G:\\\\mir3\\\\Mir3\\\\client\\\\build\\\\baozang-launcher.exe\", \"imports\": [{\"address\": \"0x401210\", \"name\": \"rtcShell\", \"xrefs\": []}], \"strings\": [{\"address\": \"0x407698\", \"text\": \"VB5!6&vb6chs.dll\", \"refs\": []}, {\"address\": \"0x40dfb3\", \"text\": \"ieframe.dll\", \"refs\": []}, {\"address\": \"0x413ccc\", \"text\": \"VBA6.DLL\", \"refs\": []}, {\"address\": \"0x414e4c\", \"text\": \"user32.dll\", \"refs\": []}, {\"address\": \"0x415488\", \"text\": \"advapi32.dll\", \"refs\": []}, {\"address\": \"0x4154e8\", \"text\": \"wtsapi32.dll\", \"refs\": []}, {\"address\": \"0x4156b8\", \"text\": \"shell32.dll\", \"refs\": []}, {\"address\": \"0x415888\", \"text\": \"mpr.dll\", \"refs\": []}, {\"address\": \"0x415c1c\", \"text\": \"RasApi32.DLL\", \"refs\": []}, {\"address\": \"0x415d14\", \"text\": \"WinInet.dll\", \"refs\": []}, {\"address\": \"0x416050\", \"text\": \"ole32.dll\", \"refs\": []}, {\"address\": \"0x416180\", \"text\": \"winmm.dll\", \"refs\": []}, {\"address\": \"0x417460\", \"text\": \"DYSHL3.DLL\", \"refs\": []}, {\"address\": \"0x4174f0\", \"text\": \"Mymir3.dll\", \"refs\": []}, {\"address\": \"0x419a48\", \"text\": \"wsock32.dll\", \"refs\": []}, {\"address\": \"0x41a354\", \"text\": \"ws2_32.dll\", \"refs\": []}, {\"address\": \"0x41b1ec\", \"text\": \"IPHLPAPI.DLL\", \"refs\": []}, {\"address\": \"0x41bdd8\", \"text\": \"ntdll.dll\", \"refs\": []}, {\"address\": \"0x41be3c\", \"text\": \"kernel32.dll\", \"refs\": []}, {\"address\": \"0x41c0a4\", \"text\": \"psapi.dll\", \"refs\": []}, {\"address\": \"0x41fecc\", \"text\": \"C:\\\\WINDOWS\\\\system32\\\\MSVBVM60.DLL\\\\3\", \"refs\": []}, {\"address\": \"0x4ef484\", \"text\": \"MSVBVM60.DLL\", \"refs\": []}]}\n",
+        "stderr": ""
+      },
+      "isError": false
+    },
+    "id": 1
+  }
+}

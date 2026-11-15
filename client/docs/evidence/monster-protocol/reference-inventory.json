@@ -1,0 +1,2671 @@
+{
+  "classes": [
+    {
+      "class": "Affliction",
+      "parent": "MonsterObject",
+      "factory_ai": [],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "attack",
+        "die"
+      ],
+      "reference_lines": 29,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "ArachnidGrazer",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        17
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "ArachnidGrazer",
+        "attack",
+        "can_move",
+        "in_attack_range",
+        "process_actions",
+        "spawn_minion"
+      ],
+      "reference_lines": 51,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "ArchLichTaedu",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        43
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "process",
+        "process_target",
+        "range_attack",
+        "spawned"
+      ],
+      "reference_lines": 106,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "BanyaLeftGuard",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        38
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 53,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "BanyoCaptain",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        72
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 63,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "BanyoLordGuzak",
+      "parent": "PachontheChaosbringer",
+      "factory_ai": [
+        74
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "process",
+        "spawn_minion"
+      ],
+      "reference_lines": 48,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "BanyoWarrior",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        71,
+        117
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 71,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "BlasterMutantFlea",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        55
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range"
+      ],
+      "reference_lines": 41,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "BlockingObject",
+      "parent": "MonsterObject",
+      "factory_ai": [],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "attacked",
+        "blocking",
+        "can_attack",
+        "can_be_seen",
+        "can_move",
+        "custom_name",
+        "die",
+        "hide",
+        "process_roam",
+        "process_search",
+        "show",
+        "walk"
+      ],
+      "reference_lines": 70,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "CarnivorousPlant",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        5,
+        125
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "CarnivorousPlant",
+        "blocking",
+        "can_attack",
+        "can_be_seen",
+        "can_move",
+        "process",
+        "process_actions",
+        "process_target"
+      ],
+      "reference_lines": 78,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "CastleFlag",
+      "parent": "CastleObject",
+      "factory_ai": [
+        1001
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "accepts_poison",
+        "attacked",
+        "can_move",
+        "cancel",
+        "process",
+        "refresh",
+        "regenerates",
+        "spawned"
+      ],
+      "reference_lines": 312,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "CastleGate",
+      "parent": "CastleObject",
+      "factory_ai": [
+        1002
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "attacked",
+        "blocking",
+        "can_attack",
+        "can_move",
+        "check_direction",
+        "close",
+        "die",
+        "open",
+        "process",
+        "regenerates",
+        "repair",
+        "spawn_blockers",
+        "wall"
+      ],
+      "reference_lines": 278,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "CastleGuard",
+      "parent": "CastleObject",
+      "factory_ai": [
+        1003
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "attacked",
+        "can_move",
+        "process",
+        "repair"
+      ],
+      "reference_lines": 169,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "CastleLord",
+      "parent": "CastleObject",
+      "factory_ai": [],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "accepts_poison",
+        "attacked",
+        "can_attack_target",
+        "die",
+        "process",
+        "regenerates",
+        "should_attack_target"
+      ],
+      "reference_lines": 311,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "CastleObject",
+      "parent": "MonsterObject",
+      "factory_ai": [],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "accepts_poison",
+        "attacked",
+        "can_attack",
+        "can_attack_target",
+        "can_move",
+        "create",
+        "participant",
+        "process",
+        "refresh",
+        "regenerates",
+        "should_attack_target",
+        "spawned"
+      ],
+      "reference_lines": 50,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "ChaosKnight",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        60
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 24,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "ChristmasMonster",
+      "parent": "MonsterObject",
+      "factory_ai": [],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attacked",
+        "can_attack",
+        "can_move",
+        "die",
+        "name_colour",
+        "refresh_stats"
+      ],
+      "reference_lines": 92,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "Companion",
+      "parent": "MonsterObject",
+      "factory_ai": [],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "Companion",
+        "activate",
+        "auto_feed",
+        "blocking",
+        "can_be_seen",
+        "can_data_be_seen",
+        "can_gain_items",
+        "can_use_item",
+        "can_wear_item",
+        "check_skills",
+        "deactivate",
+        "filter_picks",
+        "gain_items",
+        "get_skill",
+        "move_to",
+        "process_ai",
+        "process_idle",
+        "process_roam",
+        "process_search",
+        "process_target",
+        "recall",
+        "refresh_stats",
+        "refresh_weight",
+        "remove_item",
+        "send_shape_update",
+        "try_chat",
+        "walk"
+      ],
+      "reference_lines": 878,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "CorrosivePoisonSpitter",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        56,
+        57
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 43,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "CrimsonNecromancer",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        59
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 37,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "DepartedMonster",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        75,
+        76
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "die",
+        "spawn_minion"
+      ],
+      "reference_lines": 61,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "Doll",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        128
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "Doll",
+        "activate",
+        "attacked",
+        "can_attack",
+        "can_be_seen",
+        "can_move",
+        "custom_name",
+        "deactivate",
+        "despawned",
+        "die",
+        "process",
+        "process_actions",
+        "process_search",
+        "spawned"
+      ],
+      "reference_lines": 147,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "DoomClaw",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        120
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attacked",
+        "perform",
+        "process_ai",
+        "pushed",
+        "spawned"
+      ],
+      "reference_lines": 341,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "DragonLord",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        102
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process",
+        "process_target",
+        "spawn_minion"
+      ],
+      "reference_lines": 105,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "DragonQueen",
+      "parent": "YumgonWitch",
+      "factory_ai": [
+        101
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "aoe_element",
+        "die",
+        "process",
+        "set_aoe_element",
+        "spawn_minion"
+      ],
+      "reference_lines": 56,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "EmperorSaWoo",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        41,
+        85
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 92,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "EnragedArchLichTaedu",
+      "parent": "ArchLichTaedu",
+      "factory_ai": [
+        91
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "attacked",
+        "process_target"
+      ],
+      "reference_lines": 83,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "EnragedLordNiJae",
+      "parent": "LordNiJae",
+      "factory_ai": [
+        77
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "process",
+        "spawn_minion"
+      ],
+      "reference_lines": 37,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "EscortCommander",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        93
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 55,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "EvilElephant",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        25
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "deliver"
+      ],
+      "reference_lines": 76,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "FerociousIceTiger",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        104
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "location_changed"
+      ],
+      "reference_lines": 87,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "FieryDancer",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        94,
+        95
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 80,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "FlameDemon",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        83,
+        86
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 34,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "FrostLordHwa",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        70
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "FrostLordHwa",
+        "apply_bonus_stats",
+        "process_ai",
+        "process_target"
+      ],
+      "reference_lines": 141,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "GhostMage",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        10,
+        27
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "attack",
+        "blocking",
+        "can_attack",
+        "can_be_seen",
+        "can_move",
+        "process"
+      ],
+      "reference_lines": 77,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "GhostSorcerer",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        9
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "attack",
+        "in_attack_range"
+      ],
+      "reference_lines": 75,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "GiantLizard",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        33,
+        49,
+        50,
+        54,
+        79,
+        92,
+        105,
+        106
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "deliver",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 109,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "GoruArcher",
+      "parent": "SkeletonAxeThrower",
+      "factory_ai": [
+        89
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "attacked",
+        "process_target"
+      ],
+      "reference_lines": 85,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "GoruSpearman",
+      "parent": "SpittingSpider",
+      "factory_ai": [
+        88
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "attacked",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 83,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "Guard",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        -1
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "activate",
+        "advance",
+        "attacked",
+        "blocking",
+        "can_attack_target",
+        "can_move",
+        "deactivate",
+        "name_colour"
+      ],
+      "reference_lines": 129,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "HalloweenMonster",
+      "parent": "MonsterObject",
+      "factory_ai": [],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "activate",
+        "attack",
+        "can_attack_target",
+        "deactivate",
+        "die",
+        "experience",
+        "in_attack_range",
+        "name_colour",
+        "process_actions",
+        "spawned"
+      ],
+      "reference_lines": 186,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "HealerAnt",
+      "parent": "SkeletonAxeThrower",
+      "factory_ai": [
+        12
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "can_attack_target",
+        "can_help_target",
+        "heal",
+        "process_search",
+        "should_attack_target"
+      ],
+      "reference_lines": 63,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "IcyGoddess",
+      "parent": "CarnivorousPlant",
+      "factory_ai": [
+        65
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 78,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "IcySpiritGeneral",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        67
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "deliver_function",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 95,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "IcySpiritWarrior",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        66
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "deliver_function",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 70,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "InfernalSoldier",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        103
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "attack",
+        "can_attack_target",
+        "deliver",
+        "in_attack_range",
+        "process_target",
+        "spawned"
+      ],
+      "reference_lines": 121,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "JinamStoneGate",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        69
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "apply_poison",
+        "attacked",
+        "can_attack",
+        "can_move",
+        "name_colour",
+        "process",
+        "process_search",
+        "spawned"
+      ],
+      "reference_lines": 115,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "JinchonDevil",
+      "parent": "SpittingSpider",
+      "factory_ai": [
+        78,
+        127
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 107,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "JinhwanSpirit",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        99
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "die"
+      ],
+      "reference_lines": 18,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "Larva",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        18,
+        123
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "attack",
+        "die",
+        "process"
+      ],
+      "reference_lines": 44,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "LordNiJae",
+      "parent": "CarnivorousPlant",
+      "factory_ai": [
+        13
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "deliver",
+        "in_attack_range"
+      ],
+      "reference_lines": 72,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "MirrorImage",
+      "parent": "MonsterObject",
+      "factory_ai": [],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "MirrorImage",
+        "activate",
+        "attacked",
+        "can_attack",
+        "can_move",
+        "despawned",
+        "die",
+        "in_attack_range",
+        "process",
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 133,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "MonasteryBoss",
+      "parent": "PinkBat",
+      "factory_ai": [
+        126
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "die",
+        "range_attack"
+      ],
+      "reference_lines": 26,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "Monkey",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        23,
+        24,
+        64
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 76,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "MoonFeralWarrior",
+      "parent": "NumaMage",
+      "factory_ai": [
+        81
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "process_target"
+      ],
+      "reference_lines": 71,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "MutantFlea",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        51
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range"
+      ],
+      "reference_lines": 59,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "NetherworldGate",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        30
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "activate",
+        "apply_poison",
+        "attacked",
+        "can_attack",
+        "can_move",
+        "deactivate",
+        "name_colour",
+        "process",
+        "process_search",
+        "spawned"
+      ],
+      "reference_lines": 127,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "NumaHighMage",
+      "parent": "Monkey",
+      "factory_ai": [
+        62
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range"
+      ],
+      "reference_lines": 93,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "NumaMage",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        26,
+        36
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 53,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "NumaStoneThrower",
+      "parent": "SkeletonAxeThrower",
+      "factory_ai": [
+        63
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack"
+      ],
+      "reference_lines": 33,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "NumaWarlord",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        137
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "deliver",
+        "in_attack_range",
+        "process_target",
+        "pull_attack",
+        "swing_attack",
+        "teleport_attack",
+        "teleport_cell"
+      ],
+      "reference_lines": 237,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "OmaMage",
+      "parent": "SkeletonAxeThrower",
+      "factory_ai": [
+        118
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack"
+      ],
+      "reference_lines": 24,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "OmaWarlord",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        87,
+        90
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "attacked",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 83,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "OxFeralGeneral",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        82
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 47,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "PachontheChaosbringer",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        61
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 56,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "PinkBat",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        121
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 53,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "Puppet",
+      "parent": "MonsterObject",
+      "factory_ai": [],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "Puppet",
+        "activate",
+        "attacked",
+        "can_attack",
+        "can_move",
+        "deactivate",
+        "despawned",
+        "die",
+        "process",
+        "process_search",
+        "process_target"
+      ],
+      "reference_lines": 139,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "QuartzTree",
+      "parent": "TreeMonster",
+      "factory_ai": [
+        124
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "process",
+        "process_regen",
+        "spawn_minion",
+        "spawn_sub"
+      ],
+      "reference_lines": 68,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "QuartzTurtleSub",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        122
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "process",
+        "spawn_minion"
+      ],
+      "reference_lines": 28,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "QueenOfDawn",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        96
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "process_ai",
+        "process_target"
+      ],
+      "reference_lines": 106,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "RazorTusk",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        45
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "deliver",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 96,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "RedMoonTheFallen",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        19
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "can_move",
+        "in_attack_range"
+      ],
+      "reference_lines": 46,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SamaBlack",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        112
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 80,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SamaBlue",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        113
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 80,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SamaFireGuardian",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        107
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 77,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SamaIceGuardian",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        108
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 78,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SamaLightningGuardian",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        109
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 78,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SamaPhoenix",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        111
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 80,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SamaProphet",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        115
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attacked",
+        "in_attack_range",
+        "process",
+        "process_target",
+        "range_attack",
+        "spawn_minion",
+        "spawned"
+      ],
+      "reference_lines": 94,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SamaScorcer",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        116
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "attacked",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 41,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SamaWhite",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        114
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 81,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SamaWindGuardian",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        110
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 78,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "Shinsu",
+      "parent": "SpittingSpider",
+      "factory_ai": [
+        53
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "Shinsu",
+        "can_attack",
+        "can_be_seen",
+        "process",
+        "process_actions",
+        "process_target",
+        "spawned"
+      ],
+      "reference_lines": 84,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SkeletonAxeThrower",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        7,
+        20,
+        29,
+        34
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 84,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SonicLizard",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        31,
+        48,
+        97
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "deliver",
+        "in_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 137,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SpittingSpider",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        6,
+        14,
+        42,
+        46,
+        47
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range"
+      ],
+      "reference_lines": 74,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "Stomper",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        58
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack"
+      ],
+      "reference_lines": 26,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "SunFeralWarrior",
+      "parent": "BanyaLeftGuard",
+      "factory_ai": [
+        80
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attacked",
+        "range_attack"
+      ],
+      "reference_lines": 35,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "Terracotta",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        131,
+        132
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "attack",
+        "blocking",
+        "can_attack",
+        "can_be_seen",
+        "choose_attack",
+        "in_attack_range",
+        "phase_in",
+        "phase_out",
+        "process_actions",
+        "process_target",
+        "update_move_time"
+      ],
+      "reference_lines": 114,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "TerracottaBoss",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        134
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "in_melee_attack_range",
+        "process_target"
+      ],
+      "reference_lines": 79,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "TerracottaSub",
+      "parent": "Terracotta",
+      "factory_ai": [
+        133
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "TerracottaSub",
+        "attack",
+        "attack2",
+        "choose_attack"
+      ],
+      "reference_lines": 99,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "Tornado",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        129
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "blocking",
+        "can_attack_target",
+        "die",
+        "process",
+        "process_roam",
+        "pushed",
+        "spawned"
+      ],
+      "reference_lines": 121,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "TreeMonster",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        4
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "apply_poison",
+        "attacked",
+        "can_attack",
+        "can_attack_target",
+        "can_move",
+        "process_roam",
+        "process_search",
+        "process_target"
+      ],
+      "reference_lines": 40,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "UmaKing",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        16
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack",
+        "in_attack_range",
+        "process_target",
+        "range_attack"
+      ],
+      "reference_lines": 62,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "UndeadSoul",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        130
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "UndeadSoul",
+        "can_be_seen",
+        "process",
+        "spawned"
+      ],
+      "reference_lines": 48,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "VoraciousGhost",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        11
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "VoraciousGhost",
+        "can_drop_rewards",
+        "die",
+        "experience_divisor",
+        "process"
+      ],
+      "reference_lines": 47,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "Warewolf",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        68
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "process_target"
+      ],
+      "reference_lines": 24,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "WedgeMothLarva",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        44
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "attack",
+        "can_move",
+        "in_attack_range",
+        "process"
+      ],
+      "reference_lines": 50,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "WhiteBone",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        52
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "WhiteBone",
+        "can_be_seen",
+        "process",
+        "spawned"
+      ],
+      "reference_lines": 48,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "WindfurySorcerer",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        28
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "attack"
+      ],
+      "reference_lines": 25,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "WingedHorror",
+      "parent": "UmaKing",
+      "factory_ai": [
+        84
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "range_attack"
+      ],
+      "reference_lines": 25,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "YumgonWitch",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        98,
+        100
+      ],
+      "declared": true,
+      "state_struct": true,
+      "methods": [
+        "aoe_element",
+        "attack",
+        "in_attack_range",
+        "process_target",
+        "set_aoe_element"
+      ],
+      "reference_lines": 80,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "ZumaGuardian",
+      "parent": "MonsterObject",
+      "factory_ai": [
+        21
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "apply_poison",
+        "attacked",
+        "can_attack",
+        "can_move",
+        "process",
+        "wake"
+      ],
+      "reference_lines": 80,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    },
+    {
+      "class": "ZumaKing",
+      "parent": "ZumaGuardian",
+      "factory_ai": [
+        22
+      ],
+      "declared": true,
+      "state_struct": false,
+      "methods": [
+        "ZumaKing",
+        "attack",
+        "in_attack_range",
+        "process",
+        "process_target",
+        "range_attack",
+        "spawned",
+        "wake"
+      ],
+      "reference_lines": 95,
+      "world_status": "pending_individual_audit",
+      "baozang_status": "pending_individual_evidence"
+    }
+  ],
+  "factory": [
+    {
+      "ai": -1,
+      "class": "Guard",
+      "initializer": "return new Guard { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 1,
+      "class": "MonsterObject",
+      "initializer": "return new MonsterObject { MonsterInfo = monsterInfo, Passive = true, NeedHarvest = true, HarvestCount = 2 };"
+    },
+    {
+      "ai": 2,
+      "class": "MonsterObject",
+      "initializer": "return new MonsterObject { MonsterInfo = monsterInfo, Passive = true, NeedHarvest = true, HarvestCount = 3 };"
+    },
+    {
+      "ai": 3,
+      "class": "MonsterObject",
+      "initializer": "return new MonsterObject { MonsterInfo = monsterInfo, NeedHarvest = true, HarvestCount = 3 };"
+    },
+    {
+      "ai": 4,
+      "class": "TreeMonster",
+      "initializer": "return new TreeMonster { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 5,
+      "class": "CarnivorousPlant",
+      "initializer": "return new CarnivorousPlant { MonsterInfo = monsterInfo, NeedHarvest = true, HarvestCount = 2 };"
+    },
+    {
+      "ai": 6,
+      "class": "SpittingSpider",
+      "initializer": "return new SpittingSpider { MonsterInfo = monsterInfo, NeedHarvest = true, HarvestCount = 2, PoisonType = PoisonType.Green };"
+    },
+    {
+      "ai": 7,
+      "class": "SkeletonAxeThrower",
+      "initializer": "return new SkeletonAxeThrower { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 8,
+      "class": "MonsterObject",
+      "initializer": "return new MonsterObject { MonsterInfo = monsterInfo, NeedHarvest = true, HarvestCount = 2, PoisonType = PoisonType.Paralysis, PoisonTicks = 1, PoisonFrequency = 5, PoisonRate = 12 };"
+    },
+    {
+      "ai": 9,
+      "class": "GhostSorcerer",
+      "initializer": "return new GhostSorcerer { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 10,
+      "class": "GhostMage",
+      "initializer": "return new GhostMage { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 11,
+      "class": "VoraciousGhost",
+      "initializer": "return new VoraciousGhost { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 12,
+      "class": "HealerAnt",
+      "initializer": "return new HealerAnt { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 13,
+      "class": "LordNiJae",
+      "initializer": "return new LordNiJae { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 14,
+      "class": "SpittingSpider",
+      "initializer": "return new SpittingSpider { MonsterInfo = monsterInfo, PoisonType = PoisonType.Green };"
+    },
+    {
+      "ai": 15,
+      "class": "MonsterObject",
+      "initializer": "return new MonsterObject { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 16,
+      "class": "UmaKing",
+      "initializer": "return new UmaKing { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 17,
+      "class": "ArachnidGrazer",
+      "initializer": "return new ArachnidGrazer\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList = { [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.Larva)] = 1 }\n                    };"
+    },
+    {
+      "ai": 18,
+      "class": "Larva",
+      "initializer": "return new Larva { MonsterInfo = monsterInfo, PoisonType = PoisonType.Green };"
+    },
+    {
+      "ai": 19,
+      "class": "RedMoonTheFallen",
+      "initializer": "return new RedMoonTheFallen { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 20,
+      "class": "SkeletonAxeThrower",
+      "initializer": "return new SkeletonAxeThrower { MonsterInfo = monsterInfo, FearRate = 2, FearDuration = 4 };"
+    },
+    {
+      "ai": 21,
+      "class": "ZumaGuardian",
+      "initializer": "return new ZumaGuardian { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 22,
+      "class": "ZumaKing",
+      "initializer": "return new ZumaKing\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList =\n                        {\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.ZumaArcherMonster)] = 50,\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.ZumaFanaticMonster)] = 25,\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.ZumaGuardianMonster)] = 25,\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.ZumaKeeperMonster)] = 1\n                        }\n                    };"
+    },
+    {
+      "ai": 23,
+      "class": "Monkey",
+      "initializer": "return new Monkey { MonsterInfo = monsterInfo, PoisonType = PoisonType.Green };"
+    },
+    {
+      "ai": 24,
+      "class": "Monkey",
+      "initializer": "return new Monkey { MonsterInfo = monsterInfo, PoisonType = PoisonType.Red };"
+    },
+    {
+      "ai": 25,
+      "class": "EvilElephant",
+      "initializer": "return new EvilElephant { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 26,
+      "class": "NumaMage",
+      "initializer": "return new NumaMage { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 27,
+      "class": "GhostMage",
+      "initializer": "return new GhostMage { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 28,
+      "class": "WindfurySorcerer",
+      "initializer": "return new WindfurySorcerer { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 29,
+      "class": "SkeletonAxeThrower",
+      "initializer": "return new SkeletonAxeThrower { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 30,
+      "class": "NetherworldGate",
+      "initializer": "return new NetherworldGate { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 31,
+      "class": "SonicLizard",
+      "initializer": "return new SonicLizard { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 32,
+      "class": "MonsterObject",
+      "initializer": "//Unused AI\n                    return new MonsterObject { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 33,
+      "class": "GiantLizard",
+      "initializer": "return new GiantLizard { MonsterInfo = monsterInfo, AttackRange = 9, IgnoreShield = true };"
+    },
+    {
+      "ai": 34,
+      "class": "SkeletonAxeThrower",
+      "initializer": "return new SkeletonAxeThrower { MonsterInfo = monsterInfo, AttackRange = 9 };"
+    },
+    {
+      "ai": 35,
+      "class": "MonsterObject",
+      "initializer": "return new MonsterObject { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 36,
+      "class": "NumaMage",
+      "initializer": "return new NumaMage { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 37,
+      "class": "MonsterObject",
+      "initializer": "return new MonsterObject { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 38,
+      "class": "BanyaLeftGuard",
+      "initializer": "return new BanyaLeftGuard { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 39,
+      "class": "MonsterObject",
+      "initializer": "return new MonsterObject { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 40,
+      "class": "MonsterObject",
+      "initializer": "return new MonsterObject { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 41,
+      "class": "EmperorSaWoo",
+      "initializer": "return new EmperorSaWoo { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 42,
+      "class": "SpittingSpider",
+      "initializer": "return new SpittingSpider { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 43,
+      "class": "ArchLichTaedu",
+      "initializer": "return new ArchLichTaedu\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList =\n                        {\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.BoneArcher)] = 90,\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.BoneSoldier)] = 15,\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.BoneBladesman)] = 15,\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.BoneCaptain)] = 15,\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.SkeletonEnforcer)] = 1\n                        }\n                    };"
+    },
+    {
+      "ai": 44,
+      "class": "WedgeMothLarva",
+      "initializer": "return new WedgeMothLarva\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList = { [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.LesserWedgeMoth)] = 1 }\n                    };"
+    },
+    {
+      "ai": 45,
+      "class": "RazorTusk",
+      "initializer": "return new RazorTusk { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 46,
+      "class": "SpittingSpider",
+      "initializer": "return new SpittingSpider { MonsterInfo = monsterInfo, PoisonType = PoisonType.Red, PoisonTicks = 1, PoisonFrequency = 10, PoisonRate = 25 };"
+    },
+    {
+      "ai": 47,
+      "class": "SpittingSpider",
+      "initializer": "return new SpittingSpider { MonsterInfo = monsterInfo, PoisonType = PoisonType.Green, PoisonTicks = 7, PoisonRate = 15 };"
+    },
+    {
+      "ai": 48,
+      "class": "SonicLizard",
+      "initializer": "return new SonicLizard { MonsterInfo = monsterInfo, IgnoreShield = true };"
+    },
+    {
+      "ai": 49,
+      "class": "GiantLizard",
+      "initializer": "return new GiantLizard { MonsterInfo = monsterInfo, AttackRange = 8, PoisonType = PoisonType.Paralysis, PoisonTicks = 1, PoisonFrequency = 5 };"
+    },
+    {
+      "ai": 50,
+      "class": "GiantLizard",
+      "initializer": "return new GiantLizard { MonsterInfo = monsterInfo, AttackRange = 8 };"
+    },
+    {
+      "ai": 51,
+      "class": "MutantFlea",
+      "initializer": "return new MutantFlea { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 52,
+      "class": "WhiteBone",
+      "initializer": "return new WhiteBone() { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 53,
+      "class": "Shinsu",
+      "initializer": "return new Shinsu { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 54,
+      "class": "GiantLizard",
+      "initializer": "return new GiantLizard { MonsterInfo = monsterInfo, RangeCooldown = TimeSpan.FromSeconds(5) };"
+    },
+    {
+      "ai": 55,
+      "class": "BlasterMutantFlea",
+      "initializer": "return new BlasterMutantFlea { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 56,
+      "class": "CorrosivePoisonSpitter",
+      "initializer": "return new CorrosivePoisonSpitter { MonsterInfo = monsterInfo, PoisonType = PoisonType.Green, PoisonTicks = 7, PoisonRate = 15, IgnoreShield = true };"
+    },
+    {
+      "ai": 57,
+      "class": "CorrosivePoisonSpitter",
+      "initializer": "return new CorrosivePoisonSpitter { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 58,
+      "class": "Stomper",
+      "initializer": "return new Stomper { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 59,
+      "class": "CrimsonNecromancer",
+      "initializer": "return new CrimsonNecromancer() { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 60,
+      "class": "ChaosKnight",
+      "initializer": "return new ChaosKnight() { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 61,
+      "class": "PachontheChaosbringer",
+      "initializer": "return new PachontheChaosbringer { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 62,
+      "class": "NumaHighMage",
+      "initializer": "return new NumaHighMage { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 63,
+      "class": "NumaStoneThrower",
+      "initializer": "return new NumaStoneThrower { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 64,
+      "class": "Monkey",
+      "initializer": "return new Monkey { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 65,
+      "class": "IcyGoddess",
+      "initializer": "return new IcyGoddess { MonsterInfo = monsterInfo, FindRange = 3 };"
+    },
+    {
+      "ai": 66,
+      "class": "IcySpiritWarrior",
+      "initializer": "return new IcySpiritWarrior { MonsterInfo = monsterInfo, PoisonType = PoisonType.Paralysis, PoisonTicks = 1, PoisonFrequency = 5, PoisonRate = 25 };"
+    },
+    {
+      "ai": 67,
+      "class": "IcySpiritGeneral",
+      "initializer": "return new IcySpiritGeneral\n                    {\n                        MonsterInfo = monsterInfo,\n                        IgnoreShield = true,\n                    };"
+    },
+    {
+      "ai": 68,
+      "class": "Warewolf",
+      "initializer": "return new Warewolf\n                    {\n                        MonsterInfo = monsterInfo,\n                        IgnoreShield = true,\n                    };"
+    },
+    {
+      "ai": 69,
+      "class": "JinamStoneGate",
+      "initializer": "return new JinamStoneGate { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 70,
+      "class": "FrostLordHwa",
+      "initializer": "return new FrostLordHwa { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 71,
+      "class": "BanyoWarrior",
+      "initializer": "return new BanyoWarrior { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 72,
+      "class": "BanyoCaptain",
+      "initializer": "return new BanyoCaptain { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 73,
+      "class": "MonsterObject",
+      "initializer": "//Unused AI\n                    return new MonsterObject { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 74,
+      "class": "BanyoLordGuzak",
+      "initializer": "return new BanyoLordGuzak\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList =\n                        {\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.BanyoCaptain)] = 2,\n                        }\n                    };"
+    },
+    {
+      "ai": 75,
+      "class": "DepartedMonster",
+      "initializer": "return new DepartedMonster\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList = { [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.MatureEarwig)] = 1 }\n                    };"
+    },
+    {
+      "ai": 76,
+      "class": "DepartedMonster",
+      "initializer": "return new DepartedMonster\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList = { [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.GoldenArmouredBeetle)] = 1 }\n                    };"
+    },
+    {
+      "ai": 77,
+      "class": "EnragedLordNiJae",
+      "initializer": "return new EnragedLordNiJae\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList = { [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.Millipede)] = 1 },\n                        MaxMinions = 200,\n                    };"
+    },
+    {
+      "ai": 78,
+      "class": "JinchonDevil",
+      "initializer": "return new JinchonDevil { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 79,
+      "class": "GiantLizard",
+      "initializer": "return new GiantLizard { MonsterInfo = monsterInfo, AttackRange = 10, RangeCooldown = TimeSpan.FromSeconds(5) };"
+    },
+    {
+      "ai": 80,
+      "class": "SunFeralWarrior",
+      "initializer": "return new SunFeralWarrior\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList =\n                        {\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.FerociousFlameDemon)] = 5,\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.FlameDemon)] = 1,\n                        }\n                    };"
+    },
+    {
+      "ai": 81,
+      "class": "MoonFeralWarrior",
+      "initializer": "return new MoonFeralWarrior\n                    {\n                        MonsterInfo = monsterInfo\n                    };"
+    },
+    {
+      "ai": 82,
+      "class": "OxFeralGeneral",
+      "initializer": "return new OxFeralGeneral\n                    {\n                        MonsterInfo = monsterInfo,\n                        IgnoreShield = true,\n                    };"
+    },
+    {
+      "ai": 83,
+      "class": "FlameDemon",
+      "initializer": "return new FlameDemon\n                    {\n                        MonsterInfo = monsterInfo,\n                        Min = -2,\n                        Max = 2,\n                    };"
+    },
+    {
+      "ai": 84,
+      "class": "WingedHorror",
+      "initializer": "return new WingedHorror\n                    {\n                        MonsterInfo = monsterInfo,\n                        RangeChance = 1,\n                    };"
+    },
+    {
+      "ai": 85,
+      "class": "EmperorSaWoo",
+      "initializer": "return new EmperorSaWoo { MonsterInfo = monsterInfo, PoisonType = PoisonType.Paralysis, PoisonTicks = 1, PoisonFrequency = 5, PoisonRate = 8 };"
+    },
+    {
+      "ai": 86,
+      "class": "FlameDemon",
+      "initializer": "return new FlameDemon\n                    {\n                        MonsterInfo = monsterInfo,\n                        Passive = true,\n                        Min = 0,\n                        Max = 8,\n                    };"
+    },
+    {
+      "ai": 87,
+      "class": "OmaWarlord",
+      "initializer": "return new OmaWarlord\n                    {\n                        MonsterInfo = monsterInfo,\n                        PoisonType = PoisonType.Abyss,\n                        PoisonTicks = 1,\n                        PoisonFrequency = 7,\n                        PoisonRate = 15\n                    };"
+    },
+    {
+      "ai": 88,
+      "class": "GoruSpearman",
+      "initializer": "return new GoruSpearman\n                    {\n                        MonsterInfo = monsterInfo,\n                    };"
+    },
+    {
+      "ai": 89,
+      "class": "GoruArcher",
+      "initializer": "return new GoruArcher\n                    {\n                        MonsterInfo = monsterInfo,\n\n                        PoisonType = PoisonType.Silenced,\n                        PoisonTicks = 1,\n                        PoisonFrequency = 5,\n                        PoisonRate = 10\n                    };"
+    },
+    {
+      "ai": 90,
+      "class": "OmaWarlord",
+      "initializer": "return new OmaWarlord\n                    {\n                        MonsterInfo = monsterInfo,\n                        PoisonType = PoisonType.Paralysis,\n                        PoisonTicks = 1,\n                        PoisonFrequency = 5,\n                        PoisonRate = 25\n                    };"
+    },
+    {
+      "ai": 91,
+      "class": "EnragedArchLichTaedu",
+      "initializer": "return new EnragedArchLichTaedu\n                    {\n                        MonsterInfo = monsterInfo,\n\n                        MinSpawn = 5,\n                        RandomSpawn = 5,\n\n                        PoisonType = PoisonType.Red,\n                        PoisonTicks = 1,\n                        PoisonFrequency = 25,\n                        PoisonRate = 5,\n\n                        SpawnList =\n                        {\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.GoruArcher)] = 10,\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.GoruGeneral)] = 5,\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.GoruSpearman)] = 5,\n                        }\n                    };"
+    },
+    {
+      "ai": 92,
+      "class": "GiantLizard",
+      "initializer": "return new GiantLizard { MonsterInfo = monsterInfo, AttackRange = 9 };"
+    },
+    {
+      "ai": 93,
+      "class": "EscortCommander",
+      "initializer": "return new EscortCommander { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 94,
+      "class": "FieryDancer",
+      "initializer": "return new FieryDancer { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 95,
+      "class": "FieryDancer",
+      "initializer": "return new FieryDancer\n                    {\n                        MonsterInfo = monsterInfo,\n                        PoisonType = PoisonType.Paralysis,\n                        PoisonTicks = 1,\n                        PoisonFrequency = 5,\n                        PoisonRate = 15,\n                    };"
+    },
+    {
+      "ai": 96,
+      "class": "QueenOfDawn",
+      "initializer": "return new QueenOfDawn { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 97,
+      "class": "SonicLizard",
+      "initializer": "return new SonicLizard { MonsterInfo = monsterInfo, IgnoreShield = true, Range = 5 };"
+    },
+    {
+      "ai": 98,
+      "class": "YumgonWitch",
+      "initializer": "return new YumgonWitch\n                    {\n                        MonsterInfo = monsterInfo,\n                        AoEElement = Element.Lightning\n                    };"
+    },
+    {
+      "ai": 99,
+      "class": "JinhwanSpirit",
+      "initializer": "return new JinhwanSpirit\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList =\n                        {\n                            [monsterInfo] = 1,\n                        }\n                    };"
+    },
+    {
+      "ai": 100,
+      "class": "YumgonWitch",
+      "initializer": "return new YumgonWitch\n                    {\n                        MonsterInfo = monsterInfo,\n                    };"
+    },
+    {
+      "ai": 101,
+      "class": "DragonQueen",
+      "initializer": "return new DragonQueen\n                    {\n                        MonsterInfo = monsterInfo,\n                        DragonLordInfo = SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.DragonLord),\n\n                        SpawnList =\n                         {\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.OYoungBeast)] = 2,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.YumgonWitch)] = 2,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.MaWarden)] = 2,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.MaWarlord)] = 2,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.JinhwanSpirit)] = 2,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.JinhwanGuardian)] = 2,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.OyoungGeneral)] = 2,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.YumgonGeneral)] = 2,\n                         }\n                    };"
+    },
+    {
+      "ai": 102,
+      "class": "DragonLord",
+      "initializer": "return new DragonLord\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList =\n                         {\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.OYoungBeast)] = 10000,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.YumgonWitch)] = 10000,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.MaWarden)] = 10000,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.MaWarlord)] = 10000,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.JinhwanSpirit)] = 10000,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.JinhwanGuardian)] = 10000,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.OyoungGeneral)] = 10000,\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.YumgonGeneral)] = 10000,\n\n                             [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.DragonLord)] = 1,\n                         }\n                    };"
+    },
+    {
+      "ai": 103,
+      "class": "InfernalSoldier",
+      "initializer": "return new InfernalSoldier { MonsterInfo = monsterInfo, AttackRange = 5 };"
+    },
+    {
+      "ai": 104,
+      "class": "FerociousIceTiger",
+      "initializer": "return new FerociousIceTiger { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 105,
+      "class": "GiantLizard",
+      "initializer": "return new GiantLizard { MonsterInfo = monsterInfo, AttackRange = 5, IgnoreShield = true, CanPvPRange = true };"
+    },
+    {
+      "ai": 106,
+      "class": "GiantLizard",
+      "initializer": "return new GiantLizard { MonsterInfo = monsterInfo, AttackRange = 7, CanPvPRange = true };"
+    },
+    {
+      "ai": 107,
+      "class": "SamaFireGuardian",
+      "initializer": "return new SamaFireGuardian { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 108,
+      "class": "SamaIceGuardian",
+      "initializer": "return new SamaIceGuardian { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 109,
+      "class": "SamaLightningGuardian",
+      "initializer": "return new SamaLightningGuardian { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 110,
+      "class": "SamaWindGuardian",
+      "initializer": "return new SamaWindGuardian { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 111,
+      "class": "SamaPhoenix",
+      "initializer": "return new SamaPhoenix { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 112,
+      "class": "SamaBlack",
+      "initializer": "return new SamaBlack { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 113,
+      "class": "SamaBlue",
+      "initializer": "return new SamaBlue { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 114,
+      "class": "SamaWhite",
+      "initializer": "return new SamaWhite { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 115,
+      "class": "SamaProphet",
+      "initializer": "return new SamaProphet\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList =\n                        {\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.SamaSorcerer)] = 1,\n                        }\n                    };"
+    },
+    {
+      "ai": 116,
+      "class": "SamaScorcer",
+      "initializer": "return new SamaScorcer()\n                    {\n                        MonsterInfo = monsterInfo,\n                    };"
+    },
+    {
+      "ai": 117,
+      "class": "BanyoWarrior",
+      "initializer": "return new BanyoWarrior { MonsterInfo = monsterInfo, DoubleDamage = true };"
+    },
+    {
+      "ai": 118,
+      "class": "OmaMage",
+      "initializer": "return new OmaMage { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 119,
+      "class": "MonsterObject",
+      "initializer": "return new MonsterObject\n                    {\n                        MonsterInfo = monsterInfo,\n\n                        PoisonType = PoisonType.Silenced,\n                        PoisonTicks = 1,\n                        PoisonFrequency = 5,\n                        PoisonRate = 10\n                    };"
+    },
+    {
+      "ai": 120,
+      "class": "DoomClaw",
+      "initializer": "return new DoomClaw()\n                    {\n                        MonsterInfo = monsterInfo,\n                    };"
+    },
+    {
+      "ai": 121,
+      "class": "PinkBat",
+      "initializer": "return new PinkBat { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 122,
+      "class": "QuartzTurtleSub",
+      "initializer": "return new QuartzTurtleSub\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList =\n                        {\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.QuartzMiniTurtle)] = 2,\n                        }\n                    };"
+    },
+    {
+      "ai": 123,
+      "class": "Larva",
+      "initializer": "return new Larva\n                    {\n                        MonsterInfo = monsterInfo,\n                        Range = 3,\n                    };"
+    },
+    {
+      "ai": 124,
+      "class": "QuartzTree",
+      "initializer": "return new QuartzTree\n                    {\n                        MonsterInfo = monsterInfo,\n                        SubBossInfo = SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.QuartzTurtleSub),\n                        SpawnList =\n                        {\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.QuartzBlueBat)] = 20,\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.QuartzPinkBat)] = 20,\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.QuartzBlueCrystal)] = 20,\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.QuartzRedHood)] = 2,\n                        }\n                    };"
+    },
+    {
+      "ai": 125,
+      "class": "CarnivorousPlant",
+      "initializer": "return new CarnivorousPlant { MonsterInfo = monsterInfo, HideRange = 1, FindRange = 1 };"
+    },
+    {
+      "ai": 126,
+      "class": "MonasteryBoss",
+      "initializer": "return new MonasteryBoss\n                    {\n                        MonsterInfo = monsterInfo,\n                        SpawnList =\n                        {\n                            [SEnvir.MonsterInfoList.Binding.First(x => x.Flag == MonsterFlag.Sacrifice)] = 1,\n                        }\n                    };"
+    },
+    {
+      "ai": 127,
+      "class": "JinchonDevil",
+      "initializer": "return new JinchonDevil { MonsterInfo = monsterInfo, CastDelay = TimeSpan.FromSeconds(8), DeathCloudDurationMin = 2000, DeathCloudDurationRandom = 5000 };"
+    },
+    {
+      "ai": 128,
+      "class": "Doll",
+      "initializer": "return new Doll { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 129,
+      "class": "Tornado",
+      "initializer": "return new Monsters.Tornado { MonsterInfo = monsterInfo, Passive = true };"
+    },
+    {
+      "ai": 130,
+      "class": "UndeadSoul",
+      "initializer": "return new UndeadSoul { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 131,
+      "class": "Terracotta",
+      "initializer": "return new Terracotta { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 132,
+      "class": "Terracotta",
+      "initializer": "return new Terracotta { MonsterInfo = monsterInfo, CanPhase = true };"
+    },
+    {
+      "ai": 133,
+      "class": "TerracottaSub",
+      "initializer": "return new TerracottaSub\n                    {\n                        MonsterInfo = monsterInfo,\n                        PoisonType = PoisonType.Paralysis,\n                        PoisonTicks = 1,\n                        PoisonFrequency = 5,\n                        PoisonRate = 15,\n                    };"
+    },
+    {
+      "ai": 134,
+      "class": "TerracottaBoss",
+      "initializer": "return new TerracottaBoss\n                    {\n                        MonsterInfo = monsterInfo,\n                        PoisonType = PoisonType.Paralysis,\n                        PoisonTicks = 1,\n                        PoisonFrequency = 5,\n                        PoisonRate = 15,\n                    };"
+    },
+    {
+      "ai": 135,
+      "class": "MonsterObject",
+      "initializer": "//Wild Horse\n                    return new MonsterObject { MonsterInfo = monsterInfo, Passive = true };"
+    },
+    {
+      "ai": 136,
+      "class": "MonsterObject",
+      "initializer": "//Passive, does not retaliate\n                    return new MonsterObject { MonsterInfo = monsterInfo, Passive = true, CanRetaliate = false };"
+    },
+    {
+      "ai": 137,
+      "class": "NumaWarlord",
+      "initializer": "//Numa Warlord\n                    return new NumaWarlord { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 1001,
+      "class": "CastleFlag",
+      "initializer": "return new CastleFlag { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 1002,
+      "class": "CastleGate",
+      "initializer": "return new CastleGate { MonsterInfo = monsterInfo };"
+    },
+    {
+      "ai": 1003,
+      "class": "CastleGuard",
+      "initializer": "return new CastleGuard { MonsterInfo = monsterInfo };"
+    }
+  ]
+}

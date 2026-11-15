@@ -12,9 +12,7 @@
 #include "hud/level_up_effect.hpp"
 #include "hud/hud_model.hpp"
 #include "hud/human_idle.hpp"
-#include "hud/monster_behavior.hpp"
-#include "world/zuma_ai.hpp"
-#include "world/monster_prototypes.hpp"
+#include "world/Monster.hpp"
 #include "hud/human_actions.hpp"
 #include "hud/melee_cooldown.hpp"
 #include "hud/local_action_clock.hpp"
@@ -97,6 +95,8 @@
 #include <godot_cpp/classes/audio_stream_wav.hpp>
 #include <godot_cpp/classes/text_edit.hpp>
 
+namespace mir3 { int monster_projectile_direction(godot::Vector2 delta,bool eight_directions); }
+
 class Mir3HudView : public godot::Node2D {
     GDCLASS(Mir3HudView,godot::Node2D)
 public:
@@ -112,6 +112,13 @@ public:
     godot::Dictionary hud_snapshot() const;
     godot::Dictionary monster_behavior_profile(int shape);
     godot::Dictionary advance_monster_ai(int elapsed_ms,godot::Array targets);
+    bool spawn_reference_monster(int actor,godot::Vector2i cell,int shape,int facing);
+    bool spawn_reference_bee_queen(int actor,godot::Vector2i cell,int shape,int child_shape);
+    bool spawn_reference_animal(int actor,godot::Vector2i cell,int shape,int facing,godot::Vector2i mission);
+    bool bind_reference_monster(int actor,int ai,int dc,int attack_delay,int move_delay,int element);
+    bool configure_reference_combat(int actor,godot::Dictionary stats);
+    bool notify_reference_animal_struck(int actor,int hitter,godot::Vector2i hitter_cell,bool proper,int level);
+    bool configure_reference_animal_combat(int actor,int hp,int dc,int ac,int hit,int speed,int level);
     void post_chat(godot::String value,int64_t foreground,int64_t background);
     bool apply_inventory_add(int identifier,int icon,int count,int64_t make_index,godot::String name,int std_mode,int stack_mode);
     bool add_inventory_item(int icon,int count,int slot,int64_t make_index,godot::String name,int std_mode,int stack_mode);
@@ -509,6 +516,7 @@ private:
         std::array<MapActorFrame,4> frames;
         godot::Rect2 bounds;
     };
+    using SceneActorPainter=std::function<void(SceneActor&,int,const MapActorFrame*,godot::Vector2i,int,int,const MapActorFrame*,int,bool)>;
     struct SceneNpc : SceneActor {
         std::vector<MapActorFrame> standing;
         std::vector<MapActorFrame> idle_after_refresh;
@@ -537,7 +545,9 @@ private:
         double idle_ms=0;
         bool called=false;
         unsigned light_attribute=0;
-        bool can_be_butchered() const { return shape==20 || shape==21 || shape==119; }
+        bool can_be_butchered() const;
+        bool accepts_melee_target() const;
+        bool protected_from_melee() const;
         int facing=6, death_frame=-1;
         int walk_frame=-1;
         bool walk_catch_up=false, walking_backward=false;
@@ -547,13 +557,8 @@ private:
         static constexpr int revive_appearance_ms=600; // 4085A0
         int appearance_duration_ms=0;
         double appearance_elapsed_ms=0;
-        int appearance_weight(bool highlighted) const {
-            if (!appearance_duration_ms) return -1;
-            // 40ECB0 uses the integer frame clock and resets an out-of-range weight to zero.
-            const int weight=31*int(appearance_elapsed_ms)/appearance_duration_ms+(highlighted?5:0);
-            return weight>31?0:weight;
-        }
-        bool slowed() const { return (status_flags & 0x08000000u)!=0; }
+        int appearance_weight(bool highlighted) const;
+        bool slowed() const;
         int struck_frame=-1;
         int attack_frame=-1, attack_interval=120;
         int attack_action=2;
@@ -561,18 +566,8 @@ private:
         double attack_ms=0;
         bool attack_catch_up=false, struck_catch_up=false, burrow_catch_up=false, death_catch_up=false;
         godot::Vector2i walk_origin;
-        int walk_pose() const { return walk_frame>=0 && walking_backward?5-walk_frame:walk_frame; }
-        godot::Vector2i walk_pixel() const {
-            const auto direction=cell-walk_origin;
-            const int step=walk_frame+1;
-            // 4075B0 reanchors the backstep to the destination before the final frame.
-            if (walking_backward && walk_frame>=(facing==7?4:1)) {
-                const int remaining=6-step;
-                return cell*godot::Vector2i(48,32)-direction*godot::Vector2i(8*remaining,5*remaining);
-            }
-            const int y=direction.x==0?32*step/6:5*step;
-            return walk_origin*godot::Vector2i(48,32)+direction*godot::Vector2i(8*step,y);
-        }
+        int walk_pose() const;
+        godot::Vector2i walk_pixel() const;
         bool skeleton=false;
         double death_ms=0, struck_ms=0;
         struct Turn { godot::Vector2i cell; int facing; int shape; unsigned light; bool backward; std::uint32_t status; bool force_walk=false; };
@@ -598,6 +593,50 @@ private:
         std::deque<Action> actions;
     };
     std::map<int,SceneChicken> scene_chickens;
+    void advance_monsters(double delta,bool scene_movement_tick);
+    void draw_monsters(int tile_y,const SceneActorPainter& draw_scene_actor);
+    bool occupied_by_monster(godot::Vector2i cell) const;
+    int butcher_monster_at(godot::Vector2 pointer) const;
+    void clear_monsters();
+    void sync_monster_overlays();
+    void add_monster_lights(mir3::SceneLightGrid& grid) const;
+    void append_monster_snapshot(godot::Dictionary& result) const;
+    struct PlantActor {
+        mir3::PlantAi brain;
+        SceneChicken::Entry entry;
+        bool dead=false;
+        std::optional<std::array<std::uint16_t,3>> health;
+    };
+    std::map<int,PlantActor> plant_actors;
+    struct BeeQueenActor {
+        mir3::BeeQueenMonster brain;
+        int shape,child_shape;
+    };
+    std::map<int,BeeQueenActor> bee_queens;
+    std::map<int,mir3::BeeMonster> bees;
+    struct AnimalActor {
+        mir3::AnimalMonster brain;int shape;std::optional<int> target_id;
+        std::optional<mir3::MonsterVitals> vitals;
+        std::uint16_t dc=0;unsigned hit=0,speed=0,level=0;
+    };
+    std::map<int,AnimalActor> animals;
+    struct ReferenceActor {
+        std::unique_ptr<mir3::zircon::Controller> controller;
+        int ai=0,dc=0,move_delay=0;
+        mir3::zircon::Time move_at=0;
+        std::optional<mir3::zircon::CombatState> combat;
+        std::optional<int> target_id;
+        int combat_team=0;
+    };
+    std::map<int,ReferenceActor> reference_monsters;
+    double reference_tick_remainder_ms=0;
+    godot::Dictionary advance_reference_monsters(std::span<const mir3::MonsterAiTarget> targets);
+    struct MonsterStruckDelivery { int source,target;std::uint64_t due;SceneChicken::Hit hit; };
+    std::vector<MonsterStruckDelivery> monster_struck_deliveries;
+    void advance_animal_monsters(std::span<const mir3::MonsterAiTarget> visible,godot::Array& attacked,godot::Array& moved);
+    void advance_bee_monsters(std::span<const mir3::MonsterAiTarget> visible,godot::Array& spawned,
+        godot::Array& failures,godot::Array& attacked,godot::Array& moved);
+    bool remove_scene_actor_display(int actor);
     std::map<std::pair<int,int>,std::optional<MapActorFrame>> monster_frames;
     std::map<int,std::optional<mir3::WilArchive>> monster_archives;
     std::map<std::pair<std::uint64_t,bool>,MapActorFrame> projected_monster_shadows;
@@ -729,6 +768,7 @@ private:
         bool untargeted_timeout=false;
     };
     enum class MonsterEffectPose { attack, struck, death, idle, walk, burrow, skeleton };
+    int monster_overlay_pose(const SceneChicken& actor,MonsterEffectPose pose) const;
     struct MapEvent {
         const mir3::EffectResource* resource;
         godot::Vector2i cell;
@@ -775,7 +815,7 @@ private:
     void play_monster_attack_effect(int actor,const SceneChicken& monster);
     void sync_monster_action_overlay(int actor,SceneChicken& monster,bool restart=false);
     void play_monster_death_effect(int actor,const SceneChicken& monster);
-    bool play_monster_ranged_attack(const SceneChicken& monster,const SceneChicken::Attack& attack);
+    bool play_monster_ranged_attack(int actor,const SceneChicken& monster,const SceneChicken::Attack& attack);
     mir3::SpellParticlePool spell_particles;
     godot::Node2D* spell_particle_layer=nullptr;
     std::vector<godot::RID> spell_particle_items;
@@ -994,6 +1034,7 @@ private:
     std::array<godot::Ref<godot::ShaderMaterial>,32> monster_appearance_mix;
     godot::Ref<godot::ShaderMaterial> monster_tint_appearance_mix;
     mir3::ZumaAi monster_ai;
+    double actor_frame_remainder_ms=0;
     mir3::ZumaAi::Time monster_ai_clock=0;
     int monster_ai_next_id=1000000;
     godot::Ref<godot::ShaderMaterial> weapon_glow_mix;

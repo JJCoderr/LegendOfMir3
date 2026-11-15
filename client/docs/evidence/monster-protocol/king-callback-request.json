@@ -1,0 +1,3 @@
+{
+  "code": "import ida_hexrays,idautils,ida_funcs,ida_bytes,ida_nalt,json\nrefs=[]\nfor ea in (0x4b9970,0x4be854):\n for x in idautils.XrefsTo(ea):\n  f=ida_funcs.get_func(x.frm)\n  refs.append({'target':hex(ea),'from':hex(x.frm),'function':hex(f.start_ea) if f else None})\nfunctions=[]\nfor ea in sorted(set(int(r['function'],16) for r in refs if r['function'])):\n c=ida_hexrays.decompile(ea)\n functions.append({'address':hex(ea),'code':str(c) if c else None})\nprint(json.dumps({'input':ida_nalt.get_input_file_path(),'references':refs,'functions':functions}))"
+}

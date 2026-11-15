@@ -1158,3 +1158,116 @@ Features.md将功能细项及验收口径直接并入原48个模块的同一表�
 - IDA `0x42201F–0x422049`、`0x42281B–0x42283D` 确认原版在重建格索引前用角色中心的 48×48 半开矩形删除远处掉落。客户端在更新角色坐标后应用同一范围，X/Y 各保留相对坐标 -24 至 +23。Release、ground-items、map-change 通过，覆盖四条边界和地图切换回归。
 - 更正闪光间隔证据：IDA `0x401710 → 0x49FDAE` 读取两次 MSVC CRT 随机数，按绝对差对 4001 取模，再加 3000 ms。仅成功登记新掉落才取随机数，重复 610 保留原定时。Release、hud_checks --ground-items 和 Godot ground-items 通过。原版进程全局随机数序列尚未逐事件对照。
 - IDA `0x424C48 → 0x47F3F0` 确认掉落闪光使用格坐标偏移 (8,0) 和原始帧宽高，交给设备视口裁剪。移除 Godot 专用 530 行剔除。`0x49291C–0x492956` 的 alpha 调制与 ONE/INVSRCALPHA 使闪光输出使用纹理 alpha 的 1/255，RGB 保持源色。Windows Release 及 ground-items 像素回归通过；Direct3D 同场景逐像素对照仍待做。
+
+### C18/S11 远程怪物
+
+- [x] 2026-11-15 补充特殊怪物范围规则与旧版 21 个 race 的分组进度。新增食人花 `PlantAi` 显隐模型，保留四格钻出与双轴大于四格才钻回的参考语义；Windows Release `hud_checks` 构建及统一入口 `monsters ai` 通过。
+- [x] 食人花接入持久世界实体及固定位置攻击。`monsters ai`、plant-ai 专项及完整 `monsters regression` 通过隐藏出生、原地近战、钻回删除显示对象、同一 AI 保留生命再次出现，以及死亡、显式删除和换图清理。攻击截图已检查。原服伤害和数据库参数仍待。
+- [x] 按用户要求将现有怪物规则统一迁入 `client/src/world/Monster.cpp`，合并 `hud_monster_wire.cpp`，头文件只保留接口与状态。先参考工程、后对照 EXE，以 EXE 为准；文件集中不等于全部特殊怪物已实现。
+- [x] 集中后 Windows Release `mir3_client` / `hud_checks` 构建、`monsters ai` 和完整 `monsters regression` 通过。日志 `client/build/monster-consolidation-build.log`、`monster-consolidation-model.log`、`monster-consolidation-regression.log`。本次改动文件的 `git diff --check` 通过；仍有既有编译警告，未报告测试退出泄漏。
+- [ ] 继续按参考工程补齐逐怪物独立结构体/类，完成所有纳入范围的特殊行为后逐项对照 EXE。
+- [x] 独立 `RockManMonster` / `SandMobMonster` 的专用参考 Run 判定统一落入 `Monster.cpp`；`hud_checks` Release 构建和 `monsters ai` 通过，日志 `monster-hidden-model-build.log`、`monster-hidden-model.log`。验证八格边界、严格1/8秒搜索、5%整数阈值、严格3秒、双轴15格以及DWORD回绕；SandMob隐藏时仅刷新出现时间。
+- [ ] 两种隐藏怪的世界实体接入、通用基类调用顺序、外观映射与EXE对照；模型请求不等于服务端完整调度，不能标记整只怪物完成。
+- [x] 独立 `RonMonster` / `LightningZombieMonster` 的专用 Run 规则集中于 `Monster.cpp`；Windows Release `hud_checks`、`mir3_client` 构建和统一入口 `monsters ai` 通过。日志 `monster-area-lightning-build.log`、`monster-area-lightning-client-build.log`、`monster-area-lightning-model.log`。覆盖触发范围与命中查询范围的区别、空范围动作、随机提前返回不消费冷却、移动与攻击独立计时及状态门控。
+- [ ] Ron 世界查询/伤害与雷电穿透伤害、后退基类移动、同格方向、数据库映射及 EXE 对照仍待；本轮未更改图形世界接入，不重复执行已通过的完整图形回归。
+- [x] `BeeQueenMonster` 独立类型的参考行为落入 `Monster.cpp`。按 `CBeeQueen::MakeChildBee/Operate/Run` 实现排程和投递分离、500 ms 到期包含等号、投递继承当时目标、生成失败消费消息、排程后回收随从。`hud_checks` Release 构建及 `monsters ai` 通过，日志 `monster-bee-build.log`、`monster-bee-ai.log`。
+- [ ] 母体/子体正式数据库和外观映射、石化状态从服务端字段接入及 EXE 对照；显式配置的世界接入记录见下项，不计为整只怪物已完成。
+- [x] 后续已接入 `spawn_reference_bee_queen` 显式外观配置及真实子体生成。`bee-queen-ai --screenshots`、`monsters ai` 通过 499/500 ms 边界、同格生成、继承目标、子体追踪、母体固定、死亡停止新排程、删除与换图清理。截图已检查；73/74 是夹具，不能替代缺失数据库行的正式映射。
+- [ ] `_MONSTER_BEEQUEEN` / `_MONSTER_BEE` 的 CP949 注释与数据索引已核对，仍须找回数据库行的 `wRaceIndex` 和 `FLD_APPR`；不能由索引125推出子体必走普通怪物分支。
+- [x] 蜂群全集回归暴露人物整数时钟问题：约 1160 FPS 时每帧 `uint32_t(delta*1000)` 截断为零，蹲姿未结束而拒绝割肉输入。保留累计亚毫秒余量，供人物动作与预测时钟共享整数步长；诊断保存在 `monster-bee-world-regression-fps.log`，未降低帧率或放宽断言。
+- [x] 本轮最终 Windows Release 构建、`monsters ai`、bee-queen-ai 图形专项及完整 `monsters regression` 通过；完整日志 `client/build/monster-bee-world-regression-fixed.log` 包含蜂群、食人花、祖玛、追踪、远程和复活通过标记。改动文件 `git diff --check` 通过。
+
+- [x] IDA 复核基础 `Mir3.exe` 的 22 号动作分派及外观 33/46/82 的弹道参数。离线 C++ 根据旧版参考服务端实现 7 格射程、各自连射与恢复，走现有远程动作队列。Windows Release、`monsters ai` 和 `monsters regression` 通过。
+- [ ] 核对原服数据库攻击间隔、伤害和联网时序。
+- [x] 外观 124 与 125 分别通过 22 号远程专项。按原版 `0x40B0A0 → 0x4495D0 → 0x44B7E0` 绑定 569 至施法者、2 至目标。验证目标稍后入场时已出队的效果仍使用包内坐标。Windows Release 和 wire、ranged-ai 专项通过。
+- [x] 新增[特殊怪物逐项清单](docs/SpecialMonsters.md)，包括已定位的 75 个 1.45 外观、LegendOfMir3_Src 全部 21 个专用 race 分支、Zircon 104 个怪物类文件及 82 个客户端专用动作或效果外观。候选映射仍需目标版本证据。
+- [x] 恢复回归人物在比奇仓库南侧 `(425,370)` 开场。单怪物展示和双效果专项在镜头内随机出生。124、125 的图形展示连续两轮通过，出生格不同。默认怪物回归在恢复出生点后通过，随机化后的 dual-effect 专项再次通过。
+- [x] 外观 183 的 22 号远程表现复核。启用原版 MAGIC 23 的光源，保持 700 ms 定点落石和动作 2。Windows Release、numa-stone-thrower、dual-effect 通过。
+
+- [x] C18/S11：WhiteSkeletonMonster、ElfMonster、ElfWarriorMonster 独立生命周期实现集中于 Monster.cpp。按固定参考提交 ObjectMonster.cpp 2184–2382 行保留首次出现、DWORD时间写入、两种形态克隆成功/失败的事件与基类顺序、死亡严格两秒。Release hud_checks / mir3_client 构建及 monsters ai 通过，日志 monster-summon-lifecycle-build.log、monster-summon-lifecycle-model.log。
+- [ ] 召唤物仍待世界属性复制、主人归属替换、消息对象标识、基类调度和 EXE 对照；模型回调必须延迟移除对象，不可同步析构。
+
+- [x] C18/S11：MinorNumaMonster、OmaMonster 专用搜索和 SpitSpiderMonster 显式方向喷吐结算集中于 Monster.cpp。固定参考 ObjectMonster.cpp 3–51、1997–2028、2394–2453 行；保留4×4扫描、攻击者减伤及跨对象累积、零速度跳过、300ms受击。Release hud_checks / mir3_client 与 monsters ai 通过，日志 monster-spit-search-build.log、monster-spit-search-model.log。
+- [ ] 蜘蛛 AttackTarget 待核对近距离未初始化输出方向、远距离转置表索引、同/异地图清理分支；尚无完整世界伤害与EXE验收。MinorNuma/Oma 世界基类与三个Oma工厂配置待接入。
+
+- [x] C18/S11：MonsterRunState 与 AnimalMonster 的参考基类调度集中于 Monster.cpp，保留状态门控、目标失效、禁锢/Think/攻击早退、任务坐标、主人身后占位与传送条件、逃跑结束和继承调度顺序。Release hud_checks / mir3_client 构建、monsters ai 通过；日志 monster-base-animal-build.log、monster-base-animal-model.log。
+- [ ] 基类 Hooks 仍待连接实际世界状态与伤害/移动，动物未知肉量字段不得伪造默认产物。参考鸡工厂被注释，尚未据其参数启用鸡专用AI。
+
+- [x] C18/S11：MonsterRunState::think / attack_target 实现参考基类重叠脱离与近战，AnimalMonster组合测试使用实际方法验证冷却阻止移动、到期伤害/动作/禁锢/继承顺序。Release hud_checks / mir3_client 构建、monsters ai 通过；日志 monster-think-melee-build.log、monster-think-melee-model.log。
+- [ ] 参考Think只比较X变化、邻格优先于跨图检查的行为尚待EXE确认；实际世界碰撞、目标身份、伤害和协议回调仍未完成接入。
+
+- [x] C18/S11：MonsterRunState::walk_to / wander / go_to_target 按参考267–282、740–852行实现，保持首可见项重选、隐藏不筛除、最多8次实际位移尝试、随机调用顺序及禁锢/安全格门控。动物任务组合测试使用真实追踪与移动方法抵达并停留；Release hud_checks / mir3_client 与 monsters ai 通过。日志 monster-base-movement-build.log、monster-base-movement-check-build.log、monster-base-movement-model.log。
+- [ ] 基类实际世界地图碰撞与广播、独立怪物场景接入及EXE对照仍待，不能用模型坐标回调证明图形世界完成。
+
+- [x] C18/S11：AnimalMonster接入真实离线场景，所有行为实现仍集中Monster.cpp；HUD仅绑定入口。Release mir3_client/hud_checks构建和animal-ai图形专项通过，验证任务逐格移动、抵达停留、不主动搜敌、占位阻挡、死亡停止、帧末删除、同ID重建和换图清理。日志monster-animal-world-build.log、monster-animal-world-test.log。
+- [ ] 动物攻击目前只有动画，伤害、受击选敌、状态映射、主人世界跟随、数据库肉量/产物及EXE对照仍待；外观21和600/1200ms为离线夹具，不声明原服配置完成。
+
+- [x] C18/S11：MonsterRunState::struck及动物显式离线受击通知，按参考ObjectMonster.cpp:854 / ObjectEngine.cpp:99处理合格攻击者、关注时间和等级相关时间戳加值。Release hud_checks/mir3_client、monsters ai和animal-ai场景专项通过；日志monster-animal-struck-build.log、monster-animal-struck-model.log、monster-animal-struck-world.log。场景验证不合格目标忽略、追踪反击、目标离场和死亡拒绝。
+- [ ] 反击仅动作不扣目标生命；等级参数为显式夹具，仍待原服数据、状态同步与EXE对照，不从客户端无攻击者字段的受击包推断目标。
+
+- [x] C18/S11：读取固定参考ObjectEngine.h/.cpp，确认POISON_STONE=5与GetCharStatus编码得到0x04000000，接入动物/蜂后/祖玛场景AI；模型与animal-ai、bee-queen-ai、zuma-ai图形专项通过石化停止和解除恢复。修复雷电僵尸同格方向为参考DR_DOWN并补测。Release构建通过，日志monster-status-sync-build.log、monster-status-sync-model.log、monster-status-animal.log、monster-status-bee.log、monster-status-zuma.log。
+- [ ] 以上为参考实现验证，EXE对照及其余类型状态映射尚未完成。
+
+- [x] C18/S11：MonsterMeleeAttack按参考CM_HIT路径实现DC/命中/护甲、武器损耗随机顺序、扣血及550ms受击和非人物即时受击回调；零速度未定义输入显式报告。Release hud_checks/mir3_client和monsters ai通过，日志monster-melee-damage-build.log、monster-melee-damage-model.log。
+- [ ] 该结算尚未替换动物场景动画占位；目标实际生命、护盾、装备实体、原服属性和EXE对照仍待。
+
+- [x] C18/S11：MonsterVitals按参考实现护甲/整数护盾/破甲/生命上下界，与近战模型组合通过；显式配置动物战斗属性后接入真实场景扣血及550ms受击、被动反击和致死。零生命即停AI并拒绝受击通知，旧可见快照不能使其继续被攻击。Release构建、monsters ai、animal-combat与animal-ai通过；日志monster-vitals-build.log、monster-vitals-model.log、monster-vitals-world-build.log、monster-vitals-world-test.log、monster-vitals-animal-regression.log。
+- [ ] 仍待场景护盾/破甲同步、延迟队列ID复用专项、装备与真实原服属性、联网结算和EXE对照；此处配置仅离线显式参数。
+
+- [x] 本轮在用户停止频繁测试前已完成破甲状态实时同步与生命周期专项：目标ID复用、来源删除、来源仅死亡、换图、破甲解除均通过。日志monster-combat-lifecycle-build.log、monster-combat-lifecycle-test.log。
+- 用户最新指令覆盖此前安排：先把参考工程全部怪物包含进Monster.cpp；最终比对以宝藏传奇3.exe为准，Mir3.exe仅辅助；所有怪物完成后统一构建验证，不再逐小改动启动测试。AGENTS、清单及证据入口已同步。
+- 宝藏原件已定位G:/游戏/宝藏传奇3客户端/宝藏传奇3.exe（1142789字节）；既有IDA会话mir3-baozang-monsters，KingMir3分析库mir3-king-unpacked。IDA服务经技能start.ps1复用成功；未因本轮范围调整重新运行游戏/测试。
+
+- 全参考覆盖批次：新增mir3::zircon::WhiteBone、Warewolf、WedgeMothLarva及AttackClock，声明在Monster.hpp、实现全在Monster.cpp。依据各同名ServerLibrary源码和MonsterObject.LineAoE/UpdateAttackTime/SpawnMinions；MapObject倒序投递延迟动作已保留。独立于旧C++类型，尚待宝藏版取舍。遵照最新要求，本批未启动构建或测试，集中验证留到所有怪物完成。
+
+- 全参考移植批次：新增Zircon CarnivorousPlant、ZumaGuardian、TreeMonster、QuartzTree、GhostMage、GhostSorcerer独立类型；实现全部在Monster.cpp。保留树怪/祖玛受击参数位置差异、隐藏时恢复清毒、群体唤醒不额外过滤邻居死亡、子Boss尝试失败不重试、直线每格首目标及随机属性抽样顺序。未启动构建或测试，待所有怪物实现后集中验证；宝藏传奇3.exe最终裁决。
+
+- 全参考移植批次：VoraciousGhost、UndeadSoul、SkeletonAxeThrower、SonicLizard、Stomper加入mir3::zircon，专用实现在Monster.cpp。共享CombatWorld只提供地图/消息/基类能力，实际射程、移动尝试、冷却/恐惧、复活与延迟时序由独立类执行。确认Functions.Distance为Chebyshev，ProjectileSpeed=48；Sonic伤害到期抽样，与其他排程时抽样类型分开。按要求未构建/运行测试，全部完成后集中验证并以宝藏版修正。
+
+- 全参考移植批次：WindfurySorcerer、NumaStoneThrower、HealerAnt、YumgonWitch、DragonQueen、GoruArcher专用实现集中Monster.cpp。SkeletonAxeThrower改为虚派发确保继承ProcessTarget调用子类Attack；HealBuff两个布尔按MapObject.BuffAdd签名确认为visible/pause。保留主目标距离弹道、治疗到期不重查距离、龙后AoE属性getter、传送候选格Movements必须null及一次Bonus。未构建或启动测试，按用户要求留到所有怪物完成后统一执行。
+
+- 全参考移植批次：SpittingSpider、RazorTusk、DepartedMonster、JinamStoneGate加入Monster.cpp。保留蜘蛛版本差异、RazorTusk到期抽样、死亡爆发先全体排程后生成随从，以及石门实例匹配/倒序遍历/过期计数顺序。未启动构建与测试。
+
+- 全参考移植批次：FerociousIceTiger、QueenOfDawn、MutantFlea、BlasterMutantFlea独立实现加入Monster.cpp。保留旋转随机数抽样顺序、旋转不走UpdateAttackTime、战士减伤仅限旋转、QueenOfDawn未使用Bonus及全图对象快照，区分两种跳蚤的射程/近战转换。未启动构建测试，所有怪物完成后统一验证并以宝藏版最终裁决。
+
+- 全参考移植批次：UmaKing、WingedHorror、EmperorSaWoo、OmaMage独立实现加入Monster.cpp；共享群体雷电球、雷电术、旋风与闪电射线规则。保留0..8方向重复射线、中心格不存在时不处理侧格、空对象列表随机差异及零伤重新抽样。参考实现不等同于宝藏版已确认行为；最终须以宝藏传奇3.exe及实际加载模块为准，Mir3.exe仅辅助。本批未构建或启动测试，待全部怪物实现后统一验证。
+
+- 全参考移植批次：NumaMage、PinkBat、Monkey、NumaHighMage、FieryDancer、GiantLizard加入Monster.cpp。相同追击步骤使用内部模板共用，独立类型及真实继承关系保留；Monkey射程与攻击虚派发确保NumaHighMage六格直线生效。Globals.MagicRange确认为10；PinkBat弹道使用Chebyshev距离×48，GiantLizard保持严格冷却门控和到期抽伤。未构建或运行测试；仍需完整世界接入和宝藏传奇3.exe最终比对。
+
+- 全参考移植批次：FlameDemon、CorrosivePoisonSpitter、GoruSpearman、EvilElephant、BanyaLeftGuard加入Monster.cpp。读取MonsterObject.ProcessTarget确认恐惧优先逃离、超出射程移动后立即return，不混用Monkey移动后再次攻击流程。共享LineAoE参数化支持十二格火线与十格闪电端点效果差异；SpittingSpider攻击改虚派发以支持长矛手覆盖。EvilElephant毒Owner须由世界回调绑定本怪物，未完成世界接入前不标完成。未构建/运行测试，最终待宝藏版对照。
+
+- 全参考移植批次：Larva、Terracotta、TerracottaSub、TerracottaBoss加入Monster.cpp。保留兵俑PhaseOut冷却未到时仍不追击的分支、900ms延迟可见性切换、隐身20ms移动与两格显现后return；Sub专用攻击通过虚派发选择。Boss暗线偏转+1、LineAoE第二次更新时钟及近战MC伤害均按源码保留。CombatWorld新增get_mc回调。未构建或启动测试；世界接入和宝藏版最终比对尚未完成。
+
+- 全参考移植批次：ZumaKing、QuartzTurtleSub及共享MonsterFireWall加入Monster.cpp。ZumaGuardian::wake改虚派发确保群体唤醒教主时使用两秒等待；保留单次Process仅降一阶段。火墙排程携带原地图Cell标识，避免怪物换图后错误生成；投递倒序清理FireWall/Tempest。HP配置无效时暂不阶段计算，正常配置按整数比例。火墙Owner、生成及延迟队列尚需世界适配。未构建或运行测试，宝藏版最终对照未完成。
+
+- 全参考移植批次：NumaWarlord、OmaWarlord加入Monster.cpp。NumaWarlord完整读取同名源码，保留传送两次随机选格、两效果标志false、预检查优先级、拉拽到期目标快照和攻击后重新读取目标状态；Swing广播专用回调包含全部目标ID。OmaWarlord保持一格近战，不套用GoruSpearman两格射程。未构建或运行测试；延迟队列、世界操作和宝藏版证据对照仍待完成。
+
+- 全参考移植批次：SunFeralWarrior、MoonFeralWarrior、OxFeralGeneral、BanyoWarrior加入Monster.cpp。NumaMage攻击虚派发支持Moon近战覆盖；Sun受击按源码默认canStruck=true转发，召唤不加死亡过滤。射线共享函数增加BlowEarth端点效果，冰/火仍逐格。已读取BanyoCaptain源码及Purification起手，净化投递行为尚待读取并移植，未将Captain计作实现。未构建或启动测试；最终仍以宝藏传奇3.exe为准。
+
+- 全参考移植批次：补完BanyoCaptain及MonsterPurification参考实现。依据MapObject.Purify保留友方毒返回计数包含寄生毒、敌方高等级42%抽样、两个关系分支独立及统一倒序BuffRemove；Captain固定距离雷伤不抽DC。净化投递后MonsterObject.ProcessAction仍调用基类，世界延迟分发接入时须保留。已读取SamaBlack/Blue/White全部源码但尚未实现，下一批可复用范围法术规则。未构建或测试。
+
+- 全参考移植批次：SamaBlack、SamaBlue、SamaWhite及SamaIceGuardian、SamaLightningGuardian、SamaWindGuardian、SamaFireGuardian七类加入Monster.cpp。独立类共用内部追击模板/AttackAoE辅助，保留各技能枚举、弹道差异、范围半径、RangeChance与强化技能预抽双倍DC（零值重新抽样）。不添加源码不存在的远攻距离限制；火守卫ScortchedEarth与MonsterScortchedEarth明确区分。未构建或运行测试；世界适配与宝藏传奇3.exe最终比对仍待完成。
+
+- 全参考移植批次：SamaScorcer、SamaProphet、SamaPhoenix加入Monster.cpp。保留源码拼写Scorcer与旗标SamaSorcerer区分、免伤地图扫描不检查死亡、随机数先于五格判断、ProphetWind使用Ice属性及Prophet不调用基类追击/射程门控。SamaWorld提供地图快照、传送和随从操作回调，实际世界绑定仍待接入。未构建或启动测试；宝藏版最终证据对照未完成。
+
+- 全参考移植批次：Doll、BlockingObject加入Monster.cpp。Doll严格寿命比较、三个独立SetHP判断、500ms出现/1秒尸体及伤害转发；CursedList适配必须保留重复项和Remove首个匹配。BlockingObject死亡仅Hide，父对象决定阻挡与受击结果。已读取Puppet全部源码但尚未移植其玩家魔法排程/石头属性与信息包克隆，不能以Doll覆盖。未构建或运行测试；全部世界适配及宝藏版对照未完成。
+
+- 全参考移植批次：ChristmasMonster、Tornado加入Monster.cpp。圣诞怪先召集/经验清场最后基类Die；龙卷风先攻击排程再更新时钟、漫游攻击后仍尝试走或转身，怪物与玩家安全区过滤不同。已完整读取HalloweenMonster与NetherworldGate，尚未移植，不列为已实现。未构建或运行测试；所有世界绑定和宝藏传奇3.exe最终比对仍待完成。
+
+- 全参考移植批次：NetherworldGate、Affliction、InfernalSoldier加入Monster.cpp。神秘船门独立保留玩家/怪物双类型传送及常驻激活，不复用Jinam玩家限定；Affliction不加Larva无目标自毁；InfernalSoldier保留出生Show和两秒等待、独立远攻冷却及到期抽伤。未构建或运行测试；世界绑定和宝藏版最终证据对照仍未完成。
+
+- 全参考移植批次：IcySpiritWarrior、IcySpiritGeneral、IcyGoddess加入Monster.cpp。直接读取MonsterObject.ProcessAction和MapObject.ProcessAction确认Warrior的Function没有伤害处理，不擅自套General暗伤扣MP；记录为宝藏版待裁定差异。General在攻击后读取MP；Goddess保留CarnivorousPlant继承并同步攻击动作时间，世界适配还须统一显隐与CombatWorld时钟门控。未构建或运行测试，未完成宝藏版比对。
+
+- 全参考移植批次：CrimsonNecromancer、DoomClaw加入Monster.cpp。死灵无目标也检查减益且空集合消耗冷却；DoomClaw左右计数选招但攻击middleTargets、喷吐后广播空Locations、推移在命中前执行，重复时钟更新保留。世界random适配须支持C# Next(0)=0，减益Stats为null。已读ChaosKnight但其PoisonousCloud尚未移植，未列为实现。未构建或运行测试，世界接入及宝藏版对照仍待完成。
+
+- 全参考移植批次：ChaosKnight、RedMoonTheFallen及MonsterPoisonousCloud加入Monster.cpp。毒云立即按两格地图Cells生成，非延迟500ms；中心可见、统一DisplayLocation、Owner需世界回调绑定。RedMoon保留同图射程/固定方向/广播后填充共享ID列表。尚待法术实体与世界接入及宝藏版比对；未构建或运行测试。
+
+## 集中接入阶段（执行方式修正）
+
+用户要求不再逐一两类追加进度后结束，改为完整行为组连同工厂/世界/消息/延迟队列共同推进。当前状态与全部缺口集中维护docs/MonsterIntegration.md，后续更新该阶段状态，不继续重复逐小批追加。
+
+已提取104类、141工厂分支及完整初始化文本至reference-inventory.json；104个参考专用类均已有实现入口，逐方法、状态结构体与世界接入审计仍未完成。Monster.cpp新增Controller工厂及每对象逆序延迟队列，23分支映射（含93 EscortCommander）并保留20/34/84配置差异；HUD bind_reference_monster/advance_reference_monsters已接入advance_monster_ai，清图/删除销毁控制器。随后接入HUD自动帧推进、configure_reference_combat及CombatState：双方配置属性后到期攻击实际扣HP/MP、吸血、受击和死亡动作；未配置明确resolved=false。参考依据MonsterObject.Attack/Attacked、MapObject.GetAC/GetMR/ChangeHP；正负抗性、严格吸血阈值、护盾不溢出、随机顺序已保留。目标保持、反击记录和当前位置读取加入运行入口；默认同team不互殴。Config.MaxViewRange默认18已从Config.cs核对并替换先前12。完整Buff/毒、宠物奖励、死亡召唤/复活、魔法视觉和真实敌我权限仍待闭合，不能标完整可用。守卫/城堡七类核心已集中移植，1001/1002/1003另有CastleObject工厂，ConquestWorld需继续接真实世界/消息；不能视为全组可用。用户要求不用防御性编程并加快速度：直接按参考实现，不追加兜底校验框架，保留原有游戏权限判断。未构建/运行测试，最新要求改为优先直接移植Zircon，MonsterObject基类+每怪物State结构体+逻辑类；首组19普通/施法根类及NumaMage/SpittingSpider相关派生已迁移，新增Shinsu/MirrorImage/Puppet核心；所有现有类架构迁移及全量方法/世界接入审计仍未完成。已继续直译ArachnidGrazer、DragonLord、MonasteryBoss、JinhwanSpirit、ArchLichTaedu及狂暴变体、LordNiJae及狂暴变体、HalloweenMonster；植物父类收归MonsterObject并合并动作时钟。最后五类核心也已补入：FrostLordHwa、PachontheChaosbringer、BanyoLordGuzak、JinchonDevil、Companion；104类型清单缺失归零不是完成证据。下一步集中补齐架构迁移、逐方法缺口、世界接入和宝藏比对；仍未启动构建/测试。
+
+IDA旧King会话工作进程不可达（不是仍运行），经skill open.ps1指定实际IDADIR=C:/Program Files/IDA Professional 9.1恢复为baozang-monster-integration；启动器中文路径需复制为client/build/baozang-launcher.exe后通过脚本打开，原文件未修改。当前已持久保存King导出、消息接口、字符数据路径和宝藏启动器证据。进一步通过baozang-monster-callback追到King回调所属模块检查线程，通过baozang-launcher-chain解析启动器Mymir3.dll!ModifyGame描述符及两个调用点；原目录MyMir3仅有COM导出且与旧分析副本哈希一致，存在模块身份不匹配，继续沿生成/启动路径查实际游戏映像。尚未证实运行时加载成功及怪物行为，不能提升为宝藏规则。统一入口已纠正旧快照占格、同帧死亡目标、视野保持和受击HP/最大HP/伤害字段。query_baozang.py显式数据库，py_eval回调默认参数绑定避免exec作用域问题。未构建/运行游戏或测试。
+
+当前策略修正：用户要求重点参考Zircon逻辑，匹配1.45服务器并加载1.45客户端外观，完成后终止迭代。当前轮已将27个根类与9个派生类拆出状态，合并重复位置/目标/攻击时钟；不再继续以类数量和持续逆向作为推进目标。下一步围绕已有1.45协议、server-monsters数据库外观证据及场景消息建立实际链路，保留全参考类型；服务端联调不得由offline_preview替代。未构建或启动测试。

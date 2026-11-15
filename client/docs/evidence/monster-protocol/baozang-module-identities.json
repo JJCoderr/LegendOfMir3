@@ -1,0 +1,26 @@
+[
+  {
+    "Path": "G:\\游戏\\宝藏传奇3客户端\\宝藏传奇3.exe",
+    "Hash": "98344D358C7381EA0609FAE61DF9C5B66F44285062BB597837309AA8FDB629FF"
+  },
+  {
+    "Path": "G:\\游戏\\宝藏传奇3客户端\\MyMir3.dll",
+    "Hash": "744E41916A68C37ACB676559781E17C80A50A851FB91C0D5875FDE7FDFEFB025"
+  },
+  {
+    "Path": "G:\\游戏\\宝藏传奇3客户端\\Mir3.exe",
+    "Hash": "FDCE0CF98757D64C18EB08F9346842E7028B93070872CD4C50A0BD116FD47195"
+  },
+  {
+    "Path": "G:\\游戏\\宝藏传奇3客户端\\Mir3.dat",
+    "Hash": "FDCE0CF98757D64C18EB08F9346842E7028B93070872CD4C50A0BD116FD47195"
+  },
+  {
+    "Path": "C:\\Users\\czx\\AppData\\Local\\Temp\\mir3-baozang-monster-review.exe",
+    "Hash": "98344D358C7381EA0609FAE61DF9C5B66F44285062BB597837309AA8FDB629FF"
+  },
+  {
+    "Path": "C:\\Users\\czx\\AppData\\Local\\Temp\\mir3-baozang-mymir3.dll",
+    "Hash": "744E41916A68C37ACB676559781E17C80A50A851FB91C0D5875FDE7FDFEFB025"
+  }
+]
