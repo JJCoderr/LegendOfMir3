@@ -81,6 +81,7 @@
 #include "GameProcess/OptionWnd.h"
 #include "GameProcess/HorseWnd.h"
 #include "GameProcess/QuickWnd.h"
+#include "GameProcess/PortraitWnd.h"
 
 #include "Common/Typedeftxt.h"
 #include "Common/Button.h"

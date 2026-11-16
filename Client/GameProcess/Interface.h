@@ -70,6 +70,9 @@ public:
 	CInventoryWnd		m_xInventoryWnd;				//背包窗口.
     CSkillWnd m_xSkillWnd;
     CQuickWnd m_xQuickWnd;
+    CPortraitWnd m_xPortraitWnd;
+    bool m_portraitEntryPressed=false;
+    bool PortraitEntryHit(POINT point);
     CGuildEditor m_xGuildEditor;
 	CStatusWnd			m_xStatusWnd;					//角色信息查看窗口(3个)。
 	CStoreWnd			m_xStoreWnd;					//商店窗口.

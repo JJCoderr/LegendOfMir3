@@ -71,6 +71,7 @@ VOID CInterface::Init()
     m_xQuickWnd.Init();
     m_xHorseWnd.Init();
 	m_xStoreWnd.Init();
+    m_xPortraitWnd.Init(); m_xPortraitWnd.Close(); m_portraitEntryPressed=false;
 	m_xGuildWnd.Init();
 	m_xGroupWnd.Init();
 	m_xChatPopWnd.Init();
@@ -108,6 +109,7 @@ VOID CInterface::Init()
 *******************************************************************************************************************/
 VOID CInterface::Destroy()
 {
+    m_xPortraitWnd.Close();
     m_portraits.Destroy();
 	m_xClientSysMsg.Destroy();
 
@@ -178,6 +180,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xInventoryWnd.CreateInventoryWnd(_WND_ID_INVENTORY, m_pxInterImg, 1220, 518, 0, 282, 466, TRUE);
 	m_xStatusWnd.CreateStatusWnd(_WND_ID_STATUS, m_pxInterImg, 1280, 0, 0, 328, 466, TRUE);
     m_xSkillWnd.CreateGameWnd(_WND_ID_SKILL,m_pxInterImg,1620,TRUE,348,0,360,488);
+    m_xPortraitWnd.CreateGameWnd(_WND_ID_PORTRAIT,m_pxInterImg,2090,FALSE,0,0,580,404);
 	m_xStoreWnd.CreateStoreWnd(_WND_ID_STORE, m_pxInterImg, _WNDIMGIDX_STORE, 0, 0, 0, 0, TRUE);
 	m_xExchangeWnd.CreateExchangeWnd(_WND_ID_EXCHANGE, m_pxInterImg, 1390, 0, 0, 494, 330, TRUE);
 	m_xGuildMasterWnd.CreateGuildMasterWnd(_WND_ID_GUILDMASTER, m_pxInterImg, _WNDIMGIDX_GUILDMASTER, 0, 0, 0, 0, TRUE);
@@ -359,6 +362,7 @@ case _WND_ID_STATUS:
 			case _WND_ID_OPTION:
 				m_xOptionWnd.ShowOptionWnd();
 				break;
+            case _WND_ID_PORTRAIT: m_xPortraitWnd.Show(); break;
 			case _WND_ID_QUICK:
                 m_xQuickWnd.ShowQuickWnd();
                 break;
@@ -517,6 +521,8 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     m_xSkillWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_SKILL);
     m_xHorseWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_HORSE);
     m_xNPCWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_NPCCHAT);
+    const RECT portraitHover={535,486,616,580};
+    if (!m_chatExpanded && PtInRect(&portraitHover,ptMousePos)) DrawSelectionFrame(*m_pxInterImg,m_portraitEntryPressed?2097:2096,535,566,SelectionBlend::Normal,false);
     ShowWndList();
     ShowMagicKey();
     if (m_xNPCWnd.m_bActive) m_xNPCWnd.ShowNPCChatWnd();
@@ -584,6 +590,13 @@ VOID CInterface::ShowBeltItem()
 
 
 
+bool CInterface::PortraitEntryHit(POINT point)
+{
+    const RECT hover={535,486,616,580};
+    if (m_chatExpanded || !PtInRect(&hover,point) || !m_pxInterImg->NewSetIndex(2096)) return false;
+    const auto& info=*m_pxInterImg->m_lpstNewCurrWilImageInfo;
+    const RECT box={535,566,535+info.shWidth,566+info.shHeight}; return PtInRect(&box,point)!=FALSE;
+}
 VOID CInterface::ShowGameStatus()
 {
     const auto& hero = g_xGameProc.m_xMyHero;
@@ -784,6 +797,7 @@ case _WND_ID_STATUS:
 			case _WND_ID_OPTION:
 				rcWnd = m_xOptionWnd.GetGameWndRect();
 				break;
+            case _WND_ID_PORTRAIT: rcWnd=m_xPortraitWnd.m_rcWnd; break;
 			case _WND_ID_QUICK:
                 rcWnd = m_xQuickWnd.GetGameWndRect();
                 break;
@@ -1004,6 +1018,10 @@ case _WND_ID_STATUS:
 			}
 		}
 		break;
+    case _WND_ID_PORTRAIT:
+        if (m_xPortraitWnd.m_bActive) { DeleteWindowToList(nID); m_xPortraitWnd.m_bActive=FALSE; m_xPortraitWnd.Close(); }
+        else { AddWindowToList(nID); m_xPortraitWnd.m_bActive=TRUE; m_xPortraitWnd.Open(); bRet=TRUE; }
+        break;
 	case _WND_ID_QUICK:
 		{
 			if ( m_xQuickWnd.GetGameWndActive() )
@@ -1431,6 +1449,7 @@ BOOL CInterface::IsTopWindow(INT nID)
 BOOL CInterface::OnLButtonDown(POINT ptMouse)
 {
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(0,ptMouse); return TRUE; }
+    if (!m_xMsgBox.IsActive() && GetWindowInMousePos(ptMouse)==-1 && PortraitEntryHit(ptMouse)) { m_portraitEntryPressed=true; return TRUE; }
     if (!m_xMsgBox.IsActive() && PtInRect(&m_xSkillWnd.m_keyMenu,ptMouse) && GetWindowInMousePos(ptMouse)==_WND_ID_SKILL) {
         WindowFocusChangedAndSetReadyMove(_WND_ID_SKILL,ptMouse); m_bMoveFocusedWnd=FALSE;
         m_xSkillWnd.OnLButtonDown(ptMouse); return TRUE;
@@ -1478,6 +1497,8 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
 				if ( !m_xInventoryWnd.OnLButtonDown(&m_stCommonItem, ptMouse) )
 					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
 				break;
+            case _WND_ID_PORTRAIT:
+                DeleteWindowToList(_WND_ID_PORTRAIT); AddWindowToList(_WND_ID_PORTRAIT); m_bMoveFocusedWnd=FALSE; m_xPortraitWnd.Pointer(0,ptMouse); break;
 			case _WND_ID_SKILL:
                 WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect,ptMouse);
                 if (m_xSkillWnd.OnLButtonDown(ptMouse)) m_bMoveFocusedWnd=FALSE;
@@ -1674,6 +1695,8 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
+    m_portraitEntryPressed=false;
+    if (!m_xMsgBox.IsActive() && (m_xPortraitWnd.scrolling || m_xPortraitWnd.pressed>=0)) { if (m_xPortraitWnd.Pointer(2,ptMouse)) WindowActivate(_WND_ID_PORTRAIT); return TRUE; }
     if (!m_xMsgBox.IsActive() && m_xInventoryWnd.service.pressed) { m_xInventoryWnd.OnLButtonUp(&m_stCommonItem,ptMouse); return TRUE; }
     if (!m_xMsgBox.IsActive() && (m_xStoreWnd.pressed!=-1 || m_xStoreWnd.scrollCaptured)) {
         if (m_xStoreWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_STORE);
@@ -1720,6 +1743,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 			return TRUE;
 		}
 
+        if (GetWindowInMousePos(ptMouse)==-1 && PortraitEntryHit(ptMouse)) { WindowActivate(_WND_ID_PORTRAIT); g_xSound.PlayLobbyEffect("105.wav"); return TRUE; }
 		for( INT nCnt = 0; nCnt < VisibleButtons(); nCnt++ )
 		{
 			if ( m_xInterBtn[nCnt].OnLButtonUp(ptMouse) )
@@ -1814,6 +1838,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 			switch ( nInterfaceWndInRect )
 			{
 			case _WND_ID_INVENTORY:		if ( m_xInventoryWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )	WindowActivate(_WND_ID_INVENTORY);		break;
+            case _WND_ID_PORTRAIT: if (m_xPortraitWnd.Pointer(2,ptMouse)) WindowActivate(_WND_ID_PORTRAIT); break;
 			case _WND_ID_SKILL:		if ( m_xSkillWnd.OnLButtonUp(ptMouse) )		WindowActivate(_WND_ID_SKILL);			break;
 case _WND_ID_STATUS:		if ( m_xStatusWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )		WindowActivate(_WND_ID_STATUS);			break;
 			case _WND_ID_STORE:			if ( m_xStoreWnd.OnLButtonUp(ptMouse) )							WindowActivate(_WND_ID_STORE);			break;
@@ -1859,6 +1884,7 @@ case _WND_ID_STATUS:		if ( m_xStatusWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )	
 *******************************************************************************************************************/
 BOOL CInterface::OnMouseMove(POINT ptMouse)
 {
+    if (!m_xMsgBox.IsActive() && m_xPortraitWnd.scrolling) { m_xPortraitWnd.Pointer(1,ptMouse); return TRUE; }
     if (!m_xMsgBox.IsActive() && m_xStoreWnd.scrollCaptured) { m_xStoreWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(1,ptMouse); return TRUE; }
     if (m_xExchangeWnd.captured>=0) { m_xExchangeWnd.OnMouseMove(ptMouse); return TRUE; }
@@ -1892,6 +1918,7 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 		case _WND_ID_INVENTORY:
 			m_xInventoryWnd.OnMouseMove(ptMouse);
 			break;
+        case _WND_ID_PORTRAIT: m_xPortraitWnd.Pointer(1,ptMouse); break;
 		case _WND_ID_SKILL:
 			m_xSkillWnd.OnMouseMove(ptMouse);
 			break;
@@ -1947,6 +1974,7 @@ BOOL CInterface::OnScrollDown()
     if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
     const int hovered=GetWindowInMousePos(g_xGameProc.m_ptMousePos);
+    if (hovered==_WND_ID_PORTRAIT) { m_xPortraitWnd.Wheel(1); return TRUE; }
     if (hovered==_WND_ID_STORE) { m_xStoreWnd.OnScrollDown(); return TRUE; }
     if (hovered==_WND_ID_NPCCHAT) { m_xNPCWnd.OnScrollDown(); m_xNPCWnd.pressed=-1; m_xNPCWnd.arrowPressed=0; return TRUE; }
     if (IsTopWindow(_WND_ID_QUEST)) { m_xQuestWnd.OnScrollDown(); return TRUE; }
@@ -1982,6 +2010,7 @@ BOOL CInterface::OnScrollUp()
     if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
     const int hovered=GetWindowInMousePos(g_xGameProc.m_ptMousePos);
+    if (hovered==_WND_ID_PORTRAIT) { m_xPortraitWnd.Wheel(-1); return TRUE; }
     if (hovered==_WND_ID_STORE) { m_xStoreWnd.OnScrollUp(); return TRUE; }
     if (hovered==_WND_ID_NPCCHAT) { m_xNPCWnd.OnScrollUp(); m_xNPCWnd.pressed=-1; m_xNPCWnd.arrowPressed=0; return TRUE; }
     if (IsTopWindow(_WND_ID_QUEST)) { m_xQuestWnd.OnScrollUp(); return TRUE; }
@@ -2045,6 +2074,7 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
         if (!(lParam & (1L << 30))) FinishNotice(m_xMsgBox.OnKeyDown(wParam),false);
         return TRUE;
     }
+    if (wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive && IsTopWindow(_WND_ID_PORTRAIT)) { WindowActivate(_WND_ID_PORTRAIT); return TRUE; }
 	switch ( wParam )
 	{
     case 'Z':

@@ -49,6 +49,7 @@ set(MIR3_CLIENT_SOURCES
     GameProcess/GuildEditor.cpp
     GameProcess/GuildWnd.cpp
     GameProcess/QuickWnd.cpp
+    GameProcess/PortraitWnd.cpp
     GameProcess/HorseWnd.cpp
     GameProcess/Interface.cpp
     GameProcess/InventoryWnd.cpp
@@ -88,7 +89,7 @@ add_executable(Client WIN32 ${MIR3_CLIENT_SOURCES})
 # 这里关闭链接器自动生成的清单，避免同一个 exe 里出现两份 RT_MANIFEST 资源。
 target_link_options(Client PRIVATE "/MANIFEST:NO")
 set_target_properties(Client PROPERTIES OUTPUT_NAME Mir2Ex)
-target_link_libraries(Client PRIVATE WindHorn)
+target_link_libraries(Client PRIVATE WindHorn ole32 oleaut32)
 
 target_include_directories(Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
