@@ -2,6 +2,13 @@
 //
 #include "resource.h"
 
+// modern appearance manifest (Common Controls 6.0 / DPI aware)
+#ifndef RT_MANIFEST
+#define RT_MANIFEST 24
+#endif
+1 RT_MANIFEST "..\\..\\app.manifest"
+
+
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -88,7 +95,7 @@ IDB_TOOLBAR             BITMAP  DISCARDABLE     "res\\toolbar.bmp"
 //
 
 IDD_CONFIGDLG DIALOG DISCARDABLE  0, 0, 178, 132
-STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "Login Gate Server Configuration"
 FONT 9, "MS Shell Dlg"
 BEGIN

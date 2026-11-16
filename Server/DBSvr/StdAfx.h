@@ -31,6 +31,9 @@
 
 #include "resource.h"
 
+// 现代外观：主窗口尺寸/DPI 辅助（Server/Def/ModernUI.cpp）
+#include "Def/ModernUI.h"
+
 #include "Def/EnDecode.h"
 #include "Def/ServerSockHandler.h"
 #include "Def/Misc.h"
@@ -51,8 +54,12 @@
 #define _DB_SERVER_REGISTRY				_TEXT("Software\\LegendOfMir\\DatabaseSvr")
 #define _DB_SERVERLIST_REGISTRY			_TEXT("Software\\LegendOfMir\\DatabaseSvr\\Servers")
 
-#define _STATUS_HEIGHT					10
+#define _STATUS_HEIGHT					22
 #define _NUMOFMAX_STATUS_PARTS			4
+
+// 主窗口逻辑尺寸（96 DPI 像素；实际显示按显示器 DPI 缩放，并限制在工作区内）
+#define _MAINWND_WIDTH					940
+#define _MAINWND_HEIGHT					580
 										    
 #define _IDM_GATECOMMSOCK_MSG			WM_USER + 1000
 

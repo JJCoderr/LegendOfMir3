@@ -2,6 +2,13 @@
 //
 #include "resource.h"
 
+// modern appearance manifest (Common Controls 6.0 / DPI aware)
+#ifndef RT_MANIFEST
+#define RT_MANIFEST 24
+#endif
+1 RT_MANIFEST "..\\..\\app.manifest"
+
+
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -69,7 +76,7 @@ IDB_TOOLBAR             BITMAP  DISCARDABLE     ".\\Res\\toolbar.bmp"
 //
 
 IDD_CONFIGDLG DIALOG DISCARDABLE  0, 0, 151, 123
-STYLE DS_MODALFRAME | DS_3DLOOK | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+STYLE DS_MODALFRAME | DS_3DLOOK | DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
     WS_SYSMENU
 CAPTION "Login Server Configuration"
 FONT 9, "MS Shell Dlg"
@@ -92,7 +99,7 @@ BEGIN
 END
 
 IDD_SVRLIST_ADD DIALOG DISCARDABLE  0, 0, 239, 161
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Add/Edit Gate Server"
 FONT 9, "MS Shell Dlg"
 BEGIN

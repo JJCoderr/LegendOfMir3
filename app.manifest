@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Legend of Mir 3 - 公共应用清单 (Application Manifest)
+
+  作用：
+    1) 依赖 Microsoft.Windows.Common-Controls 6.0.0.0
+       -> 按钮/列表框/状态栏/工具栏/对话框等控件改用当前 Windows 主题绘制，
+          不再使用 Win95/98 的 3D 凸起（灰色）外观。
+    2) 声明 DPI 感知(system)
+       -> 高 DPI 下不再被系统位图拉伸，界面清晰；字体与控件尺寸按 DPI 正常放大。
+    3) 声明 Windows 7 / 8 / 8.1 / 10 / 11 兼容性
+       -> GetVersion 相关行为、主题与文件对话框等按新系统语义工作。
+    4) longPathAware，允许超长路径。
+
+  本文件位于仓库根目录，由各程序自己的资源脚本嵌入，例如：
+      Server\DBSvr\DBSvr.rc     ->  1 RT_MANIFEST "..\..\app.manifest"
+      Client\Resource.rc        ->  1 RT_MANIFEST "..\app.manifest"
+  并在 CMake 里用 /MANIFEST:NO 关掉链接器自动生成的清单。
+-->
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+
+  <assemblyIdentity
+      type="win32"
+      name="LegendOfMir3.App"
+      version="1.0.0.0"
+      processorArchitecture="*"/>
+  <description>Legend of Mir 3 application</description>
+
+  <!-- 现代控件外观：Common Controls 6.0 -->
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity
+          type="win32"
+          name="Microsoft.Windows.Common-Controls"
+          version="6.0.0.0"
+          processorArchitecture="*"
+          publicKeyToken="6595b64144ccf1df"
+          language="*"/>
+    </dependentAssembly>
+  </dependency>
+
+  <!-- 权限：普通用户权限启动；如某个程序需要管理员权限，
+       把 level 改成 requireAdministrator 即可 -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+  <!-- 兼容性：Windows 7 及以上 -->
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <!-- Windows 7 -->
+      <supportedOS Id="{35138b9a-5d96-4fbd-8e2d-a2440225f93a}"/>
+      <!-- Windows 8 -->
+      <supportedOS Id="{4a2f28e3-53b9-4441-ba9c-d69d4a4a6e38}"/>
+      <!-- Windows 8.1 -->
+      <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}"/>
+      <!-- Windows 10 / 11 -->
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+    </application>
+  </compatibility>
+
+  <!-- Windows 设置：DPI 感知 / 超长路径 -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <!-- 系统级 DPI 感知：界面不再模糊；若需要逐显示器自适应，
+           可把下面两行换成 permonitorv2,permonitor,system -->
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">system</dpiAwareness>
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+    </windowsSettings>
+  </application>
+
+</assembly>

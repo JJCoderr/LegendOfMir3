@@ -84,6 +84,8 @@ BOOL CALLBACK ServerListProc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
 				ListView_InsertColumn(GetDlgItem(hWndDlg, IDC_SERVERINFO_LIST), i, &lvc);
 			}
 
+			Mir3FitLogColumns(GetDlgItem(hWndDlg, IDC_SERVERINFO_LIST), hWndDlg);
+
 			ListView_DeleteAllItems(GetDlgItem(hWndDlg, IDC_SERVERINFO_LIST));
 
 			BYTE	btInstalled;

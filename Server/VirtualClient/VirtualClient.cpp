@@ -144,6 +144,9 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 							CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,                 
 							NULL, NULL, (HINSTANCE)hInstance, NULL);
 
+	// [现代外观] 先用逻辑尺寸把窗口摆好，避免首次显示时按 CW_USEDEFAULT 撑满屏幕
+	Mir3SizeMainWindow(g_hMainWnd, _MAINWND_WIDTH, _MAINWND_HEIGHT);
+
 	RECT rcMainWnd;
 
 	GetClientRect(g_hMainWnd, &rcMainWnd);
@@ -161,7 +164,7 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 
 	lvc.mask	= LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
 	lvc.fmt		= LVCFMT_LEFT;
-	lvc.cx		= 150;
+	lvc.cx		= 100;
 	lvc.pszText	= szText;
 
 	for (int i = 0; i < 3; i++)
@@ -172,8 +175,19 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 		ListView_InsertColumn(g_hLogMsgWnd, i, &lvc);
 	}
 
+	Mir3FitLogColumns(g_hLogMsgWnd, g_hMainWnd);
+
 	ShowWindow(g_hMainWnd, SW_SHOW);
 	UpdateWindow(g_hMainWnd);
+	// [现代外观] 按 96 DPI 逻辑尺寸设定主窗口大小并居中：CW_USEDEFAULT 的默认尺寸太大。
+	Mir3SizeMainWindow(g_hMainWnd, _MAINWND_WIDTH, _MAINWND_HEIGHT);
+
+	// 尺寸确定后再按实际客户区重新布局一次：工具栏/状态栏/日志列表跟上新大小，
+	// Message 列按真实宽度重算，避免列宽按旧的默认窗口尺寸算出来。
+	RECT rcLayout;
+
+	GetClientRect(g_hMainWnd, &rcLayout);
+	SendMessage(g_hMainWnd, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rcLayout.right, rcLayout.bottom));
 
 	if (WSAStartup(MAKEWORD(2, 2), &g_wsd) != 0)
 		return (FALSE);
@@ -215,6 +229,8 @@ LPARAM APIENTRY MainWndProc(HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lParam)
 			GetClientRect(g_hMainWnd, &rcMain);
 
 			MoveWindow(g_hLogMsgWnd, 0, 0, (rcMain.right - rcMain.left), (rcMain.bottom - rcMain.top), TRUE);
+
+			Mir3FitLogColumns(g_hLogMsgWnd, g_hMainWnd);
 
 			break;
 		}

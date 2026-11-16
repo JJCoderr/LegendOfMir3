@@ -122,6 +122,9 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 							CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,                 
 							NULL, NULL, (HINSTANCE)hInstance, NULL);
 
+	// [现代外观] 先用逻辑尺寸把窗口摆好，避免首次显示时按 CW_USEDEFAULT 撑满屏幕
+	Mir3SizeMainWindow(g_hMainWnd, _MAINWND_WIDTH, _MAINWND_HEIGHT);
+
 	g_hToolBar = CreateToolbarEx(g_hMainWnd, WS_CHILD|CCS_TOP|WS_VISIBLE|WS_BORDER,
 									_IDW_TOOLBAR, sizeof(tbButtons) / sizeof(TBBUTTON), (HINSTANCE)hInstance, IDB_TOOLBAR,
 									(LPCTBBUTTON)&tbButtons, sizeof(tbButtons) / sizeof(TBBUTTON),
@@ -140,6 +143,8 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 	
 	for (int i = _NUMOFMAX_STATUS_PARTS - 1; i >= 0; i--)
 		nStatusPartsWidths[nCnt++] = (rcMainWnd.right - rcMainWnd.left) - (90 * i);
+
+	nStatusPartsWidths[_NUMOFMAX_STATUS_PARTS - 1] = -1;
 
 	SendMessage(g_hStatusBar, SB_SETPARTS, _NUMOFMAX_STATUS_PARTS, (LPARAM)nStatusPartsWidths);
 	SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(1, 0), (LPARAM)_T("Not Connected"));
@@ -169,12 +174,21 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 		
 		ListView_InsertColumn(g_hLogMsgWnd, i, &lvc);
 	}
-	ListView_SetColumnWidth( g_hLogMsgWnd, 2, 500 );
+	Mir3FitLogColumns(g_hLogMsgWnd, g_hMainWnd);
 
 	SendMessage(g_hToolBar, TB_SETSTATE, (WPARAM)IDM_STOPSERVICE, (LPARAM)MAKELONG(TBSTATE_INDETERMINATE, 0));
 
 	ShowWindow(g_hMainWnd, SW_SHOW);
 	UpdateWindow(g_hMainWnd);
+	// [现代外观] 按 96 DPI 逻辑尺寸设定主窗口大小并居中：CW_USEDEFAULT 的默认尺寸太大。
+	Mir3SizeMainWindow(g_hMainWnd, _MAINWND_WIDTH, _MAINWND_HEIGHT);
+
+	// 尺寸确定后再按实际客户区重新布局一次：工具栏/状态栏/日志列表跟上新大小，
+	// Message 列按真实宽度重算，避免列宽按旧的默认窗口尺寸算出来。
+	RECT rcLayout;
+
+	GetClientRect(g_hMainWnd, &rcLayout);
+	SendMessage(g_hMainWnd, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rcLayout.right, rcLayout.bottom));
 
 	if (WSAStartup(MAKEWORD(2, 2), &g_wsd) != 0)
 		return (FALSE);
@@ -187,13 +201,13 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 	TCHAR	wszDatabase[256];
 	char	szDatabase[256];
 
+	ZeroMemory(wszDatabase, sizeof(wszDatabase));
+	ZeroMemory(szDatabase, sizeof(szDatabase));
+
 	jRegGetKey(_DB_SERVER_REGISTRY, _TEXT("Device"), (LPBYTE)wszDatabase);
 	WideCharToMultiByte(CP_ACP, 0, wszDatabase, -1, szDatabase, sizeof(szDatabase), NULL, NULL);
 
 	GetDBManager()->Init( InsertLogMsg, szDatabase, "sa", "prg" );
-
-	ZeroMemory(wszDatabase, sizeof(wszDatabase));
-	ZeroMemory(szDatabase, sizeof(szDatabase));
 
 	// 读取表
 	CConnection *pConn = GetDBManager()->m_dbMain.CreateConnection( "Mir2_Common", "sa", "prg" );

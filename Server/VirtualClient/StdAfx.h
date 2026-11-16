@@ -23,10 +23,17 @@
 #include "Def/EnDecode.h"
 #include "Def/Protocol.h"
 
+// 现代外观：主窗口尺寸/DPI 辅助（Server/Def/ModernUI.cpp）
+#include "Def/ModernUI.h"
+
 #pragma comment (lib, "ws2_32.lib")
 #pragma comment (lib, "comctl32.lib")
 
 #define _IDM_SOCKMSG			WM_USER + 1000
+
+// 主窗口逻辑尺寸（96 DPI 像素；实际显示按显示器 DPI 缩放，并限制在工作区内）
+#define _MAINWND_WIDTH					760
+#define _MAINWND_HEIGHT					480
 
 //{{AFX_INSERT_LOCATION}}
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.

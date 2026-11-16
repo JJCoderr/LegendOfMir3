@@ -4,6 +4,7 @@ add_library(Def STATIC
     RegstryHandler.cpp
     ServerSockHandler.cpp
     dbmgr.cpp
+    ModernUI.cpp
 
     _OrzEx/database.cpp
     _OrzEx/error.cpp
@@ -23,4 +24,4 @@ target_compile_definitions(Def PRIVATE UNICODE _UNICODE)
 
 target_link_libraries(Def PUBLIC ws2_32 advapi32 odbc32 odbccp32)
 
-# List.cpp / Queue.cpp / DynamicArray.cpp 是 VC6 遗留实现，与现行头文件冲突，不编译
+# List.cpp / Queue.cpp / DynamicArray.cpp �?VC6 遗留实现，与现行头文件冲突，不编�?

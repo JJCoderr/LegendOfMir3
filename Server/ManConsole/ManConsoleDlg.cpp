@@ -93,6 +93,8 @@ INT_PTR CALLBACK ManConsoleDlgProc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARA
 				ListView_InsertColumn(g_hLogMsgWnd, i, &lvc);
 			}
 
+			Mir3FitLogColumns(g_hLogMsgWnd, hWndDlg);
+
 			return TRUE;
 		}
 		case WM_SYSCOMMAND:

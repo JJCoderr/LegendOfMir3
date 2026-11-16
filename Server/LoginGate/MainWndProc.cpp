@@ -203,13 +203,17 @@ LPARAM APIENTRY MainWndProc(HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lParam)
 								(rcMain.bottom - rcMain.top) - (rcToolBar.bottom - rcToolBar.top) - (rcStatusBar.bottom - rcStatusBar.top) + 2, 
 								TRUE);
 
+				Mir3FitLogColumns(g_hLogMsgWnd, g_hMainWnd);
+
 				int	nStatusPartsWidths[_NUMOFMAX_STATUS_PARTS];
 				int nCnt = 0;
 
 				for (int i = _NUMOFMAX_STATUS_PARTS - 1; i >= 0 ; i--)
-					nStatusPartsWidths[nCnt++] = (rcStatusBar.right - rcStatusBar.left) - (90 * i);
+					nStatusPartsWidths[nCnt++] = (rcMain.right - rcMain.left) - (90 * i);
 
-				SendMessage(g_hStatusBar, SB_SETPARTS, _NUMOFMAX_STATUS_PARTS, (LPARAM)nStatusPartsWidths);
+				nStatusPartsWidths[_NUMOFMAX_STATUS_PARTS - 1] = -1;
+
+			SendMessage(g_hStatusBar, SB_SETPARTS, _NUMOFMAX_STATUS_PARTS, (LPARAM)nStatusPartsWidths);
 			}
 
 			break;

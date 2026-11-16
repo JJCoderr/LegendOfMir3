@@ -26,6 +26,9 @@
 
 #include "resource.h"
 
+// 现代外观：主窗口尺寸/DPI/列表列宽辅助（Server/Def/ModernUI.cpp）
+#include "Def/ModernUI.h"
+
 #pragma comment (lib, "ws2_32.lib")
 #pragma comment (lib, "comctl32.lib")
 

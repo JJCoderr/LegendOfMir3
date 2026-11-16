@@ -42,5 +42,9 @@ add_compile_options(
 # 导致 C2065 错误。直接并入 CXX 编译标志，可原样传到 AdditionalOptions。
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:forScope-")
 
+# 现代外观（Common Controls 6.0 主题 / DPI 感知 / 兼容性）：
+# 清单文件是仓库根目录的 app.manifest，各程序在自己的 *.rc 里以
+#   1 RT_MANIFEST "..\..\app.manifest"
+# 嵌入，并加 /MANIFEST:NO 关掉链接器自动生成的清单。
 add_subdirectory(Client)
 add_subdirectory(Server)
