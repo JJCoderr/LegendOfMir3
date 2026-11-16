@@ -14,6 +14,8 @@ public:
     bool m_chatExpanded = false;
     int m_chatMode = 0;
     bool m_chatModeChanged = false;
+    bool m_chatRejected[3] = {};
+    int m_chatReceptionFrame[3] = {-1,-1,-1};
     void FocusChatMode();
     void LayoutChat();
     struct ChatMessage { DWORD color, background; std::string text; };

@@ -459,3 +459,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 两份运行报告均 selected=1、toggled_off=1，组队prefix=!!，行会prefix=!~。
 - 截图检查发现模式提示缺失，定位并修复新增caption路径的C++反斜杠转义错误；重新构建运行后中文提示可见。
 - 已检查 out/hud-group.png 与 out/hud-guild.png；截图只含DirectDraw后台画面，子窗口编辑框前缀由GetWindowText报告验证，不宣称截图包含编辑框。
+
+### 消息接收按钮命令
+- 原生20/21/22按钮读取CmList1070/1071/1073并直接调用SendSay，匹配Godot send_chat_command，不经过输入框本地命令处理。
+- 依据参考ChatReceptionButtons，点击仅从外部接收状态推导1338/1340/1342覆盖层；不在点击时切换rejected状态，也不伪造服务器确认。增加三个接收状态槽，初始化false；服务器options更新接入仍待协议阶段完成。
+- Client全量77步编译链接通过，尚未验证服务端接收或状态回包；GUI整体仍未完成。

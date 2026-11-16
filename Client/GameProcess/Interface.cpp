@@ -50,6 +50,7 @@ VOID CInterface::Init()
 	m_nFstLine			= 0;
     m_chatMode = 0;
     m_chatModeChanged = false;
+    for (int i=0;i<3;++i) { m_chatRejected[i]=false; m_chatReceptionFrame[i]=-1; }
 	m_shBeltHeight		= 0;
 	m_bShowKey			= FALSE;
 	m_bMoveFocusedWnd	= FALSE;
@@ -479,6 +480,13 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
                 g_xMainWnd.DrawWithImageForComp(area.left,area.top,info.shWidth,info.shHeight,
                     (WORD*)m_pxInterImg->m_pbCurrImage);
             }
+        }
+        if (nCnt >= 20 && m_chatReceptionFrame[nCnt-20] >= 0 &&
+            m_pxInterImg->NewSetIndex(m_chatReceptionFrame[nCnt-20])) {
+            const auto& info = *m_pxInterImg->m_lpstNewCurrWilImageInfo;
+            const RECT area = m_xInterBtn[nCnt].GetGameBtnRect();
+            g_xMainWnd.DrawWithImageForComp(area.left,area.top,info.shWidth,info.shHeight,
+                (WORD*)m_pxInterImg->m_pbCurrImage);
         }
 		m_xInterBtn[nCnt].ShowGameBtn();
 	}
@@ -1510,6 +1518,20 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
                 g_xSound.PlayLobbyEffect("105.wav");
 				switch ( nCnt )
 				{
+                case 20:
+                case 21:
+                case 22:
+                    {
+                        const int channel = nCnt-20;
+                        // The server owns rejection state; a click only predicts the overlay.
+                        m_chatReceptionFrame[channel] = m_chatRejected[channel] ? -1 : 1338+channel*2;
+                        static CLoginMessages captions;
+                        static const bool loaded = captions.Load(".\CmList.dat");
+                        const int commandId = channel == 0 ? 1070 : channel == 1 ? 1071 : 1073;
+                        std::string command = captions.Get(commandId);
+                        g_xClientSocket.SendSay(const_cast<char*>(command.c_str()));
+                    }
+                    break;
                 case 18:
                 case 19:
                     {
