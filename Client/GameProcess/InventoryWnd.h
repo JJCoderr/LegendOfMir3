@@ -23,6 +23,7 @@ typedef struct tagCOMMONITEMSET
 class CInventoryWnd : public CGameWnd
 { 
 protected:
+    bool m_closePressed=false;
 	INT			m_nStartLineNum;					// 背包窗口起始行的编号. (共 10 行, 屏幕上最多可看到 4 行.)
 	RECT		m_rcInvenCell[_INVEN_MAX_CELL];		// 背包窗口各单元格的区域。
 	RECT		m_rcBeltCell[_BELT_MAX_CELL];

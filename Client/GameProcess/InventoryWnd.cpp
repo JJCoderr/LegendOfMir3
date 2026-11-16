@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include "Common/LoginMessages.h"
 
 
 
@@ -38,6 +39,7 @@ VOID CInventoryWnd::Init()
 	INT nCnt;
 	CGameWnd::Init();
 	m_nStartLineNum	= 0;
+    m_closePressed=false;
 	ZeroMemory(m_rcInvenCell, sizeof(RECT) *_INVEN_MAX_CELL);
 	ZeroMemory(m_rcBeltCell,  sizeof(RECT) *_BELT_MAX_CELL );
 	ZeroMemory(m_stInventoryItem, sizeof(ITEMSET)*_MAX_INVEN_ITEM);
@@ -70,7 +72,7 @@ VOID CInventoryWnd::CreateInventoryWnd(INT nID, CWHWilImageData* pxWndImage, INT
 	CreateGameWnd(nID, pxWndImage, nFrameImgIdx, bCanMove, nStartX, nStartY, nWidth, nHeight);
 
 	// 按钮创建.
-	m_xInventoryBtn[_BTN_ID_INVENCLOSE	 ].CreateGameBtn(pxWndImage, 280, 281, nStartX+255, nStartY+291);
+	m_xInventoryBtn[_BTN_ID_INVENCLOSE	 ].CreateGameBtn(pxWndImage, 1221, 1222, nStartX+242, nStartY+423);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLUP	 ].CreateGameBtn(pxWndImage, 74, 75, nStartX+247, nStartY+ 20);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLDOWN].CreateGameBtn(pxWndImage, 74, 75, nStartX+247, nStartY+167);
 	
@@ -116,17 +118,34 @@ VOID CInventoryWnd::ShowInventoryWnd()
 	INT nCnt;
 
 	// 窗口背景绘制.
-	ShowGameWnd();
-
-
-	RECT rcTitle = {m_rcWnd.left+31, m_rcWnd.top+27, m_rcWnd.left+133, m_rcWnd.top+43};
-
-	g_xMainWnd.PutsHan(NULL, rcTitle, RGB(200, 200, 255), RGB(0, 0, 0), "[Inventory]", g_xMainWnd.CreateGameFont("Arial", 10, 0, FW_BOLD));
-
-	// 滚动条.
-	m_xInvenScrlBar.ShowScrlBar(m_rcWnd.left+254, m_rcWnd.top-165, m_nStartLineNum, 12);
-	
-	// 绘制物品栏物品.
+    const int x=m_rcWnd.left,y=m_rcWnd.top;
+    if (m_pxWndImage->NewSetIndex(1220)) {
+        const auto& image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        g_xMainWnd.DrawWithImageForComp(x-(image.shWidth-282)/2,y-(image.shHeight-466)/2,
+            image.shWidth,image.shHeight,(WORD*)m_pxWndImage->m_pbCurrImage);
+    }
+    if (m_pxWndImage->NewSetIndex(1225)) {
+        const auto& image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        g_xMainWnd.DrawWithImageForComp(x+250,y+70+int(254.0f*m_nStartLineNum/91),
+            image.shWidth,image.shHeight,(WORD*)m_pxWndImage->m_pbCurrImage);
+    }
+    HDC dc; auto* surface=g_xMainWnd.GetBackBuffer();
+    if (SUCCEEDED(surface->GetDC(&dc))) {
+        const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+        HFONT font=g_xMainWnd.CreateGameFont(face,9); HGDIOBJ previous=SelectObject(dc,font);
+        SetBkMode(dc,TRANSPARENT);
+        static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
+        const auto text=[&](const char* value,int left,int top,int width,int height,COLORREF color) {
+            RECT area={x+left,y+top,x+left+width,y+top+height}; SetTextColor(dc,color);
+            DrawTextA(dc,value,-1,&area,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+        };
+        text(captions.Get(1701).c_str(),12,20,74,16,0xf8dcfa);
+        char weight[128]; const auto& ability=g_xGameProc.m_xMyHero.m_stAbility;
+        wsprintfA(weight,"%s: %u / %u",captions.Get(2501).c_str(),ability.wWeight,ability.wMaxWeight);
+        text(weight,95,21,126,16,0x0a0a0a); text(weight,94,20,126,16,0xf8c8c8);
+        SelectObject(dc,previous); DeleteObject(font); surface->ReleaseDC(dc);
+    }
+    m_xInventoryBtn[_BTN_ID_INVENCLOSE].ChangeRect(x+242,y+423);
 	for ( nCnt = 0; nCnt < _MAX_INVEN_ITEM; nCnt++ )
 	{
 		if ( m_stInventoryItem[nCnt].bSetted )
@@ -148,20 +167,6 @@ VOID CInventoryWnd::ShowInventoryWnd()
 	}
 
 	// 腰带物品绘制。
-	for ( nCnt = 0; nCnt < _MAX_BELT_ITEM; nCnt++ )
-	{
-		if ( m_stBeltItem[nCnt].bSetted )
-		{
-			INT nStartX, nStartY;
-
-			nStartX = m_rcWnd.left+m_rcBeltCell[nCnt].left;
-			nStartY = m_rcWnd.top+m_rcBeltCell[nCnt].top;
-
-			m_stBeltItem[nCnt].xItem.DrawItem(nStartX, nStartY);
-		}
-	}
-
-	// 绘制背包窗口按钮.
 	for ( nCnt = 0; nCnt < _MAX_INVEN_BTN; nCnt++ )
 	{
 		m_xInventoryBtn[nCnt].ShowGameBtn();
@@ -380,7 +385,8 @@ INT CInventoryWnd::GetInvenNum(POINT ptMouse)
 			    m_rcWnd.left+m_rcInvenCell[nCnt].left+_INVENTORY_CELL_WIDTH, m_rcWnd.top+m_rcInvenCell[nCnt].top+_INVENTORY_CELL_HEIGHT);
 		if ( PtInRect(&rc, ptMouse) )
 		{
-			return (nCnt+m_nStartLineNum*_INVEN_CELL_XCNT);
+			const int slot=nCnt+m_nStartLineNum*_INVEN_CELL_XCNT;
+            return slot<_MAX_INVEN_ITEM ? slot : -1;
 		}
 	}
 
@@ -405,18 +411,7 @@ INT CInventoryWnd::GetInvenNum(POINT ptMouse)
 *******************************************************************************************************************/
 INT CInventoryWnd::GetBeltNum(POINT ptMouse)
 {
-	RECT	rc;
-	for ( INT nCnt = 0; nCnt < _MAX_BELT_ITEM; nCnt++ )
-	{
-		SetRect(&rc, m_rcWnd.left+m_rcBeltCell[nCnt].left, m_rcWnd.top+m_rcBeltCell[nCnt].top, 
-			    m_rcWnd.left+m_rcBeltCell[nCnt].left+_INVENTORY_CELL_WIDTH, m_rcWnd.top+m_rcBeltCell[nCnt].top+_INVENTORY_CELL_HEIGHT);
-		if ( PtInRect(&rc, ptMouse) )
-		{
-			return (nCnt);
-		}
-	}
-
-	return -1;
+    return -1; // Quick items are handled by the HUD.
 }
 
 
@@ -972,27 +967,17 @@ BOOL CInventoryWnd::OnKeyUp(LPCOMMONITEMSET pstCommonItemSet, WPARAM wParam, LPA
 BOOL CInventoryWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
 	INT nCnt, nInventoryNum, nBeltInventoryNum;
+    m_closePressed=false;
 
-	m_xInventoryBtn[_BTN_ID_INVENCLOSE	 ].ChangeRect(m_rcWnd.left+255, m_rcWnd.top+291);
+	m_xInventoryBtn[_BTN_ID_INVENCLOSE	 ].ChangeRect(m_rcWnd.left+242, m_rcWnd.top+423);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLUP	 ].ChangeRect(m_rcWnd.left+247, m_rcWnd.top+ 20);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLDOWN].ChangeRect(m_rcWnd.left+247, m_rcWnd.top+167);
-
-
-	if ( m_xInvenScrlBar.OnLButtonDown(ptMouse) )
-	{
-		FLOAT	fScrlRate;
-
-		fScrlRate	= m_xInvenScrlBar.GetScrlRate();
-		m_nStartLineNum = 11*fScrlRate;
-
-		return FALSE;
-	}
 
 
 	for( nCnt = 0; nCnt < _MAX_INVEN_BTN; nCnt++ )
 	{
 		if ( m_xInventoryBtn[nCnt].OnLButtonDown(ptMouse) )		
-			return TRUE;
+        { m_closePressed=true; return TRUE; }
 	}
 
 	nInventoryNum	  = GetInvenNum(ptMouse);
@@ -1022,18 +1007,13 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
 	INT nInventoryNum, nBeltInventoryNum;
 
-	m_xInventoryBtn[_BTN_ID_INVENCLOSE	 ].ChangeRect(m_rcWnd.left+255, m_rcWnd.top+291);
+	m_xInventoryBtn[_BTN_ID_INVENCLOSE	 ].ChangeRect(m_rcWnd.left+242, m_rcWnd.top+423);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLUP	 ].ChangeRect(m_rcWnd.left+247, m_rcWnd.top+ 20);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLDOWN].ChangeRect(m_rcWnd.left+247, m_rcWnd.top+167);
 
-	if ( m_xInvenScrlBar.OnLButtonUp(ptMouse) )
-	{
-		return TRUE;
-	}
-
-	// 关闭背包窗口.
-	if ( m_xInventoryBtn[_BTN_ID_INVENCLOSE].OnLButtonUp(ptMouse) )
-		return TRUE;
+    const bool close=m_xInventoryBtn[_BTN_ID_INVENCLOSE].OnLButtonUp(ptMouse) && m_closePressed;
+    m_closePressed=false;
+    if (close) { g_xSound.PlayLobbyEffect("105.wav"); return TRUE; }
 
 	// 滚动 Up, Down 处理.
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLUP	 ].OnLButtonUp(ptMouse);
@@ -1166,7 +1146,7 @@ BOOL CInventoryWnd::OnLButtonDoubleClick(LPCOMMONITEMSET pstCommonItemSet, POINT
 
 VOID CInventoryWnd::OnMouseMove(POINT ptMouse)
 {
-	m_xInventoryBtn[_BTN_ID_INVENCLOSE	 ].ChangeRect(m_rcWnd.left+255, m_rcWnd.top+291);
+	m_xInventoryBtn[_BTN_ID_INVENCLOSE	 ].ChangeRect(m_rcWnd.left+242, m_rcWnd.top+423);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLUP	 ].ChangeRect(m_rcWnd.left+247, m_rcWnd.top+ 20);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLDOWN].ChangeRect(m_rcWnd.left+247, m_rcWnd.top+167);
 
@@ -1186,7 +1166,7 @@ VOID CInventoryWnd::OnScrollDown()
 VOID CInventoryWnd::OnScrollUp()
 {
 //	if ( m_nStartLineNum < _INVEN_MAX_CELL_YCNT - _INVEN_CELL_YCNT )		m_nStartLineNum++;
-	if ( m_nStartLineNum < (_INVEN_MAX_CELL_YCNT-1) )
+	if ( m_nStartLineNum < (_INVEN_MAX_CELL_YCNT-_INVEN_CELL_YCNT) )
 	{
 		m_nStartLineNum++;
 	}

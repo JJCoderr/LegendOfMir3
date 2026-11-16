@@ -510,13 +510,13 @@
 /******************************************************************************************************************
 	#1. Inventory Window
 *******************************************************************************************************************/
-#define _INVEN_MAX_CELL				25
+#define _INVEN_MAX_CELL				48
 #define _BELT_MAX_CELL				6
-#define _INVEN_CELL_XCNT			5
-#define _INVEN_CELL_YCNT			5
-#define _INVEN_MAX_CELL_YCNT		12
-#define _INVEN_CELL_XSTART			44
-#define _INVEN_CELL_YSTART			55
+#define _INVEN_CELL_XCNT			6
+#define _INVEN_CELL_YCNT			8
+#define _INVEN_MAX_CELL_YCNT		100
+#define _INVEN_CELL_XSTART			17
+#define _INVEN_CELL_YSTART			60
 
 #define _BELT_CELL_XGAP				40
 #define _BELT_CELL_XSTART			18

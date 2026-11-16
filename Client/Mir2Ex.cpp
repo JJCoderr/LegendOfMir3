@@ -35,6 +35,7 @@ public:
         if (groupPanel>0 && groupPanel<5) capturePath = groupPanel==2 ? "group-create.bmp" : groupPanel==3 ? "group-invite.bmp" : groupPanel==4 ? "group-remove.bmp" : "group-panel.bmp";
         if (groupPanel>=5 && groupPanel<=10) capturePath = groupPanel==5 ? "guild-overview.bmp" : groupPanel==6 ? "guild-members.bmp" : groupPanel==8 ? "guild-denied.bmp" : groupPanel==9 ? "guild-remove.bmp" : groupPanel==10 ? "guild-break-ally.bmp" : "guild-notice.bmp";
         if (groupPanel==11) capturePath="options-panel.bmp";
+        if (groupPanel==12) capturePath="inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
         g_xGameProc.m_xInterface.CreateInterface(&g_xGameProc.m_xImage);
@@ -126,6 +127,19 @@ public:
                 guild.OnLButtonDown(edit); guild.OnLButtonUp(edit);
             }
 
+        }
+        if (groupPanel==12) {
+            auto& ui=g_xGameProc.m_xInterface; auto& bag=ui.m_xInventoryWnd;
+            ui.WindowActivate(_WND_ID_INVENTORY);
+            const bool grid=bag.GetInvenNum(POINT{536,61})==0 && bag.GetInvenNum(POINT{762,363})==47 &&
+                bag.GetInvenNum(POINT{534,61})==-1;
+            COMMONITEMSET held={}; POINT close={770,435};
+            const bool stray=!bag.OnLButtonUp(&held,close);
+            bag.OnLButtonDown(&held,close);
+            const bool closed=bag.OnLButtonUp(&held,close)!=FALSE;
+            if (FILE* report=fopen("inventory-layout-check.txt","wb")) {
+                fprintf(report,"grid=%d release_without_press=%d close_clicked=%d\n",grid,stray,closed); fclose(report);
+            }
         }
         if (groupPanel==11) {
             auto& ui=g_xGameProc.m_xInterface;
@@ -342,7 +356,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=guild-denied")==0 ? 8 :
         strcmp(lpCmdLine,"--preview=guild-remove")==0 ? 9 :
         strcmp(lpCmdLine,"--preview=guild-break-ally")==0 ? 10 :
-        strcmp(lpCmdLine,"--preview=options-panel")==0 ? 11 : 0;
+        strcmp(lpCmdLine,"--preview=options-panel")==0 ? 11 :
+        strcmp(lpCmdLine,"--preview=inventory-panel")==0 ? 12 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {
