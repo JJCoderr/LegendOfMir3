@@ -4,9 +4,6 @@
 struct IPicture;
 class CPortraitWnd : public CGameWnd {
     IPicture* preview=nullptr;
-    std::string previousHint;
-    int hintHeight=6;
-    bool hintExpanding=true;
     int ReadSelected(std::vector<BYTE>& bytes,IPicture** picture);
     void LoadPreview();
     bool Scroll(int kind,POINT point);
@@ -22,7 +19,6 @@ public:
     void Close();
     void Show();
     int HintAt(POINT point,POINT& anchor);
-    void ShowHint(POINT point);
     int ButtonAt(POINT point);
     static int RowAt(POINT point);
     int ThumbY() const;

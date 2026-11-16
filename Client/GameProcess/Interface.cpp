@@ -48,6 +48,7 @@ VOID CInterface::Init()
 {
 	m_nIdxMsgBox		= 0;
 	m_nFstLine			= 0;
+    previousHint.clear(); hintHeight=6; hintExpanding=true;
     m_chatMode = 0;
     m_chatModeChanged = false;
     for (int i=0;i<3;++i) { m_chatRejected[i]=false; m_chatReceptionFrame[i]=-1; }
@@ -536,7 +537,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     m_xGuildEditor.Show();
 	m_xMsgBox.RenderMessageBox(0);
 
-    m_xPortraitWnd.ShowHint(ptMousePos);
+    ShowButtonHint(ptMousePos);
     m_xExchangeWnd.ShowHeld(ptMousePos);
 }
 
@@ -1697,6 +1698,10 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
     m_portraitEntryPressed=false;
+    if (!m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive) {
+        if (m_xInventoryWnd.ClosePressed()) { m_bMoveFocusedWnd=FALSE; if(m_xInventoryWnd.OnLButtonUp(&m_stCommonItem,ptMouse)) WindowActivate(_WND_ID_INVENTORY); return TRUE; }
+        if (m_xStatusWnd.ClosePressed()) { m_bMoveFocusedWnd=FALSE; if(m_xStatusWnd.OnLButtonUp(&m_stCommonItem,ptMouse)) WindowActivate(_WND_ID_STATUS); return TRUE; }
+    }
     if (!m_xMsgBox.IsActive() && (m_xPortraitWnd.scrolling || m_xPortraitWnd.pressed>=0)) { if (m_xPortraitWnd.Pointer(2,ptMouse)) WindowActivate(_WND_ID_PORTRAIT); return TRUE; }
     if (!m_xMsgBox.IsActive() && m_xInventoryWnd.service.pressed) { m_xInventoryWnd.OnLButtonUp(&m_stCommonItem,ptMouse); return TRUE; }
     if (!m_xMsgBox.IsActive() && (m_xStoreWnd.pressed!=-1 || m_xStoreWnd.scrollCaptured)) {
@@ -2132,4 +2137,52 @@ LRESULT	CInterface::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 		return TRUE;
 
 	return 0L;
+}
+int CInterface::ButtonHintAt(POINT point,POINT& anchor)
+{
+    if (m_xMsgBox.IsActive() || m_xGuildEditor.m_bActive) return 0;
+    const auto resolve=[&](const RECT& panel,int frame,int x,int y,int message,bool pressed) {
+        if (pressed || !m_pxInterImg->NewSetIndex(frame)) return 0;
+        const auto info=*m_pxInterImg->m_lpstNewCurrWilImageInfo;
+        const RECT hit={panel.left+x,panel.top+y,panel.left+x+info.shWidth,panel.top+y+info.shHeight};
+        if (!PtInRect(&hit,point)) return 0;
+        anchor={hit.right,hit.bottom}; return message;
+    };
+    switch (GetWindowInMousePos(point)) {
+    case _WND_ID_INVENTORY: return resolve(m_xInventoryWnd.m_rcWnd,1221,242,423,1052,m_xInventoryWnd.ClosePressed());
+    case _WND_ID_STATUS: return resolve(m_xStatusWnd.m_rcWnd,1221,289,14,1052,m_xStatusWnd.ClosePressed());
+    case _WND_ID_QUEST:
+        for (int i=0;i<2;++i) if (const int hint=resolve(m_xQuestWnd.m_rcWnd,i?1425:1422,267,i?107:75,i?1052:2200,m_xQuestWnd.pressed==i)) return hint;
+        return 0;
+    case _WND_ID_HORSE: {
+        const int buttons[][4]={{1221,236,279,1052},{1402,19,232,4100},{1405,77,232,4101},{1408,134,232,4102},{1410,191,232,4103}};
+        for (int i=0;i<5;++i) if (const int hint=resolve(m_xHorseWnd.m_rcWnd,buttons[i][0],buttons[i][1],buttons[i][2],buttons[i][3],m_xHorseWnd.pressed==i)) return hint;
+        return 0;
+    }
+    default: return m_xPortraitWnd.HintAt(point,anchor);
+    }
+}
+void CInterface::ShowButtonHint(POINT point)
+{
+    POINT anchor; const int hint=ButtonHintAt(point,anchor); if (!hint) return;
+    static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
+    const auto& caption=captions.Get(hint); if (caption.empty()) return;
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0}; HFONT font=g_xMainWnd.CreateGameFont(face,9);
+    HDC measure=CreateCompatibleDC(NULL); auto old=SelectObject(measure,font); SIZE size={};
+    GetTextExtentPoint32A(measure,caption.data(),int(caption.size()),&size); SelectObject(measure,old); DeleteDC(measure);
+    if (previousHint!=caption) { previousHint=caption; hintExpanding=true; }
+    const int width=size.cx+12,fullHeight=size.cy+4;
+    if (hintExpanding) ++hintHeight;
+    const int height=hintExpanding?min(hintHeight,fullHeight):fullHeight;
+    if (hintExpanding && hintHeight>=fullHeight) { hintExpanding=false; hintHeight=6; }
+    const int left=min(anchor.x,800-width); RECT box={left,anchor.y-height,left+width,anchor.y};
+    DrawLegacyPanel(box,RGB(255,255,150),255,RGB(0,0,0));
+    HDC dc; auto* surface=g_xMainWnd.GetBackBuffer();
+    if (SUCCEEDED(surface->GetDC(&dc))) {
+        old=SelectObject(dc,font); SetBkMode(dc,TRANSPARENT); SetTextColor(dc,0);
+        const int saved=SaveDC(dc); IntersectClipRect(dc,box.left,box.top,box.right,box.bottom);
+        DrawTextA(dc,caption.data(),int(caption.size()),&box,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+        RestoreDC(dc,saved); SelectObject(dc,old); surface->ReleaseDC(dc);
+    }
+    DeleteObject(font);
 }

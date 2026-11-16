@@ -3,10 +3,7 @@
 
 class CHorseWnd : public CGameWnd {
     POINT m_pointer={};
-    bool m_hovered=false,m_hintExpanding=true;
-    int m_hintHeight=6;
-    std::string m_previousHint;
-    void ShowHint();
+    bool m_hovered=false;
 public:
     int pressed=-1;
     BYTE shape=0;

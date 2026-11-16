@@ -560,8 +560,10 @@ BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
 	INT nEquipNum;
 
-    const bool close=m_nativeClosePressed && NativeCloseHit(ptMouse); m_nativeClosePressed=false;
+    const bool closePressed=m_nativeClosePressed;
+    const bool close=closePressed && NativeCloseHit(ptMouse); m_nativeClosePressed=false;
     if (close) { g_xSound.PlayLobbyEffect("105.wav"); return TRUE; }
+    if (closePressed) return FALSE;
 
     if (g_xGameProc.m_xInterface.m_xExchangeWnd.GetGameWndActive() && g_xGameProc.m_xInterface.m_xExchangeWnd.returnSlot>=0) return FALSE;
 

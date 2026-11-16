@@ -143,26 +143,3 @@ int CPortraitWnd::HintAt(POINT point,POINT& anchor)
     }
     return 0;
 }
-void CPortraitWnd::ShowHint(POINT point)
-{
-    POINT anchor; const int hint=HintAt(point,anchor); if (!hint) return;
-    static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
-    const auto& caption=captions.Get(hint); if (caption.empty()) return;
-    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0}; HFONT font=g_xMainWnd.CreateGameFont(face,9);
-    HDC measure=CreateCompatibleDC(NULL); auto old=SelectObject(measure,font); SIZE size={};
-    GetTextExtentPoint32A(measure,caption.data(),int(caption.size()),&size); SelectObject(measure,old); DeleteDC(measure);
-    if (previousHint!=caption) { previousHint=caption; hintExpanding=true; }
-    const int width=size.cx+12,fullHeight=size.cy+4;
-    const int height=hintExpanding?min(++hintHeight,fullHeight):fullHeight;
-    if (hintExpanding && hintHeight>=fullHeight) { hintExpanding=false; hintHeight=6; }
-    const int left=min(anchor.x,800-width); RECT box={left,anchor.y-height,left+width,anchor.y};
-    DrawLegacyPanel(box,RGB(255,255,150),255,RGB(0,0,0));
-    HDC dc; auto* surface=g_xMainWnd.GetBackBuffer();
-    if (SUCCEEDED(surface->GetDC(&dc))) {
-        old=SelectObject(dc,font); SetBkMode(dc,TRANSPARENT); SetTextColor(dc,0);
-        const int saved=SaveDC(dc); IntersectClipRect(dc,box.left,box.top,box.right,box.bottom);
-        DrawTextA(dc,caption.data(),int(caption.size()),&box,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
-        RestoreDC(dc,saved); SelectObject(dc,old); surface->ReleaseDC(dc);
-    }
-    DeleteObject(font);
-}

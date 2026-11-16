@@ -39,6 +39,7 @@ protected:
     DWORD m_scrollTick=0;
 
 public:
+    bool ClosePressed() const { return m_closePressed; }
 	ITEMSET		m_stInventoryItem[_MAX_INVEN_ITEM];
 	ITEMSET		m_stBeltItem[_MAX_BELT_ITEM];
 

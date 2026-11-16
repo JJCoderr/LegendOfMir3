@@ -1054,7 +1054,7 @@ BOOL CInventoryWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMous
 
 BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
-    if (service.pressed || ServiceButton(ptMouse)) {
+    if (!m_closePressed && (service.pressed || ServiceButton(ptMouse))) {
         const bool confirm=service.pressed && ServiceButton(ptMouse); service.pressed=false;
         if (confirm) ConfirmService(); return FALSE;
     }
@@ -1065,9 +1065,11 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLUP	 ].ChangeRect(m_rcWnd.left+247, m_rcWnd.top+ 20);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLDOWN].ChangeRect(m_rcWnd.left+247, m_rcWnd.top+167);
 
-    const bool close=m_xInventoryBtn[_BTN_ID_INVENCLOSE].OnLButtonUp(ptMouse) && m_closePressed;
+    const bool closePressed=m_closePressed;
+    const bool close=m_xInventoryBtn[_BTN_ID_INVENCLOSE].OnLButtonUp(ptMouse) && closePressed;
     m_closePressed=false;
     if (close) { g_xSound.PlayLobbyEffect("105.wav"); return TRUE; }
+    if (closePressed) return FALSE;
     if (service.actor && SlotAt(ptMouse)>=0) { SelectServiceItem(GetInvenNum(ptMouse)); return FALSE; }
     auto& quick=g_xGameProc.m_xInterface.m_xQuickWnd;
     if (quick.heldSlot>=0) {

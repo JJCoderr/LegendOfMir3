@@ -10,6 +10,11 @@
 class CInterface
 { 
 public:
+    std::string previousHint;
+    int hintHeight=6;
+    bool hintExpanding=true;
+    int ButtonHintAt(POINT point,POINT& anchor);
+    void ShowButtonHint(POINT point);
     bool m_primaryStat[2] = {true,true};
     bool m_chatExpanded = false;
     int m_chatMode = 0;

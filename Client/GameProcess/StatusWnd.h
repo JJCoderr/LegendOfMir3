@@ -24,6 +24,7 @@ protected:
 
 
 public:
+    bool ClosePressed() const { return m_nativeClosePressed; }
 	CHAR				m_szEquipItemIdx[_EQUIP_MAX_CELL][12];
 	ITEMSET				m_stEquipItem[_EQUIP_MAX_CELL];
 	ITEMSET				m_stTakeOnItemSet;				// 将待装备的物品临时保存, 直到收到是否穿戴的消息.
