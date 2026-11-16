@@ -868,3 +868,10 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - CMyHero::OnLButtonDown在行走/攻击处理前读取实际目标Actor身份与名字颜色，调用设置页共享CanAttackHuman判定；怪物不走玩家颜色限制。未把开关替换为持续按Shift，保留正常追近目标行为。
 - Client清理83步、全目标111步构建通过；options-attack-on/off各五项全1，验证按钮、白名限制、颜色与Shift例外、默认值和配置恢复。体力数字九项回归通过。预览只写preview-attack-options.ini。
 - 已检查out/options-attack-on.png和options-attack-off.png；当前证明配置与客户端判定接线，尚未通过真实服务器玩家战斗验证完整动作/伤害结果。服务器控制的设置按钮仍待接入。
+
+### 设置页服务器开关与1401确认消息
+- 补齐选项11..14/16..18的CmList2123..2129命令，攻击模式19发送1422命令，沿用原生SendSay/CM_SAY与105.wav点击音效。服务器开关独立保存confirmed状态，点击显示!confirmed；重复点击不盲目反转确认状态。
+- 按Godot SystemOptions::receive接入SM_CLIENT_OPTIONS(1401)：nRecog七个掩码40000000/80000000/08000000/04000000/02000000/01000000/00800000，wParam攻击模式。仅确认值变化时覆盖预测显示并释放对应按下状态；重复确认保留预测帧。服务器状态不写本地INI。
+- 同步主界面私聊/行会/所有聊天接收图标和提示，保留参考所有聊天同时更新行会拒绝标记的行为。
+- Client清理83步、全部111步构建通过；options-server-on/off各六项全1，含真实按钮预测、相同确认、七个命令编号、通过fnEncodeMessage和GameProc实际接收入口的1401确认、接收按钮同步、重复消息；强制攻击五项回归通过。
+- 已检查out/options-server-on.png和options-server-off.png，展示七开关开启/关闭及攻击模式4/0。该阶段为原生客户端协议接线与离线编码消息验证，尚未证明现有游戏服务器的命令/回复兼容；实际服务器交互与完整GUI验收仍未完成。

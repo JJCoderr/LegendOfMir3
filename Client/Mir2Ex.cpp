@@ -1501,6 +1501,24 @@ public:
             if(FILE* report=fopen("options-attack-check.txt","wb")) {fprintf(report,"enabled=%d disabled=%d exceptions=%d defaults=%d persisted=%d\n",enabled,disabled,exceptions,defaults,persisted);fclose(report);}
         }
 
+        if(groupPanel==99 || groupPanel==100) {
+            auto& ui=g_xGameProc.m_xInterface;auto& options=ui.m_xOptionWnd;
+            ui.WindowActivate(_WND_ID_OPTION);options.ReceiveServerOptions(0,0);
+            const POINT toggle={options.m_rcWnd.left+189,options.m_rcWnd.top+238};
+            ui.OnLButtonDown(toggle);ui.OnLButtonUp(toggle);
+            const bool predicted=options.m_values[13] && !options.m_confirmed[2];
+            const bool unchanged=options.ReceiveServerOptions(0,0)==0 && options.m_values[13];
+            bool commands=true;for(int i=0;i<7;++i) commands &= options.RequestServerOption(i)==2123+i;
+            _TDEFAULTMESSAGE packet={};packet.wIdent=1401;packet.nRecog=LONG(0xcf800000u);packet.wParam=4;
+            char encoded[64]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));g_xGameProc.OnSocketMessageRecieve(encoded);
+            bool confirmed=options.m_attackMode==4;for(int i=0;i<7;++i) confirmed &= options.m_confirmed[i];
+            const bool reception=ui.m_chatRejected[0] && ui.m_chatRejected[1] && ui.m_chatRejected[2] && ui.m_chatReceptionFrame[0]==1338 && ui.m_chatReceptionFrame[1]==1340 && ui.m_chatReceptionFrame[2]==-1;
+            const bool repeated=options.ReceiveServerOptions(0xcf800000u,4)==0 && ui.m_chatRejected[0];
+            if(groupPanel==100) options.ReceiveServerOptions(0,0);
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==99?"options-server-on.bmp":"options-server-off.bmp";
+            if(FILE* report=fopen("options-server-check.txt","wb")) {fprintf(report,"predicted=%d unchanged=%d commands=%d confirmed=%d reception=%d repeated=%d\n",predicted,unchanged,commands,confirmed,reception,repeated);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1698,6 +1716,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=options-server-on")==0 ? 99 :
+        strcmp(lpCmdLine,"--preview=options-server-off")==0 ? 100 :
         strcmp(lpCmdLine,"--preview=options-attack-on")==0 ? 97 :
         strcmp(lpCmdLine,"--preview=options-attack-off")==0 ? 98 :
         strcmp(lpCmdLine,"--preview=options-damage-on")==0 ? 95 :

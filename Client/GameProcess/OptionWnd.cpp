@@ -26,6 +26,7 @@ VOID COptionWnd::Init()
 {
     CGameWnd::Init();
     ZeroMemory(m_values,sizeof(m_values));
+    ZeroMemory(m_confirmed,sizeof(m_confirmed));
     m_values[1]=m_values[2]=m_values[7]=m_values[8]=m_values[9]=m_values[10]=m_values[20]=true;
     m_pressed=m_hover=-1;
     m_musicLevel=m_effectsLevel=m_attackMode=0; m_audioDrag=-1;
@@ -107,6 +108,12 @@ BOOL COptionWnd::OnLButtonUp(POINT point)
         std::string message=captions.Get(id);
         g_xGameProc.m_xInterface.MsgAdd(0xffffff,33023,const_cast<char*>(message.c_str()));
         SaveAudioOptions();
+    }
+    const int serverIndex=hit>=11 && hit<=14?hit-11:hit==16?4:hit==17?5:hit==18?6:-1;
+    if(serverIndex>=0 || hit==19) {
+        static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+        std::string command=captions.Get(hit==19?1422:RequestServerOption(serverIndex));
+        g_xClientSocket.SendSay(const_cast<char*>(command.c_str()));
     }
     if (hit>=1 && hit<=3) SaveAudioOptions();
     return hit==0;
@@ -199,4 +206,31 @@ bool COptionWnd::SaveAudioOptions()
     saved=write("EffectSoundLevel",m_effectsLevel) && saved;
     if (!saved) OutputDebugStringA("Cannot save audio options.\n");
     return saved;
+}
+
+int COptionWnd::RequestServerOption(int index)
+{
+    const int buttons[]={11,12,13,14,16,17,18};
+    m_values[buttons[index]]=!m_confirmed[index];return 2123+index;
+}
+unsigned COptionWnd::ReceiveServerOptions(DWORD flags,WORD mode)
+{
+    const DWORD masks[]={0x40000000u,0x80000000u,0x08000000u,0x04000000u,0x02000000u,0x01000000u,0x00800000u};
+    const int buttons[]={11,12,13,14,16,17,18};unsigned changed=0;
+    for(int i=0;i<7;++i) {
+        const bool value=(flags&masks[i])!=0;
+        if(m_confirmed[i]!=value) {
+            m_confirmed[i]=m_values[buttons[i]]=value;changed|=1u<<i;
+            if(m_pressed==buttons[i]) m_pressed=-1;
+        }
+    }
+    m_attackMode=mode;
+    auto& ui=g_xGameProc.m_xInterface;
+    const auto reception=[&](int index,bool rejected) {
+        ui.m_chatReceptionFrame[index]=rejected?-1:1338+2*index;
+        ui.m_chatReceptionHint[index]=(index==0?2637:index==1?2639:2643)+(rejected?0:1);
+    };
+    for(int i=0;i<2;++i) if(changed&(1u<<(3+i))) {reception(i,ui.m_chatRejected[i]);ui.m_chatRejected[i]=!ui.m_chatRejected[i];}
+    if(changed&(1u<<6)) {const bool previous=ui.m_chatRejected[2];reception(2,!previous);ui.m_chatRejected[1]=ui.m_chatRejected[2]=!previous;}
+    return changed;
 }

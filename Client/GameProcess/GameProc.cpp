@@ -2829,6 +2829,9 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 
 		switch (tdm.wIdent)
 		{
+            case 1401: // MIR3 SM_CLIENT_OPTIONS
+                m_xInterface.m_xOptionWnd.ReceiveServerOptions(DWORD(tdm.nRecog),tdm.wParam);
+                break;
 			case SM_SENDNOTICE:
 			{
 				char szDecodeMsg[8192];

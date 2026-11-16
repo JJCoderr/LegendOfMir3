@@ -11,6 +11,9 @@ protected:
 
 public:
     bool m_values[21] = {};
+    bool m_confirmed[7] = {};
+    int RequestServerOption(int index);
+    unsigned ReceiveServerOptions(DWORD flags,WORD mode);
     int m_pressed=-1, m_hover=-1;
     int m_musicLevel=0, m_effectsLevel=0, m_attackMode=0;
     int m_audioDrag=-1;
