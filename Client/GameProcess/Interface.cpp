@@ -148,7 +148,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	if ( m_pxInterImg->NewSetIndex(_WNDIMGIDX_MAIN) )
 	{
 		SetRect(&m_rcMain, 
-				0, (601-m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight), 
+				0, (601-m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight),
 				m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth, 601);
 	}
 	//------------------------------------------------------------------------------------------------------------
@@ -180,25 +180,25 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 
 	//------------------------------------------------------------------------------------------------------------
 	// 按钮初始化。
-	m_xInterBtn[ 0].CreateGameBtn(m_pxInterImg, 80, 81, m_rcMain.left+204, m_rcMain.top+0);		// 交易窗口。
-	m_xInterBtn[ 1].CreateGameBtn(m_pxInterImg, 82, 83, m_rcMain.left+228, m_rcMain.top+0);		// 小地图.
-	m_xInterBtn[ 2].CreateGameBtn(m_pxInterImg, 84, 85, m_rcMain.left+252, m_rcMain.top+0);		// 武功窗口.
+	m_xInterBtn[0].CreateGameBtn(m_pxInterImg, 1170, 1170, 637, 473, _BTN_TYPE_NOFOCUS);		// 交易窗口。
+	m_xInterBtn[1].CreateGameBtn(m_pxInterImg, 1172, 1172, 637, 507, _BTN_TYPE_NOFOCUS);		// 小地图.
+	m_xInterBtn[2].CreateGameBtn(m_pxInterImg, 1174, 1174, 637, 542, _BTN_TYPE_NOFOCUS);		// 武功窗口.
 
-	m_xInterBtn[ 3].CreateGameBtn(m_pxInterImg, 90, 91, m_rcMain.left+161, m_rcMain.top+65);	// 退出游戏.
-	m_xInterBtn[ 4].CreateGameBtn(m_pxInterImg, 92, 93, m_rcMain.left+161, m_rcMain.top+101);	// 注销.
-	m_xInterBtn[ 5].CreateGameBtn(m_pxInterImg, 94, 95, m_rcMain.left+616, m_rcMain.top+66);	// 队伍.
-	m_xInterBtn[ 6].CreateGameBtn(m_pxInterImg, 96, 97, m_rcMain.left+616, m_rcMain.top+102);	// 行会.
+	m_xInterBtn[3].CreateGameBtn(m_pxInterImg, 1176, 1176, 7, 539, _BTN_TYPE_NOFOCUS);	// 退出游戏.
+	m_xInterBtn[4].CreateGameBtn(m_pxInterImg, 1178, 1178, 108, 539, _BTN_TYPE_NOFOCUS);	// 注销.
+	m_xInterBtn[5].CreateGameBtn(m_pxInterImg, 1180, 1181, 706, 475, _BTN_TYPE_FOCUS);	// 队伍.
+	m_xInterBtn[6].CreateGameBtn(m_pxInterImg, 1182, 1183, 674, 478, _BTN_TYPE_FOCUS);	// 行会.
 
 	m_xInterBtn[ 7].CreateGameBtn(m_pxInterImg, 52, 53, m_rcMain.left+397, m_rcMain.top+13);	// 腰带 UP, DOWN.
 
-	m_xInterBtn[ 8].CreateGameBtn(m_pxInterImg,100, 101, m_rcMain.left+703, m_rcMain.top+34);	// 技能窗口。
-	m_xInterBtn[ 9].CreateGameBtn(m_pxInterImg,102, 103, m_rcMain.left+718, m_rcMain.top+50);	// 聊天弹窗.
-	m_xInterBtn[10].CreateGameBtn(m_pxInterImg,104, 105, m_rcMain.left+718, m_rcMain.top+88);	// 任务.
-	m_xInterBtn[11].CreateGameBtn(m_pxInterImg,106, 107, m_rcMain.left+703, m_rcMain.top+103);	// 选项.
+	m_xInterBtn[8].CreateGameBtn(m_pxInterImg, 1184, 1185, 739, 500, _BTN_TYPE_FOCUS);	// 技能窗口。
+	m_xInterBtn[9].CreateGameBtn(m_pxInterImg, 1190, 1191, 742, 528, _BTN_TYPE_FOCUS);	// 聊天弹窗.
+	m_xInterBtn[10].CreateGameBtn(m_pxInterImg, 1186, 1187, 742, 478, _BTN_TYPE_FOCUS);	// 任务.
+	m_xInterBtn[11].CreateGameBtn(m_pxInterImg, 1188, 1189, 706, 539, _BTN_TYPE_FOCUS);	// 选项.
 	m_xInterBtn[12].CreateGameBtn(m_pxInterImg,108, 109, m_rcMain.left+664, m_rcMain.top+104);	// 帮助.
-	m_xInterBtn[13].CreateGameBtn(m_pxInterImg,110, 111, m_rcMain.left+648, m_rcMain.top+88);	// 马窗口。
-	m_xInterBtn[14].CreateGameBtn(m_pxInterImg,112, 113, m_rcMain.left+648, m_rcMain.top+50);	// 背包窗口.
-	m_xInterBtn[15].CreateGameBtn(m_pxInterImg,114, 115, m_rcMain.left+665, m_rcMain.top+34);	// 状态窗口.
+	m_xInterBtn[13].CreateGameBtn(m_pxInterImg, 1192, 1193, 674, 528, _BTN_TYPE_FOCUS);	// 马窗口。
+	m_xInterBtn[14].CreateGameBtn(m_pxInterImg, 1194, 1195, 682, 500, _BTN_TYPE_FOCUS);	// 背包窗口.
+	m_xInterBtn[15].CreateGameBtn(m_pxInterImg, 1196, 1197, 711, 498, _BTN_TYPE_FOCUS);	// 状态窗口.
 	//------------------------------------------------------------------------------------------------------------
 
 	m_xScrlBar.CreateScrlBar(m_pxInterImg, 68, _MAX_CHATLINE, 12, 84, 12);
