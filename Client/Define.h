@@ -488,7 +488,7 @@
 #define _BTN_ID_BAG					14
 #define _BTN_ID_CHAR				15
 
-#define _MAX_INTER_BTN				16
+#define _MAX_INTER_BTN				23
 #define _MAX_CHATLINE				5
 
 #define _MAX_SAVECHATLINE			50

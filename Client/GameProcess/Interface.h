@@ -16,6 +16,7 @@ public:
     struct ChatMessage { DWORD color, background; std::string text; };
     std::vector<ChatMessage> m_chatHistory;
     void ReflowChat();
+    int VisibleButtons() const { return m_chatExpanded ? 23 : 16; }
     int ChatRows() const { return m_chatExpanded ? 14 : 5; }
     CWHWilImageData m_portraits;
 	 CInterface();

@@ -13,6 +13,7 @@
 
 #include "StdAfx.h"
 #include "Common/LegacyPanel.h"
+#include "Common/LoginMessages.h"
 
 
 
@@ -202,6 +203,14 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xInterBtn[14].CreateGameBtn(m_pxInterImg, 1194, 1195, 682, 500, _BTN_TYPE_FOCUS);	// 背包窗口.
 	m_xInterBtn[15].CreateGameBtn(m_pxInterImg, 1196, 1197, 711, 498, _BTN_TYPE_FOCUS);	// 状态窗口.
 	//------------------------------------------------------------------------------------------------------------
+
+    const int chatButtons[7][3] = {
+        {1330,186,557},{1333,226,557},{1335,265,556},{1337,305,556},
+        {1338,346,556},{1340,386,556},{1342,426,556}
+    };
+    for (int i=0;i<7;++i)
+        m_xInterBtn[16+i].CreateGameBtn(m_pxInterImg,chatButtons[i][0],chatButtons[i][0],
+            chatButtons[i][1],chatButtons[i][2],_BTN_TYPE_NOFOCUS);
 
     // Godot HudLayout::hit_overrides, mapped to the CLIENT's event IDs.
     m_xInterBtn[_BTN_ID_GROUP].SetHitRect(708,476,34,19);
@@ -447,7 +456,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 	ShowGameStatus();
 
 	// 按钮.
-	for ( nCnt = 0; nCnt < _MAX_INTER_BTN; nCnt++)
+	for ( nCnt = 0; nCnt < VisibleButtons(); nCnt++)
 	{
 		m_xInterBtn[nCnt].ShowGameBtn();
 	}
@@ -1327,7 +1336,7 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
 			return TRUE;
 		}
 
-		for( INT nCnt = 0; nCnt < _MAX_INTER_BTN; nCnt++ )
+		for( INT nCnt = 0; nCnt < VisibleButtons(); nCnt++ )
 		{
 			if ( m_xInterBtn[nCnt].OnLButtonDown(ptMouse) )
 				return TRUE;
@@ -1472,13 +1481,28 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 			return TRUE;
 		}
 
-		for( INT nCnt = 0; nCnt < _MAX_INTER_BTN; nCnt++ )
+		for( INT nCnt = 0; nCnt < VisibleButtons(); nCnt++ )
 		{
 			if ( m_xInterBtn[nCnt].OnLButtonUp(ptMouse) )
 			{
                 g_xSound.PlayLobbyEffect("105.wav");
 				switch ( nCnt )
 				{
+                case 16:
+                case 17:
+                    {
+                        static CLoginMessages captions;
+                        static const bool loaded = captions.Load(".\\CmList.dat");
+                        const char* prefix = nCnt == 16 ? captions.Get(1072).c_str() : "!";
+                        g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+185,
+                            g_xMainWnd.m_rcWindow.top+534,432,15,TRUE);
+                        SetWindowTextA(g_xChatEditBox.GetSafehWnd(),prefix);
+                        ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_SHOW);
+                        SetFocus(g_xChatEditBox.GetSafehWnd());
+                        SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETSEL,strlen(prefix),strlen(prefix));
+                    }
+                    break;
+
 				case _BTN_ID_QUEST:		WindowActivate(_WND_ID_QUEST);					break;
 				case _BTN_ID_OPTION:	WindowActivate(_WND_ID_OPTION);					break;
 				case _BTN_ID_HORSE:		WindowActivate(_WND_ID_HORSE);					break;
@@ -1591,7 +1615,7 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 		return TRUE;
 	}
 
-	for( INT nCnt = 0; nCnt < _MAX_INTER_BTN; nCnt++ )
+	for( INT nCnt = 0; nCnt < VisibleButtons(); nCnt++ )
 		m_xInterBtn[nCnt].OnMouseMove(ptMouse);
 
 	INT nInterfaceWndInRect;
