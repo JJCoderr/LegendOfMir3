@@ -26,7 +26,7 @@ VOID COptionWnd::Init()
 {
     CGameWnd::Init();
     ZeroMemory(m_values,sizeof(m_values));
-    m_values[1]=m_values[2]=m_values[7]=m_values[8]=m_values[20]=true;
+    m_values[1]=m_values[2]=m_values[7]=m_values[8]=m_values[9]=m_values[20]=true;
     m_pressed=m_hover=-1;
     m_musicLevel=m_effectsLevel=m_attackMode=0; m_audioDrag=-1;
 }
@@ -100,10 +100,10 @@ BOOL COptionWnd::OnLButtonUp(POINT point)
     if (hit==2) { m_values[2]=!m_values[2]; if (m_values[2]) g_xSound.SetEnablePlay(); else g_xSound.SetDisablePlay(); }
     if (hit==3) { m_values[3]=!m_values[3]; g_xSound.m_reversePan=m_values[3]; }
     if(hit==4) {g_xGameProc.SetShadowBlend(!m_values[4]);SaveAudioOptions();}
-    if(hit==7 || hit==20) {
+    if(hit==7 || hit==9 || hit==20) {
         m_values[hit]=!m_values[hit];
         static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
-        const int id=hit==7?(m_values[7]?2646:2647):(m_values[20]?2132:2131);
+        const int id=hit==7?(m_values[7]?2646:2647):hit==9?(m_values[9]?1518:1517):(m_values[20]?2132:2131);
         std::string message=captions.Get(id);
         g_xGameProc.m_xInterface.MsgAdd(0xffffff,33023,const_cast<char*>(message.c_str()));
         SaveAudioOptions();
@@ -164,6 +164,7 @@ void COptionWnd::LoadAudioOptions(const char* path)
     m_values[3]=read("ReversePan",0)==1;
     m_values[20]=read("UserPic",1)!=0;
     m_values[7]=read("ShowMon",1)!=0;
+    m_values[9]=read("MagicLight",1)!=0;
     g_xGameProc.SetShadowBlend(read("ShadowBlend",0)!=0);
     m_musicLevel=read("BGMLevel",0);
     m_effectsLevel=read("EffectSoundLevel",0);
@@ -183,7 +184,8 @@ bool COptionWnd::SaveAudioOptions()
         char text[16]; wsprintfA(text,"%d",value);
         return WritePrivateProfileStringA("Options",key,text,m_audioOptionsPath)!=FALSE;
     };
-    bool saved=write("ShadowBlend",m_values[4]);
+    bool saved=write("MagicLight",m_values[9]);
+    saved=write("ShadowBlend",m_values[4]) && saved;
     saved=write("ShowMon",m_values[7]) && saved;
     saved=write("UserPic",m_values[20]) && saved;
     saved=write("BGM",m_values[1]) && saved;

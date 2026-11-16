@@ -421,7 +421,7 @@ BOOL CMagic::DrawLight(CLightFog* xLightFog, INT nLoopTime)
 	}
 
 
-	if ( !m_bShowLight )	return TRUE;	
+	if ( !m_bShowLight || !g_xGameProc.m_xInterface.m_xOptionWnd.m_values[9] ) return TRUE;
 
 	if ( m_bActiveState == _MAGIC_ACTIVE || m_bActiveState == _LIGHT_ACTIVE )
 	{

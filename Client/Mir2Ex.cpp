@@ -1442,6 +1442,28 @@ public:
             if(FILE* report=fopen("options-shadow-check.txt","wb")) {fprintf(report,"enabled=%d defaults=%d persisted=%d disabled=%d\n",enabled,defaults,persisted,disabled);fclose(report);}
         }
 
+
+        if(groupPanel==93 || groupPanel==94) {
+            auto& ui=g_xGameProc.m_xInterface;auto& options=ui.m_xOptionWnd;
+            class LightProbe : public CLightFog {public: bool Lit() const {for(const auto& row:m_avLight) for(const auto& vertex:row) if(vertex.color) return true;return false;} } fog;
+            CMagic magic;magic.m_bActiveState=_MAGIC_ACTIVE;magic.m_bFixed=FALSE;magic.m_bShowLight=TRUE;magic.m_bMagicNum=0;
+            magic.m_shScrnX=200;magic.m_shScrnY=200;magic.m_bLightRadius[0]=2;magic.m_bLightRadius[1]=4;magic.m_bSwingCnt=5;magic.m_bCurrSwing=0;
+            const BYTE colors[2][3]={{255,160,80},{60,40,20}};memcpy(magic.m_bLightColor,colors,sizeof(colors));magic.m_wCurrLightDelay=0;
+            options.LoadAudioOptions("./preview-light-options.ini");options.m_values[9]=true;options.SaveAudioOptions();
+            fog.Init(0);magic.DrawLight(&fog,0);const bool lit=fog.Lit();
+            ui.WindowActivate(_WND_ID_OPTION);const POINT toggle={options.m_rcWnd.left+189,options.m_rcWnd.top+118};
+            ui.OnLButtonDown(toggle);ui.OnLButtonUp(toggle);fog.Init(0);magic.DrawLight(&fog,0);
+            const bool dark=!options.m_values[9] && !fog.Lit() && magic.m_bActiveState==_MAGIC_ACTIVE;
+            options.LoadAudioOptions(nullptr);const bool defaults=options.m_values[9];options.LoadAudioOptions("./preview-light-options.ini");const bool persisted=!options.m_values[9];
+            magic.m_bActiveState=_LIGHT_ACTIVE;magic.m_bLightRadius[0]=1;magic.m_bLightRadius[1]=2;magic.m_wCurrLightDelay=0;
+            const bool lifecycle=!magic.DrawLight(&fog,201) && magic.m_bActiveState==_MAGIC_FINISH;
+            ui.OnLButtonDown(toggle);ui.OnLButtonUp(toggle);magic.m_bActiveState=_MAGIC_ACTIVE;magic.m_bLightRadius[0]=2;magic.m_bLightRadius[1]=4;fog.Init(0);magic.DrawLight(&fog,0);const bool resumed=options.m_values[9] && fog.Lit();
+            if(groupPanel==94) {ui.OnLButtonDown(toggle);ui.OnLButtonUp(toggle);}
+            const bool value=options.m_values[9];options.LoadAudioOptions(nullptr);options.m_values[9]=value;
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==93?"options-light-on.bmp":"options-light-off.bmp";
+            if(FILE* report=fopen("options-light-check.txt","wb")) {fprintf(report,"lit=%d dark=%d defaults=%d persisted=%d lifecycle=%d resumed=%d\n",lit,dark,defaults,persisted,lifecycle,resumed);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1631,6 +1653,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=options-light-on")==0 ? 93 :
+        strcmp(lpCmdLine,"--preview=options-light-off")==0 ? 94 :
         strcmp(lpCmdLine,"--preview=options-shadow-on")==0 ? 91 :
         strcmp(lpCmdLine,"--preview=options-shadow-off")==0 ? 92 :
         strcmp(lpCmdLine,"--preview=options-markers-on")==0 ? 89 :

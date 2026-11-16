@@ -849,3 +849,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - ShadowBlend默认关闭，随现有Config.ini Options读写路径保存；选项点击沿用105.wav，按Godot不额外发布阴影切换聊天提示。原调试命令同步更新设置页并保存，避免两处状态分离。
 - Client清理83步、其余目标109步构建通过。options-shadow-on/off各四项全1，验证实际按下/释放、渲染标志与全部800项颜色、默认值及保存恢复；音频九项和小地图标记五项回归通过。已检查out/options-shadow-on.png和options-shadow-off.png，预览只写preview-shadow-options.ini。
 - 本轮验证证明按钮到现有角色渲染控制变量/颜色表的接线，未在真实地图上逐像素验收角色阴影。魔法光、伤害数字、强制攻击及服务器控制选项仍待相应路径迁移。
+
+### 设置页魔法光开关接入照明网格
+- 选项9新增实际点击、CmList1518/1517提示和MagicLight配置保存/恢复，默认开启，与Godot一致；保留105.wav点击音效。
+- CMagic::DrawLight在原光照提交位置检查选项，关闭仅跳过照明网格写入，仍执行光效摇摆/衰减/结束处理；角色施法与剑技的两处SetLightRadiusWithRing也受同一选项控制。普通人物/地图静态照明不受此开关影响。
+- 全目标增量构建通过。options-light-on/off各六项全1：调用真实CMagic::DrawLight和CLightFog网格，开启有光、关闭无光、恢复有光，关闭时_LIGHT_ACTIVE仍能正常结束；同时验证默认值和保存恢复。音频九项、阴影四项回归通过。
+- 已检查out/options-light-on.png和options-light-off.png，预览只写preview-light-options.ini。该测试验证照明网格和设置状态，尚未在完整地图/实际施法场景核对最终屏幕光照效果；伤害数字、强制攻击和服务器选项继续待迁移。

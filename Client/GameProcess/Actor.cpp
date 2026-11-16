@@ -1508,7 +1508,7 @@ BOOL CActor::DrawEffect()
 						m_bLightRadius[1] = m_bEffectFrameCnt - m_bEffectFrame;
 					}
 					
-					g_xGameProc.m_xLightFog.SetLightRadiusWithRing(
+					if (g_xGameProc.m_xInterface.m_xOptionWnd.m_values[9]) g_xGameProc.m_xLightFog.SetLightRadiusWithRing(
 													  m_shScrnPosX + _CELL_WIDTH/2,
 							  						  m_shScrnPosY + _CELL_HEIGHT/2, 
 													  m_bLightRadius[0], m_bLightColor[0][0], m_bLightColor[0][1], m_bLightColor[0][2], 
@@ -1526,7 +1526,7 @@ BOOL CActor::DrawEffect()
 						m_bLightRadius[0] = m_dwCurrEffectFrame - m_dwFstEffectFrame + 2;
 						m_bLightRadius[1] = m_dwCurrEffectFrame - m_dwFstEffectFrame + 3;
 					}
-					g_xGameProc.m_xLightFog.SetLightRadiusWithRing(
+					if (g_xGameProc.m_xInterface.m_xOptionWnd.m_values[9]) g_xGameProc.m_xLightFog.SetLightRadiusWithRing(
 													  m_shScrnPosX + _CELL_WIDTH/2,
 							  						  m_shScrnPosY + _CELL_HEIGHT/2, 
 													  m_bLightRadius[0], m_bLightColor[0][0], m_bLightColor[0][1], m_bLightColor[0][2], 
