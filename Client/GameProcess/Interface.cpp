@@ -1474,7 +1474,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 						   DWORD dwCurrTick = timeGetTime();
 						   if ( (dwCurrTick - g_xGameProc.m_xMyHero.m_dwLastPKStruckTime> 10000) &&
 								(dwCurrTick - g_xGameProc.m_xMyHero.m_dwLastMagicTime   > 10000) &&
-								(dwCurrTick - g_xGameProc.m_xMyHero.m_dwLastHitTime		> 10000) || 
+								(dwCurrTick - g_xGameProc.m_xMyHero.m_dwLastHitTime		> 10000) ||
 								(g_xGameProc.m_xMyHero.m_bCurrMtn					== _MT_DIE ) )
 								SendMessage(g_xMainWnd.GetSafehWnd(), WM_DESTROY, NULL, NULL);
 						   else
@@ -1495,7 +1495,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 				}
 				break;
 			}
-		
+
 }
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
