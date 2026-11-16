@@ -600,63 +600,21 @@ VOID CInterface::ShowGameStatus()
     }
     centeredText(coordinates,0xc8ffff,g_xMainWnd.CreateGameFont(normalFace,9));
 
-	dwFntClr = RGB(255, 200, 50);
-	// 绘制各职业图标及属性值.
-	sprintf(pszBuff, "%d-%d", LOBYTE(wMyAC), HIBYTE(wMyAC));
-	SetRect(&rcStats, 422, 584, 483, 599);
-	g_xMainWnd.PutsHan(NULL, rcStats, dwFntClr, RGB(0, 0, 0), pszBuff);
-
-	SetRect(&rcStats, 520, 584, 581, 599);
-	switch ( bJob )
-	{
-	case _JOB_DOSA:		
-		{
-			wJobIcon = 66;
-			wImgNum	 = 123;
-			sprintf(pszBuff, "%d-%d", LOBYTE(wMySC), HIBYTE(wMySC));
-			g_xMainWnd.PutsHan(NULL, rcStats, dwFntClr, RGB(0, 0, 0), pszBuff);
-		}
-		break;
-	case _JOB_SULSA:	
-		{
-			wJobIcon = 65;	
-			wImgNum	 = 124;
-			sprintf(pszBuff, "%d-%d", LOBYTE(wMyMC), HIBYTE(wMyMC));
-			g_xMainWnd.PutsHan(NULL, rcStats, dwFntClr, RGB(0, 0, 0), pszBuff);
-		}
-		break;
-	case _JOB_JUNSA:	
-		{
-			wJobIcon = 64;
-			wImgNum	 = 122;
-			sprintf(pszBuff, "%d-%d", LOBYTE(wMyDC), HIBYTE(wMyDC));
-			g_xMainWnd.PutsHan(NULL, rcStats, dwFntClr, RGB(0, 0, 0), pszBuff);
-		}
-		break;
-	}
-	if ( m_pxInterImg->NewSetIndex(wJobIcon) )
-	{
- 		g_xMainWnd.DrawWithImageForComp(m_rcMain.left+82, m_rcMain.top+71,
-										m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth,
-										m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight,
-										(WORD*)m_pxInterImg->m_pbCurrImage);
-	}
-	// AC 标记.
-	if ( m_pxInterImg->NewSetIndex(120) )
-	{
- 		g_xMainWnd.DrawWithImageForComp(m_rcMain.left+391, m_rcMain.top+136,
-										m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth,
-										m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight,
-										(WORD*)m_pxInterImg->m_pbCurrImage);
-	}
-	// DC, MC, SC
-	if ( m_pxInterImg->NewSetIndex(wImgNum) )
-	{
- 		g_xMainWnd.DrawWithImageForComp(m_rcMain.left+487, m_rcMain.top+136,
-										m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth,
-										m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight,
-										(WORD*)m_pxInterImg->m_pbCurrImage);
-	}
+    const WORD ranges[2] = {
+        m_primaryStat[0] ? wMyAC : ability.wMAC,
+        m_primaryStat[1] ? wMyDC : bJob == _JOB_DOSA ? wMySC : wMyMC
+    };
+    for (int side = 0; side < 2; ++side) {
+        const int frame = 1500 + side + (m_primaryStat[side] ? 0 : 2);
+        if (m_pxInterImg->NewSetIndex(frame)) {
+            const auto& image = *m_pxInterImg->m_lpstNewCurrWilImageInfo;
+            g_xMainWnd.DrawWithImageForComp(side ? 715 : 635,572,
+                image.shWidth,image.shHeight,(WORD*)m_pxInterImg->m_pbCurrImage);
+        }
+        sprintf(pszBuff,"%d-%d",LOBYTE(ranges[side]),HIBYTE(ranges[side]));
+        centeredText(side ? RECT{742,570,798,594} : RECT{663,570,713,594},
+            0x32c8ff,g_xMainWnd.CreateGameFont(normalFace,9));
+    }
 }
 
 
@@ -1344,6 +1302,14 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
 	}
 	else
 	{
+        if (GetWindowInMousePos(ptMouse) == -1 && ptMouse.y >= 570 && ptMouse.y < 590) {
+            const int side = ptMouse.x >= 634 && ptMouse.x < 664 ? 0 :
+                ptMouse.x >= 717 && ptMouse.x < 747 ? 1 : -1;
+            if (side >= 0) {
+                m_primaryStat[side] = !m_primaryStat[side];
+                return TRUE;
+            }
+        }
 		if ( m_xScrlBar.OnLButtonDown(ptMouse) )
 		{
 			FLOAT	fScrlRate;
