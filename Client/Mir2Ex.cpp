@@ -34,6 +34,7 @@ public:
         if (exitDialog) capturePath = "hud-exit.bmp";
         if (groupPanel>0 && groupPanel<5) capturePath = groupPanel==2 ? "group-create.bmp" : groupPanel==3 ? "group-invite.bmp" : groupPanel==4 ? "group-remove.bmp" : "group-panel.bmp";
         if (groupPanel>=5 && groupPanel<=10) capturePath = groupPanel==5 ? "guild-overview.bmp" : groupPanel==6 ? "guild-members.bmp" : groupPanel==8 ? "guild-denied.bmp" : groupPanel==9 ? "guild-remove.bmp" : groupPanel==10 ? "guild-break-ally.bmp" : "guild-notice.bmp";
+        if (groupPanel==20 || groupPanel==21) capturePath=groupPanel==20?"skills-panel.bmp":"skills-scrolled.bmp";
         if (groupPanel==11) capturePath="options-panel.bmp";
         if (groupPanel>=15 && groupPanel<=19) capturePath=groupPanel==19?"status-equipment.bmp":groupPanel==18?"status-identity.bmp":groupPanel==16?"status-elements.bmp":groupPanel==17?"status-tooltip.bmp":"status-panel.bmp";
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
@@ -226,6 +227,51 @@ public:
             if (FILE* report=fopen("inventory-layout-check.txt","wb")) {
                 fprintf(report,"grid=%d release_without_press=%d close_clicked=%d scroll_end=%d scroll_released=%d\n",grid,stray,closed,scrollEnd,released); fprintf(report,"icon_samples=%d large_icon=%d multi_hit=%d picked=%d moved=%d\n",samples,largeIcon,multiHit,picked,moved); fprintf(report,"collision=%d freed=%d layout_restored=%d server_records_preserved=%d\n",collision,freed,layoutRestored,serverPreserved); fprintf(report,"placement_green=%d placement_red=%d\n",green,red); fprintf(report,"gold_unsigned=%d gold_updated=%d\n",goldUnsigned,goldUpdated); fclose(report);
             }
+        }
+        if (groupPanel==20 || groupPanel==21) {
+            auto& ui=g_xGameProc.m_xInterface; auto& skills=ui.m_xStatusWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].NewLoad("./Data/MIcon.wil");
+            const int ids[]={1,5,9,23,22,113,39,41,67,2,6,17,3,7,12,25,26,34,103,107,102,106,108};
+            skills.m_bMyMagicCnt=sizeof(ids)/sizeof(ids[0]);
+            skills.m_pstMyMagic=new CLIENTMAGICRCD[skills.m_bMyMagicCnt]{};
+            for (int i=0;i<skills.m_bMyMagicCnt;++i) {
+                auto& skill=skills.m_pstMyMagic[i]; skill.stStdMagic.wMagicID=ids[i];
+                skill.bLevel=i%4; skill.nCurrTrain=120; skill.stStdMagic.nTrain[skill.bLevel]=500;
+                wsprintfA(skill.stStdMagic.szMagicName,"Skill %d",ids[i]);
+            }
+            lstrcpyA(skills.m_pstMyMagic[0].stStdMagic.szMagicName,"\xbb\xf9\xb1\xbe\xbd\xa3\xca\xf5");
+            skills.m_pstMyMagic[0].bUseKey='1';
+            skills.SetStatusWndType(_TYPE_SETMAGIC); ui.WindowActivate(_WND_ID_STATUS);
+            const bool origin=skills.m_rcWnd.left==348 && skills.m_rcWnd.top==0 && skills.m_nWidth==360 && skills.m_nHeight==488;
+            skills.m_rcWnd={350,2,710,490}; skills.SetStatusWndType(_TYPE_EQUIP);
+            const bool restoredStatus=skills.m_rcWnd.left==0 && skills.m_rcWnd.top==0;
+            skills.SetStatusWndType(_TYPE_SETMAGIC); const bool restoredSkills=skills.m_rcWnd.left==350 && skills.m_rcWnd.top==2;
+            skills.m_rcWnd={348,0,708,488};
+            COMMONITEMSET held={}; POINT close={670,430};
+            const bool stray=!skills.OnLButtonUp(&held,close);
+            skills.OnLButtonDown(&held,POINT{380,80});
+            const bool selected=skills.m_skillSelected[0]==0 && skills.SkillAt(POINT{380,80})==0;
+            skills.OnLButtonUp(&held,POINT{380,80});
+            skills.OnLButtonDown(&held,POINT{635,35}); skills.OnLButtonUp(&held,POINT{635,35});
+            const bool tab=skills.m_skillTab==7;
+            for (int i=0;i<8;++i) skills.OnScrollUp();
+            const bool bottom=skills.m_skillScroll==190;
+            for (int i=0;i<8;++i) skills.OnScrollDown();
+            const bool top=skills.m_skillScroll==0;
+            skills.m_skillScrollTime=GetTickCount()-20;
+            const bool captured=skills.SkillScrollInput(0,POINT{673,104}) && skills.m_skillScrollCaptured;
+            ui.OnMouseMove(POINT{790,580}); const bool dragged=skills.m_skillScroll==190;
+            ui.OnLButtonUp(POINT{790,580}); const bool released=!skills.m_skillScrollCaptured;
+            skills.OnLButtonDown(&held,close); ui.OnLButtonUp(POINT{790,580});
+            const bool outsideRelease=skills.m_skillPressed==-1 && !skills.OnLButtonUp(&held,close);
+            skills.OnLButtonDown(&held,close); const bool closed=skills.OnLButtonUp(&held,close)!=FALSE;
+            if (FILE* report=fopen("skill-layout-check.txt","wb")) {
+                fprintf(report,"stray_release=%d selected=%d tab=%d bottom=%d top=%d captured=%d dragged=%d released=%d close=%d\n",
+                    stray,selected,tab,bottom,top,captured,dragged,released,closed);
+                fprintf(report,"origin=%d status_position=%d skill_position=%d outside_release=%d\n",origin,restoredStatus,restoredSkills,outsideRelease); fclose(report);
+            }
+            skills.m_skillTab=groupPanel==20?0:7; skills.m_skillScroll=groupPanel==20?0:190;
+            if (groupPanel==21) skills.m_skillSelected[7]=13;
         }
         if (groupPanel>=15 && groupPanel<=19) {
             auto& ui=g_xGameProc.m_xInterface; auto& status=ui.m_xStatusWnd;
@@ -500,7 +546,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=status-elements")==0 ? 16 :
         strcmp(lpCmdLine,"--preview=status-tooltip")==0 ? 17 :
         strcmp(lpCmdLine,"--preview=status-identity")==0 ? 18 :
-        strcmp(lpCmdLine,"--preview=status-equipment")==0 ? 19 : 0;
+        strcmp(lpCmdLine,"--preview=status-equipment")==0 ? 19 :
+        strcmp(lpCmdLine,"--preview=skills-panel")==0 ? 20 :
+        strcmp(lpCmdLine,"--preview=skills-scrolled")==0 ? 21 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

@@ -1,6 +1,7 @@
 #ifndef _CSTATUSWND_H
 #define _CSTATUSWND_H
 #include <string>
+#include "SkillLayout.h"
 
 
 
@@ -66,6 +67,14 @@ public:
 	LPCLIENTMAGICRCD	m_pstMyMagic;
 
 public:
+    RECT m_statusPosition={0,0,328,466}, m_skillPosition={348,0,708,488};
+    int m_skillTab=0, m_skillScroll=0, m_skillPressed=-1;
+    int m_skillSelected[8]={-1,-1,-1,-1,-1,-1,-1,-1};
+    bool m_skillScrollCaptured=false;
+    DWORD m_skillScrollTime=0;
+    int SkillButtonAt(POINT point);
+    int SkillAt(POINT point);
+    bool SkillScrollInput(int kind,POINT point);
     static int EquipmentPreviewFrame(int mode,int slot);
     std::string m_identityTertiary, m_identityBadge;
     BYTE m_elementValues[3][7]={};
@@ -82,7 +91,21 @@ public:
 
 	__inline VOID SetStatusWndType(BYTE bType)
 	{
-		m_bType = bType;
+        if ((m_bType==_TYPE_SETMAGIC)!=(bType==_TYPE_SETMAGIC)) {
+            if (m_bType==_TYPE_SETMAGIC) { m_skillPosition=m_rcWnd; m_rcWnd=m_statusPosition; }
+            else { m_statusPosition=m_rcWnd; m_rcWnd=m_skillPosition; }
+            m_skillPressed=-1; m_skillScrollCaptured=false;
+        }
+        if (bType==_TYPE_SETMAGIC && m_bMyMagicCnt) {
+            bool populated=false;
+            for (int i=0;i<m_bMyMagicCnt;++i) if (SkillLayout::category(m_pstMyMagic[i].stStdMagic.wMagicID)==m_skillTab) populated=true;
+            if (!populated) {
+                int first=7;
+                for (int i=0;i<m_bMyMagicCnt;++i) first=min(first,SkillLayout::category(m_pstMyMagic[i].stStdMagic.wMagicID));
+                m_skillTab=first;
+            }
+        }
+        m_bType = bType;
 		switch ( m_bType )
 		{
         case _TYPE_EQUIP:
@@ -91,7 +114,8 @@ public:
             m_rcWnd.right=m_rcWnd.left+328; m_rcWnd.bottom=m_rcWnd.top+466;
             break;
 		case _TYPE_SETMAGIC:
-			ResetWndImg(_WNDIMGIDX_SKILLSET);
+			m_nFrameImgIdx=1620; m_nWidth=360; m_nHeight=488;
+            m_rcWnd.right=m_rcWnd.left+360; m_rcWnd.bottom=m_rcWnd.top+488;
 			break;
 		}
 	}

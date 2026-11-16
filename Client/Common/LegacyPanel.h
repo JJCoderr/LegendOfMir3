@@ -24,7 +24,7 @@ inline void DrawLegacyPanel(RECT box, COLORREF fill, BYTE alpha, COLORREF border
 enum class SelectionBlend { Normal, Inactive, Shadow, Additive };
 
 inline RECT DrawSelectionFrame(CWHWilImageData& image, int frame, int x, int y,
-    SelectionBlend blend, bool useOffset = true, BYTE sourceAlpha = 0)
+    SelectionBlend blend, bool useOffset = true, BYTE sourceAlpha = 0, const RECT* clip = nullptr)
 {
     if (!image.NewSetIndex(frame)) return {};
     const auto& info = *image.m_lpstNewCurrWilImageInfo;
@@ -39,7 +39,7 @@ inline RECT DrawSelectionFrame(CWHWilImageData& image, int frame, int x, int y,
         const WORD* end = run + *next;
         next = end;
         const int dy = y + sy;
-        if (dy < 0 || dy >= int(surface.dwHeight)) continue;
+        if (dy < 0 || dy >= int(surface.dwHeight) || (clip && (dy<clip->top || dy>=clip->bottom))) continue;
         auto* row = reinterpret_cast<WORD*>(static_cast<BYTE*>(surface.lpSurface) + dy * surface.lPitch);
         int dx = x;
         while (run + 1 < end) {
@@ -47,7 +47,7 @@ inline RECT DrawSelectionFrame(CWHWilImageData& image, int frame, int x, int y,
             if (tag == 0xc0) { dx += count; continue; }
             if (tag < 0xc1 || tag > 0xc3 || run + count > end) break;
             for (int i = 0; i < count; ++i, ++dx) {
-                if (dx < 0 || dx >= int(surface.dwWidth)) continue;
+                if (dx < 0 || dx >= int(surface.dwWidth) || (clip && (dx<clip->left || dx>=clip->right))) continue;
                 const WORD pixel = run[i];
                 int r = pixel >> 11, g = (pixel >> 5) & 63, b = pixel & 31;
                 if (blend == SelectionBlend::Inactive) {

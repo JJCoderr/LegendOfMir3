@@ -1563,6 +1563,10 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
+    if (m_xStatusWnd.m_skillScrollCaptured || m_xStatusWnd.m_skillPressed>=0) {
+        if (m_xStatusWnd.OnLButtonUp(&m_stCommonItem,ptMouse)) WindowActivate(_WND_ID_STATUS);
+        return TRUE;
+    }
     if (m_xInventoryWnd.m_scrollCaptured) { m_xInventoryWnd.OnLButtonUp(&m_stCommonItem,ptMouse); return TRUE; }
     if (m_xOptionWnd.m_audioDrag>=0) { m_xOptionWnd.OnLButtonUp(ptMouse); return TRUE; }
     if (m_xGuildWnd.m_scrollCaptured) { m_xGuildWnd.OnLButtonUp(ptMouse); return TRUE; }
@@ -1730,6 +1734,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 *******************************************************************************************************************/
 BOOL CInterface::OnMouseMove(POINT ptMouse)
 {
+    if (m_xStatusWnd.m_skillScrollCaptured) { m_xStatusWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xInventoryWnd.m_scrollCaptured) { m_xInventoryWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xOptionWnd.m_audioDrag>=0) { m_xOptionWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xGuildWnd.m_scrollCaptured) { m_xGuildWnd.OnMouseMove(ptMouse); return TRUE; }

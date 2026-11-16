@@ -42,6 +42,9 @@ VOID CStatusWnd::Init()
 
 	m_bType	= _TYPE_EQUIP;
     m_nativeClosePressed=false;
+    m_statusPosition={0,0,328,466}; m_skillPosition={348,0,708,488};
+    m_skillTab=0; m_skillScroll=0; m_skillPressed=-1; m_skillScrollCaptured=false; m_skillScrollTime=0;
+    for (int i=0;i<8;++i) m_skillSelected[i]=-1;
     ZeroMemory(m_elementValues,sizeof(m_elementValues)); m_showNativeHint=false;
     m_identityTertiary.clear(); m_identityBadge.clear();
 	m_nStartLineNum = 0;
@@ -68,7 +71,7 @@ VOID CStatusWnd::Init()
 VOID CStatusWnd::Destory()
 {
 	CGameWnd::Destroy();
-	SAFE_DELETE(m_pstMyMagic);
+	delete[] m_pstMyMagic; m_pstMyMagic=NULL;
 	Init();
 }
 
@@ -117,68 +120,9 @@ VOID CStatusWnd::CreateStatusWnd(INT nID, CWHWilImageData* pxWndImage, INT nFram
 
 VOID CStatusWnd::ShowStatusWnd()
 {
-    if (m_bType!=_TYPE_SETMAGIC) { ShowNativeStatus(); return; }
-	RECT rcID;
-	switch ( m_bType )
-	{
-	case _TYPE_EQUIP:
-		ShowCharEquipWnd();
-		SetRect(&rcID, m_rcWnd.left+81, m_rcWnd.top+38, m_rcWnd.left+173, m_rcWnd.top+50);
-		g_xMainWnd.PutsHan(NULL, rcID, RGB(255, 250, 180), RGB(0, 0, 0), g_xGameProc.m_xMyHero.m_szName, NULL);
-		
-		rcID.top		+= 15;
-		rcID.bottom		+= 15;
-
-		g_xMainWnd.PutsHan(NULL, rcID, RGB(255, 250, 180), RGB(0, 0, 0), g_xGameProc.m_xMyHero.m_szGuildName, NULL);
-
-		if ( g_xGameProc.m_xImage.m_xImageList[_IMAGE_INTER].NewSetIndex(204) )
-		{
-			g_xMainWnd.DrawWithImageForComp(
-											m_rcWnd.left+187, 
-											m_rcWnd.top+266, 
-											g_xGameProc.m_xImage.m_xImageList[_IMAGE_INTER].m_lpstNewCurrWilImageInfo->shWidth, 
-											g_xGameProc.m_xImage.m_xImageList[_IMAGE_INTER].m_lpstNewCurrWilImageInfo->shHeight,
-											(WORD*)(g_xGameProc.m_xImage.m_xImageList[_IMAGE_INTER].m_pbCurrImage));
-		}
-
-
-//		g_xMainWnd.DrawWithGDI(m_rcWnd, NULL, RGB(255, 250, 180), 1);
-
-		break;
-	case _TYPE_STATUS:
-
-		ShowCharEquipWnd();
-		SetRect(&rcID, m_rcWnd.left+81, m_rcWnd.top+38, m_rcWnd.left+173, m_rcWnd.top+50);
-		g_xMainWnd.PutsHan(NULL, rcID, RGB(255, 250, 180), RGB(0, 0, 0), g_xGameProc.m_xMyHero.m_szName, g_xMainWnd.CreateGameFont("Arial", 10, 0, FW_BOLD));
-
-		ShowCharStatus();
-
-		if ( g_xGameProc.m_xImage.m_xImageList[_IMAGE_INTER].NewSetIndex(203) )
-		{
-			g_xMainWnd.DrawWithImageForComp(
-											m_rcWnd.left+187, 
-											m_rcWnd.top+266, 
-											g_xGameProc.m_xImage.m_xImageList[_IMAGE_INTER].m_lpstNewCurrWilImageInfo->shWidth, 
-											g_xGameProc.m_xImage.m_xImageList[_IMAGE_INTER].m_lpstNewCurrWilImageInfo->shHeight,
-											(WORD*)(g_xGameProc.m_xImage.m_xImageList[_IMAGE_INTER].m_pbCurrImage));
-		}
-
-//		g_xMainWnd.DrawWithGDI(m_rcWnd, NULL, RGB(255, 250, 180), 1);
-
-		break;
-	case _TYPE_SETMAGIC:
-		ShowCharSetMagicWnd();
-		SetRect(&rcID, m_rcWnd.left+81, m_rcWnd.top+38, m_rcWnd.left+173, m_rcWnd.top+50);
-		g_xMainWnd.PutsHan(NULL, rcID, RGB(255, 250, 180), RGB(0, 0, 0), g_xGameProc.m_xMyHero.m_szName, g_xMainWnd.CreateGameFont("Arial", 10, 0, FW_BOLD));
-		break;
-	}
-
-	m_xStatusBtn[_BTN_ID_STATUSCLOSE].ShowGameBtn();
-	m_xStatusBtn[_BTN_ID_STATUS].ShowGameBtn();
-	m_xStatusBtn[_BTN_ID_STATUSMAGIC].ShowGameBtn();
+    if (m_bType==_TYPE_SETMAGIC) ShowCharSetMagicWnd();
+    else ShowNativeStatus();
 }
-
-
 
 VOID CStatusWnd::SetStatusBtnInit()
 {
@@ -627,91 +571,12 @@ VOID CStatusWnd::ShowCharStatus()
 	角色魔法窗口相关.
 
 *******************************************************************************************************************/
-VOID CStatusWnd::ShowCharSetMagicWnd()
-{
-	INT nLine, nCnt, nStartX, nStartY;
-	CHAR szKey[MAX_PATH];
-	CHAR szLevel[MAX_PATH];
-
-/*	CHAR* szSkillName[] =
-	{
-		"半月剑法",   "暗燃术",   "火焰风",   "降魔真法", "大地援护",   "焰蛇掌",	"无怠步",     "雷魂击",   "亚空行法", "狮子轮回", "火焰掌",	    "恢复术",
-		"结界",	      "大恢复",   "雷雪花",   "雷印掌",   "白骨召唤术", "冰雪风",	"大隐身",     "咒术之幕", "探气破燃", "地焰术",   "爆杀界",     "爆裂波",
-		"金刚火焰掌", "锐刀",	  "御剑术",	  "强击",	  "焰火诀",     "隐身",		"神兽召唤",	  "日光剑法",  "外修剑法",
-	};
-*/
-	ShowGameWnd();
-
-	for ( nCnt = 0; nCnt < _MAGIC_MAX_CELL; nCnt++ )
-	{
-		nLine = nCnt + m_nStartLineNum;
-
-		if ( nLine >= m_bMyMagicCnt )			break;
-
-		nStartX = m_rcWnd.left+m_rcMagicCell[nCnt].left;
-		nStartY = m_rcWnd.top +m_rcMagicCell[nCnt].top;
-
-		INT nMagicImgIdx = m_pstMyMagic[nLine].stStdMagic.wMagicID * 2;
-		g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].NewSetIndex(nMagicImgIdx);
-		g_xMainWnd.DrawWithImageForComp(
-										nStartX, 
-										nStartY, 
-										g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].m_lpstNewCurrWilImageInfo->shWidth, 
-										g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].m_lpstNewCurrWilImageInfo->shHeight,
-										(WORD*)(g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].m_pbCurrImage));
-
-		g_xMainWnd.PutsHan(NULL, nStartX+50, nStartY+5, RGB(255, 255, 220), RGB(0, 0, 0), m_pstMyMagic[nLine].stStdMagic.szMagicName);
-
-		if ( m_pstMyMagic[nLine].bUseKey != 0 )
-		{
-			nMagicImgIdx = m_pstMyMagic[nLine].stStdMagic.wMagicID * 2 + 1;
-			g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].NewSetIndex(nMagicImgIdx);
-			g_xMainWnd.DrawWithImageForComp(
-											nStartX, 
-											nStartY, 
-											g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].m_lpstNewCurrWilImageInfo->shWidth, 
-											g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].m_lpstNewCurrWilImageInfo->shHeight,
-											(WORD*)(g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].m_pbCurrImage));
-
-			sprintf(szKey, "F%c", (char)m_pstMyMagic[nLine].bUseKey);
-			g_xMainWnd.PutsHan(NULL, nStartX+140, nStartY+7, RGB(255, 255, 255), RGB(125, 125, 255), szKey);
-		}
-
-	
-		if ( m_pstMyMagic[nLine].bLevel < 3 )
-		{
-			sprintf(szLevel, "%d        %d/%d", m_pstMyMagic[nLine].bLevel, m_pstMyMagic[nLine].nCurrTrain, m_pstMyMagic[nLine].stStdMagic.nTrain[m_pstMyMagic[nLine].bLevel]);
-			g_xMainWnd.PutsHan(NULL, nStartX+50, nStartY+23, RGB(255, 255, 220), RGB(0, 0, 0), szLevel);
-		}
-		else
-		{
-			sprintf(szLevel, "%d        ", m_pstMyMagic[nLine].bLevel);
-			g_xMainWnd.PutsHan(NULL, nStartX+50, nStartY+23, RGB(255, 255, 220), RGB(0, 0, 0), szLevel);
-		}
-
-		m_xMagicScrlBtn[0].ShowGameBtn();
-		m_xMagicScrlBtn[1].ShowGameBtn();
-	}
-}
-
+// Native skill-tree renderer and pointer controls are below.
 
 BOOL CStatusWnd::SetMagicKey(POINT ptMouse, BYTE bKey)
 {
-	RECT rc;
-	INT  nCnt, nLine;
-	for ( nCnt = 0; nCnt < _MAGIC_MAX_CELL; nCnt++ )
-	{
-		nLine = nCnt + m_nStartLineNum;
-
-		if ( nLine >= m_bMyMagicCnt )			break;
-
-		rc.left   = m_rcWnd.left + m_rcMagicCell[nCnt].left;
-		rc.top	  = m_rcWnd.top  + m_rcMagicCell[nCnt].top;
-		rc.right  = m_rcWnd.left + m_rcMagicCell[nCnt].right;
-		rc.bottom = m_rcWnd.top	 + m_rcMagicCell[nCnt].bottom;
-
-		if ( PtInRect(&rc, ptMouse) )
-		{
+    const int nLine=SkillAt(ptMouse);
+    if (nLine>=0) {
 			for ( INT nLoop = 0; nLoop < m_bMyMagicCnt; nLoop++ )
 			{
 				if ( m_pstMyMagic[nLoop].bUseKey == bKey )
@@ -727,9 +592,8 @@ BOOL CStatusWnd::SetMagicKey(POINT ptMouse, BYTE bKey)
 
 				g_xClientSocket.SendMagicKeyChange(m_pstMyMagic[nLine].bUseKey, m_pstMyMagic[nLine].stStdMagic.wMagicID);
 			}
-			return TRUE;
-		}
-	}
+        return TRUE;
+    }
 
 	return FALSE;
 }
@@ -773,50 +637,10 @@ LPCLIENTMAGICRCD CStatusWnd::GetMagicByKey(BYTE bKey)
 
 BOOL CStatusWnd::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse)
 {
-	INT	 nLine, nCnt;
-	BOOL bCheck;
-	RECT rc;
-
-	if ( !PtInRect(&m_rcWnd, ptMouse) )		return TRUE;
-
-	bCheck = FALSE;
-
-	for ( nCnt = 0; nCnt < _MAGIC_MAX_CELL; nCnt++ )
-	{
-		nLine = nCnt + m_nStartLineNum;
-
-		rc.left  = m_rcWnd.left + m_rcMagicCell[nCnt].left;
-		rc.top	 = m_rcWnd.top  + m_rcMagicCell[nCnt].top;
-		rc.right = m_rcWnd.left + m_rcMagicCell[nCnt].right;
-		rc.bottom= m_rcWnd.top	+ m_rcMagicCell[nCnt].bottom;
-		if ( PtInRect(&rc, ptMouse) )
-		{
-			bCheck = TRUE;
-			break;
-		}
-	}
-
-	if ( !bCheck ) 							return TRUE;
-
-	if ( m_bType == _TYPE_SETMAGIC )
-	{
-		switch ( wParam )
-		{
-		case VK_F1:		SetMagicKey(ptMouse, '1');		return TRUE;
-		case VK_F2:		SetMagicKey(ptMouse, '2');		return TRUE;
-		case VK_F3:		SetMagicKey(ptMouse, '3');		return TRUE;
-		case VK_F4:		SetMagicKey(ptMouse, '4');		return TRUE;
-		case VK_F5:		SetMagicKey(ptMouse, '5');		return TRUE;
-		case VK_F6:		SetMagicKey(ptMouse, '6');		return TRUE;
-		case VK_F7:		SetMagicKey(ptMouse, '7');		return TRUE;
-		case VK_F8:		SetMagicKey(ptMouse, '8');		return TRUE;
-		}
-	}
-
-	return FALSE;
+    if (m_bType!=_TYPE_SETMAGIC || SkillAt(ptMouse)<0) return FALSE;
+    if (wParam>=VK_F1 && wParam<=VK_F8) return SetMagicKey(ptMouse,BYTE('1'+wParam-VK_F1));
+    return FALSE;
 }
-
-
 
 BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
@@ -826,54 +650,15 @@ BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
         const bool close=m_nativeClosePressed && NativeCloseHit(ptMouse); m_nativeClosePressed=false;
         if (close) { g_xSound.PlayLobbyEffect("105.wav"); return TRUE; }
     } else {
-	m_xStatusBtn[_BTN_ID_STATUSCLOSE].ChangeRect(m_rcWnd.left+222, m_rcWnd.top+298);
-	m_xStatusBtn[_BTN_ID_STATUS     ].ChangeRect(m_rcWnd.left+_BTN_ID_STATUS_X, m_rcWnd.top+_BTN_ID_STATUS_Y);
-	m_xStatusBtn[_BTN_ID_STATUSMAGIC].ChangeRect(m_rcWnd.left+_BTN_ID_STATUSMAGIC_X, m_rcWnd.top+_BTN_ID_STATUSMAGIC_Y);
-	
-	if ( m_xStatusBtn[_BTN_ID_STATUSCLOSE].OnLButtonUp(ptMouse) )		return TRUE;
-	if ( m_xStatusBtn[_BTN_ID_STATUS].OnLButtonUp(ptMouse) )
-	{
-		if ( m_bType == _TYPE_STATUS )
-		{
-			ResetWndImg(_WNDIMGIDX_ITEMSET);
-			m_bType = _TYPE_EQUIP;
-			m_xStatusBtn[_BTN_ID_STATUS].ResetGameBtn(212, 213);
-		}
-		else
-		{
-			ResetWndImg(_WNDIMGIDX_STATUS);
-			m_bType = _TYPE_STATUS; 
-			m_xStatusBtn[_BTN_ID_STATUS].ResetGameBtn(210, 211);
-
-			if ( m_rcWnd.right > 800 )
-			{
-				m_rcWnd.left  = 260;
-				m_rcWnd.right = 800;
-			}
-		}
-	}
-	if ( m_xStatusBtn[_BTN_ID_STATUSMAGIC].OnLButtonUp(ptMouse) )
-	{
-		m_bType = _TYPE_SETMAGIC;
-		ResetWndImg(_WNDIMGIDX_SKILLSET);
-	}
-
-	if ( m_bType == _TYPE_SETMAGIC )
-	{
-		m_xMagicScrlBtn[0].ChangeRect(m_rcWnd.left+232, m_rcWnd.top+147);
-		m_xMagicScrlBtn[1].ChangeRect(m_rcWnd.left+232, m_rcWnd.top+253);
-		if ( m_xMagicScrlBtn[0].OnLButtonUp(ptMouse) )
-		{
-			if ( m_nStartLineNum > 0 )									m_nStartLineNum--;
-		}
-
-		if ( m_xMagicScrlBtn[1].OnLButtonUp(ptMouse) )
-		{
-			if ( m_nStartLineNum < m_bMyMagicCnt-_MAGIC_MAX_CELL)		m_nStartLineNum++;
-		}
-	}
-
-	// 装备窗口处于激活状态时.
+        if (SkillScrollInput(2,ptMouse)) return FALSE;
+        const int button=SkillButtonAt(ptMouse);
+        const bool clicked=button>=0 && button==m_skillPressed; m_skillPressed=-1;
+        if (clicked) {
+            g_xSound.PlayLobbyEffect("105.wav");
+            if (!button) return TRUE;
+            m_skillTab=button-1;
+        }
+        return FALSE;
     }
 	if ( m_bType == _TYPE_EQUIP || m_bType == _TYPE_STATUS )
 	{
@@ -938,24 +723,8 @@ BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 
 VOID CStatusWnd::OnMouseMove(POINT ptMouse)
 {
-    if (m_bType!=_TYPE_SETMAGIC) return;
-	if ( m_bType == _TYPE_SETMAGIC )
-	{
-		m_xMagicScrlBtn[0].ChangeRect(m_rcWnd.left+232, m_rcWnd.top+147);
-		m_xMagicScrlBtn[1].ChangeRect(m_rcWnd.left+232, m_rcWnd.top+253);
-		m_xMagicScrlBtn[0].OnMouseMove(ptMouse);
-		m_xMagicScrlBtn[1].OnMouseMove(ptMouse);
-	}
-
-	m_xStatusBtn[_BTN_ID_STATUSCLOSE   ].ChangeRect(m_rcWnd.left+222, m_rcWnd.top+298);
-	m_xStatusBtn[_BTN_ID_STATUS		   ].ChangeRect(m_rcWnd.left+_BTN_ID_STATUS_X, m_rcWnd.top+_BTN_ID_STATUS_Y);
-	m_xStatusBtn[_BTN_ID_STATUSMAGIC   ].ChangeRect(m_rcWnd.left+_BTN_ID_STATUSMAGIC_X, m_rcWnd.top+_BTN_ID_STATUSMAGIC_Y);
-	m_xStatusBtn[_BTN_ID_STATUSCLOSE   ].OnMouseMove(ptMouse);
-	m_xStatusBtn[_BTN_ID_STATUS		   ].OnMouseMove(ptMouse);
-	m_xStatusBtn[_BTN_ID_STATUSMAGIC   ].OnMouseMove(ptMouse);
+    if (m_bType==_TYPE_SETMAGIC) SkillScrollInput(1,ptMouse);
 }
-
-
 
 BOOL CStatusWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
@@ -965,22 +734,16 @@ BOOL CStatusWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
         m_nativeClosePressed=NativeCloseHit(ptMouse);
         if (m_nativeClosePressed) return TRUE;
     } else {
-	m_xStatusBtn[_BTN_ID_STATUSCLOSE   ].ChangeRect(m_rcWnd.left+222, m_rcWnd.top+298);
-	m_xStatusBtn[_BTN_ID_STATUS	       ].ChangeRect(m_rcWnd.left+_BTN_ID_STATUS_X, m_rcWnd.top+_BTN_ID_STATUS_Y);
-	m_xStatusBtn[_BTN_ID_STATUSMAGIC   ].ChangeRect(m_rcWnd.left+_BTN_ID_STATUSMAGIC_X, m_rcWnd.top+_BTN_ID_STATUSMAGIC_Y);
-
-	if ( m_xStatusBtn[_BTN_ID_STATUSCLOSE   ].OnLButtonDown(ptMouse) )		return TRUE;
-	if ( m_xStatusBtn[_BTN_ID_STATUS	    ].OnLButtonDown(ptMouse) )		return TRUE;
-	if ( m_xStatusBtn[_BTN_ID_STATUSMAGIC   ].OnLButtonDown(ptMouse) )		return TRUE;
-
-	if ( m_bType == _TYPE_SETMAGIC )
-	{
-		m_xMagicScrlBtn[0].ChangeRect(m_rcWnd.left+232, m_rcWnd.top+147);
-		m_xMagicScrlBtn[1].ChangeRect(m_rcWnd.left+232, m_rcWnd.top+253);
-		if ( m_xMagicScrlBtn[0].OnLButtonDown(ptMouse) )					return TRUE;
-		if ( m_xMagicScrlBtn[1].OnLButtonDown(ptMouse) )					return TRUE;
-	}
-
+        if (SkillScrollInput(0,ptMouse)) return TRUE;
+        m_skillPressed=SkillButtonAt(ptMouse);
+        if (m_skillPressed>=0) return TRUE;
+        const int skill=SkillAt(ptMouse);
+        if (skill>=0) {
+            const int slot=SkillLayout::slot(m_skillTab,m_pstMyMagic[skill].stStdMagic.wMagicID);
+            m_skillSelected[m_skillTab]=slot<0?15:slot;
+        }
+        m_bCanMove=TRUE;
+        return FALSE;
     }
 	nEquipNum = GetEquipNum(ptMouse);
 
@@ -998,22 +761,12 @@ BOOL CStatusWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 
 VOID CStatusWnd::OnScrollDown()
 {
-	if ( m_bType == _TYPE_SETMAGIC )
-	{
-		if ( m_nStartLineNum > 0 )										m_nStartLineNum--;
-	}
+    if (m_bType==_TYPE_SETMAGIC) m_skillScroll=max(0,m_skillScroll-30);
 }
-
-
-
 VOID CStatusWnd::OnScrollUp()
 {
-	if ( m_bType == _TYPE_SETMAGIC )
-	{
-		if ( m_nStartLineNum < m_bMyMagicCnt-_MAGIC_MAX_CELL)			m_nStartLineNum++;
-	}
+    if (m_bType==_TYPE_SETMAGIC) m_skillScroll=min(190,m_skillScroll+30);
 }
-
 
 bool CStatusWnd::NativeCloseHit(POINT point)
 {
@@ -1157,4 +910,139 @@ int CStatusWnd::EquipmentPreviewFrame(int mode,int slot)
     case 60: return slot==11?1235:-1;
     default: return -1;
     }
+}
+
+int CStatusWnd::SkillButtonAt(POINT point)
+{
+    for (int index=0;index<=8;++index) {
+        const int frame=index?1640+2*(index-1):1221;
+        if (!m_pxWndImage->NewSetIndex(frame)) continue;
+        const auto& info=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        const int x=m_rcWnd.left+(index?46+34*(index-1):316),y=m_rcWnd.top+(index?30:422);
+        RECT bounds={x,y,x+info.shWidth,y+info.shHeight};
+        if (PtInRect(&bounds,point)) return index;
+    }
+    return -1;
+}
+
+int CStatusWnd::SkillAt(POINT point)
+{
+    const int x=point.x-m_rcWnd.left,y=point.y-m_rcWnd.top;
+    if (y<64 || y>=395) return -1;
+    int ordinal=0;
+    for (int i=0;i<m_bMyMagicCnt;++i) {
+        const int id=m_pstMyMagic[i].stStdMagic.wMagicID;
+        if (!id || SkillLayout::category(id)!=m_skillTab) continue;
+        if (ordinal>=15) break;
+        const int slot=SkillLayout::slot(m_skillTab,id);
+        const auto pos=slot>=0?SkillLayout::positions[m_skillTab][slot]:SkillPosition{id,ordinal<6?55:0,ordinal<6?27+46*ordinal:0};
+        const int top=pos.y-(slot>=0?m_skillScroll:0); ++ordinal;
+        if (x>=pos.x && x<pos.x+40 && y>=top && y<top+40) return i;
+    }
+    return -1;
+}
+
+bool CStatusWnd::SkillScrollInput(int kind,POINT point)
+{
+    const DWORD now=GetTickCount();
+    if (kind==2) { m_skillScrollTime=now; const bool captured=m_skillScrollCaptured; m_skillScrollCaptured=false; return captured; }
+    if (!m_pxWndImage->NewSetIndex(1672)) return false;
+    const auto info=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+    const int x=point.x-m_rcWnd.left,y=point.y-m_rcWnd.top;
+    if (kind==1) {
+        if (!m_skillScrollCaptured) return false;
+        m_skillScroll=int(190.f*max(0.f,min(1.f,float(y-100)/(238+info.shHeight)))); return true;
+    }
+    if (x<322 || x>=322+info.shWidth || y<100 || y>=338+info.shHeight) return false;
+    float ratio=float(double(m_skillScroll)/189.0);
+    if (now-m_skillScrollTime>10) {
+        const int thumb=100+int(238.f*ratio);
+        if (y>=thumb && y<thumb+info.shHeight) m_skillScrollCaptured=true;
+        else ratio=max(0.f,min(1.f,ratio+(y<thumb+7?-7.f/190:7.f/190)));
+        m_skillScrollTime=now;
+    }
+    m_skillScroll=min(189,int(190.f*ratio)); return true;
+}
+
+VOID CStatusWnd::ShowCharSetMagicWnd()
+{
+    const int x=m_rcWnd.left,y=m_rcWnd.top;
+    const auto sprite=[&](CWHWilImageData& images,int frame,int left,int top,int cropTop=-1,int cropHeight=0) {
+        if (!images.NewSetIndex(frame)) return;
+        const auto info=*images.m_lpstNewCurrWilImageInfo;
+        if (cropTop>=0) {
+            const int height=min(cropHeight,int(info.shHeight)-cropTop); if (height<=0) return;
+            RECT clip={x+left,y+top,x+left+info.shWidth,y+top+height};
+            DrawSelectionFrame(images,frame,x+left,y+top-cropTop,SelectionBlend::Normal,false,0,&clip);
+        } else g_xMainWnd.DrawWithImageForComp(x+left,y+top,info.shWidth,info.shHeight,(WORD*)images.m_pbCurrImage);
+    };
+    if (m_pxWndImage->NewSetIndex(1620)) {
+        const auto info=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        sprite(*m_pxWndImage,1620,-(info.shWidth-360)/2,-(info.shHeight-488)/2);
+    }
+    sprite(*m_pxWndImage,1622+2*m_skillTab,18,63,m_skillScroll,331);
+    sprite(*m_pxWndImage,1672,322,100+int(238.f*float(double(m_skillScroll)/189.0)));
+    bool populated[8]={}; int ordinal=0,selected=-1;
+    struct Label { int index,x,y; }; Label labels[15]; int labelCount=0;
+    for (int i=0;i<m_bMyMagicCnt;++i) {
+        const auto& skill=m_pstMyMagic[i]; const int id=skill.stStdMagic.wMagicID;
+        if (!id) continue;
+        const int category=SkillLayout::category(id); populated[category]=true;
+        if (category!=m_skillTab || ordinal>=15) continue;
+        const int slot=SkillLayout::slot(m_skillTab,id);
+        const auto pos=slot>=0?SkillLayout::positions[m_skillTab][slot]:SkillPosition{id,ordinal<6?55:0,ordinal<6?27+46*ordinal:0};
+        const int top=pos.y-(slot>=0?m_skillScroll:0); ++ordinal;
+        if (m_skillSelected[m_skillTab]==(slot<0?15:slot)) {
+            selected=i;
+            if (top-1>62 && top-1<352) {
+                RECT edge={x+pos.x-1,y+top-1,x+pos.x+41,y+top+41};
+                DrawLegacyPanel(edge,RGB(0,0,0),0,RGB(200,200,0));
+            }
+        }
+        const auto icon=[&](CWHWilImageData& images,int frame) {
+            if (!images.NewSetIndex(frame)) return;
+            const int hiddenTop=max(0,64-top),hiddenBottom=max(0,top-355);
+            const int height=images.m_lpstNewCurrWilImageInfo->shHeight-hiddenTop-hiddenBottom;
+            if (height>0) sprite(images,frame,pos.x,top+hiddenTop,hiddenTop,height);
+        };
+        icon(g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON],2*id-2);
+        if (skill.bUseKey>='1' && skill.bUseKey<='8') icon(*m_pxWndImage,1659+skill.bUseKey-'0');
+        if (top+37>56 && top+37<385) labels[labelCount++]={i,pos.x+34,top+37};
+    }
+    for (int order=0;order<=8;++order) {
+        const int index=order?9-order:0,base=index?1640+2*(index-1):1221;
+        const int left=index?46+34*(index-1):316,top=index?30:422;
+        if (!index || m_skillPressed==index || populated[index-1]) sprite(*m_pxWndImage,base+(!index && m_skillPressed==0),left,top);
+        if (index && m_skillTab==index-1) sprite(*m_pxWndImage,base+1,left,top);
+    }
+    HDC dc; auto* surface=g_xMainWnd.GetBackBuffer(); if (FAILED(surface->GetDC(&dc))) return;
+    const char normalFace[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    const char levelFace[]={char(0xb1),char(0xbc),char(0xb8),char(0xb2),0};
+    HFONT normal=g_xMainWnd.CreateGameFont(normalFace,9),level=g_xMainWnd.CreateGameFont(levelFace,8);
+    HGDIOBJ previous=SelectObject(dc,level); SetBkMode(dc,TRANSPARENT);
+    const auto text=[&](const char* value,int left,int top,int width,int height,COLORREF color,bool center) {
+        RECT area={x+left,y+top,x+left+width,y+top+height}; SetTextColor(dc,color);
+        if (center) {
+            RECT measured={0,0,width,height}; DrawTextA(dc,value,-1,&measured,DT_CALCRECT|DT_WORDBREAK);
+            area.top+=height/2-(measured.bottom-measured.top)/2; area.bottom=area.top+measured.bottom-measured.top;
+            DrawTextA(dc,value,-1,&area,DT_WORDBREAK);
+        } else TextOutA(dc,area.left,area.top,value,lstrlenA(value));
+    };
+    char value[80];
+    for (int i=0;i<labelCount;++i) {
+        const auto label=labels[i]; wsprintfA(value,"%u",m_pstMyMagic[label.index].bLevel);
+        text(value,label.x,label.y,15,15,0x64fafa,false);
+    }
+    SelectObject(dc,normal);
+    if (selected>=0) {
+        const auto& skill=m_pstMyMagic[selected];
+        text(skill.stStdMagic.szMagicName,20,387,80,61,0xfafafa,true);
+        if (skill.bLevel>=3) lstrcpyA(value,"Level : Max"); else wsprintfA(value,"Level : %u",skill.bLevel);
+        text(value,20,403,80,62,0xfafafa,true);
+        if (skill.bLevel<3) {
+            wsprintfA(value,"Exp : %d/%d",skill.nCurrTrain,skill.stStdMagic.nTrain[skill.bLevel]);
+            text(value,100,403,80,62,0xfafafa,true);
+        }
+    }
+    SelectObject(dc,previous); DeleteObject(normal); DeleteObject(level); surface->ReleaseDC(dc);
 }
