@@ -197,7 +197,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xInterBtn[9].CreateGameBtn(m_pxInterImg, 1190, 1191, 742, 528, _BTN_TYPE_FOCUS);	// 聊天弹窗.
 	m_xInterBtn[10].CreateGameBtn(m_pxInterImg, 1186, 1187, 742, 478, _BTN_TYPE_FOCUS);	// 任务.
 	m_xInterBtn[11].CreateGameBtn(m_pxInterImg, 1188, 1189, 706, 539, _BTN_TYPE_FOCUS);	// 选项.
-	m_xInterBtn[12].CreateGameBtn(m_pxInterImg,108, 109, m_rcMain.left+664, m_rcMain.top+104);	// 帮助.
+	m_xInterBtn[12].CreateGameBtn(m_pxInterImg,1205,1205,150,469,_BTN_TYPE_NOFOCUS);	// 帮助.
 	m_xInterBtn[13].CreateGameBtn(m_pxInterImg, 1192, 1193, 674, 528, _BTN_TYPE_FOCUS);	// 马窗口。
 	m_xInterBtn[14].CreateGameBtn(m_pxInterImg, 1194, 1195, 682, 500, _BTN_TYPE_FOCUS);	// 背包窗口.
 	m_xInterBtn[15].CreateGameBtn(m_pxInterImg, 1196, 1197, 711, 498, _BTN_TYPE_FOCUS);	// 状态窗口.
@@ -213,6 +213,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
     m_xInterBtn[_BTN_ID_HORSE].SetHitRect(675,532,34,22);
     m_xInterBtn[_BTN_ID_BAG].SetHitRect(682,504,30,27);
     m_xInterBtn[_BTN_ID_CHAR].SetHitRect(712,498,28,37);
+    m_xInterBtn[_BTN_ID_HELP].SetHitRect(150,469,24,15);
 
 	m_xScrlBar.CreateScrlBar(m_pxInterImg, 68, _MAX_CHATLINE, 12, 84, 12);
 
@@ -518,7 +519,6 @@ VOID CInterface::ShowGameStatus()
 	FLOAT	fMyWetRate;				
 	FLOAT	fMyExpRate;
 	WORD	wJobIcon;
-	WORD	wImgNum;
 	CHAR	pszBuff[MAX_PATH];
 	RECT	rcStats;
 	DWORD	dwFntClr;
@@ -529,7 +529,6 @@ VOID CInterface::ShowGameStatus()
 	WORD	wMyDC   = g_xGameProc.m_xMyHero.m_stAbility.wDC;
 	WORD	wMyMC   = g_xGameProc.m_xMyHero.m_stAbility.wMC;
 	WORD	wMySC   = g_xGameProc.m_xMyHero.m_stAbility.wSC;
-	BYTE	bDay	= g_xGameProc.m_bDayState;
 
 	WORD	wHP		= g_xGameProc.m_xMyHero.m_stAbility.wHP;
 	WORD	wMP		= g_xGameProc.m_xMyHero.m_stAbility.wMP;
@@ -539,28 +538,7 @@ VOID CInterface::ShowGameStatus()
 	BYTE	bJob	= g_xGameProc.m_xMyHero.m_bJob;
 	
 	// 一天的状态值(夜晚, 白天, 傍晚, 黎明)
-	switch ( bDay )
-	{
-	case _DAYSTATE_DAY:
-		wImgNum = 130;
-		break;
-	case _DAYSTATE_DUSK:
-		wImgNum = 131;
-		break;
-	case _DAYSTATE_NIGHT:
-		wImgNum = 132;
-		break;
-	case _DAYSTATE_DAWN:
-		wImgNum = 133;
-		break;
-	}
-	if ( m_pxInterImg->NewSetIndex(wImgNum) )
-	{
- 		g_xMainWnd.DrawWithImageForComp(m_rcMain.left+684, m_rcMain.top+70,
-										m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth,
-										m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight,
-										(WORD*)m_pxInterImg->m_pbCurrImage, _CLIP_WIDTH, 600);
-	}
+    // Mir3 HUD has no legacy 130..133 day-state overlay.
 
 	// 绘制 HP, MP.
 	// 比例检查。

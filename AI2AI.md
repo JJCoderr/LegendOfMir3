@@ -427,3 +427,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 离线 HUD 预览在实际 CInterface 渲染后，将 DirectDraw RGB565 后台缓冲区保存为24位BMP（hud-collapsed.bmp/hud-expanded.bmp），只影响预览模式。解决桌面捕获只能得到蓝色背景的问题。
 - 全量 Client 77步编译链接通过。新构建进程23216、30444分别以两种布局运行，窗口标题传奇3且 Responding=True；已检查两张800x600实际渲染截图：out/hud-collapsed.png、out/hud-expanded.png，且已向用户展示。
 - 可见问题：旧日夜图标和帮助按钮仍需替换，展开频道按钮尚未接事件，聊天字体/换行还需对齐。截图是当前实现检查依据，不代表HUD完成。
+
+### HUD 旧控件清理
+- 移除旧GameInter130–133日夜覆盖图，避免覆盖传奇三右侧功能按钮。
+- 原HELP槽位改为参考中的攻击模式按钮1205，位置150,469，命中24x15；按下帧与普通帧相同且不绘制悬停层。攻击模式业务事件尚未接入，不宣称功能已完成。
+- 构建通过，新预览进程28920正常响应；已检查实际渲染截图 out/hud-icons-collapsed.png。
