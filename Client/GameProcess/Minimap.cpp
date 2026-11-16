@@ -3,13 +3,13 @@
 #include "Common/LoginMessages.h"
 void CMinimap::Init()
 {
-    Destroy(); maps.NewLoad("./Data/Mmap.wil");fullMaps.NewLoad("./Data/Fmmap.wil");
+    Destroy(); maps.NewLoad("./Data/Mmap.wil");fullMaps.NewLoad("./Data/Fmmap.wil");LoadOptions(optionsPath);if(portraitPending) Request();
 }
 void CMinimap::Destroy()
 {
     maps.Destroy();fullMaps.Destroy();frame=-1;width=height=0;replyTime=0;
     visible=pending=translucent=large=dragging=releaseCaptured=false;position={672,0};
-    monsters.clear();green.clear();orange.clear();
+    monsters.clear();green.clear();orange.clear();pixels.clear();portraitMode=portraitPending=portraitVisible=false;portraitBlink=0;
 }
 RECT CMinimap::Bounds() const { return RECT{position.x,position.y,position.x+min(Size(),width),position.y+min(Size(),height)}; }
 POINT CMinimap::Source() const
@@ -24,7 +24,7 @@ bool CMinimap::Toggle(DWORD now,DWORD cooldown)
     if(replyTime && now-replyTime<=cooldown) return false;
     if(visible) {visible=false;dragging=false;return false;}
     pending=true;
-    _TDEFAULTMESSAGE message;fnMakeDefMessage(&message,1033,0,0,0,0);g_xClientSocket.SendPacket(&message,NULL);return true;
+    Request();return true;
 }
 bool CMinimap::Receive(int number,DWORD now)
 {
@@ -33,7 +33,20 @@ bool CMinimap::Receive(int number,DWORD now)
     if(!archive.NewSetIndex(id<1000?id:id-1000)) return false;
     const auto info=*archive.m_lpstNewCurrWilImageInfo;
     frame=id<1000?id:id-1000;full=id>=1000;width=info.shWidth;height=info.shHeight;replyTime=now;
-    if(pending) visible=true;pending=false;Place();return true;
+    pixels.assign(size_t(width)*height,0);
+    const WORD* next=(const WORD*)archive.m_pbCurrImage;
+    for(int y=0;y<height;++y) {
+        const WORD* run=next+1;const WORD* end=run+*next;next=end;int x=0;
+        while(run+1<end) {
+            const WORD tag=*run++,count=*run++;if(tag==0xc0) {x+=count;continue;}
+            if(tag<0xc1 || tag>0xc3 || run+count>end) break;
+            for(int i=0;i<count;++i,++x) if(x<width) pixels[size_t(y)*width+x]=0x10000|run[i];
+            run+=count;
+        }
+    }
+    if(pending) visible=true;pending=false;
+    if(portraitPending) portraitVisible=portraitMode;portraitPending=false;
+    Place();return true;
 }
 bool CMinimap::Pointer(int kind,POINT point,bool ctrl)
 {
@@ -89,7 +102,73 @@ void CMinimap::Show(CWHWilImageData& skin,DWORD now)
 
 void CMinimap::Unavailable(DWORD now)
 {
-    replyTime=now;visible=pending=dragging=false;
+    replyTime=now;visible=pending=dragging=false;portraitVisible=portraitPending=false;
     static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
     std::string text=captions.Get(1458);g_xGameProc.m_xInterface.MsgAdd(0xffffff,0xff,const_cast<char*>(text.c_str()));
+}
+
+void CMinimap::LoadOptions(const char* path)
+{
+    optionsPath=path;portraitMode=path && GetPrivateProfileIntA("Options","InformationMode",0,path)!=0;
+    portraitPending=portraitMode;portraitVisible=false;
+}
+bool CMinimap::TogglePortrait(DWORD now)
+{
+    if(replyTime && now-replyTime<=1000) return false;
+    portraitMode=!portraitMode;portraitPending=portraitMode;portraitVisible=false;
+    if(portraitPending) Request();
+    if(optionsPath) WritePrivateProfileStringA("Options","InformationMode",portraitMode?"1":"0",optionsPath);
+    return true;
+}
+RECT CMinimap::PortraitSource() const
+{
+    const int w=full?256:180,h=full?256:130;
+    const int x=max(0,min(max(0,width-w),int((__int64)player.x*3/2)-min(w,width)/2));
+    const int y=max(0,min(max(0,height-h),int(player.y)-min(h,height)/2));
+    return RECT{x,y,x+min(w,width),y+min(h,height)};
+}
+POINT CMinimap::PortraitOrigin() const
+{
+    const RECT crop=PortraitSource();return full?POINT{crop.right-crop.left>=256?510:530,crop.bottom-crop.top>=256?470:485}:POINT{510,470};
+}
+POINT CMinimap::PortraitMarker(POINT cell,bool self) const
+{
+    const RECT crop=PortraitSource();const POINT origin=PortraitOrigin();const int divisor=full?2:1,inset=self?2:1;
+    return POINT{(3*(cell.x/divisor)+2*(origin.x-crop.left/divisor-inset))/2,cell.y/divisor+origin.y-crop.top/divisor-inset};
+}
+void CMinimap::ShowPortrait()
+{
+    if(!portraitVisible || pixels.empty()) return;
+    const RECT crop=PortraitSource();const POINT origin=PortraitOrigin();const int sw=full?256:180,sh=full?256:130;
+    const RECT bounds={origin.x,origin.y,origin.x+128,origin.y+128};DrawLegacyPanel(bounds,0,255,0,false);
+    DDSURFACEDESC2 surface={};surface.dwSize=sizeof(surface);auto* buffer=g_xMainWnd.GetBackBuffer();
+    if(SUCCEEDED(buffer->Lock(NULL,&surface,DDLOCK_WAIT,NULL))) {
+        for(int dy=0;dy<128 && origin.y+dy<int(surface.dwHeight);++dy) {
+            const int sy=crop.top+(2*dy+1)*sh/256;if(sy>=crop.bottom) continue;
+            WORD* row=(WORD*)((BYTE*)surface.lpSurface+(origin.y+dy)*surface.lPitch);
+            for(int dx=0;dx<128 && origin.x+dx<int(surface.dwWidth);++dx) {
+                const int sx=crop.left+(2*dx+1)*sw/256;if(sx>=crop.right) continue;
+                const DWORD value=pixels[size_t(sy)*width+sx];if(!value) continue;
+                const WORD pixel=WORD(value);const int r=((pixel>>11)*150+127)/255,g=(((pixel>>5)&63)*150+127)/255,b=((pixel&31)*150+127)/255;
+                row[origin.x+dx]=WORD((r<<11)|(g<<5)|b);
+            }
+        }
+        buffer->Unlock(NULL);
+    }
+    DrawLegacyPanel(bounds,0,0,RGB(100,100,100));
+    const POINT self=PortraitMarker(player,true);
+    const auto markers=[&](const std::vector<POINT>& cells,COLORREF color) {
+        for(const auto& cell:cells) {
+            const POINT at=PortraitMarker(cell,false);if(abs(at.x-self.x)>=sw/2 || abs(at.y-self.y)>=sh/2) continue;
+            const RECT area={at.x-1,at.y-1,at.x+2,at.y+2};RECT clip;
+            if(IntersectRect(&clip,&area,&bounds)) DrawLegacyPanel(clip,color,255,0,false);
+        }
+    };
+    markers(green,RGB(100,250,100));markers(orange,RGB(250,150,50));
+    if(portraitBlink>0 && portraitBlink<500) DrawLegacyPanel(RECT{self.x,self.y,self.x+4,self.y+4},0,0,RGB(100,250,100));
+}
+
+void CMinimap::Request()
+{
+    _TDEFAULTMESSAGE message;fnMakeDefMessage(&message,1033,0,0,0,0);g_xClientSocket.SendPacket(&message,NULL);
 }

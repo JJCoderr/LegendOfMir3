@@ -466,6 +466,13 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 
 	// 腰带物品。
 	ShowBeltItem();
+    m_minimap.player={g_xGameProc.m_xMyHero.m_wPosX,g_xGameProc.m_xMyHero.m_wPosY};
+    m_minimap.portraitBlink+=nLoopTime;if(m_minimap.portraitBlink>800) m_minimap.portraitBlink=0;
+    if(!m_chatExpanded) {
+        DrawSelectionFrame(*m_pxInterImg,1490,534,486,SelectionBlend::Normal,false);
+        if(m_minimap.portraitMode) m_minimap.ShowPortrait();
+    }
+
 
 	// 主界面.
     if (m_chatExpanded) {
@@ -608,7 +615,7 @@ VOID CInterface::ShowGameStatus()
 {
     const auto& hero = g_xGameProc.m_xMyHero;
     const int portrait = 650 + 2 * hero.m_bJob + (hero.m_stFeature.bGender != 0);
-    if (hero.m_bJob <= 2 && m_portraits.NewSetIndex(portrait)) {
+    if (!m_minimap.portraitMode && hero.m_bJob <= 2 && m_portraits.NewSetIndex(portrait)) {
         const auto& info = *m_portraits.m_lpstNewCurrWilImageInfo;
         g_xMainWnd.DrawWithImageForComp(m_rcMain.left+534,m_rcMain.top+20,
             info.shWidth,info.shHeight,(WORD*)m_portraits.m_pbCurrImage);
@@ -1761,6 +1768,8 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 		}
 
         if (GetWindowInMousePos(ptMouse)==-1 && PortraitEntryHit(ptMouse)) { WindowActivate(_WND_ID_PORTRAIT); g_xSound.PlayLobbyEffect("105.wav"); return TRUE; }
+        const RECT portraitArea={535,486,616,580};
+        if(!m_chatExpanded && GetWindowInMousePos(ptMouse)==-1 && PtInRect(&portraitArea,ptMouse)) {m_minimap.TogglePortrait(GetTickCount());return TRUE;}
 		for( INT nCnt = 0; nCnt < VisibleButtons(); nCnt++ )
 		{
 			if ( m_xInterBtn[nCnt].OnLButtonUp(ptMouse) )
@@ -2106,6 +2115,7 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
     if (wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive && IsTopWindow(_WND_ID_PORTRAIT)) { WindowActivate(_WND_ID_PORTRAIT); return TRUE; }
 	switch ( wParam )
 	{
+    case 'J': if (!(lParam & (1L << 30))) m_minimap.TogglePortrait(GetTickCount()); return TRUE;
     case 'V': if (!(lParam & (1L << 30))) m_minimap.Toggle(GetTickCount(),1000); return TRUE;
     case 'Z':
         if (!(lParam & (1L << 30))) WindowActivate(_WND_ID_QUICK);

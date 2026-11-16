@@ -1333,6 +1333,31 @@ public:
             if(FILE* report=fopen("minimap-check.txt","wb")) {fprintf(report,"request=%d invalid=%d loaded=%d compact=%d cooldown=%d hit=%d hint=%d transparent=%d release=%d large=%d dragged=%d outside=%d ctrl=%d modal=%d unavailable=%d unsolicited=%d small_archive=%d\n",request,invalid,loaded,compact,cooldown,hit,hint,transparent,release,large,dragged,dragOutside,ctrl,modal,unavailable,unsolicited,smallArchive);fclose(report);}
         }
 
+
+        if(groupPanel>=79 && groupPanel<=81) {
+            auto& ui=g_xGameProc.m_xInterface;auto& map=ui.m_minimap;
+            hero.m_wPosX=337;hero.m_wPosY=267;map.player={337,267};
+            const bool request=map.TogglePortrait(1000) && map.portraitMode && map.portraitPending && !map.portraitVisible && !map.pending;
+            const bool loaded=map.Receive(1001,2000) && map.portraitVisible && !map.visible;
+            const RECT crop=map.PortraitSource();const POINT origin=map.PortraitOrigin(),player=map.PortraitMarker(map.player,true),nearby=map.PortraitMarker(POINT{350,284},false);
+            const bool geometry=crop.left==377 && crop.top==139 && crop.right==633 && crop.bottom==395 && origin.x==510 && origin.y==470;
+            const bool markers=player.x==572 && player.y==532 && nearby.x==583 && nearby.y==542;
+            const bool cooldown=!map.TogglePortrait(3000) && map.portraitMode;
+            const bool disabled=map.TogglePortrait(3001) && !map.portraitMode && !map.portraitVisible;
+            ui.OnLButtonDown(POINT{540,570});ui.OnLButtonUp(POINT{550,510});const bool click=map.portraitMode && map.portraitPending;
+            map.Receive(1001,0);ui.OnKeyDown('J',0);const bool key=!map.portraitMode;
+            map.LoadOptions("./preview-information-mode.ini");map.replyTime=0;
+            if(map.portraitMode) map.TogglePortrait(1000);map.TogglePortrait(2000);map.LoadOptions("./preview-information-mode.ini");map.Init();
+            const bool persisted=map.portraitMode && map.portraitPending && !map.portraitVisible;
+            map.LoadOptions(nullptr);map.TogglePortrait(3000);map.Unavailable(4000);
+            const bool unavailable=map.portraitMode && !map.portraitVisible && !map.portraitPending;
+            map.replyTime=0;map.portraitMode=false;map.TogglePortrait(5000);map.Receive(groupPanel==80?1:1001,6000);
+            map.green={{350,284}};map.orange={{360,276}};map.portraitBlink=100;
+            ui.m_chatExpanded=groupPanel==81;ui.LayoutChat();mouse={400,460};g_xGameProc.m_ptMousePos=mouse;
+            capturePath=groupPanel==79?"portrait-map-full.bmp":groupPanel==80?"portrait-map-normal.bmp":"portrait-map-expanded.bmp";
+            if(FILE* report=fopen("portrait-map-check.txt","wb")) {fprintf(report,"request=%d loaded=%d geometry=%d markers=%d cooldown=%d disabled=%d click=%d key=%d persisted=%d unavailable=%d\n",request,loaded,geometry,markers,cooldown,disabled,click,key,persisted,unavailable);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1438,6 +1463,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	ShowWindow(g_xMainWnd.GetSafehWnd(), SW_HIDE);
 
 	g_xSound.InitMirSound(g_xMainWnd.GetSafehWnd());
+    g_xGameProc.m_xInterface.m_minimap.LoadOptions(strstr(lpCmdLine,"--preview=") ? nullptr : "./Config.ini");
     g_xGameProc.m_xInterface.m_xOptionWnd.LoadAudioOptions(strstr(lpCmdLine,"--preview=") ? nullptr : "./Config.ini");
 	g_xSpriteInfo.SetInfo();
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1521,6 +1547,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=portrait-map-full")==0 ? 79 :
+        strcmp(lpCmdLine,"--preview=portrait-map-normal")==0 ? 80 :
+        strcmp(lpCmdLine,"--preview=portrait-map-expanded")==0 ? 81 :
         strcmp(lpCmdLine,"--preview=minimap-small")==0 ? 75 :
         strcmp(lpCmdLine,"--preview=minimap-large")==0 ? 76 :
         strcmp(lpCmdLine,"--preview=minimap-transparent")==0 ? 77 :

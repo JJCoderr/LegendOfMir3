@@ -4,8 +4,19 @@ class CMinimap {
     CWHWilImageData maps,fullMaps;
     int frame=-1;
     bool full=false;
+    void Request();
+    std::vector<DWORD> pixels;
+    const char* optionsPath=nullptr;
 public:
     bool visible=false,pending=false,translucent=false,large=false,dragging=false,releaseCaptured=false,showMonsters=true;
+    bool portraitMode=false,portraitPending=false,portraitVisible=false;
+    int portraitBlink=0;
+    void LoadOptions(const char* path);
+    bool TogglePortrait(DWORD now);
+    RECT PortraitSource() const;
+    POINT PortraitOrigin() const;
+    POINT PortraitMarker(POINT cell,bool self) const;
+    void ShowPortrait();
     POINT position={672,0},dragOffset={},player={};
     int width=0,height=0;
     DWORD replyTime=0;

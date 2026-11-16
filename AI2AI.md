@@ -814,3 +814,11 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 人物4像素闪烁轮廓、黄色type5/绿色/橙色标记按参考范围与尺寸裁剪；ShowMon读取原生选项7。标记容器已实现，当前只由离线样例填入，真实附近角色分类/更新尚待整合；主角位置已读取现有英雄坐标。头像内地图/J键模式尚未实现。
 - Client清理82步、全目标112步及最终增量构建通过。minimap-small/large/transparent/dragged四种实际预览各17项全1，最终键盘/覆盖/滚轮/双击五项全1；普通面板提示七项、NPC商店层级十一项及HUD按钮九项回归全1。使用参考测试位置337,267，源矩形441,203，实际截图黄色713,47、绿色755,80、橙色770,72及远处799,79裁剪像素全部匹配RGB565预期，证据out/minimap-marker-pixels.txt。
 - 已检查out/minimap-small.png、minimap-large.png、minimap-transparent.png、minimap-dragged.png，使用原版比奇地图资源，人物/附近标记为离线样例。后续需服务器地图回复、切图生命周期、实际角色标记、头像地图，以及MIR3实机整体像素与音效听感验收。
+
+### 头像区域内的原生地图模式
+- CMinimap补入portraitMode/pending/visible独立状态，共用1033请求和Mmap/Fmmap回复；J键或折叠HUD头像区域释放切换（上传入口优先），1000ms回复冷却，等待期间不继续显示普通头像。Unavailable清除显示/等待但保留模式。
+- 原生WIL帧一次解码为RGB565像素缓存。Fmmap裁剪256x256并半尺寸显示，Mmap裁剪180x130再绘制128x128，按参考近邻采样、150/255调暗、黑底及内侧灰边；小图不足256时保留530/485起点规则。地图在HUD底图之前绘制，展开聊天栏时隐藏，避免地图越过头像装饰边缘。
+- 绿色/橙色附近标记使用参考先整数除2、再3/2转换的坐标规则，玩家4x4内侧轮廓沿用累计800ms闪烁；主角与附近标记仍复用原生小地图容器，实际附近角色填充待联网阶段。
+- 使用现有Config.ini的Options/InformationMode保存模式，预览默认禁用用户配置写入；读取后重新初始化保留待请求状态并发送1033。预览持久化只写preview-information-mode.ini。提取共用Request消除两个地图模式重复发包代码。
+- Client清理82步、全部111步构建通过；portrait-map-full/normal/expanded三个预览各十项全1，覆盖独立请求/回复、源区域与标记坐标、冷却、关闭、入口拖出释放、J键、持久化和Unavailable。最终重新初始化持久化回归、右上角小地图17项、头像提示七项、HUD提示九项通过。
+- 已检查out/portrait-map-full.png、portrait-map-normal.png、portrait-map-expanded.png。按Godot样例坐标验证玩家572,532起的4x4轮廓（含周围空白）、绿色583,542及橙色591,538，RGB565像素全部匹配，证据out/portrait-map-pixels.txt。实际服务器地图回复、切图生命周期、附近角色更新及整体MIR3像素验收尚未完成。
