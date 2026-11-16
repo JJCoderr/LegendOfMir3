@@ -1562,6 +1562,24 @@ public:
             if(FILE* report=fopen("target-server-check.txt","wb")) {fprintf(report,"decoded=%d unknown=%d truncated=%d delayed=%d removed=%d cleared=%d final=%d\n",decoded,unknown,truncated,delayed,removed,cleared,finalState);fclose(report);}
         }
 
+        if(groupPanel==105 || groupPanel==106) {
+            auto& target=g_xGameProc.m_xInterface.m_targetDisplay;target.Clear();
+            CActor actor;actor.m_dwIdentity=123;actor.m_stFeature.bGender=_GENDER_MON;actor.m_stFeature.bDress=1;
+            actor.m_wHP=500;actor.m_wMAXHP=1000;actor.m_bHPPercent=50;actor.m_wPosX=337;actor.m_wPosY=267;actor.m_bIsDead=FALSE;
+            g_xGameProc.UpdateTargetDisplay(&actor,1000);
+            const bool monster=target.Displayed()==123 && target.Frame()==1 && target.current==500 && target.maximum==1000 && target.percent==50 && target.attributes.count(123)==1;
+            actor.m_wHP=250;actor.m_bHPPercent=25;g_xGameProc.UpdateTargetDisplay(&actor,1100);const bool health=target.current==250 && target.percent==25;
+            g_xGameProc.UpdateTargetDisplay(nullptr,1800);const bool retained=target.Displayed()==123;
+            g_xGameProc.UpdateTargetDisplay(nullptr,1801);const bool expired=!target.Displayed();
+            actor.m_bIsDead=TRUE;g_xGameProc.UpdateTargetDisplay(&actor,1900);const bool dead=!target.Displayed();actor.m_bIsDead=FALSE;
+            actor.m_stFeature.bGender=_GENDER_NPC;g_xGameProc.UpdateTargetDisplay(&actor,2000);const bool npc=!target.Displayed();
+            actor.m_stFeature.bGender=_GENDER_MAN;g_xGameProc.UpdateTargetDisplay(&actor,2100);const bool unknown=target.Displayed()==123 && target.Frame()==0;
+            actor.m_stFeature.bGender=_GENDER_MON;actor.m_wHP=500;actor.m_bHPPercent=50;
+            if(groupPanel==105) g_xGameProc.UpdateTargetDisplay(&actor,2200);else target.Clear();
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==105?"target-native-hover.bmp":"target-native-expired.bmp";
+            if(FILE* report=fopen("target-hover-check.txt","wb")) {fprintf(report,"monster=%d health=%d retained=%d expired=%d dead=%d npc=%d unknown=%d\n",monster,health,retained,expired,dead,npc,unknown);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1759,6 +1777,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=target-native-hover")==0 ? 105 :
+        strcmp(lpCmdLine,"--preview=target-native-expired")==0 ? 106 :
         strcmp(lpCmdLine,"--preview=target-server-attributes")==0 ? 103 :
         strcmp(lpCmdLine,"--preview=target-server-removed")==0 ? 104 :
         strcmp(lpCmdLine,"--preview=minimap-server-reply")==0 ? 101 :

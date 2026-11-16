@@ -148,6 +148,7 @@ public:
 	BOOL	ReceivePacket(CHAR* szMsg, INT nPacketLen);
 	VOID	RenderObject(INT nLoopTime);
 	VOID	RenderScene(INT nLoopTime);
+    void UpdateTargetDisplay(CActor* actor,DWORD now);
 
 	BOOL	CheckMove(INT nX, INT nY, INT nSpeed, POINT* ptDestTile = NULL, INT* nDestDir = NULL);
 	VOID	CheckMappedData(INT nLoopTime, BOOL bIsMoveTime);

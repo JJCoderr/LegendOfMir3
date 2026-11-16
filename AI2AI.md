@@ -887,3 +887,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 抽出TargetDisplay::Clear用于切图时清空显示身份、照片、属性及血量，保留已加载头像资源。SM_DISAPPEAR/SM_CLEAROBJECT在接收时移除目标显示和对应缓存；当前目标照片同时释放。
 - Client清理83步、全部111步及最终增量构建通过。target-server-attributes/removed各七项全1，经实际编码/接收入口验证字段、未知目标、截短体、迟到回复、消失、清空和最终显示；目标照片十一项回归通过。
 - 已检查out/target-server-attributes.png及target-server-removed.png。悬停目标仍由预览指定，原生旧Actor缺少部分MIR3完整形态/职业字段；真实悬停适配、属性请求、照片查询回复及服务器联调仍待继续，不能视为目标显示端到端完成。
+
+### 原生Actor驱动目标显示
+- 新增GameProc::UpdateTargetDisplay，在实际RenderScene完成鼠标目标选择后、HUD绘制前更新目标；普通/展开HUD、窗口和模态界面遮挡时按无目标处理。死亡对象和NPC不作为头像目标，沿用Focus原800ms规则。
+- 当前旧Actor怪物使用已参与原生怪物绘制的bDress外形及HP/MAXHP/HPPercent，目标变化且属性未缓存时发送1047(actor,x,y,0)。玩家使用性别；自身使用已有m_bJob，远程旧Actor缺职业字段时按参考未知职业255回退帧0。完整WORD外形、怪物特殊状态和远程职业仍需MIR3角色协议适配，不猜用武器/头发字段。
+- Client清理83步、全部111步及最终增量构建通过。target-native-hover/expired各七项全1，以真实CActor对象调用生产UpdateTargetDisplay验证外形/血量、更新、800ms边界、死亡/NPC排除和未知职业；属性消息七项回归通过。
+- 已检查out/target-native-hover.png及target-native-expired.png。悬停截图未注入属性回复，因此属性底框为空。此阶段证明Actor到目标显示的接线，尚未在完整地图上验收真实鼠标命中、1047网络请求/1304响应或远程玩家照片查询。

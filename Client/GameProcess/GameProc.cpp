@@ -996,6 +996,9 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 			CloseNPCWindow();
 		}
 
+        const bool worldPointer=m_ptMousePos.y<(m_xInterface.m_chatExpanded?305:470) && m_xInterface.GetWindowInMousePos(m_ptMousePos)==-1 &&
+            !m_xInterface.m_xMsgBox.IsActive() && !m_xInterface.m_xGuildEditor.m_bActive;
+        UpdateTargetDisplay(worldPointer?m_pxMouseTargetActor:nullptr,GetTickCount());
 		m_xInterface.RenderInterface(nLoopTime, m_ptMousePos);
 
 		ShowStatus(0, 0);
@@ -4172,4 +4175,23 @@ void CGameProcess::SetShadowBlend(bool enabled)
     m_bShadowABlend=enabled;m_xInterface.m_xOptionWnd.m_values[4]=enabled;
     const WORD color=g_xMainWnd.ConvertColor24To16(enabled?RGB(0,0,0):RGB(20,20,20));
     for(int i=0;i<800;++i) m_wShadowClr[i]=color;
+}
+
+void CGameProcess::UpdateTargetDisplay(CActor* actor,DWORD now)
+{
+    auto& target=m_xInterface.m_targetDisplay;
+    if(!actor || actor->m_bIsDead || actor->m_stFeature.bGender==_GENDER_NPC) {target.Focus(0,now);return;}
+    const BYTE type=actor->m_stFeature.bGender;
+    if(type<=_GENDER_WOMAN) {
+        // Remote legacy actors have no profession field; use the reference unknown-job frame.
+        target.SetHuman(actor->m_dwIdentity,type,actor==&m_xMyHero?m_xMyHero.m_bJob:255,now);
+    } else if(type==_GENDER_MON) {
+        const bool changed=target.ChangesTo(actor->m_dwIdentity);
+        target.SetMonster(actor->m_dwIdentity,type,actor->m_stFeature.bDress,false,0,
+            actor->m_wHP,actor->m_wMAXHP,actor->m_bHPPercent,now);
+        if(changed && target.attributes[actor->m_dwIdentity].icon==-1) {
+            _TDEFAULTMESSAGE packet;fnMakeDefMessage(&packet,1047,actor->m_dwIdentity,actor->m_wPosX,actor->m_wPosY,0);
+            g_xClientSocket.SendPacket(&packet,NULL);
+        }
+    } else target.Focus(0,now);
 }

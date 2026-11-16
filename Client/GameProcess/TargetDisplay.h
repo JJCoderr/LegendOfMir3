@@ -25,6 +25,7 @@ public:
     void Focus(DWORD actor,DWORD now);
     void Remove(DWORD actor);
     DWORD Displayed() const { return shown; }
+    bool ChangesTo(DWORD actor) const {return actor && actor!=previous;}
     int Frame() const { return frame; }
     int BarWidth() const { return int(double(percent)*double(0.01f)*84.0); }
     std::string VitalText(int part) const;
