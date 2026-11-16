@@ -34,6 +34,7 @@ VOID CGuildWnd::Init()
 {
 	CGameWnd::Init();
     m_tab=0; m_pressed=-1; m_first=0;
+    m_scrollCaptured=false; m_scrollTick=0;
     m_name.clear();
     for (int i=0;i<3;++i) m_pages[i].clear();
 }
@@ -110,6 +111,7 @@ int CGuildWnd::ButtonAt(POINT point)
 }
 BOOL CGuildWnd::OnLButtonUp(POINT point)
 {
+    if (ScrollInput(2,point)) return FALSE;
     const int hit=ButtonAt(point);
     const bool clicked=hit>=0 && hit==m_pressed;
     m_pressed=-1;
@@ -120,9 +122,46 @@ BOOL CGuildWnd::OnLButtonUp(POINT point)
 }
 BOOL CGuildWnd::OnLButtonDown(POINT point)
 {
+    if (ScrollInput(0,point)) { m_pressed=-1; return TRUE; }
     m_pressed=ButtonAt(point);
     return m_pressed>=0;
 }
-VOID CGuildWnd::OnMouseMove(POINT point) {}
+VOID CGuildWnd::OnMouseMove(POINT point) { ScrollInput(1,point); }
 VOID CGuildWnd::OnScrollDown() { m_first=max(0,m_first-1); }
 VOID CGuildWnd::OnScrollUp() { m_first=min(max(0,int(m_pages[m_tab].size())-18),m_first+1); }
+
+bool CGuildWnd::ScrollInput(int kind, POINT point)
+{
+    const DWORD now=timeGetTime();
+    if (kind==2) {
+        m_scrollTick=now;
+        const bool captured=m_scrollCaptured;
+        m_scrollCaptured=false;
+        if (captured && GetCapture()==g_xMainWnd.GetSafehWnd()) ReleaseCapture();
+        return captured;
+    }
+    if (!m_pxWndImage->NewSetIndex(1225)) return false;
+    const auto& image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+    const int top=m_rcWnd.top+60, bottom=top+258+image.shHeight, left=m_rcWnd.left+557;
+    const int count=(int)m_pages[m_tab].size();
+    if (kind==1) {
+        if (!m_scrollCaptured) return false;
+        const float ratio=max(0.0f,min(1.0f,float(point.y-top)/(bottom-top)));
+        m_first=int(double(max(0,count-1))*ratio);
+        return true;
+    }
+    if (point.x<left || point.x>=left+image.shWidth || point.y<top || point.y>=bottom) return false;
+    if (now-m_scrollTick<=10) return true;
+    m_scrollTick=now;
+    const float old=count>1?float(m_first)/(count-1):0;
+    const int thumb=top+int(258.0*old);
+    if (point.y>=thumb && point.y<thumb+image.shHeight) {
+        m_scrollCaptured=true;
+        SetCapture(g_xMainWnd.GetSafehWnd());
+        return true;
+    }
+    const float page=count>0?19.0f/count:0;
+    const float ratio=max(0.0f,min(1.0f,old+(point.y<thumb+6?-page:page)));
+    m_first=int(double(max(0,count-1))*ratio);
+    return true;
+}

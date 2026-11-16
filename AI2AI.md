@@ -506,3 +506,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 标题使用CmList4010/4009/4008、96c8ff色；正文按参考行距与标题色，聊天页绿色及阴影，1225滚动滑块，滚轮接入当前公会页。
 - Client全量77步构建通过，已检查out/guild-overview.png、guild-members.png、guild-notice.png（三者分别公告、成员目录、行会聊天），示例内容仅用于离线预览。
 - 公会服务端数据、管理动作、拖动滚动条、权限提示和工具提示尚未完成，不能宣称公会功能完成。
+
+### 公会滚动条交互
+- 按GuildScroll移植1225滑块：起点相对557,60，行程258，10ms轨道点击节流，翻页比例19/count，拖动以count-1映射。
+- 拖动时通过主窗口捕获鼠标，Interface优先转发窗口外移动和释放；释放解除捕获。
+- 运行40行数据验证报告guild-scroll-check.txt：end=1、released=1、page=1，分别验证末行39、窗口外释放、轨道一步到18。全量Client及后续构建通过。

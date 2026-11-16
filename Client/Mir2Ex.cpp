@@ -97,6 +97,25 @@ public:
             g_xGameProc.m_xInterface.WindowActivate(_WND_ID_GUILD);
             POINT tab={145+(groupPanel-5)*50,412};
             guild.OnLButtonDown(tab); guild.OnLButtonUp(tab);
+            const auto savedPage=guild.m_pages[guild.m_tab];
+            guild.m_pages[guild.m_tab].assign(40,"Scroll verification");
+            guild.m_first=0; guild.m_scrollTick=timeGetTime()-11;
+            POINT thumb={660,84}; guild.OnLButtonDown(thumb);
+            POINT outside={760,590};
+            g_xGameProc.m_xInterface.OnMouseMove(outside);
+            const bool reachedEnd=guild.m_first==39;
+            g_xGameProc.m_xInterface.OnLButtonUp(outside);
+            const bool released=!guild.m_scrollCaptured;
+            guild.m_first=0; guild.m_scrollTick=timeGetTime()-11;
+            POINT track={660,200}; guild.OnLButtonDown(track);
+            const bool pageStep=guild.m_first==18;
+            guild.OnLButtonUp(track);
+            if (FILE* report=fopen("guild-scroll-check.txt","wb")) {
+                fprintf(report,"end=%d released=%d page=%d\n",reachedEnd,released,pageStep);
+                fclose(report);
+            }
+            guild.m_pages[guild.m_tab]=savedPage; guild.m_first=0;
+
         }
         if (exitDialog) {
             POINT button = {10,542};

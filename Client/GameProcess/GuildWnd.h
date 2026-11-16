@@ -14,6 +14,9 @@ public:
     std::string m_name;
     std::vector<std::string> m_pages[3];
     int m_tab = 0, m_pressed = -1, m_first = 0;
+    bool m_scrollCaptured = false;
+    DWORD m_scrollTick = 0;
+    bool ScrollInput(int kind, POINT point);
 	CGuildWnd();
 	~CGuildWnd();
 

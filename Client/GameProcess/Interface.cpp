@@ -1534,6 +1534,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
+    if (m_xGuildWnd.m_scrollCaptured) { m_xGuildWnd.OnLButtonUp(ptMouse); return TRUE; }
 	m_bMoveFocusedWnd = FALSE;
 
 	if ( m_xMsgBox.IsActive() )	// ÓÂÆø
@@ -1698,6 +1699,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 *******************************************************************************************************************/
 BOOL CInterface::OnMouseMove(POINT ptMouse)
 {
+    if (m_xGuildWnd.m_scrollCaptured) { m_xGuildWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
 	MoveTopWindow(ptMouse);
 
