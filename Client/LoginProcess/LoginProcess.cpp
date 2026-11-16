@@ -196,7 +196,13 @@ LRESULT CLoginProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 
 LRESULT CLoginProcess::OnKeyDown(WPARAM wParam,LPARAM lParam)
 {
-	if(!m_xMsgBox.IsActive())
+	if (m_xMsgBox.IsActive()) {
+		if (wParam == VK_RETURN || wParam == VK_ESCAPE || wParam == VK_SPACE) {
+			m_xMsgBox.HideMessageBox();
+			if (m_Progress == PRG_LOGIN) m_xLogin.ResetPassword();
+		}
+		return 0;
+	}
 	{
 		switch(m_Progress)
 		{
@@ -264,7 +270,7 @@ LRESULT CLoginProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 	ptMouse.x = LOWORD(lParam);
 	ptMouse.y = HIWORD(lParam);
 
-	if(m_fIsConnected && !m_xMsgBox.IsActive())
+	if(!m_xMsgBox.IsActive())
 	{
 		m_fIsLButtonClicked = FALSE;
 		switch(m_Progress)
@@ -367,8 +373,10 @@ LRESULT CLoginProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 		}
 	}
 	else if(m_xMsgBox.IsActive())
-			if(m_xMsgBox.OnButtonUp(ptMouse)==1)
+			if(m_xMsgBox.OnButtonUp(ptMouse)==CLICK_OK) {
 				m_xMsgBox.HideMessageBox();
+				if (m_Progress == PRG_LOGIN) m_xLogin.ResetPassword();
+			}
 
 	return 0L;
 }
@@ -693,6 +701,7 @@ VOID CLoginProcess::RenderScene(INT nLoopTime)
 				break;
 			}
 		}
+		if (m_xMsgBox.IsActive()) ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
 		m_xMsgBox.RenderMessageBox(0);
 		if ( FAILED(g_xMainWnd.Present()) )
 				g_xMainWnd.RestoreSurfaces();

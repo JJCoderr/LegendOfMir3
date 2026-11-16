@@ -1,181 +1,90 @@
 #include "stdafx.h"
 
-#define POS_SERVERLIST_BORDER_X		50
-#define POS_SERVERLIST_BORDER_Y		0
-#define SERVERLIST_BORDER_WIDTH		151
-
-#define POS_TOP_SERVER_BTN_X		0
-#define POS_TOP_SERVER_BTN_Y		10
-
-#define SERVER_BTN_WIDTH			100
-#define SERVER_BTN_HEIGHT			20
-#define	SERVER_BTN_GAP				10
-#define COUNT_BUTTON_PER_COLUME		8
-
-#define SERVER_BTN_TEXTCOLOR_NORMAL	RGB(10, 10, 10)			// °µÉ«
-#define SERVER_BTN_TEXTCOLOR_FOCUS	RGB(0, 255, 255)		// YELLOW
-#define SERVER_BTN_TEXTCOLOR_CLICK	RGB(0,0,0)				// COLORKEY
-
-#define SERVER_BTN_BKCOLOR_NORMAL	RGB(125,125,125)				// 
-#define SERVER_BTN_BKCOLOR_FOCUS	RGB(95,95,95)				//
-#define SERVER_BTN_BKCOLOR_CLICK	RGB(125,125,0)			//  YELLOW
-
-#define _LEFT_BORDER				20
-#define _TOP_BORDER					60
-#define _RIGHT_BORDER				120
-#define _BOTTOM_BORDER				310
-
-CSelectSrv::CSelectSrv():CBMWnd()
+CSelectSrv::CSelectSrv():CBMWnd(), m_ppxSrvBtn(NULL), m_nSrvCount(0), m_pressed(-1), m_hover(-1)
 {
-	m_ppxSrvBtn = NULL;
-	D3DVECTOR vNorm(0, 0, -1);
-    m_avBillBoard[0]  = D3DVERTEX(D3DVECTOR(-0.5f, 0.5f, 0), vNorm, 0, 0);
-    m_avBillBoard[1]  = D3DVERTEX(D3DVECTOR(-0.5f,-0.5f, 0), vNorm, 0, 1);
-    m_avBillBoard[2]  = D3DVERTEX(D3DVECTOR( 0.5f, 0.5f, 0), vNorm, 1, 0);
-    m_avBillBoard[3]  = D3DVERTEX(D3DVECTOR( 0.5f,-0.5f, 0), vNorm, 1, 1);
+    D3DVECTOR normal(0, 0, -1);
+    m_avBillBoard[0] = D3DVERTEX(D3DVECTOR(-0.5f, 0.5f, 0), normal, 0, 0);
+    m_avBillBoard[1] = D3DVERTEX(D3DVECTOR(-0.5f,-0.5f, 0), normal, 0, 1);
+    m_avBillBoard[2] = D3DVERTEX(D3DVECTOR( 0.5f, 0.5f, 0), normal, 1, 0);
+    m_avBillBoard[3] = D3DVERTEX(D3DVECTOR( 0.5f,-0.5f, 0), normal, 1, 1);
 }
 
 CSelectSrv::~CSelectSrv()
 {
-	INT	i;
-	for(i = 0 ; i <m_nSrvCount; i++)
-		delete m_ppxSrvBtn[i];
-	delete[] m_ppxSrvBtn;
+    for (int i = 0; i < m_nSrvCount; ++i) delete m_ppxSrvBtn[i];
+    delete[] m_ppxSrvBtn;
 }
 
-VOID CSelectSrv::Create(CWHWilImageData* pxImage,CPDLList<ServerList>* pxSList)
+VOID CSelectSrv::Create(CWHWilImageData* image, CPDLList<ServerList>* servers)
 {
-	INT		i,j;
-	INT		nTop,nLeft;
-	RECT	rcTemp;
-	// Buttons
-	m_nSrvCount = pxSList->GetCounter() + 1;
-	m_ppxSrvBtn	= new _PSERVERBUTTON[m_nSrvCount];
-	m_pxImage		= pxImage;
-
-	pxSList->MoveCurrentToTop();
-	for(i = 0 ; i <= ((m_nSrvCount - 1) / COUNT_BUTTON_PER_COLUME) ; i++)
-	{	for(j = i * COUNT_BUTTON_PER_COLUME; (j < m_nSrvCount && j < (COUNT_BUTTON_PER_COLUME * (i + 1))) ; j ++)
-		{	m_ppxSrvBtn[j] = new _SERVERBUTTON;
-
-			strcpy(m_ppxSrvBtn[j]->szName, pxSList->GetCurrentData()->Name);
-			strcpy(m_ppxSrvBtn[j]->szCaption, pxSList->GetCurrentData()->Caption);
-			nLeft = POS_TOP_SERVER_BTN_X + i * 100;
-			nTop  = POS_TOP_SERVER_BTN_Y + (j - i * COUNT_BUTTON_PER_COLUME) * (SERVER_BTN_HEIGHT+SERVER_BTN_GAP);
-			SetRect(&rcTemp, nLeft, nTop, nLeft + SERVER_BTN_WIDTH, nTop + SERVER_BTN_HEIGHT);
-			m_ppxSrvBtn[j]->rcBtn = rcTemp;
-			m_ppxSrvBtn[j]->dwTxtColor = SERVER_BTN_TEXTCOLOR_NORMAL;
-			m_ppxSrvBtn[j]->dwBkColor = SERVER_BTN_BKCOLOR_NORMAL;
-			m_ppxSrvBtn[j]->nAlpha = 125;
-			pxSList->MoveNextNode();
-
-		}
-	}
-	SetRect(&m_rcWnd,_LEFT_BORDER,_TOP_BORDER,_LEFT_BORDER+SERVER_BTN_WIDTH*(m_nSrvCount/COUNT_BUTTON_PER_COLUME+1),(m_nSrvCount/COUNT_BUTTON_PER_COLUME) > 0 ? _BOTTOM_BORDER : POS_TOP_SERVER_BTN_Y + (m_nSrvCount * COUNT_BUTTON_PER_COLUME) * (SERVER_BTN_HEIGHT+SERVER_BTN_GAP));
+    for (int i = 0; i < m_nSrvCount; ++i) delete m_ppxSrvBtn[i];
+    delete[] m_ppxSrvBtn;
+    m_nSrvCount = servers->GetCounter();
+    m_ppxSrvBtn = new _PSERVERBUTTON[m_nSrvCount];
+    m_pxImage = image;
+    m_pressed = m_hover = -1;
+    HDC dc = GetDC(g_xMainWnd.GetSafehWnd());
+    HFONT font = g_xMainWnd.CreateGameFont("Arial", 12);
+    HGDIOBJ previous = SelectObject(dc, font);
+    int width = 0, height = 0;
+    servers->MoveCurrentToTop();
+    for (int i = 0; i < m_nSrvCount; ++i) {
+        m_ppxSrvBtn[i] = new _SERVERBUTTON{};
+        strcpy(m_ppxSrvBtn[i]->szName, servers->GetCurrentData()->Name);
+        strcpy(m_ppxSrvBtn[i]->szCaption, servers->GetCurrentData()->Caption);
+        SIZE size = {};
+        GetTextExtentPoint32(dc, m_ppxSrvBtn[i]->szCaption, strlen(m_ppxSrvBtn[i]->szCaption), &size);
+        width = max(width, size.cx); height = max(height, size.cy);
+        servers->MoveNextNode();
+    }
+    SelectObject(dc, previous); DeleteObject(font); ReleaseDC(g_xMainWnd.GetSafehWnd(), dc);
+    const int rowHeight = height + 20;
+    SetRect(&m_rcWnd, 20, 60, 20 + width + 90, 80 + rowHeight * m_nSrvCount);
+    for (int i = 0; i < m_nSrvCount; ++i)
+        SetRect(&m_ppxSrvBtn[i]->rcBtn, 20, 70 + i * rowHeight, m_rcWnd.right, 70 + (i + 1) * rowHeight);
 }
 
-HRESULT	CSelectSrv::OnKeyDown(WPARAM wParam, LPARAM lParam)
+INT CSelectSrv::Hit(INT x, INT y) const
 {
-	return 0;
+    POINT point = {x, y};
+    for (int i = 0; i < m_nSrvCount; ++i) if (PtInRect(&m_ppxSrvBtn[i]->rcBtn, point)) return i;
+    return -1;
 }
 
-HRESULT CSelectSrv::OnButtonDown(WPARAM wParam, LPARAM lParam)
+HRESULT CSelectSrv::OnKeyDown(WPARAM, LPARAM) { return 0; }
+HRESULT CSelectSrv::OnButtonDown(WPARAM, LPARAM position)
 {
-	INT i;
-	RECT	tRect;
-	m_fIsButtonDown = TRUE;
-
-	for( i = 0 ;  i < m_nSrvCount  ; i++)
-	{	SetRect(&tRect,m_rcWnd.left + m_ppxSrvBtn[i]->rcBtn.left, m_rcWnd.top + m_ppxSrvBtn[i]->rcBtn.top, m_rcWnd.left +m_ppxSrvBtn[i]->rcBtn.right ,m_rcWnd.top +m_ppxSrvBtn[i]->rcBtn.bottom);
-		if(IsInRect(tRect,LOWORD(lParam), HIWORD(lParam)))
-		{	m_ppxSrvBtn[i]->dwTxtColor	= SERVER_BTN_TEXTCOLOR_CLICK;			// COLOR(BLACK)
-			m_ppxSrvBtn[i]->dwBkColor	= SERVER_BTN_BKCOLOR_CLICK;	
-			m_ppxSrvBtn[i]->nAlpha		= 125;
-		}
-	}
-
-	return 0;
+    m_pressed = Hit(LOWORD(position), HIWORD(position)); return 0;
 }
-
-HRESULT CSelectSrv::OnButtonDown(POINT ptMouse)
+HRESULT CSelectSrv::OnButtonDown(POINT point) { return OnButtonDown(0, MAKELPARAM(point.x, point.y)); }
+HRESULT CSelectSrv::OnButtonUp(WPARAM, LPARAM position)
 {
-	m_fIsButtonDown = TRUE;
-
-	return 0;
+    const int pressed = m_pressed; m_pressed = -1;
+    if (pressed >= 0 && pressed == Hit(LOWORD(position), HIWORD(position)))
+        g_xClientSocket.OnSelectServer(m_ppxSrvBtn[pressed]->szName);
+    return 0;
 }
-
-HRESULT	CSelectSrv::OnButtonUp(WPARAM wParam, LPARAM lParam)
+HRESULT CSelectSrv::OnButtonUp(POINT point) { return OnButtonUp(0, MAKELPARAM(point.x, point.y)); }
+LRESULT CSelectSrv::OnMouseMove(WPARAM, LPARAM position)
 {
-	INT	i;
-	RECT tRect;
-
-	m_fIsButtonDown = FALSE;
-
-	for( i = 0 ;  i < m_nSrvCount  ; i++)
-	{	SetRect(&tRect,m_rcWnd.left + m_ppxSrvBtn[i]->rcBtn.left, m_rcWnd.top + m_ppxSrvBtn[i]->rcBtn.top, m_rcWnd.left +m_ppxSrvBtn[i]->rcBtn.right ,m_rcWnd.top +m_ppxSrvBtn[i]->rcBtn.bottom);
-		if(IsInRect(tRect,LOWORD(lParam), HIWORD(lParam)))
-		{
-			g_xClientSocket.OnSelectServer(m_ppxSrvBtn[i]->szName);
-		}
-		m_ppxSrvBtn[i]->dwTxtColor	= SERVER_BTN_TEXTCOLOR_NORMAL;			// COLOR(YELLOW)
-		m_ppxSrvBtn[i]->dwBkColor	= SERVER_BTN_BKCOLOR_NORMAL;
-		m_ppxSrvBtn[i]->nAlpha		= 125;
-	}
-
-	return 0;
+    m_hover = Hit(LOWORD(position), HIWORD(position)); return 0;
 }
 
-
-HRESULT CSelectSrv::OnButtonUp(POINT ptMouse)
+VOID CSelectSrv::Render(INT)
 {
-	return 0;
+    if (!m_fIsActive) return;
+    Draw3DBorder(m_rcWnd, RGB(100,100,100), 120);
+    HFONT font = g_xMainWnd.CreateGameFont("Arial", 12);
+    for (int i = 0; i < m_nSrvCount; ++i) {
+        const bool pressed = m_pressed == i;
+        const bool hover = m_pressed < 0 && m_hover == i;
+        RECT bounds = m_ppxSrvBtn[i]->rcBtn;
+        if (pressed || hover) Draw3DBorder(bounds, pressed ? RGB(255,100,100) : RGB(100,100,100), 50);
+        g_xMainWnd.PutsHan(NULL, bounds.left + 20, bounds.top + 10,
+            pressed ? RGB(255,100,100) : (hover ? RGB(0,0,255) : RGB(30,30,30)), RGB(0,0,0), m_ppxSrvBtn[i]->szCaption, font);
+    }
+    DeleteObject(font);
 }
-
-LRESULT	CSelectSrv::OnMouseMove(WPARAM wParam, LPARAM lParam)
-{
-	INT	i;
-	RECT tRect;
-
-	if(!m_fIsButtonDown)
-		for( i = 0 ;  i < m_nSrvCount  ; i++)
-		{	SetRect(&tRect,m_rcWnd.left + m_ppxSrvBtn[i]->rcBtn.left, m_rcWnd.top + m_ppxSrvBtn[i]->rcBtn.top, m_rcWnd.left +m_ppxSrvBtn[i]->rcBtn.right ,m_rcWnd.top +m_ppxSrvBtn[i]->rcBtn.bottom);
-			if(IsInRect(tRect,LOWORD(lParam), HIWORD(lParam)))
-			{	m_ppxSrvBtn[i]->dwTxtColor	= SERVER_BTN_TEXTCOLOR_FOCUS;			// COLOR(YELLOW)
-				m_ppxSrvBtn[i]->dwBkColor	= SERVER_BTN_BKCOLOR_FOCUS;
-				m_ppxSrvBtn[i]->nAlpha		= 125;
-			}
-			else
-			{	m_ppxSrvBtn[i]->dwTxtColor	= SERVER_BTN_TEXTCOLOR_NORMAL;		// COLOR(WHITE)
-				m_ppxSrvBtn[i]->dwBkColor	= SERVER_BTN_BKCOLOR_NORMAL;
-				m_ppxSrvBtn[i]->nAlpha		= 125;
-			}
-		}
-	return 0;
-}
-
-VOID CSelectSrv::Render(INT	nLoopTime)
-{
-	INT		i,j;
-	RECT	tRect;
-
-	COLORREF nBkColor;
-	if(m_fIsActive)
-	{
-		// Write Texts;
-		Draw3DBorder(m_rcWnd,RGB(125,125,125),125);
-		for(i = 0 ; i <= ((m_nSrvCount - 1) / COUNT_BUTTON_PER_COLUME) ; i++)
-		{
-			for(j = i * COUNT_BUTTON_PER_COLUME; (j < m_nSrvCount && j < (COUNT_BUTTON_PER_COLUME * (i + 1))) ; j ++)
-			{	nBkColor = m_ppxSrvBtn[j]->dwBkColor;
-				SetRect(&tRect,m_rcWnd.left + m_ppxSrvBtn[j]->rcBtn.left, m_rcWnd.top + m_ppxSrvBtn[j]->rcBtn.top, m_rcWnd.left +m_ppxSrvBtn[j]->rcBtn.right ,m_rcWnd.top +m_ppxSrvBtn[j]->rcBtn.bottom);
-				if(nBkColor!=RGB(125,125,125))Draw3DBorder(tRect, nBkColor,m_ppxSrvBtn[j]->nAlpha);								
-				g_xMainWnd.PutsHan(NULL, tRect,
-										m_ppxSrvBtn[j]->dwTxtColor, RGB(0,0,0), m_ppxSrvBtn[j]->szCaption,g_xMainWnd.CreateGameFont("Arial",12 ));
-			}
-		}
-	}
-}
-
 
 VOID CSelectSrv::Draw3DBorder(RECT rcWnd,COLORREF dwColor,INT nAlpha)
 {

@@ -300,3 +300,11 @@ VOID CLogin::SetFocusAfter(VOID)
 	SetFocus(g_xChatEditBox.GetSafehWnd());
 	g_xChatEditBox.SetSelectAll();
 }
+
+VOID CLogin::ResetPassword()
+{
+    m_xInputState[1].szData[0] = 0;
+    g_xChatEditBox.m_szInputMsg[0] = 0;
+    m_nUserState = LGM_INPUT_PASSWORD;
+    SetFocusAfter();
+}

@@ -15,6 +15,7 @@ class CLogin : public CBMWnd
 	// Functions
 public:
 	CLogin();
+	VOID ResetPassword();
 	~CLogin();
 
 	virtual VOID		Create(CWHWilImageData* pxImage);

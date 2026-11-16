@@ -4,8 +4,8 @@
 
 typedef struct	tagServerList
 {
-	char Caption[20];
-	char Name[20];
+	char Caption[MAX_PATH];
+	char Name[MAX_PATH];
 }ServerList,* PServerList;
 
 typedef struct tagIMAGEINFO
@@ -18,8 +18,8 @@ typedef struct tagIMAGEINFO
 typedef struct tagSERVERBUTTON
 {
 	RECT		rcBtn;
-	CHAR		szCaption[20];
-	CHAR		szName[20];
+	CHAR		szCaption[MAX_PATH];
+	CHAR		szName[MAX_PATH];
 	COLORREF	dwTxtColor;
 	COLORREF	dwBkColor;
 	INT			nAlpha;

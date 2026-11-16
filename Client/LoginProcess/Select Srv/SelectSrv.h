@@ -34,7 +34,8 @@ protected:
 	// Variable
 public:
 private:
-	BOOL					m_fIsButtonDown;
+	INT m_pressed, m_hover;
+	INT Hit(INT x, INT y) const;
 protected:
 	CWHWilImageData			*m_pxImage;
 	_PPSERVERBUTTON			m_ppxSrvBtn;
