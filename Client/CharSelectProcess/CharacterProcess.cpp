@@ -355,6 +355,7 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
             for (int gender = 0; gender < 2; ++gender)
                 if (PtInRect(&m_createBounds[gender], m_ptMousePos) && gender != m_SelectSex) {
                     m_SelectSex = (BYTE)gender;
+                    m_Tick = 0;
                     g_xSound.PlayRoleVoice(true, m_SelectJob, m_SelectSex);
                 }
             for (int i = 0; i < 5; ++i) {
@@ -368,6 +369,7 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
                 } else if (i >= 2) {
                     if (m_SelectJob != i - 2) {
                         m_SelectJob = (BYTE)(i - 2);
+                        m_Tick = 0;
                         g_xSound.PlayRoleVoice(true, m_SelectJob, m_SelectSex);
                     }
                 } else {
@@ -375,7 +377,7 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
                     if (!m_szChrName[0]) break;
                     if (strpbrk(m_szChrName, " /@?'\"\\.,:;`~!#$%^&*()-_+=|[{}]<>")) {
                         m_nMessage = 0;
-                        strcpy(m_szErrorMsg, "Please use letters, numbers or Chinese characters for the name.");
+                        lstrcpynA(m_szErrorMsg, m_messages.Get(225).c_str(), sizeof(m_szErrorMsg));
                         m_xMsgBox.ShowMessageBox(m_szErrorMsg, MSG_BTN_OK, 1240);
                         break;
                     }
@@ -826,6 +828,23 @@ VOID CCharacterProcess::RenderCharCreate(INT nLoopTime)
             g_xMainWnd.DrawWithImageForComp(control.x, control.y,
                 m_Image.m_lpstNewCurrWilImageInfo->shWidth,
                 m_Image.m_lpstNewCurrWilImageInfo->shHeight, (WORD*)m_Image.m_pbCurrImage);
+    }
+    // Control order is confirm/cancel/jobs; reference captions are jobs/confirm/cancel.
+    static const POINT anchors[5] = {{469,458},{510,458},{289,438},{332,438},{376,438}};
+    static const int captions[5] = {204,205,201,202,203};
+    if (!m_xMsgBox.IsActive()) for (int i = 0; i < 5; ++i) {
+        const auto& c = createControls[i];
+        RECT hit = {c.x,c.y,c.x+c.width,c.y+c.height};
+        if (!PtInRect(&hit,m_ptMousePos)) continue;
+        const auto& caption = m_messages.Get(captions[i]);
+        const int x = anchors[i].x + 10, y = anchors[i].y + 2;
+        RECT box = {x,y,x + int(caption.size()) * 6,y + 15};
+        DrawLegacyPanel(box,RGB(125,125,75),50,RGB(180,180,120));
+        static const POINT offsets[4] = {{1,2},{3,2},{2,1},{2,3}};
+        for (const auto& offset : offsets)
+            g_xMainWnd.PutsHan(NULL,x+offset.x,y+offset.y,1644825,0,(char*)caption.c_str());
+        g_xMainWnd.PutsHan(NULL,x+2,y+2,11862015,0,(char*)caption.c_str());
+        break;
     }
 }
 
