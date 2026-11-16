@@ -244,7 +244,6 @@ CNPCWnd::~CNPCWnd()
 VOID CNPCWnd::CreateNPCChatWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
 {
 	CreateGameWnd(nID, pxWndImage, nFrameImgIdx, bCanMove, nStartX, nStartY, nWidth, nHeight);
-	m_xMsgBox.Load(&(g_xGameProc.m_xInterface.m_xInterImgEx));
 }
 
 VOID CNPCWnd::ShowNPCChatWnd()

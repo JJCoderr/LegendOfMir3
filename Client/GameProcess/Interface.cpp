@@ -60,7 +60,6 @@ VOID CInterface::Init()
 	m_xClientSysMsg.Init();
 
 	m_pxInterImg = NULL;
-	m_xInterImgEx.Init();
 
 	m_xStatusWnd.Init();
 	m_xStoreWnd.Init();
@@ -104,7 +103,6 @@ VOID CInterface::Destroy()
     m_portraits.Destroy();
 	m_xClientSysMsg.Destroy();
 
-	m_xInterImgEx.Destroy();
 	m_pxInterImg = NULL;
 
 	m_xInventoryWnd.Destroy();
@@ -145,8 +143,6 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_pxInterImg->NewLoad(".\\Data\\gameinter.wil");
     m_portraits.Destroy();
     m_portraits.NewLoad(".\\Data\\ProgUse.wil");
-	// Still required by CNPCWnd input dialogs until their GameInter migration.
-	m_xInterImgEx.NewLoad(".\\Data\\interfacec2.wil");
 	//------------------------------------------------------------------------------------------------------------
 
 	//------------------------------------------------------------------------------------------------------------

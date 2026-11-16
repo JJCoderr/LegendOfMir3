@@ -25,10 +25,12 @@ BYTE				g_bProcState = _LOGIN_PROC;
 // Offline visual review uses the real interface without map or network updates.
 class CHudPreviewProcess : public CWHDefProcess {
     POINT mouse = {0,0};
+    const char* capturePath = NULL;
 public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
     void Load(bool expanded) {
+        capturePath = expanded ? "hud-expanded.bmp" : "hud-collapsed.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
         g_xGameProc.m_xInterface.CreateInterface(&g_xGameProc.m_xImage);
@@ -56,6 +58,36 @@ public:
         RECT canvas = {0,0,800,600};
         DrawLegacyPanel(canvas,RGB(20,24,28),255,0,false);
         g_xGameProc.m_xInterface.RenderInterface(elapsed,mouse);
+        if (capturePath) {
+            auto* buffer = g_xMainWnd.GetBackBuffer();
+            DDSURFACEDESC2 surface = {}; surface.dwSize = sizeof(surface);
+            if (SUCCEEDED(buffer->Lock(NULL,&surface,DDLOCK_WAIT|DDLOCK_READONLY,NULL))) {
+                const int stride = (surface.dwWidth*3+3)&~3;
+                std::vector<BYTE> pixels(stride*surface.dwHeight);
+                for (DWORD y=0;y<surface.dwHeight;++y) {
+                    const WORD* source = (WORD*)((BYTE*)surface.lpSurface+y*surface.lPitch);
+                    BYTE* dest = &pixels[(surface.dwHeight-1-y)*stride];
+                    for (DWORD x=0;x<surface.dwWidth;++x) {
+                        const WORD color=source[x];
+                        dest[x*3] = BYTE((color&31)*255/31);
+                        dest[x*3+1] = BYTE(((color>>5)&63)*255/63);
+                        dest[x*3+2] = BYTE((color>>11)*255/31);
+                    }
+                }
+                buffer->Unlock(NULL);
+                BITMAPFILEHEADER file = {}; BITMAPINFOHEADER info = {};
+                file.bfType=0x4d42; file.bfOffBits=sizeof(file)+sizeof(info);
+                file.bfSize=file.bfOffBits+(DWORD)pixels.size();
+                info.biSize=sizeof(info); info.biWidth=surface.dwWidth; info.biHeight=surface.dwHeight;
+                info.biPlanes=1; info.biBitCount=24; info.biSizeImage=(DWORD)pixels.size();
+                if (FILE* output=fopen(capturePath,"wb")) {
+                    fwrite(&file,sizeof(file),1,output); fwrite(&info,sizeof(info),1,output);
+                    fwrite(pixels.data(),pixels.size(),1,output); fclose(output);
+                }
+                capturePath=NULL;
+            }
+        }
+
     }
     LRESULT DefMainWndProc(HWND window,UINT message,WPARAM wp,LPARAM lp) override {
         auto& ui = g_xGameProc.m_xInterface;

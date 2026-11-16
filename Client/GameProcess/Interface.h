@@ -31,7 +31,6 @@ public:
 // Main Interface 处理变量.
 //---------------------------------------------------------------------------------------------------------------//
 	CWHWilImageData*	m_pxInterImg;					// 游戏中使用的界面图像.
-	CWHWilImageData		m_xInterImgEx;					// 界面相关图像。
 
 	COMMONITEMSET		m_stCommonItem;					// 公共物品存储(鼠标物品).
 	RECT				m_rcMain;						// 主界面整个区域。
