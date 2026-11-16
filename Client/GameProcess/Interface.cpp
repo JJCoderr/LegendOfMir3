@@ -1581,7 +1581,7 @@ void CInterface::OpenNameDialog(int action)
     if (action==10 || action==11) prompt=captions.Get(action==10?1705:1706);
     m_xMsgBox.ShowMessageBox(prompt.c_str(),MSG_BTN_YESNO,1240);
     g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+244,g_xMainWnd.m_rcWindow.top+340,309,15,TRUE);
-    g_xChatEditBox.SetLimitText(90);
+    g_xChatEditBox.SetLimitText(action==7?m_xNPCWnd.PromptLimit():90);
     SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETPASSWORDCHAR,action==7 && m_xNPCWnd.promptCommand.compare(0,3,"@@*")==0?'*':0,0);
     g_xChatEditBox.m_szInputMsg[0]=0;
     SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"");
@@ -1598,17 +1598,19 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         return;
     }
     if (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) {
-        char name[91] = {};
-        GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,sizeof(name));
+        std::vector<char> answer(GetWindowTextLengthA(g_xChatEditBox.GetSafehWnd())+1);
+        char* name=answer.data(); GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,int(answer.size()));
         if (mouse) g_xSound.PlayLobbyEffect("105.wav");
         m_xMsgBox.HideMessageBox();
         SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"");
         g_xChatEditBox.m_szInputMsg[0]=0;
         ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
         SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETPASSWORDCHAR,0,0);
+        g_xChatEditBox.SetLimitText(90);
         SetFocus(g_xMainWnd.GetSafehWnd());
         g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+185,
             g_xMainWnd.m_rcWindow.top+(m_chatExpanded?534:575),m_chatExpanded?432:344,15,TRUE);
+        if (m_nIdxMsgBox==7 && hResult!=CLICK_YES) m_xNPCWnd.ClearPrompt();
         if (hResult == CLICK_YES) {
             if (m_nIdxMsgBox == 1) g_xClientSocket.SendCreateGroup(name);
             else if (m_nIdxMsgBox == 2) g_xClientSocket.SendAddGroupMember(name);

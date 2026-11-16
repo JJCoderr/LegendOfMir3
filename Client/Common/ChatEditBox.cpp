@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include "Common/AnsiInput.h"
 #include "Common/LoginMessages.h"
 
 static const char* ChatInputFontFace()
@@ -104,6 +105,8 @@ LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LP
 			{
 			case VK_RETURN:
 				{
+                    auto& ui=g_xGameProc.m_xInterface;
+                    if (ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==7) { ui.FinishNotice(CLICK_YES,false); return 0; }
 					GetWindowText(hWnd, m_szInputMsg, MAX_PATH);
 					SetWindowText(hWnd, "");
 					HWND m_hMainWindow = g_xMainWnd.GetSafehWnd();
@@ -170,12 +173,20 @@ BOOL CChatEdit::Create(HINSTANCE hInstance, HWND hWndParent, INT nX, INT nY, INT
 
 BOOL CChatEdit::SetLimitText(INT nLimitText)
 {
+    m_byteLimit=nLimitText; m_previous.clear();
 	if ( m_hChatEdit )
 	{
 		SendMessage(m_hChatEdit, EM_LIMITTEXT, (WPARAM)nLimitText, 0);
 		return TRUE;
 	}
 	return FALSE;
+}
+void CChatEdit::Changed()
+{
+    if (m_updating) return;
+    std::string text(GetWindowTextLengthA(m_hChatEdit)+1,'\0'); GetWindowTextA(m_hChatEdit,&text[0],int(text.size())); text.resize(strlen(text.c_str()));
+    m_previous=LimitAnsiEdit(m_previous,text,m_byteLimit);
+    if (m_previous!=text) { m_updating=true; SetWindowTextA(m_hChatEdit,m_previous.c_str()); m_updating=false; }
 }
 VOID CChatEdit::MoveScaled(INT x, INT y, INT width, INT height, BOOL repaint)
 {

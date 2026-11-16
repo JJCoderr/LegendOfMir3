@@ -39,6 +39,7 @@ public:
         if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
         if (groupPanel==30 || groupPanel==31) capturePath=groupPanel==30?"mount-panel.bmp":"mount-hint.bmp";
         if (groupPanel>=32 && groupPanel<=36) capturePath=groupPanel==36?"trade-return.bmp":groupPanel==35?"trade-gold.bmp":groupPanel==32?"trade-empty.bmp":groupPanel==33?"trade-list.bmp":"trade-confirmed.bmp";
+        if (groupPanel==58) capturePath="npc-password.bmp";
         if (groupPanel==56 || groupPanel==57) capturePath=groupPanel==56?"merchant-sell-quantity.bmp":"merchant-deposit-quantity.bmp";
         if (groupPanel>=53 && groupPanel<=55) capturePath=groupPanel==53?"merchant-repair.bmp":groupPanel==54?"merchant-sell.bmp":"merchant-deposit.bmp";
         if (groupPanel>=50 && groupPanel<=52) capturePath=groupPanel==50?"storage-list.bmp":groupPanel==51?"storage-page.bmp":"storage-quantity.bmp";
@@ -519,6 +520,33 @@ public:
             if (FILE* report=fopen("mount-layout-check.txt","wb")) {
                 fprintf(report,"opened=%d repeat=%d hidden=%d buttons=%d stray=%d on_foot=%d riding=%d hint=%d pressed_hint=%d outside_release=%d covered=%d window_drag=%d closed=%d\n",
                     opened,repeat,hidden,buttons,stray,onFoot,riding,hint,pressedHint,released,covered,moved,closed); fclose(report);
+            }
+        }
+        if (groupPanel==58) {
+            auto& ui=g_xGameProc.m_xInterface; auto& npc=ui.m_xNPCWnd; const HWND edit=g_xChatEditBox.GetSafehWnd();
+            npc.SetScript(77,"≤÷ø‚√‹¬Î—È÷§°£\\<«Î ‰»Î≤÷ø‚√‹¬Î/@@*6_enter_stgpasswd>"); ui.WindowActivate(_WND_ID_NPCCHAT);
+            const auto open=[&](const char* command) { npc.promptActor=npc.m_nNpcId; npc.promptCommand=command; npc.prompt="«Î ‰»Î≤÷ø‚√‹¬Î"; ui.OpenNameDialog(7); };
+            const auto limit=[&](const char* command,int expected) { npc.promptCommand=command; return npc.PromptLimit()==expected; };
+            const bool rules=limit("@@*6_enter_stgpasswd",6) && limit("@@*8_Input_stgpasswd",8) && limit("@@*12_Change_stgpasswd",12) &&
+                limit("@@*4_confirm_passwd",4) && limit("@@*confirm_passwd",10) && limit("@@*0000001_enter_stgpasswd",10) &&
+                limit("@@*0_enter_stgpasswd",90) && limit("@@*bad_enter_stgpasswd",90) && limit("@@*+8_enter_stgpasswd",90) &&
+                limit("@@*8_other",90) && limit("@@8_enter_stgpasswd",90);
+            open("@@*4_enter_stgpasswd"); const bool secret=SendMessage(edit,EM_GETPASSWORDCHAR,0,0)=='*' && SendMessage(edit,EM_GETLIMITTEXT,0,0)==4;
+            SetWindowTextA(edit,"abc"); SendMessage(edit,EM_SETSEL,3,3); SendMessageA(edit,EM_REPLACESEL,TRUE,(LPARAM)"÷–");
+            char value[64]={}; GetWindowTextA(edit,value,sizeof(value)); const bool dbcs=!strcmp(value,"abc");
+            SetWindowTextA(edit,"ab"); SendMessage(edit,EM_SETSEL,1,1); SendMessageA(edit,EM_REPLACESEL,TRUE,(LPARAM)"÷–Œƒ"); GetWindowTextA(edit,value,sizeof(value));
+            const bool suffix=!strcmp(value,"a÷–b");
+            ui.OnLButtonDown(POINT{490,315}); ui.OnLButtonUp(POINT{490,315});
+            const bool cancelled=npc.promptCommand.empty() && !npc.promptActor && !SendMessage(edit,EM_GETPASSWORDCHAR,0,0) && SendMessage(edit,EM_GETLIMITTEXT,0,0)==90;
+            open("@@*6_enter_stgpasswd"); npc.SetScript(78,"Different actor"); const bool changed=!npc.SubmitPrompt("1234") && npc.promptCommand.empty() && !npc.promptActor; ui.FinishNotice(CLICK_NO,false);
+            open("@@answer"); const bool empty=npc.SubmitPrompt("") && npc.promptCommand.empty(); ui.FinishNotice(CLICK_NO,false);
+            open("@@*300_enter_stgpasswd"); const std::string longAnswer(300,'a'); SetWindowTextA(edit,longAnswer.c_str());
+            const bool longInput=GetWindowTextLengthA(edit)==300;
+            SendMessage(edit,WM_CHAR,VK_RETURN,0); const bool keyboard=!ui.m_xMsgBox.IsActive() && npc.promptCommand.empty() && !IsWindowVisible(edit) && SendMessage(edit,EM_GETLIMITTEXT,0,0)==90;
+            open("@@ordinary"); const bool ordinary=!SendMessage(edit,EM_GETPASSWORDCHAR,0,0) && SendMessage(edit,EM_GETLIMITTEXT,0,0)==90; ui.FinishNotice(CLICK_NO,false);
+            npc.SetScript(77,"≤÷ø‚√‹¬Î—È÷§°£\\<«Î ‰»Î≤÷ø‚√‹¬Î/@@*6_enter_stgpasswd>"); open("@@*6_enter_stgpasswd"); SetWindowTextA(edit,"123456");
+            if(FILE* report=fopen("npc-password-check.txt","wb")) {
+                fprintf(report,"rules=%d secret=%d dbcs=%d suffix=%d cancelled=%d changed_actor=%d empty_answer=%d long_input=%d keyboard=%d ordinary=%d\n",rules,secret,dbcs,suffix,cancelled,changed,empty,longInput,keyboard,ordinary); fclose(report);
             }
         }
         if (groupPanel==56 || groupPanel==57) {
@@ -1263,7 +1291,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-sell")==0 ? 54 :
         strcmp(lpCmdLine,"--preview=merchant-deposit")==0 ? 55 :
         strcmp(lpCmdLine,"--preview=merchant-sell-quantity")==0 ? 56 :
-        strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 : 0;
+        strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
+        strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

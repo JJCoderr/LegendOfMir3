@@ -2674,6 +2674,7 @@ LRESULT CGameProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 	switch ( uMsg )
 	{
         case WM_COMMAND:
+            if ((HWND)lParam==g_xChatEditBox.GetSafehWnd() && HIWORD(wParam)==EN_CHANGE && m_xInterface.m_xMsgBox.IsActive() && m_xInterface.m_nIdxMsgBox==7) { g_xChatEditBox.Changed(); return 0; }
             if ((HWND)lParam==m_xInterface.m_xGuildEditor.edit && HIWORD(wParam)==EN_CHANGE) { m_xInterface.m_xGuildEditor.Changed(); return 0; }
             break;
 		case WM_CTLCOLOREDIT:

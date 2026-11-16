@@ -116,11 +116,28 @@ BOOL CNPCWnd::OnLButtonUp(POINT point)
     }
     return FALSE;
 }
-void CNPCWnd::SubmitPrompt(const char* text)
+int CNPCWnd::PromptLimit() const
 {
-    if (!*text || promptCommand.empty()) return;
-    const std::string body=promptCommand+"\r"+text;
-    g_xClientSocket.SendNPCMessage(CM_MERCHANTDLGSELECT,promptActor,0,const_cast<char*>(body.c_str()));
+    if (promptCommand.compare(0,3,"@@*")!=0) return 90;
+    bool storage=false;
+    for (const char* marker:{"enter_stgpasswd","Input_stgpasswd","Change_stgpasswd","confirm_passwd"})
+        if (promptCommand.find(marker)!=promptCommand.npos) storage=true;
+    if (!storage) return 90;
+    const auto delimiter=promptCommand.find('_',3);
+    if (delimiter>=10) return 10;
+    int bytes=0;
+    for (size_t i=3;i<delimiter;++i) {
+        if (promptCommand[i]<'0' || promptCommand[i]>'9') return 90;
+        bytes=bytes*10+promptCommand[i]-'0';
+    }
+    return bytes>0?bytes:90;
+}
+bool CNPCWnd::SubmitPrompt(const char* text)
+{
+    const int actor=promptActor; const bool valid=actor && actor==m_nNpcId && !promptCommand.empty();
+    const std::string body=promptCommand+"\r"+text; ClearPrompt();
+    if (valid) g_xClientSocket.SendNPCMessage(CM_MERCHANTDLGSELECT,actor,0,const_cast<char*>(body.c_str()));
+    return valid;
 }
 void CNPCWnd::DrawBackground()
 {
