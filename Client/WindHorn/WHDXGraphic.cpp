@@ -118,7 +118,7 @@ BOOL CWHDXGraphicWindow::Create(HINSTANCE hInst, LPTSTR lpCaption, CHAR *pszMenu
 	{
 		dwStyle  = GetWindowStyle(m_hWnd);
 		dwStyle &= ~WS_POPUP;
-		dwStyle |= WS_POPUP;//WS_OVERLAPPED | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_SYSMENU;
+		dwStyle |= WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU;
 		SetWindowLong(m_hWnd, GWL_STYLE, dwStyle);
 	}
 	else
@@ -468,7 +468,7 @@ HRESULT CWHDXGraphicWindow::ResetDXG(WORD wWidth, WORD wHeight, WORD wBPP, BYTE 
 	{
 		dwStyle  = GetWindowStyle(m_hWnd);
 		dwStyle &= ~WS_POPUP;
-		dwStyle |= WS_OVERLAPPED | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_SYSMENU;
+		dwStyle |= WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU;
 		SetWindowLong(m_hWnd, GWL_STYLE, dwStyle);
 	}
 	else
@@ -521,16 +521,21 @@ HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
 
 		// 用窗口的整个区域大小设置窗口。但起始坐标被忽略。
 		SetWindowPos(m_hWnd, NULL, 0, 0, rcTemp.right-rcTemp.left, rcTemp.bottom-rcTemp.top,
-					 SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+					 SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 
 		// 是为了设置 HWND_NOTOPMOST。
 		SetWindowPos(m_hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
 
 		// 获取桌面区域的大小..
-		SystemParametersInfo(SPI_GETWORKAREA, 0, &rcWork, 0);
+		MONITORINFO monitor = {};
+		monitor.cbSize = sizeof(monitor);
+		GetMonitorInfo(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &monitor);
+		rcWork = monitor.rcWork;
 		GetWindowRect(m_hWnd, &rcTemp);
-		if ( rcTemp.left < rcWork.left )		rcTemp.left = rcWork.left;
-		if ( rcTemp.top  < rcWork.top )			rcTemp.top  = rcWork.top;
+		const LONG windowWidthPixels = rcTemp.right - rcTemp.left;
+		const LONG windowHeightPixels = rcTemp.bottom - rcTemp.top;
+		rcTemp.left = rcWork.left + max(0L, (rcWork.right - rcWork.left - windowWidthPixels) / 2);
+		rcTemp.top = rcWork.top + max(0L, (rcWork.bottom - rcWork.top - windowHeightPixels) / 2);
 
 		// 设置窗口的起始坐标.
 		SetWindowPos(m_hWnd, NULL, rcTemp.left, rcTemp.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
@@ -703,16 +708,8 @@ HRESULT CWHDXGraphicWindow::Init3DDeviceObjects()
 
 HFONT CWHDXGraphicWindow::CreateGameFont(LPCSTR szFontName, INT nHeight, INT nWidth, INT nWeight, BOOL bItalic, BOOL bULine, BOOL bStrikeOut, DWORD dwCharSet)
 {
-	INT nYsize;
-
-	// 调整字体大小。
-	if ( m_pddsBackBuffer )
-	{
-		HDC hDC;
-		m_pddsBackBuffer->GetDC(&hDC);
-		nYsize = -MulDiv(nHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72); 
-		m_pddsBackBuffer->ReleaseDC(hDC);
-	}
+	// Godot raster_text uses the original client's 96-DPI logical font size.
+	const INT nYsize = -MulDiv(nHeight, 96, 72);
 
 	return CreateFont(nYsize, nWidth, 0, 0, nWeight, bItalic, bULine, bStrikeOut, dwCharSet, 
 					  OUT_DEFAULT_PRECIS,	CLIP_DEFAULT_PRECIS, 

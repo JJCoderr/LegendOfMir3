@@ -27,7 +27,7 @@ BOOL CLoginNotice::HideMessageBox() {
 int CLoginNotice::Hit(POINT point) const {
     if (!m_active) return CLICK_NONE;
     if ((m_type & 127) == MSG_BTN_YESNO) {
-        RECT yes = {220,298,300,330}, no = {340,298,420,330};
+        RECT yes = {181,298,261,330}, no = {374,298,454,330};
         if (PtInRect(&yes, point)) return CLICK_YES;
         if (PtInRect(&no, point)) return CLICK_NO;
     } else {
@@ -55,8 +55,8 @@ BOOL CLoginNotice::RenderMessageBox(INT) {
     if (!m_active) return FALSE;
     Draw(1240,140,110);
     if ((m_type & 127) == MSG_BTN_YESNO) {
-        Draw(m_pressed == CLICK_YES ? 1242 : 1241,220,298);
-        Draw(m_pressed == CLICK_NO ? 1246 : 1245,340,298);
+        Draw(m_pressed == CLICK_YES ? 1242 : 1241,181,298);
+        Draw(m_pressed == CLICK_NO ? 1246 : 1245,374,298);
     } else Draw(m_pressed == CLICK_OK ? 1244 : 1243,277,298);
     const char* next = m_text;
     for (int row = 0; row < 5 && *next; ++row) {

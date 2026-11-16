@@ -30,7 +30,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	if (separator) { *separator = 0; SetCurrentDirectory(executable); }
 
 
-	if (!g_xMainWnd.Create(hInstance, "Legend Of Mir 2 Expansion[Evil's Illusion] ", NULL, MAKEINTRESOURCE(IDI_ICON), _DXG_SCREENMODE_WINDOW, _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D|_DXG_DEVICEMODE_ZBUFFER)) return -1;
+	if (!g_xMainWnd.Create(hInstance, "´«Ææ3", NULL, MAKEINTRESOURCE(IDI_ICON), _DXG_SCREENMODE_WINDOW, _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D|_DXG_DEVICEMODE_ZBUFFER)) return -1;
 	ShowWindow(g_xMainWnd.GetSafehWnd(), SW_HIDE);
 
 	g_xSound.InitMirSound(g_xMainWnd.GetSafehWnd());

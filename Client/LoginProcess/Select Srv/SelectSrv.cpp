@@ -24,7 +24,7 @@ VOID CSelectSrv::Create(CWHWilImageData* image, CPDLList<ServerList>* servers)
     m_pxImage = image;
     m_pressed = m_hover = -1;
     HDC dc = GetDC(g_xMainWnd.GetSafehWnd());
-    HFONT font = g_xMainWnd.CreateGameFont("Arial", 12);
+    HFONT font = g_xMainWnd.CreateGameFont("ËÎÌו", 9);
     HGDIOBJ previous = SelectObject(dc, font);
     int width = 0, height = 0;
     servers->MoveCurrentToTop();
@@ -74,16 +74,14 @@ VOID CSelectSrv::Render(INT)
 {
     if (!m_fIsActive) return;
     Draw3DBorder(m_rcWnd, RGB(100,100,100), 120);
-    HFONT font = g_xMainWnd.CreateGameFont("Arial", 12);
     for (int i = 0; i < m_nSrvCount; ++i) {
         const bool pressed = m_pressed == i;
         const bool hover = m_pressed < 0 && m_hover == i;
         RECT bounds = m_ppxSrvBtn[i]->rcBtn;
         if (pressed || hover) Draw3DBorder(bounds, pressed ? RGB(255,100,100) : RGB(100,100,100), 50);
         g_xMainWnd.PutsHan(NULL, bounds.left + 20, bounds.top + 10,
-            pressed ? RGB(255,100,100) : (hover ? RGB(0,0,255) : RGB(30,30,30)), RGB(0,0,0), m_ppxSrvBtn[i]->szCaption, font);
+            pressed ? RGB(255,100,100) : (hover ? RGB(0,0,255) : RGB(30,30,30)), RGB(0,0,0), m_ppxSrvBtn[i]->szCaption);
     }
-    DeleteObject(font);
 }
 
 VOID CSelectSrv::Draw3DBorder(RECT rcWnd,COLORREF dwColor,INT nAlpha)

@@ -133,7 +133,7 @@ LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LP
 
 BOOL CChatEdit::Create(HINSTANCE hInstance, HWND hWndParent, INT nX, INT nY, INT nXsize, INT nYSize)
 {
-	m_hChatEdit = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), "", WS_POPUP | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL,
+	m_hChatEdit = CreateWindowEx(0, _T("EDIT"), "", WS_POPUP | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL,
 								 nX, nY, nXsize, nYSize,
 								 hWndParent, NULL, hInstance, NULL);	  
 	m_WndProcChatEdit = (WNDPROC)SetWindowLong(m_hChatEdit, GWL_WNDPROC, (LONG)ChatEditDlgProc);
@@ -145,9 +145,9 @@ BOOL CChatEdit::Create(HINSTANCE hInstance, HWND hWndParent, INT nX, INT nY, INT
 		m_hFontChatEdit = NULL; 
 	}
 
-	m_hFontChatEdit = CreateFont(12, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGUL_CHARSET, 
+	m_hFontChatEdit = CreateFont(-12, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET,
 								 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, 
-								 DEFAULT_QUALITY, DEFAULT_PITCH, "Arial");
+								 DEFAULT_QUALITY, DEFAULT_PITCH, "宋体");
 
 	SendMessage(m_hChatEdit, WM_SETFONT, (WPARAM)m_hFontChatEdit, MAKELPARAM(TRUE, 0));
 	// 输入编辑窗口的最大输入字符个数定义.
@@ -180,8 +180,8 @@ VOID CChatEdit::MoveScaled(INT x, INT y, INT width, INT height, BOOL repaint)
         MulDiv(width, displayWidth, logicalWidth), MulDiv(height, displayHeight, logicalHeight), repaint);
     const int fontHeight = MulDiv(12, displayHeight, logicalHeight);
     if (m_fontHeight != fontHeight) {
-        HFONT font = CreateFont(fontHeight, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH, "Arial");
+        HFONT font = CreateFont(-fontHeight, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH, "宋体");
         SendMessage(m_hChatEdit, WM_SETFONT, (WPARAM)font, TRUE);
         DeleteObject(m_hFontChatEdit); m_hFontChatEdit = font; m_fontHeight = fontHeight;
     }
