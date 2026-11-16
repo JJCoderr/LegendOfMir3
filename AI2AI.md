@@ -1047,3 +1047,7 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 ### 人物装备页属性悬浮接线
 - ShowNativeStatus末尾接回ShowEquipItemState，采用UpdatePointer提供的当前悬停窗口判定和坐标；手持物品时不显示装备属性。复用各物品原生属性分派与绘制，沿用CLIENT原有left+37/top+288锚点，该锚点尚待与MIR3运行画面对照。
 - 增量构建与diff --check通过，equipment-hover-hint预览已实际截图检查，装备槽5的类型26属性在人物页显示。截图out/equipment-hover-hint.png；夹具图标不代表正式物品资源对应关系。
+
+### 类型19项链原版属性
+- 按out/item-tooltip-original.c原版444F40的case0x13及LABEL98接入AccessoryHint。魔法躲避raw41+signed86以十倍百分比显示，诅咒raw42，幸运raw43+signed87；基础/附加攻击元素49/50/97/98及独立91/92，强弱52/53仅1..6显示x1，末尾魔法与要求共享原路径。保留负加成仅参与是否显示判定、不减基础显示值的原版规则。
+- 增量构建、diff --check通过；necklace-hint三项stats/elements/boundary全1，覆盖百分比、加成色、元素组合、负加成和元素7不显示。已检查out/necklace-hint.png。20..24与53仍待迁移，尚未完成原版逐像素验收。

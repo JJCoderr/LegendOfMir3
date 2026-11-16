@@ -1829,6 +1829,23 @@ public:
             if(FILE* report=fopen("equipment-durability-check.txt","wb")) {fprintf(report,"threshold=%d warning=%d raw=%d unit=%d special=%d negative=%d wide=%d ignored=%d drop=%d\n",threshold,warning,rawBytes,unit,special,negative,wide,ignored,drop);fclose(report);}
         }
 
+        if(groupPanel==139) {
+            auto& ui=g_xGameProc.m_xInterface;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[100]={};strcpy((char*)raw,"œÓ¡¥ Ù–‘≤‚ ‘");raw[30]=19;raw[32]=2;raw[62]=11;
+            raw[66]=0xD0;raw[67]=7;raw[68]=0x10;raw[69]=0x27;
+            raw[41]=2;raw[86]=1;raw[42]=1;raw[43]=2;raw[87]=1;
+            raw[49]=1;raw[50]=2;raw[97]=1;raw[98]=3;raw[91]=2;raw[92]=4;raw[52]=1;raw[53]=2;
+            CItem item;item.SetMir3Item(raw,0);BYTE elements[7]={};auto rows=item.AccessoryHint(35,20,elements);
+            const bool stats=rows.size()==10 && rows[3].text.find("+30% (+10%)")!=std::string::npos && rows[3].color==13172630 && rows[5].text.find("+3 (+1)")!=std::string::npos;
+            const bool elemental=rows[6].text.find("+5")!=std::string::npos && rows[6].text.find("+4")!=std::string::npos && rows[7].text.find("x1")!=std::string::npos && rows[8].color==13172630;
+            raw[86]=255;raw[87]=254;raw[52]=7;raw[53]=7;item.SetMir3Item(raw,0);rows=item.AccessoryHint(35,20,elements);
+            const bool boundary=rows.size()==7 && rows[3].text.find("+20%")!=std::string::npos && rows[3].color==0xffffff;
+            raw[86]=1;raw[87]=1;raw[52]=1;raw[53]=2;item.SetMir3Item(raw,0);ui.m_xInventoryWnd.AddInvenItem(item,0,TRUE);ui.WindowActivate(_WND_ID_INVENTORY);
+            mouse={550,80};g_xGameProc.m_ptMousePos=mouse;capturePath="necklace-hint.bmp";
+            if(FILE* report=fopen("necklace-hint-check.txt","wb")) {fprintf(report,"stats=%d elements=%d boundary=%d\n",stats,elemental,boundary);fclose(report);}
+        }
+
         if(groupPanel==138) {
             auto& ui=g_xGameProc.m_xInterface;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -2216,6 +2233,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=necklace-hint")==0 ? 139 :
         strcmp(lpCmdLine,"--preview=equipment-hover-hint")==0 ? 138 :
         strcmp(lpCmdLine,"--preview=helmet-hint")==0 ? 136 :
         strcmp(lpCmdLine,"--preview=accessory-26-hint")==0 ? 137 :

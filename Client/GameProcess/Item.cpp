@@ -165,7 +165,7 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 {
     if(m_serverName[0]) {
         switch(m_stItemInfo.stStdItem.bStdMode) {
-        case 19:case 20:case 21:case 22:case 23:case 24:case 53:break;
+        case 20:case 21:case 22:case 23:case 24:case 53:break;
         default:ShowGeneralHint(nX,nY);return;
         }
     }
@@ -675,7 +675,7 @@ void CItem::ShowGeneralHint(int x,int y) const
     const int mode=m_stItemInfo.stStdItem.bStdMode;
     const auto lines=mode==5 || mode==6 || mode==54 || mode==55 || mode==56
         ?WeaponHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0])
-        :mode==15 || mode==26 || mode==57
+        :mode==15 || mode==19 || mode==26 || mode==57
         ?AccessoryHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0])
         :mode==10 || mode==11
         ?ArmorHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0])
@@ -861,6 +861,31 @@ std::vector<CItem::HintLine> CItem::AccessoryHint(int level,int attack,const BYT
                 any=true;text+=" "+captions.Get(5160+element)+"x"+std::to_string(bit && normal?2:1);
             }
             if(any) lines.push_back({text,kind?13172630u:65408u});
+        }
+    }
+    if(r[30]==19) {
+        const auto value=[&](int id,int at,int extra,int scale,const char* suffix) {
+            const int bonus=signedByte(extra);if(int(r[at])+bonus<=0) return;
+            std::string text=captions.Get(id)+": +"+std::to_string((r[at]+max(0,bonus))*scale)+suffix;
+            if(bonus>0) text+=" (+"+std::to_string(bonus*scale)+suffix+")";
+            lines.push_back({text,bonus>0?13172630u:0xffffffu});
+        };
+        value(1055,41,86,10,"%");
+        if(r[42]) lines.push_back({captions.Get(2507)+": +"+std::to_string(r[42]),0xffffff});
+        value(2506,43,87,1,"");
+        if((signedByte(91)>0 && signedByte(92)>0) || signedByte(97)>0 || r[49]) {
+            std::string text=captions.Get(5178)+":";int element=r[49];
+            if(signedByte(97)>0 || r[49]) {
+                if(element!=signedByte(97) && element) text+=" "+captions.Get(5160+element)+"+"+std::to_string(word(50));
+                if(signedByte(97)>0) element=r[97];
+                if(signedByte(98)>0) text+=" "+captions.Get(5160+element)+"+"+std::to_string(signedByte(98)+(element==r[49]?word(50):0));
+            }
+            if(signedByte(92)>0) text+=" "+captions.Get(5160+signedByte(91))+"+"+std::to_string(signedByte(92));
+            lines.push_back({text,65408});
+        }
+        for(int kind=0;kind<2;++kind) {
+            const int element=signedByte(52+kind);
+            if(element>0 && element<7) lines.push_back({captions.Get(5179+kind)+": "+captions.Get(5160+element)+"x1",kind?13172630u:65408u});
         }
     }
     range(5100+r[46],47,89,true);
