@@ -1,3 +1,5 @@
 add_executable(EncodeSize EncodeSize.cpp)
 add_executable(test_encode test_encode.cpp)
 add_executable(test_database_sqlite test_database_sqlite.cpp)
+add_executable(test_server_config test_server_config.cpp)
+target_compile_definitions(test_server_config PRIVATE UNICODE _UNICODE)

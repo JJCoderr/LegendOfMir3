@@ -1,4 +1,5 @@
 #include "stdafx.h"
+BOOL jRegGetKeyBuf(LPCTSTR, LPCTSTR, LPBYTE, DWORD);
 
 BOOL jRegSetKey(LPCTSTR pSubKeyName, LPCTSTR pValueName, DWORD dwFlags, LPBYTE pValue, DWORD nValueSize);
 BOOL jRegGetKey(LPCTSTR pSubKeyName, LPCTSTR pValueName, LPBYTE pValue);
@@ -46,10 +47,10 @@ BOOL CALLBACK ConfigDlgFunc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 			_itow(nServerNum, szServer, 10);
 			SetWindowText(GetDlgItem(hWndDlg, IDC_SRVNUMBER), szServer);
 
-			jRegGetKey(_GAME_SERVER_REGISTRY, _TEXT("MapFileLoc"), (LPBYTE)szPath);
+			jRegGetKeyBuf(_GAME_SERVER_REGISTRY, _TEXT("MapFileLoc"), (LPBYTE)szPath, sizeof(szPath));
 			SetWindowText(GetDlgItem(hWndDlg, IDC_MAPFILE_LOC), szPath);
 
-			jRegGetKey(_GAME_SERVER_REGISTRY, _TEXT("Device"), (LPBYTE)szDatabase);
+			jRegGetKeyBuf(_GAME_SERVER_REGISTRY, _TEXT("Device"), (LPBYTE)szDatabase, sizeof(szDatabase));
 			SetWindowText(GetDlgItem(hWndDlg, IDC_DBMS_DEVICE), szDatabase);
 
 			break;

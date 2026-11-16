@@ -1,129 +1,111 @@
-// ****************************************************************************
-//
-//		Registry Handler 
-//
-//      All written by Jeong, Euy-heon
-//      Copyright(C) 1997, 1998 Euy-heon, Jeong. All right reserved.
-//
-// ****************************************************************************
-
 #include "stdafx.h"
+#include <string>
+#include <vector>
+#include <set>
+#include <errno.h>
 
-// ****************************************************************************
-//
-//      jRegGetKey/jRegSetKey
-//
-//      Last update : 1997.07.16 (Euy-heon, Jeong)
-//      Purpose     : Get and set Windows null-terminate string regstry keys. 
-//
-// ****************************************************************************
+// Legacy entry points are retained for the existing configuration dialogs.
+// Configuration is stored exclusively in server.ini in the working directory.
+static const TCHAR* ConfigFile = _T(".\\server.ini");
 
-BOOL jRegSetKey(LPCTSTR pSubKeyName, LPCTSTR pValueName, DWORD dwFlags, 
-						LPBYTE pValue, DWORD nValueSize)
+static std::basic_string<TCHAR> Section(LPCTSTR key)
 {
-	HKEY	hk = NULL;
-	DWORD	dwDisposition = 0;
-
-	if (RegCreateKeyEx(HKEY_LOCAL_MACHINE, pSubKeyName, 0, NULL, 
-					REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, 
-					&hk, &dwDisposition) == ERROR_SUCCESS)
-	{
-		if (RegSetValueEx(hk, pValueName, 0, dwFlags, pValue, nValueSize) != ERROR_SUCCESS)
-		{
-			RegCloseKey(hk);
-			return FALSE;
-		}
-
-		RegCloseKey(hk);
-
-		return TRUE;
-	}
-
-	return FALSE;
+    const TCHAR* prefix = _T("Software\\LegendOfMir\\");
+    return _tcsnicmp(key, prefix, _tcslen(prefix)) == 0 ? key + _tcslen(prefix) : key;
 }
 
-// 打开 HKLM 下的键：先按进程默认视图打开，失败再按 64 / 32 位视图各试一次。
-// 32 位程序跑在 64 位系统上时，regedit 默认写的是 64 位视图、程序读的是
-// Wow6432Node —— 两边错位就读不到配置，枚举也会一并失败。
-static BOOL jRegOpenKeyRead(LPCTSTR pSubKeyName, HKEY *phk)
+static bool IsAddress(LPCTSTR name)
 {
-	const REGSAM	extra[] = { 0, KEY_WOW64_64KEY, KEY_WOW64_32KEY };
-
-	if (!phk)
-		return FALSE;
-
-	*phk = NULL;
-
-	for (int i = 0; i < (int)(sizeof(extra) / sizeof(extra[0])); i++)
-	{
-		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, pSubKeyName, 0,
-						 KEY_READ | extra[i], phk) == ERROR_SUCCESS)
-			return TRUE;
-	}
-
-	*phk = NULL;
-
-	return FALSE;
+    return _tcscmp(name, _T("RemoteIP")) == 0 || _tcscmp(name, _T("DBServerIP")) == 0 ||
+        _tcscmp(name, _T("PrivateIP")) == 0 || _tcscmp(name, _T("PublicIP")) == 0;
 }
 
-BOOL jRegGetKey(LPCTSTR pSubKeyName, LPCTSTR pValueName, LPBYTE pValue)
+static bool IsText(LPCTSTR name)
 {
-	HKEY	hk = NULL;
-	DWORD	dwFlags = 0, dwValueSize = 0;
-
-    if (jRegOpenKeyRead(pSubKeyName, &hk))
-	{
-		if (RegQueryValueEx(hk, pValueName, NULL, &dwFlags, NULL, &dwValueSize) != ERROR_SUCCESS)
-		{
-			RegCloseKey(hk);
-			return FALSE;
-		}
-
-		RegQueryValueEx(hk, pValueName, NULL, &dwFlags, pValue, &dwValueSize);
-		RegCloseKey(hk);
-
-		return TRUE;
-	}
-
-	return FALSE;
+    return _tcscmp(name, _T("Device")) == 0 || _tcscmp(name, _T("MapFileLoc")) == 0 ||
+        _tcscmp(name, _T("Title")) == 0 || _tcscmp(name, _T("Gate")) == 0;
 }
 
-// 枚举子键：键打不开时返回 ERROR_NO_MORE_ITEMS（而不是 -1），
-// 调用方 "while (返回值 == ERROR_SUCCESS)" 的循环就一定能正常结束。
-LONG jRegEnumKey(LPCTSTR pSubKeyName, int nIndex, LPTSTR lpSubKey, int nSubkeyLen)
+BOOL jRegSetKey(LPCTSTR section, LPCTSTR name, DWORD type, LPBYTE data, DWORD size)
 {
-	HKEY		hk = NULL;
-	DWORD		dwSubKeyLen = (DWORD)nSubkeyLen;
-	FILETIME	ft;
-	LONG		lRet = ERROR_NO_MORE_ITEMS;
-
-	if (!jRegOpenKeyRead(pSubKeyName, &hk))
-		return ERROR_NO_MORE_ITEMS;
-
-	lRet = RegEnumKeyEx(hk, (DWORD)nIndex, lpSubKey, &dwSubKeyLen, NULL, NULL, NULL, &ft);
-
-	RegCloseKey(hk);
-
-	return lRet;
+    if (!section || !name || !data) return FALSE;
+    TCHAR text[1024] = {};
+    if (type == REG_SZ) {
+        if (size < sizeof(TCHAR) || size > sizeof(text) || size % sizeof(TCHAR)) return FALSE;
+        memcpy(text, data, size);
+        text[size / sizeof(TCHAR) - 1] = 0;
+    } else {
+        DWORD value = 0;
+        if (type == REG_BINARY && size == 1) value = *data;
+        else if (type == REG_DWORD && size == sizeof(DWORD)) memcpy(&value, data, sizeof(value));
+        else return FALSE;
+        if (IsAddress(name))
+            _stprintf_s(text, _T("%u.%u.%u.%u"), value >> 24, (value >> 16) & 255, (value >> 8) & 255, value & 255);
+        else _stprintf_s(text, _T("%lu"), value);
+    }
+    return WritePrivateProfileString(Section(section).c_str(), name, text, ConfigFile);
 }
 
-// 带缓冲区大小的读值版本：注册表里的值再长也只会截断到调用方给的缓冲区内，
-// 不会像 jRegGetKey 那样按查询到的大小整块写入（历史写法会写爆调用方的栈缓冲）。
-BOOL jRegGetKeyBuf(LPCTSTR pSubKeyName, LPCTSTR pValueName, LPBYTE pValue, DWORD nValueSize)
+BOOL jRegGetKeyBuf(LPCTSTR section, LPCTSTR name, LPBYTE data, DWORD size)
 {
-	HKEY	hk = NULL;
-	DWORD	dwType = 0, dwSize = nValueSize;
-	LONG	lRet;
+    if (!section || !name || !data || !size) return FALSE;
+    TCHAR text[1024] = {};
+    DWORD length = GetPrivateProfileString(Section(section).c_str(), name, _T(""), text, 1024, ConfigFile);
+    if (!length || length >= 1023) return FALSE;
+    if (IsText(name)) {
+        if ((length + 1) * sizeof(TCHAR) > size) return FALSE;
+        memcpy(data, text, (length + 1) * sizeof(TCHAR));
+        return TRUE;
+    }
+    DWORD value = 0;
+    if (IsAddress(name)) {
+        unsigned a, b, c, d;
+        TCHAR extra;
+        if (_stscanf(text, _T("%u.%u.%u.%u%c"), &a, &b, &c, &d, &extra) != 4 ||
+            a > 255 || b > 255 || c > 255 || d > 255) return FALSE;
+        value = (a << 24) | (b << 16) | (c << 8) | d;
+    } else {
+        TCHAR* end = NULL;
+        errno = 0;
+        unsigned long parsed = _tcstoul(text, &end, 10);
+        if (errno || end == text || *end || text[0] == _T('-')) return FALSE;
+        value = parsed;
+    }
+    if (_tcscmp(name, _T("Installed")) == 0) {
+        if (value > 1) return FALSE;
+        *data = static_cast<BYTE>(value);
+    } else {
+        if (size < sizeof(value)) return FALSE;
+        memcpy(data, &value, sizeof(value));
+    }
+    return TRUE;
+}
 
-	if (!pValue || nValueSize == 0)
-		return FALSE;
+BOOL jRegGetKey(LPCTSTR section, LPCTSTR name, LPBYTE data)
+{
+    // String callers use the sized API; this wrapper handles legacy scalar calls.
+    if (IsText(name)) return FALSE;
+    return jRegGetKeyBuf(section, name, data, _tcscmp(name, _T("Installed")) == 0 ? 1 : sizeof(DWORD));
+}
 
-	if (!jRegOpenKeyRead(pSubKeyName, &hk))
-		return FALSE;
-
-	lRet = RegQueryValueEx(hk, pValueName, NULL, &dwType, pValue, &dwSize);
-
-	RegCloseKey(hk);
-
-	return (lRet == ERROR_SUCCESS);
+LONG jRegEnumKey(LPCTSTR section, int index, LPTSTR output, int capacity)
+{
+    if (!section || !output || index < 0 || capacity <= 0) return ERROR_INVALID_PARAMETER;
+    std::vector<TCHAR> names(32768);
+    DWORD length = GetPrivateProfileSectionNames(names.data(), static_cast<DWORD>(names.size()), ConfigFile);
+    if (length >= names.size() - 2) return ERROR_MORE_DATA;
+    std::basic_string<TCHAR> prefix = Section(section) + _T("\\");
+    std::set<std::basic_string<TCHAR>> children;
+    for (const TCHAR* p = names.data(); *p; p += _tcslen(p) + 1) {
+        if (_tcsnicmp(p, prefix.c_str(), prefix.size()) != 0) continue;
+        std::basic_string<TCHAR> child = p + prefix.size();
+        child = child.substr(0, child.find(_T('\\')));
+        if (!child.empty()) children.insert(child);
+    }
+    if (static_cast<size_t>(index) >= children.size()) return ERROR_NO_MORE_ITEMS;
+    auto item = children.begin();
+    std::advance(item, index);
+    if (item->size() + 1 > static_cast<size_t>(capacity)) return ERROR_MORE_DATA;
+    _tcscpy_s(output, capacity, item->c_str());
+    return ERROR_SUCCESS;
 }

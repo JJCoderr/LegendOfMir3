@@ -1,4 +1,5 @@
 #include "stdafx.h"
+BOOL jRegGetKeyBuf(LPCTSTR, LPCTSTR, LPBYTE, DWORD);
 
 BOOL jRegSetKey(LPCTSTR pSubKeyName, LPCTSTR pValueName, DWORD dwFlags, LPBYTE pValue, DWORD nValueSize);
 BOOL jRegGetKey(LPCTSTR pSubKeyName, LPCTSTR pValueName, LPBYTE pValue);
@@ -24,7 +25,7 @@ BOOL CALLBACK ConfigDlgFunc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 			ZeroMemory(szDatabase, sizeof(szDatabase));
 
-			jRegGetKey(_DB_SERVER_REGISTRY, _TEXT("Device"), (LPBYTE)szDatabase);
+			jRegGetKeyBuf(_DB_SERVER_REGISTRY, _TEXT("Device"), (LPBYTE)szDatabase, sizeof(szDatabase));
 			SetWindowText(GetDlgItem(hWndDlg, IDC_DBMS_DEVICE), szDatabase);
 
 			break;

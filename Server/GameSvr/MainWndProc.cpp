@@ -1,4 +1,5 @@
 #include "stdafx.h"
+BOOL jRegGetKeyBuf(LPCTSTR, LPCTSTR, LPBYTE, DWORD);
 
 LPARAM OnClientSockMsg(WPARAM wParam, LPARAM lParam);
 LPARAM OnLogSvrSockMsg(WPARAM wParam, LPARAM lParam);
@@ -77,7 +78,7 @@ UINT WINAPI InitializingServer(LPVOID lpParameter)
 	LoadString(g_hInst, IDS_GOLD, wszPath, sizeof(wszPath)/sizeof(TCHAR));
 	WideCharToMultiByte(CP_ACP, 0, wszPath, -1, g_szGoldName, sizeof(g_szGoldName), NULL, NULL);
 
-	jRegGetKey(_GAME_SERVER_REGISTRY, _TEXT("MapFileLoc"), (LPBYTE)wszPath);
+	jRegGetKeyBuf(_GAME_SERVER_REGISTRY, _TEXT("MapFileLoc"), (LPBYTE)wszPath, sizeof(wszPath));
 
 	lstrcpy(wszFullPath, wszPath);
 	lstrcat(wszFullPath, _TEXT("\\"));

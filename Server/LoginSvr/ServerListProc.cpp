@@ -48,12 +48,12 @@ void InitListView(HWND hWndDlg)
 
 		ListView_SetItemText(GetDlgItem(hWndDlg, IDC_SERVERINFO_LIST), nCount, 1, szTitle);
 
-		jRegGetKey(szKey, _T("PrivateIP"), (LPBYTE)dwPrivateIP);
+		jRegGetKey(szKey, _T("PrivateIP"), (LPBYTE)&dwPrivateIP);
 		wsprintf(szText, _TEXT("%d.%d.%d.%d"), FIRST_IPADDRESS(dwPrivateIP), SECOND_IPADDRESS(dwPrivateIP), 
 											THIRD_IPADDRESS(dwPrivateIP), FOURTH_IPADDRESS(dwPrivateIP)); 
 		ListView_SetItemText(GetDlgItem(hWndDlg, IDC_SERVERINFO_LIST), nCount, 2, szText);
 
-		jRegGetKey(szKey, _T("PublicIP"), (LPBYTE)dwPublicIP);
+		jRegGetKey(szKey, _T("PublicIP"), (LPBYTE)&dwPublicIP);
 		wsprintf(szText, _TEXT("%d.%d.%d.%d"), FIRST_IPADDRESS(dwPublicIP), SECOND_IPADDRESS(dwPublicIP), 
 											THIRD_IPADDRESS(dwPublicIP), FOURTH_IPADDRESS(dwPublicIP)); 
 		ListView_SetItemText(GetDlgItem(hWndDlg, IDC_SERVERINFO_LIST), nCount, 2, szText);

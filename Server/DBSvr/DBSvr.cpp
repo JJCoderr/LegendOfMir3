@@ -2,6 +2,7 @@
 //
 
 #include "stdafx.h"
+BOOL jRegGetKeyBuf(LPCTSTR, LPCTSTR, LPBYTE, DWORD);
 #include "../def/dbmgr.h"
 #include "TableList.h"
 
@@ -210,7 +211,7 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 	ZeroMemory(wszDatabase, sizeof(wszDatabase));
 	ZeroMemory(szDatabase, sizeof(szDatabase));
 
-	jRegGetKey(_DB_SERVER_REGISTRY, _TEXT("Device"), (LPBYTE)wszDatabase);
+	jRegGetKeyBuf(_DB_SERVER_REGISTRY, _TEXT("Device"), (LPBYTE)wszDatabase, sizeof(wszDatabase));
 	WideCharToMultiByte(CP_ACP, 0, wszDatabase, -1, szDatabase, sizeof(szDatabase), NULL, NULL);
 
 	// 数据库连不上时只记日志，不能顺手崩掉：

@@ -2,6 +2,7 @@
 //
 
 #include "stdafx.h"
+BOOL jRegGetKeyBuf(LPCTSTR, LPCTSTR, LPBYTE, DWORD);
 
 #define _BMP_CX						16
 #define _BMP_CY						16
@@ -216,7 +217,7 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 	ZeroMemory(wszDatabase, sizeof(wszDatabase));
 	ZeroMemory(szDatabase, sizeof(szDatabase));
 
-	jRegGetKey(_GAME_SERVER_REGISTRY, _TEXT("Device"), (LPBYTE)wszDatabase);
+	jRegGetKeyBuf(_GAME_SERVER_REGISTRY, _TEXT("Device"), (LPBYTE)wszDatabase, sizeof(wszDatabase));
 	WideCharToMultiByte(CP_ACP, 0, wszDatabase, -1, szDatabase, sizeof(szDatabase), NULL, NULL);
 
 	g_MirDB.SetDiagRec( __cbDBMsg );
