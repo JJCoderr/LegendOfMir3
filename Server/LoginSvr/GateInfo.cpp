@@ -309,7 +309,7 @@ void CGateInfo::ProcSelectServer(SOCKET s, WORD wServerIndex)
 	char				szEncodePacket[128];
 	char				szEncodeAllPacket[256];
 	char				szEncodeMsg[24];
-	char				*pServerIP;
+	char				*pServerIP = NULL;
 	GAMESERVERINFO		*pServerInfo;
 
 	PLISTNODE pListNode = xUserInfoList.GetHead();

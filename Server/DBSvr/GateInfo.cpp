@@ -126,7 +126,7 @@ void CGateInfo::QueryCharacter(SOCKET s, char *pszPacket)
 	{
 		*pszDevide++ = '\0';
 
-		sprintf( szQuery, "SELECT * FROM TBL_CHARACTER WHERE FLD_LOGINID='%s'", pszDevide );
+		sprintf( szQuery, "SELECT * FROM TBL_CHARACTER WHERE FLD_LOGINID='%s'", szDecodeMsg );
 
 		CRecordset *pRec = GetDBManager()->CreateRecordset();
 		
@@ -135,6 +135,7 @@ void CGateInfo::QueryCharacter(SOCKET s, char *pszPacket)
 			while (pRec->Fetch() && nCnt < 3)
 			{
 				tQueryChr[nCnt].btClass	 = atoi( pRec->Get( "FLD_JOB" ) );
+				tQueryChr[nCnt].btLevel = atoi(pRec->Get("FLD_LEVEL"));
 				tQueryChr[nCnt].btGender = atoi( pRec->Get( "FLD_GENDER" ) );
 				strcpy( tQueryChr[nCnt].szName, pRec->Get( "FLD_CHARNAME" ) );
 				ChangeSpaceToNull( tQueryChr[nCnt].szName );
@@ -150,7 +151,7 @@ void CGateInfo::QueryCharacter(SOCKET s, char *pszPacket)
 		char				szEncodeData[256];
 		char				szEncodePacket[256];
 		
-		if (nCnt > 0 && nCnt < 3)
+		if (nCnt >= 0 && nCnt <= 3)
 		{
 			fnMakeDefMessageA(&DefaultMsg, SM_QUERYCHR, 0, nCnt, 0, 0);
 			nPos = fnEncodeMessageA(&DefaultMsg, szEncodeMsg, sizeof(szEncodeMsg));
@@ -240,11 +241,11 @@ void CGateInfo::MakeNewCharacter(SOCKET s, _LPTCREATECHR lpTCreateChr)
 	
 	GetDBManager()->DestroyRecordset( pRec );
 
-	sprintf( szQuery, "SELECT COUNT(FLD_CHARNAME) AS FLD_COUNT FROM TBL_CHARACTER WHERE FLD_CHARNAME='%s'", lpTCreateChr->szName );
+	sprintf( szQuery, "SELECT COUNT(FLD_CHARNAME) AS FLD_COUNT FROM TBL_CHARACTER WHERE FLD_LOGINID='%s'", lpTCreateChr->szID );
 
 	pRec = GetDBManager()->CreateRecordset();
 
-	if (pRec->Execute( szQuery ) || pRec->Fetch() )
+	if (pRec->Execute( szQuery ) && pRec->Fetch() )
 	{
 		if (atoi(pRec->Get( "FLD_COUNT" )) >= 3)
 		{
@@ -362,6 +363,13 @@ void CGateInfo::GetSelectCharacter(SOCKET s, char *pszPacket)
 		}
 	}
 
+    if (!pBestServer || !g_xServerList.GetHead()) {
+        fnMakeDefMessageA(&DefaultMsg, SM_STARTFAIL, 0, 0, 0, 0);
+        int length = fnEncodeMessageA(&DefaultMsg, szEncodeMsg, sizeof(szEncodeMsg));
+        szEncodeMsg[length] = 0;
+        SendToGate(s, szEncodeMsg);
+        return;
+    }
 	pBestServer->connCnt++;
 //	LeaveCriticalSection( &g_xGameServerList.m_cs );
 
@@ -378,8 +386,8 @@ void CGateInfo::GetSelectCharacter(SOCKET s, char *pszPacket)
 		*pszDevide++ = '\0';
 
 		// 修改为可选择服务器
-		_TLOADHUMAN		tLoadHuman;
-		CServerInfo*	pServerInfo;
+		_TLOADHUMAN		tLoadHuman = {};
+		CServerInfo*	pServerInfo = NULL;
 
 		memcpy(tLoadHuman.szUserID, szDecodeMsg, memlen(szDecodeMsg));
 		memcpy(tLoadHuman.szCharName, pszDevide, memlen(pszDevide));
