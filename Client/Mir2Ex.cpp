@@ -1701,6 +1701,26 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel==132 || groupPanel==133) {
+            auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[100]={};strcpy((char*)raw,"·À¾ßÊôÐÔ²âÊÔ");raw[30]=10;raw[32]=12;raw[40]=3;raw[41]=7;raw[42]=2;raw[43]=5;raw[44]=1;raw[45]=3;raw[86]=2;raw[54]=0;raw[55]=40;raw[62]=11;raw[66]=0xE8;raw[67]=3;raw[68]=0x10;raw[69]=0x27;
+            CItem item;item.SetMir3Item(raw,0);BYTE elements[7]={10,10,10,10,20,20,20};
+            const auto basic=item.ArmorHint(35,20,elements);
+            const bool stats=basic.size()==7 && basic[3].text.find(": 1-3 ")!=std::string::npos && basic[4].text.find(": 3-9 (+2)")!=std::string::npos && basic[4].color==13172630;
+            const bool low=basic[1].color==3289855 && basic.back().color==255;
+            const bool level=item.ArmorHint(40,20,elements).back().color==0xffffff;
+            raw[55]=135;item.SetMir3Item(raw,0);const bool rebirth=item.ArmorHint(35,20,elements).back().color==51200;
+            raw[54]=2;raw[55]=10;item.SetMir3Item(raw,0);const bool all=item.ArmorHint(35,20,elements).back().color==0xffffff;elements[3]=9;const bool below=item.ArmorHint(35,20,elements).back().color==255;
+            raw[54]=0;raw[55]=40;
+            if(groupPanel==133) {raw[49]=1;raw[50]=2;raw[52]=1;raw[53]=2;raw[91]=1;raw[92]=2;raw[97]=1;raw[98]=3;raw[94]=2;raw[95]=1;}
+            item.SetMir3Item(raw,0);const auto detail=item.ArmorHint(35,20,elements);
+            const bool elementRows=groupPanel==132 || (detail.size()==14 && detail[9].text.find("x3")!=std::string::npos && detail[9].color==65408 && detail[10].text.find("x3")!=std::string::npos && detail[10].color==13172630 && detail[12].text.find(": 2-3 (+3)")!=std::string::npos);
+            bag.AddInvenItem(item,0,TRUE);ui.WindowActivate(_WND_ID_INVENTORY);mouse={550,80};g_xGameProc.m_ptMousePos=mouse;
+            capturePath=groupPanel==132?"armor-hint.bmp":"armor-elements-hint.bmp";
+            if(FILE* report=fopen("armor-hint-check.txt","wb")) {fprintf(report,"stats=%d low=%d level=%d rebirth=%d all=%d below=%d elements=%d\n",stats,low,level,rebirth,all,below,elementRows);fclose(report);}
+        }
+
         if(groupPanel>=129 && groupPanel<=131) {
             auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -2153,6 +2173,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=armor-hint")==0 ? 132 :
+        strcmp(lpCmdLine,"--preview=armor-elements-hint")==0 ? 133 :
         strcmp(lpCmdLine,"--preview=book-hint")==0 ? 129 :
         strcmp(lpCmdLine,"--preview=charm-hint")==0 ? 130 :
         strcmp(lpCmdLine,"--preview=stone-hint")==0 ? 131 :
