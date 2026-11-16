@@ -58,6 +58,22 @@ public:
             POINT button = {10,542};
             g_xGameProc.m_xInterface.OnLButtonDown(button);
             g_xGameProc.m_xInterface.OnLButtonUp(button);
+            auto& ui = g_xGameProc.m_xInterface;
+            const int first = ui.m_nFstLine;
+            ui.OnScrollDown(); ui.OnScrollUp();
+            const bool wheelBlocked = first == ui.m_nFstLine;
+            POINT cancel = {490,315};
+            ui.OnLButtonDown(cancel); ui.OnLButtonUp(cancel);
+            const bool cancelled = !ui.m_xMsgBox.IsActive();
+            ui.OnLButtonDown(button); ui.OnLButtonUp(button);
+            ui.OnKeyDown(VK_ESCAPE,0);
+            const bool escaped = !ui.m_xMsgBox.IsActive();
+            ui.OnLButtonDown(button); ui.OnLButtonUp(button);
+            if (FILE* report=fopen("hud-exit-check.txt","wb")) {
+                fprintf(report,"wheel_blocked=%d cancelled=%d escaped=%d reopened=%d\n",
+                    wheelBlocked,cancelled,escaped,ui.m_xMsgBox.IsActive()!=FALSE);
+                fclose(report);
+            }
         }
         if (chatMode) {
             auto& ui = g_xGameProc.m_xInterface;

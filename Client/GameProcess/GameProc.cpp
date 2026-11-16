@@ -1962,6 +1962,10 @@ LRESULT CGameProcess::OnKeyUp(WPARAM wParam, LPARAM lParam)
 
 LRESULT CGameProcess::OnKeyDown(WPARAM wParam, LPARAM lParam)
 {
+    if (m_xInterface.m_xMsgBox.IsActive()) {
+        m_xInterface.OnKeyDown(wParam,lParam);
+        return 0L;
+    }
 	INT		nTargetID;
 	POINT	ptTaretTilePos;
 	FEATURE stFeature;
@@ -2659,6 +2663,9 @@ VOID CGameProcess::RenderMapTileGrid()
 
 LRESULT CGameProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    if (m_xInterface.m_xMsgBox.IsActive() &&
+        (uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP || uMsg == WM_SYSKEYDOWN || uMsg == WM_SYSKEYUP))
+        return 0L;
 	switch ( uMsg )
 	{
 		case WM_CTLCOLOREDIT:

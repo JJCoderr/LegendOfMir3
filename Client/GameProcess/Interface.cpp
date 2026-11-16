@@ -1659,6 +1659,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 *******************************************************************************************************************/
 BOOL CInterface::OnMouseMove(POINT ptMouse)
 {
+    if (m_xMsgBox.IsActive()) return TRUE;
 	MoveTopWindow(ptMouse);
 
 	if ( m_xScrlBar.OnMouseMove(ptMouse) )
@@ -1742,6 +1743,7 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 
 BOOL CInterface::OnScrollDown()
 {
+    if (m_xMsgBox.IsActive()) return TRUE;
 	if ( IsTopWindow(m_xInventoryWnd.m_nID) )
 	{
 		m_xInventoryWnd.OnScrollDown();
@@ -1774,6 +1776,7 @@ BOOL CInterface::OnScrollDown()
 
 BOOL CInterface::OnScrollUp()
 {
+    if (m_xMsgBox.IsActive()) return TRUE;
 	if ( IsTopWindow(m_xInventoryWnd.m_nID) )
 	{
 		m_xInventoryWnd.OnScrollUp();
@@ -1805,6 +1808,7 @@ BOOL CInterface::OnScrollUp()
 
 BOOL CInterface::OnLButtonDoubleClick(POINT ptMouse)
 {
+    if (m_xMsgBox.IsActive()) return TRUE;
 	if ( IsTopWindow(m_xInventoryWnd.m_nID) )
 		m_xInventoryWnd.OnLButtonDoubleClick(&m_stCommonItem, ptMouse);
 	return TRUE;
@@ -1813,6 +1817,7 @@ BOOL CInterface::OnLButtonDoubleClick(POINT ptMouse)
 
 BOOL CInterface::OnKeyUp(WPARAM wParam, LPARAM lParam)
 {
+    if (m_xMsgBox.IsActive()) return TRUE;
 	if ( m_xInventoryWnd.OnKeyUp(&m_stCommonItem, wParam, lParam) )
 	{
 		return TRUE;
@@ -1823,6 +1828,10 @@ BOOL CInterface::OnKeyUp(WPARAM wParam, LPARAM lParam)
 
 BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
 {
+    if (m_xMsgBox.IsActive()) {
+        if (wParam == VK_ESCAPE) m_xMsgBox.HideMessageBox();
+        return TRUE;
+    }
 	switch ( wParam )
 	{
 	case VK_RETURN:	
