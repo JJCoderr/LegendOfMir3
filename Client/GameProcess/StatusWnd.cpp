@@ -820,3 +820,19 @@ bool CStatusWnd::ReceiveEquipmentRecords(const char* encoded)
     }
     std::copy(std::begin(next),std::end(next),std::begin(m_stEquipItem));return true;
 }
+
+void CStatusWnd::UpdateDurability(WORD slot,LONG current,WORD maximum)
+{
+    if(slot>=_EQUIP_MAX_CELL || !m_stEquipItem[slot].bSetted) return;
+    auto& item=m_stEquipItem[slot].xItem;
+    item.m_stItemInfo.nDura=WORD(current);item.m_stItemInfo.nDuraMax=maximum;
+    item.m_serverRecord[66]=BYTE(current);item.m_serverRecord[67]=BYTE(WORD(current)>>8);
+    item.m_serverRecord[68]=BYTE(maximum);item.m_serverRecord[69]=BYTE(maximum>>8);
+    const int mode=item.m_stItemInfo.stStdItem.bStdMode,unit=mode==54 || mode==55?100:1000;
+    if(int(double(current)/unit+0.5)<=0) {
+        static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+        std::string message=captions.Get(1470);const auto at=message.find("%s");
+        if(at!=std::string::npos) message.replace(at,2,item.Name());
+        g_xGameProc.m_xInterface.MsgAdd(0xffffff,33023,const_cast<char*>(message.c_str()));
+    }
+}

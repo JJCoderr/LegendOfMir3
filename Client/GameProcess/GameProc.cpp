@@ -3445,16 +3445,11 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 					}
 					m_xInterface.m_stCommonItem.bWaitResponse = FALSE;
 				}
+                break;
 			}
-			case SM_DURACHANGE:
-			{
-				if ( m_xInterface.m_xStatusWnd.m_stEquipItem[tdm.wParam].bSetted )
-				{
-					m_xInterface.m_xStatusWnd.m_stEquipItem[tdm.wParam].xItem.m_stItemInfo.nDura = tdm.nRecog;
-					m_xInterface.m_xStatusWnd.m_stEquipItem[tdm.wParam].xItem.m_stItemInfo.nDuraMax = MAKELONG(tdm.wTag, tdm.wSeries);
-				}
-				break;
-			}
+            case SM_DURACHANGE:
+                m_xInterface.m_xStatusWnd.UpdateDurability(tdm.wParam,tdm.nRecog,tdm.wTag);
+                break;
 			case SM_GOLDCHANGE:
 			{
                 m_xInterface.m_xInventoryWnd.UpdateGold(UINT(tdm.nRecog));

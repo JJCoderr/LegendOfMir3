@@ -1004,3 +1004,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - SetMir3Item增加装备上下文允许空名称参数，默认背包仍拒绝空名，与EquipmentWire和InventoryWire区别一致。对超12条或额外无效正文采用拒绝处理。
 - Client清理83步及全目标109步构建通过。--preview=equipment-records-reply七项全1：载入含第11槽、完整名称/原始字段、非法槽位事务保留、截断保留、空回复保留、非法数字、局部覆盖。diff --check通过。已检查out/equipment-records-reply.png，药瓶图标是槽位验证夹具，并非真实装备资源验收。
 - 装备属性提示、耐久回复的MIR3字段映射、完整角色外观及真实服务器联调仍待继续。
+
+### 装备耐久回复与耗尽提示
+- SM_DURACHANGE通过StatusWnd::UpdateDurability更新有效槽位：当前耐久取recognition低WORD，最大耐久取wTag，同步raw[66..69]。提示判断使用完整有符号recognition除单位并加0.5截断，类型54/55单位100，其余1000，对齐Godot EquipmentDurability。CmList1470使用完整名称、白字/33023背景。
+- 修复SM_DROPITEM_FAIL缺break误进入耐久分支的问题。未知/空装备槽不改数据。
+- --preview=equipment-durability九项全1，覆盖普通/特殊阈值、原始字节、负值、超过WORD范围、空/越界槽位及丢弃失败不误改耐久。增量构建与diff --check通过；已检查out/equipment-durability.png，三条耗尽提示来自三个边界测试。
+- 当前证明回复与提示接线，不代表装备属性悬浮框、真实耐久消耗与服务器流程已全部验收。

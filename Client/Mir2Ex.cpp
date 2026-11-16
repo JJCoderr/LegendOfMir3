@@ -1701,6 +1701,28 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel==125) {
+            auto& ui=g_xGameProc.m_xInterface;auto& equipment=ui.m_xStatusWnd.m_stEquipItem;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[100]={};strcpy((char*)raw,"Durability Preview");raw[30]=25;raw[62]=11;
+            equipment[9].xItem.SetMir3Item(raw,9);equipment[9].bSetted=TRUE;
+            const auto receive=[&](LONG value,WORD slot=9,WORD opcode=SM_DURACHANGE) {
+                _TDEFAULTMESSAGE packet={};packet.wIdent=opcode;packet.nRecog=value;packet.wParam=slot;packet.wTag=2000;packet.wSeries=99;
+                char encoded[64]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));g_xGameProc.OnSocketMessageRecieve(encoded);
+            };
+            auto& item=equipment[9].xItem;const auto before=ui.m_chatHistory.size();receive(500);
+            const bool threshold=ui.m_chatHistory.size()==before && item.m_stItemInfo.nDura==500;
+            receive(499);const bool warning=ui.m_chatHistory.size()==before+1 && ui.m_chatHistory.back().color==0xffffff && ui.m_chatHistory.back().background==33023;
+            const bool rawBytes=item.m_serverRecord[66]==243 && item.m_serverRecord[67]==1 && item.m_serverRecord[68]==208 && item.m_serverRecord[69]==7;
+            item.m_stItemInfo.stStdItem.bStdMode=54;receive(50);const bool unit=ui.m_chatHistory.size()==before+1;receive(49);const bool special=ui.m_chatHistory.size()==before+2;
+            receive(-1);const bool negative=item.m_stItemInfo.nDura==65535 && ui.m_chatHistory.size()==before+3;
+            receive(65536);const bool wide=item.m_stItemInfo.nDura==0 && ui.m_chatHistory.size()==before+3;
+            receive(0,12);receive(0,8);const bool ignored=ui.m_chatHistory.size()==before+3 && !equipment[8].bSetted;
+            receive(1234,9,SM_DROPITEM_FAIL);const bool drop=item.m_stItemInfo.nDura==0 && ui.m_chatHistory.size()==before+3;
+            ui.WindowActivate(_WND_ID_STATUS);capturePath="equipment-durability.bmp";
+            if(FILE* report=fopen("equipment-durability-check.txt","wb")) {fprintf(report,"threshold=%d warning=%d raw=%d unit=%d special=%d negative=%d wide=%d ignored=%d drop=%d\n",threshold,warning,rawBytes,unit,special,negative,wide,ignored,drop);fclose(report);}
+        }
+
         if(groupPanel==124) {
             auto& ui=g_xGameProc.m_xInterface;auto& equipment=ui.m_xStatusWnd.m_stEquipItem;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -2077,6 +2099,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=equipment-durability")==0 ? 125 :
         strcmp(lpCmdLine,"--preview=equipment-records-reply")==0 ? 124 :
         strcmp(lpCmdLine,"--preview=item-update-reply")==0 ? 123 :
         strcmp(lpCmdLine,"--preview=bag-records-reply")==0 ? 122 :
