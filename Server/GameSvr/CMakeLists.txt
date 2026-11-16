@@ -33,21 +33,4 @@ add_executable(GameSvr WIN32
     ThreadFuncForComm.cpp
     UserInfo.cpp
     GameSvr.rc
-
-    ../Def/EnDecode.cpp
-    ../Def/Misc.cpp
-    ../Def/RegstryHandler.cpp
-    ../Def/ServerSockHandler.cpp
-    ../Def/_OrzEx/syncobj.cpp
-    ../Def/_OrzEx/database.cpp
 )
-
-target_include_directories(GameSvr PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/..
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Def
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Def/_OrzEx
-)
-
-# OrzEx 数据库容器直接调用 ODBC API，需要显式链接
-target_link_libraries(GameSvr PRIVATE odbc32 odbccp32)

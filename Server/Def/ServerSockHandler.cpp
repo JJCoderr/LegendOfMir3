@@ -195,7 +195,12 @@ BOOL CheckSocketError(LPARAM lParam)
 			return FALSE;
 		case WSAECONNREFUSED:			// Can't Connect Server...
 		case WSAETIMEDOUT:				// Time Out
-			InsertLogMsg(IDS_CANT_CONNECT);
+			// Def is a shared static library now and must not depend on one host
+			// project's resource.h. The original code was
+			// InsertLogMsg(IDS_CANT_CONNECT), but IDS_CANT_CONNECT differs per
+			// project (11 in most, 101 in GameSvr) and the lib is compiled once.
+			// Use the literal text, like the other messages in this file.
+			InsertLogMsg(_T("Can't connect to the server."));
 			return FALSE;
 		case WSAEFAULT:
 			InsertLogMsg(_T("The name or the namelen parameter is not a valid part of the user address space, the namelen parameter is too small, or the name parameter contains incorrect address format for the associated address family."));
