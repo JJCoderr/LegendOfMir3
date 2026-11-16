@@ -26,11 +26,13 @@ BYTE				g_bProcState = _LOGIN_PROC;
 // Offline visual review uses the real interface without map or network updates.
 class CHudPreviewProcess : public CWHDefProcess {
     POINT mouse = {0,0};
+    int damagePreview=0;
     const char* capturePath = NULL;
 public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
     void Load(bool expanded, int chatMode, bool exitDialog, int groupPanel) {
+        damagePreview=groupPanel==95 || groupPanel==96 ? groupPanel : 0;
         const int extraHintPreview=groupPanel>=67 && groupPanel<=71?groupPanel:0;
         if(extraHintPreview) { const int bases[]={1,5,20,33,42}; groupPanel=bases[extraHintPreview-67]; }
         const int hintPreview=groupPanel>=64 && groupPanel<=66?groupPanel:0;
@@ -1464,11 +1466,40 @@ public:
             if(FILE* report=fopen("options-light-check.txt","wb")) {fprintf(report,"lit=%d dark=%d defaults=%d persisted=%d lifecycle=%d resumed=%d\n",lit,dark,defaults,persisted,lifecycle,resumed);fclose(report);}
         }
 
+
+        if(groupPanel==95 || groupPanel==96) {
+            auto& ui=g_xGameProc.m_xInterface;auto& options=ui.m_xOptionWnd;
+            options.LoadAudioOptions("./preview-damage-options.ini");options.m_values[10]=true;options.SaveAudioOptions();
+            auto& actor=g_xGameProc.m_xMyHero;actor.m_damage=CDamageNumbers{};actor.HealthDamage(100,125);
+            const bool healed=actor.m_damage.cursor==1 && actor.m_damage.values[0]==25;
+            actor.HealthDamage(0,100);actor.HealthDamage(100,100);const bool unchanged=actor.m_damage.cursor==1;
+            ui.WindowActivate(_WND_ID_OPTION);const POINT toggle={options.m_rcWnd.left+189,options.m_rcWnd.top+148};
+            ui.OnLButtonDown(toggle);ui.OnLButtonUp(toggle);actor.AddDamage(-20);
+            const bool disabled=!options.m_values[10] && actor.m_damage.cursor==1;
+            options.LoadAudioOptions(nullptr);const bool defaults=options.m_values[10];options.LoadAudioOptions("./preview-damage-options.ini");const bool persisted=!options.m_values[10];
+            CDamageNumbers probe;probe.Push(-99);auto glyphs=probe.Draw(100,100,true);
+            const bool smallDigits=glyphs.size()==3 && glyphs[0].frame==1800 && glyphs[0].x==112 && glyphs[0].y==64 && glyphs[1].frame==1799;
+            const bool large=CDamageNumbers::Glyphs(-100,0,0)[0].frame==1840 && CDamageNumbers::Glyphs(25,0,0)[0].frame==1821 && CDamageNumbers::Glyphs(0,0,0)[0].frame==1850;
+            probe.ages[0]=40;const bool last=!probe.Draw(100,100,false).empty() && probe.Draw(100,100,false).empty();
+            probe=CDamageNumbers{};for(int i=0;i<8;++i) probe.Push(-1);const bool wrap=probe.cursor==0 && probe.Draw(0,0,false).empty();
+            options.LoadAudioOptions(nullptr);options.m_values[10]=groupPanel==95;
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==95?"options-damage-on.bmp":"options-damage-off.bmp";
+            if(FILE* report=fopen("options-damage-check.txt","wb")) {fprintf(report,"healed=%d unchanged=%d disabled=%d defaults=%d persisted=%d small=%d styles=%d lifetime=%d wrap=%d\n",healed,unchanged,disabled,defaults,persisted,smallDigits,large,last,wrap);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
         DrawLegacyPanel(canvas,RGB(20,24,28),255,0,false);
         g_xGameProc.m_xInterface.RenderInterface(elapsed,mouse);
+        if(damagePreview) {
+            auto& actor=g_xGameProc.m_xMyHero;
+            const int amounts[]={-9,-99,-100,-65535,25,0};
+            for(int i=0;i<6;++i) {
+                actor.m_damage=CDamageNumbers{};actor.m_shScrnPosX=30+i*125;actor.m_shScrnPosY=55;
+                actor.AddDamage(amounts[i]);actor.DrawDamage();
+            }
+        }
         if (capturePath) {
             auto* buffer = g_xMainWnd.GetBackBuffer();
             DDSURFACEDESC2 surface = {}; surface.dwSize = sizeof(surface);
@@ -1653,6 +1684,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=options-damage-on")==0 ? 95 :
+        strcmp(lpCmdLine,"--preview=options-damage-off")==0 ? 96 :
         strcmp(lpCmdLine,"--preview=options-light-on")==0 ? 93 :
         strcmp(lpCmdLine,"--preview=options-light-off")==0 ? 94 :
         strcmp(lpCmdLine,"--preview=options-shadow-on")==0 ? 91 :

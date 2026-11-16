@@ -855,3 +855,10 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - CMagic::DrawLight在原光照提交位置检查选项，关闭仅跳过照明网格写入，仍执行光效摇摆/衰减/结束处理；角色施法与剑技的两处SetLightRadiusWithRing也受同一选项控制。普通人物/地图静态照明不受此开关影响。
 - 全目标增量构建通过。options-light-on/off各六项全1：调用真实CMagic::DrawLight和CLightFog网格，开启有光、关闭无光、恢复有光，关闭时_LIGHT_ACTIVE仍能正常结束；同时验证默认值和保存恢复。音频九项、阴影四项回归通过。
 - 已检查out/options-light-on.png和options-light-off.png，预览只写preview-light-options.ini。该测试验证照明网格和设置状态，尚未在完整地图/实际施法场景核对最终屏幕光照效果；伤害数字、强制攻击和服务器选项继续待迁移。
+
+### 原生体力变化数字与设置开关
+- 新增DamageNumbers，按Godot参考使用GameInter原帧：小额受击1790/1800、大额1830/1840、回血1810/1821、零伤害1850 MISS；保留八槽游标回绕、每次绘制斜向漂移及age 0..40寿命。人物/怪物采用不同高度偏移。
+- 接入原生Actor/CHero受击、血量变化和GameProc直接血量消息路径；死亡角色受击不加入数字。渲染在人物血条附近执行，使用现有DirectDraw，不依赖Godot。
+- 设置10接入BloodNum默认开启、真实点击及配置保存恢复，沿用105.wav和CmList2122/2121聊天提示。关闭时不新增/绘制数字，保留参考暂停年龄行为。
+- Client清理83步与全目标构建通过。options-damage-on/off各九项全1，覆盖血量差、无变化/初始血量、关闭、默认/持久化、帧样式、寿命和回绕；魔法光六项、音频九项回归通过。预览仅写preview-damage-options.ini。
+- 已检查并展示out/options-damage-on.png、options-damage-off.png，顶部依次为-9、-99、-100、-65535、+25、MISS原生资源样例。仍需真实服务器战斗验证消息时序、世界坐标锚点与画面遮挡，不以离线样例宣称战斗显示全部完成。

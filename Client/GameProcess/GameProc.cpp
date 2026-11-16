@@ -918,6 +918,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 
 		m_xMyHero.ShowMessage(nLoopTime);
 		m_xMyHero.DrawHPBar();
+        m_xMyHero.DrawDamage();
 
 		if ( m_xActorList.GetCounter() != 0 )
 		{
@@ -926,6 +927,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 			for ( INT nCnt = 0; nCnt < m_xActorList.GetCounter(); nCnt++ )
 			{
 				pxActor = m_xActorList.GetCurrentData();
+                pxActor->DrawDamage();
 
 				switch ( pxActor->m_stFeature.bGender )
 				{
@@ -3492,6 +3494,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			{
 				if ( tdm.nRecog == m_xMyHero.m_dwIdentity )
 				{
+                    m_xMyHero.HealthDamage(m_xMyHero.m_wHP,tdm.wParam);
 					m_xMyHero.m_wHP			= tdm.wParam;
 					m_xMyHero.m_wMP			= tdm.wTag;
 					m_xMyHero.m_wMAXHP		= tdm.wSeries;
@@ -3507,6 +3510,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 
 					if (pxActor)
 					{
+                        pxActor->HealthDamage(pxActor->m_wHP,tdm.wParam);
 						pxActor->m_wHP			= tdm.wParam;
 						pxActor->m_wMP			= tdm.wTag;
 						pxActor->m_wMAXHP		= tdm.wSeries;

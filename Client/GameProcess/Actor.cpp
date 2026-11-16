@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include "Common/LegacyPanel.h"
 
 
 
@@ -51,6 +52,7 @@ VOID CActor::InitActor()
 
 	m_dwWarModeTime		= 0;
 	m_wMAXHP			= 0;
+    m_damage=CDamageNumbers{};
 	m_wHP				= 0;
 	m_wMP				= 0;
 	m_wPosX				= 0;
@@ -889,6 +891,7 @@ VOID CActor::OnFeatureChanged(LPPACKETMSG lpPacketMsg)
 
 VOID CActor::OnHealthSpellChanged(LPPACKETMSG lpPacketMsg)
 {
+    HealthDamage(m_wHP,lpPacketMsg->stDefMsg.wParam);
 	m_wHP	 = lpPacketMsg->stDefMsg.wParam;
 	m_wMP	 = lpPacketMsg->stDefMsg.wTag;
 	m_wMAXHP = lpPacketMsg->stDefMsg.wSeries;
@@ -1092,6 +1095,7 @@ VOID CActor::OnStruck(LPPACKETMSG lpPacketMsg)
 
 	FLOAT wHPRate = (FLOAT)((FLOAT)lpPacketMsg->stDefMsg.wParam/(FLOAT)lpPacketMsg->stDefMsg.wTag);
 	WORD  wDamage = lpPacketMsg->stDefMsg.wSeries;
+    if(!m_bIsDead) AddDamage(-int(wDamage));
 	m_wHP		  = lpPacketMsg->stDefMsg.wParam;
 	m_wMAXHP	  = lpPacketMsg->stDefMsg.wTag;
 	m_bHPPercent  = wHPRate*100;
@@ -2843,6 +2847,7 @@ VOID CHero::OnStruck(LPPACKETMSG lpPacketMsg)
 
 	FLOAT wHPRate	 = (FLOAT)((FLOAT)lpPacketMsg->stDefMsg.wParam/(FLOAT)lpPacketMsg->stDefMsg.wTag);
 	WORD  wDamage	 = lpPacketMsg->stDefMsg.wSeries;
+    if(!m_bIsDead) AddDamage(-int(wDamage));
 	m_wHP			 = lpPacketMsg->stDefMsg.wParam;
 	m_wMAXHP		 = lpPacketMsg->stDefMsg.wTag;
 	m_bHPPercent     = wHPRate*100;
@@ -3812,6 +3817,7 @@ VOID CMyHero::SetMapHandler(CMapHandler* pxMap)
 
 VOID CMyHero::OnHealthSpellChanged(LPPACKETMSG lpPacketMsg)
 {
+    HealthDamage(m_stAbility.wHP,lpPacketMsg->stDefMsg.wParam);
 	m_stAbility.wHP	   = lpPacketMsg->stDefMsg.wParam;
 	m_stAbility.wMaxHP = lpPacketMsg->stDefMsg.wSeries;
 	m_stAbility.wMP    = lpPacketMsg->stDefMsg.wTag;
@@ -5544,4 +5550,19 @@ BOOL CMyHero::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTar
 	}
 
 	return TRUE;
+}
+
+void CActor::AddDamage(int value)
+{
+    m_damage.enabled=g_xGameProc.m_xInterface.m_xOptionWnd.m_values[10];m_damage.Push(value);
+}
+void CActor::HealthDamage(int before,int after)
+{
+    m_damage.enabled=g_xGameProc.m_xInterface.m_xOptionWnd.m_values[10];m_damage.Changed(before,after);
+}
+void CActor::DrawDamage()
+{
+    m_damage.enabled=g_xGameProc.m_xInterface.m_xOptionWnd.m_values[10];
+    for(const auto& glyph:m_damage.Draw(m_shScrnPosX,m_shScrnPosY,m_stFeature.bGender<2))
+        DrawSelectionFrame(*g_xGameProc.m_xInterface.m_pxInterImg,glyph.frame,glyph.x,glyph.y,SelectionBlend::Normal,false);
 }

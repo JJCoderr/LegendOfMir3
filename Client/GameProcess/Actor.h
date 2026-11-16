@@ -1,5 +1,6 @@
 #ifndef _CACTOR_H
 #define _CACTOR_H
+#include "DamageNumbers.h"
 
 
 
@@ -45,6 +46,10 @@ class CActor
 {
 private:
 public:
+    CDamageNumbers m_damage;
+    void AddDamage(int value);
+    void HealthDamage(int before,int after);
+    void DrawDamage();
 	DWORD				m_dwIdentity;					// ID Index From Server.
 	CHAR				m_szName[64];					// 角色或怪物的名称.
 	CHAR				m_szGuildName[64];
