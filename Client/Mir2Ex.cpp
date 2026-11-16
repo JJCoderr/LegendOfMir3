@@ -35,7 +35,7 @@ public:
         if (groupPanel>0 && groupPanel<5) capturePath = groupPanel==2 ? "group-create.bmp" : groupPanel==3 ? "group-invite.bmp" : groupPanel==4 ? "group-remove.bmp" : "group-panel.bmp";
         if (groupPanel>=5 && groupPanel<=10) capturePath = groupPanel==5 ? "guild-overview.bmp" : groupPanel==6 ? "guild-members.bmp" : groupPanel==8 ? "guild-denied.bmp" : groupPanel==9 ? "guild-remove.bmp" : groupPanel==10 ? "guild-break-ally.bmp" : "guild-notice.bmp";
         if (groupPanel==11) capturePath="options-panel.bmp";
-        if (groupPanel==15) capturePath="status-panel.bmp";
+        if (groupPanel>=15 && groupPanel<=17) capturePath=groupPanel==16?"status-elements.bmp":groupPanel==17?"status-tooltip.bmp":"status-panel.bmp";
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
@@ -227,20 +227,26 @@ public:
                 fprintf(report,"grid=%d release_without_press=%d close_clicked=%d scroll_end=%d scroll_released=%d\n",grid,stray,closed,scrollEnd,released); fprintf(report,"icon_samples=%d large_icon=%d multi_hit=%d picked=%d moved=%d\n",samples,largeIcon,multiHit,picked,moved); fprintf(report,"collision=%d freed=%d layout_restored=%d server_records_preserved=%d\n",collision,freed,layoutRestored,serverPreserved); fprintf(report,"placement_green=%d placement_red=%d\n",green,red); fprintf(report,"gold_unsigned=%d gold_updated=%d\n",goldUnsigned,goldUpdated); fclose(report);
             }
         }
-        if (groupPanel==15) {
+        if (groupPanel>=15 && groupPanel<=17) {
             auto& ui=g_xGameProc.m_xInterface; auto& status=ui.m_xStatusWnd;
             lstrcpyA(hero.m_szName,"MirPreview");
             hero.m_stAbility.wDC=MAKEWORD(12,24); hero.m_stAbility.wAC=MAKEWORD(5,10);
             hero.m_stAbility.wMC=MAKEWORD(7,18); hero.m_stAbility.wSC=MAKEWORD(3,6); hero.m_stAbility.wMAC=MAKEWORD(4,8);
             hero.m_stAbility.bWearWeight=12; hero.m_stAbility.bMaxWearWeight=40;
             hero.m_stAbility.bHandWeight=5; hero.m_stAbility.bMaxHandWeight=15;
+            if (groupPanel>=16) {
+                status.m_elementValues[0][0]=5; status.m_elementValues[0][3]=12; status.m_elementValues[0][6]=255;
+                status.m_elementValues[1][1]=2; status.m_elementValues[1][4]=255; status.m_elementValues[2][2]=3;
+                mouse=groupPanel==16?POINT{78,390}:POINT{220,140};
+                g_xGameProc.m_ptMousePos=mouse;
+            }
             status.SetStatusWndType(_TYPE_EQUIP); ui.WindowActivate(_WND_ID_STATUS);
             COMMONITEMSET held={}; POINT close={300,25};
             const bool stray=!status.OnLButtonUp(&held,close);
             status.OnLButtonDown(&held,close); const bool closed=status.OnLButtonUp(&held,close)!=FALSE;
             const bool slots=status.GetEquipNum(POINT{100,120})==0 && status.GetEquipNum(POINT{15,200})==7;
             if (FILE* report=fopen("status-layout-check.txt","wb")) {
-                fprintf(report,"release_without_press=%d close_clicked=%d slots=%d\n",stray,closed,slots); fclose(report);
+                fprintf(report,"release_without_press=%d close_clicked=%d slots=%d signed_elements=%d\n",stray,closed,slots,groupPanel<16 || (status.ElementValue(0,6)==255 && status.ElementValue(1,4)==-1 && status.ElementValue(1,0)==0)); fclose(report);
             }
         }
         if (groupPanel==11) {
@@ -462,7 +468,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=inventory-panel")==0 ? 12 :
         strcmp(lpCmdLine,"--preview=inventory-place")==0 ? 13 :
         strcmp(lpCmdLine,"--preview=inventory-conflict")==0 ? 14 :
-        strcmp(lpCmdLine,"--preview=status-panel")==0 ? 15 : 0;
+        strcmp(lpCmdLine,"--preview=status-panel")==0 ? 15 :
+        strcmp(lpCmdLine,"--preview=status-elements")==0 ? 16 :
+        strcmp(lpCmdLine,"--preview=status-tooltip")==0 ? 17 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

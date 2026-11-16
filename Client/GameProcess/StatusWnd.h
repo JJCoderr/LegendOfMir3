@@ -42,6 +42,9 @@ protected:
     bool m_nativeClosePressed=false;
     bool NativeCloseHit(POINT point);
     void ShowNativeStatus();
+    void ShowNativeHint();
+    POINT m_nativePointer={};
+    bool m_showNativeHint=false;
 	BYTE				m_bType;						// 0 : 装备窗口. 1 : 角色状态窗口.  2 : 角色魔法设置窗口。
 	CGameBtn			m_xStatusBtn[_MAX_STAUTS_BTN];
 
@@ -62,6 +65,12 @@ public:
 	LPCLIENTMAGICRCD	m_pstMyMagic;
 
 public:
+    BYTE m_elementValues[3][7]={};
+    int ElementValue(int row,int column) const {
+        const int value=m_elementValues[row][column];
+        return row==0 || value<128 ? value : value-256;
+    }
+    void UpdatePointer(POINT point,bool visible) { m_nativePointer=point; m_showNativeHint=visible; }
 	CStatusWnd();
 	~CStatusWnd();
 

@@ -590,3 +590,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 现有10个装备槽按EquipmentState前10槽更新命中位置；纸娃娃装备相对82,199绘制，普通饰品按格中心绘制。人物底图复用Interface已加载的ProgUse资源，修正预览资源实例未加载导致的缺失。
 - Client全量77步与后续全项目构建通过；--preview=status-panel验证release_without_press=1、close_clicked=1、slots=1；已检查out/status-panel.png，人物底图和基础属性可见。
 - 扩展装备槽10/11、元素数值、头衔/公会身份、悬停提示、装备高亮和完整穿脱流程仍待完成；当前身体帧沿用旧性别字段，完整appearance映射仍待协议适配。
+
+### 状态页元素数值与悬停提示
+- 接入3x7原始元素字节，攻击行无符号、强弱行有符号，只有正值显示图标及+N/xN；位置、1510/1520系列图标与5161起元素提示按StatusLayout。实际服务器元素消息尚未接入，此阶段数据由离线预览填充。
+- 增加等级/经验/HP/MP/负重等9行提示，采用参考文本测量、背景预乘混合和边框；鼠标命中窗口在绘制列表前统一计算，模态/上层窗口遮挡时不显示。
+- Client全量77步编译通过；--preview=status-elements与status-tooltip检查signed_elements=1，原三个状态交互检查仍通过；已检查out/status-elements.png和out/status-tooltip.png，分别展示火元素和HP提示。

@@ -493,7 +493,9 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 	m_xClientSysMsg.ShowSysMsg(nLoopTime, 30, 30);
 
 	// ÓÂÆø
-    m_xInventoryWnd.UpdatePlacementPointer(ptMousePos,!m_xMsgBox.IsActive() && GetWindowInMousePos(ptMousePos)==_WND_ID_INVENTORY);
+    const int hoveredWindow=m_xMsgBox.IsActive()?-1:GetWindowInMousePos(ptMousePos);
+    m_xInventoryWnd.UpdatePlacementPointer(ptMousePos,hoveredWindow==_WND_ID_INVENTORY);
+    m_xStatusWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_STATUS);
     ShowWndList();
 	if ( m_stCommonItem.bSetted && !m_stCommonItem.bIsHideItem )
 	{

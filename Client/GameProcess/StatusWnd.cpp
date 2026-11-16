@@ -13,6 +13,7 @@
 
 #include "StdAfx.h"
 #include "Common/LoginMessages.h"
+#include "Common/LegacyPanel.h"
 
 
 
@@ -41,6 +42,7 @@ VOID CStatusWnd::Init()
 
 	m_bType	= _TYPE_EQUIP;
     m_nativeClosePressed=false;
+    ZeroMemory(m_elementValues,sizeof(m_elementValues)); m_showNativeHint=false;
 	m_nStartLineNum = 0;
 	m_pstMyMagic = NULL;
 	m_bMyMagicCnt = 0;
@@ -1075,6 +1077,11 @@ void CStatusWnd::ShowNativeStatus()
         const auto& image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
         g_xMainWnd.DrawWithImageForComp(x+289,y+14,image.shWidth,image.shHeight,(WORD*)m_pxWndImage->m_pbCurrImage);
     }
+    for (int row=0;row<3;++row) for (int column=6;column>=0;--column) {
+        if (ElementValue(row,column)<=0 || !m_pxWndImage->NewSetIndex((row==2?1520:1510)+column)) continue;
+        const auto& image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        g_xMainWnd.DrawWithImageForComp(x+63+37*column,y+375+30*row,image.shWidth,image.shHeight,(WORD*)m_pxWndImage->m_pbCurrImage);
+    }
     HDC dc; auto* surface=g_xMainWnd.GetBackBuffer(); if (FAILED(surface->GetDC(&dc))) return;
     const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
     HFONT font=g_xMainWnd.CreateGameFont(face,9); HGDIOBJ previous=SelectObject(dc,font); SetBkMode(dc,TRANSPARENT);
@@ -1103,8 +1110,51 @@ void CStatusWnd::ShowNativeStatus()
     wsprintfA(value,"+%u%%",hero.m_stSubAbility.bSpeedPoint); text(value,245,283,67,15);
     text(captions.Get(5178).c_str(),11,377,50,15); text(captions.Get(5179).c_str(),11,408,50,15);
     text(captions.Get(5180).c_str(),12,438,50,15);
+    for (int row=0;row<3;++row) for (int column=6;column>=0;--column) {
+        const int element=ElementValue(row,column); if (element<=0) continue;
+        wsprintfA(value,row==0?"+%d":"x%d",element);
+        text(value,81+37*column,row==0?379:row==1?408:439,20,15);
+    }
     const char nameFace[]={char(0xb1),char(0xbc),char(0xb8),char(0xb2),0};
     HFONT nameFont=g_xMainWnd.CreateGameFont(nameFace,9,0,FW_BOLD); SelectObject(dc,nameFont);
     text(hero.m_szName,100,30,130,20,0xdcffdc);
     SelectObject(dc,previous); DeleteObject(nameFont); DeleteObject(font); surface->ReleaseDC(dc);
+    ShowNativeHint();
+}
+
+void CStatusWnd::ShowNativeHint()
+{
+    if (!m_showNativeHint) return;
+    static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
+    const int x=m_rcWnd.left,y=m_rcWnd.top;
+    std::string caption; RECT bounds={}; bool measured=false;
+    for (int row=0;row<3;++row) for (int column=0;column<7;++column) {
+        const RECT hit={x+62+37*column,y+382+30*row,x+98+37*column,y+401+30*row};
+        if (ElementValue(row,column)>0 && PtInRect(&hit,m_nativePointer)) {
+            caption=captions.Get(5161+column);
+            SetRect(&bounds,x+72+37*column,y+372+30*row,x+133+37*column,y+391+30*row);
+        }
+    }
+    const int messages[9]={2400,2401,-1,-1,2404,2402,2403,1053,1054};
+    for (int row=0;row<9;++row) {
+        const RECT hit={x+210,y+84+24*row,x+288,y+102+24*row};
+        if (PtInRect(&hit,m_nativePointer)) {
+            caption=row==2?"HP":row==3?"MP":captions.Get(messages[row]);
+            SetRect(&bounds,x+200,y+69+24*row,x+200,y+87+24*row); measured=true;
+        }
+    }
+    if (caption.empty()) return;
+    auto* surface=g_xMainWnd.GetBackBuffer(); HDC dc;
+    if (FAILED(surface->GetDC(&dc))) return;
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font=g_xMainWnd.CreateGameFont(face,9); HGDIOBJ previous=SelectObject(dc,font);
+    if (measured) { SIZE size; GetTextExtentPoint32A(dc,caption.c_str(),int(caption.size()),&size); bounds.right+=size.cx; }
+    SelectObject(dc,previous); surface->ReleaseDC(dc);
+    DrawLegacyPanel(bounds,RGB(80,60,40),150,RGB(100,75,50));
+    if (SUCCEEDED(surface->GetDC(&dc))) {
+        previous=SelectObject(dc,font); SetBkMode(dc,TRANSPARENT); SetTextColor(dc,RGB(255,255,255));
+        DrawTextA(dc,caption.c_str(),-1,&bounds,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+        SelectObject(dc,previous); surface->ReleaseDC(dc);
+    }
+    DeleteObject(font);
 }
