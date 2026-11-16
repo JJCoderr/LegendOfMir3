@@ -4,6 +4,7 @@
 void CSkillWnd::Init()
 {
     CGameWnd::Init();
+    m_keyMenu={}; m_keyMenuTarget=0;
     m_skillTab=0; m_skillScroll=0; m_skillPressed=-1; m_skillScrollCaptured=false; m_skillScrollTime=0;
     for (int i=0;i<8;++i) m_skillSelected[i]=-1;
 }
@@ -24,6 +25,7 @@ void CSkillWnd::SelectNonempty()
 }
 BOOL CSkillWnd::OnLButtonDown(POINT point)
 {
+    if (PtInRect(&m_keyMenu,point)) return TRUE;
     if (SkillScrollInput(0,point)) return TRUE;
     m_skillPressed=SkillButtonAt(point);
     if (m_skillPressed>=0) return TRUE;
@@ -36,6 +38,13 @@ BOOL CSkillWnd::OnLButtonDown(POINT point)
 }
 BOOL CSkillWnd::OnLButtonUp(POINT point)
 {
+    if (PtInRect(&m_keyMenu,point)) {
+        for (int i=0;i<m_bMyMagicCnt;++i) if (m_pstMyMagic[i].stStdMagic.wMagicID==m_keyMenuTarget) {
+            const int key=(point.y-m_keyMenu.top)/40*4+(point.x-m_keyMenu.left)/40+1;
+            BindMagic(m_keyMenuTarget,LegacyKey(key)); break;
+        }
+        return FALSE;
+    }
     if (SkillScrollInput(2,point)) return FALSE;
     const int button=SkillButtonAt(point);
     const bool clicked=button>=0 && button==m_skillPressed; m_skillPressed=-1;
@@ -47,29 +56,24 @@ BOOL CSkillWnd::OnLButtonUp(POINT point)
     return FALSE;
 }
 
-BOOL CSkillWnd::SetMagicKey(POINT ptMouse, BYTE bKey)
+BOOL CSkillWnd::SetMagicKey(POINT point,BYTE key)
 {
-    const int nLine=SkillAt(ptMouse);
-    if (nLine>=0) {
-			for ( INT nLoop = 0; nLoop < m_bMyMagicCnt; nLoop++ )
-			{
-				if ( m_pstMyMagic[nLoop].bUseKey == bKey )
-				{
-					m_pstMyMagic[nLoop].bUseKey = 0;
-					g_xClientSocket.SendMagicKeyChange(m_pstMyMagic[nLoop].bUseKey, m_pstMyMagic[nLoop].stStdMagic.wMagicID);
-				}
-			}
+    const int index=SkillAt(point);
+    if (index<0) return FALSE;
+    BindMagic(m_pstMyMagic[index].stStdMagic.wMagicID,key);
+    return TRUE;
+}
 
-			if ( m_pstMyMagic[nLine].bUseKey != bKey )
-			{
-				m_pstMyMagic[nLine].bUseKey = bKey;
-
-				g_xClientSocket.SendMagicKeyChange(m_pstMyMagic[nLine].bUseKey, m_pstMyMagic[nLine].stStdMagic.wMagicID);
-			}
-        return TRUE;
+void CSkillWnd::BindMagic(int id,BYTE key)
+{
+    for (int i=0;i<m_bMyMagicCnt;++i) if (m_pstMyMagic[i].bUseKey==key) {
+        m_pstMyMagic[i].bUseKey=0;
+        g_xClientSocket.SendMagicKeyChange(0,m_pstMyMagic[i].stStdMagic.wMagicID);
     }
-
-	return FALSE;
+    for (int i=0;i<m_bMyMagicCnt;++i) if (m_pstMyMagic[i].stStdMagic.wMagicID==id) {
+        m_pstMyMagic[i].bUseKey=key;
+        g_xClientSocket.SendMagicKeyChange(key,id); break;
+    }
 }
 
 LPCLIENTMAGICRCD CSkillWnd::GetMagicByKey(BYTE bKey)
@@ -191,7 +195,7 @@ VOID CSkillWnd::ShowSkillWnd()
             if (height>0) sprite(images,frame,pos.x,top+hiddenTop,hiddenTop,height);
         };
         icon(g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON],2*id-2);
-        if (skill.bUseKey>='1' && skill.bUseKey<='8') icon(*m_pxWndImage,1659+skill.bUseKey-'0');
+        if (const int key=KeyNumber(skill.bUseKey)) icon(*m_pxWndImage,1659+key);
         if (top+37>56 && top+37<385) labels[labelCount++]={i,pos.x+34,top+37};
     }
     for (int order=0;order<=8;++order) {
@@ -230,4 +234,39 @@ VOID CSkillWnd::ShowSkillWnd()
         }
     }
     SelectObject(dc,previous); DeleteObject(normal); DeleteObject(level); surface->ReleaseDC(dc);
+    ShowKeyMenu();
+}
+
+bool CSkillWnd::OpenKeyMenu(POINT point)
+{
+    const auto& positions=SkillLayout::positions[m_skillTab];
+    for (int slot=0;slot<10;++slot) {
+        const auto pos=positions[slot];
+        RECT hit={m_rcWnd.left+pos.x,m_rcWnd.top+pos.y,m_rcWnd.left+pos.x+40,m_rcWnd.top+pos.y+40};
+        if (!pos.id || !PtInRect(&hit,point)) continue;
+        bool learned=false;
+        for (int i=0;i<m_bMyMagicCnt;++i) if (m_pstMyMagic[i].stStdMagic.wMagicID==pos.id) learned=true;
+        if (!learned) continue;
+        const int left=min(point.x,m_rcWnd.right-160);
+        const int top=point.y+160>m_rcWnd.right?m_rcWnd.bottom-120:point.y;
+        m_keyMenu={left,top+40,left+160,top+160};
+        const int selected=m_skillSelected[m_skillTab];
+        m_keyMenuTarget=selected>=0 && selected<15?positions[selected].id:0;
+        m_skillPressed=-1; return true;
+    }
+    return false;
+}
+
+void CSkillWnd::ShowKeyMenu()
+{
+    if (IsRectEmpty(&m_keyMenu)) return;
+    DrawLegacyPanel(m_keyMenu,RGB(100,100,50),150,0,false);
+    for (int index=0;index<12;++index) {
+        const int x=m_keyMenu.left+40*(index%4),y=m_keyMenu.top+40*(index/4);
+        if (const auto skill=GetMagicByKey(LegacyKey(index+1))) {
+            const int id=skill->stStdMagic.wMagicID&255;
+            if (id) DrawSelectionFrame(g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON],2*id-2,x,y,SelectionBlend::Normal,false);
+        }
+        DrawSelectionFrame(*m_pxWndImage,1660+index,x,y,SelectionBlend::Normal,false);
+    }
 }

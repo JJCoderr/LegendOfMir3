@@ -33,6 +33,13 @@ typedef struct tagCLIENTMAGICRCD
 
 class CSkillWnd : public CGameWnd {
 public:
+    RECT m_keyMenu={};
+    int m_keyMenuTarget=0;
+    bool OpenKeyMenu(POINT point);
+    void ShowKeyMenu();
+    void BindMagic(int id,BYTE key);
+    static BYTE LegacyKey(int key) { return BYTE(key<=9?'0'+key:'A'+key-10); }
+    static int KeyNumber(BYTE key) { return key>='1' && key<='9'?key-'0':key>='A' && key<='C'?key-'A'+10:0; }
     BYTE m_bMyMagicCnt=0;
     LPCLIENTMAGICRCD m_pstMyMagic=nullptr;
     int m_skillTab=0, m_skillScroll=0, m_skillPressed=-1;

@@ -733,7 +733,8 @@ INT	CInterface::GetWindowInMousePos(POINT ptMouse)
 				rcWnd = m_xInventoryWnd.GetGameWndRect();
 				break;
 			case _WND_ID_SKILL:
-				rcWnd = m_xSkillWnd.GetGameWndRect();
+				if (PtInRect(&m_xSkillWnd.m_keyMenu,ptMouse)) return _WND_ID_SKILL;
+                rcWnd = m_xSkillWnd.GetGameWndRect();
 				break;
 case _WND_ID_STATUS:
 				rcWnd = m_xStatusWnd.GetGameWndRect();
@@ -890,7 +891,7 @@ BOOL CInterface::WindowActivate(INT nID)
 			{
 				DeleteWindowToList(_WND_ID_SKILL);
 				m_xSkillWnd.SetGameWndActive(FALSE);
-                m_xSkillWnd.m_skillPressed=-1; m_xSkillWnd.m_skillScrollCaptured=false;
+                m_xSkillWnd.m_skillPressed=-1; m_xSkillWnd.m_skillScrollCaptured=false; m_xSkillWnd.m_keyMenu={};
 				bRet = FALSE;
 			}
 			else
@@ -1383,6 +1384,11 @@ BOOL CInterface::IsTopWindow(INT nID)
 *******************************************************************************************************************/
 BOOL CInterface::OnLButtonDown(POINT ptMouse)
 {
+    if (!m_xMsgBox.IsActive() && PtInRect(&m_xSkillWnd.m_keyMenu,ptMouse) && GetWindowInMousePos(ptMouse)==_WND_ID_SKILL) {
+        WindowFocusChangedAndSetReadyMove(_WND_ID_SKILL,ptMouse); m_bMoveFocusedWnd=FALSE;
+        m_xSkillWnd.OnLButtonDown(ptMouse); return TRUE;
+    }
+    if (!m_xMsgBox.IsActive() && !PtInRect(&m_xSkillWnd.m_keyMenu,ptMouse)) m_xSkillWnd.m_keyMenu={};
 	if(m_xMsgBox.IsActive())	// ÓÂÆø
 	{
 		m_xMsgBox.OnButtonDown(ptMouse);
@@ -1604,6 +1610,9 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
+    if (!m_xMsgBox.IsActive() && PtInRect(&m_xSkillWnd.m_keyMenu,ptMouse) && GetWindowInMousePos(ptMouse)==_WND_ID_SKILL) {
+        m_xSkillWnd.OnLButtonUp(ptMouse); return TRUE;
+    }
     if (m_xSkillWnd.m_skillScrollCaptured || m_xSkillWnd.m_skillPressed>=0) {
         if (m_xSkillWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_SKILL);
         return TRUE;
@@ -1919,6 +1928,10 @@ BOOL CInterface::OnScrollUp()
 BOOL CInterface::OnLButtonDoubleClick(POINT ptMouse)
 {
     if (m_xMsgBox.IsActive()) return TRUE;
+    if (GetWindowInMousePos(ptMouse)==_WND_ID_SKILL && m_xSkillWnd.OpenKeyMenu(ptMouse)) {
+        WindowFocusChangedAndSetReadyMove(_WND_ID_SKILL,ptMouse); m_bMoveFocusedWnd=FALSE;
+        return TRUE;
+    }
 	if ( IsTopWindow(m_xInventoryWnd.m_nID) )
 		m_xInventoryWnd.OnLButtonDoubleClick(&m_stCommonItem, ptMouse);
 	return TRUE;
