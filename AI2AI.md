@@ -906,3 +906,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 新增PortraitWnd::SendRequest，在原生Interface渲染入口消费已验证的待发送请求；1151上传使用requested.size，默认恢复nullptr/0，消费后不重复发送。保留原按钮105.wav、JPEG检查和节流。
 - Client清理83步、全部111步构建通过。头像预览新增本机UDP回环捕获实际SendPacket输出：消息1151、全零头、JPEG逐字节一致、空默认报文和一次性消费均通过（jpeg=1/reset=1）；原头像选择二十一项回归全1。回环仅用于离线字节验证，不代表真实TCP服务器接受。
 - 已检查out/portrait-upload-verified.png。原版还把照片编码写入角色.fac缓存并更新自身头像，此本地缓存/自身照片以及照片回复路由、实际服务器存储仍未完成，不能宣称头像业务已全部完成。
+
+### 1403目标照片回复接线
+- 依据Godot保存的004282C0.c case1403：nRecog目标身份，wParam/wTag为32位版本标记，正文JPEG最多4096字节；远程目标版本为零走无照片分支。接入原生GameProc，对当前玩家目标调用ApplyPortrait，零版本清除照片并回退标准头像。
+- 解码缓冲4097字节，用已有ApplyPortrait的4096上限拒绝超量数据；错误身份和损坏JPEG保持当前照片，迟到回复不覆盖新目标。不把版本字段误当JPEG长度。
+- 全目标增量构建通过。target-photo-reply/cleared各七项全1，全部经fnEncodeMessage/fnEncode6BitBuf和GameProc真实接收入口，覆盖显示、错误身份、坏JPEG、清零、4096边界、4097拒绝和迟到回复；查询去重十项回归通过。
+- 已检查out/target-photo-reply.png和target-photo-cleared.png，照片为既有测试图案。原版还保存按服务器/角色区分的.fac文件和照片版本配置；当前只接当前目标显示，离开目标后的缓存、自身照片和真实TCP服务器交互仍待完成。

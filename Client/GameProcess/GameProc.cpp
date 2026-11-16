@@ -2834,6 +2834,15 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 
 		switch (tdm.wIdent)
 		{
+            case 1403: // MIR3 player portrait reply
+            {
+                if(!tdm.wParam && !tdm.wTag) m_xInterface.m_targetDisplay.ApplyPortrait(DWORD(tdm.nRecog),nullptr,0);
+                else {
+                    BYTE jpeg[4097];const int length=fnDecode6BitBuf(pszMsg+DEFBLOCKSIZE,(char*)jpeg,sizeof(jpeg));
+                    m_xInterface.m_targetDisplay.ApplyPortrait(DWORD(tdm.nRecog),jpeg,length);
+                }
+                break;
+            }
             case 1304: // MIR3 target attributes
             {
                 BYTE body[11]={};

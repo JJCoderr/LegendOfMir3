@@ -1610,6 +1610,27 @@ public:
             if(FILE* report=fopen("target-portrait-query-check.txt","wb")) {fprintf(report,"empty=%d first=%d repeated=%d same=%d no_photo=%d renamed=%d switched=%d removed=%d returned=%d reset=%d\n",empty,first,repeated,same,noPhoto,renamed,switched,removed,returned,reset);fclose(report);}
         }
 
+        if(groupPanel==108 || groupPanel==109) {
+            auto& target=g_xGameProc.m_xInterface.m_targetDisplay;
+            std::vector<BYTE> jpeg;if(FILE* file=fopen("./portrait-preview/portrait01.jpg","rb")) {fseek(file,0,SEEK_END);jpeg.resize(ftell(file));rewind(file);fread(jpeg.data(),1,jpeg.size(),file);fclose(file);}
+            const auto receive=[&](DWORD actor,WORD version,const std::vector<BYTE>& bytes) {
+                _TDEFAULTMESSAGE packet={};packet.wIdent=1403;packet.nRecog=actor;packet.wTag=version;
+                char encoded[8192]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));
+                if(!bytes.empty()) fnEncode6BitBuf(const_cast<BYTE*>(bytes.data()),encoded+DEFBLOCKSIZE,int(bytes.size()),sizeof(encoded)-DEFBLOCKSIZE);
+                g_xGameProc.OnSocketMessageRecieve(encoded);
+            };
+            target.Clear();target.SetHuman(7,1,1,1000);receive(7,1,jpeg);const bool loaded=target.HasPortrait();
+            receive(8,0,{});const bool wrong=target.HasPortrait();receive(7,2,{0xff,0xd8,0,0});const bool invalid=target.HasPortrait();
+            receive(7,0,jpeg);const bool cleared=!target.HasPortrait();
+            auto padded=jpeg;padded.resize(4096);receive(7,1,padded);const bool limit=target.HasPortrait();
+            receive(7,0,{});padded.push_back(0);receive(7,1,padded);const bool oversized=!target.HasPortrait();
+            target.SetHuman(8,0,2,1100);receive(7,1,jpeg);const bool delayed=!target.HasPortrait();
+            target.SetHuman(7,1,1,1200);receive(7,1,jpeg);
+            if(groupPanel==109) receive(7,0,{});
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==108?"target-photo-reply.bmp":"target-photo-cleared.bmp";
+            if(FILE* report=fopen("target-photo-reply-check.txt","wb")) {fprintf(report,"loaded=%d wrong=%d invalid=%d cleared=%d limit=%d oversized=%d delayed=%d\n",loaded,wrong,invalid,cleared,limit,oversized,delayed);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1807,6 +1828,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=target-photo-reply")==0 ? 108 :
+        strcmp(lpCmdLine,"--preview=target-photo-cleared")==0 ? 109 :
         strcmp(lpCmdLine,"--preview=target-portrait-query")==0 ? 107 :
         strcmp(lpCmdLine,"--preview=target-native-hover")==0 ? 105 :
         strcmp(lpCmdLine,"--preview=target-native-expired")==0 ? 106 :
