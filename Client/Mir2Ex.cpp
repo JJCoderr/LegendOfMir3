@@ -1653,7 +1653,7 @@ public:
             CreateDirectoryA("./preview-photo-cache",nullptr);
             std::vector<BYTE> jpeg;if(FILE* file=fopen("./portrait-preview/portrait01.jpg","rb")) {fseek(file,0,SEEK_END);jpeg.resize(ftell(file));rewind(file);fread(jpeg.data(),1,jpeg.size(),file);fclose(file);}
             picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache","./preview-photo-cache/UserPic.ini");picker.SaveOwnCache({});
-            picker.requested=jpeg;picker.requestPending=true;picker.SendRequest();
+            picker.requested=jpeg;picker.requestPending=true;picker.SendRequest();picker.SaveOwnVersion(123);
             const bool restored=picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache","./preview-photo-cache/UserPic.ini") && picker.HasOwnPhoto();
             const bool actor=!picker.SetCacheContext("ServerA","HeroMissing","./preview-photo-cache","./preview-photo-cache/UserPic.ini") && !picker.HasOwnPhoto();
             const bool server=!picker.SetCacheContext("ServerMissing","HeroA","./preview-photo-cache","./preview-photo-cache/UserPic.ini") && !picker.HasOwnPhoto();
@@ -1692,13 +1692,28 @@ public:
             picker.selected=-1;for(int i=0;i<int(picker.names.size());++i) if(picker.names[i]==filename) picker.selected=i;
             const bool enumerated=picker.selected>=0;picker.lastUpload=0;picker.requestPending=false;picker.Request(1,1000);
             const bool uploaded=picker.requestPending && !picker.requested.empty();
-            picker.SetCacheContext(name,name,"./preview-dbcs-photo","./preview-dbcs-photo/UserPic.ini");picker.SendRequest();
+            picker.SetCacheContext(name,name,"./preview-dbcs-photo","./preview-dbcs-photo/UserPic.ini");picker.SendRequest();picker.SaveOwnVersion(123);
             const bool restored=picker.SetCacheContext(name,name,"./preview-dbcs-photo","./preview-dbcs-photo/UserPic.ini") && picker.HasOwnPhoto();
             const bool pathRejected=!picker.SetCacheContext("Bad/Server",name,"./preview-dbcs-photo") && !picker.SaveOwnCache(picker.requested);
             picker.SetCacheContext(name,name,"./preview-dbcs-photo","./preview-dbcs-photo/UserPic.ini");
             if(enumerated) {const POINT row={30,30+24*picker.selected};picker.Pointer(0,row);picker.Pointer(2,row);}
             mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath="portrait-chinese-filename.bmp";
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
+        }
+
+        if(groupPanel==116 || groupPanel==117) {
+            auto& picker=g_xGameProc.m_xInterface.m_xPortraitWnd;CreateDirectoryA("./preview-photo-restore",nullptr);
+            const char* root="./preview-photo-restore";const char* ini="./preview-photo-restore/UserPic.ini";
+            std::vector<BYTE> jpeg;if(FILE* file=fopen("./portrait-preview/portrait01.jpg","rb")) {fseek(file,0,SEEK_END);jpeg.resize(ftell(file));rewind(file);fread(jpeg.data(),1,jpeg.size(),file);fclose(file);}
+            picker.SetCacheContext("ServerA","HeroA",root,ini);picker.SaveOwnCache(jpeg);picker.SaveOwnVersion(0);
+            const bool unconfirmed=!picker.SetCacheContext("ServerA","HeroA",root,ini) && !picker.HasOwnPhoto();
+            picker.SaveOwnVersion(123);const bool confirmed=picker.SetCacheContext("ServerA","HeroA",root,ini) && picker.HasOwnPhoto();
+            const bool mismatch=!picker.RestoreOwnVersion(124) && !picker.HasOwnPhoto();
+            const bool matched=picker.RestoreOwnVersion(123) && picker.HasOwnPhoto();
+            const bool zero=!picker.RestoreOwnVersion(0) && !picker.HasOwnPhoto();
+            if(groupPanel==116) picker.RestoreOwnVersion(123);
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==116?"portrait-cache-version-match.bmp":"portrait-cache-version-zero.bmp";
+            if(FILE* report=fopen("portrait-restore-version-check.txt","wb")) {fprintf(report,"unconfirmed=%d confirmed=%d mismatch=%d matched=%d zero=%d\n",unconfirmed,confirmed,mismatch,matched,zero);fclose(report);}
         }
 
     }
@@ -1898,6 +1913,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=portrait-cache-version-zero")==0 ? 117 :
         strcmp(lpCmdLine,"--preview=portrait-chinese-filename")==0 ? 115 :
         strcmp(lpCmdLine,"--preview=portrait-upload-confirmed")==0 ? 114 :
         strcmp(lpCmdLine,"--preview=own-cache-restored")==0 ? 112 :

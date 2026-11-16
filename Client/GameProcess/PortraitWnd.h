@@ -32,6 +32,7 @@ public:
     bool ShowOwnPhoto();
     bool SetCacheContext(const std::string& server,const std::string& actor,const std::string& root="./Data",const std::string& versions="./UserPic.ini");
     bool SaveOwnVersion(DWORD version);
+    bool RestoreOwnVersion(DWORD expectedVersion);
     bool SaveOwnCache(const std::vector<BYTE>& jpeg);
     bool HasOwnPhoto() const {return ownPhoto!=nullptr;}
     bool HasPreview() const { return preview!=nullptr; }

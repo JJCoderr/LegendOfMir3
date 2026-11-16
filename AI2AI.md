@@ -942,3 +942,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 发现PortraitWnd原字节级find_first_of会把GBK汉字尾字节0x5C当作反斜杠，导致合法中文JPG无法读取，中文服务器/角色缓存上下文失效。新增Common/AnsiInput.h的IsAnsiFileComponent，按CP_ACP双字节边界检查单字节非法路径字符，替换两处校验。
 - 全目标增量构建通过。在实际GetACP=936环境使用U+4E57（GBK 81 5C）命名JPG、服务器及角色，真实文件列出、上传读取、FAC保存恢复和真实分隔符拒绝四项全1。上传回环两项、缓存七项回归通过。测试仅写preview-dbcs-photo目录。
 - 已检查out/portrait-chinese-filename.png，中文文件成功选中并显示JPEG预览及自身照片。此修正处理中文资源/身份路径兼容，不代表头像版本比较、远程缓存或登录联调已完成。
+
+### FAC恢复版本门槛与扩展角色字段核查
+- 原版0x411700从16字节角色描述读取偏移8的照片版本并写actor+400400，版本改变置actor+400416。其他移动/动作处理也写该字段。CLIENT仍使用旧CHARDESC及FEATUREEX，不能直接把其偏移8解释为MIR3照片版本。证据out/actor-photo-version-original.c；完整角色消息适配仍待后续。
+- SetCacheContext现在先读取UserPic.ini非零确认版本，再经RestoreOwnVersion验证期望版本一致后解码FAC；缺失记录/0/不匹配均清空照片并回退默认。修正上一阶段无版本记录也恢复本地未确认上传的行为。RestoreOwnVersion保留供后续服务器角色版本驱动；当前创建界面仍以本地已确认版本恢复，不声称已验证最新服务器版本。
+- Client清理83步及全目标构建通过。portrait-cache-version-match/zero各五项全1，覆盖未确认、已确认、版本不符、匹配和0；缓存七项、中文文件四项回归通过。预览缓存保存测试补上模拟确认版本，符合新的恢复规则。
+- 已检查out/portrait-cache-version-match.png、portrait-cache-version-zero.png。远程缓存、扩展角色协议、自动节流重查及真实服务器登录联调仍未完成。

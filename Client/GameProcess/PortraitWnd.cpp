@@ -175,6 +175,12 @@ bool CPortraitWnd::SetCacheContext(const std::string& server,const std::string& 
     if(!IsAnsiFileComponent(server) || !IsAnsiFileComponent(actor)) return false;
     ownCacheKey=server+"_"+actor;versionPath=versions;
     ownCachePath=root+"/"+ownCacheKey+".fac";
+    return RestoreOwnVersion(GetPrivateProfileIntA("UserPic",ownCacheKey.c_str(),0,versionPath.c_str()));
+}
+bool CPortraitWnd::RestoreOwnVersion(DWORD expectedVersion)
+{
+    ApplyOwnPhoto(nullptr,0);
+    if(ownCacheKey.empty() || !expectedVersion || GetPrivateProfileIntA("UserPic",ownCacheKey.c_str(),0,versionPath.c_str())!=expectedVersion) return false;
     FILE* file=fopen(ownCachePath.c_str(),"rb");if(!file) return false;
     fseek(file,0,SEEK_END);const long size=ftell(file);rewind(file);
     if(size<9 || size>4104) {fclose(file);return false;}
