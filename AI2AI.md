@@ -862,3 +862,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 设置10接入BloodNum默认开启、真实点击及配置保存恢复，沿用105.wav和CmList2122/2121聊天提示。关闭时不新增/绘制数字，保留参考暂停年龄行为。
 - Client清理83步与全目标构建通过。options-damage-on/off各九项全1，覆盖血量差、无变化/初始血量、关闭、默认/持久化、帧样式、寿命和回绕；魔法光六项、音频九项回归通过。预览仅写preview-damage-options.ini。
 - 已检查并展示out/options-damage-on.png、options-damage-off.png，顶部依次为-9、-99、-100、-65535、+25、MISS原生资源样例。仍需真实服务器战斗验证消息时序、世界坐标锚点与画面遮挡，不以离线样例宣称战斗显示全部完成。
+
+### 强制攻击模式接入玩家点击判定
+- 选项8使用AttackUser默认开启，接入实际按钮切换、CmList1515/1516提示、105.wav点击及配置保存恢复。参考Godot step_toward_pointer：关闭时普通点击玩家受名字颜色限制，255/27631例外；Shift继续绕过限制，Alt挖取分支不受该限制影响。
+- CMyHero::OnLButtonDown在行走/攻击处理前读取实际目标Actor身份与名字颜色，调用设置页共享CanAttackHuman判定；怪物不走玩家颜色限制。未把开关替换为持续按Shift，保留正常追近目标行为。
+- Client清理83步、全目标111步构建通过；options-attack-on/off各五项全1，验证按钮、白名限制、颜色与Shift例外、默认值和配置恢复。体力数字九项回归通过。预览只写preview-attack-options.ini。
+- 已检查out/options-attack-on.png和options-attack-off.png；当前证明配置与客户端判定接线，尚未通过真实服务器玩家战斗验证完整动作/伤害结果。服务器控制的设置按钮仍待接入。

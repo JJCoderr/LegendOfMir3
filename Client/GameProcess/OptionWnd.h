@@ -17,6 +17,7 @@ public:
     bool AudioInput(int kind, POINT point);
     void LoadAudioOptions(const char* path);
     bool SaveAudioOptions();
+    bool CanAttackHuman(DWORD nameColor,bool shift) const {return shift || m_values[8] || nameColor==255 || nameColor==27631;}
 	COptionWnd();
 	~COptionWnd();
 

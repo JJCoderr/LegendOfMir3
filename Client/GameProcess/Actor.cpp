@@ -5054,6 +5054,11 @@ BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* l
 			return FALSE;
 		}
 		
+        if(nTargetID!=-1 && lpptTargetPos && !HIBYTE(GetKeyState(VK_MENU))) {
+            CActor* target=g_xGameProc.FindActor(nTargetID);
+            if(target && target->m_stFeature.bGender<2 && !bIsDead &&
+               !g_xGameProc.m_xInterface.m_xOptionWnd.CanAttackHuman(target->m_dwNameClr,HIBYTE(GetKeyState(VK_SHIFT))!=0)) return FALSE;
+        }
 		ptMouseTilePos = GetPosMouseToTile(ptMouse.x, ptMouse.y);
 		bDir		   = CalcDirection(ptMouseTilePos.x, ptMouseTilePos.y);
 

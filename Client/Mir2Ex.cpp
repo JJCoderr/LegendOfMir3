@@ -1487,6 +1487,20 @@ public:
             if(FILE* report=fopen("options-damage-check.txt","wb")) {fprintf(report,"healed=%d unchanged=%d disabled=%d defaults=%d persisted=%d small=%d styles=%d lifetime=%d wrap=%d\n",healed,unchanged,disabled,defaults,persisted,smallDigits,large,last,wrap);fclose(report);}
         }
 
+        if(groupPanel==97 || groupPanel==98) {
+            auto& ui=g_xGameProc.m_xInterface;auto& options=ui.m_xOptionWnd;
+            options.LoadAudioOptions("./preview-attack-options.ini");options.m_values[8]=true;options.SaveAudioOptions();
+            ui.WindowActivate(_WND_ID_OPTION);const POINT toggle={options.m_rcWnd.left+189,options.m_rcWnd.top+88};
+            const bool enabled=options.CanAttackHuman(0xffffff,false);
+            ui.OnLButtonDown(toggle);ui.OnLButtonUp(toggle);
+            const bool disabled=!options.m_values[8] && !options.CanAttackHuman(0xffffff,false);
+            const bool exceptions=options.CanAttackHuman(255,false) && options.CanAttackHuman(27631,false) && options.CanAttackHuman(0xffffff,true);
+            options.LoadAudioOptions(nullptr);const bool defaults=options.m_values[8];options.LoadAudioOptions("./preview-attack-options.ini");const bool persisted=!options.m_values[8];
+            options.LoadAudioOptions(nullptr);options.m_values[8]=groupPanel==97;
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==97?"options-attack-on.bmp":"options-attack-off.bmp";
+            if(FILE* report=fopen("options-attack-check.txt","wb")) {fprintf(report,"enabled=%d disabled=%d exceptions=%d defaults=%d persisted=%d\n",enabled,disabled,exceptions,defaults,persisted);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1684,6 +1698,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=options-attack-on")==0 ? 97 :
+        strcmp(lpCmdLine,"--preview=options-attack-off")==0 ? 98 :
         strcmp(lpCmdLine,"--preview=options-damage-on")==0 ? 95 :
         strcmp(lpCmdLine,"--preview=options-damage-off")==0 ? 96 :
         strcmp(lpCmdLine,"--preview=options-light-on")==0 ? 93 :
