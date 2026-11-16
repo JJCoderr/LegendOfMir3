@@ -1701,6 +1701,25 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel==126) {
+            auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;auto& quick=ui.m_xQuickWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[100]={};memcpy(raw,"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234",30);raw[31]=106;raw[61]=2;raw[62]=11;raw[71]=5;
+            CItem first,second;first.SetMir3Item(raw,0);raw[29]='5';raw[62]=22;raw[71]=7;second.SetMir3Item(raw,1);
+            bag.AddInvenItem(first,0,TRUE);bag.AddInvenItem(second,1,TRUE);quick.slots[0]=CQuickWnd::FromItem(first);
+            const bool saved=bag.SaveLayoutFile("./preview-item-layout-full.itms");
+            BYTE stored[100]={};if(FILE* file=fopen("./preview-item-layout-full.itms","rb")) {fseek(file,16,SEEK_SET);fread(stored,1,100,file);fclose(file);}
+            const bool record=!memcmp(stored,first.m_serverRecord,100);
+            bag.DeleteAllInvenItem();quick.slots[0]=CQuickWnd::Slot{};first.SetCount(99);
+            bag.AddInvenItem(second,0,TRUE);bag.AddInvenItem(first,1,TRUE);
+            const bool restored=bag.LoadLayoutFile("./preview-item-layout-full.itms");
+            const bool positions=bag.ItemAnchor(0)==1 && bag.ItemAnchor(1)==0;
+            const bool reference=quick.slots[0].present && quick.slots[0].item.m_stItemInfo.nMakeIndex==11 && quick.slots[0].count==99 && strlen(quick.slots[0].item.Name())==30;
+            const bool current=bag.m_stInventoryItem[1].xItem.m_count==99 && bag.m_stInventoryItem[1].xItem.m_serverRecord[71]==99;
+            ui.WindowActivate(_WND_ID_INVENTORY);ui.WindowActivate(_WND_ID_QUICK);capturePath="item-layout-full-name.bmp";
+            if(FILE* report=fopen("item-layout-full-name-check.txt","wb")) {fprintf(report,"saved=%d record=%d restored=%d positions=%d reference=%d current=%d\n",saved,record,restored,positions,reference,current);fclose(report);}
+        }
+
         if(groupPanel==125) {
             auto& ui=g_xGameProc.m_xInterface;auto& equipment=ui.m_xStatusWnd.m_stEquipItem;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -2099,6 +2118,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=item-layout-full-name")==0 ? 126 :
         strcmp(lpCmdLine,"--preview=equipment-durability")==0 ? 125 :
         strcmp(lpCmdLine,"--preview=equipment-records-reply")==0 ? 124 :
         strcmp(lpCmdLine,"--preview=item-update-reply")==0 ? 123 :

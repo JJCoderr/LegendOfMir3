@@ -298,16 +298,19 @@ constexpr int quickOffset=cellsOffset+1200,layoutFileSize=quickOffset+6*quickStr
 unsigned LayoutWord(const std::vector<BYTE>& data,int at) { return data[at]|(unsigned(data[at+1])<<8); }
 unsigned LayoutDword(const std::vector<BYTE>& data,int at) { return LayoutWord(data,at)|(LayoutWord(data,at+2)<<16); }
 void LayoutPutWord(std::vector<BYTE>& data,int at,unsigned value) { data[at]=BYTE(value); data[at+1]=BYTE(value>>8); }
-void LayoutIdentity(std::vector<BYTE>& data,int at,const CLIENTITEMRCD& item) {
-    memcpy(&data[at],item.stStdItem.szName,sizeof(item.stStdItem.szName));
-    LayoutPutWord(data,at+62,unsigned(item.nMakeIndex)); LayoutPutWord(data,at+64,unsigned(item.nMakeIndex)>>16);
-    LayoutPutWord(data,at+66,item.nDura); LayoutPutWord(data,at+68,item.nDuraMax);
+void LayoutIdentity(std::vector<BYTE>& data,int at,const CItem& item) {
+    if(item.m_serverName[0]) {memcpy(&data[at],item.m_serverRecord,100);return;}
+    const auto& record=item.m_stItemInfo;
+    memcpy(&data[at],record.stStdItem.szName,sizeof(record.stStdItem.szName));
+    LayoutPutWord(data,at+62,unsigned(record.nMakeIndex)); LayoutPutWord(data,at+64,unsigned(record.nMakeIndex)>>16);
+    LayoutPutWord(data,at+66,record.nDura); LayoutPutWord(data,at+68,record.nDuraMax);
 }
-bool LayoutName(const std::vector<BYTE>& data,int at,const CLIENTITEMRCD& item) {
-    for (int i=0;i<30;++i) {
-        const BYTE current=i<int(sizeof(item.stStdItem.szName)) ? BYTE(item.stStdItem.szName[i]) : 0;
-        if (data[at+i]!=current) return false;
-        if (!current) return true;
+bool LayoutName(const std::vector<BYTE>& data,int at,const CItem& item) {
+    const char* name=item.Name();const int length=item.m_serverName[0]?30:sizeof(item.m_stItemInfo.stStdItem.szName);
+    for(int i=0;i<30;++i) {
+        const BYTE current=i<length?BYTE(name[i]):0;
+        if(data[at+i]!=current) return false;
+        if(!current) return true;
     }
     return true;
 }
@@ -334,7 +337,7 @@ bool CInventoryWnd::SaveLayoutFile(const char* path)
         if (count==46 || m_layout.anchors[id]<0) return false;
         const int at=count*bagStride; savedIds[id]=count++;
         data[at]=1; LayoutPutWord(data,at+4,m_layout.widths[id]); LayoutPutWord(data,at+8,m_layout.heights[id]);
-        LayoutIdentity(data,at+16,m_stInventoryItem[id].xItem.m_stItemInfo);
+        LayoutIdentity(data,at+16,m_stInventoryItem[id].xItem);
     }
     for (int cell=0;cell<600;++cell) {
         const int id=m_layout.cells[cell];
@@ -344,7 +347,7 @@ bool CInventoryWnd::SaveLayoutFile(const char* path)
     const auto& quick=g_xGameProc.m_xInterface.m_xQuickWnd;
     for (int slot=0;slot<6;++slot) if (quick.slots[slot].present) {
         const int at=quickOffset+slot*quickStride; data[at]=1;
-        LayoutIdentity(data,at+8,quick.slots[slot].item.m_stItemInfo);
+        LayoutIdentity(data,at+8,quick.slots[slot].item);
     }
     FILE* file=fopen(path,"wb"); if (!file) return false;
     const bool written=fwrite(data.data(),1,data.size(),file)==data.size();
@@ -366,7 +369,7 @@ bool CInventoryWnd::LoadLayoutFile(const char* path)
         int current=-1;
         for (int id=0;id<_MAX_INVEN_ITEM;++id) {
             const auto& item=m_stInventoryItem[id]; const auto& record=item.xItem.m_stItemInfo;
-            if (item.bSetted && !consumed[id] && LayoutName(data,at+16,record) &&
+            if (item.bSetted && !consumed[id] && LayoutName(data,at+16,item.xItem) &&
                 LayoutDword(data,at+78)==unsigned(record.nMakeIndex) && LayoutWord(data,at+82)==record.nDura &&
                 LayoutWord(data,at+84)==record.nDuraMax) { current=id; break; }
         }
@@ -391,7 +394,7 @@ bool CInventoryWnd::LoadLayoutFile(const char* path)
     for (int slot=0;slot<6;++slot) {
         const int at=quickOffset+slot*quickStride; if (!LayoutDword(data,at)) continue;
         for (int id=0;id<_MAX_INVEN_ITEM;++id)
-            if (m_stInventoryItem[id].bSetted && LayoutName(data,at+8,m_stInventoryItem[id].xItem.m_stItemInfo))
+            if (m_stInventoryItem[id].bSetted && LayoutName(data,at+8,m_stInventoryItem[id].xItem))
                 g_xGameProc.m_xInterface.m_xQuickWnd.slots[slot]=CQuickWnd::FromItem(m_stInventoryItem[id].xItem);
     }
     return true;

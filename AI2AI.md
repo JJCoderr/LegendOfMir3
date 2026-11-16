@@ -1010,3 +1010,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 修复SM_DROPITEM_FAIL缺break误进入耐久分支的问题。未知/空装备槽不改数据。
 - --preview=equipment-durability九项全1，覆盖普通/特殊阈值、原始字节、负值、超过WORD范围、空/越界槽位及丢弃失败不误改耐久。增量构建与diff --check通过；已检查out/equipment-durability.png，三条耗尽提示来自三个边界测试。
 - 当前证明回复与提示接线，不代表装备属性悬浮框、真实耐久消耗与服务器流程已全部验收。
+
+### MIR3完整名称布局持久化
+- 核查Godot参考当前没有完整物品属性悬浮层，不能据其虚构属性格式；该部分后续需继续原版取证。本轮先修复已明确的布局链：LayoutIdentity对MIR3物品保存完整100字节记录，LayoutName按完整30字节名称匹配，旧物品维持原格式投影。
+- --preview=item-layout-full-name六项全1，使用前29字节相同、末字节不同的两个名称，重排服务器列表后恢复原位置，快捷栏准确引用对应物品；保留新数量99而非磁盘5，文件原始记录逐字节一致。
+- 增量构建及diff --check通过；旧inventory-panel布局回归通过。已检查out/item-layout-full-name.png，预览只写preview-item-layout-full.itms。完整属性悬浮层与真实登录/布局恢复仍待联调。
