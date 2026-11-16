@@ -76,6 +76,7 @@ void CLoginProcess::Load(void)
 //	int i;
 	int nSrvCount;
 	ReadIniFileData();
+	m_messages.Load(".\\CmList.dat");
 
 	m_Image.NewLoad(IMAGE_INTERFACE_1, TRUE, TRUE);
 	m_Image2.NewLoad(IMAGE_INTERFACE_2, TRUE, TRUE);
@@ -452,7 +453,7 @@ void CLoginProcess::OnSocketMessageRecieve(char *pszMsg)
 		case SM_ID_NOTFOUND:
 		{
 			m_Progress	= PRG_LOGIN;
-			SetErrorMessage(23,m_szErrorMsg);
+			SetErrorMessage(112,m_szErrorMsg);
 			m_xMsgBox.ShowMessageBox(m_szErrorMsg, 1, _WNDIMGINDX_MSGBOX1);
 			break;
 		}
@@ -461,10 +462,14 @@ void CLoginProcess::OnSocketMessageRecieve(char *pszMsg)
 		{
 			m_Progress	= PRG_LOGIN;
 			
-			if(tdm.nRecog==(-2))
-				nMsgNum = ERROR_STR_LOGIN_3;
-			else
-				nMsgNum = ERROR_STR_LOGIN_2;
+			switch (tdm.nRecog) {
+			case -7: return;
+			case -6: nMsgNum = 112; break;
+			case -5: nMsgNum = 117; break;
+			case -2: nMsgNum = 114; break;
+			case -1: nMsgNum = 113; break;
+			default: nMsgNum = 116; break;
+			}
 			SetErrorMessage(nMsgNum,m_szErrorMsg);
 			m_xMsgBox.ShowMessageBox(m_szErrorMsg, 1, _WNDIMGINDX_MSGBOX1);
 			break;
@@ -472,7 +477,7 @@ void CLoginProcess::OnSocketMessageRecieve(char *pszMsg)
 
 		case SM_CERTIFICATION_FAIL:
 		{
-			SetErrorMessage(FATAL_ERROR_STR,m_szErrorMsg);
+			SetErrorMessage(119,m_szErrorMsg);
 			m_xMsgBox.ShowMessageBox(m_szErrorMsg, 1, _WNDIMGINDX_MSGBOX1);			// ÓÂÆø
 			break;
 		}
@@ -1096,19 +1101,10 @@ BOOL CLoginProcess::StringDivideLen( INT nDivideLen, INT& nDividedLine, CHAR* sz
 	return FALSE;
 }
 
+
 VOID CLoginProcess::SetErrorMessage(INT nMsg, CHAR* szMgs)
 {
-	HINSTANCE hLib;
-
-	hLib = LoadLibrary(MESSAGE_DLL_1); // Load Dll
-	
-	if ( nMsg!=99 && nMsg!=0 )
-		LoadString(hLib, nMsg+MESSAGE_NUM_LOGIN, m_szErrorMsg, 512);	
-	else if( nMsg!=0 )	
-		LoadString(hLib, 9999, m_szErrorMsg, 512);
-	else
-		szMgs[0]=NULL;
-
-	FreeLibrary(hLib);
+    const std::string& caption = m_messages.Get(nMsg);
+    if (!caption.empty()) lstrcpynA(szMgs, caption.c_str(), 512);
+    else sprintf(szMgs, "Message %d (CmList.dat)", nMsg);
 }
-

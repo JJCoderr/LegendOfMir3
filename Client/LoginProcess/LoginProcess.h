@@ -1,3 +1,4 @@
+#include "Common/LoginMessages.h"
 #include "Common/LoginNotice.h"
 // LoginProcess.h: interface for the CLoginProcess class.
 //
@@ -51,6 +52,7 @@ public:
 	virtual char*		OnMessageReceive(CHAR* pszMessage);
 
 private:
+	CLoginMessages m_messages;
 	CLoginAvi			m_xAvi;					// Avi Degree
 	CLogin				m_xLogin;				// Login Degree
 	CSelectSrv			m_xSelectSrv;			// Select Server Degree
