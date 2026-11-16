@@ -32,6 +32,7 @@ public:
 
 public:
     static int EquipmentPreviewFrame(int mode,int slot);
+    bool ReceiveEquipmentRecords(const char* encoded);
     std::string m_identityTertiary, m_identityBadge;
     BYTE m_elementValues[3][7]={};
     int ElementValue(int row,int column) const {

@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include <charconv>
 #include "Common/LoginMessages.h"
 #include "Common/LegacyPanel.h"
 
@@ -793,4 +794,29 @@ int CStatusWnd::EquipmentPreviewFrame(int mode,int slot)
     case 60: return slot==11?1235:-1;
     default: return -1;
     }
+}
+
+bool CStatusWnd::ReceiveEquipmentRecords(const char* encoded)
+{
+    ITEMSET next[_EQUIP_MAX_CELL];std::copy(std::begin(m_stEquipItem),std::end(m_stEquipItem),std::begin(next));
+    int count=0;
+    while(*encoded) {
+        if(++count>_EQUIP_MAX_CELL) return false;
+        const char* slash=strchr(encoded,'/');if(!slash) return false;
+        int slot=-1;const auto parsed=std::from_chars(encoded,slash,slot);
+        if(parsed.ec!=std::errc{} || parsed.ptr!=slash || slot<0 || slot>=_EQUIP_MAX_CELL) return false;
+        encoded=slash+1;const char* end=strchr(encoded,'/');if(!end) return false;
+        const std::string block(encoded,end);CItem item;
+        if(block.size()==134) {
+            BYTE raw[100];
+            if(fnDecode6BitBuf(const_cast<char*>(block.c_str()),(char*)raw,sizeof(raw))!=100 || !item.SetMir3Item(raw,slot,true)) return false;
+        } else if(block.size()==(sizeof(CLIENTITEMRCD)*8+5)/6) {
+            CLIENTITEMRCD legacy={};
+            if(fnDecode6BitBuf(const_cast<char*>(block.c_str()),(char*)&legacy,sizeof(legacy))!=sizeof(legacy)) return false;
+            item.SetItem(legacy,slot);
+        } else return false;
+        if(!g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewSetIndex(item.m_stItemInfo.stStdItem.wLooks)) return false;
+        next[slot].bSetted=TRUE;next[slot].xItem=item;encoded=end+1;
+    }
+    std::copy(std::begin(next),std::end(next),std::begin(m_stEquipItem));return true;
 }

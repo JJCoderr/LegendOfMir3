@@ -27,9 +27,9 @@ CItem::~CItem()
 }
 
 
-bool CItem::SetMir3Item(const BYTE* record,SHORT cell)
+bool CItem::SetMir3Item(const BYTE* record,SHORT cell,bool allowEmptyName)
 {
-    if(!record[0]) return false;
+    if(!allowEmptyName && !record[0]) return false;
     const auto word=[&](int offset) {return WORD(record[offset]|(WORD(record[offset+1])<<8));};
     CLIENTITEMRCD legacy={};
     memcpy(legacy.stStdItem.szName,record,sizeof(legacy.stStdItem.szName)-1);

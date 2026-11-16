@@ -998,3 +998,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 203与旧SM_DELITEMS冲突：无斜杠正文按MIR3单记录更新处理，带斜杠仍走旧批量删除。202旧记录也检查精确长度。新增/更新沿用物品音效，新增/删除显示参考CmList提示。
 - --preview=item-update-reply六项全1：更新、无效图标保留、未知实例、完整名称匹配、装备重放、删除。单物品入包七项回归通过。增量构建及diff --check通过；已检查out/item-update-reply.png，最终数量60。
 - 完整装备初始回复、属性提示、布局文件及真实服务器交互仍未完成，快捷栏在200/202/203保持Godot当前同样不主动重建的行为。
+
+### MIR3装备记录初始化
+- SM_SENDUSEITEMS改由StatusWnd::ReceiveEquipmentRecords处理，解析槽位/记录/序列，支持0..11槽位和100字节MIR3记录，保留精确长度旧记录兼容。按Godot局部覆盖已给槽位，空正文不清空装备；全部记录及图标校验成功再提交。移除旧固定九次循环和未检查atoi槽位索引。
+- SetMir3Item增加装备上下文允许空名称参数，默认背包仍拒绝空名，与EquipmentWire和InventoryWire区别一致。对超12条或额外无效正文采用拒绝处理。
+- Client清理83步及全目标109步构建通过。--preview=equipment-records-reply七项全1：载入含第11槽、完整名称/原始字段、非法槽位事务保留、截断保留、空回复保留、非法数字、局部覆盖。diff --check通过。已检查out/equipment-records-reply.png，药瓶图标是槽位验证夹具，并非真实装备资源验收。
+- 装备属性提示、耐久回复的MIR3字段映射、完整角色外观及真实服务器联调仍待继续。

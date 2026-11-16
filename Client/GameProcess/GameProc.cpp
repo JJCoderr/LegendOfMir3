@@ -2975,46 +2975,9 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
                 if(m_xInterface.m_xInventoryWnd.ReceiveBagRecords(pszMsg+DEFBLOCKSIZE,tdm.wSeries))
                     m_xInterface.m_xInventoryWnd.CheckItemPos(m_xMyHero.m_szName);
                 break;
-			case SM_SENDUSEITEMS:
-			{
-				CLIENTITEMRCD cItemRcd[9];
-
-				char *pszUseIndex = (pszMsg + DEFBLOCKSIZE);
-				char *pszItem;
-				char *pszNextItem;
-
-				ZeroMemory(cItemRcd, sizeof(CLIENTITEMRCD));
-
-				for (int i = 0; i < 9; i++)
-				{
-					if (pszItem = strchr(pszUseIndex, '/'))
-					{
-						*pszItem = '\0';
-						pszItem++;
-						
-						if (pszNextItem = strchr(pszItem, '/'))
-						{
-							*pszNextItem = '\0';
-
-							fnDecode6BitBuf(pszItem, (char*)&cItemRcd[i], sizeof(CLIENTITEMRCD));	
-							
-							CItem xItem;
-							xItem.SetItem(cItemRcd[i], 0);
-
-							m_xInterface.m_xStatusWnd.m_stEquipItem[atoi(pszUseIndex)].xItem = xItem;
-							m_xInterface.m_xStatusWnd.m_stEquipItem[atoi(pszUseIndex)].bSetted = TRUE;
-
-							pszUseIndex = pszNextItem + 1;
-						}
-						else
-							break;
-					}
-					else
-						break;
-				}
-
-				break;
-			}
+            case SM_SENDUSEITEMS:
+                m_xInterface.m_xStatusWnd.ReceiveEquipmentRecords(pszMsg+DEFBLOCKSIZE);
+                break;
             case 1313: // MIR3 SM_INVENTITEM: header-only stack quantity update.
                 if(!pszMsg[DEFBLOCKSIZE]) m_xInterface.m_xInventoryWnd.UpdateStackCount(tdm.nRecog,tdm.wParam);
                 break;

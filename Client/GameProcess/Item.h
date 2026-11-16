@@ -67,7 +67,7 @@ public:
     BYTE m_serverRecord[100]={};
     char m_serverName[31]={};
     const char* Name() const { return m_serverName[0]?m_serverName:m_stItemInfo.stStdItem.szName; }
-    bool SetMir3Item(const BYTE* record,SHORT cell);
+    bool SetMir3Item(const BYTE* record,SHORT cell,bool allowEmptyName=false);
     void SetCount(WORD count) {m_count=count;m_serverRecord[71]=BYTE(count);m_serverRecord[72]=BYTE(count>>8); }
 
 protected:

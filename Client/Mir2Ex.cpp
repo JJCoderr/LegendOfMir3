@@ -1701,6 +1701,27 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel==124) {
+            auto& ui=g_xGameProc.m_xInterface;auto& equipment=ui.m_xStatusWnd.m_stEquipItem;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[100]={};memcpy(raw,"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234",30);raw[30]=25;raw[62]=11;raw[71]=5;raw[66]=0xE8;raw[67]=3;
+            char block[140]={};fnEncode6BitBuf(raw,block,100,sizeof(block));const std::string first="9/"+std::string(block)+"/";
+            raw[62]=22;fnEncode6BitBuf(raw,block,100,sizeof(block));const std::string second="11/"+std::string(block)+"/";
+            const auto receive=[&](const std::string& body) {
+                _TDEFAULTMESSAGE packet={};packet.wIdent=SM_SENDUSEITEMS;std::vector<char> encoded(DEFBLOCKSIZE+body.size()+1);
+                fnEncodeMessage(&packet,encoded.data(),int(encoded.size()));strcpy(encoded.data()+DEFBLOCKSIZE,body.c_str());g_xGameProc.OnSocketMessageRecieve(encoded.data());
+            };
+            receive(first+second);const bool loaded=equipment[9].bSetted && equipment[11].bSetted && equipment[9].xItem.m_stItemInfo.nMakeIndex==11 && equipment[11].xItem.m_shCellNum==11;
+            const bool fullName=strlen(equipment[9].xItem.Name())==30 && equipment[9].xItem.m_serverRecord[71]==5;
+            receive("5/"+std::string(block)+"/12/"+block+"/");const bool invalid=!equipment[5].bSetted && equipment[9].bSetted;
+            receive("5/"+std::string(block));const bool truncated=!equipment[5].bSetted;
+            receive("");const bool empty=equipment[9].bSetted && equipment[11].bSetted;
+            receive("5x/"+std::string(block)+"/");const bool slot=!equipment[5].bSetted;
+            receive("5/"+std::string(block)+"/");const bool partial=equipment[5].bSetted && equipment[9].bSetted && equipment[11].bSetted;
+            ui.WindowActivate(_WND_ID_STATUS);capturePath="equipment-records-reply.bmp";
+            if(FILE* report=fopen("equipment-records-check.txt","wb")) {fprintf(report,"loaded=%d full_name=%d invalid=%d truncated=%d empty=%d slot=%d partial=%d\n",loaded,fullName,invalid,truncated,empty,slot,partial);fclose(report);}
+        }
+
         if(groupPanel==123) {
             auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;auto& equipment=ui.m_xStatusWnd.m_stEquipItem;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -2056,6 +2077,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=equipment-records-reply")==0 ? 124 :
         strcmp(lpCmdLine,"--preview=item-update-reply")==0 ? 123 :
         strcmp(lpCmdLine,"--preview=bag-records-reply")==0 ? 122 :
         strcmp(lpCmdLine,"--preview=item-record-reply")==0 ? 121 :
