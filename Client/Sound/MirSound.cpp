@@ -2,6 +2,7 @@
 //
 //////////////////////////////////////////////////////////////////////
 #include "StdAfx.h"
+#include "Common/LoginMessages.h"
 
 #define MAX_KINDS_OF_WAVE	50
 //#define MAX_DUPLE_COUNT		5
@@ -351,6 +352,29 @@ void CMirSound::SetInterfaceVolume(bool music, int level)
         m_lobbyEffect.SetVolume(volume);
         m_lobbyOpening.SetVolume(volume);
     }
+}
+
+int CMirSound::ItemSoundSample(int mode,BYTE record31,const char* name)
+{
+    switch (mode) {
+    case 0: return 108;
+    case 5: case 6: return 111;
+    case 10: case 11: return 112;
+    case 15: return 116;
+    case 19: case 20: case 21: return 115;
+    case 22: case 23: return 113;
+    case 24: case 26: {
+        static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
+        return strstr(name,captions.Get(2641).c_str()) || strstr(name,captions.Get(2642).c_str())?117:114;
+    }
+    case 31: return record31<106?108:118;
+    default: return 118;
+    }
+}
+void CMirSound::PlayItemEffect(int mode,BYTE record31,const char* name)
+{
+    const char* file=SeekFileName(ItemSoundSample(mode,record31,name));
+    if (file) PlayLobbyEffect(file);
 }
 
 void CMirSound::PlayLobbyEffect(const char* file)

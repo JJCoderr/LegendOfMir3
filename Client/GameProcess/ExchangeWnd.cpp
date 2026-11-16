@@ -82,6 +82,14 @@ bool CExchangeWnd::RequestReturn()
     g_xClientSocket.SendItemIndex(1027,INT(item.makeIndex),const_cast<char*>(item.name.c_str()));
     return true;
 }
+bool CExchangeWnd::CancelReturn()
+{
+    if (!m_bActive || returnSlot<0 || returnPending || pendingSlot>=0) return false;
+    const auto& item=offers[0][returnSlot];
+    g_xSound.PlayItemEffect(item.stdMode,item.record31,item.name.c_str());
+    returnSlot=-1;
+    return true;
+}
 void CExchangeWnd::ShowHeld(POINT point)
 {
     if (!m_bActive || returnSlot<0 || point.x<0 || point.x>=800 || point.y<0 || point.y>=600) return;

@@ -79,6 +79,7 @@
 #include "GameProcess/QuestWnd.h"
 #include "GameProcess/OptionWnd.h"
 #include "GameProcess/HorseWnd.h"
+#include "GameProcess/QuickWnd.h"
 
 #include "Common/Typedeftxt.h"
 #include "Common/Button.h"

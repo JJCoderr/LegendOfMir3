@@ -39,6 +39,7 @@ public:
         if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
         if (groupPanel==30 || groupPanel==31) capturePath=groupPanel==30?"mount-panel.bmp":"mount-hint.bmp";
         if (groupPanel>=32 && groupPanel<=36) capturePath=groupPanel==36?"trade-return.bmp":groupPanel==35?"trade-gold.bmp":groupPanel==32?"trade-empty.bmp":groupPanel==33?"trade-list.bmp":"trade-confirmed.bmp";
+        if (groupPanel==37 || groupPanel==38) capturePath=groupPanel==37?"quick-empty.bmp":"quick-items.bmp";
         if (groupPanel==11) capturePath="options-panel.bmp";
         if (groupPanel>=15 && groupPanel<=19) capturePath=groupPanel==19?"status-equipment.bmp":groupPanel==18?"status-identity.bmp":groupPanel==16?"status-elements.bmp":groupPanel==17?"status-tooltip.bmp":"status-panel.bmp";
         if (groupPanel==23 || groupPanel==24) capturePath=groupPanel==23?"inventory-clip-top.bmp":"inventory-clip-bottom.bmp";
@@ -513,6 +514,45 @@ public:
                     opened,repeat,hidden,buttons,stray,onFoot,riding,hint,pressedHint,released,covered,moved,closed); fclose(report);
             }
         }
+        if (groupPanel==37 || groupPanel==38) {
+            auto& ui=g_xGameProc.m_xInterface; auto& quick=ui.m_xQuickWnd;
+            ui.OnKeyDown('Z',0); const bool opened=quick.GetGameWndActive()!=FALSE;
+            ui.OnKeyDown('Z',1L<<30); const bool repeat=quick.GetGameWndActive()!=FALSE;
+            ui.OnKeyDown('Z',0); const bool hidden=!quick.GetGameWndActive(); ui.OnKeyDown('Z',0);
+            bool slots=true; for (int i=0;i<6;++i) slots=slots && quick.SlotAt(POINT{90+42*i,419})==i && quick.SlotAt(POINT{127+42*i,456})==i;
+            const bool gap=quick.SlotAt(POINT{128,420})==-1 && quick.SlotAt(POINT{90,457})==-1;
+            const POINT close={339,447}; quick.OnLButtonUp(close); const bool stray=quick.GetGameWndActive()!=FALSE;
+            ui.OnLButtonDown(close); ui.OnLButtonUp(POINT{790,10}); const bool outside=quick.GetGameWndActive() && !quick.closePressed;
+            ui.OnLButtonDown(POINT{80,415}); ui.OnMouseMove(POINT{100,395}); ui.OnLButtonUp(POINT{100,395});
+            const bool moved=quick.m_rcWnd.left==93 && quick.m_rcWnd.top==393 && !quick.backgroundPressed && !ui.m_bMoveFocusedWnd;
+            quick.m_rcWnd={73,413,353,461};
+            ui.OnLButtonDown(POINT{95,425}); ui.OnMouseMove(POINT{105,435}); ui.OnLButtonUp(POINT{105,435});
+            const bool noDrag=quick.m_rcWnd.left==73 && quick.m_rcWnd.top==413;
+            ui.OnLButtonDown(close); ui.OnLButtonUp(close); const bool closed=!quick.GetGameWndActive(); ui.OnKeyDown('Z',0);
+            auto& trade=ui.m_xExchangeWnd; ui.WindowActivate(_WND_ID_EXCHANGE);
+            trade.offers[0][0].present=true; trade.offers[0][0].makeIndex=123; trade.offers[0][0].name="Preview";
+            trade.returnSlot=0; trade.returnPending=true;
+            ui.OnLButtonDown(POINT{95,425}); ui.OnLButtonUp(POINT{95,425}); const bool pending=trade.returnSlot==0;
+            trade.returnPending=false;
+            ui.OnLButtonDown(POINT{95,425}); ui.OnLButtonUp(POINT{95,425});
+            const bool returned=trade.returnSlot==-1 && trade.offers[0][0].present && !quick.slots[0].present;
+            ui.WindowActivate(_WND_ID_EXCHANGE);
+            const int modes[]={0,5,6,10,11,15,19,20,21,22,23,24,26,99};
+            const int samples[]={108,111,111,112,112,116,115,115,115,113,113,114,114,118};
+            bool sounds=true; for (int i=0;i<14;++i) sounds=sounds && CMirSound::ItemSoundSample(modes[i],0,"Preview")==samples[i];
+            CLoginMessages captions; captions.Load("./CmList.dat");
+            sounds=sounds && CMirSound::ItemSoundSample(24,0,captions.Get(2641).c_str())==117 && CMirSound::ItemSoundSample(26,0,captions.Get(2642).c_str())==117 && CMirSound::ItemSoundSample(31,105,"")==108 && CMirSound::ItemSoundSample(31,106,"")==118;
+            if (groupPanel==38) {
+                auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY]; icons.NewLoad("./Data/Inventory.wil");
+                int slot=0; for (int icon=0;icon<100 && slot<6;++icon) if (icons.NewSetIndex(icon) && icons.m_lpstNewCurrWilImageInfo->shWidth>0 && icons.m_lpstNewCurrWilImageInfo->shWidth<=38 && icons.m_lpstNewCurrWilImageInfo->shHeight<=38) {
+                    quick.slots[slot]={true,icon,slot?slot*11:1,2}; ++slot;
+                }
+            }
+            if (FILE* report=fopen("quick-panel-check.txt","wb")) {
+                fprintf(report,"opened=%d repeat_ignored=%d hidden=%d slots=%d gaps=%d stray=%d outside_release=%d moved=%d slot_no_drag=%d closed=%d pending_kept=%d trade_returned=%d sounds=%d\n",
+                    opened,repeat,hidden,slots,gap,stray,outside,moved,noDrag,closed,pending,returned,sounds); fclose(report);
+            }
+        }
         if (groupPanel>=32 && groupPanel<=36) {
             auto& ui=g_xGameProc.m_xInterface; auto& trade=ui.m_xExchangeWnd;
             lstrcpyA(hero.m_szName,"MirPreview"); trade.partner="TradePartner";
@@ -846,7 +886,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=trade-list")==0 ? 33 :
         strcmp(lpCmdLine,"--preview=trade-confirmed")==0 ? 34 :
         strcmp(lpCmdLine,"--preview=trade-gold")==0 ? 35 :
-        strcmp(lpCmdLine,"--preview=trade-return")==0 ? 36 : 0;
+        strcmp(lpCmdLine,"--preview=trade-return")==0 ? 36 :
+        strcmp(lpCmdLine,"--preview=quick-empty")==0 ? 37 :
+        strcmp(lpCmdLine,"--preview=quick-items")==0 ? 38 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

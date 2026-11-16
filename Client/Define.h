@@ -431,6 +431,7 @@
 #define _INPUT_EDITWND_HEIGHT		15
 
 // 主界面中使用的窗口ID.
+#define _WND_ID_QUICK 15
 #define _WND_ID_SKILL 14
 #define _WND_ID_INVENTORY			0			//背包窗口.
 #define _WND_ID_STATUS				1			//角色信息查看窗口(3个)。

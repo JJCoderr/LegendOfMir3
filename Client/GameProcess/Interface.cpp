@@ -68,6 +68,7 @@ VOID CInterface::Init()
 	m_xStatusWnd.Init();
     m_xSkillWnd.Init();
     m_xQuestWnd.Init();
+    m_xQuickWnd.Init();
     m_xHorseWnd.Init();
 	m_xStoreWnd.Init();
 	m_xGuildWnd.Init();
@@ -117,6 +118,7 @@ VOID CInterface::Destroy()
 	m_xStatusWnd.Destroy();
     m_xSkillWnd.Destroy();
     m_xQuestWnd.Destroy();
+    m_xQuickWnd.Destroy();
     m_xHorseWnd.Destroy();
 	m_xGuildWnd.Destroy();
 	m_xGroupWnd.Destroy();
@@ -185,6 +187,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 
 	m_xOptionWnd.CreateOptionWnd(_WND_ID_OPTION, m_pxInterImg, 1290, 145, 30, 510, 468, TRUE);
 	m_xQuestWnd.CreateQuestWnd(_WND_ID_QUEST, m_pxInterImg, 1420, 0, 0, 340, 440, TRUE);
+    m_xQuickWnd.CreateGameWnd(_WND_ID_QUICK,m_pxInterImg,1210,TRUE,73,413,280,48);
 	m_xHorseWnd.CreateHorseWnd(_WND_ID_HORSE, m_pxInterImg, 1400, 0, 0, 276, 322, TRUE);
 
 
@@ -354,6 +357,9 @@ case _WND_ID_STATUS:
 			case _WND_ID_OPTION:
 				m_xOptionWnd.ShowOptionWnd();
 				break;
+			case _WND_ID_QUICK:
+                m_xQuickWnd.ShowQuickWnd();
+                break;
 			case _WND_ID_HORSE:
 				m_xHorseWnd.ShowHorseWnd();
 				break;
@@ -770,6 +776,9 @@ case _WND_ID_STATUS:
 			case _WND_ID_OPTION:
 				rcWnd = m_xOptionWnd.GetGameWndRect();
 				break;
+			case _WND_ID_QUICK:
+                rcWnd = m_xQuickWnd.GetGameWndRect();
+                break;
 			case _WND_ID_HORSE:
 				rcWnd = m_xHorseWnd.GetGameWndRect();
 				break;
@@ -985,6 +994,23 @@ case _WND_ID_STATUS:
 			}
 		}
 		break;
+	case _WND_ID_QUICK:
+		{
+			if ( m_xQuickWnd.GetGameWndActive() )
+			{
+				DeleteWindowToList(_WND_ID_QUICK);
+				m_xQuickWnd.SetGameWndActive(FALSE); m_xQuickWnd.closePressed=m_xQuickWnd.backgroundPressed=false;
+				bRet = FALSE;
+			}
+			else
+			{
+				AddWindowToList(_WND_ID_QUICK);
+				m_xQuickWnd.SetGameWndActive(TRUE); m_xQuickWnd.closePressed=m_xQuickWnd.backgroundPressed=false;
+				bRet = TRUE;
+			}
+		}
+		break;
+
 	case _WND_ID_HORSE:
 		{
 			if ( m_xHorseWnd.GetGameWndActive() )
@@ -1182,6 +1208,9 @@ case _WND_ID_STATUS:
 			case _WND_ID_OPTION:
 				m_xOptionWnd.MoveGameWnd(ptMouse);
 				break;
+			case _WND_ID_QUICK:
+                m_xQuickWnd.MoveGameWnd(ptMouse);
+                break;
 			case _WND_ID_HORSE:
 				m_xHorseWnd.MoveGameWnd(ptMouse);
 				break;
@@ -1273,6 +1302,8 @@ case _WND_ID_STATUS:
 			m_xOptionWnd.SetGameWndFocused(TRUE);
 			m_xOptionWnd.SetReadyMove(ptMouse);
 			break;
+		case _WND_ID_QUICK:
+            m_xQuickWnd.SetGameWndFocused(TRUE); m_xQuickWnd.SetReadyMove(ptMouse); break;
 		case _WND_ID_HORSE:
 			m_xHorseWnd.SetGameWndFocused(TRUE);
 			m_xHorseWnd.SetReadyMove(ptMouse);
@@ -1336,6 +1367,9 @@ case _WND_ID_STATUS:
 			case _WND_ID_OPTION:
 				m_xOptionWnd.SetGameWndFocused(FALSE);
 				break;
+			case _WND_ID_QUICK:
+                m_xQuickWnd.SetGameWndFocused(FALSE);
+                break;
 			case _WND_ID_HORSE:
 				m_xHorseWnd.SetGameWndFocused(FALSE);
 				break;
@@ -1483,6 +1517,10 @@ case _WND_ID_STATUS:
 				if ( !m_xOptionWnd.OnLButtonDown(ptMouse) )
 					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
 				break;
+			case _WND_ID_QUICK:
+                WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect,ptMouse);
+                if (m_xQuickWnd.OnLButtonDown(ptMouse)) m_bMoveFocusedWnd=FALSE;
+                break;
 			case _WND_ID_HORSE:
                 WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect,ptMouse);
                 if (m_xHorseWnd.OnLButtonDown(ptMouse)) m_bMoveFocusedWnd=FALSE;
@@ -1614,6 +1652,11 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
     if (m_xExchangeWnd.captured>=0 || m_xExchangeWnd.confirmPressed || m_xExchangeWnd.headerPressed) { m_bMoveFocusedWnd=FALSE; m_xExchangeWnd.OnLButtonUp(ptMouse); return TRUE; }
+    if (m_xQuickWnd.closePressed || m_xQuickWnd.backgroundPressed) {
+        m_bMoveFocusedWnd=FALSE;
+        if (m_xQuickWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_QUICK);
+        return TRUE;
+    }
     if (m_xHorseWnd.pressed>=0) {
         if (m_xHorseWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_HORSE);
         return TRUE;
@@ -1758,6 +1801,7 @@ case _WND_ID_STATUS:		if ( m_xStatusWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )	
 
 			case _WND_ID_QUEST:			if ( m_xQuestWnd.OnLButtonUp(ptMouse) )							WindowActivate(_WND_ID_QUEST);			break;
 			case _WND_ID_OPTION:		if ( m_xOptionWnd.OnLButtonUp(ptMouse) )						WindowActivate(_WND_ID_OPTION);			break;
+            case _WND_ID_QUICK: if (m_xQuickWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_QUICK); break;
 			case _WND_ID_HORSE:			if ( m_xHorseWnd.OnLButtonUp(ptMouse) )							WindowActivate(_WND_ID_HORSE);			break;
 
 			case _WND_ID_NPCCHAT:		if ( m_xNPCWnd.OnLButtonUp(ptMouse) )							WindowActivate(_WND_ID_NPCCHAT);		break; // ÓÂÆø
@@ -1967,6 +2011,9 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
     }
 	switch ( wParam )
 	{
+    case 'Z':
+        if (!(lParam & (1L << 30))) WindowActivate(_WND_ID_QUICK);
+        return TRUE;
     case 'S':
         if (!(lParam & (1L << 30))) WindowActivate(_WND_ID_HORSE);
         return TRUE;

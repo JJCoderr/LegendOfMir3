@@ -3,7 +3,7 @@
 
 class CExchangeWnd : public CGameWnd {
 public:
-    struct Offer { bool present=false; int icon=0,width=1,height=1,count=1; unsigned makeIndex=0; std::string name; };
+    struct Offer { bool present=false; int icon=0,width=1,height=1,count=1; unsigned makeIndex=0; std::string name; int stdMode=-1; BYTE record31=0; };
     Offer offers[2][200]={};
     std::string partner;
     unsigned gold[2]={};
@@ -20,6 +20,7 @@ public:
     bool SubmitGold(const char* text,unsigned balance);
     int OfferAt(POINT point) const;
     bool RequestReturn();
+    bool CancelReturn();
     void ShowHeld(POINT point);
     BOOL OnLButtonDown(POINT point);
     BOOL OnLButtonUp(POINT point);
