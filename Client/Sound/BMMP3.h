@@ -21,6 +21,7 @@ public:
 	BOOL	LoadMp3(CHAR*	szFileName,HWND hWnd);
 	BOOL	OnPlay(BOOL	Looping);
 	BOOL	OnPlay(LONG lVolume,BOOL Looping);
+    BOOL Resume() { return OnPlay(m_bLooping); }
 	BOOL	OnStop(VOID);
 	BOOL	OnPause(VOID);
 	BOOL	InitBMMp3(HWND hWnd);

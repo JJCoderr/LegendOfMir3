@@ -153,9 +153,19 @@ public:
             const bool restoredSettings=saved && options.m_musicLevel==-25 && options.m_effectsLevel==-75 &&
                 !options.m_values[1] && options.m_values[2] && options.m_values[3] &&
                 g_xSound.m_lMp3MaxVol==-1000 && g_xSound.m_lWavMaxVol==-3000 && g_xSound.m_reversePan;
+            char musicPath[MAX_PATH];
+            GetFullPathNameA("Sound/SelChr.mp3",MAX_PATH,musicPath,NULL);
+            const bool musicStarted=g_xSound.m_pMp3->LoadMp3(musicPath,g_xMainWnd.GetSafehWnd()) &&
+                g_xSound.m_pMp3->OnPlay(-4000,TRUE) && g_xSound.m_pMp3->IsPlaying();
+            g_xSound.SetDisableBGM();
+            const bool musicStopped=!g_xSound.m_pMp3->IsPlaying();
+            g_xSound.SetEnableBGM();
+            const bool musicResumed=g_xSound.m_pMp3->IsPlaying();
+            g_xSound.SetDisableBGM();
             if (FILE* report=fopen("options-audio-check.txt","wb")) {
                 fprintf(report,"minimum=%d maximum_released=%d independent=%d\n",minimum,maximum,independent);
                 fprintf(report,"reverse_enabled=%d reverse_restored=%d settings_restored=%d\n",reversed,restored,restoredSettings);
+                fprintf(report,"music_started=%d music_stopped=%d music_resumed=%d\n",musicStarted,musicStopped,musicResumed);
                 fclose(report);
             }
         }

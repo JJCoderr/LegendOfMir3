@@ -542,3 +542,7 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 原生设置页采用Config.ini的[Options]，沿用BGM、EffectSound、ReversePan、BGMLevel、EffectSoundLevel五项；启动时声音系统初始化后加载，窗口重建时再次加载，点击/拖动时保存。音量越界时按Godot规则恢复0。
 - 所有--preview模式默认禁用玩家配置读写；音频配置验证只使用preview-audio-options.ini。保存-清除内存状态-重新加载后，验证三开关、两音量及声音系统参数一致，settings_restored=1，既有五项交互检查仍通过。已检查out/options-audio-config.png。
 - Client全量77步及最终全项目构建通过。实际声音输出、正在播放声音的开关即时停止行为及其余系统设置仍需继续完善。
+
+### 音频开关即时停止
+- 关闭音乐停止已加载的DirectShow播放并取消淡入淡出定时器；重新开启沿用原循环标志恢复播放。关闭音效停止角色、界面、开场、公共与已启用的环境音缓冲，环境音播放入口同时检查音效开关，防止定时器重新播放。
+- 全量Client及最终全项目构建通过。预览加载实际Sound/SelChr.mp3，播放接口与状态验证music_started=1、music_stopped=1、music_resumed=1，原有六项音量/配置检查仍通过。该验证未录制扬声器输出；地图音乐切换和场景音效仍待联调。

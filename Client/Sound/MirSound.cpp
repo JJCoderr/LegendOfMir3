@@ -294,7 +294,7 @@ void CMirSound::PlayMagicEffect(POINT Target, POINT Chr, int Wavnum)
 ///////////////////////////////////////////////////////////////////////
 void CMirSound::PlayAmbianceWav(int WavNum)
 {
-	if(m_bAmbiance)
+	if(m_bAmbiance && m_bPlay)
 	{
 		FreeNotUseBuffer();
 		m_pAmbianceBuffer[WavNum]->SetVolume(m_lWavMaxVol);
@@ -699,6 +699,7 @@ BOOL CMirSound::FreeNotUseBuffer(VOID)
 ///////////////////////////////////////////////////////////////////////
 VOID CMirSound::SetEnableBGM(VOID)
 {
+    if (!m_bBGMPlay) { m_pMp3->SetVolume(m_lMp3MaxVol); m_pMp3->Resume(); }
 	m_bBGMPlay = TRUE;
 }
 
@@ -716,6 +717,9 @@ VOID CMirSound::SetEnableBGM(VOID)
 VOID CMirSound::SetDisableBGM(VOID)
 {
 	m_bBGMPlay = FALSE;
+    KillTimer(m_hWnd,ID_TIMER_1);
+    m_bRunningTimer=FALSE;
+    m_pMp3->OnStop();
 }
 
 
@@ -747,6 +751,12 @@ VOID CMirSound::SetEnablePlay(VOID)
 VOID CMirSound::SetDisablePlay(VOID)
 {
 	m_bPlay = FALSE;
+    StopAllSound();
+    m_lobbyEffect.Stop();
+    m_lobbyOpening.Stop();
+    m_CommonWavBuffer.Stop();
+    if (m_bAmbiance)
+        for (int i=0;i<MAX_AMBIANCE_COUNT;++i) m_pAmbianceBuffer[i]->Stop();
 }
 
 
