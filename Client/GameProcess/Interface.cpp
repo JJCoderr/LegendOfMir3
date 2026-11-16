@@ -80,6 +80,7 @@ VOID CInterface::Init()
 	m_xScrlBar.Init();
 
 	m_xChat.ClearAllNodes();
+    m_chatHistory.clear();
 	m_xWndOrderList.ClearAllNodes();
 }
 
@@ -223,61 +224,49 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 
 
 
-VOID CInterface::MsgAdd(DWORD dwFontColor, DWORD dwFontBackColor, CHAR* pszMsg)
+VOID CInterface::MsgAdd(DWORD color, DWORD background, CHAR* message)
 {
-	if ( pszMsg )
-	{	
-		if ( pszMsg[0] != NULL )
-		{
-			INT  nCnt;
-			CHAT stChat;
-			INT	 nLineCnt;
-			CHAR pszDivied[MAX_PATH*2];
-			CHAR pszArg[5][MAX_PATH];
-
-			m_xChatPopWnd.MsgAdd(dwFontColor, dwFontBackColor, pszMsg);
-
-			ZeroMemory(pszDivied, MAX_PATH*2);
-			ZeroMemory(pszArg,	  MAX_PATH*5);
-
-			g_xMainWnd.StringDivide(m_rcChat.right-m_rcChat.left, nLineCnt, pszMsg, pszDivied);
-
-			sscanf(pszDivied, "%[^`]%*c %[^`]%*c %[^`]%*c %[^`]%*c %[^`]%*c", pszArg[0], pszArg[1], pszArg[2], pszArg[3], pszArg[4]);
-
-			if ( nLineCnt > 5 )		
-			{
-				nLineCnt = 5;
-			}
-
-			// 插入字符串。
-			for ( nCnt = 0; nCnt < nLineCnt; nCnt++ )
-			{
-				// 格子进入下一格的条件.
-				if ( m_xChat.GetCounter() - m_nFstLine == ChatRows() )
-				{
-					m_nFstLine++;
-				}
-
-				stChat.dwFontColor = dwFontColor;
-				stChat.dwBackColor = dwFontBackColor;
-				strcpy(stChat.pszChat, pszArg[nCnt]);
-
-				m_xChat.AddNode(stChat);
-			}
-
-			// 检查最大保存行数，超过则删除。
-			while ( m_xChat.GetCounter() >= 50 )
-			{
-				m_xChat.MoveCurrentToTop();
-				m_xChat.DeleteCurrentNode();
-
-				if ( m_nFstLine > 0 )
-					m_nFstLine--;
-			}
-		}
-	}
+    if (!message || !*message) return;
+    m_xChatPopWnd.MsgAdd(color,background,message);
+    m_chatHistory.push_back(ChatMessage{color,background,message});
+    if (m_chatHistory.size() > 50) m_chatHistory.erase(m_chatHistory.begin());
+    ReflowChat();
 }
 
+void CInterface::ReflowChat()
+{
+    m_xChat.ClearAllNodes();
+    HDC dc = GetDC(g_xMainWnd.GetSafehWnd());
+    const char face[] = {char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font = g_xMainWnd.CreateGameFont(face,9);
+    HGDIOBJ old = SelectObject(dc,font);
+    const int width = m_chatExpanded ? 429 : 341;
+    for (const auto& message : m_chatHistory) {
+        const char* begin = message.text.c_str();
+        while (*begin) {
+            const char* end = begin;
+            while (*end && *end != '\n' && *end != '\r') {
+                const char* next = CharNextA(end);
+                SIZE size = {};
+                GetTextExtentPoint32A(dc,begin,int(next-begin),&size);
+                if (end > begin && (size.cx > width || next-begin >= MAX_PATH)) break;
+                end = next;
+            }
+            CHAT line = {};
+            line.dwFontColor = message.color;
+            line.dwBackColor = message.background;
+            memcpy(line.pszChat,begin,end-begin);
+            m_xChat.AddNode(line);
+            if (*end == '\r') ++end;
+            if (*end == '\n') ++end;
+            begin = end;
+        }
+    }
+    SelectObject(dc,old);
+    DeleteObject(font);
+    ReleaseDC(g_xMainWnd.GetSafehWnd(),dc);
+    m_nFstLine = max(0,m_xChat.GetCounter()-ChatRows());
+}
 
 
 /******************************************************************************************************************
@@ -377,7 +366,7 @@ void CInterface::LayoutChat()
         g_xMainWnd.m_rcWindow.top+(m_chatExpanded ? 534 : 575),
         m_chatExpanded ? 432 : 344,15,TRUE);
     m_xInterBtn[_BTN_ID_BELT].ChangeRect(619,m_chatExpanded ? 305 : 472);
-    m_nFstLine = max(0,m_xChat.GetCounter()-ChatRows());
+    ReflowChat();
 }
 
 VOID CInterface::ShowChatList()
@@ -1021,7 +1010,7 @@ BOOL CInterface::WindowActivate(INT nID)
 			if ( m_xChatPopWnd.GetGameWndActive() )
 			{
 				g_xChatEditBox.MoveScaled( g_xMainWnd.m_rcWindow.left+_INPUT_EDITWND_XPOS,
-	 					   g_xMainWnd.m_rcWindow.top+_INPUT_EDITWND_YPOS, _INPUT_EDITWND_WIDTH, _INPUT_EDITWND_HEIGHT, TRUE);
+	 					   g_xMainWnd.m_rcWindow.top+(m_chatExpanded ? 534 : 575), m_chatExpanded ? 432 : 344, _INPUT_EDITWND_HEIGHT, TRUE);
 
 				DeleteWindowToList(_WND_ID_CHATPOP);
 				m_xChatPopWnd.SetGameWndActive(FALSE);

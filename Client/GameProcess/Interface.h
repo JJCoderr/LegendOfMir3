@@ -1,3 +1,5 @@
+#include <vector>
+#include <string>
 #ifndef _INTERFACE_H
 #define _INTERFACE_H
 
@@ -9,6 +11,9 @@ public:
     bool m_primaryStat[2] = {true,true};
     bool m_chatExpanded = false;
     void LayoutChat();
+    struct ChatMessage { DWORD color, background; std::string text; };
+    std::vector<ChatMessage> m_chatHistory;
+    void ReflowChat();
     int ChatRows() const { return m_chatExpanded ? 14 : 5; }
     CWHWilImageData m_portraits;
 	 CInterface();
