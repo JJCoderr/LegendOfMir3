@@ -265,6 +265,7 @@ VOID CGameProcess::LoadMapChanged(CHAR* szMap)
 {
 	m_xMap.LoadMapData(szMap);
     m_xInterface.m_minimap.MapChanged();
+    m_xInterface.m_targetDisplay.Clear();
 
 	ZeroMemory(m_stMemMappedID, sizeof(MEMMAPPEDID)*_VIEW_CELL_X_COUNT* _VIEW_CELL_Y_COUNT);
 }
@@ -2830,6 +2831,13 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 
 		switch (tdm.wIdent)
 		{
+            case 1304: // MIR3 target attributes
+            {
+                BYTE body[11]={};
+                const int length=fnDecode6BitBuf(pszMsg+DEFBLOCKSIZE,(char*)body,sizeof(body));
+                m_xInterface.m_targetDisplay.ApplyAttributes(DWORD(tdm.nRecog),tdm.wParam,tdm.wTag,body,length);
+                break;
+            }
             case 710: // MIR3 minimap reply, one-based archive index
                 m_xInterface.m_minimap.Receive(tdm.wParam,GetTickCount());
                 break;
@@ -3357,6 +3365,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			case SM_CLEAROBJECT:
 			{
 				_TDEFAULTMESSAGE*	lpstDefMsg;
+                m_xInterface.m_targetDisplay.Remove(DWORD(tdm.nRecog));
 				lpstDefMsg	= new _TDEFAULTMESSAGE;
 
 				memcpy(lpstDefMsg, &tdm, sizeof(_TDEFAULTMESSAGE));
@@ -4040,6 +4049,7 @@ VOID CGameProcess::OnSvrMsgNewMap(_TDEFAULTMESSAGE	*ptdm, char *pszMapName)
 	m_xMap.SetStartViewTile(m_xMyHero.m_wPosX - _GAPY_TILE_CHAR_MAP, m_xMyHero.m_wPosY - _GAPY_TILE_CHAR_MAP);
 	m_xMap.LoadMapData(szMapName);
     m_xInterface.m_minimap.MapChanged();
+    m_xInterface.m_targetDisplay.Clear();
 
 	switch ( m_bFogState )
 	{

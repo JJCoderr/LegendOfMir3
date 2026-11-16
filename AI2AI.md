@@ -881,3 +881,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 新增MapChanged，按Godot reset_map_overlays清除旧图尺寸/像素/标记/冷却/拖动；保留右上角已打开或请求中的意图，头像地图按portraitMode恢复请求。两种地图都隐藏至新回复，合并发送一次1033请求。接入LoadMapChanged及OnSvrMsgNewMap的实际地图加载路径。
 - Client清理83步及全目标111步构建通过。minimap-server-reply/unavailable各六项全1，使用fnEncodeMessage经GameProc实际接收入口验证首次打开、清空、无效编号、换图恢复、不可用、关闭状态；原小地图十七项回归通过。
 - 已检查out/minimap-server-reply.png、minimap-server-unavailable.png，分别显示右上角/头像地图及地图不可用状态。成功截图底部保留此前不可用测试产生的提示，属于测试序列历史。仍需真实服务器1033/710交互验证，附近玩家/怪物标记数据源与完整场景尚待接入；不据此宣称地图系统完成。
+
+### 目标属性回复与移除清理
+- 接入原生GameProc的1304目标属性回复：nRecog目标、wParam分类、wTag状态、10字节解码体，与Godot保存的004282C0.c case1304字段一致。复用TargetDisplay已有有符号修正值和缓存规则，未知/截短回复不改变面板，已缓存旧目标的迟到回复不切换当前目标。
+- 抽出TargetDisplay::Clear用于切图时清空显示身份、照片、属性及血量，保留已加载头像资源。SM_DISAPPEAR/SM_CLEAROBJECT在接收时移除目标显示和对应缓存；当前目标照片同时释放。
+- Client清理83步、全部111步及最终增量构建通过。target-server-attributes/removed各七项全1，经实际编码/接收入口验证字段、未知目标、截短体、迟到回复、消失、清空和最终显示；目标照片十一项回归通过。
+- 已检查out/target-server-attributes.png及target-server-removed.png。悬停目标仍由预览指定，原生旧Actor缺少部分MIR3完整形态/职业字段；真实悬停适配、属性请求、照片查询回复及服务器联调仍待继续，不能视为目标显示端到端完成。

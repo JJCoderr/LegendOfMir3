@@ -1539,6 +1539,29 @@ public:
             if(FILE* report=fopen("minimap-server-check.txt","wb")) {fprintf(report,"opened=%d cleared=%d invalid=%d refreshed=%d unavailable=%d closed=%d\n",opened,cleared,invalid,refreshed,unavailable,closed);fclose(report);}
         }
 
+        if(groupPanel==103 || groupPanel==104) {
+            auto& target=g_xGameProc.m_xInterface.m_targetDisplay;
+            const auto receive=[&](WORD opcode,DWORD actor,const BYTE* body,int length) {
+                _TDEFAULTMESSAGE packet={};packet.wIdent=opcode;packet.nRecog=actor;packet.wParam=1;packet.wTag=2;
+                char encoded[128]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));
+                if(length) fnEncode6BitBuf(const_cast<BYTE*>(body),encoded+DEFBLOCKSIZE,length,sizeof(encoded)-DEFBLOCKSIZE);
+                g_xGameProc.OnSocketMessageRecieve(encoded);
+            };
+            const BYTE body[]={2,0,3,5,0,253,2,0,255,2};
+            target.SetMonster(123,3,1,false,0,500,1000,50,GetTickCount());receive(1304,123,body,10);
+            const bool decoded=target.attributes[123].category==1 && target.attributes[123].state==2 && target.attributes[123].icon==2 && target.attributes[123].modifiers[2]==-3;
+            receive(1304,456,body,10);const bool unknown=target.attributes.find(456)==target.attributes.end();
+            const BYTE invalid[]={4};receive(1304,123,invalid,1);const bool truncated=target.attributes[123].icon==2;
+            target.SetMonster(456,3,1,false,0,20,40,50,GetTickCount());receive(1304,123,body,10);const bool delayed=target.Displayed()==456 && target.attributes[123].icon==2;
+            receive(SM_DISAPPEAR,456,nullptr,0);const bool removed=!target.Displayed() && target.attributes.find(456)==target.attributes.end();
+            target.Clear();const bool cleared=!target.Displayed() && target.attributes.empty() && target.Frame()==-1 && !target.HasPortrait();
+            target.SetMonster(123,3,1,false,0,500,1000,50,GetTickCount());receive(1304,123,body,10);
+            if(groupPanel==104) receive(SM_CLEAROBJECT,123,nullptr,0);
+            const bool finalState=groupPanel==103?target.Displayed()==123:!target.Displayed();
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==103?"target-server-attributes.bmp":"target-server-removed.bmp";
+            if(FILE* report=fopen("target-server-check.txt","wb")) {fprintf(report,"decoded=%d unknown=%d truncated=%d delayed=%d removed=%d cleared=%d final=%d\n",decoded,unknown,truncated,delayed,removed,cleared,finalState);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1736,6 +1759,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=target-server-attributes")==0 ? 103 :
+        strcmp(lpCmdLine,"--preview=target-server-removed")==0 ? 104 :
         strcmp(lpCmdLine,"--preview=minimap-server-reply")==0 ? 101 :
         strcmp(lpCmdLine,"--preview=minimap-server-unavailable")==0 ? 102 :
         strcmp(lpCmdLine,"--preview=options-server-on")==0 ? 99 :

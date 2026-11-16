@@ -4,13 +4,14 @@
 void CTargetDisplay::Init() { Destroy();monsters.NewLoad("./Data/MonImg.wil"); }
 CTargetDisplay::~CTargetDisplay() { Destroy(); }
 void CTargetDisplay::ClearPortrait() { if(customPortrait) customPortrait->Release();customPortrait=nullptr; }
-void CTargetDisplay::Destroy() {ClearPortrait();monsters.Destroy();shown=previous=changedAt=0;frame=badge=-1;attributes.clear();}
+void CTargetDisplay::Clear() {ClearPortrait();shown=previous=changedAt=0;frame=badge=-1;human=special=false;percent=0;maximum=current=0;attributes.clear();}
+void CTargetDisplay::Destroy() {Clear();monsters.Destroy();}
 void CTargetDisplay::Focus(DWORD actor,DWORD now)
 {
     if(actor) {shown=actor;if(actor!=previous) changedAt=now;previous=actor;}
     else if(now-changedAt>800) shown=0;
 }
-void CTargetDisplay::Remove(DWORD actor) {if(shown==actor) shown=0;if(previous==actor) previous=0;attributes.erase(actor);}
+void CTargetDisplay::Remove(DWORD actor) {if(shown==actor) {shown=0;ClearPortrait();}if(previous==actor) previous=0;attributes.erase(actor);}
 void CTargetDisplay::SetMonster(DWORD actor,BYTE type,WORD shape,bool excluded,int state,WORD hp,WORD maxHp,BYTE ratio,DWORD now)
 {
     Focus(actor,now);if(!actor) return;ClearPortrait();human=false;special=shape>=530 && shape<=533;

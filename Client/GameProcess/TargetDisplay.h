@@ -19,7 +19,7 @@ public:
     std::map<DWORD,Attributes> attributes;
     BYTE percent=0;WORD maximum=0,current=0;
     ~CTargetDisplay();
-    void Init();void Destroy();
+    void Init();void Destroy();void Clear();
     bool ApplyPortrait(DWORD actor,const BYTE* bytes,size_t size);
     bool HasPortrait() const { return customPortrait!=nullptr; }
     void Focus(DWORD actor,DWORD now);
