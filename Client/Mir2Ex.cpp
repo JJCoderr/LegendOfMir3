@@ -36,6 +36,7 @@ public:
         if (groupPanel>0 && groupPanel<5) capturePath = groupPanel==2 ? "group-create.bmp" : groupPanel==3 ? "group-invite.bmp" : groupPanel==4 ? "group-remove.bmp" : "group-panel.bmp";
         if (groupPanel>=5 && groupPanel<=10) capturePath = groupPanel==5 ? "guild-overview.bmp" : groupPanel==6 ? "guild-members.bmp" : groupPanel==8 ? "guild-denied.bmp" : groupPanel==9 ? "guild-remove.bmp" : groupPanel==10 ? "guild-break-ally.bmp" : "guild-notice.bmp";
         if ((groupPanel>=20 && groupPanel<=22) || groupPanel==25 || groupPanel==26 || groupPanel==27) capturePath=groupPanel==27?"skill-shortcuts.bmp":groupPanel==26?"skill-description.bmp":groupPanel==25?"skill-key-menu.bmp":groupPanel==22?"status-and-skills.bmp":groupPanel==20?"skills-panel.bmp":"skills-scrolled.bmp";
+        if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
         if (groupPanel==11) capturePath="options-panel.bmp";
         if (groupPanel>=15 && groupPanel<=19) capturePath=groupPanel==19?"status-equipment.bmp":groupPanel==18?"status-identity.bmp":groupPanel==16?"status-elements.bmp":groupPanel==17?"status-tooltip.bmp":"status-panel.bmp";
         if (groupPanel==23 || groupPanel==24) capturePath=groupPanel==23?"inventory-clip-top.bmp":"inventory-clip-bottom.bmp";
@@ -451,6 +452,40 @@ public:
                 fprintf(report,"release_without_press=%d close_clicked=%d slots=%d signed_elements=%d\n",stray,closed,slots,groupPanel<16 || (status.ElementValue(0,6)==255 && status.ElementValue(1,4)==-1 && status.ElementValue(1,0)==0)); fprintf(report,"equipment_rules=%d\n",previewRules); fclose(report);
             }
         }
+        if (groupPanel==28 || groupPanel==29) {
+            auto& ui=g_xGameProc.m_xInterface; auto& quest=ui.m_xQuestWnd;
+            ui.OnKeyDown('D',0); const bool opened=quest.GetGameWndActive()!=FALSE;
+            ui.OnKeyDown('D',1L<<30); const bool repeat=quest.GetGameWndActive()!=FALSE;
+            ui.OnKeyDown('D',0); const bool hidden=!quest.GetGameWndActive(); ui.OnKeyDown('D',0);
+            const bool stray=!quest.OnLButtonUp(POINT{275,115});
+            bool selected=true,expanded=true,child=true,dragged=true,released=true,description=true;
+            if (groupPanel==29) {
+                for (int i=0;i<22;++i) { CQuestWnd::Entry entry; char number[32]; wsprintfA(number," %02d",i+1);
+                    entry.title="\xc8\xce\xce\xf1"+std::string(number); entry.summary="\xc7\xeb\xc7\xb0\xcd\xf9\xb1\xc8\xc6\xe6\xb3\xc7\xd1\xb0\xd5\xd2\xc0\xcf\xb1\xf8\xa3\xac\xc1\xcb\xbd\xe2\xc3\xb0\xcf\xd5\xcb\xf9\xd0\xe8\xb5\xc4\xd7\xb0\xb1\xb8\xba\xcd\xbc\xbc\xc4\xdc\xa1\xa3\xcd\xea\xb3\xc9\xbd\xbb\xcc\xb8\xba\xf3\xa3\xac\xc7\xb0\xcd\xf9\xb3\xc7\xcd\xe2\xbb\xf7\xb0\xdc\xb5\xbe\xb2\xdd\xc8\xcb\xa3\xac\xd4\xd9\xb7\xb5\xbb\xd8\xc1\xec\xc8\xa1\xbd\xb1\xc0\xf8\xa1\xa3\xc8\xce\xce\xf1\xbd\xf8\xb6\xc8\xbb\xe1\xcf\xd4\xca\xbe\xd4\xda\xd5\xe2\xc0\xef\xa3\xac\xc7\xeb\xc1\xf4\xd2\xe2\xb8\xf7\xb8\xf6\xbd\xd7\xb6\xce\xb5\xc4\xcb\xb5\xc3\xf7\xa1\xa3"; entry.completed=(i%3)==2;
+                    quest.entries.push_back(entry);
+                }
+                quest.entries[0].title="\xb3\xf5\xb3\xf6\xc3\xa9\xc2\xae";
+                quest.entries[0].children.push_back({"\xb0\xdd\xb7\xc3\xb1\xc8\xc6\xe6\xb3\xc7\xb5\xc4\xc0\xcf\xb1\xf8","\xc7\xeb\xc7\xb0\xcd\xf9\xb1\xc8\xc6\xe6\xb3\xc7\xd1\xb0\xd5\xd2\xc0\xcf\xb1\xf8\xa3\xac\xc1\xcb\xbd\xe2\xc3\xb0\xcf\xd5\xcb\xf9\xd0\xe8\xb5\xc4\xd7\xb0\xb1\xb8\xba\xcd\xbc\xbc\xc4\xdc\xa1\xa3\xcd\xea\xb3\xc9\xbd\xbb\xcc\xb8\xba\xf3\xa3\xac\xc7\xb0\xcd\xf9\xb3\xc7\xcd\xe2\xbb\xf7\xb0\xdc\xb5\xbe\xb2\xdd\xc8\xcb\xa3\xac\xd4\xd9\xb7\xb5\xbb\xd8\xc1\xec\xc8\xa1\xbd\xb1\xc0\xf8\xa1\xa3\xc8\xce\xce\xf1\xbd\xf8\xb6\xc8\xbb\xe1\xcf\xd4\xca\xbe\xd4\xda\xd5\xe2\xc0\xef\xa3\xac\xc7\xeb\xc1\xf4\xd2\xe2\xb8\xf7\xb8\xf6\xbd\xd7\xb6\xce\xb5\xc4\xcb\xb5\xc3\xf7\xa1\xa3",false});
+                quest.entries[0].children.push_back({"\xbb\xf7\xb0\xdc\xb5\xbe\xb2\xdd\xc8\xcb","\xc7\xeb\xc7\xb0\xcd\xf9\xb1\xc8\xc6\xe6\xb3\xc7\xd1\xb0\xd5\xd2\xc0\xcf\xb1\xf8\xa3\xac\xc1\xcb\xbd\xe2\xc3\xb0\xcf\xd5\xcb\xf9\xd0\xe8\xb5\xc4\xd7\xb0\xb1\xb8\xba\xcd\xbc\xbc\xc4\xdc\xa1\xa3\xcd\xea\xb3\xc9\xbd\xbb\xcc\xb8\xba\xf3\xa3\xac\xc7\xb0\xcd\xf9\xb3\xc7\xcd\xe2\xbb\xf7\xb0\xdc\xb5\xbe\xb2\xdd\xc8\xcb\xa3\xac\xd4\xd9\xb7\xb5\xbb\xd8\xc1\xec\xc8\xa1\xbd\xb1\xc0\xf8\xa1\xa3\xc8\xce\xce\xf1\xbd\xf8\xb6\xc8\xbb\xe1\xcf\xd4\xca\xbe\xd4\xda\xd5\xe2\xc0\xef\xa3\xac\xc7\xeb\xc1\xf4\xd2\xe2\xb8\xf7\xb8\xf6\xbd\xd7\xb6\xce\xb5\xc4\xcb\xb5\xc3\xf7\xa1\xa3",true});
+                ui.OnLButtonDown(POINT{80,95}); ui.OnLButtonUp(POINT{80,95}); selected=quest.selected==0 && !ui.m_bMoveFocusedWnd;
+                ui.OnLButtonDown(POINT{275,82}); ui.OnLButtonUp(POINT{275,82}); expanded=quest.expanded==0 && quest.EntryAt(1)==-1 && quest.EntryAt(3)==1;
+                ui.OnLButtonDown(POINT{85,110}); ui.OnLButtonUp(POINT{85,110}); child=quest.descriptionChild==0 && quest.selected==-1 && !quest.Description().empty();
+                for (int i=0;i<8;++i) quest.Wheel(1,POINT{100,350}); description=quest.descriptionFirst==3 && quest.first==0;
+                quest.descriptionFirst=0;
+                ui.OnLButtonDown(POINT{278,165}); ui.OnMouseMove(POINT{780,580}); dragged=quest.scrollCaptured && quest.first==quest.LastRow();
+                ui.OnLButtonUp(POINT{780,580}); released=!quest.scrollCaptured; quest.Scroll(-100);
+            }
+            ui.OnLButtonDown(POINT{275,115}); ui.OnLButtonUp(POINT{780,580}); const bool outside=quest.pressed==-1 && quest.GetGameWndActive();
+            ui.OnLButtonDown(POINT{275,115}); ui.OnLButtonUp(POINT{275,115}); const bool closed=!quest.GetGameWndActive(); ui.OnKeyDown('D',0);
+            const int savedFirst=quest.first; quest.Wheel(1,POINT{700,100}); const bool outsideWheel=quest.first==savedFirst;
+            ui.OnLButtonDown(POINT{310,50}); ui.OnMouseMove(POINT{320,60}); ui.OnLButtonUp(POINT{320,60});
+            const bool moved=quest.m_rcWnd.left==10 && quest.m_rcWnd.top==10; quest.m_rcWnd={0,0,340,440};
+            if (FILE* report=fopen("quest-layout-check.txt","wb")) {
+                fprintf(report,"opened=%d repeat=%d hidden=%d stray=%d selected=%d expanded=%d child=%d description_scroll=%d dragged=%d released=%d outside_release=%d closed=%d\n",
+                    opened,repeat,hidden,stray,selected,expanded,child,description,dragged,released,outside,closed);
+                fprintf(report,"outside_wheel=%d window_drag=%d\n",outsideWheel,moved); fclose(report);
+            }
+        }
         if (groupPanel==11) {
             auto& ui=g_xGameProc.m_xInterface;
             auto& options=ui.m_xOptionWnd;
@@ -687,7 +722,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=inventory-clip-bottom")==0 ? 24 :
         strcmp(lpCmdLine,"--preview=skill-key-menu")==0 ? 25 :
         strcmp(lpCmdLine,"--preview=skill-description")==0 ? 26 :
-        strcmp(lpCmdLine,"--preview=skill-shortcuts")==0 ? 27 : 0;
+        strcmp(lpCmdLine,"--preview=skill-shortcuts")==0 ? 27 :
+        strcmp(lpCmdLine,"--preview=quest-empty")==0 ? 28 :
+        strcmp(lpCmdLine,"--preview=quest-list")==0 ? 29 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

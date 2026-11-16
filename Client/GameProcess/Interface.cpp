@@ -67,6 +67,7 @@ VOID CInterface::Init()
 
 	m_xStatusWnd.Init();
     m_xSkillWnd.Init();
+    m_xQuestWnd.Init();
 	m_xStoreWnd.Init();
 	m_xGuildWnd.Init();
 	m_xGroupWnd.Init();
@@ -114,6 +115,7 @@ VOID CInterface::Destroy()
 	m_xStoreWnd.Destroy();
 	m_xStatusWnd.Destroy();
     m_xSkillWnd.Destroy();
+    m_xQuestWnd.Destroy();
 	m_xGuildWnd.Destroy();
 	m_xGroupWnd.Destroy();
 	m_xExchangeWnd.Destroy();
@@ -180,7 +182,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xChatPopWnd.CreateChatPopWnd(_WND_ID_CHATPOP, m_pxInterImg, _WNDIMGIDX_CHATPOP, 0, 0, 0, 0, TRUE);
 
 	m_xOptionWnd.CreateOptionWnd(_WND_ID_OPTION, m_pxInterImg, 1290, 145, 30, 510, 468, TRUE);
-	m_xQuestWnd.CreateQuestWnd(_WND_ID_QUEST, m_pxInterImg, _WNDIMGIDX_QUEST, 0, 0, 0, 0, TRUE);
+	m_xQuestWnd.CreateQuestWnd(_WND_ID_QUEST, m_pxInterImg, 1420, 0, 0, 340, 440, TRUE);
 	m_xHorseWnd.CreateHorseWnd(_WND_ID_HORSE, m_pxInterImg, _WNDIMGIDX_HORSE, 0, 0, 0, 0, TRUE);
 
 
@@ -951,12 +953,14 @@ case _WND_ID_STATUS:
 			{
 				DeleteWindowToList(_WND_ID_QUEST);
 				m_xQuestWnd.SetGameWndActive(FALSE);
+                m_xQuestWnd.pressed=-1; m_xQuestWnd.scrollCaptured=false;
 				bRet = FALSE;
 			}
 			else
 			{
 				AddWindowToList(_WND_ID_QUEST);
 				m_xQuestWnd.SetGameWndActive(TRUE);
+                m_xQuestWnd.pressed=-1; m_xQuestWnd.scrollCaptured=false;
 				bRet = TRUE;
 			}
 		}
@@ -1468,9 +1472,9 @@ case _WND_ID_STATUS:
 
 
 			case _WND_ID_QUEST:
-				if ( !m_xQuestWnd.OnLButtonDown(ptMouse) )
-					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
-				break;
+                WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect,ptMouse);
+                if (m_xQuestWnd.OnLButtonDown(ptMouse)) m_bMoveFocusedWnd=FALSE;
+                break;
 			case _WND_ID_OPTION:
 				if ( !m_xOptionWnd.OnLButtonDown(ptMouse) )
 					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
@@ -1604,6 +1608,10 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
+    if (m_xQuestWnd.scrollCaptured || m_xQuestWnd.pressed>=0) {
+        if (m_xQuestWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_QUEST);
+        return TRUE;
+    }
     if (!m_xMsgBox.IsActive() && PtInRect(&m_xSkillWnd.m_keyMenu,ptMouse) && GetWindowInMousePos(ptMouse)==_WND_ID_SKILL) {
         m_xSkillWnd.OnLButtonUp(ptMouse); return TRUE;
     }
@@ -1767,6 +1775,7 @@ case _WND_ID_STATUS:		if ( m_xStatusWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )	
 *******************************************************************************************************************/
 BOOL CInterface::OnMouseMove(POINT ptMouse)
 {
+    if (m_xQuestWnd.scrollCaptured) { m_xQuestWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xSkillWnd.m_skillScrollCaptured) { m_xSkillWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xInventoryWnd.m_scrollCaptured) { m_xInventoryWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xOptionWnd.m_audioDrag>=0) { m_xOptionWnd.OnMouseMove(ptMouse); return TRUE; }
@@ -1843,7 +1852,6 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 		m_xChatPopWnd.SetStatusBtnInit();
 		m_xGuildMasterWnd.SetStatusBtnInit();
 		m_xOptionWnd.SetStatusBtnInit();
-		m_xQuestWnd.SetStatusBtnInit();
 		m_xHorseWnd.SetStatusBtnInit();
 		m_xExchangeWnd.SetStatusBtnInit();
 	}
@@ -1855,6 +1863,7 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 BOOL CInterface::OnScrollDown()
 {
     if (m_xMsgBox.IsActive()) return TRUE;
+    if (IsTopWindow(_WND_ID_QUEST)) { m_xQuestWnd.OnScrollDown(); return TRUE; }
     if (IsTopWindow(_WND_ID_GUILD)) { m_xGuildWnd.OnScrollDown(); return TRUE; }
 	if ( IsTopWindow(m_xInventoryWnd.m_nID) )
 	{
@@ -1889,6 +1898,7 @@ BOOL CInterface::OnScrollDown()
 BOOL CInterface::OnScrollUp()
 {
     if (m_xMsgBox.IsActive()) return TRUE;
+    if (IsTopWindow(_WND_ID_QUEST)) { m_xQuestWnd.OnScrollUp(); return TRUE; }
     if (IsTopWindow(_WND_ID_GUILD)) { m_xGuildWnd.OnScrollUp(); return TRUE; }
 	if ( IsTopWindow(m_xInventoryWnd.m_nID) )
 	{
@@ -1951,6 +1961,9 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
     }
 	switch ( wParam )
 	{
+    case 'D':
+        if (!(lParam & (1L << 30))) WindowActivate(_WND_ID_QUEST);
+        return TRUE;
     case 'B':
         if (!(lParam & (1L << 30))) m_bShowKey=!m_bShowKey;
         return TRUE;
