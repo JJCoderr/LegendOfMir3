@@ -437,12 +437,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 
 
 	// 鼠标物品.
-	if ( m_stCommonItem.bSetted && !m_stCommonItem.bIsHideItem )
-	{
-		nX = ptMousePos.x - _INVENTORY_CELL_WIDTH /2;
-		nY = ptMousePos.y - _INVENTORY_CELL_HEIGHT/2;
-		m_stCommonItem.xItem.DrawItem(nX, nY);
-	}
+
 
 	// 腰带物品。
 	ShowBeltItem();
@@ -498,7 +493,14 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 	m_xClientSysMsg.ShowSysMsg(nLoopTime, 30, 30);
 
 	// 勇气
+    m_xInventoryWnd.UpdatePlacementPointer(ptMousePos,!m_xMsgBox.IsActive() && GetWindowInMousePos(ptMousePos)==_WND_ID_INVENTORY);
     ShowWndList();
+	if ( m_stCommonItem.bSetted && !m_stCommonItem.bIsHideItem )
+	{
+		nX = ptMousePos.x - _INVENTORY_CELL_WIDTH /2;
+		nY = ptMousePos.y - _INVENTORY_CELL_HEIGHT/2;
+		m_stCommonItem.xItem.DrawItem(nX, nY);
+	}
 	m_xMsgBox.RenderMessageBox(0);
 
 	ShowMagicKey();

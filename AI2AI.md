@@ -574,3 +574,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 读取按身份匹配当前物品，校验占位范围、单锚点、完整矩形及尺寸，不覆盖当前物品属性；未匹配物品按首个可容纳位置放置。记录顺序与磁盘保存顺序无关。SM_BAGITEMS接收完成后调用恢复，退出沿用保存入口；真实服务端重登录时序尚未验证。
 - Client全量77步构建通过。独立preview-item-layout.itms保存7个物品后反序重建，再读取，layout_restored=1、server_records_preserved=1；原有UI/多格检查全部通过，已检查out/inventory-restored.png。
 - 当前内存仍旧60条容量，文件最多46条；超过46条会拒绝保存，不会静默截断。容量/完整记录与快捷栏语义仍待一起适配。
+
+### 背包放置占位预览
+- 手持物品进入背包时绘制完整多格占位，按参考绿色RGB(50,100,50)/红色RGB(100,50,50)、alpha=1的预乘混合，并裁剪至背包可见区域；预览和实际放置共用Placement坐标计算。
+- 在绘制窗口列表前确定鼠标命中的最上层窗口，模态提示/其它窗口遮挡时不绘制占位；手持图标调整到窗口之后、确认框之前绘制，修复被背包底图遮挡。手持时隐藏旧物品提示文字。
+- Client全量77步及最终全项目构建通过，原生预览placement_green=1、placement_red=1，既有UI/多格/保存恢复检查全部通过；已检查out/inventory-place.png和out/inventory-conflict.png。新增--preview=inventory-place/inventory-conflict。

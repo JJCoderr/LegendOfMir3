@@ -13,6 +13,7 @@
 
 #include "StdAfx.h"
 #include "Common/LoginMessages.h"
+#include "Common/LegacyPanel.h"
 
 
 
@@ -147,6 +148,13 @@ VOID CInventoryWnd::ShowInventoryWnd()
     }
     m_xInventoryBtn[_BTN_ID_INVENCLOSE].ChangeRect(x+242,y+423);
     const RECT clip={x+17,y+60,x+245,y+364};
+    const auto& held=g_xGameProc.m_xInterface.m_stCommonItem;
+    if (m_showPlacement && held.bSetted && !held.bIsHideItem) {
+        RECT visible; bool fits;
+        if (PreviewPlacement(held.xItem,m_placementPointer,visible,fits))
+            DrawLegacyPanel(visible,fits?RGB(50,100,50):RGB(100,50,50),1,0,false);
+    }
+
     for (nCnt=0;nCnt<_MAX_INVEN_ITEM;++nCnt) {
         if (!m_stInventoryItem[nCnt].bSetted) continue;
         const int anchor=m_layout.anchors[nCnt];
@@ -169,6 +177,7 @@ VOID CInventoryWnd::ShowInventoryWnd()
 
 VOID CInventoryWnd::ShowInvenItemState()
 {
+    if (g_xGameProc.m_xInterface.m_stCommonItem.bSetted) return;
     const int id=GetInvenNum(g_xGameProc.m_ptMousePos);
     if (id<0 || !m_stInventoryItem[id].bSetted) return;
     const int anchor=m_layout.anchors[id];
@@ -478,13 +487,13 @@ VOID CInventoryWnd::DeleteAllBeltItem()
 	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
-bool CInventoryWnd::PlaceItem(int id,const CItem& item,const POINT* point)
+bool CInventoryWnd::Placement(const CItem& item,const POINT* point,int& x,int& y,int& width,int& height)
 {
     auto& image=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];
     if (!image.NewSetIndex(item.m_stItemInfo.stStdItem.wLooks)) return false;
-    const int width=(image.m_lpstNewCurrWilImageInfo->shWidth+37)/38;
-    const int height=(image.m_lpstNewCurrWilImageInfo->shHeight+37)/38;
-    int x=-1,y=-1;
+    width=(image.m_lpstNewCurrWilImageInfo->shWidth+37)/38;
+    height=(image.m_lpstNewCurrWilImageInfo->shHeight+37)/38;
+    x=y=-1;
     if (point) {
         const int slot=SlotAt(*point);
         if (slot>=0) {
@@ -494,13 +503,22 @@ bool CInventoryWnd::PlaceItem(int id,const CItem& item,const POINT* point)
             x-=width/2; y-=height/2;
         }
     }
-    return m_layout.Place(id,width,height,x,y);
+    return true;
 }
-void CInventoryWnd::RebuildLayout()
+bool CInventoryWnd::PlaceItem(int id,const CItem& item,const POINT* point)
 {
-    m_layout.Clear();
-    for (int id=0;id<_MAX_INVEN_ITEM;++id)
-        if (m_stInventoryItem[id].bSetted) PlaceItem(id,m_stInventoryItem[id].xItem);
+    int x,y,width,height;
+    return Placement(item,point,x,y,width,height) && m_layout.Place(id,width,height,x,y);
+}
+bool CInventoryWnd::PreviewPlacement(const CItem& item,POINT point,RECT& visible,bool& fits)
+{
+    int x,y,width,height;
+    if (SlotAt(point)<0 || !Placement(item,&point,x,y,width,height)) return false;
+    const RECT clip={m_rcWnd.left+17,m_rcWnd.top+60,m_rcWnd.left+245,m_rcWnd.top+364};
+    const RECT footprint={clip.left+x*38,clip.top+(y-m_nStartLineNum)*38,
+        clip.left+(x+width)*38,clip.top+(y-m_nStartLineNum+height)*38};
+    fits=m_layout.Fits(x,y,width,height);
+    return IntersectRect(&visible,&clip,&footprint)!=FALSE;
 }
 BOOL CInventoryWnd::AddInvenItem(CItem item,INT preferred,BOOL usePreferred)
 {

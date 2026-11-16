@@ -27,7 +27,9 @@ protected:
     bool m_closePressed=false;
     CBagLayout m_layout;
     bool PlaceItem(int id,const CItem& item,const POINT* point=nullptr);
-    void RebuildLayout();
+    bool Placement(const CItem& item,const POINT* point,int& x,int& y,int& width,int& height);
+    POINT m_placementPointer={};
+    bool m_showPlacement=false;
 	INT			m_nStartLineNum;					// 背包窗口起始行的编号. (共 10 行, 屏幕上最多可看到 4 行.)
 	RECT		m_rcInvenCell[_INVEN_MAX_CELL];		// 背包窗口各单元格的区域。
 	RECT		m_rcBeltCell[_BELT_MAX_CELL];
@@ -45,6 +47,8 @@ public:
     bool ScrollInput(int kind, POINT point);
     int ScrollRow() const { return m_nStartLineNum; }
     int SlotAt(POINT point) const;
+    bool PreviewPlacement(const CItem& item,POINT point,RECT& visible,bool& fits);
+    void UpdatePlacementPointer(POINT point,bool visible) { m_placementPointer=point; m_showPlacement=visible; }
     int ItemAnchor(int id) const { return m_layout.anchors[id]; }
 	CInventoryWnd();
 	~CInventoryWnd();
