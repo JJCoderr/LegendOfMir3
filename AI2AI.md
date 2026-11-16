@@ -490,3 +490,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 替换旧命中表：1221关闭、1362创建、1365邀请、1368移除、1370允许，使用参考坐标和帧尺寸；按下/释放同按钮才执行并播放105.wav。移除硬编码mandul。
 - 三种成员动作打开GameInter1240原生确认框，正文读取1605/1606，复用ChatEdit子窗口，位置244,340、309x15、90字节限制；YES读取实际输入调用对应已有发送函数，NO隐藏并恢复聊天编辑框位置，回车通过OnMsgInputted处理。
 - 增加三个离线预览，实际按钮触发后截图out/group-create.png、group-invite.png、group-remove.png，均已检查；全量Client及后续构建通过。截图不包含原生编辑子窗口，编辑框外观、取消恢复及服务端处理仍待进一步验证。
+
+### 原生组队输入框字体与取消验证
+- ChatEdit创建和缩放重建字体均读取CmList1074，逻辑12px/400字重，默认EM_LIMITTEXT由95改为90，与参考ChatInputSpec一致。
+- 三种成员对话框运行验证均读取到PreviewMember、limit=90、cancel_restored=1；当前150%显示缩放下实际框464x23，字体高度-18，对应逻辑309x15与12px。
+- 检查通过实际HWND/WM_GETFONT/GetWindowText完成，取消后确认框关闭、编辑框隐藏且内容清空；未发送创建/邀请/移除请求。构建通过。输入框透明背景和完整窗口截图仍需进一步核对。

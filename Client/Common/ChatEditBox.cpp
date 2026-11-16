@@ -12,6 +12,15 @@
 
 
 #include "StdAfx.h"
+#include "Common/LoginMessages.h"
+
+static const char* ChatInputFontFace()
+{
+    static CLoginMessages captions;
+    static const bool loaded = captions.Load("./CmList.dat");
+    return captions.Get(1074).c_str();
+}
+
 
 
 static CChatEdit*	g_xChatEdit = NULL;
@@ -147,11 +156,11 @@ BOOL CChatEdit::Create(HINSTANCE hInstance, HWND hWndParent, INT nX, INT nY, INT
 
 	m_hFontChatEdit = CreateFont(-12, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET,
 								 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, 
-								 DEFAULT_QUALITY, DEFAULT_PITCH, "宋体");
+								 DEFAULT_QUALITY, DEFAULT_PITCH, ChatInputFontFace());
 
 	SendMessage(m_hChatEdit, WM_SETFONT, (WPARAM)m_hFontChatEdit, MAKELPARAM(TRUE, 0));
 	// 输入编辑窗口的最大输入字符个数定义.
-	SendMessage(m_hChatEdit, EM_LIMITTEXT, (WPARAM)95, 0);
+	SendMessage(m_hChatEdit, EM_LIMITTEXT, (WPARAM)90, 0);
 	ShowWindow(m_hChatEdit, SW_HIDE);
     UpdateWindow(m_hChatEdit);
 	return TRUE;
@@ -181,7 +190,7 @@ VOID CChatEdit::MoveScaled(INT x, INT y, INT width, INT height, BOOL repaint)
     const int fontHeight = MulDiv(12, displayHeight, logicalHeight);
     if (m_fontHeight != fontHeight) {
         HFONT font = CreateFont(-fontHeight, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH, "宋体");
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH, ChatInputFontFace());
         SendMessage(m_hChatEdit, WM_SETFONT, (WPARAM)font, TRUE);
         DeleteObject(m_hFontChatEdit); m_hFontChatEdit = font; m_fontHeight = fontHeight;
     }

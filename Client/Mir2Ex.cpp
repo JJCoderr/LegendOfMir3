@@ -67,6 +67,23 @@ public:
                 POINT button = {315+(groupPanel-2)*60,320};
                 g_xGameProc.m_xInterface.OnLButtonDown(button);
                 g_xGameProc.m_xInterface.OnLButtonUp(button);
+                auto& ui = g_xGameProc.m_xInterface;
+                const HWND edit = g_xChatEditBox.GetSafehWnd();
+                RECT inputRect; GetWindowRect(edit,&inputRect);
+                LOGFONTA font = {};
+                GetObjectA((HFONT)SendMessage(edit,WM_GETFONT,0,0),sizeof(font),&font);
+                const int limit = (int)SendMessage(edit,EM_GETLIMITTEXT,0,0);
+                SetWindowTextA(edit,"PreviewMember");
+                char input[91] = {}; GetWindowTextA(edit,input,sizeof(input));
+                POINT cancel = {490,315};
+                ui.OnLButtonDown(cancel); ui.OnLButtonUp(cancel);
+                const bool restored = !ui.m_xMsgBox.IsActive() && !IsWindowVisible(edit) && GetWindowTextLengthA(edit)==0;
+                if (FILE* report=fopen(groupPanel==2 ? "group-create-check.txt" : groupPanel==3 ? "group-invite-check.txt" : "group-remove-check.txt","wb")) {
+                    fprintf(report,"font=%s height=%ld limit=%d input=%s cancel_restored=%d width=%ld height=%ld\n",
+                        font.lfFaceName,font.lfHeight,limit,input,restored,inputRect.right-inputRect.left,inputRect.bottom-inputRect.top);
+                    fclose(report);
+                }
+                ui.OnLButtonDown(button); ui.OnLButtonUp(button);
             }
         }
         if (exitDialog) {
