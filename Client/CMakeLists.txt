@@ -49,6 +49,7 @@ set(MIR3_CLIENT_SOURCES
     GameProcess/GuildEditor.cpp
     GameProcess/GuildWnd.cpp
     GameProcess/QuickWnd.cpp
+    GameProcess/TargetDisplay.cpp
     GameProcess/Minimap.cpp
     GameProcess/PortraitWnd.cpp
     GameProcess/HorseWnd.cpp

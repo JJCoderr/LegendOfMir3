@@ -111,6 +111,7 @@ VOID CInterface::Init()
 VOID CInterface::Destroy()
 {
     m_xPortraitWnd.Close();
+    m_targetDisplay.Destroy();
     m_minimap.Destroy();
     m_portraits.Destroy();
 	m_xClientSysMsg.Destroy();
@@ -159,6 +160,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	// ¼ÓÔØ½Ó¿ÚÍ¼Ïñ.
 	m_pxInterImg->NewLoad(".\\Data\\gameinter.wil");
     m_portraits.Destroy();
+    m_targetDisplay.Init();
     m_minimap.Init();
     m_portraits.NewLoad(".\\Data\\ProgUse.wil");
 	//------------------------------------------------------------------------------------------------------------
@@ -537,6 +539,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     m_minimap.player={g_xGameProc.m_xMyHero.m_wPosX,g_xGameProc.m_xMyHero.m_wPosY};
     m_minimap.showMonsters=m_xOptionWnd.m_values[7];
     m_minimap.Show(*m_pxInterImg,GetTickCount());
+    if(!m_chatExpanded) m_targetDisplay.ShowVitals(m_portraits);
     ShowMagicKey();
     if (m_xNPCWnd.m_bActive) m_xNPCWnd.ShowNPCChatWnd();
     if (m_xStoreWnd.m_bActive) m_xStoreWnd.ShowStoreWnd();
@@ -547,6 +550,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 		m_stCommonItem.xItem.DrawItem(nX, nY);
 	}
     m_xGuildEditor.Show();
+    if(!m_chatExpanded) m_targetDisplay.ShowInformation(m_portraits);
 	m_xMsgBox.RenderMessageBox(0);
 
     ShowButtonHint(ptMousePos);
@@ -620,6 +624,8 @@ VOID CInterface::ShowGameStatus()
         g_xMainWnd.DrawWithImageForComp(m_rcMain.left+534,m_rcMain.top+20,
             info.shWidth,info.shHeight,(WORD*)m_portraits.m_pbCurrImage);
     }
+
+    if(!m_chatExpanded) m_targetDisplay.ShowPortrait(m_portraits);
 
 	FLOAT	fMyHPRate;
 	FLOAT	fMyMPRate;				

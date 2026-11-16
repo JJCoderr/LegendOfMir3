@@ -83,6 +83,7 @@
 #include "GameProcess/QuickWnd.h"
 #include "GameProcess/PortraitWnd.h"
 #include "GameProcess/Minimap.h"
+#include "GameProcess/TargetDisplay.h"
 
 #include "Common/Typedeftxt.h"
 #include "Common/Button.h"

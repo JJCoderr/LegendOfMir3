@@ -1358,6 +1358,34 @@ public:
             if(FILE* report=fopen("portrait-map-check.txt","wb")) {fprintf(report,"request=%d loaded=%d geometry=%d markers=%d cooldown=%d disabled=%d click=%d key=%d persisted=%d unavailable=%d\n",request,loaded,geometry,markers,cooldown,disabled,click,key,persisted,unavailable);fclose(report);}
         }
 
+
+        if(groupPanel>=82 && groupPanel<=86) {
+            auto& target=g_xGameProc.m_xInterface.m_targetDisplay;
+            target.SetMonster(1,3,20,false,0,50,100,50,1000);
+            const bool monster=target.Displayed()==1 && target.Frame()==20 && target.BarWidth()==41 && target.VitalText(0)=="50" && target.VitalText(2)=="100";
+            target.Focus(0,1800);const bool retained=target.Displayed()==1;target.Focus(0,1801);const bool expired=target.Displayed()==0;
+            target.SetMonster(2,3,127,false,0,0,100,100,2000);const bool excluded=target.Frame()==-1;
+            target.SetMonster(3,3,65535,false,0,0,100,100,2000);const bool fallback=target.Frame()==1999;
+            target.SetMonster(4,3,531,false,1,50,100,50,2000);const bool special=target.Frame()==531 || target.Frame()==1999;
+            target.SetHuman(5,1,1,2000);const bool human=target.Frame()==653;target.SetHuman(6,0,255,2000);const bool profession=target.Frame()==0;
+            target.SetMonster(1,3,20,false,0,50,100,50,3000);
+            const BYTE body[]={2,0,3,5,0,BYTE(-3),2,0,BYTE(-1),2};
+            const bool wire=target.ApplyAttributes(1,0,1,body,10) && !target.ApplyAttributes(100,0,1,body,10) && !target.ApplyAttributes(1,0,1,body,9);
+            const auto& values=target.attributes[1];const auto order=values.Order();// Preserve the reference two-pass order, including negative values.
+            const int expected[]={5,2,2,-3,-1,0,0};bool sorted=true;
+            for(int i=0;i<7;++i) sorted &= values.modifiers[order[i]]==expected[i];
+            target.SetHuman(7,0,1,4000);const bool late=target.ApplyAttributes(1,1,0,body,10) && target.Displayed()==7 && target.Frame()==652;
+            target.Remove(7);const bool removed=target.Displayed()==0;
+            target.SetMonster(1,3,20,false,0,0,100,0,5000);const bool unknown=target.VitalText(0)=="?" && target.VitalText(2)=="?" && target.BarWidth()==0;
+            target.attributes.clear();
+            if(groupPanel==84) target.SetHuman(7,1,1,6000);
+            else target.SetMonster(1,3,groupPanel==86?531:20,false,0,groupPanel==85?0:50,100,groupPanel==85?0:50,6000);
+            if(groupPanel==83) target.ApplyAttributes(1,0,1,body,10);
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;
+            const char* paths[]={"target-monster.bmp","target-attributes.bmp","target-human.bmp","target-unknown.bmp","target-special.bmp"};capturePath=paths[groupPanel-82];
+            if(FILE* report=fopen("target-display-check.txt","wb")) {fprintf(report,"monster=%d retained=%d expired=%d excluded=%d fallback=%d special=%d human=%d profession=%d wire=%d sorted=%d late=%d removed=%d unknown=%d\n",monster,retained,expired,excluded,fallback,special,human,profession,wire,sorted,late,removed,unknown);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1547,6 +1575,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=target-monster")==0 ? 82 :
+        strcmp(lpCmdLine,"--preview=target-attributes")==0 ? 83 :
+        strcmp(lpCmdLine,"--preview=target-human")==0 ? 84 :
+        strcmp(lpCmdLine,"--preview=target-unknown")==0 ? 85 :
+        strcmp(lpCmdLine,"--preview=target-special")==0 ? 86 :
         strcmp(lpCmdLine,"--preview=portrait-map-full")==0 ? 79 :
         strcmp(lpCmdLine,"--preview=portrait-map-normal")==0 ? 80 :
         strcmp(lpCmdLine,"--preview=portrait-map-expanded")==0 ? 81 :
