@@ -264,6 +264,7 @@ VOID CGameProcess::Load()
 VOID CGameProcess::LoadMapChanged(CHAR* szMap)
 {
 	m_xMap.LoadMapData(szMap);
+    m_xInterface.m_minimap.MapChanged();
 
 	ZeroMemory(m_stMemMappedID, sizeof(MEMMAPPEDID)*_VIEW_CELL_X_COUNT* _VIEW_CELL_Y_COUNT);
 }
@@ -2829,6 +2830,12 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 
 		switch (tdm.wIdent)
 		{
+            case 710: // MIR3 minimap reply, one-based archive index
+                m_xInterface.m_minimap.Receive(tdm.wParam,GetTickCount());
+                break;
+            case 711: // MIR3 minimap unavailable
+                m_xInterface.m_minimap.Unavailable(GetTickCount());
+                break;
             case 1401: // MIR3 SM_CLIENT_OPTIONS
                 m_xInterface.m_xOptionWnd.ReceiveServerOptions(DWORD(tdm.nRecog),tdm.wParam);
                 break;
@@ -4032,6 +4039,7 @@ VOID CGameProcess::OnSvrMsgNewMap(_TDEFAULTMESSAGE	*ptdm, char *pszMapName)
 
 	m_xMap.SetStartViewTile(m_xMyHero.m_wPosX - _GAPY_TILE_CHAR_MAP, m_xMyHero.m_wPosY - _GAPY_TILE_CHAR_MAP);
 	m_xMap.LoadMapData(szMapName);
+    m_xInterface.m_minimap.MapChanged();
 
 	switch ( m_bFogState )
 	{

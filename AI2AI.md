@@ -875,3 +875,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 同步主界面私聊/行会/所有聊天接收图标和提示，保留参考所有聊天同时更新行会拒绝标记的行为。
 - Client清理83步、全部111步构建通过；options-server-on/off各六项全1，含真实按钮预测、相同确认、七个命令编号、通过fnEncodeMessage和GameProc实际接收入口的1401确认、接收按钮同步、重复消息；强制攻击五项回归通过。
 - 已检查out/options-server-on.png和options-server-off.png，展示七开关开启/关闭及攻击模式4/0。该阶段为原生客户端协议接线与离线编码消息验证，尚未证明现有游戏服务器的命令/回复兼容；实际服务器交互与完整GUI验收仍未完成。
+
+### 小地图回复路由与切图刷新
+- 根据Godot仓库client/docs/evidence/feature-audit/004282C0.c的case710，地图编号来自消息wParam（WORD1(v358)，紧随opcode），接入CLIENT接收分支710到Minimap::Receive；711接入Unavailable并显示CmList1458。编号仍按一基映射Mmap/Fmmap。
+- 新增MapChanged，按Godot reset_map_overlays清除旧图尺寸/像素/标记/冷却/拖动；保留右上角已打开或请求中的意图，头像地图按portraitMode恢复请求。两种地图都隐藏至新回复，合并发送一次1033请求。接入LoadMapChanged及OnSvrMsgNewMap的实际地图加载路径。
+- Client清理83步及全目标111步构建通过。minimap-server-reply/unavailable各六项全1，使用fnEncodeMessage经GameProc实际接收入口验证首次打开、清空、无效编号、换图恢复、不可用、关闭状态；原小地图十七项回归通过。
+- 已检查out/minimap-server-reply.png、minimap-server-unavailable.png，分别显示右上角/头像地图及地图不可用状态。成功截图底部保留此前不可用测试产生的提示，属于测试序列历史。仍需真实服务器1033/710交互验证，附近玩家/怪物标记数据源与完整场景尚待接入；不据此宣称地图系统完成。

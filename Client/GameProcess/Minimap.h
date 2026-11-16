@@ -23,6 +23,7 @@ public:
     std::vector<POINT> monsters,green,orange;
     void Init();
     void Destroy();
+    void MapChanged();
     int Size() const { return large?256:128; }
     RECT Bounds() const;
     POINT Source() const;

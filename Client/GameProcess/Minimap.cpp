@@ -172,3 +172,11 @@ void CMinimap::Request()
 {
     _TDEFAULTMESSAGE message;fnMakeDefMessage(&message,1033,0,0,0,0);g_xClientSocket.SendPacket(&message,NULL);
 }
+
+void CMinimap::MapChanged()
+{
+    pending=visible || pending;visible=false;dragging=releaseCaptured=false;replyTime=0;
+    frame=-1;width=height=0;pixels.clear();monsters.clear();green.clear();orange.clear();
+    portraitVisible=false;portraitPending=portraitMode;
+    if(pending || portraitPending) Request();
+}

@@ -1519,6 +1519,26 @@ public:
             if(FILE* report=fopen("options-server-check.txt","wb")) {fprintf(report,"predicted=%d unchanged=%d commands=%d confirmed=%d reception=%d repeated=%d\n",predicted,unchanged,commands,confirmed,reception,repeated);fclose(report);}
         }
 
+        if(groupPanel==101 || groupPanel==102) {
+            auto& map=g_xGameProc.m_xInterface.m_minimap;
+            const auto receive=[&](WORD opcode,WORD number) {
+                _TDEFAULTMESSAGE packet={};packet.wIdent=opcode;packet.wParam=number;
+                char encoded[64]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));g_xGameProc.OnSocketMessageRecieve(encoded);
+            };
+            map.pending=true;map.portraitMode=map.portraitPending=true;receive(710,1001);
+            const bool opened=map.visible && map.portraitVisible && !map.pending && !map.portraitPending && map.width>0;
+            map.monsters.push_back({10,10});map.green.push_back({20,20});map.orange.push_back({30,30});map.dragging=true;map.releaseCaptured=true;
+            map.MapChanged();const bool cleared=!map.visible && !map.portraitVisible && map.pending && map.portraitPending && !map.width && !map.height && !map.replyTime && !map.dragging && !map.releaseCaptured && map.monsters.empty() && map.green.empty() && map.orange.empty();
+            receive(710,0);const bool invalid=map.pending && !map.visible;
+            receive(710,1002);const bool refreshed=map.visible && map.portraitVisible && !map.pending;
+            receive(711,0);const bool unavailable=!map.visible && !map.pending && !map.portraitVisible && !map.portraitPending && map.replyTime;
+            map.portraitMode=false;map.MapChanged();const bool closed=!map.pending && !map.portraitPending;
+            if(groupPanel==101) {map.pending=true;map.portraitMode=map.portraitPending=true;receive(710,1001);}
+            g_xGameProc.m_xMyHero.m_wPosX=337;g_xGameProc.m_xMyHero.m_wPosY=267;map.player={337,267};map.portraitBlink=100;
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==101?"minimap-server-reply.bmp":"minimap-server-unavailable.bmp";
+            if(FILE* report=fopen("minimap-server-check.txt","wb")) {fprintf(report,"opened=%d cleared=%d invalid=%d refreshed=%d unavailable=%d closed=%d\n",opened,cleared,invalid,refreshed,unavailable,closed);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1716,6 +1736,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=minimap-server-reply")==0 ? 101 :
+        strcmp(lpCmdLine,"--preview=minimap-server-unavailable")==0 ? 102 :
         strcmp(lpCmdLine,"--preview=options-server-on")==0 ? 99 :
         strcmp(lpCmdLine,"--preview=options-server-off")==0 ? 100 :
         strcmp(lpCmdLine,"--preview=options-attack-on")==0 ? 97 :
