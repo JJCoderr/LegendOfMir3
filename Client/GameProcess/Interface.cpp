@@ -545,90 +545,29 @@ VOID CInterface::ShowGameStatus()
 
 	// 绘制 HP, MP.
 	// 比例检查。
-	if ( wHP )	
-	{
-		fMyHPRate = (FLOAT)((FLOAT)wHP/(FLOAT)g_xGameProc.m_xMyHero.m_stAbility.wMaxHP);
-
-		if ( fMyHPRate > 1.0f ) 
-		{
-			fMyHPRate = 1.0f;
-		}
-	}
-	else			
-	{
-		fMyHPRate = 0;
-	}
-
-	if ( wMP )		
-	{
-		fMyMPRate = (FLOAT)((FLOAT)wMP/(FLOAT)g_xGameProc.m_xMyHero.m_stAbility.wMaxMP);
-
-		if ( fMyMPRate > 1.0f ) 
-		{
-			fMyMPRate = 1.0f;
-		}
-	}
-	else			
-	{
-		fMyMPRate = 0;
-	}
-
-	if ( dwExp )	
-	{
-		fMyExpRate = (FLOAT)((FLOAT)dwExp/(FLOAT)g_xGameProc.m_xMyHero.m_stAbility.dwMaxExp);
-
-		if ( fMyExpRate > 1.0f ) 
-		{
-			fMyExpRate = 1.0f;
-		}
-	}
-	else			
-	{
-		fMyExpRate = 0;
-	}
-
-	if ( wWet )		
-	{
-		fMyWetRate = (FLOAT)((FLOAT)wWet /(FLOAT)g_xGameProc.m_xMyHero.m_stAbility.wMaxWeight);
-
-		if ( fMyWetRate > 1.0f ) 
-		{
-			fMyWetRate = 1.0f;
-		}
-	}
-	else			
-	{
-		fMyWetRate = 0;
-	}
-
-	if ( m_pxInterImg->NewSetIndex(60) )
-	{
-		RECT rcHP = { 0, m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight-(m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight*fMyHPRate), 
-					  m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth, m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight };
- 		g_xMainWnd.DrawWithImageForComp(m_rcMain.left+46, m_rcMain.top+34, rcHP, (WORD*)m_pxInterImg->m_pbCurrImage);
-	}
-
-	if ( m_pxInterImg->NewSetIndex(61) )
-	{
-		RECT rcMP = { 0, m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight-(m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight*fMyMPRate), 
-					  m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth, m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight };
- 		g_xMainWnd.DrawWithImageForComp(m_rcMain.left+104, m_rcMain.top+34, rcMP, (WORD*)m_pxInterImg->m_pbCurrImage);
-	}
-
-	// 绘制 EXP, WET。
-	if ( m_pxInterImg->NewSetIndex(63) )
-	{
-		RECT rcEXP = { 0, m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight-(m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight*fMyExpRate), 
-					   m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth, m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight };
- 		g_xMainWnd.DrawWithImageForComp(m_rcMain.left+76, m_rcMain.top+35, rcEXP, (WORD*)m_pxInterImg->m_pbCurrImage);
-	}
-
-	if ( m_pxInterImg->NewSetIndex(67) )
-	{
-		RECT rcWET = { 0, m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight-(m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight*fMyWetRate), 
-					  m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth, m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight };
- 		g_xMainWnd.DrawWithImageForComp(m_rcMain.left+211, m_rcMain.top+35, rcWET, (WORD*)m_pxInterImg->m_pbCurrImage);
-	}
+    // Mir3 HudModel: zero capacity is empty; low-level warriors share HP in both halves.
+    const auto& ability = g_xGameProc.m_xMyHero.m_stAbility;
+    const auto ratio = [](double value, double maximum) -> float {
+        return maximum > 0 ? float(min(1.0, value / maximum)) : 0.0f;
+    };
+    fMyHPRate = ratio(wHP, ability.wMaxHP);
+    fMyMPRate = ratio(wMP, ability.wMaxMP);
+    fMyExpRate = ratio(dwExp, ability.dwMaxExp);
+    fMyWetRate = ratio(wWet, ability.wMaxWeight);
+    const bool sharedHP = bJob == 0 && ability.bLevel < 24;
+    const auto drawMeter = [&](int frame, int x, int y, float fill) {
+        if (!m_pxInterImg->NewSetIndex(frame)) return;
+        const auto& image = *m_pxInterImg->m_lpstNewCurrWilImageInfo;
+        RECT crop = {0, LONG(image.shHeight - image.shHeight * double(fill)),
+            image.shWidth, image.shHeight};
+        if (crop.top < crop.bottom)
+            g_xMainWnd.DrawWithImageForComp(m_rcMain.left+x,m_rcMain.top+y,
+                crop,(WORD*)m_pxInterImg->m_pbCurrImage);
+    };
+    drawMeter(1163,33,8,fMyHPRate);
+    drawMeter(sharedHP ? 1165 : 1164,73,8,sharedHP ? fMyHPRate : fMyMPRate);
+    drawMeter(1167,165,26,fMyWetRate);
+    drawMeter(1166,152,26,fMyExpRate);
 
 	dwFntClr = RGB(225, 225, 0);
 	// 练级6.
