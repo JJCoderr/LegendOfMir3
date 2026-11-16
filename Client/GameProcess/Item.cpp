@@ -11,6 +11,7 @@
 
 
 #include "StdAfx.h"
+#include "ItemHintStyle.h"
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 #include "AccessoryHintIds.h"
@@ -667,6 +668,7 @@ std::vector<CItem::HintLine> CItem::GeneralHint(int profession,int level,bool sh
 }
 void CItem::ShowGeneralHint(int x,int y,bool shop,bool showIcon) const
 {
+    using namespace ItemHintStyle;
     const auto& hero=g_xGameProc.m_xMyHero;
     const int mode=m_stItemInfo.stStdItem.bStdMode;
     const auto lines=mode==5 || mode==6 || mode==54 || mode==55 || mode==56
@@ -678,23 +680,24 @@ void CItem::ShowGeneralHint(int x,int y,bool shop,bool showIcon) const
         :GeneralHint(hero.m_bJob,hero.m_stAbility.bLevel,shop);auto* surface=g_xMainWnd.GetBackBuffer();HDC dc;
     if(FAILED(surface->GetDC(&dc))) return;
     const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};HFONT font=g_xMainWnd.CreateGameFont(face,9);
-    auto previous=SelectObject(dc,font);int width=0;
-    for(const auto& line:lines) {SIZE size={};GetTextExtentPoint32A(dc,line.text.c_str(),int(line.text.size()),&size);width=max(width,int(size.cx));}
+    auto previous=SelectObject(dc,font);int width=0,height=0;
+    for(const auto& line:lines) {if(line.text.empty()) continue;height+=LineHeight;SIZE size={};GetTextExtentPoint32A(dc,line.text.c_str(),int(line.text.size()),&size);width=max(width,int(size.cx));}
     SelectObject(dc,previous);surface->ReleaseDC(dc);
     auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];
     int iconWidth=0,iconHeight=0;
     if(showIcon && icons.NewSetIndex(m_stItemInfo.stStdItem.wLooks)) {
         iconWidth=icons.m_lpstNewCurrWilImageInfo->shWidth;iconHeight=icons.m_lpstNewCurrWilImageInfo->shHeight;
     }
-    RECT box={x-5,y-5,x+width+5,y+int(lines.size())*15+2};
-    if(iconWidth>0) {box.right+=iconWidth+10;if(box.bottom-box.top<iconHeight) box.bottom=box.top+iconHeight+10;}
-    if(box.right>800) OffsetRect(&box,800-box.right,0);
+    RECT box={x-Padding,y-Padding,x+width+Padding,y+height+BottomPadding};
+    if(iconWidth>0) {box.right+=iconWidth+2*Padding;if(box.bottom-box.top<iconHeight) box.bottom=box.top+iconHeight+2*Padding;}
+    if(box.right>ViewWidth) OffsetRect(&box,ViewWidth-box.right,0);
     DrawLegacyPanel(box,RGB(90,90,45),230,3315350);
-    if(iconWidth>0) DrawSelectionFrame(icons,m_stItemInfo.stStdItem.wLooks,box.left+5,box.top+(box.bottom-box.top-iconHeight)/2,SelectionBlend::Normal,false);
+    const RECT iconClip={0,0,ViewWidth,IconClipHeight};
+    if(iconWidth>0) DrawSelectionFrame(icons,m_stItemInfo.stStdItem.wLooks,box.left+Padding,box.top+(box.bottom-box.top-iconHeight)/2,SelectionBlend::Normal,false,0,&iconClip);
     if(SUCCEEDED(surface->GetDC(&dc))) {
         previous=SelectObject(dc,font);SetBkMode(dc,TRANSPARENT);
-        int lineY=box.top+5;
-        for(const auto& line:lines) {SetTextColor(dc,line.color);TextOutA(dc,box.left+5+(iconWidth>0?iconWidth+5:0),lineY,line.text.c_str(),int(line.text.size()));lineY+=15;}
+        int lineY=box.top+Padding;
+        for(const auto& line:lines) {SetTextColor(dc,line.color);TextOutA(dc,box.left+Padding+(iconWidth>0?iconWidth+Padding:0),lineY,line.text.c_str(),int(line.text.size()));lineY+=LineHeight;}
         SelectObject(dc,previous);surface->ReleaseDC(dc);
     }
     DeleteObject(font);

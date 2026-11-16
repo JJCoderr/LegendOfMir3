@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "ItemHintStyle.h"
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 #include <cmath>
@@ -288,7 +289,7 @@ void CStoreWnd::ShowStoreWnd()
         for(int cellIndex=0;cellIndex<OffersPerPage;++cellIndex) {
             const int index=cellIndex+(storage?OffersPerPage*page:0);if(index>=int(offers.size())) break;
             const RECT cell=OfferCell(cellIndex);if(!PtInRect(&cell,pointer)) continue;
-            CItem item;if(item.SetMir3Item(offers[index].record.data(),0)) item.ShowGeneralHint(cell.left,cell.top,!storage,true);
+            CItem item;if(item.SetMir3Item(offers[index].record.data(),0)) item.ShowGeneralHint(pointer.x+ItemHintStyle::PointerOffset,pointer.y+ItemHintStyle::PointerOffset,!storage,ItemHintStyle::ShopIcon(item.m_stItemInfo.stStdItem.bStdMode));
             break;
         }
     }

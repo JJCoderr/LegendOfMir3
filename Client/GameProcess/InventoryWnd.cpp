@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include "ItemHintStyle.h"
 #include "Common/LoginMessages.h"
 #include "Common/LegacyPanel.h"
 
@@ -268,9 +269,8 @@ VOID CInventoryWnd::ShowInvenItemState()
     if (g_xGameProc.m_xInterface.m_stCommonItem.bSetted) return;
     const int id=GetInvenNum(g_xGameProc.m_ptMousePos);
     if (id<0 || !m_stInventoryItem[id].bSetted) return;
-    const int anchor=m_layout.anchors[id];
-    m_stInventoryItem[id].xItem.ShowItemStatus(m_rcWnd.left+32+(anchor%6)*38,
-        m_rcWnd.top+75+(anchor/6-m_nStartLineNum)*38);
+    const POINT pointer=g_xGameProc.m_ptMousePos;
+    m_stInventoryItem[id].xItem.ShowItemStatus(pointer.x+ItemHintStyle::PointerOffset,pointer.y+ItemHintStyle::PointerOffset);
 }
 
 

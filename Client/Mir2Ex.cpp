@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 #include "GameProcess/AccessoryHintIds.h"
-namespace { constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+#include "GameProcess/ItemHintStyle.h"
+namespace { constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -1831,7 +1832,7 @@ public:
             if(FILE* report=fopen("equipment-durability-check.txt","wb")) {fprintf(report,"threshold=%d warning=%d raw=%d unit=%d special=%d negative=%d wide=%d ignored=%d drop=%d\n",threshold,warning,rawBytes,unit,special,negative,wide,ignored,drop);fclose(report);}
         }
 
-        if(groupPanel>=PreviewSpecialHint && groupPanel<=PreviewStorageHint) {
+        if(groupPanel>=PreviewSpecialHint && groupPanel<=PreviewShopArmorHint) {
             using namespace Mir3AccessoryHint;
             enum RecordField { Weight=32, Icon=36, ShopMaximum=38, Instance=62, Current=66, Maximum=68 };
             auto& ui=g_xGameProc.m_xInterface;auto& shop=ui.m_xStoreWnd;
@@ -1853,9 +1854,14 @@ public:
             const bool rejected=!shop.SetDetailRecords("broken/",1,0) && shop.offers.size()==1;
             BYTE longName[sizeof(raw)];memcpy(longName,raw,sizeof(raw));memcpy(longName,"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234",30);fnEncode6BitBuf(longName,encoded,sizeof(longName),sizeof(encoded));
             const bool fullName=shop.SetDetailRecords((std::string(encoded)+"/").c_str(),1,0) && shop.offers[0].name.size()==30;
+            if(groupPanel==PreviewShopArmorHint) {
+                raw[ModeOffset]=ItemHintStyle::MaleArmor;
+                strcpy((char*)raw,"·À¾ßÊôÐÔ²âÊÔ");setWord(AttackOffset,(3<<8)|1);
+                fnEncode6BitBuf(raw,encoded,sizeof(raw),sizeof(encoded));packet=std::string(encoded)+"/";
+            }
             shop.SetDetailRecords(packet.c_str(),1,0);
             if(groupPanel==PreviewSpecialHint) {ui.m_xInventoryWnd.AddInvenItem(item,0,TRUE);ui.WindowActivate(_WND_ID_INVENTORY);mouse={550,80};capturePath="special-equipment-hint.bmp";}
-            else {if(groupPanel==PreviewStorageHint) shop.SetStorageRecords(77,packet.c_str(),1);ui.WindowActivate(_WND_ID_STORE);const RECT cell=shop.OfferCell(0);mouse={cell.left+10,cell.top+10};capturePath=groupPanel==PreviewStorageHint?"storage-item-hint.bmp":"shop-item-hint.bmp";}
+            else {if(groupPanel==PreviewStorageHint) shop.SetStorageRecords(77,packet.c_str(),1);ui.WindowActivate(_WND_ID_STORE);const RECT cell=shop.OfferCell(0);mouse={cell.left+10,cell.top+10};capturePath=groupPanel==PreviewStorageHint?"storage-item-hint.bmp":groupPanel==PreviewShopArmorHint?"shop-armor-hint.bmp":"shop-item-hint.bmp";}
             g_xGameProc.m_ptMousePos=mouse;
             if(FILE* report=fopen("special-shop-hint-check.txt","wb")) {fprintf(report,"attributes=%d order=%d maximum=%d signed=%d parsed=%d rejected=%d full_name=%d\n",attributes,order,maximum,signedValues,parsed,rejected,fullName);fclose(report);}
         }
@@ -2291,6 +2297,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=shop-armor-hint")==0 ? PreviewShopArmorHint :
         strcmp(lpCmdLine,"--preview=special-equipment-hint")==0 ? PreviewSpecialHint :
         strcmp(lpCmdLine,"--preview=shop-item-hint")==0 ? PreviewShopHint :
         strcmp(lpCmdLine,"--preview=storage-item-hint")==0 ? PreviewStorageHint :

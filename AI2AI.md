@@ -1072,3 +1072,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - StoreWnd::Offer保留完整记录，解析允许完整30字节名称；商店/仓库明细悬停创建CItem并复用ShowGeneralHint，模态框、编辑器、手持物品、非当前悬停窗口和加载状态不显示。商店shop=true最大耐久取38，仓库false取68。无记录的旧摘要夹具不伪造属性。
 - ShowGeneralHint增加shop/showIcon参数，按448770扩展图标宽度并居中放置，文本右移；沿用现有原生DrawSelectionFrame。商品提示锚点暂为格子左上角，图标原版染色/530裁剪及空行高度细节、完整逐像素对照仍需校准。
 - Client清理83步、全目标109步构建通过；特殊/商店/仓库三预览七项attributes/order/maximum/signed/parsed/rejected/full_name全1，旧shop-offers和storage-list已运行回归。已检查out/special-equipment-hint.png、shop-item-hint.png、storage-item-hint.png。截图证明商店2/10与仓库2/5及带图标属性；图标为离线夹具。
+
+### 物品提示位置与图标规则原版校准
+- IDA38a4174b导出448770全部9个调用方，证据out/tooltip-caller-0x*.c；440B30经440220/440130确认背包6列38格映射，提示为鼠标+10/+10。4784F0经4786A0确认商店/仓库4列12格及页码，提示同为鼠标+10/+10，仅模式10/11启用图标；之前所有商品显示图标的接线已纠正。
+- ItemHintStyle.h集中指针偏移、模式、边距、行高和裁剪尺寸；ShowGeneralHint按448770仅非空文字计高，保持绘制行推进，图标裁剪800x530。库存提示从格子锚点改跟随鼠标，商店/仓库亦同步。装备页旧锚点仍待确认，不能仅凭12槽调用方推断所属页面。
+- 增量构建通过；特殊、商店、仓库、防具商品四种预览七项属性/解析回归全1，已检查对应PNG；防具夹具独立设置正常破坏范围，不复用特殊容量导致44-3。图标染色仍待48FA0F核查，未宣称完整原版像素一致。
