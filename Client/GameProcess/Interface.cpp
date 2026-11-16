@@ -370,27 +370,38 @@ void CInterface::LayoutChat()
 
 VOID CInterface::ShowChatList()
 {
-	if ( !m_xChat.CheckEmpty() )
-	{
-		INT		nCnt, nShowLine;
-		LPCHAT	pstChat;
-
-		m_xChat.MoveCurrentToTop();
-		m_xChat.MoveNode(m_nFstLine);
-
-		nShowLine = min(ChatRows(),m_xChat.GetCounter()-m_nFstLine);
-		
-		for ( nCnt = 0; nCnt < nShowLine; nCnt++ )
-		{
-			pstChat = m_xChat.GetCurrentData();
-
-			g_xMainWnd.PutsHan(g_xMainWnd.GetBackBuffer(),
-							   m_rcChat.left, m_rcChat.top+nCnt*15,
-							   pstChat->dwFontColor, pstChat->dwBackColor, pstChat->pszChat);
-
-			m_xChat.MoveNextNode();
-		}
-	}
+    if (m_xChat.CheckEmpty()) return;
+    auto* surface = g_xMainWnd.GetBackBuffer();
+    HDC dc;
+    if (FAILED(surface->GetDC(&dc))) return;
+    const char face[] = {char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font = g_xMainWnd.CreateGameFont(face,9);
+    HGDIOBJ previous = SelectObject(dc,font);
+    const int saved = SaveDC(dc);
+    IntersectClipRect(dc,m_rcChat.left,m_rcChat.top,m_rcChat.right,m_rcChat.bottom);
+    SetBkMode(dc,TRANSPARENT);
+    m_xChat.MoveCurrentToTop();
+    m_xChat.MoveNode(m_nFstLine);
+    const int rows = min(ChatRows(),m_xChat.GetCounter()-m_nFstLine);
+    for (int row=0;row<rows;++row) {
+        const CHAT* line = m_xChat.GetCurrentData();
+        const int length = (int)strlen(line->pszChat);
+        const int y = m_rcChat.top+row*15;
+        if (line->dwBackColor) {
+            SIZE extent = {};
+            GetTextExtentPoint32A(dc,line->pszChat,length,&extent);
+            RECT background = {m_rcChat.left,y,m_rcChat.left+extent.cx,y+extent.cy};
+            SetBkColor(dc,line->dwBackColor);
+            ExtTextOutA(dc,m_rcChat.left,y,ETO_OPAQUE,&background,NULL,0,NULL);
+        }
+        SetTextColor(dc,line->dwFontColor);
+        TextOutA(dc,m_rcChat.left,y,line->pszChat,length);
+        m_xChat.MoveNextNode();
+    }
+    RestoreDC(dc,saved);
+    SelectObject(dc,previous);
+    DeleteObject(font);
+    surface->ReleaseDC(dc);
 }
 
 
