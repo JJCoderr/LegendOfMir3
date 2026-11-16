@@ -1,6 +1,7 @@
 #pragma once
 // MIR3 448770 renderer and 440B30 / 4784F0 callers.
 namespace ItemHintStyle {
+constexpr int IconRedOffset=70, IconGreenOffset=71, IconBlueOffset=72;
 constexpr int PointerOffset=10;
 constexpr int MaleArmor=10, FemaleArmor=11;
 constexpr int Padding=5, BottomPadding=2, LineHeight=15;

@@ -21,10 +21,21 @@ inline void DrawLegacyPanel(RECT box, COLORREF fill, BYTE alpha, COLORREF border
 }
 
 // RGB565 adaptation of Mir3's Godot selection_pixels.hpp.
-enum class SelectionBlend { Normal, Inactive, Shadow, Additive, Alpha };
+enum class SelectionBlend { Normal, Inactive, Shadow, Additive, Alpha, ItemHighlight };
+
+// MIR3 48FA0F: dye C2/C3 first, then floor(c + 1.5*c*c/max).
+inline WORD HighlightItemPixel(WORD pixel,WORD dye)
+{
+    const auto channel=[](int source,int color,int maximum) {
+        const int tinted=source*color/maximum;
+        return min(maximum,tinted+(3*tinted*tinted)/(2*maximum));
+    };
+    return WORD((channel(pixel>>11,dye>>11,31)<<11) |
+        (channel((pixel>>5)&63,(dye>>5)&63,63)<<5) | channel(pixel&31,dye&31,31));
+}
 
 inline RECT DrawSelectionFrame(CWHWilImageData& image, int frame, int x, int y,
-    SelectionBlend blend, bool useOffset = true, BYTE sourceAlpha = 0, const RECT* clip = nullptr, BYTE tint = 255)
+    SelectionBlend blend, bool useOffset = true, BYTE sourceAlpha = 0, const RECT* clip = nullptr, BYTE tint = 255, WORD firstDye = 0xffff, WORD secondDye = 0xffff)
 {
     if (!image.NewSetIndex(frame)) return {};
     const auto& info = *image.m_lpstNewCurrWilImageInfo;
@@ -50,7 +61,10 @@ inline RECT DrawSelectionFrame(CWHWilImageData& image, int frame, int x, int y,
                 if (dx < 0 || dx >= int(surface.dwWidth) || (clip && (dx<clip->left || dx>=clip->right))) continue;
                 const WORD pixel = run[i];
                 int r = pixel >> 11, g = (pixel >> 5) & 63, b = pixel & 31;
-                if (blend == SelectionBlend::Inactive) {
+                if (blend == SelectionBlend::ItemHighlight) {
+                    const WORD highlighted=HighlightItemPixel(pixel,tag==0xc2?firstDye:tag==0xc3?secondDye:0xffff);
+                    r=highlighted>>11;g=(highlighted>>5)&63;b=highlighted&31;
+                } else if (blend == SelectionBlend::Inactive) {
                     const int gray = (r + (g >> 1) + b) / 3;
                     r = b = min(31, gray + gray * 3 / 5);
                     g = r * 2;

@@ -1077,3 +1077,13 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - IDA38a4174b导出448770全部9个调用方，证据out/tooltip-caller-0x*.c；440B30经440220/440130确认背包6列38格映射，提示为鼠标+10/+10。4784F0经4786A0确认商店/仓库4列12格及页码，提示同为鼠标+10/+10，仅模式10/11启用图标；之前所有商品显示图标的接线已纠正。
 - ItemHintStyle.h集中指针偏移、模式、边距、行高和裁剪尺寸；ShowGeneralHint按448770仅非空文字计高，保持绘制行推进，图标裁剪800x530。库存提示从格子锚点改跟随鼠标，商店/仓库亦同步。装备页旧锚点仍待确认，不能仅凭12槽调用方推断所属页面。
 - 增量构建通过；特殊、商店、仓库、防具商品四种预览七项属性/解析回归全1，已检查对应PNG；防具夹具独立设置正常破坏范围，不复用特殊容量导致44-3。图标染色仍待48FA0F核查，未宣称完整原版像素一致。
+
+### 进行中：原版提示图标分区染色与提亮
+- 38a4174b导出48FA0F完整函数out/item-icon-original.c，HexRays丢失x87运算，进一步读取汇编确认4AFA60系数1.5；C1通道floor(c+1.5*c*c/max)，C2/C3先按颜色通道乘积/max截断再相同提亮，最后clamp。48C2DB确认RGB565打包；提示调用448770以raw70/71/72为C2颜色，C3白色。与Godot wil_pixels.hpp普通分区染色共用基础含义，但原版此路径额外非线性提亮。
+- 已写入LegacyPanel.h独立SelectionBlend::ItemHighlight/HighlightItemPixel，默认参数保持其他调用不变；仅ShowGeneralHint带图标路径使用。尚未构建测试/截图/提交，下一步应以原机器码或充分像素用例验证计算、找含C2/C3的真实资源验证，之后再提交这一完整绘制功能。
+
+### 提示图标分区染色与提亮验证完成
+- out/verify-item-icon.py通过Unicorn运行原48FA0F及其浮点转换机器码，模拟DirectDraw Lock/Unlock，C1/C2/C3各穷举65536种像素、六种染色(黑白红绿蓝混合)，共1179648结果全部符合HighlightItemPixel整数计算，out/item-icon-machine-check.txt all_match=1。机器码快照out/item-icon-code.bin由IDA38a4174b原库只读导出。
+- 原生渲染加入独立ItemHighlight模式，C1白色、C2第一染色、C3第二染色；只有提示图标启用，其余现有Blend默认参数不变。RGB颜色来自记录70/71/72。
+- 增量构建、代码diff检查通过；扫描真实Inventory.wil找到含C2的frame372，红蓝预览已检查(out/shop-red-armor-hint.png、shop-blue-armor-hint.png)。两图差异仅(335,366)-(357,399)图标区域，像素计数红图红通道、蓝图蓝通道；旧shop-item-hint回归运行。图片缩略显示不明显时以实际像素数据确认，不能仅凭肉眼判成同色。
+- 该批完成提示图标绘制，人物装备锚点、其余GUI完整逐像素/交互验收和真实服务器流程继续。

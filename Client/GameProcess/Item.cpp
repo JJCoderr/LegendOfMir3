@@ -693,7 +693,10 @@ void CItem::ShowGeneralHint(int x,int y,bool shop,bool showIcon) const
     if(box.right>ViewWidth) OffsetRect(&box,ViewWidth-box.right,0);
     DrawLegacyPanel(box,RGB(90,90,45),230,3315350);
     const RECT iconClip={0,0,ViewWidth,IconClipHeight};
-    if(iconWidth>0) DrawSelectionFrame(icons,m_stItemInfo.stStdItem.wLooks,box.left+Padding,box.top+(box.bottom-box.top-iconHeight)/2,SelectionBlend::Normal,false,0,&iconClip);
+    if(iconWidth>0) {
+        const WORD dye=WORD(((m_serverRecord[IconRedOffset]>>3)<<11) | ((m_serverRecord[IconGreenOffset]>>2)<<5) | (m_serverRecord[IconBlueOffset]>>3));
+        DrawSelectionFrame(icons,m_stItemInfo.stStdItem.wLooks,box.left+Padding,box.top+(box.bottom-box.top-iconHeight)/2,SelectionBlend::ItemHighlight,false,0,&iconClip,255,dye);
+    }
     if(SUCCEEDED(surface->GetDC(&dc))) {
         previous=SelectObject(dc,font);SetBkMode(dc,TRANSPARENT);
         int lineY=box.top+Padding;
