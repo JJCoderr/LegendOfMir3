@@ -3,7 +3,7 @@
 #include "Common/LoginMessages.h"
 #include "Common/PortraitJpeg.h"
 
-CPortraitWnd::~CPortraitWnd() { Close(); }
+CPortraitWnd::~CPortraitWnd() { Close();ApplyOwnPhoto(nullptr,0); }
 void CPortraitWnd::Close()
 {
     if (preview) preview->Release(); preview=nullptr;
@@ -144,5 +144,24 @@ bool CPortraitWnd::SendRequest()
     if(!requestPending) return false;
     _TDEFAULTMESSAGE packet;fnMakeDefMessage(&packet,1151,0,0,0,0);
     g_xClientSocket.SendPacket(&packet,requested.empty()?nullptr:(char*)requested.data(),int(requested.size()));
+    ApplyOwnPhoto(requested.data(),requested.size());
     requestPending=false;return true;
+}
+
+bool CPortraitWnd::ApplyOwnPhoto(const BYTE* bytes,size_t size)
+{
+    if(size>4096) return false;
+    IPicture* picture=size?DecodePortraitJpeg(bytes,size):nullptr;
+    if(size && !picture) return false;
+    if(ownPhoto) ownPhoto->Release();ownPhoto=picture;return true;
+}
+bool CPortraitWnd::ShowOwnPhoto()
+{
+    if(!ownPhoto) return false;
+    HDC dc;auto* surface=g_xMainWnd.GetBackBuffer();
+    if(SUCCEEDED(surface->GetDC(&dc))) {
+        LONG width,height;ownPhoto->get_Width(&width);ownPhoto->get_Height(&height);
+        ownPhoto->Render(dc,534,486,82,94,0,height,width,-height,NULL);surface->ReleaseDC(dc);
+    }
+    return true;
 }

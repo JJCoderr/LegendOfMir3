@@ -110,7 +110,7 @@ VOID CInterface::Init()
 *******************************************************************************************************************/
 VOID CInterface::Destroy()
 {
-    m_xPortraitWnd.Close();
+    m_xPortraitWnd.Close();m_xPortraitWnd.ApplyOwnPhoto(nullptr,0);
     m_targetDisplay.Destroy();
     m_minimap.Destroy();
     m_portraits.Destroy();
@@ -474,7 +474,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     if(!m_chatExpanded) {
         DrawSelectionFrame(*m_pxInterImg,1490,534,486,SelectionBlend::Normal,false);
         if(m_minimap.portraitMode) m_minimap.ShowPortrait();
-        else {
+        else if(!m_xPortraitWnd.ShowOwnPhoto()) {
             const auto& hero=g_xGameProc.m_xMyHero;
             if(hero.m_bJob<=2) DrawSelectionFrame(m_portraits,650+2*hero.m_bJob+(hero.m_stFeature.bGender!=0),534,486,SelectionBlend::Normal,false);
         }

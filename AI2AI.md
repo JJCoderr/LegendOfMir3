@@ -912,3 +912,10 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 解码缓冲4097字节，用已有ApplyPortrait的4096上限拒绝超量数据；错误身份和损坏JPEG保持当前照片，迟到回复不覆盖新目标。不把版本字段误当JPEG长度。
 - 全目标增量构建通过。target-photo-reply/cleared各七项全1，全部经fnEncodeMessage/fnEncode6BitBuf和GameProc真实接收入口，覆盖显示、错误身份、坏JPEG、清零、4096边界、4097拒绝和迟到回复；查询去重十项回归通过。
 - 已检查out/target-photo-reply.png和target-photo-cleared.png，照片为既有测试图案。原版还保存按服务器/角色区分的.fac文件和照片版本配置；当前只接当前目标显示，离开目标后的缓存、自身照片和真实TCP服务器交互仍待完成。
+
+### 自身照片即时显示与回复更新
+- 通过既有IDA会话e3ded018核对原版0x4381B0..0x4381EE：自身照片矩形为534,486到616,580（82x94），区别于目标玩家照片84x103。证据out/portrait-render-original.c。
+- PortraitWnd增加独立自身IPicture，上传1151后使用已验证JPEG即时更新，恢复默认清空；关闭选择窗口不丢失自身照片，Interface销毁/对象析构释放。1403自身身份回复同步该照片，目标照片处理仍保留。
+- 原生HUD头像区域在无头像地图时优先绘制自身照片，否则绘制标准职业头像；其上仍按现有顺序绘制目标头像与HUD边框。未把自身照片错误套用目标照片的尺寸或UserPic开关。
+- Client清理83步、全目标111步构建通过；own-photo-uploaded/default各六项全1，覆盖发送后即时更新、关闭窗口保留、坏JPEG保留、恢复默认、自身编码回复及清零；上传回环JPEG/空报文回归通过。已检查out/own-photo-uploaded.png和own-photo-default.png。
+- 本轮自身照片为内存状态；原版按服务器/角色区分的.fac缓存、版本配置、登录恢复和真实服务器存储尚待完成，仍不能宣称整个头像流程验收完成。

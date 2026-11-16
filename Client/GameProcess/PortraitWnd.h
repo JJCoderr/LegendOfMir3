@@ -4,6 +4,7 @@
 struct IPicture;
 class CPortraitWnd : public CGameWnd {
     IPicture* preview=nullptr;
+    IPicture* ownPhoto=nullptr;
     int ReadSelected(std::vector<BYTE>& bytes,IPicture** picture);
     void LoadPreview();
     bool Scroll(int kind,POINT point);
@@ -26,5 +27,8 @@ public:
     BOOL Pointer(int kind,POINT point);
     void Request(int button,DWORD tick);
     bool SendRequest();
+    bool ApplyOwnPhoto(const BYTE* bytes,size_t size);
+    bool ShowOwnPhoto();
+    bool HasOwnPhoto() const {return ownPhoto!=nullptr;}
     bool HasPreview() const { return preview!=nullptr; }
 };

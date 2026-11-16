@@ -1631,6 +1631,23 @@ public:
             if(FILE* report=fopen("target-photo-reply-check.txt","wb")) {fprintf(report,"loaded=%d wrong=%d invalid=%d cleared=%d limit=%d oversized=%d delayed=%d\n",loaded,wrong,invalid,cleared,limit,oversized,delayed);fclose(report);}
         }
 
+        if(groupPanel==110 || groupPanel==111) {
+            auto& ui=g_xGameProc.m_xInterface;auto& picker=ui.m_xPortraitWnd;
+            std::vector<BYTE> jpeg;if(FILE* file=fopen("./portrait-preview/portrait01.jpg","rb")) {fseek(file,0,SEEK_END);jpeg.resize(ftell(file));rewind(file);fread(jpeg.data(),1,jpeg.size(),file);fclose(file);}
+            picker.requested=jpeg;picker.requestPending=true;picker.SendRequest();const bool uploaded=picker.HasOwnPhoto();
+            picker.Close();const bool windowClosed=picker.HasOwnPhoto();
+            const BYTE bad[]={0xff,0xd8,0,0};const bool invalid=!picker.ApplyOwnPhoto(bad,sizeof(bad)) && picker.HasOwnPhoto();
+            picker.requested.clear();picker.requestPending=true;picker.SendRequest();const bool reset=!picker.HasOwnPhoto();
+            g_xGameProc.m_xMyHero.m_dwIdentity=77;
+            _TDEFAULTMESSAGE packet={};packet.wIdent=1403;packet.nRecog=77;packet.wParam=1;
+            char encoded[8192]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));fnEncode6BitBuf(jpeg.data(),encoded+DEFBLOCKSIZE,int(jpeg.size()),sizeof(encoded)-DEFBLOCKSIZE);
+            g_xGameProc.OnSocketMessageRecieve(encoded);const bool reply=picker.HasOwnPhoto();
+            packet.wParam=0;fnEncodeMessage(&packet,encoded,sizeof(encoded));g_xGameProc.OnSocketMessageRecieve(encoded);const bool cleared=!picker.HasOwnPhoto();
+            if(groupPanel==110) picker.ApplyOwnPhoto(jpeg.data(),jpeg.size());
+            ui.m_targetDisplay.Clear();mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==110?"own-photo-uploaded.bmp":"own-photo-default.bmp";
+            if(FILE* report=fopen("own-photo-check.txt","wb")) {fprintf(report,"uploaded=%d window_closed=%d invalid=%d reset=%d reply=%d cleared=%d\n",uploaded,windowClosed,invalid,reset,reply,cleared);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1828,6 +1845,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=own-photo-uploaded")==0 ? 110 :
+        strcmp(lpCmdLine,"--preview=own-photo-default")==0 ? 111 :
         strcmp(lpCmdLine,"--preview=target-photo-reply")==0 ? 108 :
         strcmp(lpCmdLine,"--preview=target-photo-cleared")==0 ? 109 :
         strcmp(lpCmdLine,"--preview=target-portrait-query")==0 ? 107 :

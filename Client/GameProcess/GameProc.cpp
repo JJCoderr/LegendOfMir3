@@ -2836,9 +2836,13 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 		{
             case 1403: // MIR3 player portrait reply
             {
-                if(!tdm.wParam && !tdm.wTag) m_xInterface.m_targetDisplay.ApplyPortrait(DWORD(tdm.nRecog),nullptr,0);
+                if(!tdm.wParam && !tdm.wTag) {
+                    if(DWORD(tdm.nRecog)==m_xMyHero.m_dwIdentity) m_xInterface.m_xPortraitWnd.ApplyOwnPhoto(nullptr,0);
+                    m_xInterface.m_targetDisplay.ApplyPortrait(DWORD(tdm.nRecog),nullptr,0);
+                }
                 else {
                     BYTE jpeg[4097];const int length=fnDecode6BitBuf(pszMsg+DEFBLOCKSIZE,(char*)jpeg,sizeof(jpeg));
+                    if(DWORD(tdm.nRecog)==m_xMyHero.m_dwIdentity) m_xInterface.m_xPortraitWnd.ApplyOwnPhoto(jpeg,length);
                     m_xInterface.m_targetDisplay.ApplyPortrait(DWORD(tdm.nRecog),jpeg,length);
                 }
                 break;
