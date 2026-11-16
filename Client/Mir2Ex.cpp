@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "Common/LegacyPanel.h"
 
 CMirSound			g_xSound;
 CWHDXGraphicWindow	g_xMainWnd(640, 480, _SCREEN_BPP);
@@ -19,6 +20,65 @@ INT					g_nVersion;
 
 BYTE				g_bProcState = _LOGIN_PROC;
 
+
+
+// Offline visual review uses the real interface without map or network updates.
+class CHudPreviewProcess : public CWHDefProcess {
+    POINT mouse = {0,0};
+public:
+    void OnConnectToServer() override {}
+    char* OnMessageReceive(CHAR*) override { return NULL; }
+    void Load(bool expanded) {
+        g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
+            _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
+        g_xGameProc.m_xInterface.CreateInterface(&g_xGameProc.m_xImage);
+        auto& hero = g_xGameProc.m_xMyHero;
+        hero.m_bJob = 1;
+        hero.m_stAbility.bLevel = 35;
+        hero.m_stAbility.wHP = 320; hero.m_stAbility.wMaxHP = 400;
+        hero.m_stAbility.wMP = 180; hero.m_stAbility.wMaxMP = 300;
+        hero.m_stAbility.wWeight = 40; hero.m_stAbility.wMaxWeight = 100;
+        hero.m_stAbility.dwExp = 650; hero.m_stAbility.dwMaxExp = 1000;
+        hero.m_wPosX = 330; hero.m_wPosY = 270;
+        lstrcpyA(g_xGameProc.m_szMapName,"HUD Preview");
+        for (int i=1;i<=20;++i) {
+            char line[128];
+            sprintf(line,"[%02d] Native CLIENT chat preview - scroll to review history.",i);
+            g_xGameProc.m_xInterface.MsgAdd(RGB(200,255,255),RGB(0,0,0),line);
+        }
+        if (expanded) {
+            POINT toggle = {620,473};
+            g_xGameProc.m_xInterface.OnLButtonDown(toggle);
+            g_xGameProc.m_xInterface.OnLButtonUp(toggle);
+        }
+    }
+    void Render(int elapsed) {
+        RECT canvas = {0,0,800,600};
+        DrawLegacyPanel(canvas,RGB(20,24,28),255,0,false);
+        g_xGameProc.m_xInterface.RenderInterface(elapsed,mouse);
+    }
+    LRESULT DefMainWndProc(HWND window,UINT message,WPARAM wp,LPARAM lp) override {
+        auto& ui = g_xGameProc.m_xInterface;
+        switch (message) {
+        case WM_MOUSEMOVE:
+            mouse.x = (short)LOWORD(lp); mouse.y = (short)HIWORD(lp);
+            ui.OnMouseMove(mouse); return 0;
+        case WM_LBUTTONDOWN:
+            mouse.x = (short)LOWORD(lp); mouse.y = (short)HIWORD(lp);
+            SetCapture(window); ui.OnLButtonDown(mouse); return 0;
+        case WM_LBUTTONUP:
+            mouse.x = (short)LOWORD(lp); mouse.y = (short)HIWORD(lp);
+            ui.OnLButtonUp(mouse); ReleaseCapture(); return 0;
+        case WM_MOUSEWHEEL:
+            if ((short)HIWORD(wp)>0) ui.OnScrollDown();
+            else if ((short)HIWORD(wp)<0) ui.OnScrollUp();
+            return 0;
+        case WM_CTLCOLOREDIT:
+            return g_xGameProc.DefMainWndProc(window,message,wp,lp);
+        }
+        return CWHDefProcess::DefMainWndProc(window,message,wp,lp);
+    }
+};
 
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -55,7 +115,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  开始时设定为登录流程.
 	const char* preview = "--preview=";
-	if (strncmp(lpCmdLine, preview, strlen(preview)) == 0) {
+	CHudPreviewProcess hudPreview;
+	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0;
+	if (previewHud) {
+		g_xMainWnd.m_pxDefProcess = &hudPreview;
+		hudPreview.Load(strcmp(lpCmdLine,"--preview=hud-expanded")==0);
+		g_bProcState = _GAME_PROC;
+	} else if (strncmp(lpCmdLine, preview, strlen(preview)) == 0) {
 		g_xMainWnd.m_pxDefProcess = &g_xChrSelProc;
 		g_xChrSelProc.Preview(lpCmdLine + strlen(preview));
 		g_bProcState = _CHAR_SEL_PROC;
@@ -103,7 +169,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 					g_xChrSelProc.RenderScene(dwDelay);
 					break;
 				case _GAME_PROC:
-					g_xGameProc.RenderScene(dwDelay);
+					if (previewHud) hudPreview.Render(dwDelay);
+					else g_xGameProc.RenderScene(dwDelay);
 					break;
 				}
 

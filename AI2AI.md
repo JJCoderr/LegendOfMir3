@@ -410,3 +410,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 聊天滚轮向末尾滚动限制为最后完整可见页，使用当前展开/收起行数。
 - WM_MOUSEWHEEL 从高位有符号值读取方向，零增量不滚动。
 - Client 编译链接通过；本阶段是输入修正，尚未完成 HUD 运行截图验收。
+
+### 离线 HUD 预览入口与运行阻碍
+- 新增 --preview=hud 与 --preview=hud-expanded，复用正式 CInterface 渲染、鼠标和滚轮处理，使用固定角色数值及20条聊天消息，不连接服务器或运行地图逻辑。
+- Client 编译链接通过；启动 out/mud3-01/Mir2ExHudPreview.exe 后，通过窗口可访问性确认停在 Cannot find .\Data\interfacec2.wix file。这是正式 CreateInterface 仍保留的旧素材依赖，不能通过伪造或重命名素材掩盖。
+- Computer Use 对该进程激活失败，截图只显示蓝色背景，不是有效 HUD 截图。当前 HUD 仍未完成运行验收。下一步迁移 Interfacec2 使用者（公会、队伍弹窗、通用提示），再验证两个预览布局。
