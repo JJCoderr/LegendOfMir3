@@ -230,7 +230,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xScrlBar.CreateScrlBar(m_pxInterImg, 68, _MAX_CHATLINE, 12, 84, 12);
 
 	m_xMsgBox.CreateWnd(m_pxInterImg,FALSE,0,0,0,0);
-    m_xMsgBox.SetOrigin(220,112);	// ÓÂÆø
+    m_xMsgBox.SetOrigin(220,112,false);	// ÓÂÆø
 }
 
 
@@ -1577,17 +1577,14 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
                     m_chatExpanded = !m_chatExpanded;
                     LayoutChat();
                     break;
-				case _BTN_ID_EXIT:
-					{
-						CHAR	  szMsg[MAX_PATH];
-						HINSTANCE hLib;
-						m_nIdxMsgBox = 12;
-						hLib = LoadLibrary("Ats.dll");						// Load Dll
-						LoadString(hLib,m_nIdxMsgBox,szMsg, MAX_PATH);	
-						FreeLibrary(hLib);
-						m_xMsgBox.ShowMessageBox(szMsg, MSG_BTN_YESNO, 1240);					// YES/No ?
-					}
-					break;
+                case _BTN_ID_EXIT:
+                    {
+                        static CLoginMessages captions;
+                        static const bool loaded = captions.Load("./CmList.dat");
+                        m_nIdxMsgBox = 12;
+                        m_xMsgBox.ShowMessageBox(captions.Get(2636).c_str(),MSG_BTN_YESNO,1240);
+                    }
+                    break;
 				case _BTN_ID_MAGIC:
 					if ( m_xStatusWnd.GetStatusWndType() != _TYPE_SETMAGIC )
 					{

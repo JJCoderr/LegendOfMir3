@@ -464,3 +464,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 原生20/21/22按钮读取CmList1070/1071/1073并直接调用SendSay，匹配Godot send_chat_command，不经过输入框本地命令处理。
 - 依据参考ChatReceptionButtons，点击仅从外部接收状态推导1338/1340/1342覆盖层；不在点击时切换rejected状态，也不伪造服务器确认。增加三个接收状态槽，初始化false；服务器options更新接入仍待协议阶段完成。
 - Client全量77步编译链接通过，尚未验证服务端接收或状态回包；GUI整体仍未完成。
+
+### 退出确认框中文文案与截图
+- 移除HUD退出按钮对Ats.dll字符串12的加载，改用CmList2636，匹配Godot请求109的退出提示。
+- CLoginNotice增加确认文本宽度选择；游戏退出框在220,112，正文采用相对23,84,308,95；登录/选角保留原紧凑确认布局。
+- 增加 --preview=hud-exit，通过实际退出按钮按下/释放打开确认框。Client全量77步构建通过，已检查 out/hud-exit.png，中文提示及YES/NO位置可见；退出限制、确认退出及注销协议仍需单独联调。

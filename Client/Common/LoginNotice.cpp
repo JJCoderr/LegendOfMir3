@@ -61,7 +61,7 @@ BOOL CLoginNotice::RenderMessageBox(INT) {
         Draw(m_pressed == CLICK_NO ? 1246 : 1245,374,298);
     } else Draw(m_pressed == CLICK_OK ? 1244 : 1243,277,298);
     // Match native_text.cpp dialog layout: measured wrapping and vertical centering.
-    const bool confirmation = (m_type & 127) == MSG_BTN_YESNO;
+    const bool confirmation = (m_type & 127) == MSG_BTN_YESNO && m_compactConfirmation;
     RECT rect = confirmation ? RECT{183,194,461,269} : RECT{163,194,471,289};
     OffsetRect(&rect,m_offset.x,m_offset.y);
     auto* surface = g_xMainWnd.GetBackBuffer();

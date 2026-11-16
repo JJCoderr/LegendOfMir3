@@ -29,8 +29,9 @@ class CHudPreviewProcess : public CWHDefProcess {
 public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
-    void Load(bool expanded, int chatMode) {
+    void Load(bool expanded, int chatMode, bool exitDialog) {
         capturePath = chatMode == 1 ? "hud-group.bmp" : chatMode == 2 ? "hud-guild.bmp" : expanded ? "hud-expanded.bmp" : "hud-collapsed.bmp";
+        if (exitDialog) capturePath = "hud-exit.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
         g_xGameProc.m_xInterface.CreateInterface(&g_xGameProc.m_xImage);
@@ -52,6 +53,11 @@ public:
             POINT toggle = {620,473};
             g_xGameProc.m_xInterface.OnLButtonDown(toggle);
             g_xGameProc.m_xInterface.OnLButtonUp(toggle);
+        }
+        if (exitDialog) {
+            POINT button = {10,542};
+            g_xGameProc.m_xInterface.OnLButtonDown(button);
+            g_xGameProc.m_xInterface.OnLButtonUp(button);
         }
         if (chatMode) {
             auto& ui = g_xGameProc.m_xInterface;
@@ -166,10 +172,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
 	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
-	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0;
+	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
+	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit;
 	if (previewHud) {
 		g_xMainWnd.m_pxDefProcess = &hudPreview;
-		hudPreview.Load(strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0,previewChatMode);
+		hudPreview.Load(strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0,previewChatMode,previewExit);
 		g_bProcState = _GAME_PROC;
 	} else if (strncmp(lpCmdLine, preview, strlen(preview)) == 0) {
 		g_xMainWnd.m_pxDefProcess = &g_xChrSelProc;
