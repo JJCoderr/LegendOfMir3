@@ -118,6 +118,7 @@ VOID CInterface::Destroy()
 	m_xStatusWnd.Destroy();
     m_xSkillWnd.Destroy();
     m_xQuestWnd.Destroy();
+    m_xGuildEditor.Destroy();
     m_xQuickWnd.Destroy();
     m_xHorseWnd.Destroy();
 	m_xGuildWnd.Destroy();
@@ -187,6 +188,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 
 	m_xOptionWnd.CreateOptionWnd(_WND_ID_OPTION, m_pxInterImg, 1290, 145, 30, 510, 468, TRUE);
 	m_xQuestWnd.CreateQuestWnd(_WND_ID_QUEST, m_pxInterImg, 1420, 0, 0, 340, 440, TRUE);
+    m_xGuildEditor.CreateGameWnd(-1,m_pxInterImg,1326,TRUE,107,110,584,252);
     m_xQuickWnd.CreateGameWnd(_WND_ID_QUICK,m_pxInterImg,1210,TRUE,73,413,280,48);
 	m_xHorseWnd.CreateHorseWnd(_WND_ID_HORSE, m_pxInterImg, 1400, 0, 0, 276, 322, TRUE);
 
@@ -521,6 +523,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 		nY = ptMousePos.y - _INVENTORY_CELL_HEIGHT/2;
 		m_stCommonItem.xItem.DrawItem(nX, nY);
 	}
+    m_xGuildEditor.Show();
 	m_xMsgBox.RenderMessageBox(0);
 
 	ShowMagicKey();
@@ -1420,6 +1423,7 @@ BOOL CInterface::IsTopWindow(INT nID)
 *******************************************************************************************************************/
 BOOL CInterface::OnLButtonDown(POINT ptMouse)
 {
+    if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(0,ptMouse); return TRUE; }
     if (!m_xMsgBox.IsActive() && PtInRect(&m_xSkillWnd.m_keyMenu,ptMouse) && GetWindowInMousePos(ptMouse)==_WND_ID_SKILL) {
         WindowFocusChangedAndSetReadyMove(_WND_ID_SKILL,ptMouse); m_bMoveFocusedWnd=FALSE;
         m_xSkillWnd.OnLButtonDown(ptMouse); return TRUE;
@@ -1651,6 +1655,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
+    if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(2,ptMouse); return TRUE; }
     if (m_xExchangeWnd.captured>=0 || m_xExchangeWnd.confirmPressed || m_xExchangeWnd.headerPressed) { m_bMoveFocusedWnd=FALSE; m_xExchangeWnd.OnLButtonUp(ptMouse); return TRUE; }
     if (m_xQuickWnd.closePressed || m_xQuickWnd.backgroundPressed) {
         m_bMoveFocusedWnd=FALSE;
@@ -1829,6 +1834,7 @@ case _WND_ID_STATUS:		if ( m_xStatusWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )	
 *******************************************************************************************************************/
 BOOL CInterface::OnMouseMove(POINT ptMouse)
 {
+    if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(1,ptMouse); return TRUE; }
     if (m_xExchangeWnd.captured>=0) { m_xExchangeWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xQuestWnd.scrollCaptured) { m_xQuestWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xSkillWnd.m_skillScrollCaptured) { m_xSkillWnd.OnMouseMove(ptMouse); return TRUE; }
@@ -1912,6 +1918,7 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 
 BOOL CInterface::OnScrollDown()
 {
+    if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
     if (IsTopWindow(_WND_ID_QUEST)) { m_xQuestWnd.OnScrollDown(); return TRUE; }
     if (IsTopWindow(_WND_ID_GUILD)) { m_xGuildWnd.OnScrollDown(); return TRUE; }
@@ -1947,6 +1954,7 @@ BOOL CInterface::OnScrollDown()
 
 BOOL CInterface::OnScrollUp()
 {
+    if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
     if (IsTopWindow(_WND_ID_QUEST)) { m_xQuestWnd.OnScrollUp(); return TRUE; }
     if (IsTopWindow(_WND_ID_GUILD)) { m_xGuildWnd.OnScrollUp(); return TRUE; }
@@ -1981,6 +1989,7 @@ BOOL CInterface::OnScrollUp()
 
 BOOL CInterface::OnLButtonDoubleClick(POINT ptMouse)
 {
+    if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
     if (GetWindowInMousePos(ptMouse)==_WND_ID_SKILL && m_xSkillWnd.OpenKeyMenu(ptMouse)) {
         WindowFocusChangedAndSetReadyMove(_WND_ID_SKILL,ptMouse); m_bMoveFocusedWnd=FALSE;
@@ -1994,6 +2003,7 @@ BOOL CInterface::OnLButtonDoubleClick(POINT ptMouse)
 
 BOOL CInterface::OnKeyUp(WPARAM wParam, LPARAM lParam)
 {
+    if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
 	if ( m_xInventoryWnd.OnKeyUp(&m_stCommonItem, wParam, lParam) )
 	{
@@ -2005,6 +2015,7 @@ BOOL CInterface::OnKeyUp(WPARAM wParam, LPARAM lParam)
 
 BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
 {
+    if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) {
         if (!(lParam & (1L << 30))) FinishNotice(m_xMsgBox.OnKeyDown(wParam),false);
         return TRUE;

@@ -2663,13 +2663,17 @@ VOID CGameProcess::RenderMapTileGrid()
 
 LRESULT CGameProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    if (m_xInterface.m_xMsgBox.IsActive() &&
+    if ((m_xInterface.m_xMsgBox.IsActive() || m_xInterface.m_xGuildEditor.m_bActive) &&
         (uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP || uMsg == WM_SYSKEYDOWN || uMsg == WM_SYSKEYUP))
         return 0L;
 	switch ( uMsg )
 	{
+        case WM_COMMAND:
+            if ((HWND)lParam==m_xInterface.m_xGuildEditor.edit && HIWORD(wParam)==EN_CHANGE) { m_xInterface.m_xGuildEditor.Changed(); return 0; }
+            break;
 		case WM_CTLCOLOREDIT:
 		{
+            if ((HWND)lParam==m_xInterface.m_xGuildEditor.edit) return (LRESULT)m_xInterface.m_xGuildEditor.EditColor((HDC)wParam);
 			if ((HWND)lParam == g_xChatEditBox.GetSafehWnd())
 			{
                 SetBkColor((HDC)wParam,RGB(0,0,0));

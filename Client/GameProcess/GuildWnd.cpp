@@ -37,6 +37,7 @@ VOID CGuildWnd::Init()
     m_scrollCaptured=false; m_scrollTick=0;
     m_name.clear(); m_manager=false;
     for (int i=0;i<3;++i) m_pages[i].clear();
+    for (auto& page:m_editable) page.clear();
 }
 
 VOID CGuildWnd::Destroy()
@@ -119,6 +120,7 @@ BOOL CGuildWnd::OnLButtonUp(POINT point)
     g_xSound.PlayLobbyEffect("105.wav");
     if (hit>=1 && hit<=3) { m_tab=hit-1; m_first=0; }
     if (hit>=4 && hit<=8 && !m_manager) g_xGameProc.m_xInterface.ShowNotice(4000);
+    else if (hit==4 || hit==7) g_xGameProc.m_xInterface.m_xGuildEditor.Open(hit==4);
     else if (hit==5 || hit==8) g_xGameProc.m_xInterface.OpenNameDialog(hit==5?4:5);
     return hit==0;
 }

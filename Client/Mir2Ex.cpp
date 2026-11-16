@@ -39,6 +39,7 @@ public:
         if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
         if (groupPanel==30 || groupPanel==31) capturePath=groupPanel==30?"mount-panel.bmp":"mount-hint.bmp";
         if (groupPanel>=32 && groupPanel<=36) capturePath=groupPanel==36?"trade-return.bmp":groupPanel==35?"trade-gold.bmp":groupPanel==32?"trade-empty.bmp":groupPanel==33?"trade-list.bmp":"trade-confirmed.bmp";
+        if (groupPanel==40 || groupPanel==41) capturePath=groupPanel==40?"guild-notice-editor.bmp":"guild-members-editor.bmp";
         if (groupPanel==39) capturePath="quick-binding.bmp";
         if (groupPanel==37 || groupPanel==38) capturePath=groupPanel==37?"quick-empty.bmp":"quick-items.bmp";
         if (groupPanel==11) capturePath="options-panel.bmp";
@@ -515,6 +516,44 @@ public:
                     opened,repeat,hidden,buttons,stray,onFoot,riding,hint,pressedHint,released,covered,moved,closed); fclose(report);
             }
         }
+        if (groupPanel==40 || groupPanel==41) {
+            auto& ui=g_xGameProc.m_xInterface; auto& guild=ui.m_xGuildWnd; auto& editor=ui.m_xGuildEditor;
+            guild.m_name="GuildPreview"; ui.WindowActivate(_WND_ID_GUILD);
+            const POINT launch={groupPanel==40?395:545,412};
+            ui.OnLButtonDown(launch); ui.OnLButtonUp(launch); const bool denied=!editor.m_bActive && ui.m_xMsgBox.IsActive(); ui.m_xMsgBox.HideMessageBox();
+            editor.Open(false); const bool emptyDenied=!editor.m_bActive && ui.m_xMsgBox.IsActive(); ui.m_xMsgBox.HideMessageBox();
+            guild.m_manager=true; guild.m_pages[1]={"会长：测试角色","成员：原生客户端"};
+            guild.m_editable[0]={"欢迎加入行会！","请遵守行会约定，互相帮助。","","今晚八点集合，一起挑战新的冒险。"};
+            guild.m_editable[1]={"#1","会长","测试角色","#2","成员","原生客户端"};
+            ui.OnLButtonDown(launch); ui.OnLButtonUp(launch);
+            const bool opened=editor.m_bActive && IsWindowVisible(editor.edit) && editor.announcement==(groupPanel==40);
+            char initial[4001]={}; GetWindowTextA(editor.edit,initial,sizeof(initial));
+            const bool multiline=strstr(initial,"\r\n")!=NULL;
+            ui.OnKeyDown('Z',0); const int first=guild.m_first; ui.OnScrollUp();
+            const bool modal=!ui.m_xQuickWnd.m_bActive && guild.m_first==first;
+            ui.OnLButtonDown(POINT{115,115}); ui.OnMouseMove(POINT{125,105}); ui.OnLButtonUp(POINT{125,105});
+            const bool moved=editor.m_rcWnd.left==117 && editor.m_rcWnd.top==100 && !editor.dragging;
+            editor.m_rcWnd={107,110,691,362}; editor.Open(groupPanel==40);
+            const POINT close={660,326}; ui.OnLButtonUp(close); const bool stray=editor.m_bActive;
+            ui.OnLButtonDown(close); ui.OnLButtonUp(POINT{780,580}); const bool outside=editor.m_bActive && editor.pressed==-1;
+            ui.OnLButtonDown(close); ui.OnLButtonUp(close); const bool cancelled=!editor.m_bActive && !IsWindowVisible(editor.edit);
+            editor.Open(groupPanel==40);
+            const std::string huge(4100,'A'); SetWindowTextA(editor.edit,huge.c_str()); editor.Changed();
+            const bool limit=GetWindowTextLengthA(editor.edit)==4000;
+            const bool dbcs=CGuildEditor::AcceptEdit("",std::string(3999,'A')+"中")==std::string(3999,'A');
+            const std::string chinese=std::string(3999,'A')+"中"; SetWindowTextA(editor.edit,""); editor.Changed(); SendMessage(editor.edit,EM_SETSEL,0,-1); SendMessageA(editor.edit,EM_REPLACESEL,FALSE,(LPARAM)chinese.c_str());
+            const bool nativeDbcs=GetWindowTextLengthA(editor.edit)==3999;
+            SetWindowTextA(editor.edit,"A"); editor.Changed(); SendMessage(editor.edit,EM_SETSEL,1,1); SendMessage(editor.edit,WM_CHAR,VK_RETURN,0);
+            char entered[8]={}; GetWindowTextA(editor.edit,entered,sizeof(entered)); const bool enter=!strcmp(entered,"A\r\n");
+            const bool payload=CGuildEditor::Payload("a\r\n\r\nb\r\n")=="a\r \rb\r" && CGuildEditor::Payload(std::string(4100,'A')).size()==3999;
+            SetWindowTextA(editor.edit,"Preview\r\n"); ui.OnLButtonDown(POINT{573,127}); ui.OnLButtonUp(POINT{573,127});
+            const bool saved=!editor.m_bActive && !IsWindowVisible(editor.edit);
+            editor.Open(groupPanel==40);
+            if (FILE* report=fopen("guild-editor-check.txt","wb")) {
+                fprintf(report,"denied=%d empty_members=%d opened=%d multiline=%d modal=%d moved=%d stray=%d outside_release=%d cancelled=%d limit=%d dbcs=%d native_dbcs=%d enter=%d payload=%d saved=%d\n",
+                    denied,emptyDenied,opened,multiline,modal,moved,stray,outside,cancelled,limit,dbcs,nativeDbcs,enter,payload,saved); fclose(report);
+            }
+        }
         if (groupPanel==39) {
             auto& ui=g_xGameProc.m_xInterface; auto& bag=ui.m_xInventoryWnd; auto& quick=ui.m_xQuickWnd; auto& held=ui.m_stCommonItem;
             ui.WindowActivate(_WND_ID_INVENTORY); ui.OnKeyDown('Z',0);
@@ -824,8 +863,8 @@ public:
                 info.biSize=sizeof(info); info.biWidth=surface.dwWidth; info.biHeight=surface.dwHeight;
                 info.biPlanes=1; info.biBitCount=24; info.biSizeImage=(DWORD)pixels.size();
                 // Capture the real native edit control, then map its display pixels to the 800x600 review image.
-                const HWND edit = g_xChatEditBox.GetSafehWnd();
-                if (IsWindowVisible(edit)) {
+                const HWND edits[]={g_xChatEditBox.GetSafehWnd(),g_xGameProc.m_xInterface.m_xGuildEditor.edit};
+                for (HWND edit:edits) if (IsWindowVisible(edit)) {
                     RECT editRect; GetWindowRect(edit,&editRect);
                     const RECT& display = g_xMainWnd.m_rcWindow;
                     const int width = editRect.right-editRect.left, height = editRect.bottom-editRect.top;
@@ -879,6 +918,7 @@ public:
             if ((short)HIWORD(wp)>0) ui.OnScrollDown();
             else if ((short)HIWORD(wp)<0) ui.OnScrollUp();
             return 0;
+        case WM_COMMAND:
         case WM_CTLCOLOREDIT:
             return g_xGameProc.DefMainWndProc(window,message,wp,lp);
         }
@@ -962,7 +1002,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=trade-return")==0 ? 36 :
         strcmp(lpCmdLine,"--preview=quick-empty")==0 ? 37 :
         strcmp(lpCmdLine,"--preview=quick-items")==0 ? 38 :
-        strcmp(lpCmdLine,"--preview=quick-binding")==0 ? 39 : 0;
+        strcmp(lpCmdLine,"--preview=quick-binding")==0 ? 39 :
+        strcmp(lpCmdLine,"--preview=guild-notice-editor")==0 ? 40 :
+        strcmp(lpCmdLine,"--preview=guild-members-editor")==0 ? 41 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {
