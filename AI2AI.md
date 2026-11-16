@@ -624,3 +624,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 旧技能消息和Actor快捷键查找改引用独立技能窗口，技能数组生命周期统一delete[]；保持旧CLIENTMAGICRCD线格式，尚未完成MIR3完整技能协议适配，不声称真实服务端施法验证。
 - Client全量78步及最终全部构建目标通过。status-and-skills与skills-scrolled原生预览21项全部为1，新增验证双窗命中、独立开关/关闭、拖动位置恢复、页签置顶不拖动；状态页5项和快捷键3项回归通过。已检查out/status-and-skills.png与更新后的out/skills-scrolled.png。
 - 待办：参考12快捷键及快捷键选择面板、技能提示、完整服务器技能消息和施法；另外前阶段发现的背包源区域裁剪偏移仍待修正。
+
+### 背包多格物品边缘裁剪修正
+- CItem裁剪路径改为复用带屏幕裁剪的DrawSelectionFrame，保留物品原始屏幕位置，不再把源区域偏移重复加到目标坐标。普通未裁剪调用保持原路径。
+- 新增inventory-clip-top/bottom原生预览：真实Inventory图标75（68x66）分别位于首行滚动一行后、锚点44跨越底边。截图out/inventory-clip-top.png、out/inventory-clip-bottom.png已检查，内容局限于可见网格。
+- 在800x600实际DirectDraw缓冲上比较CItem完整绘制与四种裁剪绘制：裁剪内逐像素匹配完整图像，裁剪外匹配原背景，并要求可见非背景像素。修复前left=0/top=0，修复后left/right/top/bottom全1；原背包布局、拾取移动、保存恢复、放置高亮和金币检查均通过，全部构建目标通过。此检查覆盖所选真实图标，不等同于全资源扫描。

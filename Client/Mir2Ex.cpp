@@ -37,6 +37,7 @@ public:
         if (groupPanel>=20 && groupPanel<=22) capturePath=groupPanel==22?"status-and-skills.bmp":groupPanel==20?"skills-panel.bmp":"skills-scrolled.bmp";
         if (groupPanel==11) capturePath="options-panel.bmp";
         if (groupPanel>=15 && groupPanel<=19) capturePath=groupPanel==19?"status-equipment.bmp":groupPanel==18?"status-identity.bmp":groupPanel==16?"status-elements.bmp":groupPanel==17?"status-tooltip.bmp":"status-panel.bmp";
+        if (groupPanel==23 || groupPanel==24) capturePath=groupPanel==23?"inventory-clip-top.bmp":"inventory-clip-bottom.bmp";
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
@@ -130,7 +131,7 @@ public:
             }
 
         }
-        if (groupPanel>=12 && groupPanel<=14) {
+        if ((groupPanel>=12 && groupPanel<=14) || groupPanel==23 || groupPanel==24) {
             auto& ui=g_xGameProc.m_xInterface; auto& bag=ui.m_xInventoryWnd;
             ui.WindowActivate(_WND_ID_INVENTORY);
             const bool grid=bag.SlotAt(POINT{536,61})==0 && bag.SlotAt(POINT{762,363})==47 &&
@@ -213,12 +214,60 @@ public:
                 const auto item=bag.m_stInventoryItem[id].xItem;
                 green=bag.PreviewPlacement(item,POINT{650,300},visible,fits) && fits;
                 red=bag.PreviewPlacement(item,POINT{590,80},visible,fits) && !fits;
-                if (groupPanel>=13) {
+                if (groupPanel==13 || groupPanel==14) {
                     bag.SetCommonFromInven(id,&ui.m_stCommonItem);
                     mouse=groupPanel==13?POINT{650,300}:POINT{590,80};
                     g_xGameProc.m_ptMousePos=mouse;
                 }
                 break;
+            }
+            if (groupPanel==23 || groupPanel==24) {
+                CLIENTITEMRCD record={}; record.stStdItem.wLooks=largeIcon; record.nMakeIndex=2000+largeIcon;
+                lstrcpyA(record.stStdItem.szName,"ClipPreview"); CItem item; item.SetItem(record,0);
+                icons.NewSetIndex(largeIcon);
+                const int width=icons.m_lpstNewCurrWilImageInfo->shWidth,height=icons.m_lpstNewCurrWilImageInfo->shHeight;
+                const RECT canvas={0,0,800,600};
+                const auto pixels=[]() {
+                    std::vector<WORD> result; auto* buffer=g_xMainWnd.GetBackBuffer();
+                    DDSURFACEDESC2 desc={}; desc.dwSize=sizeof(desc);
+                    if (SUCCEEDED(buffer->Lock(NULL,&desc,DDLOCK_WAIT|DDLOCK_READONLY,NULL))) {
+                        result.resize(800*600);
+                        for (int row=0;row<600;++row) memcpy(result.data()+row*800,(BYTE*)desc.lpSurface+row*desc.lPitch,800*sizeof(WORD));
+                        buffer->Unlock(NULL);
+                    }
+                    return result;
+                };
+                DrawLegacyPanel(canvas,RGB(20,24,28),255,0,false); const auto background=pixels();
+                item.DrawItem(200,200); const auto full=pixels();
+                const int left=219-width/2,top=219-height/2;
+                const RECT clips[4]={{left+width/2,top,left+width,top+height},{left,top,left+width/2,top+height},
+                    {left,top+height/2,left+width,top+height},{left,top,left+width,top+height/2}};
+                bool checks[4]={};
+                for (int edge=0;edge<4;++edge) {
+                    DrawLegacyPanel(canvas,RGB(20,24,28),255,0,false);
+                    item.DrawItem(200,200,_ITEM_TYPE_INVENTORY,&clips[edge]); const auto cropped=pixels();
+                    int different=0,visible=0;
+                    if (background.size()==800*600 && full.size()==background.size() && cropped.size()==background.size()) {
+                        for (int row=0;row<600;++row) for (int col=0;col<800;++col) {
+                            const int index=row*800+col; const POINT point={col,row};
+                            const bool inside=PtInRect(&clips[edge],point)!=FALSE;
+                            const WORD expected=inside?full[index]:background[index];
+                            different+=cropped[index]!=expected;
+                            visible+=inside && full[index]!=background[index];
+                        }
+                        checks[edge]=different==0 && visible>0;
+                    }
+                }
+                bag.DeleteAllInvenItem(); bag.AddInvenItem(item,0,TRUE);
+                if (groupPanel==23) bag.OnScrollUp();
+                else {
+                    COMMONITEMSET moving={}; bag.SetCommonFromInven(0,&moving);
+                    POINT drop={650,360}; bag.SetInvenFromCommon(0,&moving,&drop);
+                }
+                if (FILE* report=fopen("inventory-clip-check.txt","wb")) {
+                    fprintf(report,"left=%d right=%d top=%d bottom=%d icon=%d width=%d height=%d row=%d anchor=%d\n",
+                        checks[0],checks[1],checks[2],checks[3],largeIcon,width,height,bag.ScrollRow(),bag.ItemAnchor(0)); fclose(report);
+                }
             }
             POINT close={770,435};
             const bool stray=!bag.OnLButtonUp(&held,close);
@@ -566,7 +615,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=status-equipment")==0 ? 19 :
         strcmp(lpCmdLine,"--preview=skills-panel")==0 ? 20 :
         strcmp(lpCmdLine,"--preview=skills-scrolled")==0 ? 21 :
-        strcmp(lpCmdLine,"--preview=status-and-skills")==0 ? 22 : 0;
+        strcmp(lpCmdLine,"--preview=status-and-skills")==0 ? 22 :
+        strcmp(lpCmdLine,"--preview=inventory-clip-top")==0 ? 23 :
+        strcmp(lpCmdLine,"--preview=inventory-clip-bottom")==0 ? 24 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

@@ -11,6 +11,7 @@
 
 
 #include "StdAfx.h"
+#include "Common/LegacyPanel.h"
 
 
 CItem::CItem()
@@ -127,8 +128,8 @@ BOOL CItem::DrawItem(INT nX, INT nY, BYTE bItemType, const RECT* clip)
         const auto& image=*pxItemImg->m_lpstNewCurrWilImageInfo;
         RECT bounds={nX,nY,nX+image.shWidth,nY+image.shHeight},visible;
         if (!IntersectRect(&visible,&bounds,clip)) return TRUE;
-        RECT source={visible.left-nX,visible.top-nY,visible.right-nX,visible.bottom-nY};
-        return g_xMainWnd.DrawWithImageForComp(visible.left,visible.top,source,(WORD*)pxItemImg->m_pbCurrImage);
+        DrawSelectionFrame(*pxItemImg,m_stItemInfo.stStdItem.wLooks,nX,nY,SelectionBlend::Normal,false,0,&visible);
+        return TRUE;
     }
 	if ( bDrawItem )
 	{
