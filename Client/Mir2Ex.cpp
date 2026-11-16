@@ -1701,6 +1701,20 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel==119) {
+            auto& ui=g_xGameProc.m_xInterface;
+            ui.m_stCommonItem.bSetted=TRUE;ui.m_stCommonItem.bIsBeltItem=FALSE;
+            ui.m_stCommonItem.xItem.m_stItemInfo.stStdItem.bStdMode=1;
+            _TDEFAULTMESSAGE packet={};packet.wIdent=SM_EAT_OK;
+            char encoded[64]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));
+            g_xGameProc.OnSocketMessageRecieve(encoded);
+            const bool consumed=!ui.m_stCommonItem.bSetted;
+            g_xGameProc.OnSocketMessageRecieve(encoded);
+            ui.WindowActivate(_WND_ID_INVENTORY);
+            capturePath="item-use-confirmed.bmp";
+            if(FILE* report=fopen("item-use-check.txt","wb")) {fprintf(report,"consumed=%d duplicate_empty=%d\n",consumed,!ui.m_stCommonItem.bSetted);fclose(report);}
+        }
+
         if(groupPanel==118) {
             hero.m_dwIdentity=123;hero.m_stFeature.bGender=0;hero.m_bCurrMtn=_MT_STAND;
             hero.m_bIsMon=FALSE;hero.m_bIsDead=FALSE;hero.m_dwLastStruckTime=0;hero.m_dwPortraitVersion=77;
@@ -1952,6 +1966,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=item-use-confirmed")==0 ? 119 :
         strcmp(lpCmdLine,"--preview=human-hit-server")==0 ? 118 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-zero")==0 ? 117 :
         strcmp(lpCmdLine,"--preview=portrait-chinese-filename")==0 ? 115 :

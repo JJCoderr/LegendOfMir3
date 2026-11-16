@@ -26,6 +26,7 @@ public:
     void PlayLobbyEffect(const char* file);
     static int ItemSoundSample(int mode, BYTE record31, const char* name);
     void PlayItemEffect(int mode, BYTE record31, const char* name);
+    void PlayUseItemEffect(BYTE mode);
     void SetInterfaceVolume(bool music, int level);
     bool m_reversePan = false;
     void PlayRoleVoice(bool creation, int profession, int gender);

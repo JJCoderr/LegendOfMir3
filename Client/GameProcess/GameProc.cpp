@@ -3119,6 +3119,8 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			}
 			case SM_EAT_OK:
 			{
+                if (m_xInterface.m_stCommonItem.bSetted)
+                    g_xSound.PlayUseItemEffect(m_xInterface.m_stCommonItem.xItem.m_stItemInfo.stStdItem.bStdMode);
 				m_xInterface.m_xInventoryWnd.AddNewBeltItem(&m_xInterface.m_stCommonItem);
 				ZeroMemory(&m_xInterface.m_stCommonItem, sizeof(COMMONITEMSET));
 				break;

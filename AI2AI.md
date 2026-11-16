@@ -965,3 +965,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 对照Godot process_local_actor_message及42EC70路径，1309不再进入旧500ms丢弃分支；31在节流期仍更新HUD和Actor血量，非致死才省略入队，致死保留入队。远程1309补入攻击来源外形查找。
 - human-hit-server增加重复1309、节流31血量同步及致死31保留三项，连同原八项共11项全1。全目标增量构建通过，diff --check通过。截图out/human-hit-repeat.png。
 - 本次修复消息丢失，不代表完整特殊受击已对齐：hit_variant驱动的特效、计时、1309复制普通受击、折叠计数及死亡动作仍待统一迁移。
+
+### 使用物品成功回复音效
+- 对照Godot apply_use_reply，SM_EAT_OK在清理m_stCommonItem之前调用原生PlayUseItemEffect：类型0播放SoundList样本108，类型1/2播放107，其余不播放；失败回复不调用，无待用物品的重复回复不播放。沿用PlayLobbyEffect的音效开关和音量。
+- Client清理83步、全目标111步构建通过；--preview=item-use-confirmed走实际成功回复处理，consumed和duplicate_empty两项通过。107/108资源均可读，为44.1kHz单声道PCM，时长1.503/1.043秒；未进行回环录音或听感验收。
+- 已检查out/item-use-confirmed.png（既有背包界面）。完整物品堆叠回复、快捷栏数量、使用提示以及真实服务器联调尚未完成；本次不宣称整个使用物品流程完成。

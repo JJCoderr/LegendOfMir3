@@ -377,6 +377,13 @@ void CMirSound::PlayItemEffect(int mode,BYTE record31,const char* name)
     if (file) PlayLobbyEffect(file);
 }
 
+void CMirSound::PlayUseItemEffect(BYTE mode)
+{
+    if (mode>2) return;
+    const char* file=SeekFileName(mode==0?108:107);
+    if (file) PlayLobbyEffect(file);
+}
+
 void CMirSound::PlayLobbyEffect(const char* file)
 {
     if (!m_bPlay || !m_pSound->GetDS()) return;
