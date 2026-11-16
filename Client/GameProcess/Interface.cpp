@@ -1722,7 +1722,7 @@ BOOL CInterface::OnScrollUp()
 	{
 		if ( !m_xChatPopWnd.m_bActive )
 		{
-			if ( m_nFstLine < (m_xChat.GetCounter()-1) )
+			if ( m_nFstLine < max(0, m_xChat.GetCounter()-ChatRows()) )
 			{
 				m_nFstLine++;
 			}

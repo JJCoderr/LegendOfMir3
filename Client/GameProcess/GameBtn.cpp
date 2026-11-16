@@ -259,6 +259,7 @@ BOOL CScrlBar::OnLButtonDown(POINT ptMouse)
 	if ( PtInRect(&m_rcScrlBtnRgn, ptMouse)  )
 	{
 		m_bGrapsed = TRUE;
+		return TRUE;
 	}
 	else if ( PtInRect(&m_rcScrlRgn, ptMouse) )
 	{

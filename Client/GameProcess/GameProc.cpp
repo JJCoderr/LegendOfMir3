@@ -1745,10 +1745,10 @@ LRESULT CGameProcess::OnLButtonDoubleClick(WPARAM wParam, LPARAM lParam)
 LRESULT CGameProcess::OnWheel(WPARAM wParam, LPARAM lParam)
 {
 	INT nDelta;
-	nDelta = ( (INT)wParam < 0 ) ? -1 : 1;
+	nDelta = (short)HIWORD(wParam);
 	if ( nDelta > 0 )
 		m_xInterface.OnScrollDown();
-	else
+	else if ( nDelta < 0 )
 		m_xInterface.OnScrollUp();
 
 	return 0L;
