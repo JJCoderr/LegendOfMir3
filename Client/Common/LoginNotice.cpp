@@ -58,18 +58,33 @@ BOOL CLoginNotice::RenderMessageBox(INT) {
         Draw(m_pressed == CLICK_YES ? 1242 : 1241,181,298);
         Draw(m_pressed == CLICK_NO ? 1246 : 1245,374,298);
     } else Draw(m_pressed == CLICK_OK ? 1244 : 1243,277,298);
-    const char* next = m_text;
-    for (int row = 0; row < 5 && *next; ++row) {
-        char line[51] = {};
-        int length = 0;
-        while (*next && *next != '\n') {
-            const int bytes = IsDBCSLeadByteEx(CP_ACP,(BYTE)*next) && next[1] ? 2 : 1;
-            if (length + bytes > 50) break;
-            memcpy(line + length,next,bytes); length += bytes; next += bytes;
-        }
-        if (*next == '\n') ++next;
-        const int left = (m_type & 127) == MSG_BTN_YESNO ? 183 : 163;
-        g_xMainWnd.PutsHan(NULL,left,194 + row * 18,0xc8faff,0,line);
+    // Match native_text.cpp dialog layout: measured wrapping and vertical centering.
+    const bool confirmation = (m_type & 127) == MSG_BTN_YESNO;
+    RECT rect = confirmation ? RECT{183,194,461,269} : RECT{163,194,471,289};
+    auto* surface = g_xMainWnd.GetBackBuffer();
+    HDC dc;
+    if (FAILED(surface->GetDC(&dc))) return FALSE;
+    const char songti[] = {char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font = g_xMainWnd.CreateGameFont(songti,9,0,FW_NORMAL);
+    HGDIOBJ previous = SelectObject(dc,font);
+    SetBkMode(dc,TRANSPARENT);
+    SetTextColor(dc,0xc8faff);
+    SIZE extent = {};
+    GetTextExtentPoint32A(dc,m_text,(int)strlen(m_text),&extent);
+    const int saved = SaveDC(dc);
+    IntersectClipRect(dc,rect.left,rect.top,rect.right,rect.bottom);
+    if (extent.cx >= rect.right - rect.left) {
+        RECT measured = rect;
+        const int height = DrawTextA(dc,m_text,-1,&measured,DT_CALCRECT | DT_WORDBREAK);
+        rect.top += (rect.bottom - rect.top - height) / 2;
+        rect.bottom = rect.top + height;
+        DrawTextA(dc,m_text,-1,&rect,DT_WORDBREAK);
+    } else {
+        DrawTextA(dc,m_text,-1,&rect,DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     }
+    RestoreDC(dc,saved);
+    SelectObject(dc,previous);
+    DeleteObject(font);
+    surface->ReleaseDC(dc);
     return TRUE;
 }
