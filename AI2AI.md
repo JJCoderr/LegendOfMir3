@@ -437,3 +437,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - ShowChatList 显式选用与 ReflowChat 相同的宋体9磅字体，不再依赖全局默认字体；一次取得后台DC绘制所有可见行。
 - 按 Godot chat_lines：背景色0透明，非0仅填充实际文字测量区域；前景颜色保持消息值，裁剪到当前聊天区域，行距15。
 - Client 编译链接通过；新预览进程14380正常响应，已检查 out/hud-font-expanded.png 实际渲染截图。整体HUD及频道交互仍未完成。
+
+### HUD 点击音效
+- Godot hud_view.cpp 加载 Sound/105.wav 作为 HUD 点击音效；原生主按钮有效释放与退出确认按钮返回有效结果时复用现有 PlayLobbyEffect 播放105.wav，沿用 m_bPlay、DirectSound 和 m_lWavMaxVol。
+- 已验证运行目录样本存在且可解析，Client 构建通过。尚未做回环录音或听感验证，不宣称已验证实际扬声器输出。
+- 展开聊天七按钮的控制映射已定位（16/17输入前缀、18/19本地模式、20–22服务器命令），尚未实现。

@@ -1430,6 +1430,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 		hResult = m_xMsgBox.OnButtonUp(ptMouse);
 		if ( hResult != 0 )
 		{
+            g_xSound.PlayLobbyEffect("105.wav");
 			switch ( m_nIdxMsgBox )
 			{
 			case 12:
@@ -1475,6 +1476,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 		{
 			if ( m_xInterBtn[nCnt].OnLButtonUp(ptMouse) )
 			{
+                g_xSound.PlayLobbyEffect("105.wav");
 				switch ( nCnt )
 				{
 				case _BTN_ID_QUEST:		WindowActivate(_WND_ID_QUEST);					break;
