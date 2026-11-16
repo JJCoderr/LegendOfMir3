@@ -26,11 +26,9 @@ add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/MP>)
 #add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
 #add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/WX>)
 
-target_compile_options(${target} PRIVATE
-    /W3
+add_compile_options(
+    #/W3
     /EHsc
-    # 代码大量依赖 VC6 时代的非标准 for 作用域（for (int i...) 之后继续使用 i）
-    /Zc:forScope-
     /wd4996   # CRT 安全函数弃用提示
     /wd4267   # size_t -> int
     /wd4244   # 数值隐式窄化
@@ -38,9 +36,11 @@ target_compile_options(${target} PRIVATE
     /wd4838   # 指针/整数转换
 )
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(WARNING "代码按 32 位 Win32 编写，请使用 -A Win32 重新配置。")
-endif()
+# 大量 VC6 时代代码依赖非标准 for 作用域（for (int i...) 之后继续使用 i）。
+# 注意：不能写进 add_compile_options —— VS 生成器会把它映射成工程属性
+# ForceConformanceInForLoopScope，在 VS2026 生成器下该属性会写成空值从而丢失选项，
+# 导致 C2065 错误。直接并入 CXX 编译标志，可原样传到 AdditionalOptions。
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:forScope-")
 
 add_subdirectory(Client)
 add_subdirectory(Server)

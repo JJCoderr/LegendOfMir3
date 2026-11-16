@@ -25,3 +25,6 @@ target_include_directories(LoginSvr PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../Def
     ${CMAKE_CURRENT_SOURCE_DIR}/../Def/_OrzEx
 )
+
+# OrzEx 数据库容器直接调用 ODBC API，需要显式链接
+target_link_libraries(LoginSvr PRIVATE odbc32 odbccp32)

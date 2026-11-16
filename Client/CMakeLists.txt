@@ -25,8 +25,8 @@ set(MIR3_CLIENT_SOURCES
     LoginProcess/Common/BMWnd.cpp
     LoginProcess/Intro/LoginAvi.cpp
     LoginProcess/Login/Login.cpp
-    LoginProcess/New Account/NewAccount.cpp
-    LoginProcess/Select Srv/SelectSrv.cpp
+    "LoginProcess/New Account/NewAccount.cpp"
+    "LoginProcess/Select Srv/SelectSrv.cpp"
     # LoginProcess/Change Pwd/ChgPwd.cpp
 
     CharSelectProcess/CharacterProcess.cpp

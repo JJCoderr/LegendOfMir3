@@ -17,6 +17,15 @@ set(MIR3_MANCONSOLE_SOURCES
 # 共享 MFC（仅作用于本目录）
 set(CMAKE_MFC_FLAG 2)
 
+# MFC 组件未安装时（例如只装了 VS2026 的 C++ 工具集）跳过本工程
+include(CheckIncludeFileCXX)
+check_include_file_cxx(afxwin.h MIR3_HAVE_MFC)
+
+if(NOT MIR3_HAVE_MFC)
+    message(STATUS "未找到 MFC 头文件 (afxwin.h)，跳过 ManConsole（需安装 C++ MFC 组件）")
+    return()
+endif()
+
 add_executable(ManConsole WIN32 ${MIR3_MANCONSOLE_SOURCES})
 
 target_include_directories(ManConsole PRIVATE
