@@ -263,6 +263,16 @@ public:
                 status.EquipmentPreviewFrame(53,10)==1236 && status.EquipmentPreviewFrame(60,11)==1235 &&
                 status.CheckEquipItem(&charm,5,POINT{20,165}) && status.CheckEquipItem(&charm,9,POINT{140,275}) &&
                 status.GetEquipNum(POINT{15,260})==10 && status.GetEquipNum(POINT{175,270})==11;
+            CLIENTMAGICRCD skills[3]={}; skills[0].bUseKey='1'; skills[2].bUseKey='8';
+            const auto savedMagic=status.m_pstMyMagic; const BYTE savedCount=status.m_bMyMagicCnt;
+            status.m_pstMyMagic=skills; status.m_bMyMagicCnt=3;
+            const bool keyMatches=status.GetMagicByKey('1')==&skills[0] && status.GetMagicByKey('8')==&skills[2];
+            const bool missingKey=status.GetMagicByKey('2')==NULL && status.GetMagicByKey(0)==NULL;
+            status.m_bMyMagicCnt=0; const bool emptySkills=status.GetMagicByKey('1')==NULL;
+            status.m_pstMyMagic=savedMagic; status.m_bMyMagicCnt=savedCount;
+            if (FILE* report=fopen("skill-key-check.txt","wb")) {
+                fprintf(report,"bound_first_last=%d unbound_and_zero=%d empty_list=%d\n",keyMatches,missingKey,emptySkills); fclose(report);
+            }
             if (FILE* report=fopen("status-layout-check.txt","wb")) {
                 fprintf(report,"release_without_press=%d close_clicked=%d slots=%d signed_elements=%d\n",stray,closed,slots,groupPanel<16 || (status.ElementValue(0,6)==255 && status.ElementValue(1,4)==-1 && status.ElementValue(1,0)==0)); fprintf(report,"equipment_rules=%d\n",previewRules); fclose(report);
             }

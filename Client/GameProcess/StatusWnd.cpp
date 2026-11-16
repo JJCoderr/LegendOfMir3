@@ -738,17 +738,10 @@ BOOL CStatusWnd::SetMagicKey(POINT ptMouse, BYTE bKey)
 
 LPCLIENTMAGICRCD CStatusWnd::GetMagicByKey(BYTE bKey)
 {
-	LPCLIENTMAGICRCD pstMagic = NULL;
-
-	for ( INT nCnt = 0; nCnt < m_bMyMagicCnt; nCnt++ )
-	{
-		pstMagic = &m_pstMyMagic[nCnt];
-		if ( pstMagic->bUseKey == bKey )
-		{
-			break;
-		}
-	}
-	return pstMagic;
+    if (!bKey) return NULL;
+    for (INT index=0; index<m_bMyMagicCnt; ++index)
+        if (m_pstMyMagic[index].bUseKey==bKey) return &m_pstMyMagic[index];
+    return NULL;
 }
 
 
