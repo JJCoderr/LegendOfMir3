@@ -186,6 +186,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xStatusWnd.CreateStatusWnd(_WND_ID_STATUS, m_pxInterImg, 1280, 0, 0, 328, 466, TRUE);
     m_xSkillWnd.CreateGameWnd(_WND_ID_SKILL,m_pxInterImg,1620,TRUE,348,0,360,488);
     m_xPortraitWnd.CreateGameWnd(_WND_ID_PORTRAIT,m_pxInterImg,2090,FALSE,0,0,580,404);
+    m_xPortraitWnd.SetCacheContext(g_xClientSocket.selectedServerName,g_szCharName);
 	m_xStoreWnd.CreateStoreWnd(_WND_ID_STORE, m_pxInterImg, _WNDIMGIDX_STORE, 0, 0, 0, 0, TRUE);
 	m_xExchangeWnd.CreateExchangeWnd(_WND_ID_EXCHANGE, m_pxInterImg, 1390, 0, 0, 494, 330, TRUE);
 	m_xGuildMasterWnd.CreateGuildMasterWnd(_WND_ID_GUILDMASTER, m_pxInterImg, _WNDIMGIDX_GUILDMASTER, 0, 0, 0, 0, TRUE);

@@ -386,6 +386,7 @@ VOID CClientSocket::OnSelectServer(char *pszServerName)
         if (pszServerName && strcmp(name,pszServerName) == 0) {
             sprintf(key,"Server%dIndex",i);
             const int index = GetPrivateProfileIntA("Server",key,i,".\\Mir3.ini");
+            selectedServerName=pszServerName;
             fnMakeDefMessage(&DefMsg,CM_SELECTSERVER,0,(WORD)index,0,0);
             SendPacket(&DefMsg,pszServerName);
             return;

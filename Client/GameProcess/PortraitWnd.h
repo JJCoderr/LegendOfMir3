@@ -5,6 +5,7 @@ struct IPicture;
 class CPortraitWnd : public CGameWnd {
     IPicture* preview=nullptr;
     IPicture* ownPhoto=nullptr;
+    std::string ownCachePath;
     int ReadSelected(std::vector<BYTE>& bytes,IPicture** picture);
     void LoadPreview();
     bool Scroll(int kind,POINT point);
@@ -29,6 +30,8 @@ public:
     bool SendRequest();
     bool ApplyOwnPhoto(const BYTE* bytes,size_t size);
     bool ShowOwnPhoto();
+    bool SetCacheContext(const std::string& server,const std::string& actor,const std::string& root="./Data");
+    bool SaveOwnCache(const std::vector<BYTE>& jpeg);
     bool HasOwnPhoto() const {return ownPhoto!=nullptr;}
     bool HasPreview() const { return preview!=nullptr; }
 };

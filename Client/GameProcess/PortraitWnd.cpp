@@ -2,6 +2,7 @@
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 #include "Common/PortraitJpeg.h"
+#include "Common/PortraitCache.h"
 
 CPortraitWnd::~CPortraitWnd() { Close();ApplyOwnPhoto(nullptr,0); }
 void CPortraitWnd::Close()
@@ -145,6 +146,7 @@ bool CPortraitWnd::SendRequest()
     _TDEFAULTMESSAGE packet;fnMakeDefMessage(&packet,1151,0,0,0,0);
     g_xClientSocket.SendPacket(&packet,requested.empty()?nullptr:(char*)requested.data(),int(requested.size()));
     ApplyOwnPhoto(requested.data(),requested.size());
+    SaveOwnCache(requested);
     requestPending=false;return true;
 }
 
@@ -164,4 +166,26 @@ bool CPortraitWnd::ShowOwnPhoto()
         ownPhoto->Render(dc,534,486,82,94,0,height,width,-height,NULL);surface->ReleaseDC(dc);
     }
     return true;
+}
+
+bool CPortraitWnd::SetCacheContext(const std::string& server,const std::string& actor,const std::string& root)
+{
+    ApplyOwnPhoto(nullptr,0);ownCachePath.clear();
+    if(server.empty() || actor.empty() || server.find_first_of("\\/:*?\"<>|")!=std::string::npos || actor.find_first_of("\\/:*?\"<>|")!=std::string::npos) return false;
+    ownCachePath=root+"/"+server+"_"+actor+".fac";
+    FILE* file=fopen(ownCachePath.c_str(),"rb");if(!file) return false;
+    fseek(file,0,SEEK_END);const long size=ftell(file);rewind(file);
+    if(size<9 || size>4104) {fclose(file);return false;}
+    std::vector<BYTE> encoded(size);const bool read=fread(encoded.data(),1,encoded.size(),file)==encoded.size();fclose(file);
+    if(!read) return false;const auto jpeg=PortraitCache::Decode(encoded);
+    return !jpeg.empty() && ApplyOwnPhoto(jpeg.data(),jpeg.size());
+}
+bool CPortraitWnd::SaveOwnCache(const std::vector<BYTE>& jpeg)
+{
+    if(ownCachePath.empty()) return false;
+    if(jpeg.empty()) return DeleteFileA(ownCachePath.c_str()) || GetLastError()==ERROR_FILE_NOT_FOUND;
+    const auto encoded=PortraitCache::Encode(jpeg);if(encoded.empty()) return false;
+    FILE* file=fopen(ownCachePath.c_str(),"wb");if(!file) return false;
+    const bool written=fwrite(encoded.data(),1,encoded.size(),file)==encoded.size();const int closed=fclose(file);
+    return written && closed==0;
 }

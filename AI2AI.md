@@ -925,3 +925,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 新增Common/PortraitCache.h实现8字节头、长度编码、四轮异或及32位校验，与原版0x47D4C0/0x47D560一致。限制有效载荷1..4096，验证长度与校验后解码，拒绝损坏缓存。
 - VS x86 C++17独立编译测试通过；从同一解包IDB提取两个原版函数机器码，在本机Unicorn中执行，与新代码1/2/255/256/4095/4096字节样例逐字节对照，编码和解码全部一致；原生测试同时覆盖损坏校验、损坏长度和大小边界。记录out/portrait-codec-machine.json、portrait-cache-check.txt、test-portrait-cache.cpp。Unicorn仅安装到忽略目录out/portrait-emulator。
 - 本阶段没有新增页面或改变截图。缓存编解码尚未接入文件读写；下一阶段仍需保存服务器选择名、建立服务器/角色缓存上下文、接入上传/1403版本保存和登录恢复。完整GUI与服务器目标保持未完成。
+
+### 自身FAC文件保存与角色隔离恢复
+- ClientSocket成功选服请求保留selectedServerName；Interface创建时按该名字和g_szCharName建立Data/服务器_角色.fac上下文，加载FAC后经原生JPEG验证恢复自身照片。空身份或含路径分隔/非法文件名字符时禁用文件上下文，避免角色名字变为文件路径。
+- 上传后保存原版编码FAC，恢复默认删除对应文件；有效自身1403照片回复同步保存，零版本清除缓存。没有改变原版图片资源或引入Godot。缓存文件I/O失败不阻断内存照片显示。
+- Client清理83步及全目标112步构建通过。own-cache-restored/default各七项全1，真实文件读写覆盖恢复、跨角色/跨服隔离、非法路径拒绝、删除默认、损坏拒绝及重新保存；自身照片六项回归通过。测试仅写preview-photo-cache目录。已检查out/own-cache-restored.png和own-cache-default.png。
+- 当前进入游戏恢复本地有效缓存，尚未按原版UserPic.ini版本与服务器角色版本比较；远程目标缓存、自动重查、真实登录过程与服务器存储仍待完成。不得把离线SetCacheContext恢复测试描述为已通过完整登录联调。

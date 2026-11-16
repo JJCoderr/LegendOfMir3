@@ -4,6 +4,7 @@
 #define ID_SOCKCLIENT_EVENT_MSG		WM_USER + 1000
 
 #include <assert.h>
+#include <string>
 
 class CClientSocket
 {
@@ -20,6 +21,7 @@ protected:
 	_TDEFAULTMESSAGE	DefMsg;
 
 public:
+    std::string selectedServerName;
 	CClientSocket();
 	virtual ~CClientSocket();
 

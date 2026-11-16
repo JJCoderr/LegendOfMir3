@@ -1648,6 +1648,26 @@ public:
             if(FILE* report=fopen("own-photo-check.txt","wb")) {fprintf(report,"uploaded=%d window_closed=%d invalid=%d reset=%d reply=%d cleared=%d\n",uploaded,windowClosed,invalid,reset,reply,cleared);fclose(report);}
         }
 
+        if(groupPanel==112 || groupPanel==113) {
+            auto& picker=g_xGameProc.m_xInterface.m_xPortraitWnd;
+            CreateDirectoryA("./preview-photo-cache",nullptr);
+            std::vector<BYTE> jpeg;if(FILE* file=fopen("./portrait-preview/portrait01.jpg","rb")) {fseek(file,0,SEEK_END);jpeg.resize(ftell(file));rewind(file);fread(jpeg.data(),1,jpeg.size(),file);fclose(file);}
+            picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache");picker.SaveOwnCache({});
+            picker.requested=jpeg;picker.requestPending=true;picker.SendRequest();
+            const bool restored=picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache") && picker.HasOwnPhoto();
+            const bool actor=!picker.SetCacheContext("ServerA","HeroMissing","./preview-photo-cache") && !picker.HasOwnPhoto();
+            const bool server=!picker.SetCacheContext("ServerMissing","HeroA","./preview-photo-cache") && !picker.HasOwnPhoto();
+            const bool unsafe=!picker.SetCacheContext("../ServerA","HeroA","./preview-photo-cache") && !picker.SaveOwnCache(jpeg);
+            picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache");picker.requested.clear();picker.requestPending=true;picker.SendRequest();
+            const bool reset=!picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache");
+            if(FILE* file=fopen("./preview-photo-cache/ServerA_HeroA.fac","wb")) {fwrite("corrupt",1,7,file);fclose(file);}
+            const bool corrupt=!picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache") && !picker.HasOwnPhoto();
+            picker.SaveOwnCache(jpeg);const bool repaired=picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache");
+            if(groupPanel==113) {picker.SaveOwnCache({});picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache");}
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==112?"own-cache-restored.bmp":"own-cache-default.bmp";
+            if(FILE* report=fopen("own-cache-check.txt","wb")) {fprintf(report,"restored=%d actor=%d server=%d unsafe=%d reset=%d corrupt=%d repaired=%d\n",restored,actor,server,unsafe,reset,corrupt,repaired);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1845,6 +1865,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=own-cache-restored")==0 ? 112 :
+        strcmp(lpCmdLine,"--preview=own-cache-default")==0 ? 113 :
         strcmp(lpCmdLine,"--preview=own-photo-uploaded")==0 ? 110 :
         strcmp(lpCmdLine,"--preview=own-photo-default")==0 ? 111 :
         strcmp(lpCmdLine,"--preview=target-photo-reply")==0 ? 108 :
