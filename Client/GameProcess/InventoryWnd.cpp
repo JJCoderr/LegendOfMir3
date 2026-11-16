@@ -45,7 +45,7 @@ VOID CInventoryWnd::Init()
 	ZeroMemory(m_stInventoryItem, sizeof(ITEMSET)*_MAX_INVEN_ITEM);
 	ZeroMemory(m_stBeltItem,	  sizeof(ITEMSET)*_MAX_BELT_ITEM );
 
-	m_xInvenScrlBar.Init();
+    m_scrollCaptured=false; m_scrollTick=0;
 
 	for ( nCnt = 0; nCnt < _MAX_INVEN_BTN; nCnt++ )
 	{
@@ -76,7 +76,6 @@ VOID CInventoryWnd::CreateInventoryWnd(INT nID, CWHWilImageData* pxWndImage, INT
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLUP	 ].CreateGameBtn(pxWndImage, 74, 75, nStartX+247, nStartY+ 20);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLDOWN].CreateGameBtn(pxWndImage, 74, 75, nStartX+247, nStartY+167);
 	
-	m_xInvenScrlBar.CreateScrlBar(pxWndImage, 270, _INVEN_MAX_CELL_YCNT, 10, 218, 10);
 
 	// 背包格子区域的 Set.
 	for ( INT nYCnt = 0; nYCnt < _INVEN_CELL_YCNT; nYCnt++ )
@@ -968,6 +967,7 @@ BOOL CInventoryWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMous
 {
 	INT nCnt, nInventoryNum, nBeltInventoryNum;
     m_closePressed=false;
+    if (ScrollInput(0,ptMouse)) return TRUE;
 
 	m_xInventoryBtn[_BTN_ID_INVENCLOSE	 ].ChangeRect(m_rcWnd.left+242, m_rcWnd.top+423);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLUP	 ].ChangeRect(m_rcWnd.left+247, m_rcWnd.top+ 20);
@@ -1005,6 +1005,7 @@ BOOL CInventoryWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMous
 
 BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
+    if (ScrollInput(2,ptMouse)) return FALSE;
 	INT nInventoryNum, nBeltInventoryNum;
 
 	m_xInventoryBtn[_BTN_ID_INVENCLOSE	 ].ChangeRect(m_rcWnd.left+242, m_rcWnd.top+423);
@@ -1146,6 +1147,7 @@ BOOL CInventoryWnd::OnLButtonDoubleClick(LPCOMMONITEMSET pstCommonItemSet, POINT
 
 VOID CInventoryWnd::OnMouseMove(POINT ptMouse)
 {
+    if (ScrollInput(1,ptMouse)) return;
 	m_xInventoryBtn[_BTN_ID_INVENCLOSE	 ].ChangeRect(m_rcWnd.left+242, m_rcWnd.top+423);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLUP	 ].ChangeRect(m_rcWnd.left+247, m_rcWnd.top+ 20);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLDOWN].ChangeRect(m_rcWnd.left+247, m_rcWnd.top+167);
@@ -1170,4 +1172,36 @@ VOID CInventoryWnd::OnScrollUp()
 	{
 		m_nStartLineNum++;
 	}
+}
+
+// Preserve the original draw divisor 91 and input multiplier 92.
+bool CInventoryWnd::ScrollInput(int kind, POINT point)
+{
+    const DWORD now=GetTickCount();
+    if (kind==2) {
+        m_scrollTick=now;
+        const bool captured=m_scrollCaptured; m_scrollCaptured=false;
+        if (captured && GetCapture()==g_xMainWnd.GetSafehWnd()) ReleaseCapture();
+        return captured;
+    }
+    if (!m_pxWndImage->NewSetIndex(1225)) return false;
+    const auto& image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+    const int left=m_rcWnd.left+250,top=m_rcWnd.top+70,bottom=top+image.shHeight+254;
+    if (kind==1) {
+        if (!m_scrollCaptured) return false;
+        const float ratio=max(0.f,min(1.f,float(point.y-top)/(bottom-top)));
+        m_nStartLineNum=int(ratio*92.f);
+        return true;
+    }
+    if (point.x<left || point.x>=left+image.shWidth || point.y<top || point.y>=bottom) return false;
+    if (now-m_scrollTick<=10) return true;
+    m_scrollTick=now;
+    const int thumb=top+int(254.0*(float(m_nStartLineNum)/91));
+    if (point.y>=thumb && point.y<thumb+image.shHeight) {
+        m_scrollCaptured=true; SetCapture(g_xMainWnd.GetSafehWnd()); return true;
+    }
+    float ratio=float(m_nStartLineNum)/91;
+    ratio=max(0.f,min(1.f,ratio+(point.y<thumb+7 ? -8.f/92 : 8.f/92)));
+    m_nStartLineNum=int(ratio*92.f);
+    return true;
 }

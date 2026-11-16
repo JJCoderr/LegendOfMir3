@@ -30,13 +30,16 @@ protected:
 
 	CGameBtn	m_xInventoryBtn[_MAX_INVEN_BTN];
 
-	CScrlBar	m_xInvenScrlBar;
+    DWORD m_scrollTick=0;
 
 public:
 	ITEMSET		m_stInventoryItem[_MAX_INVEN_ITEM];
 	ITEMSET		m_stBeltItem[_MAX_BELT_ITEM];
 
 public:
+    bool m_scrollCaptured=false;
+    bool ScrollInput(int kind, POINT point);
+    int ScrollRow() const { return m_nStartLineNum; }
 	CInventoryWnd();
 	~CInventoryWnd();
 

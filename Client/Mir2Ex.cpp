@@ -133,12 +133,19 @@ public:
             ui.WindowActivate(_WND_ID_INVENTORY);
             const bool grid=bag.GetInvenNum(POINT{536,61})==0 && bag.GetInvenNum(POINT{762,363})==47 &&
                 bag.GetInvenNum(POINT{534,61})==-1;
-            COMMONITEMSET held={}; POINT close={770,435};
+            COMMONITEMSET held={};
+            POINT thumb={770,75}; bag.OnLButtonDown(&held,thumb);
+            POINT outside={810,590}; ui.OnMouseMove(outside);
+            const bool scrollEnd=bag.ScrollRow()==92;
+            ui.OnLButtonUp(outside);
+            const bool released=!bag.m_scrollCaptured && GetCapture()!=g_xMainWnd.GetSafehWnd();
+            for (int row=0;row<92;++row) bag.OnScrollDown();
+            POINT close={770,435};
             const bool stray=!bag.OnLButtonUp(&held,close);
             bag.OnLButtonDown(&held,close);
             const bool closed=bag.OnLButtonUp(&held,close)!=FALSE;
             if (FILE* report=fopen("inventory-layout-check.txt","wb")) {
-                fprintf(report,"grid=%d release_without_press=%d close_clicked=%d\n",grid,stray,closed); fclose(report);
+                fprintf(report,"grid=%d release_without_press=%d close_clicked=%d scroll_end=%d scroll_released=%d\n",grid,stray,closed,scrollEnd,released); fclose(report);
             }
         }
         if (groupPanel==11) {
