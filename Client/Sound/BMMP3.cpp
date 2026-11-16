@@ -33,64 +33,35 @@ CBMMp3::~CBMMp3()
 
 BOOL CBMMp3::InitBMMp3(HWND hWnd)
 {
-//	HRESULT	hResult;
-	m_bInited = TRUE;
-/*	m_hWnd = hWnd;
-	if(SUCCEEDED(CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC, IID_IGraphBuilder, (LPVOID *)&m_pGraphBuilder)))
-	{
-		hResult = m_pGraphBuilder->QueryInterface(IID_IMediaControl, (void **)&m_pMediaControl);
-		if(FAILED(hResult)) 
-			m_bInited = FALSE;
-
-		hResult = m_pGraphBuilder->QueryInterface(IID_IBasicAudio, (void **)&m_pBasicAudio);
-		if(FAILED(hResult))
-			m_bInited = FALSE;
-
-		hResult = m_pGraphBuilder->QueryInterface(IID_IMediaSeeking,(void **)&m_pMediaSeeking);
-		if(FAILED(hResult))
-			m_bInited = FALSE;
-
-		hResult = m_pGraphBuilder->QueryInterface(IID_IMediaEventEx,(void **)&m_pMediaEventEx);
-		if(FAILED(hResult))
-			m_bInited = FALSE;
-
-		hResult = m_pGraphBuilder->QueryInterface(IID_IMediaPosition,(void **)&m_pMediaPosition);
-		if(FAILED(hResult))
-			m_bInited = FALSE;
-	}
-	else
-	{*/
-		m_bInited = FALSE;
-	//}
-	return m_bInited;
+    Release();
+    m_hWnd = hWnd;
+    HRESULT hr = CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC_SERVER,
+        IID_IGraphBuilder, (void**)&m_pGraphBuilder);
+    if (SUCCEEDED(hr)) hr = m_pGraphBuilder->QueryInterface(IID_IMediaControl, (void**)&m_pMediaControl);
+    if (SUCCEEDED(hr)) hr = m_pGraphBuilder->QueryInterface(IID_IBasicAudio, (void**)&m_pBasicAudio);
+    if (SUCCEEDED(hr)) hr = m_pGraphBuilder->QueryInterface(IID_IMediaSeeking, (void**)&m_pMediaSeeking);
+    if (SUCCEEDED(hr)) hr = m_pGraphBuilder->QueryInterface(IID_IMediaEventEx, (void**)&m_pMediaEventEx);
+    if (SUCCEEDED(hr)) hr = m_pGraphBuilder->QueryInterface(IID_IMediaPosition, (void**)&m_pMediaPosition);
+    if (FAILED(hr)) { Release(); return FALSE; }
+    m_bInited = TRUE;
+    return TRUE;
 }
 
-BOOL CBMMp3::LoadMp3(CHAR*	szFileName,HWND hWnd)
+BOOL CBMMp3::LoadMp3(CHAR* szFileName, HWND hWnd)
 {
-	WCHAR	wcFileName[MAX_PATH];
-	if(!m_bInited)
-	{
-		if(InitBMMp3(hWnd))
-		{
-			MultiByteToWideChar(CP_ACP,0,szFileName,	-1,wcFileName,MAX_PATH);
-			strcpy(m_szFileName,szFileName);
-			if(SUCCEEDED(m_pGraphBuilder->RenderFile(wcFileName, NULL)))
-			{
-				m_bIsLoadMp3 = TRUE;
-			}
-			else
-			{
-				m_bIsLoadMp3 = FALSE;
-			}
-		}
-	}
-	else
-	{
-		OnStop();
-		Release();
-		LoadMp3(szFileName,hWnd);
-	}
-	return TRUE;
+    // Copy before releasing: callers may pass the stored filename.
+    CHAR filename[MAX_PATH];
+    lstrcpynA(filename, szFileName, MAX_PATH);
+    if (!InitBMMp3(hWnd)) return FALSE;
+    WCHAR wide[MAX_PATH];
+    if (!MultiByteToWideChar(CP_ACP, 0, filename, -1, wide, MAX_PATH) ||
+        FAILED(m_pGraphBuilder->RenderFile(wide, NULL))) {
+        Release();
+        return FALSE;
+    }
+    lstrcpyA(m_szFileName, filename);
+    m_bIsLoadMp3 = TRUE;
+    return TRUE;
 }
 
 BOOL CBMMp3::OnPlay(BOOL Looping)
@@ -175,33 +146,21 @@ BOOL CBMMp3::OnPause(VOID)
 
 HRESULT CBMMp3::MessageProcess(VOID)
 {
-	LONG evCode, evParam1, evParam2;
-	while(SUCCEEDED(m_pMediaEventEx->GetEvent(&evCode, &evParam1, &evParam2,0)))
-	{
-		switch(evCode)
-		{
-		case EC_WINDOW_DESTROYED:
-			OnStop();
-			break;
-		case EC_COMPLETE:
-			if(m_bLooping)
-			{
-				LoadMp3(m_szFileName,m_hWnd);
-				OnPlay(m_bLooping);
-				return 0l;
-			}
-			else 
-			{
-				OnStop();
-				return 0l;
-			}
-			break;
-		case EC_ACTIVATE:
-			break;
-		}
-		m_pMediaEventEx->FreeEventParams(evCode, evParam1, evParam2);
-	}
-	return 0l;
+    if (!m_pMediaEventEx) return S_FALSE;
+    LONG code;
+    LONG_PTR first, second;
+    while (SUCCEEDED(m_pMediaEventEx->GetEvent(&code, &first, &second, 0))) {
+        m_pMediaEventEx->FreeEventParams(code, first, second);
+        if (code == EC_COMPLETE && m_bLooping) {
+            m_pMediaPosition->put_CurrentPosition(0);
+            return m_pMediaControl->Run();
+        }
+        if (code == EC_COMPLETE || code == EC_WINDOW_DESTROYED) {
+            OnStop();
+            return S_OK;
+        }
+    }
+    return S_OK;
 }
 
 VOID CBMMp3::Release(VOID)
@@ -239,6 +198,7 @@ VOID CBMMp3::Release(VOID)
 		m_pGraphBuilder= NULL;
 	}
 	m_bInited = FALSE;
+	m_bIsLoadMp3 = FALSE;
 }
 
 BOOL CBMMp3::SetVolume(LONG lVolume)

@@ -644,6 +644,8 @@ LRESULT CLoginProcess::OnWindowMove(WPARAM wParam,LPARAM lParam)
 
 VOID CLoginProcess::RenderScene(INT nLoopTime)
 {
+    using Page = CMirSound::LobbyPage;
+    g_xSound.UpdateLobbyAudio(m_Progress == PRG_LOGIN ? Page::Credentials : Page::None, nLoopTime);
 	static	DWORD	dwLastTick = 0;
 
 	m_Image.NewSetIndex(IMAGE_INDEX_LOGINBASE);

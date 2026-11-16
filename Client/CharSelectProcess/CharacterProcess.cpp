@@ -331,7 +331,10 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
         {
             if (m_bCreatePending) break;
             for (int gender = 0; gender < 2; ++gender)
-                if (PtInRect(&m_createBounds[gender], m_ptMousePos)) m_SelectSex = (BYTE)gender;
+                if (PtInRect(&m_createBounds[gender], m_ptMousePos) && gender != m_SelectSex) {
+                    m_SelectSex = (BYTE)gender;
+                    g_xSound.PlayRoleVoice(true, m_SelectJob, m_SelectSex);
+                }
             for (int i = 0; i < 5; ++i) {
                 const CreateControl& control = createControls[i];
                 RECT rect = {control.x, control.y, control.x + control.width, control.y + control.height};
@@ -341,7 +344,10 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
                     m_xBGround.SetRenderState(_RENDER_STILL_1);
                     m_xSelectChr.OpenWnd();
                 } else if (i >= 2) {
-                    m_SelectJob = (BYTE)(i - 2);
+                    if (m_SelectJob != i - 2) {
+                        m_SelectJob = (BYTE)(i - 2);
+                        g_xSound.PlayRoleVoice(true, m_SelectJob, m_SelectSex);
+                    }
                 } else {
                     GetWindowTextA(g_xChatEditBox.GetSafehWnd(), m_szChrName, sizeof(m_szChrName));
                     if (!m_szChrName[0]) break;
@@ -649,6 +655,9 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 		/**/
 VOID CCharacterProcess::RenderScene(INT nLoopTime)
 {
+    using Page = CMirSound::LobbyPage;
+    g_xSound.UpdateLobbyAudio(m_Progress == PRG_CHAR_SELE ? Page::Selection :
+        m_Progress == PRG_CREATE_CHAR ? Page::Creation : Page::None, nLoopTime);
 	m_xBGround.Render(nLoopTime);
 	switch(m_Progress)
 	{

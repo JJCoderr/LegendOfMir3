@@ -21,6 +21,11 @@ public:
 	CSBuffer*	FindBuffer(int nNum,BOOL ForLoad=TRUE);
 	CSound*		GetSoundObject(VOID){return m_pSound;}
 
+    enum class LobbyPage { None, Credentials, Selection, Creation };
+    void UpdateLobbyAudio(LobbyPage page, DWORD elapsed);
+    void PlayLobbyEffect(const char* file);
+    void PlayRoleVoice(bool creation, int profession, int gender);
+
 	void		StopAllSound(void);
 	void		StopSound(int nNum);
 	void		StopSound(int nNum,int BufIdx);
@@ -72,6 +77,10 @@ private:
 	INT			m_nUseCount;				// 正在使用的 Sound(Wav) Buffer Count
 	CSound*		m_pSound;					// Object of Sound
 	CSBuffer**	m_ppBuffer;					// Object of Sound Buffer
+    LobbyPage m_lobbyPage = LobbyPage::None;
+    DWORD m_lobbyElapsed = 0;
+    CSBuffer m_lobbyOpening;
+    CSBuffer m_lobbyEffect;
 	CSBuffer	m_CommonWavBuffer;			// Common use Wave Buffer
 	BOOL		m_bIsWarMode;
 

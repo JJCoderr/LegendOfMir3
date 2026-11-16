@@ -71,7 +71,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 
 	DWORD dwLastTime, dwTime, dwDelay;
-	dwLastTime = dwTime = dwDelay = 0;
+	dwLastTime = timeGetTime();
 
 
 	while (TRUE)
@@ -81,6 +81,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             if ( 0 == GetMessage(&msg, NULL, 0, 0) )
                 return (int) msg.wParam;
 
+            if (msg.message == WM_DSHOW_NOTIFY)
+                g_xSound.MessageProc(msg.hwnd, msg.message, msg.wParam, msg.lParam);
 	        TranslateMessage(&msg);
             DispatchMessage(&msg);
 		}

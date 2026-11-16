@@ -68,6 +68,8 @@ CMirSound::CMirSound()
 ///////////////////////////////////////////////////////////////////////
 CMirSound::~CMirSound()
 {
+    m_lobbyOpening.Release();
+    m_lobbyEffect.Release();
 	unsigned int i;
 
 	if(m_ppWavList != NULL)
@@ -310,6 +312,57 @@ void CMirSound::PlayAmbianceWav(int WavNum)
 //	Return Value:	void
 //  Update		:
 ///////////////////////////////////////////////////////////////////////
+void CMirSound::UpdateLobbyAudio(LobbyPage page, DWORD elapsed)
+{
+    if (page != m_lobbyPage) {
+        m_lobbyOpening.Release();
+        m_lobbyEffect.Release();
+        if (m_lobbyPage == LobbyPage::Selection || m_lobbyPage == LobbyPage::Creation)
+            m_pMp3->OnStop();
+        m_lobbyPage = page;
+        m_lobbyElapsed = 0;
+        return;
+    }
+    if (page == LobbyPage::None) return;
+    const DWORD delay = page == LobbyPage::Credentials ? 1200 : 1000;
+    if (m_lobbyElapsed > delay) return;
+    m_lobbyElapsed += elapsed;
+    if (m_lobbyElapsed <= delay) return;
+    if (page == LobbyPage::Credentials) {
+        if (m_bPlay && m_pSound->GetDS() && SUCCEEDED(m_lobbyOpening.Load(m_pSound, "Opening.wav"))) {
+            m_lobbyOpening.m_ID = 1;
+            m_lobbyOpening.SetVolume(m_lWavMaxVol);
+            m_lobbyOpening.Play(DSBPLAY_LOOPING);
+        }
+    } else if (m_bBGMPlay) {
+        char file[MAX_PATH];
+        GetFullPathNameA(page == LobbyPage::Selection ? "Sound\\SelChr.mp3" : "Sound\\CreateChr.mp3",
+            MAX_PATH, file, NULL);
+        if (m_pMp3->LoadMp3(file, m_hWnd)) m_pMp3->OnPlay(m_lMp3MaxVol, TRUE);
+    }
+}
+
+void CMirSound::PlayLobbyEffect(const char* file)
+{
+    if (!m_bPlay || !m_pSound->GetDS()) return;
+    m_lobbyEffect.Release();
+    if (SUCCEEDED(m_lobbyEffect.Load(m_pSound, file))) {
+        m_lobbyEffect.m_ID = 1;
+        m_lobbyEffect.SetVolume(m_lWavMaxVol);
+        m_lobbyEffect.Play(0);
+    }
+}
+
+void CMirSound::PlayRoleVoice(bool creation, int profession, int gender)
+{
+    static const char* const voices[2][6] = {
+        {"JMMSel.wav", "SMMSel.wav", "DMMSel.wav", "JWMSel.wav", "SWMSel.wav", "DWMSel.wav"},
+        {"JMCre.wav", "SMCre.wav", "DMCre.wav", "JWCre.wav", "SWCre.wav", "DWCre.wav"}
+    };
+    if (profession >= 0 && profession < 3 && gender >= 0 && gender < 2)
+        PlayLobbyEffect(voices[creation][profession + 3 * gender]);
+}
+
 void CMirSound::PlayBkMusicMp3(BOOL Looped,INT	nIndex)
 {
 	if(m_bBGMPlay)
