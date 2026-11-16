@@ -68,6 +68,8 @@ public:
     std::vector<HintLine> GeneralHint(int profession,int level,bool shop=false) const;
     void ShowGeneralHint(int x,int y) const;
     std::vector<HintLine> ArmorHint(int level,int attack,const BYTE* elements,bool shop=false) const;
+    HintLine RequirementHint(int level,int attack,const BYTE* elements) const;
+    std::vector<HintLine> WeaponHint(int level,int attack,const BYTE* elements,bool shop=false) const;
     WORD m_count=1;
     BYTE m_stackMode=0;
     BYTE m_serverRecord[100]={};

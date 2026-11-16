@@ -1701,6 +1701,21 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel==134 || groupPanel==135) {
+            auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[100]={};strcpy((char*)raw,"Œ‰∆˜ Ù–‘≤‚ ‘");raw[30]=5;raw[32]=8;raw[34]=2;raw[44]=5;raw[45]=12;raw[86]=3;raw[47]=1;raw[48]=4;raw[87]=2;raw[41]=102;raw[43]=12;raw[92]=2;raw[40]=1;raw[89]=2;raw[96]=1;raw[49]=1;raw[50]=2;raw[97]=2;raw[98]=3;raw[62]=11;raw[66]=150;raw[68]=0x10;raw[69]=0x27;raw[70]=3;raw[71]=0x30;raw[72]=0x75;
+            CItem item;item.SetMir3Item(raw,0);BYTE elements[7]={};const auto lines=item.WeaponHint(35,20,elements);
+            const auto has=[&](const std::vector<CItem::HintLine>& rows,const char* text) {for(const auto& row:rows) if(row.text.find(text)!=std::string::npos) return true;return false;};
+            const bool title=has(lines,"(*)");const bool attack=has(lines,": 5-15 (+3)");const bool magic=has(lines,": 1-6 (+2)");
+            const bool speed=has(lines,": +4 (+-8)");const bool signedAccuracy=has(lines,": -2");const bool experience=has(lines,"16.67 %");
+            raw[70]=76;item.SetMir3Item(raw,0);const bool maximum=has(item.WeaponHint(35,20,elements),"MAX");
+            raw[30]=54;item.SetMir3Item(raw,0);const auto special=item.WeaponHint(35,20,elements);const bool quantity=special[1].text.find(": 2")!=std::string::npos && !has(special,"MAX") && special[1].color==16777088;
+            raw[30]=groupPanel==134?5:54;raw[70]=3;item.SetMir3Item(raw,0);bag.AddInvenItem(item,0,TRUE);ui.WindowActivate(_WND_ID_INVENTORY);mouse={550,80};g_xGameProc.m_ptMousePos=mouse;
+            capturePath=groupPanel==134?"weapon-hint.bmp":"weapon-special-hint.bmp";
+            if(FILE* report=fopen("weapon-hint-check.txt","wb")) {fprintf(report,"title=%d attack=%d magic=%d speed=%d signed_accuracy=%d experience=%d maximum=%d quantity=%d\n",title,attack,magic,speed,signedAccuracy,experience,maximum,quantity);fclose(report);}
+        }
+
         if(groupPanel==132 || groupPanel==133) {
             auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -2173,6 +2188,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=weapon-hint")==0 ? 134 :
+        strcmp(lpCmdLine,"--preview=weapon-special-hint")==0 ? 135 :
         strcmp(lpCmdLine,"--preview=armor-hint")==0 ? 132 :
         strcmp(lpCmdLine,"--preview=armor-elements-hint")==0 ? 133 :
         strcmp(lpCmdLine,"--preview=book-hint")==0 ? 129 :

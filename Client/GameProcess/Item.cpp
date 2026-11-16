@@ -165,7 +165,7 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 {
     if(m_serverName[0]) {
         switch(m_stItemInfo.stStdItem.bStdMode) {
-        case 5:case 6:case 54:case 55:case 56:case 15:case 19:case 20:case 21:case 22:case 23:case 24:case 26:case 57:case 53:break;
+        case 15:case 19:case 20:case 21:case 22:case 23:case 24:case 26:case 57:case 53:break;
         default:ShowGeneralHint(nX,nY);return;
         }
     }
@@ -672,7 +672,10 @@ std::vector<CItem::HintLine> CItem::GeneralHint(int profession,int level,bool sh
 void CItem::ShowGeneralHint(int x,int y) const
 {
     const auto& hero=g_xGameProc.m_xMyHero;
-    const auto lines=m_stItemInfo.stStdItem.bStdMode==10 || m_stItemInfo.stStdItem.bStdMode==11
+    const int mode=m_stItemInfo.stStdItem.bStdMode;
+    const auto lines=mode==5 || mode==6 || mode==54 || mode==55 || mode==56
+        ?WeaponHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0])
+        :mode==10 || mode==11
         ?ArmorHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0])
         :GeneralHint(hero.m_bJob,hero.m_stAbility.bLevel);auto* surface=g_xMainWnd.GetBackBuffer();HDC dc;
     if(FAILED(surface->GetDC(&dc))) return;
@@ -736,6 +739,14 @@ std::vector<CItem::HintLine> CItem::ArmorHint(int level,int attack,const BYTE* e
     }
     if(signedByte(53)>0 && signedByte(53)<7) lines.push_back({captions.Get(5179)+":"+captions.Get(5160+r[53])+"x2",13172630});
     if(signedByte(97)>0) lines.push_back({label(5160+signedByte(97))+std::to_string(r[50])+"-"+std::to_string(r[51]+signedByte(98))+" (+"+std::to_string(signedByte(98))+")",65408});
+    lines.push_back(RequirementHint(level,attack,elements));
+    return lines;
+}
+
+CItem::HintLine CItem::RequirementHint(int level,int attack,const BYTE* elements) const
+{
+    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+    const auto* r=m_serverRecord;const auto label=[&](int id) {return captions.Get(id)+": ";};
     const int kind=r[54],required=r[55];bool allowed=false;std::string condition;
     if(kind==0) {
         const int needed=required>100?required-100:required;allowed=level>=needed;
@@ -750,6 +761,59 @@ std::vector<CItem::HintLine> CItem::ArmorHint(int level,int attack,const BYTE* e
             for(int i=first;i<last;++i) if(elements[i]<required) allowed=false;
         }
     }
-    lines.push_back({condition,!allowed?255u:kind==0 && (required==0 || required>100)?51200u:0xffffffu});
-    return lines;
+    return {condition,!allowed?255u:kind==0 && (required==0 || required>100)?51200u:0xffffffu};
+}
+
+std::vector<CItem::HintLine> CItem::WeaponHint(int level,int attack,const BYTE* elements,bool shop) const
+{
+    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+    const auto* r=m_serverRecord;const auto word=[&](int at) {return int(r[at])|(int(r[at+1])<<8);};
+    const auto signedByte=[&](int at) {return int(static_cast<signed char>(r[at]));};
+    const auto label=[&](int id) {return captions.Get(id)+": ";};
+    const bool special=r[30]==54 || r[30]==55;
+    std::string title=captions.Get(2515)+(r[96]?" (*)":" ");
+    if(r[73]) {int length=0;while(length<27 && r[73+length]) ++length;title.append((const char*)r+73,length);title+=" ";}
+    title+=Name();std::vector<HintLine> lines={{title,64255}};
+    const int current=int(double(word(66))/(special?100:1000)+0.5),maximum=int(double(word(shop?38:68))/1000+0.5);
+    lines.push_back({label(special?2503:2500)+std::to_string(current)+(special?"":"/"+std::to_string(maximum)),current>1?16777088u:3289855u});
+    lines.push_back({label(2501)+std::to_string(r[32]),0xffffff});
+    const auto range=[&](int id,int offset,int extra) {
+        const int bonus=signedByte(extra);if(word(offset)+bonus<=0) return;
+        std::string text=label(id)+std::to_string(r[offset])+"-"+std::to_string(r[offset+1]+max(0,bonus));
+        text+=bonus>0?" (+"+std::to_string(bonus)+")":" ";lines.push_back({text,bonus>0?13172630u:0xffffffu});
+    };
+    range(1061,44,86);range(5100+r[46],47,87);
+    if(signedByte(97)>0 || r[49]) {
+        const int element=signedByte(97)>0?r[97]:r[49];
+        lines.push_back({label(5178)+captions.Get(5160+element)+"+"+std::to_string(word(50)+max(0,signedByte(98))),65408});
+    }
+    const auto value=[&](int id,int base,int bonus,bool plus) {
+        std::string text=label(id)+(plus?"+":"")+std::to_string(base+max(0,bonus));
+        if(bonus>0) text+=" (+"+std::to_string(bonus)+")";
+        lines.push_back({text,bonus>0?13172630u:0xffffffu});
+    };
+    if(signedByte(34)+signedByte(93)>0) value(2504,signedByte(34),signedByte(93),false);
+    if(r[41]+signedByte(91)>0) value(1053,r[41]<100?r[41]:100-r[41],signedByte(91),false);
+    const int speed=r[43]+signedByte(92),extra=signedByte(92);
+    if(speed>0) {
+        std::string text=label(2505);
+        if(speed<=10) {text+="-"+std::to_string(r[43]+max(0,extra));if(extra>0) text+=" (-"+std::to_string(extra)+")";}
+        else {text+="+"+std::to_string(r[43]+max(0,extra)-10);if(extra>0) text+=" (+"+std::to_string(extra-10)+")";}
+        lines.push_back({text,extra>0?13172630u:0xffffffu});
+    }
+    if(r[40]+signedByte(89)>0) value(2506,r[40],signedByte(89),true);
+    if(r[42]+signedByte(90)>0) value(2507,r[42],signedByte(90),true);
+    if(!special) {
+        // Original 4B52A4 thresholds; each step corresponds to 60000 experience.
+        static const int thresholds[]={0,3,6,9,13,17,21,25,30,35,40,45,51,57,63,69,76};
+        int index=0;while(index<16 && r[70]>=thresholds[index+1]) ++index;
+        if(index==16) lines.push_back({captions.Get(2508)+" : MAX",0xffffff});
+        else {
+            lines.push_back({captions.Get(2508)+" : "+std::to_string(index+1),0xffffff});
+            const unsigned progress=word(71)+60000u*r[70]-60000u*thresholds[index];
+            char percent[64];sprintf(percent,"%.2f %%",100.0*progress/(60000*(thresholds[index+1]-thresholds[index])));
+            lines.push_back({captions.Get(2509)+" : "+percent,0xffffff});
+        }
+    }
+    lines.push_back(RequirementHint(level,attack,elements));return lines;
 }
