@@ -34,7 +34,7 @@ public:
 	BOOL		CheckSocketError(LPARAM lParam);
 	BOOL		DisconnectToServer();
 //	VOID		SendToServer(CHAR *pszPacket);
-	VOID		SendPacket(_TDEFAULTMESSAGE* lpDefMsg, char *pszData);
+	VOID		SendPacket(_TDEFAULTMESSAGE* lpDefMsg, char *pszData, int dataLength = -1);
 
 	// For Login
 	VOID		OnLogin(char *pszID, char *pszPassword);

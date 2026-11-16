@@ -4,18 +4,18 @@
 #define LOGIN_INPUT_COUNT			2
 #define LOGIN_IMAGE_COUNT			4
 
-#define POS_ID_INS_X				193
-#define POS_ID_INS_Y				435
-#define POS_PASS_INS_X				390
-#define POS_PASS_INS_Y				435
+#define POS_ID_INS_X				128
+#define POS_ID_INS_Y				440
+#define POS_PASS_INS_X				326
+#define POS_PASS_INS_Y				440
 
 #define _LEFT_LOGIN					0
 #define _TOP_LOGIN					372
 #define _RIGHT_LOGIN				640
 #define _BOTTOM_LOGIN				480
 
-#define _LEFT_ID_PASS				170
-#define _TOP_ID_PASS				65
+#define _LEFT_ID_PASS				100
+#define _TOP_ID_PASS				64
 
 #define _IMG_IDX_LOGIN_BORDER		1
 #define _IMG_IDX_LOGIN_IDPASS		2
@@ -25,16 +25,18 @@
 #define _IMG_IDX_BTN_EXIT			16
 
 
-#define _LEFT_LOGIN_BTN				140
-#define _LEFT_NEW_BTN				205
-#define _LEFT_CHANGE_BTN			325
-#define _LEFT_EXIT_BTN				475
-#define _TOP_LOGIN_BTNS				8
+#define _LEFT_LOGIN_BTN				459
+#define _LEFT_NEW_BTN				139
+#define _LEFT_CHANGE_BTN			279
+#define _LEFT_EXIT_BTN				439
+#define _TOP_LOGIN_BTNS				7
 
 
 CLogin::CLogin():CBMWnd()
 {
-
+	m_nUserState = LGM_INPUT_ID;
+	m_fIsButtonDown = FALSE;
+	m_fShowIDPASS = TRUE;
 }
 
 CLogin::~CLogin()
@@ -47,7 +49,7 @@ VOID CLogin::Create(CWHWilImageData* pxImage)
 	INT	nLoop;
 	// Buttons
 	BUTTONINFO LoginProcBtnInfo[] = {
-									{ _IMG_IDX_BTN_LOGIN,		_LEFT_LOGIN_BTN,	_TOP_LOGIN_BTNS,			0,		0}, // Login Button
+									{ _IMG_IDX_BTN_LOGIN,		_LEFT_LOGIN_BTN,	64,			0,		0}, // Login Button
 									{ _IMG_IDX_BTN_NEW,			_LEFT_NEW_BTN,		_TOP_LOGIN_BTNS,			0,		0},	// New Account
 									{ _IMG_IDX_BTN_CHANGE,		_LEFT_CHANGE_BTN,	_TOP_LOGIN_BTNS,			0,		0},	// Change Password
 									{ _IMG_IDX_BTN_EXIT,		_LEFT_EXIT_BTN,		_TOP_LOGIN_BTNS,			0,		0}	// Exit								
@@ -67,7 +69,7 @@ VOID CLogin::Create(CWHWilImageData* pxImage)
 	for(nLoop = 0 ; nLoop < LOGIN_BUTTON_COUNT ; nLoop ++)
 		m_xButtons[nLoop].SetBtn(&LoginProcBtnInfo[nLoop]);
 	
-	m_fShowIDPASS = FALSE;	
+	m_fShowIDPASS = TRUE;
 
 	ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
 	SetFocus(g_xMainWnd.GetSafehWnd());
@@ -139,7 +141,7 @@ HRESULT	CLogin::OnButtonUp(WPARAM wParam, LPARAM lParam)
 
 	for(i = BTN_LOGIN_ID; i <= BTN_EXIT_ID; i++)
 	{//	m_xButtons[i].m_nState = BUTTON_STATE_UP;		
-		m_pxImage->NewSetIndex(m_xButtons[i].m_nButtonID + m_xButtons[i].m_nState - 1);
+		m_pxImage->NewSetIndex(m_xButtons[i].m_nButtonID + (m_xButtons[i].m_nState == BUTTON_STATE_UP ? 0 : 1));
 		SetRect(&tRect
 				,m_xButtons[i].m_Rect.left + m_rcWnd.left ,m_xButtons[i].m_Rect.top + m_rcWnd.top 
 				,m_xButtons[i].m_Rect.left + m_rcWnd.left + m_pxImage->m_lpstNewCurrWilImageInfo->shWidth
@@ -149,24 +151,28 @@ HRESULT	CLogin::OnButtonUp(WPARAM wParam, LPARAM lParam)
 			switch(m_xButtons[i].m_nButtonID)
 			{	case _IMG_IDX_BTN_LOGIN:
 				{
-					m_fShowIDPASS = !m_fShowIDPASS;
+					SetFocusBefore();
+					if (m_xInputState[0].szData[0] && m_xInputState[1].szData[0]) {
+						strcpy(g_szUserID, m_xInputState[0].szData);
+						g_xClientSocket.OnLogin(m_xInputState[0].szData,m_xInputState[1].szData);
+					}
 					break;
 				}
 			case _IMG_IDX_BTN_NEW:
 				{
-					m_fShowIDPASS = FALSE;
+					m_fShowIDPASS = TRUE;
 
 					break; 
 				}
 			case _IMG_IDX_BTN_CHANGE:
 				{
-					m_fShowIDPASS = FALSE;
+					m_fShowIDPASS = TRUE;
 
 					break;
 				}
 			case _IMG_IDX_BTN_EXIT:
 				{
-					m_fShowIDPASS = FALSE;
+					m_fShowIDPASS = TRUE;
 					SendMessage(g_xMainWnd.GetSafehWnd(), WM_DESTROY, NULL, NULL);
 					return 0L;break;
 				}
@@ -199,7 +205,7 @@ LRESULT	CLogin::OnMouseMove(WPARAM wParam, LPARAM lParam)
 	if(!m_fIsButtonDown)
 	{
 		for( i = BTN_LOGIN_ID ; i <= BTN_EXIT_ID ; i ++)
-		{	m_pxImage->NewSetIndex(m_xButtons[i].m_nButtonID + m_xButtons[i].m_nState - 1);
+		{	m_pxImage->NewSetIndex(m_xButtons[i].m_nButtonID + (m_xButtons[i].m_nState == BUTTON_STATE_UP ? 0 : 1));
 			SetRect(&tRect
 					,m_xButtons[i].m_Rect.left + m_rcWnd.left ,m_xButtons[i].m_Rect.top + m_rcWnd.top 
 					,m_xButtons[i].m_Rect.left + m_rcWnd.left + m_pxImage->m_lpstNewCurrWilImageInfo->shWidth
@@ -223,19 +229,19 @@ VOID CLogin::Render(INT	nLoopTime)
 	{
 
 		MoveWindow(g_xChatEditBox.GetSafehWnd(), 
-					g_xMainWnd.m_rcWindow.left + m_xInputState[m_nUserState-1].Left +5,
-					g_xMainWnd.m_rcWindow.top + m_xInputState[m_nUserState-1].Top + 5 ,	m_xInputState[m_nUserState-1].Width,		m_xInputState[m_nUserState-1].Height,		TRUE);
+					g_xMainWnd.m_rcWindow.left + m_xInputState[m_nUserState-1].Left,
+					g_xMainWnd.m_rcWindow.top + m_xInputState[m_nUserState-1].Top ,	m_xInputState[m_nUserState-1].Width,		m_xInputState[m_nUserState-1].Height,		TRUE);
 	
 		ShowWindow(g_xChatEditBox.GetSafehWnd(), (m_fShowIDPASS ? SW_SHOW:SW_HIDE));
 		// Draw Login Border
-		if(!m_fShowIDPASS)
+		if(m_fShowIDPASS)
 		{	m_pxImage->NewSetIndex(_IMG_IDX_LOGIN_BORDER);
 			g_xMainWnd.DrawWithABlendCompDataWithBackBuffer(m_rcWnd.left ,m_rcWnd.top ,
 															m_pxImage->m_lpstNewCurrWilImageInfo->shWidth ,m_pxImage->m_lpstNewCurrWilImageInfo->shHeight ,(WORD*)m_pxImage->m_pbCurrImage,640,480);
 			// Draw Button Image
 			for ( i = BTN_LOGIN_ID ; i <=  BTN_EXIT_ID ; i++)
 			{
-					m_pxImage->NewSetIndex(m_xButtons[i].m_nButtonID + m_xButtons[i].m_nState - 1);
+					m_pxImage->NewSetIndex(m_xButtons[i].m_nButtonID + (m_xButtons[i].m_nState == BUTTON_STATE_UP ? 0 : 1));
 					g_xMainWnd.DrawWithImageForComp(m_rcWnd.left + m_xButtons[i].m_Rect.left, m_rcWnd.top + m_xButtons[i].m_Rect.top, 
 												m_pxImage->m_lpstNewCurrWilImageInfo->shWidth, 
 												m_pxImage->m_lpstNewCurrWilImageInfo->shHeight, (WORD*)(m_pxImage->m_pbCurrImage));
@@ -246,9 +252,10 @@ VOID CLogin::Render(INT	nLoopTime)
 		{	m_pxImage->NewSetIndex(_IMG_IDX_LOGIN_IDPASS);
 			g_xMainWnd.DrawWithImageForComp(_LEFT_ID_PASS,m_rcWnd.top + _TOP_ID_PASS,
 												m_pxImage->m_lpstNewCurrWilImageInfo->shWidth ,m_pxImage->m_lpstNewCurrWilImageInfo->shHeight,(WORD*)m_pxImage->m_pbCurrImage);
+			SetFocusBefore();
 			memset(Pass,'*',strlen(m_xInputState[1].szData));
-			g_xMainWnd.PutsHan(NULL, m_xInputState[0].Left+7, m_xInputState[0].Top+6, RGB(255,255,255), RGB(0,0,0), m_xInputState[0].szData);
-			g_xMainWnd.PutsHan(NULL, m_xInputState[1].Left+7, m_xInputState[1].Top+6, RGB(255,255,255), RGB(0,0,0), Pass);
+			g_xMainWnd.PutsHan(NULL, m_xInputState[0].Left, m_xInputState[0].Top, RGB(255,255,255), RGB(0,0,0), m_xInputState[0].szData);
+			g_xMainWnd.PutsHan(NULL, m_xInputState[1].Left, m_xInputState[1].Top, RGB(255,255,255), RGB(0,0,0), Pass);
 		}		
 	}
 }

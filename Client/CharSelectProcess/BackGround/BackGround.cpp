@@ -5,7 +5,7 @@
 
 #define IMG_IDX_SELECT_CHR_BACK				50
 
-#define IMG_IDX_CREATE_CHR_BACK				90
+#define IMG_IDX_CREATE_CHR_BACK				80
 
 #define BACK_IMG_POS_X						0
 #define BACK_IMG_POS_Y						0

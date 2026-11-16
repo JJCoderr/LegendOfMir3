@@ -4,13 +4,21 @@
 
 #include "stdafx.h"
 
+// Coordinates are shared by drawing and hit testing for the supplied UI frames.
+struct CreateControl { int frame, x, y, width, height; };
+static const CreateControl createControls[] = {
+    {85, 450, 444, 28, 28}, {88, 491, 444, 28, 28},
+    {91, 266, 419, 40, 38}, {94, 308, 419, 40, 38}, {97, 352, 419, 40, 38}
+};
+
+
 ////////////////////////////////////////////////
 ////////////////////////////////////////////////
 
 
 // Positio of Edit box
-#define POS_NAME_X						300
-#define POS_NAME_Y						460
+#define POS_NAME_X						288
+#define POS_NAME_Y						405
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -32,6 +40,11 @@ CCharacterProcess::~CCharacterProcess()
 
 VOID CCharacterProcess::Init()
 {
+	m_Tick = 0;
+	ZeroMemory(m_createBounds, sizeof(m_createBounds));
+	m_SelectJob = 0;
+	m_SelectSex = 0;
+	m_bCreatePending = FALSE;
 	m_Progress=PRG_CHAR_SELE;
 	m_ConnectionState=CONNECT_FAIL;
 	ZeroMemory(m_szErrorMsg,512);
@@ -42,14 +55,14 @@ VOID CCharacterProcess::Load()
 {
 	WSAStartup(MAKEWORD(2, 2), &m_wsd);
 	m_Image.NewLoad(".\\Data\\interface1c.wil", TRUE, TRUE);
-	m_Image2.NewLoad(".\\Data\\interfacec2.wil", TRUE, TRUE);
+	m_Image2.NewLoad(".\\Data\\GameInter.wil", TRUE, TRUE);
 	// 临时
 	//
 	m_ConnectionState = CONNECT_FAIL;
 
 	g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(), g_szServerIP, g_nServerPort);
 
-	g_xChatEditBox.SetLimitText(20);
+	g_xChatEditBox.SetLimitText(13);
 	SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETPASSWORDCHAR,NULL,0);
 
 	m_ChrCount =0;
@@ -274,57 +287,38 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 				break;
 			}
 
-		case PRG_CREATE_CHAR:
-			{
-			/*
-				for(i = ID_CREATE_CHR_OK_BTN; i <= ID_CREATE_CHR_TAO_BTN; i++)
-				{
-					m_pBtn[i].m_nState = BUTTON_STATE_UP;
-					if (m_pBtn[i].CheckMouseOn(LOWORD(lParam), HIWORD(lParam)))
-					{
-						switch(i)
-						{
-							case ID_CREATE_CHR_WAR_BTN:
-								m_SelectJob = _JOB_JUNSA;
-								break;
-							case ID_CREATE_CHR_SOR_BTN:
-								m_SelectJob = _JOB_SULSA;
-								break;
-							case ID_CREATE_CHR_TAO_BTN:
-								m_SelectJob = _JOB_DOSA;
-								break;
-							case ID_CREATE_CHR_OK_BTN:
-							{
-								int Lens;
-								GetWindowText(g_xChatEditBox.GetSafehWnd(),m_szChrName,sizeof(m_szChrName));
-								Lens = strlen(m_szChrName);
-								if(Lens!=0)
-								{
-									CHRINFO	ChrInfo;
-									strcpy(ChrInfo.ChrName,m_szChrName);
-									ChrInfo.Class=m_SelectJob;
-									ChrInfo.Gender=m_SelectSex;
-									ChrInfo.Level = 1;
-									m_ChrCount = 0;
-									m_xBGround.SetRenderState(_RENDER_AVI_OUT);
-									g_xSound.PlayMp3(MP3_TOSELECTCHAR,FALSE);
-									m_Progress = PRG_CREA_TO_SEL;					// 临时
-									g_xClientSocket.OnQueryChar();					// 临时
-								}
-								else
-								{
-									m_nMessage = 2;
-									SetErrorMessage(m_nMessage,m_szErrorMsg);
-									m_xMsgBox.ShowMessageBox(m_szErrorMsg,1,_WNDIMGINDX_MSGBOX1);
-								}
-							}
-						}
-					}
-				}*/
-				m_Progress = PRG_CREA_TO_SEL;
-				m_xBGround.SetRenderState(_RENDER_AVI_OUT);
-				break;
-			}
+        case PRG_CREATE_CHAR:
+        {
+            if (m_bCreatePending) break;
+            for (int gender = 0; gender < 2; ++gender)
+                if (PtInRect(&m_createBounds[gender], m_ptMousePos)) m_SelectSex = (BYTE)gender;
+            for (int i = 0; i < 5; ++i) {
+                const CreateControl& control = createControls[i];
+                RECT rect = {control.x, control.y, control.x + control.width, control.y + control.height};
+                if (!PtInRect(&rect, m_ptMousePos)) continue;
+                if (i == 1) {
+                    m_Progress = PRG_CHAR_SELE;
+                    m_xBGround.SetRenderState(_RENDER_STILL_1);
+                    m_xSelectChr.OpenWnd();
+                } else if (i >= 2) {
+                    m_SelectJob = (BYTE)(i - 2);
+                } else {
+                    GetWindowTextA(g_xChatEditBox.GetSafehWnd(), m_szChrName, sizeof(m_szChrName));
+                    if (!m_szChrName[0]) break;
+                    if (strpbrk(m_szChrName, " /@?'\"\\.,:;`~!#$%^&*()-_+=|[{}]<>")) {
+                        m_nMessage = 0;
+                        strcpy(m_szErrorMsg, "Please use letters, numbers or Chinese characters for the name.");
+                        m_xMsgBox.ShowMessageBox(m_szErrorMsg, MSG_BTN_OK, 1240);
+                        break;
+                    }
+                    m_bCreatePending = TRUE;
+                    g_xClientSocket.OnNewChar(m_szChrName, 0, m_SelectJob, m_SelectSex);
+                }
+                break;
+            }
+            break;
+        }
+
 		}
 	}
 	return 0L;
@@ -388,120 +382,67 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 
 	switch(tdm.wIdent)
 	{
-		case SM_QUERYCHR:
-		{
-			m_SelectChr = SELECT_NONE;
-			if (tdm.nRecog)
-			{
-				char	szDecodeMsg[512];
-				char	*pszID = NULL, *pszJob = NULL, *pszFace = NULL, *pszLevel = NULL, *pszSex = NULL, *pszNext = NULL;
-				int		nPos = 0;
-
-				m_SelectChr = SELECT_FIRST;
-				m_CRectList.ClearAllNodes();
-
-				ZeroMemory(szDecodeMsg, sizeof(szDecodeMsg));
-
-				fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), szDecodeMsg, sizeof(szDecodeMsg));
-
-				m_ChrCount = tdm.nRecog;
-
-				for (int i = 0; i < tdm.nRecog; i++)
-				{
-					CHRINFO* pxChInfo = new CHRINFO;
-
-					if (szDecodeMsg[nPos] == '*')
-					{
-						pszID		= &szDecodeMsg[nPos + 1];
-						m_SelectChr = i;
-					}
-					else
-						pszID = &szDecodeMsg[nPos];
-
-					if (pszJob = strchr(pszID, '/'))
-					{
-						*pszJob = '\0';
-						pszJob++;
-
-						strcpy(pxChInfo->ChrName, pszID);
-						
-						pxChInfo->Class = atoi(pszJob);
-
-						if (pszFace = strchr(pszJob, '/'))
-						{
-							*pszFace = '\0';
-							pszFace++;
-
-							if (pszLevel = strchr(pszFace, '/'))
-							{
-								*pszLevel = '\0';
-								pszLevel++;
-
-								pxChInfo->Level = atoi(pszLevel);
-
-								if (pszSex = strchr(pszLevel, '/'))
-								{
-									*pszSex = '\0';
-									pszSex++;
-
-									pxChInfo->Gender = atoi(pszSex);
-									
-									m_CList.AddNode(pxChInfo);
- 
-									m_Image.NewSetIndex(IDX_IMG_MALE_WAR + m_CList.GetCurrentData()->Gender + (m_CList.GetCurrentData()->Class * 2)) ;
-
-									CHRRECT* pxChRect = new CHRRECT;
-									pxChRect->nLeft		= nChrPos[i + tdm.nRecog - 1];
-									pxChRect->nTop		= 280;
-									pxChRect->nWidth	= m_Image.m_lpstNewCurrWilImageInfo->shWidth;
-									pxChRect->nHeight	= m_Image.m_lpstNewCurrWilImageInfo->shHeight;
-
-									m_CRectList.AddNode(pxChRect);
-
-									if (pszNext = strchr(pszSex, '/'))
-									{
-										pszNext++;
-
-										if (*pszNext != '\0')
-											nPos = pszNext - &szDecodeMsg[0];
-									}
-								}
-							}
-						}
-					} // For
-					m_xSelectChr.Create(&m_Image,&m_CList,&m_CRectList,tdm.nRecog);
-					m_xSelectChr.OpenWnd ();
-				}
-			}
-
-			break;
-		}
+        case SM_QUERYCHR:
+        {
+            CHRINFO records[3] = {};
+            static_assert(sizeof(CHRINFO) == 23, "Character list wire layout changed");
+            if (tdm.wParam > 3) break;
+            const int count = tdm.wParam;
+            const int decoded = fnDecode6BitBuf(pszMsg + DEFBLOCKSIZE, (char*)records, sizeof(records));
+            if (decoded != count * sizeof(CHRINFO)) break;
+            m_CList.ClearAllNodes();
+            m_CRectList.ClearAllNodes();
+            m_ChrCount = count;
+            m_SelectChr = count ? SELECT_FIRST : SELECT_NONE;
+            for (int i = 0; i < count; ++i) {
+                records[i].ChrName[sizeof(records[i].ChrName) - 1] = 0;
+                CHRINFO* info = new CHRINFO(records[i]);
+                m_CList.AddNode(info);
+                CHRRECT* rect = new CHRRECT;
+                rect->nLeft = 200 + i * 100;
+                rect->nTop = 200;
+                rect->nWidth = 90;
+                rect->nHeight = 140;
+                m_CRectList.AddNode(rect);
+            }
+            m_xSelectChr.Create(&m_Image, &m_CList, &m_CRectList, count);
+            m_xSelectChr.OpenWnd();
+            break;
+        }
 		case	SM_NEWCHR_SUCCESS:		// New character Create Success
 		{
-			m_Progress = PRG_CREA_TO_SEL;
+			m_bCreatePending = FALSE;
+			m_Progress = PRG_CHAR_SELE;
+			m_xBGround.SetRenderState(_RENDER_STILL_1);
 			g_xClientSocket.OnQueryChar();
 			break;
 		}
-		case	SM_STARTPLAY:			// Start Game
-		{
-			char	szDecodeMsg[512];
-			char	*pszIP = &szDecodeMsg[0], *pszPort;
+        case SM_NEWCHR_FAIL:
+            m_bCreatePending = FALSE;
+            m_Progress = PRG_CREATE_CHAR;
+            m_nMessage = 0;
+            sprintf(m_szErrorMsg, "Character creation failed (code %u).", tdm.wParam);
+            m_xMsgBox.ShowMessageBox(m_szErrorMsg, MSG_BTN_OK, 1240);
+            break;
+        case SM_STARTPLAY:
+        {
+            char endpoint[256] = {};
+            fnDecode6BitBuf(pszMsg + DEFBLOCKSIZE, endpoint, sizeof(endpoint)-1);
+            char* port = strchr(endpoint, '/');
+            if (port) *port++ = 0;
+            lstrcpynA(g_szServerIP, endpoint, sizeof(g_szServerIP));
+            g_nServerPort = port ? atoi(port) :
+                GetPrivateProfileIntA("Initial","GameGatePort",7200,".\\Mir3.ini");
+            g_xClientSocket.DisconnectToServer();
+            m_xSelectChr.m_nRenderState = 2;
+            break;
+        }
+        case SM_STARTFAIL:
+            m_nMessage = 0;
+            strcpy(m_szErrorMsg,"Game server is unavailable. Please try again.");
+            m_xMsgBox.ShowMessageBox(m_szErrorMsg,MSG_BTN_OK,1240);
+            break;
 
-			ZeroMemory(szDecodeMsg, sizeof(szDecodeMsg));
-
-			fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), szDecodeMsg, sizeof(szDecodeMsg));
-
-			if (pszPort = strchr(pszIP, '/'))
-			{
-				*pszPort = '\0';
-				pszPort++;
-				strcpy(g_szServerIP, pszIP);
-				g_nServerPort = atoi(pszPort);
-				g_xClientSocket.DisconnectToServer();
-				m_xSelectChr.m_nRenderState = 2;			// Set Select Renderstaet to Ready startgame
-			}
-			break;
-		}
 	}
 /*	_TDEFAULTMESSAGE	tdm;
 	char				szDecodeMsg[256];
@@ -734,30 +675,36 @@ VOID CCharacterProcess::ShowStatus(INT nStartX, INT nStartY)
 }
 
 
-VOID	CCharacterProcess::RenderCharCreate(INT nLoopTime)
+VOID CCharacterProcess::RenderCharCreate(INT nLoopTime)
 {
-	POINT nPos[] = { {120, 88}, {120, 85}, {150, 108}};
-//	int i ;
-
-	MoveWindow(g_xChatEditBox.GetSafehWnd(), 
-					   g_xMainWnd.m_rcWindow.left+POS_NAME_X,
-					   g_xMainWnd.m_rcWindow.top+POS_NAME_Y, 75, 15, TRUE);
-
-/*	for (i = ID_CREATE_CHR_OK_BTN ; i <= ID_CREATE_CHR_TAO_BTN; i++)
-	{
-		m_Image.NewSetIndex(m_pBtn[i].m_nButtonID + m_pBtn[i].m_nState -1);
-		g_xMainWnd.DrawWithImageForComp(m_pBtn[i].m_Rect.left, m_pBtn[i].m_Rect.top,
-									m_Image.m_lpstNewCurrWilImageInfo->shWidth,
-									m_Image.m_lpstNewCurrWilImageInfo->shHeight					
-									, (WORD*)(m_Image.m_pbCurrImage));
-	}
-*/
-	// 临时~!
-	m_Image.NewSetIndex(IMG_IDX_WAR_MALE_CREATE + m_SelectSex + m_SelectJob * 2);
-
-	g_xMainWnd.DrawWithImageForComp(nPos[m_SelectJob].x,nPos[m_SelectJob].y
-			,m_Image.m_lpstNewCurrWilImageInfo->shWidth,m_Image.m_lpstNewCurrWilImageInfo->shHeight
-			,(WORD*)(m_Image.m_pbCurrImage));
+    MoveWindow(g_xChatEditBox.GetSafehWnd(),
+        g_xMainWnd.m_rcWindow.left + POS_NAME_X,
+        g_xMainWnd.m_rcWindow.top + POS_NAME_Y, 75, 13, TRUE);
+    // Mir3 br_godot_test_261115: CreateCharacterPage positions/action 4.
+    static const POINT positions[6] = {{110,110},{110,120},{110,120},{400,160},{420,115},{425,118}};
+    static const int lastFrame[6] = {17,14,16,15,16,14};
+    m_Tick += nLoopTime;
+    for (int gender = 0; gender < 2; ++gender) {
+        const int role = m_SelectJob + 3 * gender;
+        const int first = 440 + 600 * m_SelectJob + 300 * gender;
+        const int frame = first + (gender == m_SelectSex ? (m_Tick / 121) % (lastFrame[role] + 1) : 0);
+        if (!m_Image.NewSetIndex(frame)) continue;
+        const NEWWILIMAGEINFO& info = *m_Image.m_lpstNewCurrWilImageInfo;
+        const int x = positions[role].x + info.shPX, y = positions[role].y + info.shPY;
+        SetRect(&m_createBounds[gender], x, y, x + info.shWidth, y + info.shHeight);
+        g_xMainWnd.DrawWithImageForComp(x, y, info.shWidth, info.shHeight, (WORD*)m_Image.m_pbCurrImage);
+    }
+    if (m_Image.NewSetIndex(81))
+        g_xMainWnd.DrawWithImageForComp(247,384,m_Image.m_lpstNewCurrWilImageInfo->shWidth,
+            m_Image.m_lpstNewCurrWilImageInfo->shHeight,(WORD*)m_Image.m_pbCurrImage);
+    for (int i = 0; i < 5; ++i) {
+        const CreateControl& control = createControls[i];
+        const int frame = control.frame + (i >= 2 && m_SelectJob == i - 2 ? 1 : 0);
+        if (m_Image.NewSetIndex(frame))
+            g_xMainWnd.DrawWithImageForComp(control.x, control.y,
+                m_Image.m_lpstNewCurrWilImageInfo->shWidth,
+                m_Image.m_lpstNewCurrWilImageInfo->shHeight, (WORD*)m_Image.m_pbCurrImage);
+    }
 }
 
 VOID CCharacterProcess::SetErrorMessage(INT nMsg,CHAR* szMgs)

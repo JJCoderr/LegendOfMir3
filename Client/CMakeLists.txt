@@ -15,6 +15,7 @@ set(MIR3_CLIENT_SOURCES
     Common/MirButton.cpp
     Common/MirMsgBox.cpp
     Common/MirMsgBox3D.cpp
+    Common/LoginNotice.cpp
     Common/MsgBox.cpp
     Common/NoticeBox.cpp
     Common/NPCTxtAnalysis.cpp

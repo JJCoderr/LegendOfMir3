@@ -22,9 +22,9 @@ VOID CWHWilImageData::Init()
 
 	ZeroMemory(&m_stWixImgaeInfo, sizeof(WIXIMAGEINFO));
 
-	ZeroMemory(&m_stNewWixImgaeInfo, sizeof(WIXIMAGEINFO));
+	ZeroMemory(&m_stNewWixImgaeInfo, sizeof(NEWWIXIMAGEINFO));
 
-	ZeroMemory(&m_szWilFileName, sizeof(MAX_PATH));
+	ZeroMemory(&m_szWilFileName, sizeof(m_szWilFileName));
 
 	m_nCurrImageIdx		= -1;								// 初始设置值未设定的状态。
 	m_pbCurrImage		= NULL;
@@ -45,14 +45,15 @@ VOID CWHWilImageData::Destroy()
 		}
 		else
 		{
-			SAFE_DELETE(m_pbStartData);
+			delete[] m_pbStartData;
+			m_pbStartData = NULL;
 		}
 	}
 
-	SAFE_DELETE(m_stWixImgaeInfo.pnPosition);
+	delete[] m_stWixImgaeInfo.pnPosition;
 	ZeroMemory(&m_stWixImgaeInfo, sizeof(WIXIMAGEINFO));
 
-	SAFE_DELETE(m_stNewWixImgaeInfo.pnPosition);
+	delete[] m_stNewWixImgaeInfo.pnPosition;
 	ZeroMemory(&m_stNewWixImgaeInfo, sizeof(NEWWIXIMAGEINFO));
 
 	Init();
@@ -159,7 +160,7 @@ BOOL CWHWilImageData::NewSetIndex(DWORD dwIndex)
 
 	m_nCurrImageIdx = dwIndex;
 
-	if ( m_stNewWixImgaeInfo.pnPosition[dwIndex] != 0 && dwIndex >= 0 && (INT)dwIndex < m_stNewWixImgaeInfo.nIndexCount )
+	if ( m_stNewWixImgaeInfo.pnPosition && dwIndex < (DWORD)m_stNewWixImgaeInfo.nIndexCount && m_stNewWixImgaeInfo.pnPosition[dwIndex] != 0 )
 	{
 		BYTE* pbTmpData = (BYTE*)(m_pbStartData + m_stNewWixImgaeInfo.pnPosition[dwIndex]);
 
@@ -193,9 +194,23 @@ BOOL CWHWilImageData::NewLoad(CHAR* szWilFile, BOOL bIsMemMapped, BOOL bComp)
 	strcpy(m_szWilFileName, szWilFile);
 
 	hWixFile= CreateFile(szWixFile, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if ( hWixFile )
+	if ( hWixFile != INVALID_HANDLE_VALUE )
 	{
-		ReadFile(hWixFile, &m_stNewWixImgaeInfo, sizeof(NEWWIXIMAGEINFO)-sizeof(INT*), &dwReadLen, NULL);
+        const DWORD headerSize = sizeof(NEWWIXIMAGEINFO) - sizeof(INT*);
+        DWORD indexSize = GetFileSize(hWixFile, NULL);
+        if (!ReadFile(hWixFile, &m_stNewWixImgaeInfo, headerSize, &dwReadLen, NULL) ||
+            dwReadLen != headerSize || m_stNewWixImgaeInfo.nIndexCount <= 0) {
+            CloseHandle(hWixFile);
+            return FALSE;
+        }
+        ULONGLONG expected = headerSize + (ULONGLONG)m_stNewWixImgaeInfo.nIndexCount * sizeof(INT);
+        // V1.45 adds a four-byte field after the index count.
+        if (indexSize == expected + 4)
+            SetFilePointer(hWixFile, 4, NULL, FILE_CURRENT);
+        else if (indexSize != expected) {
+            CloseHandle(hWixFile);
+            return FALSE;
+        }
 
 		m_stNewWixImgaeInfo.pnPosition = new INT[m_stNewWixImgaeInfo.nIndexCount];
 		ReadFile(hWixFile, m_stNewWixImgaeInfo.pnPosition, sizeof(INT)*m_stNewWixImgaeInfo.nIndexCount, &dwReadLen, NULL);
@@ -231,6 +246,7 @@ BOOL CWHWilImageData::NewLoad(CHAR* szWilFile, BOOL bIsMemMapped, BOOL bComp)
 
 			NewSetIndex(0);						// 设置为索引 0.
 			CloseHandle(hWilFile);
+			CloseHandle(hWixFile);
 			return TRUE;
 		}
 

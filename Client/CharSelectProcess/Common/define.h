@@ -22,9 +22,9 @@
 // Charater Select Image Index
 #define IMG_IDX_SELECT_CHR_BACK				50
 #define IMG_IDX_SELECT_CREATE				51
-#define IMG_IDX_SELECT_DELETE				52
-#define IMG_IDX_SELECT_START				53
-#define IMG_IDX_SELECT_EXIT					54
+#define IMG_IDX_SELECT_DELETE				53
+#define IMG_IDX_SELECT_START				55
+#define IMG_IDX_SELECT_EXIT					57
 
 // Empty Button Image Index
 #define IMG_IDX_EMPTY_BTN_UP				23
@@ -32,7 +32,7 @@
 #define IMG_IDX_EMPTY_BTN_DOWN				25
 
 // Charater Create Image Index
-#define IMG_IDX_CREATE_CHR_BACK				90
+#define IMG_IDX_CREATE_CHR_BACK				80
 #define IMG_IDX_WAR_BTN_UP					91
 #define IMG_IDX_SOR_BTN_UP					94
 #define IMG_IDX_TAO_BTN_UP					97
@@ -67,14 +67,14 @@
 #define CREATE_CHAR_OK_BTN_HEIGHT			 24
 
 // Position of Select buttons
-#define SELECT_CHAR_NEW_BTN_POS_X			442
-#define SELECT_CHAR_NEW_BTN_POS_Y			98
-#define SELECT_CHAR_ERASE_BTN_POS_X			81
-#define SELECT_CHAR_ERASE_BTN_POS_Y			247
-#define SELECT_CHAR_START_BTN_POS_X			263
-#define SELECT_CHAR_START_BTN_POS_Y			53
-#define SELECT_CHAR_EXIT_BTN_POS_X			29
-#define SELECT_CHAR_EXIT_BTN_POS_Y			441
+#define SELECT_CHAR_NEW_BTN_POS_X			440
+#define SELECT_CHAR_NEW_BTN_POS_Y			93
+#define SELECT_CHAR_ERASE_BTN_POS_X			79
+#define SELECT_CHAR_ERASE_BTN_POS_Y			243
+#define SELECT_CHAR_START_BTN_POS_X			259
+#define SELECT_CHAR_START_BTN_POS_Y			49
+#define SELECT_CHAR_EXIT_BTN_POS_X			28
+#define SELECT_CHAR_EXIT_BTN_POS_Y			438
 
 #define RETURN_SELECT_NONE					0
 #define RETURN_SELECT_NEW_BTN				1

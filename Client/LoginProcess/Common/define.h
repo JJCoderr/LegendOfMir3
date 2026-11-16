@@ -156,7 +156,7 @@
 
 // File Names
 #define IMAGE_INTERFACE_1			".\\Data\\Interface1c.wil"
-#define IMAGE_INTERFACE_2			".\\Data\\Inventory.wil"//".\\Data\\Interfacec2.wil"
+#define IMAGE_INTERFACE_2			".\\Data\\GameInter.wil"
 #define AVI_INTRO_MAIN				".\\ei_login.avi"
 #define AVI_EI_LOGO					".\\ei_logo.avi"
 #define MP3_INTRO_MAIN				".\\Sound\\StartGame.mp3" //EI_Login.mp3"

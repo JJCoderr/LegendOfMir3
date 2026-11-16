@@ -7,6 +7,8 @@
 
 CSelectChr::CSelectChr()
 {
+	m_pBtn = NULL;
+	m_nSelectChr = 0;
 	m_nRenderState = 0;
 	m_nAnimationCount = 0;
 	m_nRoll = 0;
@@ -18,6 +20,7 @@ CSelectChr::~CSelectChr()
 {
 	if(m_pBtn!=NULL)
 	{
+		for (int i = 0; i < 4; ++i) delete m_pBtn[i];
 		delete[] m_pBtn;
 	}
 }
@@ -33,12 +36,18 @@ VOID CSelectChr::Create(CWHWilImageData* pxImage,CPDLList<CHRINFO>* pxList, CPDL
 									{ IMG_IDX_SELECT_START,		SELECT_CHAR_START_BTN_POS_X,	SELECT_CHAR_START_BTN_POS_Y,	0,					0},	// Start Button									
 									};
 
+	if (m_pBtn) {
+		for (int i = 0; i < 4; ++i) delete m_pBtn[i];
+		delete[] m_pBtn;
+	}
+	m_nSelectChr = 0;
 	m_pBtn = new CMirButton*[sizeof(CharProcBtnInfo)/sizeof(BUTTONINFO)];
 
 	m_pxImage			= pxImage;
 	m_pxSList			= pxList;
 	m_pxrcList			= pxrcList;
 	m_nChrCount			= nChrCount;
+	m_nSelectChr = nChrCount ? 0 : SELECT_NONE;
 	
 	m_xLightFog.Init(RGB(125,125,125));
 
@@ -220,17 +229,16 @@ VOID CSelectChr::Render(INT	nLoopTime)
 	{
 		m_xLightFog.ClearSavedLightColor();
 
-		for (i = ID_SEL_CHR_NEW_BTN; i <= ID_SEL_CHR_START_BTN ; i++)	// °´Å¥(ÁÙÊ±)
+		// The resource background contains no button labels; draw every state.
+		for (i = ID_SEL_CHR_NEW_BTN; i <= ID_SEL_CHR_START_BTN; i++)
 		{
-			if(m_pBtn[i]->m_nState==BUTTON_STATE_DOWN)		// Draw Button when Button state is Downed..
-			{
-				m_pxImage->NewSetIndex(m_pBtn[i]->m_nButtonID);
-
+			const int frame = m_pBtn[i]->m_nButtonID +
+				(m_pBtn[i]->m_nState == BUTTON_STATE_UP ? 0 : 1);
+			if (m_pxImage->NewSetIndex(frame))
 				g_xMainWnd.DrawWithImageForComp(m_pBtn[i]->m_Rect.left, m_pBtn[i]->m_Rect.top,
-											m_pxImage->m_lpstNewCurrWilImageInfo->shWidth,
-											m_pxImage->m_lpstNewCurrWilImageInfo->shHeight					
-											, (WORD*)(m_pxImage->m_pbCurrImage));
-			}
+					m_pxImage->m_lpstNewCurrWilImageInfo->shWidth,
+					m_pxImage->m_lpstNewCurrWilImageInfo->shHeight,
+					(WORD*)m_pxImage->m_pbCurrImage);
 		}
 
 		dwTicks +=nLoopTime;
@@ -247,43 +255,34 @@ VOID CSelectChr::Render(INT	nLoopTime)
 			}
 		}
 
-		m_pxSList->MoveCurrentToTop();
-		for( i = 0 ; i < m_nChrCount ; i ++)
-		{
-				// Draw Person
-				m_pxImage->NewSetIndex(IDX_IMG_MALE_WAR 
-										+ (m_pxSList->GetCurrentData()->Gender) * 60
-										+ (m_pxSList->GetCurrentData()->Class) * 120 
-										+ ((i == m_nSelectChr) ? m_nAnimationCount : 0)) ;
-				nPx = ptPos[i + m_nChrCount - 1].x + m_pxImage->m_lpstNewCurrWilImageInfo->shPX;
-				nPy = ptPos[i + m_nChrCount - 1].y + m_pxImage->m_lpstNewCurrWilImageInfo->shPY;
-
-				g_xMainWnd.DrawWithABlendCompDataWithBackBuffer(nPx,nPy
-								,m_pxImage->m_lpstNewCurrWilImageInfo->shWidth,m_pxImage->m_lpstNewCurrWilImageInfo->shHeight
-								,(WORD*)(m_pxImage->m_pbCurrImage),640,480,0xffff,0xffff,((m_nBlend>=0)? m_nBlend : 0));
-
-				// Draw Fire
-				if(i == m_nSelectChr)
-				{
-					m_pxImage->NewSetIndex(IDX_IMG_MALE_WAR_FIRE 
-											+ (m_pxSList->GetCurrentData()->Gender) * 60
-											+ (m_pxSList->GetCurrentData()->Class) * 120 
-											+ (m_nAnimationCount)) ;
-
-					nPx = ptPos[i + m_nChrCount - 1].x + m_pxImage->m_lpstNewCurrWilImageInfo->shPX;
-					nPy = ptPos[i + m_nChrCount - 1].y + m_pxImage->m_lpstNewCurrWilImageInfo->shPY;
-
-					g_xMainWnd.DrawWithABlendCompDataWithBackBuffer(nPx,nPy
-									,m_pxImage->m_lpstNewCurrWilImageInfo->shWidth,m_pxImage->m_lpstNewCurrWilImageInfo->shHeight
-									,(WORD*)(m_pxImage->m_pbCurrImage),640,480,0xffff,0x1f1f,((m_nBlend>=0)? m_nBlend : 50));
-
-					INT nTemp = (INT)(125.0f * sin((double)(m_nRoll/10)));
-
-					m_xLightFog.SetLightRadiusWithCircle(nPx+100,nPy+100,((m_nBlend>=0) ? 5 - ((m_nBlend)/20) : 5),125 + nTemp,255 + nTemp,255 + nTemp);
-				}
-
-			m_pxSList->MoveNextNode();
-		}
+        // Frame groups/anchors follow Mir3's CharacterSelectionPage.
+        static const int idleLast[6] = {10,10,10,10,10,10};
+        static const int selectedLast[6] = {11,10,10,10,19,10};
+        m_pxSList->MoveCurrentToTop();
+        m_pxrcList->MoveCurrentToTop();
+        for (i = 0; i < m_nChrCount; ++i) {
+            const CHRINFO* role = m_pxSList->GetCurrentData();
+            const int type = role->Gender + 2 * role->Class;
+            if (type >= 0 && type < 6) {
+                const bool selected = i == m_nSelectChr;
+                const int action = selected ? 2 : 0;
+                const int frame = 200 + 60 * (action + 5 * type) +
+                    m_nAnimationCount % ((selected ? selectedLast[type] : idleLast[type]) + 1);
+                if (m_pxImage->NewSetIndex(frame)) {
+                    const NEWWILIMAGEINFO& info = *m_pxImage->m_lpstNewCurrWilImageInfo;
+                    nPx = (m_nChrCount == 1 ? 300 : (i % 2 ? 350 : 250)) + info.shPX;
+                    nPy = (i % 2 ? 250 : 210) + info.shPY;
+                    CHRRECT* bounds = m_pxrcList->GetCurrentData();
+                    bounds->nLeft = nPx; bounds->nTop = nPy;
+                    bounds->nWidth = info.shWidth; bounds->nHeight = info.shHeight;
+                    g_xMainWnd.DrawWithABlendCompDataWithBackBuffer(nPx,nPy,info.shWidth,info.shHeight,
+                        (WORD*)m_pxImage->m_pbCurrImage,640,480,0xffff,0xffff,
+                        m_nBlend >= 0 ? m_nBlend : 0);
+                }
+            }
+            m_pxSList->MoveNextNode();
+            m_pxrcList->MoveNextNode();
+        }
 		m_xLightFog.ShowLightFog();
 
 		ShowChrInfo();

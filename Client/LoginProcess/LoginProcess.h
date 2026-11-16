@@ -1,3 +1,4 @@
+#include "Common/LoginNotice.h"
 // LoginProcess.h: interface for the CLoginProcess class.
 //
 //////////////////////////////////////////////////////////////////////
@@ -72,7 +73,7 @@ private:
 
 	CPDLList<ServerList>  m_SList;
 	CPatch				*pPatch;
-	CMirMsgBox3D		m_xMsgBox;
+	CLoginNotice		m_xMsgBox;
 
 	VOID				SetErrorMessage(INT nMsg,CHAR* szMgs);			// ·¢ËÍ Error Message.
 	VOID				SetFocusBefore(VOID);

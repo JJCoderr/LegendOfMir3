@@ -515,37 +515,27 @@ void CLoginProcess::OnSocketMessageRecieve(char *pszMsg)
 			break;	
 		}
 
-		case SM_SELECTSERVER_OK:
-		{
-			char szDecodeMsg[256];
-			char *pszIP = szDecodeMsg, *pszPort, *pszIdenty;
-
-			ZeroMemory(szDecodeMsg, sizeof(szDecodeMsg));
-
-			fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), szDecodeMsg, sizeof(szDecodeMsg));
-
-			if (pszPort = strchr(szDecodeMsg, '/')){
-				*pszPort = '\0';
-				pszPort++;
-
-				if (pszIdenty = strchr(pszPort, '/')){
-					*pszIdenty = '\0';
-					pszIdenty++;
-
-					strcpy(g_szServerIP, pszIP);
-					g_nServerPort = atoi(pszPort);
-
-					m_nAnimationCounter = 0;
-					
-					g_nCertifyCode = tdm.nRecog;
-					g_xClientSocket.DisconnectToServer();
-
-					Clear(RGB(0,0,0));
-					m_Progress	= PRG_TO_SELECT_CHR;
-				}
-			}
-			break;
-		}
+        case SM_SELECTSERVER_OK:
+        {
+            char endpoint[256] = {};
+            fnDecode6BitBuf(pszMsg + DEFBLOCKSIZE,endpoint,sizeof(endpoint)-1);
+            char* port = strchr(endpoint,'/');
+            if (port) {
+                *port++ = 0;
+                g_nServerPort = atoi(port);
+                g_nCertifyCode = tdm.nRecog;
+            } else {
+                // Legacy DBSvr endpoint: IP body, certification in wParam.
+                g_nServerPort = GetPrivateProfileIntA("Initial","SelectGatePort",7100,".\\Mir3.ini");
+                g_nCertifyCode = tdm.wParam;
+            }
+            lstrcpynA(g_szServerIP,endpoint,16);
+            m_nAnimationCounter = 0;
+            g_xClientSocket.DisconnectToServer();
+            Clear(RGB(0,0,0));
+            m_Progress = PRG_TO_SELECT_CHR;
+            break;
+        }
 		// Connection Lost(close Connection)
 		case	SM_OUTOFCONNECTION:
 		{

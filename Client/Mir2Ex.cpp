@@ -52,48 +52,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	g_xLoginProc.Load();
 	g_bProcState = _LOGIN_PROC;
 
-/*/ 启动时即设置为角色 Selection Procedure
-	g_nCertifyCode = 100;
-	strcpy(g_szUserID,"2222");
-	strcpy(g_szServerIP,"61.153.254.75");
-	g_nServerPort = 7100;
-*//////
-	g_xMainWnd.m_pxDefProcess = &g_xChrSelProc;
-	g_xChrSelProc.Load();
-	g_bProcState = _CHAR_SEL_PROC;
-
-
-	WORD wColor1 = g_xMainWnd.ConvertColor24To16(RGB(255, 150, 150));
-	WORD wColor2 = g_xMainWnd.ConvertColor24To16(RGB(0, 255, 0));
-	WORD wColor3 = g_xMainWnd.ConvertColor24To16(RGB(150, 150, 255));
-	WORD wColor4 = g_xMainWnd.ConvertColor24To16(RGB(255, 255, 0));
-	WORD wColor5 = g_xMainWnd.ConvertColor24To16(RGB(255, 125, 255));
-
 	UpdateWindow(g_xMainWnd.GetSafehWnd());
 	ShowWindow(g_xMainWnd.GetSafehWnd(), SW_SHOW);
-	g_xMainWnd.m_pxDefProcess = &g_xGameProc;
-	g_xGameProc.Load();
-	g_bProcState = _GAME_PROC;
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	g_nVersion = 20090403;
 
 
 	DWORD dwLastTime, dwTime, dwDelay;
 	dwLastTime = dwTime = dwDelay = 0;
-
-
-	CAirWave m_xWave;
-	m_xWave.InitAirWave();
-	CWHWilImageData xImage;
-	xImage.NewLoad("a.wil");
-	xImage.NewSetIndex(0);
-
-		
-		g_xMainWnd.DrawWithImageForComp(0, 0, 
-								276, 185,
-								(WORD*)(xImage.m_pbCurrImage));
-
-	m_xWave.DropAirWaveMap( 180, 50, 40, -100 );
 
 
 	while (TRUE)

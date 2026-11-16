@@ -1,3 +1,4 @@
+#include "Common/LoginNotice.h"
 // CharacterProcess.h: interface for the CCharacterProcess class.
 //
 //////////////////////////////////////////////////////////////////////
@@ -53,6 +54,8 @@ public:
 	BOOL				MessageBoxProcess(LPARAM lParam);
 	
 private:
+	BOOL m_bCreatePending;
+	RECT m_createBounds[2];
 	CBackGround			m_xBGround;
 	CSelectChr			m_xSelectChr;
 	char				m_ServerIP[15];
@@ -84,7 +87,7 @@ private:
 	int					m_Distance;
 	INT					m_Tick;
 	POINT				m_PosName;
-	CMirMsgBox3D		m_xMsgBox;
+	CLoginNotice		m_xMsgBox;
 /*	CAvi				m_xCreateChrAvi;					// For Create Charector
 	CAvi				m_xStartGameAvi;					// For Create Start Game*/
 }; 

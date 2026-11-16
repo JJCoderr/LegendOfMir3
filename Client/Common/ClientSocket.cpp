@@ -343,7 +343,7 @@ LRESULT CClientSocket::OnSocketMessage(WPARAM wParam, LPARAM lParam)
 	return 0L;
 }
 
-VOID CClientSocket::SendPacket(_TDEFAULTMESSAGE* lpDefMsg, char *pszData)
+VOID CClientSocket::SendPacket(_TDEFAULTMESSAGE* lpDefMsg, char *pszData, int dataLength)
 {
 	fnEncodeMessage(lpDefMsg, m_szEncodeDefMsg, sizeof(m_szEncodeDefMsg));
 
@@ -351,7 +351,7 @@ VOID CClientSocket::SendPacket(_TDEFAULTMESSAGE* lpDefMsg, char *pszData)
 
 	if (pszData)
 	{
-		fnEncode6BitBuf((unsigned char *)pszData, m_szEncodeBody, strlen(pszData), sizeof(m_szEncodeBody));
+		fnEncode6BitBuf((unsigned char *)pszData, m_szEncodeBody, dataLength < 0 ? strlen(pszData) : dataLength, sizeof(m_szEncodeBody));
 		sprintf(m_szPacket, "#%d%s%s!", m_nSync, m_szEncodeDefMsg, m_szEncodeBody);
 	}
 	else
@@ -378,8 +378,19 @@ VOID CClientSocket::OnLogin(char *pszID, char *pszPassword)
 
 VOID CClientSocket::OnSelectServer(char *pszServerName)
 {
-	fnMakeDefMessage(&DefMsg, CM_SELECTSERVER, 0, 0, 0, 0);
-	SendPacket(&DefMsg, "ktest");
+    const int count = GetPrivateProfileIntA("Server", "ServerCount", 0, ".\\Mir3.ini");
+    for (int i = 1; i <= count; ++i) {
+        char key[32], name[256];
+        sprintf(key, "Server%dName", i);
+        GetPrivateProfileStringA("Server",key,"",name,sizeof(name),".\\Mir3.ini");
+        if (pszServerName && strcmp(name,pszServerName) == 0) {
+            sprintf(key,"Server%dIndex",i);
+            const int index = GetPrivateProfileIntA("Server",key,i,".\\Mir3.ini");
+            fnMakeDefMessage(&DefMsg,CM_SELECTSERVER,0,(WORD)index,0,0);
+            SendPacket(&DefMsg,pszServerName);
+            return;
+        }
+    }
 }
 
 VOID CClientSocket::OnChangePassword(char *pszID, char *pszOldPassword, char *pszNewPassword)
@@ -418,16 +429,18 @@ VOID CClientSocket::OnQueryChar()
 	SendPacket(&DefMsg, szPacket);
 }
 
-VOID CClientSocket::OnNewChar( char *pszId, int nHair, int nJob, int nSex )
+VOID CClientSocket::OnNewChar(char *pszId, int nHair, int nJob, int nSex)
 {
-	char szPacket[64];
-
-	fnMakeDefMessage(&DefMsg, CM_NEWCHR, 0, 0, 0, 0);
-
-	wsprintf( szPacket, "%s/%d/%d/%d", pszId, nHair, nJob, nSex );
-
-	SendPacket(&DefMsg, szPacket);
-
+    // DBSvr decodes a packed 43-byte character/account record, including zeros.
+    _TCREATECHR character = {};
+    static_assert(sizeof(character) == 43, "Character creation wire layout changed");
+    character.Class = (BYTE)nJob;
+    character.Gender = (BYTE)nSex;
+    character.Level = 1;
+    lstrcpynA(character.ChrName, pszId, sizeof(character.ChrName));
+    lstrcpynA(character.szID, g_szUserID, sizeof(character.szID));
+    fnMakeDefMessage(&DefMsg, CM_NEWCHR, 0, 0, 0, 0);
+    SendPacket(&DefMsg, (char*)&character, sizeof(character));
 }
 
 VOID CClientSocket::OnDelChar( char *pszCharName)
