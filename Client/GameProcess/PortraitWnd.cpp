@@ -138,3 +138,11 @@ int CPortraitWnd::HintAt(POINT point,POINT& anchor)
     }
     return 0;
 }
+
+bool CPortraitWnd::SendRequest()
+{
+    if(!requestPending) return false;
+    _TDEFAULTMESSAGE packet;fnMakeDefMessage(&packet,1151,0,0,0,0);
+    g_xClientSocket.SendPacket(&packet,requested.empty()?nullptr:(char*)requested.data(),int(requested.size()));
+    requestPending=false;return true;
+}

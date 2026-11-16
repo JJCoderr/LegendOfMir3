@@ -545,12 +545,29 @@ public:
             picker.first=0; picker.scrollTick=0; ui.OnLButtonDown(POINT{278,32}); const bool captured=picker.scrolling;
             ui.OnMouseMove(POINT{780,580}); ui.OnLButtonUp(POINT{780,580}); const bool bottom=picker.first==int(picker.names.size()) && !picker.scrolling;
             picker.Wheel(1); const bool bottomWheel=picker.first==int(picker.names.size())-1;
+            const auto captureUpload=[&]() {
+                SOCKET receiver=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP),sender=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+                sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);
+                bind(receiver,(sockaddr*)&address,sizeof(address));int addressLength=sizeof(address);getsockname(receiver,(sockaddr*)&address,&addressLength);
+                connect(sender,(sockaddr*)&address,sizeof(address));DWORD timeout=500;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));
+                const SOCKET saved=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;
+                const bool sent=picker.SendRequest();g_xClientSocket.m_sockClient=saved;
+                char wire[8192]={};const int received=recv(receiver,wire,sizeof(wire)-1,0);closesocket(sender);closesocket(receiver);
+                if(!sent || received<19 || wire[0]!='#' || wire[received-1]!='!') return false;
+                wire[received-1]=0;_TDEFAULTMESSAGE packet={};fnDecodeMessage(&packet,wire+2);
+                BYTE decoded[4096]={};const int length=fnDecode6BitBuf(wire+2+DEFBLOCKSIZE,(char*)decoded,sizeof(decoded));
+                return packet.wIdent==1151 && !packet.nRecog && !packet.wParam && !packet.wTag && !packet.wSeries && length==int(picker.requested.size()) &&
+                    (length==0 || memcmp(decoded,picker.requested.data(),length)==0) && !picker.requestPending && !picker.SendRequest();
+            };
             picker.first=valid; picker.selected=valid; picker.requestPending=false;
             ui.OnLButtonUp(POINT{65,350}); const bool stray=!picker.requestPending;
             ui.OnLButtonDown(POINT{65,350}); ui.OnLButtonUp(POINT{780,580}); const bool outside=!picker.requestPending && picker.pressed==-1;
             picker.lastUpload=0; picker.Request(1,1000); const bool upload=picker.requestPending && picker.requested.size()>2 && picker.requested.size()<=4095 && picker.requested[0]==0xff;
+            const bool uploadWire=captureUpload();
             picker.requestPending=false; picker.Request(1,1500); const bool cooldown=!picker.requestPending;
             ui.OnLButtonDown(POINT{185,350}); ui.OnLButtonUp(POINT{185,350}); const bool reset=picker.requestPending && picker.requested.empty() && picker.lastUpload==1000;
+            const bool resetWire=captureUpload();
+            if(FILE* report=fopen("portrait-upload-wire-check.txt","wb")) {fprintf(report,"jpeg=%d reset=%d\n",uploadWire,resetWire);fclose(report);}
             picker.requestPending=false; picker.selected=find("zz-invalid.jpg"); picker.Request(1,2000); const bool invalid=ui.m_xMsgBox.IsActive() && !picker.requestPending; ui.m_xMsgBox.HideMessageBox();
             picker.names.push_back("oversized.jpg"); picker.selected=int(picker.names.size())-1; picker.Request(1,2000); const bool size=ui.m_xMsgBox.IsActive() && !picker.requestPending; ui.m_xMsgBox.HideMessageBox(); picker.names.pop_back();
             ui.OnLButtonDown(POINT{545,370}); ui.OnLButtonUp(POINT{545,370}); const bool closed=!picker.m_bActive && picker.names.empty() && !picker.HasPreview() && picker.lastUpload==1000;

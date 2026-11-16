@@ -899,3 +899,10 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 同一目标同一名字不重复发送；空名字等待名字回复，改名/切目标/移除后返回/切图清空允许重新查询。照片数据清除与查询名缓存分开，空照片结果不会导致每帧重发。
 - Client清理83步和全部112步构建通过；target-portrait-query十项全1，照片显示十一项回归通过。已检查out/target-portrait-query.png，未注入JPEG回复，显示标准职业头像。该离线检查验证查询去重状态，不证明网络请求成功。
 - 照片回复路由以及头像上传/恢复默认的完整报文尚未接入。Godot仅暴露portrait_upload_requested事件，当前没有足够报文证据，保留待发送数据，后续查证原版/服务器定义后继续实现。
+
+### 原版头像上传协议与原生发送
+- 使用ida-reverse读取既有解包数据库，输入镜像SHA256为08f68b794bfb28803d1132c02b26d2595dba309be5b2b475ae0cdfe6a752f8aa，与Godot feature-audit一致。镜像位于C:/Users/czx/AppData/Local/Temp/mir3-assess-205da311dc994a8bbd59010e1c6a9ce2/Mir3-unpacked-analysis.exe，当前IDA会话e3ded018。启动器宝藏传奇3.exe与加壳Mir3.exe并非这些函数地址的分析对象。
+- 0x47D3A0确认1152查询头字段全零、正文名字；0x47D360确认1151上传头字段全零、正文按显式长度编码。0x41ECC0确认JPEG<=4095、1000ms限制及恢复默认发送空数据。0x47C730确认非零长度不走strlen。只读证据导出out/portrait-query-original.c、portrait-nearby-original.c、portrait-upload-original.c。
+- 新增PortraitWnd::SendRequest，在原生Interface渲染入口消费已验证的待发送请求；1151上传使用requested.size，默认恢复nullptr/0，消费后不重复发送。保留原按钮105.wav、JPEG检查和节流。
+- Client清理83步、全部111步构建通过。头像预览新增本机UDP回环捕获实际SendPacket输出：消息1151、全零头、JPEG逐字节一致、空默认报文和一次性消费均通过（jpeg=1/reset=1）；原头像选择二十一项回归全1。回环仅用于离线字节验证，不代表真实TCP服务器接受。
+- 已检查out/portrait-upload-verified.png。原版还把照片编码写入角色.fac缓存并更新自身头像，此本地缓存/自身照片以及照片回复路由、实际服务器存储仍未完成，不能宣称头像业务已全部完成。

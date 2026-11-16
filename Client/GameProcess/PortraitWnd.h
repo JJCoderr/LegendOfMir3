@@ -25,5 +25,6 @@ public:
     void Wheel(int direction);
     BOOL Pointer(int kind,POINT point);
     void Request(int button,DWORD tick);
+    bool SendRequest();
     bool HasPreview() const { return preview!=nullptr; }
 };
