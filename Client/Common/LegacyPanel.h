@@ -21,10 +21,10 @@ inline void DrawLegacyPanel(RECT box, COLORREF fill, BYTE alpha, COLORREF border
 }
 
 // RGB565 adaptation of Mir3's Godot selection_pixels.hpp.
-enum class SelectionBlend { Normal, Inactive, Shadow, Additive };
+enum class SelectionBlend { Normal, Inactive, Shadow, Additive, Alpha };
 
 inline RECT DrawSelectionFrame(CWHWilImageData& image, int frame, int x, int y,
-    SelectionBlend blend, bool useOffset = true, BYTE sourceAlpha = 0, const RECT* clip = nullptr)
+    SelectionBlend blend, bool useOffset = true, BYTE sourceAlpha = 0, const RECT* clip = nullptr, BYTE tint = 255)
 {
     if (!image.NewSetIndex(frame)) return {};
     const auto& info = *image.m_lpstNewCurrWilImageInfo;
@@ -59,6 +59,11 @@ inline RECT DrawSelectionFrame(CWHWilImageData& image, int frame, int x, int y,
                     r = (r + (dst >> 11)) / 2;
                     g = (g + ((dst >> 5) & 63)) / 2;
                     b = (b + (dst & 31)) / 2;
+                } else if (blend == SelectionBlend::Alpha) {
+                    const WORD dst = row[dx];
+                    r = (r*tint*sourceAlpha+(dst >> 11)*(255-sourceAlpha)*255+32512)/65025;
+                    g = (g*tint*sourceAlpha+((dst >> 5)&63)*(255-sourceAlpha)*255+32512)/65025;
+                    b = (b*tint*sourceAlpha+(dst&31)*(255-sourceAlpha)*255+32512)/65025;
                 } else if (blend == SelectionBlend::Additive) {
                     const WORD dst = row[dx];
                     r = min(31, r + ((dst >> 11)*(255-sourceAlpha)+127)/255);

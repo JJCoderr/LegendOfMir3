@@ -641,3 +641,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 按Godot wrap_skill_description移植165px宋体9pt换行、原字节/行上限及标题标识，缓存各技能行；提示背景RGB(100,100,50)/alpha150，标题参考10pt粗体与四色阴影，正文白色、熟练度红色。悬停位置、右边位置分支及最大等级文字沿用参考。
 - 在技能窗口绘制层中接入提示，鼠标未命中顶层技能窗口、滚动捕获或快捷键面板打开时隐藏；按树槽查说明，未学习技能也可展示文件说明。真实Magic.exp的ID1为火球术，修正原离线样例名称以免与说明矛盾；完整技能ID/资源/协议跨版本一致性仍待服务器适配时核对。
 - Client全量78步及最终全部目标构建通过；skill-description原生预览得到13行，悬停、165px换行、标题、遮挡标志、滚动/菜单隐藏、CmList复用读取均通过，既有技能窗口21项仍通过。已检查out/skill-description.png。未声称所有技能、屏幕边缘或真实服务器数据都已验证。
+
+### 顶部12槽技能快捷栏
+- 替换旧ShowMagicKey八个70起图标，按Godot draw_skill_shortcuts绘制12槽：x=40*(index+index/4)，F4/F8后留40px空隙；绑定图标使用MIcon的999+(ID&255)，位置y2/alpha200；1450起标记位于x-13,y-11，RGB与alpha均150。
+- 原生压缩纹理绘制新增Alpha混合及灰度tint参数，保持其他混合模式不变；对应参考画布shader对COLOR.rgb乘alpha后的混合。沿用HUD技能快捷栏按钮，接入B键显示开关并忽略长按重复消息。
+- Client全量78步及最终全部目标构建通过。skill-shortcuts离线预览shown/repeat_ignored/hidden全1，12图标与12标记帧均存在，既有技能窗口21项仍通过。已检查out/skill-shortcuts.png。
+- 这里只完成快捷栏显示和开关；物理F9..F12冲突、独立低字节绑定表的服务器消息更新及实际施法仍未验证/完成。

@@ -678,22 +678,15 @@ VOID CInterface::ShowGameStatus()
 
 VOID CInterface::ShowMagicKey()
 {
-	if ( m_bShowKey )
-	{
-		INT nCnt;
-
-		for ( nCnt = 0; nCnt < 8; nCnt++ )
-		{
-			if ( m_pxInterImg->NewSetIndex(70+nCnt) )
-			{
- 				g_xMainWnd.DrawWithABlendCompDataWithBackBuffer(nCnt*m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth, 0,
-																m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth,
-																m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight,
-																(WORD*)m_pxInterImg->m_pbCurrImage, _CLIP_WIDTH, 600);
-
-			}
-		}
-	}
+    if (!m_bShowKey) return;
+    for (int index=0;index<12;++index) {
+        const int x=40*(index+index/4);
+        if (const auto skill=m_xSkillWnd.GetMagicByKey(CSkillWnd::LegacyKey(index+1))) {
+            const int id=skill->stStdMagic.wMagicID&255;
+            if (id) DrawSelectionFrame(g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON],999+id,x,2,SelectionBlend::Alpha,false,200);
+        }
+        DrawSelectionFrame(*m_pxInterImg,1450+index,x-13,-11,SelectionBlend::Alpha,false,150,nullptr,150);
+    }
 }
 
 
@@ -1958,6 +1951,9 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
     }
 	switch ( wParam )
 	{
+    case 'B':
+        if (!(lParam & (1L << 30))) m_bShowKey=!m_bShowKey;
+        return TRUE;
 	case VK_RETURN:	
 		break;
 	case VK_F9:	
