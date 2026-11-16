@@ -1160,7 +1160,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 				// 存在对象1时.
 				if ( m_xMap.m_pstCellInfo[nArrayNum].wObj1 != 65535 )
 				{
-					nObjFileIdx = (m_xMap.m_pstCellInfo[nArrayNum].bFileIdx & 0XF0) >> 4;
+					nObjFileIdx = m_xMap.m_pstCellInfo[nArrayNum].bObjectFile1;
 					nImgIdx	= m_xMap.m_pstCellInfo[nArrayNum].wObj1;
 
 					if ( nObjFileIdx > 2 && nObjFileIdx < 14 )
@@ -1222,7 +1222,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 				// 存在对象2时。
 				if ( m_xMap.m_pstCellInfo[nArrayNum].wObj2 != 65535 )
 				{
-					nObjFileIdx = (m_xMap.m_pstCellInfo[nArrayNum].bFileIdx & 0X0F);
+					nObjFileIdx = m_xMap.m_pstCellInfo[nArrayNum].bObjectFile2;
 					nImgIdx		= m_xMap.m_pstCellInfo[nArrayNum].wObj2;
 
 					if ( nObjFileIdx > 2 && nObjFileIdx < 14 )
@@ -1305,7 +1305,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 				// 存在对象1时.
 				if ( m_xMap.m_pstCellInfo[nArrayNum].wObj1 != 65535 )
 				{
-					nObjFileIdx = (m_xMap.m_pstCellInfo[nArrayNum].bFileIdx & 0XF0) >> 4;
+					nObjFileIdx = m_xMap.m_pstCellInfo[nArrayNum].bObjectFile1;
 					nImgIdx	= m_xMap.m_pstCellInfo[nArrayNum].wObj1;	
 	
 					if ( nObjFileIdx > 2 && nObjFileIdx < 14 )
@@ -1369,7 +1369,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 				// 存在对象2时。
 				if ( m_xMap.m_pstCellInfo[nArrayNum].wObj2 != 65535 )
 				{
-					nObjFileIdx = (m_xMap.m_pstCellInfo[nArrayNum].bFileIdx & 0X0F);
+					nObjFileIdx = m_xMap.m_pstCellInfo[nArrayNum].bObjectFile2;
 					nImgIdx		= m_xMap.m_pstCellInfo[nArrayNum].wObj2;
 
 					if ( nObjFileIdx > 2 && nObjFileIdx < 14 )
@@ -2547,7 +2547,7 @@ VOID CGameProcess::RenderMapTileGrid()
 				{
 					if ( m_xMap.m_pstCellInfo[nArrayNum].wObj1 != 255 )
 					{
-						nObjFileIdx = (m_xMap.m_pstCellInfo[nArrayNum].bFileIdx & 0XF0) >> 4;
+						nObjFileIdx = m_xMap.m_pstCellInfo[nArrayNum].bObjectFile1;
 						nImgIdx		= m_xMap.m_pstCellInfo[nArrayNum].wObj1;
 
 						if ( nObjFileIdx > 2 && nObjFileIdx < 14 )
@@ -2583,7 +2583,7 @@ VOID CGameProcess::RenderMapTileGrid()
 				{
 					if ( m_xMap.m_pstCellInfo[nArrayNum].wObj2 != 65535 /*&& m_shObjTileViewState == 2*/ )
 					{
-						nObjFileIdx = (m_xMap.m_pstCellInfo[nArrayNum].bFileIdx & 0X0F);
+						nObjFileIdx = m_xMap.m_pstCellInfo[nArrayNum].bObjectFile2;
 						nImgIdx		= m_xMap.m_pstCellInfo[nArrayNum].wObj2;
 
 						if ( nObjFileIdx > 2 && nObjFileIdx < 14 )

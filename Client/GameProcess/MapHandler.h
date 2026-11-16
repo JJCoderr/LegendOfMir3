@@ -46,6 +46,7 @@ typedef struct tagCELLINFO
 	BYTE	bObj1Ani;
 	BYTE	bObj2Ani;
 	BYTE	bFileIdx;
+	BYTE	bObjectFile1, bObjectFile2;
 	WORD	wObj1;
 	WORD	wObj2;
 	BYTE	bDoorIdx;

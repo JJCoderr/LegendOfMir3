@@ -9,6 +9,7 @@
 
 *******************************************************************************************************************/
 #include "StdAfx.h"
+#include "../../Shared/Map145.h"
 
 
 
@@ -137,12 +138,41 @@ BOOL CMapHandler::LoadMapData(CHAR* szMapFile)
 
 		FreeMapData();
 
-		ReadFile(hFile, &m_stMapFileHeader, sizeof(MAPFILEHEADER), &dwReadLen, NULL);
+		if (!ReadFile(hFile, &m_stMapFileHeader, sizeof(MAPFILEHEADER), &dwReadLen, NULL) ||
+            dwReadLen != sizeof(MAPFILEHEADER) ||
+            !ValidateMirMapSize(hFile, m_stMapFileHeader.shWidth, m_stMapFileHeader.shHeight))
+        {
+            CloseHandle(hFile);
+            ZeroMemory(&m_stMapFileHeader, sizeof(m_stMapFileHeader));
+            return FALSE;
+        }
 
 		m_pstTileInfo = new TILEINFO[(m_stMapFileHeader.shWidth*m_stMapFileHeader.shHeight)/4];
 		ReadFile(hFile, m_pstTileInfo, sizeof(TILEINFO)*(m_stMapFileHeader.shWidth*m_stMapFileHeader.shHeight)/4, &dwReadLen, NULL);
 		m_pstCellInfo = new CELLINFO[m_stMapFileHeader.shWidth*m_stMapFileHeader.shHeight];
-		ReadFile(hFile, m_pstCellInfo, sizeof(CELLINFO)*(m_stMapFileHeader.shWidth*m_stMapFileHeader.shHeight), &dwReadLen, NULL);
+		std::vector<Mir145Cell> cells;
+		if (!ReadMir145Cells(hFile, m_stMapFileHeader.shWidth*m_stMapFileHeader.shHeight, cells))
+		{
+			CloseHandle(hFile);
+			FreeMapData();
+			return FALSE;
+		}
+		for (size_t i = 0; i < cells.size(); ++i)
+		{
+			const Mir145Cell& source = cells[i];
+			CELLINFO& target = m_pstCellInfo[i];
+			target.bFlag = source.flag;
+			target.bObj1Ani = source.animation1;
+			target.bObj2Ani = source.animation2;
+			target.bFileIdx = 0;
+			target.bObjectFile1 = source.file1;
+			target.bObjectFile2 = source.file2;
+			target.wObj1 = source.object1;
+			target.wObj2 = source.object2;
+			target.bDoorIdx = source.doorIndex;
+			target.bDoorOffset = source.doorOffset;
+			target.wLigntNEvent = source.lightEvent;
+		}
 
 		LoadNewMapBuffer();
 

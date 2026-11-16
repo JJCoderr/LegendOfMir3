@@ -1,4 +1,6 @@
 #include "stdafx.h"
+BOOL jRegGetKeyBuf(LPCTSTR, LPCTSTR, LPBYTE, DWORD);
+#include "../../Shared/Map145.h"
 
 BOOL jRegGetKey(LPCTSTR pSubKeyName, LPCTSTR pValueName, LPBYTE pValue);
 
@@ -139,7 +141,7 @@ BOOL CMirMap::LoadMapData(char *pszName)
 
 	ZeroMemory(szPath, sizeof(szPath));
 
-	jRegGetKey(_GAME_SERVER_REGISTRY, _TEXT("MapFileLoc"), (LPBYTE)szPath);
+	jRegGetKeyBuf(_GAME_SERVER_REGISTRY, _TEXT("MapFileLoc"), (LPBYTE)szPath, sizeof(szPath));
 
 	MultiByteToWideChar(CP_ACP, 0, pszName, -1, szMapName, sizeof(szMapName)/sizeof(TCHAR));
 
@@ -155,7 +157,14 @@ BOOL CMirMap::LoadMapData(char *pszName)
 
 		FreeMapData();
 
-		ReadFile(hFile, &m_stMapFH, sizeof(MAPFILEHEADER), &dwReadLen, NULL);
+		if (!ReadFile(hFile, &m_stMapFH, sizeof(MAPFILEHEADER), &dwReadLen, NULL) ||
+            dwReadLen != sizeof(MAPFILEHEADER) ||
+            !ValidateMirMapSize(hFile, m_stMapFH.shWidth, m_stMapFH.shHeight))
+        {
+            CloseHandle(hFile);
+            ZeroMemory(&m_stMapFH, sizeof(m_stMapFH));
+            return FALSE;
+        }
 
 		int nMapSize = m_stMapFH.shWidth * m_stMapFH.shHeight;
 
@@ -165,7 +174,17 @@ BOOL CMirMap::LoadMapData(char *pszName)
 
 		if (pstCellInfo)
 		{
-			ReadFile(hFile, pstCellInfo, sizeof(CELLINFO) * (nMapSize), &dwReadLen, NULL);
+			std::vector<Mir145Cell> cells;
+			if (!ReadMir145Cells(hFile, nMapSize, cells))
+			{
+				delete [] pstCellInfo;
+				CloseHandle(hFile);
+				return FALSE;
+			}
+			for (int i = 0; i < nMapSize; ++i) {
+				pstCellInfo[i].cFlag = cells[i].flag;
+				pstCellInfo[i].shLigntNEvent = cells[i].lightEvent;
+			}
 			
 			CloseHandle(hFile);
 
