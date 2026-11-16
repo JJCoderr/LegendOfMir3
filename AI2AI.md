@@ -948,3 +948,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - SetCacheContext现在先读取UserPic.ini非零确认版本，再经RestoreOwnVersion验证期望版本一致后解码FAC；缺失记录/0/不匹配均清空照片并回退默认。修正上一阶段无版本记录也恢复本地未确认上传的行为。RestoreOwnVersion保留供后续服务器角色版本驱动；当前创建界面仍以本地已确认版本恢复，不声称已验证最新服务器版本。
 - Client清理83步及全目标构建通过。portrait-cache-version-match/zero各五项全1，覆盖未确认、已确认、版本不符、匹配和0；缓存七项、中文文件四项回归通过。预览缓存保存测试补上模拟确认版本，符合新的恢复规则。
 - 已检查out/portrait-cache-version-match.png、portrait-cache-version-zero.png。远程缓存、扩展角色协议、自动节流重查及真实服务器登录联调仍未完成。
+
+### MIR3人物描述解码器
+- 新增Common/Mir3HumanAppearance.h，对齐Godot human_appearance.hpp：16字节基础描述/21字节含扩展描述，性别0..1、衣服0..8、武器>=50回退0、头发低6位且>=30回退0、职业取高2位，坐骑扩展仅0..3有效。普通移动缺扩展保留坐骑，其他非受击缺扩展默认0。
+- 区分偏移8上下文：普通描述为照片版本，SM_STRUCK/HUMAN_STRUCK为hit_source，后者绝不能覆盖照片版本；依据Godot hud_view.cpp对应消息处理及原版0x411700。扩展5字节在网络层单独编码（22+7字符），不能把整段直接当连续21字节编码。
+- VS x86 C++17独立字段/边界八项检查通过；另以C++20直接包含Godot原human_appearance.hpp，对性别3种/衣服10种/武器256种/头发256种/受击2种共3,932,160组合差分，接受范围、标准化外形、职业和坐骑全部一致。测试out/test-mir3-human.cpp及compare-mir3-human.cpp。
+- 本阶段仅完成协议解码基础，没有改动页面，无新增截图。尚未接原生Actor创建、移动/受击队列或完整角色渲染，不能声称远程职业/照片版本已在实际游戏生效；下一步需统一迁移旧CHARDESC/FEATUREEX消息边界，避免按长度猜测造成旧协议误判。
