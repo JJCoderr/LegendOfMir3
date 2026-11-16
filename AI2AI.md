@@ -919,3 +919,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 原生HUD头像区域在无头像地图时优先绘制自身照片，否则绘制标准职业头像；其上仍按现有顺序绘制目标头像与HUD边框。未把自身照片错误套用目标照片的尺寸或UserPic开关。
 - Client清理83步、全目标111步构建通过；own-photo-uploaded/default各六项全1，覆盖发送后即时更新、关闭窗口保留、坏JPEG保留、恢复默认、自身编码回复及清零；上传回环JPEG/空报文回归通过。已检查out/own-photo-uploaded.png和own-photo-default.png。
 - 本轮自身照片为内存状态；原版按服务器/角色区分的.fac缓存、版本配置、登录恢复和真实服务器存储尚待完成，仍不能宣称整个头像流程验收完成。
+
+### 原版FAC缓存格式核实与编解码
+- IDA会话e3ded018核对0x43F060/0x43F220/0x43F3B0：UserPic.ini的UserPic节使用服务器名_角色名键，Data/服务器名_角色名.fac存照片；版本不符或解码失败时节流重新查询。0x43F3B0设置固定密钥-1901381136/-1612834157，再调用0x47D560解码。证据out/portrait-cache-load-original.c、portrait-cache-decode-original.txt。
+- 新增Common/PortraitCache.h实现8字节头、长度编码、四轮异或及32位校验，与原版0x47D4C0/0x47D560一致。限制有效载荷1..4096，验证长度与校验后解码，拒绝损坏缓存。
+- VS x86 C++17独立编译测试通过；从同一解包IDB提取两个原版函数机器码，在本机Unicorn中执行，与新代码1/2/255/256/4095/4096字节样例逐字节对照，编码和解码全部一致；原生测试同时覆盖损坏校验、损坏长度和大小边界。记录out/portrait-codec-machine.json、portrait-cache-check.txt、test-portrait-cache.cpp。Unicorn仅安装到忽略目录out/portrait-emulator。
+- 本阶段没有新增页面或改变截图。缓存编解码尚未接入文件读写；下一阶段仍需保存服务器选择名、建立服务器/角色缓存上下文、接入上传/1403版本保存和登录恢复。完整GUI与服务器目标保持未完成。
