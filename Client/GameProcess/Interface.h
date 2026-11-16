@@ -32,6 +32,7 @@ public:
     void ReflowChat();
     int VisibleButtons() const { return m_chatExpanded ? 23 : 16; }
     int ChatRows() const { return m_chatExpanded ? 14 : 5; }
+    CMinimap m_minimap;
     CWHWilImageData m_portraits;
 	 CInterface();
 	~CInterface();

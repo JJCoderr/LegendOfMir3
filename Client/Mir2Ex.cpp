@@ -1292,6 +1292,47 @@ public:
             if(FILE* report=fopen("hud-button-hint-check.txt","wb")) {fprintf(report,"messages=%d anchors=%d pressed=%d group=%d guild=%d reception=%d hidden=%d modal=%d covered=%d\n",messagesOk,anchors,pressed,group,guild,reception,hidden,modal,covered);fclose(report);}
         }
 
+
+        if(groupPanel>=75 && groupPanel<=78) {
+            auto& ui=g_xGameProc.m_xInterface;auto& map=ui.m_minimap;POINT anchor={};
+            const bool request=map.Toggle(1000,1000) && map.pending && !map.visible;
+            const bool invalid=!map.Receive(0,1500) && map.pending;
+            const bool loaded=map.Receive(1001,2000) && map.visible && !map.pending;
+            hero.m_wPosX=337;hero.m_wPosY=267;map.player={337,267};
+            const RECT bounds=map.Bounds();const POINT source=map.Source();
+            const bool compact=bounds.left==672 && bounds.top==0 && bounds.right==800 && bounds.bottom==128 && source.x==441 && source.y==203;
+            const bool cooldown=!map.Toggle(3000,1000) && map.visible;
+            const bool hit=ui.GetWindowInMousePos(POINT{700,40})==_WND_ID_MINIMAP;
+            POINT alpha=map.ButtonPosition(0);alpha.x+=5;alpha.y+=5;
+            const bool hint=ui.ButtonHintAt(alpha,anchor)==1800;
+            ui.OnLButtonDown(alpha);const bool transparent=map.translucent && map.releaseCaptured && ui.ButtonHintAt(alpha,anchor)==1802;
+            ui.OnLButtonUp(POINT{400,400});const bool release=!map.releaseCaptured;
+            POINT resize=map.ButtonPosition(1);resize.x+=5;resize.y+=5;ui.OnLButtonDown(resize);ui.OnLButtonUp(POINT{400,400});
+            const bool large=map.large && map.position.x==544 && map.Bounds().bottom==256;
+            map.Pointer(0,POINT{560,20},true);map.Pointer(1,POINT{580,40},true);
+            const bool dragged=map.position.x==564 && map.position.y==20 && map.dragging;
+            map.Pointer(1,POINT{0,500},true);const bool dragOutside=map.position.x==564 && map.position.y==20;
+            map.Pointer(1,POINT{590,45},false);const bool ctrl=map.position.x==564;map.Pointer(2,POINT{0,500},false);
+            ui.ShowNotice(4716);const bool modal=ui.ButtonHintAt(POINT{600,50},anchor)==0;ui.m_xMsgBox.HideMessageBox();
+            ui.OnKeyDown('T',0);const bool resizeKey=!map.large && map.position.x==672;ui.OnKeyDown('T',0);
+            const bool oldAlpha=map.translucent;ui.OnKeyDown('Y',0);const bool alphaKey=map.translucent!=oldAlpha;
+            ui.WindowActivate(_WND_ID_INVENTORY);ui.OnLButtonDown(POINT{560,80});ui.OnLButtonUp(POINT{560,80});
+            const bool covered=ui.GetWindowInMousePos(POINT{560,80})==_WND_ID_MINIMAP && !ui.m_stCommonItem.bSetted;
+            g_xGameProc.m_ptMousePos=POINT{560,80};const int oldRow=ui.m_xInventoryWnd.ScrollRow();ui.OnScrollUp();ui.OnScrollDown();
+            const bool wheel=oldRow==ui.m_xInventoryWnd.ScrollRow();const bool doubleClick=ui.OnLButtonDoubleClick(POINT{560,80})!=FALSE;
+            ui.WindowActivate(_WND_ID_INVENTORY);
+            if(FILE* report=fopen("minimap-input-check.txt","wb")) {fprintf(report,"resize_key=%d alpha_key=%d covered=%d wheel=%d double_click=%d\n",resizeKey,alphaKey,covered,wheel,doubleClick);fclose(report);}
+            map.Unavailable(4000);const bool unavailable=!map.visible && !map.pending && map.replyTime==4000;
+            map.Receive(1001,4100);const bool unsolicited=!map.visible;
+            map.Toggle(6000,100);const bool smallArchive=map.Receive(1,6100) && map.visible;
+            map.pending=true;map.Receive(1001,6200);map.large=groupPanel!=75;map.translucent=groupPanel==77;map.Place();
+            if(groupPanel==78) {map.Pointer(0,POINT{790,20},true);map.Pointer(1,POINT{600,80},true);map.Pointer(2,POINT{600,80},false);}
+            map.monsters={{322,251}};map.green={{350,284}};map.orange={{360,276},{380,283}};
+            mouse=POINT{400,460};g_xGameProc.m_ptMousePos=mouse;
+            const char* paths[]={"minimap-small.bmp","minimap-large.bmp","minimap-transparent.bmp","minimap-dragged.bmp"};capturePath=paths[groupPanel-75];
+            if(FILE* report=fopen("minimap-check.txt","wb")) {fprintf(report,"request=%d invalid=%d loaded=%d compact=%d cooldown=%d hit=%d hint=%d transparent=%d release=%d large=%d dragged=%d outside=%d ctrl=%d modal=%d unavailable=%d unsolicited=%d small_archive=%d\n",request,invalid,loaded,compact,cooldown,hit,hint,transparent,release,large,dragged,dragOutside,ctrl,modal,unavailable,unsolicited,smallArchive);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1480,6 +1521,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=minimap-small")==0 ? 75 :
+        strcmp(lpCmdLine,"--preview=minimap-large")==0 ? 76 :
+        strcmp(lpCmdLine,"--preview=minimap-transparent")==0 ? 77 :
+        strcmp(lpCmdLine,"--preview=minimap-dragged")==0 ? 78 :
         strcmp(lpCmdLine,"--preview=hud-button-hint")==0 ? 72 :
         strcmp(lpCmdLine,"--preview=chat-mode-hint")==0 ? 73 :
         strcmp(lpCmdLine,"--preview=chat-reception-hint")==0 ? 74 :

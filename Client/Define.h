@@ -431,6 +431,7 @@
 #define _INPUT_EDITWND_HEIGHT		15
 
 // 主界面中使用的窗口ID.
+#define _WND_ID_MINIMAP 17
 #define _WND_ID_PORTRAIT 16
 #define _WND_ID_QUICK 15
 #define _WND_ID_SKILL 14

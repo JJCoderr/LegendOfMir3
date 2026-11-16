@@ -111,6 +111,7 @@ VOID CInterface::Init()
 VOID CInterface::Destroy()
 {
     m_xPortraitWnd.Close();
+    m_minimap.Destroy();
     m_portraits.Destroy();
 	m_xClientSysMsg.Destroy();
 
@@ -158,6 +159,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	// ¼ÓÔØ½Ó¿ÚÍ¼Ïñ.
 	m_pxInterImg->NewLoad(".\\Data\\gameinter.wil");
     m_portraits.Destroy();
+    m_minimap.Init();
     m_portraits.NewLoad(".\\Data\\ProgUse.wil");
 	//------------------------------------------------------------------------------------------------------------
 
@@ -525,6 +527,9 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     const RECT portraitHover={535,486,616,580};
     if (!m_chatExpanded && PtInRect(&portraitHover,ptMousePos)) DrawSelectionFrame(*m_pxInterImg,m_portraitEntryPressed?2097:2096,535,566,SelectionBlend::Normal,false);
     ShowWndList();
+    m_minimap.player={g_xGameProc.m_xMyHero.m_wPosX,g_xGameProc.m_xMyHero.m_wPosY};
+    m_minimap.showMonsters=m_xOptionWnd.m_values[7];
+    m_minimap.Show(*m_pxInterImg,GetTickCount());
     ShowMagicKey();
     if (m_xNPCWnd.m_bActive) m_xNPCWnd.ShowNPCChatWnd();
     if (m_xStoreWnd.m_bActive) m_xStoreWnd.ShowStoreWnd();
@@ -746,6 +751,8 @@ INT	CInterface::GetWindowInMousePos(POINT ptMouse)
 {
     if (m_xStoreWnd.m_bActive && PtInRect(&m_xStoreWnd.m_rcWnd,ptMouse)) return _WND_ID_STORE;
     if (m_xNPCWnd.m_bActive && PtInRect(&m_xNPCWnd.m_rcWnd,ptMouse)) return _WND_ID_NPCCHAT;
+    const RECT minimapBounds=m_minimap.Bounds();
+    if(m_minimap.visible && PtInRect(&minimapBounds,ptMouse)) return _WND_ID_MINIMAP;
 	if ( m_xWndOrderList.GetCounter() != 0 )
 	{
 		RECT rcWnd;
@@ -1451,6 +1458,7 @@ BOOL CInterface::IsTopWindow(INT nID)
 BOOL CInterface::OnLButtonDown(POINT ptMouse)
 {
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(0,ptMouse); return TRUE; }
+    if (!m_xMsgBox.IsActive() && GetWindowInMousePos(ptMouse)==_WND_ID_MINIMAP && m_minimap.Pointer(0,ptMouse,(GetKeyState(VK_CONTROL)&0x8000)!=0)) {m_bMoveFocusedWnd=FALSE;return TRUE;}
     if (!m_xMsgBox.IsActive() && GetWindowInMousePos(ptMouse)==-1 && PortraitEntryHit(ptMouse)) { m_portraitEntryPressed=true; return TRUE; }
     if (!m_xMsgBox.IsActive() && PtInRect(&m_xSkillWnd.m_keyMenu,ptMouse) && GetWindowInMousePos(ptMouse)==_WND_ID_SKILL) {
         WindowFocusChangedAndSetReadyMove(_WND_ID_SKILL,ptMouse); m_bMoveFocusedWnd=FALSE;
@@ -1698,6 +1706,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
     m_portraitEntryPressed=false;
+    if(m_minimap.releaseCaptured) {m_minimap.Pointer(2,ptMouse,false);return TRUE;}
     if (!m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive) {
         if (m_xInventoryWnd.ClosePressed()) { m_bMoveFocusedWnd=FALSE; if(m_xInventoryWnd.OnLButtonUp(&m_stCommonItem,ptMouse)) WindowActivate(_WND_ID_INVENTORY); return TRUE; }
         if (m_xStatusWnd.ClosePressed()) { m_bMoveFocusedWnd=FALSE; if(m_xStatusWnd.OnLButtonUp(&m_stCommonItem,ptMouse)) WindowActivate(_WND_ID_STATUS); return TRUE; }
@@ -1759,6 +1768,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
                 g_xSound.PlayLobbyEffect("105.wav");
 				switch ( nCnt )
 				{
+                case _BTN_ID_MINIMAP: m_minimap.Toggle(GetTickCount(),100); break;
                 case 20:
                 case 21:
                 case 22:
@@ -1893,6 +1903,7 @@ case _WND_ID_STATUS:		if ( m_xStatusWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )	
 *******************************************************************************************************************/
 BOOL CInterface::OnMouseMove(POINT ptMouse)
 {
+    if(!m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive && GetWindowInMousePos(ptMouse)==_WND_ID_MINIMAP && m_minimap.Pointer(1,ptMouse,(GetKeyState(VK_CONTROL)&0x8000)!=0)) return TRUE;
     if (!m_xMsgBox.IsActive() && m_xPortraitWnd.scrolling) { m_xPortraitWnd.Pointer(1,ptMouse); return TRUE; }
     if (!m_xMsgBox.IsActive() && m_xStoreWnd.scrollCaptured) { m_xStoreWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(1,ptMouse); return TRUE; }
@@ -1985,6 +1996,7 @@ BOOL CInterface::OnScrollDown()
     if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
     const int hovered=GetWindowInMousePos(g_xGameProc.m_ptMousePos);
+    if (hovered==_WND_ID_MINIMAP) return TRUE;
     if (hovered==_WND_ID_PORTRAIT) { m_xPortraitWnd.Wheel(1); return TRUE; }
     if (hovered==_WND_ID_STORE) { m_xStoreWnd.OnScrollDown(); return TRUE; }
     if (hovered==_WND_ID_NPCCHAT) { m_xNPCWnd.OnScrollDown(); m_xNPCWnd.pressed=-1; m_xNPCWnd.arrowPressed=0; return TRUE; }
@@ -2021,6 +2033,7 @@ BOOL CInterface::OnScrollUp()
     if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
     const int hovered=GetWindowInMousePos(g_xGameProc.m_ptMousePos);
+    if (hovered==_WND_ID_MINIMAP) return TRUE;
     if (hovered==_WND_ID_PORTRAIT) { m_xPortraitWnd.Wheel(-1); return TRUE; }
     if (hovered==_WND_ID_STORE) { m_xStoreWnd.OnScrollUp(); return TRUE; }
     if (hovered==_WND_ID_NPCCHAT) { m_xNPCWnd.OnScrollUp(); m_xNPCWnd.pressed=-1; m_xNPCWnd.arrowPressed=0; return TRUE; }
@@ -2053,6 +2066,7 @@ BOOL CInterface::OnScrollUp()
 
 BOOL CInterface::OnLButtonDoubleClick(POINT ptMouse)
 {
+    if(GetWindowInMousePos(ptMouse)==_WND_ID_MINIMAP) return TRUE;
     if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
     if (GetWindowInMousePos(ptMouse)==_WND_ID_STORE) { m_xStoreWnd.OnDoubleClick(ptMouse); return TRUE; }
@@ -2085,9 +2099,14 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
         if (!(lParam & (1L << 30))) FinishNotice(m_xMsgBox.OnKeyDown(wParam),false);
         return TRUE;
     }
+    if(m_minimap.visible && (wParam=='T' || wParam=='Y')) {
+        if(!(lParam & (1L << 30))) {if(wParam=='T') {m_minimap.large=!m_minimap.large;m_minimap.Place();} else m_minimap.translucent=!m_minimap.translucent;}
+        return TRUE;
+    }
     if (wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive && IsTopWindow(_WND_ID_PORTRAIT)) { WindowActivate(_WND_ID_PORTRAIT); return TRUE; }
 	switch ( wParam )
 	{
+    case 'V': if (!(lParam & (1L << 30))) m_minimap.Toggle(GetTickCount(),1000); return TRUE;
     case 'Z':
         if (!(lParam & (1L << 30))) WindowActivate(_WND_ID_QUICK);
         return TRUE;
@@ -2154,6 +2173,7 @@ int CInterface::ButtonHintAt(POINT point,POINT& anchor)
         anchor={hit.right,hit.bottom}; return message;
     };
     switch (GetWindowInMousePos(point)) {
+    case _WND_ID_MINIMAP: return m_minimap.HintAt(point,anchor,*m_pxInterImg);
     case _WND_ID_GROUP: {
         const int buttons[][4]={{1221,217,200,1052},{1362,38,192,1600},{1365,98,192,1601},{1368,158,192,1602}};
         for (int i=0;i<4;++i) if (const int hint=resolve(m_xGroupWnd.m_rcWnd,buttons[i][0],buttons[i][1],buttons[i][2],buttons[i][3],m_xGroupWnd.PressedButton()==i)) return hint;
