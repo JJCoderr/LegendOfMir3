@@ -43,6 +43,7 @@ VOID CStatusWnd::Init()
 	m_bType	= _TYPE_EQUIP;
     m_nativeClosePressed=false;
     ZeroMemory(m_elementValues,sizeof(m_elementValues)); m_showNativeHint=false;
+    m_identityTertiary.clear(); m_identityBadge.clear();
 	m_nStartLineNum = 0;
 	m_pstMyMagic = NULL;
 	m_bMyMagicCnt = 0;
@@ -1082,6 +1083,10 @@ void CStatusWnd::ShowNativeStatus()
         const auto& image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
         g_xMainWnd.DrawWithImageForComp(x+63+37*column,y+375+30*row,image.shWidth,image.shHeight,(WORD*)m_pxWndImage->m_pbCurrImage);
     }
+    if (!m_identityBadge.empty() && m_pxWndImage->NewSetIndex(1298)) {
+        const auto& image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        g_xMainWnd.DrawWithImageForComp(x+181,y+67,image.shWidth,image.shHeight,(WORD*)m_pxWndImage->m_pbCurrImage);
+    }
     HDC dc; auto* surface=g_xMainWnd.GetBackBuffer(); if (FAILED(surface->GetDC(&dc))) return;
     const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
     HFONT font=g_xMainWnd.CreateGameFont(face,9); HGDIOBJ previous=SelectObject(dc,font); SetBkMode(dc,TRANSPARENT);
@@ -1117,7 +1122,14 @@ void CStatusWnd::ShowNativeStatus()
     }
     const char nameFace[]={char(0xb1),char(0xbc),char(0xb8),char(0xb2),0};
     HFONT nameFont=g_xMainWnd.CreateGameFont(nameFace,9,0,FW_BOLD); SelectObject(dc,nameFont);
-    text(hero.m_szName,100,30,130,20,0xdcffdc);
+    const bool secondary=hero.m_szGuildName[0]!=0;
+    text(hero.m_szName,100,secondary?14:30,130,20,0xdcffdc);
+    SelectObject(dc,font);
+    if (secondary) {
+        text(hero.m_szGuildName,82,29,172,20,0xb4faff);
+        text(m_identityTertiary.c_str(),82,43,172,20,0x96c8ff);
+    }
+    if (!m_identityBadge.empty()) text(m_identityBadge.c_str(),200,66,105,15,0xeb3ef4);
     SelectObject(dc,previous); DeleteObject(nameFont); DeleteObject(font); surface->ReleaseDC(dc);
     ShowNativeHint();
 }

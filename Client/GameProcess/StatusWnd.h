@@ -1,5 +1,6 @@
 #ifndef _CSTATUSWND_H
 #define _CSTATUSWND_H
+#include <string>
 
 
 
@@ -65,6 +66,7 @@ public:
 	LPCLIENTMAGICRCD	m_pstMyMagic;
 
 public:
+    std::string m_identityTertiary, m_identityBadge;
     BYTE m_elementValues[3][7]={};
     int ElementValue(int row,int column) const {
         const int value=m_elementValues[row][column];
