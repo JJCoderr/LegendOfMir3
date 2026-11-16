@@ -100,6 +100,7 @@ VOID CInterface::Init()
 *******************************************************************************************************************/
 VOID CInterface::Destroy()
 {
+    m_portraits.Destroy();
 	m_xClientSysMsg.Destroy();
 
 	m_xInterImgEx.Destroy();
@@ -141,6 +142,8 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	//------------------------------------------------------------------------------------------------------------
 	// ¼ÓÔØ½Ó¿ÚÍ¼Ïñ.
 	m_pxInterImg->NewLoad(".\\Data\\gameinter.wil");
+    m_portraits.Destroy();
+    m_portraits.NewLoad(".\\Data\\ProgUse.wil");
 	m_xInterImgEx.NewLoad(".\\Data\\interfacec2.wil");
 	//------------------------------------------------------------------------------------------------------------
 
@@ -495,6 +498,14 @@ VOID CInterface::ShowBeltItem()
 
 VOID CInterface::ShowGameStatus()
 {
+    const auto& hero = g_xGameProc.m_xMyHero;
+    const int portrait = 650 + 2 * hero.m_bJob + (hero.m_stFeature.bGender != 0);
+    if (hero.m_bJob <= 2 && m_portraits.NewSetIndex(portrait)) {
+        const auto& info = *m_portraits.m_lpstNewCurrWilImageInfo;
+        g_xMainWnd.DrawWithImageForComp(m_rcMain.left+534,m_rcMain.top+20,
+            info.shWidth,info.shHeight,(WORD*)m_portraits.m_pbCurrImage);
+    }
+
 	FLOAT	fMyHPRate;
 	FLOAT	fMyMPRate;				
 	FLOAT	fMyWetRate;				

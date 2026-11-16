@@ -7,6 +7,7 @@ class CInterface
 { 
 public:
     bool m_primaryStat[2] = {true,true};
+    CWHWilImageData m_portraits;
 	 CInterface();
 	~CInterface();
 public:
