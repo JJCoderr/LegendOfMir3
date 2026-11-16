@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#include <crtdbg.h>
+
 extern HWND						g_hStatusBar;
 
 extern SOCKET					g_csock;

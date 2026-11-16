@@ -27,12 +27,12 @@
 
 #include "resource.h"
 
-#include "..\Def\Queue.h"
-#include "..\Def\EnDecode.h"
-#include "..\Def\ServerSockHandler.h"
-#include "..\Def\Protocol.h"
-#include "..\Def\DynamicArray.h"
-#include "..\Def\Misc.h"
+#include "Def/Queue.h"
+#include "Def/EnDecode.h"
+#include "Def/ServerSockHandler.h"
+#include "Def/Protocol.h"
+#include "Def/DynamicArray.h"
+#include "Def/Misc.h"
 
 #include "GameGate.h"
 #include "Abusive.h"

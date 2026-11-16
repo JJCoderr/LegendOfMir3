@@ -19,9 +19,9 @@
 #include <time.h>
 #include <crtdbg.h>
 
-#include "..\def\Misc.h"
-#include "..\def\EnDecode.h"
-#include "..\def\Protocol.h"
+#include "Def/Misc.h"
+#include "Def/EnDecode.h"
+#include "Def/Protocol.h"
 
 #pragma comment (lib, "ws2_32.lib")
 #pragma comment (lib, "comctl32.lib")

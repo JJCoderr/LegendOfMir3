@@ -27,7 +27,7 @@
 #include <stdlib.h>
 
 #include "resource.h"
-#include "..\AdminCmd\resource.h"
+#include "AdminCmd/resource.h"
 
 #define ROUND(f)	(int)(f + 0.5)
 #define _MAX(i, j)	(i > j ? i : j)
@@ -69,17 +69,17 @@ typedef struct tag_TSEARCHTABLE
 
 // **************************************************************************************
 
-#include "..\Def\EnDecode.h"
-#include "..\Def\Protocol.h"
-#include "..\Def\ServerSockHandler.h"
-#include "..\Def\Queue.h"
-#include "..\Def\List.h"
-#include "..\Def\StaticArray.h"
-#include "..\Def\Misc.h"
+#include "Def/EnDecode.h"
+#include "Def/Protocol.h"
+#include "Def/ServerSockHandler.h"
+#include "Def/Queue.h"
+#include "Def/List.h"
+#include "Def/StaticArray.h"
+#include "Def/Misc.h"
 
-#include "..\Def\_orzEx/database.h"
-#include "..\Def\_orzEx/syncobj.h"
-#include "..\Def\_orzEx/list.h"
+#include "Def/_orzEx/database.h"
+#include "Def/_orzEx/syncobj.h"
+#include "Def/_orzEx/list.h"
 
 class CCharObject;
 class CAnimalObject;

@@ -25,14 +25,14 @@
 #include <process.h>
 #include "resource.h"
 
-#include "..\Def\EnDecode.h"
-#include "..\Def\ServerSockHandler.h"
-#include "..\Def\Queue.h"
-#include "..\Def\Misc.h"
+#include "Def/EnDecode.h"
+#include "Def/ServerSockHandler.h"
+#include "Def/Queue.h"
+#include "Def/Misc.h"
 
 #include "LoginGate.h"
 
-#include "..\Def\List.h"
+#include "Def/List.h"
 
 #pragma comment (lib, "ws2_32.lib")
 #pragma comment (lib, "comctl32.lib")

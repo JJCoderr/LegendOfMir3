@@ -31,13 +31,13 @@
 
 #include "resource.h"
 
-#include "..\Def\EnDecode.h"
-#include "..\Def\ServerSockHandler.h"
-#include "..\Def\Misc.h"
-#include "..\Def\Protocol.h"
-#include "..\Def\TableColumn.h"
-#include "..\Def\Queue.h"
-#include "..\Def\List.h"
+#include "Def/EnDecode.h"
+#include "Def/ServerSockHandler.h"
+#include "Def/Misc.h"
+#include "Def/Protocol.h"
+#include "Def/TableColumn.h"
+#include "Def/Queue.h"
+#include "Def/List.h"
 
 #include "DBSvr.h"
 

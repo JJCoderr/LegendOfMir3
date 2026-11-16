@@ -1,0 +1,29 @@
+# CMake 构建目录（任意以 build 开头的顶层目录，如 build / build-client / build_vs2026）
+/build*/
+/out/
+CMakeUserPresets.json
+
+# MSVC / VS 中间产物
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.exp
+*.lib
+*.tlog
+*.iobj
+*.ipdb
+.vs/
+
+# 旧 VC6 / VS2003 IDE 文件（工程已迁移到 CMake）
+*.dsp
+*.dsw
+*.vcproj
+*.ncb
+*.opt
+*.plg
+*.aps
+*.suo
+*.clw
+*.scc
+*.positions

@@ -30,11 +30,11 @@
 
 #include "resource.h"
 
-#include "..\Def\EnDecode.h"
-#include "..\Def\ServerSockHandler.h"
-#include "..\Def\Queue.h"
-#include "..\Def\Misc.h"
-#include "..\Def\List.h"
+#include "Def/EnDecode.h"
+#include "Def/ServerSockHandler.h"
+#include "Def/Queue.h"
+#include "Def/Misc.h"
+#include "Def/List.h"
 
 #include "SelGate.h"
 
