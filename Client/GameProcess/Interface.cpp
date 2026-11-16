@@ -176,7 +176,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xGroupPopWnd.CreateGroupPopWnd(_WND_ID_GROUPPOP, m_pxInterImg, 1240, 220, 112, 360, 268, TRUE);
 	m_xChatPopWnd.CreateChatPopWnd(_WND_ID_CHATPOP, m_pxInterImg, _WNDIMGIDX_CHATPOP, 0, 0, 0, 0, TRUE);
 
-	m_xOptionWnd.CreateOptionWnd(_WND_ID_OPTION, m_pxInterImg, _WNDIMGIDX_OPTION, 0, 0, 0, 0, TRUE);
+	m_xOptionWnd.CreateOptionWnd(_WND_ID_OPTION, m_pxInterImg, 1290, 145, 30, 510, 468, TRUE);
 	m_xQuestWnd.CreateQuestWnd(_WND_ID_QUEST, m_pxInterImg, _WNDIMGIDX_QUEST, 0, 0, 0, 0, TRUE);
 	m_xHorseWnd.CreateHorseWnd(_WND_ID_HORSE, m_pxInterImg, _WNDIMGIDX_HORSE, 0, 0, 0, 0, TRUE);
 
@@ -434,7 +434,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 	INT nX, nY, nCnt;
 
 	// 窗口.
-	ShowWndList();
+
 
 	// 鼠标物品.
 	if ( m_stCommonItem.bSetted && !m_stCommonItem.bIsHideItem )
@@ -498,6 +498,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 	m_xClientSysMsg.ShowSysMsg(nLoopTime, 30, 30);
 
 	// 勇气
+    ShowWndList();
 	m_xMsgBox.RenderMessageBox(0);
 
 	ShowMagicKey();

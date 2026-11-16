@@ -6,9 +6,12 @@ class COptionWnd : public CGameWnd
 { 
 private:
 protected:
-	CGameBtn				m_xOptionBtn;
+    int ButtonAt(POINT point);
 
 public:
+    bool m_values[21] = {};
+    int m_pressed=-1, m_hover=-1;
+    int m_musicLevel=0, m_effectsLevel=0, m_attackMode=0;
 	COptionWnd();
 	~COptionWnd();
 

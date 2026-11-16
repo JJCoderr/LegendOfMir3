@@ -12,64 +12,91 @@
 
 
 #include "StdAfx.h"
+#include "Common/LoginMessages.h"
 
-
-COptionWnd::COptionWnd()
-{
-	Init();
-}
-
-COptionWnd::~COptionWnd()
-{
-	Destroy();
-}
-
+static const int optionButtons[21][3] = {
+    {1221,448,415},{1292,430,85},{1292,430,145},{1292,430,205},{1292,430,235},
+    {-1,0,0},{-1,0,0},{1292,186,55},{1292,186,85},{1292,186,115},{1292,186,145},
+    {1292,186,175},{1292,186,205},{1292,186,235},{1292,186,265},{-1,0,0},
+    {1292,186,295},{1292,186,325},{1292,430,55},{1296,430,265},{1292,430,295}
+};
+COptionWnd::COptionWnd() { Init(); }
+COptionWnd::~COptionWnd() { Destroy(); }
 VOID COptionWnd::Init()
 {
-	CGameWnd::Init();
-
-	m_xOptionBtn.Init();
+    CGameWnd::Init();
+    ZeroMemory(m_values,sizeof(m_values));
+    m_values[1]=m_values[2]=m_values[7]=m_values[8]=m_values[20]=true;
+    m_pressed=m_hover=-1;
+    m_musicLevel=m_effectsLevel=m_attackMode=0;
 }
-
-VOID COptionWnd::Destroy()
+VOID COptionWnd::Destroy() { CGameWnd::Destroy(); }
+VOID COptionWnd::CreateOptionWnd(INT id,CWHWilImageData* image,INT frame,INT x,INT y,INT width,INT height,BOOL move)
 {
-	CGameWnd::Destroy();
+    CreateGameWnd(id,image,frame,move,x,y,width,height);
 }
-
-VOID COptionWnd::CreateOptionWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
-{
-	CreateGameWnd(nID, pxWndImage, nFrameImgIdx, bCanMove, nStartX, nStartY, nWidth, nHeight);
-	m_xOptionBtn.CreateGameBtn(pxWndImage, 764, 765, nStartX+220, nStartY+11);
-}
-
 VOID COptionWnd::ShowOptionWnd()
 {
-	ShowGameWnd();
-	m_xOptionBtn.ShowGameBtn();
+    if (!m_bActive) return;
+    const int x=m_rcWnd.left,y=m_rcWnd.top;
+    const auto draw=[&](int frame,int left,int top) {
+        if (!m_pxWndImage->NewSetIndex(frame)) return;
+        const auto& image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        g_xMainWnd.DrawWithImageForComp(x+left,y+top,image.shWidth,image.shHeight,(WORD*)m_pxWndImage->m_pbCurrImage);
+    };
+    draw(1290,0,0);
+    for (int i=0;i<21;++i) {
+        const auto& button=optionButtons[i];
+        if (button[0]<0) continue;
+        if (i==0 || i==19) draw(button[0]+(m_pressed==i),button[1],button[2]);
+        else {
+            if (m_hover==i && m_pressed!=i) draw(m_values[i]?1293:1294,button[1],button[2]);
+            draw((m_pressed==i?!m_values[i]:m_values[i])?1292:1295,button[1],button[2]);
+        }
+    }
+    draw(1291,276+9*(m_musicLevel+100)/5,118);
+    draw(1291,276+9*(m_effectsLevel+100)/5,178);
+    auto* surface=g_xMainWnd.GetBackBuffer(); HDC dc;
+    if (FAILED(surface->GetDC(&dc))) return;
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font=g_xMainWnd.CreateGameFont(face,9); HGDIOBJ previous=SelectObject(dc,font);
+    SetBkMode(dc,TRANSPARENT);
+    static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
+    const auto text=[&](int id,int left,int top,int width,int height,COLORREF color) {
+        RECT area={x+left,y+top,x+left+width,y+top+height};
+        SetTextColor(dc,color);
+        DrawTextA(dc,captions.Get(id).c_str(),-1,&area,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+    };
+    text(2104,60,30,390,15,0xf8fafa);
+    for (int i=0;i<3;++i) text(2100+i,266,89+60*i,156,21,0x0096ff);
+    for (int i=0;i<10;++i) text(2105+i,20,62+30*i,155,15,0x0096ff);
+    text(2115,266,59,156,21,0x0096ff);
+    text(2103,266,239,156,21,0x0096ff);
+    text(2116+m_attackMode,266,269,156,21,0x0096ff);
+    text(2130,266,300,156,20,0x0096ff);
+    SelectObject(dc,previous); DeleteObject(font); surface->ReleaseDC(dc);
 }
-
-BOOL COptionWnd::OnLButtonUp(POINT ptMouse)
+int COptionWnd::ButtonAt(POINT point)
 {
-	if ( m_xOptionBtn.OnLButtonUp(ptMouse) )		return TRUE;
-
-	return FALSE;
+    for (int i=0;i<21;++i) {
+        const auto& button=optionButtons[i];
+        if (button[0]<0 || !m_pxWndImage->NewSetIndex(button[0])) continue;
+        const auto& image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        RECT hit={m_rcWnd.left+button[1],m_rcWnd.top+button[2],
+            m_rcWnd.left+button[1]+image.shWidth,m_rcWnd.top+button[2]+image.shHeight};
+        if (PtInRect(&hit,point)) return i;
+    }
+    return -1;
 }
-
-BOOL COptionWnd::OnLButtonDown(POINT ptMouse)
+BOOL COptionWnd::OnLButtonDown(POINT point) { m_pressed=ButtonAt(point); return m_pressed>=0; }
+BOOL COptionWnd::OnLButtonUp(POINT point)
 {
-	if ( m_xOptionBtn.OnLButtonDown(ptMouse) )		return TRUE;
-
-	return FALSE;
+    const int hit=ButtonAt(point); const bool clicked=hit>=0 && hit==m_pressed; m_pressed=-1;
+    if (!clicked) return FALSE;
+    g_xSound.PlayLobbyEffect("105.wav");
+    if (hit==1) { m_values[1]=!m_values[1]; if (m_values[1]) g_xSound.SetEnableBGM(); else g_xSound.SetDisableBGM(); }
+    if (hit==2) { m_values[2]=!m_values[2]; if (m_values[2]) g_xSound.SetEnablePlay(); else g_xSound.SetDisablePlay(); }
+    return hit==0;
 }
-
-VOID COptionWnd::OnMouseMove(POINT ptMouse)
-{
-	m_xOptionBtn.ChangeRect(m_rcWnd.left+220, m_rcWnd.top+11);
-	m_xOptionBtn.OnMouseMove(ptMouse);
-}
-
-VOID COptionWnd::SetStatusBtnInit()
-{
-	m_xOptionBtn.SetBtnState(_BTN_STATE_NORMAL);
-}
-
+VOID COptionWnd::OnMouseMove(POINT point) { m_hover=ButtonAt(point); }
+VOID COptionWnd::SetStatusBtnInit() { m_hover=m_pressed=-1; }

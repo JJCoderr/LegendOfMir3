@@ -33,7 +33,8 @@ public:
         capturePath = chatMode == 1 ? "hud-group.bmp" : chatMode == 2 ? "hud-guild.bmp" : expanded ? "hud-expanded.bmp" : "hud-collapsed.bmp";
         if (exitDialog) capturePath = "hud-exit.bmp";
         if (groupPanel>0 && groupPanel<5) capturePath = groupPanel==2 ? "group-create.bmp" : groupPanel==3 ? "group-invite.bmp" : groupPanel==4 ? "group-remove.bmp" : "group-panel.bmp";
-        if (groupPanel>=5) capturePath = groupPanel==5 ? "guild-overview.bmp" : groupPanel==6 ? "guild-members.bmp" : groupPanel==8 ? "guild-denied.bmp" : groupPanel==9 ? "guild-remove.bmp" : groupPanel==10 ? "guild-break-ally.bmp" : "guild-notice.bmp";
+        if (groupPanel>=5 && groupPanel<=10) capturePath = groupPanel==5 ? "guild-overview.bmp" : groupPanel==6 ? "guild-members.bmp" : groupPanel==8 ? "guild-denied.bmp" : groupPanel==9 ? "guild-remove.bmp" : groupPanel==10 ? "guild-break-ally.bmp" : "guild-notice.bmp";
+        if (groupPanel==11) capturePath="options-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
         g_xGameProc.m_xInterface.CreateInterface(&g_xGameProc.m_xImage);
@@ -87,7 +88,7 @@ public:
                 ui.OnLButtonDown(button); ui.OnLButtonUp(button);
             }
         }
-        if (groupPanel>=5) {
+        if (groupPanel>=5 && groupPanel<=10) {
             auto& guild=g_xGameProc.m_xInterface.m_xGuildWnd;
             guild.m_name="Preview Guild";
             guild.m_pages[0].push_back("Native CLIENT guild overview");
@@ -126,6 +127,7 @@ public:
             }
 
         }
+        if (groupPanel==11) g_xGameProc.m_xInterface.WindowActivate(_WND_ID_OPTION);
         if (exitDialog) {
             POINT button = {10,542};
             g_xGameProc.m_xInterface.OnLButtonDown(button);
@@ -297,7 +299,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=guild-notice")==0 ? 7 :
         strcmp(lpCmdLine,"--preview=guild-denied")==0 ? 8 :
         strcmp(lpCmdLine,"--preview=guild-remove")==0 ? 9 :
-        strcmp(lpCmdLine,"--preview=guild-break-ally")==0 ? 10 : 0;
+        strcmp(lpCmdLine,"--preview=guild-break-ally")==0 ? 10 :
+        strcmp(lpCmdLine,"--preview=options-panel")==0 ? 11 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

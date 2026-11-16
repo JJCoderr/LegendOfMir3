@@ -521,3 +521,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 管理者按钮5/8分别打开原生输入确认框，提示为公会名+CmList4001及CmList4002；复用成员输入框取消恢复逻辑。
 - YES移除发送CM_GUILDDELMEMBER后请求CM_GUILDMEMBERLIST；解除同盟发送CmList4016+名称的聊天命令后请求GuildHome，按Godot顺序。服务端处理尚未验证。
 - Client全量77步构建通过；离线管理者预览经真实按钮打开两框，已检查out/guild-remove.png和out/guild-break-ally.png，含真实原生输入框绘制。预览未确认或发送管理请求。
+
+### 设置页面布局迁移
+- 设置页改为GameInter1290，位置145,30尺寸510x468；中文标题/标签读取2100–2130对应文案，开关1292/1295、悬停1293/1294、滑块1291、攻击切换1296/1297、关闭1221/1222。
+- 音乐/音效开关接入现有声音系统。其余设置动作、滑块拖动、配置持久化和服务端状态尚未完成。
+- 截图发现设置页底部被HUD覆盖，调整RenderInterface为HUD后绘制窗口、窗口后绘制确认框，已重新检查out/options-panel.png。
+- Client全量77步及后续构建通过，新增--preview=options-panel。
