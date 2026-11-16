@@ -548,6 +548,40 @@ public:
             held.bSetted=TRUE; held.xItem=items[0]; lstrcpyA(held.xItem.m_stItemInfo.stStdItem.szName,"NoRoom");
             const bool full=quick.Release(3)==-1 && held.bSetted && count()==_MAX_INVEN_ITEM && !quick.slots[3].present;
             ZeroMemory(&held,sizeof(held)); for (int i=2;i<_MAX_INVEN_ITEM;++i) bag.DeleteInvenItem(i);
+            const bool saved=bag.SaveLayoutFile("./preview-quick-layout.itms");
+            bool disk=false;
+            if (FILE* file=fopen("./preview-quick-layout.itms","rb")) {
+                std::vector<BYTE> bytes(163392); const int size=int(fread(bytes.data(),1,bytes.size(),file)); fclose(file);
+                const int quickOffset=46*3120+1200;
+                disk=size==163392 && bytes[quickOffset]==1 && bytes[quickOffset+3112]==1 && bytes[quickOffset+2*3112]==0;
+                if (FILE* bad=fopen("./preview-quick-invalid.itms","wb")) {
+                    bytes[46*3120]=47; bytes[46*3120+1]=0; fwrite(bytes.data(),1,bytes.size(),bad); fclose(bad);
+                }
+            }
+            bag.DeleteAllInvenItem();
+            for (int i=0;i<2;++i) {
+                items[i].m_stItemInfo.nMakeIndex=9000+i; items[i].m_stItemInfo.stStdItem.nPrice=76543;
+                bag.AddInvenItem(items[i],i,TRUE);
+            }
+            CItem last=items[0]; last.m_stItemInfo.nMakeIndex=9002; last.m_stItemInfo.nDura=77; bag.AddInvenItem(last,2,TRUE);
+            for (auto& slot:quick.slots) slot=CQuickWnd::Slot{};
+            const bool restored=saved && bag.LoadLayoutFile("./preview-quick-layout.itms") && quick.slots[0].present && quick.slots[1].present;
+            const bool current=quick.slots[0].item.m_stItemInfo.nMakeIndex==9002 && quick.slots[0].item.m_stItemInfo.nDura==77 &&
+                quick.slots[1].item.m_stItemInfo.nMakeIndex==9001 && quick.slots[1].item.m_stItemInfo.stStdItem.nPrice==76543 && count()==3;
+            const int anchor=bag.ItemAnchor(2);
+            const bool invalid=!bag.LoadLayoutFile("./preview-quick-invalid.itms") && quick.slots[0].item.m_stItemInfo.nMakeIndex==9002 && bag.ItemAnchor(2)==anchor;
+            bag.DeleteInvenItem(1); quick.slots[1]=CQuickWnd::Slot{};
+            const bool missing=bag.LoadLayoutFile("./preview-quick-layout.itms") && !quick.slots[1].present && count()==2;
+            bag.AddInvenItem(items[1],1,TRUE); bag.LoadLayoutFile("./preview-quick-layout.itms");
+            quick.Release(0); const bool heldSaved=bag.SaveLayoutFile("./preview-quick-held.itms"); bool heldExcluded=false;
+            if (FILE* file=fopen("./preview-quick-held.itms","rb")) {
+                fseek(file,46*3120+1200,SEEK_SET); heldExcluded=heldSaved && fgetc(file)==0; fclose(file);
+            }
+            quick.Release(0);
+            if (FILE* report=fopen("quick-persistence-check.txt","wb")) {
+                fprintf(report,"saved=%d disk_layout=%d restored=%d current_records_last_match=%d invalid_unchanged=%d missing_ignored=%d held_excluded=%d\n",
+                    saved,disk,restored,current,invalid,missing,heldExcluded); fclose(report);
+            }
             if (FILE* report=fopen("quick-binding-check.txt","wb")) {
                 fprintf(report,"bound=%d picked_reference=%d moved=%d duplicate=%d same=%d swapped=%d discarded_reference=%d pending=%d equipment=%d type=%d routed=%d full_rollback=%d\n",
                     bound,picked,moved,duplicate,same,swapped,discarded,pending,equipment,type,routed,full); fclose(report);

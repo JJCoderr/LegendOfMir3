@@ -257,9 +257,10 @@ bool CInventoryWnd::SaveLayoutFile(const char* path)
         const unsigned code=id<0 ? 65535 : savedIds[id]+(m_layout.anchors[id]==cell?1000:0);
         LayoutPutWord(data,cellsOffset+cell*2,code);
     }
-    for (int slot=0;slot<6;++slot) if (m_stBeltItem[slot].bSetted) {
+    const auto& quick=g_xGameProc.m_xInterface.m_xQuickWnd;
+    for (int slot=0;slot<6;++slot) if (quick.slots[slot].present) {
         const int at=quickOffset+slot*quickStride; data[at]=1;
-        LayoutIdentity(data,at+8,m_stBeltItem[slot].xItem.m_stItemInfo);
+        LayoutIdentity(data,at+8,quick.slots[slot].item.m_stItemInfo);
     }
     FILE* file=fopen(path,"wb"); if (!file) return false;
     const bool written=fwrite(data.data(),1,data.size(),file)==data.size();
@@ -307,7 +308,7 @@ bool CInventoryWnd::LoadLayoutFile(const char* path)
         const int at=quickOffset+slot*quickStride; if (!LayoutDword(data,at)) continue;
         for (int id=0;id<_MAX_INVEN_ITEM;++id)
             if (m_stInventoryItem[id].bSetted && LayoutName(data,at+8,m_stInventoryItem[id].xItem.m_stItemInfo))
-                m_stBeltItem[slot]=m_stInventoryItem[id];
+                g_xGameProc.m_xInterface.m_xQuickWnd.slots[slot]=CQuickWnd::FromItem(m_stInventoryItem[id].xItem);
     }
     return true;
 }
