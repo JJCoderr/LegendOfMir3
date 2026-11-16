@@ -35,7 +35,7 @@ public:
         if (groupPanel>0 && groupPanel<5) capturePath = groupPanel==2 ? "group-create.bmp" : groupPanel==3 ? "group-invite.bmp" : groupPanel==4 ? "group-remove.bmp" : "group-panel.bmp";
         if (groupPanel>=5 && groupPanel<=10) capturePath = groupPanel==5 ? "guild-overview.bmp" : groupPanel==6 ? "guild-members.bmp" : groupPanel==8 ? "guild-denied.bmp" : groupPanel==9 ? "guild-remove.bmp" : groupPanel==10 ? "guild-break-ally.bmp" : "guild-notice.bmp";
         if (groupPanel==11) capturePath="options-panel.bmp";
-        if (groupPanel>=15 && groupPanel<=18) capturePath=groupPanel==18?"status-identity.bmp":groupPanel==16?"status-elements.bmp":groupPanel==17?"status-tooltip.bmp":"status-panel.bmp";
+        if (groupPanel>=15 && groupPanel<=19) capturePath=groupPanel==19?"status-equipment.bmp":groupPanel==18?"status-identity.bmp":groupPanel==16?"status-elements.bmp":groupPanel==17?"status-tooltip.bmp":"status-panel.bmp";
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
@@ -227,7 +227,7 @@ public:
                 fprintf(report,"grid=%d release_without_press=%d close_clicked=%d scroll_end=%d scroll_released=%d\n",grid,stray,closed,scrollEnd,released); fprintf(report,"icon_samples=%d large_icon=%d multi_hit=%d picked=%d moved=%d\n",samples,largeIcon,multiHit,picked,moved); fprintf(report,"collision=%d freed=%d layout_restored=%d server_records_preserved=%d\n",collision,freed,layoutRestored,serverPreserved); fprintf(report,"placement_green=%d placement_red=%d\n",green,red); fprintf(report,"gold_unsigned=%d gold_updated=%d\n",goldUnsigned,goldUpdated); fclose(report);
             }
         }
-        if (groupPanel>=15 && groupPanel<=18) {
+        if (groupPanel>=15 && groupPanel<=19) {
             auto& ui=g_xGameProc.m_xInterface; auto& status=ui.m_xStatusWnd;
             lstrcpyA(hero.m_szName,"MirPreview");
             hero.m_stAbility.wDC=MAKEWORD(12,24); hero.m_stAbility.wAC=MAKEWORD(5,10);
@@ -246,13 +246,25 @@ public:
                 status.m_identityTertiary="\xd5\xc6\xc3\xc5"; status.m_identityBadge="\xc8\xd9\xd3\xfe\xd3\xc2\xca\xbf";
                 mouse=POINT{0,0}; g_xGameProc.m_ptMousePos=mouse;
             }
+            if (groupPanel==19) {
+                g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+                CLIENTITEMRCD record={}; record.stStdItem.bStdMode=25; record.stStdItem.wLooks=75;
+                ui.m_stCommonItem.xItem.SetItem(record,0); ui.m_stCommonItem.bSetted=TRUE;
+                mouse=POINT{149,284}; g_xGameProc.m_ptMousePos=mouse;
+            }
             status.SetStatusWndType(_TYPE_EQUIP); ui.WindowActivate(_WND_ID_STATUS);
             COMMONITEMSET held={}; POINT close={300,25};
             const bool stray=!status.OnLButtonUp(&held,close);
             status.OnLButtonDown(&held,close); const bool closed=status.OnLButtonUp(&held,close)!=FALSE;
             const bool slots=status.GetEquipNum(POINT{100,120})==0 && status.GetEquipNum(POINT{15,200})==7;
+            CLIENTITEMRCD charmRecord={}; charmRecord.stStdItem.bStdMode=25;
+            CItem charm; charm.SetItem(charmRecord,0);
+            const bool previewRules=status.EquipmentPreviewFrame(25,5)==-1 && status.EquipmentPreviewFrame(25,9)==1235 &&
+                status.EquipmentPreviewFrame(53,10)==1236 && status.EquipmentPreviewFrame(60,11)==1235 &&
+                status.CheckEquipItem(&charm,5,POINT{20,165}) && status.CheckEquipItem(&charm,9,POINT{140,275}) &&
+                status.GetEquipNum(POINT{15,260})==10 && status.GetEquipNum(POINT{175,270})==11;
             if (FILE* report=fopen("status-layout-check.txt","wb")) {
-                fprintf(report,"release_without_press=%d close_clicked=%d slots=%d signed_elements=%d\n",stray,closed,slots,groupPanel<16 || (status.ElementValue(0,6)==255 && status.ElementValue(1,4)==-1 && status.ElementValue(1,0)==0)); fclose(report);
+                fprintf(report,"release_without_press=%d close_clicked=%d slots=%d signed_elements=%d\n",stray,closed,slots,groupPanel<16 || (status.ElementValue(0,6)==255 && status.ElementValue(1,4)==-1 && status.ElementValue(1,0)==0)); fprintf(report,"equipment_rules=%d\n",previewRules); fclose(report);
             }
         }
         if (groupPanel==11) {
@@ -477,7 +489,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=status-panel")==0 ? 15 :
         strcmp(lpCmdLine,"--preview=status-elements")==0 ? 16 :
         strcmp(lpCmdLine,"--preview=status-tooltip")==0 ? 17 :
-        strcmp(lpCmdLine,"--preview=status-identity")==0 ? 18 : 0;
+        strcmp(lpCmdLine,"--preview=status-identity")==0 ? 18 :
+        strcmp(lpCmdLine,"--preview=status-equipment")==0 ? 19 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

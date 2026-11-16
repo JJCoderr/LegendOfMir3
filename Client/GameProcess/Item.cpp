@@ -30,6 +30,7 @@ BOOL CItem::SetItem(CLIENTITEMRCD stItemInfo, SHORT shInventoryNum)
 {
 	m_stItemInfo = stItemInfo;
 	m_shCellNum = shInventoryNum;
+    m_bAttr=_U_UNEQUIP;
 /*
 a:武器
 b:衣服
@@ -54,7 +55,8 @@ g:其他
 	{
 	// 武器。
 	case 5:		
-	case 6:		
+	case 6:
+    case 54: case 55: case 56:
 		m_bAttr = _U_WEAPON;
 		break;
 	// 衣服.
@@ -68,6 +70,7 @@ g:其他
 	case 19:
 	case 20:
 	case 21:
+    case 57:
 		m_bAttr = _U_NECKLACE;
 		break;
 	case 22:
@@ -84,10 +87,12 @@ g:其他
 		break;
 	// 毒粉、符咒。
 	case 25:
-		m_bAttr = _U_ARMRINGL;
+		m_bAttr = _U_CHARM;
 		break;
 	}
 
+    if (m_stItemInfo.stStdItem.bStdMode==53) m_bAttr=10;
+    if (m_stItemInfo.stStdItem.bStdMode==60) m_bAttr=11;
 	return TRUE;
 }
 

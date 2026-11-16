@@ -705,7 +705,7 @@
 #define _TYPE_STATUS				1
 #define _TYPE_SETMAGIC				2
 
-#define _EQUIP_MAX_CELL				10
+#define _EQUIP_MAX_CELL				12
 #define _MAGIC_MAX_CELL				5
 #define _MAGIC_MAX_KEY				8
 

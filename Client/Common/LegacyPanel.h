@@ -24,7 +24,7 @@ inline void DrawLegacyPanel(RECT box, COLORREF fill, BYTE alpha, COLORREF border
 enum class SelectionBlend { Normal, Inactive, Shadow, Additive };
 
 inline RECT DrawSelectionFrame(CWHWilImageData& image, int frame, int x, int y,
-    SelectionBlend blend, bool useOffset = true)
+    SelectionBlend blend, bool useOffset = true, BYTE sourceAlpha = 0)
 {
     if (!image.NewSetIndex(frame)) return {};
     const auto& info = *image.m_lpstNewCurrWilImageInfo;
@@ -61,9 +61,9 @@ inline RECT DrawSelectionFrame(CWHWilImageData& image, int frame, int x, int y,
                     b = (b + (dst & 31)) / 2;
                 } else if (blend == SelectionBlend::Additive) {
                     const WORD dst = row[dx];
-                    r = min(31, r + (dst >> 11));
-                    g = min(63, g + ((dst >> 5) & 63));
-                    b = min(31, b + (dst & 31));
+                    r = min(31, r + ((dst >> 11)*(255-sourceAlpha)+127)/255);
+                    g = min(63, g + (((dst >> 5) & 63)*(255-sourceAlpha)+127)/255);
+                    b = min(31, b + ((dst & 31)*(255-sourceAlpha)+127)/255);
                 }
                 row[dx] = WORD((r << 11) | (g << 5) | b);
             }

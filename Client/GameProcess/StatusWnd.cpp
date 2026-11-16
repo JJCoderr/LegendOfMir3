@@ -95,9 +95,9 @@ VOID CStatusWnd::CreateStatusWnd(INT nID, CWHWilImageData* pxWndImage, INT nFram
 	SetRect(&m_rcCell[_U_WEAPON],	48,  70,   91,  154);
 
 	// 魔法按钮初始化.
-    const int slots[10][4]={{95,114,50,90},{40,70,50,95},{90,265,38,38},{170,88,38,38},
-        {95,70,38,34},{12,155,38,38},{170,155,38,38},{12,195,38,38},{170,195,38,38},{130,265,38,38}};
-    for (int i=0;i<10;++i) SetRect(&m_rcCell[i],slots[i][0],slots[i][1],slots[i][0]+slots[i][2],slots[i][1]+slots[i][3]);
+    const int slots[12][4]={{95,114,50,90},{40,70,50,95},{90,265,38,38},{170,88,38,38},
+        {95,70,38,34},{12,155,38,38},{170,155,38,38},{12,195,38,38},{170,195,38,38},{130,265,38,38},{12,255,38,38},{170,265,38,38}};
+    for (int i=0;i<12;++i) SetRect(&m_rcCell[i],slots[i][0],slots[i][1],slots[i][0]+slots[i][2],slots[i][1]+slots[i][3]);
 	m_xMagicScrlBtn[0].CreateGameBtn(pxWndImage, 74, 75, nStartX+232, nStartY+147);
 	m_xMagicScrlBtn[1].CreateGameBtn(pxWndImage, 74, 75, nStartX+232, nStartY+253);
 
@@ -281,40 +281,13 @@ INT CStatusWnd::GetEquipNum(POINT ptMouse)
 
 
 
-BOOL CStatusWnd::CheckEquipItem(CItem* pxItem, BYTE bEquipCell, POINT ptMouse)
+BOOL CStatusWnd::CheckEquipItem(CItem* item,BYTE slot,POINT point)
 {
-	RECT rc;
-
-	for ( INT nCnt = 0; nCnt < _EQUIP_MAX_CELL; nCnt++ )
-	{
-		SetRect(&rc, m_rcWnd.left+m_rcCell[nCnt].left, m_rcWnd.top+m_rcCell[nCnt].top, 
-			    m_rcWnd.left+m_rcCell[nCnt].left+(m_rcCell[nCnt].right-m_rcCell[nCnt].left), m_rcWnd.top+m_rcCell[nCnt].top+(m_rcCell[nCnt].bottom-m_rcCell[nCnt].top));
-		if ( PtInRect(&rc, ptMouse) )
-		{
-			if ( pxItem->m_bAttr == _U_ARMRINGL || pxItem->m_bAttr == _U_ARMRINGR )
-			{
-				if ( pxItem->m_stItemInfo.stStdItem.bStdMode == 25 )
-				{
-					if ( _U_ARMRINGL == bEquipCell )
-						return TRUE;
-				}
-				else
-				{
-					if ( _U_ARMRINGL == bEquipCell || _U_ARMRINGR == bEquipCell )			return TRUE;
-				}
-			}
-			else if ( pxItem->m_bAttr == _U_RINGL || pxItem->m_bAttr ==  _U_RINGR )
-			{
-				if ( _U_RINGL == bEquipCell || _U_RINGR == bEquipCell )					return TRUE;
-			}
-			else if ( pxItem->m_bAttr == bEquipCell )
-			{
-				return TRUE;
-			}			
-		}
-	}
-
-	return FALSE;
+    if (GetEquipNum(point)!=slot) return FALSE;
+    if (item->m_stItemInfo.stStdItem.bStdMode==25) return slot==5 || slot==9;
+    if (item->m_bAttr==5 || item->m_bAttr==6) return slot==5 || slot==6;
+    if (item->m_bAttr==7 || item->m_bAttr==8) return slot==7 || slot==8;
+    return item->m_bAttr==slot;
 }
 
 
@@ -1064,6 +1037,14 @@ void CStatusWnd::ShowNativeStatus()
         g_xMainWnd.DrawWithImageForComp(x-(image.shWidth-328)/2,y-(image.shHeight-466)/2,
             image.shWidth,image.shHeight,(WORD*)m_pxWndImage->m_pbCurrImage);
     }
+    const auto& held=g_xGameProc.m_xInterface.m_stCommonItem;
+    if (m_showNativeHint && held.bSetted) {
+        const int slot=GetEquipNum(m_nativePointer);
+        const int mode=held.xItem.m_stItemInfo.stStdItem.bStdMode;
+        const int frame=EquipmentPreviewFrame(mode,slot);
+        if (frame>=0) DrawSelectionFrame(*m_pxWndImage,frame,x+m_rcCell[slot].left-2,
+            y+m_rcCell[slot].top-(mode==53?21:2),SelectionBlend::Additive,false,20);
+    }
     auto& hero=g_xGameProc.m_xMyHero;
     auto& body=g_xGameProc.m_xInterface.m_portraits;
     if (body.NewSetIndex(hero.m_stFeature.bGender)) {
@@ -1169,4 +1150,18 @@ void CStatusWnd::ShowNativeHint()
         SelectObject(dc,previous); surface->ReleaseDC(dc);
     }
     DeleteObject(font);
+}
+
+int CStatusWnd::EquipmentPreviewFrame(int mode,int slot)
+{
+    switch (mode) {
+    case 19: case 20: case 21: case 57: return slot==3?1235:-1;
+    case 22: case 23: return slot==7 || slot==8?1235:-1;
+    case 24: case 26: return slot==5 || slot==6?1235:-1;
+    case 25: return slot==9?1235:-1;
+    case 30: return slot==2?1235:-1;
+    case 53: return slot==10?1236:-1;
+    case 60: return slot==11?1235:-1;
+    default: return -1;
+    }
 }
