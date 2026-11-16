@@ -67,11 +67,13 @@ public:
             const bool cancelled = !ui.m_xMsgBox.IsActive();
             ui.OnLButtonDown(button); ui.OnLButtonUp(button);
             ui.OnKeyDown(VK_ESCAPE,0);
-            const bool escaped = !ui.m_xMsgBox.IsActive();
+            const bool escapeBlocked = ui.m_xMsgBox.IsActive()!=FALSE;
+            ui.OnKeyDown(VK_TAB,0); ui.OnKeyDown(VK_RETURN,0);
+            const bool keyboardCancelled = !ui.m_xMsgBox.IsActive();
             ui.OnLButtonDown(button); ui.OnLButtonUp(button);
             if (FILE* report=fopen("hud-exit-check.txt","wb")) {
-                fprintf(report,"wheel_blocked=%d cancelled=%d escaped=%d reopened=%d\n",
-                    wheelBlocked,cancelled,escaped,ui.m_xMsgBox.IsActive()!=FALSE);
+                fprintf(report,"wheel_blocked=%d cancelled=%d escape_blocked=%d keyboard_cancelled=%d reopened=%d\n",
+                    wheelBlocked,cancelled,escapeBlocked,keyboardCancelled,ui.m_xMsgBox.IsActive()!=FALSE);
                 fclose(report);
             }
         }

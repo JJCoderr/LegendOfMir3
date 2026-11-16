@@ -14,6 +14,7 @@ BOOL CLoginNotice::CreateWnd(CWHWilImageData* image, BOOL, INT, INT, INT, INT) {
 BOOL CLoginNotice::ShowMessageBox(const CHAR* message, INT type, INT) {
     lstrcpynA(m_text, message, sizeof(m_text));
     m_type = type;
+    m_selected = (type & 127) == MSG_BTN_YESNO ? CLICK_YES : CLICK_OK;
     m_pressed = 0;
     m_active = TRUE;
     return TRUE;
@@ -36,6 +37,14 @@ int CLoginNotice::Hit(POINT point) const {
         RECT ok = {277,298,357,330};
         if (PtInRect(&ok, point)) return CLICK_OK;
     }
+    return CLICK_NONE;
+}
+
+HRESULT CLoginNotice::OnKeyDown(WPARAM key) {
+    if (!m_active) return CLICK_NONE;
+    if (key == VK_TAB && (m_type & 127) == MSG_BTN_YESNO)
+        m_selected = m_selected == CLICK_YES ? CLICK_NO : CLICK_YES;
+    if (key == VK_RETURN || key == VK_SPACE) return m_selected;
     return CLICK_NONE;
 }
 

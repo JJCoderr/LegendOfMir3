@@ -1459,17 +1459,10 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
 	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
-BOOL CInterface::OnLButtonUp(POINT ptMouse)
+void CInterface::FinishNotice(int hResult, bool mouse)
 {
-	m_bMoveFocusedWnd = FALSE;
-
-	if ( m_xMsgBox.IsActive() )	// 勇气
-	{
-		HRESULT hResult;
-		hResult = m_xMsgBox.OnButtonUp(ptMouse);
-		if ( hResult != 0 )
-		{
-            g_xSound.PlayLobbyEffect("105.wav");
+    if (!hResult) return;
+            if (mouse) g_xSound.PlayLobbyEffect("105.wav");
 			switch ( m_nIdxMsgBox )
 			{
 			case 12:
@@ -1502,7 +1495,18 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 				}
 				break;
 			}
-		}
+		
+}
+
+BOOL CInterface::OnLButtonUp(POINT ptMouse)
+{
+	m_bMoveFocusedWnd = FALSE;
+
+	if ( m_xMsgBox.IsActive() )	// 勇气
+	{
+		HRESULT hResult;
+		hResult = m_xMsgBox.OnButtonUp(ptMouse);
+        FinishNotice(hResult,true);
 	}
 	else
 	{
@@ -1829,7 +1833,7 @@ BOOL CInterface::OnKeyUp(WPARAM wParam, LPARAM lParam)
 BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
 {
     if (m_xMsgBox.IsActive()) {
-        if (wParam == VK_ESCAPE) m_xMsgBox.HideMessageBox();
+        if (!(lParam & (1L << 30))) FinishNotice(m_xMsgBox.OnKeyDown(wParam),false);
         return TRUE;
     }
 	switch ( wParam )

@@ -474,3 +474,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 确认框活动期间拦截底层鼠标移动、滚轮、双击、按键释放；GameProc提前转交键盘并拦截右键和系统快捷键，防止继续执行地图/聊天快捷操作。Esc取消确认框。
 - 离线退出预览通过实际处理器检查滚轮保持聊天位置、NO取消、Esc取消、重新打开。报告hud-exit-check.txt四项均为1；构建通过。
 - 键盘左右选择/回车确认和实际退出限制尚待对齐验证。
+
+### 确认框键盘规则校正
+- 按Godot group_dialog_input：默认YES，Tab在YES/NO切换，Enter/Space返回选中结果；重复按键不触发。Esc仅拦截，不取消，纠正上一阶段误加行为。
+- 提取FinishNotice共用确认结果处理，鼠标播放点击声，键盘不播放（与参考区分）。
+- Client全量77步编译通过；退出预览报告wheel_blocked=1、cancelled=1、escape_blocked=1、keyboard_cancelled=1、reopened=1，验证Tab+Enter可取消。真实YES退出仍需退出限制联调。
