@@ -29,10 +29,10 @@ class CHudPreviewProcess : public CWHDefProcess {
 public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
-    void Load(bool expanded, int chatMode, bool exitDialog, bool groupPanel) {
+    void Load(bool expanded, int chatMode, bool exitDialog, int groupPanel) {
         capturePath = chatMode == 1 ? "hud-group.bmp" : chatMode == 2 ? "hud-guild.bmp" : expanded ? "hud-expanded.bmp" : "hud-collapsed.bmp";
         if (exitDialog) capturePath = "hud-exit.bmp";
-        if (groupPanel) capturePath = "group-panel.bmp";
+        if (groupPanel) capturePath = groupPanel==2 ? "group-create.bmp" : groupPanel==3 ? "group-invite.bmp" : groupPanel==4 ? "group-remove.bmp" : "group-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
         g_xGameProc.m_xInterface.CreateInterface(&g_xGameProc.m_xImage);
@@ -63,6 +63,11 @@ public:
                 g_xGameProc.m_xInterface.m_xGroupWnd.m_xGroupList.AddNode(member);
             }
             g_xGameProc.m_xInterface.WindowActivate(_WND_ID_GROUP);
+            if (groupPanel>1) {
+                POINT button = {315+(groupPanel-2)*60,320};
+                g_xGameProc.m_xInterface.OnLButtonDown(button);
+                g_xGameProc.m_xInterface.OnLButtonUp(button);
+            }
         }
         if (exitDialog) {
             POINT button = {10,542};
@@ -200,7 +205,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
 	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
-	const bool previewGroup = strcmp(lpCmdLine,"--preview=group-panel")==0;
+	const int previewGroup = strcmp(lpCmdLine,"--preview=group-panel")==0 ? 1 :
+        strcmp(lpCmdLine,"--preview=group-create")==0 ? 2 :
+        strcmp(lpCmdLine,"--preview=group-invite")==0 ? 3 :
+        strcmp(lpCmdLine,"--preview=group-remove")==0 ? 4 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

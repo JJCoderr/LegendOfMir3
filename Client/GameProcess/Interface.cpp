@@ -1459,9 +1459,43 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
 	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
+void CInterface::OpenGroupDialog(int action)
+{
+    static CLoginMessages captions;
+    static const bool loaded = captions.Load("./CmList.dat");
+    m_nIdxMsgBox = action;
+    m_xMsgBox.SetOrigin(220,112,true);
+    m_xMsgBox.ShowMessageBox(captions.Get(action==3?1606:1605).c_str(),MSG_BTN_YESNO,1240);
+    g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+244,g_xMainWnd.m_rcWindow.top+340,309,15,TRUE);
+    g_xChatEditBox.SetLimitText(90);
+    g_xChatEditBox.m_szInputMsg[0]=0;
+    SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"");
+    ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_SHOW);
+    SetFocus(g_xChatEditBox.GetSafehWnd());
+}
+
 void CInterface::FinishNotice(int hResult, bool mouse)
 {
     if (!hResult) return;
+    if (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 3) {
+        char name[91] = {};
+        GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,sizeof(name));
+        if (mouse) g_xSound.PlayLobbyEffect("105.wav");
+        m_xMsgBox.HideMessageBox();
+        SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"");
+        g_xChatEditBox.m_szInputMsg[0]=0;
+        ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
+        SetFocus(g_xMainWnd.GetSafehWnd());
+        g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+185,
+            g_xMainWnd.m_rcWindow.top+(m_chatExpanded?534:575),m_chatExpanded?432:344,15,TRUE);
+        if (hResult == CLICK_YES) {
+            if (m_nIdxMsgBox == 1) g_xClientSocket.SendCreateGroup(name);
+            else if (m_nIdxMsgBox == 2) g_xClientSocket.SendAddGroupMember(name);
+            else g_xClientSocket.SendDelGroupMember(name);
+        }
+        return;
+    }
+
             if (mouse) g_xSound.PlayLobbyEffect("105.wav");
 			switch ( m_nIdxMsgBox )
 			{
@@ -1586,6 +1620,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
                         static CLoginMessages captions;
                         static const bool loaded = captions.Load("./CmList.dat");
                         m_nIdxMsgBox = 12;
+                        m_xMsgBox.SetOrigin(220,112,false);
                         m_xMsgBox.ShowMessageBox(captions.Get(2636).c_str(),MSG_BTN_YESNO,1240);
                     }
                     break;
@@ -1889,6 +1924,11 @@ VOID CInterface::OnSysKeyDown()
 
 LRESULT	CInterface::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 {
+    if (m_xMsgBox.IsActive() && m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 3) {
+        SetWindowTextA(g_xChatEditBox.GetSafehWnd(),g_xChatEditBox.m_szInputMsg);
+        FinishNotice(CLICK_YES,false);
+        return TRUE;
+    }
 	if ( m_xNPCWnd.OnMsgInputted() )
 		return TRUE;
 

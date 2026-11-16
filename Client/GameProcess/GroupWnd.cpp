@@ -12,26 +12,9 @@
 #include "StdAfx.h"
 #include "Common/LoginMessages.h"
 
-typedef struct tagINTERFACE_BUTTON
-{
-public:
-	int		m_nLeft;
-	int		m_nTop;
-	int		m_nWidth;
-	int		m_nHeight;
-	BYTE	m_btCommand;
-} INTERFACE_BUTTON;
-
-#define GROUPBTN_ALLOWGROUP		1
-#define GROUPBTN_CREATEGROUP	2
-#define GROUPBTN_ADDMEMBER		3
-#define GROUPBTN_DELMEMBER		4
-
-INTERFACE_BUTTON GroupWndButton[] = {	{ 21, 57, 27, 28, GROUPBTN_ALLOWGROUP },
-										{ 27, 200, 71, 13, GROUPBTN_CREATEGROUP }, 
-										{ 91, 200, 77, 16, GROUPBTN_ADDMEMBER }, 
-										{ 170, 200, 73, 16, GROUPBTN_DELMEMBER } 
-									};
+static const int groupButtons[5][3] = {
+    {1221,217,200},{1362,38,192},{1365,98,192},{1368,158,192},{1370,23,47}
+};
 
 BOOL g_fAllowGroup = TRUE;
 
@@ -63,7 +46,9 @@ VOID CGroupWnd::ShowGroupWnd()
         const auto& skin = *m_pxWndImage->m_lpstNewCurrWilImageInfo;
         draw(1360,area.left-(skin.shWidth-258)/2,area.top-(skin.shHeight-244)/2);
     }
-    draw(1221,area.left+217,area.top+200);
+    for (int i=0;i<4;++i)
+        if (i==0 || m_pressed==i)
+            draw(groupButtons[i][0]+(m_pressed==i),area.left+groupButtons[i][1],area.top+groupButtons[i][2]);
     draw(g_fAllowGroup?1370:1371,area.left+23,area.top+47);
     auto* surface = g_xMainWnd.GetBackBuffer();
     HDC dc;
@@ -102,42 +87,39 @@ VOID CGroupWnd::Destroy()
 	CGameWnd::Destroy();
 }
 
-BOOL CGroupWnd::OnLButtonUp(POINT ptMouse)
+int CGroupWnd::ButtonAt(POINT point)
 {
-	RECT tRect = GetGameWndRect();
-
-	for (int i = 0; i < sizeof(GroupWndButton)/sizeof(INTERFACE_BUTTON); i++)
-	{
-		if (tRect.left + GroupWndButton[i].m_nLeft < ptMouse.x && tRect.left + GroupWndButton[i].m_nLeft + GroupWndButton[i].m_nWidth > ptMouse.x &&
-			tRect.top + GroupWndButton[i].m_nTop < ptMouse.y && tRect.top + GroupWndButton[i].m_nTop + GroupWndButton[i].m_nHeight > ptMouse.y)
-		{
-			switch (GroupWndButton[i].m_btCommand)
-			{
-				case GROUPBTN_ALLOWGROUP:
-					(g_fAllowGroup ? g_fAllowGroup = FALSE : g_fAllowGroup = TRUE);
-					g_xClientSocket.SendGroupMode(g_fAllowGroup);
-					break;
-				case GROUPBTN_CREATEGROUP:
-					g_xClientSocket.SendCreateGroup("mandul");
-					break;
-				case GROUPBTN_ADDMEMBER:
-					g_xClientSocket.SendAddGroupMember("mandul");
-					break;
-				case GROUPBTN_DELMEMBER:
-					g_xClientSocket.SendDelGroupMember("mandul");
-					break;
-			}
-		}
-	}
-
-	return FALSE;
+    for (int i=0;i<5;++i) {
+        if (!m_pxWndImage->NewSetIndex(groupButtons[i][0])) continue;
+        const auto& image = *m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        RECT hit = {m_rcWnd.left+groupButtons[i][1],m_rcWnd.top+groupButtons[i][2],
+            m_rcWnd.left+groupButtons[i][1]+image.shWidth,m_rcWnd.top+groupButtons[i][2]+image.shHeight};
+        if (PtInRect(&hit,point)) return i;
+    }
+    return -1;
 }
 
-BOOL CGroupWnd::OnLButtonDown(POINT ptMouse)
+BOOL CGroupWnd::OnLButtonUp(POINT point)
 {
-	return FALSE;
+    const int hit = ButtonAt(point);
+    const bool clicked = hit >= 0 && hit == m_pressed;
+    m_pressed = -1;
+    if (!clicked) return FALSE;
+    g_xSound.PlayLobbyEffect("105.wav");
+    if (hit == 0) return TRUE;
+    if (hit == 4) {
+        g_fAllowGroup = !g_fAllowGroup;
+        g_xClientSocket.SendGroupMode(g_fAllowGroup);
+    } else g_xGameProc.m_xInterface.OpenGroupDialog(hit);
+    return FALSE;
 }
 
-VOID CGroupWnd::OnMouseMove(POINT ptMouse)
+BOOL CGroupWnd::OnLButtonDown(POINT point)
+{
+    m_pressed = ButtonAt(point);
+    return m_pressed >= 0;
+}
+
+VOID CGroupWnd::OnMouseMove(POINT point)
 {
 }

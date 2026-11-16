@@ -9,6 +9,8 @@ public:
 
 class CGroupWnd : public CGameWnd
 { 
+    int m_pressed = -1;
+    int ButtonAt(POINT point);
 public:
 	CPDLList<CGroupMember>	m_xGroupList;
 
