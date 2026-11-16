@@ -123,7 +123,7 @@ float CMirSound::CalsDistanceX(POINT Src,POINT Chr)		// 检查声音发生位置与当前角
 	float l_Result;
 	l_Result = (float)((Chr.x - Src.x)%13);						// 距离不能超过 12.
 	l_Result = (float)(1.0-(float)sqrt(1.0 - l_Result/(float)12.0))*((float)-1.0);
-	return l_Result;
+	return m_reversePan ? -l_Result : l_Result;
 }
 
 float CMirSound::CalsDistanceY(POINT Src,POINT Chr)		// 检查声音发生位置与当前角色之间的距离
@@ -163,7 +163,7 @@ int CMirSound::CalsPan(int Dir,int Dis)
 	int pans;
 	pans = Dir*(int)(5000.0*(sin(_PI*(Dis/26.0))));
 
-	return pans;				
+	return m_reversePan ? -pans : pans;
 }
 
 

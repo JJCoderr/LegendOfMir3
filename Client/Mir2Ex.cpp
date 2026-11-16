@@ -139,8 +139,14 @@ public:
             POINT effects={605,210}; options.OnLButtonDown(effects);
             POINT middle={523,210}; ui.OnMouseMove(middle); ui.OnLButtonUp(middle);
             const bool independent=options.m_effectsLevel==-50 && g_xSound.m_lWavMaxVol==-2000 && g_xSound.m_lMp3MaxVol==0;
+            POINT reverse={580,240}; options.OnLButtonDown(reverse); options.OnLButtonUp(reverse);
+            const bool reversed=options.m_values[3] && g_xSound.m_reversePan;
+            options.OnLButtonDown(reverse); options.OnLButtonUp(reverse);
+            const bool restored=!options.m_values[3] && !g_xSound.m_reversePan;
+            options.OnLButtonDown(reverse); options.OnLButtonUp(reverse);
             if (FILE* report=fopen("options-audio-check.txt","wb")) {
                 fprintf(report,"minimum=%d maximum_released=%d independent=%d\n",minimum,maximum,independent);
+                fprintf(report,"reverse_enabled=%d reverse_restored=%d\n",reversed,restored);
                 fclose(report);
             }
         }

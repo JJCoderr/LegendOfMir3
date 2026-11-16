@@ -25,6 +25,7 @@ public:
     void UpdateLobbyAudio(LobbyPage page, DWORD elapsed);
     void PlayLobbyEffect(const char* file);
     void SetInterfaceVolume(bool music, int level);
+    bool m_reversePan = false;
     void PlayRoleVoice(bool creation, int profession, int gender);
 
 	void		StopAllSound(void);

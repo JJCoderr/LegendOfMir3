@@ -533,3 +533,7 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 新增独立音量入口，映射40*level，分别更新音乐和音效音量；现有界面点击/开场音效同步更新。参考右端可产生level=2，DirectSound不支持正增益，因此音频输出参数钳制到0dB，控件保留参考位置。
 - 全量Client及后续全项目构建完成。原生预览options-audio-check.txt为minimum=1 maximum_released=1 independent=1，已检查out/options-audio-sliders.png。验证涉及控件交互与声音系统参数，未验证实际音频输出，未覆盖所有正在播放的场景音效。
 - 配置持久化、其余设置动作和服务器状态同步仍待完成。
+
+### 声道反转开关
+- 设置页音响左右频道按钮接入CMirSound：反转2D声像及3D横向坐标，作用于后续播放/更新的定位音效。滑块按下补充参考105.wav音效。
+- Client全量77步构建通过。原生预览报告reverse_enabled=1、reverse_restored=1，已有三个音量检查仍通过；已检查out/options-reverse-pan.png。该验证证明按钮与声音状态联动，未完成实际左右声道输出监听或录制。

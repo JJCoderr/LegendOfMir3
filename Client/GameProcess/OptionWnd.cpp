@@ -97,6 +97,7 @@ BOOL COptionWnd::OnLButtonUp(POINT point)
     g_xSound.PlayLobbyEffect("105.wav");
     if (hit==1) { m_values[1]=!m_values[1]; if (m_values[1]) g_xSound.SetEnableBGM(); else g_xSound.SetDisableBGM(); }
     if (hit==2) { m_values[2]=!m_values[2]; if (m_values[2]) g_xSound.SetEnablePlay(); else g_xSound.SetDisablePlay(); }
+    if (hit==3) { m_values[3]=!m_values[3]; g_xSound.m_reversePan=m_values[3]; }
     return hit==0;
 }
 VOID COptionWnd::OnMouseMove(POINT point) { if (!AudioInput(1,point)) m_hover=ButtonAt(point); }
@@ -123,7 +124,7 @@ bool COptionWnd::AudioInput(int kind, POINT point)
         RECT hit={276+offset,118+60*i,276+offset+knob.shWidth,118+60*i+knob.shHeight};
         POINT local={x,y};
         if (PtInRect(&hit,local)) {
-            if (kind==0) { m_audioDrag=i; SetCapture(g_xMainWnd.GetSafehWnd()); }
+            if (kind==0) { m_audioDrag=i; SetCapture(g_xMainWnd.GetSafehWnd()); g_xSound.PlayLobbyEffect("105.wav"); }
             return true;
         }
         if (x>266 && x<487 && y>116+60*i && y<136+60*i) {
