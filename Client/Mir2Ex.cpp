@@ -127,7 +127,23 @@ public:
             }
 
         }
-        if (groupPanel==11) g_xGameProc.m_xInterface.WindowActivate(_WND_ID_OPTION);
+        if (groupPanel==11) {
+            auto& ui=g_xGameProc.m_xInterface;
+            auto& options=ui.m_xOptionWnd;
+            ui.WindowActivate(_WND_ID_OPTION);
+            POINT knob={605,150}; options.OnLButtonDown(knob);
+            POINT left={400,150}; ui.OnMouseMove(left);
+            const bool minimum=options.m_musicLevel==-100 && g_xSound.m_lMp3MaxVol==-4000;
+            POINT right={760,150}; ui.OnMouseMove(right); ui.OnLButtonUp(right);
+            const bool maximum=options.m_musicLevel==2 && g_xSound.m_lMp3MaxVol==0 && options.m_audioDrag==-1;
+            POINT effects={605,210}; options.OnLButtonDown(effects);
+            POINT middle={523,210}; ui.OnMouseMove(middle); ui.OnLButtonUp(middle);
+            const bool independent=options.m_effectsLevel==-50 && g_xSound.m_lWavMaxVol==-2000 && g_xSound.m_lMp3MaxVol==0;
+            if (FILE* report=fopen("options-audio-check.txt","wb")) {
+                fprintf(report,"minimum=%d maximum_released=%d independent=%d\n",minimum,maximum,independent);
+                fclose(report);
+            }
+        }
         if (exitDialog) {
             POINT button = {10,542};
             g_xGameProc.m_xInterface.OnLButtonDown(button);

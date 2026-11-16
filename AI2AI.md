@@ -527,3 +527,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 音乐/音效开关接入现有声音系统。其余设置动作、滑块拖动、配置持久化和服务端状态尚未完成。
 - 截图发现设置页底部被HUD覆盖，调整RenderInterface为HUD后绘制窗口、窗口后绘制确认框，已重新检查out/options-panel.png。
 - Client全量77步及后续构建通过，新增--preview=options-panel。
+
+### 设置页音量滑块与声音参数
+- 按Godot AudioOptions移植音乐/音效滑块拖动、严格轨道边界与9像素步进；主窗口捕获鼠标，Interface转发窗口外移动及释放。
+- 新增独立音量入口，映射40*level，分别更新音乐和音效音量；现有界面点击/开场音效同步更新。参考右端可产生level=2，DirectSound不支持正增益，因此音频输出参数钳制到0dB，控件保留参考位置。
+- 全量Client及后续全项目构建完成。原生预览options-audio-check.txt为minimum=1 maximum_released=1 independent=1，已检查out/options-audio-sliders.png。验证涉及控件交互与声音系统参数，未验证实际音频输出，未覆盖所有正在播放的场景音效。
+- 配置持久化、其余设置动作和服务器状态同步仍待完成。

@@ -28,7 +28,7 @@ VOID COptionWnd::Init()
     ZeroMemory(m_values,sizeof(m_values));
     m_values[1]=m_values[2]=m_values[7]=m_values[8]=m_values[20]=true;
     m_pressed=m_hover=-1;
-    m_musicLevel=m_effectsLevel=m_attackMode=0;
+    m_musicLevel=m_effectsLevel=m_attackMode=0; m_audioDrag=-1;
 }
 VOID COptionWnd::Destroy() { CGameWnd::Destroy(); }
 VOID COptionWnd::CreateOptionWnd(INT id,CWHWilImageData* image,INT frame,INT x,INT y,INT width,INT height,BOOL move)
@@ -88,9 +88,10 @@ int COptionWnd::ButtonAt(POINT point)
     }
     return -1;
 }
-BOOL COptionWnd::OnLButtonDown(POINT point) { m_pressed=ButtonAt(point); return m_pressed>=0; }
+BOOL COptionWnd::OnLButtonDown(POINT point) { if (AudioInput(0,point)) return TRUE; m_pressed=ButtonAt(point); return m_pressed>=0; }
 BOOL COptionWnd::OnLButtonUp(POINT point)
 {
+    if (AudioInput(2,point)) return FALSE;
     const int hit=ButtonAt(point); const bool clicked=hit>=0 && hit==m_pressed; m_pressed=-1;
     if (!clicked) return FALSE;
     g_xSound.PlayLobbyEffect("105.wav");
@@ -98,5 +99,42 @@ BOOL COptionWnd::OnLButtonUp(POINT point)
     if (hit==2) { m_values[2]=!m_values[2]; if (m_values[2]) g_xSound.SetEnablePlay(); else g_xSound.SetDisablePlay(); }
     return hit==0;
 }
-VOID COptionWnd::OnMouseMove(POINT point) { m_hover=ButtonAt(point); }
+VOID COptionWnd::OnMouseMove(POINT point) { if (!AudioInput(1,point)) m_hover=ButtonAt(point); }
 VOID COptionWnd::SetStatusBtnInit() { m_hover=m_pressed=-1; }
+
+bool COptionWnd::AudioInput(int kind, POINT point)
+{
+    const int x=point.x-m_rcWnd.left,y=point.y-m_rcWnd.top;
+    if (m_audioDrag>=0) {
+        if (kind==1) {
+            const int offset=x<288?0:x>468?185:x-288;
+            int& level=m_audioDrag==0?m_musicLevel:m_effectsLevel;
+            level=(5*offset-900)/9;
+            g_xSound.SetInterfaceVolume(m_audioDrag==0,level);
+        }
+        if (kind==2) { m_audioDrag=-1; if (GetCapture()==g_xMainWnd.GetSafehWnd()) ReleaseCapture(); }
+        return true;
+    }
+    if (kind==1 || !m_pxWndImage->NewSetIndex(1291)) return false;
+    const auto& knob=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+    for (int i=0;i<2;++i) {
+        int& level=i==0?m_musicLevel:m_effectsLevel;
+        int offset=9*(level+100)/5;
+        RECT hit={276+offset,118+60*i,276+offset+knob.shWidth,118+60*i+knob.shHeight};
+        POINT local={x,y};
+        if (PtInRect(&hit,local)) {
+            if (kind==0) { m_audioDrag=i; SetCapture(g_xMainWnd.GetSafehWnd()); }
+            return true;
+        }
+        if (x>266 && x<487 && y>116+60*i && y<136+60*i) {
+            if (kind==2) {
+                if (x>offset+292 || x>477) offset=offset+9>180?185:offset+9;
+                else if (x<offset+276 || x<275) offset=offset<9?0:offset-9;
+                level=(5*offset-900)/9;
+                g_xSound.SetInterfaceVolume(i==0,level);
+            }
+            return true;
+        }
+    }
+    return false;
+}

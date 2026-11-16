@@ -342,6 +342,17 @@ void CMirSound::UpdateLobbyAudio(LobbyPage page, DWORD elapsed)
     }
 }
 
+void CMirSound::SetInterfaceVolume(bool music, int level)
+{
+    const LONG volume=min(0,40*level); // DirectSound cannot amplify above 0 dB.
+    if (music) { m_lMp3MaxVol=volume; m_pMp3->SetVolume(volume); }
+    else {
+        m_lWavMaxVol=volume;
+        m_lobbyEffect.SetVolume(volume);
+        m_lobbyOpening.SetVolume(volume);
+    }
+}
+
 void CMirSound::PlayLobbyEffect(const char* file)
 {
     if (!m_bPlay || !m_pSound->GetDS()) return;

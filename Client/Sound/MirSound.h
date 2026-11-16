@@ -24,6 +24,7 @@ public:
     enum class LobbyPage { None, Credentials, Selection, Creation };
     void UpdateLobbyAudio(LobbyPage page, DWORD elapsed);
     void PlayLobbyEffect(const char* file);
+    void SetInterfaceVolume(bool music, int level);
     void PlayRoleVoice(bool creation, int profession, int gender);
 
 	void		StopAllSound(void);
