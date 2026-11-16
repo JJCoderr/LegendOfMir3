@@ -8,11 +8,17 @@ class CStoreWnd : public CGameWnd {
     void Request(int opcode,const std::string& name,DWORD instance=0,WORD quantity=0);
 public:
     struct Good { std::string name; int variants=0,price=0,stock=0,icon=0,requirementType=0,requirement=0; };
-    struct Offer { std::string name; int icon=0,price=0; DWORD id=0; };
+    struct Offer { std::string name; int icon=0,price=0; DWORD id=0; int count=1,stackMode=0; };
     std::vector<Good> goods;
     std::vector<Offer> offers;
     int actor=0,first=0,highlighted=-1,selected=-1,offerIndex=-1,page=0,bulk=-1,pressed=-1;
-    bool details=false,loading=false,scrollCaptured=false;
+    bool details=false,loading=false,scrollCaptured=false,storage=false;
+    DWORD storagePending=0;
+    RECT OfferCell(int cell) const;
+    void SetStorage(int id,std::vector<Offer> list);
+    bool SetStorageRecords(int id,const char* body,int count);
+    void Withdraw(int quantity=0);
+    void SubmitWithdrawal(const char* text);
     double fraction=0;
     void Init() override;
     void Reset();

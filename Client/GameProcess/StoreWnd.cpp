@@ -9,9 +9,35 @@ void CStoreWnd::Init() { CGameWnd::Init(); Reset(); }
 void CStoreWnd::Reset()
 {
     actor=first=page=0; highlighted=selected=offerIndex=bulk=pressed=-1;
-    details=loading=scrollCaptured=false; fraction=0; goods.clear(); offers.clear(); Layout();
+    storage=false; storagePending=0; details=loading=scrollCaptured=false; fraction=0; goods.clear(); offers.clear(); Layout();
 }
-void CStoreWnd::Layout() { m_rcWnd={0,225,bulk>=0?516:details?488:292,449}; }
+void CStoreWnd::Layout() { m_rcWnd=storage?RECT{-292,234,196,439}:RECT{0,225,bulk>=0?516:details?488:292,449}; }
+RECT CStoreWnd::OfferCell(int cell) const
+{
+    const int x=(storage?22:315)+38*(cell%4),y=(storage?266:267)+38*(cell/4),size=storage?37:35;
+    return RECT{x,y,x+size,y+size};
+}
+void CStoreWnd::SetStorage(int id,std::vector<Offer> list)
+{
+    const DWORD pending=storage?storagePending:0; const int owner=storage?actor:id;
+    CloseOffers(); Reset(); actor=owner; storage=details=true; storagePending=pending; offers=std::move(list);
+    offerIndex=offers.empty()?-1:0; Layout();
+}
+void CStoreWnd::Withdraw(int quantity)
+{
+    if (!storage || storagePending || offerIndex<0 || offerIndex>=int(offers.size())) return;
+    const auto& offer=offers[offerIndex];
+    if (!quantity && offer.stackMode>=2 && offer.count>1) { g_xGameProc.m_xInterface.OpenNameDialog(9); return; }
+    if (!quantity && offer.stackMode>=2) quantity=1;
+    if (quantity<0 || quantity>offer.count) return;
+    storagePending=offer.id; Request(CM_USERTAKEBACKSTORAGEITEM,offer.name,offer.id,WORD(quantity));
+}
+void CStoreWnd::SubmitWithdrawal(const char* text)
+{
+    if (offerIndex<0 || offerIndex>=int(offers.size())) return;
+    const long quantity=!strcmp(text,"*")?offers[offerIndex].count:strtol(text,NULL,10);
+    if (quantity>0 && quantity<=65535) Withdraw(int(quantity));
+}
 void CStoreWnd::CreateStoreWnd(INT id,CWHWilImageData* image,INT,INT,INT,INT,INT,BOOL)
 { CreateGameWnd(id,image,1260,FALSE,0,225,292,224); }
 bool CStoreWnd::SetGoods(int id,const char* text,int count)
@@ -36,14 +62,13 @@ bool CStoreWnd::SetGoods(int id,const char* text,int count)
 void CStoreWnd::SetOffers(std::vector<Offer> list,int offset)
 {
     auto& ui=g_xGameProc.m_xInterface;
-    if (ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==8) ui.FinishNotice(CLICK_NO,false);
+    if (ui.m_xMsgBox.IsActive() && (ui.m_nIdxMsgBox==8 || ui.m_nIdxMsgBox==9)) ui.FinishNotice(CLICK_NO,false);
     offers=std::move(list); bulk=-1; details=true; loading=false; pressed=-1;
     offerIndex=offers.empty()?-1:0; page=offset/10; Layout();
 }
-bool CStoreWnd::SetDetailRecords(const char* body,int count,int offset)
+static bool ReadShopRecords(const char* body,int count,std::vector<CStoreWnd::Offer>& result)
 {
-    if (count<0 || count>255 || selected<0) return false;
-    std::vector<Offer> result; const char* cursor=body;
+    const char* cursor=body;
     for (int i=0;i<count;++i) {
         const char* end=strchr(cursor,'/'); if (!end || end-cursor!=134) return false;
         const std::string encoded(cursor,end); BYTE record[101]={};
@@ -51,10 +76,21 @@ bool CStoreWnd::SetDetailRecords(const char* body,int count,int offset)
         const char* name=(char*)record; const size_t length=strlen(name); if (!length || length>=30) return false;
         const DWORD id=DWORD(record[62])|(DWORD(record[63])<<8)|(DWORD(record[64])<<16)|(DWORD(record[65])<<24);
         if (!id) return false;
-        result.push_back({std::string(name,length),record[36]|(record[37]<<8),record[68]|(record[69]<<8),id}); cursor=end+1;
+        result.push_back({std::string(name,length),record[36]|(record[37]<<8),record[68]|(record[69]<<8),id,record[71]|(record[72]<<8),record[61]}); cursor=end+1;
     }
-    if (*cursor) return false;
+    return !*cursor;
+}
+bool CStoreWnd::SetDetailRecords(const char* body,int count,int offset)
+{
+    if (count<0 || count>255 || selected<0) return false;
+    std::vector<Offer> result; if (!ReadShopRecords(body,count,result)) return false;
     SetOffers(std::move(result),offset); return true;
+}
+bool CStoreWnd::SetStorageRecords(int id,const char* body,int count)
+{
+    if ((!storage && id<=0) || count<0 || count>65535) return false;
+    std::vector<Offer> result; if (!ReadShopRecords(body,count,result)) return false;
+    SetStorage(id,std::move(result)); return true;
 }
 void CStoreWnd::Request(int opcode,const std::string& name,DWORD instance,WORD quantity)
 {
@@ -75,11 +111,11 @@ void CStoreWnd::OpenCategory()
 void CStoreWnd::CloseOffers()
 {
     auto& ui=g_xGameProc.m_xInterface;
-    if (ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==8) ui.FinishNotice(CLICK_NO,false);
+    if (ui.m_xMsgBox.IsActive() && (ui.m_nIdxMsgBox==8 || ui.m_nIdxMsgBox==9)) ui.FinishNotice(CLICK_NO,false);
     bulk=-1; details=loading=false; selected=offerIndex=pressed=-1; page=0; offers.clear(); Layout();
 }
 void CStoreWnd::BuyOffer()
-{ if (!loading && offerIndex>=0) Request(CM_USERBUYITEM,offers[offerIndex].name,offers[offerIndex].id); }
+{ if (storage) Withdraw(); else if (!loading && offerIndex>=0) Request(CM_USERBUYITEM,offers[offerIndex].name,offers[offerIndex].id); }
 void CStoreWnd::BuyBulk(const char* text)
 {
     if (bulk<0) return;
@@ -93,22 +129,24 @@ int CStoreWnd::Hit(POINT point)
         const auto& info=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
         const RECT box={x,y,x+info.shWidth,y+info.shHeight}; return PtInRect(&box,point)!=FALSE;
     };
-    if (button(1221,258,408)) return -7;
+    const int offset=storage?-292:0;
+    if (!storage && button(1221,258,408)) return -7;
     if (details) {
-        if (button(1221,449,384)) return -5;
-        if (button(1265,358,388)) return -2;
-        if (button(1268,316,388)) return -3;
-        if (button(1270,406,388)) return -4;
+        if (button(1221,offset+449,384)) return -5;
+        if (button(1265,offset+358,388)) return -2;
+        if (button(1268,offset+316,388)) return -3;
+        if (button(1270,offset+406,388)) return -4;
     }
     if (bulk>=0) {
         if (button(1221,475,281)) return -5;
         if (button(1272,367,284)) return -8;
     }
-    if (button(1263,106,411)) return -6;
+    if (!storage && button(1263,106,411)) return -6;
     if (details) for (int i=0;i<12;++i) {
-        const RECT cell={315+38*(i%4),267+38*(i/4),350+38*(i%4),302+38*(i/4)};
-        if (PtInRect(&cell,point)) return !loading && i<int(offers.size())?256+i:-1;
+        const RECT cell=OfferCell(i); const int index=i+(storage?12*page:0);
+        if (PtInRect(&cell,point)) return !loading && index<int(offers.size())?256+index:-1;
     }
+    if (storage) return -1;
     for (int i=0;i<4;++i) {
         const int y=241+42*i; const RECT icon={20,y,56,y+36},label={62,y,251,y+36};
         if ((PtInRect(&icon,point) || PtInRect(&label,point)) && first+i<int(goods.size())) return first+i;
@@ -135,11 +173,14 @@ BOOL CStoreWnd::OnLButtonUp(POINT point)
     if (Scroll(2,point)) return FALSE;
     const int control=Hit(point),previous=pressed; pressed=-1;
     if (control!=previous || control==-1) return FALSE;
-    if (control==-7) return TRUE;
+    if (control==-7 || (control==-5 && storage)) return TRUE;
     if (control==-5) CloseOffers();
     else if (control==-6) OpenCategory();
     else if (control==-8) g_xGameProc.m_xInterface.OpenNameDialog(8);
     else if (control==-2) BuyOffer();
+    else if ((control==-3 || control==-4) && storage && !storagePending) {
+        page=max(0,min(max(0,(int(offers.size())-1)/12),page+(control==-3?-1:1))); offerIndex=-1;
+    }
     else if ((control==-3 || control==-4) && selected>=0 && !loading) {
         const int next=max(0,min(6553,page+(control==-3?-1:1)));
         if (next!=page) { page=next; loading=true; Request(CM_USERGETDETAILITEM,goods[selected].name,10*page); }
@@ -165,12 +206,12 @@ void CStoreWnd::ShowStoreWnd()
     const int skin=bulk>=0?1262:details?1261:1260;
     if (m_pxWndImage->NewSetIndex(skin)) {
         const auto info=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
-        DrawSelectionFrame(*m_pxWndImage,skin,(m_rcWnd.right-info.shWidth)/2,225+(224-info.shHeight)/2,SelectionBlend::Normal,false);
+        DrawSelectionFrame(*m_pxWndImage,skin,m_rcWnd.left+(m_rcWnd.right-m_rcWnd.left-info.shWidth)/2,m_rcWnd.top+(m_rcWnd.bottom-m_rcWnd.top-info.shHeight)/2,SelectionBlend::Normal,false);
     }
     if (goods.size()>1) DrawSelectionFrame(*m_pxWndImage,1225,260,257+int(std::lround(85*fraction)),SelectionBlend::Normal,false);
     const int buttons[][4]={{-7,1222,258,408},{-6,1264,106,411},{-5,1222,bulk>=0?475:449,bulk>=0?281:384},
         {-8,1273,367,284},{-2,1266,358,388},{-3,1269,316,388},{-4,1271,406,388}};
-    for (const auto& button:buttons) if (pressed==button[0]) DrawSelectionFrame(*m_pxWndImage,button[1],button[2],button[3],SelectionBlend::Normal,false);
+    for (const auto& button:buttons) if (pressed==button[0]) DrawSelectionFrame(*m_pxWndImage,button[1],button[2]+(storage?-292:0),button[3],SelectionBlend::Normal,false);
     auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];
     const auto icon=[&](int frame,int x,int y) {
         if (!icons.NewSetIndex(frame)) return; const auto info=*icons.m_lpstNewCurrWilImageInfo;
@@ -187,10 +228,11 @@ void CStoreWnd::ShowStoreWnd()
         DrawLegacyPanel(RECT{305,242,341,278},RGB(80,80,160),1,RGB(180,180,180));
         DrawLegacyPanel(RECT{352,242,500,278},RGB(80,80,160),1,RGB(250,200,150)); icon(goods[bulk].icon,324,261);
     }
-    if (details) for (int i=0;i<min(12,int(offers.size()));++i) {
-        const int x=315+38*(i%4),y=267+38*(i/4);
-        if (i==offerIndex) DrawLegacyPanel(RECT{x,y,x+35,y+35},RGB(50,150,150),1,RGB(180,180,180));
-        icon(offers[i].icon,x+19,y+19);
+    if (details) for (int i=0;i<12;++i) {
+        const int index=i+(storage?12*page:0); if (index>=int(offers.size())) break;
+        const RECT cell=OfferCell(i);
+        if (index==offerIndex) DrawLegacyPanel(cell,RGB(50,150,150),1,RGB(180,180,180));
+        icon(offers[index].icon,cell.left+19,cell.top+19);
     }
     HDC dc; auto* surface=g_xMainWnd.GetBackBuffer(); if (FAILED(surface->GetDC(&dc))) return;
     static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
@@ -221,7 +263,12 @@ void CStoreWnd::ShowStoreWnd()
         const auto& good=goods[first+i]; label(good,66,241+42*i+(good.icon==304 || (good.variants && good.requirement)?2:13),184,first+i==highlighted);
     }
     if (bulk>=0) label(goods[bulk],358,225+(goods[bulk].requirement?19:30),126,true);
-    if (details) {
+    if (storage) {
+        RECT current={52,229,92,259},total={82,229,132,259}; SetTextColor(dc,0x96c8ff);
+        const auto value=std::to_string(page+1),pages="/    "+std::to_string(max(1,(int(offers.size())+11)/12));
+        DrawTextA(dc,value.c_str(),-1,&current,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+        DrawTextA(dc,pages.c_str(),-1,&total,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+    } else if (details) {
         RECT box={310,222,473,266}; SetTextColor(dc,0x96c8ff); const auto value=loading?std::string("..."):std::to_string(page);
         DrawTextA(dc,value.c_str(),-1,&box,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
         const char priceFace[]={char(0xb1),char(0xbc),char(0xb8),char(0xb2),0};
@@ -237,7 +284,18 @@ void CStoreWnd::ShowStoreWnd()
 }
 void CStoreWnd::Receive(const _TDEFAULTMESSAGE& header,const char* body)
 {
-    if (header.wIdent==SM_SENDGOODSLIST) {
+    if (header.wIdent==SM_STORAGE_LIST) {
+        if (SetStorageRecords(header.nRecog,body,header.wSeries) && !m_bActive) g_xGameProc.m_xInterface.WindowActivate(_WND_ID_STORE);
+    } else if (header.wIdent>=SM_STORAGE_WITHDRAW_OK && header.wIdent<=SM_STORAGE_BAG_FULL) {
+        if (header.wIdent!=SM_STORAGE_WITHDRAW_OK) g_xGameProc.m_xInterface.ShowNotice(header.wIdent==SM_STORAGE_WITHDRAW_FAIL?1445:1446);
+        if (!storage || !storagePending) return;
+        const DWORD instance=storagePending; storagePending=0;
+        if (header.wIdent==SM_STORAGE_WITHDRAW_OK) for (auto item=offers.begin();item!=offers.end();++item) if (item->id==instance) {
+            if (header.wParam) item->count=header.wParam;
+            else { offers.erase(item); offerIndex=-1; page=min(page,max(0,(int(offers.size())-1)/12)); }
+            break;
+        }
+    } else if (header.wIdent==SM_SENDGOODSLIST) {
         char decoded[10241]; const int length=fnDecode6BitBuf(const_cast<char*>(body),decoded,sizeof(decoded)-1); decoded[length]=0;
         if (SetGoods(header.nRecog,decoded,header.wParam) && !m_bActive) g_xGameProc.m_xInterface.WindowActivate(_WND_ID_STORE);
     }

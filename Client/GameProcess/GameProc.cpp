@@ -3388,6 +3388,10 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			case SM_SENDDETAILGOODSLIST:
 			case SM_BUYITEM_FAIL:
             case SM_BUYITEM_SUCCESS:
+            case SM_STORAGE_LIST:
+            case SM_STORAGE_WITHDRAW_OK:
+            case SM_STORAGE_WITHDRAW_FAIL:
+            case SM_STORAGE_BAG_FULL:
 			
 			{	// 商店窗口处理例程
                 m_xInterface.m_xStoreWnd.Receive(tdm,pszMsg+DEFBLOCKSIZE);

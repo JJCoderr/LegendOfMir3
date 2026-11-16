@@ -39,6 +39,7 @@ public:
         if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
         if (groupPanel==30 || groupPanel==31) capturePath=groupPanel==30?"mount-panel.bmp":"mount-hint.bmp";
         if (groupPanel>=32 && groupPanel<=36) capturePath=groupPanel==36?"trade-return.bmp":groupPanel==35?"trade-gold.bmp":groupPanel==32?"trade-empty.bmp":groupPanel==33?"trade-list.bmp":"trade-confirmed.bmp";
+        if (groupPanel>=50 && groupPanel<=52) capturePath=groupPanel==50?"storage-list.bmp":groupPanel==51?"storage-page.bmp":"storage-quantity.bmp";
         if (groupPanel>=46 && groupPanel<=49) capturePath=groupPanel==46?"shop-goods.bmp":groupPanel==47?"shop-offers.bmp":groupPanel==48?"shop-bulk.bmp":"shop-quantity.bmp";
         if (groupPanel>=42 && groupPanel<=45) capturePath=groupPanel==42?"npc-dialogue.bmp":groupPanel==43?"npc-scrolled.bmp":groupPanel==44?"npc-input.bmp":"npc-notclose.bmp";
         if (groupPanel==40 || groupPanel==41) capturePath=groupPanel==40?"guild-notice-editor.bmp":"guild-members-editor.bmp";
@@ -516,6 +517,56 @@ public:
             if (FILE* report=fopen("mount-layout-check.txt","wb")) {
                 fprintf(report,"opened=%d repeat=%d hidden=%d buttons=%d stray=%d on_foot=%d riding=%d hint=%d pressed_hint=%d outside_release=%d covered=%d window_drag=%d closed=%d\n",
                     opened,repeat,hidden,buttons,stray,onFoot,riding,hint,pressedHint,released,covered,moved,closed); fclose(report);
+            }
+        }
+        if (groupPanel>=50 && groupPanel<=52) {
+            auto& ui=g_xGameProc.m_xInterface; auto& shop=ui.m_xStoreWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            ui.m_xNPCWnd.SetScript(77,"仓库保管员。\\请选择要取回的物品。\\<返回/@main>"); ui.WindowActivate(_WND_ID_NPCCHAT);
+            std::vector<CStoreWnd::Offer> items;
+            for(int i=0;i<25;++i) items.push_back({"仓库药剂",i%2?15:0,0,DWORD(100+i),i?1:30,i?0:2});
+            shop.SetStorage(77,items); ui.WindowActivate(_WND_ID_STORE);
+            const bool bounds=shop.storage && shop.m_rcWnd.left==-292 && shop.m_rcWnd.right==196 && shop.m_rcWnd.top==234;
+            const RECT last=shop.OfferCell(11); const bool cells=last.left==136 && last.top==342 && last.right==173 && last.bottom==379;
+            ui.OnLButtonUp(POINT{117,393}); const bool stray=shop.page==0;
+            ui.OnLButtonDown(POINT{117,393}); ui.OnLButtonUp(POINT{780,580}); const bool released=shop.page==0 && shop.pressed==-1;
+            ui.OnLButtonDown(POINT{117,393}); ui.OnLButtonUp(POINT{117,393}); const bool next=shop.page==1 && shop.offerIndex==-1;
+            ui.OnLButtonDown(POINT{25,270}); ui.OnLButtonUp(POINT{25,270}); const bool selected=shop.offerIndex==12;
+            ui.OnLButtonDown(POINT{117,393}); ui.OnLButtonUp(POINT{117,393});
+            ui.OnLButtonDown(POINT{117,393}); ui.OnLButtonUp(POINT{117,393}); const bool end=shop.page==2;
+            ui.OnLButtonDown(POINT{65,270}); ui.OnLButtonUp(POINT{65,270}); const bool empty=shop.offerIndex==-1;
+            shop.SetStorage(77,items); shop.Withdraw();
+            const bool quantity=ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==9 && IsWindowVisible(g_xChatEditBox.GetSafehWnd());
+            ui.OnLButtonDown(POINT{490,315}); ui.OnLButtonUp(POINT{490,315}); const bool cancel=!ui.m_xMsgBox.IsActive() && !shop.storagePending;
+            shop.SubmitWithdrawal("31"); shop.SubmitWithdrawal("0"); const bool invalid=!shop.storagePending;
+            shop.SubmitWithdrawal("*"); const bool all=shop.storagePending==100 && shop.offers.size()==25;
+            ui.OnLButtonDown(POINT{117,393}); ui.OnLButtonUp(POINT{117,393}); const bool pending=shop.page==0;
+            shop.SetStorage(99,items); const bool refreshed=shop.storagePending==100 && shop.actor==77;
+            _TDEFAULTMESSAGE reply; fnMakeDefMessage(&reply,SM_STORAGE_WITHDRAW_OK,0,10,20,0); shop.Receive(reply,"");
+            const bool partial=!shop.storagePending && shop.offers[0].count==10;
+            shop.SubmitWithdrawal("10tail"); fnMakeDefMessage(&reply,SM_STORAGE_WITHDRAW_OK,0,0,10,0); shop.Receive(reply,"");
+            const bool removed=shop.offers.size()==24 && !shop.storagePending && shop.offerIndex==-1;
+            shop.SetStorage(77,items); shop.Withdraw(); g_xGameProc.CloseNPCWindow();
+            const bool closed=!shop.m_bActive && !ui.m_xMsgBox.IsActive() && !IsWindowVisible(g_xChatEditBox.GetSafehWnd());
+            BYTE record[100]={}; strcpy((char*)record,"StoredItem"); record[36]=15; record[62]=123; record[61]=2; record[71]=30;
+            char encoded[256]={}; fnEncode6BitBuf(record,encoded,100,sizeof(encoded)); const auto wire=std::string(encoded)+"/";
+            fnMakeDefMessage(&reply,SM_STORAGE_LIST,77,0,0,1); shop.Receive(reply,wire.c_str());
+            const bool parsed=shop.m_bActive && shop.storage && shop.offers.size()==1 && shop.offers[0].count==30 && shop.offers[0].stackMode==2;
+            const bool rejected=!shop.SetStorageRecords(77,"invalid/",1) && shop.offers.size()==1;
+            shop.SetStorage(77,{}); ui.OnLButtonDoubleClick(POINT{25,270});
+            const bool emptyList=shop.offerIndex==-1 && !shop.storagePending && shop.page==0;
+            ui.OnLButtonDown(POINT{162,390}); ui.OnLButtonUp(POINT{162,390}); const bool closeButton=!shop.m_bActive && !shop.storage;
+            shop.SetStorage(77,items); ui.WindowActivate(_WND_ID_STORE);
+            ui.OnLButtonDoubleClick(POINT{65,270}); const bool single=shop.storagePending==101 && !ui.m_xMsgBox.IsActive();
+            fnMakeDefMessage(&reply,SM_STORAGE_WITHDRAW_FAIL,0,0,0,0); shop.Receive(reply,"");
+            const bool failed=!shop.storagePending && shop.offers.size()==25 && ui.m_xMsgBox.IsActive();
+            ui.m_xMsgBox.HideMessageBox();
+            ui.m_xNPCWnd.SetScript(77,"仓库保管员。\\请选择要取回的物品。\\<返回/@main>"); ui.WindowActivate(_WND_ID_NPCCHAT);
+            shop.SetStorage(77,items); ui.DeleteWindowToList(_WND_ID_STORE); ui.AddWindowToList(_WND_ID_STORE);
+            if(groupPanel==51) { ui.OnLButtonDown(POINT{117,393}); ui.OnLButtonUp(POINT{117,393}); }
+            if(groupPanel==52) { shop.Withdraw(); SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"*"); }
+            if(FILE* report=fopen("storage-layout-check.txt","wb")) {
+                fprintf(report,"bounds=%d cells=%d stray=%d released=%d next=%d selected=%d end=%d empty=%d quantity=%d cancel=%d invalid=%d all=%d pending=%d refreshed=%d partial=%d removed=%d closed=%d parsed=%d rejected=%d empty_list=%d close_button=%d single=%d failed=%d\n",bounds,cells,stray,released,next,selected,end,empty,quantity,cancel,invalid,all,pending,refreshed,partial,removed,closed,parsed,rejected,emptyList,closeButton,single,failed); fclose(report);
             }
         }
         if (groupPanel>=46 && groupPanel<=49) {
@@ -1138,7 +1189,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=shop-goods")==0 ? 46 :
         strcmp(lpCmdLine,"--preview=shop-offers")==0 ? 47 :
         strcmp(lpCmdLine,"--preview=shop-bulk")==0 ? 48 :
-        strcmp(lpCmdLine,"--preview=shop-quantity")==0 ? 49 : 0;
+        strcmp(lpCmdLine,"--preview=shop-quantity")==0 ? 49 :
+        strcmp(lpCmdLine,"--preview=storage-list")==0 ? 50 :
+        strcmp(lpCmdLine,"--preview=storage-page")==0 ? 51 :
+        strcmp(lpCmdLine,"--preview=storage-quantity")==0 ? 52 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {
