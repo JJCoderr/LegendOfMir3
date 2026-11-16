@@ -68,6 +68,7 @@ VOID CInterface::Init()
 	m_xStatusWnd.Init();
     m_xSkillWnd.Init();
     m_xQuestWnd.Init();
+    m_xHorseWnd.Init();
 	m_xStoreWnd.Init();
 	m_xGuildWnd.Init();
 	m_xGroupWnd.Init();
@@ -116,6 +117,7 @@ VOID CInterface::Destroy()
 	m_xStatusWnd.Destroy();
     m_xSkillWnd.Destroy();
     m_xQuestWnd.Destroy();
+    m_xHorseWnd.Destroy();
 	m_xGuildWnd.Destroy();
 	m_xGroupWnd.Destroy();
 	m_xExchangeWnd.Destroy();
@@ -183,7 +185,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 
 	m_xOptionWnd.CreateOptionWnd(_WND_ID_OPTION, m_pxInterImg, 1290, 145, 30, 510, 468, TRUE);
 	m_xQuestWnd.CreateQuestWnd(_WND_ID_QUEST, m_pxInterImg, 1420, 0, 0, 340, 440, TRUE);
-	m_xHorseWnd.CreateHorseWnd(_WND_ID_HORSE, m_pxInterImg, _WNDIMGIDX_HORSE, 0, 0, 0, 0, TRUE);
+	m_xHorseWnd.CreateHorseWnd(_WND_ID_HORSE, m_pxInterImg, 1400, 0, 0, 276, 322, TRUE);
 
 
 	m_xNPCWnd.CreateNPCChatWnd(_WND_ID_NPCCHAT, m_pxInterImg, _WNDIMGIDX_NPCCHAT, 0, 0, 0, 0, TRUE);				// ÓÂÆø
@@ -505,6 +507,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     m_xInventoryWnd.UpdatePlacementPointer(ptMousePos,hoveredWindow==_WND_ID_INVENTORY);
     m_xStatusWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_STATUS);
     m_xSkillWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_SKILL);
+    m_xHorseWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_HORSE);
     ShowWndList();
 	if ( m_stCommonItem.bSetted && !m_stCommonItem.bIsHideItem )
 	{
@@ -986,13 +989,13 @@ case _WND_ID_STATUS:
 			if ( m_xHorseWnd.GetGameWndActive() )
 			{
 				DeleteWindowToList(_WND_ID_HORSE);
-				m_xHorseWnd.SetGameWndActive(FALSE);
+				m_xHorseWnd.SetGameWndActive(FALSE); m_xHorseWnd.pressed=-1;
 				bRet = FALSE;
 			}
 			else
 			{
 				AddWindowToList(_WND_ID_HORSE);
-				m_xHorseWnd.SetGameWndActive(TRUE);
+				m_xHorseWnd.SetGameWndActive(TRUE); m_xHorseWnd.pressed=-1;
 				bRet = TRUE;
 			}
 		}
@@ -1480,9 +1483,9 @@ case _WND_ID_STATUS:
 					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
 				break;
 			case _WND_ID_HORSE:
-				if ( !m_xHorseWnd.OnLButtonDown(ptMouse) )
-					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
-				break;
+                WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect,ptMouse);
+                if (m_xHorseWnd.OnLButtonDown(ptMouse)) m_bMoveFocusedWnd=FALSE;
+                break;
 
 			}
 			return TRUE;
@@ -1608,6 +1611,10 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
+    if (m_xHorseWnd.pressed>=0) {
+        if (m_xHorseWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_HORSE);
+        return TRUE;
+    }
     if (m_xQuestWnd.scrollCaptured || m_xQuestWnd.pressed>=0) {
         if (m_xQuestWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_QUEST);
         return TRUE;
@@ -1836,9 +1843,6 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 		case _WND_ID_OPTION:
 			m_xOptionWnd.OnMouseMove(ptMouse);
 			break;
-		case _WND_ID_HORSE:
-			m_xHorseWnd.OnMouseMove(ptMouse);
-			break;
 
 		case _WND_ID_NPCCHAT:		// ÓÂÆø
 			m_xNPCWnd.OnMouseMove(ptMouse);
@@ -1852,7 +1856,6 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 		m_xChatPopWnd.SetStatusBtnInit();
 		m_xGuildMasterWnd.SetStatusBtnInit();
 		m_xOptionWnd.SetStatusBtnInit();
-		m_xHorseWnd.SetStatusBtnInit();
 		m_xExchangeWnd.SetStatusBtnInit();
 	}
 
@@ -1961,6 +1964,9 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
     }
 	switch ( wParam )
 	{
+    case 'S':
+        if (!(lParam & (1L << 30))) WindowActivate(_WND_ID_HORSE);
+        return TRUE;
     case 'D':
         if (!(lParam & (1L << 30))) WindowActivate(_WND_ID_QUEST);
         return TRUE;

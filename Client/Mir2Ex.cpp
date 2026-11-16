@@ -37,6 +37,7 @@ public:
         if (groupPanel>=5 && groupPanel<=10) capturePath = groupPanel==5 ? "guild-overview.bmp" : groupPanel==6 ? "guild-members.bmp" : groupPanel==8 ? "guild-denied.bmp" : groupPanel==9 ? "guild-remove.bmp" : groupPanel==10 ? "guild-break-ally.bmp" : "guild-notice.bmp";
         if ((groupPanel>=20 && groupPanel<=22) || groupPanel==25 || groupPanel==26 || groupPanel==27) capturePath=groupPanel==27?"skill-shortcuts.bmp":groupPanel==26?"skill-description.bmp":groupPanel==25?"skill-key-menu.bmp":groupPanel==22?"status-and-skills.bmp":groupPanel==20?"skills-panel.bmp":"skills-scrolled.bmp";
         if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
+        if (groupPanel==30 || groupPanel==31) capturePath=groupPanel==30?"mount-panel.bmp":"mount-hint.bmp";
         if (groupPanel==11) capturePath="options-panel.bmp";
         if (groupPanel>=15 && groupPanel<=19) capturePath=groupPanel==19?"status-equipment.bmp":groupPanel==18?"status-identity.bmp":groupPanel==16?"status-elements.bmp":groupPanel==17?"status-tooltip.bmp":"status-panel.bmp";
         if (groupPanel==23 || groupPanel==24) capturePath=groupPanel==23?"inventory-clip-top.bmp":"inventory-clip-bottom.bmp";
@@ -486,6 +487,31 @@ public:
                 fprintf(report,"outside_wheel=%d window_drag=%d\n",outsideWheel,moved); fclose(report);
             }
         }
+        if (groupPanel==30 || groupPanel==31) {
+            auto& ui=g_xGameProc.m_xInterface; auto& mount=ui.m_xHorseWnd;
+            ui.OnKeyDown('S',0); const bool opened=mount.GetGameWndActive()!=FALSE;
+            ui.OnKeyDown('S',1L<<30); const bool repeat=mount.GetGameWndActive()!=FALSE;
+            ui.OnKeyDown('S',0); const bool hidden=!mount.GetGameWndActive(); ui.OnKeyDown('S',0);
+            const bool buttons=mount.ButtonAt(POINT{240,285})==0 && mount.ButtonAt(POINT{30,245})==1 && mount.ButtonAt(POINT{90,245})==2 && mount.ButtonAt(POINT{145,245})==3 && mount.ButtonAt(POINT{205,245})==4;
+            const bool stray=!mount.OnLButtonUp(POINT{240,285});
+            const bool onFoot=mount.Command(1)==4106 && mount.Command(2)==0 && mount.Command(3)==4104 && mount.Command(4)==4105;
+            mount.shape=1; const bool riding=mount.Command(1)==0 && mount.Command(2)==4105; mount.shape=0;
+            mount.UpdatePointer(POINT{30,245},true); const bool hint=mount.HintAt()==4100;
+            ui.OnLButtonDown(POINT{30,245}); const bool pressedHint=mount.HintAt()==0 && !ui.m_bMoveFocusedWnd;
+            ui.OnLButtonUp(POINT{780,580}); const bool released=mount.pressed==-1;
+            mount.UpdatePointer(POINT{30,245},false); const bool covered=mount.HintAt()==0;
+            ui.OnLButtonDown(POINT{100,60}); ui.OnMouseMove(POINT{110,70}); ui.OnLButtonUp(POINT{110,70});
+            const bool moved=mount.m_rcWnd.left==10 && mount.m_rcWnd.top==10; mount.m_rcWnd={0,0,276,322};
+            ui.OnLButtonDown(POINT{240,285}); ui.OnLButtonUp(POINT{240,285}); const bool closed=!mount.GetGameWndActive(); ui.OnKeyDown('S',0);
+            if (groupPanel==31) {
+                mouse=POINT{30,245}; g_xGameProc.m_ptMousePos=mouse; mount.UpdatePointer(mouse,true);
+                for (int i=0;i<24;++i) mount.ShowHorseWnd();
+            }
+            if (FILE* report=fopen("mount-layout-check.txt","wb")) {
+                fprintf(report,"opened=%d repeat=%d hidden=%d buttons=%d stray=%d on_foot=%d riding=%d hint=%d pressed_hint=%d outside_release=%d covered=%d window_drag=%d closed=%d\n",
+                    opened,repeat,hidden,buttons,stray,onFoot,riding,hint,pressedHint,released,covered,moved,closed); fclose(report);
+            }
+        }
         if (groupPanel==11) {
             auto& ui=g_xGameProc.m_xInterface;
             auto& options=ui.m_xOptionWnd;
@@ -724,7 +750,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=skill-description")==0 ? 26 :
         strcmp(lpCmdLine,"--preview=skill-shortcuts")==0 ? 27 :
         strcmp(lpCmdLine,"--preview=quest-empty")==0 ? 28 :
-        strcmp(lpCmdLine,"--preview=quest-list")==0 ? 29 : 0;
+        strcmp(lpCmdLine,"--preview=quest-list")==0 ? 29 :
+        strcmp(lpCmdLine,"--preview=mount-panel")==0 ? 30 :
+        strcmp(lpCmdLine,"--preview=mount-hint")==0 ? 31 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

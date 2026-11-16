@@ -1,34 +1,24 @@
-#ifndef _CHORSEWND_H
-#define _CHORSEWND_H
+#pragma once
+#include <string>
 
-
-class CHorseWnd : public CGameWnd
-{ 
-private:
-protected:
-	CGameBtn				m_xHorseBtn;
-
+class CHorseWnd : public CGameWnd {
+    POINT m_pointer={};
+    bool m_hovered=false,m_hintExpanding=true;
+    int m_hintHeight=6;
+    std::string m_previousHint;
+    void ShowHint();
 public:
-	CHorseWnd();
-	~CHorseWnd();
-
-	virtual VOID Init();
-	virtual VOID Destroy();
-
-	VOID	CreateHorseWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
-	VOID	ShowHorseWnd();
-
-	VOID	SetStatusBtnInit();
-
-public:
-//  ÏûÏ¢º¯Êý.
-	BOOL	OnLButtonDown(POINT ptMouse);
-	BOOL	OnLButtonUp(POINT ptMouse);
-	VOID	OnMouseMove(POINT ptMouse);
-
-	VOID	OnScrollDown();
-	VOID	OnScrollUp();
+    int pressed=-1;
+    BYTE shape=0;
+    CHorseWnd() { Init(); }
+    void Init() override;
+    void Destroy() override { CGameWnd::Destroy(); }
+    void CreateHorseWnd(INT id,CWHWilImageData* image,INT frame,INT x,INT y,INT width,INT height,BOOL movable);
+    void ShowHorseWnd();
+    int ButtonAt(POINT point);
+    int Command(int button) const;
+    int HintAt();
+    void UpdatePointer(POINT point,bool visible) { m_pointer=point; m_hovered=visible; }
+    BOOL OnLButtonDown(POINT point);
+    BOOL OnLButtonUp(POINT point);
 };
-
-
-#endif // _CHORSEWND_H
