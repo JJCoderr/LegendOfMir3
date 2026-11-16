@@ -50,6 +50,10 @@ VOID CSelectChr::Create(CWHWilImageData* pxImage,CPDLList<CHRINFO>* pxList, CPDL
 	m_pxrcList			= pxrcList;
 	m_nChrCount			= nChrCount;
 	m_nSelectChr = nChrCount ? 0 : SELECT_NONE;
+    for (int i = 0; i < 3; ++i) {
+        m_roleAnimation[i] = RoleAnimation{};
+        m_roleAnimation[i].action = i == 0 ? 1 : 0;
+    }
 	
 	m_xLightFog.Init(RGB(125,125,125));
 
@@ -164,6 +168,12 @@ HRESULT	CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
 				if(Py<0 && ((Py+m_pxrcList->GetCurrentData()->nHeight)>0))
 				{
                     if (m_nSelectChr != i) {
+                        if (m_nSelectChr >= 0) {
+                            m_roleAnimation[m_nSelectChr] = RoleAnimation{};
+                            m_roleAnimation[m_nSelectChr].action = 3;
+                        }
+                        m_roleAnimation[i] = RoleAnimation{};
+                        m_roleAnimation[i].action = 1;
                         m_nSelectChr = i;
                         m_pxSList->MoveCurrentToTop();
                         m_pxSList->MoveNode(i);
@@ -264,23 +274,32 @@ VOID CSelectChr::Render(INT	nLoopTime)
 		}
 
         // Frame groups/anchors follow Mir3's CharacterSelectionPage.
-        static const int idleLast[6] = {10,10,10,10,10,10};
-        static const int selectedLast[6] = {11,10,10,10,19,10};
+        static const int lastFrames[30] = {
+            10,19,11,7,17, 10,10,10,11,15, 10,11,10,10,14,
+            10,17,10,8,16, 10,16,19,11,16, 10,16,10,9,14
+        };
         m_pxSList->MoveCurrentToTop();
         m_pxrcList->MoveCurrentToTop();
         for (i = 0; i < m_nChrCount; ++i) {
             const CHRINFO* role = m_pxSList->GetCurrentData();
             const int type = role->Gender + 2 * role->Class;
             if (type >= 0 && type < 6) {
-                const bool selected = i == m_nSelectChr;
-                const int action = selected ? 2 : 0;
-                const int frame = 200 + 60 * (action + 5 * type) +
-                    m_nAnimationCount % ((selected ? selectedLast[type] : idleLast[type]) + 1);
+                auto& animation = m_roleAnimation[i];
+                animation.elapsed += nLoopTime;
+                if (animation.elapsed > 120) {
+                    animation.elapsed = 0;
+                    if (++animation.frame > lastFrames[animation.action + 5 * type]) {
+                        animation.frame = 0;
+                        if (animation.action == 1) animation.action = 2;
+                        else if (animation.action == 3) animation.action = 0;
+                    }
+                }
+                const int frame = 200 + 60 * (animation.action + 5 * type) + animation.frame;
                 const int x = m_nChrCount == 1 ? 300 : (i % 2 ? 350 : 250);
                 const int y = i % 2 ? 250 : 210;
                 DrawSelectionFrame(*m_pxImage, frame + 20, x, y, SelectionBlend::Shadow);
                 const RECT rect = DrawSelectionFrame(*m_pxImage, frame, x, y,
-                    selected ? SelectionBlend::Normal : SelectionBlend::Inactive);
+                    animation.action ? SelectionBlend::Normal : SelectionBlend::Inactive);
                 DrawSelectionFrame(*m_pxImage, frame + 40, x, y, SelectionBlend::Additive);
                 CHRRECT* bounds = m_pxrcList->GetCurrentData();
                 bounds->nLeft = rect.left; bounds->nTop = rect.top;

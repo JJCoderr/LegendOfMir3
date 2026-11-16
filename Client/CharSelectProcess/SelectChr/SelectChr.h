@@ -40,6 +40,8 @@ public:
 	INT					m_nSelectChr;
 private:
 protected:
+    struct RoleAnimation { int action = 0, frame = 0, elapsed = 0; };
+    RoleAnimation m_roleAnimation[3];
 	CLoginMessages m_messages;
 	CLightFog			m_xLightFog;
 	CPDLList<CHRINFO>*	m_pxSList;
