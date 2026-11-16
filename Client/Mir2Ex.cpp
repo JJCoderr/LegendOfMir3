@@ -38,6 +38,7 @@ public:
         if ((groupPanel>=20 && groupPanel<=22) || groupPanel==25 || groupPanel==26 || groupPanel==27) capturePath=groupPanel==27?"skill-shortcuts.bmp":groupPanel==26?"skill-description.bmp":groupPanel==25?"skill-key-menu.bmp":groupPanel==22?"status-and-skills.bmp":groupPanel==20?"skills-panel.bmp":"skills-scrolled.bmp";
         if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
         if (groupPanel==30 || groupPanel==31) capturePath=groupPanel==30?"mount-panel.bmp":"mount-hint.bmp";
+        if (groupPanel>=32 && groupPanel<=34) capturePath=groupPanel==32?"trade-empty.bmp":groupPanel==33?"trade-list.bmp":"trade-confirmed.bmp";
         if (groupPanel==11) capturePath="options-panel.bmp";
         if (groupPanel>=15 && groupPanel<=19) capturePath=groupPanel==19?"status-equipment.bmp":groupPanel==18?"status-identity.bmp":groupPanel==16?"status-elements.bmp":groupPanel==17?"status-tooltip.bmp":"status-panel.bmp";
         if (groupPanel==23 || groupPanel==24) capturePath=groupPanel==23?"inventory-clip-top.bmp":"inventory-clip-bottom.bmp";
@@ -512,6 +513,45 @@ public:
                     opened,repeat,hidden,buttons,stray,onFoot,riding,hint,pressedHint,released,covered,moved,closed); fclose(report);
             }
         }
+        if (groupPanel>=32 && groupPanel<=34) {
+            auto& ui=g_xGameProc.m_xInterface; auto& trade=ui.m_xExchangeWnd;
+            lstrcpyA(hero.m_szName,"MirPreview"); trade.partner="TradePartner";
+            ui.WindowActivate(_WND_ID_EXCHANGE);
+            auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY]; icons.NewLoad("./Data/Inventory.wil");
+            if (groupPanel!=32) {
+                for (int side=0;side<2;++side) {
+                    auto& item=trade.offers[side][0]; item.present=true; item.icon=75; item.width=item.height=2; item.count=1;
+                    for (int icon=0;icon<100;++icon) if (icons.NewSetIndex(icon) && icons.m_lpstNewCurrWilImageInfo->shWidth>0 && icons.m_lpstNewCurrWilImageInfo->shWidth<=38 && icons.m_lpstNewCurrWilImageInfo->shHeight<=38) {
+                        trade.offers[side][3]={true,icon,1,1,side?9:25}; break;
+                    }
+                }
+                trade.gold[0]=123456789; trade.gold[1]=987654;
+            }
+            const bool amount=trade.Amount(0)=="0" && trade.Amount(123456789)=="123,456,789" && trade.Amount(0xffffffffu)=="4,294,967,295";
+            ui.OnLButtonDown(POINT{211,65}); ui.OnMouseMove(POINT{780,580});
+            const bool left=trade.first[0]==33 && trade.first[1]==0; ui.OnLButtonUp(POINT{780,580});
+            const bool released=trade.captured==-1; trade.first[0]=0;
+            ui.OnLButtonDown(POINT{462,65}); ui.OnMouseMove(POINT{780,580});
+            const bool right=trade.first[1]==33 && trade.first[0]==0; ui.OnLButtonUp(POINT{780,580}); trade.first[1]=0;
+            const POINT confirm={240,290}; trade.OnLButtonUp(confirm); const bool stray=!trade.confirmed;
+            bool pending=true;
+            for (int kind=0;kind<3;++kind) {
+                trade.goldPending=kind==0; trade.pendingSlot=kind==1?0:-1; trade.returnSlot=kind==2?0:-1;
+                ui.OnLButtonDown(confirm); ui.OnLButtonUp(confirm); pending=pending && !trade.confirmed;
+            }
+            trade.goldPending=false; trade.pendingSlot=trade.returnSlot=-1;
+            ui.OnLButtonDown(confirm); ui.OnLButtonUp(POINT{780,580}); const bool cancelled=!trade.confirmed && !trade.confirmPressed;
+            ui.OnLButtonDown(POINT{30,70}); ui.OnMouseMove(POINT{40,80}); ui.OnLButtonUp(POINT{40,80});
+            const bool bodyNoDrag=trade.m_rcWnd.left==0 && trade.m_rcWnd.top==0;
+            ui.OnLButtonDown(POINT{480,20}); ui.OnMouseMove(POINT{490,30}); ui.OnLButtonUp(POINT{490,30});
+            const bool moved=trade.m_rcWnd.left==10 && trade.m_rcWnd.top==10; trade.m_rcWnd={0,0,494,330};
+            ui.OnLButtonDown(confirm); ui.OnLButtonUp(confirm); const bool confirmed=trade.confirmed;
+            trade.confirmed=groupPanel==34;
+            if (FILE* report=fopen("trade-layout-check.txt","wb")) {
+                fprintf(report,"amount=%d left_scroll=%d right_scroll=%d released=%d stray=%d pending_blocked=%d outside_release=%d body_no_drag=%d header_drag=%d confirmed=%d\n",
+                    amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
+            }
+        }
         if (groupPanel==11) {
             auto& ui=g_xGameProc.m_xInterface;
             auto& options=ui.m_xOptionWnd;
@@ -752,7 +792,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=quest-empty")==0 ? 28 :
         strcmp(lpCmdLine,"--preview=quest-list")==0 ? 29 :
         strcmp(lpCmdLine,"--preview=mount-panel")==0 ? 30 :
-        strcmp(lpCmdLine,"--preview=mount-hint")==0 ? 31 : 0;
+        strcmp(lpCmdLine,"--preview=mount-hint")==0 ? 31 :
+        strcmp(lpCmdLine,"--preview=trade-empty")==0 ? 32 :
+        strcmp(lpCmdLine,"--preview=trade-list")==0 ? 33 :
+        strcmp(lpCmdLine,"--preview=trade-confirmed")==0 ? 34 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

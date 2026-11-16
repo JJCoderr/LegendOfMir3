@@ -176,7 +176,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xStatusWnd.CreateStatusWnd(_WND_ID_STATUS, m_pxInterImg, 1280, 0, 0, 328, 466, TRUE);
     m_xSkillWnd.CreateGameWnd(_WND_ID_SKILL,m_pxInterImg,1620,TRUE,348,0,360,488);
 	m_xStoreWnd.CreateStoreWnd(_WND_ID_STORE, m_pxInterImg, _WNDIMGIDX_STORE, 0, 0, 0, 0, TRUE);
-	m_xExchangeWnd.CreateExchangeWnd(_WND_ID_EXCHANGE, m_pxInterImg, _WNDIMGIDX_EXCHANGE, 0, 0, 0, 0, TRUE);
+	m_xExchangeWnd.CreateExchangeWnd(_WND_ID_EXCHANGE, m_pxInterImg, 1390, 0, 0, 494, 330, TRUE);
 	m_xGuildMasterWnd.CreateGuildMasterWnd(_WND_ID_GUILDMASTER, m_pxInterImg, _WNDIMGIDX_GUILDMASTER, 0, 0, 0, 0, TRUE);
 	m_xGuildWnd.CreateGuildWnd(_WND_ID_GUILD, m_pxInterImg, 1300, 102, 22, 594, 444, TRUE);
 	m_xGroupWnd.CreateGroupWnd(_WND_ID_GROUP, m_pxInterImg, 1360, 272, 123, 258, 244, TRUE);
@@ -939,7 +939,7 @@ case _WND_ID_STATUS:
 			if ( m_xExchangeWnd.GetGameWndActive() )
 			{
 				DeleteWindowToList(_WND_ID_EXCHANGE);
-				m_xExchangeWnd.SetGameWndActive(FALSE);
+				m_xExchangeWnd.SetGameWndActive(FALSE); m_xExchangeWnd.confirmPressed=false; m_xExchangeWnd.captured=-1;
 				bRet = FALSE;
 			}
 			else
@@ -1445,9 +1445,9 @@ case _WND_ID_STATUS:
 					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
 				break;
 			case _WND_ID_EXCHANGE:
-				if ( !m_xExchangeWnd.OnLButtonDown(ptMouse) )
-					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
-				break;
+                WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect,ptMouse);
+                if (m_xExchangeWnd.OnLButtonDown(ptMouse)) m_bMoveFocusedWnd=FALSE;
+                break;
 			case _WND_ID_GUILDMASTER:
 				if ( !m_xGuildMasterWnd.OnLButtonDown(ptMouse) )
 					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
@@ -1611,6 +1611,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
+    if (m_xExchangeWnd.captured>=0 || m_xExchangeWnd.confirmPressed) { m_xExchangeWnd.OnLButtonUp(ptMouse); return TRUE; }
     if (m_xHorseWnd.pressed>=0) {
         if (m_xHorseWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_HORSE);
         return TRUE;
@@ -1782,6 +1783,7 @@ case _WND_ID_STATUS:		if ( m_xStatusWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )	
 *******************************************************************************************************************/
 BOOL CInterface::OnMouseMove(POINT ptMouse)
 {
+    if (m_xExchangeWnd.captured>=0) { m_xExchangeWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xQuestWnd.scrollCaptured) { m_xQuestWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xSkillWnd.m_skillScrollCaptured) { m_xSkillWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xInventoryWnd.m_scrollCaptured) { m_xInventoryWnd.OnMouseMove(ptMouse); return TRUE; }
@@ -1856,7 +1858,6 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 		m_xChatPopWnd.SetStatusBtnInit();
 		m_xGuildMasterWnd.SetStatusBtnInit();
 		m_xOptionWnd.SetStatusBtnInit();
-		m_xExchangeWnd.SetStatusBtnInit();
 	}
 
 	return FALSE;
