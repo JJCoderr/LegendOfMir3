@@ -31,7 +31,7 @@ BOOL CItem::SetItem(CLIENTITEMRCD stItemInfo, SHORT shInventoryNum)
 {
 	m_stItemInfo = stItemInfo;
 	m_shCellNum = shInventoryNum;
-    m_bAttr=_U_UNEQUIP;
+    m_bAttr=_U_UNEQUIP; m_count=1; m_stackMode=0;
 /*
 a:ÎäÆ÷
 b:ÒÂ·þ

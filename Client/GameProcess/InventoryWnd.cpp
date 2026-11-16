@@ -114,11 +114,25 @@ VOID CInventoryWnd::SetInvenBtnInit()
 }
 
 
+void CInventoryWnd::ClearService()
+{
+    auto& ui=g_xGameProc.m_xInterface;
+    if (ui.m_xMsgBox.IsActive() && (ui.m_nIdxMsgBox==10 || ui.m_nIdxMsgBox==11)) ui.FinishNotice(CLICK_NO,false);
+    service=Service{};
+}
+void CInventoryWnd::SubmitServiceQuantity(const char* text)
+{
+    long quantity=0;
+    if (!strcmp(text,"*")) {
+        for (const auto& entry:m_stInventoryItem) if (entry.bSetted && entry.xItem.m_stItemInfo.nMakeIndex==service.item && service.name==entry.xItem.m_stItemInfo.stStdItem.szName) { quantity=entry.xItem.m_count; break; }
+    } else quantity=strtol(text,NULL,10);
+    if (quantity>0 && quantity<=65535) ConfirmService(int(quantity));
+}
 void CInventoryWnd::OpenService(int actor,int mode)
 {
     auto& ui=g_xGameProc.m_xInterface;
     if (mode==3 && ui.m_xStoreWnd.m_bActive) ui.WindowActivate(_WND_ID_STORE);
-    service=Service{}; service.actor=actor; service.mode=mode;
+    ClearService(); service.actor=actor; service.mode=mode;
     m_rcWnd={519,0,801,466};
     if (!m_bActive) ui.WindowActivate(_WND_ID_INVENTORY);
     else { ui.DeleteWindowToList(_WND_ID_INVENTORY); ui.AddWindowToList(_WND_ID_INVENTORY); }
@@ -135,6 +149,7 @@ void CInventoryWnd::SelectServiceItem(int index)
     if (index<0 || !m_stInventoryItem[index].bSetted || service.phase==ServicePhase::Quoting || service.phase==ServicePhase::Paying) return;
     const auto& record=m_stInventoryItem[index].xItem.m_stItemInfo;
     service.item=record.nMakeIndex; service.name=record.stStdItem.szName; service.price=0;
+    service.stack=m_stInventoryItem[index].xItem.m_stackMode>=2;
     service.phase=service.mode==3?ServicePhase::Quoted:ServicePhase::Quoting;
     if (service.mode!=3) {
         _TDEFAULTMESSAGE request; fnMakeDefMessage(&request,service.mode==2?CM_MERCHANTQUERYSELLPRICE:CM_MERCHANTQUERYREPAIRCOST,
@@ -148,15 +163,20 @@ void CInventoryWnd::QuoteService(DWORD price,bool selling)
         (service.phase!=ServicePhase::Quoting && service.phase!=ServicePhase::Quoted && service.phase!=ServicePhase::Unavailable)) return;
     service.price=price; service.phase=price?ServicePhase::Quoted:ServicePhase::Unavailable;
 }
-void CInventoryWnd::ConfirmService()
+void CInventoryWnd::ConfirmService(int quantity)
 {
     if (!service.actor || service.phase!=ServicePhase::Quoted) return;
-    bool present=false;
-    for (const auto& entry:m_stInventoryItem) if (entry.bSetted && entry.xItem.m_stItemInfo.nMakeIndex==service.item && service.name==entry.xItem.m_stItemInfo.stStdItem.szName) { present=true; break; }
-    if (!present) { service.phase=ServicePhase::Choosing; service.price=0; return; }
+    const CItem* current=nullptr;
+    for (const auto& entry:m_stInventoryItem) if (entry.bSetted && entry.xItem.m_stItemInfo.nMakeIndex==service.item && service.name==entry.xItem.m_stItemInfo.stStdItem.szName) { current=&entry.xItem; break; }
+    if (!current) { service.phase=ServicePhase::Choosing; service.price=0; return; }
+    if (service.mode!=1 && current->m_stackMode>=2 && current->m_count>1 && !quantity) {
+        g_xGameProc.m_xInterface.OpenNameDialog(service.mode==3?11:10); return;
+    }
+    if (!quantity && service.mode==3 && current->m_stackMode>=2) quantity=1;
+    if (quantity<0 || quantity>current->m_count) return;
     service.phase=ServicePhase::Paying;
     _TDEFAULTMESSAGE request; fnMakeDefMessage(&request,service.mode==3?CM_USERSTORAGEITEM:service.mode==2?CM_USERSELLITEM:CM_USERREPAIRITEM,
-        service.actor,LOWORD(service.item),HIWORD(service.item),0);
+        service.actor,LOWORD(service.item),HIWORD(service.item),WORD(quantity));
     g_xClientSocket.SendPacket(&request,const_cast<char*>(service.name.c_str()));
 }
 
@@ -189,7 +209,7 @@ VOID CInventoryWnd::ShowInventoryWnd()
         };
         text(captions.Get(service.actor?(service.mode==3?1704:service.mode==2?1703:1702):1701).c_str(),12,20,74,16,0xf8dcfa);
         if (service.actor && service.price) {
-            auto caption=captions.Get(1452); const auto at=caption.find("%d");
+            auto caption=captions.Get(service.mode==2 && service.stack?1451:1452); const auto at=caption.find("%d");
             if (at!=caption.npos) caption.replace(at,2,std::to_string(service.price));
             text(caption.c_str(),70,423,85,14,0xf8dcfa);
         }
@@ -218,6 +238,18 @@ VOID CInventoryWnd::ShowInventoryWnd()
         const int itemX=x+17+(anchor%6)*38+(m_layout.widths[nCnt]-1)*19;
         const int itemY=y+60+(anchor/6-m_nStartLineNum)*38+(m_layout.heights[nCnt]-1)*19;
         m_stInventoryItem[nCnt].xItem.DrawItem(itemX,itemY,_ITEM_TYPE_INVENTORY,&clip);
+    }
+    if (SUCCEEDED(surface->GetDC(&dc))) {
+        const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0}; HFONT font=g_xMainWnd.CreateGameFont(face,9);
+        auto old=SelectObject(dc,font); SetBkMode(dc,TRANSPARENT); SetTextColor(dc,0xffffff);
+        for (int i=0;i<_MAX_INVEN_ITEM;++i) if (m_stInventoryItem[i].bSetted && m_stInventoryItem[i].xItem.m_count>1 && m_layout.anchors[i]>=0) {
+            const int anchor=m_layout.anchors[i],left=x+35+(anchor%6)*38,top=y+82+(anchor/6-m_nStartLineNum)*38;
+            const RECT label={left,top,left+20,top+16};
+            if (label.left<clip.left || label.right>clip.right || label.top<clip.top || label.bottom>clip.bottom) continue;
+            const int saved=SaveDC(dc); IntersectClipRect(dc,label.left,label.top,label.right,label.bottom);
+            const auto value=std::to_string(m_stInventoryItem[i].xItem.m_count); TextOutA(dc,left,top,value.data(),int(value.size())); RestoreDC(dc,saved);
+        }
+        SelectObject(dc,old); DeleteObject(font); surface->ReleaseDC(dc);
     }
 	for ( nCnt = 0; nCnt < _MAX_INVEN_BTN; nCnt++ )
 	{

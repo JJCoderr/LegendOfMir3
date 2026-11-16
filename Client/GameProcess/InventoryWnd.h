@@ -44,11 +44,13 @@ public:
 
 public:
     enum class ServicePhase { Choosing, Quoting, Quoted, Unavailable, Paying };
-    struct Service { int actor=0,mode=0,item=0; DWORD price=0; std::string name; ServicePhase phase=ServicePhase::Choosing; bool pressed=false; } service;
+    struct Service { int actor=0,mode=0,item=0; DWORD price=0; std::string name; ServicePhase phase=ServicePhase::Choosing; bool pressed=false,stack=false; } service;
     void OpenService(int actor,int mode);
     void SelectServiceItem(int index);
     void QuoteService(DWORD price,bool selling);
-    void ConfirmService();
+    void ConfirmService(int quantity=0);
+    void SubmitServiceQuantity(const char* text);
+    void ClearService();
     bool ServiceButton(POINT point);
     bool m_scrollCaptured=false;
     bool ScrollInput(int kind, POINT point);

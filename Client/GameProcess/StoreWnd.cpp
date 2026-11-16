@@ -20,7 +20,7 @@ RECT CStoreWnd::OfferCell(int cell) const
 void CStoreWnd::SetStorage(int id,std::vector<Offer> list)
 {
     const DWORD pending=storage?storagePending:0; const int owner=storage?actor:id;
-    g_xGameProc.m_xInterface.m_xInventoryWnd.service=CInventoryWnd::Service{};
+    g_xGameProc.m_xInterface.m_xInventoryWnd.ClearService();
     CloseOffers(); Reset(); actor=owner; storage=details=true; storagePending=pending; offers=std::move(list);
     offerIndex=offers.empty()?-1:0; Layout();
 }

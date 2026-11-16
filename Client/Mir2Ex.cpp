@@ -39,6 +39,7 @@ public:
         if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
         if (groupPanel==30 || groupPanel==31) capturePath=groupPanel==30?"mount-panel.bmp":"mount-hint.bmp";
         if (groupPanel>=32 && groupPanel<=36) capturePath=groupPanel==36?"trade-return.bmp":groupPanel==35?"trade-gold.bmp":groupPanel==32?"trade-empty.bmp":groupPanel==33?"trade-list.bmp":"trade-confirmed.bmp";
+        if (groupPanel==56 || groupPanel==57) capturePath=groupPanel==56?"merchant-sell-quantity.bmp":"merchant-deposit-quantity.bmp";
         if (groupPanel>=53 && groupPanel<=55) capturePath=groupPanel==53?"merchant-repair.bmp":groupPanel==54?"merchant-sell.bmp":"merchant-deposit.bmp";
         if (groupPanel>=50 && groupPanel<=52) capturePath=groupPanel==50?"storage-list.bmp":groupPanel==51?"storage-page.bmp":"storage-quantity.bmp";
         if (groupPanel>=46 && groupPanel<=49) capturePath=groupPanel==46?"shop-goods.bmp":groupPanel==47?"shop-offers.bmp":groupPanel==48?"shop-bulk.bmp":"shop-quantity.bmp";
@@ -518,6 +519,36 @@ public:
             if (FILE* report=fopen("mount-layout-check.txt","wb")) {
                 fprintf(report,"opened=%d repeat=%d hidden=%d buttons=%d stray=%d on_foot=%d riding=%d hint=%d pressed_hint=%d outside_release=%d covered=%d window_drag=%d closed=%d\n",
                     opened,repeat,hidden,buttons,stray,onFoot,riding,hint,pressedHint,released,covered,moved,closed); fclose(report);
+            }
+        }
+        if (groupPanel==56 || groupPanel==57) {
+            auto& ui=g_xGameProc.m_xInterface; auto& bag=ui.m_xInventoryWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            CLIENTITEMRCD record={}; record.nMakeIndex=1001; record.stStdItem.wLooks=0; strcpy(record.stStdItem.szName,"金创药");
+            CItem item; item.SetItem(record,0); const bool legacy=item.m_count==1 && item.m_stackMode==0;
+            item.m_count=30; item.m_stackMode=2; bag.AddInvenItem(item,0,TRUE);
+            const auto quick=CQuickWnd::FromItem(item); const bool reference=quick.count==30 && quick.stackMode==2;
+            bag.SetCommonFromInven(0,&ui.m_stCommonItem); const bool held=ui.m_stCommonItem.xItem.m_count==30 && ui.m_stCommonItem.xItem.m_stackMode==2;
+            bag.SetInvenFromCommon(0,&ui.m_stCommonItem); const bool restored=bag.m_stInventoryItem[0].xItem.m_count==30;
+            const auto open=[&](int mode) { bag.OpenService(77,mode); bag.SelectServiceItem(0); if(mode==2) bag.QuoteService(125,true); bag.ConfirmService(); };
+            open(2); const bool sell=ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==10 && bag.service.stack && bag.service.phase==CInventoryWnd::ServicePhase::Quoted;
+            ui.OnLButtonDown(POINT{490,315}); ui.OnLButtonUp(POINT{490,315}); const bool cancel=!ui.m_xMsgBox.IsActive() && bag.service.phase==CInventoryWnd::ServicePhase::Quoted;
+            for(const char* value:{"","0","-1","31","65536","999999999999999999999999"}) bag.SubmitServiceQuantity(value);
+            const bool invalid=bag.service.phase==CInventoryWnd::ServicePhase::Quoted;
+            bag.SubmitServiceQuantity("10tail"); const bool prefix=bag.service.phase==CInventoryWnd::ServicePhase::Paying && bag.m_stInventoryItem[0].xItem.m_count==30;
+            open(3); const bool deposit=ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==11;
+            SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"*"); ui.OnLButtonDown(POINT{290,315}); ui.OnLButtonUp(POINT{290,315});
+            const bool all=!ui.m_xMsgBox.IsActive() && bag.service.phase==CInventoryWnd::ServicePhase::Paying && bag.m_stInventoryItem[0].xItem.m_count==30;
+            open(2); bag.DeleteInvenItem(0); SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"10"); ui.OnLButtonDown(POINT{290,315}); ui.OnLButtonUp(POINT{290,315});
+            const bool missing=bag.service.phase==CInventoryWnd::ServicePhase::Choosing && !ui.m_xMsgBox.IsActive(); bag.AddInvenItem(item,0,TRUE);
+            open(2); bag.OpenService(77,3); const bool replaced=!ui.m_xMsgBox.IsActive() && !IsWindowVisible(g_xChatEditBox.GetSafehWnd());
+            open(3); ui.WindowActivate(_WND_ID_INVENTORY); const bool closed=!ui.m_xMsgBox.IsActive() && !bag.service.actor;
+            open(2); ui.m_xStoreWnd.SetStorage(77,{}); const bool storage=!ui.m_xMsgBox.IsActive() && !bag.service.actor;
+            ui.m_xStoreWnd.Reset();
+            ui.m_xNPCWnd.SetScript(77,"请选择背包中的物品。\\可输入数量，或用 * 表示全部。\\<返回/@main>"); ui.WindowActivate(_WND_ID_NPCCHAT);
+            open(groupPanel==56?2:3); SetWindowTextA(g_xChatEditBox.GetSafehWnd(),groupPanel==56?"10":"*");
+            if(FILE* report=fopen("service-quantity-check.txt","wb")) {
+                fprintf(report,"legacy=%d reference=%d held=%d restored=%d sell=%d cancel=%d invalid=%d prefix=%d deposit=%d all=%d missing=%d replaced=%d closed=%d storage=%d\n",legacy,reference,held,restored,sell,cancel,invalid,prefix,deposit,all,missing,replaced,closed,storage); fclose(report);
             }
         }
         if (groupPanel>=53 && groupPanel<=55) {
@@ -1230,7 +1261,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=storage-quantity")==0 ? 52 :
         strcmp(lpCmdLine,"--preview=merchant-repair")==0 ? 53 :
         strcmp(lpCmdLine,"--preview=merchant-sell")==0 ? 54 :
-        strcmp(lpCmdLine,"--preview=merchant-deposit")==0 ? 55 : 0;
+        strcmp(lpCmdLine,"--preview=merchant-deposit")==0 ? 55 :
+        strcmp(lpCmdLine,"--preview=merchant-sell-quantity")==0 ? 56 :
+        strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

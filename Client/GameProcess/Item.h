@@ -62,6 +62,8 @@ public:
 	BYTE			m_bAttr;
 	SHORT			m_shCellNum;
 	CLIENTITEMRCD	m_stItemInfo;
+    WORD m_count=1;
+    BYTE m_stackMode=0;
 
 protected:
 public:

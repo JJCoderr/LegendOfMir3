@@ -11,7 +11,7 @@ void CQuickWnd::Init()
 CQuickWnd::Slot CQuickWnd::FromItem(const CItem& item)
 {
     Slot result; result.present=true; result.icon=item.m_stItemInfo.stStdItem.wLooks;
-    result.count=1; result.item=item; return result;
+    result.count=item.m_count; result.stackMode=item.m_stackMode; result.item=item; return result;
 }
 int CQuickWnd::Find(const char* name) const
 {

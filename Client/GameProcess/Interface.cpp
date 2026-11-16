@@ -888,7 +888,7 @@ BOOL CInterface::WindowActivate(INT nID)
 			{
 				DeleteWindowToList(_WND_ID_INVENTORY);
 				m_xInventoryWnd.SetGameWndActive(FALSE);
-                m_xInventoryWnd.service=CInventoryWnd::Service{};
+                m_xInventoryWnd.ClearService();
 				bRet = FALSE;
 			}
 			else
@@ -1578,6 +1578,7 @@ void CInterface::OpenNameDialog(int action)
     if (action==7) prompt=m_xNPCWnd.prompt;
     if (action==8) prompt=captions.Get(2302);
     if (action==9) prompt=captions.Get(2301);
+    if (action==10 || action==11) prompt=captions.Get(action==10?1705:1706);
     m_xMsgBox.ShowMessageBox(prompt.c_str(),MSG_BTN_YESNO,1240);
     g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+244,g_xMainWnd.m_rcWindow.top+340,309,15,TRUE);
     g_xChatEditBox.SetLimitText(90);
@@ -1596,7 +1597,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         m_xMsgBox.HideMessageBox();
         return;
     }
-    if (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 9) {
+    if (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) {
         char name[91] = {};
         GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,sizeof(name));
         if (mouse) g_xSound.PlayLobbyEffect("105.wav");
@@ -1616,6 +1617,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
             else if (m_nIdxMsgBox == 7) m_xNPCWnd.SubmitPrompt(name);
             else if (m_nIdxMsgBox == 8) m_xStoreWnd.BuyBulk(name);
             else if (m_nIdxMsgBox == 9) m_xStoreWnd.SubmitWithdrawal(name);
+            else if (m_nIdxMsgBox == 10 || m_nIdxMsgBox == 11) m_xInventoryWnd.SubmitServiceQuantity(name);
             else if (m_nIdxMsgBox == 6) m_xExchangeWnd.SubmitGold(name,g_xGameProc.m_xMyHero.m_nGlod);
             else {
                 static CLoginMessages captions;
@@ -2088,7 +2090,7 @@ VOID CInterface::OnSysKeyDown()
 
 LRESULT	CInterface::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 {
-    if (m_xMsgBox.IsActive() && m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 9) {
+    if (m_xMsgBox.IsActive() && m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) {
         SetWindowTextA(g_xChatEditBox.GetSafehWnd(),g_xChatEditBox.m_szInputMsg);
         FinishNotice(CLICK_YES,false);
         return TRUE;
