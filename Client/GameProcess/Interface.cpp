@@ -473,6 +473,11 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     if(!m_chatExpanded) {
         DrawSelectionFrame(*m_pxInterImg,1490,534,486,SelectionBlend::Normal,false);
         if(m_minimap.portraitMode) m_minimap.ShowPortrait();
+        else {
+            const auto& hero=g_xGameProc.m_xMyHero;
+            if(hero.m_bJob<=2) DrawSelectionFrame(m_portraits,650+2*hero.m_bJob+(hero.m_stFeature.bGender!=0),534,486,SelectionBlend::Normal,false);
+        }
+        m_targetDisplay.ShowPortrait(m_portraits,m_xOptionWnd.m_values[20]);
     }
 
 
@@ -617,16 +622,6 @@ bool CInterface::PortraitEntryHit(POINT point)
 }
 VOID CInterface::ShowGameStatus()
 {
-    const auto& hero = g_xGameProc.m_xMyHero;
-    const int portrait = 650 + 2 * hero.m_bJob + (hero.m_stFeature.bGender != 0);
-    if (!m_minimap.portraitMode && hero.m_bJob <= 2 && m_portraits.NewSetIndex(portrait)) {
-        const auto& info = *m_portraits.m_lpstNewCurrWilImageInfo;
-        g_xMainWnd.DrawWithImageForComp(m_rcMain.left+534,m_rcMain.top+20,
-            info.shWidth,info.shHeight,(WORD*)m_portraits.m_pbCurrImage);
-    }
-
-    if(!m_chatExpanded) m_targetDisplay.ShowPortrait(m_portraits);
-
 	FLOAT	fMyHPRate;
 	FLOAT	fMyMPRate;				
 	FLOAT	fMyWetRate;				

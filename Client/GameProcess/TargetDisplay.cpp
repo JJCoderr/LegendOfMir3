@@ -1,7 +1,10 @@
 #include "StdAfx.h"
 #include "Common/LegacyPanel.h"
+#include "Common/PortraitJpeg.h"
 void CTargetDisplay::Init() { Destroy();monsters.NewLoad("./Data/MonImg.wil"); }
-void CTargetDisplay::Destroy() {monsters.Destroy();shown=previous=changedAt=0;frame=badge=-1;attributes.clear();}
+CTargetDisplay::~CTargetDisplay() { Destroy(); }
+void CTargetDisplay::ClearPortrait() { if(customPortrait) customPortrait->Release();customPortrait=nullptr; }
+void CTargetDisplay::Destroy() {ClearPortrait();monsters.Destroy();shown=previous=changedAt=0;frame=badge=-1;attributes.clear();}
 void CTargetDisplay::Focus(DWORD actor,DWORD now)
 {
     if(actor) {shown=actor;if(actor!=previous) changedAt=now;previous=actor;}
@@ -10,7 +13,7 @@ void CTargetDisplay::Focus(DWORD actor,DWORD now)
 void CTargetDisplay::Remove(DWORD actor) {if(shown==actor) shown=0;if(previous==actor) previous=0;attributes.erase(actor);}
 void CTargetDisplay::SetMonster(DWORD actor,BYTE type,WORD shape,bool excluded,int state,WORD hp,WORD maxHp,BYTE ratio,DWORD now)
 {
-    Focus(actor,now);if(!actor) return;human=false;special=shape>=530 && shape<=533;
+    Focus(actor,now);if(!actor) return;ClearPortrait();human=false;special=shape>=530 && shape<=533;
     frame=type!=3 || excluded || shape==127 || shape==153?-1:(shape>=2000 || special?shape:shape&255);
     if(frame>=0 && !monsters.NewSetIndex(frame)) frame=1999;
     badge=frame<0 || special?-1:state==1?635:634;current=hp;maximum=maxHp;percent=ratio;
@@ -18,7 +21,7 @@ void CTargetDisplay::SetMonster(DWORD actor,BYTE type,WORD shape,bool excluded,i
 }
 void CTargetDisplay::SetHuman(DWORD actor,BYTE type,BYTE profession,DWORD now)
 {
-    if(!actor || type>1) return;Focus(actor,now);human=true;badge=-1;special=false;
+    if(!actor || type>1) return;if(!human || shown!=actor) ClearPortrait();Focus(actor,now);human=true;badge=-1;special=false;
     frame=profession<=2?650+2*profession+(type!=0):0;
 }
 bool CTargetDisplay::ApplyAttributes(DWORD actor,WORD category,WORD state,const BYTE* body,int length)
@@ -46,10 +49,16 @@ void TargetText(const std::string& value,RECT box,bool centered)
     RestoreDC(dc,saved);SelectObject(dc,old);DeleteObject(font);surface->ReleaseDC(dc);
 }
 }
-void CTargetDisplay::ShowPortrait(CWHWilImageData& portraits)
+void CTargetDisplay::ShowPortrait(CWHWilImageData& portraits,bool userPhotos)
 {
     if(!shown || frame<0) return;
-    DrawSelectionFrame(human?portraits:monsters,frame,534,486,SelectionBlend::Normal,false);
+    if(human && userPhotos && customPortrait) {
+        HDC dc;auto* surface=g_xMainWnd.GetBackBuffer();
+        if(SUCCEEDED(surface->GetDC(&dc))) {
+            LONG width,height;customPortrait->get_Width(&width);customPortrait->get_Height(&height);
+            customPortrait->Render(dc,534,479,84,103,0,height,width,-height,NULL);surface->ReleaseDC(dc);
+        }
+    } else DrawSelectionFrame(human?portraits:monsters,frame,534,486,SelectionBlend::Normal,false);
     if(badge>=0) DrawSelectionFrame(portraits,badge,595,560,SelectionBlend::Normal,false);
 }
 void CTargetDisplay::ShowVitals(CWHWilImageData& portraits)
@@ -75,4 +84,12 @@ void CTargetDisplay::ShowInformation(CWHWilImageData& portraits)
         const int amount=value.modifiers[index];if(!amount) break;const int x=620+32*(slot%3),y=510+20*(slot/3);
         icon(610+index,x,y);TargetText(std::string(amount>0?" +":" ")+std::to_string(amount)+"%",RECT{x+15,y+5,x+55,y+23},false);++slot;
     }
+}
+
+bool CTargetDisplay::ApplyPortrait(DWORD actor,const BYTE* bytes,size_t size)
+{
+    if(!actor || !human || shown!=actor || size>4096) return false;
+    if(!size) {ClearPortrait();return true;}
+    IPicture* picture=DecodePortraitJpeg(bytes,size);if(!picture) return false;
+    ClearPortrait();customPortrait=picture;return true;
 }

@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
-#include <olectl.h>
+#include "Common/PortraitJpeg.h"
 
 CPortraitWnd::~CPortraitWnd() { Close(); }
 void CPortraitWnd::Close()
@@ -26,13 +26,8 @@ int CPortraitWnd::ReadSelected(std::vector<BYTE>& bytes,IPicture** picture)
     if (size>4095) { fclose(file); return 4714; }
     if (size<=0) { fclose(file); return 4716; }
     bytes.resize(size); const bool read=fread(bytes.data(),1,bytes.size(),file)==bytes.size(); fclose(file); if (!read) return 4716;
-    // OleLoadPicture accepts other formats too; this panel is specifically JPEG.
-    if (bytes.size()<2 || bytes[0]!=0xff || bytes[1]!=0xd8) return 4716;
-    HGLOBAL memory=GlobalAlloc(GMEM_MOVEABLE,bytes.size()); void* destination=GlobalLock(memory);
-    memcpy(destination,bytes.data(),bytes.size()); GlobalUnlock(memory);
-    IStream* stream=nullptr; if (FAILED(CreateStreamOnHGlobal(memory,TRUE,&stream))) { GlobalFree(memory); return 4716; }
-    const HRESULT status=OleLoadPicture(stream,LONG(bytes.size()),FALSE,IID_IPicture,(void**)picture); stream->Release();
-    return SUCCEEDED(status)?0:4716;
+    *picture=DecodePortraitJpeg(bytes.data(),bytes.size());
+    return *picture?0:4716;
 }
 void CPortraitWnd::LoadPreview()
 {

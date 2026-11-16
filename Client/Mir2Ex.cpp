@@ -1386,6 +1386,30 @@ public:
             if(FILE* report=fopen("target-display-check.txt","wb")) {fprintf(report,"monster=%d retained=%d expired=%d excluded=%d fallback=%d special=%d human=%d profession=%d wire=%d sorted=%d late=%d removed=%d unknown=%d\n",monster,retained,expired,excluded,fallback,special,human,profession,wire,sorted,late,removed,unknown);fclose(report);}
         }
 
+
+        if(groupPanel==87 || groupPanel==88) {
+            auto& ui=g_xGameProc.m_xInterface;auto& target=ui.m_targetDisplay;
+            std::vector<BYTE> jpeg;if(FILE* file=fopen("./portrait-preview/portrait01.jpg","rb")) {fseek(file,0,SEEK_END);jpeg.resize(ftell(file));rewind(file);fread(jpeg.data(),1,jpeg.size(),file);fclose(file);}
+            target.SetHuman(7,1,1,1000);const bool loaded=target.ApplyPortrait(7,jpeg.data(),jpeg.size()) && target.HasPortrait();
+            const bool wrong=!target.ApplyPortrait(8,jpeg.data(),jpeg.size()) && target.HasPortrait();
+            const BYTE bad[]={0xff,0xd8,0,0};const bool invalid=!target.ApplyPortrait(7,bad,sizeof(bad)) && target.HasPortrait();
+            auto padded=jpeg;padded.resize(4096);const bool limit=target.ApplyPortrait(7,padded.data(),padded.size());padded.push_back(0);
+            const bool oversized=!target.ApplyPortrait(7,padded.data(),padded.size()) && target.HasPortrait();
+            target.SetHuman(7,0,1,1100);const bool same=target.HasPortrait();target.SetHuman(8,0,1,1200);const bool changed=!target.HasPortrait();
+            target.ApplyPortrait(8,jpeg.data(),jpeg.size());const bool cleared=target.ApplyPortrait(8,nullptr,0) && !target.HasPortrait();
+            target.SetMonster(9,3,20,false,0,50,100,50,1300);const bool monster=!target.ApplyPortrait(9,jpeg.data(),jpeg.size());
+            target.SetHuman(7,1,1,1400);target.ApplyPortrait(7,jpeg.data(),jpeg.size());
+            ui.WindowActivate(_WND_ID_OPTION);ui.OnLButtonDown(POINT{578,328});ui.OnLButtonUp(POINT{578,328});
+            const bool option=!ui.m_xOptionWnd.m_values[20] && target.HasPortrait();ui.WindowActivate(_WND_ID_OPTION);
+            ui.m_xOptionWnd.LoadAudioOptions("./preview-photo-options.ini");ui.m_xOptionWnd.m_values[20]=false;
+            const bool saved=ui.m_xOptionWnd.SaveAudioOptions();ui.m_xOptionWnd.LoadAudioOptions(nullptr);
+            const bool defaults=ui.m_xOptionWnd.m_values[20];ui.m_xOptionWnd.LoadAudioOptions("./preview-photo-options.ini");
+            const bool persisted=saved && defaults && !ui.m_xOptionWnd.m_values[20];ui.m_xOptionWnd.LoadAudioOptions(nullptr);
+            ui.m_xOptionWnd.m_values[20]=groupPanel==87;
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==87?"target-photo.bmp":"target-photo-disabled.bmp";
+            if(FILE* report=fopen("target-photo-check.txt","wb")) {fprintf(report,"loaded=%d wrong_actor=%d invalid=%d limit=%d oversized=%d same_actor=%d changed_actor=%d cleared=%d monster=%d option=%d persisted=%d\n",loaded,wrong,invalid,limit,oversized,same,changed,cleared,monster,option,persisted);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1575,6 +1599,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=target-photo")==0 ? 87 :
+        strcmp(lpCmdLine,"--preview=target-photo-disabled")==0 ? 88 :
         strcmp(lpCmdLine,"--preview=target-monster")==0 ? 82 :
         strcmp(lpCmdLine,"--preview=target-attributes")==0 ? 83 :
         strcmp(lpCmdLine,"--preview=target-human")==0 ? 84 :

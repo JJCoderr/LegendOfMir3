@@ -99,6 +99,13 @@ BOOL COptionWnd::OnLButtonUp(POINT point)
     if (hit==1) { m_values[1]=!m_values[1]; if (m_values[1]) g_xSound.SetEnableBGM(); else g_xSound.SetDisableBGM(); }
     if (hit==2) { m_values[2]=!m_values[2]; if (m_values[2]) g_xSound.SetEnablePlay(); else g_xSound.SetDisablePlay(); }
     if (hit==3) { m_values[3]=!m_values[3]; g_xSound.m_reversePan=m_values[3]; }
+    if(hit==20) {
+        m_values[20]=!m_values[20];
+        static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+        std::string message=captions.Get(m_values[20]?2132:2131);
+        g_xGameProc.m_xInterface.MsgAdd(0xffffff,33023,const_cast<char*>(message.c_str()));
+        SaveAudioOptions();
+    }
     if (hit>=1 && hit<=3) SaveAudioOptions();
     return hit==0;
 }
@@ -153,6 +160,7 @@ void COptionWnd::LoadAudioOptions(const char* path)
     m_values[1]=read("BGM",1)!=0;
     m_values[2]=read("EffectSound",1)!=0;
     m_values[3]=read("ReversePan",0)==1;
+    m_values[20]=read("UserPic",1)!=0;
     m_musicLevel=read("BGMLevel",0);
     m_effectsLevel=read("EffectSoundLevel",0);
     if (m_musicLevel < -100 || m_musicLevel > 0) m_musicLevel=0;
@@ -171,7 +179,8 @@ bool COptionWnd::SaveAudioOptions()
         char text[16]; wsprintfA(text,"%d",value);
         return WritePrivateProfileStringA("Options",key,text,m_audioOptionsPath)!=FALSE;
     };
-    bool saved=write("BGM",m_values[1]);
+    bool saved=write("UserPic",m_values[20]);
+    saved=write("BGM",m_values[1]) && saved;
     saved=write("EffectSound",m_values[2]) && saved;
     saved=write("ReversePan",m_values[3]) && saved;
     saved=write("BGMLevel",m_musicLevel) && saved;

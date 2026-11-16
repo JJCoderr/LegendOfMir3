@@ -2,7 +2,10 @@
 #include <array>
 #include <map>
 #include <string>
+struct IPicture;
 class CTargetDisplay {
+    IPicture* customPortrait=nullptr;
+    void ClearPortrait();
     CWHWilImageData monsters;
     DWORD shown=0,previous=0,changedAt=0;
     bool human=false,special=false;
@@ -15,7 +18,10 @@ public:
     };
     std::map<DWORD,Attributes> attributes;
     BYTE percent=0;WORD maximum=0,current=0;
+    ~CTargetDisplay();
     void Init();void Destroy();
+    bool ApplyPortrait(DWORD actor,const BYTE* bytes,size_t size);
+    bool HasPortrait() const { return customPortrait!=nullptr; }
     void Focus(DWORD actor,DWORD now);
     void Remove(DWORD actor);
     DWORD Displayed() const { return shown; }
@@ -25,7 +31,7 @@ public:
     void SetMonster(DWORD actor,BYTE type,WORD shape,bool excluded,int state,WORD hp,WORD maxHp,BYTE ratio,DWORD now);
     void SetHuman(DWORD actor,BYTE type,BYTE profession,DWORD now);
     bool ApplyAttributes(DWORD actor,WORD category,WORD state,const BYTE* body,int length);
-    void ShowPortrait(CWHWilImageData& portraits);
+    void ShowPortrait(CWHWilImageData& portraits,bool userPhotos);
     void ShowVitals(CWHWilImageData& portraits);
     void ShowInformation(CWHWilImageData& portraits);
 };
