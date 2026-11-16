@@ -1,3 +1,4 @@
+#include "Common/LoginMessages.h"
 // LoginProcess.h: interface for the CSelectChrProcess class.
 //
 //////////////////////////////////////////////////////////////////////
@@ -39,6 +40,7 @@ public:
 	INT					m_nSelectChr;
 private:
 protected:
+	CLoginMessages m_messages;
 	CLightFog			m_xLightFog;
 	CPDLList<CHRINFO>*	m_pxSList;
 	CPDLList<CHRRECT>*	m_pxrcList;

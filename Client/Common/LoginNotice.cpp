@@ -10,7 +10,7 @@ BOOL CLoginNotice::CreateWnd(CWHWilImageData* image, BOOL, INT, INT, INT, INT) {
     return image && image->NewSetIndex(1240) && image->NewSetIndex(1243);
 }
 
-BOOL CLoginNotice::ShowMessageBox(CHAR* message, INT type, INT) {
+BOOL CLoginNotice::ShowMessageBox(const CHAR* message, INT type, INT) {
     lstrcpynA(m_text, message, sizeof(m_text));
     m_type = type;
     m_pressed = 0;
@@ -68,7 +68,8 @@ BOOL CLoginNotice::RenderMessageBox(INT) {
             memcpy(line + length,next,bytes); length += bytes; next += bytes;
         }
         if (*next == '\n') ++next;
-        g_xMainWnd.PutsHan(NULL,163,194 + row * 18,RGB(255,250,200),RGB(0,0,0),line);
+        const int left = (m_type & 127) == MSG_BTN_YESNO ? 183 : 163;
+        g_xMainWnd.PutsHan(NULL,left,194 + row * 18,0xc8faff,0,line);
     }
     return TRUE;
 }

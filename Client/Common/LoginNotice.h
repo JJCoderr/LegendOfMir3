@@ -5,7 +5,7 @@ class CLoginNotice {
 public:
     CLoginNotice();
     BOOL CreateWnd(CWHWilImageData* image, BOOL, INT, INT, INT, INT);
-    BOOL ShowMessageBox(CHAR* message, INT type, INT ignoredFrame);
+    BOOL ShowMessageBox(const CHAR* message, INT type, INT ignoredFrame);
     BOOL HideMessageBox();
     BOOL IsActive() const { return m_active; }
     HRESULT OnButtonDown(POINT point);

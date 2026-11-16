@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Common/LegacyPanel.h"
 
 #define CHR_ANI_COUNT			21
 #define ANIMATION_TICK			200
@@ -28,6 +29,7 @@ CSelectChr::~CSelectChr()
 VOID CSelectChr::Create(CWHWilImageData* pxImage,CPDLList<CHRINFO>* pxList, CPDLList<CHRRECT>* pxrcList,INT nChrCount)
 {
 	INT	nLoop;
+	m_messages.Load(".\\CmList.dat");
 	// Buttons
 	BUTTONINFO CharProcBtnInfo[] ={
 									{ IMG_IDX_SELECT_CREATE,	SELECT_CHAR_NEW_BTN_POS_X,		SELECT_CHAR_NEW_BTN_POS_Y,		0,					0},	// Create New Charector Button
@@ -233,7 +235,7 @@ VOID CSelectChr::Render(INT	nLoopTime)
 		for (i = ID_SEL_CHR_NEW_BTN; i <= ID_SEL_CHR_START_BTN; i++)
 		{
 			const int frame = m_pBtn[i]->m_nButtonID +
-				(m_pBtn[i]->m_nState == BUTTON_STATE_UP ? 0 : 1);
+				(m_fIsButtonDown && m_pBtn[i]->m_nState == BUTTON_STATE_DOWN ? 0 : 1);
 			if (m_pxImage->NewSetIndex(frame))
 				g_xMainWnd.DrawWithImageForComp(m_pBtn[i]->m_Rect.left, m_pBtn[i]->m_Rect.top,
 					m_pxImage->m_lpstNewCurrWilImageInfo->shWidth,
@@ -268,17 +270,15 @@ VOID CSelectChr::Render(INT	nLoopTime)
                 const int action = selected ? 2 : 0;
                 const int frame = 200 + 60 * (action + 5 * type) +
                     m_nAnimationCount % ((selected ? selectedLast[type] : idleLast[type]) + 1);
-                if (m_pxImage->NewSetIndex(frame)) {
-                    const NEWWILIMAGEINFO& info = *m_pxImage->m_lpstNewCurrWilImageInfo;
-                    nPx = (m_nChrCount == 1 ? 300 : (i % 2 ? 350 : 250)) + info.shPX;
-                    nPy = (i % 2 ? 250 : 210) + info.shPY;
-                    CHRRECT* bounds = m_pxrcList->GetCurrentData();
-                    bounds->nLeft = nPx; bounds->nTop = nPy;
-                    bounds->nWidth = info.shWidth; bounds->nHeight = info.shHeight;
-                    g_xMainWnd.DrawWithABlendCompDataWithBackBuffer(nPx,nPy,info.shWidth,info.shHeight,
-                        (WORD*)m_pxImage->m_pbCurrImage,640,480,0xffff,0xffff,
-                        m_nBlend >= 0 ? m_nBlend : 0);
-                }
+                const int x = m_nChrCount == 1 ? 300 : (i % 2 ? 350 : 250);
+                const int y = i % 2 ? 250 : 210;
+                DrawSelectionFrame(*m_pxImage, frame + 20, x, y, SelectionBlend::Shadow);
+                const RECT rect = DrawSelectionFrame(*m_pxImage, frame, x, y,
+                    selected ? SelectionBlend::Normal : SelectionBlend::Inactive);
+                DrawSelectionFrame(*m_pxImage, frame + 40, x, y, SelectionBlend::Additive);
+                CHRRECT* bounds = m_pxrcList->GetCurrentData();
+                bounds->nLeft = rect.left; bounds->nTop = rect.top;
+                bounds->nWidth = rect.right - rect.left; bounds->nHeight = rect.bottom - rect.top;
             }
             m_pxSList->MoveNextNode();
             m_pxrcList->MoveNextNode();
@@ -297,19 +297,29 @@ VOID CSelectChr::Render(INT	nLoopTime)
 
 VOID CSelectChr::ShowChrInfo(VOID)
 {
-	char ChrName[20];
-	char ChrLev[3];
-	if(m_nChrCount!=0)
-	{
-		m_pxSList->MoveCurrentToTop();
-		m_pxSList->MoveNode(m_nSelectChr);
-		strcpy(ChrName,m_pxSList->GetCurrentData()->ChrName);
-		strcpy(g_szCharName,m_pxSList->GetCurrentData()->ChrName);
-		itoa(m_pxSList->GetCurrentData()->Level,ChrLev,10);
-		g_xMainWnd.PutsHan(NULL,m_PosName.x,m_PosName.y,RGB(255,255,255),RGB(0,0,0),ChrName);
-	}
+    if (m_nSelectChr < 0 || m_nSelectChr >= m_nChrCount) return;
+    m_pxSList->MoveCurrentToTop();
+    m_pxSList->MoveNode(m_nSelectChr);
+    const CHRINFO& role = *m_pxSList->GetCurrentData();
+    lstrcpynA(g_szCharName, role.ChrName, sizeof(g_szCharName));
+    const std::string name = m_messages.Get(206) + "   " + role.ChrName;
+    const std::string level = m_messages.Get(207) + "   " + std::to_string(role.Level);
+    const std::string job = m_messages.Get(208 + role.Class);
+    const std::string& face = m_messages.Get(1074);
+    HFONT font = g_xMainWnd.CreateGameFont(face.c_str(), 9, 0, FW_BOLD);
+    HDC dc = GetDC(g_xMainWnd.GetSafehWnd());
+    HGDIOBJ old = SelectObject(dc, font);
+    SIZE nameSize = {}, jobSize = {};
+    GetTextExtentPoint32A(dc, name.c_str(), (int)name.size(), &nameSize);
+    GetTextExtentPoint32A(dc, job.c_str(), (int)job.size(), &jobSize);
+    SelectObject(dc, old); ReleaseDC(g_xMainWnd.GetSafehWnd(), dc); DeleteObject(font);
+    const int width = max(nameSize.cx, jobSize.cx) + 20;
+    RECT box = {79,108,79+width,178};
+    DrawLegacyPanel(box, RGB(50,50,25), 100, RGB(100,100,80));
+    g_xMainWnd.PutsHan(NULL,89,118,0x96c8ff,0,(char*)name.c_str(),g_xMainWnd.CreateGameFont(face.c_str(),9,0,FW_BOLD));
+    g_xMainWnd.PutsHan(NULL,89,138,0x96f096,0,(char*)level.c_str(),g_xMainWnd.CreateGameFont(face.c_str(),9,0,FW_BOLD));
+    g_xMainWnd.PutsHan(NULL,89,158,0xafffff,0,(char*)job.c_str(),g_xMainWnd.CreateGameFont(face.c_str(),9,0,FW_BOLD));
 }
-
 
 VOID CSelectChr::CloseWnd(VOID)
 {

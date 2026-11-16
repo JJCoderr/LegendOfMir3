@@ -21,7 +21,8 @@ public:
 						CCharacterProcess();
 	virtual				~CCharacterProcess();
 	VOID				Init();
-	VOID				Load();
+	VOID				Load(bool connect = true);
+	void Preview(const char* page);
 
 // Message Function
 	LRESULT				OnKeyDown(WPARAM wParam, LPARAM lParam);
@@ -54,6 +55,9 @@ public:
 	BOOL				MessageBoxProcess(LPARAM lParam);
 	
 private:
+	void OpenDeleteNotice();
+	void DrawCreationDescription();
+	CLoginMessages m_messages;
 	BOOL m_bCreatePending;
 	RECT m_createBounds[2];
 	CBackGround			m_xBGround;

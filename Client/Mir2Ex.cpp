@@ -54,9 +54,16 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  开始时设定为登录流程.
-	g_xClientSocket.m_pxDefProc = g_xMainWnd.m_pxDefProcess = &g_xLoginProc;
-	g_xLoginProc.Load();
-	g_bProcState = _LOGIN_PROC;
+	const char* preview = "--preview=";
+	if (strncmp(lpCmdLine, preview, strlen(preview)) == 0) {
+		g_xMainWnd.m_pxDefProcess = &g_xChrSelProc;
+		g_xChrSelProc.Preview(lpCmdLine + strlen(preview));
+		g_bProcState = _CHAR_SEL_PROC;
+	} else {
+		g_xClientSocket.m_pxDefProc = g_xMainWnd.m_pxDefProcess = &g_xLoginProc;
+		g_xLoginProc.Load();
+		g_bProcState = _LOGIN_PROC;
+	}
 
 	UpdateWindow(g_xMainWnd.GetSafehWnd());
 	ShowWindow(g_xMainWnd.GetSafehWnd(), SW_SHOW);

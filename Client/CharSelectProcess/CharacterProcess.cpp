@@ -3,6 +3,8 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "Common/LegacyPanel.h"
+#include <vector>
 
 // Coordinates are shared by drawing and hit testing for the supplied UI frames.
 struct CreateControl { int frame, x, y, width, height; };
@@ -51,7 +53,7 @@ VOID CCharacterProcess::Init()
 //	m_pBtn = new CMirButton[sizeof(g_CharProcBtnInfo)/sizeof(BUTTONINFO)];
 }
 
-VOID CCharacterProcess::Load()
+VOID CCharacterProcess::Load(bool connect)
 {
 	WSAStartup(MAKEWORD(2, 2), &m_wsd);
 	m_Image.NewLoad(".\\Data\\interface1c.wil", TRUE, TRUE);
@@ -60,7 +62,8 @@ VOID CCharacterProcess::Load()
 	//
 	m_ConnectionState = CONNECT_FAIL;
 
-	g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(), g_szServerIP, g_nServerPort);
+	if (connect) g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(), g_szServerIP, g_nServerPort);
+	m_messages.Load(".\\CmList.dat");
 
 	g_xChatEditBox.SetLimitText(13);
 	SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETPASSWORDCHAR,NULL,0);
@@ -73,6 +76,38 @@ VOID CCharacterProcess::Load()
 	m_xBGround.Create(&m_Image);
 	m_xBGround.OpenWnd();
 }	
+
+void CCharacterProcess::Preview(const char* page)
+{
+    Load(false);
+    auto* role = new CHRINFO{};
+    lstrcpyA(role->ChrName, "MirPreview");
+    role->Level = 12;
+    m_CList.AddNode(role);
+    m_CRectList.AddNode(new CHRRECT{});
+    m_ChrCount = 1;
+    m_xSelectChr.Create(&m_Image, &m_CList, &m_CRectList, m_ChrCount);
+    m_xSelectChr.OpenWnd();
+    if (strcmp(page, "create") == 0) {
+        m_xBGround.SetRenderState(_RENDER_STILL_2);
+        m_Progress = PRG_CREATE_CHAR;
+    } else if (strcmp(page, "delete") == 0) {
+        OpenDeleteNotice();
+    }
+}
+
+void CCharacterProcess::OpenDeleteNotice()
+{
+    m_nMessage = 5;
+    m_xMsgBox.ShowMessageBox(m_messages.Get(228).c_str(), MSG_BTN_YESNO, 0);
+    HWND editor = g_xChatEditBox.GetSafehWnd();
+    g_xChatEditBox.SetLimitText(90);
+    SetWindowTextA(editor, "");
+    g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left + 164,
+        g_xMainWnd.m_rcWindow.top + 338, 309, 15, TRUE);
+    ShowWindow(editor, SW_SHOW);
+    SetFocus(editor);
+}
 
 VOID CCharacterProcess::SetNextProc()
 {
@@ -103,6 +138,13 @@ LRESULT CCharacterProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, L
 {
 	switch ( uMsg )
 	{
+    case WM_CTLCOLOREDIT:
+        if ((HWND)lParam == g_xChatEditBox.GetSafehWnd()) {
+            SetBkColor((HDC)wParam, RGB(0, 0, 0));
+            SetTextColor((HDC)wParam, RGB(255, 255, 255));
+            return (LRESULT)GetStockObject(BLACK_BRUSH);
+        }
+        break;
 		case WM_LBUTTONDOWN:
 			OnLButtonDown(wParam, lParam);
 			break;
@@ -260,9 +302,7 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 					}
 					case RETURN_SELECT_DEL_BTN:
 					{
-						m_nMessage = 5;
-						SetErrorMessage(m_nMessage,m_szErrorMsg);
-						m_xMsgBox.ShowMessageBox(m_szErrorMsg,MSG_BTN_YESNO,_WNDIMGINDX_MSGBOX1);
+						OpenDeleteNotice();
 						break;
 					}
 					case RETURN_SELECT_DEL_ERR:
@@ -614,7 +654,8 @@ VOID CCharacterProcess::RenderScene(INT nLoopTime)
 	{
 		case PRG_CHAR_SELE:
 		{
-			ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
+			if (!m_xMsgBox.IsActive() || m_nMessage != 5)
+				ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
 			switch(m_xSelectChr.m_nRenderState)
 			{
 				case 11:	// Zoom in
@@ -645,7 +686,7 @@ VOID CCharacterProcess::RenderScene(INT nLoopTime)
 				m_Progress = PRG_CREATE_CHAR;
 			break;
 		case PRG_CREATE_CHAR:
-			ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_SHOW);
+			ShowWindow(g_xChatEditBox.GetSafehWnd(), m_xMsgBox.IsActive() ? SW_HIDE : SW_SHOW);
 			RenderCharCreate(nLoopTime);
 			break;
 		case PRG_CREA_TO_SEL:
@@ -675,11 +716,49 @@ VOID CCharacterProcess::ShowStatus(INT nStartX, INT nStartY)
 }
 
 
+// Mir3 hud_view.cpp: creation description wraps at 430 logical pixels.
+void CCharacterProcess::DrawCreationDescription()
+{
+    const std::string& description = m_messages.Get(216 + m_SelectJob);
+    std::vector<std::string> lines;
+    HWND hwnd = g_xMainWnd.GetSafehWnd();
+    HDC dc = GetDC(hwnd);
+    const char songti[] = {char(0xcb), char(0xce), char(0xcc), char(0xe5), 0};
+    HFONT font = g_xMainWnd.CreateGameFont(songti, 9, 0, FW_NORMAL);
+    HGDIOBJ previous = SelectObject(dc, font);
+    const char* start = description.c_str();
+    for (const char* end = start; *end;) {
+        end = CharNextA(end);
+        SIZE extent = {};
+        GetTextExtentPoint32A(dc, start, int(end - start), &extent);
+        if (extent.cx >= 430 || !*end) {
+            lines.emplace_back(start, end);
+            start = end;
+        }
+    }
+    SelectObject(dc, previous);
+    ReleaseDC(hwnd, dc);
+    DeleteObject(font);
+
+    RECT box = {100, 15, 550, 35 + 18 * LONG(lines.size() + 1)};
+    DrawLegacyPanel(box, RGB(50, 50, 50), 50, RGB(150, 150, 150));
+    std::string title = m_messages.Get(211 + m_SelectSex) + m_messages.Get(213 + m_SelectJob);
+    const std::string& face = m_messages.Get(1074);
+    g_xMainWnd.PutsHan(NULL, 110, 25, 0x96c8fa, 0, &title[0],
+        g_xMainWnd.CreateGameFont(face.c_str(), 10, 0, FW_BOLD));
+    int y = 50;
+    for (auto& line : lines) {
+        g_xMainWnd.PutsHan(NULL, 110, y, 16775930, 0, &line[0]);
+        y += 18;
+    }
+}
+
 VOID CCharacterProcess::RenderCharCreate(INT nLoopTime)
 {
     g_xChatEditBox.MoveScaled(
         g_xMainWnd.m_rcWindow.left + POS_NAME_X,
         g_xMainWnd.m_rcWindow.top + POS_NAME_Y, 75, 13, TRUE);
+    DrawCreationDescription();
     // Mir3 br_godot_test_261115: CreateCharacterPage positions/action 4.
     static const POINT positions[6] = {{110,110},{110,120},{110,120},{400,160},{420,115},{425,118}};
     static const int lastFrame[6] = {17,14,16,15,16,14};
@@ -688,15 +767,20 @@ VOID CCharacterProcess::RenderCharCreate(INT nLoopTime)
         const int role = m_SelectJob + 3 * gender;
         const int first = 440 + 600 * m_SelectJob + 300 * gender;
         const int frame = first + (gender == m_SelectSex ? (m_Tick / 121) % (lastFrame[role] + 1) : 0);
-        if (!m_Image.NewSetIndex(frame)) continue;
-        const NEWWILIMAGEINFO& info = *m_Image.m_lpstNewCurrWilImageInfo;
-        const int x = positions[role].x + info.shPX, y = positions[role].y + info.shPY;
-        SetRect(&m_createBounds[gender], x, y, x + info.shWidth, y + info.shHeight);
-        g_xMainWnd.DrawWithImageForComp(x, y, info.shWidth, info.shHeight, (WORD*)m_Image.m_pbCurrImage);
+        const auto& anchor = positions[role];
+        DrawSelectionFrame(m_Image, frame + 20, anchor.x, anchor.y, SelectionBlend::Shadow);
+        const bool selected = gender == m_SelectSex;
+        m_createBounds[gender] = DrawSelectionFrame(m_Image, frame, anchor.x, anchor.y,
+            selected ? SelectionBlend::Normal : SelectionBlend::Inactive);
+        if (selected)
+            DrawSelectionFrame(m_Image, frame + 40, anchor.x, anchor.y, SelectionBlend::Additive);
     }
+    DrawSelectionFrame(m_Image, 82, 201, 434, SelectionBlend::Shadow, false);
     if (m_Image.NewSetIndex(81))
         g_xMainWnd.DrawWithImageForComp(247,384,m_Image.m_lpstNewCurrWilImageInfo->shWidth,
             m_Image.m_lpstNewCurrWilImageInfo->shHeight,(WORD*)m_Image.m_pbCurrImage);
+    RECT editor = {287,404,364,419};
+    DrawLegacyPanel(editor, 0, 255, RGB(120,90,60));
     for (int i = 0; i < 5; ++i) {
         const CreateControl& control = createControls[i];
         const int frame = control.frame + (i >= 2 && m_SelectJob == i - 2 ? 1 : 0);
@@ -733,6 +817,12 @@ BOOL CCharacterProcess::MessageBoxProcess(LPARAM lParam)
 	ptMouse.x = LOWORD(lParam);
 	ptMouse.y = HIWORD(lParam);
 	hResult  = m_xMsgBox.OnButtonUp(ptMouse);
+    if (m_nMessage == 5 && (hResult == CLICK_YES || hResult == CLICK_NO)) {
+        HWND editor = g_xChatEditBox.GetSafehWnd();
+        SetWindowTextA(editor, "");
+        ShowWindow(editor, SW_HIDE);
+        g_xChatEditBox.SetLimitText(13);
+    }
 	if((hResult&HAVE_EDITOBOX)==HAVE_EDITOBOX)
 	{
 		// edit box exist
