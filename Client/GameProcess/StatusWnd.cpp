@@ -563,6 +563,8 @@ BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
     const bool close=m_nativeClosePressed && NativeCloseHit(ptMouse); m_nativeClosePressed=false;
     if (close) { g_xSound.PlayLobbyEffect("105.wav"); return TRUE; }
 
+    if (g_xGameProc.m_xInterface.m_xExchangeWnd.GetGameWndActive() && g_xGameProc.m_xInterface.m_xExchangeWnd.returnSlot>=0) return FALSE;
+
 		nEquipNum = GetEquipNum(ptMouse);
 		// 鼠标位于装备窗口区域时.
 		if ( nEquipNum != -1)

@@ -9,7 +9,7 @@ void CExchangeWnd::Init()
         gold[side]=0; first[side]=0;
         for (auto& item:offers[side]) item=Offer{};
     }
-    captured=pendingSlot=returnSlot=-1; confirmed=confirmPressed=goldPending=false;
+    captured=pendingSlot=returnSlot=-1; confirmed=confirmPressed=goldPending=returnPending=headerPressed=false;
 }
 void CExchangeWnd::CreateExchangeWnd(INT id,CWHWilImageData* image,INT frame,INT x,INT y,INT width,INT height,BOOL movable)
 {
@@ -62,15 +62,47 @@ bool CExchangeWnd::SubmitGold(const char* text,unsigned balance)
     fnMakeDefMessage(&message,1029,INT(amount),0,0,0); g_xClientSocket.SendPacket(&message,NULL);
     return true;
 }
+int CExchangeWnd::OfferAt(POINT point) const
+{
+    const int x=point.x-m_rcWnd.left-14,y=point.y-m_rcWnd.top-56;
+    if (x<0 || x>=190 || y<0 || y>=190) return -1;
+    const int column=x/38,row=first[0]+y/38;
+    for (int slot=0;slot<200;++slot) {
+        const auto& item=offers[0][slot];
+        if (item.present && item.makeIndex && column>=slot%5 && column<slot%5+item.width &&
+            row>=slot/5 && row<slot/5+item.height) return slot;
+    }
+    return -1;
+}
+bool CExchangeWnd::RequestReturn()
+{
+    if (!m_bActive || returnSlot<0 || returnPending) return false;
+    auto& item=offers[0][returnSlot];
+    returnPending=true;
+    g_xClientSocket.SendItemIndex(1027,INT(item.makeIndex),const_cast<char*>(item.name.c_str()));
+    return true;
+}
+void CExchangeWnd::ShowHeld(POINT point)
+{
+    if (!m_bActive || returnSlot<0 || point.x<0 || point.x>=800 || point.y<0 || point.y>=600) return;
+    auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];
+    const auto& item=offers[0][returnSlot];
+    if (!icons.NewSetIndex(item.icon)) return;
+    const auto info=*icons.m_lpstNewCurrWilImageInfo;
+    DrawSelectionFrame(icons,item.icon,point.x-(info.shWidth+1)/2,point.y-(info.shHeight+1)/2,SelectionBlend::Normal,false);
+}
 BOOL CExchangeWnd::OnLButtonDown(POINT point)
 {
+    headerPressed=false;
     if (ScrollInput(0,point)) return TRUE;
     confirmPressed=ConfirmHit(point);
+    headerPressed=!confirmPressed && point.y<m_rcWnd.top+56;
     return confirmPressed || point.y>=m_rcWnd.top+56;
 }
 BOOL CExchangeWnd::OnLButtonUp(POINT point)
 {
     if (ScrollInput(2,point)) return FALSE;
+    const bool wasCaptured=headerPressed || confirmPressed; headerPressed=false;
     const bool activate=confirmPressed && ConfirmHit(point) && !confirmed && !goldPending && pendingSlot<0 && returnSlot<0;
     confirmPressed=false;
     if (activate) {
@@ -78,6 +110,10 @@ BOOL CExchangeWnd::OnLButtonUp(POINT point)
         // Mir3 protocol/message_ids.inc: CM_TRADE_CONFIRM, no payload.
         g_xClientSocket.SendQueryMsg(1030);
     }
+    if (wasCaptured) return FALSE;
+    const RECT grid={m_rcWnd.left+14,m_rcWnd.top+56,m_rcWnd.left+204,m_rcWnd.top+246};
+    if (!confirmed && pendingSlot<0 && !returnPending && !g_xGameProc.m_xInterface.m_stCommonItem.bSetted && PtInRect(&grid,point))
+        returnSlot=OfferAt(point);
     const RECT amount={m_rcWnd.left+34,m_rcWnd.top+270,m_rcWnd.left+156,m_rcWnd.top+304};
     if (!confirmed && !goldPending && pendingSlot<0 && returnSlot<0 && !gold[0] &&
         !g_xGameProc.m_xInterface.m_stCommonItem.bSetted && g_xGameProc.m_xMyHero.m_nGlod && PtInRect(&amount,point))

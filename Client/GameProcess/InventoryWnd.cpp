@@ -867,6 +867,7 @@ VOID CInventoryWnd::AddNewBeltItem(LPCOMMONITEMSET pstCommonItemSet)
 *******************************************************************************************************************/
 BOOL CInventoryWnd::OnKeyUp(LPCOMMONITEMSET pstCommonItemSet, WPARAM wParam, LPARAM lParam)
 {
+    if (g_xGameProc.m_xInterface.m_xExchangeWnd.GetGameWndActive() && g_xGameProc.m_xInterface.m_xExchangeWnd.returnSlot>=0) return TRUE;
 	INT nBeltInventoryNum;
 
 	nBeltInventoryNum = -1;
@@ -936,6 +937,10 @@ BOOL CInventoryWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMous
         { m_closePressed=true; return TRUE; }
 	}
 
+    auto& trade=g_xGameProc.m_xInterface.m_xExchangeWnd;
+    const RECT grid={m_rcWnd.left+17,m_rcWnd.top+60,m_rcWnd.left+245,m_rcWnd.top+364};
+    if (trade.GetGameWndActive() && trade.returnSlot>=0 && PtInRect(&grid,ptMouse)) return TRUE;
+
 	nInventoryNum	  = GetInvenNum(ptMouse);
 	nBeltInventoryNum = GetBeltNum(ptMouse);
 
@@ -971,6 +976,13 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
     const bool close=m_xInventoryBtn[_BTN_ID_INVENCLOSE].OnLButtonUp(ptMouse) && m_closePressed;
     m_closePressed=false;
     if (close) { g_xSound.PlayLobbyEffect("105.wav"); return TRUE; }
+    auto& trade=g_xGameProc.m_xInterface.m_xExchangeWnd;
+    if (trade.GetGameWndActive() && trade.returnSlot>=0) {
+        const RECT grid={m_rcWnd.left+17,m_rcWnd.top+60,m_rcWnd.left+245,m_rcWnd.top+364};
+        if (PtInRect(&grid,ptMouse)) trade.RequestReturn();
+        return FALSE;
+    }
+
 
 	// ¹ö¶¯ Up, Down ´¦Àí.
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLUP	 ].OnLButtonUp(ptMouse);
@@ -1052,7 +1064,8 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 
 
 BOOL CInventoryWnd::OnLButtonDoubleClick(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
-{	
+{
+    if (g_xGameProc.m_xInterface.m_xExchangeWnd.GetGameWndActive() && g_xGameProc.m_xInterface.m_xExchangeWnd.returnSlot>=0) return TRUE;
 	INT nInventoryNum	  = GetInvenNum(ptMouse);
 	INT nBeltInventoryNum = GetBeltNum(ptMouse);
 

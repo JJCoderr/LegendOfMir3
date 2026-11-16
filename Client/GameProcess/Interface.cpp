@@ -518,6 +518,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 	m_xMsgBox.RenderMessageBox(0);
 
 	ShowMagicKey();
+    m_xExchangeWnd.ShowHeld(ptMousePos);
 }
 
 
@@ -939,7 +940,7 @@ case _WND_ID_STATUS:
 			if ( m_xExchangeWnd.GetGameWndActive() )
 			{
 				DeleteWindowToList(_WND_ID_EXCHANGE);
-				m_xExchangeWnd.SetGameWndActive(FALSE); m_xExchangeWnd.confirmPressed=false; m_xExchangeWnd.captured=-1;
+				m_xExchangeWnd.SetGameWndActive(FALSE); m_xExchangeWnd.confirmPressed=m_xExchangeWnd.headerPressed=false; m_xExchangeWnd.captured=-1;
 				bRet = FALSE;
 			}
 			else
@@ -1612,7 +1613,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
-    if (m_xExchangeWnd.captured>=0 || m_xExchangeWnd.confirmPressed) { m_xExchangeWnd.OnLButtonUp(ptMouse); return TRUE; }
+    if (m_xExchangeWnd.captured>=0 || m_xExchangeWnd.confirmPressed || m_xExchangeWnd.headerPressed) { m_bMoveFocusedWnd=FALSE; m_xExchangeWnd.OnLButtonUp(ptMouse); return TRUE; }
     if (m_xHorseWnd.pressed>=0) {
         if (m_xHorseWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_HORSE);
         return TRUE;
