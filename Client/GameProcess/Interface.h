@@ -5,6 +5,8 @@
 
 
 
+#include "Common/LoginNotice.h"
+
 class CInterface
 { 
 public:
@@ -50,7 +52,7 @@ public:
 
 	BOOL				m_bShowKey;
 
-	CMirMsgBox			m_xMsgBox;						// ÈÝÆ÷.
+	CLoginNotice		m_xMsgBox;						// ÈÝÆ÷.
 	INT					m_nIdxMsgBox;					// ÈÝÆ÷.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 

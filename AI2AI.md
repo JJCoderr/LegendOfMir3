@@ -415,3 +415,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 新增 --preview=hud 与 --preview=hud-expanded，复用正式 CInterface 渲染、鼠标和滚轮处理，使用固定角色数值及20条聊天消息，不连接服务器或运行地图逻辑。
 - Client 编译链接通过；启动 out/mud3-01/Mir2ExHudPreview.exe 后，通过窗口可访问性确认停在 Cannot find .\Data\interfacec2.wix file。这是正式 CreateInterface 仍保留的旧素材依赖，不能通过伪造或重命名素材掩盖。
 - Computer Use 对该进程激活失败，截图只显示蓝色背景，不是有效 HUD 截图。当前 HUD 仍未完成运行验收。下一步迁移 Interfacec2 使用者（公会、队伍弹窗、通用提示），再验证两个预览布局。
+
+### 游戏弹窗素材迁移（第一部分）
+- 公会底图改用 GameInter1300，逻辑区域参考 Godot 为102,22,594,444；队伍输入弹窗底图改用1240，位置220,112。两者现有内容仍为空壳，尚未完成窗口。
+- HUD 退出确认改用 CLoginNotice 的 GameInter1240/1241/1245等帧，新增可设置绘制/命中/文本统一偏移，游戏位置220,112；登录/选角默认位置保持不变。
+- Client 全量77步编译链接通过。运行时发现 NPCWnd.cpp:247 也依赖 m_xInterImgEx；移除旧素材加载会使按钮初始化读空指针，预览进程已退出。因此恢复旧加载，待迁移 NPC 带编辑框对话框后再移除，不能宣称 HUD 已正常启动。
+- 本阶段尚无有效新页面截图。

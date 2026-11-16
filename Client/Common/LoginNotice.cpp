@@ -3,6 +3,7 @@
 
 CLoginNotice::CLoginNotice() : m_image(NULL), m_active(FALSE), m_type(MSG_BTN_OK), m_pressed(0) {
     m_text[0] = 0;
+    m_offset.x = m_offset.y = 0;
 }
 
 BOOL CLoginNotice::CreateWnd(CWHWilImageData* image, BOOL, INT, INT, INT, INT) {
@@ -26,6 +27,7 @@ BOOL CLoginNotice::HideMessageBox() {
 
 int CLoginNotice::Hit(POINT point) const {
     if (!m_active) return CLICK_NONE;
+    point.x -= m_offset.x; point.y -= m_offset.y;
     if ((m_type & 127) == MSG_BTN_YESNO) {
         RECT yes = {181,298,261,330}, no = {374,298,454,330};
         if (PtInRect(&yes, point)) return CLICK_YES;
@@ -48,7 +50,7 @@ HRESULT CLoginNotice::OnButtonUp(POINT point) {
 void CLoginNotice::Draw(int frame, int x, int y) {
     if (!m_image || !m_image->NewSetIndex(frame)) return;
     const NEWWILIMAGEINFO& info = *m_image->m_lpstNewCurrWilImageInfo;
-    g_xMainWnd.DrawWithImageForComp(x,y,info.shWidth,info.shHeight,(WORD*)m_image->m_pbCurrImage);
+    g_xMainWnd.DrawWithImageForComp(x+m_offset.x,y+m_offset.y,info.shWidth,info.shHeight,(WORD*)m_image->m_pbCurrImage);
 }
 
 BOOL CLoginNotice::RenderMessageBox(INT) {
@@ -61,6 +63,7 @@ BOOL CLoginNotice::RenderMessageBox(INT) {
     // Match native_text.cpp dialog layout: measured wrapping and vertical centering.
     const bool confirmation = (m_type & 127) == MSG_BTN_YESNO;
     RECT rect = confirmation ? RECT{183,194,461,269} : RECT{163,194,471,289};
+    OffsetRect(&rect,m_offset.x,m_offset.y);
     auto* surface = g_xMainWnd.GetBackBuffer();
     HDC dc;
     if (FAILED(surface->GetDC(&dc))) return FALSE;

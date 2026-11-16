@@ -145,6 +145,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_pxInterImg->NewLoad(".\\Data\\gameinter.wil");
     m_portraits.Destroy();
     m_portraits.NewLoad(".\\Data\\ProgUse.wil");
+	// Still required by CNPCWnd input dialogs until their GameInter migration.
 	m_xInterImgEx.NewLoad(".\\Data\\interfacec2.wil");
 	//------------------------------------------------------------------------------------------------------------
 
@@ -170,9 +171,9 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xStoreWnd.CreateStoreWnd(_WND_ID_STORE, m_pxInterImg, _WNDIMGIDX_STORE, 0, 0, 0, 0, TRUE);
 	m_xExchangeWnd.CreateExchangeWnd(_WND_ID_EXCHANGE, m_pxInterImg, _WNDIMGIDX_EXCHANGE, 0, 0, 0, 0, TRUE);
 	m_xGuildMasterWnd.CreateGuildMasterWnd(_WND_ID_GUILDMASTER, m_pxInterImg, _WNDIMGIDX_GUILDMASTER, 0, 0, 0, 0, TRUE);
-	m_xGuildWnd.CreateGuildWnd(_WND_ID_GUILD, &m_xInterImgEx, _WNDIMGIDX_GUILD, 0, 0, 540, 442, TRUE);
+	m_xGuildWnd.CreateGuildWnd(_WND_ID_GUILD, m_pxInterImg, 1300, 102, 22, 594, 444, TRUE);
 	m_xGroupWnd.CreateGroupWnd(_WND_ID_GROUP, m_pxInterImg, _WNDIMGIDX_GROUP, 0, 0, 0, 0, TRUE);
-	m_xGroupPopWnd.CreateGroupPopWnd(_WND_ID_GROUPPOP, &m_xInterImgEx, _WNDIMGIDX_GROUPPOP, 0, 0, 260, 114, TRUE);
+	m_xGroupPopWnd.CreateGroupPopWnd(_WND_ID_GROUPPOP, m_pxInterImg, 1240, 220, 112, 360, 268, TRUE);
 	m_xChatPopWnd.CreateChatPopWnd(_WND_ID_CHATPOP, m_pxInterImg, _WNDIMGIDX_CHATPOP, 0, 0, 0, 0, TRUE);
 
 	m_xOptionWnd.CreateOptionWnd(_WND_ID_OPTION, m_pxInterImg, _WNDIMGIDX_OPTION, 0, 0, 0, 0, TRUE);
@@ -219,7 +220,8 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 
 	m_xScrlBar.CreateScrlBar(m_pxInterImg, 68, _MAX_CHATLINE, 12, 84, 12);
 
-	m_xMsgBox.Load(&m_xInterImgEx);	// ÓÂÆø
+	m_xMsgBox.CreateWnd(m_pxInterImg,FALSE,0,0,0,0);
+    m_xMsgBox.SetOrigin(220,112);	// ÓÂÆø
 }
 
 
@@ -1514,7 +1516,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 						hLib = LoadLibrary("Ats.dll");						// Load Dll
 						LoadString(hLib,m_nIdxMsgBox,szMsg, MAX_PATH);	
 						FreeLibrary(hLib);
-						m_xMsgBox.ShowMessageBox(szMsg, 2);					// YES/No ?
+						m_xMsgBox.ShowMessageBox(szMsg, MSG_BTN_YESNO, 1240);					// YES/No ?
 					}
 					break;
 				case _BTN_ID_MAGIC:

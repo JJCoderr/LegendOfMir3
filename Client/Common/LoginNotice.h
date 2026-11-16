@@ -7,6 +7,7 @@ public:
     BOOL CreateWnd(CWHWilImageData* image, BOOL, INT, INT, INT, INT);
     BOOL ShowMessageBox(const CHAR* message, INT type, INT ignoredFrame);
     BOOL HideMessageBox();
+    void SetOrigin(int x, int y) { m_offset.x = x-140; m_offset.y = y-110; }
     BOOL IsActive() const { return m_active; }
     HRESULT OnButtonDown(POINT point);
     HRESULT OnButtonUp(POINT point);
@@ -18,5 +19,6 @@ private:
     CWHWilImageData* m_image;
     BOOL m_active;
     int m_type, m_pressed;
+    POINT m_offset;
     char m_text[512];
 };
