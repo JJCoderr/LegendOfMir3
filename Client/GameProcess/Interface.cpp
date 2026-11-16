@@ -1901,8 +1901,8 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
     if (m_xSkillWnd.m_skillScrollCaptured) { m_xSkillWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xInventoryWnd.m_scrollCaptured) { m_xInventoryWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xOptionWnd.m_audioDrag>=0) { m_xOptionWnd.OnMouseMove(ptMouse); return TRUE; }
-    if (m_xGroupWnd.PressedButton()>=0) { if(m_xGroupWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_GROUP); return TRUE; }
-    if (m_xGuildWnd.m_pressed>=0) { if(m_xGuildWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_GUILD); return TRUE; }
+    if (m_xGroupWnd.PressedButton()>=0) return TRUE;
+    if (m_xGuildWnd.m_pressed>=0) return TRUE;
     if (m_xGuildWnd.m_scrollCaptured) { m_xGuildWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
 	MoveTopWindow(ptMouse);

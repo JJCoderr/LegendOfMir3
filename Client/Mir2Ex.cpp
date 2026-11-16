@@ -1216,7 +1216,7 @@ public:
                 CGameWnd* panel=i==0?(CGameWnd*)&ui.m_xInventoryWnd:i==1?(CGameWnd*)&ui.m_xStatusWnd:(CGameWnd*)&ui.m_xQuestWnd;
                 POINT point={panel->m_rcWnd.left+offsets[i].x,panel->m_rcWnd.top+offsets[i].y},anchor={};
                 hits &= ui.ButtonHintAt(point,anchor)==(i==2?2200:1052);
-                ui.OnLButtonDown(point); pressed &= ui.ButtonHintAt(point,anchor)==0;
+                ui.OnLButtonDown(point); ui.OnMouseMove(point); pressed &= ui.ButtonHintAt(point,anchor)==0;
                 ui.OnLButtonUp(POINT{450,450}); outside &= panel->m_bActive && ui.ButtonHintAt(point,anchor)==(i==2?2200:1052);
                 const POINT original=anchor; OffsetRect(&panel->m_rcWnd,10,10); point.x+=10;point.y+=10;
                 moved &= ui.ButtonHintAt(point,anchor)==(i==2?2200:1052) && anchor.x==original.x+10 && anchor.y==original.y+10;
@@ -1248,7 +1248,7 @@ public:
             for(int i=0;i<count;++i) {
                 POINT point={panel->m_rcWnd.left+buttons[i][0],panel->m_rcWnd.top+buttons[i][1]};
                 hints &= ui.ButtonHintAt(point,anchor)==buttons[i][2];
-                ui.OnLButtonDown(point); pressed &= ui.ButtonHintAt(point,anchor)==0;
+                ui.OnLButtonDown(point); ui.OnMouseMove(point); pressed &= ui.ButtonHintAt(point,anchor)==0;
                 ui.OnLButtonUp(POINT{795,460}); released &= panel->m_bActive && ui.ButtonHintAt(point,anchor)==buttons[i][2];
             }
             const int chosen=mode==0 || mode==2?1:mode==1?4:0;
