@@ -1683,6 +1683,24 @@ public:
             if(FILE* report=fopen("portrait-version-check.txt","wb")) {fprintf(report,"acknowledged=%d zero_ignored=%d wide=%d isolated=%d zero_saved=%d\n",acknowledged,zeroIgnored,wide,isolated,zeroSaved);fclose(report);}
         }
 
+        if(groupPanel==115) {
+            auto& picker=g_xGameProc.m_xInterface.m_xPortraitWnd;CreateDirectoryA("./preview-dbcs-photo",nullptr);
+            char name[32]={};WideCharToMultiByte(CP_ACP,0,L"\x4e57",-1,name,sizeof(name),nullptr,nullptr);
+            const std::string filename=std::string(name)+".jpg",path="./preview-dbcs-photo/"+filename;
+            CopyFileA("./portrait-preview/portrait01.jpg",path.c_str(),FALSE);
+            picker.directory="./preview-dbcs-photo";g_xGameProc.m_xInterface.WindowActivate(_WND_ID_PORTRAIT);
+            picker.selected=-1;for(int i=0;i<int(picker.names.size());++i) if(picker.names[i]==filename) picker.selected=i;
+            const bool enumerated=picker.selected>=0;picker.lastUpload=0;picker.requestPending=false;picker.Request(1,1000);
+            const bool uploaded=picker.requestPending && !picker.requested.empty();
+            picker.SetCacheContext(name,name,"./preview-dbcs-photo","./preview-dbcs-photo/UserPic.ini");picker.SendRequest();
+            const bool restored=picker.SetCacheContext(name,name,"./preview-dbcs-photo","./preview-dbcs-photo/UserPic.ini") && picker.HasOwnPhoto();
+            const bool pathRejected=!picker.SetCacheContext("Bad/Server",name,"./preview-dbcs-photo") && !picker.SaveOwnCache(picker.requested);
+            picker.SetCacheContext(name,name,"./preview-dbcs-photo","./preview-dbcs-photo/UserPic.ini");
+            if(enumerated) {const POINT row={30,30+24*picker.selected};picker.Pointer(0,row);picker.Pointer(2,row);}
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath="portrait-chinese-filename.bmp";
+            if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1880,6 +1898,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=portrait-chinese-filename")==0 ? 115 :
         strcmp(lpCmdLine,"--preview=portrait-upload-confirmed")==0 ? 114 :
         strcmp(lpCmdLine,"--preview=own-cache-restored")==0 ? 112 :
         strcmp(lpCmdLine,"--preview=own-cache-default")==0 ? 113 :

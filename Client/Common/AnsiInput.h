@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <cstring>
 
 inline std::string LimitAnsiEdit(const std::string& previous,const std::string& next,size_t limit)
 {
@@ -16,4 +17,15 @@ inline std::string LimitAnsiEdit(const std::string& previous,const std::string& 
     size_t inserted=min(next.size()-retained,available);
     while (inserted && !boundary(next,prefix+inserted)) --inserted;
     return next.substr(0,prefix)+next.substr(prefix,inserted)+next.substr(next.size()-suffix);
+}
+
+inline bool IsAnsiFileComponent(const std::string& name,UINT codePage=CP_ACP)
+{
+    if(name.empty()) return false;
+    for(size_t i=0;i<name.size();++i) {
+        const BYTE c=BYTE(name[i]);
+        if(IsDBCSLeadByteEx(codePage,c)) {if(++i==name.size() || !name[i]) return false;continue;}
+        if(c<32 || std::strchr("\\/:*?\"<>|",c)) return false;
+    }
+    return true;
 }

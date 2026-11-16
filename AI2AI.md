@@ -937,3 +937,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - PortraitWnd缓存上下文增加独立版本文件路径，SaveOwnVersion以原版有符号十进制文本保存32位值；自身1403有效JPEG缓存保存成功后记录MAKELONG(wParam,wTag)，零版本清除自身缓存并记录0。
 - Client清理83步、全目标111步构建通过。portrait-upload-confirmed五项全1，经真实编码消息入口验证确认、零忽略、高位32位值、角色隔离和0记录；本地缓存七项、自身照片六项回归通过。测试INI位于preview-photo-version/preview-photo-cache独立目录。
 - 已检查out/portrait-upload-confirmed.png，三条成功提示来自测试序列中三次非零模拟确认，不是实际服务器上传结果。缓存版本现在已记录，但加载时与服务器版本比较、失败节流重查、远程玩家版本缓存及真实登录联调仍未完成。
+
+### 中文头像文件与缓存身份的DBCS路径修正
+- 发现PortraitWnd原字节级find_first_of会把GBK汉字尾字节0x5C当作反斜杠，导致合法中文JPG无法读取，中文服务器/角色缓存上下文失效。新增Common/AnsiInput.h的IsAnsiFileComponent，按CP_ACP双字节边界检查单字节非法路径字符，替换两处校验。
+- 全目标增量构建通过。在实际GetACP=936环境使用U+4E57（GBK 81 5C）命名JPG、服务器及角色，真实文件列出、上传读取、FAC保存恢复和真实分隔符拒绝四项全1。上传回环两项、缓存七项回归通过。测试仅写preview-dbcs-photo目录。
+- 已检查out/portrait-chinese-filename.png，中文文件成功选中并显示JPEG预览及自身照片。此修正处理中文资源/身份路径兼容，不代表头像版本比较、远程缓存或登录联调已完成。

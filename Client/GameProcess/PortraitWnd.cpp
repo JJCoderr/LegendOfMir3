@@ -3,6 +3,7 @@
 #include "Common/LoginMessages.h"
 #include "Common/PortraitJpeg.h"
 #include "Common/PortraitCache.h"
+#include "Common/AnsiInput.h"
 
 CPortraitWnd::~CPortraitWnd() { Close();ApplyOwnPhoto(nullptr,0); }
 void CPortraitWnd::Close()
@@ -21,7 +22,7 @@ void CPortraitWnd::Open()
 int CPortraitWnd::ReadSelected(std::vector<BYTE>& bytes,IPicture** picture)
 {
     if (selected<0 || selected>=int(names.size())) return 4716;
-    const auto& name=names[selected]; if (name.find_first_of("/\\:")!=name.npos) return 4716;
+    const auto& name=names[selected]; if (!IsAnsiFileComponent(name)) return 4716;
     FILE* file=fopen((directory+"/"+name).c_str(),"rb"); if (!file) return 4716;
     fseek(file,0,SEEK_END); const long size=ftell(file); rewind(file);
     if (size>4095) { fclose(file); return 4714; }
@@ -171,7 +172,7 @@ bool CPortraitWnd::ShowOwnPhoto()
 bool CPortraitWnd::SetCacheContext(const std::string& server,const std::string& actor,const std::string& root,const std::string& versions)
 {
     ApplyOwnPhoto(nullptr,0);ownCachePath.clear();ownCacheKey.clear();versionPath.clear();
-    if(server.empty() || actor.empty() || server.find_first_of("\\/:*?\"<>|")!=std::string::npos || actor.find_first_of("\\/:*?\"<>|")!=std::string::npos) return false;
+    if(!IsAnsiFileComponent(server) || !IsAnsiFileComponent(actor)) return false;
     ownCacheKey=server+"_"+actor;versionPath=versions;
     ownCachePath=root+"/"+ownCacheKey+".fac";
     FILE* file=fopen(ownCachePath.c_str(),"rb");if(!file) return false;
