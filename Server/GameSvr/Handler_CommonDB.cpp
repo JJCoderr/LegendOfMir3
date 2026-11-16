@@ -57,7 +57,7 @@ void InitStdItemEtcInfo()
 	
 	pRec= g_pConnCommon->CreateRecordset();
 
-	sprintf( szQuery, "SELECT COUNT(*) AS FLD_COUNT FROM TBL_STDITEM_ETC");
+	sprintf( szQuery, "SELECT COALESCE(MAX(FLD_INDEX), -1) + 1 AS FLD_COUNT FROM TBL_STDITEM_ETC");
 
 	if (pRec->Execute( szQuery ))
 	{
@@ -77,9 +77,10 @@ void InitStdItemEtcInfo()
 	
 	if (pRec->Execute( szQuery ))
 	{
-		for (int i = 0; i < g_nStdItemEtc; i++)
+		while (pRec->Fetch())
 		{
-			if (pRec->Fetch())								 
+			const int i = atoi(pRec->Get("FLD_INDEX"));
+			if (i >= 0 && i < g_nStdItemEtc)
 			{
 				strcpy(g_pStdItemEtc[i].szName, pRec->Get( "FLD_NAME" ) );
 
@@ -104,7 +105,7 @@ void InitStdItemSpecial()
 	char szQuery[1024];
 
 	CRecordset *pRec = g_pConnCommon->CreateRecordset();
-	sprintf( szQuery, "SELECT COUNT(*) AS FLD_COUNT FROM TBL_STDITEM");
+	sprintf( szQuery, "SELECT COALESCE(MAX(FLD_INDEX), -1) + 1 AS FLD_COUNT FROM TBL_STDITEM");
 
 	if (pRec->Execute( szQuery ))
 	{
@@ -124,9 +125,10 @@ void InitStdItemSpecial()
 	
 	if (pRec->Execute( szQuery ))
 	{
-		for (int i = 0; i < g_nStdItemSpecial; i++)
+		while (pRec->Fetch())
 		{
-			if (pRec->Fetch())								 
+			const int i = atoi(pRec->Get("FLD_INDEX"));
+			if (i >= 0 && i < g_nStdItemSpecial)
 			{
 				strcpy(g_pStdItemSpecial[i].szName, pRec->Get( "FLD_NAME" ) );
 

@@ -23,6 +23,18 @@ class MinimalSchemaTests(unittest.TestCase):
                 with self.subTest(query=query):
                     self.assertNotIn("%", query)
                     db.execute(query).fetchall()
+            self.assertEqual(db.execute(
+                "SELECT FLD_INDEX, FLD_STDMODE, FLD_DURAMAX FROM TBL_STDITEM ORDER BY FLD_INDEX"
+            ).fetchall(), [(7, 5, 4000), (33, 10, 5000), (34, 11, 5000)])
+            self.assertEqual(db.execute(
+                "SELECT FLD_INDEX, FLD_VAL1 FROM TBL_STDITEM_ETC"
+            ).fetchall(), [(0, 8000)])
+            # Reapplying the schema must preserve customized definitions.
+            db.execute("UPDATE TBL_STDITEM SET FLD_NAME = 'Custom sword' WHERE FLD_INDEX = 7")
+            db.executescript(schema)
+            self.assertEqual(db.execute(
+                "SELECT FLD_NAME FROM TBL_STDITEM WHERE FLD_INDEX = 7"
+            ).fetchall(), [('Custom sword',)])
             self.assertEqual(db.execute("PRAGMA integrity_check").fetchone()[0], "ok")
             self.assertEqual(db.execute("SELECT COUNT(*) FROM TBL_MAPINFO").fetchone()[0], 1)
 
