@@ -127,3 +127,10 @@ typedef struct tag_TGATESENDBUFF
 void InsertLogMsg(UINT nID);
 void InsertLogMsg(LPTSTR lpszMsg);
 void InsertLogMsgParam(UINT nID, void *pParam, BYTE btFlags = LOGPARAM_STR);
+// **************************************************************************************
+
+// 日志：工作线程调用时只把文本投递给主线程，由主线程更新日志列表（避免跨线程卡死）
+void LogText(LPCTSTR pszMsg);
+
+// 创建主窗口的线程 ID（只有这个线程可以碰界面）
+extern DWORD g_dwMainThreadId;

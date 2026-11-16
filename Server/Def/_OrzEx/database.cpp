@@ -83,6 +83,10 @@ CConnection * CDatabase::CreateConnection( char *pDSN, char *pID, char *pPasswor
 
 void CDatabase::DestroyConnection( CConnection *pConn )
 {
+	// CreateConnection 失败时这里就是 NULL，别去解引用（否则进程直接 0xC0000005 退出）
+	if ( pConn == NULL )
+		return;
+
 	pConn->Uninit();
 
 	delete pConn;
@@ -208,6 +212,10 @@ CRecordset * CConnection::CreateRecordset()
 
 void CConnection::DestroyRecordset( CRecordset *pRec )
 {
+	// CreateRecordset 失败时返回 NULL，这里要能安全跳过
+	if ( pRec == NULL )
+		return;
+
 	pRec->Uninit();
 	delete pRec;
 }

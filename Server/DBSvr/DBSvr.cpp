@@ -33,6 +33,9 @@ HWND			g_hLogMsgWnd = NULL;
 HWND			g_hToolBar = NULL;
 HWND			g_hStatusBar = NULL;
 
+// 创建主窗口的线程 ID：界面（ListView / 状态栏）只能在它上面动
+DWORD			g_dwMainThreadId = 0;
+
 static WSADATA	g_wsd;
 
 TBBUTTON tbButtons[] = 
@@ -46,6 +49,8 @@ TBBUTTON tbButtons[] =
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     MSG msg;
+
+	g_dwMainThreadId = GetCurrentThreadId();
 
 //	if (CheckAvailableIOCP())
 //	{
@@ -66,6 +71,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		TCHAR szMsg[1024];
 
 		LoadString(hInstance, IDS_NOTWINNT, szMsg, sizeof(szMsg));
+
 		MessageBox(NULL, szMsg, _LOGINGATE_SERVER_TITLE, MB_OK|MB_ICONINFORMATION);
 		
 		return -1;
@@ -207,7 +213,14 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 	jRegGetKey(_DB_SERVER_REGISTRY, _TEXT("Device"), (LPBYTE)wszDatabase);
 	WideCharToMultiByte(CP_ACP, 0, wszDatabase, -1, szDatabase, sizeof(szDatabase), NULL, NULL);
 
-	GetDBManager()->Init( InsertLogMsg, szDatabase, "sa", "prg" );
+	// 数据库连不上时只记日志，不能顺手崩掉：
+	// 后面再拿空连接去查表 / 释放，就是"点取消（关配置框）之后程序自己退出"的那种崩溃。
+	if ( !GetDBManager()->Init( InsertLogMsg, szDatabase, "sa", "prg" ) )
+	{
+		InsertLogMsg( _T("数据库连接失败：请用 Configuration 检查数据库设置（ODBC DSN 名称 / 账号 / 密码）。") );
+
+		return TRUE;
+	}
 
 	// 读取表
 	CConnection *pConn = GetDBManager()->m_dbMain.CreateConnection( "Mir2_Common", "sa", "prg" );
@@ -215,16 +228,29 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 	{
 		if ( !GetTblStartPoint()->Init( pConn ) )
 			InsertLogMsg( _T("failed to read TBL_STARTPOINT table\n") );
+
+		GetDBManager()->m_dbMain.DestroyConnection( pConn );
 	}
-	GetDBManager()->m_dbMain.DestroyConnection( pConn );
+	else
+		InsertLogMsg( _T("读取 TBL_STARTPOINT 失败：连不上 Mir2_Common 数据库。") );
 
 	return TRUE;
 }
 
 // **************************************************************************************
 //
-//			
+//			日志输出
 //
+// **************************************************************************************
+//
+// 日志列表（ListView）只有主线程能碰。
+//
+// 以前各个工作线程（ProcessDBMsg / ProcessGateMsg / AcceptThread / IOCP worker）
+// 都是直接调 ListView_* 跨线程改列表的：主线程一忙（比如停在关闭确认框里、
+// 或者在等 ODBC 返回），工作线程就跟着阻塞在 SendMessage 上，两边一起卡住。
+//
+// 现在改成：工作线程只把文本 Post 给主线程，立刻返回；主线程在窗口过程
+// (_WM_LOGMSG) 里统一写列表。谁也不会互相等。
 // **************************************************************************************
 
 int AddNewLogMsg()
@@ -257,30 +283,63 @@ int AddNewLogMsg()
 	return nCount;
 }
 
+// 主线程专用：把一条文本追加到日志列表
+static void AppendLogText(LPCTSTR pszMsg)
+{
+	if (g_hLogMsgWnd == NULL || pszMsg == NULL)
+		return;
+
+	int	nCount	= AddNewLogMsg();
+	int	nLen	= lstrlen(pszMsg);
+
+	if (nLen > 256)
+		nLen = 256;
+
+	TCHAR	szText[260];
+
+	lstrcpyn(szText, pszMsg, nLen + 1);
+
+	ListView_SetItemText(g_hLogMsgWnd, nCount, 2, szText);
+	ListView_Scroll(g_hLogMsgWnd, 0, 8);
+}
+
+// 任意线程：主线程直接写列表，其它线程投递给主线程
+void LogText(LPCTSTR pszMsg)
+{
+	if (pszMsg == NULL)
+		return;
+
+	if (GetCurrentThreadId() == g_dwMainThreadId)
+	{
+		AppendLogText(pszMsg);
+		return;
+	}
+
+	size_t	nBytes	= (lstrlen(pszMsg) + 1) * sizeof(TCHAR);
+	LPTSTR	pszCopy	= (LPTSTR)LocalAlloc(LPTR, nBytes);
+
+	if (pszCopy == NULL)
+		return;
+
+	memcpy(pszCopy, pszMsg, nBytes);
+
+	if (!PostMessage(g_hMainWnd, _WM_LOGMSG, (WPARAM)0, (LPARAM)pszCopy))
+		LocalFree(pszCopy);
+}
+
 void InsertLogMsg(UINT nID)
 {
 	TCHAR	szText[256];
 
-	int nCount = AddNewLogMsg();
+	if (LoadString(g_hInst, nID, szText, sizeof(szText) / sizeof(TCHAR)) == 0)
+		return;
 
-	LoadString(g_hInst, nID, szText, sizeof(szText)/sizeof(TCHAR));
-
-	if (lstrlen(szText) <= 256)
-	{
-		ListView_SetItemText(g_hLogMsgWnd, nCount, 2, szText);
-		ListView_Scroll(g_hLogMsgWnd, 0, 8);
-	}
+	LogText(szText);
 }
 
 void InsertLogMsg(LPTSTR lpszMsg)
 {
-	int nCount = AddNewLogMsg();
-
-	if (lstrlen(lpszMsg) <= 256)
-	{
-		ListView_SetItemText(g_hLogMsgWnd, nCount, 2, lpszMsg);
-		ListView_Scroll(g_hLogMsgWnd, 0, 8);
-	}
+	LogText(lpszMsg);
 }
 
 void InsertLogMsgParam(UINT nID, void *pParam, BYTE btFlags)
@@ -288,10 +347,9 @@ void InsertLogMsgParam(UINT nID, void *pParam, BYTE btFlags)
 	TCHAR	szText[128];
 	TCHAR	szMsg[256];
 
-	int nCount = AddNewLogMsg();
+	if (LoadString(g_hInst, nID, szText, sizeof(szText) / sizeof(TCHAR)) == 0)
+		return;
 
-	LoadString(g_hInst, nID, szText, sizeof(szText)/sizeof(TCHAR));
-	
 	switch (btFlags)
 	{
 		case LOGPARAM_STR:
@@ -300,11 +358,9 @@ void InsertLogMsgParam(UINT nID, void *pParam, BYTE btFlags)
 		case LOGPARAM_INT:
 			_stprintf(szMsg, szText, *(int *)pParam);
 			break;
+		default:
+			return;
 	}
 
-	if (lstrlen(szMsg) <= 256)
-	{
-		ListView_SetItemText(g_hLogMsgWnd, nCount, 2, szMsg);
-		ListView_Scroll(g_hLogMsgWnd, 0, 8);
-	}
+	LogText(szMsg);
 }

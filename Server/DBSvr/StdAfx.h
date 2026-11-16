@@ -63,6 +63,9 @@
 										    
 #define _IDM_GATECOMMSOCK_MSG			WM_USER + 1000
 
+#define _WM_LOGMSG						WM_USER + 1004	// 工作线程投递给主线程的日志消息
+#define _WM_SESSIONCOUNT				WM_USER + 1005	// 工作线程投递的连接数
+
 #define _IDW_TOOLBAR					_IDM_GATECOMMSOCK_MSG + 2
 #define _IDW_STATUSBAR					_IDM_GATECOMMSOCK_MSG + 3
 

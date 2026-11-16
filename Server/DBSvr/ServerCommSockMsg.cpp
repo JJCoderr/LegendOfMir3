@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+extern HWND					g_hMainWnd;
 extern HWND					g_hStatusBar;
 extern HANDLE				g_hIOCP;
 extern SOCKET				g_ssock;
@@ -15,13 +16,12 @@ void UpdateStatusBarSession(BOOL fGrow)
 {
 	static long	nNumOfCurrSession = 0;
 
-	TCHAR	szText[20];
-
 	(fGrow ? InterlockedIncrement(&nNumOfCurrSession) : InterlockedDecrement(&nNumOfCurrSession));
-	
-	wsprintf(szText, _TEXT("%d Sessions"), nNumOfCurrSession);
 
-	SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(3, 0), (LPARAM)szText);
+	// 这里在工作线程（Accept / IOCP worker）里跑：
+	// 以前直接 SendMessage 状态栏，主线程停在关闭确认框或某个阻塞调用里时，这条线程就跟着卡住。
+	// 改成把连接数投递给主线程，由主线程刷状态栏。
+	PostMessage(g_hMainWnd, _WM_SESSIONCOUNT, (WPARAM)nNumOfCurrSession, 0);
 }
 
 DWORD WINAPI AcceptThread(LPVOID lpParameter)

@@ -10,6 +10,11 @@ static CDBManager s_dbManager;
 
 CDBManager::CDBManager()
 {
+	// 成员必须初始化：Init() 失败时后面还会用到它们，
+	// m_pfnLog 是函数指针，没初始化就调用等于跳到一个随机地址。
+	m_pConn		= NULL;
+	m_pfnLog	= NULL;
+
 	m_dbMain.SetDiagRec( __cbDBMsg );
 
 	m_dbMain.Init();
@@ -38,13 +43,20 @@ CRecordset * CDBManager::CreateRecordset()
 {
 	Lock();
 	
+	if ( m_pConn == NULL )		// 数据库没连上
+	{
+		Unlock();
+		return NULL;
+	}
+
 	return m_pConn->CreateRecordset();
 }
 
 
 void CDBManager::DestroyRecordset( CRecordset *pRec )
 {
-	m_pConn->DestroyRecordset( pRec );
+	if ( m_pConn && pRec )
+		m_pConn->DestroyRecordset( pRec );
 
 	Unlock();
 }
@@ -54,6 +66,9 @@ void CDBManager::__cbDBMsg( char *pState, int nNativeCode, char *pDesc )
 {
 	static TCHAR szState[256], szDesc[2048];
 	static TCHAR szMsg[2048];
+
+	if ( GetDBManager()->m_pfnLog == NULL )		// Init() 之前就可能收到诊断回调
+		return;
 
 	MultiByteToWideChar( CP_ACP, 0, pState, -1, szState, sizeof( szState ) / sizeof( TCHAR ) );
 	MultiByteToWideChar( CP_ACP, 0, pDesc, -1, szDesc, sizeof( szDesc ) / sizeof( TCHAR ) );

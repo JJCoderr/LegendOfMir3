@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 extern CWHList<CGateInfo*>			g_xGateInfoList;
+extern BOOL							g_fTerminated;
 
 UINT WINAPI ProcessGateMsg(LPVOID lpParameter)
 {
@@ -13,6 +14,10 @@ UINT WINAPI ProcessGateMsg(LPVOID lpParameter)
 				
 	while (TRUE)
 	{
+		// 停服务 / 关程序时要能跳出这个循环，否则主线程永远等不到线程结束
+		if (g_fTerminated)
+			return 0L;
+
 		if (g_xGateInfoList.GetCount())
 		{
 			pListNode = g_xGateInfoList.GetHead();
