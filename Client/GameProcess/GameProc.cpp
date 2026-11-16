@@ -2672,16 +2672,9 @@ LRESULT CGameProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 		{
 			if ((HWND)lParam == g_xChatEditBox.GetSafehWnd())
 			{
-				SetBkColor((HDC)wParam, RGB(0, 125, 125));
-				SetTextColor((HDC)wParam, RGB(255, 255, 255));
-
-				UnrealizeObject(m_hBrush);
-				
-				POINT pt;
-
-				SetBrushOrgEx((HDC)wParam, 0, 0, &pt);
-
-				return (LRESULT)m_hBrush;
+                SetBkColor((HDC)wParam,RGB(0,0,0));
+                SetTextColor((HDC)wParam,RGB(255,255,255));
+                return (LRESULT)GetStockObject(BLACK_BRUSH);
 			}
 
 			break;

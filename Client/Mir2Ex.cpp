@@ -153,6 +153,32 @@ public:
                 file.bfSize=file.bfOffBits+(DWORD)pixels.size();
                 info.biSize=sizeof(info); info.biWidth=surface.dwWidth; info.biHeight=surface.dwHeight;
                 info.biPlanes=1; info.biBitCount=24; info.biSizeImage=(DWORD)pixels.size();
+                // Capture the real native edit control, then map its display pixels to the 800x600 review image.
+                const HWND edit = g_xChatEditBox.GetSafehWnd();
+                if (IsWindowVisible(edit)) {
+                    RECT editRect; GetWindowRect(edit,&editRect);
+                    const RECT& display = g_xMainWnd.m_rcWindow;
+                    const int width = editRect.right-editRect.left, height = editRect.bottom-editRect.top;
+                    HDC target = CreateCompatibleDC(NULL), source = CreateCompatibleDC(NULL);
+                    BITMAPINFO bitmapInfo = {}; bitmapInfo.bmiHeader=info;
+                    void* bits = NULL;
+                    HBITMAP combined = CreateDIBSection(target,&bitmapInfo,DIB_RGB_COLORS,&bits,NULL,0);
+                    HGDIOBJ oldTarget = SelectObject(target,combined);
+                    memcpy(bits,pixels.data(),pixels.size());
+                    HBITMAP control = CreateCompatibleBitmap(target,width,height);
+                    HGDIOBJ oldSource = SelectObject(source,control);
+                    SendMessage(edit,WM_PRINT,(WPARAM)source,PRF_CLIENT|PRF_ERASEBKGND);
+                    const int x=MulDiv(editRect.left-display.left,800,display.right-display.left);
+                    const int y=MulDiv(editRect.top-display.top,600,display.bottom-display.top);
+                    SetStretchBltMode(target,COLORONCOLOR);
+                    StretchBlt(target,x,y,MulDiv(width,800,display.right-display.left),
+                        MulDiv(height,600,display.bottom-display.top),source,0,0,width,height,SRCCOPY);
+                    GdiFlush();
+                    memcpy(pixels.data(),bits,pixels.size());
+                    SelectObject(source,oldSource); SelectObject(target,oldTarget);
+                    DeleteObject(control); DeleteObject(combined);
+                    DeleteDC(source); DeleteDC(target);
+                }
                 if (FILE* output=fopen(capturePath,"wb")) {
                     fwrite(&file,sizeof(file),1,output); fwrite(&info,sizeof(info),1,output);
                     fwrite(pixels.data(),pixels.size(),1,output); fclose(output);

@@ -495,3 +495,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - ChatEdit创建和缩放重建字体均读取CmList1074，逻辑12px/400字重，默认EM_LIMITTEXT由95改为90，与参考ChatInputSpec一致。
 - 三种成员对话框运行验证均读取到PreviewMember、limit=90、cancel_restored=1；当前150%显示缩放下实际框464x23，字体高度-18，对应逻辑309x15与12px。
 - 检查通过实际HWND/WM_GETFONT/GetWindowText完成，取消后确认框关闭、编辑框隐藏且内容清空；未发送创建/邀请/移除请求。构建通过。输入框透明背景和完整窗口截图仍需进一步核对。
+
+### 预览包含原生编辑框
+- 预览截图在DirectDraw后台图像上，按实际窗口位置缩放合入WM_PRINT返回的真实原生EDIT绘制，不再遗漏独立编辑窗口；截图不含光标闪烁。
+- 完整截图暴露旧WM_CTLCOLOREDIT画刷覆盖底图，改为黑底白字、BLACK_BRUSH，消除旧背景色；与Godot透明背景的细节一致性仍待后续核对。
+- 构建通过，已检查 out/group-create-edit.png，原生输入框与底图槽位对齐。
