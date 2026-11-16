@@ -1,774 +1,178 @@
-/******************************************************************************************************************
-
-	模块名:
-
-	作者:
-	编写日期:
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
-
 #include "StdAfx.h"
+#include "Common/LegacyPanel.h"
+#include "Common/LoginMessages.h"
+#include <cstdlib>
 
-#define MAX_NPCSTR_HEIGHT		129		
-#define MAX_SHOW_LINE			6		
-#define POS_DRAWSTART_Y			40		
-#define LINE_GAP				5		
-
-#define BUILD_GUILD				"@@BUILDGUILDNOW"			// 行会建立
-#define GUILD_WAR				"@@GUILDWAR"				// 行会战申请
-#define WITHDRAWAL_CASTLE		"@@WITHDRAWAL"				// 取出钱款.
-#define RECEIPT_CASTLE			"@@RECEIPTS"				// 寄存金钱.
-
-#define SCRIPT_GENTEXT		1
-#define SCRIPT_BUTTON		2
-#define SCRIPT_RETURN		3
-#define SCRIPT_TAG			4
-
-COLORREF ScriptTxtColor[] = {	RGB(0, 0, 0),		// 0 : Black
-								RGB(255, 0, 0),		// 1 : Red
-								RGB(0, 128, 0),		// 2 : Green
-								RGB(128, 128, 0), 	// 3 : Olive
-								RGB(128, 128, 128), // 4 : Gray
-								RGB(128, 0, 0),		// 5 : Marron
-								RGB(0, 128, 128),	// 6 : Teal
-								RGB(0, 0, 128),		// 7 : Navy
-								RGB(192, 192, 192),	// 8 : Silver
-								RGB(128, 0, 128),	// 9 : Purple
-								RGB(0, 255, 0),		// 10 : Lime
-								RGB(0, 0, 255),		// 11 : Blue
-								RGB(255, 255, 255),	// 12 : White
-								RGB(255, 0, 255),	// 13 : Fuchsia
-								RGB(0, 255, 255),	// 14 : Aqua
-								RGB(255, 255, 0),	// 15 : Yellow
-								RGB(1, 1, 1),		// 16 : Default
-							};
-
-class CScriptLine
+void CNPCWnd::CreateNPCChatWnd(INT id,CWHWilImageData* image,INT,INT,INT,INT,INT,BOOL)
 {
-public:
-	BYTE	m_btScriptType;
-	char	*m_pszScriptText;
-	char	*m_pszScriptCommand;
-	RECT	m_Rect;
-	bool	m_fIsSelected;
-	bool	m_fIsFocused;
-
-public:
-	CScriptLine()
-	{
-		m_pszScriptText		= NULL;
-		m_pszScriptCommand	= NULL;
-
-		m_fIsFocused		= FALSE;
-		m_fIsSelected		= FALSE;
-	}
-	~CScriptLine()
-	{
-//		if (m_pszScriptText) delete [] m_pszScriptText;
-//		if (m_pszScriptCommand) delete [] m_pszScriptCommand;
-	}
-};
-
-CPDLList<CScriptLine>	ScriptList;
-char					szQuestNPCName[64];
-
-char *CheckText(char *pszScript)
-{
-	if (pszScript)
-	{
-		char	*pszText = pszScript;
-
-		while (*pszText)
-		{
-			if (*pszText == '\\' || *pszText == '<' || *pszText == '{')
-				return pszText;
-
-			pszText++;
-		}
-	}
-
-	return NULL;
+    Init(); CreateGameWnd(id,image,1353,FALSE,0,0,386,224);
 }
-
-char *AddScriptLine(char *pszLine, int nLineLen, int nType)
-{
-	CScriptLine* pScriptLine = new CScriptLine;
-
-	if (pScriptLine)
-	{
-		pScriptLine->m_btScriptType = nType;
-
-		switch (nType)
-		{
-			case SCRIPT_GENTEXT:
-			{
-				pScriptLine->m_pszScriptText	= new char[nLineLen];
-
-				memcpy(pScriptLine->m_pszScriptText, pszLine, nLineLen);
-				pScriptLine->m_pszScriptText[nLineLen] = '\0';
-
-				ScriptList.AddNode(pScriptLine);
-
-				return NULL;
-			}
-			case SCRIPT_RETURN:
-			{
-				ScriptList.AddNode(pScriptLine);
-
-				return NULL;
-			}
-			case SCRIPT_BUTTON:
-			{
-				char *pszEndCmd;
-				char *pszDevide;
-
-				if (pszEndCmd = (char *)strchr(pszLine, '>'))
-				{
-					*pszEndCmd = '\0';
-
-					if (pszDevide = (char *)strchr(pszLine, '/'))
-					{
-						*pszDevide = '\0';
-
-						pScriptLine->m_pszScriptCommand = new char[pszEndCmd - pszDevide];
-						pScriptLine->m_pszScriptText	= new char[pszDevide - pszLine];
-						
-						strcpy(pScriptLine->m_pszScriptCommand, ++pszDevide);
-						strcpy(pScriptLine->m_pszScriptText, ++pszLine);
-
-						ScriptList.AddNode(pScriptLine);
-					}
-
-					return ++pszEndCmd;
-				}
-
-				return NULL;
-			}
-			case SCRIPT_TAG:
-			{
-				char *pszEndCmd;
-				char *pszDevide;
-
-				if (pszEndCmd = (char *)strchr(pszLine, '}'))
-				{
-					*pszEndCmd = '\0';
-
-					if (pszDevide = (char *)strchr(pszLine, '/'))
-					{
-						*pszDevide = '\0';
-
-						pScriptLine->m_pszScriptCommand = new char[pszEndCmd - pszDevide];
-						pScriptLine->m_pszScriptText	= new char[pszDevide - pszLine];
-						
-						strcpy(pScriptLine->m_pszScriptCommand, ++pszDevide);
-						strcpy(pScriptLine->m_pszScriptText, ++pszLine);
-
-						ScriptList.AddNode(pScriptLine);
-					}
-
-					return ++pszEndCmd;
-				}
-
-				return NULL;
-			}
-		}
-	}
-
-	delete pScriptLine;
-
-	return NULL;
-}
-
-void DevideScript(char *pszScript)
-{
-	char *pszText = pszScript;
-	char *pszPaser;
-	int  nLineLen = 0;
-
-	while (*pszText)
-	{
-		if (pszPaser = CheckText(pszText))
-		{
-			nLineLen = pszPaser - pszText;
-
-			switch (*pszPaser)
-			{
-				case '\\':
-				{
-					if (nLineLen >= 1)
-						AddScriptLine(pszText, nLineLen, SCRIPT_GENTEXT);
-
-					AddScriptLine(NULL, 0, SCRIPT_RETURN);
-					
-					pszText = ++pszPaser;
-
-					break;
-				}
-				case '<':
-				{
-					if (nLineLen >= 1)
-						AddScriptLine(pszText, nLineLen, SCRIPT_GENTEXT);
-
-					pszText = AddScriptLine(pszPaser, nLineLen, SCRIPT_BUTTON);
-
-					break;
-				}
-				case '{':
-				{
-					if (nLineLen >= 1)
-						AddScriptLine(pszText, nLineLen, SCRIPT_GENTEXT);
-
-					pszText = AddScriptLine(pszPaser, nLineLen, SCRIPT_TAG);
-
-					break;
-				}
-			}
-		}
-	}
-}
-
-CNPCWnd::CNPCWnd()
-{
-	m_nStartLine	= 0;
-	m_nMaxLine		= MAX_SHOW_LINE;
-}
-
-CNPCWnd::~CNPCWnd()
-{
-	ResetDialog();
-}
-
-
-VOID CNPCWnd::CreateNPCChatWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
-{
-	CreateGameWnd(nID, pxWndImage, nFrameImgIdx, bCanMove, nStartX, nStartY, nWidth, nHeight);
-}
-
-VOID CNPCWnd::ShowNPCChatWnd()
-{
-	SIZE			tSize;
-	RECT			tRect;
-	CScriptLine*	pScriptLine;
-	int				nLineCnt = 0;
-	int				nLine = 0;
-	int				POS_DRAWSTART_X		= 60;		
-	int				MAX_NPCSTR_WIDTH	= 430;
-
-	tRect = GetGameWndRect();				// Get Window Rect
-
-	ShowGameWnd();
-
-	ScriptList.MoveCurrentToTop();
-
-	COLORREF TextColor = ScriptTxtColor[12];
-
-	for (int i = 0; i < ScriptList.GetCounter(); i++)
-	{
-		pScriptLine = ScriptList.GetCurrentData();
-
-		switch (pScriptLine->m_btScriptType)
-		{
-			case SCRIPT_GENTEXT:
-			{
-				char	szTempText[1024];
-
-				tSize = g_xMainWnd.GetStrLength(NULL, NULL, pScriptLine->m_pszScriptText);
-
-				if (nLine + tSize.cx > MAX_NPCSTR_WIDTH)
-				{
-					int nLen	= strlen(pScriptLine->m_pszScriptText);
-					int nCount	= 0;
-
-					for (int i = 0; i < nLen; i++)
-					{
-						if (pScriptLine->m_pszScriptText[i] < 0)
-						{
-							szTempText[nCount++]	=  pScriptLine->m_pszScriptText[i++];
-							szTempText[nCount]		=  pScriptLine->m_pszScriptText[i];
-							szTempText[nCount + 1]	= '\0';
-						}
-						else
-						{
-							szTempText[nCount]		=  pScriptLine->m_pszScriptText[i];
-							szTempText[nCount + 1]	= '\0';
-						}
-
-						tSize = g_xMainWnd.GetStrLength(NULL, NULL, szTempText);
-
-						if (nLine + tSize.cx >= MAX_NPCSTR_WIDTH)
-						{
-							if (nLineCnt >= m_nStartLine && nLineCnt <= m_nStartLine + MAX_SHOW_LINE)
-								g_xMainWnd.PutsHan(NULL, tRect.left + POS_DRAWSTART_X + nLine, tRect.top + ((nLineCnt - m_nStartLine) * (tSize.cy + LINE_GAP)) + POS_DRAWSTART_Y,
-													TextColor, RGB(0, 0, 0), szTempText);
-
-							nLineCnt++;
-							nLine	= 0;
-							nCount	= 0;
-						}
-						else
-							nCount++;
-					}
-
-					if (nCount)
-					{
-						if (nLineCnt >= m_nStartLine && nLineCnt <= m_nStartLine + MAX_SHOW_LINE)
-							g_xMainWnd.PutsHan(NULL, tRect.left + POS_DRAWSTART_X + nLine, tRect.top + ((nLineCnt - m_nStartLine) * (tSize.cy + LINE_GAP)) + POS_DRAWSTART_Y,
-												TextColor, RGB(0, 0, 0), szTempText);
-						nLine += tSize.cx;
-					}
-				}
-				else
-				{
-					if (nLineCnt >= m_nStartLine && nLineCnt <= m_nStartLine + MAX_SHOW_LINE)
-						g_xMainWnd.PutsHan(NULL, tRect.left + POS_DRAWSTART_X + nLine, tRect.top + ((nLineCnt - m_nStartLine) * (tSize.cy + LINE_GAP)) + POS_DRAWSTART_Y,
-											TextColor, RGB(0, 0, 0), pScriptLine->m_pszScriptText);
-
-					nLine += tSize.cx;
-				}
-
-				break;
-			}
-			case SCRIPT_RETURN:
-				nLineCnt++;
-				nLine = 0;
-				break;
-			case SCRIPT_BUTTON:
-			{
-				char		szTempText[1024];
-
-				HFONT		hFont = NULL;
-				COLORREF	color = RGB(255, 255, 0);
-
-				if (pScriptLine->m_fIsFocused)
-					hFont = g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_NORMAL, FALSE, TRUE);
-
-				if (pScriptLine->m_fIsSelected)
-					color = RGB(255, 0, 0);
-
-				tSize = g_xMainWnd.GetStrLength(NULL, NULL, pScriptLine->m_pszScriptText);
-
-				if (nLine + tSize.cx > MAX_NPCSTR_WIDTH)
-				{
-					int nLen	= strlen(pScriptLine->m_pszScriptText);
-					int nCount	= 0;
-					int nRow	= 0;
-
-					pScriptLine->m_Rect.left	= tRect.left + POS_DRAWSTART_X + nLine;
-					pScriptLine->m_Rect.top		= tRect.top + (nLineCnt * (tSize.cy + LINE_GAP)) + POS_DRAWSTART_Y;
-					pScriptLine->m_Rect.right	= pScriptLine->m_Rect.left + MAX_NPCSTR_WIDTH;
-
-					for (int i = 0; i < nLen; i++)
-					{
-						if (pScriptLine->m_pszScriptText[i] < 0)
-						{
-							szTempText[nCount++]	=  pScriptLine->m_pszScriptText[i++];
-							szTempText[nCount]		=  pScriptLine->m_pszScriptText[i];
-							szTempText[nCount + 1]	= '\0';
-						}
-						else
-						{
-							szTempText[nCount]		=  pScriptLine->m_pszScriptText[i];
-							szTempText[nCount + 1]	= '\0';
-						}
-
-						tSize = g_xMainWnd.GetStrLength(NULL, NULL, szTempText);
-
-						if (nLine + tSize.cx >= MAX_NPCSTR_WIDTH)
-						{
-							if (nLineCnt >= m_nStartLine && nLineCnt <= m_nStartLine + MAX_SHOW_LINE)
-								g_xMainWnd.PutsHan(NULL, tRect.left + POS_DRAWSTART_X + nLine, tRect.top + ((nLineCnt - m_nStartLine) * (tSize.cy + LINE_GAP)) + POS_DRAWSTART_Y,
-													color, RGB(0, 0, 0), szTempText, hFont);
-
-							nLineCnt++;
-							nRow++;
-							nLine	= 0;
-							nCount	= 0;
-						}
-						else
-							nCount++;
-					}
-
-					if (nCount)
-					{
-						if (nLineCnt >= m_nStartLine && nLineCnt <= m_nStartLine + MAX_SHOW_LINE)
-							g_xMainWnd.PutsHan(NULL, tRect.left + POS_DRAWSTART_X + nLine, tRect.top + ((nLineCnt - m_nStartLine) * (tSize.cy + LINE_GAP)) + POS_DRAWSTART_Y,
-												color, RGB(0, 0, 0), szTempText, hFont);
-
-						nRow++;
-						nLine += tSize.cx;
-					}
-
-					pScriptLine->m_Rect.bottom	= pScriptLine->m_Rect.top + (nRow * (tSize.cy + LINE_GAP));
-
-				}
-				else
-				{
-					pScriptLine->m_Rect.left	= tRect.left + POS_DRAWSTART_X + nLine;
-					pScriptLine->m_Rect.top		= tRect.top + ((nLineCnt - m_nStartLine) * (tSize.cy + LINE_GAP)) + POS_DRAWSTART_Y;
-					pScriptLine->m_Rect.right	= pScriptLine->m_Rect.left + tSize.cx;
-					pScriptLine->m_Rect.bottom	= pScriptLine->m_Rect.top + tSize.cy;
-
-					if (nLineCnt >= m_nStartLine && nLineCnt <= m_nStartLine + MAX_SHOW_LINE)
-						g_xMainWnd.PutsHan(NULL, pScriptLine->m_Rect.left, pScriptLine->m_Rect.top,
-											color, RGB(0, 0, 0), pScriptLine->m_pszScriptText, hFont);
-				
-					nLine += tSize.cx;
-				}
-
-				DeleteObject(hFont);
-				
-				break;
-			}
-			case SCRIPT_TAG:
-			{
-				if (strcmp(pScriptLine->m_pszScriptText, "FCOLOR") == 0)
-				{
-					int nColor = atoi(pScriptLine->m_pszScriptCommand);
-
-					TextColor = ScriptTxtColor[nColor];
-				}
-				else if (strcmp(pScriptLine->m_pszScriptText, "NPCIMG") == 0)
-				{
-					if (!m_xNPCImage.m_pbCurrImage)
-					{
-					//	m_xNPCImage.DeleteImage();
-
-						m_xNPCImage.NewLoad(".\\Data\\NPCFace.WIL", FALSE, TRUE);
-					}
-
-					if (m_xNPCImage.NewSetIndex(1))
-						g_xMainWnd.DrawWithImageForComp(40, 30, m_xNPCImage.m_lpstNewCurrWilImageInfo->shWidth, 
-																m_xNPCImage.m_lpstNewCurrWilImageInfo->shHeight, 
-																(WORD *)m_xNPCImage.m_pbCurrImage);
-
-					POS_DRAWSTART_X		= 150;
-					MAX_NPCSTR_WIDTH	= 365;
-				}
-
-				break;
-			}
-		}
-
-		ScriptList.MoveNextNode();
-	}
-
-	m_nMaxLine = nLineCnt;
-}
-
-BOOL CNPCWnd::OnLButtonDown(POINT ptMouse)
-{
-	CScriptLine*	pScriptLine;
-
-	ScriptList.MoveCurrentToTop();
-
-	for (int i = 0; i < ScriptList.GetCounter(); i++)
-	{
-		pScriptLine = ScriptList.GetCurrentData();
-
-		if (pScriptLine->m_btScriptType == SCRIPT_BUTTON)
-		{
-			if (PtInRect(&pScriptLine->m_Rect, ptMouse))
-				pScriptLine->m_fIsSelected = TRUE;
-			else
-				pScriptLine->m_fIsSelected = FALSE;
-		}
-
-		ScriptList.MoveNextNode();
-	}
-
-	return FALSE;
-}
-
-BOOL CNPCWnd::OnLButtonUp(POINT ptMouse)
-{
-	CScriptLine*	pScriptLine;
-
-	ScriptList.MoveCurrentToTop();
-
-	for (int i = 0; i < ScriptList.GetCounter(); i++)
-	{
-		pScriptLine = ScriptList.GetCurrentData();
-
-		if (pScriptLine->m_btScriptType == SCRIPT_BUTTON)
-		{
-			if (PtInRect(&pScriptLine->m_Rect, ptMouse))
-			{
-				if (pScriptLine->m_pszScriptCommand[0] == '@' && pScriptLine->m_pszScriptCommand[1] == '@')
-				{
-					if (strcmp(pScriptLine->m_pszScriptCommand, "@@buildguildnow") == 0)
-					{
-						char szBuildGuild[128];
-
-						sprintf(szBuildGuild, "%s%c%s", pScriptLine->m_pszScriptCommand, 13, "Gadget Detective Clan");
-
-						g_xClientSocket.SendNPCMessage(CM_MERCHANTDLGSELECT,(DWORD)m_nNpcId, 0, szBuildGuild);
-					}
-				}
-				else
-					g_xClientSocket.SendNPCMessage(CM_MERCHANTDLGSELECT,(DWORD)m_nNpcId, 0, pScriptLine->m_pszScriptCommand);
-			}
-		}
-
-		pScriptLine->m_fIsSelected = FALSE;
-
-		ScriptList.MoveNextNode();
-	}
-
-	return FALSE;
-}
-
-void CNPCWnd::OnMouseMove(POINT ptMouse)
-{
-	CScriptLine*	pScriptLine;
-
-	ScriptList.MoveCurrentToTop();
-
-	for (int i = 0; i < ScriptList.GetCounter(); i++)
-	{
-		pScriptLine = ScriptList.GetCurrentData();
-
-		if (pScriptLine->m_btScriptType == SCRIPT_BUTTON)
-		{
-			if (PtInRect(&pScriptLine->m_Rect, ptMouse))
-				pScriptLine->m_fIsFocused	= TRUE;
-			else
-				pScriptLine->m_fIsFocused	= FALSE;
-
-		}
-
-		ScriptList.MoveNextNode();
-	}
-}
-
 void CNPCWnd::ResetDialog()
 {
-	CScriptLine*	pScriptLine;
-
-	ScriptList.MoveCurrentToTop();
-
-	for (int i = 0; i < ScriptList.GetCounter();)
-	{
-		pScriptLine = ScriptList.GetCurrentData();
-
-		if (pScriptLine)
-			delete pScriptLine;
-
-		ScriptList.DeleteCurrentNodeEx();
-	}
-
-	m_nStartLine	= 0;
-	m_nMaxLine		= MAX_SHOW_LINE;
+    rows.clear(); m_nNpcId=promptActor=0; first=extraRows=scrollLimit=arrowPressed=arrowFrame=0; pressed=-1;
+    canClose=true; closePressed=scrollEnabled=downLit=false; prompt.clear(); promptCommand.clear();
 }
-
-VOID CNPCWnd::OnScrollDown()
+void CNPCWnd::SetScript(int actor,const char* input)
 {
-	if (m_nMaxLine > MAX_SHOW_LINE)
-	{
-		if (m_nStartLine <= 0)
-			m_nStartLine = 0;
-		else
-			m_nStartLine--;
-	}
+    if (actor!=m_nNpcId) { canClose=true; arrowFrame=0; downLit=false; }
+    m_nNpcId=actor; rows.clear(); first=0; pressed=-1; arrowPressed=0; closePressed=false;
+    const COLORREF colors[]={0,0xff,0x8000,0x8080,0x808080,0x80,0x808000,0x800000,0xc0c0c0,0x800080,0xff00,0xff0000,0xffffff,0xff00ff,0xffff00,0xffff,0x10101};
+    COLORREF color=0xffffff; int line=0,estimate=0,optionId=0;
+    HDC dc; auto* surface=g_xMainWnd.GetBackBuffer(); if (FAILED(surface->GetDC(&dc))) return;
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0}; HFONT font=g_xMainWnd.CreateGameFont(face,9); auto old=SelectObject(dc,font);
+    const auto measure=[&](const std::string& text) { SIZE size={}; GetTextExtentPoint32A(dc,text.data(),int(text.size()),&size); return size; };
+    std::string script=input;
+    while (!script.empty()) {
+        int x=0,bytes=0;
+        const auto append=[&](std::string label,const std::string& command) {
+            bytes+=int(label.size()); const int option=command.empty()?-1:optionId++;
+            while (!label.empty()) {
+                size_t length=0; SIZE size={}; const int limit=command.empty() && line<7?198:305;
+                const SIZE whole=label.size()<=1024?measure(label):SIZE{};
+                const bool fits=x+whole.cx<=limit && whole.cy>0;
+                if (fits) { length=label.size(); size=whole; }
+                while (length<label.size()) {
+                    length+=IsDBCSLeadByteEx(CP_ACP,BYTE(label[length])) && length+1<label.size()?2:1;
+                    size=measure(label.substr(0,length)); if (x+size.cx>=305) break;
+                }
+                rows.push_back({label.substr(0,length),command,35+x,line,int(size.cx),int(size.cy),color,option});
+                label.erase(0,length); if (!fits && x+size.cx>=305) { ++line; x=0; } else x+=size.cx;
+            }
+        };
+        while (!script.empty()) {
+            const auto open=script.find_first_of("\\<{"); append(script.substr(0,open),"");
+            if (open==std::string::npos) { script.clear(); break; }
+            script.erase(0,open); if (script[0]=='\\') break;
+            const bool option=script[0]=='<'; const auto close=script.find(option?'>':'}',1);
+            if (close==std::string::npos) { script.clear(); break; }
+            const auto tag=script.substr(1,close-1); const auto split=tag.find('/');
+            if (split!=std::string::npos) {
+                const auto name=tag.substr(0,split),value=tag.substr(split+1);
+                if (option) append(name,value);
+                else if (name=="NOTCLOSE") canClose=false;
+                else if (name=="FCOLOR" && !value.empty() && (value[0]=='-' || (value[0]>='0' && value[0]<='9'))) {
+                    char* end; const long index=std::strtol(value.c_str(),&end,10);
+                    if (end!=value.c_str() && index>=0 && index<17) color=colors[index];
+                }
+            }
+            script.erase(0,close+1);
+        }
+        if (bytes || !script.empty()) estimate+=max(1,(bytes+49)/50);
+        if (script.empty()) break; script.erase(0,1); ++line;
+    }
+    SelectObject(dc,old); DeleteObject(font); surface->ReleaseDC(dc);
+    extraRows=max(0,min(13,estimate-9)); scrollEnabled=estimate>22; scrollLimit=scrollEnabled?max(0,line-21):0;
+    m_rcWnd={0,0,386,Height()}; m_nWidth=386; m_nHeight=Height();
 }
-
-VOID CNPCWnd::OnScrollUp()
+RECT CNPCWnd::TextBounds(const Row& row) const
 {
-	if (m_nMaxLine > MAX_SHOW_LINE)
-	{
-		if (m_nStartLine >= m_nMaxLine)
-			m_nStartLine = m_nMaxLine;
-		else
-			m_nStartLine++;
-	}
+    const int y=40+(row.height+5)*(row.line-first); return RECT{row.x,y,row.x+row.width,y+row.height};
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//////////////////////////////////////////////////////////////////
-
-BOOL	CNPCWnd::ClickCommandProcess(CMTxtBtn* ClickedBtn)		// 综合下面这些内容
+int CNPCWnd::OptionAt(POINT point) const
 {
-/*	m_pClickedTxtBtn = ClickedBtn;
-	if(ClickedBtn!=NULL)
-	{
-		if(strcmp(m_xTxtAnalysis.UpperCase(ClickedBtn->Param),BUILD_GUILD)==0)				// 行会建立处理
-		{
-			CHAR	szMsg[MAX_PATH];
-			HINSTANCE hLib;
-			hLib = LoadLibrary("Ats.dll"); // Load Dll
-			LoadString(hLib,ASK_MAKE_BIG_GUILD,szMsg,MAX_PATH);
-			FreeLibrary(hLib);
-			if(!m_xMsgBox.IsActive())	SetWndRectExtend();
-			m_xMsgBox.ShowMessageBox(szMsg,MSG_EDITEXIST|MSG_BTN_OK);	// OK
-			SetNpcEditBoxPos();
-			// 打开行会建立窗口并输入行会名称.
-			m_nNpcMsgState = 1;
-			return TRUE;
-		}
-		else if(strcmp(m_xTxtAnalysis.UpperCase(ClickedBtn->Param),GUILD_WAR)==0)			// 行会战争
-		{
-			CHAR	szMsg[MAX_PATH];
-			HINSTANCE hLib;
-			hLib = LoadLibrary("Ats.dll"); // Load Dll
-			LoadString(hLib,ASK_OTHERSNAME,szMsg,MAX_PATH);
-			FreeLibrary(hLib);
-			if(!m_xMsgBox.IsActive())	SetWndRectExtend();
-			m_xMsgBox.ShowMessageBox(szMsg,MSG_EDITEXIST|MSG_BTN_OK);	// OK
-			SetNpcEditBoxPos();
-			// 输入要交战的行会.
-			m_nNpcMsgState = 2;
-			return TRUE;
-		}
-		else if(strcmp(m_xTxtAnalysis.UpperCase(ClickedBtn->Param),WITHDRAWAL_CASTLE)==0)	// 从城金库中取钱
-		{
-			CHAR	szMsg[MAX_PATH];
-			HINSTANCE hLib;
-			hLib = LoadLibrary("Ats.dll"); // Load Dll
-			LoadString(hLib,ASK_WITHDRAWAL,szMsg,MAX_PATH);
-			FreeLibrary(hLib);
-			if(!m_xMsgBox.IsActive())	SetWndRectExtend();
-			m_xMsgBox.ShowMessageBox(szMsg,MSG_EDITEXIST|MSG_BTN_OK);	// OK
-			SetNpcEditBoxPos();
-			// 打开城金库窗口并输入要取出的金额.
-			m_nNpcMsgState = 3;
-			return TRUE;
-		}
-		else if(strcmp(m_xTxtAnalysis.UpperCase(ClickedBtn->Param),RECEIPT_CASTLE)==0)		// 向城金库中存钱
-		{
-			CHAR	szMsg[MAX_PATH];
-			HINSTANCE hLib;
-			hLib = LoadLibrary("Ats.dll"); // Load Dll
-			LoadString(hLib,ASK_RECEIPT,szMsg,MAX_PATH);
-			FreeLibrary(hLib);
-			if(!m_xMsgBox.IsActive())	SetWndRectExtend();
-			m_xMsgBox.ShowMessageBox(szMsg,MSG_EDITEXIST|MSG_BTN_OK);	// OK
-			SetNpcEditBoxPos();
-			// 打开城金库窗口并输入要存入的金额.
-			m_nNpcMsgState = 4;
-			return TRUE;
-		}
-		else
-		{
-			m_nNpcMsgState = 0;
-			m_pClickedTxtBtn = NULL;
-			SendCommandToSrv(ClickedBtn->Param);
-		}
-	}
-//		不进行任何处理 */
-	return FALSE;
+    int option=-1,rectangles=0;
+    for (const auto& row:rows) {
+        if (row.option<0 || row.line<first || row.line>first+21) continue;
+        if (option!=row.option) { option=row.option; rectangles=0; }
+        const RECT box=TextBounds(row); if (++rectangles<=5 && PtInRect(&box,point)) return option;
+    }
+    return -1;
 }
-
-BOOL CNPCWnd::SendCommandToSrv(CHAR* szMsg)
+bool CNPCWnd::Hit(int frame,int x,int y,POINT point)
 {
-	// 默认消息处理
-	g_xClientSocket.SendNPCMessage(CM_MERCHANTDLGSELECT,(DWORD)m_nNpcId,0,szMsg);
-	return FALSE;
+    if (!m_pxWndImage->NewSetIndex(frame)) return false;
+    const auto info=*m_pxWndImage->m_lpstNewCurrWilImageInfo; const RECT box={x,y,x+info.shWidth,y+info.shHeight}; return PtInRect(&box,point)!=FALSE;
 }
-
-VOID CNPCWnd::SetWndRectExtend(VOID)
+BOOL CNPCWnd::OnLButtonDown(POINT point)
 {
-//	m_rectExtended = m_rcWnd;
-//	m_rcWnd.left = 0;
-//	m_rcWnd.top = 0;
-//	m_rcWnd.right = 800;
-//	m_rcWnd.bottom = 560;
+    closePressed=Hit(1221,346,Height()-42,point); arrowPressed=0;
+    if (scrollEnabled && !closePressed) {
+        if (first>0 && Hit(1357,183,Height()-48,point)) arrowPressed=-1;
+        else if (first<scrollLimit && Hit(1355,183,Height()-30,point)) arrowPressed=1;
+    }
+    pressed=closePressed || arrowPressed?-1:OptionAt(point); return TRUE;
 }
-
-VOID CNPCWnd::SetWndRectReduce(VOID)
+BOOL CNPCWnd::OnLButtonUp(POINT point)
 {
-//	m_rcWnd = m_rectExtended;
+    if (closePressed || Hit(1221,346,Height()-42,point)) {
+        const bool close=closePressed && Hit(1221,346,Height()-42,point) && canClose;
+        closePressed=false; if (close) g_xGameProc.CloseNPCWindow(); return FALSE;
+    }
+    if (arrowPressed) {
+        if (Hit(arrowPressed<0?1357:1355,183,Height()-(arrowPressed<0?48:30),point)) first=max(0,min(scrollLimit,first+arrowPressed));
+        arrowPressed=0; pressed=-1; return FALSE;
+    }
+    const int option=OptionAt(point); pressed=-1; const DWORD now=GetTickCount();
+    if (option<0 || (lastAction && now-lastAction<=1000)) return FALSE;
+    for (const auto& row:rows) if (row.option==option) {
+        lastAction=now;
+        if (row.command.compare(0,2,"@@")==0) {
+            promptActor=m_nNpcId; promptCommand=row.command; prompt.clear();
+            for (const auto& part:rows) if (part.option==option) prompt+=part.text;
+            if (row.command=="@@buildguildnow") { static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat"); prompt=captions.Get(2000); }
+            g_xGameProc.m_xInterface.OpenNameDialog(7);
+        } else g_xClientSocket.SendNPCMessage(CM_MERCHANTDLGSELECT,m_nNpcId,0,const_cast<char*>(row.command.c_str()));
+        break;
+    }
+    return FALSE;
 }
-
-VOID CNPCWnd::SetNpcEditBoxPos(VOID)
+void CNPCWnd::SubmitPrompt(const char* text)
 {
-	// 与 Edit Box 相关
-//	m_rcEditBoxFrame.left = 247;
-//	m_rcEditBoxFrame.top = 256;
-//	m_rcEditBoxFrame.right = 467;
-//	m_rcEditBoxFrame.bottom = 272;
-//	MoveWindow(g_xChatEditBox.GetSafehWnd(), g_xMainWnd.m_rcWindow.left + m_rcWnd.left + m_rcEditBoxFrame.left, 
-//		g_xMainWnd.m_rcWindow.top + m_rcWnd.top + m_rcEditBoxFrame.top, 
-//		m_rcEditBoxFrame.right - m_rcEditBoxFrame.left, 
-//		m_rcEditBoxFrame.bottom - m_rcEditBoxFrame.top, TRUE);
-//	SetWindowText(g_xChatEditBox.GetSafehWnd(),NULL);
-//	g_xChatEditBox.SetLimitText(30);
-//	SetFocus(g_xChatEditBox.GetSafehWnd());
-//	ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_SHOW);
+    if (!*text || promptCommand.empty()) return;
+    const std::string body=promptCommand+"\r"+text;
+    g_xClientSocket.SendNPCMessage(CM_MERCHANTDLGSELECT,promptActor,0,const_cast<char*>(body.c_str()));
 }
-
-VOID CNPCWnd::OnEnterKeyDown(VOID)
+void CNPCWnd::DrawBackground()
 {
-	CHAR	szTxt[MAX_PATH];
-	ZeroMemory(szTxt,MAX_PATH);
-	if(m_xMsgBox.IsActive())
-	{
-		SetWndRectReduce();
-		GetWindowText(g_xChatEditBox.GetSafehWnd(),szTxt,MAX_PATH);
-		if(szTxt[0]==NULL)
-		{
-			strncpy(szTxt,g_xChatEditBox.m_szInputMsg,strlen(g_xChatEditBox.m_szInputMsg));
-		}
-		// For Editbox to Chatting
-		SetFocus(g_xMainWnd.GetSafehWnd());
-		ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
-		g_xChatEditBox.SetLimitText(90);// 将聊天窗口改为 Limit length。
-		g_xChatEditBox.MoveScaled( g_xMainWnd.m_rcWindow.left+_INPUT_EDITWND_XPOS,
-			g_xMainWnd.m_rcWindow.top+_INPUT_EDITWND_YPOS, _INPUT_EDITWND_WIDTH, _INPUT_EDITWND_HEIGHT, TRUE);
-		switch(m_nNpcMsgState)
-		{
-		case 1:
-		case 2:
-			// 创建行会
-			// 行会战申请
-			{
-				CHAR szMsg[MAX_PATH*2];
-				strcpy(szMsg,m_pClickedTxtBtn->Param);
-				strcat(szMsg,"/\0");
-				strcat(szMsg,szTxt);
-				SendCommandToSrv(szMsg);
-			break;
-			}
-		case 3:
-		case 4:
-			{
-			// 查找圣紫金
-			// 圣子金受击
-			break;
-			}
-		}
-		g_xChatEditBox.m_szInputMsg[0] = NULL;
-		SetWindowText(g_xChatEditBox.GetSafehWnd(),NULL);
-		m_xMsgBox.HideMessageBox();
-	}
+    const int strips=max(1,extraRows),height=Height();
+    if (cachedStrips!=strips) {
+        background.assign(386*height,0x10000); cachedStrips=strips;
+        const auto compose=[&](int frame,int top) {
+            if (!m_pxWndImage->NewSetIndex(frame)) return;
+            const auto info=*m_pxWndImage->m_lpstNewCurrWilImageInfo; const WORD* next=(WORD*)m_pxWndImage->m_pbCurrImage;
+            for (int y=0;y<info.shHeight;++y) {
+                const WORD* run=next+1; const WORD* end=run+*next; next=end; int x=0;
+                while (run+1<end) {
+                    const WORD tag=*run++,count=*run++; if (tag==0xc0) { x+=count; continue; }
+                    if (tag<0xc1 || tag>0xc3 || run+count>end) break;
+                    for (int i=0;i<count;++i,++x) if (x<386 && top+y<height) background[(top+y)*386+x]=run[i];
+                    run+=count;
+                }
+            }
+        };
+        compose(1353,0); for (int i=0;i<strips;++i) compose(1351,160+20*i); compose(1352,160+20*strips);
+    }
+    DDSURFACEDESC2 desc={}; desc.dwSize=sizeof(desc); auto* surface=g_xMainWnd.GetBackBuffer();
+    if (FAILED(surface->Lock(NULL,&desc,DDLOCK_WAIT,NULL))) return;
+    for (int y=0;y<min(height,int(desc.dwHeight));++y) {
+        WORD* row=(WORD*)((BYTE*)desc.lpSurface+y*desc.lPitch);
+        for (int x=0;x<min(386,int(desc.dwWidth));++x) {
+            const DWORD source=background[y*386+x]; if (source==0x10000) continue; const WORD dst=row[x];
+            const int r=((source>>11)*180*220+(dst>>11)*35*255+32512)/65025;
+            const int g=(((source>>5)&63)*180*220+((dst>>5)&63)*35*255+32512)/65025;
+            const int b=((source&31)*180*220+(dst&31)*35*255+32512)/65025; row[x]=WORD((r<<11)|(g<<5)|b);
+        }
+    }
+    surface->Unlock(NULL);
 }
-
-BOOL CNPCWnd::OnMsgInputted(VOID)
+void CNPCWnd::ShowNPCChatWnd()
 {
-	if(!m_xMsgBox.IsActive())
-		return FALSE;
-	OnEnterKeyDown();
-	return TRUE;
+    DrawBackground(); const int bottom=Height();
+    DrawSelectionFrame(*m_pxWndImage,closePressed?1222:1221,346,bottom-42,SelectionBlend::Normal,false);
+    if (scrollEnabled) {
+        if (arrowFrame++==16) { arrowFrame=1; downLit=!downLit; }
+        DrawSelectionFrame(*m_pxWndImage,arrowPressed==-1?1358:1357,183,bottom-48,SelectionBlend::Normal,false);
+        if (first<scrollLimit && downLit) DrawSelectionFrame(*m_pxWndImage,arrowPressed==1?1356:1355,183,bottom-30,SelectionBlend::Normal,false);
+    }
+    HDC dc; auto* surface=g_xMainWnd.GetBackBuffer(); if (FAILED(surface->GetDC(&dc))) return;
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0}; HFONT normal=g_xMainWnd.CreateGameFont(face,9);
+    LOGFONTA desc={}; GetObjectA(normal,sizeof(desc),&desc); desc.lfUnderline=TRUE; HFONT link=CreateFontIndirectA(&desc);
+    auto old=SelectObject(dc,normal); SetBkMode(dc,TRANSPARENT); const int focused=hovered?OptionAt(pointer):-1;
+    for (const auto& row:rows) if (row.line>=first && row.line<=first+21) {
+        const bool clickable=!row.command.empty(); SelectObject(dc,clickable && focused==row.option?link:normal);
+        SetTextColor(dc,clickable?(pressed==row.option?0x0000ff:0x00ffff):row.color);
+        const RECT box=TextBounds(row); const int saved=SaveDC(dc); IntersectClipRect(dc,box.left,box.top,box.right,box.bottom);
+        TextOutA(dc,box.left,box.top,row.text.data(),int(row.text.size())); RestoreDC(dc,saved);
+    }
+    SelectObject(dc,old); DeleteObject(normal); DeleteObject(link); surface->ReleaseDC(dc);
 }

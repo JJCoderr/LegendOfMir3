@@ -516,6 +516,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     m_xStatusWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_STATUS);
     m_xSkillWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_SKILL);
     m_xHorseWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_HORSE);
+    m_xNPCWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_NPCCHAT);
     ShowWndList();
 	if ( m_stCommonItem.bSetted && !m_stCommonItem.bIsHideItem )
 	{
@@ -1126,7 +1127,7 @@ case _WND_ID_STATUS:
 			{
 				DeleteWindowToList(_WND_ID_NPCCHAT);
 //				m_xNPCWnd.CloseWnd();
-				m_xNPCWnd.SetGameWndActive(FALSE);
+				m_xNPCWnd.SetGameWndActive(FALSE); m_xNPCWnd.ResetDialog();
 				bRet = FALSE;
 			}
 			else
@@ -1572,9 +1573,11 @@ void CInterface::OpenNameDialog(int action)
     m_xMsgBox.SetOrigin(220,112,true);
     std::string prompt = action==4 ? "'"+m_xGuildWnd.m_name+"' "+captions.Get(4001) :
         captions.Get(action==6?1304:action==5?4002:action==3?1606:1605);
+    if (action==7) prompt=m_xNPCWnd.prompt;
     m_xMsgBox.ShowMessageBox(prompt.c_str(),MSG_BTN_YESNO,1240);
     g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+244,g_xMainWnd.m_rcWindow.top+340,309,15,TRUE);
     g_xChatEditBox.SetLimitText(90);
+    SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETPASSWORDCHAR,action==7 && m_xNPCWnd.promptCommand.compare(0,3,"@@*")==0?'*':0,0);
     g_xChatEditBox.m_szInputMsg[0]=0;
     SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"");
     ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_SHOW);
@@ -1589,7 +1592,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         m_xMsgBox.HideMessageBox();
         return;
     }
-    if (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 6) {
+    if (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 7) {
         char name[91] = {};
         GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,sizeof(name));
         if (mouse) g_xSound.PlayLobbyEffect("105.wav");
@@ -1597,6 +1600,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"");
         g_xChatEditBox.m_szInputMsg[0]=0;
         ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
+        SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETPASSWORDCHAR,0,0);
         SetFocus(g_xMainWnd.GetSafehWnd());
         g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+185,
             g_xMainWnd.m_rcWindow.top+(m_chatExpanded?534:575),m_chatExpanded?432:344,15,TRUE);
@@ -1605,6 +1609,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
             else if (m_nIdxMsgBox == 2) g_xClientSocket.SendAddGroupMember(name);
             else if (m_nIdxMsgBox == 3) g_xClientSocket.SendDelGroupMember(name);
             else if (m_nIdxMsgBox == 4) g_xClientSocket.SendGuildMemberRemoval(name);
+            else if (m_nIdxMsgBox == 7) m_xNPCWnd.SubmitPrompt(name);
             else if (m_nIdxMsgBox == 6) m_xExchangeWnd.SubmitGold(name,g_xGameProc.m_xMyHero.m_nGlod);
             else {
                 static CLoginMessages captions;
@@ -1655,6 +1660,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
+    if (m_xNPCWnd.closePressed || m_xNPCWnd.arrowPressed) { m_xNPCWnd.OnLButtonUp(ptMouse); return TRUE; }
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(2,ptMouse); return TRUE; }
     if (m_xExchangeWnd.captured>=0 || m_xExchangeWnd.confirmPressed || m_xExchangeWnd.headerPressed) { m_bMoveFocusedWnd=FALSE; m_xExchangeWnd.OnLButtonUp(ptMouse); return TRUE; }
     if (m_xQuickWnd.closePressed || m_xQuickWnd.backgroundPressed) {
@@ -2067,7 +2073,7 @@ VOID CInterface::OnSysKeyDown()
 
 LRESULT	CInterface::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 {
-    if (m_xMsgBox.IsActive() && m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 6) {
+    if (m_xMsgBox.IsActive() && m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 7) {
         SetWindowTextA(g_xChatEditBox.GetSafehWnd(),g_xChatEditBox.m_szInputMsg);
         FinishNotice(CLICK_YES,false);
         return TRUE;

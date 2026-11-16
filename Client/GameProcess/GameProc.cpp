@@ -6,7 +6,7 @@ extern CWHQueue	PacketQ;
 char	szBuff[8192];
 int		nBuff = 0;
 
-void DevideScript(char *pszScript);
+
 
 /******************************************************************************************************************
 
@@ -1014,6 +1014,9 @@ VOID CGameProcess::CloseNPCWindow()
 	{
 		m_xInterface.DeleteWindowToList(_WND_ID_NPCCHAT);
 		m_xInterface.m_xNPCWnd.SetGameWndActive(FALSE);
+        if (m_xInterface.m_xMsgBox.IsActive() && m_xInterface.m_nIdxMsgBox==7)
+            m_xInterface.FinishNotice(CLICK_NO,false);
+        m_xInterface.m_xNPCWnd.ResetDialog();
 
 		m_wNPCWndPosX = m_wNPCWndPosY = 0;
 	}
@@ -3364,40 +3367,17 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				m_xWaitDefaultPacketQueue.PushQ((BYTE*)lpstDefMsg);
 				break;
 			}
-			case SM_MERCHANTSAY:		// gadget
-			{	
-				int		nPos;
-				char	szDecodeMsg[8192];
-				char	*pszSay;
-
-				m_xInterface.m_xNPCWnd.ResetDialog();
-
-				m_wNPCWndPosX = m_xMyHero.m_wPosX;
-				m_wNPCWndPosY = m_xMyHero.m_wPosY;
-
-//				if (tdm.nRecog != m_xInterface.m_xNPCWnd.m_nNpcId)
-//				{
-//				}
-				
-				nPos = fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), szDecodeMsg, sizeof(szDecodeMsg));
-				szDecodeMsg[nPos] = '\0';
-
-				if (pszSay = strchr(szDecodeMsg, '/'))
-				{
-					*pszSay++ = '\0';
-
-					if (pszSay)
-						DevideScript(pszSay);
-				}
-
-				if(!m_xInterface.m_xNPCWnd.GetGameWndActive())
-				{
-					m_xInterface.WindowActivate(_WND_ID_NPCCHAT);
-					m_xInterface.m_xNPCWnd.SetNPC(tdm.nRecog);
-				}
-				
-				break;
-			}
+            case SM_MERCHANTSAY:
+            {
+                char decoded[8193];
+                const int length=fnDecode6BitBuf(pszMsg+DEFBLOCKSIZE,decoded,sizeof(decoded)-1);
+                decoded[length]=0;
+                const char* script=strchr(decoded,'/'); if (!script) break;
+                m_wNPCWndPosX=m_xMyHero.m_wPosX; m_wNPCWndPosY=m_xMyHero.m_wPosY;
+                m_xInterface.m_xNPCWnd.SetScript(tdm.nRecog,script+1);
+                if (!m_xInterface.m_xNPCWnd.GetGameWndActive()) m_xInterface.WindowActivate(_WND_ID_NPCCHAT);
+                break;
+            }
 			case SM_MERCHANTDLGCLOSE:
 			{
 				CloseNPCWindow();

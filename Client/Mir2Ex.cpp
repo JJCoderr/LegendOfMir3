@@ -39,6 +39,7 @@ public:
         if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
         if (groupPanel==30 || groupPanel==31) capturePath=groupPanel==30?"mount-panel.bmp":"mount-hint.bmp";
         if (groupPanel>=32 && groupPanel<=36) capturePath=groupPanel==36?"trade-return.bmp":groupPanel==35?"trade-gold.bmp":groupPanel==32?"trade-empty.bmp":groupPanel==33?"trade-list.bmp":"trade-confirmed.bmp";
+        if (groupPanel>=42 && groupPanel<=45) capturePath=groupPanel==42?"npc-dialogue.bmp":groupPanel==43?"npc-scrolled.bmp":groupPanel==44?"npc-input.bmp":"npc-notclose.bmp";
         if (groupPanel==40 || groupPanel==41) capturePath=groupPanel==40?"guild-notice-editor.bmp":"guild-members-editor.bmp";
         if (groupPanel==39) capturePath="quick-binding.bmp";
         if (groupPanel==37 || groupPanel==38) capturePath=groupPanel==37?"quick-empty.bmp":"quick-items.bmp";
@@ -514,6 +515,59 @@ public:
             if (FILE* report=fopen("mount-layout-check.txt","wb")) {
                 fprintf(report,"opened=%d repeat=%d hidden=%d buttons=%d stray=%d on_foot=%d riding=%d hint=%d pressed_hint=%d outside_release=%d covered=%d window_drag=%d closed=%d\n",
                     opened,repeat,hidden,buttons,stray,onFoot,riding,hint,pressedHint,released,covered,moved,closed); fclose(report);
+            }
+        }
+        if (groupPanel>=42 && groupPanel<=45) {
+            auto& ui=g_xGameProc.m_xInterface; auto& npc=ui.m_xNPCWnd;
+            const std::string shortScript="欢迎来到比奇城！\\这里可以购买补给，也可以了解城中的消息。\\{FCOLOR/15}请选择需要的服务：\\<购买药品/@buy>  <询问任务/@quest>\\{FCOLOR/12}<建立行会/@@buildguildnow>\\旅途愉快。";
+            const auto open=[&](const std::string& script) { npc.SetScript(123,script.c_str()); if (!npc.m_bActive) ui.WindowActivate(_WND_ID_NPCCHAT); };
+            open("末尾纯文本"); const bool trailing=npc.rows.size()==1 && npc.rows[0].text=="末尾纯文本";
+            open("前缀<未闭合"); const bool malformed=npc.rows.size()==1 && npc.rows[0].text=="前缀";
+            open("{FCOLOR/1}红色{FCOLOR/12}白色"); const bool colors=npc.rows.size()==2 && npc.rows[0].color==0xff && npc.rows[1].color==0xffffff;
+            open("{NOTCLOSE/1}不能关闭"); npc.SetScript(123,"仍然不能关闭"); const bool retained=!npc.canClose;
+            npc.SetScript(124,"可以关闭"); const bool reset=npc.canClose;
+            open(shortScript); const bool bounds=npc.Height()==224 && !npc.scrollEnabled;
+            int option=-1; POINT link={};
+            for (const auto& row:npc.rows) if (row.option>=0) { const RECT box=npc.TextBounds(row); link={box.left+1,box.top+1}; option=row.option; break; }
+            const bool hit=npc.OptionAt(link)==option && npc.OptionAt(POINT{380,10})==-1;
+            ui.OnLButtonDown(link); const bool pressed=npc.pressed==option && !ui.m_bMoveFocusedWnd;
+            ui.OnLButtonUp(link); const DWORD sent=npc.lastAction; ui.OnLButtonUp(link); const bool cooldown=sent && npc.lastAction==sent;
+            npc.lastAction=0; ui.OnLButtonUp(link); const bool releaseOnly=npc.lastAction!=0;
+            const POINT close={350,npc.Height()-38}; ui.OnLButtonUp(close); const bool stray=npc.m_bActive;
+            ui.OnLButtonDown(close); ui.OnLButtonUp(POINT{780,580}); const bool outside=npc.m_bActive && !npc.closePressed;
+            ui.OnLButtonDown(close); ui.OnLButtonUp(close); const bool closed=!npc.m_bActive && npc.canClose;
+            open("{NOTCLOSE/1}不可关闭\\<继续/@next>"); ui.OnLButtonDown(close); ui.OnLButtonUp(close); const bool locked=npc.m_bActive && !npc.canClose;
+            g_xGameProc.CloseNPCWindow();
+            std::string longScript; for (int i=0;i<32;++i) longScript+="第"+std::to_string(i+1)+"行：原生NPC长对话滚动检查。\\";
+            open(longScript); const bool longBounds=npc.Height()==464 && npc.scrollEnabled && npc.scrollLimit>0;
+            ui.OnLButtonDown(POINT{188,npc.Height()-26}); ui.OnLButtonUp(POINT{188,npc.Height()-26}); const bool arrow=npc.first==1;
+            for (int i=0;i<100;++i) npc.OnScrollUp(); const bool end=npc.first==npc.scrollLimit;
+            open("<请输入行会名称/@@buildguildnow>"); npc.lastAction=0; const RECT promptBox=npc.TextBounds(npc.rows[0]);
+            ui.OnLButtonUp(POINT{promptBox.left+1,promptBox.top+1});
+            const bool prompt=ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==7 && IsWindowVisible(g_xChatEditBox.GetSafehWnd());
+            ui.OnLButtonDown(POINT{490,315}); ui.OnLButtonUp(POINT{490,315}); const bool cancelled=!ui.m_xMsgBox.IsActive();
+            open("<Password/@@*storage>"); npc.lastAction=0;
+            const RECT passwordBox=npc.TextBounds(npc.rows[0]); ui.OnLButtonUp(POINT{passwordBox.left+1,passwordBox.top+1});
+            const int actor=npc.m_nNpcId; npc.SetScript(actor+1,"Other actor");
+            const bool promptActor=npc.promptActor==actor && npc.m_nNpcId!=actor;
+            const bool password=SendMessage(g_xChatEditBox.GetSafehWnd(),EM_GETPASSWORDCHAR,0,0)=='*';
+            g_xGameProc.CloseNPCWindow();
+            const bool promptClosed=!ui.m_xMsgBox.IsActive() && !IsWindowVisible(g_xChatEditBox.GetSafehWnd()) && !SendMessage(g_xChatEditBox.GetSafehWnd(),EM_GETPASSWORDCHAR,0,0);
+            if (FILE* report=fopen("npc-dialogue-check.txt","wb")) {
+                fprintf(report,"trailing=%d malformed=%d colors=%d retained_notclose=%d new_actor_reset=%d short_bounds=%d hit=%d pressed=%d cooldown=%d release_only=%d stray=%d outside_release=%d closed=%d locked=%d long_bounds=%d arrow=%d scroll_end=%d prompt=%d cancelled=%d prompt_actor=%d password=%d prompt_closed=%d\n",
+                    trailing,malformed,colors,retained,reset,bounds,hit,pressed,cooldown,releaseOnly,stray,outside,closed,locked,longBounds,arrow,end,prompt,cancelled,promptActor,password,promptClosed); fclose(report);
+            }
+            g_xGameProc.CloseNPCWindow();
+            if (groupPanel==43) { open(longScript); npc.OnScrollUp(); npc.OnScrollUp(); npc.downLit=true; }
+            else if (groupPanel==45) open("{NOTCLOSE/1}请先完成当前对话。\\{FCOLOR/15}此时关闭按钮仍显示，但不可关闭窗口。\\<继续对话/@next>");
+            else {
+                open(shortScript); mouse=link; g_xGameProc.m_ptMousePos=mouse;
+                if (groupPanel==44) {
+                    for (const auto& row:npc.rows) if (row.command=="@@buildguildnow") {
+                        const RECT box=npc.TextBounds(row); npc.lastAction=0; ui.OnLButtonUp(POINT{box.left+1,box.top+1}); break;
+                    }
+                    SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"测试行会");
+                }
             }
         }
         if (groupPanel==40 || groupPanel==41) {
@@ -1022,7 +1076,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=quick-items")==0 ? 38 :
         strcmp(lpCmdLine,"--preview=quick-binding")==0 ? 39 :
         strcmp(lpCmdLine,"--preview=guild-notice-editor")==0 ? 40 :
-        strcmp(lpCmdLine,"--preview=guild-members-editor")==0 ? 41 : 0;
+        strcmp(lpCmdLine,"--preview=guild-members-editor")==0 ? 41 :
+        strcmp(lpCmdLine,"--preview=npc-dialogue")==0 ? 42 :
+        strcmp(lpCmdLine,"--preview=npc-scrolled")==0 ? 43 :
+        strcmp(lpCmdLine,"--preview=npc-input")==0 ? 44 :
+        strcmp(lpCmdLine,"--preview=npc-notclose")==0 ? 45 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {
