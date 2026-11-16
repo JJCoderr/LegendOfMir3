@@ -31,6 +31,8 @@ public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
     void Load(bool expanded, int chatMode, bool exitDialog, int groupPanel) {
+        const int extraHintPreview=groupPanel>=67 && groupPanel<=71?groupPanel:0;
+        if(extraHintPreview) { const int bases[]={1,5,20,33,42}; groupPanel=bases[extraHintPreview-67]; }
         const int hintPreview=groupPanel>=64 && groupPanel<=66?groupPanel:0;
         if(hintPreview) groupPanel=hintPreview==64?12:hintPreview==65?15:29;
         capturePath = chatMode == 1 ? "hud-group.bmp" : chatMode == 2 ? "hud-guild.bmp" : expanded ? "hud-expanded.bmp" : "hud-collapsed.bmp";
@@ -1232,6 +1234,33 @@ public:
             capturePath=index==0?"inventory-hint.bmp":index==1?"status-button-hint.bmp":"quest-hint.bmp";
         }
 
+
+        if(extraHintPreview) {
+            auto& ui=g_xGameProc.m_xInterface; POINT anchor={}; bool hints=true,pressed=true,released=true,modal=true,state=true;
+            const int group[][3]={{220,203,1052},{41,195,1600},{101,195,1601},{161,195,1602}};
+            const int guild[][3]={{557,404,1052},{42,388,4010},{92,388,4009},{142,388,4008},{292,388,4011},{342,388,4012},{392,388,4013},{442,388,4014},{492,388,4015}};
+            const int skill[][3]={{319,425,1052},{49,33,5050},{83,33,5051},{117,33,5052},{151,33,5053},{185,33,5054},{219,33,5055},{253,33,5056},{287,33,5057}};
+            const int trade[][3]={{229,282,1300}};
+            const int npc[][3]={{349,ui.m_xNPCWnd.Height()-39,1052}};
+            const int mode=extraHintPreview-67; const int (*buttons)[3]=mode==0?group:mode==1?guild:mode==2?skill:mode==3?trade:npc;
+            CGameWnd* panel=mode==0?(CGameWnd*)&ui.m_xGroupWnd:mode==1?(CGameWnd*)&ui.m_xGuildWnd:mode==2?(CGameWnd*)&ui.m_xSkillWnd:mode==3?(CGameWnd*)&ui.m_xExchangeWnd:(CGameWnd*)&ui.m_xNPCWnd;
+            const int count=mode==0?4:mode==1 || mode==2?9:1;
+            for(int i=0;i<count;++i) {
+                POINT point={panel->m_rcWnd.left+buttons[i][0],panel->m_rcWnd.top+buttons[i][1]};
+                hints &= ui.ButtonHintAt(point,anchor)==buttons[i][2];
+                ui.OnLButtonDown(point); pressed &= ui.ButtonHintAt(point,anchor)==0;
+                ui.OnLButtonUp(POINT{795,460}); released &= panel->m_bActive && ui.ButtonHintAt(point,anchor)==buttons[i][2];
+            }
+            const int chosen=mode==0 || mode==2?1:mode==1?4:0;
+            mouse={panel->m_rcWnd.left+buttons[chosen][0],panel->m_rcWnd.top+buttons[chosen][1]};g_xGameProc.m_ptMousePos=mouse;
+            if(mode==3) {ui.m_xExchangeWnd.confirmed=true;state=ui.ButtonHintAt(mouse,anchor)==1303;ui.m_xExchangeWnd.confirmed=false;}
+            if(mode==4) {ui.m_xNPCWnd.canClose=false;state=ui.ButtonHintAt(mouse,anchor)==0;ui.m_xNPCWnd.canClose=true;}
+            ui.ShowNotice(4716);modal=ui.ButtonHintAt(mouse,anchor)==0;ui.m_xMsgBox.HideMessageBox();
+            for(int i=0;i<24;++i) ui.ShowButtonHint(mouse);
+            if(FILE* report=fopen("remaining-hint-check.txt","wb")) {fprintf(report,"hints=%d pressed=%d released=%d modal=%d state=%d\n",hints,pressed,released,modal,state);fclose(report);}
+            const char* paths[]={"group-hint.bmp","guild-hint.bmp","skill-button-hint.bmp","trade-hint.bmp","npc-close-hint.bmp"}; capturePath=paths[mode];
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1420,6 +1449,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=group-hint")==0 ? 67 :
+        strcmp(lpCmdLine,"--preview=guild-hint")==0 ? 68 :
+        strcmp(lpCmdLine,"--preview=skill-button-hint")==0 ? 69 :
+        strcmp(lpCmdLine,"--preview=trade-hint")==0 ? 70 :
+        strcmp(lpCmdLine,"--preview=npc-close-hint")==0 ? 71 :
         strcmp(lpCmdLine,"--preview=inventory-hint")==0 ? 64 :
         strcmp(lpCmdLine,"--preview=status-button-hint")==0 ? 65 :
         strcmp(lpCmdLine,"--preview=quest-hint")==0 ? 66 :

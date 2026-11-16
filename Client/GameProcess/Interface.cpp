@@ -1733,6 +1733,8 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
     }
     if (m_xInventoryWnd.m_scrollCaptured) { m_xInventoryWnd.OnLButtonUp(&m_stCommonItem,ptMouse); return TRUE; }
     if (m_xOptionWnd.m_audioDrag>=0) { m_xOptionWnd.OnLButtonUp(ptMouse); return TRUE; }
+    if (m_xGroupWnd.PressedButton()>=0) { if(m_xGroupWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_GROUP); return TRUE; }
+    if (m_xGuildWnd.m_pressed>=0) { if(m_xGuildWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_GUILD); return TRUE; }
     if (m_xGuildWnd.m_scrollCaptured) { m_xGuildWnd.OnLButtonUp(ptMouse); return TRUE; }
 	m_bMoveFocusedWnd = FALSE;
 
@@ -1898,6 +1900,8 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
     if (m_xSkillWnd.m_skillScrollCaptured) { m_xSkillWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xInventoryWnd.m_scrollCaptured) { m_xInventoryWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xOptionWnd.m_audioDrag>=0) { m_xOptionWnd.OnMouseMove(ptMouse); return TRUE; }
+    if (m_xGroupWnd.PressedButton()>=0) { if(m_xGroupWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_GROUP); return TRUE; }
+    if (m_xGuildWnd.m_pressed>=0) { if(m_xGuildWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_GUILD); return TRUE; }
     if (m_xGuildWnd.m_scrollCaptured) { m_xGuildWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
 	MoveTopWindow(ptMouse);
@@ -2149,6 +2153,21 @@ int CInterface::ButtonHintAt(POINT point,POINT& anchor)
         anchor={hit.right,hit.bottom}; return message;
     };
     switch (GetWindowInMousePos(point)) {
+    case _WND_ID_GROUP: {
+        const int buttons[][4]={{1221,217,200,1052},{1362,38,192,1600},{1365,98,192,1601},{1368,158,192,1602}};
+        for (int i=0;i<4;++i) if (const int hint=resolve(m_xGroupWnd.m_rcWnd,buttons[i][0],buttons[i][1],buttons[i][2],buttons[i][3],m_xGroupWnd.PressedButton()==i)) return hint;
+        return 0;
+    }
+    case _WND_ID_GUILD: {
+        const int buttons[][4]={{1221,554,401,1052},{1301,39,385,4010},{1304,89,385,4009},{1307,139,385,4008},{1310,289,385,4011},{1313,339,385,4012},{1316,389,385,4013},{1320,439,385,4014},{1323,489,385,4015}};
+        for (int i=0;i<9;++i) if (const int hint=resolve(m_xGuildWnd.m_rcWnd,buttons[i][0],buttons[i][1],buttons[i][2],buttons[i][3],m_xGuildWnd.m_pressed==i)) return hint;
+        return 0;
+    }
+    case _WND_ID_SKILL:
+        for (int i=0;i<9;++i) if (const int hint=resolve(m_xSkillWnd.m_rcWnd,i?1640+2*(i-1):1221,i?46+34*(i-1):316,i?30:422,i?5049+i:1052,m_xSkillWnd.m_skillPressed==i)) return hint;
+        return 0;
+    case _WND_ID_EXCHANGE: return resolve(m_xExchangeWnd.m_rcWnd,1394,226,279,m_xExchangeWnd.confirmed?1303:1300,m_xExchangeWnd.confirmPressed);
+    case _WND_ID_NPCCHAT: return resolve(RECT{0,0,386,m_xNPCWnd.Height()},1221,346,m_xNPCWnd.Height()-42,1052,m_xNPCWnd.closePressed || !m_xNPCWnd.canClose);
     case _WND_ID_INVENTORY: return resolve(m_xInventoryWnd.m_rcWnd,1221,242,423,1052,m_xInventoryWnd.ClosePressed());
     case _WND_ID_STATUS: return resolve(m_xStatusWnd.m_rcWnd,1221,289,14,1052,m_xStatusWnd.ClosePressed());
     case _WND_ID_QUEST:

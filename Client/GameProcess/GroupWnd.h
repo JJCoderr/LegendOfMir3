@@ -12,6 +12,7 @@ class CGroupWnd : public CGameWnd
     int m_pressed = -1;
     int ButtonAt(POINT point);
 public:
+    int PressedButton() const { return m_pressed; }
 	CPDLList<CGroupMember>	m_xGroupList;
 
 public:
