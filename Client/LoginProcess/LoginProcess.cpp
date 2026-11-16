@@ -27,7 +27,7 @@ CLoginProcess::CLoginProcess()
 VOID CLoginProcess::Init()
 {
 	m_fIsConnected				= CONNECT_FAIL;
-	m_Progress					= PRG_PATCH;
+	m_Progress					= PRG_LOGIN;
 	m_UserState					= LGM_INPUT_ID;
 	m_fIsLButtonClicked			= FALSE;
 	m_nAnimationCounter			= 0;
@@ -75,13 +75,13 @@ void CLoginProcess::Load(void)
 {	
 //	int i;
 	int nSrvCount;
+	ReadIniFileData();
 
 	m_Image.NewLoad(IMAGE_INTERFACE_1, TRUE, TRUE);
 	m_Image2.NewLoad(IMAGE_INTERFACE_2, TRUE, TRUE);
 
 	ZeroMemory(g_xChatEditBox.m_szInputMsg,sizeof(g_xChatEditBox.m_szInputMsg));
-	pPatch = new CPatch;
-	pPatch->InitPatch();
+	pPatch = NULL;
 
 //	m_xMsgBox.Load(&m_Image);							// 容器		2D
 	m_xMsgBox.CreateWnd(&m_Image2,TRUE,219,110,362,180);	// 容器		3D
@@ -94,6 +94,9 @@ void CLoginProcess::Load(void)
 	m_xAvi.Create(&m_Image);
 	m_xLogin.Create(&m_Image);
 	m_xSelectSrv.Create(&m_Image,&m_SList);
+	m_xAvi.SetRenderAviState(9); // Static login background when movies are absent.
+	m_xLogin.OpenWnd();
+	g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(), m_szServerIP, m_nServerPort);
 
 }
 
@@ -127,6 +130,12 @@ LRESULT CLoginProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 			OnLButtonUp(wParam, lParam);
 			break;
 		case ID_SOCKCLIENT_EVENT_MSG:
+			if (WSAGETSELECTERROR(lParam) || WSAGETSELECTEVENT(lParam) == FD_CLOSE) {
+				g_xClientSocket.DisconnectToServer();
+				m_fIsConnected = CONNECT_FAIL;
+				m_xMsgBox.ShowMessageBox("连接服务器失败，请检查服务器后重新启动客户端。", 1, 0);
+				break;
+			}
 			g_xClientSocket.OnSocketMessage(wParam, lParam);
 			break;
 		case WM_KEYDOWN:
@@ -630,7 +639,7 @@ VOID CLoginProcess::RenderScene(INT nLoopTime)
 		return;
 	}	
 
-	if(m_fIsConnected==CONNECT_SUCCESS)
+	// Rendering must not depend on a live server connection.
 	{
 		Clear(0x0000);
 		m_xAvi.Render(nLoopTime);

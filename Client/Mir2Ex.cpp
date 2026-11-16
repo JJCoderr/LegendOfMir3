@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 
 CMirSound			g_xSound;
-CWHDXGraphicWindow	g_xMainWnd;
+CWHDXGraphicWindow	g_xMainWnd(640, 480, _SCREEN_BPP);
 CLoginProcess		g_xLoginProc;
 CCharacterProcess	g_xChrSelProc;
 CGameProcess		g_xGameProc;
@@ -23,8 +23,14 @@ BYTE				g_bProcState = _LOGIN_PROC;
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     MSG	msg;
+	// Resolve config and resources beside the executable, including shortcut launches.
+	char executable[MAX_PATH];
+	GetModuleFileName(NULL, executable, MAX_PATH);
+	char* separator = strrchr(executable, '\\');
+	if (separator) { *separator = 0; SetCurrentDirectory(executable); }
 
-	g_xMainWnd.Create(hInstance, "Legend Of Mir 2 Expansion[Evil's Illusion] ", NULL, MAKEINTRESOURCE(IDI_ICON), _DXG_SCREENMODE_WINDOW, _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D|_DXG_DEVICEMODE_ZBUFFER);
+
+	if (!g_xMainWnd.Create(hInstance, "Legend Of Mir 2 Expansion[Evil's Illusion] ", NULL, MAKEINTRESOURCE(IDI_ICON), _DXG_SCREENMODE_WINDOW, _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D|_DXG_DEVICEMODE_ZBUFFER)) return -1;
 	ShowWindow(g_xMainWnd.GetSafehWnd(), SW_HIDE);
 
 	g_xSound.InitMirSound(g_xMainWnd.GetSafehWnd());

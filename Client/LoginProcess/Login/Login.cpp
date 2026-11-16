@@ -75,6 +75,7 @@ VOID CLogin::Create(CWHWilImageData* pxImage)
 	SetFocus(g_xMainWnd.GetSafehWnd());
 
 	SetRect(&m_rcWnd,_LEFT_LOGIN,_TOP_LOGIN,_RIGHT_LOGIN,_BOTTOM_LOGIN);
+	SetFocusAfter();
 }
 
 HRESULT	CLogin::OnKeyDown(WPARAM wParam, LPARAM lParam)
@@ -89,7 +90,7 @@ HRESULT	CLogin::OnKeyDown(WPARAM wParam, LPARAM lParam)
 					break;
 				}
 				case LGM_INPUT_PASSWORD:
-				{	if( ( lstrlen( m_xInputState[LGM_INPUT_ID-1].szData) >= LIMIT_USERID ) 
+				{	if( wParam == VK_RETURN && ( lstrlen( m_xInputState[LGM_INPUT_ID-1].szData) >= LIMIT_USERID )
 									&& lstrlen( m_xInputState[LGM_INPUT_PASSWORD-1].szData ) )
 					{	g_xClientSocket.OnLogin(m_xInputState[LGM_INPUT_ID-1].szData,m_xInputState[LGM_INPUT_PASSWORD-1].szData);
 						strcpy(g_szUserID,m_xInputState[LGM_INPUT_ID-1].szData);
@@ -252,7 +253,7 @@ VOID CLogin::Render(INT	nLoopTime)
 		{	m_pxImage->NewSetIndex(_IMG_IDX_LOGIN_IDPASS);
 			g_xMainWnd.DrawWithImageForComp(_LEFT_ID_PASS,m_rcWnd.top + _TOP_ID_PASS,
 												m_pxImage->m_lpstNewCurrWilImageInfo->shWidth ,m_pxImage->m_lpstNewCurrWilImageInfo->shHeight,(WORD*)m_pxImage->m_pbCurrImage);
-			SetFocusBefore();
+			GetWindowText(g_xChatEditBox.GetSafehWnd(), m_xInputState[m_nUserState-1].szData, m_xInputState[m_nUserState-1].nSize);
 			memset(Pass,'*',strlen(m_xInputState[1].szData));
 			g_xMainWnd.PutsHan(NULL, m_xInputState[0].Left, m_xInputState[0].Top, RGB(255,255,255), RGB(0,0,0), m_xInputState[0].szData);
 			g_xMainWnd.PutsHan(NULL, m_xInputState[1].Left, m_xInputState[1].Top, RGB(255,255,255), RGB(0,0,0), Pass);

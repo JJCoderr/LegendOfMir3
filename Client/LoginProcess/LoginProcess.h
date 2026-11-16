@@ -61,7 +61,7 @@ private:
 	int					m_Progress;
 	CMirButton			m_pBtn[6];									// LOGIN BUTTON
 
-	char				m_szServerIP[15];
+	char				m_szServerIP[16];
 	char				m_szErrorMsg[512];
 	BOOL				m_fIsConnected;
 	BOOL				m_fIsLButtonClicked;

@@ -65,7 +65,6 @@ INT_PTR CALLBACK ChatEditDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
-	PAINTSTRUCT ps;
 	switch (nMsg)
 	{
 		case WM_KEYDOWN:
@@ -122,14 +121,6 @@ LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LP
 					return 0L;
 				}
 			}
-			break;
-		}
-		case WM_PAINT:
-		{
-
-			BeginPaint(m_hChatEdit, &ps);
-			InvalidateRect(hWnd, NULL, FALSE);
-			EndPaint(m_hChatEdit, &ps);
 			break;
 		}
 		default:

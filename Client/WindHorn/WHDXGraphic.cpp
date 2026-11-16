@@ -403,7 +403,7 @@ HRESULT CWHDXGraphicWindow::CreateDXG()
 				return E_FAIL;		
 		}
 
-		if ( FAILED(hr == CreatePrimarySurface()) )
+		if ( FAILED(hr = CreatePrimarySurface()) )
 		{
 			MessageBox(m_hWnd, TEXT("[CWHDXGraphicWindow::CreateDXG]") TEXT("Primary surface create failed."), TEXT("MirDXG"), MB_ICONERROR | MB_OK);
 			return E_FAIL;
@@ -540,6 +540,14 @@ HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
 		if ( m_bDeviceModeFlag & _DXG_DEVICEMODE_D3D )
 			ddsd.ddsCaps.dwCaps |= DDSCAPS_3DDEVICE;
 
+		// All sprite decoders and software drawing routines write RGB565 pixels.
+		ddsd.dwFlags |= DDSD_PIXELFORMAT;
+		ddsd.ddpfPixelFormat.dwSize = sizeof(DDPIXELFORMAT);
+		ddsd.ddpfPixelFormat.dwFlags = DDPF_RGB;
+		ddsd.ddpfPixelFormat.dwRGBBitCount = 16;
+		ddsd.ddpfPixelFormat.dwRBitMask = 0xf800;
+		ddsd.ddpfPixelFormat.dwGBitMask = 0x07e0;
+		ddsd.ddpfPixelFormat.dwBBitMask = 0x001f;
 		ddsd.dwWidth    = m_stDisplayInfo.wWidth;
 		ddsd.dwHeight   = m_stDisplayInfo.wHeight;
 
