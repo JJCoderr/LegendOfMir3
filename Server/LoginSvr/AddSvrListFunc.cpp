@@ -55,7 +55,7 @@ BOOL CALLBACK AddSvrListProc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
 						lstrcat(szKey, _T("\\Servers\\"));
 						lstrcat(szKey, szTitle);
 
-						jRegSetKey(szKey, _TEXT("Title"), REG_SZ, (LPBYTE)szTitle, _tcslen(szTitle) * sizeof(TCHAR));
+						jRegSetKey(szKey, _TEXT("Title"), REG_SZ, (LPBYTE)szTitle, (DWORD)((lstrlen(szTitle) + 1) * sizeof(TCHAR)));
 						
 						if (SendMessage(GetDlgItem(hWndDlg, IDC_IPADDRESS1), IPM_ISBLANK, (WPARAM)0, (LPARAM)0L) ||
 							SendMessage(GetDlgItem(hWndDlg, IDC_IPADDRESS2), IPM_ISBLANK, (WPARAM)0, (LPARAM)0L))
@@ -88,7 +88,7 @@ BOOL CALLBACK AddSvrListProc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
 							wsprintf(szGateList, _TEXT("%d.%d.%d.%d:%s"), FIRST_IPADDRESS(dwIP), SECOND_IPADDRESS(dwIP), 
 															THIRD_IPADDRESS(dwIP), FOURTH_IPADDRESS(dwIP), szPort);
 
-							jRegSetKey(szKey, _TEXT("Gate"), REG_SZ, (LPBYTE)szGateList, _tcslen(szGateList) * sizeof(TCHAR));
+							jRegSetKey(szKey, _TEXT("Gate"), REG_SZ, (LPBYTE)szGateList, (DWORD)((lstrlen(szGateList) + 1) * sizeof(TCHAR)));
 						}
 					}
 				}

@@ -24,8 +24,9 @@ void InitListView(HWND hWndDlg)
 	lvi.iSubItem	= 0;
 
 	ZeroMemory(szText, sizeof(szText));
+	ZeroMemory(szTitle, sizeof(szTitle));
 
-	while (jRegEnumKey(_LOGIN_SERVERLIST_REGISTRY, nCount, szText, sizeof(szText)) != ERROR_NO_MORE_ITEMS)
+	while (jRegEnumKey(_LOGIN_SERVERLIST_REGISTRY, nCount, szText, sizeof(szText)/sizeof(TCHAR)) != ERROR_NO_MORE_ITEMS)
 	{				
 		lvi.pszText = szText;
 		ListView_InsertItem(GetDlgItem(hWndDlg, IDC_SERVERINFO_LIST), &lvi);

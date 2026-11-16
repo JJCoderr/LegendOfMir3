@@ -202,6 +202,9 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 
 	g_MirDB.SetDiagRec( __cbDBMsg );
 	g_MirDB.Init();
+	ZeroMemory(wszDatabase, sizeof(wszDatabase));
+	ZeroMemory(szDatabase, sizeof(szDatabase));
+
 
 	g_pConnCommon	= g_MirDB.CreateConnection( "Mir2_Common", "sa", "prg" );
 	g_pConnGame		= g_MirDB.CreateConnection( szDatabase, "sa", "prg" );

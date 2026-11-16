@@ -28,6 +28,13 @@ BOOL CALLBACK ConfigDlgFunc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 			int		nPort = 0, nServerNum = 0;
 
+			// 缓冲区必须清零：注册表键缺失时 GET 不会写入，
+			// 未初始化的栈内容会被 SetWindowText 显示成乱码
+			ZeroMemory(szPort, sizeof(szPort));
+			ZeroMemory(szServer, sizeof(szServer));
+			ZeroMemory(szPath, sizeof(szPath));
+			ZeroMemory(szDatabase, sizeof(szDatabase));
+
 			jRegGetKey(_GAME_SERVER_REGISTRY, _TEXT("DBServerIP"), (LPBYTE)&dwIP);
 			SendMessage(GetDlgItem(hWndDlg, IDC_DBSVR_IP), IPM_SETADDRESS, (WPARAM)0, (LPARAM)(DWORD)dwIP);
 
@@ -76,10 +83,10 @@ BOOL CALLBACK ConfigDlgFunc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 					jRegSetKey(_GAME_SERVER_REGISTRY, _TEXT("DBServerPort"), REG_DWORD, (LPBYTE)&nRemotePort, sizeof(DWORD));
 
 					GetWindowText(GetDlgItem(hWndDlg, IDC_MAPFILE_LOC), szPath, sizeof(szPath));
-					jRegSetKey(_GAME_SERVER_REGISTRY, _TEXT("MapFileLoc"), REG_SZ, (LPBYTE)szPath, sizeof(szPath)/sizeof(TCHAR));
+					jRegSetKey(_GAME_SERVER_REGISTRY, _TEXT("MapFileLoc"), REG_SZ, (LPBYTE)szPath, (DWORD)((lstrlen(szPath) + 1) * sizeof(TCHAR)));
 
 					GetWindowText(GetDlgItem(hWndDlg, IDC_DBMS_DEVICE), szDatabase, sizeof(szDatabase));
-					jRegSetKey(_GAME_SERVER_REGISTRY, _TEXT("Device"), REG_SZ, (LPBYTE)szDatabase, sizeof(szDatabase)/sizeof(TCHAR));
+					jRegSetKey(_GAME_SERVER_REGISTRY, _TEXT("Device"), REG_SZ, (LPBYTE)szDatabase, (DWORD)((lstrlen(szDatabase) + 1) * sizeof(TCHAR)));
 
 				}
 				case IDCANCEL:

@@ -137,6 +137,8 @@ BOOL CMirMap::LoadMapData(char *pszName)
 	TCHAR			szMapFileName[256];
 	TCHAR			szPath[128];
 
+	ZeroMemory(szPath, sizeof(szPath));
+
 	jRegGetKey(_GAME_SERVER_REGISTRY, _TEXT("MapFileLoc"), (LPBYTE)szPath);
 
 	MultiByteToWideChar(CP_ACP, 0, pszName, -1, szMapName, sizeof(szMapName)/sizeof(TCHAR));

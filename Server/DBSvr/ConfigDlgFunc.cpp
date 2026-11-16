@@ -42,7 +42,7 @@ BOOL CALLBACK ConfigDlgFunc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 					jRegSetKey(_DB_SERVER_REGISTRY, _TEXT("Installed"), REG_BINARY, (LPBYTE)&btInstalled, sizeof(BYTE));
 
 					GetWindowText(GetDlgItem(hWndDlg, IDC_DBMS_DEVICE), szDatabase, sizeof(szDatabase));
-					jRegSetKey(_DB_SERVER_REGISTRY, _TEXT("Device"), REG_SZ, (LPBYTE)szDatabase, sizeof(szDatabase)/sizeof(TCHAR));
+					jRegSetKey(_DB_SERVER_REGISTRY, _TEXT("Device"), REG_SZ, (LPBYTE)szDatabase, (DWORD)((lstrlen(szDatabase) + 1) * sizeof(TCHAR)));
 				}
 				case IDCANCEL:
 					return EndDialog(hWndDlg, IDCANCEL);

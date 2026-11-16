@@ -192,6 +192,9 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 
 	GetDBManager()->Init( InsertLogMsg, szDatabase, "sa", "prg" );
 
+	ZeroMemory(wszDatabase, sizeof(wszDatabase));
+	ZeroMemory(szDatabase, sizeof(szDatabase));
+
 	// ¶ÁÈ¡±í
 	CConnection *pConn = GetDBManager()->m_dbMain.CreateConnection( "Mir2_Common", "sa", "prg" );
 	if ( pConn )

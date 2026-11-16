@@ -70,6 +70,9 @@ UINT WINAPI InitializingServer(LPVOID lpParameter)
 	TCHAR		wszFullPath[256];
 	DWORD		dwReadLen;
 
+	ZeroMemory(wszPath, sizeof(wszPath));
+	ZeroMemory(wszFullPath, sizeof(wszFullPath));
+
 	ZeroMemory(g_szGoldName, sizeof(g_szGoldName));
 	LoadString(g_hInst, IDS_GOLD, wszPath, sizeof(wszPath)/sizeof(TCHAR));
 	WideCharToMultiByte(CP_ACP, 0, wszPath, -1, g_szGoldName, sizeof(g_szGoldName), NULL, NULL);
