@@ -1652,20 +1652,35 @@ public:
             auto& picker=g_xGameProc.m_xInterface.m_xPortraitWnd;
             CreateDirectoryA("./preview-photo-cache",nullptr);
             std::vector<BYTE> jpeg;if(FILE* file=fopen("./portrait-preview/portrait01.jpg","rb")) {fseek(file,0,SEEK_END);jpeg.resize(ftell(file));rewind(file);fread(jpeg.data(),1,jpeg.size(),file);fclose(file);}
-            picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache");picker.SaveOwnCache({});
+            picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache","./preview-photo-cache/UserPic.ini");picker.SaveOwnCache({});
             picker.requested=jpeg;picker.requestPending=true;picker.SendRequest();
-            const bool restored=picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache") && picker.HasOwnPhoto();
-            const bool actor=!picker.SetCacheContext("ServerA","HeroMissing","./preview-photo-cache") && !picker.HasOwnPhoto();
-            const bool server=!picker.SetCacheContext("ServerMissing","HeroA","./preview-photo-cache") && !picker.HasOwnPhoto();
-            const bool unsafe=!picker.SetCacheContext("../ServerA","HeroA","./preview-photo-cache") && !picker.SaveOwnCache(jpeg);
-            picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache");picker.requested.clear();picker.requestPending=true;picker.SendRequest();
-            const bool reset=!picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache");
+            const bool restored=picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache","./preview-photo-cache/UserPic.ini") && picker.HasOwnPhoto();
+            const bool actor=!picker.SetCacheContext("ServerA","HeroMissing","./preview-photo-cache","./preview-photo-cache/UserPic.ini") && !picker.HasOwnPhoto();
+            const bool server=!picker.SetCacheContext("ServerMissing","HeroA","./preview-photo-cache","./preview-photo-cache/UserPic.ini") && !picker.HasOwnPhoto();
+            const bool unsafe=!picker.SetCacheContext("../ServerA","HeroA","./preview-photo-cache","./preview-photo-cache/UserPic.ini") && !picker.SaveOwnCache(jpeg);
+            picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache","./preview-photo-cache/UserPic.ini");picker.requested.clear();picker.requestPending=true;picker.SendRequest();
+            const bool reset=!picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache","./preview-photo-cache/UserPic.ini");
             if(FILE* file=fopen("./preview-photo-cache/ServerA_HeroA.fac","wb")) {fwrite("corrupt",1,7,file);fclose(file);}
-            const bool corrupt=!picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache") && !picker.HasOwnPhoto();
-            picker.SaveOwnCache(jpeg);const bool repaired=picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache");
-            if(groupPanel==113) {picker.SaveOwnCache({});picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache");}
+            const bool corrupt=!picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache","./preview-photo-cache/UserPic.ini") && !picker.HasOwnPhoto();
+            picker.SaveOwnCache(jpeg);const bool repaired=picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache","./preview-photo-cache/UserPic.ini");
+            if(groupPanel==113) {picker.SaveOwnCache({});picker.SetCacheContext("ServerA","HeroA","./preview-photo-cache","./preview-photo-cache/UserPic.ini");}
             mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==112?"own-cache-restored.bmp":"own-cache-default.bmp";
             if(FILE* report=fopen("own-cache-check.txt","wb")) {fprintf(report,"restored=%d actor=%d server=%d unsafe=%d reset=%d corrupt=%d repaired=%d\n",restored,actor,server,unsafe,reset,corrupt,repaired);fclose(report);}
+        }
+
+        if(groupPanel==114) {
+            auto& picker=g_xGameProc.m_xInterface.m_xPortraitWnd;CreateDirectoryA("./preview-photo-version",nullptr);
+            const char* ini="./preview-photo-version/UserPic.ini";picker.SetCacheContext("ServerA","HeroA","./preview-photo-version",ini);picker.SaveOwnVersion(0);
+            const auto ack=[&](DWORD version) {_TDEFAULTMESSAGE packet={};packet.wIdent=1402;packet.nRecog=LONG(version);char wire[64]={};fnEncodeMessage(&packet,wire,sizeof(wire));g_xGameProc.OnSocketMessageRecieve(wire);};
+            ack(123456);const bool acknowledged=GetPrivateProfileIntA("UserPic","ServerA_HeroA",0,ini)==123456;
+            ack(0);const bool zeroIgnored=GetPrivateProfileIntA("UserPic","ServerA_HeroA",0,ini)==123456;
+            ack(0xf1234567u);const bool wide=GetPrivateProfileIntA("UserPic","ServerA_HeroA",0,ini)==0xf1234567u;
+            picker.SetCacheContext("ServerA","HeroB","./preview-photo-version",ini);picker.SaveOwnVersion(42);
+            const bool isolated=GetPrivateProfileIntA("UserPic","ServerA_HeroA",0,ini)==0xf1234567u && GetPrivateProfileIntA("UserPic","ServerA_HeroB",0,ini)==42;
+            picker.SetCacheContext("ServerA","HeroA","./preview-photo-version",ini);
+            const bool zeroSaved=picker.SaveOwnVersion(0) && GetPrivateProfileIntA("UserPic","ServerA_HeroA",99,ini)==0;
+            ack(123456);mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath="portrait-upload-confirmed.bmp";
+            if(FILE* report=fopen("portrait-version-check.txt","wb")) {fprintf(report,"acknowledged=%d zero_ignored=%d wide=%d isolated=%d zero_saved=%d\n",acknowledged,zeroIgnored,wide,isolated,zeroSaved);fclose(report);}
         }
 
     }
@@ -1865,6 +1880,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=portrait-upload-confirmed")==0 ? 114 :
         strcmp(lpCmdLine,"--preview=own-cache-restored")==0 ? 112 :
         strcmp(lpCmdLine,"--preview=own-cache-default")==0 ? 113 :
         strcmp(lpCmdLine,"--preview=own-photo-uploaded")==0 ? 110 :

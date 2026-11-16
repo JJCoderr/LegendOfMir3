@@ -168,11 +168,12 @@ bool CPortraitWnd::ShowOwnPhoto()
     return true;
 }
 
-bool CPortraitWnd::SetCacheContext(const std::string& server,const std::string& actor,const std::string& root)
+bool CPortraitWnd::SetCacheContext(const std::string& server,const std::string& actor,const std::string& root,const std::string& versions)
 {
-    ApplyOwnPhoto(nullptr,0);ownCachePath.clear();
+    ApplyOwnPhoto(nullptr,0);ownCachePath.clear();ownCacheKey.clear();versionPath.clear();
     if(server.empty() || actor.empty() || server.find_first_of("\\/:*?\"<>|")!=std::string::npos || actor.find_first_of("\\/:*?\"<>|")!=std::string::npos) return false;
-    ownCachePath=root+"/"+server+"_"+actor+".fac";
+    ownCacheKey=server+"_"+actor;versionPath=versions;
+    ownCachePath=root+"/"+ownCacheKey+".fac";
     FILE* file=fopen(ownCachePath.c_str(),"rb");if(!file) return false;
     fseek(file,0,SEEK_END);const long size=ftell(file);rewind(file);
     if(size<9 || size>4104) {fclose(file);return false;}
@@ -188,4 +189,11 @@ bool CPortraitWnd::SaveOwnCache(const std::vector<BYTE>& jpeg)
     FILE* file=fopen(ownCachePath.c_str(),"wb");if(!file) return false;
     const bool written=fwrite(encoded.data(),1,encoded.size(),file)==encoded.size();const int closed=fclose(file);
     return written && closed==0;
+}
+
+bool CPortraitWnd::SaveOwnVersion(DWORD version)
+{
+    if(ownCacheKey.empty()) return false;
+    const auto text=std::to_string(static_cast<LONG>(version));
+    return WritePrivateProfileStringA("UserPic",ownCacheKey.c_str(),text.c_str(),versionPath.c_str())!=FALSE;
 }

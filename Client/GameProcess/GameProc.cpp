@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "Common/LoginMessages.h"
 
 
 extern CWHQueue	PacketQ;
@@ -2834,16 +2835,26 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 
 		switch (tdm.wIdent)
 		{
+            case 1402: // MIR3 portrait upload acknowledgement
+                if(tdm.nRecog) {
+                    m_xInterface.m_xPortraitWnd.SaveOwnVersion(DWORD(tdm.nRecog));
+                    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+                    std::string message=captions.Get(1519);m_xInterface.MsgAdd(0xffffff,0xff,const_cast<char*>(message.c_str()));
+                }
+                break;
             case 1403: // MIR3 player portrait reply
             {
                 if(!tdm.wParam && !tdm.wTag) {
-                    if(DWORD(tdm.nRecog)==m_xMyHero.m_dwIdentity) {m_xInterface.m_xPortraitWnd.ApplyOwnPhoto(nullptr,0);m_xInterface.m_xPortraitWnd.SaveOwnCache({});}
+                    if(DWORD(tdm.nRecog)==m_xMyHero.m_dwIdentity) {m_xInterface.m_xPortraitWnd.ApplyOwnPhoto(nullptr,0);m_xInterface.m_xPortraitWnd.SaveOwnCache({});m_xInterface.m_xPortraitWnd.SaveOwnVersion(0);}
                     m_xInterface.m_targetDisplay.ApplyPortrait(DWORD(tdm.nRecog),nullptr,0);
                 }
                 else {
                     BYTE jpeg[4097];const int length=fnDecode6BitBuf(pszMsg+DEFBLOCKSIZE,(char*)jpeg,sizeof(jpeg));
                     if(DWORD(tdm.nRecog)==m_xMyHero.m_dwIdentity && m_xInterface.m_xPortraitWnd.ApplyOwnPhoto(jpeg,length))
-                        m_xInterface.m_xPortraitWnd.SaveOwnCache(std::vector<BYTE>(jpeg,jpeg+length));
+                    {
+                        if(m_xInterface.m_xPortraitWnd.SaveOwnCache(std::vector<BYTE>(jpeg,jpeg+length)))
+                            m_xInterface.m_xPortraitWnd.SaveOwnVersion(MAKELONG(tdm.wParam,tdm.wTag));
+                    }
                     m_xInterface.m_targetDisplay.ApplyPortrait(DWORD(tdm.nRecog),jpeg,length);
                 }
                 break;

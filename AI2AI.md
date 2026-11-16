@@ -931,3 +931,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 上传后保存原版编码FAC，恢复默认删除对应文件；有效自身1403照片回复同步保存，零版本清除缓存。没有改变原版图片资源或引入Godot。缓存文件I/O失败不阻断内存照片显示。
 - Client清理83步及全目标112步构建通过。own-cache-restored/default各七项全1，真实文件读写覆盖恢复、跨角色/跨服隔离、非法路径拒绝、删除默认、损坏拒绝及重新保存；自身照片六项回归通过。测试仅写preview-photo-cache目录。已检查out/own-cache-restored.png和own-cache-default.png。
 - 当前进入游戏恢复本地有效缓存，尚未按原版UserPic.ini版本与服务器角色版本比较；远程目标缓存、自动重查、真实登录过程与服务器存储仍待完成。不得把离线SetCacheContext恢复测试描述为已通过完整登录联调。
+
+### 服务器头像上传确认与版本记录
+- 依据原版004282C0.c case1402及0x42D2DE对dword_823A30的写入，1402非零nRecog为上传确认版本，显示CmList1519白字红底提示并记录UserPic.ini/UserPic/服务器_角色。零确认按原版忽略，不把本地SendRequest作为服务器成功。
+- PortraitWnd缓存上下文增加独立版本文件路径，SaveOwnVersion以原版有符号十进制文本保存32位值；自身1403有效JPEG缓存保存成功后记录MAKELONG(wParam,wTag)，零版本清除自身缓存并记录0。
+- Client清理83步、全目标111步构建通过。portrait-upload-confirmed五项全1，经真实编码消息入口验证确认、零忽略、高位32位值、角色隔离和0记录；本地缓存七项、自身照片六项回归通过。测试INI位于preview-photo-version/preview-photo-cache独立目录。
+- 已检查out/portrait-upload-confirmed.png，三条成功提示来自测试序列中三次非零模拟确认，不是实际服务器上传结果。缓存版本现在已记录，但加载时与服务器版本比较、失败节流重查、远程玩家版本缓存及真实登录联调仍未完成。
