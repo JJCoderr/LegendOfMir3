@@ -954,3 +954,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 区分偏移8上下文：普通描述为照片版本，SM_STRUCK/HUMAN_STRUCK为hit_source，后者绝不能覆盖照片版本；依据Godot hud_view.cpp对应消息处理及原版0x411700。扩展5字节在网络层单独编码（22+7字符），不能把整段直接当连续21字节编码。
 - VS x86 C++17独立字段/边界八项检查通过；另以C++20直接包含Godot原human_appearance.hpp，对性别3种/衣服10种/武器256种/头发256种/受击2种共3,932,160组合差分，接受范围、标准化外形、职业和坐骑全部一致。测试out/test-mir3-human.cpp及compare-mir3-human.cpp。
 - 本阶段仅完成协议解码基础，没有改动页面，无新增截图。尚未接原生Actor创建、移动/受击队列或完整角色渲染，不能声称远程职业/照片版本已在实际游戏生效；下一步需统一迁移旧CHARDESC/FEATUREEX消息边界，避免按长度猜测造成旧协议误判。
+
+### MIR3专用人物受击消息接入
+- 1309仅接受已有的人物及完整16字节描述，经现有人物队列更新HP、受击动作、职业与外形；偏移8仍作为攻击来源，不写照片版本。目标头像优先采用已收到的职业。旧31消息保留既有处理，普通出现/移动等共享编号尚未迁移。
+- 移除ChangeFeature中强制发型2的旧调试覆盖；Client单独启用C++17以使用人物描述optional字段，服务器编译标准不变。
+- 新增--preview=human-hit-server，走OnSocketMessageRecieve、ProcessPacket、CMyHero队列与目标显示。unknown/truncated/queued/health/appearance/photo/motion/portrait八项全1；截图out/human-hit-server.png已检查。截图为离线HUD，未包含世界人物渲染，不代表真实服务器联调完成。
+- Client清理构建83步及全目标112步通过，diff --check通过。受击沿用旧动作与音效路径，尚未听音验证；连续受击节流及完整MIR3动作队列仍需对照Godot继续迁移。

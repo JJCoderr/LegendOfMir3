@@ -1701,6 +1701,30 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel==118) {
+            hero.m_dwIdentity=123;hero.m_stFeature.bGender=0;hero.m_bCurrMtn=_MT_STAND;
+            hero.m_bIsMon=FALSE;hero.m_bIsDead=FALSE;hero.m_dwLastStruckTime=0;hero.m_dwPortraitVersion=77;
+            BYTE body[16]={0,1,1,BYTE((2<<6)|5),0,0,0,0,42};
+            const auto receive=[&](DWORD identity,int length) {
+                _TDEFAULTMESSAGE packet={};packet.wIdent=1309;packet.nRecog=identity;packet.wParam=275;packet.wTag=400;packet.wSeries=45;
+                char encoded[128]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));
+                fnEncode6BitBuf(body,encoded+DEFBLOCKSIZE,length,sizeof(encoded)-DEFBLOCKSIZE);
+                g_xGameProc.OnSocketMessageRecieve(encoded);
+            };
+            receive(456,16);const bool unknown=g_xGameProc.m_xWaitPacketQueue.GetCount()==0;
+            receive(123,15);const bool truncated=g_xGameProc.m_xWaitPacketQueue.GetCount()==0;
+            receive(123,16);g_xGameProc.ProcessPacket();const bool queued=hero.m_xPacketQueue.GetCount()==1;
+            hero.UpdatePacketState();
+            const bool health=hero.m_wHP==275 && hero.m_wMAXHP==400 && hero.m_stAbility.wHP==275;
+            const bool appearance=hero.m_bProfession==2 && hero.m_stFeature.bHair==5 && hero.m_stFeature.bDress==1;
+            const bool photo=hero.m_dwPortraitVersion==77;
+            const bool motion=hero.m_bCurrMtn==_MT_HITTED;
+            hero.m_szName[0]=0;g_xGameProc.UpdateTargetDisplay(&hero,GetTickCount());
+            const bool portrait=g_xGameProc.m_xInterface.m_targetDisplay.Frame()==654;
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath="human-hit-server.bmp";
+            if(FILE* report=fopen("human-hit-check.txt","wb")) {fprintf(report,"unknown=%d truncated=%d queued=%d health=%d appearance=%d photo=%d motion=%d portrait=%d\n",unknown,truncated,queued,health,appearance,photo,motion,portrait);fclose(report);}
+        }
+
         if(groupPanel==116 || groupPanel==117) {
             auto& picker=g_xGameProc.m_xInterface.m_xPortraitWnd;CreateDirectoryA("./preview-photo-restore",nullptr);
             const char* root="./preview-photo-restore";const char* ini="./preview-photo-restore/UserPic.ini";
@@ -1914,6 +1938,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=human-hit-server")==0 ? 118 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-zero")==0 ? 117 :
         strcmp(lpCmdLine,"--preview=portrait-chinese-filename")==0 ? 115 :
         strcmp(lpCmdLine,"--preview=portrait-upload-confirmed")==0 ? 114 :

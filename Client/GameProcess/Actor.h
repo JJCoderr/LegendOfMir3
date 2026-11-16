@@ -46,6 +46,8 @@ class CActor
 {
 private:
 public:
+    BYTE m_bProfession=255;
+    DWORD m_dwPortraitVersion=0;
     CDamageNumbers m_damage;
     void AddDamage(int value);
     void HealthDamage(int before,int after);

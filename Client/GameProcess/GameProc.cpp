@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "Common/Mir3HumanAppearance.h"
 #include "Common/LoginMessages.h"
 
 
@@ -3721,6 +3722,13 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 
 				break;
 			}
+            case 1309: // MIR3 human hit requires an existing human, never creates an actor from HP coordinates.
+            {
+                CActor* actor=DWORD(tdm.nRecog)==m_xMyHero.m_dwIdentity?&m_xMyHero:FindActor(tdm.nRecog);
+                if(!actor || actor->m_stFeature.bGender>1) break;
+                BYTE body[16];if(strlen(pszMsg+DEFBLOCKSIZE)!=22 || fnDecode6BitBuf(pszMsg+DEFBLOCKSIZE,(char*)body,sizeof(body))!=16 || !CMir3HumanAppearance::Parse(body,sizeof(body),true)) break;
+            }
+            // Fall through to the existing actor message queue.
 			default:
 			{
 				LPPACKETMSG	lpPacketMsg	= new PACKETMSG;
@@ -3919,7 +3927,7 @@ VOID CGameProcess::ProcessPacket()
 				}
 				else
 				{
-					if ( lpPacketMsg->stDefMsg.wIdent == SM_STRUCK )
+					if ( lpPacketMsg->stDefMsg.wIdent == SM_STRUCK || lpPacketMsg->stDefMsg.wIdent == 1309 )
 					{
 //						m_xMyHero.StruckMsgReassign();
 
@@ -4209,7 +4217,7 @@ void CGameProcess::UpdateTargetDisplay(CActor* actor,DWORD now)
     const BYTE type=actor->m_stFeature.bGender;
     if(type<=_GENDER_WOMAN) {
         // Remote legacy actors have no profession field; use the reference unknown-job frame.
-        target.SetHuman(actor->m_dwIdentity,type,actor==&m_xMyHero?m_xMyHero.m_bJob:255,now);
+        target.SetHuman(actor->m_dwIdentity,type,actor->m_bProfession!=255?actor->m_bProfession:actor==&m_xMyHero?m_xMyHero.m_bJob:255,now);
         target.QueryPortrait(actor->m_szName);
     } else if(type==_GENDER_MON) {
         const bool changed=target.ChangesTo(actor->m_dwIdentity);

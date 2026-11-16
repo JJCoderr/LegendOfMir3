@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include "Common/Mir3HumanAppearance.h"
 #include "Common/LegacyPanel.h"
 
 
@@ -52,6 +53,7 @@ VOID CActor::InitActor()
 
 	m_dwWarModeTime		= 0;
 	m_wMAXHP			= 0;
+    m_bProfession=255;m_dwPortraitVersion=0;
     m_damage=CDamageNumbers{};
 	m_wHP				= 0;
 	m_wMP				= 0;
@@ -375,7 +377,7 @@ BOOL CActor::ChangeFeature(FEATURE stFeature)
 
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-					stFeature.bHair = 2;
+					// Preserve the hairstyle supplied by the server.
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -396,7 +398,7 @@ BOOL CActor::ChangeFeature(FEATURE stFeature)
 
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-					stFeature.bHair = 2;
+					// Preserve the hairstyle supplied by the server.
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -2845,6 +2847,12 @@ VOID CHero::OnStruck(LPPACKETMSG lpPacketMsg)
 	MESSAGEBODYWL stMsgBodyWl;
 	FEATURE		  stFeature;
 
+    std::optional<CMir3HumanAppearance> appearance;
+    if(lpPacketMsg->stDefMsg.wIdent==1309) {
+        BYTE body[16];if(strlen(lpPacketMsg->szEncodeData)!=22 || fnDecode6BitBuf(lpPacketMsg->szEncodeData,(char*)body,sizeof(body))!=16) return;
+        appearance=CMir3HumanAppearance::Parse(body,sizeof(body),true);if(!appearance) return;
+        m_bProfession=appearance->profession;m_nState=appearance->flags;
+    }
 	FLOAT wHPRate	 = (FLOAT)((FLOAT)lpPacketMsg->stDefMsg.wParam/(FLOAT)lpPacketMsg->stDefMsg.wTag);
 	WORD  wDamage	 = lpPacketMsg->stDefMsg.wSeries;
     if(!m_bIsDead) AddDamage(-int(wDamage));
@@ -2855,6 +2863,7 @@ VOID CHero::OnStruck(LPPACKETMSG lpPacketMsg)
 
 	fnDecode6BitBuf(lpPacketMsg->szEncodeData, (char*)&stMsgBodyWl, sizeof(MESSAGEBODYWL));
 	memcpy(&stFeature, &stMsgBodyWl.lParam1, sizeof(LONG));
+    if(appearance) stFeature={appearance->type,appearance->weapon,appearance->clothing,appearance->hair};
 
 	if ( !m_bIsMon )
 	{
@@ -3160,6 +3169,7 @@ BOOL CHero::UpdatePacketState()
 					case SM_WALK:				{	OnWalk(lpPacketMsg);				break;	}
 					case SM_RUN:				{	OnRun(lpPacketMsg);					break;	}
 					case SM_TURN:				{	OnTurn(lpPacketMsg);				break;	}
+					case 1309:
 					case SM_STRUCK:				{	OnStruck(lpPacketMsg);				break;	}
 					case SM_HIT:
 					case SM_FIREHIT:
@@ -3868,6 +3878,7 @@ BOOL CMyHero::UpdatePacketState()
 			{
 				switch ( lpPacketMsg->stDefMsg.wIdent )
 				{
+					case 1309:
 					case SM_STRUCK:
 					{
 						m_bInputLock = TRUE;
