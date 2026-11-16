@@ -81,6 +81,7 @@ public:
 class CScrlBar
 {
 public:
+    void ShowChatScroll(bool expanded, int first, int count);
 	CScrlBar();
 	~CScrlBar();
 

@@ -184,6 +184,22 @@ VOID CScrlBar::CreateScrlBar(CWHWilImageData* pxImage, INT ImgIdx, INT nPageLine
 	m_wScrlBtnHeight= wScrlBtnHeight;
 }
 
+void CScrlBar::ShowChatScroll(bool expanded, int first, int count)
+{
+    if (!m_pxScrlImage->NewSetIndex(1207)) return;
+    const auto& image = *m_pxScrlImage->m_lpstNewCurrWilImageInfo;
+    const int top = expanded ? 342 : 507, travel = expanded ? 203 : 43;
+    m_nPageLine = expanded ? 14 : 5;
+    m_fScrlRate = count > 1 ? float(max(0,min(first,count-1))) / (count-1) : 0;
+    m_fPageRate = count > 0 ? float(m_nPageLine) / count : 0;
+    const int thumb = top + int(travel * double(m_fScrlRate));
+    m_wScrlBtnHeight = 12;
+    SetRect(&m_rcScrlRgn,619,top,619+image.shWidth,top+travel+image.shHeight);
+    SetRect(&m_rcScrlBtnRgn,619,thumb,619+image.shWidth,thumb+image.shHeight);
+    g_xMainWnd.DrawWithImageForComp(619,thumb,image.shWidth,image.shHeight,
+        (WORD*)m_pxScrlImage->m_pbCurrImage);
+}
+
 VOID CScrlBar::ShowScrlBar(INT nX, INT nY, INT nFstPos, INT nCounter)
 {
 	RECT	rcImg;

@@ -443,7 +443,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 	}
 
 	// 滚动条.
-	m_xScrlBar.ShowScrlBar(584, 404, m_nFstLine, m_xChat.GetCounter());
+	m_xScrlBar.ShowChatScroll(m_chatExpanded, m_nFstLine, m_xChat.GetCounter());
 
 	// 客户端消息(左上角).
 	m_xClientSysMsg.ShowSysMsg(nLoopTime, 30, 30);
@@ -1010,7 +1010,7 @@ BOOL CInterface::WindowActivate(INT nID)
 			if ( m_xChatPopWnd.GetGameWndActive() )
 			{
 				g_xChatEditBox.MoveScaled( g_xMainWnd.m_rcWindow.left+_INPUT_EDITWND_XPOS,
-	 					   g_xMainWnd.m_rcWindow.top+(m_chatExpanded ? 534 : 575), m_chatExpanded ? 432 : 344, _INPUT_EDITWND_HEIGHT, TRUE);
+                           g_xMainWnd.m_rcWindow.top+(m_chatExpanded ? 534 : 575), m_chatExpanded ? 432 : 344, _INPUT_EDITWND_HEIGHT, TRUE);
 
 				DeleteWindowToList(_WND_ID_CHATPOP);
 				m_xChatPopWnd.SetGameWndActive(FALSE);
@@ -1335,7 +1335,7 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
 			FLOAT	fScrlRate;
 
 			fScrlRate = m_xScrlBar.GetScrlRate();
-			m_nFstLine  = (m_xChat.GetCounter()-1)*fScrlRate;
+			m_nFstLine  = max(0,m_xChat.GetCounter()-1)*fScrlRate;
 
 			return TRUE;
 		}
@@ -1598,7 +1598,7 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 		FLOAT	fScrlRate;
 
 		fScrlRate = m_xScrlBar.GetScrlRate();
-		m_nFstLine  = (m_xChat.GetCounter()-1)*fScrlRate;
+		m_nFstLine  = max(0,m_xChat.GetCounter()-1)*fScrlRate;
 		return TRUE;
 	}
 
