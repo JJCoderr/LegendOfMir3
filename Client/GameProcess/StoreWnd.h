@@ -1,14 +1,16 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <array>
 class CStoreWnd : public CGameWnd {
     int Hit(POINT point);
     bool Scroll(int kind,POINT point);
     void Layout();
     void Request(int opcode,const std::string& name,DWORD instance=0,WORD quantity=0);
 public:
+    static constexpr int ItemRecordBytes=100, OffersPerPage=12;
     struct Good { std::string name; int variants=0,price=0,stock=0,icon=0,requirementType=0,requirement=0; };
-    struct Offer { std::string name; int icon=0,price=0; DWORD id=0; int count=1,stackMode=0; };
+    struct Offer { std::string name; int icon=0,price=0; DWORD id=0; int count=1,stackMode=0; std::array<BYTE,ItemRecordBytes> record={}; };
     std::vector<Good> goods;
     std::vector<Offer> offers;
     int actor=0,first=0,highlighted=-1,selected=-1,offerIndex=-1,page=0,bulk=-1,pressed=-1;

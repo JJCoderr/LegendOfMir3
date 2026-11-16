@@ -66,7 +66,7 @@ public:
 	CLIENTITEMRCD	m_stItemInfo;
     struct HintLine { std::string text; DWORD color; };
     std::vector<HintLine> GeneralHint(int profession,int level,bool shop=false) const;
-    void ShowGeneralHint(int x,int y) const;
+    void ShowGeneralHint(int x,int y,bool shop=false,bool showIcon=false) const;
     std::vector<HintLine> ArmorHint(int level,int attack,const BYTE* elements,bool shop=false) const;
     HintLine RequirementHint(int level,int attack,const BYTE* elements) const;
     std::vector<HintLine> WeaponHint(int level,int attack,const BYTE* elements,bool shop=false) const;

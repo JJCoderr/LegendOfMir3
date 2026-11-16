@@ -1,6 +1,6 @@
 #include "StdAfx.h"
 #include "GameProcess/AccessoryHintIds.h"
-namespace { constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -1831,6 +1831,35 @@ public:
             if(FILE* report=fopen("equipment-durability-check.txt","wb")) {fprintf(report,"threshold=%d warning=%d raw=%d unit=%d special=%d negative=%d wide=%d ignored=%d drop=%d\n",threshold,warning,rawBytes,unit,special,negative,wide,ignored,drop);fclose(report);}
         }
 
+        if(groupPanel>=PreviewSpecialHint && groupPanel<=PreviewStorageHint) {
+            using namespace Mir3AccessoryHint;
+            enum RecordField { Weight=32, Icon=36, ShopMaximum=38, Instance=62, Current=66, Maximum=68 };
+            auto& ui=g_xGameProc.m_xInterface;auto& shop=ui.m_xStoreWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[sizeof(CItem().m_serverRecord)]={};strcpy((char*)raw,"特殊装备属性测试");
+            const auto setWord=[&](int field,int value) {raw[field]=BYTE(value);raw[field+1]=BYTE(value>>8);};
+            raw[ModeOffset]=SpecialEquipment;raw[Weight]=3;raw[Instance]=1;
+            setWord(Current,2000);setWord(Maximum,5000);setWord(ShopMaximum,10000);
+            setWord(ComfortOffset,300);raw[FirstBonusOffset]=2;raw[CarryCapacityOffset]=3;raw[SecondBonusOffset]=1;raw[HandCapacityOffset]=4;raw[AttackBonusOffset]=2;
+            raw[StrongElementOffset]=1;raw[ExtraElementOffset]=1;raw[StrongElementOffset+1]=2;raw[ExtraElementAmountOffset]=2;raw[HealthBonusOffset]=2;raw[ManaBonusOffset]=3;
+            CItem item;item.SetMir3Item(raw,0);BYTE elements[ElementCount]={};const auto rows=item.AccessoryHint(35,20,elements);
+            const bool attributes=rows.size()==11 && rows[3].text.find("302 (+2)")!=std::string::npos && rows[4].text.find("4 (+1)")!=std::string::npos && rows[5].text.find("6 (+2)")!=std::string::npos;
+            const bool order=rows[6].text.find("x2")!=std::string::npos && rows[7].text.find("+20")!=std::string::npos && rows[8].text.find("+30")!=std::string::npos && rows[9].text.find("x2")!=std::string::npos;
+            const bool maximum=rows[1].text.find("2/5")!=std::string::npos && item.AccessoryHint(35,20,elements,true)[1].text.find("2/10")!=std::string::npos;
+            raw[FirstBonusOffset]=255;raw[HealthBonusOffset]=255;item.SetMir3Item(raw,0);const auto negative=item.AccessoryHint(35,20,elements);const bool signedValues=negative.size()==10 && negative[3].text.find(": 300")!=std::string::npos && negative[3].color==NormalColor;
+            raw[FirstBonusOffset]=2;raw[HealthBonusOffset]=2;item.SetMir3Item(raw,0);
+            char encoded[140]={};fnEncode6BitBuf(raw,encoded,sizeof(raw),sizeof(encoded));std::string packet=std::string(encoded)+"/";shop.selected=0;
+            const bool parsed=shop.SetDetailRecords(packet.c_str(),1,0) && !memcmp(shop.offers[0].record.data(),raw,sizeof(raw));
+            const bool rejected=!shop.SetDetailRecords("broken/",1,0) && shop.offers.size()==1;
+            BYTE longName[sizeof(raw)];memcpy(longName,raw,sizeof(raw));memcpy(longName,"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234",30);fnEncode6BitBuf(longName,encoded,sizeof(longName),sizeof(encoded));
+            const bool fullName=shop.SetDetailRecords((std::string(encoded)+"/").c_str(),1,0) && shop.offers[0].name.size()==30;
+            shop.SetDetailRecords(packet.c_str(),1,0);
+            if(groupPanel==PreviewSpecialHint) {ui.m_xInventoryWnd.AddInvenItem(item,0,TRUE);ui.WindowActivate(_WND_ID_INVENTORY);mouse={550,80};capturePath="special-equipment-hint.bmp";}
+            else {if(groupPanel==PreviewStorageHint) shop.SetStorageRecords(77,packet.c_str(),1);ui.WindowActivate(_WND_ID_STORE);const RECT cell=shop.OfferCell(0);mouse={cell.left+10,cell.top+10};capturePath=groupPanel==PreviewStorageHint?"storage-item-hint.bmp":"shop-item-hint.bmp";}
+            g_xGameProc.m_ptMousePos=mouse;
+            if(FILE* report=fopen("special-shop-hint-check.txt","wb")) {fprintf(report,"attributes=%d order=%d maximum=%d signed=%d parsed=%d rejected=%d full_name=%d\n",attributes,order,maximum,signedValues,parsed,rejected,fullName);fclose(report);}
+        }
+
         if(groupPanel>=PreviewVitalAccessory && groupPanel<=PreviewAccuracyBracelet) {
             using namespace Mir3AccessoryHint;
             auto& ui=g_xGameProc.m_xInterface;
@@ -2262,6 +2291,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=special-equipment-hint")==0 ? PreviewSpecialHint :
+        strcmp(lpCmdLine,"--preview=shop-item-hint")==0 ? PreviewShopHint :
+        strcmp(lpCmdLine,"--preview=storage-item-hint")==0 ? PreviewStorageHint :
         strcmp(lpCmdLine,"--preview=vital-accessory-hint")==0 ? PreviewVitalAccessory :
         strcmp(lpCmdLine,"--preview=defense-accessory-hint")==0 ? PreviewDefenseAccessory :
         strcmp(lpCmdLine,"--preview=recovery-accessory-hint")==0 ? PreviewRecoveryAccessory :

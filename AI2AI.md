@@ -1061,3 +1061,14 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 新AccessoryHintIds.h集中命名该函数物品类型、记录偏移、文案、颜色；范围、标量、基础攻击元素、强弱位图分别复用小型局部函数。常量名称按CmList实显修正为中毒回避/恢复，避免误称生命恢复。
 - 按用户新要求合并21..24为一个功能批次统一验证：增量构建通过，四个新增预览各五项scalar/elements/speed/signed/trailing全1；helmet/accessory26/necklace/accuracy-necklace回归通过。四张截图out/{vital-accessory,defense-accessory,recovery-accessory,accuracy-bracelet}-hint.png已检查。夹具0/0耐久用于呈现低耐久色，图标不作资源对应验收。
 - 用户AGENTS.md修改不纳入提交；仅本轮代码diff检查。类型53、商店带图标提示、原版逐像素校准和真实服务器流程继续待完成。
+
+### 进行中：特殊53与商店提示
+- IDA旧会话worker不可达，经技能open.ps1重新打开原分析库，当前38a4174b；py_eval导出443490到out/item-tooltip-special.c(14046字符，stderr空)。
+- 类型53已写入AccessoryHint独立分支但尚未构建/运行验证、未提交：共同标题耐久重量；WORD44+signed86(Cm2502)、byte47+signed87(Cm1063)、byte48+signed88(Cm1064)；强元素位图x1/x2，HP94/MP95正值*10，弱元素位图，末尾RequirementHint。复用elementMasks(first,end)保持行顺序；MIR3所有模式均可走ShowGeneralHint，删除已无分支的空switch。
+- 下一步先加入53的边界/行序预览，再连同商店提示完整功能统一测试提交。StoreWnd::Offer当前只保留名称图标价格ID数量堆叠，丢弃完整记录；ShowStoreWnd未绘制悬浮提示，需先保留完整记录再接线，不能仅调用现有旧属性。用户要求大功能批次测试/提交。
+
+### 特殊装备与商店仓库属性提示完成接线
+- 53分支按443490完成舒适(WORD44+signed86)、负重能力(byte47+signed87)、手负重能力(byte48+signed88)、强元素、HP/MP附加、弱元素、要求的原版行序；命名常量按实际CmList含义修正。删除MIR3分派的空switch。
+- StoreWnd::Offer保留完整记录，解析允许完整30字节名称；商店/仓库明细悬停创建CItem并复用ShowGeneralHint，模态框、编辑器、手持物品、非当前悬停窗口和加载状态不显示。商店shop=true最大耐久取38，仓库false取68。无记录的旧摘要夹具不伪造属性。
+- ShowGeneralHint增加shop/showIcon参数，按448770扩展图标宽度并居中放置，文本右移；沿用现有原生DrawSelectionFrame。商品提示锚点暂为格子左上角，图标原版染色/530裁剪及空行高度细节、完整逐像素对照仍需校准。
+- Client清理83步、全目标109步构建通过；特殊/商店/仓库三预览七项attributes/order/maximum/signed/parsed/rejected/full_name全1，旧shop-offers和storage-list已运行回归。已检查out/special-equipment-hint.png、shop-item-hint.png、storage-item-hint.png。截图证明商店2/10与仓库2/5及带图标属性；图标为离线夹具。

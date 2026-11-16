@@ -74,10 +74,10 @@ static bool ReadShopRecords(const char* body,int count,std::vector<CStoreWnd::Of
         const char* end=strchr(cursor,'/'); if (!end || end-cursor!=134) return false;
         const std::string encoded(cursor,end); BYTE record[101]={};
         if (fnDecode6BitBuf(const_cast<char*>(encoded.c_str()),(char*)record,100)!=100) return false;
-        const char* name=(char*)record; const size_t length=strlen(name); if (!length || length>=30) return false;
+        const char* name=(char*)record; const size_t length=strnlen(name,30); if (!length) return false;
         const DWORD id=DWORD(record[62])|(DWORD(record[63])<<8)|(DWORD(record[64])<<16)|(DWORD(record[65])<<24);
         if (!id) return false;
-        result.push_back({std::string(name,length),record[36]|(record[37]<<8),record[68]|(record[69]<<8),id,record[71]|(record[72]<<8),record[61]}); cursor=end+1;
+        result.push_back({std::string(name,length),record[36]|(record[37]<<8),record[68]|(record[69]<<8),id,record[71]|(record[72]<<8),record[61]}); memcpy(result.back().record.data(),record,result.back().record.size()); cursor=end+1;
     }
     return !*cursor;
 }
@@ -282,6 +282,16 @@ void CStoreWnd::ShowStoreWnd()
         SelectObject(dc,font); DeleteObject(priceFont);
     }
     SelectObject(dc,old); DeleteObject(font); surface->ReleaseDC(dc);
+    auto& ui=g_xGameProc.m_xInterface;
+    const POINT pointer=g_xGameProc.m_ptMousePos;
+    if(details && !loading && !ui.m_stCommonItem.bSetted && !ui.m_xMsgBox.IsActive() && !ui.m_xGuildEditor.m_bActive && ui.GetWindowInMousePos(pointer)==_WND_ID_STORE) {
+        for(int cellIndex=0;cellIndex<OffersPerPage;++cellIndex) {
+            const int index=cellIndex+(storage?OffersPerPage*page:0);if(index>=int(offers.size())) break;
+            const RECT cell=OfferCell(cellIndex);if(!PtInRect(&cell,pointer)) continue;
+            CItem item;if(item.SetMir3Item(offers[index].record.data(),0)) item.ShowGeneralHint(cell.left,cell.top,!storage,true);
+            break;
+        }
+    }
 }
 void CStoreWnd::Receive(const _TDEFAULTMESSAGE& header,const char* body)
 {

@@ -2,6 +2,18 @@
 
 // MIR3 100-byte item record and tooltip identifiers (444F40).
 namespace Mir3AccessoryHint {
+constexpr unsigned SpecialEquipment = 53;
+constexpr unsigned ComfortOffset = 44;
+constexpr unsigned CarryCapacityOffset = 47;
+constexpr unsigned HandCapacityOffset = 48;
+constexpr unsigned ComfortCaption = 2502;
+constexpr unsigned CarryCapacityCaption = 1063;
+constexpr unsigned HandCapacityCaption = 1064;
+constexpr unsigned HealthBonusOffset = 94;
+constexpr unsigned ManaBonusOffset = 95;
+constexpr unsigned HealthBonusCaption = 2518;
+constexpr unsigned ManaBonusCaption = 2519;
+constexpr unsigned VitalBonusPerUnit = 10;
 constexpr unsigned AccuracyBracelet = 24;
 constexpr unsigned ElementCount = 7;
 constexpr unsigned SimpleElementLimit = 7;

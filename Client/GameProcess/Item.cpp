@@ -164,12 +164,7 @@ BOOL CItem::DrawItem(INT nX, INT nY, BYTE bItemType, const RECT* clip)
 
 VOID CItem::ShowItemStatus(INT nX, INT nY)
 {
-    if(m_serverName[0]) {
-        switch(m_stItemInfo.stStdItem.bStdMode) {
-        case 53:break;
-        default:ShowGeneralHint(nX,nY);return;
-        }
-    }
+    if(m_serverName[0]) { ShowGeneralHint(nX,nY);return; }
 	CHAR	szLineBuf[3][MAX_PATH];
 	CHAR	szName[MAX_PATH];
 	SIZE	sizeLen;
@@ -670,29 +665,36 @@ std::vector<CItem::HintLine> CItem::GeneralHint(int profession,int level,bool sh
     }
     return lines;
 }
-void CItem::ShowGeneralHint(int x,int y) const
+void CItem::ShowGeneralHint(int x,int y,bool shop,bool showIcon) const
 {
     const auto& hero=g_xGameProc.m_xMyHero;
     const int mode=m_stItemInfo.stStdItem.bStdMode;
     const auto lines=mode==5 || mode==6 || mode==54 || mode==55 || mode==56
-        ?WeaponHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0])
-        :mode==15 || (mode>=Mir3AccessoryHint::AvoidanceNecklace && mode<=Mir3AccessoryHint::AccuracyBracelet) || mode==26 || mode==57
-        ?AccessoryHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0])
+        ?WeaponHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0],shop)
+        :mode==15 || (mode>=Mir3AccessoryHint::AvoidanceNecklace && mode<=Mir3AccessoryHint::AccuracyBracelet) || mode==26 || mode==Mir3AccessoryHint::SpecialEquipment || mode==57
+        ?AccessoryHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0],shop)
         :mode==10 || mode==11
-        ?ArmorHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0])
-        :GeneralHint(hero.m_bJob,hero.m_stAbility.bLevel);auto* surface=g_xMainWnd.GetBackBuffer();HDC dc;
+        ?ArmorHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0],shop)
+        :GeneralHint(hero.m_bJob,hero.m_stAbility.bLevel,shop);auto* surface=g_xMainWnd.GetBackBuffer();HDC dc;
     if(FAILED(surface->GetDC(&dc))) return;
     const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};HFONT font=g_xMainWnd.CreateGameFont(face,9);
     auto previous=SelectObject(dc,font);int width=0;
     for(const auto& line:lines) {SIZE size={};GetTextExtentPoint32A(dc,line.text.c_str(),int(line.text.size()),&size);width=max(width,int(size.cx));}
     SelectObject(dc,previous);surface->ReleaseDC(dc);
+    auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];
+    int iconWidth=0,iconHeight=0;
+    if(showIcon && icons.NewSetIndex(m_stItemInfo.stStdItem.wLooks)) {
+        iconWidth=icons.m_lpstNewCurrWilImageInfo->shWidth;iconHeight=icons.m_lpstNewCurrWilImageInfo->shHeight;
+    }
     RECT box={x-5,y-5,x+width+5,y+int(lines.size())*15+2};
+    if(iconWidth>0) {box.right+=iconWidth+10;if(box.bottom-box.top<iconHeight) box.bottom=box.top+iconHeight+10;}
     if(box.right>800) OffsetRect(&box,800-box.right,0);
     DrawLegacyPanel(box,RGB(90,90,45),230,3315350);
+    if(iconWidth>0) DrawSelectionFrame(icons,m_stItemInfo.stStdItem.wLooks,box.left+5,box.top+(box.bottom-box.top-iconHeight)/2,SelectionBlend::Normal,false);
     if(SUCCEEDED(surface->GetDC(&dc))) {
         previous=SelectObject(dc,font);SetBkMode(dc,TRANSPARENT);
         int lineY=box.top+5;
-        for(const auto& line:lines) {SetTextColor(dc,line.color);TextOutA(dc,box.left+5,lineY,line.text.c_str(),int(line.text.size()));lineY+=15;}
+        for(const auto& line:lines) {SetTextColor(dc,line.color);TextOutA(dc,box.left+5+(iconWidth>0?iconWidth+5:0),lineY,line.text.c_str(),int(line.text.size()));lineY+=15;}
         SelectObject(dc,previous);surface->ReleaseDC(dc);
     }
     DeleteObject(font);
@@ -852,8 +854,8 @@ std::vector<CItem::HintLine> CItem::AccessoryHint(int level,int attack,const BYT
             lines.push_back({text,ElementColor});
         }
     };
-    const auto elementMasks=[&]() {
-        for(int kind=0;kind<2;++kind) {
+    const auto elementMasks=[&](int first=0,int end=2) {
+        for(int kind=first;kind<end;++kind) {
             const int base=signedByte(StrongElementOffset+kind),mask=signedByte(ExtraElementOffset+kind);
             if(mask<=0 && !r[StrongElementOffset+kind]) continue;
             std::string text=captions.Get(StrongElementCaption+kind)+":";bool any=false;
@@ -872,6 +874,24 @@ std::vector<CItem::HintLine> CItem::AccessoryHint(int level,int attack,const BYT
         if(bonus<=0 && trailing) text+=" ";
         lines.push_back({text,bonus>0?BonusColor:NormalColor});
     };
+    if(r[ModeOffset]==SpecialEquipment) {
+        const auto scalar=[&](int caption,int base,int bonus) {
+            if(base+bonus<=0) return;
+            std::string text=captions.Get(caption)+": "+std::to_string(base+max(0,bonus));
+            if(bonus>0) text+=" (+"+std::to_string(bonus)+")";
+            lines.push_back({text,bonus>0?BonusColor:NormalColor});
+        };
+        scalar(ComfortCaption,word(ComfortOffset),signedByte(FirstBonusOffset));
+        scalar(CarryCapacityCaption,r[CarryCapacityOffset],signedByte(SecondBonusOffset));
+        scalar(HandCapacityCaption,r[HandCapacityOffset],signedByte(AttackBonusOffset));
+        elementMasks(0,1);
+        for(int kind=0;kind<2;++kind) {
+            const int bonus=signedByte(HealthBonusOffset+kind);
+            if(bonus>0) lines.push_back({captions.Get(HealthBonusCaption+kind)+": +"+std::to_string(bonus*VitalBonusPerUnit),BonusColor});
+        }
+        elementMasks(1,2);
+        lines.push_back(RequirementHint(level,attack,elements));return lines;
+    }
     range(AttackCaption,AttackOffset,AttackBonusOffset,true);
     if(r[ModeOffset]==Helmet || r[ModeOffset]==Accessory26) {
         range(DefenseCaption,DefenseOffset,FirstBonusOffset,false);range(MagicDefenseCaption,MagicDefenseOffset,SecondBonusOffset,false);
