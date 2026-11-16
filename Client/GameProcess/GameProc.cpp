@@ -3931,11 +3931,16 @@ VOID CGameProcess::ProcessPacket()
 					{
 //						m_xMyHero.StruckMsgReassign();
 
-						if ( timeGetTime() - m_xMyHero.m_dwLastStruckTime < 500 )
-						{
-							SAFE_DELETE(lpPacketMsg);
-							continue;
-						}
+						if ( lpPacketMsg->stDefMsg.wIdent == SM_STRUCK && timeGetTime() - m_xMyHero.m_dwLastStruckTime < 500 )
+                        {
+                            m_xMyHero.m_wHP = m_xMyHero.m_stAbility.wHP = lpPacketMsg->stDefMsg.wParam;
+                            m_xMyHero.m_wMAXHP = m_xMyHero.m_stAbility.wMaxHP = lpPacketMsg->stDefMsg.wTag;
+                            m_xMyHero.m_bHPPercent = lpPacketMsg->stDefMsg.wTag ? 100u*lpPacketMsg->stDefMsg.wParam/lpPacketMsg->stDefMsg.wTag : 0;
+                            if (lpPacketMsg->stDefMsg.wParam) {
+                                SAFE_DELETE(lpPacketMsg);
+                                continue;
+                            }
+                        }
 
 						MESSAGEBODYWL stMsgBodyWl;
 						fnDecode6BitBuf(lpPacketMsg->szEncodeData, (char*)&stMsgBodyWl, sizeof(MESSAGEBODYWL));
@@ -4031,7 +4036,7 @@ VOID CGameProcess::ProcessPacket()
 
 				if ( pxActor )				
 				{
-					if ( lpPacketMsg->stDefMsg.wIdent == SM_STRUCK )
+					if ( lpPacketMsg->stDefMsg.wIdent == SM_STRUCK || lpPacketMsg->stDefMsg.wIdent == 1309 )
 					{
 //						pxActor->StruckMsgReassign();
 

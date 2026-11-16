@@ -1721,8 +1721,22 @@ public:
             const bool motion=hero.m_bCurrMtn==_MT_HITTED;
             hero.m_szName[0]=0;g_xGameProc.UpdateTargetDisplay(&hero,GetTickCount());
             const bool portrait=g_xGameProc.m_xInterface.m_targetDisplay.Frame()==654;
+            hero.m_dwLastStruckTime=timeGetTime();receive(123,16);g_xGameProc.ProcessPacket();
+            const bool repeated=hero.m_xPacketQueue.GetCount()==1;
+            hero.m_bCurrMtn=_MT_STAND;hero.UpdatePacketState();
+            const auto ordinary=[&](WORD hp) {
+                _TDEFAULTMESSAGE packet={};packet.wIdent=SM_STRUCK;packet.nRecog=123;packet.wParam=hp;packet.wTag=400;packet.wSeries=25;
+                char encoded[128]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));
+                fnEncode6BitBuf(body,encoded+DEFBLOCKSIZE,16,sizeof(encoded)-DEFBLOCKSIZE);
+                hero.m_dwLastStruckTime=timeGetTime();g_xGameProc.OnSocketMessageRecieve(encoded);g_xGameProc.ProcessPacket();
+            };
+            ordinary(250);const bool throttled=hero.m_xPacketQueue.GetCount()==0 && hero.m_wHP==250 && hero.m_stAbility.wHP==250;
+            ordinary(0);const bool fatal=hero.m_xPacketQueue.GetCount()==1 && hero.m_stAbility.wHP==0;
+            delete reinterpret_cast<PACKETMSG*>(hero.m_xPacketQueue.PopQ());
+            hero.m_stAbility.wHP=hero.m_wHP=250;hero.m_bHPPercent=62;g_xGameProc.UpdateTargetDisplay(&hero,GetTickCount());
+
             mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath="human-hit-server.bmp";
-            if(FILE* report=fopen("human-hit-check.txt","wb")) {fprintf(report,"unknown=%d truncated=%d queued=%d health=%d appearance=%d photo=%d motion=%d portrait=%d\n",unknown,truncated,queued,health,appearance,photo,motion,portrait);fclose(report);}
+            if(FILE* report=fopen("human-hit-check.txt","wb")) {fprintf(report,"unknown=%d truncated=%d queued=%d health=%d appearance=%d photo=%d motion=%d portrait=%d repeated=%d throttled=%d fatal=%d\n",unknown,truncated,queued,health,appearance,photo,motion,portrait,repeated,throttled,fatal);fclose(report);}
         }
 
         if(groupPanel==116 || groupPanel==117) {

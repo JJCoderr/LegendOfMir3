@@ -960,3 +960,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 移除ChangeFeature中强制发型2的旧调试覆盖；Client单独启用C++17以使用人物描述optional字段，服务器编译标准不变。
 - 新增--preview=human-hit-server，走OnSocketMessageRecieve、ProcessPacket、CMyHero队列与目标显示。unknown/truncated/queued/health/appearance/photo/motion/portrait八项全1；截图out/human-hit-server.png已检查。截图为离线HUD，未包含世界人物渲染，不代表真实服务器联调完成。
 - Client清理构建83步及全目标112步通过，diff --check通过。受击沿用旧动作与音效路径，尚未听音验证；连续受击节流及完整MIR3动作队列仍需对照Godot继续迁移。
+
+### 连续受击血量同步修复
+- 对照Godot process_local_actor_message及42EC70路径，1309不再进入旧500ms丢弃分支；31在节流期仍更新HUD和Actor血量，非致死才省略入队，致死保留入队。远程1309补入攻击来源外形查找。
+- human-hit-server增加重复1309、节流31血量同步及致死31保留三项，连同原八项共11项全1。全目标增量构建通过，diff --check通过。截图out/human-hit-repeat.png。
+- 本次修复消息丢失，不代表完整特殊受击已对齐：hit_variant驱动的特效、计时、1309复制普通受击、折叠计数及死亡动作仍待统一迁移。
