@@ -200,6 +200,10 @@ public:
                     if (savedItems[old].bSetted && savedItems[old].xItem.m_stItemInfo.nMakeIndex==record.nMakeIndex)
                         layoutRestored=layoutRestored && bag.ItemAnchor(id)==savedAnchors[old];
             }
+            bag.UpdateGold(0xffffffffu);
+            const bool goldUnsigned=g_xGameProc.m_xMyHero.m_nGlod==0xffffffffu;
+            bag.UpdateGold(123456789u);
+            const bool goldUpdated=g_xGameProc.m_xMyHero.m_nGlod==123456789u;
             bool green=false,red=false;
             for (int id=0;id<_MAX_INVEN_ITEM;++id) if (bag.m_stInventoryItem[id].bSetted &&
                 bag.m_stInventoryItem[id].xItem.m_stItemInfo.stStdItem.wLooks==largeIcon) {
@@ -219,7 +223,7 @@ public:
             bag.OnLButtonDown(&held,close);
             const bool closed=bag.OnLButtonUp(&held,close)!=FALSE;
             if (FILE* report=fopen("inventory-layout-check.txt","wb")) {
-                fprintf(report,"grid=%d release_without_press=%d close_clicked=%d scroll_end=%d scroll_released=%d\n",grid,stray,closed,scrollEnd,released); fprintf(report,"icon_samples=%d large_icon=%d multi_hit=%d picked=%d moved=%d\n",samples,largeIcon,multiHit,picked,moved); fprintf(report,"collision=%d freed=%d layout_restored=%d server_records_preserved=%d\n",collision,freed,layoutRestored,serverPreserved); fprintf(report,"placement_green=%d placement_red=%d\n",green,red); fclose(report);
+                fprintf(report,"grid=%d release_without_press=%d close_clicked=%d scroll_end=%d scroll_released=%d\n",grid,stray,closed,scrollEnd,released); fprintf(report,"icon_samples=%d large_icon=%d multi_hit=%d picked=%d moved=%d\n",samples,largeIcon,multiHit,picked,moved); fprintf(report,"collision=%d freed=%d layout_restored=%d server_records_preserved=%d\n",collision,freed,layoutRestored,serverPreserved); fprintf(report,"placement_green=%d placement_red=%d\n",green,red); fprintf(report,"gold_unsigned=%d gold_updated=%d\n",goldUnsigned,goldUpdated); fclose(report);
             }
         }
         if (groupPanel==11) {

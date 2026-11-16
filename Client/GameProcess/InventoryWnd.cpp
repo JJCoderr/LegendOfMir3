@@ -144,7 +144,11 @@ VOID CInventoryWnd::ShowInventoryWnd()
         char weight[128]; const auto& ability=g_xGameProc.m_xMyHero.m_stAbility;
         wsprintfA(weight,"%s: %u / %u",captions.Get(2501).c_str(),ability.wWeight,ability.wMaxWeight);
         text(weight,95,21,126,16,0x0a0a0a); text(weight,94,20,126,16,0xf8c8c8);
-        SelectObject(dc,previous); DeleteObject(font); surface->ReleaseDC(dc);
+        HFONT goldFont=g_xMainWnd.CreateGameFont(captions.Get(1074).c_str(),10,0,FW_BOLD);
+        SelectObject(dc,goldFont);
+        char gold[16]; wsprintfA(gold,"%u",g_xGameProc.m_xMyHero.m_nGlod);
+        text(gold,72,402,77,17,0x64c8f8);
+        SelectObject(dc,previous); DeleteObject(goldFont); DeleteObject(font); surface->ReleaseDC(dc);
     }
     m_xInventoryBtn[_BTN_ID_INVENCLOSE].ChangeRect(x+242,y+423);
     const RECT clip={x+17,y+60,x+245,y+364};
@@ -1156,4 +1160,19 @@ bool CInventoryWnd::ScrollInput(int kind, POINT point)
     ratio=max(0.f,min(1.f,ratio+(point.y<thumb+7 ? -8.f/92 : 8.f/92)));
     m_nStartLineNum=int(ratio*92.f);
     return true;
+}
+
+void CInventoryWnd::UpdateGold(UINT balance)
+{
+    auto& current=g_xGameProc.m_xMyHero.m_nGlod;
+    const LONG gain=LONG(balance-current);
+    g_xSound.PlayLobbyEffect("106.wav");
+    if (gain>0) {
+        static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
+        std::string caption=captions.Get(1471);
+        const auto at=caption.find("%d");
+        if (at!=std::string::npos) caption.replace(at,2,std::to_string(gain));
+        g_xGameProc.m_xInterface.MsgAdd(0xffffff,33023,const_cast<char*>(caption.c_str()));
+    }
+    current=balance;
 }

@@ -3468,7 +3468,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			}
 			case SM_GOLDCHANGE:
 			{
-				m_xMyHero.m_nGlod = tdm.nRecog;
+                m_xInterface.m_xInventoryWnd.UpdateGold(UINT(tdm.nRecog));
 				break;
 			}
 			case SM_WEIGHTCHANGED:

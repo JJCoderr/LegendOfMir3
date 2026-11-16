@@ -65,6 +65,7 @@ public:
 public:
 	BOOL	CheckItemPos(CHAR* szName);
 	BOOL	SaveItemPos(CHAR* szName);
+    void UpdateGold(UINT balance);
     bool SaveLayoutFile(const char* path);
     bool LoadLayoutFile(const char* path);
 
