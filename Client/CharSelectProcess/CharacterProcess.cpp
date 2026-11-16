@@ -669,6 +669,8 @@ VOID CCharacterProcess::RenderScene(INT nLoopTime)
 			{
 				case 11:	// Zoom in
 				{
+                    g_xSound.UpdateLobbyAudio(Page::None, 0);
+                    g_xSound.PlayLobbyEffect("CreateChr.wav");
 					m_xBGround.SetRenderState(_RENDER_AVI_IN);
 					m_Progress = PRG_SEL_TO_CREA;
 					m_xSelectChr.CloseWnd();
@@ -676,6 +678,8 @@ VOID CCharacterProcess::RenderScene(INT nLoopTime)
 				}
 				case 12:	// Zoom Out
 				{
+                    g_xSound.UpdateLobbyAudio(Page::None, 0);
+                    g_xSound.PlayLobbyEffect("StartGame.wav");
 					m_xBGround.SetRenderState(_RENDER_AVI_START);	
 					m_Progress = PRG_SEL_TO_GAME;
 					m_xSelectChr.CloseWnd();

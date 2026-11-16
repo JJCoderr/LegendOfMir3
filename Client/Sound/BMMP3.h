@@ -53,7 +53,7 @@ public:
 	VOID Release(VOID);
 	__inline BOOL	IsPlaying(VOID)
 	{
-		return m_bInited;
+		return m_bIsPlaying;
 	}
 };
 

@@ -163,7 +163,13 @@ HRESULT	CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
 			{
 				if(Py<0 && ((Py+m_pxrcList->GetCurrentData()->nHeight)>0))
 				{
-					m_nSelectChr = i;
+                    if (m_nSelectChr != i) {
+                        m_nSelectChr = i;
+                        m_pxSList->MoveCurrentToTop();
+                        m_pxSList->MoveNode(i);
+                        const CHRINFO& role = *m_pxSList->GetCurrentData();
+                        g_xSound.PlayRoleVoice(false, role.Class, role.Gender);
+                    }
 
 				}
 			}

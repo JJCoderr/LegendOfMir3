@@ -118,8 +118,7 @@ BOOL CBMMp3::OnStop(VOID)
 				return FALSE;
 			m_pMediaPosition->put_CurrentPosition(0);	// 重新回到开头.
 			m_bIsPlaying = FALSE;
-//			m_bLooping = FALSE;
-			Release();
+// Keep the loaded graph available for replay; Release owns destruction.
 		}
 		else
 			return FALSE;
