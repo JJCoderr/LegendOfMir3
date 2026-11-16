@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include "Common/LegacyPanel.h"
 
 
 
@@ -569,17 +570,35 @@ VOID CInterface::ShowGameStatus()
     drawMeter(1167,165,26,fMyWetRate);
     drawMeter(1166,152,26,fMyExpRate);
 
-	dwFntClr = RGB(225, 225, 0);
-	// 练级6.
-	sprintf(pszBuff, "%d", g_xGameProc.m_xMyHero.m_stAbility.bLevel);
-	SetRect(&rcStats, 693, 528, 709, 544);
-	g_xMainWnd.PutsHan(NULL, rcStats, dwFntClr, RGB(0, 0, 0), pszBuff, g_xMainWnd.CreateGameFont("Arial", 10, 0, FW_BOLD));
+    const auto centeredText = [&](RECT area, COLORREF color, HFONT font) {
+        HDC dc;
+        auto* surface = g_xMainWnd.GetBackBuffer();
+        if (FAILED(surface->GetDC(&dc))) { DeleteObject(font); return; }
+        HGDIOBJ old = SelectObject(dc,font);
+        SetBkMode(dc,TRANSPARENT);
+        SetTextColor(dc,color);
+        DrawTextA(dc,pszBuff,-1,&area,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+        SelectObject(dc,old);
+        DeleteObject(font);
+        surface->ReleaseDC(dc);
+    };
+    const char levelFace[] = {char(0xb1),char(0xbc),char(0xb8),char(0xb2),0};
+    const char normalFace[] = {char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    sprintf(pszBuff,"%d",ability.bLevel);
+    centeredText(RECT{393,466,409,482},0x00e1e1,
+        g_xMainWnd.CreateGameFont(levelFace,8,0,FW_BOLD));
 
-	dwFntClr = RGB(255, 255, 200);
-	// 绘制地图名称及坐标.
-	sprintf(pszBuff, "%s : [%d,%d]", g_xGameProc.m_szMapName, g_xGameProc.m_xMyHero.m_wPosX, g_xGameProc.m_xMyHero.m_wPosY);
-	SetRect(&rcStats, 219, 584, 379, 599);
-	g_xMainWnd.PutsHan(NULL, rcStats, dwFntClr, RGB(0, 0, 0), pszBuff);
+    sprintf(pszBuff,"%s : [%d,%d]",g_xGameProc.m_szMapName,
+        g_xGameProc.m_xMyHero.m_wPosX,g_xGameProc.m_xMyHero.m_wPosY);
+    RECT coordinates = {6,575,139,592};
+    DrawLegacyPanel(coordinates,RGB(100,75,50),100,0,false);
+    const POINT shadows[4] = {{-1,-1},{1,-1},{-1,1},{1,1}};
+    for (const auto& shadow : shadows) {
+        RECT area = coordinates;
+        OffsetRect(&area,shadow.x,shadow.y);
+        centeredText(area,0x0a0a0a,g_xMainWnd.CreateGameFont(normalFace,9));
+    }
+    centeredText(coordinates,0xc8ffff,g_xMainWnd.CreateGameFont(normalFace,9));
 
 	dwFntClr = RGB(255, 200, 50);
 	// 绘制各职业图标及属性值.

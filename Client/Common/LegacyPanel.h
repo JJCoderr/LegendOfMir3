@@ -1,7 +1,7 @@
 #pragma once
 
 // Same premultiplied rectangle operation as Godot selection_pixels.hpp.
-inline void DrawLegacyPanel(RECT box, COLORREF fill, BYTE alpha, COLORREF border)
+inline void DrawLegacyPanel(RECT box, COLORREF fill, BYTE alpha, COLORREF border, bool outlined = true)
 {
     DDSURFACEDESC2 surface = {}; surface.dwSize = sizeof(surface);
     LPDIRECTDRAWSURFACE7 buffer = g_xMainWnd.GetBackBuffer();
@@ -9,7 +9,7 @@ inline void DrawLegacyPanel(RECT box, COLORREF fill, BYTE alpha, COLORREF border
     for (int y = max(0L, box.top); y < min((LONG)surface.dwHeight, box.bottom); ++y) {
         WORD* row = (WORD*)((BYTE*)surface.lpSurface + y * surface.lPitch);
         for (int x = max(0L, box.left); x < min((LONG)surface.dwWidth, box.right); ++x) {
-            const bool edge = x == box.left || x == box.right-1 || y == box.top || y == box.bottom-1;
+            const bool edge = outlined && (x == box.left || x == box.right-1 || y == box.top || y == box.bottom-1);
             const WORD old = row[x];
             const int r = edge ? GetRValue(border) : min(255, GetRValue(fill) + (((old >> 11) * 255 / 31) * (255-alpha) + 127) / 255);
             const int g = edge ? GetGValue(border) : min(255, GetGValue(fill) + ((((old >> 5) & 63) * 255 / 63) * (255-alpha) + 127) / 255);
