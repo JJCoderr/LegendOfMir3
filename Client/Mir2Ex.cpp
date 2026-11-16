@@ -545,13 +545,31 @@ public:
             const bool nativeDbcs=GetWindowTextLengthA(editor.edit)==3999;
             SetWindowTextA(editor.edit,"A"); editor.Changed(); SendMessage(editor.edit,EM_SETSEL,1,1); SendMessage(editor.edit,WM_CHAR,VK_RETURN,0);
             char entered[8]={}; GetWindowTextA(editor.edit,entered,sizeof(entered)); const bool enter=!strcmp(entered,"A\r\n");
+            std::string longText; for (int row=0;row<60;++row) longText+="Line "+std::to_string(row)+"\r\n";
+            SetWindowTextA(editor.edit,longText.c_str()); editor.Changed(); SendMessage(editor.edit,EM_LINESCROLL,0,25);
+            const bool scrolled=SendMessage(editor.edit,EM_GETFIRSTVISIBLELINE,0,0)>0;
+            editor.Show();
+            const RECT display=g_xMainWnd.m_rcWindow; g_xMainWnd.m_rcWindow.right=display.left+(display.right-display.left)*3/4;
+            editor.Show(); RECT scaled; GetClientRect(editor.edit,&scaled);
+            bool resized=scaled.right==MulDiv(468,g_xMainWnd.m_rcWindow.right-display.left,800),brushMatches=true;
+            HDC source; auto* surface=g_xMainWnd.GetBackBuffer();
+            if (SUCCEEDED(surface->GetDC(&source))) {
+                HDC actual=CreateCompatibleDC(source),expected=CreateCompatibleDC(source);
+                HBITMAP a=CreateCompatibleBitmap(source,scaled.right,scaled.bottom),b=CreateCompatibleBitmap(source,scaled.right,scaled.bottom);
+                auto oldA=SelectObject(actual,a),oldB=SelectObject(expected,b);
+                FillRect(actual,&scaled,editor.EditColor(actual));
+                StretchBlt(expected,0,0,scaled.right,scaled.bottom,source,editor.m_rcWnd.left+46,editor.m_rcWnd.top+54,468,170,SRCCOPY);
+                for (int y=0;y<scaled.bottom;y+=13) for (int x=0;x<scaled.right;x+=11) brushMatches=brushMatches && GetPixel(actual,x,y)==GetPixel(expected,x,y);
+                SelectObject(actual,oldA); SelectObject(expected,oldB); DeleteObject(a); DeleteObject(b); DeleteDC(actual); DeleteDC(expected); surface->ReleaseDC(source);
+            } else brushMatches=false;
+            resized=resized && brushMatches; g_xMainWnd.m_rcWindow=display; editor.Show();
             const bool payload=CGuildEditor::Payload("a\r\n\r\nb\r\n")=="a\r \rb\r" && CGuildEditor::Payload(std::string(4100,'A')).size()==3999;
             SetWindowTextA(editor.edit,"Preview\r\n"); ui.OnLButtonDown(POINT{573,127}); ui.OnLButtonUp(POINT{573,127});
             const bool saved=!editor.m_bActive && !IsWindowVisible(editor.edit);
             editor.Open(groupPanel==40);
             if (FILE* report=fopen("guild-editor-check.txt","wb")) {
-                fprintf(report,"denied=%d empty_members=%d opened=%d multiline=%d modal=%d moved=%d stray=%d outside_release=%d cancelled=%d limit=%d dbcs=%d native_dbcs=%d enter=%d payload=%d saved=%d\n",
-                    denied,emptyDenied,opened,multiline,modal,moved,stray,outside,cancelled,limit,dbcs,nativeDbcs,enter,payload,saved); fclose(report);
+                fprintf(report,"denied=%d empty_members=%d opened=%d multiline=%d modal=%d moved=%d stray=%d outside_release=%d cancelled=%d limit=%d dbcs=%d native_dbcs=%d enter=%d long_scroll=%d horizontal_resize=%d payload=%d saved=%d\n",
+                    denied,emptyDenied,opened,multiline,modal,moved,stray,outside,cancelled,limit,dbcs,nativeDbcs,enter,scrolled,resized,payload,saved); fclose(report);
             }
         }
         if (groupPanel==39) {

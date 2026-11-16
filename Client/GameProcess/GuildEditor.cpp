@@ -13,8 +13,14 @@ void CGuildEditor::LayoutEdit()
 {
     const auto& display=g_xMainWnd.m_rcWindow;
     const int width=display.right-display.left,height=display.bottom-display.top;
-    MoveWindow(edit,display.left+MulDiv(m_rcWnd.left+46,width,800),display.top+MulDiv(m_rcWnd.top+54,height,600),
-        MulDiv(468,width,800),MulDiv(170,height,600),TRUE);
+    const int x=display.left+MulDiv(m_rcWnd.left+46,width,800),y=display.top+MulDiv(m_rcWnd.top+54,height,600);
+    const int editWidth=MulDiv(468,width,800),editHeight=MulDiv(170,height,600);
+    RECT previous; GetWindowRect(edit,&previous);
+    if (previous.right-previous.left!=editWidth || previous.bottom-previous.top!=editHeight) {
+        if (background) DeleteObject(background); background=NULL;
+    }
+    if (previous.left!=x || previous.top!=y || previous.right!=x+editWidth || previous.bottom!=y+editHeight)
+        MoveWindow(edit,x,y,editWidth,editHeight,TRUE);
     const int pixels=MulDiv(12,height,600);
     if (fontHeight!=pixels) {
         static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
