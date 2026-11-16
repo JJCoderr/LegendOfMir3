@@ -132,7 +132,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 
 	//------------------------------------------------------------------------------------------------------------
 	// 聊天编辑窗口的位置指定.
-	MoveWindow(g_xChatEditBox.GetSafehWnd(), 
+	g_xChatEditBox.MoveScaled(
 			   g_xMainWnd.m_rcWindow.left+_INPUT_EDITWND_XPOS, g_xMainWnd.m_rcWindow.top+_INPUT_EDITWND_YPOS,
 			   _INPUT_EDITWND_WIDTH, _INPUT_EDITWND_HEIGHT, TRUE);
 	//------------------------------------------------------------------------------------------------------------
@@ -1062,7 +1062,7 @@ BOOL CInterface::WindowActivate(INT nID)
 		{
 			if ( m_xChatPopWnd.GetGameWndActive() )
 			{
-				MoveWindow(g_xChatEditBox.GetSafehWnd(), g_xMainWnd.m_rcWindow.left+_INPUT_EDITWND_XPOS, 
+				g_xChatEditBox.MoveScaled( g_xMainWnd.m_rcWindow.left+_INPUT_EDITWND_XPOS,
 	 					   g_xMainWnd.m_rcWindow.top+_INPUT_EDITWND_YPOS, _INPUT_EDITWND_WIDTH, _INPUT_EDITWND_HEIGHT, TRUE);
 
 				DeleteWindowToList(_WND_ID_CHATPOP);
@@ -1071,7 +1071,7 @@ BOOL CInterface::WindowActivate(INT nID)
 			}
 			else
 			{
-				MoveWindow(g_xChatEditBox.GetSafehWnd(), g_xMainWnd.m_rcWindow.left + m_xChatPopWnd.m_rcWnd.left + m_xChatPopWnd.m_rcEditBoxFrame.left, 
+				g_xChatEditBox.MoveScaled( g_xMainWnd.m_rcWindow.left + m_xChatPopWnd.m_rcWnd.left + m_xChatPopWnd.m_rcEditBoxFrame.left,
 	 					   g_xMainWnd.m_rcWindow.top + m_xChatPopWnd.m_rcWnd.top + m_xChatPopWnd.m_rcEditBoxFrame.top, 
 						   m_xChatPopWnd.m_rcEditBoxFrame.right - m_xChatPopWnd.m_rcEditBoxFrame.left, 
 						   m_xChatPopWnd.m_rcEditBoxFrame.bottom - m_xChatPopWnd.m_rcEditBoxFrame.top, TRUE);

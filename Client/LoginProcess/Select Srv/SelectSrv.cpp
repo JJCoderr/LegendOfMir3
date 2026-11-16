@@ -103,7 +103,7 @@ VOID CSelectSrv::Draw3DBorder(RECT rcWnd,COLORREF dwColor,INT nAlpha)
 			g_xMainWnd.Get3DDevice()->GetTransform(D3DTRANSFORMSTATE_WORLD, &matWorldOriginal);
 
 			ZeroMemory(&matView, sizeof(D3DMATRIX));
-		 	D3DVECTOR vEyePt    = D3DVECTOR(0, 0, -(float)((g_xMainWnd.m_rcWindow.bottom - g_xMainWnd.m_rcWindow.top)/2));
+			D3DVECTOR vEyePt    = D3DVECTOR(0, 0, -(float)(g_xMainWnd.m_stDisplayInfo.wHeight/2));
 			D3DVECTOR vLookatPt = D3DVECTOR(0, 0, 0);
 			D3DVECTOR vUpVec    = D3DVECTOR(0, 1, 0);
 

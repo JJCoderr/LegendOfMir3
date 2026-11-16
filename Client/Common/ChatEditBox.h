@@ -37,6 +37,8 @@ public:
 	BOOL		Create(HINSTANCE hInstance, HWND hWndParent, INT nX, INT nY, INT nXsize, INT nYSize);
 	BOOL		DestroyDialog();
 	BOOL		SetLimitText(INT nLimitText);
+	VOID MoveScaled(INT x, INT y, INT width, INT height, BOOL repaint);
+	INT m_fontHeight = 12;
 	__inline	VOID SetSelectAll() { SendMessage(m_hChatEdit, EM_SETSEL, 0, (LPARAM)-1); }
 public:
 //4: Message Map

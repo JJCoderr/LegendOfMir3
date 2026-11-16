@@ -677,7 +677,7 @@ VOID CCharacterProcess::ShowStatus(INT nStartX, INT nStartY)
 
 VOID CCharacterProcess::RenderCharCreate(INT nLoopTime)
 {
-    MoveWindow(g_xChatEditBox.GetSafehWnd(),
+    g_xChatEditBox.MoveScaled(
         g_xMainWnd.m_rcWindow.left + POS_NAME_X,
         g_xMainWnd.m_rcWindow.top + POS_NAME_Y, 75, 13, TRUE);
     // Mir3 br_godot_test_261115: CreateCharacterPage positions/action 4.

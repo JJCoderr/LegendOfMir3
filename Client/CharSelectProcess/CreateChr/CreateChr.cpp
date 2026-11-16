@@ -102,7 +102,7 @@ VOID CCreateChr::Render(INT	nLoopTime)
 
 	if(m_fIsActive)
 	{
-		MoveWindow(g_xChatEditBox.GetSafehWnd(), 
+		g_xChatEditBox.MoveScaled(
 						   g_xMainWnd.m_rcWindow.left+280,
 						   g_xMainWnd.m_rcWindow.top+400, 75, 15, TRUE);
 

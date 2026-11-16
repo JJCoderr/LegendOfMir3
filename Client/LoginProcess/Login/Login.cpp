@@ -229,7 +229,7 @@ VOID CLogin::Render(INT	nLoopTime)
 	if(m_fIsActive)
 	{
 
-		MoveWindow(g_xChatEditBox.GetSafehWnd(), 
+		g_xChatEditBox.MoveScaled(
 					g_xMainWnd.m_rcWindow.left + m_xInputState[m_nUserState-1].Left,
 					g_xMainWnd.m_rcWindow.top + m_xInputState[m_nUserState-1].Top ,	m_xInputState[m_nUserState-1].Width,		m_xInputState[m_nUserState-1].Height,		TRUE);
 	

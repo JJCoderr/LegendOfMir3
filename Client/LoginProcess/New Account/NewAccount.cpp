@@ -182,7 +182,7 @@ VOID CNewAccount::Render(INT	nLoopTime)
 		int i;
 		char Pass[16]="";
 
-		MoveWindow(g_xChatEditBox.GetSafehWnd(), 
+		g_xChatEditBox.MoveScaled(
 					g_xMainWnd.m_rcWindow.left + m_xInputState[m_nUserState-1].Left +5,
 					g_xMainWnd.m_rcWindow.top + m_xInputState[m_nUserState-1].Top + 5 ,	m_xInputState[m_nUserState-1].Width,		m_xInputState[m_nUserState-1].Height,		TRUE);
 

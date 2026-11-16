@@ -740,7 +740,7 @@ VOID CLoginProcess::RenderNewAccount(int nLoopTime)
 {
 	/*char Pass[10];
 
-	MoveWindow(g_xChatEditBox.GetSafehWnd(),
+	g_xChatEditBox.MoveScaled(
 						g_xMainWnd.m_rcWindow.left + g_LoginInputState[m_UserState+2].Left,
 						g_xMainWnd.m_rcWindow.left +  g_LoginInputState[m_UserState+2].Top,
 						g_LoginInputState[m_UserState+2].Width,

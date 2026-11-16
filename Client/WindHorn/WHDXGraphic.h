@@ -232,6 +232,12 @@ protected:
 
 	__inline virtual LRESULT MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{ 
+		if (uMsg >= WM_MOUSEMOVE && uMsg <= WM_MBUTTONDBLCLK && uMsg != WM_MOUSEWHEEL) {
+			RECT client; GetClientRect(hWnd, &client);
+			if (client.right && client.bottom) lParam = MAKELPARAM(
+				MulDiv((short)LOWORD(lParam), m_stDisplayInfo.wWidth, client.right),
+				MulDiv((short)HIWORD(lParam), m_stDisplayInfo.wHeight, client.bottom));
+		}
 		if ( m_pxDefProcess )	return m_pxDefProcess->DefMainWndProc(hWnd, uMsg, wParam, lParam);
 		else					return MainWndProcDXG(hWnd, uMsg, wParam, lParam); 
 	}

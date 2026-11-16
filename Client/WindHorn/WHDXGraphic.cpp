@@ -508,7 +508,13 @@ HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
 		
 		// 设置客户端区域大小的部分与窗口的创建有关.
 		// 获取屏幕分辨率即客户端矩形区域的大小。
-		SetRect(&rcTemp, 0, 0, m_stDisplayInfo.wWidth, m_stDisplayInfo.wHeight);
+		// Window size is independent of the legacy page's drawing coordinates.
+		HDC screen = GetDC(m_hWnd);
+		const int dpi = GetDeviceCaps(screen, LOGPIXELSX);
+		ReleaseDC(m_hWnd, screen);
+		const int windowWidth = GetPrivateProfileInt("Display", "WindowWidth", 800, ".\\Mir3.ini");
+		const int windowHeight = GetPrivateProfileInt("Display", "WindowHeight", 600, ".\\Mir3.ini");
+		SetRect(&rcTemp, 0, 0, MulDiv(windowWidth, dpi, 96), MulDiv(windowHeight, dpi, 96));
 
 		// 从客户端矩形区域大小转换为整个窗口区域的大小.
 		AdjustWindowRectEx(&rcTemp, GetWindowStyle(m_hWnd), GetMenu(m_hWnd) != NULL, GetWindowExStyle(m_hWnd));

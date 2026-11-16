@@ -168,3 +168,21 @@ BOOL CChatEdit::SetLimitText(INT nLimitText)
 	}
 	return FALSE;
 }
+VOID CChatEdit::MoveScaled(INT x, INT y, INT width, INT height, BOOL repaint)
+{
+    const RECT& target = g_xMainWnd.m_rcWindow;
+    const int displayWidth = target.right - target.left;
+    const int displayHeight = target.bottom - target.top;
+    const int logicalWidth = g_xMainWnd.m_stDisplayInfo.wWidth;
+    const int logicalHeight = g_xMainWnd.m_stDisplayInfo.wHeight;
+    MoveWindow(m_hChatEdit, target.left + MulDiv(x - target.left, displayWidth, logicalWidth),
+        target.top + MulDiv(y - target.top, displayHeight, logicalHeight),
+        MulDiv(width, displayWidth, logicalWidth), MulDiv(height, displayHeight, logicalHeight), repaint);
+    const int fontHeight = MulDiv(12, displayHeight, logicalHeight);
+    if (m_fontHeight != fontHeight) {
+        HFONT font = CreateFont(fontHeight, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH, "Arial");
+        SendMessage(m_hChatEdit, WM_SETFONT, (WPARAM)font, TRUE);
+        DeleteObject(m_hFontChatEdit); m_hFontChatEdit = font; m_fontHeight = fontHeight;
+    }
+}

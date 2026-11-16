@@ -736,7 +736,7 @@ VOID CNPCWnd::OnEnterKeyDown(VOID)
 		SetFocus(g_xMainWnd.GetSafehWnd());
 		ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
 		g_xChatEditBox.SetLimitText(90);// 将聊天窗口改为 Limit length。
-		MoveWindow(g_xChatEditBox.GetSafehWnd(), g_xMainWnd.m_rcWindow.left+_INPUT_EDITWND_XPOS, 
+		g_xChatEditBox.MoveScaled( g_xMainWnd.m_rcWindow.left+_INPUT_EDITWND_XPOS,
 			g_xMainWnd.m_rcWindow.top+_INPUT_EDITWND_YPOS, _INPUT_EDITWND_WIDTH, _INPUT_EDITWND_HEIGHT, TRUE);
 		switch(m_nNpcMsgState)
 		{

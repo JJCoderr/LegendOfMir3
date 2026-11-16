@@ -139,7 +139,7 @@ VOID CChatPopWnd::ShowChatPopWnd()
 
 BOOL CChatPopWnd::OnLButtonUp(POINT ptMouse)
 {
-	MoveWindow(g_xChatEditBox.GetSafehWnd(), g_xMainWnd.m_rcWindow.left + m_rcWnd.left + m_rcEditBoxFrame.left, 
+	g_xChatEditBox.MoveScaled( g_xMainWnd.m_rcWindow.left + m_rcWnd.left + m_rcEditBoxFrame.left,
 	 		   g_xMainWnd.m_rcWindow.top + m_rcWnd.top + m_rcEditBoxFrame.top, 
 			   m_rcEditBoxFrame.right - m_rcEditBoxFrame.left, 
 			   m_rcEditBoxFrame.bottom - m_rcEditBoxFrame.top, TRUE);
