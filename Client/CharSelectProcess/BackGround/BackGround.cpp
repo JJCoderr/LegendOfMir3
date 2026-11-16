@@ -1,7 +1,7 @@
 #include "stdafx.h"
 
-#define AVI_CREATECHAR						".\\CreateChr.avi"
-#define AVI_STARTGAME						".\\StartGame.avi"
+#define AVI_CREATECHAR						".\\CreateChr.dat"
+#define AVI_STARTGAME						".\\StartGame.dat"
 
 #define IMG_IDX_SELECT_CHR_BACK				50
 
@@ -132,21 +132,27 @@ VOID CBackGround::SetRenderState(INT nState)
 	{
 		case _RENDER_AVI_IN:
 		{
-			m_xCreateChrAvi.Create(AVI_CREATECHAR, FALSE);
+			if (!m_xCreateChrAvi.Create(AVI_CREATECHAR, FALSE)) {
+				m_nRenderState = _RENDER_STILL_2; break;
+			}
 			m_xCreateChrAvi.SetDestRect(tRect);
 			m_xCreateChrAvi.Start();
 			break;
 		}
 		case _RENDER_AVI_OUT:
 		{
-			m_xCreateChrAvi.Create(AVI_CREATECHAR, FALSE,FALSE);
+			if (!m_xCreateChrAvi.Create(AVI_CREATECHAR, FALSE,FALSE)) {
+				m_nRenderState = _RENDER_STILL_1; break;
+			}
 			m_xCreateChrAvi.SetDestRect(tRect);
 			m_xCreateChrAvi.Start();
 			break;
 		}
 		case _RENDER_AVI_START:
 		{
-			m_xStartGameAvi.Create(AVI_STARTGAME,FALSE);
+			if (!m_xStartGameAvi.Create(AVI_STARTGAME,FALSE)) {
+				m_nRenderState = _RENDER_STARTGAME; break;
+			}
 			m_xStartGameAvi.SetDestRect(tRect);
 			m_xStartGameAvi.Start();
 			break;

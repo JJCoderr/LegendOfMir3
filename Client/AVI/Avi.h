@@ -69,6 +69,7 @@ public:
 private:
 	LPDIRECTSOUND			m_lpDS;
 	BOOL					m_bIsPlaying;
+	BOOL m_bLoaded;
 	INT						m_nStopFrame;
 };
 

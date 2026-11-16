@@ -22,6 +22,9 @@ CAvi::CAvi(void)
 	m_SoundFramesAhead = 0;
 	m_nStopFrame = -1;
 	m_bIsPlaying = FALSE;
+	m_bPlaying = FALSE;
+	m_bLoaded = FALSE;
+	m_Fps = 0;
 	m_SoundBuffer = NULL;
 }
 
@@ -42,6 +45,7 @@ void CAvi::InitAvi(LPDIRECTSOUND lpDS)
 void CAvi::ReleaseAvi( void )
 {
 	CAvi::Stop( );
+	m_bLoaded = FALSE;
 	
 	Sleep(1);
 
@@ -92,6 +96,8 @@ void CAvi::ReleaseAvi( void )
 //////////////////////////////////////////////////////////////////////////////////
 BOOL CAvi::Create(const char* Filename, BOOL bLoop, BOOL bPlayBack)
 {
+	Stop();
+	m_bLoaded = FALSE;
 	if(Filename == NULL) return FALSE;
 	AVIFileInit();
 	m_bLoop = bLoop;
@@ -214,6 +220,7 @@ BOOL CAvi::Create(const char* Filename, BOOL bLoop, BOOL bPlayBack)
 		}
 	}
 	m_Index = (m_bPlayDirection ? 0 : m_nFrames);
+	m_bLoaded = TRUE;
 	return TRUE;
 }
 
@@ -223,6 +230,7 @@ BOOL CAvi::Create(const char* Filename, BOOL bLoop, BOOL bPlayBack)
 //////////////////////////////////////////////////////////////////////////////////
 void CAvi::Start(void)
 {
+	if (!m_bLoaded) return;
 	if( !GetSound() ) return;
 
 	m_bPlaying = TRUE;
@@ -415,6 +423,7 @@ HRESULT CAvi::DrawBuffer(void)
 //////////////////////////////////////////////////////////////////////////////////
 BOOL CAvi::Draw(INT	nLoopTime)
 {
+	if (!m_bLoaded) return FALSE;
 	BOOL rval = 0;
 
 	ReadDatas(nLoopTime);
