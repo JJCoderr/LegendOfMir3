@@ -77,6 +77,7 @@ public:
 	BOOL	SaveItemPos(CHAR* szName);
     void UpdateGold(UINT balance);
     void UpdateStackCount(DWORD instance,WORD quantity);
+    bool ReceiveBagRecords(const char* encoded,int count);
     bool SaveLayoutFile(const char* path);
     bool LoadLayoutFile(const char* path);
 

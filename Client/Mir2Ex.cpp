@@ -1701,6 +1701,27 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel==122) {
+            auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[100]={};strcpy((char*)raw,"Potion");raw[61]=2;raw[62]=11;raw[71]=12;
+            char block[140]={};fnEncode6BitBuf(raw,block,100,sizeof(block));std::string first=std::string(block)+"/";
+            raw[62]=22;raw[71]=34;strcpy((char*)raw,"Second Potion");fnEncode6BitBuf(raw,block,100,sizeof(block));const std::string full=first+block+"/";
+            const auto receive=[&](const std::string& body,WORD count) {
+                _TDEFAULTMESSAGE packet={};packet.wIdent=SM_BAGITEMS;packet.wSeries=count;
+                std::vector<char> encoded(DEFBLOCKSIZE+body.size()+1);fnEncodeMessage(&packet,encoded.data(),int(encoded.size()));strcpy(encoded.data()+DEFBLOCKSIZE,body.c_str());
+                g_xGameProc.OnSocketMessageRecieve(encoded.data());
+            };
+            receive(full,2);const bool loaded=bag.m_stInventoryItem[0].xItem.m_count==12 && bag.m_stInventoryItem[1].xItem.m_count==34 && bag.ItemAnchor(0)!=bag.ItemAnchor(1);
+            receive(first,2);const bool incomplete=bag.m_stInventoryItem[1].xItem.m_count==34;
+            receive(full.substr(0,full.size()-1),2);const bool delimiter=bag.m_stInventoryItem[1].bSetted;
+            receive(full,47);const bool capacity=bag.m_stInventoryItem[1].bSetted;
+            receive(first,1);const bool replaced=bag.m_stInventoryItem[0].bSetted && !bag.m_stInventoryItem[1].bSetted;
+            receive("",0);const bool cleared=!bag.m_stInventoryItem[0].bSetted && bag.ItemAnchor(0)==-1;
+            receive(full,2);ui.WindowActivate(_WND_ID_INVENTORY);capturePath="bag-records-reply.bmp";
+            if(FILE* report=fopen("bag-records-check.txt","wb")) {fprintf(report,"loaded=%d incomplete=%d delimiter=%d capacity=%d replaced=%d cleared=%d\n",loaded,incomplete,delimiter,capacity,replaced,cleared);fclose(report);}
+        }
+
         if(groupPanel==121) {
             auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -2016,6 +2037,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=bag-records-reply")==0 ? 122 :
         strcmp(lpCmdLine,"--preview=item-record-reply")==0 ? 121 :
         strcmp(lpCmdLine,"--preview=item-stack-reply")==0 ? 120 :
         strcmp(lpCmdLine,"--preview=item-use-confirmed")==0 ? 119 :

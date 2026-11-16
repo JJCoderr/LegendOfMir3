@@ -2971,37 +2971,10 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				}
 				break;
 			}
-			case SM_BAGITEMS:
-			{
-				char *pszItem  = (pszMsg + DEFBLOCKSIZE);
-				char *pszNextItem;
-				int  nCount = 0;
-
-				CLIENTITEMRCD	stReceivedItem;
-				CItem			xItem;
-
-				m_xInterface.m_xInventoryWnd.DeleteAllInvenItem();
-
-				do
-				{
-					if (pszNextItem = strchr(pszItem, '/'))
-					{
-						*pszNextItem = '\0';
-
-						fnDecode6BitBuf(pszItem, (char*)&stReceivedItem, sizeof(CLIENTITEMRCD));
-
-						xItem.SetItem(stReceivedItem, 0);
-
-						m_xInterface.m_xInventoryWnd.AddInvenItem(xItem, 0, FALSE);
-
-						pszItem = pszNextItem + 1;
-
-						nCount++;
-					}
-				} while (nCount < tdm.wSeries && pszNextItem);
-                m_xInterface.m_xInventoryWnd.CheckItemPos(m_xMyHero.m_szName);
-				break;
-			}
+            case SM_BAGITEMS:
+                if(m_xInterface.m_xInventoryWnd.ReceiveBagRecords(pszMsg+DEFBLOCKSIZE,tdm.wSeries))
+                    m_xInterface.m_xInventoryWnd.CheckItemPos(m_xMyHero.m_szName);
+                break;
 			case SM_SENDUSEITEMS:
 			{
 				CLIENTITEMRCD cItemRcd[9];

@@ -1314,3 +1314,28 @@ void CInventoryWnd::UpdateStackCount(DWORD instance,WORD quantity)
         break;
     }
 }
+
+bool CInventoryWnd::ReceiveBagRecords(const char* encoded,int count)
+{
+    if(count<0 || count>_MAX_INVEN_ITEM) return false;
+    std::vector<CItem> items;CBagLayout layout;
+    for(int i=0;i<count;++i) {
+        const char* end=strchr(encoded,'/');if(!end) return false;
+        const std::string block(encoded,end);CItem item;
+        if(block.size()==134) {
+            BYTE raw[100];
+            if(fnDecode6BitBuf(const_cast<char*>(block.c_str()),(char*)raw,sizeof(raw))!=100 || !item.SetMir3Item(raw,i)) return false;
+        } else if(block.size()==(sizeof(CLIENTITEMRCD)*8+5)/6) {
+            CLIENTITEMRCD legacy={};
+            if(fnDecode6BitBuf(const_cast<char*>(block.c_str()),(char*)&legacy,sizeof(legacy))!=sizeof(legacy)) return false;
+            item.SetItem(legacy,i);
+        } else return false;
+        int x,y,width,height;
+        if(!Placement(item,nullptr,x,y,width,height) || !layout.Place(i,width,height)) return false;
+        items.push_back(item);encoded=end+1;
+    }
+    if(*encoded) return false;
+    DeleteAllInvenItem();m_layout=layout;
+    for(int i=0;i<count;++i) {m_stInventoryItem[i].bSetted=TRUE;m_stInventoryItem[i].xItem=items[i];}
+    return true;
+}
