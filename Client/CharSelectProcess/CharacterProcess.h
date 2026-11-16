@@ -58,6 +58,7 @@ private:
 	void OpenDeleteNotice();
 	void DrawCreationDescription();
 	CLoginMessages m_messages;
+    int m_createPressed = -1;
 	BOOL m_bCreatePending;
 	RECT m_createBounds[2];
 	CBackGround			m_xBGround;

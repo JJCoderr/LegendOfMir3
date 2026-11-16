@@ -199,6 +199,7 @@ LRESULT CCharacterProcess::OnKeyDown(WPARAM wParam, LPARAM lParam)
 
 LRESULT CCharacterProcess::OnMouseMove(WPARAM wParam, LPARAM lParam)
 {
+    m_ptMousePos = POINT{LOWORD(lParam), HIWORD(lParam)};
 	int		i;
 	BOOL	fOnButton = FALSE;
 
@@ -249,7 +250,16 @@ LRESULT CCharacterProcess::OnMouseMove(WPARAM wParam, LPARAM lParam)
 }
 
 LRESULT CCharacterProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
-{	
+{
+    m_createPressed = -1;
+    m_ptMousePos = POINT{LOWORD(lParam), HIWORD(lParam)};
+    if (m_Progress == PRG_CREATE_CHAR && !m_xMsgBox.IsActive()) {
+        for (int i = 0; i < 5; ++i) {
+            const auto& c = createControls[i];
+            RECT r = {c.x,c.y,c.x+c.width,c.y+c.height};
+            if (PtInRect(&r,m_ptMousePos)) m_createPressed = i;
+        }
+    }
 	m_fIsLButtonClicked = FALSE;
 	if(m_xMsgBox.IsActive())
 	{
@@ -283,6 +293,7 @@ LRESULT CCharacterProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 {	
 	INT	nRecieve;
+    m_createPressed = -1;
 	m_ptMousePos.x = LOWORD(lParam);
 	m_ptMousePos.y = HIWORD(lParam);
 
@@ -807,7 +818,10 @@ VOID CCharacterProcess::RenderCharCreate(INT nLoopTime)
     DrawLegacyPanel(editor, 0, 255, RGB(120,90,60));
     for (int i = 0; i < 5; ++i) {
         const CreateControl& control = createControls[i];
-        const int frame = control.frame + (i >= 2 && m_SelectJob == i - 2 ? 1 : 0);
+        RECT bounds = {control.x,control.y,control.x+control.width,control.y+control.height};
+        const bool hover = !m_xMsgBox.IsActive() && PtInRect(&bounds,m_ptMousePos);
+        const int state = m_createPressed == i ? 2 : hover ? 1 : 0;
+        const int frame = control.frame + (i == 4 && state == 2 ? 1 : state);
         if (m_Image.NewSetIndex(frame))
             g_xMainWnd.DrawWithImageForComp(control.x, control.y,
                 m_Image.m_lpstNewCurrWilImageInfo->shWidth,
