@@ -9,6 +9,7 @@ class CTargetDisplay {
     CWHWilImageData monsters;
     DWORD shown=0,previous=0,changedAt=0;
     bool human=false,special=false;
+    std::string queriedName;
     int frame=-1,badge=-1;
 public:
     struct Attributes {
@@ -22,6 +23,7 @@ public:
     void Init();void Destroy();void Clear();
     bool ApplyPortrait(DWORD actor,const BYTE* bytes,size_t size);
     bool HasPortrait() const { return customPortrait!=nullptr; }
+    bool QueryPortrait(const char* name);
     void Focus(DWORD actor,DWORD now);
     void Remove(DWORD actor);
     DWORD Displayed() const { return shown; }

@@ -1580,6 +1580,19 @@ public:
             if(FILE* report=fopen("target-hover-check.txt","wb")) {fprintf(report,"monster=%d health=%d retained=%d expired=%d dead=%d npc=%d unknown=%d\n",monster,health,retained,expired,dead,npc,unknown);fclose(report);}
         }
 
+        if(groupPanel==107) {
+            auto& target=g_xGameProc.m_xInterface.m_targetDisplay;target.Clear();
+            target.SetHuman(123,0,0,1000);const bool empty=!target.QueryPortrait("");
+            const bool first=target.QueryPortrait("Preview");const bool repeated=!target.QueryPortrait("Preview");
+            target.SetHuman(123,0,1,1100);const bool same=!target.QueryPortrait("Preview");
+            target.ApplyPortrait(123,nullptr,0);const bool noPhoto=!target.QueryPortrait("Preview");
+            const bool renamed=target.QueryPortrait("Renamed");target.SetHuman(456,1,2,1200);const bool switched=target.QueryPortrait("Renamed");
+            target.Remove(456);const bool removed=!target.QueryPortrait("Renamed");target.SetHuman(456,1,2,1300);const bool returned=target.QueryPortrait("Renamed");
+            target.Clear();target.SetHuman(456,1,2,1400);const bool reset=target.QueryPortrait("Renamed");
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath="target-portrait-query.bmp";
+            if(FILE* report=fopen("target-portrait-query-check.txt","wb")) {fprintf(report,"empty=%d first=%d repeated=%d same=%d no_photo=%d renamed=%d switched=%d removed=%d returned=%d reset=%d\n",empty,first,repeated,same,noPhoto,renamed,switched,removed,returned,reset);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1777,6 +1790,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=target-portrait-query")==0 ? 107 :
         strcmp(lpCmdLine,"--preview=target-native-hover")==0 ? 105 :
         strcmp(lpCmdLine,"--preview=target-native-expired")==0 ? 106 :
         strcmp(lpCmdLine,"--preview=target-server-attributes")==0 ? 103 :

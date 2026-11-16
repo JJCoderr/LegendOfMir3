@@ -4185,6 +4185,7 @@ void CGameProcess::UpdateTargetDisplay(CActor* actor,DWORD now)
     if(type<=_GENDER_WOMAN) {
         // Remote legacy actors have no profession field; use the reference unknown-job frame.
         target.SetHuman(actor->m_dwIdentity,type,actor==&m_xMyHero?m_xMyHero.m_bJob:255,now);
+        target.QueryPortrait(actor->m_szName);
     } else if(type==_GENDER_MON) {
         const bool changed=target.ChangesTo(actor->m_dwIdentity);
         target.SetMonster(actor->m_dwIdentity,type,actor->m_stFeature.bDress,false,0,

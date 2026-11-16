@@ -4,7 +4,7 @@
 void CTargetDisplay::Init() { Destroy();monsters.NewLoad("./Data/MonImg.wil"); }
 CTargetDisplay::~CTargetDisplay() { Destroy(); }
 void CTargetDisplay::ClearPortrait() { if(customPortrait) customPortrait->Release();customPortrait=nullptr; }
-void CTargetDisplay::Clear() {ClearPortrait();shown=previous=changedAt=0;frame=badge=-1;human=special=false;percent=0;maximum=current=0;attributes.clear();}
+void CTargetDisplay::Clear() {ClearPortrait();queriedName.clear();shown=previous=changedAt=0;frame=badge=-1;human=special=false;percent=0;maximum=current=0;attributes.clear();}
 void CTargetDisplay::Destroy() {Clear();monsters.Destroy();}
 void CTargetDisplay::Focus(DWORD actor,DWORD now)
 {
@@ -22,7 +22,7 @@ void CTargetDisplay::SetMonster(DWORD actor,BYTE type,WORD shape,bool excluded,i
 }
 void CTargetDisplay::SetHuman(DWORD actor,BYTE type,BYTE profession,DWORD now)
 {
-    if(!actor || type>1) return;if(!human || shown!=actor) ClearPortrait();Focus(actor,now);human=true;badge=-1;special=false;
+    if(!actor || type>1) return;if(!human || shown!=actor) {ClearPortrait();queriedName.clear();}Focus(actor,now);human=true;badge=-1;special=false;
     frame=profession<=2?650+2*profession+(type!=0):0;
 }
 bool CTargetDisplay::ApplyAttributes(DWORD actor,WORD category,WORD state,const BYTE* body,int length)
@@ -93,4 +93,13 @@ bool CTargetDisplay::ApplyPortrait(DWORD actor,const BYTE* bytes,size_t size)
     if(!size) {ClearPortrait();return true;}
     IPicture* picture=DecodePortraitJpeg(bytes,size);if(!picture) return false;
     ClearPortrait();customPortrait=picture;return true;
+}
+
+bool CTargetDisplay::QueryPortrait(const char* name)
+{
+    if(!shown || !human || !name[0] || queriedName==name) return false;
+    queriedName=name;
+    _TDEFAULTMESSAGE packet;fnMakeDefMessage(&packet,1152,0,0,0,0);
+    g_xClientSocket.SendPacket(&packet,const_cast<char*>(queriedName.c_str()));
+    return true;
 }

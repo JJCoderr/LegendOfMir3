@@ -893,3 +893,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 当前旧Actor怪物使用已参与原生怪物绘制的bDress外形及HP/MAXHP/HPPercent，目标变化且属性未缓存时发送1047(actor,x,y,0)。玩家使用性别；自身使用已有m_bJob，远程旧Actor缺职业字段时按参考未知职业255回退帧0。完整WORD外形、怪物特殊状态和远程职业仍需MIR3角色协议适配，不猜用武器/头发字段。
 - Client清理83步、全部111步及最终增量构建通过。target-native-hover/expired各七项全1，以真实CActor对象调用生产UpdateTargetDisplay验证外形/血量、更新、800ms边界、死亡/NPC排除和未知职业；属性消息七项回归通过。
 - 已检查out/target-native-hover.png及target-native-expired.png。悬停截图未注入属性回复，因此属性底框为空。此阶段证明Actor到目标显示的接线，尚未在完整地图上验收真实鼠标命中、1047网络请求/1304响应或远程玩家照片查询。
+
+### 玩家目标照片查询去重
+- 根据Godot set_hovered_human与CM_TARGET_PORTRAIT=1152，新增TargetDisplay::QueryPortrait并接入实际玩家悬停更新。使用现有SendPacket发送1152/零头字段及ANSI玩家名字，目标身份保留在本地显示上下文。实际服务器报文兼容仍待抓包联调。
+- 同一目标同一名字不重复发送；空名字等待名字回复，改名/切目标/移除后返回/切图清空允许重新查询。照片数据清除与查询名缓存分开，空照片结果不会导致每帧重发。
+- Client清理83步和全部112步构建通过；target-portrait-query十项全1，照片显示十一项回归通过。已检查out/target-portrait-query.png，未注入JPEG回复，显示标准职业头像。该离线检查验证查询去重状态，不证明网络请求成功。
+- 照片回复路由以及头像上传/恢复默认的完整报文尚未接入。Godot仅暴露portrait_upload_requested事件，当前没有足够报文证据，保留待发送数据，后续查证原版/服务器定义后继续实现。
