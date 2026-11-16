@@ -42,6 +42,9 @@ private:
 protected:
     struct RoleAnimation { int action = 0, frame = 0, elapsed = 0; };
     RoleAnimation m_roleAnimation[3];
+    int m_page = 0, m_pagePressed = -1;
+    CWHWilImageData m_pageImages;
+    int PageHit(LPARAM position);
 	CLoginMessages m_messages;
 	CLightFog			m_xLightFog;
 	CPDLList<CHRINFO>*	m_pxSList;

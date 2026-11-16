@@ -86,6 +86,17 @@ void CCharacterProcess::Preview(const char* page)
     m_CList.AddNode(role);
     m_CRectList.AddNode(new CHRRECT{});
     m_ChrCount = 1;
+    if (strcmp(page, "select-three") == 0) {
+        for (int i = 1; i < 3; ++i) {
+            auto* extra = new CHRINFO{};
+            lstrcpyA(extra->ChrName, i == 1 ? "MagePreview" : "TaoPreview");
+            extra->Class = BYTE(i);
+            extra->Level = 12;
+            m_CList.AddNode(extra);
+            m_CRectList.AddNode(new CHRRECT{});
+            ++m_ChrCount;
+        }
+    }
     m_xSelectChr.Create(&m_Image, &m_CList, &m_CRectList, m_ChrCount);
     m_xSelectChr.OpenWnd();
     if (strcmp(page, "create") == 0) {

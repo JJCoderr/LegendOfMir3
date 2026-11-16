@@ -30,6 +30,9 @@ VOID CSelectChr::Create(CWHWilImageData* pxImage,CPDLList<CHRINFO>* pxList, CPDL
 {
 	INT	nLoop;
 	m_messages.Load(".\\CmList.dat");
+    m_page = 0;
+    m_pagePressed = -1;
+    m_pageImages.NewLoad(".\\Data\\GameInter.wil", TRUE, TRUE);
 	// Buttons
 	BUTTONINFO CharProcBtnInfo[] ={
 									{ IMG_IDX_SELECT_CREATE,	SELECT_CHAR_NEW_BTN_POS_X,		SELECT_CHAR_NEW_BTN_POS_Y,		0,					0},	// Create New Charector Button
@@ -78,8 +81,20 @@ HRESULT	CSelectChr::OnKeyDown(WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
+int CSelectChr::PageHit(LPARAM position)
+{
+    if (m_nChrCount <= 2) return -1;
+    const int target = 1 - m_page, x = target ? 550 : 500;
+    if (!m_pageImages.NewSetIndex(target ? 1153 : 1150)) return -1;
+    const auto& info = *m_pageImages.m_lpstNewCurrWilImageInfo;
+    RECT bounds = {x,400,x + info.shWidth,400 + info.shHeight};
+    POINT point = {LOWORD(position),HIWORD(position)};
+    return PtInRect(&bounds, point) ? target : -1;
+}
+
 HRESULT CSelectChr::OnButtonDown(WPARAM wParam, LPARAM lParam)
 {
+    m_pagePressed = m_fIsActive ? PageHit(lParam) : -1;
 	if(m_fIsActive)
 		for (int i = ID_SEL_CHR_NEW_BTN; i <= ID_SEL_CHR_START_BTN; i++)
 		{
@@ -101,8 +116,20 @@ HRESULT CSelectChr::OnButtonDown(POINT ptMouse)
 	return 0;
 }
 
-HRESULT	CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
+HRESULT CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
 {
+    const int target = PageHit(lParam);
+    if (m_fIsActive && target >= 0 && target == m_pagePressed) {
+        m_roleAnimation[m_nSelectChr] = RoleAnimation{};
+        m_page = target;
+        m_nSelectChr = target * 2;
+        m_roleAnimation[m_nSelectChr] = RoleAnimation{};
+        m_roleAnimation[m_nSelectChr].action = 1;
+        m_pagePressed = -1;
+        m_fIsButtonDown = FALSE;
+        return 0;
+    }
+    m_pagePressed = -1;
 	INT		i;
 	int		Px,Py;
 	if(m_fIsActive)
@@ -163,7 +190,7 @@ HRESULT	CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
 		{
 			Px = m_pxrcList->GetCurrentData()->nLeft - LOWORD(lParam);
 			Py = m_pxrcList->GetCurrentData()->nTop - HIWORD(lParam);
-			if(Px < 0 && ((Px +m_pxrcList->GetCurrentData()->nWidth)>0))
+			if(i / 2 == m_page && Px < 0 && ((Px +m_pxrcList->GetCurrentData()->nWidth)>0))
 			{
 				if(Py<0 && ((Py+m_pxrcList->GetCurrentData()->nHeight)>0))
 				{
@@ -283,7 +310,7 @@ VOID CSelectChr::Render(INT	nLoopTime)
         for (i = 0; i < m_nChrCount; ++i) {
             const CHRINFO* role = m_pxSList->GetCurrentData();
             const int type = role->Gender + 2 * role->Class;
-            if (type >= 0 && type < 6) {
+            if (i / 2 == m_page && type >= 0 && type < 6) {
                 auto& animation = m_roleAnimation[i];
                 animation.elapsed += nLoopTime;
                 if (animation.elapsed > 120) {
@@ -310,6 +337,17 @@ VOID CSelectChr::Render(INT	nLoopTime)
         }
 		m_xLightFog.ShowLightFog();
 
+        if (m_nChrCount > 2) {
+            for (int target = 0; target < 2; ++target) {
+                const int base = target ? 1153 : 1150;
+                const int frame = base + (target == m_page ? 2 : m_pagePressed == target ? 1 : 0);
+                if (m_pageImages.NewSetIndex(frame)) {
+                    const auto& info = *m_pageImages.m_lpstNewCurrWilImageInfo;
+                    g_xMainWnd.DrawWithImageForComp(target ? 550 : 500, 400,
+                        info.shWidth, info.shHeight, (WORD*)m_pageImages.m_pbCurrImage);
+                }
+            }
+        }
 		ShowChrInfo();
 		if((m_nBlend>=100 && m_nRenderState!=9)||(m_nBlend<=0 && m_nRenderState==9))
 		{
