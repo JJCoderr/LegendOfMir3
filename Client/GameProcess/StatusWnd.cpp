@@ -143,7 +143,8 @@ VOID CStatusWnd::ShowCharEquipWnd()
 
 VOID CStatusWnd::ShowEquipItemState()
 {
-	INT nEquipNum = GetEquipNum(g_xGameProc.m_ptMousePos);
+	if (!m_showNativeHint || g_xGameProc.m_xInterface.m_stCommonItem.bSetted) return;
+	INT nEquipNum = GetEquipNum(m_nativePointer);
 
 	if ( nEquipNum != -1 )
 	{
@@ -743,6 +744,7 @@ void CStatusWnd::ShowNativeStatus()
     if (!m_identityBadge.empty()) text(m_identityBadge.c_str(),200,66,105,15,0xeb3ef4);
     SelectObject(dc,previous); DeleteObject(nameFont); DeleteObject(font); surface->ReleaseDC(dc);
     ShowNativeHint();
+    ShowEquipItemState();
 }
 
 void CStatusWnd::ShowNativeHint()

@@ -1829,6 +1829,17 @@ public:
             if(FILE* report=fopen("equipment-durability-check.txt","wb")) {fprintf(report,"threshold=%d warning=%d raw=%d unit=%d special=%d negative=%d wide=%d ignored=%d drop=%d\n",threshold,warning,rawBytes,unit,special,negative,wide,ignored,drop);fclose(report);}
         }
 
+        if(groupPanel==138) {
+            auto& ui=g_xGameProc.m_xInterface;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[100]={};strcpy((char*)raw,"◊∞±∏ Ù–‘≤‚ ‘");raw[30]=26;raw[32]=3;raw[62]=11;
+            raw[66]=0xD0;raw[67]=7;raw[68]=0x10;raw[69]=0x27;raw[40]=1;raw[41]=3;raw[86]=2;
+            ui.m_xStatusWnd.m_stEquipItem[5].xItem.SetMir3Item(raw,5);
+            ui.m_xStatusWnd.m_stEquipItem[5].bSetted=TRUE;
+            ui.WindowActivate(_WND_ID_STATUS);mouse={20,165};g_xGameProc.m_ptMousePos=mouse;
+            capturePath="equipment-hover-hint.bmp";
+        }
+
         if(groupPanel==124) {
             auto& ui=g_xGameProc.m_xInterface;auto& equipment=ui.m_xStatusWnd.m_stEquipItem;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -2205,6 +2216,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=equipment-hover-hint")==0 ? 138 :
         strcmp(lpCmdLine,"--preview=helmet-hint")==0 ? 136 :
         strcmp(lpCmdLine,"--preview=accessory-26-hint")==0 ? 137 :
         strcmp(lpCmdLine,"--preview=weapon-hint")==0 ? 134 :

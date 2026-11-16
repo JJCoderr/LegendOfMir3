@@ -1043,3 +1043,7 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 按原版444F40接入15/26与默认57分支，新增AccessoryHint；名称、耐久、重量抽为EquipmentBaseHint与防具共享。15/26省略零防御/魔防，攻击元素保持原分支，强弱元素普通x1、叠加x2；魔法范围在元素之后，末尾复用穿戴要求。57仅公共破坏/魔法及要求，不进入头盔元素分支。
 - 增量构建成功；helmet-hint与accessory-26-hint运行截图已检查，六项检查omitted/defense/elements/order/shared/variant全1；armor-hint七项回归全1。截图out/helmet-hint.png、out/accessory-26-hint.png。每次预览等待4秒，仅终止自身进程。
 - 饰品19..24、特殊53、装备窗口悬浮接线、商店提示与原版逐像素验收仍待完成；本轮未宣称服务器完整流程通过。
+
+### 人物装备页属性悬浮接线
+- ShowNativeStatus末尾接回ShowEquipItemState，采用UpdatePointer提供的当前悬停窗口判定和坐标；手持物品时不显示装备属性。复用各物品原生属性分派与绘制，沿用CLIENT原有left+37/top+288锚点，该锚点尚待与MIR3运行画面对照。
+- 增量构建与diff --check通过，equipment-hover-hint预览已实际截图检查，装备槽5的类型26属性在人物页显示。截图out/equipment-hover-hint.png；夹具图标不代表正式物品资源对应关系。
