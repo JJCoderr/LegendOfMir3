@@ -195,130 +195,108 @@ VOID CInventoryWnd::ShowInvenItemState()
 
 *******************************************************************************************************************/
 
-BOOL CInventoryWnd::CheckItemPos(CHAR* szName)
-{
-	HANDLE	hFile;
-	CHAR	szItemFile[MAX_PATH];
-	INT		nCnt1, nCnt2;
-	ITEMSET	stInvenItem[_MAX_INVEN_ITEM];						// 临时数据加载用变量.
-	ITEMSET	stBeltItem[_MAX_BELT_ITEM];							
-	ITEMSET	stCheckedInvenItem[_MAX_INVEN_ITEM];				// 保存已检查数据的变量.
-	ITEMSET	stCehckedBeltItem[_MAX_BELT_ITEM];
-
-	ZeroMemory(szItemFile, MAX_PATH);
-	g_xMainWnd.StringPlus(szItemFile, ".\\Data\\", szName, ".itm", "");
-
-	hFile = CreateFile(szItemFile, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-
-	ZeroMemory(stInvenItem, sizeof(ITEMSET)*_MAX_INVEN_ITEM);
-	ZeroMemory(stCheckedInvenItem, sizeof(ITEMSET)*_MAX_INVEN_ITEM);
-	ZeroMemory(stBeltItem , sizeof(ITEMSET)*_MAX_BELT_ITEM );
-	ZeroMemory(stCehckedBeltItem, sizeof(ITEMSET)*_MAX_BELT_ITEM);
-
-	if ( hFile != INVALID_HANDLE_VALUE )
-	{
-		DWORD		dwReadLen;
-
-		ReadFile(hFile, &stInvenItem, sizeof(ITEMSET)*_MAX_INVEN_ITEM, &dwReadLen, NULL);
-		ReadFile(hFile, &stBeltItem , sizeof(ITEMSET)*_MAX_BELT_ITEM , &dwReadLen, NULL);
-
-		// 将服务器接收的背包数据与客户端最后保存的腰带窗口数据进行比较，并分配到正确的位置。
-		for ( nCnt1 = 0; nCnt1 < _MAX_BELT_ITEM; nCnt1++ )
-		{
-			if ( stBeltItem[nCnt1].bSetted )
-			{
-				for ( nCnt2 = 0; nCnt2 < _MAX_INVEN_ITEM; nCnt2++ )
-				{
-					if ( m_stInventoryItem[nCnt2].bSetted )
-					{
-						// 判断是否为相同物品.
-						if ( stBeltItem[nCnt1].xItem.m_stItemInfo.nMakeIndex  != m_stInventoryItem[nCnt2].xItem.m_stItemInfo.nMakeIndex &&
-							 !strcmp(stBeltItem[nCnt1].xItem.m_stItemInfo.stStdItem.szName, m_stInventoryItem[nCnt2].xItem.m_stItemInfo.stStdItem.szName) &&
-							 (stBeltItem[nCnt1].xItem.m_stItemInfo.nDura    == m_stInventoryItem[nCnt2].xItem.m_stItemInfo.nDura   ) &&
-							 (stBeltItem[nCnt1].xItem.m_stItemInfo.nDuraMax == m_stInventoryItem[nCnt2].xItem.m_stItemInfo.nDuraMax) )
-						{
-							stCehckedBeltItem[nCnt1] = m_stInventoryItem[nCnt2];
-							ZeroMemory(&stBeltItem[nCnt1], sizeof(ITEMSET));
-							DeleteInvenItem(nCnt2);
-							break;
-						}						   
-					}
-				}
-			}
-		} 
-
-		memcpy(m_stBeltItem, stCehckedBeltItem, sizeof(ITEMSET)*_MAX_BELT_ITEM);
-
-		// 背包.
-		for ( nCnt1 = 0; nCnt1 < _MAX_INVEN_ITEM; nCnt1++ )
-		{
-			if ( stInvenItem[nCnt1].bSetted )
-			{
-				for ( nCnt2 = 0; nCnt2 < _MAX_INVEN_ITEM; nCnt2++ )
-				{
-					if ( m_stInventoryItem[nCnt2].bSetted )
-					{
-						// 判断是否为相同物品.
-						if ( stInvenItem[nCnt1].xItem.m_stItemInfo.nMakeIndex != m_stInventoryItem[nCnt2].xItem.m_stItemInfo.nMakeIndex &&
-							 !strcmp(stInvenItem[nCnt1].xItem.m_stItemInfo.stStdItem.szName, m_stInventoryItem[nCnt2].xItem.m_stItemInfo.stStdItem.szName) &&
-							 (stInvenItem[nCnt1].xItem.m_stItemInfo.nDura	 == m_stInventoryItem[nCnt2].xItem.m_stItemInfo.nDura    ) &&
-							 (stInvenItem[nCnt1].xItem.m_stItemInfo.nDuraMax == m_stInventoryItem[nCnt2].xItem.m_stItemInfo.nDuraMax ) )
-						{
-							stCheckedInvenItem[nCnt1] = m_stInventoryItem[nCnt2];
-							ZeroMemory(&stInvenItem[nCnt1], sizeof(ITEMSET));
-							DeleteInvenItem(nCnt2);
-							break;
-						}						
-					}
-				}
-			}
-		}
-
-		for ( nCnt1 = 0; nCnt1 < _MAX_INVEN_ITEM; nCnt1++ )
-		{
-			if ( m_stInventoryItem[nCnt1].bSetted )
-			{
-				for ( nCnt2 = 0; nCnt2 < _MAX_INVEN_ITEM; nCnt2++ )
-				{
-					if ( !stCheckedInvenItem[nCnt2].bSetted )
-					{
-						stCheckedInvenItem[nCnt2] = m_stInventoryItem[nCnt1];
-						break;
-					}
-				}
-			}
-		}
-		memcpy(m_stInventoryItem, stCheckedInvenItem, sizeof(ITEMSET)*_MAX_INVEN_ITEM);
-        RebuildLayout();
-
-		CloseHandle(hFile);
-		return TRUE;
-	}
-
-	return FALSE;
+namespace {
+constexpr int bagStride=3120,quickStride=3112,cellsOffset=46*bagStride;
+constexpr int quickOffset=cellsOffset+1200,layoutFileSize=quickOffset+6*quickStride;
+unsigned LayoutWord(const std::vector<BYTE>& data,int at) { return data[at]|(unsigned(data[at+1])<<8); }
+unsigned LayoutDword(const std::vector<BYTE>& data,int at) { return LayoutWord(data,at)|(LayoutWord(data,at+2)<<16); }
+void LayoutPutWord(std::vector<BYTE>& data,int at,unsigned value) { data[at]=BYTE(value); data[at+1]=BYTE(value>>8); }
+void LayoutIdentity(std::vector<BYTE>& data,int at,const CLIENTITEMRCD& item) {
+    memcpy(&data[at],item.stStdItem.szName,sizeof(item.stStdItem.szName));
+    LayoutPutWord(data,at+62,unsigned(item.nMakeIndex)); LayoutPutWord(data,at+64,unsigned(item.nMakeIndex)>>16);
+    LayoutPutWord(data,at+66,item.nDura); LayoutPutWord(data,at+68,item.nDuraMax);
 }
-
-
-BOOL CInventoryWnd::SaveItemPos(CHAR* szName)
+bool LayoutName(const std::vector<BYTE>& data,int at,const CLIENTITEMRCD& item) {
+    for (int i=0;i<30;++i) {
+        const BYTE current=i<int(sizeof(item.stStdItem.szName)) ? BYTE(item.stStdItem.szName[i]) : 0;
+        if (data[at+i]!=current) return false;
+        if (!current) return true;
+    }
+    return true;
+}
+}
+BOOL CInventoryWnd::CheckItemPos(CHAR* name)
 {
-	HANDLE	hFile;
-	CHAR	szItemFile[MAX_PATH];
-
-	ZeroMemory(szItemFile, MAX_PATH);
-	g_xMainWnd.StringPlus(szItemFile, ".\\Data\\", szName, ".itm", "");
-	hFile = CreateFile(szItemFile, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-
-	if ( hFile != INVALID_HANDLE_VALUE )
-	{
-		DWORD		dwWriteLen;
-
-		WriteFile(hFile, m_stInventoryItem, sizeof(ITEMSET)*_MAX_INVEN_ITEM, &dwWriteLen, NULL);
-		WriteFile(hFile, m_stBeltItem,		sizeof(ITEMSET)*_MAX_BELT_ITEM , &dwWriteLen, NULL);
-
-		CloseHandle(hFile);
-		return TRUE;
-	}
-	return FALSE;
+    if (!name[0]) return FALSE;
+    char path[MAX_PATH]; wsprintfA(path,"./Data/%s.itms",name);
+    return LoadLayoutFile(path);
+}
+BOOL CInventoryWnd::SaveItemPos(CHAR* name)
+{
+    if (!name[0]) return FALSE;
+    char path[MAX_PATH]; wsprintfA(path,"./Data/%s.itms",name);
+    return SaveLayoutFile(path);
+}
+bool CInventoryWnd::SaveLayoutFile(const char* path)
+{
+    std::vector<BYTE> data(layoutFileSize,0);
+    int savedIds[_MAX_INVEN_ITEM],count=0;
+    for (int id=0;id<_MAX_INVEN_ITEM;++id) {
+        savedIds[id]=-1;
+        if (!m_stInventoryItem[id].bSetted) continue;
+        if (count==46 || m_layout.anchors[id]<0) return false;
+        const int at=count*bagStride; savedIds[id]=count++;
+        data[at]=1; LayoutPutWord(data,at+4,m_layout.widths[id]); LayoutPutWord(data,at+8,m_layout.heights[id]);
+        LayoutIdentity(data,at+16,m_stInventoryItem[id].xItem.m_stItemInfo);
+    }
+    for (int cell=0;cell<600;++cell) {
+        const int id=m_layout.cells[cell];
+        const unsigned code=id<0 ? 65535 : savedIds[id]+(m_layout.anchors[id]==cell?1000:0);
+        LayoutPutWord(data,cellsOffset+cell*2,code);
+    }
+    for (int slot=0;slot<6;++slot) if (m_stBeltItem[slot].bSetted) {
+        const int at=quickOffset+slot*quickStride; data[at]=1;
+        LayoutIdentity(data,at+8,m_stBeltItem[slot].xItem.m_stItemInfo);
+    }
+    FILE* file=fopen(path,"wb"); if (!file) return false;
+    const bool written=fwrite(data.data(),1,data.size(),file)==data.size();
+    return fclose(file)==0 && written;
+}
+bool CInventoryWnd::LoadLayoutFile(const char* path)
+{
+    FILE* file=fopen(path,"rb"); if (!file) return false;
+    std::vector<BYTE> data(layoutFileSize);
+    const bool complete=fread(data.data(),1,data.size(),file)==data.size() && fgetc(file)==EOF;
+    fclose(file); if (!complete) return false;
+    for (int cell=0;cell<600;++cell) {
+        const unsigned code=LayoutWord(data,cellsOffset+cell*2);
+        if (code!=65535 && !(code<46 || (code>=1000 && code<1046))) return false;
+    }
+    CBagLayout next; bool consumed[_MAX_INVEN_ITEM]={};
+    for (int saved=0;saved<46;++saved) {
+        const int at=saved*bagStride; if (!LayoutDword(data,at)) continue;
+        int current=-1;
+        for (int id=0;id<_MAX_INVEN_ITEM;++id) {
+            const auto& item=m_stInventoryItem[id]; const auto& record=item.xItem.m_stItemInfo;
+            if (item.bSetted && !consumed[id] && LayoutName(data,at+16,record) &&
+                LayoutDword(data,at+78)==unsigned(record.nMakeIndex) && LayoutWord(data,at+82)==record.nDura &&
+                LayoutWord(data,at+84)==record.nDuraMax) { current=id; break; }
+        }
+        if (current<0) continue;
+        int anchor=-1,cells=0;
+        for (int cell=0;cell<600;++cell) {
+            const unsigned code=LayoutWord(data,cellsOffset+cell*2);
+            if (code==unsigned(1000+saved)) { if (anchor>=0) { anchor=-2; break; } anchor=cell; }
+            if (code!=65535 && code%1000==unsigned(saved)) ++cells;
+        }
+        const int width=m_layout.widths[current],height=m_layout.heights[current];
+        if (anchor<0 || cells!=width*height || !next.Fits(anchor%6,anchor/6,width,height)) continue;
+        bool valid=true;
+        for (int y=0;y<height;++y) for (int x=0;x<width;++x)
+            if (LayoutWord(data,cellsOffset+(anchor+y*6+x)*2)!=unsigned(saved+(x==0 && y==0?1000:0))) valid=false;
+        if (!valid) continue;
+        next.Place(current,width,height,anchor%6,anchor/6); consumed[current]=true;
+    }
+    for (int id=0;id<_MAX_INVEN_ITEM;++id)
+        if (m_stInventoryItem[id].bSetted && !consumed[id] && !next.Place(id,m_layout.widths[id],m_layout.heights[id])) return false;
+    m_layout=next;
+    for (int slot=0;slot<6;++slot) {
+        const int at=quickOffset+slot*quickStride; if (!LayoutDword(data,at)) continue;
+        for (int id=0;id<_MAX_INVEN_ITEM;++id)
+            if (m_stInventoryItem[id].bSetted && LayoutName(data,at+8,m_stInventoryItem[id].xItem.m_stItemInfo))
+                m_stBeltItem[slot]=m_stInventoryItem[id];
+    }
+    return true;
 }
 
 

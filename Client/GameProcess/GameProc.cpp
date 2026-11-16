@@ -2958,6 +2958,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 						nCount++;
 					}
 				} while (nCount < tdm.wSeries && pszNextItem);
+                m_xInterface.m_xInventoryWnd.CheckItemPos(m_xMyHero.m_szName);
 				break;
 			}
 			case SM_SENDUSEITEMS:

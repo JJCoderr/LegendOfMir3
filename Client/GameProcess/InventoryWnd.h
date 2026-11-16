@@ -61,6 +61,8 @@ public:
 public:
 	BOOL	CheckItemPos(CHAR* szName);
 	BOOL	SaveItemPos(CHAR* szName);
+    bool SaveLayoutFile(const char* path);
+    bool LoadLayoutFile(const char* path);
 
 	VOID	DeleteBeltItem(INT nBeltInventoryNum);
 	VOID	DeleteInvenItem(INT nInventoryNum);

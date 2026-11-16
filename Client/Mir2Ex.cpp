@@ -138,7 +138,8 @@ public:
             int samples=0;
             for (int icon=0;icon<100 && samples<6;++icon) {
                 if (!icons.NewSetIndex(icon) || icons.m_lpstNewCurrWilImageInfo->shWidth<=0) continue;
-                CLIENTITEMRCD record={}; record.stStdItem.wLooks=icon;
+                CLIENTITEMRCD record={}; record.stStdItem.wLooks=icon; record.nMakeIndex=1000+icon;
+                wsprintfA(record.stStdItem.szName,"Preview%d",icon);
                 CItem item; item.SetItem(record,0);
                 bag.AddInvenItem(item,samples*7,TRUE); ++samples;
             }
@@ -164,7 +165,8 @@ public:
             const bool freed=probe.Fits(0,0,2,3) && probe.cells[2]==1;
             bool multiHit=false,picked=false,moved=false;
             if (largeIcon>=0) {
-                CLIENTITEMRCD record={}; record.stStdItem.wLooks=largeIcon;
+                CLIENTITEMRCD record={}; record.stStdItem.wLooks=largeIcon; record.nMakeIndex=1000+largeIcon;
+                lstrcpyA(record.stStdItem.szName,"LargePreview");
                 CItem item; item.SetItem(record,6); bag.AddInvenItem(item,6,TRUE);
                 const int anchor=bag.ItemAnchor(6);
                 POINT pick={535+(anchor%6+largeWidth-1)*38+2,60+(anchor/6+largeHeight-1)*38+2};
@@ -180,12 +182,30 @@ public:
                 for (int row=0;row<20;++row) bag.OnScrollDown();
                 bag.OnLButtonUp(&held,drop);
             }
+            ITEMSET savedItems[_MAX_INVEN_ITEM]; int savedAnchors[_MAX_INVEN_ITEM];
+            memcpy(savedItems,bag.m_stInventoryItem,sizeof(savedItems));
+            for (int id=0;id<_MAX_INVEN_ITEM;++id) savedAnchors[id]=bag.ItemAnchor(id);
+            const bool layoutSaved=bag.SaveLayoutFile("./preview-item-layout.itms");
+            bag.DeleteAllInvenItem();
+            for (int id=_MAX_INVEN_ITEM-1;id>=0;--id) if (savedItems[id].bSetted) {
+                CItem item=savedItems[id].xItem; item.m_stItemInfo.stStdItem.nPrice=12345;
+                bag.AddInvenItem(item,0,FALSE);
+            }
+            bool layoutRestored=layoutSaved && bag.LoadLayoutFile("./preview-item-layout.itms");
+            bool serverPreserved=true;
+            for (int id=0;id<_MAX_INVEN_ITEM;++id) if (bag.m_stInventoryItem[id].bSetted) {
+                const auto& record=bag.m_stInventoryItem[id].xItem.m_stItemInfo;
+                serverPreserved=serverPreserved && record.stStdItem.nPrice==12345;
+                for (int old=0;old<_MAX_INVEN_ITEM;++old)
+                    if (savedItems[old].bSetted && savedItems[old].xItem.m_stItemInfo.nMakeIndex==record.nMakeIndex)
+                        layoutRestored=layoutRestored && bag.ItemAnchor(id)==savedAnchors[old];
+            }
             POINT close={770,435};
             const bool stray=!bag.OnLButtonUp(&held,close);
             bag.OnLButtonDown(&held,close);
             const bool closed=bag.OnLButtonUp(&held,close)!=FALSE;
             if (FILE* report=fopen("inventory-layout-check.txt","wb")) {
-                fprintf(report,"grid=%d release_without_press=%d close_clicked=%d scroll_end=%d scroll_released=%d\n",grid,stray,closed,scrollEnd,released); fprintf(report,"icon_samples=%d large_icon=%d multi_hit=%d picked=%d moved=%d\n",samples,largeIcon,multiHit,picked,moved); fprintf(report,"collision=%d freed=%d\n",collision,freed); fclose(report);
+                fprintf(report,"grid=%d release_without_press=%d close_clicked=%d scroll_end=%d scroll_released=%d\n",grid,stray,closed,scrollEnd,released); fprintf(report,"icon_samples=%d large_icon=%d multi_hit=%d picked=%d moved=%d\n",samples,largeIcon,multiHit,picked,moved); fprintf(report,"collision=%d freed=%d layout_restored=%d server_records_preserved=%d\n",collision,freed,layoutRestored,serverPreserved); fclose(report);
             }
         }
         if (groupPanel==11) {
