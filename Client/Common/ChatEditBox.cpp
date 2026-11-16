@@ -24,19 +24,6 @@ static CChatEdit*	g_xChatEdit = NULL;
 *******************************************************************************************************************/
 
 
-/******************************************************************************************************************
-
-	函数名 : CChatEdit::CChatEdit()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CChatEdit::CChatEdit()
 {
 	m_hChatEdit = NULL;
@@ -48,19 +35,6 @@ CChatEdit::CChatEdit()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CChatEdit::~CChatEdit()
-
-	作者 : 
-	日期 : 
-
-	目的   : 
-	输出   : 
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CChatEdit::~CChatEdit()
 {
 	DestroyDialog();
@@ -68,19 +42,6 @@ CChatEdit::~CChatEdit()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CChatEdit::DestroyDialog()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CChatEdit::DestroyDialog()
 {
 	if ( m_hFontChatEdit != NULL )
@@ -95,23 +56,6 @@ BOOL CChatEdit::DestroyDialog()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : ChatEditDlgProc()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : HWND hWnd
-	         UINT uMsg
-	         WPARAM wParam
-	         LPARAM lParam
-	输出   : INT_PTR CALLBACK
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 INT_PTR CALLBACK ChatEditDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     return g_xChatEdit->ChatEditProc(hWnd, uMsg, wParam, lParam);
@@ -119,23 +63,6 @@ INT_PTR CALLBACK ChatEditDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CChatEdit::ChatEditProc()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输入   : HWND hWnd
-	         UINT nMsg
-	         WPARAM wParam
-	         LPARAM lParam
-	输出   : LRESULT CALLBACK
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
 	PAINTSTRUCT ps;
@@ -213,25 +140,6 @@ LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LP
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CChatEdit::Create()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : HINSTANCE hInstance
-	         HWND hWndParent
-	         INT nX
-	         INT nY
-	         INT nXsize
-	         INT nYSize
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CChatEdit::Create(HINSTANCE hInstance, HWND hWndParent, INT nX, INT nY, INT nXsize, INT nYSize)
 {
 	m_hChatEdit = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), "", WS_POPUP | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL,

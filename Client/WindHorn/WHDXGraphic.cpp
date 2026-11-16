@@ -40,22 +40,6 @@ CWHDXGraphicWindow* GetDXGWindowPtr()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::CWHDXGraphicWindow()
-
-	作者 :
-	创建日期 :
-
-	目的   :
-	输入   : WORD wWidth
-	         WORD wHeight
-	         WORD wBpp
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CWHDXGraphicWindow::CWHDXGraphicWindow(WORD wWidth, WORD wHeight, WORD wBpp)
 {
 	m_pDD				= NULL;
@@ -107,19 +91,6 @@ VOID CWHDXGraphicWindow::UsedAndFreeMemoryCheck()
 } 
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::~CWHDXGraphicWindow()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CWHDXGraphicWindow::~CWHDXGraphicWindow()
 {
 	FreeDXGEnumModeResources();
@@ -130,23 +101,6 @@ CWHDXGraphicWindow::~CWHDXGraphicWindow()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::Create()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : LPTSTR lpCaption
-	         CHAR *pszMenuName
-	         BYTE bScreenModeFlag
-	         BYTE bDeviceModeFlag
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CWHDXGraphicWindow::Create(HINSTANCE hInst, LPTSTR lpCaption, CHAR *pszMenuName, CHAR* pszIconName, BYTE bScreenModeFlag, BYTE bDeviceModeFlag)
 {
 	DWORD	dwStyle;
@@ -196,23 +150,6 @@ BOOL CWHDXGraphicWindow::Create(HINSTANCE hInst, LPTSTR lpCaption, CHAR *pszMenu
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::MainWndProcDXG()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : HWND hWnd
-	         UINT uMsg
-	         WPARAM wParam
-	         LPARAM lParam
-	输出   : LRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 LRESULT CWHDXGraphicWindow::MainWndProcDXG(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
 	switch (uMsg)
@@ -279,21 +216,6 @@ LRESULT CWHDXGraphicWindow::OnSetCursor()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::OnSize()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : WPARAM wParam
-	         LPARAM lParam
-	输出   : LRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 LRESULT CWHDXGraphicWindow::OnSize(WPARAM wParam, LPARAM lParam)
 {
     if ( SIZE_MAXHIDE == wParam || SIZE_MINIMIZED == wParam )
@@ -307,21 +229,6 @@ LRESULT CWHDXGraphicWindow::OnSize(WPARAM wParam, LPARAM lParam)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::OnMove()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : WPARAM wParam
-	         LPARAM lParam
-	输出   : LRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 LRESULT CWHDXGraphicWindow::OnMove(WPARAM wParam, LPARAM lParam)
 {
 	UpdateBoundsWnd();
@@ -329,40 +236,12 @@ LRESULT CWHDXGraphicWindow::OnMove(WPARAM wParam, LPARAM lParam)
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::OnDestroy()
-
-	作者 : 
-	编写日期 : 
-
-	目的   : 
-	输出   : BOOL 
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 LRESULT CWHDXGraphicWindow::OnDestroy()
 {
 	return CWHWindow::OnDestroy();
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::OnSysKeyDown()
-
-	作者 :
-	日期 :
-
-	目的   :
-	输入   : WPARAM wParam
-	         LPARAM lParam
-	输出   : LRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 LRESULT CWHDXGraphicWindow::OnSysKeyDown(WPARAM wParam, LPARAM lParam)
 {
 	if ( wParam == VK_RETURN )
@@ -398,19 +277,6 @@ LRESULT CWHDXGraphicWindow::OnSysKeyDown(WPARAM wParam, LPARAM lParam)
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::FindDriverAndDevice()
-
-	作者 :
-	日期 :
-
-	目的   :
-	输出   : DWORD
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BYTE CWHDXGraphicWindow::FindDriverAndDevice()
 {
 	BYTE bNum = 0;
@@ -456,19 +322,6 @@ BYTE CWHDXGraphicWindow::FindDriverAndDevice()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::DestroyDXGObjects()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : HRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::DestroyDXGObjects()
 {
 	HRESULT	hr;
@@ -519,19 +372,6 @@ HRESULT CWHDXGraphicWindow::DestroyDXGObjects()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::FreeDXGEnumModeResources()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CWHDXGraphicWindow::FreeDXGEnumModeResources()
 {	
     for ( BYTE bCnt = 0; bCnt < g_bNumDevices; bCnt++ )
@@ -541,19 +381,6 @@ VOID CWHDXGraphicWindow::FreeDXGEnumModeResources()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::CreateDXG()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : HRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::CreateDXG() 
 {
     HRESULT hr;
@@ -616,24 +443,6 @@ HRESULT CWHDXGraphicWindow::CreateDXG()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CDXGraphic::ResetDXG()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : WORD wWidth
-	         WORD wHeight
-	         WORD wBPP
-	         BYTE bScreenModeFlag
-	         BYTE bDeviceModeFlag
-	输出   : HRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::ResetDXG(WORD wWidth, WORD wHeight, WORD wBPP, BYTE bScreenModeFlag, BYTE bDeviceModeFlag)
 {
     HRESULT hr;
@@ -682,19 +491,6 @@ HRESULT CWHDXGraphicWindow::ResetDXG(WORD wWidth, WORD wHeight, WORD wBPP, BYTE 
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::CreatePrimarySurface()
-
-	作者 :
-	创建日期 :
-
-	目的   :
-	输出   : HRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
 {		
     DDSURFACEDESC2	ddsd;
@@ -786,19 +582,6 @@ HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::UpdateBoundsWnd()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
 VOID CWHDXGraphicWindow::UpdateBoundsWnd()
 {
 	if ( m_bScreenModeFlag & _DXG_SCREENMODE_WINDOW )
@@ -814,20 +597,6 @@ VOID CWHDXGraphicWindow::UpdateBoundsWnd()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::CreateZBuffer()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : GUID* pDeviceGUID
-	输出   : HRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::CreateZBuffer(GUID* pDeviceGUID)
 {
     HRESULT hr;
@@ -918,23 +687,6 @@ HRESULT CWHDXGraphicWindow::Init3DDeviceObjects()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::CreateGameFont()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : LPCSTR szFontName
-	         INT nXsize
-	         INT nYsize
-	         BYTE bFontType
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 HFONT CWHDXGraphicWindow::CreateGameFont(LPCSTR szFontName, INT nHeight, INT nWidth, INT nWeight, BOOL bItalic, BOOL bULine, BOOL bStrikeOut, DWORD dwCharSet)
 {
 	INT nYsize;
@@ -1001,26 +753,6 @@ CHAR* CWHDXGraphicWindow::IntToStr(INT nNum)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::PutsHan()
-
-	作者 :
-	日期 :
-
-	目的   :
-	输入   : LPDIRECTDRAWSURFACE7 pSurface
-	         INT nX
-	         INT nY
-	         COLORREF foreColor
-	         COLORREF backColor
-	         CHAR* szFormat
-	         ...
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CWHDXGraphicWindow::PutsHan(LPDIRECTDRAWSURFACE7 pSurface, INT nX, INT nY, COLORREF foreColor, COLORREF backColor, CHAR* szText, HFONT hFont)
 {
 	HDC		hDC;
@@ -1055,26 +787,6 @@ VOID CWHDXGraphicWindow::PutsHan(LPDIRECTDRAWSURFACE7 pSurface, INT nX, INT nY, 
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::PutsHan()
-
-	作者 :
-	日期 :
-
-	目的   :
-	输入   : LPDIRECTDRAWSURFACE7 pSurface
-	         INT nX
-	         INT nY
-	         COLORREF foreColor
-	         COLORREF backColor
-	         CHAR* szFormat
-	         ...
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CWHDXGraphicWindow::PutsHan(LPDIRECTDRAWSURFACE7 pSurface, RECT rc, COLORREF foreColor, COLORREF backColor, CHAR* szText, HFONT hFont)
 {
 	HDC		hDC;
@@ -1344,20 +1056,6 @@ BOOL CWHDXGraphicWindow::StringDivide(INT nDivideWidth, INT& nDividedLine, CHAR*
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::GetRGBMaskInfoIN16Bits()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : LPDIRECTDRAWSURFACE7 pSurface
-	输出   : DXG_MASKINFO
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 DXG_MASKINFO CWHDXGraphicWindow::GetRGBMaskInfoIN16Bits(LPDIRECTDRAWSURFACE7 pSurface)
 {	
 	DDPIXELFORMAT ddpf;
@@ -1421,24 +1119,6 @@ WORD CWHDXGraphicWindow::ConvertColor24To16(COLORREF dwColor)
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::DrawWithGDI()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : RECT rc
-	         LPDIRECTDRAWSURFACE7 pSurface
-	         DWORD dwColor
-	         DWORD dwPenStyleFlg
-	         BYTE bKind
-	输出   : HRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::DrawWithGDI(RECT rc, LPDIRECTDRAWSURFACE7 pSurface, DWORD dwColor, BYTE bKind)
 {
 	POINT	pt;
@@ -1653,22 +1333,6 @@ BOOL CWHDXGraphicWindow::DrawWithImagePerLineClipRgn(INT nX, INT nY, INT nXSize,
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::DrawWithSurface()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输入   : LPDIRECTDRAWSURFACE7 pddsSrc
-	         RECT* prcSrc
-	         RECT* prcDst
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CWHDXGraphicWindow::DrawWithSurface(INT nX, INT nY, INT nXSize, INT nYSize, LPDIRECTDRAWSURFACE7 pddsSrc)
 {
 	RECT	rc;
@@ -5967,22 +5631,6 @@ BOOL CWHDXGraphicWindow::DrawWithABlendForIntersectCompData(INT nSrcX, INT nSrcY
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHDXGraphicWindow::Present()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输入   : LPRECT lprcDest
-	         LPRECT lprcSrc
-	         BYTE bCntRgn
-	输出   : HRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::Present()
 {
 	HRESULT hr;
@@ -6018,19 +5666,6 @@ HRESULT CWHDXGraphicWindow::Present()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : RestoreSurfaces()
-
-	作者 :
-	创建日期 :
-
-	目的   :
-	输出   : HRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::RestoreSurfaces()
 {
     HRESULT hr;
@@ -6063,24 +5698,6 @@ HRESULT CWHDXGraphicWindow::RestoreSurfaces()
 *******************************************************************************************************************/
 
 
-/******************************************************************************************************************
-
-	函数名 : WINAPI DXGDriverEnumCallbackEx()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : GUID *pGUID
-	         LPSTR szDesc
-	         LPSTR szName
-	         LPVOID pContext
-	         HMONITOR hm
-	输出   : static BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 static BOOL WINAPI DXGDriverEnumCallbackEx(GUID *pGUID, LPSTR szDesc, LPSTR szName, LPVOID pContext, HMONITOR hm)
 {
     LPDIRECTDRAW7			pDD	 = NULL;
@@ -6134,21 +5751,6 @@ static BOOL WINAPI DXGDriverEnumCallbackEx(GUID *pGUID, LPSTR szDesc, LPSTR szNa
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : WINAPI DXGEnumDisplayModeCallback()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : DDSURFACEDESC2* pddsd
-	         VOID* pParentInfo
-	输出   : static HRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 static HRESULT WINAPI DXGEnumDisplayModeCallback(DDSURFACEDESC2* pddsd, VOID* pParentInfo)
 {
     DXG_ENUM_DEVICEINFO* pDevice = (DXG_ENUM_DEVICEINFO*) pParentInfo;
@@ -6164,21 +5766,6 @@ static HRESULT WINAPI DXGEnumDisplayModeCallback(DDSURFACEDESC2* pddsd, VOID* pP
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : DXGModesSortCallback()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : const VOID* arg1
-	         const VOID* arg2
-	输出   : static int
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
 static int DXGModesSortCallback(const VOID* arg1, const VOID* arg2)
 {
     DDSURFACEDESC2* p1 = (DDSURFACEDESC2*)arg1;
@@ -6197,23 +5784,6 @@ static int DXGModesSortCallback(const VOID* arg1, const VOID* arg2)
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : WINAPI DXG3DDeviceEnumCallback()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输入   : TCHAR* szDesc
-	         TCHAR* szName
-	         D3DDEVICEDESC7* pDesc
-	         VOID* pParentInfo
-	输出   : static HRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 static HRESULT WINAPI DXG3DDeviceEnumCallback(TCHAR* szDesc, TCHAR* szName, D3DDEVICEDESC7* pDesc, VOID* pParentInfo)
 {
     DXG_ENUM_DEVICEINFO* pDriverInfo = (DXG_ENUM_DEVICEINFO*)pParentInfo;
@@ -6266,21 +5836,6 @@ static HRESULT WINAPI DXG3DDeviceEnumCallback(TCHAR* szDesc, TCHAR* szName, D3DD
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : WINAPI DXGEnumZBufferFormatsCallback()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : DDPIXELFORMAT* pddpf
-	         VOID* pContext
-	输出   : static HRESULT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 static HRESULT WINAPI DXGEnumZBufferFormatsCallback(DDPIXELFORMAT* pddpf, VOID* pContext)
 {
     DDPIXELFORMAT* pddpfOut = (DDPIXELFORMAT*) pContext;

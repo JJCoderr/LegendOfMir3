@@ -20,39 +20,13 @@
 	CActor Class
 
 *******************************************************************************************************************/
-/******************************************************************************************************************
 
-	函数名 : CActor::CActor()
-
-	作者 :
-	创建日期 :
-
-	目的   :
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CActor::CActor()
 {
 	InitActor();
 }
 
 
-
-/******************************************************************************************************************
-
-	函数名 : CActor::~CActor()
-
-	作者   :
-	编写日期 :
-
-	目的   :
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CActor::~CActor()
 {
 	DestroyActor();
@@ -228,25 +202,6 @@ VOID CActor::DrawWithEffected(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSr
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::Create()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输入   : CImageHandler* pxImgHandler
-	         FEATURE stFeature
-	         BYTE bMtn
-	         WORD bDir
-	         WORD wPosX
-	         WORD wPosY
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CActor::Create(CImageHandler* pxImgHandler, FEATURE* pstFeature, BYTE bMtn, WORD bDir, WORD wPosX, WORD wPosY)
 {
 	// 参数应用及确认./////////////////////////////////////////////////////////////////////////////////
@@ -371,20 +326,6 @@ BOOL CActor::Create(CImageHandler* pxImgHandler, FEATURE* pstFeature, BYTE bMtn,
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::CheckFeatureValidate()
-
-	作者 :
-	创建日期 :
-
-	目的   :
-	输入   : FEATURE stFeature
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CActor::CheckFeatureValidate(FEATURE stFeature)
 {
 //	if ( (stFeature.bGender >= 0 && stFeature.bGender < _MAX_GENDER) )
@@ -410,21 +351,6 @@ BOOL CActor::CheckFeatureValidate(FEATURE stFeature)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::ChangeFeature()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : CImageHandler* pxImgHandler
-	         FEATURE stFeature
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CActor::ChangeFeature(FEATURE stFeature)
 {
 	CImageHandler* pxImgHandler = &g_xGameProc.m_xImage;
@@ -506,21 +432,6 @@ BOOL CActor::ChangeFeature(FEATURE stFeature)
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::SetMotionFrame()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : BYTE bMtn
-	         BYTE bDir
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CActor::SetMotionFrame(BYTE bMtn, BYTE bDir)
 {
 	if ( /*(bMtn < 0 && bMtn >= _MAX_HERO_MTN) || */(bDir < 0 && bDir >= _MAX_DIRECTION) )
@@ -693,19 +604,6 @@ VOID CActor::PlayActSound()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::SetMoving()
-
-	作者 : 
-	编写日期 : 
-
-	目的   : 
-	输出   : VOID 
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CActor::SetMoving()
 {	
 	WORD wFrmCnt  = m_dwEndFrame  - m_dwFstFrame;
@@ -794,19 +692,6 @@ VOID CActor::SetMoving()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::SetBackStepMoving()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CActor::SetBackStepMoving()
 {	
 	switch ( m_bMoveDir )
@@ -891,19 +776,6 @@ VOID CActor::SetBackStepMoving()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::SetMoved()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
 VOID CActor::SetMoved()
 {
 	switch ( m_bMoveDir )
@@ -1439,19 +1311,6 @@ VOID CActor::StruckMsgReassign()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::UpdatePacketState()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CActor::UpdatePacketState()
 {
 	LPPACKETMSG	lpPacketMsg = NULL;
@@ -1507,22 +1366,6 @@ BOOL CActor::UpdatePacketState()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::LoadEffect()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : CImageHandler* pxImgHandler
-	         WORD wEffectNum
-	         BYTE bDir
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CActor::LoadEffect(CImageHandler* pxImgHandler, WORD wEffectNum, BYTE bDir)
 {
 	WORD wFileType;
@@ -1575,19 +1418,6 @@ BOOL CActor::LoadEffect(CImageHandler* pxImgHandler, WORD wEffectNum, BYTE bDir)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::DrawEffect()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CActor::DrawEffect()
 {
 	if ( g_xMainWnd.Get3DDevice() )
@@ -1715,24 +1545,6 @@ BOOL CActor::DrawEffect()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::UpdateMotionState()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : INT nLoopTime
-	         SHORT shStartViewTileX
-	         SHORT shStartViewTileY
-	         SHORT shViewOffsetX
-	         SHORT shViewOffsetY
-	输出   : VOID
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
 VOID CActor::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 {
 	m_wABlendCurrDelay += nLoopTime;
@@ -1825,19 +1637,6 @@ VOID CActor::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::UpdateMove(BOOL bIsMoveTime)
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CActor::UpdateMove(BOOL bIsMoveTime)
 {
 	if ( m_bCurrMtn == _MT_MON_WALK || m_bCurrMtn == _MT_PUSHBACK )
@@ -1906,21 +1705,6 @@ BOOL CActor::UpdateMove(BOOL bIsMoveTime)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::DrawActor()
-
-	作者 :
-	日期 :
-
-	目的   :
-	输入   : BOOL bFocused
-	         BOOL bShadowAblended
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CActor::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, BOOL bUseScrnPos, BOOL bDrawShadow)
 {
 	// 坐标处理。
@@ -2079,19 +1863,6 @@ BOOL CActor::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, 
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::DrawHPBar()
-
-	作者 :
-	日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CActor::DrawHPBar()
 {
 	if ( m_bOpenHealth )
@@ -2116,19 +1887,6 @@ VOID CActor::DrawHPBar()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CActor::DrawName()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CActor::DrawName()
 {
 	SIZE sizeLen;
@@ -2297,22 +2055,7 @@ VOID CActor::ShowMessage(INT nLoopTime)
 	CNPC Class
 
 *******************************************************************************************************************/
-/******************************************************************************************************************
 
-	函数名 : CNPC::DrawActor()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : CMapHandler* pxMap
-	         BOOL bFocused
-	         BOOL bShadowAblended
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CNPC::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, BOOL bUseScrnPos, BOOL bDrawShadow)
 {
 	// 坐标处理。
@@ -2429,20 +2172,6 @@ VOID CNPC::OnHit(LPPACKETMSG lpPacketMsg)
 	SetMotionFrame(_MT_NPC_ACT01, bDir);
 }
 
-
-/******************************************************************************************************************
-
-	函数名 : CNPC::UpdatePacketState()
-
-	作者 : 
-	日期 : 
-
-	目的   : 
-	输出   : BOOL 
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CNPC::UpdatePacketState()
 {
 //	if ( m_bCurrMtn == _MT_NPC_STAND )
@@ -2485,21 +2214,6 @@ BOOL CNPC::UpdatePacketState()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CNPC::UpdateMotionState()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : INT nLoopTime
-	         BOOL bIsMoveTime
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CNPC::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 {
 	m_wCurrDelay += nLoopTime;
@@ -2529,39 +2243,13 @@ VOID CNPC::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 	CHero Class
 
 *******************************************************************************************************************/
-/******************************************************************************************************************
 
-	函数名 : CHero::CHero()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CHero::CHero()
 {
 	InitActor();
 }
 
 
-
-/******************************************************************************************************************
-
-	函数名 : CHero::~CHero()
-
-	作者 :
-	日期 :
-
-	目的   :
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CHero::~CHero()
 {
 	DestroyActor();
@@ -2611,26 +2299,6 @@ VOID CHero::DestroyActor()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CHero::Create()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : CImageHandler* pxImgHandler
-	         WORD wActor
-	         BYTE bMtn
-	         WORD bDir
-	         WORD wPosX
-	         WORD wPosY
-	         FEATURE stFeature
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CHero::Create(CImageHandler* pxImgHandler, BYTE bMtn, BYTE bDir, WORD wPosX, WORD wPosY, 
 				   FEATURE* pstFeature, FEATUREEX* pstFeatureEx)
 {
@@ -2883,19 +2551,6 @@ VOID CHero::ShowShield()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CHero::UpdateMove(BOOL bIsMoveTime)
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CHero::UpdateMove(BOOL bIsMoveTime)
 {
 	if ( m_bCurrMtn == _MT_WALK || m_bCurrMtn == _MT_RUN || m_bCurrMtn == _MT_HORSEWALK || m_bCurrMtn == _MT_HORSERUN || m_bCurrMtn == _MT_MOODEPO || m_bCurrMtn == _MT_PUSHBACK )
@@ -3462,19 +3117,6 @@ VOID CHero::OnButch(LPPACKETMSG lpPacketMsg)
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CHero::UpdatePacketState()
-
-	作者   :
-	编写日期 :
-
-	目的   :
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CHero::UpdatePacketState()
 {
 	LPPACKETMSG	lpPacketMsg = NULL;
@@ -3537,21 +3179,6 @@ BOOL CHero::UpdatePacketState()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CHero::UpdateMotionState()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : INT nLoopTime
-	         BOOL bIsMoveTime
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 {
 	if ( m_bWarMode ) 
@@ -3749,21 +3376,6 @@ BOOL CHero::ChangeFeature(FEATURE stFeature, FEATUREEX stFeatureEx)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CHero::DrawActor()
-
-	作者 : 
-	日期 : 
-
-	目的   : 
-	输入   : BOOL bFocused
-	         BOOL bShadowAblended
-	输出   : BOOL 
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, BOOL bUseScrnPos, BOOL bDrawShadow)
 {
 	// 坐标处理。
@@ -4101,39 +3713,13 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 	CMyHero Class
 
 *******************************************************************************************************************/
-/******************************************************************************************************************
 
-	函数名 : CMyHero::CMyHero()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CMyHero::CMyHero()
 {
 	InitActor();
 }
 
 
-
-/******************************************************************************************************************
-
-	函数名 : CMyHero::~CMyHero()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CMyHero::~CMyHero()
 {
 	DestroyActor();
@@ -4218,20 +3804,6 @@ BOOL CMyHero::Create(CImageHandler* pxImgHandler, BYTE bMtn, BYTE bDir, WORD wPo
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CMyHero::SetMapHandler()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : CMapHandler* pxMap
-	输出   : VOID
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
 VOID CMyHero::SetMapHandler(CMapHandler* pxMap)
 {
 	m_pxMap = pxMap;
@@ -4253,19 +3825,6 @@ VOID CMyHero::OnHealthSpellChanged(LPPACKETMSG lpPacketMsg)
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CMyHero::UpdatePacketState()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : BOOL
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CMyHero::UpdatePacketState()
 {	
 	LPPACKETMSG	lpPacketMsg = NULL;
@@ -4365,19 +3924,6 @@ BOOL CMyHero::UpdatePacketState()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CMyHero::SetOldPosition()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : BOOL
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CMyHero::SetOldPosition()
 {
 	m_wPosX	   = m_wOldPosX;
@@ -4407,19 +3953,6 @@ BOOL CMyHero::SetOldPosition()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CMyHero::CheckMyPostion()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CMyHero::CheckMyPostion()
 {
 	if ( m_wPosX != m_pxMap->m_shStartViewTileX + _GAPX_TILE_CHAR_MAP ||
@@ -4432,19 +3965,6 @@ BOOL CMyHero::CheckMyPostion()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CMyHero::AdjustMyPostion()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CMyHero::AdjustMyPostion()
 {
 	m_pxMap->SetStartViewTile(m_wPosX-_GAPX_TILE_CHAR_MAP, m_wPosY-_GAPY_TILE_CHAR_MAP);
@@ -4452,22 +3972,6 @@ VOID CMyHero::AdjustMyPostion()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CMyHero::SetMotionState()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : BYTE bMtn
-	         BYTE bDir
-	         LPPOINT lpptTarget
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CMyHero::SetMotionState(BYTE bMtn, BYTE bDir, INT nMouseTargetID, BOOL bIsDead, LPPOINT lpptPos, SHORT shSkill)
 {
 	if ( !m_bIsMon )
@@ -4763,20 +4267,6 @@ VOID CMyHero::SetMotionState(BYTE bMtn, BYTE bDir, INT nMouseTargetID, BOOL bIsD
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CMyHero::UpdateMotionState()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输入   : INT nLoopTime
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 {
 	if ( m_bMotionLock ) 
@@ -5080,20 +4570,6 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CMyHero::UpdateMove(BOOL bIsMoveTime)
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输入   : BOOL bIsMoveTime
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 {
 	if ( !m_bIsMon )
@@ -5416,21 +4892,6 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CMyHero:DrawActor()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : BOOL bFocused
-	         BOOL bShadowAblended
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CMyHero::DrawActor(BOOL bFocused, BOOL bShadowAblended, BOOL bUseScrnPos, BOOL bDrawShadow)
 {
 	// 角色坐标固定.
@@ -5453,21 +4914,6 @@ BOOL CMyHero::DrawActor(BOOL bFocused, BOOL bShadowAblended, BOOL bUseScrnPos, B
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CMyHero::CalcDirection()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : INT nTargetTileX
-	         INT nTargetTileY
-	输出   :
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
 BYTE CMyHero::CalcDirection(INT nTargetTileX, INT nTargetTileY)
 {
 	INT nWidth	= nTargetTileX - m_wPosX;
@@ -5512,21 +4958,6 @@ BYTE CMyHero::CalcDirection(INT nTargetTileX, INT nTargetTileY)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CMyHero::GetPosMouseToTile()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : INT nXPos
-	         INT nYPos
-	输出   : POINT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 POINT CMyHero::GetPosMouseToTile(INT nXPos, INT nYPos)
 {
 	POINT ptTilePos;
@@ -5595,22 +5026,7 @@ BOOL CMyHero::CanRun()
 //---------------------------------------------------------------------------------------------------------------//
 //  用户输入函数.
 //---------------------------------------------------------------------------------------------------------------//
-/******************************************************************************************************************
 
-	函数名 : CMyHero::OnLButtonDown()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输入   : POINT ptMouse
-	         INT nTargetID
-	         POINT* lpptTargetPos
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* lpptTargetPos)
 {
 	POINT ptTargetTile;
@@ -5784,21 +5200,6 @@ BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* l
 }
 
 
-
-/******************************************************************************************************************
-
-	函数名 : CMyHero::OnRButtonDown()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : POINT ptMouse
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CMyHero::OnRButtonDown(POINT ptMouse)
 {
 	POINT ptTargetTile;
@@ -6071,22 +5472,6 @@ VOID CMyHero::SetMagic(LPCLIENTMAGICRCD	pstMagic, BYTE bKeyNum, BYTE bDir, INT n
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CMyHero::OnKeyDown()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输入   : WPARAM wParam
-	         LPARAM lParam
-	         POINT ptMouse
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CMyHero::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTargetPos, INT nMosueTargetID, FEATURE stTargetFeature)
 {
 	BYTE				bDir, bMagicKey;

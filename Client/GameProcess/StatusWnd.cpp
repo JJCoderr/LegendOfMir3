@@ -20,39 +20,13 @@
 	CStatusWnd Class
 
 *******************************************************************************************************************/
-/******************************************************************************************************************
 
-	函数名 : CStatusWnd::CStatusWnd()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CStatusWnd::CStatusWnd()
 {
 	Init();
 }
 
 
-
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::~CStatusWnd()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CStatusWnd::~CStatusWnd()
 {
 	Destory();
@@ -94,27 +68,6 @@ VOID CStatusWnd::Destory()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::CreateStatusWnd()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : INT nID
-	         CWHWilImageData* pxWndImage
-	         INT nFrameImgIdx
-	         INT nStartX
-	         INT nStartY
-	         INT nWidth
-	         INT nHeight
-	         BOOL bCanMove
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::CreateStatusWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
 {
 	CreateGameWnd(nID, pxWndImage, nFrameImgIdx, bCanMove, nStartX, nStartY, nWidth, nHeight);
@@ -154,19 +107,6 @@ VOID CStatusWnd::CreateStatusWnd(INT nID, CWHWilImageData* pxWndImage, INT nFram
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::ShowStatusWnd()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::ShowStatusWnd()
 {
 	RECT rcID;
@@ -231,19 +171,6 @@ VOID CStatusWnd::ShowStatusWnd()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::SetStatusBtnInit()
-
-	作者 :
-	日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::SetStatusBtnInit()
 {
 	m_xStatusBtn[_BTN_ID_STATUSCLOSE].SetBtnState(_BTN_STATE_NORMAL);
@@ -266,19 +193,7 @@ VOID CStatusWnd::SetStatusBtnInit()
 	角色装备窗口相关.
 
 *******************************************************************************************************************/
-/******************************************************************************************************************
 
-	函数名 : CStatusWnd::ShowCharEquipWnd()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::ShowCharEquipWnd()
 {
 	INT nStartX, nStartY;
@@ -324,20 +239,6 @@ VOID CStatusWnd::ShowCharEquipWnd()
 }
 
 
-
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::ShowEquipItemState()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::ShowEquipItemState()
 {
 	INT nEquipNum = GetEquipNum(g_xGameProc.m_ptMousePos);
@@ -353,20 +254,6 @@ VOID CStatusWnd::ShowEquipItemState()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::GetEquipNum()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : POINT ptMouse
-	输出   : INT
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 INT CStatusWnd::GetEquipNum(POINT ptMouse)
 {
 	RECT rc;
@@ -385,22 +272,6 @@ INT CStatusWnd::GetEquipNum(POINT ptMouse)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::CheckEquipItem()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : CItem* pxItem
-	         BYTE bEquipCell
-	         POINT ptMouse
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CStatusWnd::CheckEquipItem(CItem* pxItem, BYTE bEquipCell, POINT ptMouse)
 {
 	RECT rc;
@@ -439,20 +310,6 @@ BOOL CStatusWnd::CheckEquipItem(CItem* pxItem, BYTE bEquipCell, POINT ptMouse)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::DeleteEquipItem()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : INT nEquipNum
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::DeleteEquipItem(INT nEquipNum)
 {
 	ZeroMemory(&m_stEquipItem[nEquipNum], sizeof(ITEMSET));
@@ -480,19 +337,6 @@ VOID CStatusWnd::DeleteEquipItem(INT nMakeIndex, CHAR* szName)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::DeleteAllEquipItem()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::DeleteAllEquipItem()
 {
 	for ( INT nCnt = 0; nCnt < _EQUIP_MAX_CELL; nCnt++ )
@@ -503,22 +347,6 @@ VOID CStatusWnd::DeleteAllEquipItem()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::AddEquipItem()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : CItem xItem
-	         INT nEquipNum
-	         BOOL bUseEquipNum
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CStatusWnd::AddEquipItem(CItem xItem, INT nEquipNum, BOOL bUseEquipNum)
 {
 	if ( bUseEquipNum )
@@ -549,21 +377,6 @@ BOOL CStatusWnd::AddEquipItem(CItem xItem, INT nEquipNum, BOOL bUseEquipNum)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::ExtractEquipItem()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : CItem* pxItem
-	         INT nEquipNum
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CStatusWnd::ExtractEquipItem(CItem* pxItem, INT nEquipNum)
 {
 	if ( m_stEquipItem[nEquipNum].bSetted )
@@ -580,21 +393,6 @@ BOOL CStatusWnd::ExtractEquipItem(CItem* pxItem, INT nEquipNum)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::ChangeEquipWithCommon()
-
-	作者   :
-	编写日期 :
-
-	目的   :
-	输入   : INT nEquipNum
-	         LPCOMMONITEMSET pstCommonItemSet
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::ChangeEquipWithCommon(INT nEquipNum, LPCOMMONITEMSET pstCommonItemSet)
 {
 	if ( pstCommonItemSet->bSetted )
@@ -618,21 +416,6 @@ VOID CStatusWnd::ChangeEquipWithCommon(INT nEquipNum, LPCOMMONITEMSET pstCommonI
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::SetCommonFromEquip()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : INT nEquipNum
-	         LPCOMMONITEMSET pstCommonItemSet
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::SetCommonFromEquip(INT nEquipNum, LPCOMMONITEMSET pstCommonItemSet)
 {
 	CItem xEquipItem;
@@ -650,21 +433,6 @@ VOID CStatusWnd::SetCommonFromEquip(INT nEquipNum, LPCOMMONITEMSET pstCommonItem
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::SetEquipFromCommon()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : INT nEquipNum
-	         LPCOMMONITEMSET pstCommonItemSet
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::SetEquipFromCommon(INT nEquipNum, LPCOMMONITEMSET pstCommonItemSet)
 {
 	if ( pstCommonItemSet->bSetted )
@@ -677,20 +445,6 @@ VOID CStatusWnd::SetEquipFromCommon(INT nEquipNum, LPCOMMONITEMSET pstCommonItem
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::SetTakeOnFromEquip()
-
-	作者 :
-	日期 :
-
-	目的   :
-	输入   : INT nEquipNum
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::SetTakeOnFromEquip(INT nEquipNum)
 {
 	if ( m_stEquipItem[nEquipNum].bSetted )
@@ -704,20 +458,6 @@ VOID CStatusWnd::SetTakeOnFromEquip(INT nEquipNum)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::SetTakeOnFromCommon()
-
-	作者 : 
-	编写日期 : 
-
-	目的   : 
-	输入   : LPCOMMONITEMSET pstCommonItemSet
-	输出   : VOID 
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::SetTakeOnFromCommon(INT nEquipNum, LPCOMMONITEMSET pstCommonItemSet)
 {
 	if ( pstCommonItemSet->bSetted )
@@ -731,19 +471,6 @@ VOID CStatusWnd::SetTakeOnFromCommon(INT nEquipNum, LPCOMMONITEMSET pstCommonIte
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::SetEquipFromTakeOn()
-
-	作者   :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::SetEquipFromTakeOn()
 {
 	if ( m_stTakeOnItemSet.bSetted )
@@ -778,19 +505,7 @@ VOID CStatusWnd::SetEquipFromTakeOn()
 	角色状态信息窗口相关.
 
 *******************************************************************************************************************/
-/******************************************************************************************************************
 
-	函数名 : CStatusWnd::ShowCharStatus()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::ShowCharStatus()
 {
 	CHAR	szBuff[MAX_PATH];
@@ -998,22 +713,6 @@ VOID CStatusWnd::ShowCharSetMagicWnd()
 }
 
 
-
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::SetMagicKey()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : POINT ptMouse
-	         BYTE bKey
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CStatusWnd::SetMagicKey(POINT ptMouse, BYTE bKey)
 {
 	RECT rc;
@@ -1055,20 +754,6 @@ BOOL CStatusWnd::SetMagicKey(POINT ptMouse, BYTE bKey)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::GetMagicByKey()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : BYTE bKey
-	输出   : LPCLIENTMAGICRCD
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 LPCLIENTMAGICRCD CStatusWnd::GetMagicByKey(BYTE bKey)
 {
 	LPCLIENTMAGICRCD pstMagic = NULL;
@@ -1111,22 +796,6 @@ LPCLIENTMAGICRCD CStatusWnd::GetMagicByKey(BYTE bKey)
 
 *******************************************************************************************************************/
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::OnKeyDown()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : WPARAM wParam
-	         LPARAM lParam
-	         POINT ptMouse
-	输出   : BOOL
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CStatusWnd::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse)
 {
 	INT	 nLine, nCnt;
@@ -1174,20 +843,6 @@ BOOL CStatusWnd::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::OnLButtonUp()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : POINT ptMouse
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
 	INT nEquipNum;
@@ -1301,20 +956,6 @@ BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::OnMouseMove()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : POINT ptMouse
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::OnMouseMove(POINT ptMouse)
 {
 	if ( m_bType == _TYPE_SETMAGIC )
@@ -1335,21 +976,6 @@ VOID CStatusWnd::OnMouseMove(POINT ptMouse)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::OnLButtonDown()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : LPCOMMONITEMSET pstCommonItemSet
-	         POINT ptMouse
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CStatusWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
 	INT nEquipNum;
@@ -1384,19 +1010,6 @@ BOOL CStatusWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::OnScrollDown()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::OnScrollDown()
 {
 	if ( m_bType == _TYPE_SETMAGIC )
@@ -1407,19 +1020,6 @@ VOID CStatusWnd::OnScrollDown()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CStatusWnd::OnScrollUp()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CStatusWnd::OnScrollUp()
 {
 	if ( m_bType == _TYPE_SETMAGIC )

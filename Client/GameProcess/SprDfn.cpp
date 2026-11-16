@@ -19,39 +19,13 @@
 	CSprite Class
 
 *******************************************************************************************************************/
-/******************************************************************************************************************
 
-	函数名 : CSprite::CSprite()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CSprite::CSprite()
 {
 	InitSpriteInfo();
 }
 
 
-
-/******************************************************************************************************************
-
-	函数名 : CSprite::~CSprite()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CSprite::~CSprite()
 {
 	DeleteSpriteInfo();
@@ -59,19 +33,6 @@ CSprite::~CSprite()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CSprite::InitSpriteInfo()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CSprite::InitSpriteInfo()
 {	
 	ZeroMemory(m_stHeroSpr,		sizeof(SPRFRMDEF)*_MAX_HERO_MTN);
@@ -85,19 +46,6 @@ VOID CSprite::InitSpriteInfo()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CSprite::DeleteSpriteInfo()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CSprite::DeleteSpriteInfo()
 {
 	InitSpriteInfo();
@@ -105,36 +53,6 @@ VOID CSprite::DeleteSpriteInfo()
  
 
 
-/******************************************************************************************************************
-
-	函数名 : CSprite::SetEffectInfo()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : LPEFFECTSPRINFO pstEffect
-	         DWORD dwFstFrm
-	         DWORD dwEndFrm
-	         WORD wDelay
-	         WORD wImgIdx
-	         WORD wEffectIdx
-	         BYTE bSLightRadius
-	         BYTE bLLightRadius
-	         BYTE bSLightRColor
-	         BYTE bSLightGColor
-	         BYTE bSLightBColor
-	         BYTE bLLightRColor
-	         BYTE bLLightGColor
-	         BYTE bLLightBColor
-	         BYTE bBlendType
-	         BYTE bOpa
-	         BYTE bSwingCnt
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CSprite::SetEffectInfo(LPEFFECTSPRINFO pstEffect, DWORD dwFstFrm, DWORD dwEndFrm, WORD wDelay, WORD wImgIdx, WORD wEffectIdx,
 				   BYTE bSLightRadius, BYTE bLLightRadius, 
 				   BYTE bSLightRColor, BYTE bSLightGColor, BYTE bSLightBColor,
@@ -169,20 +87,6 @@ VOID CSprite::SetEffectInfo(LPEFFECTSPRINFO pstEffect, DWORD dwFstFrm, DWORD dwE
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CSprite::GetEffectInfo()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : WORD wEffectNum
-	输出   : LPEFFECTSPRINFO
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 LPEFFECTSPRINFO CSprite::GetEffectInfo(WORD wEffectNum)
 {
 	LPEFFECTSPRINFO pstEffect = NULL;
@@ -201,20 +105,6 @@ LPEFFECTSPRINFO CSprite::GetEffectInfo(WORD wEffectNum)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CSprite::GetExplosionInfo()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输入   : WORD wEffectNum
-	输出   : LPEFFECTSPRINFO
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 LPEFFECTSPRINFO CSprite::GetExplosionInfo(WORD wEffectNum)
 {
 	LPEFFECTSPRINFO pstEffect = NULL;
@@ -233,20 +123,6 @@ LPEFFECTSPRINFO CSprite::GetExplosionInfo(WORD wEffectNum)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CSprite::GetMagicInfo()
-
-	作者   :
-	编写日期 :
-
-	目的   :
-	输入   : WORD wEffectNum
-	输出   : LPEFFECTSPRINFO
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 LPEFFECTSPRINFO CSprite::GetMagicInfo(WORD wEffectNum)
 {
 	LPEFFECTSPRINFO pstEffect = NULL;
@@ -265,23 +141,6 @@ LPEFFECTSPRINFO CSprite::GetMagicInfo(WORD wEffectNum)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CSprite::SetSprDfn()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : LPSPRFRMDEF pstSprDfn
-	         WORD wFstFrm
-	         WORD wFrmCnt
-	         WORD wDelay
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CSprite::SetSprDfn(LPSPRFRMDEF pstSprDfn, WORD wFstFrm, WORD wFrmCnt, WORD wDelay)
 {
 	pstSprDfn->wFstFrm	= wFstFrm;
@@ -290,19 +149,6 @@ VOID CSprite::SetSprDfn(LPSPRFRMDEF pstSprDfn, WORD wFstFrm, WORD wFrmCnt, WORD 
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CSprite::SetInfo()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CSprite::SetInfo()
 {
 	SetWeaponOrder("weapon.ord");

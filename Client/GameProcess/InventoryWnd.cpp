@@ -20,39 +20,13 @@
 	CInventoryWnd Class
 
 *******************************************************************************************************************/
-/******************************************************************************************************************
 
-	函数名 : CInventoryWnd::CInventoryWnd()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输出   :
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CInventoryWnd::CInventoryWnd()
 {
 	Init();
 }
 
 
-
-/******************************************************************************************************************
-
-	函数名 : CInventoryWnd::~CInventoryWnd()
-
-	作者 : 
-	编写日期 : 
-
-	目的   : 
-	输出   : 
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 CInventoryWnd::~CInventoryWnd()
 {
 	Destroy();
@@ -90,27 +64,6 @@ VOID CInventoryWnd::Destroy()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CInventoryWnd::CreateInventoryWnd()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : INT nID
-	         CWHWilImageData* pxWndImage
-	         INT nFrameImgIdx
-	         INT nStartX
-	         INT nStartY
-	         INT nWidth
-	         INT nHeight
-	         BOOL bCanMove
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CInventoryWnd::CreateInventoryWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
 {
 	// 窗口创建.
@@ -149,19 +102,6 @@ VOID CInventoryWnd::CreateInventoryWnd(INT nID, CWHWilImageData* pxWndImage, INT
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CInventoryWnd::SetInvenBtnInit()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CInventoryWnd::SetInvenBtnInit()
 {
 	for( INT nCnt = 0; nCnt < _MAX_INVEN_BTN; nCnt++ )
@@ -171,19 +111,6 @@ VOID CInventoryWnd::SetInvenBtnInit()
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CInventoryWnd::ShowInventoryWnd()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CInventoryWnd::ShowInventoryWnd()
 {
 	INT nCnt;
@@ -247,19 +174,6 @@ VOID CInventoryWnd::ShowInventoryWnd()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CInventoryWnd::ShowInvenItemState()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CInventoryWnd::ShowInvenItemState()
 {
 /*	INT nInventoryNum = GetInvenNum(g_xGameProc.m_ptMousePos);
@@ -316,20 +230,7 @@ VOID CInventoryWnd::ShowInvenItemState()
 	物品放入与取出相关, 背包位置的保存文件存盘及加载.(背包及腰带)
 
 *******************************************************************************************************************/
-/******************************************************************************************************************
 
-	函数名 : CInventoryWnd::CheckItemPos()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : CHAR* szName
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CInventoryWnd::CheckItemPos(CHAR* szName)
 {
 	HANDLE	hFile;
@@ -433,21 +334,6 @@ BOOL CInventoryWnd::CheckItemPos(CHAR* szName)
 }
 
 
-
-/******************************************************************************************************************
-
-	函数名 : CInventoryWnd::SaveItemPos()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : CHAR* szName
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CInventoryWnd::SaveItemPos(CHAR* szName)
 {
 	HANDLE	hFile;
@@ -1083,20 +969,6 @@ BOOL CInventoryWnd::OnKeyUp(LPCOMMONITEMSET pstCommonItemSet, WPARAM wParam, LPA
 }
 
 
-/******************************************************************************************************************
-
-	函数名 : CInventoryWnd::OnLButtonDown()
-
-	作者 : 
-	日期 : 
-
-	目的   : 
-	输入   : POINT ptMouse
-	输出   : BOOL 
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CInventoryWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
 	INT nCnt, nInventoryNum, nBeltInventoryNum;
@@ -1146,21 +1018,6 @@ BOOL CInventoryWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMous
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CInventoryWnd::OnLButtonUp()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : LPCOMMONITEMSET pstCommonItemSet
-	         POINT ptMouse
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
 	INT nInventoryNum, nBeltInventoryNum;
@@ -1257,21 +1114,6 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CInventoryWnd::OnLButtonDoubleClick()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : LPCOMMONITEMSET pstCommonItemSet
-	         POINT ptMouse
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CInventoryWnd::OnLButtonDoubleClick(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {	
 	INT nInventoryNum	  = GetInvenNum(ptMouse);
@@ -1322,20 +1164,6 @@ BOOL CInventoryWnd::OnLButtonDoubleClick(LPCOMMONITEMSET pstCommonItemSet, POINT
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CInventoryWnd::OnMouseMove()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : POINT ptMouse
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CInventoryWnd::OnMouseMove(POINT ptMouse)
 {
 	m_xInventoryBtn[_BTN_ID_INVENCLOSE	 ].ChangeRect(m_rcWnd.left+255, m_rcWnd.top+291);
@@ -1348,19 +1176,6 @@ VOID CInventoryWnd::OnMouseMove(POINT ptMouse)
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CInventoryWnd::OnScrollDown()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CInventoryWnd::OnScrollDown()
 {
 	if ( m_nStartLineNum > 0 )												m_nStartLineNum--;
@@ -1368,19 +1183,6 @@ VOID CInventoryWnd::OnScrollDown()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CInventoryWnd::OnScrollUp()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输出   : VOID
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 VOID CInventoryWnd::OnScrollUp()
 {
 //	if ( m_nStartLineNum < _INVEN_MAX_CELL_YCNT - _INVEN_CELL_YCNT )		m_nStartLineNum++;

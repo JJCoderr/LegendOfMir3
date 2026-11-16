@@ -16,19 +16,6 @@
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHSurface::ReleaseSurface()
-
-	编写者 :
-	编写日期 :
-
-	目的   :
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CWHSurface::ReleaseSurface()
 {
 	if ( m_pDDS )
@@ -44,22 +31,6 @@ BOOL CWHSurface::ReleaseSurface()
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHSurface::CreateOffScreenSurface()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : LPDIRECTDRAW7 pDD
-	         DWORD dwXSize
-	         DWORD dwYSize
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CWHSurface::CreateOffScreenSurface(LPDIRECTDRAW7 pDD, DWORD dwXSize, DWORD dwYSize) 
 {
 	HRESULT					hr;
@@ -82,22 +53,6 @@ BOOL CWHSurface::CreateOffScreenSurface(LPDIRECTDRAW7 pDD, DWORD dwXSize, DWORD 
 
 
 
-/******************************************************************************************************************
-
-	函数名 : CWHSurface::CopyImageToSurface()
-
-	作者 :
-	编写日期 :
-
-	目的   :
-	输入   : DWORD dwSrcWidth
-	         DWORD dwSrcHeight
-	         WORD* pwSrc
-	输出   : BOOL
-
-	[日期][修改者] : 修改内容
-
-*******************************************************************************************************************/
 BOOL CWHSurface::CopyImageToSurface(DWORD dwSrcWidth, DWORD dwSrcHeight, WORD* pwSrc)
 {
 	DDSURFACEDESC2			ddsd;
