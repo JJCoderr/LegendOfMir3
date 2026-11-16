@@ -1701,15 +1701,35 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel>=129 && groupPanel<=131) {
+            auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[100]={};strcpy((char*)raw,"物品属性测试");raw[32]=1;raw[62]=11;raw[71]=1;raw[30]=4;raw[31]=1;raw[38]=40;
+            CItem item;item.SetMir3Item(raw,0);const auto book=item.GeneralHint(1,35);
+            const bool level=book.size()==4 && book.back().color==255;
+            const bool allowed=item.GeneralHint(1,40).back().color==0xffffff;
+            const bool profession=item.GeneralHint(0,40).back().color==255;
+            raw[30]=25;raw[66]=150;raw[68]=138;raw[69]=2;item.SetMir3Item(raw,0);const auto charm=item.GeneralHint(1,35);
+            const bool uses=charm.back().text.find(": 2/7")!=std::string::npos && charm.back().color==16777088;
+            raw[30]=30;item.SetMir3Item(raw,0);const bool low=item.GeneralHint(1,35).back().color==3289855;
+            raw[30]=60;raw[40]=2;raw[41]=5;raw[86]=3;item.SetMir3Item(raw,0);const auto stone=item.GeneralHint(1,35);
+            const bool bonus=stone.back().text.find(": 2-8 (+3)")!=std::string::npos && stone.back().color==13172630;
+            raw[86]=255;item.SetMir3Item(raw,0);const bool signedBonus=item.GeneralHint(1,35).back().text.find(": 2-5")!=std::string::npos && item.GeneralHint(1,35).back().color==0xffffff;
+            raw[30]=groupPanel==129?4:groupPanel==130?25:60;raw[86]=3;item.SetMir3Item(raw,0);bag.AddInvenItem(item,0,TRUE);
+            ui.WindowActivate(_WND_ID_INVENTORY);mouse={550,80};g_xGameProc.m_ptMousePos=mouse;
+            capturePath=groupPanel==129?"book-hint.bmp":groupPanel==130?"charm-hint.bmp":"stone-hint.bmp";
+            if(FILE* report=fopen("general-item-hint-check.txt","wb")) {fprintf(report,"level=%d allowed=%d profession=%d uses=%d low=%d bonus=%d signed_bonus=%d\n",level,allowed,profession,uses,low,bonus,signedBonus);fclose(report);}
+        }
+
         if(groupPanel==127 || groupPanel==128) {
             auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
             BYTE raw[100]={};strcpy((char*)raw,"金创药（小量）");raw[32]=3;raw[40]=50;raw[42]=30;raw[62]=11;raw[71]=1;
-            CItem item;item.SetMir3Item(raw,0);const auto single=item.PotionHint();
+            CItem item;item.SetMir3Item(raw,0);const auto single=item.GeneralHint(1,35);
             const bool ordinary=single.size()==4 && single[0].color==64255 && single[1].text.find(": 3")!=std::string::npos && single[2].text.find("+50HP")!=std::string::npos && single[3].text.find("+30MP")!=std::string::npos;
-            raw[61]=2;raw[71]=25;CItem stack;stack.SetMir3Item(raw,0);const auto multiple=stack.PotionHint();
+            raw[61]=2;raw[71]=25;CItem stack;stack.SetMir3Item(raw,0);const auto multiple=stack.GeneralHint(1,35);
             const bool quantity=multiple.size()==5 && multiple[1].text.find(": 2")!=std::string::npos && multiple[2].text.find(": 25")!=std::string::npos;
-            raw[61]=3;stack.SetMir3Item(raw,0);const bool weight=stack.PotionHint()[1].text.find(": 75")!=std::string::npos;
+            raw[61]=3;stack.SetMir3Item(raw,0);const bool weight=stack.GeneralHint(1,35)[1].text.find(": 75")!=std::string::npos;
             raw[61]=2;stack.SetMir3Item(raw,0);bag.AddInvenItem(groupPanel==127?item:stack,0,TRUE);
             ui.WindowActivate(_WND_ID_INVENTORY);mouse={550,80};g_xGameProc.m_ptMousePos=mouse;
             capturePath=groupPanel==127?"potion-hint.bmp":"potion-stack-hint.bmp";
@@ -2133,6 +2153,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=book-hint")==0 ? 129 :
+        strcmp(lpCmdLine,"--preview=charm-hint")==0 ? 130 :
+        strcmp(lpCmdLine,"--preview=stone-hint")==0 ? 131 :
         strcmp(lpCmdLine,"--preview=potion-hint")==0 ? 127 :
         strcmp(lpCmdLine,"--preview=potion-stack-hint")==0 ? 128 :
         strcmp(lpCmdLine,"--preview=item-layout-full-name")==0 ? 126 :

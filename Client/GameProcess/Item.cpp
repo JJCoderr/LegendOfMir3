@@ -163,7 +163,12 @@ BOOL CItem::DrawItem(INT nX, INT nY, BYTE bItemType, const RECT* clip)
 
 VOID CItem::ShowItemStatus(INT nX, INT nY)
 {
-    if(m_serverName[0] && m_stItemInfo.stStdItem.bStdMode==0) {ShowPotionHint(nX,nY);return;}
+    if(m_serverName[0]) {
+        switch(m_stItemInfo.stStdItem.bStdMode) {
+        case 5:case 6:case 54:case 55:case 56:case 10:case 11:case 15:case 19:case 20:case 21:case 22:case 23:case 24:case 26:case 57:case 53:break;
+        default:ShowGeneralHint(nX,nY);return;
+        }
+    }
 	CHAR	szLineBuf[3][MAX_PATH];
 	CHAR	szName[MAX_PATH];
 	SIZE	sizeLen;
@@ -614,7 +619,7 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 }
 
 
-std::vector<CItem::HintLine> CItem::PotionHint() const
+std::vector<CItem::HintLine> CItem::GeneralHint(int profession,int level,bool shop) const
 {
     static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
     const auto word=[&](int offset) {return unsigned(m_serverRecord[offset])|(unsigned(m_serverRecord[offset+1])<<8);};
@@ -631,13 +636,42 @@ std::vector<CItem::HintLine> CItem::PotionHint() const
     const int stack=m_serverRecord[61],count=word(71),weight=stack==2?count/10:stack>2?count*m_serverRecord[32]:m_serverRecord[32];
     lines.push_back({captions.Get(2501)+": "+std::to_string(weight),0xffffff});
     if(stack>=2) lines.push_back({captions.Get(2503)+": "+std::to_string(count),0xffffff});
-    if(word(40)) lines.push_back({captions.Get(1058)+": +"+std::to_string(word(40))+"HP ",0xffffff});
-    if(word(42)) lines.push_back({captions.Get(1059)+": +"+std::to_string(word(42))+"MP ",0xffffff});
+    const int mode=m_serverRecord[30],shape=m_serverRecord[31];
+    const auto rounded=[&](int offset,int unit) {return int(double(word(offset))/unit+0.5);};
+    const auto label=[&](int id,int value) {return captions.Get(id)+": "+std::to_string(value);};
+    const auto durability=[&](int id,int unit,DWORD color) {lines.push_back({label(id,rounded(66,unit))+"/"+std::to_string(rounded(shop?38:68,unit)),color});};
+    switch(mode) {
+    case 0:
+        if(word(40)) lines.push_back({captions.Get(1058)+": +"+std::to_string(word(40))+"HP ",0xffffff});
+        if(word(42)) lines.push_back({captions.Get(1059)+": +"+std::to_string(word(42))+"MP ",0xffffff});
+        break;
+    case 3:
+        if(shape==13 || shape==15) {const int required=m_serverRecord[40];lines.push_back({required?label(5140,required):captions.Get(2516),level>=required?0xffffffu:255u});}
+        break;
+    case 4:case 51:
+        if(shape<3) {
+            lines.push_back({captions.Get(5170+shape),0xffffff});
+            const int required=word(38);
+            lines.push_back({required?label(5140,required):captions.Get(5140)+": "+captions.Get(5182),profession==shape && level>=required?0xffffffu:255u});
+        }
+        break;
+    case 25:durability(2511,100,16777088);break;
+    case 30:durability(2500,1000,rounded(66,1000)>1?16777088:3289855);break;
+    case 40:durability(2512,1000,16777088);break;
+    case 42:lines.push_back({captions.Get(2513),0xffffff});break;
+    case 43:lines.push_back({label(2514,rounded(66,1000)),16777088});break;
+    case 60: {
+        const int bonus=static_cast<signed char>(m_serverRecord[86]);
+        std::string text=label(5177,m_serverRecord[40])+"-"+std::to_string(m_serverRecord[41]+max(0,bonus));
+        if(bonus>0) text+=" (+"+std::to_string(bonus)+")";
+        lines.push_back({text,bonus>0?13172630u:0xffffffu});break;
+    }
+    }
     return lines;
 }
-void CItem::ShowPotionHint(int x,int y) const
+void CItem::ShowGeneralHint(int x,int y) const
 {
-    const auto lines=PotionHint();auto* surface=g_xMainWnd.GetBackBuffer();HDC dc;
+    const auto lines=GeneralHint(g_xGameProc.m_xMyHero.m_bJob,g_xGameProc.m_xMyHero.m_stAbility.bLevel);auto* surface=g_xMainWnd.GetBackBuffer();HDC dc;
     if(FAILED(surface->GetDC(&dc))) return;
     const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};HFONT font=g_xMainWnd.CreateGameFont(face,9);
     auto previous=SelectObject(dc,font);int width=0;

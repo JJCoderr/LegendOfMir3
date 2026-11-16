@@ -65,8 +65,8 @@ public:
 	SHORT			m_shCellNum;
 	CLIENTITEMRCD	m_stItemInfo;
     struct HintLine { std::string text; DWORD color; };
-    std::vector<HintLine> PotionHint() const;
-    void ShowPotionHint(int x,int y) const;
+    std::vector<HintLine> GeneralHint(int profession,int level,bool shop=false) const;
+    void ShowGeneralHint(int x,int y) const;
     WORD m_count=1;
     BYTE m_stackMode=0;
     BYTE m_serverRecord[100]={};
