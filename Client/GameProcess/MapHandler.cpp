@@ -408,7 +408,7 @@ VOID CMapHandler::SetDoorState(BYTE bIndex, BOOL bDoorOpen)
 			{
 				WORD wPosX = m_pstDoorInfo[nCnt].pstDoorImgInfo[nLoop].wPosX;
 				WORD wPosY = m_pstDoorInfo[nCnt].pstDoorImgInfo[nLoop].wPosY;
-				
+
 				if ( bDoorOpen )
 					m_pstCellInfo[wPosX + wPosY*m_stMapFileHeader.shWidth].wLigntNEvent = m_pstCellInfo[wPosX + wPosY*m_stMapFileHeader.shWidth].wLigntNEvent | 0X08;
 				else
@@ -1120,7 +1120,7 @@ VOID CMapHandler::DrawSMTile(INT nX, INT nY)
 {
 	INT nObjImgIdx, nMidImgIdx;
 	if ( nX >= m_stMapFileHeader.wWidth || nY >= m_stMapFileHeader.wHeight || nX < 0 || nY < 0 )
-		return; 
+		return;
 	nObjImgIdx = (m_lpstCellInfo[nY + nX*m_stMapFileHeader.wHeight].bArea * 10000) + (m_lpstCellInfo[nY + nX*m_stMapFileHeader.wHeight].wFrImgIdx & 0x7FFF) - 1;
 	if (m_lpstCellInfo[nY + nX*m_stMapFileHeader.wHeight].bArea < 8 )//<---------------??????????3 号地图中不使用就会出错
 	{

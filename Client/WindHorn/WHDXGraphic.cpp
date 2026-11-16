@@ -863,7 +863,7 @@ SIZE CWHDXGraphicWindow::GetStrLength(LPDIRECTDRAWSURFACE7 pSurface, HFONT hFont
 {
 	CHAR szTmpCheck[MAX_PATH];
 	CHAR szResult[MAX_PATH];
-	
+
 	nDividedLine = 1;
 
 	INT nStartLen	= 0;

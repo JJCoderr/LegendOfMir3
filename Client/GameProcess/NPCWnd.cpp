@@ -620,7 +620,7 @@ BOOL	CNPCWnd::ClickCommandProcess(CMTxtBtn* ClickedBtn)		// 综合下面这些内容
 			CHAR	szMsg[MAX_PATH];
 			HINSTANCE hLib;
 			hLib = LoadLibrary("Ats.dll"); // Load Dll
-			LoadString(hLib,ASK_MAKE_BIG_GUILD,szMsg,MAX_PATH);	
+			LoadString(hLib,ASK_MAKE_BIG_GUILD,szMsg,MAX_PATH);
 			FreeLibrary(hLib);
 			if(!m_xMsgBox.IsActive())	SetWndRectExtend();
 			m_xMsgBox.ShowMessageBox(szMsg,MSG_EDITEXIST|MSG_BTN_OK);	// OK
@@ -634,7 +634,7 @@ BOOL	CNPCWnd::ClickCommandProcess(CMTxtBtn* ClickedBtn)		// 综合下面这些内容
 			CHAR	szMsg[MAX_PATH];
 			HINSTANCE hLib;
 			hLib = LoadLibrary("Ats.dll"); // Load Dll
-			LoadString(hLib,ASK_OTHERSNAME,szMsg,MAX_PATH);	
+			LoadString(hLib,ASK_OTHERSNAME,szMsg,MAX_PATH);
 			FreeLibrary(hLib);
 			if(!m_xMsgBox.IsActive())	SetWndRectExtend();
 			m_xMsgBox.ShowMessageBox(szMsg,MSG_EDITEXIST|MSG_BTN_OK);	// OK
@@ -648,7 +648,7 @@ BOOL	CNPCWnd::ClickCommandProcess(CMTxtBtn* ClickedBtn)		// 综合下面这些内容
 			CHAR	szMsg[MAX_PATH];
 			HINSTANCE hLib;
 			hLib = LoadLibrary("Ats.dll"); // Load Dll
-			LoadString(hLib,ASK_WITHDRAWAL,szMsg,MAX_PATH);	
+			LoadString(hLib,ASK_WITHDRAWAL,szMsg,MAX_PATH);
 			FreeLibrary(hLib);
 			if(!m_xMsgBox.IsActive())	SetWndRectExtend();
 			m_xMsgBox.ShowMessageBox(szMsg,MSG_EDITEXIST|MSG_BTN_OK);	// OK
@@ -662,7 +662,7 @@ BOOL	CNPCWnd::ClickCommandProcess(CMTxtBtn* ClickedBtn)		// 综合下面这些内容
 			CHAR	szMsg[MAX_PATH];
 			HINSTANCE hLib;
 			hLib = LoadLibrary("Ats.dll"); // Load Dll
-			LoadString(hLib,ASK_RECEIPT,szMsg,MAX_PATH);	
+			LoadString(hLib,ASK_RECEIPT,szMsg,MAX_PATH);
 			FreeLibrary(hLib);
 			if(!m_xMsgBox.IsActive())	SetWndRectExtend();
 			m_xMsgBox.ShowMessageBox(szMsg,MSG_EDITEXIST|MSG_BTN_OK);	// OK

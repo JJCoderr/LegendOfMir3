@@ -171,7 +171,7 @@ VOID CGameProcess::Load()
 		if ( szSetup[nCnt] == '\\' )
 		{
 			szSetup[nCnt+1] = NULL;
-			break; 
+			break;
 		}
 	}
 */
@@ -209,7 +209,7 @@ VOID CGameProcess::Load()
 	{
 		if ( m_xImage.m_xImageList[_IMAGE_PROGUSE].NewSetIndex(nCnt+40) )
 		{
-			D3DWILTextr_CreateEmptyTexture(m_xImage.m_xImageList[_IMAGE_PROGUSE].m_szWilFileName, nCnt+40, 
+			D3DWILTextr_CreateEmptyTexture(m_xImage.m_xImageList[_IMAGE_PROGUSE].m_szWilFileName, nCnt+40,
 										   m_xImage.m_xImageList[_IMAGE_PROGUSE].m_lpstNewCurrWilImageInfo->shWidth,
 										   m_xImage.m_xImageList[_IMAGE_PROGUSE].m_lpstNewCurrWilImageInfo->shHeight,
 										   (WORD*)m_xImage.m_xImageList[_IMAGE_PROGUSE].m_pbCurrImage, D3DTEXTR_TRANSPARENTBLACK);
@@ -1554,10 +1554,10 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 								RECT rc, rcIntersect;
 //								if ( bLongObj && pxActor->m_wPosY <= nYCnt && pxActor->m_stFeature.bDress > 114 && pxActor->m_stFeature.bDress < 118 )
 								{
-									SetRect(&rc, 
-									(nXCnt-m_xMap.m_shStartViewTileX)*_CELL_WIDTH +_VIEW_CELL_X_START-m_xMap.m_shViewOffsetX, 
-									(nYCnt-m_xMap.m_shStartViewTileY)*_CELL_HEIGHT+_VIEW_CELL_Y_START-m_xMap.m_pxTileImg[nObjFileIdx]->m_lpstNewCurrWilImageInfo->shHeight+_CELL_HEIGHT-m_xMap.m_shViewOffsetY, 
-									m_xMap.m_pxTileImg[nObjFileIdx]->m_lpstNewCurrWilImageInfo->shWidth  + (nXCnt-m_xMap.m_shStartViewTileX)*_CELL_WIDTH +_VIEW_CELL_X_START-m_xMap.m_shViewOffsetX, 
+									SetRect(&rc,
+									(nXCnt-m_xMap.m_shStartViewTileX)*_CELL_WIDTH +_VIEW_CELL_X_START-m_xMap.m_shViewOffsetX,
+									(nYCnt-m_xMap.m_shStartViewTileY)*_CELL_HEIGHT+_VIEW_CELL_Y_START-m_xMap.m_pxTileImg[nObjFileIdx]->m_lpstNewCurrWilImageInfo->shHeight+_CELL_HEIGHT-m_xMap.m_shViewOffsetY,
+									m_xMap.m_pxTileImg[nObjFileIdx]->m_lpstNewCurrWilImageInfo->shWidth  + (nXCnt-m_xMap.m_shStartViewTileX)*_CELL_WIDTH +_VIEW_CELL_X_START-m_xMap.m_shViewOffsetX,
 									m_xMap.m_pxTileImg[nObjFileIdx]->m_lpstNewCurrWilImageInfo->shHeight + (nYCnt-m_xMap.m_shStartViewTileY)*_CELL_HEIGHT+_VIEW_CELL_Y_START-m_xMap.m_pxTileImg[nObjFileIdx]->m_lpstNewCurrWilImageInfo->shHeight+_CELL_HEIGHT-m_xMap.m_shViewOffsetY);
 
 									// ÂíÓë±³¾°.
@@ -1565,7 +1565,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 									{
 										m_xImage.m_xImageList[pxActor->m_bActorImgIdx].NewSetIndex(pxActor->m_dwCurrFrame);
  										g_xMainWnd.DrawWithABlendForIntersectCompData(
-														pxActor->m_rcActor.left, 
+														pxActor->m_rcActor.left,
 														pxActor->m_rcActor.top,
 														m_xImage.m_xImageList[pxActor->m_bActorImgIdx].m_lpstNewCurrWilImageInfo->shWidth,
 														m_xImage.m_xImageList[pxActor->m_bActorImgIdx].m_lpstNewCurrWilImageInfo->shHeight,

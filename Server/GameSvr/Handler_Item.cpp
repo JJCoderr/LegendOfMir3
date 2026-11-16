@@ -76,7 +76,7 @@ void CStdItemSpecial::GetUpgradeStdItem(_LPTCLIENTITEMRCD lpClientItemRcd, _LPTU
 			lpClientItemRcd->tStdItem.wMAC	= MAKEWORD(g_pStdItemArmor[nIdx].wMAC, g_pStdItemArmor[nIdx].wMAC2 + lpUserItemRcd->btValue[1]);
 			lpClientItemRcd->tStdItem.wMC	= MAKEWORD(g_pStdItemArmor[nIdx].wMC, g_pStdItemArmor[nIdx].wMC2 + lpUserItemRcd->btValue[3]);
 			lpClientItemRcd->tStdItem.wSC	= MAKEWORD(g_pStdItemArmor[nIdx].wSC, g_pStdItemArmor[nIdx].wSC2 + lpUserItemRcd->btValue[4]);
-			
+
 			break;
 		}
 		case 'C': // Accessory

@@ -117,7 +117,7 @@ HRESULT	CNewAccount::OnButtonUp(WPARAM wParam, LPARAM lParam)
 
 	for(i = BTN_NEW_ID; i <= BTN_OK_ID; i++)
 	{	m_xButtons[i].m_nState = BUTTON_STATE_UP;
-		
+
 		if( m_xButtons[i].CheckMouseOn( LOWORD( lParam ), HIWORD( lParam ) ) )
 		{	switch(m_xButtons[i].m_nButtonID)
 			{	case IMG_IDX_BTN_NEW:
