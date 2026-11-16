@@ -32,6 +32,7 @@ VOID CSelectChr::Create(CWHWilImageData* pxImage,CPDLList<CHRINFO>* pxList, CPDL
 	m_messages.Load(".\\CmList.dat");
     m_page = 0;
     m_pagePressed = -1;
+    m_pageImages.Destroy();
     m_pageImages.NewLoad(".\\Data\\GameInter.wil", TRUE, TRUE);
 	// Buttons
 	BUTTONINFO CharProcBtnInfo[] ={
