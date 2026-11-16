@@ -843,3 +843,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 原生小地图已经读取选项7，本轮闭合设置按钮到黄色type5标记绘制的路径；绿色/橙色附近角色不受此开关影响。实际角色标记数据源仍待接入。
 - 全部目标增量构建通过；options-markers-on/off各五项全1，含非配对释放、开关、默认值与配置恢复。音频设置九项和目标照片十一项回归全1。已检查out/options-markers-on.png及options-markers-off.png，实际像素验证713,47黄色按开关消失，755,80绿色及770,72橙色保持一致。
 - 预览只写preview-marker-options.ini。设置页的强制攻击、魔法光、伤害数字、阴影与服务器控制开关仍需继续迁移并接入对应运行状态，尚未完成整页业务验收。
+
+### 设置页阴影混合开关接入原生渲染
+- 选项4接入GameProc现有m_bShadowABlend及800项m_wShadowClr表；提取SetShadowBlend统一设置页、启动恢复与原@shadow命令，开启使用黑色混合源，关闭使用原RGB20阴影源。修正进入游戏时固定重置灰色表覆盖保存状态的问题。
+- ShadowBlend默认关闭，随现有Config.ini Options读写路径保存；选项点击沿用105.wav，按Godot不额外发布阴影切换聊天提示。原调试命令同步更新设置页并保存，避免两处状态分离。
+- Client清理83步、其余目标109步构建通过。options-shadow-on/off各四项全1，验证实际按下/释放、渲染标志与全部800项颜色、默认值及保存恢复；音频九项和小地图标记五项回归通过。已检查out/options-shadow-on.png和options-shadow-off.png，预览只写preview-shadow-options.ini。
+- 本轮验证证明按钮到现有角色渲染控制变量/颜色表的接线，未在真实地图上逐像素验收角色阴影。魔法光、伤害数字、强制攻击及服务器控制选项仍待相应路径迁移。

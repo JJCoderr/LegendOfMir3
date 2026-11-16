@@ -1426,6 +1426,22 @@ public:
             if(FILE* report=fopen("options-markers-check.txt","wb")) {fprintf(report,"stray=%d disabled=%d defaults=%d persisted=%d enabled=%d\n",stray,disabled,defaults,persisted,enabled);fclose(report);}
         }
 
+
+        if(groupPanel==91 || groupPanel==92) {
+            auto& ui=g_xGameProc.m_xInterface;auto& options=ui.m_xOptionWnd;
+            options.LoadAudioOptions("./preview-shadow-options.ini");g_xGameProc.SetShadowBlend(false);options.SaveAudioOptions();
+            ui.WindowActivate(_WND_ID_OPTION);const POINT toggle={options.m_rcWnd.left+433,options.m_rcWnd.top+238};
+            ui.OnLButtonDown(toggle);ui.OnLButtonUp(toggle);
+            bool enabled=options.m_values[4] && g_xGameProc.m_bShadowABlend;for(int i=0;i<800;++i) enabled &= g_xGameProc.m_wShadowClr[i]==0;
+            options.LoadAudioOptions(nullptr);const bool defaults=!options.m_values[4] && !g_xGameProc.m_bShadowABlend;
+            options.LoadAudioOptions("./preview-shadow-options.ini");const bool persisted=options.m_values[4] && g_xGameProc.m_bShadowABlend;
+            ui.OnLButtonDown(toggle);ui.OnLButtonUp(toggle);bool disabled=!options.m_values[4] && !g_xGameProc.m_bShadowABlend;
+            const WORD color=g_xMainWnd.ConvertColor24To16(RGB(20,20,20));for(int i=0;i<800;++i) disabled &= g_xGameProc.m_wShadowClr[i]==color;
+            options.LoadAudioOptions(nullptr);g_xGameProc.SetShadowBlend(groupPanel==91);
+            mouse={400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==91?"options-shadow-on.bmp":"options-shadow-off.bmp";
+            if(FILE* report=fopen("options-shadow-check.txt","wb")) {fprintf(report,"enabled=%d defaults=%d persisted=%d disabled=%d\n",enabled,defaults,persisted,disabled);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1615,6 +1631,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=options-shadow-on")==0 ? 91 :
+        strcmp(lpCmdLine,"--preview=options-shadow-off")==0 ? 92 :
         strcmp(lpCmdLine,"--preview=options-markers-on")==0 ? 89 :
         strcmp(lpCmdLine,"--preview=options-markers-off")==0 ? 90 :
         strcmp(lpCmdLine,"--preview=target-photo")==0 ? 87 :

@@ -44,6 +44,7 @@ public:
 	BOOL					m_bShowSnow;
 	BOOL					m_bShowMist;
 	BOOL					m_bShowRain;
+    void SetShadowBlend(bool enabled);
 	BOOL					m_bShadowABlend;
 	BOOL					m_bShowFPS;
 

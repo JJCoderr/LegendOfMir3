@@ -239,11 +239,7 @@ VOID CGameProcess::Load()
 	SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETPASSWORDCHAR, NULL, NULL);
 	g_xChatEditBox.SetLimitText(90);
 
-	WORD wShadowClr = g_xMainWnd.ConvertColor24To16(RGB(20, 20, 20));
-	for ( nCnt = 0; nCnt < 800; nCnt++ )
-	{
-		m_wShadowClr[nCnt] = wShadowClr;
-	}
+    SetShadowBlend(m_xInterface.m_xOptionWnd.m_values[4]);
 
 	m_xMap.LoadMapImage(&m_xImage);
 
@@ -2251,22 +2247,8 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 	}*/	
 	else if ( !strcmp(szCommand, "@shadow") )
 	{
-		m_bShadowABlend = !m_bShadowABlend;
-		WORD wShadowClr;
-
-		if ( m_bShadowABlend )
-		{
-			wShadowClr = g_xMainWnd.ConvertColor24To16(RGB(0, 0, 0));
-		}
-		else
-		{
-			wShadowClr = g_xMainWnd.ConvertColor24To16(RGB(20, 20, 20));
-		}
-			
-		for ( INT nCnt = 0; nCnt < 800; nCnt++ )
-		{
-			m_wShadowClr[nCnt] = wShadowClr;
-		}	
+        SetShadowBlend(!m_bShadowABlend);
+        m_xInterface.m_xOptionWnd.SaveAudioOptions();
 
 	}	
 	else if ( !strcmp(szCommand, "@morph") )
@@ -4158,4 +4140,11 @@ VOID CGameProcess::OnSvrMsgHear(_TDEFAULTMESSAGE *ptdm, char *pszMsg)
 			}
 		}
 	}
+}
+
+void CGameProcess::SetShadowBlend(bool enabled)
+{
+    m_bShadowABlend=enabled;m_xInterface.m_xOptionWnd.m_values[4]=enabled;
+    const WORD color=g_xMainWnd.ConvertColor24To16(enabled?RGB(0,0,0):RGB(20,20,20));
+    for(int i=0;i<800;++i) m_wShadowClr[i]=color;
 }
