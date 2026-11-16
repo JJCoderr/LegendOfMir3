@@ -1701,6 +1701,23 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel==136 || groupPanel==137) {
+            auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[100]={};strcpy((char*)raw,"Õ∑ø¯ Ù–‘≤‚ ‘");raw[30]=15;raw[32]=3;raw[62]=11;raw[66]=0xD0;raw[67]=7;raw[68]=0x10;raw[69]=0x27;
+            CItem item;item.SetMir3Item(raw,0);BYTE elements[7]={};const bool omitted=item.AccessoryHint(35,20,elements).size()==4;
+            raw[40]=1;raw[41]=3;raw[86]=2;raw[49]=1;raw[50]=2;raw[97]=1;raw[98]=3;raw[52]=1;raw[91]=1;raw[53]=2;raw[92]=2;raw[47]=1;raw[48]=2;raw[89]=1;
+            item.SetMir3Item(raw,0);const auto rows=item.AccessoryHint(35,20,elements);
+            const bool defense=rows[3].text.find(": 1-5 (+2)")!=std::string::npos && rows[3].color==13172630;
+            const bool elementsAdded=rows[4].text.find("+5")!=std::string::npos && rows[5].text.find("x2")!=std::string::npos && rows[6].text.find("x2")!=std::string::npos;
+            const bool order=rows.size()==9 && rows[7].text.find(": 1-3 (+1)")!=std::string::npos;
+            raw[30]=26;item.SetMir3Item(raw,0);const bool shared=item.AccessoryHint(35,20,elements).size()==rows.size();
+            raw[30]=57;item.SetMir3Item(raw,0);const bool variant=item.AccessoryHint(35,20,elements).size()==5;
+            raw[30]=groupPanel==136?15:26;item.SetMir3Item(raw,0);bag.AddInvenItem(item,0,TRUE);ui.WindowActivate(_WND_ID_INVENTORY);mouse={550,80};g_xGameProc.m_ptMousePos=mouse;
+            capturePath=groupPanel==136?"helmet-hint.bmp":"accessory-26-hint.bmp";
+            if(FILE* report=fopen("helmet-hint-check.txt","wb")) {fprintf(report,"omitted=%d defense=%d elements=%d order=%d shared=%d variant=%d\n",omitted,defense,elementsAdded,order,shared,variant);fclose(report);}
+        }
+
         if(groupPanel==134 || groupPanel==135) {
             auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -2188,6 +2205,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=helmet-hint")==0 ? 136 :
+        strcmp(lpCmdLine,"--preview=accessory-26-hint")==0 ? 137 :
         strcmp(lpCmdLine,"--preview=weapon-hint")==0 ? 134 :
         strcmp(lpCmdLine,"--preview=weapon-special-hint")==0 ? 135 :
         strcmp(lpCmdLine,"--preview=armor-hint")==0 ? 132 :
