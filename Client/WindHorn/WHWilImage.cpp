@@ -166,10 +166,10 @@ BOOL CWHWilImageData::NewSetIndex(DWORD dwIndex)
 
 		m_lpstNewCurrWilImageInfo = (LPNEWWILIMAGEINFO)pbTmpData;
 
-		if ( m_bIsCompressed )
-			m_pbCurrImage = (BYTE*)(pbTmpData + sizeof(NEWWILIMAGEINFO));
-		else
-			m_pbCurrImage = (BYTE*)(pbTmpData + sizeof(NEWWILIMAGEINFO) - sizeof(DWORD));
+        const SHORT version=((LPNEWWILFILEHEADER)m_pbStartData)->shVer;
+        // V5000/V6000 append four bytes to the V17 frame header.
+        const int headerSize=sizeof(NEWWILIMAGEINFO)+(version==5000 || version==6000?4:0);
+        m_pbCurrImage=pbTmpData+headerSize-(m_bIsCompressed?0:sizeof(DWORD));
 
 		return TRUE;
 	}
