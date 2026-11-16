@@ -1468,13 +1468,15 @@ void CInterface::ShowNotice(int message)
     m_xMsgBox.ShowMessageBox(captions.Get(message).c_str(),MSG_BTN_OK,1240);
 }
 
-void CInterface::OpenGroupDialog(int action)
+void CInterface::OpenNameDialog(int action)
 {
     static CLoginMessages captions;
     static const bool loaded = captions.Load("./CmList.dat");
     m_nIdxMsgBox = action;
     m_xMsgBox.SetOrigin(220,112,true);
-    m_xMsgBox.ShowMessageBox(captions.Get(action==3?1606:1605).c_str(),MSG_BTN_YESNO,1240);
+    std::string prompt = action==4 ? "'"+m_xGuildWnd.m_name+"' "+captions.Get(4001) :
+        captions.Get(action==5?4002:action==3?1606:1605);
+    m_xMsgBox.ShowMessageBox(prompt.c_str(),MSG_BTN_YESNO,1240);
     g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+244,g_xMainWnd.m_rcWindow.top+340,309,15,TRUE);
     g_xChatEditBox.SetLimitText(90);
     g_xChatEditBox.m_szInputMsg[0]=0;
@@ -1491,7 +1493,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         m_xMsgBox.HideMessageBox();
         return;
     }
-    if (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 3) {
+    if (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 5) {
         char name[91] = {};
         GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,sizeof(name));
         if (mouse) g_xSound.PlayLobbyEffect("105.wav");
@@ -1505,7 +1507,15 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         if (hResult == CLICK_YES) {
             if (m_nIdxMsgBox == 1) g_xClientSocket.SendCreateGroup(name);
             else if (m_nIdxMsgBox == 2) g_xClientSocket.SendAddGroupMember(name);
-            else g_xClientSocket.SendDelGroupMember(name);
+            else if (m_nIdxMsgBox == 3) g_xClientSocket.SendDelGroupMember(name);
+            else if (m_nIdxMsgBox == 4) g_xClientSocket.SendGuildMemberRemoval(name);
+            else {
+                static CLoginMessages captions;
+                static const bool loaded=captions.Load("./CmList.dat");
+                std::string command=captions.Get(4016)+name;
+                g_xClientSocket.SendSay(const_cast<char*>(command.c_str()));
+                g_xClientSocket.SendGuildHome();
+            }
         }
         return;
     }
@@ -1942,7 +1952,7 @@ VOID CInterface::OnSysKeyDown()
 
 LRESULT	CInterface::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 {
-    if (m_xMsgBox.IsActive() && m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 3) {
+    if (m_xMsgBox.IsActive() && m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 5) {
         SetWindowTextA(g_xChatEditBox.GetSafehWnd(),g_xChatEditBox.m_szInputMsg);
         FinishNotice(CLICK_YES,false);
         return TRUE;

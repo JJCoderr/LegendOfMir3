@@ -18,7 +18,7 @@ public:
     int m_chatReceptionFrame[3] = {-1,-1,-1};
     void FocusChatMode();
     void ShowNotice(int message);
-    void OpenGroupDialog(int action);
+    void OpenNameDialog(int action);
     void FinishNotice(int result, bool mouse);
     void LayoutChat();
     struct ChatMessage { DWORD color, background; std::string text; };

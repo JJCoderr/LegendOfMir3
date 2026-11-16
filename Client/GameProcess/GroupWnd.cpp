@@ -110,7 +110,7 @@ BOOL CGroupWnd::OnLButtonUp(POINT point)
     if (hit == 4) {
         g_fAllowGroup = !g_fAllowGroup;
         g_xClientSocket.SendGroupMode(g_fAllowGroup);
-    } else g_xGameProc.m_xInterface.OpenGroupDialog(hit);
+    } else g_xGameProc.m_xInterface.OpenNameDialog(hit);
     return FALSE;
 }
 

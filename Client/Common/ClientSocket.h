@@ -77,6 +77,7 @@ public:
 	void		SendDelGroupMember(char *pszWho);
 
 	void		SendGuildHome();
+    void SendGuildMemberRemoval(char* name);
 
 	LRESULT		OnSocketMessage(WPARAM wParam, LPARAM lParam);
 

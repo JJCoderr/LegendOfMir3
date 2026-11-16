@@ -516,3 +516,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 按GuildLayout::denial，非管理者点击4–8号管理按钮显示CmList4000原文，使用GameInter1240与1243单确认按钮。公会管理身份初始化false，仍待服务器数据提供真实值。
 - 新增通用ShowNotice路径，结果处理关闭提示框并区分鼠标音效与键盘确认。
 - Client全量77步编译通过；--preview=guild-denied通过实际管理按钮打开提示，已检查out/guild-denied.png，正文和单按钮位置正确。管理者分支功能尚未完成。
+
+### 公会成员移除与解除同盟对话框
+- 管理者按钮5/8分别打开原生输入确认框，提示为公会名+CmList4001及CmList4002；复用成员输入框取消恢复逻辑。
+- YES移除发送CM_GUILDDELMEMBER后请求CM_GUILDMEMBERLIST；解除同盟发送CmList4016+名称的聊天命令后请求GuildHome，按Godot顺序。服务端处理尚未验证。
+- Client全量77步构建通过；离线管理者预览经真实按钮打开两框，已检查out/guild-remove.png和out/guild-break-ally.png，含真实原生输入框绘制。预览未确认或发送管理请求。

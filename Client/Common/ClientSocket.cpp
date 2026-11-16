@@ -550,3 +550,11 @@ void CClientSocket::SendGuildHome()
 	fnMakeDefMessage(&DefMsg, CM_GUILDHOME, 0, 0, 0, 0);
 	SendPacket(&DefMsg, NULL);
 }
+
+void CClientSocket::SendGuildMemberRemoval(char* name)
+{
+    fnMakeDefMessage(&DefMsg,CM_GUILDDELMEMBER,0,0,0,0);
+    SendPacket(&DefMsg,name);
+    fnMakeDefMessage(&DefMsg,CM_GUILDMEMBERLIST,0,0,0,0);
+    SendPacket(&DefMsg,NULL);
+}
