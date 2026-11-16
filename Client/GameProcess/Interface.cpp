@@ -536,6 +536,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     m_xGuildEditor.Show();
 	m_xMsgBox.RenderMessageBox(0);
 
+    m_xPortraitWnd.ShowHint(ptMousePos);
     m_xExchangeWnd.ShowHeld(ptMousePos);
 }
 

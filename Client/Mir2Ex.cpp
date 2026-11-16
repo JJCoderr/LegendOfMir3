@@ -39,7 +39,7 @@ public:
         if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
         if (groupPanel==30 || groupPanel==31) capturePath=groupPanel==30?"mount-panel.bmp":"mount-hint.bmp";
         if (groupPanel>=32 && groupPanel<=36) capturePath=groupPanel==36?"trade-return.bmp":groupPanel==35?"trade-gold.bmp":groupPanel==32?"trade-empty.bmp":groupPanel==33?"trade-list.bmp":"trade-confirmed.bmp";
-        if (groupPanel>=60 && groupPanel<=62) capturePath=groupPanel==60?"portrait-empty.bmp":groupPanel==61?"portrait-preview.bmp":"portrait-scrolled.bmp";
+        if (groupPanel>=60 && groupPanel<=63) capturePath=groupPanel==60?"portrait-empty.bmp":groupPanel==61?"portrait-preview.bmp":groupPanel==62?"portrait-scrolled.bmp":"portrait-hint.bmp";
         if (groupPanel==59) capturePath="npc-shop-layering.bmp";
         if (groupPanel==58) capturePath="npc-password.bmp";
         if (groupPanel==56 || groupPanel==57) capturePath=groupPanel==56?"merchant-sell-quantity.bmp":"merchant-deposit-quantity.bmp";
@@ -524,7 +524,7 @@ public:
                     opened,repeat,hidden,buttons,stray,onFoot,riding,hint,pressedHint,released,covered,moved,closed); fclose(report);
             }
         }
-        if (groupPanel>=60 && groupPanel<=62) {
+        if (groupPanel>=60 && groupPanel<=63) {
             auto& ui=g_xGameProc.m_xInterface; auto& picker=ui.m_xPortraitWnd; picker.directory="./portrait-preview";
             const POINT entry={550,573}; ui.OnLButtonDown(entry); const bool entryPressed=ui.m_portraitEntryPressed;
             ui.OnLButtonUp(POINT{790,10}); const bool entryOutside=!picker.m_bActive && !ui.m_portraitEntryPressed;
@@ -554,6 +554,16 @@ public:
             ui.WindowActivate(_WND_ID_PORTRAIT);
             if(groupPanel!=60) { picker.first=find("portrait01.jpg"); picker.Pointer(0,POINT{40,35}); picker.Pointer(2,POINT{40,35}); if(groupPanel==62) picker.first=10; }
             mouse=POINT{40,35}; g_xGameProc.m_ptMousePos=mouse;
+            POINT hintAnchor={};
+            const bool uploadHint=picker.HintAt(POINT{65,350},hintAnchor)==4700;
+            const bool resetHint=picker.HintAt(POINT{185,350},hintAnchor)==4701;
+            const bool closeHint=picker.HintAt(POINT{545,370},hintAnchor)==1052;
+            picker.pressed=1; const bool pressedHint=picker.HintAt(POINT{65,350},hintAnchor)==0; picker.pressed=-1;
+            const bool entryHint=picker.HintAt(entry,hintAnchor)==4715;
+            ui.m_chatExpanded=true; const bool expandedHint=picker.HintAt(entry,hintAnchor)==0; ui.m_chatExpanded=false;
+            ui.ShowNotice(4716); const bool modalHint=picker.HintAt(entry,hintAnchor)==0 && picker.HintAt(POINT{65,350},hintAnchor)==0; ui.m_xMsgBox.HideMessageBox();
+            if(FILE* report=fopen("portrait-hint-check.txt","wb")) { fprintf(report,"upload=%d reset=%d close=%d pressed=%d entry=%d expanded=%d modal=%d\n",uploadHint,resetHint,closeHint,pressedHint,entryHint,expandedHint,modalHint); fclose(report); }
+            if(groupPanel==63) { mouse=POINT{65,350}; g_xGameProc.m_ptMousePos=mouse; for(int i=0;i<24;++i) picker.ShowHint(mouse); }
             if(FILE* report=fopen("portrait-picker-check.txt","wb")) {
                 fprintf(report,"entry_pressed=%d entry_outside=%d opened=%d files=%d selected=%d hover=%d gap=%d wheel=%d captured=%d bottom=%d bottom_wheel=%d stray=%d outside=%d upload=%d cooldown=%d reset=%d invalid=%d size=%d closed=%d escape=%d expanded=%d\n",entryPressed,entryOutside,opened,files,selected,hover,gap,wheel,captured,bottom,bottomWheel,stray,outside,upload,cooldown,reset,invalid,size,closed,escape,expanded); fclose(report);
             }
@@ -1375,6 +1385,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=portrait-hint")==0 ? 63 :
         strcmp(lpCmdLine,"--preview=portrait-empty")==0 ? 60 :
         strcmp(lpCmdLine,"--preview=portrait-preview")==0 ? 61 :
         strcmp(lpCmdLine,"--preview=portrait-scrolled")==0 ? 62 : 0;
