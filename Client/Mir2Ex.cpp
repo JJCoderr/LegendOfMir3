@@ -39,6 +39,7 @@ public:
         if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
         if (groupPanel==30 || groupPanel==31) capturePath=groupPanel==30?"mount-panel.bmp":"mount-hint.bmp";
         if (groupPanel>=32 && groupPanel<=36) capturePath=groupPanel==36?"trade-return.bmp":groupPanel==35?"trade-gold.bmp":groupPanel==32?"trade-empty.bmp":groupPanel==33?"trade-list.bmp":"trade-confirmed.bmp";
+        if (groupPanel==59) capturePath="npc-shop-layering.bmp";
         if (groupPanel==58) capturePath="npc-password.bmp";
         if (groupPanel==56 || groupPanel==57) capturePath=groupPanel==56?"merchant-sell-quantity.bmp":"merchant-deposit-quantity.bmp";
         if (groupPanel>=53 && groupPanel<=55) capturePath=groupPanel==53?"merchant-repair.bmp":groupPanel==54?"merchant-sell.bmp":"merchant-deposit.bmp";
@@ -522,6 +523,51 @@ public:
                     opened,repeat,hidden,buttons,stray,onFoot,riding,hint,pressedHint,released,covered,moved,closed); fclose(report);
             }
         }
+        if (groupPanel==59) {
+            auto& ui=g_xGameProc.m_xInterface; auto& npc=ui.m_xNPCWnd; auto& shop=ui.m_xStoreWnd; auto& bag=ui.m_xInventoryWnd;
+            std::string script="窗口层级测试。\\<向商人询问详细服务内容以及仓库功能/@next>\\";
+            for(int i=0;i<30;++i) script+="这是NPC对话第"+std::to_string(i+1)+"行。\\";
+            npc.SetScript(77,script.c_str()); ui.WindowActivate(_WND_ID_NPCCHAT);
+            const char* goods="金创药/2/100/20/0/0/0/魔法药/2/180/20/15/0/0/太阳水/2/300/20/20/0/0/";
+            shop.SetGoods(77,goods,3); ui.WindowActivate(_WND_ID_STORE);
+            ui.WindowActivate(_WND_ID_INVENTORY); bag.m_rcWnd={150,0,432,466};
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            const bool activation=ui.IsTopWindow(_WND_ID_INVENTORY);
+            const bool npcHit=ui.GetWindowInMousePos(POINT{175,60})==_WND_ID_NPCCHAT;
+            const bool shopHit=ui.GetWindowInMousePos(POINT{175,300})==_WND_ID_STORE;
+            const bool bagHit=ui.GetWindowInMousePos(POINT{420,100})==_WND_ID_INVENTORY;
+            npc.lastAction=0; ui.OnLButtonDown(POINT{175,60}); ui.OnLButtonUp(POINT{175,60});
+            const bool npcClick=npc.lastAction && !ui.m_bMoveFocusedWnd;
+            ui.DeleteWindowToList(_WND_ID_INVENTORY); ui.AddWindowToList(_WND_ID_INVENTORY);
+            ui.OnLButtonDown(POINT{175,300}); ui.OnLButtonUp(POINT{175,300}); const bool shopClick=shop.highlighted==1;
+            ui.DeleteWindowToList(_WND_ID_INVENTORY); ui.AddWindowToList(_WND_ID_INVENTORY);
+            g_xGameProc.m_ptMousePos=POINT{175,300}; ui.OnScrollUp(); const bool shopWheel=shop.first==1 && npc.first==0;
+            g_xGameProc.m_ptMousePos=POINT{175,60}; ui.OnScrollUp(); const bool npcWheel=npc.first==1 && bag.ScrollRow()==0;
+            npc.first=0; shop.first=0; shop.fraction=0;
+            ui.WindowActivate(_WND_ID_STORE); const bool revealed=ui.GetWindowInMousePos(POINT{175,300})==_WND_ID_NPCCHAT;
+            shop.SetGoods(77,goods,3); ui.WindowActivate(_WND_ID_STORE);
+            ui.DeleteWindowToList(_WND_ID_INVENTORY); ui.AddWindowToList(_WND_ID_INVENTORY);
+            ui.ShowNotice(1437); npc.lastAction=0; ui.OnLButtonDown(POINT{175,60}); ui.OnLButtonUp(POINT{175,60});
+            const bool modal=!npc.lastAction && ui.m_xMsgBox.IsActive(); ui.m_xMsgBox.HideMessageBox();
+            const auto render=[&]() {
+                auto* surface=g_xMainWnd.GetBackBuffer(); DDBLTFX fill={}; fill.dwSize=sizeof(fill); fill.dwFillColor=0x0841;
+                surface->Blt(NULL,NULL,NULL,DDBLT_COLORFILL|DDBLT_WAIT,&fill); ui.RenderInterface(0,POINT{790,590});
+                DDSURFACEDESC2 desc={}; desc.dwSize=sizeof(desc); std::vector<WORD> pixels(432*449);
+                if (SUCCEEDED(surface->Lock(NULL,&desc,DDLOCK_WAIT,NULL))) {
+                    for(int y=0;y<449;++y) memcpy(&pixels[y*432],(BYTE*)desc.lpSurface+y*desc.lPitch,432*2);
+                    surface->Unlock(NULL);
+                }
+                return pixels;
+            };
+            const auto before=render();
+            ui.DeleteWindowToList(_WND_ID_NPCCHAT); ui.AddWindowToList(_WND_ID_NPCCHAT);
+            ui.DeleteWindowToList(_WND_ID_STORE); ui.AddWindowToList(_WND_ID_STORE);
+            const bool pixels=before==render();
+            ui.DeleteWindowToList(_WND_ID_INVENTORY); ui.AddWindowToList(_WND_ID_INVENTORY);
+            if(FILE* report=fopen("npc-shop-layering-check.txt","wb")) {
+                fprintf(report,"activation=%d npc_hit=%d shop_hit=%d bag_hit=%d npc_click=%d shop_click=%d shop_wheel=%d npc_wheel=%d revealed=%d modal=%d pixels=%d\n",activation,npcHit,shopHit,bagHit,npcClick,shopClick,shopWheel,npcWheel,revealed,modal,pixels); fclose(report);
+            }
+        }
         if (groupPanel==58) {
             auto& ui=g_xGameProc.m_xInterface; auto& npc=ui.m_xNPCWnd; const HWND edit=g_xChatEditBox.GetSafehWnd();
             npc.SetScript(77,"仓库密码验证。\\<请输入仓库密码/@@*6_enter_stgpasswd>"); ui.WindowActivate(_WND_ID_NPCCHAT);
@@ -676,7 +722,7 @@ public:
             ui.OnLButtonDown(POINT{70,300}); ui.OnLButtonUp(POINT{780,580}); const bool outside=shop.pressed==-1 && shop.highlighted==0;
             ui.OnLButtonDown(POINT{70,300}); ui.OnLButtonUp(POINT{70,300}); const bool selected=shop.highlighted==1;
             ui.OnLButtonDown(POINT{58,300}); ui.OnLButtonUp(POINT{58,300}); const bool gap=shop.highlighted==1 && !ui.m_bMoveFocusedWnd;
-            ui.OnScrollUp(); const bool wheel=shop.first==1; for(int i=0;i<20;++i) ui.OnScrollUp(); const bool end=shop.first==5;
+            g_xGameProc.m_ptMousePos=POINT{263,260}; ui.OnScrollUp(); const bool wheel=shop.first==1; for(int i=0;i<20;++i) ui.OnScrollUp(); const bool end=shop.first==5;
             for(int i=0;i<20;++i) ui.OnScrollDown();
             ui.OnLButtonDown(POINT{263,260}); const bool captured=shop.scrollCaptured;
             ui.OnMouseMove(POINT{780,580}); ui.OnLButtonUp(POINT{780,580}); const bool drag=shop.first==5 && !shop.scrollCaptured;
@@ -1292,7 +1338,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit")==0 ? 55 :
         strcmp(lpCmdLine,"--preview=merchant-sell-quantity")==0 ? 56 :
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
-        strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 : 0;
+        strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
+        strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

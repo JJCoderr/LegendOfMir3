@@ -329,7 +329,7 @@ case _WND_ID_STATUS:
 				m_xStatusWnd.ShowStatusWnd();
 				break;
 			case _WND_ID_STORE:
-				m_xStoreWnd.ShowStoreWnd();
+                // Merchant overlays are drawn after ordinary panels.
 				break;
 			case _WND_ID_EXCHANGE:
 				m_xExchangeWnd.ShowExchangeWnd();
@@ -350,7 +350,7 @@ case _WND_ID_STATUS:
 				m_xChatPopWnd.ShowChatPopWnd();
 				break;
 			case _WND_ID_NPCCHAT:					// 勇气
-				m_xNPCWnd.ShowNPCChatWnd();
+                // NPC overlays stay above the panel activation order.
 				break;
 
 			case _WND_ID_QUEST:
@@ -511,13 +511,16 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 	m_xClientSysMsg.ShowSysMsg(nLoopTime, 30, 30);
 
 	// 勇气
-    const int hoveredWindow=m_xMsgBox.IsActive()?-1:GetWindowInMousePos(ptMousePos);
+    const int hoveredWindow=(m_xMsgBox.IsActive() || m_xGuildEditor.m_bActive)?-1:GetWindowInMousePos(ptMousePos);
     m_xInventoryWnd.UpdatePlacementPointer(ptMousePos,hoveredWindow==_WND_ID_INVENTORY);
     m_xStatusWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_STATUS);
     m_xSkillWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_SKILL);
     m_xHorseWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_HORSE);
     m_xNPCWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_NPCCHAT);
     ShowWndList();
+    ShowMagicKey();
+    if (m_xNPCWnd.m_bActive) m_xNPCWnd.ShowNPCChatWnd();
+    if (m_xStoreWnd.m_bActive) m_xStoreWnd.ShowStoreWnd();
 	if ( m_stCommonItem.bSetted && !m_stCommonItem.bIsHideItem )
 	{
 		nX = ptMousePos.x - _INVENTORY_CELL_WIDTH /2;
@@ -527,7 +530,6 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     m_xGuildEditor.Show();
 	m_xMsgBox.RenderMessageBox(0);
 
-	ShowMagicKey();
     m_xExchangeWnd.ShowHeld(ptMousePos);
 }
 
@@ -727,6 +729,8 @@ VOID CInterface::ShowMagicKey()
 *******************************************************************************************************************/
 INT	CInterface::GetWindowInMousePos(POINT ptMouse)
 {
+    if (m_xStoreWnd.m_bActive && PtInRect(&m_xStoreWnd.m_rcWnd,ptMouse)) return _WND_ID_STORE;
+    if (m_xNPCWnd.m_bActive && PtInRect(&m_xNPCWnd.m_rcWnd,ptMouse)) return _WND_ID_NPCCHAT;
 	if ( m_xWndOrderList.GetCounter() != 0 )
 	{
 		RECT rcWnd;
@@ -1942,7 +1946,9 @@ BOOL CInterface::OnScrollDown()
 {
     if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
-    if (IsTopWindow(_WND_ID_STORE)) { m_xStoreWnd.OnScrollDown(); return TRUE; }
+    const int hovered=GetWindowInMousePos(g_xGameProc.m_ptMousePos);
+    if (hovered==_WND_ID_STORE) { m_xStoreWnd.OnScrollDown(); return TRUE; }
+    if (hovered==_WND_ID_NPCCHAT) { m_xNPCWnd.OnScrollDown(); m_xNPCWnd.pressed=-1; m_xNPCWnd.arrowPressed=0; return TRUE; }
     if (IsTopWindow(_WND_ID_QUEST)) { m_xQuestWnd.OnScrollDown(); return TRUE; }
     if (IsTopWindow(_WND_ID_GUILD)) { m_xGuildWnd.OnScrollDown(); return TRUE; }
 	if ( IsTopWindow(m_xInventoryWnd.m_nID) )
@@ -1952,10 +1958,6 @@ BOOL CInterface::OnScrollDown()
 	else if ( IsTopWindow(m_xSkillWnd.m_nID) )
 	{
 		m_xSkillWnd.OnScrollDown();
-	}
-	else if (IsTopWindow(m_xNPCWnd.m_nID))		// 勇气
-	{
-		m_xNPCWnd.OnScrollDown();
 	}
 	else
 	{
@@ -1979,7 +1981,9 @@ BOOL CInterface::OnScrollUp()
 {
     if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
-    if (IsTopWindow(_WND_ID_STORE)) { m_xStoreWnd.OnScrollUp(); return TRUE; }
+    const int hovered=GetWindowInMousePos(g_xGameProc.m_ptMousePos);
+    if (hovered==_WND_ID_STORE) { m_xStoreWnd.OnScrollUp(); return TRUE; }
+    if (hovered==_WND_ID_NPCCHAT) { m_xNPCWnd.OnScrollUp(); m_xNPCWnd.pressed=-1; m_xNPCWnd.arrowPressed=0; return TRUE; }
     if (IsTopWindow(_WND_ID_QUEST)) { m_xQuestWnd.OnScrollUp(); return TRUE; }
     if (IsTopWindow(_WND_ID_GUILD)) { m_xGuildWnd.OnScrollUp(); return TRUE; }
 	if ( IsTopWindow(m_xInventoryWnd.m_nID) )
@@ -1989,10 +1993,6 @@ BOOL CInterface::OnScrollUp()
 	else if ( IsTopWindow(m_xSkillWnd.m_nID) )
 	{
 		m_xSkillWnd.OnScrollUp();
-	}
-	else if (IsTopWindow(m_xNPCWnd.m_nID))		// 勇气
-	{
-		m_xNPCWnd.OnScrollUp();
 	}
 	else
 	{
