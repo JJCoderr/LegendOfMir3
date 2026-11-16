@@ -13,6 +13,7 @@
 #include "StdAfx.h"
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
+#include "AccessoryHintIds.h"
 
 
 CItem::CItem()
@@ -165,7 +166,7 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 {
     if(m_serverName[0]) {
         switch(m_stItemInfo.stStdItem.bStdMode) {
-        case 21:case 22:case 23:case 24:case 53:break;
+        case 53:break;
         default:ShowGeneralHint(nX,nY);return;
         }
     }
@@ -675,7 +676,7 @@ void CItem::ShowGeneralHint(int x,int y) const
     const int mode=m_stItemInfo.stStdItem.bStdMode;
     const auto lines=mode==5 || mode==6 || mode==54 || mode==55 || mode==56
         ?WeaponHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0])
-        :mode==15 || mode==19 || mode==20 || mode==26 || mode==57
+        :mode==15 || (mode>=Mir3AccessoryHint::AvoidanceNecklace && mode<=Mir3AccessoryHint::AccuracyBracelet) || mode==26 || mode==57
         ?AccessoryHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0])
         :mode==10 || mode==11
         ?ArmorHint(hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0])
@@ -831,6 +832,7 @@ std::vector<CItem::HintLine> CItem::EquipmentBaseHint(bool shop) const
 
 std::vector<CItem::HintLine> CItem::AccessoryHint(int level,int attack,const BYTE* elements,bool shop) const
 {
+    using namespace Mir3AccessoryHint;
     static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
     const auto* r=m_serverRecord;const auto word=[&](int at) {return int(r[at])|(int(r[at+1])<<8);};
     const auto signedByte=[&](int at) {return int(static_cast<signed char>(r[at]));};
@@ -839,60 +841,84 @@ std::vector<CItem::HintLine> CItem::AccessoryHint(int level,int attack,const BYT
         const int bonus=signedByte(extra);if(word(at)+bonus<=0) return;
         std::string text=captions.Get(id)+": "+std::to_string(r[at])+"-"+std::to_string(r[at+1]+max(0,bonus));
         text+=bonus>0?" (+"+std::to_string(bonus)+")":trailing?" ":"";
-        lines.push_back({text,bonus>0?13172630u:0xffffffu});
+        lines.push_back({text,bonus>0?BonusColor:NormalColor});
     };
-    range(1061,44,88,true);
-    if(r[30]==15 || r[30]==26) {
-        range(5177,40,86,false);range(1406,42,87,false);
-        if(signedByte(97)>0 || r[49]) {
-            std::string text=captions.Get(5178)+":";int element=r[49];
-            if(element!=signedByte(97) && element) text+=" "+captions.Get(5160+element)+"+"+std::to_string(word(50));
-            if(signedByte(97)>0) element=r[97];
-            if(signedByte(98)>0) text+=" "+captions.Get(5160+element)+"+"+std::to_string(signedByte(98)+(element==r[49]?word(50):0));
-            lines.push_back({text,65408});
+    const auto attackElements=[&]() {
+        if(signedByte(AttackElementBonusKindOffset)>0 || r[AttackElementOffset]) {
+            std::string text=captions.Get(AttackElementCaption)+":";int element=r[AttackElementOffset];
+            if(element!=signedByte(AttackElementBonusKindOffset) && element) text+=" "+captions.Get(ElementCaptionBase+element)+"+"+std::to_string(word(AttackElementAmountOffset));
+            if(signedByte(AttackElementBonusKindOffset)>0) element=r[AttackElementBonusKindOffset];
+            if(signedByte(AttackElementBonusAmountOffset)>0) text+=" "+captions.Get(ElementCaptionBase+element)+"+"+std::to_string(signedByte(AttackElementBonusAmountOffset)+(element==r[AttackElementOffset]?word(AttackElementAmountOffset):0));
+            lines.push_back({text,ElementColor});
         }
+    };
+    const auto elementMasks=[&]() {
         for(int kind=0;kind<2;++kind) {
-            const int base=signedByte(52+kind),mask=signedByte(91+kind);
-            if(mask<=0 && !r[52+kind]) continue;
-            std::string text=captions.Get(5179+kind)+":";bool any=false;
-            for(int element=1;element<=7;++element) {
+            const int base=signedByte(StrongElementOffset+kind),mask=signedByte(ExtraElementOffset+kind);
+            if(mask<=0 && !r[StrongElementOffset+kind]) continue;
+            std::string text=captions.Get(StrongElementCaption+kind)+":";bool any=false;
+            for(int element=1;element<=ElementCount;++element) {
                 const bool bit=(mask&(1<<(element-1)))!=0,normal=base==element;
                 if(!bit && !normal) continue;
-                any=true;text+=" "+captions.Get(5160+element)+"x"+std::to_string(bit && normal?2:1);
+                any=true;text+=" "+captions.Get(ElementCaptionBase+element)+"x"+std::to_string(bit && normal?2:1);
             }
-            if(any) lines.push_back({text,kind?13172630u:65408u});
+            if(any) lines.push_back({text,kind?BonusColor:ElementColor});
         }
+    };
+    const auto value=[&](int id,int at,int extra,int scale,const char* suffix,bool trailing=false) {
+        const int bonus=signedByte(extra);if(int(r[at])+bonus<=0) return;
+        std::string text=captions.Get(id)+": +"+std::to_string((r[at]+max(0,bonus))*scale)+suffix;
+        if(bonus>0) text+=" (+"+std::to_string(bonus*scale)+suffix+")";
+        if(bonus<=0 && trailing) text+=" ";
+        lines.push_back({text,bonus>0?BonusColor:NormalColor});
+    };
+    range(AttackCaption,AttackOffset,AttackBonusOffset,true);
+    if(r[ModeOffset]==Helmet || r[ModeOffset]==Accessory26) {
+        range(DefenseCaption,DefenseOffset,FirstBonusOffset,false);range(MagicDefenseCaption,MagicDefenseOffset,SecondBonusOffset,false);
+        attackElements();
+        elementMasks();
     }
-    if(r[30]==19 || r[30]==20) {
-        const auto value=[&](int id,int at,int extra,int scale,const char* suffix) {
-            const int bonus=signedByte(extra);if(int(r[at])+bonus<=0) return;
-            std::string text=captions.Get(id)+": +"+std::to_string((r[at]+max(0,bonus))*scale)+suffix;
-            if(bonus>0) text+=" (+"+std::to_string(bonus*scale)+suffix+")";
-            lines.push_back({text,bonus>0?13172630u:0xffffffu});
-        };
-        if(r[30]==19) {
-            value(1055,41,86,10,"%");
-            if(r[42]) lines.push_back({captions.Get(2507)+": +"+std::to_string(r[42]),0xffffff});
-            value(2506,43,87,1,"");
+    if(r[ModeOffset]==AccuracyBracelet) {
+        value(AccuracyCaption,FirstScalarOffset,FirstBonusOffset,1,"");
+        value(AgilityCaption,SecondScalarOffset,SecondBonusOffset,1,"");
+        attackElements();
+        elementMasks();
+    }
+    if(r[ModeOffset]>=AvoidanceNecklace && r[ModeOffset]<=RecoveryRing) {
+        if(r[ModeOffset]==AvoidanceNecklace) {
+            value(MagicAvoidanceCaption,FirstScalarOffset,FirstBonusOffset,PercentPerUnit,"%");
+            if(r[MagicDefenseOffset]) lines.push_back({captions.Get(CurseCaption)+": +"+std::to_string(r[MagicDefenseOffset]),NormalColor});
+            value(LuckCaption,SecondScalarOffset,SecondBonusOffset,1,"");
+        } else if(r[ModeOffset]==DefenseRing) {
+            range(DefenseCaption,DefenseOffset,FirstBonusOffset,false);
+            range(MagicDefenseCaption,MagicDefenseOffset,SecondBonusOffset,false);
+        } else if(r[ModeOffset]==VitalNecklace || r[ModeOffset]==RecoveryRing) {
+            const bool recovery=r[ModeOffset]==RecoveryRing;
+            value(recovery?PoisonAvoidanceCaption:HealthCaption,FirstScalarOffset,FirstBonusOffset,PercentPerUnit,"%",recovery);
+            value(recovery?PoisonRecoveryCaption:ManaCaption,SecondScalarOffset,SecondBonusOffset,PercentPerUnit,"%",recovery);
         } else {
-            value(1053,41,86,1,"");
-            value(1054,43,87,1,"");
+            value(AccuracyCaption,FirstScalarOffset,FirstBonusOffset,1,"");
+            value(AgilityCaption,SecondScalarOffset,SecondBonusOffset,1,"");
         }
-        if((signedByte(91)>0 && signedByte(92)>0) || signedByte(97)>0 || r[49]) {
-            std::string text=captions.Get(5178)+":";int element=r[49];
-            if(signedByte(97)>0 || r[49]) {
-                if(element!=signedByte(97) && element) text+=" "+captions.Get(5160+element)+"+"+std::to_string(word(50));
-                if(signedByte(97)>0) element=r[97];
-                if(signedByte(98)>0) text+=" "+captions.Get(5160+element)+"+"+std::to_string(signedByte(98)+(element==r[49]?word(50):0));
+        if((signedByte(ExtraElementOffset)>0 && signedByte(ExtraElementAmountOffset)>0) || signedByte(AttackElementBonusKindOffset)>0 || r[AttackElementOffset]) {
+            std::string text=captions.Get(AttackElementCaption)+":";int element=r[AttackElementOffset];
+            if(signedByte(AttackElementBonusKindOffset)>0 || r[AttackElementOffset]) {
+                if(element!=signedByte(AttackElementBonusKindOffset) && element) text+=" "+captions.Get(ElementCaptionBase+element)+"+"+std::to_string(word(AttackElementAmountOffset));
+                if(signedByte(AttackElementBonusKindOffset)>0) element=r[AttackElementBonusKindOffset];
+                if(signedByte(AttackElementBonusAmountOffset)>0) text+=" "+captions.Get(ElementCaptionBase+element)+"+"+std::to_string(signedByte(AttackElementBonusAmountOffset)+(element==r[AttackElementOffset]?word(AttackElementAmountOffset):0));
             }
-            if(signedByte(92)>0) text+=" "+captions.Get(5160+signedByte(91))+"+"+std::to_string(signedByte(92));
-            lines.push_back({text,65408});
+            if(signedByte(ExtraElementAmountOffset)>0) text+=" "+captions.Get(ElementCaptionBase+signedByte(ExtraElementOffset))+"+"+std::to_string(signedByte(ExtraElementAmountOffset));
+            lines.push_back({text,ElementColor});
         }
         for(int kind=0;kind<2;++kind) {
-            const int element=signedByte(52+kind);
-            if(element>0 && element<7) lines.push_back({captions.Get(5179+kind)+": "+captions.Get(5160+element)+"x1",kind?13172630u:65408u});
+            const int element=signedByte(StrongElementOffset+kind);
+            if(element>0 && element<SimpleElementLimit) lines.push_back({captions.Get(StrongElementCaption+kind)+": "+captions.Get(ElementCaptionBase+element)+"x1",kind?BonusColor:ElementColor});
         }
     }
-    range(5100+r[46],47,89,true);
+    if(r[ModeOffset]==VitalNecklace || r[ModeOffset]==RecoveryRing) {
+        if(r[SpeedUpOffset]) lines.push_back({captions.Get(SpeedCaption)+": +"+std::to_string(r[SpeedUpOffset])+" ",NormalColor});
+        if(r[SpeedDownOffset]) lines.push_back({captions.Get(SpeedCaption)+": -"+std::to_string(r[SpeedDownOffset])+" ",NormalColor});
+    }
+    range(MagicCaptionBase+r[MagicKindOffset],MagicOffset,MagicBonusOffset,true);
     lines.push_back(RequirementHint(level,attack,elements));return lines;
 }

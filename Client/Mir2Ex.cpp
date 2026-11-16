@@ -1,4 +1,6 @@
 #include "StdAfx.h"
+#include "GameProcess/AccessoryHintIds.h"
+namespace { constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -1829,6 +1831,32 @@ public:
             if(FILE* report=fopen("equipment-durability-check.txt","wb")) {fprintf(report,"threshold=%d warning=%d raw=%d unit=%d special=%d negative=%d wide=%d ignored=%d drop=%d\n",threshold,warning,rawBytes,unit,special,negative,wide,ignored,drop);fclose(report);}
         }
 
+        if(groupPanel>=PreviewVitalAccessory && groupPanel<=PreviewAccuracyBracelet) {
+            using namespace Mir3AccessoryHint;
+            auto& ui=g_xGameProc.m_xInterface;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            const int modes[]={VitalNecklace,DefenseRing,RecoveryRing,AccuracyBracelet};
+            const char* paths[]={"vital-accessory-hint.bmp","defense-accessory-hint.bmp","recovery-accessory-hint.bmp","accuracy-bracelet-hint.bmp"};
+            const int selected=groupPanel-PreviewVitalAccessory;
+            BYTE raw[sizeof(CItem().m_serverRecord)]={};strcpy((char*)raw,"ÊÎÆ·ÊôÐÔ²âÊÔ");
+            raw[ModeOffset]=modes[selected];raw[DefenseOffset]=1;raw[FirstScalarOffset]=2;
+            raw[MagicDefenseOffset]=1;raw[SecondScalarOffset]=2;raw[FirstBonusOffset]=1;raw[SecondBonusOffset]=1;
+            raw[AttackElementOffset]=1;raw[AttackElementAmountOffset]=2;raw[AttackElementBonusKindOffset]=1;raw[AttackElementBonusAmountOffset]=3;
+            raw[ExtraElementOffset]=1;raw[ExtraElementAmountOffset]=2;raw[StrongElementOffset]=1;raw[StrongElementOffset+1]=2;
+            CItem item;item.SetMir3Item(raw,0);BYTE elements[ElementCount]={};const auto rows=item.AccessoryHint(35,20,elements);
+            const auto has=[&](const std::vector<CItem::HintLine>& lines,const char* text,unsigned color) {for(const auto& line:lines) if(line.text.find(text)!=std::string::npos && line.color==color) return true;return false;};
+            const bool scalar=selected==1?has(rows,": 1-3 (+1)",BonusColor):has(rows,selected==3?": +3 (+1)":": +30% (+10%)",BonusColor);
+            const bool elemental=has(rows,"+5",ElementColor) && has(rows,selected==3?"x2":"x1",ElementColor) && has(rows,selected==3?"x2":"x1",BonusColor);
+            const bool speed=(selected!=0 && selected!=2) || (has(rows,": +1 ",NormalColor) && has(rows,": -1 ",NormalColor));
+            raw[FirstBonusOffset]=255;raw[SecondBonusOffset]=254;item.SetMir3Item(raw,0);const auto negative=item.AccessoryHint(35,20,elements);
+            const bool signedBonus=selected==1?has(negative,": 1-2",NormalColor):has(negative,selected==3?": +2":": +20%",NormalColor);
+            const bool trailing=selected!=2 || has(negative,": +20% ",NormalColor);
+            raw[FirstBonusOffset]=1;raw[SecondBonusOffset]=1;item.SetMir3Item(raw,0);
+            ui.m_xInventoryWnd.AddInvenItem(item,0,TRUE);ui.WindowActivate(_WND_ID_INVENTORY);mouse={550,80};g_xGameProc.m_ptMousePos=mouse;capturePath=paths[selected];
+            const std::string reportPath=std::string(paths[selected])+".txt";
+            if(FILE* report=fopen(reportPath.c_str(),"wb")) {fprintf(report,"scalar=%d elements=%d speed=%d signed=%d trailing=%d\n",scalar,elemental,speed,signedBonus,trailing);fclose(report);}
+        }
+
         if(groupPanel==139 || groupPanel==140) {
             auto& ui=g_xGameProc.m_xInterface;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -2234,6 +2262,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=vital-accessory-hint")==0 ? PreviewVitalAccessory :
+        strcmp(lpCmdLine,"--preview=defense-accessory-hint")==0 ? PreviewDefenseAccessory :
+        strcmp(lpCmdLine,"--preview=recovery-accessory-hint")==0 ? PreviewRecoveryAccessory :
+        strcmp(lpCmdLine,"--preview=accuracy-bracelet-hint")==0 ? PreviewAccuracyBracelet :
         strcmp(lpCmdLine,"--preview=accuracy-necklace-hint")==0 ? 140 :
         strcmp(lpCmdLine,"--preview=necklace-hint")==0 ? 139 :
         strcmp(lpCmdLine,"--preview=equipment-hover-hint")==0 ? 138 :

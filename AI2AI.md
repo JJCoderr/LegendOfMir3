@@ -1055,3 +1055,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 ### 类型20准确敏捷饰品属性
 - 对照444F40 case0x14，类型20准确raw41+signed86(Cm1053)、敏捷raw43+signed87(Cm1054)，均整数；与19共享相同的攻击元素及强弱x1规则，19仍独立保留百分比躲避/诅咒/幸运。复用现有value辅助避免重复元素代码。
 - 增量构建与diff --check通过；accuracy-necklace-hint与necklace-hint三项stats/elements/boundary各全1，覆盖正负加成、行数顺序、元素组合与范围。已检查out/accuracy-necklace-hint.png。类型21..24及53仍未迁移，完整GUI/音效/服务器流程继续。
+
+### 饰品完整属性分支统一补齐
+- 按444F40补齐21/22/23/24；至此其15/19..24/26/57普通提示分支均走原生AccessoryHint。21为体力/魔法恢复百分比，22防御/魔防范围，23回避中毒/中毒恢复百分比(无加成保留尾空格)，21/23在元素后追加独立正负速度；24准确/敏捷及强弱位图x1/x2。比较模式a3标记仍未接入，不宣称整体属性系统完成。
+- 新AccessoryHintIds.h集中命名该函数物品类型、记录偏移、文案、颜色；范围、标量、基础攻击元素、强弱位图分别复用小型局部函数。常量名称按CmList实显修正为中毒回避/恢复，避免误称生命恢复。
+- 按用户新要求合并21..24为一个功能批次统一验证：增量构建通过，四个新增预览各五项scalar/elements/speed/signed/trailing全1；helmet/accessory26/necklace/accuracy-necklace回归通过。四张截图out/{vital-accessory,defense-accessory,recovery-accessory,accuracy-bracelet}-hint.png已检查。夹具0/0耐久用于呈现低耐久色，图标不作资源对应验收。
+- 用户AGENTS.md修改不纳入提交；仅本轮代码diff检查。类型53、商店带图标提示、原版逐像素校准和真实服务器流程继续待完成。
