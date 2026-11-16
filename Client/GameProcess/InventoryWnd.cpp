@@ -40,6 +40,7 @@ VOID CInventoryWnd::Init()
 	CGameWnd::Init();
 	m_nStartLineNum	= 0;
     m_closePressed=false;
+    m_layout.Clear();
 	ZeroMemory(m_rcInvenCell, sizeof(RECT) *_INVEN_MAX_CELL);
 	ZeroMemory(m_rcBeltCell,  sizeof(RECT) *_BELT_MAX_CELL );
 	ZeroMemory(m_stInventoryItem, sizeof(ITEMSET)*_MAX_INVEN_ITEM);
@@ -148,8 +149,10 @@ VOID CInventoryWnd::ShowInventoryWnd()
     const RECT clip={x+17,y+60,x+245,y+364};
     for (nCnt=0;nCnt<_MAX_INVEN_ITEM;++nCnt) {
         if (!m_stInventoryItem[nCnt].bSetted) continue;
-        const int itemX=x+17+(nCnt%6)*38;
-        const int itemY=y+60+(nCnt/6-m_nStartLineNum)*38;
+        const int anchor=m_layout.anchors[nCnt];
+        if (anchor<0) continue;
+        const int itemX=x+17+(anchor%6)*38+(m_layout.widths[nCnt]-1)*19;
+        const int itemY=y+60+(anchor/6-m_nStartLineNum)*38+(m_layout.heights[nCnt]-1)*19;
         m_stInventoryItem[nCnt].xItem.DrawItem(itemX,itemY,_ITEM_TYPE_INVENTORY,&clip);
     }
 	for ( nCnt = 0; nCnt < _MAX_INVEN_BTN; nCnt++ )
@@ -166,40 +169,11 @@ VOID CInventoryWnd::ShowInventoryWnd()
 
 VOID CInventoryWnd::ShowInvenItemState()
 {
-/*	INT nInventoryNum = GetInvenNum(g_xGameProc.m_ptMousePos);
-	if ( nInventoryNum != -1 )
-	{
-		if ( m_stInventoryItem[nInventoryNum].bSetted )
-		{
-			m_stInventoryItem[nInventoryNum].xItem.ShowItemStatus(m_rcWnd.left+95, m_rcWnd.top+250);
-		}
-	}
-*/
-	INT nInventoryNum = GetInvenNum(g_xGameProc.m_ptMousePos);
-	if ( nInventoryNum != -1 )
-	{
-		if ( m_stInventoryItem[nInventoryNum].bSetted )
-		{
-			INT nStartX, nStartY;
-
-			if ( nInventoryNum >= m_nStartLineNum*_INVEN_CELL_XCNT && nInventoryNum < (m_nStartLineNum+_INVEN_CELL_YCNT)*_INVEN_CELL_XCNT ) 
-			{
-				nStartX = m_rcWnd.left+m_rcInvenCell[nInventoryNum-(m_nStartLineNum*_INVEN_CELL_XCNT)].left;
-				nStartY = m_rcWnd.top +m_rcInvenCell[nInventoryNum-(m_nStartLineNum*_INVEN_CELL_XCNT)].top;
-
-				m_stInventoryItem[nInventoryNum].xItem.ShowItemStatus(nStartX+15, nStartY+15);
-			}
-		}
-	}
-
-	INT nBeltInventoryNum = GetBeltNum(g_xGameProc.m_ptMousePos);
-	if ( nBeltInventoryNum != -1 )
-	{
-		if ( m_stBeltItem[nBeltInventoryNum].bSetted )
-		{
-			m_stBeltItem[nBeltInventoryNum].xItem.ShowItemStatus(m_rcWnd.left+95, m_rcWnd.top+250);
-		}		
-	}
+    const int id=GetInvenNum(g_xGameProc.m_ptMousePos);
+    if (id<0 || !m_stInventoryItem[id].bSetted) return;
+    const int anchor=m_layout.anchors[id];
+    m_stInventoryItem[id].xItem.ShowItemStatus(m_rcWnd.left+32+(anchor%6)*38,
+        m_rcWnd.top+75+(anchor/6-m_nStartLineNum)*38);
 }
 
 
@@ -315,6 +289,7 @@ BOOL CInventoryWnd::CheckItemPos(CHAR* szName)
 			}
 		}
 		memcpy(m_stInventoryItem, stCheckedInvenItem, sizeof(ITEMSET)*_MAX_INVEN_ITEM);
+        RebuildLayout();
 
 		CloseHandle(hFile);
 		return TRUE;
@@ -361,21 +336,19 @@ BOOL CInventoryWnd::SaveItemPos(CHAR* szName)
 	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
-INT CInventoryWnd::GetInvenNum(POINT ptMouse)
+int CInventoryWnd::SlotAt(POINT point) const
 {
-	RECT	rc;
-	for ( INT nCnt = 0; nCnt < _INVEN_MAX_CELL; nCnt++ )
-	{
-		SetRect(&rc, m_rcWnd.left+m_rcInvenCell[nCnt].left, m_rcWnd.top+m_rcInvenCell[nCnt].top, 
-			    m_rcWnd.left+m_rcInvenCell[nCnt].left+_INVENTORY_CELL_WIDTH, m_rcWnd.top+m_rcInvenCell[nCnt].top+_INVENTORY_CELL_HEIGHT);
-		if ( PtInRect(&rc, ptMouse) )
-		{
-			const int slot=nCnt+m_nStartLineNum*_INVEN_CELL_XCNT;
-            return slot<_MAX_INVEN_ITEM ? slot : -1;
-		}
-	}
-
-	return -1;
+    const int x=point.x-m_rcWnd.left-17,y=point.y-m_rcWnd.top-60;
+    if (x<0 || y<0 || x>=228 || y>=304) return -1;
+    return x/38+6*(y/38+m_nStartLineNum);
+}
+INT CInventoryWnd::GetInvenNum(POINT point)
+{
+    const int slot=SlotAt(point);
+    if (slot<0) return -1;
+    if (m_layout.cells[slot]>=0) return m_layout.cells[slot];
+    for (int id=0;id<_MAX_INVEN_ITEM;++id) if (!m_stInventoryItem[id].bSetted) return id;
+    return -1;
 }
 
 
@@ -418,6 +391,7 @@ INT CInventoryWnd::GetBeltNum(POINT ptMouse)
 VOID CInventoryWnd::DeleteInvenItem(INT nInventoryNum)
 {
 	ZeroMemory(&m_stInventoryItem[nInventoryNum], sizeof(ITEMSET));
+    m_layout.Remove(nInventoryNum);
 }
 
 
@@ -456,6 +430,7 @@ VOID CInventoryWnd::DeleteInvenItem(INT nMakeIndex, CHAR* szName)
 *******************************************************************************************************************/
 VOID CInventoryWnd::DeleteAllInvenItem()
 {
+    m_layout.Clear();
 	for ( INT nCnt = 0; nCnt < _MAX_INVEN_ITEM; nCnt++ )
 	{
 		ZeroMemory(&m_stInventoryItem[nCnt], sizeof(ITEMSET));
@@ -525,31 +500,37 @@ VOID CInventoryWnd::DeleteAllBeltItem()
 	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
-BOOL CInventoryWnd::AddInvenItem(CItem xItem, INT nInvenNum, BOOL bUseInvenNum)
+bool CInventoryWnd::PlaceItem(int id,const CItem& item,const POINT* point)
 {
-	if ( bUseInvenNum )
-	{
-		if ( !m_stInventoryItem[nInvenNum].bSetted )
-		{
-			m_stInventoryItem[nInvenNum].bSetted = TRUE;
-			m_stInventoryItem[nInvenNum].xItem = xItem;
-
-			return TRUE;
-		}
-	}
-
-	for ( INT nCnt = 0; nCnt < _MAX_INVEN_ITEM; nCnt++ )
-	{
-		if ( !m_stInventoryItem[nCnt].bSetted )
-		{
-			m_stInventoryItem[nCnt].bSetted = TRUE;
-			m_stInventoryItem[nCnt].xItem = xItem;
-
-			return TRUE;
-		}
-	}
-
-	return FALSE;
+    auto& image=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];
+    if (!image.NewSetIndex(item.m_stItemInfo.stStdItem.wLooks)) return false;
+    const int width=(image.m_lpstNewCurrWilImageInfo->shWidth+37)/38;
+    const int height=(image.m_lpstNewCurrWilImageInfo->shHeight+37)/38;
+    int x=-1,y=-1;
+    if (point) {
+        const int slot=SlotAt(*point);
+        if (slot>=0) {
+            x=slot%6; y=slot/6;
+            if (width%2==0 && point->x>m_rcWnd.left+17+38*x+19) ++x;
+            if (height%2==0 && point->y>m_rcWnd.top+60+38*y+19) ++y;
+            x-=width/2; y-=height/2;
+        }
+    }
+    return m_layout.Place(id,width,height,x,y);
+}
+void CInventoryWnd::RebuildLayout()
+{
+    m_layout.Clear();
+    for (int id=0;id<_MAX_INVEN_ITEM;++id)
+        if (m_stInventoryItem[id].bSetted) PlaceItem(id,m_stInventoryItem[id].xItem);
+}
+BOOL CInventoryWnd::AddInvenItem(CItem item,INT preferred,BOOL usePreferred)
+{
+    int id=usePreferred && preferred>=0 && preferred<_MAX_INVEN_ITEM && !m_stInventoryItem[preferred].bSetted ? preferred : -1;
+    if (id<0) for (int i=0;i<_MAX_INVEN_ITEM;++i) if (!m_stInventoryItem[i].bSetted) { id=i; break; }
+    if (id<0 || !PlaceItem(id,item)) return FALSE;
+    m_stInventoryItem[id].bSetted=TRUE; m_stInventoryItem[id].xItem=item;
+    return TRUE;
 }
 
 
@@ -671,24 +652,16 @@ BOOL CInventoryWnd::ExtractBeltItem(CItem* pxItem, INT nBeltInventoryNum)
 	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
-VOID CInventoryWnd::ChangeInvenWithCommon(INT nInventoryNum, LPCOMMONITEMSET pstCommonItemSet)
+VOID CInventoryWnd::ChangeInvenWithCommon(INT id,LPCOMMONITEMSET held,const POINT* point)
 {
-	if ( pstCommonItemSet->bSetted )
-	{
-		CItem xInvenItem;
-		if ( ExtractInvenItem(&xInvenItem, nInventoryNum) )
-		{
-			AddInvenItem(pstCommonItemSet->xItem, nInventoryNum, TRUE);
-
-			pstCommonItemSet->bSetted			= TRUE;
-			pstCommonItemSet->xItem				= xInvenItem;
-			pstCommonItemSet->bWaitResponse		= FALSE;
-			pstCommonItemSet->bIsEquipItem		= FALSE;
-			pstCommonItemSet->bIsHideItem		= FALSE;
-			pstCommonItemSet->bIsBeltItem		= FALSE;
-			pstCommonItemSet->xItem.m_shCellNum = nInventoryNum; 
-		}
-	}
+    if (!held->bSetted || !m_stInventoryItem[id].bSetted) return;
+    const CBagLayout previous=m_layout;
+    m_layout.Remove(id);
+    if (!PlaceItem(id,held->xItem,point)) { m_layout=previous; return; }
+    const CItem old=m_stInventoryItem[id].xItem;
+    m_stInventoryItem[id].xItem=held->xItem;
+    held->xItem=old; held->xItem.m_shCellNum=id;
+    held->bWaitResponse=held->bIsEquipItem=held->bIsHideItem=held->bIsBeltItem=FALSE;
 }
 
 
@@ -809,15 +782,12 @@ VOID CInventoryWnd::SetCommonFromBelt(INT nBeltInventoryNum, LPCOMMONITEMSET pst
 	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
-VOID CInventoryWnd::SetInvenFromCommon(INT nInventoryNum, LPCOMMONITEMSET pstCommonItemSet)
+VOID CInventoryWnd::SetInvenFromCommon(INT id,LPCOMMONITEMSET held,const POINT* point)
 {
-	if ( pstCommonItemSet->bSetted )
-	{
-		pstCommonItemSet->xItem.m_shCellNum = nInventoryNum;
-		AddInvenItem(pstCommonItemSet->xItem, nInventoryNum, TRUE);
-
-		ZeroMemory(pstCommonItemSet, sizeof(COMMONITEMSET));
-	}
+    if (!held->bSetted || !PlaceItem(id,held->xItem,point)) return;
+    m_stInventoryItem[id].bSetted=TRUE; m_stInventoryItem[id].xItem=held->xItem;
+    m_stInventoryItem[id].xItem.m_shCellNum=id;
+    ZeroMemory(held,sizeof(COMMONITEMSET));
 }
 
 
@@ -1036,7 +1006,7 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 			// 存在公共(鼠标)物品集, 不在等待服务器应答信号的过程中, 且不是已穿戴物品时.
 			else if ( pstCommonItemSet->bSetted && !pstCommonItemSet->bWaitResponse && !pstCommonItemSet->bIsEquipItem )
 			{				  
-				ChangeInvenWithCommon(nInventoryNum, pstCommonItemSet);
+				ChangeInvenWithCommon(nInventoryNum, pstCommonItemSet, &ptMouse);
 			}
 		}
 		// 点击的背包中没有物品时。
@@ -1045,7 +1015,7 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 			// 存在公共(鼠标)物品集，且不在等待服务器响应信号时，
 			if ( pstCommonItemSet->bSetted && !pstCommonItemSet->bWaitResponse && !pstCommonItemSet->bIsEquipItem )
 			{				  
-				SetInvenFromCommon(nInventoryNum, pstCommonItemSet);
+				SetInvenFromCommon(nInventoryNum, pstCommonItemSet, &ptMouse);
 			}
 		}
 	}
@@ -1100,7 +1070,7 @@ BOOL CInventoryWnd::OnLButtonDoubleClick(LPCOMMONITEMSET pstCommonItemSet, POINT
 			// 存在公共(鼠标)物品集，且不在等待服务器响应信号时，
 			else if ( pstCommonItemSet->bSetted && !pstCommonItemSet->bWaitResponse && !pstCommonItemSet->bIsEquipItem )
 			{				  
-				ChangeInvenWithCommon(nInventoryNum, pstCommonItemSet);
+				ChangeInvenWithCommon(nInventoryNum, pstCommonItemSet, &ptMouse);
 			}
 		}
 	}

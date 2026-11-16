@@ -1,5 +1,6 @@
 #ifndef _INVENTORYWND_H
 #define _INVENTORYWND_H
+#include "BagLayout.h"
 
 
 #pragma pack(1)
@@ -24,6 +25,9 @@ class CInventoryWnd : public CGameWnd
 { 
 protected:
     bool m_closePressed=false;
+    CBagLayout m_layout;
+    bool PlaceItem(int id,const CItem& item,const POINT* point=nullptr);
+    void RebuildLayout();
 	INT			m_nStartLineNum;					// 背包窗口起始行的编号. (共 10 行, 屏幕上最多可看到 4 行.)
 	RECT		m_rcInvenCell[_INVEN_MAX_CELL];		// 背包窗口各单元格的区域。
 	RECT		m_rcBeltCell[_BELT_MAX_CELL];
@@ -40,6 +44,8 @@ public:
     bool m_scrollCaptured=false;
     bool ScrollInput(int kind, POINT point);
     int ScrollRow() const { return m_nStartLineNum; }
+    int SlotAt(POINT point) const;
+    int ItemAnchor(int id) const { return m_layout.anchors[id]; }
 	CInventoryWnd();
 	~CInventoryWnd();
 
@@ -71,13 +77,13 @@ public:
 	BOOL	ExtractInvenItem(CItem* pxItem, INT nInventoryNum);
 	BOOL	ExtractBeltItem(CItem* pxItem, INT nBeltInventoryNum);
 
-	VOID	ChangeInvenWithCommon(INT nInventoryNum, LPCOMMONITEMSET pstCommonItemSet);
+	VOID	ChangeInvenWithCommon(INT nInventoryNum, LPCOMMONITEMSET pstCommonItemSet, const POINT* point=nullptr);
 	VOID	ChangeBeltWithCommon(INT nBeltInventoryNum, LPCOMMONITEMSET pstCommonItemSet);
 
 	VOID	SetCommonFromInven(INT nInventoryNum, LPCOMMONITEMSET pstCommonItemSet);
 	VOID	SetCommonFromBelt(INT nBeltInventoryNum, LPCOMMONITEMSET pstCommonItemSet);
 
-	VOID	SetInvenFromCommon(INT nInventoryNum, LPCOMMONITEMSET pstCommonItemSet);
+	VOID	SetInvenFromCommon(INT nInventoryNum, LPCOMMONITEMSET pstCommonItemSet, const POINT* point=nullptr);
 	VOID	SetBeltFromCommon(INT nBeltInventoryNum, LPCOMMONITEMSET pstCommonItemSet);
 
 	VOID	AddNewBeltItem(LPCOMMONITEMSET pstCommonItemSet);
