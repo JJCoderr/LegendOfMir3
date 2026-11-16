@@ -80,7 +80,7 @@ public:
 		return memchr( Buffer, '$', bufLen ) ? true : false;
 	}
 
-	// recv 滚欺俊辑 肯己等 窍唱狼 菩哦阑 惶酒辰促.
+	// 从 recv 缓冲区中取出一个完整的数据包.
 	char * ExtractPacket( char *pPacket )
 	{
 		int packetLen = (char *) memchr( Buffer, '$', bufLen ) - Buffer + 1;
@@ -100,10 +100,10 @@ struct GAMESERVERINFO
 	int  index;
 	char name[50];
 	char ip[50];
-	int  connCnt;	// 立加 荐 包府
+	int  connCnt;	// 连接数管理
 };
 
-// ORZ: 倾侩 霸捞飘辑滚 格废 畴靛 单捞磐
+// ORZ: 允许的网关服务器列表节点数据
 struct GATESERVERINFO
 {
 	char ip[50];

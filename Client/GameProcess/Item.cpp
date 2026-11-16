@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 
@@ -31,10 +31,10 @@ BOOL CItem::SetItem(CLIENTITEMRCD stItemInfo, SHORT shInventoryNum)
 	m_stItemInfo = stItemInfo;
 	m_shCellNum = shInventoryNum;
 /*
-a:公扁
-b:渴
-c:馆瘤 迫骂 格吧捞
-g:扁鸥
+a:武器
+b:衣服
+c:戒指 手镯 项链
+g:其他
 */
 /*
 #define _U_DRESS					0
@@ -52,12 +52,12 @@ g:扁鸥
 
 	switch ( m_stItemInfo.stStdItem.bStdMode )
 	{
-	// 公扁.
+	// 武器。
 	case 5:		
 	case 6:		
 		m_bAttr = _U_WEAPON;
 		break;
-	// 渴.
+	// 衣服.
 	case 10:
 	case 11:
 		m_bAttr = _U_DRESS;
@@ -78,11 +78,11 @@ g:扁鸥
 	case 26:
 		m_bAttr = _U_ARMRINGL;
 		break;
-	// 檬, 榷阂.
+	// 蜡烛, 火把。
 	case 30:
 		m_bAttr = _U_RIGHTHAND;
 		break;
-	// 刀啊风, 何利.
+	// 毒粉、符咒。
 	case 25:
 		m_bAttr = _U_ARMRINGL;
 		break;
@@ -146,13 +146,13 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 	{
 		switch ( m_stItemInfo.stStdItem.bStdMode )
 		{
-		// 巢磊渴, 咯磊渴.
+		// 男衣, 女衣.
 		case 10:
 		case 11:
 			{
 				bUseAble = FALSE;
 
-				// 霉掳临.
+				// 第一行。
 				if ( m_stItemInfo.stStdItem.szName[20] )
 					g_xMainWnd.StringPlus(szName, &m_stItemInfo.stStdItem.szName[20], " ", &m_stItemInfo.stStdItem.szName[0], "");
 				else
@@ -160,58 +160,58 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 				g_xMainWnd.PutsHan(NULL, nX, nY, RGB(250, 250, 0), RGB(0, 0, 0), szName);
 				sizeLen = g_xMainWnd.GetStrLength(NULL, NULL, szName);
 
-				sprintf(szLineBuf[0], " 公霸%d 郴备%d/%d", (m_stItemInfo.stStdItem.bWeight), (m_stItemInfo.nDura/1000), (m_stItemInfo.nDuraMax)/1000);
+				sprintf(szLineBuf[0], " Weight %d Durability %d/%d", (m_stItemInfo.stStdItem.bWeight), (m_stItemInfo.nDura/1000), (m_stItemInfo.nDuraMax)/1000);
 
 				g_xMainWnd.PutsHan(NULL, nX+sizeLen.cx, nY, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[0]);
 				
 
-				// 笛掳临.
+				// 第二行.
 				if ( m_stItemInfo.stStdItem.wAC > 0 )
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "规绢%d-%d ", LOBYTE(m_stItemInfo.stStdItem.wAC), HIBYTE(m_stItemInfo.stStdItem.wAC));
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Defense %d-%d ", LOBYTE(m_stItemInfo.stStdItem.wAC), HIBYTE(m_stItemInfo.stStdItem.wAC));
 
 				if ( m_stItemInfo.stStdItem.wMAC > 0 )
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "付亲%d-%d ", LOBYTE(m_stItemInfo.stStdItem.wMAC), HIBYTE(m_stItemInfo.stStdItem.wMAC));
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Magic Resist %d-%d ", LOBYTE(m_stItemInfo.stStdItem.wMAC), HIBYTE(m_stItemInfo.stStdItem.wMAC));
 
 				if ( m_stItemInfo.stStdItem.wDC > 0 )
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "颇鲍%d-%d ", LOBYTE(m_stItemInfo.stStdItem.wDC), HIBYTE(m_stItemInfo.stStdItem.wDC));
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Destruction %d-%d ", LOBYTE(m_stItemInfo.stStdItem.wDC), HIBYTE(m_stItemInfo.stStdItem.wDC));
 
 				if ( m_stItemInfo.stStdItem.wMC > 0 )
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "付过%d-%d ", LOBYTE(m_stItemInfo.stStdItem.wMC), HIBYTE(m_stItemInfo.stStdItem.wMC));
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Magic %d-%d ", LOBYTE(m_stItemInfo.stStdItem.wMC), HIBYTE(m_stItemInfo.stStdItem.wMC));
 
 				if ( m_stItemInfo.stStdItem.wSC > 0 )
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "档仿%d-%d ", LOBYTE(m_stItemInfo.stStdItem.wSC), HIBYTE(m_stItemInfo.stStdItem.wSC));
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Tao Power %d-%d ", LOBYTE(m_stItemInfo.stStdItem.wSC), HIBYTE(m_stItemInfo.stStdItem.wSC));
 
 				g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[1]);
 
-				// 技掳临.
+				// 第三行.
 				switch ( m_stItemInfo.stStdItem.bNeed )
 				{
 				case 0:
 					{
 						if ( g_xGameProc.m_xMyHero.m_stAbility.bLevel >= m_stItemInfo.stStdItem.bNeedLevel )
 						   bUseAble = TRUE;
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "鞘夸饭骇%d ", m_stItemInfo.stStdItem.bNeedLevel);
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Req. Level %d ", m_stItemInfo.stStdItem.bNeedLevel);
 					}
 					break;
 				case 1:
 					{
 						if ( HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wDC) >= m_stItemInfo.stStdItem.bNeedLevel )
 						   bUseAble = TRUE;
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "鞘夸颇鲍仿%d ", m_stItemInfo.stStdItem.bNeedLevel);
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Req. Destruction %d ", m_stItemInfo.stStdItem.bNeedLevel);
 					}
 					break;
 				case 2:
 					{
 						if ( HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wMC) >= m_stItemInfo.stStdItem.bNeedLevel )
 						   bUseAble = TRUE;
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "鞘夸付过仿%d ", m_stItemInfo.stStdItem.bNeedLevel);
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Req. Magic %d ", m_stItemInfo.stStdItem.bNeedLevel);
 					}
 					break;
 				case 3:
 					{
 						if ( HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wSC) >= m_stItemInfo.stStdItem.bNeedLevel )
 						   bUseAble = TRUE;
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "鞘夸档仿%d ", m_stItemInfo.stStdItem.bNeedLevel);
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Req. Tao Power %d ", m_stItemInfo.stStdItem.bNeedLevel);
 					}
 					break;
 				}
@@ -222,13 +222,13 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 					g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap*2, RGB(250, 0, 0), RGB(0, 0, 0), szLineBuf[2]);
 			}
 			break;
-		// 公扁.
+		// 武器。
 		case 5:
 		case 6:
 			{
 				bUseAble = FALSE;
 
-				// 霉掳临.
+				// 第一行。
 				if ( (m_stItemInfo.stStdItem.bNeedIdentify & 0X01) != 0 )			
 				{
 					if ( m_stItemInfo.stStdItem.szName[20] )
@@ -247,41 +247,41 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 				g_xMainWnd.PutsHan(NULL, nX, nY, RGB(250, 250, 0), RGB(0, 0, 0), szName);
 				sizeLen = g_xMainWnd.GetStrLength(NULL, NULL, szName);
 
-				sprintf(szLineBuf[0], " 公霸%d 郴备%d/%d", (m_stItemInfo.stStdItem.bWeight), (m_stItemInfo.nDura/1000), (m_stItemInfo.nDuraMax)/1000);
+				sprintf(szLineBuf[0], " Weight %d Durability %d/%d", (m_stItemInfo.stStdItem.bWeight), (m_stItemInfo.nDura/1000), (m_stItemInfo.nDuraMax)/1000);
 				g_xMainWnd.PutsHan(NULL, nX+sizeLen.cx, nY, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[0]);
 
-				// 笛掳临.
+				// 第二行.
 				if ( m_stItemInfo.stStdItem.wDC > 0 )
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "颇鲍%d-%d ", LOBYTE(m_stItemInfo.stStdItem.wDC), HIBYTE(m_stItemInfo.stStdItem.wDC));
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Destruction %d-%d ", LOBYTE(m_stItemInfo.stStdItem.wDC), HIBYTE(m_stItemInfo.stStdItem.wDC));
 
 				if ( m_stItemInfo.stStdItem.wMC > 0 )
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "付过%d-%d ", LOBYTE(m_stItemInfo.stStdItem.wMC), HIBYTE(m_stItemInfo.stStdItem.wMC));
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Magic %d-%d ", LOBYTE(m_stItemInfo.stStdItem.wMC), HIBYTE(m_stItemInfo.stStdItem.wMC));
 
 				if ( m_stItemInfo.stStdItem.wSC > 0 )
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "档仿%d-%d ", LOBYTE(m_stItemInfo.stStdItem.wSC), HIBYTE(m_stItemInfo.stStdItem.wSC));
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Tao Power %d-%d ", LOBYTE(m_stItemInfo.stStdItem.wSC), HIBYTE(m_stItemInfo.stStdItem.wSC));
 
 				if ( m_stItemInfo.stStdItem.sSpecialPower > 0 )
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "碍档%d ", m_stItemInfo.stStdItem.sSpecialPower);
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Power %d ", m_stItemInfo.stStdItem.sSpecialPower);
 
 				g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[1]);
 
-				// 技掳临.
+				// 第三行.
 				if ( HIBYTE(m_stItemInfo.stStdItem.wAC) > 0 )
-					sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "沥犬+%d ", HIBYTE(m_stItemInfo.stStdItem.wAC));
+					sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Accuracy +%d ", HIBYTE(m_stItemInfo.stStdItem.wAC));
 
 				if ( HIBYTE(m_stItemInfo.stStdItem.wMAC) > 0 )
 				{
 					if ( HIBYTE(m_stItemInfo.stStdItem.wMAC) > 10 )
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "傍拜加档+%d ", HIBYTE(m_stItemInfo.stStdItem.wMAC)-10);
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Attack Speed +%d ", HIBYTE(m_stItemInfo.stStdItem.wMAC)-10);
 					else
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "傍拜加档-%d ", HIBYTE(m_stItemInfo.stStdItem.wMAC));
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Attack Speed -%d ", HIBYTE(m_stItemInfo.stStdItem.wMAC));
 				}
 
 				if ( LOBYTE(m_stItemInfo.stStdItem.wAC) > 0 )
-					sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "青款+%d ", LOBYTE(m_stItemInfo.stStdItem.wAC));
+					sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Luck +%d ", LOBYTE(m_stItemInfo.stStdItem.wAC));
 
 				if ( LOBYTE(m_stItemInfo.stStdItem.wMAC) > 0 )
-					sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "历林+%d ", LOBYTE(m_stItemInfo.stStdItem.wMAC));
+					sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Curse +%d ", LOBYTE(m_stItemInfo.stStdItem.wMAC));
 
 				switch ( m_stItemInfo.stStdItem.bNeed )
 				{
@@ -289,28 +289,28 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 					{
 						if ( g_xGameProc.m_xMyHero.m_stAbility.bLevel >= m_stItemInfo.stStdItem.bNeedLevel )
 						   bUseAble = TRUE;
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "鞘夸饭骇%d ", m_stItemInfo.stStdItem.bNeedLevel);
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Req. Level %d ", m_stItemInfo.stStdItem.bNeedLevel);
 					}
 					break;
 				case 1:
 					{
 						if ( HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wDC) >= m_stItemInfo.stStdItem.bNeedLevel )
 						   bUseAble = TRUE;
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "鞘夸颇鲍仿%d ", m_stItemInfo.stStdItem.bNeedLevel);
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Req. Destruction %d ", m_stItemInfo.stStdItem.bNeedLevel);
 					}
 					break;
 				case 2:
 					{
 						if ( HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wMC) >= m_stItemInfo.stStdItem.bNeedLevel )
 						   bUseAble = TRUE;
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "鞘夸付过仿%d ", m_stItemInfo.stStdItem.bNeedLevel);
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Req. Magic %d ", m_stItemInfo.stStdItem.bNeedLevel);
 					}
 					break;
 				case 3:
 					{
 						if ( HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wSC) >= m_stItemInfo.stStdItem.bNeedLevel )
 						   bUseAble = TRUE;
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "鞘夸档仿%d ", m_stItemInfo.stStdItem.bNeedLevel);
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Req. Tao Power %d ", m_stItemInfo.stStdItem.bNeedLevel);
 					}
 					break;
 				}
@@ -322,18 +322,18 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 
 			}
 			break;			
-        case 15:	//葛磊,捧备
-        case 19:	//格吧捞
+        case 15:	//帽子,头盔
+        case 19:	//项链
 		case 20:
 		case 21:  
-        case 22:	//馆瘤
+        case 22:	//戒指
 		case 23:  
-        case 24:	//迫骂
+        case 24:	//手镯
 		case 26:  
 			{
 				bUseAble = FALSE;
 
-				// 霉掳临.
+				// 第一行。
 				if ( m_stItemInfo.stStdItem.szName[20] )
 					g_xMainWnd.StringPlus(szName, &m_stItemInfo.stStdItem.szName[20], " ", &m_stItemInfo.stStdItem.szName[0], "");
 				else
@@ -341,94 +341,94 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 				g_xMainWnd.PutsHan(NULL, nX, nY, RGB(250, 250, 0), RGB(0, 0, 0), szName);
 				sizeLen = g_xMainWnd.GetStrLength(NULL, NULL, szName);
 
-				sprintf(szLineBuf[0], " 公霸%d 郴备%d/%d", (m_stItemInfo.stStdItem.bWeight), (m_stItemInfo.nDura/1000), (m_stItemInfo.nDuraMax)/1000);
+				sprintf(szLineBuf[0], " Weight %d Durability %d/%d", (m_stItemInfo.stStdItem.bWeight), (m_stItemInfo.nDura/1000), (m_stItemInfo.nDuraMax)/1000);
 
 				g_xMainWnd.PutsHan(NULL, nX+sizeLen.cx, nY, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[0]);
 
-				// 滴锅掳临.
-				// 格吧捞.
+				// 第二行.
+				// 项链.
 				if ( m_stItemInfo.stStdItem.bStdMode == 19 && m_stItemInfo.stStdItem.bStdMode == 20 )
 				{
 					if ( m_stItemInfo.stStdItem.wAC > 0 )
-						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "付过雀乔+%d ", HIBYTE(m_stItemInfo.stStdItem.wAC));
+						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Magic Evasion +%d ", HIBYTE(m_stItemInfo.stStdItem.wAC));
 
 					if ( LOBYTE(m_stItemInfo.stStdItem.wMAC) > 0 )
-						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "历林+%d ", LOBYTE(m_stItemInfo.stStdItem.wMAC));
+						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Curse +%d ", LOBYTE(m_stItemInfo.stStdItem.wMAC));
 
 					if ( HIBYTE(m_stItemInfo.stStdItem.wMAC) > 0 )
-						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "青款+%d ", HIBYTE(m_stItemInfo.stStdItem.wMAC));		
+						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Luck +%d ", HIBYTE(m_stItemInfo.stStdItem.wMAC));		
 				}				
-				// 馆瘤.
+				// 戒指.
 				if ( m_stItemInfo.stStdItem.bStdMode == 22 && m_stItemInfo.stStdItem.bStdMode == 23 )
 				{
 					if ( HIBYTE(m_stItemInfo.stStdItem.wMAC) > 0 )
-						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "吝刀雀汗+%d ", HIBYTE(m_stItemInfo.stStdItem.wMAC));
+						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Poison Recovery +%d ", HIBYTE(m_stItemInfo.stStdItem.wMAC));
 
 					if ( LOBYTE(m_stItemInfo.stStdItem.wAC) > 0 )
-						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "傍拜加档+%d ", LOBYTE(m_stItemInfo.stStdItem.wAC));
+						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Attack Speed +%d ", LOBYTE(m_stItemInfo.stStdItem.wAC));
 					
 					if ( LOBYTE(m_stItemInfo.stStdItem.wMAC) > 0 )
-						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "傍拜加档-%d ", LOBYTE(m_stItemInfo.stStdItem.wMAC));
+						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Attack Speed -%d ", LOBYTE(m_stItemInfo.stStdItem.wMAC));
 				}
-				// 迫骂.
+				// 手镯.
 				else if ( m_stItemInfo.stStdItem.bStdMode == 24 && m_stItemInfo.stStdItem.bStdMode == 26 )
 				{
 					if ( m_stItemInfo.stStdItem.wAC > 0 )
-						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "沥犬+%d ", HIBYTE(m_stItemInfo.stStdItem.wAC));
+						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Accuracy +%d ", HIBYTE(m_stItemInfo.stStdItem.wAC));
 			
 					if ( m_stItemInfo.stStdItem.wMAC > 0 )
-						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "刮酶+%d ", HIBYTE(m_stItemInfo.stStdItem.wMAC));
+						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Agility +%d ", HIBYTE(m_stItemInfo.stStdItem.wMAC));
 				}
 				else
 				{
 
 					if ( m_stItemInfo.stStdItem.wAC > 0 )
-						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "规绢%d-%d ", LOBYTE(m_stItemInfo.stStdItem.wAC), HIBYTE(m_stItemInfo.stStdItem.wAC));
+						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Defense %d-%d ", LOBYTE(m_stItemInfo.stStdItem.wAC), HIBYTE(m_stItemInfo.stStdItem.wAC));
 					
 					if ( m_stItemInfo.stStdItem.wMAC > 0 )
-						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "付亲%d-%d ", LOBYTE(m_stItemInfo.stStdItem.wMAC), HIBYTE(m_stItemInfo.stStdItem.wMAC));
+						sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Magic Resist %d-%d ", LOBYTE(m_stItemInfo.stStdItem.wMAC), HIBYTE(m_stItemInfo.stStdItem.wMAC));
 				}
 
 				if ( m_stItemInfo.stStdItem.wDC > 0 )
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "颇鲍%d-%d ", LOBYTE(m_stItemInfo.stStdItem.wDC), HIBYTE(m_stItemInfo.stStdItem.wDC));
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Destruction %d-%d ", LOBYTE(m_stItemInfo.stStdItem.wDC), HIBYTE(m_stItemInfo.stStdItem.wDC));
 
 				if ( m_stItemInfo.stStdItem.wMC > 0 )
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "付过%d-%d ", LOBYTE(m_stItemInfo.stStdItem.wMC), HIBYTE(m_stItemInfo.stStdItem.wMC));
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Magic %d-%d ", LOBYTE(m_stItemInfo.stStdItem.wMC), HIBYTE(m_stItemInfo.stStdItem.wMC));
 
 				if ( m_stItemInfo.stStdItem.wSC > 0 )
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "档仿%d-%d ", LOBYTE(m_stItemInfo.stStdItem.wSC), HIBYTE(m_stItemInfo.stStdItem.wSC));
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], "Tao Power %d-%d ", LOBYTE(m_stItemInfo.stStdItem.wSC), HIBYTE(m_stItemInfo.stStdItem.wSC));
 
 				g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[1]);
 
-				// 技锅掳临.
+				// 第三行。
 				switch ( m_stItemInfo.stStdItem.bNeed )
 				{
 				case 0:
 					{
 						if ( g_xGameProc.m_xMyHero.m_stAbility.bLevel >= m_stItemInfo.stStdItem.bNeedLevel )
 						   bUseAble = TRUE;
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "鞘夸饭骇%d ", m_stItemInfo.stStdItem.bNeedLevel);
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Req. Level %d ", m_stItemInfo.stStdItem.bNeedLevel);
 					}
 					break;
 				case 1:
 					{
 						if ( HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wDC) >= m_stItemInfo.stStdItem.bNeedLevel )
 						   bUseAble = TRUE;
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "鞘夸颇鲍仿%d ", m_stItemInfo.stStdItem.bNeedLevel);
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Req. Destruction %d ", m_stItemInfo.stStdItem.bNeedLevel);
 					}
 					break;
 				case 2:
 					{
 						if ( HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wMC) >= m_stItemInfo.stStdItem.bNeedLevel )
 						   bUseAble = TRUE;
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "鞘夸付过仿%d ", m_stItemInfo.stStdItem.bNeedLevel);
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Req. Magic %d ", m_stItemInfo.stStdItem.bNeedLevel);
 					}
 					break;
 				case 3:
 					{
 						if ( HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wSC) >= m_stItemInfo.stStdItem.bNeedLevel )
 						   bUseAble = TRUE;
-						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "鞘夸档仿%d ", m_stItemInfo.stStdItem.bNeedLevel);
+						sprintf(&szLineBuf[2][strlen(szLineBuf[2])], "Req. Tao Power %d ", m_stItemInfo.stStdItem.bNeedLevel);
 					}
 					break;
 				}
@@ -440,53 +440,53 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 			}
 			break;
 
-/*		case 25:	//谎府绰 刀啊风
-		case 30:	//檬,冉阂
-		case 40:	//绊扁耽绢府
+/*		case 25:	//撒播的毒粉
+		case 30:	//蜡烛,火把
+		case 40:	//肉块
 		case 42:
 		case 43:
 */		default:
 			{
 				bUseAble = FALSE;
 
-				// 霉锅掳临.
+				// 第一行.
 				g_xMainWnd.PutsHan(NULL, nX, nY, RGB(250, 250, 0), RGB(0, 0, 0), m_stItemInfo.stStdItem.szName);
 				sizeLen = g_xMainWnd.GetStrLength(NULL, NULL, m_stItemInfo.stStdItem.szName);
 
 				switch ( m_stItemInfo.stStdItem.bStdMode )
 				{
-				case 0:			// 拱距.
+				case 0:			// 药水。
 					if ( m_stItemInfo.stStdItem.wAC > 0 )
 						sprintf(&szLineBuf[0][strlen(szLineBuf[0])], " +%dHP ", m_stItemInfo.stStdItem.wAC);
 
 					if ( m_stItemInfo.stStdItem.wMAC > 0 )
 						sprintf(&szLineBuf[0][strlen(szLineBuf[0])], " +%dMP ", m_stItemInfo.stStdItem.wMAC);
 
-					sprintf(&szLineBuf[0][strlen(szLineBuf[0])], " 公霸%d ", m_stItemInfo.stStdItem.bWeight);
+					sprintf(&szLineBuf[0][strlen(szLineBuf[0])], " Weight %d ", m_stItemInfo.stStdItem.bWeight);
 
 					g_xMainWnd.PutsHan(NULL, nX+sizeLen.cx, nY, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[0]);
 
 					break;
-				case 1:			// 富赴绊扁.
-				case 2:			// 林冈逛.
+				case 1:			// 干肉.
+				case 2:			// 饭团。
 					break;
-				case 3:			// 漂荐茄拱距 OR 阿辆傈辑甸.
-					sprintf(&szLineBuf[0][strlen(szLineBuf[0])], " 公霸%d ", m_stItemInfo.stStdItem.bWeight);
+				case 3:			// 特殊药水 OR 各种全书。
+					sprintf(&szLineBuf[0][strlen(szLineBuf[0])], " Weight %d ", m_stItemInfo.stStdItem.bWeight);
 					g_xMainWnd.PutsHan(NULL, nX+sizeLen.cx, nY, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[0]);
 					break;
-				case 4:			// 阿辆氓甸.
-					sprintf(&szLineBuf[0][strlen(szLineBuf[0])], " 公霸%d ", m_stItemInfo.stStdItem.bWeight);
+				case 4:			// 各种书籍.
+					sprintf(&szLineBuf[0][strlen(szLineBuf[0])], " Weight %d ", m_stItemInfo.stStdItem.bWeight);
 					g_xMainWnd.PutsHan(NULL, nX+sizeLen.cx, nY, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[0]);
 
 					switch ( m_stItemInfo.stStdItem.bShape )
 					{
 					case 0:
 						{
-							// 笛掳临.
-							sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " 傈荤公傍厚鞭 ");
+							// 第二行.
+							sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " Warrior Manual ");
 							g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[1]);
 
-							sprintf(&szLineBuf[2][strlen(szLineBuf[2])], " 鞘夸饭骇%d ", m_stItemInfo.stStdItem.wDuraMax);
+							sprintf(&szLineBuf[2][strlen(szLineBuf[2])], " Req. Level %d ", m_stItemInfo.stStdItem.wDuraMax);
 
 							if ( (g_xGameProc.m_xMyHero.m_bJob == _JOB_JUNSA) && (g_xGameProc.m_xMyHero.m_stAbility.bLevel >= m_stItemInfo.stStdItem.wDuraMax) )
 							   bUseAble = TRUE;
@@ -498,11 +498,11 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 						break;
 					case 1:
 						{
-							// 笛掳临.
-							sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " 林贱荤付过氓 ");
+							// 第二行.
+							sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " Taoist Spell Book ");
 							g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[1]);
 
-							sprintf(&szLineBuf[2][strlen(szLineBuf[2])], " 鞘夸饭骇%d ", m_stItemInfo.stStdItem.wDuraMax);
+							sprintf(&szLineBuf[2][strlen(szLineBuf[2])], " Req. Level %d ", m_stItemInfo.stStdItem.wDuraMax);
 
 							if ( (g_xGameProc.m_xMyHero.m_bJob == _JOB_SULSA) && (g_xGameProc.m_xMyHero.m_stAbility.bLevel >= m_stItemInfo.stStdItem.wDuraMax) )
 							   bUseAble = TRUE;
@@ -515,10 +515,10 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 						break;
 					case 2:
 						{
-							sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " 档荤公傍厚鞭 ");
+							sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " Taoist Manual ");
 							g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[1]);
 
-							sprintf(&szLineBuf[2][strlen(szLineBuf[2])], " 鞘夸饭骇%d ", m_stItemInfo.stStdItem.wDuraMax);
+							sprintf(&szLineBuf[2][strlen(szLineBuf[2])], " Req. Level %d ", m_stItemInfo.stStdItem.wDuraMax);
 
 							if ( (g_xGameProc.m_xMyHero.m_bJob == _JOB_DOSA) && (g_xGameProc.m_xMyHero.m_stAbility.bLevel >= m_stItemInfo.stStdItem.wDuraMax) )
 							   bUseAble = TRUE;
@@ -531,48 +531,48 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 						break;
 					}
 					break;						
-				case 25:			// 阿辆 刀啊风.
-					// 霉锅掳临.
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " 公霸%d ", m_stItemInfo.stStdItem.bWeight);
+				case 25:			// 各种毒粉。
+					// 第一行.
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " Weight %d ", m_stItemInfo.stStdItem.bWeight);
 					g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[1]);
 
-					// 滴锅掳临.
-					sprintf(&szLineBuf[2][strlen(szLineBuf[2])], " 荤侩%d/%d ", m_stItemInfo.nDura, m_stItemInfo.nDuraMax);
+					// 第二行.
+					sprintf(&szLineBuf[2][strlen(szLineBuf[2])], " Uses %d/%d ", m_stItemInfo.nDura, m_stItemInfo.nDuraMax);
 					g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap*2, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[2]);
 					break;
-				case 30:			// 榷阂苞 檬.
-					// 滴锅掳临.
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " 公霸%d 郴备%d/%d ", m_stItemInfo.stStdItem.bWeight, m_stItemInfo.nDura/1000, m_stItemInfo.nDuraMax/1000);
+				case 30:			// 火把和蜡烛.
+					// 第二行.
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " Weight %d Durability %d/%d ", m_stItemInfo.stStdItem.bWeight, m_stItemInfo.nDura/1000, m_stItemInfo.nDuraMax/1000);
 					g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[1]);
 					break;
-				case 31:			// 阿辆弓澜矫府令.
-					// 霉锅掳临.
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " 公霸%d ", m_stItemInfo.stStdItem.bWeight);
+				case 31:			// 各种打包系列。
+					// 第一行.
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " Weight %d ", m_stItemInfo.stStdItem.bWeight);
 					g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[1]);
 					break;
-				case 40:		// 阿辆绊扁甸(绊扁耽绢府)
-					// 滴锅掳临.
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " 公霸%d 前龙%d/%d ", m_stItemInfo.stStdItem.bWeight, m_stItemInfo.nDura/1000, m_stItemInfo.nDuraMax/1000);
+				case 40:		// 各种肉类(肉块)
+					// 第二行.
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " Weight %d Quality %d/%d ", m_stItemInfo.stStdItem.bWeight, m_stItemInfo.nDura/1000, m_stItemInfo.nDuraMax/1000);
 					g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[1]);
 					break;
-				case 42:			// 阿辆距犁甸.
-					// 滴锅掳临.
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " 公霸%d 距犁 ", m_stItemInfo.stStdItem.bWeight);
+				case 42:			// 各种药材.
+					// 第二行.
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " Weight %d Herb ", m_stItemInfo.stStdItem.bWeight);
 					g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[1]);
 					break;
-				case 43:		// 阿辆堡籍甸.
-					// 滴锅掳临.
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " 公霸%d 鉴档%d ", m_stItemInfo.stStdItem.bWeight, m_stItemInfo.nDura/1000);
+				case 43:		// 各种矿石.
+					// 第二行.
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " Weight %d Purity %d ", m_stItemInfo.stStdItem.bWeight, m_stItemInfo.nDura/1000);
 					g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[1]);
 					break;
-				case 44:		// 惑痢俊绰 绝绰 漂荐 酒捞袍.
+				case 44:		// 商店里没有的特殊物品.
 					break;
-				case 45:		// 顶俊 冻绢龙锭 官差绰 扁瓷己 酒捞袍.
+				case 45:		// 掉落在地面时发生变化的功能性物品.
 					break;
-				case 46:		// 扁瓷篮 绝绰 窜鉴酒捞袍.
+				case 46:		// 没有功能的单纯物品。
 				default:
-					// 滴锅掳临.
-					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " 公霸%d ", m_stItemInfo.stStdItem.bWeight);
+					// 第二行.
+					sprintf(&szLineBuf[1][strlen(szLineBuf[1])], " Weight %d ", m_stItemInfo.stStdItem.bWeight);
 					g_xMainWnd.PutsHan(NULL, nX, nY+nLineGap, RGB(250, 250, 250), RGB(0, 0, 0), szLineBuf[1]);
 					break;
 				}

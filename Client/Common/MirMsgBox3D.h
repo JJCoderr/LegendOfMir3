@@ -32,7 +32,7 @@ private:
 	BOOL					m_bCanMove;
 	BOOL					m_bFocused;
 	POINT					m_bGrabbedMousePos;
-	// 3DÅ×½ºÆ®
+	// 3D²âÊÔ
 	D3DVERTEX		m_avMagic[4];
 	RECT			m_rcWnd;
 	RECT			m_rcImgWnd;

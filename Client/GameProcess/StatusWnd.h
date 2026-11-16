@@ -39,13 +39,13 @@ class CStatusWnd : public CGameWnd
 { 
 private:
 protected:
-	BYTE				m_bType;						// 0 : 厘馒芒. 1 : 某腐磐 惑怕芒.  2 : 某腐磐 付过 汲沥芒.
+	BYTE				m_bType;						// 0 : 装备窗口. 1 : 角色状态窗口.  2 : 角色魔法设置窗口。
 	CGameBtn			m_xStatusBtn[_MAX_STAUTS_BTN];
 
-	RECT				m_rcCell[_EQUIP_MAX_CELL];		// 牢亥配府芒狼 阿伎甸狼 康开.
+	RECT				m_rcCell[_EQUIP_MAX_CELL];		// 背包窗口各单元格的区域。
 
-	RECT				m_rcMagicCell[_MAGIC_MAX_CELL];	// 付过技泼芒狼 阿伎甸狼 康开.
-	INT					m_nStartLineNum;				// 付过芒狼 贸澜 扼牢狼 锅龋. (付过府胶飘俊 甸绢乐绰俺荐父怒 胶农费且荐乐促..)
+	RECT				m_rcMagicCell[_MAGIC_MAX_CELL];	// 魔法设置窗口各单元格的区域.
+	INT					m_nStartLineNum;				// 魔法窗口首行的编号。(可以按魔法列表中包含的个数进行滚动..)
 	BYTE				m_bMagicIdxTable[_MAX_MAGIC_SKILL];
 	CGameBtn			m_xMagicScrlBtn[2];
 
@@ -53,7 +53,7 @@ protected:
 public:
 	CHAR				m_szEquipItemIdx[_EQUIP_MAX_CELL][12];
 	ITEMSET				m_stEquipItem[_EQUIP_MAX_CELL];
-	ITEMSET				m_stTakeOnItemSet;				// 厘馒矫懦酒捞袍阑 馒侩咯何 皋矫瘤甫 罐阑锭鳖瘤 烙矫利栏肺 历厘茄促.
+	ITEMSET				m_stTakeOnItemSet;				// 将待装备的物品临时保存, 直到收到是否穿戴的消息.
 
 	BYTE				m_bMyMagicCnt;
 	LPCLIENTMAGICRCD	m_pstMyMagic;

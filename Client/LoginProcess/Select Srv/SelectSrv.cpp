@@ -12,7 +12,7 @@
 #define	SERVER_BTN_GAP				10
 #define COUNT_BUTTON_PER_COLUME		8
 
-#define SERVER_BTN_TEXTCOLOR_NORMAL	RGB(10, 10, 10)			// æÓµŒøÓ ªˆ
+#define SERVER_BTN_TEXTCOLOR_NORMAL	RGB(10, 10, 10)			// ∞µ…´
 #define SERVER_BTN_TEXTCOLOR_FOCUS	RGB(0, 255, 255)		// YELLOW
 #define SERVER_BTN_TEXTCOLOR_CLICK	RGB(0,0,0)				// COLORKEY
 
@@ -170,7 +170,7 @@ VOID CSelectSrv::Render(INT	nLoopTime)
 				SetRect(&tRect,m_rcWnd.left + m_ppxSrvBtn[j]->rcBtn.left, m_rcWnd.top + m_ppxSrvBtn[j]->rcBtn.top, m_rcWnd.left +m_ppxSrvBtn[j]->rcBtn.right ,m_rcWnd.top +m_ppxSrvBtn[j]->rcBtn.bottom);
 				if(nBkColor!=RGB(125,125,125))Draw3DBorder(tRect, nBkColor,m_ppxSrvBtn[j]->nAlpha);								
 				g_xMainWnd.PutsHan(NULL, tRect,
-										m_ppxSrvBtn[j]->dwTxtColor, RGB(0,0,0), m_ppxSrvBtn[j]->szCaption,g_xMainWnd.CreateGameFont("∏Ì¡∂",12 ));
+										m_ppxSrvBtn[j]->dwTxtColor, RGB(0,0,0), m_ppxSrvBtn[j]->szCaption,g_xMainWnd.CreateGameFont("Arial",12 ));
 			}
 		}
 	}
@@ -213,7 +213,7 @@ VOID CSelectSrv::Draw3DBorder(RECT rcWnd,COLORREF dwColor,INT nAlpha)
 			D3DMath_MatrixMultiply(matWorld, matScale, matTrans);
 			g_xMainWnd.Get3DDevice()->SetTransform(D3DTRANSFORMSTATE_WORLD, &matWorld);
 
-			// ¿”Ω√
+			// ¡Ÿ ±
 			D3DUtil_InitMaterial(mtrl, 
 								 (FLOAT)GetRValue(dwColor)/255.0f,
 								 (FLOAT)GetGValue(dwColor)/255.0f, 

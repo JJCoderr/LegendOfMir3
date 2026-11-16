@@ -12,7 +12,7 @@ public:
 	BOOL	AddButton(CHAR *pszTxt,RECT xRect,INT nLinePos,CHAR *pszParam,COLORREF nColor,COLORREF cColor);	// Add Button to class
 	BOOL	AddButton(CHAR *pszTxt,CHAR *pszTxt2,RECT xRect,INT nLinePos,CHAR *pszParam,COLORREF nColor,COLORREF cColor);	// Add Button to class
 
-	CMTxtBtn*	ClickCheck(POINT xWndPos,POINT	xPos,INT CurrentTopLine);	// xWndPos: 角力 Text 啊 嘛洒绰 啊厘 场痢
+	CMTxtBtn*	ClickCheck(POINT xWndPos,POINT	xPos,INT CurrentTopLine);	// xWndPos: 实际 Text 绘制的最后端点
 	CMTxtBtn*	ButtonDownCheck(POINT xWndPos,POINT xPos,INT CurrentTopLine);
 	CMTxtBtn*	ButtonUpCheck(POINT xWndPos,POINT xPos,INT CurrentTopLine);
 
@@ -24,9 +24,9 @@ public:
 	BOOL		ReleaseButtons(VOID);	
 private:
 	BOOL		m_bIsReady;
-	RECT		m_rtWndRect;			// 扩档快狼 Rect 窜, 臂磊啊 钎矫登绰 何盒
-	INT			m_nTxtHeight;			// Text喊 Height
-	INT			m_nMaxLine;				// 扩档快俊 钎矫登绰 弥措 Line 荐
+	RECT		m_rtWndRect;			// 窗口的 Rect，仅文字显示的部分
+	INT			m_nTxtHeight;			// 每个 Text 的 Height
+	INT			m_nMaxLine;				// 窗口中显示的最大 Line 数
 	INT			m_nLineGap;
 	POINT		m_xStartPos;
 	BOOL		m_IsUseSubTxt;

@@ -27,7 +27,7 @@ public:
 	VOID SetNpcEditBoxPos(VOID);
 	VOID SetWndRectReduce(VOID);
 	VOID SetWndRectExtend(VOID);
-//  皋矫瘤 窃荐.
+//  消息函数.
 	BOOL	OnLButtonDown(POINT ptMouse);
 	BOOL	OnLButtonUp(POINT ptMouse);
 	VOID	OnMouseMove(POINT ptMouse);
@@ -38,18 +38,18 @@ public:
 	VOID	OnEnterKeyDown(VOID);
 
 private:
-	// Command Click 贸府
-	BOOL	ClickCommandProcess(CMTxtBtn* ClickedBtn);		// 酒贰 俊 乐绰 巴甸 辆钦
+	// Command Click 处理
+	BOOL	ClickCommandProcess(CMTxtBtn* ClickedBtn);		// 综合下面这些内容
 	BOOL	SendCommandToSrv(CHAR* szMsg);
 	INT		m_nNpcMsgState;
 	CMTxtBtn* m_pClickedTxtBtn;
 	CMirMsgBox	m_xMsgBox;
-/*	ClickPepairCommand(VOID);		// 绊摹促(@REPAIR)
-	ClickSellCommand(VOID);			// 迫促(@SELL)
-	ClickBuyCommand(VOID);			// 荤促(@BUY)
-	ClickBuildGuildCommand(VOID);	// 巩颇汲赋(@@BUILDGUILDNOW)
-	ClickSpecialRepairCommand(VOID);// 漂荐荐府(@SPECIALREPAIR)
-	ClickMakeCommand(VOID);			// 父甸促(@MAKE)
+/*	ClickPepairCommand(VOID);		// 修理(@REPAIR)
+	ClickSellCommand(VOID);			// 出售(@SELL)
+	ClickBuyCommand(VOID);			// 购买(@BUY)
+	ClickBuildGuildCommand(VOID);	// 行会创建(@@BUILDGUILDNOW)
+	ClickSpecialRepairCommand(VOID);// 特殊修理(@SPECIALREPAIR)
+	ClickMakeCommand(VOID);			// 制作(@MAKE)
 */
 };
 

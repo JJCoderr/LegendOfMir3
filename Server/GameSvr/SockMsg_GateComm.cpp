@@ -105,7 +105,7 @@ DWORD WINAPI ServerWorkerThread(LPVOID CompletionPortID)
 						pUserInfo->m_bEmpty = true;
 						pUserInfo->Unlock();
 						
-						// 绊媚具 凳
+						// 需要修正
 						if (pUserInfo->m_pxPlayerObject)
 							pUserInfo->m_pxPlayerObject->m_pMap->RemoveObject(pUserInfo->m_pxPlayerObject->m_nCurrX,
 																				pUserInfo->m_pxPlayerObject->m_nCurrY,

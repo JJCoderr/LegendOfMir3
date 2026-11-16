@@ -21,7 +21,7 @@ public:
 	VOID	SetStatusBtnInit();
 
 public:
-//  ¸Þ½ÃÁö ÇÔ¼ö.
+//  ÏûÏ¢º¯Êý.
 	BOOL	OnLButtonDown(POINT ptMouse);
 	BOOL	OnLButtonUp(POINT ptMouse);
 	VOID	OnMouseMove(POINT ptMouse);

@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 
@@ -28,7 +28,7 @@ protected:
 public:
 	VOID	Init(DWORD dwLightColor);
 	VOID	ShowLightFog(WORD wScrnWidth = 400, WORD wScrnHeight =300);
-	// 货肺 官诧 祸阑 m_avSaveLight俊 历厘矫挪促.
+	// 将新变更的颜色保存到 m_avSaveLight 中.
 	VOID	ChangeLightColor(DWORD dwColor);
 	VOID	ClearSavedLightColor();
 	BOOL	GetScreenPosToLightTile(INT nX, INT nY, INT* nTileX, INT* nTileY);

@@ -265,7 +265,7 @@ void CGateInfo::MakeNewCharacter(SOCKET s, _LPTCREATECHR lpTCreateChr)
 
 		pRec = GetDBManager()->CreateRecordset();
 
-		// TBL_CHARACTER Å×ÀÌºí Ãß°¡
+		// Ìí¼Ó TBL_CHARACTER ±í
 
 		sprintf(szQuery, "INSERT TBL_CHARACTER ("
 						"FLD_LOGINID, FLD_CHARNAME, FLD_JOB, FLD_GENDER, FLD_LEVEL, FLD_DIRECTION, "
@@ -296,14 +296,14 @@ void CGateInfo::MakeNewCharacter(SOCKET s, _LPTCREATECHR lpTCreateChr)
 		strcpy( human.szUserID, lpTCreateChr->szID );
 		strcpy( human.szCharName, lpTCreateChr->szName );
 
-		// Æòº¹ Ãß°¡ (0: ³², 1: ¿©)
+		// Ìí¼Ó±ã·þ (0: ÄÐ, 1: Å®)
 		makeItem.szStdType	= 'B';
 		makeItem.nStdIndex	= lpTCreateChr->btGender ? 34 : 33;
 		makeItem.nDura		= 5000;
 		makeItem.nDuraMax	= 5000;
 		MakeNewItem( NULL, &human, &makeItem, 0 );
 
-		// ¸ñ°Ë Ãß°¡
+		// Ìí¼ÓÄ¾½£
 		makeItem.szStdType	= 'A';
 		makeItem.nStdIndex	= 7;
 		makeItem.nDura		= 4000;
@@ -337,7 +337,7 @@ void CGateInfo::GetSelectCharacter(SOCKET s, char *pszPacket)
 	char				szEncodePacket[256];
 	_TDEFAULTMESSAGE	DefaultMsg;
 	
-	// ORZ: Load Balancing, Á¢¼Ó¼ö°¡ °¡Àå ÀûÀº °ÔÀÌÆ® ¼­¹ö IP ¼±ÅÃ
+	// ORZ: Load Balancing, Ñ¡ÔñÁ¬½ÓÊý×îÉÙµÄÍø¹Ø·þÎñÆ÷ IP
 	GAMESERVERINFO *pBestServer = NULL;
 	GAMESERVERINFO *pTemp;
 
@@ -368,7 +368,7 @@ void CGateInfo::GetSelectCharacter(SOCKET s, char *pszPacket)
 	{
 		*pszDevide++ = '\0';
 
-		// ¼­¹ö ¼±ÅÃÀÌ °¡´ÉÇÏµµ·Ï ¼öÁ¤
+		// ÐÞ¸ÄÎª¿ÉÑ¡Ôñ·þÎñÆ÷
 		_TLOADHUMAN		tLoadHuman;
 		CServerInfo*	pServerInfo;
 
@@ -392,8 +392,8 @@ void CGateInfo::GetSelectCharacter(SOCKET s, char *pszPacket)
 		memmove(&szEncodePacket[nPos], szEncodeData, nPos2);
 		szEncodePacket[nPos + nPos2] = '\0';
 		
-		// ORZ: ÀüÃ¼ ¸®½ºÆ®¿¡ Ãß°¡ÇÑ´Ù.
-		// °°Àº ¾ÆÀÌµð°¡ ÀÌ¹Ì Á¸ÀçÇÏ°Å³ª ¸Þ¸ð¸® ºÎÁ·µîÀÇ ÀÌÀ¯·Î ½ÇÆÐÇÒ ¼ö ÀÖ´Ù.
+		// ORZ: Ìí¼Óµ½È«²¿ÁÐ±íÖÐ.
+		// ¿ÉÄÜÒòÏàÍ¬ÕËºÅIDÒÑ´æÔÚ»òÄÚ´æ²»×ãµÈÔ­Òò¶øÊ§°Ü¡£
 //		if ( GetGlobalUserList()->Insert( tLoadHuman.szCharName, szServerIP ) )
 			SendToGate(s, szEncodePacket);
 //		else

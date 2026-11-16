@@ -37,8 +37,8 @@ protected:
 CDBManager * GetDBManager();
 
 
-// 孽府巩捞 呈公 汗棱且 锭 荤侩茄促.
-// 林狼: 弥措 滚欺农扁=4096
+// 查询语句过于复杂时使用。
+// 注意: 最大缓冲区大小=4096
 class CQueryManager
 {
 protected:

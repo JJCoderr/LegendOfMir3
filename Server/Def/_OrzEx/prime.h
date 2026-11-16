@@ -7,7 +7,7 @@
 		2001/02/05 (Last Updated: 2002/03/06)
 
 	Note:
-		家荐(Prime Number)客 包访等 窃荐 笼钦
+		与素数(Prime Number)相关的函数集合
 */
 #ifndef __ORZ_ALGORITHM_PRIME__
 #define __ORZ_ALGORITHM_PRIME__

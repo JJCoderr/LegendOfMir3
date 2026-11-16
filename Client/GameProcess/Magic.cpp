@@ -60,7 +60,7 @@ BOOL CMagic::CreateMagic(BYTE bMagicNum, SHORT shFireTileX, SHORT shFireTileY,
 	if ( pstMagicSpr )
 	{
 		//------------------------------------------------------------------------------------------------------------
-		// ÁÂÇ¥¼¼ÆÃ.
+		// ×ø±êÉèÖÃ¡£
 		//------------------------------------------------------------------------------------------------------------
 		m_pxMap		= &g_xGameProc.m_xMap;
 
@@ -88,17 +88,17 @@ BOOL CMagic::CreateMagic(BYTE bMagicNum, SHORT shFireTileX, SHORT shFireTileY,
 			}
 		}
 
-		// ¹ß»çÁöÁ¡.
+		// ·¢Éäµã¡£
 		m_shFireTileX = shFireTileX;
 		m_shFireTileY = shFireTileY;
 		m_pxMap->GetScrnPosFromTilePos(m_shFireTileX, m_shFireTileY, m_shFireScrnX, m_shFireScrnY);
 
-		// ¸ñÀûÁöÁ¡.
+		// Ä¿±êµØµã.
 		m_shTargetTileX = shTargetTileX;
 		m_shTargetTileY = shTargetTileY;
 		m_pxMap->GetScrnPosFromTilePos(m_shTargetTileX, m_shTargetTileY, m_shTargetScrnX, m_shTargetScrnY);
 
-		// ÇöÀçÀ§Ä¡.
+		// µ±Ç°Î»ÖÃ¡£
 		m_shTileX = m_shFireTileX;
 		m_shTileY = m_shFireTileY;
 		m_shScrnX = m_fFloatScrnX = m_shFireScrnX;
@@ -134,7 +134,7 @@ BOOL CMagic::CreateMagic(BYTE bMagicNum, SHORT shFireTileX, SHORT shFireTileY,
 		//------------------------------------------------------------------------------------------------------------
 
 		//------------------------------------------------------------------------------------------------------------
-		// ±âº»Á¤º¸ÀÔ·Â.
+		// »ù±¾ÐÅÏ¢ÊäÈë.
 		//------------------------------------------------------------------------------------------------------------
 		m_pxOwner	= pxOwner;
 		m_bActiveState= _MAGIC_ACTIVE;
@@ -147,7 +147,7 @@ BOOL CMagic::CreateMagic(BYTE bMagicNum, SHORT shFireTileX, SHORT shFireTileY,
 		//------------------------------------------------------------------------------------------------------------
 
 		//------------------------------------------------------------------------------------------------------------
-		// ¸¶¹ý¿¡ µû¸¥ Á¤º¸¼¼ÆÃ.
+		// ¸ù¾ÝÄ§·¨ÉèÖÃÐÅÏ¢.
 		//------------------------------------------------------------------------------------------------------------
 		switch ( bMagicNum )
 		{
@@ -169,14 +169,14 @@ BOOL CMagic::CreateMagic(BYTE bMagicNum, SHORT shFireTileX, SHORT shFireTileY,
 				m_bRepeat = TRUE;
 				m_bFixed = FALSE;
 				break;
-		// ¸ó½ºÅÍ.
+		// ¹ÖÎï.
 		case _MONMAGIC_MAARROW:
 		case _MONMAGIC_CHIM:
 				m_bRepeat = TRUE;
 				m_bFixed = FALSE;
 				m_bShowLight = FALSE;
 				break;
-		// ¸ó½ºÅÍ.
+		// ¹ÖÎï.
 		case _MONMAGIC_ANTHEAL:
 		case _MONMAGIC_DUALAXE:
 				m_bRepeat = TRUE;
@@ -190,7 +190,7 @@ BOOL CMagic::CreateMagic(BYTE bMagicNum, SHORT shFireTileX, SHORT shFireTileY,
 				m_bFixed = TRUE;
 				m_pxTarget	= NULL;
 				break;
-		// ¸ó½ºÅÍ.
+		// ¹ÖÎï.
 		case _MONMAGIC_COWGHOST:
 		case _MONMAGIC_SINSU:
 		case _MONMAGIC_ZOMBIE:
@@ -226,7 +226,7 @@ BOOL CMagic::CreateMagic(BYTE bMagicNum, SHORT shFireTileX, SHORT shFireTileY,
 		case _SKILL_SHOWHP:
 		case _SKILL_SPACEMOVE2:
 		case _SKILL_SPACEMOVE3:
-		// ¸ó½ºÅÍ.
+		// ¹ÖÎï.
 		case _MONMAGIC_KEPAL:
 		case _MONMAGIC_EXPLODE:
 		case _MONMAGIC_EXPLODE1:
@@ -254,10 +254,10 @@ BOOL CMagic::CreateMagic(BYTE bMagicNum, SHORT shFireTileX, SHORT shFireTileY,
 		//------------------------------------------------------------------------------------------------------------
 
 		//------------------------------------------------------------------------------------------------------------
-		// ÀÌ¹ÌÁö·Îµù.
+		// Í¼Ïñ¼ÓÔØ.
 		//------------------------------------------------------------------------------------------------------------
 		//------------------------------------------------------------------------------------------------------------
-		// ÇÁ·¹ÀÓÁ¤º¸¾ò±â.
+		// »ñÈ¡Ö¡ÐÅÏ¢.
 		//------------------------------------------------------------------------------------------------------------
 		m_dwFstFrame		= pstMagicSpr->dwFstFrm+(10)*m_bDir16;
 		m_dwEndFrame		= pstMagicSpr->dwEndFrm+(10)*m_bDir16;
@@ -335,7 +335,7 @@ BOOL CMagic::CreateMagic(BYTE bMagicNum, SHORT shFireTileX, SHORT shFireTileY,
 
 BOOL CMagic::DrawLight(CLightFog* xLightFog, INT nLoopTime)
 {
-	BYTE bSwingCnt		= 0;				// ÇÁ·¹ÀÓÀÌ º¯È­µÆÀ»¶§¸¸.
+	BYTE bSwingCnt		= 0;				// ½öÔÚÖ¡·¢Éú±ä»¯Ê±.
 	m_wCurrLightDelay  += nLoopTime;
 
 	if ( m_bMagicNum == _SKILL_EARTHFIRE || m_bMagicNum == _SKILL_HOLYSHIELD || m_bMagicNum == _SKILL_FIRE || m_bMagicNum == _SKILL_SPACEMOVE2 || m_bMagicNum == _SKILL_SINSU || m_bMagicNum == _SKILL_LIGHTENING )
@@ -448,7 +448,7 @@ BOOL CMagic::DrawLight(CLightFog* xLightFog, INT nLoopTime)
 
 BOOL CMagic::DrawMagic()
 {
-// ÀÓ½Ã.
+// ÁÙÊ±.
 POINT ptArr[16] = 
 {
 	{40, 34}, {42, 35}, {49, 33}, {59, 31}, {65, 31}, {62, 33}, {54, 36}, {41, 44}, {47, 48}, {47, 45}, 
@@ -484,7 +484,7 @@ POINT ptArr2[16] =
 					vTrans.y = (FLOAT)-m_shScrnY-(FLOAT)m_pxMagicImg->m_lpstNewCurrWilImageInfo->shHeight/2-m_pxMagicImg->m_lpstNewCurrWilImageInfo->shPY+300; 
 					vTrans.z = 0;
 
-// ÀÓ½Ã.
+// ÁÙÊ±.
 	if ( !m_bFixed )
 	{
 					if ( m_bMagicNum == _SKILL_FIREBALL2 )
@@ -524,7 +524,7 @@ POINT ptArr2[16] =
 
 					g_xMainWnd.Get3DDevice()->DrawPrimitive(D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, m_avMagic, 4, NULL);
 
-					// ¿ø»óº¹±Í.
+					// »Ö¸´Ô­×´.
 					ZeroMemory(&mtrl, sizeof(mtrl));
 					mtrl.diffuse.r = mtrl.diffuse.g = mtrl.diffuse.b = 0.1f;
 					mtrl.ambient.r = mtrl.ambient.g = mtrl.ambient.b = 1.0f;
@@ -614,7 +614,7 @@ BOOL CMagic::UpdateMagic(INT nLoopTime)
 	{
 		if ( m_pxTarget )
 		{
-			// Å¸°ÙÀÇ ÁÂÇ¥¸¦ Àç¼³Á¤ÇÑ´Ù.
+			// ÖØÐÂÉèÖÃÄ¿±êµÄ×ø±ê¡£
 			m_shTargetTileX = m_pxTarget->m_wPosX;
 			m_shTargetTileY = m_pxTarget->m_wPosY;
 			m_shTargetScrnX = m_pxTarget->m_shScrnPosX;
@@ -625,7 +625,7 @@ BOOL CMagic::UpdateMagic(INT nLoopTime)
 //			m_shScrnX = m_fFloatScrnX = m_shFireScrnX;
 //			m_shScrnY = m_fFloatScrnY = m_shFireScrnY;
 
-			// °Å¸®Àç¼³Á¤.
+			// ÖØÐÂÉèÖÃ¾àÀë.
 		   if ( m_shScrnX != m_shTargetScrnX )		shScrnGapX = abs(m_shTargetScrnX-m_shScrnX);
 		   else										shScrnGapX = 1;
 
@@ -650,8 +650,8 @@ BOOL CMagic::UpdateMagic(INT nLoopTime)
 		   m_shScrnY = m_fFloatScrnY;
 
 
-		   // ÇöÀç ½ºÅ©¸°ÁÂÇ¥¸¦ Å¸ÀÏÁÂÇ¥·Î º¯È¯ÇÏ¿© ¸¶¹ýÅë°ú¿©ºÎ¸¦ °áÁ¤ÇÑ´Ù.
-//		   if ( ¸¶¹ýÀÌ Åë°úÇÒ¼ö ¾øÀ¸¸é )
+		   // ½«µ±Ç°ÆÁÄ»×ø±ê×ª»»ÎªÍ¼¿é×ø±ê£¬ÒÔ¾ö¶¨Ä§·¨ÊÇ·ñ¿ÉÒÔÍ¨¹ý.
+//		   if ( Ä§·¨²»¿ÉÍ¨¹ý )
 		   INT nabsX, nabsY;
 		   nabsX = abs(m_shTargetScrnX-m_shScrnX);
 		   nabsY = abs(m_shTargetScrnY-m_shScrnY);
@@ -665,7 +665,7 @@ BOOL CMagic::UpdateMagic(INT nLoopTime)
 				m_nPrevDistanceY = nabsY;
 		   }
 		}
-		// Target Actor°¡ ¾ø´Ù¸é.
+		// Èç¹ûÃ»ÓÐ Target Actor¡£
 		else
 		{
 			FLOAT fDisX = (FLOAT)((FLOAT)m_nDistanceX/900);
@@ -697,7 +697,7 @@ BOOL CMagic::UpdateMagic(INT nLoopTime)
 		   }
 		}
 	}
-	// ¿òÁ÷ÀÌÁö ¾Ê´Â È¿°ú¶ó¸é.
+	// Èç¹ûÊÇ²»ÒÆ¶¯µÄÐ§¹û¡£
 	else
 	{
 		if ( m_pxTarget )
@@ -722,19 +722,19 @@ BOOL CMagic::UpdateMagic(INT nLoopTime)
 		m_bFixed = TRUE;
 		m_bRepeat= FALSE;
 		bCrash = TRUE;
-		// Æø¹ßÇÁ·¹ÀÓÀ¸·ÎÀüÈ¯ÇÑ´Ù.
+		// ÇÐ»»µ½±¬Õ¨Ö¡.
 
 		LPEFFECTSPRINFO pstMagicSpr = g_xSpriteInfo.GetExplosionInfo(m_bMagicNum);
 
 		if ( !pstMagicSpr )
 		{
-			// Æø¹ßÇÁ·¹ÀÓÀÌ ¾ø´Ù¸é.
+			// Èç¹ûÃ»ÓÐ±¬Õ¨Ö¡.
 			m_bActiveState	= _MAGIC_FINISH;
 			return FALSE;
 		}
 
 		//------------------------------------------------------------------------------------------------------------
-		// ÇÁ·¹ÀÓÁ¤º¸¾ò±â.
+		// »ñÈ¡Ö¡ÐÅÏ¢.
 		//------------------------------------------------------------------------------------------------------------
 		m_dwFstFrame		= pstMagicSpr->dwFstFrm;
 		m_dwEndFrame		= pstMagicSpr->dwEndFrm;
@@ -754,7 +754,7 @@ BOOL CMagic::UpdateMagic(INT nLoopTime)
 		//------------------------------------------------------------------------------------------------------------
 
 		//------------------------------------------------------------------------------------------------------------
-		// ÀÌ¹ÌÁö·Îµù.
+		// Í¼Ïñ¼ÓÔØ.
 		//------------------------------------------------------------------------------------------------------------
 		WORD wFileType;
 		WORD wImgIdx = pstMagicSpr->wImgIdx;
@@ -1206,7 +1206,7 @@ BOOL CRepeatMagic::DrawMagic()
 
 					g_xMainWnd.Get3DDevice()->DrawPrimitive(D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, m_avMagic, 4, NULL);
 
-					// ¿ø»óº¹±Í.
+					// »Ö¸´Ô­×´.
 					ZeroMemory(&mtrl, sizeof(mtrl));
 					mtrl.diffuse.r = mtrl.diffuse.g = mtrl.diffuse.b = 0.1f;
 					mtrl.ambient.r = mtrl.ambient.g = mtrl.ambient.b = 1.0f;

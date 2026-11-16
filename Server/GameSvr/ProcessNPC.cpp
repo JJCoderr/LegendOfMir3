@@ -91,9 +91,9 @@ UINT WINAPI ProcessNPC(LPVOID lpParameter)
 		nHour = GetTime();
 
 		if (nHour == 23 || nHour == 11)
-			g_nMirDayTime = 2; // Àú³á
+			g_nMirDayTime = 2; // °øÍí
 		else if (nHour == 4 || nHour == 15)
-			g_nMirDayTime = 0; // »õº®
+			g_nMirDayTime = 0; // ÀèÃ÷
 		else if ((nHour >= 0 && nHour <= 3) || (nHour >= 12 && nHour <= 14))
 			g_nMirDayTime = 3;
 		else

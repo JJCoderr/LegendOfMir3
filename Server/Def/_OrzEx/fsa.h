@@ -7,7 +7,7 @@
 		2002/03/05
 
 	Note:
-		皋葛府 且寸/秦力俊 靛绰 厚侩(Cost)苞 窜祈拳(Fragmentation)甫 临捞扁 困茄 努贰胶
+		用于减少内存分配/释放开销(Cost)与碎片(Fragmentation)的类
 */
 #ifndef __ORZ_MEMORY_ALLOCATOR__
 #define __ORZ_MEMORY_ALLOCATOR__

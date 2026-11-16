@@ -469,10 +469,10 @@ VOID CClientSocket::SendSay(CHAR *pszSay)
 
 VOID CClientSocket::SendSpellMsg(INT nMagicID, INT nTargetX, INT nTargetY, INT nTargetID)
 {
-//wParam  : 付过 ID(wtag)
-//lParam1 : 鸥百X
-//lParam2 : 鸥百Y
-//lParam3 : 鸥百 坷宏璃飘 id(wTag)
+//wParam  : 魔法 ID(wtag)
+//lParam1 : 目标X
+//lParam2 : 目标Y
+//lParam3 : 目标对象 id(wTag)
 //lParam4 : ...(wSeries)
 	fnMakeDefMessage(&DefMsg, CM_SPELL, MAKELONG(nTargetX, nTargetY), LOWORD(nTargetID), nMagicID, HIWORD(nTargetID));
 	SendPacket(&DefMsg, NULL);

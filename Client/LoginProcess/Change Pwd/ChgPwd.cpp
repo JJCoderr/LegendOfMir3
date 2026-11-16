@@ -124,7 +124,7 @@ HRESULT	CLogin::OnButtonUp(WPARAM wParam, LPARAM lParam)
 		{	switch(m_xButtons[i].m_nButtonID)
 			{	case IMG_IDX_BTN_NEW:
 				{
-					//m_nProgress = PRG_NEW_ACCOUNT;	- > New Account肺 逞扁绰 窃荐
+					//m_nProgress = PRG_NEW_ACCOUNT;	- > 切换到 New Account 的函数
 					SetFocusBefore();
 					SetWindowText(g_xChatEditBox.GetSafehWnd(),NULL);
 					m_nUserState = LGM_INPUT_USER_ID;
@@ -132,8 +132,8 @@ HRESULT	CLogin::OnButtonUp(WPARAM wParam, LPARAM lParam)
 					break;
 				}
 			case IMG_IDX_BTN_CHGPASS:
-				{	// 烙矫肺 辆丰滚瓢栏肺 捞侩
-					//	Avi 包访 窃荐 辆丰 窍绰 内靛
+				{	// 临时作为退出按钮使用
+					//	结束 Avi 相关函数的代码
 					//	break; 
 				}
 //						case BTN_EXIT:

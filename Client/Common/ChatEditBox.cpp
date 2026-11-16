@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 
@@ -26,15 +26,15 @@ static CChatEdit*	g_xChatEdit = NULL;
 
 /******************************************************************************************************************
 
-	窃荐疙 : CChatEdit::CChatEdit()
+	函数名 : CChatEdit::CChatEdit()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CChatEdit::CChatEdit()
@@ -50,15 +50,15 @@ CChatEdit::CChatEdit()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CChatEdit::~CChatEdit()
+	函数名 : CChatEdit::~CChatEdit()
 
-	累己磊 : 
-	累己老 : 
+	作者 : 
+	日期 : 
 
-	格利   : 
-	免仿   : 
+	目的   : 
+	输出   : 
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CChatEdit::~CChatEdit()
@@ -70,15 +70,15 @@ CChatEdit::~CChatEdit()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CChatEdit::DestroyDialog()
+	函数名 : CChatEdit::DestroyDialog()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : BOOL 
+	目的   :
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CChatEdit::DestroyDialog()
@@ -97,19 +97,19 @@ BOOL CChatEdit::DestroyDialog()
 
 /******************************************************************************************************************
 
-	窃荐疙 : ChatEditDlgProc()
+	函数名 : ChatEditDlgProc()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : HWND hWnd
+	目的   :
+	输入   : HWND hWnd
 	         UINT uMsg
 	         WPARAM wParam
 	         LPARAM lParam
-	免仿   : INT_PTR CALLBACK 
+	输出   : INT_PTR CALLBACK
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 INT_PTR CALLBACK ChatEditDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -121,19 +121,19 @@ INT_PTR CALLBACK ChatEditDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 /******************************************************************************************************************
 
-	窃荐疙 : CChatEdit::ChatEditProc()
+	函数名 : CChatEdit::ChatEditProc()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : HWND hWnd
+	目的   :
+	输入   : HWND hWnd
 	         UINT nMsg
 	         WPARAM wParam
 	         LPARAM lParam
-	免仿   : LRESULT CALLBACK 
+	输出   : LRESULT CALLBACK
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lParam)
@@ -215,21 +215,21 @@ LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LP
 
 /******************************************************************************************************************
 
-	窃荐疙 : CChatEdit::Create()
+	函数名 : CChatEdit::Create()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : HINSTANCE hInstance
+	目的   :
+	输入   : HINSTANCE hInstance
 	         HWND hWndParent
 	         INT nX
 	         INT nY
 	         INT nXsize
 	         INT nYSize
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CChatEdit::Create(HINSTANCE hInstance, HWND hWndParent, INT nX, INT nY, INT nXsize, INT nYSize)
@@ -239,7 +239,7 @@ BOOL CChatEdit::Create(HINSTANCE hInstance, HWND hWndParent, INT nX, INT nY, INT
 								 hWndParent, NULL, hInstance, NULL);	  
 	m_WndProcChatEdit = (WNDPROC)SetWindowLong(m_hChatEdit, GWL_WNDPROC, (LONG)ChatEditDlgProc);
 
-	// 捞固 迄飘啊 积己登绢 乐栏搁 货肺 父甸荐 乐档废 Clear
+	// 若字体已创建, 则 Clear 以便重新创建
 	if ( m_hFontChatEdit != NULL )
 	{
 		DeleteObject(m_hFontChatEdit); 
@@ -248,10 +248,10 @@ BOOL CChatEdit::Create(HINSTANCE hInstance, HWND hWndParent, INT nX, INT nY, INT
 
 	m_hFontChatEdit = CreateFont(12, 0, 0, 0, FW_NORMAL, 0, 0, 0, HANGUL_CHARSET, 
 								 OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, 
-								 DEFAULT_QUALITY, DEFAULT_PITCH, "奔覆眉");
+								 DEFAULT_QUALITY, DEFAULT_PITCH, "Arial");
 
 	SendMessage(m_hChatEdit, WM_SETFONT, (WPARAM)m_hFontChatEdit, MAKELPARAM(TRUE, 0));
-	// 涝仿俊叼飘扩档快狼 弥措涝仿巩磊 肮荐 沥狼.
+	// 输入编辑窗口的最大输入字符个数定义.
 	SendMessage(m_hChatEdit, EM_LIMITTEXT, (WPARAM)95, 0);
 	ShowWindow(m_hChatEdit, SW_HIDE);
     UpdateWindow(m_hChatEdit);

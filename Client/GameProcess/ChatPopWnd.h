@@ -13,11 +13,11 @@ class CChatPopWnd : public CGameWnd
 { 
 private:
 protected:
-	CDLList<CHATSTRING> m_xstrDividedChat;		// 唱穿绢柳 盲泼 单捞鸥.
+	CDLList<CHATSTRING> m_xstrDividedChat;		// 分割后的聊天数据。
 	
 	CGameBtn		m_xChatPopBtn;
-	RECT			m_rcChatPopFrame;			// 盲泼康开.
-	INT				m_nCurrStartChatLine;		// 盲泼拳搁扼牢狼 力老 拉临捞 啊府虐绰 盲泼府胶飘狼 锅龋牢郸胶.
+	RECT			m_rcChatPopFrame;			// 聊天区域.
+	INT				m_nCurrStartChatLine;		// 聊天画面最上面一行所指向的聊天列表的编号索引。
 	INT				m_nCanScrlCnt;
 
 public:
@@ -36,7 +36,7 @@ public:
 	VOID	ShowChatPopWnd();
 	VOID	SetStatusBtnInit();
 public:
-//  皋矫瘤 窃荐.
+//  消息函数.
 	BOOL	OnLButtonDown(POINT ptMouse);
 	BOOL	OnLButtonUp(POINT ptMouse);
 	VOID	OnMouseMove(POINT ptMouse);

@@ -10,23 +10,23 @@ public:
 	~CInterface();
 public:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// 谅螟惑窜狼 Message 包府.
+// 左上角的 Message 管理。
 //---------------------------------------------------------------------------------------------------------------//
 	ClientSysMsg	m_xClientSysMsg;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// Main Interface 贸府函荐.
+// Main Interface 处理变量.
 //---------------------------------------------------------------------------------------------------------------//
-	CWHWilImageData*	m_pxInterImg;					// 霸烙惑俊辑 荤侩且 牢磐其捞胶 捞固瘤.
-	CWHWilImageData		m_xInterImgEx;					// 牢磐其捞胶 包访 捞固瘤.
+	CWHWilImageData*	m_pxInterImg;					// 游戏中使用的界面图像.
+	CWHWilImageData		m_xInterImgEx;					// 界面相关图像。
 
-	COMMONITEMSET		m_stCommonItem;					// 傍侩 酒捞袍 历厘(付快胶 酒捞袍).
-	RECT				m_rcMain;						// 皋牢牢磐其捞胶 傈眉 康开.
+	COMMONITEMSET		m_stCommonItem;					// 公共物品存储(鼠标物品).
+	RECT				m_rcMain;						// 主界面整个区域。
 
-	RECT				m_rcChat;						// 盲泼芒 康开.
-	INT					m_nFstLine;						// 盲泼拳搁扼牢狼 力老 拉临捞 啊府虐绰 盲泼府胶飘狼 锅龋牢郸胶.
-	CDLList<CHAT>		m_xChat;						// 唱穿绢柳 盲泼 单捞鸥.
+	RECT				m_rcChat;						// 聊天窗口区域.
+	INT					m_nFstLine;						// 聊天画面最上面一行所指向的聊天列表的编号索引。
+	CDLList<CHAT>		m_xChat;						// 分割后的聊天数据。
 
 	CDLList<INT>		m_xWndOrderList;				
 	BOOL				m_bMoveFocusedWnd;
@@ -34,36 +34,36 @@ public:
 	SHORT				m_shBeltHeight;
 	BYTE				m_bBeltState;
 
-	CGameBtn			m_xInterBtn[_MAX_INTER_BTN];	// 滚瓢.
+	CGameBtn			m_xInterBtn[_MAX_INTER_BTN];	// 按钮.
 
 	CScrlBar			m_xScrlBar;
 
 	BOOL				m_bShowKey;
 
-	CMirMsgBox			m_xMsgBox;						// 侩扁.
-	INT					m_nIdxMsgBox;					// 侩扁.
+	CMirMsgBox			m_xMsgBox;						// 容器.
+	INT					m_nIdxMsgBox;					// 容器.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// Main Interface 俊辑 包府窍绰 Window.
+// 由 Main Interface 管理的 Window.
 //---------------------------------------------------------------------------------------------------------------//
-	CInventoryWnd		m_xInventoryWnd;				//啊规扩档快.
-	CStatusWnd			m_xStatusWnd;					//某腐磐 沥焊 焊扁扩档快(3俺).
-	CStoreWnd			m_xStoreWnd;					//惑痢扩档快.
-	CExchangeWnd		m_xExchangeWnd;					//背券扩档快.
-	CGuildMasterWnd		m_xGuildMasterWnd;				//巩林扩档快.
-	CGuildWnd			m_xGuildWnd;					//巩盔扩档快.
-	CGroupWnd			m_xGroupWnd;					//弊缝扩档快.
-	CGroupPopWnd		m_xGroupPopWnd;					//弊缝涝仿扩档快.
-	CChatPopWnd			m_xChatPopWnd;					//弊缝涝仿扩档快.
-	CNPCWnd				m_xNPCWnd;						//NPC 措拳芒.
-	CQuestWnd			m_xQuestWnd;					//涅胶飘芒.
-	COptionWnd			m_xOptionWnd;					//可记芒.
-	CHorseWnd			m_xHorseWnd;					//富芒.
+	CInventoryWnd		m_xInventoryWnd;				//背包窗口.
+	CStatusWnd			m_xStatusWnd;					//角色信息查看窗口(3个)。
+	CStoreWnd			m_xStoreWnd;					//商店窗口.
+	CExchangeWnd		m_xExchangeWnd;					//交易窗口.
+	CGuildMasterWnd		m_xGuildMasterWnd;				//门主窗口.
+	CGuildWnd			m_xGuildWnd;					//文元窗口.
+	CGroupWnd			m_xGroupWnd;					//组窗口。
+	CGroupPopWnd		m_xGroupPopWnd;					//组输入窗口.
+	CChatPopWnd			m_xChatPopWnd;					//组输入窗口.
+	CNPCWnd				m_xNPCWnd;						//NPC 对话窗口。
+	CQuestWnd			m_xQuestWnd;					//任务窗口.
+	COptionWnd			m_xOptionWnd;					//选项窗口.
+	CHorseWnd			m_xHorseWnd;					//聊天框.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 public:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// 檬扁拳, 昏力, 积己.
+// 初始化, 删除, 创建.
 //---------------------------------------------------------------------------------------------------------------//
 	VOID			Init();
 	VOID			Destroy();
@@ -71,16 +71,16 @@ public:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// 盲泼皋矫瘤包访 窃荐.
+// 聊天消息相关函数.
 //---------------------------------------------------------------------------------------------------------------//
 	VOID			MsgAdd(DWORD dwFontColor, DWORD dwFontBackColor, CHAR* pszMsg = NULL);
-	BOOL			MsgDelete();					// 皋矫瘤 昏力.
+	BOOL			MsgDelete();					// 消息删除。
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// 皋牢牢磐其捞胶包访 窃荐.
+// 主界面相关函数.
 //---------------------------------------------------------------------------------------------------------------//
-	VOID			RenderInterface(INT nLoopTime, POINT ptMousePos);	// 拳搁俊 牢磐其捞胶 包访何盒阑 焊咯霖促.
+	VOID			RenderInterface(INT nLoopTime, POINT ptMousePos);	// 在屏幕上显示界面相关部分。
 
 	VOID			ShowWndList();
 	VOID			ShowChatList();
@@ -90,7 +90,7 @@ public:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-// 扩档快 府胶飘 包府 棺 惑怕摹 汲沥窃荐.
+// 窗口列表管理及状态值设置函数.
 //---------------------------------------------------------------------------------------------------------------//
 	INT				GetWindowInMousePos(POINT ptMouse);
 	VOID			AddWindowToList(INT nID);

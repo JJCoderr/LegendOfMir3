@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 
@@ -27,44 +27,44 @@ class CMagic
 private:
 protected:
 public:
-	BYTE			m_bActiveState;							// 付过 劝己拳咯何.(付过家戈矫俊 荤侩等促.)
-	BOOL			m_bRepeat;								// 局聪皋捞记狼 馆汗咯何.
-	BOOL			m_bFixed;								// 付过狼 捞悼咯何.
-	BYTE			m_bMagicNum;							// 付过锅龋.
+	BYTE			m_bActiveState;							// 魔法是否激活.(魔法消失时使用.)
+	BOOL			m_bRepeat;								// 动画是否重复。
+	BOOL			m_bFixed;								// 魔法是否移动.
+	BYTE			m_bMagicNum;							// 魔法编号.
 
-	CActor*			m_pxOwner;								// 付过惯荤林眉.
-	CActor*			m_pxTarget;								// 付过惯荤按眉.
-	CMapHandler*	m_pxMap;								// 甘曼炼器牢磐.
+	CActor*			m_pxOwner;								// 魔法发射主体。
+	CActor*			m_pxTarget;								// 魔法发射对象.
+	CMapHandler*	m_pxMap;								// 地图引用指针.
 
-	// 谅钎沥焊.
-	SHORT	m_shScrnX, m_shScrnY;							// 付过胶农赴谅钎.
-	FLOAT	m_fFloatScrnX, m_fFloatScrnY;					// 付过胶农赴谅钎.
-	SHORT	m_shTileX, m_shTileY;							// 付过鸥老谅钎.
+	// 坐标信息。
+	SHORT	m_shScrnX, m_shScrnY;							// 魔法屏幕坐标。
+	FLOAT	m_fFloatScrnX, m_fFloatScrnY;					// 魔法屏幕坐标。
+	SHORT	m_shTileX, m_shTileY;							// 魔法图块坐标.
 
-	SHORT	m_shFireScrnX, m_shFireScrnY;					// 付过积己胶农赴谅钎.	
-	SHORT	m_shFireTileX, m_shFireTileY;					// 付过积己鸥老谅钎.
+	SHORT	m_shFireScrnX, m_shFireScrnY;					// 魔法生成屏幕坐标.	
+	SHORT	m_shFireTileX, m_shFireTileY;					// 魔法生成图块坐标。
 
-	SHORT	m_shTargetScrnX, m_shTargetScrnY;				// 格钎痢狼 胶农赴谅钎.
-	SHORT	m_shTargetTileX, m_shTargetTileY;				// 格钎痢狼 鸥老谅钎.(函拳瞪荐乐促.)
+	SHORT	m_shTargetScrnX, m_shTargetScrnY;				// 目标点的屏幕坐标。
+	SHORT	m_shTargetTileX, m_shTargetTileY;				// 目标点的图块坐标.(可能会变化.)
 
-	// 坊歹傅沥焊.
-	WORD	m_wCurrDelay;									// 瘤楷矫埃历厘蔼.
+	// 渲染信息.
+	WORD	m_wCurrDelay;									// 延迟时间保存值.
 	WORD	m_wCurrLightDelay;
-	WORD	m_wFrmDelay;									// 橇饭烙阑 逞扁扁 困茄 瘤楷矫埃蔼.
-	WORD	m_wMagicLife;									// 付过捞 角青登绊 乐绰 矫埃.(ms窜困)
+	WORD	m_wFrmDelay;									// 用于翻帧的延迟时间值.
+	WORD	m_wMagicLife;									// 魔法正在执行的时间。(单位 ms)
 
 
-	BYTE	m_bLightRadius[2];								// 堡盔 呈厚.
-	BYTE	m_bLightColor[2][3];							// 堡盔 祸.
-	BYTE	m_bMagicColor[3];								// 祸.
+	BYTE	m_bLightRadius[2];								// 光源宽度。
+	BYTE	m_bLightColor[2][3];							// 光源颜色.
+	BYTE	m_bMagicColor[3];								// 颜色。
 
-	DWORD	m_dwFstFrame;									// 泅犁 付过狼 矫累橇饭烙.
-	DWORD	m_dwEndFrame;									// 泅犁 付过狼 付瘤阜橇饭烙.
-	DWORD	m_dwCurrFrame;									// 橇饭烙历厘蔼.
+	DWORD	m_dwFstFrame;									// 当前魔法的起始帧.
+	DWORD	m_dwEndFrame;									// 当前魔法的最后一帧.
+	DWORD	m_dwCurrFrame;									// 帧保存值.
 
-	BYTE	m_bBlendType;									// 付过阑 绢恫屈怕肺 弊副巴牢啊甫 搬沥.
-	BYTE	m_bOpacity;										// 0 - 255窜拌. 0篮 肯傈 捧疙(扼捞飘屈怕), 255绰 阂捧疙.
-	BYTE	m_bSwingCnt;									// 付过狼 如甸覆 炼扒阑 霖促.
+	BYTE	m_bBlendType;									// 决定以何种形态绘制魔法。
+	BYTE	m_bOpacity;										// 0 - 255 级. 0 为完全透明(光照形态), 255 为不透明.
+	BYTE	m_bSwingCnt;									// 设置魔法摇动的条件.
 
 	FLOAT	m_fGradient;
 	INT		m_nShiftX;
@@ -101,7 +101,7 @@ public:
 };
 
 
-// _SKILL_FIRE, _SKILL_SHOOTLIGHTEN 傈侩.
+// _SKILL_FIRE, _SKILL_SHOOTLIGHTEN 专用。
 class CMagicStream : public CMagic
 {
 private:
@@ -132,13 +132,13 @@ public:
 
 
 
-// _SKILL_HOLYSHIELD, _SKILL_EARTHFIRE 傈侩.
+// _SKILL_HOLYSHIELD, _SKILL_EARTHFIRE 专用。
 class CRepeatMagic : public CMagic
 {
 private:
 public:
 	DWORD	m_dwMagiLifeTotal;
-	INT		m_nEventID;					// 捞亥飘肺包府等促.
+	INT		m_nEventID;					// 由事件管理.
 
 	_inline CRepeatMagic()
 	{

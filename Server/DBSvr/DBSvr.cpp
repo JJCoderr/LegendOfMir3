@@ -192,7 +192,7 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 
 	GetDBManager()->Init( InsertLogMsg, szDatabase, "sa", "prg" );
 
-	// Å×ÀÌºí ÀÐ±â
+	// ¶ÁÈ¡±í
 	CConnection *pConn = GetDBManager()->m_dbMain.CreateConnection( "Mir2_Common", "sa", "prg" );
 	if ( pConn )
 	{

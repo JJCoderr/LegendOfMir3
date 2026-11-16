@@ -398,30 +398,30 @@ LPDIRECTDRAWSURFACE7 LoadBitmap8BitsInSurface(LPDIRECTDRAW7 lpdd, LPCTSTR pszFil
 
 	HANDLE hFile = ::CreateFile(pszFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
 								FILE_ATTRIBUTE_NORMAL, NULL);
-	// 厚飘甘 庆歹沥焊.(鉴辑措肺 扁废等促.)
+	// 位图头信息。(按顺序记录。)
 	//BITMAPFILEHEADER
 	//BITMAPINFO(BITMAPINFOHEADER, RGBQUAD)
-	//捞固瘤单捞磐
+	//图像数据
 
 
 	if ( hFile )
 	{
 		ZeroMemory(&stFileHeader, sizeof(stFileHeader));
 
-		// 颇老庆歹佬扁.
+		// 读取文件头.
 		ReadFile(hFile, &stFileHeader, sizeof(stFileHeader), &dwReadSize, NULL);
 
-		// BMP牢瘤甫 犬牢茄促.
+		// 检查是否为 BMP。
 		if ( HIBYTE(stFileHeader.bfType) == 'M' && LOBYTE(stFileHeader.bfType) == 'B' )
 		{
 			pstBmpInfo = (LPBITMAPINFO) malloc(sizeof(BITMAPINFO) + sizeof(RGBQUAD)*256);
 
-			// 牢器庆歹父怒父 老窜 佬绰促.
+			// 先只读取信息头长度的内容。
 			ReadFile(hFile, pstBmpInfo, sizeof(BITMAPINFO)-sizeof(RGBQUAD), &dwReadSize, NULL);
 
 			pstInfoHeader = &(pstBmpInfo->bmiHeader);
 
-			// 8厚飘烙阑 犬牢茄促.
+			// 确认是否为 8 位.
 			if( pstInfoHeader->biBitCount == 8 && pstInfoHeader->biCompression == BI_RGB)
 			{
 				DWORD dwColorTableSize = 256 * sizeof(RGBQUAD);
@@ -441,7 +441,7 @@ LPDIRECTDRAWSURFACE7 LoadBitmap8BitsInSurface(LPDIRECTDRAW7 lpdd, LPCTSTR pszFil
 					ReadFile(hFile, pbDataBit, pstBmpInfo->bmiHeader.biWidth*pstBmpInfo->bmiHeader.biHeight, &dwReadSize, NULL);
 				}
 
-				// 角力掘篮单捞鸥甫 辑乔胶俊 持绰促.
+				// 将实际获得的数据放入表面.
 				LPDIRECTDRAWSURFACE7 lpdds;
 				DDSURFACEDESC2 ddsd;
 				ZeroMemory(&ddsd, sizeof(DDSURFACEDESC2));
@@ -456,7 +456,7 @@ LPDIRECTDRAWSURFACE7 LoadBitmap8BitsInSurface(LPDIRECTDRAW7 lpdd, LPCTSTR pszFil
 				lpdd->CreateSurface(&ddsd, &lpdds, NULL);
 				lpdds->Lock(NULL, &ddsd, 0, NULL);
 
-//扼牢喊 单捞鸥绰 鞍瘤父 扼牢捞 困何磐 第官差菌扁锭巩俊 促矫 倒妨霖促.
+//各行数据相同，但由于行从上到下被颠倒，因此再次反转回来.
 /*				INT nLineCnt = 0;
 				for ( INT nY=(ddsd.dwHeight-1); nY>=0; nY-- )
 				{
@@ -520,7 +520,7 @@ LPDIRECTDRAWSURFACE7 LoadWilIntoSurface(LPDIRECTDRAW7 lpdd, CHAR* szWilFile)
 		ReadFile(hFile, pbData, shWidth*shHeight, &dwReadLen, NULL);
 		CloseHandle(hFile);
 
-		// 角力掘篮单捞鸥甫 辑乔胶俊 持绰促.
+		// 将实际获得的数据放入表面.
 		LPDIRECTDRAWSURFACE7 lpdds;
 		DDSURFACEDESC2 ddsd;
 		ZeroMemory(&ddsd, sizeof(DDSURFACEDESC2));
@@ -535,7 +535,7 @@ LPDIRECTDRAWSURFACE7 LoadWilIntoSurface(LPDIRECTDRAW7 lpdd, CHAR* szWilFile)
 		lpdd->CreateSurface(&ddsd, &lpdds, NULL);
 		lpdds->Lock(NULL, &ddsd, 0, NULL);
 
-//扼牢喊 单捞鸥绰 鞍瘤父 扼牢捞 困何磐 第官差菌扁锭巩俊 促矫 倒妨霖促.
+//各行数据相同，但由于行从上到下被颠倒，因此再次反转回来.
 /*				INT nLineCnt = 0;
 		for ( INT nY=(ddsd.dwHeight-1); nY>=0; nY-- )
 		{

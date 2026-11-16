@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	¸ğµâ¸í:																											
-																													
-	ÀÛ¼ºÀÚ:																											
-	ÀÛ¼ºÀÏ:																											
-																													
-	[ÀÏÀÚ][¼öÁ¤ÀÚ] : ¼öÁ¤ ³»¿ë																						
-                                                                                                                   
+
+	Ä£¿éÃû:
+
+	×÷Õß:
+	±àĞ´ÈÕÆÚ:
+
+	[ÈÕÆÚ][ĞŞ¸ÄÈË] : ĞŞ¸ÄÄÚÈİ
+
 *******************************************************************************************************************/
 
 
@@ -21,15 +21,15 @@
 *******************************************************************************************************************/
 /******************************************************************************************************************
 
-	ÇÔ¼ö¸í : CSprite::CSprite()
+	º¯ÊıÃû : CSprite::CSprite()
 
-	ÀÛ¼ºÀÚ : 
-	ÀÛ¼ºÀÏ : 
+	×÷Õß :
+	±àĞ´ÈÕÆÚ :
 
-	¸ñÀû   : 
-	Ãâ·Â   : 
+	Ä¿µÄ   :
+	Êä³ö   :
 
-	[ÀÏÀÚ][¼öÁ¤ÀÚ] : ¼öÁ¤³»¿ë
+	[ÈÕÆÚ][ĞŞ¸ÄÕß] : ĞŞ¸ÄÄÚÈİ
 
 *******************************************************************************************************************/
 CSprite::CSprite()
@@ -41,15 +41,15 @@ CSprite::CSprite()
 
 /******************************************************************************************************************
 
-	ÇÔ¼ö¸í : CSprite::~CSprite()
+	º¯ÊıÃû : CSprite::~CSprite()
 
-	ÀÛ¼ºÀÚ : 
-	ÀÛ¼ºÀÏ : 
+	×÷Õß :
+	±àĞ´ÈÕÆÚ :
 
-	¸ñÀû   : 
-	Ãâ·Â   : 
+	Ä¿µÄ   :
+	Êä³ö   :
 
-	[ÀÏÀÚ][¼öÁ¤ÀÚ] : ¼öÁ¤³»¿ë
+	[ÈÕÆÚ][ĞŞ¸ÄÕß] : ĞŞ¸ÄÄÚÈİ
 
 *******************************************************************************************************************/
 CSprite::~CSprite()
@@ -61,15 +61,15 @@ CSprite::~CSprite()
 
 /******************************************************************************************************************
 
-	ÇÔ¼ö¸í : CSprite::InitSpriteInfo()
+	º¯ÊıÃû : CSprite::InitSpriteInfo()
 
-	ÀÛ¼ºÀÚ : 
-	ÀÛ¼ºÀÏ : 
+	×÷Õß :
+	±àĞ´ÈÕÆÚ :
 
-	¸ñÀû   : 
-	Ãâ·Â   : VOID 
+	Ä¿µÄ   :
+	Êä³ö   : VOID
 
-	[ÀÏÀÚ][¼öÁ¤ÀÚ] : ¼öÁ¤³»¿ë
+	[ÈÕÆÚ][ĞŞ¸ÄÕß] : ĞŞ¸ÄÄÚÈİ
 
 *******************************************************************************************************************/
 VOID CSprite::InitSpriteInfo()
@@ -87,15 +87,15 @@ VOID CSprite::InitSpriteInfo()
 
 /******************************************************************************************************************
 
-	ÇÔ¼ö¸í : CSprite::DeleteSpriteInfo()
+	º¯ÊıÃû : CSprite::DeleteSpriteInfo()
 
-	ÀÛ¼ºÀÚ : 
-	ÀÛ¼ºÀÏ : 
+	×÷Õß :
+	±àĞ´ÈÕÆÚ :
 
-	¸ñÀû   : 
-	Ãâ·Â   : VOID 
+	Ä¿µÄ   :
+	Êä³ö   : VOID
 
-	[ÀÏÀÚ][¼öÁ¤ÀÚ] : ¼öÁ¤³»¿ë
+	[ÈÕÆÚ][ĞŞ¸ÄÕß] : ĞŞ¸ÄÄÚÈİ
 
 *******************************************************************************************************************/
 VOID CSprite::DeleteSpriteInfo()
@@ -107,13 +107,13 @@ VOID CSprite::DeleteSpriteInfo()
 
 /******************************************************************************************************************
 
-	ÇÔ¼ö¸í : CSprite::SetEffectInfo()
+	º¯ÊıÃû : CSprite::SetEffectInfo()
 
-	ÀÛ¼ºÀÚ : 
-	ÀÛ¼ºÀÏ : 
+	×÷Õß :
+	±àĞ´ÈÕÆÚ :
 
-	¸ñÀû   : 
-	ÀÔ·Â   : LPEFFECTSPRINFO pstEffect
+	Ä¿µÄ   :
+	ÊäÈë   : LPEFFECTSPRINFO pstEffect
 	         DWORD dwFstFrm
 	         DWORD dwEndFrm
 	         WORD wDelay
@@ -130,9 +130,9 @@ VOID CSprite::DeleteSpriteInfo()
 	         BYTE bBlendType
 	         BYTE bOpa
 	         BYTE bSwingCnt
-	Ãâ·Â   : VOID 
+	Êä³ö   : VOID
 
-	[ÀÏÀÚ][¼öÁ¤ÀÚ] : ¼öÁ¤³»¿ë
+	[ÈÕÆÚ][ĞŞ¸ÄÕß] : ĞŞ¸ÄÄÚÈİ
 
 *******************************************************************************************************************/
 VOID CSprite::SetEffectInfo(LPEFFECTSPRINFO pstEffect, DWORD dwFstFrm, DWORD dwEndFrm, WORD wDelay, WORD wImgIdx, WORD wEffectIdx,
@@ -171,16 +171,16 @@ VOID CSprite::SetEffectInfo(LPEFFECTSPRINFO pstEffect, DWORD dwFstFrm, DWORD dwE
 
 /******************************************************************************************************************
 
-	ÇÔ¼ö¸í : CSprite::GetEffectInfo()
+	º¯ÊıÃû : CSprite::GetEffectInfo()
 
-	ÀÛ¼ºÀÚ : 
-	ÀÛ¼ºÀÏ : 
+	×÷Õß :
+	±àĞ´ÈÕÆÚ :
 
-	¸ñÀû   : 
-	ÀÔ·Â   : WORD wEffectNum
-	Ãâ·Â   : LPEFFECTSPRINFO 
+	Ä¿µÄ   :
+	ÊäÈë   : WORD wEffectNum
+	Êä³ö   : LPEFFECTSPRINFO
 
-	[ÀÏÀÚ][¼öÁ¤ÀÚ] : ¼öÁ¤³»¿ë
+	[ÈÕÆÚ][ĞŞ¸ÄÕß] : ĞŞ¸ÄÄÚÈİ
 
 *******************************************************************************************************************/
 LPEFFECTSPRINFO CSprite::GetEffectInfo(WORD wEffectNum)
@@ -203,16 +203,16 @@ LPEFFECTSPRINFO CSprite::GetEffectInfo(WORD wEffectNum)
 
 /******************************************************************************************************************
 
-	ÇÔ¼ö¸í : CSprite::GetExplosionInfo()
+	º¯ÊıÃû : CSprite::GetExplosionInfo()
 
-	ÀÛ¼ºÀÚ : 
-	ÀÛ¼ºÀÏ : 
+	±àĞ´Õß :
+	±àĞ´ÈÕÆÚ :
 
-	¸ñÀû   : 
-	ÀÔ·Â   : WORD wEffectNum
-	Ãâ·Â   : LPEFFECTSPRINFO 
+	Ä¿µÄ   :
+	ÊäÈë   : WORD wEffectNum
+	Êä³ö   : LPEFFECTSPRINFO
 
-	[ÀÏÀÚ][¼öÁ¤ÀÚ] : ¼öÁ¤³»¿ë
+	[ÈÕÆÚ][ĞŞ¸ÄÕß] : ĞŞ¸ÄÄÚÈİ
 
 *******************************************************************************************************************/
 LPEFFECTSPRINFO CSprite::GetExplosionInfo(WORD wEffectNum)
@@ -235,16 +235,16 @@ LPEFFECTSPRINFO CSprite::GetExplosionInfo(WORD wEffectNum)
 
 /******************************************************************************************************************
 
-	ÇÔ¼ö¸í : CSprite::GetMagicInfo()
+	º¯ÊıÃû : CSprite::GetMagicInfo()
 
-	ÀÛ¼ºÀÚ : 
-	ÀÛ¼ºÀÏ : 
+	×÷Õß   :
+	±àĞ´ÈÕÆÚ :
 
-	¸ñÀû   : 
-	ÀÔ·Â   : WORD wEffectNum
-	Ãâ·Â   : LPEFFECTSPRINFO 
+	Ä¿µÄ   :
+	ÊäÈë   : WORD wEffectNum
+	Êä³ö   : LPEFFECTSPRINFO
 
-	[ÀÏÀÚ][¼öÁ¤ÀÚ] : ¼öÁ¤³»¿ë
+	[ÈÕÆÚ][ĞŞ¸ÄÕß] : ĞŞ¸ÄÄÚÈİ
 
 *******************************************************************************************************************/
 LPEFFECTSPRINFO CSprite::GetMagicInfo(WORD wEffectNum)
@@ -267,19 +267,19 @@ LPEFFECTSPRINFO CSprite::GetMagicInfo(WORD wEffectNum)
 
 /******************************************************************************************************************
 
-	ÇÔ¼ö¸í : CSprite::SetSprDfn()
+	º¯ÊıÃû : CSprite::SetSprDfn()
 
-	ÀÛ¼ºÀÚ : 
-	ÀÛ¼ºÀÏ : 
+	×÷Õß :
+	±àĞ´ÈÕÆÚ :
 
-	¸ñÀû   : 
-	ÀÔ·Â   : LPSPRFRMDEF pstSprDfn
+	Ä¿µÄ   :
+	ÊäÈë   : LPSPRFRMDEF pstSprDfn
 	         WORD wFstFrm
 	         WORD wFrmCnt
 	         WORD wDelay
-	Ãâ·Â   : VOID 
+	Êä³ö   : VOID
 
-	[ÀÏÀÚ][¼öÁ¤ÀÚ] : ¼öÁ¤³»¿ë
+	[ÈÕÆÚ][ĞŞ¸ÄÕß] : ĞŞ¸ÄÄÚÈİ
 
 *******************************************************************************************************************/
 VOID CSprite::SetSprDfn(LPSPRFRMDEF pstSprDfn, WORD wFstFrm, WORD wFrmCnt, WORD wDelay)
@@ -292,22 +292,22 @@ VOID CSprite::SetSprDfn(LPSPRFRMDEF pstSprDfn, WORD wFstFrm, WORD wFrmCnt, WORD 
 
 /******************************************************************************************************************
 
-	ÇÔ¼ö¸í : CSprite::SetInfo()
+	º¯ÊıÃû : CSprite::SetInfo()
 
-	ÀÛ¼ºÀÚ : 
-	ÀÛ¼ºÀÏ : 
+	×÷Õß :
+	±àĞ´ÈÕÆÚ :
 
-	¸ñÀû   : 
-	Ãâ·Â   : VOID 
+	Ä¿µÄ   :
+	Êä³ö   : VOID
 
-	[ÀÏÀÚ][¼öÁ¤ÀÚ] : ¼öÁ¤³»¿ë
+	[ÈÕÆÚ][ĞŞ¸ÄÕß] : ĞŞ¸ÄÄÚÈİ
 
 *******************************************************************************************************************/
 VOID CSprite::SetInfo()
 {
 	SetWeaponOrder("weapon.ord");
 
-	//~~~ Hero ½ºÇÁ¶óÀÌÆ® ¼³Á¤. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//~~~ Hero ¾«ÁéÉèÖÃ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	SetSprDfn(&m_stHeroSpr[0],     0,  4, 200);			// _MT_STAND		
 	SetSprDfn(&m_stHeroSpr[1],    80,  6, 100);			// _MT_ARROWATTACK	
 	SetSprDfn(&m_stHeroSpr[2],   160,  5,  80);			// _MT_SPELL1		
@@ -342,86 +342,86 @@ VOID CSprite::SetInfo()
 	SetSprDfn(&m_stHeroSpr[31], 2480,  6, 100);			// _MT_HORSERUN	
 	SetSprDfn(&m_stHeroSpr[32], 2560,  3, 100);			// _MT_HORSEHIT	
 
-	//~~~ Monster ½ºÇÁ¶óÀÌÆ® ¼³Á¤. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	SetSprDfn(&m_stMonSpr[0],     0,  4, 300);			// À¯ÈŞµ¿ÀÛ.
-	SetSprDfn(&m_stMonSpr[1],    80,  6, 130);			// °È±âµ¿ÀÛ.
-	SetSprDfn(&m_stMonSpr[2],   160,  6, 120);			// ÀÏ¹İ°ø°İµ¿ÀÛ.
-	SetSprDfn(&m_stMonSpr[3],   240,  2, 300);			// ¸Â±âµ¿ÀÛ.
-	SetSprDfn(&m_stMonSpr[4],   320, 10, 150);			// Á×±âµ¿ÀÛ.
-	SetSprDfn(&m_stMonSpr[5],   400,  6, 150);			// Æ¯¼ö°ø°İµ¿ÀÛ1.
-	SetSprDfn(&m_stMonSpr[6],   480, 10, 150);			// Æ¯¼ö°ø°İµ¿ÀÛ2.
-	SetSprDfn(&m_stMonSpr[7],   560, 10, 150);			// »ç¶óÁö±âµ¿ÀÛ.
-	SetSprDfn(&m_stMonSpr[8],   640,  6, 150);			// Æ¯¼öµ¿ÀÛ.
+	//~~~ Monster ¾«ÁéÉèÖÃ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	SetSprDfn(&m_stMonSpr[0],     0,  4, 300);			// ¿ÕÏĞ¶¯×÷¡£
+	SetSprDfn(&m_stMonSpr[1],    80,  6, 130);			// ĞĞ×ß¶¯×÷¡£
+	SetSprDfn(&m_stMonSpr[2],   160,  6, 120);			// ÆÕÍ¨¹¥»÷¶¯×÷.
+	SetSprDfn(&m_stMonSpr[3],   240,  2, 300);			// ÊÜ»÷¶¯×÷.
+	SetSprDfn(&m_stMonSpr[4],   320, 10, 150);			// ËÀÍö¶¯×÷.
+	SetSprDfn(&m_stMonSpr[5],   400,  6, 150);			// ÌØÊâ¹¥»÷¶¯×÷1.
+	SetSprDfn(&m_stMonSpr[6],   480, 10, 150);			// ÌØÊâ¹¥»÷¶¯×÷2.
+	SetSprDfn(&m_stMonSpr[7],   560, 10, 150);			// ÏûÊ§¶¯×÷¡£
+	SetSprDfn(&m_stMonSpr[8],   640,  6, 150);			// ÌØÊâ¶¯×÷.
 
-	//~~~ NPC ½ºÇÁ¶óÀÌÆ® ¼³Á¤. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	SetSprDfn(&m_stNPCSpr[0],     0,  4, 300);			// À¯ÈŞµ¿ÀÛ.
-	SetSprDfn(&m_stNPCSpr[1],    30, 10, 300);			// Æ¯¼öµ¿ÀÛ1.
-	SetSprDfn(&m_stNPCSpr[2],    60,  6, 300);			// Æ¯¼öµ¿ÀÛ2.
+	//~~~ NPC ¾«ÁéÉèÖÃ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	SetSprDfn(&m_stNPCSpr[0],     0,  4, 300);			// ¿ÕÏĞ¶¯×÷¡£
+	SetSprDfn(&m_stNPCSpr[1],    30, 10, 300);			// ÌØÊâ¶¯×÷1.
+	SetSprDfn(&m_stNPCSpr[2],    60,  6, 300);			// ÌØÊâ¶¯×÷2.
 
 	//~~~ Effect Frame Define. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	SetEffectInfo(&m_stEffectSpr[0],   230,  236, 100, _IMAGE_MAGIC,       _SKILL_BANWOL, 3, 4, 100, 100, 100, 100, 100, 170);	// ¹İ¿ù°ø°İ 12½Ã.
-	SetEffectInfo(&m_stEffectSpr[1],    60,   70, 100, _IMAGE_MAGIC,    _SKILL_AMYOUNSUL, 3, 4, 100, 100, 100, 100, 160, 100, 255, 255, 255, _BLEND_NORMAL);	// ¾Ï¿¬¼ú ½ÃÀü.
-	SetEffectInfo(&m_stEffectSpr[2],    90,   98, 100, _IMAGE_MAGIC,     _SKILL_FIREWIND, 3, 4, 100, 100, 100, 100, 140, 180);	// È­¿°Ç³.
-	SetEffectInfo(&m_stEffectSpr[3],  1820, 1828, 100, _IMAGE_MAGIC,         _SKILL_FIRE, 3, 4, 100, 100, 100, 100, 140, 180);	// ¿°»çÀå ½ÃÀü.
-	SetEffectInfo(&m_stEffectSpr[4],     0,    9, 100, _IMAGE_MAGIC,      _SKILL_TAMMING, 3, 4, 100, 100, 100, 170, 100, 100);	// ·ÚÈ¥°İ½ÃÀü.
-	SetEffectInfo(&m_stEffectSpr[5],   110,  129, 100, _IMAGE_MAGIC,    _SKILL_SPACEMOVE, 3, 4, 100, 100, 100, 170, 100, 100);	// ¾Æ°øÇà¹ı.
-	SetEffectInfo(&m_stEffectSpr[6],   130,  140, 100, _IMAGE_MAGIC,   _SKILL_KILLUNDEAD, 3, 4, 100, 100, 100, 170, 100, 100);	// »çÀÚÀ±È¸½ÃÀü.
-	SetEffectInfo(&m_stEffectSpr[7],  1820, 1828, 100, _IMAGE_MAGIC,     _SKILL_FIREBALL, 3, 4, 100, 100, 100, 100, 140, 180);	// È­¿°Àå.
-	SetEffectInfo(&m_stEffectSpr[8],   600,  610, 100, _IMAGE_MAGIC,     _SKILL_HEALLING, 3, 4, 100, 100, 100, 140, 100, 120);	// È¸º¹¼ú.
-	SetEffectInfo(&m_stEffectSpr[9],   630,  640, 100, _IMAGE_MAGIC,   _SKILL_HOLYSHIELD, 3, 4, 100, 100, 100, 170, 100, 100);	// °á°è.
-	SetEffectInfo(&m_stEffectSpr[10],  660,  670, 100, _IMAGE_MAGIC,  _SKILL_BIGHEALLING, 3, 4, 100, 100, 100, 140, 100, 120);	// ´ëÈ¸º¹.
-//	SetEffectInfo(&m_stEffectSpr[11],  690,  704, 100, _IMAGE_MAGIC,  _SKILL_LIGHTFLOWER, 3, 4, 100, 100, 100, 170, 100, 100);	// ·Ú¼³È­.
-	SetEffectInfo(&m_stEffectSpr[11],  690,  704, 100, _IMAGE_MAGIC,  _SKILL_LIGHTFLOWER, 3, 4, 150, 100,  50, 150, 100,  50);	// ·Ú¼³È­.	
-	SetEffectInfo(&m_stEffectSpr[12], 1970, 1978,  80, _IMAGE_MAGIC, _SKILL_SHOOTLIGHTEN, 3, 4, 100, 100, 100, 170, 100, 100);	// ·ÚÀÎÀå.
-	SetEffectInfo(&m_stEffectSpr[13],  740,  750, 100, _IMAGE_MAGIC,    _SKILL_SKELLETON, 3, 4, 100, 100, 100, 120, 100, 120);	// ¹é°ñ¼ÒÈ¯¼ú.
-	SetEffectInfo(&m_stEffectSpr[14],  770,  780, 100, _IMAGE_MAGIC,     _SKILL_SNOWWIND, 3, 4, 100, 100, 100, 170, 100, 100);	// ºù¼³Ç³.
-	SetEffectInfo(&m_stEffectSpr[15],  870,  890, 100, _IMAGE_MAGIC,       _SKILL_SHOWHP, 3, 4, 100, 100, 100, 100, 100, 170);	// Å½±âÆÄ¿¬.
-	SetEffectInfo(&m_stEffectSpr[16],  910,  920, 100, _IMAGE_MAGIC,    _SKILL_EARTHFIRE, 3, 4, 100, 100, 100, 100, 140, 180);	// Áö¿°¼ú.
-	SetEffectInfo(&m_stEffectSpr[17],  940,  950, 100, _IMAGE_MAGIC,     _SKILL_FIREBOOM, 3, 4, 100, 100, 100, 100, 140, 180);	// Æø¿­ÆÄ.
-	SetEffectInfo(&m_stEffectSpr[18], 1560, 1569, 100, _IMAGE_MAGIC,    _SKILL_FIREBALL2, 3, 4, 100, 100, 100, 100, 140, 180);	// ±İ°­È­¿°Àå.
-	SetEffectInfo(&m_stEffectSpr[19],  320,  326, 100, _IMAGE_MAGIC,        _SKILL_ERGUM, 3, 4, 100, 100, 100, 100, 100, 170);	// ¾î°Ë¼ú.
-	SetEffectInfo(&m_stEffectSpr[20], 1350, 1356, 100, _IMAGE_MAGIC,         _SKILL_YEDO, 3, 4, 100, 100, 100, 100, 100, 170);	// ¿¹µµ°Ë¹ı.
-	SetEffectInfo(&m_stEffectSpr[21], 1470, 1476, 100, _IMAGE_MAGIC,    _SKILL_FIRESWORD, 3, 4, 100, 100, 100, 100, 140, 180);	// ¿°È­°á.
-	SetEffectInfo(&m_stEffectSpr[22], 1430, 1445, 100, _IMAGE_MAGIC,   _SKILL_LIGHTENING, 3, 4, 100, 100, 100, 170, 100, 100);	// °­°İ.
-	SetEffectInfo(&m_stEffectSpr[23],  810,  820, 100, _IMAGE_MAGIC,        _SKILL_CLOAK, 3, 4, 150, 150, 150, 200, 150, 180);	// Àº½Å.
-	SetEffectInfo(&m_stEffectSpr[24], 2080, 2086, 100, _IMAGE_MAGIC, _SKILL_HANGMAJINBUB, 3, 4, 150, 100,  50, 200, 150, 100);	// Ç×¸¶Áø¹ı.
-	SetEffectInfo(&m_stEffectSpr[25], 2080, 2086, 100, _IMAGE_MAGIC,    _SKILL_DEJIWONHO, 3, 4, 150, 180, 200, 180, 200, 220);	// ´ëÁö¿øÈ£.
-	SetEffectInfo(&m_stEffectSpr[26], 2080, 2086, 100, _IMAGE_MAGIC,    _SKILL_FIRECHARM, 3, 4, 100, 150, 200, 150, 200, 250);	// Æø»ì°è.
-	SetEffectInfo(&m_stEffectSpr[27], 2080, 2086, 100, _IMAGE_MAGIC,     _SKILL_BIGCLOAK, 3, 4, 150, 150, 150, 200, 150, 180);	// ´ëÀº½Å.
-	SetEffectInfo(&m_stEffectSpr[28], 2180, 2190, 100, _IMAGE_MAGIC,     _SKILL_JUMPSHOT, 3, 4, 150, 150, 150, 200, 150, 180);	// Á¡ÇÁ¼¦.
-	SetEffectInfo(&m_stEffectSpr[29], 2270, 2280, 100, _IMAGE_MAGIC,    _SKILL_RANDSWING, 3, 4, 150, 150, 150, 200, 150, 180);	// ·£´ı½ºÀ®.
-	SetEffectInfo(&m_stEffectSpr[30], 2080, 2086, 100, _IMAGE_MAGIC,		_SKILL_SINSU, 3, 4, 150, 150, 150, 200, 150, 180, 255, 255, 255, _BLEND_NORMAL, 255);	// ½Å¼ö¼ÒÈ¯.
+	SetEffectInfo(&m_stEffectSpr[0],   230,  236, 100, _IMAGE_MAGIC,       _SKILL_BANWOL, 3, 4, 100, 100, 100, 100, 100, 170);	// °ëÔÂ¹¥»÷ 12 Ê±¡£
+	SetEffectInfo(&m_stEffectSpr[1],    60,   70, 100, _IMAGE_MAGIC,    _SKILL_AMYOUNSUL, 3, 4, 100, 100, 100, 100, 160, 100, 255, 255, 255, _BLEND_NORMAL);	// °µÑÌÊõÊ©·Å¡£
+	SetEffectInfo(&m_stEffectSpr[2],    90,   98, 100, _IMAGE_MAGIC,     _SKILL_FIREWIND, 3, 4, 100, 100, 100, 100, 140, 180);	// »ğÑæ·ç.
+	SetEffectInfo(&m_stEffectSpr[3],  1820, 1828, 100, _IMAGE_MAGIC,         _SKILL_FIRE, 3, 4, 100, 100, 100, 100, 140, 180);	// ÑæÉßÕÆÊ©·Å.
+	SetEffectInfo(&m_stEffectSpr[4],     0,    9, 100, _IMAGE_MAGIC,      _SKILL_TAMMING, 3, 4, 100, 100, 100, 170, 100, 100);	// À×»ê»÷Ê©·Å.
+	SetEffectInfo(&m_stEffectSpr[5],   110,  129, 100, _IMAGE_MAGIC,    _SKILL_SPACEMOVE, 3, 4, 100, 100, 100, 170, 100, 100);	// ÎÒ¿ÕĞĞ·¨.
+	SetEffectInfo(&m_stEffectSpr[6],   130,  140, 100, _IMAGE_MAGIC,   _SKILL_KILLUNDEAD, 3, 4, 100, 100, 100, 170, 100, 100);	// Ê¨×ÓÂÖ»ØÊ©·Å.
+	SetEffectInfo(&m_stEffectSpr[7],  1820, 1828, 100, _IMAGE_MAGIC,     _SKILL_FIREBALL, 3, 4, 100, 100, 100, 100, 140, 180);	// »ğÑæ³¡.
+	SetEffectInfo(&m_stEffectSpr[8],   600,  610, 100, _IMAGE_MAGIC,     _SKILL_HEALLING, 3, 4, 100, 100, 100, 140, 100, 120);	// »Ö¸´Êõ.
+	SetEffectInfo(&m_stEffectSpr[9],   630,  640, 100, _IMAGE_MAGIC,   _SKILL_HOLYSHIELD, 3, 4, 100, 100, 100, 170, 100, 100);	// ½á½ç.
+	SetEffectInfo(&m_stEffectSpr[10],  660,  670, 100, _IMAGE_MAGIC,  _SKILL_BIGHEALLING, 3, 4, 100, 100, 100, 140, 100, 120);	// ´ó»Ö¸´.
+//	SetEffectInfo(&m_stEffectSpr[11],  690,  704, 100, _IMAGE_MAGIC,  _SKILL_LIGHTFLOWER, 3, 4, 100, 100, 100, 170, 100, 100);	// À×Ñ©»¨.
+	SetEffectInfo(&m_stEffectSpr[11],  690,  704, 100, _IMAGE_MAGIC,  _SKILL_LIGHTFLOWER, 3, 4, 150, 100,  50, 150, 100,  50);	// À×Ñ©»¨.	
+	SetEffectInfo(&m_stEffectSpr[12], 1970, 1978,  80, _IMAGE_MAGIC, _SKILL_SHOOTLIGHTEN, 3, 4, 100, 100, 100, 170, 100, 100);	// À×Ó¡.
+	SetEffectInfo(&m_stEffectSpr[13],  740,  750, 100, _IMAGE_MAGIC,    _SKILL_SKELLETON, 3, 4, 100, 100, 100, 120, 100, 120);	// °×¹ÇÕÙ»½Êõ.
+	SetEffectInfo(&m_stEffectSpr[14],  770,  780, 100, _IMAGE_MAGIC,     _SKILL_SNOWWIND, 3, 4, 100, 100, 100, 170, 100, 100);	// ±ùĞı·ç.
+	SetEffectInfo(&m_stEffectSpr[15],  870,  890, 100, _IMAGE_MAGIC,       _SKILL_SHOWHP, 3, 4, 100, 100, 100, 100, 100, 170);	// Ì½ÆøÆÆÑÓ.
+	SetEffectInfo(&m_stEffectSpr[16],  910,  920, 100, _IMAGE_MAGIC,    _SKILL_EARTHFIRE, 3, 4, 100, 100, 100, 100, 140, 180);	// µØÑ×Êõ¡£
+	SetEffectInfo(&m_stEffectSpr[17],  940,  950, 100, _IMAGE_MAGIC,     _SKILL_FIREBOOM, 3, 4, 100, 100, 100, 100, 140, 180);	// ±¬ÁÑ²¨.
+	SetEffectInfo(&m_stEffectSpr[18], 1560, 1569, 100, _IMAGE_MAGIC,    _SKILL_FIREBALL2, 3, 4, 100, 100, 100, 100, 140, 180);	// ½ğ¸Õ»ğÑæÕÆ.
+	SetEffectInfo(&m_stEffectSpr[19],  320,  326, 100, _IMAGE_MAGIC,        _SKILL_ERGUM, 3, 4, 100, 100, 100, 100, 100, 170);	// Óù½£Êõ.
+	SetEffectInfo(&m_stEffectSpr[20], 1350, 1356, 100, _IMAGE_MAGIC,         _SKILL_YEDO, 3, 4, 100, 100, 100, 100, 100, 170);	// Àñµ¶½£·¨.
+	SetEffectInfo(&m_stEffectSpr[21], 1470, 1476, 100, _IMAGE_MAGIC,    _SKILL_FIRESWORD, 3, 4, 100, 100, 100, 100, 140, 180);	// Ñæ»ğ¾÷.
+	SetEffectInfo(&m_stEffectSpr[22], 1430, 1445, 100, _IMAGE_MAGIC,   _SKILL_LIGHTENING, 3, 4, 100, 100, 100, 170, 100, 100);	// Ç¿»÷.
+	SetEffectInfo(&m_stEffectSpr[23],  810,  820, 100, _IMAGE_MAGIC,        _SKILL_CLOAK, 3, 4, 150, 150, 150, 200, 150, 180);	// ÒşÉí.
+	SetEffectInfo(&m_stEffectSpr[24], 2080, 2086, 100, _IMAGE_MAGIC, _SKILL_HANGMAJINBUB, 3, 4, 150, 100,  50, 200, 150, 100);	// ½µÄ§Õó·¨.
+	SetEffectInfo(&m_stEffectSpr[25], 2080, 2086, 100, _IMAGE_MAGIC,    _SKILL_DEJIWONHO, 3, 4, 150, 180, 200, 180, 200, 220);	// ´óµØÔ®»¤.
+	SetEffectInfo(&m_stEffectSpr[26], 2080, 2086, 100, _IMAGE_MAGIC,    _SKILL_FIRECHARM, 3, 4, 100, 150, 200, 150, 200, 250);	// ±¬É±Ïµ.
+	SetEffectInfo(&m_stEffectSpr[27], 2080, 2086, 100, _IMAGE_MAGIC,     _SKILL_BIGCLOAK, 3, 4, 150, 150, 150, 200, 150, 180);	// ´óÒşÉí.
+	SetEffectInfo(&m_stEffectSpr[28], 2180, 2190, 100, _IMAGE_MAGIC,     _SKILL_JUMPSHOT, 3, 4, 150, 150, 150, 200, 150, 180);	// ÌøÔ¾Éä»÷¡£
+	SetEffectInfo(&m_stEffectSpr[29], 2270, 2280, 100, _IMAGE_MAGIC,    _SKILL_RANDSWING, 3, 4, 150, 150, 150, 200, 150, 180);	// Ëæ»ú»Ó¿³¡£
+	SetEffectInfo(&m_stEffectSpr[30], 2080, 2086, 100, _IMAGE_MAGIC,		_SKILL_SINSU, 3, 4, 150, 150, 150, 200, 150, 180, 255, 255, 255, _BLEND_NORMAL, 255);	// ÉñÊŞÕÙ»½.
 
-	SetEffectInfo(&m_stEffectSpr[31], 1680, 1686, 100, _IMAGE_MONMAGIC, _MONMAGIC_NUMAGUMGI, 3, 4, 150, 150, 150, 200, 150, 180, 255, 255, 255, _BLEND_NORMAL, 255);// ´©¸¶¿Õ °Ë±â.
-	SetEffectInfo(&m_stEffectSpr[32], 830, 839, 100, _IMAGE_MAGIC, _SKILL_SHIELD, 3, 4, 100, 100, 100, 170, 100, 100);			// ÁÖ¼úÀÇ¸·.
+	SetEffectInfo(&m_stEffectSpr[31], 1680, 1686, 100, _IMAGE_MONMAGIC, _MONMAGIC_NUMAGUMGI, 3, 4, 150, 150, 150, 200, 150, 180, 255, 255, 255, _BLEND_NORMAL, 255);// Å¬ÂêÍõ½£Æø¡£
+	SetEffectInfo(&m_stEffectSpr[32], 830, 839, 100, _IMAGE_MAGIC, _SKILL_SHIELD, 3, 4, 100, 100, 100, 170, 100, 100);			// ÖäÊõÖ®Ä».
 	//~~~ Monster Effect Frame Define. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	//~~~ Magic Frame Define. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	SetEffectInfo(&m_stMagicSpr[0],    70,   88, 100, _IMAGE_MAGIC,    _SKILL_AMYOUNSUL, 3, 4, 190, 220, 190, 190, 240, 190, 255, 255, 255, _BLEND_NORMAL); // ¾Ï¿¬¼ú.
-	SetEffectInfo(&m_stMagicSpr[1],  1900, 1960,  50, _IMAGE_MAGIC,         _SKILL_FIRE, 3, 4,  70,  90, 110,  90, 120, 150);	// ¿°»çÀå.
-	SetEffectInfo(&m_stMagicSpr[2],    10,   30,  50, _IMAGE_MAGIC,      _SKILL_TAMMING, 3, 4, 200, 100, 100, 250, 150, 150);	// ·ÚÈ¥°İ.
-	SetEffectInfo(&m_stMagicSpr[3],   140,  159,  50, _IMAGE_MAGIC,   _SKILL_KILLUNDEAD, 3, 4, 200, 100, 100, 100,  75,  50);	// »çÀÚÀ±È¸.
-	SetEffectInfo(&m_stMagicSpr[4],   420,  425,  20, _IMAGE_MAGIC,     _SKILL_FIREBALL, 2, 3, 100, 150, 200, 150, 200, 250);	// È­¿°Àå.
-	SetEffectInfo(&m_stMagicSpr[5],   610,  620, 100, _IMAGE_MAGIC,     _SKILL_HEALLING, 3, 4, 200, 140, 170, 230, 170, 200);	// È¸º¹¼ú.
-	SetEffectInfo(&m_stMagicSpr[6],   640,  650, 100, _IMAGE_MAGIC,   _SKILL_HOLYSHIELD, 3, 4, 120,  60,  60, 150,  80,  80);	// °á°è.
-	SetEffectInfo(&m_stMagicSpr[7],   670,  680,  50, _IMAGE_MAGIC,  _SKILL_BIGHEALLING, 4, 5, 200, 140, 170, 230, 170, 200);//200, 100, 100, 250, 150, 150);	// ´ëÈ¸º¹.
-	SetEffectInfo(&m_stMagicSpr[8],  2050, 2056,  80, _IMAGE_MAGIC, _SKILL_SHOOTLIGHTEN, 2, 3, 150, 100, 100, 200, 150, 150);	// ·ÚÀÎÀå.
-	SetEffectInfo(&m_stMagicSpr[9],   750,  760, 155, _IMAGE_MAGIC,    _SKILL_SKELLETON, 3, 4, 150, 150, 150, 200, 150, 180);	// ¹é°ñ¼ÒÈ¯¼ú.
-	SetEffectInfo(&m_stMagicSpr[10],  780,  800, 100, _IMAGE_MAGIC,     _SKILL_SNOWWIND, 5, 6, 255, 123,   0, 255, 123,   0, 255, 255, 255, _BLEND_LIGHTINV, 0, 1);	// ºù¼³Ç³.
-//	SetEffectInfo(&m_stMagicSpr[10],  780,  800, 100, _IMAGE_MAGIC,     _SKILL_SNOWWIND, 4, 5, 220, 150, 150, 250, 170, 170);	// ºù¼³Ç³.
-	SetEffectInfo(&m_stMagicSpr[11],  840,  850, 100, _IMAGE_MAGIC,       _SKILL_SHIELD, 3, 4, 100, 100, 100, 100, 140, 180);	// ÁÖ¼úÀÇ¸·.
-	SetEffectInfo(&m_stMagicSpr[12],  890,  900, 100, _IMAGE_MAGIC,       _SKILL_SHOWHP, 3, 4,  75,  75,  75, 100,  75,  50);	// Å½±âÆÄ¿¬.
-	SetEffectInfo(&m_stMagicSpr[13],  920,  930, 120, _IMAGE_MAGIC,    _SKILL_EARTHFIRE, 4, 5,  40,  60,  80,  60,  80, 100);	// Áö¿°¼ú.
-	SetEffectInfo(&m_stMagicSpr[14],  980,  983, 100, _IMAGE_MAGIC,    _SKILL_FIRECHARM, 2, 3, 100, 150, 200, 150, 200, 250, 255, 255, 255, _BLEND_NORMAL, 255);	// Æø»ì°è.
-	SetEffectInfo(&m_stMagicSpr[15],  980,  983, 100, _IMAGE_MAGIC, _SKILL_HANGMAJINBUB, 2, 3, 150, 100,  50, 200, 150, 100, 255, 255, 255, _BLEND_NORMAL, 255);	// Ç×¸¶Áø¹ı.
-	SetEffectInfo(&m_stMagicSpr[16],  980,  983, 100, _IMAGE_MAGIC,    _SKILL_DEJIWONHO, 2, 3, 150, 180, 200, 180, 200, 220, 255, 255, 255, _BLEND_NORMAL, 255);	// ´ëÁö¿øÈ£.
-	SetEffectInfo(&m_stMagicSpr[17],  950,  970, 100, _IMAGE_MAGIC,     _SKILL_FIREBOOM, 5, 6, 100, 150, 200, 150, 200, 250);	// Æø¿­ÆÄ.
-	SetEffectInfo(&m_stMagicSpr[18], 1640, 1646,  20, _IMAGE_MAGIC,    _SKILL_FIREBALL2, 2, 3, 100, 150, 200, 150, 200, 250);	// ±İ°­È­¿°Àå.
-//	SetEffectInfo(&m_stMagicSpr[19], 1450, 1455, 100, _IMAGE_MAGIC,   _SKILL_LIGHTENING, 5, 6, 250, 150, 150, 255, 200, 200);	// °­°İ.
-	SetEffectInfo(&m_stMagicSpr[19], 1450, 1455, 100, _IMAGE_MAGIC,   _SKILL_LIGHTENING, 20, 21, 255, 125, 50, 255, 255, 255);	// °­°İ.
-	SetEffectInfo(&m_stMagicSpr[20],  980,  983, 100, _IMAGE_MAGIC,     _SKILL_BIGCLOAK, 2, 3, 150, 150, 150, 200, 150, 180);	// ´ëÀº½Å.
-	SetEffectInfo(&m_stMagicSpr[21],  110,  129,  60, _IMAGE_MAGIC,   _SKILL_SPACEMOVE2, 3, 4, 100, 100, 100, 100, 100, 100);	// ¾Æ°øÇà¹ı2.
-	SetEffectInfo(&m_stMagicSpr[22],  110,  129, 100, _IMAGE_MAGIC,   _SKILL_SPACEMOVE3, 3, 4, 100, 100, 100, 100, 100, 100);	// ¾Æ°øÇà¹ı3.
+	SetEffectInfo(&m_stMagicSpr[0],    70,   88, 100, _IMAGE_MAGIC,    _SKILL_AMYOUNSUL, 3, 4, 190, 220, 190, 190, 240, 190, 255, 255, 255, _BLEND_NORMAL); // °µÈ»Êõ.
+	SetEffectInfo(&m_stMagicSpr[1],  1900, 1960,  50, _IMAGE_MAGIC,         _SKILL_FIRE, 3, 4,  70,  90, 110,  90, 120, 150);	// ÑÎÉç³¤.
+	SetEffectInfo(&m_stMagicSpr[2],    10,   30,  50, _IMAGE_MAGIC,      _SKILL_TAMMING, 3, 4, 200, 100, 100, 250, 150, 150);	// À×»ê»÷.
+	SetEffectInfo(&m_stMagicSpr[3],   140,  159,  50, _IMAGE_MAGIC,   _SKILL_KILLUNDEAD, 3, 4, 200, 100, 100, 100,  75,  50);	// Ê¨×ÓÂÖ»Ø.
+	SetEffectInfo(&m_stMagicSpr[4],   420,  425,  20, _IMAGE_MAGIC,     _SKILL_FIREBALL, 2, 3, 100, 150, 200, 150, 200, 250);	// »ğÑæ³¡.
+	SetEffectInfo(&m_stMagicSpr[5],   610,  620, 100, _IMAGE_MAGIC,     _SKILL_HEALLING, 3, 4, 200, 140, 170, 230, 170, 200);	// »Ö¸´Êõ.
+	SetEffectInfo(&m_stMagicSpr[6],   640,  650, 100, _IMAGE_MAGIC,   _SKILL_HOLYSHIELD, 3, 4, 120,  60,  60, 150,  80,  80);	// ½á½ç.
+	SetEffectInfo(&m_stMagicSpr[7],   670,  680,  50, _IMAGE_MAGIC,  _SKILL_BIGHEALLING, 4, 5, 200, 140, 170, 230, 170, 200);//200, 100, 100, 250, 150, 150);	// ´ó»Ö¸´.
+	SetEffectInfo(&m_stMagicSpr[8],  2050, 2056,  80, _IMAGE_MAGIC, _SKILL_SHOOTLIGHTEN, 2, 3, 150, 100, 100, 200, 150, 150);	// À×Ó¡.
+	SetEffectInfo(&m_stMagicSpr[9],   750,  760, 155, _IMAGE_MAGIC,    _SKILL_SKELLETON, 3, 4, 150, 150, 150, 200, 150, 180);	// °×¹ÇÕÙ»½Êõ.
+	SetEffectInfo(&m_stMagicSpr[10],  780,  800, 100, _IMAGE_MAGIC,     _SKILL_SNOWWIND, 5, 6, 255, 123,   0, 255, 123,   0, 255, 255, 255, _BLEND_LIGHTINV, 0, 1);	// ±ùĞı·ç.
+//	SetEffectInfo(&m_stMagicSpr[10],  780,  800, 100, _IMAGE_MAGIC,     _SKILL_SNOWWIND, 4, 5, 220, 150, 150, 250, 170, 170);	// ±ùÑ©·ç¡£
+	SetEffectInfo(&m_stMagicSpr[11],  840,  850, 100, _IMAGE_MAGIC,       _SKILL_SHIELD, 3, 4, 100, 100, 100, 100, 140, 180);	// ÖäÊõÖ®Ä».
+	SetEffectInfo(&m_stMagicSpr[12],  890,  900, 100, _IMAGE_MAGIC,       _SKILL_SHOWHP, 3, 4,  75,  75,  75, 100,  75,  50);	// Ì½ÆøÆÆÑÓ.
+	SetEffectInfo(&m_stMagicSpr[13],  920,  930, 120, _IMAGE_MAGIC,    _SKILL_EARTHFIRE, 4, 5,  40,  60,  80,  60,  80, 100);	// µØÑ×Êõ¡£
+	SetEffectInfo(&m_stMagicSpr[14],  980,  983, 100, _IMAGE_MAGIC,    _SKILL_FIRECHARM, 2, 3, 100, 150, 200, 150, 200, 250, 255, 255, 255, _BLEND_NORMAL, 255);	// ±¬É±Ïµ.
+	SetEffectInfo(&m_stMagicSpr[15],  980,  983, 100, _IMAGE_MAGIC, _SKILL_HANGMAJINBUB, 2, 3, 150, 100,  50, 200, 150, 100, 255, 255, 255, _BLEND_NORMAL, 255);	// ½µÄ§Õó·¨.
+	SetEffectInfo(&m_stMagicSpr[16],  980,  983, 100, _IMAGE_MAGIC,    _SKILL_DEJIWONHO, 2, 3, 150, 180, 200, 180, 200, 220, 255, 255, 255, _BLEND_NORMAL, 255);	// ´óµØÔ®»¤.
+	SetEffectInfo(&m_stMagicSpr[17],  950,  970, 100, _IMAGE_MAGIC,     _SKILL_FIREBOOM, 5, 6, 100, 150, 200, 150, 200, 250);	// ±¬ÁÑ²¨.
+	SetEffectInfo(&m_stMagicSpr[18], 1640, 1646,  20, _IMAGE_MAGIC,    _SKILL_FIREBALL2, 2, 3, 100, 150, 200, 150, 200, 250);	// ½ğ¸Õ»ğÑæÕÆ.
+//	SetEffectInfo(&m_stMagicSpr[19], 1450, 1455, 100, _IMAGE_MAGIC,   _SKILL_LIGHTENING, 5, 6, 250, 150, 150, 255, 200, 200);	// Ç¿»÷.
+	SetEffectInfo(&m_stMagicSpr[19], 1450, 1455, 100, _IMAGE_MAGIC,   _SKILL_LIGHTENING, 20, 21, 255, 125, 50, 255, 255, 255);	// Ç¿»÷.
+	SetEffectInfo(&m_stMagicSpr[20],  980,  983, 100, _IMAGE_MAGIC,     _SKILL_BIGCLOAK, 2, 3, 150, 150, 150, 200, 150, 180);	// ´óÒşÉí.
+	SetEffectInfo(&m_stMagicSpr[21],  110,  129,  60, _IMAGE_MAGIC,   _SKILL_SPACEMOVE2, 3, 4, 100, 100, 100, 100, 100, 100);	// °¢¿ÕĞĞ·¨2¡£
+	SetEffectInfo(&m_stMagicSpr[22],  110,  129, 100, _IMAGE_MAGIC,   _SKILL_SPACEMOVE3, 3, 4, 100, 100, 100, 100, 100, 100);	// °¢¿ÕĞĞ·¨3.
 
 	//~~~ Monster Magic Frame Define. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	SetEffectInfo(&m_stMagicSpr[23],    0,    4, 100, _IMAGE_MONMAGIC,    _MONMAGIC_KEPAL, 2, 3, 100, 100, 100, 150, 150, 150);	
@@ -434,59 +434,59 @@ VOID CSprite::SetInfo()
 	SetEffectInfo(&m_stMagicSpr[30],   40,   50, 100, _IMAGE_MONMAGIC,     _MONMAGIC_RED2, 2, 3, 100, 100, 100, 150, 150, 150);	
 	SetEffectInfo(&m_stMagicSpr[31],  220,  227, 100, _IMAGE_MONMAGIC,      _MONMAGIC_ANT, 2, 3, 100, 100, 100, 150, 150, 150);	
 	SetEffectInfo(&m_stMagicSpr[32],  240,  246, 100, _IMAGE_MONMAGIC,  _MONMAGIC_WORKANT, 2, 3, 100, 100, 100, 150, 150, 150);	
-	SetEffectInfo(&m_stMagicSpr[33],  440,  446, 100, _IMAGE_MONMAGIC, _MONMAGIC_COWGHOST, 2, 3, 100, 100, 100, 150, 150, 150);	// ¿ì¸é±Í¿Õ.
-	SetEffectInfo(&m_stMagicSpr[34],  980,  986, 100, _IMAGE_MONMAGIC,    _MONMAGIC_SINSU, 2, 3, 100, 100, 100, 150, 150, 150);	// ½Å¼ö.
-	SetEffectInfo(&m_stMagicSpr[35],  600,  606, 100, _IMAGE_MONMAGIC,   _MONMAGIC_ZOMBIE, 2, 3, 100, 100, 100, 150, 150, 150);	// Á»ºñ.
-	SetEffectInfo(&m_stMagicSpr[36],  720,  728, 100, _IMAGE_MONMAGIC, _MONMAGIC_JUMAWANG, 2, 3, 100, 100, 100, 150, 150, 150);	// ÁÖ¸¶¿Õ.
+	SetEffectInfo(&m_stMagicSpr[33],  440,  446, 100, _IMAGE_MONMAGIC, _MONMAGIC_COWGHOST, 2, 3, 100, 100, 100, 150, 150, 150);	// Å£Ãæ¹íÍõ¡£
+	SetEffectInfo(&m_stMagicSpr[34],  980,  986, 100, _IMAGE_MONMAGIC,    _MONMAGIC_SINSU, 2, 3, 100, 100, 100, 150, 150, 150);	// ÉñÊŞ.
+	SetEffectInfo(&m_stMagicSpr[35],  600,  606, 100, _IMAGE_MONMAGIC,   _MONMAGIC_ZOMBIE, 2, 3, 100, 100, 100, 150, 150, 150);	// ½©Ê¬.
+	SetEffectInfo(&m_stMagicSpr[36],  720,  728, 100, _IMAGE_MONMAGIC, _MONMAGIC_JUMAWANG, 2, 3, 100, 100, 100, 150, 150, 150);	// ×ßÂíÍõ¡£
 
-	SetEffectInfo(&m_stMagicSpr[37], 1240, 1241, 100, _IMAGE_MONMAGIC,         _MONMAGIC_CHIM, 2, 3, 100, 100, 100, 150, 150, 150, 255, 255, 255, _BLEND_NORMAL, 255);	// ´ÙÅ©Ä§.
-	SetEffectInfo(&m_stMagicSpr[38], 1400, 1401, 100, _IMAGE_MONMAGIC,        _MONMAGIC_ARROW, 2, 3, 100, 100, 100, 150, 150, 150, 255, 255, 255, _BLEND_NORMAL, 255);	// ±Ã¼ö°æºñÈ­»ì.
-	SetEffectInfo(&m_stMagicSpr[39], 1070, 1071, 100, _IMAGE_MONMAGIC,      _MONMAGIC_MAARROW, 2, 3, 100, 100, 100, 150, 150, 150, 255, 255, 255, _BLEND_NORMAL, 255);	// ¸¶±Ã»çÈ­»ì.
-	SetEffectInfo(&m_stMagicSpr[40],  800,  806, 100, _IMAGE_MONMAGIC,      _MONMAGIC_DUALAXE, 2, 3, 100, 100, 100, 150, 150, 150, 255, 255, 255, _BLEND_NORMAL, 255);	// ½Öµµ³¢ÇØ°ñ´øÁö±â.
-	SetEffectInfo(&m_stMagicSpr[41],  520,  527, 100, _IMAGE_MONMAGIC,     _MONMAGIC_COWFLAME, 2, 3, 100, 100, 100, 150, 150, 150);	// È­¿°¿ì¸é±Í.
-	SetEffectInfo(&m_stMagicSpr[42],  360,  370, 100, _IMAGE_MONMAGIC,  _MONMAGIC_BIGGINE_ATT, 2, 3, 100, 100, 100, 150, 150, 150);	// ÃË·æ½Å °ø°İ.
-	SetEffectInfo(&m_stMagicSpr[43],  380,  400, 100, _IMAGE_MONMAGIC, _MONMAGIC_BIGGINE_CHAR, 2, 3, 100, 100, 100, 150, 150, 150);	// ÃË·æ½Å¿¡ °ø°İ´çÇÔ.
-	SetEffectInfo(&m_stMagicSpr[44],  320,  330,  70, _IMAGE_MONMAGIC,     _MONMAGIC_SANDFISH, 2, 3, 100, 100, 100, 150, 150, 150,  10,  10,  10, _BLEND_LIGHTINV, 0);		// »ç¾î°ø°İ.
-	SetEffectInfo(&m_stMagicSpr[45],  260,  266, 100, _IMAGE_MONMAGIC,       _MONMAGIC_BAODIE, 2, 3, 100, 100, 100, 150, 150, 150);	// ¹Ùº¸´ŞµåÁ×À½.
-	SetEffectInfo(&m_stMagicSpr[46],  880,  886, 150, _IMAGE_MONMAGIC,        _MONMAGIC_SSEGI, 2, 3, 100, 100, 100, 150, 150, 150, 255, 255, 255, _BLEND_LIGHTINV, 15);		// ½û±â³ª¹æÅ¸¾×.
-	SetEffectInfo(&m_stMagicSpr[47],   60,   70, 100, _IMAGE_MONMAGIC,    _MONMAGIC_SINGI_DIE, 2, 3, 100, 100, 100, 150, 150, 150);	// ¸ó½ºÅÍÁ×±â. °æ°©¿Ê±â»ç, È«ÀÇ, ÈæÀÇ¸¶¹ı»ç. // ¹æÇâ±¸º°Àº ¾ø´Ù.
-	SetEffectInfo(&m_stMagicSpr[48],  680,  689, 100, _IMAGE_MONMAGIC,     _MONMAGIC_HUSU_DIE, 2, 3, 100, 100, 100, 150, 150, 150);	// Çã¼ö¾ÆºñÁ×±â.
-	SetEffectInfo(&m_stMagicSpr[49],  700,  708, 100, _IMAGE_MONMAGIC,   _MONMAGIC_ZOMBIE_DIE, 2, 3, 100, 100, 100, 150, 150, 150);	// Á»ºñÁ×±â.
+	SetEffectInfo(&m_stMagicSpr[37], 1240, 1241, 100, _IMAGE_MONMAGIC,         _MONMAGIC_CHIM, 2, 3, 100, 100, 100, 150, 150, 150, 255, 255, 255, _BLEND_NORMAL, 255);	// ºÚ°µ´Ì.
+	SetEffectInfo(&m_stMagicSpr[38], 1400, 1401, 100, _IMAGE_MONMAGIC,        _MONMAGIC_ARROW, 2, 3, 100, 100, 100, 150, 150, 150, 255, 255, 255, _BLEND_NORMAL, 255);	// ¹­ÊÖÊØÎÀ¼ı¡£
+	SetEffectInfo(&m_stMagicSpr[39], 1070, 1071, 100, _IMAGE_MONMAGIC,      _MONMAGIC_MAARROW, 2, 3, 100, 100, 100, 150, 150, 150, 255, 255, 255, _BLEND_NORMAL, 255);	// Ä§¹­ÊÖ¼ı.
+	SetEffectInfo(&m_stMagicSpr[40],  800,  806, 100, _IMAGE_MONMAGIC,      _MONMAGIC_DUALAXE, 2, 3, 100, 100, 100, 150, 150, 150, 255, 255, 255, _BLEND_NORMAL, 255);	// Ë«¸«÷¼÷ÃÍ¶ÖÀ.
+	SetEffectInfo(&m_stMagicSpr[41],  520,  527, 100, _IMAGE_MONMAGIC,     _MONMAGIC_COWFLAME, 2, 3, 100, 100, 100, 150, 150, 150);	// »ğÑæÅ£Ãæ¹í.
+	SetEffectInfo(&m_stMagicSpr[42],  360,  370, 100, _IMAGE_MONMAGIC,  _MONMAGIC_BIGGINE_ATT, 2, 3, 100, 100, 100, 150, 150, 150);	// ÖòÁúÉñ¹¥»÷.
+	SetEffectInfo(&m_stMagicSpr[43],  380,  400, 100, _IMAGE_MONMAGIC, _MONMAGIC_BIGGINE_CHAR, 2, 3, 100, 100, 100, 150, 150, 150);	// ±»ÖòÁúÉñ¹¥»÷¡£
+	SetEffectInfo(&m_stMagicSpr[44],  320,  330,  70, _IMAGE_MONMAGIC,     _MONMAGIC_SANDFISH, 2, 3, 100, 100, 100, 150, 150, 150,  10,  10,  10, _BLEND_LIGHTINV, 0);		// É³Óã¹¥»÷.
+	SetEffectInfo(&m_stMagicSpr[45],  260,  266, 100, _IMAGE_MONMAGIC,       _MONMAGIC_BAODIE, 2, 3, 100, 100, 100, 150, 150, 150);	// °Í²©´ï¶ûµÂËÀÍö¡£
+	SetEffectInfo(&m_stMagicSpr[46],  880,  886, 150, _IMAGE_MONMAGIC,        _MONMAGIC_SSEGI, 2, 3, 100, 100, 100, 150, 150, 150, 255, 255, 255, _BLEND_LIGHTINV, 15);		// ´Ì¶êÍÙÒº.
+	SetEffectInfo(&m_stMagicSpr[47],   60,   70, 100, _IMAGE_MONMAGIC,    _MONMAGIC_SINGI_DIE, 2, 3, 100, 100, 100, 150, 150, 150);	// ¹ÖÎïËÀÍö. Çá¼×ÆïÊ¿, ºìÒÂ, ºÚÒÂÄ§·¨Ê¦. // ÎŞ·½ÏòÇø·Ö.
+	SetEffectInfo(&m_stMagicSpr[48],  680,  689, 100, _IMAGE_MONMAGIC,     _MONMAGIC_HUSU_DIE, 2, 3, 100, 100, 100, 150, 150, 150);	// µ¾²İÈËËÀÍö¡£
+	SetEffectInfo(&m_stMagicSpr[49],  700,  708, 100, _IMAGE_MONMAGIC,   _MONMAGIC_ZOMBIE_DIE, 2, 3, 100, 100, 100, 150, 150, 150);	// ½©Ê¬ËÀÍö.
 
-	SetEffectInfo(&m_stMagicSpr[50],  980,  983, 10, _IMAGE_MAGIC,	_SKILL_SINSU, 3, 4, 150, 150, 150, 200, 150, 180, 255, 255, 255, _BLEND_NORMAL, 255);	// ½Å¼ö.
+	SetEffectInfo(&m_stMagicSpr[50],  980,  983, 10, _IMAGE_MAGIC,	_SKILL_SINSU, 3, 4, 150, 150, 150, 200, 150, 180, 255, 255, 255, _BLEND_NORMAL, 255);	// ÉñÊŞ.
 
 	SetEffectInfo(&m_stMagicSpr[51],  1770,  1790, 100, _IMAGE_MONMAGIC,  _MONMAGIC_EXPLODE1, 2, 3, 100, 100,  50, 150, 150,  75);	
 
 	//~~~ Explosion Frame Define. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	SetEffectInfo(&m_stExplosionSpr[0],  200,  220,  80, _IMAGE_MAGIC, _SKILL_HANGMAJINBUB, 4, 5, 200, 150,  60, 255, 170, 100, 255, 255, 255, _BLEND_LIGHTINV, 0, 1);// Ç×¸¶Áø¹ı.
-	SetEffectInfo(&m_stExplosionSpr[1],  170,  190,  80, _IMAGE_MAGIC,    _SKILL_DEJIWONHO, 4, 5, 120, 170, 220, 160, 210, 255, 255, 255, 255, _BLEND_LIGHTINV, 0, 1);// ´ëÁö¿øÈ£.
-	SetEffectInfo(&m_stExplosionSpr[2],  580,  590, 100, _IMAGE_MAGIC,     _SKILL_FIREBALL, 2, 3, 120, 170, 220, 160, 210, 255);	// È­¿°Àå.
-	SetEffectInfo(&m_stExplosionSpr[3], 1140, 1150, 100, _IMAGE_MAGIC,    _SKILL_FIRECHARM, 2, 3, 120, 170, 220, 160, 210, 255);	// Æø»ì°è.
-	SetEffectInfo(&m_stExplosionSpr[4], 1800, 1810, 100, _IMAGE_MAGIC,    _SKILL_FIREBALL2, 2, 3, 120, 170, 220, 160, 210, 255);	// ±İ°­È­¿°Àå.
-	SetEffectInfo(&m_stExplosionSpr[5],  820,  830, 100, _IMAGE_MAGIC,     _SKILL_BIGCLOAK, 4, 5, 200, 210, 190, 200, 150, 180);	// ´ëÀº½Å.
+	SetEffectInfo(&m_stExplosionSpr[0],  200,  220,  80, _IMAGE_MAGIC, _SKILL_HANGMAJINBUB, 4, 5, 200, 150,  60, 255, 170, 100, 255, 255, 255, _BLEND_LIGHTINV, 0, 1);// ½µÄ§Õó·¨.
+	SetEffectInfo(&m_stExplosionSpr[1],  170,  190,  80, _IMAGE_MAGIC,    _SKILL_DEJIWONHO, 4, 5, 120, 170, 220, 160, 210, 255, 255, 255, 255, _BLEND_LIGHTINV, 0, 1);// ´óµØÔ®»¤.
+	SetEffectInfo(&m_stExplosionSpr[2],  580,  590, 100, _IMAGE_MAGIC,     _SKILL_FIREBALL, 2, 3, 120, 170, 220, 160, 210, 255);	// »ğÑæ³¡.
+	SetEffectInfo(&m_stExplosionSpr[3], 1140, 1150, 100, _IMAGE_MAGIC,    _SKILL_FIRECHARM, 2, 3, 120, 170, 220, 160, 210, 255);	// ±¬É±Ïµ.
+	SetEffectInfo(&m_stExplosionSpr[4], 1800, 1810, 100, _IMAGE_MAGIC,    _SKILL_FIREBALL2, 2, 3, 120, 170, 220, 160, 210, 255);	// ½ğ¸Õ»ğÑæÕÆ.
+	SetEffectInfo(&m_stExplosionSpr[5],  820,  830, 100, _IMAGE_MAGIC,     _SKILL_BIGCLOAK, 4, 5, 200, 210, 190, 200, 150, 180);	// ´óÒşÉí.
 	//~~~ Monster Explosion Frame Define. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	SetEffectInfo(&m_stExplosionSpr[6],  100,  110, 100, _IMAGE_MONMAGIC, _MONMAGIC_ANTHEAL, 2, 3, 100, 100, 100, 150, 150, 150);	// ¹æÇâ±¸º°Àº ¾ø´Ù.
+	SetEffectInfo(&m_stExplosionSpr[6],  100,  110, 100, _IMAGE_MONMAGIC, _MONMAGIC_ANTHEAL, 2, 3, 100, 100, 100, 150, 150, 150);	// Ã»ÓĞ·½ÏòÇø±ğ¡£
 
-	SetEffectInfo(&m_stExplosionSpr[7], 2360, 2379, 100, _IMAGE_MAGIC,	_SKILL_SINSU, 3, 4, 150, 150, 150, 200, 150, 180, 255, 255, 255, _BLEND_NORMAL, 255);	// ½Å¼ö.
+	SetEffectInfo(&m_stExplosionSpr[7], 2360, 2379, 100, _IMAGE_MAGIC,	_SKILL_SINSU, 3, 4, 150, 150, 150, 200, 150, 180, 255, 255, 255, _BLEND_NORMAL, 255);	// ÉñÊŞ.
 }
 
 
 
 VOID CSprite::SetMonFrameInfo(WORD wMonNum)
 {
-/*	//~~~ Monster ½ºÇÁ¶óÀÌÆ® ¼³Á¤. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	SetSprDfn(&m_stMonSpr[0],    0,  4, 300);			// À¯ÈŞµ¿ÀÛ.
-	SetSprDfn(&m_stMonSpr[1],   80,  6, 130);			// °È±âµ¿ÀÛ.
-	SetSprDfn(&m_stMonSpr[2],  160,  6, 120);			// ÀÏ¹İ°ø°İµ¿ÀÛ1.
-	SetSprDfn(&m_stMonSpr[3],  240,  2, 300);			// ¸Â±âµ¿ÀÛ.
-	SetSprDfn(&m_stMonSpr[4],  320, 10, 150);			// Á×±âµ¿ÀÛ.
-	SetSprDfn(&m_stMonSpr[5],  400,  6, 150);			// ÀÏ¹İ°ø°İµ¿ÀÛ2.
-	SetSprDfn(&m_stMonSpr[6],  480, 10, 150);			// ¸¶¹ı°ø°İµ¿ÀÛ1.
-	SetSprDfn(&m_stMonSpr[7],  560, 10, 150);			// ¸¶¹ı°ø°İµ¿ÀÛ2.
-	SetSprDfn(&m_stMonSpr[8],  640,  6, 150);			// ³ªÅ¸³ª±â, »ç¶óÁö±â.
-	SetSprDfn(&m_stMonSpr[9],  720,  6, 150);			// Æ¯¼öµ¿ÀÛ1.
+/*	//~~~ Monster ¾«ÁéÉèÖÃ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	SetSprDfn(&m_stMonSpr[0],    0,  4, 300);			// ¿ÕÏĞ¶¯×÷.
+	SetSprDfn(&m_stMonSpr[1],   80,  6, 130);			// ĞĞ×ß¶¯×÷.
+	SetSprDfn(&m_stMonSpr[2],  160,  6, 120);			// ÆÕÍ¨¹¥»÷¶¯×÷1.
+	SetSprDfn(&m_stMonSpr[3],  240,  2, 300);			// ÊÜ»÷¶¯×÷.
+	SetSprDfn(&m_stMonSpr[4],  320, 10, 150);			// ËÀÍö¶¯×÷.
+	SetSprDfn(&m_stMonSpr[5],  400,  6, 150);			// ÆÕÍ¨¹¥»÷¶¯×÷2.
+	SetSprDfn(&m_stMonSpr[6],  480, 10, 150);			// Ä§·¨¹¥»÷¶¯×÷1.
+	SetSprDfn(&m_stMonSpr[7],  560, 10, 150);			// Ä§·¨¹¥»÷¶¯×÷2.
+	SetSprDfn(&m_stMonSpr[8],  640,  6, 150);			// ³öÏÖ,ÏûÊ§.
+	SetSprDfn(&m_stMonSpr[9],  720,  6, 150);			// ÌØÊâ¶¯×÷1.
 */
-	// 0. Monster Mtn -> À¯ÈŞµ¿ÀÛ.
+	// 0. Monster Mtn -> ¿ÕÏĞ¶¯×÷.
 	switch ( wMonNum )
 	{
 	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:
@@ -496,36 +496,36 @@ VOID CSprite::SetMonFrameInfo(WORD wMonNum)
 		break;
 	}
 
-	// 1. Monster Mtn -> °È±âµ¿ÀÛ.
+	// 1. Monster Mtn -> ĞĞ×ß¶¯×÷.
 	SetSprDfn(&m_stMonSpr[1],    80,  6, 90);
 
-	// 2. Monster Mtn -> ÀÏ¹İ°ø°İµ¿ÀÛ1.
+	// 2. Monster Mtn -> ÆÕÍ¨¹¥»÷¶¯×÷1.
 	switch ( wMonNum )
 	{
 	case  0: case  1: case  2: case 12: case 99:	
-		SetSprDfn(&m_stMonSpr[2],  160,  6, 120);	// ÀúÆÄ, ¾ßÇà±Í, ÄÉÆÈ·ÎÇÁ, °ß, ¹Ù¿À´Şµå.
+		SetSprDfn(&m_stMonSpr[2],  160,  6, 120);	// µÍ²¨, Ò¹ĞĞ¹í, ¿­ÅÁÂåÆÕ, È®, °Í°Â´ï¶ûµÂ.
 		break;
 	case 14: case 16: case 92:
-		SetSprDfn(&m_stMonSpr[2],  160,  6, 140);	// º´¿ë°³¹Ì, µå³­°³¹Ì, ´Ù°ï.
+		SetSprDfn(&m_stMonSpr[2],  160,  6, 140);	// ±øÓÃÂìÒÏ¡¢µÂÄÏÂìÒÏ¡¢´ï¹±¡£
 		break;
 	case  3: case  5: case  6: case  7: case  8: case  9: case 15: case 19: case 93: case 96: case 97: case 98:
-		SetSprDfn(&m_stMonSpr[2],  160,  6, 150);	// »ç±«, ¹ÙÄí°¡¸£³ª, ¹ÙÀÚ¿ï, Ä¡À¯°³¹Ì, °©ÁÖ°³¹Ì, ·Ğ, ´©¸¶¿Õ, ·¹µğ°¡¸£³ª, µ¥³ª°¡´ÙÄÚ, Æ÷·ç°³¹Ì, Ç³¹é, ´©¸¶¿Õ1.
+		SetSprDfn(&m_stMonSpr[2],  160,  6, 150);	// É³¹Ö, °Í¿â¼Ó¶ûÄÉ, °ÍÔúÎÚ¶û, ÖÎÓúÒÏ, ¼×ëĞÒÏ, Â×, Å¬ÂêÍõ, À×µÏ¼Ó¶ûÄÉ, µÂÄÉ¼Ó´ï¿Æ, ²¨Â³ÒÏ, ·ç²®, Å¬ÂêÍõ1.
 		break;
 	case  4: case 10: case 11: case 13: case 17: case 18: case 94:
-		SetSprDfn(&m_stMonSpr[2],  160,  6, 170);	// ¼®ÀåÀÎ, ¸ğµğÁ¯, ¸ğµğÁ¯1, ´©¸¶¹ı·Î, ´©¸¶ºñÀå, ´©¸¶, »ç¾î.
+		SetSprDfn(&m_stMonSpr[2],  160,  6, 170);	// Ê¯½³ÈË, Ä¦µÒÕæ, Ä¦µÒÕæ1, Å¬Âê·¨ÀÏ, Å¬Âê·É½«, Å¬Âê, É³Óã¡£
 		break;
 	default:
 		SetSprDfn(&m_stMonSpr[2],  160,  6, 130);	
 		break;
 	}
 
-	// 3. Monster Mtn -> ¸Â±âµ¿ÀÛ.
+	// 3. Monster Mtn -> ÊÜ»÷¶¯×÷.
 	switch ( wMonNum )
 	{
 	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:
 		SetSprDfn(&m_stMonSpr[3],  240,  2, 300);	
 		break;
-	case  116:										// ¸».
+	case  116:										// Âí.
 	case  117:										
 	case  118:										
 		SetSprDfn(&m_stMonSpr[3],  240, 3, 160);		
@@ -535,16 +535,16 @@ VOID CSprite::SetMonFrameInfo(WORD wMonNum)
 		break;
 	}
 
-	// 4. Monster Mtn -> Á×±âµ¿ÀÛ.
+	// 4. Monster Mtn -> ËÀÍö¶¯×÷.
 	switch ( wMonNum )
 	{
-	case  94:										// »ç¾î
+	case  94:										// É³Óã
 		SetSprDfn(&m_stMonSpr[4],  320, 10, 160);		
 		break;
-	case  30:										// ¹¶ÄÚ.
+	case  30:										// ÃÉ¿Æ.
 		SetSprDfn(&m_stMonSpr[4],  320, 4, 160);		
 		break;
-	case  104:										// Àû¿ù¸¶.
+	case  104:										// ³àÔÂÄ§.
 		SetSprDfn(&m_stMonSpr[4],  320, 20, 160);		
 		break;
 	default:
@@ -552,7 +552,7 @@ VOID CSprite::SetMonFrameInfo(WORD wMonNum)
 		break;
 	}
 
-	// 5. Monster Mtn -> ÀÏ¹İ°ø°İµ¿ÀÛ2.
+	// 5. Monster Mtn -> ÆÕÍ¨¹¥»÷¶¯×÷2.
 	switch ( wMonNum )
 	{
 	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:
@@ -563,7 +563,7 @@ VOID CSprite::SetMonFrameInfo(WORD wMonNum)
 		break;
 	}
 
-	// 6. Monster Mtn -> ¸¶¹ı°ø°İµ¿ÀÛ1.
+	// 6. Monster Mtn -> Ä§·¨¹¥»÷¶¯×÷1¡£
 	switch ( wMonNum )
 	{
 	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:
@@ -574,7 +574,7 @@ VOID CSprite::SetMonFrameInfo(WORD wMonNum)
 		break;
 	}
 
-	// 7. Monster Mtn -> ¸¶¹ı°ø°İµ¿ÀÛ2.
+	// 7. Monster Mtn -> Ä§·¨¹¥»÷¶¯×÷2¡£
 	switch ( wMonNum )
 	{
 	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:
@@ -585,19 +585,19 @@ VOID CSprite::SetMonFrameInfo(WORD wMonNum)
 		break;
 	}
 
-	// 8. Monster Mtn -> »ç¶óÁö±â, ³ªÅ¸³ª±â µ¿ÀÛ.
+	// 8. Monster Mtn -> ÏûÊ§¡¢³öÏÖ¶¯×÷.
 	switch ( wMonNum )
 	{
 	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:
 		SetSprDfn(&m_stMonSpr[8],  640,  10, 150);		
 		break;
-	case 83:	// ÁÖ¸¶½ÅÀå.
+	case 83:	// ×¡Ä§Éñ½«.
 		SetSprDfn(&m_stMonSpr[8],  640,  6, 150);		
 		break;
-	case 84:	// ÁÖ¸¶È£¹ı.
+	case 84:	// ×ßÂí»¤·¨¡£
 		SetSprDfn(&m_stMonSpr[8],  640,  6, 150);		
 		break;
-	case 85:	// ÁÖ¸¶¿Õ.
+	case 85:	// ×ßÂíÍõ¡£
 		SetSprDfn(&m_stMonSpr[8],  640,  20, 150);		
 		break;
 	default:
@@ -605,7 +605,7 @@ VOID CSprite::SetMonFrameInfo(WORD wMonNum)
 		break;
 	}
 
-	// 9. Monster Mtn -> Æ¯¼öµ¿ÀÛ1.
+	// 9. Monster Mtn -> ÌØÊâ¶¯×÷1.
 	switch ( wMonNum )
 	{
 	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:

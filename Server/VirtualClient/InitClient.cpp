@@ -47,7 +47,7 @@ LRESULT OnSockMsg(WPARAM wParam, LPARAM lParam)
 	{
 		case FD_CONNECT:
 		{
-			InsertLogMsg(_T("로그인 게이트 서버와 접속 되었습니다."));
+			InsertLogMsg(_T("Connected to the login gate server."));
 
 			break;
 		}

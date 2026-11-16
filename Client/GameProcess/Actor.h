@@ -13,14 +13,14 @@ typedef struct tagMESSAGEBODYWL
 {
 	LONG	lParam1;
 	LONG	lParam2;
-	LONG	nTag1;			// 锭赴仇 ID.(SM_STRUCK老锭).
+	LONG	nTag1;			// 攻击者的 ID.(SM_STRUCK 时).
 	LONG	nTag2;
 }MESSAGEBODYWL, *LPMESSAGEBODYWL;
 typedef struct tagMESSAGEBODYW
 {
 	WORD	wParam1;
 	WORD	wParam2;
-	WORD	wTag1;			// 锭赴仇 ID.(SM_STRUCK老锭).
+	WORD	wTag1;			// 攻击者的 ID.(SM_STRUCK 时).
 	WORD	wTag2;
 }MESSAGEBODYW, *LPMESSAGEBODYW;
 
@@ -46,55 +46,55 @@ class CActor
 private:
 public:
 	DWORD				m_dwIdentity;					// ID Index From Server.
-	CHAR				m_szName[64];					// 某腐磐唱 阁胶磐狼 捞抚.
+	CHAR				m_szName[64];					// 角色或怪物的名称.
 	CHAR				m_szGuildName[64];
 
-	FEATURE				m_stFeature;					// 某腐磐狼 寇屈阑 搬沥窿绰促.
-	BYTE				m_bActorImgIdx;					// 泅犁 Actor啊 啊龙 捞固瘤备炼眉狼 锅龋.
-	BYTE				m_bEffectImgIdx;				// 泅犁 Actor啊 啊龙 捞固瘤备炼眉狼 锅龋.
-	CWHWilImageData*	m_pxActorImage;					// 捞固瘤甫 掘绢棵 器牢磐甸.
-	RECT				m_rcActor;						// 泅犁 胶农赴惑狼Actor狼 荤阿 康开.
-	RECT				m_rcTargetRgn;					// 泅犁 Actor狼 鸥百康开.
+	FEATURE				m_stFeature;					// 决定角色的外观.
+	BYTE				m_bActorImgIdx;					// 当前 Actor 所拥有的图像结构体的编号。
+	BYTE				m_bEffectImgIdx;				// 当前 Actor 所拥有的图像结构体的编号。
+	CWHWilImageData*	m_pxActorImage;					// 用于获取图像的指针.
+	RECT				m_rcActor;						// 当前屏幕上的 Actor 的矩形区域。
+	RECT				m_rcTargetRgn;					// 当前 Actor 的目标区域.
 
-	DWORD				m_dwFstFrame;					// 泅犁 悼累狼 矫累 橇饭烙.
-	DWORD				m_dwEndFrame;					// 泅犁 悼累狼 付瘤阜橇饭烙.
-	WORD				m_wDelay;						// 泅犁 悼累俊 措茄 瘤楷矫埃.
+	DWORD				m_dwFstFrame;					// 当前动作的起始帧.
+	DWORD				m_dwEndFrame;					// 当前动作的最后一帧.
+	WORD				m_wDelay;						// 当前动作的延迟时间.
 
-	BYTE				m_bCurrMtn;						// 泅犁 悼累.
-	BYTE				m_bCurrDir;						// 泅犁 规氢.
-	BYTE				m_bMoveDir;						// 泅犁 规氢.
-	DWORD				m_dwCurrFrame;					// 泅犁 橇饭烙.
-	WORD				m_wCurrDelay;					// 泅犁 瘤楷矫埃.
+	BYTE				m_bCurrMtn;						// 当前动作.
+	BYTE				m_bCurrDir;						// 当前方向.
+	BYTE				m_bMoveDir;						// 当前方向.
+	DWORD				m_dwCurrFrame;					// 当前帧.
+	WORD				m_wCurrDelay;					// 当前延迟时间。
 
-	WORD				m_wOldPosX;						// 泅犁 青悼捞 乐扁傈狼 鸥老X谅钎.
+	WORD				m_wOldPosX;						// 当前动作发生之前的图块 X 坐标.
 	WORD				m_wOldPosY;
-	BYTE				m_bOldDir;						// 泅犁 青悼捞 乐扁傈狼 规氢.
-	WORD				m_wPosX;						// 鸥老 X谅钎.
-	WORD				m_wPosY;						// 鸥老 Y谅钎.
-	SHORT				m_shShiftPixelX;				// 泅犁 磊脚狼 鸥老俊辑 X绵父怒 捞悼茄 侨伎狼 芭府.
-	SHORT				m_shShiftPixelY;				// 泅犁 磊脚狼 鸥老俊辑 Y绵父怒 捞悼茄 侨伎狼 芭府.
-	SHORT				m_shShiftTileX;					// 泅犁 磊脚狼 鸥老俊辑 X绵父怒 捞悼茄 鸥老狼 芭府.
-	SHORT				m_shShiftTileY;					// 泅犁 磊脚狼 鸥老俊辑 Y绵父怒 捞悼茄 鸥老狼 芭府.
-	SHORT				m_shScrnPosX;					// 吝缴痢阑 绊妨窍瘤 臼篮 拳搁惑狼 X谅钎.
-	SHORT				m_shScrnPosY;					// 吝缴痢阑 绊妨窍瘤 臼篮 拳搁惑狼 Y谅钎.
-	BYTE				m_bMoveSpeed;					// 捞悼加档.
+	BYTE				m_bOldDir;						// 当前动作发生之前的方向.
+	WORD				m_wPosX;						// 图块 X坐标.
+	WORD				m_wPosY;						// 图块 Y 坐标。
+	SHORT				m_shShiftPixelX;				// 从当前自身图块沿 X 轴移动的像素距离.
+	SHORT				m_shShiftPixelY;				// 当前从自身所在图块沿 Y 轴移动的像素距离。
+	SHORT				m_shShiftTileX;					// 从自身当前图块沿 X 轴移动的图块距离。
+	SHORT				m_shShiftTileY;					// 从当前自身图块沿 Y 轴移动的图块距离.
+	SHORT				m_shScrnPosX;					// 未考虑中心点的屏幕 X 坐标.
+	SHORT				m_shScrnPosY;					// 未考虑中心点的屏幕 Y 坐标.
+	BYTE				m_bMoveSpeed;					// 移动速度.
 
-	CWHQueue			m_xPacketQueue;					// Actor啊 贸府秦具瞪 皋矫瘤甫 历厘窍绊 乐绰 钮.
-	BOOL				m_bMsgHurryCheck;				// 皋矫瘤啊 2俺捞惑 阶咯乐阑锭绰 橇饭烙阑 1橇饭烙究阑 扒呈囤促.
+	CWHQueue			m_xPacketQueue;					// 保存 Actor 待处理消息的队列.
+	BOOL				m_bMsgHurryCheck;				// 消息堆积 2 个以上时，每次跳过 1 帧.
 
 	BYTE				m_bBackStepFrame;
 	BYTE				m_bBackStepFrameCnt;
 
-	DWORD				m_dwCurrEffectFrame;			// 某腐磐 Effect泅犁 橇饭烙.
-	DWORD				m_dwFstEffectFrame;				// 某腐磐 Effect贸澜 橇饭烙.
-	DWORD				m_dwEndEffectFrame;				// 某腐磐 Effect付瘤阜 橇饭烙.
+	DWORD				m_dwCurrEffectFrame;			// 角色 Effect 当前帧.
+	DWORD				m_dwFstEffectFrame;				// 角色 Effect 起始帧.
+	DWORD				m_dwEndEffectFrame;				// 角色 Effect 最后一帧。
 	BYTE				m_bEffectFrame;
 	BYTE				m_bEffectFrameCnt;
-	BYTE				m_bLightRadius[2];				// 堡盔 呈厚.
-	BYTE				m_bLightColor [2][3];			// 堡盔 祸.
+	BYTE				m_bLightRadius[2];				// 光源宽度。
+	BYTE				m_bLightColor [2][3];			// 光源颜色.
 
-	BOOL				m_bUseEffect;					// 捞棋飘橇饭烙阑 荤侩.
-	BOOL				m_bUseSwordEffect;				// 八过瓤苞 荤侩.
+	BOOL				m_bUseEffect;					// 使用特效帧。
+	BOOL				m_bUseSwordEffect;				// 剑法效果使用.
 
 	BOOL				m_bWarMode;
 	DWORD				m_dwWarModeTime;
@@ -105,7 +105,7 @@ public:
 	WORD				m_wMP;
 	BOOL				m_bOpenHealth;
 
-	BYTE				m_bLightSize;					// Actor林函狼 堡盔农扁.
+	BYTE				m_bLightSize;					// Actor 周围的光源大小。
 
 	D3DVERTEX			m_avBoard[4];
 
@@ -133,12 +133,12 @@ public:
 
 	INT					m_nDividedChatLine;
 	DWORD				m_wCurrChatDelay;
-	CHAR				m_szChatMsg[MAX_PATH];			// 盲泼皋矫瘤.
-	CHAR				m_szChatMsgArg[5][MAX_PATH];	// 盲泼皋矫瘤甫 5俺狼 胶飘傅栏肺 备盒茄巴.
+	CHAR				m_szChatMsg[MAX_PATH];			// 聊天消息。
+	CHAR				m_szChatMsgArg[5][MAX_PATH];	// 将聊天消息分为 5 个字符串。
 
 public:
 //---------------------------------------------------------------------------------------------------------------//
-// 积己磊 棺 家戈磊.
+// 构造函数与析构函数.
 	CActor();
 	~CActor();
 
@@ -147,21 +147,21 @@ public:
 //---------------------------------------------------------------------------------------------------------------//
 
 //---------------------------------------------------------------------------------------------------------------//
-// 积己.
+// 创建.
 	virtual BOOL Create(CImageHandler* pxImgHandler, FEATURE* pstFeature, BYTE bMtn, WORD bDir, WORD wPosX, WORD wPosY);
 //---------------------------------------------------------------------------------------------------------------//
 
 	BOOL LoadEffect(CImageHandler* pxImgHandler, WORD wEffectNum, BYTE bDir = 0);
 	VOID DrawWithEffected(INT nx, INT nY, INT nXSize, INT nYSize, WORD* pwSrc, WORD wChooseColor1 = 0XFFFF, WORD wChooseColor2 = 0XFFFF, BOOL bFocused = FALSE, BYTE bOpa = 50, WORD wState = _STATE_NOTUSED);
 //---------------------------------------------------------------------------------------------------------------//
-// 橇饭烙 汲沥包访.
+// 帧设置相关.
 	BOOL	CheckFeatureValidate(FEATURE stFeature);
 	BOOL	ChangeFeature(FEATURE stFeature);
 	virtual BOOL SetMotionFrame(BYTE bMtn, BYTE bDir);
 //---------------------------------------------------------------------------------------------------------------//
 
 //---------------------------------------------------------------------------------------------------------------//
-// 某腐磐 捞悼.
+// 角色移动.
 	VOID SetMoving();
 	VOID SetBackStepMoving();
 	VOID SetMoved();
@@ -175,12 +175,12 @@ public:
 	virtual VOID PlayActSound();
 
 //---------------------------------------------------------------------------------------------------------------//
-// 悼累 柳青.
+// 动作进行.
 	virtual BOOL UpdatePacketState();
 	virtual VOID UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime);
 	virtual BOOL UpdateMove(BOOL bIsMoveTime);
 
-// 蜡屈喊 菩哦惑怕利侩.
+// 按类型应用数据包状态.
 	virtual VOID OnCharDescPacket(LPPACKETMSG lpPacketMsg);
 	virtual VOID OnUserName(LPPACKETMSG lpPacketMsg);
 	virtual VOID OnChangeNameClr(LPPACKETMSG lpPacketMsg);
@@ -266,9 +266,9 @@ private:
 public:
 	FEATUREEX			m_stFeatureEx;
 
-	BYTE				m_bWeaponImgIdx;				// 泅犁 Actor 公扁啊 啊龙 捞固瘤备炼眉狼 锅龋.
-	BYTE				m_bHairImgIdx;					// 泅犁 Actor 赣府啊 啊龙 捞固瘤备炼眉狼 锅龋.
-	BYTE				m_bHorseImgIdx;					// 泅犁 Actor 富捞   啊龙 捞固瘤备炼眉狼 锅龋.
+	BYTE				m_bWeaponImgIdx;				// 当前 Actor 武器所持有的图像结构体编号.
+	BYTE				m_bHairImgIdx;					// 当前 Actor 头部所具有的图像结构体的编号。
+	BYTE				m_bHorseImgIdx;					// 当前 Actor 坐骑所具有的图像结构体的编号。
 
 	BYTE				m_bYedoCnt;
 	BYTE				m_bFireHitCnt;
@@ -374,13 +374,13 @@ typedef struct tagACTORABILITY
 
 typedef struct tagACTORSUBABILITY
 {
-	WORD wAntiMagic;		// 付过雀乔.
-	BYTE bHitPoint;			// 沥犬.
-	BYTE bSpeedPoint;		// 刮酶.
-	BYTE bAntiPoison;		// 吝刀雀乔.
-	BYTE bPoisonRecover;	// 吝刀雀汗.
-	BYTE bHealthRecover;	// 眉仿雀汗.
-	BYTE bSpellRecover;		// 付仿雀汗.
+	WORD wAntiMagic;		// 魔法回避。
+	BYTE bHitPoint;			// 准确.
+	BYTE bSpeedPoint;		// 敏捷.
+	BYTE bAntiPoison;		// 中毒回避.
+	BYTE bPoisonRecover;	// 中毒恢复.
+	BYTE bHealthRecover;	// 体力恢复。
+	BYTE bSpellRecover;		// 魔法力恢复.
 }ACTORSUBABILITY, *LPACTORSUBABILITY;
 #pragma pack(8)
 
@@ -389,10 +389,10 @@ class CMyHero : public CHero
 private:
 public:
 //---------------------------------------------------------------------------------------------------------------//
-//  某腐磐 焊沥侩 函荐.
+//  角色校正用变量.
 	DWORD			m_dwMotionLockTime;
-	BOOL			m_bInputLock;				// 某腐磐啊 悼累登搁 绢恫涝仿档 罐瘤 臼绰促.
-	BOOL			m_bMotionLock;				// 某腐磐狼 悼累捞 技泼登搁 辑滚俊辑 悼累铰牢捞 坷扁傈鳖柳 绢恫悼累档 罐瘤 臼绰促.
+	BOOL			m_bInputLock;				// 角色动作执行中不接受任何输入.
+	BOOL			m_bMotionLock;				// 角色动作设定后，在服务器发来动作确认之前不接受任何动作.
 //---------------------------------------------------------------------------------------------------------------//
 
 	CMapHandler*	m_pxMap;
@@ -403,20 +403,20 @@ public:
 	BYTE		    m_bJob;
 	UINT			m_nGlod;
 
-	CWHQueue		m_xPriorPacketQueue;					// Actor啊 贸府秦具瞪 皋矫瘤甫 历厘窍绊 乐绰 钮.
+	CWHQueue		m_xPriorPacketQueue;					// 保存 Actor 待处理消息的队列.
 
 //---------------------------------------------------------------------------------------------------------------//
-//  某腐磐 Delay包访 函荐.
-	DWORD			m_dwLastHitTime;						// 漠龙捞 甸绢艾阑锭狼 平 焊包蔼.
-	DWORD			m_dwLastSpellTime;						// 付过捞 甸绢艾阑锭狼 平 焊包蔼.
-	DWORD			m_dwLastMagicTime;						// 堪拳搬 矫傈饶狼 平焊包蔼.
-	DWORD			m_dwLastStruckTime;						// 嘎疽阑锭狼 平 焊包蔼.
+//  角色 Delay 相关变量。
+	DWORD			m_dwLastHitTime;						// 刀击命中时的 tick 保存值。
+	DWORD			m_dwLastSpellTime;						// 魔法生效时的 tick 保存值。
+	DWORD			m_dwLastMagicTime;						// 炎火诀施放后保存的 tick 值。
+	DWORD			m_dwLastStruckTime;						// 受击时的 tick 保存值.
 	DWORD			m_dwLastPKStruckTime;
-	DWORD			m_dwLastRushTime;						// 公怕焊 矫傈饶狼 平焊包蔼.
-	DWORD			m_dwLastFireHitTime;					// 堪拳搬 矫傈饶狼 平焊包蔼.
+	DWORD			m_dwLastRushTime;						// 无胎步施放后的 tick 保存值.
+	DWORD			m_dwLastFireHitTime;					// 炎火诀施放后保存的 tick 值。
 
-	WORD			m_wMagicPKDelayTime;					// 付过栏肺 荤恩阑 傍拜沁阑锭狼 菩澄萍Delay.(叭扁客 顿扁俊 利侩等促.)
-	WORD			m_wMagicDelayTime;						// 付过阑静绊 抄饶 促澜付过捞 甸绢哎锭鳖瘤狼 Delay.
+	WORD			m_wMagicPKDelayTime;					// 用魔法攻击人物时的惩罚 Delay.(适用于行走和奔跑。)
+	WORD			m_wMagicDelayTime;						// 施放魔法后,到下一个魔法进入之前的 Delay.
 //---------------------------------------------------------------------------------------------------------------//
 
 protected:
@@ -459,13 +459,13 @@ public:
 	}
 
 //---------------------------------------------------------------------------------------------------------------//
-//  某腐磐 Delay包访 窃荐.
-	BOOL CanNextHit();									// 瘤陛 漠龙且荐 乐唱狼 咯何. 饭骇苞 馒侩公霸俊 蝶扼 崔扼柳促.
-	BOOL CanWalk();										// Delay客 包访瘤绢辑 某腐磐啊 框流老荐 乐绰瘤狼 咯何.
-	BOOL CanRun();										// Delay客 包访瘤绢辑 某腐磐啊 框流老荐 乐绰瘤狼 咯何.
+//  角色 Delay 相关函数。
+	BOOL CanNextHit();									// 现在是否可以挥刀攻击。随等级和装备重量而变化。
+	BOOL CanWalk();										// 与 Delay 相关联,角色是否可以移动的判断.
+	BOOL CanRun();										// 与 Delay 相关联,角色是否可以移动的判断.
 //---------------------------------------------------------------------------------------------------------------//
 //---------------------------------------------------------------------------------------------------------------//
-//  蜡历 涝仿窃荐.
+//  用户输入函数.
 	BOOL OnLButtonDown(POINT ptMouse, INT nTargetID = -1, BOOL bIsDead = FALSE, POINT* lpptTargetPos = NULL);
 	BOOL OnRButtonDown(POINT ptMouse);
 	BOOL OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTargetPos, INT nMosueTargetID, FEATURE stTargetFeature);

@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 
@@ -33,7 +33,7 @@ VOID CGameWnd::CreateGameWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImg
 
 	SetRect(&m_rcWnd, nStartX, nStartY, nStartX+m_nWidth, nStartY+m_nHeight);
 
-	// 3D抛胶飘
+	// 3D测试
  	D3DVECTOR vNorm(0, 0, -1);
     m_avBoard[0]  = D3DVERTEX(D3DVECTOR(-0.5f, 0.5f, 0), vNorm, 0, 0);
     m_avBoard[1]  = D3DVERTEX(D3DVECTOR(-0.5f,-0.5f, 0), vNorm, 0, 1);
@@ -165,7 +165,7 @@ VOID CGameWnd::ResetWndImg(INT nIdx)
 //	D3DWILTextr_Restore(m_pxWndImage->m_szWilFileName, m_nFrameImgIdx, g_xMainWnd.Get3DDevice());
 }
 
-// 扩档快甫 劝己拳 茄促.
+// 激活窗口。
 VOID CGameWnd::SetGameWndActive(BOOL bActive)
 {
 	m_bActive = bActive;
@@ -183,7 +183,7 @@ VOID CGameWnd::SetGameWndActive(BOOL bActive)
 */
 }
 
-// 扩档快俊 器目胶甫 霖促.
+// 使窗口获得焦点。
 VOID CGameWnd::SetGameWndFocused(BOOL bFocused)
 {
 	m_bFocused = bFocused;
@@ -198,7 +198,7 @@ VOID CGameWnd::MoveGameWnd(POINT ptMouse)
 	}
 }
 
-// 扩档快啊 框流捞扁 矫累且锭 付快胶客狼 Gap阑 掘绰促.
+// 窗口开始移动时取得与鼠标的 Gap.
 VOID CGameWnd::SetReadyMove(POINT ptMouse)
 {
 	if ( m_bActive && m_bFocused && m_bCanMove )

@@ -142,10 +142,10 @@ BOOL CBMMp3::OnStop(VOID)
 	{
 		if(m_bIsPlaying)
 		{
-			SetNotifyFlags(AM_MEDIAEVENT_NONOTIFY);	// WM_DSHOW_NOTIFY 甫 惯积矫虐瘤 臼澜
+			SetNotifyFlags(AM_MEDIAEVENT_NONOTIFY);	// 不产生 WM_DSHOW_NOTIFY
 			if(FAILED(m_pMediaControl->Stop()))
 				return FALSE;
-			m_pMediaPosition->put_CurrentPosition(0);	// 贸澜栏肺 倒府钞.
+			m_pMediaPosition->put_CurrentPosition(0);	// 重新回到开头.
 			m_bIsPlaying = FALSE;
 //			m_bLooping = FALSE;
 			Release();

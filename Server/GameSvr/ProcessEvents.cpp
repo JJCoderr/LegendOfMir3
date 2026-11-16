@@ -42,14 +42,14 @@ void WINAPI ProcessEvents()
 				pEvent = NULL;
 
 				pListNode = g_xEventCloseList.RemoveNode(pListNode);
-				continue;	// 捞傈 滚怜篮 茄锅俊 茄俺究父 瘤奎澜.
+				continue;	// 以前的版本一次只删除一个.
 			}
 
 			pListNode = g_xEventCloseList.GetNext(pListNode);
 		}
 	}
 
-	// 搬拌
+	// 结界
 	if (g_xHolySeizeList.GetCount())
 	{
 		PLISTNODE pListNode = g_xHolySeizeList.GetHead();

@@ -178,34 +178,34 @@ BOOL CMonsterObject::IsProperTarget(CCharObject* pTargetObject)
 				fFlag = TRUE;
 		}
 /*			if (
-         //林牢捞 乐绰 各
+         //有主人的怪物
          //if (target.RaceServer >= RC_ANIMAL) and (target.Master = nil) then
          //   Result := TRUE;
          if (Master.LastHiter = target) or (Master.ExpHiter = target) or (Master.TargetCret = target) then
             Result := TRUE;
          if target.TargetCret <> nil then begin
-            if (target.TargetCret = Master) or  //林牢阑 傍拜
-               (target.TargetCret.Master = Master) and (target.RaceServer <> 0) //悼丰甫 傍拜, 荤恩牢版快 力寇
+            if (target.TargetCret = Master) or  //攻击主人
+               (target.TargetCret.Master = Master) and (target.RaceServer <> 0) //攻击同伴, 人类的情况除外
             then
                Result := TRUE;
          end; */
 		if (pTargetObject->m_pTargetObject == this)
 			fFlag = TRUE;
-/*         if (target.TargetCret = self) and (target.RaceServer >= RC_ANIMAL) then  //各捞搁辑 磊脚阑 傍拜窍绰 磊
+/*         if (target.TargetCret = self) and (target.RaceServer >= RC_ANIMAL) then  //是怪物且攻击自己的对象
             Result := TRUE;
-         if target.Master <> nil then begin  //惑措啊 家券各
+         if target.Master <> nil then begin  //对方是召唤怪
             if (target.Master = Master.LastHiter) or (target.Master = Master.TargetCret) then
                Result := TRUE;
          end;
-         if target.Master = Master then Result := FALSE;  //林牢捞 鞍栏搁 傍拜救窃
-         if target.BoHolySeize then Result := FALSE;  //搬拌俊 吧妨 乐栏搁 傍拜救窃
+         if target.Master = Master then Result := FALSE;  //主人相同则不攻击
+         if target.BoHolySeize then Result := FALSE;  //处于结界状态则不攻击
          if Master.BoSlaveRelax then Result := FALSE;
-         if target.RaceServer = RC_USERHUMAN then begin  //惑措啊 荤恩牢 版快
-            if (Master.InSafeZone) or (target.InSafeZone) then begin  //林牢捞 救傈瘤措俊 乐芭唱, 惑措啊 救傈瘤措俊 乐绰 版快
+         if target.RaceServer = RC_USERHUMAN then begin  //对方是人类的情况
+            if (Master.InSafeZone) or (target.InSafeZone) then begin  //主人处于安全区, 或对方处于安全区的情况
                Result := FALSE;
             end;
          end;
-         BreakCrazyMode;  //林牢乐绰 各.. */
+         BreakCrazyMode;  //有主人的怪物.. */
 	}
 	else
 	{
@@ -217,13 +217,13 @@ BOOL CMonsterObject::IsProperTarget(CCharObject* pTargetObject)
 
 /*         if target.RaceServer = RC_USERHUMAN then
             Result := TRUE;
-         if (RaceServer > RC_PEACENPC) and (RaceServer < RC_ANIMAL) then begin //傍拜仿阑 啊柳 NPC绰 酒公唱 傍拜茄促.
+         if (RaceServer > RC_PEACENPC) and (RaceServer < RC_ANIMAL) then begin //拥有攻击力的 NPC 谁都会攻击.
             Result := TRUE;
          end;
          if target.Master <> nil then
             Result := TRUE; */
 
-//		if BoCrazyMode then  //固魔, 酒公唱 傍拜, 利 救啊覆... (家券各俊霸档 烹茄促.)
+//		if BoCrazyMode then  //发狂, 攻击任何人, 不区分敌我... (对召唤的怪物也适用.)
   //       Result := TRUE;
 	}
 
@@ -320,34 +320,34 @@ void CMonsterObject::Die()
 
 	CCharObject::Die();
 /*   try
-      //各阑 磷牢 版快.  版氰摹甫 掘绰促.
+      //杀死怪物的情况。 获得经验值。
       if (RaceServer <> RC_USERHUMAN) and (LastHiter <> nil) then begin
-         //付瘤阜 锭赴磊啊 荤恩捞绢具 窃.
-         if ExpHiter <> nil then begin //版氰摹甫 冈绰 荤恩.. 刚历 锭府扁 矫累茄 荤恩
+         //最后一击者必须是人。
+         if ExpHiter <> nil then begin //获得经验值的人.. 最先开始攻击的人
             if ExpHiter.RaceServer = RC_USERHUMAN then begin
-               //弥措 眉仿 父怒, 惑措狼 饭骇俊 厚肥秦辑 版氰摹甫 掘绰促.
+               //按照最大体力，并按对方等级的比例获得经验值。
                exp := ExpHiter.CalcGetExp (self.Abil.Level, self.FightExp);
                if not BoVentureServer then begin
                   ExpHiter.GainExp (exp);
                end else begin
-                  //葛氰辑滚俊辑绰 痢荐啊 棵扼埃促.
+                  //在冒险服务器中分数会上升。
                end;
             end else begin
-               if ExpHiter.Master <> nil then begin //锭赴仇捞 家券各
-                  //何窍档 版氰摹甫 冈澜
-                  ExpHiter.GainSlaveExp (self.Abil.Level);  //惑措狼 饭骇父怒 版氰阑 冈澜
-                  //林牢捞 版氰摹甫 冈绰促.
+               if ExpHiter.Master <> nil then begin //攻击者是召唤怪
+                  //随从也获得经验值
+                  ExpHiter.GainSlaveExp (self.Abil.Level);  //按对方等级获得经验
+                  //主人获得经验值。
                   exp := ExpHiter.Master.CalcGetExp (self.Abil.Level, self.FightExp);
                   if not BoVentureServer then begin
-                     ExpHiter.Master.GainExp (exp); //家券荐甫 何府绰 荤恩捞 冈绰促.
+                     ExpHiter.Master.GainExp (exp); //驱使召唤物的人获得。
                   end else begin
-                     //葛氰辑滚俊辑绰 痢荐啊 棵扼埃促.
+                     //在冒险服务器中分数会上升。
                   end;
                end;
             end;
          end else
             if LastHiter.RaceServer = RC_USERHUMAN then begin
-               //弥措 眉仿 父怒, 惑措狼 饭骇俊 厚肥秦辑 版氰摹甫 掘绰促.
+               //按照最大体力，并按对方等级的比例获得经验值。
                exp := LastHiter.CalcGetExp (self.Abil.Level, self.FightExp);
                if not BoVentureServer then begin
                   LastHiter.GainExp (exp);
@@ -382,7 +382,7 @@ void CMonsterObject::ScatterBagItems()
 	}
 }
 /*
-procedure TCreature.ScatterBagItems;    //磷绢辑 啊规俊 酒捞袍阑 汝覆.. 傈何 汝赴促.
+procedure TCreature.ScatterBagItems;    //死亡后背包中的物品掉落.. 全部掉落.
 var
    i, dropwide: integer;
    pu: PTUserItem;
@@ -394,8 +394,8 @@ begin
    boDropall := TRUE;
    if RaceServer = RC_USERHUMAN then begin
       dropwide := 2;
-      if PKLevel < 2 then boDropall := FALSE; //荤恩篮 1/3犬伏肺 冻焙促.
-      //弧盎捞绰 促 冻焙促.
+      if PKLevel < 2 then boDropall := FALSE; //人类以 1/3 概率掉落.
+      //红名全部掉落.
    end else
       dropwide := 3;
 
@@ -406,7 +406,7 @@ begin
                pu := PTUserItem(ItemList[i]);
                if RaceServer = RC_USERHUMAN then begin
                   if dellist = nil then dellist := TStringList.Create;
-                  //冻绢哆赴 酒捞袍阑 努扼捞攫飘俊 舅覆.
+                  //将掉落的物品通知客户端.
                   dellist.AddObject(UserEngine.GetStdItemName (pu.Index), TObject(pu.MakeIndex));
                end;
                Dispose(PTUserItem(ItemList[i]));
@@ -416,7 +416,7 @@ begin
       end;
       if dellist <> nil then begin
          SendMsg (self, RM_DELITEMS, 0, integer(dellist), 0, 0, '');
-         //dellist绰 rm_delitem俊辑 free 矫难具 茄促.
+         //dellist 必须在 rm_delitem 中 free.
       end;
    except
       MainOutMessage ('[Exception] TCreature.ScatterBagItems');
@@ -587,10 +587,10 @@ begin
       for i:=0 to list.Count-1 do begin
          pmi := PTMonItemInfo(list[i]);
          if pmi.SelPoint >= Random(pmi.MaxPoint) then begin
-            if CompareText(pmi.ItemName, '捣') = 0 then begin
+            if CompareText(pmi.ItemName, '钱') = 0 then begin
                mon.Gold := (pmi.Count div 2) + Random(pmi.Count);
             end else begin
-               //蜡聪农 酒捞袍 捞亥飘....
+               //独特物品事件....
                iname := '';
                ////if (BoUniqueItemEvent) and (not mon.BoAnimal) then begin
                ////   if GetUniqueEvnetItemName (iname, numb) then begin
@@ -602,17 +602,17 @@ begin
 
                new (pu);
                if CopyToUserItemFromName (iname, pu^) then begin
-                  //郴备己捞 函版登绢 乐澜..
+                  //耐久度已被修改..
                   pu.Dura := Round ((pu.DuraMax / 100) * (20+Random(80)));
 
                   pstd := GetStdItem (pu.Index);
                   ////if pstd <> nil then
-                  ////   if pstd.StdMode = 50 then begin  //惑前鼻
+                  ////   if pstd.StdMode = 50 then begin  //代金券
                   ////      pu.Dura := numb;
                   ////   end;
 
-                  //撤篮 犬伏肺
-                  //酒捞袍狼 诀弊贰捞靛等 郴侩 利侩
+                  //以较低概率
+                  //应用物品的升级内容
                   if Random(10) = 0 then
                      RandomUpgradeItem (pu);
 
@@ -824,7 +824,7 @@ void CMonsterObject::GotoTargetXY()
 		}
 
 //		char szTemp[64];
-//		sprintf(szTemp, "捞 仇 %s 具 芭扁 几芭扼... 窍窍窍", m_pTargetObject->m_szName);
+//		sprintf(szTemp, "你这家伙 %s，给我站住... 哈哈哈", m_pTargetObject->m_szName);
 //		AddRefMsg(RM_MONSTERSAY, 0, 0, 0, 0, szTemp);
 
 		int nOldX = m_nCurrX;
@@ -870,11 +870,11 @@ begin
          SelectTarget (hiter);
    end;
    if BoAnimal then begin
-      MeatQuality := MeatQuality - Random (300);  //悼拱捞 嘎栏搁 嘎阑 荐废 绊扁 前龙捞 冻绢咙
+      MeatQuality := MeatQuality - Random (300);  //动物被打得越多，肉的品质越下降
       if MeatQuality < 0 then MeatQuality := 0;
    end;
    if Abil.Level < 50 then
-      HitTime  := HitTime + (150 - _MIN(130, Abil.Level * 4)); //茄规俊 ms究 词霸 锭赴促.
+      HitTime  := HitTime + (150 - _MIN(130, Abil.Level * 4)); //每一下延迟 ms 再攻击。
    //WalkTime := WalkTime + (300 - _MIN(200, (Abil.Level div 5) * 20));
 end;
 */
@@ -981,8 +981,8 @@ void CMonsterObject::Operate()
 						HealthSpellChanged();
 						AddRefMsg(RM_STRUCK_MAG, nVal, m_WAbility.HP, m_WAbility.MP, (int)lpProcessMsg->pCharObject, NULL);
 						
-//                  if BoAnimal then begin //绊扁啊 唱坷绰 悼拱牢 版快..
- //                   MeatQuality := MeatQuality - v1 * 1000;  //付过阑 嘎栏搁 绊扁龙捞 摹疙利栏肺 唱狐柳促.
+//                  if BoAnimal then begin //若是会掉落肉类的动物..
+ //                   MeatQuality := MeatQuality - v1 * 1000;  //被魔法击中时肉质会严重变差.
 //                  end;
 						SetLastHiter(lpProcessMsg->pCharObject);
 //						Struck(lpProcessMsg->pCharObject);
@@ -1309,7 +1309,7 @@ void CMonsterObject::Run()
 						}
 					}
 
-/*               //林牢苞 呈公 冻绢廉 乐栏搁...
+/*               //如果与主人离得太远……
                if (not Master.BoSlaveRelax) and
                   ((PEnvir <> Master.PEnvir) or
                    (abs(CX-Master.CX) > 20) or
@@ -1338,7 +1338,7 @@ void CMonsterObject::Run()
 
 /*         if Master <> nil then begin
             if Master.BoSlaveRelax then begin
-               //林牢捞 绒侥窍扼绊 窃...
+               //主人让它休息...
                inherited Run;
                exit;
             end;
@@ -1416,7 +1416,7 @@ BOOL CMonsterObject::CheckComeOut(int nValue)
 
 /* **************************************************************************************
 
-		老馆 阁胶磐
+		普通怪物
 
    ************************************************************************************** */
 
@@ -1436,7 +1436,7 @@ void CGenneralMonObject::Run()
 
 /* **************************************************************************************
 
-		催
+		鸡
 
    ************************************************************************************** */
 
@@ -1452,7 +1452,7 @@ void CChickenObject::Run()
 
 /* **************************************************************************************
 
-		林付龋过, 林付脚厘
+		走马护法, 走马神将
 
    ************************************************************************************** */
 
@@ -1542,7 +1542,7 @@ void CScultureObject::Run()
 
 /* **************************************************************************************
 
-		林付空
+		住魔王
 
    ************************************************************************************** */
 
@@ -1562,7 +1562,7 @@ CScultureKingObject::CScultureKingObject()
 void CScultureKingObject::CallSlave()
 {
 	static const int MaxSlaveList = 4;
-	static int SlaveList[MaxSlaveList] = { 143/*付泵荤*/, 145/*林付脚厘*/, 148/* 林付龋过 */, 126/*禁扁唱规*/ };
+	static int SlaveList[MaxSlaveList] = { 143/*魔弓士*/, 145/*走马神掌*/, 148/* 走马护法 */, 126/*刺蛾*/ };
 
 	int				nCount = 6 + (rand() % 6);
 	int				nMonRace;
@@ -1655,7 +1655,7 @@ void CScultureKingObject::Run()
 
 /* **************************************************************************************
 
-		厚阜盔面
+		飞膜元虫
 
    ************************************************************************************** */
 
@@ -1762,7 +1762,7 @@ void CBeeQueen::Run()
 
 /* **************************************************************************************
 
-		街档尝 秦榜, 付泵荤
+		双斧骷髅, 魔弓士
 
    ************************************************************************************** */
 
@@ -1774,7 +1774,7 @@ CDualAxeObject::CDualAxeObject(int nChainShotCount)
 
 void CDualAxeObject::FlyAxeAttack(CCharObject* pTargetObject)
 {
-//   if PEnvir.CanFly (CX, CY, targ.CX, targ.CY) then begin //档尝啊 朝酒哎荐 乐绰瘤.
+//   if PEnvir.CanFly (CX, CY, targ.CX, targ.CY) then begin //斧头能否飞出。
 	int nDamage;
 	int nDir	= GetNextDirection(pTargetObject->m_nCurrX, pTargetObject->m_nCurrY);
 
@@ -1853,7 +1853,7 @@ void CDualAxeObject::Run()
 
 		if (GetTickCount() - m_dwWalkTime > m_dwNextWalkTime)
 		{
-			// 档噶啊绰 内靛 眠啊
+			// 添加逃跑代码
 		}
 	}
 
@@ -1862,7 +1862,7 @@ void CDualAxeObject::Run()
 
 /* **************************************************************************************
 
-		扼捞飘醋 粱厚
+		闪电僵尸
 
    ************************************************************************************** */
 
@@ -1933,7 +1933,7 @@ void CLightingZombiObject::Run()
 
 /* **************************************************************************************
 
-		沸
+		罗恩
 
    ************************************************************************************** */
 
@@ -1990,7 +1990,7 @@ void CRonObject::Run()
 
 /* **************************************************************************************
 
-		窍鞭 穿付
+		下级 努马
 
    ************************************************************************************** */
 
@@ -2010,7 +2010,7 @@ void CMinorNumaObject::Run()
 
 /* **************************************************************************************
 
-		坷付 矫府令 
+		奥马系列
 
    ************************************************************************************** */
 
@@ -2030,7 +2030,7 @@ void COmaObject::Run()
 
 /* **************************************************************************************
 
-		榜伐(籍厘牢)
+		魔像(石匠)
 
    ************************************************************************************** */
 
@@ -2071,7 +2071,7 @@ void CRockManObject::Run()
 
 /* **************************************************************************************
 
-		侥牢檬
+		食人草
 
    ************************************************************************************** */
 
@@ -2123,7 +2123,7 @@ void CStickObject::Run()
 
 /* **************************************************************************************
 
-		葛贰 鲍拱(荤锄)
+		沙怪(沙脑)
 
    ************************************************************************************** */
 
@@ -2177,7 +2177,7 @@ void CSandMobObject::Run()
 
 /* **************************************************************************************
 
-		归榜
+		白骨
 
    ************************************************************************************** */
 
@@ -2212,7 +2212,7 @@ void CWhiteSkeleton::Run()
 
 /* **************************************************************************************
 
-		脚荐 (锅脚傈)
+		神兽 (变身殿)
 
    ************************************************************************************** */
 
@@ -2244,7 +2244,7 @@ begin
    //Appear;
    //ResetElfMon;
    RecalcAbilitys;
-   WalkTime := WalkTime + 800; //函脚饶 距埃 掉饭捞 乐澜
+   WalkTime := WalkTime + 800; //变身后有少许延迟
 end;
 */
 }
@@ -2296,7 +2296,7 @@ void CElfMonster::Run()
 
 /* **************************************************************************************
 
-		脚荐 (函脚饶)
+		神兽 (变身后)
 
    ************************************************************************************** */
 
@@ -2328,7 +2328,7 @@ begin
    //Appear;
    //ResetElfMon;
    RecalcAbilitys;
-   WalkTime := WalkTime + 800; //函脚饶 距埃 掉饭捞 乐澜
+   WalkTime := WalkTime + 800; //变身后有少许延迟
 end;
 */
 }
@@ -2383,7 +2383,7 @@ void CElfWarriorMonster::Run()
 
 /* **************************************************************************************
 
-		魔芭固
+		毒针蜘蛛
 
    ************************************************************************************** */
 
@@ -2435,11 +2435,11 @@ void CSpitSpiderMonster::SpitAttack(int nDir)
 																	pCharObject->m_WAbility.MaxHP, (int)this, NULL, 300);
 
 /*                        if BoUsePoison then begin
-                           //眉仿捞 皑家窍绰 刀俊 吝刀 等促.
+                           //中毒于使体力减少的毒。
                            if Random(20 + cret.AntiPoison) = 0 then
-                              cret.MakePoison (POISON_DECHEALTH, 30, 1);   //眉仿捞 皑家
+                              cret.MakePoison (POISON_DECHEALTH, 30, 1);   //体力减少
                            //if Random(2) = 0 then
-                           //   cret.MakePoison (POISON_STONE, 5);   //付厚
+                           //   cret.MakePoison (POISON_STONE, 5);   //麻痹
                         end; */
 
 								}

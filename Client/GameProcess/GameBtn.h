@@ -7,11 +7,11 @@ public:
 	RECT			m_rcBtn;
 
 	CWHWilImageData* m_pxBtnImage;
-	INT				m_nFocusImgIdx;			// 捞固瘤 包访 函荐甸. 
+	INT				m_nFocusImgIdx;			// 图像相关变量. 
 	INT				m_nClickImgIdx;			
 
-	BYTE			m_bBtnType;				// 0 : 器目胶 惑怕甫 啊瘤瘤 臼绰促. 1: 器目胶 乐澜.
-	BYTE			m_bBtnState;			// 0 : 弊措肺... 1: 付快胶 器目胶惑怕. 2: 付快胶 努腐惑怕.
+	BYTE			m_bBtnType;				// 0 : 不具有焦点状态. 1: 有焦点.
+	BYTE			m_bBtnState;			// 0 : 保持原样... 1: 鼠标焦点状态. 2: 鼠标点击状态.
 
 
 public:
@@ -75,23 +75,23 @@ public:
 	~CScrlBar();
 
 public:
-	CWHWilImageData*	m_pxScrlImage;		// 胶农费官 捞固瘤颇老 器牢磐.
-	INT					m_nScrlImgIdx;		// 胶农费官 捞固瘤.
+	CWHWilImageData*	m_pxScrlImage;		// 滚动条图像文件指针。
+	INT					m_nScrlImgIdx;		// 滚动条图像。
 
-	FLOAT				m_fScrlRate;		// 0.0f~1.0f荤捞. 胶农费官狼 厚啦.
+	FLOAT				m_fScrlRate;		// 0.0f~1.0f 之间。滚动条的比例。
 	FLOAT				m_fPageRate;		
 
 	INT					m_nPageLine;
 
-	BOOL				m_bGrapsed;			// 胶农费 滚瓢康开俊辑 Mouse LButtonDown俊 狼秦辑 喘妨柳惑怕牢瘤甫 魄窜茄促.
+	BOOL				m_bGrapsed;			// 判断在滚动按钮区域内是否因 Mouse LButtonDown 而处于按下状态.
 
 	WORD				m_wScrlWidth;
 	WORD				m_wScrlHeight;
 
 	WORD				m_wScrlBtnHeight;
 
-	RECT				m_rcScrlRgn;		// 胶农费官狼 康开.
-	RECT				m_rcScrlBtnRgn;		// 胶农费官俊辑 滚瓢狼 康开.
+	RECT				m_rcScrlRgn;		// 滚动条的区域.
+	RECT				m_rcScrlBtnRgn;		// 滚动条中按钮的区域.
 
 	__inline FLOAT GetScrlRate()
 	{

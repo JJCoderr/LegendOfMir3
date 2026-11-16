@@ -10,38 +10,38 @@ CMonsterObject* AddCreature(CMirMap* pMap, int nX, int nY, int nMonRace, BOOL fS
 	{
 		case _ANIMAL_DEER:
 			pMonsterObject = (CMonsterObject*)new CAnimalObject; break;
-		case _MONSTER_STICK:		// 侥牢檬
+		case _MONSTER_STICK:		// 食人草
 			pMonsterObject = (CMonsterObject*)new CStickObject; break;
-		case _MONSTER_SANDMOB:		// 籍厘牢
+		case _MONSTER_SANDMOB:		// 石匠人
 			pMonsterObject = (CMonsterObject*)new CSandMobObject; break;
-		case _MONSTER_RON:			// 沸
+		case _MONSTER_RON:			// 罗恩
 			pMonsterObject = (CMonsterObject*)new CRonObject; break;
-		case _MONSTER_SCULTURE1:	// 林付脚厘, 林付龋过
+		case _MONSTER_SCULTURE1:	// 走马神掌、走马护法
 		case _MONSTER_SCULTURE2:
 			pMonsterObject = (CMonsterObject*)new CScultureObject; break;
-		case _MONSTER_BEEQUEEN:		// 厚阜盔面
+		case _MONSTER_BEEQUEEN:		// 飞膜圆虫
 			pMonsterObject = (CMonsterObject*)new CBeeQueen; break;
-		case _MONSTER_SCULTUREKING: // 林付空
+		case _MONSTER_SCULTUREKING: // 走马王
 			pMonsterObject = (CMonsterObject*)new CScultureKingObject; break;
-		case _MONSTER_DUALAXE:		// 街档尝秦榜
+		case _MONSTER_DUALAXE:		// 双斧骷髅
 			pMonsterObject = (CMonsterObject*)new CDualAxeObject; break;
-		case _MONSTER_MAGUNGSA:		// 付泵荤
+		case _MONSTER_MAGUNGSA:		// 魔弓士
 			pMonsterObject = (CMonsterObject*)new CDualAxeObject(6); break;
-		case _MONSTER_THONEDARK:	// 促农
+		case _MONSTER_THONEDARK:	// 暗黑
 			pMonsterObject = (CMonsterObject*)new CDualAxeObject(3); break;
 		case _MONSTER_LIGHTZOMBI:
 			pMonsterObject = (CMonsterObject*)new CLightingZombiObject; break;
-		case _MONSTER_ROCKMAN:		// 荤鲍
+		case _MONSTER_ROCKMAN:		// 沙魁
 			pMonsterObject = (CMonsterObject*)new CRockManObject; break;
 		case _MONSTER_MINORNUMA:
 			pMonsterObject = (CMonsterObject*)new CMinorNumaObject; break;
-		case _MONSTER_WHITESKELETON:	// 归榜
+		case _MONSTER_WHITESKELETON:	// 白骨
 			pMonsterObject = (CMonsterObject*)new CWhiteSkeleton; break;
-		case _MONSTER_ELFMONSTER:		// 脚荐 函脚 傈 
+		case _MONSTER_ELFMONSTER:		// 神兽变身之前 
 			pMonsterObject = (CMonsterObject*)new CElfMonster; break;			
-		case _MONSTER_ELFWARRIOR:		// 脚荐 函脚 饶 
+		case _MONSTER_ELFWARRIOR:		// 神兽变身之后 
 			pMonsterObject = (CMonsterObject*)new CElfWarriorMonster; break;
-		case _MONSTER_SPITSPIDER:		// 魔芭固
+		case _MONSTER_SPITSPIDER:		// 唾液蜘蛛
 			pMonsterObject = (CMonsterObject*)new CSpitSpiderMonster; break;
 		case _MONSTER_OMA:
 		case _MONSTER_OMAKNIGHT:
@@ -102,7 +102,7 @@ DWORD GetZenTime(DWORD dwZenTime)
 	{
 		return dwZenTime;
 /*      if ztime < 30 * 60 * 1000 then begin
-         r := (GetUserCount - UserFullCount) / ZenFastStep;  //概 200疙捞 疵锭付促 10%究 各阑 歹 哩 矫糯
+         r := (GetUserCount - UserFullCount) / ZenFastStep;  //每增加 200 人就把怪物刷新量提高 10%
          if r > 0 then begin
             if r > 6 then r := 6;
             Result := ztime - Round ((ztime/10) * r);

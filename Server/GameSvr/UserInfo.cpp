@@ -761,7 +761,7 @@ void CUserInfo::ProcessUserMessage(char *pszPacket)
                hum.SendMsg (hum, pmsg.Ident, 0, pmsg.Recog, pmsg.Param{x}, pmsg.Tag{y}, '');
             end;
 
-         //string ÆÄ¶ó¸ŞÅÍ°¡ ÀÖÀ½.
+         //string ²ÎÊı´æÔÚ.
 	case CM_DROPITEM:
 	case CM_TAKEOFFITEM:
 	case CM_EXCHGTAKEONITEM:

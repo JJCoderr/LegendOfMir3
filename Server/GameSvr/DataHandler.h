@@ -67,8 +67,8 @@ public:
 
 	char				m_szMapName[16];
 	char				m_szMapTextName[40];
-	BYTE				m_btSeries;					// 瘤开 盔家 加己
-	BYTE				m_btSeriesVal;				// 瘤开 盔家 加己蔼
+	BYTE				m_btSeries;					// 区域元素属性
+	BYTE				m_btSeriesVal;				// 区域元素属性值
 
 public:
 	CMirMap();

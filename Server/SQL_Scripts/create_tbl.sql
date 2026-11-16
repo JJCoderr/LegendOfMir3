@@ -110,27 +110,27 @@ GO
 CREATE TABLE TBL_STDITEM
 (
 	FLD_INDEX		INT			NOT NULL,
-	FLD_NAME		CHAR(14)		NOT NULL,		/* 酒捞袍 疙 */
+	FLD_NAME		CHAR(14)		NOT NULL,		/* 物品名称 */
 	FLD_STDMODE		SMALLINT		NULL,			
-	FLD_SHAPE		SMALLINT		NULL,			/* 屈怕喊 捞抚 */
-	FLD_WEIGHT		SMALLINT		NULL,			/* 公霸 */
-	FLD_ANICOUNT		SMALLINT		NULL,			/* 1焊促 农搁 俊聪皋捞记 登绰 酒捞袍 */
-	FLD_SOURCE		SMALLINT		NULL,			/* 犁龙 (0:扁夯, 1捞惑:歹 窜窜窃) */
+	FLD_SHAPE		SMALLINT		NULL,			/* 按形态的名称 */
+	FLD_WEIGHT		SMALLINT		NULL,			/* 重量 */
+	FLD_ANICOUNT		SMALLINT		NULL,			/* 大于 1 则为有动画的物品 */
+	FLD_SOURCE		SMALLINT		NULL,			/* 材质 (0:默认, 1以上:更坚硬) */
 	FLD_RESERVED		SMALLINT		NULL,
-	FLD_LOOKS		INT			NULL,			/* 弊覆 锅龋 */
+	FLD_LOOKS		INT			NULL,			/* 图像编号 */
 	FLD_DURAMAX		INT			NULL,
-	FLD_AC			SMALLINT		NULL,			/* 规绢仿 */
+	FLD_AC			SMALLINT		NULL,			/* 防御力 */
 	FLD_AC2			SMALLINT		NULL,
-	FLD_MAC		SMALLINT		NULL,			/* 付亲仿 */
+	FLD_MAC		SMALLINT		NULL,			/* 魔抗力 */
 	FLD_MAC2		SMALLINT		NULL,
-	FLD_DC			SMALLINT		NULL,			/* 单固瘤 */
+	FLD_DC			SMALLINT		NULL,			/* 伤害 */
 	FLD_DC2			SMALLINT		NULL,
-	FLD_MC			SMALLINT		NULL,			/* 贱荤狼 付过 颇况 */
+	FLD_MC			SMALLINT		NULL,			/* 术士的魔法威力 */
 	FLD_MC2		SMALLINT		NULL,
-	FLD_SC			SMALLINT		NULL,			/* 档荤狼 沥脚仿 */
+	FLD_SC			SMALLINT		NULL,			/* 道士的精神力 */
 	FLD_SC2			SMALLINT		NULL,
 	FLD_NEED		SMALLINT		NULL,			/* 0:Level, 1:DC, 2:MC, 3:SC */
-	FLD_NEEDLEVEL		SMALLINT		NULL,			/* 1...60 饭骇 蔼 */
+	FLD_NEEDLEVEL		SMALLINT		NULL,			/* 1...60 等级值 */
 	FLD_PRICE		INT			NULL,
 	FLD_STOCK		INT			NULL,
 	FLD_DESCRIPTION	VARCHAR(100)		NULL,

@@ -6,14 +6,14 @@
 	Date:
 		2001/02/05 
 
-	Note: 
-		秦浆 抛捞喉阑 捞侩茄 甘 努贰胶
-		Division Hash 窃荐甫 荤侩窍哥 阿 滚哦俊 措秦辑 捞柳 沤祸阑 荐青茄促.
-		Key绰 巩磊凯(char *)阑 荤侩茄促.
+	Note:
+		使用哈希表的地图类
+		使用 Division Hash 函数，并对每个桶执行二分查找。
+		Key 使用字符串(char *)。
 
 	Usage:
-		InitHashTable肺 鞘夸茄 皋葛府甫 且寸窍绊 UninitHashTable肺 皋葛府甫 秦力茄促.
-		荤侩窍扁 傈俊 馆靛矫 SetGetKeyFunction阑 龋免窍咯具 茄促.
+		用 InitHashTable 分配所需内存，用 UninitHashTable 释放内存。
+		使用之前必须先调用 SetGetKeyFunction。
 */
 #ifndef __ORZ_DATASTRUCTURE_MAP__
 #define __ORZ_DATASTRUCTURE_MAP__
@@ -24,16 +24,16 @@
 #include "prime.h"
 
 
-// 秦浆 抛捞喉阑 檬扁拳且 锭 荤侩登绰 敲贰弊
-#define IHT_UNTOUCH		1	// 瘤沥等 农扁甫 弊措肺 荤侩茄促.
-#define IHT_ROUNDUP		2	// 瘤沥等 农扁客 啊厘 啊鳖款 家荐(奴蔼)甫 荤侩茄促.
-#define IHT_ROUNDDOWN	3	// 瘤沥等 农扁客 啊厘 啊鳖款 家荐(累篮蔼)甫 荤侩茄促.
+// 初始化哈希表时使用的标志
+#define IHT_UNTOUCH		1	// 直接使用指定的大小。
+#define IHT_ROUNDUP		2	// 使用与指定大小最接近的质数(较大的值).
+#define IHT_ROUNDDOWN	3	// 使用与指定大小最接近的较小值.
 
 
 /*
-	CMap 努贰胶 沥狼
+	CMap 类定义
 
-	Note: T狼 器牢磐甫 荤侩茄促.
+	Note: 使用 T 的指针.
 */
 template< class T >
 class CMap
@@ -75,7 +75,7 @@ protected:
 
 
 /*
-	备泅
+	实现
 */
 template< class T >
 CMap< T >::CMap()
@@ -99,7 +99,7 @@ bool CMap< T >::InitHashTable( int nDemandSize, int nFlags )
 {
 	m_nDemandSize = nDemandSize;
 	
-	// 角力 滚哦 农扁甫 备茄促.
+	// 求出实际的桶大小.
 	switch ( nFlags )
 	{
 	case IHT_UNTOUCH:
@@ -115,7 +115,7 @@ bool CMap< T >::InitHashTable( int nDemandSize, int nFlags )
 		break;
 	}
 
-	// 畴靛 硅凯 且寸
+	// 节点数组分配
 	m_pHashTable = new CBsTree< T >[ m_nRealSize ];
 	if ( m_pHashTable )
 	{

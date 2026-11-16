@@ -27,7 +27,7 @@ VOID CLightFog::Init(DWORD dwLightColor)
 
 	memcpy(m_avSaveLight, m_avLight, sizeof(D3DLVERTEX)*(NUM_CNTY_LIGHTTILE+1)*(NUM_CNTX_LIGHTTILE+1));
 
-	// 鸥老弃府帮狼 牢郸胶 积己.
+	// 生成图块多边形的索引.
     WORD* pwIndex = m_pwLightIndices;
 	for ( nCntY = 0; nCntY < NUM_CNTY_LIGHTTILE; nCntY++ )
 	{
@@ -90,7 +90,7 @@ BOOL CLightFog::SetLightRadiusWithRing(INT XLightPos, INT YLightPos,
 	INT nEndTileX			= nX + nLargeRadius + 1;
 	INT nEndTileY			= nY + nLargeRadius + 1;
 
-	// y甫 绵栏肺 秦辑 俩 绢滴款 何盒阑 备茄促.(x焊促 y啊 歹 利栏骨肺)
+	// 以 y 为轴计算最暗的部分.(因为 y 比 x 更小)
 	nLargeRadius = (nLargeRadius*TILE_HEIGHT);
 	nSmallRadius = (nSmallRadius*TILE_HEIGHT);
 
@@ -112,7 +112,7 @@ BOOL CLightFog::SetLightRadiusWithRing(INT XLightPos, INT YLightPos,
 							   (YLightPos-(nCntY*TILE_HEIGHT+TILE_START_YPOS))*(YLightPos-(nCntY*TILE_HEIGHT+TILE_START_YPOS)));
 			if ( nCntX < NUM_CNTX_LIGHTTILE && nCntY < NUM_CNTY_LIGHTTILE )
 			{
-				// 器牢飘痢阑 器窃窍瘤 臼绰 谅窍. 器牢飘痢阑 器窃窍瘤 臼绰 快惑.
+				// 不含点坐标的左下. 不含点坐标的右上.
 				if ( (nCntX > nX && nCntY < nY) || (nCntX < nX && nCntY > nY) )
 				{
 					WORD* pwIndex = ((WORD*)m_pwLightIndices+(nCntX+nCntY*(NUM_CNTX_LIGHTTILE))*6);
@@ -189,7 +189,7 @@ BOOL CLightFog::SetLightRadiusWithCircle(INT XLightPos, INT YLightPos, INT nRadi
 	INT nEndTileX			= nX + nRadius + 1;
 	INT nEndTileY			= nY + nRadius + 1;
 
-	// y甫 绵栏肺 秦辑 俩 绢滴款 何盒阑 备茄促.(x焊促 y啊 歹 利栏骨肺)
+	// 以 y 为轴计算最暗的部分.(因为 y 比 x 更小)
 	nRadius = (nRadius*TILE_HEIGHT);
 
 	DOUBLE rLengthCnt		= 0;
@@ -210,7 +210,7 @@ BOOL CLightFog::SetLightRadiusWithCircle(INT XLightPos, INT YLightPos, INT nRadi
 							   (YLightPos-(nCntY*TILE_HEIGHT+TILE_START_YPOS))*(YLightPos-(nCntY*TILE_HEIGHT+TILE_START_YPOS)));
 			if ( nCntX < NUM_CNTX_LIGHTTILE && nCntY < NUM_CNTY_LIGHTTILE )
 			{
-				// 器牢飘痢阑 器窃窍瘤 臼绰 谅窍. 器牢飘痢阑 器窃窍瘤 臼绰 快惑.
+				// 不含点坐标的左下. 不含点坐标的右上.
 				if ( (nCntX > nX && nCntY < nY) || (nCntX < nX && nCntY > nY) )
 				{
 					WORD* pwIndex = ((WORD*)m_pwLightIndices+(nCntX+nCntY*(NUM_CNTX_LIGHTTILE))*6);
@@ -325,7 +325,7 @@ BOOL CLightFog::SetLightRadiusWithElipse(INT XLightPos, INT YLightPos, INT nXRad
 		{
 			if ( nCntX < NUM_CNTX_LIGHTTILE && nCntY < NUM_CNTY_LIGHTTILE )
 			{
-				// 器牢飘痢阑 器窃窍瘤 臼绰 谅窍. 器牢飘痢阑 器窃窍瘤 臼绰 快惑.
+				// 不含点坐标的左下. 不含点坐标的右上.
 				if ( (nCntX > nX && nCntY < nY) || (nCntX < nX && nCntY > nY) )
 				{
 					WORD* pwIndex = ((WORD*)m_pwLightIndices+(nCntX+nCntY*(NUM_CNTX_LIGHTTILE))*6);

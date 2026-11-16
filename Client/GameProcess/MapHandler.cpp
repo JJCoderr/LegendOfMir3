@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 #include "StdAfx.h"
 
@@ -14,15 +14,15 @@
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMapHandler::CMapHandler()
+	函数名 : CMapHandler::CMapHandler()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CMapHandler::CMapHandler()
@@ -34,15 +34,15 @@ CMapHandler::CMapHandler()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMapHandler::~CMapHandler()
+	函数名 : CMapHandler::~CMapHandler()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CMapHandler::~CMapHandler()
@@ -54,15 +54,15 @@ CMapHandler::~CMapHandler()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMapHandler::InitMapHandler()
+	函数名 : CMapHandler::InitMapHandler()
 
-	累己磊 : 
-	累己老 : 
+	作者 : 
+	日期 : 
 
-	格利   : 
-	免仿   : VOID 
+	目的   : 
+	输出   : VOID 
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CMapHandler::InitMapHandler()
@@ -109,15 +109,15 @@ VOID CMapHandler::LoadMapHandler(CHAR* szMapFile, CImageHandler* pxImgHandler, I
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMapHandler::DestroyMapHandler()
+	函数名 : CMapHandler::DestroyMapHandler()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CMapHandler::DestroyMapHandler()
@@ -140,15 +140,15 @@ VOID CMapHandler::DestroyMapHandler()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMapHandler::LoadNewMapBuffer()
+	函数名 : CMapHandler::LoadNewMapBuffer()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	创建日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CMapHandler::LoadNewMapBuffer()
@@ -189,16 +189,16 @@ VOID CMapHandler::LoadNewMapBuffer()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMapHandler::LoadMapData()
+	函数名 : CMapHandler::LoadMapData()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : CHAR* szMapFile
-	免仿   : BOOL 
+	目的   :
+	输入   : CHAR* szMapFile
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CMapHandler::LoadMapData(CHAR* szMapFile)
@@ -255,15 +255,15 @@ BOOL CMapHandler::LoadMapData(CHAR* szMapFile)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMapHandler::LoadMapImage(CImageHandler* pxImgHandler)
+	函数名 : CMapHandler::LoadMapImage(CImageHandler* pxImgHandler)
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CMapHandler::LoadMapImage(CImageHandler* pxImgHandler)
@@ -288,15 +288,15 @@ VOID CMapHandler::LoadMapImage(CImageHandler* pxImgHandler)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMapHandler::FreeMapData()
+	函数名 : CMapHandler::FreeMapData()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CMapHandler::FreeMapData()
@@ -318,18 +318,18 @@ VOID CMapHandler::FreeMapData()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMapHandler::ScrollMap()
+	函数名 : CMapHandler::ScrollMap()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nCharDir
+	目的   :
+	输入   : INT nCharDir
 	         INT nCharFrame
 	         INT nSpeed
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CMapHandler::ScrollMap(INT nCharDir, INT nCharFrame, INT nSpeed)
@@ -338,38 +338,38 @@ VOID CMapHandler::ScrollMap(INT nCharDir, INT nCharFrame, INT nSpeed)
 
 	switch ( nCharDir )
 	{
-	// 流急 困肺 捞悼.
+	// 沿直线向上移动.
 	case _DIRECTION_LIST_1:	
 		m_shViewOffsetY = -(m_ptMovePixelArray[nCharFrame].y * nSpeed);		
 		break;
-	// 坷弗率困肺 捞悼.
+	// 向右上方移动.
 	case _DIRECTION_LIST_2:
 		m_shViewOffsetX =  (m_ptMovePixelArray[nCharFrame].x * nSpeed);
 		m_shViewOffsetY = -(m_ptMovePixelArray[nCharFrame].y * nSpeed);
 		break;
-	// 坷弗率栏肺 捞悼.
+	// 向右移动。
 	case _DIRECTION_LIST_3:
 		m_shViewOffsetX =  (m_ptMovePixelArray[nCharFrame].x * nSpeed);
 		break;
-	// 坷弗率酒贰肺 捞悼.
+	// 向右下移动.
 	case _DIRECTION_LIST_4:
 		m_shViewOffsetX =  (m_ptMovePixelArray[nCharFrame].x * nSpeed);
 		m_shViewOffsetY =  (m_ptMovePixelArray[nCharFrame].y * nSpeed);
 		break;
-	// 流急 酒贰肺 捞悼.
+	// 沿直线向下移动。
 	case _DIRECTION_LIST_5:
 		m_shViewOffsetY =  (m_ptMovePixelArray[nCharFrame].y * nSpeed);
 		break;
-	// 哭率酒贰肺 捞悼.
+	// 向左下移动。
 	case _DIRECTION_LIST_6:
 		m_shViewOffsetX = -(m_ptMovePixelArray[nCharFrame].x * nSpeed);
 		m_shViewOffsetY =  (m_ptMovePixelArray[nCharFrame].y * nSpeed);
 		break;
-	// 哭率栏肺 捞悼.
+	// 向左移动.
 	case _DIRECTION_LIST_7:
 		m_shViewOffsetX = -(m_ptMovePixelArray[nCharFrame].x * nSpeed);
 		break;
-	// 哭率困肺 捞悼.
+	// 向左上移动。
 	case _DIRECTION_LIST_8:
 		m_shViewOffsetX = -(m_ptMovePixelArray[nCharFrame].x * nSpeed);
 		m_shViewOffsetY = -(m_ptMovePixelArray[nCharFrame].y * nSpeed);
@@ -386,38 +386,38 @@ VOID CMapHandler::ScrollMap(INT nCharDir, WORD wCurrDelay, WORD wMoveDelay, INT 
 
 	switch ( nCharDir )
 	{
-	// 流急 困肺 捞悼.
+	// 沿直线向上移动.
 	case _DIRECTION_LIST_1:	
 		m_shViewOffsetY -= (SHORT)-fViewOffSetY;
 		break;
-	// 坷弗率困肺 捞悼.
+	// 向右上方移动.
 	case _DIRECTION_LIST_2:
 		m_shViewOffsetX = (SHORT)fViewOffSetX;
 		m_shViewOffsetY = (SHORT)-fViewOffSetY;
 		break;
-	// 坷弗率栏肺 捞悼.
+	// 向右移动。
 	case _DIRECTION_LIST_3:
 		m_shViewOffsetX = (SHORT)fViewOffSetX;
 		break;
-	// 坷弗率酒贰肺 捞悼.
+	// 向右下移动.
 	case _DIRECTION_LIST_4:
 		m_shViewOffsetX = (SHORT)fViewOffSetX;
 		m_shViewOffsetY = (SHORT)fViewOffSetY;
 		break;
-	// 流急 酒贰肺 捞悼.
+	// 沿直线向下移动。
 	case _DIRECTION_LIST_5:
 		m_shViewOffsetY = (SHORT)fViewOffSetY;
 		break;
-	// 哭率酒贰肺 捞悼.
+	// 向左下移动。
 	case _DIRECTION_LIST_6:
 		m_shViewOffsetX = (SHORT)-fViewOffSetX;
 		m_shViewOffsetY = (SHORT)fViewOffSetY;
 		break;
-	// 哭率栏肺 捞悼.
+	// 向左移动.
 	case _DIRECTION_LIST_7:
 		m_shViewOffsetX = (SHORT)-fViewOffSetX;
 		break;
-	// 哭率困肺 捞悼.
+	// 向左上移动。
 	case _DIRECTION_LIST_8:
 		m_shViewOffsetX = (SHORT)fViewOffSetX;
 		m_shViewOffsetY = (SHORT)-fViewOffSetY;
@@ -429,17 +429,17 @@ VOID CMapHandler::ScrollMap(INT nCharDir, WORD wCurrDelay, WORD wMoveDelay, INT 
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMapHandler::DrawBaseTile()
+	函数名 : CMapHandler::DrawBaseTile()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nX
+	目的   :
+	输入   : INT nX
 	         INT nY
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CMapHandler::DrawBaseTile(INT nX, INT nY)
@@ -472,17 +472,17 @@ VOID CMapHandler::DrawBaseTile(INT nX, INT nY)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMapHandler::DrawOpenDoor()
+	函数名 : CMapHandler::DrawOpenDoor()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nX
+	目的   :
+	输入   : INT nX
 	         INT nY
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 /*VOID CMapHandler::DrawOpenDoor(INT nX, INT nY)
@@ -500,8 +500,8 @@ VOID CMapHandler::DrawBaseTile(INT nX, INT nY)
 					WORD wPosY = m_pstDoorInfo[nCnt].pstDoorImgInfo[nLoop].wPosY;
 					if ( nX == wPosX && nY == wPosY )
 					{
-						WORD wImgIndex = m_pstDoorInfo[nCnt].pstDoorImgInfo[nLoop].wImageNum;						
-						// 弊覆阑 弊赴促.
+						WORD wImgIndex = m_pstDoorInfo[nCnt].pstDoorImgInfo[nLoop].wImageNum;
+						// 绘制图像.
 
 						// ".\\Data\\housesc.wil"
 						m_pxTileImg[4].NewSetIndex(wImgIndex);
@@ -544,7 +544,7 @@ BOOL CMapHandler::GetDoorState(INT nX, INT nY)
 		 !(m_pstCellInfo[nX + nY*m_stMapFileHeader.shWidth].wLigntNEvent & 0X08) )
 		return FALSE;
 
-	// 巩捞凯妨乐促.
+	// 门已打开.
 	return TRUE;
 }
 
@@ -650,17 +650,17 @@ INT CMapHandler::GetDoorImgIdx(INT nX, INT nY)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMapHandler::SetMovedTileBuffer()
+	函数名 : CMapHandler::SetMovedTileBuffer()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : SHORT shMovedTileX
+	目的   :
+	输入   : SHORT shMovedTileX
 	         SHORT shMovedTileY
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CMapHandler::SetMovedTileBuffer(SHORT shMovedTileX, SHORT shMovedTileY)
@@ -672,15 +672,15 @@ VOID CMapHandler::SetMovedTileBuffer(SHORT shMovedTileX, SHORT shMovedTileY)
 
 	INT nX, nY;
 
-	// 泅犁 鸥老滚欺俊 乐绰 皋葛府甫 舅嘎霸 捞悼矫虐绊 眠啊登绰弊覆阑 弊赴促.
-	// 伎窜困啊 酒囱 鸥老窜困肺 诀单捞飘茄促.
+	// 适当移动当前图块缓冲区中的内存，并绘制新增的图像.
+	// 不以单元格为单位, 而以图块为单位更新.
 
-	// 泅犁 Y鸥老捞芭唱, 酒贰肺 哎锭.
+	// 当前为 Y 图块,或者向下移动时.
 	if ( shMovedTileY >= 0 )
 	{
 		if ( shMovedTileX >= 0 )
 		{
-			// 坷弗率栏肺 哎锭.
+			// 向右走时.
 			for ( INT nYCnt = 0; nYCnt < _VIEW_CELL_Y_COUNT*_CELL_HEIGHT-_CELL_HEIGHT*shMovedTileY; nYCnt++ )
 			{
 				memmove(&m_wSavedMapBuffer[(nYCnt*_VIEW_CELL_X_COUNT*_CELL_WIDTH)], 
@@ -688,9 +688,9 @@ VOID CMapHandler::SetMovedTileBuffer(SHORT shMovedTileX, SHORT shMovedTileY)
 						sizeof(WORD)*_CELL_WIDTH*(_VIEW_CELL_X_COUNT-shMovedTileX));
 			}
 
-			// 弊覆惑栏肺 坷弗率苞 酒贰何盒狼 鸥老阑 盎脚秦拎具茄促.
-			// 扁夯鸥老篮 2伎肺 捞凤廉乐绊 (坷弗率苞 酒贰绰 1伎父狼 咯蜡)甫 啊瘤扁 锭巩俊 1伎究阑 歹 佬绢拎辑 盎脚阑 矫挪促.
-			// 酒贰客 鞍篮 屈怕捞促. '1'篮 memmove肺 颗败柳 单捞鸥捞绊 'o'啊 货肺 盎脚矫懦 鸥老弊覆单捞鸥捞促. '0'篮 歹佬绢临 单捞鸥捞促.
+			// 在图像上必须更新右侧和下方的图块.
+			// 基本图块由 2 格构成(右侧和下方只留 1 格的余量),因此每次多读取 1 格来进行更新.
+			// 形式如下。'1' 是通过 memmove 移动的数据, 'o' 是新要更新的图块图像数据, '0' 是还需读取的数据。
 			// 11111111111111...0o
 			// 11111111111111...0o
 			// 11111111111111...0o
@@ -699,7 +699,7 @@ VOID CMapHandler::SetMovedTileBuffer(SHORT shMovedTileX, SHORT shMovedTileY)
 			// 00000000000000...0o
 			// oooooooooooooo...oo
 			
-			// 扁夯鸥老 盎脚.
+			// 更新基本图块.
 			for ( nX = m_shStartViewTileX+_VIEW_CELL_X_COUNT-shMovedTileX-1; nX < m_shStartViewTileX+_VIEW_CELL_X_COUNT; nX++ )
 				for ( nY = m_shStartViewTileY; nY < m_shStartViewTileY+_VIEW_CELL_Y_COUNT; nY++ )		
 				{
@@ -713,8 +713,8 @@ VOID CMapHandler::SetMovedTileBuffer(SHORT shMovedTileX, SHORT shMovedTileY)
 		}
 		else
 		{
-			// 哭率栏肺 哎锭.
-			// 哭率苞 酒贰何盒狼 鸥老阑 盎脚.
+			// 向左移动时.
+			// 更新左侧和下方的图块。
 			// o11111111111111...1
 			// o11111111111111...1
 			// o11111111111111...1
@@ -723,8 +723,8 @@ VOID CMapHandler::SetMovedTileBuffer(SHORT shMovedTileX, SHORT shMovedTileY)
 			// o00000000000000...0
 			// ooooooooooooooo...o
 
-			// 扁夯鸥老 盎脚.
-			// 谅螟篮 2鸥老狼 咯蜡甫 啊瘤骨肺 1伎究父 佬绊, 酒贰肺绰 茄鸥老父狼 咯蜡甫 啊瘤骨肺 酒贰肺绰 1伎究阑 歹 佬绢霖促.
+			// 更新基本图块.
+			// 左侧有 2 图块的余量, 因此每次只读 1 格; 下方只有 1 图块的余量, 所以下方要多读 1 格.
 			for ( INT nYCnt = 0; nYCnt < _VIEW_CELL_Y_COUNT*_CELL_HEIGHT-_CELL_HEIGHT*shMovedTileY; nYCnt++ )
 			{
 				memmove(&m_wSavedMapBuffer[(nYCnt*_VIEW_CELL_X_COUNT*_CELL_WIDTH)+_CELL_WIDTH*(-shMovedTileX)], 
@@ -743,12 +743,12 @@ VOID CMapHandler::SetMovedTileBuffer(SHORT shMovedTileX, SHORT shMovedTileY)
 				}
 		}
 	}
-	// 困肺 哎锭.
+	// 向上移动时.
 	else
 	{
 		if ( shMovedTileX >= 0 )
 		{
-			// 坷弗率栏肺 哎锭.
+			// 向右走时.
 
 			// ooooooooooooo...0o
 			// 1111111111111...0o
@@ -779,7 +779,7 @@ VOID CMapHandler::SetMovedTileBuffer(SHORT shMovedTileX, SHORT shMovedTileY)
 		{
 			for ( INT nYCnt = (_VIEW_CELL_Y_COUNT*_CELL_HEIGHT)+(_CELL_HEIGHT*shMovedTileY)-1; nYCnt >= 0 ; nYCnt-- )
 			{
-				// 哭率栏肺 哎锭.
+				// 向左移动时.
 				memmove(&m_wSavedMapBuffer[((nYCnt+_CELL_HEIGHT*(-shMovedTileY))*_VIEW_CELL_X_COUNT*_CELL_WIDTH)+_CELL_WIDTH*(-shMovedTileX)], 
  						&m_wSavedMapBuffer[(nYCnt*_VIEW_CELL_X_COUNT*_CELL_WIDTH)], sizeof(WORD)*_CELL_WIDTH*(_VIEW_CELL_X_COUNT-(-shMovedTileX)));
 			}
@@ -1087,11 +1087,11 @@ BYTE CMapHandler::CalcDirection16(WORD wFireTileX, WORD wFireTileY, WORD wDestTi
 	BYTE	bDir;
 	rLineLength = (FLOAT)sqrt((double)(nWidth*nWidth+nHeight*nHeight));
 	
-	// 扁夯.
+	// 默认.
 	// 7  0  1          
 	// 6     2
 	// 5  4  3
-	// 老窜篮 4俺狼 盒搁(90档扁霖)栏肺 唱穿绊 盒搁俊 措茄 cos蔼阑 利侩茄促.
+	// 首先分为 4 个象限(以 90 度为基准), 并对象限应用 cos 值。
 	( nWidth >= 0 ) ?
 		( nHeight <  0 ? (rBottomInTriangle=(FLOAT)-nHeight, nDimension=0) : (rBottomInTriangle=(FLOAT) nWidth, nDimension=4) ):
 		( nHeight >= 0 ? (rBottomInTriangle=(FLOAT) nHeight, nDimension=8) : (rBottomInTriangle=(FLOAT)-nWidth, nDimension=12) );
@@ -1103,7 +1103,7 @@ BYTE CMapHandler::CalcDirection16(WORD wFireTileX, WORD wFireTileY, WORD wDestTi
 
 	CONST FLOAT rCosVal16[8] = { 1.0f, 0.980785f, 0.923880f, 0.831470f, 0.707107f, 0.555570f, 0.382683f, 0.195090f };
 	
-	// 阿盒搁阑 3俺狼 康开栏肺 唱穿绢辑 康开阑 犁炼沥茄促.
+	// 把各个象限分成 3 个区域，再重新调整区域。
 	bDir = 0;
 	for ( INT nCnt = 0; nCnt < 8; nCnt++ )
 	{
@@ -1129,11 +1129,11 @@ BYTE CMapHandler::CalcDirection8(WORD wFireTileX, WORD wFireTileY, WORD wDestTil
 	BYTE	bDir;
 	rLineLength = (FLOAT)sqrt((double)(nWidth*nWidth+nHeight*nHeight));
 	
-	// 扁夯.
+	// 默认.
 	// 7  0  1          
 	// 6     2
 	// 5  4  3
-	// 老窜篮 4俺狼 盒搁(90档扁霖)栏肺 唱穿绊 盒搁俊 措茄 cos蔼阑 利侩茄促.
+	// 首先分为 4 个象限(以 90 度为基准), 并对象限应用 cos 值。
 	( nWidth >= 0 ) ?
 		( nHeight <  0 ? (rBottomInTriangle=(FLOAT)-nHeight, nDimension=0) : (rBottomInTriangle=(FLOAT) nWidth, nDimension=2) ):
 		( nHeight >= 0 ? (rBottomInTriangle=(FLOAT) nHeight, nDimension=4) : (rBottomInTriangle=(FLOAT)-nWidth, nDimension=6) );
@@ -1146,7 +1146,7 @@ BYTE CMapHandler::CalcDirection8(WORD wFireTileX, WORD wFireTileY, WORD wDestTil
 //	cos(0), cos(pi/8), cos(pi/4), cos(pi/2)
 	CONST FLOAT rCosVal8[4] = { 1.0f, 0.923880f, 0.707107f, 0.382683f };
 	
-	// 阿盒搁阑 3俺狼 康开栏肺 唱穿绢辑 康开阑 犁炼沥茄促.
+	// 把各个象限分成 3 个区域，再重新调整区域。
 	bDir = 0;
 	for ( INT nCnt = 0; nCnt < 4; nCnt++ )
 	{
@@ -1175,10 +1175,10 @@ VOID CMapHandler::DrawOneCellObjTile(INT nX, INT nY)
 
 	INT		nObjFileIdx, nImgIdx;
 
-	// 坷宏璃飘啊 乐阑锭.
+	// 有对象时.
 	if ( m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].cFileIdx != -1 )
 	{
-		// 坷宏璃飘1捞 乐阑锭.
+		// 有对象1时.
 		if ( m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].shObj1 != -1 )
 		{
 			nObjFileIdx = (m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].cFileIdx & 0XF0) >> 4;
@@ -1198,7 +1198,7 @@ VOID CMapHandler::DrawOneCellObjTile(INT nX, INT nY)
 							_CLIP_WIDTH, _CLIP_HEIGHT);
 			}
 		}
-		// 坷宏璃飘2啊 乐阑锭.
+		// 有对象2时.
 		if ( m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].shObj2 != -1 )
 		{
 			nObjFileIdx = (m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].cFileIdx & 0X0F);
@@ -1230,10 +1230,10 @@ BOOL CMapHandler::DrawOneCellOverObjTile(INT nX, INT nY)
 
 	INT		nObjFileIdx, nImgIdx;
 
-	// 坷宏璃飘啊 乐阑锭.
+	// 有对象时.
 	if ( m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].cFileIdx != -1 )
 	{
-		// 坷宏璃飘1捞 乐阑锭.
+		// 有对象1时.
 		if ( m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].shObj1 != -1 )
 		{
 			nObjFileIdx = (m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].cFileIdx & 0XF0) >> 4;
@@ -1254,7 +1254,7 @@ BOOL CMapHandler::DrawOneCellOverObjTile(INT nX, INT nY)
 				return TRUE;
 			}
 		}
-		// 坷宏璃飘2啊 乐阑锭.
+		// 有对象2时.
 		if ( m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].shObj2 != -1 )
 		{
 			nObjFileIdx = (m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].cFileIdx & 0X0F);
@@ -1283,17 +1283,17 @@ BOOL CMapHandler::DrawOneCellOverObjTile(INT nX, INT nY)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMapHandler::DrawSMTile()
+	函数名 : CMapHandler::DrawSMTile()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nX
+	目的   :
+	输入   : INT nX
 	         INT nY
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 /*
@@ -1303,7 +1303,7 @@ VOID CMapHandler::DrawSMTile(INT nX, INT nY)
 	if ( nX >= m_stMapFileHeader.wWidth || nY >= m_stMapFileHeader.wHeight || nX < 0 || nY < 0 )
 		return; 
 	nObjImgIdx = (m_lpstCellInfo[nY + nX*m_stMapFileHeader.wHeight].bArea * 10000) + (m_lpstCellInfo[nY + nX*m_stMapFileHeader.wHeight].wFrImgIdx & 0x7FFF) - 1;
-	if (m_lpstCellInfo[nY + nX*m_stMapFileHeader.wHeight].bArea < 8 )//<---------------??????????3锅甘俊 救静搁 俊矾巢
+	if (m_lpstCellInfo[nY + nX*m_stMapFileHeader.wHeight].bArea < 8 )//<---------------??????????3 号地图中不使用就会出错
 	{
 		nMidImgIdx = m_lpstCellInfo[nY + nX*m_stMapFileHeader.wHeight].wMidImgIdx - 1;
 		if ( nMidImgIdx >= 0 && nMidImgIdx < 938 && nY < m_shStartViewTileY+_VIEW_CELL_Y_COUNT )

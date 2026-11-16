@@ -87,12 +87,12 @@ protected:
 	class CColumnInfo
 	{
 	public:
-		int  nColNameSize;			// 拿烦 捞抚 农扁
-		char szColName[DB_MAXBUF];	// 拿烦 捞抚
-		int  nColType;				// 拿烦 鸥涝
-		int  nColSize;				// 拿烦 农扁
-		int  nAllowDecimalDigit;	// 10柳荐 函版 倾侩 咯何
-		int  nAllowNull;			// 澄 倾侩 咯何
+		int  nColNameSize;			// 列 名称 大小
+		char szColName[DB_MAXBUF];	// 列名
+		int  nColType;				// 列类型
+		int  nColSize;				// 列大小
+		int  nAllowDecimalDigit;	// 是否允许十进制变更
+		int  nAllowNull;			// 是否允许空值
 
 	public:
 		CColumnInfo();
@@ -103,8 +103,8 @@ protected:
 	class CColumnData
 	{
 	public:
-		char *pData;				// 单捞磐
-		int  nDataSize;				// 鉴荐 单捞磐 农扁 (且寸等 皋葛府 农扁啊 酒丛)
+		char *pData;				// 数据
+		int  nDataSize;				// 纯数据大小 (不是已分配的内存大小)
 
 	public:
 		CColumnData();

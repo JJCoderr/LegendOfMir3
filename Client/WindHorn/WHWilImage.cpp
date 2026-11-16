@@ -26,7 +26,7 @@ VOID CWHWilImageData::Init()
 
 	ZeroMemory(&m_szWilFileName, sizeof(MAX_PATH));
 
-	m_nCurrImageIdx		= -1;								// 檬扁 技泼摹啊 汲沥登瘤 臼篮惑怕.
+	m_nCurrImageIdx		= -1;								// 初始设置值未设定的状态。
 	m_pbCurrImage		= NULL;
 	m_lpstCurrWilImageInfo = NULL;
 
@@ -88,7 +88,7 @@ BOOL CWHWilImageData::Load(CHAR* szWilFile, BOOL bIsMemMapped, BOOL bComp)
 
 		if ( hWilFile != INVALID_HANDLE_VALUE )
 		{
-			// 皋葛府甘屈怕老锭.
+			// 内存映射形态时.
 			if ( m_bIsMemMapped )
 			{
 				hWilMappedFile = CreateFileMapping(hWilFile, NULL, PAGE_READONLY, NULL, NULL, NULL);
@@ -113,7 +113,7 @@ BOOL CWHWilImageData::Load(CHAR* szWilFile, BOOL bIsMemMapped, BOOL bComp)
 				ReadFile(hWilFile, m_pbStartData, dwFileSize, &dwReadLen, NULL);
 			}
 
-			SetIndex(0);						// 0锅 牢郸胶肺 技泼茄促.
+			SetIndex(0);						// 设置为索引 0.
 			CloseHandle(hWilFile);
 			CloseHandle(hWixFile);
 			return TRUE;
@@ -138,7 +138,7 @@ BOOL CWHWilImageData::Load(CHAR* szWilFile, BOOL bIsMemMapped, BOOL bComp)
 
 VOID CWHWilImageData::SetIndex(INT nIndex)
 {
-	if ( m_nCurrImageIdx == nIndex )	return;				// 货肺 Setting登绰 Index啊 函拳啊 绝促搁.
+	if ( m_nCurrImageIdx == nIndex )	return;				// 若新设置的 Index 没有变化.
 
 	m_nCurrImageIdx = nIndex;
 
@@ -155,7 +155,7 @@ VOID CWHWilImageData::SetIndex(INT nIndex)
 
 BOOL CWHWilImageData::NewSetIndex(DWORD dwIndex)
 {
-//	if ( m_nCurrImageIdx == nIndex || !m_stNewWixImgaeInfo.pnPosition[nIndex] )	return;				// 货肺 Setting登绰 Index啊 函拳啊 绝促搁.
+//	if ( m_nCurrImageIdx == nIndex || !m_stNewWixImgaeInfo.pnPosition[nIndex] )	return;				// 如果新 Setting 的 Index 没有变化.
 
 	m_nCurrImageIdx = dwIndex;
 
@@ -204,7 +204,7 @@ BOOL CWHWilImageData::NewLoad(CHAR* szWilFile, BOOL bIsMemMapped, BOOL bComp)
 
 		if ( hWilFile != INVALID_HANDLE_VALUE )
 		{
-			// 皋葛府甘屈怕老锭.
+			// 内存映射形态时.
 			if ( m_bIsMemMapped )
 			{
 				hWilMappedFile = CreateFileMapping(hWilFile, NULL, PAGE_READONLY, NULL, NULL, NULL);
@@ -229,7 +229,7 @@ BOOL CWHWilImageData::NewLoad(CHAR* szWilFile, BOOL bIsMemMapped, BOOL bComp)
 				ReadFile(hWilFile, m_pbStartData, dwFileSize, &dwReadLen, NULL);
 			}
 
-			NewSetIndex(0);						// 0锅 牢郸胶肺 技泼茄促.
+			NewSetIndex(0);						// 设置为索引 0.
 			CloseHandle(hWilFile);
 			return TRUE;
 		}

@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 
@@ -17,15 +17,15 @@
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::CInterface()
+	函数名 : CInterface::CInterface()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CInterface::CInterface()
@@ -37,15 +37,15 @@ CInterface::CInterface()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::~CInterface()
+	函数名 : CInterface::~CInterface()
 
-	累己磊 : 
-	累己老 : 
+	作者   :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CInterface::~CInterface()
@@ -57,15 +57,15 @@ CInterface::~CInterface()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::Init()
+	函数名 : CInterface::Init()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 牢磐其捞胶包访 函荐棺, 按眉檬扁拳.
-	免仿   : VOID 
+	目的   : 接口相关变量及对象初始化.
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CInterface::Init()
@@ -112,15 +112,15 @@ VOID CInterface::Init()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::Destroy()
+	函数名 : CInterface::Destroy()
 
-	累己磊 : 
-	累己老 : 
+	作者   :
+	编写日期 :
 
-	格利   : 牢磐其捞胶包访 函荐, 按眉狼 家戈棺, 檬扁拳.
-	免仿   : VOID 
+	目的   : 接口相关变量、对象的销毁及初始化。
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CInterface::Destroy()
@@ -157,20 +157,20 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_pxInterImg = &(pxImgHandler->m_xImageList[_IMAGE_INTER]);
 
 	//------------------------------------------------------------------------------------------------------------
-	// 盲泼俊叼飘 扩档快 困摹瘤沥.
+	// 聊天编辑窗口的位置指定.
 	MoveWindow(g_xChatEditBox.GetSafehWnd(), 
 			   g_xMainWnd.m_rcWindow.left+_INPUT_EDITWND_XPOS, g_xMainWnd.m_rcWindow.top+_INPUT_EDITWND_YPOS,
 			   _INPUT_EDITWND_WIDTH, _INPUT_EDITWND_HEIGHT, TRUE);
 	//------------------------------------------------------------------------------------------------------------
 
 	//------------------------------------------------------------------------------------------------------------
-	// 牢磐其捞胶 捞固瘤 肺靛.
+	// 加载接口图像.
 	m_pxInterImg->NewLoad(".\\Data\\gameinter.wil");
 	m_xInterImgEx.NewLoad(".\\Data\\interfacec2.wil");
 	//------------------------------------------------------------------------------------------------------------
 
 	//------------------------------------------------------------------------------------------------------------
-	// 皋牢牢磐其捞胶 康开汲沥.
+	// 主界面区域设置.
 	if ( m_pxInterImg->NewSetIndex(_WNDIMGIDX_MAIN) )
 	{
 		SetRect(&m_rcMain, 
@@ -180,12 +180,12 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	//------------------------------------------------------------------------------------------------------------
 
 	//------------------------------------------------------------------------------------------------------------
-	// 盲泼 康开汲沥.
+	// 聊天区域设置。
 	SetRect(&m_rcChat, 224, 471, 578, 545);
 	//------------------------------------------------------------------------------------------------------------
 
 	//------------------------------------------------------------------------------------------------------------
-	// 扩档快甸 积己.
+	// 创建各窗口。
 	m_xInventoryWnd.CreateInventoryWnd(_WND_ID_INVENTORY, m_pxInterImg, _WNDIMGIDX_INVENTORY, 0, 0, 0, 0, TRUE);
 	m_xStatusWnd.CreateStatusWnd(_WND_ID_STATUS, m_pxInterImg, _WNDIMGIDX_ITEMSET, 510, 0, 0, 0, TRUE);
 	m_xStoreWnd.CreateStoreWnd(_WND_ID_STORE, m_pxInterImg, _WNDIMGIDX_STORE, 0, 0, 0, 0, TRUE);
@@ -201,53 +201,53 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xHorseWnd.CreateHorseWnd(_WND_ID_HORSE, m_pxInterImg, _WNDIMGIDX_HORSE, 0, 0, 0, 0, TRUE);
 
 
-	m_xNPCWnd.CreateNPCChatWnd(_WND_ID_NPCCHAT, m_pxInterImg, _WNDIMGIDX_NPCCHAT, 0, 0, 0, 0, TRUE);				// 侩扁
+	m_xNPCWnd.CreateNPCChatWnd(_WND_ID_NPCCHAT, m_pxInterImg, _WNDIMGIDX_NPCCHAT, 0, 0, 0, 0, TRUE);				// 勇气
 	//------------------------------------------------------------------------------------------------------------
 
 	//------------------------------------------------------------------------------------------------------------
-	// 滚瓢 檬扁拳.
-	m_xInterBtn[ 0].CreateGameBtn(m_pxInterImg, 80, 81, m_rcMain.left+204, m_rcMain.top+0);		// 背券芒.
-	m_xInterBtn[ 1].CreateGameBtn(m_pxInterImg, 82, 83, m_rcMain.left+228, m_rcMain.top+0);		// 固聪甘.
-	m_xInterBtn[ 2].CreateGameBtn(m_pxInterImg, 84, 85, m_rcMain.left+252, m_rcMain.top+0);		// 公傍芒.
+	// 按钮初始化。
+	m_xInterBtn[ 0].CreateGameBtn(m_pxInterImg, 80, 81, m_rcMain.left+204, m_rcMain.top+0);		// 交易窗口。
+	m_xInterBtn[ 1].CreateGameBtn(m_pxInterImg, 82, 83, m_rcMain.left+228, m_rcMain.top+0);		// 小地图.
+	m_xInterBtn[ 2].CreateGameBtn(m_pxInterImg, 84, 85, m_rcMain.left+252, m_rcMain.top+0);		// 武功窗口.
 
-	m_xInterBtn[ 3].CreateGameBtn(m_pxInterImg, 90, 91, m_rcMain.left+161, m_rcMain.top+65);	// 霸烙辆丰.
-	m_xInterBtn[ 4].CreateGameBtn(m_pxInterImg, 92, 93, m_rcMain.left+161, m_rcMain.top+101);	// 肺弊酒眶.
-	m_xInterBtn[ 5].CreateGameBtn(m_pxInterImg, 94, 95, m_rcMain.left+616, m_rcMain.top+66);	// 弊缝.
-	m_xInterBtn[ 6].CreateGameBtn(m_pxInterImg, 96, 97, m_rcMain.left+616, m_rcMain.top+102);	// 巩颇.
+	m_xInterBtn[ 3].CreateGameBtn(m_pxInterImg, 90, 91, m_rcMain.left+161, m_rcMain.top+65);	// 退出游戏.
+	m_xInterBtn[ 4].CreateGameBtn(m_pxInterImg, 92, 93, m_rcMain.left+161, m_rcMain.top+101);	// 注销.
+	m_xInterBtn[ 5].CreateGameBtn(m_pxInterImg, 94, 95, m_rcMain.left+616, m_rcMain.top+66);	// 队伍.
+	m_xInterBtn[ 6].CreateGameBtn(m_pxInterImg, 96, 97, m_rcMain.left+616, m_rcMain.top+102);	// 行会.
 
-	m_xInterBtn[ 7].CreateGameBtn(m_pxInterImg, 52, 53, m_rcMain.left+397, m_rcMain.top+13);	// 骇飘 UP, DOWN.
+	m_xInterBtn[ 7].CreateGameBtn(m_pxInterImg, 52, 53, m_rcMain.left+397, m_rcMain.top+13);	// 腰带 UP, DOWN.
 
-	m_xInterBtn[ 8].CreateGameBtn(m_pxInterImg,100, 101, m_rcMain.left+703, m_rcMain.top+34);	// 胶懦芒.
-	m_xInterBtn[ 9].CreateGameBtn(m_pxInterImg,102, 103, m_rcMain.left+718, m_rcMain.top+50);	// 盲泼扑诀.
-	m_xInterBtn[10].CreateGameBtn(m_pxInterImg,104, 105, m_rcMain.left+718, m_rcMain.top+88);	// 涅胶飘.
-	m_xInterBtn[11].CreateGameBtn(m_pxInterImg,106, 107, m_rcMain.left+703, m_rcMain.top+103);	// 可记.
-	m_xInterBtn[12].CreateGameBtn(m_pxInterImg,108, 109, m_rcMain.left+664, m_rcMain.top+104);	// 档框富.
-	m_xInterBtn[13].CreateGameBtn(m_pxInterImg,110, 111, m_rcMain.left+648, m_rcMain.top+88);	// 富芒.
-	m_xInterBtn[14].CreateGameBtn(m_pxInterImg,112, 113, m_rcMain.left+648, m_rcMain.top+50);	// 啊规芒.
-	m_xInterBtn[15].CreateGameBtn(m_pxInterImg,114, 115, m_rcMain.left+665, m_rcMain.top+34);	// 惑怕芒.
+	m_xInterBtn[ 8].CreateGameBtn(m_pxInterImg,100, 101, m_rcMain.left+703, m_rcMain.top+34);	// 技能窗口。
+	m_xInterBtn[ 9].CreateGameBtn(m_pxInterImg,102, 103, m_rcMain.left+718, m_rcMain.top+50);	// 聊天弹窗.
+	m_xInterBtn[10].CreateGameBtn(m_pxInterImg,104, 105, m_rcMain.left+718, m_rcMain.top+88);	// 任务.
+	m_xInterBtn[11].CreateGameBtn(m_pxInterImg,106, 107, m_rcMain.left+703, m_rcMain.top+103);	// 选项.
+	m_xInterBtn[12].CreateGameBtn(m_pxInterImg,108, 109, m_rcMain.left+664, m_rcMain.top+104);	// 帮助.
+	m_xInterBtn[13].CreateGameBtn(m_pxInterImg,110, 111, m_rcMain.left+648, m_rcMain.top+88);	// 马窗口。
+	m_xInterBtn[14].CreateGameBtn(m_pxInterImg,112, 113, m_rcMain.left+648, m_rcMain.top+50);	// 背包窗口.
+	m_xInterBtn[15].CreateGameBtn(m_pxInterImg,114, 115, m_rcMain.left+665, m_rcMain.top+34);	// 状态窗口.
 	//------------------------------------------------------------------------------------------------------------
 
 	m_xScrlBar.CreateScrlBar(m_pxInterImg, 68, _MAX_CHATLINE, 12, 84, 12);
 
-	m_xMsgBox.Load(&m_xInterImgEx);	// 侩扁
+	m_xMsgBox.Load(&m_xInterImgEx);	// 勇气
 }
 
 
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::MsgAdd()
+	函数名 : CInterface::MsgAdd()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : DWORD dwFontColor
+	目的   :
+	输入   : DWORD dwFontColor
 	         DWORD dwFontBackColor
 	         CHAR* pszMsg
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CInterface::MsgAdd(DWORD dwFontColor, DWORD dwFontBackColor, CHAR* pszMsg)
@@ -276,10 +276,10 @@ VOID CInterface::MsgAdd(DWORD dwFontColor, DWORD dwFontBackColor, CHAR* pszMsg)
 				nLineCnt = 5;
 			}
 
-			// 巩磊凯 火涝.
+			// 插入字符串。
 			for ( nCnt = 0; nCnt < nLineCnt; nCnt++ )
 			{
-				// 沫捞 促澜栏肺 哎炼扒.
+				// 格子进入下一格的条件.
 				if ( m_xChat.GetCounter() - m_nFstLine == _MAX_CHATLINE )
 				{
 					m_nFstLine++;
@@ -292,7 +292,7 @@ VOID CInterface::MsgAdd(DWORD dwFontColor, DWORD dwFontBackColor, CHAR* pszMsg)
 				m_xChat.AddNode(stChat);
 			}
 
-			// 弥措历厘扼牢 八荤秦辑 弊捞惑捞搁 昏力茄促.
+			// 检查最大保存行数，超过则删除。
 			while ( m_xChat.GetCounter() >= 50 )
 			{
 				m_xChat.MoveCurrentToTop();
@@ -309,15 +309,15 @@ VOID CInterface::MsgAdd(DWORD dwFontColor, DWORD dwFontBackColor, CHAR* pszMsg)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::ShowWndList()
+	函数名 : CInterface::ShowWndList()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : Active登绢乐绰 扩档快狼 府胶飘甫 焊咯霖促.
-	免仿   : VOID 
+	目的   : 显示处于 Active 状态的窗口列表.
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CInterface::ShowWndList()
@@ -361,7 +361,7 @@ VOID CInterface::ShowWndList()
 			case _WND_ID_CHATPOP:
 				m_xChatPopWnd.ShowChatPopWnd();
 				break;
-			case _WND_ID_NPCCHAT:					// 侩扁
+			case _WND_ID_NPCCHAT:					// 勇气
 				m_xNPCWnd.ShowNPCChatWnd();
 				break;
 
@@ -385,15 +385,15 @@ VOID CInterface::ShowWndList()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::ShowChatList()
+	函数名 : CInterface::ShowChatList()
 
-	累己磊 : 
-	累己老 : 
+	作者 : 
+	日期 : 
 
-	格利   : 盲泼 府胶飘甫 焊咯霖促.
-	免仿   : VOID 
+	目的   : 显示聊天列表.
+	输出   : VOID 
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CInterface::ShowChatList()
@@ -425,27 +425,27 @@ VOID CInterface::ShowChatList()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::RenderInterface()
+	函数名 : CInterface::RenderInterface()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nLoopTime
+	目的   :
+	输入   : INT nLoopTime
 	         POINT ptMousePos
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 {
 	INT nX, nY, nCnt;
 
-	// 扩档快.
+	// 窗口.
 	ShowWndList();
 
-	// 付快胶 酒捞袍.
+	// 鼠标物品.
 	if ( m_stCommonItem.bSetted && !m_stCommonItem.bIsHideItem )
 	{
 		nX = ptMousePos.x - _INVENTORY_CELL_WIDTH /2;
@@ -453,35 +453,35 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 		m_stCommonItem.xItem.DrawItem(nX, nY);
 	}
 
-	// 骇飘酒捞袍.
+	// 腰带物品。
 	ShowBeltItem();
 
-	// 皋牢牢磐其捞胶.
+	// 主界面.
 	if ( m_pxInterImg->NewSetIndex(_WNDIMGIDX_MAIN) )
 	{
  		g_xMainWnd.DrawWithImageForCompClipRgn(m_rcMain.left, m_rcMain.top,	m_rcMain.right-m_rcMain.left, m_rcMain.bottom-m_rcMain.top,
 											   (WORD*)m_pxInterImg->m_pbCurrImage, _CLIP_WIDTH, 600);
 	}
 
-	// 盲泼府胶飘.
+	// 聊天列表.
 	ShowChatList();
 
-	// 惑怕摹.
+	// 状态值.
 	ShowGameStatus();
 
-	// 滚瓢.
+	// 按钮.
 	for ( nCnt = 0; nCnt < _MAX_INTER_BTN; nCnt++)
 	{
 		m_xInterBtn[nCnt].ShowGameBtn();
 	}
 
-	// 胶农费官.
+	// 滚动条.
 	m_xScrlBar.ShowScrlBar(584, 404, m_nFstLine, m_xChat.GetCounter());
 
-	// 努扼捞攫飘皋矫瘤(哭率惑窜).
+	// 客户端消息(左上角).
 	m_xClientSysMsg.ShowSysMsg(nLoopTime, 30, 30);
 
-	// 侩扁
+	// 勇气
 	m_xMsgBox.RenderMessageBox(0);
 
 	ShowMagicKey();
@@ -491,15 +491,15 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::ShowBeltItem()
+	函数名 : CInterface::ShowBeltItem()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	创建日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CInterface::ShowBeltItem()
@@ -533,7 +533,7 @@ VOID CInterface::ShowBeltItem()
 												   m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth,
 												   m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight,
 												   (WORD*)m_pxInterImg->m_pbCurrImage, _CLIP_WIDTH, 600);
-			// 骇飘 酒捞袍 弊府扁.
+			// 腰带物品绘制。
 			for ( INT nCnt = 0; nCnt < _MAX_BELT_ITEM; nCnt++ )
 			{
 				if ( m_xInventoryWnd.m_stBeltItem[nCnt].bSetted )
@@ -553,15 +553,15 @@ VOID CInterface::ShowBeltItem()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::ShowGameStatus()
+	函数名 : CInterface::ShowGameStatus()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : BOOL 
+	目的   :
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CInterface::ShowGameStatus()
@@ -591,7 +591,7 @@ VOID CInterface::ShowGameStatus()
 
 	BYTE	bJob	= g_xGameProc.m_xMyHero.m_bJob;
 	
-	// 窍风狼 惑怕摹(广, 撤, 历翅, 货寒)
+	// 一天的状态值(夜晚, 白天, 傍晚, 黎明)
 	switch ( bDay )
 	{
 	case _DAYSTATE_DAY:
@@ -615,8 +615,8 @@ VOID CInterface::ShowGameStatus()
 										(WORD*)m_pxInterImg->m_pbCurrImage, _CLIP_WIDTH, 600);
 	}
 
-	// HP, MP嘛扁.
-	// 厚啦八荤.
+	// 绘制 HP, MP.
+	// 比例检查。
 	if ( wHP )	
 	{
 		fMyHPRate = (FLOAT)((FLOAT)wHP/(FLOAT)g_xGameProc.m_xMyHero.m_stAbility.wMaxHP);
@@ -687,7 +687,7 @@ VOID CInterface::ShowGameStatus()
  		g_xMainWnd.DrawWithImageForComp(m_rcMain.left+104, m_rcMain.top+34, rcMP, (WORD*)m_pxInterImg->m_pbCurrImage);
 	}
 
-	// EXP, WET 嘛扁.
+	// 绘制 EXP, WET。
 	if ( m_pxInterImg->NewSetIndex(63) )
 	{
 		RECT rcEXP = { 0, m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight-(m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight*fMyExpRate), 
@@ -703,19 +703,19 @@ VOID CInterface::ShowGameStatus()
 	}
 
 	dwFntClr = RGB(225, 225, 0);
-	// 饭骇嘛6扁.
+	// 练级6.
 	sprintf(pszBuff, "%d", g_xGameProc.m_xMyHero.m_stAbility.bLevel);
 	SetRect(&rcStats, 693, 528, 709, 544);
-	g_xMainWnd.PutsHan(NULL, rcStats, dwFntClr, RGB(0, 0, 0), pszBuff, g_xMainWnd.CreateGameFont("泵辑眉", 10, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, rcStats, dwFntClr, RGB(0, 0, 0), pszBuff, g_xMainWnd.CreateGameFont("Arial", 10, 0, FW_BOLD));
 
 	dwFntClr = RGB(255, 255, 200);
-	// 甘捞抚 棺 谅钎嘛扁.
+	// 绘制地图名称及坐标.
 	sprintf(pszBuff, "%s : [%d,%d]", g_xGameProc.m_szMapName, g_xGameProc.m_xMyHero.m_wPosX, g_xGameProc.m_xMyHero.m_wPosY);
 	SetRect(&rcStats, 219, 584, 379, 599);
 	g_xMainWnd.PutsHan(NULL, rcStats, dwFntClr, RGB(0, 0, 0), pszBuff);
 
 	dwFntClr = RGB(255, 200, 50);
-	// 流诀喊 酒捞能棺 漂己摹 嘛扁.
+	// 绘制各职业图标及属性值.
 	sprintf(pszBuff, "%d-%d", LOBYTE(wMyAC), HIBYTE(wMyAC));
 	SetRect(&rcStats, 422, 584, 483, 599);
 	g_xMainWnd.PutsHan(NULL, rcStats, dwFntClr, RGB(0, 0, 0), pszBuff);
@@ -755,7 +755,7 @@ VOID CInterface::ShowGameStatus()
 										m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight,
 										(WORD*)m_pxInterImg->m_pbCurrImage);
 	}
-	// AC嘛扁.
+	// AC 标记.
 	if ( m_pxInterImg->NewSetIndex(120) )
 	{
  		g_xMainWnd.DrawWithImageForComp(m_rcMain.left+391, m_rcMain.top+136,
@@ -798,20 +798,20 @@ VOID CInterface::ShowMagicKey()
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 扩档快 包府何盒/////////////////////////////////////////////////////////////////////////////////////////////
+// 窗口管理部分/////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::GetWindowInMousePos()
+	函数名 : CInterface::GetWindowInMousePos()
 
-	累己磊 : 
-	累己老 : 
+	作者 : 
+	日期 : 
 
-	格利   : 付快胶 器牢磐甫 康开救俊 啊瘤绊 乐绰 扩档快府胶飘吝 盖贸澜 扩档快狼 ID甫 府畔茄促.
-	涝仿   : POINT ptMouse
-	免仿   : 
+	目的   : 返回鼠标指针所在区域内的窗口列表中第一个窗口的 ID.
+	输入   : POINT ptMouse
+	输出   : 
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 INT	CInterface::GetWindowInMousePos(POINT ptMouse)
@@ -855,7 +855,7 @@ INT	CInterface::GetWindowInMousePos(POINT ptMouse)
 			case _WND_ID_CHATPOP:
 				rcWnd = m_xChatPopWnd.GetGameWndRect();
 				break;
-			case _WND_ID_NPCCHAT:	// 侩扁
+			case _WND_ID_NPCCHAT:	// 勇气
 				rcWnd = m_xNPCWnd.GetGameWndRect();
 				break;
 
@@ -885,16 +885,16 @@ INT	CInterface::GetWindowInMousePos(POINT ptMouse)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::AddWindowToList()
+	函数名 : CInterface::AddWindowToList()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 扩档快府胶飘狼 盖 付瘤阜俊 泅犁 涝仿罐篮 酒捞叼啊 nID牢 扩档快甫 眠啊茄促.
-	涝仿   : INT nID
-	免仿   : VOID 
+	目的   : 在窗口列表的最后添加当前输入的 ID 为 nID 的窗口。
+	输入   : INT nID
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CInterface::AddWindowToList(INT nID)
@@ -905,16 +905,16 @@ VOID CInterface::AddWindowToList(INT nID)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::DeleteWindowToList()
+	函数名 : CInterface::DeleteWindowToList()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : nID狼 酒捞叼甫 啊柳 扩档快甫 府胶飘惑俊辑 昏力茄促.
-	涝仿   : INT nID
-	免仿   : VOID 
+	目的   : 从列表上删除具有 nID 标识的窗口.
+	输入   : INT nID
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CInterface::DeleteWindowToList(INT nID)
@@ -942,22 +942,22 @@ VOID CInterface::DeleteWindowToList(INT nID)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::WindowActivate()
+	函数名 : CInterface::WindowActivate()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : nID牢 扩档快甫 扩档快府胶飘俊 眠啊矫虐芭唱 昏力矫虐哥, 眠啊狼 版快, 扩档快狼 惑怕甫 弥惑困 惑怕肺 技泼茄促.
-			 扩档快啊 虐涝仿阑 罐酒辑 拳搁俊 唱棵锭 龋免窍绰 窃荐捞促.
-	涝仿   : INT nID
-	免仿   : VOID 
+	目的   : 将 nID 窗口添加到窗口列表中或从列表中删除,添加时将窗口状态设置为最顶层状态。
+			 是窗口接收键盘输入并显示到屏幕时调用的函数。
+	输入   : INT nID
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CInterface::WindowActivate(INT nID)
 {
-	// 货肺款 扩档快俊 器目胶甫 林扁困秦辑 葛电 扩档快狼 器目胶甫 FALSE矫难霖促.
+	// 为了让新窗口获得焦点，将所有窗口的焦点设为 FALSE。
 	BOOL bRet = FALSE;
 
 	AllWindowsFocusOff();
@@ -1166,7 +1166,7 @@ BOOL CInterface::WindowActivate(INT nID)
 			}
 		}
 		break;
-	case _WND_ID_NPCCHAT:		// 侩扁
+	case _WND_ID_NPCCHAT:		// 勇气
 		{
 			if ( m_xNPCWnd.GetGameWndActive() )
 			{
@@ -1177,9 +1177,9 @@ BOOL CInterface::WindowActivate(INT nID)
 			}
 			else
 			{
-				// 烙矫
+				// 临时
 				AddWindowToList(_WND_ID_NPCCHAT);
-//				m_xNPCWnd.SetNPCStr("窍疵阑 快矾矾 茄痢 何掺烦 绝扁甫 蕾技俊捞绰 官恩俊档 唱绰 鲍肺况 沁促 <喊/@STAR>阑 畴贰窍绰 付澜栏肺 葛电 磷绢 啊绰巴阑 <荤尔/@LOVE>秦具瘤 弊府绊 肚 唱俊霸 林况 柳辨阑 吧绢 啊具 摆促. 坷疵 广俊档 喊捞 官恩俊 胶摹款促. 悼秦拱苞 归滴魂捞 付福绊 催配废 窍蠢丛捞 焊快窍荤 快府唱扼 父技 公泵拳 伙玫府 拳妨碍魂 措茄荤恩 措茄栏肺 辨捞 焊傈窍技. 矫阁 呈绰 酒蠢衬 辫逛 糠备府 避绰 家府绰  矫阁 呈绰 酒蠢衬 避带 糠备府 磐瘤绰 家府甫 呈公唱档 酒抚促款 弊家府甫 沥惩 呈绰 葛福绰 巴捞衬\n <巩颇甫 积己秦杭鳖?/@@buildguildnow>  \n <辆丰/@end>",0);
+//				m_xNPCWnd.SetNPCStr("仰望天空 直至无一丝羞愧 在掠过叶间的风中 我也曾感到痛苦 <星星/@STAR> 以歌唱的心 去<爱/@LOVE>一切正在死去的事物 然后还要走完被赐予的那条路. 今夜星星依旧被风掠过. 东海之水与白头山枯竭殆尽 愿上天保佑 我国万岁 无穷花三千里 华丽江山 大韩之人 以大韩永世长存. 西门 你可知道 刮紫菜包饭侧边的声音 西门 你可知道 刮开的侧边崩裂的声音 那无比美妙的声音 你当真不知道吗\n <创建行会试试看?/@@buildguildnow>  \n <退出/@end>",0);
 				m_xNPCWnd.SetGameWndActive(TRUE);
 				bRet = TRUE;
 			}
@@ -1193,16 +1193,16 @@ BOOL CInterface::WindowActivate(INT nID)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::MoveTopWindow()
+	函数名 : CInterface::MoveTopWindow()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 盖困狼 扩档快甫 付快胶 谅钎肺 捞悼矫挪促.
-	涝仿   : POINT ptMouse
-	免仿   : VOID 
+	目的   : 将最上层的窗口移动到鼠标坐标。
+	输入   : POINT ptMouse
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CInterface::MoveTopWindow(POINT ptMouse)
@@ -1244,7 +1244,7 @@ VOID CInterface::MoveTopWindow(POINT ptMouse)
 				m_xChatPopWnd.MoveGameWnd(ptMouse);
 				ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
 				break;
-			case _WND_ID_NPCCHAT:		// 侩扁
+			case _WND_ID_NPCCHAT:		// 勇气
 				m_xNPCWnd.MoveGameWnd(ptMouse);
 				break;
 
@@ -1267,16 +1267,16 @@ VOID CInterface::MoveTopWindow(POINT ptMouse)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::WindowFocusChanged()
+	函数名 : CInterface::WindowFocusChanged()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 扩档快 康开栏肺 付快胶 努腐捞 登搁 泅犁 Top 扩档快甫 付快胶 努腐 扩档快肺 官层林绊 弊扩档快肺 器目胶甫 嘎苗霖促.
-	涝仿   : INT nID
-	免仿   : VOID 
+	目的   : 在窗口区域点击鼠标时，将当前的顶层窗口切换为鼠标点击的窗口，并把焦点设置到该窗口.
+	输入   : INT nID
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CInterface::WindowFocusChangedAndSetReadyMove(INT nID, POINT ptMouse)
@@ -1287,7 +1287,7 @@ VOID CInterface::WindowFocusChangedAndSetReadyMove(INT nID, POINT ptMouse)
 
 		DeleteWindowToList(nID);
 		AddWindowToList(nID);
-		// 付快胶 努腐捞 等惑怕捞搁 捞悼矫懦 霖厚啊 等惑怕捞促.
+		// 如果处于鼠标点击状态,则处于可以移动的准备状态.
 		m_bMoveFocusedWnd = TRUE;
 
 		switch ( nID )
@@ -1328,7 +1328,7 @@ VOID CInterface::WindowFocusChangedAndSetReadyMove(INT nID, POINT ptMouse)
 			m_xChatPopWnd.SetGameWndFocused(TRUE);
 			m_xChatPopWnd.SetReadyMove(ptMouse);
 			break;
-		case _WND_ID_NPCCHAT:		// 侩扁
+		case _WND_ID_NPCCHAT:		// 勇气
 			m_xNPCWnd.SetGameWndFocused(TRUE);
 			m_xNPCWnd.SetReadyMove(ptMouse);
 			break;
@@ -1391,7 +1391,7 @@ VOID CInterface::AllWindowsFocusOff()
 			case _WND_ID_CHATPOP:
 				m_xChatPopWnd.SetGameWndFocused(FALSE);
 				break;
-			case _WND_ID_NPCCHAT:		// 侩扁
+			case _WND_ID_NPCCHAT:		// 勇气
 				m_xNPCWnd.SetGameWndFocused(FALSE);
 				break;
 
@@ -1433,25 +1433,25 @@ BOOL CInterface::IsTopWindow(INT nID)
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 皋矫瘤 涝仿包访何盒/////////////////////////////////////////////////////////////////////////////////////////
+// 消息输入相关部分/////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::OnLButtonDown()
+	函数名 : CInterface::OnLButtonDown()
 
- 	累己磊 : 
-	累己老 : 
+ 	作者 :
+	编写日期 :
 
-	格利   : Mouse LButtonDown捞 老绢车阑锭 牢磐其捞胶俊辑 且老阑 沥狼茄促.
-	涝仿   : POINT ptMouse
-	免仿   : BOOL 
+	目的   : 定义 Mouse LButtonDown 发生时接口中要做的工作.
+	输入   : POINT ptMouse
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CInterface::OnLButtonDown(POINT ptMouse)
 {
-	if(m_xMsgBox.IsActive())	// 侩扁
+	if(m_xMsgBox.IsActive())	// 勇气
 	{
 		m_xMsgBox.OnButtonDown(ptMouse);
 		return TRUE;
@@ -1517,7 +1517,7 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
 				if ( !m_xChatPopWnd.OnLButtonDown(ptMouse) )
 					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
 				break;
-			case _WND_ID_NPCCHAT:	// 侩扁
+			case _WND_ID_NPCCHAT:	// 勇气
 				if ( !m_xNPCWnd.OnLButtonDown(ptMouse) )
 					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
 				break;
@@ -1549,23 +1549,23 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::OnLButtonUp()
+	函数名 : CInterface::OnLButtonUp()
 
-	累己磊 : 
-	累己老 : 
+	作者   :
+	编写日期 :
 
-	格利   : Mouse LButtonUp捞 老绢车阑锭 牢磐其捞胶俊辑 且老阑 沥狼茄促.
-	涝仿   : POINT ptMouse
-	免仿   : BOOL 
+	目的   : 定义鼠标 LButtonUp 发生时接口要做的处理。
+	输入   : POINT ptMouse
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
 	m_bMoveFocusedWnd = FALSE;
 
-	if ( m_xMsgBox.IsActive() )	// 侩扁
+	if ( m_xMsgBox.IsActive() )	// 勇气
 	{
 		HRESULT hResult;
 		hResult = m_xMsgBox.OnButtonUp(ptMouse);
@@ -1575,7 +1575,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 			{
 			case 12:
 				{
-					switch ( hResult )	// 俊叼飘 冠胶啊 绝澜.
+					switch ( hResult )	// 没有编辑框.
 					{
 					case 2:
 						{
@@ -1592,7 +1592,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 							   dwFont = GetChatColor(3);
 							   dwBack = GetChatColor(2);
 
-							   MsgAdd(dwFont, dwBack, "傈捧吝俊绰 立加阑 谗阑 荐 绝嚼聪促.");
+							   MsgAdd(dwFont, dwBack, "You cannot disconnect during combat.");
 						   }
 						}
 						break;
@@ -1687,7 +1687,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 		INT nInterfaceWndInRect;
 		nInterfaceWndInRect = GetWindowInMousePos(ptMouse);
 
-		// 阿 扩档快狼 OnLButtonUp狼 府畔蔼捞 TRUE捞搁 扩档快令绰 Close等促.
+		// 各窗口的 OnLButtonUp 返回值为 TRUE 时, 窗口将被 Close。
 		if ( nInterfaceWndInRect != -1 )
 		{
 			switch ( nInterfaceWndInRect )
@@ -1711,7 +1711,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 			case _WND_ID_OPTION:		if ( m_xOptionWnd.OnLButtonUp(ptMouse) )						WindowActivate(_WND_ID_OPTION);			break;
 			case _WND_ID_HORSE:			if ( m_xHorseWnd.OnLButtonUp(ptMouse) )							WindowActivate(_WND_ID_HORSE);			break;
 
-			case _WND_ID_NPCCHAT:		if ( m_xNPCWnd.OnLButtonUp(ptMouse) )							WindowActivate(_WND_ID_NPCCHAT);		break; // 侩扁
+			case _WND_ID_NPCCHAT:		if ( m_xNPCWnd.OnLButtonUp(ptMouse) )							WindowActivate(_WND_ID_NPCCHAT);		break; // 勇气
 			}
 			return TRUE;
 		}
@@ -1722,16 +1722,16 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CInterface::OnMouseMove()
+	函数名 : CInterface::OnMouseMove()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : Mouse Move啊 老绢车阑锭 牢磐其捞胶俊辑 且老阑 沥狼茄促.
-	涝仿   : POINT ptMouse
-	免仿   : BOOL 
+	目的   : 当 Mouse Move 发生时, 定义界面中要做的事.
+	输入   : POINT ptMouse
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CInterface::OnMouseMove(POINT ptMouse)
@@ -1795,7 +1795,7 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 			m_xHorseWnd.OnMouseMove(ptMouse);
 			break;
 
-		case _WND_ID_NPCCHAT:		// 侩扁
+		case _WND_ID_NPCCHAT:		// 勇气
 			m_xNPCWnd.OnMouseMove(ptMouse);
 			break;
 		}
@@ -1827,7 +1827,7 @@ BOOL CInterface::OnScrollDown()
 	{
 		m_xStatusWnd.OnScrollDown();
 	}
-	else if (IsTopWindow(m_xNPCWnd.m_nID))		// 侩扁
+	else if (IsTopWindow(m_xNPCWnd.m_nID))		// 勇气
 	{
 		m_xNPCWnd.OnScrollDown();
 	}
@@ -1859,7 +1859,7 @@ BOOL CInterface::OnScrollUp()
 	{
 		m_xStatusWnd.OnScrollUp();
 	}
-	else if (IsTopWindow(m_xNPCWnd.m_nID))		// 侩扁
+	else if (IsTopWindow(m_xNPCWnd.m_nID))		// 勇气
 	{
 		m_xNPCWnd.OnScrollUp();
 	}
@@ -1938,7 +1938,7 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
 
 VOID CInterface::OnSysKeyDown()
 {
-	// F10 Key 喘啡阑锭.
+	// F10 Key 被按下时。
 	if ( m_xStatusWnd.GetStatusWndType() != _TYPE_EQUIP )
 	{
 		if ( !WindowActivate(_WND_ID_STATUS) )

@@ -1,28 +1,28 @@
 #ifndef _SPRITEDEF_H
 #define _SPRITEDEF_H
 
-// 某腐磐, 阁胶磐, NPC殿狼 胶橇扼捞飘甫 Define茄促.
+// 对角色, 怪物, NPC 等的精灵执行 Define.
 
 #define	 _MAX_HUMAN_RACE_FRAME	  2640
 
-// 某腐磐 辆幅 Define.
+// 角色种类 Define。
 #define	 _MAX_HUMAN_RACE			 3
 
-#define	 _HUMAN_RACE_TYPE1			 0		// 舅个 巢磊.
-//#define	 _HUMAN_RACE_TYPE2			 1		// 舅个 咯磊.
-#define	 _HUMAN_RACE_TYPE2			 1		// 乞汗 巢磊.
-//#define	 _HUMAN_RACE_TYPE4			 3		// 乞汗 咯磊.
-#define	 _HUMAN_RACE_TYPE3			 2		// 版癌 巢磊.
-//#define	 _HUMAN_RACE_TYPE6			 5		// 版癌 咯磊.
-//#define	 _HUMAN_RACE_TYPE7			 6		// 傈巩汗 傈荤 巢磊.
-//#define	 _HUMAN_RACE_TYPE8			 7		// 傈巩汗 傈荤 咯磊.
-//#define	 _HUMAN_RACE_TYPE9			 8		// 傈巩汗 贱荤 巢磊.
-//#define	 _HUMAN_RACE_TYPE10			 9		// 傈巩汗 贱荤 咯磊.
-//#define	 _HUMAN_RACE_TYPE11			10		// 傈巩汗 档荤 巢磊.
-//#define	 _HUMAN_RACE_TYPE12			11		// 傈巩汗 档荤 咯磊.
+#define	 _HUMAN_RACE_TYPE1			 0		// 裸体男性。
+//#define	 _HUMAN_RACE_TYPE2			 1		// 裸体女子.
+#define	 _HUMAN_RACE_TYPE2			 1		// 便服男子。
+//#define	 _HUMAN_RACE_TYPE4			 3		// 便服女子.
+#define	 _HUMAN_RACE_TYPE3			 2		// 轻甲男.
+//#define	 _HUMAN_RACE_TYPE6			 5		// 轻甲女性.
+//#define	 _HUMAN_RACE_TYPE7			 6		// 全套服战士男性。
+//#define	 _HUMAN_RACE_TYPE8			 7		// 专职服 女战士。
+//#define	 _HUMAN_RACE_TYPE9			 8		// 全套服术士男子.
+//#define	 _HUMAN_RACE_TYPE10			 9		// 正装术士女.
+//#define	 _HUMAN_RACE_TYPE11			10		// 专业服 道士 男.
+//#define	 _HUMAN_RACE_TYPE12			11		// 女道士专用服.
 
 
-// 某腐磐 悼累 Define.
+// 角色动作 Define。
 #define  _MAX_HUMAN_MTN				33
 
 #define  _MT_HUMAN_STAND			 0
@@ -66,7 +66,7 @@
 
 
 
-// 阁胶磐 辆幅 Define
+// 怪物种类 Define
 #define	 _MAX_MON_RACE				 5
 
 #define	 _RACE_LIZARD				 0
@@ -76,7 +76,7 @@
 #define	 _RACE_GOLEM				 4
 
 
-// 阁胶磐 悼累 Define
+// 怪物动作 Define
 #define  _MAX_MON_MTN				 9	
 
 #define  _MT_MON_STAND				 0
@@ -143,7 +143,7 @@ public:
 
 
 
-// 橇饭烙狼 备炼......
+// 帧的结构......
 /*
 LPRACE
 
@@ -159,12 +159,12 @@ typedef struct tagRACETYPEINFO
 
 typedef struct tagMTNINFO
 {
-	BYTE	bMtnFrmOffset;				// 泅犁 悼累俊 措茄 弥措 橇饭烙.
-	WORD	wDir;						// 规氢捞 乐绰厚飘俊 1捞 技泼等促.
-	BYTE	bStartFrm;					// 矫累 橇饭烙.
-	BYTE	bFrmCnt;					// 橇饭烙狼 肮荐.
-	SHORT	shDelay;					// 泅犁 悼累狼 Delay.
-	BOOL	bReverse;					// 悼累阑 芭操肺 倒副巴牢瘤狼 咯何.
+	BYTE	bMtnFrmOffset;				// 当前动作的最大帧.
+	WORD	wDir;						// 有方向的位上设置为 1.
+	BYTE	bStartFrm;					// 起始帧.
+	BYTE	bFrmCnt;					// 帧的个数.
+	SHORT	shDelay;					// 当前动作的 Delay.
+	BOOL	bReverse;					// 是否将动作反向播放.
 }MTNFRMINFO, *LPMTNFRMINFO;
 */
 

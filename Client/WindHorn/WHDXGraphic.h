@@ -18,12 +18,12 @@ typedef struct tagDXG_DISPLAYINFO
 
 typedef struct DXG_ENUM_DEVICEINFO
 {
-    // 3D 叼官捞胶 沥焊.
+    // 3D 设备信息。
     TCHAR			szDeviceDesc[256];
     GUID*			pDeviceGUID;
     D3DDEVICEDESC7	ddDeviceDesc;
     BOOL			f3DHardware;
-    // 靛肺快 靛扼捞滚 沥焊.
+    // 绘制驱动信息。
 	TCHAR			szDriverDesc[256];
     GUID*			pDriverGUID;
     DDCAPS			ddDriverCaps;
@@ -74,10 +74,10 @@ protected:
     BYTE					m_bDeviceModeFlag;
 
 public:
-	DWORD					m_dwTextureTotal;	// 傈眉 荤侩且荐 乐绰 皋葛府.
-	DWORD					m_dwTextureFree;    // 泅犁 巢篮 皋葛府.
-	DWORD					m_dwVideoTotal; 	// vram 傈眉 皋葛府.
-	DWORD					m_dwVideoFree;      // 泅犁 巢篮 vram 皋葛府 .
+	DWORD					m_dwTextureTotal;	// 全部可使用的内存.
+	DWORD					m_dwTextureFree;    // 当前剩余内存.
+	DWORD					m_dwVideoTotal; 	// vram 全部内存.
+	DWORD					m_dwVideoFree;      // 当前剩余的 vram 内存 .
 
 	BOOL					m_bIsWindowActive;
 	BOOL					m_bIsWindowReady;
@@ -87,7 +87,7 @@ public:
 	DXG_MASKINFO			m_stBitsMaskInfo;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// 橇肺技胶甫 唱穿扁困茄 函荐急攫.
+	// 用于分割进程的变量声明.
 	static CWHDXGraphicWindow*	m_pxDXGWnd;
 	CWHDefProcess*				m_pxDefProcess;
 
@@ -144,21 +144,21 @@ public:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	WORD					ConvertColor24To16(COLORREF dwColor);
-	// 坊歹傅 窃荐葛澜.
-	// 1. GDI侩 弊府扁 窃荐.(急, 荤阿屈殿阑 归辑乔胶俊 弊赴促.)
+	// 渲染函数集合.
+	// 1. GDI 用绘制函数.(将线、矩形等绘制到背面表面.)
 	HRESULT					DrawWithGDI(RECT rc, LPDIRECTDRAWSURFACE7 pSurface, DWORD dwColor, BYTE bKind);
-	// 2. WORD屈 单捞鸥 弊府扁 窃荐.(侨伎窜困肺 拿矾虐甫 八荤窍搁辑 归辑乔胶俊 弊赴促.)
+	// 2. WORD 型数据绘制函数.(按像素单位检查颜色键, 绘制到背景表面上.)
 	BOOL					DrawWithImage(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc);
-	// 3. WORD屈 单捞鸥 弊府扁 窃荐.(扼牢窜困肺 拿矾虐甫 绊妨窍瘤 臼绊 归辑乔胶狼 努府俏 郴何康开俊父 弊赴促.)
+	// 3. WORD 型数据绘制函数。(按行不考虑颜色键，只在后台表面的裁剪内部区域绘制。)
 	BOOL					DrawWithImagePerLineClipRgn(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc, WORD wClipWidth, WORD wClipHeight);
-	// 4. Surface屈 单捞鸥 弊府扁 窃荐.(家胶狼 拿矾虐甫 绊妨窍搁辑 归辑乔胶俊 弊赴促.)
+	// 4. Surface 型数据绘制函数。(考虑源的颜色键并绘制到后台表面。)
 	BOOL					DrawWithSurface(INT nX, INT nY, INT nXSize, INT nYSize, LPDIRECTDRAWSURFACE7 pddsSrc);
 
-	// wChooseColor1篮 堪祸渴(0xC2)俊 措秦辑, wChooseColor2(0xC3)绰 赣府殿(漠, 扁鸥 函窍绰祸)狼 堪祸栏肺 敬促.
-	// 5. 拘绵(0锅)棺 堪祸等 WORD屈 单捞鸥 弊府扁 窃荐.(归辑乔胶俊 弊赴促.)
+	// wChooseColor1 用于染色衣服(0xC2), wChooseColor2(0xC3) 用于头发等(刀, 其他变化的颜色)的染色.
+	// 5. 压缩(0 号)及染色的 WORD 型数据绘制函数.(绘制到后台表面.)
 	BOOL					DrawWithImageForComp(INT nX, INT nY, RECT rcSrc, WORD* pwSrc, WORD wChooseColor1 = 0XFFFF, WORD wChooseColor2 = 0XFFFF);
 	BOOL					DrawWithImageForComp(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc, WORD wChooseColor1 = 0XFFFF, WORD wChooseColor2 = 0XFFFF);
-	// 6. 拘绵(0锅)棺 堪祸等 WORD屈 单捞鸥 弊府扁 窃荐.(归辑乔胶狼 努府俏 郴何康开俊父 弊赴促.)
+	// 6. 压缩(0号)及染色后的 WORD 型数据绘制函数.(仅绘制在白色表面的裁剪内部区域.)
 	BOOL					DrawWithImageForCompClipRgnBase(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc, WORD wClipWidth, WORD wClipHeight, WORD wChooseColor1 = 0XFFFF, WORD wChooseColor2 = 0XFFFF);
 	__inline VOID			DrawWithImageForCompClipRgn(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc, WORD wClipWidth, WORD wClipHeight, WORD wChooseColor1 = 0XFFFF, WORD wChooseColor2 = 0XFFFF, BOOL bLighted = FALSE)
 	{
@@ -167,12 +167,12 @@ public:
 	}
 
 
-	// 7. 拘绵(0锅)棺 堪祸等 WORD屈 单捞鸥 弊府扁 窃荐.(家胶皋葛府狼 康开俊辑 单胶飘康开皋葛府肺 弊赴促.)
+	// 7. 绘制压缩(0 号)及染色后的 WORD 型数据的函数.(从源内存区域绘制到目标内存区域.)
 	BOOL					DrawWithImageForCompMemToMem(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc, INT nDstXSize, INT nDstYSize, WORD* pwDst, WORD wChooseColor1 = 0XFFFF, WORD wChooseColor2 = 0XFFFF);
-	// 8. 拘绵(0锅)棺 堪祸等 WORD屈 单捞鸥 弊府扁 窃荐.(拘绵等 单捞鸥狼 家胶皋葛府狼 康开俊辑 老何泛飘康开父阑 单胶飘康开皋葛府肺 弊赴促.)
+	// 8. 绘制压缩(0 号)及染色后的 WORD 型数据的函数.(只把压缩数据源内存区域中的一部分矩形区域绘制到目地区域内存.)
 	BOOL					DrawWithImageForCompToMem(RECT rcWanted, WORD* pwSrc, WORD wChooseColor1, WORD wChooseColor2, WORD* pwDst);
 	BOOL					DrawWithImageForCompColorToMem(RECT rcWanted, WORD* pwSrc, WORD wColor, WORD* pwDst);
-	// 9. 拘绵(0锅)棺 堪祸等 WORD屈 单捞鸥 弊府扁 窃荐.(拘绵等 单捞鸥狼 家胶康开苞 单胶飘康开狼 背瞒泛飘甫 舅颇喉坊爹秦辑 归辑乔胶俊弊赴促.)
+	// 9. 压缩(0号)及染色的 WORD 型数据的绘制函数。(把压缩数据源区域与目标区域的交叉矩形做 alpha 混合后绘制到后台表面。)
 	BOOL					DrawWithABlendForIntersectCompData(INT nSrcX, INT nSrcY, 
 															   INT nSrcXSize, INT nSrcYSize, WORD* pwSrc,
 															   INT nDstX, INT nDstY,
@@ -182,18 +182,18 @@ public:
 															   WORD wSrcChooseColor1 = 0XFFFF, WORD wSrcChooseColor2 = 0XFFFF,
 															   WORD wDstChooseColor1 = 0XFFFF, WORD wDstChooseColor2 = 0XFFFF,
 															   WORD wSrcColor = 0XFFFF, WORD wDstColor = 0XFFFF);
-	// 10. 拘绵(0锅)棺 堪祸等 WORD屈 单捞鸥 弊府扁 窃荐.(拘绵等 单捞鸥狼 家胶康开阑 归辑乔胶客 舅颇喉坊爹茄促.)
+	// 10. 压缩(0 号)及染色的 WORD 型数据绘制函数。(将压缩数据的源区域与背景表面进行 alpha 混合。)
 	BOOL					DrawWithABlendCompDataWithBackBuffer(INT nX, INT nY, 
 																 INT nXSize, INT nYSize, WORD* pwSrc,
 																 WORD wClipWidth, WORD wClipHeight,
 																 WORD wChooseColor1 = 0XFFFF, WORD wChooseColor2 = 0XFFFF, BYTE bOpa = 50);
-	// 11. 拘绵(0锅)棺 堪祸等 WORD屈 单捞鸥 弊府扁 窃荐.(拘绵等 单捞鸥狼 家胶康开阑 盔窍绰 拿矾肺 扼捞泼 惑怕肺(灌霸) 归辑乔胶俊 弊赴促.)
+	// 11. 压缩(0 号)及染色后的 WORD 型数据绘制函数.(把压缩数据的源区域以想要的色彩、以光照状态(变亮)绘制到背景表面.)
 	BOOL					DrawWithABlendCompDataWithLightedColor(INT nX, INT nY, 
 																   INT nXSize, INT nYSize, WORD* pwSrc,
 																   WORD wClipWidth, WORD wClipHeight,
 																   WORD wChooseColor1 = 0XFFFF, WORD wChooseColor2 = 0XFFFF);
-	// 弊覆磊 弊府扁 窃荐.
-	// 12. 拘绵(0锅)棺 堪祸等 WORD屈 单捞鸥 弊府扁 窃荐.(拘绵等 单捞鸥狼 家胶康开狼 弊覆磊甫 归辑乔胶俊 舅颇喉坊爹茄促. 弊覆磊绰 臭捞啊 例馆栏肺 临绢甸绊 承捞绰 YSize父怒 疵绢唱辑 扁匡咯 归辑乔胶俊 嘛腮促.)
+	// 阴影绘制函数.
+	// 12. 压缩(0号)及染色后的 WORD 型数据绘制函数.(将压缩后数据源区域的影子以阿尔法混合绘制到白色表面上.影子的高度减半,宽度增加 YSize,倾斜地绘制到白色表面上.)
 	BOOL					DrawWithShadowABlend(INT nX, INT nY, 
 												 INT nXSize, INT nYSize, WORD* pwSrc,
 												 WORD wClipWidth, WORD wClipHeight, WORD* pwShadowClrSrc,
@@ -201,13 +201,13 @@ public:
 	VOID					DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nYSize, 
 		                                         INT nPX, INT nPY, WORD* pwSrc, WORD wClipWidth, WORD wClipHeight, WORD* pwShadowClrSrc,
 												 BOOL bBlend = FALSE, BYTE bOpa = 50);
-	// 拿矾贸府.
+	// 颜色处理.
 	// 13.
 	BOOL					DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc, WORD wClipWidth, WORD wClipHeight, WORD wColor, BOOL bFocused = FALSE, BOOL bBlend = FALSE);
 	BOOL					DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc, WORD wClipWidth, WORD wClipHeight, WORD wColor, WORD wChooseColor1 = 0XFFFF, WORD wChooseColor2 = 0XFFFF);
 	// 14.
 	BOOL					DrawWithImageForCompClipRgnGray(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc , WORD wClipWidth, WORD wClipHeight, WORD wChooseColor1 = 0XFFFF, WORD wChooseColor2 = 0XFFFF);
-	// 孺归贸府.
+	// 黑白处理.
 	// 15.
 	VOID					DrawWithGrayBackBuffer();
 

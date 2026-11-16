@@ -1,10 +1,10 @@
 
-#define ET_DIGOUTZOMBI    1  //粱厚啊 顶颇绊 唱柯 如利
-#define ET_MINE           2  //堡籍捞 概厘登绢 乐澜
-#define ET_PILESTONES     3  //倒公歹扁
-#define ET_HOLYCURTAIN    4  //搬拌
+#define ET_DIGOUTZOMBI    1  //僵尸从地里钻出的痕迹
+#define ET_MINE           2  //埋藏有矿石
+#define ET_PILESTONES     3  //石堆
+#define ET_HOLYCURTAIN    4  //结界
 #define ET_FIRE           5
-#define ET_SCULPEICE      6  //林付空狼 倒柄柳 炼阿
+#define ET_SCULPEICE      6  //走马王的碎石块
 
 class CEvent
 {

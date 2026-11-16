@@ -99,8 +99,8 @@ BOOL CMirMsgBox3D::RenderMessageBox(INT nLoopTIme)
 
 	if(m_bActive&&m_bInited&&m_bSet)
 	{
-		// 柳楼 嘛绢具 且锭父 嘛阑巴
-		// 嘛阑 捞固瘤 康开 犬牢
+		// 只在真正需要绘制时才绘制
+		// 确认要绘制的图像区域
 		POINT	xTxtPos;
 
 		m_xBoxPos.x = m_rcWnd.left;
@@ -112,7 +112,7 @@ BOOL CMirMsgBox3D::RenderMessageBox(INT nLoopTIme)
 		xTxtPos.x = m_xBoxPos.x +24;
 		switch(nCount)
 		{
-		case 1:	// 嘛阑 临捞 1俺 挥老锭
+		case 1:	// 要绘制的线只有 1 条时
 			{
 				xTxtPos.y = 68;
 				INT n = strlen(m_szMsg);
@@ -122,32 +122,32 @@ BOOL CMirMsgBox3D::RenderMessageBox(INT nLoopTIme)
 				}
 				break;
 			}
-		case 2:	// 嘛阑 临捞 2俺 老锭
+		case 2:	// 要绘制的行数为 2 个时
 			{
 				xTxtPos.y = 61;
 				break;
 			}
-		case 3:	// 嘛阑 临捞 3俺 老锭
+		case 3:	// 打印的行数为 3 个时
 			{
 				xTxtPos.y = 54;
 				break;
 			}
-		case 4:	// 嘛阑 临捞 4俺 老锭
+		case 4:	// 要绘制的行数为 4 个时
 			{
 				xTxtPos.y = 47;
 				break;
 			}
-		case 5:	// 嘛阑 临捞 5俺 老锭
+		case 5:	// 要绘制的行数为 5 个时
 			{
 				xTxtPos.y = 40;
 				break;
 			}
-		case 6:	// 嘛阑 临捞 6俺 老锭
+		case 6:	// 要绘制的行数为 6 个时
 			{
 				xTxtPos.y = 33;
 				break;
 			}
-		default: // 嘛阑 临捞 7俺 捞惑老 版快
+		default: // 要绘制的行在 7 个以上时
 			{
 				xTxtPos.y = 26;
 				break;

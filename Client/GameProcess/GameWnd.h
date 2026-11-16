@@ -5,23 +5,23 @@
 class CGameWnd
 { 
 public:
-	INT				m_nID;					// 扩档快 包府磊啊 捞扩档快甫 备盒且 侥喊磊.
-	RECT			m_rcImgWnd;				// 扩档快狼 捞固瘤狼康开. 
-	RECT			m_rcWnd;				// 扩档快狼 拳搁康开. 
+	INT				m_nID;					// 窗口管理器用于区分此窗口的标识符。
+	RECT			m_rcImgWnd;				// 窗口图像的区域. 
+	RECT			m_rcWnd;				// 窗口的屏幕区域. 
 
-	INT				 m_nFrameImgIdx;		// 捞固瘤 包访 函荐甸. 
+	INT				 m_nFrameImgIdx;		// 图像相关变量. 
 	CWHWilImageData* m_pxWndImage;
 
-	BOOL			m_bActive;				// 扩档快 劝己拳 咯何. 
+	BOOL			m_bActive;				// 窗口是否激活。 
 	BOOL			m_bFocused; 
-	BOOL			m_bMoving;				// 扩档快 框流捞绰瘤狼 咯何.
-	BOOL			m_bCanMove;				// 扩档快 绊沥咯何.
+	BOOL			m_bMoving;				// 窗口是否正在移动.
+	BOOL			m_bCanMove;				// 窗口是否固定.
 
 	INT				m_nWidth;
 	INT				m_nHeight;
 
 	POINT			m_bGrabbedMousePos;
-	// 3D抛胶飘
+	// 3D测试
 	D3DVERTEX		m_avBoard[4];
 
 public:

@@ -253,7 +253,7 @@ BOOL CCharObject::GetBackPosition(int &nX, int &nY)
 
 BOOL CCharObject::IsProperTarget(CCharObject* pTargetObject)
 {
-//	if target.BoSysopMode or target.BoStoneMode then  //款康磊...
+//	if target.BoSysopMode or target.BoStoneMode then  //管理员...
 //       Result := FALSE;
 
 	return TRUE;
@@ -277,8 +277,8 @@ BOOL CCharObject::IsFriend(CCharObject* pCharObject)
 /*   function IsFriend (cret: TCreature): Boolean;
    begin
       Result := FALSE;
-      if cret.RaceServer = RC_USERHUMAN then begin  //措惑捞 荤恩牢 版快父
-         //傍拜屈怕 汲沥俊 蝶扼 促抚
+      if cret.RaceServer = RC_USERHUMAN then begin  //仅当目标为人物时
+         //根据攻击形态设置而不同
          case HumAttackMode of
             HAM_ALL:  Result := TRUE;
             HAM_PEACE: Result := TRUE;
@@ -296,7 +296,7 @@ BOOL CCharObject::IsFriend(CCharObject* pCharObject)
                   if MyGuild <> nil then begin
                      if TGuild(MyGuild).IsMember(cret.UserName) then
                         Result := TRUE;
-                     if BoGuildWarArea and (cret.MyGuild <> nil) then begin  //巩颇傈,傍己傈 瘤开俊 乐澜
+                     if BoGuildWarArea and (cret.MyGuild <> nil) then begin  //位于行会战、攻城战区域
                         if TGuild(MyGuild).IsAllyGuild(TGuild(cret.MyGuild)) then
                            Result := TRUE;
                      end;
@@ -305,9 +305,9 @@ BOOL CCharObject::IsFriend(CCharObject* pCharObject)
             HAM_PKATTACK:
                begin
                   if cret = self then Result := TRUE;
-                  if PKLevel >= 2 then begin //郴啊 弧盎捞
+                  if PKLevel >= 2 then begin //我是红名
                      if cret.PKLevel < 2 then Result := TRUE;
-                  end else begin  //郴啊 闰嫡捞
+                  end else begin  //我是白名
                      if cret.PKLevel >= 2 then Result := TRUE;
                   end;
                end;
@@ -376,7 +376,7 @@ BOOL CCharObject::RestoreHealSpell()
 		m_WAbility.MP = m_WAbility.MaxMP;
 	}
 
-	int n = (GetTickCount() - m_dwTickSec) / 20;  //檬寸 50
+	int n = (GetTickCount() - m_dwTickSec) / 20;  //每秒 50
 	
 	m_dwTickSec = GetTickCount();
 
@@ -423,14 +423,14 @@ BOOL CCharObject::RestoreHealSpell()
 			return TRUE;
 		}
 /*        if WAbil.HP = 0 then begin
-            if BoAbilRevival then begin //犁积 瓷仿捞 乐促.
+            if BoAbilRevival then begin //具有再生能力。
                if GetTickCount - LatestRevivalTime > 60 * 1000 then begin
                   LatestRevivalTime := GetTickCount;
-                  //馆瘤甫 粹霸 茄促.
+                  //让戒指磨损。
                   ItemDamageRevivalRing;
                   WAbil.HP := WAbil.MaxHP;
                   HealthSpellChanged;
-                  SysMsg ('馆瘤狼 塞栏肺 个捞 犁积登菌嚼聪促.', 1);
+                  SysMsg ('借助戒指之力，身体已再生。', 1);
                end;
             end;
             if WAbil.HP = 0 then
@@ -621,9 +621,9 @@ begin
    ps := UserEngine.GetStdItem (ui.Index);
    if ps <> nil then begin
 
-      if ps.StdMode = 40 then begin //绊扁甫 顶俊 冻绢哆赴 版快 绊扁 前龙捞 冻绢柳促.
-         idura := ui.Dura; //word捞骨肺.
-         idura := idura - 2000; //绊扁 前龙捞 冻绢柳促.
+      if ps.StdMode = 40 then begin //把肉掉在地上的情况, 肉的品质会下降.
+         idura := ui.Dura; //因为是 word.
+         idura := idura - 2000; //肉的品质下降.
          if idura < 0 then idura := 0;
          ui.Dura := idura;
       end;
@@ -632,20 +632,20 @@ begin
       pmi.UserItem := ui;
       pmi.Name := ps.Name;
       pmi.Looks := ps.Looks;
-      if ps.StdMode = 45 then begin  //林荤困, 格犁
+      if ps.StdMode = 45 then begin  //骰子, 木材
          pmi.Looks := GetRandomLook (pmi.Looks, ps.Shape);
       end;
       pmi.AniCount := ps.AniCount;
       pmi.Reserved := 0;
       pmi.Count := 1;
       GetDropPosition (CX, CY, scatterrange, dx, dy);
-      pr := Penvir.AddToMap (dx, dy, OS_ITEMOBJECT, TObject (pmi));  //茄伎俊 5俺 捞惑狼 酒捞袍捞 乐栏搁 角菩茄促.
+      pr := Penvir.AddToMap (dx, dy, OS_ITEMOBJECT, TObject (pmi));  //一个格子里有 5 个以上物品时失败.
       if pr = pmi then begin
-         //酒捞袍篮 眠啊 酒聪搁 角菩..
+         //物品要么添加成功, 否则失败..
          SendRefMsg (RM_ITEMSHOW, pmi.Looks, integer(pmi), dx, dy, pmi.Name);
-         //冻绢哆覆
-         if diedrop then logcap := '冻崩_'
-         else logcap := '滚覆_';
+         //掉落
+         if diedrop then logcap := '丢弃_'
+         else logcap := '抛弃_';
          if not IsCheapStuff (ps.StdMode) then
             AddUserLog (logcap +
                         MapName + '_' +
@@ -657,7 +657,7 @@ begin
                         IntToStr(ui.MakeIndex));
          Result := TRUE;
       end else begin
-         //角菩牢版快
+         //失败的情况
          Dispose (pmi);
       end;
    end;
@@ -693,11 +693,11 @@ void CCharObject::Run()
 					{
 						case STATE_DEFENCEUP:
 							fNeedRecalc = TRUE;
-							SysMsg("规绢仿 惑铰 秦力", 1);
+							SysMsg("Defense increase removed", 1);
 							break;
                         case STATE_MAGDEFENCEUP:
 							fNeedRecalc = TRUE;
-							SysMsg("付亲仿 惑铰 秦力", 1);
+							SysMsg("Magic Resist increase removed", 1);
 							break;
 /*                        case STATE_TRANSPARENT:
                            begin
@@ -743,47 +743,47 @@ void CCharObject::Die()
    try
       boPK := FALSE;
       if (not BoVentureServer) and (not PEnvir.FightZone) and (not PEnvir.Fight3Zone) then begin
-         //PK陛瘤 备开牢 版快
+         //PK禁止区域的情况
          if (RaceServer = RC_USERHUMAN) and (LastHiter <> nil) and (PKLevel < 2) then begin
-            //磷篮磊啊 荤恩, 锭赴磊 乐澜, 磷篮磊啊 PK酒丛
+            //死者是人、有攻击者、死者不是PK
             if LastHiter.RaceServer = RC_USERHUMAN then
                boPK := TRUE;
             if LastHiter.Master <> nil then
                if LastHiter.Master.RaceServer = RC_USERHUMAN then begin
-                  LastHiter := LastHiter.Master; //林牢捞 锭赴 巴栏肺 埃林
+                  LastHiter := LastHiter.Master; //视为主人所为
                   boPK := TRUE;
                end;
          end;
       end;
 
       if boPK and (LastHiter <> nil) then begin
-         //荤恩捞 磷篮 版快, 葛氰辑滚俊辑绰 秦寸救凳
-         //荤恩捞 急樊茄 荤恩阑 磷烙.
+         //人死了的情况，冒险服务器不适用
+         //人杀死了善良的人。
 
-         //巩颇傈栏肺 磷澜
+         //因行会战死亡
          guildwarkill := FALSE;
          if (MyGuild <> nil) and (LastHiter.MyGuild <> nil) then begin
-            //笛促 巩颇俊 啊涝等 惑怕俊辑
-            if GetGuildRelation (self, LastHiter) = 2 then  //巩颇傈 吝烙
-               guildwarkill := TRUE;  //巩颇傈栏肺 磷澜, 弧盎捞 救凳
+            //双方都已加入行会的情况下
+            if GetGuildRelation (self, LastHiter) = 2 then  //行会战进行中
+               guildwarkill := TRUE;  //因行会战死亡，不会红名
          end;
 
-         //傍己傈栏肺 磷澜
+         //因攻城战死亡
          if UserCastle.BoCastleUnderAttack then
             if (BoInFreePKArea) or (UserCastle.IsCastleWarArea (PEnvir, CX, CY)) then
                guildwarkill := TRUE;
 
-         if not guildwarkill then begin //巩颇傈栏肺 磷澜
+         if not guildwarkill then begin //因行会战死亡
             if not LastHiter.IsGoodKilling(self) then begin
                LastHiter.IncPkPoint (100); //
-               LastHiter.SysMsg ('寸脚篮 混牢阑 窍看嚼聪促.', 0);
-               //混牢茄 荤恩 青款 皑家
+               LastHiter.SysMsg ('你进行了杀人行为。', 0);
+               //杀人者的幸运值减少
                LastHiter.AddBodyLuck (-500);
-               if PkLevel < 1 then //磷篮 荤恩捞 馒茄 荤恩
-                  if Random(5) = 0 then //混牢阑 窍搁 公扁啊 历林甫 罐绰促.
+               if PkLevel < 1 then //死者是善良的人
+                  if Random(5) = 0 then //杀人会使武器受到诅咒。
                      LastHiter.MakeWeaponUnlock;
             end else
-               LastHiter.SysMsg ('[沥寸规绢 痹蘑俊 狼秦 焊龋凳]', 1);
+               LastHiter.SysMsg ('[受到正当防卫规则保护]', 1);
          end;
 
       end;
@@ -794,44 +794,44 @@ void CCharObject::Die()
    try
       if (not PEnvir.FightZone) and
          (not PEnvir.Fight3Zone) and
-         (not BoAnimal) then begin //悼拱捞搁 戒绢具 绊扁啊 唱柯促.
+         (not BoAnimal) then begin //若是动物，需切割才会掉肉。
          DropUseItems;
          if (Master = nil) and (not BoNoItem) then
-            ScatterBagItems;  //林牢乐绰 各篮 拱扒阑 汝府瘤 臼澜
+            ScatterBagItems;  //有主人的怪物不会掉落物品
          if (RaceServer >= RC_ANIMAL) and (Master = nil) and (not BoNoItem) then
             ScatterGolds;
-         //磷篮 版快 青款摹 皑家
+         //死亡时幸运值减少
          AddBodyLuck ( - (50 - (50 - Abil.Level * 5)));
       end;
 
-      //巩颇 措傈 吝
+      //行会对战中
       if PEnvir.Fight3Zone then begin
-         //3锅 磷绢档 登绰 措访牢 版快
+         //可以死亡3次的练习赛情况下
          Inc (FightZoneDieCount);
          if MyGuild <> nil then begin
             TGuild(MyGuild).TeamFightWhoDead (UserName);
          end;
 
-         //痢荐 拌魂
+         //分数计算
          if (LastHiter <> nil) then begin
             if (LastHiter.MyGuild <> nil) and (MyGuild <> nil) then begin
-               TGuild(LastHiter.MyGuild).TeamFightWhoWinPoint (LastHiter.UserName, 100);  //matchpoint 刘啊, 俺牢己利 扁废
+               TGuild(LastHiter.MyGuild).TeamFightWhoWinPoint (LastHiter.UserName, 100);  //matchpoint 增加，记录个人战绩
                str := TGuild(LastHiter.MyGuild).GuildName + ':' +
                       IntToStr(TGuild(LastHiter.MyGuild).MatchPoint) + '  ' +
                       TGuild(MyGuild).GuildName + ':' +
                       IntToStr(TGuild(MyGuild).MatchPoint);
-               UserEngine.CryCry (RM_CRY, PEnvir, CX, CY, 10000, '- ' + str);  //泅甘 傈眉俊霸 舅赴促.
+               UserEngine.CryCry (RM_CRY, PEnvir, CX, CY, 10000, '- ' + str);  //通知当前地图全体。
             end;
          end;
       end;
 
-      //肺弊甫 巢变促.
+      //记录日志。
       if RaceServer = RC_USERHUMAN then begin
          if LastHiter <> nil then begin
             if LastHiter.RaceServer = RC_USERHUMAN then str := LastHiter.UserName
             else str := '#' + LastHiter.UserName;
          end else str := '####';
-         AddUserLog ('磷澜_' +
+         AddUserLog ('死亡_' +
                      MapName + '_' +
                      IntToStr(CX) + '_' +
                      IntToStr(CY) + '_' +
@@ -1814,7 +1814,7 @@ void CCharObject::DamageSpell(int nVal)
 //			if (-) healing health
 void CCharObject::DamageHealth(int nDamage)
 {
-/*  焊龋狼馆瘤 
+/*  保护戒指 
 	if BoMagicShield and (damage > 0) and (WAbil.MP > 0) then begin
       spdam := Round (damage * 1.5);
       if integer(WAbil.MP) >= spdam then begin
@@ -1856,7 +1856,7 @@ int CCharObject::GetMagStruckDamage(int nDamage)
 
 	if (nDamage > 0)
 	{
-		if (m_fAbilMagBubbleDefence) // 林贱狼阜
+		if (m_fAbilMagBubbleDefence) // 咒术之幕
 		{
 			nDamage = ROUND(nDamage / 100 * (m_btMagBubbleDefenceLevel + 2) * 8);
 			DamageBubbleDefence();
@@ -1890,11 +1890,11 @@ void CCharObject::StruckDamage(int nDamage)
 				
 				nDura	-= wDam;
 
-				if (nDura <= 0)	// 粹酒 绝绢咙
+				if (nDura <= 0)	// 磨损消失
 				{
 					lptDress->nDura = nDura = 0;
 
-//               hum.SendDelItem (UseItems[U_DRESS]); //努扼捞攫飘俊 绝绢柳芭 焊晨
+//               hum.SendDelItem (UseItems[U_DRESS]); //向客户端发送已消失的(物品)
 					m_pUserInfo->SetEmptyDress();
 
 					AddProcess(this, RM_DURACHANGE, U_DRESS, nDura, lptDress->nDuraMax, 0); 
@@ -1922,11 +1922,11 @@ void CCharObject::StruckDamage(int nDamage)
 					
 					nDura	-= wDam;
 
-					if (nDura <= 0)	// 粹酒 绝绢咙
+					if (nDura <= 0)	// 磨损消失
 					{
 						lptUseItem->nDura = nDura = 0;
 
-	//               hum.SendDelItem (UseItems[U_DRESS]); //努扼捞攫飘俊 绝绢柳芭 焊晨
+	//               hum.SendDelItem (UseItems[U_DRESS]); //向客户端发送已消失的(物品)
 						m_pUserInfo->SetEmptyUseItem(i);
 
 						AddProcess(this, RM_DURACHANGE, i, nDura, lptUseItem->nDuraMax, 0); 
@@ -1964,7 +1964,7 @@ int CCharObject::GetHitStruckDamage(int nDamage)
 
 	if (nDamage > 0)
 	{
-		if (m_fAbilMagBubbleDefence) // 林贱狼阜
+		if (m_fAbilMagBubbleDefence) // 咒术之幕
 		{
 			nDamage = ROUND(nDamage / 100 * (m_btMagBubbleDefenceLevel + 2) * 8);
 			DamageBubbleDefence();
@@ -1994,12 +1994,12 @@ int CCharObject::GetAttackPower(int nDamage, int nVal)
 begin
    if val < 0 then val := 0;
    if Luck > 0 then begin
-      if Random(10 - _MIN(9,Luck)) = 0 then Result := damage + val //青款牢版快
+      if Random(10 - _MIN(9,Luck)) = 0 then Result := damage + val //幸运的情况
       else Result := damage + Random(val + 1);
    end else begin
       Result := damage + Random(val + 1);
       if Luck < 0 then begin
-         if Random(10 - _MAX(0,-Luck)) = 0 then Result := damage;  //阂款牢版快
+         if Random(10 - _MAX(0,-Luck)) = 0 then Result := damage;  //不幸的情况
       end;
    end; */
 }
@@ -2017,10 +2017,10 @@ void CCharObject::DoDamageWeapon(int nDamage)
 			
 			nDura	-= nDamage;
 
-			if (nDura <= 0)	// 粹酒 绝绢咙
+			if (nDura <= 0)	// 磨损消失
 			{
 				lptWeapon->nDura = nDura = 0;
-//               hum.SendDelItem (UseItems[U_DRESS]); //努扼捞攫飘俊 绝绢柳芭 焊晨
+//               hum.SendDelItem (UseItems[U_DRESS]); //向客户端发送已消失的(物品)
 
 				((CPlayerObject*)this)->RecalcAbilitys();
 
@@ -2141,12 +2141,12 @@ BOOL CCharObject::_Attack(WORD wHitMode, CCharObject* pObject)
 
 			if (m_wObjectType & _OBJECT_HUMAN)
 			{
-				sprintf(szMsg, "%s 嘎澜 - PW:%d HP:%d, 公扁郴备粹澜:%d", pObject->m_szName, nPower, pObject->m_WAbility.HP, nWeaponDamage);
+				sprintf(szMsg, "%s hit - PW:%d HP:%d, weapon durability wear:%d", pObject->m_szName, nPower, pObject->m_WAbility.HP, nWeaponDamage);
 				SysMsg(szMsg, 0);
 			}
 			else if (pObject->m_wObjectType & _OBJECT_HUMAN)
 			{
-				sprintf(szMsg, "%s 嘎澜 - PW:%d HP:%d", pObject->m_szName, nPower, pObject->m_WAbility.HP);
+				sprintf(szMsg, "%s hit - PW:%d HP:%d", pObject->m_szName, nPower, pObject->m_WAbility.HP);
 				pObject->SysMsg(szMsg, 0);
 			}
 			// Debug Code
@@ -2229,7 +2229,7 @@ BOOL CCharObject::HitXY(WORD wIdent, int nX, int nY, int nDir, int nHitStyle)
 				}
 			}
 
-			if (m_pUserInfo->m_lpTMagicPowerHitSkill)		// 抗档 八过
+			if (m_pUserInfo->m_lpTMagicPowerHitSkill)		// 锐刀剑法
 			{
 				m_pUserInfo->m_btAttackSkillCount--;
 
@@ -2347,7 +2347,7 @@ void CCharObject::DoMotaebo()
 
 /* **************************************************************************************
 
-										沤扁颇楷
+										贪气破延
 
    ************************************************************************************** */
 
@@ -2394,7 +2394,7 @@ void CCharObject::BreakOpenHealth()
 
 /* **************************************************************************************
 
-										公怕焊
+										武太步
 
    ************************************************************************************** */
 
@@ -2425,7 +2425,7 @@ int CCharObject::CharPushed(int nDir, int nPushCount)
 
 	return nResult;
 
-/*function  TCreature.CharPushed (ndir, pushcount: integer): integer;  //绢恫 塞俊 狼秦辑 剐妨唱促.
+/*function  TCreature.CharPushed (ndir, pushcount: integer): integer;  //被某种力量推开.
 var
    i, nx, ny, olddir, oldx, oldy: integer;
 begin
@@ -2436,14 +2436,14 @@ begin
    Dir := ndir;
    for i:=0 to pushcount-1 do begin
       GetFrontPosition (self, nx, ny);
-      if PEnvir.CanWalk (nx, ny, FALSE{扳魔倾侩救窃}) then begin
+      if PEnvir.CanWalk (nx, ny, FALSE{不允许重叠}) then begin
          if PEnvir.MoveToMovingObject (CX, CY, self, nx, ny, FALSE) > 0 then begin
             CX := nx;
             CY := ny;
             SendRefMsg (RM_PUSH, GetBack(ndir), CX, CY, 0, '');
             Inc (Result);
             if RaceServer >= RC_ANIMAL then
-               WalkTime := WalkTime + 800; //剐府搁辑 词霸 锭赴促.
+               WalkTime := WalkTime + 800; //被推开时攻击会延迟.
          end else
             break;
       end else
@@ -2456,7 +2456,7 @@ end;
 
 /* **************************************************************************************
 
-										拳堪浅
+										火焰风
 
    ************************************************************************************** */
 
@@ -2515,7 +2515,7 @@ begin
          if (not cret.Death) and (cret <> user) then begin
             if (user.Abil.Level > cret.Abil.Level) and (not cret.StickMode) then begin
                levelgap := user.Abil.Level - cret.Abil.Level;
-               if (Random(20) < 6+pushlevel*3+levelgap) then begin  //荐访沥档俊 蝶扼辑
+               if (Random(20) < 6+pushlevel*3+levelgap) then begin  //根据修炼程度
                   if user.IsProperTarget(cret) then begin
                      push := 1 + _MAX(0,pushlevel-1) + Random(2);
                      ndir := GetNextDirection (user.CX, user.CY, cret.CX, cret.CY);
@@ -2533,7 +2533,7 @@ end;
 
 /* **************************************************************************************
 
-										堪荤厘, 汾牢厘
+										焰沙掌, 雷印掌
 
    ************************************************************************************** */
 
@@ -2585,10 +2585,10 @@ begin
       cret := TCreature (PEnvir.GetCreature (sx, sy, TRUE));
       if cret <> nil then begin
          //if (RaceServer = RC_USERHUMAN) and (cret.RaceServer = RC_USERHUMAN) and ((cret.InSafeZone) or (InSafeZone)) then
-         //   continue;  //救傈瘤措
+         //   continue;  //安全区
          if IsProperTarget (cret) then begin
-            if cret.AntiMagic <= Random(10) then begin  //付过 雀乔啊 乐澜
-               if undeadattack then  //攫单靛 阁胶磐俊霸 傍拜仿 碍拳牢 版快
+            if cret.AntiMagic <= Random(10) then begin  //存在魔法回避
+               if undeadattack then  //对不死系怪物攻击力强化的情况
                   acpwr := Round (magpwr * 1.5)
                else
                   acpwr := magpwr;
@@ -2610,7 +2610,7 @@ end; */
 
 /* **************************************************************************************
 
-										林贱狼阜
+										咒术之幕
 
    ************************************************************************************** */
 
@@ -2650,7 +2650,7 @@ void CCharObject::DamageBubbleDefence()
 
 /* **************************************************************************************
 
-										瘤堪贱
+										地炎术
 
    ************************************************************************************** */
 
@@ -2691,7 +2691,7 @@ int CCharObject::MagMakeFireCross(int nDamage, int nHTime, int nX, int nY)
 
 /* **************************************************************************************
 
-										搬拌
+										结界
 
    ************************************************************************************** */
 
@@ -2777,7 +2777,7 @@ int CCharObject::MagMakeHolyCurtain(int nHTime, int nX, int nY)
 
 /* **************************************************************************************
 
-										绢八贱
+										御剑术
 
    ************************************************************************************** */
 
@@ -2819,7 +2819,7 @@ BOOL CCharObject::SwordLongAttack(int nDamage)
 #ifdef _DEBUG
 					char szMsg[64];
 
-					sprintf(szMsg, "%s 绢八 嘎澜 - PW:%d HP:%d", pTargetObject->m_szName, nDamage, pTargetObject->m_WAbility.HP);
+					sprintf(szMsg, "%s hit by Sword Control - PW:%d HP:%d", pTargetObject->m_szName, nDamage, pTargetObject->m_WAbility.HP);
 					SysMsg(szMsg, 0);
 					// Debug Code
 #endif
@@ -2833,7 +2833,7 @@ BOOL CCharObject::SwordLongAttack(int nDamage)
 
 /* **************************************************************************************
 
-										馆岿八过
+										半月剑法
 
    ************************************************************************************** */
 
@@ -2864,7 +2864,7 @@ BOOL CCharObject::SwordWideAttack(int nDamage)
 #ifdef _DEBUG
 					char szMsg[64];
 
-					sprintf(szMsg, "%s 馆岿 嘎澜 - PW:%d HP:%d", pTargetObject->m_szName, nDamage, pTargetObject->m_WAbility.HP);
+					sprintf(szMsg, "%s hit by Crescent Sword - PW:%d HP:%d", pTargetObject->m_szName, nDamage, pTargetObject->m_WAbility.HP);
 					SysMsg(szMsg, 0);
 					// Debug Code
 #endif
@@ -2879,7 +2879,7 @@ BOOL CCharObject::SwordWideAttack(int nDamage)
 
 /* **************************************************************************************
 
-										汾汲拳
+										雷雪花
 
    ************************************************************************************** */
 
@@ -2919,7 +2919,7 @@ BOOL CCharObject::MagElecBlizzard(int nPower)
 
 /* **************************************************************************************
 
-									葫汲浅, 气凯颇
+									冰雪风, 爆裂波
 
    ************************************************************************************** */
 
@@ -2956,7 +2956,7 @@ BOOL CCharObject::MagBigExplosion(int nPower, int nX, int nY, int nWide)
 
 /* **************************************************************************************
 
-										措雀汗贱
+										大恢复术
 
    ************************************************************************************** */
 
@@ -3020,7 +3020,7 @@ end;
 
 /* **************************************************************************************
 
-										亲付柳过, 措瘤盔龋
+										降魔真法, 大地援护
 
    ************************************************************************************** */
 
@@ -3124,7 +3124,7 @@ BOOL CCharObject::MagMakeDefenceArea(int nX, int nY, int nRange, int nSec, int n
 
 /* **************************************************************************************
 
-										篮脚贱
+										隐身术
 
    ************************************************************************************** */
 
@@ -3173,7 +3173,7 @@ BOOL CCharObject::MagMakePrivateTransparent(int nHTime)
 
 /* **************************************************************************************
 
-										措篮脚贱
+										大隐身术
 
    ************************************************************************************** */
 
@@ -3212,7 +3212,7 @@ BOOL CCharObject::MagMakeGroupTransparent(int nX, int nY, int nHTime)
 
 /* **************************************************************************************
 
-										荤磊辣雀
+										狮子轮回
 
    ************************************************************************************** */
 

@@ -21,7 +21,7 @@
 #define DEFAULT_PATCH_PASS		NULL
 #define DEFAULT_LAST_PATCH_DATE	"20020120"
 #define DEFAULT_VERSION			"20011219"
-#define DEFAULT_REG_PATH		"SOFTWARE\\WEMADE Entertainment\\¹Ì¸£ÀÇÀü¼³2ei"
+#define DEFAULT_REG_PATH		"SOFTWARE\\WEMADE Entertainment\\LegendOfMir2ei"
 
 #define PATCH_INI_FILE_NAME		"\\Mir2Patch.ini"
 #define PATCHED_LIST_FILE		"Patch.lst"
@@ -145,7 +145,7 @@ BOOL	CPatch::WillBePatch(VOID)
 
 	if((dwErrNum=GetLastError())==ERROR_FILE_EXISTS)
 	{
-		// È­ÀÏÀÌ Á¸ÀçÇÏ¸é ´Ù½Ã ¹Ş¾Æ¶ó
+		// Èç¹ûÎÄ¼ş´æÔÚ¾ÍÖØĞÂÏÂÔØ
 		DeleteFile(PATCH_LIST_FILE_LIST);
 		m_hFile = CreateFile (PATCH_LIST_FILE_LIST, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
 	}
@@ -157,7 +157,7 @@ BOOL	CPatch::WillBePatch(VOID)
 	strcat(szTemp,PATCH_LIST_FILE_LIST);
 	m_HFileFtp = FtpOpenFile( m_HFtp,szTemp, GENERIC_READ, FTP_TRANSFER_TYPE_BINARY, 0);
 
-	while(1)						// È­ÀÏ ¹Ş´Â ºÎºĞ.
+	while(1)						// ½ÓÊÕÎÄ¼şµÄ²¿·Ö.
 	{
 		if (InternetReadFile( m_HFileFtp, FileBuffer, (DWORD)BufferSize, &dwReadLen) != FALSE)
 		{
@@ -205,25 +205,25 @@ BOOL	CPatch::WillBePatch(VOID)
 	if(CmpResult>0)
 	{
 		return TRUE;
-		// Patch ¹Ş¾Æ¾ß ÇÔ
+		// ĞèÒª½ÓÊÕ Patch
 	}
 	else
 	{
 		if(CmpResult==0)
 		{
-			// Patch ¹ŞÀ» ÇÊ¿ä ¾øÀ½
+			// ÎŞĞè½ÓÊÕ Patch
 			return FALSE;
 		}
 		else
 		{
-			// ÇöÁ¦ °¡Áö°í ÀÖ´Â°ÍÀÌ ¼­¹ö¿¡¼­ Áö¿øÇÏ´Â°Å º¸´Ù ÃÖ±Ù ¹öÀüÀÌ´Ù ¤Ñ.¤Ñ?
+			// µ±Ç°ÓµÓĞµÄ°æ±¾±È·şÎñÆ÷Ö§³ÖµÄ°æ±¾¸üĞÂ...?
 			return FALSE;
 		}
 	}
 }
 
 
-HRESULT CPatch::GetFtpFiles(VOID)	// ¿©±â¿¡¼­ File List¸¦ ºĞ¼®ÇØ¼­ GetFileÀ» °è¼Ó µ¹·ÁÁÙ°Í  return -1l : Error  0: End 1: Continue
+HRESULT CPatch::GetFtpFiles(VOID)	// ÔÚÕâÀï·ÖÎö File List£¬²¢³ÖĞø·µ»Ø GetFile.  return -1l : Error  0: End 1: Continue
 {
 	static int		Pos=0;
 	char			szTemp[MAX_PATH];
@@ -231,7 +231,7 @@ HRESULT CPatch::GetFtpFiles(VOID)	// ¿©±â¿¡¼­ File List¸¦ ºĞ¼®ÇØ¼­ GetFileÀ» °è¼
 	char			szFileName[MAX_PATH];
 
 	UnCompressedFileNode* FileNode;
-// ¿©±â¿¡¼­ Last Patch Date¸¦ ¾ò¾î¾ß ÇÑ´Ù.
+// ÔÚÕâÀï±ØĞëÈ¡µÃ Last Patch Date.
 	if(m_bEndPatch != TRUE)
 	{
 		if(m_PatchState == 3)
@@ -274,7 +274,7 @@ HRESULT CPatch::GetFtpFiles(VOID)	// ¿©±â¿¡¼­ File List¸¦ ºĞ¼®ÇØ¼­ GetFileÀ» °è¼
 				DWORD dwErrNum;
 				ZeroMemory(szDirStr, MAX_PATH);
 
-				if(strcmp(FileNode->szFileName, "Mir2Patch.exe") == 0)	// Patch È­ÀÏ ÀÏ °æ¿ì
+				if(strcmp(FileNode->szFileName, "Mir2Patch.exe") == 0)	// ÈôÊÇ Patch ÎÄ¼şµÄÇé¿ö
 				{
 					DeleteFile(FileNode->szFileName);
 					if(!jRegGetKey(_T(DEFAULT_REG_PATH), _T("setup path"), (LPBYTE)szDirStr))
@@ -305,9 +305,9 @@ HRESULT CPatch::GetFtpFiles(VOID)	// ¿©±â¿¡¼­ File List¸¦ ºĞ¼®ÇØ¼­ GetFileÀ» °è¼
 				m_hFile = CreateFile (szTemp, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
 				if((dwErrNum=GetLastError()) == ERROR_FILE_EXISTS)
 				{
-					// È­ÀÏÀÌ ÀÌ¹Ì Á¸Àç ÇÒ °æ¿ì ±× È­ÀÏÀÇ Å©±â¸¦ È®ÀÎ
-					// ¾÷µ¥ÀÌÆ® ÇÏ·Á´Â È­ÀÏº¸´Ù ÀÛÀº È­ÀÏÀÇ °æ¿ì
-					// Àç´ë·Î ¾÷µ¥ÀÌÆ® µÇÁö ¾ÊÀº È­ÀÏ ÀÌ¹Ç·Î ´Ù½Ã ¾÷µ¥ÀÌÆ®¸¦ ¹Ş´Â´Ù.
+					// Èç¹ûÎÄ¼şÒÑ´æÔÚ£¬ÔòÈ·ÈÏ¸ÃÎÄ¼şµÄ´óĞ¡
+					// ¶ÔÓÚ±ÈÒª¸üĞÂµÄÎÄ¼ş¸üĞ¡µÄÎÄ¼ş
+					// ÒòÎªÊÇÎ´ÕıÈ·¸üĞÂµÄÎÄ¼ş,ËùÒÔÖØĞÂ½ÓÊÕ¸üĞÂ.
 					m_hFile = CreateFile (szTemp, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 					DWORD High_FileSize;
 					DWORD Low_FileSize;
@@ -345,7 +345,7 @@ HRESULT CPatch::GetFtpFiles(VOID)	// ¿©±â¿¡¼­ File List¸¦ ºĞ¼®ÇØ¼­ GetFileÀ» °è¼
 			strcpy(szTemp, m_szPatchDate);
 			strcat(szTemp, "\\");
 			strcat(szTemp, szFileName);
-			GetFile(szTemp);		// È­ÀÏ °è¼Ó ¹Ş±â ^^;
+			GetFile(szTemp);		// ¼ÌĞø½ÓÊÕÎÄ¼ş ^^;
 		}
 	}
 	else
@@ -480,22 +480,22 @@ VOID CPatch::InitPatch(VOID)
 	dwFrameHeight   = 0;
 	dwFrameWidth    = 0;
 
-	// ¹ÙÅÁÈ­¸éÀÇ RECT¸¦ ±¸ÇÑ´Ù.
+	// Çó×ÀÃæµÄ RECT.
 	SystemParametersInfo(SPI_GETWORKAREA, 0, &rcWork, 0);
 
-	// ÇöÁ¦ ¼³Á¤µÈ WindowÀÇ Rect¸¦ º¸Á¸
+	// ±£´æµ±Ç°ÉèÖÃµÄ Window µÄ Rect
 	tWidth =g_xMainWnd.m_rcWindow.right;
 	tHeight = g_xMainWnd.m_rcWindow.bottom;
 
-	// WindowÀÇ (x,y)ÁÂÇ¥ ¾ò±â
+	// »ñÈ¡ Window µÄ (x,y) ×ø±ê
 	Left = (rcWork.right - Width) / 2;
 	Top =  (rcWork.bottom - Height) / 2;
 
-	//WindowÀÇ ½ÃÀÛ ÁÂÇ¥¸¦ ¼³Á¤
+	//ÉèÖÃ Window µÄÆğÊ¼×ø±ê
 	g_xMainWnd.m_rcWindow.left  = Left + dwFrameWidth;
 	g_xMainWnd.m_rcWindow.top	= Top + dwFrameHeight + dwMenuHeight;
 
-	// ¹Ù²î°ÔµÉ windowÀÇ Width¿Í Height
+	// ½«Òª±ä¸üµÄ window µÄ Width ºÍ Height
 	Width = Width + dwFrameWidth * 2;
 	Height = Height + dwFrameHeight * 2 + dwMenuHeight;
 
@@ -510,9 +510,9 @@ VOID CPatch::InitPatch(VOID)
 	{
 		if(WillBePatch())	// Patch Data List Check
 		{
-			// 2 °³ÀÇ Patch Check °¡ ¸ğµÎ ¼º°øÇØ¾ß¸¸ °¡´ÉÇÏ´Ù.
+			// 2 ¸ö Patch Check ±ØĞëÈ«²¿³É¹¦²Å¿ÉÒÔ.
 			m_bEndPatch = FALSE;
-			// ÆäÄ¡°¡ ÀÖÀ»¶§¸¸, ÀÌ¹ÌÁö¸¦ Convert ÇÑ´Ù.
+			// ½öÔÚ´æÔÚ fetch Ê±, ²Å Convert Í¼Ïñ¡£
 			ZeroMemory((BYTE*)&FLHeader,sizeof(FileListHeader));
 
 			HFile = NULL;
@@ -547,17 +547,17 @@ VOID CPatch::InitPatch(VOID)
 				}
 			}
 
-			// Update ÇÒ Directory ¸¦ »ı¼º 
-			strcat(szDirStr, "UpDate\\");			// Update Directory¸¦ »ı¼º
-			strcpy(m_UpdatePath, szDirStr);			// Update Path¸¦ °¡Áö°í ÀÖÀ»°Í 
+			// ´´½¨Òª Update µÄ Directory 
+			strcat(szDirStr, "UpDate\\");			// ´´½¨ Update Directory
+			strcpy(m_UpdatePath, szDirStr);			// ½«³ÖÓĞ Update Path 
 			CreateDirectory(szDirStr, NULL);
 
-			// Patch Á¤º¸¸¦ ¾ò´Â´Ù.
+			// »ñÈ¡ Patch ĞÅÏ¢¡£
 			m_ppFilesData = new UnCompressedFileNode* [m_FACount];
 
 			ZeroMemory(szFileName,MAX_PATH);
 			ZeroMemory(szTemp,MAX_PATH);
-			// °³°³ È­ÀÏ Á¤º¸ ÀĞ±â
+			// ¶ÁÈ¡¸÷¸öÎÄ¼şµÄĞÅÏ¢
 			for(int i = 0; i< m_FACount ;i ++)
 			{
 				m_ppFilesData[i] = new UnCompressedFileNode;
@@ -608,14 +608,14 @@ BOOL CPatch::CheckPatchDate(VOID)
 
 	if((dwErrNum=GetLastError())==ERROR_FILE_EXISTS)
 	{
-		// È­ÀÏÀÌ Á¸ÀçÇÏ¸é ´Ù½Ã ¹Ş¾Æ¶ó
+		// Èç¹ûÎÄ¼ş´æÔÚ¾ÍÖØĞÂÏÂÔØ
 		DeleteFile(PATCHED_LIST_FILE);
 		m_hFile = CreateFile (PATCHED_LIST_FILE, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL,NULL);
 	}
 
 	m_HFileFtp = FtpOpenFile( m_HFtp, PATCHED_LIST_FILE, GENERIC_READ, FTP_TRANSFER_TYPE_BINARY, 0);
 
-	while(1)						// È­ÀÏ ¹Ş´Â ºÎºĞ.
+	while(1)						// ½ÓÊÕÎÄ¼şµÄ²¿·Ö.
 	{
 		if (InternetReadFile( m_HFileFtp, FileBuffer, (DWORD)BufferSize, &dwReadLen) != FALSE)
 		{
@@ -656,30 +656,30 @@ BOOL CPatch::CheckPatchDate(VOID)
 		ZeroMemory(ReadDate, 9);
 		fread( ReadDate, sizeof( char ) * 9, 1, HFile );
 //		fscanf(HFile,"%8s",ReadDate);
-		// ÀĞ¾úÀ¸´Ï±î ºñ±³Çì¼­ Ã³¸®ÇÏÀÚ ^^
+		// ÒÑ¾­¶ÁÈ¡ÁË£¬±È½Ïºó´¦Àí°É ^^
 		ReadDate[8]=NULL;
 
 		CmpResult=strncmp(ReadDate, LastUpdateDate, 8);
 
 		if(CmpResult > 0)
 		{
-			// m_szPatchDate¿¡ ÇØ´ç ³¯Â¥°¡ ÀÖÀ½.
+			// m_szPatchDate ÖĞÓĞ¶ÔÓ¦ÈÕÆÚ.
 			fclose(HFile);
 			strcpy(m_szPatchDate, ReadDate);
 			return TRUE;
-			// Patch ¹Ş¾Æ¾ß ÇÔ
+			// ĞèÒª½ÓÊÕ Patch
 		}
 		else
 		{
 			if(CmpResult == 0)
 			{
-				// Patch ¹ŞÀ» ÇÊ¿ä ¾øÀ½ ´ÙÀ½ ³¯Â¥ È®ÀÎ
+				// ÎŞĞè½ÓÊÜ Patch£¬¼ì²éÏÂÒ»¸öÈÕÆÚ
 				continue;
 			}
 			else
 			{
-				// ÇöÁ¦ °¡Áö°í ÀÖ´Â°ÍÀÌ ¼­¹ö¿¡¼­ Áö¿øÇÏ´Â°Å º¸´Ù ÃÖ±Ù ¹öÀüÀÌ´Ù ¤Ñ.¤Ñ?
-				// ´ÙÀ½ ³¯Â¥ È®ÀÎ ¤Ñ¤Ñ; 
+				// µ±Ç°ÓµÓĞµÄ°æ±¾±È·şÎñÆ÷Ö§³ÖµÄ°æ±¾¸üĞÂ...?
+				// È·ÈÏÏÂÒ»¸öÈÕÆÚ ¡­¡­; 
 				continue;
 			}
 		}		

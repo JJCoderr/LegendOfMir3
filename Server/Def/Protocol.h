@@ -408,21 +408,21 @@ typedef struct tag_TGENITEMRCD
 
 typedef struct tag_TSTANDARDITEM
 {
-	char		szName[20];			// 酒捞袍 捞抚 (玫窍力老八)
+	char		szName[20];			// 物品名称 (天下第一剑)
 	char		szPrefixName[20];
 	BYTE		btStdMode;          //
-	BYTE		btShape;            // 屈怕喊 捞抚 (枚八)
-	BYTE		btWeight;           // 公霸
-	BYTE		btAniCount;         // 1焊促 农搁 局聪皋捞记 登绰 酒捞袍
-	BYTE		btSource;           // 犁龙 (0篮 扁夯, 1焊促 农搁 歹 窜窜窃)
-	BYTE		btNeedIdentify;     // $01 (酒捞错萍颇捞 救 等 巴)
-	WORD		wLooks;             // 弊覆 锅龋
+	BYTE		btShape;            // 按形态的名称 (铁剑)
+	BYTE		btWeight;           // 重量
+	BYTE		btAniCount;         // 大于 1 则为有动画的物品
+	BYTE		btSource;           // 材质 (0 为默认, 大于 1 则更坚硬)
+	BYTE		btNeedIdentify;     // $01 (未鉴定的)
+	WORD		wLooks;             // 图像编号
 	WORD		wDuraMax;
-	WORD		wAC;				// 规绢仿
-	WORD		wMAC;				// 付亲仿
-	WORD		wDC;				// 单固瘤
-	WORD		wMC;				// 贱荤狼 付过 颇况
-	WORD		wSC;				// 档荤狼 沥脚仿
+	WORD		wAC;				// 防御力
+	WORD		wMAC;				// 魔抗
+	WORD		wDC;				// 伤害
+	WORD		wMC;				// 术士的魔法威力
+	WORD		wSC;				// 道士的精神力
 	BYTE		btNeed;             // 0:Level, 1:DC, 2:MC, 3:SC
 	BYTE		btNeedLevel;        // 1..60 level value...
 	UINT		nPrice;

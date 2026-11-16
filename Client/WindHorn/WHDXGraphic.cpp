@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 
@@ -42,18 +42,18 @@ CWHDXGraphicWindow* GetDXGWindowPtr()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::CWHDXGraphicWindow()
+	函数名 : CWHDXGraphicWindow::CWHDXGraphicWindow()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	创建日期 :
 
-	格利   : 
-	涝仿   : WORD wWidth
+	目的   :
+	输入   : WORD wWidth
 	         WORD wHeight
 	         WORD wBpp
-	免仿   : 
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CWHDXGraphicWindow::CWHDXGraphicWindow(WORD wWidth, WORD wHeight, WORD wBpp)
@@ -65,7 +65,7 @@ CWHDXGraphicWindow::CWHDXGraphicWindow(WORD wWidth, WORD wHeight, WORD wBpp)
 	m_pddsZBuffer		= NULL;
     m_pddsFrontBuffer	= NULL;
     m_pddsBackBuffer	= NULL;
-//	俊叼飘扩档快 免仿阑 困秦辑 努府欺甫 技泼茄促.
+//	为了编辑窗口的输出而设置裁剪器。
 	m_lpcClipper		= NULL;
 
 	m_stDisplayInfo.wWidth	= wWidth;
@@ -109,15 +109,15 @@ VOID CWHDXGraphicWindow::UsedAndFreeMemoryCheck()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::~CWHDXGraphicWindow()
+	函数名 : CWHDXGraphicWindow::~CWHDXGraphicWindow()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CWHDXGraphicWindow::~CWHDXGraphicWindow()
@@ -132,19 +132,19 @@ CWHDXGraphicWindow::~CWHDXGraphicWindow()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::Create()
+	函数名 : CWHDXGraphicWindow::Create()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : LPTSTR lpCaption
+	目的   :
+	输入   : LPTSTR lpCaption
 	         CHAR *pszMenuName
 	         BYTE bScreenModeFlag
 	         BYTE bDeviceModeFlag
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CWHDXGraphicWindow::Create(HINSTANCE hInst, LPTSTR lpCaption, CHAR *pszMenuName, CHAR* pszIconName, BYTE bScreenModeFlag, BYTE bDeviceModeFlag)
@@ -198,19 +198,19 @@ BOOL CWHDXGraphicWindow::Create(HINSTANCE hInst, LPTSTR lpCaption, CHAR *pszMenu
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::MainWndProcDXG()
+	函数名 : CWHDXGraphicWindow::MainWndProcDXG()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : HWND hWnd
+	目的   :
+	输入   : HWND hWnd
 	         UINT uMsg
 	         WPARAM wParam
 	         LPARAM lParam
-	免仿   : LRESULT 
+	输出   : LRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 LRESULT CWHDXGraphicWindow::MainWndProcDXG(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
@@ -281,17 +281,17 @@ LRESULT CWHDXGraphicWindow::OnSetCursor()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::OnSize()
+	函数名 : CWHDXGraphicWindow::OnSize()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : WPARAM wParam
+	目的   :
+	输入   : WPARAM wParam
 	         LPARAM lParam
-	免仿   : LRESULT 
+	输出   : LRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 LRESULT CWHDXGraphicWindow::OnSize(WPARAM wParam, LPARAM lParam)
@@ -309,17 +309,17 @@ LRESULT CWHDXGraphicWindow::OnSize(WPARAM wParam, LPARAM lParam)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::OnMove()
+	函数名 : CWHDXGraphicWindow::OnMove()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : WPARAM wParam
+	目的   :
+	输入   : WPARAM wParam
 	         LPARAM lParam
-	免仿   : LRESULT 
+	输出   : LRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 LRESULT CWHDXGraphicWindow::OnMove(WPARAM wParam, LPARAM lParam)
@@ -331,15 +331,15 @@ LRESULT CWHDXGraphicWindow::OnMove(WPARAM wParam, LPARAM lParam)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::OnDestroy()
+	函数名 : CWHDXGraphicWindow::OnDestroy()
 
-	累己磊 : 
-	累己老 : 
+	作者 : 
+	编写日期 : 
 
-	格利   : 
-	免仿   : BOOL 
+	目的   : 
+	输出   : BOOL 
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 LRESULT CWHDXGraphicWindow::OnDestroy()
@@ -350,17 +350,17 @@ LRESULT CWHDXGraphicWindow::OnDestroy()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::OnSysKeyDown()
+	函数名 : CWHDXGraphicWindow::OnSysKeyDown()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	日期 :
 
-	格利   : 
-	涝仿   : WPARAM wParam
+	目的   :
+	输入   : WPARAM wParam
 	         LPARAM lParam
-	免仿   : LRESULT 
+	输出   : LRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 LRESULT CWHDXGraphicWindow::OnSysKeyDown(WPARAM wParam, LPARAM lParam)
@@ -400,15 +400,15 @@ LRESULT CWHDXGraphicWindow::OnSysKeyDown(WPARAM wParam, LPARAM lParam)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::FindDriverAndDevice()
+	函数名 : CWHDXGraphicWindow::FindDriverAndDevice()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	日期 :
 
-	格利   : 
-	免仿   : DWORD 
+	目的   :
+	输出   : DWORD
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BYTE CWHDXGraphicWindow::FindDriverAndDevice()
@@ -431,7 +431,7 @@ BYTE CWHDXGraphicWindow::FindDriverAndDevice()
 	{
 		for ( bCnt = g_bNumDevices-1; bCnt >= 0; bCnt-- )
 		{
-			// 厚叼坷 墨靛啊 2俺捞惑
+			// 视频卡有 2 个以上
 			if( g_bNumDevices > 2 )
 			{
 				if ( g_stDXGEnumDeviceInfo[0].dwNumModes != g_stDXGEnumDeviceInfo[bCnt].dwNumModes )
@@ -458,15 +458,15 @@ BYTE CWHDXGraphicWindow::FindDriverAndDevice()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::DestroyDXGObjects()
+	函数名 : CWHDXGraphicWindow::DestroyDXGObjects()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : HRESULT 
+	目的   :
+	输出   : HRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::DestroyDXGObjects()
@@ -496,7 +496,7 @@ HRESULT CWHDXGraphicWindow::DestroyDXGObjects()
     SAFE_RELEASE(m_pddsBackBuffer);
     SAFE_RELEASE(m_pddsFrontBuffer);
     SAFE_RELEASE(m_pddsZBuffer);
-//	俊叼飘扩档快 免仿阑 困秦辑 努府欺甫 技泼茄促.
+//	为了编辑窗口的输出而设置裁剪器。
 	SAFE_RELEASE(m_lpcClipper);
     SAFE_RELEASE(m_pD3D);
 
@@ -521,15 +521,15 @@ HRESULT CWHDXGraphicWindow::DestroyDXGObjects()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::FreeDXGEnumModeResources()
+	函数名 : CWHDXGraphicWindow::FreeDXGEnumModeResources()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CWHDXGraphicWindow::FreeDXGEnumModeResources()
@@ -543,15 +543,15 @@ VOID CWHDXGraphicWindow::FreeDXGEnumModeResources()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::CreateDXG()
+	函数名 : CWHDXGraphicWindow::CreateDXG()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : HRESULT 
+	目的   :
+	输出   : HRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::CreateDXG() 
@@ -618,20 +618,20 @@ HRESULT CWHDXGraphicWindow::CreateDXG()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CDXGraphic::ResetDXG()
+	函数名 : CDXGraphic::ResetDXG()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : WORD wWidth
+	目的   :
+	输入   : WORD wWidth
 	         WORD wHeight
 	         WORD wBPP
 	         BYTE bScreenModeFlag
 	         BYTE bDeviceModeFlag
-	免仿   : HRESULT 
+	输出   : HRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::ResetDXG(WORD wWidth, WORD wHeight, WORD wBPP, BYTE bScreenModeFlag, BYTE bDeviceModeFlag)
@@ -684,15 +684,15 @@ HRESULT CWHDXGraphicWindow::ResetDXG(WORD wWidth, WORD wHeight, WORD wBPP, BYTE 
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::CreatePrimarySurface()
+	函数名 : CWHDXGraphicWindow::CreatePrimarySurface()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	创建日期 :
 
-	格利   : 
-	免仿   : HRESULT 
+	目的   :
+	输出   : HRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
@@ -710,27 +710,27 @@ HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
 
 	    GetWindowRect(m_hWnd, &rcTemp);
 		
-		// 努扼捞攫飘康开狼 农扁甫 棱绰何盒篮 扩档快狼 积己苞 包访捞 乐促.
-		// 拳搁秦惑档 溜, 努扼捞攫飘 荤阿屈 康开狼 农扁甫 掘绢柯促.
+		// 设置客户端区域大小的部分与窗口的创建有关.
+		// 获取屏幕分辨率即客户端矩形区域的大小。
 		SetRect(&rcTemp, 0, 0, m_stDisplayInfo.wWidth, m_stDisplayInfo.wHeight);
 
-		// 努扼捞攫飘 荤阿屈 康开农扁俊辑 扩档快 傈眉康开狼 农扁肺 函券茄促.
+		// 从客户端矩形区域大小转换为整个窗口区域的大小.
 		AdjustWindowRectEx(&rcTemp, GetWindowStyle(m_hWnd), GetMenu(m_hWnd) != NULL, GetWindowExStyle(m_hWnd));
 
-		// 扩档快 傈眉康开农扁肺 扩档快甫 技泼茄促. 窜 矫累谅钎绰 公矫等促.
+		// 用窗口的整个区域大小设置窗口。但起始坐标被忽略。
 		SetWindowPos(m_hWnd, NULL, 0, 0, rcTemp.right-rcTemp.left, rcTemp.bottom-rcTemp.top,
 					 SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
 
-		// HWND_NOTOPMOST甫 技泼窍扁 困秦辑捞促.
+		// 是为了设置 HWND_NOTOPMOST。
 		SetWindowPos(m_hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
 
-		// 官帕拳搁康开狼 农扁甫 掘绢柯促..
+		// 获取桌面区域的大小..
 		SystemParametersInfo(SPI_GETWORKAREA, 0, &rcWork, 0);
 		GetWindowRect(m_hWnd, &rcTemp);
 		if ( rcTemp.left < rcWork.left )		rcTemp.left = rcWork.left;
 		if ( rcTemp.top  < rcWork.top )			rcTemp.top  = rcWork.top;
 
-		// 扩档快狼 矫累谅钎甫 技泼茄促.
+		// 设置窗口的起始坐标.
 		SetWindowPos(m_hWnd, NULL, rcTemp.left, rcTemp.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
     
 		ddsd.dwFlags        = DDSD_CAPS;
@@ -767,7 +767,7 @@ HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
 			return E_FAIL;
 	}
 
-//	俊叼飘扩档快 免仿阑 困秦辑 努府欺甫 技泼茄促.////////////////////////////////////////////////////////////////
+//	为了编辑窗口输出而设置裁剪器。////////////////////////////////////////////////////////////////
 	if ( FAILED(hr = m_pDD->CreateClipper(0, &m_lpcClipper, NULL)) )						return E_FAIL;
 	if ( FAILED(hr = m_lpcClipper->SetHWnd(0, m_hWnd)) )
 	{
@@ -788,15 +788,15 @@ HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::UpdateBoundsWnd()
+	函数名 : CWHDXGraphicWindow::UpdateBoundsWnd()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改人] : 修改内容
 
 *******************************************************************************************************************/
 VOID CWHDXGraphicWindow::UpdateBoundsWnd()
@@ -816,16 +816,16 @@ VOID CWHDXGraphicWindow::UpdateBoundsWnd()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::CreateZBuffer()
+	函数名 : CWHDXGraphicWindow::CreateZBuffer()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : GUID* pDeviceGUID
-	免仿   : HRESULT 
+	目的   :
+	输入   : GUID* pDeviceGUID
+	输出   : HRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::CreateZBuffer(GUID* pDeviceGUID)
@@ -875,7 +875,7 @@ HRESULT CWHDXGraphicWindow::Init3DDeviceObjects()
     // Set the transform matrices
     D3DMATRIX matWorld, matView, matProj;
 
-	// 泅犁 800*600拳搁俊 嘎霸 3D 谅钎拌甫 汲沥茄促.
+	// 设置适合当前 800*600 屏幕的 3D 坐标系。
  	D3DVECTOR vEyePt    = D3DVECTOR(0, 0, -300.0f);
     D3DVECTOR vLookatPt = D3DVECTOR(0, 0, 0);
     D3DVECTOR vUpVec    = D3DVECTOR(0, 1, 0);
@@ -883,7 +883,7 @@ HRESULT CWHDXGraphicWindow::Init3DDeviceObjects()
     D3DUtil_SetViewMatrix(matView, vEyePt, vLookatPt, vUpVec);
     D3DUtil_SetProjectionMatrix(matProj, g_PI/2, float(600.0f/800.0f), -1.0f, 1.0f);
 
-	// MATRIAL狼 檬扁拳甫 汲沥茄促.
+	// 设置 MATRIAL 的初始化.
     D3DMATERIAL7 mtrl;
 	ZeroMemory(&mtrl, sizeof(mtrl));
 	mtrl.diffuse.r = mtrl.diffuse.g = mtrl.diffuse.b = 0.1f;
@@ -897,7 +897,7 @@ HRESULT CWHDXGraphicWindow::Init3DDeviceObjects()
     m_pd3dDevice->SetTransform(D3DTRANSFORMSTATE_VIEW,       &matView);
     m_pd3dDevice->SetTransform(D3DTRANSFORMSTATE_PROJECTION, &matProj);
 
-	// RenderState狼 檬扁蔼 汲沥.
+	// RenderState 的初始值设置.
 	m_pd3dDevice->SetRenderState(D3DRENDERSTATE_AMBIENT, 0xFFFFFFFF);
     m_pd3dDevice->SetRenderState(D3DRENDERSTATE_DITHERENABLE, FALSE); 
 	m_pd3dDevice->SetRenderState(D3DRENDERSTATE_CULLMODE, D3DCULL_NONE); 	
@@ -906,7 +906,7 @@ HRESULT CWHDXGraphicWindow::Init3DDeviceObjects()
 //	m_pd3dDevice->SetRenderState(D3DRENDERSTATE_FILLMODE, D3DFILL_WIREFRAME);
 //	m_pd3dDevice->SetRenderState(D3DRENDERSTATE_SHADEMODE, D3DSHADE_GOURAUD);
 	
-    // TextureStageState狼 檬扁蔼 汲沥.
+    // TextureStageState 的初始值设置。
 	m_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
     m_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE); 
     m_pd3dDevice->SetTextureStageState(0, D3DTSS_COLOROP,   D3DTOP_MODULATE);
@@ -920,26 +920,26 @@ HRESULT CWHDXGraphicWindow::Init3DDeviceObjects()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::CreateGameFont()
+	函数名 : CWHDXGraphicWindow::CreateGameFont()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : LPCSTR szFontName
+	目的   :
+	输入   : LPCSTR szFontName
 	         INT nXsize
 	         INT nYsize
 	         BYTE bFontType
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 HFONT CWHDXGraphicWindow::CreateGameFont(LPCSTR szFontName, INT nHeight, INT nWidth, INT nWeight, BOOL bItalic, BOOL bULine, BOOL bStrikeOut, DWORD dwCharSet)
 {
 	INT nYsize;
 
-	// 迄飘农扁 嘎眠扁.
+	// 调整字体大小。
 	if ( m_pddsBackBuffer )
 	{
 		HDC hDC;
@@ -955,7 +955,7 @@ HFONT CWHDXGraphicWindow::CreateGameFont(LPCSTR szFontName, INT nHeight, INT nWi
 }
 VOID CWHDXGraphicWindow::CreateDefFont()
 {
-	// 捞固 扁夯迄飘啊 积己登绢 乐栏搁 货肺 父甸荐 乐档废 Clear.
+	// 如果默认字体已创建, 则 Clear 以便可以重新创建。
 	if ( m_hDefGameFont != NULL )
 	{
 		DeleteObject(m_hDefGameFont); 
@@ -1003,22 +1003,22 @@ CHAR* CWHDXGraphicWindow::IntToStr(INT nNum)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::PutsHan()
+	函数名 : CWHDXGraphicWindow::PutsHan()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	日期 :
 
-	格利   : 
-	涝仿   : LPDIRECTDRAWSURFACE7 pSurface
+	目的   :
+	输入   : LPDIRECTDRAWSURFACE7 pSurface
 	         INT nX
 	         INT nY
 	         COLORREF foreColor
 	         COLORREF backColor
 	         CHAR* szFormat
 	         ...
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CWHDXGraphicWindow::PutsHan(LPDIRECTDRAWSURFACE7 pSurface, INT nX, INT nY, COLORREF foreColor, COLORREF backColor, CHAR* szText, HFONT hFont)
@@ -1057,22 +1057,22 @@ VOID CWHDXGraphicWindow::PutsHan(LPDIRECTDRAWSURFACE7 pSurface, INT nX, INT nY, 
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::PutsHan()
+	函数名 : CWHDXGraphicWindow::PutsHan()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	日期 :
 
-	格利   : 
-	涝仿   : LPDIRECTDRAWSURFACE7 pSurface
+	目的   :
+	输入   : LPDIRECTDRAWSURFACE7 pSurface
 	         INT nX
 	         INT nY
 	         COLORREF foreColor
 	         COLORREF backColor
 	         CHAR* szFormat
 	         ...
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CWHDXGraphicWindow::PutsHan(LPDIRECTDRAWSURFACE7 pSurface, RECT rc, COLORREF foreColor, COLORREF backColor, CHAR* szText, HFONT hFont)
@@ -1168,18 +1168,18 @@ SIZE CWHDXGraphicWindow::GetStrLength(LPDIRECTDRAWSURFACE7 pSurface, HFONT hFont
 			ZeroMemory(szTmpCheck, MAX_PATH);
 			nEndLen = nCnt+1;
 
-			// 泅犁何盒鳖瘤狼 巩磊凯阑 佬绰促.
+			// 读取到当前部分的字符串。
 			memcpy(&szTmpCheck, &szSrc[nStartLen], nEndLen-nStartLen);
 			INT nsLen;
 			nsLen = strlen(szTmpCheck);
 
-			// 泅犁鳖瘤 佬绢柯 何盒捞 倾侩承捞甫 逞绢脊阑锭.
+			// 当已读取到的部分超过允许宽度时。
 			if (nsLen > nDivideLen )
 			{
-				// 泅犁 2官捞飘 巩磊扼搁. 
+				// 当前若是 2 字节字符。
 				if ( szSrc[nEndLen-1] < 0 )
 				{
-					// 泅犁 菊俊巩磊啊 2官捞飘 巩磊啊 酒聪扼搁
+					// 若当前前面的字符不是 2 字节字符
 					if ( !(nWordCheck%2) )
 					{
 						nStartLen += strlen(szTmpCheck)-1;
@@ -1206,8 +1206,8 @@ SIZE CWHDXGraphicWindow::GetStrLength(LPDIRECTDRAWSURFACE7 pSurface, HFONT hFont
 						nWordCheck--;
 					}
 				}
-				// 1官捞飘 巩磊. 
-				// 泅犁焊促 茄官捞飘菊何盒鳖瘤父 绊妨秦林搁 等促.
+				// 1 字节字符。
+				// 只需考虑到比当前位置往前一个字节的部分即可。
 				else
 				{
 					nStartLen += strlen(szTmpCheck)-1;
@@ -1221,7 +1221,7 @@ SIZE CWHDXGraphicWindow::GetStrLength(LPDIRECTDRAWSURFACE7 pSurface, HFONT hFont
 					nDividedLine++;
 				}
 			}
-			else if(szSrc[nEndLen-1]=='\n')	// 碍力俺青     \n栏肺窍搁  Error ????
+			else if(szSrc[nEndLen-1]=='\n')	// 强制换行     用 \n 的话  Error ????
 			{
 				nStartLen += strlen(szTmpCheck)-1;
 				CHAR* pszNewLine;
@@ -1280,26 +1280,26 @@ BOOL CWHDXGraphicWindow::StringDivide(INT nDivideWidth, INT& nDividedLine, CHAR*
 
 			nEndLen = nCnt+1;
 
-			// 父距俊 臂磊农扁啊 弥措 臂磊农扁甫 逞绢啊搁 弥措摹肺 嘎苗霖促.
+			// 如果字体大小超过最大字体大小，则调整为最大值.
 			if ( nEndLen >= MAX_PATH )
 			{
 				szResult[MAX_PATH-1] = NULL;
 				break;
 			}
 
-			// 泅犁何盒鳖瘤狼 巩磊凯阑 佬绰促.
+			// 读取截至当前部分的字符串。
 			memcpy(&szTmpCheck, &szSrc[nStartLen], nEndLen-nStartLen);
 
 			SIZE sizeLen;
 			sizeLen = GetStrLength(NULL, NULL, szTmpCheck);
 
-			// 泅犁鳖瘤 佬绢柯 何盒捞 倾侩承捞甫 逞绢脊阑锭.
+			// 当前已读取的部分超出允许宽度时。
 			if ( sizeLen.cx > nDivideWidth )
 			{
-				// 泅犁 2官捞飘 巩磊扼搁. 
+				// 当前如果是 2 字节字符. 
 				if ( szSrc[nEndLen-1] < 0 )
 				{
-					// 泅犁 菊俊巩磊啊 2官捞飘 巩磊啊 酒聪扼搁
+					// 如果当前前面的字符不是 2 字节字符
 					if ( !(nWordCheck%2) )
 					{
 						nStartLen += strlen(szTmpCheck)-1;
@@ -1317,8 +1317,8 @@ BOOL CWHDXGraphicWindow::StringDivide(INT nDivideWidth, INT& nDividedLine, CHAR*
 						nWordCheck--;
 					}
 				}
-				// 1官捞飘 巩磊. 
-				// 泅犁焊促 茄官捞飘菊何盒鳖瘤父 绊妨秦林搁 等促.
+				// 1字节字符. 
+				// 只需考虑到比当前位置往前一个字节的部分即可。
 				else
 				{
 					nStartLen += strlen(szTmpCheck)-1;
@@ -1346,16 +1346,16 @@ BOOL CWHDXGraphicWindow::StringDivide(INT nDivideWidth, INT& nDividedLine, CHAR*
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::GetRGBMaskInfoIN16Bits()
+	函数名 : CWHDXGraphicWindow::GetRGBMaskInfoIN16Bits()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : LPDIRECTDRAWSURFACE7 pSurface
-	免仿   : DXG_MASKINFO 
+	目的   :
+	输入   : LPDIRECTDRAWSURFACE7 pSurface
+	输出   : DXG_MASKINFO
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 DXG_MASKINFO CWHDXGraphicWindow::GetRGBMaskInfoIN16Bits(LPDIRECTDRAWSURFACE7 pSurface)
@@ -1402,7 +1402,7 @@ DXG_MASKINFO CWHDXGraphicWindow::GetRGBMaskInfoIN16Bits(LPDIRECTDRAWSURFACE7 pSu
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 弊府绰 窃荐甸 葛澜.
+// 绘制函数集合.
 
 WORD CWHDXGraphicWindow::ConvertColor24To16(COLORREF dwColor)
 {
@@ -1423,20 +1423,20 @@ WORD CWHDXGraphicWindow::ConvertColor24To16(COLORREF dwColor)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::DrawWithGDI()
+	函数名 : CWHDXGraphicWindow::DrawWithGDI()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : RECT rc
+	目的   :
+	输入   : RECT rc
 	         LPDIRECTDRAWSURFACE7 pSurface
 	         DWORD dwColor
 	         DWORD dwPenStyleFlg
 	         BYTE bKind
-	免仿   : HRESULT 
+	输出   : HRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::DrawWithGDI(RECT rc, LPDIRECTDRAWSURFACE7 pSurface, DWORD dwColor, BYTE bKind)
@@ -1511,20 +1511,20 @@ HRESULT CWHDXGraphicWindow::DrawWithGDI(RECT rc, LPDIRECTDRAWSURFACE7 pSurface, 
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::DrawSprite()
+	函数名 : CWHDXGraphicWindow::DrawSprite()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 老馆利牢 弊府扁. 茄侨伎究 弊赴促. 胶农赴康开 努府俏, 家胶康开 努府俏
-	涝仿   : INT nX
+	目的   : 常规绘制. 逐像素绘制. 屏幕区域裁剪, 源区域裁剪
+	输入   : INT nX
 	         INT nY
 	         INT nXSize
 	         INT nYSize
 	         WORD* pwSrc
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CWHDXGraphicWindow::DrawWithImage(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc)
@@ -1655,18 +1655,18 @@ BOOL CWHDXGraphicWindow::DrawWithImagePerLineClipRgn(INT nX, INT nY, INT nXSize,
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::DrawWithSurface()
+	函数名 : CWHDXGraphicWindow::DrawWithSurface()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : LPDIRECTDRAWSURFACE7 pddsSrc
+	目的   :
+	输入   : LPDIRECTDRAWSURFACE7 pddsSrc
 	         RECT* prcSrc
 	         RECT* prcDst
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CWHDXGraphicWindow::DrawWithSurface(INT nX, INT nY, INT nXSize, INT nYSize, LPDIRECTDRAWSURFACE7 pddsSrc)
@@ -1769,7 +1769,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompMemToMem(INT nX, INT nY, INT nXSize
 			BYTE  bRedWantedColor, bGreenWantedColor, bBlueWantedColor;
 			WORD  wPixel;
 
-			// y绵 努府俏.
+			// y 轴裁剪。
 			for ( nYCnt=0 ; nYCnt < rc.top ; nYCnt++ )
 			{
 				nWidthEnd += pwSrc[nWidthStart];
@@ -1778,14 +1778,14 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompMemToMem(INT nX, INT nY, INT nXSize
 				nWidthStart	= nWidthEnd;
 			}
 
-			// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+			// 只决定对 y 轴实际进行循环的 Count.
 			for ( nYCnt=rc.top ; nYCnt < rc.bottom ; nYCnt++ )
 			{
-				// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+				// 获取一行的长度.(单位为字)
 				nWidthEnd += pwSrc[nWidthStart];
 				nWidthStart++;
 
-				// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+				// 按行的长度输出到屏幕。
 				for ( INT x = nWidthStart; x < nWidthEnd ; )
 				{
 					if ( pwSrc[x] == 0xC0 )
@@ -1810,14 +1810,14 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompMemToMem(INT nX, INT nY, INT nXSize
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
 								memcpy(&pwDst[((nYCnt+nY) * nDstXSize) + (rc.left+nX)], &pwSrc[x], sizeof(WORD)*(nCurrWidth-rc.left));
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								memcpy(&pwDst[((nYCnt+nY) * nDstXSize) + (nLastWidth+nX)], &pwSrc[x], sizeof(WORD)*(rc.right-nLastWidth));
@@ -1856,7 +1856,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompMemToMem(INT nX, INT nY, INT nXSize
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
@@ -1893,7 +1893,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompMemToMem(INT nX, INT nY, INT nXSize
 								}
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								for ( INT nCheck = 0; nCheck < rc.right-nLastWidth; nCheck++ )
@@ -1967,7 +1967,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompMemToMem(INT nX, INT nY, INT nXSize
 						}
 					}	
 				}
-				// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+				// 将本行的结尾移到下一行的开头.
 				nWidthEnd++;
 
 				nWidthStart	= nWidthEnd;
@@ -2041,7 +2041,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForComp(INT nX, INT nY, RECT rcSrc, WORD* 
 			BYTE  bRedWantedColor, bGreenWantedColor, bBlueWantedColor;
 			WORD  wPixel;
 
-			// y绵 努府俏.
+			// y 轴裁剪。
 			for ( nYCnt=0 ; nYCnt < rc.top ; nYCnt++ )
 			{
 				nWidthEnd += pwSrc[nWidthStart];
@@ -2050,14 +2050,14 @@ BOOL CWHDXGraphicWindow::DrawWithImageForComp(INT nX, INT nY, RECT rcSrc, WORD* 
 				nWidthStart	= nWidthEnd;
 			}
 
-			// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+			// 只决定对 y 轴实际进行循环的 Count.
 			for ( nYCnt=rc.top ; nYCnt < rc.bottom ; nYCnt++ )
 			{
-				// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+				// 获取一行的长度.(单位为字)
 				nWidthEnd += pwSrc[nWidthStart];
 				nWidthStart++;
 
-				// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+				// 按行的长度输出到屏幕。
 				for ( INT x = nWidthStart; x < nWidthEnd ; )
 				{
 					if ( pwSrc[x] == 0xC0 )
@@ -2082,14 +2082,14 @@ BOOL CWHDXGraphicWindow::DrawWithImageForComp(INT nX, INT nY, RECT rcSrc, WORD* 
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
 								memcpy(&pwdDst[((nYCnt+nY) * (ddsd.lPitch >> 1)) + (rc.left+nX)], &pwSrc[x], sizeof(WORD)*(nCurrWidth-rc.left));
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								memcpy(&pwdDst[((nYCnt+nY) * (ddsd.lPitch >> 1)) + (nLastWidth+nX)], &pwSrc[x], sizeof(WORD)*(rc.right-nLastWidth));
@@ -2128,7 +2128,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForComp(INT nX, INT nY, RECT rcSrc, WORD* 
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
@@ -2165,7 +2165,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForComp(INT nX, INT nY, RECT rcSrc, WORD* 
 								}
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								for ( INT nCheck = 0; nCheck < rc.right-nLastWidth; nCheck++ )
@@ -2239,7 +2239,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForComp(INT nX, INT nY, RECT rcSrc, WORD* 
 						}
 					}	
 				}
-				// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+				// 将本行的结尾移到下一行的开头.
 				nWidthEnd++;
 
 				nWidthStart	= nWidthEnd;
@@ -2312,7 +2312,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForComp(INT nX, INT nY, INT nXSize, INT nY
 			BYTE  bRedWantedColor, bGreenWantedColor, bBlueWantedColor;
 			WORD  wPixel;
 
-			// y绵 努府俏.
+			// y 轴裁剪。
 			for ( nYCnt=0 ; nYCnt < rc.top ; nYCnt++ )
 			{
 				nWidthEnd += pwSrc[nWidthStart];
@@ -2321,14 +2321,14 @@ BOOL CWHDXGraphicWindow::DrawWithImageForComp(INT nX, INT nY, INT nXSize, INT nY
 				nWidthStart	= nWidthEnd;
 			}
 
-			// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+			// 只决定对 y 轴实际进行循环的 Count.
 			for ( nYCnt=rc.top ; nYCnt < rc.bottom ; nYCnt++ )
 			{
-				// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+				// 获取一行的长度.(单位为字)
 				nWidthEnd += pwSrc[nWidthStart];
 				nWidthStart++;
 
-				// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+				// 按行的长度输出到屏幕。
 				for ( INT x = nWidthStart; x < nWidthEnd ; )
 				{
 					if ( pwSrc[x] == 0xC0 )
@@ -2353,14 +2353,14 @@ BOOL CWHDXGraphicWindow::DrawWithImageForComp(INT nX, INT nY, INT nXSize, INT nY
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
 								memcpy(&pwdDst[((nYCnt+nY) * (ddsd.lPitch >> 1)) + (rc.left+nX)], &pwSrc[x], sizeof(WORD)*(nCurrWidth-rc.left));
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								memcpy(&pwdDst[((nYCnt+nY) * (ddsd.lPitch >> 1)) + (nLastWidth+nX)], &pwSrc[x], sizeof(WORD)*(rc.right-nLastWidth));
@@ -2399,7 +2399,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForComp(INT nX, INT nY, INT nXSize, INT nY
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
@@ -2436,7 +2436,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForComp(INT nX, INT nY, INT nXSize, INT nY
 								}
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								for ( INT nCheck = 0; nCheck < rc.right-nLastWidth; nCheck++ )
@@ -2510,7 +2510,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForComp(INT nX, INT nY, INT nXSize, INT nY
 						}
 					}	
 				}
-				// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+				// 将本行的结尾移到下一行的开头.
 				nWidthEnd++;
 
 				nWidthStart	= nWidthEnd;
@@ -2583,7 +2583,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnBase(INT nX, INT nY, INT nXS
 			BYTE  bRedWantedColor, bGreenWantedColor, bBlueWantedColor;
 			WORD  wPixel;
 
-			// y绵 努府俏.
+			// y 轴裁剪。
   			for ( nYCnt=0 ; nYCnt < rc.top ; nYCnt++ )
 			{
 				nWidthEnd += pwSrc[nWidthStart];
@@ -2592,14 +2592,14 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnBase(INT nX, INT nY, INT nXS
 				nWidthStart	= nWidthEnd;
 			}
 
-			// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+			// 只决定对 y 轴实际进行循环的 Count.
 			for ( nYCnt=rc.top ; nYCnt < rc.bottom ; nYCnt++ )
 			{
-				// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+				// 获取一行的长度.(单位为字)
 				nWidthEnd += pwSrc[nWidthStart];
 				nWidthStart++;
 
-				// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+				// 按行的长度输出到屏幕。
 				for ( INT x = nWidthStart; x < nWidthEnd ; )
 				{
 					if ( pwSrc[x] == 0xC0 )
@@ -2624,14 +2624,14 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnBase(INT nX, INT nY, INT nXS
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
 								memcpy(&pwdDst[((nYCnt+nY) * (ddsd.lPitch >> 1)) + (rc.left+nX)], &pwSrc[x], sizeof(WORD)*(nCurrWidth-rc.left));
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								memcpy(&pwdDst[((nYCnt+nY) * (ddsd.lPitch >> 1)) + (nLastWidth+nX)], &pwSrc[x], sizeof(WORD)*(rc.right-nLastWidth));
@@ -2670,7 +2670,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnBase(INT nX, INT nY, INT nXS
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
@@ -2707,7 +2707,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnBase(INT nX, INT nY, INT nXS
 								}
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								for ( INT nCheck = 0; nCheck < rc.right-nLastWidth; nCheck++ )
@@ -2781,7 +2781,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnBase(INT nX, INT nY, INT nXS
 						}
 					}	
 				}
-				// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+				// 将本行的结尾移到下一行的开头.
 				nWidthEnd++;
 
 				nWidthStart	= nWidthEnd;
@@ -2860,7 +2860,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithBackBuffer(INT nX, INT nY,
 			WORD wPixel;
 			FLOAT rBlueRate, rGreenRate, bRedRate;
 
-			// y绵 努府俏.
+			// y 轴裁剪。
   			for ( nYCnt=0 ; nYCnt < rc.top ; nYCnt++ )
 			{
 				nWidthEnd += pwSrc[nWidthStart];
@@ -2869,14 +2869,14 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithBackBuffer(INT nX, INT nY,
 				nWidthStart	= nWidthEnd;
 			}
 
-			// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+			// 只决定对 y 轴实际进行循环的 Count.
 			for ( nYCnt=rc.top ; nYCnt < rc.bottom ; nYCnt++ )
 			{
-				// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+				// 获取一行的长度.(单位为字)
 				nWidthEnd += pwSrc[nWidthStart];
 				nWidthStart++;
 
-				// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+				// 按行的长度输出到屏幕。
 				for ( INT x = nWidthStart; x < nWidthEnd ; )
 				{
 					if ( pwSrc[x] == 0xC0 )
@@ -2901,7 +2901,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithBackBuffer(INT nX, INT nY,
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
@@ -2927,7 +2927,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithBackBuffer(INT nX, INT nY,
 								}
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								for ( INT nCheck = 0; nCheck < rc.right-nLastWidth; nCheck++ )
@@ -3003,7 +3003,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithBackBuffer(INT nX, INT nY,
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
@@ -3050,7 +3050,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithBackBuffer(INT nX, INT nY,
 								}
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								for ( INT nCheck = 0; nCheck < rc.right-nLastWidth; nCheck++ )
@@ -3144,7 +3144,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithBackBuffer(INT nX, INT nY,
 						}
 					}	
 				}
-				// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+				// 将本行的结尾移到下一行的开头.
 				nWidthEnd++;
 
 				nWidthStart	= nWidthEnd;
@@ -3159,12 +3159,12 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithBackBuffer(INT nX, INT nY,
 }
 
 
-// nX, nY绰 吝缴痢狼 谅钎捞促.
+// nX, nY 是中心点的坐标.
 BOOL CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc, WORD wClipWidth, WORD wClipHeight,
 											  WORD* pwShadowClrSrc, BOOL bBlend, BYTE bShadowType, BYTE bOpa)
 
 {
-	// 嘛瘤 臼绰 弊覆磊.
+	// 不绘制的阴影.
 	if ( bShadowType == 48 )
 		return FALSE;
 
@@ -3219,10 +3219,10 @@ BOOL CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nY
 			SetRect(&rcScrnShadow, nX, nY, nX+nWidth, nY+nHeight);
 		}
 
-		// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+		// 只决定对 y 轴实际进行循环的 Count.
 		for ( nYCnt=rc.top ; nYCnt < rc.bottom ; nYCnt++ )
 		{
-			// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+			// 获取一行的长度.(单位为字)
 			nWidthEnd += pwSrc[nWidthStart];
 			nWidthStart++;
 
@@ -3237,14 +3237,14 @@ BOOL CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nY
 
 			if ( nDstYPos < 0 || nDstYPos >= wClipHeight || (bShadowType==49 && nYCnt%2) )
 			{
-				// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+				// 将本行的结尾移到下一行的开头.
 				nWidthEnd++;
 				nWidthStart	= nWidthEnd;
 				nCurrWidth = 0;
 				continue;
 			}
 
-			// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+			// 按行的长度输出到屏幕。
 			for ( INT x = nWidthStart; x < nWidthEnd ; )
 			{
 				if ( pwSrc[x] == 0xC0 )
@@ -3274,7 +3274,7 @@ BOOL CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nY
 
 					if ( !bBlend ) 
 					{
-						// 哭率 吧副锭.
+						// 左侧碰撞时.
 						if ( nDstXPos < 0 && nDstXPos+nCntCopyWord >= 0 )
 						{
 							for ( INT nCheck = 0; nCheck < nCntCopyWord; nCheck++ )
@@ -3287,7 +3287,7 @@ BOOL CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nY
 							}
 							x += nCntCopyWord;
 						}
-						// 坷弗率 吧副锭.
+						// 在右侧卡住时。
 						else if ( nDstXPos < wClipWidth && nDstXPos+nCntCopyWord >= wClipWidth )
 						{
 							for ( INT nCheck = 0; nCheck < nCntCopyWord; nCheck++ )
@@ -3300,7 +3300,7 @@ BOOL CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nY
 							}
 							x += nCntCopyWord;
 						}
-						// 救吧副锭.
+						// 未被碰到时.
 						else if ( nDstXPos >= 0 && nDstXPos+nCntCopyWord < wClipWidth )
 						{
 							memcpy(&pwdDst[(nDstYPos * (ddsd.lPitch >> 1)) + nDstXPos], pwShadowClrSrc, sizeof(WORD)*nCntCopyWord);
@@ -3314,7 +3314,7 @@ BOOL CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nY
 					}
 					else
 					{
-						// 哭率 吧副锭.
+						// 左侧碰撞时.
 						if ( nDstXPos < 0 && nDstXPos+nCntCopyWord >= 0 )
 						{
 							for ( INT nCheck = 0; nCheck < nCntCopyWord; nCheck++ )
@@ -3343,7 +3343,7 @@ BOOL CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nY
 							}
 							x += nCntCopyWord;
 						}
-						// 坷弗率 吧副锭.
+						// 在右侧卡住时。
 						else if ( nDstXPos < wClipWidth && nDstXPos+nCntCopyWord >= wClipWidth )
 						{
 							for ( INT nCheck = 0; nCheck < nCntCopyWord; nCheck++ )
@@ -3374,7 +3374,7 @@ BOOL CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nY
 							}
 							x += nCntCopyWord;
 						}
-						// 救吧副锭.
+						// 未被碰到时.
 						else if ( nDstXPos >= 0 && nDstXPos+nCntCopyWord < wClipWidth )
 						{
 	//						memset(&pwdDst[(nDstYPos * (ddsd.lPitch >> 1)) + nDstXPos], wSahdowColor, sizeof(WORD)*nCntCopyWord);
@@ -3411,7 +3411,7 @@ BOOL CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nY
 					}
 				}
 			}
-			// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+			// 将本行的结尾移到下一行的开头.
 			nWidthEnd++;
 
 			nWidthStart	= nWidthEnd;
@@ -3434,9 +3434,9 @@ VOID CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nY
 #define _HALF_CELL_WIDTH	24
 #define _HALF_CELL_HEIGHT	16
 
-//  拳搁(800*600)俊辑 弊覆磊啊 嘛鳃 荤捞令甫 备茄促.
+//  求屏幕(800*600)上阴影绘制的大小.
 	
-	// 拳搁(800*600)俊辑狼 伎矫累谅钎啊 酒囱 角力 吝缴痢 谅钎(伎困 沥吝居痢捞促.)
+	// 不是画面(800*600)中的单元格起始坐标，而是实际的中心点坐标(单元格正中央点。)
 	INT		nScrnCenterX = nX - nPX + 24;//_HALF_CELL_WIDTH;
 	INT		nScrnCenterY = nY - nPY + 16;//_HALF_CELL_HEIGHT;
 	INT		nRealCenterX = nX - nScrnCenterX;
@@ -3480,7 +3480,7 @@ VOID CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nY
 					m_pddsBackBuffer->Unlock(NULL);
 					return;
 				}
-				// y绵 努府俏棺 茄临究 扒呈顿扁.
+				// y 轴裁剪以及逐行跳过.
 				if ( nYCnt%2 == 0 ||  nDstYPos < 0 )
 				{
 					nWidthEnd += pwSrc[nWidthStart];
@@ -3492,11 +3492,11 @@ VOID CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nY
 				}
 				else
 				{
-					// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+					// 获取一行的长度.(单位为字)
 					nWidthEnd += pwSrc[nWidthStart];
 					nWidthStart++;
 
-					// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+					// 按行的长度输出到屏幕。
 					for ( INT x = nWidthStart; x < nWidthEnd ; )
 					{
 						if ( pwSrc[x] == 0xC0 )
@@ -3574,7 +3574,7 @@ VOID CWHDXGraphicWindow::DrawWithShadowABlend(INT nX, INT nY, INT nXSize, INT nY
 							x += nCntCopyWord;
 						}
 					}
-					// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+					// 将本行的结尾移到下一行的开头.
 					nWidthEnd++;
 
 					nWidthStart	= nWidthEnd;
@@ -3651,7 +3651,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithLightedColor(INT nX, INT nY,
 			WORD wDyingKind, wChooseColor;
 			FLOAT rBlueRate, rGreenRate, bRedRate;
 
-			// y绵 努府俏.
+			// y 轴裁剪。
   			for ( nYCnt=0 ; nYCnt < rc.top ; nYCnt++ )
 			{
 				nWidthEnd += pwSrc[nWidthStart];
@@ -3660,14 +3660,14 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithLightedColor(INT nX, INT nY,
 				nWidthStart	= nWidthEnd;
 			}
 
-			// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+			// 只决定对 y 轴实际进行循环的 Count.
 			for ( nYCnt=rc.top ; nYCnt < rc.bottom ; nYCnt++ )
 			{
-				// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+				// 获取一行的长度.(单位为字)
 				nWidthEnd += pwSrc[nWidthStart];
 				nWidthStart++;
 
-				// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+				// 按行的长度输出到屏幕。
 				for ( INT x = nWidthStart; x < nWidthEnd ; )
 				{
 					if ( pwSrc[x] == 0xC0 )
@@ -3692,7 +3692,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithLightedColor(INT nX, INT nY,
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
@@ -3724,7 +3724,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithLightedColor(INT nX, INT nY,
 								}
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								for ( INT nCheck = 0; nCheck < rc.right-nLastWidth; nCheck++ )
@@ -3812,7 +3812,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithLightedColor(INT nX, INT nY,
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
@@ -3868,7 +3868,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithLightedColor(INT nX, INT nY,
 								}
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								for ( INT nCheck = 0; nCheck < rc.right-nLastWidth; nCheck++ )
@@ -3980,7 +3980,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendCompDataWithLightedColor(INT nX, INT nY,
 						}
 					}	
 				}
-				// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+				// 将本行的结尾移到下一行的开头.
 				nWidthEnd++;
 
 				nWidthStart	= nWidthEnd;
@@ -4056,7 +4056,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 			FLOAT rBlueRate, rGreenRate, rRedRate;
 			FLOAT rbLightRate = 0.0f;
 
-			// y绵 努府俏.
+			// y 轴裁剪。
   			for ( nYCnt=0 ; nYCnt < rc.top ; nYCnt++ )
 			{
 				nWidthEnd += pwSrc[nWidthStart];
@@ -4065,14 +4065,14 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 				nWidthStart	= nWidthEnd;
 			}
 
-			// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+			// 只决定对 y 轴实际进行循环的 Count.
 			for ( nYCnt=rc.top ; nYCnt < rc.bottom ; nYCnt++ )
 			{
-				// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+				// 获取一行的长度.(单位为字)
 				nWidthEnd += pwSrc[nWidthStart];
 				nWidthStart++;
 
-				// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+				// 按行的长度输出到屏幕。
 				for ( INT x = nWidthStart; x < nWidthEnd ; )
 				{
 					if ( pwSrc[x] == 0xC0 )
@@ -4097,7 +4097,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
@@ -4113,7 +4113,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 									bGreenSrc = (BYTE)((wPixel & m_stBitsMaskInfo.dwGMask) >> m_stBitsMaskInfo.bGShift);
 									bRedSrc   = (BYTE)((wPixel & m_stBitsMaskInfo.dwRMask) >> m_stBitsMaskInfo.bRShift);
 
-									// Focus咯何.
+									// 是否 Focus.
 									if ( bFocused )			rbLightRate = 0.6f;
 									else					rbLightRate = 0.0f;
 
@@ -4167,7 +4167,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 								}
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								for ( INT nCheck = 0; nCheck < rc.right-nLastWidth; nCheck++ )
@@ -4182,7 +4182,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 									bGreenSrc = (BYTE)((wPixel & m_stBitsMaskInfo.dwGMask) >> m_stBitsMaskInfo.bGShift);
 									bRedSrc   = (BYTE)((wPixel & m_stBitsMaskInfo.dwRMask) >> m_stBitsMaskInfo.bRShift);
 
-									// Focus咯何.
+									// 是否 Focus.
 									if ( bFocused )			rbLightRate = 0.6f;
 									else					rbLightRate = 0.0f;
 
@@ -4250,7 +4250,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 									bGreenSrc = (BYTE)((wPixel & m_stBitsMaskInfo.dwGMask) >> m_stBitsMaskInfo.bGShift);
 									bRedSrc   = (BYTE)((wPixel & m_stBitsMaskInfo.dwRMask) >> m_stBitsMaskInfo.bRShift);
 
-									// Focus咯何.
+									// 是否 Focus.
 									if ( bFocused )			rbLightRate = 0.6f;
 									else					rbLightRate = 0.0f;
 
@@ -4307,7 +4307,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 						}
 					}
 				}
-				// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+				// 将本行的结尾移到下一行的开头.
 				nWidthEnd++;
 
 				nWidthStart	= nWidthEnd;
@@ -4391,7 +4391,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 			BYTE  bRedWantedColor, bGreenWantedColor, bBlueWantedColor;
 			WORD  wPixel;
 
-			// y绵 努府俏.
+			// y 轴裁剪。
 			for ( nYCnt=0 ; nYCnt < rc.top ; nYCnt++ )
 			{
 				nWidthEnd += pwSrc[nWidthStart];
@@ -4400,14 +4400,14 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 				nWidthStart	= nWidthEnd;
 			}
 
-			// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+			// 只决定对 y 轴实际进行循环的 Count.
 			for ( nYCnt=rc.top ; nYCnt < rc.bottom ; nYCnt++ )
 			{
-				// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+				// 获取一行的长度.(单位为字)
 				nWidthEnd += pwSrc[nWidthStart];
 				nWidthStart++;
 
-				// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+				// 按行的长度输出到屏幕。
 				for ( INT x = nWidthStart; x < nWidthEnd ; )
 				{
 					if ( pwSrc[x] == 0xC0 )
@@ -4420,7 +4420,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 					else if ( pwSrc[x] == 0xC1 )
 					{
 						x++;
-						nCntCopyWord = pwSrc[x];	// 肮荐
+						nCntCopyWord = pwSrc[x];	// 个数
 						x++;
 
 						nLastWidth = nCurrWidth;
@@ -4428,11 +4428,11 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 
 						if ( rc.left > nCurrWidth || rc.right < nLastWidth )
 						{
-							x += nCntCopyWord;		// 倔配 寸配 臼篮 版快
+							x += nCntCopyWord;		// 不合情理的情况
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
@@ -4460,7 +4460,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								for(WORD i = 0 ; i < (sizeof(WORD)*(rc.right-nLastWidth));i++)
@@ -4538,7 +4538,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
@@ -4587,7 +4587,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 								}
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								for ( INT nCheck = 0; nCheck < rc.right-nLastWidth; nCheck++ )
@@ -4685,7 +4685,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnColor(INT nX, INT nY, INT nX
 						}
 					}	
 				}
-				// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+				// 将本行的结尾移到下一行的开头.
 				nWidthEnd++;
 
 				nWidthStart	= nWidthEnd;
@@ -4769,7 +4769,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnGray(INT nX, INT nY, INT nXS
 			BYTE  bRedWantedColor, bGreenWantedColor, bBlueWantedColor;
 			WORD  wPixel;
 
-			// y绵 努府俏.
+			// y 轴裁剪。
 			for ( nYCnt=0 ; nYCnt < rc.top ; nYCnt++ )
 			{
 				nWidthEnd += pwSrc[nWidthStart];
@@ -4778,14 +4778,14 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnGray(INT nX, INT nY, INT nXS
 				nWidthStart	= nWidthEnd;
 			}
 
-			// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+			// 只决定对 y 轴实际进行循环的 Count.
 			for ( nYCnt=rc.top ; nYCnt < rc.bottom ; nYCnt++ )
 			{
-				// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+				// 获取一行的长度.(单位为字)
 				nWidthEnd += pwSrc[nWidthStart];
 				nWidthStart++;
 
-				// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+				// 按行的长度输出到屏幕。
 				for ( INT x = nWidthStart; x < nWidthEnd ; )
 				{
 					if ( pwSrc[x] == 0xC0 )
@@ -4798,7 +4798,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnGray(INT nX, INT nY, INT nXS
 					else if ( pwSrc[x] == 0xC1 )
 					{
 						x++;
-						nCntCopyWord = pwSrc[x];	// 肮荐
+						nCntCopyWord = pwSrc[x];	// 个数
 						x++;
 
 						nLastWidth = nCurrWidth;
@@ -4806,11 +4806,11 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnGray(INT nX, INT nY, INT nXS
 
 						if ( rc.left > nCurrWidth || rc.right < nLastWidth )
 						{
-							x += nCntCopyWord;		// 倔配 寸配 臼篮 版快
+							x += nCntCopyWord;		// 不合情理的情况
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
@@ -4835,7 +4835,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnGray(INT nX, INT nY, INT nXS
 
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								for(WORD i = 0 ; i < (sizeof(WORD)*(rc.right-nLastWidth));i++)
@@ -4907,7 +4907,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnGray(INT nX, INT nY, INT nXS
 						}
 						else
 						{
-							// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.left 为基准,复制区域被截取的情况.
 							if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 							{
 								x += (rc.left-nLastWidth);
@@ -4952,7 +4952,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnGray(INT nX, INT nY, INT nXS
 								}
 								x += (nCurrWidth-rc.left);
 							}
-							// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+							// 以 rc.right 点为基准，复制区域被截断的情况.
 							else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 							{
 								for ( INT nCheck = 0; nCheck < rc.right-nLastWidth; nCheck++ )
@@ -5042,7 +5042,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompClipRgnGray(INT nX, INT nY, INT nXS
 						}
 					}	
 				}
-				// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+				// 将本行的结尾移到下一行的开头.
 				nWidthEnd++;
 
 				nWidthStart	= nWidthEnd;
@@ -5102,14 +5102,14 @@ VOID CWHDXGraphicWindow::DrawWithGrayBackBuffer()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::DrawWithImageForCompClipRgnToMem()
+	函数名 : CWHDXGraphicWindow::DrawWithImageForCompClipRgnToMem()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 拘绵等 家胶 捞固瘤狼 盔窍绰 荤捞令 拘绵阑 钱篮 惑怕肺 傈崔罐篮 皋葛府(pwDst)俊 墨乔茄促.
+	目的   : 将压缩的源图像按所需大小解压后的状态复制到传入的内存(pwDst)中.
 
-	涝仿   : INT nStartX
+	输入   : INT nStartX
 	         INT nStartY
 	         INT nWantedXSize
 	         INT nWantedYSize
@@ -5118,9 +5118,9 @@ VOID CWHDXGraphicWindow::DrawWithGrayBackBuffer()
 	         WORD wClipHeight
 	         WORD wChooseColor1
 	         WORD wChooseColor2
-	免仿   : BOOL
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CWHDXGraphicWindow::DrawWithImageForCompColorToMem(RECT rcWanted, WORD* pwSrc, WORD wColor, WORD* pwDst)
@@ -5136,7 +5136,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompColorToMem(RECT rcWanted, WORD* pwS
 	INT nYCnt			= 0;
 	INT nLastWidth		= 0;
 
-	// y绵 努府俏.
+	// y 轴裁剪。
   	for ( nYCnt=0 ; nYCnt < rcWanted.top ; nYCnt++ )
 	{
  		nWidthEnd += pwSrc[nWidthStart];
@@ -5152,14 +5152,14 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompColorToMem(RECT rcWanted, WORD* pwS
 	BYTE  bRedStateColor, bGreenStateColor, bBlueStateColor;
 	WORD  wPixel;
 
-	// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+	// 只决定对 y 轴实际进行循环的 Count.
 	for ( nYCnt=rcWanted.top ; nYCnt < rcWanted.bottom ; nYCnt++ )
 	{
-		// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+		// 获取一行的长度.(单位为字)
 		nWidthEnd += pwSrc[nWidthStart];
 		nWidthStart++;
 
-		// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+		// 按行的长度输出到屏幕。
 		for ( INT x = nWidthStart; x < nWidthEnd ; )
 		{
 			if ( pwSrc[x] == 0xC0 )
@@ -5170,7 +5170,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompColorToMem(RECT rcWanted, WORD* pwS
 				nLastWidth = nCurrWidth;
 				nCurrWidth += nCntCopyWord;
 
-				// rcWanted.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+				// 以 rcWanted.left 点为基准, 复制区域发生重叠的情况.
 				if ( nLastWidth <= rcWanted.left && nCurrWidth >= rcWanted.right )
 				{
 					memset(&pwDst[((nYCnt-rcWanted.top) * (rcWanted.right-rcWanted.left))  + nNewCurrWidth], 0, sizeof(WORD)*(rcWanted.right-rcWanted.left));
@@ -5186,7 +5186,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompColorToMem(RECT rcWanted, WORD* pwS
 					memset(&pwDst[((nYCnt-rcWanted.top) * (rcWanted.right-rcWanted.left))  + nNewCurrWidth], 0, sizeof(WORD)*(nCntCopyWord));
 					nNewCurrWidth += nCntCopyWord;
 				}
-				// rcWanted.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+				// 以 rcWanted.right 点为基准, 复制区域被涉及的情况.
 				else if ( nLastWidth < rcWanted.right && nCurrWidth > rcWanted.right )
 				{
 					memset(&pwDst[((nYCnt-rcWanted.top) * (rcWanted.right-rcWanted.left)) + nNewCurrWidth], 0, sizeof(WORD)*(rcWanted.right-nLastWidth));
@@ -5208,7 +5208,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompColorToMem(RECT rcWanted, WORD* pwS
 				}
 				else
 				{
-					// rcWanted.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+					// 以 rcWanted.left 点为基准, 复制区域发生重叠的情况.
 					if ( nLastWidth <= rcWanted.left && nCurrWidth >= rcWanted.right )
 					{
 						x += (rcWanted.left-nLastWidth);
@@ -5358,7 +5358,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompColorToMem(RECT rcWanted, WORD* pwS
 						nNewCurrWidth += nCntCopyWord;
 						x += nCntCopyWord;
 					}
-					// rcWanted.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+					// 以 rcWanted.right 点为基准, 复制区域被涉及的情况.
 					else if ( nLastWidth < rcWanted.right && nCurrWidth > rcWanted.right )
 					{
 						for ( INT nCheck = 0; nCheck < rcWanted.right-nLastWidth; nCheck++ )
@@ -5414,7 +5414,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompColorToMem(RECT rcWanted, WORD* pwS
 				}
 			}	
 		}
-		// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+		// 将本行的结尾移到下一行的开头.
 		nWidthEnd++;
 
 		nWidthStart	= nWidthEnd;
@@ -5440,7 +5440,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompToMem(RECT rcWanted, WORD* pwSrc, W
 	INT nYCnt			= 0;
 	INT nLastWidth		= 0;
 
-	// y绵 努府俏.
+	// y 轴裁剪。
   	for ( nYCnt=0 ; nYCnt < rcWanted.top ; nYCnt++ )
 	{
  		nWidthEnd += pwSrc[nWidthStart];
@@ -5456,14 +5456,14 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompToMem(RECT rcWanted, WORD* pwSrc, W
 	BYTE  bRedWantedColor, bGreenWantedColor, bBlueWantedColor;
 	WORD  wPixel;
 
-	// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+	// 只决定对 y 轴实际进行循环的 Count.
 	for ( nYCnt=rcWanted.top ; nYCnt < rcWanted.bottom ; nYCnt++ )
 	{
-		// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+		// 获取一行的长度.(单位为字)
 		nWidthEnd += pwSrc[nWidthStart];
 		nWidthStart++;
 
-		// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+		// 按行的长度输出到屏幕。
 		for ( INT x = nWidthStart; x < nWidthEnd ; )
 		{
 			if ( pwSrc[x] == 0xC0 )
@@ -5474,7 +5474,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompToMem(RECT rcWanted, WORD* pwSrc, W
 				nLastWidth = nCurrWidth;
 				nCurrWidth += nCntCopyWord;
 
-				// rcWanted.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+				// 以 rcWanted.left 点为基准, 复制区域发生重叠的情况.
 				if ( nLastWidth <= rcWanted.left && nCurrWidth >= rcWanted.right )
 				{
 					memset(&pwDst[((nYCnt-rcWanted.top) * (rcWanted.right-rcWanted.left))  + nNewCurrWidth], 0, sizeof(WORD)*(rcWanted.right-rcWanted.left));
@@ -5490,7 +5490,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompToMem(RECT rcWanted, WORD* pwSrc, W
 					memset(&pwDst[((nYCnt-rcWanted.top) * (rcWanted.right-rcWanted.left))  + nNewCurrWidth], 0, sizeof(WORD)*(nCntCopyWord));
 					nNewCurrWidth += nCntCopyWord;
 				}
-				// rcWanted.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+				// 以 rcWanted.right 点为基准, 复制区域被涉及的情况.
 				else if ( nLastWidth < rcWanted.right && nCurrWidth > rcWanted.right )
 				{
 					memset(&pwDst[((nYCnt-rcWanted.top) * (rcWanted.right-rcWanted.left)) + nNewCurrWidth], 0, sizeof(WORD)*(rcWanted.right-nLastWidth));
@@ -5512,7 +5512,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompToMem(RECT rcWanted, WORD* pwSrc, W
 				}
 				else
 				{
-					// rcWanted.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+					// 以 rcWanted.left 点为基准, 复制区域发生重叠的情况.
 					if ( nLastWidth <= rcWanted.left && nCurrWidth >= rcWanted.right )
 					{
 						x += (rcWanted.left-nLastWidth);
@@ -5533,7 +5533,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompToMem(RECT rcWanted, WORD* pwSrc, W
 						nNewCurrWidth += nCntCopyWord;
 						x += nCntCopyWord;
 					}
-					// rcWanted.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+					// 以 rcWanted.right 点为基准, 复制区域被涉及的情况.
 					else if ( nLastWidth < rcWanted.right && nCurrWidth > rcWanted.right )
 					{
 						memcpy(&pwDst[((nYCnt-rcWanted.top) * (rcWanted.right-rcWanted.left)) + nNewCurrWidth], &pwSrc[x], sizeof(WORD)*(rcWanted.right-nLastWidth));
@@ -5572,7 +5572,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompToMem(RECT rcWanted, WORD* pwSrc, W
 				}
 				else
 				{
-					// rcWanted.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+					// 以 rcWanted.left 点为基准, 复制区域发生重叠的情况.
 					if ( nLastWidth <= rcWanted.left && nCurrWidth >= rcWanted.right )
 					{
 						x += (rcWanted.left-nLastWidth);
@@ -5683,7 +5683,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompToMem(RECT rcWanted, WORD* pwSrc, W
 						nNewCurrWidth += nCntCopyWord;
 						x += nCntCopyWord;
 					}
-					// rcWanted.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+					// 以 rcWanted.right 点为基准, 复制区域被涉及的情况.
 					else if ( nLastWidth < rcWanted.right && nCurrWidth > rcWanted.right )
 					{
 						for ( INT nCheck = 0; nCheck < rcWanted.right-nLastWidth; nCheck++ )
@@ -5728,7 +5728,7 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompToMem(RECT rcWanted, WORD* pwSrc, W
 				}
 			}	
 		}
-		// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+		// 将本行的结尾移到下一行的开头.
 		nWidthEnd++;
 
 		nWidthStart	= nWidthEnd;
@@ -5743,27 +5743,27 @@ BOOL CWHDXGraphicWindow::DrawWithImageForCompToMem(RECT rcWanted, WORD* pwSrc, W
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::DrawWithABlendForIntersectCompData()
+	函数名 : CWHDXGraphicWindow::DrawWithABlendForIntersectCompData()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nX					: 归滚欺惑狼 弊覆矫累困摹.
-	         INT nY					
-	         INT nSrcXSize			: 盔夯弊覆狼 荤捞令.
+	目的   :
+	输入   : INT nX					: 后台缓冲区上的绘制起始位置.
+	         INT nY
+	         INT nSrcXSize			: 原始图像的大小.
 	         INT nSrcYSize
-	         WORD* pwSrc			: 盔夯弊覆狼 单捞鸥.
-	         INT nDstXSize			: 鸥百弊覆狼 荤捞令.
+	         WORD* pwSrc			: 原始图像的数据.
+	         INT nDstXSize			: 目标图像的大小.
 	         INT nDstYSize
-	         WORD* pwDst			: 鸥百弊覆狼 单捞鸥.
-	         WORD wSrcChooseColor1	: 盔夯弊覆狼 堪祸 捞固瘤1 拿矾.
+	         WORD* pwDst			: 目标图像的数据.
+	         WORD wSrcChooseColor1	: 原始图像的染色图像1 颜色.
 	         WORD wSrcChooseColor2
-	         WORD wDstChooseColor1	: 鸥百弊覆狼 堪祸 捞固瘤1 拿矾.
+	         WORD wDstChooseColor1	: 目标图像的染色图像1 颜色.
 	         WORD wDstChooseColor2
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CWHDXGraphicWindow::DrawWithABlendForIntersectCompData(INT nSrcX, INT nSrcY, 
@@ -5802,7 +5802,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendForIntersectCompData(INT nSrcX, INT nSrcY
 
 	if ( m_pddsBackBuffer != NULL )
 	{
-		// Source狼 拳搁努府俏茄 康开.
+		// Source 的屏幕裁剪区域.
 		if ( nSrcX < nStartX )
 		{ 
 			nXSrcOffset	= nStartX - nSrcX;
@@ -5820,13 +5820,13 @@ BOOL CWHDXGraphicWindow::DrawWithABlendForIntersectCompData(INT nSrcX, INT nSrcY
 
 		if ( (nSrcWidth > 0) && (nSrcHeight > 0) )
 		{
-			// Source康开狼 汲沥.
+			// Source 区域的设置。
 			rcSrc.left		= nXSrcOffset;
 			rcSrc.right		= nXSrcOffset+nSrcWidth;
 			rcSrc.top		= nYSrcOffset;
 			rcSrc.bottom	= nYSrcOffset+nSrcHeight;
 
-			// Destination狼 拳搁努府俏茄 康开.
+			// Destination 的屏幕裁剪区域.
 			if ( nDstX < nStartX )
 			{ 
 				nXDstOffset	= nStartX - nDstX;
@@ -5844,31 +5844,31 @@ BOOL CWHDXGraphicWindow::DrawWithABlendForIntersectCompData(INT nSrcX, INT nSrcY
 
 			if ( (nDstWidth > 0) && (nDstHeight > 0) )
 			{
-				// Destination康开狼 汲沥.
+				// Destination 区域的设置.
 				rcDst.left		= nXDstOffset;
 				rcDst.right		= nXDstOffset+nDstWidth;
 				rcDst.top		= nYDstOffset;
 				rcDst.bottom	= nYDstOffset+nDstHeight;
 
-				// 滴捞固瘤狼 般摹绰 康开阑 备茄促.
+				// 求两个图像的重叠区域。
 				RECT rcTemp;
 
-				// 家胶康开俊 惑措利牢 单胶飘康开阑 备茄促.
+				// 求出相对于源区域的目地区域.
 				rcTemp.left = rcDst.left + (nDstX-nSrcX);
 				rcTemp.top = rcDst.top + (nDstY-nSrcY);
 				rcTemp.right = rcDst.right + (nDstX-nSrcX);
 				rcTemp.bottom = rcDst.bottom + (nDstY-nSrcY);
 
-				// 家胶 泛飘康开阑 扁霖栏肺 茄 滴 荤阿屈狼 背瞒荤阿屈阑 备茄促.
+				// 求以源矩形区域为基准的两个矩形的相交矩形.
 				IntersectRect(&rcSrcIntersect, &rcSrc, &rcTemp);
 
-				// 单胶飘康开俊 惑措利牢 家胶康开阑 备茄促.
+				// 求出相对于目标区域的源区域.
 				rcTemp.left = rcSrc.left + (nSrcX-nDstX);
 				rcTemp.top = rcSrc.top + (nSrcY-nDstY);
 				rcTemp.right = rcSrc.right + (nSrcX-nDstX);
 				rcTemp.bottom = rcSrc.bottom + (nSrcY-nDstY);
 
-				// 单胶飘 泛飘康开阑 扁霖栏肺 茄 滴 荤阿屈狼 背瞒荤阿屈阑 备茄促.
+				// 求以目标矩形区域为基准的两个矩形的相交矩形。
 				IntersectRect(&rcDstIntersect, &rcTemp, &rcDst);
 
 				ddsd.dwSize	= sizeof(DDSURFACEDESC2);
@@ -5934,7 +5934,7 @@ BOOL CWHDXGraphicWindow::DrawWithABlendForIntersectCompData(INT nSrcX, INT nSrcY
 							if ( bRedSrc > (m_stBitsMaskInfo.dwRMask>>m_stBitsMaskInfo.bRShift) )
 								bRedSrc = (BYTE)(m_stBitsMaskInfo.dwRMask>>m_stBitsMaskInfo.bRShift);
 
-							// 器目胶啊 灯阑锭 Opacity蔼阑 臭咯霖促.
+							// 获得焦点时提高 Opacity 值.
 							bOpa = 40;
 						}
 
@@ -5969,18 +5969,18 @@ BOOL CWHDXGraphicWindow::DrawWithABlendForIntersectCompData(INT nSrcX, INT nSrcY
 
 /******************************************************************************************************************
 
-	窃荐疙 : CWHDXGraphicWindow::Present()
+	函数名 : CWHDXGraphicWindow::Present()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : LPRECT lprcDest
+	目的   :
+	输入   : LPRECT lprcDest
 	         LPRECT lprcSrc
 	         BYTE bCntRgn
-	免仿   : HRESULT 
+	输出   : HRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::Present()
@@ -5996,7 +5996,7 @@ HRESULT CWHDXGraphicWindow::Present()
 	{
 //		if ( m_bScreenModeFlag & _DXG_SCREENMODE_WINDOW )
 //		{
-//		 俊叼飘扩档快 免仿阑 困秦辑 努府欺甫 技泼茄促.
+//		 为了编辑窗口的输出而设置裁剪器.
 			m_pddsFrontBuffer->SetClipper(m_lpcClipper);
 			hr = m_pddsFrontBuffer->Blt(&m_rcWindow, m_pddsBackBuffer, NULL, DDBLT_WAIT, NULL);
 /*		}
@@ -6020,15 +6020,15 @@ HRESULT CWHDXGraphicWindow::Present()
 
 /******************************************************************************************************************
 
-	窃荐疙 : RestoreSurfaces()
+	函数名 : RestoreSurfaces()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	创建日期 :
 
-	格利   : 
-	免仿   : HRESULT 
+	目的   :
+	输出   : HRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 HRESULT CWHDXGraphicWindow::RestoreSurfaces()
@@ -6065,20 +6065,20 @@ HRESULT CWHDXGraphicWindow::RestoreSurfaces()
 
 /******************************************************************************************************************
 
-	窃荐疙 : WINAPI DXGDriverEnumCallbackEx()
+	函数名 : WINAPI DXGDriverEnumCallbackEx()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : GUID *pGUID
+	目的   :
+	输入   : GUID *pGUID
 	         LPSTR szDesc
 	         LPSTR szName
 	         LPVOID pContext
 	         HMONITOR hm
-	免仿   : static BOOL 
+	输出   : static BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 static BOOL WINAPI DXGDriverEnumCallbackEx(GUID *pGUID, LPSTR szDesc, LPSTR szName, LPVOID pContext, HMONITOR hm)
@@ -6136,17 +6136,17 @@ static BOOL WINAPI DXGDriverEnumCallbackEx(GUID *pGUID, LPSTR szDesc, LPSTR szNa
 
 /******************************************************************************************************************
 
-	窃荐疙 : WINAPI DXGEnumDisplayModeCallback()
+	函数名 : WINAPI DXGEnumDisplayModeCallback()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : DDSURFACEDESC2* pddsd
+	目的   :
+	输入   : DDSURFACEDESC2* pddsd
 	         VOID* pParentInfo
-	免仿   : static HRESULT 
+	输出   : static HRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 static HRESULT WINAPI DXGEnumDisplayModeCallback(DDSURFACEDESC2* pddsd, VOID* pParentInfo)
@@ -6166,17 +6166,17 @@ static HRESULT WINAPI DXGEnumDisplayModeCallback(DDSURFACEDESC2* pddsd, VOID* pP
 
 /******************************************************************************************************************
 
-	窃荐疙 : DXGModesSortCallback()
+	函数名 : DXGModesSortCallback()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : const VOID* arg1
+	目的   :
+	输入   : const VOID* arg1
 	         const VOID* arg2
-	免仿   : static int 
+	输出   : static int
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改人] : 修改内容
 
 *******************************************************************************************************************/
 static int DXGModesSortCallback(const VOID* arg1, const VOID* arg2)
@@ -6199,19 +6199,19 @@ static int DXGModesSortCallback(const VOID* arg1, const VOID* arg2)
 
 /******************************************************************************************************************
 
-	窃荐疙 : WINAPI DXG3DDeviceEnumCallback()
+	函数名 : WINAPI DXG3DDeviceEnumCallback()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : TCHAR* szDesc
+	目的   :
+	输入   : TCHAR* szDesc
 	         TCHAR* szName
 	         D3DDEVICEDESC7* pDesc
 	         VOID* pParentInfo
-	免仿   : static HRESULT 
+	输出   : static HRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 static HRESULT WINAPI DXG3DDeviceEnumCallback(TCHAR* szDesc, TCHAR* szName, D3DDEVICEDESC7* pDesc, VOID* pParentInfo)
@@ -6268,17 +6268,17 @@ static HRESULT WINAPI DXG3DDeviceEnumCallback(TCHAR* szDesc, TCHAR* szName, D3DD
 
 /******************************************************************************************************************
 
-	窃荐疙 : WINAPI DXGEnumZBufferFormatsCallback()
+	函数名 : WINAPI DXGEnumZBufferFormatsCallback()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : DDPIXELFORMAT* pddpf
+	目的   :
+	输入   : DDPIXELFORMAT* pddpf
 	         VOID* pContext
-	免仿   : static HRESULT 
+	输出   : static HRESULT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 static HRESULT WINAPI DXGEnumZBufferFormatsCallback(DDPIXELFORMAT* pddpf, VOID* pContext)

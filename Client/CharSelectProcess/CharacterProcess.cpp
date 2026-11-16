@@ -43,7 +43,7 @@ VOID CCharacterProcess::Load()
 	WSAStartup(MAKEWORD(2, 2), &m_wsd);
 	m_Image.NewLoad(".\\Data\\interface1c.wil", TRUE, TRUE);
 	m_Image2.NewLoad(".\\Data\\interfacec2.wil", TRUE, TRUE);
-	// ÀÓ½Ã
+	// ÁÙÊ±
 	//
 	m_ConnectionState = CONNECT_FAIL;
 
@@ -55,7 +55,7 @@ VOID CCharacterProcess::Load()
 	m_ChrCount =0;
 	m_nMessage = 0;
 //	m_xMsgBox.Load(&m_Image2);
-	m_xMsgBox.CreateWnd(&m_Image2,TRUE,219,110,362,180);	// ¿ë±â
+	m_xMsgBox.CreateWnd(&m_Image2,TRUE,219,110,362,180);	// ÓÂÆø
 	m_Progress	= PRG_CHAR_SELE;							// Character Selection
 	m_xBGround.Create(&m_Image);
 	m_xBGround.OpenWnd();
@@ -80,7 +80,7 @@ VOID CCharacterProcess::DeleteProc()
 	WSACleanup();
 	m_Image.Destroy();
 	m_Image2.Destroy();
-	// ÀÓ½Ã
+	// ÁÙÊ±
 	m_CRectList.ClearAllNodes();
 	m_CList.ClearAllNodes();
 }
@@ -307,9 +307,9 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 									ChrInfo.Level = 1;
 									m_ChrCount = 0;
 									m_xBGround.SetRenderState(_RENDER_AVI_OUT);
-									g_xSound.PlayMp3(MP3_TOSELECTCHAR,FALSE); 
-									m_Progress = PRG_CREA_TO_SEL;					// ÀÓ½Ã
-									g_xClientSocket.OnQueryChar();					// ÀÓ½Ã
+									g_xSound.PlayMp3(MP3_TOSELECTCHAR,FALSE);
+									m_Progress = PRG_CREA_TO_SEL;					// ÁÙÊ±
+									g_xClientSocket.OnQueryChar();					// ÁÙÊ±
 								}
 								else
 								{
@@ -525,17 +525,17 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 			pCHRRECT tChRect;
 			m_CRectList.ClearAllNodes();
 			m_CList.ClearAllNodes();
-			if(tdm.wParam!=0)	// ÄÉ¸¯ÅÍ°¡ Á¸Àç ÇÒ°æ¿ì
+			if(tdm.wParam!=0)	// ½ÇÉ«´æÔÚÊ±
 			{
-				ChrInfo = new CHRINFO[tdm.wParam]; // ¹Þ¾Æ¿Â °Ù¼ö¸¸Å­ ÄÉ¸¯ÅÍ Á¤º¸ ¸¦ ¸¸µç´Ù.
+				ChrInfo = new CHRINFO[tdm.wParam]; // °´ÊÕµ½µÄ¸öÊý´´½¨½ÇÉ«ÐÅÏ¢.
 				m_SelectChr = SELECT_FIRST;
 				m_ChrCount = tdm.wParam;
 				fnDecode6BitBuf((szTmpDecodeMsg + DEFBLOCKSIZE + 1), (char*)ChrInfo, sizeof(CHRINFO)*(tdm.wParam));
 				pCHRINFO  tChInfo;
 				for(int i = 0 ;i<tdm.wParam;i++)
 				{
-					// ÄÉ¸¯ÅÍ°¡ Á¸Àç ÇÏÁö ¾ÊÀ»°æ¿ì?
-					// ÄÉ¸¯ÅÍ Info
+					// ½ÇÉ«²»´æÔÚÊ±?
+					// ½ÇÉ« Info
 					tChInfo = new CHRINFO;
 					strcpy(tChInfo->ChrName,ChrInfo[i].ChrName);
 					tChInfo->Class=ChrInfo[i].Class;
@@ -543,7 +543,7 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 					tChInfo->Level=ChrInfo[i].Level;
 					m_CList.AddNode(tChInfo);
 
-					// ÄÉ¸¯ÅÍ Rect ¼öÁ¤ ÇÒ°Í  // ÀÓ½Ã
+					// ½ÇÉ« Rect ÐèÒªÐÞ¸Ä  // ÁÙÊ±
 					tChRect = new CHRRECT;
 
 					m_tImage1.NewSetIndex((2-(INT)(tChInfo->Class)));
@@ -592,7 +592,7 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 				delete ChrInfo;
 			}
 			else
-			{	// ÄÉ¸¯ÅÍ°¡ Á¸Àç ÇÏÁö ¾ÊÀ»°æ¿ì´Â?
+			{	// ½ÇÉ«²»´æÔÚÊ±ÊÇ?
 				m_SelectChr = SELECT_NONE;
 			}
 			break;
@@ -605,7 +605,7 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 		}
 	case	SM_NEWCHR_FAIL:			// New character Create Fail
 		{
-			m_nMessage = tdm.wParam;		// Message Parameter Àü´Þ
+			m_nMessage = tdm.wParam;		// ´«µÝ Message Parameter
 			SetErrorMessage(m_nMessage,m_szErrorMsg);
 			m_xMsgBox.ShowMessageBox(m_szErrorMsg,1,_WNDIMGINDX_MSGBOX1);
 			m_Progress	= PRG_CREATE_CHAR;	// Create New Character
@@ -622,8 +622,8 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 			m_nMessage = tdm.wParam;
 			SetErrorMessage(m_nMessage,m_szErrorMsg);
 			m_xMsgBox.ShowMessageBox(m_szErrorMsg,1,_WNDIMGINDX_MSGBOX1);
-			// 1. Á¸ÀçÇÏÁö ¾Ê´Â ÄÉ¸¯ÅÍ¸¦ Áö¿ï°æ¿ì
-			// 2. ¾Ë¼ö ¾ø´Â Error
+			// 1. É¾³ý²»´æÔÚµÄ½ÇÉ«Ê±
+			// 2. Î´Öª Error
 			// 3. 
 			m_Progress	= PRG_CHAR_SELE;	// Character Selection
 		}
@@ -640,7 +640,7 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 					g_nServerPort = atoi(szDecodeMsg+i+1);
 				}
 			}
-			g_xClientSocket.DisconnectToServer();		// Char sever¿ÍÀÇ ¿¬°á Á¾·á
+			g_xClientSocket.DisconnectToServer();		// ¶Ï¿ªÓë Char sever µÄÁ¬½Ó
 			m_Progress=PRG_SEL_TO_GAME;
 			break;
 		}
@@ -752,7 +752,7 @@ VOID	CCharacterProcess::RenderCharCreate(INT nLoopTime)
 									, (WORD*)(m_Image.m_pbCurrImage));
 	}
 */
-	// ÀÓ½Ã~!
+	// ÁÙÊ±~!
 	m_Image.NewSetIndex(IMG_IDX_WAR_MALE_CREATE + m_SelectSex + m_SelectJob * 2);
 
 	g_xMainWnd.DrawWithImageForComp(nPos[m_SelectJob].x,nPos[m_SelectJob].y

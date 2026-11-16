@@ -6,22 +6,22 @@
 	Date:
 		2001/01/09
 
-	Note: 
-		捞柳 沤祸 飘府
+	Note:
+		二叉搜索树
 
 	Usage:
-		荤侩窍扁 傈 馆靛矫 SetCompareFunction甫 秦林绢具 茄促.
-		胶飘傅栏肺 虐 蔼阑 厚背且 版快 SetCompareStringFunction阑 龋免茄促.
-		促 静绊 抄 第俊 皋葛府甫 秦力窍扁 困秦辑 馆靛矫 ClearAll阑 龋免秦具 茄促. 
+		使用之前必须先调用 SetCompareFunction.
+		用字符串比较键值时调用 SetCompareStringFunction.
+		使用完毕后,为了释放内存必须调用 ClearAll.
 */
 #ifndef __ORZ_DATASTRUCTURE_BINARY_SEARCH_TREE__
 #define __ORZ_DATASTRUCTURE_BINARY_SEARCH_TREE__
 
 
 /*
-	Tree 畴靛 沥狼
+	Tree 节点定义
 
-	Note: class T狼 器牢磐甫 荤侩茄促.
+	Note: 使用 class T 的指针.
 */
 template< class T >
 class CBsTreeNode
@@ -46,7 +46,7 @@ public:
 
 
 /*
-	Tree 畴靛 备泅
+	Tree 节点实现
 */
 template< class T >
 CBsTreeNode< T >::CBsTreeNode()
@@ -147,7 +147,7 @@ void CBsTreeNode< T >::Postorder( void (*pfnCallback)( void *pArg, T *pData ), v
 
 
 /*
-	Binary Search Tree 沥狼
+	Binary Search Tree 定义
 */
 template< class T >
 class CBsTree
@@ -155,11 +155,11 @@ class CBsTree
 protected:
 	CBsTreeNode< T > *m_pRoot;
 
-	// Key甫 厚背且 锭 龋免登绰 窃荐
+	// 比较 Key 时调用的函数
 	int  (*m_pfnCmp)( void *pArg, T *pFirst, T *pSecond );
 	void *m_pArgCmpFunc;
 
-	// String苞 Data甫 厚背且 锭 龋免登绰 窃荐
+	// 比较 String 与 Data 时被调用的函数
 	int  (*m_pfnCmpStr)( void *pArg, T *pData, char *pString );
 	void *m_pArgCmpStrFunc;
 
@@ -192,7 +192,7 @@ public:
 
 
 /*
-	Binary Search Tree 备泅
+	Binary Search Tree 实现
 */
 template< class T >
 CBsTree< T >::CBsTree()
@@ -250,7 +250,7 @@ bool CBsTree< T >::Insert( T *pData )
 		pTempParent	= pTemp;
 		nCmpResult	= m_pfnCmp( m_pArgCmpFunc, pTemp->m_pData, pData );
 
-		// 鞍篮 Key扼搁 
+		// 如果 Key 相同 
 		if ( nCmpResult == 0 )
 			return false;
 
@@ -292,7 +292,7 @@ T * CBsTree< T >::Remove( T *pKey )
 
 	T *pData = pTemp->m_pData;
 
-	// 磊侥捞 绝绰版快
+	// 没有子节点的情况
 	if ( pTemp->m_pLeft == NULL && pTemp->m_pRight == NULL )
 	{		
 		if ( m_pRoot == pTemp )
@@ -307,7 +307,7 @@ T * CBsTree< T >::Remove( T *pKey )
 				pTemp->m_pParent->m_pRight = NULL;
 		}		
 	}
-	// 磊侥捞 窍唱 乐绰 版快
+	// 只有一个子节点的情况
 	else if ( (pTemp->m_pLeft && pTemp->m_pRight == NULL) ||
 		      (pTemp->m_pLeft == NULL && pTemp->m_pRight) )
 	{
@@ -327,7 +327,7 @@ T * CBsTree< T >::Remove( T *pKey )
 				pTemp->m_pParent->m_pRight = pChild;
 		}
 	}
-	// 磊侥捞 笛牢 版快 哭率 辑宏 飘府俊辑 啊厘 奴 畴靛狼 蔼栏肺 摹券茄促.
+	// 有两个子节点时，用左子树中最大节点的值替换。
 	else
 	{
 		CBsTreeNode< T > *pMaxKeyNode = pTemp->m_pLeft->GetMaxKeyNode();

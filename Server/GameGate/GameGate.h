@@ -18,8 +18,8 @@ public:
 
 	CHAR			SendBuffer[DATA_BUFSIZE];
 	int				nSendBufferLen;
-    //SocData: string;   //罐篮 滚欺
-    //SendData: string;  //焊尘巴捞 巢澜
+    //SocData: string;   //接收到的缓冲区
+    //SendData: string;  //还有要发送的内容
 
 //    SendLock: Boolean;
 //    SendLatestTime: longword;
@@ -63,7 +63,7 @@ public:
 		return memchr( Buffer, '!', bufLen ) ? true : false;
 	}
 
-	// recv 滚欺俊辑 肯己等 窍唱狼 菩哦阑 惶酒辰促.
+	// 从 recv 缓冲区中取出一个完整的数据包.
 	char * ExtractPacket( char *pPacket )
 	{
 		int packetLen = (char *) memchr( Buffer, '!', bufLen ) - Buffer + 1;

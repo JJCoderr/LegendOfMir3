@@ -7,9 +7,9 @@
 		2001/02/05
 
 	Note:
-		鉴雀(Traverse) 加档甫 刘啊矫虐扁 困秦 郴何利栏肺 List甫 荤侩茄促.
-		拱沸, 牢郸胶甫 荤侩窍扁 锭巩俊 火涝/昏力矫 粱歹 腹篮 CPU Time苞 皋葛府啊 鞘夸窍促.
-		府胶飘狼 Key 沥纺篮 窍瘤 臼绰促.
+		为了提升遍历(Traverse)速度, 内部使用 List.
+		当然, 由于使用索引, 插入/删除时需要更多的 CPU Time 和内存.
+		不对列表的 Key 进行排序.
 */
 #ifndef __ORZ_DATASTRUCTURE_INDEX_MAP__
 #define __ORZ_DATASTRUCTURE_INDEX_MAP__

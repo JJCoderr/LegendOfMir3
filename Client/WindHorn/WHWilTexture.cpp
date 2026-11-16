@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 #include "StdAfx.h"
 
@@ -17,7 +17,7 @@ struct WILTextureContainer
 
     TCHAR   m_strWilFileName[80];
 	INT		m_nIdx;
-	WORD*	m_pwData;				// Surface肺 肺爹矫懦锭父 蔼捞 沥狼等促. 弊寇浚 亲惑 NULL捞促.<---???
+	WORD*	m_pwData;				// 仅在以 Surface 加载时才定义值. 除此之外始终为 NULL.<---???
     DWORD   m_dwFlags;
     DWORD   m_dwWidth;
     DWORD   m_dwHeight;
@@ -192,7 +192,7 @@ HRESULT WILTextureContainer::Restore(LPDIRECT3DDEVICE7 pd3dDevice)
     ddsd.dwWidth  = min(ddsd.dwWidth,  (dwMaxWidth  ? dwMaxWidth  : 256));
     ddsd.dwHeight = min(ddsd.dwHeight, (dwMaxHeight ? dwMaxHeight : 256));
 
-	// 流荤阿屈狼 咆胶苗甫 瘤盔窍瘤 臼绰促搁...
+	// 如果不支持矩形的纹理...
     if ( ddDesc.dpcTriCaps.dwTextureCaps & D3DPTEXTURECAPS_SQUAREONLY )
     {
         if ( ddsd.dwWidth > ddsd.dwHeight ) ddsd.dwHeight = ddsd.dwWidth;
@@ -200,7 +200,7 @@ HRESULT WILTextureContainer::Restore(LPDIRECT3DDEVICE7 pd3dDevice)
     }
 
 
-	// 咆胶苗 侨伎器杆技泼...
+	// 纹理像素格式设置...
     TEXTURESEARCHINFO tsi;
     tsi.bFoundGoodFormat = FALSE;
     tsi.pddpf            = &ddsd.ddpfPixelFormat;
@@ -234,7 +234,7 @@ HRESULT WILTextureContainer::Restore(LPDIRECT3DDEVICE7 pd3dDevice)
 	else
 		CopyDataToSurfaceToSurface();
 
-	// 拿矾虐甫 技泼茄促.
+	// 设置颜色键。
 	DDSetColorKey(m_pddsSurface, RGB(0, 0, 0));
 
     return S_OK;
@@ -286,7 +286,7 @@ HRESULT WILTextureContainer::CopyDataToSurfaceToSurface()
 	INT nYCnt =0;
 	INT nLastWidth = 0;
 
-	// y绵 努府俏.
+	// y 轴裁剪。
 	for ( nYCnt=0 ; nYCnt < rc.top ; nYCnt++ )
 	{
 		nWidthEnd += m_pwData[nWidthStart];
@@ -295,14 +295,14 @@ HRESULT WILTextureContainer::CopyDataToSurfaceToSurface()
 		nWidthStart	= nWidthEnd;
 	}
 
-	// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+	// 只决定对 y 轴实际进行循环的 Count.
 	for ( nYCnt=rc.top ; nYCnt < rc.bottom ; nYCnt++ )
 	{
-		// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+		// 获取一行的长度.(单位为字)
 		nWidthEnd += m_pwData[nWidthStart];
 		nWidthStart++;
 		
-		// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+		// 按行的长度输出到屏幕。
 		for ( INT x = nWidthStart; x < nWidthEnd ; )
 		{
 			if ( m_pwData[x] == 0xC0 )
@@ -327,14 +327,14 @@ HRESULT WILTextureContainer::CopyDataToSurfaceToSurface()
 				}
 				else
 				{
-					// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+					// 以 rc.left 为基准,复制区域被截取的情况.
 					if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 					{
 						x += (rc.left-nLastWidth);
 						memcpy(&pwdDst[((nYCnt) * (ddsd.lPitch >> 1)) + (rc.left)], &m_pwData[x], sizeof(WORD)*(nCurrWidth-rc.left));
 						x += (nCurrWidth-rc.left);
 					}
-					// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+					// 以 rc.right 点为基准，复制区域被截断的情况.
 					else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 					{
 						memcpy(&pwdDst[((nYCnt) * (ddsd.lPitch >> 1)) + (nLastWidth)], &m_pwData[x], sizeof(WORD)*(rc.right-nLastWidth));
@@ -348,7 +348,7 @@ HRESULT WILTextureContainer::CopyDataToSurfaceToSurface()
 				}
 			}
 		}
-		// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+		// 将本行的结尾移到下一行的开头.
 		nWidthEnd++;
 
 		nWidthStart	= nWidthEnd;
@@ -430,7 +430,7 @@ HRESULT WILTextureContainer::CopyDataToSurface()
 	INT nYCnt =0;
 	INT nLastWidth = 0;
 
-	// y绵 努府俏.
+	// y 轴裁剪。
 	for ( nYCnt=0 ; nYCnt < rc.top ; nYCnt++ )
 	{
 		nWidthEnd += m_pwData[nWidthStart];
@@ -439,14 +439,14 @@ HRESULT WILTextureContainer::CopyDataToSurface()
 		nWidthStart	= nWidthEnd;
 	}
 
-	// y绵俊 措秦辑 角力肺 风俏矫懦 Count父阑 沥茄促.
+	// 只决定对 y 轴实际进行循环的 Count.
 	for ( nYCnt=rc.top ; nYCnt < rc.bottom ; nYCnt++ )
 	{
-		// 茄扼牢狼 辨捞甫 掘绢柯促.(窜困绰 况靛)
+		// 获取一行的长度.(单位为字)
 		nWidthEnd += m_pwData[nWidthStart];
 		nWidthStart++;
 		
-		// 扼牢狼 辨捞父怒 拳搁俊 谎妨霖促.
+		// 按行的长度输出到屏幕。
 		for ( INT x = nWidthStart; x < nWidthEnd ; )
 		{
 			if ( m_pwData[x] == 0xC0 )
@@ -471,14 +471,14 @@ HRESULT WILTextureContainer::CopyDataToSurface()
 				}
 				else
 				{
-					// rc.left痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+					// 以 rc.left 为基准,复制区域被截取的情况.
 					if ( nLastWidth < rc.left && rc.left <= nCurrWidth )
 					{
 						x += (rc.left-nLastWidth);
 						memcpy(&pwdDst[((nYCnt) * (ddsd.lPitch >> 1)) + (rc.left)], &m_pwData[x], sizeof(WORD)*(nCurrWidth-rc.left));
 						x += (nCurrWidth-rc.left);
 					}
-					// rc.right痢阑 扁霖栏肺 墨乔且 康开捞 吧赴 版快.
+					// 以 rc.right 点为基准，复制区域被截断的情况.
 					else if ( nLastWidth <= rc.right && rc.right < nCurrWidth )
 					{
 						memcpy(&pwdDst[((nYCnt) * (ddsd.lPitch >> 1)) + (nLastWidth)], &m_pwData[x], sizeof(WORD)*(rc.right-nLastWidth));
@@ -492,7 +492,7 @@ HRESULT WILTextureContainer::CopyDataToSurface()
 				}
 			}
 		}
-		// 扼牢狼 场阑 促澜 扼牢狼 矫累栏肺 颗败霖促.
+		// 将本行的结尾移到下一行的开头.
 		nWidthEnd++;
 
 		nWidthStart	= nWidthEnd;

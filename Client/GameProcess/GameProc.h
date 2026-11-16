@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 
@@ -102,7 +102,7 @@ public:
 	DWORD					m_dwLastShineTick;
 	WORD					m_wShineCurrDelay;
 	BYTE					m_bCurrShineFrame;
-	LPDIRECTDRAWSURFACE7	m_lpddsShineTextr[10];		// 酒捞袍 馆娄芭覆.
+	LPDIRECTDRAWSURFACE7	m_lpddsShineTextr[10];		// 物品闪烁.
 	D3DVERTEX				m_avBillboard[4];
 	BOOL					RenderShine(INT nLoopTime);
 

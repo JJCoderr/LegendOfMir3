@@ -24,7 +24,7 @@ bstr::bstr( bstr &str )
 	size	= 0;
 
 	if ( assign( str.ptr ) == false )
-		throw CError( "bstr::bstr 메모리 할당 실패" );
+		throw CError( "bstr::bstr memory allocation failed" );
 }
 
 
@@ -34,7 +34,7 @@ bstr::bstr( char *str )
 	size	= 0;
 
 	if ( assign( str ) == false )
-		throw CError( "bstr::bstr 메모리 할당 실패" );
+		throw CError( "bstr::bstr memory allocation failed" );
 }
 
 

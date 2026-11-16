@@ -1,10 +1,10 @@
-// 弥措 滚瓢狼 荐
+// 最大按钮数
 
 #include "stdafx.h"
 #define MAX_TXT_BUTTON_COUNT	5
 
 /////////////////////////////////////////////////////////////////////////
-//	CTextButton : 积己磊
+//	CTextButton : 构造函数
 /////////////////////////////////////////////////////////////////////////
 CTextButton::CTextButton()
 {
@@ -16,7 +16,7 @@ CTextButton::CTextButton()
 }
 
 /////////////////////////////////////////////////////////////////////////
-//	~CTextButton : 家戈磊
+//	~CTextButton : 析构函数
 /////////////////////////////////////////////////////////////////////////
 CTextButton::~CTextButton()
 {
@@ -24,12 +24,12 @@ CTextButton::~CTextButton()
 }
 
 /////////////////////////////////////////////////////////////////////////
-//	AddButton : Text 滚瓢阑 眠啊茄促.
+//	AddButton : 添加 Text 按钮.
 /////////////////////////////////////////////////////////////////////////
-// pszTxt: 拳搁俊 钎矫瞪 Text
-// xRect: 滚瓢栏肺 牢侥瞪 Rect 康开
-// nLinePos: 嘛鳃镑狼 Line Count
-// pszParam: 努腐 登菌阑锭 静老 Parameter蔼
+// pszTxt: 屏幕上显示的 Text
+// xRect: 被识别为按钮的 Rect 区域
+// nLinePos: 绘制位置的 Line Count
+// pszParam: 被点击时使用的 Parameter 值
 /////////////////////////////////////////////////////////////////////////
 BOOL	CTextButton::AddButton(CHAR *pszTxt,RECT xRect,INT nLinePos,CHAR *pszParam,COLORREF nColor,COLORREF cColor)
 {
@@ -84,11 +84,11 @@ BOOL	CTextButton::AddButton(CHAR *pszTxt,CHAR *pszTxt2,RECT xRect,INT nLinePos,C
 }
 
 /////////////////////////////////////////////////////////////////////////
-//	ClickCheck : Button Click 俊 狼茄 Click Checking 阑 茄促.
+//	ClickCheck : 进行由 Button Click 引起的 Click Checking。
 /////////////////////////////////////////////////////////////////////////
-// xPos: 角力 付快胶 谅钎甫 罐酒 棵巴
-// xWndPos: 角力 Text啊 静捞扁 矫累 窍绰 镑狼 谅钎甫 罐绢 棵巴
-// CurrentTopLine: 泅力 Window 惑俊 嘛洒绰 啊厘 拉临
+// xPos: 要获取实际鼠标坐标
+// xWndPos: 将取得实际 Text 开始写入位置的坐标
+// CurrentTopLine: 当前 Window 上显示的最上一行
 /////////////////////////////////////////////////////////////////////////
 CMTxtBtn*	CTextButton::ClickCheck(POINT xWndPos,POINT	xPos,INT CurrentTopLine)
 {
@@ -112,7 +112,7 @@ CMTxtBtn*	CTextButton::ClickCheck(POINT xWndPos,POINT	xPos,INT CurrentTopLine)
 }
 
 /////////////////////////////////////////////////////////////////////////
-//	ReleaseButtons : 捞固 棱囚 乐绰 葛电 滚瓢甸阑 朝赴促.
+//	ReleaseButtons : 丢弃当前已捕获的所有按钮.
 /////////////////////////////////////////////////////////////////////////
 BOOL CTextButton::ReleaseButtons(VOID)
 {
@@ -128,11 +128,11 @@ BOOL CTextButton::ReleaseButtons(VOID)
 }
 
 /////////////////////////////////////////////////////////////////////////
-//	InitTxtBtn : 夯 努贰胶甫 荤侩 且荐 乐档废 霖厚 茄促.
+//	InitTxtBtn : 为使本类可以使用而进行准备。
 /////////////////////////////////////////////////////////////////////////
-// nTextHeight: 角力 Text狼 Height  
-// WndRect: 扩档快狼 农扁  
-// nMaxLine: 嘛阑荐 乐绰 弥措 扼牢荐
+// nTextHeight: 实际 Text 的 Height  
+// WndRect: 窗口的大小  
+// nMaxLine: 可输出的最大行数
 /////////////////////////////////////////////////////////////////////////
 BOOL CTextButton::InitTxtBtn(INT nMaxLine,POINT StartPos,INT nLineGap)
 {
@@ -144,7 +144,7 @@ BOOL CTextButton::InitTxtBtn(INT nMaxLine,POINT StartPos,INT nLineGap)
 }
 
 /////////////////////////////////////////////////////////////////////////
-//	GetButton : 秦寸 Button狼 器牢磐甫 掘绰促.
+//	GetButton : 获取该 Button 的指针。
 /////////////////////////////////////////////////////////////////////////
 // nIndex : Index
 /////////////////////////////////////////////////////////////////////////
@@ -157,7 +157,7 @@ CMTxtBtn* CTextButton::GetButton(INT nIndex)
 }
 
 /////////////////////////////////////////////////////////////////////////
-//	GetButtonCount : Button狼 荐甫 掘绰促.
+//	GetButtonCount : 获取 Button 的数量.
 /////////////////////////////////////////////////////////////////////////
 INT CTextButton::GetButtonCount(VOID)
 {
@@ -175,11 +175,11 @@ VOID CTextButton::ClickFreeAllBtn(VOID)
 }
 
 /////////////////////////////////////////////////////////////////////////
-//	ClickCheck : Button Click 俊 狼茄 Click Checking 阑 茄促.
+//	ClickCheck : 进行由 Button Click 引起的 Click Checking。
 /////////////////////////////////////////////////////////////////////////
-// xPos: 角力 付快胶 谅钎甫 罐酒 棵巴
-// xWndPos: 角力 Text啊 静捞扁 矫累 窍绰 镑狼 谅钎甫 罐绢 棵巴
-// CurrentTopLine: 泅力 Window 惑俊 嘛洒绰 啊厘 拉临
+// xPos: 要获取实际鼠标坐标
+// xWndPos: 将取得实际 Text 开始写入位置的坐标
+// CurrentTopLine: 当前 Window 上显示的最上一行
 /////////////////////////////////////////////////////////////////////////
 
 
@@ -187,7 +187,7 @@ CMTxtBtn* CTextButton::ButtonDownCheck(POINT xWndPos,POINT xPos,INT CurrentTopLi
 {
 ///	CMTxtBtn*	xResult=NULL;
 /*	int			nTempX,nTempY;
-	int			StdPosX,StdPosY;	// 框流捞绰 扩档快郴俊辑 扁霖 痢阑 拌魂 茄促.*/
+	int			StdPosX,StdPosY;	// 在移动的窗口内计算基准点。*/
 	
 	if(m_bIsReady)
 	{
@@ -236,10 +236,10 @@ CMTxtBtn* CTextButton::ButtonUpCheck(POINT xWndPos,POINT xPos,INT CurrentTopLine
 BOOL CTextButton::IsCurrsorOnThisButton(CMTxtBtn* pBtn,POINT xWndPos,POINT xPos,INT CurrentTopLine)
 {
 	int			nTempX,nTempY;
-	int			StdPosX,StdPosY;																			// 框流捞绰 扩档快郴俊辑 扁霖 痢阑 拌魂 茄促.
+	int			StdPosX,StdPosY;																			// 在移动的窗口内计算基准点.
 	
-	StdPosY = xWndPos.y + (pBtn->nLinePos - CurrentTopLine)*(m_nTxtHeight+m_nLineGap)+m_xStartPos.y;		// 啊函 困摹俊辑狼 Top阑 备茄促.
-	StdPosX = xWndPos.x + pBtn->xRect.left+m_xStartPos.x;													// 啊函 困摹俊辑狼 Left甫 备茄促.
+	StdPosY = xWndPos.y + (pBtn->nLinePos - CurrentTopLine)*(m_nTxtHeight+m_nLineGap)+m_xStartPos.y;		// 获取可变位置处的 Top。
+	StdPosX = xWndPos.x + pBtn->xRect.left+m_xStartPos.x;													// 求可变位置上的 Left.
 	nTempX = StdPosX	+ pBtn->xRect.right;
 	nTempY = StdPosY	+ pBtn->xRect.bottom;
 			

@@ -227,18 +227,18 @@ BOOL CNoticeBox::StringDivideLen(INT nDivideLen, INT& nDividedLine, CHAR* szSrc,
 		{
 			nEndLen = nCnt+1;
 
-			// 泅犁何盒鳖瘤狼 巩磊凯阑 佬绰促.
+			// 读取截至当前部分的字符串。
 			szTmpCheck = szSrc+nStartLen;
 			INT nsLen;
 			nsLen = strlen(szTmpCheck);
 
-			// 泅犁鳖瘤 佬绢柯 何盒捞 倾侩承捞甫 逞绢脊阑锭.
+			// 当前已读取的部分超出允许宽度时。
 			if (nsLen > nDivideLen )
 			{
-				// 泅犁 2官捞飘 巩磊扼搁. 
+				// 当前如果是 2 字节字符. 
 				if ( szSrc[nEndLen-1] < 0 )
 				{
-					// 泅犁 菊俊巩磊啊 2官捞飘 巩磊啊 酒聪扼搁
+					// 如果当前前面的字符不是 2 字节字符
 					if ( !(nWordCheck%2) )
 					{
 						nStartLen += strlen(szTmpCheck)-1;
@@ -265,8 +265,8 @@ BOOL CNoticeBox::StringDivideLen(INT nDivideLen, INT& nDividedLine, CHAR* szSrc,
 						nWordCheck--;
 					}
 				}
-				// 1官捞飘 巩磊. 
-				// 泅犁焊促 茄官捞飘菊何盒鳖瘤父 绊妨秦林搁 等促.
+				// 1字节字符. 
+				// 只需考虑到比当前位置往前一个字节的部分即可。
 				else
 				{
 					nStartLen += strlen(szTmpCheck)-1;
@@ -280,7 +280,7 @@ BOOL CNoticeBox::StringDivideLen(INT nDivideLen, INT& nDividedLine, CHAR* szSrc,
 					nDividedLine++;
 				}
 			}
-			else if(szSrc[nEndLen-1] == '\n' || szSrc[nEndLen-1] == 0x1B)	// 碍力俺青     \n栏肺窍搁  Error ????
+			else if(szSrc[nEndLen-1] == '\n' || szSrc[nEndLen-1] == 0x1B)	// 强制换行     如果用 \n 则 Error ????
 
 			{
 				nStartLen += strlen(szTmpCheck)-1;

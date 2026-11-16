@@ -83,8 +83,8 @@ void CLoginProcess::Load(void)
 	pPatch = new CPatch;
 	pPatch->InitPatch();
 
-//	m_xMsgBox.Load(&m_Image);							// 侩扁		2D
-	m_xMsgBox.CreateWnd(&m_Image2,TRUE,219,110,362,180);	// 侩扁		3D
+//	m_xMsgBox.Load(&m_Image);							// 容器		2D
+	m_xMsgBox.CreateWnd(&m_Image2,TRUE,219,110,362,180);	// 容器		3D
 //	g_xChatEditBox.SetLimitText(g_LoginInputState[0].nSize);
 //	g_xChatEditBox.m_dwFontColor = RGB(125,125,125);
 	SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETPASSWORDCHAR,NULL,0);
@@ -191,7 +191,7 @@ LRESULT CLoginProcess::OnKeyDown(WPARAM wParam,LPARAM lParam)
 	{
 		switch(m_Progress)
 		{
-			case PRG_LOGIN:// LOGIN 老版快
+			case PRG_LOGIN:// LOGIN 的情况下
 			{
 				m_xLogin.OnKeyDown(wParam,lParam);
 				break;
@@ -456,7 +456,7 @@ void CLoginProcess::OnSocketMessageRecieve(char *pszMsg)
 		case SM_CERTIFICATION_FAIL:
 		{
 			SetErrorMessage(FATAL_ERROR_STR,m_szErrorMsg);
-			m_xMsgBox.ShowMessageBox(m_szErrorMsg, 1, _WNDIMGINDX_MSGBOX1);			// 侩扁
+			m_xMsgBox.ShowMessageBox(m_szErrorMsg, 1, _WNDIMGINDX_MSGBOX1);			// 勇气
 			break;
 		}
 
@@ -549,7 +549,7 @@ void CLoginProcess::OnSocketMessageRecieve(char *pszMsg)
 		// Connection Lost(close Connection)
 		case	SM_OUTOFCONNECTION:
 		{
-			m_Progress	= PRG_QUIT;									// Quit for Some Reason		橇肺弊伐 辆丰
+			m_Progress	= PRG_QUIT;									// Quit for Some Reason		程序退出
 			SendMessage(g_xMainWnd.GetSafehWnd(), WM_DESTROY, NULL, NULL);
 			break;
 		}
@@ -675,7 +675,7 @@ VOID CLoginProcess::RenderScene(INT nLoopTime)
 			case PRG_SERVER_SELE:
 			{
 				ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
-				m_Image.NewSetIndex(IMG_IDX_LOGIN_BACK);					// 烙矫
+				m_Image.NewSetIndex(IMG_IDX_LOGIN_BACK);					// 临时
 				m_xSelectSrv.Render(nLoopTime);
 				break;
 			}
@@ -785,10 +785,10 @@ VOID CLoginProcess::RenderPatch(int nLoopTime)
 	g_xMainWnd.ResetDXG(_SCREEN_WIDTH, _SCREEN_HEIGHT, _SCREEN_BPP, _DXG_SCREENMODE_FULLSCREEN, _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
 */
 
-	if(pPatch->m_bEndPatch == TRUE)//GetFtpFiles()==0l)	// Patch啊 辆丰 登菌栏搁
+	if(pPatch->m_bEndPatch == TRUE)//GetFtpFiles()==0l)	// 如果 Patch 已结束
 	{
 		
-		if(pPatch->m_bPatched == TRUE)	// Patch 登菌栏搁 辆丰
+		if(pPatch->m_bPatched == TRUE)	// 若已 Patch 则退出
 		{
 			delete pPatch;
 			char PatchName[1024];
@@ -798,18 +798,18 @@ VOID CLoginProcess::RenderPatch(int nLoopTime)
 			//m_Progress = PRG_QUIT;
       m_Progress = PRG_INTRO;
 			ShellExecute(NULL,"open",PatchName,NULL,NULL,SW_SHOWNORMAL);
-			// 角青阑 辆丰窍绊 寇何 Patch 橇肺弊伐阑 角青矫挪促.
+			// 结束运行并执行外部 Patch 程序。
 		}
 		else
 		{
-			// 菩摹 茄巴捞 绝栏搁
+			// 若没有已打补丁的内容
 			delete pPatch;
 
 			g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(), m_szServerIP, m_nServerPort);
 			m_Progress = PRG_INTRO;
 
 
-			// Full Screen 栏肺 傈券
+			// 切换到 Full Screen
 			g_xMainWnd.ResetDXG(640, 480, _SCREEN_BPP, _DXG_SCREENMODE_WINDOW, _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
 //			g_xMainWnd.ResetDXG(640, 480, _SCREEN_BPP, _DXG_SCREENMODE_FULLSCREEN, _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
 			SETRECT(tRect, SCR_LEFT, SCR_TOP, SCR_RIGHT, SCR_BOTTOM );
@@ -817,7 +817,7 @@ VOID CLoginProcess::RenderPatch(int nLoopTime)
 	}
 	else
 	{
-		// 拌加 菩摹 秦具窍搁
+		// 若需继续 Patch
 		pPatch->GetFtpFiles();
 	}
 
@@ -825,7 +825,7 @@ VOID CLoginProcess::RenderPatch(int nLoopTime)
 	{
 		HINSTANCE hLib;
 		hLib = LoadLibrary(MESSAGE_DLL_1);
-		SetErrorMessage(300,m_szErrorMsg);		// 庆寸 Error 皋矫瘤 茫扁
+		SetErrorMessage(300,m_szErrorMsg);		// 查找对应 Error 消息
 		FreeLibrary(hLib);
 		MessageBox(g_xMainWnd.GetSafehWnd(),m_szErrorMsg,"Error",MB_OK);
 	}
@@ -853,7 +853,7 @@ VOID CLoginProcess::RenderScroll(INT nLoopTime)
 	{	nScroll += 5;
 		if(nScroll >= 180)
 		{	
-			SetNextProc();												// 纳腐磐 伎泛飘 辑滚肺 捞悼 (烙矫)
+			SetNextProc();												// 移动到角色选择服务器 (临时)
 			return;
 		}
 	}
@@ -864,7 +864,7 @@ VOID CLoginProcess::RenderScroll(INT nLoopTime)
 
 
 BOOL CLoginProcess::CheckSSNO(char* szSSNo)
-{	// 固肯
+{	// 未完成
 	int		nLen = 0, nYear = 0;
 	long	nSum = 0, nCheckSum = 0;
 	char	szDate[7], szYear[5], szSex[5] = "1234";
@@ -878,16 +878,16 @@ BOOL CLoginProcess::CheckSSNO(char* szSSNo)
 
 	pszLowCode = strchr(sztSSNo,'-');
 	if(pszLowCode==NULL)
-		return FALSE;								// 林刮殿废锅龋 惑俊 -捞 绝栏搁 坷幅贸府
+		return FALSE;								// 居民登记号上没有 - 则按错误处理
 	pszLowCode ++;
 
 	nLen = strlen( sztSSNo );
 	if(nLen != 14)
 		return FALSE;
 	
-	// 己喊 内靛 犬牢
+	// 性别代码确认
 	if((*pszLowCode - '0') < 0 || (*pszLowCode - '0') > 4 ) 
-		return FALSE;								// 己喊 内靛 嘎瘤 臼澜
+		return FALSE;								// 性别代码不匹配
 
 	strncpy(szDate,sztSSNo,6);
 	strncpy(szYear,sztSSNo,2);
@@ -968,17 +968,17 @@ BOOL CLoginProcess::CheckEMail( char* szEMail )	// E Mail Check
 {
 	CHAR* pszTemp = NULL;
 
-	// '@'绰 盖菊俊 棵荐 绝促. '@'绰 怖 器窃 窍绊 乐绢具 茄促.
+	// '@' 不能出现在最前面。'@' 必须始终包含。
 	pszTemp = strchr( szEMail , '@');
 	if( ( ( pszTemp - szEMail ) == 0 ) ||
 		( pszTemp == NULL ) )
 		return FALSE; 
 
-	// '@'绰 窍唱捞惑 啊龙荐 绝促.
+	// '@' 不能有一个以上.
 	pszTemp = strchr( pszTemp + 1 ,'@');
 	if( pszTemp != NULL ) return FALSE; 
 
-	// '.'绰 盖菊俊 棵荐 绝促. '.'绰 窍唱捞惑 怖 器窃 窍绊 乐绢具 茄促.
+	// '.' 不能出现在最前面. '.' 必须至少包含一个.
 	pszTemp = strchr(szEMail,'.');
 	if( ( ( pszTemp - szEMail ) == 0 ) ||
 		( pszTemp == NULL ) )
@@ -1007,16 +1007,16 @@ BOOL CLoginProcess::StringDivideLen( INT nDivideLen, INT& nDividedLine, CHAR* sz
 			ZeroMemory(szTmpCheck, MAX_PATH);
 			nEndLen = nCnt+1;
 
-			// 泅犁何盒鳖瘤狼 巩磊凯阑 佬绰促.
+			// 读取截至当前部分的字符串。
 			memcpy(&szTmpCheck, &szSrc[nStartLen], nEndLen-nStartLen);
 			INT nsLen;
 			nsLen = strlen(szTmpCheck);
 
-			// 泅犁鳖瘤 佬绢柯 何盒捞 倾侩承捞甫 逞绢脊阑锭.
+			// 当前已读取的部分超出允许宽度时。
 			if (nsLen > nDivideLen ){
-				// 泅犁 2官捞飘 巩磊扼搁. 
+				// 当前如果是 2 字节字符. 
 				if ( szSrc[nEndLen-1] < 0 ){
-					// 泅犁 菊俊巩磊啊 2官捞飘 巩磊啊 酒聪扼搁
+					// 如果当前前面的字符不是 2 字节字符
 					if ( !(nWordCheck%2) ){
 						CHAR* pszNewLine;
 						nStartLen += strlen(szTmpCheck)-1;
@@ -1041,8 +1041,8 @@ BOOL CLoginProcess::StringDivideLen( INT nDivideLen, INT& nDividedLine, CHAR* sz
 						nWordCheck--;
 					}
 				}
-				// 1官捞飘 巩磊. 
-				// 泅犁焊促 茄官捞飘菊何盒鳖瘤父 绊妨秦林搁 等促.
+				// 1字节字符. 
+				// 只需考虑到比当前位置往前一个字节的部分即可。
 				else{
 					CHAR* pszNewLine;
 					nStartLen += strlen(szTmpCheck)-1;
@@ -1055,7 +1055,7 @@ BOOL CLoginProcess::StringDivideLen( INT nDivideLen, INT& nDividedLine, CHAR* sz
 					nDividedLine++;
 				}
 			}
-			// 碍力俺青     \n栏肺窍搁  Error ????
+			// 强制换行     如果用 \n 则 Error ????
 			else if(szSrc[nEndLen-1]=='\n'){
 				CHAR* pszNewLine;
 				nStartLen += strlen(szTmpCheck)-1;

@@ -79,7 +79,7 @@ BOOL CPlayerObject::IsProperTarget(CCharObject* pTargetObject)
              if MyGuild <> nil then begin
                 if TGuild(MyGuild).IsMember(target.UserName) then
                    Result := FALSE;
-                if BoGuildWarArea and (target.MyGuild <> nil) then begin  //巩颇傈,傍己傈 瘤开俊 乐澜
+                if BoGuildWarArea and (target.MyGuild <> nil) then begin  //处于行会战,攻城战地区
                    if TGuild(MyGuild).IsAllyGuild(TGuild(target.MyGuild)) then
                       Result := FALSE;
                 end;
@@ -91,11 +91,11 @@ BOOL CPlayerObject::IsProperTarget(CCharObject* pTargetObject)
           if not ((target.RaceServer >= RC_NPC) and (target.RaceServer <= RC_PEACENPC)) then
              Result := TRUE;
           if target.RaceServer = RC_USERHUMAN then
-             if self.PKLevel >= 2 then begin  //傍拜窍绰 磊啊 弧盎捞
+             if self.PKLevel >= 2 then begin  //攻击者是红名
                 if target.PKLevel < 2 then Result := TRUE
                 else Result := FALSE;
              end else begin
-                //傍拜窍绰 磊啊 闰嫡捞
+                //攻击者是白名
                 if target.PKLevel >= 2 then Result := TRUE
                 else Result := FALSE;
              end;
@@ -108,24 +108,24 @@ BOOL CPlayerObject::IsProperTarget(CCharObject* pTargetObject)
            Result := FALSE;
         end;
 
-        if not target.BoInFreePKArea then begin  //傍己傈 瘤开俊辑绰 力寇 等促.
-           if (PKLevel >= 2) and (Abil.Level > 10) then begin //绊乏 弧盎捞甸
-              if (target.Abil.Level <= 10) and (target.PKLevel < 2) then //历肪 馒茄 檬焊甫 傍拜 给茄促.
+        if not target.BoInFreePKArea then begin  //攻城战区域除外。
+           if (PKLevel >= 2) and (Abil.Level > 10) then begin //高等级红名
+              if (target.Abil.Level <= 10) and (target.PKLevel < 2) then //无法攻击低等级善良新手。
                  Result := FALSE;
            end;
-           if (Abil.Level <= 10) and (PKLevel < 2) then begin //历肪 馒茄 檬焊
-              if (target.PKLevel >= 2) and (target.Abil.Level > 10) then //绊肪 弧盎捞甸阑 傍拜给茄促.
+           if (Abil.Level <= 10) and (PKLevel < 2) then begin //低等级善良新手
+              if (target.PKLevel >= 2) and (target.Abil.Level > 10) then //无法攻击高等级红名。
                  Result := FALSE;
            end;
         end;
 
-        //甘 捞悼饶 3檬 悼救篮 傍拜 给窍绊 救 寸窃
+        //地图移动后 3 秒内无法攻击，也不会被攻击
         if (GetTickCount - MapMoveTime < 3000) or (GetTickCount - target.MapMoveTime < 3000) then
            Result := FALSE;
 
      end else begin
-        if target.Master = self then begin  //郴 何窍
-           if HumAttackMode <> HAM_ALL then  //葛滴 傍拜 老锭父 何窍啊 傍拜凳
+        if target.Master = self then begin  //我的部下
+           if HumAttackMode <> HAM_ALL then  //仅在全部攻击模式下部下才会攻击
               Result := FALSE;
         end else begin
            if target.Master <> nil then
@@ -387,20 +387,20 @@ var
    hum: TUserHuman;
 begin
    Result := FALSE;
-   if BoDealing then exit;  //背券吝俊绰 拱扒阑 林阑 荐 绝促.
+   if BoDealing then exit;  //交易中无法拾取物品.
    pmi := PEnvir.GetItem (CX, CY);
    if pmi <> nil then begin
-      if CompareText (pmi.Name, '陛傈') = 0 then begin
+      if CompareText (pmi.Name, '金钱') = 0 then begin
          if PEnvir.DeleteFromMap (CX, CY, OS_ITEMOBJECT, TObject(pmi)) = 1 then begin
             if IncGold (pmi.Count) then begin
                SendRefMsg (RM_ITEMHIDE, 0, integer(pmi), CX, CY, '');
-               //肺弊巢辫
-               AddUserLog ('凛扁_' +
+               //记录留痕
+               AddUserLog ('拾取_' +
                            MapName + '_' +
                            IntToStr(CX) + '_' +
                            IntToStr(CY) + '_' +
                            UserName + '_' +
-                           '陛傈_' +
+                           '金钱_' +
                            IntToStr(pmi.count));
                GoldChanged;
                Dispose (pmi);
@@ -416,9 +416,9 @@ begin
                if (ps <> nil) and IsAddWeightAvailable (UserEngine.GetStdItemWeight(pu.Index)) then begin
                   SendMsg (self, RM_ITEMHIDE, 0, integer(pmi), CX, CY, '');
                   AddItem (pu);
-                  //肺弊巢辫
+                  //记录留痕
                   if not IsCheapStuff (ps.StdMode) then
-                     AddUserLog ('凛扁_' +
+                     AddUserLog ('拾取_' +
                                  MapName + '_' +
                                  IntToStr(CX) + '_' +
                                  IntToStr(CY) + '_' +
@@ -557,7 +557,7 @@ int CPlayerObject::UpdateItemToDB(_LPTUSERITEMRCD lpMakeItemRcd, int nAction)
 
 	if ( !pRec->Execute( szQuery ) || pRec->GetRowCount() <= 0 )
 	{
-		InsertLogMsg(_T("UpdateItemToDB : 盎脚 坷幅"));
+		InsertLogMsg(_T("UpdateItemToDB : update error"));
 		g_pConnGame->DestroyRecordset( pRec );
 
 		return 0;
@@ -616,11 +616,11 @@ begin
    hum := TUserHuman (UserEngine.GetUserHuman (whostr));
    if hum <> nil then begin
       if not hum.ReadyRun then begin
-         SysMsg (whostr + '丛俊霸 皋技瘤甫 傈崔 且 荐 绝嚼聪促.', 0);
+         SysMsg (whostr + '无法向该用户传递消息。', 0);
          exit;
       end;
       if not hum.BoHearWhisper or hum.IsBlockWhisper (UserName) then begin
-         SysMsg (whostr + '丛篮 庇加富 芭何吝 涝聪促.', 0);
+         SysMsg (whostr + '该用户正在拒绝私聊。', 0);
          exit;
       end;
       hum.SendMsg (self, RM_WHISPER, 0, 0, 0, 0, UserName + '=> ' + saystr);
@@ -628,7 +628,7 @@ begin
       if UserEngine.FindOtherServerUser (whostr, svidx) then begin
          UserEngine.SendInterMsg (ISM_WHISPER, svidx, whostr + '/' + UserName + '=> ' + saystr);
       end else
-         SysMsg (whostr + '丛阑 茫阑 荐 绝嚼聪促.', 0);
+         SysMsg (whostr + '找不到该用户。', 0);
    end;
 end;
 }
@@ -679,7 +679,7 @@ void CPlayerObject::WinExp(int nExp)
 		HasLevelUp(m_Ability.Level - 1);
 
 		AddBodyLuck (100);
-/*      AddUserLog ('肪诀_' +
+/*      AddUserLog ('升级_' +
                   UserName + '_' +
                   IntToStr(Abil.Level) + '_' +
                   IntToStr(Abil.Exp)); */
@@ -734,18 +734,18 @@ void CPlayerObject::HasLevelUp(int nPrevLevel)
    RecalcLevelAbilitys();
 /*
 {$IFDEF FOR_ABIL_POINT}
-//4/16老 何磐 利侩
+//从 4/16 起适用
    if prevlevel + 1 = Abil.Level then begin
-      BonusPoint := BonusPoint + GetBonusPoint (Job, Abil.Level);  //肪诀俊 蝶弗 焊呈胶
+      BonusPoint := BonusPoint + GetBonusPoint (Job, Abil.Level);  //升级带来的奖励
       SendMsg (self, RM_ADJUST_BONUS, 0, 0, 0, 0, '');
    end else begin
       if prevlevel <> Abil.Level then begin
-         //焊呈胶 器牢飘甫 贸澜何磐 促矫 拌魂茄促.
+         //从头重新计算奖励点数。
          BonusPoint := GetLevelBonusSum (Job, Abil.Level);
          FillChar (BonusAbil, sizeof(TNakedAbility), #0);
          FillChar (CurBonusAbil, sizeof(TNakedAbility), #0);
          //if prevlevel <> 0 then begin
-         RecalcLevelAbilitys;  //饭骇俊 蝶弗 瓷仿摹甫 拌魂茄促.
+         RecalcLevelAbilitys;  //计算随等级变化的能力值。
          //end else begin
          //   RecalcLevelAbilitys_old;
          //   BonusPoint := 0;
@@ -768,7 +768,7 @@ void CPlayerObject::RecalcHitSpeed()
 	m_btHitPoint = 5;
 
    /*case Job of
-      2: SpeedPoint := DEFSPEED + BonusAbil.Speed + 3;  //档荤绰 扁夯 刮酶捞 臭促.
+      2: SpeedPoint := DEFSPEED + BonusAbil.Speed + 3;  //道士的默认敏捷较高.
       else SpeedPoint := DEFSPEED + BonusAbil.Speed;
    end;*/
 	if (m_pUserInfo->GetJob() == 2)
@@ -849,7 +849,7 @@ void CPlayerObject::RecalcAbilitys()
 	m_btPoisonRecover	= 0;
 	m_btHealthRecover	= 0;
 	m_btSpellRecover	= 0;
-	m_btAntiMagic		= 1;   //扁夯 10%
+	m_btAntiMagic		= 1;   //基本 10%
 	
 	m_sHitSpeed			= 0;
 
@@ -882,13 +882,13 @@ void CPlayerObject::RecalcAbilitys()
 				m_WAbility.WearWeight += g_pStdItemSpecial[lpUserItemRcd->nStdIndex].wWeight; 
 
 			if ( i == U_WEAPON )
-				m_AddAbility.WeaponStrong = (BYTE)g_pStdItemSpecial[lpUserItemRcd->nStdIndex].dwRSource; // 公扁狼 碍档. 碍档啊 臭栏搁 肋 救 磺俺咙
+				m_AddAbility.WeaponStrong = (BYTE)g_pStdItemSpecial[lpUserItemRcd->nStdIndex].dwRSource; // 武器的强度. 强度越高越不容易损坏
 		}
 	}
 
 	m_WAbility.Weight	= m_pUserInfo->CalcBagWeight();
 
-	// BEGIN:篮脚贱
+	// BEGIN:隐身术
 	if ((m_fFixedHideMode) && (m_wStatusArr[STATE_TRANSPARENT] > 0))
 		m_fHumHideMode = TRUE;
 
@@ -909,7 +909,7 @@ void CPlayerObject::RecalcAbilitys()
 			AddRefMsg(RM_CHARSTATUSCHANGED, m_sHitSpeed/*wparam*/, m_nCharStatus, 0, 0, NULL);
 		}
 	}
-	// END:篮脚贱
+	// END:隐身术
 
 	RecalcHitSpeed();
 
@@ -951,10 +951,10 @@ void CPlayerObject::RecalcAbilitys()
 	m_WAbility.MC		= MAKEWORD(LOBYTE(m_AddAbility.MC)  + LOBYTE(m_Ability.MC),  HIBYTE(m_AddAbility.MC)  + HIBYTE(m_Ability.MC));
 	m_WAbility.SC		= MAKEWORD(LOBYTE(m_AddAbility.SC)  + LOBYTE(m_Ability.SC),  HIBYTE(m_AddAbility.SC)  + HIBYTE(m_Ability.SC));
 
-	if (m_wStatusArr[STATE_DEFENCEUP] > 0) // 规绢仿 惑铰
+	if (m_wStatusArr[STATE_DEFENCEUP] > 0) // 防御力上升
 		m_WAbility.AC = MAKEWORD(LOBYTE(m_WAbility.AC), HIBYTE(m_WAbility.AC) + 2 + (m_Ability.Level / 7));
 
-	if (m_wStatusArr[STATE_MAGDEFENCEUP] > 0) // 付亲仿 惑铰
+	if (m_wStatusArr[STATE_MAGDEFENCEUP] > 0) // 魔抗上升
 		m_WAbility.MAC = MAKEWORD(LOBYTE(m_WAbility.MAC), HIBYTE(m_WAbility.MAC) + 2 + (m_Ability.Level / 7));
 
 	UpdateProcess(this, RM_CHARSTATUSCHANGED, m_sHitSpeed/*wparam*/, m_nCharStatus, 0, 0, NULL);
@@ -1083,7 +1083,7 @@ void CPlayerObject::RecalcLevelAbilitys()
 
 	switch (m_pUserInfo->m_THumanRcd.btJob)
 	{
-		case 2:		// 档荤
+		case 2:		// 道士
 		{
             m_Ability.MaxHP			= 14 + ROUND((nLevel / 6 + 2.5) * nLevel);
             m_Ability.MaxMP			= 13 + ROUND((nLevel / 8)* 2.2 * nLevel);
@@ -1104,7 +1104,7 @@ void CPlayerObject::RecalcLevelAbilitys()
 		
 			break;
 		}
-		case 1:		// 贱荤
+		case 1:		// 术士
 		{
             m_Ability.MaxHP			= 14 + ROUND((nLevel / 15 + 1.8) * nLevel);
             m_Ability.MaxMP			= 13 + ROUND((nLevel / 5 + 2) * 2.2 * nLevel);
@@ -1122,7 +1122,7 @@ void CPlayerObject::RecalcLevelAbilitys()
 
 			break;
 		}
-		case 0:		// 傈荤
+		case 0:		// 战士
 		{
             m_Ability.MaxHP			= 14 + ROUND((nLevel / 4 + 4) * nLevel);
             m_Ability.MaxMP			= 11 + (int)(nLevel * 2);
@@ -1295,7 +1295,7 @@ BOOL CPlayerObject::CheckTakeOnItem(WORD wWhere, _LPTUSERITEMRCD lpTItemRcd)
 	{
 		if (lpTItemRcd->szMakeIndex[0] != 'B') return FALSE;
 
-		if (g_pStdItemSpecial[lpTItemRcd->nStdIndex].wStdMode == 10)	// 巢磊渴
+		if (g_pStdItemSpecial[lpTItemRcd->nStdIndex].wStdMode == 10)	// 男装
 		{
 			if (m_tFeature.btGender != 0)
 			{
@@ -1306,7 +1306,7 @@ BOOL CPlayerObject::CheckTakeOnItem(WORD wWhere, _LPTUSERITEMRCD lpTItemRcd)
 				return FALSE;
 			}
 		}
-		else if (g_pStdItemSpecial[lpTItemRcd->nStdIndex].wStdMode == 11)	// 咯磊渴
+		else if (g_pStdItemSpecial[lpTItemRcd->nStdIndex].wStdMode == 11)	// 女装
 		{
 			if (m_tFeature.btGender != 1)
 			{
@@ -1558,7 +1558,7 @@ void CPlayerObject::Run()
 	if (RestoreHealSpell())
 		Die();
 
-	// 家券 坷宏璃飘 八荤
+	// 召唤对象检查
 	if (m_xSlaveObjList.GetCount())
 	{
 		PLISTNODE pListNode = m_xSlaveObjList.GetHead();
@@ -1608,7 +1608,7 @@ void CPlayerObject::ServerGetButch(CCharObject* pCharObject, int nX, int nY, int
 
 					if (pAnimalObject->m_nBodyLeathery <= 0)
 					{
-	//               if (animal.RaceServer >= RC_ANIMAL) and (animal.RaceServer < RC_MONSTER) then begin  //荤娇鞍捞 绊扁甫林绰 巴父, 秦榜肺 函窃
+	//               if (animal.RaceServer >= RC_ANIMAL) and (animal.RaceServer < RC_MONSTER) then begin  //像鹿一样给肉的才变成骷髅
 	//                  animal.BoSkeleton := TRUE;
 	//                  animal.ApplyMeatQuality;
 	//                  animal.SendRefMsg (RM_SKELETON, animal.Dir, animal.CX, animal.CY, 0, '')
@@ -1617,7 +1617,7 @@ void CPlayerObject::ServerGetButch(CCharObject* pCharObject, int nX, int nY, int
 						pAnimalObject->AddRefMsg(RM_SKELETON, pAnimalObject->m_nDirection, pAnimalObject->m_nCurrX, pAnimalObject->m_nCurrY, 0, NULL);
 
 //						if (!pAnimalObject->TakeCretBagItems())
-//							SysMag("酒公巴档 掘瘤 给沁嚼聪促.", 0);
+//							SysMag("什么也没有得到。", 0);
 
 						pAnimalObject->m_nBodyLeathery = 50;
 					}
@@ -1738,14 +1738,14 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 
 	switch (lptMagicRcd->btMagicID)
 	{
-		case _SKILL_SHOWHP:			// 沤扁颇楷
+		case _SKILL_SHOWHP:			// 探气破连
 		{
 			if (!DoShowHP(pTargetObject, pMagicInfo, lptMagicRcd->btLevel))
 				return FALSE;
 		
 			break;
 		}
-		case _SKILL_HEALLING:		// 雀汗贱
+		case _SKILL_HEALLING:		// 恢复术
 		{
 			if (!pTargetObject)
 			{
@@ -1764,14 +1764,14 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 #ifdef _DEBUG
 				char szMsg[64];
 
-				sprintf(szMsg, "%s 雀汗矫糯 - PW:%d HP:%d", pTargetObject->m_szName, nPwr, pTargetObject->m_WAbility.HP);
+				sprintf(szMsg, "%s healed - PW:%d HP:%d", pTargetObject->m_szName, nPwr, pTargetObject->m_WAbility.HP);
 				SysMsg(szMsg, 0);
 #endif
 			}
 
 			break;
 		}
-		case _SKILL_BIGHEALLING:	// 措雀汗贱
+		case _SKILL_BIGHEALLING:	// 大恢复术
 		{
 			int nPwr = GetAttackPower(pMagicInfo->GetPower(pMagicInfo->MPow() + LOBYTE(m_WAbility.SC) * 2, lptMagicRcd->btLevel), 
 										(HIBYTE(m_WAbility.SC) - LOBYTE(m_WAbility.SC)) * 2 + 1);
@@ -1781,7 +1781,7 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 			
 			break;
 		}
-		case _SKILL_LIGHTENING:		// 碍拜
+		case _SKILL_LIGHTENING:		// 强击
 		{
 			if (IsProperTarget(pTargetObject))
 			{
@@ -1806,8 +1806,8 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 
 			break;
 		}
-		case _SKILL_FIREBALL:		// 拳堪厘
-		case _SKILL_FIREBALL2:		// 陛碍拳堪厘 
+		case _SKILL_FIREBALL:		// 火焰场
+		case _SKILL_FIREBALL2:		// 金刚火焰掌 
 		{
 			int nPwr = GetAttackPower(pMagicInfo->GetPower(pMagicInfo->MPow(), lptMagicRcd->btLevel) + LOBYTE(m_WAbility.MC), 
 										HIBYTE(m_WAbility.MC) - LOBYTE(m_WAbility.MC) + 1);
@@ -1822,10 +1822,10 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
                          ShortInt(Hibyte(WAbil.MC)-Lobyte(WAbil.MC)) + 1
                       );
              //pwr := GetPower (MPow(pum)) + (Lobyte(WAbil.MC) + Random(Hibyte(WAbil.MC)-Lobyte(WAbil.MC) + 1));
-             //鸥百 嘎澜, 饶俊 瓤苞唱鸥巢
+             //目标被击中, 之后出现效果
              //target.SendDelayMsg (user, RM_MAGSTRUCK, 0, pwr, 0, 0, '', 1200 + _MAX(Abs(CX-xx),Abs(CY-yy)) * 50 );
           end;
-          //rm-delaymagic俊辑 selecttarget阑 贸府茄促.
+          //在 rm-delaymagic 中处理 selecttarget。
           user.SendDelayMsg (user, RM_DELAYMAGIC, pwr, MakeLong(xx, yy), 2, integer(target), '', 600);
           if (target.RaceServer >= RC_ANIMAL) then train := TRUE;
        end else
@@ -1836,13 +1836,13 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
     target := nil; */
 			break;
 		}
-		case _SKILL_FIREWIND:		// 拳堪浅
+		case _SKILL_FIREWIND:		// 火焰风
 		{
 			if (MagPushArround(3) > 0) fTrain = TRUE;
 
 			break;
 		}
-		case _SKILL_FIRE:			// 堪荤厘
+		case _SKILL_FIRE:			// 焰蛇将
 		{
 			int nX = 0, nY = 0;
 
@@ -1861,7 +1861,7 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 
 			break;
 		}
-		case _SKILL_SHOOTLIGHTEN:	// 汾牢厘
+		case _SKILL_SHOOTLIGHTEN:	// 雷印掌
 		{
 			int nX = 0, nY = 0;
 
@@ -1880,14 +1880,14 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 
 			break;
 		}
-		case _SKILL_SHIELD:		// 林贱狼阜
+		case _SKILL_SHIELD:		// 咒术之幕
 		{
 			if (MagBubbleDefenceUp(lptMagicRcd->btLevel, pMagicInfo->GetPower(15 + GetRPow(m_WAbility.MC), lptMagicRcd->btLevel)))
 				fTrain = TRUE;
 
 			break;
 		}
-		case _SKILL_EATTHFIRE:	// 瘤堪贱
+		case _SKILL_EATTHFIRE:	// 地炎术
 		{
 			int nPwr = GetAttackPower(pMagicInfo->GetPower(pMagicInfo->MPow(), lptMagicRcd->btLevel) + LOBYTE(m_WAbility.MC), 
 										HIBYTE(m_WAbility.MC) - LOBYTE(m_WAbility.MC) + 1);
@@ -1897,8 +1897,8 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 
 			break;
 		}
-		case _SKILL_FIREBOOM:	// 气凯颇
-		case _SKILL_SNOWWIND:	// 葫汲浅
+		case _SKILL_FIREBOOM:	// 爆裂波
+		case _SKILL_SNOWWIND:	// 冰雪风
 		{
 			if (MagBigExplosion(GetAttackPower(pMagicInfo->GetPower(pMagicInfo->MPow(), lptMagicRcd->btLevel) + LOBYTE(m_WAbility.MC), 
 												HIBYTE(m_WAbility.MC) - LOBYTE(m_WAbility.MC) + 1), 
@@ -1926,7 +1926,7 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 
 					switch (lptMagicRcd->btMagicID)
 					{
-						case _SKILL_HANGMAJINBUB:	// 亲付柳过
+						case _SKILL_HANGMAJINBUB:	// 降魔阵法
 						{
 							int nPwr = GetAttackPower(pMagicInfo->GetPower13(60, lptMagicRcd->btLevel) + 5 * LOBYTE(m_WAbility.SC),
 														5 * (HIBYTE(m_WAbility.SC) - LOBYTE(m_WAbility.SC)) + 1);
@@ -1936,7 +1936,7 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 
 							break;
 						}
-						case _SKILL_DEJIWONHO:		// 措瘤盔龋
+						case _SKILL_DEJIWONHO:		// 大地援护
 						{
 							int nPwr = GetAttackPower(pMagicInfo->GetPower13(60, lptMagicRcd->btLevel) + 5 * LOBYTE(m_WAbility.SC),
 														5 * (HIBYTE(m_WAbility.SC) - LOBYTE(m_WAbility.SC)) + 1);
@@ -1946,21 +1946,21 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 
 							break;
 						}
-						case _SKILL_CLOAK:			// 篮脚贱
+						case _SKILL_CLOAK:			// 隐身术
 						{
 							if (MagMakePrivateTransparent(pMagicInfo->GetPower13(30, lptMagicRcd->btLevel) + 3 * GetRPow(m_WAbility.SC)))
 								fTrain = TRUE;
 
 							break;
 						}
-						case _SKILL_BIGCLOAK:		// 措篮脚贱
+						case _SKILL_BIGCLOAK:		// 大隐身术
 						{
 							if (MagMakeGroupTransparent(TargetX, TargetY, pMagicInfo->GetPower13(30, lptMagicRcd->btLevel) + 3 * GetRPow(m_WAbility.SC)))
 								fTrain = TRUE;
 
 							break;
 						}
-						case _SKILL_FIRECHARM:		// 气混拌
+						case _SKILL_FIRECHARM:		// 爆杀系
 						{
 							int nPwr = GetAttackPower(pMagicInfo->GetPower(pMagicInfo->MPow(), lptMagicRcd->btLevel) + LOBYTE(m_WAbility.SC), 
 														HIBYTE(m_WAbility.SC) - LOBYTE(m_WAbility.SC) + 1);
@@ -1969,14 +1969,14 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 
 							break;
 						}
-						case _SKILL_HOLYSHIELD:		// 搬拌
+						case _SKILL_HOLYSHIELD:		// 结界
 						{
 							if (MagMakeHolyCurtain(pMagicInfo->GetPower13(40, lptMagicRcd->btLevel) + 3 * GetRPow(m_WAbility.SC), TargetX, TargetY) > 0)
 								fTrain = TRUE;
 
 							break;
 						}
-						case _SKILL_SKELLETON:		// 归榜家券贱
+						case _SKILL_SKELLETON:		// 白骨召唤术
 						{
 							int nX, nY;
 
@@ -1997,7 +1997,7 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 
 			break;
 		}
-		case _SKILL_SINSU:			// 脚荐家券
+		case _SKILL_SINSU:			// 神兽召唤
 		{
 			if (_LPTGENERALITEMRCD lptItem = m_pUserInfo->CanUseBujuk())
 			{
@@ -2053,10 +2053,10 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
       with user do begin
          if needfire then
             SendRefMsg (RM_MAGICFIRE, 0, MakeWord(pum.pDef.EffectType, pum.pDef.Effect), MakeLong(xx, yy), integer(target), '');
-         //嘎篮 惑措
+         //被击中的对方
          if (pum.Level < 3) and train then
             if Abil.Level >= pum.pDef.NeedLevel[pum.Level] then begin
-               //荐访饭骇俊 档崔茄 版快
+               //达到修炼等级的情况
                user.TrainSkill (pum, 1 + Random(3));
                if not CheckMagicLevelup (pum) then
                   SendDelayMsg (user, RM_MAGIC_LVEXP, 0, pum.pDef.MagicId, pum.Level, pum.CurTrain, '', 1000);
@@ -2225,7 +2225,7 @@ void CPlayerObject::Operate()
 								// Debug Code
 								char szMsg[64];
 
-								sprintf(szMsg, "%s 付过 嘎澜 - PW:%d", pTargetObject->m_szName, nMagPower);
+								sprintf(szMsg, "%s hit by magic - PW:%d", pTargetObject->m_szName, nMagPower);
 								SysMsg(szMsg, 0);
 								// Debug Code
 

@@ -59,7 +59,7 @@ private:
 	WSADATA				m_wsd;
 	CWHWilImageData		m_Image;
 	CWHWilImageData		m_Image2;
-	CWHWilImageData		m_tImage1;	// 烙矫
+	CWHWilImageData		m_tImage1;	// 临时
 	int					m_Progress;
 	SOCKET 				m_LoginSocket;
 	SOCKADDR_IN			m_LoginAddress;
@@ -70,15 +70,15 @@ private:
 												// 2: login fail etc.
 	BOOL				m_fIsLButtonClicked;
 
-	CPDLList<CHRINFO>	m_CList;				// 纳腐磐 Info 历厘 List
-	CPDLList<CHRRECT>	m_CRectList;			// 纳腐磐 Rect 历厘 List
+	CPDLList<CHRINFO>	m_CList;				// 角色 Info 保存 List
+	CPDLList<CHRRECT>	m_CRectList;			// 角色 Rect 保存 List
 	// Buttons
 	CMirButton			*m_pBtn;
 	INT					m_nMessage;				// Error Message Box Index
-	BYTE				m_SelectJob;			// 积己芒俊辑 急琶等 流诀
-	BYTE				m_SelectSex;			// 积己芒俊辑 急琶等 己喊
-	INT					m_SelectChr;			// 急氓芒俊辑 急琶等 纳腐磐 锅龋
-	INT					m_ChrCount;				// 孽府肺 罐绢柯 纳腐磐 箭磊
+	BYTE				m_SelectJob;			// 创建窗口中选中的职业
+	BYTE				m_SelectSex;			// 创建窗口中选定的性别
+	INT					m_SelectChr;			// 选择窗口中选中的角色编号
+	INT					m_ChrCount;				// 通过查询得到的角色数量
 	char				m_szChrName[16];
 	CHAR				m_szErrorMsg[512];
 	int					m_Distance;

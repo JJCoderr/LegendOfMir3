@@ -319,18 +319,18 @@ HRESULT _DbgOut( TCHAR* strFile, DWORD dwLine, HRESULT hr, TCHAR* strMsg )
 
 /******************************************************************************************************************
 
-	窃荐疙 : SetBlendRenderState()
+	函数名 : SetBlendRenderState()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 坊歹傅胶抛捞飘甫 悸泼茄促.
-	涝仿   : LPDIRECT3DDEVICE7 pd3dDevice
+	目的   : 设置渲染状态.
+	输入   : LPDIRECT3DDEVICE7 pd3dDevice
 	         BYTE bBlendFlag
 	         D3DMATERIAL7 mtrlGetMtrl
-	免仿   : void 
+	输出   : void
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改人] : 修改内容
 
 *******************************************************************************************************************/
 void SetBlendRenderState(LPDIRECT3DDEVICE7 pd3dDevice, BYTE bBlendFlag, D3DMATERIAL7 mtrlGetMtrl)
@@ -406,16 +406,16 @@ void SetBlendRenderState(LPDIRECT3DDEVICE7 pd3dDevice, BYTE bBlendFlag, D3DMATER
 
 /******************************************************************************************************************
 
-	窃荐疙 : ResetBlendenderState()
+	函数名 : ResetBlendenderState()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 坊歹傅胶抛捞飘甫 扁夯惑怕肺 汗备茄促.
-	涝仿   : LPDIRECT3DDEVICE7 pd3dDevice
-	免仿   : void 
+	目的   : 将渲染状态恢复为默认状态.
+	输入   : LPDIRECT3DDEVICE7 pd3dDevice
+	输出   : void
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 void ResetBlendenderState(LPDIRECT3DDEVICE7 pd3dDevice)

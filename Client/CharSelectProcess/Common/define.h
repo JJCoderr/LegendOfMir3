@@ -90,7 +90,7 @@
 #define SEX_WOMAN							1
 
 // Job counts
-#define JOB_KIND							3		// 流诀 辆幅
+#define JOB_KIND							3		// 职业种类
 
 
 // Button IDs

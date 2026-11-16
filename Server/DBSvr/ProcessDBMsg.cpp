@@ -356,7 +356,7 @@ char *SaveHumanMagicRcd(char *pszUserID, char *pszCharName, char *pszEncodeRcd, 
 							pszUserID, pszCharName, tUserMagicRcd.btMagicID, tUserMagicRcd.btLevel, tUserMagicRcd.btUseKey, tUserMagicRcd.nCurrTrain);
 			
 			if ( !pRec->Execute( szTmp ) || pRec->GetRowCount() <= 0 )
-				InsertLogMsg(_T("SaveHumanMagicRcd 갱신 오류"));
+				InsertLogMsg(_T("SaveHumanMagicRcd update error"));
 			
 			GetDBManager()->DestroyRecordset( pRec );
 
@@ -399,7 +399,7 @@ void SaveGenItemRcd(char *pszUserID, char *pszCharName, char *pszEncodeRcd, int 
 							"( '%s', '%s', '%s' )", pszUserID, pszCharName, tItemRcd.szItem);
 
 			if ( !pRec->Execute( szTmp ) || pRec->GetRowCount() <= 0 )
-				InsertLogMsg(_T("SaveGenItemRcd 갱신 오류"));
+				InsertLogMsg(_T("SaveGenItemRcd update error"));
 
 			GetDBManager()->DestroyRecordset( pRec );
 
@@ -433,7 +433,7 @@ BOOL SaveHumanRcd(CServerInfo* pServerInfo, _LPTLOADHUMAN lpLoadHuman, _LPTHUMAN
 
 	if (!pRec->Execute( szSQL ) || pRec->GetRowCount() <= 0 )
 	{
-		InsertLogMsg(_T("SaveHumanRcd 갱신 오류"));
+		InsertLogMsg(_T("SaveHumanRcd update error"));
 		GetDBManager()->DestroyRecordset( pRec );
 		return FALSE;		
 	}

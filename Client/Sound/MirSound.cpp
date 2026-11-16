@@ -39,7 +39,7 @@ CMirSound::CMirSound()
 	m_ppBuffer = NULL;
 	m_3DEnable = FALSE;
 	m_bPlay = TRUE;
-	m_bBGMPlay = TRUE;	// 烙矫
+	m_bBGMPlay = TRUE;	// 临时
 	ReadWavFileList("SoundList.wwl");
 	m_ppBuffer = new CSBuffer*[MAX_KINDS_OF_WAVE];
 	for(int i = 0 ; i < MAX_KINDS_OF_WAVE ; i++)
@@ -116,18 +116,18 @@ CMirSound::~CMirSound()
 //	Return Value:	int Distance
 //  Update		:
 ///////////////////////////////////////////////////////////////////////
-float CMirSound::CalsDistanceX(POINT Src,POINT Chr)		// 家府 惯积 困摹客 泅犁 纳腐磐埃狼 芭府 炼荤
+float CMirSound::CalsDistanceX(POINT Src,POINT Chr)		// 检查声音发生位置与当前角色之间的距离
 {
 	float l_Result;
-	l_Result = (float)((Chr.x - Src.x)%13);						// 芭府绰 12 捞惑老荐 绝促.
+	l_Result = (float)((Chr.x - Src.x)%13);						// 距离不能超过 12.
 	l_Result = (float)(1.0-(float)sqrt(1.0 - l_Result/(float)12.0))*((float)-1.0);
 	return l_Result;
 }
 
-float CMirSound::CalsDistanceY(POINT Src,POINT Chr)		// 家府 惯积 困摹客 泅犁 纳腐磐埃狼 芭府 炼荤
+float CMirSound::CalsDistanceY(POINT Src,POINT Chr)		// 检查声音发生位置与当前角色之间的距离
 {
 	float l_Result;
-	l_Result = (float)((Chr.y- Src.y)%13);						// 芭府绰 12 捞惑老荐 绝促.
+	l_Result = (float)((Chr.y- Src.y)%13);						// 距离不能超过 12.
 	l_Result =float(1.0-(float)sqrt(1.0 - (double)(l_Result)/12.0))*((float)-1.0);
 	return l_Result;
 }
@@ -175,19 +175,19 @@ int CMirSound::CalsPan(int Dir,int Dis)
 //	Return Value:
 //  Update		:
 ///////////////////////////////////////////////////////////////////////
-int CMirSound::CalsVolume(int Dis) // 荐沥 夸噶
+int CMirSound::CalsVolume(int Dis) // 需要修改
 {
 	int l_Result;
 	if(Dis!=0)
 	{
 		l_Result = (int)((cos(_PI*(Dis/26.0)))*100);
-		l_Result = (101 - l_Result);		// 弥措 杭冯 0 弥家 杭俘 (-1)*x : 泅力狼 100-(x)%
-		l_Result = m_lWavMaxVol+l_Result*(-20);			// 弥家澜樊 -2000 ~ 弥措澜樊 0
+		l_Result = (101 - l_Result);		// 最大音量 0 最小音量 (-1)*x : 当前的 100-(x)%
+		l_Result = m_lWavMaxVol+l_Result*(-20);			// 最小音量 -2000 ~ 最大音量 0
 		return l_Result;
 	}
 	else
 	{
-		return m_lWavMaxVol;							// 般媚 廉 乐芭唱 夯牢狼 家府	弥措 澜樊栏肺
+		return m_lWavMaxVol;							// 重叠的或自身的声音	以最大音量
 	}
 }
 
@@ -318,11 +318,11 @@ void CMirSound::PlayBkMusicMp3(BOOL Looped,INT	nIndex)
 		ZeroMemory(szMp3FileName,MAX_PATH);
 		if(m_pMp3->IsPlaying())
 		{
-			// Play吝
+			// 播放中
 			m_pMp3->OnStop();
 		}
 //		FindBGMFileName(nIndex,szMp3FileName);
-		strcpy(szMp3FileName,"1.mp3");	// 烙矫
+		strcpy(szMp3FileName,"1.mp3");	// 临时
 		if(szMp3FileName[0]!=NULL)
 		{
 			m_pMp3->LoadMp3(szMp3FileName,g_xMainWnd.GetSafehWnd());
@@ -485,26 +485,26 @@ char* CMirSound::SeekFileName(int wavnum)
 //	Return Value:	
 //  Update		:
 ///////////////////////////////////////////////////////////////////////
-CSBuffer* CMirSound::FindBuffer(int nNum,BOOL ForLoad)	// 绝阑锭 Load窍绰 巴捞搁 TRUE 酒聪搁 FASLE
+CSBuffer* CMirSound::FindBuffer(int nNum,BOOL ForLoad)	// 不存在时加载则为 TRUE 否则为 FASLE
 {
 	if(m_nUseCount>0)
 	{
 		for(int i=0 ; i<MAX_KINDS_OF_WAVE;i++)
 		{
-			if(m_ppBuffer[i]->m_ID==nNum)	// 佬绢 初篮 巴甸吝俊 乐衬?
+			if(m_ppBuffer[i]->m_ID==nNum)	// 在已读取的内容中是否存在?
 			{
 				return m_ppBuffer[i];
 			}
 			
 		}
 	}
-	// 佬绢 初篮巴吝俊 绝窜富捞衬?
+	// 读取的内容中没有吗?
 	if(ForLoad)
 	{
 		if(m_nUseCount<MAX_KINDS_OF_WAVE)
 		{
 			char* fname;
-			// 弊烦 佬磊!
+			// 那么开始读取!
 			fname = SeekFileName(nNum);
 			if(m_3DEnable) m_ppBuffer[m_nUseCount]->Enable3d();
 			if(m_ppBuffer[m_nUseCount]->Load(m_pSound,fname,5)!=E_FAIL)
@@ -515,8 +515,8 @@ CSBuffer* CMirSound::FindBuffer(int nNum,BOOL ForLoad)	// 绝阑锭 Load窍绰 巴捞搁
 			}
 		}
 		else
-		{	// 卿! 佬阑 傍埃 付历 绝窜 富捞衬?
-			// 弊烦 富磊!
+		{	// 呃! 连读取的空间都没有了吗?
+			// 那就这样吧!
 			return NULL;
 		}
 	}
@@ -596,7 +596,7 @@ BOOL CMirSound::FreeNotUseBuffer(VOID)
 	CSBuffer*	pxTempBuffer;
 	int i=0;
 
-	dwCurrentTime = timeGetTime();		// 泅犁 矫埃阑 备茄促.
+	dwCurrentTime = timeGetTime();		// 获取当前时间。
 
 	do
 	{
@@ -604,7 +604,7 @@ BOOL CMirSound::FreeNotUseBuffer(VOID)
 		if(dwTempTime!=0)
 		{
 			dwTempTime = dwCurrentTime - dwTempTime;
-			if(dwTempTime >  MAX_LIM_TIME)	// 1盒 捞惑 救敬巴阑 朝妨扼
+			if(dwTempTime >  MAX_LIM_TIME)	// 丢弃 1 分钟以上未使用的部分
 			{	
 				m_ppBuffer[i]->Release();
 				pxTempBuffer = m_ppBuffer[i];
@@ -743,7 +743,7 @@ VOID CMirSound::SetEnableAmbiance(INT nMapNum,INT nCount)
 		if(m_CommonWavBuffer.Load(m_pSound,"00.wav",1)!=E_FAIL)		// FadeIn
 		{
 			m_CommonWavBuffer.SetVolume(m_lWavMaxVol);
-			m_CommonWavBuffer.m_ID = 1;			// 骏厚攫胶老版快俊父 1肺 秦霖促.
+			m_CommonWavBuffer.m_ID = 1;			// 仅在环境(Ambience)情况下设为 1。
 			m_CommonWavBuffer.Play(0);
 		}
 
@@ -756,7 +756,7 @@ VOID CMirSound::SetEnableAmbiance(INT nMapNum,INT nCount)
 			m_pAmbianceBuffer[i] = new CSBuffer;
 			if(m_3DEnable)	m_pAmbianceBuffer[i]->Enable3d();
 			m_pAmbianceBuffer[i]->Load(m_pSound,szFname,2);
-			m_pAmbianceBuffer[i]->m_ID = 1;		// 骏厚攫胶老版快俊父 1肺 秦霖促.
+			m_pAmbianceBuffer[i]->m_ID = 1;		// 仅在环境(Ambience)情况下设为 1。
 		}
 		m_bAmbiance = TRUE;
 		SetTimer(m_hWnd,ID_AMBIANCE_TIMER,1000,(TIMERPROC)(AmbianceTimerProc));
@@ -928,7 +928,7 @@ BOOL CMirSound::SetMasterVol(INT nVolume)
 	if(nVolume>=1 && nVolume<=100)
 	{
 		m_lWavMaxVol = (nVolume-101)*(50);		// 100 -> -50    0 -> -5000
-		m_lMp3MaxVol = (m_lWavMaxVol-1)*(10);		// Wav volume狼 -10db
+		m_lMp3MaxVol = (m_lWavMaxVol-1)*(10);		// Wav volume 的 -10db
 		return TRUE;
 	}
 	return FALSE;
@@ -950,7 +950,7 @@ BOOL CMirSound::SetBGMVol(INT nVolume)
 {
 	if(nVolume>=0 && nVolume<=100)
 	{
-		m_lMp3MaxVol = (m_lWavMaxVol-1)*(10)*(nVolume+1);		// Wav volume狼 -10dB狼 割%?
+		m_lMp3MaxVol = (m_lWavMaxVol-1)*(10)*(nVolume+1);		// Wav volume 的 -10dB 占百分之几？
 		return TRUE;
 	}
 	return FALSE;
@@ -1036,22 +1036,22 @@ void CALLBACK AmbianceTimerProc(HWND hwnd,UINT uMsg,UINT idEvent,DWORD dwTime )
 
 	nCount++;
 	
-	if((Fact_1+Fact_2)<=6)  // 15%捞惑狼 犬伏肺 Play   1~15% = 15%
+	if((Fact_1+Fact_2)<=6)  // 以 15% 以上的概率 Play   1~15% = 15%
 		nNum = 1;
 	else
-		if((Fact_1+Fact_2)<=8)  // 28%捞惑狼 犬伏肺 Play  16~28% = 12%
+		if((Fact_1+Fact_2)<=8)  // 以 28% 以上的概率 Play  16~28% = 12%
 			nNum = 2;
 		else
-			if((Fact_1+Fact_2)<=10)  // 45%捞惑狼 犬伏肺 Play   27~45%  = 18%
+			if((Fact_1+Fact_2)<=10)  // 45% 以上的概率 Play   27~45%  = 18%
 				nNum = 3;
 			else
-				if((Fact_1+Fact_2)<=11)  // 55%捞惑狼 犬伏肺 Play   46~55% = 10%
+				if((Fact_1+Fact_2)<=11)  // 55% 以上的概率 Play   46~55% = 10%
 					nNum = 4;
 				else
-					if((Fact_1+Fact_2)<=13)  // 72%捞惑狼 犬伏肺 Play  56~72% = 16%
+					if((Fact_1+Fact_2)<=13)  // 以 72% 以上的概率 Play  56~72% = 16%
 						nNum = 5;
 					else
-						if((Fact_1+Fact_2)<=16)  // 90%捞惑狼 犬伏肺 Play	72~90 = 18%
+						if((Fact_1+Fact_2)<=16)  // 以 90% 以上的概率 Play	72~90 = 18%
 							nNum = 7;
 						else
 							nNum = 8;			 //	10%
@@ -1064,7 +1064,7 @@ void CALLBACK AmbianceTimerProc(HWND hwnd,UINT uMsg,UINT idEvent,DWORD dwTime )
 	}
 	if(nNum >= 0 && nNum <= 8)
 	{
-		g_xSound.PlayAmbianceWav(nNum);		// 盔贰
+		g_xSound.PlayAmbianceWav(nNum);		// 原本
 	}
 	if(nReply>=g_xSound.m_nAmbianceCount)
 	{

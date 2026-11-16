@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 
@@ -22,15 +22,15 @@
 *******************************************************************************************************************/
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::CStatusWnd()
+	函数名 : CStatusWnd::CStatusWnd()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CStatusWnd::CStatusWnd()
@@ -42,15 +42,15 @@ CStatusWnd::CStatusWnd()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::~CStatusWnd()
+	函数名 : CStatusWnd::~CStatusWnd()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CStatusWnd::~CStatusWnd()
@@ -96,13 +96,13 @@ VOID CStatusWnd::Destory()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::CreateStatusWnd()
+	函数名 : CStatusWnd::CreateStatusWnd()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nID
+	目的   :
+	输入   : INT nID
 	         CWHWilImageData* pxWndImage
 	         INT nFrameImgIdx
 	         INT nStartX
@@ -110,21 +110,21 @@ VOID CStatusWnd::Destory()
 	         INT nWidth
 	         INT nHeight
 	         BOOL bCanMove
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::CreateStatusWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
 {
 	CreateGameWnd(nID, pxWndImage, nFrameImgIdx, bCanMove, nStartX, nStartY, nWidth, nHeight);
 
-	// 滚瓢檬扁拳.
+	// 按钮初始化.
 	m_xStatusBtn[_BTN_ID_STATUSCLOSE].CreateGameBtn(pxWndImage,  214,  215, nStartX+222, nStartY+298);
 	m_xStatusBtn[_BTN_ID_STATUS].CreateGameBtn(pxWndImage,  212,  213, nStartX+_BTN_ID_STATUS_X, nStartY+_BTN_ID_STATUS_Y);
 	m_xStatusBtn[_BTN_ID_STATUSMAGIC].CreateGameBtn(pxWndImage,  99, 100, nStartX+_BTN_ID_STATUSMAGIC_X, nStartY+_BTN_ID_STATUSMAGIC_Y);
 
-	// 厘馒芒 檬扁拳.
+	// 装备窗口初始化。
 	SetRect(&m_rcCell[_U_NECKLACE], 187,  70, 190+_INVENTORY_CELL_WIDTH,  70+_INVENTORY_CELL_HEIGHT);
 	SetRect(&m_rcCell[_U_RIGHTHAND], 37, 264,  37+_INVENTORY_CELL_WIDTH, 264+_INVENTORY_CELL_HEIGHT);
 	SetRect(&m_rcCell[_U_CHARM],	74, 264, 74+_INVENTORY_CELL_WIDTH, 264+_INVENTORY_CELL_HEIGHT);
@@ -136,18 +136,18 @@ VOID CStatusWnd::CreateStatusWnd(INT nID, CWHWilImageData* pxWndImage, INT nFram
 	SetRect(&m_rcCell[_U_DRESS],	96,  114, 146,  204);
 	SetRect(&m_rcCell[_U_WEAPON],	48,  70,   91,  154);
 
-	// 付过滚瓢檬扁拳.
+	// 魔法按钮初始化.
 	m_xMagicScrlBtn[0].CreateGameBtn(pxWndImage, 74, 75, nStartX+232, nStartY+147);
 	m_xMagicScrlBtn[1].CreateGameBtn(pxWndImage, 74, 75, nStartX+232, nStartY+253);
 
-	// 付过芒檬扁拳.
+	// 魔法窗口初始化.
 	SetRect(&m_rcMagicCell[0], 39,  77, 74, 112);
 	SetRect(&m_rcMagicCell[1], 39, 115, 74, 149);
 	SetRect(&m_rcMagicCell[2], 39, 152, 74, 186);
 	SetRect(&m_rcMagicCell[3], 39, 188, 74, 223);
 	SetRect(&m_rcMagicCell[4], 39, 225, 74, 260);
 
-	// 付过 函荐 檬扁拳.
+	// 魔法变量初始化.
 	m_pstMyMagic  = NULL;
 	m_bMyMagicCnt = 0;
 }
@@ -156,15 +156,15 @@ VOID CStatusWnd::CreateStatusWnd(INT nID, CWHWilImageData* pxWndImage, INT nFram
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::ShowStatusWnd()
+	函数名 : CStatusWnd::ShowStatusWnd()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::ShowStatusWnd()
@@ -200,7 +200,7 @@ VOID CStatusWnd::ShowStatusWnd()
 
 		ShowCharEquipWnd();
 		SetRect(&rcID, m_rcWnd.left+81, m_rcWnd.top+38, m_rcWnd.left+173, m_rcWnd.top+50);
-		g_xMainWnd.PutsHan(NULL, rcID, RGB(255, 250, 180), RGB(0, 0, 0), g_xGameProc.m_xMyHero.m_szName, g_xMainWnd.CreateGameFont("泵辑眉", 10, 0, FW_BOLD));
+		g_xMainWnd.PutsHan(NULL, rcID, RGB(255, 250, 180), RGB(0, 0, 0), g_xGameProc.m_xMyHero.m_szName, g_xMainWnd.CreateGameFont("Arial", 10, 0, FW_BOLD));
 
 		ShowCharStatus();
 
@@ -220,7 +220,7 @@ VOID CStatusWnd::ShowStatusWnd()
 	case _TYPE_SETMAGIC:
 		ShowCharSetMagicWnd();
 		SetRect(&rcID, m_rcWnd.left+81, m_rcWnd.top+38, m_rcWnd.left+173, m_rcWnd.top+50);
-		g_xMainWnd.PutsHan(NULL, rcID, RGB(255, 250, 180), RGB(0, 0, 0), g_xGameProc.m_xMyHero.m_szName, g_xMainWnd.CreateGameFont("泵辑眉", 10, 0, FW_BOLD));
+		g_xMainWnd.PutsHan(NULL, rcID, RGB(255, 250, 180), RGB(0, 0, 0), g_xGameProc.m_xMyHero.m_szName, g_xMainWnd.CreateGameFont("Arial", 10, 0, FW_BOLD));
 		break;
 	}
 
@@ -233,15 +233,15 @@ VOID CStatusWnd::ShowStatusWnd()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::SetStatusBtnInit()
+	函数名 : CStatusWnd::SetStatusBtnInit()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::SetStatusBtnInit()
@@ -263,20 +263,20 @@ VOID CStatusWnd::SetStatusBtnInit()
 
 /******************************************************************************************************************
 
-	某腐磐 厘馒芒包访.
+	角色装备窗口相关.
 
 *******************************************************************************************************************/
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::ShowCharEquipWnd()
+	函数名 : CStatusWnd::ShowCharEquipWnd()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::ShowCharEquipWnd()
@@ -285,7 +285,7 @@ VOID CStatusWnd::ShowCharEquipWnd()
 
 	ShowGameWnd();
 
-	// 巢磊牢瘤, 咯磊牢瘤备盒.
+	// 区分是男性还是女性.
 	if ( g_xGameProc.m_xImage.m_xImageList[_IMAGE_PROGUSE].NewSetIndex(g_xGameProc.m_xMyHero.m_stFeature.bGender) )
 	{
 		g_xMainWnd.DrawWithImageForComp(
@@ -296,7 +296,7 @@ VOID CStatusWnd::ShowCharEquipWnd()
 						(WORD*)(g_xGameProc.m_xImage.m_xImageList[_IMAGE_PROGUSE].m_pbCurrImage));
 	}
 
-	// 酒捞袍 弊府扁.
+	// 物品绘制.
 	for ( INT nCnt = 0; nCnt < _EQUIP_MAX_CELL; nCnt++ )
 	{
 		if ( m_stEquipItem[nCnt].bSetted )
@@ -327,15 +327,15 @@ VOID CStatusWnd::ShowCharEquipWnd()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::ShowEquipItemState()
+	函数名 : CStatusWnd::ShowEquipItemState()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::ShowEquipItemState()
@@ -355,16 +355,16 @@ VOID CStatusWnd::ShowEquipItemState()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::GetEquipNum()
+	函数名 : CStatusWnd::GetEquipNum()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : POINT ptMouse
-	免仿   : INT 
+	目的   :
+	输入   : POINT ptMouse
+	输出   : INT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 INT CStatusWnd::GetEquipNum(POINT ptMouse)
@@ -387,18 +387,18 @@ INT CStatusWnd::GetEquipNum(POINT ptMouse)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::CheckEquipItem()
+	函数名 : CStatusWnd::CheckEquipItem()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : CItem* pxItem
+	目的   :
+	输入   : CItem* pxItem
 	         BYTE bEquipCell
 	         POINT ptMouse
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CStatusWnd::CheckEquipItem(CItem* pxItem, BYTE bEquipCell, POINT ptMouse)
@@ -441,16 +441,16 @@ BOOL CStatusWnd::CheckEquipItem(CItem* pxItem, BYTE bEquipCell, POINT ptMouse)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::DeleteEquipItem()
+	函数名 : CStatusWnd::DeleteEquipItem()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nEquipNum
-	免仿   : VOID 
+	目的   :
+	输入   : INT nEquipNum
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::DeleteEquipItem(INT nEquipNum)
@@ -482,15 +482,15 @@ VOID CStatusWnd::DeleteEquipItem(INT nMakeIndex, CHAR* szName)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::DeleteAllEquipItem()
+	函数名 : CStatusWnd::DeleteAllEquipItem()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::DeleteAllEquipItem()
@@ -505,18 +505,18 @@ VOID CStatusWnd::DeleteAllEquipItem()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::AddEquipItem()
+	函数名 : CStatusWnd::AddEquipItem()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : CItem xItem
+	目的   :
+	输入   : CItem xItem
 	         INT nEquipNum
 	         BOOL bUseEquipNum
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CStatusWnd::AddEquipItem(CItem xItem, INT nEquipNum, BOOL bUseEquipNum)
@@ -551,17 +551,17 @@ BOOL CStatusWnd::AddEquipItem(CItem xItem, INT nEquipNum, BOOL bUseEquipNum)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::ExtractEquipItem()
+	函数名 : CStatusWnd::ExtractEquipItem()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : CItem* pxItem
+	目的   :
+	输入   : CItem* pxItem
 	         INT nEquipNum
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CStatusWnd::ExtractEquipItem(CItem* pxItem, INT nEquipNum)
@@ -582,17 +582,17 @@ BOOL CStatusWnd::ExtractEquipItem(CItem* pxItem, INT nEquipNum)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::ChangeEquipWithCommon()
+	函数名 : CStatusWnd::ChangeEquipWithCommon()
 
-	累己磊 : 
-	累己老 : 
+	作者   :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nEquipNum
+	目的   :
+	输入   : INT nEquipNum
 	         LPCOMMONITEMSET pstCommonItemSet
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::ChangeEquipWithCommon(INT nEquipNum, LPCOMMONITEMSET pstCommonItemSet)
@@ -620,17 +620,17 @@ VOID CStatusWnd::ChangeEquipWithCommon(INT nEquipNum, LPCOMMONITEMSET pstCommonI
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::SetCommonFromEquip()
+	函数名 : CStatusWnd::SetCommonFromEquip()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nEquipNum
+	目的   :
+	输入   : INT nEquipNum
 	         LPCOMMONITEMSET pstCommonItemSet
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::SetCommonFromEquip(INT nEquipNum, LPCOMMONITEMSET pstCommonItemSet)
@@ -652,17 +652,17 @@ VOID CStatusWnd::SetCommonFromEquip(INT nEquipNum, LPCOMMONITEMSET pstCommonItem
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::SetEquipFromCommon()
+	函数名 : CStatusWnd::SetEquipFromCommon()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nEquipNum
+	目的   :
+	输入   : INT nEquipNum
 	         LPCOMMONITEMSET pstCommonItemSet
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::SetEquipFromCommon(INT nEquipNum, LPCOMMONITEMSET pstCommonItemSet)
@@ -679,16 +679,16 @@ VOID CStatusWnd::SetEquipFromCommon(INT nEquipNum, LPCOMMONITEMSET pstCommonItem
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::SetTakeOnFromEquip()
+	函数名 : CStatusWnd::SetTakeOnFromEquip()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	日期 :
 
-	格利   : 
-	涝仿   : INT nEquipNum
-	免仿   : VOID 
+	目的   :
+	输入   : INT nEquipNum
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::SetTakeOnFromEquip(INT nEquipNum)
@@ -706,16 +706,16 @@ VOID CStatusWnd::SetTakeOnFromEquip(INT nEquipNum)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::SetTakeOnFromCommon()
+	函数名 : CStatusWnd::SetTakeOnFromCommon()
 
-	累己磊 : 
-	累己老 : 
+	作者 : 
+	编写日期 : 
 
-	格利   : 
-	涝仿   : LPCOMMONITEMSET pstCommonItemSet
-	免仿   : VOID 
+	目的   : 
+	输入   : LPCOMMONITEMSET pstCommonItemSet
+	输出   : VOID 
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::SetTakeOnFromCommon(INT nEquipNum, LPCOMMONITEMSET pstCommonItemSet)
@@ -733,15 +733,15 @@ VOID CStatusWnd::SetTakeOnFromCommon(INT nEquipNum, LPCOMMONITEMSET pstCommonIte
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::SetEquipFromTakeOn()
+	函数名 : CStatusWnd::SetEquipFromTakeOn()
 
-	累己磊 : 
-	累己老 : 
+	作者   :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::SetEquipFromTakeOn()
@@ -775,20 +775,20 @@ VOID CStatusWnd::SetEquipFromTakeOn()
 
 /******************************************************************************************************************
 
-	某腐磐 惑怕沥焊芒包访.
+	角色状态信息窗口相关.
 
 *******************************************************************************************************************/
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::ShowCharStatus()
+	函数名 : CStatusWnd::ShowCharStatus()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::ShowCharStatus()
@@ -797,49 +797,49 @@ VOID CStatusWnd::ShowCharStatus()
 
 	POINT	ptStart = {m_rcWnd.left+255+15, m_rcWnd.top+67};
 
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "LEVEL", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "LEVEL", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "%d", g_xGameProc.m_xMyHero.m_stAbility.bLevel);
 	g_xMainWnd.PutsHan(NULL, ptStart.x+53, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "HP", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "HP", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "%d / %d", g_xGameProc.m_xMyHero.m_stAbility.wHP, g_xGameProc.m_xMyHero.m_stAbility.wMaxHP);
 	g_xMainWnd.PutsHan(NULL, ptStart.x+53, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "MP", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "MP", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "%d / %d", g_xGameProc.m_xMyHero.m_stAbility.wMP, g_xGameProc.m_xMyHero.m_stAbility.wMaxMP);
 	g_xMainWnd.PutsHan(NULL, ptStart.x+53, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 	
 	ptStart.y += 20;
 
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "AC", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "AC", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "%d-%d", LOBYTE(g_xGameProc.m_xMyHero.m_stAbility.wAC), HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wAC));
 	g_xMainWnd.PutsHan(NULL, ptStart.x+53, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "MAC", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "MAC", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "%d-%d", LOBYTE(g_xGameProc.m_xMyHero.m_stAbility.wMAC), HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wMAC));
 	g_xMainWnd.PutsHan(NULL, ptStart.x+53, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "DC", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "DC", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "%d-%d", LOBYTE(g_xGameProc.m_xMyHero.m_stAbility.wDC), HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wDC));
 	g_xMainWnd.PutsHan(NULL, ptStart.x+53, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "MC", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "MC", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "%d-%d", LOBYTE(g_xGameProc.m_xMyHero.m_stAbility.wMC), HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wMC));
 	g_xMainWnd.PutsHan(NULL, ptStart.x+53, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "SC", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "SC", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "%d-%d", LOBYTE(g_xGameProc.m_xMyHero.m_stAbility.wSC), HIBYTE(g_xGameProc.m_xMyHero.m_stAbility.wSC));
 	g_xMainWnd.PutsHan(NULL, ptStart.x+53, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
@@ -847,67 +847,67 @@ VOID CStatusWnd::ShowCharStatus()
 	ptStart.y = m_rcWnd.top+67;
 
 	FLOAT fExpRate = (FLOAT)((FLOAT)g_xGameProc.m_xMyHero.m_stAbility.dwExp/(FLOAT)g_xGameProc.m_xMyHero.m_stAbility.dwMaxExp);
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "版氰", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "EXP", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "%.2f%s", fExpRate*100, "%%");
 	g_xMainWnd.PutsHan(NULL, ptStart.x+55, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "啊规公霸", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "Bag Weight", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "%d / %d", g_xGameProc.m_xMyHero.m_stAbility.wWeight, g_xGameProc.m_xMyHero.m_stAbility.wMaxWeight);
 	g_xMainWnd.PutsHan(NULL, ptStart.x+55, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "馒侩公霸", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "Equip Weight", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "%d / %d", g_xGameProc.m_xMyHero.m_stAbility.bWearWeight, g_xGameProc.m_xMyHero.m_stAbility.bMaxWearWeight);
 	g_xMainWnd.PutsHan(NULL, ptStart.x+55, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "剧颊公霸", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "Two-Hand Weight", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "%d / %d", g_xGameProc.m_xMyHero.m_stAbility.bHandWeight, g_xGameProc.m_xMyHero.m_stAbility.bMaxHandWeight);
 	g_xMainWnd.PutsHan(NULL, ptStart.x+55, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "沥犬", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "Accuracy", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "+%d%", g_xGameProc.m_xMyHero.m_stSubAbility.bHitPoint);
 	g_xMainWnd.PutsHan(NULL, ptStart.x+55, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "刮酶", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "Agility", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "+%d%", g_xGameProc.m_xMyHero.m_stSubAbility.bSpeedPoint);
 	g_xMainWnd.PutsHan(NULL, ptStart.x+55, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 	
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "付过雀乔", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "Magic Evasion", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "+%d%", g_xGameProc.m_xMyHero.m_stSubAbility.wAntiMagic*10);
 	g_xMainWnd.PutsHan(NULL, ptStart.x+55, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 	
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "吝刀雀乔", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "Poison Resist", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "+%d%", g_xGameProc.m_xMyHero.m_stSubAbility.bAntiPoison*10);
 	g_xMainWnd.PutsHan(NULL, ptStart.x+55, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 	
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "吝刀雀汗", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "Poison Recovery", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "+%d%", g_xGameProc.m_xMyHero.m_stSubAbility.bPoisonRecover*10);
 	g_xMainWnd.PutsHan(NULL, ptStart.x+55, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 	
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "眉仿雀汗", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "HP Recovery", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "+%d%", g_xGameProc.m_xMyHero.m_stSubAbility.bHealthRecover*10);
 	g_xMainWnd.PutsHan(NULL, ptStart.x+55, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 	ptStart.y += 20;
 	
-	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "付仿雀汗", g_xMainWnd.CreateGameFont("奔覆眉", 9, 0, FW_BOLD));
+	g_xMainWnd.PutsHan(NULL, ptStart.x, ptStart.y, RGB(200, 225, 250), RGB(0, 0, 0), "MP Recovery", g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_BOLD));
 	sprintf(szBuff, "+%d%", g_xGameProc.m_xMyHero.m_stSubAbility.bSpellRecover*10);
 	g_xMainWnd.PutsHan(NULL, ptStart.x+55, ptStart.y, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 }
@@ -927,7 +927,7 @@ VOID CStatusWnd::ShowCharStatus()
 
 /******************************************************************************************************************
 
-	某腐磐 付过芒包访.
+	角色魔法窗口相关.
 
 *******************************************************************************************************************/
 VOID CStatusWnd::ShowCharSetMagicWnd()
@@ -937,10 +937,10 @@ VOID CStatusWnd::ShowCharSetMagicWnd()
 	CHAR szLevel[MAX_PATH];
 
 /*	CHAR* szSkillName[] =
-	{ 
-		"馆岿八过",   "鞠楷贱",   "拳堪浅",   "亲付柳过", "措瘤盔龋",   "堪荤厘",	"公怕焊",     "汾去拜",   "酒傍青过", "荤磊辣雀", "拳堪厘",	    "雀汗贱",
-		"搬拌",	      "措雀汗",   "汾汲拳",   "汾牢厘",   "归榜家券贱", "葫汲浅",	"措篮脚",     "林贱狼阜", "沤扁颇楷", "瘤堪贱",   "气混拌",     "气凯颇",
-		"陛碍拳堪厘", "抗档",	  "绢八贱",	  "碍拜",	  "堪拳搬",     "篮脚",		"脚荐家券",	  "老堡八过",  "寇荐八过",
+	{
+		"半月剑法",   "暗燃术",   "火焰风",   "降魔真法", "大地援护",   "焰蛇掌",	"无怠步",     "雷魂击",   "亚空行法", "狮子轮回", "火焰掌",	    "恢复术",
+		"结界",	      "大恢复",   "雷雪花",   "雷印掌",   "白骨召唤术", "冰雪风",	"大隐身",     "咒术之幕", "探气破燃", "地焰术",   "爆杀界",     "爆裂波",
+		"金刚火焰掌", "锐刀",	  "御剑术",	  "强击",	  "焰火诀",     "隐身",		"神兽召唤",	  "日光剑法",  "外修剑法",
 	};
 */
 	ShowGameWnd();
@@ -1001,17 +1001,17 @@ VOID CStatusWnd::ShowCharSetMagicWnd()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::SetMagicKey()
+	函数名 : CStatusWnd::SetMagicKey()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : POINT ptMouse
+	目的   :
+	输入   : POINT ptMouse
 	         BYTE bKey
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CStatusWnd::SetMagicKey(POINT ptMouse, BYTE bKey)
@@ -1057,16 +1057,16 @@ BOOL CStatusWnd::SetMagicKey(POINT ptMouse, BYTE bKey)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::GetMagicByKey()
+	函数名 : CStatusWnd::GetMagicByKey()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : BYTE bKey
-	免仿   : LPCLIENTMAGICRCD 
+	目的   :
+	输入   : BYTE bKey
+	输出   : LPCLIENTMAGICRCD
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 LPCLIENTMAGICRCD CStatusWnd::GetMagicByKey(BYTE bKey)
@@ -1113,18 +1113,18 @@ LPCLIENTMAGICRCD CStatusWnd::GetMagicByKey(BYTE bKey)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::OnKeyDown()
+	函数名 : CStatusWnd::OnKeyDown()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : WPARAM wParam
+	目的   :
+	输入   : WPARAM wParam
 	         LPARAM lParam
 	         POINT ptMouse
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改人] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CStatusWnd::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse)
@@ -1176,16 +1176,16 @@ BOOL CStatusWnd::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::OnLButtonUp()
+	函数名 : CStatusWnd::OnLButtonUp()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : POINT ptMouse
-	免仿   : BOOL 
+	目的   :
+	输入   : POINT ptMouse
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
@@ -1239,28 +1239,28 @@ BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 		}
 	}
 
-	// 厘馒芒 劝己拳 灯阑版快.
+	// 装备窗口处于激活状态时.
 	if ( m_bType == _TYPE_EQUIP || m_bType == _TYPE_STATUS )
 	{
 		nEquipNum = GetEquipNum(ptMouse);
-		// 付快胶啊 厘馒芒康开俊 乐阑锭.
+		// 鼠标位于装备窗口区域时.
 		if ( nEquipNum != -1)
 		{
-			// 努腐茄厘馒芒俊 酒捞袍捞 乐阑版快.
+			// 点击的装备窗口中有物品时.
 			if ( m_stEquipItem[nEquipNum].bSetted )
 			{
-				// 傍烹(付快胶)酒捞袍悸捞 厚绢乐栏搁,
+				// 如果公共(鼠标)物品集为空，
 				if ( !pstCommonItemSet->bSetted )
 				{				  
-					// 付快胶俊 酒捞袍阑 嘿咯初栏搁 牢亥配府 扩档俊辑 努腐窍绰鉴埃 CM_TAKEOFFITEM皋矫瘤甫 焊辰促.
+					// 把物品挂在鼠标上时, 在背包窗口点击的瞬间会发送 CM_TAKEOFFITEM 消息.
 					SetCommonFromEquip(nEquipNum, pstCommonItemSet);
 				}
-				// 傍烹(付快胶)酒捞袍悸篮 乐绊, 辑滚肺何磐 览翠脚龋甫 扁促府绰 吝捞 酒聪搁,
-				// 傍烹酒捞袍阑 m_stTakeOnItemSet俊 酒捞袍阑 技泼秦滴绊, 泅犁 努腐等 厘馒芒 酒捞袍阑 傍烹酒捞袍栏肺 技泼窍绊唱辑,
-				// CM_TAKEONITEM皋矫瘤甫 焊辰促.
+				// 存在公共(鼠标)物品集，且不在等待服务器响应信号时，
+				// 把物品预先设置到公共物品 m_stTakeOnItemSet 中, 再把当前点击的装备窗口物品设置为公共物品后,
+				// 发送 CM_TAKEONITEM 消息.
 				else if ( pstCommonItemSet->bSetted && !pstCommonItemSet->bWaitResponse )
 				{
-					// 焊郴扁傈 康开捞 辑肺 嘎绰啊(馆瘤磊府俊 馆瘤啊 肋甸绢艾绰瘤)甫 眉农茄促.
+					// 检查发送前的区域是否相互匹配(戒指是否放进了戒指位置).
 					if ( CheckEquipItem(&pstCommonItemSet->xItem, nEquipNum, ptMouse) )
 					{
 						SetTakeOnFromCommon(nEquipNum, pstCommonItemSet);
@@ -1270,15 +1270,15 @@ BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 					}
 				}
 			}
-			// 努腐茄 厘馒芒俊 酒捞袍捞 绝阑版快.
+			// 点击的装备窗口中没有物品时.
 			else
 			{
-				// 傍烹(付快胶)酒捞袍悸篮 乐绊, 辑滚肺何磐 览翠脚龋甫 扁促府绰 吝捞 酒聪搁, 傍烹酒捞袍阑 m_stTakeOnItemSet俊 酒捞袍阑 技泼秦敌促.
+				// 存在公共(鼠标)物品集, 且不是在等待服务器响应信号时, 就把公共物品设置到 m_stTakeOnItemSet 中.
 				if ( pstCommonItemSet->bSetted && !pstCommonItemSet->bWaitResponse )
 				{	
 					if ( CheckEquipItem(&pstCommonItemSet->xItem, nEquipNum, ptMouse) )
 					{
-						// 辑滚肺 皋矫瘤甫 焊尘鞘夸绰 绝促. 酒捞袍阑 哈菌促啊 促矫馒侩茄版快.
+						// 无需向服务器发送消息。卸下物品后又重新穿戴的情况。
 						if ( pstCommonItemSet->bIsEquipItem )
 						{
 							SetEquipFromCommon(pstCommonItemSet->xItem.m_shCellNum, pstCommonItemSet);
@@ -1303,16 +1303,16 @@ BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::OnMouseMove()
+	函数名 : CStatusWnd::OnMouseMove()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : POINT ptMouse
-	免仿   : VOID 
+	目的   :
+	输入   : POINT ptMouse
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::OnMouseMove(POINT ptMouse)
@@ -1337,17 +1337,17 @@ VOID CStatusWnd::OnMouseMove(POINT ptMouse)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::OnLButtonDown()
+	函数名 : CStatusWnd::OnLButtonDown()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : LPCOMMONITEMSET pstCommonItemSet
+	目的   :
+	输入   : LPCOMMONITEMSET pstCommonItemSet
 	         POINT ptMouse
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CStatusWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
@@ -1386,15 +1386,15 @@ BOOL CStatusWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::OnScrollDown()
+	函数名 : CStatusWnd::OnScrollDown()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::OnScrollDown()
@@ -1409,15 +1409,15 @@ VOID CStatusWnd::OnScrollDown()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CStatusWnd::OnScrollUp()
+	函数名 : CStatusWnd::OnScrollUp()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CStatusWnd::OnScrollUp()

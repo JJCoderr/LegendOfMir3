@@ -46,13 +46,13 @@ BOOL CNPCTxtAnalysis::FreeAllMsg(VOID)
 {
 	if(m_bInited)
 	{
-		m_pxpTxt->ClearAllNodes();							// 盒籍等 臂 葛滴 朝府扁
-		m_pxBtn->ReleaseButtons();							// 积己等 窜捧 葛滴 朝府扁
+		m_pxpTxt->ClearAllNodes();							// 清除所有已解析的文字
+		m_pxBtn->ReleaseButtons();							// 丢弃所有已生成的单投
 	}
 
 	if(m_pSourceText!=NULL)
 	{
-		delete[] m_pSourceText;								// 罐篮 家胶档 葛滴 朝府扁
+		delete[] m_pSourceText;								// 接收到的源码也全部清除
 		m_pSourceText = NULL;
 	}
 
@@ -60,8 +60,8 @@ BOOL CNPCTxtAnalysis::FreeAllMsg(VOID)
 	return TRUE;
 }
 
-// Divider 绰 阿 CHAR喊肺 葛滴 八免茄促.
-// 搬苞绰 罐绰 溜矫 Memcpy甫 且巴.. 酒聪搁 静饭扁 蔼栏 凳...
+// Divider 对每个 CHAR 都进行检测。
+// 结果要在收到的同时立即进行 Memcpy.. 否则会变成垃圾值...
 CHAR* CNPCTxtAnalysis::GetValidStr(CHAR* szSource,CHAR* szDest,CHAR* Divider)
 {
 	CHAR* szBuffer;
@@ -75,21 +75,21 @@ CHAR* CNPCTxtAnalysis::GetValidStr(CHAR* szSource,CHAR* szDest,CHAR* Divider)
 	nBuf_Count	=	0;
 	nCount		=	0;
 
-	if (nSrcLen >= MAX_BUFFER_SIZE - 1 )				// 弥措 辨捞焊促 辨搁 角青阑 秒家 茄促.
+	if (nSrcLen >= MAX_BUFFER_SIZE - 1 )				// 超过最大长度则取消执行.
 	{
 		ZeroMemory(szDest,sizeof(szDest));
 		delete[] szBuffer;
 		return NULL;
 	}
 
-	if (strlen(szSource)==0)						// 家胶 Text啊 绝栏搁 角青阑 秒家 茄促.
+	if (strlen(szSource)==0)						// 若无源 Text 则取消执行。
 	{
 		ZeroMemory(szDest,sizeof(szDest));
 		delete[] szBuffer;
 		return szDest;
 	}
 
-	nArrCount = strlen(Divider)/sizeof(char);		// Divider狼 辨捞甫 备茄促.
+	nArrCount = strlen(Divider)/sizeof(char);		// 求 Divider 的长度。
 
 	while(true)
 	{
@@ -100,7 +100,7 @@ CHAR* CNPCTxtAnalysis::GetValidStr(CHAR* szSource,CHAR* szDest,CHAR* Divider)
 			Ch=szSource[nCount];
 			for(int i = 0; i<= nArrCount-1;i++)		
 			{
-				if(Ch == Divider[i])				// Divider 八免
+				if(Ch == Divider[i])				// Divider 检测
 				{
 					goto CATCH_DIV;
 				}
@@ -157,14 +157,14 @@ CHAR* CNPCTxtAnalysis::GetValidStr(CHAR* szSource,CHAR* szDest,CHAR Divider)
 	nBuf_Count	=	0;
 	nCount		=	0;
 
-	if (nSrcLen >= MAX_BUFFER_SIZE - 1 )				// 弥措 辨捞焊促 辨搁 角青阑 秒家 茄促.
+	if (nSrcLen >= MAX_BUFFER_SIZE - 1 )				// 超过最大长度则取消执行.
 	{
 		ZeroMemory(szDest,sizeof(szDest));
 		delete[] szBuffer;
 		return NULL;
 	}
 
-	if (strlen(szSource)==0)							// 家胶 Text啊 绝栏搁 角青阑 秒家 茄促.
+	if (strlen(szSource)==0)							// 若无源 Text 则取消执行。
 	{
 		ZeroMemory(szDest,sizeof(szDest));
 		delete[] szBuffer;
@@ -178,7 +178,7 @@ CHAR* CNPCTxtAnalysis::GetValidStr(CHAR* szSource,CHAR* szDest,CHAR Divider)
 		if( nCount <= nSrcLen )
 		{
 			Ch=szSource[nCount];
-			if(Ch == Divider)				// Divider 八免
+			if(Ch == Divider)				// Divider 检测
 			{
 				goto CATCH_DIV;
 			}
@@ -238,14 +238,14 @@ CHAR* CNPCTxtAnalysis::GetValidStr(CHAR* szSource,INT nSrcLen,CHAR* szDest,INT n
 	nBuf_Count	=	0;
 	nCount		=	0;
 
-	if (nSrcLen >= MAX_BUFFER_SIZE - 1 )				// 弥措 辨捞焊促 辨搁 角青阑 秒家 茄促.
+	if (nSrcLen >= MAX_BUFFER_SIZE - 1 )				// 超过最大长度则取消执行.
 	{
 		ZeroMemory(szDest,nDestLen);
 		delete[] szBuffer;
 		return NULL;
 	}
 
-	if (strlen(szSource)==0)							// 家胶 Text啊 绝栏搁 角青阑 秒家 茄促.
+	if (strlen(szSource)==0)							// 若无源 Text 则取消执行。
 	{
 		ZeroMemory(szDest,nDestLen);
 		delete[] szBuffer;
@@ -259,7 +259,7 @@ CHAR* CNPCTxtAnalysis::GetValidStr(CHAR* szSource,INT nSrcLen,CHAR* szDest,INT n
 		if( nCount <= nSrcLen )
 		{
 			Ch=szSource[nCount];
-			if(Ch == Divider)				// Divider 八免
+			if(Ch == Divider)				// Divider 检测
 			{
 				goto CATCH_DIV;
 			}
@@ -442,7 +442,7 @@ int CNPCTxtAnalysis::FindChr(CHAR* szStr,CHAR* ch)
 			}
 			if(nChk == nLenObject)
 				Conditions = false;
-			// Text啊 葛滴 老摹 且 版快父 八免
+			// 仅当 Text 全部一致时检出
 		}
 		Count++;
 	}
@@ -499,7 +499,7 @@ void CNPCTxtAnalysis::AnalySisText(CDLList<CHAR*>* pxpTxt,INT nLineMax)
 					CHAR*	Fdata;
 					Fdata	=	new CHAR[MAX_BUFFER_SIZE];
 					ZeroMemory(Fdata,MAX_BUFFER_SIZE);
-					// <>Tag 盒府 Text Button 积己
+					// <>Tag 分离 Text Button 创建
 					if((szStr[0])!='<')
 					{
 						szTemp =  GetValidStr(szStr,Fdata,'<');
@@ -507,7 +507,7 @@ void CNPCTxtAnalysis::AnalySisText(CDLList<CHAR*>* pxpTxt,INT nLineMax)
 						strcat(szStr,szTemp);				
 					}	// endif
 
-					// <>救俊 乐绰 郴侩 CmdStr肺
+					// <> 内的内容作为 CmdStr
 					szTemp = ArrestString(szStr,'<','>',CmdStr);
 					strcpy(szStr,szTemp);
 					szTemp = NULL;
@@ -516,87 +516,87 @@ void CNPCTxtAnalysis::AnalySisText(CDLList<CHAR*>* pxpTxt,INT nLineMax)
 					{
 						switch(UpperCase(CmdStr[0]))
 						{
-							case '0':		// <0> 老版快 臂磊祸 BLACK
+							case '0':		// <0> 时文字颜色 BLACK
 							{
 								cColor = RGB(0,0,0);
 							}
 							break;
-							case '1':		// <1> 老版快 臂磊祸 RED
+							case '1':		// <1> 的情况下文字颜色 RED
 							{
 								cColor = RGB(255,0,0);
 							}
 							break;
-							case '2':		// <2> 老版快 臂磊祸 GREEN
+							case '2':		// <2> 的情况下文字颜色 GREEN
 							{
 								cColor = RGB(0,128,0);
 							}
 							break;
-							case '3':		// <3> 老版快 臂磊祸 Olive
+							case '3':		// <3> 时文字颜色 Olive
 							{
 								cColor = RGB(128,128,0);
 							}
 							break;
-							case '4':		// <4> 老版快 臂磊祸 GRAY
+							case '4':		// 为 <4> 时文字颜色 GRAY
 							{
 								cColor = RGB(128,128,128);
 							}
 							break;
-							case '5':		// <5> 老版快 臂磊祸 Maroon
+							case '5':		// <5> 的情况下文字颜色 Maroon
 							{
 								cColor = RGB(128,0,0);
 							}
 							break;
-							case '6':		// <6> 老版快 臂磊祸 Teal
+							case '6':		// <6> 时文字颜色为 Teal
 							{
 								cColor = RGB(0,128,128);
 							}
 							break;
-							case '7':		// <7> 老版快 臂磊祸 Navy
+							case '7':		// <7> 时文字颜色 Navy
 							{
 								cColor = RGB(0,0,128);
 							}
 							break;
-							case '8':		// <8> 老版快 臂磊祸 Silver
+							case '8':		// <8> 时文字颜色为 Silver
 							{
 								cColor = RGB(192,192,192);
 							}
 							break;
-							case '9':		// <9> 老版快 臂磊祸 Purple
+							case '9':		// <9> 时为文字颜色 Purple
 							{
 								cColor = RGB(128,0,128);
 							}
 							break;
-							case 'A':		// <A> 老版快 臂磊祸 Lime
+							case 'A':		// <A> 的情况下文字颜色 Lime
 							{
 								cColor = RGB(0,255,0);
 							}
 							break;
-							case 'B':		// <B> 老版快 臂磊祸 Blue
+							case 'B':		// <B> 时文字颜色 Blue
 							{
 								cColor = RGB(0,0,255);
 							}
 							break;
-							case 'C':		// <C> 老版快 臂磊祸 White
+							case 'C':		// <C> 时文字颜色 White
 							{
 								cColor = RGB(255,255,255);
 							}
 							break;
-							case 'D':		// <D> 老版快 臂磊祸 Fuchsia
+							case 'D':		// <D> 时文字颜色 Fuchsia
 							{
 								cColor = RGB(255,0,255);
 							}
 							break;
-							case 'E':		// <E> 老版快 臂磊祸 Aqua
+							case 'E':		// <E> 时文字颜色 Aqua
 							{
 								cColor = RGB(0,255,255);
 							}
 							break;
-							case 'F':		// <F> 老版快 臂磊祸 Yellow
+							case 'F':		// <F> 时文字颜色 Yellow
 							{
 								cColor = RGB(255,255,0);
 							}
 							break;
-							case 'X':		// <Z> 老版快 臂磊祸 Default
+							case 'X':		// <Z> 时文字颜色 Default
 							{
 								cColor = RGB(1,1,1);
 							}
@@ -612,17 +612,17 @@ void CNPCTxtAnalysis::AnalySisText(CDLList<CHAR*>* pxpTxt,INT nLineMax)
 					}  // endif
 					else
 					{
-						// 辆搬 <> 啊 乐栏搁 辆丰
+						// 若有结束符 <> 则结束
 					}  // endifelse
 
-					if(strlen(Fdata)!=0)		// '<' 傈俊 乐绰 Text甫 老馆 Text俊 眠啊
-					{	// 老馆 Text 眠啊
+					if(strlen(Fdata)!=0)		// 将 '<' 之前的 Text 添加到普通 Text 中
+					{	// 添加普通 Text
 						CMText* pxTmpTxt;
 						pxTmpTxt = new CMText;
 						pxTmpTxt->pText = new CHAR[strlen(Fdata)+1];
-						// Text 汲沥
+						// Text 设置
 						pxTmpTxt->bDrawCenter = DrawCenter;
-						pxTmpTxt->fColor =	cColor!=RGB(1,1,1) ? cColor : DEFAULT_TXT_COLOR;		// 祸篮 Tag俊 狼秦 搬沥秦 林绢具窃.
+						pxTmpTxt->fColor =	cColor!=RGB(1,1,1) ? cColor : DEFAULT_TXT_COLOR;		// 颜色必须由 Tag 决定。
 						pxTmpTxt->nLine = nLineCount;
 						pxTmpTxt->nPosx = nPosX;
 						strcpy(pxTmpTxt->pText,Fdata);
@@ -644,7 +644,7 @@ void CNPCTxtAnalysis::AnalySisText(CDLList<CHAR*>* pxpTxt,INT nLineMax)
 						tRect.right = tSize.cx;					
 						tRect.bottom = tSize.cy;
 
-						// Text 滚瓢 积己
+						// 创建 Text 按钮
 						m_pxBtn->AddButton(CmdStr,tRect,nLineCount,CmdParamStr,(cColor!=RGB(1,1,1) ? cColor : DEFAULT_BTN_COLOR),DEFAULT_BTN_CLICK_COLOR);
 
 						nPosX=nPosX+tSize.cx;
@@ -656,12 +656,12 @@ void CNPCTxtAnalysis::AnalySisText(CDLList<CHAR*>* pxpTxt,INT nLineMax)
 						Fdata = NULL;
 					}
 				} // end while
-				// '>'缔何盒 趣篮 '<','>' 绝绰 扁成 Text老 版快
+				// '>' 之后的部分，或者没有 '<'、'>' 的普通 Text 的情况
 				if(strlen(szStr)!=0)
 				{
 					do
 					{
-						// Line 阑 唱穿绊 弊 搬苞甫 Text List 俊 持绰促.
+						// 拆分 Line 并把结果放入 Text List 中.
 						CHAR  *szTemp1=NULL,*szTemp2=NULL;
 						szTemp1 = new CHAR[MAX_BUFFER_SIZE];
 						ZeroMemory(szTemp1,MAX_BUFFER_SIZE);
@@ -670,14 +670,14 @@ void CNPCTxtAnalysis::AnalySisText(CDLList<CHAR*>* pxpTxt,INT nLineMax)
 						szTemp2 =  GetValidStr(szStr,szTemp1,LINE_DIVIDER);	
 						strcpy(szStr,szTemp2);
 						
-						// Text 积己
+						// Text 创建
 						CMText* pxTmpTxt;
 						pxTmpTxt = new CMText;
 						pxTmpTxt->pText = new CHAR[strlen(szTemp1)+1];
 
-						// Text 汲沥
+						// Text 设置
 						pxTmpTxt->bDrawCenter = DrawCenter;
-						pxTmpTxt->fColor =	cColor!=RGB(1,1,1) ? cColor : DEFAULT_TXT_COLOR;			// 烙矫 Tag俊 狼窍咯 祸函券
+						pxTmpTxt->fColor =	cColor!=RGB(1,1,1) ? cColor : DEFAULT_TXT_COLOR;			// 依据临时 Tag 进行颜色转换
 						pxTmpTxt->nLine = nLineCount;
 						pxTmpTxt->nPosx = nPosX;
 						strcpy(pxTmpTxt->pText,szTemp1);
@@ -693,7 +693,7 @@ void CNPCTxtAnalysis::AnalySisText(CDLList<CHAR*>* pxpTxt,INT nLineMax)
 			}	// endif
 			// Line Feed
 			nLineCount ++;
-			nPosX = 20;		//矫累篮 20 pixel 何磐
+			nPosX = 20;		//从 20 pixel 开始
 			pxpTxt->MoveNextNode();
 		} // end while
 		delete[] CmdParamStr;
@@ -751,7 +751,7 @@ void CNPCTxtAnalysis::AnalySisText(CHAR* Msg)
 					CHAR*	Fdata;
 					Fdata	=	new CHAR[MAX_BUFFER_SIZE];
 					ZeroMemory(Fdata,MAX_BUFFER_SIZE);
-					// <>Tag 盒府 Text Button 积己
+					// <>Tag 分离 Text Button 创建
 					if((szStr[0])!='<')
 					{
 						szTemp =  GetValidStr(szStr,Fdata,'<');
@@ -759,7 +759,7 @@ void CNPCTxtAnalysis::AnalySisText(CHAR* Msg)
 						strcat(szStr,szTemp);				
 					}
 
-					// <>救俊 乐绰 郴侩 CmdStr肺
+					// <> 内的内容作为 CmdStr
 					szTemp = ArrestString(szStr,'<','>',CmdStr);
 					strcpy(szStr,szTemp);
 					szTemp = NULL;
@@ -768,103 +768,103 @@ void CNPCTxtAnalysis::AnalySisText(CHAR* Msg)
 					{
 						switch(UpperCase(CmdStr[0]))
 						{
-							case '0':		// <0> 老版快 臂磊祸 BLACK
+							case '0':		// <0> 时文字颜色 BLACK
 							{
 								cColor = RGB(0,0,0);
 								continue;
 							}
 							break;
-							case '1':		// <1> 老版快 臂磊祸 RED
+							case '1':		// <1> 的情况下文字颜色 RED
 							{
 								cColor = RGB(255,0,0);
 								continue;
 							}
 							break;
-							case '2':		// <2> 老版快 臂磊祸 GREEN
+							case '2':		// <2> 的情况下文字颜色 GREEN
 							{
 								cColor = RGB(0,128,0);
 								continue;
 							}
 							break;
-							case '3':		// <3> 老版快 臂磊祸 Olive
+							case '3':		// <3> 时文字颜色 Olive
 							{
 								cColor = RGB(128,128,0);
 								continue;
 							}
 							break;
-							case '4':		// <4> 老版快 臂磊祸 GRAY
+							case '4':		// 为 <4> 时文字颜色 GRAY
 							{
 								cColor = RGB(128,128,128);
 								continue;
 							}
 							break;
-							case '5':		// <5> 老版快 臂磊祸 Maroon
+							case '5':		// <5> 的情况下文字颜色 Maroon
 							{
 								cColor = RGB(128,0,0);
 								continue;
 							}
 							break;
-							case '6':		// <6> 老版快 臂磊祸 Teal
+							case '6':		// <6> 时文字颜色为 Teal
 							{
 								cColor = RGB(0,128,128);
 								continue;
 							}
 							break;
-							case '7':		// <7> 老版快 臂磊祸 Navy
+							case '7':		// <7> 时文字颜色 Navy
 							{
 								cColor = RGB(0,0,128);
 								continue;
 							}
 							break;
-							case '8':		// <8> 老版快 臂磊祸 Silver
+							case '8':		// <8> 时文字颜色为 Silver
 							{
 								cColor = RGB(192,192,192);
 								continue;
 							}
 							break;
-							case '9':		// <9> 老版快 臂磊祸 Purple
+							case '9':		// <9> 时为文字颜色 Purple
 							{
 								cColor = RGB(128,0,128);
 								continue;
 							}
 							break;
-							case 'A':		// <A> 老版快 臂磊祸 Lime
+							case 'A':		// <A> 的情况下文字颜色 Lime
 							{
 								cColor = RGB(0,255,0);
 								continue;
 							}
 							break;
-							case 'B':		// <B> 老版快 臂磊祸 Blue
+							case 'B':		// <B> 时文字颜色 Blue
 							{
 								cColor = RGB(0,0,255);
 								continue;
 							}
 							break;
-							case 'C':		// <C> 老版快 臂磊祸 White
+							case 'C':		// <C> 时文字颜色 White
 							{
 								cColor = RGB(255,255,255);
 								continue;
 							}
 							break;
-							case 'D':		// <D> 老版快 臂磊祸 Fuchsia
+							case 'D':		// <D> 时文字颜色 Fuchsia
 							{
 								cColor = RGB(255,0,255);
 								continue;
 							}
 							break;
-							case 'E':		// <E> 老版快 臂磊祸 Aqua
+							case 'E':		// <E> 时文字颜色 Aqua
 							{
 								cColor = RGB(0,255,255);
 								continue;
 							}
 							break;
-							case 'F':		// <F> 老版快 臂磊祸 Yellow
+							case 'F':		// <F> 时文字颜色 Yellow
 							{
 								cColor = RGB(255,255,0);
 								continue;
 							}
 							break;
-							case 'X':		// <Z> 老版快 臂磊祸 Default
+							case 'X':		// <Z> 时文字颜色 Default
 							{
 
 								cColor = RGB(1,1,1);
@@ -876,7 +876,7 @@ void CNPCTxtAnalysis::AnalySisText(CHAR* Msg)
 /*						szTemp = new CHAR[2];
 						strncpy(szTemp,CmdStr,2);
 						szTemp = UpperCase(szTemp);
-						if(strncmp(szTemp,"/C",2)==0)		// </C> 老 版快 啊款单 嘛扁 场
+						if(strncmp(szTemp,"/C",2)==0)		// </C> 时居中绘制结束
 						{
 							DrawCenter = FALSE;
 							delete[] szTemp;
@@ -892,17 +892,17 @@ void CNPCTxtAnalysis::AnalySisText(CHAR* Msg)
 					}
 					else
 					{
-						// 辆搬 <> 啊 乐栏搁 辆丰
+						// 若有结束符 <> 则结束
 					}
 
-					if(strlen(Fdata)!=0)		// '<' 傈俊 乐绰 Text甫 老馆 Text俊 眠啊
-					{	// 老馆 Text 眠啊
+					if(strlen(Fdata)!=0)		// 将 '<' 之前的 Text 添加到普通 Text 中
+					{	// 添加普通 Text
 						CMText* pxTmpTxt;
 						pxTmpTxt = new CMText;
 						pxTmpTxt->pText = new CHAR[strlen(Fdata)+1];
-						// Text 汲沥
+						// Text 设置
 						pxTmpTxt->bDrawCenter = DrawCenter;
-						pxTmpTxt->fColor =	cColor!=RGB(1,1,1) ? cColor : DEFAULT_TXT_COLOR;		// 祸篮 Tag俊 狼秦 搬沥秦 林绢具窃.
+						pxTmpTxt->fColor =	cColor!=RGB(1,1,1) ? cColor : DEFAULT_TXT_COLOR;		// 颜色必须由 Tag 决定。
 						pxTmpTxt->nLine = nLineCount;
 						pxTmpTxt->nPosx = nPosX;
 						strcpy(pxTmpTxt->pText,Fdata);
@@ -922,19 +922,19 @@ void CNPCTxtAnalysis::AnalySisText(CHAR* Msg)
 						tRect.right = tSize.cx;					
 						tRect.bottom = tSize.cy;
 
-						// Text 滚瓢 积己
+						// 创建 Text 按钮
 						m_pxBtn->AddButton(CmdStr,tRect,nLineCount,CmdParamStr,(cColor!=RGB(1,1,1) ? cColor : DEFAULT_BTN_COLOR),DEFAULT_BTN_CLICK_COLOR);
 
 						nPosX=nPosX+tSize.cx;
 
 					}	// Text Button
 				}
-				// '>'缔何盒 趣篮 '<','>' 绝绰 扁成 Text老 版快
+				// '>' 之后的部分，或者没有 '<'、'>' 的普通 Text 的情况
 				if(strlen(szStr)!=0)
 				{
 					do
 					{
-						// Line 阑 唱穿绊 弊 搬苞甫 Text List 俊 持绰促.
+						// 拆分 Line 并把结果放入 Text List 中.
 						CHAR  *szTemp1=NULL,*szTemp2=NULL;
 						szTemp1 = new CHAR[MAX_BUFFER_SIZE];
 						ZeroMemory(szTemp1,MAX_BUFFER_SIZE);
@@ -943,14 +943,14 @@ void CNPCTxtAnalysis::AnalySisText(CHAR* Msg)
 						szTemp2 =  GetValidStr(szStr,szTemp1,LINE_DIVIDER);	
 						strcpy(szStr,szTemp2);
 						
-						// Text 积己
+						// Text 创建
 						CMText* pxTmpTxt;
 						pxTmpTxt = new CMText;
 						pxTmpTxt->pText = new CHAR[strlen(szTemp1)+1];
 
-						// Text 汲沥
+						// Text 设置
 						pxTmpTxt->bDrawCenter = DrawCenter;
-						pxTmpTxt->fColor =	cColor!=RGB(1,1,1) ? cColor : DEFAULT_TXT_COLOR;			// 烙矫 Tag俊 狼窍咯 祸函券
+						pxTmpTxt->fColor =	cColor!=RGB(1,1,1) ? cColor : DEFAULT_TXT_COLOR;			// 依据临时 Tag 进行颜色转换
 						pxTmpTxt->nLine = nLineCount;
 						pxTmpTxt->nPosx = nPosX;
 						strcpy(pxTmpTxt->pText,szTemp1);
@@ -961,7 +961,7 @@ void CNPCTxtAnalysis::AnalySisText(CHAR* Msg)
 
 						delete[] szTemp1;
 
-						nPosX = 20;		// 矫累篮 20 pixel 何磐
+						nPosX = 20;		// 从 20 pixel 开始
 						nLineCount ++;	// Line Feed
 					}while(strlen(szStr)!=0);
 					// Draw Normal Text
@@ -969,7 +969,7 @@ void CNPCTxtAnalysis::AnalySisText(CHAR* Msg)
 			}
 			// Line Feed
 			nLineCount ++;
-			nPosX = 20;		//矫累篮 20 pixel 何磐
+			nPosX = 20;		//从 20 pixel 开始
 		}
 		delete CmdParamStr;
 		delete CmdStr;
@@ -992,7 +992,7 @@ BOOL CNPCTxtAnalysis::IsInitialized(VOID)
 	return m_bInited;
 }
 
-// 侩扁
+// 勇气
 BOOL CNPCTxtAnalysis::StringDivide(INT nDivideWidth, INT& nDividedLine, CHAR* szSrc,CDLList<CHAR*>* m_pxpStr)
 {
 	CHAR szTmpCheck[MAX_PATH];
@@ -1014,18 +1014,18 @@ BOOL CNPCTxtAnalysis::StringDivide(INT nDivideWidth, INT& nDividedLine, CHAR* sz
 			ZeroMemory(szTmpCheck, MAX_PATH);
 			nEndLen = nCnt+1;
 
-			// 泅犁何盒鳖瘤狼 巩磊凯阑 佬绰促.
+			// 读取截至当前部分的字符串。
 			memcpy(&szTmpCheck, &szSrc[nStartLen], nEndLen-nStartLen);
 			SIZE sizeLen;
 			sizeLen = m_pxGWND->GetStrLength(NULL,NULL, szTmpCheck);
 
-			// 泅犁鳖瘤 佬绢柯 何盒捞 倾侩承捞甫 逞绢脊阑锭.
+			// 当前已读取的部分超出允许宽度时。
 			if ( sizeLen.cx > nDivideWidth )
 			{
-				// 泅犁 2官捞飘 巩磊扼搁. 
+				// 当前如果是 2 字节字符. 
 				if ( szSrc[nEndLen-1] < 0 )
 				{
-					// 泅犁 菊俊巩磊啊 2官捞飘 巩磊啊 酒聪扼搁
+					// 如果当前前面的字符不是 2 字节字符
 					if ( !(nWordCheck%2) )
 					{
 						nStartLen += strlen(szTmpCheck)-1;
@@ -1052,8 +1052,8 @@ BOOL CNPCTxtAnalysis::StringDivide(INT nDivideWidth, INT& nDividedLine, CHAR* sz
 						nWordCheck--;
 					}
 				}
-				// 1官捞飘 巩磊. 
-				// 泅犁焊促 茄官捞飘菊何盒鳖瘤父 绊妨秦林搁 等促.
+				// 1字节字符. 
+				// 只需考虑到比当前位置往前一个字节的部分即可。
 				else
 				{
 					nStartLen += strlen(szTmpCheck)-1;
@@ -1067,7 +1067,7 @@ BOOL CNPCTxtAnalysis::StringDivide(INT nDivideWidth, INT& nDividedLine, CHAR* sz
 					nDividedLine++;
 				}
 			}
-			else if(szSrc[nEndLen-1]=='\n')	// 碍力俺青     \n栏肺窍搁  Error ????
+			else if(szSrc[nEndLen-1]=='\n')	// 强制换行     如果用 \n 则 Error ????
 			{
 				nStartLen += strlen(szTmpCheck)-1;
 				CHAR* pszNewLine;

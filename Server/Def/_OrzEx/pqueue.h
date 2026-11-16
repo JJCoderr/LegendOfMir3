@@ -7,12 +7,12 @@
 		2002/02/25
 
 	Note:
-		赛阑 捞侩茄 快急鉴困 钮
+		基于堆的优先队列
 
 	Usage:
-		荤侩 傈 龋免 窃荐: SetCompareFunction
-		荤侩 饶 龋免 窃荐: ClearAll
-		府悸: ClearAll -> ResetVector
+		使用前调用函数: SetCompareFunction
+		使用后调用函数: ClearAll
+		重置: ClearAll -> ResetVector
 */
 #ifndef __ORZ_DATASTRUCTURE_PRIORITY_QUEUE__
 #define __ORZ_DATASTRUCTURE_PRIORITY_QUEUE__

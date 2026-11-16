@@ -31,7 +31,7 @@ public:
 	void		PlayMagicEffect(POINT Target,POINT Chr,int Wavnum);
 	INT			PlayActorWav(INT Sx,INT Sy,INT Dx,INT Dy,int Wavnum,INT lVolume=100,BOOL bLooping=FALSE);	// lVolume = 100% ~ 1%   
 
-	BOOL		BGMFadeOut(LONG lTime=(5000)/*5ÃÊ*/,LONG	lMinVol=(-5000)); 
+	BOOL		BGMFadeOut(LONG lTime=(5000)/*5Ãë*/,LONG	lMinVol=(-5000)); 
 	BOOL		BGMFadeIn(LONG lMaxVol=-100);
 	VOID		EndFading(INT nState);
 
@@ -65,11 +65,11 @@ public:
 private:
 
 	HWND		m_hWnd;
-	BOOL		m_bPlay;					// Sound°¡ ³ª¿Íµµ µÅ´Â°Å?
-	BOOL		m_bBGMPlay;					// BGM ÀÌ Play µÇ¾îµµ µÅ´Â°¡?
-	BOOL		m_bAmbiance;				// Ambiance Wave°¡ Play µÇ¾îµµ µÅ´Â°¡?
+	BOOL		m_bPlay;					// ¿ÉÒÔ²¥·Å Sound Âð?
+	BOOL		m_bBGMPlay;					// BGM ¿ÉÒÔ Play Âð?
+	BOOL		m_bAmbiance;				// Ambiance Wave ¿ÉÒÔ Play Âð?
 	BOOL		m_3DEnable;					// 3D Sound Effect Enable
-	INT			m_nUseCount;				// »ç¿ë µÅ°í ÀÖ´Â Sound(Wav) Buffer Count
+	INT			m_nUseCount;				// ÕýÔÚÊ¹ÓÃµÄ Sound(Wav) Buffer Count
 	CSound*		m_pSound;					// Object of Sound
 	CSBuffer**	m_ppBuffer;					// Object of Sound Buffer
 	CSBuffer	m_CommonWavBuffer;			// Common use Wave Buffer

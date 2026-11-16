@@ -21,7 +21,7 @@ C3DInit::~C3DInit()
 
 HRESULT C3DInit::InitDeviceObjects()
 {
-	// ÇöÀç 800*600È­¸é¿¡ ¸Â°Ô 3D ÁÂÇ¥°è¸¦ ¼³Á¤ÇÑ´Ù.
+	// ÉèÖÃÊÊºÏµ±Ç° 800*600 ÆÁÄ»µÄ 3D ×ø±êÏµ¡£
  	D3DVECTOR vEyePt    = D3DVECTOR(0, 0, -300.0f);
     D3DVECTOR vLookatPt = D3DVECTOR(0, 0, 0);
     D3DVECTOR vUpVec    = D3DVECTOR(0, 1, 0);
@@ -36,7 +36,7 @@ HRESULT C3DInit::InitDeviceObjects()
 	D3DUtil_InitMaterial(m_mtrl);
     m_pd3dDevice->SetMaterial(&m_mtrl);
 
-	// RenderStateÀÇ ÃÊ±â°ª ¼³Á¤.
+	// RenderState µÄ³õÊ¼ÖµÉèÖÃ.
 	m_pd3dDevice->SetRenderState( D3DRENDERSTATE_AMBIENT, 0xFFFFFFFF);
     m_pd3dDevice->SetRenderState(D3DRENDERSTATE_DITHERENABLE, TRUE); 
 	m_pd3dDevice->SetRenderState(D3DRENDERSTATE_CULLMODE, D3DCULL_NONE); 	
@@ -45,7 +45,7 @@ HRESULT C3DInit::InitDeviceObjects()
 //	m_pd3dDevice->SetRenderState(D3DRENDERSTATE_FILLMODE, D3DFILL_WIREFRAME);
 	m_pd3dDevice->SetRenderState(D3DRENDERSTATE_SHADEMODE, D3DSHADE_GOURAUD);
 	
-    // TextureStageStateÀÇ ÃÊ±â°ª ¼³Á¤.
+    // TextureStageState µÄ³õÊ¼ÖµÉèÖÃ¡£
 	m_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
     m_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE); 
     m_pd3dDevice->SetTextureStageState(0, D3DTSS_COLOROP,   D3DTOP_MODULATE);

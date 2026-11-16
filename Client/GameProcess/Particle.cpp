@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 #include "StdAfx.h"
 
@@ -114,8 +114,8 @@ VOID CParticleSystem::UpdateCrash(WORD wNum)
 			FLOAT fOldX = m_pxParticle[wNum].m_vecPos.x - m_pxParticle[wNum].m_vecVel.x * m_pxParticle[wNum].m_wDelay;
 			FLOAT fOldY = m_pxParticle[wNum].m_vecPos.y - m_pxParticle[wNum].m_vecVel.y * m_pxParticle[wNum].m_wDelay;
 			
-			FLOAT fBefore = m_pxParticle[wNum].m_wDelay * (m_vecBounding[1].y - fOldY)/(m_pxParticle[wNum].m_vecPos.y - fOldY);							// 面倒傈.
-			FLOAT fAfter  = m_pxParticle[wNum].m_wDelay * (m_pxParticle[wNum].m_vecPos.y - m_vecBounding[1].y)/(m_pxParticle[wNum].m_vecPos.y - fOldY);	// 面倒饶.
+			FLOAT fBefore = m_pxParticle[wNum].m_wDelay * (m_vecBounding[1].y - fOldY)/(m_pxParticle[wNum].m_vecPos.y - fOldY);							// 碰撞前.
+			FLOAT fAfter  = m_pxParticle[wNum].m_wDelay * (m_pxParticle[wNum].m_vecPos.y - m_vecBounding[1].y)/(m_pxParticle[wNum].m_vecPos.y - fOldY);	// 碰撞后.
 			
 			m_pxParticle[wNum].m_vecPos.x = fOldX + m_pxParticle[wNum].m_vecVel.x * fBefore;
 			m_pxParticle[wNum].m_vecPos.y = fOldY + m_pxParticle[wNum].m_vecVel.y * fBefore;
@@ -631,7 +631,7 @@ HRESULT CRain::RenderSystem(LPDIRECT3DDEVICE7 lpDevice)
 
 VOID CRain::SetParticleDefault(WORD wNum, D3DVECTOR vecGenPos)
 {
-	// m_bRainIntensity ---> 厚狼 碍档啊 缴秦龙荐废 gencnt, mass, size, delay, velocity殿俊 康氢阑 固模促.
+	// m_bRainIntensity ---> 雨势越强，对 gencnt、mass、size、delay、velocity 等影响越大。
 
 
 	ZeroMemory(&m_pxParticle[wNum], sizeof(CParticle));
@@ -865,7 +865,7 @@ HRESULT CFly::RenderSystem(LPDIRECT3DDEVICE7 lpDevice)
 
 VOID CFly::SetParticleDefault(WORD wNum, D3DVECTOR vecGenPos)
 {
-	// m_bRainIntensity ---> 厚狼 碍档啊 缴秦龙荐废 gencnt, mass, size, delay, velocity殿俊 康氢阑 固模促.
+	// m_bRainIntensity ---> 雨势越强，对 gencnt、mass、size、delay、velocity 等影响越大。
 
 	ZeroMemory(&m_pxParticle[wNum], sizeof(CParticle));
     m_pxParticle[wNum].m_vecPos		= vecGenPos;
@@ -1730,7 +1730,7 @@ VOID CElec::SetupElec()
 
 	memcpy(m_avSaveElec, m_avElec, (_MAX_ELEC_NODEY+1)*(_MAX_ELEC_NODEX+1)*sizeof(D3DVERTEX));
 
-	// 鸥老弃府帮狼 牢郸胶 积己.
+	// 生成图块多边形的索引.
     WORD* pwIndex = m_pwElecIndices;
 	for ( nCntY = 0; nCntY < _MAX_ELEC_NODEY; nCntY++ )
 	{
@@ -1827,7 +1827,7 @@ VOID CElec::UpdateElec(SHORT shPosX, SHORT shPosY, SHORT shDstPosX, SHORT shDstP
 	
 /*
 	CHAR szBuff[MAX_PATH];
-	sprintf(szBuff, "->扼叼救:[%f] %f", m_fRadian, fDiv);
+	sprintf(szBuff, "->弧度:[%f] %f", m_fRadian, fDiv);
 	g_xMainWnd.PutsHan(g_xMainWnd.GetBackBuffer(), 0, 100, RGB(250, 125, 0), RGB(0, 0, 0), szBuff);
 */
 }

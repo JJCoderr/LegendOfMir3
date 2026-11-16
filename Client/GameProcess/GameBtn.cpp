@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 
@@ -244,7 +244,7 @@ BOOL CScrlBar::OnLButtonDown(POINT ptMouse)
 	}
 	else if ( PtInRect(&m_rcScrlRgn, ptMouse) )
 	{
-		// 困肺 茄其捞瘤 胶农费.
+		// 向上滚动一页。
 		if ( m_rcScrlBtnRgn.top+m_wScrlBtnHeight/2 > ptMouse.y )
 		{
 			m_fScrlRate -= m_fPageRate;
@@ -254,7 +254,7 @@ BOOL CScrlBar::OnLButtonDown(POINT ptMouse)
 				m_fScrlRate = 0.0f;
 			}
 		}
-		// 酒贰肺 茄其捞瘤 胶农费.
+		// 向下滚动一页.
 		else if ( m_rcScrlBtnRgn.top+m_wScrlBtnHeight/2 <= ptMouse.y )
 		{
 			m_fScrlRate += m_fPageRate;

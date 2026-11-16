@@ -60,9 +60,9 @@ void CStdItemSpecial::GetUpgradeStdItem(_LPTCLIENTITEMRCD lpClientItemRcd, _LPTU
 		{
 			lpClientItemRcd->tStdItem.wDC		= MAKEWORD(g_pStdItemWeapon[nIdx].wDC, g_pStdItemWeapon[nIdx].wDC2 + lpUserItemRcd->btValue[0]);
 			lpClientItemRcd->tStdItem.wMC		= MAKEWORD(g_pStdItemWeapon[nIdx].wMC, g_pStdItemWeapon[nIdx].wMC2 + lpUserItemRcd->btValue[1]);
-			lpClientItemRcd->tStdItem.wSC		= MAKEWORD(g_pStdItemWeapon[nIdx].wSC, g_pStdItemWeapon[nIdx].wSC2 + lpUserItemRcd->btValue[2]);										//3:青款, 4:历林
-			lpClientItemRcd->tStdItem.wAC		= MAKEWORD(g_pStdItemWeapon[nIdx].wAC + lpUserItemRcd->btValue[3], g_pStdItemWeapon[nIdx].wAC2 + lpUserItemRcd->btValue[5]);			//沥犬
-			lpClientItemRcd->tStdItem.wMAC		= MAKEWORD(g_pStdItemWeapon[nIdx].wMAC + lpUserItemRcd->btValue[4], g_pStdItemWeapon[nIdx].wMAC2 + lpUserItemRcd->btValue[6]);		//傍拜加档(-/+)
+			lpClientItemRcd->tStdItem.wSC		= MAKEWORD(g_pStdItemWeapon[nIdx].wSC, g_pStdItemWeapon[nIdx].wSC2 + lpUserItemRcd->btValue[2]);										//3:幸运, 4:诅咒
+			lpClientItemRcd->tStdItem.wAC		= MAKEWORD(g_pStdItemWeapon[nIdx].wAC + lpUserItemRcd->btValue[3], g_pStdItemWeapon[nIdx].wAC2 + lpUserItemRcd->btValue[5]);			//准确
+			lpClientItemRcd->tStdItem.wMAC		= MAKEWORD(g_pStdItemWeapon[nIdx].wMAC + lpUserItemRcd->btValue[4], g_pStdItemWeapon[nIdx].wMAC2 + lpUserItemRcd->btValue[6]);		//攻击速度(-/+)
 			lpClientItemRcd->tStdItem.btSource	= (BYTE)lpUserItemRcd->btValue[7];
 
 			if (lpUserItemRcd->btValue[10]) lpClientItemRcd->tStdItem.btNeedIdentify = 0x01;
@@ -97,9 +97,9 @@ void CStdItemSpecial::GetUpgradeStdItem(_LPTCLIENTITEMRCD lpClientItemRcd, _LPTU
 		{
 			lpClientItemRcd->tStdItem.wDC		= MAKEWORD(wDC, wDC2 + lpUserItemRcd->btValue[0]);
 			lpClientItemRcd->tStdItem.wMC		= MAKEWORD(wMC, wMC2 + lpUserItemRcd->btValue[1]);
-			lpClientItemRcd->tStdItem.wSC		= MAKEWORD(wSC, wSC2 + lpUserItemRcd->btValue[2]); //3:青款, 4:历林
-			lpClientItemRcd->tStdItem.wAC		= MAKEWORD(wAC + lpUserItemRcd->btValue[3], wAC2 + lpUserItemRcd->btValue[5]);  //沥犬
-			lpClientItemRcd->tStdItem.wMAC		= MAKEWORD(wMAC + lpUserItemRcd->btValue[4], wMAC2 + lpUserItemRcd->btValue[6]);  //傍拜加档(-/+)
+			lpClientItemRcd->tStdItem.wSC		= MAKEWORD(wSC, wSC2 + lpUserItemRcd->btValue[2]); //3:幸运, 4:诅咒
+			lpClientItemRcd->tStdItem.wAC		= MAKEWORD(wAC + lpUserItemRcd->btValue[3], wAC2 + lpUserItemRcd->btValue[5]);  //准确
+			lpClientItemRcd->tStdItem.wMAC		= MAKEWORD(wMAC + lpUserItemRcd->btValue[4], wMAC2 + lpUserItemRcd->btValue[6]);  //攻击速度(-/+)
 			lpClientItemRcd->tStdItem.btSource	= lpUserItemRcd->btValue[7];
 		//	if (lpMakeItemRcd->btValue[10])
 		//		lptWeaponItem->NeedIdentify := 0x01;
@@ -145,14 +145,14 @@ void CStdItemSpecial::UpgradeRandomItem(BYTE* btValue, WORD &nDura, WORD &nDuraM
 
 	switch (btType)
 	{
-		case 0:	// 公扁
+		case 0:	// 武器
 		{
-			// 颇鲍 可记
+			// 破坏选项
 			nUpgrade = GetUpgrade(12, 15);
 			if (rand() % 15 == 0) 
 				btValue[0] = 1 + nUpgrade;	// DC
 
-			// 傍拜 加档
+			// 攻击速度
 			nUpgrade = GetUpgrade(12, 15);
 			if (rand() % 20 == 0)
 			{
@@ -160,28 +160,28 @@ void CStdItemSpecial::UpgradeRandomItem(BYTE* btValue, WORD &nDura, WORD &nDuraM
 
 				if (nIncp > 0)
 				{
-					if (rand() % 3 != 0) btValue[6] = nIncp;	// 傍拜 加档 (-)
+					if (rand() % 3 != 0) btValue[6] = nIncp;	// 攻击速度 (-)
 					else
-						btValue[6] = 10 + nIncp; // 傍拜 加档 (+)
+						btValue[6] = 10 + nIncp; // 攻击速度 (+)
 				}
 			}
 
-			// 付仿
+			// 魔法力
 			nUpgrade = GetUpgrade(12, 15);
 			if (rand() % 15 == 0) 
 				btValue[1] = 1 + nUpgrade;	// MC
 
-			// 档仿
+			// 道力
 			nUpgrade = GetUpgrade(12, 15);
 			if (rand() % 15 == 0) 
 				btValue[2] = 1 + nUpgrade;	// SC
 
-			// 沥犬
+			// 准确
 			nUpgrade = GetUpgrade(12, 15);
 			if (rand() % 24 == 0) 
-				btValue[5] = 1 + ((int)nUpgrade / 2);	// 沥犬 (+)
+				btValue[5] = 1 + ((int)nUpgrade / 2);	// 准确 (+)
 
-			// 郴备
+			// 耐久
 			nUpgrade = GetUpgrade(12, 12);
 			if (rand() % 3 < 2)
 			{
@@ -191,41 +191,41 @@ void CStdItemSpecial::UpgradeRandomItem(BYTE* btValue, WORD &nDura, WORD &nDuraM
 				nDura		= _MIN(65000, nDura + nVal);
 			}
 
-			// 碍档
+			// 强度
 			nUpgrade = GetUpgrade(12, 15);
 			if (rand() % 10 == 0) 
 				btValue[7] = 1 + ((int)nUpgrade / 2);
 
 			break;
 		}
-		case 1:	// 规绢备幅
+		case 1:	// 防具类
 		{
-			//规绢
+			//防御
 			nUpgrade = GetUpgrade(6, 15);
 			if (rand() % 40 == 0) 
 				btValue[0] = 1 + nUpgrade;	// AC
 
-			//付亲
+			//魔抗
 			nUpgrade = GetUpgrade(6, 15);
 			if (rand() % 40 == 0) 
 				btValue[1] = 1 + nUpgrade;	// MAC
 
-			//颇鲍
+			//破坏
 			nUpgrade = GetUpgrade(6, 20);
 			if (rand() % 40 == 0) 
 				btValue[2] = 1 + nUpgrade;	// DC
 
-			//付过
+			//魔法
 			nUpgrade = GetUpgrade(6, 20);
 			if (rand() % 40 == 0) 
 				btValue[3] = 1 + nUpgrade;	// MC
 
-			//档仿
+			//道力
 			nUpgrade = GetUpgrade(6, 20);
 			if (rand() % 40 == 0) 
 				btValue[4] = 1 + nUpgrade;	// SC
 
-			//郴备
+			//耐久
 			nUpgrade = GetUpgrade(6, 10);
 			if (rand() % 8 < 6)
 			{
@@ -237,34 +237,34 @@ void CStdItemSpecial::UpgradeRandomItem(BYTE* btValue, WORD &nDura, WORD &nDuraM
 
 			break;
 		}
-		case 2:	// 馆瘤, 迫瘤, 格吧捞
+		case 2:	// 戒指, 手镯, 项链
 		{
-			// 沥犬
+			// 准确
 			nUpgrade = GetUpgrade(6, 30);
 			if (rand() % 60 == 0) 
 				btValue[0] = 1 + nUpgrade;	// AC(HIT)
 
-			//刮酶
+			//敏捷
 			nUpgrade = GetUpgrade(6, 30);
 			if (rand() % 60 == 0) 
 				btValue[1] = 1 + nUpgrade;	// MAC(SPEED)
 
-			//颇鲍
+			//破坏
 			nUpgrade = GetUpgrade(6, 20);
 			if (rand() % 30 == 0) 
 				btValue[2] = 1 + nUpgrade;	// DC
 
-			//付过
+			//魔法
 			nUpgrade = GetUpgrade(6, 20);
 			if (rand() % 30 == 0) 
 				btValue[3] = 1 + nUpgrade;	// MC
 
-			//档仿
+			//道力
 			nUpgrade = GetUpgrade(6, 20);
 			if (rand() % 30 == 0) 
 				btValue[4] = 1 + nUpgrade;	// SC
 
-			//郴备
+			//耐久
 			nUpgrade = GetUpgrade(6, 12);
 			if (rand() % 20 < 15)
 			{
@@ -288,12 +288,12 @@ void CStdItemSpecial::ApplyItemParameters(CObjectAddAbility *m_pAddAbility)
             m_pAddAbility->HIT			= m_pAddAbility->HIT + wAC2;
 
             if (wMAC2 > 10)
-               m_pAddAbility->HitSpeed	= m_pAddAbility->HitSpeed + wMAC2 - 10; //傍拜加档 (+)
+               m_pAddAbility->HitSpeed	= m_pAddAbility->HitSpeed + wMAC2 - 10; //攻击速度 (+)
             else
-               m_pAddAbility->HitSpeed	= m_pAddAbility->HitSpeed - wMAC2; //傍拜加档 (-)
+               m_pAddAbility->HitSpeed	= m_pAddAbility->HitSpeed - wMAC2; //攻击速度 (-)
 
-            m_pAddAbility->Luck			= m_pAddAbility->Luck + wAC;   //霸烙惑狼 捞亥飘甫 烹秦 嘿澜
-            m_pAddAbility->UnLuck		= m_pAddAbility->UnLuck + wMAC;  //霸烙惑狼 捞亥飘甫 烹秦 嘿澜(乔纳捞)
+            m_pAddAbility->Luck			= m_pAddAbility->Luck + wAC;   //通过游戏内的活动附加
+            m_pAddAbility->UnLuck		= m_pAddAbility->UnLuck + wMAC;  //通过游戏内事件附加(PK)
 
 			break;
 		}
@@ -308,23 +308,23 @@ void CStdItemSpecial::ApplyItemParameters(CObjectAddAbility *m_pAddAbility)
 		{
 			switch (wStdMode)
 			{
-				case 21: //格吧捞
+				case 21: //项链
 					m_pAddAbility->AntiMagic	+= wAC2;
 					m_pAddAbility->UnLuck		+= wMAC;
 					m_pAddAbility->Luck			+= wMAC2;
 					break;
-				case 22: //格吧捞
-				case 41: //迫骂
+				case 22: //项链
+				case 41: //手镯
 					m_pAddAbility->HIT			+= wAC2;
 					m_pAddAbility->SPEED		+= wMAC2;
 					break;
-				case 23: //格吧捞
+				case 23: //项链
 					m_pAddAbility->HealthRecover	+= wAC2;
 					m_pAddAbility->SpellRecover		+= wMAC2;
 					m_pAddAbility->HitSpeed			+= wAC;
 					m_pAddAbility->HitSpeed			-= wMAC;
 					break;
-				case 32: //馆瘤
+				case 32: //戒指
 					m_pAddAbility->AntiPoison		+= wAC2;
 					m_pAddAbility->PoisonRecover	+= wMAC2;
 					m_pAddAbility->HitSpeed			+= wAC;

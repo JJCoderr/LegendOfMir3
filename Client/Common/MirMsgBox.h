@@ -39,7 +39,7 @@ protected:
 public:
 private:
 protected:
-	CDLList<CHAR*>	m_xMsg;		// 免仿瞪 巩磊
+	CDLList<CHAR*>	m_xMsg;		// 将被输出的字符
 	INT		m_nImgIndex;
 	POINT	m_xBoxPos;
 	SHORT	m_shWidth;

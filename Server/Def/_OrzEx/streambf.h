@@ -7,7 +7,7 @@
 		2001/10/23
 
 	Note:
-		Queue客 厚搅茄 俺充栏肺 畴靛 窜困啊 酒囱 胶飘覆栏肺 贸府茄促.
+		与 Queue 类似的概念, 不是以节点为单位, 而是以流为单位处理。
 */
 #ifndef __ORZ_DATASTRUCTURE_STREAM_BUFFER__
 #define __ORZ_DATASTRUCTURE_STREAM_BUFFER__

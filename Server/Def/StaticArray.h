@@ -10,7 +10,7 @@ template< class T >
 class CStaticArray
 {
 public:
-	// 努贰胶 T绰 酒贰 牢磐其捞胶甫 备泅窍咯具 茄促.
+	// 类 T 必须实现下面的接口.
 	interface IArrayData
 	{
 		virtual bool IsEmpty() = 0;

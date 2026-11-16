@@ -25,7 +25,7 @@ int _hextodec( char *hex, int len )
 }
 
 
-// 16柳荐 沥荐甫 16柳荐 巩磊肺 函券矫挪促.
+// 将十六进制整数转换为十六进制字符。
 static char _hexdectochar( char num )
 {
 	if ( num < 10 )
@@ -58,7 +58,7 @@ void _dectohex( int dec, char *hex, int len )
 		}
 	}
 
-	// 芭操肺 历厘等 16柳荐 巩磊凯阑 第笼绰促.
+	// 将倒序保存的十六进制字符串反转。
 	for ( int i = 0; i < index / 2; i++ )
 		_swap( hex[i], hex[index - i - 1] );
 }

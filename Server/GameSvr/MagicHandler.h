@@ -1,41 +1,41 @@
 #ifndef _MAGIC_HANDLER
 #define _MAGIC_HANDLER
 
-#define _SKILL_BANWOL				0			// ¹Ý¿ù.
-#define _SKILL_AMYOUNSUL			1			// ¾Ï¿¬¼ú.
-#define _SKILL_FIREWIND				2			// È­¿°Ç³.
-#define _SKILL_HANGMAJINBUB			3			// Ç×¸¶Áø¹ý.
-#define _SKILL_DEJIWONHO			4			// ´ëÁö¿øÈ£.
-#define _SKILL_FIRE					5			// ¿°»çÀå.
-#define _SKILL_MOOTEBO				6			// ¹«ÅÂº¸.
+#define _SKILL_BANWOL				0			// °ëÔÂ.
+#define _SKILL_AMYOUNSUL			1			// °µÈ»Êõ.
+#define _SKILL_FIREWIND				2			// »ðÑæ·ç.
+#define _SKILL_HANGMAJINBUB			3			// ½µÄ§Õó·¨.
+#define _SKILL_DEJIWONHO			4			// ´óµØÔ®»¤.
+#define _SKILL_FIRE					5			// ÑÎÉç³¤.
+#define _SKILL_MOOTEBO				6			// ÎäÌ«²½¡£
 
-#define _SKILL_TAMMING				7			// ·ÚÈ¥°Ý.
-#define _SKILL_SPACEMOVE			8			// ¾Æ°øÇà¹ý.
-#define _SKILL_KILLUNDEAD			9			// »çÀÚÀ±È¸.
+#define _SKILL_TAMMING				7			// À×»ê»÷.
+#define _SKILL_SPACEMOVE			8			// ÎÒ¿ÕÐÐ·¨.
+#define _SKILL_KILLUNDEAD			9			// Ê¨×ÓÂÖ»Ø.
 
-#define _SKILL_FIREBALL				10			// È­¿°Àå.
-#define _SKILL_HEALLING				11			// È¸º¹¼ú.
-#define _SKILL_HOLYSHIELD			12			// °á°è.
-#define _SKILL_BIGHEALLING			13			// ´ëÈ¸º¹.
-#define _SKILL_LIGHTFLOWER			14			// ·Ú¼³È­.
-#define _SKILL_SHOOTLIGHTEN			15			// ·ÚÀÎÀå.
-#define _SKILL_SKELLETON			16			// ¹é°ñ¼ÒÈ¯¼ú.
-#define _SKILL_SNOWWIND				17			// ºù¼³Ç³.
-#define _SKILL_BIGCLOAK				18			// ´ëÀº½Å.
-#define _SKILL_SHIELD				19			// ÁÖ¼úÀÇ¸·.
-#define _SKILL_SHOWHP				20			// Å½±âÆÄ¿¬.
-#define _SKILL_EATTHFIRE			21			// Áö¿°¼ú.
-#define _SKILL_FIRECHARM			22			// Æø»ì°è.
-#define _SKILL_FIREBOOM				23			// Æø¿­ÆÄ.
-#define _SKILL_FIREBALL2			24			// ±Ý°­È­¿°Àå.
-#define _SKILL_YEDO					25			// ¿¹µµ.
-#define _SKILL_ERGUM				26			// ¾î°Ë¼ú.
-#define _SKILL_LIGHTENING			27			// °­°Ý.
-#define _SKILL_FIRESWORD			28			// ¿°È­°á.
-#define _SKILL_CLOAK				29			// Àº½Å.
-#define _SKILL_SINSU				30			// ½Å¼ö¼ÒÈ¯.
-#define _SKILL_ILKWANG				31			// ÀÏ±¤°Ë¹ý.
-#define _SKILL_ONESWORD				32			// ¿Ü¼ö°Ë¹ý.
+#define _SKILL_FIREBALL				10			// »ðÑæ³¡.
+#define _SKILL_HEALLING				11			// »Ö¸´Êõ.
+#define _SKILL_HOLYSHIELD			12			// ½á½ç.
+#define _SKILL_BIGHEALLING			13			// ´ó»Ö¸´.
+#define _SKILL_LIGHTFLOWER			14			// À×Ñ©»ð.
+#define _SKILL_SHOOTLIGHTEN			15			// À×Ó¡.
+#define _SKILL_SKELLETON			16			// °×¹ÇÕÙ»½Êõ.
+#define _SKILL_SNOWWIND				17			// ±ùÐý·ç.
+#define _SKILL_BIGCLOAK				18			// ´óÒþÉí.
+#define _SKILL_SHIELD				19			// ÖäÊõÖ®Ä».
+#define _SKILL_SHOWHP				20			// Ì½ÆøÆÆÑÓ.
+#define _SKILL_EATTHFIRE			21			// µØÑ×Êõ¡£
+#define _SKILL_FIRECHARM			22			// ±¬É±Ïµ.
+#define _SKILL_FIREBOOM				23			// ±¬ÁÑ²¨.
+#define _SKILL_FIREBALL2			24			// ½ð¸Õ»ðÑæÕÆ.
+#define _SKILL_YEDO					25			// Èñµ¶.
+#define _SKILL_ERGUM				26			// Óù½£Êõ.
+#define _SKILL_LIGHTENING			27			// Ç¿»÷.
+#define _SKILL_FIRESWORD			28			// Ñæ»ð¾÷.
+#define _SKILL_CLOAK				29			// ÒþÉí.
+#define _SKILL_SINSU				30			// ÉñÊÞÕÙ»½.
+#define _SKILL_ILKWANG				31			// ÈÕ¹â½£·¨.
+#define _SKILL_ONESWORD				32			// ÍâÊÖ½£·¨¡£
 
 class CMagicInfo
 {

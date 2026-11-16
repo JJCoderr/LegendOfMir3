@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 
@@ -22,15 +22,15 @@
 *******************************************************************************************************************/
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::CActor()
+	函数名 : CActor::CActor()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	创建日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CActor::CActor()
@@ -42,15 +42,15 @@ CActor::CActor()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::~CActor()
+	函数名 : CActor::~CActor()
 
-	累己磊 : 
-	累己老 : 
+	作者   :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CActor::~CActor()
@@ -151,7 +151,7 @@ VOID CActor::DestroyActor()
 	lpPacketMsg  = NULL;
 	shLeftMsgCnt = m_xPacketQueue.GetCount();
 
-	// 阶咯乐绰 菩哦阑 瘤款促.
+	// 清除已堆积的数据包。
 	if ( shLeftMsgCnt > 0 )
 	{
 		for ( nCnt = 0; nCnt < shLeftMsgCnt; nCnt++ )
@@ -164,7 +164,7 @@ VOID CActor::DestroyActor()
 		}
 	}
 
-	// 葛电函荐甫 檬扁拳 矫难敌促.
+	// 初始化全部变量.
 	InitActor();
 }
 
@@ -230,26 +230,26 @@ VOID CActor::DrawWithEffected(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSr
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::Create()
+	函数名 : CActor::Create()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : CImageHandler* pxImgHandler
+	目的   :
+	输入   : CImageHandler* pxImgHandler
 	         FEATURE stFeature
 	         BYTE bMtn
 	         WORD bDir
 	         WORD wPosX
 	         WORD wPosY
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CActor::Create(CImageHandler* pxImgHandler, FEATURE* pstFeature, BYTE bMtn, WORD bDir, WORD wPosX, WORD wPosY)
 {
-	// 傈崔牢磊 利侩 棺 犬牢./////////////////////////////////////////////////////////////////////////////////
+	// 参数应用及确认./////////////////////////////////////////////////////////////////////////////////
 	if ( /*(pstFeature->bGender >= 0 && pstFeature->bGender < _MAX_GENDER) && */(bDir >= 0 && bDir < _MAX_DIRECTION) )
 	{
 		switch ( pstFeature->bGender )
@@ -305,12 +305,12 @@ BOOL CActor::Create(CImageHandler* pxImgHandler, FEATURE* pstFeature, BYTE bMtn,
 				{
 					switch ( m_stFeature.bDress )
 					{
-					case 31:	// 侥牢檬.
-					case 67:	// 盟锋脚.
-					case 73:	// 厚阜盔面.
-					case 104:	// 利岿付.
+					case 31:	// 食人草.
+					case 67:	// 烛龙神.
+					case 73:	// 飞膜元虫.
+					case 104:	// 赤月魔.
 						bDir = 0;
-					case 106:	// 气救芭固.
+					case 106:	// 暴眼蜘蛛.
 						bDir = 1;
 						break;
 					default:
@@ -333,7 +333,7 @@ BOOL CActor::Create(CImageHandler* pxImgHandler, FEATURE* pstFeature, BYTE bMtn,
 				else
 				{
 					m_bActorImgIdx = _IMAGE_NPC;
-					bDir++;		// bDir篮 0捞 瞪荐档 乐扁锭巩捞促.
+					bDir++;		// 因为 bDir 也可能为 0。
 					bDir = bDir/3;
 					m_dwFstFrame = g_xSpriteInfo.m_stNPCSpr[bMtn].wFstFrm + pstFeature->bDress*_MAX_NPC_FRAME + bDir*10;
 					m_dwEndFrame = m_dwFstFrame + g_xSpriteInfo.m_stNPCSpr[bMtn].wFrmCnt;
@@ -373,16 +373,16 @@ BOOL CActor::Create(CImageHandler* pxImgHandler, FEATURE* pstFeature, BYTE bMtn,
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::CheckFeatureValidate()
+	函数名 : CActor::CheckFeatureValidate()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	创建日期 :
 
-	格利   : 
-	涝仿   : FEATURE stFeature
-	免仿   : BOOL 
+	目的   :
+	输入   : FEATURE stFeature
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CActor::CheckFeatureValidate(FEATURE stFeature)
@@ -412,17 +412,17 @@ BOOL CActor::CheckFeatureValidate(FEATURE stFeature)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::ChangeFeature()
+	函数名 : CActor::ChangeFeature()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : CImageHandler* pxImgHandler
+	目的   :
+	输入   : CImageHandler* pxImgHandler
 	         FEATURE stFeature
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CActor::ChangeFeature(FEATURE stFeature)
@@ -490,7 +490,7 @@ BOOL CActor::ChangeFeature(FEATURE stFeature)
 				}
 			}
 			break;
-		// NPC绰 橇饭烙捞 老沥窍瘤 臼栏骨肺 蝶肺 利侩矫挪促.
+		// NPC 的帧不固定, 因此单独应用。
 		case _GENDER_NPC:
 		default:
 			return FALSE;
@@ -508,17 +508,17 @@ BOOL CActor::ChangeFeature(FEATURE stFeature)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::SetMotionFrame()
+	函数名 : CActor::SetMotionFrame()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : BYTE bMtn
+	目的   :
+	输入   : BYTE bMtn
 	         BYTE bDir
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CActor::SetMotionFrame(BYTE bMtn, BYTE bDir)
@@ -549,12 +549,12 @@ BOOL CActor::SetMotionFrame(BYTE bMtn, BYTE bDir)
 
 		switch ( m_stFeature.bDress )
 		{
-		case 31:	// 侥牢檬.
-		case 67:	// 盟锋脚.
-		case 73:	// 厚阜盔面.
-		case 104:	// 利岿付.
+		case 31:	// 食人草.
+		case 67:	// 烛龙神.
+		case 73:	// 飞膜元虫.
+		case 104:	// 赤月魔.
 			bDir = 0;
-		case 106:	// 气救芭固.
+		case 106:	// 暴眼蜘蛛.
 			bDir = 1;
 			break;
 		default:
@@ -569,7 +569,7 @@ BOOL CActor::SetMotionFrame(BYTE bMtn, BYTE bDir)
 		break;
 	case _GENDER_NPC:
 		{
-			bDir++;		// bDir篮 0捞 瞪荐档 乐扁锭巩捞促.
+			bDir++;		// 因为 bDir 也可能为 0。
 			bDir = bDir/3;
 			m_dwFstFrame = g_xSpriteInfo.m_stNPCSpr[bMtn].wFstFrm + m_stFeature.bDress*_MAX_NPC_FRAME + bDir*10;
 			m_dwEndFrame = m_dwFstFrame + g_xSpriteInfo.m_stNPCSpr[bMtn].wFrmCnt;
@@ -614,11 +614,11 @@ VOID CActor::PlayActSound()
 		171,  33,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,	// 90 - 99
 	};
 
-	if ( m_dwCurrFrame == m_dwFstFrame+1 && m_bCurrMtn == _MT_MON_APPEAR )			// 唱鸥唱扁.
+	if ( m_dwCurrFrame == m_dwFstFrame+1 && m_bCurrMtn == _MT_MON_APPEAR )			// 出现。
 	{
 		nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10;
 	}
-	else if ( (m_dwCurrFrame == m_dwFstFrame+1) && (m_bCurrMtn == _MT_MON_STAND || _MT_MON_WALK) )		// 肛苗乐扁.
+	else if ( (m_dwCurrFrame == m_dwFstFrame+1) && (m_bCurrMtn == _MT_MON_STAND || _MT_MON_WALK) )		// 静止不动.
 	{
 		INT nRand = rand();
 
@@ -640,11 +640,11 @@ VOID CActor::PlayActSound()
 				nWaveNum = -1;
 		}
 	}
-	else if ( m_dwCurrFrame == m_dwFstFrame+1 && m_bCurrMtn == _MT_MON_ATTACK_A )	// 老馆傍拜1.
+	else if ( m_dwCurrFrame == m_dwFstFrame+1 && m_bCurrMtn == _MT_MON_ATTACK_A )	// 普通攻击1.
 	{
 		nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10 + 2;
 	}
-	else if ( m_dwCurrFrame == m_dwFstFrame+2 && m_bCurrMtn == _MT_MON_ATTACK_A )	// 老馆傍拜1.
+	else if ( m_dwCurrFrame == m_dwFstFrame+2 && m_bCurrMtn == _MT_MON_ATTACK_A )	// 普通攻击1.
 	{
 		nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10 + 3;
 	}
@@ -654,34 +654,34 @@ VOID CActor::PlayActSound()
 		{
 			switch ( m_stHitter.bWeapon )
 			{
-				case 21: case 24: // 窜八, 厚窜八.
-				case 8: case 9: // 格八, 酒府荐格八.
-				case 18:  case 22:  case 23:  case 26:  case 27:  case 28:  case 30:  // 荤葛八. 没悼八. 枚八. 没澜八. 寒荤八. 玫飞. 邦己八.
-				case 1:   case 4:  case 11:  case 13:  case 14:  case 20:  case 25:  case 29:  case 31:   // 蜡岿档. 宫没措档. 腊钦档. 焙档. 档锋焊档. 荤阿档. 技梅档. 抗档. 檬去档.
+				case 21: case 24: // 短剑，非短剑.
+				case 8: case 9: // 木剑, 阿里水木剑.
+				case 18:  case 22:  case 23:  case 26:  case 27:  case 28:  case 30:  // 蛇矛剑. 青铜剑. 铁剑. 青音剑. 辟邪剑. 天灵. 哭声剑.
+				case 1:   case 4:  case 11:  case 13:  case 14:  case 20:  case 25:  case 29:  case 31:   // 柳月刀. 墨青大刀. 六合刀. 军刀. 屠龙宝刀. 四角刀. 细尖刀. 锐刀. 招魂刀.
 					nWaveNum = 70;
 					break;
-				case 5:  case 10:  case 12: // 伙利措何. 没悼档尝. 楷磊何.
-				case 15:  // 颇锄柳寸.
+				case 5:  case 10:  case 12: // 三戟大斧. 青铜斧. 连子斧.
+				case 15:  // 破雷震堂.
 					nWaveNum = 71;
 					break;
-				case 2:  case 3:  case 6:  case 7: case 16:  case 17: case 19:  // 伙瘤芒. 玫屈格. 全酒芒. 邦豹捞. 没付芒, 侩酒厘. 力付豪
+				case 2:  case 3:  case 6:  case 7: case 16:  case 17: case 19:  // 三叉戟. 天刑木. 红牙枪. 镐. 青马枪, 龙牙杖. 制魔棒
 					nWaveNum = 72;
 					break;
 				default:
-					nWaveNum = 73;	// 盖颊.
+					nWaveNum = 73;	// 空手。
 					break;
 			}
 		}
 	}
-	else if ( m_dwCurrFrame == m_dwFstFrame+2 && m_bCurrMtn == _MT_MON_HITTED )		// 嘎扁.
+	else if ( m_dwCurrFrame == m_dwFstFrame+2 && m_bCurrMtn == _MT_MON_HITTED )		// 受击.
 	{
 		nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10 + 4;
 	}
-	else if ( m_dwCurrFrame == m_dwFstFrame+2 && m_bCurrMtn == _MT_MON_DIE )		// 磷扁1.
+	else if ( m_dwCurrFrame == m_dwFstFrame+2 && m_bCurrMtn == _MT_MON_DIE )		// 死亡1.
 	{
 		nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10 + 5;
 	}
-	else if ( m_dwCurrFrame == m_dwFstFrame+3 && m_bCurrMtn == _MT_MON_DIE )		// 磷扁2.
+	else if ( m_dwCurrFrame == m_dwFstFrame+3 && m_bCurrMtn == _MT_MON_DIE )		// 死亡2.
 	{
 		nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10 + 6;
 	}
@@ -695,15 +695,15 @@ VOID CActor::PlayActSound()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::SetMoving()
+	函数名 : CActor::SetMoving()
 
-	累己磊 : 
-	累己老 : 
+	作者 : 
+	编写日期 : 
 
-	格利   : 
-	免仿   : VOID 
+	目的   : 
+	输出   : VOID 
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CActor::SetMoving()
@@ -796,15 +796,15 @@ VOID CActor::SetMoving()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::SetBackStepMoving()
+	函数名 : CActor::SetBackStepMoving()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CActor::SetBackStepMoving()
@@ -893,15 +893,15 @@ VOID CActor::SetBackStepMoving()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::SetMoved()
+	函数名 : CActor::SetMoved()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改人] : 修改内容
 
 *******************************************************************************************************************/
 VOID CActor::SetMoved()
@@ -950,16 +950,16 @@ VOID CActor::SetMoved()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::OnCharDescPacket()
+	函数名 : CActor::OnCharDescPacket()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : SM_WALK, SM_DEATH, SM_TURN, SM_RUN, SM_DIGUP 皋矫瘤俊 荤侩茄促.
-	涝仿   : LPPACKETMSG lpPacketMsg
-	免仿   : VOID 
+	目的   : SM_WALK, SM_DEATH, SM_TURN, SM_RUN, SM_DIGUP 消息中使用.
+	输入   : LPPACKETMSG lpPacketMsg
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CActor::OnCharDescPacket(LPPACKETMSG lpPacketMsg)
@@ -1045,7 +1045,7 @@ VOID CActor::OnTurn(LPPACKETMSG lpPacketMsg)
 	bDir		 = LOBYTE(lpPacketMsg->stDefMsg.wSeries);
 	m_bLightSize = HIBYTE(lpPacketMsg->stDefMsg.wSeries);
 
-	// 侥牢檬.
+	// 食人草.
 	if ( m_stFeature.bDress == 31 )
 		bDir = 0;
 
@@ -1053,13 +1053,13 @@ VOID CActor::OnTurn(LPPACKETMSG lpPacketMsg)
 
 	SetMotionFrame(_MT_MON_STAND, bDir);
 
-	if( m_nState & 0X1 )		// 籍拳惑怕.
+	if( m_nState & 0X1 )		// 石化状态.
 	{
 		switch ( m_stFeature.bDress )
 		{
-		case 83: //林付脚厘.
-		case 84: //林付龋过.
-		case 85: //林付空.
+		case 83: //走马神掌.
+		case 84: //走马护法.
+		case 85: //主魔王.
 			SetMotionFrame(_MT_MON_APPEAR, 0);
 			m_dwEndFrame = m_dwFstFrame + 1;
 			m_bCurrMtn = _MT_MON_STAND;
@@ -1083,10 +1083,10 @@ VOID CActor::OnDigup(LPPACKETMSG lpPacketMsg)
 	case 3: 
 		m_bReverse = TRUE;
 		break;
-	case 85: //林付空.
+	case 85: //主魔王.
 		bDir = 0;
 		break;
-	case 31: //侥牢檬.		
+	case 31: //食人草.		
 		bDir = 0;
 		m_bReverse = TRUE;
 		break;
@@ -1125,7 +1125,7 @@ VOID CActor::OnDigDown(LPPACKETMSG lpPacketMsg)
 	case 3: 
 		m_bReverse = FALSE;
 		break;
-	case 31: //侥牢檬.		
+	case 31: //食人草.		
 		bDir = 0;
 		m_bReverse = FALSE;
 		break;
@@ -1151,42 +1151,42 @@ VOID CActor::OnDeath(LPPACKETMSG lpPacketMsg)
 	}
 	else 
 	{
-		// 阁胶磐老锭.
+		// 为怪物时.
 		if ( m_stFeature.bGender == _GENDER_MON )
 		{
 			CMagic* pxMagic;
 			switch ( m_stFeature.bDress )
 			{
-			case 4:		// 籍厘牢.
+			case 4:		// 石匠.
 				pxMagic = new CMagic;
 				pxMagic->CreateMagic(_MONMAGIC_EXPLODE1, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 				g_xGameProc.m_xMagicList.AddNode(pxMagic);
 				break;
-			case  5:		// 官捻啊福唱.
-			case  6:		// 官磊匡.
-			case 11:		// 葛叼怜.
-			case 19:		// 饭叼啊福唱.
+			case  5:		// 巴库加尔纳.
+			case  6:		// 巴扎乌尔.
+			case 11:		// 莫迪森.
+			case 19:		// 雷迪加尔纳.
 				pxMagic = new CMagic;
 				pxMagic->CreateMagic(_MONMAGIC_SINGI_DIE, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 				g_xGameProc.m_xMagicList.AddNode(pxMagic);
 /*				LoadEffect(&g_xGameProc.m_xImage, _MONMAGIC_DIE);
 				m_bUseSwordEffect = TRUE;
 */				break;
-			case 40:		// 倾荐酒厚.
+			case 40:		// 稻草人.
 				pxMagic = new CMagic;
 				pxMagic->CreateMagic(_MONMAGIC_HUSU_DIE, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 				g_xGameProc.m_xMagicList.AddNode(pxMagic);
 /*				LoadEffect(&g_xGameProc.m_xImage, _MONMAGIC_HUSU_DIE);
 				m_bUseSwordEffect = TRUE;
 */				break;
-			case 48:		// 粱厚.
+			case 48:		// 僵尸.
 				pxMagic = new CMagic;
 				pxMagic->CreateMagic(_MONMAGIC_ZOMBIE_DIE, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 				g_xGameProc.m_xMagicList.AddNode(pxMagic);
 /*				LoadEffect(&g_xGameProc.m_xImage, _MONMAGIC_ZOMBIE_DIE);
 				m_bUseSwordEffect = TRUE;
 */				break;
-			case 99:		// 官坷崔靛.
+			case 99:		// 巴奥达尔德.
 				pxMagic = new CMagic;
 				pxMagic->CreateMagic(_MONMAGIC_BAODIE, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 				g_xGameProc.m_xMagicList.AddNode(pxMagic);
@@ -1231,25 +1231,25 @@ VOID CActor::OnStruck(LPPACKETMSG lpPacketMsg)
 	ChangeFeature(stFeature);
 	SetMotionFrame(_MT_MON_HITTED, m_bCurrDir);
 
-	// 阁胶磐老锭.
+	// 为怪物时.
 	if ( m_stHitter.bGender == _GENDER_MON )
 	{
 		CMagic* pxMagic;
 		switch ( m_stHitter.bDress )
 		{
-		case 2:		// 纳迫肺橇.
+		case 2:		// 凯法洛普.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_KEPAL, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;
-		case 8:		// 癌林俺固.
-		case 14:	// 捍侩俺固.
-		case 16:	// 靛抄俺固.
+		case 8:		// 甲胄蚂蚁.
+		case 14:	// 兵蚁.
+		case 16:	// 游荡蚁.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_GREATANT, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;
-		case 67:	// 盟锋脚.
+		case 67:	// 烛龙神.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_BIGGINE_CHAR, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
@@ -1280,7 +1280,7 @@ VOID CActor::OnLighting(LPPACKETMSG lpPacketMsg)
 
 	switch ( m_stFeature.bDress )
 	{
-	case 48:		// 粱厚. 8规氢.
+	case 48:		// 僵尸. 8方向.
 		pxMagic = new CMagic;
 		pxMagic->CreateMagic(_MONMAGIC_ZOMBIE, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this, nTargetID);
 		g_xGameProc.m_xMagicList.AddNode(pxMagic);
@@ -1308,19 +1308,19 @@ VOID CActor::OnFlyAxe(LPPACKETMSG lpPacketMsg)
 
 	switch ( m_stFeature.bDress )
 	{
-	case 33:				// 街档尝秦榜.
+	case 33:				// 双斧骷髅.
 		pxMagic = new CMagic;
 		pxMagic->CreateMagic(_MONMAGIC_DUALAXE, m_wPosX, m_wPosY, wTargetX, wTargetY, this, nTargetID);
 		g_xGameProc.m_xMagicList.AddNode(pxMagic);
 		SetMotionFrame(_MT_MON_ATTACK_A, m_bCurrDir);
 		break;
-	case 46:				// 促农.
+	case 46:				// 暗黑。
 		pxMagic = new CMagic;
 		pxMagic->CreateMagic(_MONMAGIC_CHIM, m_wPosX, m_wPosY, wTargetX, wTargetY, this, nTargetID);
 		g_xGameProc.m_xMagicList.AddNode(pxMagic);
 		SetMotionFrame(_MT_MON_ATTACK_A, m_bCurrDir);
 		break;
-	case 82:				// 付泵荤.
+	case 82:				// 魔弓士.
 		pxMagic = new CMagic;
 		pxMagic->CreateMagic(_MONMAGIC_MAARROW, m_wPosX, m_wPosY, wTargetX, wTargetY, this, nTargetID);
 		g_xGameProc.m_xMagicList.AddNode(pxMagic);
@@ -1338,63 +1338,63 @@ VOID CActor::OnHit(LPPACKETMSG lpPacketMsg)
 	m_wPosY = lpPacketMsg->stDefMsg.wTag;
 	SetMotionFrame(_MT_MON_ATTACK_A, bDir);
 
-	// 阁胶磐老锭.
+	// 为怪物时.
 	if ( m_stFeature.bGender == _GENDER_MON )
 	{
 		CMagic* pxMagic;
 		switch ( m_stFeature.bDress )
 		{
-		case 9:		// 沸.
+		case 9:		// 罗恩.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_EXPLODE, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;
-		case 5:		// 官捻啊福唱.
+		case 5:		// 巴库加尔纳.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_BLACK1, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;
-		case 19:		// 饭叼啊福唱.
+		case 19:		// 雷迪加尔纳.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_RED1, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;
-		case 45:		// 快搁蓖空. 
+		case 45:		// 牛面鬼王. 
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_COWGHOST, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;
-		case 90:		// 脚荐.
+		case 90:		// 神兽.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_SINSU, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;
-		case 43:		// 拳堪快搁蓖.
+		case 43:		// 火焰牛面鬼.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_COWFLAME, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;
-		case 85:		// 林付空.
+		case 85:		// 走马王。
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_JUMAWANG, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;
-		case 67:		// 盟锋脚.
+		case 67:		// 烛龙神.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_BIGGINE_ATT, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;	
-		case 75:		// 禁扁唱规.
+		case 75:		// 刺蛾.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_SSEGI, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;	
-		case 94:		// 荤绢.
+		case 94:		// 沙鱼.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_SANDFISH, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;	
-		case 98:		// 惑鞭鲍拱.
+		case 98:		// 上级怪物.
 			m_dwCurrEffectFrame = 50;
 			m_dwFstEffectFrame  = 50;
 			m_dwEndEffectFrame  = 60;
@@ -1441,15 +1441,15 @@ VOID CActor::StruckMsgReassign()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::UpdatePacketState()
+	函数名 : CActor::UpdatePacketState()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : BOOL 
+	目的   :
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CActor::UpdatePacketState()
@@ -1509,18 +1509,18 @@ BOOL CActor::UpdatePacketState()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::LoadEffect()
+	函数名 : CActor::LoadEffect()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : CImageHandler* pxImgHandler
+	目的   :
+	输入   : CImageHandler* pxImgHandler
 	         WORD wEffectNum
 	         BYTE bDir
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CActor::LoadEffect(CImageHandler* pxImgHandler, WORD wEffectNum, BYTE bDir)
@@ -1577,15 +1577,15 @@ BOOL CActor::LoadEffect(CImageHandler* pxImgHandler, WORD wEffectNum, BYTE bDir)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::DrawEffect()
+	函数名 : CActor::DrawEffect()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : BOOL 
+	目的   :
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CActor::DrawEffect()
@@ -1654,7 +1654,7 @@ BOOL CActor::DrawEffect()
 					SetBlendRenderState(g_xMainWnd.Get3DDevice(), _BLEND_LIGHTINV, mtrl);
 					g_xMainWnd.Get3DDevice()->DrawPrimitive(D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, m_avBoard, 4, NULL);
 
-					// 盔惑汗蓖.
+					// 恢复原状.
 					ZeroMemory(&mtrl, sizeof(mtrl));
 					mtrl.diffuse.r = mtrl.diffuse.g = mtrl.diffuse.b = 0.1f;
 					mtrl.ambient.r = mtrl.ambient.g = mtrl.ambient.b = 1.0f;
@@ -1717,20 +1717,20 @@ BOOL CActor::DrawEffect()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::UpdateMotionState()
+	函数名 : CActor::UpdateMotionState()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nLoopTime
+	目的   :
+	输入   : INT nLoopTime
 	         SHORT shStartViewTileX
 	         SHORT shStartViewTileY
 	         SHORT shViewOffsetX
 	         SHORT shViewOffsetY
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改人] : 修改内容
 
 *******************************************************************************************************************/
 VOID CActor::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
@@ -1804,13 +1804,13 @@ VOID CActor::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 
 			SetMotionFrame(_MT_MON_STAND, m_bCurrDir);
 
-			if( m_nState & 0X1 )		// 籍拳惑怕.
+			if( m_nState & 0X1 )		// 石化状态.
 			{
 				switch ( m_stFeature.bDress )
 				{
-				case 83: //林付脚厘.
-				case 84: //林付龋过.
-				case 85: //林付空.
+				case 83: //走马神掌.
+				case 84: //走马护法.
+				case 85: //主魔王.
 					SetMotionFrame(_MT_MON_APPEAR, 0);
 					m_dwEndFrame = m_dwFstFrame + 1;
 					m_bCurrMtn = _MT_MON_STAND;
@@ -1827,15 +1827,15 @@ VOID CActor::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::UpdateMove(BOOL bIsMoveTime)
+	函数名 : CActor::UpdateMove(BOOL bIsMoveTime)
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : BOOL
+	目的   :
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CActor::UpdateMove(BOOL bIsMoveTime)
@@ -1867,7 +1867,7 @@ BOOL CActor::UpdateMove(BOOL bIsMoveTime)
 			}
 		}
 
-		// 楷加利牢 橇饭烙 吝俊辑 秦具且老.
+		// 连续帧中要做的事。
 		if ( m_dwCurrFrame >= m_dwEndFrame )
 		{
 			m_dwCurrFrame = m_dwEndFrame - 1;
@@ -1908,22 +1908,22 @@ BOOL CActor::UpdateMove(BOOL bIsMoveTime)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::DrawActor()
+	函数名 : CActor::DrawActor()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	日期 :
 
-	格利   : 
-	涝仿   : BOOL bFocused
+	目的   :
+	输入   : BOOL bFocused
 	         BOOL bShadowAblended
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CActor::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, BOOL bUseScrnPos, BOOL bDrawShadow)
 {
-	// 谅钎贸府.
+	// 坐标处理。
 	if ( bUseScrnPos )
 	{
 		m_shScrnPosX = (m_wPosX - pxMap->m_shStartViewTileX) * _CELL_WIDTH + _VIEW_CELL_X_START - pxMap->m_shViewOffsetX + m_shShiftPixelX;
@@ -1992,7 +1992,7 @@ BOOL CActor::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, 
 			BYTE bOpaRate = 70;
 			WORD wState   = GetCharState();
 
-			// 阁胶磐 弊覆磊 颇老 利侩.
+			// 应用怪物影子文件。
 			if ( bDrawShadow )
 			{
 				CWHWilImageData* pxSahdowImage;
@@ -2018,10 +2018,10 @@ BOOL CActor::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, 
 																   _CLIP_WIDTH, _CLIP_HEIGHT, 0XFFFF, 0XFFFF, bFocused);
 					}
 				}
-				// 拌魂秦辑 弊府扁.
+				// 计算后绘制.
 				else
 				{
-					// 弊覆磊甫 弊赴促.
+					// 绘制影子。
 					if ( m_wABlendDelay || wState==_STATE_ABLEND || bShadowAblended )
 					{
 						if ( bOpaRate < 0 && bOpaRate > 100 )		bOpaRate  = 0;
@@ -2081,15 +2081,15 @@ BOOL CActor::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, 
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::DrawHPBar()
+	函数名 : CActor::DrawHPBar()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CActor::DrawHPBar()
@@ -2118,15 +2118,15 @@ VOID CActor::DrawHPBar()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CActor::DrawName()
+	函数名 : CActor::DrawName()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CActor::DrawName()
@@ -2237,7 +2237,7 @@ VOID CActor::ShowMessage(INT nLoopTime)
 				g_xMainWnd.Get3DDevice()->SetTexture(0, NULL);
 				g_xMainWnd.Get3DDevice()->DrawPrimitive(D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, m_avBoard, 4, NULL);
 
-				// 盔惑汗蓖.
+				// 恢复原状.
 				ZeroMemory(&mtrl, sizeof(mtrl));
 				mtrl.diffuse.r = mtrl.diffuse.g = mtrl.diffuse.b = 0.1f;
 				mtrl.ambient.r = mtrl.ambient.g = mtrl.ambient.b = 1.0f;
@@ -2299,23 +2299,23 @@ VOID CActor::ShowMessage(INT nLoopTime)
 *******************************************************************************************************************/
 /******************************************************************************************************************
 
-	窃荐疙 : CNPC::DrawActor()
+	函数名 : CNPC::DrawActor()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : CMapHandler* pxMap
+	目的   :
+	输入   : CMapHandler* pxMap
 	         BOOL bFocused
 	         BOOL bShadowAblended
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CNPC::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, BOOL bUseScrnPos, BOOL bDrawShadow)
 {
-	// 谅钎贸府.
+	// 坐标处理。
 	m_shScrnPosX = (m_wPosX - pxMap->m_shStartViewTileX) * _CELL_WIDTH + _VIEW_CELL_X_START - pxMap->m_shViewOffsetX + m_shShiftPixelX;
 	m_shScrnPosY = (m_wPosY - pxMap->m_shStartViewTileY) * _CELL_HEIGHT+ _VIEW_CELL_Y_START - pxMap->m_shViewOffsetY + m_shShiftPixelY;
 
@@ -2360,14 +2360,14 @@ BOOL CNPC::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, BO
 			m_rcTargetRgn.bottom = m_rcActor.bottom;
 		}
 
-		// 某腐磐 弊覆磊.
+		// 角色影子.
 		INT nStartX1 = m_shScrnPosX + shShadowPX;
 		INT nStartY1 = m_shScrnPosY + shShadowPY;
 
 		BYTE bOpaRate = 70;
 		WORD wState   = GetCharState();
 
-		// 弊覆磊甫 弊赴促.
+		// 绘制影子。
 		if ( m_wABlendDelay || wState==_STATE_ABLEND )
 		{
 			bShadowAblended = TRUE;
@@ -2432,15 +2432,15 @@ VOID CNPC::OnHit(LPPACKETMSG lpPacketMsg)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CNPC::UpdatePacketState()
+	函数名 : CNPC::UpdatePacketState()
 
-	累己磊 : 
-	累己老 : 
+	作者 : 
+	日期 : 
 
-	格利   : 
-	免仿   : BOOL 
+	目的   : 
+	输出   : BOOL 
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CNPC::UpdatePacketState()
@@ -2487,17 +2487,17 @@ BOOL CNPC::UpdatePacketState()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CNPC::UpdateMotionState()
+	函数名 : CNPC::UpdateMotionState()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nLoopTime
+	目的   :
+	输入   : INT nLoopTime
 	         BOOL bIsMoveTime
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CNPC::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
@@ -2531,15 +2531,15 @@ VOID CNPC::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 *******************************************************************************************************************/
 /******************************************************************************************************************
 
-	窃荐疙 : CHero::CHero()
+	函数名 : CHero::CHero()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CHero::CHero()
@@ -2551,15 +2551,15 @@ CHero::CHero()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CHero::~CHero()
+	函数名 : CHero::~CHero()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CHero::~CHero()
@@ -2613,22 +2613,22 @@ VOID CHero::DestroyActor()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CHero::Create()
+	函数名 : CHero::Create()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : CImageHandler* pxImgHandler
+	目的   :
+	输入   : CImageHandler* pxImgHandler
 	         WORD wActor
 	         BYTE bMtn
 	         WORD bDir
 	         WORD wPosX
 	         WORD wPosY
 	         FEATURE stFeature
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CHero::Create(CImageHandler* pxImgHandler, BYTE bMtn, BYTE bDir, WORD wPosX, WORD wPosY, 
@@ -2689,24 +2689,24 @@ VOID CHero::PlayActSound()
 	{
 		switch ( m_stHitter.bWeapon )
 		{
-			case 21: case 24: // 窜八, 厚窜八.
-			case 8: case 9: // 格八, 酒府荐格八.
-			case 18:  case 22:  case 23:  case 26:  case 27:  case 28:  case 30:  // 荤葛八. 没悼八. 枚八. 没澜八. 寒荤八. 玫飞. 邦己八.
-			case 1:   case 4:  case 11:  case 13:  case 14:  case 20:  case 25:  case 29:  case 31:   // 蜡岿档. 宫没措档. 腊钦档. 焙档. 档锋焊档. 荤阿档. 技梅档. 抗档. 檬去档.
+			case 21: case 24: // 短剑，非短剑.
+			case 8: case 9: // 木剑, 阿里水木剑.
+			case 18:  case 22:  case 23:  case 26:  case 27:  case 28:  case 30:  // 蛇矛剑. 青铜剑. 铁剑. 青音剑. 辟邪剑. 天灵. 哭声剑.
+			case 1:   case 4:  case 11:  case 13:  case 14:  case 20:  case 25:  case 29:  case 31:   // 柳月刀. 墨青大刀. 六合刀. 军刀. 屠龙宝刀. 四角刀. 细尖刀. 锐刀. 招魂刀.
 				nWaveNum = 70;
 				break;
-			case 5:  case 10:  case 12: // 伙利措何. 没悼档尝. 楷磊何.
-			case 15:  // 颇锄柳寸.
+			case 5:  case 10:  case 12: // 三戟大斧. 青铜斧. 连子斧.
+			case 15:  // 破雷震堂.
 				nWaveNum = 71;
 				break;
-			case 2:  case 3:  case 6:  case 7: case 16:  case 17: case 19:  // 伙瘤芒. 玫屈格. 全酒芒. 邦豹捞. 没付芒, 侩酒厘. 力付豪
+			case 2:  case 3:  case 6:  case 7: case 16:  case 17: case 19:  // 三叉戟. 天刑木. 红牙枪. 镐. 青马枪, 龙牙杖. 制魔棒
 				nWaveNum = 72;
 				break;
 			default:
-				nWaveNum = 73;	// 盖颊.
+				nWaveNum = 73;	// 空手。
 				break;
 		}
-		if ( m_stFeature.bDress == 3 )		// 固癌林.
+		if ( m_stFeature.bDress == 3 )		// 未甲胄.
 			nWaveNum += 10;
 	}
 	else if ( m_dwCurrFrame == m_dwFstFrame+2 && m_bCurrMtn == _MT_HITTED )
@@ -2751,29 +2751,29 @@ VOID CHero::PlayActSound()
 	{
 		switch ( m_stFeature.bWeapon )
 		{
-		case 21: case 24: // 窜八, 厚窜八.
+		case 21: case 24: // 短剑，非短剑.
 			nWaveNum = 50;
 			break;
-		case 8: case 9: // 格八, 酒府荐格八.
+		case 8: case 9: // 木剑, 阿里水木剑.
 			nWaveNum = 51;
 			break;
-		case 18:  case 22:  case 23:  case 26:  case 27:  case 28:  case 30:  // 荤葛八. 没悼八. 枚八. 没澜八. 寒荤八. 玫飞. 邦己八.
+		case 18:  case 22:  case 23:  case 26:  case 27:  case 28:  case 30:  // 蛇矛剑. 青铜剑. 铁剑. 青音剑. 辟邪剑. 天灵. 哭声剑.
 			nWaveNum = 52;
 			break;
-		case 1:   case 4:  case 11:  case 13:  case 14:  case 20:  case 25:  case 29:  case 31:   // 蜡岿档. 宫没措档. 腊钦档. 焙档. 档锋焊档. 荤阿档. 技梅档. 抗档. 檬去档.
+		case 1:   case 4:  case 11:  case 13:  case 14:  case 20:  case 25:  case 29:  case 31:   // 柳月刀. 墨青大刀. 六合刀. 军刀. 屠龙宝刀. 四角刀. 细尖刀. 锐刀. 招魂刀.
 			nWaveNum = 53;
 			break;
-		case 5:  case 10:  case 12: // 伙利措何. 没悼档尝. 楷磊何.
+		case 5:  case 10:  case 12: // 三戟大斧. 青铜斧. 连子斧.
 			nWaveNum = 54;
 			break;
-		case 15:  // 颇锄柳寸.
+		case 15:  // 破雷震堂.
 			nWaveNum = 55;
 			break;
-		case 2:  case 3:  case 6:  case 7: case 16:  case 17: case 19:  // 伙瘤芒. 玫屈格. 全酒芒. 邦豹捞. 没付芒, 侩酒厘. 力付豪
+		case 2:  case 3:  case 6:  case 7: case 16:  case 17: case 19:  // 三叉戟. 天刑木. 红牙枪. 镐. 青马枪, 龙牙杖. 制魔棒
 			nWaveNum = 56;
 			break;
 		default:
-			nWaveNum = 57;	// 盖颊.
+			nWaveNum = 57;	// 空手。
 			break;
 		}
 	}
@@ -2865,7 +2865,7 @@ VOID CHero::ShowShield()
 
 					g_xMainWnd.Get3DDevice()->DrawPrimitive(D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, m_avBoard, 4, NULL);
 
-					// 盔惑汗蓖.
+					// 恢复原状.
 					ZeroMemory(&mtrl, sizeof(mtrl));
 					mtrl.diffuse.r = mtrl.diffuse.g = mtrl.diffuse.b = 0.1f;
 					mtrl.ambient.r = mtrl.ambient.g = mtrl.ambient.b = 1.0f;
@@ -2885,15 +2885,15 @@ VOID CHero::ShowShield()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CHero::UpdateMove(BOOL bIsMoveTime)
+	函数名 : CHero::UpdateMove(BOOL bIsMoveTime)
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : BOOL 
+	目的   :
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CHero::UpdateMove(BOOL bIsMoveTime)
@@ -2946,7 +2946,7 @@ BOOL CHero::UpdateMove(BOOL bIsMoveTime)
 			}
 		}
 
-		// 楷加利牢 橇饭烙 吝俊辑 秦具且老.
+		// 连续帧中要做的事。
 		if ( m_dwCurrFrame >= m_dwEndFrame )
 		{
 			m_dwCurrFrame = m_dwEndFrame - 1;
@@ -3208,33 +3208,33 @@ VOID CHero::OnStruck(LPPACKETMSG lpPacketMsg)
 		SetMotionFrame(_MT_MON_HITTED, m_bCurrDir);
 	}
 
-	// 阁胶磐老锭.
+	// 为怪物时.
 	if ( m_stHitter.bGender == _GENDER_MON )
 	{
 		CMagic* pxMagic;
 		switch ( m_stHitter.bDress )
 		{
-		case 2:		// 纳迫肺橇.
+		case 2:		// 凯法洛普.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_KEPAL, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this, 0);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;
-		case 8:		// 癌林俺固.
+		case 8:		// 甲胄蚂蚁.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_GREATANT, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;
-		case 14:	// 捍侩俺固.
+		case 14:	// 兵蚁.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_ANT, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;
-		case 16:	// 靛抄俺固.
+		case 16:	// 游荡蚁.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_WORKANT, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
 			break;
-		case 67:	// 盟锋脚.
+		case 67:	// 烛龙神.
 			pxMagic = new CMagic;
 			pxMagic->CreateMagic(_MONMAGIC_BIGGINE_CHAR, m_wPosX, m_wPosY, m_wPosX, m_wPosY, this);
 			g_xGameProc.m_xMagicList.AddNode(pxMagic);
@@ -3464,15 +3464,15 @@ VOID CHero::OnButch(LPPACKETMSG lpPacketMsg)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CHero::UpdatePacketState()
+	函数名 : CHero::UpdatePacketState()
 
-	累己磊 : 
-	累己老 : 
+	作者   :
+	编写日期 :
 
-	格利   : 
-	免仿   : BOOL 
+	目的   :
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CHero::UpdatePacketState()
@@ -3539,17 +3539,17 @@ BOOL CHero::UpdatePacketState()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CHero::UpdateMotionState()
+	函数名 : CHero::UpdateMotionState()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nLoopTime
+	目的   :
+	输入   : INT nLoopTime
 	         BOOL bIsMoveTime
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
@@ -3680,18 +3680,18 @@ VOID CHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CHero::ChangeFeature()
+	函数名 : CHero::ChangeFeature()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : BYTE bGender, BYTE bWear, BYTE bHair, BYTE bWeapon;
-	涝仿   : WORD wActor
+	目的   : BYTE bGender, BYTE bWear, BYTE bHair, BYTE bWeapon;
+	输入   : WORD wActor
 	         BYTE bHair
 	         BYTE bWeapon
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CHero::ChangeFeature(FEATURE stFeature, FEATUREEX stFeatureEx)
@@ -3751,22 +3751,22 @@ BOOL CHero::ChangeFeature(FEATURE stFeature, FEATUREEX stFeatureEx)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CHero::DrawActor()
+	函数名 : CHero::DrawActor()
 
-	累己磊 : 
-	累己老 : 
+	作者 : 
+	日期 : 
 
-	格利   : 
-	涝仿   : BOOL bFocused
+	目的   : 
+	输入   : BOOL bFocused
 	         BOOL bShadowAblended
-	免仿   : BOOL 
+	输出   : BOOL 
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, BOOL bUseScrnPos, BOOL bDrawShadow)
 {
-	// 谅钎贸府.
+	// 坐标处理。
 	if ( bUseScrnPos )
 	{
 		m_shScrnPosX = (m_wPosX - pxMap->m_shStartViewTileX) * _CELL_WIDTH + _VIEW_CELL_X_START - pxMap->m_shViewOffsetX + m_shShiftPixelX;
@@ -3780,9 +3780,9 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 	SHORT	shPX, shPY;
 
 	//---------------------------------------------------------------------------------------------------------------//
-	// 阿 捞固瘤 技泼棺 谅钎康开 眉农.
+	// 各图像的设置及坐标区域检查。
 	//---------------------------------------------------------------------------------------------------------------//
-	// 富.
+	// 马.
 	if ( m_stFeatureEx.bHorse != _HORSE_NONE && m_pxHorseImage != NULL )
 	{
 		if ( m_bCurrMtn >= _START_HORSE_MTN )
@@ -3798,7 +3798,7 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 		}
 	} 
 
-	// 公扁.
+	// 武器。
 	if ( m_stFeature.bWeapon != _WEAPON_NONE && m_pxWeaponImage != NULL )
 	{
 		if ( m_bCurrMtn < _MAX_WEAPON_MTN )
@@ -3815,7 +3815,7 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 		}
 	}
 
-	// 某腐磐.
+	// 角色.
 	if ( m_pxActorImage )
 	{
 		if ( !m_pxActorImage->NewSetIndex(m_dwCurrFrame) )
@@ -3853,7 +3853,7 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 		}
 	}
 
-	// 赣府.
+	// 头部.
 	if ( m_stFeature.bHair != _HAIR_NONE && m_pxHairImage != NULL )
 	{
 		m_dwCurrHairFrame = (m_stFeature.bHair*_MAX_HERO_FRAME-_MAX_HERO_FRAME)+(m_dwCurrFrame-(_MAX_HERO_FRAME*m_stFeature.bDress));
@@ -3867,12 +3867,12 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 	}
 
 	//---------------------------------------------------------------------------------------------------------------//
-	// 弊覆磊弊府扁.
+	// 绘制影子.
 	//---------------------------------------------------------------------------------------------------------------//
 	BYTE bOpaRate = 70;
 	WORD wState   = GetCharState();
 
-	// 公扁.
+	// 武器。
 	if ( m_stFeature.bWeapon != _WEAPON_NONE && m_pxWeaponImage != NULL )
 	{
 		if ( m_bCurrMtn < _MAX_WEAPON_MTN )
@@ -3905,7 +3905,7 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 		}
 	}
 
-	// 富.
+	// 马.
 	if ( m_stFeatureEx.bHorse != _HORSE_NONE && m_pxHorseImage != NULL )
 	{
 		if ( m_bCurrMtn >= _START_HORSE_MTN )
@@ -3938,7 +3938,7 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 		}
 	}
 
-	// 某腐磐.
+	// 角色.
 	if ( m_pxActorImage )
 	{
 		INT nStartX1 = m_shScrnPosX + shShadowPX;
@@ -3967,7 +3967,7 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 		}
 	}
 
-	// 赣府绰 弊覆磊甫 弊府瘤 臼绰促.
+	// 头部不绘制阴影。
 	if ( m_wABlendDelay )		
 	{
 		bShadowAblended = TRUE;
@@ -3993,9 +3993,9 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 	else if ( wState==_STATE_ABLEND )			bShadowAblended = TRUE;
 
 	//---------------------------------------------------------------------------------------------------------------//
-	// 捞固瘤 弊府扁.
+	// 绘制图像.
 	//---------------------------------------------------------------------------------------------------------------//
-	// 富.
+	// 马.
 	if ( m_stFeatureEx.bHorse != _HORSE_NONE && m_pxHorseImage != NULL )
 	{
 		if ( m_bCurrMtn >= _START_HORSE_MTN )
@@ -4005,7 +4005,7 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 		}
 	}
 
-	// 公扁甫 刚历 弊妨具瞪规氢.
+	// 需要先绘制武器的方向.
 	if ( m_stFeature.bWeapon != _WEAPON_NONE && m_pxWeaponImage != NULL && g_xSpriteInfo.m_bWOrder[(m_dwCurrFrame-(_MAX_HERO_FRAME*m_stFeature.bDress))] )
 	{
 		if ( m_bCurrMtn < _MAX_WEAPON_MTN )
@@ -4020,21 +4020,21 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 */		}
 	}
 
-	// 某腐磐.
+	// 角色.
 	if ( m_pxActorImage != NULL )
 	{
 		DrawWithEffected(m_rcActor.left, m_rcActor.top, m_pxActorImage->m_lpstNewCurrWilImageInfo->shWidth, m_pxActorImage->m_lpstNewCurrWilImageInfo->shHeight, (WORD*)m_pxActorImage->m_pbCurrImage,
 				         m_stFeatureEx.wDressColor, m_stFeatureEx.wHairColor, bFocused, bOpaRate, wState);
 	}
 
-	// 赣府.
+	// 头部.
  	if ( m_stFeature.bHair != _HAIR_NONE && m_pxHairImage != NULL )
 	{
 		DrawWithEffected(m_rcHair.left, m_rcHair.top, m_pxHairImage->m_lpstNewCurrWilImageInfo->shWidth, m_pxHairImage->m_lpstNewCurrWilImageInfo->shHeight, (WORD*)m_pxHairImage->m_pbCurrImage, 
 				         m_stFeatureEx.wDressColor, m_stFeatureEx.wHairColor, bFocused, bOpaRate, wState);
 	}			
 
-	// 公扁甫 唱吝俊 弊妨具瞪 规氢.
+	// 之后需要绘制武器的方向.
 	if ( m_stFeature.bWeapon != _WEAPON_NONE && m_pxWeaponImage != NULL && !g_xSpriteInfo.m_bWOrder[(m_dwCurrFrame-(_MAX_HERO_FRAME*m_stFeature.bDress))] ) 
 	{
 		if ( m_bCurrMtn < _MAX_WEAPON_MTN )
@@ -4103,15 +4103,15 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 *******************************************************************************************************************/
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::CMyHero()
+	函数名 : CMyHero::CMyHero()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CMyHero::CMyHero()
@@ -4123,15 +4123,15 @@ CMyHero::CMyHero()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::~CMyHero()
+	函数名 : CMyHero::~CMyHero()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CMyHero::~CMyHero()
@@ -4188,7 +4188,7 @@ VOID CMyHero::DestroyActor()
 	lpPacketMsg  = NULL;
 	shLeftMsgCnt = m_xPriorPacketQueue.GetCount();
 
-	// 阶咯乐绰 菩哦阑 瘤款促.
+	// 清除已堆积的数据包。
 	if ( shLeftMsgCnt > 0 )
 	{
 		for ( nCnt = 0; nCnt < shLeftMsgCnt; nCnt++ )
@@ -4220,16 +4220,16 @@ BOOL CMyHero::Create(CImageHandler* pxImgHandler, BYTE bMtn, BYTE bDir, WORD wPo
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::SetMapHandler()
+	函数名 : CMyHero::SetMapHandler()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : CMapHandler* pxMap
-	免仿   : VOID 
+	目的   :
+	输入   : CMapHandler* pxMap
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改人] : 修改内容
 
 *******************************************************************************************************************/
 VOID CMyHero::SetMapHandler(CMapHandler* pxMap)
@@ -4255,15 +4255,15 @@ VOID CMyHero::OnHealthSpellChanged(LPPACKETMSG lpPacketMsg)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::UpdatePacketState()
+	函数名 : CMyHero::UpdatePacketState()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : BOOL 
+	目的   :
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改人] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CMyHero::UpdatePacketState()
@@ -4367,15 +4367,15 @@ BOOL CMyHero::UpdatePacketState()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::SetOldPosition()
+	函数名 : CMyHero::SetOldPosition()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : BOOL 
+	目的   :
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改人] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CMyHero::SetOldPosition()
@@ -4409,15 +4409,15 @@ BOOL CMyHero::SetOldPosition()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::CheckMyPostion()
+	函数名 : CMyHero::CheckMyPostion()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : BOOL 
+	目的   :
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CMyHero::CheckMyPostion()
@@ -4434,15 +4434,15 @@ BOOL CMyHero::CheckMyPostion()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::AdjustMyPostion()
+	函数名 : CMyHero::AdjustMyPostion()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CMyHero::AdjustMyPostion()
@@ -4454,18 +4454,18 @@ VOID CMyHero::AdjustMyPostion()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::SetMotionState()
+	函数名 : CMyHero::SetMotionState()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : BYTE bMtn
+	目的   :
+	输入   : BYTE bMtn
 	         BYTE bDir
 	         LPPOINT lpptTarget
-	免仿   : VOID 
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CMyHero::SetMotionState(BYTE bMtn, BYTE bDir, INT nMouseTargetID, BOOL bIsDead, LPPOINT lpptPos, SHORT shSkill)
@@ -4623,7 +4623,7 @@ VOID CMyHero::SetMotionState(BYTE bMtn, BYTE bDir, INT nMouseTargetID, BOOL bIsD
 				if ( lpptPos )		
 				{
 					g_xClientSocket.SendSpellMsg(shSkill, lpptPos->x, lpptPos->y, 0);
-					// 公怕焊 矫埃蔼 扁废.
+					// 记录无怠步的时间值.
 					m_dwLastRushTime = timeGetTime();
 					m_bMotionLock = m_bInputLock = TRUE;
 					m_bWarMode	= TRUE;
@@ -4765,16 +4765,16 @@ VOID CMyHero::SetMotionState(BYTE bMtn, BYTE bDir, INT nMouseTargetID, BOOL bIsD
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::UpdateMotionState()
+	函数名 : CMyHero::UpdateMotionState()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nLoopTime
-	免仿   : VOID 
+	目的   :
+	输入   : INT nLoopTime
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
@@ -4852,7 +4852,7 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 
 			UpdatePacketState();
 
-			// 楷加利牢 橇饭烙 吝俊辑 秦具且老.
+			// 连续帧中要做的事。
 			if ( m_dwMotionLockTime > _MOTION_LOCKTIME )
 			{
 				m_dwMotionLockTime = 0;
@@ -5003,7 +5003,7 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 
 			UpdatePacketState();
 
-			// 楷加利牢 橇饭烙 吝俊辑 秦具且老.
+			// 连续帧中要做的事。
 			if ( m_dwMotionLockTime > _MOTION_LOCKTIME )
 			{
 				m_dwMotionLockTime = 0;
@@ -5082,16 +5082,16 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::UpdateMove(BOOL bIsMoveTime)
+	函数名 : CMyHero::UpdateMove(BOOL bIsMoveTime)
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : BOOL bIsMoveTime
-	免仿   : BOOL 
+	目的   :
+	输入   : BOOL bIsMoveTime
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
@@ -5150,7 +5150,7 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 				}
 			}
 
-			// 楷加利牢 橇饭烙 吝俊辑 秦具且老.
+			// 连续帧中要做的事。
 			if ( m_dwCurrFrame >= m_dwEndFrame )
 			{
 				m_dwCurrFrame = m_dwEndFrame-1;
@@ -5170,7 +5170,7 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 							m_shShiftPixelY	= 0;
 							m_shShiftTileX	= 0;
 							m_shShiftTileY	= 0;
-							// 捞悼饶 谅钎犬牢.
+							// 移动后确认坐标。
 							if ( CheckMyPostion() == FALSE )
 								AdjustMyPostion();
 
@@ -5196,7 +5196,7 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 
 							m_bBackStepFrame = 0;
 							m_bBackStepFrameCnt = 0;
-							// 捞悼饶 谅钎犬牢.
+							// 移动后确认坐标。
 							if ( CheckMyPostion() == FALSE )
 								AdjustMyPostion();
 
@@ -5231,7 +5231,7 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 							}
 							else	SetMotionFrame(_MT_HORSESTAND, m_bCurrDir);
 
-							// 捞悼饶 谅钎犬牢.
+							// 移动后确认坐标。
 							if ( CheckMyPostion() == FALSE )
 								AdjustMyPostion();
 							POINT ptMouse;
@@ -5311,7 +5311,7 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 				}
 			}
 
-			// 楷加利牢 橇饭烙 吝俊辑 秦具且老.
+			// 连续帧中要做的事。
 			if ( m_dwMotionLockTime > _MOTION_LOCKTIME )
 			{
 				m_dwMotionLockTime = 0;
@@ -5366,7 +5366,7 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 							
 							SetMotionFrame(_MT_MON_STAND, m_bCurrDir);
 
-							// 捞悼饶 谅钎犬牢.
+							// 移动后确认坐标。
 							if ( CheckMyPostion() == FALSE )
 								AdjustMyPostion();
 							POINT ptMouse;
@@ -5391,7 +5391,7 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 				}
 			}
 
-			// 楷加利牢 橇饭烙 吝俊辑 秦具且老.
+			// 连续帧中要做的事。
 			if ( m_dwMotionLockTime > _MOTION_LOCKTIME )
 			{
 				m_dwMotionLockTime = 0;
@@ -5418,22 +5418,22 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero:DrawActor()
+	函数名 : CMyHero:DrawActor()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : BOOL bFocused
+	目的   :
+	输入   : BOOL bFocused
 	         BOOL bShadowAblended
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CMyHero::DrawActor(BOOL bFocused, BOOL bShadowAblended, BOOL bUseScrnPos, BOOL bDrawShadow)
 {
-	// 某腐磐 谅钎绰 绊沥.
+	// 角色坐标固定.
 	m_shScrnPosX = _CHAR_CENTER_XPOS - 24; 
 	m_shScrnPosY = _CHAR_CENTER_YPOS - 16;
 
@@ -5455,17 +5455,17 @@ BOOL CMyHero::DrawActor(BOOL bFocused, BOOL bShadowAblended, BOOL bUseScrnPos, B
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::CalcDirection()
+	函数名 : CMyHero::CalcDirection()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nTargetTileX
+	目的   :
+	输入   : INT nTargetTileX
 	         INT nTargetTileY
-	免仿   : 
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改人] : 修改内容
 
 *******************************************************************************************************************/
 BYTE CMyHero::CalcDirection(INT nTargetTileX, INT nTargetTileY)
@@ -5478,11 +5478,11 @@ BYTE CMyHero::CalcDirection(INT nTargetTileX, INT nTargetTileY)
 	BYTE	bDir;
 	rLineLength = (FLOAT)sqrt((double)(nWidth*nWidth+nHeight*nHeight));
 	
-	// 扁夯.
+	// 默认.
 	// 7  0  1          
 	// 6     2
 	// 5  4  3
-	// 老窜篮 4俺狼 盒搁(90档扁霖)栏肺 唱穿绊 盒搁俊 措茄 cos蔼阑 利侩茄促.
+	// 首先分为 4 个象限(以 90 度为基准), 并对象限应用 cos 值。
 	( nWidth >= 0 ) ?
 		( nHeight <  0 ? (rBottomInTriangle=(FLOAT)-nHeight, nDimension=0) : (rBottomInTriangle=(FLOAT) nWidth, nDimension=2) ):
 		( nHeight >= 0 ? (rBottomInTriangle=(FLOAT) nHeight, nDimension=4) : (rBottomInTriangle=(FLOAT)-nWidth, nDimension=6) );
@@ -5495,7 +5495,7 @@ BYTE CMyHero::CalcDirection(INT nTargetTileX, INT nTargetTileY)
 //	cos(0), cos(pi/8), cos(pi/4), cos(pi/2)
 	CONST FLOAT rCosVal8[4] = { 1.0f, 0.923880f, 0.707107f, 0.382683f };
 	
-	// 阿盒搁阑 3俺狼 康开栏肺 唱穿绢辑 康开阑 犁炼沥茄促.
+	// 把各个象限分成 3 个区域，再重新调整区域。
 	bDir = 0;
 	for ( INT nCnt = 0; nCnt < 4; nCnt++ )
 	{
@@ -5514,17 +5514,17 @@ BYTE CMyHero::CalcDirection(INT nTargetTileX, INT nTargetTileY)
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::GetPosMouseToTile()
+	函数名 : CMyHero::GetPosMouseToTile()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : INT nXPos
+	目的   :
+	输入   : INT nXPos
 	         INT nYPos
-	免仿   : POINT 
+	输出   : POINT
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 POINT CMyHero::GetPosMouseToTile(INT nXPos, INT nYPos)
@@ -5593,22 +5593,22 @@ BOOL CMyHero::CanRun()
 
 
 //---------------------------------------------------------------------------------------------------------------//
-//  蜡历 涝仿窃荐.
+//  用户输入函数.
 //---------------------------------------------------------------------------------------------------------------//
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::OnLButtonDown()
+	函数名 : CMyHero::OnLButtonDown()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : POINT ptMouse
+	目的   :
+	输入   : POINT ptMouse
 	         INT nTargetID
 	         POINT* lpptTargetPos
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* lpptTargetPos)
@@ -5645,7 +5645,7 @@ BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* l
 			nLength = (INT)sqrt((double)(m_wPosX-ptMouseTilePos.x)*(m_wPosX-ptMouseTilePos.x) + (m_wPosY-ptMouseTilePos.y)*(m_wPosY-ptMouseTilePos.y));
 
 
-		// 1. SHIFT.(碍力 傍拜)
+		// 1. SHIFT.(强制攻击)
 		if ( HIBYTE(GetKeyState(VK_SHIFT)) )
 		{
 			if ( m_stFeatureEx.bHorse == _HORSE_NONE )
@@ -5654,7 +5654,7 @@ BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* l
 				{
 					if ( m_stFeatureEx.bHorse == _HORSE_NONE && !bIsDead )
 					{
-						// 傍拜茄促.
+						// 进行攻击.
 						ptTargetTile.x = m_wPosX;
 						ptTargetTile.y = m_wPosY;
 						SetMotionState(_MT_ONEHSWING, bDir, nTargetID, bIsDead, &ptTargetTile);
@@ -5668,30 +5668,30 @@ BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* l
 				}
 			}
 		}
-		// 2. ALT.(戒扁)
+		// 2. ALT.(切)
 		else if ( HIBYTE(GetKeyState(VK_MENU)) )
 		{
 			SetMotionState(_MT_CUT, bDir, nTargetID, bIsDead, &ptTargetTile);
 		}
 		/*
-		// 3. 努腐茄鸥老捞 郴 某腐磐啊 困摹茄 镑牢啊?
+		// 3. 点击的图块是否是我角色所在的位置?
 		else if ()
 		{
-			// 酒捞袍捞 乐绰啊?
+			// 是否有物品?
 			if ()
 			{
-				// 酒捞袍阑 凛绰促.
+				// 拾取物品.
 			}
 		}*/
-		// 4. 努腐茄 谅钎啊 Actor 康开 救俊 乐绰啊?
+		// 4. 点击的坐标是否在 Actor 区域之内?
 		else if ( nTargetID != -1 && lpptTargetPos )
 		{
-			//1. 鸥百 鸥老狼 困摹啊 1鸥老 捞郴牢啊?
+			//1. 目标图块的位置是否在 1 图块以内?
 			if ( nLength < 2 && nLength > 0 ) 
 			{
 				if ( m_stFeatureEx.bHorse == _HORSE_NONE && !bIsDead )
 				{
-					// 傍拜茄促.
+					// 进行攻击.
 					ptTargetTile.x = m_wPosX;
 					ptTargetTile.y = m_wPosY;
 					bDir = CalcDirection(lpptTargetPos->x, lpptTargetPos->y);
@@ -5699,10 +5699,10 @@ BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* l
 
 				}
 			}
-			// Actor啊 乐绰 规氢栏肺 捞悼 啊瓷茄啊?(甘加己眉农) 
+			// 能向 Actor 所在的方向移动吗？(地图属性检查) 
 			else if ( m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, bDir, 1, &ptTargetTile) && nLength > 0)
 			{
-				// 1鸥老 捞悼茄促.
+				// 移动1图块.
 				if ( m_stFeatureEx.bHorse == _HORSE_NONE )		SetMotionState(_MT_WALK, bDir, nTargetID, bIsDead, &ptTargetTile);
 				else											SetMotionState(_MT_HORSEWALK, bDir, nTargetID, bIsDead, &ptTargetTile);
 			}
@@ -5712,35 +5712,35 @@ BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* l
 				else											SetMotionState(_MT_HORSESTAND, bDir);
 
 			}
-			/*// Actor啊 NPC牢啊?
+			/*// Actor 是否 NPC?
 			if ()
 			{
-				// 措拳芒捞唱 惑痢芒阑 楷促.
+				// 打开对话框或商店窗口.
 			}
-			// Actor啊 傍拜 啊瓷茄啊?
+			// Actor 是否可攻击?
 			else if()
 			{
-				// Actor狼 困摹啊 1鸥老 郴牢啊?
+				// Actor 的位置是否在 1 图块内?
 				if ()
 				{
-					// 傍拜茄促.
+					// 进行攻击.
 				}
-				// Actor啊 乐绰 规氢栏肺 捞悼 啊瓷茄啊?(甘加己眉农) 
+				// 能否向 Actor 所在方向移动?(地图属性检查)
 				else if ()
 				{
-					// 1鸥老 捞悼茄促.
+					// 移动 1 图块.
 				}
 			}*/
 		}
-		// 6. 泅犁 付快胶鸥老规氢栏肺 捞悼 啊瓷茄啊?(甘加己眉农)
+		// 6. 当前能否向鼠标方向移动?(地图属性检查)
 		else if ( m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, bDir, 1, &ptTargetTile) && nLength > 0 )
 		{
-			// 1鸥老 捞悼茄促.
+			// 移动1图块.
 			if ( m_stFeatureEx.bHorse == _HORSE_NONE )			SetMotionState(_MT_WALK, bDir, nTargetID, bIsDead, &ptTargetTile);
 			else												SetMotionState(_MT_HORSEWALK, bDir, nTargetID, bIsDead, &ptTargetTile);
 
 		}
-		// 7. 捞悼 且荐 绝促搁 林函俊 捞悼且荐 乐绰 鸥老阑 茫酒郴绢 格利 鸥老苞狼 啊厘 啊鳖款 鸥老阑 茫酒辰促.
+		// 7. 若无法移动，则在周围找出可移动的图块，并找出与目标图块最接近的图块.
 		else if ( !m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, bDir, 1, &ptTargetTile) )
 		{
 			INT nSelectedDir = -1;
@@ -5762,7 +5762,7 @@ BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* l
 
 			if ( nSelectedDir != -1 && nDistance > 0 )
 			{
-				// 1鸥老 捞悼茄促.
+				// 移动1图块.
 				m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, nSelectedDir, 1, &ptTargetTile);
 				if ( m_stFeatureEx.bHorse == _HORSE_NONE )		SetMotionState(_MT_WALK, nSelectedDir, nTargetID, bIsDead, &ptTargetTile);
 				else											SetMotionState(_MT_HORSEWALK, nSelectedDir, nTargetID, bIsDead, &ptTargetTile);
@@ -5787,16 +5787,16 @@ BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* l
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::OnRButtonDown()
+	函数名 : CMyHero::OnRButtonDown()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : POINT ptMouse
-	免仿   : BOOL 
+	目的   :
+	输入   : POINT ptMouse
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CMyHero::OnRButtonDown(POINT ptMouse)
@@ -5821,39 +5821,39 @@ BOOL CMyHero::OnRButtonDown(POINT ptMouse)
 		ptMouseTilePos = GetPosMouseToTile(ptMouse.x, ptMouse.y);
 		bDir		   = CalcDirection(ptMouseTilePos.x, ptMouseTilePos.y);			
 
-		//1. 鸥百 鸥老狼 困摹啊 1鸥老 捞郴牢啊?
+		//1. 目标图块的位置是否在 1 图块以内?
 		if ( (INT)(sqrt((double)(m_wPosX-ptMouseTilePos.x)*(m_wPosX-ptMouseTilePos.x) + (m_wPosY-ptMouseTilePos.y)*(m_wPosY-ptMouseTilePos.y)))
 			 < 2 ) 
 		{
-			// 规氢阑 官槽促.
+			// 改变方向.
 			if ( m_stFeatureEx.bHorse == _HORSE_NONE )		SetMotionState(_MT_STAND, bDir);
 			else											SetMotionState(_MT_HORSESTAND, bDir);
 		}
-		//2. 框流牢促.
+		//2. 移动.
 		else
 		{
-			// 崔副荐 乐阑锭.
+			// 可以奔跑时.
 			if ( m_bCanRun )
 			{
 				m_bCanRun = FALSE;
 
 				if ( m_stFeatureEx.bHorse != _HORSE_NONE )
 				{
-					// 格利瘤鸥老苞狼 规氢栏肺 1, 2, 3鸥老掳狼 困摹俊 规秦拱捞 绝阑锭.
+					// 朝向目的地图块的方向时，第 1、2、3 个图块位置没有障碍物。
 					if ( m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, bDir, 1, &ptTargetTile) && 
 						 m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, bDir, 2, &ptTargetTile) &&
 						 m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, bDir, 3, &ptTargetTile) )
 					{
-						// 3鸥老 捞悼茄促.
+						// 移动 3 个图块。
 						m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, bDir, 3, &ptTargetTile);
 						SetMotionState(_MT_HORSERUN, bDir, 0, FALSE, &ptTargetTile);
 					}
-					// 格利瘤鸥老苞狼 规氢栏肺 1鸥老掳狼 困摹俊 规秦拱捞 绝阑锭.
+					// 朝目标图块方向第 1 个图块的位置没有障碍物时.
 					else if ( m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, bDir, 1, &ptTargetTile) )
 					{
 						SetMotionState(_MT_HORSEWALK, bDir, 0, FALSE, &ptTargetTile);
 					}
-					// 格利瘤鸥老苞狼 规氢栏肺 1鸥老掳狼 困摹俊 规秦拱捞 乐阑锭.
+					// 朝目的地图块的方向, 第 1 个图块的位置上有障碍物时.
 					else
 					{
 						INT nSelectedDir = -1;
@@ -5874,7 +5874,7 @@ BOOL CMyHero::OnRButtonDown(POINT ptMouse)
 						}
 						if ( nSelectedDir != -1 )
 						{
-							// 1鸥老 捞悼茄促.
+							// 移动1图块.
 							m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, nSelectedDir, 1, &ptTargetTile);
 							SetMotionState(_MT_HORSEWALK, nSelectedDir, 0, FALSE, &ptTargetTile);
 						}
@@ -5884,23 +5884,23 @@ BOOL CMyHero::OnRButtonDown(POINT ptMouse)
 						}
 					}
 				}
-				// 富阑 救鸥绊 乐阑锭.
+				// 没有骑马时。
 				else
 				{
-					// 格利瘤鸥老苞狼 规氢栏肺 1, 2鸥老掳狼 困摹俊 规秦拱捞 绝阑锭.
+					// 朝目标图块方向第 1, 2 图块位置没有障碍物时.
 					if ( m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, bDir, 1, &ptTargetTile) && 
 						 m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, bDir, 2, &ptTargetTile) )
 					{
-						// 2鸥老 捞悼茄促.
+						// 移动 2 个图块。
 						m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, bDir, 2, &ptTargetTile);
 						SetMotionState(_MT_RUN, bDir, 0, FALSE, &ptTargetTile);
 					}
-					// 格利瘤鸥老苞狼 规氢栏肺 1鸥老掳狼 困摹俊 规秦拱捞 绝阑锭.
+					// 朝目标图块方向第 1 个图块的位置没有障碍物时.
 					else if ( m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, bDir, 1, &ptTargetTile) )
 					{
 						SetMotionState(_MT_WALK, bDir, 0, FALSE, &ptTargetTile);
 					}
-					// 格利瘤鸥老苞狼 规氢栏肺 1鸥老掳狼 困摹俊 规秦拱捞 乐阑锭.
+					// 朝目的地图块的方向, 第 1 个图块的位置上有障碍物时.
 					else
 					{
 						INT nSelectedDir = -1;
@@ -5921,7 +5921,7 @@ BOOL CMyHero::OnRButtonDown(POINT ptMouse)
 						}
 						if ( nSelectedDir != -1 )
 						{
-							// 1鸥老 捞悼茄促.
+							// 移动1图块.
 							m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, nSelectedDir, 1, &ptTargetTile);
 							SetMotionState(_MT_WALK, nSelectedDir, 0, FALSE, &ptTargetTile);
 						}
@@ -5934,14 +5934,14 @@ BOOL CMyHero::OnRButtonDown(POINT ptMouse)
 			}
 			else
 			{
-				// 格利瘤鸥老苞狼 规氢栏肺 1鸥老掳狼 困摹俊 规秦拱捞 绝阑锭.
+				// 朝目标图块方向第 1 个图块的位置没有障碍物时.
 				if ( m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, bDir, 1, &ptTargetTile) )
 				{
 					if ( m_stFeatureEx.bHorse == _HORSE_NONE )		SetMotionState(_MT_WALK, bDir, 0, FALSE, &ptTargetTile);
 					else											SetMotionState(_MT_HORSEWALK, bDir, 0, FALSE, &ptTargetTile);
 
 				}
-				// 格利瘤鸥老苞狼 规氢栏肺 1鸥老掳狼 困摹俊 规秦拱捞 乐阑锭.
+				// 朝目的地图块的方向, 第 1 个图块的位置上有障碍物时.
 				else
 				{
 					INT nSelectedDir = -1;
@@ -5962,7 +5962,7 @@ BOOL CMyHero::OnRButtonDown(POINT ptMouse)
 					}
 					if ( nSelectedDir != -1 )
 					{
-						// 1鸥老 捞悼茄促.
+						// 移动1图块.
 						m_pxMap->GetNextTileCanMove(m_wPosX, m_wPosY, nSelectedDir, 1, &ptTargetTile);
 						if ( m_stFeatureEx.bHorse == _HORSE_NONE )	SetMotionState(_MT_WALK, nSelectedDir, 0, FALSE, &ptTargetTile);
 						else										SetMotionState(_MT_HORSEWALK, nSelectedDir, 0, FALSE, &ptTargetTile);
@@ -6034,12 +6034,12 @@ VOID CMyHero::SetMagic(LPCLIENTMAGICRCD	pstMagic, BYTE bKeyNum, BYTE bDir, INT n
 
 	switch ( m_shCurrMagicID )
 	{
-	// 堪拳搬.
+	// 焰火诀.
 	case _SKILL_FIRESWORD:
         if ( dwCurrTick - m_dwLastFireHitTime > 10000 )
 			g_xClientSocket.SendSpellMsg(m_shCurrMagicID, 0, 0, nTargetID);
 		break;
-	// 堪拳搬捞寇狼 八过.
+	// 焰火诀以外的剑法.
 	case _SKILL_BANWOL:
 	case _SKILL_ERGUM:
         if ( dwCurrTick - m_dwLastSpellTime > 200 )
@@ -6051,7 +6051,7 @@ VOID CMyHero::SetMagic(LPCLIENTMAGICRCD	pstMagic, BYTE bKeyNum, BYTE bDir, INT n
 		break;
 	}
 
-	// 傍拜付过老锭 立加辆丰 给窍霸窍绰 Delay.
+	// 攻击魔法时防止断开连接的 Delay.
 	switch ( m_shCurrMagicID )
 	{
 	case _SKILL_MOOTEBO:	case _SKILL_FIRESWORD:		case _SKILL_BANWOL:		case _SKILL_ERGUM:			case _SKILL_FIRECHARM:
@@ -6061,7 +6061,7 @@ VOID CMyHero::SetMagic(LPCLIENTMAGICRCD	pstMagic, BYTE bKeyNum, BYTE bDir, INT n
 		break;
 	}
 
-	// 荤恩阑 傍拜沁阑锭 框流烙 菩澄萍 Delay.
+	// 攻击人时移动惩罚 Delay。
 	m_wMagicPKDelayTime = 0;
 	if ( nTargetID )
 	{
@@ -6073,18 +6073,18 @@ VOID CMyHero::SetMagic(LPCLIENTMAGICRCD	pstMagic, BYTE bKeyNum, BYTE bDir, INT n
 
 /******************************************************************************************************************
 
-	窃荐疙 : CMyHero::OnKeyDown()
+	函数名 : CMyHero::OnKeyDown()
 
-	累己磊 : 
-	累己老 : 
+	编写者 :
+	编写日期 :
 
-	格利   : 
-	涝仿   : WPARAM wParam
+	目的   :
+	输入   : WPARAM wParam
 	         LPARAM lParam
 	         POINT ptMouse
-	免仿   : BOOL 
+	输出   : BOOL
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 BOOL CMyHero::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTargetPos, INT nMosueTargetID, FEATURE stTargetFeature)
@@ -6133,10 +6133,10 @@ BOOL CMyHero::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTar
 	}
 
 	dwCurrTick = timeGetTime();
-	// 付过捞侩啊瓷 Delay Time Check.
+	// 魔法可用 Delay Time Check.
 	if ( dwCurrTick - m_dwLastSpellTime > 500 + m_wMagicDelayTime )
 	{
-		// 付过捞 力措肺 技泼登菌绰瘤 Check.
+		// 检查魔法是否已正确设置 Check.
 		if ( bMagicKey )
 		{
 			if ( nMosueTargetID == NULL )	ptMouseTilePos = GetPosMouseToTile(ptMouse.x, ptMouse.y);
@@ -6153,7 +6153,7 @@ BOOL CMyHero::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTar
 					SetMagic(pstMagic, bMagicKey, bDir, nMosueTargetID, stTargetFeature, ptMouseTilePos);
 				}
 				else
-					g_xGameProc.m_xInterface.m_xClientSysMsg.AddSysMsg("付仿捞 葛磊而聪促.");
+					g_xGameProc.m_xInterface.m_xClientSysMsg.AddSysMsg("Not enough MP.");
 			}
 		}
 	}

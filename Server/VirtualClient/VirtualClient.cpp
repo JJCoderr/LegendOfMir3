@@ -139,7 +139,7 @@ BOOL InitInstance(HANDLE hInstance, int nCmdShow)
 
 	InitCommonControlsEx(&icex);
 
-    g_hMainWnd = CreateWindowEx(0, _T("VirtualClient"), _T("미르의 전설 2 - 가상 클라이언트"), 
+    g_hMainWnd = CreateWindowEx(0, _T("VirtualClient"), _T("Legend of Mir 2 - Virtual Client"), 
 							WS_OVERLAPPEDWINDOW|WS_VISIBLE,
 							CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,                 
 							NULL, NULL, (HINSTANCE)hInstance, NULL);

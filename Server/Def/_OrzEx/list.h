@@ -7,8 +7,8 @@
 	Date:
 		2001/02/05 
 
-	Note: 
-		剧规氢 楷搬 府胶飘
+	Note:
+		双向链表
 */
 #ifndef __ORZ_DATASTRUCTURE_LIST__
 #define __ORZ_DATASTRUCTURE_LIST__
@@ -88,7 +88,7 @@ class CList
 protected:
 	CListNode< T > *m_pHead, *m_pTail;
 
-	// Key甫 厚背且 锭 龋免登绰 窃荐
+	// 比较 Key 时调用的函数
 	int  (*m_pfnCmp)( void *pArg, T *pFirst, T *pSecond );
 	void *m_pArgCmpFunc;
 

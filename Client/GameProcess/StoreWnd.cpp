@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 #include "StdAfx.h"
@@ -41,8 +41,8 @@
 #define TOP_ITEM_RECT			103
 #define BOTTOM_ITEM_RECT		199
 
-#define POS_X				84			// ex (傈:POS_X,POS_Y)(GOLD:POS__X,POS_Y)
-#define POS_Y				246			// ex (公霸:POS_X,POS__Y)(啊规公霸:POS__X,POS__Y)
+#define POS_X				84			// ex (钱:POS_X,POS_Y)(GOLD:POS__X,POS_Y)
+#define POS_Y				246			// ex (重量:POS_X,POS__Y)(背包重量:POS__X,POS__Y)
 #define POS__Y				270
 #define POS__X				246
 
@@ -104,14 +104,14 @@ VOID CStoreWnd::ShowStoreWnd()
 	if(m_nIsReadyToDisplay>0)
 	{
 		tRect = GetGameWndRect();
-		g_xMainWnd.PutsHan(NULL,tRect.left + POS_KINDSTITLE_X,tRect.top + POS_KINDSTITLE_Y,RGB(255,255,255),RGB(0,0,0)," 惑  前  疙");
+		g_xMainWnd.PutsHan(NULL,tRect.left + POS_KINDSTITLE_X,tRect.top + POS_KINDSTITLE_Y,RGB(255,255,255),RGB(0,0,0)," I T E M  N A M E");
 //		if(stdMod=1) 
-			g_xMainWnd.PutsHan(NULL,tRect.left + POS_ITEMSTITLE_X,tRect.top + POS_ITEMSTITLE_Y,RGB(255,255,255),RGB(0,0,0)," 备   盒          啊   拜");
+			g_xMainWnd.PutsHan(NULL,tRect.left + POS_ITEMSTITLE_X,tRect.top + POS_ITEMSTITLE_Y,RGB(255,255,255),RGB(0,0,0)," T Y P E            P R I C E");
 		if(m_bSelectedKind)  
-		{// Kinds啊 急琶 登菌阑锭
-			g_xMainWnd.PutsHan(NULL,tRect.left + POS_ITEMNAME_X+20,tRect.top + POS_ITEMNAME_Y + 10 ,RGB(255,255,255),RGB(0,0,0),"蜡岿档");
+		{// 选中 Kinds 时
+			g_xMainWnd.PutsHan(NULL,tRect.left + POS_ITEMNAME_X+20,tRect.top + POS_ITEMNAME_Y + 10 ,RGB(255,255,255),RGB(0,0,0),"Crescent Blade");
 
-			g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewSetIndex(1); // 秦寸 酒捞袍 Looks甫 持阑巴
+			g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewSetIndex(1); // 填入该物品的 Looks
 			g_xMainWnd.DrawWithImageForCompClipRgn(
 				tRect.left + POS_ITEMIMAGE_X - (g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].m_lpstNewCurrWilImageInfo->shWidth / 2),tRect.top + POS_ITEMIMAGE_Y - (g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].m_lpstNewCurrWilImageInfo->shHeight / 2)
 				,g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].m_lpstNewCurrWilImageInfo->shWidth,g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].m_lpstNewCurrWilImageInfo->shHeight,
@@ -119,7 +119,7 @@ VOID CStoreWnd::ShowStoreWnd()
 		}
 
 		if(m_nIsReadyToDisplay&&1)
-		{	// Kinds List 免仿
+		{	// Kinds List 输出
 			m_xKindBtn.m_pTxtBtn.MoveCurrentToTop();
 			for(int i = 0 ; i <m_xKindBtn.GetButtonCount(); i++)
 			{
@@ -134,7 +134,7 @@ VOID CStoreWnd::ShowStoreWnd()
 			}
 		}
 		if((m_nIsReadyToDisplay>>1)&&1)
-		{	// Item List 免仿
+		{	// Item List 输出
 //			g_xMainWnd.PutsHan(NULL,tRect.left+POS_ITEMLIST_LINE_X,tRect.top+POS_ITEMLIST_LINE_Y+17,RGB(255,255,0),RGB(0,0,0),"123456789012345678901234567890");
 			m_xItemLstBtn.m_pTxtBtn.MoveCurrentToTop();
 			for(int i = 0 ; i <m_xItemLstBtn.GetButtonCount(); i++)
@@ -166,24 +166,24 @@ BOOL CStoreWnd::OnLButtonUp(POINT ptMouse)
 	tPos.y = tRect.top;
 	//bResult = ClickCommandProcess(
 	if(IsInRect(ptMouse,m_xKindRect))
-	{	// 格废 List
+	{	// 列表 List
 		tBtn = m_xKindBtn.ClickCheck(tPos,ptMouse,m_nCurrentKindTop);
 		if(tBtn!=NULL)
 		{
-			// 喘妨柳 滚瓢捞 皋春啊 乐蠢瘤甫 犬牢 窍绊.
-			// 皋春啊 绝栏搁 弊成 急咆俊辑 肛眠绊 皋春啊 乐阑版快
-			// 窍困 皋春甫 夸备茄促.
+			// 确认被按下的按钮是否有菜单.
+			// 没有菜单时就停在选择处，有菜单时
+			// 请求下级菜单。
 			tBtn = m_xKindBtn.ClickCheck(tPos,ptMouse,m_nCurrentKindTop);
 			if(tBtn->nColor==RGB(255,255,0))
 			{
-				// 皋春啊 乐衬?
-				// 荤扁 阂啊瓷
+				// 有菜单吗?
+				// 不可欺诈
 				SendDeTailGoodsList(0,tBtn->Param);
 			}
 			else
 			{
-				// 皋痹啊 绝衬?
-				// 弊烦 弊成 急咆. 荤扁 啊瓷.
+				// 没有菜单吗?
+				// 那就直接选择。可以作弊。
 			}
 		}
 		else
@@ -193,14 +193,14 @@ BOOL CStoreWnd::OnLButtonUp(POINT ptMouse)
 		}
 	}
 	if(IsInRect(ptMouse,m_xItemRect))
-	{	// 亲格  List
+	{	// 项目  List
 		tBtn = NULL;
 		tBtn = m_xItemLstBtn.ClickCheck(tPos,ptMouse,m_nCurrentItemTop);
 		if(tBtn!=NULL)
 		{
-			// 荤扁 啊瓷
+			// 可以购买
 			m_bSelectedItem = TRUE;
-			//烙矫
+			//临时
 			SendButThisITme(tBtn);
 		}
 		else
@@ -238,7 +238,7 @@ BOOL CStoreWnd::OnLButtonDown(POINT ptMouse)
 
 BOOL CStoreWnd::SetBuyKinds(CHAR* Msg,INT Count)   // Eatch Button Divider '\n
 {
-	CNPCTxtAnalysis	tTxtAnalysis;				// 窜瘤 GetValidStr窃荐甫 荤侩窍扁 困秦辑..
+	CNPCTxtAnalysis	tTxtAnalysis;				// 只是为了使用 GetValidStr 函数..
 	CHAR*	szParam;
 	CHAR*	pszStr = new CHAR [MAX_MSG_LENGTH];
 
@@ -247,8 +247,8 @@ BOOL CStoreWnd::SetBuyKinds(CHAR* Msg,INT Count)   // Eatch Button Divider '\n
 	{
 		m_xKindBtn.ReleaseButtons();
 		m_bSelectedKind = FALSE;
-		// 历厘等 虐 朝府扁
-		m_nIsReadyToDisplay= 0;	// Kinds List 汲沥捞 钱啡澜阑 舅覆
+		// 清除已保存的按键
+		m_nIsReadyToDisplay= 0;	// Kinds List 设置已解除的通知
 	}
 
 	ZeroMemory(pszStr,MAX_MSG_LENGTH);
@@ -282,22 +282,22 @@ BOOL CStoreWnd::SetBuyKinds(CHAR* Msg,INT Count)   // Eatch Button Divider '\n
 		ZeroMemory(&tRect,sizeof(RECT));	//
 		tSize = g_xMainWnd.GetStrLength(NULL,NULL,szGName);
 		tRect.top = 0;
-		tRect.left = 0;				// List Button 狼 版快, Left  = 0;
+		tRect.left = 0;				// List Button 的情况, Left  = 0;
 		tRect.right = tSize.cx;
 		tRect.bottom = tSize.cy;
 		szParam = new CHAR[35];
 		ZeroMemory(szParam,35);
-		strcpy(szParam,szGName);	// 烙矫 Parameter甫 酒捞袍捞抚苞 鞍捞 贸府窃.
+		strcpy(szParam,szGName);	// 临时 Parameter 与物品名称一起处理。
 		// Parameter...
 		if(nSubMenuCount>0)
-		{	// Sub Menu 啊 粮犁 窍绰 版快
-			// 皋春啊 粮犁窍搁 灌篮 畴尔祸
+		{	// 存在 Sub Menu 的情况
+			// 若存在菜单则为亮黄色
 			sprintf(szTemp,"%-14s",szGName);
 			m_xKindBtn.AddButton(szTemp,tRect,i,szParam,RGB(255,255,0),RGB(255,0,0));	// Add Button to class
 		}
 		else
-		{	// Sub Menu 啊 粮犁 窍瘤 臼绰 版快
-			// 皋春啊 粮犁窍瘤 臼栏搁 绢滴款 畴尔祸
+		{	// Sub Menu 不存在的情况
+			// 菜单不存在则为暗黄色
 			sprintf(szTemp,"%-14s",szGName);
 			m_xKindBtn.AddButton(szTemp,tRect,i,szParam,RGB(180,180,0),RGB(255,0,0));	// Add Button to class
 		}
@@ -309,7 +309,7 @@ BOOL CStoreWnd::SetBuyKinds(CHAR* Msg,INT Count)   // Eatch Button Divider '\n
 		delete[] szParam;
 	}
 
-	m_nIsReadyToDisplay = 1;		// Kinds List啊 汲沥登菌澜阑 舅覆
+	m_nIsReadyToDisplay = 1;		// 通知 Kinds List 已设置
 	//
 	delete[] pszStr;
 	return	TRUE;
@@ -317,13 +317,13 @@ BOOL CStoreWnd::SetBuyKinds(CHAR* Msg,INT Count)   // Eatch Button Divider '\n
 
 BOOL CStoreWnd::SetBuyItemLst(CHAR* Msg,INT Count)
 {
-	CNPCTxtAnalysis	tTxtAnalysis;				// 窜瘤 GetValidStr窃荐甫 荤侩窍扁 困秦辑..
+	CNPCTxtAnalysis	tTxtAnalysis;				// 只是为了使用 GetValidStr 函数..
 	CHAR*	szLastMsg = NULL;
 	CHAR	szDetailitem[MAX_PATH];
 
 	m_xItemLstBtn.ReleaseButtons();
 	m_xItems.ClearAllNodes();
-	// 历厘等 虐&单捞磐 朝府扁
+	// 清除已保存的键&数据
 	m_nCurrentItemTop = 0;
 
 	ZeroMemory(szDetailitem,MAX_PATH);
@@ -354,49 +354,49 @@ BOOL CStoreWnd::SetBuyItemLst(CHAR* Msg,INT Count)
 			ZeroMemory(bCurrentData,MAX_PATH);
 			
 			//		szTemp	 =	new CHAR[50];
-			CHAR szTemp1[50];	// 啊拜
-			CHAR szTemp2[50];	// 扁鸥
+			CHAR szTemp1[50];	// 价格
+			CHAR szTemp2[50];	// 其他
 			
 			ZeroMemory(szTemp1,50);
 			ZeroMemory(szTemp2,50);
 			
 			m_xItems.AddNode(pxClItem);
 
-//			szMakeIndex[12]; // A:公扁 B:渴 C:馆瘤,迫骂,格吧捞 G:扁鸥
-			sprintf(szTemp1,"%d傈",pxClItem->stStdItem.nPrice);
+//			szMakeIndex[12]; // A:武器 B:衣服 C:戒指,手镯,项链 G:其他
+			sprintf(szTemp1,"%d Gold",pxClItem->stStdItem.nPrice);
 /*			switch(pxClItem->szMakeIndex[0])
 			{
-			case 'G':	// 扁鸥
+			case 'G':	// 其他
 			case 'g':
 				{
 					switch(pxClItem->stStdItem.bStdMode)
 					{
-					case 0:	// 拱距幅
-					case 1:	// 富赴绊扁
-					case 2:	// 林冈逛
-					case 3:	// 漂荐茄拱距 or 阿辆傈辑甸
-					case 4:	// 阿辆 氓甸
-					case 7:	// 弓澜揪府令
-					case 9:	// 距力甸
+					case 0:	// 药水类
+					case 1:	// 干肉
+					case 2:	// 饭团
+					case 3:	// 特殊药水 or 各种典书
+					case 4:	// 各种书籍
+					case 7:	// 捆绑系列
+					case 9:	// 药剂
 						break;
-					case 5:	// 刀啊风
+					case 5:	// 毒粉
 						sprintf(szTemp2,"%d",pxClItem->nDura);
 						break;
-					case 8:	// 冈瘤 给窍绰 绊扁
-						sprintf(szTemp2,"前龙 %d",pxClItem->nDura);
+					case 8:	// 不能食用的肉
+						sprintf(szTemp2,"品质 %d",pxClItem->nDura);
 						break;
-					case 10:	// 堡籍
-						sprintf(szTemp2,"鉴档 %d",pxClItem->nDura);
+					case 10:	// 矿石
+						sprintf(szTemp2,"纯度 %d",pxClItem->nDura);
 						break;
-					case 6:	// 榷阂,檬
-					default:	// 扁鸥
-						sprintf(szTemp2,"郴备 %d",pxClItem->nDura);
+					case 6:	// 火把,蜡烛
+					default:	// 其他
+						sprintf(szTemp2,"耐久 %d",pxClItem->nDura);
 						break;
 					}
 					break;
 				}
 			default:
-				sprintf(szTemp2,"郴备 %d",pxClItem->nDura);
+				sprintf(szTemp2,"耐久 %d",pxClItem->nDura);
 				break;
 			}
 */
@@ -405,14 +405,14 @@ BOOL CStoreWnd::SetBuyItemLst(CHAR* Msg,INT Count)
 			ZeroMemory(&tRect,sizeof(RECT));
 			tSize = g_xMainWnd.GetStrLength(NULL,NULL,szTemp1);
 			tRect.top = 0;
-			tRect.left = 0;											// List Button 狼 版快, Left  = 0;
+			tRect.left = 0;											// List Button 的情况, Left  = 0;
 			tRect.right = m_xItemRect.right - m_xItemRect.left;		//
 			tRect.bottom = tSize.cy;
 
 			// Parameter ...
 			szParam = new CHAR[35];
 			ZeroMemory(szParam,35);
-//			strcpy(szParam,pxClItem->szMakeIndex);	// 烙矫 Parameter甫 酒捞袍捞抚苞 鞍捞 贸府窃.
+//			strcpy(szParam,pxClItem->szMakeIndex);	// 临时 Parameter 与物品名称一起处理.
 
 			// Dark Yellow
 			m_xItemLstBtn.AddButton(szTemp1,szTemp2,tRect,nLoop,szParam,RGB(180,180,0),RGB(255,0,0));	// Add Button to class
@@ -420,7 +420,7 @@ BOOL CStoreWnd::SetBuyItemLst(CHAR* Msg,INT Count)
 			delete[] szParam;
 		}
 	}
-	m_nIsReadyToDisplay=m_nIsReadyToDisplay|2;		// Item List 汲沥捞 夌澜阑 舅覆
+	m_nIsReadyToDisplay=m_nIsReadyToDisplay|2;		// 通知 Item List 设置已完成
 		//
 	return TRUE;
 }
@@ -474,8 +474,8 @@ BOOL CStoreWnd::SetSellItemLst(CInventoryWnd* pxInvenWnd,CHAR Kind,BYTE nStdMode
 	CHAR szTemp2[50];
 	CHAR szParam[50];
 	INT nCount=0;
-//	if(咯包捞 酒聪衬?)
-//	{	// 咯包捞 酒聪搁 吧矾辑 持绢具 茄促.
+//	if(不是旅馆吗?)
+//	{	// 如果不是旅馆就要过滤后再放入.
 		if(pxInvenWnd!=NULL)
 		{
 			for(int i=0 ; i<60; i++)
@@ -486,7 +486,7 @@ BOOL CStoreWnd::SetSellItemLst(CInventoryWnd* pxInvenWnd,CHAR Kind,BYTE nStdMode
 					if(bKind!='a' && bKind!='A' && bKind!='b' && bKind!='B')
 					{
 						if(nStdMode==pxItem->stStdItem.bStdMode)
-						{	// 扁鸥绰 促矫 吧矾 林绢具 茄促.
+						{	// 其他项目必须再过滤一次.
 							m_xItems.AddNode(pxItem);
 							strcpy(szTemp1,pxItem->stStdItem.szName);
 							itoa(pxItem->nDura,szTemp2,10);
@@ -494,7 +494,7 @@ BOOL CStoreWnd::SetSellItemLst(CInventoryWnd* pxInvenWnd,CHAR Kind,BYTE nStdMode
 
 							tSize = g_xMainWnd.GetStrLength(NULL,NULL,szTemp1);
 							tRect.top = 0;
-							tRect.left = 0;											// List Button 狼 版快, Left  = 0;
+							tRect.left = 0;											// List Button 的情况, Left  = 0;
 							tRect.right = m_xItemRect.right - m_xItemRect.left;		//
 							tRect.bottom = tSize.cy;
 
@@ -504,7 +504,7 @@ BOOL CStoreWnd::SetSellItemLst(CInventoryWnd* pxInvenWnd,CHAR Kind,BYTE nStdMode
 					}
 					else
 					{
-						// 公扁唱 癌渴篮 弊成 持绢档 公包..
+						// 武器或衣服直接放入也无妨..
 						m_xItems.AddNode(pxItem);
 						strcpy(szTemp1,pxItem->stStdItem.szName);
 						itoa(pxItem->nDura,szTemp2,10);
@@ -512,7 +512,7 @@ BOOL CStoreWnd::SetSellItemLst(CInventoryWnd* pxInvenWnd,CHAR Kind,BYTE nStdMode
 
 						tSize = g_xMainWnd.GetStrLength(NULL,NULL,szTemp1);
 						tRect.top = 0;
-						tRect.left = 0;											// List Button 狼 版快, Left  = 0;
+						tRect.left = 0;											// List Button 的情况, Left  = 0;
 						tRect.right = m_xItemRect.right - m_xItemRect.left;		//
 						tRect.bottom = tSize.cy;
 
@@ -524,11 +524,11 @@ BOOL CStoreWnd::SetSellItemLst(CInventoryWnd* pxInvenWnd,CHAR Kind,BYTE nStdMode
 		}
 //	}
 //	else
-//	{	// 咯包 捞搁 付备 持绢档 等促.
+//	{	// 若是旅馆就可以随便放入。
 //		for(int i=0 ; i<60; i++)
 //		{
 //			pxItem = &pxInvenWnd->m_stInventoryItem[i].xItem.m_stItemInfo;
-			// 公扁唱 癌渴篮 弊成 持绢档 公包..
+			// 武器或衣服直接放入也无妨..
 //			m_xItems.AddNode(pxItem);
 //			strcpy(szTemp1,pxItem->stStdItem.szName);
 //			itoa(pxItem->nDura,szTemp2,10);
@@ -536,7 +536,7 @@ BOOL CStoreWnd::SetSellItemLst(CInventoryWnd* pxInvenWnd,CHAR Kind,BYTE nStdMode
 
 //			tSize = g_xMainWnd.GetStrLength(NULL,NULL,szTemp1);
 //			tRect.top = 0;
-//			tRect.left = 0;											// List Button 狼 版快, Left  = 0;
+//			tRect.left = 0;											// List Button 的情况下, Left  = 0;
 //			tRect.right = m_xItemRect.right - m_xItemRect.left;		//
 //			tRect.bottom = tSize.cy;
 //
@@ -584,10 +584,10 @@ BOOL CStoreWnd::OnUpdateQueue(VOID)
 		}
 		else
 		{
-			// 秦寸 NPC啊 酒丛
-			// 秦具且巴
-			// NPC芒阑 摧阑巴
-			// NPC甫 盎脚 且巴
+			// 不是该 NPC
+			// 待做事项
+			// 将关闭 NPC 窗口
+			// 将更新 NPC
 			m_xPacketQueue.PushQ((BYTE*)lpPacketMsg);
 			return FALSE;
 		}

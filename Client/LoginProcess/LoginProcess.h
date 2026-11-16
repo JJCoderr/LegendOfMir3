@@ -74,7 +74,7 @@ private:
 	CPatch				*pPatch;
 	CMirMsgBox3D		m_xMsgBox;
 
-	VOID				SetErrorMessage(INT nMsg,CHAR* szMgs);			// Error Message를 보낸다.
+	VOID				SetErrorMessage(INT nMsg,CHAR* szMgs);			// 랙箇 Error Message.
 	VOID				SetFocusBefore(VOID);
 	VOID				SetFocusAfter(VOID);
 

@@ -9,12 +9,12 @@
 
 *******************************************************************************************************************/
 
-//~~~ Hero客 阁胶磐, NPC甫 困茄 橇饭烙沥狼. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~ Hero 与怪物、NPC 用的帧定义. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 typedef struct tagSPRFRMDEF
 {
-	WORD		wFstFrm;						// 悼累狼 矫累 橇饭烙.
-	WORD		wFrmCnt;						// 悼累狼 橇饭烙肮荐.
-	WORD		wDelay;							// 悼累狼 瘤楷矫埃.
+	WORD		wFstFrm;						// 动作的起始帧。
+	WORD		wFrmCnt;						// 动作的帧数.
+	WORD		wDelay;							// 动作的延迟时间.
 }SPRFRMDEF, *LPSPRFRMDEF;
 
 
@@ -24,7 +24,7 @@ typedef struct tagSPRFRMDEF
 
 *******************************************************************************************************************/
 
-//~~~ 付过阑 困茄 橇饭烙沥狼. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~ 用于魔法的帧定义. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 typedef struct tagEFFECTSPRINFO
 {
 	DWORD		dwFstFrm;
@@ -32,9 +32,9 @@ typedef struct tagEFFECTSPRINFO
 	WORD		wDelay;
 	WORD		wImgIdx;
 	WORD		wEffectIdx;
-	BYTE		bLightRadius[2];				// 堡盔 呈厚.
-	BYTE		bLightColor [2][3];				// 堡盔 祸.
-	BYTE		bMagicColor [3];				// 付过 祸.
+	BYTE		bLightRadius[2];				// 光源宽度。
+	BYTE		bLightColor [2][3];				// 光源颜色.
+	BYTE		bMagicColor [3];				// 魔法颜色。
 	BYTE		bBlendType;
 	BYTE		bOpa;
 	BYTE		bSwingCnt;
@@ -44,18 +44,18 @@ typedef struct tagEFFECTSPRINFO
 class CSprite
 {
 public:
-	EFFECTSPRINFO		m_stEffectSpr[_MAX_EFFECT];			// 付过狼 矫傈棺 八过瓤苞.
-	EFFECTSPRINFO		m_stMagicSpr[_MAX_MAGIC];			// 付过瓤苞.
-	EFFECTSPRINFO		m_stExplosionSpr[_MAX_EXPLOSION];	// 付过气惯瓤苞.
+	EFFECTSPRINFO		m_stEffectSpr[_MAX_EFFECT];			// 魔法的施放及剑法效果.
+	EFFECTSPRINFO		m_stMagicSpr[_MAX_MAGIC];			// 魔法效果.
+	EFFECTSPRINFO		m_stExplosionSpr[_MAX_EXPLOSION];	// 魔法爆炸效果.
 
-	EFFECTSPRINFO		m_stMonEffectSpr[_MAX_EFFECT];			// 付过狼 矫傈棺 八过瓤苞.
-	EFFECTSPRINFO		m_stMonMagicSpr[_MAX_MAGIC];			// 付过瓤苞.
-	EFFECTSPRINFO		m_stMonExplosionSpr[_MAX_EXPLOSION];	// 付过气惯瓤苞.
+	EFFECTSPRINFO		m_stMonEffectSpr[_MAX_EFFECT];			// 魔法的施放及剑法效果.
+	EFFECTSPRINFO		m_stMonMagicSpr[_MAX_MAGIC];			// 魔法效果.
+	EFFECTSPRINFO		m_stMonExplosionSpr[_MAX_EXPLOSION];	// 魔法爆炸效果.
 
 
-	SPRFRMDEF			m_stHeroSpr[_MAX_HERO_MTN];			// Hero狼 悼累橇饭烙 沥狼.
-	SPRFRMDEF			m_stMonSpr [_MAX_MON_MTN];			// Monster狼 悼累橇饭烙 沥狼.
-	SPRFRMDEF			m_stNPCSpr [_MAX_MON_MTN];			// Monster狼 悼累橇饭烙 沥狼.
+	SPRFRMDEF			m_stHeroSpr[_MAX_HERO_MTN];			// Hero 的动作帧定义。
+	SPRFRMDEF			m_stMonSpr [_MAX_MON_MTN];			// Monster 的动作帧定义.
+	SPRFRMDEF			m_stNPCSpr [_MAX_MON_MTN];			// Monster 的动作帧定义.
 
 	BYTE				m_bWOrder[_MAX_HERO_REALFRAME];	
 

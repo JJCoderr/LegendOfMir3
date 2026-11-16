@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 
@@ -22,8 +22,8 @@ typedef struct tagLIGHTINFO
 	CHAR	cLightColorType;
 }LIGHTINFO, *LPLIGHTINFO;
 
-// 甘颇老 肺爹包访 沥焊历厘.
-// 泅犁 乐绰 瘤开狼 傈眉 甘俊 包访等 荤亲阑 焊包茄促.
+// 保存地图文件加载相关信息.
+// 保存当前所在区域全部地图的相关事项。
 typedef struct tagMAPFILEHEADER
 {
 	CHAR	szDesc[20];
@@ -78,19 +78,19 @@ public:
 	LPTILEINFO		m_pstTileInfo;
 	LPCELLINFO		m_pstCellInfo;
 
-	MAPFILEHEADER	m_stMapFileHeader;				// 肺爹等 甘颇老狼 庆歹.
+	MAPFILEHEADER	m_stMapFileHeader;				// 已加载地图文件的头.
 
-	// 某腐磐狼 捞悼苞 包访等促.
-	SHORT			m_shStartViewTileX;				// 轰康开狼 矫累 X Tile 谅钎.(角力 胶农赴 矫累 鸥老 谅钎焊促 炼陛 歹 奴 荤捞令捞促.)
-	SHORT			m_shStartViewTileY;				// 轰康开篮 角力 胶农赴 康开焊促 啊肺, 技肺 1鸥老究阑 咯盒栏肺 敌促.
-	SHORT			m_shViewOffsetX;				// 胶农费茄 X绵茄 辨捞.(某腐磐狼 叭扁悼累狼 橇饭烙.)
+	// 与角色移动相关.
+	SHORT			m_shStartViewTileX;				// 视图区域的起始 X Tile 坐标.(比实际屏幕起始图块坐标稍大一些.)
+	SHORT			m_shStartViewTileY;				// 视图区域比实际屏幕区域横、竖各多留 1 个图块。
+	SHORT			m_shViewOffsetX;				// 沿 X 轴滚动的长度.(角色行走动作的帧.)
 	SHORT			m_shViewOffsetY;				
 
-	RECT			m_rcView;						// 甘扁夯鸥老捞 弊妨龙 康开.(拳搁努府俏阑 困秦辑)
+	RECT			m_rcView;						// 地图基础图块将要绘制的区域.(用于屏幕裁剪)
 
-	POINT			m_ptMovePixelArray[6];			// 捞悼阑 困茄 侨伎蔼狼 焊包单捞鸥.
+	POINT			m_ptMovePixelArray[6];			// 用于移动的像素值保存数据.
 
-	WORD			m_wSavedMapBuffer[_VIEW_CELL_X_COUNT*_CELL_WIDTH*_VIEW_CELL_Y_COUNT*_CELL_HEIGHT];				// 扁夯鸥老苞 SM鸥老阑 扁废茄 滚欺. 磊扁 某腐磐啊 捞悼窍扁傈浚 盎脚登瘤 臼绰促.
+	WORD			m_wSavedMapBuffer[_VIEW_CELL_X_COUNT*_CELL_WIDTH*_VIEW_CELL_Y_COUNT*_CELL_HEIGHT];				// 记录基本图块和 SM 图块的缓冲区. 自己的角色移动之前不会更新.
 
 
 	DWORD			m_dwAniSaveTime[8];
@@ -106,24 +106,24 @@ public:
 public:
 	CMapHandler();
 	~CMapHandler();
-	VOID			InitMapHandler();				// 努贰胶 沥焊 檬扁拳.
-	VOID			LoadMapHandler(CHAR* szMapFile, CImageHandler* pxImgHandler, INT nX, INT nY);// 捞固瘤棺 阿辆 甘侩单捞鸥 肺靛.
-	VOID			DestroyMapHandler();			// 努贰胶 沥焊 檬扁拳棺 皋葛府 秦力.
+	VOID			InitMapHandler();				// 类信息初始化.
+	VOID			LoadMapHandler(CHAR* szMapFile, CImageHandler* pxImgHandler, INT nX, INT nY);// 加载图像及各种地图数据.
+	VOID			DestroyMapHandler();			// 类信息初始化及内存释放。
 
-	BOOL			LoadMapData(CHAR* szMapFile);	// 利侩登绰 甘狼 单捞鸥甫 肺爹.(甘捞 官拆锭付促 阂妨柳促.)
-	VOID			LoadMapImage(CImageHandler* pxImgHandler);					// 甘俊 包访等 捞固瘤 单捞鸥 肺爹(皋葛府甘荤侩).
-	VOID			LoadNewMapBuffer();				// 甘捞 贸澜 肺爹登菌阑锭 鸥老, SM鸥老 扁废滚欺俊 弥檬狼 郴侩阑 利侩茄促.
+	BOOL			LoadMapData(CHAR* szMapFile);	// 加载所应用地图的数据。(每次地图改变时都会被调用。)
+	VOID			LoadMapImage(CImageHandler* pxImgHandler);					// 加载地图相关的图像数据(使用内存映射)。
+	VOID			LoadNewMapBuffer();				// 地图首次加载时，把最初的内容应用到图块、SM图块记录缓冲区。
 
-	VOID			FreeMapData();					// 利侩登绰 甘狼 单捞鸥甫 秦力.(甘捞 官拆锭付促 阂妨柳促.)
+	VOID			FreeMapData();					// 释放所应用地图的数据.(每次地图变化时被调用.)
 
-	VOID			DrawBaseTile(INT nX, INT nY);	// 扁夯鸥老阑 弊赴促.
+	VOID			DrawBaseTile(INT nX, INT nY);	// 绘制基本图块。
 //	VOID			DrawOpenDoor(INT nX, INT nY);
 //	VOID			SetDoorIndex();
 
-	VOID			ScrollMap(INT nCharDir, INT nCharFrame, INT nSpeed);		// 某腐磐 捞悼矫 甘狼 Scroll包访 函荐甸 利侩.
+	VOID			ScrollMap(INT nCharDir, INT nCharFrame, INT nSpeed);		// 角色移动时应用地图的 Scroll 相关变量。
 	VOID			ScrollMap(INT nCharDir, WORD wCurrDelay, WORD wMoveDelay, INT nSpeed);
-	VOID			SetMovedTileBuffer(SHORT shMovedTileX, SHORT shMovedTileY);	// 某腐磐 捞悼矫 货肺 盎脚登绰 扁夯 捞固瘤(鸥老, SM鸥老)甫 利侩.
-	VOID			SetStartViewTile(INT nX, INT nY);							// 弊府绰 轰康开狼 檬扁摹技泼.
+	VOID			SetMovedTileBuffer(SHORT shMovedTileX, SHORT shMovedTileY);	// 角色移动时应用新更新的默认图像(图块, SM图块).
+	VOID			SetStartViewTile(INT nX, INT nY);							// 绘制视图区域的初始值设置.
 
 	BOOL			GetNextTileCanMove(INT nXPos, INT nYPos, BYTE bDir, INT nGap, POINT* lpptTarget);
 
@@ -135,7 +135,7 @@ public:
 	BYTE			CalcDirection8(WORD wFireTileX, WORD wFireTileY, WORD wDestTileX, WORD wDestTileY);
 
 
-//  泅犁 鸥老俊 措茄 甘加己 掘扁 窃荐甸.
+//  获取当前图块地图属性的函数。
 	BYTE			GetTileAttribute(INT nX, INT nY);
 	BYTE			GetEventNum(INT nX, INT nY);
 //	BOOL			GetDoorState(INT nX, INT nY);

@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 #include "StdAfx.h"
@@ -16,10 +16,10 @@
 #define POS_DRAWSTART_Y			40		
 #define LINE_GAP				5		
 
-#define BUILD_GUILD				"@@BUILDGUILDNOW"			// 巩颇 汲赋
-#define GUILD_WAR				"@@GUILDWAR"				// 巩里 脚没
-#define WITHDRAWAL_CASTLE		"@@WITHDRAWAL"				// 捣阑 茫绰促.
-#define RECEIPT_CASTLE			"@@RECEIPTS"				// 捣阑 嘎变促.
+#define BUILD_GUILD				"@@BUILDGUILDNOW"			// 行会建立
+#define GUILD_WAR				"@@GUILDWAR"				// 行会战申请
+#define WITHDRAWAL_CASTLE		"@@WITHDRAWAL"				// 取出钱款.
+#define RECEIPT_CASTLE			"@@RECEIPTS"				// 寄存金钱.
 
 #define SCRIPT_GENTEXT		1
 #define SCRIPT_BUTTON		2
@@ -343,7 +343,7 @@ VOID CNPCWnd::ShowNPCChatWnd()
 				COLORREF	color = RGB(255, 255, 0);
 
 				if (pScriptLine->m_fIsFocused)
-					hFont = g_xMainWnd.CreateGameFont("奔覆", 9, 0, FW_NORMAL, FALSE, TRUE);
+					hFont = g_xMainWnd.CreateGameFont("Arial", 9, 0, FW_NORMAL, FALSE, TRUE);
 
 				if (pScriptLine->m_fIsSelected)
 					color = RGB(255, 0, 0);
@@ -502,7 +502,7 @@ BOOL CNPCWnd::OnLButtonUp(POINT ptMouse)
 					{
 						char szBuildGuild[128];
 
-						sprintf(szBuildGuild, "%s%c%s", pScriptLine->m_pszScriptCommand, 13, "啊力飘屈荤颇");
+						sprintf(szBuildGuild, "%s%c%s", pScriptLine->m_pszScriptCommand, 13, "Gadget Detective Clan");
 
 						g_xClientSocket.SendNPCMessage(CM_MERCHANTDLGSELECT,(DWORD)m_nNpcId, 0, szBuildGuild);
 					}
@@ -610,12 +610,12 @@ VOID CNPCWnd::OnScrollUp()
 
 //////////////////////////////////////////////////////////////////
 
-BOOL	CNPCWnd::ClickCommandProcess(CMTxtBtn* ClickedBtn)		// 酒贰 俊 乐绰 巴甸 辆钦
+BOOL	CNPCWnd::ClickCommandProcess(CMTxtBtn* ClickedBtn)		// 综合下面这些内容
 {
 /*	m_pClickedTxtBtn = ClickedBtn;
 	if(ClickedBtn!=NULL)
 	{
-		if(strcmp(m_xTxtAnalysis.UpperCase(ClickedBtn->Param),BUILD_GUILD)==0)				// 巩颇 汲赋 贸府
+		if(strcmp(m_xTxtAnalysis.UpperCase(ClickedBtn->Param),BUILD_GUILD)==0)				// 行会建立处理
 		{
 			CHAR	szMsg[MAX_PATH];
 			HINSTANCE hLib;
@@ -625,11 +625,11 @@ BOOL	CNPCWnd::ClickCommandProcess(CMTxtBtn* ClickedBtn)		// 酒贰 俊 乐绰 巴甸 辆
 			if(!m_xMsgBox.IsActive())	SetWndRectExtend();
 			m_xMsgBox.ShowMessageBox(szMsg,MSG_EDITEXIST|MSG_BTN_OK);	// OK
 			SetNpcEditBoxPos();
-			// 巩颇 汲赋芒阑 凯绊 巩颇 疙阑 涝仿 罐绰促.
+			// 打开行会建立窗口并输入行会名称.
 			m_nNpcMsgState = 1;
 			return TRUE;
 		}
-		else if(strcmp(m_xTxtAnalysis.UpperCase(ClickedBtn->Param),GUILD_WAR)==0)			// 巩颇傈里
+		else if(strcmp(m_xTxtAnalysis.UpperCase(ClickedBtn->Param),GUILD_WAR)==0)			// 行会战争
 		{
 			CHAR	szMsg[MAX_PATH];
 			HINSTANCE hLib;
@@ -639,11 +639,11 @@ BOOL	CNPCWnd::ClickCommandProcess(CMTxtBtn* ClickedBtn)		// 酒贰 俊 乐绰 巴甸 辆
 			if(!m_xMsgBox.IsActive())	SetWndRectExtend();
 			m_xMsgBox.ShowMessageBox(szMsg,MSG_EDITEXIST|MSG_BTN_OK);	// OK
 			SetNpcEditBoxPos();
-			// 巩里阑 且 惑措 巩颇甫 涝仿 罐绰促.
+			// 输入要交战的行会.
 			m_nNpcMsgState = 2;
 			return TRUE;
 		}
-		else if(strcmp(m_xTxtAnalysis.UpperCase(ClickedBtn->Param),WITHDRAWAL_CASTLE)==0)	// 己 陛绊俊辑 捣 哗扁
+		else if(strcmp(m_xTxtAnalysis.UpperCase(ClickedBtn->Param),WITHDRAWAL_CASTLE)==0)	// 从城金库中取钱
 		{
 			CHAR	szMsg[MAX_PATH];
 			HINSTANCE hLib;
@@ -653,11 +653,11 @@ BOOL	CNPCWnd::ClickCommandProcess(CMTxtBtn* ClickedBtn)		// 酒贰 俊 乐绰 巴甸 辆
 			if(!m_xMsgBox.IsActive())	SetWndRectExtend();
 			m_xMsgBox.ShowMessageBox(szMsg,MSG_EDITEXIST|MSG_BTN_OK);	// OK
 			SetNpcEditBoxPos();
-			// 己 陛绊芒阑 凯绢 哗绢尘 捣阑 涝仿 罐绰促.
+			// 打开城金库窗口并输入要取出的金额.
 			m_nNpcMsgState = 3;
 			return TRUE;
 		}
-		else if(strcmp(m_xTxtAnalysis.UpperCase(ClickedBtn->Param),RECEIPT_CASTLE)==0)		// 己 陛绊俊 捣 持扁
+		else if(strcmp(m_xTxtAnalysis.UpperCase(ClickedBtn->Param),RECEIPT_CASTLE)==0)		// 向城金库中存钱
 		{
 			CHAR	szMsg[MAX_PATH];
 			HINSTANCE hLib;
@@ -667,7 +667,7 @@ BOOL	CNPCWnd::ClickCommandProcess(CMTxtBtn* ClickedBtn)		// 酒贰 俊 乐绰 巴甸 辆
 			if(!m_xMsgBox.IsActive())	SetWndRectExtend();
 			m_xMsgBox.ShowMessageBox(szMsg,MSG_EDITEXIST|MSG_BTN_OK);	// OK
 			SetNpcEditBoxPos();
-			// 己 陛绊芒阑 凯绢 持阑 捣 咀荐甫 涝仿 罐绰促.
+			// 打开城金库窗口并输入要存入的金额.
 			m_nNpcMsgState = 4;
 			return TRUE;
 		}
@@ -678,13 +678,13 @@ BOOL	CNPCWnd::ClickCommandProcess(CMTxtBtn* ClickedBtn)		// 酒贰 俊 乐绰 巴甸 辆
 			SendCommandToSrv(ClickedBtn->Param);
 		}
 	}
-//		酒公巴档 贸府 窍瘤 臼澜 */
+//		不进行任何处理 */
 	return FALSE;
 }
 
 BOOL CNPCWnd::SendCommandToSrv(CHAR* szMsg)
 {
-	// 扁夯 皋矫瘤 贸府
+	// 默认消息处理
 	g_xClientSocket.SendNPCMessage(CM_MERCHANTDLGSELECT,(DWORD)m_nNpcId,0,szMsg);
 	return FALSE;
 }
@@ -705,7 +705,7 @@ VOID CNPCWnd::SetWndRectReduce(VOID)
 
 VOID CNPCWnd::SetNpcEditBoxPos(VOID)
 {
-	// Edit Box 包访
+	// 与 Edit Box 相关
 //	m_rcEditBoxFrame.left = 247;
 //	m_rcEditBoxFrame.top = 256;
 //	m_rcEditBoxFrame.right = 467;
@@ -735,15 +735,15 @@ VOID CNPCWnd::OnEnterKeyDown(VOID)
 		// For Editbox to Chatting
 		SetFocus(g_xMainWnd.GetSafehWnd());
 		ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
-		g_xChatEditBox.SetLimitText(90);// 眉泼芒 Limit length 肺 官操绢 霖促.
+		g_xChatEditBox.SetLimitText(90);// 将聊天窗口改为 Limit length。
 		MoveWindow(g_xChatEditBox.GetSafehWnd(), g_xMainWnd.m_rcWindow.left+_INPUT_EDITWND_XPOS, 
 			g_xMainWnd.m_rcWindow.top+_INPUT_EDITWND_YPOS, _INPUT_EDITWND_WIDTH, _INPUT_EDITWND_HEIGHT, TRUE);
 		switch(m_nNpcMsgState)
 		{
 		case 1:
 		case 2:
-			// 巩颇 积己
-			// 巩里 脚没
+			// 创建行会
+			// 行会战申请
 			{
 				CHAR szMsg[MAX_PATH*2];
 				strcpy(szMsg,m_pClickedTxtBtn->Param);
@@ -755,8 +755,8 @@ VOID CNPCWnd::OnEnterKeyDown(VOID)
 		case 3:
 		case 4:
 			{
-			// 己磊陛 茫扁
-			// 己磊陛 嘎扁扁
+			// 查找圣紫金
+			// 圣子金受击
 			break;
 			}
 		}

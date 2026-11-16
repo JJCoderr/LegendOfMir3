@@ -233,7 +233,7 @@ LPARAM APIENTRY MainWndProc(HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lParam)
 			OnCommand(wParam, lParam);
 			break;
 		case WM_ERASEBKGND:
-			return 0; // ORZ: ±ôºý°Å¸®´Â °Í Á¦°Å
+			return 0; // ORZ: È¥³ýÉÁË¸
 		case WM_SIZE:
 		{
 			if (g_hToolBar && g_hMainWnd && g_hStatusBar) 

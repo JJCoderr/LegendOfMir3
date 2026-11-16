@@ -25,9 +25,9 @@ VOID CCreateChr::Create(CWHWilImageData* pxImage)
 	// Buttons
 	BUTTONINFO CharProcBtnInfo[] = {
 									{ IMG_IDX_EMPTY_BTN_UP, 	CREATE_CHAR_OK_BTN_POS_X,		CREATE_CHAR_OK_BTN_POS_Y,		WIDTH_EMPTY_BTN,	HEIGHT_EMPTY_BTN},	// Create Charector Ok Button
-									{ IMG_IDX_WAR_BTN_UP,	 	CREATE_CHAR_WAR_BTN_POS_X,		CREATE_CHAR_BTN_POS_Y,			WIDTH_JOB_BTN,		HEIGHT_JOB_BTN},	// 傈荤 Button
-									{ IMG_IDX_SOR_BTN_UP,		CREATE_CHAR_SOR_BTN_POS_X,		CREATE_CHAR_BTN_POS_Y,			WIDTH_JOB_BTN,		HEIGHT_JOB_BTN},	// 贱荤 Button
-									{ IMG_IDX_TAO_BTN_UP, 		CREATE_CHAR_TAO_BTN_POS_X,		CREATE_CHAR_BTN_POS_Y,			WIDTH_JOB_BTN,		HEIGHT_JOB_BTN}		// 档荤 Button
+									{ IMG_IDX_WAR_BTN_UP,	 	CREATE_CHAR_WAR_BTN_POS_X,		CREATE_CHAR_BTN_POS_Y,			WIDTH_JOB_BTN,		HEIGHT_JOB_BTN},	// 战士 Button
+									{ IMG_IDX_SOR_BTN_UP,		CREATE_CHAR_SOR_BTN_POS_X,		CREATE_CHAR_BTN_POS_Y,			WIDTH_JOB_BTN,		HEIGHT_JOB_BTN},	// 术士 Button
+									{ IMG_IDX_TAO_BTN_UP, 		CREATE_CHAR_TAO_BTN_POS_X,		CREATE_CHAR_BTN_POS_Y,			WIDTH_JOB_BTN,		HEIGHT_JOB_BTN}		// 道士 Button
 									};
 
 	m_pxImage		= pxImage;
@@ -115,7 +115,7 @@ VOID CCreateChr::Render(INT	nLoopTime)
 										, (WORD*)(m_pxImage->m_pbCurrImage));
 		}
 
-		// 烙矫~!
+		// 临时~!
 		m_pxImage->NewSetIndex(IMG_IDX_WAR_MALE_CREATE + m_nSelectGender + m_nSelectJob * 2);
 
 		g_xMainWnd.DrawWithImageForComp(nPos[m_nSelectJob].x,nPos[m_nSelectJob].y

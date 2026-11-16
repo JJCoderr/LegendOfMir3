@@ -10,12 +10,12 @@ typedef struct tagITEMSET
 }ITEMSET, *LPITEMSET;
 typedef struct tagCOMMONITEMSET
 {
-	BOOL	bSetted;					// 酒捞袍捞 技泼登菌绰瘤狼 咯何.
-	BOOL	bWaitResponse;				// 泅犁 酒捞袍捞 冈芭唱, 馒侩登绢辑 辑滚狼 览翠阑 扁促府绰瘤狼 咯何.
-	BOOL	bIsEquipItem;				// 泅犁 酒捞袍捞 厘馒芒栏肺何磐 吭绰瘤狼 咯何.
-	BOOL	bIsBeltItem;				// 泅犁 酒捞袍捞 骇飘芒栏肺何磐 吭绰瘤狼 咯何.
-	BOOL	bIsHideItem;				// 付快胶惑怕狼 酒捞袍阑 焊咯临巴牢啊?.
-	CItem	xItem;						// 酒捞袍.
+	BOOL	bSetted;					// 物品是否已设置.
+	BOOL	bWaitResponse;				// 当前物品是否已被吃掉或穿戴,正在等待服务器响应.
+	BOOL	bIsEquipItem;				// 当前物品是否来自装备窗口.
+	BOOL	bIsBeltItem;				// 当前物品是否来自腰带窗口.
+	BOOL	bIsHideItem;				// 是否显示鼠标状态下的物品?。
+	CItem	xItem;						// 物品.
 }COMMONITEMSET, *LPCOMMONITEMSET;
 #pragma pack(8)
 
@@ -23,8 +23,8 @@ typedef struct tagCOMMONITEMSET
 class CInventoryWnd : public CGameWnd
 { 
 protected:
-	INT			m_nStartLineNum;					// 牢亥配府芒狼 贸澜 扼牢狼 锅龋. (醚 10临捞绊 拳搁俊绰 4临 鳖瘤 杭荐 乐促.)
-	RECT		m_rcInvenCell[_INVEN_MAX_CELL];		// 牢亥配府芒狼 阿伎甸狼 康开.
+	INT			m_nStartLineNum;					// 背包窗口起始行的编号. (共 10 行, 屏幕上最多可看到 4 行.)
+	RECT		m_rcInvenCell[_INVEN_MAX_CELL];		// 背包窗口各单元格的区域。
 	RECT		m_rcBeltCell[_BELT_MAX_CELL];
 
 	CGameBtn	m_xInventoryBtn[_MAX_INVEN_BTN];

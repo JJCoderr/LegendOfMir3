@@ -8,14 +8,14 @@
 
 #define DEFSPEED					14
 
-#define _CHAT_COLOR1				0			//RGB(  0,   0,   0); // 捧苞祸.
-#define _CHAT_COLOR2				1			//RGB( 10,  10,  10); // 八沥祸.
-#define _CHAT_COLOR3				2			//RGB(255, 255, 255); // 闰祸.
-#define _CHAT_COLOR4				3			//RGB(255,   0,   0); // 弧碍.
-#define _CHAT_COLOR5				4			//RGB(  0, 255,   0); // 踌祸.
-#define _CHAT_COLOR6				5			//RGB(  0,   0, 255); // 仟弗祸
-#define _CHAT_COLOR7				6			//RGB(255, 255,   0); // 畴尔祸.
-#define _CHAT_COLOR8				7			//RGB(255, 128,   0); // 林炔祸
+#define _CHAT_COLOR1				0			//RGB(  0,   0,   0); // 透明色.
+#define _CHAT_COLOR2				1			//RGB( 10,  10,  10); // 黑色.
+#define _CHAT_COLOR3				2			//RGB(255, 255, 255); // 白色.
+#define _CHAT_COLOR4				3			//RGB(255,   0,   0); // 红色.
+#define _CHAT_COLOR5				4			//RGB(  0, 255,   0); // 绿色.
+#define _CHAT_COLOR6				5			//RGB(  0,   0, 255); // 蓝色
+#define _CHAT_COLOR7				6			//RGB(255, 255,   0); // 黄色.
+#define _CHAT_COLOR8				7			//RGB(255, 128,   0); // 橙色
 
 #define DR_UP						0
 #define DR_UPRIGHT					1
@@ -45,7 +45,7 @@
 #define STATE_BUBBLEDEFENCEUP		11
 
 #define	STATE_STONE_MODE			0x00000001;
-#define	STATE_OPENHEATH				0x00000002;  //眉仿 傍俺惑怕
+#define	STATE_OPENHEATH				0x00000002;  //体力公开状态
 
 class CCharObject;
 class CMirMap;
@@ -146,7 +146,7 @@ public:
 	WORD	m_wEarth;
 };
 
-class CObjectAddAbility	// 酒捞袍 馒侩栏肺 疵绢唱绰 瓷仿摹
+class CObjectAddAbility	// 因穿戴物品而增加的属性值
 {
 public:
 	WORD	HP;
@@ -162,9 +162,9 @@ public:
 	WORD	PoisonRecover;
 	WORD	HealthRecover;
 	WORD	SpellRecover;
-	WORD	AntiMagic;			//付过 雀乔啦
-	BYTE	Luck;				//青款 器牢飘
-	BYTE	UnLuck;				//阂青 器牢飘
+	WORD	AntiMagic;			//魔法回避率
+	BYTE	Luck;				//幸运点数
+	BYTE	UnLuck;				//不幸点数
 	BYTE	WeaponStrong;
 	short	HitSpeed;
 };

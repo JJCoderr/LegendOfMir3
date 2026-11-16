@@ -48,11 +48,11 @@ private:
 	SHORT	m_shHeight;
 	BOOL	m_bIsSelected;
 
-	CDLList<CHAR*>		m_xMsg;		// 免仿瞪 巩磊
+	CDLList<CHAR*>		m_xMsg;		// 将被输出的字符
 	CGameBtn			m_xMsgBtn;
 	CWHWilImageData*	m_pxBtnImage;
 protected:
-	__inline BOOL	IsInRect(int nPosX, int nPosY, RECT rc)	// 沥犬窍霸 Rect 救秦 乐绰啊甫 眉农
+	__inline BOOL	IsInRect(int nPosX, int nPosY, RECT rc)	// 检查是否没有正确设置 Rect
 	{	if (nPosX >= rc.left && nPosX <= rc.right && nPosY >= rc.top && nPosY <= rc.bottom)
 			return TRUE;
 		else 

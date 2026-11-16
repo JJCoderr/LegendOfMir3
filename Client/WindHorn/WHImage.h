@@ -27,7 +27,7 @@ public:
 	BOOL LoadBitmapFromRes(LPCTSTR lpResName, LPCTSTR lpTypeName, BOOL fCut = FALSE, BOOL fCompress = FALSE, BYTE bBitCount = 16);
 	BOOL Convert24To16(BYTE *pOrgImage, BYTE bOrgImgBitCount);
 	BOOL Optimize();
-// æ–√‡
+// —πÀı
 	BOOL XOptimize();
 
 

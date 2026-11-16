@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 
@@ -28,27 +28,27 @@ class CParticle
 {
 public:
 //------------------------------------------------------------------------------------------------------------------
-// 涝磊包访 沥焊.
-	WORD					m_wLife;					// 荐疙.
-	WORD					m_wCurrLife;				// 泅犁荐疙.
-	D3DVECTOR				m_vecPos;					// 谅钎.
-	D3DVECTOR				m_vecOldPos;				// 谅钎 焊包.
-	D3DVECTOR				m_vecVel;					// 加档.
-	D3DVECTOR				m_vecAccel;					// 啊加档.
-	D3DVECTOR				m_vecLocalForce;			// 颇萍努俊 俺喊 康氢阑 林绰 塞.
-	FLOAT					m_fMass;					// 龙樊.
-	FLOAT					m_fSize;					// 农扁.
-	BOOL					m_bIsDead;					// 颇萍努狼 粮犁咯何.
-	BYTE					m_bRed, m_bGreen, m_bBlue;	// 祸.
+// 粒子相关信息.
+	WORD					m_wLife;					// 寿命.
+	WORD					m_wCurrLife;				// 当前寿命.
+	D3DVECTOR				m_vecPos;					// 坐标。
+	D3DVECTOR				m_vecOldPos;				// 坐标保存。
+	D3DVECTOR				m_vecVel;					// 速度。
+	D3DVECTOR				m_vecAccel;					// 加速度。
+	D3DVECTOR				m_vecLocalForce;			// 对每个粒子单独影响的作用力.
+	FLOAT					m_fMass;					// 质量.
+	FLOAT					m_fSize;					// 大小。
+	BOOL					m_bIsDead;					// 粒子是否存在.
+	BYTE					m_bRed, m_bGreen, m_bBlue;	// 颜色。
 	BYTE					m_bOpa;
 
-	FLOAT					m_fOriSize;					// 贸澜农扁.
-	BYTE					m_bFstRed, m_bFstGreen, m_bFstBlue;	// 颇萍努 积己矫痢狼祸.
-	BYTE					m_bEndRed, m_bEndGreen, m_bEndBlue;	// 颇萍努 辆丰矫痢狼祸.
+	FLOAT					m_fOriSize;					// 初始大小.
+	BYTE					m_bFstRed, m_bFstGreen, m_bFstBlue;	// 粒子创建时的颜色.
+	BYTE					m_bEndRed, m_bEndGreen, m_bEndBlue;	// 粒子结束时刻的颜色。
 //------------------------------------------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------------------------------------------
-// 涝磊 Frame包访 沥焊.
+// 粒子 Frame 相关信息.
 	WORD					m_wDelay;					// Animation Delay.
 	WORD					m_wCurrDelay;
 	WORD					m_wCurrFrame;				
@@ -87,32 +87,32 @@ public:
 /******************************************************************************************************************
 
 	CParticleSystem Class
-	颇萍努 包府 Base Class
+	粒子管理 Base Class
 
 *******************************************************************************************************************/
 class CParticleSystem
 {
 protected:
-//	FLOAT					m_fAirFiction;			// 傍扁付蔓俺荐.(官恩.)
-//	D3DVECTOR				m_vecEnvironment;		// 涝磊俊 累侩窍绰 券版函荐(吝仿, 官恩).
-	D3DVECTOR				m_vecBounding[2];		// 面倒眉农康开 汲沥.
+//	FLOAT					m_fAirFiction;			// 空气摩擦系数.(风.)
+//	D3DVECTOR				m_vecEnvironment;		// 作用于粒子的环境变量(重力, 风).
+	D3DVECTOR				m_vecBounding[2];		// 设置碰撞检测区域。
 
-	WORD					m_wNum;					// 涝磊狼 肮荐.
-	CParticle*				m_pxParticle;			// 涝磊 俺眉.
+	WORD					m_wNum;					// 粒子个数.
+	CParticle*				m_pxParticle;			// 粒子对象.
     D3DVERTEX				m_avShape[4];			// Vertex.
 
 	FLOAT					m_fDeltaTime;
 
 public:
-	D3DVECTOR				m_vecEnvironment;		// 涝磊俊 累侩窍绰 券版函荐(吝仿, 官恩).
-	FLOAT					m_fAirFiction;			// 傍扁付蔓俺荐.(官恩.)
+	D3DVECTOR				m_vecEnvironment;		// 作用于粒子的环境变量(重力, 风)。
+	FLOAT					m_fAirFiction;			// 空气摩擦个数.(风.)
 
 	CParticleSystem();
 	~CParticleSystem();
 
-	VOID UpdateAirFiction(WORD wNum);				// 傍扁付蔓拌荐 利侩.
-	VOID UpdateMove(WORD wNum);						// 吝仿厘 利侩.
-	VOID UpdateCrash(WORD wNum);					// 面倒馆惯仿 利侩.
+	VOID UpdateAirFiction(WORD wNum);				// 应用空气摩擦系数.
+	VOID UpdateMove(WORD wNum);						// 应用重力场.
+	VOID UpdateCrash(WORD wNum);					// 应用碰撞反弹力。
 
 	__inline VOID SetEnvFactor(FLOAT fAirFriction = -0.05f, 
 							   D3DVECTOR vecEnvironment = D3DVECTOR(0, 300, 0), 
@@ -181,7 +181,7 @@ private:
 
     FLOAT	m_fWidth, m_fGround;
 
-	BYTE	m_bRainIntensity;			// 厚狼碍档.
+	BYTE	m_bRainIntensity;			// 雨的强度。
 
 public:
 	BYTE	m_bGenCnt;					
@@ -204,7 +204,7 @@ public:
 /******************************************************************************************************************
 
 	CFly Class
-	朝酒啊绰 屈怕狼 Praticle包府.(蜡己狼 部府)
+	飞行形态的 Praticle 管理。(流星的尾迹)
 
 *******************************************************************************************************************/
 #define _MAX_FLYFRAME	10
@@ -234,7 +234,7 @@ public:
 /******************************************************************************************************************
 
 	CBoom
-	气惯 屈怕狼 Praticle包府.
+	爆炸形态的 Praticle 管理。
 
 *******************************************************************************************************************/
 #define _MAX_BOOMFRAME	10
@@ -266,7 +266,7 @@ public:
 /******************************************************************************************************************
 
 	CFlyingTail
-	朝酒啊绰 屈怕狼 Praticle包府.
+	飞行形态的 Praticle 管理.
 
 *******************************************************************************************************************/
 #define _MAX_FLYTAILFRAME	10
@@ -333,7 +333,7 @@ public:
 /******************************************************************************************************************
 
 	CElec
-	傈扁 颇厘 Praticle包府.
+	电气波长的 Praticle 管理.
 
 *******************************************************************************************************************/
 #define _MAX_ELECFRAME	1

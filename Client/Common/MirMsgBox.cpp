@@ -55,7 +55,7 @@ BOOL CMirMsgBox::ShowMessageBox(CHAR* szMsg,INT nType,INT nImgIndex) // Show	Mes
 		{
 			if(CMsgBox::ShowMessageBox(szMsg,nType))
 			{
-				// m_xMsg俊促 String 
+				// 在 m_xMsg 中存入 String 
 				m_xMsg.ClearAllNodes();
 				StringDivideLen(WRITESTRLENTH,Lenth, m_szMsg,&m_xMsg);
 
@@ -208,18 +208,18 @@ BOOL CMirMsgBox::StringDivideLen(INT nDivideLen, INT& nDividedLine, CHAR* szSrc,
 			ZeroMemory(szTmpCheck, MAX_PATH);
 			nEndLen = nCnt+1;
 
-			// 泅犁何盒鳖瘤狼 巩磊凯阑 佬绰促.
+			// 读取截至当前部分的字符串。
 			memcpy(&szTmpCheck, &szSrc[nStartLen], nEndLen-nStartLen);
 			INT nsLen;
 			nsLen = strlen(szTmpCheck);
 
-			// 泅犁鳖瘤 佬绢柯 何盒捞 倾侩承捞甫 逞绢脊阑锭.
+			// 当前已读取的部分超出允许宽度时。
 			if (nsLen > nDivideLen )
 			{
-				// 泅犁 2官捞飘 巩磊扼搁. 
+				// 当前如果是 2 字节字符. 
 				if ( szSrc[nEndLen-1] < 0 )
 				{
-					// 泅犁 菊俊巩磊啊 2官捞飘 巩磊啊 酒聪扼搁
+					// 如果当前前面的字符不是 2 字节字符
 					if ( !(nWordCheck%2) )
 					{
 						nStartLen += strlen(szTmpCheck)-1;
@@ -246,8 +246,8 @@ BOOL CMirMsgBox::StringDivideLen(INT nDivideLen, INT& nDividedLine, CHAR* szSrc,
 						nWordCheck--;
 					}
 				}
-				// 1官捞飘 巩磊. 
-				// 泅犁焊促 茄官捞飘菊何盒鳖瘤父 绊妨秦林搁 等促.
+				// 1字节字符. 
+				// 只需考虑到比当前位置往前一个字节的部分即可。
 				else
 				{
 					nStartLen += strlen(szTmpCheck)-1;
@@ -261,7 +261,7 @@ BOOL CMirMsgBox::StringDivideLen(INT nDivideLen, INT& nDividedLine, CHAR* szSrc,
 					nDividedLine++;
 				}
 			}
-			else if(szSrc[nEndLen-1]=='\n')	// 碍力俺青     \n栏肺窍搁  Error ????
+			else if(szSrc[nEndLen-1]=='\n')	// 强制换行     如果用 \n 则 Error ????
 			{
 				nStartLen += strlen(szTmpCheck)-1;
 				CHAR* pszNewLine;
@@ -304,8 +304,8 @@ BOOL CMirMsgBox::RenderMessageBox(INT nLoopTIme)							// Render Function
 //	POINT	xSize;
 
 	if(m_bActive&&m_bInited&&m_bSet)
-	{	// 柳楼 嘛绢具 且锭父 嘛阑巴
-		// 嘛阑 捞固瘤 康开 犬牢
+	{	// 只在真正需要绘制时才绘制
+		// 确认要绘制的图像区域
 		g_xMainWnd.DrawWithImageForCompClipRgn(m_xBoxPos.x,m_xBoxPos.y,m_shWidth,m_shHeight,m_wpData,800,600);
 
 		POINT	xTxtPos;
@@ -315,7 +315,7 @@ BOOL CMirMsgBox::RenderMessageBox(INT nLoopTIme)							// Render Function
 		xTxtPos.x = m_xBoxPos.x +24;
 		switch(nCount)
 		{
-		case 1:	// 嘛阑 临捞 1俺 挥老锭
+		case 1:	// 要绘制的线只有 1 条时
 			{
 				xTxtPos.y = 68;
 				INT n = strlen(m_szMsg);
@@ -325,32 +325,32 @@ BOOL CMirMsgBox::RenderMessageBox(INT nLoopTIme)							// Render Function
 				}
 				break;
 			}
-		case 2:	// 嘛阑 临捞 2俺 老锭
+		case 2:	// 要绘制的行数为 2 个时
 			{
 				xTxtPos.y = 61;
 				break;
 			}
-		case 3:	// 嘛阑 临捞 2俺 老锭
+		case 3:	// 要绘制的行数为 2 个时
 			{
 				xTxtPos.y = 54;
 				break;
 			}
-		case 4:	// 嘛阑 临捞 2俺 老锭
+		case 4:	// 要绘制的行数为 2 个时
 			{
 				xTxtPos.y = 47;
 				break;
 			}
-		case 5:	// 嘛阑 临捞 2俺 老锭
+		case 5:	// 要绘制的行数为 2 个时
 			{
 				xTxtPos.y = 40;
 				break;
 			}
-		case 6:	// 嘛阑 临捞 2俺 老锭
+		case 6:	// 要绘制的行数为 2 个时
 			{
 				xTxtPos.y = 33;
 				break;
 			}
-		default: // 嘛阑 临捞 3俺 捞惑老 版快
+		default: // 当要输出的行数为 3 行以上时
 			{
 				xTxtPos.y = 26;
 				break;

@@ -220,7 +220,7 @@ VOID CSelectChr::Render(INT	nLoopTime)
 	{
 		m_xLightFog.ClearSavedLightColor();
 
-		for (i = ID_SEL_CHR_NEW_BTN; i <= ID_SEL_CHR_START_BTN ; i++)	// ´ÜÃß ÀÓ½Ã
+		for (i = ID_SEL_CHR_NEW_BTN; i <= ID_SEL_CHR_START_BTN ; i++)	// °´Å¥(ÁÙÊ±)
 		{
 			if(m_pBtn[i]->m_nState==BUTTON_STATE_DOWN)		// Draw Button when Button state is Downed..
 			{

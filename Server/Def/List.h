@@ -1,5 +1,5 @@
 
-// ORZ: 吝汗 include 规瘤
+// ORZ: 防止重复 include
 #pragma once
 
 typedef VOID *	PLISTNODE;
@@ -220,7 +220,7 @@ template <class T> void *CWHList<T>::FindNode(LPLINKEDLIST lpList)
 	{
 		if (lpNode == lpList)
 		{
-			// ORZ: 内靛 眠啊
+			// ORZ: 添加代码
 //			LeaveCriticalSection( &m_cs );
 			return lpNode;
 		}
@@ -243,7 +243,7 @@ template <class T>PLISTNODE CWHList<T>::FindData(T t)
 	{
 		if (((T)lpNode->lpData) == t)
 		{
-			// ORZ: 内靛 眠啊
+			// ORZ: 添加代码
 //			LeaveCriticalSection( &m_cs );
 			return (PLISTNODE)lpNode;
 		}

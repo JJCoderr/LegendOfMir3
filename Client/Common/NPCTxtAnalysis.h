@@ -41,7 +41,7 @@ private:
 	CHAR*		 m_pSourceText;
 	BOOL		m_bReady;
 	BOOL		m_bInited;
-	CWHDXGraphicWindow*	m_pxGWND;		// Text 狼 Width客 Height甫 掘扁 困秦 荤侩
+	CWHDXGraphicWindow*	m_pxGWND;		// 用于获取 Text 的 Width 和 Height
 
 
 	// Functions

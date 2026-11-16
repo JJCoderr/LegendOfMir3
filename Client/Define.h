@@ -39,8 +39,8 @@
 /******************************************************************************************************************
 	#1. User Define Message
 *******************************************************************************************************************/
-#define _WM_USER_MSG_INPUTTED		WM_USER + 1005				// 俊叼飘冠胶 涝仿皋矫瘤. 皋矫瘤啊 目盖靛老版快 wParam蔼篮 TRUE肺 技泼等促.
-#define ID_SOCKCLIENT_EVENT_MSG		WM_USER + 1000				// 家南捞亥飘皋矫瘤.
+#define _WM_USER_MSG_INPUTTED		WM_USER + 1005				// 编辑框输入消息. 当消息为命令时，wParam 值被设置为 TRUE。
+#define ID_SOCKCLIENT_EVENT_MSG		WM_USER + 1000				// 套接字事件消息.
 
 
 
@@ -135,29 +135,29 @@
 #define _INVENTORY_CELL_WIDTH		38
 #define _INVENTORY_CELL_HEIGHT		38
 
-#define _CHAT_COLOR1				0	//RGB(  0,   0,   0); // 捧苞祸.
-#define _CHAT_COLOR2				1	//RGB( 10,  10,  10); // 八沥祸.
-#define _CHAT_COLOR3				2	//RGB(255, 255, 255); // 闰祸.
-#define _CHAT_COLOR4				3	//RGB(255,   0,   0); // 弧碍.
-#define _CHAT_COLOR5				4	//RGB(  0, 255,   0); // 踌祸.
-#define _CHAT_COLOR6				5	//RGB(  0,   0, 255); // 仟弗祸
-#define _CHAT_COLOR7				6	//RGB(255, 255,   0); // 畴尔祸.
-#define _CHAT_COLOR8				7	//RGB(255, 128,   0); // 林炔祸
+#define _CHAT_COLOR1				0	//RGB(  0,   0,   0); // 透明色.
+#define _CHAT_COLOR2				1	//RGB( 10,  10,  10); // 黑色.
+#define _CHAT_COLOR3				2	//RGB(255, 255, 255); // 白色.
+#define _CHAT_COLOR4				3	//RGB(255,   0,   0); // 红色.
+#define _CHAT_COLOR5				4	//RGB(  0, 255,   0); // 绿色.
+#define _CHAT_COLOR6				5	//RGB(  0,   0, 255); // 蓝色
+#define _CHAT_COLOR7				6	//RGB(255, 255,   0); // 黄色.
+#define _CHAT_COLOR8				7	//RGB(255, 128,   0); // 橙色
 
-#define _USER_NAMECLR1				255	//RGB(255, 255, 255); 闰祸
-#define _USER_NAMECLR2				251	//RGB(255, 255,   0); 畴鄂祸
-#define _USER_NAMECLR3				249	//RGB(255,   0,   0); 弧埃祸
-#define _USER_NAMECLR4				125	//RGB(255,   0,   0); ??祸(搬拌救 阁胶磐祸)
-#define _USER_NAMECLR5				47	//RGB(165,  99,  57); 哎祸
-#define _USER_NAMECLR6				180	//RGB(  0,   0, 255); 仟弗祸
-#define _USER_NAMECLR7				69	//RGB(239, 107,   0); 林炔祸
-#define _USER_NAMECLR8				221	//RGB(  0, 148,   0); 踌祸
-#define _USER_NAMECLR9				254	//RGB(  0, 255, 255); 祸
-#define _USER_NAMECLR10				147	//RGB(140, 214, 239); 祸
-#define _USER_NAMECLR11				154	//RGB( 57, 181, 239); 祸
-#define _USER_NAMECLR12				229	//RGB(119, 136, 255); 祸
-#define _USER_NAMECLR13				168	//RGB(  0, 123, 222); 祸
-#define _USER_NAMECLR14				252	//RGB(  0,   0, 255); 祸
+#define _USER_NAMECLR1				255	//RGB(255, 255, 255); 白色
+#define _USER_NAMECLR2				251	//RGB(255, 255,   0); 黄色
+#define _USER_NAMECLR3				249	//RGB(255,   0,   0); 红色
+#define _USER_NAMECLR4				125	//RGB(255,   0,   0); ??色(结界内怪物颜色)
+#define _USER_NAMECLR5				47	//RGB(165,  99,  57); 棕色
+#define _USER_NAMECLR6				180	//RGB(  0,   0, 255); 蓝色
+#define _USER_NAMECLR7				69	//RGB(239, 107,   0); 橙色
+#define _USER_NAMECLR8				221	//RGB(  0, 148,   0); 绿色
+#define _USER_NAMECLR9				254	//RGB(  0, 255, 255); 颜色
+#define _USER_NAMECLR10				147	//RGB(140, 214, 239); 颜色
+#define _USER_NAMECLR11				154	//RGB( 57, 181, 239); 颜色
+#define _USER_NAMECLR12				229	//RGB(119, 136, 255); 颜色
+#define _USER_NAMECLR13				168	//RGB(  0, 123, 222); 颜色
+#define _USER_NAMECLR14				252	//RGB(  0,   0, 255); 颜色
 
 
 
@@ -251,106 +251,106 @@
 /******************************************************************************************************************
 	#1. Sprite Define
 *******************************************************************************************************************/
-// Hero狼 悼累 沥狼.(霸烙郴狼 葛电 悼累阑 沥狼茄促.)
+// Hero 的动作定义。(定义游戏内的全部动作。)
 
-#define _MAX_HERO_MTN				33			// 弥措 悼累肮荐.
-#define _MAX_HERO_FRAME				3000		// 促澜 Hero肺 逞绢啊绰 弥措 橇饭烙 肮荐.
+#define _MAX_HERO_MTN				33			// 最大动作个数.
+#define _MAX_HERO_FRAME				3000		// 切换到下一个 Hero 的最大帧数。
 #define	_MAX_HERO_REALFRAME			2640
 
-#define _MT_STAND					0			// 蜡绒悼累.
-#define _MT_ARROWATTACK				1			// 劝傍拜.
-#define _MT_SPELL1					2			// 付过 矫傈1.
-#define _MT_SPELL2					3			// 付过 傍拜 矫傈2.
-#define _MT_HOLD					4			// 斑叼扁.
-#define _MT_PUSHBACK				5			// 第肺 剐妨唱扁.
-#define _MT_PUSHBACKFLY				6			// 第肺 朝扼辑 剐妨唱扁.
-#define _MT_ATTACKMODE				7			// 傈捧葛靛.
-#define _MT_CUT						8			// 绊扁 戒扁.
-#define _MT_ONEVSWING				9			// 茄颊 辆海扁.(悼累 9锅何磐 14锅鳖瘤俊辑 公扁狼 辆幅俊 蝶扼 悼累捞 沥秦柳促.)
-#define _MT_TWOVSWING				10			// 滴颊 辆海扁.
-#define _MT_ONEHSWING				11			// 茄颊 染海扁.
-#define _MT_TWOHSWING				12			// 滴颊 染海扁.	
-#define _MT_SPEARVSWING				13			// 芒 辆海扁.
-#define _MT_SPEARHSWING				14			// 芒 染海扁.
-#define _MT_HITTED					15			// 嘎扁.
-#define _MT_WHEELWIND				16			// 倒搁辑 海扁.
-#define _MT_RANDSWING				17			// 付备 海扁.
-#define _MT_BACKDROPKICK			18			// 第倒酒 瞒扁.
-#define _MT_DIE						19			// 磷扁.
-#define _MT_SPECIALDIE				20			// 脾绢棵扼 磷扁.
-#define _MT_WALK					21			// 叭扁.
-#define _MT_RUN						22			// 崔府扁.
-#define _MT_MOODEPO					23			// 公怕焊 顿扁.
-#define _MT_ROLL					24			// 备福扁.
-#define _MT_FISHSTAND				25			// 超矫葛靛 蜡绒.
-#define _MT_FISHHAND				26			// 超矫葛靛.
-#define _MT_FISHTHROW				27			// 超矫临 带瘤扁.
-#define _MT_FISHPULL				28			// 超矫临 寸扁扁.
-#define _MT_HORSESTAND				29			// 铰付葛靛 蜡绒.
-#define _MT_HORSEWALK				30			// 铰付葛靛 叭扁.
-#define _MT_HORSERUN				31			// 铰付葛靛 崔府扁.
-#define _MT_HORSEHIT				32			// 铰付葛靛 嘎扁.
+#define _MT_STAND					0			// 空闲动作。
+#define _MT_ARROWATTACK				1			// 弓箭攻击。
+#define _MT_SPELL1					2			// 魔法施放1.
+#define _MT_SPELL2					3			// 魔法攻击施放2.
+#define _MT_HOLD					4			// 忍耐.
+#define _MT_PUSHBACK				5			// 被向后推开.
+#define _MT_PUSHBACKFLY				6			// 向后被击飞推开。
+#define _MT_ATTACKMODE				7			// 战斗模式.
+#define _MT_CUT						8			// 切肉.
+#define _MT_ONEVSWING				9			// 单手纵斩.(在动作第 9 号到第 14 号中，动作由武器种类决定.)
+#define _MT_TWOVSWING				10			// 双手纵斩.
+#define _MT_ONEHSWING				11			// 单手横斩.
+#define _MT_TWOHSWING				12			// 双手横扫斩.	
+#define _MT_SPEARVSWING				13			// 长枪纵向劈砍.
+#define _MT_SPEARHSWING				14			// 枪横扫.
+#define _MT_HITTED					15			// 受击.
+#define _MT_WHEELWIND				16			// 旋转劈砍.
+#define _MT_RANDSWING				17			// 乱砍.
+#define _MT_BACKDROPKICK			18			// 回身踢.
+#define _MT_DIE						19			// 死亡.
+#define _MT_SPECIALDIE				20			// 跳起死亡.
+#define _MT_WALK					21			// 行走.
+#define _MT_RUN						22			// 奔跑.
+#define _MT_MOODEPO					23			// 武太步跳跃.
+#define _MT_ROLL					24			// 翻滚。
+#define _MT_FISHSTAND				25			// 钓鱼模式空闲.
+#define _MT_FISHHAND				26			// 钓鱼模式.
+#define _MT_FISHTHROW				27			// 抛钓鱼线.
+#define _MT_FISHPULL				28			// 拉钓鱼线.
+#define _MT_HORSESTAND				29			// 骑马模式空闲.
+#define _MT_HORSEWALK				30			// 骑马模式行走.
+#define _MT_HORSERUN				31			// 骑马模式奔跑.
+#define _MT_HORSEHIT				32			// 骑马模式受击.
 
-// Monster狼 悼累 沥狼.(霸烙郴狼 葛电 悼累阑 沥狼茄促.)
-#define _MAX_MON_MTN				10			// 弥措 悼累肮荐.
-#define _MAX_MON_FRAME				1000		// 促澜 Mon肺 逞绢啊绰 弥措 橇饭烙 肮荐.
+// Monster 的动作定义。(定义游戏内的所有动作。)
+#define _MAX_MON_MTN				10			// 最大动作个数.
+#define _MAX_MON_FRAME				1000		// 切换到下一个 Mon 的最大帧数.
 
-#define _MT_MON_STAND				0			// 蜡绒悼累.
-#define _MT_MON_WALK				1			// 叭扁悼累.
-#define _MT_MON_ATTACK_A			2			// 老馆傍拜悼累1.
-#define _MT_MON_HITTED				3			// 嘎扁悼累.
-#define _MT_MON_DIE					4			// 磷扁悼累.
-#define _MT_MON_ATTACK_B			5			// 老馆傍拜悼累2.
-#define _MT_MON_SPELL_A				6			// 付过傍拜悼累1.
-#define _MT_MON_SPELL_B				7			// 付过傍拜悼累2.
-#define _MT_MON_APPEAR				8			// 唱鸥唱扁悼累.
-#define _MT_MON_SPECIAL_MTN			9			// 漂荐悼累1.
-
-
-// NPC狼 悼累 沥狼.(霸烙郴狼 葛电 悼累阑 沥狼茄促.)
-// NPC 包访沥狼.
-#define _MAX_NPC_MTN				3			// 弥措 悼累肮荐.
-#define _MAX_NPC_FRAME				100			// 促澜 NPC肺 逞绢啊绰 弥措 橇饭烙 肮荐.
-
-#define _MT_NPC_STAND				0			// 蜡绒悼累.
-#define _MT_NPC_ACT01				1			// 漂荐悼累1.
-#define _MT_NPC_ACT02				2			// 漂荐悼累2.
-
-// 扁档.							0			
-// 公扁措厘厘捞.					1			
-// 规绢备措厘厘捞.					2			
-// 咯包辆诀盔.						3			
-// 墨款磐.							4			
-// 版概救郴磊.						5			
-// 绊鞭荤辑.						6			
-// 档辑包版厚.						7			
-// 荤辑.							8			
-// 立荐贸.							9			
-// 距檬且酒滚瘤.					10			
-// 狼幅惑.							11			
-// 林痢NPC.							12			
-// 荤阜傈荤.						13			
-// 措厘埃辆诀盔.					14			
-// 档冠厘氓烙磊.					15			
-// 烤朝措厘厘捞.					16			
-// 烤朝距规畴牢.					17			
-// 烤朝氓规畴牢.					18			
-// 棱惑牢.							19			
-// 棱拳惑.							20			
-// 棱拳惑.							21			
-// 棱拳惑.							22			
-// 痢里捞.							23			
-// 器格惑.							24			
-// 咯包酒淋付.						25
-// 澜侥痢且硅.						26
-// 沥腊痢林牢.						27			
-// 青沥包.							28			
+#define _MT_MON_STAND				0			// 空闲动作。
+#define _MT_MON_WALK				1			// 行走动作。
+#define _MT_MON_ATTACK_A			2			// 普通攻击动作1.
+#define _MT_MON_HITTED				3			// 受击动作.
+#define _MT_MON_DIE					4			// 死亡动作.
+#define _MT_MON_ATTACK_B			5			// 普通攻击动作2。
+#define _MT_MON_SPELL_A				6			// 魔法攻击动作1.
+#define _MT_MON_SPELL_B				7			// 魔法攻击动作2.
+#define _MT_MON_APPEAR				8			// 出现动作.
+#define _MT_MON_SPECIAL_MTN			9			// 特殊动作1.
 
 
+// NPC 的动作定义。(定义游戏内的所有动作。)
+// NPC 相关定义.
+#define _MAX_NPC_MTN				3			// 最大动作个数.
+#define _MAX_NPC_FRAME				100			// 切换到下一个 NPC 的最大帧数.
+
+#define _MT_NPC_STAND				0			// 空闲动作。
+#define _MT_NPC_ACT01				1			// 特殊动作1.
+#define _MT_NPC_ACT02				2			// 特殊动作2.
+
+// 祈祷.							0			
+// 武器铁匠.					1			
+// 防具铁匠.					2			
+// 客栈员工.						3			
+// 计数器.							4			
+// 拍卖向导。						5			
+// 高级书吏.						6			
+// 图书馆守卫.						7			
+// 书吏.							8			
+// 接待处.							9			
+// 药草爷爷.					10			
+// 服装商.							11			
+// 酒馆NPC.							12			
+// 沙漠战士。						13			
+// 铁匠铺员工.					14			
+// 赌场负责人.					15			
+// 旧时铁匠.					16			
+// 旧时药房老人.					17			
+// 旧书店老人.					18			
+// 杂货商人.							19			
+// 杂货商.							20			
+// 杂货商.							21			
+// 杂货商.							22			
+// 占卜师.							23			
+// 布匹商.							24			
+// 旅馆老板娘.						25
+// 餐馆老翁.						26
+// 肉店老板.						27			
+// 行政官.							28			
 
 
 
-// 付过瓤苞包访沥狼.
+
+
+// 魔法效果相关定义.
 #define _MAX_EFFECT					33
 #define _MAX_MAGIC					52
 #define _MAX_EXPLOSION				8
@@ -389,25 +389,25 @@
 #define _CLIP_HEIGHT				492
 #define _TIMER_ID					1
 
-#define _ET_DIGOUTZOMBI				1  //粱厚啊 顶颇绊 唱柯 如利
-#define _ET_MINE					2  //堡籍捞 概厘登绢 乐澜
-#define _ET_PILESTONES				3  //倒公歹扁
-#define _ET_HOLYCURTAIN				4  //搬拌
+#define _ET_DIGOUTZOMBI				1  //僵尸从地里钻出的痕迹
+#define _ET_MINE					2  //埋藏有矿石
+#define _ET_PILESTONES				3  //石堆
+#define _ET_HOLYCURTAIN				4  //结界
 #define _ET_FIRE					5
-#define _ET_SCULPEICE				6  //林付空狼 倒柄柳 炼阿
+#define _ET_SCULPEICE				6  //走马王的碎石块
 
 #define _MAX_CELL_OBJ				10
 
 // Day Bright.
-#define _DAYSTATE_DUSK				0  // 货寒.
-#define _DAYSTATE_DAY				1  // 撤.
-#define _DAYSTATE_DAWN				2  // 历翅.
-#define _DAYSTATE_NIGHT				3  // 广.
+#define _DAYSTATE_DUSK				0  // 黎明.
+#define _DAYSTATE_DAY				1  // 白天.
+#define _DAYSTATE_DAWN				2  // 傍晚.
+#define _DAYSTATE_NIGHT				3  // 夜晚.
 
 // Fog Bright.
-#define _FOGSTATE_DAY				0  // 撤.
-#define _FOGSTATE_NIGHT				1  // 广.
-#define _FOGSTATE_DAWN				2  // 货寒, 历翅.
+#define _FOGSTATE_DAY				0  // 白天.
+#define _FOGSTATE_NIGHT				1  // 夜晚.
+#define _FOGSTATE_DAWN				2  // 清晨, 傍晚.
 
 
 
@@ -416,28 +416,28 @@
 /******************************************************************************************************************
 	#1. Interface
 *******************************************************************************************************************/
-#define _CHAT_COLOR1				0	//RGB(  0,   0,   0); // 捧苞祸.
-#define _CHAT_COLOR2				1	//RGB( 10,  10,  10); // 八沥祸.
-#define _CHAT_COLOR3				2	//RGB(255, 255, 255); // 闰祸.
-#define _CHAT_COLOR4				3	//RGB(255,   0,   0); // 弧碍.
-#define _CHAT_COLOR5				4	//RGB(  0, 255,   0); // 踌祸.
-#define _CHAT_COLOR6				5	//RGB(  0,   0, 255); // 仟弗祸
-#define _CHAT_COLOR7				6	//RGB(255, 255,   0); // 畴尔祸.
-#define _CHAT_COLOR8				7	//RGB(255, 128,   0); // 林炔祸
+#define _CHAT_COLOR1				0	//RGB(  0,   0,   0); // 透明色.
+#define _CHAT_COLOR2				1	//RGB( 10,  10,  10); // 黑色.
+#define _CHAT_COLOR3				2	//RGB(255, 255, 255); // 白色.
+#define _CHAT_COLOR4				3	//RGB(255,   0,   0); // 红色.
+#define _CHAT_COLOR5				4	//RGB(  0, 255,   0); // 绿色.
+#define _CHAT_COLOR6				5	//RGB(  0,   0, 255); // 蓝色
+#define _CHAT_COLOR7				6	//RGB(255, 255,   0); // 黄色.
+#define _CHAT_COLOR8				7	//RGB(255, 128,   0); // 橙色
 
 #define _INPUT_EDITWND_XPOS			223
 #define _INPUT_EDITWND_YPOS			549
 #define _INPUT_EDITWND_WIDTH		353
 #define _INPUT_EDITWND_HEIGHT		15
 
-// 皋牢牢磐其捞胶俊辑 静老 扩档快 酒捞叼.
-#define _WND_ID_INVENTORY			0			//啊规扩档快.
-#define _WND_ID_STATUS				1			//某腐磐 沥焊 焊扁扩档快(3俺).
-#define _WND_ID_STORE				2			//惑痢扩档快.
-#define _WND_ID_EXCHANGE			3			//背券扩档快.
-#define _WND_ID_GUILD				4			//巩盔扩档快.
-#define _WND_ID_GUILDMASTER			5			//巩林扩档快.
-#define _WND_ID_GROUP				6			//弊缝扩档快.
+// 主界面中使用的窗口ID.
+#define _WND_ID_INVENTORY			0			//背包窗口.
+#define _WND_ID_STATUS				1			//角色信息查看窗口(3个)。
+#define _WND_ID_STORE				2			//商店窗口.
+#define _WND_ID_EXCHANGE			3			//交易窗口.
+#define _WND_ID_GUILD				4			//文元窗口.
+#define _WND_ID_GUILDMASTER			5			//门主窗口.
+#define _WND_ID_GROUP				6			//组窗口。
 #define _WND_ID_GROUPPOP			7			//
 #define _WND_ID_CHATPOP				8			//
 #define _WND_ID_NPCCHAT				9		
@@ -446,31 +446,31 @@
 #define _WND_ID_OPTION				12			// 
 #define _WND_ID_HORSE				13			// 
 
-// 皋牢 牢磐其捞胶俊辑 静老 扩档快狼 捞固瘤 牢郸胶.
-#define _WNDIMGIDX_MAIN				50			//皋牢牢磐其捞胶盲泼芒
-#define _WNDIMGIDX_INVENTORY	    250			//牢亥配府
+// 主界面中使用的窗口的图像索引.
+#define _WNDIMGIDX_MAIN				50			//主界面聊天窗口
+#define _WNDIMGIDX_INVENTORY	    250			//背包
 #define _WNDIMGIDX_ITEMSET		    200			//
-#define _WNDIMGIDX_SKILLSET			202			//公傍汲沥芒
+#define _WNDIMGIDX_SKILLSET			202			//武功设置窗口
 #define _WNDIMGIDX_STATUS			201			//
 #define _WNDIMGIDX_CHARINFO			201			//
-#define _WNDIMGIDX_STORE			253			//惑痢拱扒荤扁
-#define _WNDIMGIDX_EXCHANGE			251			//背券芒
-#define _WNDIMGIDX_GUILDMASTER		600			//巩林霸矫魄.
-#define _WNDIMGIDX_GUILD			169			//巩盔霸矫魄.
-#define _WNDIMGIDX_GROUP			900			//弊缝芒.
-#define _WNDIMGIDX_GROUPPOP			145			//弊缝涝仿芒.
-#define _WNDIMGIDX_CHATPOP			350			//盲泼扑诀芒.
+#define _WNDIMGIDX_STORE			253			//商店购买物品
+#define _WNDIMGIDX_EXCHANGE			251			//交易窗口
+#define _WNDIMGIDX_GUILDMASTER		600			//门主公告板.
+#define _WNDIMGIDX_GUILD			169			//文原公告板。
+#define _WNDIMGIDX_GROUP			900			//组队窗口.
+#define _WNDIMGIDX_GROUPPOP			145			//组队输入窗口.
+#define _WNDIMGIDX_CHATPOP			350			//聊天弹出窗口.
 #define _WNDIMGINDX_MSGBOX1			254
 #define _WNDIMGINDX_MSGBOX2			255
-#define _WNDIMGIDX_NPCCHAT			300			//NPC措拳芒
-#define _WNDIMGIDX_QUEST			700			//涅胶飘芒.
-#define _WNDIMGIDX_OPTION			750			//可记芒.
-#define _WNDIMGIDX_HORSE			850			//富芒.
-#define _IDX_IMG_NOTICEBOX			0			//傍瘤芒 牢郸胶
+#define _WNDIMGIDX_NPCCHAT			300			//NPC对话窗口
+#define _WNDIMGIDX_QUEST			700			//任务窗口.
+#define _WNDIMGIDX_OPTION			750			//选项窗口.
+#define _WNDIMGIDX_HORSE			850			//聊天框.
+#define _IDX_IMG_NOTICEBOX			0			//公告窗口索引
 
 #define _IMGIDX_BELT				51
 
-// 皋牢牢磐其捞胶俊辑 静老 滚瓢 酒捞叼.
+// 主界面中使用的按钮 ID.
 #define _BTN_ID_CHANGE				0
 #define _BTN_ID_MINIMAP				1
 #define _BTN_ID_MUGONG				2
@@ -553,65 +553,65 @@
 /******************************************************************************************************************
 	#1. Magic
 *******************************************************************************************************************/
-#define _MAGIC_ACTIVE				0			// 付过劝己惑怕.
-#define _LIGHT_ACTIVE				1			// 付过堡盔劝己惑怕.
-#define _MAGIC_FINISH				2			// 付过家戈.
+#define _MAGIC_ACTIVE				0			// 魔法激活状态。
+#define _LIGHT_ACTIVE				1			// 魔法光源激活状态.
+#define _MAGIC_FINISH				2			// 魔法消失.
 
-#define _SKILL_FIREBALL				1			// 拳堪厘.
-#define _SKILL_HEALLING				2			// 雀汗贱.
-#define _SKILL_ONESWORD				3			// 寇荐.
-#define _SKILL_ILKWANG				4			// 老堡.
-#define _SKILL_FIREBALL2			5			// 陛碍拳堪厘.
-#define _SKILL_AMYOUNSUL			6			// 鞠楷贱.
-#define _SKILL_YEDO					7			// 抗档.
-#define _SKILL_FIREWIND				8			// 拳堪浅.
-#define _SKILL_FIRE					9			// 堪荤厘.
-#define _SKILL_SHOOTLIGHTEN			10			// 汾牢厘.
-#define _SKILL_LIGHTENING			11			// 碍拜.
-#define _SKILL_ERGUM				12			// 绢八贱.
-#define _SKILL_FIRECHARM			13			// 气混拌.
-#define _SKILL_HANGMAJINBUB			14			// 亲付柳过.
-#define _SKILL_DEJIWONHO			15			// 措瘤盔龋.
-#define _SKILL_HOLYSHIELD			16			// 搬拌.
-#define _SKILL_SKELLETON			17			// 归榜家券贱.
-#define _SKILL_CLOAK				18			// 篮脚.
-#define _SKILL_BIGCLOAK				19			// 措篮脚.
-#define _SKILL_TAMMING				20			// 汾去拜.
-#define _SKILL_SPACEMOVE			21			// 酒傍青过.
-#define _SKILL_EARTHFIRE			22			// 瘤堪贱.
-#define _SKILL_FIREBOOM				23			// 气凯颇.
-#define _SKILL_LIGHTFLOWER			24			// 汾汲拳.
-#define _SKILL_BANWOL				25			// 馆岿.
-#define _SKILL_FIRESWORD			26			// 堪拳搬.
-#define _SKILL_MOOTEBO				27			// 公怕焊.
-#define _SKILL_SHOWHP				28			// 沤扁颇楷.
-#define _SKILL_BIGHEALLING			29			// 措雀汗.
-#define _SKILL_SINSU				30			// 脚荐家券.
-#define _SKILL_SHIELD				31			// 林贱狼阜.
-#define _SKILL_KILLUNDEAD			32			// 荤磊辣雀.
-#define _SKILL_SNOWWIND				33			// 葫汲浅.
+#define _SKILL_FIREBALL				1			// 火焰场.
+#define _SKILL_HEALLING				2			// 恢复术.
+#define _SKILL_ONESWORD				3			// 外修.
+#define _SKILL_ILKWANG				4			// 日光.
+#define _SKILL_FIREBALL2			5			// 金刚火焰掌.
+#define _SKILL_AMYOUNSUL			6			// 暗然术.
+#define _SKILL_YEDO					7			// 锐刀.
+#define _SKILL_FIREWIND				8			// 火焰风.
+#define _SKILL_FIRE					9			// 盐社长.
+#define _SKILL_SHOOTLIGHTEN			10			// 雷印.
+#define _SKILL_LIGHTENING			11			// 强击.
+#define _SKILL_ERGUM				12			// 御剑术.
+#define _SKILL_FIRECHARM			13			// 爆杀系.
+#define _SKILL_HANGMAJINBUB			14			// 降魔阵法.
+#define _SKILL_DEJIWONHO			15			// 大地援护.
+#define _SKILL_HOLYSHIELD			16			// 结界.
+#define _SKILL_SKELLETON			17			// 白骨召唤术.
+#define _SKILL_CLOAK				18			// 隐身.
+#define _SKILL_BIGCLOAK				19			// 大隐身.
+#define _SKILL_TAMMING				20			// 雷魂击.
+#define _SKILL_SPACEMOVE			21			// 我空行法.
+#define _SKILL_EARTHFIRE			22			// 地炎术。
+#define _SKILL_FIREBOOM				23			// 爆裂波.
+#define _SKILL_LIGHTFLOWER			24			// 雷雪火.
+#define _SKILL_BANWOL				25			// 半月.
+#define _SKILL_FIRESWORD			26			// 焰火诀.
+#define _SKILL_MOOTEBO				27			// 武太步。
+#define _SKILL_SHOWHP				28			// 探气破延.
+#define _SKILL_BIGHEALLING			29			// 大恢复.
+#define _SKILL_SINSU				30			// 神兽召唤.
+#define _SKILL_SHIELD				31			// 咒术之幕.
+#define _SKILL_KILLUNDEAD			32			// 狮子轮回.
+#define _SKILL_SNOWWIND				33			// 冰旋风.
 
-#define _SKILL_JUMPSHOT				33			// 痢橇秦辑摹扁 八扁.
-#define _SKILL_RANDSWING			34			// 付备 戎滴福扁.
-#define _SKILL_SPACEMOVE2			35			// 酒傍青过2.
-#define _SKILL_SPACEMOVE3			36			// 酒傍青过3.
+#define _SKILL_JUMPSHOT				33			// 跳跃劈砍 剑气.
+#define _SKILL_RANDSWING			34			// 胡乱挥舞。
+#define _SKILL_SPACEMOVE2			35			// 阿空行法2。
+#define _SKILL_SPACEMOVE3			36			// 阿空行法3.
 
-#define _MONMAGIC_KEPAL				100			// 傈拜傍拜.(傍拜茄 某腐磐困俊)(付过)
-#define _MONMAGIC_EXPLODE			101			// 气惯付过.(倒榜方磷阑锭, 沸傍拜矫)
-#define _MONMAGIC_BLACK1			102			// 孺付过荤. (付过(矫傈))
-#define _MONMAGIC_BLACK2			103			// 孺付过荤. (付过(付过))
-#define _MONMAGIC_DIE				104			// 孺付过荤, 版癌渴扁荤, 全付过荤, 脚扁急焊胶函脚傈 磷澜.(瓤苞)
-#define _MONMAGIC_ANTHEAL			105			// 摹蜡俺固鳃傅(惯荤付过, 气惯瓤苞.)
-#define _MONMAGIC_GREATANT			106			// 芭措俺固.(傍拜茄 某腐磐困俊)(付过)
-#define _MONMAGIC_MAGENUMA			108			// 搬拌.
-#define _MONMAGIC_ANT				109			// 捍沥俺固傍拜.(傍拜茄 某腐磐困俊)(付过)
-#define _MONMAGIC_WORKANT			110			// 老俺固傍拜.(傍拜茄 某腐磐困俊)(付过)
-#define _MONMAGIC_RED1				111			// 全付过荤. (付过(矫傈))
-#define _MONMAGIC_RED2				112			// 全付过荤. (付过(付过))
-#define _MONMAGIC_COWGHOST			113			// 快搁蓖. (付过)
-#define _MONMAGIC_SINSU				114			// 脚荐. (付过)
-#define _MONMAGIC_ZOMBIE			115			// 粱厚. (付过)
-#define _MONMAGIC_JUMAWANG			116			// 林付空. (付过)
+#define _MONMAGIC_KEPAL				100			// 电击攻击.(在攻击的角色上方)(魔法)
+#define _MONMAGIC_EXPLODE			101			// 爆炸魔法.(石头傀儡死亡时, 隆攻击时)
+#define _MONMAGIC_BLACK1			102			// 黑魔法师。(魔法(施放))
+#define _MONMAGIC_BLACK2			103			// 黑魔法师. (魔法(魔法))
+#define _MONMAGIC_DIE				104			// 黑魔法师, 轻甲骑士, 红魔法师, 神机船BOSS变身前死亡.(效果)
+#define _MONMAGIC_ANTHEAL			105			// 治愈蚂蚁治疗(发射魔法, 爆炸效果.)
+#define _MONMAGIC_GREATANT			106			// 巨大蚂蚁.(攻击的角色上方)(魔法)
+#define _MONMAGIC_MAGENUMA			108			// 结界.
+#define _MONMAGIC_ANT				109			// 兵蚁攻击.(在攻击的角色上方)(魔法)
+#define _MONMAGIC_WORKANT			110			// 工蚁攻击.(在攻击的角色上方)(魔法)
+#define _MONMAGIC_RED1				111			// 红魔法师. (魔法(施放))
+#define _MONMAGIC_RED2				112			// 红魔法师。(魔法(魔法))
+#define _MONMAGIC_COWGHOST			113			// 牛面鬼. (魔法)
+#define _MONMAGIC_SINSU				114			// 神兽. (魔法)
+#define _MONMAGIC_ZOMBIE			115			// 僵尸. (魔法)
+#define _MONMAGIC_JUMAWANG			116			// 走马王. (魔法)
 #define _MONMAGIC_CHIM				117
 #define _MONMAGIC_ARROW				118
 #define _MONMAGIC_MAARROW			119
@@ -628,8 +628,8 @@
 #define _MONMAGIC_NUMAGUMGI			130
 #define _MONMAGIC_EXPLODE1			131
 
-#define _BLEND_NORMAL				0			// 老馆利牢弊府扁.(舅颇蔼捞 利侩瞪荐乐促.)
-#define _BLEND_LIGHT				1			// 级堡瓤苞屈怕狼 喉坊爹.
+#define _BLEND_NORMAL				0			// 一般绘制。（可应用 alpha 值。）
+#define _BLEND_LIGHT				1			// 闪光效果形态的混合.
 #define _BLEND_LIGHTINV				2	
 #define _BLEND_INVNORMAL			3
 #define _BLEND_INVLIGHT				4
@@ -642,45 +642,45 @@
 	#1. Map Handler
 *******************************************************************************************************************/
 
-#define _BASETILE_WIDTH				96				// 扁夯鸥老 承捞.
+#define _BASETILE_WIDTH				96				// 基本图块宽度。
 #define _BASETILE_HEIGHT			64
 	
-#define _CELL_WIDTH					48				// 扁夯伎 承捞, 扁夯鸥老篮 4俺狼 伎肺 捞风绢瘤绊 沥焊绰 伎窜困肺 历厘等促.
+#define _CELL_WIDTH					48				// 默认单元格宽度, 默认图块由 4 个单元格组成, 信息以单元格为单位保存.
 #define _CELL_HEIGHT				32
 
-#define _VIEW_CELL_X_COUNT			24				// 轰康开俊 鞘夸茄 X绵狼 伎窜困 俺荐.((楼捧府 鸥老力寇)谅客困肺 3伎, 快客酒贰肺 2伎究狼 咯蜡甫 敌促.)
+#define _VIEW_CELL_X_COUNT			24				// 视图区域所需的 X 轴单元格数量.((不含零散图块)左侧和上方留 3 个单元格, 右侧和下方各留 2 个单元格的余量.)
 #define _VIEW_CELL_Y_COUNT			24			
 #define _VIEW_CELL_Y_COUNT_FOR_OBJ	44
 
-#define _VIEW_CELL_X_START			-200			// 轰康开阑 弊府扁 困茄 矫累 伎 X谅钎.
+#define _VIEW_CELL_X_START			-200			// 用于绘制视图区域的起始单元格 X 坐标。
 #define _VIEW_CELL_Y_START			-157
 #define _MAX_TILE_FILE				14
 
-// 器弊祸 包访 加己.
+// 雾色相关属性。
 #define _FOG_COLOR_TYPE0			RGB(0, 0, 0);
 #define _FOG_COLOR_TYPE1			RGB(100, 10, 10);
 #define _FOG_COLOR_TYPE2			RGB(10, 255, 10);
 #define _FOG_COLOR_TYPE3			RGB(10, 10, 255);
 
-// 加己 包访 沥狼.
+// 属性相关定义.
 #define _CAN_WALK					0
 #define _CAN_NOTWALK	 			1
 #define _CAN_FLY					0
 #define _CAN_NOTFLY					1
 
-// 扼捞飘 农扁 包访 沥狼.
+// 光照大小相关定义.
 #define _LIGHT_SIZE_TYPE0			3
 #define _LIGHT_SIZE_TYPE1			4
 #define _LIGHT_SIZE_TYPE2			5
 #define _LIGHT_SIZE_TYPE3			6
 
-// 扼捞飘 祸 包访 沥狼.
+// 光照颜色相关定义.
 #define _LIGHT_COLOR_TYPE0			RGB(255, 0, 0);
 #define _LIGHT_COLOR_TYPE1			RGB(0, 255, 0);
 #define _LIGHT_COLOR_TYPE2			RGB(0, 0, 255);
 #define _LIGHT_COLOR_TYPE3			RGB(255, 0, 255);
 
-// 巩包访 沥狼.
+// 行会相关定义.
 #define _DOOR_ISCLOSED				0
 #define _DOOR_ISOPEN				1
 
@@ -775,7 +775,7 @@
 #define CM_HIT						3014
 #define CM_LONGHIT					3019
 #define CM_POWERHIT					3018
-#define CM_SPELL					3017	// 焊辰饶 辑滚俊辑 铰牢捞 坷搁 悼累阑 茄促. 胶歧悼累捞 场抄饶 sm_magicfire啊 坷搁 悼累阑 胶拍靛肺 官槽促.
+#define CM_SPELL					3017	// 发送后，若服务器返回许可则执行动作。法术动作结束后，若收到 sm_magicfire 则把动作切换为站立。
 #define CM_WIDEHIT					3024
 #define CM_FIREHIT					3025
 #define CM_SAY						3030
@@ -787,50 +787,50 @@
 #define	CM_OPENDOOR					1002
 
 
-//侩扁
+//勇气
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 傍烹
-#define	CM_CLICKNPC					1010	// 捞 皋矫瘤甫 辑滚肺 焊郴绢 秦寸 MPC狼 沥焊甫 罐绰促.
-#define	CM_MERCHANTDLGSELECT		1011	// 荤侩磊啊 NPC措拳吝 Tag啊 粮犁窍绰 何盒阑 Click沁阑版快 焊郴绢柳促.
+// 通用
+#define	CM_CLICKNPC					1010	// 将此消息发送到服务器，以获取该 MPC 的信息。
+#define	CM_MERCHANTDLGSELECT		1011	// 当用户在 NPC 对话中点击存在 Tag 的部分时会发送.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 迫扁
-#define	CM_MERCHANTQUERYSELLPRICE	1012	// 迫扁 拱扒阑 棵妨 初阑 版快 啊拜阑 掘绰促.  
-											// 函版且 鞘夸啊 乐澜 (苞芭: 迫拱扒狼 啊拜父 钎矫, 泅犁: 迫府绰 拱扒狼 阿败 葛滴钎矫)
-#define CM_USERSELLITEM				1013	// 迫扁 滚瓢阑 喘啡阑 版快 (苞扁: 迫拱扒父 窍唱父 焊晨, 泅犁: 迫拱扒 葛滴 焊晨
+// 出售
+#define	CM_MERCHANTQUERYSELLPRICE	1012	// 上架要出售的物品时会得到价格.  
+											// 需要修改 (过去: 只显示出售物品的价格, 当前: 显示所有出售物品的价格)
+#define CM_USERSELLITEM				1013	// 按下卖出按钮的情况 (过去: 只发送一件要卖出的物品, 当前: 发送全部要卖出的物品
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 荤扁
-#define CM_USERBUYITEM				1014	// 荤扁 滚瓢阑 喘啡阑 版快
-#define CM_USERGETDETAILITEM		1015	// 惑痢 格废吝俊 Sub Menu啊 乐绰 巴阑 努腐沁阑 版快
+// 购买
+#define CM_USERBUYITEM				1014	// 按下购买按钮时
+#define CM_USERGETDETAILITEM		1015	// 当在商店列表中点击带有 Sub Menu 的项目时
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 荐府
-#define	CM_USERREPAIRITEM			1023	// 荐府窍促 滚瓢阑 喘范阑 版快
-#define	CM_MERCHANTQUERYREPAIRCOST	1024	// 荐府且酒捞袍阑 棵妨 初阑 版快 啊拜阑 掘绰促.
+// 修理
+#define	CM_USERREPAIRITEM			1023	// 按下修理按钮时
+#define	CM_MERCHANTQUERYREPAIRCOST	1024	// 放入要修理的物品时获得价格.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 距规
+// 药房
 #define CM_USERMAKEDRUGITEM			1034	// 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 咯包
-#define	CM_USERSTORAGEITEM			1031	// 荤侩磊啊 负变促 滚瓢(咆胶飘 滚瓢 酒丛)阑 喘范阑 版快 焊郴绢柳促.
-#define	CM_USERTAKEBACKSTORAGEITEM	1032	// 荤侩磊啊 茫绰促 滚瓢(咆胶飘 滚瓢 酒丛)阑 喘范阑 版快 焊郴绢柳促.
+// 客栈
+#define	CM_USERSTORAGEITEM			1031	// 用户按下委托按钮(非文本按钮)时发送。
+#define	CM_USERTAKEBACKSTORAGEITEM	1032	// 用户按下查找按钮(非文本按钮)时发送.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 巩颇
-#define	CM_OPENGUILDDLG				1035	// 荤侩磊啊 巩颇芒阑 凯绊磊 沁阑 版快 焊郴绢柳促.
-#define CM_GUILDHOME				1036	// 荤侩磊啊 巩颇芒吝 HOME 滚瓢阑 喘范阑 版快 焊郴绢柳促.
-#define	CM_GUILDMEMBERLIST			1037	// 荤侩磊啊 巩颇芒吝 巩盔LIST甫 焊绊磊 寝阑 版快
-#define CM_GUILDADDMEMBER			1038	// 荤侩磊啊 巩盔眠啊甫 沁阑 版快
-#define	CM_GUILDDELMEMBER			1039	// 荤侩磊啊 巩盔昏力甫 沁阑 版快
-#define	CM_GUILDUPDATENOTICE		1040	// 荤侩磊啊 巩颇傍瘤甫 荐沥 沁阑 版快
-#define	CM_GUILDUPDATERANKINFO		1041	// 荤侩磊啊 巩盔流困甫 荐沥沁阑 版快
-#define CM_GUILDMAKEALLY			1044	// 荤侩磊啊 巩颇悼竿阑 沁阑 版快
-#define CM_GUILDBREAKALLY			1045	// 荤侩磊啊 巩颇悼竿颇扁甫 沁阑版快
+// 行会
+#define	CM_OPENGUILDDLG				1035	// 当用户想要打开行会窗口时发送。
+#define CM_GUILDHOME				1036	// 用户按下行会窗口中的 HOME 按钮时发送。
+#define	CM_GUILDMEMBERLIST			1037	// 用户想要查看行会窗口中的成员 LIST 时
+#define CM_GUILDADDMEMBER			1038	// 当用户添加行会成员时
+#define	CM_GUILDDELMEMBER			1039	// 当用户删除行会成员时
+#define	CM_GUILDUPDATENOTICE		1040	// 用户修改了行会公告时
+#define	CM_GUILDUPDATERANKINFO		1041	// 用户修改行会成员职位时
+#define CM_GUILDMAKEALLY			1044	// 用户进行行会结盟的情况
+#define CM_GUILDBREAKALLY			1045	// 用户解除行会结盟时
 
 
 
 /******************************************************************************************************************
 	#1. Server To Client Message
 *******************************************************************************************************************/
-#define SM_RUSH						6		// 公怕焊 剐扁.
+#define SM_RUSH						6		// 武太步推开.
 #define SM_FIREHIT					8
 #define SM_POWERHIT					18
 #define SM_BACKSTEP					9
@@ -838,7 +838,7 @@
 #define SM_WALK						11
 #define SM_RUN						13
 #define SM_HIT						14
-#define SM_SPELL					17		// 胶歧阑 茄促.
+#define SM_SPELL					17		// 进行施放。
 #define SM_LONGHIT					19
 #define SM_DIGUP					20
 #define SM_DIGDOWN					21
@@ -887,7 +887,7 @@
 #define SM_CLEAROBJECT				633
 #define SM_EAT_OK					635
 #define SM_EAT_FAIL					636
-#define SM_MAGICFIRE				638		// 付过捞 角青等促.
+#define SM_MAGICFIRE				638		// 魔法被执行.
 #define SM_MAGIC_LVEXP				640
 #define SM_DURACHANGE				642
 #define SM_GOLDCHANGE				653
@@ -914,7 +914,7 @@
 #define SM_MONSTERSAY				1501
 #define SM_SITDOWN					12
 #define SM_BUTCH					637
-#define SM_SKELETON					33		// SM_DEATH客 悼老.
+#define SM_SKELETON					33		// 与 SM_DEATH 相同.
 #define SM_CHANGEFACE				1104;
 
 #define SM_OPENDOOR_OK				612

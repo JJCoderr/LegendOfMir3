@@ -18,7 +18,7 @@
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_KOR)
 #ifdef _WIN32
 LANGUAGE LANG_KOREAN, SUBLANG_DEFAULT
-#pragma code_page(949)
+#pragma code_page(936)
 #endif //_WIN32
 
 #ifdef APSTUDIO_INVOKED
@@ -54,14 +54,14 @@ END
 
 IDR_MAINMENU MENU DISCARDABLE 
 BEGIN
-    POPUP "명령어"
+    POPUP "Command"
     BEGIN
         MENUITEM "CM_&IDPASSWORD",              IDM_CM_IDPASSWORD
         MENUITEM "CM_&ADDUSER",                 IDM_CM_ADDUSER
     END
-    POPUP "가혹테스트"
+    POPUP "Stress Test"
     BEGIN
-        MENUITEM "가혹테스트 시작(&S)",         IDM_TEST
+        MENUITEM "Start Stress Test(&S)",         IDM_TEST
     END
 END
 
@@ -74,7 +74,7 @@ END
 IDD_LOGIN DIALOG DISCARDABLE  0, 0, 121, 101
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Login"
-FONT 9, "굴림"
+FONT 9, "MS Shell Dlg"
 BEGIN
     EDITTEXT        IDC_USERID,64,23,40,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_PASSWORD,64,44,40,14,ES_AUTOHSCROLL
@@ -87,7 +87,7 @@ END
 IDD_NEWUSER DIALOG DISCARDABLE  0, 0, 167, 261
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Add New User"
-FONT 9, "굴림"
+FONT 9, "MS Shell Dlg"
 BEGIN
     EDITTEXT        IDC_USERID,73,19,40,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_PASSWORD,73,37,40,14,ES_AUTOHSCROLL
@@ -104,17 +104,17 @@ BEGIN
     DEFPUSHBUTTON   "OK",IDOK,7,240,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,110,240,50,14
     LTEXT           "ID :",IDC_STATIC,56,22,12,8
-    LTEXT           "암호 :",IDC_STATIC,49,39,19,8
-    LTEXT           "사용자 명 :",IDC_STATIC,33,56,35,8
-    LTEXT           "주민등록번호 :",IDC_STATIC,21,73,47,8
-    LTEXT           "질문 1 :",IDC_STATIC,43,108,25,8
-    LTEXT           "질문 2 :",IDC_STATIC,43,140,25,8
-    LTEXT           "답 1 :",IDC_STATIC,50,124,18,8
-    LTEXT           "답 2 :",IDC_STATIC,50,157,18,8
-    LTEXT           "전화 번호 :",IDC_STATIC,33,174,35,8
-    LTEXT           "이동전화 번호 :",IDC_STATIC,19,191,49,8
-    LTEXT           "이메일 주소 :",IDC_STATIC,26,208,42,8
-    LTEXT           "생일 :",IDC_STATIC,49,89,19,8
+    LTEXT           "Password :",IDC_STATIC,49,39,19,8
+    LTEXT           "User Name :",IDC_STATIC,33,56,35,8
+    LTEXT           "ID Number :",IDC_STATIC,21,73,47,8
+    LTEXT           "Question 1 :",IDC_STATIC,43,108,25,8
+    LTEXT           "Question 2 :",IDC_STATIC,43,140,25,8
+    LTEXT           "Answer 1 :",IDC_STATIC,50,124,18,8
+    LTEXT           "Answer 2 :",IDC_STATIC,50,157,18,8
+    LTEXT           "Phone :",IDC_STATIC,33,174,35,8
+    LTEXT           "Mobile :",IDC_STATIC,19,191,49,8
+    LTEXT           "E-mail :",IDC_STATIC,26,208,42,8
+    LTEXT           "Birthday :",IDC_STATIC,49,89,19,8
 END
 
 

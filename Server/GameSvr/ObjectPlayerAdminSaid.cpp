@@ -98,11 +98,11 @@ BOOL CPlayerObject::ProcessForAdminSaid(char *pszMsg)
 
 		switch (IDS_COMMAND_MONGEN + nCommand)
 		{
-			case IDS_COMMAND_MONGEN:						//"各哩"
+			case IDS_COMMAND_MONGEN:						//"怪物刷新"
 				if (pszParam1 && pszParam2)
 					CmdCallMakeMonster(pszParam1, pszParam2);
 				break;
-			case IDS_COMMAND_INSPECTOR:						//"皑矫磊"
+			case IDS_COMMAND_INSPECTOR:						//"观察者"
 			{
 				TCHAR	wszMsg[64];
 				char	szMsg[64];
@@ -119,9 +119,9 @@ BOOL CPlayerObject::ProcessForAdminSaid(char *pszMsg)
 
 				break;
 			}
-			case IDS_COMMAND_ADMIN:							//"款康磊"
+			case IDS_COMMAND_ADMIN:							//"管理员"
 				break;
-			case IDS_COMMAND_INVINCIBILITY:					//"公利"
+			case IDS_COMMAND_INVINCIBILITY:					//"无敌"
 			{
 				TCHAR	wszMsg[64];
 				char	szMsg[64];
@@ -138,13 +138,13 @@ BOOL CPlayerObject::ProcessForAdminSaid(char *pszMsg)
 
 				break;
 			}
-			case IDS_COMMAND_ATTACK:						//"傍拜"
+			case IDS_COMMAND_ATTACK:						//"攻击"
 				break;
-			case IDS_COMMAND_MOVE:							//"捞悼"
+			case IDS_COMMAND_MOVE:							//"移动"
 				if (pszParam1)
 					CmdRandomSpaceMove(pszParam1);
 				break;
-			case IDS_COMMAND_CHANGELEVEL:					//"饭骇炼沥"
+			case IDS_COMMAND_CHANGELEVEL:					//"等级调整"
 			{
 				if (pszParam1)
 				{
@@ -153,11 +153,11 @@ BOOL CPlayerObject::ProcessForAdminSaid(char *pszMsg)
 				}
 				break;
 			}
-			case IDS_COMMAND_MOVEFREESTYLE:					//"磊蜡捞悼"
+			case IDS_COMMAND_MOVEFREESTYLE:					//"自由移动"
 				if (pszParam1 && pszParam2 && pszParam3)
 					CmdFreeSpaceMove(pszParam1, pszParam2, pszParam3);
 				break;
-			case IDS_COMMAND_MAP:							//"甘"
+			case IDS_COMMAND_MAP:							//"地图"
 			{
 				char szMsg[64];
 
@@ -168,82 +168,82 @@ BOOL CPlayerObject::ProcessForAdminSaid(char *pszMsg)
 				
 				break;
 			}
-			case IDS_COMMAND_LEVEL:							//"肪"
+			case IDS_COMMAND_LEVEL:							//"等级"
 				break;
-			case IDS_COMMAND_MONLEVEL:						//"各肪"
+			case IDS_COMMAND_MONLEVEL:						//"怪物等级"
 				CmdSendMonsterLevelInfos();
 				break;
-			case IDS_COMMAND_RECALL:						//"家券"
+			case IDS_COMMAND_RECALL:						//"召唤"
 				break;
-			case IDS_COMMAND_NUMOFMON:						//"各荐"
+			case IDS_COMMAND_NUMOFMON:						//"怪物数量"
 				break;
-			case IDS_COMMAND_NUMOFHUMAN:					//"荤恩荐"
+			case IDS_COMMAND_NUMOFHUMAN:					//"人数"
 				break;
-			case IDS_COMMAND_SABUKMONEY:					//"荤合己捣"
+			case IDS_COMMAND_SABUKMONEY:					//"沙北城钱"
 				break;
 			case IDS_COMMAND_KICK:							//"Kick"
 				break;
-			case IDS_COMMAND_KICK2:							//"疟"
+			case IDS_COMMAND_KICK2:							//"踢"
 				break;
-			case IDS_COMMAND_TING:							//"泼"
+			case IDS_COMMAND_TING:							//"叮"
 				break;
-			case IDS_COMMAND_KINGTING:						//"空泼"
+			case IDS_COMMAND_KINGTING:						//"王廷"
 				break;
-			case IDS_COMMAND_LUCKYVALUE:					//"青款蔼"
+			case IDS_COMMAND_LUCKYVALUE:					//"幸运值"
 				break;
-			case IDS_COMMANT_SHUTUP:						//"盲陛"
+			case IDS_COMMANT_SHUTUP:						//"采金"
 				break;
-			case IDS_COMMAND_TALK:							//"盲陛秦力"
+			case IDS_COMMAND_TALK:							//"采矿解除"
 				break;
-			case IDS_COMMAND_SHUTUPMAN:						//"盲陛磊"
+			case IDS_COMMAND_SHUTUPMAN:						//"采金者"
 				break;
 			case IDS_COMMAND_RELOADADMIN:					//"ReloadAdmin"
 				break;
-			case IDS_COMMAND_RELOADABUSIVE:					//"垮汲沥焊佬扁"
+			case IDS_COMMAND_RELOADABUSIVE:					//"辱骂信息读取"
 				break;
-			case IDS_COMMAND_MOOTAEBO:						//"公怕焊"
+			case IDS_COMMAND_MOOTAEBO:						//"武太保"
 				break;
-			case IDS_COMMAND_BACKWALK:						//"缔吧澜"
+			case IDS_COMMAND_BACKWALK:						//"后退"
 				break;
-			case IDS_COMMAND_GAIN:							//"积魂"
+			case IDS_COMMAND_GAIN:							//"生产"
 				if (pszParam1 && pszParam2)
 					CmdMakeItem(pszParam1, pszParam2);
 				break;
-			case IDS_COMMAND_DELGOLD:						//"捣昏力"
+			case IDS_COMMAND_DELGOLD:						//"金钱删除"
 				break;
-			case IDS_COMMAND_ADDGOLD:						//"捣眠啊"
+			case IDS_COMMAND_ADDGOLD:						//"增加金钱"
 				break;
-			case IDS_COMMAND_GOOD:							//"拱扒"
+			case IDS_COMMAND_GOOD:							//"物品"
 				break;
-			case IDS_COMMAND_OTHERDELGOLD:					//"鸥牢捣昏力"
+			case IDS_COMMAND_OTHERDELGOLD:					//"删除他人金钱"
 				break;
-			case IDS_COMMAND_OTHERADDGOLD:					//"鸥牢捣眠啊"
+			case IDS_COMMAND_OTHERADDGOLD:					//"添加他人金钱"
 				break;
-			case IDS_COMMAND_OTHERLEVELUP:					//"鸥牢饭骇炼沥"
+			case IDS_COMMAND_OTHERLEVELUP:					//"他人等级调整"
 				break;
-			case IDS_COMMAND_OTHEREXPUP:					//"鸥牢版氰摹炼沥"
+			case IDS_COMMAND_OTHEREXPUP:					//"他人经验值调整"
 				break;
-			case IDS_COMMAND_WEAPONDUR:						//"公扁郴备炼沥"
+			case IDS_COMMAND_WEAPONDUR:						//"武器耐久调整"
 				break;
-			case IDS_COMMAND_PARDON:						//"搁了"
+			case IDS_COMMAND_PARDON:						//"免罪"
 				break;
-			case IDS_COMMAND_PKPOINT:						//"乔纳捞痢荐"
+			case IDS_COMMAND_PKPOINT:						//"PK分数"
 				break;
-			case IDS_COMMAND_PKPOINTUP:						//"乔纳捞痢荐刘啊"
+			case IDS_COMMAND_PKPOINTUP:						//"PK分数增加"
 				break;
-			case IDS_COMMAND_CHANGELUCKY:					//"青款函版"
+			case IDS_COMMAND_CHANGELUCKY:					//"幸运变更"
 				break;
-			case IDS_COMMAND_SKILLUP:						//"公傍荐访"
+			case IDS_COMMAND_SKILLUP:						//"武功修炼"
 				if (pszParam1 && pszParam2)
 					CmdMakeFullSkill(pszParam1, pszParam2);
 				break;
-			case IDS_COMMAND_OTHERSKILLUP:					//"鸥牢公傍荐访"
+			case IDS_COMMAND_OTHERSKILLUP:					//"他人武功修炼"
 				break;
-			case IDS_COMMAND_DELSKILL:						//"公傍昏力窍扁"
+			case IDS_COMMAND_DELSKILL:						//"删除武功"
 				break;
-			case IDS_COMMAND_OTHERDELSKILL:					//"鸥牢公傍昏力窍扁"
+			case IDS_COMMAND_OTHERDELSKILL:					//"删除他人武功"
 				break;
-			case IDS_COMMAND_CHGJOB:						//"傈诀"
+			case IDS_COMMAND_CHGJOB:						//"转职"
 			{
 				if (pszParam1)
 				{
@@ -253,7 +253,7 @@ BOOL CPlayerObject::ProcessForAdminSaid(char *pszMsg)
 			
 				break;
 			}
-			case IDS_COMMAND_CHGGENDER:						//"飘罚胶哩歹"
+			case IDS_COMMAND_CHGGENDER:						//"跨性别者"
 			{
 				if (m_pUserInfo->m_THumanRcd.btGender == 0) m_pUserInfo->m_THumanRcd.btGender = m_tFeature.btGender = 1;
 				else m_pUserInfo->m_THumanRcd.btGender = m_tFeature.btGender = 0;
@@ -262,26 +262,26 @@ BOOL CPlayerObject::ProcessForAdminSaid(char *pszMsg)
 
 				break;
 			}
-			case IDS_COMMAND_COLOR:							//"祸"
+			case IDS_COMMAND_COLOR:							//"颜色"
 				break;
-			case IDS_COMMAND_MONRECALL:						//"各家券"
+			case IDS_COMMAND_MONRECALL:						//"怪物召唤"
 			{
 				if (pszParam1 && pszParam2)
 					CmdCallMakeSlaveMonster(pszParam1, pszParam2);
 
 				break;
 			}
-			case IDS_COMMAND_MISSION:						//"固记"
+			case IDS_COMMAND_MISSION:						//"任务"
 				break;
-			case IDS_COMMAND_GENPOS:						//"哩镑"
+			case IDS_COMMAND_GENPOS:						//"刷新点"
 			{
 				if (pszParam1 && pszParam2 && pszParam3 && pszParam4)
 					CmdCallMakeMonsterXY(pszParam1, pszParam2, pszParam3, pszParam4);
 				break;
 			}
-			case IDS_COMMAND_TRANSPARENCY:					//"捧疙"
+			case IDS_COMMAND_TRANSPARENCY:					//"透明"
 				break;
-			case IDS_COMMAND_CIVILWAR:						//"碍力傍己傈"
+			case IDS_COMMAND_CIVILWAR:						//"强制攻城战"
 				break;
 			case IDS_COMMAND_DYEINGHAIR:
 				if (pszParam1)
@@ -295,11 +295,11 @@ BOOL CPlayerObject::ProcessForAdminSaid(char *pszMsg)
 				if (pszParam1)
 					CmdHairStyle(pszParam1);
 				break;
-			case IDS_COMMAND_RESERVED3:						// 酒捞袍捞抚
+			case IDS_COMMAND_RESERVED3:						// 物品名称
 				if (pszParam1 && pszParam2)
 					CmdChangeItemPrefix(pszParam1, pszParam2);
 				break;
-			case IDS_COMMAND_RESERVED4:						// 哎公府
+			case IDS_COMMAND_RESERVED4:						// 仓库存取
 			{
 				TCHAR	wszMsg[64];
 				char	szMsg[64];

@@ -85,7 +85,7 @@ public:
 	BOOL	SetSellKinds(CInventoryWnd*,CHAR Kind,INT nStdMode);
 	BOOL	SetSellItemLst(CInventoryWnd*,CHAR Kind,BYTE nStdMode,CHAR bKind);
 public:
-//  皋矫瘤 窃荐.
+//  消息函数.
 	BOOL	OnLButtonDown(POINT ptMouse);
 	BOOL	OnLButtonUp(POINT ptMouse);
 	VOID	OnMouseMove(POINT ptMouse);
@@ -93,7 +93,7 @@ public:
 	VOID	OnScrollDown();
 	VOID	OnScrollUp();
 
-	CWHQueue			m_xPacketQueue;					// NPC Chat俊辑 贸府秦具瞪 皋矫瘤甫 历厘窍绊 乐绰 钮.
+	CWHQueue			m_xPacketQueue;					// 保存需要在 NPC Chat 中处理的消息的队列.
 	BOOL	OnUpdateQueue(VOID);
 
 private:

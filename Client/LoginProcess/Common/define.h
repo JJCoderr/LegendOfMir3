@@ -48,14 +48,14 @@
 #define IMAGE_INDEX_LOGINBASE		29
 #define IMAGE_INDEX_LOGINBOX		2
 
-#define PUNISHMENT_ID_USING				1		//	"泅犁 夯 ID绰 荤侩吝涝聪促."
-#define PUNISHMENT_ID_THEFT				2		//	"酒捞叼 档侩苞 包访窍咯 拌沥捞 喉钒等 惑怕涝聪促."
-#define PUNISHMENT_DISTURB_GAME			3		//	"霸烙狼 柳青阑 规秦窍咯 拌沥捞 喉钒等 惑怕涝聪促."
-#define PUNISHMENT_BBS_CURSES			4		//	"霸矫魄殿俊 垮汲苞 包访窍咯 拌沥捞 喉钒等 惑怕涝聪促."
-#define PUNISHMENT_CONFIRMED_CURSES		5		//	"惑嚼利牢 垮汲肺 牢窍咯 拌沥捞 喉钒等 惑怕涝聪促."
-#define PUNISHMENT_USAGE_BUG			6		//	"滚弊甫 捞侩茄 霸烙栏肺 牢窍咯 拌沥捞 喉钒等 惑怕 涝聪促."
-#define PUNISHMENT_ASSUMED_GAMEMASTER	7		//	"款康磊 荤莫殿俊 包访窍咯 拌沥捞 喉钒等 惑怕涝聪促."
-#define PUNISHMENT_SPREAD_FALLACY		8		//	"倾困荤角 蜡器殿俊 狼窍咯 拌沥捞 喉钒等 惑怕涝聪促."
+#define PUNISHMENT_ID_USING				1		//	"当前该 ID 已被使用。"
+#define PUNISHMENT_ID_THEFT				2		//	"因账号ID盗用问题，账号处于封停状态."
+#define PUNISHMENT_DISTURB_GAME			3		//	"因妨碍游戏进行，账号已被封停。"
+#define PUNISHMENT_BBS_CURSES			4		//	"因在论坛等处使用脏话, 账号处于被封禁状态。"
+#define PUNISHMENT_CONFIRMED_CURSES		5		//	"因习惯性辱骂, 账号已被封停."
+#define PUNISHMENT_USAGE_BUG			6		//	"因利用 bug 进行游戏，账号处于封停状态."
+#define PUNISHMENT_ASSUMED_GAMEMASTER	7		//	"因冒充管理员等原因，账号已被封停。"
+#define PUNISHMENT_SPREAD_FALLACY		8		//	"因散布虚假事实等, 账号处于被封禁的状态."
 
 //  New
 #define POS_ID_TITLE_X				111

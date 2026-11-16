@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	∏µ‚∏Ì:																											
-																													
-	¿€º∫¿⁄:																											
-	¿€º∫¿œ:																											
-																													
-	[¿œ¿⁄][ºˆ¡§¿⁄] : ºˆ¡§ ≥ªøÎ																						
-                                                                                                                   
+
+	ƒ£øÈ√˚:
+
+	◊˜’ﬂ:
+	±‡–¥»’∆⁄:
+
+	[»’∆⁄][–ﬁ∏ƒ»À] : –ﬁ∏ƒƒ⁄»›
+
 *******************************************************************************************************************/
 
 
@@ -81,7 +81,7 @@ VOID CSpriteInfo::SetHumanSpriteInfo()
       
 VOID CSpriteInfo::SetMonSpriteInfo()
 {
-	// ªÁ∏∑ µµ∏∂πÏ «¡∑π¿”¡§¿«.
+	// …≥ƒÆÚ·ÚÊ÷°∂®“Â°£
 	SetMonRaceInfo(&m_stMon[_RACE_LIZARD], _IMAGE_MONSTER, 0, 400);
 	SetMotionInfo(&m_stMon[_RACE_LIZARD].stMtn[_MT_MON_STAND],    0,  4, 6, 150, FALSE);
 	SetMotionInfo(&m_stMon[_RACE_LIZARD].stMtn[_MT_MON_WALK],    80,  6, 4, 150, FALSE);
@@ -93,7 +93,7 @@ VOID CSpriteInfo::SetMonSpriteInfo()
 	SetMotionInfo(&m_stMon[_RACE_LIZARD].stMtn[_MT_MON_DISAPPEAR],0,  0, 0, 0, FALSE);
 	SetMotionInfo(&m_stMon[_RACE_LIZARD].stMtn[_MT_MON_CRITICAL], 0,  0, 0, 0, FALSE);
 
-	// æﬂ«‡±Õ «¡∑π¿”¡§¿«.
+	// “π––πÌ ÷°∂®“Â.
 	SetMonRaceInfo(&m_stMon[_RACE_NIGHTGHOST], _IMAGE_MONSTER, 400, 800);
 	SetMotionInfo(&m_stMon[_RACE_NIGHTGHOST].stMtn[_MT_MON_STAND],	 400+  0,  4, 6, 150, FALSE);
 	SetMotionInfo(&m_stMon[_RACE_NIGHTGHOST].stMtn[_MT_MON_WALK],	 400+ 80,  6, 4, 150, FALSE);
@@ -105,7 +105,7 @@ VOID CSpriteInfo::SetMonSpriteInfo()
 	SetMotionInfo(&m_stMon[_RACE_NIGHTGHOST].stMtn[_MT_MON_DISAPPEAR],	   0,  0, 0, 0, FALSE);
 	SetMotionInfo(&m_stMon[_RACE_NIGHTGHOST].stMtn[_MT_MON_CRITICAL],	   0,  0, 0, 0, FALSE);
 
-	// √Àºˆ±´π∞ «¡∑π¿”¡§¿«.
+	// ¥• ÷π÷ŒÔ÷°∂®“Â.
 	SetMonRaceInfo(&m_stMon[_RACE_THORN], _IMAGE_MONSTER, 800, 1200);
 	SetMotionInfo(&m_stMon[_RACE_THORN].stMtn[_MT_MON_STAND],	 800+  0,  4, 6, 150, FALSE);
 	SetMotionInfo(&m_stMon[_RACE_THORN].stMtn[_MT_MON_WALK],	 800+ 80,  6, 4, 150, FALSE);
@@ -117,7 +117,7 @@ VOID CSpriteInfo::SetMonSpriteInfo()
 	SetMotionInfo(&m_stMon[_RACE_THORN].stMtn[_MT_MON_DISAPPEAR],	   0,  0, 0, 0, FALSE);
 	SetMotionInfo(&m_stMon[_RACE_THORN].stMtn[_MT_MON_CRITICAL],	   0,  0, 0, 0, FALSE);
 
-	// ∏∑°±´π∞ «¡∑π¿”¡§¿«.
+	// …≥π÷÷°∂®“Â.
 	SetMonRaceInfo(&m_stMon[_RACE_SANDMON], _IMAGE_MONSTER, 1200, 1680);
 	SetMotionInfo(&m_stMon[_RACE_SANDMON].stMtn[_MT_MON_STAND],	   1200+  0,  4, 6, 150, FALSE);
 	SetMotionInfo(&m_stMon[_RACE_SANDMON].stMtn[_MT_MON_WALK],	   1200+ 80,  6, 4, 150, FALSE);
@@ -129,7 +129,7 @@ VOID CSpriteInfo::SetMonSpriteInfo()
 	SetMotionInfo(&m_stMon[_RACE_SANDMON].stMtn[_MT_MON_DISAPPEAR],1200+400, 10, 0, 150, FALSE);
 	SetMotionInfo(&m_stMon[_RACE_SANDMON].stMtn[_MT_MON_CRITICAL],       0,  0, 0, 0, FALSE);
 
-	// ∞Ò∑Ω «¡∑π¿”¡§¿«.
+	// Golem ÷°∂®“Â.
 	SetMonRaceInfo(&m_stMon[_RACE_GOLEM], _IMAGE_MONSTER, 1680, 2160);
 	SetMotionInfo(&m_stMon[_RACE_GOLEM].stMtn[_MT_MON_STAND],	 1680+  0,  4, 6, 150, FALSE);
 	SetMotionInfo(&m_stMon[_RACE_GOLEM].stMtn[_MT_MON_WALK],	 1680+ 80,  6, 4, 150, FALSE);

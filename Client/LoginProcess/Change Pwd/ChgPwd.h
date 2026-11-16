@@ -36,7 +36,7 @@ protected:
 public:
 private:
 	INPUTSTATE			m_xInputState[2];
-	_LOGINIMAGEINFO		m_xInputImg[4];			// ÀÌ¹ÌÁö »èÁ¦ ³óÈÄ
+	_LOGINIMAGEINFO		m_xInputImg[4];			// Í¼ÏñÉ¾³ýºó
 	CMirButton			m_xButtons[3];
 	INT					m_nUserState;
 	BOOL				m_fIsButtonDown;

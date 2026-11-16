@@ -5,7 +5,7 @@ void CPlayerCloneObject::Create(CPlayerObject* pPlayerObject)
 	m_dwRunTime			= GetTickCount();
 	m_dwRunNextTick		= 5000;
 
-	strcpy(m_szName, "°¡Á¦Æ®");
+	strcpy(m_szName, "Gadget");
 
 	m_nCurrX			= pPlayerObject->m_nCurrX;
 	m_nCurrY			= pPlayerObject->m_nCurrY;

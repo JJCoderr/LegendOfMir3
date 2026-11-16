@@ -12,7 +12,7 @@ CGlobalUserList::CGlobalUserList()
 : m_fixedMemory( GLOBALLIST_MAXLIST )
 {
 	if ( !m_listUser.InitHashTable( GLOBALLIST_MAXBUCKET, IHT_ROUNDUP ) )
-		throw CError( "CGlobalUserList::CGlobalUserList 해쉬테이블 생성 실패" );
+		throw CError( "CGlobalUserList::CGlobalUserList hash table creation failed" );
 
 	m_listUser.SetGetKeyFunction( __cbGetKey );
 }

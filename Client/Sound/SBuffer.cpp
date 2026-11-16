@@ -356,12 +356,12 @@ LPDIRECTSOUNDBUFFER CSBuffer::GetFreeBuffer(VOID)
 				nBufferIdx = m_Current;				
 				if(SUCCEEDED(rval) && (Status & DSBSTATUS_PLAYING) == DSBSTATUS_PLAYING)
 				{	
-					// Play吝捞搁 家府甫 肛眠绊 贸澜栏肺 倒赴促.
+					// 若正在 Play 则停止声音并回到开头。
 /*					Buffer->Stop();
 					Buffer->SetCurrentPosition(0);
 					
 */				
-					// Play吝捞搁 家府甫 促澜 家府绰 Play 窍瘤 富巴
+					// 如果正在 Play，则下一个声音不要 Play
 					m_Current = m_Current==0 ? m_nBuffers-1 : m_Current-1;
 					Buffer = NULL;
 					nBufferIdx = MAX_DUPLE_COUNT;
@@ -549,7 +549,7 @@ void CSBuffer::SetPan(INT nBufferIdx,LONG Pan)
 	}
 }
 
-// Play 登绊 乐绰 百荐甫 备茄促.
+// 获取正在 Play 的个数.
 DWORD CSBuffer::Playing(VOID)
 {
 	DWORD ctr=0, Status;

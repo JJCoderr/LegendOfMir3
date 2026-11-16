@@ -1,26 +1,26 @@
 
-#define _MONSTER_SANDMOB		3		// 籍厘牢
-#define _MONSTER_ROCKMAN		4		// 荤鲍
-#define _MONSTER_RON			9		// 沸
-#define _MONSTER_MINORNUMA		18		// 穿付
-#define _ANIMAL_DEER			21		// 荤娇
-#define _MONSTER_OMA			23		// 坷付
-#define _MONSTER_OMAKNIGHT		25		// 坷付傈荤
-#define _MONSTER_OMAWARRIOR		27		// 坷付侩荤
-#define _MONSTER_SPITSPIDER		30		// 魔芭固
-#define _MONSTER_STICK			39		// 侥牢檬
-#define _MONSTER_DUALAXE		42		// 街档尝秦榜
-#define _MONSTER_THONEDARK		74		// 促农
-#define _MONSTER_LIGHTZOMBI		78		// 扼捞飘醋 粱厚
-#define _MONSTER_WHITESKELETON	94		// 归榜
-#define _MONSTER_BEEQUEEN		124		// 厚阜盔面
-#define _MONSTER_BEE			125		// 厚阜面
-#define _MONSTER_MAGUNGSA		143		// 付泵荤
-#define _MONSTER_SCULTURE1		145		// 林付脚厘
-#define _MONSTER_SCULTURE2		148		// 林付脚厘
-#define _MONSTER_SCULTUREKING	152		// 林付空
-#define _MONSTER_ELFMONSTER		161		// 脚荐
-#define _MONSTER_ELFWARRIOR		162		// 脚荐 函脚饶
+#define _MONSTER_SANDMOB		3		// 石匠人
+#define _MONSTER_ROCKMAN		4		// 沙魁
+#define _MONSTER_RON			9		// 罗恩
+#define _MONSTER_MINORNUMA		18		// 努玛
+#define _ANIMAL_DEER			21		// 鹿
+#define _MONSTER_OMA			23		// 五魔
+#define _MONSTER_OMAKNIGHT		25		// 奥玛战士
+#define _MONSTER_OMAWARRIOR		27		// 五魔勇士
+#define _MONSTER_SPITSPIDER		30		// 唾液蜘蛛
+#define _MONSTER_STICK			39		// 食人草
+#define _MONSTER_DUALAXE		42		// 双斧骷髅
+#define _MONSTER_THONEDARK		74		// 暗黑
+#define _MONSTER_LIGHTZOMBI		78		// 闪电僵尸
+#define _MONSTER_WHITESKELETON	94		// 白骨
+#define _MONSTER_BEEQUEEN		124		// 飞膜圆虫
+#define _MONSTER_BEE			125		// 飞膜虫
+#define _MONSTER_MAGUNGSA		143		// 魔弓士
+#define _MONSTER_SCULTURE1		145		// 朱马神将
+#define _MONSTER_SCULTURE2		148		// 朱马神将
+#define _MONSTER_SCULTUREKING	152		// 走马王
+#define _MONSTER_ELFMONSTER		161		// 神兽
+#define _MONSTER_ELFWARRIOR		162		// 神兽变身之后
 
 #define LA_UNDEAD				1
 
@@ -142,7 +142,7 @@ public:
 	int				m_nBodyLeathery;
 };
 
-// 催
+// 鸡
 class CChickenObject : public CAnimalObject
 {
 public:
@@ -151,7 +151,7 @@ public:
 	virtual void	Run();
 };
 
-// 林付脚厘, 林付龋过
+// 走马神掌、走马护法
 class CScultureObject : public CMonsterObject
 {
 public:
@@ -163,7 +163,7 @@ public:
 	virtual void	Run();
 };
 
-// 林付空
+// 走马王
 class CScultureKingObject : public CMonsterObject
 {
 protected:
@@ -179,7 +179,7 @@ public:
 	virtual void	Run();
 };
 
-// 厚阜盔面
+// 飞膜圆虫
 class CBeeQueen : public CMonsterObject
 {
 protected:
@@ -195,7 +195,7 @@ public:
 	virtual void	Run();
 };
 
-// 街档尝秦榜, 付泵荤
+// 双斧骷髅, 魔弓士
 class CDualAxeObject : public CMonsterObject
 {
 protected:
@@ -211,7 +211,7 @@ public:
 	virtual void	Run();
 };
 
-// 扼捞飘葫 粱厚
+// 光冰僵尸
 class CLightingZombiObject : public CMonsterObject
 {	   	
 public:
@@ -225,7 +225,7 @@ public:
 	virtual void	Run();
 };
 
-// 沸
+// 罗恩
 class CRonObject : public CGenneralMonObject
 {
 public:
@@ -234,21 +234,21 @@ public:
 	virtual void	Run();
 };
 
-// 窍鞭 穿付
+// 下级弩玛
 class CMinorNumaObject : public CMonsterObject
 {
 public:
 	virtual void	Run();
 };
 
-// 坷付 矫府令
+// 五魔系列
 class COmaObject : public CMonsterObject
 {
 public:
 	virtual void	Run();
 };
 
-// 侥牢檬
+// 食人草
 class CStickObject : public CMonsterObject
 {
 public:
@@ -258,7 +258,7 @@ public:
 };
 
 
-// 葛贰 鲍拱 (荤鲍)
+// 沙子怪物 (沙怪)
 class CSandMobObject : public CMonsterObject
 {
 public:
@@ -269,7 +269,7 @@ public:
 	virtual void	Run();
 };
 
-// 籍厘牢
+// 石匠人
 class CRockManObject : public CMonsterObject
 {
 public:
@@ -278,7 +278,7 @@ public:
 	virtual void	Run();
 };
 
-// 归榜
+// 白骨
 class CWhiteSkeleton : public CGenneralMonObject
 {
 protected:
@@ -292,7 +292,7 @@ public:
 	virtual void	Run();
 };
 
-// 魔芭固
+// 唾液蜘蛛
 class CSpitSpiderMonster : public CGenneralMonObject
 {
 public:
@@ -303,7 +303,7 @@ public:
 	virtual BOOL AttackTarget();
 };
 
-// 脚荐 函脚傈
+// 神兽变身之前
 class CElfMonster : public CMonsterObject
 {
 protected:
@@ -318,7 +318,7 @@ public:
 	virtual void	Run();
 };
 
-// 脚荐 函脚饶
+// 神兽变身之后
 class CElfWarriorMonster : public CSpitSpiderMonster
 {
 protected:

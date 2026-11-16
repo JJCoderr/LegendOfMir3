@@ -10,20 +10,20 @@ void DevideScript(char *pszScript);
 
 /******************************************************************************************************************
 
-	霸烙 敲饭捞 包访 窃荐甸.
+	游戏操作相关函数.
 
 *******************************************************************************************************************/
 /******************************************************************************************************************
 
-	窃荐疙 : CGameProcess::CGameProcess()
+	函数名 : CGameProcess::CGameProcess()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CGameProcess::CGameProcess()
@@ -35,15 +35,15 @@ CGameProcess::CGameProcess()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CGameProcess::~CGameProcess()
+	函数名 : CGameProcess::~CGameProcess()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : 
+	目的   :
+	输出   :
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 CGameProcess::~CGameProcess()
@@ -75,8 +75,8 @@ VOID CGameProcess::Init()
 	m_bDayState				= _DAYSTATE_DAY;
 	m_bFogState				= _FOGSTATE_DAY;
 
-	m_pxMouseTargetActor	= NULL;		// 泅犁 付快胶啊 啊府虐绰 镑狼 鸥百咀磐.
-	m_pxMouseOldTargetActor	= NULL;		// 历厘登绢乐绰 鸥百咀磐.
+	m_pxMouseTargetActor	= NULL;		// 当前鼠标所指位置的目标 Actor.
+	m_pxMouseOldTargetActor	= NULL;		// 已保存的目标 Actor.
 	m_pxSavedTargetActor	= NULL;
 
 	m_fTileLightRed			= 255;
@@ -132,7 +132,7 @@ VOID CGameProcess::DeleteProc()
 	lpPacketMsg  = NULL;
 	shLeftMsgCnt = m_xWaitPacketQueue.GetCount();
 
-	// 阶咯乐绰 菩哦阑 瘤款促.
+	// 清除已堆积的数据包。
 	if ( shLeftMsgCnt > 0 )
 	{
 		for ( nCnt = 0; nCnt < shLeftMsgCnt; nCnt++ )
@@ -148,7 +148,7 @@ VOID CGameProcess::DeleteProc()
 	lpPacketMsg  = NULL;
 	shLeftMsgCnt = m_xWaitDefaultPacketQueue.GetCount();
 
-	// 阶咯乐绰 菩哦阑 瘤款促.
+	// 清除已堆积的数据包。
 	if ( shLeftMsgCnt > 0 )
 	{
 		for ( nCnt = 0; nCnt < shLeftMsgCnt; nCnt++ )
@@ -185,15 +185,15 @@ VOID CGameProcess::DeleteProc()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CGameProcess::Load()
+	函数名 : CGameProcess::Load()
 
-	累己磊 : 
-	累己老 : 
+	作者 :
+	编写日期 :
 
-	格利   : 
-	免仿   : VOID 
+	目的   :
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CGameProcess::Load()
@@ -204,7 +204,7 @@ VOID CGameProcess::Load()
 
 /*	CHAR szSetup[MAX_PATH];
 	ZeroMemory(szSetup, MAX_PATH);
-	jRegGetKey(_T("Software\\WEMADE Entertainment\\固福狼傈汲2"), _T("setup path"), (LPBYTE)szSetup);
+	jRegGetKey(_T("Software\\WEMADE Entertainment\\传奇2"), _T("setup path"), (LPBYTE)szSetup);
 	for ( nCnt = strlen(szSetup); nCnt >= 0; nCnt--)
 	{
 		if ( szSetup[nCnt] == '\\' )
@@ -243,7 +243,7 @@ VOID CGameProcess::Load()
 		}
 	}
 */
-/*	// 酒捞袍 馆娄芭覆 咆胶苗.
+/*	// 物品闪烁纹理.
 	for ( nCnt = 0; nCnt < 10; nCnt++)
 	{
 		if ( m_xImage.m_xImageList[_IMAGE_PROGUSE].NewSetIndex(nCnt+40) )
@@ -292,16 +292,16 @@ VOID CGameProcess::Load()
 
 /******************************************************************************************************************
 
-	窃荐疙 : CGameProcess::LoadMapChanged()
+	函数名 : CGameProcess::LoadMapChanged()
 
-	累己磊 : 
-	累己老 :  
+	作者 :
+	编写日期 :
 
-	格利   : 甘捞 官差菌阑锭 皋葛府 秦力客 积己, 棺 单捞鸥 肺靛.
-	涝仿   : CHAR* szMap
-	免仿   : VOID 
+	目的   : 地图变更时内存的释放与创建,以及数据加载.
+	输入   : CHAR* szMap
+	输出   : VOID
 
-	[老磊][荐沥磊] : 荐沥郴侩
+	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
 VOID CGameProcess::LoadMapChanged(CHAR* szMap)
@@ -428,7 +428,7 @@ VOID CGameProcess::CheckMappedData(INT nLoopTime, BOOL bIsMoveTime)
 						bIsSaveTargetExisted = TRUE;
 					}
 
-					// 弊覆狼 矫累谅钎, 器目胶惑怕, 弊覆磊 喉坊爹 惑怕甫 逞败霖促.
+					// 传入图像的起始坐标、焦点状态、阴影混合状态。
 					if ( !m_pxMouseTargetActor /*&& !pxActor->m_bIsDead*/ )
 					{
 						if ( PtInRect(&pxActor->m_rcActor, m_ptMousePos) )
@@ -454,7 +454,7 @@ VOID CGameProcess::CheckMappedData(INT nLoopTime, BOOL bIsMoveTime)
 						}
 					}	
 
-					// 磷篮 Actor绰 菊栏肺 动变促.
+					// 把死亡的 Actor 向前拉.
 					if ( pxActor->m_bIsDead )
 					{
 						CActor* pxTempActor[_MAX_CELL_OBJ];
@@ -630,16 +630,16 @@ VOID CGameProcess::AutoTargeting()
 		{
 			if ( m_xMyHero.m_stFeatureEx.bHorse == _HORSE_NONE && !m_pxSavedTargetActor->m_bIsDead )
 			{
-				// 傍拜茄促.
+				// 进行攻击.
 				ptTargetTile.x = m_xMyHero.m_wPosX;
 				ptTargetTile.y = m_xMyHero.m_wPosY;
 				m_xMyHero.SetMotionState(_MT_ONEHSWING, bDir, m_pxSavedTargetActor->m_dwIdentity, m_pxSavedTargetActor->m_bIsDead, &ptTargetTile);
 			}
 		}
-		// Actor啊 乐绰 规氢栏肺 捞悼 啊瓷茄啊?(甘加己眉农) 
+		// 能向 Actor 所在的方向移动吗？(地图属性检查) 
 		else if ( m_xMap.GetNextTileCanMove(m_xMyHero.m_wPosX, m_xMyHero.m_wPosY, bDir, 1, &ptTargetTile) )
 		{
-			// 1鸥老 捞悼茄促.
+			// 移动1图块.
 			if ( m_xMyHero.m_stFeatureEx.bHorse == _HORSE_NONE )
 			{
 				m_xMyHero.SetMotionState(_MT_WALK, bDir);
@@ -703,7 +703,7 @@ VOID CGameProcess::AutoTargeting()
 
 			if ( nSeclectedDirCnt != -1 )
 			{
-				// 1鸥老 捞悼茄促.
+				// 移动1图块.
 				m_xMap.GetNextTileCanMove(m_xMyHero.m_wPosX, m_xMyHero.m_wPosY, bSelectedDir, 1, &ptTargetTile);
 				if ( m_xMyHero.m_stFeatureEx.bHorse == _HORSE_NONE )
 				{
@@ -808,7 +808,7 @@ VOID CGameProcess::DropItemShow()
 						g_xMainWnd.Get3DDevice()->SetTexture(0, NULL);
 						g_xMainWnd.Get3DDevice()->DrawPrimitive(D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, m_avBillboard, 4, NULL);
 
-						// 盔惑汗蓖.
+						// 恢复原状.
 						ZeroMemory(&mtrl, sizeof(mtrl));
 						mtrl.diffuse.r = mtrl.diffuse.g = mtrl.diffuse.b = 0.1f;
 						mtrl.ambient.r = mtrl.ambient.g = mtrl.ambient.b = 1.0f;
@@ -866,7 +866,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 	}
 	if ( !m_bRender && dwReceiveTime > 100000 )
 	{
-		MessageBox(g_xMainWnd.GetSafehWnd(), "肺弊柯 沥焊甫 罐绰单 角菩沁嚼聪促. 橇肺弊伐阑 辆丰钦聪促.", "", MB_OK);
+		MessageBox(g_xMainWnd.GetSafehWnd(), "Failed to receive logon information. The program will exit.", "", MB_OK);
 		PostQuitMessage(NULL);
 		dwReceiveTime = 0;
 	}
@@ -876,7 +876,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 		m_xLightFog.ClearSavedLightColor();
 
 		m_xMyHero.UpdateMotionState(nLoopTime, bIsMoveTime);
-		// 甘阑 弊赴促.
+		// 绘制地图.
 //		Clear(0);
 		g_xMainWnd.DrawWithImagePerLineClipRgn(
 			m_xMap.m_rcView.left+_VIEW_CELL_X_START-m_xMap.m_shViewOffsetX,
@@ -1135,7 +1135,7 @@ BOOL CGameProcess::RenderShine(INT nLoopTime)
 						SetBlendRenderState(g_xMainWnd.Get3DDevice(), _BLEND_LIGHTINV, mtrl);
 						g_xMainWnd.Get3DDevice()->DrawPrimitive(D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, m_avBillboard, 4, NULL);
 
-						// 盔惑汗蓖.
+						// 恢复原状.
 						ZeroMemory(&mtrl, sizeof(mtrl));
 						mtrl.diffuse.r = mtrl.diffuse.g = mtrl.diffuse.b = 0.1f;
 						mtrl.ambient.r = mtrl.ambient.g = mtrl.ambient.b = 1.0f;
@@ -1169,7 +1169,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 
 	m_xMap.SetAniTileFrame(nLoopTime);
 
-// 48*32 鸥老屈 坷宏璃飘 弊府扁.
+// 绘制 48*32 图块型对象。
 	for ( INT nYCnt = m_xMap.m_shStartViewTileY-4; nYCnt < m_xMap.m_shStartViewTileY+_VIEW_CELL_Y_COUNT+6; nYCnt++ )
 	{
 		for ( INT nXCnt = m_xMap.m_shStartViewTileX-4; nXCnt < m_xMap.m_shStartViewTileX+_VIEW_CELL_X_COUNT+6; nXCnt++ )
@@ -1181,7 +1181,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 				continue; 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Test : 堡盔阑 困秦辑 -4何磐 +5鳖瘤狼 康开阑 歹 棱绰促.
+// Test : 为了光源，再多取 -4 到 +5 的区域。
 			LIGHTINFO stLight = m_xMap.GetTileLightInfo(nXCnt, nYCnt);
 			if ( stLight.bIsLight )
 			{
@@ -1193,10 +1193,10 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 
 			nArrayNum = nYCnt + nXCnt*m_xMap.m_stMapFileHeader.shHeight;
 
-			// 坷宏璃飘啊 乐阑锭.
+			// 存在对象时.
 			if ( m_xMap.m_pstCellInfo[nArrayNum].bFileIdx != 255 )
 			{
-				// 坷宏璃飘1捞 乐阑锭.
+				// 存在对象1时.
 				if ( m_xMap.m_pstCellInfo[nArrayNum].wObj1 != 65535 )
 				{
 					nObjFileIdx = (m_xMap.m_pstCellInfo[nArrayNum].bFileIdx & 0XF0) >> 4;
@@ -1213,7 +1213,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 								
 								nImgIdx += m_xMap.GetDoorImgIdx(nXCnt, nYCnt);
 
-								// 局聪皋捞记 坷宏璃飘捞搁.
+								// 如果是动画对象.
 								if ( m_xMap.m_pstCellInfo[nArrayNum].bObj1Ani != 255 )
 								{
 									BYTE  bTickType;
@@ -1258,7 +1258,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 						}
 					}
 				}
-				// 坷宏璃飘2啊 乐阑锭.
+				// 存在对象2时。
 				if ( m_xMap.m_pstCellInfo[nArrayNum].wObj2 != 65535 )
 				{
 					nObjFileIdx = (m_xMap.m_pstCellInfo[nArrayNum].bFileIdx & 0X0F);
@@ -1275,7 +1275,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 								
 								nImgIdx += m_xMap.GetDoorImgIdx(nXCnt, nYCnt);
 
-								// 局聪皋捞记 坷宏璃飘捞搁.
+								// 如果是动画对象.
 								if ( m_xMap.m_pstCellInfo[nArrayNum].bObj2Ani != 255 )
 								{
 									BYTE  bTickType;
@@ -1324,7 +1324,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 		}
 	}	
 
-	// 48*32啊 酒囱 辨捞啊 乐绰 鸥老屈 坷宏璃飘 弊府扁.
+	// 绘制长度不是 48*32 的图块型对象.
 	for ( nYCnt = m_xMap.m_shStartViewTileY; nYCnt < m_xMap.m_shStartViewTileY+_VIEW_CELL_Y_COUNT_FOR_OBJ; nYCnt++ )
 	{
 		for ( INT nXCnt = m_xMap.m_shStartViewTileX; nXCnt < m_xMap.m_shStartViewTileX+_VIEW_CELL_X_COUNT; nXCnt++ )
@@ -1338,10 +1338,10 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 
 			nArrayNum = nYCnt + nXCnt*m_xMap.m_stMapFileHeader.shHeight;
 
-			// 坷宏璃飘啊 乐阑锭.
+			// 存在对象时.
 			if ( m_xMap.m_pstCellInfo[nArrayNum].bFileIdx != 255 )
 			{
-				// 坷宏璃飘1捞 乐阑锭.
+				// 存在对象1时.
 				if ( m_xMap.m_pstCellInfo[nArrayNum].wObj1 != 65535 )
 				{
 					nObjFileIdx = (m_xMap.m_pstCellInfo[nArrayNum].bFileIdx & 0XF0) >> 4;
@@ -1358,7 +1358,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 								
 								nImgIdx += m_xMap.GetDoorImgIdx(nXCnt, nYCnt);
 
-								// 局聪皋捞记 坷宏璃飘捞搁.
+								// 如果是动画对象.
 								if ( m_xMap.m_pstCellInfo[nArrayNum].bObj1Ani != 255 )
 								{
 									BYTE  bTickType;
@@ -1405,7 +1405,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 						}
 					}
 				}
-				// 坷宏璃飘2啊 乐阑锭.
+				// 存在对象2时。
 				if ( m_xMap.m_pstCellInfo[nArrayNum].wObj2 != 65535 )
 				{
 					nObjFileIdx = (m_xMap.m_pstCellInfo[nArrayNum].bFileIdx & 0X0F);
@@ -1422,7 +1422,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 								
 								nImgIdx += m_xMap.GetDoorImgIdx(nXCnt, nYCnt);
 
-								// 局聪皋捞记 坷宏璃飘捞搁.
+								// 如果是动画对象.
 								if ( m_xMap.m_pstCellInfo[nArrayNum].bObj2Ani != 255 )
 								{
 									BYTE  bTickType;
@@ -1484,7 +1484,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 				nMapViewY = nYCnt - m_xMap.m_shStartViewTileY;
 			}
 	
-			// 官蹿酒捞袍 弊府扁.
+			// 绘制地面物品。
 			if ( bIsMapViewTime )
 			{
 				for ( nObjCnt = 0; nObjCnt < _MAX_CELL_OBJ; nObjCnt++ )
@@ -1522,10 +1522,10 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 			}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 郴某腐磐 弊府扁.
+// 绘制自己的角色.
 			if ( nXCnt == m_xMyHero.m_wPosX && nYCnt == m_xMyHero.m_wPosY )
 			{
-				// 弊覆狼 矫累谅钎, 器目胶惑怕, 弊覆磊 喉坊爹 惑怕甫 逞败霖促.
+				// 传入图像的起始坐标、焦点状态、阴影混合状态。
 				if ( PtInRect(&m_xMyHero.m_rcActor, m_ptMousePos) && !m_pxMouseTargetActor )
 				{
 					bFocused			 = TRUE;
@@ -1543,7 +1543,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 促弗 某腐磐 弊府扁.
+// 绘制其他角色。
 			if ( bIsMapViewTime )
 			{
 				for ( nObjCnt = 0; nObjCnt < _MAX_CELL_OBJ; nObjCnt++ )
@@ -1589,7 +1589,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 							{
 								pxActor->DrawActor(&m_xMap, bFocused, m_bShadowABlend, TRUE, bDrawShadow);
 
-/*								// 富老锭.
+/*								// 马匹时.
 								RECT rc, rcIntersect;
 //								if ( bLongObj && pxActor->m_wPosY <= nYCnt && pxActor->m_stFeature.bDress > 114 && pxActor->m_stFeature.bDress < 118 )
 								{
@@ -1599,7 +1599,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 									m_xMap.m_pxTileImg[nObjFileIdx]->m_lpstNewCurrWilImageInfo->shWidth  + (nXCnt-m_xMap.m_shStartViewTileX)*_CELL_WIDTH +_VIEW_CELL_X_START-m_xMap.m_shViewOffsetX, 
 									m_xMap.m_pxTileImg[nObjFileIdx]->m_lpstNewCurrWilImageInfo->shHeight + (nYCnt-m_xMap.m_shStartViewTileY)*_CELL_HEIGHT+_VIEW_CELL_Y_START-m_xMap.m_pxTileImg[nObjFileIdx]->m_lpstNewCurrWilImageInfo->shHeight+_CELL_HEIGHT-m_xMap.m_shViewOffsetY);
 
-									// 富苞硅版.
+									// 马与背景.
 									if ( IntersectRect(&rcIntersect, &rc, &pxActor->m_rcActor) )
 									{
 										m_xImage.m_xImageList[pxActor->m_bActorImgIdx].NewSetIndex(pxActor->m_dwCurrFrame);
@@ -1690,7 +1690,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 
 /******************************************************************************************************************
 
-	皋矫瘤 包访 窃荐.
+	消息相关函数.
 
 *******************************************************************************************************************/
 LRESULT CGameProcess::OnDestroy(WPARAM wParam, LPARAM lParam)
@@ -1867,7 +1867,7 @@ LRESULT CGameProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 {	
 	POINT ptTaretTilePos;
 
-	// 霸烙单捞鸥啊 肺靛登菌绰瘤...
+	// 游戏数据是否已加载...
 	if(m_xNotice.IsActive())
 	{
 		m_xNotice.OnButtonDown(m_ptMousePos);
@@ -1884,9 +1884,9 @@ LRESULT CGameProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 
 	if ( !m_xInterface.OnLButtonDown(m_ptMousePos) )
 	{
-		// 牢磐其捞胶俊辑 窍绰老捞 绝阑锭.
+		// 界面中没有要做的事情时.
 
-		// 1. 酒捞袍阑 冻绢哆府扁.
+		// 1. 掉落物品。
 		if ( m_xInterface.m_stCommonItem.bSetted && !m_xInterface.m_stCommonItem.bWaitResponse && !m_xInterface.m_stCommonItem.bIsEquipItem )
 		{
 			g_xClientSocket.SendItemIndex(CM_DROPITEM, m_xInterface.m_stCommonItem.xItem.m_stItemInfo.nMakeIndex, m_xInterface.m_stCommonItem.xItem.m_stItemInfo.stStdItem.szName);
@@ -1894,7 +1894,7 @@ LRESULT CGameProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 			return 0L;
 		}
 
-		// 2. 甘酒捞袍 凛扁.
+		// 2. 拾取地图物品.
 		if ( m_stMapItemList.GetCounter() != 0 )
 		{
 			m_stMapItemList.MoveCurrentToTop();
@@ -1917,7 +1917,7 @@ LRESULT CGameProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 		{
 			if ( !m_pxMouseTargetActor->m_bIsDead )
 			{
-				// 傍拜措惑 Actor沥窍扁.
+				// 确定攻击目标 Actor。
 				m_pxSavedTargetActor = m_pxMouseTargetActor;
 			}
 
@@ -2192,7 +2192,7 @@ LRESULT CGameProcess::OnKeyDown(WPARAM wParam, LPARAM lParam)
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 蜡历 叼颇牢 皋矫瘤包访 窃荐.
+// 用户自定义消息相关函数。
 LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 {
 	if ( m_xInterface.OnMsgInputted(wParam, lParam) )
@@ -2203,7 +2203,7 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 	if ( g_xChatEditBox.m_szInputMsg[0] == NULL )
 		return 0L;
 
-	// 目盖靛 皋矫瘤.
+	// 命令消息.
 	if ( wParam )
 	{
 		CommandAnalyze();
@@ -2222,7 +2222,7 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 	sscanf(g_xChatEditBox.m_szInputMsg, "%[^ ]%*c %[^ ]%*c %[^ ]%*c %[^ ]%*c %[^ ]%*c", szCommand, szArg1, szArg2, szArg3, szArg4);
 	INT nArg1;	INT nArg2;	INT nArg3;	INT nArg4;
 	nArg1 = nArg2 = nArg3 = nArg4 = 0;
-	if ( !strcmp(szCommand, "@渴堪祸") )
+	if ( !strcmp(szCommand, "@dye") )
 	{
 		nArg1 = atoi(szArg1);
 		nArg2 = atoi(szArg2);
@@ -2230,7 +2230,7 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 		
 		WORD wColor = g_xMainWnd.ConvertColor24To16(RGB(nArg3, nArg2, nArg1));
 
-		sprintf(g_xChatEditBox.m_szInputMsg, "@渴堪祸 %d", wColor );
+		sprintf(g_xChatEditBox.m_szInputMsg, "@dye %d", wColor );
 		m_xMyHero.m_stFeatureEx.wDressColor = wColor;
 	}	
 	else if ( !strcmp(szCommand, "@speed") )
@@ -2261,26 +2261,26 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 		pxNPC->m_wABlendDelay	  = 0;
 		nNPC++;
 	}	
-	else if ( !strcmp(szCommand, "@蝴") )
+	else if ( !strcmp(szCommand, "@light") )
 	{
 		m_fTileLightRed = atoi(szArg1);
 		m_fTileLightGreen = atoi(szArg2);
 		m_fTileLightBlue = atoi(szArg3);
 	}	
-	else if ( !strcmp(szCommand, "@矫埃函拳") )
+	else if ( !strcmp(szCommand, "@timeshift") )
 	{
 		m_bDayState = atoi(szArg1);
 		m_bFogState = atoi(szArg2);
 		SetTimer(g_xMainWnd.GetSafehWnd(), _TIMER_ID, 50, NULL);
 	}	
-/*	else if ( !strcmp(szCommand, "@哩镑") )
+/*	else if ( !strcmp(szCommand, "@刷怪点") )
 	{
 		CHAR szTmp[MAX_PATH];
 		nArg2 = atoi(szArg2);
 		sprintf(szTmp, "%s %d %d %s %d", szCommand, m_ptCurrTile.x, m_ptCurrTile.y, szArg1, nArg2);
 		strcpy(g_xChatEditBox.m_szInputMsg, szTmp);
 	}*/	
-	else if ( !strcmp(szCommand, "@弊覆磊") )
+	else if ( !strcmp(szCommand, "@shadow") )
 	{
 		m_bShadowABlend = !m_bShadowABlend;
 		WORD wShadowClr;
@@ -2300,7 +2300,7 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 		}	
 
 	}	
-	else if ( !strcmp(szCommand, "@函脚") )
+	else if ( !strcmp(szCommand, "@morph") )
 	{		
 		static FEATURE stLastCahrFeature;
 		FEATURE stFeature;
@@ -2308,7 +2308,7 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 
 		if ( !m_xMyHero.m_bIsMon )	stLastCahrFeature = m_xMyHero.m_stFeature;
 
-		if ( !strcmp(szArg1, "救窍扁") )
+		if ( !strcmp(szArg1, "None") )
 		{
 			m_xMyHero.m_bIsMon = FALSE;
 			stFeature = stLastCahrFeature;
@@ -2323,14 +2323,14 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 		
 		if ( !m_xMyHero.ChangeFeature(stFeature, m_xMyHero.m_stFeatureEx) )
 		{
-			strcpy(g_xChatEditBox.m_szInputMsg, "函脚且荐 绝绰 阁胶磐涝聪促.");
+			strcpy(g_xChatEditBox.m_szInputMsg, "This monster cannot be transformed.");
 		}
 		else
 		{
 			m_xMyHero.m_stFeature = stFeature;
 		}
 	}	
-	else if ( !strcmp(szCommand, "@赣府堪祸") )
+	else if ( !strcmp(szCommand, "@hairdye") )
 	{
 		nArg1 = atoi(szArg1);
 		nArg2 = atoi(szArg2);
@@ -2338,10 +2338,10 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 		
 		WORD wColor = g_xMainWnd.ConvertColor24To16(RGB(nArg3, nArg2, nArg1));
 
-		sprintf(g_xChatEditBox.m_szInputMsg, "@赣府堪祸 %d", wColor );
+		sprintf(g_xChatEditBox.m_szInputMsg, "@hairdye %d", wColor );
 		m_xMyHero.m_stFeatureEx.wHairColor = wColor;
 	}	
-	else if ( !strcmp(szCommand, "@赣府葛剧") )
+	else if ( !strcmp(szCommand, "@hairstyle") )
 	{
 		nArg1 = atoi(szArg1);
 
@@ -2353,7 +2353,7 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 		m_xMyHero.ChangeFeature(stFeature, m_xMyHero.m_stFeatureEx);
 	}	
 
-// 老馆皋矫瘤.
+// 普通消息.
 	g_xClientSocket.SendSay(g_xChatEditBox.m_szInputMsg);
 
 	if ( g_xChatEditBox.m_szInputMsg[0] == '/' )
@@ -2379,7 +2379,7 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 
 /******************************************************************************************************************
 
-	扁鸥 窃荐棺 叼滚弊侩 窃荐.
+	其他函数及调试用函数。
 
 *******************************************************************************************************************/
 VOID CGameProcess::ShowStatus(INT nStartX, INT nStartY)
@@ -2388,13 +2388,13 @@ VOID CGameProcess::ShowStatus(INT nStartX, INT nStartY)
 	{
 		TCHAR			szBuff[MAX_PATH];
 
-		sprintf(szBuff, "泅犁鸥老谅钎 x:%d, y:%d", m_ptCurrTile.x, m_ptCurrTile.y);
+		sprintf(szBuff, "Current tile x:%d, y:%d", m_ptCurrTile.x, m_ptCurrTile.y);
 		g_xMainWnd.PutsHan(g_xMainWnd.GetBackBuffer(), nStartX, nStartY+10, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
-		sprintf(szBuff, "立加辑滚锅龋 : %s", g_szServerIP);
+		sprintf(szBuff, "Server No. : %s", g_szServerIP);
 		g_xMainWnd.PutsHan(g_xMainWnd.GetBackBuffer(), nStartX, nStartY+25, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
-		sprintf(szBuff, "付快胶谅钎 x:%d, y:%d", m_ptMousePos.x, m_ptMousePos.y);
+		sprintf(szBuff, "Mouse x:%d, y:%d", m_ptMousePos.x, m_ptMousePos.y);
 		g_xMainWnd.PutsHan(g_xMainWnd.GetBackBuffer(), nStartX, nStartY+40, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
 		sprintf(szBuff, "MYIDNUM:%x, %d", m_xMyHero.m_dwIdentity, m_xWaitPacketQueue.GetCount());
@@ -2413,10 +2413,10 @@ VOID CGameProcess::ShowStatus(INT nStartX, INT nStartY)
 		}
 
 		g_xMainWnd.UsedAndFreeMemoryCheck();
-		sprintf(szBuff, "咆胶苗傈眉:%d, 咆胶苗咯蜡:%d, 荤侩茄咆胶苗:%d", g_xMainWnd.m_dwTextureTotal, g_xMainWnd.m_dwTextureFree, g_xMainWnd.m_dwTextureTotal-g_xMainWnd.m_dwTextureFree);
+		sprintf(szBuff, "Texture total:%d, free:%d, used:%d", g_xMainWnd.m_dwTextureTotal, g_xMainWnd.m_dwTextureFree, g_xMainWnd.m_dwTextureTotal-g_xMainWnd.m_dwTextureFree);
 		g_xMainWnd.PutsHan(g_xMainWnd.GetBackBuffer(), nStartX, nStartY+70, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 
-		sprintf(szBuff, "厚叼坷伐傈眉:%d, 厚叼坷伐咯蜡:%d, 荤侩茄厚叼坷伐:%d", g_xMainWnd.m_dwVideoTotal, g_xMainWnd.m_dwVideoFree, g_xMainWnd.m_dwVideoTotal-g_xMainWnd.m_dwVideoFree);
+		sprintf(szBuff, "Video RAM total:%d, free:%d, used:%d", g_xMainWnd.m_dwVideoTotal, g_xMainWnd.m_dwVideoFree, g_xMainWnd.m_dwVideoTotal-g_xMainWnd.m_dwVideoFree);
 		g_xMainWnd.PutsHan(g_xMainWnd.GetBackBuffer(), nStartX, nStartY+85, RGB(250, 250, 250), RGB(0, 0, 0), szBuff);
 	}
 
@@ -2490,7 +2490,7 @@ VOID CGameProcess::CommandAnalyze()
 			m_bStatusView = !m_bStatusView;
 		}
 	}
-/*	else if ( !strcmp(szCommand, "@捞悼") )
+/*	else if ( !strcmp(szCommand, "@移动") )
 	{
 		nArg1 = atoi(szArg1);
 		nArg2 = atoi(szArg2);
@@ -2500,7 +2500,7 @@ VOID CGameProcess::CommandAnalyze()
 		m_xMap.SetStartViewTile(nArg1, nArg2);
 		m_xMap.LoadNewMapBuffer();
 	}
-	else if ( !strcmp(szCommand, "@磊蜡捞悼") )
+	else if ( !strcmp(szCommand, "@自由移动") )
 	{
 		m_bRender = FALSE;
 		nArg2 = atoi(szArg2);
@@ -2546,7 +2546,7 @@ VOID CGameProcess::RenderMapTileGrid()
 
 			INT nArrayNum = nYCnt + nXCnt*m_xMap.m_stMapFileHeader.shHeight;
 
-			// Cell弊府靛 焊咯林扁.
+			// 显示 Cell 网格.
 			if ( m_bCellView )
 			{
 				SetRect(&rc,
@@ -2559,7 +2559,7 @@ VOID CGameProcess::RenderMapTileGrid()
 
 			if ( m_bTileView )
 			{
-				// 鸥老弊府靛焊咯林扁.
+				// 显示图块网格。
  				if( !( nXCnt % 2 ) && !( nYCnt % 2 ) && nYCnt < m_xMap.m_shStartViewTileY+_VIEW_CELL_Y_COUNT )
  				{
 					nFileIdx= m_xMap.m_pstTileInfo[(nYCnt/2) + (nXCnt/2)*m_xMap.m_stMapFileHeader.shHeight/2].bFileIdx;
@@ -2581,7 +2581,7 @@ VOID CGameProcess::RenderMapTileGrid()
 
 			if ( m_bObj1View )
 			{
-				// Obj1鸥老 弊府靛 焊咯林扁.
+				// 显示 Obj1 图块网格.
 				if ( m_xMap.m_pstCellInfo[nArrayNum].bFileIdx != 255 )
 				{
 					if ( m_xMap.m_pstCellInfo[nArrayNum].wObj1 != 255 )
@@ -2617,7 +2617,7 @@ VOID CGameProcess::RenderMapTileGrid()
 			
 			if ( m_bObj2View )
 			{
-				// Obj2鸥老 弊府靛 焊咯林扁.
+				// 显示 Obj2 图块网格。
 				if ( m_xMap.m_pstCellInfo[nArrayNum].bFileIdx != 255 )
 				{
 					if ( m_xMap.m_pstCellInfo[nArrayNum].wObj2 != 65535 /*&& m_shObjTileViewState == 2*/ )
@@ -2910,7 +2910,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				
 				m_xMyHero.m_stAbility.dwExp = tdm.nRecog;
 				
-				sprintf(szExp, "版氰摹甫 %d 掘菌嚼聪促.", tdm.wParam);
+				sprintf(szExp, "You gained %d experience.", tdm.wParam);
 				
 				DWORD dwFont = GetChatColor(_CHAT_COLOR4);
 				DWORD dwBack = GetChatColor(_CHAT_COLOR3);
@@ -3052,7 +3052,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				m_xInterface.m_xInventoryWnd.AddInvenItem(xItem, 0, FALSE);
 
 				CHAR szSysMsg[MAX_PATH];
-				sprintf(szSysMsg, "%s阑 掘菌嚼聪促.", xItem.m_stItemInfo.stStdItem.szName);
+				sprintf(szSysMsg, "You got %s.", xItem.m_stItemInfo.stStdItem.szName);
 				m_xInterface.m_xClientSysMsg.AddSysMsg(szSysMsg);
 				break;
 			}
@@ -3068,7 +3068,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				m_xInterface.m_xStatusWnd.DeleteEquipItem(stReceivedItem.nMakeIndex, stReceivedItem.stStdItem.szName);
 
 				CHAR szSysMsg[MAX_PATH];
-				sprintf(szSysMsg, "%s酒捞袍捞 昏力登菌嚼聪促.", stReceivedItem.stStdItem.szName);
+				sprintf(szSysMsg, "%s item was deleted.", stReceivedItem.stStdItem.szName);
 				m_xInterface.m_xClientSysMsg.AddSysMsg(szSysMsg);
 				break;
 			}
@@ -3105,7 +3105,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 							m_xInterface.m_xInventoryWnd.DeleteInvenItem(nItemIndex, szItemName);
 							m_xInterface.m_xStatusWnd.DeleteEquipItem(nItemIndex, szItemName);
 
-							sprintf(szSysMsg, "%s酒捞袍捞 昏力登菌嚼聪促.", szItemName);
+							sprintf(szSysMsg, "%s item was deleted.", szItemName);
 							m_xInterface.m_xClientSysMsg.AddSysMsg(szSysMsg);
 
 							nCount++;
@@ -3154,9 +3154,9 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				memcpy(&stFeature, &tdm.nRecog, sizeof(LONG));
 				g_xGameProc.m_xMyHero.ChangeFeature(stFeature, g_xGameProc.m_xMyHero.m_stFeatureEx);
 
-				// 厘馒芒狼 馒侩酒捞袍(m_stTakeOnItemSet)阑 厘馒芒狼 嘎绰伎俊 利侩矫虐绊, 馒侩酒捞袍(m_stTakeOnItemSet)阑 瘤款促.
+				// 把装备窗口的已穿戴物品(m_stTakeOnItemSet)应用到装备窗口对应的单元格, 然后删除已穿戴物品(m_stTakeOnItemSet).
 				m_xInterface.m_xStatusWnd.SetEquipFromTakeOn();
-				// 父距 傍烹(付快胶)酒捞袍捞 乐促搁 牢亥配府扩档快狼 后伎俊 持绊, 傍烹(付快胶)酒捞袍阑 瘤款促.
+				// 如果存在公共(鼠标)物品, 则放入背包窗口的空格子中, 并删除公共(鼠标)物品。
 				if ( m_xInterface.m_stCommonItem.bSetted )
 				{
 //					m_xInterface.m_xInventoryWnd.AddInvenItem(m_xInterface.m_stCommonItem.xItem, 0, FALSE);
@@ -3166,8 +3166,8 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			}
 			case SM_TAKEON_FAIL:
 			{
-				// 厘馒芒狼 馒侩酒捞袍(m_stTakeOnItemSet)阑 促矫 牢亥配府俊 持绰促.
-				// 父距俊 傍烹(付快胶)酒捞袍捞 乐促搁 弊吧 馒侩伎俊 持绰促.
+				// 将装备窗口的已穿戴物品(m_stTakeOnItemSet)重新放入背包。
+				// 如果存在公共(鼠标)物品, 则将其放入装备格子中。
 				if ( m_xInterface.m_xStatusWnd.m_stTakeOnItemSet.bSetted )
 				{
 					m_xInterface.m_xInventoryWnd.AddInvenItem(m_xInterface.m_xStatusWnd.m_stTakeOnItemSet.xItem, 0, FALSE);
@@ -3186,7 +3186,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				memcpy(&stFeature, &tdm.nRecog, sizeof(LONG));
 				g_xGameProc.m_xMyHero.ChangeFeature(stFeature, g_xGameProc.m_xMyHero.m_stFeatureEx);
 
-				// 哈阑妨绊 茄酒捞袍阑 牢亥配府俊 持绰促.
+				// 把想要脱下的物品放进背包.
 				if ( m_xInterface.m_stCommonItem.bSetted )
 				{
 //					m_xInterface.m_xInventoryWnd.AddInvenItem(m_xInterface.m_stCommonItem.xItem, 0, FALSE);
@@ -3196,7 +3196,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			}
 			case SM_TAKEOFF_FAIL:
 			{
-				// 傍烹(付快胶)酒捞袍阑 促矫 馒侩伎俊 持绰促.
+				// 将通用(鼠标)物品重新放入装备格.
 				if ( m_xInterface.m_stCommonItem.bSetted )
 				{
 					m_xInterface.m_xStatusWnd.SetEquipFromCommon(m_xInterface.m_stCommonItem.xItem.m_shCellNum, &m_xInterface.m_stCommonItem);
@@ -3296,7 +3296,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 					}
 				}	
 
-				// 积己茄促.
+				// 创建.
 				if ( !bExisted )
 				{
 					BYTE bEffectNum = 0;
@@ -3364,7 +3364,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				m_xMyHero.m_stAbility.dwExp = tdm.nRecog;
 				m_xMyHero.m_stAbility.bLevel = tdm.wParam;
 
-				m_xInterface.m_xClientSysMsg.AddSysMsg("饭骇捞 棵耳嚼聪促");
+				m_xInterface.m_xClientSysMsg.AddSysMsg("Level up!");
 				break;
 			}
 			case SM_DAYCHANGING:
@@ -3442,11 +3442,11 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			case SM_SENDDETAILGOODSLIST:
 			case SM_BUYITEM_FAIL:
 			
-			{	// 惑痢芒 贸府 风凭
+			{	// 商店窗口处理例程
 				LPPACKETMSG	lpPacketMsg	= new PACKETMSG;
 				lpPacketMsg->stDefMsg	= tdm;
 				lstrcpy(lpPacketMsg->szEncodeData, (pszMsg + DEFBLOCKSIZE));
-				m_xInterface.m_xStoreWnd.m_xPacketQueue.PushQ((BYTE*)lpPacketMsg);	// Packet阑 Queue俊 持绰促.
+				m_xInterface.m_xStoreWnd.m_xPacketQueue.PushQ((BYTE*)lpPacketMsg);	// 将 Packet 放入 Queue.
 				if(!m_xInterface.m_xStoreWnd.GetGameWndActive())
 				{
 					m_xInterface.WindowActivate(_WND_ID_STORE);
@@ -3475,7 +3475,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			}
 			case SM_DROPITEM_FAIL:
 			{
-				// 啊规俊 促矫 持绢滚赴促.
+				// 重新放回背包.
 				CHAR	pszItemName[15];
 				if (m_xInterface.m_stCommonItem.bWaitResponse )
 				{
@@ -3540,7 +3540,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			}
 			case SM_OPENDOOR_LOCK:
 			{
-				m_xInterface.m_xClientSysMsg.AddSysMsg("巩捞 泪败廉 乐嚼聪促.");
+				m_xInterface.m_xClientSysMsg.AddSysMsg("The door is locked.");
 				break;
 			}
 			case SM_CLOSEDOOR:
@@ -3593,16 +3593,16 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				switch (tdm.nRecog)
 				{
 					case -1: 
-						//FrmDlg.DMessageDlg ('捞固 弊缝俊 啊涝登绢 乐嚼聪促.', [mbOk]);
+						//FrmDlg.DMessageDlg ('已加入该组。', [mbOk]);
 						break;
 					case -2: 
-						//FrmDlg.DMessageDlg ('弊缝俊 曼咯且 捞抚捞 官福瘤 臼嚼聪促.', [mbOk]);
+						//FrmDlg.DMessageDlg ('要加入组的名称不正确.', [mbOk]);
 						break;
 					case -3: 
-						//FrmDlg.DMessageDlg ('窃膊 曼咯窍妨绰 荤恩捞 促弗 弊缝俊 曼咯吝涝聪促.', [mbOk]);
+						//FrmDlg.DMessageDlg ('想要一起参加的人正在参加其他队伍.', [mbOk]);
 						break;
 					case -4: 
-						//FrmDlg.DMessageDlg ('惑措规捞 弊缝芭何吝涝聪促.', [mbOk]);
+						//FrmDlg.DMessageDlg ('对方正在拒绝组队.', [mbOk]);
 						break;
 				}
 			}
@@ -3645,7 +3645,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			{
 //         begin
 //            FrmDlg.LastestClickTime := GetTickCount;
-//          FrmDlg.DMessageDlg ('巩颇啊 父甸绢 脸嚼聪促.', [mbOk]);
+//          FrmDlg.DMessageDlg ('行会已创建.', [mbOk]);
 //         end;
 				break;
 			}
@@ -3654,9 +3654,9 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 //         begin
 //            FrmDlg.LastestClickTime := GetTickCount;
 //            case msg.Recog of
-//               -1: FrmDlg.DMessageDlg ('捞固 巩颇俊 啊涝秦 乐嚼聪促.', [mbOk]);
-//               -2: FrmDlg.DMessageDlg ('殿废厚侩捞 何练钦聪促.', [mbOk]);
-//               -3: FrmDlg.DMessageDlg ('鞘夸酒捞袍阑 葛滴 啊瘤绊 乐瘤 臼嚼聪促.', [mbOk]);
+//               -1: FrmDlg.DMessageDlg ('已经加入行会了。', [mbOk]);
+//               -2: FrmDlg.DMessageDlg ('注册费用不足.', [mbOk]);
+//               -3: FrmDlg.DMessageDlg ('未拥有全部所需物品。', [mbOk]);
 //            end;
 //         end;
 				break;
@@ -3807,7 +3807,7 @@ VOID CGameProcess::ProcessDefaultPacket()
 							}
 							break;
 						}						
-						break;		//for巩阑 狐廉唱埃促.
+						break;		//跳出 for 循环。
 					}					
 					m_xActorList.MoveNextNode();
 
@@ -4018,8 +4018,8 @@ VOID CGameProcess::ProcessPacket()
 					{
 						stFeature.bGender	= _GENDER_MON;
 
-						// 利侩矫难具窃.
-//						if ( stFeature.bWeapon == 0 ) // 扁夯.
+						// 需要应用.
+//						if ( stFeature.bWeapon == 0 ) // 默认.
 //						if ( stFeature.bWeapon == 1 ) // SKELLEON.
 
 						pxActor = new CActor;
@@ -4131,7 +4131,7 @@ VOID CGameProcess::OnSvrMsgLogon(_TDEFAULTMESSAGE	*ptdm, char *pszMsg)
 	if ( bDir > 8 )
 		bDir = 0;
 
-	// 眠啊内靛
+	// 附加代码
 	fnDecode6BitBuf(pszMsg, (char*)&wl, sizeof(wl));
 
 //	if ( stFeatureEx.bHorse == _HORSE_NONE )

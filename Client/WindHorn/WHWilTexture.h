@@ -1,12 +1,12 @@
 /******************************************************************************************************************
-                                                                                                                   
-	葛碘疙:																											
-																													
-	累己磊:																											
-	累己老:																											
-																													
-	[老磊][荐沥磊] : 荐沥 郴侩																						
-                                                                                                                   
+
+	模块名:
+
+	作者:
+	编写日期:
+
+	[日期][修改人] : 修改内容
+
 *******************************************************************************************************************/
 
 #ifndef D3DWILTEXTR_H
@@ -35,7 +35,7 @@ INT		GetRandomNum(INT nFrom, INT nTo);
 //POINT	D3DWILTextr_GetImageSize(TCHAR* strWilFileName, INT nIndex);
 
 
-// 咆胶苗肺 静绰 葛电 廓颇老阑 包府茄促.
+// 管理用作纹理的所有文件.
 /*
     WILTextureContainer* m_pNext;
 
@@ -46,9 +46,9 @@ INT		GetRandomNum(INT nFrom, INT nTo);
     DWORD   m_dwHeight;
     LPDIRECTDRAWSURFACE7 m_pddsSurface;
 */
-// [俺夸]  颇老 甘俏阑 捞侩窍咯 单捞鸥俊 立辟茄促.(廓颇老苞 括胶 颇老捞侩)
-//    ---> CMappedWilFile努贰胶俊辑 m_strWilFileName, m_nIdx, m_dwWidth, 
-//		   m_dwHeight, 捞固瘤单捞鸥林家 甫 逞败 罐酒辑 咆胶苗侩 辑乔胶甫 父电促.
+// [概述]  使用文件映射访问数据.(使用 WIL 文件与 WIX 文件)
+//    ---> CMappedWilFile 类中的 m_strWilFileName, m_nIdx, m_dwWidth, 
+//		   m_dwHeight, 图像数据地址, 创建用于纹理的表面.
 
 
 #endif // D3DWILTEXTR_H

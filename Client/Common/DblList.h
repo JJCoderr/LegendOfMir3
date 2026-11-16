@@ -123,7 +123,7 @@ public:
 		}
 	};
 
-	// 寇何俊辑 typeData甫 瘤快绰 屈怕捞促.
+	// 从外部删除 typeData 的形式.
 	BOOL DeleteCurrentNodeEx(VOID)
 	{
 		LPNODE pstTempNode;

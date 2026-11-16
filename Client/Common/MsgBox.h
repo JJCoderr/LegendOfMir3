@@ -21,23 +21,23 @@
 #define MSG_BTN_YESNOCANCLE		4
 #define MSG_EDITEXIST			128
 
-#define ASK_MAKE_BIG_GUILD			1		// ¼³¸³ÇÒ ¹®ÆÄÀÇ ÀÌ¸§À» ÀûÀ¸½Ê½Ã¿À.
-#define ASK_MAKE_SMALL_GUILD		2		// ¼³¸³ÇÒ ¹æÆÄÀÇ ÀÌ¸§À» ÀûÀ¸½Ê½Ã¿À.
-#define ASK_OTHERSNAME				3		// »ó´ë ¹®ÆÄ¸íÀ» ÀÔ·Á°¡¼¼¿ä.
-#define ASK_DELMEMBER_NAME			4		// ¹®¿ø¿¡¼­ Á¦¿ÜÇÒ »ç¶÷ÀÇ ÀÌ¸§À» ÀÔ·ÂÇÏ½Ê½Ã¿À.
-#define ASK_ADDMEMBER_NAME			5		// ¹®¿øÀ¸·Î Ãß°¡ÇÒ »ç¶÷ÀÇ ÀÌ¸§À» ÀÔ·ÂÇÏ½Ê½Ã¿À.
-#define ASK_DROP_GOLD				6		// ³»·Á ³õÀ» ±Ý¾×À» ÀÔ·ÂÇÏ¼¼¿ä.
-#define ASK_DEAL_GOLD				7		// °Å·¡ÇÒ ±Ý¾×À» ÀÔ·ÂÇÏ¼¼¿ä.
-#define ASK_GROUP_ADD_MEMBER_NAME	8		// ±×·ì¿¡ Âü¿©ÇÒ »ç¶÷ÀÇ ÀÌ¸§À» ÀûÀ¸½Ê½Ã¿À.
-#define ASK_GROUP_DEL_MEMBER_NAME	9		// ±×·ì¿¡¼­ ºüÁú »ç¶÷ÀÇ ÀÌ¸§À» ÀûÀ¸½Ê½Ã¿À.
-#define	ASK_GUILD_BREAK_ALLY		10		// µ¿¸ÍÀ» ÆÄ±â ÇÒ ¹®ÆÄÀÇ ÀÌ¸§À» ÀÔ·ÂÇÏ½Ê½Ã¿À.
-#define	ASK_YN_LOGOUT_GAME			11		// ·Î±×¾Æ¿ô ÇÏ½Ã°Ú½À´Ï±î?
-#define ASK_YN_QUIT_GAME			12		// ¹Ì¸£ÀÇÀü¼³2¸¦ Á¾·áÇÏ½Ã°Ú½À´Ï±î?
-#define	ASK_YN_GUILD_ALLY			13		// µ¿¸ÍÀ» ÇÏ±â À§ÇØ¼­´Â »ó´ë¹æ ¹®ÆÄ°¡ [µ¿¸Í°¡´É] »óÅÂ ÀÌ¾î¾ß ÇÏ¸ç »ó´ë ¹®ÁÖ¿Í ¸¶ÁÖ°íº¸ ÀÖ¾î¾ß ÇÕ´Ï´Ù.
-#define	ASK_YN_GAIN_SKILL			14		// À»(¸¦) ÀÍÈ÷½Ã°Ú½À´Ï±î?
-#define	ASK_YN_USE_ITEM				15		// À»(¸¦) »ç¿ëÇÏ½Ã°Ú½À´Ï±î?
-#define ASK_WITHDRAWAL				16		// Ã£°íÀÚ ÇÏ´Â ±Ý¾×À» ÀÔ·ÁÇÏ¼¼¿ä.
-#define ASK_RECEIPT					17		// ¸Ã±â°íÀÚÇÏ´Â ±Ý¾×À» ÀÔ·ÂÇÏ¼¼¿ä.
+#define ASK_MAKE_BIG_GUILD			1		// ÇëÌîÐ´Òª´´½¨µÄÐÐ»áÃû³Æ.
+#define ASK_MAKE_SMALL_GUILD		2		// ÇëÊäÈëÒª´´½¨µÄÐÐ»áÃû³Æ¡£
+#define ASK_OTHERSNAME				3		// ÇëÊäÈë¶Ô·½ÐÐ»áÃû³Æ.
+#define ASK_DELMEMBER_NAME			4		// ÇëÊäÈëÒª´ÓÐÐ»áÖÐÅÅ³ýµÄÈËÔ±Ãû³Æ.
+#define ASK_ADDMEMBER_NAME			5		// ÇëÊäÈëÒªÌí¼ÓÎªÐÐ»á³ÉÔ±µÄÈËµÄÃû³Æ.
+#define ASK_DROP_GOLD				6		// ÇëÊäÈëÒª´æ·ÅµÄ½ð¶î.
+#define ASK_DEAL_GOLD				7		// ÇëÊäÈë½»Ò×½ð¶î¡£
+#define ASK_GROUP_ADD_MEMBER_NAME	8		// ÇëÌîÐ´Òª¼ÓÈë¶ÓÎéµÄÈËµÄÐÕÃû.
+#define ASK_GROUP_DEL_MEMBER_NAME	9		// ÇëÐ´ÏÂÒªÍË³ö¶ÓÎéµÄÈËµÄÐÕÃû.
+#define	ASK_GUILD_BREAK_ALLY		10		// ÇëÊäÈëÒª½â³ýÍ¬ÃËµÄÐÐ»áÃû³Æ.
+#define	ASK_YN_LOGOUT_GAME			11		// Òª×¢ÏúÂð?
+#define ASK_YN_QUIT_GAME			12		// ÊÇ·ñÍË³ö´«Ææ2?
+#define	ASK_YN_GUILD_ALLY			13		// Òª½øÐÐ½áÃË£¬¶Ô·½ÐÐ»á±ØÐë´¦ÓÚ [¿É½áÃË] ×´Ì¬£¬²¢ÇÒ±ØÐëÓë¶Ô·½ÐÐ»á»á³¤Ãæ¶ÔÃæ¡£
+#define	ASK_YN_GAIN_SKILL			14		// ÒªÑ§Ï°Âð?
+#define	ASK_YN_USE_ITEM				15		// ÊÇ·ñÊ¹ÓÃ£¿
+#define ASK_WITHDRAWAL				16		// ÇëÊäÈëÒª²éÕÒµÄ½ð¶î.
+#define ASK_RECEIPT					17		// ÇëÊäÈëÒª¼Ä´æµÄ½ð¶î.
 
 
 class	CMsgBox
@@ -67,17 +67,17 @@ public:
 	virtual BOOL	RenderMessageBox(INT nLoopTIme);				// Render Function
 private:
 protected:
-	__inline BOOL	IsInRect(int nPosX, int nPosY, RECT rc)	// Á¤È®ÇÏ°Ô Rect ¾ÈÇØ ÀÖ´Â°¡¸¦ Ã¼Å©
+	__inline BOOL	IsInRect(int nPosX, int nPosY, RECT rc)	// ¼ì²éÊÇ·ñÃ»ÓÐÕýÈ·ÉèÖÃ Rect
 	{	if (nPosX >= rc.left && nPosX <= rc.right && nPosY >= rc.top && nPosY <= rc.bottom)
 			return TRUE;
 		else 
 			return FALSE;
 	}
 public:
-	CHAR	m_szMsg[MAX_PATH];			// Ãâ·ÂÇÒ ¹®ÀÚ
+	CHAR	m_szMsg[MAX_PATH];			// ÒªÊä³öµÄ×Ö·û
 private:
 protected:
-	INT		m_nType;			// 0: OK(È®ÀÎ) ,1 : YES/NO ,2 : YES/NO/Cancle ,3 : EditBox & OK(È®ÀÎ) ...
+	INT		m_nType;			// 0: OK(È·ÈÏ) ,1 : YES/NO ,2 : YES/NO/Cancle ,3 : EditBox & OK(È·ÈÏ) ...
 	BOOL	m_bActive;			// Show or Hide ??
 	BOOL	m_bInited;			// Initialized ?
 	BOOL	m_bSet;				// Set ?

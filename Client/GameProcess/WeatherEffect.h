@@ -19,11 +19,11 @@ private:
 public:
 	CMist();
 	~CMist();
-	BOOL Create();			// 救俺 积己.	
-	VOID Init();			// 救俺 函荐 檬扁拳.
-	VOID Destory();			// 咆胶苗殿狼 皋葛府秦力.
+	BOOL Create();			// 生成雾气.	
+	VOID Init();			// 雾气变量初始化。
+	VOID Destory();			// 纹理等的内存释放.
 	HRESULT DrawMist();
-	VOID ProgressMist();	// 救俺 柳青.(救俺矫累矫痢, 救俺柳青, 救俺辆丰矫痢俊辑 辑肺 促福促.)
+	VOID ProgressMist();	// 雾气推进。(雾气开始时刻、雾气推进中、雾气结束时刻各不相同。)
 };
 
 /*

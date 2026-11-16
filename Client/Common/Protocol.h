@@ -16,26 +16,26 @@
 
 #define	SM_VERSION_AVAILABLE	500			//
 #define	SM_CERTIFICATION_FAIL	501			//  Fail
-#define SM_ID_NOTFOUND			502			//	ID 绝澜
-#define	SM_PASSWD_FAIL			503			//	菩胶况靛 撇覆
-#define	SM_NEWID_SUCCESS		504			//	货酒捞叼 肋 父甸绢 脸澜
-#define	SM_NEWID_FAIL			505			//	货酒捞叼 父甸扁 角菩
-#define	SM_CHGPASSWD_SUCCESS	506			//	菩胶况靛 官操扁 己傍
-#define	SM_CHGPASSWD_FAIL		507			//	菩胶况靛 官操扁 角菩
-#define	SM_QUERYCHR				520			//	某腐府胶飘
-#define	SM_NEWCHR_SUCCESS		521			//	纳腐磐 积己 己傍
-#define	SM_NEWCHR_FAIL			522			//	纳腐磐 积己 角菩
-#define	SM_DELCHR_SUCCESS		523			//	纳腐磐 昏力 己傍
-#define	SM_DELCHR_FAIL			524			//	纳腐磐 昏力 角菩
-#define	SM_STARTPLAY			525			//	俺烙矫累
-#define	SM_STARTFAIL			526			//	俺烙矫累 角菩
-#define	SM_QUERYCHR_FAIL		527			//	纳腐磐 沥焊 佬绢坷扁 角菩
-#define	SM_OUTOFCONNECTION		528			//	楷搬 秦力凳
-#define	SM_PASSOK_SELECTSERVER	529			//	Password啊 嘎栏骨肺  辑滚 Selection栏肺 逞绢皑(辑滚 List棺 弥辟 立加辑滚 磊丰)
-#define	SM_SELECTSERVER_OK		530			//	辑滚急琶 (立加 滚辑 IP殿狼 沥焊啊 甸绢皑)
-#define	SM_NEEDUPDATE_ACCOUNT	531			//	拌沥狼 沥焊甫 促矫 涝仿窍扁 官恩 芒..
-#define	SM_UPDATEID_SUCCESS		532			//	拌沥沥焊 盎脚 己傍
-#define	SM_UPDATEID_FAIL		533			//	拌沥沥焊 盎脚 角菩
+#define SM_ID_NOTFOUND			502			//	无 ID
+#define	SM_PASSWD_FAIL			503			//	密码错误
+#define	SM_NEWID_SUCCESS		504			//	新账号创建成功
+#define	SM_NEWID_FAIL			505			//	新建账号ID失败
+#define	SM_CHGPASSWD_SUCCESS	506			//	修改密码成功
+#define	SM_CHGPASSWD_FAIL		507			//	修改密码失败
+#define	SM_QUERYCHR				520			//	角色列表
+#define	SM_NEWCHR_SUCCESS		521			//	角色创建成功
+#define	SM_NEWCHR_FAIL			522			//	角色创建失败
+#define	SM_DELCHR_SUCCESS		523			//	角色删除成功
+#define	SM_DELCHR_FAIL			524			//	角色删除失败
+#define	SM_STARTPLAY			525			//	游戏开始
+#define	SM_STARTFAIL			526			//	游戏开始失败
+#define	SM_QUERYCHR_FAIL		527			//	读取角色信息失败
+#define	SM_OUTOFCONNECTION		528			//	连接已断开
+#define	SM_PASSOK_SELECTSERVER	529			//	Password 正确，因此转到服务器 Selection(服务器 List 及最近连接的服务器资料)
+#define	SM_SELECTSERVER_OK		530			//	服务器选择 (内含连接服务器 IP 等信息)
+#define	SM_NEEDUPDATE_ACCOUNT	531			//	请重新输入账号信息的窗口..
+#define	SM_UPDATEID_SUCCESS		532			//	账号信息更新成功
+#define	SM_UPDATEID_FAIL		533			//	账号信息更新失败
 
 
 // For login process
@@ -134,7 +134,7 @@ typedef	struct	tagFileListHeader
 }FileListHeader;
 
 ////////////////////////////////////////////
-#define WM_BUTTONCLICK				WM_USER + 500	// Button Class啊 Click Event 甫 罐疽阑 版快
-#define WM_MOUSEON					WM_USER + 501	// Button Class啊 mouse on Event 甫 罐疽阑 版快
+#define WM_BUTTONCLICK				WM_USER + 500	// Button Class 接收到 Click Event 的情况
+#define WM_MOUSEON					WM_USER + 501	// Button Class 接收到 mouse on Event 时
 
 #endif
