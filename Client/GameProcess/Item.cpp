@@ -92,7 +92,7 @@ g:ÆäËû
 }
 
 
-BOOL CItem::DrawItem(INT nX, INT nY, BYTE bItemType)
+BOOL CItem::DrawItem(INT nX, INT nY, BYTE bItemType, const RECT* clip)
 {
 	CWHWilImageData*	pxItemImg;	
 	BOOL bDrawItem = FALSE;
@@ -118,6 +118,13 @@ BOOL CItem::DrawItem(INT nX, INT nY, BYTE bItemType)
 		break;
 	}
 		
+    if (bDrawItem && clip) {
+        const auto& image=*pxItemImg->m_lpstNewCurrWilImageInfo;
+        RECT bounds={nX,nY,nX+image.shWidth,nY+image.shHeight},visible;
+        if (!IntersectRect(&visible,&bounds,clip)) return TRUE;
+        RECT source={visible.left-nX,visible.top-nY,visible.right-nX,visible.bottom-nY};
+        return g_xMainWnd.DrawWithImageForComp(visible.left,visible.top,source,(WORD*)pxItemImg->m_pbCurrImage);
+    }
 	if ( bDrawItem )
 	{
  		g_xMainWnd.DrawWithImageForCompClipRgn(

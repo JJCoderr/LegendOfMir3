@@ -145,27 +145,13 @@ VOID CInventoryWnd::ShowInventoryWnd()
         SelectObject(dc,previous); DeleteObject(font); surface->ReleaseDC(dc);
     }
     m_xInventoryBtn[_BTN_ID_INVENCLOSE].ChangeRect(x+242,y+423);
-	for ( nCnt = 0; nCnt < _MAX_INVEN_ITEM; nCnt++ )
-	{
-		if ( m_stInventoryItem[nCnt].bSetted )
-		{
-			INT nStartX, nStartY;
-
-			if ( nCnt >= m_nStartLineNum*_INVEN_CELL_XCNT && nCnt < (m_nStartLineNum+_INVEN_CELL_YCNT)*_INVEN_CELL_XCNT ) 
-			{
-				nStartX = m_rcWnd.left+m_rcInvenCell[nCnt-(m_nStartLineNum*_INVEN_CELL_XCNT)].left;
-				nStartY = m_rcWnd.top +m_rcInvenCell[nCnt-(m_nStartLineNum*_INVEN_CELL_XCNT)].top;
-
-//				m_stInventoryItem[nCnt].xItem.m_stItemInfo.stStdItem.wLooks = 4;
-				m_stInventoryItem[nCnt].xItem.DrawItem(nStartX, nStartY);
-
-//				RECT rc = {nStartX, nStartY, nStartX+_INVENTORY_CELL_WIDTH, nStartY+_INVENTORY_CELL_HEIGHT};
-//				g_xMainWnd.DrawWithGDI(rc, NULL, RGB(255, 0, 255), 1);
-			}
-		}
-	}
-
-	// 腰带物品绘制。
+    const RECT clip={x+17,y+60,x+245,y+364};
+    for (nCnt=0;nCnt<_MAX_INVEN_ITEM;++nCnt) {
+        if (!m_stInventoryItem[nCnt].bSetted) continue;
+        const int itemX=x+17+(nCnt%6)*38;
+        const int itemY=y+60+(nCnt/6-m_nStartLineNum)*38;
+        m_stInventoryItem[nCnt].xItem.DrawItem(itemX,itemY,_ITEM_TYPE_INVENTORY,&clip);
+    }
 	for ( nCnt = 0; nCnt < _MAX_INVEN_BTN; nCnt++ )
 	{
 		m_xInventoryBtn[nCnt].ShowGameBtn();

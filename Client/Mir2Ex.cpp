@@ -133,6 +133,15 @@ public:
             ui.WindowActivate(_WND_ID_INVENTORY);
             const bool grid=bag.GetInvenNum(POINT{536,61})==0 && bag.GetInvenNum(POINT{762,363})==47 &&
                 bag.GetInvenNum(POINT{534,61})==-1;
+            auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];
+            icons.NewLoad("./Data/Inventory.wil");
+            int samples=0;
+            for (int icon=0;icon<100 && samples<6;++icon) {
+                if (!icons.NewSetIndex(icon) || icons.m_lpstNewCurrWilImageInfo->shWidth<=0) continue;
+                CLIENTITEMRCD record={}; record.stStdItem.wLooks=icon;
+                CItem item; item.SetItem(record,0);
+                bag.AddInvenItem(item,samples*7,TRUE); ++samples;
+            }
             COMMONITEMSET held={};
             POINT thumb={770,75}; bag.OnLButtonDown(&held,thumb);
             POINT outside={810,590}; ui.OnMouseMove(outside);
@@ -145,7 +154,7 @@ public:
             bag.OnLButtonDown(&held,close);
             const bool closed=bag.OnLButtonUp(&held,close)!=FALSE;
             if (FILE* report=fopen("inventory-layout-check.txt","wb")) {
-                fprintf(report,"grid=%d release_without_press=%d close_clicked=%d scroll_end=%d scroll_released=%d\n",grid,stray,closed,scrollEnd,released); fclose(report);
+                fprintf(report,"grid=%d release_without_press=%d close_clicked=%d scroll_end=%d scroll_released=%d\n",grid,stray,closed,scrollEnd,released); fprintf(report,"icon_samples=%d\n",samples); fclose(report);
             }
         }
         if (groupPanel==11) {

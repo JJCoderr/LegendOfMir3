@@ -66,7 +66,7 @@ public:
 protected:
 public:
 	BOOL		SetItem(CLIENTITEMRCD stItemInfo, SHORT shInventoryNum);
-	BOOL		DrawItem(INT nX, INT nY, BYTE bItemType = _ITEM_TYPE_INVENTORY);
+	BOOL		DrawItem(INT nX, INT nY, BYTE bItemType = _ITEM_TYPE_INVENTORY, const RECT* clip = nullptr);
 	VOID		ShowItemStatus(INT nX, INT nY);
 public:
 };
