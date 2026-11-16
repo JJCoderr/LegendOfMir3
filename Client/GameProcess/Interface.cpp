@@ -48,6 +48,8 @@ VOID CInterface::Init()
 {
 	m_nIdxMsgBox		= 0;
 	m_nFstLine			= 0;
+    m_chatMode = 0;
+    m_chatModeChanged = false;
 	m_shBeltHeight		= 0;
 	m_bShowKey			= FALSE;
 	m_bMoveFocusedWnd	= FALSE;
@@ -377,6 +379,17 @@ void CInterface::LayoutChat()
     ReflowChat();
 }
 
+void CInterface::FocusChatMode()
+{
+    if (m_chatMode) {
+        const char* prefix = m_chatMode == 1 ? "!!" : "!~";
+        SetWindowTextA(g_xChatEditBox.GetSafehWnd(),prefix);
+        SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETSEL,2,2);
+    }
+    ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_SHOW);
+    SetFocus(g_xChatEditBox.GetSafehWnd());
+}
+
 VOID CInterface::ShowChatList()
 {
     if (m_xChat.CheckEmpty()) return;
@@ -458,6 +471,15 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 	// °´Å¥.
 	for ( nCnt = 0; nCnt < VisibleButtons(); nCnt++)
 	{
+        if (m_chatExpanded && m_chatModeChanged && (nCnt == 18 || nCnt == 19)) {
+            const int frame = nCnt == 18 ? (m_chatMode == 1 ? 1335 : 1334) : (m_chatMode == 2 ? 1337 : 1336);
+            if (m_pxInterImg->NewSetIndex(frame)) {
+                const auto& info = *m_pxInterImg->m_lpstNewCurrWilImageInfo;
+                const RECT area = m_xInterBtn[nCnt].GetGameBtnRect();
+                g_xMainWnd.DrawWithImageForComp(area.left,area.top,info.shWidth,info.shHeight,
+                    (WORD*)m_pxInterImg->m_pbCurrImage);
+            }
+        }
 		m_xInterBtn[nCnt].ShowGameBtn();
 	}
 
@@ -1488,6 +1510,20 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
                 g_xSound.PlayLobbyEffect("105.wav");
 				switch ( nCnt )
 				{
+                case 18:
+                case 19:
+                    {
+                        const int requested = nCnt == 18 ? 1 : 2;
+                        m_chatMode = m_chatMode == requested ? 0 : requested;
+                        m_chatModeChanged = true;
+                        m_xInterBtn[18].ResetGameBtn(m_chatMode == 1 ? 1335 : 1334,m_chatMode == 1 ? 1335 : 1334);
+                        m_xInterBtn[19].ResetGameBtn(m_chatMode == 2 ? 1337 : 1336,m_chatMode == 2 ? 1337 : 1336);
+                        static CLoginMessages captions;
+                        static const bool loaded = captions.Load(".\CmList.dat");
+                        std::string message = captions.Get(m_chatMode == 0 ? 2626 : (m_chatMode == 1 ? 2633 : 2635));
+                        MsgAdd(0xffffff,0x80ff,const_cast<char*>(message.c_str()));
+                    }
+                    break;
                 case 16:
                 case 17:
                     {

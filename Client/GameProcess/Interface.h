@@ -12,6 +12,9 @@ class CInterface
 public:
     bool m_primaryStat[2] = {true,true};
     bool m_chatExpanded = false;
+    int m_chatMode = 0;
+    bool m_chatModeChanged = false;
+    void FocusChatMode();
     void LayoutChat();
     struct ChatMessage { DWORD color, background; std::string text; };
     std::vector<ChatMessage> m_chatHistory;

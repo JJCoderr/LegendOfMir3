@@ -2020,11 +2020,10 @@ LRESULT CGameProcess::OnKeyDown(WPARAM wParam, LPARAM lParam)
 /*			g_xSound.StopSound(1);
 */			break;
 		}
+	case VK_SPACE:
 	case VK_RETURN:
 		{
-			SetFocus(g_xChatEditBox.GetSafehWnd());
-			ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_SHOW);
-			OnMsgInputted(0, 0);
+            m_xInterface.FocusChatMode();
 		}
 		break;
 	case 'U':
