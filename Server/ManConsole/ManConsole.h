@@ -8,38 +8,40 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#ifndef __AFXWIN_H__
-	#error include 'stdafx.h' before including this file for PCH
+#ifndef _WINDOWS_
+	#error include 'stdafx.h' before including this file
 #endif
 
 #include "resource.h"		// main symbols
 
 /////////////////////////////////////////////////////////////////////////////
-// CManConsoleApp:
-// See ManConsole.cpp for the implementation of this class
 //
+//			Global Variables Definition
+//
+// **************************************************************************************
 
-class CManConsoleApp : public CWinApp
-{
-public:
-	CManConsoleApp();
+extern HINSTANCE	g_hInst;			// Application instance
+extern HWND			g_hMainWnd;			// Main dialog handle
+extern HWND			g_hLogMsgWnd;		// Log list view
+extern HWND			g_hCommandWnd;		// Command edit box
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CManConsoleApp)
-	public:
-	virtual BOOL InitInstance();
-	//}}AFX_VIRTUAL
+/////////////////////////////////////////////////////////////////////////////
+//
+//			Log message helpers
+//
+// **************************************************************************************
 
-// Implementation
+int		AddNewLogMsg();
+void	InsertLogMsg(LPCTSTR lpszMsg);
 
-	//{{AFX_MSG(CManConsoleApp)
-		// NOTE - the ClassWizard will add and remove member functions here.
-		//    DO NOT EDIT what you see in these blocks of generated code !
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
-};
+/////////////////////////////////////////////////////////////////////////////
+//
+//			Dialog procedures
+//
+// **************************************************************************************
 
+INT_PTR CALLBACK ManConsoleDlgProc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+INT_PTR CALLBACK AboutDlgProc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 /////////////////////////////////////////////////////////////////////////////
 

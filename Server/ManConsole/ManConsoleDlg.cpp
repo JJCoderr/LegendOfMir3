@@ -2,169 +2,129 @@
 //
 
 #include "stdafx.h"
+
 #include "ManConsole.h"
-#include "ManConsoleDlg.h"
 
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#undef THIS_FILE
-static char THIS_FILE[] = __FILE__;
-#endif
+// **************************************************************************************
+//
+//			CAboutDlg dialog used for App About
+//
+// **************************************************************************************
 
-/////////////////////////////////////////////////////////////////////////////
-// CAboutDlg dialog used for App About
-
-class CAboutDlg : public CDialog
+INT_PTR CALLBACK AboutDlgProc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-public:
-	CAboutDlg();
-
-// Dialog Data
-	//{{AFX_DATA(CAboutDlg)
-	enum { IDD = IDD_ABOUTBOX };
-	//}}AFX_DATA
-
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CAboutDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
-
-// Implementation
-protected:
-	//{{AFX_MSG(CAboutDlg)
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
-};
-
-CAboutDlg::CAboutDlg() : CDialog(CAboutDlg::IDD)
-{
-	//{{AFX_DATA_INIT(CAboutDlg)
-	//}}AFX_DATA_INIT
-}
-
-void CAboutDlg::DoDataExchange(CDataExchange* pDX)
-{
-	CDialog::DoDataExchange(pDX);
-	//{{AFX_DATA_MAP(CAboutDlg)
-	//}}AFX_DATA_MAP
-}
-
-BEGIN_MESSAGE_MAP(CAboutDlg, CDialog)
-	//{{AFX_MSG_MAP(CAboutDlg)
-		// No message handlers
-	//}}AFX_MSG_MAP
-END_MESSAGE_MAP()
-
-/////////////////////////////////////////////////////////////////////////////
-// CManConsoleDlg dialog
-
-CManConsoleDlg::CManConsoleDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CManConsoleDlg::IDD, pParent)
-{
-	//{{AFX_DATA_INIT(CManConsoleDlg)
-		// NOTE: the ClassWizard will add member initialization here
-	//}}AFX_DATA_INIT
-	// Note that LoadIcon does not require a subsequent DestroyIcon in Win32
-	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
-}
-
-void CManConsoleDlg::DoDataExchange(CDataExchange* pDX)
-{
-	CDialog::DoDataExchange(pDX);
-	//{{AFX_DATA_MAP(CManConsoleDlg)
-		// NOTE: the ClassWizard will add DDX and DDV calls here
-	//}}AFX_DATA_MAP
-}
-
-BEGIN_MESSAGE_MAP(CManConsoleDlg, CDialog)
-	//{{AFX_MSG_MAP(CManConsoleDlg)
-	ON_WM_SYSCOMMAND()
-	ON_WM_PAINT()
-	ON_WM_QUERYDRAGICON()
-	//}}AFX_MSG_MAP
-END_MESSAGE_MAP()
-
-/////////////////////////////////////////////////////////////////////////////
-// CManConsoleDlg message handlers
-
-BOOL CManConsoleDlg::OnInitDialog()
-{
-	CDialog::OnInitDialog();
-
-	// Add "About..." menu item to system menu.
-
-	// IDM_ABOUTBOX must be in the system command range.
-	ASSERT((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
-	ASSERT(IDM_ABOUTBOX < 0xF000);
-
-	CMenu* pSysMenu = GetSystemMenu(FALSE);
-	if (pSysMenu != NULL)
+	switch (uMsg)
 	{
-		CString strAboutMenu;
-		strAboutMenu.LoadString(IDS_ABOUTBOX);
-		if (!strAboutMenu.IsEmpty())
+		case WM_INITDIALOG:
+			return TRUE;
+		case WM_COMMAND:
 		{
-			pSysMenu->AppendMenu(MF_SEPARATOR);
-			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
+			switch (LOWORD(wParam))
+			{
+				case IDOK:
+				case IDCANCEL:
+					return EndDialog(hWndDlg, LOWORD(wParam));
+			}
+
+			break;
 		}
 	}
 
-	// Set the icon for this dialog.  The framework does this automatically
-	//  when the application's main window is not a dialog
-	SetIcon(m_hIcon, TRUE);			// Set big icon
-	SetIcon(m_hIcon, FALSE);		// Set small icon
-	
-	// TODO: Add extra initialization here
-	
-	return TRUE;  // return TRUE  unless you set the focus to a control
+	return FALSE;
 }
 
-void CManConsoleDlg::OnSysCommand(UINT nID, LPARAM lParam)
+// **************************************************************************************
+//
+//			CManConsoleDlg dialog
+//
+// **************************************************************************************
+
+INT_PTR CALLBACK ManConsoleDlgProc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
+	switch (uMsg)
 	{
-		CAboutDlg dlgAbout;
-		dlgAbout.DoModal();
+		case WM_INITDIALOG:
+		{
+			g_hMainWnd = hWndDlg;
+
+			HICON hIcon = (HICON)LoadImage(g_hInst, MAKEINTRESOURCE(IDR_MAINFRAME), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE|LR_SHARED);
+
+			SendMessage(hWndDlg, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
+			SendMessage(hWndDlg, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIcon);
+
+			// Add "About..." menu item to system menu.
+
+			// IDM_ABOUTBOX must be in the system command range.
+			HMENU hSysMenu = GetSystemMenu(hWndDlg, FALSE);
+
+			if (hSysMenu != NULL)
+			{
+				TCHAR szAboutMenu[64];
+
+				LoadString(g_hInst, IDS_ABOUTBOX, szAboutMenu, sizeof(szAboutMenu) / sizeof(TCHAR));
+
+				if (szAboutMenu[0] != _T('\0'))
+				{
+					AppendMenu(hSysMenu, MF_SEPARATOR, 0, NULL);
+					AppendMenu(hSysMenu, MF_STRING, IDM_ABOUTBOX, szAboutMenu);
+				}
+			}
+
+			g_hLogMsgWnd = GetDlgItem(hWndDlg, IDC_LIST1);
+			g_hCommandWnd = GetDlgItem(hWndDlg, IDC_EDIT1);
+
+			ListView_SetExtendedListViewStyle(g_hLogMsgWnd, LVS_EX_FULLROWSELECT);
+
+			LV_COLUMN	lvc;
+			TCHAR		szText[64];
+
+			lvc.mask	= LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
+			lvc.fmt		= LVCFMT_LEFT;
+			lvc.cx		= 150;
+			lvc.pszText	= szText;
+
+			for (int i = 0; i < 3; i++)
+			{
+				lvc.iSubItem = i;
+				lvc.cx = (i == 2) ? 400 : 150;
+
+				LoadString(g_hInst, IDS_LVS_LABEL1 + i, szText, sizeof(szText) / sizeof(TCHAR));
+
+				ListView_InsertColumn(g_hLogMsgWnd, i, &lvc);
+			}
+
+			return TRUE;
+		}
+		case WM_SYSCOMMAND:
+		{
+			if ((wParam & 0xFFF0) == IDM_ABOUTBOX)
+			{
+				DialogBox(g_hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWndDlg, (DLGPROC)AboutDlgProc);
+
+				return TRUE;
+			}
+
+			break;
+		}
+		case WM_COMMAND:
+		{
+			switch (LOWORD(wParam))
+			{
+				case IDOK:
+				case IDCANCEL:
+					EndDialog(hWndDlg, LOWORD(wParam));
+					return TRUE;
+			}
+
+			break;
+		}
+		case WM_CLOSE:
+		{
+			EndDialog(hWndDlg, IDCANCEL);
+
+			return TRUE;
+		}
 	}
-	else
-	{
-		CDialog::OnSysCommand(nID, lParam);
-	}
-}
 
-// If you add a minimize button to your dialog, you will need the code below
-//  to draw the icon.  For MFC applications using the document/view model,
-//  this is automatically done for you by the framework.
-
-void CManConsoleDlg::OnPaint() 
-{
-	if (IsIconic())
-	{
-		CPaintDC dc(this); // device context for painting
-
-		SendMessage(WM_ICONERASEBKGND, (WPARAM) dc.GetSafeHdc(), 0);
-
-		// Center icon in client rectangle
-		int cxIcon = GetSystemMetrics(SM_CXICON);
-		int cyIcon = GetSystemMetrics(SM_CYICON);
-		CRect rect;
-		GetClientRect(&rect);
-		int x = (rect.Width() - cxIcon + 1) / 2;
-		int y = (rect.Height() - cyIcon + 1) / 2;
-
-		// Draw the icon
-		dc.DrawIcon(x, y, m_hIcon);
-	}
-	else
-	{
-		CDialog::OnPaint();
-	}
-}
-
-// The system calls this to obtain the cursor to display while the user drags
-//  the minimized window.
-HCURSOR CManConsoleDlg::OnQueryDragIcon()
-{
-	return (HCURSOR) m_hIcon;
+	return FALSE;
 }

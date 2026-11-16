@@ -7,6 +7,9 @@
 #define IDS_ABOUTBOX                    101
 #define IDD_MANCONSOLE_DIALOG           102
 #define IDP_SOCKETS_INIT_FAILED         103
+#define IDS_LVS_LABEL1                  104
+#define IDS_LVS_LABEL2                  105
+#define IDS_LVS_LABEL3                  106
 #define IDR_MAINFRAME                   128
 #define IDC_LIST1                       1000
 #define IDC_EDIT1                       1001

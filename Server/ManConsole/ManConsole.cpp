@@ -1,80 +1,113 @@
-// ManConsole.cpp : Defines the class behaviors for the application.
+// ManConsole.cpp : Defines the entry point for the application.
 //
 
 #include "stdafx.h"
+
 #include "ManConsole.h"
-#include "ManConsoleDlg.h"
 
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#undef THIS_FILE
-static char THIS_FILE[] = __FILE__;
-#endif
+// **************************************************************************************
 
-/////////////////////////////////////////////////////////////////////////////
-// CManConsoleApp
+INT	InitInstance(HINSTANCE hInstance);
 
-BEGIN_MESSAGE_MAP(CManConsoleApp, CWinApp)
-	//{{AFX_MSG_MAP(CManConsoleApp)
-		// NOTE - the ClassWizard will add and remove mapping macros here.
-		//    DO NOT EDIT what you see in these blocks of generated code!
-	//}}AFX_MSG
-	ON_COMMAND(ID_HELP, CWinApp::OnHelp)
-END_MESSAGE_MAP()
+// **************************************************************************************
+//
+//			Global Variables Definition
+//
+// **************************************************************************************
 
-/////////////////////////////////////////////////////////////////////////////
-// CManConsoleApp construction
+HINSTANCE	g_hInst = NULL;				// Application instance
+HWND		g_hMainWnd = NULL;			// Main dialog handle
+HWND		g_hLogMsgWnd = NULL;		// Log list view
+HWND		g_hCommandWnd = NULL;		// Command edit box
 
-CManConsoleApp::CManConsoleApp()
+static WSADATA	g_wsd;
+
+// **************************************************************************************
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	// TODO: add construction code here,
-	// Place all significant initialization in InitInstance
+	if (WSAStartup(MAKEWORD(2, 2), &g_wsd) != 0)
+	{
+		TCHAR szMsg[256];
+
+		LoadString(hInstance, IDP_SOCKETS_INIT_FAILED, szMsg, sizeof(szMsg) / sizeof(TCHAR));
+		MessageBox(NULL, szMsg, _MANCONSOLE_TITLE, MB_OK|MB_ICONERROR);
+
+		return (-1);
+	}
+
+	int nResponse = InitInstance(hInstance);
+
+	WSACleanup();
+
+	return (nResponse);
 }
 
-/////////////////////////////////////////////////////////////////////////////
-// The one and only CManConsoleApp object
+// **************************************************************************************
+//
+//			
+//
+// **************************************************************************************
 
-CManConsoleApp theApp;
-
-/////////////////////////////////////////////////////////////////////////////
-// CManConsoleApp initialization
-
-BOOL CManConsoleApp::InitInstance()
+INT InitInstance(HINSTANCE hInstance)
 {
-	if (!AfxSocketInit())
+	INITCOMMONCONTROLSEX	icex;
+
+	icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+	icex.dwICC = ICC_LISTVIEW_CLASSES | ICC_BAR_CLASSES;
+
+	InitCommonControlsEx(&icex);
+
+	g_hInst = hInstance;
+
+	// The main window is the dialog template itself, so the application
+	// is driven by the dialog's own message loop.
+	return (INT)DialogBox(g_hInst, MAKEINTRESOURCE(IDD_MANCONSOLE_DIALOG), NULL, (DLGPROC)ManConsoleDlgProc);
+}
+
+// **************************************************************************************
+//
+//			
+//
+// **************************************************************************************
+
+int AddNewLogMsg()
+{
+	LV_ITEM		lvi;
+	TCHAR		szText[64];
+
+	int nCount = ListView_GetItemCount(g_hLogMsgWnd);
+
+	if (nCount >= 100)
 	{
-		AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
-		return FALSE;
+		ListView_DeleteItem(g_hLogMsgWnd, 0);
+		nCount--;
 	}
 
-	AfxEnableControlContainer();
+	lvi.mask		= LVIF_TEXT;
+	lvi.iItem		= nCount;
+	lvi.iSubItem	= 0;
 
-	// Standard initialization
-	// If you are not using these features and wish to reduce the size
-	//  of your final executable, you should remove from the following
-	//  the specific initialization routines you do not need.
+	_tstrdate(szText);
 
-#ifdef _AFXDLL
-	Enable3dControls();			// Call this when using MFC in a shared DLL
-#else
-	Enable3dControlsStatic();	// Call this when linking to MFC statically
+	lvi.pszText = szText;
+
+	ListView_InsertItem(g_hLogMsgWnd, &lvi);
+
+	_tstrtime(szText);
+
+	ListView_SetItemText(g_hLogMsgWnd, nCount, 1, szText);
+
+	return nCount;
+}
+
+void InsertLogMsg(LPCTSTR lpszMsg)
+{
+	int nCount = AddNewLogMsg();
+
+	ListView_SetItemText(g_hLogMsgWnd, nCount, 2, (LPTSTR)lpszMsg);
+
+#ifdef _DEBUG
+	_RPT1(_CRT_WARN, "%ls\n", lpszMsg);
 #endif
-
-	CManConsoleDlg dlg;
-	m_pMainWnd = &dlg;
-	int nResponse = dlg.DoModal();
-	if (nResponse == IDOK)
-	{
-		// TODO: Place code here to handle when the dialog is
-		//  dismissed with OK
-	}
-	else if (nResponse == IDCANCEL)
-	{
-		// TODO: Place code here to handle when the dialog is
-		//  dismissed with Cancel
-	}
-
-	// Since the dialog has been closed, return FALSE so that we exit the
-	//  application, rather than start the application's message pump.
-	return FALSE;
 }

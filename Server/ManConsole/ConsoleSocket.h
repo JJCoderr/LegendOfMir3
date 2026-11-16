@@ -7,34 +7,41 @@
 // ConsoleSocket.h : header file
 //
 
-
-
 /////////////////////////////////////////////////////////////////////////////
-// CConsoleSocket command target
+// CConsoleSocket
+//
+// Blocking socket wrapper used by the console to talk to the game servers.
 
-class CConsoleSocket : public CAsyncSocket
+class CConsoleSocket
 {
 // Attributes
 public:
+	SOCKET	GetSocket() const						{ return m_hSocket; }
+	BOOL	IsValid() const							{ return (m_hSocket != INVALID_SOCKET); }
+	operator SOCKET() const							{ return m_hSocket; }
 
 // Operations
 public:
 	CConsoleSocket();
 	virtual ~CConsoleSocket();
 
-// Overrides
-public:
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CConsoleSocket)
-	//}}AFX_VIRTUAL
+	BOOL	Create(UINT nSocketPort = 0, int nSocketType = SOCK_STREAM, LPCTSTR lpszSocketAddress = NULL);
+	BOOL	Connect(LPCTSTR lpszHostAddress, UINT nHostPort);
+	BOOL	Connect(const SOCKADDR* lpSockAddr, int nSockAddrLen);
+	BOOL	Bind(const SOCKADDR* lpSockAddr, int nSockAddrLen);
+	BOOL	Listen(int nConnectionBacklog = 5);
+	BOOL	Accept(CConsoleSocket& rConnectedSocket);
+	BOOL	Attach(SOCKET hSocket);
+	SOCKET	Detach();
+	void	Close();
 
-	// Generated message map functions
-	//{{AFX_MSG(CConsoleSocket)
-		// NOTE - the ClassWizard will add and remove member functions here.
-	//}}AFX_MSG
+	int		Receive(void* lpBuf, int nBufLen, int nFlags = 0);
+	int		Send(const void* lpBuf, int nBufLen, int nFlags = 0);
+	BOOL	ShutDown(int nHow = SD_SEND);
 
 // Implementation
 protected:
+	SOCKET	m_hSocket;
 };
 
 /////////////////////////////////////////////////////////////////////////////
