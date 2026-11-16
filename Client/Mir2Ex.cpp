@@ -32,7 +32,8 @@ public:
     void Load(bool expanded, int chatMode, bool exitDialog, int groupPanel) {
         capturePath = chatMode == 1 ? "hud-group.bmp" : chatMode == 2 ? "hud-guild.bmp" : expanded ? "hud-expanded.bmp" : "hud-collapsed.bmp";
         if (exitDialog) capturePath = "hud-exit.bmp";
-        if (groupPanel) capturePath = groupPanel==2 ? "group-create.bmp" : groupPanel==3 ? "group-invite.bmp" : groupPanel==4 ? "group-remove.bmp" : "group-panel.bmp";
+        if (groupPanel>0 && groupPanel<5) capturePath = groupPanel==2 ? "group-create.bmp" : groupPanel==3 ? "group-invite.bmp" : groupPanel==4 ? "group-remove.bmp" : "group-panel.bmp";
+        if (groupPanel>=5) capturePath = groupPanel==5 ? "guild-overview.bmp" : groupPanel==6 ? "guild-members.bmp" : "guild-notice.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
         g_xGameProc.m_xInterface.CreateInterface(&g_xGameProc.m_xImage);
@@ -55,7 +56,7 @@ public:
             g_xGameProc.m_xInterface.OnLButtonDown(toggle);
             g_xGameProc.m_xInterface.OnLButtonUp(toggle);
         }
-        if (groupPanel) {
+        if (groupPanel>0 && groupPanel<5) {
             lstrcpyA(g_szCharName,"MirPreview");
             for (int i=0;i<6;++i) {
                 CGroupMember* member = new CGroupMember;
@@ -85,6 +86,17 @@ public:
                 }
                 ui.OnLButtonDown(button); ui.OnLButtonUp(button);
             }
+        }
+        if (groupPanel>=5) {
+            auto& guild=g_xGameProc.m_xInterface.m_xGuildWnd;
+            guild.m_name="Preview Guild";
+            guild.m_pages[0].push_back("Native CLIENT guild overview");
+            guild.m_pages[1].push_back("Leader: MirPreview");
+            guild.m_pages[1].push_back("Member: WarriorPreview");
+            guild.m_pages[2].push_back("Guild notice preview");
+            g_xGameProc.m_xInterface.WindowActivate(_WND_ID_GUILD);
+            POINT tab={145+(groupPanel-5)*50,412};
+            guild.OnLButtonDown(tab); guild.OnLButtonUp(tab);
         }
         if (exitDialog) {
             POINT button = {10,542};
@@ -251,7 +263,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const int previewGroup = strcmp(lpCmdLine,"--preview=group-panel")==0 ? 1 :
         strcmp(lpCmdLine,"--preview=group-create")==0 ? 2 :
         strcmp(lpCmdLine,"--preview=group-invite")==0 ? 3 :
-        strcmp(lpCmdLine,"--preview=group-remove")==0 ? 4 : 0;
+        strcmp(lpCmdLine,"--preview=group-remove")==0 ? 4 :
+        strcmp(lpCmdLine,"--preview=guild-overview")==0 ? 5 :
+        strcmp(lpCmdLine,"--preview=guild-members")==0 ? 6 :
+        strcmp(lpCmdLine,"--preview=guild-notice")==0 ? 7 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

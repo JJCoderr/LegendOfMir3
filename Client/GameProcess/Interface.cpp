@@ -1783,6 +1783,7 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 BOOL CInterface::OnScrollDown()
 {
     if (m_xMsgBox.IsActive()) return TRUE;
+    if (IsTopWindow(_WND_ID_GUILD)) { m_xGuildWnd.OnScrollDown(); return TRUE; }
 	if ( IsTopWindow(m_xInventoryWnd.m_nID) )
 	{
 		m_xInventoryWnd.OnScrollDown();
@@ -1816,6 +1817,7 @@ BOOL CInterface::OnScrollDown()
 BOOL CInterface::OnScrollUp()
 {
     if (m_xMsgBox.IsActive()) return TRUE;
+    if (IsTopWindow(_WND_ID_GUILD)) { m_xGuildWnd.OnScrollUp(); return TRUE; }
 	if ( IsTopWindow(m_xInventoryWnd.m_nID) )
 	{
 		m_xInventoryWnd.OnScrollUp();

@@ -1,14 +1,19 @@
 #ifndef _CGUILDWND_H
 #define _CGUILDWND_H
+#include <string>
+#include <vector>
 
 
 class CGuildWnd : public CGameWnd
 { 
 private:
 protected:
-	CGameBtn				m_xGuildBtn[5];
+    int ButtonAt(POINT point);
 
 public:
+    std::string m_name;
+    std::vector<std::string> m_pages[3];
+    int m_tab = 0, m_pressed = -1, m_first = 0;
 	CGuildWnd();
 	~CGuildWnd();
 
