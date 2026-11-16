@@ -39,6 +39,7 @@ public:
         if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
         if (groupPanel==30 || groupPanel==31) capturePath=groupPanel==30?"mount-panel.bmp":"mount-hint.bmp";
         if (groupPanel>=32 && groupPanel<=36) capturePath=groupPanel==36?"trade-return.bmp":groupPanel==35?"trade-gold.bmp":groupPanel==32?"trade-empty.bmp":groupPanel==33?"trade-list.bmp":"trade-confirmed.bmp";
+        if (groupPanel==39) capturePath="quick-binding.bmp";
         if (groupPanel==37 || groupPanel==38) capturePath=groupPanel==37?"quick-empty.bmp":"quick-items.bmp";
         if (groupPanel==11) capturePath="options-panel.bmp";
         if (groupPanel>=15 && groupPanel<=19) capturePath=groupPanel==19?"status-equipment.bmp":groupPanel==18?"status-identity.bmp":groupPanel==16?"status-elements.bmp":groupPanel==17?"status-tooltip.bmp":"status-panel.bmp";
@@ -514,6 +515,44 @@ public:
                     opened,repeat,hidden,buttons,stray,onFoot,riding,hint,pressedHint,released,covered,moved,closed); fclose(report);
             }
         }
+        if (groupPanel==39) {
+            auto& ui=g_xGameProc.m_xInterface; auto& bag=ui.m_xInventoryWnd; auto& quick=ui.m_xQuickWnd; auto& held=ui.m_stCommonItem;
+            ui.WindowActivate(_WND_ID_INVENTORY); ui.OnKeyDown('Z',0);
+            auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY]; icons.NewLoad("./Data/Inventory.wil");
+            CItem items[2]; int found=0;
+            for (int icon=0;icon<100 && found<2;++icon) if (icons.NewSetIndex(icon) && icons.m_lpstNewCurrWilImageInfo->shWidth>0 && icons.m_lpstNewCurrWilImageInfo->shWidth<=38 && icons.m_lpstNewCurrWilImageInfo->shHeight<=38) {
+                CLIENTITEMRCD record={}; record.nMakeIndex=2000+found; record.stStdItem.wLooks=icon; record.stStdItem.bStdMode=found?3:0;
+                wsprintfA(record.stStdItem.szName,"QuickPreview%d",found); items[found].SetItem(record,found); bag.AddInvenItem(items[found],found,TRUE); ++found;
+            }
+            const auto count=[&]() { int total=0; for (const auto& entry:bag.m_stInventoryItem) if (entry.bSetted) ++total; return total; };
+            bag.SetCommonFromInven(0,&held);
+            const bool bound=quick.Release(0)==1068 && count()==2 && !held.bSetted && quick.slots[0].item.m_stItemInfo.nMakeIndex==2000;
+            const bool picked=quick.Release(0)==0 && quick.heldSlot==0 && held.bIsBeltItem && count()==2 && !quick.slots[0].present;
+            const bool moved=quick.Release(1)==0 && !held.bSetted && quick.heldSlot==-1 && quick.slots[1].present && count()==2;
+            bag.SetCommonFromInven(0,&held);
+            const bool duplicate=quick.Release(2)==1067 && held.bSetted && count()==1 && !quick.slots[2].present;
+            const bool same=quick.Release(1)==1069 && held.xItem.m_stItemInfo.nMakeIndex==2000;
+            bag.SetInvenFromCommon(0,&held);
+            bag.SetCommonFromInven(1,&held);
+            const bool swapped=quick.Release(1)==0 && quick.slots[1].item.m_stItemInfo.nMakeIndex==2001 && quick.heldSlot==1 && held.xItem.m_stItemInfo.nMakeIndex==2000 && count()==2;
+            quick.Release(2); quick.Release(2);
+            ui.OnLButtonDown(POINT{550,80}); ui.OnLButtonUp(POINT{550,80});
+            const bool discarded=quick.heldSlot==-1 && !held.bSetted && !quick.slots[2].present && count()==2;
+            bag.SetCommonFromInven(0,&held);
+            held.bWaitResponse=TRUE; const bool pending=quick.Release(0)==-1 && held.bSetted; held.bWaitResponse=FALSE;
+            held.bIsEquipItem=TRUE; const bool equipment=quick.Release(0)==-1; held.bIsEquipItem=FALSE;
+            held.xItem.m_stItemInfo.stStdItem.bStdMode=5; const bool type=quick.Release(0)==-1; held.xItem.m_stItemInfo.stStdItem.bStdMode=0;
+            ui.OnLButtonDown(POINT{95,425}); ui.OnLButtonUp(POINT{95,425});
+            const bool routed=quick.slots[0].present && !held.bSetted && count()==2;
+            for (int i=2;i<_MAX_INVEN_ITEM;++i) bag.AddInvenItem(items[0],i,TRUE);
+            held.bSetted=TRUE; held.xItem=items[0]; lstrcpyA(held.xItem.m_stItemInfo.stStdItem.szName,"NoRoom");
+            const bool full=quick.Release(3)==-1 && held.bSetted && count()==_MAX_INVEN_ITEM && !quick.slots[3].present;
+            ZeroMemory(&held,sizeof(held)); for (int i=2;i<_MAX_INVEN_ITEM;++i) bag.DeleteInvenItem(i);
+            if (FILE* report=fopen("quick-binding-check.txt","wb")) {
+                fprintf(report,"bound=%d picked_reference=%d moved=%d duplicate=%d same=%d swapped=%d discarded_reference=%d pending=%d equipment=%d type=%d routed=%d full_rollback=%d\n",
+                    bound,picked,moved,duplicate,same,swapped,discarded,pending,equipment,type,routed,full); fclose(report);
+            }
+        }
         if (groupPanel==37 || groupPanel==38) {
             auto& ui=g_xGameProc.m_xInterface; auto& quick=ui.m_xQuickWnd;
             ui.OnKeyDown('Z',0); const bool opened=quick.GetGameWndActive()!=FALSE;
@@ -888,7 +927,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=trade-gold")==0 ? 35 :
         strcmp(lpCmdLine,"--preview=trade-return")==0 ? 36 :
         strcmp(lpCmdLine,"--preview=quick-empty")==0 ? 37 :
-        strcmp(lpCmdLine,"--preview=quick-items")==0 ? 38 : 0;
+        strcmp(lpCmdLine,"--preview=quick-items")==0 ? 38 :
+        strcmp(lpCmdLine,"--preview=quick-binding")==0 ? 39 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

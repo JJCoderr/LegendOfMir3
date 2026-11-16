@@ -1,11 +1,58 @@
 #include "StdAfx.h"
 #include "Common/LegacyPanel.h"
 #include <cmath>
+#include "Common/LoginMessages.h"
 
 void CQuickWnd::Init()
 {
-    CGameWnd::Init(); closePressed=backgroundPressed=false;
+    CGameWnd::Init(); closePressed=backgroundPressed=false; heldSlot=-1; heldReference=Slot{};
     for (auto& slot:slots) slot=Slot{};
+}
+CQuickWnd::Slot CQuickWnd::FromItem(const CItem& item)
+{
+    Slot result; result.present=true; result.icon=item.m_stItemInfo.stStdItem.wLooks;
+    result.count=1; result.item=item; return result;
+}
+int CQuickWnd::Find(const char* name) const
+{
+    for (int i=0;i<6;++i) if (slots[i].present && !strcmp(slots[i].item.m_stItemInfo.stStdItem.szName,name)) return i;
+    return -1;
+}
+void CQuickWnd::ClearHeldReference()
+{
+    if (heldSlot<0) return;
+    ZeroMemory(&g_xGameProc.m_xInterface.m_stCommonItem,sizeof(COMMONITEMSET));
+    heldSlot=-1; heldReference=Slot{};
+}
+int CQuickWnd::Release(int slot)
+{
+    auto& ui=g_xGameProc.m_xInterface; auto& held=ui.m_stCommonItem;
+    if (slot<0 || slot>=6 || held.bWaitResponse) return -1;
+    const auto take=[&](const Slot& source) {
+        heldReference=source; heldSlot=slot;
+        ZeroMemory(&held,sizeof(held)); held.bSetted=held.bIsBeltItem=TRUE;
+        held.xItem=source.item; held.xItem.m_shCellNum=slot;
+    };
+    if (!held.bSetted) {
+        if (!slots[slot].present) return -1;
+        take(slots[slot]); slots[slot]=Slot{}; return 0;
+    }
+    static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
+    const auto& record=held.xItem.m_stItemInfo;
+    if (held.bIsEquipItem || !strcmp(record.stStdItem.szName,captions.Get(1050).c_str()) ||
+        (record.stStdItem.bStdMode!=0 && record.stStdItem.bStdMode!=3)) return -1;
+    const bool fromQuick=heldSlot>=0;
+    const Slot incoming=fromQuick?heldReference:FromItem(held.xItem);
+    if (slots[slot].present) {
+        if (!strcmp(slots[slot].item.m_stItemInfo.stStdItem.szName,record.stStdItem.szName)) return 1069;
+        if (!fromQuick && !ui.m_xInventoryWnd.AddInvenItem(held.xItem,-1,FALSE)) return -1;
+        const Slot previous=slots[slot]; slots[slot]=incoming; take(previous); return 0;
+    }
+    if (Find(record.stStdItem.szName)>=0) return 1067;
+    if (!fromQuick && !ui.m_xInventoryWnd.AddInvenItem(held.xItem,slot,TRUE)) return -1;
+    slots[slot]=incoming;
+    ZeroMemory(&held,sizeof(held)); heldSlot=-1; heldReference=Slot{};
+    return fromQuick?0:1068;
 }
 int CQuickWnd::SlotAt(POINT point) const
 {
@@ -31,7 +78,23 @@ BOOL CQuickWnd::OnLButtonUp(POINT point)
 {
     const bool close=closePressed && CloseHit(point),captured=backgroundPressed || closePressed;
     closePressed=backgroundPressed=false;
-    if (!captured && SlotAt(point)>=0) g_xGameProc.m_xInterface.m_xExchangeWnd.CancelReturn();
+    const int slot=SlotAt(point);
+    if (!captured && slot>=0) {
+        auto& ui=g_xGameProc.m_xInterface; auto& trade=ui.m_xExchangeWnd;
+        if (trade.pendingSlot<0 && trade.returnSlot>=0) trade.CancelReturn();
+        else if (trade.pendingSlot<0) {
+            const CItem sound=ui.m_stCommonItem.bSetted?ui.m_stCommonItem.xItem:slots[slot].item;
+            const int result=Release(slot);
+            if (result>0) {
+                static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
+                std::string text=captions.Get(result);
+                auto at=text.find("%s"); if (at!=std::string::npos) text.replace(at,2,sound.m_stItemInfo.stStdItem.szName);
+                at=text.find("%d"); if (at!=std::string::npos) text.replace(at,2,std::to_string(slot+1));
+                ui.MsgAdd(11861940,0,const_cast<char*>(text.c_str()));
+            }
+            if (result==0 || result==1068) g_xSound.PlayItemEffect(sound.m_stItemInfo.stStdItem.bStdMode,0,sound.m_stItemInfo.stStdItem.szName);
+        }
+    }
     return close;
 }
 void CQuickWnd::ShowQuickWnd()
