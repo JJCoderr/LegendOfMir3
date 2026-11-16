@@ -193,7 +193,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xInterBtn[5].CreateGameBtn(m_pxInterImg, 1180, 1181, 706, 475, _BTN_TYPE_FOCUS);	// 队伍.
 	m_xInterBtn[6].CreateGameBtn(m_pxInterImg, 1182, 1183, 674, 478, _BTN_TYPE_FOCUS);	// 行会.
 
-	m_xInterBtn[ 7].CreateGameBtn(m_pxInterImg, 52, 53, m_rcMain.left+397, m_rcMain.top+13);	// 腰带 UP, DOWN.
+	m_xInterBtn[7].CreateGameBtn(m_pxInterImg,1168,1168,619,472);	// 腰带 UP, DOWN.
 
 	m_xInterBtn[8].CreateGameBtn(m_pxInterImg, 1184, 1185, 739, 500, _BTN_TYPE_FOCUS);	// 技能窗口。
 	m_xInterBtn[9].CreateGameBtn(m_pxInterImg, 1190, 1191, 742, 528, _BTN_TYPE_FOCUS);	// 聊天弹窗.
@@ -253,7 +253,7 @@ VOID CInterface::MsgAdd(DWORD dwFontColor, DWORD dwFontBackColor, CHAR* pszMsg)
 			for ( nCnt = 0; nCnt < nLineCnt; nCnt++ )
 			{
 				// 格子进入下一格的条件.
-				if ( m_xChat.GetCounter() - m_nFstLine == _MAX_CHATLINE )
+				if ( m_xChat.GetCounter() - m_nFstLine == ChatRows() )
 				{
 					m_nFstLine++;
 				}
@@ -369,6 +369,17 @@ VOID CInterface::ShowWndList()
 	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
+void CInterface::LayoutChat()
+{
+    const int top = m_chatExpanded ? 320 : 492;
+    SetRect(&m_rcChat,189,top,m_chatExpanded ? 618 : 530,top+ChatRows()*15);
+    g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+185,
+        g_xMainWnd.m_rcWindow.top+(m_chatExpanded ? 534 : 575),
+        m_chatExpanded ? 432 : 344,15,TRUE);
+    m_xInterBtn[_BTN_ID_BELT].ChangeRect(619,m_chatExpanded ? 305 : 472);
+    m_nFstLine = max(0,m_xChat.GetCounter()-ChatRows());
+}
+
 VOID CInterface::ShowChatList()
 {
 	if ( !m_xChat.CheckEmpty() )
@@ -379,7 +390,7 @@ VOID CInterface::ShowChatList()
 		m_xChat.MoveCurrentToTop();
 		m_xChat.MoveNode(m_nFstLine);
 
-		nShowLine = ((m_xChat.GetCounter() - m_nFstLine ) >= _MAX_CHATLINE) ?  _MAX_CHATLINE : m_xChat.GetCounter() - m_nFstLine;
+		nShowLine = min(ChatRows(),m_xChat.GetCounter()-m_nFstLine);
 		
 		for ( nCnt = 0; nCnt < nShowLine; nCnt++ )
 		{
@@ -415,6 +426,10 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 	ShowBeltItem();
 
 	// 主界面.
+    if (m_chatExpanded) {
+        RECT backing = {185,317,618,530};
+        DrawLegacyPanel(backing,RGB(30,30,30),150,0,false);
+    }
 	if ( m_pxInterImg->NewSetIndex(_WNDIMGIDX_MAIN) )
 	{
  		g_xMainWnd.DrawWithImageForCompClipRgn(m_rcMain.left, m_rcMain.top,	m_rcMain.right-m_rcMain.left, m_rcMain.bottom-m_rcMain.top,
@@ -422,9 +437,9 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 	}
 
 	// 聊天列表.
-    if (m_pxInterImg->NewSetIndex(1161)) {
+    if (m_pxInterImg->NewSetIndex(m_chatExpanded ? 1162 : 1161)) {
         const auto& skin = *m_pxInterImg->m_lpstNewCurrWilImageInfo;
-        g_xMainWnd.DrawWithImageForComp(178,448,skin.shWidth,skin.shHeight,
+        g_xMainWnd.DrawWithImageForComp(178,m_chatExpanded ? 281 : 448,skin.shWidth,skin.shHeight,
             (WORD*)m_pxInterImg->m_pbCurrImage);
     }
 	ShowChatList();
@@ -601,7 +616,7 @@ VOID CInterface::ShowGameStatus()
     const char levelFace[] = {char(0xb1),char(0xbc),char(0xb8),char(0xb2),0};
     const char normalFace[] = {char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
     sprintf(pszBuff,"%d",ability.bLevel);
-    centeredText(RECT{393,466,409,482},0x00e1e1,
+    centeredText(m_chatExpanded ? RECT{393,298,409,314} : RECT{393,466,409,482},0x00e1e1,
         g_xMainWnd.CreateGameFont(levelFace,8,0,FW_BOLD));
 
     sprintf(pszBuff,"%s : [%d,%d]",g_xGameProc.m_szMapName,
@@ -1499,26 +1514,9 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 				case _BTN_ID_BAG:		WindowActivate(_WND_ID_INVENTORY);				break;
 				case _BTN_ID_MUGONG:	m_bShowKey = !m_bShowKey;						break;
 				case _BTN_ID_BELT:
-					{
-						if ( m_shBeltHeight >= 46 )	
-						{
-							m_shBeltHeight = 46;
-						}
-						else if ( m_shBeltHeight <= 0 )		
-						{
-							m_shBeltHeight = 0;
-						}
-
-						if ( m_shBeltHeight == 46 )
-						{
-							m_bBeltState = _BELT_STATE_DOWN;
-						}
-						else if ( m_shBeltHeight == 0 )
-						{
-							m_bBeltState = _BELT_STATE_UP;
-						}
-					}
-					break;
+                    m_chatExpanded = !m_chatExpanded;
+                    LayoutChat();
+                    break;
 				case _BTN_ID_EXIT:
 					{
 						CHAR	  szMsg[MAX_PATH];

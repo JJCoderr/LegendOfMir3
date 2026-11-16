@@ -7,6 +7,9 @@ class CInterface
 { 
 public:
     bool m_primaryStat[2] = {true,true};
+    bool m_chatExpanded = false;
+    void LayoutChat();
+    int ChatRows() const { return m_chatExpanded ? 14 : 5; }
     CWHWilImageData m_portraits;
 	 CInterface();
 	~CInterface();
