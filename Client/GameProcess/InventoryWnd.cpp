@@ -1296,21 +1296,21 @@ void CInventoryWnd::UpdateStackCount(DWORD instance,WORD quantity)
 {
     auto& ui=g_xGameProc.m_xInterface;auto& held=ui.m_stCommonItem;auto& quick=ui.m_xQuickWnd;
     if(held.bSetted && quick.heldSlot<0 && DWORD(held.xItem.m_stItemInfo.nMakeIndex)==instance)
-        held.xItem.m_count=quantity;
+        held.xItem.SetCount(quantity);
     for(auto& slot:m_stInventoryItem) {
         if(!slot.bSetted || DWORD(slot.xItem.m_stItemInfo.nMakeIndex)!=instance) continue;
-        auto& item=slot.xItem;const char* name=item.m_stItemInfo.stStdItem.szName;
+        auto& item=slot.xItem;const char* name=item.Name();
         if(quantity>item.m_count) {
             static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
             std::string message=captions.Get(1707);
             auto at=message.find("%s");if(at!=std::string::npos) message.replace(at,2,name);
             at=message.find("%d");if(at!=std::string::npos) message.replace(at,2,std::to_string(quantity-item.m_count));
             ui.MsgAdd(11861940,0,const_cast<char*>(message.c_str()));
-            g_xSound.PlayItemEffect(item.m_stItemInfo.stStdItem.bStdMode,0,name);
+            g_xSound.PlayItemEffect(item.m_stItemInfo.stStdItem.bStdMode,item.m_serverRecord[31],name);
         }
-        item.m_count=quantity;
+        item.SetCount(quantity);
         const int index=quick.Find(name);
-        if(index>=0) {quick.slots[index].count=quantity;quick.slots[index].item.m_count=quantity;}
+        if(index>=0) {quick.slots[index].count=quantity;quick.slots[index].item.SetCount(quantity);}
         break;
     }
 }

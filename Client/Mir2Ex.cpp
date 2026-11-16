@@ -1701,6 +1701,28 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel==121) {
+            auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[100]={};memcpy(raw,"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234",30);raw[31]=106;raw[61]=2;raw[62]=0x34;raw[63]=0x12;raw[66]=0xE8;raw[67]=3;raw[68]=0xD0;raw[69]=7;raw[71]=25;
+            const auto receive=[&](int length) {
+                _TDEFAULTMESSAGE packet={};packet.wIdent=SM_ADDITEM;
+                char encoded[256]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));fnEncode6BitBuf(raw,encoded+DEFBLOCKSIZE,length,sizeof(encoded)-DEFBLOCKSIZE);
+                g_xGameProc.OnSocketMessageRecieve(encoded);
+            };
+            receive(99);const bool truncated=!bag.m_stInventoryItem[0].bSetted;
+            receive(100);auto& item=bag.m_stInventoryItem[0].xItem;
+            const bool decoded=bag.m_stInventoryItem[0].bSetted && item.m_stItemInfo.nMakeIndex==0x1234 && item.m_count==25 && item.m_stackMode==2;
+            const bool fullName=strlen(item.Name())==30 && !memcmp(item.Name(),raw,30);
+            const bool retained=!memcmp(item.m_serverRecord,raw,100) && item.m_stItemInfo.nDura==1000 && item.m_stItemInfo.nDuraMax==2000;
+            ui.m_xQuickWnd.slots[0]=CQuickWnd::FromItem(item);bag.UpdateStackCount(0x1234,300);
+            const bool count=item.m_serverRecord[71]==44 && item.m_serverRecord[72]==1 && ui.m_xQuickWnd.slots[0].item.m_serverRecord[72]==1;
+            const bool quick=ui.m_xQuickWnd.Find("ABCDEFGHIJKLMNOPQRSTUVWXYZ1234")==0;
+            raw[0]=0;receive(100);const bool empty=!bag.m_stInventoryItem[1].bSetted;
+            ui.WindowActivate(_WND_ID_INVENTORY);ui.WindowActivate(_WND_ID_QUICK);capturePath="item-record-reply.bmp";
+            if(FILE* report=fopen("item-record-check.txt","wb")) {fprintf(report,"truncated=%d decoded=%d full_name=%d retained=%d count=%d quick=%d empty=%d\n",truncated,decoded,fullName,retained,count,quick,empty);fclose(report);}
+        }
+
         if(groupPanel==120) {
             auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;auto& quick=ui.m_xQuickWnd;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -1994,6 +2016,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=item-record-reply")==0 ? 121 :
         strcmp(lpCmdLine,"--preview=item-stack-reply")==0 ? 120 :
         strcmp(lpCmdLine,"--preview=item-use-confirmed")==0 ? 119 :
         strcmp(lpCmdLine,"--preview=human-hit-server")==0 ? 118 :

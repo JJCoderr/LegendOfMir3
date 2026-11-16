@@ -27,11 +27,27 @@ CItem::~CItem()
 }
 
 
+bool CItem::SetMir3Item(const BYTE* record,SHORT cell)
+{
+    if(!record[0]) return false;
+    const auto word=[&](int offset) {return WORD(record[offset]|(WORD(record[offset+1])<<8));};
+    CLIENTITEMRCD legacy={};
+    memcpy(legacy.stStdItem.szName,record,sizeof(legacy.stStdItem.szName)-1);
+    legacy.stStdItem.bStdMode=record[30];legacy.stStdItem.bShape=record[31];
+    legacy.stStdItem.wLooks=word(36);
+    legacy.nMakeIndex=DWORD(word(62))|(DWORD(word(64))<<16);
+    legacy.nDura=word(66);legacy.nDuraMax=word(68);
+    SetItem(legacy,cell);
+    memcpy(m_serverRecord,record,sizeof(m_serverRecord));memcpy(m_serverName,record,30);m_serverName[30]=0;
+    m_stackMode=record[61];m_count=word(71);return true;
+}
+
 BOOL CItem::SetItem(CLIENTITEMRCD stItemInfo, SHORT shInventoryNum)
 {
 	m_stItemInfo = stItemInfo;
 	m_shCellNum = shInventoryNum;
     m_bAttr=_U_UNEQUIP; m_count=1; m_stackMode=0;
+    ZeroMemory(m_serverRecord,sizeof(m_serverRecord));ZeroMemory(m_serverName,sizeof(m_serverName));
 /*
 a:ÎäÆ÷
 b:ÒÂ·þ

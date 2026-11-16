@@ -15,7 +15,7 @@ CQuickWnd::Slot CQuickWnd::FromItem(const CItem& item)
 }
 int CQuickWnd::Find(const char* name) const
 {
-    for (int i=0;i<6;++i) if (slots[i].present && !strcmp(slots[i].item.m_stItemInfo.stStdItem.szName,name)) return i;
+    for (int i=0;i<6;++i) if (slots[i].present && !strcmp(slots[i].item.Name(),name)) return i;
     return -1;
 }
 void CQuickWnd::ClearHeldReference()
@@ -39,16 +39,16 @@ int CQuickWnd::Release(int slot)
     }
     static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
     const auto& record=held.xItem.m_stItemInfo;
-    if (held.bIsEquipItem || !strcmp(record.stStdItem.szName,captions.Get(1050).c_str()) ||
+    if (held.bIsEquipItem || !strcmp(held.xItem.Name(),captions.Get(1050).c_str()) ||
         (record.stStdItem.bStdMode!=0 && record.stStdItem.bStdMode!=3)) return -1;
     const bool fromQuick=heldSlot>=0;
     const Slot incoming=fromQuick?heldReference:FromItem(held.xItem);
     if (slots[slot].present) {
-        if (!strcmp(slots[slot].item.m_stItemInfo.stStdItem.szName,record.stStdItem.szName)) return 1069;
+        if (!strcmp(slots[slot].item.Name(),held.xItem.Name())) return 1069;
         if (!fromQuick && !ui.m_xInventoryWnd.AddInvenItem(held.xItem,-1,FALSE)) return -1;
         const Slot previous=slots[slot]; slots[slot]=incoming; take(previous); return 0;
     }
-    if (Find(record.stStdItem.szName)>=0) return 1067;
+    if (Find(held.xItem.Name())>=0) return 1067;
     if (!fromQuick && !ui.m_xInventoryWnd.AddInvenItem(held.xItem,slot,TRUE)) return -1;
     slots[slot]=incoming;
     ZeroMemory(&held,sizeof(held)); heldSlot=-1; heldReference=Slot{};
@@ -88,11 +88,11 @@ BOOL CQuickWnd::OnLButtonUp(POINT point)
             if (result>0) {
                 static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
                 std::string text=captions.Get(result);
-                auto at=text.find("%s"); if (at!=std::string::npos) text.replace(at,2,sound.m_stItemInfo.stStdItem.szName);
+                auto at=text.find("%s"); if (at!=std::string::npos) text.replace(at,2,sound.Name());
                 at=text.find("%d"); if (at!=std::string::npos) text.replace(at,2,std::to_string(slot+1));
                 ui.MsgAdd(11861940,0,const_cast<char*>(text.c_str()));
             }
-            if (result==0 || result==1068) g_xSound.PlayItemEffect(sound.m_stItemInfo.stStdItem.bStdMode,0,sound.m_stItemInfo.stStdItem.szName);
+            if (result==0 || result==1068) g_xSound.PlayItemEffect(sound.m_stItemInfo.stStdItem.bStdMode,sound.m_serverRecord[31],sound.Name());
         }
     }
     return close;

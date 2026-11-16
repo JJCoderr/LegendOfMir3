@@ -2907,7 +2907,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			}
 			case SM_WINEXP:
 			{
-				CHAR szExp[MAX_PATH];											
+				CHAR szExp[MAX_PATH];
 				
 				m_xMyHero.m_stAbility.dwExp = tdm.nRecog;
 				
@@ -3046,7 +3046,24 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
                 if(!pszMsg[DEFBLOCKSIZE]) m_xInterface.m_xInventoryWnd.UpdateStackCount(tdm.nRecog,tdm.wParam);
                 break;
 			case SM_ADDITEM:
-			{											
+			{
+                if(strlen(pszMsg+DEFBLOCKSIZE)==134) {
+                    BYTE raw[100];
+                    if(fnDecode6BitBuf(pszMsg+DEFBLOCKSIZE,(char*)raw,sizeof(raw))!=100) break;
+                    CItem item;if(!item.SetMir3Item(raw,0)) break;
+                    if(!m_xInterface.m_xInventoryWnd.AddInvenItem(item,-1,FALSE)) break;
+                    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+                    int resource=item.m_stackMode<=2?1465:1461;
+                    for(int i=0;i<10;++i) if(item.Name()==captions.Get(1409)+std::to_string(i)) {resource=1463;break;}
+                    std::string message=captions.Get(resource);
+                    auto at=message.find("%s");if(at!=std::string::npos) message.replace(at,2,item.Name());
+                    at=message.find("%d");if(at!=std::string::npos) message.replace(at,2,std::to_string(item.m_count));
+                    m_xInterface.MsgAdd(11861940,0,const_cast<char*>(message.c_str()));
+                    g_xSound.PlayItemEffect(item.m_stItemInfo.stStdItem.bStdMode,raw[31],item.Name());
+                    break;
+                }
+
+                if(strlen(pszMsg+DEFBLOCKSIZE)!=(sizeof(CLIENTITEMRCD)*8+5)/6) break;
 				CLIENTITEMRCD	stReceivedItem;
 
 				char *pszItem = (pszMsg + DEFBLOCKSIZE);
@@ -3062,7 +3079,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				break;
 			}
 			case SM_DELITEM:
-			{											
+			{
 				CLIENTITEMRCD	stReceivedItem;
 
 				char *pszItem = (pszMsg + DEFBLOCKSIZE);
@@ -3125,7 +3142,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
                 if (m_xInterface.m_stCommonItem.bSetted) {
                     const auto& used=m_xInterface.m_stCommonItem.xItem.m_stItemInfo.stStdItem;
                     static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
-                    std::string name=used.szName;
+                    std::string name=m_xInterface.m_stCommonItem.xItem.Name();
                     const std::string& base=captions.Get(1409);
                     for(int i=0;i<10;++i) if(name==base+std::to_string(i)) {name=base;break;}
                     std::string message=captions.Get(1464);
