@@ -38,7 +38,7 @@ public:
         if ((groupPanel>=20 && groupPanel<=22) || groupPanel==25 || groupPanel==26 || groupPanel==27) capturePath=groupPanel==27?"skill-shortcuts.bmp":groupPanel==26?"skill-description.bmp":groupPanel==25?"skill-key-menu.bmp":groupPanel==22?"status-and-skills.bmp":groupPanel==20?"skills-panel.bmp":"skills-scrolled.bmp";
         if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
         if (groupPanel==30 || groupPanel==31) capturePath=groupPanel==30?"mount-panel.bmp":"mount-hint.bmp";
-        if (groupPanel>=32 && groupPanel<=34) capturePath=groupPanel==32?"trade-empty.bmp":groupPanel==33?"trade-list.bmp":"trade-confirmed.bmp";
+        if (groupPanel>=32 && groupPanel<=35) capturePath=groupPanel==35?"trade-gold.bmp":groupPanel==32?"trade-empty.bmp":groupPanel==33?"trade-list.bmp":"trade-confirmed.bmp";
         if (groupPanel==11) capturePath="options-panel.bmp";
         if (groupPanel>=15 && groupPanel<=19) capturePath=groupPanel==19?"status-equipment.bmp":groupPanel==18?"status-identity.bmp":groupPanel==16?"status-elements.bmp":groupPanel==17?"status-tooltip.bmp":"status-panel.bmp";
         if (groupPanel==23 || groupPanel==24) capturePath=groupPanel==23?"inventory-clip-top.bmp":"inventory-clip-bottom.bmp";
@@ -513,7 +513,7 @@ public:
                     opened,repeat,hidden,buttons,stray,onFoot,riding,hint,pressedHint,released,covered,moved,closed); fclose(report);
             }
         }
-        if (groupPanel>=32 && groupPanel<=34) {
+        if (groupPanel>=32 && groupPanel<=35) {
             auto& ui=g_xGameProc.m_xInterface; auto& trade=ui.m_xExchangeWnd;
             lstrcpyA(hero.m_szName,"MirPreview"); trade.partner="TradePartner";
             ui.WindowActivate(_WND_ID_EXCHANGE);
@@ -547,6 +547,31 @@ public:
             const bool moved=trade.m_rcWnd.left==10 && trade.m_rcWnd.top==10; trade.m_rcWnd={0,0,494,330};
             ui.OnLButtonDown(confirm); ui.OnLButtonUp(confirm); const bool confirmed=trade.confirmed;
             trade.confirmed=groupPanel==34;
+            if (groupPanel==35) {
+                hero.m_nGlod=100000; trade.gold[0]=0;
+                ui.OnLButtonDown(POINT{80,290}); ui.OnLButtonUp(POINT{80,290});
+                const bool opened=ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==6 && IsWindowVisible(g_xChatEditBox.GetSafehWnd());
+                ui.OnKeyDown(VK_ESCAPE,0); const bool escapeBlocked=ui.m_xMsgBox.IsActive()!=FALSE;
+                ui.OnLButtonDown(POINT{490,315}); ui.OnLButtonUp(POINT{490,315});
+                const bool cancelled=!ui.m_xMsgBox.IsActive() && !trade.goldPending && !IsWindowVisible(g_xChatEditBox.GetSafehWnd());
+                bool rejected=true;
+                const char* invalid[]={"","0","-1","+1"," 1","1 ","1x","100001","4294967296"};
+                for (const auto value:invalid) rejected=rejected && !trade.SubmitGold(value,100000) && !trade.goldPending;
+                const bool balanceAllowed=trade.SubmitGold("100000",100000) && trade.goldPending && trade.gold[0]==0 && hero.m_nGlod==100000;
+                const bool pendingBlocked=!trade.SubmitGold("1",100000); trade.goldPending=false;
+                ui.OnLButtonDown(POINT{80,290}); ui.OnLButtonUp(POINT{80,290});
+                lstrcpyA(g_xChatEditBox.m_szInputMsg,"10000"); ui.OnMsgInputted(0,0);
+                const bool submitted=trade.goldPending && !ui.m_xMsgBox.IsActive() && !IsWindowVisible(g_xChatEditBox.GetSafehWnd());
+                trade.goldPending=false;
+                ui.OnLButtonDown(POINT{80,290}); ui.OnLButtonUp(POINT{80,290});
+                SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"10000");
+                const int scrollBefore=trade.first[0]; ui.OnScrollUp(); const bool modal=ui.m_xMsgBox.IsActive() && trade.first[0]==scrollBefore;
+                if (FILE* report=fopen("trade-gold-check.txt","wb")) {
+                    fprintf(report,"opened=%d escape_blocked=%d cancelled=%d invalid_rejected=%d full_balance=%d pending_blocked=%d enter_submitted=%d modal=%d\n",
+                        opened,escapeBlocked,cancelled,rejected,balanceAllowed,pendingBlocked,submitted,modal); fclose(report);
+                }
+            }
+
             if (FILE* report=fopen("trade-layout-check.txt","wb")) {
                 fprintf(report,"amount=%d left_scroll=%d right_scroll=%d released=%d stray=%d pending_blocked=%d outside_release=%d body_no_drag=%d header_drag=%d confirmed=%d\n",
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
@@ -795,7 +820,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=mount-hint")==0 ? 31 :
         strcmp(lpCmdLine,"--preview=trade-empty")==0 ? 32 :
         strcmp(lpCmdLine,"--preview=trade-list")==0 ? 33 :
-        strcmp(lpCmdLine,"--preview=trade-confirmed")==0 ? 34 : 0;
+        strcmp(lpCmdLine,"--preview=trade-confirmed")==0 ? 34 :
+        strcmp(lpCmdLine,"--preview=trade-gold")==0 ? 35 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

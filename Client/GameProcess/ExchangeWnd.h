@@ -17,6 +17,7 @@ public:
     bool ConfirmHit(POINT point);
     bool ScrollInput(int kind,POINT point);
     static std::string Amount(unsigned value);
+    bool SubmitGold(const char* text,unsigned balance);
     BOOL OnLButtonDown(POINT point);
     BOOL OnLButtonUp(POINT point);
     void OnMouseMove(POINT point) { ScrollInput(1,point); }

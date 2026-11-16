@@ -1,5 +1,6 @@
 #include "StdAfx.h"
 #include "Common/LegacyPanel.h"
+#include <cstdlib>
 
 void CExchangeWnd::Init()
 {
@@ -47,6 +48,20 @@ bool CExchangeWnd::ScrollInput(int kind,POINT point)
     }
     return false;
 }
+bool CExchangeWnd::SubmitGold(const char* text,unsigned balance)
+{
+    if (!m_bActive || confirmed || goldPending || gold[0]) return false;
+    if (!*text) return false;
+    for (const char* digit=text;*digit;++digit) if (*digit<'0' || *digit>'9') return false;
+    const unsigned long long parsed=std::strtoull(text,NULL,10);
+    if (!parsed || parsed>balance) return false;
+    const unsigned amount=unsigned(parsed);
+    goldPending=true;
+    _TDEFAULTMESSAGE message;
+    // Mir3 CM_TRADE_GOLD carries the amount in recognition; balance stays server-owned.
+    fnMakeDefMessage(&message,1029,INT(amount),0,0,0); g_xClientSocket.SendPacket(&message,NULL);
+    return true;
+}
 BOOL CExchangeWnd::OnLButtonDown(POINT point)
 {
     if (ScrollInput(0,point)) return TRUE;
@@ -63,6 +78,10 @@ BOOL CExchangeWnd::OnLButtonUp(POINT point)
         // Mir3 protocol/message_ids.inc: CM_TRADE_CONFIRM, no payload.
         g_xClientSocket.SendQueryMsg(1030);
     }
+    const RECT amount={m_rcWnd.left+34,m_rcWnd.top+270,m_rcWnd.left+156,m_rcWnd.top+304};
+    if (!confirmed && !goldPending && pendingSlot<0 && returnSlot<0 && !gold[0] &&
+        !g_xGameProc.m_xInterface.m_stCommonItem.bSetted && g_xGameProc.m_xMyHero.m_nGlod && PtInRect(&amount,point))
+        g_xGameProc.m_xInterface.OpenNameDialog(6);
     return FALSE;
 }
 void CExchangeWnd::ShowExchangeWnd()
