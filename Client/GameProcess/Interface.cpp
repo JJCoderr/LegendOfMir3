@@ -1526,7 +1526,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
                         // The server owns rejection state; a click only predicts the overlay.
                         m_chatReceptionFrame[channel] = m_chatRejected[channel] ? -1 : 1338+channel*2;
                         static CLoginMessages captions;
-                        static const bool loaded = captions.Load(".\CmList.dat");
+                        static const bool loaded = captions.Load(".\\CmList.dat");
                         const int commandId = channel == 0 ? 1070 : channel == 1 ? 1071 : 1073;
                         std::string command = captions.Get(commandId);
                         g_xClientSocket.SendSay(const_cast<char*>(command.c_str()));
