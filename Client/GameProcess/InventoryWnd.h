@@ -43,6 +43,13 @@ public:
 	ITEMSET		m_stBeltItem[_MAX_BELT_ITEM];
 
 public:
+    enum class ServicePhase { Choosing, Quoting, Quoted, Unavailable, Paying };
+    struct Service { int actor=0,mode=0,item=0; DWORD price=0; std::string name; ServicePhase phase=ServicePhase::Choosing; bool pressed=false; } service;
+    void OpenService(int actor,int mode);
+    void SelectServiceItem(int index);
+    void QuoteService(DWORD price,bool selling);
+    void ConfirmService();
+    bool ServiceButton(POINT point);
     bool m_scrollCaptured=false;
     bool ScrollInput(int kind, POINT point);
     int ScrollRow() const { return m_nStartLineNum; }

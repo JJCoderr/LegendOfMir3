@@ -40,7 +40,7 @@ VOID CInventoryWnd::Init()
 	INT nCnt;
 	CGameWnd::Init();
 	m_nStartLineNum	= 0;
-    m_closePressed=false;
+    m_closePressed=false; service=Service{};
     m_layout.Clear();
 	ZeroMemory(m_rcInvenCell, sizeof(RECT) *_INVEN_MAX_CELL);
 	ZeroMemory(m_rcBeltCell,  sizeof(RECT) *_BELT_MAX_CELL );
@@ -114,6 +114,52 @@ VOID CInventoryWnd::SetInvenBtnInit()
 }
 
 
+void CInventoryWnd::OpenService(int actor,int mode)
+{
+    auto& ui=g_xGameProc.m_xInterface;
+    if (mode==3 && ui.m_xStoreWnd.m_bActive) ui.WindowActivate(_WND_ID_STORE);
+    service=Service{}; service.actor=actor; service.mode=mode;
+    m_rcWnd={519,0,801,466};
+    if (!m_bActive) ui.WindowActivate(_WND_ID_INVENTORY);
+    else { ui.DeleteWindowToList(_WND_ID_INVENTORY); ui.AddWindowToList(_WND_ID_INVENTORY); }
+}
+bool CInventoryWnd::ServiceButton(POINT point)
+{
+    if (!service.actor || !m_pxWndImage->NewSetIndex(service.mode==3?1231:service.mode==2?1229:1227)) return false;
+    const auto& info=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+    const RECT box={m_rcWnd.left+198,m_rcWnd.top+401,m_rcWnd.left+198+info.shWidth,m_rcWnd.top+401+info.shHeight};
+    return PtInRect(&box,point)!=FALSE;
+}
+void CInventoryWnd::SelectServiceItem(int index)
+{
+    if (index<0 || !m_stInventoryItem[index].bSetted || service.phase==ServicePhase::Quoting || service.phase==ServicePhase::Paying) return;
+    const auto& record=m_stInventoryItem[index].xItem.m_stItemInfo;
+    service.item=record.nMakeIndex; service.name=record.stStdItem.szName; service.price=0;
+    service.phase=service.mode==3?ServicePhase::Quoted:ServicePhase::Quoting;
+    if (service.mode!=3) {
+        _TDEFAULTMESSAGE request; fnMakeDefMessage(&request,service.mode==2?CM_MERCHANTQUERYSELLPRICE:CM_MERCHANTQUERYREPAIRCOST,
+            service.actor,LOWORD(service.item),HIWORD(service.item),0);
+        g_xClientSocket.SendPacket(&request,const_cast<char*>(service.name.c_str()));
+    }
+}
+void CInventoryWnd::QuoteService(DWORD price,bool selling)
+{
+    if (!service.actor || service.mode==3 || (service.mode==2)!=selling ||
+        (service.phase!=ServicePhase::Quoting && service.phase!=ServicePhase::Quoted && service.phase!=ServicePhase::Unavailable)) return;
+    service.price=price; service.phase=price?ServicePhase::Quoted:ServicePhase::Unavailable;
+}
+void CInventoryWnd::ConfirmService()
+{
+    if (!service.actor || service.phase!=ServicePhase::Quoted) return;
+    bool present=false;
+    for (const auto& entry:m_stInventoryItem) if (entry.bSetted && entry.xItem.m_stItemInfo.nMakeIndex==service.item && service.name==entry.xItem.m_stItemInfo.stStdItem.szName) { present=true; break; }
+    if (!present) { service.phase=ServicePhase::Choosing; service.price=0; return; }
+    service.phase=ServicePhase::Paying;
+    _TDEFAULTMESSAGE request; fnMakeDefMessage(&request,service.mode==3?CM_USERSTORAGEITEM:service.mode==2?CM_USERSELLITEM:CM_USERREPAIRITEM,
+        service.actor,LOWORD(service.item),HIWORD(service.item),0);
+    g_xClientSocket.SendPacket(&request,const_cast<char*>(service.name.c_str()));
+}
+
 VOID CInventoryWnd::ShowInventoryWnd()
 {
 	INT nCnt;
@@ -130,6 +176,7 @@ VOID CInventoryWnd::ShowInventoryWnd()
         g_xMainWnd.DrawWithImageForComp(x+250,y+70+int(254.0f*m_nStartLineNum/91),
             image.shWidth,image.shHeight,(WORD*)m_pxWndImage->m_pbCurrImage);
     }
+    if (service.actor) DrawSelectionFrame(*m_pxWndImage,(service.mode==3?1231:service.mode==2?1229:1227)-int(service.pressed),x+198,y+401,SelectionBlend::Normal,false);
     HDC dc; auto* surface=g_xMainWnd.GetBackBuffer();
     if (SUCCEEDED(surface->GetDC(&dc))) {
         const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
@@ -140,7 +187,12 @@ VOID CInventoryWnd::ShowInventoryWnd()
             RECT area={x+left,y+top,x+left+width,y+top+height}; SetTextColor(dc,color);
             DrawTextA(dc,value,-1,&area,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
         };
-        text(captions.Get(1701).c_str(),12,20,74,16,0xf8dcfa);
+        text(captions.Get(service.actor?(service.mode==3?1704:service.mode==2?1703:1702):1701).c_str(),12,20,74,16,0xf8dcfa);
+        if (service.actor && service.price) {
+            auto caption=captions.Get(1452); const auto at=caption.find("%d");
+            if (at!=caption.npos) caption.replace(at,2,std::to_string(service.price));
+            text(caption.c_str(),70,423,85,14,0xf8dcfa);
+        }
         char weight[128]; const auto& ability=g_xGameProc.m_xMyHero.m_stAbility;
         wsprintfA(weight,"%s: %u / %u",captions.Get(2501).c_str(),ability.wWeight,ability.wMaxWeight);
         text(weight,95,21,126,16,0x0a0a0a); text(weight,94,20,126,16,0xf8c8c8);
@@ -926,6 +978,8 @@ BOOL CInventoryWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMous
 {
 	INT nCnt, nInventoryNum, nBeltInventoryNum;
     m_closePressed=false;
+    if (ServiceButton(ptMouse)) { service.pressed=true; return TRUE; }
+    if (service.actor && SlotAt(ptMouse)>=0) return TRUE;
     if (ScrollInput(0,ptMouse)) return TRUE;
 
 	m_xInventoryBtn[_BTN_ID_INVENCLOSE	 ].ChangeRect(m_rcWnd.left+242, m_rcWnd.top+423);
@@ -968,6 +1022,10 @@ BOOL CInventoryWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMous
 
 BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
+    if (service.pressed || ServiceButton(ptMouse)) {
+        const bool confirm=service.pressed && ServiceButton(ptMouse); service.pressed=false;
+        if (confirm) ConfirmService(); return FALSE;
+    }
     if (ScrollInput(2,ptMouse)) return FALSE;
 	INT nInventoryNum, nBeltInventoryNum;
 
@@ -978,6 +1036,7 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
     const bool close=m_xInventoryBtn[_BTN_ID_INVENCLOSE].OnLButtonUp(ptMouse) && m_closePressed;
     m_closePressed=false;
     if (close) { g_xSound.PlayLobbyEffect("105.wav"); return TRUE; }
+    if (service.actor && SlotAt(ptMouse)>=0) { SelectServiceItem(GetInvenNum(ptMouse)); return FALSE; }
     auto& quick=g_xGameProc.m_xInterface.m_xQuickWnd;
     if (quick.heldSlot>=0) {
         if (!pstCommonItemSet->bWaitResponse && SlotAt(ptMouse)>=0) quick.ClearHeldReference();
@@ -1072,6 +1131,7 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 
 BOOL CInventoryWnd::OnLButtonDoubleClick(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
+    if (service.actor) return TRUE;
     if (g_xGameProc.m_xInterface.m_xQuickWnd.heldSlot>=0) return TRUE;
     if (g_xGameProc.m_xInterface.m_xExchangeWnd.GetGameWndActive() && g_xGameProc.m_xInterface.m_xExchangeWnd.returnSlot>=0) return TRUE;
 	INT nInventoryNum	  = GetInvenNum(ptMouse);

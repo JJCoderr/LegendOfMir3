@@ -813,6 +813,9 @@
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ¿ÍÕ»
+#define SM_OPEN_REPAIR 668
+#define SM_REPAIR_QUOTE 671
+#define SM_STORAGE_OPEN 700
 #define SM_STORAGE_LIST 704
 #define SM_STORAGE_WITHDRAW_OK 705
 #define SM_STORAGE_WITHDRAW_FAIL 706

@@ -1010,6 +1010,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 
 VOID CGameProcess::CloseNPCWindow()
 {
+    if (m_xInterface.m_xInventoryWnd.m_bActive && m_xInterface.m_xInventoryWnd.service.actor) m_xInterface.WindowActivate(_WND_ID_INVENTORY);
     if (m_xInterface.m_xStoreWnd.GetGameWndActive()) m_xInterface.WindowActivate(_WND_ID_STORE);
 	if ( m_xInterface.m_xNPCWnd.GetGameWndActive() )
 	{
@@ -3384,7 +3385,16 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				CloseNPCWindow();
 				break;
 			}
-			case SM_SENDGOODSLIST:
+            case SM_SENDUSERSELL:
+            case SM_OPEN_REPAIR:
+            case SM_STORAGE_OPEN:
+                if (tdm.nRecog) m_xInterface.m_xInventoryWnd.OpenService(tdm.nRecog,tdm.wIdent==SM_STORAGE_OPEN?3:tdm.wIdent==SM_SENDUSERSELL?2:1);
+                break;
+            case SM_SENDBUYPRICE:
+            case SM_REPAIR_QUOTE:
+                m_xInterface.m_xInventoryWnd.QuoteService(DWORD(tdm.nRecog),tdm.wIdent==SM_SENDBUYPRICE);
+                break;
+            case SM_SENDGOODSLIST:
 			case SM_SENDDETAILGOODSLIST:
 			case SM_BUYITEM_FAIL:
             case SM_BUYITEM_SUCCESS:

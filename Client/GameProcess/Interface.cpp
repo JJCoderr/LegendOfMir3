@@ -888,6 +888,7 @@ BOOL CInterface::WindowActivate(INT nID)
 			{
 				DeleteWindowToList(_WND_ID_INVENTORY);
 				m_xInventoryWnd.SetGameWndActive(FALSE);
+                m_xInventoryWnd.service=CInventoryWnd::Service{};
 				bRet = FALSE;
 			}
 			else
@@ -1665,6 +1666,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
+    if (!m_xMsgBox.IsActive() && m_xInventoryWnd.service.pressed) { m_xInventoryWnd.OnLButtonUp(&m_stCommonItem,ptMouse); return TRUE; }
     if (!m_xMsgBox.IsActive() && (m_xStoreWnd.pressed!=-1 || m_xStoreWnd.scrollCaptured)) {
         if (m_xStoreWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_STORE);
         return TRUE;
