@@ -1051,3 +1051,7 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 ### 类型19项链原版属性
 - 按out/item-tooltip-original.c原版444F40的case0x13及LABEL98接入AccessoryHint。魔法躲避raw41+signed86以十倍百分比显示，诅咒raw42，幸运raw43+signed87；基础/附加攻击元素49/50/97/98及独立91/92，强弱52/53仅1..6显示x1，末尾魔法与要求共享原路径。保留负加成仅参与是否显示判定、不减基础显示值的原版规则。
 - 增量构建、diff --check通过；necklace-hint三项stats/elements/boundary全1，覆盖百分比、加成色、元素组合、负加成和元素7不显示。已检查out/necklace-hint.png。20..24与53仍待迁移，尚未完成原版逐像素验收。
+
+### 类型20准确敏捷饰品属性
+- 对照444F40 case0x14，类型20准确raw41+signed86(Cm1053)、敏捷raw43+signed87(Cm1054)，均整数；与19共享相同的攻击元素及强弱x1规则，19仍独立保留百分比躲避/诅咒/幸运。复用现有value辅助避免重复元素代码。
+- 增量构建与diff --check通过；accuracy-necklace-hint与necklace-hint三项stats/elements/boundary各全1，覆盖正负加成、行数顺序、元素组合与范围。已检查out/accuracy-necklace-hint.png。类型21..24及53仍未迁移，完整GUI/音效/服务器流程继续。
