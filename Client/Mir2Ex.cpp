@@ -144,9 +144,18 @@ public:
             options.OnLButtonDown(reverse); options.OnLButtonUp(reverse);
             const bool restored=!options.m_values[3] && !g_xSound.m_reversePan;
             options.OnLButtonDown(reverse); options.OnLButtonUp(reverse);
+            options.LoadAudioOptions("./preview-audio-options.ini");
+            options.m_musicLevel=-25; options.m_effectsLevel=-75;
+            options.m_values[1]=false; options.m_values[2]=true; options.m_values[3]=true;
+            const bool saved=options.SaveAudioOptions();
+            options.LoadAudioOptions(nullptr);
+            options.LoadAudioOptions("./preview-audio-options.ini");
+            const bool restoredSettings=saved && options.m_musicLevel==-25 && options.m_effectsLevel==-75 &&
+                !options.m_values[1] && options.m_values[2] && options.m_values[3] &&
+                g_xSound.m_lMp3MaxVol==-1000 && g_xSound.m_lWavMaxVol==-3000 && g_xSound.m_reversePan;
             if (FILE* report=fopen("options-audio-check.txt","wb")) {
                 fprintf(report,"minimum=%d maximum_released=%d independent=%d\n",minimum,maximum,independent);
-                fprintf(report,"reverse_enabled=%d reverse_restored=%d\n",reversed,restored);
+                fprintf(report,"reverse_enabled=%d reverse_restored=%d settings_restored=%d\n",reversed,restored,restoredSettings);
                 fclose(report);
             }
         }
@@ -289,6 +298,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	ShowWindow(g_xMainWnd.GetSafehWnd(), SW_HIDE);
 
 	g_xSound.InitMirSound(g_xMainWnd.GetSafehWnd());
+    g_xGameProc.m_xInterface.m_xOptionWnd.LoadAudioOptions(strstr(lpCmdLine,"--preview=") ? nullptr : "./Config.ini");
 	g_xSpriteInfo.SetInfo();
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ±à¼­¿ò´´½¨.

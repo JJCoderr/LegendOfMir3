@@ -7,6 +7,7 @@ class COptionWnd : public CGameWnd
 private:
 protected:
     int ButtonAt(POINT point);
+    const char* m_audioOptionsPath = nullptr;
 
 public:
     bool m_values[21] = {};
@@ -14,6 +15,8 @@ public:
     int m_musicLevel=0, m_effectsLevel=0, m_attackMode=0;
     int m_audioDrag=-1;
     bool AudioInput(int kind, POINT point);
+    void LoadAudioOptions(const char* path);
+    bool SaveAudioOptions();
 	COptionWnd();
 	~COptionWnd();
 

@@ -34,6 +34,7 @@ VOID COptionWnd::Destroy() { CGameWnd::Destroy(); }
 VOID COptionWnd::CreateOptionWnd(INT id,CWHWilImageData* image,INT frame,INT x,INT y,INT width,INT height,BOOL move)
 {
     CreateGameWnd(id,image,frame,move,x,y,width,height);
+    LoadAudioOptions(m_audioOptionsPath);
 }
 VOID COptionWnd::ShowOptionWnd()
 {
@@ -98,6 +99,7 @@ BOOL COptionWnd::OnLButtonUp(POINT point)
     if (hit==1) { m_values[1]=!m_values[1]; if (m_values[1]) g_xSound.SetEnableBGM(); else g_xSound.SetDisableBGM(); }
     if (hit==2) { m_values[2]=!m_values[2]; if (m_values[2]) g_xSound.SetEnablePlay(); else g_xSound.SetDisablePlay(); }
     if (hit==3) { m_values[3]=!m_values[3]; g_xSound.m_reversePan=m_values[3]; }
+    if (hit>=1 && hit<=3) SaveAudioOptions();
     return hit==0;
 }
 VOID COptionWnd::OnMouseMove(POINT point) { if (!AudioInput(1,point)) m_hover=ButtonAt(point); }
@@ -112,6 +114,7 @@ bool COptionWnd::AudioInput(int kind, POINT point)
             int& level=m_audioDrag==0?m_musicLevel:m_effectsLevel;
             level=(5*offset-900)/9;
             g_xSound.SetInterfaceVolume(m_audioDrag==0,level);
+            SaveAudioOptions();
         }
         if (kind==2) { m_audioDrag=-1; if (GetCapture()==g_xMainWnd.GetSafehWnd()) ReleaseCapture(); }
         return true;
@@ -133,9 +136,46 @@ bool COptionWnd::AudioInput(int kind, POINT point)
                 else if (x<offset+276 || x<275) offset=offset<9?0:offset-9;
                 level=(5*offset-900)/9;
                 g_xSound.SetInterfaceVolume(i==0,level);
+                SaveAudioOptions();
             }
             return true;
         }
     }
     return false;
+}
+
+void COptionWnd::LoadAudioOptions(const char* path)
+{
+    m_audioOptionsPath=path;
+    const auto read=[path](const char* key,int fallback) {
+        return path ? (int)GetPrivateProfileIntA("Options",key,fallback,path) : fallback;
+    };
+    m_values[1]=read("BGM",1)!=0;
+    m_values[2]=read("EffectSound",1)!=0;
+    m_values[3]=read("ReversePan",0)==1;
+    m_musicLevel=read("BGMLevel",0);
+    m_effectsLevel=read("EffectSoundLevel",0);
+    if (m_musicLevel < -100 || m_musicLevel > 0) m_musicLevel=0;
+    if (m_effectsLevel < -100 || m_effectsLevel > 0) m_effectsLevel=0;
+    if (m_values[1]) g_xSound.SetEnableBGM(); else g_xSound.SetDisableBGM();
+    if (m_values[2]) g_xSound.SetEnablePlay(); else g_xSound.SetDisablePlay();
+    g_xSound.m_reversePan=m_values[3];
+    g_xSound.SetInterfaceVolume(true,m_musicLevel);
+    g_xSound.SetInterfaceVolume(false,m_effectsLevel);
+}
+
+bool COptionWnd::SaveAudioOptions()
+{
+    if (!m_audioOptionsPath) return true;
+    const auto write=[this](const char* key,int value) {
+        char text[16]; wsprintfA(text,"%d",value);
+        return WritePrivateProfileStringA("Options",key,text,m_audioOptionsPath)!=FALSE;
+    };
+    bool saved=write("BGM",m_values[1]);
+    saved=write("EffectSound",m_values[2]) && saved;
+    saved=write("ReversePan",m_values[3]) && saved;
+    saved=write("BGMLevel",m_musicLevel) && saved;
+    saved=write("EffectSoundLevel",m_effectsLevel) && saved;
+    if (!saved) OutputDebugStringA("Cannot save audio options.\n");
+    return saved;
 }
