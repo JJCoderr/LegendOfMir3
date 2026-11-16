@@ -1519,7 +1519,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
                         m_xInterBtn[18].ResetGameBtn(m_chatMode == 1 ? 1335 : 1334,m_chatMode == 1 ? 1335 : 1334);
                         m_xInterBtn[19].ResetGameBtn(m_chatMode == 2 ? 1337 : 1336,m_chatMode == 2 ? 1337 : 1336);
                         static CLoginMessages captions;
-                        static const bool loaded = captions.Load(".\CmList.dat");
+                        static const bool loaded = captions.Load(".\\CmList.dat");
                         std::string message = captions.Get(m_chatMode == 0 ? 2626 : (m_chatMode == 1 ? 2633 : 2635));
                         MsgAdd(0xffffff,0x80ff,const_cast<char*>(message.c_str()));
                     }

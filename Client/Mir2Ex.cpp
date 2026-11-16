@@ -29,8 +29,8 @@ class CHudPreviewProcess : public CWHDefProcess {
 public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
-    void Load(bool expanded) {
-        capturePath = expanded ? "hud-expanded.bmp" : "hud-collapsed.bmp";
+    void Load(bool expanded, int chatMode) {
+        capturePath = chatMode == 1 ? "hud-group.bmp" : chatMode == 2 ? "hud-guild.bmp" : expanded ? "hud-expanded.bmp" : "hud-collapsed.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
         g_xGameProc.m_xInterface.CreateInterface(&g_xGameProc.m_xImage);
@@ -53,6 +53,23 @@ public:
             g_xGameProc.m_xInterface.OnLButtonDown(toggle);
             g_xGameProc.m_xInterface.OnLButtonUp(toggle);
         }
+        if (chatMode) {
+            auto& ui = g_xGameProc.m_xInterface;
+            POINT button = {chatMode == 1 ? 270 : 310,560};
+            ui.OnLButtonDown(button); ui.OnLButtonUp(button);
+            ui.FocusChatMode();
+            char prefix[16] = {};
+            GetWindowTextA(g_xChatEditBox.GetSafehWnd(),prefix,sizeof(prefix));
+            const bool selected = ui.m_chatMode == chatMode && strcmp(prefix,chatMode == 1 ? "!!" : "!~") == 0;
+            ui.OnLButtonDown(button); ui.OnLButtonUp(button);
+            const bool toggledOff = ui.m_chatMode == 0;
+            ui.OnLButtonDown(button); ui.OnLButtonUp(button);
+            if (FILE* report=fopen(chatMode == 1 ? "hud-group-check.txt" : "hud-guild-check.txt","wb")) {
+                fprintf(report,"mode=%d prefix=%s selected=%d toggled_off=%d\n",ui.m_chatMode,prefix,selected,toggledOff);
+                fclose(report);
+            }
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -148,10 +165,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 //  开始时设定为登录流程.
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
-	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0;
+	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
+	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0;
 	if (previewHud) {
 		g_xMainWnd.m_pxDefProcess = &hudPreview;
-		hudPreview.Load(strcmp(lpCmdLine,"--preview=hud-expanded")==0);
+		hudPreview.Load(strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0,previewChatMode);
 		g_bProcState = _GAME_PROC;
 	} else if (strncmp(lpCmdLine, preview, strlen(preview)) == 0) {
 		g_xMainWnd.m_pxDefProcess = &g_xChrSelProc;

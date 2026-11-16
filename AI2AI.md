@@ -453,3 +453,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 模式变化后按1334/1335、1336/1337绘制状态覆盖帧，按下帧同步当前状态。
 - 游戏回车/空格打开聊天调用FocusChatMode，组队预填!!，行会预填!~；普通模式保留输入。删除旧的打开编辑框时直接调用OnMsgInputted，避免发送旧缓冲。
 - Client全量及后续增量构建通过；模式运行交互和截图尚待验证，接收状态三个按钮仍未接命令。
+
+### 聊天模式运行验证
+- 新增 --preview=hud-group / --preview=hud-guild，通过实际CInterface按下/释放处理器完成选择、取消、重新选择，再保存后台渲染图；读取原生编辑框文字记录结果。
+- 两份运行报告均 selected=1、toggled_off=1，组队prefix=!!，行会prefix=!~。
+- 截图检查发现模式提示缺失，定位并修复新增caption路径的C++反斜杠转义错误；重新构建运行后中文提示可见。
+- 已检查 out/hud-group.png 与 out/hud-guild.png；截图只含DirectDraw后台画面，子窗口编辑框前缀由GetWindowText报告验证，不宣称截图包含编辑框。
