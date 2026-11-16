@@ -16,6 +16,7 @@
 
 VOID CGameBtn::CreateGameBtn(CWHWilImageData* pxBtnImage, INT nFocusImgIdx, INT nClickImgIdx, INT nStartX, INT nStartY, BYTE bBtnType)
 {
+    m_customHit = false;
 	m_bBtnType		= bBtnType;
 	m_bBtnState		= _BTN_STATE_NORMAL;
 	m_pxBtnImage	= pxBtnImage;
@@ -31,6 +32,7 @@ VOID CGameBtn::CreateGameBtn(CWHWilImageData* pxBtnImage, INT nFocusImgIdx, INT 
 
 VOID CGameBtn::Init()
 {
+    m_customHit = false;
 	m_bBtnType		= _BTN_TYPE_FOCUS;
 	m_bBtnState		= _BTN_STATE_FOCUS;
 	m_pxBtnImage	= NULL;
@@ -65,7 +67,7 @@ VOID CGameBtn::ShowGameBtn()
 
 VOID CGameBtn::OnMouseMove(POINT ptMouse)
 {
-	if ( PtInRect(&m_rcBtn, ptMouse) && (m_bBtnState != _BTN_STATE_CLICK) )
+	if ( Hit(ptMouse) && (m_bBtnState != _BTN_STATE_CLICK) )
 	{
 		m_bBtnState = _BTN_STATE_FOCUS;
 		return;
@@ -80,7 +82,7 @@ VOID CGameBtn::OnMouseMove(POINT ptMouse)
 
 BOOL CGameBtn::OnLButtonDown(POINT ptMouse)
 {
-	if ( PtInRect(&m_rcBtn, ptMouse) )
+	if ( Hit(ptMouse) )
 	{
 		m_bBtnState = _BTN_STATE_CLICK;
 		return TRUE;
@@ -92,7 +94,7 @@ BOOL CGameBtn::OnLButtonDown(POINT ptMouse)
 BOOL CGameBtn::OnLButtonUp(POINT ptMouse)
 {
 	m_bBtnState = _BTN_STATE_NORMAL;
-	if ( PtInRect(&m_rcBtn, ptMouse) )
+	if ( Hit(ptMouse) )
 	{
 		return TRUE;
 	}

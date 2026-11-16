@@ -201,6 +201,17 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xInterBtn[15].CreateGameBtn(m_pxInterImg, 1196, 1197, 711, 498, _BTN_TYPE_FOCUS);	// ×´Ì¬´°¿Ú.
 	//------------------------------------------------------------------------------------------------------------
 
+    // Godot HudLayout::hit_overrides, mapped to the CLIENT's event IDs.
+    m_xInterBtn[_BTN_ID_GROUP].SetHitRect(708,476,34,19);
+    m_xInterBtn[_BTN_ID_GUILD].SetHitRect(674,475,29,25);
+    m_xInterBtn[_BTN_ID_MAGIC].SetHitRect(740,502,28,29);
+    m_xInterBtn[_BTN_ID_QUEST].SetHitRect(742,478,35,24);
+    m_xInterBtn[_BTN_ID_OPTION].SetHitRect(709,539,35,20);
+    m_xInterBtn[_BTN_ID_POPUP].SetHitRect(744,531,36,24);
+    m_xInterBtn[_BTN_ID_HORSE].SetHitRect(675,532,34,22);
+    m_xInterBtn[_BTN_ID_BAG].SetHitRect(682,504,30,27);
+    m_xInterBtn[_BTN_ID_CHAR].SetHitRect(712,498,28,37);
+
 	m_xScrlBar.CreateScrlBar(m_pxInterImg, 68, _MAX_CHATLINE, 12, 84, 12);
 
 	m_xMsgBox.Load(&m_xInterImgEx);	// ÓÂÆø

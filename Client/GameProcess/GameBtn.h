@@ -5,6 +5,16 @@ class CGameBtn
 { 
 public:
 	RECT			m_rcBtn;
+    RECT m_hitRect = {};
+    bool m_customHit = false;
+    void SetHitRect(int x, int y, int width, int height) {
+        SetRect(&m_hitRect,x,y,x+width,y+height);
+        m_customHit = true;
+    }
+    bool Hit(POINT point) const {
+        return PtInRect(m_customHit ? &m_hitRect : &m_rcBtn,point) != FALSE;
+    }
+
 
 	CWHWilImageData* m_pxBtnImage;
 	INT				m_nFocusImgIdx;			// 图像相关变量. 
