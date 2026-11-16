@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -1832,6 +1832,32 @@ public:
             if(FILE* report=fopen("equipment-durability-check.txt","wb")) {fprintf(report,"threshold=%d warning=%d raw=%d unit=%d special=%d negative=%d wide=%d ignored=%d drop=%d\n",threshold,warning,rawBytes,unit,special,negative,wide,ignored,drop);fclose(report);}
         }
 
+        if(groupPanel>=PreviewTradeLocal && groupPanel<=PreviewTradeHeld) {
+            using namespace Mir3AccessoryHint;
+            using Trade=CExchangeWnd;
+            enum RecordField { NameBytes=30, Weight=32, Icon=36, Instance=62, Current=66, Maximum=68, LargeIcon=75 };
+            auto& ui=g_xGameProc.m_xInterface;auto& trade=ui.m_xExchangeWnd;
+            auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];icons.NewLoad("./Data/Inventory.wil");
+            BYTE raw[Trade::RecordBytes]={};memcpy(raw,"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234",NameBytes);
+            raw[ModeOffset]=AccuracyBracelet;raw[Weight]=3;raw[Icon]=LargeIcon;raw[Instance]=1;raw[FirstScalarOffset]=2;raw[FirstBonusOffset]=1;
+            raw[Current]=0xD0;raw[Current+1]=7;raw[Maximum]=0x10;raw[Maximum+1]=0x27;
+            const bool local=trade.SetOfferRecord(0,0,raw);const bool name=trade.offers[0][0].name.size()==NameBytes;
+            const bool retained=!memcmp(trade.offers[0][0].record.data(),raw,sizeof(raw));
+            strcpy((char*)raw,"对方交易装备");raw[Instance]=2;const int remoteSlot=2*Trade::GridColumns;
+            const bool remote=trade.SetOfferRecord(1,remoteSlot,raw);trade.first[1]=2;
+            const POINT left={trade.m_rcWnd.left+Trade::LocalGridLeft+Trade::CellSize+1,trade.m_rcWnd.top+Trade::GridTop+Trade::CellSize+1};
+            const POINT right={trade.m_rcWnd.left+Trade::RemoteGridLeft+1,trade.m_rcWnd.top+Trade::GridTop+1};
+            const bool multi=trade.OfferAt(left)==0 && trade.offers[0][0].width>1 && trade.offers[0][0].height>1;
+            const bool scroll=trade.OfferAt(right,1)==remoteSlot && trade.OfferAt(right)==-1 && trade.first[0]==0;
+            const bool edge=trade.OfferAt({trade.m_rcWnd.left+Trade::LocalGridLeft-1,left.y})==-1;
+            raw[0]=0;const bool invalid=!trade.SetOfferRecord(0,0,raw) && trade.offers[0][0].name.size()==NameBytes;
+            trade.partner="TradePartner";ui.WindowActivate(_WND_ID_EXCHANGE);
+            mouse=groupPanel==PreviewTradeRemote?right:left;g_xGameProc.m_ptMousePos=mouse;
+            if(groupPanel==PreviewTradeHeld) trade.returnSlot=0;
+            capturePath=groupPanel==PreviewTradeLocal?"trade-local-hint.bmp":groupPanel==PreviewTradeRemote?"trade-remote-hint.bmp":"trade-held-hint.bmp";
+            if(FILE* report=fopen("trade-item-hint-check.txt","wb")) {fprintf(report,"local=%d remote=%d name=%d retained=%d multi=%d scroll=%d edge=%d invalid=%d\n",local,remote,name,retained,multi,scroll,edge,invalid);fclose(report);}
+        }
+
         if(groupPanel>=PreviewSpecialHint && groupPanel<=PreviewBlueArmor) {
             using namespace Mir3AccessoryHint;
             enum RecordField { Weight=32, Icon=36, ShopMaximum=38, Instance=62, Current=66, Maximum=68 };
@@ -2123,6 +2149,10 @@ public:
         RECT canvas = {0,0,800,600};
         DrawLegacyPanel(canvas,RGB(20,24,28),255,0,false);
         g_xGameProc.m_xInterface.RenderInterface(elapsed,mouse);
+        if(capturePath && !strcmp(capturePath,"equipment-hover-hint.bmp")) {
+            auto& ui=g_xGameProc.m_xInterface;
+            if(FILE* report=fopen("equipment-hover-check.txt","wb")) {fprintf(report,"window=%d status=%d slot=%d held=%d present=%d name=%s mouse=%ld,%ld\n",ui.GetWindowInMousePos(mouse),_WND_ID_STATUS,ui.m_xStatusWnd.GetEquipNum(mouse),ui.m_stCommonItem.bSetted,ui.m_xStatusWnd.m_stEquipItem[5].bSetted,ui.m_xStatusWnd.m_stEquipItem[5].xItem.Name(),mouse.x,mouse.y);fclose(report);}
+        }
         if(damagePreview) {
             auto& actor=g_xGameProc.m_xMyHero;
             const int amounts[]={-9,-99,-100,-65535,25,0};
@@ -2316,6 +2346,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=trade-local-hint")==0 ? PreviewTradeLocal :
+        strcmp(lpCmdLine,"--preview=trade-remote-hint")==0 ? PreviewTradeRemote :
+        strcmp(lpCmdLine,"--preview=trade-held-hint")==0 ? PreviewTradeHeld :
         strcmp(lpCmdLine,"--preview=shop-red-armor-hint")==0 ? PreviewRedArmor :
         strcmp(lpCmdLine,"--preview=shop-blue-armor-hint")==0 ? PreviewBlueArmor :
         strcmp(lpCmdLine,"--preview=shop-armor-hint")==0 ? PreviewShopArmorHint :

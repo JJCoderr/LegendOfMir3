@@ -1087,3 +1087,13 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 原生渲染加入独立ItemHighlight模式，C1白色、C2第一染色、C3第二染色；只有提示图标启用，其余现有Blend默认参数不变。RGB颜色来自记录70/71/72。
 - 增量构建、代码diff检查通过；扫描真实Inventory.wil找到含C2的frame372，红蓝预览已检查(out/shop-red-armor-hint.png、shop-blue-armor-hint.png)。两图差异仅(335,366)-(357,399)图标区域，像素计数红图红通道、蓝图蓝通道；旧shop-item-hint回归运行。图片缩略显示不明显时以实际像素数据确认，不能仅凭肉眼判成同色。
 - 该批完成提示图标绘制，人物装备锚点、其余GUI完整逐像素/交互验收和真实服务器流程继续。
+
+### 进行中：装备与交易提示统一接线
+- 依据Godot client/docs/evidence/client-module-inventory.md及window-dispatch-instructions.json确认436D14对象2AB4C(人物装备)调用4761E0，使用槽绝对left/top+15；此前47B0E0实际为ID7行会成员窗口，不能用于人物装备。已将StatusWnd固定left+37/top+288改为对应装备槽+15。
+- 交易41D640使用鼠标+10，当前ExchangeWnd仅存摘要、无完整属性记录，现新增Offer.record及SetOfferRecord，OfferAt支持双方独立滚动、保留默认本方以兼容取回操作；ShowExchangeWnd双方悬停复用原生属性。手持/待取回/模态/非顶层窗口均隐藏。
+- 以上修改尚未编译测试或提交。下一步加入双方、多格/滚动、完整名称/字段保持、模态与取回遮挡预览，统一构建验证后提交。检查发现当前CLIENT交易服务端回复没有对应ExchangeWnd数据写入，SetOfferRecord仅准备GUI数据入口，后续真实协议接线仍需实现，勿宣称已有实服交易闭环。
+
+### 装备与交易提示验证完成
+- Client清理83步、全目标109步构建通过。trade-local/remote/held三预览八项local/remote/name/retained/multi/scroll/edge/invalid全1；原trade-list十项布局/交互回归全1，已检查双方提示与取回隐藏截图。
+- 装备首次截图未见提示，加入预览状态报告后复核window=status=1、slot5、held0、present1；新截图out/equipment-hover-audited.png正确显示在槽位+15。额外两次预览BMP SHA256均5595CE706CF0BE2542D57EC000C9FC5BC5CD8DE5C772D77EC8EDD02BA3C34755；首次差异原因未确定，不宣称已修复未知根因。报告equipment-hover-check.txt保留供复核。
+- 新入口SetOfferRecord仅供完整物品GUI数据使用，尚无真实交易回复调用；当前证明GUI数据、定位和绘制，不代表实服交易闭环。

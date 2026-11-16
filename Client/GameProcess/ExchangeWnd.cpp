@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "ItemHintStyle.h"
 #include "Common/LegacyPanel.h"
 #include <cstdlib>
 
@@ -62,17 +63,29 @@ bool CExchangeWnd::SubmitGold(const char* text,unsigned balance)
     fnMakeDefMessage(&message,1029,INT(amount),0,0,0); g_xClientSocket.SendPacket(&message,NULL);
     return true;
 }
-int CExchangeWnd::OfferAt(POINT point) const
+int CExchangeWnd::OfferAt(POINT point,int side) const
 {
-    const int x=point.x-m_rcWnd.left-14,y=point.y-m_rcWnd.top-56;
-    if (x<0 || x>=190 || y<0 || y>=190) return -1;
-    const int column=x/38,row=first[0]+y/38;
-    for (int slot=0;slot<200;++slot) {
-        const auto& item=offers[0][slot];
-        if (item.present && item.makeIndex && column>=slot%5 && column<slot%5+item.width &&
-            row>=slot/5 && row<slot/5+item.height) return slot;
+    const int x=point.x-m_rcWnd.left-(side?RemoteGridLeft:LocalGridLeft),y=point.y-m_rcWnd.top-GridTop;
+    if (x<0 || x>=GridWidth || y<0 || y>=GridWidth) return -1;
+    const int column=x/CellSize,row=first[side]+y/CellSize;
+    for (int slot=0;slot<SlotsPerSide;++slot) {
+        const auto& item=offers[side][slot];
+        if (item.present && item.makeIndex && column>=slot%GridColumns && column<slot%GridColumns+item.width &&
+            row>=slot/GridColumns && row<slot/GridColumns+item.height) return slot;
     }
     return -1;
+}
+bool CExchangeWnd::SetOfferRecord(int side,int slot,const BYTE* record)
+{
+    CItem item;if(!item.SetMir3Item(record,slot)) return false;
+    auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];
+    if(!icons.NewSetIndex(item.m_stItemInfo.stStdItem.wLooks)) return false;
+    const auto& info=*icons.m_lpstNewCurrWilImageInfo;
+    Offer offer;offer.present=true;offer.icon=item.m_stItemInfo.stStdItem.wLooks;
+    offer.width=max(1,(info.shWidth+CellSize-1)/CellSize);offer.height=max(1,(info.shHeight+CellSize-1)/CellSize);
+    offer.count=item.m_count;offer.makeIndex=item.m_stItemInfo.nMakeIndex;offer.name=item.Name();
+    offer.stdMode=item.m_stItemInfo.stStdItem.bStdMode;offer.record31=item.m_stItemInfo.stStdItem.bShape;
+    memcpy(offer.record.data(),record,offer.record.size());offers[side][slot]=std::move(offer);return true;
 }
 bool CExchangeWnd::RequestReturn()
 {
@@ -167,4 +180,11 @@ void CExchangeWnd::ShowExchangeWnd()
     }
     SelectObject(dc,old); DeleteObject(font); surface->ReleaseDC(dc);
     DrawSelectionFrame(*m_pxWndImage,confirmed?1394:confirmPressed?1396:1392,x+226,y+279,SelectionBlend::Normal,false);
+    auto& ui=g_xGameProc.m_xInterface;const POINT pointer=g_xGameProc.m_ptMousePos;
+    if(ui.m_stCommonItem.bSetted || returnSlot>=0 || ui.m_xMsgBox.IsActive() || ui.m_xGuildEditor.m_bActive || ui.GetWindowInMousePos(pointer)!=_WND_ID_EXCHANGE) return;
+    for(int side=0;side<2;++side) {
+        const int slot=OfferAt(pointer,side);if(slot<0) continue;
+        CItem item;if(item.SetMir3Item(offers[side][slot].record.data(),slot)) item.ShowGeneralHint(pointer.x+ItemHintStyle::PointerOffset,pointer.y+ItemHintStyle::PointerOffset);
+        break;
+    }
 }

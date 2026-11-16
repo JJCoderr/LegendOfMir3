@@ -1,9 +1,11 @@
 #pragma once
 #include <string>
+#include <array>
 
 class CExchangeWnd : public CGameWnd {
 public:
-    struct Offer { bool present=false; int icon=0,width=1,height=1,count=1; unsigned makeIndex=0; std::string name; int stdMode=-1; BYTE record31=0; };
+    static constexpr int RecordBytes=100, SlotsPerSide=200, GridColumns=5, CellSize=38, GridWidth=190, GridTop=56, LocalGridLeft=14, RemoteGridLeft=264;
+    struct Offer { bool present=false; int icon=0,width=1,height=1,count=1; unsigned makeIndex=0; std::string name; int stdMode=-1; BYTE record31=0; std::array<BYTE,RecordBytes> record={}; };
     Offer offers[2][200]={};
     std::string partner;
     unsigned gold[2]={};
@@ -18,7 +20,8 @@ public:
     bool ScrollInput(int kind,POINT point);
     static std::string Amount(unsigned value);
     bool SubmitGold(const char* text,unsigned balance);
-    int OfferAt(POINT point) const;
+    int OfferAt(POINT point,int side=0) const;
+    bool SetOfferRecord(int side,int slot,const BYTE* record);
     bool RequestReturn();
     bool CancelReturn();
     void ShowHeld(POINT point);

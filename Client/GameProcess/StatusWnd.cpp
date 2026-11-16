@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include "ItemHintStyle.h"
 #include <charconv>
 #include "Common/LoginMessages.h"
 #include "Common/LegacyPanel.h"
@@ -150,7 +151,7 @@ VOID CStatusWnd::ShowEquipItemState()
 	{
 		if ( m_stEquipItem[nEquipNum].bSetted )
 		{
-			m_stEquipItem[nEquipNum].xItem.ShowItemStatus(m_rcWnd.left+37, m_rcWnd.top+288);
+			m_stEquipItem[nEquipNum].xItem.ShowItemStatus(m_rcWnd.left+m_rcCell[nEquipNum].left+ItemHintStyle::EquipmentSlotOffset, m_rcWnd.top+m_rcCell[nEquipNum].top+ItemHintStyle::EquipmentSlotOffset);
 		}		
 	}
 }
