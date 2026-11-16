@@ -1701,6 +1701,27 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel==120) {
+            auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;auto& quick=ui.m_xQuickWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            CLIENTITEMRCD record={};record.nMakeIndex=1001;strcpy(record.stStdItem.szName,"Potion");
+            CItem item;item.SetItem(record,0);item.m_count=10;item.m_stackMode=2;bag.AddInvenItem(item,0,TRUE);quick.slots[0]=CQuickWnd::FromItem(item);
+            const auto receive=[&](DWORD identity,WORD count) {
+                _TDEFAULTMESSAGE packet={};packet.wIdent=1313;packet.nRecog=identity;packet.wParam=count;
+                char encoded[64]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));g_xGameProc.OnSocketMessageRecieve(encoded);
+            };
+            const auto before=ui.m_chatHistory.size();receive(1001,25);
+            const bool increase=bag.m_stInventoryItem[0].xItem.m_count==25 && quick.slots[0].count==25 && ui.m_chatHistory.size()==before+1;
+            receive(1001,5);const bool decrease=bag.m_stInventoryItem[0].xItem.m_count==5 && quick.slots[0].item.m_count==5 && ui.m_chatHistory.size()==before+1;
+            receive(9999,99);const bool unknown=bag.m_stInventoryItem[0].xItem.m_count==5;
+            receive(1001,0);const bool zero=bag.m_stInventoryItem[0].bSetted && quick.slots[0].present && quick.slots[0].count==0;
+            bag.SetCommonFromInven(0,&ui.m_stCommonItem);receive(1001,7);const bool held=ui.m_stCommonItem.xItem.m_count==7;
+            bag.SetInvenFromCommon(0,&ui.m_stCommonItem);receive(1001,30);
+            ui.WindowActivate(_WND_ID_INVENTORY);ui.WindowActivate(_WND_ID_QUICK);
+            capturePath="item-stack-reply.bmp";
+            if(FILE* report=fopen("item-stack-check.txt","wb")) {fprintf(report,"increase=%d decrease=%d unknown=%d zero=%d held=%d\n",increase,decrease,unknown,zero,held);fclose(report);}
+        }
+
         if(groupPanel==119) {
             auto& ui=g_xGameProc.m_xInterface;
             ui.m_stCommonItem.bSetted=TRUE;ui.m_stCommonItem.bIsBeltItem=FALSE;
@@ -1973,6 +1994,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=item-stack-reply")==0 ? 120 :
         strcmp(lpCmdLine,"--preview=item-use-confirmed")==0 ? 119 :
         strcmp(lpCmdLine,"--preview=human-hit-server")==0 ? 118 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-zero")==0 ? 117 :

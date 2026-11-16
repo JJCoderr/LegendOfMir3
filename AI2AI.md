@@ -975,3 +975,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - SM_EAT_OK有待用物品时，读取CmList1464并替换物品名，按Godot规则将CmList1409加单个数字0..9的名称归一化；使用chat_palette(2)/chat_palette(7)对应0xffffff/33023，经原生MsgAdd显示。无待用物品的重复回复不产生提示或音效。
 - 原生item-use-confirmed预览覆盖消费状态、重复回复、归一化提示、前景/背景颜色及单次提示，共五项全1。增量构建和diff --check通过；已检查out/item-use-feedback.png，中文提示显示在原生聊天区域。
 - 快捷栏剩余数量提示与MIR3堆叠回复尚未迁移，不以该确认提示证明物品使用端到端完成。
+
+### 服务器物品数量更新与快捷栏同步
+- 接入MIR3 SM_INVENTITEM=1313，仅接受无正文消息，按nRecog实例编号/wParam数量调用InventoryWnd::UpdateStackCount。对齐Godot update_bag_stack_count默认分支：更新非快捷栏引用的鼠标持有物品、背包物品及同名快捷栏引用；数量0保留物品，未知实例不创建物品。
+- 数量增加显示CmList1707的物品名和增加量，前景11861940/背景0，并调用现有物品音效；减少/相等不重复提示。现有旧物品记录缺少完整MIR3 raw[31]，音效该参数仍沿用0，完整记录迁移后需补齐。
+- --preview=item-stack-reply经过实际编码消息入口，增加/减少/未知/零保留/鼠标持有五项全1；增量构建及diff --check通过。已检查out/item-stack-reply.png，背包和快捷栏均显示30，聊天显示增加15和23的两条提示。
+- 本阶段接数量回复，不代表MIR3完整物品入包/使用/出售/拆分协议已完成。

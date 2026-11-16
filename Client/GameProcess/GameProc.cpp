@@ -3042,6 +3042,9 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 
 				break;
 			}
+            case 1313: // MIR3 SM_INVENTITEM: header-only stack quantity update.
+                if(!pszMsg[DEFBLOCKSIZE]) m_xInterface.m_xInventoryWnd.UpdateStackCount(tdm.nRecog,tdm.wParam);
+                break;
 			case SM_ADDITEM:
 			{											
 				CLIENTITEMRCD	stReceivedItem;
