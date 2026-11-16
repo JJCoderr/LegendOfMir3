@@ -1,106 +1,36 @@
-#ifndef _CSTOREWND_H
-#define _CSTOREWND_H
-
-using namespace std;
-
-
-typedef struct tagQUALITYINFO
-{
-	string	stlszQuality;
-	string	stlszPrice;
-}QUALITYINFO, *LPQUALITYINFO;
-
-typedef struct tagARTICLEINFO
-{
-	string					stlszArticle;
-	CDLList<QUALITYINFO>	m_xQualityList;
-}ARTICLEINFO, *LPARTICLEINFO;
-
-
-class CStoreWnd : public CGameWnd
-{ 
-private:
-	INT						m_nIsReadyToDisplay;
-	INT						m_nCurrentItemTop;
-	INT						m_nCurrentKindTop;
-	INT						m_nMaxKindLine;
-	INT						m_nMaxItemLine;
-	INT						m_nNpcID;
-
-	CTextButton				m_xKindBtn;
-	CTextButton				m_xItemLstBtn;
-
-	RECT					m_xKindRect;
-	RECT					m_xItemRect;
-
-	CPDLList<CLIENTITEMRCD>	m_xItems;
-
-	BOOL					m_bSelectedKind;
-	BOOL					m_bSelectedItem;
-protected:
-	BYTE					m_bState;					// 0 : Sell. 1 : Buy.  2 : Repair   3 : Special Repair
-	CGameBtn				m_xStoreBtn[5];
-	CDLList<ARTICLEINFO>	m_stArticleList;
-
-	SHORT					m_shArticleStart;
-	SHORT					m_shQualityStart;
-
+#pragma once
+#include <string>
+#include <vector>
+class CStoreWnd : public CGameWnd {
+    int Hit(POINT point);
+    bool Scroll(int kind,POINT point);
+    void Layout();
+    void Request(int opcode,const std::string& name,DWORD instance=0,WORD quantity=0);
 public:
-	__inline VOID SetNPC(INT Id)
-	{
-		m_nNpcID = Id;
-	}
-
-	inline	BOOL			IsInRect(POINT tPos,RECT tRect)
-	{
-		INT	nTemp;
-		RECT twRect;
-		twRect = GetGameWndRect();
-		nTemp = tRect.left - (tPos.x - twRect.left);
-		if(nTemp<=0)
-		{
-			nTemp = nTemp + (tRect.right-tRect.left);
-			if(nTemp>=0)
-			{
-				nTemp = tRect.top - (tPos.y - twRect.top);
-				if(nTemp<=0)
-				{
-					nTemp = nTemp + (tRect.bottom - tRect.top);
-					if(nTemp>=0)
-					{
-						return TRUE;
-					}
-				}
-			}
-		}
-		return FALSE;
-	};
-	CStoreWnd();
-	~CStoreWnd();
-	VOID	CreateStoreWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
-	VOID	ShowStoreWnd();
-
-	BOOL	SetBuyKinds(CHAR* msg,INT Cound);
-	BOOL	SetBuyItemLst(CHAR* Msg,INT Cound);
-	BOOL	SetSellKinds(CInventoryWnd*,CHAR Kind,INT nStdMode);
-	BOOL	SetSellItemLst(CInventoryWnd*,CHAR Kind,BYTE nStdMode,CHAR bKind);
-public:
-//  消息函数.
-	BOOL	OnLButtonDown(POINT ptMouse);
-	BOOL	OnLButtonUp(POINT ptMouse);
-	VOID	OnMouseMove(POINT ptMouse);
-
-	VOID	OnScrollDown();
-	VOID	OnScrollUp();
-
-	CWHQueue			m_xPacketQueue;					// 保存需要在 NPC Chat 中处理的消息的队列.
-	BOOL	OnUpdateQueue(VOID);
-
-private:
-	VOID	SendDeTailGoodsList(INT nIndex,CHAR* szItemName);
-	VOID	SendButThisITme(CMTxtBtn* tBtn);
-
+    struct Good { std::string name; int variants=0,price=0,stock=0,icon=0,requirementType=0,requirement=0; };
+    struct Offer { std::string name; int icon=0,price=0; DWORD id=0; };
+    std::vector<Good> goods;
+    std::vector<Offer> offers;
+    int actor=0,first=0,highlighted=-1,selected=-1,offerIndex=-1,page=0,bulk=-1,pressed=-1;
+    bool details=false,loading=false,scrollCaptured=false;
+    double fraction=0;
+    void Init() override;
+    void Reset();
+    void SetNPC(int id) { actor=id; }
+    void CreateStoreWnd(INT id,CWHWilImageData* image,INT,INT,INT,INT,INT,BOOL);
+    void ShowStoreWnd();
+    bool SetGoods(int id,const char* text,int count);
+    void SetOffers(std::vector<Offer> list,int offset);
+    bool SetDetailRecords(const char* body,int count,int offset);
+    void OpenCategory();
+    void CloseOffers();
+    void BuyOffer();
+    void BuyBulk(const char* quantity);
+    BOOL OnLButtonDown(POINT point);
+    BOOL OnLButtonUp(POINT point);
+    void OnDoubleClick(POINT point);
+    void OnMouseMove(POINT point) { Scroll(1,point); }
+    void OnScrollDown();
+    void OnScrollUp();
+    void Receive(const _TDEFAULTMESSAGE& header,const char* body);
 };
-
-
-#endif // _CSTOREWND_H

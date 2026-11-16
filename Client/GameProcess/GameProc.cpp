@@ -1010,6 +1010,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 
 VOID CGameProcess::CloseNPCWindow()
 {
+    if (m_xInterface.m_xStoreWnd.GetGameWndActive()) m_xInterface.WindowActivate(_WND_ID_STORE);
 	if ( m_xInterface.m_xNPCWnd.GetGameWndActive() )
 	{
 		m_xInterface.DeleteWindowToList(_WND_ID_NPCCHAT);
@@ -3386,17 +3387,10 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			case SM_SENDGOODSLIST:
 			case SM_SENDDETAILGOODSLIST:
 			case SM_BUYITEM_FAIL:
+            case SM_BUYITEM_SUCCESS:
 			
 			{	// 商店窗口处理例程
-				LPPACKETMSG	lpPacketMsg	= new PACKETMSG;
-				lpPacketMsg->stDefMsg	= tdm;
-				lstrcpy(lpPacketMsg->szEncodeData, (pszMsg + DEFBLOCKSIZE));
-				m_xInterface.m_xStoreWnd.m_xPacketQueue.PushQ((BYTE*)lpPacketMsg);	// 将 Packet 放入 Queue.
-				if(!m_xInterface.m_xStoreWnd.GetGameWndActive())
-				{
-					m_xInterface.WindowActivate(_WND_ID_STORE);
-					m_xInterface.m_xStoreWnd.SetNPC(tdm.nRecog);
-				}
+                m_xInterface.m_xStoreWnd.Receive(tdm,pszMsg+DEFBLOCKSIZE);
 				break;
 			}
 			case SM_DROPITEM_SCCESS: 

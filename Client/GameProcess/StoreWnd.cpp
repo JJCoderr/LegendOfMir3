@@ -1,621 +1,257 @@
-/******************************************************************************************************************
-
-	模块名:
-
-	作者:
-	编写日期:
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
-
 #include "StdAfx.h"
+#include "Common/LegacyPanel.h"
+#include "Common/LoginMessages.h"
+#include <cmath>
+#include <cstdlib>
+#include <cerrno>
 
-/////////////////////////////////////////////////////
-#define MAX_KINDS_LINE			11
-#define MAX_ITEMLIST_LINE		5
-#define LINE_GAP				5
-/////////////////////////////////////////////////////
-#define POS_KINDS_X				44
-#define POS_KINDS_Y				43
-#define POS_KINDSTITLE_X		POS_KINDS_X+12
-#define POS_KINDSTITLE_Y		28
-#define POS_ITEMSTITLE_X		POS_ITEMLIST_LINE_X+15
-#define POS_ITEMSTITLE_Y		POS_ITEMLIST_LINE_Y
-
-#define POS_ITEMLIST_LINE_X		159
-#define POS_ITEMLIST_LINE_Y		90
-
-#define POS_ITEMNAME_X			190
-#define POS_ITEMNAME_Y			28
-#define POS_ITEMIMAGE_X			188
-#define	POS_ITEMIMAGE_Y			56
-
-#define LEFT_KIND_RECT			42
-#define RIGHT_KIND_RECT			130
-#define TOP_KIND_RECT			25
-#define BOTTOM_KIND_RECT		228
-
-#define LEFT_ITEM_RECT			157
-#define RIGHT_ITEM_RECT			309
-#define TOP_ITEM_RECT			103
-#define BOTTOM_ITEM_RECT		199
-
-#define POS_X				84			// ex (钱:POS_X,POS_Y)(GOLD:POS__X,POS_Y)
-#define POS_Y				246			// ex (重量:POS_X,POS__Y)(背包重量:POS__X,POS__Y)
-#define POS__Y				270
-#define POS__X				246
-
-#define MAX_MSG_LENGTH			20480			// (20Kb)
-
-
-CStoreWnd::CStoreWnd()
+void CStoreWnd::Init() { CGameWnd::Init(); Reset(); }
+void CStoreWnd::Reset()
 {
-	POINT	Temp;
-
-	m_nIsReadyToDisplay = 0;
-	m_nCurrentItemTop = 0;
-	m_nCurrentKindTop = 0;
-	m_nMaxItemLine = 0;
-	m_nMaxKindLine = 0;
-
-	Temp.x = POS_KINDS_X;
-	Temp.y = POS_KINDS_Y;
-
-
-	m_xKindBtn.InitTxtBtn(MAX_KINDS_LINE,Temp,LINE_GAP);
-
-	Temp.x = POS_ITEMLIST_LINE_X;
-	Temp.y = POS_ITEMLIST_LINE_Y + 17;
-
-//	tRect.top+POS_ITEMLIST_LINE_Y + 17 + (xtBtn->nLinePos-m_nCurrentItemTop)*(tSize.cy+LINE_GAP);
-
-	m_xItemLstBtn.InitTxtBtn(MAX_ITEMLIST_LINE,Temp,LINE_GAP);
-	m_bSelectedKind=FALSE;
-	m_bSelectedItem=FALSE;
-
-	m_xKindRect.left = LEFT_KIND_RECT;
-	m_xKindRect.top	= TOP_KIND_RECT;
-	m_xKindRect.right = RIGHT_KIND_RECT;
-	m_xKindRect.bottom = BOTTOM_KIND_RECT;
-
-	m_xItemRect.left = LEFT_ITEM_RECT;
-	m_xItemRect.top	= TOP_ITEM_RECT;
-	m_xItemRect.right = RIGHT_ITEM_RECT;
-	m_xItemRect.bottom = BOTTOM_ITEM_RECT;
+    actor=first=page=0; highlighted=selected=offerIndex=bulk=pressed=-1;
+    details=loading=scrollCaptured=false; fraction=0; goods.clear(); offers.clear(); Layout();
 }
-
-CStoreWnd::~CStoreWnd()
+void CStoreWnd::Layout() { m_rcWnd={0,225,bulk>=0?516:details?488:292,449}; }
+void CStoreWnd::CreateStoreWnd(INT id,CWHWilImageData* image,INT,INT,INT,INT,INT,BOOL)
+{ CreateGameWnd(id,image,1260,FALSE,0,225,292,224); }
+bool CStoreWnd::SetGoods(int id,const char* text,int count)
 {
+    if (id<=0 || id!=g_xGameProc.m_xInterface.m_xNPCWnd.m_nNpcId || count<0 || count>255) return false;
+    std::vector<Good> result; const char* cursor=text;
+    for (int i=0;i<count;++i) {
+        Good good; const char* end=strchr(cursor,'/'); if (!end || end==cursor) return false;
+        good.name.assign(cursor,end); cursor=end+1;
+        int* fields[]={&good.variants,&good.price,&good.stock,&good.icon,&good.requirementType,&good.requirement};
+        for (auto field:fields) {
+            char* tail; errno=0; const long value=strtol(cursor,&tail,10);
+            if (*cursor<'0' || *cursor>'9' || *tail!='/' || value<0 || errno==ERANGE) return false;
+            *field=int(value); cursor=tail+1;
+        }
+        if (good.icon>65535) return false;
+        result.push_back(good);
+    }
+    if (*cursor) return false;
+    CloseOffers(); Reset(); actor=id; goods=std::move(result); highlighted=goods.empty()?-1:0; return true;
 }
-
-VOID CStoreWnd::CreateStoreWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
+void CStoreWnd::SetOffers(std::vector<Offer> list,int offset)
 {
-	CreateGameWnd(nID, pxWndImage, nFrameImgIdx, bCanMove, nStartX, nStartY, nWidth, nHeight);
+    auto& ui=g_xGameProc.m_xInterface;
+    if (ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==8) ui.FinishNotice(CLICK_NO,false);
+    offers=std::move(list); bulk=-1; details=true; loading=false; pressed=-1;
+    offerIndex=offers.empty()?-1:0; page=offset/10; Layout();
 }
-
-
-VOID CStoreWnd::ShowStoreWnd()
+bool CStoreWnd::SetDetailRecords(const char* body,int count,int offset)
 {
-	RECT tRect;
-	CMTxtBtn* xtBtn;
-	ShowGameWnd();
-	OnUpdateQueue();
-	if(m_nIsReadyToDisplay>0)
-	{
-		tRect = GetGameWndRect();
-		g_xMainWnd.PutsHan(NULL,tRect.left + POS_KINDSTITLE_X,tRect.top + POS_KINDSTITLE_Y,RGB(255,255,255),RGB(0,0,0)," I T E M  N A M E");
-//		if(stdMod=1) 
-			g_xMainWnd.PutsHan(NULL,tRect.left + POS_ITEMSTITLE_X,tRect.top + POS_ITEMSTITLE_Y,RGB(255,255,255),RGB(0,0,0)," T Y P E            P R I C E");
-		if(m_bSelectedKind)  
-		{// 选中 Kinds 时
-			g_xMainWnd.PutsHan(NULL,tRect.left + POS_ITEMNAME_X+20,tRect.top + POS_ITEMNAME_Y + 10 ,RGB(255,255,255),RGB(0,0,0),"Crescent Blade");
-
-			g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewSetIndex(1); // 填入该物品的 Looks
-			g_xMainWnd.DrawWithImageForCompClipRgn(
-				tRect.left + POS_ITEMIMAGE_X - (g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].m_lpstNewCurrWilImageInfo->shWidth / 2),tRect.top + POS_ITEMIMAGE_Y - (g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].m_lpstNewCurrWilImageInfo->shHeight / 2)
-				,g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].m_lpstNewCurrWilImageInfo->shWidth,g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].m_lpstNewCurrWilImageInfo->shHeight,
-				(WORD*)g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].m_pbCurrImage,800,600);
-		}
-
-		if(m_nIsReadyToDisplay&&1)
-		{	// Kinds List 输出
-			m_xKindBtn.m_pTxtBtn.MoveCurrentToTop();
-			for(int i = 0 ; i <m_xKindBtn.GetButtonCount(); i++)
-			{
-				xtBtn = m_xKindBtn.m_pTxtBtn.GetCurrentData();
-				if((xtBtn->nLinePos>=m_nCurrentKindTop)&&(xtBtn->nLinePos<(m_nCurrentKindTop+MAX_KINDS_LINE)))
-				{
-					SIZE tSize;
-					tSize = g_xMainWnd.GetStrLength(NULL,NULL,xtBtn->Txt);
-					g_xMainWnd.PutsHan(NULL,tRect.left + xtBtn->xRect.left +POS_KINDS_X,tRect.top + (xtBtn->nLinePos-m_nCurrentKindTop)*(tSize.cy+LINE_GAP) +POS_KINDS_Y,(!xtBtn->bIsClicked?xtBtn->nColor:xtBtn->cColor),RGB(0,0,0),xtBtn->Txt);
-				}
-				m_xKindBtn.m_pTxtBtn.MoveNextNode();
-			}
-		}
-		if((m_nIsReadyToDisplay>>1)&&1)
-		{	// Item List 输出
-//			g_xMainWnd.PutsHan(NULL,tRect.left+POS_ITEMLIST_LINE_X,tRect.top+POS_ITEMLIST_LINE_Y+17,RGB(255,255,0),RGB(0,0,0),"123456789012345678901234567890");
-			m_xItemLstBtn.m_pTxtBtn.MoveCurrentToTop();
-			for(int i = 0 ; i <m_xItemLstBtn.GetButtonCount(); i++)
-			{
-				xtBtn = m_xItemLstBtn.m_pTxtBtn.GetCurrentData();
-				if((xtBtn->nLinePos>=m_nCurrentItemTop)&&(xtBtn->nLinePos<(m_nCurrentItemTop+MAX_KINDS_LINE)))
-				{
-					SIZE tSize;
-					tSize = g_xMainWnd.GetStrLength(NULL,NULL,xtBtn->Txt);
-					g_xMainWnd.PutsHan(NULL,tRect.left+POS_ITEMLIST_LINE_X + xtBtn->xRect.left +80,tRect.top+POS_ITEMLIST_LINE_Y + 17 + (xtBtn->nLinePos-m_nCurrentItemTop)*(tSize.cy+LINE_GAP) ,(!xtBtn->bIsClicked?xtBtn->nColor:xtBtn->cColor),RGB(0,0,0),xtBtn->Txt);
-					g_xMainWnd.PutsHan(NULL,tRect.left+POS_ITEMLIST_LINE_X + xtBtn->xRect.left ,tRect.top+POS_ITEMLIST_LINE_Y + 17 + (xtBtn->nLinePos-m_nCurrentItemTop)*(tSize.cy+LINE_GAP) ,(!xtBtn->bIsClicked?xtBtn->nColor:xtBtn->cColor),RGB(0,0,0),xtBtn->sTxt);
-				}
-				m_xItemLstBtn.m_pTxtBtn.MoveNextNode();
-			}
-		}
-	}
+    if (count<0 || count>255 || selected<0) return false;
+    std::vector<Offer> result; const char* cursor=body;
+    for (int i=0;i<count;++i) {
+        const char* end=strchr(cursor,'/'); if (!end || end-cursor!=134) return false;
+        const std::string encoded(cursor,end); BYTE record[101]={};
+        if (fnDecode6BitBuf(const_cast<char*>(encoded.c_str()),(char*)record,100)!=100) return false;
+        const char* name=(char*)record; const size_t length=strlen(name); if (!length || length>=30) return false;
+        const DWORD id=DWORD(record[62])|(DWORD(record[63])<<8)|(DWORD(record[64])<<16)|(DWORD(record[65])<<24);
+        if (!id) return false;
+        result.push_back({std::string(name,length),record[36]|(record[37]<<8),record[68]|(record[69]<<8),id}); cursor=end+1;
+    }
+    if (*cursor) return false;
+    SetOffers(std::move(result),offset); return true;
 }
-
-
-BOOL CStoreWnd::OnLButtonUp(POINT ptMouse)
+void CStoreWnd::Request(int opcode,const std::string& name,DWORD instance,WORD quantity)
 {
-//	BOOL	bResult;
-	RECT tRect;
-	POINT tPos;
-//	CHAR*	szTest;
-	CMTxtBtn* tBtn;
-	tRect = GetGameWndRect();			// Get Window Rect
-	tPos.x = tRect.left;
-	tPos.y = tRect.top;
-	//bResult = ClickCommandProcess(
-	if(IsInRect(ptMouse,m_xKindRect))
-	{	// 列表 List
-		tBtn = m_xKindBtn.ClickCheck(tPos,ptMouse,m_nCurrentKindTop);
-		if(tBtn!=NULL)
-		{
-			// 确认被按下的按钮是否有菜单.
-			// 没有菜单时就停在选择处，有菜单时
-			// 请求下级菜单。
-			tBtn = m_xKindBtn.ClickCheck(tPos,ptMouse,m_nCurrentKindTop);
-			if(tBtn->nColor==RGB(255,255,0))
-			{
-				// 有菜单吗?
-				// 不可欺诈
-				SendDeTailGoodsList(0,tBtn->Param);
-			}
-			else
-			{
-				// 没有菜单吗?
-				// 那就直接选择。可以作弊。
-			}
-		}
-		else
-		{
-			m_nIsReadyToDisplay = 1;
-			m_bSelectedKind= FALSE;
-		}
-	}
-	if(IsInRect(ptMouse,m_xItemRect))
-	{	// 项目  List
-		tBtn = NULL;
-		tBtn = m_xItemLstBtn.ClickCheck(tPos,ptMouse,m_nCurrentItemTop);
-		if(tBtn!=NULL)
-		{
-			// 可以购买
-			m_bSelectedItem = TRUE;
-			//临时
-			SendButThisITme(tBtn);
-		}
-		else
-		{
-			m_bSelectedItem = FALSE;
-		}
-	}
-	return FALSE;
+    _TDEFAULTMESSAGE message; fnMakeDefMessage(&message,opcode,actor,LOWORD(instance),HIWORD(instance),quantity);
+    g_xClientSocket.SendPacket(&message,const_cast<char*>(name.c_str()));
 }
-
-VOID CStoreWnd::OnMouseMove(POINT ptMouse)
+void CStoreWnd::OpenCategory()
 {
-
+    if (highlighted<0) return;
+    if (goods[highlighted].variants==2) {
+        bulk=highlighted; details=loading=false; selected=offerIndex=-1; page=0; offers.clear(); Layout(); return;
+    }
+    bulk=-1;
+    if (selected!=highlighted) { offers.clear(); offerIndex=-1; }
+    selected=highlighted; page=0; loading=details; Layout();
+    Request(CM_USERGETDETAILITEM,goods[selected].name);
 }
-
-BOOL CStoreWnd::OnLButtonDown(POINT ptMouse)
+void CStoreWnd::CloseOffers()
 {
-	RECT tRect;
-	POINT tPos;
-	tRect = GetGameWndRect();			// Get Window Rect
-	tPos.x = tRect.left;
-	tPos.y = tRect.top;
-
-	if(IsInRect(ptMouse,m_xKindRect))
-	{
-		m_xKindBtn.ClickFreeAllBtn();
-		m_xKindBtn.ClickCheck(tPos,ptMouse,m_nCurrentKindTop);
-	}
-	if(IsInRect(ptMouse,m_xItemRect))
-	{
-		m_xItemLstBtn.ClickFreeAllBtn();
-	}
-	return FALSE;
+    auto& ui=g_xGameProc.m_xInterface;
+    if (ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==8) ui.FinishNotice(CLICK_NO,false);
+    bulk=-1; details=loading=false; selected=offerIndex=pressed=-1; page=0; offers.clear(); Layout();
 }
-
-BOOL CStoreWnd::SetBuyKinds(CHAR* Msg,INT Count)   // Eatch Button Divider '\n
+void CStoreWnd::BuyOffer()
+{ if (!loading && offerIndex>=0) Request(CM_USERBUYITEM,offers[offerIndex].name,offers[offerIndex].id); }
+void CStoreWnd::BuyBulk(const char* text)
 {
-	CNPCTxtAnalysis	tTxtAnalysis;				// 只是为了使用 GetValidStr 函数..
-	CHAR*	szParam;
-	CHAR*	pszStr = new CHAR [MAX_MSG_LENGTH];
-
-
-	if(m_nIsReadyToDisplay&&1)
-	{
-		m_xKindBtn.ReleaseButtons();
-		m_bSelectedKind = FALSE;
-		// 清除已保存的按键
-		m_nIsReadyToDisplay= 0;	// Kinds List 设置已解除的通知
-	}
-
-	ZeroMemory(pszStr,MAX_MSG_LENGTH);
-	strcpy(pszStr,Msg);
-
-	m_nMaxKindLine = Count;
-
-	for(int i = 0 ; i < Count ; i ++)
-	{
-		CHAR* szTemp;
-		CHAR* szGName = new CHAR[MAX_PATH];
-		CHAR* szGSubMenu = new CHAR[MAX_PATH];
-		CHAR* szGPrice = new CHAR[MAX_PATH];
-		CHAR* szGStock = new CHAR[MAX_PATH];
-		INT   nSubMenuCount;
-
-		szTemp = tTxtAnalysis.GetValidStr(pszStr,szGName,'/');
-		strcpy(pszStr,szTemp);
-		szTemp = tTxtAnalysis.GetValidStr(pszStr,szGSubMenu,'/');
-		strcpy(pszStr,szTemp);
-		nSubMenuCount = atoi(szGSubMenu);
-		szTemp = tTxtAnalysis.GetValidStr(pszStr,szGPrice,'/');
-		strcpy(pszStr,szTemp);
-		szTemp = tTxtAnalysis.GetValidStr(pszStr,szGStock,'/');
-		strcpy(pszStr,szTemp);
-
-		szTemp = new CHAR[15];
-		szTemp[14]=NULL;
-		RECT	tRect;
-		SIZE	tSize;
-		ZeroMemory(&tRect,sizeof(RECT));	//
-		tSize = g_xMainWnd.GetStrLength(NULL,NULL,szGName);
-		tRect.top = 0;
-		tRect.left = 0;				// List Button 的情况, Left  = 0;
-		tRect.right = tSize.cx;
-		tRect.bottom = tSize.cy;
-		szParam = new CHAR[35];
-		ZeroMemory(szParam,35);
-		strcpy(szParam,szGName);	// 临时 Parameter 与物品名称一起处理。
-		// Parameter...
-		if(nSubMenuCount>0)
-		{	// 存在 Sub Menu 的情况
-			// 若存在菜单则为亮黄色
-			sprintf(szTemp,"%-14s",szGName);
-			m_xKindBtn.AddButton(szTemp,tRect,i,szParam,RGB(255,255,0),RGB(255,0,0));	// Add Button to class
-		}
-		else
-		{	// Sub Menu 不存在的情况
-			// 菜单不存在则为暗黄色
-			sprintf(szTemp,"%-14s",szGName);
-			m_xKindBtn.AddButton(szTemp,tRect,i,szParam,RGB(180,180,0),RGB(255,0,0));	// Add Button to class
-		}
-//		m_xKindBtn
-		delete[] szGName;
-		delete[] szGSubMenu;
-		delete[] szGPrice;
-		delete[] szGStock;
-		delete[] szParam;
-	}
-
-	m_nIsReadyToDisplay = 1;		// 通知 Kinds List 已设置
-	//
-	delete[] pszStr;
-	return	TRUE;
+    if (bulk<0) return;
+    const long quantity=*text?strtol(text,NULL,10):1;
+    if (quantity>0 && quantity<=65535) Request(CM_USERBUYITEM,goods[bulk].name,goods[bulk].stock,WORD(quantity));
 }
-
-BOOL CStoreWnd::SetBuyItemLst(CHAR* Msg,INT Count)
+int CStoreWnd::Hit(POINT point)
 {
-	CNPCTxtAnalysis	tTxtAnalysis;				// 只是为了使用 GetValidStr 函数..
-	CHAR*	szLastMsg = NULL;
-	CHAR	szDetailitem[MAX_PATH];
-
-	m_xItemLstBtn.ReleaseButtons();
-	m_xItems.ClearAllNodes();
-	// 清除已保存的键&数据
-	m_nCurrentItemTop = 0;
-
-	ZeroMemory(szDetailitem,MAX_PATH);
-
-	m_nMaxItemLine = Count;
-
-	INT nCurrLen =0;
-
-	for ( INT nLoop = 0; nLoop < Count; nLoop++ )
-	{
-		szLastMsg = strchr(Msg+nCurrLen, '/');
-
-		if ( szLastMsg )
-		{
-			CHAR*	szParam;
-			CHAR	bCurrentData[MAX_PATH];
-			
-			
-			CLIENTITEMRCD* pxClItem;
-			pxClItem =	new	CLIENTITEMRCD;
-			
-			memcpy(szDetailitem, Msg + nCurrLen, strlen(Msg)-strlen(szLastMsg));
-			
-			nCurrLen = nCurrLen + (int)(szLastMsg - Msg)+1;
-			
-			fnDecode6BitBuf(szDetailitem, (char*)pxClItem, sizeof(CLIENTITEMRCD));
-			
-			ZeroMemory(bCurrentData,MAX_PATH);
-			
-			//		szTemp	 =	new CHAR[50];
-			CHAR szTemp1[50];	// 价格
-			CHAR szTemp2[50];	// 其他
-			
-			ZeroMemory(szTemp1,50);
-			ZeroMemory(szTemp2,50);
-			
-			m_xItems.AddNode(pxClItem);
-
-//			szMakeIndex[12]; // A:武器 B:衣服 C:戒指,手镯,项链 G:其他
-			sprintf(szTemp1,"%d Gold",pxClItem->stStdItem.nPrice);
-/*			switch(pxClItem->szMakeIndex[0])
-			{
-			case 'G':	// 其他
-			case 'g':
-				{
-					switch(pxClItem->stStdItem.bStdMode)
-					{
-					case 0:	// 药水类
-					case 1:	// 干肉
-					case 2:	// 饭团
-					case 3:	// 特殊药水 or 各种典书
-					case 4:	// 各种书籍
-					case 7:	// 捆绑系列
-					case 9:	// 药剂
-						break;
-					case 5:	// 毒粉
-						sprintf(szTemp2,"%d",pxClItem->nDura);
-						break;
-					case 8:	// 不能食用的肉
-						sprintf(szTemp2,"品质 %d",pxClItem->nDura);
-						break;
-					case 10:	// 矿石
-						sprintf(szTemp2,"纯度 %d",pxClItem->nDura);
-						break;
-					case 6:	// 火把,蜡烛
-					default:	// 其他
-						sprintf(szTemp2,"耐久 %d",pxClItem->nDura);
-						break;
-					}
-					break;
-				}
-			default:
-				sprintf(szTemp2,"耐久 %d",pxClItem->nDura);
-				break;
-			}
-*/
-			RECT	tRect;
-			SIZE	tSize;
-			ZeroMemory(&tRect,sizeof(RECT));
-			tSize = g_xMainWnd.GetStrLength(NULL,NULL,szTemp1);
-			tRect.top = 0;
-			tRect.left = 0;											// List Button 的情况, Left  = 0;
-			tRect.right = m_xItemRect.right - m_xItemRect.left;		//
-			tRect.bottom = tSize.cy;
-
-			// Parameter ...
-			szParam = new CHAR[35];
-			ZeroMemory(szParam,35);
-//			strcpy(szParam,pxClItem->szMakeIndex);	// 临时 Parameter 与物品名称一起处理.
-
-			// Dark Yellow
-			m_xItemLstBtn.AddButton(szTemp1,szTemp2,tRect,nLoop,szParam,RGB(180,180,0),RGB(255,0,0));	// Add Button to class
-
-			delete[] szParam;
-		}
-	}
-	m_nIsReadyToDisplay=m_nIsReadyToDisplay|2;		// 通知 Item List 设置已完成
-		//
-	return TRUE;
+    const auto button=[&](int frame,int x,int y) {
+        if (!m_pxWndImage->NewSetIndex(frame)) return false;
+        const auto& info=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        const RECT box={x,y,x+info.shWidth,y+info.shHeight}; return PtInRect(&box,point)!=FALSE;
+    };
+    if (button(1221,258,408)) return -7;
+    if (details) {
+        if (button(1221,449,384)) return -5;
+        if (button(1265,358,388)) return -2;
+        if (button(1268,316,388)) return -3;
+        if (button(1270,406,388)) return -4;
+    }
+    if (bulk>=0) {
+        if (button(1221,475,281)) return -5;
+        if (button(1272,367,284)) return -8;
+    }
+    if (button(1263,106,411)) return -6;
+    if (details) for (int i=0;i<12;++i) {
+        const RECT cell={315+38*(i%4),267+38*(i/4),350+38*(i%4),302+38*(i/4)};
+        if (PtInRect(&cell,point)) return !loading && i<int(offers.size())?256+i:-1;
+    }
+    for (int i=0;i<4;++i) {
+        const int y=241+42*i; const RECT icon={20,y,56,y+36},label={62,y,251,y+36};
+        if ((PtInRect(&icon,point) || PtInRect(&label,point)) && first+i<int(goods.size())) return first+i;
+    }
+    return -1;
 }
-
-VOID CStoreWnd::OnScrollDown()
+bool CStoreWnd::Scroll(int kind,POINT point)
 {
-	POINT tPos;
-
-	tPos = g_xGameProc.m_ptMousePos;
-	if(IsInRect(tPos,m_xKindRect))
-	{
-		m_nCurrentKindTop=m_nCurrentKindTop > 0 ? m_nCurrentKindTop - 1: 0;
-	}
-
-	if(IsInRect(tPos,m_xItemRect))
-	{
-		m_nCurrentItemTop=m_nCurrentItemTop>0 ? m_nCurrentItemTop - 1 : 0;
-	}
+    if (goods.size()<2 || !m_pxWndImage->NewSetIndex(1225)) return false;
+    const auto& info=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+    const int y=257+int(std::lround(85*fraction));
+    const RECT track={260,257,260+info.shWidth,342+info.shHeight},thumb={260,y,260+info.shWidth,y+info.shHeight};
+    if (kind==0 && PtInRect(&track,point)) {
+        scrollCaptured=PtInRect(&thumb,point)!=FALSE;
+        if (!scrollCaptured) fraction=max(0.0,min(1.0,fraction+(point.y<y+info.shHeight/2?-5.0:5.0)/goods.size()));
+    } else if (kind==1 && scrollCaptured) fraction=max(0.0,min(1.0,(point.y-257)/double(85+info.shHeight)));
+    else if (kind==2 && scrollCaptured) scrollCaptured=false;
+    else return false;
+    first=int(std::lround((goods.size()-1)*fraction)); pressed=-1; return true;
 }
-
-VOID CStoreWnd::OnScrollUp()
+BOOL CStoreWnd::OnLButtonDown(POINT point) { if (!Scroll(0,point)) pressed=Hit(point); return TRUE; }
+BOOL CStoreWnd::OnLButtonUp(POINT point)
 {
-	POINT tPos;
-
-	tPos = g_xGameProc.m_ptMousePos;
-	if(IsInRect(tPos,m_xKindRect))
-	{
-		m_nCurrentKindTop=m_nCurrentKindTop < m_nMaxKindLine-1 ? m_nCurrentKindTop + 1: m_nMaxKindLine-1;
-	}
-
-	if(IsInRect(tPos,m_xItemRect))
-	{
-		m_nCurrentItemTop=m_nCurrentItemTop < m_nMaxItemLine-1 ? m_nCurrentItemTop + 1 : m_nMaxItemLine-1;
-	}
+    if (Scroll(2,point)) return FALSE;
+    const int control=Hit(point),previous=pressed; pressed=-1;
+    if (control!=previous || control==-1) return FALSE;
+    if (control==-7) return TRUE;
+    if (control==-5) CloseOffers();
+    else if (control==-6) OpenCategory();
+    else if (control==-8) g_xGameProc.m_xInterface.OpenNameDialog(8);
+    else if (control==-2) BuyOffer();
+    else if ((control==-3 || control==-4) && selected>=0 && !loading) {
+        const int next=max(0,min(6553,page+(control==-3?-1:1)));
+        if (next!=page) { page=next; loading=true; Request(CM_USERGETDETAILITEM,goods[selected].name,10*page); }
+    } else if (control>=256) offerIndex=control-256;
+    else if (control>=0) highlighted=control;
+    return FALSE;
 }
-
-BOOL CStoreWnd::SetSellKinds(CInventoryWnd* pxInvenWnd,CHAR Kind,INT nStdMode)
+void CStoreWnd::OnDoubleClick(POINT point)
 {
-	if(pxInvenWnd!=NULL)
-	{
-	}
-	return FALSE;
+    if (bulk>=0) {
+        const RECT icon={305,242,341,278},label={352,242,500,278};
+        if (PtInRect(&icon,point) || PtInRect(&label,point)) { pressed=-1; BuyBulk("1"); return; }
+    }
+    const int hit=Hit(point); pressed=-1;
+    if (hit>=256) { offerIndex=hit-256; BuyOffer(); }
+    else if (hit>=0) { highlighted=hit; OpenCategory(); }
 }
-
-BOOL CStoreWnd::SetSellItemLst(CInventoryWnd* pxInvenWnd,CHAR Kind,BYTE nStdMode,CHAR bKind)
+void CStoreWnd::OnScrollDown() { first=max(0,first-1); fraction=goods.size()>1?double(first)/(goods.size()-1):0; pressed=-1; }
+void CStoreWnd::OnScrollUp() { first=min(max(0,int(goods.size())-1),first+1); fraction=goods.size()>1?double(first)/(goods.size()-1):0; pressed=-1; }
+void CStoreWnd::ShowStoreWnd()
 {
-	CLIENTITEMRCD*	pxItem;
-	RECT	tRect;
-	SIZE	tSize;
-	CHAR szTemp1[50];
-	CHAR szTemp2[50];
-	CHAR szParam[50];
-	INT nCount=0;
-//	if(不是旅馆吗?)
-//	{	// 如果不是旅馆就要过滤后再放入.
-		if(pxInvenWnd!=NULL)
-		{
-			for(int i=0 ; i<60; i++)
-			{
-				pxItem = &pxInvenWnd->m_stInventoryItem[i].xItem.m_stItemInfo;
-//				if(bKind==pxItem->szMakeIndex[0])
-				{
-					if(bKind!='a' && bKind!='A' && bKind!='b' && bKind!='B')
-					{
-						if(nStdMode==pxItem->stStdItem.bStdMode)
-						{	// 其他项目必须再过滤一次.
-							m_xItems.AddNode(pxItem);
-							strcpy(szTemp1,pxItem->stStdItem.szName);
-							itoa(pxItem->nDura,szTemp2,10);
-							strcpy(szParam,pxItem->stStdItem.szName);
-
-							tSize = g_xMainWnd.GetStrLength(NULL,NULL,szTemp1);
-							tRect.top = 0;
-							tRect.left = 0;											// List Button 的情况, Left  = 0;
-							tRect.right = m_xItemRect.right - m_xItemRect.left;		//
-							tRect.bottom = tSize.cy;
-
-							m_xItemLstBtn.AddButton(szTemp1,szTemp2,tRect,nCount,szParam,RGB(180,180,0),RGB(255,0,0));
-							nCount++;
-						}
-					}
-					else
-					{
-						// 武器或衣服直接放入也无妨..
-						m_xItems.AddNode(pxItem);
-						strcpy(szTemp1,pxItem->stStdItem.szName);
-						itoa(pxItem->nDura,szTemp2,10);
-						strcpy(szParam,pxItem->stStdItem.szName);
-
-						tSize = g_xMainWnd.GetStrLength(NULL,NULL,szTemp1);
-						tRect.top = 0;
-						tRect.left = 0;											// List Button 的情况, Left  = 0;
-						tRect.right = m_xItemRect.right - m_xItemRect.left;		//
-						tRect.bottom = tSize.cy;
-
-						m_xItemLstBtn.AddButton(szTemp1,szTemp2,tRect,nCount,szParam,RGB(180,180,0),RGB(255,0,0));
-						nCount++;
-					}
-				}
-			}
-		}
-//	}
-//	else
-//	{	// 若是旅馆就可以随便放入。
-//		for(int i=0 ; i<60; i++)
-//		{
-//			pxItem = &pxInvenWnd->m_stInventoryItem[i].xItem.m_stItemInfo;
-			// 武器或衣服直接放入也无妨..
-//			m_xItems.AddNode(pxItem);
-//			strcpy(szTemp1,pxItem->stStdItem.szName);
-//			itoa(pxItem->nDura,szTemp2,10);
-//			strcpy(szParam,pxItem->stStdItem.szName);
-
-//			tSize = g_xMainWnd.GetStrLength(NULL,NULL,szTemp1);
-//			tRect.top = 0;
-//			tRect.left = 0;											// List Button 的情况下, Left  = 0;
-//			tRect.right = m_xItemRect.right - m_xItemRect.left;		//
-//			tRect.bottom = tSize.cy;
-//
-//			m_xItemLstBtn.AddButton(szTemp1,szTemp2,tRect,nCount,szParam,RGB(180,180,0),RGB(255,0,0));
-//			nCount++;
-//		}
-//	}
-	return FALSE;
+    Layout();
+    const int skin=bulk>=0?1262:details?1261:1260;
+    if (m_pxWndImage->NewSetIndex(skin)) {
+        const auto info=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        DrawSelectionFrame(*m_pxWndImage,skin,(m_rcWnd.right-info.shWidth)/2,225+(224-info.shHeight)/2,SelectionBlend::Normal,false);
+    }
+    if (goods.size()>1) DrawSelectionFrame(*m_pxWndImage,1225,260,257+int(std::lround(85*fraction)),SelectionBlend::Normal,false);
+    const int buttons[][4]={{-7,1222,258,408},{-6,1264,106,411},{-5,1222,bulk>=0?475:449,bulk>=0?281:384},
+        {-8,1273,367,284},{-2,1266,358,388},{-3,1269,316,388},{-4,1271,406,388}};
+    for (const auto& button:buttons) if (pressed==button[0]) DrawSelectionFrame(*m_pxWndImage,button[1],button[2],button[3],SelectionBlend::Normal,false);
+    auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];
+    const auto icon=[&](int frame,int x,int y) {
+        if (!icons.NewSetIndex(frame)) return; const auto info=*icons.m_lpstNewCurrWilImageInfo;
+        DrawSelectionFrame(icons,frame,x-info.shWidth/2,y-info.shHeight/2,SelectionBlend::Normal,false);
+    };
+    for (int i=0;i<4 && first+i<int(goods.size());++i) {
+        const auto& good=goods[first+i]; const int y=241+42*i; const bool chosen=first+i==highlighted;
+        const COLORREF tint=good.variants?RGB(40,120,120):RGB(80,80,160),border=RGB(250,200,150);
+        if (chosen) DrawLegacyPanel(RECT{62,y,251,y+36},tint,1,border);
+        if (chosen || good.variants) DrawLegacyPanel(RECT{20,y,56,y+36},chosen?tint:0,chosen?1:0,chosen?border:RGB(180,180,180));
+        icon(good.icon,39,y+19);
+    }
+    if (bulk>=0) {
+        DrawLegacyPanel(RECT{305,242,341,278},RGB(80,80,160),1,RGB(180,180,180));
+        DrawLegacyPanel(RECT{352,242,500,278},RGB(80,80,160),1,RGB(250,200,150)); icon(goods[bulk].icon,324,261);
+    }
+    if (details) for (int i=0;i<min(12,int(offers.size()));++i) {
+        const int x=315+38*(i%4),y=267+38*(i/4);
+        if (i==offerIndex) DrawLegacyPanel(RECT{x,y,x+35,y+35},RGB(50,150,150),1,RGB(180,180,180));
+        icon(offers[i].icon,x+19,y+19);
+    }
+    HDC dc; auto* surface=g_xMainWnd.GetBackBuffer(); if (FAILED(surface->GetDC(&dc))) return;
+    static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0}; HFONT font=g_xMainWnd.CreateGameFont(face,9);
+    auto old=SelectObject(dc,font); SetBkMode(dc,TRANSPARENT);
+    const auto text=[&](const std::string& value,int x,int y,int width,COLORREF color) {
+        const int saved=SaveDC(dc); IntersectClipRect(dc,x,y,x+width,y+16); SetTextColor(dc,color);
+        TextOutA(dc,x,y,value.data(),int(value.size())); RestoreDC(dc,saved);
+    };
+    const auto requirement=[&](const Good& good,int x,int y,int width) {
+        auto& hero=g_xGameProc.m_xMyHero;
+        if (good.icon==304 && good.requirement<=2) text(captions.Get(5170+good.requirement),x,y,width,hero.m_bJob==good.requirement?13172680:1974015);
+        else if (good.variants && good.requirement>0 && good.requirementType<12) {
+            auto& attack=g_xGameProc.m_xInterface.m_xStatusWnd.m_elementValues[0];
+            const auto low=[&](int a,int b) { int value=255; for (int i=a;i<b;++i) value=min(value,int(attack[i])); return value; };
+            const int attributes[]={hero.m_stAbility.bLevel,HIBYTE(hero.m_stAbility.wDC),low(0,4),low(4,7),low(0,7),attack[0],attack[1],attack[2],attack[3],attack[4],attack[5],attack[6]};
+            text(captions.Get(5140+good.requirementType)+" "+std::to_string(good.requirement),x,y,width,attributes[good.requirementType]>=good.requirement?16773360:1974015);
+        }
+    };
+    const auto label=[&](const Good& good,int x,int y,int width,bool shadow) {
+        SIZE size={}; GetTextExtentPoint32A(dc,good.name.data(),int(good.name.size()),&size);
+        auto price=captions.Get(2300); const auto marker=price.find("%d");
+        if (marker!=price.npos) price.replace(marker,2,std::to_string(good.price)); else price=std::to_string(good.price);
+        if (shadow) { text(good.name,x-1,y-1,width,0x0a0a0a); text(price,x+1+size.cx,y-1,124,0x0a0a0a); }
+        text(good.name,x,y,width,0xfafa); text(price,x+2+size.cx,y,124,0x64b4fa); requirement(good,x,y+20,width);
+    };
+    for (int i=0;i<4 && first+i<int(goods.size());++i) {
+        const auto& good=goods[first+i]; label(good,66,241+42*i+(good.icon==304 || (good.variants && good.requirement)?2:13),184,first+i==highlighted);
+    }
+    if (bulk>=0) label(goods[bulk],358,225+(goods[bulk].requirement?19:30),126,true);
+    if (details) {
+        RECT box={310,222,473,266}; SetTextColor(dc,0x96c8ff); const auto value=loading?std::string("..."):std::to_string(page);
+        DrawTextA(dc,value.c_str(),-1,&box,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+        const char priceFace[]={char(0xb1),char(0xbc),char(0xb8),char(0xb2),0};
+        HFONT priceFont=g_xMainWnd.CreateGameFont(priceFace,8); SelectObject(dc,priceFont);
+        for (int i=0;i<min(12,int(offers.size()));++i) {
+            if (!icons.NewSetIndex(offers[i].icon) || icons.m_lpstNewCurrWilImageInfo->shWidth<=0) continue;
+            const int x=315+38*(i%4),y=267+38*(i/4); const auto price=std::to_string(offers[i].price);
+            text(price,x-1,y+20,35,0x0a0a0a); text(price,x,y+21,35,0xffffff);
+        }
+        SelectObject(dc,font); DeleteObject(priceFont);
+    }
+    SelectObject(dc,old); DeleteObject(font); surface->ReleaseDC(dc);
 }
-
-
-BOOL CStoreWnd::OnUpdateQueue(VOID)
+void CStoreWnd::Receive(const _TDEFAULTMESSAGE& header,const char* body)
 {
-	if(m_xPacketQueue.GetCount()>0)
-	{
-		LPPACKETMSG	lpPacketMsg;
-		lpPacketMsg =(LPPACKETMSG) m_xPacketQueue.PopQ();
-		if(lpPacketMsg->stDefMsg.nRecog == m_nNpcID)
-		{
-			switch(lpPacketMsg->stDefMsg.wIdent)
-			{
-			case SM_SENDGOODSLIST:
-				{
-					INT nPos;
-					CHAR  szDecodeMsg[MAX_PATH*4];
-					nPos = fnDecode6BitBuf(lpPacketMsg->szEncodeData, szDecodeMsg, sizeof(szDecodeMsg));
-					SetBuyKinds(szDecodeMsg,lpPacketMsg->stDefMsg.wIdent);
-					break;
-				}
-			case SM_SENDDETAILGOODSLIST:
-				{
-					SetBuyItemLst(lpPacketMsg->szEncodeData,(lpPacketMsg->stDefMsg).wSeries);	
-					break;
-				}
-			case SM_BUYITEM_FAIL:
-				{
-					break;
-				}
-				/*			default :
-				{
-				m_xPacketQueue.PushQ((BYTE*)lpPacketMsg);
-				return FALSE
-			}*/
-			}
-		}
-		else
-		{
-			// 不是该 NPC
-			// 待做事项
-			// 将关闭 NPC 窗口
-			// 将更新 NPC
-			m_xPacketQueue.PushQ((BYTE*)lpPacketMsg);
-			return FALSE;
-		}
-		delete lpPacketMsg;
-		return TRUE;
-	}
-	return FALSE;
-}
-
-VOID CStoreWnd::SendDeTailGoodsList(INT nIndex,CHAR* szItemName)
-{
-	g_xClientSocket.SendGetDetailItem(m_nNpcID, nIndex, szItemName);
-}
-
-VOID CStoreWnd::SendButThisITme(CMTxtBtn* tBtn)
-{
-	CHAR	szItemName[MAX_PATH];
-
-	ZeroMemory(szItemName,MAX_PATH);
-
-	m_xItems.MoveCurrentToTop();
-	for(INT i = 0 ; i<m_xItems.GetCounter();i++)
-	{
-//		if(strncmp(m_xItems.GetCurrentData()->szMakeIndex,tBtn->Param,12)==0)
-		{
-//			g_xClientSocket.SendBuyItem(m_nNpcID,m_xItems.GetCurrentData()->stStdItem.szName,tBtn->Param);					// MOON
-			return;
-		}
-		m_xItems.MoveNextNode();
-	}
+    if (header.wIdent==SM_SENDGOODSLIST) {
+        char decoded[10241]; const int length=fnDecode6BitBuf(const_cast<char*>(body),decoded,sizeof(decoded)-1); decoded[length]=0;
+        if (SetGoods(header.nRecog,decoded,header.wParam) && !m_bActive) g_xGameProc.m_xInterface.WindowActivate(_WND_ID_STORE);
+    }
+    else if (header.wIdent==SM_SENDDETAILGOODSLIST && header.nRecog==actor) {
+        char decoded[8197]; const int length=fnDecode6BitBuf(const_cast<char*>(body),decoded,sizeof(decoded)-1); decoded[length]=0;
+        SetDetailRecords(decoded,header.wParam,header.wTag);
+    } else if (header.wIdent==SM_BUYITEM_SUCCESS || header.wIdent==SM_BUYITEM_FAIL) {
+        const bool success=header.wIdent==SM_BUYITEM_SUCCESS;
+        if (success || (header.nRecog>=1 && header.nRecog<=3)) {
+            if ((success || header.nRecog==1) && details && offerIndex>=0 && offerIndex<int(offers.size())) {
+                offers.erase(offers.begin()+offerIndex); if (offerIndex>=int(offers.size())) offerIndex=-1;
+            }
+            if (success) g_xGameProc.m_xMyHero.m_nGlod=header.nRecog;
+            else g_xGameProc.m_xInterface.ShowNotice(1436+header.nRecog);
+        }
+    }
 }

@@ -39,6 +39,7 @@ public:
         if (groupPanel==28 || groupPanel==29) capturePath=groupPanel==28?"quest-empty.bmp":"quest-list.bmp";
         if (groupPanel==30 || groupPanel==31) capturePath=groupPanel==30?"mount-panel.bmp":"mount-hint.bmp";
         if (groupPanel>=32 && groupPanel<=36) capturePath=groupPanel==36?"trade-return.bmp":groupPanel==35?"trade-gold.bmp":groupPanel==32?"trade-empty.bmp":groupPanel==33?"trade-list.bmp":"trade-confirmed.bmp";
+        if (groupPanel>=46 && groupPanel<=49) capturePath=groupPanel==46?"shop-goods.bmp":groupPanel==47?"shop-offers.bmp":groupPanel==48?"shop-bulk.bmp":"shop-quantity.bmp";
         if (groupPanel>=42 && groupPanel<=45) capturePath=groupPanel==42?"npc-dialogue.bmp":groupPanel==43?"npc-scrolled.bmp":groupPanel==44?"npc-input.bmp":"npc-notclose.bmp";
         if (groupPanel==40 || groupPanel==41) capturePath=groupPanel==40?"guild-notice-editor.bmp":"guild-members-editor.bmp";
         if (groupPanel==39) capturePath="quick-binding.bmp";
@@ -515,6 +516,59 @@ public:
             if (FILE* report=fopen("mount-layout-check.txt","wb")) {
                 fprintf(report,"opened=%d repeat=%d hidden=%d buttons=%d stray=%d on_foot=%d riding=%d hint=%d pressed_hint=%d outside_release=%d covered=%d window_drag=%d closed=%d\n",
                     opened,repeat,hidden,buttons,stray,onFoot,riding,hint,pressedHint,released,covered,moved,closed); fclose(report);
+            }
+        }
+        if (groupPanel>=46 && groupPanel<=49) {
+            auto& ui=g_xGameProc.m_xInterface; auto& shop=ui.m_xStoreWnd; auto& npc=ui.m_xNPCWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            npc.SetScript(77,"欢迎光临商店。\\请选择需要的商品。\\<返回/@main>"); ui.WindowActivate(_WND_ID_NPCCHAT);
+            const char* list="金创药/2/100/20/0/0/0/强效金创药/2/180/30/1/0/0/魔法药/1/850/1/15/0/8/太阳水/1/500/1/20/0/12/技能书/1/1500/1/304/0/1/布衣/0/200/1/30/0/0/";
+            const bool parsed=shop.SetGoods(77,list,6) && shop.goods.size()==6 && shop.goods[2].requirement==8;
+            const bool invalid=!shop.SetGoods(77,"broken/1/x/",1) && shop.goods.size()==6 && !shop.SetGoods(77,"",256);
+            ui.WindowActivate(_WND_ID_STORE);
+            const bool bounds=shop.m_rcWnd.left==0 && shop.m_rcWnd.top==225 && shop.m_rcWnd.right==292;
+            ui.OnLButtonUp(POINT{70,300}); const bool stray=shop.highlighted==0;
+            ui.OnLButtonDown(POINT{70,300}); ui.OnLButtonUp(POINT{780,580}); const bool outside=shop.pressed==-1 && shop.highlighted==0;
+            ui.OnLButtonDown(POINT{70,300}); ui.OnLButtonUp(POINT{70,300}); const bool selected=shop.highlighted==1;
+            ui.OnLButtonDown(POINT{58,300}); ui.OnLButtonUp(POINT{58,300}); const bool gap=shop.highlighted==1 && !ui.m_bMoveFocusedWnd;
+            ui.OnScrollUp(); const bool wheel=shop.first==1; for(int i=0;i<20;++i) ui.OnScrollUp(); const bool end=shop.first==5;
+            for(int i=0;i<20;++i) ui.OnScrollDown();
+            ui.OnLButtonDown(POINT{263,260}); const bool captured=shop.scrollCaptured;
+            ui.OnMouseMove(POINT{780,580}); ui.OnLButtonUp(POINT{780,580}); const bool drag=shop.first==5 && !shop.scrollCaptured;
+            shop.SetGoods(77,list,6); ui.OnLButtonDoubleClick(POINT{70,345});
+            const bool requested=shop.selected==2 && shop.bulk==-1 && !shop.details;
+            std::vector<CStoreWnd::Offer> offers; for (int i=0;i<12;++i) offers.push_back({"魔法药",15,850+i*10,DWORD(100+i)});
+            BYTE record[100]={}; strcpy((char*)record,"WireItem"); record[36]=15; record[62]=123; record[68]=250;
+            char encoded[256]={}; fnEncode6BitBuf(record,encoded,100,sizeof(encoded));
+            const std::string wire=std::string(encoded)+"/";
+            const bool wireParsed=shop.SetDetailRecords(wire.c_str(),1,20) && shop.offers[0].id==123 && shop.offers[0].price==250;
+            const bool wireRejected=!shop.SetDetailRecords("broken/",1,0) && shop.offers.size()==1;
+            std::string records; for(int i=0;i<12;++i) records+=wire;
+            char encodedList[4096]={}; fnEncode6BitBuf((BYTE*)records.data(),encodedList,int(records.size()),sizeof(encodedList));
+            _TDEFAULTMESSAGE reply; fnMakeDefMessage(&reply,SM_SENDDETAILGOODSLIST,77,12,40,0); shop.Receive(reply,encodedList);
+            const bool detailReply=shop.offers.size()==12 && shop.page==4 && strlen(encodedList)>1040;
+            const auto oldGold=g_xGameProc.m_xMyHero.m_nGlod;
+            fnMakeDefMessage(&reply,SM_BUYITEM_SUCCESS,12345,0,0,0); shop.Receive(reply,"");
+            const bool purchaseReply=shop.offers.size()==11 && g_xGameProc.m_xMyHero.m_nGlod==12345;
+            g_xGameProc.m_xMyHero.m_nGlod=oldGold;
+            shop.SetOffers(offers,20); const bool details=shop.details && shop.page==2 && shop.offerIndex==0 && shop.m_rcWnd.right==488;
+            ui.OnLButtonDown(POINT{355,270}); ui.OnLButtonUp(POINT{355,270}); const bool cell=shop.offerIndex==1;
+            ui.OnLButtonDown(POINT{410,392}); ui.OnLButtonUp(POINT{410,392}); const bool pending=shop.loading && shop.page==3;
+            ui.OnLButtonDown(POINT{318,270}); ui.OnLButtonUp(POINT{318,270}); const bool blocked=shop.offerIndex==1;
+            shop.SetOffers(offers,30); ui.OnLButtonDown(POINT{455,390}); ui.OnLButtonUp(POINT{455,390});
+            const bool detailsClosed=!shop.details && shop.m_rcWnd.right==292 && shop.goods.size()==6;
+            ui.OnLButtonDoubleClick(POINT{70,255}); const bool bulk=shop.bulk==0 && shop.m_rcWnd.right==516;
+            ui.OnLButtonDown(POINT{375,290}); ui.OnLButtonUp(POINT{375,290});
+            const bool quantity=ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==8 && IsWindowVisible(g_xChatEditBox.GetSafehWnd());
+            ui.OnLButtonDown(POINT{490,315}); ui.OnLButtonUp(POINT{490,315}); const bool cancelled=!ui.m_xMsgBox.IsActive();
+            ui.OnLButtonDown(POINT{375,290}); ui.OnLButtonUp(POINT{375,290}); g_xGameProc.CloseNPCWindow();
+            const bool lifecycle=!shop.m_bActive && !npc.m_bActive && !ui.m_xMsgBox.IsActive() && !IsWindowVisible(g_xChatEditBox.GetSafehWnd());
+            npc.SetScript(77,"欢迎光临商店。\\请选择需要的商品。\\<返回/@main>"); ui.WindowActivate(_WND_ID_NPCCHAT);
+            shop.SetGoods(77,list,6); ui.WindowActivate(_WND_ID_STORE);
+            if(groupPanel==47) { shop.highlighted=2; shop.OpenCategory(); shop.SetOffers(offers,0); }
+            if(groupPanel>=48) { shop.OpenCategory(); if(groupPanel==49) { ui.OpenNameDialog(8); SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"10"); } }
+            if(FILE* report=fopen("shop-layout-check.txt","wb")) {
+                fprintf(report,"parsed=%d invalid=%d bounds=%d stray=%d outside=%d selected=%d gap=%d wheel=%d scroll_end=%d captured=%d drag=%d requested=%d details=%d cell=%d pending=%d blocked=%d details_closed=%d bulk=%d quantity=%d cancelled=%d lifecycle=%d wire_parsed=%d wire_rejected=%d detail_reply=%d purchase_reply=%d\n",parsed,invalid,bounds,stray,outside,selected,gap,wheel,end,captured,drag,requested,details,cell,pending,blocked,detailsClosed,bulk,quantity,cancelled,lifecycle,wireParsed,wireRejected,detailReply,purchaseReply); fclose(report);
             }
         }
         if (groupPanel>=42 && groupPanel<=45) {
@@ -1080,7 +1134,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-dialogue")==0 ? 42 :
         strcmp(lpCmdLine,"--preview=npc-scrolled")==0 ? 43 :
         strcmp(lpCmdLine,"--preview=npc-input")==0 ? 44 :
-        strcmp(lpCmdLine,"--preview=npc-notclose")==0 ? 45 : 0;
+        strcmp(lpCmdLine,"--preview=npc-notclose")==0 ? 45 :
+        strcmp(lpCmdLine,"--preview=shop-goods")==0 ? 46 :
+        strcmp(lpCmdLine,"--preview=shop-offers")==0 ? 47 :
+        strcmp(lpCmdLine,"--preview=shop-bulk")==0 ? 48 :
+        strcmp(lpCmdLine,"--preview=shop-quantity")==0 ? 49 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

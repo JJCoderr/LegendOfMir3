@@ -938,6 +938,7 @@ case _WND_ID_STATUS:
 			{
 				DeleteWindowToList(_WND_ID_STORE);
 				m_xStoreWnd.SetGameWndActive(FALSE);
+                m_xStoreWnd.CloseOffers(); m_xStoreWnd.Reset();
 				bRet = FALSE;
 			}
 			else
@@ -1574,6 +1575,7 @@ void CInterface::OpenNameDialog(int action)
     std::string prompt = action==4 ? "'"+m_xGuildWnd.m_name+"' "+captions.Get(4001) :
         captions.Get(action==6?1304:action==5?4002:action==3?1606:1605);
     if (action==7) prompt=m_xNPCWnd.prompt;
+    if (action==8) prompt=captions.Get(2302);
     m_xMsgBox.ShowMessageBox(prompt.c_str(),MSG_BTN_YESNO,1240);
     g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+244,g_xMainWnd.m_rcWindow.top+340,309,15,TRUE);
     g_xChatEditBox.SetLimitText(90);
@@ -1592,7 +1594,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         m_xMsgBox.HideMessageBox();
         return;
     }
-    if (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 7) {
+    if (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 8) {
         char name[91] = {};
         GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,sizeof(name));
         if (mouse) g_xSound.PlayLobbyEffect("105.wav");
@@ -1610,6 +1612,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
             else if (m_nIdxMsgBox == 3) g_xClientSocket.SendDelGroupMember(name);
             else if (m_nIdxMsgBox == 4) g_xClientSocket.SendGuildMemberRemoval(name);
             else if (m_nIdxMsgBox == 7) m_xNPCWnd.SubmitPrompt(name);
+            else if (m_nIdxMsgBox == 8) m_xStoreWnd.BuyBulk(name);
             else if (m_nIdxMsgBox == 6) m_xExchangeWnd.SubmitGold(name,g_xGameProc.m_xMyHero.m_nGlod);
             else {
                 static CLoginMessages captions;
@@ -1660,6 +1663,10 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
+    if (!m_xMsgBox.IsActive() && (m_xStoreWnd.pressed!=-1 || m_xStoreWnd.scrollCaptured)) {
+        if (m_xStoreWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_STORE);
+        return TRUE;
+    }
     if (m_xNPCWnd.closePressed || m_xNPCWnd.arrowPressed) { m_xNPCWnd.OnLButtonUp(ptMouse); return TRUE; }
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(2,ptMouse); return TRUE; }
     if (m_xExchangeWnd.captured>=0 || m_xExchangeWnd.confirmPressed || m_xExchangeWnd.headerPressed) { m_bMoveFocusedWnd=FALSE; m_xExchangeWnd.OnLButtonUp(ptMouse); return TRUE; }
@@ -1840,6 +1847,7 @@ case _WND_ID_STATUS:		if ( m_xStatusWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )	
 *******************************************************************************************************************/
 BOOL CInterface::OnMouseMove(POINT ptMouse)
 {
+    if (!m_xMsgBox.IsActive() && m_xStoreWnd.scrollCaptured) { m_xStoreWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(1,ptMouse); return TRUE; }
     if (m_xExchangeWnd.captured>=0) { m_xExchangeWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xQuestWnd.scrollCaptured) { m_xQuestWnd.OnMouseMove(ptMouse); return TRUE; }
@@ -1926,6 +1934,7 @@ BOOL CInterface::OnScrollDown()
 {
     if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
+    if (IsTopWindow(_WND_ID_STORE)) { m_xStoreWnd.OnScrollDown(); return TRUE; }
     if (IsTopWindow(_WND_ID_QUEST)) { m_xQuestWnd.OnScrollDown(); return TRUE; }
     if (IsTopWindow(_WND_ID_GUILD)) { m_xGuildWnd.OnScrollDown(); return TRUE; }
 	if ( IsTopWindow(m_xInventoryWnd.m_nID) )
@@ -1962,6 +1971,7 @@ BOOL CInterface::OnScrollUp()
 {
     if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
+    if (IsTopWindow(_WND_ID_STORE)) { m_xStoreWnd.OnScrollUp(); return TRUE; }
     if (IsTopWindow(_WND_ID_QUEST)) { m_xQuestWnd.OnScrollUp(); return TRUE; }
     if (IsTopWindow(_WND_ID_GUILD)) { m_xGuildWnd.OnScrollUp(); return TRUE; }
 	if ( IsTopWindow(m_xInventoryWnd.m_nID) )
@@ -1997,6 +2007,7 @@ BOOL CInterface::OnLButtonDoubleClick(POINT ptMouse)
 {
     if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
+    if (GetWindowInMousePos(ptMouse)==_WND_ID_STORE) { m_xStoreWnd.OnDoubleClick(ptMouse); return TRUE; }
     if (GetWindowInMousePos(ptMouse)==_WND_ID_SKILL && m_xSkillWnd.OpenKeyMenu(ptMouse)) {
         WindowFocusChangedAndSetReadyMove(_WND_ID_SKILL,ptMouse); m_bMoveFocusedWnd=FALSE;
         return TRUE;
@@ -2073,7 +2084,7 @@ VOID CInterface::OnSysKeyDown()
 
 LRESULT	CInterface::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 {
-    if (m_xMsgBox.IsActive() && m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 7) {
+    if (m_xMsgBox.IsActive() && m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 8) {
         SetWindowTextA(g_xChatEditBox.GetSafehWnd(),g_xChatEditBox.m_szInputMsg);
         FinishNotice(CLICK_YES,false);
         return TRUE;
