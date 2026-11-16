@@ -69,6 +69,7 @@
 #include "GameProcess/GameWnd.h"
 #include "GameProcess/InventoryWnd.h"
 #include "GameProcess/StatusWnd.h"
+#include "GameProcess/SkillWnd.h"
 #include "GameProcess/ExchangeWnd.h"
 #include "GameProcess/GuildMasterWnd.h"
 #include "GameProcess/GuildWnd.h"

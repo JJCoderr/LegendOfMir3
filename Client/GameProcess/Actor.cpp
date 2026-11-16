@@ -5528,7 +5528,7 @@ BOOL CMyHero::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTar
 			else							ptMouseTilePos = ptTargetPos;
 
 			bDir = CalcDirection(ptMouseTilePos.x, ptMouseTilePos.y);
-			pstMagic = g_xGameProc.m_xInterface.m_xStatusWnd.GetMagicByKey(bMagicKey);
+			pstMagic = g_xGameProc.m_xInterface.m_xSkillWnd.GetMagicByKey(bMagicKey);
 
 			if ( pstMagic )
 			{

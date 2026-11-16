@@ -60,6 +60,7 @@ set(MIR3_CLIENT_SOURCES
     GameProcess/QuestWnd.cpp
     GameProcess/SprDfn.cpp
     GameProcess/StatusWnd.cpp
+    GameProcess/SkillWnd.cpp
     GameProcess/StoreWnd.cpp
     GameProcess/WeatherEffect.cpp
     # GameProcess/PlayerChar.cpp

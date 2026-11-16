@@ -66,6 +66,7 @@ VOID CInterface::Init()
 	m_pxInterImg = NULL;
 
 	m_xStatusWnd.Init();
+    m_xSkillWnd.Init();
 	m_xStoreWnd.Init();
 	m_xGuildWnd.Init();
 	m_xGroupWnd.Init();
@@ -112,6 +113,7 @@ VOID CInterface::Destroy()
 	m_xInventoryWnd.Destroy();
 	m_xStoreWnd.Destroy();
 	m_xStatusWnd.Destroy();
+    m_xSkillWnd.Destroy();
 	m_xGuildWnd.Destroy();
 	m_xGroupWnd.Destroy();
 	m_xExchangeWnd.Destroy();
@@ -168,6 +170,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	// 创建各窗口。
 	m_xInventoryWnd.CreateInventoryWnd(_WND_ID_INVENTORY, m_pxInterImg, 1220, 518, 0, 282, 466, TRUE);
 	m_xStatusWnd.CreateStatusWnd(_WND_ID_STATUS, m_pxInterImg, 1280, 0, 0, 328, 466, TRUE);
+    m_xSkillWnd.CreateGameWnd(_WND_ID_SKILL,m_pxInterImg,1620,TRUE,348,0,360,488);
 	m_xStoreWnd.CreateStoreWnd(_WND_ID_STORE, m_pxInterImg, _WNDIMGIDX_STORE, 0, 0, 0, 0, TRUE);
 	m_xExchangeWnd.CreateExchangeWnd(_WND_ID_EXCHANGE, m_pxInterImg, _WNDIMGIDX_EXCHANGE, 0, 0, 0, 0, TRUE);
 	m_xGuildMasterWnd.CreateGuildMasterWnd(_WND_ID_GUILDMASTER, m_pxInterImg, _WNDIMGIDX_GUILDMASTER, 0, 0, 0, 0, TRUE);
@@ -310,7 +313,10 @@ VOID CInterface::ShowWndList()
 			case _WND_ID_INVENTORY:
 				m_xInventoryWnd.ShowInventoryWnd();
 				break;
-			case _WND_ID_STATUS:
+			case _WND_ID_SKILL:
+				m_xSkillWnd.ShowSkillWnd();
+				break;
+case _WND_ID_STATUS:
 				m_xStatusWnd.ShowStatusWnd();
 				break;
 			case _WND_ID_STORE:
@@ -726,7 +732,10 @@ INT	CInterface::GetWindowInMousePos(POINT ptMouse)
 			case _WND_ID_INVENTORY:
 				rcWnd = m_xInventoryWnd.GetGameWndRect();
 				break;
-			case _WND_ID_STATUS:
+			case _WND_ID_SKILL:
+				rcWnd = m_xSkillWnd.GetGameWndRect();
+				break;
+case _WND_ID_STATUS:
 				rcWnd = m_xStatusWnd.GetGameWndRect();
 				break;
 			case _WND_ID_STORE:
@@ -875,7 +884,25 @@ BOOL CInterface::WindowActivate(INT nID)
 			}
 		}
 		break;
-	case _WND_ID_STATUS:
+	case _WND_ID_SKILL:
+		{
+			if ( m_xSkillWnd.GetGameWndActive() )
+			{
+				DeleteWindowToList(_WND_ID_SKILL);
+				m_xSkillWnd.SetGameWndActive(FALSE);
+                m_xSkillWnd.m_skillPressed=-1; m_xSkillWnd.m_skillScrollCaptured=false;
+				bRet = FALSE;
+			}
+			else
+			{
+				AddWindowToList(_WND_ID_SKILL);
+				m_xSkillWnd.SelectNonempty();
+                m_xSkillWnd.SetGameWndActive(TRUE);
+				bRet = TRUE;
+			}
+		}
+		break;
+case _WND_ID_STATUS:
 		{
 			if ( m_xStatusWnd.GetGameWndActive() )
 			{
@@ -1114,7 +1141,10 @@ VOID CInterface::MoveTopWindow(POINT ptMouse)
 			case _WND_ID_INVENTORY:
 				m_xInventoryWnd.MoveGameWnd(ptMouse);
 				break;
-			case _WND_ID_STATUS:
+			case _WND_ID_SKILL:
+				m_xSkillWnd.MoveGameWnd(ptMouse);
+				break;
+case _WND_ID_STATUS:
 				m_xStatusWnd.MoveGameWnd(ptMouse);
 				break;
 			case _WND_ID_STORE:
@@ -1191,7 +1221,11 @@ VOID CInterface::WindowFocusChangedAndSetReadyMove(INT nID, POINT ptMouse)
 			m_xInventoryWnd.SetGameWndFocused(TRUE);
 			m_xInventoryWnd.SetReadyMove(ptMouse);
 			break;
-		case _WND_ID_STATUS:
+		case _WND_ID_SKILL:
+			m_xSkillWnd.SetGameWndFocused(TRUE);
+			m_xSkillWnd.SetReadyMove(ptMouse);
+			break;
+case _WND_ID_STATUS:
 			m_xStatusWnd.SetGameWndFocused(TRUE);
 			m_xStatusWnd.SetReadyMove(ptMouse);
 			break;
@@ -1262,7 +1296,10 @@ VOID CInterface::AllWindowsFocusOff()
 			case _WND_ID_INVENTORY:
 				m_xInventoryWnd.SetGameWndFocused(FALSE);
 				break;
-			case _WND_ID_STATUS:
+			case _WND_ID_SKILL:
+				m_xSkillWnd.SetGameWndFocused(FALSE);
+				break;
+case _WND_ID_STATUS:
 				m_xStatusWnd.SetGameWndFocused(FALSE);
 				break;
 			case _WND_ID_STORE:
@@ -1388,7 +1425,11 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
 				if ( !m_xInventoryWnd.OnLButtonDown(&m_stCommonItem, ptMouse) )
 					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
 				break;
-			case _WND_ID_STATUS:
+			case _WND_ID_SKILL:
+                WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect,ptMouse);
+                if (m_xSkillWnd.OnLButtonDown(ptMouse)) m_bMoveFocusedWnd=FALSE;
+                break;
+case _WND_ID_STATUS:
 				if ( !m_xStatusWnd.OnLButtonDown(&m_stCommonItem, ptMouse) )
 					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
 				break;
@@ -1563,8 +1604,8 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
-    if (m_xStatusWnd.m_skillScrollCaptured || m_xStatusWnd.m_skillPressed>=0) {
-        if (m_xStatusWnd.OnLButtonUp(&m_stCommonItem,ptMouse)) WindowActivate(_WND_ID_STATUS);
+    if (m_xSkillWnd.m_skillScrollCaptured || m_xSkillWnd.m_skillPressed>=0) {
+        if (m_xSkillWnd.OnLButtonUp(ptMouse)) WindowActivate(_WND_ID_SKILL);
         return TRUE;
     }
     if (m_xInventoryWnd.m_scrollCaptured) { m_xInventoryWnd.OnLButtonUp(&m_stCommonItem,ptMouse); return TRUE; }
@@ -1661,23 +1702,11 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
                     }
                     break;
 				case _BTN_ID_MAGIC:
-					if ( m_xStatusWnd.GetStatusWndType() != _TYPE_SETMAGIC )
-					{
-						if ( !WindowActivate(_WND_ID_STATUS) )		WindowActivate(_WND_ID_STATUS);
-					}
-					else
-						WindowActivate(_WND_ID_STATUS);
-					m_xStatusWnd.SetStatusWndType(_TYPE_SETMAGIC);
-					break;
+                    WindowActivate(_WND_ID_SKILL);
+                    break;
 				case _BTN_ID_CHAR:
-					if ( m_xStatusWnd.GetStatusWndType() != _TYPE_EQUIP )
-					{
-						if ( !WindowActivate(_WND_ID_STATUS) )		WindowActivate(_WND_ID_STATUS);
-					}
-					else
-						WindowActivate(_WND_ID_STATUS);
-					m_xStatusWnd.SetStatusWndType(_TYPE_EQUIP);
-					break;
+                    WindowActivate(_WND_ID_STATUS);
+                    break;
 				}
 			}
 		}
@@ -1691,7 +1720,8 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 			switch ( nInterfaceWndInRect )
 			{
 			case _WND_ID_INVENTORY:		if ( m_xInventoryWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )	WindowActivate(_WND_ID_INVENTORY);		break;
-			case _WND_ID_STATUS:		if ( m_xStatusWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )		WindowActivate(_WND_ID_STATUS);			break;
+			case _WND_ID_SKILL:		if ( m_xSkillWnd.OnLButtonUp(ptMouse) )		WindowActivate(_WND_ID_SKILL);			break;
+case _WND_ID_STATUS:		if ( m_xStatusWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )		WindowActivate(_WND_ID_STATUS);			break;
 			case _WND_ID_STORE:			if ( m_xStoreWnd.OnLButtonUp(ptMouse) )							WindowActivate(_WND_ID_STORE);			break;
 			case _WND_ID_EXCHANGE:		if ( m_xExchangeWnd.OnLButtonUp(ptMouse) )						WindowActivate(_WND_ID_EXCHANGE);		break;
 			case _WND_ID_GUILDMASTER:
@@ -1734,7 +1764,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 *******************************************************************************************************************/
 BOOL CInterface::OnMouseMove(POINT ptMouse)
 {
-    if (m_xStatusWnd.m_skillScrollCaptured) { m_xStatusWnd.OnMouseMove(ptMouse); return TRUE; }
+    if (m_xSkillWnd.m_skillScrollCaptured) { m_xSkillWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xInventoryWnd.m_scrollCaptured) { m_xInventoryWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xOptionWnd.m_audioDrag>=0) { m_xOptionWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xGuildWnd.m_scrollCaptured) { m_xGuildWnd.OnMouseMove(ptMouse); return TRUE; }
@@ -1763,8 +1793,8 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 		case _WND_ID_INVENTORY:
 			m_xInventoryWnd.OnMouseMove(ptMouse);
 			break;
-		case _WND_ID_STATUS:
-			m_xStatusWnd.OnMouseMove(ptMouse);
+		case _WND_ID_SKILL:
+			m_xSkillWnd.OnMouseMove(ptMouse);
 			break;
 		case _WND_ID_STORE:
 			m_xStoreWnd.OnMouseMove(ptMouse);
@@ -1806,7 +1836,6 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 	}
 	else
 	{
-		m_xStatusWnd.SetStatusBtnInit();
 		m_xInventoryWnd.SetInvenBtnInit();
 		m_xChatPopWnd.SetStatusBtnInit();
 		m_xGuildMasterWnd.SetStatusBtnInit();
@@ -1828,9 +1857,9 @@ BOOL CInterface::OnScrollDown()
 	{
 		m_xInventoryWnd.OnScrollDown();
 	}
-	else if ( IsTopWindow(m_xStatusWnd.m_nID) )
+	else if ( IsTopWindow(m_xSkillWnd.m_nID) )
 	{
-		m_xStatusWnd.OnScrollDown();
+		m_xSkillWnd.OnScrollDown();
 	}
 	else if (IsTopWindow(m_xNPCWnd.m_nID))		// 勇气
 	{
@@ -1862,9 +1891,9 @@ BOOL CInterface::OnScrollUp()
 	{
 		m_xInventoryWnd.OnScrollUp();
 	}
-	else if ( IsTopWindow(m_xStatusWnd.m_nID) )
+	else if ( IsTopWindow(m_xSkillWnd.m_nID) )
 	{
-		m_xStatusWnd.OnScrollUp();
+		m_xSkillWnd.OnScrollUp();
 	}
 	else if (IsTopWindow(m_xNPCWnd.m_nID))		// 勇气
 	{
@@ -1921,16 +1950,8 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
 		WindowActivate(_WND_ID_INVENTORY);			
 		break;
 	case VK_F11:
-		if ( m_xStatusWnd.GetStatusWndType() != _TYPE_SETMAGIC )
-		{
-			if ( !WindowActivate(_WND_ID_STATUS) )
-				WindowActivate(_WND_ID_STATUS);
-		}
-		else
-			WindowActivate(_WND_ID_STATUS);
-
-		m_xStatusWnd.SetStatusWndType(_TYPE_SETMAGIC);
-		break;
+        WindowActivate(_WND_ID_SKILL);
+        break;
 	}
 
 	INT nInterfaceWndInRect;
@@ -1938,9 +1959,9 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
 
 	if ( nInterfaceWndInRect != -1 )
 	{
-		if ( nInterfaceWndInRect == _WND_ID_STATUS )
+		if ( nInterfaceWndInRect == _WND_ID_SKILL )
 		{
-			if ( m_xStatusWnd.OnKeyDown(wParam, lParam, g_xGameProc.m_ptMousePos) )
+			if ( m_xSkillWnd.OnKeyDown(wParam, lParam, g_xGameProc.m_ptMousePos) )
 				return TRUE;
 		}
 	}
@@ -1951,18 +1972,8 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
 
 VOID CInterface::OnSysKeyDown()
 {
-	// F10 Key 被按下时。
-	if ( m_xStatusWnd.GetStatusWndType() != _TYPE_EQUIP )
-	{
-		if ( !WindowActivate(_WND_ID_STATUS) )
-			WindowActivate(_WND_ID_STATUS);
-	}
-	else
-		WindowActivate(_WND_ID_STATUS);
-
-	m_xStatusWnd.SetStatusWndType(_TYPE_EQUIP);
+    WindowActivate(_WND_ID_STATUS);
 }
-
 
 LRESULT	CInterface::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 {

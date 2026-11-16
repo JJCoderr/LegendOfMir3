@@ -2892,23 +2892,23 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			}
 			case SM_SENDMYMAGIC:
 			{
-				SAFE_DELETE(m_xInterface.m_xStatusWnd.m_pstMyMagic);
+				delete[] m_xInterface.m_xSkillWnd.m_pstMyMagic; m_xInterface.m_xSkillWnd.m_pstMyMagic=NULL;
 				
-				m_xInterface.m_xStatusWnd.m_bMyMagicCnt = tdm.wSeries;
-				m_xInterface.m_xStatusWnd.m_pstMyMagic	= new CLIENTMAGICRCD[m_xInterface.m_xStatusWnd.m_bMyMagicCnt];
+				m_xInterface.m_xSkillWnd.m_bMyMagicCnt = tdm.wSeries;
+				m_xInterface.m_xSkillWnd.m_pstMyMagic	= new CLIENTMAGICRCD[m_xInterface.m_xSkillWnd.m_bMyMagicCnt];
 				
-				ZeroMemory(m_xInterface.m_xStatusWnd.m_pstMyMagic, sizeof(CLIENTMAGICRCD) * m_xInterface.m_xStatusWnd.m_bMyMagicCnt);
+				ZeroMemory(m_xInterface.m_xSkillWnd.m_pstMyMagic, sizeof(CLIENTMAGICRCD) * m_xInterface.m_xSkillWnd.m_bMyMagicCnt);
 
 				char *pszMagic = (pszMsg + DEFBLOCKSIZE);
 				char *pszNextMagic;
 
-				for ( INT nLoop = 0; nLoop < m_xInterface.m_xStatusWnd.m_bMyMagicCnt; nLoop++ )
+				for ( INT nLoop = 0; nLoop < m_xInterface.m_xSkillWnd.m_bMyMagicCnt; nLoop++ )
 				{
 					if (pszNextMagic = strchr(pszMagic, '/'))
 					{
 						*pszNextMagic = '\0';
 
-						fnDecode6BitBuf(pszMagic, (char*)&m_xInterface.m_xStatusWnd.m_pstMyMagic[nLoop], sizeof(CLIENTMAGICRCD));
+						fnDecode6BitBuf(pszMagic, (char*)&m_xInterface.m_xSkillWnd.m_pstMyMagic[nLoop], sizeof(CLIENTMAGICRCD));
 
 						pszMagic = pszNextMagic + 1;
 					}
@@ -2918,12 +2918,12 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			} 
 			case SM_MAGIC_LVEXP:
 			{
-				for ( INT nLoop = 0; nLoop < m_xInterface.m_xStatusWnd.m_bMyMagicCnt; nLoop++ )
+				for ( INT nLoop = 0; nLoop < m_xInterface.m_xSkillWnd.m_bMyMagicCnt; nLoop++ )
 				{
-					if ( m_xInterface.m_xStatusWnd.m_pstMyMagic[nLoop].stStdMagic.wMagicID == tdm.nRecog )
+					if ( m_xInterface.m_xSkillWnd.m_pstMyMagic[nLoop].stStdMagic.wMagicID == tdm.nRecog )
 					{
-						m_xInterface.m_xStatusWnd.m_pstMyMagic[nLoop].nCurrTrain	= MAKELONG(tdm.wTag, tdm.wSeries);
-						m_xInterface.m_xStatusWnd.m_pstMyMagic[nLoop].bLevel		= tdm.wParam;
+						m_xInterface.m_xSkillWnd.m_pstMyMagic[nLoop].nCurrTrain	= MAKELONG(tdm.wTag, tdm.wSeries);
+						m_xInterface.m_xSkillWnd.m_pstMyMagic[nLoop].bLevel		= tdm.wParam;
 
 						break;
 					}
@@ -3096,17 +3096,17 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			}
 			case SM_ADDMAGIC:
 			{
-				m_xInterface.m_xStatusWnd.m_bMyMagicCnt++;
+				m_xInterface.m_xSkillWnd.m_bMyMagicCnt++;
 				CLIENTMAGICRCD* pstMagicRCD;
-				pstMagicRCD = new CLIENTMAGICRCD[m_xInterface.m_xStatusWnd.m_bMyMagicCnt];
+				pstMagicRCD = new CLIENTMAGICRCD[m_xInterface.m_xSkillWnd.m_bMyMagicCnt];
 
-				memcpy(pstMagicRCD, m_xInterface.m_xStatusWnd.m_pstMyMagic, sizeof(CLIENTMAGICRCD)*(m_xInterface.m_xStatusWnd.m_bMyMagicCnt-1));
+				memcpy(pstMagicRCD, m_xInterface.m_xSkillWnd.m_pstMyMagic, sizeof(CLIENTMAGICRCD)*(m_xInterface.m_xSkillWnd.m_bMyMagicCnt-1));
 
-				fnDecode6BitBuf(&pszMsg[_DEFBLOCKSIZE], (char*)&pstMagicRCD[m_xInterface.m_xStatusWnd.m_bMyMagicCnt-1], sizeof(CLIENTMAGICRCD));
+				fnDecode6BitBuf(&pszMsg[_DEFBLOCKSIZE], (char*)&pstMagicRCD[m_xInterface.m_xSkillWnd.m_bMyMagicCnt-1], sizeof(CLIENTMAGICRCD));
 
-				SAFE_DELETE(m_xInterface.m_xStatusWnd.m_pstMyMagic);
+				delete[] m_xInterface.m_xSkillWnd.m_pstMyMagic; m_xInterface.m_xSkillWnd.m_pstMyMagic=NULL;
 
-				m_xInterface.m_xStatusWnd.m_pstMyMagic = pstMagicRCD;
+				m_xInterface.m_xSkillWnd.m_pstMyMagic = pstMagicRCD;
 				break;
 			}
 			case SM_TAKEON_OK:
