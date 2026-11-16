@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include "Common/LoginMessages.h"
 
 
 
@@ -39,6 +40,7 @@ VOID CStatusWnd::Init()
 	CGameWnd::Init();
 
 	m_bType	= _TYPE_EQUIP;
+    m_nativeClosePressed=false;
 	m_nStartLineNum = 0;
 	m_pstMyMagic = NULL;
 	m_bMyMagicCnt = 0;
@@ -90,6 +92,9 @@ VOID CStatusWnd::CreateStatusWnd(INT nID, CWHWilImageData* pxWndImage, INT nFram
 	SetRect(&m_rcCell[_U_WEAPON],	48,  70,   91,  154);
 
 	// 魔法按钮初始化.
+    const int slots[10][4]={{95,114,50,90},{40,70,50,95},{90,265,38,38},{170,88,38,38},
+        {95,70,38,34},{12,155,38,38},{170,155,38,38},{12,195,38,38},{170,195,38,38},{130,265,38,38}};
+    for (int i=0;i<10;++i) SetRect(&m_rcCell[i],slots[i][0],slots[i][1],slots[i][0]+slots[i][2],slots[i][1]+slots[i][3]);
 	m_xMagicScrlBtn[0].CreateGameBtn(pxWndImage, 74, 75, nStartX+232, nStartY+147);
 	m_xMagicScrlBtn[1].CreateGameBtn(pxWndImage, 74, 75, nStartX+232, nStartY+253);
 
@@ -109,6 +114,7 @@ VOID CStatusWnd::CreateStatusWnd(INT nID, CWHWilImageData* pxWndImage, INT nFram
 
 VOID CStatusWnd::ShowStatusWnd()
 {
+    if (m_bType!=_TYPE_SETMAGIC) { ShowNativeStatus(); return; }
 	RECT rcID;
 	switch ( m_bType )
 	{
@@ -847,6 +853,10 @@ BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
 	INT nEquipNum;
 
+    if (m_bType!=_TYPE_SETMAGIC) {
+        const bool close=m_nativeClosePressed && NativeCloseHit(ptMouse); m_nativeClosePressed=false;
+        if (close) { g_xSound.PlayLobbyEffect("105.wav"); return TRUE; }
+    } else {
 	m_xStatusBtn[_BTN_ID_STATUSCLOSE].ChangeRect(m_rcWnd.left+222, m_rcWnd.top+298);
 	m_xStatusBtn[_BTN_ID_STATUS     ].ChangeRect(m_rcWnd.left+_BTN_ID_STATUS_X, m_rcWnd.top+_BTN_ID_STATUS_Y);
 	m_xStatusBtn[_BTN_ID_STATUSMAGIC].ChangeRect(m_rcWnd.left+_BTN_ID_STATUSMAGIC_X, m_rcWnd.top+_BTN_ID_STATUSMAGIC_Y);
@@ -895,6 +905,7 @@ BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 	}
 
 	// 装备窗口处于激活状态时.
+    }
 	if ( m_bType == _TYPE_EQUIP || m_bType == _TYPE_STATUS )
 	{
 		nEquipNum = GetEquipNum(ptMouse);
@@ -958,6 +969,7 @@ BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 
 VOID CStatusWnd::OnMouseMove(POINT ptMouse)
 {
+    if (m_bType!=_TYPE_SETMAGIC) return;
 	if ( m_bType == _TYPE_SETMAGIC )
 	{
 		m_xMagicScrlBtn[0].ChangeRect(m_rcWnd.left+232, m_rcWnd.top+147);
@@ -980,6 +992,10 @@ BOOL CStatusWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
 	INT nEquipNum;
 
+    if (m_bType!=_TYPE_SETMAGIC) {
+        m_nativeClosePressed=NativeCloseHit(ptMouse);
+        if (m_nativeClosePressed) return TRUE;
+    } else {
 	m_xStatusBtn[_BTN_ID_STATUSCLOSE   ].ChangeRect(m_rcWnd.left+222, m_rcWnd.top+298);
 	m_xStatusBtn[_BTN_ID_STATUS	       ].ChangeRect(m_rcWnd.left+_BTN_ID_STATUS_X, m_rcWnd.top+_BTN_ID_STATUS_Y);
 	m_xStatusBtn[_BTN_ID_STATUSMAGIC   ].ChangeRect(m_rcWnd.left+_BTN_ID_STATUSMAGIC_X, m_rcWnd.top+_BTN_ID_STATUSMAGIC_Y);
@@ -996,6 +1012,7 @@ BOOL CStatusWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 		if ( m_xMagicScrlBtn[1].OnLButtonDown(ptMouse) )					return TRUE;
 	}
 
+    }
 	nEquipNum = GetEquipNum(ptMouse);
 
 	if ( nEquipNum == -1 )		m_bCanMove = TRUE;
@@ -1028,3 +1045,66 @@ VOID CStatusWnd::OnScrollUp()
 	}
 }
 
+
+bool CStatusWnd::NativeCloseHit(POINT point)
+{
+    if (!m_pxWndImage->NewSetIndex(1221)) return false;
+    const auto& image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+    RECT area={m_rcWnd.left+289,m_rcWnd.top+14,m_rcWnd.left+289+image.shWidth,m_rcWnd.top+14+image.shHeight};
+    return PtInRect(&area,point)!=FALSE;
+}
+void CStatusWnd::ShowNativeStatus()
+{
+    const int x=m_rcWnd.left,y=m_rcWnd.top;
+    if (m_pxWndImage->NewSetIndex(1280)) {
+        const auto& image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        g_xMainWnd.DrawWithImageForComp(x-(image.shWidth-328)/2,y-(image.shHeight-466)/2,
+            image.shWidth,image.shHeight,(WORD*)m_pxWndImage->m_pbCurrImage);
+    }
+    auto& hero=g_xGameProc.m_xMyHero;
+    auto& body=g_xGameProc.m_xInterface.m_portraits;
+    if (body.NewSetIndex(hero.m_stFeature.bGender)) {
+        const auto& image=*body.m_lpstNewCurrWilImageInfo;
+        g_xMainWnd.DrawWithImageForComp(x+82+image.shPX,y+199+image.shPY,image.shWidth,image.shHeight,(WORD*)body.m_pbCurrImage);
+    }
+    for (int slot=0;slot<_EQUIP_MAX_CELL;++slot) if (m_stEquipItem[slot].bSetted) {
+        if (slot==0 || slot==1 || slot==4) m_stEquipItem[slot].xItem.DrawItem(x+82,y+199,_ITEM_TYPE_EQUIP);
+        else m_stEquipItem[slot].xItem.DrawItem(x+m_rcCell[slot].left,y+m_rcCell[slot].top);
+    }
+    if (m_pxWndImage->NewSetIndex(m_nativeClosePressed?1222:1221)) {
+        const auto& image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        g_xMainWnd.DrawWithImageForComp(x+289,y+14,image.shWidth,image.shHeight,(WORD*)m_pxWndImage->m_pbCurrImage);
+    }
+    HDC dc; auto* surface=g_xMainWnd.GetBackBuffer(); if (FAILED(surface->GetDC(&dc))) return;
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font=g_xMainWnd.CreateGameFont(face,9); HGDIOBJ previous=SelectObject(dc,font); SetBkMode(dc,TRANSPARENT);
+    static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
+    const auto text=[&](const char* value,int left,int top,int width,int height,COLORREF color=0xfafafa,bool center=true) {
+        RECT area={x+left,y+top,x+left+width,y+top+height}; SetTextColor(dc,color);
+        DrawTextA(dc,value,-1,&area,DT_VCENTER|DT_SINGLELINE|(center?DT_CENTER:DT_LEFT));
+    };
+    const auto& a=hero.m_stAbility; char value[64];
+    wsprintfA(value,"%u",a.bLevel); text(value,245,91,67,15);
+    sprintf(value,"%.2f%%",a.dwMaxExp?100.0*a.dwExp/a.dwMaxExp:0.0); text(value,245,115,67,15,0x0000ff);
+    const unsigned vitals[5][2]={{a.wHP,a.wMaxHP},{a.wMP,a.wMaxMP},{a.wWeight,a.wMaxWeight},
+        {a.bWearWeight,a.bMaxWearWeight},{a.bHandWeight,a.bMaxHandWeight}};
+    for (int row=0;row<5;++row) {
+        for (int part=0;part<2;++part) { wsprintfA(value,"%u",vitals[row][part]); text(value,part?282:245,139+24*row,30,15); }
+        text("/",276,140+24*row,6,15,0xfafafa,false);
+    }
+    const int labels[5][3]={{11,320,58},{13,349,58},{118,349,60},{118,320,60},{218,349,60}};
+    const int values[5][3]={{58,320,58},{60,349,58},{163,349,60},{163,320,60},{270,349,60}};
+    const int messages[5]={1061,5101,5102,1060,1406}; const WORD ranges[5]={a.wDC,a.wMC,a.wSC,a.wAC,a.wMAC};
+    for (int i=0;i<5;++i) {
+        text(captions.Get(messages[i]).c_str(),labels[i][0],labels[i][1],labels[i][2],15);
+        wsprintfA(value,"%u-%u",LOBYTE(ranges[i]),HIBYTE(ranges[i])); text(value,values[i][0],values[i][1],values[i][2],15);
+    }
+    wsprintfA(value,"+%u%%",hero.m_stSubAbility.bHitPoint); text(value,245,259,67,15);
+    wsprintfA(value,"+%u%%",hero.m_stSubAbility.bSpeedPoint); text(value,245,283,67,15);
+    text(captions.Get(5178).c_str(),11,377,50,15); text(captions.Get(5179).c_str(),11,408,50,15);
+    text(captions.Get(5180).c_str(),12,438,50,15);
+    const char nameFace[]={char(0xb1),char(0xbc),char(0xb8),char(0xb2),0};
+    HFONT nameFont=g_xMainWnd.CreateGameFont(nameFace,9,0,FW_BOLD); SelectObject(dc,nameFont);
+    text(hero.m_szName,100,30,130,20,0xdcffdc);
+    SelectObject(dc,previous); DeleteObject(nameFont); DeleteObject(font); surface->ReleaseDC(dc);
+}

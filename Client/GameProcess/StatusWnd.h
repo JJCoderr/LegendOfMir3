@@ -39,6 +39,9 @@ class CStatusWnd : public CGameWnd
 { 
 private:
 protected:
+    bool m_nativeClosePressed=false;
+    bool NativeCloseHit(POINT point);
+    void ShowNativeStatus();
 	BYTE				m_bType;						// 0 : 装备窗口. 1 : 角色状态窗口.  2 : 角色魔法设置窗口。
 	CGameBtn			m_xStatusBtn[_MAX_STAUTS_BTN];
 
@@ -70,14 +73,11 @@ public:
 		m_bType = bType;
 		switch ( m_bType )
 		{
-		case _TYPE_EQUIP:
-			ResetWndImg(_WNDIMGIDX_ITEMSET);
-			break;
-		case _TYPE_STATUS:
-			ResetWndImg(_WNDIMGIDX_STATUS);
-			m_rcWnd.left -= 250;
-			m_rcWnd.right-= 250;
-			break;
+        case _TYPE_EQUIP:
+        case _TYPE_STATUS:
+            m_nFrameImgIdx=1280; m_nWidth=328; m_nHeight=466;
+            m_rcWnd.right=m_rcWnd.left+328; m_rcWnd.bottom=m_rcWnd.top+466;
+            break;
 		case _TYPE_SETMAGIC:
 			ResetWndImg(_WNDIMGIDX_SKILLSET);
 			break;

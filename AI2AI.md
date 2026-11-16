@@ -584,3 +584,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 金币读取现有m_nGlod，按参考72,402/77x17、CmList1074字体10pt粗体、COLORREF 0x64c8f8居中显示无符号余额。
 - SM_GOLDCHANGE转入UpdateGold，按32位回绕差值显示正增量CmList1471提示（白字/33023背景），并播放音效106；已检查SoundList.wwl的106映射为106.wav。初始角色金币消息继续使用原初始化入口。
 - Client全量77步构建通过；离线UpdateGold验证gold_unsigned=1、gold_updated=1，既有背包检查全部通过；已检查out/inventory-gold.png，显示123456789测试金额及回绕增量提示。未验证真实服务器金币消息和实际音频输出。
+
+### 角色状态合并页面首轮迁移
+- 普通装备/状态视图统一使用GameInter1280、0,0/328x466；基础属性按StatusLayout坐标、宋体9pt及参考色绘制，人物名按参考字体粗体，关闭1221/1222位于289,14并要求匹配按下/释放，点击105音效。技能旧入口暂保留，未声明已迁移。
+- 现有10个装备槽按EquipmentState前10槽更新命中位置；纸娃娃装备相对82,199绘制，普通饰品按格中心绘制。人物底图复用Interface已加载的ProgUse资源，修正预览资源实例未加载导致的缺失。
+- Client全量77步与后续全项目构建通过；--preview=status-panel验证release_without_press=1、close_clicked=1、slots=1；已检查out/status-panel.png，人物底图和基础属性可见。
+- 扩展装备槽10/11、元素数值、头衔/公会身份、悬停提示、装备高亮和完整穿脱流程仍待完成；当前身体帧沿用旧性别字段，完整appearance映射仍待协议适配。
