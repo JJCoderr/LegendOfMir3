@@ -447,7 +447,7 @@
 #define _WND_ID_HORSE				13			// 
 
 // 主界面中使用的窗口的图像索引.
-#define _WNDIMGIDX_MAIN				50			//主界面聊天窗口
+#define _WNDIMGIDX_MAIN				1160			//主界面聊天窗口
 #define _WNDIMGIDX_INVENTORY	    250			//背包
 #define _WNDIMGIDX_ITEMSET		    200			//
 #define _WNDIMGIDX_SKILLSET			202			//武功设置窗口

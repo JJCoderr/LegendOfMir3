@@ -148,8 +148,8 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	if ( m_pxInterImg->NewSetIndex(_WNDIMGIDX_MAIN) )
 	{
 		SetRect(&m_rcMain, 
-				0, (600-m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight), 
-				m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth, 600);
+				0, (601-m_pxInterImg->m_lpstNewCurrWilImageInfo->shHeight), 
+				m_pxInterImg->m_lpstNewCurrWilImageInfo->shWidth, 601);
 	}
 	//------------------------------------------------------------------------------------------------------------
 
