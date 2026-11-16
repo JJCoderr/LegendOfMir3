@@ -33,7 +33,7 @@ public:
         capturePath = chatMode == 1 ? "hud-group.bmp" : chatMode == 2 ? "hud-guild.bmp" : expanded ? "hud-expanded.bmp" : "hud-collapsed.bmp";
         if (exitDialog) capturePath = "hud-exit.bmp";
         if (groupPanel>0 && groupPanel<5) capturePath = groupPanel==2 ? "group-create.bmp" : groupPanel==3 ? "group-invite.bmp" : groupPanel==4 ? "group-remove.bmp" : "group-panel.bmp";
-        if (groupPanel>=5) capturePath = groupPanel==5 ? "guild-overview.bmp" : groupPanel==6 ? "guild-members.bmp" : "guild-notice.bmp";
+        if (groupPanel>=5) capturePath = groupPanel==5 ? "guild-overview.bmp" : groupPanel==6 ? "guild-members.bmp" : groupPanel==8 ? "guild-denied.bmp" : "guild-notice.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
         g_xGameProc.m_xInterface.CreateInterface(&g_xGameProc.m_xImage);
@@ -95,7 +95,7 @@ public:
             guild.m_pages[1].push_back("Member: WarriorPreview");
             guild.m_pages[2].push_back("Guild notice preview");
             g_xGameProc.m_xInterface.WindowActivate(_WND_ID_GUILD);
-            POINT tab={145+(groupPanel-5)*50,412};
+            POINT tab={145+(groupPanel==8?0:groupPanel-5)*50,412};
             guild.OnLButtonDown(tab); guild.OnLButtonUp(tab);
             const auto savedPage=guild.m_pages[guild.m_tab];
             guild.m_pages[guild.m_tab].assign(40,"Scroll verification");
@@ -115,6 +115,10 @@ public:
                 fclose(report);
             }
             guild.m_pages[guild.m_tab]=savedPage; guild.m_first=0;
+            if (groupPanel==8) {
+                POINT edit={395,412};
+                guild.OnLButtonDown(edit); guild.OnLButtonUp(edit);
+            }
 
         }
         if (exitDialog) {
@@ -285,7 +289,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=group-remove")==0 ? 4 :
         strcmp(lpCmdLine,"--preview=guild-overview")==0 ? 5 :
         strcmp(lpCmdLine,"--preview=guild-members")==0 ? 6 :
-        strcmp(lpCmdLine,"--preview=guild-notice")==0 ? 7 : 0;
+        strcmp(lpCmdLine,"--preview=guild-notice")==0 ? 7 :
+        strcmp(lpCmdLine,"--preview=guild-denied")==0 ? 8 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {

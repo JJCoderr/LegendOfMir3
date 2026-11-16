@@ -35,7 +35,7 @@ VOID CGuildWnd::Init()
 	CGameWnd::Init();
     m_tab=0; m_pressed=-1; m_first=0;
     m_scrollCaptured=false; m_scrollTick=0;
-    m_name.clear();
+    m_name.clear(); m_manager=false;
     for (int i=0;i<3;++i) m_pages[i].clear();
 }
 
@@ -118,6 +118,7 @@ BOOL CGuildWnd::OnLButtonUp(POINT point)
     if (!clicked) return FALSE;
     g_xSound.PlayLobbyEffect("105.wav");
     if (hit>=1 && hit<=3) { m_tab=hit-1; m_first=0; }
+    if (hit>=4 && hit<=8 && !m_manager) g_xGameProc.m_xInterface.ShowNotice(4000);
     return hit==0;
 }
 BOOL CGuildWnd::OnLButtonDown(POINT point)

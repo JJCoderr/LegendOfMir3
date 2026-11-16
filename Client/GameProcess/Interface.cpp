@@ -1459,6 +1459,15 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
 	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
+void CInterface::ShowNotice(int message)
+{
+    static CLoginMessages captions;
+    static const bool loaded=captions.Load("./CmList.dat");
+    m_nIdxMsgBox=0;
+    m_xMsgBox.SetOrigin(220,112,false);
+    m_xMsgBox.ShowMessageBox(captions.Get(message).c_str(),MSG_BTN_OK,1240);
+}
+
 void CInterface::OpenGroupDialog(int action)
 {
     static CLoginMessages captions;
@@ -1477,6 +1486,11 @@ void CInterface::OpenGroupDialog(int action)
 void CInterface::FinishNotice(int hResult, bool mouse)
 {
     if (!hResult) return;
+    if (m_nIdxMsgBox==0) {
+        if (mouse) g_xSound.PlayLobbyEffect("105.wav");
+        m_xMsgBox.HideMessageBox();
+        return;
+    }
     if (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 3) {
         char name[91] = {};
         GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,sizeof(name));
