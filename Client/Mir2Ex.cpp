@@ -1410,6 +1410,22 @@ public:
             if(FILE* report=fopen("target-photo-check.txt","wb")) {fprintf(report,"loaded=%d wrong_actor=%d invalid=%d limit=%d oversized=%d same_actor=%d changed_actor=%d cleared=%d monster=%d option=%d persisted=%d\n",loaded,wrong,invalid,limit,oversized,same,changed,cleared,monster,option,persisted);fclose(report);}
         }
 
+
+        if(groupPanel==89 || groupPanel==90) {
+            auto& ui=g_xGameProc.m_xInterface;auto& options=ui.m_xOptionWnd;auto& map=ui.m_minimap;
+            options.LoadAudioOptions("./preview-marker-options.ini");options.m_values[7]=true;options.SaveAudioOptions();
+            ui.WindowActivate(_WND_ID_OPTION);const POINT toggle={options.m_rcWnd.left+189,options.m_rcWnd.top+58};
+            ui.OnLButtonUp(toggle);const bool stray=options.m_values[7];
+            ui.OnLButtonDown(toggle);ui.OnLButtonUp(toggle);const bool disabled=!options.m_values[7];
+            options.LoadAudioOptions(nullptr);const bool defaults=options.m_values[7];options.LoadAudioOptions("./preview-marker-options.ini");const bool persisted=!options.m_values[7];
+            ui.OnLButtonDown(toggle);ui.OnLButtonUp(toggle);const bool enabled=options.m_values[7];
+            if(groupPanel==90) {ui.OnLButtonDown(toggle);ui.OnLButtonUp(toggle);}
+            const bool finalValue=options.m_values[7];options.LoadAudioOptions(nullptr);options.m_values[7]=finalValue;
+            map.pending=true;map.Receive(1001,0);hero.m_wPosX=337;hero.m_wPosY=267;map.monsters={{322,251}};map.green={{350,284}};map.orange={{360,276}};
+            mouse=POINT{400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==89?"options-markers-on.bmp":"options-markers-off.bmp";
+            if(FILE* report=fopen("options-markers-check.txt","wb")) {fprintf(report,"stray=%d disabled=%d defaults=%d persisted=%d enabled=%d\n",stray,disabled,defaults,persisted,enabled);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1599,6 +1615,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=options-markers-on")==0 ? 89 :
+        strcmp(lpCmdLine,"--preview=options-markers-off")==0 ? 90 :
         strcmp(lpCmdLine,"--preview=target-photo")==0 ? 87 :
         strcmp(lpCmdLine,"--preview=target-photo-disabled")==0 ? 88 :
         strcmp(lpCmdLine,"--preview=target-monster")==0 ? 82 :
