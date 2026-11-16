@@ -425,9 +425,9 @@
 #define _CHAT_COLOR7				6	//RGB(255, 255,   0); // 黄色.
 #define _CHAT_COLOR8				7	//RGB(255, 128,   0); // 橙色
 
-#define _INPUT_EDITWND_XPOS			223
-#define _INPUT_EDITWND_YPOS			549
-#define _INPUT_EDITWND_WIDTH		353
+#define _INPUT_EDITWND_XPOS			185
+#define _INPUT_EDITWND_YPOS			575
+#define _INPUT_EDITWND_WIDTH		344
 #define _INPUT_EDITWND_HEIGHT		15
 
 // 主界面中使用的窗口ID.

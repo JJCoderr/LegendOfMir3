@@ -159,7 +159,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 
 	//------------------------------------------------------------------------------------------------------------
 	// 聊天区域设置。
-	SetRect(&m_rcChat, 224, 471, 578, 545);
+	SetRect(&m_rcChat, 189, 492, 530, 567);
 	//------------------------------------------------------------------------------------------------------------
 
 	//------------------------------------------------------------------------------------------------------------
@@ -387,7 +387,7 @@ VOID CInterface::ShowChatList()
 
 			g_xMainWnd.PutsHan(g_xMainWnd.GetBackBuffer(),
 							   m_rcChat.left, m_rcChat.top+nCnt*15,
-							   pstChat->dwBackColor, pstChat->dwFontColor, pstChat->pszChat);
+							   pstChat->dwFontColor, pstChat->dwBackColor, pstChat->pszChat);
 
 			m_xChat.MoveNextNode();
 		}
@@ -422,6 +422,11 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 	}
 
 	// 聊天列表.
+    if (m_pxInterImg->NewSetIndex(1161)) {
+        const auto& skin = *m_pxInterImg->m_lpstNewCurrWilImageInfo;
+        g_xMainWnd.DrawWithImageForComp(178,448,skin.shWidth,skin.shHeight,
+            (WORD*)m_pxInterImg->m_pbCurrImage);
+    }
 	ShowChatList();
 
 	// 状态值.
