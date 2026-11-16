@@ -10,3 +10,6 @@ public:
 private:
     std::map<std::string, std::string> m_values;
 };
+
+// Shared encrypted text container used by CmList.dat and Magic.exp.
+bool LoadLegacyText(const char* path,std::string& plain);

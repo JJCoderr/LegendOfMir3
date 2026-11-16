@@ -1,10 +1,12 @@
 #include "StdAfx.h"
 #include "Common/LegacyPanel.h"
+#include "Common/LoginMessages.h"
 
 void CSkillWnd::Init()
 {
     CGameWnd::Init();
     m_keyMenu={}; m_keyMenuTarget=0;
+    m_descriptionLoaded=false; m_showDescription=false; m_descriptionText.clear(); m_descriptionRows.clear();
     m_skillTab=0; m_skillScroll=0; m_skillPressed=-1; m_skillScrollCaptured=false; m_skillScrollTime=0;
     for (int i=0;i<8;++i) m_skillSelected[i]=-1;
 }
@@ -235,6 +237,7 @@ VOID CSkillWnd::ShowSkillWnd()
     }
     SelectObject(dc,previous); DeleteObject(normal); DeleteObject(level); surface->ReleaseDC(dc);
     ShowKeyMenu();
+    ShowDescription();
 }
 
 bool CSkillWnd::OpenKeyMenu(POINT point)
@@ -269,4 +272,105 @@ void CSkillWnd::ShowKeyMenu()
         }
         DrawSelectionFrame(*m_pxWndImage,1660+index,x,y,SelectionBlend::Normal,false);
     }
+}
+
+namespace {
+std::string WrapDescription(HDC dc,const std::string& line,int& count)
+{
+    std::string result; int start=0,highBytes=0; count=1;
+    for (int i=0;i<int(line.size());++i) {
+        SIZE extent={}; GetTextExtentPoint32A(dc,line.data()+start,i-start+1,&extent);
+        const bool high=static_cast<signed char>(line[i])<0;
+        if (extent.cx<=165) { if (high) ++highBytes; result+=line[i]; }
+        else if (high && highBytes%2) { result.back()='`'; start=i-1; i-=2; --highBytes; ++count; }
+        else { result+='`'; start=i; --i; ++count; }
+    }
+    return result;
+}
+}
+
+const std::vector<CSkillWnd::DescriptionRow>& CSkillWnd::DescriptionRows(int id)
+{
+    const auto cached=m_descriptionRows.find(id);
+    if (cached!=m_descriptionRows.end()) return cached->second;
+    if (!m_descriptionLoaded) { LoadLegacyText("./Magic.exp",m_descriptionText); m_descriptionLoaded=true; }
+    auto& rows=m_descriptionRows[id];
+    HDC dc=CreateCompatibleDC(NULL);
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font=g_xMainWnd.CreateGameFont(face,9); HGDIOBJ old=SelectObject(dc,font);
+    bool active=false; size_t start=0;
+    while (start<m_descriptionText.size()) {
+        const auto end=m_descriptionText.find('\r',start);
+        if (end==std::string::npos || end+1>=m_descriptionText.size() || m_descriptionText[end+1]!='\n') break;
+        const auto line=m_descriptionText.substr(start,end-start); start=end+2;
+        if (!line.empty() && line[0]==';') continue;
+        if (!line.empty() && line[0]=='#') {
+            if (strtol(line.c_str()+1,NULL,10)==id) active=true;
+            else if (active) break;
+        } else if (active && line.size()<=1299) {
+            int count=0; const auto wrapped=WrapDescription(dc,line,count); size_t pos=0; bool failed=false;
+            for (int i=0;i<min(count,20);++i) {
+                std::string row;
+                if (!failed) {
+                    const auto next=wrapped.find('`',pos);
+                    const auto length=(next==std::string::npos?wrapped.size():next)-pos;
+                    if (!length) failed=true;
+                    else {
+                        row=wrapped.substr(pos,min(length,size_t(259))); pos=next==std::string::npos?wrapped.size():next+1;
+                        while (pos<wrapped.size() && (wrapped[pos]==' ' || wrapped[pos]=='\t' || wrapped[pos]=='\r' || wrapped[pos]=='\n')) ++pos;
+                        if (next==std::string::npos) failed=true;
+                    }
+                }
+                SIZE size={}; GetTextExtentPoint32A(dc,row.data(),int(row.size()),&size);
+                rows.push_back({row,int(size.cx),!row.empty() && row[0]=='['});
+            }
+        }
+    }
+    SelectObject(dc,old); DeleteObject(font); DeleteDC(dc);
+    return rows;
+}
+
+int CSkillWnd::DescriptionAt() const
+{
+    if (!m_showDescription || m_skillScrollCaptured || !IsRectEmpty(&m_keyMenu) || !PtInRect(&m_rcWnd,m_descriptionPointer)) return 0;
+    for (const auto pos:SkillLayout::positions[m_skillTab]) {
+        const RECT hit={m_rcWnd.left+pos.x,m_rcWnd.top+pos.y-m_skillScroll,m_rcWnd.left+pos.x+40,m_rcWnd.top+pos.y-m_skillScroll+40};
+        if (pos.id && PtInRect(&hit,m_descriptionPointer)) return pos.id;
+    }
+    return 0;
+}
+
+void CSkillWnd::ShowDescription()
+{
+    const int id=DescriptionAt(); if (!id) return;
+    const auto& rows=DescriptionRows(id); if (rows.empty()) return;
+    int width=0; for (const auto& row:rows) if (row.width>width) width=row.width+7;
+    const int x=m_descriptionPointer.x+190>800?630:m_descriptionPointer.x+20;
+    int y=m_descriptionPointer.y+20;
+    RECT box={x-2,y,x-2+width,y+int(rows.size())*15+30};
+    DrawLegacyPanel(box,RGB(100,100,50),150,0,false);
+    auto* surface=g_xMainWnd.GetBackBuffer(); HDC dc; if (FAILED(surface->GetDC(&dc))) return;
+    const char normalFace[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    const char titleFace[]={char(0xb1),char(0xbc),char(0xb8),char(0xb2),0};
+    HFONT normal=g_xMainWnd.CreateGameFont(normalFace,9),title=g_xMainWnd.CreateGameFont(titleFace,10,0,FW_BOLD);
+    HGDIOBJ old=SelectObject(dc,normal); SetBkMode(dc,TRANSPARENT);
+    for (const auto& row:rows) {
+        y+=15; SelectObject(dc,row.title?title:normal);
+        if (row.title) {
+            SetTextColor(dc,0x0a0a0a);
+            const int shadow[4][2]={{-1,-1},{1,-1},{-1,1},{1,1}};
+            for (const auto& offset:shadow) TextOutA(dc,x+offset[0],y+offset[1],row.text.data(),int(row.text.size()));
+        }
+        SetTextColor(dc,row.title?0x96c8fa:0xfafafa); TextOutA(dc,x,y,row.text.data(),int(row.text.size()));
+        if (row.title) y+=15;
+    }
+    SelectObject(dc,normal); SetTextColor(dc,0x1414fa);
+    for (int i=0;i<m_bMyMagicCnt;++i) if (m_pstMyMagic[i].stStdMagic.wMagicID==id) {
+        const auto& skill=m_pstMyMagic[i]; char value[64];
+        if (skill.bLevel>=3) lstrcpyA(value,"Level : Max");
+        else wsprintfA(value,"%d/%d",skill.nCurrTrain,skill.stStdMagic.nTrain[skill.bLevel]);
+        RECT area={x,y,x+(skill.bLevel>=3?80:50),y+15}; DrawTextA(dc,value,-1,&area,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+        break;
+    }
+    SelectObject(dc,old); DeleteObject(normal); DeleteObject(title); surface->ReleaseDC(dc);
 }

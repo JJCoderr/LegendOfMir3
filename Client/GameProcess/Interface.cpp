@@ -502,6 +502,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     const int hoveredWindow=m_xMsgBox.IsActive()?-1:GetWindowInMousePos(ptMousePos);
     m_xInventoryWnd.UpdatePlacementPointer(ptMousePos,hoveredWindow==_WND_ID_INVENTORY);
     m_xStatusWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_STATUS);
+    m_xSkillWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_SKILL);
     ShowWndList();
 	if ( m_stCommonItem.bSetted && !m_stCommonItem.bIsHideItem )
 	{

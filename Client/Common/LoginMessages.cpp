@@ -4,7 +4,7 @@
 #include <iterator>
 #include <vector>
 
-bool CLoginMessages::Load(const char* path)
+bool LoadLegacyText(const char* path,std::string& plain)
 {
     std::ifstream stream(path, std::ios::binary);
     const std::vector<unsigned char> file{std::istreambuf_iterator<char>(stream), {}};
@@ -18,10 +18,17 @@ bool CLoginMessages::Load(const char* path)
     if (length != file.size() - 8) return false;
     for (std::uint32_t i = 0; i < length; ++i) checksum += i * (std::uint32_t(file[i + 8]) + 1);
     if ((checksum ^ std::uint32_t(-1612834157)) != stored) return false;
-    std::string plain(reinterpret_cast<const char*>(file.data() + 8), length);
+    plain.assign(reinterpret_cast<const char*>(file.data() + 8), length);
     for (int j = 3; j >= 0; --j)
         for (std::uint32_t i = 0; i < length; ++i)
             plain[i] = char(static_cast<unsigned char>(plain[i]) ^ static_cast<unsigned char>(file[j] + i));
+    return true;
+}
+
+bool CLoginMessages::Load(const char* path)
+{
+    std::string plain;
+    if (!LoadLegacyText(path,plain)) return false;
     std::map<std::string, std::string> values;
     std::size_t start = 0;
     while (start < plain.size()) {

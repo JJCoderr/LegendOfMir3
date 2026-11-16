@@ -1,5 +1,8 @@
 #pragma once
 #include "SkillLayout.h"
+#include <map>
+#include <string>
+#include <vector>
 
 #pragma pack(1)
 typedef struct tagSTANDARDMAGIC
@@ -32,7 +35,18 @@ typedef struct tagCLIENTMAGICRCD
 #pragma pack(8)
 
 class CSkillWnd : public CGameWnd {
+    std::string m_descriptionText;
+    bool m_descriptionLoaded=false, m_showDescription=false;
+    POINT m_descriptionPointer={};
 public:
+    struct DescriptionRow { std::string text; int width; bool title; };
+private:
+    std::map<int,std::vector<DescriptionRow>> m_descriptionRows;
+public:
+    const std::vector<DescriptionRow>& DescriptionRows(int id);
+    int DescriptionAt() const;
+    void ShowDescription();
+    void UpdatePointer(POINT point,bool visible) { m_descriptionPointer=point; m_showDescription=visible; }
     RECT m_keyMenu={};
     int m_keyMenuTarget=0;
     bool OpenKeyMenu(POINT point);

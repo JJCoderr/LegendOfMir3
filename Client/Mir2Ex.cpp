@@ -1,5 +1,6 @@
 #include "StdAfx.h"
 #include "Common/LegacyPanel.h"
+#include "Common/LoginMessages.h"
 
 CMirSound			g_xSound;
 CWHDXGraphicWindow	g_xMainWnd(640, 480, _SCREEN_BPP);
@@ -34,7 +35,7 @@ public:
         if (exitDialog) capturePath = "hud-exit.bmp";
         if (groupPanel>0 && groupPanel<5) capturePath = groupPanel==2 ? "group-create.bmp" : groupPanel==3 ? "group-invite.bmp" : groupPanel==4 ? "group-remove.bmp" : "group-panel.bmp";
         if (groupPanel>=5 && groupPanel<=10) capturePath = groupPanel==5 ? "guild-overview.bmp" : groupPanel==6 ? "guild-members.bmp" : groupPanel==8 ? "guild-denied.bmp" : groupPanel==9 ? "guild-remove.bmp" : groupPanel==10 ? "guild-break-ally.bmp" : "guild-notice.bmp";
-        if ((groupPanel>=20 && groupPanel<=22) || groupPanel==25) capturePath=groupPanel==25?"skill-key-menu.bmp":groupPanel==22?"status-and-skills.bmp":groupPanel==20?"skills-panel.bmp":"skills-scrolled.bmp";
+        if ((groupPanel>=20 && groupPanel<=22) || groupPanel==25 || groupPanel==26) capturePath=groupPanel==26?"skill-description.bmp":groupPanel==25?"skill-key-menu.bmp":groupPanel==22?"status-and-skills.bmp":groupPanel==20?"skills-panel.bmp":"skills-scrolled.bmp";
         if (groupPanel==11) capturePath="options-panel.bmp";
         if (groupPanel>=15 && groupPanel<=19) capturePath=groupPanel==19?"status-equipment.bmp":groupPanel==18?"status-identity.bmp":groupPanel==16?"status-elements.bmp":groupPanel==17?"status-tooltip.bmp":"status-panel.bmp";
         if (groupPanel==23 || groupPanel==24) capturePath=groupPanel==23?"inventory-clip-top.bmp":"inventory-clip-bottom.bmp";
@@ -277,7 +278,7 @@ public:
                 fprintf(report,"grid=%d release_without_press=%d close_clicked=%d scroll_end=%d scroll_released=%d\n",grid,stray,closed,scrollEnd,released); fprintf(report,"icon_samples=%d large_icon=%d multi_hit=%d picked=%d moved=%d\n",samples,largeIcon,multiHit,picked,moved); fprintf(report,"collision=%d freed=%d layout_restored=%d server_records_preserved=%d\n",collision,freed,layoutRestored,serverPreserved); fprintf(report,"placement_green=%d placement_red=%d\n",green,red); fprintf(report,"gold_unsigned=%d gold_updated=%d\n",goldUnsigned,goldUpdated); fclose(report);
             }
         }
-        if ((groupPanel>=20 && groupPanel<=22) || groupPanel==25) {
+        if ((groupPanel>=20 && groupPanel<=22) || groupPanel==25 || groupPanel==26) {
             auto& ui=g_xGameProc.m_xInterface; auto& skills=ui.m_xSkillWnd;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].NewLoad("./Data/MIcon.wil");
             const int ids[]={1,5,9,23,22,113,39,41,67,2,6,17,3,7,12,25,26,34,103,107,102,106,108};
@@ -288,7 +289,7 @@ public:
                 skill.bLevel=i%4; skill.nCurrTrain=120; skill.stStdMagic.nTrain[skill.bLevel]=500;
                 wsprintfA(skill.stStdMagic.szMagicName,"Skill %d",ids[i]);
             }
-            lstrcpyA(skills.m_pstMyMagic[0].stStdMagic.szMagicName,"\xbb\xf9\xb1\xbe\xbd\xa3\xca\xf5");
+            lstrcpyA(skills.m_pstMyMagic[0].stStdMagic.szMagicName,"\xbb\xf0\xc7\xf2\xca\xf5");
             skills.m_pstMyMagic[0].bUseKey='1';
             ui.WindowActivate(_WND_ID_SKILL); ui.WindowActivate(_WND_ID_STATUS);
             const bool origin=skills.m_rcWnd.left==348 && skills.m_rcWnd.top==0 && skills.m_nWidth==360 && skills.m_nHeight==488;
@@ -338,6 +339,19 @@ public:
             skills.m_skillTab=groupPanel==21?7:0; skills.m_skillScroll=groupPanel==21?190:0;
             if (groupPanel!=22) ui.WindowActivate(_WND_ID_STATUS);
             if (groupPanel==21) skills.m_skillSelected[7]=13;
+            if (groupPanel==26) {
+                mouse=POINT{390,90}; g_xGameProc.m_ptMousePos=mouse;
+                skills.UpdatePointer(mouse,true); const bool hovered=skills.DescriptionAt()==1;
+                const auto& rows=skills.DescriptionRows(1); bool wrapped=!rows.empty(),title=false;
+                for (const auto& row:rows) { wrapped=wrapped && row.width<=165; title=title || row.title; }
+                skills.UpdatePointer(mouse,false); const bool covered=skills.DescriptionAt()==0;
+                skills.UpdatePointer(mouse,true); skills.m_skillScrollCaptured=true; const bool scrolling=skills.DescriptionAt()==0;
+                skills.m_skillScrollCaptured=false; skills.OpenKeyMenu(mouse); const bool menu=skills.DescriptionAt()==0; skills.m_keyMenu={};
+                CLoginMessages captions; const bool messages=captions.Load("./CmList.dat") && !captions.Get(1074).empty();
+                if (FILE* report=fopen("skill-description-check.txt","wb")) {
+                    fprintf(report,"hovered=%d rows=%u wrapped=%d title=%d covered=%d scrolling=%d menu=%d messages=%d\n",hovered,unsigned(rows.size()),wrapped,title,covered,scrolling,menu,messages); fclose(report);
+                }
+            }
             if (groupPanel==25) {
                 const POINT skillPoint={380,80};
                 ui.OnLButtonDown(skillPoint); ui.OnLButtonUp(skillPoint); ui.OnLButtonDoubleClick(skillPoint);
@@ -653,7 +667,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=status-and-skills")==0 ? 22 :
         strcmp(lpCmdLine,"--preview=inventory-clip-top")==0 ? 23 :
         strcmp(lpCmdLine,"--preview=inventory-clip-bottom")==0 ? 24 :
-        strcmp(lpCmdLine,"--preview=skill-key-menu")==0 ? 25 : 0;
+        strcmp(lpCmdLine,"--preview=skill-key-menu")==0 ? 25 :
+        strcmp(lpCmdLine,"--preview=skill-description")==0 ? 26 : 0;
 	const bool previewExit = strcmp(lpCmdLine,"--preview=hud-exit")==0;
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {
