@@ -51,7 +51,7 @@ VOID CInterface::Init()
     previousHint.clear(); hintHeight=6; hintExpanding=true;
     m_chatMode = 0;
     m_chatModeChanged = false;
-    for (int i=0;i<3;++i) { m_chatRejected[i]=false; m_chatReceptionFrame[i]=-1; }
+    for (int i=0;i<3;++i) { m_chatRejected[i]=false; m_chatReceptionFrame[i]=-1; m_chatReceptionHint[i]=i==0?2637:i==1?2639:2643; }
 	m_shBeltHeight		= 0;
 	m_bShowKey			= FALSE;
 	m_bMoveFocusedWnd	= FALSE;
@@ -1765,6 +1765,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
                     {
                         const int channel = nCnt-20;
                         // The server owns rejection state; a click only predicts the overlay.
+                        m_chatReceptionHint[channel]=(channel==0?2637:channel==1?2639:2643)+(m_chatRejected[channel]?0:1);
                         m_chatReceptionFrame[channel] = m_chatRejected[channel] ? -1 : 1338+channel*2;
                         static CLoginMessages captions;
                         static const bool loaded = captions.Load(".\\CmList.dat");
@@ -2176,6 +2177,21 @@ int CInterface::ButtonHintAt(POINT point,POINT& anchor)
     case _WND_ID_HORSE: {
         const int buttons[][4]={{1221,236,279,1052},{1402,19,232,4100},{1405,77,232,4101},{1408,134,232,4102},{1410,191,232,4103}};
         for (int i=0;i<5;++i) if (const int hint=resolve(m_xHorseWnd.m_rcWnd,buttons[i][0],buttons[i][1],buttons[i][2],buttons[i][3],m_xHorseWnd.pressed==i)) return hint;
+        return 0;
+    }
+    case -1: {
+        if (const int hint=m_xPortraitWnd.HintAt(point,anchor)) return hint;
+        // Native button indices 7..15 predate the MIR3 ordering.
+        const int reference[]={0,1,2,3,4,5,6,14,7,10,8,9,15,11,12,13,16,17,18,19,20,21,22};
+        for (int i=0;i<VisibleButtons();++i) {
+            auto& button=m_xInterBtn[i]; if (!button.Hit(point)) continue;
+            if (button.GetGameBtnState()==_BTN_STATE_CLICK) return 0;
+            const RECT bounds=button.m_customHit?button.m_hitRect:button.m_rcBtn; anchor={bounds.right,bounds.bottom};
+            if (i==18) return m_chatMode==1?2631:2618;
+            if (i==19) return m_chatMode==2?2630:2619;
+            if (i>=20) return m_chatReceptionHint[i-20];
+            return 2600+reference[i];
+        }
         return 0;
     }
     default: return m_xPortraitWnd.HintAt(point,anchor);

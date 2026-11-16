@@ -20,6 +20,7 @@ public:
     int m_chatMode = 0;
     bool m_chatModeChanged = false;
     bool m_chatRejected[3] = {};
+    int m_chatReceptionHint[3] = {2637,2639,2643};
     int m_chatReceptionFrame[3] = {-1,-1,-1};
     void FocusChatMode();
     void ShowNotice(int message);

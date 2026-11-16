@@ -1261,6 +1261,37 @@ public:
             const char* paths[]={"group-hint.bmp","guild-hint.bmp","skill-button-hint.bmp","trade-hint.bmp","npc-close-hint.bmp"}; capturePath=paths[mode];
         }
 
+
+        if(groupPanel>=72 && groupPanel<=74) {
+            auto& ui=g_xGameProc.m_xInterface;POINT anchor={};
+            const int messages[]={2600,2601,2602,2603,2604,2605,2606,2614,2607,2610,2608,2609,2615,2611,2612,2613,2616,2617,2618,2619,2637,2639,2643};
+            const auto pointAt=[&](int i) {const auto& button=ui.m_xInterBtn[i]; const RECT rect=button.m_customHit?button.m_hitRect:button.m_rcBtn;return POINT{rect.left+2,rect.top+2};};
+            bool messagesOk=true,anchors=true,pressed=true,reception=true;
+            ui.m_chatExpanded=true;ui.LayoutChat();
+            for(int i=0;i<23;++i) {
+                const POINT point=pointAt(i);auto& button=ui.m_xInterBtn[i];const RECT rect=button.m_customHit?button.m_hitRect:button.m_rcBtn;
+                messagesOk &= ui.ButtonHintAt(point,anchor)==messages[i];anchors &= anchor.x==rect.right && anchor.y==rect.bottom;
+                button.SetBtnState(_BTN_STATE_CLICK);pressed &= ui.ButtonHintAt(point,anchor)==0;button.SetBtnState(_BTN_STATE_NORMAL);
+            }
+            ui.m_chatMode=1; const bool group=ui.ButtonHintAt(pointAt(18),anchor)==2631;
+            ui.m_chatMode=2; const bool guild=ui.ButtonHintAt(pointAt(19),anchor)==2630;ui.m_chatMode=0;
+            for(int i=0;i<3;++i) {
+                const POINT point=pointAt(20+i);ui.m_chatRejected[i]=false;ui.OnLButtonDown(point);ui.OnLButtonUp(point);
+                reception &= ui.ButtonHintAt(point,anchor)==messages[20+i]+1;
+                ui.m_chatRejected[i]=true;ui.OnLButtonDown(point);ui.OnLButtonUp(point);
+                reception &= ui.ButtonHintAt(point,anchor)==messages[20+i];
+            }
+            ui.m_chatExpanded=false;ui.LayoutChat();const bool hidden=ui.ButtonHintAt(pointAt(18),anchor)==0;
+            ui.ShowNotice(4716);const bool modal=ui.ButtonHintAt(pointAt(14),anchor)==0;ui.m_xMsgBox.HideMessageBox();
+            ui.WindowActivate(_WND_ID_INVENTORY);OffsetRect(&ui.m_xInventoryWnd.m_rcWnd,0,100);const bool covered=ui.ButtonHintAt(pointAt(14),anchor)==0;OffsetRect(&ui.m_xInventoryWnd.m_rcWnd,0,-100);ui.WindowActivate(_WND_ID_INVENTORY);
+            if(groupPanel>=73) {ui.m_chatExpanded=true;ui.LayoutChat();}
+            if(groupPanel==73) {ui.m_chatMode=1;ui.m_chatModeChanged=true;}
+            mouse=pointAt(groupPanel==72?14:groupPanel==73?18:20);g_xGameProc.m_ptMousePos=mouse;
+            for(int i=0;i<24;++i) ui.ShowButtonHint(mouse);
+            capturePath=groupPanel==72?"hud-button-hint.bmp":groupPanel==73?"chat-mode-hint.bmp":"chat-reception-hint.bmp";
+            if(FILE* report=fopen("hud-button-hint-check.txt","wb")) {fprintf(report,"messages=%d anchors=%d pressed=%d group=%d guild=%d reception=%d hidden=%d modal=%d covered=%d\n",messagesOk,anchors,pressed,group,guild,reception,hidden,modal,covered);fclose(report);}
+        }
+
     }
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
@@ -1449,6 +1480,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=merchant-deposit-quantity")==0 ? 57 :
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
+        strcmp(lpCmdLine,"--preview=hud-button-hint")==0 ? 72 :
+        strcmp(lpCmdLine,"--preview=chat-mode-hint")==0 ? 73 :
+        strcmp(lpCmdLine,"--preview=chat-reception-hint")==0 ? 74 :
         strcmp(lpCmdLine,"--preview=group-hint")==0 ? 67 :
         strcmp(lpCmdLine,"--preview=guild-hint")==0 ? 68 :
         strcmp(lpCmdLine,"--preview=skill-button-hint")==0 ? 69 :
