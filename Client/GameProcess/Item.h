@@ -1,5 +1,7 @@
 #ifndef _CITEM_H
 #define	_CITEM_H
+#include <string>
+#include <vector>
 
 
 #pragma pack(1)
@@ -62,6 +64,9 @@ public:
 	BYTE			m_bAttr;
 	SHORT			m_shCellNum;
 	CLIENTITEMRCD	m_stItemInfo;
+    struct HintLine { std::string text; DWORD color; };
+    std::vector<HintLine> PotionHint() const;
+    void ShowPotionHint(int x,int y) const;
     WORD m_count=1;
     BYTE m_stackMode=0;
     BYTE m_serverRecord[100]={};

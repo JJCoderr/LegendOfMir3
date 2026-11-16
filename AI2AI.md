@@ -1015,3 +1015,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 核查Godot参考当前没有完整物品属性悬浮层，不能据其虚构属性格式；该部分后续需继续原版取证。本轮先修复已明确的布局链：LayoutIdentity对MIR3物品保存完整100字节记录，LayoutName按完整30字节名称匹配，旧物品维持原格式投影。
 - --preview=item-layout-full-name六项全1，使用前29字节相同、末字节不同的两个名称，重排服务器列表后恢复原位置，快捷栏准确引用对应物品；保留新数量99而非磁盘5，文件原始记录逐字节一致。
 - 增量构建及diff --check通过；旧inventory-panel布局回归通过。已检查out/item-layout-full-name.png，预览只写preview-item-layout-full.itms。完整属性悬浮层与真实登录/布局恢复仍待联调。
+
+### 原版药品悬浮属性框
+- 原IDA会话e3ded018失效，经技能open.ps1重开同一Mir3-unpacked-analysis.exe.i64，当前会话6f444c1e。定位4423F0属性分派：武器444050、防具4424E0、饰品444F40、特殊53为443490、普通447E70；448770绘制。证据out/item-tooltip-{dispatch,general,weapon,armor,render}.c和item-tooltip-original.c。
+- 原物品对象记录起点this+4；普通物品标题CmList2515+名称/前缀raw73，栗子数字名称用2510；类型0药品HP/MP来自WORD40/42，CmList1058/1059。重量raw32，堆叠2重量count/10，堆叠>2重量count*raw32；数量WORD71，CmList2501/2503。标题64255，其余白字。
+- CItem对MIR3类型0走PotionHint/ShowPotionHint原生GDI/DirectDraw提示：15像素行距，边距5/底部2，原背景RGB100/100/50 alpha230经现有预乘绘制为90/90/45，边框3315350，右侧超800整体左移。字体沿用原生界面宋体9；尚未与运行中的原版逐像素核对。
+- Client清理83步、全目标109步构建通过；普通/堆叠两预览各三项全1，覆盖HP/MP、stack2重量和数量、stack3重量。已检查out/potion-hint.png和potion-stack-hint.png。仅药品类型0已迁移，其他类型属性、商店附带图标提示及完整原版视觉验收继续待处理。

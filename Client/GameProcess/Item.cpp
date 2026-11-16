@@ -12,6 +12,7 @@
 
 #include "StdAfx.h"
 #include "Common/LegacyPanel.h"
+#include "Common/LoginMessages.h"
 
 
 CItem::CItem()
@@ -162,6 +163,7 @@ BOOL CItem::DrawItem(INT nX, INT nY, BYTE bItemType, const RECT* clip)
 
 VOID CItem::ShowItemStatus(INT nX, INT nY)
 {
+    if(m_serverName[0] && m_stItemInfo.stStdItem.bStdMode==0) {ShowPotionHint(nX,nY);return;}
 	CHAR	szLineBuf[3][MAX_PATH];
 	CHAR	szName[MAX_PATH];
 	SIZE	sizeLen;
@@ -611,3 +613,44 @@ VOID CItem::ShowItemStatus(INT nX, INT nY)
 	}
 }
 
+
+std::vector<CItem::HintLine> CItem::PotionHint() const
+{
+    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+    const auto word=[&](int offset) {return unsigned(m_serverRecord[offset])|(unsigned(m_serverRecord[offset+1])<<8);};
+    std::vector<HintLine> lines;
+    std::string title=captions.Get(2515);
+    if(m_serverRecord[73]) {
+        int size=0;while(size<27 && m_serverRecord[73+size]) ++size;
+        title.append((const char*)m_serverRecord+73,size);title+=" ";title+=Name();
+    } else {
+        title+=Name();
+        for(int i=0;i<10;++i) if(Name()==captions.Get(1409)+std::to_string(i)) {title=captions.Get(2510);break;}
+    }
+    lines.push_back({title,64255});
+    const int stack=m_serverRecord[61],count=word(71),weight=stack==2?count/10:stack>2?count*m_serverRecord[32]:m_serverRecord[32];
+    lines.push_back({captions.Get(2501)+": "+std::to_string(weight),0xffffff});
+    if(stack>=2) lines.push_back({captions.Get(2503)+": "+std::to_string(count),0xffffff});
+    if(word(40)) lines.push_back({captions.Get(1058)+": +"+std::to_string(word(40))+"HP ",0xffffff});
+    if(word(42)) lines.push_back({captions.Get(1059)+": +"+std::to_string(word(42))+"MP ",0xffffff});
+    return lines;
+}
+void CItem::ShowPotionHint(int x,int y) const
+{
+    const auto lines=PotionHint();auto* surface=g_xMainWnd.GetBackBuffer();HDC dc;
+    if(FAILED(surface->GetDC(&dc))) return;
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};HFONT font=g_xMainWnd.CreateGameFont(face,9);
+    auto previous=SelectObject(dc,font);int width=0;
+    for(const auto& line:lines) {SIZE size={};GetTextExtentPoint32A(dc,line.text.c_str(),int(line.text.size()),&size);width=max(width,int(size.cx));}
+    SelectObject(dc,previous);surface->ReleaseDC(dc);
+    RECT box={x-5,y-5,x+width+5,y+int(lines.size())*15+2};
+    if(box.right>800) OffsetRect(&box,800-box.right,0);
+    DrawLegacyPanel(box,RGB(90,90,45),230,3315350);
+    if(SUCCEEDED(surface->GetDC(&dc))) {
+        previous=SelectObject(dc,font);SetBkMode(dc,TRANSPARENT);
+        int lineY=box.top+5;
+        for(const auto& line:lines) {SetTextColor(dc,line.color);TextOutA(dc,box.left+5,lineY,line.text.c_str(),int(line.text.size()));lineY+=15;}
+        SelectObject(dc,previous);surface->ReleaseDC(dc);
+    }
+    DeleteObject(font);
+}

@@ -1701,6 +1701,21 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel==127 || groupPanel==128) {
+            auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[100]={};strcpy((char*)raw,"金创药（小量）");raw[32]=3;raw[40]=50;raw[42]=30;raw[62]=11;raw[71]=1;
+            CItem item;item.SetMir3Item(raw,0);const auto single=item.PotionHint();
+            const bool ordinary=single.size()==4 && single[0].color==64255 && single[1].text.find(": 3")!=std::string::npos && single[2].text.find("+50HP")!=std::string::npos && single[3].text.find("+30MP")!=std::string::npos;
+            raw[61]=2;raw[71]=25;CItem stack;stack.SetMir3Item(raw,0);const auto multiple=stack.PotionHint();
+            const bool quantity=multiple.size()==5 && multiple[1].text.find(": 2")!=std::string::npos && multiple[2].text.find(": 25")!=std::string::npos;
+            raw[61]=3;stack.SetMir3Item(raw,0);const bool weight=stack.PotionHint()[1].text.find(": 75")!=std::string::npos;
+            raw[61]=2;stack.SetMir3Item(raw,0);bag.AddInvenItem(groupPanel==127?item:stack,0,TRUE);
+            ui.WindowActivate(_WND_ID_INVENTORY);mouse={550,80};g_xGameProc.m_ptMousePos=mouse;
+            capturePath=groupPanel==127?"potion-hint.bmp":"potion-stack-hint.bmp";
+            if(FILE* report=fopen("potion-hint-check.txt","wb")) {fprintf(report,"ordinary=%d quantity=%d weight=%d\n",ordinary,quantity,weight);fclose(report);}
+        }
+
         if(groupPanel==126) {
             auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;auto& quick=ui.m_xQuickWnd;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -2118,6 +2133,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=potion-hint")==0 ? 127 :
+        strcmp(lpCmdLine,"--preview=potion-stack-hint")==0 ? 128 :
         strcmp(lpCmdLine,"--preview=item-layout-full-name")==0 ? 126 :
         strcmp(lpCmdLine,"--preview=equipment-durability")==0 ? 125 :
         strcmp(lpCmdLine,"--preview=equipment-records-reply")==0 ? 124 :
