@@ -1701,6 +1701,25 @@ public:
             if(FILE* report=fopen("portrait-dbcs-check.txt","wb")) {fprintf(report,"codepage=%u enumerated=%d uploaded=%d restored=%d path_rejected=%d\n",GetACP(),enumerated,uploaded,restored,pathRejected);fclose(report);}
         }
 
+        if(groupPanel==123) {
+            auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;auto& equipment=ui.m_xStatusWnd.m_stEquipItem;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[100]={};memcpy(raw,"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234",30);raw[61]=2;raw[62]=11;raw[71]=12;
+            const auto receive=[&](WORD opcode) {
+                _TDEFAULTMESSAGE packet={};packet.wIdent=opcode;char encoded[160]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));fnEncode6BitBuf(raw,encoded+DEFBLOCKSIZE,100,sizeof(encoded)-DEFBLOCKSIZE);g_xGameProc.OnSocketMessageRecieve(encoded);
+            };
+            receive(SM_ADDITEM);raw[71]=35;receive(203);
+            const bool updated=bag.m_stInventoryItem[0].xItem.m_count==35 && !bag.m_stInventoryItem[1].bSetted;
+            raw[36]=raw[37]=255;receive(203);const bool invalid=bag.m_stInventoryItem[0].xItem.m_count==35;raw[36]=raw[37]=0;
+            raw[62]=99;receive(203);const bool unknown=!bag.m_stInventoryItem[1].bSetted;raw[62]=11;
+            raw[29]='5';receive(SM_DELITEM);const bool name=bag.m_stInventoryItem[0].bSetted;raw[29]='4';
+            equipment[5].bSetted=TRUE;equipment[5].xItem=bag.m_stInventoryItem[0].xItem;
+            raw[71]=50;receive(203);const bool equipped=equipment[0].bSetted && equipment[0].xItem.m_count==50 && !equipment[5].bSetted;
+            receive(SM_DELITEM);const bool deleted=!bag.m_stInventoryItem[0].bSetted && !equipment[0].bSetted && bag.ItemAnchor(0)==-1;
+            receive(SM_ADDITEM);raw[71]=60;receive(203);ui.WindowActivate(_WND_ID_INVENTORY);capturePath="item-update-reply.bmp";
+            if(FILE* report=fopen("item-update-check.txt","wb")) {fprintf(report,"updated=%d invalid=%d unknown=%d name=%d equipped=%d deleted=%d\n",updated,invalid,unknown,name,equipped,deleted);fclose(report);}
+        }
+
         if(groupPanel==122) {
             auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -2037,6 +2056,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=item-update-reply")==0 ? 123 :
         strcmp(lpCmdLine,"--preview=bag-records-reply")==0 ? 122 :
         strcmp(lpCmdLine,"--preview=item-record-reply")==0 ? 121 :
         strcmp(lpCmdLine,"--preview=item-stack-reply")==0 ? 120 :

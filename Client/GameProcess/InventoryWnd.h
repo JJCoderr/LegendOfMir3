@@ -78,6 +78,7 @@ public:
     void UpdateGold(UINT balance);
     void UpdateStackCount(DWORD instance,WORD quantity);
     bool ReceiveBagRecords(const char* encoded,int count);
+    bool ReceiveItemRecord(WORD opcode,const char* encoded);
     bool SaveLayoutFile(const char* path);
     bool LoadLayoutFile(const char* path);
 

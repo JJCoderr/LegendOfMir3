@@ -1339,3 +1339,41 @@ bool CInventoryWnd::ReceiveBagRecords(const char* encoded,int count)
     for(int i=0;i<count;++i) {m_stInventoryItem[i].bSetted=TRUE;m_stInventoryItem[i].xItem=items[i];}
     return true;
 }
+
+bool CInventoryWnd::ReceiveItemRecord(WORD opcode,const char* encoded)
+{
+    BYTE raw[100];
+    if(strlen(encoded)!=134 || fnDecode6BitBuf(const_cast<char*>(encoded),(char*)raw,sizeof(raw))!=100) return false;
+    CItem item;if(!item.SetMir3Item(raw,0)) return false;
+    const bool add=opcode==SM_ADDITEM,remove=opcode==SM_DELITEM;
+    ITEMSET next[_MAX_INVEN_ITEM];std::copy(std::begin(m_stInventoryItem),std::end(m_stInventoryItem),std::begin(next));
+    CBagLayout layout=m_layout;bool found=false;
+    const auto matches=[&](const ITEMSET& slot) {return slot.bSetted && slot.xItem.m_stItemInfo.nMakeIndex==item.m_stItemInfo.nMakeIndex && !strcmp(slot.xItem.Name(),item.Name());};
+    if(!add) for(int i=0;i<_MAX_INVEN_ITEM;++i) if(matches(next[i])) {next[i]=ITEMSET{};layout.Remove(i);found=true;break;}
+    if(!remove) {
+        int x,y,width,height;if(!Placement(item,nullptr,x,y,width,height)) return false;
+        if(add || found) {
+            int id=0;while(id<_MAX_INVEN_ITEM && next[id].bSetted) ++id;
+            if(id==_MAX_INVEN_ITEM || !layout.Place(id,width,height)) return false;
+            next[id].bSetted=TRUE;next[id].xItem=item;
+        }
+    }
+    std::copy(std::begin(next),std::end(next),std::begin(m_stInventoryItem));m_layout=layout;
+    auto& ui=g_xGameProc.m_xInterface;
+    if(!add) for(auto& slot:ui.m_xStatusWnd.m_stEquipItem) if(matches(slot)) {
+        slot=ITEMSET{};
+        if(!remove) for(auto& target:ui.m_xStatusWnd.m_stEquipItem) if(!target.bSetted) {target.bSetted=TRUE;target.xItem=item;break;}
+        break;
+    }
+    if(!remove) g_xSound.PlayItemEffect(item.m_stItemInfo.stStdItem.bStdMode,raw[31],item.Name());
+    if(add || remove) {
+        static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+        int resource=remove?1466:item.m_stackMode<=2?1465:1461;
+        if(add) for(int i=0;i<10;++i) if(item.Name()==captions.Get(1409)+std::to_string(i)) {resource=1463;break;}
+        std::string message=captions.Get(resource);
+        auto at=message.find("%s");if(at!=std::string::npos) message.replace(at,2,item.Name());
+        at=message.find("%d");if(at!=std::string::npos) message.replace(at,2,std::to_string(item.m_count));
+        ui.MsgAdd(11861940,0,const_cast<char*>(message.c_str()));
+    }
+    return true;
+}
