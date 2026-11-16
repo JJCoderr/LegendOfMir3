@@ -3119,8 +3119,17 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			}
 			case SM_EAT_OK:
 			{
-                if (m_xInterface.m_stCommonItem.bSetted)
-                    g_xSound.PlayUseItemEffect(m_xInterface.m_stCommonItem.xItem.m_stItemInfo.stStdItem.bStdMode);
+                if (m_xInterface.m_stCommonItem.bSetted) {
+                    const auto& used=m_xInterface.m_stCommonItem.xItem.m_stItemInfo.stStdItem;
+                    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+                    std::string name=used.szName;
+                    const std::string& base=captions.Get(1409);
+                    for(int i=0;i<10;++i) if(name==base+std::to_string(i)) {name=base;break;}
+                    std::string message=captions.Get(1464);
+                    const auto at=message.find("%s");if(at!=std::string::npos) message.replace(at,2,name);
+                    m_xInterface.MsgAdd(0xffffff,33023,const_cast<char*>(message.c_str()));
+                    g_xSound.PlayUseItemEffect(used.bStdMode);
+                }
 				m_xInterface.m_xInventoryWnd.AddNewBeltItem(&m_xInterface.m_stCommonItem);
 				ZeroMemory(&m_xInterface.m_stCommonItem, sizeof(COMMONITEMSET));
 				break;

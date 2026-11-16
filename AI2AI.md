@@ -970,3 +970,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 对照Godot apply_use_reply，SM_EAT_OK在清理m_stCommonItem之前调用原生PlayUseItemEffect：类型0播放SoundList样本108，类型1/2播放107，其余不播放；失败回复不调用，无待用物品的重复回复不播放。沿用PlayLobbyEffect的音效开关和音量。
 - Client清理83步、全目标111步构建通过；--preview=item-use-confirmed走实际成功回复处理，consumed和duplicate_empty两项通过。107/108资源均可读，为44.1kHz单声道PCM，时长1.503/1.043秒；未进行回环录音或听感验收。
 - 已检查out/item-use-confirmed.png（既有背包界面）。完整物品堆叠回复、快捷栏数量、使用提示以及真实服务器联调尚未完成；本次不宣称整个使用物品流程完成。
+
+### 使用物品确认提示
+- SM_EAT_OK有待用物品时，读取CmList1464并替换物品名，按Godot规则将CmList1409加单个数字0..9的名称归一化；使用chat_palette(2)/chat_palette(7)对应0xffffff/33023，经原生MsgAdd显示。无待用物品的重复回复不产生提示或音效。
+- 原生item-use-confirmed预览覆盖消费状态、重复回复、归一化提示、前景/背景颜色及单次提示，共五项全1。增量构建和diff --check通过；已检查out/item-use-feedback.png，中文提示显示在原生聊天区域。
+- 快捷栏剩余数量提示与MIR3堆叠回复尚未迁移，不以该确认提示证明物品使用端到端完成。

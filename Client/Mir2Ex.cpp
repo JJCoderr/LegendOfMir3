@@ -1705,14 +1705,21 @@ public:
             auto& ui=g_xGameProc.m_xInterface;
             ui.m_stCommonItem.bSetted=TRUE;ui.m_stCommonItem.bIsBeltItem=FALSE;
             ui.m_stCommonItem.xItem.m_stItemInfo.stStdItem.bStdMode=1;
+            CLoginMessages captions;captions.Load("./CmList.dat");
+            const std::string itemName=captions.Get(1409)+"3";
+            lstrcpynA(ui.m_stCommonItem.xItem.m_stItemInfo.stStdItem.szName,itemName.c_str(),sizeof(ui.m_stCommonItem.xItem.m_stItemInfo.stStdItem.szName));
+            const auto before=ui.m_chatHistory.size();
             _TDEFAULTMESSAGE packet={};packet.wIdent=SM_EAT_OK;
             char encoded[64]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));
             g_xGameProc.OnSocketMessageRecieve(encoded);
             const bool consumed=!ui.m_stCommonItem.bSetted;
+            std::string expected=captions.Get(1464);const auto at=expected.find("%s");if(at!=std::string::npos) expected.replace(at,2,captions.Get(1409));
+            const bool message=ui.m_chatHistory.size()==before+1 && ui.m_chatHistory.back().text==expected;
+            const bool colors=ui.m_chatHistory.back().color==0xffffff && ui.m_chatHistory.back().background==33023;
             g_xGameProc.OnSocketMessageRecieve(encoded);
             ui.WindowActivate(_WND_ID_INVENTORY);
             capturePath="item-use-confirmed.bmp";
-            if(FILE* report=fopen("item-use-check.txt","wb")) {fprintf(report,"consumed=%d duplicate_empty=%d\n",consumed,!ui.m_stCommonItem.bSetted);fclose(report);}
+            if(FILE* report=fopen("item-use-check.txt","wb")) {fprintf(report,"consumed=%d duplicate_empty=%d message=%d colors=%d duplicate_quiet=%d\n",consumed,!ui.m_stCommonItem.bSetted,message,colors,ui.m_chatHistory.size()==before+1);fclose(report);}
         }
 
         if(groupPanel==118) {
