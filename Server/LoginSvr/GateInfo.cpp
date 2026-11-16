@@ -149,7 +149,7 @@ void CGateInfo::MakeNewUser(char *pszPacket)
 		{
 			char szQuery[1024];
 			sprintf( szQuery, 
-				"INSERT TBL_ACCOUNT( FLD_LOGINID, FLD_PASSWORD, FLD_USERNAME, FLD_CERTIFICATION ) "
+				"INSERT INTO TBL_ACCOUNT( FLD_LOGINID, FLD_PASSWORD, FLD_USERNAME, FLD_CERTIFICATION ) "
 				"VALUES( '%s', '%s', '%s', 0 )",
 				pszID, pszPassword, pszName );
 
@@ -464,7 +464,7 @@ void CGateInfo::ProcAddUser(SOCKET s, char *pszData)
 			pRec = GetDBManager()->CreateRecordset();
 
 			sprintf( szQuery, 
-				"INSERT TBL_ACCOUNT(FLD_LOGINID, FLD_PASSWORD, FLD_USERNAME, FLD_CERTIFICATION) "
+				"INSERT INTO TBL_ACCOUNT(FLD_LOGINID, FLD_PASSWORD, FLD_USERNAME, FLD_CERTIFICATION) "
 				"VALUES( '%s', '%s', '%s', 0 )",
 				UserEntryInfo.szLoginID, 
 				UserEntryInfo.szPassword, 
@@ -473,7 +473,7 @@ void CGateInfo::ProcAddUser(SOCKET s, char *pszData)
 			pRec->Execute( szQuery );
 
 			sprintf( szQuery,
-				"INSERT TBL_ACCOUNTADD(FLD_LOGINID, FLD_SSNO, FLD_BIRTHDAY, FLD_ADDRESS1, FLD_ADDRESS2, "
+				"INSERT INTO TBL_ACCOUNTADD(FLD_LOGINID, FLD_SSNO, FLD_BIRTHDAY, FLD_ADDRESS1, FLD_ADDRESS2, "
 				                      "FLD_PHONE, FLD_MOBILEPHONE, FLD_EMAIL, FLD_QUIZ1, FLD_ANSWER1, FLD_QUIZ2, FLD_ANSWER2) "
 				"VALUES( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )",
 				UserEntryInfo.szLoginID,

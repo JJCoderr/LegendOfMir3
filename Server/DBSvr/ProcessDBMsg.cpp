@@ -200,7 +200,7 @@ BOOL GetHumanRcd(char	*szName, _LPTHUMANRCD lptHumanRcd, _LPTLOADHUMAN lpLoadHum
 		memmove( lptHumanRcd->szTakeItem[8], pRec->Get( "FLD_RINGL_ID" ), 12 );
 		memmove( lptHumanRcd->szTakeItem[9], pRec->Get( "FLD_RINGR_ID" ), 12 );
 
-		lptHumanRcd->fIsAdmin	= (BYTE)*pRec->Get( "FLD_ISADMIN" );
+		lptHumanRcd->fIsAdmin	= (BYTE)atoi(pRec->Get( "FLD_ISADMIN" ));
 	}
 	else
 	{
@@ -351,7 +351,7 @@ char *SaveHumanMagicRcd(char *pszUserID, char *pszCharName, char *pszEncodeRcd, 
 
 			fnDecode6BitBufA( pszEncode, (char *) &tUserMagicRcd, sizeof( _THUMANMAGICRCD ) );
 
-			sprintf(szTmp, "INSERT TBL_CHARACTER_MAGIC(FLD_LOGINID, FLD_CHARNAME, FLD_MAGICID, FLD_LEVEL, FLD_USEKEY, FLD_CURRTRAIN) VALUES "
+			sprintf(szTmp, "INSERT INTO TBL_CHARACTER_MAGIC(FLD_LOGINID, FLD_CHARNAME, FLD_MAGICID, FLD_LEVEL, FLD_USEKEY, FLD_CURRTRAIN) VALUES "
 							"( '%s', '%s', %d, %d, %d, %d )",
 							pszUserID, pszCharName, tUserMagicRcd.btMagicID, tUserMagicRcd.btLevel, tUserMagicRcd.btUseKey, tUserMagicRcd.nCurrTrain);
 			
@@ -395,7 +395,7 @@ void SaveGenItemRcd(char *pszUserID, char *pszCharName, char *pszEncodeRcd, int 
 
 			fnDecode6BitBufA( pszEncode, (char *) &tItemRcd, sizeof( _TGENITEMRCD ) );
 
-			sprintf(szTmp, "INSERT TBL_CHARACTER_GENITEM (FLD_LOGINID, FLD_CHARNAME, FLD_ITEMINDEX) VALUES "
+			sprintf(szTmp, "INSERT INTO TBL_CHARACTER_GENITEM (FLD_LOGINID, FLD_CHARNAME, FLD_ITEMINDEX) VALUES "
 							"( '%s', '%s', '%s' )", pszUserID, pszCharName, tItemRcd.szItem);
 
 			if ( !pRec->Execute( szTmp ) || pRec->GetRowCount() <= 0 )
@@ -487,7 +487,7 @@ BOOL MakeNewItem(CServerInfo* pServerInfo, _LPTLOADHUMAN lpHumanLoad, _LPTMAKEIT
 		strcpy(szCharName, "WEMADE");
 	}
 
-	sprintf(szQuery, "INSERT TBL_CHARACTER_ITEM (FLD_LOGINID, FLD_CHARNAME, FLD_STDTYPE, FLD_MAKEDATE, FLD_MAKEINDEX, "
+	sprintf(szQuery, "INSERT INTO TBL_CHARACTER_ITEM (FLD_LOGINID, FLD_CHARNAME, FLD_STDTYPE, FLD_MAKEDATE, FLD_MAKEINDEX, "
 						"FLD_STDINDEX, FLD_DURA, FLD_DURAMAX, FLD_VALUE1, FLD_VALUE2, FLD_VALUE3, FLD_VALUE4, FLD_VALUE5, "
 						"FLD_VALUE6, FLD_VALUE7, FLD_VALUE8, FLD_VALUE9, FLD_VALUE10, FLD_VALUE11, FLD_VALUE12, FLD_VALUE13, "
 						"FLD_VALUE14, FLD_LASTOWNER, FLD_LASTACTION, FLD_PREFIXNAME) "

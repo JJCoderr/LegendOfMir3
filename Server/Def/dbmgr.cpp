@@ -163,7 +163,7 @@ void CQueryManager::StartInsertQuery( char *pTable )
 
 char * CQueryManager::GetInsertQuery()
 {
-	sprintf( m_szQuery, "INSERT %s(", m_szTable );
+	sprintf( m_szQuery, "INSERT INTO %s(", m_szTable );
 
 	CListNode< ITEM > *pNode = m_listItem.GetHead();
 	if ( !pNode )

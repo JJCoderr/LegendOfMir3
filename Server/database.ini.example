@@ -1,0 +1,7 @@
+[SQLite]
+Mir2_Account=mir3.sqlite3
+Mir2_Common=mir3.sqlite3
+Mir2_Game=mir3.sqlite3
+
+[Game]
+StartMap=01

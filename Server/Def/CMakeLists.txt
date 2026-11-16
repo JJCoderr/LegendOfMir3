@@ -1,3 +1,7 @@
+add_library(mir_sqlite STATIC sqlite/sqlite3.c)
+set_target_properties(mir_sqlite PROPERTIES COMPILE_OPTIONS "")
+target_compile_definitions(mir_sqlite PRIVATE SQLITE_THREADSAFE=1)
+
 add_library(Def STATIC
     EnDecode.cpp
     Misc.cpp
@@ -7,6 +11,7 @@ add_library(Def STATIC
     ModernUI.cpp
 
     _OrzEx/database.cpp
+    _OrzEx/database_sqlite.cpp
     _OrzEx/error.cpp
     _OrzEx/prime.cpp
     _OrzEx/stringex.cpp
@@ -22,6 +27,6 @@ target_include_directories(Def PUBLIC
 
 target_compile_definitions(Def PRIVATE UNICODE _UNICODE)
 
-target_link_libraries(Def PUBLIC ws2_32 advapi32 odbc32 odbccp32)
+target_link_libraries(Def PUBLIC mir_sqlite ws2_32 advapi32 odbc32 odbccp32)
 
 # List.cpp / Queue.cpp / DynamicArray.cpp �?VC6 遗留实现，与现行头文件冲突，不编�?

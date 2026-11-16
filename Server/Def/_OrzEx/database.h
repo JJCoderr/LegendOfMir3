@@ -14,6 +14,8 @@
 #include <windows.h>
 #include <sql.h>
 #include <sqlext.h>
+struct sqlite3;
+struct sqlite3_stmt;
 
 
 #define DB_MAXBUF	256
@@ -46,6 +48,7 @@ public:
 public:
 	static void SetDiagRec( void (*pfnRecord)( char *pState, int nErrCode, char *pDesc ) );
 	static void UnsetDiagRec();
+	static void SQLiteError(sqlite3* db, int code);
 	static void DiagRec( int nHandleType, SQLHANDLE hHandle );
 };
 
@@ -57,6 +60,8 @@ class CConnection
 {
 protected:
 	SQLHDBC		m_hDBConn;
+	sqlite3* m_sqlite;
+	bool InitSQLite(const char* path);
 
 private:
 	CConnection();
@@ -80,6 +85,11 @@ class CRecordset
 {
 protected:
 	SQLHSTMT	m_hStmt;
+	sqlite3* m_sqlite;
+	sqlite3_stmt* m_sqliteStmt;
+	bool ExecuteSQLite(char* query);
+	bool FetchSQLite();
+	void ResetSQLite();
 
 	int			m_nRowCount;
 	int			m_nCols;

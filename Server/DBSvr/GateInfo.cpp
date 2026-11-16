@@ -261,13 +261,22 @@ void CGateInfo::MakeNewCharacter(SOCKET s, _LPTCREATECHR lpTCreateChr)
 
 		GetDBManager()->DestroyRecordset( pRec );
 
-		CTblStartPoint::TABLE *table = GetTblStartPoint()->Get( "4" );
+		char startMap[15] = {};
+        GetPrivateProfileStringA("Game", "StartMap", "4", startMap, sizeof(startMap), ".\\database.ini");
+        CTblStartPoint::TABLE *table = GetTblStartPoint()->Get(startMap);
+        if (!table) {
+            fnMakeDefMessageA(&DefaultMsg, SM_NEWCHR_FAIL, 0, 4, 0, 0);
+            nPos = fnEncodeMessageA(&DefaultMsg, szEncodeMsg, sizeof(szEncodeMsg));
+            szEncodeMsg[nPos] = '\0';
+            SendToGate(s, szEncodeMsg);
+            return;
+        }
 
 		pRec = GetDBManager()->CreateRecordset();
 
 		// Ìí¼Ó TBL_CHARACTER ±í
 
-		sprintf(szQuery, "INSERT TBL_CHARACTER ("
+		sprintf(szQuery, "INSERT INTO TBL_CHARACTER ("
 						"FLD_LOGINID, FLD_CHARNAME, FLD_JOB, FLD_GENDER, FLD_LEVEL, FLD_DIRECTION, "
 						"FLD_ATTACKMODE, FLD_CX, FLD_CY, FLD_MAPNAME, FLD_GOLD, FLD_HAIR, "
 						"FLD_DRESS_ID, FLD_WEAPON_ID, FLD_LEFTHAND_ID, FLD_RIGHTHAND_ID, FLD_HELMET_ID, "
@@ -282,7 +291,7 @@ void CGateInfo::MakeNewCharacter(SOCKET s, _LPTCREATECHR lpTCreateChr)
 						table->posX, table->posY, table->mapName);
 		pRec->Execute( szQuery );
 
-		sprintf(szQuery, "INSERT TBL_CHARACTER_GENITEM (FLD_LOGINID, FLD_CHARNAME, FLD_ITEMINDEX) VALUES ('%s', '%s', 'G00080008000')",
+		sprintf(szQuery, "INSERT INTO TBL_CHARACTER_GENITEM (FLD_LOGINID, FLD_CHARNAME, FLD_ITEMINDEX) VALUES ('%s', '%s', 'G00080008000')",
 							lpTCreateChr->szID, lpTCreateChr->szName);
 		pRec->Execute( szQuery );
 		

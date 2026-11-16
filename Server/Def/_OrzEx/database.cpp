@@ -2,6 +2,7 @@
 
 #include "stdafx.h"
 #include "database.h"
+#include "../sqlite/sqlite3.h"
 
 
 /*
@@ -105,6 +106,12 @@ void CDatabase::SetDiagRec( void (*pfnRecord)( char *pState, int nErrCode, char 
 }
 
 
+void CDatabase::SQLiteError(sqlite3* db, int code)
+{
+    if (g_pfnRecord) g_pfnRecord(const_cast<char*>("SQLIT"), code,
+        const_cast<char*>(db ? sqlite3_errmsg(db) : sqlite3_errstr(code)));
+}
+
 void CDatabase::UnsetDiagRec()
 {
 	g_pfnRecord = NULL;
@@ -148,6 +155,7 @@ void CDatabase::DiagRec( int nHandleType, SQLHANDLE hHandle )
 CConnection::CConnection()
 {
 	m_hDBConn	= NULL;
+	m_sqlite = NULL;
 }
 
 
@@ -158,6 +166,11 @@ CConnection::~CConnection()
 
 bool CConnection::Init( SQLHENV hEnv, char *pDSN, char *pID, char *pPassword )
 {
+    char mapped[MAX_PATH] = {};
+    GetPrivateProfileStringA("SQLite", pDSN ? pDSN : "", "", mapped, MAX_PATH, ".\\database.ini");
+    if (mapped[0]) return InitSQLite(mapped);
+    if (pDSN && strncmp(pDSN, "sqlite:", 7) == 0) return InitSQLite(pDSN + 7);
+
 	int nResult;
 
 	nResult = SQLAllocHandle( SQL_HANDLE_DBC, hEnv, &m_hDBConn );
@@ -185,6 +198,7 @@ bool CConnection::Init( SQLHENV hEnv, char *pDSN, char *pID, char *pPassword )
 
 void CConnection::Uninit()
 {
+	if (m_sqlite) { sqlite3_close_v2(m_sqlite); m_sqlite = NULL; }
 	if ( m_hDBConn )
 	{
 		SQLDisconnect( m_hDBConn );
@@ -200,7 +214,8 @@ CRecordset * CConnection::CreateRecordset()
 	if ( pRec == NULL )
 		return NULL;
 
-	if ( pRec->Init( m_hDBConn ) == false )
+	pRec->m_sqlite = m_sqlite;
+	if ( !m_sqlite && pRec->Init( m_hDBConn ) == false )
 	{
 		delete pRec;
 		return NULL;
@@ -227,6 +242,8 @@ void CConnection::DestroyRecordset( CRecordset *pRec )
 CRecordset::CRecordset()
 {
 	m_hStmt		= NULL;
+	m_sqlite = NULL;
+	m_sqliteStmt = NULL;
 
 	m_nRowCount	= 0;
 	m_nCols		= 0;
@@ -255,6 +272,7 @@ bool CRecordset::Init( SQLHDBC hDBConn )
 
 void CRecordset::Uninit()
 {
+	if (m_sqliteStmt) { sqlite3_finalize(m_sqliteStmt); m_sqliteStmt = NULL; }
 	if ( m_pColInfo )
 	{
 		delete[] m_pColInfo;
@@ -277,6 +295,7 @@ void CRecordset::Uninit()
 
 bool CRecordset::Execute( char *pQuery )
 {
+	if (m_sqlite) return ExecuteSQLite(pQuery);
 	int nResult;
 	int nCount;
 
@@ -360,6 +379,7 @@ bool CRecordset::Execute( char *pQuery )
 
 bool CRecordset::Fetch()
 {
+	if (m_sqlite) return FetchSQLite();
 	int nResult;
 
 	nResult = SQLFetch( m_hStmt );

@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 4.3.1)
 project(LegendOfMir3 VERSION 0.1 LANGUAGES CXX)
 
 enable_language(RC)
+enable_language(C)
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
