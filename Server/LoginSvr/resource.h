@@ -26,6 +26,15 @@
 #define IDS_LOADACCOUNTRECORDS          22
 #define IDS_BOUNDACCOUNTRECORDS         23
 #define IDS_COMPLETENEWUSER             24
+#define IDS_STATUS_COL1                 25
+#define IDS_STATUS_COL2                 26
+#define IDS_STATUS_COL3                 27
+#define IDS_STATUS_COL4                 28
+#define IDS_STATUS_COL5                 29
+#define IDS_STATUS_LISTENING            30
+#define IDS_STATUS_STOPPED              31
+#define IDS_STATUS_SUMMARY_FMT          32
+#define IDS_DBCONNECTFAIL               33
 #define IDI_ICON1                       101
 #define IDI_MIR2                        101
 #define IDR_MAINMENU                    101
@@ -35,6 +44,7 @@
 #define IDD_CONFIGDLG                   103
 #define IDD_CONFIGDLG_SERVERLIST        104
 #define IDD_SVRLIST_ADD                 105
+#define IDD_SERVERSTAT                  106
 #define IDC_SERVERINFO_LIST             1000
 #define IDC_SVRLIST_ADD                 1002
 #define IDC_SVRLIST_REMOVE              1003
@@ -48,6 +58,9 @@
 #define IDC_REMOVE_GATELIST             1014
 #define IDC_EDIT1                       1016
 #define IDC_PORT                        1016
+#define IDC_STATUS_LIST                 1017
+#define IDC_STATUS_REFRESH              1018
+#define IDC_STATUS_SUMMARY              1019
 #define IDM_STARTSERVICE                40001
 #define IDM_STOPSERVICE                 40002
 #define IDM_CONFIG                      40003

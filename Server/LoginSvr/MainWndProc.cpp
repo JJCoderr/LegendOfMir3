@@ -8,6 +8,7 @@ BOOL			jRegGetKey(LPCSTR pSubKeyName, LPCSTR pValueName, LPBYTE pValue);
 
 BOOL CALLBACK	ConfigDlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 BOOL CALLBACK	ServerListProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+void			ShowServerStatusDlg(HWND hParentWnd);
 
 LPARAM			OnGateCommSockMsg(WPARAM wParam, LPARAM lParam);
 
@@ -93,7 +94,17 @@ UINT WINAPI LoadAccountRecords(LPVOID lpParameter)
 {
 	InsertLogMsg(IDS_LOADACCOUNTRECORDS);
 
+	// 数据库没连上时 CreateRecordset() 返回 NULL（CDBManager 的空指针保护会直接
+	// 返回 NULL）。这里必须先判断：拿 NULL 去 Execute() 就是 0xC0000005，
+	// 表现就是点 Start Service 之后进程直接消失。
 	CRecordset *pRec = GetDBManager()->CreateRecordset();
+
+	if ( pRec == NULL )
+	{
+		InsertLogMsg( IDS_DBCONNECTFAIL );
+		return 0L;
+	}
+
 	pRec->Execute( "UPDATE TBL_ACCOUNT SET FLD_CERTIFICATION=0 WHERE FLD_CERTIFICATION >= 30" );
 	GetDBManager()->DestroyRecordset( pRec );
 	// ----------------------------------------------------------------------------------------
@@ -101,7 +112,7 @@ UINT WINAPI LoadAccountRecords(LPVOID lpParameter)
 	GAMESERVERINFO *pServerInfo;
 
 	pRec = GetDBManager()->CreateRecordset();
-	if ( pRec->Execute( "SELECT * FROM TBL_SERVERINFO" ) )
+	if ( pRec && pRec->Execute( "SELECT * FROM TBL_SERVERINFO" ) )
 	{
 		while ( pRec->Fetch() )
 		{			
@@ -117,7 +128,8 @@ UINT WINAPI LoadAccountRecords(LPVOID lpParameter)
 			g_xGameServerList.AddNewNode( pServerInfo );
 		}
 	}
-	GetDBManager()->DestroyRecordset( pRec );
+	if ( pRec )
+		GetDBManager()->DestroyRecordset( pRec );
 
 	char szTmp[64];
 	for ( PLISTNODE pNode = g_xGameServerList.GetHead(); pNode; pNode = g_xGameServerList.GetNext( pNode ) )
@@ -209,6 +221,11 @@ void OnCommand(WPARAM wParam, LPARAM lParam)
 		case IDM_BACKCOLOR:
 			SetBackColor();
 			return;
+		case IDM_SERVERSTAT:
+		{
+			ShowServerStatusDlg(g_hMainWnd);
+			return;
+		}
 		case IDM_CONFIG:
 		{
 			CreateConfigProperties();

@@ -154,11 +154,13 @@ void CGateInfo::MakeNewUser(char *pszPacket)
 				pszID, pszPassword, pszName );
 
 			CRecordset *pRec = GetDBManager()->CreateRecordset();
-			if ( pRec->Execute( szQuery ) && pRec->GetRowCount() )
+			if ( pRec && pRec->Execute( szQuery ) && pRec->GetRowCount() )
 				fnMakeDefMessageA( &DefMsg, SM_NEWID_SUCCESS, 0, 0, 0, 0 );
 			else
 				fnMakeDefMessageA( &DefMsg, SM_NEWID_FAIL, 0, 0, 0, 0 );
-			GetDBManager()->DestroyRecordset( pRec );
+
+			if ( pRec )
+				GetDBManager()->DestroyRecordset( pRec );
 			// -----------------------------------------------------------------------------------
 		}
 		else
@@ -202,8 +204,12 @@ void CGateInfo::ReceiveServerMsg(char *pszPacket)
 			nCertification, pszPacket );
 
 		CRecordset *pRec = GetDBManager()->CreateRecordset();
-		pRec->Execute( szQuery );
-		GetDBManager()->DestroyRecordset( pRec );
+
+		if ( pRec )
+		{
+			pRec->Execute( szQuery );
+			GetDBManager()->DestroyRecordset( pRec );
+		}
 	}
 }
 
@@ -437,6 +443,15 @@ void CGateInfo::ProcAddUser(SOCKET s, char *pszData)
 
 		CRecordset *pRec = GetDBManager()->CreateRecordset();
 
+		if ( pRec == NULL )
+		{
+			// 数据库不可用：直接回失败，避免用空指针继续查表
+			fnMakeDefMessageA( &DefMsg, SM_NEWID_FAIL, 0, 0, 0, 0 );
+			fnEncodeMessageA( &DefMsg, szEncodePacket, sizeof( szEncodePacket ) );
+			SendToGate( s, szEncodePacket );
+			return;
+		}
+
 		if (!pRec->Execute( szQuery ))
 			fnMakeDefMessageA(&DefMsg, SM_NEWID_FAIL, 0, 0, 0, 0);
 
@@ -532,6 +547,16 @@ void CGateInfo::ProcLogin(SOCKET s, char *pszData)
 				sprintf( szQuery, "SELECT * FROM TBL_ACCOUNT WHERE FLD_LOGINID='%s'", pszID );
 
 				CRecordset *pRec = GetDBManager()->CreateRecordset();
+
+				if ( pRec == NULL )
+				{
+					// 数据库不可用：按"账号不存在"回复，别用空指针继续走
+					fnMakeDefMessageA( &DefMsg, SM_ID_NOTFOUND, 0, 0, 0, 0 );
+					nPos = fnEncodeMessageA( &DefMsg, szEncodePacket, sizeof( szEncodePacket ) );
+					szEncodePacket[nPos] = '\0';
+					SendToGate( s, szEncodePacket );
+					return;
+				}
 
 				if ( !pRec->Execute( szQuery ) || !pRec->Fetch() )
 					fnMakeDefMessageA( &DefMsg, SM_ID_NOTFOUND, 0, 0, 0, 0 );

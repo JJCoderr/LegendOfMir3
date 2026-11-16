@@ -121,6 +121,19 @@ BEGIN
 END
 
 
+IDD_SERVERSTAT DIALOGEX 0, 0, 320, 196
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Game Server Connection Status"
+FONT 9, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "",IDC_STATUS_SUMMARY,7,7,306,10
+    CONTROL         "",IDC_STATUS_LIST,"SysListView32",LVS_REPORT | 
+                    WS_BORDER | WS_TABSTOP,7,21,306,148
+    PUSHBUTTON      "&Refresh",IDC_STATUS_REFRESH,197,172,56,14
+    DEFPUSHBUTTON   "Close",IDOK,258,172,55,14
+END
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // DESIGNINFO
@@ -211,6 +224,15 @@ BEGIN
     IDS_LOADACCOUNTRECORDS  "Reading user account records."
     IDS_BOUNDACCOUNTRECORDS "Read %d user account records."
     IDS_COMPLETENEWUSER     "Created user ID [ %s ]."
+    IDS_STATUS_COL1         "Type"
+    IDS_STATUS_COL2         "Name"
+    IDS_STATUS_COL3         "Address"
+    IDS_STATUS_COL4         "Port"
+    IDS_STATUS_COL5         "State"
+    IDS_STATUS_LISTENING    "Listening"
+    IDS_STATUS_STOPPED      "Stopped"
+    IDS_STATUS_SUMMARY_FMT  "%d login gate(s) connected, %d game server(s) registered."
+    IDS_DBCONNECTFAIL       "Cannot connect to the database. Service start aborted."
 END
 
 #endif    // Korean resources

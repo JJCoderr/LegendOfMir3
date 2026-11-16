@@ -6,6 +6,7 @@ add_executable(LoginSvr WIN32
     LoginSvr.cpp
     MainWndProc.cpp
     ServerListProc.cpp
+    StatusDlg.cpp
     StdAfx.cpp
     ThreadFuncForMsg.cpp
     LoginSvr.rc

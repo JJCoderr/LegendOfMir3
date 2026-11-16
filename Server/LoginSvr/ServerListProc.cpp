@@ -5,6 +5,7 @@ extern HWND			g_hMainWnd;
 
 BOOL jRegGetKey(LPCTSTR pSubKeyName, LPCTSTR pValueName, LPBYTE pValue);
 LONG jRegEnumKey(LPCTSTR pSubKeyName, int nIndex, LPTSTR lpSubKey, int nSubkeyLen);
+BOOL jRegGetKeyBuf(LPCTSTR pSubKeyName, LPCTSTR pValueName, LPBYTE pValue, DWORD nValueSize);
 
 BOOL CALLBACK AddSvrListProc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -26,8 +27,16 @@ void InitListView(HWND hWndDlg)
 	ZeroMemory(szText, sizeof(szText));
 	ZeroMemory(szTitle, sizeof(szTitle));
 
-	while (jRegEnumKey(_LOGIN_SERVERLIST_REGISTRY, nCount, szText, sizeof(szText)/sizeof(TCHAR)) != ERROR_NO_MORE_ITEMS)
+	// ORZ: 原来的写法只把 ERROR_NO_MORE_ITEMS 当成结束条件。只要枚举函数返回别的
+	// 错误码（键不存在、没有权限、注册表 32/64 位视图错位……），循环就永远退不出去，
+	// 每轮还往列表里插一条空记录 —— 表现就是点 Configuration 之后界面卡死。
+	// 这里改成只认 ERROR_SUCCESS，并且带条数上限，任何异常情况都能立刻结束。
+	for (UINT nLoop = 0; nLoop < 512; nLoop++)
 	{				
+		// 枚举失败（含根本没有 Servers 键）就立刻退出，绝不空转。
+		if (jRegEnumKey(_LOGIN_SERVERLIST_REGISTRY, (int)nCount, szText,
+						(int)(sizeof(szText) / sizeof(TCHAR))) != ERROR_SUCCESS)
+			break;
 		lvi.pszText = szText;
 		ListView_InsertItem(GetDlgItem(hWndDlg, IDC_SERVERINFO_LIST), &lvi);
 
@@ -35,7 +44,7 @@ void InitListView(HWND hWndDlg)
 		lstrcat(szKey, _TEXT("\\"));
 		lstrcat(szKey, szText);
 
-		jRegGetKey(szKey, _T("Title"), (LPBYTE)szTitle);
+		jRegGetKeyBuf(szKey, _T("Title"), (LPBYTE)szTitle, sizeof(szTitle));
 
 		ListView_SetItemText(GetDlgItem(hWndDlg, IDC_SERVERINFO_LIST), nCount, 1, szTitle);
 
