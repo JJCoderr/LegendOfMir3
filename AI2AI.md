@@ -479,3 +479,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 按Godot group_dialog_input：默认YES，Tab在YES/NO切换，Enter/Space返回选中结果；重复按键不触发。Esc仅拦截，不取消，纠正上一阶段误加行为。
 - 提取FinishNotice共用确认结果处理，鼠标播放点击声，键盘不播放（与参考区分）。
 - Client全量77步编译通过；退出预览报告wheel_blocked=1、cancelled=1、escape_blocked=1、keyboard_cancelled=1、reopened=1，验证Tab+Enter可取消。真实YES退出仍需退出限制联调。
+
+### 组队页面显示迁移
+- 组队逻辑区域272,123,258,244，GameInter1360居中绘制；关闭1221与允许组队1370/1371按Godot位置显示。
+- 名称改为角色名，宋体9磅；成员按参考两列顺序、20px行距显示，允许状态读取1603/1604。
+- 新增 --preview=group-panel，注入六名示例成员，复用实际窗口列表绘制；构建通过，已检查 out/group-panel.png。
+- 旧按钮命中和创建/邀请/移除仍待迁移，尤其旧代码硬编码mandul不可视为完整功能；下一步实现输入对话框并替换这些测试动作。

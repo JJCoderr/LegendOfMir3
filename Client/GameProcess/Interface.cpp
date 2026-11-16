@@ -172,7 +172,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xExchangeWnd.CreateExchangeWnd(_WND_ID_EXCHANGE, m_pxInterImg, _WNDIMGIDX_EXCHANGE, 0, 0, 0, 0, TRUE);
 	m_xGuildMasterWnd.CreateGuildMasterWnd(_WND_ID_GUILDMASTER, m_pxInterImg, _WNDIMGIDX_GUILDMASTER, 0, 0, 0, 0, TRUE);
 	m_xGuildWnd.CreateGuildWnd(_WND_ID_GUILD, m_pxInterImg, 1300, 102, 22, 594, 444, TRUE);
-	m_xGroupWnd.CreateGroupWnd(_WND_ID_GROUP, m_pxInterImg, _WNDIMGIDX_GROUP, 0, 0, 0, 0, TRUE);
+	m_xGroupWnd.CreateGroupWnd(_WND_ID_GROUP, m_pxInterImg, 1360, 272, 123, 258, 244, TRUE);
 	m_xGroupPopWnd.CreateGroupPopWnd(_WND_ID_GROUPPOP, m_pxInterImg, 1240, 220, 112, 360, 268, TRUE);
 	m_xChatPopWnd.CreateChatPopWnd(_WND_ID_CHATPOP, m_pxInterImg, _WNDIMGIDX_CHATPOP, 0, 0, 0, 0, TRUE);
 

@@ -10,6 +10,7 @@
 *******************************************************************************************************************/
 
 #include "StdAfx.h"
+#include "Common/LoginMessages.h"
 
 typedef struct tagINTERFACE_BUTTON
 {
@@ -51,37 +52,44 @@ VOID CGroupWnd::CreateGroupWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameI
 
 VOID CGroupWnd::ShowGroupWnd()
 {
-	CGroupMember*	pGroupMember;
-
-	RECT tRect = GetGameWndRect();
-
-	int				nX = tRect.left + 45, nY = tRect.top + 100;
-	
-	ShowGameWnd();
-
-	g_xMainWnd.PutsHan(NULL, tRect.left + 45, tRect.top + 25, RGB(255, 255, 255), RGB(0, 0, 0), g_szUserID, NULL);
-
-	if (m_xGroupList.GetCounter())
-	{
-		m_xGroupList.MoveCurrentToTop();
-
-		for (int i = 1; i <= m_xGroupList.GetCounter(); i++)
-		{
-			pGroupMember = m_xGroupList.GetCurrentData();
-
-			g_xMainWnd.PutsHan(NULL, nX, nY, RGB(255, 255, 255), RGB(0, 0, 0), pGroupMember->szMemberName);
-
-			if (i % 2) 
-				nX += 100;
-			else
-			{
-				nX -= 100;
-				nY += 50;
-			}
-
-			m_xGroupList.MoveNextNode();
-		}
-	}
+    if (!m_bActive) return;
+    const RECT area = GetGameWndRect();
+    const auto draw = [&](int frame,int x,int y) {
+        if (!m_pxWndImage->NewSetIndex(frame)) return;
+        const auto& skin = *m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        g_xMainWnd.DrawWithImageForComp(x,y,skin.shWidth,skin.shHeight,(WORD*)m_pxWndImage->m_pbCurrImage);
+    };
+    if (m_pxWndImage->NewSetIndex(1360)) {
+        const auto& skin = *m_pxWndImage->m_lpstNewCurrWilImageInfo;
+        draw(1360,area.left-(skin.shWidth-258)/2,area.top-(skin.shHeight-244)/2);
+    }
+    draw(1221,area.left+217,area.top+200);
+    draw(g_fAllowGroup?1370:1371,area.left+23,area.top+47);
+    auto* surface = g_xMainWnd.GetBackBuffer();
+    HDC dc;
+    if (FAILED(surface->GetDC(&dc))) return;
+    const char face[] = {char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font = g_xMainWnd.CreateGameFont(face,9);
+    HGDIOBJ previous = SelectObject(dc,font);
+    SetBkMode(dc,TRANSPARENT);
+    const auto text = [&](const char* value,int x,int y,int width,COLORREF color) {
+        RECT clip = {area.left+x,area.top+y,area.left+x+width,area.top+y+15};
+        SetTextColor(dc,color);
+        ExtTextOutA(dc,clip.left,clip.top,ETO_CLIPPED,&clip,value,(UINT)strlen(value),NULL);
+    };
+    text(g_szCharName,52,15,180,0xdce6c8);
+    static CLoginMessages captions;
+    static const bool loaded = captions.Load("./CmList.dat");
+    text(captions.Get(g_fAllowGroup?1603:1604).c_str(),110,52,140,0xdce6c8);
+    m_xGroupList.MoveCurrentToTop();
+    for (int i=0;i<m_xGroupList.GetCounter() && i<10;++i) {
+        const CGroupMember* member = m_xGroupList.GetCurrentData();
+        text(member->szMemberName,i%2?45:145,90+20*(i/2),100,0xffffff);
+        m_xGroupList.MoveNextNode();
+    }
+    SelectObject(dc,previous);
+    DeleteObject(font);
+    surface->ReleaseDC(dc);
 }
 
 VOID CGroupWnd::Init()
