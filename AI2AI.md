@@ -1259,3 +1259,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - CSiegeWnd缓存保存updated，每帧RenderInterface调用ExpireObjects，不依赖窗口可见性；只移除记录/取消objectPresent，不解除controlled，也不清数值和目标。新位置恢复；换图清缓存沿用。
 - 初次增量链接命中旧GameProc目标依赖，clean后全部七目标重建通过；11项新增+124项回归全1。182 siege-expired截图out/siege-expired.png已检查，地图和射程消失、控件保留。下一预览空闲183。
 - 人物/怪物地图标记、全量GUI细节及实服联调仍待完成；目标保持原范围。
+
+### 三种地图场景标记接入（2026-11-17）
+- 对照Godot minimap.hpp与MIR3 45D0B0/45DAD0/45E660：修复此前将NPC黄色点误作monsters且仅在预览赋值的问题。CheckMappedData每帧动作/删除后收集NPC、存活怪物、存活玩家，红/白受选项控制，黄NPC始终显示；投石车不画白玩家。
+- 1312缓存过期后CopyMapMarkers同步普通/头像地图绿橙集合，投石车移除重复绘制。选项在RenderInterface开头同步，避免头像图读旧值。
+- clean Client及全部七目标构建通过；6项状态+既有135项回归全1；四截图精确红/白/黄12个像素计数通过。文档Client/docs/minimap-scene-evidence.md。尚未用实服场景对象执行端到端验证。
+- 新预览183 scene-map、184 scene-portrait、185 scene-siege、186 scene-map-hidden；下一空闲187。截图out/scene-map.png、scene-portrait.png、scene-siege.png、scene-map-hidden.png已检查。

@@ -59,9 +59,14 @@ void CSiegeWnd::Show()
             const RECT box={at.x-radius,at.y-radius,at.x+radius+1,at.y+radius+1};RECT clip;
             if(IntersectRect(&clip,&box,&viewport)) DrawLegacyPanel(clip,outline?0:color,outline?0:255,color,outline);
         };
-        if(map.showMonsters) for(const auto& cell:map.monsters) marker(cell,RGB(255,255,0),0,false);
-        for(const auto& cell:map.green) marker(cell,RGB(100,250,100),1,false);
-        for(const auto& cell:map.orange) marker(cell,RGB(250,150,50),1,false);
+        const auto actors=[&](const std::vector<POINT>& cells,COLORREF color,int size) {
+            for(const auto& cell:cells) {
+                const POINT at=Marker(cell,origin,crop);const RECT box={at.x,at.y,at.x+size,at.y+size};RECT clip;
+                if(IntersectRect(&clip,&box,&viewport)) DrawLegacyPanel(clip,color,255,0,false);
+            }
+        };
+        actors(map.npcs,RGB(255,255,0),1);
+        if(map.showMonsters) actors(map.monsters,RGB(255,0,0),2);
         const POINT extent=map.SiegeExtent();
         for(const auto& entry:objects) if(entry.first!=objectId) {
             const POINT at=Marker(entry.second.cell,origin,crop);
@@ -222,4 +227,11 @@ void CSiegeWnd::SendRequest(Request request)
     if(g_xClientSocket.m_sockClient!=INVALID_SOCKET)
         g_xClientSocket.SendPacket(&header,body.empty()?nullptr:body.data());
     requests.push_back(std::move(request));
+}
+
+void CSiegeWnd::CopyMapMarkers(CMinimap& map) const
+{
+    map.green.clear();map.orange.clear();
+    for(const auto& entry:objects)
+        (entry.second.kind?map.orange:map.green).push_back(entry.second.cell);
 }

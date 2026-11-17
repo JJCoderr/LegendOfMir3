@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <map>
+class CMinimap;
 class CSiegeWnd : public CGameWnd {
 public:
     struct Request { SiegeLayout::Action action; POINT target; CItem item; unsigned quantity=0; };
@@ -16,6 +17,7 @@ public:
     void ReceiveStatus(DWORD values);
     void ReceiveObject(DWORD id,POINT cell,WORD kind=0,DWORD now=GetTickCount());
     void ExpireObjects(DWORD now);
+    void CopyMapMarkers(CMinimap& map) const;
     static bool BuildRequest(const Request& request,_TDEFAULTMESSAGE& header,std::string& body);
     void ClearObjects();
     void ReleaseControl();

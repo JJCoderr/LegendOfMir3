@@ -24,7 +24,9 @@ public:
     POINT position={672,0},dragOffset={},player={};
     int width=0,height=0;
     DWORD replyTime=0;
-    std::vector<POINT> monsters,green,orange;
+    std::vector<POINT> npcs,monsters,players,green,orange;
+    void ClearActors();
+    void AddActor(BYTE kind,bool dead,POINT cell);
     void Init();
     void Destroy();
     void MapChanged();

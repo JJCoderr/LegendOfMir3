@@ -2,7 +2,7 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -66,7 +66,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewSiegeExpired) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewSceneHidden) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1888,6 +1888,29 @@ public:
             if(groupPanel==PreviewMailNotify) {mouse=badgePoint;capturePath="mail-notification.bmp";}
         }
 
+        if(groupPanel>=PreviewSceneMap && groupPanel<=PreviewSceneHidden) {
+            auto& ui=g_xGameProc.m_xInterface;auto& map=ui.m_minimap;auto& siege=ui.m_xSiegeWnd;
+            auto& hero=g_xGameProc.m_xMyHero;hero.m_wPosX=hero.m_wPosY=140;
+            map.Init();map.large=true;map.pending=true;map.Receive(1,GetTickCount());map.player={140,140};
+            map.ClearActors();map.AddActor(_GENDER_NPC,false,POINT{145,145});map.AddActor(_GENDER_MON,false,POINT{130,145});
+            map.AddActor(_GENDER_MAN,false,POINT{135,135});map.AddActor(_GENDER_WOMAN,false,POINT{150,135});
+            map.AddActor(_GENDER_MON,true,POINT{125,125});map.AddActor(_GENDER_MAN,true,POINT{155,125});map.AddActor(255,false,POINT{160,125});
+            const bool npcs=map.npcs.size()==1,monsters=map.monsters.size()==1,players=map.players.size()==2;
+            siege.ClearObjects();siege.ReceiveObject(7,POINT{140,140});siege.ReceiveControl(MAKELONG(50,100),1,"engine\t7");
+            siege.ReceiveObject(9,POINT{150,130},0);siege.ReceiveObject(10,POINT{130,160},1);siege.CopyMapMarkers(map);
+            const bool positions=map.green.size()==2 && map.orange.size()==1 && map.orange[0].y==160;
+            siege.ReceiveObject(10,POINT{135,160},0);siege.CopyMapMarkers(map);
+            const bool changed=map.green.size()==3 && map.orange.empty();
+            siege.ReceiveObject(10,POINT{130,160},1);siege.CopyMapMarkers(map);
+            CMinimap empty;empty.AddActor(_GENDER_MON,false,POINT{1,1});empty.ClearActors();
+            const bool cleared=empty.npcs.empty() && empty.monsters.empty() && empty.players.empty();
+            ui.m_xOptionWnd.m_values[7]=groupPanel!=PreviewSceneHidden;
+            capturePath=groupPanel==PreviewSceneHidden?"scene-map-hidden.bmp":"scene-map.bmp";mouse={400,400};
+            if(groupPanel==PreviewScenePortrait) {map.visible=false;map.portraitMode=map.portraitVisible=true;map.portraitBlink=100;capturePath="scene-portrait.bmp";}
+            if(groupPanel==PreviewSceneSiege) {map.visible=false;ui.WindowActivate(SiegeLayout::WindowId);capturePath="scene-siege.bmp";}
+            if(FILE* report=fopen("scene-marker-check.txt","wb")) {fprintf(report,"npcs=%d monsters=%d players=%d positions=%d changed=%d cleared=%d\n",npcs,monsters,players,positions,changed,cleared);fclose(report);}
+        }
+
         if((groupPanel>=PreviewSiege && groupPanel<=PreviewSiegeChecks) || groupPanel==PreviewSiegeExpired) {
             using namespace SiegeLayout;
             auto& ui=g_xGameProc.m_xInterface;auto& panel=ui.m_xSiegeWnd;auto& map=ui.m_minimap;
@@ -2749,6 +2772,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=scene-map")==0 ? PreviewSceneMap :
+        strcmp(lpCmdLine,"--preview=scene-portrait")==0 ? PreviewScenePortrait :
+        strcmp(lpCmdLine,"--preview=scene-siege")==0 ? PreviewSceneSiege :
+        strcmp(lpCmdLine,"--preview=scene-map-hidden")==0 ? PreviewSceneHidden :
         strcmp(lpCmdLine,"--preview=siege-expired")==0 ? PreviewSiegeExpired :
         strcmp(lpCmdLine,"--preview=consignment-input")==0 ? PreviewConsignmentInput :
         strcmp(lpCmdLine,"--preview=consignment-wire")==0 ? PreviewConsignmentWire :

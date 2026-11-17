@@ -318,6 +318,9 @@ BOOL CGameProcess::TargetInLongAttack(BYTE bDir)
 
 VOID CGameProcess::CheckMappedData(INT nLoopTime, BOOL bIsMoveTime)
 {
+    m_xInterface.m_minimap.ClearActors();
+    m_xInterface.m_xSiegeWnd.ExpireObjects(GetTickCount());
+    m_xInterface.m_xSiegeWnd.CopyMapMarkers(m_xInterface.m_minimap);
 	INT		nCnt, nObjCnt;
 	BOOL	bIsSaveTargetExisted = FALSE;
 	BOOL	bFocused;
@@ -377,6 +380,8 @@ VOID CGameProcess::CheckMappedData(INT nLoopTime, BOOL bIsMoveTime)
 
 		if ( !pxActor )
 			continue;
+
+        m_xInterface.m_minimap.AddActor(pxActor->m_stFeature.bGender,pxActor->m_bIsDead!=FALSE,POINT{pxActor->m_wPosX,pxActor->m_wPosY});
 
 		if ( pxActor->m_wPosX >= m_xMap.m_shStartViewTileX && pxActor->m_wPosX < m_xMap.m_shStartViewTileX + _VIEW_CELL_X_COUNT && 
 			 pxActor->m_wPosY >= m_xMap.m_shStartViewTileY && pxActor->m_wPosY < m_xMap.m_shStartViewTileY + _VIEW_CELL_Y_COUNT )				 

@@ -10,7 +10,7 @@ void CMinimap::Destroy()
 {
     maps.Destroy();fullMaps.Destroy();frame=-1;width=height=0;replyTime=0;
     visible=pending=translucent=large=dragging=releaseCaptured=false;position={672,0};
-    monsters.clear();green.clear();orange.clear();pixels.clear();portraitMode=portraitPending=portraitVisible=false;portraitBlink=0;
+    ClearActors();green.clear();orange.clear();pixels.clear();portraitMode=portraitPending=portraitVisible=false;portraitBlink=0;
 }
 RECT CMinimap::Bounds() const { return RECT{position.x,position.y,position.x+min(Size(),width),position.y+min(Size(),height)}; }
 POINT CMinimap::Source() const
@@ -89,7 +89,8 @@ void CMinimap::Show(CWHWilImageData& skin,DWORD now)
             fill(RECT{x-int(nearby),y-int(nearby),x+2,y+2},color);
         }
     };
-    if(showMonsters) markers(monsters,RGB(255,255,0),false);
+    markers(npcs,RGB(255,255,0),false);
+    if(showMonsters) {markers(monsters,RGB(255,0,0),false);markers(players,RGB(255,255,255),false);}
     markers(green,RGB(100,250,100),true);markers(orange,RGB(250,150,50),true);
     if(now%801<500) {
         RECT clipped,box={px,py,px+4,py+4};
@@ -165,6 +166,14 @@ void CMinimap::ShowPortrait()
             if(IntersectRect(&clip,&area,&bounds)) DrawLegacyPanel(clip,color,255,0,false);
         }
     };
+    const auto actors=[&](const std::vector<POINT>& cells,COLORREF color,int size) {
+        for(const auto& cell:cells) {
+            const POINT at=PortraitMarker(cell,false);const RECT box={at.x,at.y,at.x+size,at.y+size};RECT clip;
+            if(IntersectRect(&clip,&box,&bounds)) DrawLegacyPanel(clip,color,255,0,false);
+        }
+    };
+    actors(npcs,RGB(255,255,0),1);
+    if(showMonsters) {actors(monsters,RGB(255,0,0),2);actors(players,RGB(255,255,255),2);}
     markers(green,RGB(100,250,100));markers(orange,RGB(250,150,50));
     if(portraitBlink>0 && portraitBlink<500) DrawLegacyPanel(RECT{self.x,self.y,self.x+4,self.y+4},0,0,RGB(100,250,100));
 }
@@ -178,7 +187,7 @@ void CMinimap::Request()
 void CMinimap::MapChanged()
 {
     pending=visible || pending;visible=false;dragging=releaseCaptured=false;replyTime=0;
-    frame=-1;width=height=0;pixels.clear();monsters.clear();green.clear();orange.clear();
+    frame=-1;width=height=0;pixels.clear();ClearActors();green.clear();orange.clear();
     portraitVisible=false;portraitPending=portraitMode;
     if(pending || portraitPending) Request();
 }
@@ -211,4 +220,17 @@ void CMinimap::ShowSiege(POINT origin,POINT center)
         }
     }
     buffer->Unlock(NULL);
+}
+
+void CMinimap::ClearActors()
+{
+    npcs.clear();monsters.clear();players.clear();
+}
+void CMinimap::AddActor(BYTE kind,bool dead,POINT cell)
+{
+    if(kind==_GENDER_NPC) npcs.push_back(cell);
+    else if(!dead) {
+        if(kind==_GENDER_MON) monsters.push_back(cell);
+        else if(kind==_GENDER_MAN || kind==_GENDER_WOMAN) players.push_back(cell);
+    }
 }

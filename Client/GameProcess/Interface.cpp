@@ -471,6 +471,7 @@ VOID CInterface::ShowChatList()
 VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 {
     m_xSiegeWnd.ExpireObjects(GetTickCount());
+    m_minimap.showMonsters=m_xOptionWnd.m_values[7];
     m_xPortraitWnd.SendRequest();
 	INT nX, nY, nCnt;
 
@@ -564,7 +565,6 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     m_xMailWnd.ShowNotification();
     ShowWndList();
     m_minimap.player={g_xGameProc.m_xMyHero.m_wPosX,g_xGameProc.m_xMyHero.m_wPosY};
-    m_minimap.showMonsters=m_xOptionWnd.m_values[7];
     m_minimap.Show(*m_pxInterImg,GetTickCount());
     if(!m_chatExpanded) m_targetDisplay.ShowVitals(m_portraits);
     ShowMagicKey();
