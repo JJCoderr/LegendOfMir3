@@ -1042,6 +1042,7 @@ case _WND_ID_STATUS:
 			{
 				AddWindowToList(_WND_ID_QUEST);
 				m_xQuestWnd.SetGameWndActive(TRUE);
+                m_xQuestWnd.Query();
                 m_xQuestWnd.pressed=-1; m_xQuestWnd.scrollCaptured=false;
 				bRet = TRUE;
 			}

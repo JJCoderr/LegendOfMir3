@@ -1265,3 +1265,10 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 1312缓存过期后CopyMapMarkers同步普通/头像地图绿橙集合，投石车移除重复绘制。选项在RenderInterface开头同步，避免头像图读旧值。
 - clean Client及全部七目标构建通过；6项状态+既有135项回归全1；四截图精确红/白/黄12个像素计数通过。文档Client/docs/minimap-scene-evidence.md。尚未用实服场景对象执行端到端验证。
 - 新预览183 scene-map、184 scene-portrait、185 scene-siege、186 scene-map-hidden；下一空闲187。截图out/scene-map.png、scene-portrait.png、scene-siege.png、scene-map-hidden.png已检查。
+
+### 任务列表、子任务及正文接入（2026-11-17）
+- 从 Godot quest_wire.hpp 移植独立解析器；原生 QuestWnd 接1301/1302/1303/1310/1311，开窗/展开/空正文点击查询1046/1048/1049。全量替换清旧数据，增量按原版重复停止，迟到正文不切换选择；Destroy清缓存。
+- MIR3 46CFE0/46D310再次确认查询条件；正文160像素换行，通知白字红底符合401430调色板。详见Client/docs/quest-wire-evidence.md。
+- clean Client及全部七目标构建通过；新增15项+既有任务14项+相关141项，共170项全1。三截图out/quest-wire-list.png、quest-wire-detail.png、quest-wire-increment.png已检查。尚未验证完整加密包或实服流程。
+- 预览187/188/189，下一空闲190。全GUI与登录服务端目标仍未完成。
+- 下一批金额对话框待修：原版4256B0寄售价与邮件金币上限100000000；目前寄售MaximumPrice是0x7fffffff，邮件仅余额限制。原版输入0保留旧金额；证据out/extension-load-consumer.c，需整体核对交互后统一构建提交。

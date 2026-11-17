@@ -2,7 +2,7 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -66,7 +66,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewSceneHidden) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewQuestIncrement) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1888,6 +1888,41 @@ public:
             if(groupPanel==PreviewMailNotify) {mouse=badgePoint;capturePath="mail-notification.bmp";}
         }
 
+        if(groupPanel>=PreviewQuestWire && groupPanel<=PreviewQuestIncrement) {
+            using namespace QuestWire;
+            auto& ui=g_xGameProc.m_xInterface;auto& quest=ui.m_xQuestWnd;
+            const auto receive=[&](WORD opcode,WORD count,WORD parent,const std::string& text) {
+                char encoded[MaxEncodedBytes+1]={};fnEncode6BitBuf((BYTE*)text.data(),encoded,int(text.size()),sizeof(encoded));
+                _TDEFAULTMESSAGE header={};fnMakeDefMessage(&header,opcode,0,count,0,parent);return quest.Receive(header,encoded);
+            };
+            ui.WindowActivate(_WND_ID_QUEST);
+            const bool query=!quest.requests.empty() && quest.requests.back().wIdent==QueryList;
+            const std::string list="20/后续历练/0/0//10/初入玛法/2/1/前往比奇城寻找老兵。/";
+            const bool full=receive(ListMessage,2,0,list) && quest.entries.size()==2 && quest.entries[0].id==10 && quest.entries[0].completed && quest.entries[1].summary.empty();
+            const auto beforeQuery=quest.requests.size();quest.Query();const bool cached=quest.requests.size()==beforeQuery;
+            quest.selected=0;quest.Expand();const bool childrenQuery=quest.requests.back().wIdent==QueryChildren && quest.requests.back().wSeries==10;
+            const bool children=receive(ChildrenMessage,2,10,"101/拜访老兵/102/击败稻草人/") && quest.entries[0].children.size()==2 && quest.entries[0].children[0].completed;
+            const POINT childPoint={quest.m_rcWnd.left+80,quest.m_rcWnd.top+106};quest.OnLButtonDown(childPoint);quest.OnLButtonUp(childPoint);
+            const bool detailQuery=quest.requests.back().wIdent==QueryText && quest.requests.back().nRecog==101 && quest.requests.back().wSeries==10;
+            receive(TextMessage,102,10,"击败城外的稻草人。");const bool late=quest.Description().empty() && quest.entries[0].children[1].summary=="击败城外的稻草人。";
+            const std::string detail="请前往比奇城寻找老兵，了解冒险所需的装备和技能。完成交谈后，前往城外击败稻草人，再返回领取奖励。任务进度会显示在这里，请留意各个阶段的说明。";
+            const bool text=receive(TextMessage,101,10,detail) && quest.Description()==detail;
+            receive(TextMessage,101,99,"未知任务");const bool unknown=quest.Description()==detail;
+            const bool increment=receive(ChildAddedMessage,10,2,"10/103/收集药草/在城外收集药草。/101/重复记录/不应覆盖/") && quest.entries[0].children.size()==3 && quest.entries[0].children.back().completed && quest.Description()==detail;
+            const bool added=receive(AddedMessage,0,2,"5/新的委托/10/重复任务/") && quest.entries.size()==3 && quest.entries[0].id==5 && quest.descriptionParent==-1;
+            const bool malformed=!receive(ListMessage,1,0,"99/截断任务") && quest.entries.size()==3;
+            const bool refreshed=receive(ListMessage,1,0,"10/初入玛法/2/0/尚未完成/") && quest.entries.size()==1 && !quest.entries[0].completed && quest.entries[0].children.empty();
+            const bool empty=receive(ListMessage,0,0,"") && quest.entries.empty() && !quest.listInitialized;
+            const auto beforeIncrement=quest.requests.size();receive(AddedMessage,0,1,"5/新的委托");
+            const bool resync=quest.entries.empty() && quest.requests.size()==beforeIncrement+1 && quest.requests.back().wIdent==QueryList;
+            receive(ListMessage,2,0,list);quest.selected=0;quest.Expand();receive(ChildrenMessage,2,10,"101/拜访老兵/102/击败稻草人/");
+            quest.OnLButtonDown(childPoint);quest.OnLButtonUp(childPoint);receive(TextMessage,101,10,detail);
+            if(groupPanel==PreviewQuestWire) {quest.expanded=-1;quest.selected=quest.descriptionParent=0;quest.descriptionChild=-1;capturePath="quest-wire-list.bmp";}
+            else {capturePath="quest-wire-detail.bmp";if(groupPanel==PreviewQuestIncrement) {receive(ChildAddedMessage,10,1,"10/103/收集药草/在城外收集药草。/");capturePath="quest-wire-increment.bmp";}}
+            mouse={400,400};
+            if(FILE* report=fopen("quest-wire-check.txt","wb")) {fprintf(report,"query=%d full=%d cached=%d childrenQuery=%d children=%d detailQuery=%d late=%d text=%d unknown=%d increment=%d added=%d malformed=%d refreshed=%d empty=%d resync=%d\n",query,full,cached,childrenQuery,children,detailQuery,late,text,unknown,increment,added,malformed,refreshed,empty,resync);fclose(report);}
+        }
+
         if(groupPanel>=PreviewSceneMap && groupPanel<=PreviewSceneHidden) {
             auto& ui=g_xGameProc.m_xInterface;auto& map=ui.m_minimap;auto& siege=ui.m_xSiegeWnd;
             auto& hero=g_xGameProc.m_xMyHero;hero.m_wPosX=hero.m_wPosY=140;
@@ -2772,6 +2807,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=quest-wire")==0 ? PreviewQuestWire :
+        strcmp(lpCmdLine,"--preview=quest-wire-detail")==0 ? PreviewQuestDetail :
+        strcmp(lpCmdLine,"--preview=quest-wire-increment")==0 ? PreviewQuestIncrement :
         strcmp(lpCmdLine,"--preview=scene-map")==0 ? PreviewSceneMap :
         strcmp(lpCmdLine,"--preview=scene-portrait")==0 ? PreviewScenePortrait :
         strcmp(lpCmdLine,"--preview=scene-siege")==0 ? PreviewSceneSiege :

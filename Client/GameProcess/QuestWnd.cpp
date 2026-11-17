@@ -1,9 +1,14 @@
 #include "StdAfx.h"
 #include "Common/LegacyPanel.h"
+#include "Common/LoginMessages.h"
+#include <algorithm>
 
 void CQuestWnd::Init()
 {
-    CGameWnd::Init(); entries.clear();
+    CGameWnd::Init(); entries.clear();requests.clear();listInitialized=false;ResetView();
+}
+void CQuestWnd::ResetView()
+{
     pressed=selected=expanded=descriptionParent=descriptionChild=-1;
     first=descriptionFirst=0; scrollCaptured=false;
 }
@@ -77,6 +82,8 @@ BOOL CQuestWnd::OnLButtonDown(POINT point)
     if (index>=0) { selected=descriptionParent=index; descriptionChild=-1; descriptionFirst=0; }
     else if (expanded>=0 && row>expanded && row<=expanded+int(entries[expanded].children.size())) {
         selected=-1; descriptionParent=expanded; descriptionChild=row-expanded-1; descriptionFirst=0;
+        const auto& parent=entries[expanded];const auto& child=parent.children[descriptionChild];
+        if(child.summary.empty()) SendRequest(QuestWire::QueryText,child.id,WORD(parent.id));
     }
     return TRUE;
 }
@@ -87,7 +94,7 @@ BOOL CQuestWnd::OnLButtonUp(POINT point)
     if (clicked) {
         g_xSound.PlayLobbyEffect("105.wav");
         if (hit==1) return TRUE;
-        if (selected>=0) { expanded=selected; Scroll(0); }
+        if (selected>=0) Expand();
     }
     return FALSE;
 }
@@ -119,11 +126,80 @@ void CQuestWnd::ShowQuestWnd()
     while (end<description.size()) {
         end+=end+1<description.size() && IsDBCSLeadByteEx(CP_ACP,BYTE(description[end]))?2:1;
         SIZE extent={}; GetTextExtentPoint32A(dc,description.data()+start,int(end-start),&extent);
-        if (extent.cx>=170 || end==description.size()) {
+        if (extent.cx>=QuestWire::TextWidth || end==description.size()) {
             if (line>=descriptionFirst && line<descriptionFirst+3) text(description.substr(start,end-start),84,347+15*(line-descriptionFirst),165,0x7d0000);
             ++line; start=end;
         }
     }
     SelectObject(dc,old); DeleteObject(font); surface->ReleaseDC(dc);
     for (int index=0;index<2;++index) DrawSelectionFrame(*m_pxWndImage,(index?1425:1422)+(pressed==index),x+267,y+(index?107:75),SelectionBlend::Normal,false);
+}
+
+void CQuestWnd::Destroy()
+{
+    entries.clear();requests.clear();listInitialized=false;ResetView();CGameWnd::Destroy();
+}
+void CQuestWnd::SendRequest(WORD opcode,int id,WORD parent)
+{
+    _TDEFAULTMESSAGE header={};fnMakeDefMessage(&header,opcode,id,0,0,parent);
+    if(g_xClientSocket.m_sockClient!=INVALID_SOCKET) g_xClientSocket.SendPacket(&header,nullptr);
+    requests.push_back(header);
+}
+void CQuestWnd::Query()
+{
+    if(!listInitialized) SendRequest(QuestWire::QueryList);
+}
+void CQuestWnd::Expand()
+{
+    if(selected<0 || selected>=int(entries.size())) return;
+    expanded=selected;Scroll(0);
+    if(!entries[selected].childrenLoaded) SendRequest(QuestWire::QueryChildren,0,WORD(entries[selected].id));
+}
+bool CQuestWnd::Receive(const _TDEFAULTMESSAGE& header,const char* encoded)
+{
+    using namespace QuestWire;
+    if(strlen(encoded)>MaxEncodedBytes) return false;
+    char buffer[MaxDecodedBytes+1]={};
+    const int length=fnDecode6BitBuf(const_cast<char*>(encoded),buffer,MaxDecodedBytes);
+    buffer[length]=0;const std::string decoded(buffer);
+    const auto findParent=[&](int id) {return std::find_if(entries.begin(),entries.end(),[&](const Entry& entry){return entry.id==id;});};
+    if(header.wIdent==TextMessage) {
+        if(decoded.size()>MaxTextBytes) return false;
+        const auto parent=findParent(header.wSeries);
+        if(parent!=entries.end()) for(auto& child:parent->children) if(child.id==header.wParam) {child.summary=decoded;break;}
+        return true;
+    }
+    int parentId=header.wSeries;
+    const bool full=header.wIdent==ListMessage,children=header.wIdent==ChildrenMessage,childAdded=header.wIdent==ChildAddedMessage;
+    auto records=Parse(header.wIdent,decoded,full || children?header.wParam:header.wSeries,&parentId);
+    if(!records) return false;
+    if(!full && !children) {
+        static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+        auto message=captions.Get(childAdded?ChildAddedCaption:AddedCaption);
+        g_xGameProc.m_xInterface.MsgAdd(GetChatColor(_CHAT_COLOR3),GetChatColor(_CHAT_COLOR4),const_cast<char*>(message.c_str()));
+    }
+    if(!full && !listInitialized) {Query();return true;}
+    if(children || childAdded) {
+        const auto parent=findParent(parentId);if(parent==entries.end()) return true;
+        if(children && records->empty()) return true;
+        if(children) parent->children.clear();
+        for(const auto& record:*records) {
+            if(childAdded) {
+                const auto duplicateParent=findParent(header.wParam);
+                if(duplicateParent!=entries.end() && std::any_of(duplicateParent->children.begin(),duplicateParent->children.end(),[&](const Child& child){return child.id==record.id;})) break;
+            }
+            Child child;child.id=record.id;child.title=record.title;child.summary=record.summary;child.completed=parent->completed;
+            parent->children.push_back(std::move(child));parent->childrenLoaded=true;
+        }
+        if(children && descriptionParent==int(parent-entries.begin())) {descriptionChild=-1;descriptionFirst=0;}
+        Scroll(0);return true;
+    }
+    if(full) {entries.clear();listInitialized=!records->empty();}
+    for(const auto& record:*records) {
+        if(!full && findParent(record.id)!=entries.end()) break;
+        Entry entry;entry.id=record.id;entry.title=record.title;entry.summary=record.summary;
+        entry.completed=record.completed;entry.childCount=record.child_count;entries.push_back(std::move(entry));
+    }
+    std::stable_sort(entries.begin(),entries.end(),[](const Entry& a,const Entry& b){return a.id<b.id;});
+    ResetView();return true;
 }

@@ -2878,6 +2878,9 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
             }
             case MailWire::NotificationMessage:
                 m_xInterface.m_xMailWnd.notified=true;break;
+            case QuestWire::ListMessage:case QuestWire::AddedMessage:case QuestWire::ChildAddedMessage:
+            case QuestWire::ChildrenMessage:case QuestWire::TextMessage:
+                m_xInterface.m_xQuestWnd.Receive(tdm,pszMsg+DEFBLOCKSIZE);break;
             case ConsignmentWire::ListMessage:
                 m_xInterface.m_xConsignmentWnd.ReceiveList(pszMsg+DEFBLOCKSIZE,tdm.wSeries,tdm.wParam,tdm.wTag);
                 if(!m_xInterface.m_xConsignmentWnd.m_bActive) {
