@@ -1532,3 +1532,14 @@ spell-map预览改用生产LoadAllImage，而非只加载场景子集；60个实
 ### 昼夜光照与雨雪雾集中验收（2026-11-17）
 
 已完成SceneAmbient、18x19采样网格、地图及人物/NPC/怪物灯、天气46/地图消息接入，共享天气/施法PRNG，原生天气Quad/快照/混合，清除旧天气实例。本帧绘制标志与分类+ID灯光顺序已接；地面闪光alpha1补正。最终clean87/87、all109/109与同版257项检查全通过。截图out/lighting-{day,night,dawn}.png及out/weather-{snow,rain,fog}.png已查看。预览243..248，下一249。证据Client/docs/scene-lighting-migration-audit.md记载首轮断言/包含错误和修复。真实服务器、原版逐像素、近战特殊灯序仍未验收，整个目标继续active。
+
+
+## 2026-11-17：原生账号登录 GUI 完整批次
+
+- 完成 640×480 账号页、Notice.ntc 公告、登录错误框、登录后服务器列表和计费提示；复用 CBMWnd/CChatEdit/CLoginNotice，未使用 Godot 实现。详见 Client/docs/login-gui-migration-audit.md。
+- 纠正审计中的初步判断：账号输入坐标原本已对应 MIR3；缺口是 24 字节限制、状态顺序、公告、按钮状态/网址行为和服务器列表反馈。Godot 的注册/修改密码按钮打开 Initial/Param2、Param3 网址并退出，没有独立表单，不应移植旧版注册表单。
+- CLogin 采用原生输入控件；Enter 和点击提交差异、提示清空密码、Esc 保持提示。账号全局缓冲区增至 25 字节；普通提示使用既有 GameInter 1240/1243。网址预览只记录请求，不联网或打开浏览器。
+- 公告复用 LoadLegacyText，GDI 字号/粗体和原调色板；严格 >100 ms 滚动。服务器列表使用原生像素面板和宋体，529 负载/计费、528 提示，保留同一行按下释放才选择。按钮音效 105.wav，Opening.wav 延迟循环沿用已完成音频层。
+- 最终 Client 清理构建 87/87、全七目标 113/113 通过；登录 27、键盘路由 34、音效 15 共 76 检查通过。out/mud3-01/Mir2Ex-login-review.exe，日志 out/login-gui-clean-final.log、out/login-gui-all-final.log。
+- 预览编号 249..254（LoginPreview::First/Last）：login、login-hover、login-pressed、login-error、login-servers、login-billing；六张真实原生截图 out/login*.png。原生截图合成已改用实际后台宽高，兼容 640×480 和既有 800×600。
+- 下一批应优先迁移 800×600 LoginInterface/SelLogin.ini 服务器分组入口（现有 ServerSelectProcess 仍需核对）。真实登录连接/530 转场和选角/入场联调仍待 GUI 后进行；未声称 MIR3.EXE 同帧逐像素一致。

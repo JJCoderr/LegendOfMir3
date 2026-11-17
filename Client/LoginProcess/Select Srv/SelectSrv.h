@@ -4,6 +4,8 @@
 
 #ifndef _SELECT_SERVER_H
 #define _SELECT_SERVER_H
+#include "Common/LoginMessages.h"
+#include <vector>
 
 #if _MSC_VER > 1000
 #pragma once
@@ -15,6 +17,8 @@ class CSelectSrv : public CBMWnd
 	// Functions
 public:
 	CSelectSrv();
+    bool ApplyLoads(const char* body);
+    void ResetPointer() {m_pressed=m_hover=-1;}
 	~CSelectSrv();
 
 	virtual VOID		Create(CWHWilImageData* pxImage,CPDLList<ServerList>* pxSList);
@@ -27,19 +31,20 @@ public:
 	virtual LRESULT		OnMouseMove(WPARAM wParam, LPARAM lParam);
 
 	virtual	VOID		Render(INT	nLoopTime);
-	VOID				Draw3DBorder(RECT rcWnd, COLORREF dwColor, INT nAlpha);
 private:
 protected:
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// Variable
 public:
 private:
-	INT m_pressed, m_hover;
+	friend struct LoginPreview;
+    friend class CLoginProcess;
+    std::vector<int> m_loads;
+    CLoginMessages m_messages;
+    INT m_pressed, m_hover;
 	INT Hit(INT x, INT y) const;
 protected:
-	CWHWilImageData			*m_pxImage;
 	_PPSERVERBUTTON			m_ppxSrvBtn;
 	INT						m_nSrvCount;
-	D3DVERTEX				m_avBillBoard[4];
 };
 #endif //_SELECT_SERVER_H

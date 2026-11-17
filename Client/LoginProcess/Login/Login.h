@@ -1,47 +1,27 @@
-// LoginProcess.h: interface for the CLoginProcess class.
-//
-//////////////////////////////////////////////////////////////////////
-
-#ifndef _LOGIN_H
-#define _LOGIN_H
-
-#if _MSC_VER > 1000
 #pragma once
-#endif // _MSC_VER > 1000
-
-class CLogin : public CBMWnd 
-{
-	/////////////////////////////////////////////////////////////////////////////////////////
-	// Functions
+#include "../LoginLayout.h"
+#include <string>
+class CLogin : public CBMWnd {
 public:
-	CLogin();
-	VOID ResetPassword();
-	~CLogin();
-
-	virtual VOID		Create(CWHWilImageData* pxImage);
-
-	virtual HRESULT		OnButtonDown(WPARAM wParam, LPARAM lParam);
-	virtual HRESULT		OnButtonDown(POINT ptMouse);
-	virtual HRESULT		OnButtonUp(WPARAM wParam, LPARAM lParam);
-	virtual HRESULT		OnButtonUp(POINT ptMouse);
-	virtual HRESULT		OnKeyDown(WPARAM wParam, LPARAM lParam);
-	virtual LRESULT		OnMouseMove(WPARAM wParam, LPARAM lParam);
-	virtual	VOID		Render(INT	nLoopTime);
+    enum Action { None, Submit, Register, Password, Exit };
+    void Create(CWHWilImageData* image);
+    void ResetPassword();
+    HRESULT OnKeyDown(WPARAM key, LPARAM) override;
+    HRESULT OnButtonDown(WPARAM, LPARAM position) override;
+    HRESULT OnButtonUp(WPARAM, LPARAM position) override;
+    LRESULT OnMouseMove(WPARAM, LPARAM position) override;
+    void Render(INT) override;
+    void SetEditorVisible(bool visible);
 private:
-protected:
-	VOID				SetFocusBefore(VOID);
-	VOID				SetFocusAfter(VOID);
-	/////////////////////////////////////////////////////////////////////////////////////////
-	// Variable
-public:
-private:
-	INPUTSTATE			m_xInputState[2];
-	CMirButton			m_xButtons[4];
-	INT					m_nUserState;
-	BOOL				m_fIsButtonDown;
-protected:
-	CWHWilImageData		*m_pxImage;
-	CMirButton			*m_pBtn;
-	BOOL				m_fShowIDPASS;
+    friend struct LoginPreview;
+    friend class CLoginProcess;
+    void ChangeField(int target);
+    void SyncEditor();
+    Action SubmitEditor(bool mouse);
+    int Hit(POINT point);
+    CWHWilImageData* m_image=nullptr;
+    std::string m_values[2];
+    int m_field=0, m_pressed=-1;
+    POINT m_pointer={};
+    bool m_editorVisible=true;
 };
-#endif //_LOGIN_H

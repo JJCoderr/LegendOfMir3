@@ -1,5 +1,6 @@
 #include "Common/LoginMessages.h"
 #include "Common/LoginNotice.h"
+#include "LoginVisual.h"
 // LoginProcess.h: interface for the CLoginProcess class.
 //
 //////////////////////////////////////////////////////////////////////
@@ -25,7 +26,7 @@ public:
 	virtual				~CLoginProcess();
 
 	VOID				Init(VOID);
-	void				Load(void);	
+	void				Load(bool connect = true);
 	VOID				DeleteProc(VOID);
 	VOID				SetNextProc(VOID);
 	VOID				ReadIniFileData(VOID);
@@ -52,6 +53,12 @@ public:
 	virtual char*		OnMessageReceive(CHAR* pszMessage);
 
 private:
+    friend struct LoginPreview;
+    void LoginAction(HRESULT action);
+    LoginAnnouncement m_announcement;
+    bool m_offline=false;
+    unsigned m_previewRequests=0;
+    std::string m_lastUrl;
 	CLoginMessages m_messages;
 	CLoginAvi			m_xAvi;					// Avi Degree
 	CLogin				m_xLogin;				// Login Degree

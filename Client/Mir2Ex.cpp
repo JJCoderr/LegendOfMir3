@@ -22,7 +22,7 @@ CChatEdit			g_xChatEditBox;
 CClientSocket		g_xClientSocket;
 
 INT					g_nCertifyCode;
-char				g_szUserID[20];
+char				g_szUserID[25];
 char				g_szCharName[20];
 char				g_szServerIP[16];
 INT					g_nServerPort;
@@ -33,11 +33,14 @@ BYTE				g_bProcState = _LOGIN_PROC;
 
 
 
+#include "LoginProcess/LoginPreview.h"
+
 // Offline visual review uses the real interface without map or network updates.
 class CHudPreviewProcess : public CWHDefProcess {
     POINT mouse = {0,0};
     int damagePreview=0;
     bool levelPreview=false;
+    bool loginPreview=false;
     bool spellPreview=false,spellMapPreview=false;
     bool namePreview=false;
     bool speechPreview=false;
@@ -50,6 +53,9 @@ public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
     void Load(bool expanded, int chatMode, bool exitDialog, int groupPanel) {
+        if(groupPanel>=LoginPreview::First && groupPanel<=LoginPreview::Last) {
+            loginPreview=true;capturePath=LoginPreview::Load(groupPanel);return;
+        }
         damagePreview=groupPanel==95 || groupPanel==96 ? groupPanel : 0;
         const int extraHintPreview=groupPanel>=67 && groupPanel<=71?groupPanel:0;
         if(extraHintPreview) { const int bases[]={1,5,20,33,42}; groupPanel=bases[extraHintPreview-67]; }
@@ -3359,7 +3365,8 @@ public:
 
     }
     void Render(int elapsed) {
-        if(exitWaitingPreview) {
+        if(loginPreview) g_xLoginProc.RenderScene(0);
+        else if(exitWaitingPreview) {
             if(g_bProcState==_GAME_PROC) {
                 g_xGameProc.ReturnToSelection();
                 if(FILE* report=fopen("exit-return-check.txt","wb")) {
@@ -3456,11 +3463,11 @@ public:
                     HBITMAP control = CreateCompatibleBitmap(target,width,height);
                     HGDIOBJ oldSource = SelectObject(source,control);
                     SendMessage(edit,WM_PRINT,(WPARAM)source,PRF_CLIENT|PRF_ERASEBKGND);
-                    const int x=MulDiv(editRect.left-display.left,800,display.right-display.left);
-                    const int y=MulDiv(editRect.top-display.top,600,display.bottom-display.top);
+                    const int x=MulDiv(editRect.left-display.left,surface.dwWidth,display.right-display.left);
+                    const int y=MulDiv(editRect.top-display.top,surface.dwHeight,display.bottom-display.top);
                     SetStretchBltMode(target,COLORONCOLOR);
-                    StretchBlt(target,x,y,MulDiv(width,800,display.right-display.left),
-                        MulDiv(height,600,display.bottom-display.top),source,0,0,width,height,SRCCOPY);
+                    StretchBlt(target,x,y,MulDiv(width,surface.dwWidth,display.right-display.left),
+                        MulDiv(height,surface.dwHeight,display.bottom-display.top),source,0,0,width,height,SRCCOPY);
                     GdiFlush();
                     memcpy(pixels.data(),bits,pixels.size());
                     SelectObject(source,oldSource); SelectObject(target,oldTarget);
@@ -3478,6 +3485,7 @@ public:
 
     }
     LRESULT DefMainWndProc(HWND window,UINT message,WPARAM wp,LPARAM lp) override {
+        if(loginPreview) return g_xLoginProc.DefMainWndProc(window,message,wp,lp);
         auto& ui = g_xGameProc.m_xInterface;
         switch (message) {
         case WM_MOUSEMOVE:
@@ -3548,7 +3556,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
 	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
-	const int previewGroup = strcmp(lpCmdLine,"--preview=group-panel")==0 ? 1 :
+	const int previewGroup = strcmp(lpCmdLine,"--preview=login")==0 ? LoginPreview::First :
+        strcmp(lpCmdLine,"--preview=login-hover")==0 ? LoginPreview::First+1 :
+        strcmp(lpCmdLine,"--preview=login-pressed")==0 ? LoginPreview::First+2 :
+        strcmp(lpCmdLine,"--preview=login-error")==0 ? LoginPreview::First+3 :
+        strcmp(lpCmdLine,"--preview=login-servers")==0 ? LoginPreview::First+4 :
+        strcmp(lpCmdLine,"--preview=login-billing")==0 ? LoginPreview::First+5 :
+        strcmp(lpCmdLine,"--preview=group-panel")==0 ? 1 :
         strcmp(lpCmdLine,"--preview=group-create")==0 ? 2 :
         strcmp(lpCmdLine,"--preview=group-invite")==0 ? 3 :
         strcmp(lpCmdLine,"--preview=group-remove")==0 ? 4 :

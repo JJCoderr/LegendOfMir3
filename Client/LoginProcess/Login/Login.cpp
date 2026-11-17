@@ -1,310 +1,107 @@
 #include "stdafx.h"
+#include "Common/LegacyPanel.h"
+#include "../LoginVisual.h"
 
-#define LOGIN_BUTTON_COUNT			4
-#define LOGIN_INPUT_COUNT			2
-#define LOGIN_IMAGE_COUNT			4
-
-#define POS_ID_INS_X				128
-#define POS_ID_INS_Y				440
-#define POS_PASS_INS_X				326
-#define POS_PASS_INS_Y				440
-
-#define _LEFT_LOGIN					0
-#define _TOP_LOGIN					372
-#define _RIGHT_LOGIN				640
-#define _BOTTOM_LOGIN				480
-
-#define _LEFT_ID_PASS				100
-#define _TOP_ID_PASS				64
-
-#define _IMG_IDX_LOGIN_BORDER		1
-#define _IMG_IDX_LOGIN_IDPASS		2
-#define _IMG_IDX_BTN_LOGIN			10
-#define _IMG_IDX_BTN_NEW			12
-#define _IMG_IDX_BTN_CHANGE			14
-#define _IMG_IDX_BTN_EXIT			16
-
-
-#define _LEFT_LOGIN_BTN				459
-#define _LEFT_NEW_BTN				139
-#define _LEFT_CHANGE_BTN			279
-#define _LEFT_EXIT_BTN				439
-#define _TOP_LOGIN_BTNS				7
-
-
-CLogin::CLogin():CBMWnd()
+void CLogin::Create(CWHWilImageData* image)
 {
-	m_nUserState = LGM_INPUT_ID;
-	m_fIsButtonDown = FALSE;
-	m_fShowIDPASS = TRUE;
+    m_image=image;m_values[0].clear();m_values[1].clear();
+    m_field=0;m_pressed=-1;m_editorVisible=true;m_pointer={};
+    SyncEditor();
 }
-
-CLogin::~CLogin()
+void CLogin::ChangeField(int target)
 {
-
+    // MIR3 403F30 stores the opposite field, including repeated clicks.
+    char text[LoginLayout::InputBytes+1]={};
+    GetWindowTextA(g_xChatEditBox.GetSafehWnd(),text,sizeof(text));
+    m_values[!target]=text;m_field=target;m_editorVisible=true;
 }
-
-VOID CLogin::Create(CWHWilImageData* pxImage)
+void CLogin::SyncEditor()
 {
-	INT	nLoop;
-	// Buttons
-	BUTTONINFO LoginProcBtnInfo[] = {
-									{ _IMG_IDX_BTN_LOGIN,		_LEFT_LOGIN_BTN,	64,			0,		0}, // Login Button
-									{ _IMG_IDX_BTN_NEW,			_LEFT_NEW_BTN,		_TOP_LOGIN_BTNS,			0,		0},	// New Account
-									{ _IMG_IDX_BTN_CHANGE,		_LEFT_CHANGE_BTN,	_TOP_LOGIN_BTNS,			0,		0},	// Change Password
-									{ _IMG_IDX_BTN_EXIT,		_LEFT_EXIT_BTN,		_TOP_LOGIN_BTNS,			0,		0}	// Exit								
-									};
-	// EditBox State
-	INPUTSTATE LoginInputState[] =  {
-									{ LGM_INPUT_ID,				POS_ID_INS_X,		POS_ID_INS_Y,			100,				15,			0,				10,				"\0"},			// Input ID in Login
-									{ LGM_INPUT_PASSWORD,		POS_PASS_INS_X,		POS_PASS_INS_Y,			100,				15,			0,				10,				"\0"}			// Input Password In Login
-									};
-
-	m_pxImage		= pxImage;
-
-	
-	for(nLoop = 0 ; nLoop < LOGIN_INPUT_COUNT ; nLoop ++)
-		memcpy(&m_xInputState[nLoop],&LoginInputState[nLoop],sizeof(INPUTSTATE));
-
-	for(nLoop = 0 ; nLoop < LOGIN_BUTTON_COUNT ; nLoop ++)
-		m_xButtons[nLoop].SetBtn(&LoginProcBtnInfo[nLoop]);
-	
-	m_fShowIDPASS = TRUE;
-
-	ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
-	SetFocus(g_xMainWnd.GetSafehWnd());
-
-	SetRect(&m_rcWnd,_LEFT_LOGIN,_TOP_LOGIN,_RIGHT_LOGIN,_BOTTOM_LOGIN);
-	SetFocusAfter();
+    HWND edit=g_xChatEditBox.GetSafehWnd();
+    if(!m_editorVisible) {ShowWindow(edit,SW_HIDE);SetFocus(g_xMainWnd.GetSafehWnd());return;}
+    const RECT box=LoginLayout::Inputs[m_field];
+    g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+box.left,g_xMainWnd.m_rcWindow.top+box.top,
+        box.right-box.left,box.bottom-box.top,TRUE);
+    g_xChatEditBox.SetLimitText(LoginLayout::InputBytes);
+    SendMessage(edit,EM_SETPASSWORDCHAR,m_field?'*':0,0);
+    SetWindowTextA(edit,m_values[m_field].c_str());
+    g_xChatEditBox.m_szInputMsg[0]=0;
+    ShowWindow(edit,SW_SHOW);SetFocus(edit);g_xChatEditBox.SetSelectAll();
 }
-
-HRESULT	CLogin::OnKeyDown(WPARAM wParam, LPARAM lParam)
+void CLogin::SetEditorVisible(bool visible)
 {
-	if(m_fShowIDPASS)
-	{
-		if (wParam == VK_RETURN || wParam == VK_TAB)
-		{	SetFocusBefore();
-			switch(m_nUserState)
-			{	case  LGM_INPUT_ID:
-				{	m_nUserState = LGM_INPUT_PASSWORD;
-					break;
-				}
-				case LGM_INPUT_PASSWORD:
-				{	if( wParam == VK_RETURN && ( lstrlen( m_xInputState[LGM_INPUT_ID-1].szData) >= LIMIT_USERID )
-									&& lstrlen( m_xInputState[LGM_INPUT_PASSWORD-1].szData ) )
-					{	g_xClientSocket.OnLogin(m_xInputState[LGM_INPUT_ID-1].szData,m_xInputState[LGM_INPUT_PASSWORD-1].szData);
-						strcpy(g_szUserID,m_xInputState[LGM_INPUT_ID-1].szData);
-						return 0L;
-					}						
-					m_nUserState = LGM_INPUT_ID;							
-					break;
-				}
-			}
-			SetFocusAfter();
-		}
-	}
-	return 0;
+    if(visible==m_editorVisible) return;
+    if(m_editorVisible && !visible && m_field<2) {
+        char text[LoginLayout::InputBytes+1]={};
+        GetWindowTextA(g_xChatEditBox.GetSafehWnd(),text,sizeof(text));m_values[m_field]=text;
+    }
+    m_editorVisible=visible;SyncEditor();
 }
-
-HRESULT CLogin::OnButtonDown(WPARAM wParam, LPARAM lParam)
+CLogin::Action CLogin::SubmitEditor(bool mouse)
 {
-	INT i;
-	RECT tRect;
-
-	m_fIsButtonDown = TRUE;
-
-	if(m_fShowIDPASS)
-		for( i = LGM_INPUT_ID-1 ; i < LGM_INPUT_PASSWORD; i ++)
-		{	SetRect(&tRect
-					,m_xInputState[i].Left,m_xInputState[i].Top
-					,m_xInputState[i].Left+m_xInputState[i].Width,m_xInputState[i].Top+m_xInputState[i].Height);
-			if( IsInRect( tRect, LOWORD( lParam ), HIWORD( lParam ) ) )
-			{	SetFocusBefore();
-				m_nUserState = i+1;
-				SetFocusAfter();
-			}
-		}
-	return 0;
+    ChangeField(!m_field);
+    if(!mouse && (m_field!=0 || m_values[0].empty() || m_values[1].empty())) {SyncEditor();return None;}
+    if(!mouse) m_field=2;
+    m_editorVisible=false;SyncEditor();
+    return Submit;
 }
-
-HRESULT CLogin::OnButtonDown(POINT ptMouse)
+HRESULT CLogin::OnKeyDown(WPARAM key, LPARAM)
 {
-	m_fIsButtonDown = TRUE;
-	return 0;
+    if(key==VK_TAB) {ChangeField(!m_field);SyncEditor();}
+    else if(key==VK_RETURN) return SubmitEditor(false);
+    return None;
 }
-
-HRESULT	CLogin::OnButtonUp(WPARAM wParam, LPARAM lParam)
+int CLogin::Hit(POINT point)
 {
-	INT		i;
-	RECT	tRect;
-
-	m_fIsButtonDown = FALSE;
-
-	for(i = BTN_LOGIN_ID; i <= BTN_EXIT_ID; i++)
-	{//	m_xButtons[i].m_nState = BUTTON_STATE_UP;		
-		m_pxImage->NewSetIndex(m_xButtons[i].m_nButtonID + (m_xButtons[i].m_nState == BUTTON_STATE_UP ? 0 : 1));
-		SetRect(&tRect
-				,m_xButtons[i].m_Rect.left + m_rcWnd.left ,m_xButtons[i].m_Rect.top + m_rcWnd.top 
-				,m_xButtons[i].m_Rect.left + m_rcWnd.left + m_pxImage->m_lpstNewCurrWilImageInfo->shWidth
-				,m_xButtons[i].m_Rect.top  + m_rcWnd.top + m_pxImage->m_lpstNewCurrWilImageInfo->shHeight);
-		if (IsInRect(tRect,LOWORD( lParam ), HIWORD( lParam ) ) )
-		{
-			switch(m_xButtons[i].m_nButtonID)
-			{	case _IMG_IDX_BTN_LOGIN:
-				{
-					SetFocusBefore();
-					if (m_xInputState[0].szData[0] && m_xInputState[1].szData[0]) {
-						strcpy(g_szUserID, m_xInputState[0].szData);
-						g_xClientSocket.OnLogin(m_xInputState[0].szData,m_xInputState[1].szData);
-					}
-					break;
-				}
-			case _IMG_IDX_BTN_NEW:
-				{
-					m_fShowIDPASS = TRUE;
-
-					break; 
-				}
-			case _IMG_IDX_BTN_CHANGE:
-				{
-					m_fShowIDPASS = TRUE;
-
-					break;
-				}
-			case _IMG_IDX_BTN_EXIT:
-				{
-					m_fShowIDPASS = TRUE;
-					SendMessage(g_xMainWnd.GetSafehWnd(), WM_DESTROY, NULL, NULL);
-					return 0L;break;
-				}
-			}// switch
-		}// if
-	}// for
-	if(m_fShowIDPASS)
-	{	ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_SHOW);
-		SetFocus(g_xChatEditBox.GetSafehWnd());
-	}
-		else
-	{
-		ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
-		SetFocus(g_xMainWnd.GetSafehWnd());
-	}
-	return 0;
+    for(int i=0;i<4;++i) if(m_image->NewSetIndex(LoginLayout::Frames[i])) {
+        const auto& size=*m_image->m_lpstNewCurrWilImageInfo;
+        const POINT at=LoginLayout::Buttons[i];RECT box={at.x,at.y,at.x+size.shWidth,at.y+size.shHeight};
+        if(PtInRect(&box,point)) return i;
+    }
+    return -1;
 }
-
-HRESULT CLogin::OnButtonUp(POINT ptMouse)
+HRESULT CLogin::OnButtonDown(WPARAM, LPARAM position)
 {
-
-	return 0;
+    m_pointer={(short)LOWORD(position),(short)HIWORD(position)};
+    for(int i=0;i<2;++i) if(PtInRect(&LoginLayout::Inputs[i],m_pointer)) {ChangeField(i);SyncEditor();return None;}
+    m_pressed=Hit(m_pointer);return None;
 }
-
-LRESULT	CLogin::OnMouseMove(WPARAM wParam, LPARAM lParam)
+HRESULT CLogin::OnButtonUp(WPARAM, LPARAM position)
 {
-	INT	i;
-	RECT tRect;
-
-	if(!m_fIsButtonDown)
-	{
-		for( i = BTN_LOGIN_ID ; i <= BTN_EXIT_ID ; i ++)
-		{	m_pxImage->NewSetIndex(m_xButtons[i].m_nButtonID + (m_xButtons[i].m_nState == BUTTON_STATE_UP ? 0 : 1));
-			SetRect(&tRect
-					,m_xButtons[i].m_Rect.left + m_rcWnd.left ,m_xButtons[i].m_Rect.top + m_rcWnd.top 
-					,m_xButtons[i].m_Rect.left + m_rcWnd.left + m_pxImage->m_lpstNewCurrWilImageInfo->shWidth
-					,m_xButtons[i].m_Rect.top  + m_rcWnd.top + m_pxImage->m_lpstNewCurrWilImageInfo->shHeight);
-			if (IsInRect(tRect,LOWORD( lParam ), HIWORD( lParam ) ) )
-				m_xButtons[i].m_nState = BUTTON_STATE_ON;
-			else
-				m_xButtons[i].m_nState = BUTTON_STATE_UP;
-		}
-	}
-
-	return 0;
+    m_pointer={(short)LOWORD(position),(short)HIWORD(position)};m_pressed=-1;
+    const int hit=Hit(m_pointer);
+    if(hit<0) return None;
+    g_xSound.PlayLobbyEffect(LoginLayout::ClickSound);
+    return hit==0?SubmitEditor(true):Action(hit+1);
 }
-
-VOID CLogin::Render(INT	nLoopTime)
+LRESULT CLogin::OnMouseMove(WPARAM, LPARAM position)
 {
-	int i;
-	char Pass[16]="";
-
-	if(m_fIsActive)
-	{
-
-		g_xChatEditBox.MoveScaled(
-					g_xMainWnd.m_rcWindow.left + m_xInputState[m_nUserState-1].Left,
-					g_xMainWnd.m_rcWindow.top + m_xInputState[m_nUserState-1].Top ,	m_xInputState[m_nUserState-1].Width,		m_xInputState[m_nUserState-1].Height,		TRUE);
-	
-		ShowWindow(g_xChatEditBox.GetSafehWnd(), (m_fShowIDPASS ? SW_SHOW:SW_HIDE));
-		// Draw Login Border
-		if(m_fShowIDPASS)
-		{	m_pxImage->NewSetIndex(_IMG_IDX_LOGIN_BORDER);
-			g_xMainWnd.DrawWithABlendCompDataWithBackBuffer(m_rcWnd.left ,m_rcWnd.top ,
-															m_pxImage->m_lpstNewCurrWilImageInfo->shWidth ,m_pxImage->m_lpstNewCurrWilImageInfo->shHeight ,(WORD*)m_pxImage->m_pbCurrImage,640,480);
-			// Draw Button Image
-			for ( i = BTN_LOGIN_ID ; i <=  BTN_EXIT_ID ; i++)
-			{
-					m_pxImage->NewSetIndex(m_xButtons[i].m_nButtonID + (m_xButtons[i].m_nState == BUTTON_STATE_UP ? 0 : 1));
-					g_xMainWnd.DrawWithImageForComp(m_rcWnd.left + m_xButtons[i].m_Rect.left, m_rcWnd.top + m_xButtons[i].m_Rect.top, 
-												m_pxImage->m_lpstNewCurrWilImageInfo->shWidth, 
-												m_pxImage->m_lpstNewCurrWilImageInfo->shHeight, (WORD*)(m_pxImage->m_pbCurrImage));
-			}
-		}
-		// Draw ID & Pass Image
-		if(m_fShowIDPASS)
-		{	m_pxImage->NewSetIndex(_IMG_IDX_LOGIN_IDPASS);
-			g_xMainWnd.DrawWithImageForComp(_LEFT_ID_PASS,m_rcWnd.top + _TOP_ID_PASS,
-												m_pxImage->m_lpstNewCurrWilImageInfo->shWidth ,m_pxImage->m_lpstNewCurrWilImageInfo->shHeight,(WORD*)m_pxImage->m_pbCurrImage);
-			GetWindowText(g_xChatEditBox.GetSafehWnd(), m_xInputState[m_nUserState-1].szData, m_xInputState[m_nUserState-1].nSize);
-			memset(Pass,'*',strlen(m_xInputState[1].szData));
-			g_xMainWnd.PutsHan(NULL, m_xInputState[0].Left, m_xInputState[0].Top, RGB(255,255,255), RGB(0,0,0), m_xInputState[0].szData);
-			g_xMainWnd.PutsHan(NULL, m_xInputState[1].Left, m_xInputState[1].Top, RGB(255,255,255), RGB(0,0,0), Pass);
-		}		
-	}
+    m_pointer={(short)LOWORD(position),(short)HIWORD(position)};return 0;
 }
-
-
-VOID CLogin::SetFocusBefore(VOID)
+void CLogin::ResetPassword()
 {
-	INT nTemp;
-
-	nTemp =  m_nUserState - 1;
-
-	if(g_xChatEditBox.m_szInputMsg[0]!=NULL)
-			lstrcpy(m_xInputState[nTemp].szData , g_xChatEditBox.m_szInputMsg);
-		else
-			GetWindowText(g_xChatEditBox.GetSafehWnd(),m_xInputState[nTemp].szData ,m_xInputState[nTemp].nSize);
-		
-	ZeroMemory(g_xChatEditBox.m_szInputMsg,sizeof(g_xChatEditBox.m_szInputMsg));
-	ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
-	g_xChatEditBox.SetSelectAll();
+    m_values[1].clear();m_field=1;m_editorVisible=true;m_pressed=-1;SyncEditor();
 }
-
-VOID CLogin::SetFocusAfter(VOID)
+void CLogin::Render(INT)
 {
-	CHAR	cChr;
-	INT		nTemp;
-
-	ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_SHOW);
-
-	nTemp = m_nUserState - 1;
-
-	g_xChatEditBox.SetLimitText(m_xInputState[nTemp].nSize);
-
-	if( m_nUserState != LGM_INPUT_PASSWORD )
-		cChr = NULL;
-	else
-		cChr = '*';
-
-	SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETPASSWORDCHAR,(WPARAM)cChr,0);
-	SetWindowText(g_xChatEditBox.GetSafehWnd(), m_xInputState[nTemp].szData);
-
-	SetFocus(g_xChatEditBox.GetSafehWnd());
-	g_xChatEditBox.SetSelectAll();
-}
-
-VOID CLogin::ResetPassword()
-{
-    m_xInputState[1].szData[0] = 0;
-    g_xChatEditBox.m_szInputMsg[0] = 0;
-    m_nUserState = LGM_INPUT_PASSWORD;
-    SetFocusAfter();
+    if(!m_fIsActive) return;
+    DrawLegacyPanel(LoginLayout::ButtonBar,RGB(50,50,60),100,RGB(100,100,100));
+    for(int i=0;i<4;++i) {
+        const POINT at=LoginLayout::Buttons[i];
+        DrawSelectionFrame(*m_image,LoginLayout::Frames[i]+(m_pressed==i),at.x,at.y,SelectionBlend::Normal,false);
+    }
+    if(Hit(m_pointer)==0) {
+        m_image->NewSetIndex(LoginLayout::LoginButton);const auto& size=*m_image->m_lpstNewCurrWilImageInfo;
+        DrawLegacyPanel({459,436,459+size.shWidth,436+size.shHeight},RGB(150,100,50),50,RGB(200,150,100));
+    }
+    DrawSelectionFrame(*m_image,LoginLayout::Fields,100,436,SelectionBlend::Normal,false);
+    for(int i=0;i<2;++i) if(m_field!=i) {
+        std::string text=i?std::string(m_values[1].size(),'*'):m_values[0];
+        LoginVisual::Text(text,LoginLayout::Inputs[i].left,440,RGB(255,255,255),100);
+    }
+    if(m_editorVisible) {
+        const RECT box=LoginLayout::Inputs[m_field];
+        g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+box.left,g_xMainWnd.m_rcWindow.top+box.top,
+            box.right-box.left,box.bottom-box.top,TRUE);
+    }
 }

@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include <shellapi.h>
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -41,7 +42,7 @@ VOID CLoginProcess::ReadIniFileData(VOID)
 	INT		nServerCount;
 	INT		nLoop;
 
-	GetCurrentDirectory(1024,szFullPathFileName);
+	GetCurrentDirectory(MAX_PATH,szFullPathFileName);
 	strcat(szFullPathFileName+strlen(szFullPathFileName),"\\\0");
  	strcat(szFullPathFileName,MIR2EI_INI_FILE_NAME);
 
@@ -71,11 +72,13 @@ CLoginProcess::~CLoginProcess()
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //	Load
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-void CLoginProcess::Load(void)
+void CLoginProcess::Load(bool connect)
 {	
 //	int i;
 	int nSrvCount;
+    m_offline=!connect;m_Progress=PRG_LOGIN;m_previewRequests=0;m_lastUrl.clear();
 	ReadIniFileData();
+    m_announcement.Load("./Notice.ntc");
 	m_messages.Load(".\\CmList.dat");
 
 	m_Image.NewLoad(IMAGE_INTERFACE_1, TRUE, TRUE);
@@ -97,7 +100,7 @@ void CLoginProcess::Load(void)
 	m_xSelectSrv.Create(&m_Image,&m_SList);
 	m_xAvi.SetRenderAviState(9); // Static login background when movies are absent.
 	m_xLogin.OpenWnd();
-	g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(), m_szServerIP, m_nServerPort);
+	if(connect) g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(), m_szServerIP, m_nServerPort);
 
 }
 
@@ -108,6 +111,9 @@ LRESULT CLoginProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 {
 	switch ( uMsg )
 	{
+		case WM_COMMAND:
+            if((HWND)lParam==g_xChatEditBox.GetSafehWnd() && HIWORD(wParam)==EN_CHANGE) {g_xChatEditBox.Changed();return 0;}
+            break;
 		case WM_CTLCOLOREDIT:
 		{
 			if ((HWND)lParam == g_xChatEditBox.GetSafehWnd())
@@ -164,6 +170,8 @@ LRESULT CLoginProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 			switch(m_Progress)
 			{
 				case PRG_LOGIN:
+                    SetWindowTextA(g_xChatEditBox.GetSafehWnd(),g_xChatEditBox.m_szInputMsg);
+                    OnKeyDown(VK_RETURN,0);break;
 				case PRG_NEW_ACCOUNT:
 					OnKeyDown((WPARAM)VK_RETURN,NULL);
 					break;
@@ -198,7 +206,7 @@ LRESULT CLoginProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 LRESULT CLoginProcess::OnKeyDown(WPARAM wParam,LPARAM lParam)
 {
 	if (m_xMsgBox.IsActive()) {
-		if (wParam == VK_RETURN || wParam == VK_ESCAPE || wParam == VK_SPACE) {
+		if (wParam == VK_RETURN || wParam == VK_SPACE) {
 			m_xMsgBox.HideMessageBox();
 			if (m_Progress == PRG_LOGIN) m_xLogin.ResetPassword();
 		}
@@ -209,7 +217,7 @@ LRESULT CLoginProcess::OnKeyDown(WPARAM wParam,LPARAM lParam)
 		{
 			case PRG_LOGIN:// LOGIN 的情况下
 			{
-				m_xLogin.OnKeyDown(wParam,lParam);
+				LoginAction(m_xLogin.OnKeyDown(wParam,lParam));
 				break;
 			}
 			case PRG_NEW_ACCOUNT:
@@ -278,12 +286,13 @@ LRESULT CLoginProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 		{
 			case PRG_LOGIN:
 			{
-				m_xLogin.OnButtonUp(wParam, lParam);
+				LoginAction(m_xLogin.OnButtonUp(wParam, lParam));
 				break;
 			}// case
 			case PRG_SERVER_SELE:
 			{
-				m_xSelectSrv.OnButtonUp(wParam, lParam);
+				const int selected=m_xSelectSrv.OnButtonUp(wParam,lParam);
+                if(selected && !m_offline) g_xClientSocket.OnSelectServer(m_xSelectSrv.m_ppxSrvBtn[selected-1]->szName);
 				break;
 			}
 			case PRG_NEW_ACCOUNT:
@@ -484,8 +493,22 @@ void CLoginProcess::OnSocketMessageRecieve(char *pszMsg)
 
 		case SM_PASSOK_SELECTSERVER:
 		{
-			m_xSelectSrv.OpenWnd();
-			m_Progress = PRG_SERVER_SELE;
+			char loads[256]={};
+            fnDecode6BitBuf(pszMsg+DEFBLOCKSIZE,loads,sizeof(loads)-1);
+            if(!m_xSelectSrv.ApplyLoads(loads)) break;
+            m_xLogin.SetEditorVisible(false);
+            m_xSelectSrv.OpenWnd();m_xSelectSrv.ResetPointer();
+            int caption=0,argument=0;
+            if(tdm.wTag) {caption=tdm.wTag==1?LoginLayout::MonthlyLastDay:LoginLayout::MonthlyDays;argument=tdm.wTag-1;}
+            else if(tdm.wSeries) {caption=tdm.wSeries==1?LoginLayout::HourlyLast:LoginLayout::HourlyRemaining;argument=tdm.wSeries-1;}
+            else if(tdm.wParam && tdm.wParam<=100) {caption=LoginLayout::PointsRemaining;argument=tdm.wParam;}
+            else if(!tdm.wParam && tdm.nRecog>0) {caption=LoginLayout::CreditRemaining;argument=tdm.nRecog;}
+            if(caption) {
+                std::string text=m_messages.Get(caption);const auto at=text.find("%d");
+                if(at!=std::string::npos) text.replace(at,2,std::to_string(argument));
+                m_xMsgBox.ShowMessageBox(text.c_str(),MSG_BTN_OK,0);
+            }
+            m_Progress = PRG_SERVER_SELE;
 			Clear(RGB(0,0,0));
 //			g_xClientSocket.OnSelectServer(NULL);
 
@@ -559,11 +582,10 @@ void CLoginProcess::OnSocketMessageRecieve(char *pszMsg)
             break;
         }
 		// Connection Lost(close Connection)
-		case	SM_OUTOFCONNECTION:
-		{
-			m_Progress	= PRG_QUIT;									// Quit for Some Reason		程序退出
-			SendMessage(g_xMainWnd.GetSafehWnd(), WM_DESTROY, NULL, NULL);
-			break;
+		case SM_OUTOFCONNECTION:
+        {
+            m_xMsgBox.ShowMessageBox(m_messages.Get(LoginLayout::Disconnected).c_str(),MSG_BTN_OK,0);
+            break;
 		}
 	}
 /*	
@@ -675,7 +697,8 @@ VOID CLoginProcess::RenderScene(INT nLoopTime)
 			// Render For Login
 			case PRG_LOGIN:					
 			{
-				m_xLogin.Render(nLoopTime);
+				m_announcement.Advance(nLoopTime);m_announcement.Draw();
+                m_xLogin.Render(nLoopTime);
 				break;
 			}
 			// Render 
@@ -708,7 +731,7 @@ VOID CLoginProcess::RenderScene(INT nLoopTime)
 				break;
 			}
 		}
-		if (m_xMsgBox.IsActive()) ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
+		if (m_xMsgBox.IsActive()) m_xLogin.SetEditorVisible(false);
 		m_xMsgBox.RenderMessageBox(0);
 		if ( FAILED(g_xMainWnd.Present()) )
 				g_xMainWnd.RestoreSurfaces();
@@ -820,7 +843,7 @@ VOID CLoginProcess::RenderPatch(int nLoopTime)
 			// 若没有已打补丁的内容
 			delete pPatch;
 
-			g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(), m_szServerIP, m_nServerPort);
+			if(connect) g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(), m_szServerIP, m_nServerPort);
 			m_Progress = PRG_INTRO;
 
 
@@ -1109,4 +1132,26 @@ VOID CLoginProcess::SetErrorMessage(INT nMsg, CHAR* szMgs)
     const std::string& caption = m_messages.Get(nMsg);
     if (!caption.empty()) lstrcpynA(szMgs, caption.c_str(), 512);
     else sprintf(szMgs, "Message %d (CmList.dat)", nMsg);
+}
+
+void CLoginProcess::LoginAction(HRESULT action)
+{
+    if(action==CLogin::Submit) {
+        lstrcpynA(g_szUserID,m_xLogin.m_values[0].c_str(),sizeof(g_szUserID));
+        if(m_offline) ++m_previewRequests;
+        else g_xClientSocket.OnLogin(const_cast<char*>(m_xLogin.m_values[0].c_str()),const_cast<char*>(m_xLogin.m_values[1].c_str()));
+    } else if(action>=CLogin::Register && action<=CLogin::Exit) {
+        if(action==CLogin::Exit) m_lastUrl=m_messages.Get(LoginLayout::ExitUrl);
+        else {
+            char url[2048]={};
+            GetPrivateProfileStringA("Initial",action==CLogin::Register?"Param2":"Param3",
+                action==CLogin::Register?"http://account.wemade.com/main01.html":"http://account.wemade.com/main03.html",url,sizeof(url),"./Mir3.ini");
+            m_lastUrl=url;
+        }
+        if(!m_offline) {
+            g_xSound.UpdateLobbyAudio(CMirSound::LobbyPage::None,0);
+            if(!m_lastUrl.empty()) ShellExecuteA(g_xMainWnd.GetSafehWnd(),"open",m_lastUrl.c_str(),nullptr,nullptr,SW_SHOWNORMAL);
+            PostMessage(g_xMainWnd.GetSafehWnd(),WM_CLOSE,0,0);
+        }
+    }
 }
