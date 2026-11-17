@@ -3078,62 +3078,15 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
             case SM_EAT_FAIL:
                 m_xInterface.m_xInventoryWnd.ApplyUseReply(tdm.wIdent,tdm.wParam);
                 break;
-			case SM_TAKEON_OK:
-			{
-				FEATURE stFeature;
-				memcpy(&stFeature, &tdm.nRecog, sizeof(LONG));
-				g_xGameProc.m_xMyHero.ChangeFeature(stFeature, g_xGameProc.m_xMyHero.m_stFeatureEx);
-
-				// 把装备窗口的已穿戴物品(m_stTakeOnItemSet)应用到装备窗口对应的单元格, 然后删除已穿戴物品(m_stTakeOnItemSet).
-				m_xInterface.m_xStatusWnd.SetEquipFromTakeOn();
-				// 如果存在公共(鼠标)物品, 则放入背包窗口的空格子中, 并删除公共(鼠标)物品。
-				if ( m_xInterface.m_stCommonItem.bSetted )
-				{
-//					m_xInterface.m_xInventoryWnd.AddInvenItem(m_xInterface.m_stCommonItem.xItem, 0, FALSE);
-					ZeroMemory(&m_xInterface.m_stCommonItem, sizeof(ITEMSET));
-				}
-				break;
-			}
-			case SM_TAKEON_FAIL:
-			{
-				// 将装备窗口的已穿戴物品(m_stTakeOnItemSet)重新放入背包。
-				// 如果存在公共(鼠标)物品, 则将其放入装备格子中。
-				if ( m_xInterface.m_xStatusWnd.m_stTakeOnItemSet.bSetted )
-				{
-					m_xInterface.m_xInventoryWnd.AddInvenItem(m_xInterface.m_xStatusWnd.m_stTakeOnItemSet.xItem, 0, FALSE);
-					ZeroMemory(&m_xInterface.m_xStatusWnd.m_stTakeOnItemSet, sizeof(ITEMSET));
-				}
-				if ( m_xInterface.m_stCommonItem.bSetted )
-				{
-					m_xInterface.m_xStatusWnd.SetEquipFromCommon(m_xInterface.m_stCommonItem.xItem.m_shCellNum, &m_xInterface.m_stCommonItem);
-	//												ZeroMemory(&m_xInterface.m_stCommonItem, sizeof(ITEMSET));
-				}
-				break;
-			}
-			case SM_TAKEOFF_OK:
-			{
-				FEATURE stFeature;
-				memcpy(&stFeature, &tdm.nRecog, sizeof(LONG));
-				g_xGameProc.m_xMyHero.ChangeFeature(stFeature, g_xGameProc.m_xMyHero.m_stFeatureEx);
-
-				// 把想要脱下的物品放进背包.
-				if ( m_xInterface.m_stCommonItem.bSetted )
-				{
-//					m_xInterface.m_xInventoryWnd.AddInvenItem(m_xInterface.m_stCommonItem.xItem, 0, FALSE);
-					ZeroMemory(&m_xInterface.m_stCommonItem, sizeof(ITEMSET));
-				}
-				break;
-			}
-			case SM_TAKEOFF_FAIL:
-			{
-				// 将通用(鼠标)物品重新放入装备格.
-				if ( m_xInterface.m_stCommonItem.bSetted )
-				{
-					m_xInterface.m_xStatusWnd.SetEquipFromCommon(m_xInterface.m_stCommonItem.xItem.m_shCellNum, &m_xInterface.m_stCommonItem);
-	//												ZeroMemory(&m_xInterface.m_stCommonItem, sizeof(ITEMSET));
-				}
-				break;
-			}
+            case SM_TAKEON_OK:
+            case SM_TAKEON_FAIL:
+            case SM_TAKEOFF_OK:
+            case SM_TAKEOFF_FAIL:
+                if(m_xInterface.m_xStatusWnd.ApplyEquipmentReply(tdm.wIdent) && (tdm.wIdent==SM_TAKEON_OK || tdm.wIdent==SM_TAKEOFF_OK)) {
+                    FEATURE appearance;memcpy(&appearance,&tdm.nRecog,sizeof(LONG));
+                    m_xMyHero.ChangeFeature(appearance,m_xMyHero.m_stFeatureEx);
+                }
+                break;
 			case SM_ITEMSHOW:
 			{
 				BOOL bExisted = FALSE;

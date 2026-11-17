@@ -1388,3 +1388,13 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 ## 仓库取回结果同步（2026-11-17）
 
 StoreWnd::Receive补上705 wTag非零时的背包/快捷栏/鼠标持有数量同步，继续用wParam更新仓库剩余量；705..707异常附加载荷不消费pending。与Godot原分支一致，零wTag不清背包。预览219 storage-withdraw-reply，下一220；74项集中回归及七目标增量构建通过，截图out/storage-withdraw-reply.png已查看。详见Client/docs/storage-withdraw-reply-evidence.md。真实服务器仓库事务仍待验证。
+
+
+## 装备穿脱待迁移审查（2026-11-17）
+
+590a742后核对发现装备615/616/619/620仍为旧事务：缺少pending种类/回包匹配，sizeof(ITEMSET)清COMMONITEMSET，满背包失败返回值被忽略；缺1124快速操作和回包音效。已读取Godot EquipmentState及原版地址注释，完整行为和下一批验收见Client/docs/equipment-transaction-audit.md。本轮仅新增审查依据，未修改运行时代码，未测试/提交，下一preview仍220。
+
+
+## 原生装备穿脱事务迁移（2026-11-17）
+
+已完成上一节审查的统一事务：StatusWnd记录穿上/脱下pending，普通与1124快速操作、错类/重复回包拒绝、失败恢复和音效；满背包返回物品保留鼠标持有，满装备槽保留pending。GameProc仅接受成功后更新外观，背包脱下通过RequestTakeOff，物品使用互斥覆盖脱下pending。长名称夹具修正为30字符。清理87/87、七目标111/111及72项集中检查通过，三种final_state通过。预览220..222，下一223；截图out/equipment-transaction.png、equipment-rollback.png、equipment-takeoff.png。详见Client/docs/equipment-transaction-audit.md。真实服务器穿脱和属性重算仍未验证，目标未完成。

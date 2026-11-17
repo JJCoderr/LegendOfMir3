@@ -1046,7 +1046,7 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
     const DWORD now=GetTickCount(),elapsed=now-m_lastRelease;
     m_lastRelease=now;
     if (pstCommonItemSet->bWaitResponse) return FALSE;
-    if (SlotAt(ptMouse)>=0 && pstCommonItemSet->bSetted &&
+    if (SlotAt(ptMouse)>=0 && pstCommonItemSet->bSetted && !pstCommonItemSet->bIsEquipItem &&
         pstCommonItemSet->xItem.m_stItemInfo.nMakeIndex && elapsed<ItemUse::DoubleReleaseMs) {
         if (UseBlocked()) return FALSE;
         if (UseAllowed(pstCommonItemSet->xItem,now-m_lastUse)) {
@@ -1067,8 +1067,7 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 		nInventoryNum = GetInvenNum(ptMouse);
 		if ( nInventoryNum != -1 )
 		{
-			g_xClientSocket.SendTakeOnOffItem(CM_TAKEOFFITEM, pstCommonItemSet->xItem.m_shCellNum, pstCommonItemSet->xItem.m_stItemInfo.stStdItem.szName, pstCommonItemSet->xItem.m_stItemInfo.nMakeIndex);
-			pstCommonItemSet->bWaitResponse	= TRUE;
+            g_xGameProc.m_xInterface.m_xStatusWnd.RequestTakeOff();
 			return FALSE;
 		}
 	}
@@ -1317,7 +1316,7 @@ bool CInventoryWnd::UseAllowed(const CItem& item,DWORD elapsed)
 bool CInventoryWnd::UseBlocked() const
 {
     const auto& ui=g_xGameProc.m_xInterface;
-    return ui.m_xStatusWnd.m_stTakeOnItemSet.bSetted || ui.m_stCommonItem.bIsEquipItem ||
+    return ui.m_xStatusWnd.m_equipmentRequest || ui.m_xStatusWnd.m_stTakeOnItemSet.bSetted || ui.m_stCommonItem.bIsEquipItem ||
         ui.m_xExchangeWnd.pendingSlot>=0 || ui.m_xExchangeWnd.returnSlot>=0;
 }
 

@@ -13,6 +13,7 @@
 
 #include "StdAfx.h"
 #include "ItemHintStyle.h"
+#include "EquipmentActionIds.h"
 #include <charconv>
 #include "Common/LoginMessages.h"
 #include "Common/LegacyPanel.h"
@@ -41,14 +42,14 @@ VOID CStatusWnd::Init()
 {
 	CGameWnd::Init();
 
-    m_nativeClosePressed=false;
+    m_nativeClosePressed=false; m_equipmentRequest=0; m_equipmentSlot=-1; m_equipmentRelease=0;
     ZeroMemory(m_abilityExtension,sizeof(m_abilityExtension));
     ZeroMemory(m_abilityHeaderOptions,sizeof(m_abilityHeaderOptions));
     ZeroMemory(m_elementValues,sizeof(m_elementValues)); m_showNativeHint=false;
     m_identityTertiary.clear(); m_identityBadge.clear();
 	ZeroMemory(&m_rcCell, sizeof(RECT)*_EQUIP_MAX_CELL);
 	ZeroMemory(&m_stEquipItem, sizeof(ITEMSET)*_EQUIP_MAX_CELL);
-	ZeroMemory(&m_stTakeOnItemSet, sizeof(CItem));
+	ZeroMemory(&m_stTakeOnItemSet, sizeof(m_stTakeOnItemSet));
 	ZeroMemory(&m_szEquipItemIdx, sizeof(m_szEquipItemIdx));
 
 
@@ -561,77 +562,87 @@ VOID CStatusWnd::ShowCharStatus()
 
 
 
-BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
+BOOL CStatusWnd::OnLButtonUp(LPCOMMONITEMSET, POINT point)
 {
-	INT nEquipNum;
-
-    const bool closePressed=m_nativeClosePressed;
-    const bool close=closePressed && NativeCloseHit(ptMouse); m_nativeClosePressed=false;
-    if (close) { g_xSound.PlayLobbyEffect("105.wav"); return TRUE; }
-    if (closePressed) return FALSE;
-
-    if (g_xGameProc.m_xInterface.m_xExchangeWnd.GetGameWndActive() && g_xGameProc.m_xInterface.m_xExchangeWnd.returnSlot>=0) return FALSE;
-
-		nEquipNum = GetEquipNum(ptMouse);
-		// 鼠标位于装备窗口区域时.
-		if ( nEquipNum != -1)
-		{
-			// 点击的装备窗口中有物品时.
-			if ( m_stEquipItem[nEquipNum].bSetted )
-			{
-				// 如果公共(鼠标)物品集为空，
-				if ( !pstCommonItemSet->bSetted )
-				{				  
-					// 把物品挂在鼠标上时, 在背包窗口点击的瞬间会发送 CM_TAKEOFFITEM 消息.
-					SetCommonFromEquip(nEquipNum, pstCommonItemSet);
-				}
-				// 存在公共(鼠标)物品集，且不在等待服务器响应信号时，
-				// 把物品预先设置到公共物品 m_stTakeOnItemSet 中, 再把当前点击的装备窗口物品设置为公共物品后,
-				// 发送 CM_TAKEONITEM 消息.
-				else if ( pstCommonItemSet->bSetted && !pstCommonItemSet->bWaitResponse )
-				{
-					// 检查发送前的区域是否相互匹配(戒指是否放进了戒指位置).
-					if ( CheckEquipItem(&pstCommonItemSet->xItem, nEquipNum, ptMouse) )
-					{
-						SetTakeOnFromCommon(nEquipNum, pstCommonItemSet);
-						SetCommonFromEquip(nEquipNum, pstCommonItemSet);					
-						g_xClientSocket.SendTakeOnOffItem(CM_TAKEONITEM, nEquipNum, m_stTakeOnItemSet.xItem.m_stItemInfo.stStdItem.szName, m_stTakeOnItemSet.xItem.m_stItemInfo.nMakeIndex);
-						pstCommonItemSet->bWaitResponse	= TRUE;
-					}
-				}
-			}
-			// 点击的装备窗口中没有物品时.
-			else
-			{
-				// 存在公共(鼠标)物品集, 且不是在等待服务器响应信号时, 就把公共物品设置到 m_stTakeOnItemSet 中.
-				if ( pstCommonItemSet->bSetted && !pstCommonItemSet->bWaitResponse )
-				{	
-					if ( CheckEquipItem(&pstCommonItemSet->xItem, nEquipNum, ptMouse) )
-					{
-						// 无需向服务器发送消息。卸下物品后又重新穿戴的情况。
-						if ( pstCommonItemSet->bIsEquipItem )
-						{
-							SetEquipFromCommon(pstCommonItemSet->xItem.m_shCellNum, pstCommonItemSet);
-							ZeroMemory(pstCommonItemSet, sizeof(COMMONITEMSET));
-						}
-						else
-						{
-							SetTakeOnFromCommon(nEquipNum, pstCommonItemSet);
-							g_xClientSocket.SendTakeOnOffItem(CM_TAKEONITEM, nEquipNum, m_stTakeOnItemSet.xItem.m_stItemInfo.stStdItem.szName, m_stTakeOnItemSet.xItem.m_stItemInfo.nMakeIndex);
-							pstCommonItemSet->bWaitResponse	= TRUE;
-						}
-					}
-				}
-			}
-		}
-
-
-	return FALSE;
+    const bool pressed=m_nativeClosePressed,close=pressed && NativeCloseHit(point);
+    m_nativeClosePressed=false;
+    if(close) {g_xSound.PlayLobbyEffect("105.wav");return TRUE;}
+    if(!pressed) ReleaseEquipment(point,GetTickCount());
+    return FALSE;
 }
 
+bool CStatusWnd::ReleaseEquipment(POINT point,DWORD now)
+{
+    auto& ui=g_xGameProc.m_xInterface;auto& held=ui.m_stCommonItem;auto& trade=ui.m_xExchangeWnd;
+    const int slot=GetEquipNum(point);
+    if(slot<0 || trade.pendingSlot>=0 || trade.returnSlot>=0 || (held.bSetted && !held.xItem.m_stItemInfo.nMakeIndex)) return false;
+    const DWORD elapsed=now-m_equipmentRelease;m_equipmentRelease=now;
+    if(m_equipmentRequest || held.bWaitResponse || ui.m_xInventoryWnd.m_usePending) return false;
+    if(elapsed<EquipmentAction::RapidReleaseMs && held.bSetted) {
+        const int mode=held.xItem.m_stItemInfo.stStdItem.bStdMode;
+        if(mode==5 || mode==6 || mode==10 || mode==11 || mode==15 || mode==53) {
+            CQuickWnd::Notice(EquipmentAction::RejectedNotice,slot,held.xItem.Name());
+        } else {
+            if(!held.bIsEquipItem || !CheckEquipItem(&held.xItem,slot,point)) return false;
+            int destination=slot;
+            if(m_stEquipItem[destination].bSetted) {destination=-1;for(int i=0;i<_EQUIP_MAX_CELL;++i) if(!m_stEquipItem[i].bSetted) {destination=i;break;}}
+            if(destination<0) return false;
+            m_stEquipItem[destination]={TRUE,held.xItem};m_stEquipItem[destination].xItem.m_shCellNum=destination;
+            held=COMMONITEMSET{};
+            _TDEFAULTMESSAGE request={};fnMakeDefMessage(&request,EquipmentAction::Quick,slot,0,0,0);g_xClientSocket.SendPacket(&request,nullptr);
+            return true;
+        }
+    }
+    if(!held.bSetted) {
+        if(!m_stEquipItem[slot].bSetted) return false;
+        SetCommonFromEquip(slot,&held);return true;
+    }
+    if(!CheckEquipItem(&held.xItem,slot,point)) return false;
+    if(held.bIsEquipItem) {
+        if(m_stEquipItem[slot].bSetted) return false;
+        SetEquipFromCommon(held.xItem.m_shCellNum,&held);return true;
+    }
+    SetTakeOnFromCommon(slot,&held);
+    if(m_stEquipItem[slot].bSetted) SetCommonFromEquip(slot,&held);
+    m_equipmentRequest=CM_TAKEONITEM;m_equipmentSlot=slot;held.bWaitResponse=TRUE;
+    const auto& item=m_stTakeOnItemSet.xItem;
+    g_xClientSocket.SendTakeOnOffItem(CM_TAKEONITEM,slot,const_cast<char*>(item.Name()),item.m_stItemInfo.nMakeIndex);
+    return true;
+}
 
+bool CStatusWnd::RequestTakeOff()
+{
+    auto& ui=g_xGameProc.m_xInterface;auto& held=ui.m_stCommonItem;
+    if(m_equipmentRequest || held.bWaitResponse || ui.m_xInventoryWnd.m_usePending || !held.bSetted || !held.bIsEquipItem || ui.m_xExchangeWnd.pendingSlot>=0 || ui.m_xExchangeWnd.returnSlot>=0) return false;
+    m_equipmentRequest=CM_TAKEOFFITEM;m_equipmentSlot=held.xItem.m_shCellNum;held.bWaitResponse=TRUE;
+    g_xClientSocket.SendTakeOnOffItem(CM_TAKEOFFITEM,m_equipmentSlot,const_cast<char*>(held.xItem.Name()),held.xItem.m_stItemInfo.nMakeIndex);
+    return true;
+}
 
-
+bool CStatusWnd::ApplyEquipmentReply(WORD opcode)
+{
+    const bool takeon=m_equipmentRequest==CM_TAKEONITEM;
+    if(!m_equipmentRequest || (takeon?(opcode!=SM_TAKEON_OK && opcode!=SM_TAKEON_FAIL):(opcode!=SM_TAKEOFF_OK && opcode!=SM_TAKEOFF_FAIL))) return false;
+    auto& ui=g_xGameProc.m_xInterface;auto& held=ui.m_stCommonItem;
+    const bool success=opcode==SM_TAKEON_OK || opcode==SM_TAKEOFF_OK;
+    const ITEMSET incoming=m_stTakeOnItemSet;const COMMONITEMSET previous=held;
+    const CItem* restore=takeon && success?&incoming.xItem:!success && held.bSetted?&held.xItem:nullptr;
+    if(restore) {
+        int destination=m_equipmentSlot;
+        if(m_stEquipItem[destination].bSetted) {destination=-1;for(int i=0;i<_EQUIP_MAX_CELL;++i) if(!m_stEquipItem[i].bSetted) {destination=i;break;}}
+        if(destination<0) return false;
+        m_stEquipItem[destination]={TRUE,*restore};m_stEquipItem[destination].xItem.m_shCellNum=destination;
+    }
+    held=COMMONITEMSET{};m_stTakeOnItemSet=ITEMSET{};
+    if(takeon && !success && incoming.bSetted && !ui.m_xInventoryWnd.AddInvenItem(incoming.xItem,0,FALSE)) {
+        held.bSetted=TRUE;held.xItem=incoming.xItem;
+    }
+    m_equipmentRequest=0;m_equipmentSlot=-1;
+    const auto sound=[](const CItem& item) {g_xSound.PlayItemEffect(item.m_stItemInfo.stStdItem.bStdMode,item.m_serverRecord[31],item.Name());};
+    if(takeon && incoming.bSetted) sound(incoming.xItem);
+    if(previous.bSetted && (!takeon || !success)) sound(previous.xItem);
+    return true;
+}
 
 BOOL CStatusWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
