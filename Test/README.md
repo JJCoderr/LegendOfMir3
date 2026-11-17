@@ -26,7 +26,7 @@ build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pi
 python Test/launch_csv.py Test/Inventory.csv --log out/items.log
 ```
 
-辅助程序使用标准库，读取同名 `Inventory.fixture.csv` 的 SQL 数据种子，创建独立 `out/rpc-*` 目录和资源链接，先执行服务端基础检查，再启动客户端并调用 Test.exe。默认程序目录 `build-eiserver/Release`，配置资源目录 `out/debug`，可用 `--bin-dir`、`--config-dir`、`--port-offset` 覆盖。也支持 `--from` / `--to`，但新启动的客户端没有已完成的业务前置状态。结束后只关闭自己启动的进程。
+辅助程序使用标准库，读取同名 `Inventory.fixture.csv` 的 SQL 数据种子，创建独立 `out/rpc-*` 目录和资源链接，先执行服务端基础检查，再启动客户端并调用 Test.exe。默认程序目录 `build-eiserver/Release`，配置资源目录 `out/debug`，可用 `--bin-dir`、`--config-dir`、`--port-offset` 覆盖。也支持 `--from` / `--to` 和透传给 Test.exe 的 `--timeout-ms`，但新启动的客户端没有已完成的业务前置状态。结束后只关闭自己启动的进程。
 
 ## CSV 格式
 
@@ -67,7 +67,7 @@ step,name,target,action,params,expect
 | 角色 | `Character.csv`、`CharacterDelete.csv` | 创建角色、删除角色及持久化 |
 | 物品 | `Inventory.csv`、`InventoryDuplicates.csv`、`InventoryFull.csv`、`InventoryFullUnequip.csv`、`InventorySaveFailure.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
 | 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复、施法回包、扣蓝与受伤治疗 |
-| 怪物 | `MonstersSpawn.csv`、`MonstersRespawn.csv`、`MonstersLoot.csv`、`MonstersLootCount.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentCount.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
+| 怪物 | `MonstersSpawn.csv`、`MonstersRespawn.csv`、`MonstersCorpse.csv`、`MonstersLoot.csv`、`MonstersLootCount.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentCount.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
@@ -127,3 +127,5 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 `InventoryFullUnequip.csv` 验证满包卸装收到服务端 SM_TAKEOFF_FAIL，装备、外观和背包不变；使用一瓶药水后卸装成功，护甲进入背包，再穿戴腾出空位并拾取地面物品，最后保存重登验证。服务端卸装必须在清除装备槽前检查背包容量。
 
 `MonstersRespawn.csv` 使用 FLD_GENTIME=1（分钟）的真实刷新配置，击杀后等待新怪物出现、查询名称并再次击杀，再检查第二次补充刷新。刷新数量只统计未死亡且未进入 Ghost 状态的怪物；尸体和延迟释放对象仍按原时序保留，不阻塞刷新名额。场景约需两分钟，使用 state.wait 等待，不修改时钟。本场景验证两轮刷新与战斗，不覆盖尸体最终消失、Ghost 对象释放或长期运行稳定性。
+
+`MonstersCorpse.csv` 在击杀和一分钟补充刷新后等待原尸体消失，检查 SM_DISAPPEAR，随后攻击剩余的新怪物，确认移除旧实体未影响新实体。使用真实三分钟尸体时序；运行命令为 `python Test/launch_csv.py Test/MonstersCorpse.csv --timeout-ms 190000 --log out/monsters-corpse.log`。超时参数只调整测试等待期限，不改变游戏计时。本场景不验证额外三分钟 Ghost 对象保留后的内存释放。
