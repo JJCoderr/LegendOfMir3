@@ -227,3 +227,5 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 ShopDurability/MeatPrice/MeatPremium/OrePrice/OreMinimum/MaximumLoss/PowderPrice 验证不同计价、成交和保存重登；ShopStackPriceBypass 验证堆叠模式跳过折价；ShopDetailPages/Shared/Restock/Capacity/Weight/Gold 验证分页、争买、补货及失败保留。双客户端 Shared 场景需 `--clients 2`。价格详情使用16位协议字段，超出范围拒绝；装备附加属性和原服溢出行为尚未实现。详见 [耐久计价核对](Shop/native-durability-audit.md)。
 
 `Inventory/InventoryEquipmentAttributes.csv` 为装备的14个附加属性设置各不相同的值，经过真实客户端丢弃、拾取、保存与重登后检查数据库逐项保留，并检查当前/最大耐久。它覆盖了加载遗漏 FLD_VALUE14、转移 SQL 把 FLD_VALUE5 写成 VALUE6 的回归；不代表装备出售或全部附加属性显示已完成。
+
+装备回包状态新增 `upgrades`（14字节原始附加属性）、`base_defence`、`base_magic_defence`、`base_attack`，均读取客户端实际收到的100字节记录。InventoryEquipmentAttributes / InventoryWeaponAttributes 在背包、穿脱、丢弃拾取及重登时断言这些字段；武器模式5/6的强度附加值最多发送5，数据库原值不变。基础属性与附加属性分开发送，避免客户端提示把已合并值再次当作基础值。此处尚未覆盖所有魔法/元素字段或角色战斗能力中的附加值应用。

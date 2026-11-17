@@ -8,10 +8,19 @@ bool BuildSpecialItem(CUserInfo& owner, const _TUSERITEMRCD& item, Mir3Item::Rec
 {
     if (item.nStdIndex >= g_nStdItemSpecial) return false;
     _TCLIENTITEMRCD legacy = {};
-    g_pStdItemSpecial[item.nStdIndex].GetStandardItem(&legacy);
-    g_pStdItemSpecial[item.nStdIndex].GetUpgradeStdItem(&legacy, const_cast<_TUSERITEMRCD*>(&item));
+    auto& standard = g_pStdItemSpecial[item.nStdIndex];
+    standard.GetStandardItem(&legacy);
+    legacy.tStdItem.wAC = MAKEWORD(standard.wAC,standard.wAC2);
+    legacy.tStdItem.wMAC = MAKEWORD(standard.wMAC,standard.wMAC2);
+    legacy.tStdItem.wDC = MAKEWORD(standard.wDC,standard.wDC2);
     legacy.nDura = item.nDura; legacy.nDuraMax = item.nDuraMax;
     record = Mir3Item::FromLegacy(legacy, owner.m_itemIdentities.Get(item.szMakeIndex));
+    // Reference 0x514270 keeps base values and the 14 instance bonuses separate.
+    std::memcpy(record.data()+Mir3Item::Upgrades,item.btValue,sizeof(item.btValue));
+    constexpr int FirstWeaponMode=5, LastWeaponMode=6, MaximumStrengthBonus=5;
+    if (standard.wStdMode>=FirstWeaponMode && standard.wStdMode<=LastWeaponMode &&
+        record[Mir3Item::WeaponStrengthBonus]>MaximumStrengthBonus)
+        record[Mir3Item::WeaponStrengthBonus]=MaximumStrengthBonus;
     return true;
 }
 bool BuildGeneralItem(CUserInfo& owner, const _TGENERALITEMRCD& item, Mir3Item::Record& record)

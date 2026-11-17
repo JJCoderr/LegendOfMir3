@@ -14,19 +14,23 @@
 130,enter character,Client,session.enter,name=MirProbe01,result.status=submitted
 140,world ready,Client,state.wait,,"result.scene=world;result.map=""01"";result.hp=18"
 150,dismiss arrival,Client,notice.dismiss,,result.status=submitted
-160,items ready,Client,state.wait,,result.input_delayed=false;result.notice=false;result.bag.0.id=1;result.bag_count=1
+160,items ready,Client,state.wait,,"result.input_delayed=false;result.notice=false;result.bag.0.id=1;result.bag_count=1;result.bag.0.upgrades=[1,2,3,4,5,6,7,8,9,10,11,12,13,14];result.bag.0.base_defence=[2,5];result.bag.0.base_magic_defence=[1,3];result.bag.0.base_attack=[0,0]"
+165,wear upgraded item,Client,item.equip,id=1;slot=0,result.status=submitted
+166,equipped attributes,Client,state.wait,,"result.equipment_pending=0;result.bag=[];result.equipment.0.upgrades=[1,2,3,4,5,6,7,8,9,10,11,12,13,14];result.equipment.0.base_defence=[2,5];result.equipment.0.base_magic_defence=[1,3];result.equipment.0.base_attack=[0,0]"
+167,remove upgraded item,Client,item.unequip,slot=0,result.status=submitted
+168,item returned,Client,state.wait,,"result.equipment_pending=0;result.equipment=[];result.bag_count=1;result.bag.0.upgrades=[1,2,3,4,5,6,7,8,9,10,11,12,13,14];result.bag.0.base_defence=[2,5];result.bag.0.base_magic_defence=[1,3];result.bag.0.base_attack=[0,0]"
 170,drop upgraded armor,Client,item.drop,id=1,result.status=submitted
 180,armor on ground,Client,state.wait,,result.bag=[];result.drop_pending=false;result.ground_items.0.name=Test male armor;result.ground_items.0.x=458;result.ground_items.0.y=260
 190,dropped attributes preserved,Database,query,"SELECT FLD_VALUE1,FLD_VALUE2,FLD_VALUE3,FLD_VALUE4,FLD_VALUE5,FLD_VALUE6,FLD_VALUE7,FLD_VALUE8,FLD_VALUE9,FLD_VALUE10,FLD_VALUE11,FLD_VALUE12,FLD_VALUE13,FLD_VALUE14 FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='WEMADE'","rows=[[1,2,3,4,5,6,7,8,9,10,11,12,13,14]]"
 200,walk to armor,Client,world.walk,x=458;y=260,result.status=submitted
 210,arrived,Client,state.wait,,result.x=458;result.y=260;result.cast_ready=true
 220,recover armor,Client,item.pickup,,result.status=submitted
-230,armor recovered,Client,state.wait,,result.ground_items=[];result.bag_count=1;result.bag.0.id=1;result.bag.0.durability=4000;result.bag.0.max_durability=5000
+230,armor recovered,Client,state.wait,,"result.ground_items=[];result.bag_count=1;result.bag.0.id=1;result.bag.0.durability=4000;result.bag.0.max_durability=5000;result.bag.0.upgrades=[1,2,3,4,5,6,7,8,9,10,11,12,13,14];result.bag.0.base_defence=[2,5];result.bag.0.base_magic_defence=[1,3];result.bag.0.base_attack=[0,0]"
 240,recovered attributes preserved,Database,query,"SELECT FLD_VALUE1,FLD_VALUE2,FLD_VALUE3,FLD_VALUE4,FLD_VALUE5,FLD_VALUE6,FLD_VALUE7,FLD_VALUE8,FLD_VALUE9,FLD_VALUE10,FLD_VALUE11,FLD_VALUE12,FLD_VALUE13,FLD_VALUE14 FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='MirProbe01'","rows=[[1,2,3,4,5,6,7,8,9,10,11,12,13,14]]"
 250,ready to save,Client,state.wait,,result.return_ready=true
 260,save,Client,session.return,,result.status=submitted
 270,saved,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
 280,reenter,Client,session.enter,name=MirProbe01,result.status=submitted
-290,restored armor,Client,state.wait,,result.scene=world;result.bag_count=1;result.bag.0.durability=4000;result.bag.0.max_durability=5000
+290,restored armor,Client,state.wait,,"result.scene=world;result.bag_count=1;result.bag.0.durability=4000;result.bag.0.max_durability=5000;result.bag.0.upgrades=[1,2,3,4,5,6,7,8,9,10,11,12,13,14];result.bag.0.base_defence=[2,5];result.bag.0.base_magic_defence=[1,3];result.bag.0.base_attack=[0,0]"
 300,saved attributes preserved,Database,query,"SELECT FLD_VALUE1,FLD_VALUE2,FLD_VALUE3,FLD_VALUE4,FLD_VALUE5,FLD_VALUE6,FLD_VALUE7,FLD_VALUE8,FLD_VALUE9,FLD_VALUE10,FLD_VALUE11,FLD_VALUE12,FLD_VALUE13,FLD_VALUE14 FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='MirProbe01'","rows=[[1,2,3,4,5,6,7,8,9,10,11,12,13,14]]"
 310,coverage,Client,protocol.get,,

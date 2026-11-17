@@ -1,4 +1,5 @@
 #pragma once
+#include "../../Server/Def/Mir3Item.h"
 
 // Included after StdAfx.h and Shared/DebugState.h. Captured only when debug state is enabled.
 namespace mir3 {
@@ -9,7 +10,14 @@ inline std::string ItemDebugState(CGameProcess& game)
     const auto range = [](WORD value) {
         return "[" + std::to_string(LOBYTE(value)) + "," + std::to_string(HIBYTE(value)) + "]";
     };
-    const auto item = [](const CItem& value, int slot, int cell = -1) {
+    const auto item = [&](const CItem& value, int slot, int cell = -1) {
+        std::string upgrades="[";
+        for (int at=Mir3Item::Upgrades;at<Mir3Item::Size;++at) {
+            if(at!=Mir3Item::Upgrades) upgrades+=',';
+            upgrades+=std::to_string(value.m_serverRecord[at]);
+        }
+        upgrades+=']';
+        const auto base=[&](int at) { return range(WORD(value.m_serverRecord[at]|(WORD(value.m_serverRecord[at+1])<<8))); };
         return std::string("{\"slot\":") + std::to_string(slot)
             + ",\"cell\":" + std::to_string(cell)
             + ",\"id\":" + std::to_string(value.m_stItemInfo.nMakeIndex)
@@ -19,6 +27,10 @@ inline std::string ItemDebugState(CGameProcess& game)
             + ",\"standard_durability\":" + std::to_string(value.m_stItemInfo.stStdItem.wDuraMax)
             + ",\"durability\":" + std::to_string(value.m_stItemInfo.nDura)
             + ",\"max_durability\":" + std::to_string(value.m_stItemInfo.nDuraMax)
+            + ",\"upgrades\":" + upgrades
+            + ",\"base_defence\":" + base(Mir3Item::Defence)
+            + ",\"base_magic_defence\":" + base(Mir3Item::MagicDefence)
+            + ",\"base_attack\":" + base(Mir3Item::Attack)
             + ",\"name\":" + QuoteLocalText(value.Name()) + "}";
     };
     const auto list = [&](const auto& slots, bool bag = false) {

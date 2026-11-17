@@ -13,7 +13,7 @@ enum Offset {
     Defence = 40, MagicDefence = 42, Attack = 44,
     Requirement = 54, RequirementValue = 55, Price = 56,
     StackMode = 61, Instance = 62, Durability = 66, MaxDurability = 68,
-    Count = 71
+    Count = 71, Upgrades = 86, WeaponStrengthBonus = 93
 };
 using Record = std::array<unsigned char, Size>;
 inline void Word(Record& record, int at, unsigned value) {
