@@ -470,6 +470,7 @@ VOID CInterface::ShowChatList()
 
 VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 {
+    m_xSiegeWnd.ExpireObjects(GetTickCount());
     m_xPortraitWnd.SendRequest();
 	INT nX, nY, nCnt;
 

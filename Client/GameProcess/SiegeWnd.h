@@ -14,7 +14,8 @@ public:
     void Create(CWHWilImageData* image);
     void ReceiveControl(DWORD values,WORD rangeStyle,const char* description);
     void ReceiveStatus(DWORD values);
-    void ReceiveObject(DWORD id,POINT cell,WORD kind=0);
+    void ReceiveObject(DWORD id,POINT cell,WORD kind=0,DWORD now=GetTickCount());
+    void ExpireObjects(DWORD now);
     static bool BuildRequest(const Request& request,_TDEFAULTMESSAGE& header,std::string& body);
     void ClearObjects();
     void ReleaseControl();
@@ -31,7 +32,7 @@ public:
     RECT EntryBounds() const;
     void ShowEntry();
 private:
-    struct Object { POINT cell; WORD kind; };
+    struct Object { POINT cell; WORD kind; DWORD updated; };
     std::map<DWORD,Object> objects;
     void SendRequest(Request request);
 };

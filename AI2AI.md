@@ -1253,3 +1253,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 1312位置缓存保存wSeries类别，投石车地图绘制缓存中的其他对象，0绿色/非0橙色，按地图源半宽高筛选；仍待恢复对象过期及人物/怪物标记条件。没有以完整动态地图完成为名结束目标。
 - clean后WaitMessage命名冲突已修复，全部七目标重建通过。新增7项含真实SendPacket本地UDP回环捕获+既有117项回归全1。截图out/siege-send.png、out/siege-load-send.png已检查；不代表实服操作成功。
 - 继续使用174/175/176预览，未新增ID；下一空闲仍182。证据Client/docs/window18-evidence.md与out/siege-load-and-objects.txt。
+
+### 地图对象位置生命周期（2026-11-17）
+- 428110汇编确认DWORD时间差>=5000删除1312位置记录，调用点4249A3；每条记录+16更新时间由接收分支刷新。证据out/map-object-expiry-confirmed.asm。
+- CSiegeWnd缓存保存updated，每帧RenderInterface调用ExpireObjects，不依赖窗口可见性；只移除记录/取消objectPresent，不解除controlled，也不清数值和目标。新位置恢复；换图清缓存沿用。
+- 初次增量链接命中旧GameProc目标依赖，clean后全部七目标重建通过；11项新增+124项回归全1。182 siege-expired截图out/siege-expired.png已检查，地图和射程消失、控件保留。下一预览空闲183。
+- 人物/怪物地图标记、全量GUI细节及实服联调仍待完成；目标保持原范围。

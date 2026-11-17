@@ -2,7 +2,7 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -66,7 +66,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewConsignmentInput) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewSiegeExpired) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1888,7 +1888,7 @@ public:
             if(groupPanel==PreviewMailNotify) {mouse=badgePoint;capturePath="mail-notification.bmp";}
         }
 
-        if(groupPanel>=PreviewSiege && groupPanel<=PreviewSiegeChecks) {
+        if((groupPanel>=PreviewSiege && groupPanel<=PreviewSiegeChecks) || groupPanel==PreviewSiegeExpired) {
             using namespace SiegeLayout;
             auto& ui=g_xGameProc.m_xInterface;auto& panel=ui.m_xSiegeWnd;auto& map=ui.m_minimap;
             panel.controlled=panel.objectPresent=true;panel.objectCell={140,140};panel.style=1;panel.firstValue=50;panel.secondValue=100;
@@ -1902,6 +1902,7 @@ public:
                 BYTE raw[100]={};strcpy((char*)raw,"ÅÚµ¯");raw[IconOffset]=BYTE(FirstAmmoIcon);raw[IconOffset+1]=BYTE(FirstAmmoIcon>>8);raw[InstanceOffset]=7;raw[CountOffset]=10;
                 ui.m_stCommonItem.xItem.SetMir3Item(raw,0);ui.m_stCommonItem.bSetted=TRUE;
             };
+            if(groupPanel==PreviewSiegeExpired) {panel.ReceiveObject(7,POINT{140,140},0,GetTickCount()-ObjectLifetime);capturePath="siege-expired.bmp";}
             if(groupPanel==PreviewSiegeLoad) {holdAmmo();panel.BeginLoad();SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"5");capturePath="siege-load.bmp";}
             if(groupPanel==PreviewSiegeChecks) {
                 const bool hit=ui.GetWindowInMousePos(POINT{110,110})==WindowId;
@@ -1957,6 +1958,25 @@ public:
                 emptyAttack.action=Action::Close;const bool noClosePacket=!CSiegeWnd::BuildRequest(emptyAttack,packet,body);
                 panel.ReceiveObject(9,POINT{150,150},0);panel.ReceiveObject(10,POINT{120,130},1);
                 if(FILE* report=fopen("siege-send-check.txt","wb")) {fprintf(report,"map=%d attack=%d wait=%d move=%d load=%d noTarget=%d noClosePacket=%d\n",mapRequest,attackWire,waitWire,moveWire,loadWire,noTarget,noClosePacket);fclose(report);}
+                panel.ClearObjects();panel.ReceiveObject(7,POINT{140,140},0,100);
+                panel.ReceiveControl(0,1,"engine\t7");panel.ExpireObjects(100+ObjectLifetime-1);
+                const bool beforeExpiry=panel.objectPresent;
+                panel.ExpireObjects(100+ObjectLifetime);const bool exactExpiry=!panel.objectPresent;
+                const bool keepControl=panel.controlled && panel.m_bActive;
+                panel.ReceiveObject(7,POINT{141,142},0,6000);const bool recovered=panel.objectPresent && panel.objectCell.x==141;
+                panel.ReceiveObject(7,POINT{142,143},1,9000);panel.ExpireObjects(6000+ObjectLifetime);
+                const bool refreshed=panel.objectPresent && panel.objectCell.y==143;
+                panel.ExpireObjects(9000+ObjectLifetime);const bool refreshedExpiry=!panel.objectPresent;
+                panel.ReceiveObject(7,POINT{140,140},0,100);panel.ReceiveObject(8,POINT{150,150},1,4000);panel.ExpireObjects(5100);
+                panel.ReceiveControl(0,1,"engine\t8");const bool independent=panel.objectPresent;
+                panel.ReceiveControl(0,1,"engine\t7");const bool removed=!panel.objectPresent;
+                panel.ReceiveObject(7,POINT{140,140},0,0xffffff00u);panel.ExpireObjects(ObjectLifetime-257);
+                const bool wrapBefore=panel.objectPresent;panel.ExpireObjects(ObjectLifetime-256);const bool wrapExpiry=!panel.objectPresent;
+                panel.ReceiveObject(7,POINT{140,140},0,100);ui.WindowActivate(WindowId);panel.ExpireObjects(5100);
+                const bool closedExpiry=!panel.objectPresent && !panel.m_bActive && panel.controlled;
+                panel.ReceiveObject(7,POINT{140,140});panel.ReceiveObject(9,POINT{150,150},0);panel.ReceiveObject(10,POINT{120,130},1);
+                panel.ReceiveStatus(MAKELONG(50,100));ui.WindowActivate(WindowId);
+                if(FILE* report=fopen("siege-expiry-check.txt","wb")) {fprintf(report,"before=%d boundary=%d control=%d recovered=%d refreshed=%d refreshedExpiry=%d independent=%d removed=%d wrapBefore=%d wrapExpiry=%d closed=%d\n",beforeExpiry,exactExpiry,keepControl,recovered,refreshed,refreshedExpiry,independent,removed,wrapBefore,wrapExpiry,closedExpiry);fclose(report);}
                 capturePath="siege-checks.bmp";
             }
         }
@@ -2729,6 +2749,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=siege-expired")==0 ? PreviewSiegeExpired :
         strcmp(lpCmdLine,"--preview=consignment-input")==0 ? PreviewConsignmentInput :
         strcmp(lpCmdLine,"--preview=consignment-wire")==0 ? PreviewConsignmentWire :
         strcmp(lpCmdLine,"--preview=mail-wire")==0 ? PreviewMailWire :

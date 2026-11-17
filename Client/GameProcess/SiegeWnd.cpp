@@ -166,10 +166,18 @@ void CSiegeWnd::ReleaseControl()
     if(m_bActive) g_xGameProc.m_xInterface.WindowActivate(SiegeLayout::WindowId);
 }
 
-void CSiegeWnd::ReceiveObject(DWORD id,POINT cell,WORD kind)
+void CSiegeWnd::ReceiveObject(DWORD id,POINT cell,WORD kind,DWORD now)
 {
-    objects[id]={cell,kind};
+    objects[id]={cell,kind,now};
     if(controlled && id==objectId) {objectCell=cell;objectPresent=true;}
+}
+void CSiegeWnd::ExpireObjects(DWORD now)
+{
+    for(auto it=objects.begin();it!=objects.end();) {
+        if(DWORD(now-it->second.updated)>=SiegeLayout::ObjectLifetime) it=objects.erase(it);
+        else ++it;
+    }
+    objectPresent=controlled && objects.find(objectId)!=objects.end();
 }
 void CSiegeWnd::ClearObjects()
 {

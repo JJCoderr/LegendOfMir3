@@ -9,6 +9,7 @@ constexpr int CloseCaption=1052, AttackCaption=4300, WaitCaption=4301,
     MoveCaption=4302, RangeCaption=4303, LoadCaption=4304;
 constexpr int AttackMessage=1120, MoveMessage=1121, WaitMessage=1122;
 constexpr int ObjectPositionMessage=1312;
+constexpr DWORD ObjectLifetime=5000;
 constexpr int ControlMessage=1350, StatusMessage=1351, ReleaseMessage=1353;
 constexpr int TargetMarker=1599;
 constexpr int HudBackground=1160,EntryNormal=1570,EntryPressed=1572,EntryCaption=2645;

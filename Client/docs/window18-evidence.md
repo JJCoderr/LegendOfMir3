@@ -71,3 +71,13 @@ SiegeLayout.h已加入未接线的原生布局、按钮定义、float坐标换�
 ### 本批验证（2026-11-17）
 
 清理后首次构建发现WaitMessage与Win32 API冲突，限定SiegeLayout命名空间后全部七目标重建通过（out/build-siege-send-all.log）。本地UDP回环捕获并解码实际SendPacket：地图1033、攻击1120、等待1122、移动1121、装填1123全部正确，另有无目标/关闭不构造报文，共7项全1；既有117项回归全1。投石车及装填对话框截图out/siege-send.png、out/siege-load-send.png已检查。尚未在实服执行攻击或装填。
+
+## 位置记录生命周期
+
+4282C0的1312分支将当前GetTickCount写入20字节对象记录+16，随后写id/x/y/kind。428110在424280绘制循环调用，逐记录计算DWORD当前时间减更新时间；42813A比较0x1388（5000），仅小于时保留，达到或超过即删除。汇编证据out/map-object-expiry-confirmed.asm；对象列表引用盘点out/object-list-refs.txt。
+
+现有位置缓存新增更新时间，ExpireObjects每帧执行且不依赖窗口可见性；受控对象过期后objectPresent=false，停止绘地图和射程，不清controlled/目标/数值。再次收到同ID位置可恢复。关闭窗口不提前删除记录，换图仍清缓存。独立对象分别续期，差值采用DWORD保持回绕行为。此前“对象过期规则待恢复”在本批落实；人物和怪物标记过滤仍未完成。
+
+### 生命周期验证（2026-11-17）
+
+函数签名变化后的首次增量链接暴露GameProc旧目标文件依赖，clean Client后全部七目标重建通过（out/build-siege-expiry-clean.log、out/build-siege-expiry-all.log）。新增11项生命周期检查及已有124项回归全部通过。预览182 siege-expired通过实际RenderInterface过期处理截屏，out/siege-expired.png确认地图/射程消失、窗口/数值/入口保留。没有连接实服。
