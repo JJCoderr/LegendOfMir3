@@ -15,6 +15,10 @@ inline std::string ItemDebugState(CGameProcess& game)
             + ",\"id\":" + std::to_string(value.m_stItemInfo.nMakeIndex)
             + ",\"looks\":" + std::to_string(value.m_stItemInfo.stStdItem.wLooks)
             + ",\"shape\":" + std::to_string(value.m_stItemInfo.stStdItem.bShape)
+            + ",\"mode\":" + std::to_string(value.m_stItemInfo.stStdItem.bStdMode)
+            + ",\"standard_durability\":" + std::to_string(value.m_stItemInfo.stStdItem.wDuraMax)
+            + ",\"durability\":" + std::to_string(value.m_stItemInfo.nDura)
+            + ",\"max_durability\":" + std::to_string(value.m_stItemInfo.nDuraMax)
             + ",\"name\":" + QuoteLocalText(value.Name()) + "}";
     };
     const auto list = [&](const auto& slots, bool bag = false) {

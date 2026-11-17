@@ -25,7 +25,7 @@ void CStdItem::GetStandardItem(_LPTCLIENTITEMRCD lpClientItemRcd)
 	lpClientItemRcd->tStdItem.btAniCount	= 0;
 	lpClientItemRcd->tStdItem.btSource		= 0;
 	lpClientItemRcd->tStdItem.wLooks		= (WORD)dwLooks;
-	lpClientItemRcd->tStdItem.wDuraMax		= (WORD)wDuraMax;
+	lpClientItemRcd->tStdItem.wDuraMax		= wStandardDurability;
 	lpClientItemRcd->tStdItem.btNeed		= 0;
 	lpClientItemRcd->tStdItem.btNeedLevel	= 0;
 	lpClientItemRcd->tStdItem.nPrice		= (UINT)dwPrice;

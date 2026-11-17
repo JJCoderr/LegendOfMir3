@@ -42,6 +42,7 @@ public:
 class CStdItem : public CItem
 {
 public:
+    WORD wStandardDurability{}; // Independent of legacy Val1/Val2 potion effects.
 	CStdItem() {};
 
 	virtual		void GetStandardItem(_LPTCLIENTITEMRCD lpClientItemRcd);

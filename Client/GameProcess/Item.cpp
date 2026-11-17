@@ -38,6 +38,8 @@ bool CItem::SetMir3Item(const BYTE* record,SHORT cell,bool allowEmptyName)
     memcpy(legacy.stStdItem.szName,record,sizeof(legacy.stStdItem.szName)-1);
     legacy.stStdItem.bStdMode=record[30];legacy.stStdItem.bShape=record[31];
     legacy.stStdItem.wLooks=word(36);
+    constexpr int StandardDurabilityOffset=38;
+    legacy.stStdItem.wDuraMax=word(StandardDurabilityOffset);
     legacy.nMakeIndex=DWORD(word(62))|(DWORD(word(64))<<16);
     legacy.nDura=word(66);legacy.nDuraMax=word(68);
     SetItem(legacy,cell);

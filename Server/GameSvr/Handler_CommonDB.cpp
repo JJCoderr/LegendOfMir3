@@ -91,6 +91,8 @@ void InitStdItemEtcInfo()
 				g_pStdItemEtc[i].wDuraMax	= atoi( pRec->Get( "FLD_VAL1" ) );
 				g_pStdItemEtc[i].dwRSource	= atoi( pRec->Get( "FLD_VAL2" ) );
 				g_pStdItemEtc[i].dwPrice	= atoi( pRec->Get( "FLD_PRICE" ) );
+                const char* durability = pRec->Get("FLD_DURAMAX");
+                g_pStdItemEtc[i].wStandardDurability = durability ? WORD(atoi(durability)) : 0;
 			}
 		}
 

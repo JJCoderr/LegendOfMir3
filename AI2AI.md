@@ -2258,3 +2258,11 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 解码原服stditem.dat（184字节记录，逐字节XOR4）并核对0x4961F0：类型25为药粉、30为蜡烛，40肉、43矿石。修正MeatMode/OreMode常量名以及3个CSV名称，原数值/门槛行为不变。
 - 新证据Test/Shop/native-durability-audit.md记录地址、文件哈希、实际物品样本和字段映射。普通物品FLD_VAL1是药效，缺独立标准耐久/堆叠字段；回购物品还共用标准商品单价，需要与折价同步解决，未贸然用药效字段计算耐久。
 - EIServer Release构建通过；ShopSellPowderLow/PowderBoundary/CandleLow共87步真实联调通过，日志out/csv-validation/type-*.log。耐久折价、完整装备和堆叠交易仍未实现，目标保持进行中。
+
+
+## 普通物品标准耐久与药效字段分离
+
+- TBL_STDITEM_ETC新增FLD_DURAMAX，CStdItem独立wStandardDurability并发送到标准物品属性；不再用FLD_VAL1药效填充标准耐久。旧表缺列取0，新建SQLite/SQL Server表均更新；不自动改已有库。
+- 实测发现Client SetMir3Item此前未把收到的标准耐久写入本地物品结构，现补读38偏移。RPC/调试物品记录增加mode、standard_durability、durability、max_durability。
+- 新增InventoryStandardDurability/InventoryLegacyStandard，两者验证标准耐久1/65535（旧表0）与实例8000、4000/8000独立，真实怪物受伤后药水按FLD_VAL1恢复满血、保存重登保留实例属性。Client/EIServer Release构建通过；这两项及Inventory、InventoryDuplicates、ShopSell、MonstersLoot共6场景253步通过，日志out/csv-validation/standard-*.log。
+- 本轮未改生成/计价。新发现普通实例键G%03d%04d%04d写入13字节，耐久10000超出四位槽；须先统一扩展生成/保存/读取编码，不能把高标准耐久直接套到旧格式。SQL Server运行时、堆叠和耐久折价仍未验证/实现。

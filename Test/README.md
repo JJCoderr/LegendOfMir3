@@ -210,3 +210,10 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 出售边界场景：`Shop/ShopSellZeroDurability.csv` 验证普通物品耐久为0仍可成交，但不加入商人库存；随后买完原有3件，检查余额52、背包4件及保存重登，数据库中售出的零耐久记录为0。此规则不覆盖25/30类型的最低品质限制。
 
 `Shop/ShopSellZeroQuote.csv` 使用基础价1（半价取偶数为0），验证界面进入Unavailable且正常shop.sell拒绝，再用shop.sale_request发送真实协议探测。服务端接受零价成交，重复同实例请求拒绝，商人库存增加1，保存重登后金币100、背包1件。探测绕过客户端Paying阶段，因此不以当前客户端背包即时变化判断成功，而以成功/失败回包、商人库存、数据库及重登结果交叉验证；不改变正常UI的零报价限制。
+
+
+普通物品标准耐久：`TBL_STDITEM_ETC.FLD_DURAMAX`独立于药效FLD_VAL1/FLD_VAL2，按16位字段发送；旧表没有此列时取0。SQLite/SQL Server新建表已加入该列，已有SQLite表可执行 `ALTER TABLE TBL_STDITEM_ETC ADD COLUMN FLD_DURAMAX INTEGER NOT NULL DEFAULT 0;`。本轮未自动迁移已有数据库，也未执行SQL Server实测。
+
+客户端state.get的bag/equipment/held_item物品记录增加`mode`、`standard_durability`、`durability`、`max_durability`，来自实际接收的物品属性。`Inventory/InventoryStandardDurability.csv`验证标准耐久1/65535与实例耐久8000、4000/8000互相独立；真实怪物造成伤害后使用药水，确认按药效恢复满血，再保存重登检查剩余物品。`Inventory/InventoryLegacyStandard.csv`删除新列后运行同样流程，确认旧数据库回退标准耐久0而不影响药效或实例属性。
+
+本阶段未改普通物品生成和耐久报价。旧实例键的四位十进制耐久槽无法容纳10000，需要后续扩展保存格式，不能直接把新的高标准耐久套入旧生成路径。
