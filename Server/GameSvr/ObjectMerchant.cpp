@@ -335,9 +335,9 @@ void CMerchantObject::Sale(CPlayerObject* player, _LPTGENERALITEMRCD item, bool 
             price = base/2 + ((base%2 && (base/2)%2) ? 1 : 0);
         }
     }
-    constexpr int MeatMode=25, OreMode=30, MinimumSaleDurability=4000;
-    const bool lowQuality = item && (g_pStdItemEtc[item->nStdIndex].wStdMode==MeatMode ||
-        g_pStdItemEtc[item->nStdIndex].wStdMode==OreMode) && item->nDura<MinimumSaleDurability;
+    constexpr int PowderMode=25, CandleMode=30, MinimumSaleDurability=4000;
+    const bool lowQuality = item && (g_pStdItemEtc[item->nStdIndex].wStdMode==PowderMode ||
+        g_pStdItemEtc[item->nStdIndex].wStdMode==CandleMode) && item->nDura<MinimumSaleDurability;
     bool sold = false;
     if (commit && !lowQuality && price>=0 && quantity==0 && ULONGLONG(owner->GetGold())+price<=BAGGOLD) {
         Good* stock = NULL;

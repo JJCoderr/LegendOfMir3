@@ -2250,3 +2250,11 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 新增ShopSellZeroDurability（53步）：零耐久普通物品成交后不回收库存，购买原库存、余额52/背包4件、零耐久记录消失及重登通过。
 - 新增ShopSellZeroQuote（49步）：基础价1收购价0，UI拒绝确认；真实协议探测允许零价成交，重复实例拒绝，库存增加1、金币100/背包1件保存重登通过。绕过Paying阶段的探测不驱动即时客户端背包删除，以回包、库存、数据库和重登验证，未修改正常UI限制。
 - 两个真实客户端/服务器CSV共102步通过，日志out/csv-validation/sale-zero-durability.log和sale-zero-quote.log；本阶段仅新增测试与说明，未修改产品代码。装备、堆叠、耐久折价等剩余适配继续进行。
+
+
+## 原服耐久计价和物品类型映射复核
+
+- IDA复核0x4D0BC4：标准耐久/实例最大耐久非零且堆叠模式<=1时进行计价；类型40/43先额外处理，再统一附加属性、最大耐久折算、当前耐久折价，最后由收购函数除2取偶数。损耗明确落栈double；类型43扩展常量实际为1.3，旧反编译显示不可信。
+- 解码原服stditem.dat（184字节记录，逐字节XOR4）并核对0x4961F0：类型25为药粉、30为蜡烛，40肉、43矿石。修正MeatMode/OreMode常量名以及3个CSV名称，原数值/门槛行为不变。
+- 新证据Test/Shop/native-durability-audit.md记录地址、文件哈希、实际物品样本和字段映射。普通物品FLD_VAL1是药效，缺独立标准耐久/堆叠字段；回购物品还共用标准商品单价，需要与折价同步解决，未贸然用药效字段计算耐久。
+- EIServer Release构建通过；ShopSellPowderLow/PowderBoundary/CandleLow共87步真实联调通过，日志out/csv-validation/type-*.log。耐久折价、完整装备和堆叠交易仍未实现，目标保持进行中。

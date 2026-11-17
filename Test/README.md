@@ -200,7 +200,7 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 `shop.quote(id)` 通过真实背包询价入口选择实例，`shop.sell` 确认已报价物品；`state.get.merchant_service` 返回actor、mode、item、price和phase。`shop.sale_request(index,id,name)` 为协议测试入口，可发送正常UI无法产生的失效实例请求，服务端始终重新验证当前出售上下文、地图距离、物品归属、名称和未装备状态。
 
-`ShopSell.csv` / `ShopSellDefault.csv` 验证%150/%100下收购价同为6（基础价11）、指定第二件同名物品、重复请求拒绝、原属性回购、保存重登；`ShopSellNewStock.csv` 验证收购物品不在[Goods]中时创建回购分类。`ShopSellRoundDown/Even/RoundUp.csv` 覆盖9/13/15的半价取偶数。`ShopSellGoldCap.csv`、`ShopSellRejectedType.csv` 验证金币上限和类型拒绝不丢物品；`ShopSellQualityLow/QualityBoundary/OreLow.csv` 验证类型25/30的4000耐久门槛（这些场景标准耐久为0，未覆盖耐久折价计算）。
+`ShopSell.csv` / `ShopSellDefault.csv` 验证%150/%100下收购价同为6（基础价11）、指定第二件同名物品、重复请求拒绝、原属性回购、保存重登；`ShopSellNewStock.csv` 验证收购物品不在[Goods]中时创建回购分类。`ShopSellRoundDown/Even/RoundUp.csv` 覆盖9/13/15的半价取偶数。`ShopSellGoldCap.csv`、`ShopSellRejectedType.csv` 验证金币上限和类型拒绝不丢物品；`ShopSellPowderLow/PowderBoundary/CandleLow.csv` 验证类型25/30的4000耐久门槛（这些场景标准耐久为0，未覆盖耐久折价计算）。
 
 本阶段支持现有独立实例的普通物品单件出售，尚未支持数量式堆叠出售、装备和附加属性/耐久折价计算；标准价只对已覆盖的普通物品报价路径验证。耐久非零的收购物品以原记录进入库存，回购保留原属性；库存列表不主动广播，仍随重新打开商店刷新。未配置[Goods]的收购物品没有定时补货目标，尚未实现原服库存文件保存及超额回收清理。
 

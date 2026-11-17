@@ -49,3 +49,5 @@ ROUND使用x87最近偶数取整（控制字证据见native-price-audit.md）。
 现已实现普通物品单件报价/成交/回购，并以ShopSell系列CSV验证上述主要路径。数量堆叠出售、装备和附加属性/耐久折价仍未实现；不要将本阶段断言当作这些路径已兼容原服的证据。
 
 补充验证：ShopSellZeroDurability（53步）确认零耐久成交后不回收库存；ShopSellZeroQuote（49步）区分客户端零报价禁用与服务器零价成交，检查回包、重复请求、库存、保存重登。后者为协议探测，不是UI可执行的出售操作。
+
+耐久/附加属性计价、类型25/30真实含义和标准物品字段映射见[native-durability-audit.md](native-durability-audit.md)。此前MeatMode/OreMode及OreLow场景命名有误，实际分别为药粉和蜡烛；类型40/43才是肉和矿石。
