@@ -1918,7 +1918,8 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 					g_xClientSocket.SendGuildHome();
 					break;
 				case _BTN_ID_GROUP:		WindowActivate(_WND_ID_GROUP);					break;
-				case _BTN_ID_POPUP:		WindowActivate(_WND_ID_CHATPOP);				break;
+				case _BTN_ID_POPUP: break; // MIR3 HUD action 10 has no window action.
+                case _BTN_ID_HELP: WindowActivate(_WND_ID_QUICK); break;
 				case _BTN_ID_BAG:		WindowActivate(_WND_ID_INVENTORY);				break;
 				case _BTN_ID_MUGONG:	m_bShowKey = !m_bShowKey;						break;
 				case _BTN_ID_BELT:

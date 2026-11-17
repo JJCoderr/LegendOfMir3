@@ -1030,6 +1030,13 @@ public:
         }
         if (groupPanel==37 || groupPanel==38) {
             auto& ui=g_xGameProc.m_xInterface; auto& quick=ui.m_xQuickWnd;
+            const POINT quickButton={160,475},inactiveButton={755,540};
+            ui.OnLButtonDown(quickButton); ui.OnLButtonUp(quickButton);
+            const bool hudOpened=quick.GetGameWndActive()!=FALSE;
+            ui.OnLButtonDown(quickButton); ui.OnLButtonUp(quickButton);
+            const bool hudClosed=!quick.GetGameWndActive();
+            ui.OnLButtonDown(inactiveButton); ui.OnLButtonUp(inactiveButton);
+            const bool noLegacyPopup=!ui.m_xChatPopWnd.GetGameWndActive();
             ui.OnKeyDown('Z',0); const bool opened=quick.GetGameWndActive()!=FALSE;
             ui.OnKeyDown('Z',1L<<30); const bool repeat=quick.GetGameWndActive()!=FALSE;
             ui.OnKeyDown('Z',0); const bool hidden=!quick.GetGameWndActive(); ui.OnKeyDown('Z',0);
@@ -1063,8 +1070,8 @@ public:
                 }
             }
             if (FILE* report=fopen("quick-panel-check.txt","wb")) {
-                fprintf(report,"opened=%d repeat_ignored=%d hidden=%d slots=%d gaps=%d stray=%d outside_release=%d moved=%d slot_no_drag=%d closed=%d pending_kept=%d trade_returned=%d sounds=%d\n",
-                    opened,repeat,hidden,slots,gap,stray,outside,moved,noDrag,closed,pending,returned,sounds); fclose(report);
+                fprintf(report,"hud_opened=%d hud_closed=%d no_legacy_popup=%d opened=%d repeat_ignored=%d hidden=%d slots=%d gaps=%d stray=%d outside_release=%d moved=%d slot_no_drag=%d closed=%d pending_kept=%d trade_returned=%d sounds=%d\n",
+                    hudOpened,hudClosed,noLegacyPopup,opened,repeat,hidden,slots,gap,stray,outside,moved,noDrag,closed,pending,returned,sounds); fclose(report);
             }
         }
         if (groupPanel>=32 && groupPanel<=36) {

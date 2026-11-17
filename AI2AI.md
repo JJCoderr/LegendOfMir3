@@ -1363,3 +1363,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - CSBuffer.GetVolume与CMirSound.InspectInterfaceAudio只读DirectSound GetVolume/GetStatus，用于实际缓冲验证，不是假调用计数。
 - 新预览212 interface-audio15项全1，覆盖按钮105、实际音量、静音恢复、缺资源、12职业性别语音、物品使用、Opening延迟1200+1/循环音量/停止；options-panel9项回归全1（含实际MP3播放/停止/恢复）。共24条件，12语音样本。
 - clean87/87、all109/109通过；out/interface-audio.png已查看。下一个空闲213。尚未扬声器录音或物理输出验收，不能说已听过实际音效。详情Client/docs/interface-audio-evidence.md。
+
+
+## HUD 快捷栏入口修复（2026-11-17）
+
+原版 HUD action 15（1205，CLIENT 旧名 HELP）实际打开窗口 16，即现有 CQuickWnd；已接通按钮。action 10（1190）原版无窗口动作，已删除旧 CHATPOP 误打开。原版证据、快捷栏与音效 50 项集中回归见 Client/docs/hud-quick-entry-evidence.md；七目标增量构建通过，截图 out/quick-items.png。下一 preview ID 仍为 213，本批复用既有预览。目标未完成，在线流程仍待后续验证。
