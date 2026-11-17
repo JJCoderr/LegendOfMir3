@@ -15,3 +15,12 @@ python Client/Tools/test_native_roundtrip.py
 终端输出每阶段状态，最后打印 PASS；服务日志保留在该轮目录的 server.log。失败返回非零并保留现场文件。清理只结束本轮创建的进程，服务端最后使用进程终止收尾，因此本测试不证明服务端协调停服、在线保存或长期稳定性。也不覆盖装备、背包、战斗和视觉样式完整验收。
 
 退出保存检查使用确认退出前的新鲜客户端快照，等待 SQLite 坐标精确匹配后才重登。第二次进图会再次移动，确保本次保存位置与先前返回选角的记录不同，避免把上一次保存当作本次保存完成。
+
+鼠标坐标换算另有独立检查，不需要游戏资源：
+
+```powershell
+cmake --build build-eiserver --config Release --target InputCoordinatesCheck
+./build-eiserver/Release/InputCoordinatesCheck.exe
+```
+
+检查真实 Win32 客户区在 100%、150% 和横纵不同缩放下的坐标换算，以及窗口外负坐标。窗口消息与角色持续按键轮询共用该换算；本检查不模拟物理按键持续按住的完整游戏行为。

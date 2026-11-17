@@ -4425,6 +4425,8 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 				POINT ptMouse;
 				GetCursorPos(&ptMouse);
 				ScreenToClient(g_xMainWnd.GetSafehWnd(), &ptMouse);
+				ptMouse = mir3::ClientToCanvas(g_xMainWnd.GetSafehWnd(), ptMouse,
+				    g_xMainWnd.m_stDisplayInfo.wWidth, g_xMainWnd.m_stDisplayInfo.wHeight);
 				m_bCanRun = FALSE;
 
 				if ( HIBYTE(GetKeyState(VK_RBUTTON)) || ( HIBYTE(GetKeyState(VK_LBUTTON)) && HIBYTE(GetKeyState(VK_CONTROL))) )
@@ -4523,6 +4525,8 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 				POINT ptMouse;
 				GetCursorPos(&ptMouse);
 				ScreenToClient(g_xMainWnd.GetSafehWnd(), &ptMouse);
+				ptMouse = mir3::ClientToCanvas(g_xMainWnd.GetSafehWnd(), ptMouse,
+				    g_xMainWnd.m_stDisplayInfo.wWidth, g_xMainWnd.m_stDisplayInfo.wHeight);
 				m_bCanRun = FALSE;
 
 				if ( HIBYTE(GetKeyState(VK_RBUTTON)) || ( HIBYTE(GetKeyState(VK_LBUTTON)) && HIBYTE(GetKeyState(VK_CONTROL))) )
@@ -4687,6 +4691,8 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 							POINT ptMouse;
 							GetCursorPos(&ptMouse);
 							ScreenToClient(g_xMainWnd.GetSafehWnd(), &ptMouse);
+							ptMouse = mir3::ClientToCanvas(g_xMainWnd.GetSafehWnd(), ptMouse,
+							    g_xMainWnd.m_stDisplayInfo.wWidth, g_xMainWnd.m_stDisplayInfo.wHeight);
 							if ( HIBYTE(GetKeyState(VK_RBUTTON)) || ( HIBYTE(GetKeyState(VK_LBUTTON)) && HIBYTE(GetKeyState(VK_CONTROL))) )
 							{
 								m_bCanRun = TRUE;
@@ -4728,6 +4734,8 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 							POINT ptMouse;
 							GetCursorPos(&ptMouse);
 							ScreenToClient(g_xMainWnd.GetSafehWnd(), &ptMouse);
+							ptMouse = mir3::ClientToCanvas(g_xMainWnd.GetSafehWnd(), ptMouse,
+							    g_xMainWnd.m_stDisplayInfo.wWidth, g_xMainWnd.m_stDisplayInfo.wHeight);
 
 							if ( HIBYTE(GetKeyState(VK_RBUTTON)) || ( HIBYTE(GetKeyState(VK_LBUTTON)) && HIBYTE(GetKeyState(VK_CONTROL))) )
 							{
@@ -4822,6 +4830,8 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 							POINT ptMouse;
 							GetCursorPos(&ptMouse);
 							ScreenToClient(g_xMainWnd.GetSafehWnd(), &ptMouse);
+							ptMouse = mir3::ClientToCanvas(g_xMainWnd.GetSafehWnd(), ptMouse,
+							    g_xMainWnd.m_stDisplayInfo.wWidth, g_xMainWnd.m_stDisplayInfo.wHeight);
 							if ( HIBYTE(GetKeyState(VK_LBUTTON)) )
 							{
 								OnLButtonDown(ptMouse);
