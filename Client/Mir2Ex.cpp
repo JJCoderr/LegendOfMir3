@@ -1223,6 +1223,25 @@ public:
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
         }
+        if(groupPanel==318) {
+            auto& ui=g_xGameProc.m_xInterface;const HWND edit=g_xChatEditBox.GetSafehWnd();
+            FILE* report=fopen("input-window-move-check.txt","wb");
+            const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+            const auto moveCheck=[&]() {
+                SetWindowTextA(edit,"ÖÐÎÄÊäÈë");ShowWindow(edit,SW_SHOW);SetFocus(edit);
+                return CheckInputWindowMove();
+            };
+            ui.LayoutChat();check("compact_chat_moves",moveCheck());
+            ui.m_chatExpanded=true;ui.LayoutChat();check("expanded_chat_moves",moveCheck());
+            ui.OpenNameDialog(TradeWire::QuantityDialog);check("dialog_moves",moveCheck());
+            ui.FinishNotice(CLICK_NO,false);ui.m_chatExpanded=false;ui.LayoutChat();
+            ShowWindow(edit,SW_HIDE);RECT window;GetWindowRect(g_xMainWnd.GetSafehWnd(),&window);
+            SetWindowPos(g_xMainWnd.GetSafehWnd(),nullptr,window.left+10,window.top+10,0,0,SWP_NOSIZE|SWP_NOZORDER|SWP_NOACTIVATE);
+            check("hidden_editor_stays_hidden",!IsWindowVisible(edit));
+            SetWindowPos(g_xMainWnd.GetSafehWnd(),nullptr,window.left,window.top,0,0,SWP_NOSIZE|SWP_NOZORDER|SWP_NOACTIVATE);
+            ui.OpenNameDialog(TradeWire::QuantityDialog);SetWindowTextA(edit,"23");
+            if(report) fclose(report);mouse={790,430};capturePath="input-window-moved.bmp";
+        }
         if(groupPanel>=313 && groupPanel<=315) {
             auto& ui=g_xGameProc.m_xInterface;auto& mail=ui.m_xMailWnd;
             FILE* report=fopen("panel-editor-check.txt","wb");
@@ -3787,6 +3806,7 @@ public:
             if ((short)HIWORD(wp)>0) ui.OnScrollDown();
             else if ((short)HIWORD(wp)<0) ui.OnScrollUp();
             return 0;
+        case WM_MOVE: return g_xGameProc.OnMove(wp,lp);
         case WM_COMMAND:
         case WM_CTLCOLOREDIT:
             return g_xGameProc.DefMainWndProc(window,message,wp,lp);
@@ -3851,6 +3871,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=consignment-editor-restored")==0 ? 315 :
         strcmp(lpCmdLine,"--preview=creation-return-cancelled")==0 ? CharacterInteractionPreview::ReturnCancelled :
         strcmp(lpCmdLine,"--preview=creation-return-created")==0 ? CharacterInteractionPreview::ReturnCreated :
+        strcmp(lpCmdLine,"--preview=input-window-moved")==0 ? 318 :
         strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
         strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
         strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :

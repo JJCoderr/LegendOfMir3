@@ -1789,12 +1789,10 @@ LRESULT CGameProcess::OnSysKeyUp(WPARAM wParam, LPARAM lParam)
 
 LRESULT CGameProcess::OnMove(WPARAM wParam, LPARAM lParam)
 {
-	g_xMainWnd.OnMove(wParam, lParam);
-	g_xChatEditBox.MoveScaled(
-			   g_xMainWnd.m_rcWindow.left+_INPUT_EDITWND_XPOS, 
-			   g_xMainWnd.m_rcWindow.top+_INPUT_EDITWND_YPOS, _INPUT_EDITWND_WIDTH, _INPUT_EDITWND_HEIGHT, TRUE);
-
-	return 0L;
+    const RECT previous=g_xMainWnd.m_rcWindow;
+    g_xMainWnd.OnMove(wParam,lParam);
+    g_xChatEditBox.Relocate(previous);
+    return 0L;
 }
 
 

@@ -1,4 +1,5 @@
 #pragma once
+#include "Common/InputMovePreview.h"
 struct LoginPreview {
     enum {First=249,Last=254};
     static void Reply(WORD opcode,int reason=0,WORD p0=0,WORD p1=0,WORD p2=0,const char* body="") {
@@ -15,6 +16,7 @@ struct LoginPreview {
         check("offline",process.m_offline && g_xClientSocket.m_sockClient==INVALID_SOCKET);
         check("announcement_resource",!process.m_announcement.rows.empty());
         check("initial_account",login.m_field==0 && login.m_editorVisible);
+        check("login_editor_window_move",CheckInputWindowMove());
         SetWindowTextA(edit,"1234567890123456789012345");g_xChatEditBox.Changed();
         check("account_byte_limit",GetWindowTextLengthA(edit)==LoginLayout::InputBytes);
         process.OnKeyDown(VK_TAB,0);

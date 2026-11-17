@@ -1686,3 +1686,10 @@ Interface鼠标按下/抬起/移动优先模态，键盘模态先于行会编辑
 - 只读盘点工作区GameInter与四归档：经典复刻RAR实际Mir3Server2610条；mir2x资源ZIP490624条只有同名MP3；Wood/DATA.zip4项人物WIL/WIX；服务器7z无目标素材命中。
 - 仍仅找到一套GameInter，哈希/帧尺寸已写Client/docs/gui-resource-inventory.md，原始证据out/gui-resource-audit.json等。公告原帧缩略图notice-source-frames.png已查看。未改资源或生产代码，因此未重复构建。
 - 已异步询问用户其他原版客户端本机路径，尚未得到答复。原影片缺失、公告版本对应仍未解决；可继续其他GUI核查，目标active。下一预览318。
+
+
+## 2026-11-17 窗口移动时输入布局
+- ChatEdit.Relocate按此前客户区计算输入框逻辑位置，游戏/登录/选角WM_MOVE统一重新定位；修复旧聊天位置重置和隐藏输入。空句柄初始化阶段返回，无类布局变化。
+- Common/InputMovePreview.h实际SetWindowPos验证相对位置/尺寸/内容/焦点/可见性，覆盖登录创建删除及三游戏输入态。新318 input-window-moved，下一319。
+- 七目标构建input-window-move-final.log；登录35+创建21+移动4+键盘34+模态27=121通过，6页图out/input-window-move，数量输入已查看。最后空句柄守卫后重跑登录/游戏启动，自启预览全停。
+- 未验证DPI/最小化/全屏切换。原影片和公告资源目录问题仍待用户答复，其他GUI可继续。

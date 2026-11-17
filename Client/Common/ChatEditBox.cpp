@@ -232,3 +232,15 @@ VOID CChatEdit::MoveScaled(INT x, INT y, INT width, INT height, BOOL repaint)
         DeleteObject(m_hFontChatEdit); m_hFontChatEdit = font; m_fontHeight = fontHeight;
     }
 }
+
+void CChatEdit::Relocate(const RECT& previousDisplay)
+{
+    if(!m_hChatEdit) return; // WM_MOVE can precede editor creation.
+    RECT editor;GetWindowRect(m_hChatEdit,&editor);
+    const int width=previousDisplay.right-previousDisplay.left,height=previousDisplay.bottom-previousDisplay.top;
+    const auto& display=g_xMainWnd.m_rcWindow;
+    const auto& logical=g_xMainWnd.m_stDisplayInfo;
+    MoveScaled(display.left+MulDiv(editor.left-previousDisplay.left,logical.wWidth,width),
+        display.top+MulDiv(editor.top-previousDisplay.top,logical.wHeight,height),
+        MulDiv(editor.right-editor.left,logical.wWidth,width),MulDiv(editor.bottom-editor.top,logical.wHeight,height),TRUE);
+}

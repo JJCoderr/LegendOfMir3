@@ -1,4 +1,5 @@
 #pragma once
+#include "Common/InputMovePreview.h"
 struct CharacterInteractionPreview {
     enum {First=289,Create=290,Female=291,Last=Female};
     static void Checks() {
@@ -37,6 +38,7 @@ struct CharacterInteractionPreview {
         FILE* report=fopen("creation-name-check.txt","wb");
         const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
         check("visible_focused",IsWindowVisible(edit) && GetFocus()==edit);
+        check("creation_editor_window_move",CheckInputWindowMove());
         check("name_limit",SendMessage(edit,EM_GETLIMITTEXT,0,0)==SelectionDialog::NameBytes);
         const auto text=[&](){char value[128]={};GetWindowTextA(edit,value,sizeof(value));return std::string(value);};
         SetWindowTextA(edit,"");SendMessageA(edit,EM_REPLACESEL,TRUE,(LPARAM)"1234567890123456");
@@ -74,7 +76,7 @@ struct CharacterInteractionPreview {
         check("delete_tab_keeps_text_focus",GetFocus()==edit && text()=="confirmation");
         SendMessage(edit,WM_CHAR,VK_SPACE,0);
         check("delete_space_cancels_selected",!p.m_xMsgBox.IsActive() && !p.IsWaiting() && !IsWindowVisible(edit));
-        p.OpenDeleteNotice();SendMessage(edit,WM_CHAR,VK_TAB,0);SendMessage(edit,WM_CHAR,VK_RETURN,0);
+        p.OpenDeleteNotice();check("delete_editor_window_move",CheckInputWindowMove());SendMessage(edit,WM_CHAR,VK_TAB,0);SendMessage(edit,WM_CHAR,VK_RETURN,0);
         check("delete_enter_cancels_selected",!p.m_xMsgBox.IsActive() && !p.IsWaiting());
         p.DeleteProc();p.Preview("create");g_bProcState=previousState;
         SetWindowTextA(edit,mode==NameAscii?"MirWarrior":mode==NameChinese?"传奇勇士":"再次创建");

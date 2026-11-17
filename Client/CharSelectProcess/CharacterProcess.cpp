@@ -434,8 +434,9 @@ LRESULT CCharacterProcess::OnMouseOn(WPARAM wParam, LPARAM lParam)
 LRESULT CCharacterProcess::OnWindowMove(WPARAM wParam,LPARAM lParam)
 {
 
-	ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
+    const RECT previous=g_xMainWnd.m_rcWindow;
 	g_xMainWnd.OnMove(wParam, lParam);
+    g_xChatEditBox.Relocate(previous);
 	return 0L;
 }
 
