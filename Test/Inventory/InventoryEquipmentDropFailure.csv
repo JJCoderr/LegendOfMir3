@@ -1,0 +1,32 @@
+﻿step,name,target,action,params,expect
+10,credentials ready,Client,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+20,wrong password,Client,session.login,account=mirtest;password=wrong,result.status=submitted
+30,login rejected,Client,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+40,dismiss rejection,Client,notice.dismiss,,result.status=submitted
+50,login,Client,session.login,account=mirtest;password=test123,result.status=submitted
+60,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+70,authenticated,Client,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+80,dismiss billing,Client,notice.dismiss,,result.status=submitted
+90,unknown server rejected,Client,session.select_server,name=MissingServer,error.code=-32002
+100,select server,Client,session.select_server,name=Mir3Local,result.status=submitted
+110,roster ready,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+120,unknown character rejected,Client,session.enter,name=MissingRole,error.code=-32002
+130,enter character,Client,session.enter,name=MirProbe01,result.status=submitted
+140,world ready,Client,state.wait,,"result.scene=world;result.map=""01"";result.hp=18"
+150,dismiss arrival,Client,notice.dismiss,,result.status=submitted
+160,items ready,Client,state.wait,,"result.input_delayed=false;result.notice=false;result.bag.0.id=1;result.bag_count=1;result.bag.0.upgrades=[1,2,3,4,5,6,7,8,9,10,11,12,13,14];result.bag.0.base_defence=[2,5];result.bag.0.base_magic_defence=[1,3];result.bag.0.base_attack=[0,0]"
+170,drop request,Client,item.drop,id=1,result.status=submitted
+180,failed drop restores armor,Client,state.wait,,result.drop_pending=false;result.bag_count=1;result.bag.0.id=1;result.ground_items=[];result.held_item=null
+190,failure acknowledgment,Client,wire.expect,message=SM_DROPITEM_FAIL;direction=received,count=1
+200,drop request,Client,item.drop,id=1,result.status=submitted
+210,failed drop restores armor,Client,state.wait,,result.drop_pending=false;result.bag_count=1;result.bag.0.id=1;result.ground_items=[];result.held_item=null
+220,failure acknowledgment,Client,wire.expect,message=SM_DROPITEM_FAIL;direction=received,count=2
+230,no ground broadcast,Client,wire.expect,message=SM_ITEMSHOW;direction=received;at_least=0,count=0
+240,ownership preserved,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='MirProbe01',rows=[[1]]
+250,no detached record,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='WEMADE',rows=[[0]]
+260,ready to save,Client,state.wait,,result.return_ready=true
+270,save,Client,session.return,,result.status=submitted
+280,saved,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+290,reenter,Client,session.enter,name=MirProbe01,result.status=submitted
+300,restored without duplicate,Client,state.wait,,result.scene=world;result.bag_count=1;result.bag.0.id=1;result.ground_items=[]
+310,coverage,Client,protocol.get,,

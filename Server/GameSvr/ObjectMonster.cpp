@@ -378,7 +378,7 @@ void CMonsterObject::ScatterBagItems()
     auto* general=m_xTGenItemRcd.GetHead();
     while(general) {
         auto* item=m_xTGenItemRcd.GetData(general);
-        DropItemDown(reinterpret_cast<_LPTUSERITEMRCD>(item),3,TRUE);
+        if (!DropItemDown(reinterpret_cast<_LPTUSERITEMRCD>(item),3,TRUE)) delete item;
         general=m_xTGenItemRcd.RemoveNode(general);
     }
 	_LPTUSERITEMRCD lptUserItemRcd = NULL;
@@ -391,8 +391,8 @@ void CMonsterObject::ScatterBagItems()
 		{
 			lptUserItemRcd = m_xTItemRcd.GetData(pListNode);
 
-			if (lptUserItemRcd)
-				DropItemDown(lptUserItemRcd, 3, FALSE);
+			if (lptUserItemRcd && !DropItemDown(lptUserItemRcd, 3, FALSE))
+				delete lptUserItemRcd;
 
 			pListNode = m_xTItemRcd.RemoveNode(pListNode);
 		}

@@ -553,8 +553,6 @@ BOOL CUserInfo::UserDropItem(int nItemIndex, char *pszMakeIndex)
 			{
 				if (m_pxPlayerObject->DropItemDown(lpTItemRcd, 2, FALSE))
 				{
-					m_pxPlayerObject->UpdateItemToDB(lpTItemRcd, _ITEM_ACTION_THROW);
-
 //					delete lpTItemRcd;
 					m_lpTItemRcd.RemoveNode(pListNode);
 

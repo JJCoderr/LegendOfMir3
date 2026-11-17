@@ -604,7 +604,17 @@ BOOL CCharObject::DropItemDown(_LPTUSERITEMRCD lpTItemRcd, int nRange, BOOL fIsG
 	int nX, nY;
 
 	m_pMap->GetDropPosition(m_nCurrX, m_nCurrY, nRange, nX, nY);
-	m_pMap->AddNewObject(nX, nY, OS_ITEMOBJECT, (VOID *)xpMapItem);
+    if (!m_pMap->AddNewObject(nX,nY,OS_ITEMOBJECT,xpMapItem)) {
+        delete xpMapItem;
+        return FALSE;
+    }
+    // Persist an owned equipment transfer before publishing the ground item.
+    if (!fIsGenItem && m_pUserInfo &&
+        !m_pUserInfo->m_pxPlayerObject->UpdateItemToDB(lpTItemRcd,_ITEM_ACTION_THROW)) {
+        m_pMap->RemoveObject(nX,nY,OS_ITEMOBJECT,xpMapItem);
+        delete xpMapItem;
+        return FALSE;
+    }
 
 	AddRefMsg(RM_ITEMSHOW, xpMapItem->wLooks, (int)xpMapItem, nX, nY, xpMapItem->szName);
 

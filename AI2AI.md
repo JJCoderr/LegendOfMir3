@@ -2297,3 +2297,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - Client RPC 的物品状态暴露 upgrades/base_defence/base_magic_defence/base_attack，来自实际回包。补强护甲CSV并新增 InventoryWeaponAttributes，验证穿脱、丢弃拾取、保存重登与武器发送裁剪但数据库不变。
 - Client/EIServer Release构建通过；护甲35、武器35、完整背包71、装备掉落41、普通物品耐久商店62，共244步通过。
 - 仍需：完整魔法/元素字段适配、附加属性参与角色能力、装备计价与库存/所有权事务。装备出售尚未开放。
+
+## 2026-11-18 装备丢弃持久化失败回滚
+
+- 复现装备丢弃数据库更新失败仍清空背包、广播地面物品的问题。DropItemDown 现在检查地图插入结果，并在广播前提交装备所有权更新；失败时撤销地面包装记录，保留原背包装备，由既有失败回包恢复客户端。
+- UserDropItem 不再重复更新数据库。怪物掉落失败时释放未移交的物品记录，正常掉落不走玩家装备所有权更新。
+- 新增 InventoryEquipmentDropFailure / InventoryEquipmentDropIgnored，分别注入SQL异常和零行更新，验证连续失败、无地面广播、所有权及重登无复制。修复前首个失败恢复断言复现背包缺项。
+- EIServer Release构建通过；两项故障各31步、完整背包71、武器属性35、装备掉落41、入库失败39，共248步通过。地图插入失败分支已处理但未单独注入验证；服务器崩溃后的地面库存恢复仍未实现。

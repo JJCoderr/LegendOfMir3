@@ -229,3 +229,5 @@ ShopDurability/MeatPrice/MeatPremium/OrePrice/OreMinimum/MaximumLoss/PowderPrice
 `Inventory/InventoryEquipmentAttributes.csv` 为装备的14个附加属性设置各不相同的值，经过真实客户端丢弃、拾取、保存与重登后检查数据库逐项保留，并检查当前/最大耐久。它覆盖了加载遗漏 FLD_VALUE14、转移 SQL 把 FLD_VALUE5 写成 VALUE6 的回归；不代表装备出售或全部附加属性显示已完成。
 
 装备回包状态新增 `upgrades`（14字节原始附加属性）、`base_defence`、`base_magic_defence`、`base_attack`，均读取客户端实际收到的100字节记录。InventoryEquipmentAttributes / InventoryWeaponAttributes 在背包、穿脱、丢弃拾取及重登时断言这些字段；武器模式5/6的强度附加值最多发送5，数据库原值不变。基础属性与附加属性分开发送，避免客户端提示把已合并值再次当作基础值。此处尚未覆盖所有魔法/元素字段或角色战斗能力中的附加值应用。
+
+`InventoryEquipmentDropFailure.csv` 用 SQLite 触发器拒绝装备转移更新；`InventoryEquipmentDropIgnored.csv` 用 RAISE(IGNORE) 使更新成功执行但影响零行。两者都验证连续两次丢弃收到失败回包、原背包实例恢复、无地面广播、数据库所有权保留和保存重登不复制装备。服务端在地面物品广播前检查持久化结果，失败则移除临时地面记录；普通物品仍沿用角色保存路径。这里不代表服务器崩溃时内存地面库存能够恢复。
