@@ -244,8 +244,14 @@ ShopDurability/MeatPrice/MeatPremium/OrePrice/OreMinimum/MaximumLoss/PowderPrice
 
 装备成交事务增加 `ShopEquipmentSaleGoldFailure`、`ShopEquipmentRebuyGoldFailure`、`ShopEquipmentCreateGoldFailure`、`ShopEquipmentCreateGoldIgnored`，分别在物品已写入事务后拒绝金币更新，检查物品与金币同时回滚；最后一项覆盖更新影响零行而不报SQL异常的路径。正常装备场景也在角色保存前读取数据库金币。
 
-重启验证运行 `python Test/verify_equipment_recovery.py --log-dir out/equipment-recovery`。脚本在出售、回购、新购成功后截断CSV，先强制终止测试服务器，再终止客户端，避免断线保存；随后复用同一数据库运行对应 `ShopEquipmentRecovery*.csv`，检查金币、物品数量、独立身份与归属。恢复CSV需要此前的运行状态，不能当作独立新环境场景。
+重启验证运行 `python Test/verify_equipment_recovery.py --log-dir out/equipment-recovery`。脚本在出售、回购、新购及两种混合交易完成后截断CSV，先强制终止测试服务器，再终止客户端，避免断线保存；随后复用同一数据库运行对应 `ShopEquipmentRecovery*.csv`，检查金币、物品数量、独立身份与归属。恢复CSV需要此前的运行状态，不能当作独立新环境场景。
 
 辅助启动器新增 `--resume-runtime out/rpc-xxx`：复用一个已停止的隔离环境，跳过SQL种子和资源覆盖，仍启动并清理自己的进程。恢复时使用该目录原有客户端与配置，以及 `--bin-dir` 中的服务器/Test.exe；保持两端版本一致。
 
 这只验证装备成交的数据库事务和进程重启恢复，不代表整个游戏世界已具备统一崩溃恢复：商人库存未持久化，其他未保存的普通物品、地图及角色状态仍需统一处理。SQL Server事务路径尚未实测。
+
+混合交易：`ShopMixedTrade` 先购买普通物品再购买装备，`ShopMixedSale` 先购买普通物品再出售装备。装备成交事务现在同时替换该角色的普通物品快照，使用 GeneralItemKey 编码当前属性，保留同属性重复记录及16位耐久，并检查其他角色数据不变。
+
+`ShopMixedDeleteFailure/DeleteIgnored/InsertFailure/InsertIgnored` 覆盖快照删除/插入报错和忽略操作，失败后装备、金币及旧普通物品快照一起回滚。删除后查询剩余记录，防止忽略删除后继续插入形成重复；插入必须影响一行。
+
+`verify_equipment_recovery.py` 现执行五种交易恢复，混合场景分别使用 `ShopMixedRecovery` / `ShopMixedSaleRecovery`。普通物品交易本身仍沿用原有保存时机；本次同步的是装备成交时的普通物品和金币快照，尚未覆盖全部角色属性、装备栏引用或商人库存持久化。

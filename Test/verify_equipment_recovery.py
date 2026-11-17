@@ -30,10 +30,14 @@ def main():
 
     # launch_csv terminates its own server before its clients in finally. These cutoffs occur
     # before session.return, so neither phase relies on the character-save request.
-    for name, last in [('Sold', '282'), ('Rebuy', '385'), ('New', '462')]:
-        runtime = run(name+'-before', 'ShopEquipment.csv', '--to', last)
-        run(name+'-after', 'ShopEquipmentRecovery'+name+'.csv', '--resume-runtime', runtime)
-    print('PASS: sale, repurchase and new purchase survive process termination before character save')
+    cases = [(name, 'ShopEquipment.csv', last, 'ShopEquipmentRecovery'+name+'.csv')
+             for name, last in [('Sold', '282'), ('Rebuy', '385'), ('New', '462')]]
+    cases += [('MixedBuy', 'ShopMixedTrade.csv', None, 'ShopMixedRecovery.csv'),
+              ('MixedSale', 'ShopMixedSale.csv', None, 'ShopMixedSaleRecovery.csv')]
+    for name, scenario, last, recovery in cases:
+        runtime = run(name+'-before', scenario, *(['--to', last] if last else []))
+        run(name+'-after', recovery, '--resume-runtime', runtime)
+    print('PASS: five trade scenarios survive server termination before character save')
 
 
 if __name__ == '__main__':

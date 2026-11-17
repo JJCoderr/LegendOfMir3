@@ -2319,3 +2319,13 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 增加出售/回购/新购金币更新拒绝与零行更新CSV；正常交易在角色保存前验证数据库金币。15项联调与既有物品失败/争买回归共768步通过，EIServer Release重建通过。
 - launch_csv.py 新增 --resume-runtime，跳过fixture重置；清理时先终止自有服务器再终止客户端，排除断线保存。verify_equipment_recovery.py 分别在出售、回购、新购后截断CSV并强制终止，再同库启动执行Recovery系列CSV。最终3次重启（6个执行段177步）全部通过。
 - 已验证的是装备成交事务及进程重启，不是整个世界的统一恢复。商人库存未持久化；其他未保存普通物品/角色/地图状态与经济快照仍需统一，SQL Server事务路径未实测。
+
+
+## 2026-11-18 普通物品与装备交易持久化检查点
+
+- TradeItemToDB 在装备记录、金币同一事务内保存当前普通物品快照，避免先买药水再交易装备时只保存金币而丢失药水。沿用 GeneralItemKey 编码，保留重复数量和 16 位耐久。
+- 删除后检查目标角色旧行已清空；删除/插入 ABORT 或 IGNORE 均回滚装备、金币和普通物品快照。其他角色记录保留。
+- Test/Shop 新增 MixedTrade、MixedSale、四类快照故障和两个重启恢复 CSV；verify_equipment_recovery.py 扩展为五种成交后强制终止服务器再恢复的场景。
+- EIServer Release 构建通过。11 个场景最终通过 508 项检查；五种重启场景共 286 项检查通过。证据在 out/csv-validation/snapshot-*.log 和 snapshot-recovery/。
+- 双客户端 ShopEquipmentShared 首轮在步骤 700 返回选角等待角色列表超时，交易和数据库断言已通过；复跑 82 项通过。保留首轮日志 snapshot-ShopEquipmentShared.log。CharacterProcess::BeginRosterWait 会显示 notice=true、waiting=true，因此不能把该现象当作业务错误提示；偶发角色列表等待仍待定位，不宣称已修复。
+- 范围：普通物品单独交易仍沿用原保存时机，此检查点不包括商店库存、角色其他属性或装备槽位的完整重启恢复。ODBC 后端未做运行验证。

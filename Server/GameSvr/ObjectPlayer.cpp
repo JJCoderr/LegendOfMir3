@@ -2,6 +2,7 @@
 #include "MagicWire.h"
 #include "../../Shared/Mir3ChatOptions.h"
 #include "../Def/Mir3Ability.h"
+#include "../Def/GeneralItemKey.h"
 
 namespace {
 std::string ItemSqlText(const char* text) {
@@ -507,6 +508,25 @@ bool CPlayerObject::TradeItemToDB(_LPTUSERITEMRCD item, int action, int gold)
         std::string query="UPDATE TBL_CHARACTER SET FLD_GOLD="+std::to_string(gold)+
             " WHERE FLD_LOGINID="+ItemSqlText(m_pUserInfo->m_szUserID)+" AND FLD_CHARNAME="+ItemSqlText(m_pUserInfo->m_szCharName);
         saved=record && record->Execute(&query[0]) && record->GetRowCount()==1;
+        // The balance includes earlier ordinary-item actions in this session.
+        // Commit their current inventory snapshot with the same economic checkpoint.
+        const std::string character=ItemSqlText(m_pUserInfo->m_szCharName);
+        if (saved) {
+            query="DELETE FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME="+character;
+            saved=record->Execute(&query[0]);
+        }
+        if (saved) {
+            query="SELECT COUNT(*) AS REMAINING FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME="+character;
+            saved=record->Execute(&query[0]) && record->Fetch() && atoi(record->Get("REMAINING"))==0;
+        }
+        for (auto node=m_pUserInfo->m_lpTGenItemRcd.GetHead();saved && node;node=m_pUserInfo->m_lpTGenItemRcd.GetNext(node)) {
+            const auto* general=m_pUserInfo->m_lpTGenItemRcd.GetData(node);
+            char key[GeneralItemKey::Size+1];
+            GeneralItemKey::Encode(key,general->nStdIndex,general->nDura,general->nDuraMax);
+            query="INSERT INTO TBL_CHARACTER_GENITEM (FLD_LOGINID,FLD_CHARNAME,FLD_ITEMINDEX) VALUES ("+
+                ItemSqlText(m_pUserInfo->m_szUserID)+","+character+","+ItemSqlText(key)+")";
+            saved=record->Execute(&query[0]) && record->GetRowCount()==1;
+        }
         if (record) g_pConnGame->DestroyRecordset(record);
     }
     saved=g_pConnGame->EndTransaction(saved) && saved;
