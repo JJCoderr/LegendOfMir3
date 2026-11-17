@@ -2349,3 +2349,12 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 分片双客户端三轮返回/重进 82 项通过（LoginGate 254 次单字节写入，SelGate 784 次）；无代理登录 24 项通过，共 130 项。日志 out/csv-validation/login-fragments-final、login-return-fragments、login-gate-normal.log。
 - EIServer Release 和 test_gate_frames 构建通过，36 种分片组合与残包续接通过。代理单字节写入不能保证 Windows 每次 recv 只读一个字节，精确边界覆盖由直接调用产品解析器的单元测试完成。
 - 尚未审计网关发送短写、LoginSvr/DBSvr 反向输入拆包，以及客户端非游戏接收缓冲累加逻辑；仍是后续网络链路核查范围。
+
+
+## 2026-11-18 登录与选角请求双向分片回归
+
+- Test/verify_gate_stream.py 新增 --direction requests|replies|both，默认 replies 保持原行为；每条链路分别计数请求/回包的单字节转发，所选方向必须有数据。两端 TCP_NODELAY 仅用于测试代理。
+- 双向分片运行 Login 24、Character 34、CharacterDelete 38、LoginReturnShared 82 项，合计 178 项通过。另运行 requests-only 和默认 replies-only 各 24 项，全部 226 项通过。日志 out/csv-validation/gate-bidirectional-*、gate-requests-login、gate-replies-login。
+- 双客户端反复进出时，LoginGate 转发请求 335 / 回包 254 字节，SelGate 请求 940 / 回包 784 字节；各三轮角色列表归属与精确协议计数通过。
+- 阅读 LoginSvr/DBSvr 的 ExtractPacket：按实际 bufLen 找 $，提取后保留残包；本轮未复现请求拆包错误，未修改服务端业务代码。不代表覆盖所有负载、长包或异常连接情形。
+- 后续：Client/Common/ClientSocket.cpp 非游戏 FD_READ 循环用累计 nCurRecv 再累加 m_nCurRecv，若同一循环多次短读会重复计数；同时 recv 请求未按缓冲剩余空间约束、残包移动使用 memcpy。应单独复现并验证客户端直连网关的分片接收，不能用本轮网关上游代理替代该覆盖。

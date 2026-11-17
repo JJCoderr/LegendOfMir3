@@ -277,3 +277,10 @@ python Test/verify_gate_stream.py --scenario Test/Login/LoginReturnShared.csv --
 ```
 
 代理只改变测试环境的传输分段，不修改游戏时钟、业务回包或角色数据。默认单步骤等待 15 秒，包含正常页面过渡动画；不宜将完整登录场景的等待期限缩短到 2 秒。
+
+
+分片方向可用 `--direction requests|replies|both` 选择，默认 `replies`。`requests` 检查网关到 LoginSvr/DBSvr 的请求分片，`both` 同时分片请求和回包。程序分别输出每条链路的请求/回包单字节写入次数，并要求所选方向实际传输过数据。例如：
+
+```powershell
+python Test/verify_gate_stream.py --direction both --scenario Test/Character/CharacterDelete.csv --log-dir out/character-delete-fragments
+```
