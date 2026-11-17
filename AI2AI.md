@@ -2329,3 +2329,13 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - EIServer Release 构建通过。11 个场景最终通过 508 项检查；五种重启场景共 286 项检查通过。证据在 out/csv-validation/snapshot-*.log 和 snapshot-recovery/。
 - 双客户端 ShopEquipmentShared 首轮在步骤 700 返回选角等待角色列表超时，交易和数据库断言已通过；复跑 82 项通过。保留首轮日志 snapshot-ShopEquipmentShared.log。CharacterProcess::BeginRosterWait 会显示 notice=true、waiting=true，因此不能把该现象当作业务错误提示；偶发角色列表等待仍待定位，不宣称已修复。
 - 范围：普通物品单独交易仍沿用原保存时机，此检查点不包括商店库存、角色其他属性或装备槽位的完整重启恢复。ODBC 后端未做运行验证。
+
+
+## 2026-11-18 选角网关回包分片修复
+
+- 历史 snapshot-ShopEquipmentShared 失败日志中，DBSvr 已收到第二客户端 CM_QUERYCHR 并发送正确 SM_QUERYCHR；客户端仍等待列表。定位 SelGate::ThreadFuncForMsg 的残包被 nDataPos=0 覆盖，且 strlen/memlen 会截断带 NUL 填充的合并回包。
+- SelGate 接收队列记录实际 recv 长度；GateFrames 保留未完成的 %...$ 帧，按序取出多帧并跳过帧间填充。移除旧固定缓冲残包拼接。处理 recv<=0 和入队失败时释放本次缓冲。
+- 根目录 Test/Login/GateFrames.cpp 直接调用产品拆包实现，验证 36 种分片组合及残包续接。EIServer 与 test_gate_frames Release 构建通过。
+- 新增 LoginReturnShared.csv：两个真实客户端各连续三轮返回选角/重新进图，每轮检查角色归属及查询/回包精确次数。82 项通过；ShopEquipmentShared 两轮各 82 项、Character 34 项、CharacterDelete 38 项通过，合计 318 项。日志 out/csv-validation/gate-*.log。
+- 新 CSV 首次编写误假定每次重进都显示入图提示，实际仅首次显示，已按观察修正；保留初稿失败日志 gate-return-shared.log。最终日志 gate-return-shared-final.log。
+- 历史失败未采集 TCP 字节流，不能证明偶发等待唯一成因；本次证明并修复拆包确定性缺陷。LoginGate 存在相似旧拆包实现，尚未迁移；本轮只改 SelGate。其他网关发送短写/会话线程问题未审计。

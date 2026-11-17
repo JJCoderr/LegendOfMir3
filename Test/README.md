@@ -255,3 +255,14 @@ ShopDurability/MeatPrice/MeatPremium/OrePrice/OreMinimum/MaximumLoss/PowderPrice
 `ShopMixedDeleteFailure/DeleteIgnored/InsertFailure/InsertIgnored` 覆盖快照删除/插入报错和忽略操作，失败后装备、金币及旧普通物品快照一起回滚。删除后查询剩余记录，防止忽略删除后继续插入形成重复；插入必须影响一行。
 
 `verify_equipment_recovery.py` 现执行五种交易恢复，混合场景分别使用 `ShopMixedRecovery` / `ShopMixedSaleRecovery`。普通物品交易本身仍沿用原有保存时机；本次同步的是装备成交时的普通物品和金币快照，尚未覆盖全部角色属性、装备栏引用或商人库存持久化。
+
+
+### 选角回包与连续返回
+
+`Login/LoginReturnShared.csv` 使用两个真实客户端，各执行三轮返回选角和重新进图，逐轮检查账号对应的角色列表，以及 CM_QUERYCHR / SM_QUERYCHR 精确次数。执行：
+
+```powershell
+python Test/launch_csv.py Test/Login/LoginReturnShared.csv --clients 2 --timeout-ms 15000 --log out/login-return-shared.log
+```
+
+网关 TCP 分片由 `Test/Login/GateFrames.cpp` 验证：遍历每个分割位置、逐字节输入、带 NUL 填充的连续多包、控制包和残包续接。构建 `test_gate_frames` 后运行 `build-eiserver/Release/test_gate_frames.exe`。测试直接调用选角网关使用的拆包实现；真实 CSV 验证两端流程，但不保证操作系统实际生成某种 TCP 分片。

@@ -8,3 +8,5 @@ set_target_properties(Test PROPERTIES DEBUG_POSTFIX "")
 add_executable(test_general_item_key EXCLUDE_FROM_ALL Inventory/GeneralItemKey.cpp)
 
 add_executable(test_merchant_pricing EXCLUDE_FROM_ALL Shop/MerchantPricing.cpp)
+
+add_executable(test_gate_frames EXCLUDE_FROM_ALL Login/GateFrames.cpp)
