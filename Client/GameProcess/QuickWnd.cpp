@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "ItemUseIds.h"
 #include "Common/LegacyPanel.h"
 #include <cmath>
 #include "Common/LoginMessages.h"
@@ -121,4 +122,38 @@ void CQuickWnd::ShowQuickWnd()
         TextOutA(dc,box.left,box.top,text.data(),int(text.size())); RestoreDC(dc,saved);
     }
     SelectObject(dc,old); DeleteObject(font); surface->ReleaseDC(dc);
+}
+
+void CQuickWnd::Notice(int resource,int slot,const char* name)
+{
+    if(resource<=0) return;
+    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+    std::string text=captions.Get(resource);
+    auto at=text.find("%s");if(at!=std::string::npos) text.replace(at,2,name);
+    at=text.find("%d");if(at!=std::string::npos) text.replace(at,2,std::to_string(slot+1));
+    g_xGameProc.m_xInterface.MsgAdd(11861940,0,const_cast<char*>(text.c_str()));
+}
+void CQuickWnd::Activate(int slot,DWORD now,bool mouse)
+{
+    if(slot<0 || slot>=_MAX_BELT_ITEM) return;
+    auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;auto& held=ui.m_stCommonItem;
+    if(bag.UseBlocked()) return;
+    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+    const auto accepts=[&]() {return held.bSetted && !held.bWaitResponse && !held.bIsEquipItem &&
+        strcmp(held.xItem.Name(),captions.Get(ItemUse::GoldName).c_str()) &&
+        (held.xItem.m_stItemInfo.stStdItem.bStdMode==ItemUse::Medicine || held.xItem.m_stItemInfo.stStdItem.bStdMode==ItemUse::OtherMedicine);};
+    if(mouse) {
+        if(accepts() && bag.UseAllowed(held.xItem,now-bag.m_lastUse)) bag.RequestUse(now);
+        else Notice(held.bSetted?ItemUse::Unavailable:ItemUse::EmptySlot,slot,held.xItem.Name());
+        return;
+    }
+    const bool allowed=slots[slot].present?bag.UseAllowed(slots[slot].item,now-bag.m_lastUse):now-bag.m_lastUse>ItemUse::MedicineMs;
+    if(!allowed || held.bWaitResponse) {Notice(slots[slot].present?ItemUse::Unavailable:ItemUse::EmptySlot,slot,held.xItem.Name());return;}
+    const std::string previous=held.bSetted?held.xItem.Name():"";
+    if(!slots[slot].present && accepts()) {const int duplicate=Find(held.xItem.Name());if(duplicate>=0) slots[duplicate]=Slot{};}
+    Notice(Release(slot),slot,previous.c_str());
+    if(!held.bSetted || held.bWaitResponse || held.bIsEquipItem || !strcmp(held.xItem.Name(),captions.Get(ItemUse::GoldName).c_str())) {
+        Notice(slots[slot].present?ItemUse::Unavailable:ItemUse::EmptySlot,slot,previous.c_str());return;
+    }
+    bag.RequestUse(now);
 }

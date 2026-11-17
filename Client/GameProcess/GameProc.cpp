@@ -3073,35 +3073,10 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 
 				break;
 			}
-			case SM_EAT_OK:
-			{
-                if (m_xInterface.m_stCommonItem.bSetted) {
-                    const auto& used=m_xInterface.m_stCommonItem.xItem.m_stItemInfo.stStdItem;
-                    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
-                    std::string name=m_xInterface.m_stCommonItem.xItem.Name();
-                    const std::string& base=captions.Get(1409);
-                    for(int i=0;i<10;++i) if(name==base+std::to_string(i)) {name=base;break;}
-                    std::string message=captions.Get(1464);
-                    const auto at=message.find("%s");if(at!=std::string::npos) message.replace(at,2,name);
-                    m_xInterface.MsgAdd(0xffffff,33023,const_cast<char*>(message.c_str()));
-                    g_xSound.PlayUseItemEffect(used.bStdMode);
-                }
-				m_xInterface.m_xInventoryWnd.AddNewBeltItem(&m_xInterface.m_stCommonItem);
-				ZeroMemory(&m_xInterface.m_stCommonItem, sizeof(COMMONITEMSET));
-				break;
-			}
-			case SM_EAT_FAIL:
-			{
-				if ( m_xInterface.m_stCommonItem.bSetted )
-				{
-					if ( !m_xInterface.m_stCommonItem.bIsBeltItem )
-						m_xInterface.m_xInventoryWnd.AddInvenItem(m_xInterface.m_stCommonItem.xItem, m_xInterface.m_stCommonItem.xItem.m_shCellNum, TRUE);
-					else
-						m_xInterface.m_xInventoryWnd.AddBeltItem(m_xInterface.m_stCommonItem.xItem, m_xInterface.m_stCommonItem.xItem.m_shCellNum, TRUE);
-				}
-				ZeroMemory(&m_xInterface.m_stCommonItem, sizeof(COMMONITEMSET));
-				break;
-			}
+            case SM_EAT_OK:
+            case SM_EAT_FAIL:
+                m_xInterface.m_xInventoryWnd.ApplyUseReply(tdm.wIdent,tdm.wParam);
+                break;
 			case SM_TAKEON_OK:
 			{
 				FEATURE stFeature;

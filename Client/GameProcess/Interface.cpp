@@ -2182,6 +2182,7 @@ BOOL CInterface::OnLButtonDoubleClick(POINT ptMouse)
         }
         return TRUE;
     }
+    if (GetWindowInMousePos(ptMouse)==_WND_ID_QUICK) { m_xQuickWnd.Activate(m_xQuickWnd.SlotAt(ptMouse),GetTickCount(),true); return TRUE; }
     if (GetWindowInMousePos(ptMouse)==_WND_ID_STORE) { m_xStoreWnd.OnDoubleClick(ptMouse); return TRUE; }
     if (GetWindowInMousePos(ptMouse)==_WND_ID_SKILL && m_xSkillWnd.OpenKeyMenu(ptMouse)) {
         WindowFocusChangedAndSetReadyMove(_WND_ID_SKILL,ptMouse); m_bMoveFocusedWnd=FALSE;
@@ -2210,6 +2211,10 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
     if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) {
         if (!(lParam & (1L << 30))) FinishNotice(m_xMsgBox.OnKeyDown(wParam),false);
+        return TRUE;
+    }
+    if(wParam>='1' && wParam<='6' && !(wParam<='2' && (GetKeyState(VK_SHIFT)&0x8000))) {
+        if(!(lParam & (1L<<30))) m_xQuickWnd.Activate(int(wParam-'1'),GetTickCount());
         return TRUE;
     }
     if(IsTopWindow(ConsignmentLayout::BrowserId) && m_xConsignmentWnd.KeyDown(wParam)) return TRUE;

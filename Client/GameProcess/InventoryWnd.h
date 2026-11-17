@@ -39,6 +39,12 @@ protected:
     DWORD m_scrollTick=0;
 
 public:
+    DWORD m_lastUse=0,m_lastRelease=0;
+    bool m_usePending=false;
+    static bool UseAllowed(const CItem& item,DWORD elapsed);
+    bool UseBlocked() const;
+    bool RequestUse(DWORD now);
+    bool ApplyUseReply(WORD opcode,WORD remaining);
     bool ClosePressed() const { return m_closePressed; }
 	ITEMSET		m_stInventoryItem[_MAX_INVEN_ITEM];
 	ITEMSET		m_stBeltItem[_MAX_BELT_ITEM];

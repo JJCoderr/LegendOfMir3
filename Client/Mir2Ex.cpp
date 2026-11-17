@@ -2,7 +2,7 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewInterfaceAudio=212; constexpr int PreviewNotice=210,PreviewNoticeMoved=211; constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewItemUse=213,PreviewItemUseRestored=214; constexpr int PreviewInterfaceAudio=212; constexpr int PreviewNotice=210,PreviewNoticeMoved=211; constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -70,7 +70,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewInterfaceAudio) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewItemUseRestored) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1906,6 +1906,61 @@ public:
 
 
 
+        if(groupPanel==PreviewItemUse || groupPanel==PreviewItemUseRestored) {
+            auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;auto& quick=ui.m_xQuickWnd;auto& held=ui.m_stCommonItem;
+            auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];icons.NewLoad("./Data/Inventory.wil");
+            int icon=0;for(;icon<100;++icon) if(icons.NewSetIndex(icon) && icons.m_lpstNewCurrWilImageInfo->shWidth>0 && icons.m_lpstNewCurrWilImageInfo->shWidth<=38 && icons.m_lpstNewCurrWilImageInfo->shHeight<=38) break;
+            CLIENTITEMRCD record={};record.nMakeIndex=2345;record.stStdItem.wLooks=icon;record.stStdItem.bStdMode=0;lstrcpyA(record.stStdItem.szName,"QuickMedicine");
+            CItem item;item.SetItem(record,0);item.m_stackMode=3;item.SetCount(8);
+            const auto reset=[&]() {bag.DeleteAllInvenItem();for(auto& slot:quick.slots) slot=CQuickWnd::Slot{};quick.heldSlot=-1;quick.heldReference=CQuickWnd::Slot{};ZeroMemory(&held,sizeof(held));bag.m_usePending=false;bag.m_lastUse=bag.m_lastRelease=0;bag.AddInvenItem(item,0,TRUE);quick.slots[0]=CQuickWnd::FromItem(item);};
+            const auto receive=[&](WORD opcode,WORD remaining) {_TDEFAULTMESSAGE message={};message.wIdent=opcode;message.wParam=remaining;char encoded[64]={};fnEncodeMessage(&message,encoded,sizeof(encoded));g_xGameProc.OnSocketMessageRecieve(encoded);};
+            const auto capture=[&](auto action,DWORD tick,bool expected) {
+                SOCKET receiver=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP),sender=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+                sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);bind(receiver,(sockaddr*)&address,sizeof(address));int size=sizeof(address);getsockname(receiver,(sockaddr*)&address,&size);connect(sender,(sockaddr*)&address,sizeof(address));
+                DWORD timeout=60;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));const SOCKET saved=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;action();g_xClientSocket.m_sockClient=saved;
+                char wire[256]={};const int length=recv(receiver,wire,sizeof(wire)-1,0);closesocket(sender);closesocket(receiver);
+                if(!expected) return length==SOCKET_ERROR;
+                if(length<=19) return false;_TDEFAULTMESSAGE header={};fnDecodeMessage(&header,wire+2);
+                const bool stamp=tick?MAKELONG(header.wParam,header.wTag)==tick:MAKELONG(header.wParam,header.wTag)!=0;
+                char name[128]={};wire[length-1]=0;fnDecode6BitBuf(wire+2+DEFBLOCKSIZE,name,sizeof(name));
+                return header.wIdent==CM_EAT && header.nRecog==2345 && stamp && !header.wSeries && !strcmp(name,"QuickMedicine");
+            };
+            reset();const DWORD tick=0x12345678;
+            const bool wire=capture([&](){quick.Activate(0,tick);},tick,true) && bag.m_usePending && held.bWaitResponse && !quick.slots[0].present && bag.m_stInventoryItem[0].bSetted;
+            const bool duplicate=capture([&](){quick.Activate(0,tick+3000);},0,false);
+            receive(SM_EAT_OK,5);const bool remaining=quick.slots[0].count==5 && bag.m_stInventoryItem[0].xItem.m_count==5 && !held.bSetted && !bag.m_usePending;
+            DWORD playing=0;LONG volume=0;const bool useSound=SUCCEEDED(g_xSound.InspectInterfaceAudio(false,playing,volume)) && (playing&DSBSTATUS_PLAYING);
+            const auto history=ui.m_chatHistory.size();receive(SM_EAT_OK,5);const bool repeated=ui.m_chatHistory.size()==history;
+            const bool boundary=capture([&](){quick.Activate(0,tick+2000);},0,false);
+            const bool next=capture([&](){quick.Activate(0,tick+2001);},tick+2001,true);receive(SM_EAT_FAIL,0);
+            const bool failed=quick.slots[0].count==5 && bag.m_stInventoryItem[0].xItem.m_count==5 && !held.bSetted;
+            reset();quick.slots[0].item.SetCount(1);quick.slots[0].count=1;bag.m_stInventoryItem[0].xItem.SetCount(1);
+            quick.Activate(0,3000);receive(SM_EAT_OK,0);const bool last=!quick.slots[0].present && !bag.m_stInventoryItem[0].bSetted;
+            reset();bag.m_lastUse=0xfffffff0;const bool wrap=capture([&](){quick.Activate(0,0x800);},0x800,true);receive(SM_EAT_FAIL,0);
+            CItem fast=item;fast.m_stItemInfo.stStdItem.wLooks=20;
+            const bool fastBoundary=!bag.UseAllowed(fast,1000) && bag.UseAllowed(fast,1001) && !bag.UseAllowed(item,2000) && bag.UseAllowed(item,2001);
+            reset();const bool key=capture([&](){ui.OnKeyDown('1',0);},0,true);const bool keyup=capture([&](){ui.OnKeyUp('1',0);},0,false);receive(SM_EAT_FAIL,0);
+            bag.m_lastUse=0;const bool repeat=capture([&](){ui.OnKeyDown('1',1L<<30);},0,false);
+            ui.m_xExchangeWnd.pendingSlot=0;const bool trade=capture([&](){quick.Activate(0,4000);},0,false);ui.m_xExchangeWnd.pendingSlot=-1;
+            ui.m_xStatusWnd.m_stTakeOnItemSet.bSetted=TRUE;const bool equipment=capture([&](){quick.Activate(0,4000);},0,false);ui.m_xStatusWnd.m_stTakeOnItemSet.bSetted=FALSE;
+            reset();quick.Release(0);const bool mouse=capture([&](){quick.Activate(0,4000,true);},4000,true);receive(SM_EAT_FAIL,0);
+            reset();bag.SetCommonFromInven(0,&held);const bool bagRequest=capture([&](){bag.RequestUse(6000);},6000,true);receive(SM_EAT_OK,3);
+            const bool bagRemaining=bag.m_stInventoryItem[0].xItem.m_count==3 && quick.slots[0].count==3 && !held.bSetted;
+            const bool shared=capture([&](){quick.Activate(0,8000);},0,false);
+            reset();bag.SetCommonFromInven(0,&held);bag.RequestUse(9000);receive(SM_EAT_FAIL,0);const bool bagFailed=bag.m_stInventoryItem[0].xItem.m_count==8 && !held.bSetted;
+            reset();quick.Activate(0,10000);for(auto& slot:quick.slots) slot=CQuickWnd::FromItem(item);
+            receive(SM_EAT_FAIL,0);const bool full=held.bSetted && bag.m_usePending;quick.slots[2]=CQuickWnd::Slot{};receive(SM_EAT_FAIL,0);const bool fallback=quick.slots[2].present && !held.bSetted;
+            reset();ui.ShowNotice(1066);const bool modal=capture([&](){g_xGameProc.OnKeyDown('1',0);g_xGameProc.OnKeyUp('1',0);},0,false);ui.m_xMsgBox.HideMessageBox();
+            BYTE keys[256]={},savedKeys[256]={};GetKeyboardState(savedKeys);memcpy(keys,savedKeys,sizeof(keys));keys[VK_SHIFT]=0x80;SetKeyboardState(keys);
+            const bool shift=capture([&](){ui.OnKeyDown('1',0);},0,false);SetKeyboardState(savedKeys);
+            reset();const POINT bagPoint={bag.m_rcWnd.left+36,bag.m_rcWnd.top+79};bag.m_lastRelease=GetTickCount()-301;
+            bag.OnLButtonUp(&held,bagPoint);
+            const bool bagClick=capture([&](){bag.OnLButtonUp(&held,bagPoint);},0,true);receive(SM_EAT_FAIL,0);
+            reset();quick.Activate(0,12000);receive(groupPanel==PreviewItemUseRestored?SM_EAT_FAIL:SM_EAT_OK,3);
+            ui.WindowActivate(_WND_ID_INVENTORY);ui.WindowActivate(_WND_ID_QUICK);
+            capturePath=groupPanel==PreviewItemUseRestored?"item-use-restored.bmp":"item-use-chain.bmp";
+            if(FILE* report=fopen("item-use-chain-check.txt","wb")) {fprintf(report,"wire=%d pending_duplicate=%d remaining=%d repeated_reply=%d boundary=%d next=%d failed=%d last=%d wrap=%d fast_boundary=%d key=%d keyup=%d repeat=%d trade=%d equipment=%d mouse=%d bag_request=%d bag_remaining=%d shared=%d bag_failed=%d full=%d fallback=%d modal=%d shift=%d bag_click=%d use_sound=%d\n",wire,duplicate,remaining,repeated,boundary,next,failed,last,wrap,fastBoundary,key,keyup,repeat,trade,equipment,mouse,bagRequest,bagRemaining,shared,bagFailed,full,fallback,modal,shift,bagClick,useSound);fclose(report);}
+        }
         if(groupPanel==PreviewInterfaceAudio) {
             auto& ui=g_xGameProc.m_xInterface;auto& options=ui.m_xOptionWnd;
             options.LoadAudioOptions(nullptr);ui.WindowActivate(_WND_ID_OPTION);
@@ -2919,7 +2974,7 @@ public:
 
         if(groupPanel==119) {
             auto& ui=g_xGameProc.m_xInterface;
-            ui.m_stCommonItem.bSetted=TRUE;ui.m_stCommonItem.bIsBeltItem=FALSE;
+            ui.m_stCommonItem.bSetted=TRUE;ui.m_stCommonItem.bIsBeltItem=FALSE;ui.m_stCommonItem.bWaitResponse=TRUE;ui.m_xInventoryWnd.m_usePending=true;
             ui.m_stCommonItem.xItem.m_stItemInfo.stStdItem.bStdMode=1;
             CLoginMessages captions;captions.Load("./CmList.dat");
             const std::string itemName=captions.Get(1409)+"3";
@@ -3204,6 +3259,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=item-use-chain")==0 ? PreviewItemUse :
+        strcmp(lpCmdLine,"--preview=item-use-restored")==0 ? PreviewItemUseRestored :
         strcmp(lpCmdLine,"--preview=interface-audio")==0 ? PreviewInterfaceAudio :
         strcmp(lpCmdLine,"--preview=server-notice")==0 ? PreviewNotice :
         strcmp(lpCmdLine,"--preview=server-notice-moved")==0 ? PreviewNoticeMoved :

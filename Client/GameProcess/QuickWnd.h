@@ -6,6 +6,8 @@ public:
     Slot heldReference;
     int heldSlot=-1;
     int Release(int slot);
+    void Activate(int slot,DWORD now,bool mouse=false);
+    static void Notice(int resource,int slot,const char* name);
     void ClearHeldReference();
     int Find(const char* name) const;
     static Slot FromItem(const CItem& item);

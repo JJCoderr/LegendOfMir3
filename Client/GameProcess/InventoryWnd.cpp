@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include "ItemUseIds.h"
 #include "ItemHintStyle.h"
 #include "Common/LoginMessages.h"
 #include "Common/LegacyPanel.h"
@@ -42,6 +43,7 @@ VOID CInventoryWnd::Init()
 	CGameWnd::Init();
 	m_nStartLineNum	= 0;
     m_closePressed=false; service=Service{};
+    m_lastUse=m_lastRelease=0; m_usePending=false;
     m_layout.Clear();
 	ZeroMemory(m_rcInvenCell, sizeof(RECT) *_INVEN_MAX_CELL);
 	ZeroMemory(m_rcBeltCell,  sizeof(RECT) *_BELT_MAX_CELL );
@@ -953,61 +955,10 @@ VOID CInventoryWnd::AddNewBeltItem(LPCOMMONITEMSET pstCommonItemSet)
 	Message Function.(鼠标输入)
 
 *******************************************************************************************************************/
-BOOL CInventoryWnd::OnKeyUp(LPCOMMONITEMSET pstCommonItemSet, WPARAM wParam, LPARAM lParam)
+BOOL CInventoryWnd::OnKeyUp(LPCOMMONITEMSET, WPARAM, LPARAM)
 {
-    if (g_xGameProc.m_xInterface.m_xQuickWnd.heldSlot>=0) return TRUE;
-    if (g_xGameProc.m_xInterface.m_xExchangeWnd.GetGameWndActive() && g_xGameProc.m_xInterface.m_xExchangeWnd.returnSlot>=0) return TRUE;
-	INT nBeltInventoryNum;
-
-	nBeltInventoryNum = -1;
-	
-	switch ( wParam )
-	{
-	case '1': 	nBeltInventoryNum = 0;		break;
-	case '2': 	nBeltInventoryNum = 1;		break;
-	case '3': 	nBeltInventoryNum = 2;		break;
-	case '4': 	nBeltInventoryNum = 3;		break;
-	case '5': 	nBeltInventoryNum = 4;		break;
-	case '6': 	nBeltInventoryNum = 5;		break;
-	}
-
-	if ( nBeltInventoryNum != -1 )
-	{
-		if ( m_stBeltItem[nBeltInventoryNum].bSetted )
-		{
-			if ( !pstCommonItemSet->bSetted )
-			{				  
-				SetCommonFromBelt(nBeltInventoryNum, pstCommonItemSet);
-			}
-			else if ( pstCommonItemSet->bSetted && !pstCommonItemSet->bWaitResponse && !pstCommonItemSet->bIsEquipItem )
-			{		
-				if ( /*pstCommonItemSet->xItem.m_stItemInfo.szMakeIndex[0] == 'G' && */
-					 (pstCommonItemSet->xItem.m_stItemInfo.stStdItem.bStdMode == 0 || pstCommonItemSet->xItem.m_stItemInfo.stStdItem.bStdMode == 3) )
-					ChangeBeltWithCommon(nBeltInventoryNum, pstCommonItemSet);
-			}
-		}
-		else
-		{
-			if ( pstCommonItemSet->bSetted && !pstCommonItemSet->bWaitResponse && !pstCommonItemSet->bIsEquipItem )
-			{				  
-				if ( /*pstCommonItemSet->xItem.m_stItemInfo.szMakeIndex[0] == 'G' && */
-					 (pstCommonItemSet->xItem.m_stItemInfo.stStdItem.bStdMode == 0 || pstCommonItemSet->xItem.m_stItemInfo.stStdItem.bStdMode == 3) )
-					 SetBeltFromCommon(nBeltInventoryNum, pstCommonItemSet);
-			}
-		}
-
-		if ( pstCommonItemSet->bSetted && !pstCommonItemSet->bWaitResponse && !pstCommonItemSet->bIsEquipItem )
-		{			
-			pstCommonItemSet->bWaitResponse = TRUE;
-			pstCommonItemSet->bIsHideItem	= TRUE;
-			g_xClientSocket.SendItemIndex(CM_EAT, pstCommonItemSet->xItem.m_stItemInfo.nMakeIndex, pstCommonItemSet->xItem.m_stItemInfo.stStdItem.szName);
-			return TRUE;
-		}
-	}
-
-	return FALSE;
+    return FALSE; // MIR3 uses the native quick references on key-down.
 }
-
 
 BOOL CInventoryWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 {
@@ -1091,6 +1042,21 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLUP	 ].OnLButtonUp(ptMouse);
 //	m_xInventoryBtn[_BTN_ID_INVENSCRLDOWN].OnLButtonUp(ptMouse);
 
+    const DWORD now=GetTickCount(),elapsed=now-m_lastRelease;
+    m_lastRelease=now;
+    if (pstCommonItemSet->bWaitResponse) return FALSE;
+    if (SlotAt(ptMouse)>=0 && pstCommonItemSet->bSetted &&
+        pstCommonItemSet->xItem.m_stItemInfo.nMakeIndex && elapsed<ItemUse::DoubleReleaseMs) {
+        if (UseBlocked()) return FALSE;
+        if (UseAllowed(pstCommonItemSet->xItem,now-m_lastUse)) {
+            const int target=GetInvenNum(ptMouse);
+            if(target>=0 && m_stInventoryItem[target].bSetted)
+                ChangeInvenWithCommon(target,pstCommonItemSet,&ptMouse);
+            RequestUse(now); return FALSE;
+        }
+        CQuickWnd::Notice(ItemUse::Unavailable,0,pstCommonItemSet->xItem.Name());
+    }
+
 	nInventoryNum	  = GetInvenNum(ptMouse);
 	nBeltInventoryNum = GetBeltNum(ptMouse);
 
@@ -1166,58 +1132,11 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
 
 
 
-BOOL CInventoryWnd::OnLButtonDoubleClick(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
+BOOL CInventoryWnd::OnLButtonDoubleClick(LPCOMMONITEMSET, POINT)
 {
-    if (service.actor) return TRUE;
-    if (g_xGameProc.m_xInterface.m_xQuickWnd.heldSlot>=0) return TRUE;
-    if (g_xGameProc.m_xInterface.m_xExchangeWnd.GetGameWndActive() && g_xGameProc.m_xInterface.m_xExchangeWnd.returnSlot>=0) return TRUE;
-	INT nInventoryNum	  = GetInvenNum(ptMouse);
-	INT nBeltInventoryNum = GetBeltNum(ptMouse);
-
-	if ( nInventoryNum != -1 )
-	{
-		// 点击的背包中有物品时。
-		if ( m_stInventoryItem[nInventoryNum].bSetted )
-		{
-			// 如果公共(鼠标)物品集为空，
-			if ( !pstCommonItemSet->bSetted )
-			{				  
-				// 把物品附着在鼠标上.
-				SetCommonFromInven(nInventoryNum, pstCommonItemSet);
-			}
-			// 存在公共(鼠标)物品集，且不在等待服务器响应信号时，
-			else if ( pstCommonItemSet->bSetted && !pstCommonItemSet->bWaitResponse && !pstCommonItemSet->bIsEquipItem )
-			{				  
-				ChangeInvenWithCommon(nInventoryNum, pstCommonItemSet, &ptMouse);
-			}
-		}
-	}
-
-	if ( nBeltInventoryNum != -1 )
-	{
-		if ( m_stBeltItem[nBeltInventoryNum].bSetted )
-		{
-			if ( !pstCommonItemSet->bSetted )
-			{				  
-				SetCommonFromBelt(nBeltInventoryNum, pstCommonItemSet);
-			}
-			else if ( pstCommonItemSet->bSetted && !pstCommonItemSet->bWaitResponse && !pstCommonItemSet->bIsEquipItem )
-			{				  
-				ChangeBeltWithCommon(nBeltInventoryNum, pstCommonItemSet);
-			} 
-		}
-	}
-
-	if ( pstCommonItemSet->bSetted && !pstCommonItemSet->bWaitResponse && !pstCommonItemSet->bIsEquipItem )
-	{			
-		pstCommonItemSet->bWaitResponse = TRUE;
-		g_xClientSocket.SendItemIndex(CM_EAT, pstCommonItemSet->xItem.m_stItemInfo.nMakeIndex, pstCommonItemSet->xItem.m_stItemInfo.stStdItem.szName);
-	}
-
-	return TRUE;
+    // The second button release performs MIR3's timed use/placement action.
+    return TRUE;
 }
-
-
 
 VOID CInventoryWnd::OnMouseMove(POINT ptMouse)
 {
@@ -1378,5 +1297,78 @@ bool CInventoryWnd::ReceiveItemRecord(WORD opcode,const char* encoded)
         at=message.find("%d");if(at!=std::string::npos) message.replace(at,2,std::to_string(item.m_count));
         ui.MsgAdd(11861940,0,const_cast<char*>(message.c_str()));
     }
+    return true;
+}
+
+// Shared by bag releases and the six native quick references.
+bool CInventoryWnd::UseAllowed(const CItem& item,DWORD elapsed)
+{
+    const auto& info=item.m_stItemInfo.stStdItem;
+    const bool medicine=info.bStdMode==ItemUse::Medicine || info.bStdMode==ItemUse::OtherMedicine;
+    const bool fast=info.bStdMode==ItemUse::Medicine && (info.wLooks==ItemUse::FastIconSmall || info.wLooks==ItemUse::FastIconLarge || info.wLooks==ItemUse::FastIconSpecial);
+    return !medicine || elapsed>ItemUse::MedicineMs || (fast && elapsed>ItemUse::FastMedicineMs);
+}
+
+bool CInventoryWnd::UseBlocked() const
+{
+    const auto& ui=g_xGameProc.m_xInterface;
+    return ui.m_xStatusWnd.m_stTakeOnItemSet.bSetted || ui.m_stCommonItem.bIsEquipItem ||
+        ui.m_xExchangeWnd.pendingSlot>=0 || ui.m_xExchangeWnd.returnSlot>=0;
+}
+
+bool CInventoryWnd::RequestUse(DWORD now)
+{
+    auto& held=g_xGameProc.m_xInterface.m_stCommonItem;
+    if(!held.bSetted || !held.xItem.m_stItemInfo.nMakeIndex || held.bWaitResponse || UseBlocked()) return false;
+    held.bWaitResponse=held.bIsHideItem=TRUE; m_usePending=true;
+    const int mode=held.xItem.m_stItemInfo.stStdItem.bStdMode;
+    if(mode==ItemUse::Medicine || mode==ItemUse::OtherMedicine) m_lastUse=now;
+    _TDEFAULTMESSAGE packet={};
+    fnMakeDefMessage(&packet,CM_EAT,held.xItem.m_stItemInfo.nMakeIndex,LOWORD(now),HIWORD(now),0);
+    g_xClientSocket.SendPacket(&packet,const_cast<char*>(held.xItem.Name()));
+    return true;
+}
+
+bool CInventoryWnd::ApplyUseReply(WORD opcode,WORD remaining)
+{
+    auto& ui=g_xGameProc.m_xInterface; auto& held=ui.m_stCommonItem; auto& quick=ui.m_xQuickWnd;
+    if(!m_usePending || !held.bSetted || (opcode!=SM_EAT_OK && opcode!=SM_EAT_FAIL)) return false;
+    const CItem used=held.xItem; const bool fromQuick=quick.heldSlot>=0,success=opcode==SM_EAT_OK;
+    const bool stack=used.m_stackMode==ItemUse::Stacked;
+    const bool restore=!success || (stack && used.m_count>1);
+    int destination=quick.heldSlot;
+    if(fromQuick && restore && quick.slots[destination].present) {
+        destination=-1;
+        for(int i=0;i<_MAX_BELT_ITEM;++i) if(!quick.slots[i].present) {destination=i;break;}
+        if(destination<0) return false;
+    }
+    if(success && stack) {
+        if(used.m_count<=1) {
+            DeleteInvenItem(used.m_stItemInfo.nMakeIndex,const_cast<char*>(used.Name()));
+            const int reference=quick.Find(used.Name());if(reference>=0) quick.slots[reference]=CQuickWnd::Slot{};
+        } else {
+            for(auto& item:m_stInventoryItem) if(item.bSetted && item.xItem.m_stItemInfo.nMakeIndex==used.m_stItemInfo.nMakeIndex) item.xItem.SetCount(remaining);
+            held.xItem.SetCount(remaining);
+            if(!fromQuick) {const int reference=quick.Find(used.Name());if(reference>=0) {quick.slots[reference].count=remaining;quick.slots[reference].item.SetCount(remaining);}}
+        }
+    }
+    m_usePending=false;held.bWaitResponse=held.bIsHideItem=FALSE;
+    if(fromQuick) {
+        if(restore) quick.slots[destination]=CQuickWnd::FromItem(held.xItem);
+        quick.ClearHeldReference();
+    } else if(!restore || AddInvenItem(held.xItem,held.xItem.m_shCellNum,TRUE)) ZeroMemory(&held,sizeof(held));
+    if(success) {
+        static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+        std::string name=used.Name();
+        for(int i=0;i<10;++i) if(name==captions.Get(ItemUse::BaseItemName)+std::to_string(i)) {name=captions.Get(ItemUse::BaseItemName);break;}
+        const auto post=[&](int resource,const std::string& itemName) {
+            std::string message=captions.Get(resource);
+            auto at=message.find("%s");if(at!=std::string::npos) message.replace(at,2,itemName);
+            at=message.find("%d");if(at!=std::string::npos) message.replace(at,2,std::to_string(remaining));
+            ui.MsgAdd(0xffffff,33023,const_cast<char*>(message.c_str()));
+        };
+        post(ItemUse::Consumed,name);if(fromQuick) post(remaining?ItemUse::Remaining:ItemUse::Exhausted,used.Name());
+        g_xSound.PlayUseItemEffect(used.m_stItemInfo.stStdItem.bStdMode);
+    } else if(used.m_stItemInfo.stStdItem.bStdMode==ItemUse::FailureDialogMode) ui.ShowNotice(ItemUse::FailureDialog);
     return true;
 }
