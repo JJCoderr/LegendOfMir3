@@ -1,4 +1,5 @@
 #include "Service/CoreHeaders.h"
+#include "Def/JsonRpc.h"
 #include "EIServer.h"
 #include "Def/DebugService.h"
 
@@ -73,6 +74,7 @@ int Run()
     ULONGLONG deadline=0;
     bool starting=false;
     mir3::DebugState debugState(L"EIServer");
+    mir3::JsonRpc rpc(GetCommandLineA(), L"Server");
     for (;;) {
         const BOOL result = GetMessage(&msg,nullptr,0,0);
         wchar_t message[256];
@@ -95,6 +97,11 @@ int Run()
             mir3::ConsoleLog(L"EIServer", message);
             return static_cast<int>(msg.wParam);
         }
+        rpc.Poll([&](const std::string& method, const std::string&) {
+            if (method != "state.get") throw mir3::JsonRpc::Error{-32601, "Method not found"};
+            return std::string("{\"schema\":1,\"ready\":") + mir3::BoolJson(current==_countof(services))
+                + ",\"services_ready\":" + std::to_string(current) + mir3::ServiceTcpState() + "}";
+        });
         if(!msg.hwnd && msg.message==WM_TIMER) {
             debugState.Poll([&] {
                 return std::string(",\"ready\":") + mir3::BoolJson(current==_countof(services))

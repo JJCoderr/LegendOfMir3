@@ -1950,3 +1950,11 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 状态输出新增背包物品cell（实际布局锚点）和bag_scroll_row。数组slot不是显示格子，盔甲占多格；首轮knaxq3_e按slot点击误选盔甲，协议日志显示两次均CM_EAT盔甲，不是药水服务失败。
 - 原生脚本--consumable可与--equipment组合：隔离数据库放入DBSvr既有通用物品键G00080008000，测试定义命名Test potion并沿用红药图标0；不更改开发数据库。按实际锚点双击，检查服务端SM_EAT_FAIL后盔甲返包、SM_EAT_OK后药水消失、其他物品守恒与面板稳定；退出保存后DB通用物品为空，重登无药水。
 - Client Release构建通过并更新out/debug/Mir2Ex.exe。3pjf0_jp完整通过消耗/失败返包、盔甲三穿两脱、退选重进及客户端重启重登，最终位置461,262与数据库一致，两个客户端退出0。日志out/item-consumable-test.log。没有验证受伤回血量、快捷栏消耗、堆叠、满背包或掉落拾取，不据此宣称整个物品系统完成。
+
+
+## 2026-11-18 JSON-RPC架构按用户确认落地
+- 最新结构：Server/Def/JsonRpc.h/.cpp提供共用命名管道与JSON-RPC 2.0协议；Client/ClientRpc.h/.cpp处理客户端方法与响应；服务端方法直接在Server/EIServer.cpp；Client/Test与Server/Test只保存JSON测试集。没有Test.h/.cpp或Server/Rpc文件。ClientRpc命名避开Windows SDK rpc.h。
+- 仅显式--debug-pipe启用，端点为\\.\pipe\Mir3.Client.<PID> / Mir3.Server.<PID>。主线程轮询非阻塞管道，每行一个UTF-8 JSON消息；支持请求ID、通知、批量请求及标准错误码。目前只有state.get，尚未接入登录、背包等业务命令和事件序号等待，不可称为全部协议适配完成。
+- JSON解析使用nlohmann/json v3.11.3单头文件（MIT许可在文件头），来源https://github.com/nlohmann/json/releases/tag/v3.11.3，已校验官方SHA256 9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6。只在独立JsonRpc.cpp包含，不能放入六个服务命名空间封装源列表。
+- Client/EIServer Release构建通过。Client/Tools/run_rpc_tests.py以真实进程--pid运行JSON用例；客户端及服务器各6项通过（状态、未知方法、参数类型、请求格式、解析错误、批量通知），无登录点击/截图。初版测试器读写同一同步句柄并发阻塞，改为先写再读已通过。
+- 丢弃拾取检查发现通用物品被当装备记录处理及DB失败未返地图；ObjectPlayer.cpp有本轮修复但尚未通过真实业务RPC验证，未混入本提交，未部署新EIServer到out/debug。

@@ -5,6 +5,8 @@ project(LegendOfMir3_Client VERSION 0.1 LANGUAGES CXX)
 add_subdirectory(WindHorn)
 
 set(MIR3_CLIENT_SOURCES
+    ../Server/Def/JsonRpc.cpp
+    ClientRpc.cpp
     Common/Button.cpp
     Common/ChatEditBox.cpp
     Common/ClientSocket.cpp
