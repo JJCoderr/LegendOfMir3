@@ -102,7 +102,13 @@ BOOL CNPCWnd::OnLButtonUp(POINT point)
         if (Hit(arrowPressed<0?1357:1355,183,Height()-(arrowPressed<0?48:30),point)) first=max(0,min(scrollLimit,first+arrowPressed));
         arrowPressed=0; pressed=-1; return FALSE;
     }
-    const int option=OptionAt(point); pressed=-1; const DWORD now=GetTickCount();
+    const int option=OptionAt(point); pressed=-1;
+    SelectOption(option); return FALSE;
+}
+bool CNPCWnd::SelectOption(int option)
+{
+    if (!GetGameWndActive()) return false;
+    const DWORD now=GetTickCount();
     if (option<0 || (lastAction && now-lastAction<=1000)) return FALSE;
     for (const auto& row:rows) if (row.option==option) {
         lastAction=now;
@@ -112,9 +118,9 @@ BOOL CNPCWnd::OnLButtonUp(POINT point)
             if (row.command=="@@buildguildnow") { static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat"); prompt=captions.Get(2000); }
             g_xGameProc.m_xInterface.OpenNameDialog(7);
         } else g_xClientSocket.SendNPCMessage(CM_MERCHANTDLGSELECT,m_nNpcId,0,const_cast<char*>(row.command.c_str()));
-        break;
+        return true;
     }
-    return FALSE;
+    return false;
 }
 int CNPCWnd::PromptLimit() const
 {

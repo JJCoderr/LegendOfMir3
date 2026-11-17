@@ -1885,7 +1885,7 @@ LRESULT CGameProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 			ptTaretTilePos.y = m_pxMouseTargetActor->m_wPosY;
 			if ( m_pxMouseTargetActor->m_stFeature.bGender == _GENDER_NPC )
 			{
-				g_xClientSocket.SendNPCClick(m_pxMouseTargetActor->m_dwIdentity);
+				ClickNPC(m_pxMouseTargetActor);
 				m_pxSavedTargetActor = NULL;
 			}
 			else
@@ -4247,4 +4247,12 @@ std::int64_t CGameProcess::PlaySpellSound(int sample,POINT cell)
     const int x=cell.x*_CELL_WIDTH+_VIEW_CELL_X_START-m_xMap.m_shStartViewTileX*_CELL_WIDTH-m_xMap.m_shViewOffsetX;
     const int y=cell.y*_CELL_HEIGHT+_VIEW_CELL_Y_START-m_xMap.m_shStartViewTileY*_CELL_HEIGHT-m_xMap.m_shViewOffsetY;
     return g_xSound.PlaySpellWav(sample,x,y);
+}
+
+bool CGameProcess::ClickNPC(CActor* actor)
+{
+    if (!actor || actor->m_bIsDead || actor->m_stFeature.bGender != _GENDER_NPC ||
+        InputDelayed() || m_xNotice.IsActive() || m_xInterface.HasInputDialog()) return false;
+    g_xClientSocket.SendNPCClick(actor->m_dwIdentity);
+    return true;
 }

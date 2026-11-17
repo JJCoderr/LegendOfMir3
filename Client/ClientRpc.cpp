@@ -143,6 +143,15 @@ std::string ClientState() {
         state += std::string(",\"return_ready\":")+mir3::BoolJson(!game.m_exitTransition.active &&
             game.m_exitGuard.Allowed(GetTickCount(),hero.m_bCurrMtn));
         state += mir3::ItemDebugState(game);
+        auto& npc=game.m_xInterface.m_xNPCWnd;
+        Array npcRows;
+        for(const auto& row:npc.rows) npcRows.emplace_back(Object{
+            {"text",Parse(mir3::QuoteLocalText(row.text.c_str()))},
+            {"command",Parse(mir3::QuoteLocalText(row.command.c_str()))},
+            {"option",Json(int64_t(row.option))}});
+        state += ",\"npc_dialog\":"+Json(Object{{"open",Json(bool(npc.GetGameWndActive()))},
+            {"id",Json(int64_t(npc.m_nNpcId))},{"rows",Json(npcRows)},
+            {"ready",Json(!npc.lastAction || GetTickCount()-npc.lastAction>1000)}}).serialize();
         Array rejected;
         for(bool value:game.m_xInterface.m_chatRejected) rejected.emplace_back(value);
         state += ",\"chat_rejected\":"+Json(rejected).serialize();
@@ -235,6 +244,15 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
             memcpy(g_xChatEditBox.m_szInputMsg,text.c_str(),text.size()+1);
             g_xGameProc.OnMsgInputted(text[0]=='@',0);accepted=true;
         }
+    } else if (method == "npc.click" && g_bProcState == _GAME_PROC) {
+        const int index=Integer(params,"index");auto& actors=g_xGameProc.m_xActorList;
+        if(index<actors.GetCounter()) {
+            actors.MoveCurrentToTop();for(int i=0;i<index;++i) actors.MoveNextNode();
+            accepted=g_xGameProc.ClickNPC(actors.GetCurrentData());
+        }
+    } else if (method == "npc.select" && g_bProcState == _GAME_PROC) {
+        if(!g_xGameProc.InputDelayed() && !g_xGameProc.m_xNotice.IsActive() && !g_xGameProc.m_xInterface.HasInputDialog())
+            accepted=g_xGameProc.m_xInterface.m_xNPCWnd.SelectOption(Integer(params,"option"));
     } else if (method == "actor.query_name" && g_bProcState == _GAME_PROC) {
         const int index=Integer(params,"index");
         auto& actors=g_xGameProc.m_xActorList;

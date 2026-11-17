@@ -27,6 +27,7 @@ public:
 	CMerchantObject();
 
 	void RunRace();
+    void Say(CPlayerObject* player, const char* section);
 
 	virtual WORD	GetThisCharColor() { return _CHAT_COLOR3; }
 	virtual void	GetCharName(char *pszCharName) { strcpy(pszCharName, m_szName); }

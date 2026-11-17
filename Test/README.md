@@ -70,7 +70,7 @@ step,name,target,action,params,expect
 | 怪物 | `Monsters/MonstersSpawn.csv`、`Monsters/MonstersRespawn.csv`、`Monsters/MonstersCorpse.csv`、`Monsters/MonstersLoot.csv`、`Monsters/MonstersLootCount.csv`、`Monsters/MonstersGold.csv`、`Monsters/MonstersGoldCap.csv`、`Monsters/MonstersEquipment.csv`、`Monsters/MonstersEquipmentCount.csv`、`Monsters/MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `Combat/CombatMagic.csv`、`Combat/CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
 | 聊天 | `Chat/ChatLocal.csv`、`Chat/ChatShout.csv`、`Chat/ChatShoutLevel.csv`、`Chat/ChatShoutRange.csv`、`Chat/ChatShoutRangeY.csv`、`Chat/ChatWhisper.csv`、`Chat/ChatWhisperReject.csv`、`Chat/ChatWhisperIsolation.csv` | 普通聊天、中文编码、喊话等级及冷却拒绝 |
-| NPC | `Npc/NpcSpawn.csv` | 商人生成、NPC 类型、位置与名称同步、无效地图不生成 |
+| NPC | `Npc/NpcSpawn.csv`、`Npc/NpcDialog.csv` | 商人生成、NPC 类型、名称同步、基础对话及选项跳转 |
 | RPC 基础 | `Rpc/RpcClient.csv`、`Rpc/RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
 
@@ -147,3 +147,9 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 喊话距离：`Chat/ChatShoutRange.csv` / `Chat/ChatShoutRangeY.csv` 均用 `--clients 3` 运行，分别在横向和纵向放置距离 49 格、50 格的玩家。检查 49 格玩家收到 SM_CRY，50 格玩家的 SM_CRY/SM_HEAR 均为 0；之后发给边界玩家的私聊确认处理已完成，也证明私聊不受此范围限制。验证的是现有服务端同地图、两轴差值均小于 50 的规则；未校验该数值是否与原版服务器完全一致，也未覆盖跨地图和死亡角色过滤。
 
 `Npc/NpcSpawn.csv` 通过 TBL_MERCHANT 加载真实商人，检查 actors[].npc、坐标、名称请求与回包。使用稀疏商人 ID，并放置一条不存在地图的记录，确认不会生成额外实体。服务端与客户端共用 MIR3_ACTOR_NPC 类型常量；旧服务端的类型 2 与客户端 NPC 类型 50 不一致。此场景尚未覆盖 NPC 点击、对话、选项或商店交易。
+
+`Npc/NpcDialog.csv` 通过真实 npc.click / npc.select 入口验证 CM_CLICKNPC、CM_MERCHANTDLGSELECT 和 SM_MERCHANTSAY。state.get 的 npc_dialog 包含 open、id、rows 和选项冷却 ready；rows 来自客户端实际接收并解析的对话。33 步覆盖两页跳转、无效实体/选项拒绝、未支持条件页不回传，以及后续正常页面可用。
+
+场景可附带同名 `.files` 目录，例如 `Npc/NpcDialog.files/Envir/Market_Def/NpcProbe-01.txt`。启动器将其中的相对目录结构复制到隔离运行目录。CSV 仍只存测试动作与断言，NPC 文本由服务端实际读取。
+
+当前数据库商人的脚本约定为 `Envir/Market_Def/<NPC名称>-<地图名>.txt`（本地代码页），支持 `[@main]` / `[@选项]`、`#SAY`、反斜杠换行及 `<文字/@选项>`。尚未接入参考服 merchant.txt 的独立脚本文件名映射、#IF/#ACT/#CALL/#INCLUDE、交易和任务指令；包含这些指令的页面直接拒绝执行。本阶段不是完整旧脚本引擎。

@@ -224,6 +224,7 @@ public:
 	VOID	ProcessDefaultPacket();
 
 	VOID	CloseNPCWindow();
+    bool ClickNPC(CActor* actor);
 
 	virtual VOID ShowStatus(INT nStartX, INT nStartY);
 

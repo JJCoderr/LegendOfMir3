@@ -57,6 +57,8 @@
 
 // For game process
 // Client To Server Commands
+#define CM_CLICKNPC             1010
+#define CM_MERCHANTDLGSELECT    1011
 #define CM_QUERYUSERNAME        80
 #define CM_QUERYBAGITEMS        81
 

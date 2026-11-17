@@ -31,6 +31,7 @@ public:
     void OnScrollDown() { if (scrollEnabled) first=max(0,first-1); }
     void OnScrollUp() { if (scrollEnabled) first=min(scrollLimit,first+1); }
     BOOL OnMsgInputted() { return FALSE; }
+    bool SelectOption(int option);
     int PromptLimit() const;
     void ClearPrompt() { promptActor=0; prompt.clear(); promptCommand.clear(); }
     bool SubmitPrompt(const char* text);

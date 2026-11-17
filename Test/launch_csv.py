@@ -4,6 +4,7 @@ import csv
 import ctypes
 import json
 import subprocess
+import shutil
 import time
 from pathlib import Path
 from rpc_fixture import prepare
@@ -32,6 +33,8 @@ def main():
         with fixture.open(encoding='utf-8-sig', newline='') as source:
             statements = list(csv.DictReader(source))
     root = prepare(repo, binaries, args.config_dir.resolve(), {'fixture':statements}, args.port_offset)
+    assets = args.scenario.with_suffix('.files')
+    if assets.is_dir(): shutil.copytree(assets, root, dirs_exist_ok=True)
     log_path = args.log.resolve() if args.log else root/'test.log'
     print('Runtime:', root, flush=True)
     processes = []

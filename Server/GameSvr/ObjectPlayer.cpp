@@ -2464,6 +2464,30 @@ void CPlayerObject::Operate()
                         }
                         break;
                     }
+                    case CM_CLICKNPC:
+                    case CM_MERCHANTDLGSELECT:
+                    {
+                        // Resolve the wire identity against live merchants before dereferencing it.
+                        PLISTNODE node = g_xMerchantObjList.GetHead();
+                        while (node) {
+                            CMerchantObject* npc = g_xMerchantObjList.GetData(node);
+                            node = g_xMerchantObjList.GetNext(node);
+                            if ((int)npc != lpProcessMsg->lParam1) continue;
+                            if (m_fIsDead || npc->m_pMap != m_pMap ||
+                                abs(npc->m_nCurrX-m_nCurrX)>m_nViewRange ||
+                                abs(npc->m_nCurrY-m_nCurrY)>m_nViewRange) break;
+                            char section[256] = "@main";
+                            if (lpProcessMsg->wIdent == CM_MERCHANTDLGSELECT) {
+                                if (!lpProcessMsg->pszData) break;
+                                const int size = fnDecode6BitBufA(lpProcessMsg->pszData, section, sizeof(section)-1);
+                                section[size] = 0;
+                                if (section[0] != '@') break;
+                            }
+                            npc->Say(this, section);
+                            break;
+                        }
+                        break;
+                    }
 					case CM_QUERYUSERNAME:
 					{
 						GetQueryUserName((CCharObject*)lpProcessMsg->lParam1, lpProcessMsg->lParam2/*x*/, lpProcessMsg->lParam3/*y*/);

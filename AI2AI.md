@@ -2157,3 +2157,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 首轮真实测试暴露商人 feature.btGender=2，而客户端 _GENDER_NPC=50。Shared/Mir3ActorKinds.h 统一两端 NPC 类型，Client state.get 的 actors 新增 npc 字段。
 - Client/EIServer Release 构建通过，NpcSpawn 21 步通过：out/csv-validation/npc-spawn-fixed.log。
 - NPC 点击与对话尚未接通：服务端没有 CM_CLICKNPC 处理；RM_MERCHANTSAY 只有发送分支。下一步需确定真实对话脚本来源并接通请求/选项处理，不能用测试固定文本代替业务。
+
+## 2026-11-18 NPC 基础对话往返
+
+- 商人读取 Envir/Market_Def/<名称>-<地图>.txt，支持 [@main]/#SAY/标签选项跳转。CM_CLICKNPC 和 CM_MERCHANTDLGSELECT 在玩家消息队列中解析真实商人身份、同地图及视野范围；独立编码缓冲发送 SM_MERCHANTSAY，避免既有聊天256字节缓冲限制。
+- Client ClickNPC 与 CNPCWnd::SelectOption 由鼠标和 RPC 共用；npc_dialog 状态来自真实窗口解析结果。Test/launch_csv.py 复制同名 .files 脚本资源到隔离目录。
+- Client/EIServer 构建通过；Test/Npc/NpcDialog.csv 33 步通过，日志 out/csv-validation/npc-dialog-final.log。检查两页对话、非法索引/选项、未支持条件页拒绝和正常页恢复。
+- 参考 Mud3/Envir 的真实脚本为 [@section]/#SAY，且依赖 #IF/#ACT/#CALL/#INCLUDE。当前仅基础文本页，不能忽略条件执行其后文本。后续仍需独立脚本文件名映射、条件/动作解释、交易/任务支持；不是完整NPC子系统。

@@ -744,6 +744,9 @@ void CUserInfo::ProcessUserMessage(char *pszPacket)
 		case CM_RIDE:
 			m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, lpDefMsg->wTag, LOWORD(lpDefMsg->nRecog), HIWORD(lpDefMsg->nRecog), NULL);
 			break;
+        case CM_MERCHANTDLGSELECT:
+            m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, 0, lpDefMsg->nRecog, 0, 0, pszPacket + sizeof(_TDEFAULTMESSAGE));
+            break;
 		case CM_SAY:
 			m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, 0, 0, 0, 0, pszPacket + sizeof(_TDEFAULTMESSAGE));
 			break;
