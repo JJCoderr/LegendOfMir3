@@ -264,11 +264,20 @@ int wmain(int argc,wchar_t** argv) {
             label=row[1];const auto& target=row[2];const auto& action=row[3];
             const auto expected=Fields(row[5]);Json response;
             output("STEP "+std::to_string(step)+" "+label+" "+target+" "+action);
-            if(target=="Database") {
+            if(target=="Runner") {
+                const auto fields=Fields(row[4]);
+                const auto duration=fields.count("milliseconds")?fields.at("milliseconds"):Json();
+                if(action!="wait" || !duration.is<int64_t>() || duration.get<int64_t>()<=0 || duration.get<int64_t>()>=INFINITE)
+                    throw std::runtime_error("Runner wait requires milliseconds in 1..4294967294");
+                const auto before=GetTickCount64();
+                Sleep(DWORD(duration.get<int64_t>()));
+                response=Json(Object{{"result",Json(Object{{"status",Json(std::string("waited"))},
+                    {"elapsed_ms",Json(int64_t(GetTickCount64()-before))}})}});
+            } else if(target=="Database") {
                 if(action!="query" || database.empty()) throw std::runtime_error("Database query requires --database");
                 response=Query(database,row[4]);
             } else {
-                if(target!="Client" && target!="Client2" && target!="Client3" && target!="Server") throw std::runtime_error("Target must be Client, Client2, Client3, Server or Database");
+                if(target!="Client" && target!="Client2" && target!="Client3" && target!="Server") throw std::runtime_error("Target must be Client, Client2, Client3, Server, Database or Runner");
                 if(!pipes.count(target)) {
                     if(!pids[target]) throw std::runtime_error("Missing PID for "+target);
                     pipes[target]=std::make_unique<Pipe>(target=="Server"?"Server":"Client",pids[target]);

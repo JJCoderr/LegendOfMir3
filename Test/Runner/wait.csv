@@ -1,0 +1,6 @@
+step,name,target,action,params,expect
+10,real elapsed wait,Runner,wait,milliseconds=20,result.status=waited
+20,negative duration,Runner,wait,milliseconds=-1,
+30,fractional duration,Runner,wait,milliseconds=1.5,
+40,infinite duration,Runner,wait,milliseconds=4294967295,
+50,unknown runner action,Runner,missing,milliseconds=1,

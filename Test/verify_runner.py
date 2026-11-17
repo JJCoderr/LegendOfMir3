@@ -14,6 +14,9 @@ root = Path(tempfile.mkdtemp(prefix='csv-runner-',dir=repo/'out'))
 with sqlite3.connect(root/'test.sqlite3') as db:
     db.execute('CREATE TABLE fixture(value)')
 checks = [
+    ('wait','wait.csv',['--from','10','--to','10'],0,['PASS 10'],[]),
+    *[(f'wait-invalid-{step}','wait.csv',['--from',str(step),'--to',str(step)],1,
+       ['Runner wait requires milliseconds'],['PASS']) for step in (20,30,40,50)],
     ('all','csv.csv',[],0,['PASS 10','PASS 20','PASS 30'],[]),
     ('range','csv.csv',['--from','20','--to','20'],0,['PASS 20'],['STEP 10','STEP 30']),
     ('start','csv.csv',['--from','20'],0,['PASS 20','PASS 30'],['STEP 10']),

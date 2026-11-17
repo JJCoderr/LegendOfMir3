@@ -21,6 +21,7 @@ CCharObject::CCharObject(CUserInfo*	pUserInfo)
 
 	m_nCurrX					= 0;
 	m_nCurrY					= 0;
+	m_nViewRange				= _RANGE_X;
 
 	ZeroMemory(m_szName, sizeof(m_szName));
 

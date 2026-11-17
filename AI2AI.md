@@ -2222,3 +2222,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 参照原服0x4E11C0，服务端保存最近成功返回页面的选项；只接受列表内标签以及当前上下文的@main/@exit。页面失败保留原列表，点击另一NPC或退出清空。颜色控制标签中的伪选项不计入。
 - 客户端新增npc.request(index,command)诊断RPC，经真实SendNPCMessage发包，专门绕过UI选项过滤以测试服务端；正常流程继续用npc.select。NpcOptions.csv的50步验证隐藏/过期/关闭后请求拒绝与合法恢复，聊天回包作为处理屏障。
 - Client/EIServer Release构建通过；11个NPC场景加ShopBuy/ShopSharedStock共13场景505步通过，日志out/csv-validation/npc-options*.log。输入型@@参数和完整任务/交易指令仍待实现。
+
+## 普通商品定时补货与NPC线程恢复
+
+- 参照原服0x4CCB4C/0x4CD3EC，每超过30秒检查商品小时配置并恢复目标库存；0小时每轮补货，部分余量不叠加。商品加载/购买/补货共用商人互斥锁，使用64位单调计时；补货仍需重新打开购买页面查看。
+- 实测发现旧CCharObject未初始化m_nViewRange，商人首次SearchViewRange进入巨量地图扫描并占满NPC线程。已用已有_RANGE_X初始化基类默认范围，玩家和怪物显式设置不变；临时追踪代码已移除。
+- Test.exe新增Runner/wait用于真实时间场景，不修改游戏时钟；执行器13项检查通过。ShopRestock真实等待两次31秒，验证买空/部分库存补回、1小时商品不提前补货和8件物品/余额12保存。
+- EIServer/Test Release构建通过，补货与购买、共享库存、负重、NPC、怪物回归共9场景376步通过；日志out/csv-validation/shop-restock-final.log与restock-*.log。完整一小时到期未实测；初始商品仍首次打开时加载，库存重启持久化/装备/出售修理仍待接入。

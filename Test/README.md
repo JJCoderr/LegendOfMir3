@@ -39,7 +39,7 @@ step,name,target,action,params,expect
 30,等待登录完成,Client,state.wait,,result.stage=server_list;result.notice=true
 ```
 
-- target：`Client`、`Client2`、`Client3`、`Server`、`Database`。Client2/Client3 是额外的真实客户端，用 `--client2-pid` / `--client3-pid` 指定进程。
+- target：`Client`、`Client2`、`Client3`、`Server`、`Database`、`Runner`。Client2/Client3 是额外的真实客户端，用 `--client2-pid` / `--client3-pid` 指定进程。
 - action：通常直接填写 RPC 方法名。
 - params：`参数=值;参数=值`；空白表示无参数。
 - expect：`响应路径=值;响应路径=值`，支持 `result.equipment.0.name` 等路径；留空表示只要求 RPC 正常返回。预期错误必须明确填写 `error.code`。
@@ -47,6 +47,8 @@ step,name,target,action,params,expect
 - 含分号的字符串用 JSON 引号包围；含逗号、双引号或换行的 CSV 单元格用双引号包围，内部双引号写两次。支持 UTF-8 BOM、CRLF/LF 和多行单元格。
 
 特殊 action：
+
+- `Runner,wait`：params 为 `milliseconds=31000`，执行器等待真实时间，再继续下一步；响应含 `result.status=waited` 和 `result.elapsed_ms`。仅接受1至4294967294的整数毫秒，不需要客户端/服务器PID；不受RPC超时参数控制。用于补货等真实定时行为，不修改游戏时钟。
 
 - `state.wait`：反复查询该端 `state.get`，直到 expect 满足或超时。业务动作的 submitted 只代表提交，应另写状态/数据库断言确认结果。
 - `raw`：params 是原始 JSON-RPC 文本，仅供格式错误、批处理、ID 精度等协议基础测试。
@@ -182,8 +184,14 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 `ShopBuy.csv` 验证两件同名药品购买、金币不足拒绝、关闭商店、数据库保存和重登恢复。`ShopStock.csv` 验证超库存拒绝、买空及买空后的再次拒绝；`ShopCapacity.csv` 使用59格背包购买2件，`ShopWeight.csv` 使用超负重商品，检查整笔拒绝、金币/库存/物品不变。购买仅在当前商人已打开商店且角色同地图、在视野内时处理。扣款前检查完整数量对应的库存、容量、负重和总价；成功后更新金币、独立物品实例、负重及购买者商品列表。notice.dismiss 可通过既有确认入口关闭普通提示，不提交输入或确认交易对话框。
 
-本阶段仅支持普通物品和初始库存，补货小时已读取但尚未执行定时补货，库存尚未跨服务器重启持久化，也未实现装备明细商品、出售/修理或所有在线顾客的即时库存广播。物品和金币沿用角色保存事务，已验证正常保存重登；尚未验证购买过程中的服务器崩溃恢复。
+本阶段支持普通物品初始库存及定时补货，库存尚未跨服务器重启持久化，也未实现装备明细商品、出售/修理或所有在线顾客的即时库存广播。物品和金币沿用角色保存事务，已验证正常保存重登；尚未验证购买过程中的服务器崩溃恢复。
 
 `Shop/ShopPrice.csv` 使用标准价11和 `%150`，报价单价18，购买2件扣36；验证余额4的保存重登。单价按参考服 `base / 100 * percent * 1.1` 的 x87 扩展精度顺序计算，再取最近整数，报价和扣款共用单价。`ShopLowPrice.csv` 验证 `%0` 被忽略，`ShopInvalidPrice.csv` 验证非数字倍率保留默认100；`ShopPriceBelowMinimum.csv` / `ShopPriceMinimum.csv` 验证54/55边界；`ShopPriceRetained.csv` 验证无效、过低和溢出的倍率不覆盖先前有效值。`ShopZeroPrice.csv` 验证零基础价可以报价但不能购买。`ShopPriceRounding.csv` 验证基础价5/15/25/35对应单价6/17/28/38及按单价乘数量扣款。
 
 `python Test/launch_csv.py Test/Shop/ShopSharedStock.csv --clients 2 --log out/shop-shared-stock.log` 启动两个真实角色，双方看到同一初始库存后交替购买。第一位买2件后，第二位按旧列表购买2件被服务器拒绝；重新打开商店获得真实剩余1件并买走；第一位的过期购买也被拒绝。保存后检查总物品数3与双方余额78/89。该场景证明交替请求使用共享服务端库存，不是并发压力测试；尚未向其他顾客主动广播库存变化。
+
+`Shop/ShopRestock.csv` 运行两个真实31秒等待：0小时商品先买空再补满、部分售出再恢复目标数量，1小时商品在两轮内维持剩余库存；随后购买补货商品并验证金币与8件物品保存。后台每30秒检查，商品间隔按小时换算；补货不会主动广播，重新进入购买页面获取当前库存。购买、商品列表和补货共享每个商人的互斥锁，避免NPC线程与玩家线程同时修改库存。
+
+参考服 `0x4CCB4C` 每超过30000毫秒调用补货函数 `0x4CD3EC`；后者在商品间隔到期时更新计时、按目标与现存差值增加或减少库存。当前普通商品直接恢复目标数。使用64位单调计时避免32位溢出；负补货小时不作为有效商品加载。初始库存仍在首次打开商店时加载；未接入原服库存文件、出售商品回收或重启持久化。本场景未等待完整一小时，不能作为一小时间隔到期的实测证据。
+
+本轮补货测试还定位并修复了旧NPC调度问题：CCharObject未初始化m_nViewRange，商人首次SearchViewRange可能扫描巨大的坐标区间、占住NPC线程。基类现在使用已有_RANGE_X初始化默认视野；玩家和怪物各自的显式视野配置仍生效。

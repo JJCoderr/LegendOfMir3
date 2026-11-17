@@ -15,6 +15,18 @@ CMerchantObject::CMerchantObject() : CCharObject(NULL)
 
 void CMerchantObject::RunRace()
 {
+    {
+        std::lock_guard<std::mutex> lock(m_goodsMutex);
+        constexpr ULONGLONG RefillCheckMilliseconds = 30000;
+        const ULONGLONG now = GetTickCount64();
+        if (now-m_lastRefillCheck > RefillCheckMilliseconds) {
+            m_lastRefillCheck = now;
+            for (auto& good : m_goods) if (now-good.lastRefill > good.refillInterval) {
+                good.lastRefill = now;
+                good.stock = good.targetStock;
+            }
+        }
+    }
 	if ((rand() % 40) == 0)
 		TurnTo(rand() % 8);
 	else if ((rand() % 50) == 0)
@@ -201,6 +213,7 @@ void CMerchantObject::Say(CPlayerObject* player, const char* section)
 
 void CMerchantObject::ShowGoods(CPlayerObject* player)
 {
+    std::lock_guard<std::mutex> lock(m_goodsMutex);
     if (!m_goodsLoaded) {
         const auto& info = g_pMerchantInfo[m_nIndex];
         const std::string name = info.scriptName.empty() ? m_szName : info.scriptName;
@@ -222,15 +235,22 @@ void CMerchantObject::ShowGoods(CPlayerObject* player)
             if (line[0]=='[') { if (goods) break; goods = !_stricmp(line.c_str(), "[Goods]"); continue; }
             if (!goods) continue;
             char item[20], extra; int count, hours;
-            if (sscanf(line.c_str(), "%19s %d %d %c", item, &count, &hours, &extra)!=3 || count<=0 || count>USHRT_MAX) continue;
+            if (sscanf(line.c_str(), "%19s %d %d %c", item, &count, &hours, &extra)!=3 || count<=0 || count>USHRT_MAX || hours<0) continue;
             for (int i=0; i<g_nStdItemEtc; ++i) if (!strcmp(item, g_pStdItemEtc[i].szName)) {
                 const long long price = MerchantPrice(int(g_pStdItemEtc[i].dwPrice), percent);
-                if (price>=0 && price<=INT_MAX) m_goods.push_back({i,count,int(price)});
+                constexpr ULONGLONG MillisecondsPerHour = 60ULL*60*1000;
+                if (price>=0 && price<=INT_MAX)
+                    m_goods.push_back({i,count,int(price),count,ULONGLONG(hours)*MillisecondsPerHour,GetTickCount64()});
                 break;
             }
         }
         m_goodsLoaded = true;
     }
+    SendGoods(player);
+}
+
+void CMerchantObject::SendGoods(CPlayerObject* player)
+{
     constexpr int BulkGoods = 2;
     std::string text;
     for (const auto& good : m_goods) {
@@ -249,6 +269,7 @@ void CMerchantObject::ShowGoods(CPlayerObject* player)
 
 void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity)
 {
+    std::lock_guard<std::mutex> lock(m_goodsMutex);
     enum Failure { Unavailable = 1, CannotCarry = 2, NotEnoughGold = 3 };
     int failure = Unavailable;
     CUserInfo* owner = player->m_pUserInfo;
@@ -279,5 +300,5 @@ void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity)
     fnMakeDefMessage(&message, failure ? SM_BUYITEM_FAIL : SM_BUYITEM_SUCCESS,
         failure ? failure : owner->GetGold(), 0, 0, 0);
     player->SendSocket(&message, NULL);
-    if (!failure) ShowGoods(player);
+    if (!failure) SendGoods(player);
 }

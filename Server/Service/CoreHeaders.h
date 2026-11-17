@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <malloc.h>
 #include <math.h>
+#include <mutex>
 #include <set>
 #include <string>
 #include <time.h>

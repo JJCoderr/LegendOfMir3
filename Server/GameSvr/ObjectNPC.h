@@ -1,3 +1,4 @@
+#include <mutex>
 
 /*
 */
@@ -28,10 +29,13 @@ public:
 
 	void RunRace();
     void Say(CPlayerObject* player, const char* section);
-    struct Good { int standard, stock, price; };
+    struct Good { int standard, stock, price, targetStock; ULONGLONG refillInterval, lastRefill; };
     std::vector<Good> m_goods;
     bool m_goodsLoaded = false;
+    std::mutex m_goodsMutex;
+    ULONGLONG m_lastRefillCheck = GetTickCount64();
     void ShowGoods(CPlayerObject* player);
+    void SendGoods(CPlayerObject* player); // Caller holds m_goodsMutex.
     void Buy(CPlayerObject* player, const char* name, int quantity);
 
 	virtual WORD	GetThisCharColor() { return _CHAT_COLOR3; }
