@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include "MailWire.h"
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -559,6 +560,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
         panel->SyncEditors(IsTopWindow(panel->m_nID) && !m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive && !m_xStoreWnd.m_bActive && !m_xNPCWnd.m_bActive);
     }
     m_xSiegeWnd.ShowEntry();
+    m_xMailWnd.ShowNotification();
     ShowWndList();
     m_minimap.player={g_xGameProc.m_xMyHero.m_wPosX,g_xGameProc.m_xMyHero.m_wPosY};
     m_minimap.showMonsters=m_xOptionWnd.m_values[7];
@@ -2277,6 +2279,10 @@ int CInterface::ButtonHintAt(POINT point,POINT& anchor)
         if (!PtInRect(&hit,point)) return 0;
         anchor={hit.right,hit.bottom}; return message;
     };
+    const RECT mailNotification=m_xMailWnd.NotificationBounds();
+    if(GetWindowInMousePos(point)==-1 && PtInRect(&mailNotification,point)) {
+        anchor={mailNotification.right,mailNotification.bottom};return MailWire::NotificationCaption;
+    }
     const RECT siegeEntry=m_xSiegeWnd.EntryBounds();
     if(GetWindowInMousePos(point)==-1 && !m_xSiegeWnd.entryPressed && PtInRect(&siegeEntry,point)) {
         anchor={siegeEntry.right,siegeEntry.bottom};return SiegeLayout::EntryCaption;

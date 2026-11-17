@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "MailWire.h"
 #include "Common/Mir3HumanAppearance.h"
 #include "Common/LoginMessages.h"
 
@@ -2870,6 +2871,19 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
                 m_xInterface.m_targetDisplay.ApplyAttributes(DWORD(tdm.nRecog),tdm.wParam,tdm.wTag,body,length);
                 break;
             }
+            case MailWire::NotificationMessage:
+                m_xInterface.m_xMailWnd.notified=true;break;
+            case MailWire::ListMessage:
+                if(tdm.wParam==MailWire::Inbox || tdm.wParam==MailWire::Outbox)
+                    m_xInterface.m_xMailWnd.ReceiveList(tdm.wParam==MailWire::Outbox,pszMsg+DEFBLOCKSIZE,tdm.wSeries);
+                break;
+            case MailWire::BodyMessage:
+                if(tdm.wParam==MailWire::Inbox || tdm.wParam==MailWire::Outbox) {
+                    BYTE record[MailWire::BodyBytes]={};
+                    const int length=fnDecode6BitBuf(pszMsg+DEFBLOCKSIZE,(char*)record,sizeof(record));
+                    m_xInterface.m_xMailWnd.ReceiveBody(tdm.wParam==MailWire::Outbox,record,length);
+                }
+                break;
             case SiegeLayout::ObjectPositionMessage:
                 m_xInterface.m_xSiegeWnd.ReceiveObject(DWORD(tdm.nRecog),POINT{tdm.wParam,tdm.wTag});break;
             case SiegeLayout::ControlMessage:

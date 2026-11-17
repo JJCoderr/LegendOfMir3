@@ -1,7 +1,8 @@
 #include "StdAfx.h"
+#include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -65,7 +66,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewSiegeChecks) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewMailNotify) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1841,6 +1842,31 @@ public:
             if(FILE* report=fopen("equipment-durability-check.txt","wb")) {fprintf(report,"threshold=%d warning=%d raw=%d unit=%d special=%d negative=%d wide=%d ignored=%d drop=%d\n",threshold,warning,rawBytes,unit,special,negative,wide,ignored,drop);fclose(report);}
         }
 
+        if(groupPanel>=PreviewMailWire && groupPanel<=PreviewMailNotify) {
+            auto& ui=g_xGameProc.m_xInterface;auto& mail=ui.m_xMailWnd;
+            BYTE header[MailWire::HeaderBytes]={},body[MailWire::BodyBytes]={};
+            header[MailWire::Id]=7;header[MailWire::Kind]=1;
+            strcpy((char*)header+MailWire::Person,"行会信使");strcpy((char*)header+MailWire::Subject,"新的旅程");strcpy((char*)header+MailWire::Date,"11-17");
+            body[MailWire::Id]=7;body[MailWire::Gold]=100;strcpy((char*)body+MailWire::Text,"欢迎回到玛法大陆。\r这封信带来新的消息。");
+            char encoded[256]={};fnEncode6BitBuf(header,encoded,sizeof(header),sizeof(encoded));const std::string list=std::string(encoded)+"/";
+            const bool early=mail.ReceiveBody(false,body,sizeof(body));mail.ReceiveList(false,list.c_str(),1);
+            const bool decoded=mail.inbox.size()==1 && mail.inbox[0].person=="行会信使" && mail.inbox[0].subject=="新的旅程" && mail.inbox[0].date=="11-17";
+            const bool cached=decoded && mail.inbox[0].loaded && mail.inbox[0].gold==100;
+            mail.ReceiveList(true,list.c_str(),1);const bool separated=mail.outbox.size()==1 && !mail.outbox[0].loaded;
+            mail.ReceiveList(true,encoded,1);const bool delimiter=mail.outbox.empty();
+            mail.ReceiveList(true,list.c_str(),1);const bool shortBody=!mail.ReceiveBody(false,body,sizeof(body)-1);
+            ui.WindowActivate(_WND_ID_MAIL);mail.selectedInbox=0;mail.OpenSelected();const bool read=mail.view==MailLayout::View::Read;
+            mail.SelectView(MailLayout::View::Compose);mail.ReceiveBody(false,body,sizeof(body));const bool draftKept=mail.view==MailLayout::View::Compose;
+            mail.Close();mail.ReceiveBody(false,body,sizeof(body));const bool closed=!mail.m_bActive;
+            ui.DeleteWindowToList(_WND_ID_MAIL);ui.WindowActivate(_WND_ID_MAIL);mail.SelectView(MailLayout::View::Inbox);
+            mail.notified=true;POINT anchor={};const RECT badge=mail.NotificationBounds();const POINT badgePoint={badge.left+2,badge.top+2};
+            const bool notification=ui.ButtonHintAt(badgePoint,anchor)==MailWire::NotificationCaption;
+            if(FILE* report=fopen("mail-wire-check.txt","wb")) {fprintf(report,"early=%d decoded=%d cached=%d separated=%d delimiter=%d shortBody=%d read=%d draft=%d closed=%d notification=%d\n",early,decoded,cached,separated,delimiter,shortBody,read,draftKept,closed,notification);fclose(report);}
+            mouse={790,430};capturePath="mail-wire-list.bmp";
+            if(groupPanel==PreviewMailWireRead) {mail.selectedInbox=0;mail.OpenSelected();capturePath="mail-wire-read.bmp";}
+            if(groupPanel==PreviewMailNotify) {mouse=badgePoint;capturePath="mail-notification.bmp";}
+        }
+
         if(groupPanel>=PreviewSiege && groupPanel<=PreviewSiegeChecks) {
             using namespace SiegeLayout;
             auto& ui=g_xGameProc.m_xInterface;auto& panel=ui.m_xSiegeWnd;auto& map=ui.m_minimap;
@@ -2371,6 +2397,10 @@ public:
                 actor.AddDamage(amounts[i]);actor.DrawDamage();
             }
         }
+        // Button hints expand over several frames; capture their final readable state.
+        POINT hintAnchor={};
+        auto& previewUi=g_xGameProc.m_xInterface;
+        if(capturePath && previewUi.hintExpanding && previewUi.ButtonHintAt(mouse,hintAnchor)) return;
         if (capturePath) {
             auto* buffer = g_xMainWnd.GetBackBuffer();
             DDSURFACEDESC2 surface = {}; surface.dwSize = sizeof(surface);
@@ -2556,6 +2586,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=mail-wire")==0 ? PreviewMailWire :
+        strcmp(lpCmdLine,"--preview=mail-wire-read")==0 ? PreviewMailWireRead :
+        strcmp(lpCmdLine,"--preview=mail-notification")==0 ? PreviewMailNotify :
         strcmp(lpCmdLine,"--preview=siege")==0 ? PreviewSiege :
         strcmp(lpCmdLine,"--preview=siege-load")==0 ? PreviewSiegeLoad :
         strcmp(lpCmdLine,"--preview=siege-checks")==0 ? PreviewSiegeChecks :

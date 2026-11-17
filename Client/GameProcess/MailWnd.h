@@ -3,6 +3,7 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <map>
 
 class CMailWnd : public CGameWnd {
     HFONT editFont=nullptr;
@@ -18,6 +19,9 @@ class CMailWnd : public CGameWnd {
     void ReadEditors();
 public:
     HWND edits[2]={};
+    bool notified=false;
+    RECT NotificationBounds() const;
+    void ShowNotification();
     bool dragging=false,captured=false,readSent=false,scrolling=false;
     int pressedRow=-1,hoverRow=-1,checkedInbox=-1,checkedOutbox=-1;
     bool pressedCheck=false;
@@ -31,6 +35,8 @@ public:
     };
     std::vector<Request> requests;
     void RequestAction(MailLayout::Action action);
+    void ReceiveList(bool sent,const char* encoded,int count);
+    bool ReceiveBody(bool sent,const BYTE* record,int length);
     struct Message {
         unsigned id=0;
         std::string person,subject,body,date;
@@ -38,6 +44,7 @@ public:
         unsigned gold=0;
         std::array<BYTE,MailLayout::ItemRecordBytes> item={};
     };
+    std::map<std::pair<bool,unsigned>,Message> receivedBodies;
     MailLayout::View view=MailLayout::View::Inbox;
     std::vector<Message> inbox,outbox;
     int firstInbox=0,firstOutbox=0,selectedInbox=-1,selectedOutbox=-1,pressed=-1;

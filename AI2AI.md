@@ -1196,3 +1196,28 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - clean Client86/86通过；build-siege-state-all.log七目标通过。siege-state-check9项全1，既有siege-gui-check10项全1。测试直接调用状态处理函数及窗口鼠标路由，并未注入真实加密网络包，也未运行实服器械流程。
 - 截图out/siege-state.png含右下HUD器械入口；out/siege-load-state.png装填框；out/siege-checks-state.png提示状态。主窗口截图已核对，提示截图暴露底边文字被裁切，后续需统一核对ButtonHint边界。
 - 静态1312原版还保存类别和更新时间；当前窗口位置缓存只保留ID/坐标，原版过期删除规则尚未找到，不能宣称动态列表生命周期完全等价。攻击/移动/等待/装填仍仅记录Request，后续网络动作接线继续。
+
+### 提示截图时机校正（2026-11-17）
+- 上轮将器械HUD提示首帧误判为裁切；核对ShowButtonHint确认原版展开动画，hintHeight从6逐帧增至文字高度。运行时动画正常，问题是预览首次Render即保存BMP。
+- 现仅调整CHudPreviewProcess截图时机：存在按钮提示且仍展开时延迟保存，直到展开完成；无提示/模态预览照常。首次编译因Windows interface宏冲突失败，变量改为previewUi后build-hint-capture.log全部目标通过。
+- 三种原生预览验证：siege-checks、hud-button-hint、inventory-hint。panel-hint-check7项、hud-button-hint-check9项全1，保留首帧/展开动画测试；截图out/{siege-checks,hud-button-hint,inventory-hint}-expanded.png已检查。
+- 展开后的CmList2645明确为“投石车窗口(Ctrl+P, P)”，窗口18可正式命名投石车；先前“器械控制”是证据不足时暂称。当前代码P入口已实现，Ctrl修饰未额外拦截，仍需原版完整按键优先级核对。
+- 本次为预览验收修正，暂不做单独小提交，随下一完整GUI/流程批次提交；当前Mir2Ex.cpp和AI2AI.md有未提交修改。
+
+### 邮件通知和回复接线启动
+- 新增Client/docs/mail-wire-evidence.md保存证据。1358仅点亮HUD邮件标志；邮件按钮2072/2074与投石车入口同位置，后绘制，但43C130释放未找到邮件开关，不能臆造点击行为。
+- 1356的wParam0/2选择收发列表，wSeries条数；原编码正文逐段按/切分，再各解码80字节。1357固定613字节正文缓存，正文偏移112。列表id0、WORD4/6、人员8、第二列33已确认，其他字段/打开路径待核对。
+- 本轮为具体接线证据进展，邮件行为未改、无新增完成页面；上轮预览截图等待展开修正仍未提交，将与后续完整批次合并。
+
+- 邮件字段恢复补充：45B420复制header+64日期，人员8(25字节)、标题33(31)、日期64(16)。body613中金币8、物品12(100)、正文112(501)。新增MailWire.h及ReceiveList/ReceiveBody，GameProc1356/1357分派已写入，尚未编译/测试。
+- ReceiveList按/分段调用旧char*解码API（std::string.data），要求80字节；ReceiveBody匹配当前选中并OpenSelected进入阅读。还需处理正文先于列表缓存、未知ID回复、方向切换与通知生命周期，不能仅凭当前接线视为完整。下一步统一实现这些状态及预览177起，再完整构建验证。
+
+- 已补receivedBodies按(sent,id)缓存，正文先到也能保留，刷新列表恢复对应正文；切到Compose/Gift或关闭窗口时延迟回复不切阅读页。缓存当前Destroy清理，关闭保留，实际原版关闭缓存策略待结合45C450进一步确认。
+- 1358通知分派与2072 HUD提示绘制接入，覆盖顺序在投石车之后，提示4622。未伪造点击开关，释放路径仍按原证据处理。
+- 新增预览177 mail-wire、178 mail-wire-read、179 mail-notification，以及10项解码/缓存/方向/边界/页面状态检查。当前尚未编译运行，下轮先clean Client（类布局增加map/bool），再统一全部目标和预览回归，不把写入测试代码视为通过。
+
+### 邮件回复与通知批次验收（2026-11-17）
+- clean Client86/86通过，build-mail-wire-all.log全部七目标通过。mail-wire-check10项全1；旧邮件15+4+3、投石车10+9、寄售16项回归全1。记录解析测试对80字节列表先编码再按原/分隔解码，613字节正文直接传接收函数；尚未注入完整加密网络包，不算实服验证。
+- 预览177/178/179分别mail-wire、mail-wire-read、mail-notification；下一空闲180。out/mail-wire-list.png、mail-wire-read.png、mail-notification.png逐张检查，人物/标题/日期/正文/金币附件标记与来信提示可见。
+- 本批合并此前预览截图等待提示展开修正和投石车名称证据更新；未另做碎片提交。资源/报文/记录偏移统一MailWire命名，复用原生邮件页面和消息解码。
+- 边界仍明确：通知图标按原证据只显示，不新增未经确认的点击打开；邮件查询、发送、删除、撤回请求尚未发送；服务器开放入口与真实事务仍待接入。缓存Close保留/Destroy清空，原版所有删除/撤回失效细节待恢复。整个客户端GUI/登录/服务端目标未完成。

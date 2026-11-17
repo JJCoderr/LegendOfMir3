@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "MailWire.h"
 #include "MailWnd.h"
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
@@ -197,13 +198,13 @@ void CMailWnd::Destroy()
     for(auto& brush:editBackground) {if(brush) DeleteObject(brush);brush=nullptr;}
     if(editFont) DeleteObject(editFont);
     editFont=nullptr;editFontHeight=0;editProcedure=nullptr;
-    inbox.clear();outbox.clear();requests.clear();bodyLines.clear();wrappedBody.clear();
+    inbox.clear();outbox.clear();receivedBodies.clear();requests.clear();bodyLines.clear();wrappedBody.clear();
     recipient.clear();draft.clear();composeRecipient.clear();composeDraft.clear();giftRecipient.clear();giftDraft.clear();
     view=MailLayout::View::Inbox;
     firstInbox=firstOutbox=firstBody=0;
     selectedInbox=selectedOutbox=checkedInbox=checkedOutbox=pressed=pressedRow=hoverRow=-1;
     dragging=captured=scrolling=readSent=pressedCheck=hasGiftItem=giftIsGold=false;
-    giftGold=0;editorsAvailable=true;
+    giftGold=0;editorsAvailable=true;notified=false;
     CGameWnd::Destroy();
 }
 void CMailWnd::Close()
@@ -508,4 +509,73 @@ void CMailWnd::ShowAttachmentHint(POINT point)
             SelectObject(dc,previous);DeleteObject(font);surface->ReleaseDC(dc);
         }
     }
+}
+
+namespace {
+unsigned MailNumber(const BYTE* record,int offset,int bytes)
+{
+    unsigned value=0;for(int i=0;i<bytes;++i) value|=unsigned(record[offset+i])<<(8*i);return value;
+}
+std::string MailText(const BYTE* record,int offset,int size)
+{
+    const char* text=(const char*)record+offset;int length=0;
+    while(length<size && text[length]) ++length;return std::string(text,length);
+}
+}
+void CMailWnd::ReceiveList(bool sent,const char* encoded,int count)
+{
+    using namespace MailWire;
+    auto& messages=sent?outbox:inbox;messages.clear();
+    const char* start=encoded;
+    for(int index=0;index<count;++index) {
+        const char* end=strchr(start,'/');if(!end) break;
+        std::string part(start,end);BYTE record[HeaderBytes]={};
+        if(fnDecode6BitBuf(part.data(),(char*)record,sizeof(record))==HeaderBytes) {
+            Message message;message.id=MailNumber(record,Id,4);
+            message.attachment=MailNumber(record,Kind,2)==1;message.read=MailNumber(record,ReadState,2)!=0;
+            message.person=MailText(record,Person,PersonBytes);message.subject=MailText(record,Subject,SubjectBytes);message.date=MailText(record,Date,DateBytes);
+            const auto cached=receivedBodies.find({sent,message.id});
+            if(cached!=receivedBodies.end()) {
+                message.body=cached->second.body;message.gold=cached->second.gold;
+                message.item=cached->second.item;message.loaded=true;
+            }
+            messages.push_back(std::move(message));
+        }
+        start=end+1;
+    }
+    (sent?firstOutbox:firstInbox)=0;(sent?selectedOutbox:selectedInbox)=-1;
+    (sent?checkedOutbox:checkedInbox)=-1;
+}
+bool CMailWnd::ReceiveBody(bool sent,const BYTE* record,int length)
+{
+    using namespace MailWire;
+    if(length!=BodyBytes) return false;
+    const unsigned id=MailNumber(record,Id,4);
+    Message body;body.id=id;body.gold=MailNumber(record,Gold,4);
+    std::copy(record+Item,record+Item+MailLayout::ItemRecordBytes,body.item.begin());
+    body.body=MailText(record,Text,TextBytes);body.loaded=true;
+    receivedBodies[{sent,id}]=body;
+    auto& messages=sent?outbox:inbox;
+    for(auto& message:messages) if(message.id==id) {
+        message.gold=body.gold;message.item=body.item;message.body=body.body;message.loaded=true;
+        const bool reading=view==MailLayout::View::Inbox || view==MailLayout::View::Outbox || view==MailLayout::View::Read;
+        if(m_bActive && reading && readSent==sent && CurrentMessage()==&message) OpenSelected();
+        break;
+    }
+    return true;
+}
+
+RECT CMailWnd::NotificationBounds() const
+{
+    using namespace MailWire;
+    if(!notified || !m_pxWndImage->NewSetIndex(HudFrame)) return {};
+    const int y=HudBottom-m_pxWndImage->m_lpstNewCurrWilImageInfo->shHeight+NotificationOffsetY;
+    if(!m_pxWndImage->NewSetIndex(NotificationFrame)) return {};
+    const auto image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+    return {NotificationX,y,NotificationX+image.shWidth,y+image.shHeight};
+}
+void CMailWnd::ShowNotification()
+{
+    const RECT area=NotificationBounds();if(IsRectEmpty(&area)) return;
+    DrawSelectionFrame(*m_pxWndImage,MailWire::NotificationFrame,area.left,area.top,SelectionBlend::Normal,false);
 }
