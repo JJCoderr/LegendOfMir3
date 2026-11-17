@@ -14,6 +14,13 @@
 #define	_GAMEPROC_H
 #include "LevelEffects.h"
 #include "ExitFlow.h"
+#include "SpellPlayback.h"
+#include "StagedSpell.h"
+#include "GroundSpell.h"
+#include "SpellParticlePool.h"
+#include "SpellOrbit.h"
+#include "SpellDirection.h"
+#include <map>
 
 
 
@@ -41,6 +48,38 @@ public:
     void ReturnToSelection();
     void DrawExitTransition();
     CLevelEffects m_levelEffects;
+    struct NativeSpell {
+        mir3::SpellPlayback playback;
+        std::optional<mir3::StagedSpell> staged;
+        std::optional<mir3::SpellOrbit> orbit;
+        unsigned orbitDirection=0;
+        std::int64_t soundVoice=0;
+        int soundSample=0;
+        mir3::SpellFlight::Point anchor={};
+        bool groundWave=false,ember=false;
+        POINT cell={};
+        int remaining=0,tint=255;
+        DWORD target=0;std::uint64_t targetInstance=0,serial=0;
+    };
+    std::uint64_t m_nextNativeSpell=1;
+    std::vector<NativeSpell> m_nativeSpells;
+    bool StartNativeSpell(CActor& source,WORD skill,POINT target,DWORD targetId);
+    std::int64_t PlaySpellSound(int sample,POINT cell);
+    void StartGroundSpell(mir3::MagicEffectId effect,POINT source,POINT target,int facing);
+    void StartSpellEmber(POINT cell,int resourceId);
+    void AdvanceNativeSpells(DWORD elapsed,std::uint64_t before);
+    struct SpellMark {POINT cell;int frame;DWORD age=0;};
+    static constexpr DWORD SpellMarkLifetime=2000,SpellEmberLifetime=10000;
+    static constexpr int FireMark=220,IceMark=260,FirstEmber=330,LastEmber=334;
+    std::vector<SpellMark> m_spellMarks;
+    mir3::SpellParticlePool m_spellParticles;
+    mir3::EffectRandom m_effectRandom;
+    std::map<WORD,POINT> m_spellLibraryOffsets;
+    void ClearNativeSpells();
+    void DrawSpellMarks();
+    void DrawSpellParticles();
+    void DrawNativeSpells();
+    void LightNativeSpells();
     WORD m_weaponTraining=0;
     bool ReceiveProgression(const _TDEFAULTMESSAGE& header);
     bool ReceiveAbility(const _TDEFAULTMESSAGE& header,const char* encoded);

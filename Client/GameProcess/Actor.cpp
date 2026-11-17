@@ -12,6 +12,8 @@
 
 
 #include "StdAfx.h"
+#include "EffectRenderer.h"
+#include "SpellReply.h"
 #include "Common/Mir3HumanAppearance.h"
 #include "Common/LegacyPanel.h"
 
@@ -36,6 +38,7 @@ CActor::~CActor()
 
 VOID CActor::InitActor()
 {
+    static std::uint64_t nextInstance=0;m_instanceSerial=++nextInstance;
 	m_wOldPosX			= 0;
 	m_wOldPosY			= 0;
 	m_bOldDir			= 0;
@@ -2208,6 +2211,8 @@ CHero::~CHero()
 
 VOID CHero::InitActor()
 {
+    m_forcedMotion.reset();
+    m_spellTint={};m_spellLightActive=false;m_spellFrameElapsed=0;
 	CActor::InitActor();
 
 	ZeroMemory(&m_stFeatureEx, sizeof(FEATUREEX));
@@ -2634,32 +2639,55 @@ VOID CHero::OnCharStatusChanged(LPPACKETMSG lpPacketMsg)
 	else					m_bOpenHealth = FALSE;
 }
 
-VOID CHero::OnRush(LPPACKETMSG lpPacketMsg)
+void CHero::BeginForcedMotion(LPPACKETMSG packet)
 {
-	BYTE bDir = lpPacketMsg->stDefMsg.wSeries;
-	m_wPosX   = lpPacketMsg->stDefMsg.wParam;
-	m_wPosY   = lpPacketMsg->stDefMsg.wTag;
-	SetMotionFrame(_MT_MOODEPO, bDir);
-	m_bMoveSpeed = _SPEED_WALK;
-	SetMoving();
+    m_forcedMotion=mir3::ForcedMotion::begin(packet->stDefMsg.wIdent,LOBYTE(packet->stDefMsg.wSeries),
+        packet->stDefMsg.wParam,packet->stDefMsg.wTag);
+    m_bUseEffect=m_bUseSwordEffect=FALSE;m_spellLightActive=false;
+    const auto& motion=*m_forcedMotion;
+    m_wPosX=WORD(motion.origin[0]);m_wPosY=WORD(motion.origin[1]);
+    SetMotionFrame(motion.opcode==mir3::ForcedMotion::Backstep?_MT_PUSHBACK:_MT_MOODEPO,BYTE(motion.facing));
+    m_bMoveDir=BYTE(motion.direction());m_bMoveSpeed=_SPEED_WALK;m_bIsMoved=FALSE;
+    const auto offset=motion.offset();m_shShiftPixelX=SHORT(offset[0]);m_shShiftPixelY=SHORT(offset[1]);
 }
-
-VOID CHero::OnBackStep(LPPACKETMSG lpPacketMsg)
+VOID CHero::OnRush(LPPACKETMSG packet) {BeginForcedMotion(packet);}
+VOID CHero::OnBackStep(LPPACKETMSG packet) {BeginForcedMotion(packet);}
+bool CHero::AdvanceForcedMotion(DWORD elapsed)
 {
-	BYTE bDir = lpPacketMsg->stDefMsg.wSeries;
-	m_wPosX   = lpPacketMsg->stDefMsg.wParam;
-	m_wPosY   = lpPacketMsg->stDefMsg.wTag;
-	SetMotionFrame(_MT_PUSHBACK, bDir);
-	if ( m_bCurrDir < 4 )	m_bMoveDir = m_bCurrDir + 4;
-	else					m_bMoveDir = m_bCurrDir - 4;
-	m_bBackStepFrame	= 0;
-	m_bBackStepFrameCnt = 6;
-	m_bMoveSpeed		= _SPEED_WALK;
-	SetBackStepMoving();
+    if(!m_forcedMotion) return false;
+    auto& motion=*m_forcedMotion;motion.advance(elapsed);
+    const auto cell=motion.cell(),offset=motion.offset();
+    const bool local=this==&g_xGameProc.m_xMyHero;
+    const bool changed=m_wPosX!=cell[0] || m_wPosY!=cell[1];
+    m_wPosX=WORD(cell[0]);m_wPosY=WORD(cell[1]);
+    m_shShiftPixelX=SHORT(offset[0]);m_shShiftPixelY=SHORT(offset[1]);
+    m_dwCurrFrame=m_dwFstFrame+(motion.opcode==mir3::ForcedMotion::Backstep?0:motion.frame);
+    if(local) {
+        auto& hero=g_xGameProc.m_xMyHero;
+        if(changed || !hero.CheckMyPostion()) hero.AdjustMyPostion();
+        hero.m_pxMap->m_shViewOffsetX=m_shShiftPixelX;hero.m_pxMap->m_shViewOffsetY=m_shShiftPixelY;
+    }
+    if(motion.finished()) {
+        const bool returned=motion.returned();m_forcedMotion.reset();
+        m_bMoveSpeed=0;m_bIsMoved=FALSE;
+        m_shShiftPixelX=m_shShiftPixelY=m_shShiftTileX=m_shShiftTileY=0;
+        SetMotionFrame(m_stFeatureEx.bHorse==_HORSE_NONE?_MT_ATTACKMODE:_MT_HORSESTAND,m_bCurrDir);
+        if(local) {
+            auto& hero=g_xGameProc.m_xMyHero;
+            if(returned) {
+                hero.m_wOldPosX=m_wPosX;hero.m_wOldPosY=m_wPosY;hero.m_bOldDir=m_bCurrDir;
+                hero.ConfirmAction();
+            }
+            hero.m_bInputLock=hero.m_spellAwaitingReply;
+            hero.AdjustMyPostion();
+        }
+    }
+    return true;
 }
 
 VOID CHero::OnDeath(LPPACKETMSG lpPacketMsg)
 {
+    m_forcedMotion.reset();
 	BYTE bDir;
 	m_wPosX = lpPacketMsg->stDefMsg.wParam;
 	m_wPosY = lpPacketMsg->stDefMsg.wTag;
@@ -2908,161 +2936,153 @@ VOID CHero::OnHit(LPPACKETMSG lpPacketMsg)
 	}
 }
 
+void CHero::OnMagicList(LPPACKETMSG packet)
+{
+    const auto reply=SpellWire::Reply::Parse(packet->stDefMsg,packet->szEncodeData);
+    if(!reply || !reply->multiple) return;
+    m_shCurrMagicID=reply->skill;
+    if(reply->skill!=WORD(mir3::SkillId::original_113)) return;
+    for(DWORD identity:reply->targets) {
+        auto& game=g_xGameProc;
+        CActor* target=identity==game.m_xMyHero.m_dwIdentity?&game.m_xMyHero:game.FindActor(int(identity));
+        if(!identity || !target) continue;
+        game.StartNativeSpell(*this,reply->skill,POINT{target->m_wPosX,target->m_wPosY},identity);
+    }
+}
+
 VOID CHero::OnMagicFire(LPPACKETMSG lpPacketMsg)
 {
-	POINT	ptPos;
-	BYTE	bMagicID;
-	INT		nMagicTargetID, nPos;
+    const auto reply=SpellWire::Reply::Parse(lpPacketMsg->stDefMsg,lpPacketMsg->szEncodeData);
+    if(!reply || reply->multiple) return;
+    POINT ptPos={reply->x,reply->y};
+    const INT nMagicTargetID=INT(reply->targets.front());
+    // 413150 ignores these replies without changing the actor's current spell.
+    switch(static_cast<mir3::SkillId>(reply->skill)) {
+    case mir3::SkillId::original_104: case mir3::SkillId::spacemove:
+    case mir3::SkillId::sinsu: case mir3::SkillId::firewind:
+    case mir3::SkillId::cloak: case mir3::SkillId::skelleton:
+    case mir3::SkillId::original_78: case mir3::SkillId::original_64:
+    case mir3::SkillId::original_105: case mir3::SkillId::original_121: return;
+    case mir3::SkillId::earthfire: case mir3::SkillId::holyshield:
+    case mir3::SkillId::original_63:
+        m_shCurrMagicID=reply->skill;return;
+    default: break;
+    }
+    const POINT source={m_wPosX,m_wPosY};
+    switch(static_cast<mir3::SkillId>(reply->skill)) {
+    case mir3::SkillId::fire:
+        g_xGameProc.StartGroundSpell(mir3::MagicEffectId::fire_wave,source,ptPos,m_bCurrDir);break;
+    case mir3::SkillId::original_53:
+        g_xGameProc.StartGroundSpell(mir3::MagicEffectId::ice_wave,source,ptPos,m_bCurrDir);break;
+    case mir3::SkillId::original_110:
+        g_xGameProc.StartGroundSpell(mir3::MagicEffectId::three_rays,source,ptPos,m_bCurrDir);break;
+    default:
+        g_xGameProc.StartNativeSpell(*this,reply->skill,ptPos,DWORD(nMagicTargetID));
+        if(reply->skill==WORD(mir3::SkillId::shootlighten))
+            g_xGameProc.StartGroundSpell(mir3::MagicEffectId::lightning_trail,source,ptPos,m_bCurrDir);
+        break;
+    }
+    m_shCurrMagicID=reply->skill;
+}
 
-	ptPos.x	 = lpPacketMsg->stDefMsg.wParam;
-	ptPos.y  = lpPacketMsg->stDefMsg.wTag;
-	bMagicID = lpPacketMsg->stDefMsg.wSeries;
+BOOL CHero::DrawEffect()
+{
+    if(m_bCurrMtn!=_MT_SPELL1 && m_bCurrMtn!=_MT_SPELL2) return CActor::DrawEffect();
+    const WORD skill=WORD(m_shCurrMagicID);
+    const auto* resource=mir3::EffectCatalog::shared().find(mir3::EffectCatalog::Section::spell,skill);
+    if(resource && m_bUseEffect) {
+        const int direction=mir3::SpellRoutes::get(skill).directional_effect?m_bCurrDir:0;
+        if(m_spellLightActive && resource->outer_radius) {
+            const BYTE outer=BYTE(m_bEffectFrame>=(m_bEffectFrameCnt>>1)?m_bEffectFrameCnt-m_bEffectFrame:m_bEffectFrame+1);
+            const BYTE inner=BYTE(outer-1);
+            if(g_xGameProc.m_xInterface.m_xOptionWnd.m_values[9])
+                g_xGameProc.m_xLightFog.SetLightRadiusWithRing(m_shScrnPosX+_CELL_WIDTH/2,m_shScrnPosY+_CELL_HEIGHT/2,
+                    inner,resource->inner_color[0],resource->inner_color[1],resource->inner_color[2],
+                    outer,resource->outer_color[0],resource->outer_color[1],resource->outer_color[2]);
+            if(!outer) m_spellLightActive=false;
+        }
+        auto tinted=*resource;tinted.tint=m_spellTint;
+        NativeEffects::Draw(tinted,int(resource->first)+direction*10+m_bEffectFrame,m_shScrnPosX,m_shScrnPosY);
+    }
+    return TRUE;
+}
 
-	nPos = fnDecode6BitBuf(lpPacketMsg->szEncodeData, (CHAR*)&nMagicTargetID, sizeof(INT));
+void CHero::BeginSpellAction(WORD skill,BYTE facing,BYTE action)
+{
+    m_spellFrameElapsed=0;
+    const auto& route=mir3::SpellRoutes::get(skill);
+    m_shCurrMagicID=skill;
+    m_bWarMode=TRUE;
+    m_dwFstEffectFrame=m_dwEndEffectFrame=m_dwCurrEffectFrame=0;
+    m_bEffectFrame=0;
+    const auto* resource=mir3::EffectCatalog::shared().find(mir3::EffectCatalog::Section::spell,skill);
+    m_bUseEffect=resource!=nullptr;m_spellLightActive=resource!=nullptr;
+    m_spellTint=resource?resource->tint:mir3::SpellColor::Rgb{};
+    if(resource && this==&g_xGameProc.m_xMyHero) {
+        std::array<std::uint16_t,AbilityWire::ElementCount> attack={};
+        const BYTE* extension=g_xGameProc.m_xInterface.m_xStatusWnd.m_abilityExtension;
+        for(int i=0;i<AbilityWire::ElementCount;++i) {
+            const int offset=AbilityWire::AttackElements-AbilityWire::Extension+2*i;
+            attack[i]=WORD(extension[offset])|(WORD(extension[offset+1])<<8);
+        }
+        m_spellTint=mir3::SpellColor::strongest(attack,m_spellTint);
+    }
+    if(resource) {
+        m_dwFstEffectFrame=resource->first+(route.directional_effect?facing*10:0);
+        m_dwCurrEffectFrame=m_dwFstEffectFrame;m_dwEndEffectFrame=resource->end+(route.directional_effect?facing*10:0);
+        m_bLightRadius[0]=resource->inner_radius;m_bLightRadius[1]=resource->outer_radius;
+        for(int channel=0;channel<3;++channel) {
+            m_bLightColor[0][channel]=resource->inner_color[channel];
+            m_bLightColor[1][channel]=resource->outer_color[channel];
+        }
+    }
+    m_bEffectFrameCnt=BYTE(route.action_limit);
+    SetMotionFrame(action,facing);
+    constexpr WORD NormalSpellInterval=75;
+    m_wDelay=route.action_interval?WORD(route.action_interval):NormalSpellInterval;
+    if(mir3::EffectCatalog::shared().find(mir3::EffectCatalog::Section::spell,skill)) {
+        const int sound=10*(int(skill)+1000);
+        g_xGameProc.PlaySpellSound(sound,{m_wPosX,m_wPosY});
+    }
+}
 
-	if ( bMagicID == _SKILL_SKELLETON )
-	{
-		return;
-	}
+bool CHero::AdvanceSpellAnimation(DWORD elapsed)
+{
+    if(m_bCurrMtn!=_MT_SPELL1 && m_bCurrMtn!=_MT_SPELL2) return false;
+    m_wCurrDelay=0;m_spellFrameElapsed+=elapsed;
+    constexpr DWORD SlowActionStatus=0x08000000u;
+    const DWORD interval=DWORD(m_wDelay)*((DWORD(m_nState)&SlowActionStatus)?2:1);
+    if(m_dwCurrFrame<m_dwEndFrame && LONG(m_spellFrameElapsed)>LONG(interval)) {
+        m_spellFrameElapsed=0;++m_dwCurrFrame;++m_dwCurrEffectFrame;++m_bEffectFrame;
+        if(this!=&g_xGameProc.m_xMyHero && m_bMsgHurryCheck) {
+            m_wDelay/=2;m_bMsgHurryCheck=FALSE;
+        }
+        ApplySpellPhase();
+    }
+    return true;
+}
 
-	if ( bMagicID == _SKILL_SHOOTLIGHTEN )
-	{
-		CElecMagic* pxElecMagic;
-		pxElecMagic = new CElecMagic;
-		pxElecMagic->CreateMagic(bMagicID, m_wPosX, m_wPosY, ptPos.x, ptPos.y, NULL, nMagicTargetID);
-		g_xGameProc.m_xMagicList.AddNode(pxElecMagic);
-	}
-//	if ( bMagicID == _SKILL_SHOOTLIGHTEN || bMagicID == _SKILL_FIRE )
-	else if ( bMagicID == _SKILL_FIRE )
-	{
-		BYTE  bDir16	 = (BYTE)g_xGameProc.m_xMap.CalcDirection8(m_wPosX, m_wPosY, ptPos.x, ptPos.y);
-		POINT ptTileGap  = {0, 0};
-		POINT ptTileDest = {0, 0};
-		BYTE  bLoopCnt	 = 0;
-		BYTE  bDelay     = 0;
-
-		if ( bMagicID == _SKILL_SHOOTLIGHTEN )			{	bLoopCnt = 15;	bDelay =  70; }
-		else											{	bLoopCnt =  5;	bDelay = 150; }
-
-		switch ( bDir16 )
-		{
-		case 0 :	ptTileGap.x =  0; ptTileGap.y = -1; break;
-		case 1 :	ptTileGap.x =  1; ptTileGap.y = -1; break;
-		case 2 :	ptTileGap.x =  1; ptTileGap.y =  0; break;
-		case 3 :	ptTileGap.x =  1; ptTileGap.y =  1; break;
-		case 4 :	ptTileGap.x =  0; ptTileGap.y =  1; break;
-		case 5 :	ptTileGap.x = -1; ptTileGap.y =  1; break;
-		case 6 :	ptTileGap.x = -1; ptTileGap.y =  0; break;
-		case 7 :	ptTileGap.x = -1; ptTileGap.y = -1; break;
-		}
-
-		for ( INT nCnt = 0; nCnt < bLoopCnt; nCnt++ )
-		{
-			CMagicStream* pxMagicStream;
-			pxMagicStream = new CMagicStream;
-			ptTileDest.x = m_wPosX + ptTileGap.x*(nCnt+1);
-			ptTileDest.y = m_wPosY + ptTileGap.y*(nCnt+1);
-
-			pxMagicStream->CreateMagic(bMagicID, m_wPosX, m_wPosY, ptTileDest.x, ptTileDest.y, NULL, nMagicTargetID, nCnt*bDelay, ptTileGap);
-
-			if ( bMagicID == _SKILL_SHOOTLIGHTEN )
-				g_xGameProc.m_xMagicList.AddNode(pxMagicStream);
-			else
-				g_xGameProc.m_xGroundMagicList.AddNode(pxMagicStream);
-		}
-	}
-	else if ( bMagicID == _SKILL_SHIELD )
-	{
-		CMagic* pxMagic;
-		pxMagic = new CMagic;
-		pxMagic->CreateMagic(bMagicID, m_wPosX, m_wPosY, m_wPosX, m_wPosY, NULL, m_dwIdentity);
-		g_xGameProc.m_xMagicList.AddNode(pxMagic);
-	}
-	else if ( bMagicID != _SKILL_EARTHFIRE &&  bMagicID != _SKILL_HOLYSHIELD )
-	{
-		CMagic* pxMagic;
-		pxMagic = new CMagic;
-		pxMagic->CreateMagic(bMagicID, m_wPosX, m_wPosY, ptPos.x, ptPos.y, NULL, nMagicTargetID);
-		g_xGameProc.m_xMagicList.AddNode(pxMagic);						
-	}
-
-	m_shCurrMagicID = bMagicID;
+void CHero::ApplySpellPhase()
+{
+    if(m_bCurrMtn==_MT_SPELL2) {
+        if(m_dwCurrFrame>=m_dwEndFrame-1 && m_bEffectFrame<=BYTE(m_bEffectFrameCnt-2)) {
+            m_wDelay=70;m_dwCurrFrame=m_dwEndFrame-2;
+        }
+    } else if(m_bCurrMtn==_MT_SPELL1) {
+        if(m_dwCurrFrame>=m_dwEndFrame-3 && m_dwCurrFrame<m_dwEndFrame-2) {
+            if(m_bEffectFrame<BYTE(m_bEffectFrameCnt-4)) m_dwCurrFrame=m_dwEndFrame-4;
+        } else if(m_dwCurrFrame>=m_dwEndFrame-2 && m_dwCurrFrame<m_dwEndFrame-1) m_wDelay=200;
+        else if(m_dwCurrFrame>=m_dwEndFrame-1) m_wDelay=80;
+    }
 }
 
 VOID CHero::OnSpell(LPPACKETMSG lpPacketMsg)
 {
-	BYTE  bMagicDir; 
-	INT	  nMagicID;
-	POINT ptTargetPos;
-
-	ptTargetPos.x = lpPacketMsg->stDefMsg.wParam;
-	ptTargetPos.y = lpPacketMsg->stDefMsg.wTag;
-//	bDir		  = lpPacketMsg->stDefMsg.wSeries;
-//	nPos		  = fnDecode6BitBuf(lpPacketMsg->szEncodeData, szDecodeMsg, sizeof(szDecodeMsg));
-//	szDecodeMsg[nPos] = '\0';
-
-	bMagicDir = g_xGameProc.m_xMap.CalcDirection8(m_wPosX, m_wPosY, ptTargetPos.x, ptTargetPos.y);
-	nMagicID  = atoi(lpPacketMsg->szEncodeData);
-
-	if ( nMagicID == _SKILL_FIREBALL     || nMagicID == _SKILL_FIREBALL2 || nMagicID == _SKILL_FIRE      || nMagicID == _SKILL_SHOOTLIGHTEN ||
-		 nMagicID == _SKILL_HANGMAJINBUB || nMagicID== _SKILL_DEJIWONHO  || nMagicID == _SKILL_FIRECHARM || nMagicID == _SKILL_BIGCLOAK || nMagicID == _SKILL_SINSU )
-		LoadEffect(&g_xGameProc.m_xImage, nMagicID, bMagicDir);
-	else
-		LoadEffect(&g_xGameProc.m_xImage, nMagicID);
-
-	if	( nMagicID == _SKILL_SHOWHP )				m_bEffectFrameCnt = 20;
-	else if ( nMagicID == _SKILL_LIGHTFLOWER )		m_bEffectFrameCnt = 20;
-	else if ( nMagicID == _SKILL_SPACEMOVE )		m_bEffectFrameCnt = 19;
-	else if ( nMagicID == _SKILL_LIGHTENING )		m_bEffectFrameCnt = 17;
-
-	m_bWarMode = m_bUseEffect = TRUE;
-
-/*	if ( nMagicID == _SKILL_SHIELD )
-	{
-		m_dwFstEffectFrame  = 50;
-		m_dwEndEffectFrame  = 60;
-		m_dwCurrEffectFrame = 50;
-		m_bEffectFrame		= 0;
-		m_bEffectFrameCnt	= _DEFAULT_SPELLFRAME;
-	}
-*/	m_shCurrMagicID	= nMagicID;
-
-	switch( nMagicID )
-	{
-		case _SKILL_HANGMAJINBUB:
-		case _SKILL_DEJIWONHO:
-		case _SKILL_FIRECHARM:
-		case _SKILL_FIRE:
-		case _SKILL_FIREBALL2:
-		case _SKILL_SINSU:
-		case _SKILL_FIREBALL:
-		case _SKILL_SHOOTLIGHTEN:
-		case _SKILL_BIGCLOAK:
-			SetMotionFrame(_MT_SPELL1, bMagicDir);
-			break;
-		case _SKILL_FIREWIND:	
-		case _SKILL_AMYOUNSUL:
-		case _SKILL_TAMMING:
-		case _SKILL_KILLUNDEAD:
-		case _SKILL_HEALLING:
-		case _SKILL_HOLYSHIELD:
-		case _SKILL_BIGHEALLING:
-		case _SKILL_LIGHTFLOWER:
-		case _SKILL_SKELLETON:
-		case _SKILL_SNOWWIND:
-		case _SKILL_SHIELD:
-		case _SKILL_SHOWHP:
-		case _SKILL_EARTHFIRE:
-		case _SKILL_FIREBOOM:
-		case _SKILL_SPACEMOVE:
-		case _SKILL_CLOAK:
-		case _SKILL_LIGHTENING:
-		default:
-			SetMotionFrame(_MT_SPELL2, bMagicDir);
-			break;			
-	}
+    const WORD skill=WORD(atoi(lpPacketMsg->szEncodeData));
+    const BYTE facing=g_xGameProc.m_xMap.CalcDirection8(m_wPosX,m_wPosY,
+        lpPacketMsg->stDefMsg.wParam,lpPacketMsg->stDefMsg.wTag);
+    BeginSpellAction(skill,facing,BYTE(mir3::SpellRoutes::remote_action(skill)));
 }
-
 
 
 VOID CHero::OnButch(LPPACKETMSG lpPacketMsg)
@@ -3080,7 +3100,7 @@ BOOL CHero::UpdatePacketState()
 	LPPACKETMSG	lpPacketMsg = NULL;
 
 
-	if ( m_bCurrMtn == _MT_STAND || m_bCurrMtn == _MT_ATTACKMODE || m_bCurrMtn == _MT_HORSESTAND || (m_bCurrMtn==_MT_SPELL1 && m_dwCurrFrame == m_dwEndFrame-2) )
+	if ( m_bCurrMtn == _MT_STAND || m_bCurrMtn == _MT_ATTACKMODE || m_bCurrMtn == _MT_HORSESTAND )
 	{
 		LPPACKETMSG	lpPacketMsg;
 		SHORT shLeftMsgCnt = m_xPacketQueue.GetCount();
@@ -3106,6 +3126,7 @@ BOOL CHero::UpdatePacketState()
 					case SM_USERNAME:			{	OnUserName(lpPacketMsg);			break;	}
 					case SM_CHANGENAMECOLOR:	{	OnChangeNameClr(lpPacketMsg);		break;	}
 					case SM_HEALTHSPELLCHANGED:	{	OnHealthSpellChanged(lpPacketMsg);	break;	}
+					case mir3::ForcedMotion::Bump:
 					case SM_RUSH:				{	OnRush(lpPacketMsg);				break;	}
 					case SM_BACKSTEP:			{	OnBackStep(lpPacketMsg);			break;	}
 					case SM_NOWDEATH:
@@ -3121,6 +3142,7 @@ BOOL CHero::UpdatePacketState()
 					case SM_POWERHIT:
 					case SM_WIDEHIT:			{	OnHit(lpPacketMsg);					break;	}
 					case SM_MAGICFIRE:			{	OnMagicFire(lpPacketMsg);			break;	}
+                    case SpellWire::MultipleReply: {OnMagicList(lpPacketMsg);break;}
 					case SM_SPELL:				{	OnSpell(lpPacketMsg);				break;	}
 					default:
 					{										
@@ -3164,6 +3186,7 @@ VOID CHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 		return;
 	}
 
+    if(AdvanceForcedMotion(DWORD(nLoopTime))) {UpdatePacketState();return;}
 	if ( UpdateMove(bIsMoveTime) )
 	{
 		UpdatePacketState();
@@ -3182,7 +3205,7 @@ VOID CHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 				m_bShieldCurrFrm = 0;
 		}
 
-		if ( m_wCurrDelay > m_wDelay )
+		if ( !AdvanceSpellAnimation(DWORD(nLoopTime)) && m_wCurrDelay > m_wDelay )
 		{
 			m_wCurrDelay = 0;
 
@@ -3192,7 +3215,7 @@ VOID CHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 
 				PlayActSound();
 
-				if ( (m_bCurrMtn == _MT_SPELL2 || m_bCurrMtn == _MT_SPELL1) && m_bUseEffect )
+				if ( (m_bCurrMtn == _MT_SPELL2 || m_bCurrMtn == _MT_SPELL1) )
 				{
 					m_dwCurrEffectFrame++;
 					m_bEffectFrame++;
@@ -3214,28 +3237,8 @@ VOID CHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 			m_bWarMode		= FALSE;
 		}
 
-		if ( m_dwCurrFrame >= m_dwEndFrame-1 )
-		{
-			if ( (m_bCurrMtn == _MT_SPELL2) && m_bUseEffect )
-			{
-				if ( m_dwCurrEffectFrame - m_dwFstEffectFrame < m_bEffectFrameCnt-2 )
-				{
-					m_dwCurrFrame = m_dwEndFrame - 2;
-				}
-			}
-		}
-		else if ( m_dwCurrFrame >= m_dwEndFrame-3 )
-		{
-			if ( (m_bCurrMtn == _MT_SPELL1) && m_bUseEffect )
-			{
-				if ( m_dwCurrEffectFrame - m_dwFstEffectFrame < m_bEffectFrameCnt-5 )
-				{
-					m_dwCurrFrame = m_dwEndFrame - 4;
-				}
-			}
-		}
 
-		if ( m_dwCurrFrame >= m_dwEndFrame )
+        if ( m_dwCurrFrame >= m_dwEndFrame )
 		{
 			m_dwCurrEffectFrame = 0;
 			m_dwFstEffectFrame = 0;
@@ -3687,6 +3690,7 @@ CMyHero::~CMyHero()
 
 VOID CMyHero::InitActor()
 {
+    m_spellTiming={};m_actionClock={};m_pendingAction.reset();m_spellAwaitingReply=false;m_spellReplyElapsed=0;
 	CHero::InitActor();
 
 	m_wOldPosX			= 0;
@@ -3701,7 +3705,7 @@ VOID CMyHero::InitActor()
 	m_bJob				= 0;
 	m_nGlod				= 0;
 
-	m_dwLastHitTime		= timeGetTime();
+	m_dwLastHitTime		= 0;
 	m_dwLastSpellTime	= timeGetTime();
 	m_dwLastMagicTime	= timeGetTime();
 	m_dwLastStruckTime  = timeGetTime();
@@ -3786,7 +3790,8 @@ VOID CMyHero::OnHealthSpellChanged(LPPACKETMSG lpPacketMsg)
 
 
 BOOL CMyHero::UpdatePacketState()
-{	
+{
+    if(m_pendingAction) return FALSE;
 	LPPACKETMSG	lpPacketMsg = NULL;
 
 	SHORT shLeftMsgCnt = m_xPriorPacketQueue.GetCount();
@@ -3805,7 +3810,7 @@ BOOL CMyHero::UpdatePacketState()
 		}
 	}
 
-	if ( m_bCurrMtn == _MT_STAND || m_bCurrMtn == _MT_ATTACKMODE || m_bCurrMtn == _MT_HORSESTAND || (m_bCurrMtn==_MT_SPELL1 && m_dwCurrFrame==m_dwEndFrame - 2) )
+	if ( m_bCurrMtn == _MT_STAND || m_bCurrMtn == _MT_ATTACKMODE || m_bCurrMtn == _MT_HORSESTAND )
 	{
 		LPPACKETMSG	lpPacketMsg;
 
@@ -3838,6 +3843,7 @@ BOOL CMyHero::UpdatePacketState()
                         g_xGameProc.m_exitGuard.ticks[ExitFlow::Struck]=GetTickCount();
 						break;
 					}
+                    case mir3::ForcedMotion::Bump:
 					case SM_RUSH:
 					{
 						m_bInputLock = TRUE;
@@ -3846,7 +3852,7 @@ BOOL CMyHero::UpdatePacketState()
 						m_bOldDir	 = m_bCurrDir;
 						OnRush(lpPacketMsg);
 						if ( !CheckMyPostion() )			AdjustMyPostion();
-						m_pxMap->ScrollMap(m_bMoveDir, m_dwCurrFrame-m_dwFstFrame, m_bMoveSpeed);
+						AdvanceForcedMotion(0);
 						break;
 					}
 					case SM_BACKSTEP:
@@ -3858,7 +3864,7 @@ BOOL CMyHero::UpdatePacketState()
 						OnBackStep(lpPacketMsg);
 
 						if ( !CheckMyPostion() )			AdjustMyPostion();
-						m_pxMap->ScrollMap(m_bMoveDir, m_dwCurrFrame-m_dwFstFrame, m_bMoveSpeed);			
+						AdvanceForcedMotion(0);
 						break;
 					}
 					case SM_FEATURECHANGED:		{	OnFeatureChanged(lpPacketMsg);		break;	}
@@ -3869,6 +3875,7 @@ BOOL CMyHero::UpdatePacketState()
 					case SM_CHANGENAMECOLOR:	{	OnChangeNameClr(lpPacketMsg);		break;	}
 					case SM_CHARSTATUSCHANGE:	{	OnCharStatusChanged(lpPacketMsg);	break;	}
 					case SM_MAGICFIRE:			{	OnMagicFire(lpPacketMsg);			break;	}
+                    case SpellWire::MultipleReply: {OnMagicList(lpPacketMsg);break;}
 					case SM_HEALTHSPELLCHANGED:	{	OnHealthSpellChanged(lpPacketMsg);	break;	}
 					default:
 					{										
@@ -3886,8 +3893,21 @@ BOOL CMyHero::UpdatePacketState()
 
 
 
+void CMyHero::ConfirmAction()
+{
+    m_spellAwaitingReply=false;m_spellReplyElapsed=0;m_bMotionLock=FALSE;
+    if(!m_bIsDead && (m_bCurrMtn==_MT_STAND || m_bCurrMtn==_MT_HORSESTAND || m_bCurrMtn==_MT_ATTACKMODE))
+        m_bInputLock=FALSE;
+}
+
 BOOL CMyHero::SetOldPosition()
 {
+    if(m_bIsDead || m_bCurrMtn==_MT_DIE) return FALSE;
+    m_pendingAction.reset();m_forcedMotion.reset();
+    m_spellAwaitingReply=false;m_spellReplyElapsed=0;
+    m_spellLightActive=false;m_bUseEffect=m_bUseSwordEffect=FALSE;
+    m_dwCurrEffectFrame=m_dwFstEffectFrame=m_dwEndEffectFrame=0;
+    m_bEffectFrame=0;m_dwMotionLockTime=0;
 	m_wPosX	   = m_wOldPosX;
 	m_wPosY	   = m_wOldPosY;
 	m_bCurrDir = m_bOldDir;
@@ -3934,7 +3954,46 @@ VOID CMyHero::AdjustMyPostion()
 }
 
 
-VOID CMyHero::SetMotionState(BYTE bMtn, BYTE bDir, INT nMouseTargetID, BOOL bIsDead, LPPOINT lpptPos, SHORT shSkill)
+VOID CMyHero::SetMotionState(BYTE motion,BYTE direction,INT target,BOOL targetDead,LPPOINT position,SHORT skill)
+{
+    if(m_pendingAction) return;
+    const bool movement=motion==_MT_WALK || motion==_MT_RUN || motion==_MT_HORSEWALK || motion==_MT_HORSERUN;
+    const bool attack=motion==_MT_ONEHSWING;
+    if(!m_bIsMon && (movement || attack)) {
+        if(!position || m_bIsDead || m_spellAwaitingReply || (movement && m_xPacketQueue.GetCount())) return;
+        if(attack && !CanNextHit()) return;
+        m_pendingAction=PendingLocalAction{motion,direction,target,targetDead,*position,{m_wPosX,m_wPosY},skill,{},0};
+        AdvancePendingAction();return;
+    }
+    ExecuteMotionState(motion,direction,target,targetDead,position,skill);
+}
+DWORD CMyHero::AttackInterval() const
+{
+    const int discount=(std::min)(800,(std::min)(370,int(m_stAbility.bLevel)*14)+60*int(m_shHitSpeed));
+    return DWORD(1400-discount+(m_stAbility.bHandWeight>m_stAbility.bMaxHandWeight?1500:0));
+}
+void CMyHero::AdvancePendingAction()
+{
+    if(!m_pendingAction) return;
+    auto& pending=*m_pendingAction;
+    if(!m_pxMap || !m_pxMap->m_pstCellInfo || m_wPosX!=pending.origin.x || m_wPosY!=pending.origin.y ||
+        m_bIsDead || (m_stAbility.wMaxHP && !m_stAbility.wHP)) {m_pendingAction.reset();return;}
+    const DWORD now=GetTickCount();
+    const bool movement=pending.motion!=_MT_ONEHSWING;
+    if(!pending.waitingSince) {
+        if(movement) {
+            if(!m_actionClock.admit_move(now)) return;
+            if(!m_spellTiming.movement_ready(now)) {m_pendingAction.reset();return;}
+        }
+        pending.waitingSince=now;pending.wait=m_actionClock.shared_wait(now,AttackInterval());
+    }
+    if(mir3::LocalActionClock::remaining(now,*pending.waitingSince,pending.wait)) return;
+    auto action=pending;m_pendingAction.reset();
+    if(movement) m_actionClock.moved=now;
+    else m_actionClock.attacked=now;
+    ExecuteMotionState(action.motion,action.direction,action.target,action.targetDead,&action.destination,action.skill);
+}
+VOID CMyHero::ExecuteMotionState(BYTE bMtn,BYTE bDir,INT nMouseTargetID,BOOL bIsDead,LPPOINT lpptPos,SHORT shSkill)
 {
 	if ( !m_bIsMon )
 	{
@@ -4020,7 +4079,7 @@ VOID CMyHero::SetMotionState(BYTE bMtn, BYTE bDir, INT nMouseTargetID, BOOL bIsD
 					m_bAttackMode = _MT_ONEVSWING;
 				}			
 
-				if ( lpptPos && CanNextHit() )
+				if ( lpptPos )
 				{
 					m_bMotionLock	= m_bInputLock = TRUE;
 					m_wOldPosX		= m_wPosX;
@@ -4085,10 +4144,18 @@ VOID CMyHero::SetMotionState(BYTE bMtn, BYTE bDir, INT nMouseTargetID, BOOL bIsD
 				break;
 			}
 			case _MT_MOODEPO:
+            case _MT_BACKDROPKICK:
 			{
 				if ( lpptPos )		
 				{
-					g_xClientSocket.SendSpellMsg(shSkill, lpptPos->x, lpptPos->y, 0);
+					m_wOldPosX=m_wPosX;m_wOldPosY=m_wPosY;m_bOldDir=m_bCurrDir;
+                    BeginSpellReply();
+                    g_xClientSocket.SendSpellMsg(shSkill,lpptPos->x,lpptPos->y,0);
+                    if(bMtn==_MT_BACKDROPKICK) {
+                        SetMotionFrame(bMtn,bDir);m_bUseEffect=FALSE;m_spellLightActive=false;
+                        constexpr int SpecialSpellSound=142;
+                        g_xSound.PlayActorWav(m_wPosX,m_wPosY,g_xGameProc.m_xMyHero.m_wPosX,g_xGameProc.m_xMyHero.m_wPosY,SpecialSpellSound);
+                    }
 					// 记录无怠步的时间值.
 					m_dwLastRushTime = timeGetTime();
 					m_bMotionLock = m_bInputLock = TRUE;
@@ -4097,52 +4164,17 @@ VOID CMyHero::SetMotionState(BYTE bMtn, BYTE bDir, INT nMouseTargetID, BOOL bIsD
 
 				break;
 			}
-			case _MT_SPELL2:
-			case _MT_SPELL1:
-			{
-				if ( lpptPos )
-				{
-					g_xClientSocket.SendSpellMsg(shSkill, lpptPos->x, lpptPos->y, nMouseTargetID);
-
-					m_wOldPosX = m_wPosX;
-					m_wOldPosY = m_wPosY;
-					m_bOldDir  = m_bCurrDir;
-
-					m_bMotionLock = m_bInputLock = TRUE;
-					m_bWarMode	= TRUE;
-
-					if ( m_shCurrMagicID == _SKILL_FIREBALL || m_shCurrMagicID == _SKILL_FIREBALL2 || m_shCurrMagicID == _SKILL_FIRE || m_shCurrMagicID == _SKILL_SHOOTLIGHTEN ||
-						 m_shCurrMagicID == _SKILL_HANGMAJINBUB || m_shCurrMagicID== _SKILL_DEJIWONHO || m_shCurrMagicID == _SKILL_FIRECHARM || m_shCurrMagicID == _SKILL_SINSU ||
-						 m_shCurrMagicID == _SKILL_BIGCLOAK )
-						LoadEffect(&g_xGameProc.m_xImage, m_shCurrMagicID, bDir);
-					else
-						LoadEffect(&g_xGameProc.m_xImage, m_shCurrMagicID);
-
-					m_bUseEffect = TRUE;
-
-/*					if ( m_shCurrMagicID == _SKILL_SHIELD )
-					{
-						m_dwFstEffectFrame = 50;
-						m_dwEndEffectFrame = 60;
-						m_dwCurrEffectFrame = 50;
-						m_bEffectFrame = 0;
-						m_bEffectFrameCnt = _DEFAULT_SPELLFRAME;
-					}
-*/
- 					if ( m_shCurrMagicID == _SKILL_SHOWHP )
-						m_bEffectFrameCnt = 20;
-					else if ( m_shCurrMagicID == _SKILL_LIGHTFLOWER )
-						m_bEffectFrameCnt = 15;
-					else if ( m_shCurrMagicID == _SKILL_SPACEMOVE )
-						m_bEffectFrameCnt = 19;
-					else if ( m_shCurrMagicID == _SKILL_LIGHTENING )			
-						m_bEffectFrameCnt = 17;
-
-
-					SetMotionFrame(bMtn, bDir);
-				}
-				break;
-			}
+            case _MT_SPELL2:
+            case _MT_SPELL1:
+                if(lpptPos) {
+                    m_wOldPosX=m_wPosX;m_wOldPosY=m_wPosY;m_bOldDir=m_bCurrDir;
+                    BeginSpellReply();
+                    g_xClientSocket.SendSpellMsg(shSkill,lpptPos->x,lpptPos->y,nMouseTargetID);
+                    m_bMotionLock=m_bInputLock=TRUE;
+                    m_dwMotionLockTime=0;
+                    BeginSpellAction(WORD(shSkill),bDir,bMtn);
+                }
+                break;
 			case _MT_CUT:
 			{
 				m_bInputLock = TRUE;
@@ -4231,9 +4263,14 @@ VOID CMyHero::SetMotionState(BYTE bMtn, BYTE bDir, INT nMouseTargetID, BOOL bIsD
 
 VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 {
+    AdvancePendingAction();
 	if ( m_bMotionLock ) 
 		m_dwMotionLockTime += nLoopTime;
 
+    if(m_spellAwaitingReply) {
+        if(std::uint64_t(m_spellReplyElapsed)+DWORD(nLoopTime)>_MOTION_LOCKTIME) ConfirmAction();
+        else m_spellReplyElapsed+=DWORD(nLoopTime);
+    }
 	if ( m_bWarMode ) 
 		m_dwWarModeTime += nLoopTime;
 
@@ -4263,6 +4300,7 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 	}
 
 
+    if(AdvanceForcedMotion(DWORD(nLoopTime))) {UpdatePacketState();return;}
 	if ( UpdateMove(bIsMoveTime) )
 	{
 		UpdatePacketState();
@@ -4284,7 +4322,7 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 					m_bShieldCurrFrm = 0;
 			}
 
-			if ( m_wCurrDelay > m_wDelay )
+			if ( !AdvanceSpellAnimation(DWORD(nLoopTime)) && m_wCurrDelay > m_wDelay )
 			{
 				m_wCurrDelay  = 0;
 
@@ -4294,7 +4332,7 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 
 					PlayActSound();
 
-					if ( (m_bCurrMtn == _MT_SPELL2 || m_bCurrMtn == _MT_SPELL1) && m_bUseEffect )
+					if ( (m_bCurrMtn == _MT_SPELL2 || m_bCurrMtn == _MT_SPELL1) )
 					{
 						m_dwCurrEffectFrame++;
 						m_bEffectFrame++;
@@ -4318,28 +4356,8 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 				m_bWarMode		= FALSE;
 			}
 
-			if ( m_dwCurrFrame >= m_dwEndFrame-1 )
-			{
-				if ( (m_bCurrMtn == _MT_SPELL2) && m_bUseEffect )
-				{
-					if ( m_dwCurrEffectFrame - m_dwFstEffectFrame < m_bEffectFrameCnt-2 )
-					{
-						m_dwCurrFrame = m_dwEndFrame - 2;
-					}
-				}
-			}
-			else if ( m_dwCurrFrame >= m_dwEndFrame-3 )
-			{
-				if ( (m_bCurrMtn == _MT_SPELL1) && m_bUseEffect )
-				{
-					if ( m_dwCurrEffectFrame - m_dwFstEffectFrame < m_bEffectFrameCnt-5 )
-					{
-						m_dwCurrFrame = m_dwEndFrame - 4;
-					}
-				}
-			}
 
-			if ( m_dwCurrFrame >= m_dwEndFrame )
+        if ( m_dwCurrFrame >= m_dwEndFrame )
 			{
 				switch ( m_bCurrMtn )
 				{
@@ -4355,8 +4373,8 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 				case _MT_STAND:
 				case _MT_HORSESTAND:
 					{
-						m_bInputLock  = FALSE;
-						m_bMotionLock = FALSE;
+						m_bInputLock  = m_spellAwaitingReply;
+						m_bMotionLock = m_spellAwaitingReply;
 						m_bUseEffect = FALSE;
 						m_bUseSwordEffect = FALSE;
 						m_dwCurrFrame = m_dwFstFrame;
@@ -4370,14 +4388,20 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 							SetMotionFrame(_MT_STAND, m_bCurrDir);
 						else
 						{
-							m_bInputLock  = FALSE;
-							m_bMotionLock = FALSE;
+							m_bInputLock  = m_spellAwaitingReply;
+							m_bMotionLock = m_spellAwaitingReply;
 							m_dwCurrFrame = m_dwFstFrame;
 						}
 						break;
 					}
 				default:
 					{
+                        if(m_spellAwaitingReply && (m_bCurrMtn==_MT_SPELL1 || m_bCurrMtn==_MT_SPELL2 || m_bCurrMtn==_MT_BACKDROPKICK)) {
+                            m_bUseEffect=FALSE;m_spellLightActive=false;
+                            SetMotionFrame(_MT_ATTACKMODE,m_bCurrDir);
+                            m_bMotionLock=m_bInputLock=TRUE;
+                            break;
+                        }
 						m_dwCurrEffectFrame = 0;
 						m_dwFstEffectFrame = 0;
 						m_dwEndEffectFrame = 0;
@@ -4938,38 +4962,17 @@ POINT CMyHero::GetPosMouseToTile(INT nXPos, INT nYPos)
 
 BOOL CMyHero::CanNextHit()
 {
-	DWORD	dwCurrTick;
-	INT		nNextHit, nLevelFast;
-	BOOL	bAttackSlow = FALSE;
-
-	nLevelFast = min(370, m_stAbility.bLevel*14);
-	nLevelFast = min(800, nLevelFast + m_shHitSpeed * 60);
-
-	if ( m_stAbility.bHandWeight > m_stAbility.bMaxHandWeight )		
-		bAttackSlow = TRUE;
-
-	if ( bAttackSlow )		nNextHit = 1400 - nLevelFast + 1500;
-	else					nNextHit = 1400 - nLevelFast;
-
-	dwCurrTick = timeGetTime();
-
-	if ( dwCurrTick - m_dwLastHitTime > nNextHit )
-	{
-		m_dwLastHitTime = dwCurrTick;
-        g_xGameProc.m_exitGuard.ticks[ExitFlow::Attack]=GetTickCount();
-		return TRUE;
-	}
-
-	return FALSE;
+    const DWORD now=GetTickCount();
+    if(DWORD(now-m_dwLastHitTime)<=AttackInterval()) return FALSE;
+    m_dwLastHitTime=now;
+    g_xGameProc.m_exitGuard.ticks[ExitFlow::Attack]=now;
+    return TRUE;
 }
 
 
 BOOL CMyHero::CanWalk()
 {
-   if ( timeGetTime() - m_dwLastSpellTime < m_wMagicPKDelayTime )
-      return TRUE;
-
-   return FALSE;
+    return m_spellTiming.movement_ready(GetTickCount());
 }
 
 
@@ -4978,7 +4981,7 @@ BOOL CMyHero::CanRun()
    if ( m_stAbility.wHP < _RUN_MINHEALTH )
       return FALSE;
 
-   if ( (timeGetTime() - m_dwLastPKStruckTime < 3000) || (timeGetTime() - m_dwLastSpellTime < m_wMagicPKDelayTime ) )
+   if ( (timeGetTime() - m_dwLastPKStruckTime < 3000) || !m_spellTiming.movement_ready(GetTickCount()) )
       return FALSE;
 
    return TRUE;
@@ -5352,95 +5355,64 @@ BOOL CMyHero::OnRButtonDown(POINT ptMouse)
 }
 
 
-VOID CMyHero::SetMagic(LPCLIENTMAGICRCD	pstMagic, BYTE bKeyNum, BYTE bDir, INT nTargetID, FEATURE stTargetFeature, POINT ptTargetPos)
+VOID CMyHero::SetMagic(LPCLIENTMAGICRCD pstMagic, BYTE bKeyNum, BYTE bDir, INT nTargetID, FEATURE stTargetFeature, POINT ptTargetPos)
 {
-	DWORD dwCurrTick = timeGetTime();
-	if ( !m_bMotionLock && !m_bInputLock )
-	{
-		switch ( m_shCurrMagicID )
-		{
-		case _SKILL_MOOTEBO:
-            if ( dwCurrTick - m_dwLastRushTime > 3000 )
-			{
-				SetMotionState(_MT_MOODEPO, bDir, 0, FALSE, &ptTargetPos, m_shCurrMagicID);
-//				SetMotionState(_MT_MOODEPO, bDir, &ptTargetPos, bKeyNum, 0);
-			}
-			break;
-		case _SKILL_HANGMAJINBUB:
-		case _SKILL_DEJIWONHO:
-		case _SKILL_FIRECHARM:
-		case _SKILL_FIRE:
-		case _SKILL_FIREBALL2:
-		case _SKILL_SINSU:
-		case _SKILL_FIREBALL:
-		case _SKILL_SHOOTLIGHTEN:
-		case _SKILL_BIGCLOAK:
-			m_dwLastSpellTime = dwCurrTick;
-            m_wMagicDelayTime = 200 + pstMagic->stStdMagic.nDelayTime;
-			SetMotionState(_MT_SPELL1, bDir, nTargetID, TRUE, &ptTargetPos, m_shCurrMagicID);
-			break;
-		case _SKILL_FIREWIND:	
-		case _SKILL_AMYOUNSUL:
-		case _SKILL_TAMMING:
-		case _SKILL_KILLUNDEAD:
-		case _SKILL_HEALLING:
-		case _SKILL_HOLYSHIELD:
-		case _SKILL_BIGHEALLING:
-		case _SKILL_LIGHTFLOWER:
-		case _SKILL_SKELLETON:
-		case _SKILL_SNOWWIND:
-		case _SKILL_SHIELD:
-		case _SKILL_SHOWHP:
-		case _SKILL_EARTHFIRE:
-		case _SKILL_FIREBOOM:
-		case _SKILL_SPACEMOVE:
-		case _SKILL_CLOAK:
-		case _SKILL_LIGHTENING:
-			m_dwLastSpellTime = dwCurrTick;
-            m_wMagicDelayTime = 200 + pstMagic->stStdMagic.nDelayTime;
-			SetMotionState(_MT_SPELL2, bDir, nTargetID, TRUE, &ptTargetPos, m_shCurrMagicID);
-			break;
-		}
-	}
-
-	switch ( m_shCurrMagicID )
-	{
-	// 焰火诀.
-	case _SKILL_FIRESWORD:
-        if ( dwCurrTick - m_dwLastFireHitTime > 10000 )
-			g_xClientSocket.SendSpellMsg(m_shCurrMagicID, 0, 0, nTargetID);
-		break;
-	// 焰火诀以外的剑法.
-	case _SKILL_BANWOL:
-	case _SKILL_ERGUM:
-        if ( dwCurrTick - m_dwLastSpellTime > 200 )
-		{
-			m_dwLastSpellTime = dwCurrTick;
-			m_wMagicDelayTime = 0;
-			g_xClientSocket.SendSpellMsg(m_shCurrMagicID, 0, 0, nTargetID);
-		}
-		break;
-	}
-
-	// 攻击魔法时防止断开连接的 Delay.
-	switch ( m_shCurrMagicID )
-	{
-	case _SKILL_MOOTEBO:	case _SKILL_FIRESWORD:		case _SKILL_BANWOL:		case _SKILL_ERGUM:			case _SKILL_FIRECHARM:
-	case _SKILL_FIRE:		case _SKILL_FIREBALL2:		case _SKILL_FIREBALL:	case _SKILL_SHOOTLIGHTEN:	case _SKILL_AMYOUNSUL:
-	case _SKILL_KILLUNDEAD: case _SKILL_LIGHTFLOWER:	case _SKILL_SNOWWIND:	case _SKILL_EARTHFIRE:
-		m_dwLastMagicTime = dwCurrTick;
-		break;
-	}
-
-	// 攻击人时移动惩罚 Delay。
-    if(ExitFlow::RestrictsExit(WORD(m_shCurrMagicID)))
-        g_xGameProc.m_exitGuard.ticks[ExitFlow::Spell]=GetTickCount();
-	m_wMagicPKDelayTime = 0;
-	if ( nTargetID )
-	{
-		if ( stTargetFeature.bGender == 0 || stTargetFeature.bGender == 1 )
-			m_wMagicPKDelayTime = 300 + GetRandomNum(1, 1100);
-	}
+    if(m_pendingAction) return;
+    using namespace mir3;
+    const DWORD now=GetTickCount();
+    const auto& route=SpellRoutes::get(m_shCurrMagicID);
+    int followupTarget=nTargetID;
+    if(!m_bMotionLock && !m_bInputLock) {
+        if(route.action==SpellAction::directed || route.action==SpellAction::area) {
+            if(route.self_target) {ptTargetPos={m_wPosX,m_wPosY};nTargetID=m_dwIdentity;followupTarget=nTargetID;}
+            m_spellTiming.begin_animated(now,DWORD(pstMagic->stStdMagic.nDelayTime));
+            SetMotionState(BYTE(route.action),bDir,nTargetID,TRUE,&ptTargetPos,m_shCurrMagicID);
+        } else if(route.action==SpellAction::rush || route.action==SpellAction::special) {
+            auto& last=route.action==SpellAction::rush?m_spellTiming.rush_at:m_spellTiming.special_at;
+            if(SpellTiming::elapsed_after(now,last,3000)) {
+                last=now;
+                POINT direction={bDir,0};
+                SetMotionState(BYTE(route.action),bDir,0,FALSE,&direction,m_shCurrMagicID);
+            }
+        }
+    }
+    switch(route.direct) {
+    case DirectSpell::fire_sword:
+    case DirectSpell::skill35:
+    case DirectSpell::skill34: {
+        auto& last=route.direct==DirectSpell::fire_sword?m_spellTiming.fire_sword_at:
+            route.direct==DirectSpell::skill35?m_spellTiming.skill35_at:m_spellTiming.skill34_at;
+        if(SpellTiming::elapsed_after(now,last,10000)) {
+            g_xClientSocket.SendSpellMsg(m_shCurrMagicID,0,0,nTargetID);last=now;
+        }
+        break;
+    }
+    case DirectSpell::rapid:
+        if(SpellTiming::elapsed_after(now,m_spellTiming.cast_at,200)) {
+            m_spellTiming.cast_at=now;m_spellTiming.casting_delay=0;
+            g_xClientSocket.SendSpellMsg(m_shCurrMagicID,0,0,nTargetID);
+        }
+        break;
+    case DirectSpell::predicted:
+        if(SpellTiming::elapsed_after(now,m_spellTiming.cast_at,1000)) {
+            m_spellTiming.cast_at=now;
+            m_wOldPosX=m_wPosX;m_wOldPosY=m_wPosY;m_bOldDir=m_bCurrDir;
+            BeginSpellReply();
+            g_xClientSocket.SendSpellMsg(m_shCurrMagicID,0,0,nTargetID);
+            m_bMotionLock=m_bInputLock=TRUE;m_dwMotionLockTime=0;
+        }
+        break;
+    default:break;
+    }
+    if(route.restrict_followup) {
+        m_spellTiming.restricted_at=now;
+        g_xGameProc.m_exitGuard.ticks[ExitFlow::Spell]=now;
+    }
+    m_spellTiming.finish_target(DWORD(followupTarget),stTargetFeature.bGender,rand(),rand());
+    // Existing movement code is migrated with the action/reply lifecycle in this batch.
+    m_dwLastSpellTime=m_spellTiming.cast_at;
+    m_wMagicDelayTime=WORD(m_spellTiming.casting_delay);
+    m_wMagicPKDelayTime=WORD(m_spellTiming.movement_delay);
 }
 
 
@@ -5477,9 +5449,9 @@ BOOL CMyHero::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTar
 		}
 	}
 
-	dwCurrTick = timeGetTime();
+	dwCurrTick = GetTickCount();
 	// 魔法可用 Delay Time Check.
-	if ( dwCurrTick - m_dwLastSpellTime > 500 + m_wMagicDelayTime )
+	if ( m_stFeatureEx.bHorse==_HORSE_NONE && m_spellTiming.key_ready(dwCurrTick,skillSlot,(lParam & (1L<<30))!=0) )
 	{
 		// 检查魔法是否已正确设置 Check.
 		if ( bMagicKey )
@@ -5492,13 +5464,17 @@ BOOL CMyHero::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTar
 
 			if ( pstMagic )
 			{
-				if ( (10 + pstMagic->stStdMagic.bDefSpell) <= m_stAbility.wMP )
+				if ( mir3::SpellRoutes::get(pstMagic->stStdMagic.wMagicID).bypass_mana || (10 + pstMagic->stStdMagic.bDefSpell) <= m_stAbility.wMP )
 				{
 					m_shCurrMagicID = pstMagic->stStdMagic.wMagicID;
 					SetMagic(pstMagic, bMagicKey, bDir, nMosueTargetID, stTargetFeature, ptMouseTilePos);
 				}
 				else
-					g_xGameProc.m_xInterface.m_xClientSysMsg.AddSysMsg("Not enough MP.");
+					{
+                    constexpr int InsufficientManaCaption=1000;
+                    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+                    g_xGameProc.m_xInterface.m_xClientSysMsg.AddSysMsg(const_cast<char*>(captions.Get(InsufficientManaCaption).c_str()));
+                }
 			}
 		}
 	}

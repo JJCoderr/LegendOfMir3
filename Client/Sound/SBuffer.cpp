@@ -727,3 +727,9 @@ HRESULT CSBuffer::GetVolume(LONG& volume) const
     if(!m_lpDSB || !m_lpDSB[0]) return DSERR_UNINITIALIZED;
     return m_lpDSB[0]->GetVolume(&volume);
 }
+
+HRESULT CSBuffer::GetPan(LONG& pan) const
+{
+    if(!m_lpDSB || !m_lpDSB[0]) return DSERR_UNINITIALIZED;
+    return m_lpDSB[0]->GetPan(&pan);
+}

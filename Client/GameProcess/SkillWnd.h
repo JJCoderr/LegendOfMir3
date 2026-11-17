@@ -2,6 +2,7 @@
 #include "SkillLayout.h"
 #include "SkillWire.h"
 #include <map>
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -34,6 +35,8 @@ typedef struct tagCLIENTMAGICRCD
 	STANDARDMAGIC	stStdMagic;
 }CLIENTMAGICRCD, *LPCLIENTMAGICRCD;
 #pragma pack(8)
+static_assert(offsetof(CLIENTMAGICRCD,stStdMagic)+offsetof(STANDARDMAGIC,nDelayTime)==SkillWire::CastingDelayOffset,"Casting delay wire offset");
+static_assert(offsetof(CLIENTMAGICRCD,stStdMagic)+offsetof(STANDARDMAGIC,bDefSpell)==SkillWire::ManaThresholdOffset,"Mana threshold wire offset");
 
 class CSkillWnd : public CGameWnd {
     std::string m_descriptionText;

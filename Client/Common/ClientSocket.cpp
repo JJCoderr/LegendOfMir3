@@ -494,7 +494,11 @@ VOID CClientSocket::SendSpellMsg(INT nMagicID, INT nTargetX, INT nTargetY, INT n
 //lParam3 : 目标对象 id(wTag)
 //lParam4 : ...(wSeries)
 	fnMakeDefMessage(&DefMsg, CM_SPELL, MAKELONG(nTargetX, nTargetY), LOWORD(nTargetID), nMagicID, HIWORD(nTargetID));
-	SendPacket(&DefMsg, NULL);
+    // 47CAB0: DWORD tick is formatted as signed decimal before common encoding.
+    const DWORD tick=GetTickCount();
+    LONG signedTick;memcpy(&signedTick,&tick,sizeof(signedTick));
+    char body[16];sprintf(body,"%ld",signedTick);
+    SendPacket(&DefMsg,body);
 }
 
 VOID CClientSocket::SendOpenDoor(INT nX, INT nY, INT nIdx)

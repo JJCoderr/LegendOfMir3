@@ -5,7 +5,8 @@
 #include "GameProcess/MerchantServiceIds.h"
 #include "GameProcess/EquipmentActionIds.h"
 #include "GameProcess/TradeWire.h"
-namespace { constexpr int PreviewExitProgram=231,PreviewExitCharacter=232,PreviewExitBlocked=233,PreviewExitFade=234,PreviewExitWaiting=235,PreviewExitQuit=236; constexpr int PreviewKeyboard=228,PreviewKeyboardShortcuts=229,PreviewKeyboardCovered=230; constexpr int PreviewTradeTransaction=223,PreviewTradeQuantity=224,PreviewTradeCancelled=225,PreviewTradeGoldInput=226,PreviewTradeOpenError=227; constexpr int PreviewEquipSuccess=220,PreviewEquipFailure=221,PreviewEquipTakeOff=222; constexpr int PreviewStorageReply=219; constexpr int PreviewServiceRepair=215,PreviewServiceSell=216,PreviewServiceDeposit=217,PreviewServiceFailure=218; constexpr int PreviewItemUse=213,PreviewItemUseRestored=214; constexpr int PreviewInterfaceAudio=212; constexpr int PreviewNotice=210,PreviewNoticeMoved=211; constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+#include "GameProcess/SpellPreview.h"
+namespace { constexpr int PreviewSpellGround=237,PreviewSpellOrbit=238,PreviewSpellStaged=239,PreviewSpellMap=240; constexpr int PreviewExitProgram=231,PreviewExitCharacter=232,PreviewExitBlocked=233,PreviewExitFade=234,PreviewExitWaiting=235,PreviewExitQuit=236; constexpr int PreviewKeyboard=228,PreviewKeyboardShortcuts=229,PreviewKeyboardCovered=230; constexpr int PreviewTradeTransaction=223,PreviewTradeQuantity=224,PreviewTradeCancelled=225,PreviewTradeGoldInput=226,PreviewTradeOpenError=227; constexpr int PreviewEquipSuccess=220,PreviewEquipFailure=221,PreviewEquipTakeOff=222; constexpr int PreviewStorageReply=219; constexpr int PreviewServiceRepair=215,PreviewServiceSell=216,PreviewServiceDeposit=217,PreviewServiceFailure=218; constexpr int PreviewItemUse=213,PreviewItemUseRestored=214; constexpr int PreviewInterfaceAudio=212; constexpr int PreviewNotice=210,PreviewNoticeMoved=211; constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -35,6 +36,7 @@ class CHudPreviewProcess : public CWHDefProcess {
     POINT mouse = {0,0};
     int damagePreview=0;
     bool levelPreview=false;
+    bool spellPreview=false,spellMapPreview=false;
     bool namePreview=false;
     bool speechPreview=false;
     bool noticePreview=false;
@@ -76,7 +78,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewExitQuit) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewSpellMap) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1912,6 +1914,15 @@ public:
 
 
 
+        if(groupPanel==PreviewSpellMap) {
+            spellMapPreview=SpellPreview::MapScene(g_xGameProc);
+            mouse={790,430};capturePath="spell-map.bmp";
+        }
+        if(groupPanel>=PreviewSpellGround && groupPanel<=PreviewSpellStaged) {
+            SpellPreview::Checks(g_xGameProc);SpellPreview::Scene(g_xGameProc,groupPanel-PreviewSpellGround);
+            spellPreview=true;mouse={790,430};
+            capturePath=groupPanel==PreviewSpellGround?"spell-ground.bmp":groupPanel==PreviewSpellOrbit?"spell-orbit.bmp":"spell-staged.bmp";
+        }
         if(groupPanel>=PreviewExitProgram && groupPanel<=PreviewExitQuit) {
             using namespace ExitFlow;
             auto& game=g_xGameProc;auto& ui=game.m_xInterface;
@@ -3363,13 +3374,17 @@ public:
             }
             g_xChrSelProc.RenderScene(elapsed);
         } else {
+        if(spellMapPreview) g_xGameProc.RenderScene(0);
+        else {
         RECT canvas = {0,0,800,600};
         DrawLegacyPanel(canvas,RGB(20,24,28),255,0,false);
         if(levelPreview) {
             const auto& effects=g_xGameProc.m_levelEffects.active;
             for(size_t i=0;i<effects.size();++i) g_xGameProc.m_levelEffects.DrawAt(effects[i],440+int(i)*180,300);
         }
+        if(spellPreview) {g_xGameProc.DrawSpellMarks();g_xGameProc.DrawNativeSpells();g_xGameProc.DrawSpellParticles();}
         g_xGameProc.m_xInterface.RenderInterface(elapsed,mouse);
+        }
         if(namePreview) g_xGameProc.m_xMyHero.DrawName();
         if(speechPreview) g_xGameProc.m_xMyHero.ShowMessage(0);
         if(noticePreview) g_xGameProc.m_xNotice.RenderMessageBox(0);
@@ -3580,6 +3595,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=spell-map")==0 ? PreviewSpellMap :
+        strcmp(lpCmdLine,"--preview=spell-ground")==0 ? PreviewSpellGround :
+        strcmp(lpCmdLine,"--preview=spell-orbit")==0 ? PreviewSpellOrbit :
+        strcmp(lpCmdLine,"--preview=spell-staged")==0 ? PreviewSpellStaged :
         strcmp(lpCmdLine,"--preview=exit-program")==0 ? PreviewExitProgram :
         strcmp(lpCmdLine,"--preview=exit-character")==0 ? PreviewExitCharacter :
         strcmp(lpCmdLine,"--preview=exit-blocked")==0 ? PreviewExitBlocked :

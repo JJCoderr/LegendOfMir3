@@ -69,6 +69,7 @@ CMirSound::CMirSound()
 ///////////////////////////////////////////////////////////////////////
 CMirSound::~CMirSound()
 {
+    ClearSpellVoices();
     m_lobbyOpening.Release();
     m_lobbyEffect.Release();
 	unsigned int i;
@@ -351,6 +352,7 @@ void CMirSound::SetInterfaceVolume(bool music, int level)
         m_lWavMaxVol=volume;
         m_lobbyEffect.SetVolume(volume);
         m_lobbyOpening.SetVolume(volume);
+        RefreshSpellVoices();
     }
 }
 
@@ -469,7 +471,7 @@ INT CMirSound::PlayActorWav(INT Sx,INT Sy,INT Dx,INT Dy,int Wavnum,INT lVolume,B
 	INT Dis;
 	INT Dir;
 	MAKEPOS(Mon,Sx,Sy);
-	MAKEPOS(Chr,Dx,Sy);
+	MAKEPOS(Chr,Dx,Dy);
  	if(m_bPlay)
 	{
 		FreeNotUseBuffer();
@@ -516,6 +518,7 @@ INT CMirSound::PlayActorWav(INT Sx,INT Sy,INT Dx,INT Dy,int Wavnum,INT lVolume,B
 ///////////////////////////////////////////////////////////////////////
 void CMirSound::StopAllSound(void)
 {
+    for(auto& voice:m_spellVoices) if(voice.buffer) voice.buffer->Stop();
 	for(int i = 0;i<m_nUseCount;i++)
 	{
 		m_ppBuffer[i]->Stop();
@@ -1190,7 +1193,7 @@ BOOL CMirSound::ChgPlayingSet(INT nWavIdx,INT nBufferIdx,INT Sx,INT Sy,INT Dx,IN
 	INT Dir;
 	CSBuffer*	pBuffer;
 	MAKEPOS(Mon,Sx,Sy);
-	MAKEPOS(Chr,Dx,Sy);
+	MAKEPOS(Chr,Dx,Dy);
 
 	pBuffer= FindBuffer(nWavIdx,FALSE);
 	if(pBuffer!=NULL)
@@ -1213,4 +1216,68 @@ void CMirSound::StopSceneAudio()
     StopAllSound();m_lobbyEffect.Stop();m_lobbyOpening.Stop();m_CommonWavBuffer.Stop();
     if(m_bAmbiance) for(int i=0;i<MAX_AMBIANCE_COUNT;++i) m_pAmbianceBuffer[i]->Stop();
     StopBkMusicMp3();UpdateLobbyAudio(LobbyPage::None,0);
+}
+
+std::int64_t CMirSound::PlaySpellWav(int sample,int viewX,int viewY)
+{
+    if(!m_bPlay || !m_pSound) return 0;
+    const char* file=SeekFileName(sample);
+    if(!file || GetFileAttributesA((std::string("Sound\\")+file).c_str())==INVALID_FILE_ATTRIBUTES) return 0;
+    const auto selected=m_spellVoiceCache.select(sample,GetTickCount(),[&](std::int64_t key) {
+        const auto index=std::size_t(mir3::SpellSoundVoices::key(0,0)-key);
+        return m_spellVoices[index].buffer && m_spellVoices[index].buffer->Playing()!=0;
+    });
+    if(!selected) return 0;
+    if(selected->replaced)
+        for(int i=0;i<mir3::SpellSoundVoices::voices;++i)
+            m_spellVoices[selected->cache*mir3::SpellSoundVoices::voices+i].buffer.reset();
+    if(!selected->play) return selected->key;
+    auto& voice=m_spellVoices[std::size_t(mir3::SpellSoundVoices::key(0,0)-selected->key)];
+    if(!voice.buffer) {
+        voice.buffer=std::make_unique<CSBuffer>();
+        const HRESULT loaded=voice.buffer->Load(m_pSound,file,1);
+        voice.buffer->m_ID=sample;
+        if(FAILED(loaded)) {voice.buffer.reset();return 0;}
+    }
+    voice.position=mir3::SoundPosition::from_view(viewX,viewY);
+    const int volume=(std::max)(int(DSBVOLUME_MIN),(std::min)(0,voice.position.volume+int(m_lWavMaxVol)));
+    const int pan=voice.position.pan*(m_reversePan?-1:1);
+    auto* buffer=voice.buffer->GetFreeBuffer();
+    if(!buffer || FAILED(buffer->SetCurrentPosition(0))) return 0;
+    if(FAILED(voice.buffer->PlayExtended(DWORD(0),pan,volume,DWORD(0)))) return 0;
+    return selected->key;
+}
+void CMirSound::ApplySpellVoice(SpellVoice& voice)
+{
+    if(!voice.buffer) return;
+    voice.buffer->SetPan(voice.position.pan*(m_reversePan?-1:1));
+    voice.buffer->SetVolume((std::max)(int(DSBVOLUME_MIN),(std::min)(0,voice.position.volume+int(m_lWavMaxVol))));
+}
+void CMirSound::PositionSpellWav(std::int64_t key,int sample,int viewX,int viewY)
+{
+    const auto index=mir3::SpellSoundVoices::key(0,0)-key;
+    if(index<0 || index>=std::int64_t(m_spellVoices.size())) return;
+    if(m_spellVoiceCache.cache[std::size_t(index)/mir3::SpellSoundVoices::voices].id!=sample) return;
+    auto& voice=m_spellVoices[std::size_t(index)];
+    voice.position=mir3::SoundPosition::from_view(viewX,viewY);ApplySpellVoice(voice);
+}
+void CMirSound::RefreshSpellVoices()
+{
+    for(auto& voice:m_spellVoices) ApplySpellVoice(voice);
+}
+void CMirSound::ClearSpellVoices()
+{
+    for(auto& voice:m_spellVoices) voice.buffer.reset();
+    m_spellVoiceCache={};
+}
+
+HRESULT CMirSound::InspectSpellAudio(std::int64_t key,DWORD& playing,LONG& volume,LONG& pan)
+{
+    const auto index=mir3::SpellSoundVoices::key(0,0)-key;
+    if(index<0 || index>=std::int64_t(m_spellVoices.size())) return E_INVALIDARG;
+    const auto& voice=m_spellVoices[std::size_t(index)];
+    if(!voice.buffer) return DSERR_UNINITIALIZED;
+    playing=voice.buffer->Playing();
+    const HRESULT result=voice.buffer->GetVolume(volume);
+    return FAILED(result)?result:voice.buffer->GetPan(pan);
 }

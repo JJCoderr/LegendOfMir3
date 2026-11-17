@@ -1,3 +1,8 @@
+#include "SpellTiming.h"
+#include "LocalActionClock.h"
+#include "ForcedMotion.h"
+#include <optional>
+#include "SpellColor.h"
 #ifndef _CACTOR_H
 #define _CACTOR_H
 #include "DamageNumbers.h"
@@ -46,6 +51,7 @@ class CActor
 {
 private:
 public:
+    std::uint64_t m_instanceSerial=0;
     BYTE m_bProfession=255;
     DWORD m_dwPortraitVersion=0;
     CDamageNumbers m_damage;
@@ -220,7 +226,7 @@ public:
 	virtual VOID DrawHPBar();
 	virtual VOID DrawName();
 
-	BOOL DrawEffect();
+	virtual BOOL DrawEffect();
 //---------------------------------------------------------------------------------------------------------------//
 protected:
 public:
@@ -276,6 +282,12 @@ class CHero : public CActor
 {
 private:
 public:
+    std::optional<mir3::ForcedMotion> m_forcedMotion;
+    void BeginForcedMotion(LPPACKETMSG packet);
+    bool AdvanceForcedMotion(DWORD elapsed);
+    DWORD m_spellFrameElapsed=0;
+    bool AdvanceSpellAnimation(DWORD elapsed);
+
 	FEATUREEX			m_stFeatureEx;
 
 	BYTE				m_bWeaponImgIdx;				// 当前 Actor 武器所持有的图像结构体编号.
@@ -328,6 +340,12 @@ public:
 	virtual VOID OnRun(LPPACKETMSG lpPacketMsg);
 	virtual VOID OnRush(LPPACKETMSG lpPacketMsg);
 	virtual VOID OnMagicFire(LPPACKETMSG lpPacketMsg);
+    void OnMagicList(LPPACKETMSG packet);
+	mir3::SpellColor::Rgb m_spellTint={};
+    bool m_spellLightActive=false;
+    BOOL DrawEffect() override;
+    void BeginSpellAction(WORD skill,BYTE facing,BYTE action);
+    void ApplySpellPhase();
 	virtual VOID OnSpell(LPPACKETMSG lpPacketMsg);
 	virtual VOID OnCharDescPacket(LPPACKETMSG lpPacketMsg);
 	virtual VOID OnFeatureChanged(LPPACKETMSG lpPacketMsg);
@@ -398,6 +416,24 @@ typedef struct tagACTORSUBABILITY
 
 class CMyHero : public CHero
 {
+public:
+    mir3::SpellTiming m_spellTiming;
+    mir3::LocalActionClock m_actionClock;
+    struct PendingLocalAction {
+        BYTE motion,direction;
+        int target;BOOL targetDead;
+        POINT destination,origin;SHORT skill;
+        std::optional<DWORD> waitingSince;
+        DWORD wait=0;
+    };
+    std::optional<PendingLocalAction> m_pendingAction;
+    DWORD AttackInterval() const;
+    void AdvancePendingAction();
+    void ExecuteMotionState(BYTE motion,BYTE direction,INT target,BOOL targetDead,LPPOINT position,SHORT skill);
+    bool m_spellAwaitingReply=false;
+    DWORD m_spellReplyElapsed=0;
+    void BeginSpellReply() {m_spellAwaitingReply=true;m_spellReplyElapsed=0;}
+    void ConfirmAction();
 private:
 public:
 //---------------------------------------------------------------------------------------------------------------//

@@ -1,4 +1,6 @@
 #include "StdAfx.h"
+#include "EffectRenderer.h"
+#include "SpellSpriteRenderer.h"
 #include "TradeWire.h"
 #include "MerchantServiceIds.h"
 #include "MailWire.h"
@@ -157,7 +159,7 @@ VOID CGameProcess::DeleteProc()
 
 	m_xActorList.ClearAllNodes();
 	m_xMagicList.ClearAllNodes();
-    m_levelEffects.Clear();m_weaponTraining=0;
+    m_levelEffects.Clear();ClearNativeSpells();m_weaponTraining=0;
 	m_xGroundMagicList.ClearAllNodes();
 	m_stMapItemList.ClearAllNodes();
 
@@ -274,7 +276,7 @@ VOID CGameProcess::LoadMapChanged(CHAR* szMap)
 	m_xMap.LoadMapData(szMap);
     m_xInterface.m_minimap.MapChanged();
     m_xInterface.m_xSiegeWnd.ClearObjects();
-    m_levelEffects.Clear();
+    m_levelEffects.Clear();ClearNativeSpells();
     m_xInterface.m_targetDisplay.Clear();
 
 	ZeroMemory(m_stMemMappedID, sizeof(MEMMAPPEDID)*_VIEW_CELL_X_COUNT* _VIEW_CELL_Y_COUNT);
@@ -849,6 +851,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 	if ( m_bRender )
 	{
 		m_xLightFog.ClearSavedLightColor();
+        const auto nativeSpellBoundary=m_nextNativeSpell;
         m_levelEffects.Advance(nLoopTime);m_levelEffects.Light();
 
 		m_xMyHero.UpdateMotionState(nLoopTime, bIsMoveTime);
@@ -863,6 +866,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 
 		m_pxMouseTargetActor = NULL;
 		CheckMappedData(nLoopTime, bIsMoveTime);
+        AdvanceNativeSpells(DWORD(nLoopTime),nativeSpellBoundary);DrawSpellMarks();
 		AutoTargeting();
 
 		RenderObject(nLoopTime);
@@ -933,6 +937,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 //		m_xElec.RenderElec(g_xMainWnd.Get3DDevice());
 
 
+        LightNativeSpells();
 		m_xLightFog.ShowLightFog();
 
 		m_xMyHero.ShowMessage(nLoopTime);
@@ -973,7 +978,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 		}
 
 		DropItemShow();
-        m_levelEffects.Draw();
+        m_levelEffects.Draw();DrawNativeSpells();DrawSpellParticles();
 //		RenderShine(nLoopTime);
 
 		if ( m_xMagicList.GetCounter() != 0 )
@@ -2815,7 +2820,7 @@ void CGameProcess::OnProcPacketNotEncode(char *pszMsg)
 	static char pszUPwr[]	= "PWR";
 
 	if ( memcmp(pszMsg, pszGood, strlen(pszGood)) == 0 )
-		m_xMyHero.m_bMotionLock = FALSE;
+		m_xMyHero.ConfirmAction();
  	else if( memcmp(pszMsg, pszFail, strlen(pszFail)) == 0 )
 		m_xMyHero.SetOldPosition();
  	else if( memcmp(pszMsg, pszLng, strlen(pszLng)) == 0 )
@@ -3493,6 +3498,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
             // Fall through to the existing actor message queue.
 			default:
 			{
+                if(strlen(pszMsg+DEFBLOCKSIZE)>=ActorPacketBodyCapacity) break;
 				LPPACKETMSG	lpPacketMsg	= new PACKETMSG;
 
 				lpPacketMsg->stDefMsg			= tdm;
@@ -3853,7 +3859,7 @@ VOID CGameProcess::OnSvrMsgNewMap(_TDEFAULTMESSAGE	*ptdm, char *pszMapName)
 	m_xMap.LoadMapData(szMapName);
     m_xInterface.m_minimap.MapChanged();
     m_xInterface.m_xSiegeWnd.ClearObjects();
-    m_levelEffects.Clear();
+    m_levelEffects.Clear();ClearNativeSpells();
     m_xInterface.m_targetDisplay.Clear();
 
 	switch ( m_bFogState )
@@ -4094,4 +4100,288 @@ void CGameProcess::ReturnToSelection()
     g_xClientSocket.m_pxDefProc=g_xMainWnd.m_pxDefProcess=&g_xChrSelProc;g_bProcState=_CHAR_SEL_PROC;
     g_xMainWnd.ResetDXG(640,480,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,_DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
     g_xChrSelProc.LoadReturn();
+}
+
+
+bool CGameProcess::StartNativeSpell(CActor& source,WORD skill,POINT target,DWORD targetId)
+{
+    const float deltaX=float((target.x-source.m_wPosX)*_CELL_WIDTH);
+    const float deltaY=float((target.y-source.m_wPosY)*_CELL_HEIGHT);
+    if(skill==WORD(mir3::SkillId::original_150)) {
+        const bool fireball=StartNativeSpell(source,WORD(mir3::SkillId::fireball),target,0);
+        if(deltaX==0 && deltaY==0) return fireball;
+        const auto* resource=mir3::EffectCatalog::shared().find(mir3::EffectCatalog::Section::magic,skill);
+        if(!resource || !NativeEffects::Image(resource->library)) return fireball;
+        const int direction=mir3::SpellDirection(deltaX,deltaY);
+        constexpr DWORD SecondOrbitDelay=30;
+        for(int i=0;i<2;++i) {
+            NativeSpell effect;effect.serial=m_nextNativeSpell++;
+            effect.orbit=mir3::SpellOrbit{0,i!=0};effect.orbitDirection=unsigned(direction);
+            effect.playback.begin(mir3::SkillId::original_150,*resource,
+                {float(source.m_wPosX*_CELL_WIDTH),float(source.m_wPosY*_CELL_HEIGHT)},
+                {float(target.x*_CELL_WIDTH),float(target.y*_CELL_HEIGHT)},direction,false,i*SecondOrbitDelay);
+            effect.playback.particle_only=true;
+            effect.soundSample=int(skill)*10+10001;
+            effect.soundVoice=PlaySpellSound(effect.soundSample,{source.m_wPosX,source.m_wPosY});
+            m_nativeSpells.push_back(effect);
+        }
+        return true;
+    }
+    const auto* resource=mir3::EffectCatalog::shared().find(mir3::EffectCatalog::Section::magic,skill);
+    if(!resource || resource->end<=resource->first || !resource->interval || !NativeEffects::Image(resource->library)) return false;
+    const auto rules=mir3::MagicRules::for_skill(static_cast<mir3::SkillId>(skill));
+    if(rules.reject_same_cell && source.m_wPosX==target.x && source.m_wPosY==target.y) return false;
+    CActor* actor=targetId==m_xMyHero.m_dwIdentity?&m_xMyHero:FindActor(int(targetId));
+    if(!rules.track_target || !targetId) actor=nullptr;
+    const int direction=rules.direction==mir3::MagicDirection::fixed?0:
+        mir3::SpellDirection(deltaX,deltaY,rules.direction==mir3::MagicDirection::eight);
+    NativeSpell effect;effect.serial=m_nextNativeSpell++;
+    effect.target=actor?targetId:0;effect.targetInstance=actor?actor->m_instanceSerial:0;
+    effect.playback.begin(static_cast<mir3::SkillId>(skill),*resource,
+        {float(source.m_wPosX*_CELL_WIDTH),float(source.m_wPosY*_CELL_HEIGHT)},
+        {float(target.x*_CELL_WIDTH),float(target.y*_CELL_HEIGHT)},direction,actor!=nullptr);
+    if(skill==WORD(mir3::SkillId::original_73) || skill==WORD(mir3::SkillId::original_74)) {
+        const bool sourceAnchor=skill==WORD(mir3::SkillId::original_73);
+        effect.anchor=sourceAnchor?mir3::SpellFlight::Point{float(source.m_wPosX*_CELL_WIDTH),float(source.m_wPosY*_CELL_HEIGHT)}:
+            mir3::SpellFlight::Point{float(target.x*_CELL_WIDTH),float(target.y*_CELL_HEIGHT)};
+        const unsigned facing=unsigned(mir3::SpellDirection(deltaX,deltaY))>>1;
+        effect.staged.emplace(static_cast<mir3::SkillId>(skill),facing,
+            mir3::StagedSpell::Frames{int(resource->first),int(resource->end),resource->interval});
+        effect.playback.bound=false;effect.playback.frame_offset=0;
+        effect.playback.position={effect.anchor[0]+effect.staged->offset[0],effect.anchor[1]+effect.staged->offset[1]};
+    }
+    const POINT soundCell=rules.at_target && !rules.use_source_as_target?target:POINT{source.m_wPosX,source.m_wPosY};
+    effect.soundSample=int(skill)*10+(effect.playback.flying?10001:10002);
+    effect.soundVoice=PlaySpellSound(effect.soundSample,soundCell);
+    m_nativeSpells.push_back(effect);
+    return true;
+}
+void CGameProcess::ClearNativeSpells()
+{
+    m_nativeSpells.clear();m_spellMarks.clear();m_spellParticles.clear();g_xSound.ClearSpellVoices();
+}
+void CGameProcess::StartGroundSpell(mir3::MagicEffectId id,POINT source,POINT target,int facing)
+{
+    const auto* resource=mir3::EffectCatalog::shared().find(mir3::EffectCatalog::Section::magic,WORD(id));
+    const bool particles=id==mir3::MagicEffectId::lightning_trail;
+    if(!resource || (!particles && (resource->end<=resource->first || !resource->interval)) || !NativeEffects::Image(resource->library)) return;
+    for(const auto& segment:mir3::GroundSpell::segments(id,{int(source.x),int(source.y)},{int(target.x),int(target.y)},facing)) {
+        NativeSpell effect;effect.serial=m_nextNativeSpell++;effect.groundWave=true;
+        effect.cell={segment.cell[0],segment.cell[1]};
+        auto& playback=effect.playback;
+        playback.resource=resource;playback.skill=static_cast<mir3::SkillId>(id);
+        playback.frame=int(resource->first);playback.delay=segment.delay;
+        playback.position={float(effect.cell.x*_CELL_WIDTH),float(effect.cell.y*_CELL_HEIGHT)};
+        playback.light=resource->outer_radius!=0;
+        m_nativeSpells.push_back(effect);
+        PlaySpellSound(int(id)*10+10002,effect.cell);
+    }
+}
+void CGameProcess::StartSpellEmber(POINT cell,int id)
+{
+    const auto* resource=mir3::EffectCatalog::shared().find(mir3::EffectCatalog::Section::magic,WORD(id));
+    if(!resource || resource->end<=resource->first || !resource->interval || !NativeEffects::Image(resource->library)) return;
+    NativeSpell effect;effect.serial=m_nextNativeSpell++;effect.ember=true;effect.cell=cell;
+    effect.remaining=SpellEmberLifetime;
+    auto& playback=effect.playback;playback.resource=resource;
+    playback.frame=int(resource->first);playback.one_shot=false;
+    playback.position={float(cell.x*_CELL_WIDTH),float(cell.y*_CELL_HEIGHT)};
+    m_nativeSpells.push_back(effect);
+    PlaySpellSound(id*10+10002,cell);
+}
+void CGameProcess::AdvanceNativeSpells(DWORD elapsed,std::uint64_t before)
+{
+    for(auto& mark:m_spellMarks) mark.age+=elapsed;
+    m_spellMarks.erase(std::remove_if(m_spellMarks.begin(),m_spellMarks.end(),[](const SpellMark& mark){return mark.age>SpellMarkLifetime;}),m_spellMarks.end());
+    std::vector<std::pair<POINT,int>> embers;
+    const int originX=_VIEW_CELL_X_START-m_xMap.m_shStartViewTileX*_CELL_WIDTH-m_xMap.m_shViewOffsetX;
+    const int originY=_VIEW_CELL_Y_START-m_xMap.m_shStartViewTileY*_CELL_HEIGHT-m_xMap.m_shViewOffsetY;
+    for(auto& effect:m_nativeSpells) {
+        if(effect.serial>=before) continue;
+        const auto rememberFrame=[&]() {
+            const auto& playback=effect.playback;
+            if(effect.orbit || playback.finished || playback.delay || (playback.tail && !effect.groundWave) ||
+                (effect.groundWave && playback.resource->id==WORD(mir3::MagicEffectId::lightning_trail))) return;
+            auto* image=NativeEffects::Image(playback.resource->library);
+            if(image && image->NewSetIndex(playback.frame))
+                m_spellLibraryOffsets[playback.resource->library]={image->m_lpstNewCurrWilImageInfo->shPX,image->m_lpstNewCurrWilImageInfo->shPY};
+        };
+        if(effect.groundWave || effect.ember) {
+            auto& playback=effect.playback;playback.elapsed+=elapsed;
+            if(effect.ember) {
+                effect.remaining=(std::max)(0,effect.remaining-int(elapsed));
+                if(!effect.remaining) {
+                    effect.tint=(std::max)(0,effect.tint-5);
+                    if(!effect.tint) {playback.stop();continue;}
+                }
+            }
+            DWORD lightElapsed=elapsed;
+            if(playback.delay) {
+                if(playback.elapsed<playback.delay) continue;
+                playback.elapsed-=playback.delay;playback.delay=0;
+                lightElapsed=playback.elapsed;
+            }
+            // Ground light fades before animation advancement, unlike common projectiles.
+            if(playback.advance_light(lightElapsed,true)==mir3::SpellPlayback::Change::finished) continue;
+            const auto id=static_cast<mir3::MagicEffectId>(playback.resource->id);
+            const bool walkable=effect.cell.x>=0 && effect.cell.y>=0 &&
+                effect.cell.x<m_xMap.m_stMapFileHeader.shWidth && effect.cell.y<m_xMap.m_stMapFileHeader.shHeight &&
+                m_xMap.GetTileAttribute(effect.cell.x,effect.cell.y)==_CAN_WALK;
+            const int interval=effect.groundWave?mir3::GroundSpell::interval(id,playback.frame,playback.resource->interval,walkable):playback.resource->interval;
+            if(!playback.tail && playback.elapsed>DWORD(interval)) {
+                playback.elapsed=0;
+                if(effect.ember) {
+                    if(++playback.frame>=int(playback.resource->end)) playback.frame=int(playback.resource->first);
+                    rememberFrame();continue;
+                }
+                const auto change=mir3::GroundSpell::next(id,playback.frame,int(playback.resource->first),int(playback.resource->end),walkable);
+                const float x=float(effect.cell.x*_CELL_WIDTH+originX+_CELL_WIDTH/2);
+                const float y=float(effect.cell.y*_CELL_HEIGHT+originY);
+                if(change.lightning) m_spellParticles.emit_lightning({x,y-_CELL_HEIGHT/2},m_effectRandom);
+                if(change.residue) {
+                    const bool fire=id==mir3::MagicEffectId::fire_wave;
+                    if(fire) embers.push_back({effect.cell,m_effectRandom.between(FirstEmber,LastEmber)});
+                    m_spellMarks.push_back({effect.cell,fire?FireMark:IceMark+m_effectRandom.between(0,1),elapsed});
+                }
+                if(change.ice_particles) m_spellParticles.emit_ice({x,y},m_effectRandom);
+                if(change.finished) {
+                    if(!playback.light) playback.stop();
+                    else {playback.tail=true;--playback.frame;}
+                }
+            }
+            rememberFrame();continue;
+        }
+        if(effect.staged) {
+            auto& playback=effect.playback;auto& staged=*effect.staged;
+            if(!playback.tail) {
+                const auto change=staged.advance(elapsed);
+                if(change==mir3::StagedSpell::Change::load_explosion) {
+                    const auto* resource=mir3::EffectCatalog::shared().find(mir3::EffectCatalog::Section::explosion,WORD(playback.skill));
+                    if(!resource || resource->end<=resource->first || !resource->interval || !NativeEffects::Image(resource->library)) {playback.stop();continue;}
+                    playback.resource=resource;
+                    staged.load_explosion({int(resource->first),int(resource->end),resource->interval});
+                }
+                playback.frame=staged.frame;
+                playback.position={effect.anchor[0]+staged.offset[0],effect.anchor[1]+staged.offset[1]};
+                if(change==mir3::StagedSpell::Change::finished) {playback.tail=true;--playback.frame;}
+            }
+            playback.advance_light(elapsed);rememberFrame();continue;
+        }
+        std::optional<mir3::SpellFlight::Point> target;
+        if(effect.playback.bound) {
+            CActor* actor=effect.target==m_xMyHero.m_dwIdentity?&m_xMyHero:FindActor(int(effect.target));
+            if(actor && actor->m_instanceSerial==effect.targetInstance) {
+                if(actor==&m_xMyHero) {
+                    // Local rendering is screen-centered while the camera scrolls.
+                    target=mir3::SpellFlight::Point{
+                        float(m_xMap.m_shStartViewTileX*_CELL_WIDTH+m_xMap.m_shViewOffsetX-_VIEW_CELL_X_START+_CHAR_CENTER_XPOS-_CELL_WIDTH/2),
+                        float(m_xMap.m_shStartViewTileY*_CELL_HEIGHT+m_xMap.m_shViewOffsetY-_VIEW_CELL_Y_START+_CHAR_CENTER_YPOS-_CELL_HEIGHT/2)};
+                } else target=mir3::SpellFlight::Point{
+                    float(actor->m_wPosX*_CELL_WIDTH+actor->m_shShiftPixelX),
+                    float(actor->m_wPosY*_CELL_HEIGHT+actor->m_shShiftPixelY)};
+            }
+        }
+        const auto change=effect.playback.advance(elapsed,target,mir3::EffectCatalog::shared());
+        if(effect.soundVoice && effect.playback.flying && !effect.playback.finished && !effect.playback.delay &&
+            (mir3::SpellSoundVoices::key(0,0)-effect.soundVoice)%mir3::SpellSoundVoices::voices<5) {
+            // The original follows only the first five voices; positions are quantized to cells.
+            const auto& position=effect.playback.flight.position;
+            const int cellX=int(position[0]/_CELL_WIDTH),cellY=int(position[1]/_CELL_HEIGHT);
+            g_xSound.PositionSpellWav(effect.soundVoice,effect.soundSample,cellX*_CELL_WIDTH+originX,cellY*_CELL_HEIGHT+originY);
+        }
+        if(effect.orbit && !effect.playback.finished && !effect.playback.delay && effect.playback.flying && !effect.playback.tail && elapsed) {
+            auto& playback=effect.playback;
+            const auto pixel=effect.orbit->advance(playback.flight.position[0],playback.flight.position[1],effect.orbitDirection);
+            playback.position={float(pixel[0]),float(pixel[1])};
+            const auto offset=m_spellLibraryOffsets[playback.resource->library];
+            const auto emitter=mir3::SpellOrbit::emitter({pixel[0]+originX,pixel[1]+originY},effect.orbitDirection,offset.x,offset.y);
+            m_spellParticles.emit({float(emitter[0]),float(emitter[1])},m_effectRandom);
+        }
+        rememberFrame();
+        if(change==mir3::SpellPlayback::Change::impact && effect.playback.bound) {
+            const auto& position=effect.playback.position;
+            PlaySpellSound(int(effect.playback.skill)*10+10002,{int(position[0])/_CELL_WIDTH,int(position[1])/_CELL_HEIGHT});
+        }
+    }
+    for(const auto& ember:embers) StartSpellEmber(ember.first,ember.second);
+    if(elapsed) m_spellParticles.advance(int(elapsed),m_effectRandom);
+    g_xSound.RefreshSpellVoices();
+    m_nativeSpells.erase(std::remove_if(m_nativeSpells.begin(),m_nativeSpells.end(),[](const NativeSpell& effect){return effect.playback.finished;}),m_nativeSpells.end());
+}
+void CGameProcess::DrawNativeSpells()
+{
+    const int originX=_VIEW_CELL_X_START-m_xMap.m_shStartViewTileX*_CELL_WIDTH-m_xMap.m_shViewOffsetX;
+    const int originY=_VIEW_CELL_Y_START-m_xMap.m_shStartViewTileY*_CELL_HEIGHT-m_xMap.m_shViewOffsetY;
+    for(const auto& entry:m_nativeSpells) {
+        const auto& effect=entry.playback;
+        if(effect.finished || effect.delay || entry.orbit) continue;
+        const int x=int(effect.position[0])+originX,y=int(effect.position[1])+originY;
+        if(entry.groundWave && effect.resource->id==WORD(mir3::MagicEffectId::lightning_trail)) continue;
+        if(!effect.tail || entry.groundWave) {
+            auto resource=*effect.resource;
+            if(entry.ember) resource.tint={BYTE(entry.tint),BYTE(entry.tint),BYTE(entry.tint)};
+            NativeEffects::Draw(resource,effect.frame,x,y);
+        }
+
+    }
+}
+
+void CGameProcess::LightNativeSpells()
+{
+    if(!m_xInterface.m_xOptionWnd.m_values[9]) return;
+    const int originX=_VIEW_CELL_X_START-m_xMap.m_shStartViewTileX*_CELL_WIDTH-m_xMap.m_shViewOffsetX;
+    const int originY=_VIEW_CELL_Y_START-m_xMap.m_shStartViewTileY*_CELL_HEIGHT-m_xMap.m_shViewOffsetY;
+    for(const auto& entry:m_nativeSpells) {
+        const auto& effect=entry.playback;
+        if(effect.finished || effect.delay) continue;
+        const int x=int(effect.position[0])+originX,y=int(effect.position[1])+originY;
+        if(effect.light) {
+            const auto& r=*effect.resource;
+            m_xLightFog.SetLightRadiusWithRing(x+_CELL_WIDTH/2,y+_CELL_HEIGHT/2,
+                int(r.inner_radius)+effect.light_phase-effect.light_shrink,
+                mir3::SpellLight::channel(r.inner_color[0],effect.light_fade),mir3::SpellLight::channel(r.inner_color[1],effect.light_fade),mir3::SpellLight::channel(r.inner_color[2],effect.light_fade),
+                int(r.outer_radius)+effect.light_phase-effect.light_shrink,
+                mir3::SpellLight::channel(r.outer_color[0],effect.light_fade),mir3::SpellLight::channel(r.outer_color[1],effect.light_fade),mir3::SpellLight::channel(r.outer_color[2],effect.light_fade));
+        }
+    }
+}
+
+void CGameProcess::DrawSpellMarks()
+{
+    if(m_spellMarks.empty()) return;
+    DDSURFACEDESC2 surface={};surface.dwSize=sizeof(surface);auto* buffer=g_xMainWnd.GetBackBuffer();
+    if(FAILED(buffer->Lock(nullptr,&surface,DDLOCK_WAIT,nullptr))) return;
+    const int originX=_VIEW_CELL_X_START-m_xMap.m_shStartViewTileX*_CELL_WIDTH-m_xMap.m_shViewOffsetX;
+    const int originY=_VIEW_CELL_Y_START-m_xMap.m_shStartViewTileY*_CELL_HEIGHT-m_xMap.m_shViewOffsetY;
+    for(const auto& mark:m_spellMarks) {
+        if(!mark.age) continue;
+        const auto* sprite=NativeSpellSprites::Frame(mark.frame);if(!sprite) continue;
+        NativeSpellSprites::Draw(surface,*sprite,float(mark.cell.x*_CELL_WIDTH+originX+sprite->offsetX),
+            float(mark.cell.y*_CELL_HEIGHT+originY+sprite->offsetY),float(sprite->width),float(sprite->height),
+            {255,255,255},NativeSpellSprites::Blend::mark);
+    }
+    buffer->Unlock(nullptr);
+}
+void CGameProcess::DrawSpellParticles()
+{
+    if(!m_spellParticles.count()) return;
+    DDSURFACEDESC2 surface={};surface.dwSize=sizeof(surface);auto* buffer=g_xMainWnd.GetBackBuffer();
+    if(FAILED(buffer->Lock(nullptr,&surface,DDLOCK_WAIT,nullptr))) return;
+    for(const auto* slots:{&m_spellParticles.sparks,&m_spellParticles.glows,&m_spellParticles.fragments})
+        for(const auto& slot:*slots) {
+            if(!slot || slot->size<=0) continue;
+            const auto& particle=*slot;
+            const auto* sprite=NativeSpellSprites::Frame(particle.resource_frame());if(!sprite) continue;
+            NativeSpellSprites::Draw(surface,*sprite,particle.position[0]-particle.size*.5f,
+                particle.position[1]-particle.size*.5f,particle.size,particle.size,particle.color,
+                particle.glow()?NativeSpellSprites::Blend::glow:NativeSpellSprites::Blend::spark);
+        }
+    buffer->Unlock(nullptr);
+}
+
+std::int64_t CGameProcess::PlaySpellSound(int sample,POINT cell)
+{
+    const int x=cell.x*_CELL_WIDTH+_VIEW_CELL_X_START-m_xMap.m_shStartViewTileX*_CELL_WIDTH-m_xMap.m_shViewOffsetX;
+    const int y=cell.y*_CELL_HEIGHT+_VIEW_CELL_Y_START-m_xMap.m_shStartViewTileY*_CELL_HEIGHT-m_xMap.m_shViewOffsetY;
+    return g_xSound.PlaySpellWav(sample,x,y);
 }

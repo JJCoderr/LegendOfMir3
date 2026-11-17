@@ -43,6 +43,7 @@ public:
 
 	DWORD	Playing(VOID);
     HRESULT GetVolume(LONG& volume) const;
+    HRESULT GetPan(LONG& pan) const;
 
 	HRESULT	SetCone( float x, float y, float z, DWORD InsideAngle, DWORD OutsideAngle, long OutsideVolume );
 	HRESULT Set3dProperties( DWORD Mode, float MinDistance, float MaxDistance, float VelX, float VelY, float VelZ );

@@ -9,6 +9,10 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
+#include "SpellSoundVoices.h"
+#include "SoundPosition.h"
+#include <memory>
+
 #define MAX_AMBIANCE_COUNT	9
 
 
@@ -24,6 +28,11 @@ public:
     enum class LobbyPage { None, Credentials, Selection, Creation };
     void UpdateLobbyAudio(LobbyPage page, DWORD elapsed);
     void StopSceneAudio();
+    std::int64_t PlaySpellWav(int sample,int viewX,int viewY);
+    void PositionSpellWav(std::int64_t key,int sample,int viewX,int viewY);
+    void RefreshSpellVoices();
+    void ClearSpellVoices();
+    HRESULT InspectSpellAudio(std::int64_t key,DWORD& playing,LONG& volume,LONG& pan);
     bool PlayLobbyEffect(const char* file);
     HRESULT InspectInterfaceAudio(bool opening,DWORD& playing,LONG& volume);
     static int ItemSoundSample(int mode, BYTE record31, const char* name);
@@ -84,6 +93,13 @@ private:
 	INT			m_nUseCount;				// 正在使用的 Sound(Wav) Buffer Count
 	CSound*		m_pSound;					// Object of Sound
 	CSBuffer**	m_ppBuffer;					// Object of Sound Buffer
+    struct SpellVoice {
+        std::unique_ptr<CSBuffer> buffer;
+        mir3::SoundPosition position={0,0};
+    };
+    mir3::SpellSoundVoices m_spellVoiceCache;
+    std::array<SpellVoice,mir3::SpellSoundVoices::samples*mir3::SpellSoundVoices::voices> m_spellVoices;
+    void ApplySpellVoice(SpellVoice& voice);
     LobbyPage m_lobbyPage = LobbyPage::None;
     DWORD m_lobbyElapsed = 0;
     CSBuffer m_lobbyOpening;

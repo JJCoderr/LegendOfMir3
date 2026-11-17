@@ -1430,3 +1430,75 @@ feafc67后完成GUI输入批次：F1..F12全绑定、F10系统路径、聊天编
 清理87/87、七目标109/109及最终增量通过；退出30+重连7+键盘34/交易54/装备25/音效15回归=165项全部通过。程序退出用独立子进程自然结束；select-three/create/delete也运行检查。运行文件out/mud3-01/Mir2Ex-exit-verified.exe，报告out/exit-regression，截图out/exit-{program,character,blocked,fade,waiting}.png。预览231..236，下一237。详见Client/docs/exit-flow-migration-audit.md。
 
 完整目标保持active。真实账号登录、战斗、角色保存和再次进入游戏尚未联机验收；后续继续GUI缺口及技能路由批次，不能把本机TCP夹具当真实服务器登录流程完成。
+
+
+## 施法完整批次审查（2026-11-17，继续实施）
+
+d7c70bb后核对当前源代码与Godot施法证据。重要纠正：原生74字节技能记录已经完整保留49延迟/53 MP门槛，不需要新增记录解析；3017头已正确但缺有符号tick正文。旧500ms准入、MP豁免/提示、动作分派、638/1410效果和恢复必须整批迁移。OnSpell原本直接atoi正文正确；CanWalk只发现定义，不能改未调用函数冒充移动限制。详见Client/docs/skill-casting-migration-audit.md。本次记录实证，不单独测试/提交；下一预览237，总目标active。
+
+施法批次已有未验证运行时代码：SpellRoutes.h/SpellTiming.h复用Godot纯C++模型；ExitFlow共用route限制；3017时间正文、49/53偏移断言、CMyHero实际按键/SetMagic初步接入。尚未构建或测试、未提交，不能当功能完成。起手方向/效果帧、特殊18动画声音、预测恢复和实际移动门槛仍待同批实现；细节见skill-casting-migration-audit.md末节。参考hud_view正确路径client/src/godot/hud_view.cpp。
+
+施法继续：BeginSpellAction已统一本地/远端路由、方向、限制帧和104间隔，远端30为动作3；空贴图不再阻断法术帧推进。实际资源入口是SprDfn.cpp CSprite静态表，不是SpriteInfo.cpp；CHero最终声音调用被注释。接下来须用MInfo三节资源替换/衔接，参考Godot resources/effect_catalog.hpp和原生LevelEffects.cpp解码，不能启用旧技能声音映射冒充正确音效。仍未构建/测试/提交。
+
+施法继续：EffectCatalog.h移植MInfo三节纯C++解析，BeginSpellAction按SPELL记录触发原编号起手音效；ApplySpellPhase统一75/40起手、70/200/80阶段和循环阈值。未验收。重要：旧m_xImageList只有61项，原资源库137/149不能直接索引；实际LoadEffect仍旧表，须独立库映射与绘制后再验收。详见施法审查末节，仍不测试/提交。
+
+施法绘制继续：EffectRenderer.h独立映射原库81/91/129/137/138/140/143/148/149，RGB565实现参考shader混合模式；CHero虚拟DrawEffect在原人物绘制位置画SPELL，BeginSpellAction已改查MInfo而非旧静态表。尚未验收；元素色/光源/生命周期、实际移动和预测恢复、638/1410仍待做。未测试或提交，预览仍237。
+
+施法继续：SpellColor使用能力扩展完整WORD（不是GUI低BYTE）选最强元素，平局早元素，起手冻结颜色；光源独立贴图扩缩并在外半径0停止，InitActor清理。发现PlayActorWav将听者Y误取源Sy，已改Dy，需同批验证声像。所有施法改动仍未构建/测试/提交；继续回包/恢复和效果批次。
+
+施法恢复继续：实际SetMotionState步行/奔跑接600ms移动准入后检查SpellTiming完整DWORD限制，LocalActionClock复位。23/18保存原坐标方向，18起动作/142音效；预测直接请求清确认累计；FAIL SetOldPosition加死亡豁免并清施法光/贴图。shared_wait待执行队列、idle提前解锁、GOOD/FAIL/8秒/BUMP闭环仍待完成，不能验收。仍无构建测试提交。
+
+施法等待继续：BeginSpellReply覆盖普通/23/18/预测直接请求，独立elapsed严格>8000释放；idle保留等待锁、视觉结束进战斗待机不再循环起手。GOOD ConfirmAction保留动画/保存位置且待机立即解锁；FAIL与Init清等待。未验证，仍须BUMP强制位移/FIFO及638/1410同批完成，无测试提交。
+
+施法回包继续：SpellReply.h实现638 DWORD/1410十进制列表解码，638已接OnMagicFire，1410尚待完整113效果消费。PACKETMSG正文1040装不下1024字节编码，已改1367含NUL并在默认入队拒绝超长，整批必须干净编译。仍未构建测试提交，下一237。
+
+施法效果继续：新增MagicRules/SpellLight参考规则和SpellFlight世界像素模型（初速精度差异、跟踪整数商、原float步长、15像素/接近判定）。尚未接实例；下一步须处理延迟/3秒/60秒/爆炸切换保留累计/目标引用及音效后接绘制，不能继续套旧CMagic WORD生命周期。仍未测试提交。
+
+施法效果继续：SpellPlayback.h已串起通用延迟/帧累计/60秒/无目标3秒/EXPLOSION保留累计/光尾模型，返回impact供声音消费。尚未接GameProc场景实例与638/1410，调用方必须使用稳定目标实例避免同id重绑；地表/73/74/150单独推进。仍未验证或提交。
+
+施法场景继续：GameProc NativeSpell持有/更新/绘制/清理已接，目标使用CActor独立实例序号防同id重绑；1410本地/远端FIFO已接，113逐实际目标创建，重复保留，其余只改技能。未验收：跟踪尚按格而非行走像素；GetScrnPos(0,0) SHORT原点需换可见格差；光源阶段/声音句柄/638特殊分派仍待完成。未构建测试提交。
+
+施法坐标继续：新实例在actor更新后推进，远端取tile+ShiftPixel，本地用相机+固定锚点反算；32位原点替代SHORT地图0格换算。LightNativeSpells拆到ShowLightFog之前，贴图仍原法术层。尚未验证；同帧新实例年龄/声音回收/638特殊分派继续未完。
+
+施法特殊效果继续：新实例serial边界避免同帧提前老化；73/74 StagedSpell已接638三阶段/原轨迹/爆炸保留时钟及光尾，跳过通用60秒，声音用原格而非暂态偏移格。未测试构建提交，150/地表/其余638及恢复仍未齐。
+
+
+施法批次继续（未验收）：638已补全完全忽略及仅更新编号的分支，非地表单目标接入新NativeSpell；9/10/53/110尚保留旧路径。新增GroundSpell.h实现原地表几何及帧阈值，尚待场景消费与残留/粒子接入。详见skill-casting-migration-audit.md末节。本批仍未构建/测试/提交，按完整功能集中验收，不误用此前退出批次截图证明本批。
+
+
+地表施法实现继续：638旧地表创建已替换成NativeSpell地表专用分支；新增痕迹/余烬、共享冰雷粒子池、原ProgUse缩放混合绘制与集中清理。GroundSpell已接场景，先前“尚未接入”记录由此覆盖。SpellOrbit模型已移植但150双轨尚未接入；音效句柄/移动预测和整批干净构建、回归、截图仍待完成。未测试提交，详见迁移审计末节。
+
+
+施法批次：150双轨现已接入（普通火球+0/30ms反相粒子），SpellDirection改原像素阈值。独立50*10法术声音缓存已接起手/效果/地表/余烬/命中与前5声道跟随、静音/音量/切图释放；旧ChgPlayingSet听者Y也已修正。仍未构建/测试/提交；待移动等待/BUMP等剩余逻辑与整批预览验收。最新改动含Client/Sound/MirSound.h及SpellSoundVoices.h/SoundPosition.h；下次必须干净重建，不复用旧布局对象。
+
+
+共享动作等待已接原生SetMotionState/AdvancePendingAction：移动准入600ms后施法限制，再按攻击0.8倍/移动480ms共享等待；普通攻击只在入队时做冷却，执行时不二次消费。请求保存起点并在失效/FAIL取消，实际执行写moved/attacked。去掉施法末段提前消费FIFO的旧分支。仍未测试提交；下一步补BUMP7与强制位移生命周期，再对完整施法批次干净编译、运行回归和截图。
+
+
+施法批次首次干净编译成功：out/spell-client-clean.log [87/87]链接Mir2Ex.exe，exit0。新增ForcedMotion.h接RUSH6/BUMP7/BACKSTEP9，本地/远端严格>95ms推进2帧，BUMP帧4回起点；客户端独立强制位移替代旧UpdateMove。仍未运行新功能验收或截图、未提交。下步新增237起的完整施法预览/回归报告；重点检查模型和实际638/1410、渲染、音效、动作锁/死亡与强制位移。没有仍在运行的构建session。
+
+
+首轮施法运行验收完成33/33（out/mud3-01/spell-check.txt），新预览237地表/238双轨/239分阶段；真实截图out/spell-{ground,orbit,staged}.png已查看，HUD坐标[4,8]。7目标[111/111]构建通过。注意Ninja未追踪本次SpellPreview.h单独修改，已touch Mir2Ex.cpp重编译[2/2]并重新截图；后续头改必须确认实际重编译/必要时clean。尚缺真实发包、原生动作队列/强制位移、实际声音和像素原版对照等验证，未提交。没有正在运行的编译/预览。
+
+
+施法验收扩到49/49：本机UDP捕获实际3017序列化（头、序号、signed tick）、真实SetMagic普通/102/12分支、+GOOD/+FAIL/死亡/8000ms边界，以及原生BUMP返回。首次测试漏“+”导致两项失败，已修正测试输入并重跑全通过，生产逻辑未为测试改动。未提交；下步实际音频声道/音量、更多动作队列和渲染对照。所有构建与预览均已结束。
+
+
+实际法术音频测试发现并修复根目录存在性检查错误（CSBuffer实际Sound\目录）；新增真实GetPan/InspectSpellAudio，11项DS检查通过，新施法共60/60。旧快捷键34+交易54+装备25+界面音效15也全过，总188。runtime仍Mir2Ex-spell-review.exe，音频编译log spell-audio-path.log。未提交；还须渲染原版/完整人物动作与地图队列审查。无运行中进程。
+
+
+施法动作时钟修复：AdvanceSpellAnimation独立DWORD，严格阈值，阶段调整只在实际推进帧执行，状态0x08000000双间隔，远端首帧追帧减半；新7项动作实际方法测试通过，当前67/67。spell-animation-clean.log干净87构建通过。此前旧128项回归是上一版，勿误报当前195全通过；此版尚须旧回归、实际队列/地图与混合像素对照，未提交。无活动进程。
+
+
+原生动作队列新增9项通过，当前76/76。使用真实01.map数据（离屏视口，只验证数据/队列），检查pending准入/共享等待/起点取消/施法拒绝/真实CM_WALK发送与消费，以及施法期间638 FIFO保留、结束后消费。spell-queue-build.log七目标112通过。未提交；剩余混合/人物地图视觉审查和最终同版旧回归。无运行进程。
+
+
+### 施法整批收尾验证（2026-11-17）
+
+原生离线预览增加 `--preview=spell-map`，实际加载01.map与地图/男性人物WIL，通过CGameProcess::RenderScene绘制人物施法、火墙、冰刺、150飞行粒子及原生HUD。截图 `out/spell-map.png` 已实际检查并展示；人物处于树下，保留原生树木遮挡关系。该画面为原生800×600回缓冲截图，不是Godot画面，也不宣称已与MIR3.EXE逐像素相同。
+
+加载全套旧库时发现末尾interfacec2.wil/wix在当前MIR3资源目录不存在，会弹出错误。离线场景改为显式加载需要的地图和人物库；生产LoadAllImage的旧资源清单问题留待真实进场联调处理，未通过复制伪造资源绕过。
+
+最终同一可执行文件 `out/mud3-01/Mir2Ex-spell-review.exe`：施法76、快捷键34、交易54、装备25、界面音效15，全204项通过；退出守卫/发送/等待30项及回选角本地TCP7项通过，总241项。七目标构建成功；最终预览调整构建 `out/spell-map-build.log` [2/2]实际重新编译链接，基于此前七目标完整构建 `out/spell-queue-build.log` [112/112]。git空白检查通过。退出预览已执行，但未将单独程序退出状态额外计入断言数。
+
+本批以“原生施法动作、特效与空间音效”完整功能统一提交。仍待真实服务器联调、MIR3逐像素与听感验收；原生地图旧资源清单、天气与特效共享随机序列仍有已知差异。整个GUI与服务端接入目标尚未完成。

@@ -21,10 +21,13 @@ typedef struct tag_TSHORTMSSEAGE
 } _TSHORTMSSEAGE, *_LPTSHORTMSSEAGE;
 
 
+constexpr int MaximumActorPayloadBytes=1024;
+constexpr int ActorPacketBodyCapacity=(MaximumActorPayloadBytes*8+5)/6+1;
+
 typedef struct tagPACKETMSG
 {
 	_TDEFAULTMESSAGE	stDefMsg;
-	CHAR				szEncodeData[MAX_PATH * 4];
+	CHAR				szEncodeData[ActorPacketBodyCapacity];
 }PACKETMSG, *LPPACKETMSG;
 
 typedef struct tag_TMSGHEADER
