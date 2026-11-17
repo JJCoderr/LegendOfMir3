@@ -1,0 +1,6 @@
+add_executable(Test Test.cpp)
+target_compile_features(Test PRIVATE cxx_std_17)
+target_compile_definitions(Test PRIVATE NOMINMAX PICOJSON_USE_INT64)
+target_compile_options(Test PRIVATE /utf-8)
+target_link_libraries(Test PRIVATE mir_sqlite)
+set_target_properties(Test PROPERTIES DEBUG_POSTFIX "")

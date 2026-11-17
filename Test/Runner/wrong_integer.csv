@@ -1,0 +1,2 @@
+﻿step,name,target,action,params,expect
+10,must reject nearby integer,Database,query,SELECT 9007199254740993,rows=[[9007199254740992]]

@@ -2000,3 +2000,12 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 所有 JSON 测试集迁移至 Test/Client、Test/Server，通用执行器和 fixture/协议统计工具从 Client/Tools 迁至 Test。Client/Server 仅承担 RPC 入口和业务响应。
 - 新入口：python Test/run_rpc_tests.py Test/Client/items.json --launch。自动启动及 --pid 附着均输出 out/rpc-*/test.log 和 result.json；客户端另有协议统计，自动启动保留 runtime.log。Test/README.md 说明用法和边界。
 - 真实两端回归 rpc-w212xy2b：72 项全部通过，10.882 秒；附着不存在 PID 的失败路径 rpc-5mjj41jc：日志和 failed 结果正确落盘，退出码 1。仅迁移 Python/JSON，无需重编 C++。
+
+
+## 2026-11-18 按子系统组织CSV与原生Test.exe
+- 用户改为CSV场景，新增根CMake下Test控制台目标（Test/Test.cpp）；Test.exe接收CSV、--client-pid/--server-pid、--from/--to（含边界步骤号）、--log、--timeout-ms及只读--database。每行自由切换Client/Server，日志记录响应与断言差异，失败即停并返回1。
+- 业务按子系统放Test/Login.csv、Inventory.csv；基础协议为RpcClient.csv/RpcServer.csv，测试种子同名.fixture.csv。移除四个旧JSON测试集与Python RPC执行器；launch_csv.py只负责隔离fixture、启动两端及调用原生执行器，保留协议覆盖报告。
+- CSV支持UTF-8 BOM、引号转义、逗号和跨行单元格；参数/预期用key=value分号列表。支持state.wait、wire.expect、Database query和基础协议raw。现有服务端state.get仅证明服务/网络状态，业务结果仍检查客户端状态及数据库。
+- PicoJSON通用相等比较会把int64转double并改写值；执行器采用精确递归比较，新增相邻大整数拒绝验证，未修改第三方头文件。
+- Test Release构建通过；真实全场景rpc-4v69c9op含67步骤+10服务端检查全部通过，场景9.329秒，日志out/csv-validation/items-final.log。客户端基础协议也通过；8项执行器验证覆盖CSV字段、起止范围、空/逆序范围、精度和失败停止。按子系统重命名后rpc-mz7a0_87再次验证指定第6步及自定义日志成功。
+- 角色创建删除未在本轮修改：用户要求优先改CSV执行器。后续继续各子系统协议闭环，不做截图调试，也未宣称整体适配完成。

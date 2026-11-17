@@ -1,0 +1,11 @@
+﻿step,name,target,action,params,expect
+1,state,Server,raw,"{""jsonrpc"":""2.0"",""id"":1,""method"":""state.get""}","jsonrpc=""2.0"";id=1;result.schema=1"
+2,unknown method,Server,raw,"{""jsonrpc"":""2.0"",""id"":""未知"",""method"":""missing""}",id=未知;error.code=-32601
+3,invalid params,Server,raw,"{""jsonrpc"":""2.0"",""id"":3,""method"":""state.get"",""params"":3}",id=3;error.code=-32602
+4,invalid request,Server,raw,"{""id"":4,""method"":""state.get""}",id=null;error.code=-32600
+5,parse error,Server,raw,{,id=null;error.code=-32700
+6,batch notification,Server,raw,"[{""jsonrpc"":""2.0"",""method"":""state.get""},{""jsonrpc"":""2.0"",""id"":6,""method"":""state.get""}]",0.id=6;0.result.schema=1
+7,large integer id,Server,raw,"{""jsonrpc"":""2.0"",""id"":9007199254740993,""method"":""state.get""}",id=9007199254740993;result.schema=1
+8,escaped unicode id,Server,raw,"{""jsonrpc"":""2.0"",""id"":""\u6d4b\u8bd5\ud83d\ude00\n\"""",""method"":""state.get""}","id=""测试😀\n\"""";result.schema=1"
+9,trailing data,Server,raw,"{""jsonrpc"":""2.0"",""id"":9,""method"":""state.get""} garbage",id=null;error.code=-32700
+10,all services ready,Server,state.wait_ready,,result.ready=true;result.services_ready=6

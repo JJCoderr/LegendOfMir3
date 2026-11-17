@@ -1,0 +1,68 @@
+﻿step,name,target,action,params,expect
+1,credentials ready,Client,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+2,wrong password,Client,session.login,account=mirtest;password=wrong,result.status=submitted
+3,login rejected,Client,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+4,dismiss rejection,Client,notice.dismiss,,result.status=submitted
+5,login,Client,session.login,account=mirtest;password=test123,result.status=submitted
+6,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+7,authenticated,Client,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+8,dismiss billing,Client,notice.dismiss,,result.status=submitted
+9,unknown server rejected,Client,session.select_server,name=MissingServer,error.code=-32002
+10,select server,Client,session.select_server,name=Mir3Local,result.status=submitted
+11,roster ready,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+12,unknown character rejected,Client,session.enter,name=MissingRole,error.code=-32002
+13,enter character,Client,session.enter,name=MirProbe01,result.status=submitted
+14,world ready,Client,state.wait,,"result.scene=world;result.map=""01"";result.hp=18"
+15,dismiss arrival,Client,notice.dismiss,,result.status=submitted
+16,items ready,Client,state.wait,,result.input_delayed=false;result.notice=false;result.bag.0.id=1;result.bag.1.id=2
+17,wrong equipment slot rejected,Client,item.equip,id=1;slot=1,error.code=-32002
+18,rejected equipment preserves inventory,Client,state.get,,result.bag.0.id=1;result.bag.1.id=2;result.held_item=null;result.equipment=[]
+19,unowned item rejected,Client,item.use,id=999,error.code=-32002
+20,equip armor,Client,item.equip,id=1;slot=0,result.status=submitted
+21,server state after equip armor,Server,state.get,,result.ready=true;result.services_ready=6
+22,armor equipped,Client,state.wait,,"result.dress=1;result.defence=[2,5];result.magic_defence=[1,3];result.equipment_pending=0;result.equipment.0.id=1;result.held_item=null"
+23,unequip armor,Client,item.unequip,slot=0,result.status=submitted
+24,armor returned,Client,state.wait,,"result.dress=0;result.defence=[0,0];result.equipment=[];result.equipment_pending=0;result.bag.0.id=1;result.held_item=null"
+25,drop potion,Client,item.drop,id=2,result.status=submitted
+26,potion on ground,Client,state.wait,,result.drop_pending=false;result.ground_items.0.name=Test potion;result.ground_items.0.x=459;result.ground_items.0.y=261
+27,pickup potion,Client,item.pickup,,result.status=submitted
+28,potion recovered,Client,state.wait,,result.ground_items=[];result.bag.1.id=2;result.bag.1.name=Test potion
+29,consume recovered potion,Client,item.use,id=2,result.status=submitted
+30,server state after consume recovered potion,Server,state.get,,result.ready=true;result.services_ready=6
+31,potion consumed,Client,state.wait,,result.ground_items=[];result.use_pending=false;result.held_item=null;result.bag.0.id=1
+32,drop armor,Client,item.drop,id=1,result.status=submitted
+33,armor on ground,Client,state.wait,,result.bag=[];result.drop_pending=false;result.ground_items.0.name=Test male armor
+34,pickup armor,Client,item.pickup,,result.status=submitted
+35,armor recovered,Client,state.wait,,result.ground_items=[];result.bag.0.id=1;result.bag.0.name=Test male armor
+36,equip again,Client,item.equip,id=1;slot=0,result.status=submitted
+37,final equipment,Client,state.wait,,"result.bag=[];result.equipment.0.id=1;result.equipment_pending=0;result.dress=1;result.defence=[2,5];result.hp=18;result.mp=13"
+38,return to selection,Client,session.return,,result.status=submitted
+39,server state after return to selection,Server,state.get,,result.ready=true;result.services_ready=6
+40,selection after saving,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+41,reenter saved character,Client,session.enter,name=MirProbe01,result.status=submitted
+42,restored inventory,Client,state.wait,,"result.scene=world;result.map=""01"";result.bag=[];result.equipment.0.name=Test male armor;result.dress=1;result.defence=[2,5];result.magic_defence=[1,3]"
+43,wire CM_IDPASSWORD,Client,wire.expect,direction=sent;message=CM_IDPASSWORD;at_least=2,
+44,wire CM_SELECTSERVER,Client,wire.expect,direction=sent;message=CM_SELECTSERVER,
+45,wire CM_QUERYCHR,Client,wire.expect,direction=sent;message=CM_QUERYCHR,
+46,wire CM_SELCHR,Client,wire.expect,direction=sent;message=CM_SELCHR,
+47,wire SM_PASSWD_FAIL,Client,wire.expect,direction=received;message=SM_PASSWD_FAIL,
+48,wire SM_PASSOK_SELECTSERVER,Client,wire.expect,direction=received;message=SM_PASSOK_SELECTSERVER,
+49,wire SM_SELECTSERVER_OK,Client,wire.expect,direction=received;message=SM_SELECTSERVER_OK,
+50,wire SM_QUERYCHR,Client,wire.expect,direction=received;message=SM_QUERYCHR,
+51,wire SM_STARTPLAY,Client,wire.expect,direction=received;message=SM_STARTPLAY,
+52,wire CM_TAKEONITEM,Client,wire.expect,direction=sent;message=CM_TAKEONITEM,
+53,wire CM_TAKEOFFITEM,Client,wire.expect,direction=sent;message=CM_TAKEOFFITEM,
+54,wire CM_DROPITEM,Client,wire.expect,direction=sent;message=CM_DROPITEM,
+55,wire CM_PICKUP,Client,wire.expect,direction=sent;message=CM_PICKUP,
+56,wire CM_EAT,Client,wire.expect,direction=sent;message=CM_EAT,
+57,wire SM_TAKEON_OK,Client,wire.expect,direction=received;message=SM_TAKEON_OK,
+58,wire SM_TAKEOFF_OK,Client,wire.expect,direction=received;message=SM_TAKEOFF_OK,
+59,wire SM_ITEMSHOW,Client,wire.expect,direction=received;message=SM_ITEMSHOW,
+60,wire SM_ITEMHIDE,Client,wire.expect,direction=received;message=SM_ITEMHIDE,
+61,wire SM_ADDITEM,Client,wire.expect,direction=received;message=SM_ADDITEM,
+62,wire SM_EAT_OK,Client,wire.expect,direction=received;message=SM_EAT_OK,
+63,wire SM_DROPITEM_SCCESS,Client,wire.expect,direction=received;message=SM_DROPITEM_SCCESS,
+64,consumed potion not saved,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='MirProbe01',rows=[[0]]
+65,exactly one recovered armor saved,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='MirProbe01' AND FLD_STDINDEX=33,rows=[[1]]
+66,equipped armor persisted,Database,query,SELECT FLD_DRESS_ID FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01',"rows=[[""B26111800001""]]"
+67,protocol coverage,Client,protocol.get,,

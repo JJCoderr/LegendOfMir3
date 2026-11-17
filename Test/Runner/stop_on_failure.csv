@@ -1,0 +1,3 @@
+﻿step,name,target,action,params,expect
+10,intentional mismatch,Database,query,SELECT 1,rows=[[2]]
+20,must not execute after failure,Database,query,SELECT 1,rows=[[1]]

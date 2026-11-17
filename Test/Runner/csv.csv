@@ -1,0 +1,5 @@
+﻿step,name,target,action,params,expect
+10,UTF-8 quoted multiline,Database,query,"SELECT '中文,双引号""
+下一行;结束'","rows=[[""中文,双引号\""\n下一行;结束""]]"
+20,exact 64-bit integer,Database,query,SELECT 9007199254740993,rows=[[9007199254740993]]
+30,mixed numeric types,Database,query,SELECT 1.0,rows=[[1]]
