@@ -7,6 +7,7 @@
 #include "AbilityWire.h"
 #include "Common/Mir3HumanAppearance.h"
 #include "Common/LoginMessages.h"
+#include "Common/LegacyPanel.h"
 
 
 extern CWHQueue	PacketQ;
@@ -276,7 +277,7 @@ VOID CGameProcess::LoadMapChanged(CHAR* szMap)
 	m_xMap.LoadMapData(szMap);
     m_xInterface.m_minimap.MapChanged();
     m_xInterface.m_xSiegeWnd.ClearObjects();
-    m_levelEffects.Clear();ClearNativeSpells();
+    m_levelEffects.Clear();ClearNativeSpells();m_stMapItemList.ClearAllNodes();
     m_xInterface.m_targetDisplay.Clear();
 
 	ZeroMemory(m_stMemMappedID, sizeof(MEMMAPPEDID)*_VIEW_CELL_X_COUNT* _VIEW_CELL_Y_COUNT);
@@ -560,7 +561,7 @@ VOID CGameProcess::CheckMappedData(INT nLoopTime, BOOL bIsMoveTime)
 		if ( pstItem->shTileX >= m_xMap.m_shStartViewTileX && pstItem->shTileX < m_xMap.m_shStartViewTileX  + _VIEW_CELL_X_COUNT && 
 			 pstItem->shTileY >= m_xMap.m_shStartViewTileY && pstItem->shTileY < m_xMap.m_shStartViewTileY  + _VIEW_CELL_Y_COUNT )
 		{
-			for ( nObjCnt = 0; nObjCnt < _MAX_CELL_OBJ; nObjCnt++ )
+			for ( nObjCnt = 0; nObjCnt < GroundItemDisplay::CellCapacity; nObjCnt++ )
 			{
 				if ( m_stMemMappedID[pstItem->shTileY - m_xMap.m_shStartViewTileY][pstItem->shTileX - m_xMap.m_shStartViewTileX].pstItem[nObjCnt] == NULL )
 				{
@@ -719,106 +720,37 @@ VOID CGameProcess::AutoTargeting()
 
 VOID CGameProcess::DropItemShow()
 {
-	if ( m_stMapItemList.GetCounter() != 0 )
-	{
-		m_stMapItemList.MoveCurrentToTop();
-		LPGROUNDITEM pstItem;
-
-		for ( INT nCnt = 0; nCnt < m_stMapItemList.GetCounter(); nCnt++ )
-		{
-			pstItem = m_stMapItemList.GetCurrentData();
-
-			if ( pstItem->shTileX == m_ptCurrTile.x && pstItem->shTileY == m_ptCurrTile.y )
-			{
-				SIZE sizeLen;
-
-				sizeLen		 = g_xMainWnd.GetStrLength(NULL, NULL, pstItem->szItemName);
-				INT nCenterX = (pstItem->shTileX-m_xMap.m_shStartViewTileX)*_CELL_WIDTH +_VIEW_CELL_X_START-m_xMap.m_shViewOffsetX+_CELL_WIDTH /2;
-				INT nCenterY = (pstItem->shTileY-m_xMap.m_shStartViewTileY)*_CELL_HEIGHT+_VIEW_CELL_Y_START-m_xMap.m_shViewOffsetY+_CELL_HEIGHT/2-12;
-
-				RECT rcBack;
-				SetRect(&rcBack, nCenterX-sizeLen.cx/2, nCenterY-7, nCenterX+sizeLen.cx/2, nCenterY+8);
-
-				if ( g_xMainWnd.Get3DDevice() )
-				{
-					if( SUCCEEDED(g_xMainWnd.Get3DDevice()->BeginScene()) )
-					{
-						D3DVECTOR vTrans;
-						D3DMATRIX matTrans;
-						D3DMATRIX matScale;
-						D3DMATRIX matWorld;
-						D3DMATRIX matWorldOriginal;
-
-						g_xMainWnd.Get3DDevice()->GetTransform(D3DTRANSFORMSTATE_WORLD, &matWorldOriginal);
-
-						D3DMATERIAL7 mtrl;
-
-						vTrans.x = (FLOAT)rcBack.left-400+(rcBack.right-rcBack.left)/2-1;  
-						vTrans.y = (FLOAT)-rcBack.top+300-4; 
-						vTrans.z = 0;
-						D3DUtil_SetTranslateMatrix(matTrans, vTrans);
-						D3DUtil_SetScaleMatrix(matScale, (FLOAT)rcBack.right-rcBack.left, (FLOAT)rcBack.bottom-rcBack.top, 0.0f);
-						D3DMath_MatrixMultiply(matWorld, matScale, matTrans);
-						g_xMainWnd.Get3DDevice()->SetTransform(D3DTRANSFORMSTATE_WORLD, &matWorld);				
-
-						D3DUtil_InitMaterial(mtrl, 
-											 (FLOAT)100/255.0f,
-											 (FLOAT)100/255.0f, 
-											 (FLOAT)100/255.0f);
-						mtrl.diffuse.a = 125/255.0f;
-						g_xMainWnd.Get3DDevice()->SetMaterial(&mtrl);
-
-						g_xMainWnd.Get3DDevice()->SetRenderState( D3DRENDERSTATE_ALPHABLENDENABLE, TRUE );
-						g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_COLORKEYENABLE, TRUE);
-						g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-						g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_ALPHAOP,   D3DTOP_MODULATE);
-						g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-
-						g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ONE);
-						g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
-
-						g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ONE);
-						g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
-
-
-						g_xMainWnd.Get3DDevice()->SetTexture(0, NULL);
-						g_xMainWnd.Get3DDevice()->DrawPrimitive(D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, m_avBillboard, 4, NULL);
-
-						// 恢复原状.
-						ZeroMemory(&mtrl, sizeof(mtrl));
-						mtrl.diffuse.r = mtrl.diffuse.g = mtrl.diffuse.b = 0.1f;
-						mtrl.ambient.r = mtrl.ambient.g = mtrl.ambient.b = 1.0f;
-						g_xMainWnd.Get3DDevice()->SetMaterial(&mtrl);
-
-						g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-						g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_COLOROP,   D3DTOP_MODULATE);
-						g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-						g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-						g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_ALPHAOP,   D3DTOP_SELECTARG1);
-						g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-
-						g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
-						g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_COLORKEYENABLE, FALSE);
-						g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_SRCBLEND , D3DBLEND_ONE);
-						g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_ZERO);
-						g_xMainWnd.Get3DDevice()->SetTransform(D3DTRANSFORMSTATE_WORLD, &matWorldOriginal);
-
-						g_xMainWnd.Get3DDevice()->EndScene();
-
-					}
-				}
-
-				g_xMainWnd.PutsHan(g_xMainWnd.GetBackBuffer(), nCenterX-sizeLen.cx/2-1, nCenterY-7, RGB(  0,   0,   0), RGB(0, 0, 0), pstItem->szItemName);
-				g_xMainWnd.PutsHan(g_xMainWnd.GetBackBuffer(), nCenterX-sizeLen.cx/2  , nCenterY-8, RGB(255, 255, 125), RGB(0, 0, 0), pstItem->szItemName);
-
-				break;
-			}
-
-			m_stMapItemList.MoveNextNode();
-		}
-	}	
+    if(m_xNotice.IsActive() || !m_xInterface.SpellPointerAvailable()) return;
+    static CLoginMessages messages;static bool loaded=messages.Load("CmList.dat");
+    const auto& coin=messages.Get(GroundItemDisplay::CoinNameMessage);
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font=g_xMainWnd.CreateGameFont(face,9);
+    HDC dc=GetDC(g_xMainWnd.GetSafehWnd());HGDIOBJ previous=SelectObject(dc,font);
+    struct Label {RECT bounds;std::string text;};std::vector<Label> labels;
+    int y=(m_ptCurrTile.y-m_xMap.m_shStartViewTileY)*_CELL_HEIGHT+_VIEW_CELL_Y_START-m_xMap.m_shViewOffsetY-4;
+    m_stMapItemList.MoveCurrentToTop();
+    for(int index=0;index<m_stMapItemList.GetCounter();++index) {
+        const auto* item=m_stMapItemList.GetCurrentData();m_stMapItemList.MoveNextNode();
+        if(item->shTileX!=m_ptCurrTile.x || item->shTileY!=m_ptCurrTile.y) continue;
+        SIZE size={};GetTextExtentPoint32A(dc,item->szItemName,int(strlen(item->szItemName)),&size);
+        const int x=(item->shTileX-m_xMap.m_shStartViewTileX)*_CELL_WIDTH+_VIEW_CELL_X_START-m_xMap.m_shViewOffsetX+24-size.cx/2;
+        const bool variant=GroundItemDisplay::CoinVariant(item->szItemName,coin);
+        labels.push_back({{x,y,x+size.cx,y+15},variant?coin:std::string(item->szItemName)});
+        if(variant || labels.size()==GroundItemDisplay::CellCapacity) break;
+        y-=16;
+    }
+    SelectObject(dc,previous);ReleaseDC(g_xMainWnd.GetSafehWnd(),dc);
+    for(const auto& label:labels) DrawLegacyPanel(label.bounds,RGB(80,60,40),150,0,false);
+    if(SUCCEEDED(g_xMainWnd.GetBackBuffer()->GetDC(&dc))) {
+        previous=SelectObject(dc,font);SetBkMode(dc,TRANSPARENT);
+        for(const auto& label:labels) {
+            SetTextColor(dc,RGB(0,0,0));TextOutA(dc,label.bounds.left-1,label.bounds.top+2,label.text.c_str(),int(label.text.size()));
+            SetTextColor(dc,RGB(255,255,125));TextOutA(dc,label.bounds.left,label.bounds.top+1,label.text.c_str(),int(label.text.size()));
+        }
+        SelectObject(dc,previous);g_xMainWnd.GetBackBuffer()->ReleaseDC(dc);
+    }
+    DeleteObject(font);
 }
-
 
 VOID CGameProcess::RenderScene(INT nLoopTime)
 {
@@ -850,6 +782,8 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 
 	if ( m_bRender )
 	{
+        m_ptCurrTile.x=m_xMap.m_shStartViewTileX+(m_ptMousePos.x-_VIEW_CELL_X_START+m_xMap.m_shViewOffsetX)/_CELL_WIDTH;
+        m_ptCurrTile.y=m_xMap.m_shStartViewTileY+(m_ptMousePos.y-_VIEW_CELL_Y_START+m_xMap.m_shViewOffsetY)/_CELL_HEIGHT;
 		m_xLightFog.ClearSavedLightColor();
         const auto nativeSpellBoundary=m_nextNativeSpell;
         m_levelEffects.Advance(nLoopTime);m_levelEffects.Light();
@@ -865,6 +799,15 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 			m_xMap.m_wSavedMapBuffer, _CLIP_WIDTH, _CLIP_HEIGHT);
 
 		m_pxMouseTargetActor = NULL;
+        m_stMapItemList.MoveCurrentToTop();
+        for(int index=0;index<m_stMapItemList.GetCounter();) {
+            auto* item=m_stMapItemList.GetCurrentData();
+            if(!GroundItemDisplay::Nearby(int(item->shTileX)-m_xMyHero.m_wPosX,int(item->shTileY)-m_xMyHero.m_wPosY)) {
+                m_stMapItemList.DeleteCurrentNodeEx();delete item;continue;
+            }
+            item->sparkle.Advance(GetTickCount(),DWORD(nLoopTime));
+            m_stMapItemList.MoveNextNode();++index;
+        }
 		CheckMappedData(nLoopTime, bIsMoveTime);
         AdvanceNativeSpells(DWORD(nLoopTime),nativeSpellBoundary);DrawSpellMarks();
 		AutoTargeting();
@@ -979,6 +922,16 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 
 		DropItemShow();
         m_levelEffects.Draw();DrawNativeSpells();DrawSpellParticles();
+        m_stMapItemList.MoveCurrentToTop();
+        for(int index=0;index<m_stMapItemList.GetCounter();++index) {
+            const auto* item=m_stMapItemList.GetCurrentData();
+            if(item->sparkle.frame>=0) {
+                const int x=(item->shTileX-m_xMap.m_shStartViewTileX)*_CELL_WIDTH+_VIEW_CELL_X_START-m_xMap.m_shViewOffsetX+8;
+                const int y=(item->shTileY-m_xMap.m_shStartViewTileY)*_CELL_HEIGHT+_VIEW_CELL_Y_START-m_xMap.m_shViewOffsetY;
+                DrawSelectionFrame(m_xImage.m_xImageList[_IMAGE_PROGUSE],GroundItemDisplay::SparkleFirst+item->sparkle.frame,x,y,SelectionBlend::Normal,false);
+            }
+            m_stMapItemList.MoveNextNode();
+        }
 //		RenderShine(nLoopTime);
 
 		if ( m_xMagicList.GetCounter() != 0 )
@@ -1480,7 +1433,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 			// 绘制地面物品。
 			if ( bIsMapViewTime )
 			{
-				for ( nObjCnt = 0; nObjCnt < _MAX_CELL_OBJ; nObjCnt++ )
+				for ( nObjCnt = 0; nObjCnt < GroundItemDisplay::CellCapacity; nObjCnt++ )
 				{
 					LPGROUNDITEM pstItem = m_stMemMappedID[nMapViewY][nMapViewX].pstItem[nObjCnt];
 					if ( pstItem )
@@ -1493,19 +1446,10 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 							INT nX  = nStartX+_CELL_WIDTH/2-pxItemImg->m_lpstNewCurrWilImageInfo->shWidth/2;
 							INT nY  = nStartY+_CELL_HEIGHT/2-pxItemImg->m_lpstNewCurrWilImageInfo->shHeight/2;
 
-							g_xMainWnd.DrawWithShadowABlend(
-													nX+1, nY+1, 
-													pxItemImg->m_lpstNewCurrWilImageInfo->shWidth,
-													pxItemImg->m_lpstNewCurrWilImageInfo->shHeight,
-													(WORD*)pxItemImg->m_pbCurrImage, 
-													_CLIP_WIDTH, _CLIP_HEIGHT, m_wShadowClr, FALSE, 50);
 
-							if ( nXCnt == m_ptCurrTile.x && nYCnt == m_ptCurrTile.y )
-								g_xMainWnd.DrawWithImageForCompClipRgn(nX, nY, pxItemImg->m_lpstNewCurrWilImageInfo->shWidth,pxItemImg->m_lpstNewCurrWilImageInfo->shHeight,
-																	   (WORD*)pxItemImg->m_pbCurrImage, _CLIP_WIDTH, _CLIP_HEIGHT, 0XFFFF, 0XFFFF, TRUE);
-							else
-								g_xMainWnd.DrawWithImageForCompClipRgn(nX, nY, pxItemImg->m_lpstNewCurrWilImageInfo->shWidth,pxItemImg->m_lpstNewCurrWilImageInfo->shHeight,
-																	   (WORD*)pxItemImg->m_pbCurrImage, _CLIP_WIDTH, _CLIP_HEIGHT);
+                            const bool highlighted=nXCnt==m_ptCurrTile.x && nYCnt==m_ptCurrTile.y && !m_xNotice.IsActive() && m_xInterface.SpellPointerAvailable();
+                            DrawSelectionFrame(*pxItemImg,pstItem->wLooks,nX,nY,highlighted?SelectionBlend::ItemHighlight:SelectionBlend::Normal,false);
+
 
 						}
 					}
@@ -1848,8 +1792,8 @@ LRESULT CGameProcess::OnMouseMove(WPARAM wParam, LPARAM lParam)
 {	
 	m_ptMousePos.x = LOWORD(lParam);
 	m_ptMousePos.y = HIWORD(lParam);
-	m_ptCurrTile.x = m_xMap.m_shStartViewTileX + (m_ptMousePos.x - _VIEW_CELL_X_START) / TILE_WIDTH;
-	m_ptCurrTile.y = m_xMap.m_shStartViewTileY + (m_ptMousePos.y - _VIEW_CELL_Y_START) / TILE_HEIGHT;
+	m_ptCurrTile.x = m_xMap.m_shStartViewTileX + (m_ptMousePos.x - _VIEW_CELL_X_START + m_xMap.m_shViewOffsetX) / TILE_WIDTH;
+	m_ptCurrTile.y = m_xMap.m_shStartViewTileY + (m_ptMousePos.y - _VIEW_CELL_Y_START + m_xMap.m_shViewOffsetY) / TILE_HEIGHT;
 
 	if(m_xNotice.IsActive())
 	{
@@ -1879,8 +1823,8 @@ LRESULT CGameProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 
 	m_ptMousePos.x = LOWORD(lParam);
 	m_ptMousePos.y = HIWORD(lParam);
-	m_ptCurrTile.x = m_xMap.m_shStartViewTileX + (m_ptMousePos.x - _VIEW_CELL_X_START) / TILE_WIDTH;
-	m_ptCurrTile.y = m_xMap.m_shStartViewTileY + (m_ptMousePos.y - _VIEW_CELL_Y_START) / TILE_HEIGHT;
+	m_ptCurrTile.x = m_xMap.m_shStartViewTileX + (m_ptMousePos.x - _VIEW_CELL_X_START + m_xMap.m_shViewOffsetX) / TILE_WIDTH;
+	m_ptCurrTile.y = m_xMap.m_shStartViewTileY + (m_ptMousePos.y - _VIEW_CELL_Y_START + m_xMap.m_shViewOffsetY) / TILE_HEIGHT;
 
 	if ( !m_xInterface.OnLButtonDown(m_ptMousePos) )
 	{
@@ -1948,8 +1892,8 @@ LRESULT CGameProcess::OnRButtonDown(WPARAM wParam, LPARAM lParam)
     if(m_xNotice.IsActive()) return 0L;
 	m_ptMousePos.x = LOWORD(lParam);
 	m_ptMousePos.y = HIWORD(lParam);
-	m_ptCurrTile.x = m_xMap.m_shStartViewTileX + (m_ptMousePos.x - _VIEW_CELL_X_START) / TILE_WIDTH;
-	m_ptCurrTile.y = m_xMap.m_shStartViewTileY + (m_ptMousePos.y - _VIEW_CELL_Y_START) / TILE_HEIGHT;
+	m_ptCurrTile.x = m_xMap.m_shStartViewTileX + (m_ptMousePos.x - _VIEW_CELL_X_START + m_xMap.m_shViewOffsetX) / TILE_WIDTH;
+	m_ptCurrTile.y = m_xMap.m_shStartViewTileY + (m_ptMousePos.y - _VIEW_CELL_Y_START + m_xMap.m_shViewOffsetY) / TILE_HEIGHT;
 
 	m_pxSavedTargetActor = NULL;
 
@@ -1963,8 +1907,8 @@ LRESULT CGameProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 {
 	m_ptMousePos.x = LOWORD(lParam);
 	m_ptMousePos.y = HIWORD(lParam);
-	m_ptCurrTile.x = m_xMap.m_shStartViewTileX + (m_ptMousePos.x - _VIEW_CELL_X_START) / TILE_WIDTH;
-	m_ptCurrTile.y = m_xMap.m_shStartViewTileY + (m_ptMousePos.y - _VIEW_CELL_Y_START) / TILE_HEIGHT;
+	m_ptCurrTile.x = m_xMap.m_shStartViewTileX + (m_ptMousePos.x - _VIEW_CELL_X_START + m_xMap.m_shViewOffsetX) / TILE_WIDTH;
+	m_ptCurrTile.y = m_xMap.m_shStartViewTileY + (m_ptMousePos.y - _VIEW_CELL_Y_START + m_xMap.m_shViewOffsetY) / TILE_HEIGHT;
 	if(m_xNotice.IsActive())
 	{
 		if(m_xNotice.OnButtonUp(m_ptMousePos))
@@ -1987,8 +1931,8 @@ LRESULT CGameProcess::OnRButtonUp(WPARAM wParam, LPARAM lParam)
     if(m_xNotice.IsActive()) return 0L;
 	m_ptMousePos.x = LOWORD(lParam);
 	m_ptMousePos.y = HIWORD(lParam);
-	m_ptCurrTile.x = m_xMap.m_shStartViewTileX + (m_ptMousePos.x - _VIEW_CELL_X_START) / TILE_WIDTH;
-	m_ptCurrTile.y = m_xMap.m_shStartViewTileY + (m_ptMousePos.y - _VIEW_CELL_Y_START) / TILE_HEIGHT;
+	m_ptCurrTile.x = m_xMap.m_shStartViewTileX + (m_ptMousePos.x - _VIEW_CELL_X_START + m_xMap.m_shViewOffsetX) / TILE_WIDTH;
+	m_ptCurrTile.y = m_xMap.m_shStartViewTileY + (m_ptMousePos.y - _VIEW_CELL_Y_START + m_xMap.m_shViewOffsetY) / TILE_HEIGHT;
 
 	return 0L;
 }
@@ -3099,44 +3043,36 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
                     m_xMyHero.ChangeFeature(appearance,m_xMyHero.m_stFeatureEx);
                 }
                 break;
-			case SM_ITEMSHOW:
-			{
-				BOOL bExisted = FALSE;
-
-				if ( m_stMapItemList.GetCounter() != 0 )
-				{
-					m_stMapItemList.MoveCurrentToTop();
-					LPGROUNDITEM pstItem;
-
-					for ( INT nCnt = 0; nCnt < m_stMapItemList.GetCounter(); nCnt++ )
-					{
-						pstItem = m_stMapItemList.GetCurrentData();
-
-						if ( pstItem->nRecog == tdm.nRecog )
-							bExisted = TRUE;
-
-						m_stMapItemList.MoveNextNode();
-					}
-				}	
-
-				if ( !bExisted )
-				{
-					LPGROUNDITEM pstItem = new GROUNDITEM;
-
-					pstItem->nRecog  = tdm.nRecog;
-					pstItem->shTileX = tdm.wParam;
-					pstItem->shTileY = tdm.wTag;
-					pstItem->wLooks  = tdm.wSeries;
-					nPos = fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), (char*)pstItem->szItemName, sizeof(pstItem->szItemName));
-					pstItem->szItemName[nPos] = '\0';
-
-					m_stMapItemList.AddNode(pstItem);
-				}											
-
-				break;
-			}
+            case SM_ITEMSHOW:
+            {
+                if(!m_bRender || tdm.nRecog<=0 || tdm.wParam>=m_xMap.m_stMapFileHeader.shWidth ||
+                    tdm.wTag>=m_xMap.m_stMapFileHeader.shHeight) break;
+                const char* encoded=pszMsg+DEFBLOCKSIZE;const size_t length=strlen(encoded);
+                if(length>ActorPacketBodyCapacity-1) break;
+                bool valid=true;
+                for(size_t i=0;i<length;++i) if(BYTE(encoded[i])<0x3c || BYTE(encoded[i])>0x7b) {valid=false;break;}
+                if(!valid) break;
+                char decoded[MaximumActorPayloadBytes+1]={};
+                const int count=fnDecode6BitBuf(const_cast<char*>(encoded),decoded,sizeof(decoded)-1);
+                if(count<0 || count>MaximumActorPayloadBytes) break;
+                decoded[count]=0;std::string name(decoded);int stackMode=0;
+                const auto slash=name.find('/');
+                if(slash!=std::string::npos) {stackMode=strtol(name.c_str(),nullptr,10);name.erase(0,slash+1);}
+                if(name.size()>GroundItemDisplay::NameLimit) break;
+                bool exists=false;m_stMapItemList.MoveCurrentToTop();
+                for(int index=0;index<m_stMapItemList.GetCounter();++index) {
+                    if(m_stMapItemList.GetCurrentData()->nRecog==tdm.nRecog) {exists=true;break;}
+                    m_stMapItemList.MoveNextNode();
+                }
+                if(exists) break;
+                auto* item=new GROUNDITEM{};item->nRecog=tdm.nRecog;item->shTileX=tdm.wParam;item->shTileY=tdm.wTag;
+                item->wLooks=tdm.wSeries;item->stackMode=stackMode;memcpy(item->szItemName,name.c_str(),name.size()+1);
+                const int first=rand();item->sparkle.Begin(GetTickCount(),first,rand());
+                m_stMapItemList.AddNode(item);break;
+            }
 			case SM_ITEMHIDE:
 			{
+                if(pszMsg[DEFBLOCKSIZE]) break;
 				LPGROUNDITEM pstItem;
 
 				m_stMapItemList.MoveCurrentToTop();
@@ -3859,7 +3795,7 @@ VOID CGameProcess::OnSvrMsgNewMap(_TDEFAULTMESSAGE	*ptdm, char *pszMapName)
 	m_xMap.LoadMapData(szMapName);
     m_xInterface.m_minimap.MapChanged();
     m_xInterface.m_xSiegeWnd.ClearObjects();
-    m_levelEffects.Clear();ClearNativeSpells();
+    m_levelEffects.Clear();ClearNativeSpells();m_stMapItemList.ClearAllNodes();
     m_xInterface.m_targetDisplay.Clear();
 
 	switch ( m_bFogState )

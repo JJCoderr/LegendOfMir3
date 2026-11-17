@@ -1509,3 +1509,13 @@ d7c70bb后核对当前源代码与Godot施法证据。重要纠正：原生74字
 已修复上一批发现的interfacec2缺失提示：CImageHandler::LoadAllImage保留旧索引布局，将不再使用的_IMAGE_INTEREX槽设为nullptr，仅加载真实资源。CGameWnd::SetGameWndActive移除旧三维纹理登记，当前ShowGameWnd使用m_pxWndImage直接二维绘制；其余三维引用位于旧注释代码中。未伪造或复制替代资源。
 
 spell-map预览改用生产LoadAllImage，而非只加载场景子集；60个实际库加载成功，1个废弃槽为空，61项断言通过。实际01.map+人物施法+HUD画面生成out/scene-resources.png，已检查。相同二进制的窗口/快捷键34项通过，共95项。七目标增量构建out/scene-resource-build.log [4/4]成功，git diff --check通过。程序已退出。此证据覆盖正式资源加载和原生窗口开关，不等于真实登录/服务器进场流程已通过。
+
+
+### 地面物品GUI完整批次审查（2026-11-17）
+
+基线5524af8，已核对Godot ground_items.hpp/hud_view.cpp与原生GameProc：当前缺100件单格容量、名称堆叠/金币变体、闪光周期、严格接收与范围清理；仍绘旧阴影。证据及批次验收见Client/docs/ground-items-migration-audit.md。本次仅保存可执行迁移依据，未改运行代码、未测试或单独提交。下一预览ID241，后续完成整批再验证提交。
+
+
+### 地面物品GUI整批完成（2026-11-17）
+
+已实现消息校验/stack_mode、独立100容量、堆叠名称/金币名称、原高亮/无旧阴影、40..49闪光与DWORD时钟、24格半开剔除及换图释放，鼠标格补滚动偏移并每帧更新。干净87/87、七目标111/111构建及同版228项检查通过；截图out/ground-items.png、out/ground-coin.png已展示。预览241/242，下一243。证据Client/docs/ground-items-migration-audit.md。没有真实服务器拾取或MIR3同帧像素验收，完整目标仍active。

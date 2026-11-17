@@ -1,3 +1,4 @@
+#include "GroundItemDisplay.h"
 #ifndef _CITEM_H
 #define	_CITEM_H
 #include <string>
@@ -49,6 +50,8 @@ typedef struct tagGROUNDITEM
 	SHORT			shTileY;
 	WORD			wLooks;
 	CHAR			szItemName[40];
+    int stackMode=0;
+    GroundItemDisplay::Sparkle sparkle;
 }GROUNDITEM, *LPGROUNDITEM;
 #pragma pack(8)
 

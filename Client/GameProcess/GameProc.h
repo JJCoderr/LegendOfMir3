@@ -28,7 +28,7 @@ typedef struct tagMEMMAPPEDID
 {
 	CActor*			pxActor[_MAX_CELL_OBJ];
 	CMagic*			pxMagic[_MAX_CELL_OBJ];
-	LPGROUNDITEM	pstItem[_MAX_CELL_OBJ];
+	LPGROUNDITEM	pstItem[GroundItemDisplay::CellCapacity];
 }MEMMAPPEDID, *LPMEMMAPPEDID;
 
 
