@@ -8,9 +8,7 @@ namespace LoginVisual {
 inline void ResizeCanvas(int width,int height) {
     if(g_xMainWnd.m_stDisplayInfo.wWidth!=width || g_xMainWnd.m_stDisplayInfo.wHeight!=height)
         g_xMainWnd.ResetDXG(width,height,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,_DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-    HWND window=g_xMainWnd.GetSafehWnd();RECT bounds={0,0,width,height};
-    AdjustWindowRectEx(&bounds,GetWindowLong(window,GWL_STYLE),FALSE,GetWindowLong(window,GWL_EXSTYLE));
-    SetWindowPos(window,nullptr,0,0,bounds.right-bounds.left,bounds.bottom-bounds.top,SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);
+    HWND window=g_xMainWnd.GetSafehWnd();
     GetClientRect(window,&g_xMainWnd.m_rcWindow);
     ClientToScreen(window,(POINT*)&g_xMainWnd.m_rcWindow.left);ClientToScreen(window,(POINT*)&g_xMainWnd.m_rcWindow.right);
 }
