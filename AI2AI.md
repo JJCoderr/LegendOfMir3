@@ -2016,3 +2016,13 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 修复SM_NEWCHR_FAIL：集成DBSvr通过wParam报告旧错误码，客户端此前只读nRecog；兼容原有nRecog映射，正确识别重名并恢复后续创建。
 - Test/Character.csv及同名fixture新增完整创建场景：非法职业/性别/名字、重名请求回包、恢复、女性法师创建、列表刷新、客户端上限、数据库角色/初始装备/药水及真实进图。Client Release构建通过；rpc-leoyrz4q的34步骤与10服务端基础检查全部通过，场景3.796秒，日志out/csv-validation/character-final.log。
 - 删除仍未实现：OnDelChar发送name/confirmation，DBSvr却解为_TCREATECHR且忽略SQL失败，后续需要核对确认语义和账号绑定后修复；本轮只完成创建闭环，不宣称角色子系统或全部协议完成。
+
+
+## 2026-11-18 删除角色协议、密码校验与事务回滚
+- 从原版宝藏传奇3/CmList.dat按现有LoadLegacyText算法解码，#228明确要求游戏分区密码；Godot只转发name/confirmation，不能把确认文本当角色名。
+- DBSvr按name/password解析CM_DELCHR，选角查询将账号关联当前连接，打开/关闭连接清理关联；删除通过Mir2_Account的FLD_PASSWORD校验，并按账号+角色名限定SQL。账号关联本身不等于完成登录凭证认证，其他旧认证链路未在本轮重构。
+- 新增CConnection事务接口（SQLite/ODBC），删除角色、普通物品、装备和技能在同一数据库锁/事务中完成；失败回滚并发SM_DELCHR_FAIL，不再无条件成功。ODBC分支编译通过但未做运行验证。
+- Client UI/RPC共用DeleteCharacter，character.delete接收name/password；状态暴露deletion_result，待回包锁定创建/删除/进图，收到成功或失败后才请求列表。CM_DELCHR日志体脱敏，最终日志3个删除请求均脱敏且无test123正文。
+- 故障注入测试在删除装备时RAISE ABORT，验证已删角色与普通物品回滚、技能值完整、其他账号角色保留。Test/CharacterDelete.csv和fixture覆盖38步骤，加10服务端基础检查全部通过，rpc-m2xs0xwv耗时7.052秒（场景4.813秒），日志out/csv-validation/character-delete-verified.log。
+- 首轮删除检查通过后，保留角色进图触发真实EIServer退出：sqlite_minimal的技能宽表与GetHumanMagicRcd/SaveHumanMagicRcd逐技能行格式不符。已将新建脚本对齐FLD_MAGICID/LEVEL/USEKEY/CURRTRAIN及复合主键，带技能行进图复测通过。未迁移任何已有数据库；旧宽表数据迁移、技能语义全链路仍需继续。
+- 尚未覆盖多会话同时在线删除、名字复用冷却、账号认证全链路；不能视为角色/技能系统全面完成。

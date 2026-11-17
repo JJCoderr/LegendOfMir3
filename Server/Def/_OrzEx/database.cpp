@@ -201,6 +201,21 @@ bool CConnection::Init( SQLHENV hEnv, char *pDSN, char *pID, char *pPassword )
 }
 
 
+bool CConnection::BeginTransaction() {
+    if(m_sqlite) return sqlite3_exec(m_sqlite,"BEGIN IMMEDIATE",NULL,NULL,NULL)==SQLITE_OK;
+    return SQL_SUCCEEDED(SQLSetConnectAttr(m_hDBConn,SQL_ATTR_AUTOCOMMIT,(SQLPOINTER)SQL_AUTOCOMMIT_OFF,0));
+}
+bool CConnection::EndTransaction(bool commit) {
+    if(m_sqlite) {
+        const int result=sqlite3_exec(m_sqlite,commit?"COMMIT":"ROLLBACK",NULL,NULL,NULL);
+        if(result!=SQLITE_OK && commit) sqlite3_exec(m_sqlite,"ROLLBACK",NULL,NULL,NULL);
+        return result==SQLITE_OK;
+    }
+    const auto result=SQLEndTran(SQL_HANDLE_DBC,m_hDBConn,commit?SQL_COMMIT:SQL_ROLLBACK);
+    if(!SQL_SUCCEEDED(result) && commit) SQLEndTran(SQL_HANDLE_DBC,m_hDBConn,SQL_ROLLBACK);
+    const auto restored=SQLSetConnectAttr(m_hDBConn,SQL_ATTR_AUTOCOMMIT,(SQLPOINTER)SQL_AUTOCOMMIT_ON,0);
+    return SQL_SUCCEEDED(result) && SQL_SUCCEEDED(restored);
+}
 void CConnection::Uninit()
 {
 	if (m_sqlite) { sqlite3_close_v2(m_sqlite); m_sqlite = NULL; }

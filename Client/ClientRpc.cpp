@@ -103,7 +103,8 @@ std::string ClientState() {
     } else if (g_bProcState == _CHAR_SEL_PROC && g_xMainWnd.m_pxDefProcess == &g_xChrSelProc) {
         state += ",\"waiting\":" + std::string(mir3::BoolJson(g_xChrSelProc.IsWaiting()))
             + ",\"notice\":" + mir3::BoolJson(g_xChrSelProc.HasNotice())
-            + ",\"creation_result\":" + mir3::QuoteLocalText(g_xChrSelProc.CreationResult());
+            + ",\"creation_result\":" + mir3::QuoteLocalText(g_xChrSelProc.CreationResult())
+            + ",\"deletion_result\":" + mir3::QuoteLocalText(g_xChrSelProc.DeletionResult());
         const auto roster=g_xChrSelProc.Roster();Array characters;
         for(int i=0;i<roster.count;++i) {
             const auto& role=roster.roles[i];
@@ -173,6 +174,8 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
         accepted=g_xLoginProc.SelectServer(Text(params,"name"));
     else if (method == "session.enter" && g_bProcState == _CHAR_SEL_PROC)
         accepted=g_xChrSelProc.EnterCharacter(Text(params,"name"));
+    else if (method == "character.delete" && g_bProcState == _CHAR_SEL_PROC)
+        accepted=g_xChrSelProc.DeleteCharacter(Text(params,"name"),Text(params,"password"));
     else if (method == "character.create" && g_bProcState == _CHAR_SEL_PROC)
         accepted=g_xChrSelProc.CreateCharacter(Text(params,"name"),Integer(params,"job"),Integer(params,"gender"));
     else if (method == "notice.dismiss" && g_bProcState == _CHAR_SEL_PROC)

@@ -1,5 +1,7 @@
 
 #pragma once
+#include <string>
+#include <vector>
 
 #define PACKET_KEEPALIVE		"%++$"
 
@@ -50,6 +52,11 @@ public:
 
 class CGateInfo
 {
+    struct SelectionSession { SOCKET socket; std::string account; };
+    std::vector<SelectionSession> selectionSessions;
+    SRWLOCK selectionLock=SRWLOCK_INIT;
+    void BindSelection(SOCKET socket,const std::string& account);
+    std::string SelectionAccount(SOCKET socket);
 public:
 	SOCKET					sock;
 
@@ -67,7 +74,7 @@ public:
 	void	ReceiveSendUser(char *pszPacket);
 
 	void	QueryCharacter(SOCKET s, char *pszPacket);
-	void	DeleteExistCharacter(SOCKET s, _LPTCREATECHR lpTCreateChr);
+	void	DeleteExistCharacter(SOCKET s, char* packet);
 	void	MakeNewCharacter(SOCKET s, _LPTCREATECHR lpTCreateChr);
 	void	GetSelectCharacter(SOCKET s, char *pszPacket);
 

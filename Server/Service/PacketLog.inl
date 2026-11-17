@@ -15,7 +15,7 @@ static void TracePacket(const wchar_t* direction, SOCKET socket, const char* pac
         header.nRecog, header.wParam, header.wTag, header.wSeries);
     std::wstring message(prefix);
     if (!wcscmp(direction, L"RX") && (header.wIdent == CM_IDPASSWORD ||
-        header.wIdent == CM_ADDNEWUSER || header.wIdent == CM_CHANGEPASSWORD || header.wIdent == CM_UPDATEUSER)) {
+        header.wIdent == CM_DELCHR || header.wIdent == CM_ADDNEWUSER || header.wIdent == CM_CHANGEPASSWORD || header.wIdent == CM_UPDATEUSER)) {
         message += L"body=<credentials redacted>";
     } else {
         const std::string encoded = frame.substr(_DEFBLOCKSIZE);

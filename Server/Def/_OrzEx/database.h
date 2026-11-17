@@ -72,6 +72,8 @@ private:
 
 public:
 	friend CDatabase;
+    bool BeginTransaction();
+    bool EndTransaction(bool commit);
 
 	CRecordset * CreateRecordset();
 	void DestroyRecordset( CRecordset *pRec );

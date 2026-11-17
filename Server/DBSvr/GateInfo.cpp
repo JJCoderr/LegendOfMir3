@@ -17,6 +17,25 @@ void GetLoadHumanRcd(CServerInfo* pServerInfo, _LPTLOADHUMAN lpLoadHuman, int nR
 extern CWHList<CServerInfo*>		g_xServerList;
 extern CWHList< GAMESERVERINFO * >	g_xGameServerList;
 
+void CGateInfo::BindSelection(SOCKET socket,const std::string& account) {
+    AcquireSRWLockExclusive(&selectionLock);
+    for(auto i=selectionSessions.begin();i!=selectionSessions.end();++i) {
+        if(i->socket==socket) {selectionSessions.erase(i);break;}
+    }
+    if(!account.empty()) selectionSessions.push_back({socket,account});
+    ReleaseSRWLockExclusive(&selectionLock);
+}
+std::string CGateInfo::SelectionAccount(SOCKET socket) {
+    AcquireSRWLockShared(&selectionLock);
+    std::string account;
+    for(const auto& session:selectionSessions) if(session.socket==socket) {account=session.account;break;}
+    ReleaseSRWLockShared(&selectionLock);return account;
+}
+static std::string SelectionSqlText(const std::string& text) {
+    std::string result="'";
+    for(char c:text) {result+=c;if(c=='\'') result+=c;}
+    return result+"'";
+}
 void CGateInfo::ReceiveOpenUser(char *pszPacket)
 {
 	char	*pszPos;
@@ -26,6 +45,7 @@ void CGateInfo::ReceiveOpenUser(char *pszPacket)
 	if (pszPos = (char *)memchr(pszPacket, '/', nLen))
 	{
 		nSocket = AnsiStrToVal(pszPacket);
+        BindSelection(nSocket,"");
 
 		pszPos++;
 
@@ -52,6 +72,7 @@ void CGateInfo::ReceiveOpenUser(char *pszPacket)
 void CGateInfo::ReceiveCloseUser(char *pszPacket)
 {
 	int nSocket = AnsiStrToVal(pszPacket);
+    BindSelection(nSocket,"");
 /*
 	map<SOCKET, CUserInfo, less<SOCKET> >::iterator it = pGateInfo->UserInfoMap.find((SOCKET)nSocket);
 
@@ -132,12 +153,12 @@ void CGateInfo::QueryCharacter(SOCKET s, char *pszPacket)
 	if (pszDevide)
 	{
 		*pszDevide++ = '\0';
-
-		sprintf( szQuery, "SELECT * FROM TBL_CHARACTER WHERE FLD_LOGINID='%s'", szDecodeMsg );
+        BindSelection(s,szDecodeMsg);
+        auto query=std::string("SELECT * FROM TBL_CHARACTER WHERE FLD_LOGINID=")+SelectionSqlText(szDecodeMsg);
 
 		CRecordset *pRec = GetDBManager()->CreateRecordset();
 		
-		if (pRec->Execute( szQuery ))
+		if (pRec->Execute( &query[0] ))
 		{
 			while (pRec->Fetch() && nCnt < 3)
 			{
@@ -181,42 +202,51 @@ void CGateInfo::QueryCharacter(SOCKET s, char *pszPacket)
 	}
 }
 
-void CGateInfo::DeleteExistCharacter(SOCKET s, _LPTCREATECHR lpTCreateChr)
-{
-	_TDEFAULTMESSAGE	DefaultMsg;
-	char				szEncodeMsg[32];
-	char				szQuery[256];
-	CRecordset			*pRec;
-
-	sprintf( szQuery, "DELETE FROM TBL_CHARACTER WHERE FLD_LOGINID='%s' AND FLD_CHARNAME='%s'", lpTCreateChr->szID, lpTCreateChr->szName );
-
-	pRec = GetDBManager()->CreateRecordset();
-	pRec->Execute( szQuery );
-	GetDBManager()->DestroyRecordset( pRec );
-
-	sprintf( szQuery, "DELETE FROM TBL_CHARACTER_GENITEM WHERE FLD_LOGINID='%s' AND FLD_CHARNAME='%s'", lpTCreateChr->szID, lpTCreateChr->szName );
-
-	pRec = GetDBManager()->CreateRecordset();
-	pRec->Execute( szQuery );
-	GetDBManager()->DestroyRecordset( pRec );
-
-	sprintf( szQuery, "DELETE FROM TBL_CHARACTER_ITEM WHERE FLD_LOGINID='%s' AND FLD_CHARNAME='%s'", lpTCreateChr->szID, lpTCreateChr->szName );
-
-	pRec = GetDBManager()->CreateRecordset();
-	pRec->Execute( szQuery );
-	GetDBManager()->DestroyRecordset( pRec );
-
-	sprintf( szQuery, "DELETE FROM TBL_CHARACTER_MAGIC WHERE FLD_LOGINID='%s' AND FLD_CHARNAME='%s'", lpTCreateChr->szID, lpTCreateChr->szName );
-
-	pRec = GetDBManager()->CreateRecordset();
-	pRec->Execute( szQuery );
-	GetDBManager()->DestroyRecordset( pRec );
-
-	fnMakeDefMessageA(&DefaultMsg, SM_DELCHR_SUCCESS, 0, 4, 0, 0);
-	int nPos = fnEncodeMessageA(&DefaultMsg, szEncodeMsg, sizeof(szEncodeMsg));
-	szEncodeMsg[nPos] = '\0';
-	
-	SendToGate(s, szEncodeMsg);
+void CGateInfo::DeleteExistCharacter(SOCKET s,char* packet) {
+    char decoded[128]={};
+    const int length=fnDecode6BitBufA(packet,decoded,sizeof(decoded)-1);
+    bool success=false;
+    const auto account=SelectionAccount(s);
+    if(length>0 && length<sizeof(decoded) && !account.empty()) {
+        decoded[length]=0;char* password=strchr(decoded,'/');
+        if(password && password!=decoded) {
+            *password++=0;
+            // The original prompt asks for the game's login password.
+            // Use the account DSN, which may differ from the character database.
+            auto* manager=GetDBManager();
+            auto* connection=manager->m_dbMain.CreateConnection("Mir2_Account","sa","prg");
+            bool authenticated=false;
+            if(connection) {
+                auto* record=connection->CreateRecordset();
+                auto sql=std::string("SELECT FLD_PASSWORD FROM TBL_ACCOUNT WHERE FLD_LOGINID=")+SelectionSqlText(account);
+                if(record && record->Execute(&sql[0]) && record->Fetch())
+                    authenticated=strcmp(password,record->Get("FLD_PASSWORD"))==0;
+                if(record) connection->DestroyRecordset(record);
+                manager->m_dbMain.DestroyConnection(connection);
+            }
+            if(authenticated) {
+                auto* record=manager->CreateRecordset(); // Holds the database manager lock for the transaction.
+                if(record) {
+                    const auto where=std::string(" WHERE FLD_LOGINID=")+SelectionSqlText(account)+" AND FLD_CHARNAME="+SelectionSqlText(decoded);
+                    if(manager->m_pConn->BeginTransaction()) {
+                        auto sql=std::string("DELETE FROM TBL_CHARACTER")+where;
+                        success=record->Execute(&sql[0]) && record->GetRowCount()==1;
+                        for(const char* table:{"TBL_CHARACTER_GENITEM","TBL_CHARACTER_ITEM","TBL_CHARACTER_MAGIC"}) {
+                            if(!success) break;
+                            sql=std::string("DELETE FROM ")+table+where;
+                            success=record->Execute(&sql[0]);
+                        }
+                        success=manager->m_pConn->EndTransaction(success) && success;
+                    }
+                    manager->DestroyRecordset(record);
+                }
+            }
+        }
+    }
+    _TDEFAULTMESSAGE message;char encoded[32];
+    fnMakeDefMessageA(&message,success?SM_DELCHR_SUCCESS:SM_DELCHR_FAIL,0,0,0,0);
+    const int count=fnEncodeMessageA(&message,encoded,sizeof(encoded));encoded[count]=0;
+    SendToGate(s,encoded);
 }
 
 void CGateInfo::MakeNewCharacter(SOCKET s, _LPTCREATECHR lpTCreateChr)

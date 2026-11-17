@@ -1,0 +1,39 @@
+﻿step,name,target,action,params,expect
+1,credentials ready,Client,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+2,wrong password,Client,session.login,account=mirtest;password=wrong,result.status=submitted
+3,login rejected,Client,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+4,dismiss rejection,Client,notice.dismiss,,result.status=submitted
+5,login,Client,session.login,account=mirtest;password=test123,result.status=submitted
+6,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+7,authenticated,Client,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+8,dismiss billing,Client,notice.dismiss,,result.status=submitted
+9,unknown server rejected,Client,session.select_server,name=MissingServer,error.code=-32002
+10,select server,Client,session.select_server,name=Mir3Local,result.status=submitted
+11,roster ready,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+12,unowned role rejected,Client,character.delete,name=ForeignRole;password=test123,error.code=-32002
+13,wrong deletion password,Client,character.delete,name=MirProbe01;password=wrong,result.status=submitted
+14,wrong password preserves roster,Client,state.wait,,"result.deletion_result=failed;result.waiting=false;result.characters=[{""name"":""MirProbe01"",""job"":0,""gender"":0,""level"":1},{""name"":""ProtectedRole"",""job"":0,""gender"":0,""level"":1}]"
+15,wrong password preserves TBL_CHARACTER,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01',rows=[[1]]
+16,wrong password preserves TBL_CHARACTER_ITEM,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='MirProbe01',rows=[[1]]
+17,wrong password preserves TBL_CHARACTER_GENITEM,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='MirProbe01',rows=[[1]]
+18,wrong password preserves TBL_CHARACTER_MAGIC,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_MAGIC WHERE FLD_CHARNAME='MirProbe01',rows=[[1]]
+19,delete owned character,Client,character.delete,name=MirProbe01;password=test123,result.status=submitted
+20,successful deletion refreshes roster,Client,state.wait,,"result.deletion_result=succeeded;result.waiting=false;result.characters=[{""name"":""ProtectedRole"",""job"":0,""gender"":0,""level"":1}]"
+21,deleted TBL_CHARACTER,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01',rows=[[0]]
+22,deleted TBL_CHARACTER_ITEM,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='MirProbe01',rows=[[0]]
+23,deleted TBL_CHARACTER_GENITEM,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='MirProbe01',rows=[[0]]
+24,deleted TBL_CHARACTER_MAGIC,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_MAGIC WHERE FLD_CHARNAME='MirProbe01',rows=[[0]]
+25,delete rolls back on database error,Client,character.delete,name=ProtectedRole;password=test123,result.status=submitted
+26,database failure preserves roster,Client,state.wait,,"result.deletion_result=failed;result.waiting=false;result.characters=[{""name"":""ProtectedRole"",""job"":0,""gender"":0,""level"":1}]"
+27,rollback TBL_CHARACTER,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER WHERE FLD_CHARNAME='ProtectedRole',rows=[[1]]
+28,rollback TBL_CHARACTER_ITEM,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='ProtectedRole',rows=[[1]]
+29,rollback TBL_CHARACTER_GENITEM,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='ProtectedRole',rows=[[1]]
+30,rollback TBL_CHARACTER_MAGIC,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_MAGIC WHERE FLD_CHARNAME='ProtectedRole',rows=[[1]]
+31,rollback preserves skill values,Database,query,"SELECT FLD_MAGICID,FLD_LEVEL,FLD_USEKEY,FLD_CURRTRAIN FROM TBL_CHARACTER_MAGIC WHERE FLD_CHARNAME='ProtectedRole'","rows=[[1,1,2,30]]"
+32,foreign role preserved,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER WHERE FLD_LOGINID='other' AND FLD_CHARNAME='ForeignRole',rows=[[1]]
+33,wire CM_DELCHR,Client,wire.expect,message=CM_DELCHR;direction=sent;at_least=3,
+34,wire SM_DELCHR_SUCCESS,Client,wire.expect,message=SM_DELCHR_SUCCESS;direction=received;at_least=1,
+35,wire SM_DELCHR_FAIL,Client,wire.expect,message=SM_DELCHR_FAIL;direction=received;at_least=2,
+36,still enter surviving role,Client,session.enter,name=ProtectedRole,result.status=submitted
+37,surviving role enters world,Client,state.wait,,"result.scene=world;result.map=""01"""
+38,protocol coverage,Client,protocol.get,,

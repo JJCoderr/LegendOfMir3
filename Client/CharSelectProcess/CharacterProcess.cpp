@@ -541,7 +541,10 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
         case SM_QUERYCHR_FAIL: ShowNotice(SelectionDialog::QueryFailed);break;
         case SM_OUTOFCONNECTION: ShowNotice(SelectionDialog::Disconnected);break;
         case SM_DELCHR_SUCCESS:
-        case SM_DELCHR_FAIL: RequestRoster();break;
+        case SM_DELCHR_FAIL:
+            m_deletePending=false;
+            m_deletionResult=tdm.wIdent==SM_DELCHR_SUCCESS?"succeeded":"failed";
+            RequestRoster();break;
 
 	}
 /*	_TDEFAULTMESSAGE	tdm;
@@ -926,7 +929,7 @@ void CCharacterProcess::SubmitCreation() {
     CreateCharacter(name,m_SelectJob,m_SelectSex);
 }
 bool CCharacterProcess::CreateCharacter(const std::string& name,int job,int gender) {
-    if(IsWaiting() || HasNotice() || m_bCreatePending || !g_szUserID[0] || name.empty()) return false;
+    if(IsWaiting() || HasNotice() || m_bCreatePending || m_deletePending || !g_szUserID[0] || name.empty()) return false;
     if(job<0 || job>2 || gender<0 || gender>1) return false;
     if(const int error=SelectionDialog::NameError(name)) {ShowNotice(error);return false;}
     if(m_ChrCount>=SelectionDialog::CreationLimit) {m_creationResult="full";ShowNotice(SelectionDialog::Full);return false;}
@@ -935,6 +938,17 @@ bool CCharacterProcess::CreateCharacter(const std::string& name,int job,int gend
     m_bCreatePending=TRUE;m_creationResult="pending";
     g_xClientSocket.OnNewChar(m_szChrName,0,m_SelectJob,m_SelectSex);
     return true;
+}
+bool CCharacterProcess::DeleteCharacter(const std::string& name,const std::string& password) {
+    if(IsWaiting() || HasNotice() || m_bCreatePending || m_deletePending || !g_szUserID[0]) return false;
+    if(password.empty() || password.size()>SelectionDialog::ConfirmationBytes) return false;
+    const auto roster=Roster();
+    for(int i=0;i<roster.count;++i) if(name==roster.roles[i].ChrName) {
+        m_deletePending=true;m_deletionResult="pending";
+        g_xClientSocket.OnDelChar(name.c_str(),password.c_str());
+        return true;
+    }
+    return false;
 }
 SelectionRoster CCharacterProcess::Roster() {
     SelectionRoster roster;roster.count=m_ChrCount;
@@ -959,8 +973,7 @@ void CCharacterProcess::FinishNotice(HRESULT result) {
         g_xChatEditBox.SetLimitText(SelectionDialog::NameBytes);
         if(result==CLICK_YES && m_xSelectChr.m_nSelectChr>=0 && m_xSelectChr.m_nSelectChr<m_ChrCount && g_szUserID[0]) {
             m_CList.MoveCurrentToTop();m_CList.MoveNode(m_xSelectChr.m_nSelectChr);
-            g_xClientSocket.OnDelChar(m_CList.GetCurrentData()->ChrName,confirmation);
-            RequestRoster();
+            DeleteCharacter(m_CList.GetCurrentData()->ChrName,confirmation);
         }
     } else if(m_Progress==PRG_CREATE_CHAR) {
         SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"");ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_SHOW);

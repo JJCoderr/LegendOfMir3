@@ -18,7 +18,9 @@
 class CCharacterProcess: public CWHDefProcess  
 {
 public:
-    bool EnterCharacter(const std::string& name) { return !IsWaiting() && !HasNotice() && !m_bCreatePending && m_xSelectChr.EnterCharacter(name); }
+    bool EnterCharacter(const std::string& name) { return !IsWaiting() && !HasNotice() && !m_bCreatePending && !m_deletePending && m_xSelectChr.EnterCharacter(name); }
+    bool DeleteCharacter(const std::string& name,const std::string& password);
+    const char* DeletionResult() const { return m_deletionResult; }
     bool CreateCharacter(const std::string& name,int job,int gender);
     SelectionRoster Roster();
     const char* CreationResult() const { return m_creationResult; }
@@ -71,6 +73,8 @@ private:
     void ExitSelection();
     bool m_offline=false;
     const char* m_creationResult="idle";
+    const char* m_deletionResult="idle";
+    bool m_deletePending=false;
     std::string m_lastUrl;
     friend struct SelectionRosterPreview;
     friend struct SelectionDialogPreview;
