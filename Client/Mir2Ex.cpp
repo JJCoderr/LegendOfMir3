@@ -1,5 +1,6 @@
 #include "StdAfx.h"
 #include "../Shared/DebugState.h"
+#include "Tools/ItemDebugState.h"
 #include "ServerSelectProcess/SvrSelProc.h"
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
@@ -4627,6 +4628,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                     + ",\"y\":" + std::to_string(hero.m_wPosY)
                     + ",\"hp\":" + std::to_string(hero.m_stAbility.wHP)
                     + ",\"mp\":" + std::to_string(hero.m_stAbility.wMP);
+                state += mir3::ItemDebugState(game.m_xInterface);
             }
             return state;
         });

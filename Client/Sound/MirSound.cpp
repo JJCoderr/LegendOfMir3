@@ -41,7 +41,6 @@ CMirSound::CMirSound()
 	m_3DEnable = FALSE;
 	m_bPlay = TRUE;
 	m_bBGMPlay = TRUE;	// ¡Ÿ ±
-	ReadWavFileList("SoundList.wwl");
 	m_ppBuffer = new CSBuffer*[MAX_KINDS_OF_WAVE];
 	for(int i = 0 ; i < MAX_KINDS_OF_WAVE ; i++)
 	{
@@ -211,13 +210,11 @@ void CMirSound::ReadWavFileList(char* fName)
 	unsigned int i;
 	int Count;
 	DWORD dwReadSize;
-	DWORD	dwError;
 	WAVELIST* l_WavList;
 
 	HANDLE hFile = ::CreateFile(fName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL, NULL);
 
-	dwError = GetLastError();
-	if(dwError==ERROR_SUCCESS)
+	if(hFile != INVALID_HANDLE_VALUE)
 	{
 		//	Header Reading
 		m_pWavListHeader = new WAVELISTHEADER;
@@ -566,7 +563,7 @@ void CMirSound::StopSound(int nNum,int BufIdx)
 char* CMirSound::SeekFileName(int wavnum)
 {
 	unsigned int i;
-	if(m_bPlay)
+	if(m_bPlay && m_pWavListHeader)
 	{
 		for(i=0;i<m_pWavListHeader->FieldCount;i++)
 		{
@@ -642,6 +639,7 @@ BOOL CMirSound::InitMirSound(HWND hWnd)
 	if(hWnd != NULL)
 	{
 		m_hWnd = hWnd;
+        ReadWavFileList("SoundList.wwl");
 		m_pSound = new CSound;
 		return SUCCEEDED(m_pSound->Create(m_hWnd,TRUE));
 	}

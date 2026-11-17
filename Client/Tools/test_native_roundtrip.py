@@ -42,6 +42,7 @@ parser.add_argument('--bin-dir', type=Path, default=repo / 'out/debug')
 parser.add_argument('--config-dir', type=Path, default=repo / 'out/debug')
 parser.add_argument('--port-offset', type=int, default=20000)
 parser.add_argument('--hold-mouse', action='store_true', help='Exercise real held mouse input; requires an unlocked foreground desktop')
+parser.add_argument('--equipment', action='store_true', help='Exercise armor equip/unequip and persistence through native panels')
 args = parser.parse_args()
 exe = args.bin_dir.resolve()
 config_dir = args.config_dir.resolve()
@@ -55,6 +56,9 @@ root=Path(tempfile.mkdtemp(prefix='native-roundtrip-',dir=repo/'out'))
 # EIServer uses cwd; Mir2Ex changes cwd to its executable directory.
 # Keep the listening server binary stable and isolate the outbound-only client.
 shutil.copy2(exe/"Mir2Ex.exe", root/"Mir2Ex.exe")
+# Optional sound index shares the configured resource without copying it.
+if (config_dir/'SoundList.wwl').is_file():
+    os.link(config_dir/'SoundList.wwl', root/'SoundList.wwl')
 # Override endpoint and DB keys explicitly so test writes stay in the fixture.
 for name in ('EIServer.ini', 'Mir3.ini'):
     config = configparser.ConfigParser(interpolation=None)
@@ -95,6 +99,10 @@ for name in ('Data','Map','Sound'):
 with sqlite3.connect(root/'mir3.sqlite3') as db:
     db.executescript((repo/'Server/SQL_Scripts/sqlite_minimal.sql').read_text(encoding='utf-8-sig'))
     db.execute("INSERT INTO TBL_CHARACTER (FLD_LOGINID,FLD_CHARNAME,FLD_JOB,FLD_GENDER,FLD_LEVEL,FLD_MAPNAME,FLD_CX,FLD_CY) VALUES ('mirtest','MirProbe01','0','0',1,'01',459,261)")
+if args.equipment:
+    with sqlite3.connect(root/'mir3.sqlite3') as db:
+        db.execute("INSERT INTO TBL_CHARACTER_ITEM (FLD_LOGINID,FLD_CHARNAME,FLD_STDTYPE,FLD_MAKEDATE,FLD_MAKEINDEX,FLD_STDINDEX,FLD_DURA,FLD_DURAMAX) VALUES ('mirtest','MirProbe01','B','261117','00001',33,5000,5000)")
+
 env=dict(os.environ,MIR3_DEBUG_STATE_DIR=str(root))
 processes=[]
 print(root,flush=True)
@@ -126,6 +134,38 @@ def click(h,x,y):
     x=round(x*u.GetDpiForSystem()/96);y=round(y*u.GetDpiForSystem()/96)
     pos=(y<<16)|x
     for msg,wp in ((WM_MOUSEMOVE,0),(WM_LBUTTONDOWN,MK_LBUTTON),(WM_LBUTTONUP,0)):u.PostMessageW(h,msg,wp,pos)
+def equipment_roundtrip(h, state_path):
+    def equipped(d):
+        return len(d.get('equipment', [])) == 1 and not d.get('bag') and not d.get('held_item') and not d.get('equipment_pending')
+    for key in ('Q', 'W'):
+        u.PostMessageW(h, WM_KEYDOWN, ord(key), 0)
+        u.PostMessageW(h, WM_KEYUP, ord(key), 0)
+    initial = wait(state_path, lambda d:d.get('bag_panel', {}).get('open') and d.get('equipment_panel', {}).get('open') and len(d.get('bag', [])) == 1)
+    bag = initial['bag_panel']; status = initial['equipment_panel']
+    bag_point = (bag['x'] + 36, bag['y'] + 79)
+    armor_point = (status['x'] + 120, status['y'] + 159)
+    item_id = initial['bag'][0]['id']
+    for cycle in range(3):
+        click(h, *bag_point)
+        wait(state_path, lambda d:d.get('held_item', {}) and d['held_item']['id'] == item_id)
+        click(h, *armor_point)
+        worn = wait(state_path, equipped)
+        assert worn['equipment'][0]['slot'] == 0 and worn['equipment'][0]['id'] == item_id, worn
+        assert worn['equipment_panel'] == status and worn['bag_panel'] == bag, worn
+        assert (worn['hp'], worn['mp']) == (initial['hp'], initial['mp']), worn
+        print('armor equipped', cycle, worn, flush=True)
+        if cycle == 2:break
+        click(h, *armor_point)
+        wait(state_path, lambda d:d.get('held_item', {}) and d['held_item']['id'] == item_id)
+        click(h, *bag_point)
+        removed = wait(state_path, lambda d:len(d.get('bag', [])) == 1 and not d.get('equipment') and not d.get('held_item') and not d.get('equipment_pending'))
+        assert removed['bag'][0]['id'] == item_id, removed
+        print('armor removed', cycle, removed, flush=True)
+    for key in ('Q', 'W'):
+        u.PostMessageW(h, WM_KEYDOWN, ord(key), 0)
+        u.PostMessageW(h, WM_KEYUP, ord(key), 0)
+    wait(state_path, lambda d:not d['bag_panel']['open'] and not d['equipment_panel']['open'])
+
 def hold_mouse(h, x, y, seconds=1.8):
     if any(u.GetAsyncKeyState(key) & 0x8000 for key in (VK_LBUTTON, VK_RBUTTON)):
         raise RuntimeError('A mouse button is already held; refusing to interfere')
@@ -200,6 +240,8 @@ with (root/'server.log').open('wb') as log:
                 # Acknowledge the arrival notice before using the map.
                 u.PostMessageW(h,WM_KEYDOWN,VK_RETURN,0);u.PostMessageW(h,WM_KEYUP,VK_RETURN,0)
                 print('input ready',wait(cs,lambda d:not d.get('notice') and not d.get('input_delayed')),flush=True)
+                if args.equipment:
+                    equipment_roundtrip(h,cs)
                 if args.hold_mouse:
                     hold_mouse(h,448,240)
                 else:
@@ -213,6 +255,8 @@ with (root/'server.log').open('wb') as log:
                     assert moved['x'] >= world['x'] + 2 and moved['y'] == world['y'], ('held input must continue east', moved, world)
             else:
                 assert (world['x'],world['y'])==saved, (world,saved)
+                if args.equipment:
+                    assert len(world['equipment'])==1 and world['equipment'][0]['name']=='Test male armor' and not world['bag'],world
             if iteration==0:
                 u.PostMessageW(h,WM_SYSKEYDOWN,ord('X'),ALT_CONTEXT)
                 time.sleep(.5)
@@ -228,6 +272,8 @@ with (root/'server.log').open('wb') as log:
                 click(h,275,61)
                 restored=wait(cs,lambda d:d.get('scene')=='world' and d.get('map') and d.get('remote_port')==ports[7200],20)
                 print('restored',restored,flush=True)
+                if args.equipment:
+                    assert len(restored['equipment'])==1 and restored['equipment'][0]['name']=='Test male armor' and not restored['bag'],restored
                 assert (restored['x'],restored['y'])==(moved['x'],moved['y']),(restored,moved)
                 wait(cs,lambda d:not d.get('input_delayed'))
                 # Make the second save distinct from the earlier return-to-selection save.
