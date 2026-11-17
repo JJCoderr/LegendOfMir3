@@ -59,11 +59,10 @@ int Run()
             folder = debugFolder;
     }
     if (!SetCurrentDirectoryW(folder.c_str()) || GetFileAttributesW(ConfigName) == INVALID_FILE_ATTRIBUTES) {
-        fwprintf(stderr, L"Cannot read %ls in %ls\n", ConfigName, folder.c_str());
+        mir3::ConsoleLog(L"EIServer", (std::wstring(L"Cannot read EIServer.ini in ") + folder).c_str());
         return 1;
     }
-    wprintf(L"Runtime directory: %ls\n", folder.c_str());
-    fflush(stdout);
+    mir3::ConsoleLog(L"EIServer", (std::wstring(L"Runtime directory: ") + folder).c_str());
     HINSTANCE instance=GetModuleHandleW(nullptr);
     HWND windows[_countof(services)]{};
     for(unsigned i=0;i<_countof(services);++i) {
@@ -90,20 +89,20 @@ int Run()
         if(!msg.hwnd && msg.message==WM_TIMER && current<_countof(services)) {
             const auto& core=services[current];
             if(!starting) {
-                wprintf(L"[%s] starting\n",core.name);fflush(stdout);
+                mir3::ConsoleLog(core.name, L"Starting");
                 if(!core.initialize(instance,windows[current])) {
-                    fwprintf(stderr, L"[%ls] initialization failed in %ls\n", core.name, folder.c_str());
+                    mir3::ConsoleLog(core.name, (std::wstring(L"Initialization failed in ") + folder).c_str());
                     return 1;
                 }
                 core.start();starting=true;deadline=GetTickCount64()+StartupTimeoutMs;
             }
             int port=GetPrivateProfileIntW(core.section,L"LocalPort",core.defaultPort,L".\\EIServer.ini");
             if(Listening(port)) {
-                wprintf(L"[%s] listening on %d\n",core.name,port);fflush(stdout);
+                mir3::ConsoleLog(core.name, (std::wstring(L"Listening on ") + std::to_wstring(port)).c_str());
                 ++current;starting=false;
-                if(current==_countof(services)) { puts("All services ready. Ctrl+C to exit.");fflush(stdout); }
+                if(current==_countof(services)) { mir3::ConsoleLog(L"EIServer", L"All services ready. Ctrl+C to exit."); }
             } else if(GetTickCount64()>=deadline) {
-                fwprintf(stderr,L"[%s] startup timed out\n",core.name);return 1;
+                mir3::ConsoleLog(core.name, L"Startup timed out");return 1;
             }
         } else {
             TranslateMessage(&msg);DispatchMessage(&msg);

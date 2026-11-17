@@ -21,3 +21,5 @@
 #include <string>
 #include <time.h>
 #include <vector>
+
+#include "ConsoleLog.h"

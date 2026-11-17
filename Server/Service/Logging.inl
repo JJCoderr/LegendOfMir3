@@ -1,5 +1,5 @@
 
-void InsertLogMsg(LPTSTR text) { if(text) { fwprintf(stdout,L"[%s] %s\n", ServiceName, text);fflush(stdout); } }
+void InsertLogMsg(LPTSTR text) { if(text) { mir3::ConsoleLog(ServiceName, text); } }
 void InsertLogMsg(UINT id) { wchar_t text[1024]={}; if(LoadString(g_hInst,id,text,_countof(text))) InsertLogMsg(text); }
 #ifdef LOGPARAM_STR
 void InsertLogMsgParam(UINT id,void* parameter,BYTE flags) {

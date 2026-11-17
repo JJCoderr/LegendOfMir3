@@ -1872,3 +1872,10 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 ## 2026-11-17 窗口DPI最终约定
 - 用户确认保留DPI放大，但不能写死。已撤销本轮尚未提交的原尺寸回退，继续使用9bdb779中读取系统DPI并MulDiv计算窗口的实现。Release重建通过，out/debug/Mir2Ex.exe与构建产物SHA256一致。
 - 本轮原尺寸临时测试通过返回选角，但恢复坐标460,262与第一次移动快照460,261不一致，原因未确认；不能把该次测试记为全通过。隔离实例已退出。后续需区分移动中快照与最终保存坐标。开发服务器34664保留运行。
+
+
+## 2026-11-17 EIServer 控制台日志
+- 六个静态库的InsertLogMsg与宿主启动消息统一经过Service/ConsoleLog.h，格式[HH:MM:SS.mmm] [服务名] 消息。线程间串行输出完整行；控制台WriteConsoleW，重定向WriteFile输出UTF-8。未增加原始包体/账号密码转储。
+- Release构建通过。out/native-live-5u3_51lk真实客户端登录、移动、返回选角、再次进图及重新启动客户端登录全部通过，退出码0；退出前客户端位置、SQLite、重进位置均460,261。日志44行均匹配统一格式并能严格UTF-8解码。
+- 旧开发服务器34664在无客户端连接时通过Ctrl+C结束。out/debug/EIServer.exe已更新并用可见控制台启动PID33900；控制台IsWindowVisible=1，读取控制台缓冲区确认All services ready；快照六服务就绪、七默认端口正常。未重定向其标准输出，日志直接显示。
+- 此前单次坐标差一格未复现，尚不能定性为已修复。临时联调脚本仍在out/native-return-check.py，整理为正式脚本尚未完成。
