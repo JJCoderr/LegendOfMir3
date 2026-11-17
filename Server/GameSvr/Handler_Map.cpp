@@ -65,7 +65,7 @@ CMirMap* GetMap(char *pszMapName)
 		{
 			pMirMap = g_xMirMapList.GetData(pListNode);
 
-			if (memcmp(pMirMap->m_szMapName, pszMapName, memlen(pszMapName) -1) == 0)
+			if (strcmp(pMirMap->m_szMapName, pszMapName) == 0)
 				return pMirMap;
 			
 			pListNode = g_xMirMapList.GetNext(pListNode);

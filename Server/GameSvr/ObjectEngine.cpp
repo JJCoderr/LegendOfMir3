@@ -1212,7 +1212,7 @@ void CCharObject::AddRefMsg(WORD wIdent, WORD wParam, DWORD lParam1, DWORD lPara
 
 			if (!pCharObject->m_fIsGhost)
 			{
-				if ((pCharObject->m_pMap = m_pMap) && (abs(pCharObject->m_nCurrX - m_nCurrX) <= 11) && 
+				if ((pCharObject->m_pMap == m_pMap) && (abs(pCharObject->m_nCurrX - m_nCurrX) <= 11) &&
 					(abs(pCharObject->m_nCurrY - m_nCurrY) <= 11))
 				{
 					if (pCharObject->m_wObjectType & _OBJECT_HUMAN)

@@ -2427,3 +2427,12 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - Test/Combat/CombatMelee.csv 及同名 fixture 覆盖无效目标、连续攻击拒绝、两次伤害、死亡/经验、恰好两次 CM_HIT、SM_STRUCK/SM_NOWDEATH。1 级战士、怪物闪避 1、无防御，未改变运行时随机算法。
 - Client Release 构建通过；近战 27、全链路双向分片近战 27、魔法战斗回归 24，共 78 项通过。日志 out/csv-validation/combat-melee-fixed.log、combat-melee-fragments/test.log、combat-melee-magic-regression.log；失败复现 combat-melee-two-hit.log。
 - 当前未验证玩家对战、全部特殊近战技能与变身攻击；总体客户端/服务端适配目标继续。
+
+
+## 2026-11-18 多地图查找与广播隔离
+
+- GetMap 原来只比较请求名称的长度，导致地图 0 匹配先加载的 01；三客户端 CSV 在步骤 460 实测存档为 0 却进入 01。改为 strcmp 完整匹配。
+- AddRefMsg 的缓存路径将地图判断写成赋值，会改写缓存接收者的 m_pMap；改为 ==，保持原有广播距离与缓存周期。
+- 新增 Chat/ChatMapIsolation 与 Combat/CombatMapIsolation（各自 CSV/fixture，--clients 3）。两个客户端在 01，第三个在 0；验证同图聊天/攻击/伤害/死亡，异图无回包与经验泄漏。聊天另验证返回选角保存的地图为 0，重进仍为 0。
+- EIServer Release 构建成功；聊天基础 60、战斗 66、包含保存重进的双向分片聊天 65，共 191 项通过。日志 out/csv-validation/chat-map-isolation-fixed.log、combat-map-isolation.log、chat-map-isolation-fragments/test.log；前缀错误复现 chat-map-isolation.log。
+- 尚未强制复现 500ms 广播缓存有效期内换图的时序；赋值错误由代码路径直接确认，多地图 CSV 不等价于该竞争时序验证。总体适配继续。
