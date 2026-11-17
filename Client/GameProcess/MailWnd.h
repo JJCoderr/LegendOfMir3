@@ -1,5 +1,6 @@
 #pragma once
 #include "MailLayout.h"
+#include "MailWire.h"
 #include <string>
 #include <array>
 #include <vector>
@@ -35,6 +36,8 @@ public:
     };
     std::vector<Request> requests;
     void RequestAction(MailLayout::Action action);
+    static bool BuildRequest(const Request& request,_TDEFAULTMESSAGE& header);
+    static bool BuildCompose(const Request& request,std::array<BYTE,MailWire::SendBytes>& body);
     void ReceiveList(bool sent,const char* encoded,int count);
     bool ReceiveBody(bool sent,const BYTE* record,int length);
     struct Message {

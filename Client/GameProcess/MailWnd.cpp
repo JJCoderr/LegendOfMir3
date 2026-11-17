@@ -427,7 +427,14 @@ void CMailWnd::RequestAction(MailLayout::Action action)
     case Action::Refresh:break;
     default:return;
     }
-    // Keep an immutable GUI request until the mail protocol adapter consumes it.
+    _TDEFAULTMESSAGE header={};
+    if(BuildRequest(request,header) && g_xClientSocket.m_sockClient!=INVALID_SOCKET) {
+        if(action==Action::SendCompose) {
+            std::array<BYTE,MailWire::SendBytes> body={};
+            if(BuildCompose(request,body)) g_xClientSocket.SendPacket(&header,(char*)body.data(),int(body.size()));
+        } else g_xClientSocket.SendPacket(&header,nullptr);
+    }
+    // Retain the immutable operation; only server replies may change mail contents.
     requests.push_back(std::move(request));
 }
 
@@ -578,4 +585,38 @@ void CMailWnd::ShowNotification()
 {
     const RECT area=NotificationBounds();if(IsRectEmpty(&area)) return;
     DrawSelectionFrame(*m_pxWndImage,MailWire::NotificationFrame,area.left,area.top,SelectionBlend::Normal,false);
+}
+
+bool CMailWnd::BuildRequest(const Request& request,_TDEFAULTMESSAGE& header)
+{
+    using MailLayout::Action;
+    const WORD direction=request.sent?MailWire::Outbox:MailWire::Inbox;
+    WORD message=0,parameter=direction;DWORD id=request.messageId;
+    switch(request.action) {
+    case Action::SendCompose:message=MailWire::Send;id=0;parameter=0;break;
+    case Action::Refresh:message=MailWire::Query;id=0;break;
+    case Action::Read:message=MailWire::Read;break;
+    case Action::Delete:case Action::DeleteRead:message=MailWire::Delete;break;
+    case Action::CancelOutbox:message=MailWire::Recall;parameter=0;break;
+    default:return false;
+    }
+    fnMakeDefMessage(&header,message,id,parameter,0,0);return true;
+}
+
+bool CMailWnd::BuildCompose(const Request& request,std::array<BYTE,MailWire::SendBytes>& body)
+{
+    using namespace MailWire;
+    body.fill(0);
+    const auto recipient=LimitAnsiEdit("",request.recipient,RecipientLimit);
+    const auto text=LimitAnsiEdit("",CGuildEditor::Payload(request.body),BodyLimit);
+    if(recipient.empty() || text.empty()) return false;
+    std::string subject=text.substr(0,text.find('\r'));
+    if(subject.size()>SubjectLimit) {
+        static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+        subject=LimitAnsiEdit("",subject,SubjectPrefix)+captions.Get(EllipsisCaption);
+        subject=LimitAnsiEdit("",subject,SubjectLimit);
+    }
+    memcpy(body.data()+SendRecipient,recipient.data(),recipient.size());
+    memcpy(body.data()+SendSubject,subject.data(),subject.size());
+    memcpy(body.data()+SendText,text.data(),text.size());return true;
 }

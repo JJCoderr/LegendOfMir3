@@ -1862,6 +1862,27 @@ public:
             mail.notified=true;POINT anchor={};const RECT badge=mail.NotificationBounds();const POINT badgePoint={badge.left+2,badge.top+2};
             const bool notification=ui.ButtonHintAt(badgePoint,anchor)==MailWire::NotificationCaption;
             if(FILE* report=fopen("mail-wire-check.txt","wb")) {fprintf(report,"early=%d decoded=%d cached=%d separated=%d delimiter=%d shortBody=%d read=%d draft=%d closed=%d notification=%d\n",early,decoded,cached,separated,delimiter,shortBody,read,draftKept,closed,notification);fclose(report);}
+            CMailWnd::Request request={};_TDEFAULTMESSAGE packet={};
+            request.sent=true;request.messageId=7;request.action=MailLayout::Action::Read;
+            const bool readRequest=CMailWnd::BuildRequest(request,packet) && packet.wIdent==MailWire::Read && packet.nRecog==7 && packet.wParam==MailWire::Outbox;
+            request.action=MailLayout::Action::Refresh;
+            const bool queryRequest=CMailWnd::BuildRequest(request,packet) && packet.wIdent==MailWire::Query && packet.nRecog==0;
+            request.sent=false;request.action=MailLayout::Action::DeleteRead;
+            const bool deleteRequest=CMailWnd::BuildRequest(request,packet) && packet.wIdent==MailWire::Delete && packet.wParam==MailWire::Inbox;
+            request.action=MailLayout::Action::CancelOutbox;
+            const bool recallRequest=CMailWnd::BuildRequest(request,packet) && packet.wIdent==MailWire::Recall && packet.nRecog==7 && packet.wParam==0;
+            request.action=MailLayout::Action::SendCompose;request.recipient="recipient";request.body="subject\r\n\r\nbody";
+            std::array<BYTE,MailWire::SendBytes> outgoing={};
+            const bool sendRequest=CMailWnd::BuildRequest(request,packet) && packet.wIdent==MailWire::Send && packet.nRecog==0 && packet.wParam==0 && packet.wTag==0 && packet.wSeries==0;
+            const bool compose=CMailWnd::BuildCompose(request,outgoing) && strcmp((char*)outgoing.data()+MailWire::SendRecipient,"recipient")==0 && strcmp((char*)outgoing.data()+MailWire::SendSubject,"subject")==0 && strcmp((char*)outgoing.data()+MailWire::SendText,"subject\r \rbody")==0 && outgoing.back()==0;
+            request.recipient=std::string(MailWire::RecipientLimit-1,'a')+"中文";request.body=std::string(MailWire::BodyLimit-1,'b')+"中文";
+            const bool boundaries=CMailWnd::BuildCompose(request,outgoing) && strlen((char*)outgoing.data())==MailWire::RecipientLimit-1 && strlen((char*)outgoing.data()+MailWire::SendText)==MailWire::BodyLimit-1 && strlen((char*)outgoing.data()+MailWire::SendSubject)<=MailWire::SubjectLimit;
+            char encodedSend[MailWire::SendBytes*2]={};std::array<BYTE,MailWire::SendBytes> decodedSend={};
+            fnEncode6BitBuf(outgoing.data(),encodedSend,int(outgoing.size()),sizeof(encodedSend));
+            const bool roundtrip=fnDecode6BitBuf(encodedSend,(char*)decodedSend.data(),int(decodedSend.size()))==MailWire::SendBytes && outgoing==decodedSend;
+            request.recipient.clear();const bool empty=!CMailWnd::BuildCompose(request,outgoing);
+            request.action=MailLayout::Action::SendGift;const bool giftUnsupported=!CMailWnd::BuildRequest(request,packet);
+            if(FILE* report=fopen("mail-send-check.txt","wb")) {fprintf(report,"read=%d query=%d delete=%d recall=%d send=%d compose=%d boundaries=%d roundtrip=%d empty=%d giftUnsupported=%d\n",readRequest,queryRequest,deleteRequest,recallRequest,sendRequest,compose,boundaries,roundtrip,empty,giftUnsupported);fclose(report);}
             mouse={790,430};capturePath="mail-wire-list.bmp";
             if(groupPanel==PreviewMailWireRead) {mail.selectedInbox=0;mail.OpenSelected();capturePath="mail-wire-read.bmp";}
             if(groupPanel==PreviewMailNotify) {mouse=badgePoint;capturePath="mail-notification.bmp";}

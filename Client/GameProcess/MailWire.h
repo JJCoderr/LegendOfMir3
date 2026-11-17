@@ -1,6 +1,9 @@
 #pragma once
 namespace MailWire {
 constexpr int ListMessage=1356, BodyMessage=1357, NotificationMessage=1358;
+constexpr int Query=1137, Read=1138, Delete=1139, Send=1141, Recall=1142;
+constexpr int SendBytes=596, SendRecipient=0, SendSubject=64, SendText=95;
+constexpr int RecipientLimit=24, SubjectLimit=30, SubjectPrefix=28, BodyLimit=500, EllipsisCaption=4613;
 constexpr int Inbox=0, Outbox=2;
 constexpr int NotificationFrame=2072, NotificationCaption=4622;
 constexpr int HudFrame=1160,HudBottom=601,NotificationX=757,NotificationOffsetY=-20;
