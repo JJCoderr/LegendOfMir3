@@ -2,7 +2,7 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -67,7 +67,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewLevelTail) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewSkillProgress) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -324,7 +324,7 @@ public:
                 wsprintfA(skill.stStdMagic.szMagicName,"Skill %d",ids[i]);
             }
             lstrcpyA(skills.m_pstMyMagic[0].stStdMagic.szMagicName,"\xbb\xf0\xc7\xf2\xca\xf5");
-            skills.m_pstMyMagic[0].bUseKey='1';
+            skills.m_pstMyMagic[0].bUseKey='1';skills.UpdateShortcut(skills.m_pstMyMagic[0],true);
             ui.WindowActivate(_WND_ID_SKILL); ui.WindowActivate(_WND_ID_STATUS);
             const bool origin=skills.m_rcWnd.left==348 && skills.m_rcWnd.top==0 && skills.m_nWidth==360 && skills.m_nHeight==488;
             ui.OnLButtonDown(POINT{700,410}); ui.OnMouseMove(POINT{690,420}); ui.OnLButtonUp(POINT{690,420});
@@ -376,7 +376,7 @@ public:
             if (groupPanel==27) {
                 int icons=0,labels=0;
                 for (int key=1;key<=12;++key) {
-                    skills.m_pstMyMagic[key-1].bUseKey=skills.LegacyKey(key);
+                    skills.m_pstMyMagic[key-1].bUseKey=skills.LegacyKey(key);skills.UpdateShortcut(skills.m_pstMyMagic[key-1],true);
                     const int id=skills.m_pstMyMagic[key-1].stStdMagic.wMagicID&255;
                     icons+=g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].NewSetIndex(999+id)!=FALSE;
                     labels+=ui.m_pxInterImg->NewSetIndex(1449+key)!=FALSE;
@@ -407,7 +407,7 @@ public:
                 ui.OnLButtonDown(skillPoint); ui.OnLButtonUp(skillPoint); ui.OnLButtonDoubleClick(skillPoint);
                 const bool opened=!IsRectEmpty(&skills.m_keyMenu) && skills.m_keyMenu.left==380 && skills.m_keyMenu.top==120 && skills.m_keyMenuTarget==1;
                 const bool noDrag=!ui.m_bMoveFocusedWnd;
-                skills.m_pstMyMagic[1].bUseKey='C';
+                skills.m_pstMyMagic[1].bUseKey='C';skills.UpdateShortcut(skills.m_pstMyMagic[1],true);
                 ui.OnLButtonDown(POINT{520,220}); ui.OnLButtonUp(POINT{520,220});
                 const bool lastKey=skills.GetMagicByKey('C')==&skills.m_pstMyMagic[0] && skills.m_pstMyMagic[1].bUseKey==0;
                 const bool keptOpen=!IsRectEmpty(&skills.m_keyMenu);
@@ -431,7 +431,7 @@ public:
                         opened,noDrag,lastKey,keptOpen,tenthKey,keys,outsideClosed,panelClosed);
                     fprintf(report,"outside_window_hit=%d popup_over_hud=%d\n",outsideHit,overHud); fclose(report);
                 }
-                skills.m_pstMyMagic[1].bUseKey='2'; skills.m_pstMyMagic[2].bUseKey='3';
+                skills.m_pstMyMagic[1].bUseKey='2'; skills.m_pstMyMagic[2].bUseKey='3';skills.UpdateShortcut(skills.m_pstMyMagic[1],true);skills.UpdateShortcut(skills.m_pstMyMagic[2],true);
             }
 
         }
@@ -1889,6 +1889,43 @@ public:
             if(groupPanel==PreviewMailNotify) {mouse=badgePoint;capturePath="mail-notification.bmp";}
         }
 
+        if(groupPanel==PreviewSkillWire || groupPanel==PreviewSkillProgress) {
+            auto& ui=g_xGameProc.m_xInterface;auto& skills=ui.m_xSkillWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].NewLoad("./Data/MIcon.wil");
+            const auto record=[](WORD id,char key,BYTE level,const char* name) {
+                BYTE bytes[74]={};bytes[0]=120;bytes[4]=key;bytes[5]=level;bytes[6]=LOBYTE(id);bytes[7]=HIBYTE(id);
+                memcpy(bytes+8,name,min(size_t(12),strlen(name)));
+                const DWORD thresholds[]={500,1500,3000};memcpy(bytes+31,thresholds,sizeof(thresholds));
+                char encoded[100]={};fnEncode6BitBuf(bytes,encoded,sizeof(bytes),sizeof(encoded));return std::string(encoded);
+            };
+            const auto receive=[&](WORD opcode,int id,WORD param,WORD tag,WORD series,const std::string& body=std::string()) {
+                _TDEFAULTMESSAGE header={};fnMakeDefMessage(&header,opcode,id,param,tag,series);return skills.Receive(header,body.c_str());
+            };
+            const auto fire=record(1,'1',1,"火球术"),resist=record(5,'C',2,"抗拒火环"),ice=record(41,'2',1,"冰月神掌");
+            const std::string list=fire+"/"+resist+"/"+ice+"/ignored";
+            const bool full=receive(SM_SENDMYMAGIC,0,0,0,0x103,list) && skills.m_bMyMagicCnt==3 && skills.m_skillTab==0 && skills.Shortcut(0)==1 && skills.Shortcut(11)==5 && skills.Shortcut(1)==41;
+            const bool fields=skills.m_pstMyMagic[0].nCurrTrain==120 && skills.m_pstMyMagic[0].stStdMagic.nTrain[1]==1500 && std::string(skills.m_pstMyMagic[0].stStdMagic.szMagicName)=="火球术";
+            const bool progress=receive(SM_MAGIC_LVEXP,1,0x102,0x5678,0xFEDC) && skills.m_pstMyMagic[0].bLevel==2 && skills.m_pstMyMagic[0].nCurrTrain==0xFEDC5678u;
+            const auto added=record(39,'A',1,"霹雳掌");const bool add=receive(SM_ADDMAGIC,0,0,0,0,added) && skills.m_bMyMagicCnt==4 && !skills.Shortcut(9) && skills.GetMagicByKey('A');
+            std::string invalid=list;invalid[0]='!';
+            const bool rejected=!receive(SM_SENDMYMAGIC,0,0,0,3,fire+"/"+resist+"/") && !receive(SM_SENDMYMAGIC,0,0,0,3,invalid) && skills.m_bMyMagicCnt==4 && skills.Shortcut(11)==5;
+            skills.BindMagic(5,'1');const bool binding=skills.m_pstMyMagic[0].bUseKey==0 && skills.GetMagicByKey('1')->stStdMagic.wMagicID==5 && skills.Shortcut(0)==5 && !skills.Shortcut(11);
+            skills.BindMagic(5,'C');const bool lastKey=skills.Shortcut(11)==5 && !skills.Shortcut(0);
+            skills.m_keyMenu={1,1,40,40};skills.m_keyMenuTarget=5;
+            const bool removed=receive(SkillWire::DeleteMessage,5,0,0,0) && skills.m_bMyMagicCnt==3 && skills.Shortcut(11)==5 && IsRectEmpty(&skills.m_keyMenu);
+            const bool unknown=!receive(SkillWire::DeleteMessage,999,0,0,0) && !receive(SM_MAGIC_LVEXP,999,1,0,0);
+            skills.m_skillTab=2;const bool empty=receive(SM_SENDMYMAGIC,0,0,0,0,"ignored") && !skills.m_bMyMagicCnt && skills.m_skillTab==2 && skills.Shortcut(11)==5;
+            receive(SM_SENDMYMAGIC,0,0,0,1,record(0x101,'3',1,"高位技能")+"/");const bool lowByte=skills.Shortcut(2)==1;
+            const int frame=skills.m_nFrameImgIdx;auto* image=skills.m_pxWndImage;const RECT bounds=skills.m_rcWnd;
+            skills.Destroy();const bool cleared=!skills.m_bMyMagicCnt && !skills.m_pstMyMagic && !skills.Shortcut(11) && !skills.Shortcut(2);
+            skills.CreateGameWnd(_WND_ID_SKILL,image,frame,TRUE,bounds.left,bounds.top,bounds.right-bounds.left,bounds.bottom-bounds.top);
+            receive(SM_SENDMYMAGIC,0,0,0,3,list);skills.m_skillSelected[0]=0;
+            if(groupPanel==PreviewSkillProgress) receive(SM_MAGIC_LVEXP,1,2,0x5678,0xFEDC);
+            ui.WindowActivate(_WND_ID_SKILL);ui.m_bShowKey=true;mouse={790,430};
+            capturePath=groupPanel==PreviewSkillProgress?"skill-wire-progress.bmp":"skill-wire-list.bmp";
+            if(FILE* report=fopen("skill-wire-check.txt","wb")) {fprintf(report,"full=%d fields=%d progress=%d added=%d rejected=%d binding=%d lastKey=%d removed=%d unknown=%d empty=%d lowByte=%d cleared=%d\n",full,fields,progress,add,rejected,binding,lastKey,removed,unknown,empty,lowByte,cleared);fclose(report);}
+        }
+
         if(groupPanel==PreviewProgression || groupPanel==PreviewLevelTail) {
             auto& process=g_xGameProc;auto& ui=process.m_xInterface;auto& effects=process.m_levelEffects;
             const auto receive=[&](WORD opcode,int recognition,WORD param,WORD tag,WORD series) {
@@ -2895,6 +2932,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=skill-wire")==0 ? PreviewSkillWire :
+        strcmp(lpCmdLine,"--preview=skill-wire-progress")==0 ? PreviewSkillProgress :
         strcmp(lpCmdLine,"--preview=progression")==0 ? PreviewProgression :
         strcmp(lpCmdLine,"--preview=level-tail")==0 ? PreviewLevelTail :
         strcmp(lpCmdLine,"--preview=ability-wire")==0 ? PreviewAbility :

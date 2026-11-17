@@ -5,7 +5,7 @@
 void CSkillWnd::Init()
 {
     CGameWnd::Init();
-    m_keyMenu={}; m_keyMenuTarget=0;
+    m_keyMenu={}; m_keyMenuTarget=0;m_shortcuts.fill(0);
     m_descriptionLoaded=false; m_showDescription=false; m_descriptionText.clear(); m_descriptionRows.clear();
     m_skillTab=0; m_skillScroll=0; m_skillPressed=-1; m_skillScrollCaptured=false; m_skillScrollTime=0;
     for (int i=0;i<8;++i) m_skillSelected[i]=-1;
@@ -68,12 +68,15 @@ BOOL CSkillWnd::SetMagicKey(POINT point,BYTE key)
 
 void CSkillWnd::BindMagic(int id,BYTE key)
 {
+    const int targetSlot=KeyNumber(key);if(targetSlot) m_shortcuts[targetSlot-1]=0;
     for (int i=0;i<m_bMyMagicCnt;++i) if (m_pstMyMagic[i].bUseKey==key) {
         m_pstMyMagic[i].bUseKey=0;
         g_xClientSocket.SendMagicKeyChange(0,m_pstMyMagic[i].stStdMagic.wMagicID);
     }
     for (int i=0;i<m_bMyMagicCnt;++i) if (m_pstMyMagic[i].stStdMagic.wMagicID==id) {
+        const int old=KeyNumber(m_pstMyMagic[i].bUseKey);if(old) m_shortcuts[old-1]=0;
         m_pstMyMagic[i].bUseKey=key;
+        const int slot=KeyNumber(key);if(slot) m_shortcuts[slot-1]=BYTE(id);
         g_xClientSocket.SendMagicKeyChange(key,id); break;
     }
 }
@@ -227,11 +230,12 @@ VOID CSkillWnd::ShowSkillWnd()
     SelectObject(dc,normal);
     if (selected>=0) {
         const auto& skill=m_pstMyMagic[selected];
-        text(skill.stStdMagic.szMagicName,20,387,80,61,0xfafafa,true);
+        const std::string name(skill.stStdMagic.szMagicName,strnlen(skill.stStdMagic.szMagicName,sizeof(skill.stStdMagic.szMagicName)));
+        text(name.c_str(),20,387,80,61,0xfafafa,true);
         if (skill.bLevel>=3) lstrcpyA(value,"Level : Max"); else wsprintfA(value,"Level : %u",skill.bLevel);
         text(value,20,403,80,62,0xfafafa,true);
         if (skill.bLevel<3) {
-            wsprintfA(value,"Exp : %d/%d",skill.nCurrTrain,skill.stStdMagic.nTrain[skill.bLevel]);
+            wsprintfA(value,"Exp : %u/%d",skill.nCurrTrain,skill.stStdMagic.nTrain[skill.bLevel]);
             text(value,100,403,80,62,0xfafafa,true);
         }
     }
@@ -266,8 +270,7 @@ void CSkillWnd::ShowKeyMenu()
     DrawLegacyPanel(m_keyMenu,RGB(100,100,50),150,0,false);
     for (int index=0;index<12;++index) {
         const int x=m_keyMenu.left+40*(index%4),y=m_keyMenu.top+40*(index/4);
-        if (const auto skill=GetMagicByKey(LegacyKey(index+1))) {
-            const int id=skill->stStdMagic.wMagicID&255;
+        if (const int id=Shortcut(index)) {
             if (id) DrawSelectionFrame(g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON],2*id-2,x,y,SelectionBlend::Normal,false);
         }
         DrawSelectionFrame(*m_pxWndImage,1660+index,x,y,SelectionBlend::Normal,false);
@@ -368,9 +371,62 @@ void CSkillWnd::ShowDescription()
     for (int i=0;i<m_bMyMagicCnt;++i) if (m_pstMyMagic[i].stStdMagic.wMagicID==id) {
         const auto& skill=m_pstMyMagic[i]; char value[64];
         if (skill.bLevel>=3) lstrcpyA(value,"Level : Max");
-        else wsprintfA(value,"%d/%d",skill.nCurrTrain,skill.stStdMagic.nTrain[skill.bLevel]);
+        else wsprintfA(value,"%u/%d",skill.nCurrTrain,skill.stStdMagic.nTrain[skill.bLevel]);
         RECT area={x,y,x+(skill.bLevel>=3?80:50),y+15}; DrawTextA(dc,value,-1,&area,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
         break;
     }
     SelectObject(dc,old); DeleteObject(normal); DeleteObject(title); surface->ReleaseDC(dc);
+}
+
+void CSkillWnd::UpdateShortcut(const CLIENTMAGICRCD& record,bool full)
+{
+    char key[SkillWire::RecordSize-SkillWire::KeyOffset+1]={};
+    memcpy(key,reinterpret_cast<const BYTE*>(&record)+SkillWire::KeyOffset,sizeof(key)-1);
+    const long decimal=std::strtol(key,nullptr,10);
+    const int label=decimal>0 && decimal<10?int(decimal):BYTE(record.bUseKey)-55;
+    const int slot=full?label:BYTE(decimal);
+    if(slot>=1 && slot<=SkillWire::ShortcutCount) m_shortcuts[slot-1]=BYTE(record.stStdMagic.wMagicID);
+}
+bool CSkillWnd::Receive(const _TDEFAULTMESSAGE& header,const char* encoded)
+{
+    static_assert(sizeof(CLIENTMAGICRCD)==SkillWire::RecordSize,"MIR3 skill record layout");
+    if(header.wIdent==SM_MAGIC_LVEXP || header.wIdent==SkillWire::DeleteMessage) {
+        for(int i=0;i<m_bMyMagicCnt;++i) if(m_pstMyMagic[i].stStdMagic.wMagicID==header.nRecog) {
+            if(header.wIdent==SM_MAGIC_LVEXP) {
+                m_pstMyMagic[i].nCurrTrain=DWORD(header.wTag)|(DWORD(header.wSeries)<<16);
+                m_pstMyMagic[i].bLevel=LOBYTE(header.wParam);
+            } else {
+                std::move(m_pstMyMagic+i+1,m_pstMyMagic+m_bMyMagicCnt,m_pstMyMagic+i);--m_bMyMagicCnt;
+                if(m_keyMenuTarget==header.nRecog) {m_keyMenu={};m_keyMenuTarget=0;}
+                SelectNonempty();
+            }
+            return true;
+        }
+        return false;
+    }
+    const bool full=header.wIdent==SM_SENDMYMAGIC;
+    if(!full && header.wIdent!=SM_ADDMAGIC) return false;
+    const int count=full?LOBYTE(header.wSeries):1;
+    if(!full && m_bMyMagicCnt==SkillWire::MaximumRecords) return false;
+    std::vector<CLIENTMAGICRCD> incoming;incoming.reserve(count);
+    const char* cursor=encoded;
+    for(int i=0;i<count;++i) {
+        const char* end=full?strchr(cursor,'/'):cursor+strlen(cursor);
+        if(!end || end-cursor!=SkillWire::EncodedRecordSize) return false;
+        const std::string segment(cursor,end);
+        for(unsigned char c:segment) if(c<SkillWire::EncodingFirst || c>SkillWire::EncodingLast) return false;
+        BYTE bytes[SkillWire::RecordSize+1]={};
+        if(fnDecode6BitBuf(const_cast<char*>(segment.c_str()),reinterpret_cast<char*>(bytes),sizeof(bytes))!=SkillWire::RecordSize) return false;
+        CLIENTMAGICRCD record;memcpy(&record,bytes,sizeof(record));if(!record.stStdMagic.wMagicID) return false;
+        incoming.push_back(record);cursor=full?end+1:end;
+    }
+    const int oldCount=full?0:m_bMyMagicCnt,newCount=oldCount+count;
+    auto* next=newCount?new CLIENTMAGICRCD[newCount]:nullptr;
+    if(oldCount) std::copy(m_pstMyMagic,m_pstMyMagic+oldCount,next);
+    for(int i=0;i<count;++i) {next[oldCount+i]=incoming[i];UpdateShortcut(incoming[i],full);}
+    delete[] m_pstMyMagic;m_pstMyMagic=next;m_bMyMagicCnt=BYTE(newCount);
+    const int previous=m_skillTab;
+    if(full) {m_skillTab=0;m_keyMenu={};m_keyMenuTarget=0;}
+    SelectNonempty();if(full && !newCount) m_skillTab=previous;
+    return true;
 }

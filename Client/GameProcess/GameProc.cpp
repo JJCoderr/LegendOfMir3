@@ -2959,46 +2959,12 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
             case SM_WEIGHTCHANGED:
                 ReceiveProgression(tdm);
                 break;
-			case SM_SENDMYMAGIC:
-			{
-				delete[] m_xInterface.m_xSkillWnd.m_pstMyMagic; m_xInterface.m_xSkillWnd.m_pstMyMagic=NULL;
-				
-				m_xInterface.m_xSkillWnd.m_bMyMagicCnt = tdm.wSeries;
-				m_xInterface.m_xSkillWnd.m_pstMyMagic	= new CLIENTMAGICRCD[m_xInterface.m_xSkillWnd.m_bMyMagicCnt];
-				
-				ZeroMemory(m_xInterface.m_xSkillWnd.m_pstMyMagic, sizeof(CLIENTMAGICRCD) * m_xInterface.m_xSkillWnd.m_bMyMagicCnt);
-
-				char *pszMagic = (pszMsg + DEFBLOCKSIZE);
-				char *pszNextMagic;
-
-				for ( INT nLoop = 0; nLoop < m_xInterface.m_xSkillWnd.m_bMyMagicCnt; nLoop++ )
-				{
-					if (pszNextMagic = strchr(pszMagic, '/'))
-					{
-						*pszNextMagic = '\0';
-
-						fnDecode6BitBuf(pszMagic, (char*)&m_xInterface.m_xSkillWnd.m_pstMyMagic[nLoop], sizeof(CLIENTMAGICRCD));
-
-						pszMagic = pszNextMagic + 1;
-					}
-				}
-
-				break;
-			} 
-			case SM_MAGIC_LVEXP:
-			{
-				for ( INT nLoop = 0; nLoop < m_xInterface.m_xSkillWnd.m_bMyMagicCnt; nLoop++ )
-				{
-					if ( m_xInterface.m_xSkillWnd.m_pstMyMagic[nLoop].stStdMagic.wMagicID == tdm.nRecog )
-					{
-						m_xInterface.m_xSkillWnd.m_pstMyMagic[nLoop].nCurrTrain	= MAKELONG(tdm.wTag, tdm.wSeries);
-						m_xInterface.m_xSkillWnd.m_pstMyMagic[nLoop].bLevel		= tdm.wParam;
-
-						break;
-					}
-				}
-				break;
-			}
+            case SM_SENDMYMAGIC:
+            case SM_ADDMAGIC:
+            case SM_MAGIC_LVEXP:
+            case SkillWire::DeleteMessage:
+                m_xInterface.m_xSkillWnd.Receive(tdm,pszMsg+DEFBLOCKSIZE);
+                break;
             case SM_BAGITEMS:
                 if(m_xInterface.m_xInventoryWnd.ReceiveBagRecords(pszMsg+DEFBLOCKSIZE,tdm.wSeries))
                     m_xInterface.m_xInventoryWnd.CheckItemPos(m_xMyHero.m_szName);
@@ -3125,21 +3091,6 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 						m_xInterface.m_xInventoryWnd.AddBeltItem(m_xInterface.m_stCommonItem.xItem, m_xInterface.m_stCommonItem.xItem.m_shCellNum, TRUE);
 				}
 				ZeroMemory(&m_xInterface.m_stCommonItem, sizeof(COMMONITEMSET));
-				break;
-			}
-			case SM_ADDMAGIC:
-			{
-				m_xInterface.m_xSkillWnd.m_bMyMagicCnt++;
-				CLIENTMAGICRCD* pstMagicRCD;
-				pstMagicRCD = new CLIENTMAGICRCD[m_xInterface.m_xSkillWnd.m_bMyMagicCnt];
-
-				memcpy(pstMagicRCD, m_xInterface.m_xSkillWnd.m_pstMyMagic, sizeof(CLIENTMAGICRCD)*(m_xInterface.m_xSkillWnd.m_bMyMagicCnt-1));
-
-				fnDecode6BitBuf(&pszMsg[_DEFBLOCKSIZE], (char*)&pstMagicRCD[m_xInterface.m_xSkillWnd.m_bMyMagicCnt-1], sizeof(CLIENTMAGICRCD));
-
-				delete[] m_xInterface.m_xSkillWnd.m_pstMyMagic; m_xInterface.m_xSkillWnd.m_pstMyMagic=NULL;
-
-				m_xInterface.m_xSkillWnd.m_pstMyMagic = pstMagicRCD;
 				break;
 			}
 			case SM_TAKEON_OK:

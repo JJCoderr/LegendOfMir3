@@ -1,5 +1,6 @@
 #pragma once
 #include "SkillLayout.h"
+#include "SkillWire.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -27,7 +28,7 @@ typedef struct tagSTANDARDMAGIC
 
 typedef struct tagCLIENTMAGICRCD
 {
-	INT				nCurrTrain;
+	DWORD				nCurrTrain;
 	CHAR			bUseKey;
 	BYTE			bLevel;
 	STANDARDMAGIC	stStdMagic;
@@ -54,6 +55,10 @@ public:
     void BindMagic(int id,BYTE key);
     static BYTE LegacyKey(int key) { return BYTE(key<=9?'0'+key:'A'+key-10); }
     static int KeyNumber(BYTE key) { return key>='1' && key<='9'?key-'0':key>='A' && key<='C'?key-'A'+10:0; }
+    std::array<BYTE,SkillWire::ShortcutCount> m_shortcuts={};
+    bool Receive(const _TDEFAULTMESSAGE& header,const char* encoded);
+    void UpdateShortcut(const CLIENTMAGICRCD& record,bool full);
+    BYTE Shortcut(int slot) const { return m_shortcuts[slot]; }
     BYTE m_bMyMagicCnt=0;
     LPCLIENTMAGICRCD m_pstMyMagic=nullptr;
     int m_skillTab=0, m_skillScroll=0, m_skillPressed=-1;

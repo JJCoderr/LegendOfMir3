@@ -751,8 +751,7 @@ VOID CInterface::ShowMagicKey()
     if (!m_bShowKey) return;
     for (int index=0;index<12;++index) {
         const int x=40*(index+index/4);
-        if (const auto skill=m_xSkillWnd.GetMagicByKey(CSkillWnd::LegacyKey(index+1))) {
-            const int id=skill->stStdMagic.wMagicID&255;
+        if (const int id=m_xSkillWnd.Shortcut(index)) {
             if (id) DrawSelectionFrame(g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON],999+id,x,2,SelectionBlend::Alpha,false,200);
         }
         DrawSelectionFrame(*m_pxInterImg,1450+index,x-13,-11,SelectionBlend::Alpha,false,150,nullptr,150);

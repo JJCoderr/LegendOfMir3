@@ -1292,3 +1292,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 原音效14222已请求，当前SoundList.wwl没有映射，无法验收可听输出。运行目录缺失MInfo已从原资源复制；部署需此文件。
 - clean Client87/87及全部七目标通过；新增15项+相关60项共75项全1。191 progression、192 level-tail截图out/progression.png、level-tail.png已检查；下一空闲193。
 - 文档Client/docs/progression-evidence.md。预览特效固定两屏幕位置便于检查，实服实际地图投影；夜间实景/全部移动边界/实服时序仍待验证，目标未完成。
+
+### 原生技能列表与快捷栏协议接入（2026-11-17）
+- 替换GameProc旧裸解码/增添分支：CSkillWnd::Receive接211/210/212/640，固定74字节独立分段，计数低BYTE，先验证再替换，尾余文规则按Godot/MIR3。
+- 独立12槽低BYTE技能ID表用于HUD/按键菜单，保留全量/删除不清表、新增A不绑定差异；退出角色清理。BindMagic同步表并沿用1008先取消后设置。熟练度DWORD完整显示，不再变负。
+- clean Client87/87与七目标构建通过；12新增+69相关回归共81项全1，图标/标记各12帧存在。193 skill-wire、194 skill-wire-progress截图out/skill-wire-list.png、skill-wire-progress.png已核对；下一空闲195。
+- 文档Client/docs/skill-wire-evidence.md。实际施法GetMagicByKey仍沿用当前CLIENT查记录；完整加密连接、服务器技能记录及施法/消耗/战斗不在本批验证范围，目标继续。
