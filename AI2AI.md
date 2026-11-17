@@ -1650,3 +1650,9 @@ Interface鼠标按下/抬起/移动优先模态，键盘模态先于行会编辑
 - ChatEditProc按_CHAR_SEL_PROC统一转发控制键，创建空Enter不隐藏框、Escape/Tab不夺焦；删除Space执行选中按钮。CharacterProcess增加HasNotice只读查询。
 - 新增7项原生EDIT消息检查，姓名19+角色交互15+选角弹窗23+登录27+游戏模态27=111通过。七目标构建out/selection-editor-build.log；6页截图out/selection-editor，中文创建/删除确认已查看。自启预览全停。
 - 无新预览编号，下一310。整体GUI仍在核查，真实服务器创建/删除未联调。
+
+
+## 2026-11-17 游戏共用输入字节边界
+- GameProc原EN_CHANGE仅处理NPC输入；现统一共用ChatEdit的Changed，实现普通90字节限制，保留中文边界与编辑后缀，NPC自定义限制不变。
+- 新310聊天中文/311组队中文/312行会成员移除中文截图；下一313。out/game-input-boundary三图已查看。行会夹具最初误用组队action3，已改4并重跑，生产代码未再改。
+- 输入11+建组5+行会编辑17+音效15+键盘34+模态27+NPC密码10=119检查通过。七目标构建game-input-boundary-final.log通过，9页新鲜截图，自启预览全停。数字框测试只验证容量，非业务接受中文数值。

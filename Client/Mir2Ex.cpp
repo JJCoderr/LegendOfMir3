@@ -1220,6 +1220,34 @@ public:
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
         }
+        if(groupPanel>=310 && groupPanel<=312) {
+            auto& ui=g_xGameProc.m_xInterface;const HWND edit=g_xChatEditBox.GetSafehWnd();
+            constexpr int GroupCreateDialog=1,GuildRemoveMemberDialog=4;
+            FILE* report=fopen("game-input-boundary-check.txt","wb");
+            const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+            const auto text=[&](){char value[256]={};GetWindowTextA(edit,value,sizeof(value));return std::string(value);};
+            const auto insert=[&](const std::string& value){SendMessageA(edit,EM_REPLACESEL,TRUE,(LPARAM)value.c_str());};
+            std::string chinese;for(int i=0;i<50;++i) chinese+="中";
+            g_xChatEditBox.SetLimitText(90);SetWindowTextA(edit,"");ShowWindow(edit,SW_SHOW);SetFocus(edit);
+            insert(chinese);check("chat_chinese_90_bytes",text()==chinese.substr(0,90));
+            SetWindowTextA(edit,std::string(89,'A').c_str());SendMessage(edit,EM_SETSEL,45,45);insert("中");
+            check("chat_overflow_preserves_suffix",text()==std::string(89,'A'));
+            SetWindowTextA(edit,std::string(88,'A').c_str());SendMessage(edit,EM_SETSEL,44,44);insert("中");
+            check("chat_exact_fit_preserves_suffix",text()==std::string(44,'A')+"中"+std::string(44,'A'));
+            const int actions[]={GroupCreateDialog,GuildRemoveMemberDialog,TradeWire::QuantityDialog,MailLayout::GoldDialogAction,ConsignmentLayout::PriceDialog,SiegeLayout::LoadDialog};
+            const char* names[]={"group_limit","guild_limit","trade_limit","mail_gold_limit","sale_price_limit","siege_load_limit"};
+            for(int i=0;i<6;++i) {
+                ui.OpenNameDialog(actions[i]);insert(chinese);check(names[i],text()==chinese.substr(0,90));
+                ui.FinishNotice(CLICK_NO,false);
+            }
+            ui.m_xNPCWnd.prompt="Password";ui.m_xNPCWnd.promptCommand="@@*6_enter_stgpasswd";ui.OpenNameDialog(7);
+            insert(chinese);check("npc_custom_limit",text()==chinese.substr(0,6));ui.FinishNotice(CLICK_NO,false);
+            ui.OpenNameDialog(GroupCreateDialog);insert(chinese);check("limit_restored_after_npc",text()==chinese.substr(0,90));ui.FinishNotice(CLICK_NO,false);
+            if(report) fclose(report);
+            if(groupPanel==310) {ui.LayoutChat();ShowWindow(edit,SW_SHOW);SetFocus(edit);SetWindowTextA(edit,"你好，传奇世界！");}
+            else {ui.m_xGuildWnd.m_name="传奇行会";ui.OpenNameDialog(groupPanel==311?GroupCreateDialog:GuildRemoveMemberDialog);SetWindowTextA(edit,"传奇勇士");}
+            mouse={790,430};capturePath=groupPanel==310?"chat-chinese-input.bmp":groupPanel==311?"group-chinese-input.bmp":"guild-chinese-input.bmp";
+        }
         if(groupPanel>=304 && groupPanel<=306) {
             modalPointerPreview=groupPanel;
             auto& ui=g_xGameProc.m_xInterface;
@@ -3758,6 +3786,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=creation-name-ascii")==0 ? CharacterInteractionPreview::NameAscii :
         strcmp(lpCmdLine,"--preview=creation-name-chinese")==0 ? CharacterInteractionPreview::NameChinese :
         strcmp(lpCmdLine,"--preview=creation-name-restored")==0 ? CharacterInteractionPreview::NameRestored :
+        strcmp(lpCmdLine,"--preview=chat-chinese-input")==0 ? 310 :
+        strcmp(lpCmdLine,"--preview=group-chinese-input")==0 ? 311 :
+        strcmp(lpCmdLine,"--preview=guild-chinese-input")==0 ? 312 :
         strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
         strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
         strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :

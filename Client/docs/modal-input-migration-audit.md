@@ -41,3 +41,14 @@
 新增9项：无按下释放、移出再移回、跨按钮释放、鼠标不改YES/NO键盘选择、键盘取消、成对取消、单按钮提示移出与成对确认。加模态27、密码10、退出30、音效15，共91检查通过。七目标构建通过out/modal-pointer-final.log；9页预览包含选角删除与寄售确认，所有自启进程已停。
 
 新增304 modal-button-pressed、305 modal-button-left、306 modal-button-returned，下一307。截图在out/modal-pointer。首次截图受窗口显示时的真实鼠标移动影响，按下态被清除；已在预览捕获前重放对应原生接口事件，重跑三态。查看按下与移回图，像素差仅在按钮范围(262,301)-(339,331)，移回图恢复普通按钮。最后修改仅预览夹具，其他生产回归无需重跑。真实服务器流程仍留后。
+
+
+## 2026-11-17 游戏共用编辑框字节限制
+
+发现GameProc的EN_CHANGE仅对NPC输入(action7)调用Changed；聊天与其他共用输入框仍按Windows字符数限制。参考ChatInputSpec普通90字节，NPC提示可覆盖。现统一处理共用EDIT的EN_CHANGE，沿用现有LimitAnsiEdit，不截断中文，不丢失编辑后缀。
+
+新增11项：聊天中文90字节、超限插入保留后缀、恰好容纳中文保留后缀，组队/行会移除/交易数量/邮件金额/寄售价格/攻城装填六种输入限制、NPC自定义6字节、退出NPC恢复90字节。金额类检查只测文本输入容量，不代表允许中文数值提交。
+
+新增310 chat-chinese-input、311 group-chinese-input、312 guild-chinese-input；下一313。三张填入中文截图out/game-input-boundary已查看。初次行会夹具误用组队action3，截图发现后改为行会成员移除action4并重跑三态；生产实现无再次变化。
+
+七目标构建out/game-input-boundary-final.log通过。输入11+建组5+行会编辑17+音效15+键盘34+模态27+NPC密码10=119项通过（音效voiceCount另计）。共9页新鲜截图，所有自启预览停止。真实服务器联调仍留后。
