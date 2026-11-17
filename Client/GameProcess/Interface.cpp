@@ -558,6 +558,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
         panel->hovered=hoveredWindow==panel->m_nID?panel->RowAt(ptMousePos):-1;
         panel->SyncEditors(IsTopWindow(panel->m_nID) && !m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive && !m_xStoreWnd.m_bActive && !m_xNPCWnd.m_bActive);
     }
+    m_xSiegeWnd.ShowEntry();
     ShowWndList();
     m_minimap.player={g_xGameProc.m_xMyHero.m_wPosX,g_xGameProc.m_xMyHero.m_wPosY};
     m_minimap.showMonsters=m_xOptionWnd.m_values[7];
@@ -1507,6 +1508,8 @@ BOOL CInterface::IsTopWindow(INT nID)
 BOOL CInterface::OnLButtonDown(POINT ptMouse)
 {
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(0,ptMouse); return TRUE; }
+    const RECT siegeEntry=m_xSiegeWnd.EntryBounds();
+    if(!m_xMsgBox.IsActive() && GetWindowInMousePos(ptMouse)==-1 && PtInRect(&siegeEntry,ptMouse)) {m_xSiegeWnd.entryPressed=true;return TRUE;}
     if (!m_xMsgBox.IsActive() && GetWindowInMousePos(ptMouse)==_WND_ID_MINIMAP && m_minimap.Pointer(0,ptMouse,(GetKeyState(VK_CONTROL)&0x8000)!=0)) {m_bMoveFocusedWnd=FALSE;return TRUE;}
     if (!m_xMsgBox.IsActive() && GetWindowInMousePos(ptMouse)==-1 && PortraitEntryHit(ptMouse)) { m_portraitEntryPressed=true; return TRUE; }
     if (!m_xMsgBox.IsActive() && PtInRect(&m_xSkillWnd.m_keyMenu,ptMouse) && GetWindowInMousePos(ptMouse)==_WND_ID_SKILL) {
@@ -1788,6 +1791,11 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
     }
     if (m_xNPCWnd.closePressed || m_xNPCWnd.arrowPressed) { m_xNPCWnd.OnLButtonUp(ptMouse); return TRUE; }
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(2,ptMouse); return TRUE; }
+    if(!m_xMsgBox.IsActive() && m_xSiegeWnd.entryPressed) {
+        m_xSiegeWnd.entryPressed=false;const RECT area=m_xSiegeWnd.EntryBounds();
+        if(GetWindowInMousePos(ptMouse)==-1 && PtInRect(&area,ptMouse)) {g_xSound.PlayLobbyEffect("105.wav");WindowActivate(SiegeLayout::WindowId);}
+        return TRUE;
+    }
     if(!m_xMsgBox.IsActive() && m_xSiegeWnd.captured) {m_xSiegeWnd.Pointer(2,ptMouse);if(!m_xSiegeWnd.m_bActive) DeleteWindowToList(SiegeLayout::WindowId);return TRUE;}
     if(!m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive) for(auto* panel:{&m_xConsignmentWnd,&m_xConsignmentRegistration}) if(panel->captured) {
         panel->Pointer(2,ptMouse);if(!panel->m_bActive) DeleteWindowToList(panel->m_nID);return TRUE;
@@ -2269,6 +2277,10 @@ int CInterface::ButtonHintAt(POINT point,POINT& anchor)
         if (!PtInRect(&hit,point)) return 0;
         anchor={hit.right,hit.bottom}; return message;
     };
+    const RECT siegeEntry=m_xSiegeWnd.EntryBounds();
+    if(GetWindowInMousePos(point)==-1 && !m_xSiegeWnd.entryPressed && PtInRect(&siegeEntry,point)) {
+        anchor={siegeEntry.right,siegeEntry.bottom};return SiegeLayout::EntryCaption;
+    }
     switch (GetWindowInMousePos(point)) {
     case SiegeLayout::WindowId:return m_xSiegeWnd.HintAt(point,anchor);
     case ConsignmentLayout::BrowserId:case ConsignmentLayout::RegistrationId: {

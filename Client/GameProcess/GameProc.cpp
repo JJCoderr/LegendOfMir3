@@ -267,6 +267,7 @@ VOID CGameProcess::LoadMapChanged(CHAR* szMap)
 {
 	m_xMap.LoadMapData(szMap);
     m_xInterface.m_minimap.MapChanged();
+    m_xInterface.m_xSiegeWnd.ClearObjects();
     m_xInterface.m_targetDisplay.Clear();
 
 	ZeroMemory(m_stMemMappedID, sizeof(MEMMAPPEDID)*_VIEW_CELL_X_COUNT* _VIEW_CELL_Y_COUNT);
@@ -2869,6 +2870,20 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
                 m_xInterface.m_targetDisplay.ApplyAttributes(DWORD(tdm.nRecog),tdm.wParam,tdm.wTag,body,length);
                 break;
             }
+            case SiegeLayout::ObjectPositionMessage:
+                m_xInterface.m_xSiegeWnd.ReceiveObject(DWORD(tdm.nRecog),POINT{tdm.wParam,tdm.wTag});break;
+            case SiegeLayout::ControlMessage:
+            {
+                char body[8192]={};
+                const int length=fnDecode6BitBuf(pszMsg+DEFBLOCKSIZE,body,sizeof(body)-1);
+                body[length]=0;
+                m_xInterface.m_xSiegeWnd.ReceiveControl(DWORD(tdm.nRecog),tdm.wParam,body);
+                break;
+            }
+            case SiegeLayout::StatusMessage:
+                m_xInterface.m_xSiegeWnd.ReceiveStatus(DWORD(tdm.nRecog));break;
+            case SiegeLayout::ReleaseMessage:
+                m_xInterface.m_xSiegeWnd.ReleaseControl();break;
             case 710: // MIR3 minimap reply, one-based archive index
                 m_xInterface.m_minimap.Receive(tdm.wParam,GetTickCount());
                 break;
@@ -4051,6 +4066,7 @@ VOID CGameProcess::OnSvrMsgNewMap(_TDEFAULTMESSAGE	*ptdm, char *pszMapName)
 	m_xMap.SetStartViewTile(m_xMyHero.m_wPosX - _GAPY_TILE_CHAR_MAP, m_xMyHero.m_wPosY - _GAPY_TILE_CHAR_MAP);
 	m_xMap.LoadMapData(szMapName);
     m_xInterface.m_minimap.MapChanged();
+    m_xInterface.m_xSiegeWnd.ClearObjects();
     m_xInterface.m_targetDisplay.Clear();
 
 	switch ( m_bFogState )

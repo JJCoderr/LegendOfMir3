@@ -1870,6 +1870,20 @@ public:
                 const bool loaded=panel.requests.size()==4 && panel.requests.back().quantity==10 && !ui.m_stCommonItem.bSetted && ui.m_xInventoryWnd.m_stInventoryItem[0].bSetted;
                 ui.OnKeyDown('P',0);const bool shortcut=!panel.m_bActive;ui.OnKeyDown('P',0);
                 if(FILE* report=fopen("siege-gui-check.txt","wb")) {fprintf(report,"hit=%d selected=%d excluded=%d attack=%d move=%d modal=%d cancel=%d limit=%d loaded=%d shortcut=%d\n",hit,selected,excluded,attack,move,modal,cancel,limit,loaded,shortcut);fclose(report);}
+                panel.ReleaseControl();panel.ClearObjects();
+                panel.ReceiveObject(7,POINT{130,140});panel.ReceiveControl(MAKELONG(12,34),1,"engine\t7");
+                const bool before=panel.controlled && panel.objectPresent && panel.objectCell.x==130 && panel.firstValue==12 && panel.secondValue==34;
+                panel.ReceiveStatus(MAKELONG(56,78));const bool status=panel.firstValue==56 && panel.secondValue==78;
+                panel.ReceiveControl(MAKELONG(1,2),2,"engine\t8");const bool absent=!panel.objectPresent;
+                panel.ReceiveObject(8,POINT{150,160});const bool after=panel.objectPresent && panel.objectCell.y==160;
+                const RECT entry=panel.EntryBounds();const POINT click={entry.left+2,entry.top+2};POINT anchor={};
+                const bool hint=ui.ButtonHintAt(click,anchor)==EntryCaption;
+                ui.OnLButtonDown(click);ui.OnLButtonUp(click);const bool opened=panel.m_bActive;
+                panel.ReleaseControl();const bool released=!panel.controlled && !panel.m_bActive && IsRectEmpty(&panel.m_rcWnd)==FALSE;
+                const RECT hiddenEntry=panel.EntryBounds();const bool hidden=IsRectEmpty(&hiddenEntry)!=FALSE;
+                panel.ClearObjects();panel.ReceiveControl(0,1,"engine\t8");const bool cleared=!panel.objectPresent;
+                panel.ReceiveObject(8,POINT{140,140});ui.WindowActivate(WindowId);mouse=click;
+                if(FILE* report=fopen("siege-state-check.txt","wb")) {fprintf(report,"before=%d status=%d absent=%d after=%d hint=%d opened=%d released=%d hidden=%d cleared=%d\n",before,status,absent,after,hint,opened,released,hidden,cleared);fclose(report);}
                 capturePath="siege-checks.bmp";
             }
         }

@@ -8,8 +8,11 @@ constexpr int TextColor=0x64c8f8, InnerColor=0x6464c8, OuterColor=3289850;
 constexpr int CloseCaption=1052, AttackCaption=4300, WaitCaption=4301,
     MoveCaption=4302, RangeCaption=4303, LoadCaption=4304;
 constexpr int AttackMessage=1120, MoveMessage=1121, WaitMessage=1122;
+constexpr int ObjectPositionMessage=1312;
 constexpr int ControlMessage=1350, StatusMessage=1351, ReleaseMessage=1353;
 constexpr int TargetMarker=1599;
+constexpr int HudBackground=1160,EntryNormal=1570,EntryPressed=1572,EntryCaption=2645;
+constexpr int EntryX=757,EntryAboveHud=20,HudBottom=601;
 constexpr RECT FirstValue={14,22,90,37}, SecondValue={100,22,180,37};
 constexpr RECT MapArea={6,65,186,250};
 constexpr int MapWidth=180, MapHeight=150;

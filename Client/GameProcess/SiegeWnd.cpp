@@ -10,9 +10,9 @@ void CSiegeWnd::Create(CWHWilImageData* image)
 }
 void CSiegeWnd::Destroy()
 {
-    controlled=objectPresent=captured=dragging=false;objectId=0;
+    controlled=objectPresent=captured=dragging=entryPressed=false;objectId=0;
     firstValue=secondValue=style=0;pressed=-1;objectCell=target={};requests.clear();
-    CGameWnd::Destroy();
+    objects.clear();CGameWnd::Destroy();
 }
 void CSiegeWnd::Close(bool clearTarget)
 {
@@ -140,4 +140,47 @@ bool CSiegeWnd::SubmitLoad(const char* text)
     request.item=held.xItem;request.quantity=quantity;
     if(!ui.m_xInventoryWnd.AddInvenItem(held.xItem,held.xItem.m_shCellNum,TRUE)) return false;
     requests.push_back(request);held.bSetted=FALSE;return true;
+}
+
+void CSiegeWnd::ReceiveStatus(DWORD values)
+{
+    firstValue=LOWORD(values);secondValue=HIWORD(values);
+}
+void CSiegeWnd::ReceiveControl(DWORD values,WORD rangeStyle,const char* description)
+{
+    const char* separator=strchr(description,'\t');
+    if(separator) objectId=DWORD(std::strtoul(separator+1,nullptr,10));
+    ReceiveStatus(values);style=rangeStyle;controlled=true;
+    const auto found=objects.find(objectId);objectPresent=found!=objects.end();
+    if(objectPresent) objectCell=found->second;
+}
+void CSiegeWnd::ReleaseControl()
+{
+    controlled=false;objectPresent=false;entryPressed=false;
+    if(m_bActive) g_xGameProc.m_xInterface.WindowActivate(SiegeLayout::WindowId);
+}
+
+void CSiegeWnd::ReceiveObject(DWORD id,POINT cell)
+{
+    objects[id]=cell;
+    if(controlled && id==objectId) {objectCell=cell;objectPresent=true;}
+}
+void CSiegeWnd::ClearObjects()
+{
+    objects.clear();objectPresent=false;
+}
+
+RECT CSiegeWnd::EntryBounds() const
+{
+    using namespace SiegeLayout;
+    if(!controlled || !m_pxWndImage->NewSetIndex(HudBackground)) return {};
+    const int y=HudBottom-m_pxWndImage->m_lpstNewCurrWilImageInfo->shHeight-EntryAboveHud;
+    if(!m_pxWndImage->NewSetIndex(EntryNormal)) return {};
+    const auto image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
+    return {EntryX,y,EntryX+image.shWidth,y+image.shHeight};
+}
+void CSiegeWnd::ShowEntry()
+{
+    const RECT area=EntryBounds();if(IsRectEmpty(&area)) return;
+    DrawSelectionFrame(*m_pxWndImage,entryPressed?SiegeLayout::EntryPressed:SiegeLayout::EntryNormal,area.left,area.top,SelectionBlend::Normal,false);
 }
