@@ -3941,6 +3941,7 @@ bool CGameProcess::ConfirmExit(int action,DWORD now)
     if(g_bProcState!=_GAME_PROC || m_exitTransition.active || (action!=ExitFlow::ProgramDialog && action!=ExitFlow::CharacterDialog) || !CheckExitAllowed(now)) return false;
     if(action==ExitFlow::ProgramDialog) {SendMessage(g_xMainWnd.GetSafehWnd(),WM_DESTROY,0,0);return true;}
     if(!g_xChrSelProc.PrepareReturn()) return false;
+    m_xMyHero.m_pendingAction.reset();
     g_xClientSocket.SendQueryMsg(ExitFlow::Logout);
     m_xInterface.m_xInventoryWnd.SaveItemPos(m_xMyHero.m_szName);
     m_exitTransition.Begin();return true;

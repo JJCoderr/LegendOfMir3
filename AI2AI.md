@@ -1893,3 +1893,9 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 像素回读复现：WHWilTexture枚举16位格式，但CreateSurface的DDSD_PIXELFORMAT被注释，实际返回32位00ff0000/0000ff00/000000ff；上传仍按WORD逐像素复制，导致颜色/布局错乱。恢复纹理及中间面的格式标志，明确选择RGB565，上传前清零透明区域，并支持C1/C2/C3有色游程。
 - 增加--check-arrival-textures：使用真实DirectDraw纹理与独立WIL解码像素比较，不截图。修复前10帧rgb565=0；修复后10帧rgb565=1、透明像素正确、mismatch=0，退出0。报告out/debug/arrival-texture-check.txt。
 - Release构建成功，out/debug/Mir2Ex.exe已更新。out/arrival-live-check.py隔离实测登录进图并在入场播放后保持存活，目录out/native-live-siyddt4d。未完成原版入场特效全调用链反编译，不把资源核对写成完整IDA验收。
+
+
+## 2026-11-17 修复返回选角过渡仍发送移动
+- out/native-live-oo8w1t1z日志明确显示1009退出消息后仍有3011走路请求，导致客户端快照460,261与数据库460,262不同。DefMainWndProc只拦截窗口消息，但角色UpdateMotionState仍轮询鼠标，且动作队列可能尚有待发操作。
+- InputDelayed同时判断退出过渡，统一阻止鼠标轮询和动作入口；ConfirmExit在发送Logout前清空待发动作。保持场景过渡动画和网络接收。
+- Release构建通过。退出回归32项全通过，包括新增加的pending取消、轮询输入零发包。真实客户端out/native-live-_1yoqbtd验证移动、返回选角、重进与重登，客户端/SQLite位置均460,261；日志1009到选角重新连接之间无3011/3013。out/debug/Mir2Ex.exe已更新。

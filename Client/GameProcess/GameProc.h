@@ -142,7 +142,7 @@ public:
 
 	WORD					m_wInputDelayTime;
 	WORD					m_wCurrInputDelayTime;
-    bool InputDelayed() const { return m_wInputDelayTime>m_wCurrInputDelayTime; }
+    bool InputDelayed() const { return m_exitTransition.active || m_wInputDelayTime>m_wCurrInputDelayTime; }
     void StartInputDelay(WORD duration) { m_wInputDelayTime=duration;m_wCurrInputDelayTime=0; }
     void AdvanceInputDelay(int elapsed) {
         if(elapsed<=0 || !m_wInputDelayTime) return;

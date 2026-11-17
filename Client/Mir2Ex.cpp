@@ -2594,9 +2594,16 @@ public:
             sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);bind(receiver,(sockaddr*)&address,sizeof(address));int size=sizeof(address);getsockname(receiver,(sockaddr*)&address,&size);connect(sender,(sockaddr*)&address,sizeof(address));DWORD timeout=30;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));
             const SOCKET saved=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;
             ui.OpenExitDialog(CharacterDialog);ui.FinishNotice(CLICK_NO,false);char wire[128]={};check("cancel_no_packet",recv(receiver,wire,sizeof(wire),0)==SOCKET_ERROR);
+            hero.m_pendingAction=CMyHero::PendingLocalAction{};
             const bool accepted=game.ConfirmExit(CharacterDialog,GetTickCount());const int length=recv(receiver,wire,sizeof(wire)-1,0);_TDEFAULTMESSAGE packet={};if(length>2) fnDecodeMessage(&packet,wire+2);
             check("logout_wire",accepted && length==DEFBLOCKSIZE+3 && packet.wIdent==Logout && !packet.nRecog && !packet.wParam && !packet.wTag && !packet.wSeries);
             check("repeat_rejected",!game.ConfirmExit(CharacterDialog,GetTickCount()) && recv(receiver,wire,sizeof(wire),0)==SOCKET_ERROR);
+            check("logout_cancels_pending_action",!hero.m_pendingAction);
+            const POINT nextTile={hero.m_wPosX+1,hero.m_wPosY};
+            hero.SetMotionState(_MT_WALK,hero.m_bCurrDir,0,FALSE,const_cast<POINT*>(&nextTile),0);
+            hero.OnLButtonDown(POINT{448,240});hero.OnRButtonDown(POINT{448,240});
+            check("logout_blocks_polled_input",game.InputDelayed() && !hero.m_pendingAction && recv(receiver,wire,sizeof(wire),0)==SOCKET_ERROR);
+
             game.m_exitTransition={};g_xClientSocket.m_sockClient=saved;closesocket(sender);closesocket(receiver);
             g_bProcState=_CHAR_SEL_PROC;check("old_page_rejected",!game.ConfirmExit(CharacterDialog,GetTickCount()));g_bProcState=_GAME_PROC;
             CLoginNotice waiting;waiting.ShowMessageBox("Waiting",CLoginNotice::Waiting,0);check("waiting_keys",!waiting.OnKeyDown(VK_RETURN) && !waiting.OnKeyDown(VK_SPACE) && !waiting.OnKeyDown(VK_ESCAPE));waiting.OnButtonDown(POINT{300,310});check("waiting_mouse",!waiting.OnButtonUp(POINT{300,310}));
