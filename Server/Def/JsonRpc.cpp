@@ -26,6 +26,7 @@ void JsonRpc::Disconnect()
     connected = false;
     input.clear();
     output.clear();
+    pendingDeadline = 0;
 }
 void JsonRpc::PollRaw(void* context, Handler handler)
 {
@@ -80,23 +81,41 @@ void JsonRpc::PollRaw(void* context, Handler handler)
             if (!parse(body, handler(context, value.get("method").get<std::string>(), params.serialize())))
                 throw Error{-32603, "Internal error"};
             result = Json(Object{{"jsonrpc", Json(std::string("2.0"))}, {"id", id}, {"result", body}});
-        } catch (const Error& e) { result = error(id, e.code, e.message); }
+        } catch (const Pending&) { if (notification) return Json(); throw; }
+          catch (const Error& e) { result = error(id, e.code, e.message); }
           catch (const std::exception&) { result = error(id, -32603, "Internal error"); }
         return notification ? Json() : result;
     };
     Json response, value;
+    try {
     if (!parse(value, request)) response = error(Json(), -32700, "Parse error");
     else if (value.is<Array>()) {
         if (value.get<Array>().empty()) response = error(Json(), -32600, "Invalid Request");
         else {
             Array replies;
             for (const auto& entry : value.get<Array>()) {
-                const auto reply = call(entry);
+                Json reply;
+                try { reply = call(entry); }
+                catch (const Pending&) { reply = error(entry.get("id"), -32600, "Wait cannot be batched"); }
                 if (!reply.is<picojson::null>()) replies.push_back(reply);
             }
             if (!replies.empty()) response = Json(replies);
         }
     } else response = call(value);
+    } catch (const Pending& wait) {
+        if (!value.is<Object>() || !value.contains("id")) {
+            response = error(Json(), -32600, "Waiting requires an individual request with id");
+        } else {
+            const auto now = GetTickCount64();
+            if (!pendingDeadline) pendingDeadline = now + wait.timeoutMs;
+            if (now < pendingDeadline) {
+                input.insert(0, request + "\n");
+                return;
+            }
+            response = error(value.get("id"), -32001, "Wait timed out");
+        }
+    }
+    pendingDeadline = 0;
     if (!response.is<picojson::null>()) output = response.serialize() + "\n";
 }
 }

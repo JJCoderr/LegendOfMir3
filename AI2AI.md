@@ -1964,3 +1964,11 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 按用户要求移除919975字节/24765行的nlohmann json.hpp，换成PicoJSON v1.3.0单头文件26102字节/1010行（BSD-2-Clause许可保留在文件头），体积减少97.2%。来源https://github.com/kazuho/picojson/blob/v1.3.0/picojson.h；SHA256 5ddf7276d04926da7be243e7af49258e78cc27278ee9097ba45b942c7a6b5f9d。
 - JSON-RPC架构与方法保持不变；启用64位整数保证大整数请求ID精度，检查解析结束位置拒绝尾随内容。业务实现仍与解析库隔离。
 - Client/EIServer Release构建通过，真实两端各9项JSON测试全部通过，新增9007199254740993 ID、Unicode代理对/转义字符和尾随非法数据。构建日志out/jsonrpc-small-build.log。
+
+
+## 2026-11-18 真实客户端登录RPC与事件等待
+- ClientRpc新增session.login、session.select_server、session.enter、notice.dismiss；调用原登录动作、选服发送及选角业务方法，实际经过原网络编码/服务器/客户端接收，未用坐标输入或模拟网络客户端。抽出选服和进入角色方法供GUI与RPC共享；选择角色时立即同步g_szCharName，避免依赖渲染帧写回。
+- 主线程记录带递增序号的state/submitted事件，环形保存256条，events.wait接受after/timeout_ms；等待期间主循环继续处理网络和渲染，超时返回-32001，历史过期-32003，未来序号拒绝。操作返回submitted，不声称服务器已成功。当前事件尚未包含逐条网络收发包，后续协议覆盖还需补齐。
+- Client/Test/login.json覆盖密码错误及恢复、正常登录、通知确认、无效服务器/角色拒绝、选服、选角、进图，共13步；通用测试器增加await_state，经事件长轮询等待，不再按固定sleep或重复登录探测业务状态。
+- Client/EIServer Release构建通过。使用现有隔离fixture 3pjf0_jp，真实两端9项服务端RPC基础测试与13步客户端业务测试全部通过，单轮约5秒；日志out/rpc-login-runtime.log。测试进程结束，没有操作鼠标/截图。尚需独立fixture自动创建、全协议清单、角色创建删除及后续业务测试集；没有把局部通过当完整适配。
+- 已读取用户更新AGENTS.md：全部协议先经JSONRPC连通，最后统一UI调试；保留该用户修改未混入本提交。

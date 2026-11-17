@@ -53,6 +53,9 @@ public:
 	virtual VOID		OnConnectToServer();
 	virtual char*		OnMessageReceive(CHAR* pszMessage);
 
+    bool SubmitCredentials(const std::string& account, const std::string& password);
+    bool SelectServer(const std::string& name);
+    void DismissNotice();
     const char* DebugStage();
     bool HasNotice() { return m_xMsgBox.IsActive() != FALSE; }
 

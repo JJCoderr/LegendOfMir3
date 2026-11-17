@@ -1,0 +1,154 @@
+{
+  "role": "Client",
+  "cases": [
+    {
+      "name": "credentials ready",
+      "await_state": {
+        "scene": "login",
+        "stage": "credentials",
+        "connected": true
+      }
+    },
+    {
+      "name": "wrong password",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": "wrong password",
+        "method": "session.login",
+        "params": {
+          "account": "mirtest",
+          "password": "wrong"
+        }
+      },
+      "expect": {
+        "result.status": "submitted"
+      }
+    },
+    {
+      "name": "login rejected",
+      "await_state": {
+        "scene": "login",
+        "stage": "credentials",
+        "notice": true
+      }
+    },
+    {
+      "name": "dismiss rejection",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": "dismiss rejection",
+        "method": "notice.dismiss"
+      },
+      "expect": {
+        "result.status": "submitted"
+      }
+    },
+    {
+      "name": "login",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": "login",
+        "method": "session.login",
+        "params": {
+          "account": "mirtest",
+          "password": "test123"
+        }
+      },
+      "expect": {
+        "result.status": "submitted"
+      }
+    },
+    {
+      "name": "authenticated",
+      "await_state": {
+        "scene": "login",
+        "stage": "server_list",
+        "notice": true
+      }
+    },
+    {
+      "name": "dismiss billing",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": "dismiss billing",
+        "method": "notice.dismiss",
+        "params": {}
+      },
+      "expect": {
+        "result.status": "submitted"
+      }
+    },
+    {
+      "name": "unknown server rejected",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": "unknown server",
+        "method": "session.select_server",
+        "params": {
+          "name": "MissingServer"
+        }
+      },
+      "expect": {
+        "error.code": -32002
+      }
+    },
+    {
+      "name": "select server",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": "select server",
+        "method": "session.select_server",
+        "params": {
+          "name": "Mir3Local"
+        }
+      },
+      "expect": {
+        "result.status": "submitted"
+      }
+    },
+    {
+      "name": "roster ready",
+      "await_state": {
+        "scene": "character_select",
+        "waiting": false,
+        "notice": false
+      }
+    },
+    {
+      "name": "unknown character rejected",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": "unknown character",
+        "method": "session.enter",
+        "params": {
+          "name": "MissingRole"
+        }
+      },
+      "expect": {
+        "error.code": -32002
+      }
+    },
+    {
+      "name": "enter character",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": "enter character",
+        "method": "session.enter",
+        "params": {
+          "name": "MirProbe01"
+        }
+      },
+      "expect": {
+        "result.status": "submitted"
+      }
+    },
+    {
+      "name": "world ready",
+      "await_state": {
+        "scene": "world",
+        "map": "01",
+        "hp": 18
+      }
+    }
+  ]
+}

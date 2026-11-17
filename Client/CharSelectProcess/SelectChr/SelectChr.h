@@ -17,6 +17,7 @@ class CSelectChr : public CBMWnd
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// Functions
 public:
+    bool EnterCharacter(const std::string& name);
 	CSelectChr();
 	~CSelectChr();
 

@@ -18,6 +18,7 @@
 class CCharacterProcess: public CWHDefProcess  
 {
 public:
+    bool EnterCharacter(const std::string& name) { return !IsWaiting() && !HasNotice() && m_xSelectChr.EnterCharacter(name); }
     bool HasNotice() const { return m_xMsgBox.IsActive()!=FALSE; }
 						CCharacterProcess();
 	virtual				~CCharacterProcess();

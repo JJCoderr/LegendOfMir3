@@ -4595,6 +4595,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     while (TRUE)
     {
         debugState.Poll(mir3::ClientState);
+        if (rpc.Enabled()) mir3::ClientRpcTick();
         rpc.Poll(mir3::ClientRpc);
         if ( PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE) )
         {

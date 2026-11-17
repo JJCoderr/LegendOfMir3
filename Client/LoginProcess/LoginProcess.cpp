@@ -206,8 +206,7 @@ LRESULT CLoginProcess::OnKeyDown(WPARAM wParam,LPARAM lParam)
     if(m_Progress==PRG_TO_SELECT_CHR || m_xAvi.Opening()) return 0;
 	if (m_xMsgBox.IsActive()) {
 		if (wParam == VK_RETURN || wParam == VK_SPACE) {
-			m_xMsgBox.HideMessageBox();
-			if (m_Progress == PRG_LOGIN) m_xLogin.ResetPassword();
+            DismissNotice();
 		}
 		return 0;
 	}
@@ -293,7 +292,7 @@ LRESULT CLoginProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 			case PRG_SERVER_SELE:
 			{
 				const int selected=m_xSelectSrv.OnButtonUp(wParam,lParam);
-                if(selected && !m_offline) g_xClientSocket.OnSelectServer(m_xSelectSrv.m_ppxSrvBtn[selected-1]->szName);
+                if(selected) SelectServer(m_xSelectSrv.m_ppxSrvBtn[selected-1]->szName);
 				break;
 			}
 			case PRG_NEW_ACCOUNT:
@@ -1169,4 +1168,34 @@ void CLoginProcess::LoginAction(HRESULT action)
             PostMessage(g_xMainWnd.GetSafehWnd(),WM_CLOSE,0,0);
         }
     }
+}
+
+void CLoginProcess::DismissNotice()
+{
+    if (!m_xMsgBox.IsActive()) return;
+    m_xMsgBox.HideMessageBox();
+    if (m_Progress == PRG_LOGIN) m_xLogin.ResetPassword();
+}
+bool CLoginProcess::SubmitCredentials(const std::string& account, const std::string& password)
+{
+    if (m_Progress != PRG_LOGIN || m_xAvi.Opening() || HasNotice() ||
+        account.empty() || password.empty() || account.size() > LoginLayout::InputBytes ||
+        password.size() > LoginLayout::InputBytes) return false;
+    m_xLogin.m_values[0] = account;
+    m_xLogin.m_values[1] = password;
+    m_xLogin.m_editorVisible = false;
+    m_xLogin.SyncEditor();
+    LoginAction(CLogin::Submit);
+    return true;
+}
+bool CLoginProcess::SelectServer(const std::string& name)
+{
+    if (m_Progress != PRG_SERVER_SELE || HasNotice()) return false;
+    for (int i = 0; i < m_xSelectSrv.m_nSrvCount; ++i) {
+        if (name == m_xSelectSrv.m_ppxSrvBtn[i]->szName) {
+            if (!m_offline) g_xClientSocket.OnSelectServer(m_xSelectSrv.m_ppxSrvBtn[i]->szName);
+            return true;
+        }
+    }
+    return false;
 }

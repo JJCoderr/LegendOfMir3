@@ -203,7 +203,7 @@ HRESULT CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
 						{	m_nBlend = 0;
 							m_pxSList->MoveCurrentToTop();
 							m_pxSList->MoveNode(m_nSelectChr);
-							g_xClientSocket.OnSelChar(m_pxSList->GetCurrentData()->ChrName);
+							EnterCharacter(m_pxSList->GetCurrentData()->ChrName);
 							return RETURN_SELECT_START_BTN;
 						}
 						else
@@ -385,4 +385,22 @@ VOID CSelectChr::ShowChrInfo(VOID)
 VOID CSelectChr::CloseWnd(VOID)
 {
 	m_fIsActive = FALSE;
+}
+
+bool CSelectChr::EnterCharacter(const std::string& name)
+{
+    if (!m_fIsActive) return false;
+    m_pxSList->MoveCurrentToTop();
+    for (int i = 0; i < m_nChrCount; ++i) {
+        const auto role = m_pxSList->GetCurrentData();
+        if (name == role->ChrName) {
+            m_nSelectChr = i;
+            m_nBlend = 0;
+            lstrcpynA(g_szCharName, role->ChrName, sizeof(g_szCharName));
+            g_xClientSocket.OnSelChar(role->ChrName);
+            return true;
+        }
+        m_pxSList->MoveNextNode();
+    }
+    return false;
 }

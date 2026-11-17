@@ -5,6 +5,7 @@ import json
 import msvcrt
 import queue
 import threading
+import time
 from pathlib import Path
 from ctypes import wintypes
 
@@ -26,23 +27,42 @@ def run(suite_path, pid):
                 replies.put(EOFError('RPC pipe closed before a response'))
             except Exception as error:
                 replies.put(error)
-        for case in suite['cases']:
-            request = case.get('raw', json.dumps(case.get('request'), ensure_ascii=False))
+        def exchange(request):
             pipe.write((request + '\n').encode('utf-8'))
             reader = threading.Thread(target=read, daemon=True)
             reader.start()
             try:
-                response = replies.get(timeout=10)
+                response = replies.get(timeout=35)
             except queue.Empty:
                 ctypes.windll.kernel32.CancelIoEx(wintypes.HANDLE(msvcrt.get_osfhandle(pipe.fileno())), None)
                 reader.join(timeout=1)
-                raise TimeoutError(case['name'])
+                raise TimeoutError('RPC response')
             if isinstance(response, Exception): raise response
-            for key, expected in case['expect'].items():
+            return response
+        def matches(response, expected):
+            for key, value in expected.items():
                 actual = response
-                for part in key.split('.'):
-                    actual = actual[int(part)] if isinstance(actual, list) else actual[part]
-                assert actual == expected, (case['name'], key, expected, response)
+                try:
+                    for part in key.split('.'):
+                        actual = actual[int(part)] if isinstance(actual, list) else actual[part]
+                except (KeyError, IndexError, TypeError): return False
+                if actual != value: return False
+            return True
+        after = 0
+        for case in suite['cases']:
+            if 'await_state' in case:
+                deadline = time.monotonic() + 30
+                while True:
+                    response = exchange(json.dumps({'jsonrpc':'2.0','id':case['name'], 'method':'events.wait',
+                        'params':{'after':after,'timeout_ms':10000}}))
+                    assert 'result' in response, (case['name'], response)
+                    after = response['result']['sequence']
+                    states = [e['data'] for e in response['result']['events'] if e['kind']=='state']
+                    if states and matches(states[-1], case['await_state']): break
+                    assert time.monotonic() < deadline, (case['name'], response)
+            else:
+                response = exchange(case.get('raw', json.dumps(case.get('request'), ensure_ascii=False)))
+                assert matches(response, case['expect']), (case['name'], case['expect'], response)
             print('PASS:', suite['role'], case['name'], flush=True)
 
 if __name__ == '__main__':
