@@ -42,6 +42,7 @@ public:
 	VOID	Continue(INT nBufferIdx);
 
 	DWORD	Playing(VOID);
+    HRESULT GetVolume(LONG& volume) const;
 
 	HRESULT	SetCone( float x, float y, float z, DWORD InsideAngle, DWORD OutsideAngle, long OutsideVolume );
 	HRESULT Set3dProperties( DWORD Mode, float MinDistance, float MaxDistance, float VelX, float VelY, float VelZ );

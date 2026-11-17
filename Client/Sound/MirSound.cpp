@@ -384,15 +384,20 @@ void CMirSound::PlayUseItemEffect(BYTE mode)
     if (file) PlayLobbyEffect(file);
 }
 
-void CMirSound::PlayLobbyEffect(const char* file)
+bool CMirSound::PlayLobbyEffect(const char* file)
 {
-    if (!m_bPlay || !m_pSound->GetDS()) return;
+    if (!m_bPlay || !m_pSound->GetDS()) return false;
     m_lobbyEffect.Release();
-    if (SUCCEEDED(m_lobbyEffect.Load(m_pSound, file))) {
-        m_lobbyEffect.m_ID = 1;
-        m_lobbyEffect.SetVolume(m_lWavMaxVol);
-        m_lobbyEffect.Play(0);
-    }
+    if (FAILED(m_lobbyEffect.Load(m_pSound, file))) return false;
+    m_lobbyEffect.m_ID = 1;
+    m_lobbyEffect.SetVolume(m_lWavMaxVol);
+    return SUCCEEDED(m_lobbyEffect.Play(0));
+}
+
+HRESULT CMirSound::InspectInterfaceAudio(bool opening,DWORD& playing,LONG& volume)
+{
+    auto& buffer=opening?m_lobbyOpening:m_lobbyEffect;
+    playing=buffer.Playing();return buffer.GetVolume(volume);
 }
 
 void CMirSound::PlayRoleVoice(bool creation, int profession, int gender)
@@ -635,8 +640,7 @@ BOOL CMirSound::InitMirSound(HWND hWnd)
 	{
 		m_hWnd = hWnd;
 		m_pSound = new CSound;
-		m_pSound->Create(m_hWnd,TRUE);
-		return TRUE;
+		return SUCCEEDED(m_pSound->Create(m_hWnd,TRUE));
 	}
 	return FALSE;
 }

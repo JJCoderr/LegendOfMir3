@@ -721,3 +721,9 @@ VOID CSBuffer::Continue(INT nBufferIdx)
 		m_lpDSB[nBufferIdx]->Play(0, 0, 0);
 }
 
+
+HRESULT CSBuffer::GetVolume(LONG& volume) const
+{
+    if(!m_lpDSB || !m_lpDSB[0]) return DSERR_UNINITIALIZED;
+    return m_lpDSB[0]->GetVolume(&volume);
+}

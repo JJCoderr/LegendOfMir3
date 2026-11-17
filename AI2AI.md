@@ -1356,3 +1356,10 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 原版4815D0确为x+50/宽324px；48BF93直接GetTextExtentPoint32A，48BCAF直接TextOutA，没有内框剪裁或缩放。因此当前素材下的溢出不是遗漏裁剪；保留已确认原版行为，不凭视觉擅改宽度。证据out/server-notice-original-render.c。
 - 资源与原版完整运行画面的最终对应关系仍未实机验收；未改运行代码、未重复测试。复核并入上一公告功能提交。
 - 补充只读IDA会话950bec4e为VB启动器、a507abb4为MyMir3.dll，不是公告实现来源；主参考仍78ac321b。
+
+
+### 2026-11-17 GUI音效实际后端验证
+- InitMirSound改为返回DirectSound创建结果；PlayLobbyEffect改为bool，静音/无设备/缺文件/加载播放失败可识别。旧调用方资源及触发时机不变。
+- CSBuffer.GetVolume与CMirSound.InspectInterfaceAudio只读DirectSound GetVolume/GetStatus，用于实际缓冲验证，不是假调用计数。
+- 新预览212 interface-audio15项全1，覆盖按钮105、实际音量、静音恢复、缺资源、12职业性别语音、物品使用、Opening延迟1200+1/循环音量/停止；options-panel9项回归全1（含实际MP3播放/停止/恢复）。共24条件，12语音样本。
+- clean87/87、all109/109通过；out/interface-audio.png已查看。下一个空闲213。尚未扬声器录音或物理输出验收，不能说已听过实际音效。详情Client/docs/interface-audio-evidence.md。
