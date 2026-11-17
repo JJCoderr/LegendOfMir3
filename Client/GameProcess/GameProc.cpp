@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "MerchantServiceIds.h"
 #include "MailWire.h"
 #include "AbilityWire.h"
 #include "Common/Mir3HumanAppearance.h"
@@ -3341,6 +3342,17 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
             case SM_OPEN_REPAIR:
             case SM_STORAGE_OPEN:
                 if (tdm.nRecog) m_xInterface.m_xInventoryWnd.OpenService(tdm.nRecog,tdm.wIdent==SM_STORAGE_OPEN?3:tdm.wIdent==SM_SENDUSERSELL?2:1);
+                break;
+            case SM_USERSELLITEM_OK:
+            case SM_USERSELLITEM_FAIL:
+            case MerchantService::StackSaleOk:
+            case MerchantService::StackSaleFail:
+            case MerchantService::RepairOk:
+            case MerchantService::RepairFail:
+            case MerchantService::DepositOk:
+            case MerchantService::StorageFull:
+            case MerchantService::DepositFail:
+                if(!pszMsg[DEFBLOCKSIZE]) m_xInterface.m_xInventoryWnd.ReceiveService(tdm);
                 break;
             case SM_SENDBUYPRICE:
             case SM_REPAIR_QUOTE:

@@ -13,6 +13,7 @@
 
 #include "StdAfx.h"
 #include "ItemUseIds.h"
+#include "MerchantServiceIds.h"
 #include "ItemHintStyle.h"
 #include "Common/LoginMessages.h"
 #include "Common/LegacyPanel.h"
@@ -127,7 +128,7 @@ void CInventoryWnd::SubmitServiceQuantity(const char* text)
 {
     long quantity=0;
     if (!strcmp(text,"*")) {
-        for (const auto& entry:m_stInventoryItem) if (entry.bSetted && entry.xItem.m_stItemInfo.nMakeIndex==service.item && service.name==entry.xItem.m_stItemInfo.stStdItem.szName) { quantity=entry.xItem.m_count; break; }
+        for (const auto& entry:m_stInventoryItem) if (entry.bSetted && entry.xItem.m_stItemInfo.nMakeIndex==service.item && service.name==entry.xItem.Name()) { quantity=entry.xItem.m_count; break; }
     } else quantity=strtol(text,NULL,10);
     if (quantity>0 && quantity<=65535) ConfirmService(int(quantity));
 }
@@ -151,7 +152,7 @@ void CInventoryWnd::SelectServiceItem(int index)
 {
     if (index<0 || !m_stInventoryItem[index].bSetted || service.phase==ServicePhase::Quoting || service.phase==ServicePhase::Paying) return;
     const auto& record=m_stInventoryItem[index].xItem.m_stItemInfo;
-    service.item=record.nMakeIndex; service.name=record.stStdItem.szName; service.price=0;
+    service.item=record.nMakeIndex; service.name=m_stInventoryItem[index].xItem.Name(); service.price=0;
     service.stack=m_stInventoryItem[index].xItem.m_stackMode>=2;
     service.phase=service.mode==3?ServicePhase::Quoted:ServicePhase::Quoting;
     if (service.mode!=3) {
@@ -170,7 +171,7 @@ void CInventoryWnd::ConfirmService(int quantity)
 {
     if (!service.actor || service.phase!=ServicePhase::Quoted) return;
     const CItem* current=nullptr;
-    for (const auto& entry:m_stInventoryItem) if (entry.bSetted && entry.xItem.m_stItemInfo.nMakeIndex==service.item && service.name==entry.xItem.m_stItemInfo.stStdItem.szName) { current=&entry.xItem; break; }
+    for (const auto& entry:m_stInventoryItem) if (entry.bSetted && entry.xItem.m_stItemInfo.nMakeIndex==service.item && service.name==entry.xItem.Name()) { current=&entry.xItem; break; }
     if (!current) { service.phase=ServicePhase::Choosing; service.price=0; return; }
     if (service.mode!=1 && current->m_stackMode>=2 && current->m_count>1 && !quantity) {
         g_xGameProc.m_xInterface.OpenNameDialog(service.mode==3?11:10); return;
@@ -1214,14 +1215,18 @@ void CInventoryWnd::UpdateGold(UINT balance)
     current=balance;
 }
 
-void CInventoryWnd::UpdateStackCount(DWORD instance,WORD quantity)
+void CInventoryWnd::UpdateStackCount(DWORD instance,WORD quantity,bool removeWhenEmpty)
 {
     auto& ui=g_xGameProc.m_xInterface;auto& held=ui.m_stCommonItem;auto& quick=ui.m_xQuickWnd;
-    if(held.bSetted && quick.heldSlot<0 && DWORD(held.xItem.m_stItemInfo.nMakeIndex)==instance)
+    if((!removeWhenEmpty || quantity) && held.bSetted && quick.heldSlot<0 && DWORD(held.xItem.m_stItemInfo.nMakeIndex)==instance)
         held.xItem.SetCount(quantity);
     for(auto& slot:m_stInventoryItem) {
         if(!slot.bSetted || DWORD(slot.xItem.m_stItemInfo.nMakeIndex)!=instance) continue;
         auto& item=slot.xItem;const char* name=item.Name();
+        if(!quantity && removeWhenEmpty) {
+            const int reference=quick.Find(name);if(reference>=0) quick.slots[reference]=CQuickWnd::Slot{};
+            DeleteInvenItem(int(&slot-m_stInventoryItem));return;
+        }
         if(quantity>item.m_count) {
             static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
             std::string message=captions.Get(1707);
@@ -1371,4 +1376,44 @@ bool CInventoryWnd::ApplyUseReply(WORD opcode,WORD remaining)
         g_xSound.PlayUseItemEffect(used.m_stItemInfo.stStdItem.bStdMode);
     } else if(used.m_stItemInfo.stStdItem.bStdMode==ItemUse::FailureDialogMode) ui.ShowNotice(ItemUse::FailureDialog);
     return true;
+}
+
+void CInventoryWnd::ReceiveService(const _TDEFAULTMESSAGE& message)
+{
+    using namespace MerchantService;
+    auto& ui=g_xGameProc.m_xInterface;
+    const WORD opcode=message.wIdent;
+    const bool deposit=opcode==DepositOk || opcode==StorageFull || opcode==DepositFail;
+    const bool repair=opcode==RepairOk || opcode==RepairFail;
+    const bool stack=opcode==StackSaleOk;
+    const bool success=opcode==DepositOk || opcode==RepairOk || opcode==SM_USERSELLITEM_OK || stack;
+    if(success && !deposit) g_xGameProc.m_xMyHero.m_nGlod=DWORD(message.nRecog);
+    if(opcode==StorageFull) ui.ShowNotice(FullNotice);
+    else if(opcode==DepositFail) ui.ShowNotice(DepositError);
+    else if(opcode==RepairFail) ui.ShowNotice(RepairError);
+    else if(opcode==SM_USERSELLITEM_FAIL) ui.ShowNotice(SaleError);
+    const int mode=deposit?Deposit:repair?Repair:Sell;
+    if(!service.actor || service.mode!=mode || service.phase!=ServicePhase::Paying) return;
+    if(success) {
+        static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+        const int resource=deposit?(message.wTag?DepositedStack:DepositedItem):repair?Repaired:stack?SoldStack:SoldItem;
+        std::string text=captions.Get(resource);
+        auto at=text.find("%s");if(at!=std::string::npos) text.replace(at,2,service.name);
+        at=text.find("%d");if(at!=std::string::npos) text.replace(at,2,std::to_string(message.wTag));
+        ui.MsgAdd(11861940,0,const_cast<char*>(text.c_str()));
+        if(deposit || stack) UpdateStackCount(service.item,message.wParam,true);
+        else for(int i=0;i<_MAX_INVEN_ITEM;++i) {
+            auto& entry=m_stInventoryItem[i];
+            if(!entry.bSetted || entry.xItem.m_stItemInfo.nMakeIndex!=service.item) continue;
+            if(!repair) {DeleteInvenItem(i);break;}
+            if(service.name!=entry.xItem.Name()) continue;
+            auto& item=entry.xItem;
+            item.m_stItemInfo.nDura=message.wParam;item.m_stItemInfo.nDuraMax=message.wTag;
+            item.m_serverRecord[DurabilityOffset]=LOBYTE(message.wParam);item.m_serverRecord[DurabilityOffset+1]=HIBYTE(message.wParam);
+            item.m_serverRecord[MaximumOffset]=LOBYTE(message.wTag);item.m_serverRecord[MaximumOffset+1]=HIBYTE(message.wTag);
+            break;
+        }
+    }
+    service.phase=ServicePhase::Choosing;
+    if(!deposit) service.price=0;
 }

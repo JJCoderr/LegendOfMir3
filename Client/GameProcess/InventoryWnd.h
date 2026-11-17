@@ -55,6 +55,7 @@ public:
     void OpenService(int actor,int mode);
     void SelectServiceItem(int index);
     void QuoteService(DWORD price,bool selling);
+    void ReceiveService(const _TDEFAULTMESSAGE& message);
     void ConfirmService(int quantity=0);
     void SubmitServiceQuantity(const char* text);
     void ClearService();
@@ -82,7 +83,7 @@ public:
 	BOOL	CheckItemPos(CHAR* szName);
 	BOOL	SaveItemPos(CHAR* szName);
     void UpdateGold(UINT balance);
-    void UpdateStackCount(DWORD instance,WORD quantity);
+    void UpdateStackCount(DWORD instance,WORD quantity,bool removeWhenEmpty=false);
     bool ReceiveBagRecords(const char* encoded,int count);
     bool ReceiveItemRecord(WORD opcode,const char* encoded);
     bool SaveLayoutFile(const char* path);

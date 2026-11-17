@@ -1378,3 +1378,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 ## 原生物品使用链路迁移（2026-11-17）
 
 已落实上一节断点：InventoryWnd 统一冷却、请求与 OK/FAIL 回包；QuickWnd 使用新六格引用，数字键在按下时处理；背包按释放间隔处理使用，旧抬键 belt 使用路径停用。CM_EAT 携带 tick，模式 3 使用服务器剩余量，失败和重复回包不丢引用/不重复反馈。ItemUseIds.h 保存新增资源与冷却常量。预览 213/214 为 item-use-chain/restored，下一 ID 215；截图 out/item-use-chain.png、out/item-use-restored.png。详见 Client/docs/item-use-migration-audit.md。真实服务器消费及持久化仍未验证，目标继续。
+
+
+## 商人服务结果回包（2026-11-17）
+
+已补全出售648/649/1314/1315、修理669/670、存入701/702/703的GameProc分派和InventoryWnd结果处理，结束Paying、同步余额/耐久/剩余量并显示原提示。服务使用完整物品名；UpdateStackCount新增removeWhenEmpty，原1313零数量语义不变。普通出售保留Godot/原版只删除背包槽的行为。MerchantServiceIds.h集中新增常量。清理87/87及七目标构建通过，78项集中检查通过；截图out/service-repair-reply.png、service-sell-reply.png、service-deposit-reply.png、service-failure-reply.png已查看。证据Client/docs/merchant-service-reply-evidence.md。预览215..218，下一219。在线服务器交易及存储仍待验证，目标未完成。

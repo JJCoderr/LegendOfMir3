@@ -2,7 +2,8 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewItemUse=213,PreviewItemUseRestored=214; constexpr int PreviewInterfaceAudio=212; constexpr int PreviewNotice=210,PreviewNoticeMoved=211; constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+#include "GameProcess/MerchantServiceIds.h"
+namespace { constexpr int PreviewServiceRepair=215,PreviewServiceSell=216,PreviewServiceDeposit=217,PreviewServiceFailure=218; constexpr int PreviewItemUse=213,PreviewItemUseRestored=214; constexpr int PreviewInterfaceAudio=212; constexpr int PreviewNotice=210,PreviewNoticeMoved=211; constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -70,7 +71,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewItemUseRestored) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewServiceFailure) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1906,6 +1907,37 @@ public:
 
 
 
+        if(groupPanel>=PreviewServiceRepair && groupPanel<=PreviewServiceFailure) {
+            using namespace MerchantService;
+            auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;auto& quick=ui.m_xQuickWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            CLIENTITEMRCD record={};record.nMakeIndex=1001;record.stStdItem.wLooks=0;record.nDura=1000;record.nDuraMax=5000;lstrcpyA(record.stStdItem.szName,"ServicePotion");
+            CItem item;item.SetItem(record,0);item.m_stackMode=3;item.SetCount(8);lstrcpyA(item.m_serverName,"ServicePotionLongName0123456789");
+            const auto begin=[&](int mode) {ui.m_xMsgBox.HideMessageBox();bag.DeleteAllInvenItem();bag.AddInvenItem(item,0,TRUE);quick.slots[0]=CQuickWnd::FromItem(item);bag.OpenService(77,mode);bag.SelectServiceItem(0);if(mode!=Deposit) bag.QuoteService(125,mode==Sell);bag.ConfirmService(mode==Repair?0:2);};
+            const auto receive=[&](WORD opcode,DWORD balance,WORD first,WORD second,bool extra=false) {_TDEFAULTMESSAGE packet={};packet.wIdent=opcode;packet.nRecog=balance;packet.wParam=first;packet.wTag=second;char encoded[64]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));if(extra) strcat(encoded,"x");g_xGameProc.OnSocketMessageRecieve(encoded);};
+            begin(Sell);receive(StackSaleOk,240,3,5,true);const bool malformed=bag.service.phase==CInventoryWnd::ServicePhase::Paying && bag.m_stInventoryItem[0].xItem.m_count==8;
+            receive(StackSaleOk,240,3,5);const bool sold=hero.m_nGlod==240 && bag.m_stInventoryItem[0].xItem.m_count==3 && quick.slots[0].count==3 && bag.service.phase==CInventoryWnd::ServicePhase::Choosing && !bag.service.price;
+            const auto history=ui.m_chatHistory.size();receive(StackSaleOk,300,1,2);const bool repeated=hero.m_nGlod==300 && ui.m_chatHistory.size()==history && bag.m_stInventoryItem[0].xItem.m_count==3;
+            begin(Sell);receive(StackSaleOk,600,0,8);const bool all=!bag.m_stInventoryItem[0].bSetted && !quick.slots[0].present && bag.ItemAnchor(0)==-1;
+            begin(Sell);receive(SM_USERSELLITEM_OK,660,0,0);const bool ordinary=!bag.m_stInventoryItem[0].bSetted && quick.slots[0].present && hero.m_nGlod==660;
+            begin(Sell);receive(StackSaleFail,0,0,0);const bool stackFail=bag.m_stInventoryItem[0].xItem.m_count==8 && !ui.m_xMsgBox.IsActive() && bag.service.phase==CInventoryWnd::ServicePhase::Choosing;
+            begin(Sell);receive(SM_USERSELLITEM_FAIL,0,0,0);const bool saleFail=ui.m_xMsgBox.IsActive() && bag.m_stInventoryItem[0].xItem.m_count==8;
+            begin(Repair);receive(RepairOk,880,5500,6000);const auto& repaired=bag.m_stInventoryItem[0].xItem;
+            const bool repair=hero.m_nGlod==880 && repaired.m_stItemInfo.nDura==5500 && repaired.m_stItemInfo.nDuraMax==6000 && repaired.m_serverRecord[66]==LOBYTE(5500) && repaired.m_serverRecord[67]==HIBYTE(5500) && bag.service.phase==CInventoryWnd::ServicePhase::Choosing;
+            begin(Repair);receive(RepairFail,0,0,0);const bool repairFail=ui.m_xMsgBox.IsActive() && bag.m_stInventoryItem[0].xItem.m_stItemInfo.nDura==1000 && !bag.service.price;
+            begin(Deposit);receive(DepositOk,0,3,5);const bool deposit=bag.m_stInventoryItem[0].xItem.m_count==3 && quick.slots[0].count==3 && bag.service.phase==CInventoryWnd::ServicePhase::Choosing;
+            begin(Deposit);receive(DepositOk,0,0,8);const bool storedAll=!bag.m_stInventoryItem[0].bSetted && !quick.slots[0].present;
+            begin(Deposit);receive(StorageFull,0,0,0);const bool full=ui.m_xMsgBox.IsActive() && bag.m_stInventoryItem[0].xItem.m_count==8 && bag.service.phase==CInventoryWnd::ServicePhase::Choosing;
+            begin(Deposit);receive(DepositFail,0,0,0);const bool depositFail=ui.m_xMsgBox.IsActive() && quick.slots[0].count==8 && bag.service.phase==CInventoryWnd::ServicePhase::Choosing;
+            begin(Deposit);receive(RepairOk,777,1,1);const bool mismatch=hero.m_nGlod==777 && bag.service.phase==CInventoryWnd::ServicePhase::Paying && bag.m_stInventoryItem[0].xItem.m_stItemInfo.nDura==1000;
+            bag.ClearService();receive(RepairOk,760,3000,6000);const bool late=hero.m_nGlod==760 && bag.m_stInventoryItem[0].xItem.m_stItemInfo.nDura==1000;
+            ui.m_xMsgBox.HideMessageBox();receive(RepairFail,0,0,0);const bool lateFailure=ui.m_xMsgBox.IsActive();
+            const int mode=groupPanel==PreviewServiceRepair?Repair:groupPanel==PreviewServiceSell?Sell:Deposit;begin(mode);
+            receive(groupPanel==PreviewServiceFailure?StorageFull:mode==Repair?RepairOk:mode==Sell?StackSaleOk:DepositOk,900,mode==Repair?5500:3,mode==Repair?6000:5);
+            if(!quick.m_bActive) ui.WindowActivate(_WND_ID_QUICK);
+            capturePath=groupPanel==PreviewServiceRepair?"service-repair-reply.bmp":groupPanel==PreviewServiceSell?"service-sell-reply.bmp":groupPanel==PreviewServiceDeposit?"service-deposit-reply.bmp":"service-failure-reply.bmp";
+            if(FILE* report=fopen("service-reply-check.txt","wb")) {fprintf(report,"malformed=%d sold=%d repeated=%d all=%d ordinary=%d stack_fail=%d sale_fail=%d repair=%d repair_fail=%d deposit=%d stored_all=%d full=%d deposit_fail=%d mismatch=%d late=%d late_failure=%d\n",malformed,sold,repeated,all,ordinary,stackFail,saleFail,repair,repairFail,deposit,storedAll,full,depositFail,mismatch,late,lateFailure);fclose(report);}
+        }
         if(groupPanel==PreviewItemUse || groupPanel==PreviewItemUseRestored) {
             auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;auto& quick=ui.m_xQuickWnd;auto& held=ui.m_stCommonItem;
             auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];icons.NewLoad("./Data/Inventory.wil");
@@ -3259,6 +3291,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=service-repair-reply")==0 ? PreviewServiceRepair :
+        strcmp(lpCmdLine,"--preview=service-sell-reply")==0 ? PreviewServiceSell :
+        strcmp(lpCmdLine,"--preview=service-deposit-reply")==0 ? PreviewServiceDeposit :
+        strcmp(lpCmdLine,"--preview=service-failure-reply")==0 ? PreviewServiceFailure :
         strcmp(lpCmdLine,"--preview=item-use-chain")==0 ? PreviewItemUse :
         strcmp(lpCmdLine,"--preview=item-use-restored")==0 ? PreviewItemUseRestored :
         strcmp(lpCmdLine,"--preview=interface-audio")==0 ? PreviewInterfaceAudio :
