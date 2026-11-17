@@ -1,7 +1,7 @@
 param(
     [string]$Repository = (Resolve-Path "$PSScriptRoot/../..").Path,
     [string]$Output = 'out/gui-review-current',
-    [ValidateSet('game','lobby')][string]$Suite = 'game'
+    [ValidateSet('game','lobby','all')][string]$Suite = 'game'
 )
 $ErrorActionPreference = 'Stop'
 $runtime = Join-Path $Repository 'out/mud3-01'
@@ -17,14 +17,22 @@ $modes = @(
     'mail-inbox','mail-read','mail-compose','mail-gift','consignment-empty','consignment-list','consignment-registration','consignment-confirm',
     'portrait-empty','portrait-preview','siege','siege-load','exit-program','exit-character','minimap-small','minimap-large'
 )
-if ($Suite -eq 'lobby') {
-    $modes = @(
+$lobbyModes = @(
         'server-groups','server-group-hover','server-group-selected','server-group-row','server-group-scroll','server-group-exit','server-group-login',
         'login','login-hover','login-pressed','login-error','login-servers','login-billing',
         'selection-roster-first','selection-roster-waiting','selection-roster-second','selection-roster-long-name','selection-roster-empty',
         'role-male-warrior','role-male-mage','role-male-tao','role-female-warrior','role-female-mage','role-female-tao','role-selection-hover','role-selection-pressed',
         'character-name-exists','character-full','character-create-failed','character-name-invalid','character-query-failed','character-start-failed',
         'character-disconnected','character-delete-confirm','character-delete-missing','character-start-missing','character-name-long','character-empty'
+    )
+if ($Suite -eq 'lobby') { $modes = $lobbyModes }
+if ($Suite -eq 'all') {
+    $modes += $lobbyModes
+    $modes += @(
+        'modal-scroll','modal-audio','modal-guild-editor','modal-button-pressed','modal-button-left','modal-button-returned',
+        'chat-chinese-input','group-chinese-input','guild-chinese-input','mail-editor-restored','mail-gift-restored','consignment-editor-restored',
+        'input-window-moved','server-notice','server-notice-moved',
+        'creation-name-ascii','creation-name-chinese','creation-name-restored','creation-return-cancelled','creation-return-created'
     )
 }
 $manifest = [ordered]@{

@@ -122,3 +122,14 @@
 - `character-start-missing` → `out/gui-review-lobby/character-start-missing.png`
 - `character-name-long` → `out/gui-review-lobby/character-name-long.png`
 - `character-empty` → `out/gui-review-lobby/character-empty.png`
+
+
+## 2026-11-17 同版本整批截图与资源口径
+
+用户确认没有其他原版目录，后续以当前原版资源为准。无需继续等待额外目录；现有资源包仍可按证据核查。未找到的三段影片保留缺失记录，不使用同名MP3代替。
+
+review_gui.ps1新增all套件：52个游戏内状态、38个大厅状态和20个输入/弹窗边界状态。完整运行110/110，生成out/gui-review-integrated/index.html、110张原尺寸PNG、19张联系表及42份本次新鲜报告。manifest记录生产版本724bc52b58f113516f52214fe45418f448bd6b5b和二进制SHA256 1802597130EF08E8226A968C0B198DAF912CE62044604638310ABBB7569DE636。
+
+已核对报告；inventory-layout静态模式的moved/placement_green/placement_red为0沿用既有夹具含义，不累计成通过数。其余报告中的断言均为1，样本数量/字体/尺寸等为数据字段。检查110个唯一模式及PNG齐全；抽查中文创建原图、返回列表联系表19，未声称本轮逐张视觉验收全部110图。旧批次视觉检查记录保留。
+
+本批只更改采集工具和文档，沿用已干净构建的客户端，不重复编译；没有新增生产功能。截图套件不是全部交互测试，音效沿用上一批15项验证，真实服务器流程、原版影片、公告长文本资源适配及跨显示器DPI/全屏仍未完整验收。
