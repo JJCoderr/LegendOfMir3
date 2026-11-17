@@ -67,7 +67,7 @@ step,name,target,action,params,expect
 | 角色 | `Character.csv`、`CharacterDelete.csv` | 创建角色、删除角色及持久化 |
 | 物品 | `Inventory.csv`、`InventoryDuplicates.csv`、`InventoryFull.csv`、`InventoryFullUnequip.csv`、`InventorySaveFailure.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
 | 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复、施法回包、扣蓝与受伤治疗 |
-| 怪物 | `MonstersSpawn.csv`、`MonstersLoot.csv`、`MonstersLootCount.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentCount.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
+| 怪物 | `MonstersSpawn.csv`、`MonstersRespawn.csv`、`MonstersLoot.csv`、`MonstersLootCount.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentCount.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
@@ -125,3 +125,5 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 保存原子性：DBSvr 将角色、技能和普通物品写入同一事务，并持有数据库管理器锁，全部成功后才提交。`InventorySaveFailure.csv` 通过触发器拒绝普通物品 INSERT，验证原有两瓶药水和角色位置保留、重登恢复上一次快照；保存失败会写服务端日志，当前没有新增客户端保存失败通知。
 
 `InventoryFullUnequip.csv` 验证满包卸装收到服务端 SM_TAKEOFF_FAIL，装备、外观和背包不变；使用一瓶药水后卸装成功，护甲进入背包，再穿戴腾出空位并拾取地面物品，最后保存重登验证。服务端卸装必须在清除装备槽前检查背包容量。
+
+`MonstersRespawn.csv` 使用 FLD_GENTIME=1（分钟）的真实刷新配置，击杀后等待新怪物出现、查询名称并再次击杀，再检查第二次补充刷新。刷新数量只统计未死亡且未进入 Ghost 状态的怪物；尸体和延迟释放对象仍按原时序保留，不阻塞刷新名额。场景约需两分钟，使用 state.wait 等待，不修改时钟。本场景验证两轮刷新与战斗，不覆盖尸体最终消失、Ghost 对象释放或长期运行稳定性。

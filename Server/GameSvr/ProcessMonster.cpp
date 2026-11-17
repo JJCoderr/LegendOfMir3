@@ -147,9 +147,15 @@ UINT WINAPI ProcessMonster(LPVOID lpParameter)
 			{
 				if ((pMonGenInfo->dwStartTime == 0) || ((dwLastGenTick - pMonGenInfo->dwStartTime) > GetZenTime(pMonGenInfo->dwZenTime)))
 				{
-					if (pMonGenInfo->nCount > (int)pMonGenInfo->xMonsterObjList.GetCount())
-					{
-						if (RegenMonster(pMonGenInfo, pMonGenInfo->nCount - pMonGenInfo->xMonsterObjList.GetCount()))
+                    int living = 0;
+                    auto& monsters = pMonGenInfo->xMonsterObjList;
+                    for (auto node = monsters.GetHead(); node; node = monsters.GetNext(node)) {
+                        const auto monster = monsters.GetData(node);
+                        if (monster && !monster->m_fIsDead && !monster->m_fIsGhost) ++living;
+                    }
+                    if (pMonGenInfo->nCount > living)
+                    {
+                        if (RegenMonster(pMonGenInfo, pMonGenInfo->nCount - living))
 							pMonGenInfo->dwStartTime = GetTickCount();
 					}
 				}

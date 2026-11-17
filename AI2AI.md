@@ -2107,3 +2107,7 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 ### 满包卸装
 - ServerGetTakeOffItem 在清除装备槽前检查 IsEnoughBag；满包通过现有 SM_TAKEOFF_FAIL 回包让客户端恢复穿戴状态。
 - InventoryFullUnequip.csv 52 步通过：满包卸装失败回包、外观/装备不变、消费一瓶后卸装成功、重新穿戴后拾取、保存重登数量正确。EIServer Release 构建通过，日志 out/csv-validation/inventory-full-unequip.log。
+
+### 怪物按存活数量补充刷新
+- ProcessMonster 刷新名额改为仅统计未死亡、非 Ghost 对象；仍保留原尸体及延迟释放时序，避免这些对象占用刷新名额。
+- MonstersRespawn.csv 使用真实 FLD_GENTIME=1 分钟配置，首杀后补充刷新、查询新实体名称、再击杀、第二轮补充刷新，30 步通过，耗时 118984ms。EIServer Release 构建通过，日志 out/csv-validation/monsters-respawn.log。本场景不覆盖尸体最终消失、Ghost 释放与长期稳定性。
