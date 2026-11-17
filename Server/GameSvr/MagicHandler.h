@@ -62,7 +62,7 @@ public:
 
 public:
 	int		GetPower13(int nPwr, int nLevel);
-	BOOL	CheckMagicLevelup(CCharObject* pCharObject, _LPTHUMANMAGICRCD lptMagicRcd);
+	BOOL	CheckMagicLevelup(_LPTHUMANMAGICRCD lptMagicRcd);
 
 	__inline int MPow() 
 		{ if ((sDefMaxPower - sDefPower) > 0) return sDefPower + (rand() % (sDefMaxPower - sDefPower)); 

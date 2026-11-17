@@ -2138,8 +2138,14 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 
 	if (lptMagicRcd->btLevel < 3)
 	{
-		if (m_Ability.Level >= pMagicInfo->sNeed[lptMagicRcd->btLevel])
-			TrainSkill(lptMagicRcd, 1 + (rand() % 3));
+        if (m_Ability.Level >= pMagicInfo->sNeed[lptMagicRcd->btLevel]) {
+            TrainSkill(lptMagicRcd,1+(rand()%3));
+            constexpr int LevelReplyDelayMs=800, ProgressReplyDelayMs=1000;
+            const bool upgraded=pMagicInfo->CheckMagicLevelup(lptMagicRcd)!=FALSE;
+            AddDelayProcess(this,RM_MAGIC_LVEXP,0,lptMagicRcd->nCurrTrain,
+                lptMagicRcd->btLevel,lptMagicRcd->btMagicID,NULL,
+                upgraded?LevelReplyDelayMs:ProgressReplyDelayMs);
+        }
 	}
 
 	return TRUE;
@@ -2245,7 +2251,7 @@ void CPlayerObject::Operate()
 					case RM_MAGIC_LVEXP:
 					{						
 						fnMakeDefMessage(&DefMsg, SM_MAGIC_LVEXP, lpProcessMsg->lParam3, 
-											(WORD)lpProcessMsg->lParam2, (WORD)lpProcessMsg->lParam1, 0);
+											(WORD)lpProcessMsg->lParam2, LOWORD(lpProcessMsg->lParam1), HIWORD(lpProcessMsg->lParam1));
 						SendSocket(&DefMsg, NULL);
 
 						break;
@@ -3133,7 +3139,7 @@ void CPlayerObject::Operate()
 					case RM_MAGIC_LVEXP:
 					{						
 						fnMakeDefMessage(&DefMsg, SM_MAGIC_LVEXP, lpProcessMsg->lParam3, 
-											(WORD)lpProcessMsg->lParam2, (WORD)lpProcessMsg->lParam1, 0);
+											(WORD)lpProcessMsg->lParam2, LOWORD(lpProcessMsg->lParam1), HIWORD(lpProcessMsg->lParam1));
 						SendSocket(&DefMsg, NULL);
 						break;
 					}

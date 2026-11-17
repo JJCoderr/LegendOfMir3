@@ -2397,3 +2397,14 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 初次 fixture 写 FLD_DURAMAX=NULL 触发 SQLite NOT NULL 约束，已改为0以采用既有默认初始化规则；未修改数据库schema或业务实现。
 - 最终48步场景普通连接与全链路双向分片各通过，共96项。日志 out/csv-validation/shop-skill-book-final.log 与 shop-skill-book-fragments/test.log。最终验证含学习后的再次进图，不只检查数据库。
 - 未发现默认技能书购买流程的编号丢失，未改产品代码。非零 FLD_DURAMAX 的技能书配置、卖书回购、训练升级与学习保存失败仍待覆盖；不要将该默认路径通过当成所有技能书规则与原版一致。
+
+
+## 2026-11-18 接通技能修炼升级与进度通知
+
+- 新 SkillsTraining 场景修复前 step180 超时：角色成功施法击杀，但技能保持1级。DoSpell 原先只增加 nCurrTrain，未调用已存在的 CheckMagicLevelup，也不发送普通进度更新。
+- 接通升级检查；CheckMagicLevelup 只更新等级/扣除当前阈值并返回是否升级，DoSpell 分别按既有800/1000毫秒延迟发送统一的 RM_MAGIC_LVEXP。避免原方法按 training 值去重延迟消息。现有1–3随机增量、快速修炼倍率和角色等级条件未改变。
+- 两处 SM_MAGIC_LVEXP 编码将修炼值拆为 wTag/wSeries 低/高16位，匹配客户端既有32位解码，避免高修炼值截断。
+- SkillsTraining、High、Progress、Cap 四个CSV及fixture覆盖升级、升级后高位修炼值、未升级进度、满级不增长。verify_skill_training.py 对比实时Client/SQLite/重登值，随机增量不写死；实测分别为 (1,2,2)、(1,2,70002)、(1,1,70003)、(1,3,70000)，三者完全一致。
+- EIServer Release 构建通过。四场景106项，高位场景全链路分片26项（也核对三处值），施法26、治疗24、日志编码回归登录24，共206项通过。证据 out/csv-validation/skills-training-comparison、skills-training-high-fragments、skills-training-*-regression.log、skills-training-utf8-launcher。
+- 分片辅助程序子进程 stdout 原随本地代码页，导致 launcher.log 中文路径无法UTF-8读取；显式 PYTHONIOENCODING=utf-8 后验证通过。结果CSV日志原本已是UTF-8。
+- 未核对修炼数值与原版服务器、未改变现有 fTrain 条件使用方式，未覆盖所有技能效果、被动属性重算、多技能快速连续回包与学习保存故障。ObjectPlayerAdmin 的 RM_MAGIC_LVEXP 参数顺序仍需单独核查。

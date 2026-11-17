@@ -13,33 +13,11 @@ int CMagicInfo::GetPower13(int nPwr, int nLevel)
 		return ROUND(p1 + p2 / (3/*MaxTrainLevel*/ + 1) * (nLevel + 1) + sDefPower);
 }
 
-BOOL CMagicInfo::CheckMagicLevelup(CCharObject *pCharObject, _LPTHUMANMAGICRCD lptMagicRcd)
+BOOL CMagicInfo::CheckMagicLevelup(_LPTHUMANMAGICRCD record)
 {
-	int nLevel;
-
-	if (lptMagicRcd->btLevel >= 0 && lptMagicRcd->btLevel <= 3/*MaxTrainLevel*/)
-		nLevel = (int)lptMagicRcd->btLevel;
-	else
-		nLevel = 0;
-
-	if (lptMagicRcd->btLevel < 3/*MaxTrainLevel*/)
-	{
-		if (lptMagicRcd->nCurrTrain >= nTrain[nLevel])
-		{
-			if (lptMagicRcd->btLevel < 3/*MaxTrainLevel*/)
-			{
-				lptMagicRcd->nCurrTrain -= nTrain[nLevel];
-				lptMagicRcd->btLevel	+= 1;
-				
-				pCharObject->UpdateDelayProcessCheckParam1(pCharObject, RM_MAGIC_LVEXP, 0, lptMagicRcd->nCurrTrain, lptMagicRcd->btLevel, lptMagicRcd->btMagicID, NULL, 800);
-//				CheckMagicSpecialAbility (pum);
-			}
-			else
-				lptMagicRcd->nCurrTrain = nTrain[nLevel];
-
-			return TRUE;
-		}
-	}
-
-	return FALSE;
+    constexpr BYTE MaximumSkillLevel=3;
+    if (record->btLevel>=MaximumSkillLevel || record->nCurrTrain<nTrain[record->btLevel]) return FALSE;
+    record->nCurrTrain-=nTrain[record->btLevel];
+    ++record->btLevel;
+    return TRUE;
 }

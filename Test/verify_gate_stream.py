@@ -2,6 +2,7 @@
 import argparse
 import configparser
 import csv
+import os
 import select
 import shutil
 import socket
@@ -115,7 +116,8 @@ def main():
         with (args.log_dir/'launcher.log').open('w', encoding='utf-8') as output:
             result = subprocess.run([sys.executable, str(repo/'Test/launch_csv.py'), str(args.scenario.resolve()),
                 '--resume-runtime', str(root), '--clients', str(args.clients), '--timeout-ms', str(args.timeout_ms),
-                '--log', str((args.log_dir/'test.log').resolve())], stdout=output, stderr=subprocess.STDOUT)
+                '--log', str((args.log_dir/'test.log').resolve())], stdout=output, stderr=subprocess.STDOUT,
+                env=dict(os.environ, PYTHONIOENCODING='utf-8'))
     finally:
         for _, proxy in proxies: proxy.close()
     for section, proxy in proxies:

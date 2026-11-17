@@ -323,3 +323,16 @@ python Test/verify_gate_stream.py --edge client --game --direction both --scenar
 ```
 
 本场景验证当前数据规则下的购买、学习和保存，不覆盖为技能书显式设置非零 FLD_DURAMAX、技能书出售回购或技能训练升级。
+
+
+### 技能修炼、升级与完整进度
+
+`Skills/SkillsTraining.csv` 使用真实施法击杀怪物，验证跨阈值升级、SM_MAGIC_LVEXP、保存和重登。`SkillsTrainingHigh.csv` 验证升级后仍大于 65535 的修炼值，`SkillsTrainingProgress.csv` 验证未升级的修炼进度，`SkillsTrainingCap.csv` 验证满级不再增长或发送修炼更新。后两项等待两秒，让已有的延迟回包有机会到达，不修改游戏时钟。
+
+随机修炼增量不写死：CSV 检查合法范围，以下校验程序再比较实时客户端值、SQLite 存档和重登值是否完全一致，结果写入 comparison.log：
+
+```powershell
+python Test/verify_skill_training.py --log-dir out/skill-training
+```
+
+服务端沿用原有每次 1–3 点（快速修炼时乘 3）的规则和角色等级条件；本轮接通原先未调用的升级检查及进度通知，升级延迟 800 毫秒、普通进度延迟 1000 毫秒。未验证这些数值与原版服务器完全一致，也未覆盖所有技能的可修炼条件、被动技能属性重算或多技能并发回包。
