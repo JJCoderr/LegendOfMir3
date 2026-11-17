@@ -72,3 +72,53 @@
 仓库根目录运行 `./Client/Tools/review_gui.ps1`，再运行 `python Client/Tools/gui_gallery.py out/gui-review-current`。依赖现有运行资源、已构建CLIENT和Pillow。HTML可按预览名筛选并点击原图；已验证52图文件和链接存在，未声称浏览器交互已验收。
 
 下一批补齐错误/禁用/滚动/拖动状态，检查字体、输入、声音。下一新预览ID仍301。
+
+
+## 大厅页面整批索引（2026-11-17）
+
+源码 4786674d8b8d9a5dc910b26b77bcb11562de5208，二进制SHA256 7A793E0016CD1F59EA04A6EDDAFC3DD344FA5C76F0E92C1BF54C194C68B9DEB7。输出out/gui-review-lobby/index.html，38张当前截图、7张原尺寸拼图。全部图片逐批查看，无整页缺失或弹窗文字不可见现象；不代表逐像素对齐验收。
+
+运行方式：`Client/Tools/review_gui.ps1 -Suite lobby -Output out/gui-review-lobby`，然后 `python Client/Tools/gui_gallery.py out/gui-review-lobby`。默认game套件仍为原52页。
+
+服务器分组7、登录6、角色列表5、六外观及选角按钮8、选角/创建错误及删除确认12，共38页。分组33、登录27、角色表现22、角色列表22、选角对话框23，共127项检查通过。预览进程全部停止。
+
+创建姓名框初始为空，OpenCreation与参考均为(288,405)、75×13；空白截图不能代替输入焦点与输入内容的完整验收。影片资源缺失问题仍在；真实登录链路未验证。
+
+- `server-groups` → `out/gui-review-lobby/server-groups.png`
+- `server-group-hover` → `out/gui-review-lobby/server-group-hover.png`
+- `server-group-selected` → `out/gui-review-lobby/server-group-selected.png`
+- `server-group-row` → `out/gui-review-lobby/server-group-row.png`
+- `server-group-scroll` → `out/gui-review-lobby/server-group-scroll.png`
+- `server-group-exit` → `out/gui-review-lobby/server-group-exit.png`
+- `server-group-login` → `out/gui-review-lobby/server-group-login.png`
+- `login` → `out/gui-review-lobby/login.png`
+- `login-hover` → `out/gui-review-lobby/login-hover.png`
+- `login-pressed` → `out/gui-review-lobby/login-pressed.png`
+- `login-error` → `out/gui-review-lobby/login-error.png`
+- `login-servers` → `out/gui-review-lobby/login-servers.png`
+- `login-billing` → `out/gui-review-lobby/login-billing.png`
+- `selection-roster-first` → `out/gui-review-lobby/selection-roster-first.png`
+- `selection-roster-waiting` → `out/gui-review-lobby/selection-roster-waiting.png`
+- `selection-roster-second` → `out/gui-review-lobby/selection-roster-second.png`
+- `selection-roster-long-name` → `out/gui-review-lobby/selection-roster-long-name.png`
+- `selection-roster-empty` → `out/gui-review-lobby/selection-roster-empty.png`
+- `role-male-warrior` → `out/gui-review-lobby/role-male-warrior.png`
+- `role-male-mage` → `out/gui-review-lobby/role-male-mage.png`
+- `role-male-tao` → `out/gui-review-lobby/role-male-tao.png`
+- `role-female-warrior` → `out/gui-review-lobby/role-female-warrior.png`
+- `role-female-mage` → `out/gui-review-lobby/role-female-mage.png`
+- `role-female-tao` → `out/gui-review-lobby/role-female-tao.png`
+- `role-selection-hover` → `out/gui-review-lobby/role-selection-hover.png`
+- `role-selection-pressed` → `out/gui-review-lobby/role-selection-pressed.png`
+- `character-name-exists` → `out/gui-review-lobby/character-name-exists.png`
+- `character-full` → `out/gui-review-lobby/character-full.png`
+- `character-create-failed` → `out/gui-review-lobby/character-create-failed.png`
+- `character-name-invalid` → `out/gui-review-lobby/character-name-invalid.png`
+- `character-query-failed` → `out/gui-review-lobby/character-query-failed.png`
+- `character-start-failed` → `out/gui-review-lobby/character-start-failed.png`
+- `character-disconnected` → `out/gui-review-lobby/character-disconnected.png`
+- `character-delete-confirm` → `out/gui-review-lobby/character-delete-confirm.png`
+- `character-delete-missing` → `out/gui-review-lobby/character-delete-missing.png`
+- `character-start-missing` → `out/gui-review-lobby/character-start-missing.png`
+- `character-name-long` → `out/gui-review-lobby/character-name-long.png`
+- `character-empty` → `out/gui-review-lobby/character-empty.png`

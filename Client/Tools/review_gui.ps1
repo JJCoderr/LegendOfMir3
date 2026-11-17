@@ -1,6 +1,7 @@
 param(
     [string]$Repository = (Resolve-Path "$PSScriptRoot/../..").Path,
-    [string]$Output = 'out/gui-review-current'
+    [string]$Output = 'out/gui-review-current',
+    [ValidateSet('game','lobby')][string]$Suite = 'game'
 )
 $ErrorActionPreference = 'Stop'
 $runtime = Join-Path $Repository 'out/mud3-01'
@@ -16,7 +17,18 @@ $modes = @(
     'mail-inbox','mail-read','mail-compose','mail-gift','consignment-empty','consignment-list','consignment-registration','consignment-confirm',
     'portrait-empty','portrait-preview','siege','siege-load','exit-program','exit-character','minimap-small','minimap-large'
 )
+if ($Suite -eq 'lobby') {
+    $modes = @(
+        'server-groups','server-group-hover','server-group-selected','server-group-row','server-group-scroll','server-group-exit','server-group-login',
+        'login','login-hover','login-pressed','login-error','login-servers','login-billing',
+        'selection-roster-first','selection-roster-waiting','selection-roster-second','selection-roster-long-name','selection-roster-empty',
+        'role-male-warrior','role-male-mage','role-male-tao','role-female-warrior','role-female-mage','role-female-tao','role-selection-hover','role-selection-pressed',
+        'character-name-exists','character-full','character-create-failed','character-name-invalid','character-query-failed','character-start-failed',
+        'character-disconnected','character-delete-confirm','character-delete-missing','character-start-missing','character-name-long','character-empty'
+    )
+}
 $manifest = [ordered]@{
+    suite = $Suite
     revision = (git -C $Repository rev-parse HEAD)
     binaryHash = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash
     created = [DateTime]::UtcNow.ToString('o')
