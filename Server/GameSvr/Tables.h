@@ -14,6 +14,7 @@ class CMonRaceInfo
 {
 public:
 	int			nIndex;
+    int databaseId; // TBL_MONSTER.FLD_INDEX; nIndex remains the in-memory slot.
 
 	char		szMonName[14];
 	int			nMonRace;

@@ -84,3 +84,5 @@ extern HANDLE						g_hSvrMsgEvnt;
 extern CWHList<CScripterObject*>	g_xScripterList;
 
 void LoadSearchTable(LPCTSTR path);
+
+CMonRaceInfo* GetMonRaceInfo(int databaseId);

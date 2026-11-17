@@ -209,7 +209,8 @@ void InitMonsterGenInfo()
 				g_pMonGenInfo[i].dwZenTime		= atoi( pRec->Get( "FLD_GENTIME" ) ) * 60000;
 				g_pMonGenInfo[i].dwStartTime	= 0;
 
-				g_pMonGenInfo[i].nMonIndex		= atoi( pRec->Get( "FLD_MONINDEX" ) );
+				const auto* monster=GetMonRaceInfo(atoi(pRec->Get("FLD_MONINDEX")));
+                g_pMonGenInfo[i].nMonIndex=monster?monster->nIndex:-1;
 
 				g_pMonGenInfo[i].nCount			= atoi( pRec->Get( "FLD_COUNT" ) );
 
@@ -301,6 +302,7 @@ void InitMonRaceInfo()
 			if (pRec->Fetch())								 
 			{
 				g_pMonRaceInfo[i].nIndex	= i;
+                g_pMonRaceInfo[i].databaseId=atoi(pRec->Get("FLD_INDEX"));
 
 				strcpy(g_pMonRaceInfo[i].szMonName, pRec->Get( "FLD_NAME" ) );
 				ChangeSpaceToNull(g_pMonRaceInfo[i].szMonName);
@@ -552,4 +554,11 @@ CMonRaceInfo* GetMonRaceInfo(char *pszMonName)
 	}
 
 	return NULL;
+}
+
+CMonRaceInfo* GetMonRaceInfo(int databaseId)
+{
+    for(int i=0;i<g_nNumOfMonRaceInfo;++i)
+        if(g_pMonRaceInfo[i].databaseId==databaseId) return &g_pMonRaceInfo[i];
+    return NULL;
 }

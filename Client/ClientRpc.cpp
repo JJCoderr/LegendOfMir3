@@ -124,6 +124,16 @@ std::string ClientState() {
             + ",\"y\":" + std::to_string(hero.m_wPosY)
             + ",\"hp\":" + std::to_string(hero.m_stAbility.wHP)
             + ",\"mp\":" + std::to_string(hero.m_stAbility.wMP);
+        Array actors;
+        game.m_xActorList.MoveCurrentToTop();
+        for(int i=0;i<game.m_xActorList.GetCounter();++i) {
+            const auto* actor=game.m_xActorList.GetCurrentData();game.m_xActorList.MoveNextNode();
+            actors.emplace_back(Object{{"id",Json(int64_t(actor->m_dwIdentity))},
+                {"name",Parse(mir3::QuoteLocalText(actor->m_szName))},
+                {"x",Json(int64_t(actor->m_wPosX))},{"y",Json(int64_t(actor->m_wPosY))},
+                {"dead",Json(bool(actor->m_bIsDead))}});
+        }
+        state += ",\"actors\":"+Json(actors).serialize()+",\"actor_count\":"+std::to_string(actors.size());
         state += mir3::ItemDebugState(game);
         state += ",\"spell_reply_id\":"+std::to_string(hero.m_lastSpellReplyId)
             +",\"cast_ready\":"+mir3::BoolJson(!game.InputDelayed() && !hero.m_pendingAction &&
@@ -199,6 +209,16 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
     } else if (method == "notice.dismiss" && g_bProcState == _GAME_PROC) {
         accepted=true;
         if(g_xGameProc.m_xNotice.IsActive()) g_xGameProc.m_xNotice.HideMessageBox();
+    } else if (method == "actor.query_name" && g_bProcState == _GAME_PROC) {
+        const int index=Integer(params,"index");
+        auto& actors=g_xGameProc.m_xActorList;
+        if(index<actors.GetCounter()) {
+            actors.MoveCurrentToTop();
+            for(int i=0;i<index;++i) actors.MoveNextNode();
+            const auto* actor=actors.GetCurrentData();
+            g_xClientSocket.SendQueryName(actor->m_dwIdentity,actor->m_wPosX,actor->m_wPosY);
+            accepted=true;
+        }
     } else if (method == "skill.cast" && g_bProcState == _GAME_PROC) {
         const int key=Integer(params,"key"),x=Integer(params,"x"),y=Integer(params,"y");
         if(x<=USHRT_MAX && y<=USHRT_MAX && !g_xGameProc.m_xNotice.IsActive())

@@ -2050,3 +2050,9 @@ Client/EIServer/Test 构建通过；最终施法 CSV 26 步通过，真实两次
 新增 Test/SkillsHealing.csv / fixture，真实怪物攻击使 HP 16→12，客户端治疗术使 HP 12→16、MP 18→12，断言 SM_STRUCK、SM_MAGICFIRE、SM_HEALTHSPELLCHANGED 和服务端健康。恢复 ProcessMonster 中整段被注释的数据库刷新循环，跳过未配置刷新组的轮询；校验刷新地图/怪物数组索引。修复怪物名称错误使用行为类型二次索引种族数组。当前资源没有 searchTable.tbl，新增 LoadSearchTable：有效文件仍加载，缺失/短读时生成 15 圈共 960 个由近到远的搜索偏移，统一服务和独立窗口入口。
 
 恢复搜索后复现 EIServer 0xc0000005：怪物攻击误用 m_pUserInfo->GetWeapon，已将武器损耗计算限定到具有玩家记录的角色。去掉临时 MONDBG 诊断。EIServer 构建通过；SkillsHealing 最终 24 步通过（out/csv-validation/skills-healing-final.log，9016ms），SkillsCasting 回归 26 步通过（out/csv-validation/healing-casting-regression.log），两次 RpcServer 各 10 步通过。没有截图或物理输入测试。怪物死亡后刷新、掉落、各行为类型、实体技能伤害尚需后续验证；当前刷新配置仍使用旧服务端怪物数组索引语义，稀疏数据库 ID 映射尚未处理。
+
+## 怪物数据库编号与实体名称查询
+
+怪物定义保存 TBL_MONSTER.FLD_INDEX 为 databaseId，保留 nIndex 的运行时数组下标语义；先加载定义，再将刷新配置 FLD_MONINDEX 按数据库编号解析一次为运行时下标，缺失编号标记 -1 并跳过。新增 MonstersSpawn.csv/fixture，数据库编号 3、1007，刷新 1007；额外不存在编号 1 不得误刷数组第 1 项。Client state.get 新增 actors(id/name/x/y/dead) 和 actor_count；actor.query_name(index) 使用当前可见数组下标调用现有 SendQueryName，验证 CM_QUERYUSERNAME/SM_USERNAME，不依赖鼠标悬停。怪物初次进入视野名字为空符合当前客户端按需查询路径，本次没有改动名称协议格式。
+
+Client/EIServer 构建通过。MonstersSpawn 29 步通过（out/csv-validation/monster-name.log，9203ms，runtime rpc-q861_yka）：仅一个实体、名称 HealingProbe、怪物受击 HP16→12、治疗 HP12→16/MP18→12、无效实体下标拒绝；原编号0的 SkillsHealing 24步回归通过（out/csv-validation/monster-id-zero-regression.log，9000ms），两次 RpcServer 各10步通过。未验证怪物死亡刷新/掉落、特殊召唤怪物硬编码索引和实体目标伤害。

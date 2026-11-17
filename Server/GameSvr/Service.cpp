@@ -60,8 +60,8 @@ CMapInfo* InitDataInDatabase()
 	int nServerIndex;
 
 	InitMagicInfo();
-	InitMonsterGenInfo();
 	InitMonRaceInfo();
+	InitMonsterGenInfo();
 	InitStdItemSpecial();
 	InitStdItemEtcInfo();
 	InitMerchantInfo();

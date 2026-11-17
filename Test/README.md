@@ -67,6 +67,7 @@ step,name,target,action,params,expect
 | 角色 | `Character.csv`、`CharacterDelete.csv` | 创建角色、删除角色及持久化 |
 | 物品 | `Inventory.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
 | 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复及施法回包、扣蓝 |
+| 怪物 | `MonstersSpawn.csv` | 稀疏编号刷新、无效编号、实体名称查询及受击治疗 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
 
@@ -97,3 +98,5 @@ build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pi
 `SkillsCasting.csv` 经真实客户端与服务器验证火球术快捷键施法、两次扣蓝及回包、未绑定快捷键与蓝量不足拒绝。当前只覆盖地图坐标目标，不包含实体目标伤害、其他技能效果。`skill.cast` 参数为 `key`（1–12）、`x`、`y`（地图格坐标），复用客户端快捷键业务；`state.get` 的 `spell_reply_id` 记录已解析的施法回包技能，`cast_ready` 表示动作时序允许尝试施法，具体技能还需满足已绑定、蓝量等条件。等待断言失败期间，执行器仅在响应状态变化时输出 WAIT，便于定位回包和状态更新。
 
 `SkillsHealing.csv` 配置真实怪物攻击，将角色 HP 从 16 降到 12，再通过客户端治疗术恢复到 16、MP 从 18 降到 12；断言受击、施法和血蓝回包及服务器存活。fixture 中怪物攻击间隔为 60 秒，行动间隔为 500 毫秒，避免治疗期间连续伤害。服务端恢复数据库怪物刷新；缺少或不完整的 `Map/searchTable.tbl` 使用按距离排列的默认 15 圈搜索偏移。暂未覆盖怪物死亡后刷新、掉落、所有怪物类型与技能目标伤害。
+
+`MonstersSpawn.csv` 使用数据库怪物编号 3、1007 和一个不存在的编号 1，验证只生成目标怪物，并查询名称、执行受伤治疗链路。`TBL_MONGEN.FLD_MONINDEX` 引用 `TBL_MONSTER.FLD_INDEX`，不依赖查询结果行号。客户端 `state.get` 增加 `actors`（id/name/x/y/dead）和 `actor_count`；`actor.query_name(index)` 使用当前 actors 数组的零基下标，走与鼠标悬停相同的名称查询协议。实体增减可能改变数组下标，调用前应读取当前状态。
