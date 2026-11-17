@@ -46,20 +46,22 @@
 
 普通物品通过独立 FLD_DURAMAX / wStandardDurability 传输标准耐久，FLD_VAL1/FLD_VAL2 仍用于药效。FLD_STACKMODE 可为空；缺列或 NULL 时沿用类型0为3、其他为0的旧规则，显式0表示不堆叠。
 
-`Server/Def/MerchantPricing.h` 按上述 x87 顺序实现无附加属性的普通物品基础价，保存和恢复调用者控制字。出售使用基础价半价取偶，购买在基础价上应用商人百分比。肉、矿石预处理和公共折价分别取整；不修改实例耐久。
+`Server/Def/MerchantPricing.h` 按上述 x87 顺序实现普通物品及装备基础价，保存和恢复调用者控制字。出售使用基础价半价取偶，购买在基础价上应用商人百分比。肉、矿石预处理和公共折价分别取整；不修改实例耐久。
 
 参考服 0x4E0C38 的分类标志区分批量与实例商品；0x4CE5F0 每页最多返回10个实例，0x4CE1BC 按实例ID重新计价并成交。当前实现对应1015请求/652详情回包，沿用客户端商店详情窗口。详情记录先逐项编码，再整体编码；第68字节的 WORD 用作报价。商人物品ID在刷新和翻页时保留，售出后失效，补货分配新ID。回收物品保留真实当前/最大耐久。
 
-验证脚本包括 ShopDurability、ShopMeatPrice、ShopMeatPremium、ShopOrePrice、ShopOreMinimum、ShopMaximumLoss、ShopPowderPrice、ShopStackPriceBypass，以及 ShopDetailPages/Shared/Restock/Capacity/Weight/Gold。`test_merchant_pricing` 检查17个黄金价格及调用者 x87 控制字恢复。
+验证脚本包括 ShopDurability、ShopMeatPrice、ShopMeatPremium、ShopOrePrice、ShopOreMinimum、ShopMaximumLoss、ShopPowderPrice、ShopStackPriceBypass，以及 ShopDetailPages/Shared/Restock/Capacity/Weight/Gold。`test_merchant_pricing` 检查24个黄金价格及调用者 x87 控制字恢复。
 
-尚未实现装备附加属性定价和真实堆叠数量交易。当前普通物品仍逐条存储；堆叠模式只决定计价与购买分支。实例详情报价超过 WORD 上限时拒绝展示/成交，不模拟原服溢出；整数中间价溢出同样拒绝。SQL Server 运行路径尚未实测。
+已按第4步接入装备附加属性定价，尚未实现真实堆叠数量交易。当前普通物品仍逐条存储；堆叠模式只决定计价与购买分支。实例详情报价超过 WORD 上限时拒绝展示/成交，不模拟原服溢出；整数中间价溢出同样拒绝。SQL Server 运行路径尚未实测。
 
 普通物品16位耐久的生成、保存与读取使用内部 G~ 扩展键，见[普通物品实例键](../Inventory/general-item-key.md)。
 
 ## 装备接入前置核对
 
-参考服 `0x514270` 将40字节实例记录偏移10起的14字节复制到100字节客户端记录偏移86；类型5/6对客户端记录偏移93的值另有限制。`0x4D0BC4` 则读取实例偏移10、11、12及武器偏移16参与计价。当前工程 `_TUSERITEMRCD::btValue[14]` 必须先完整加载、转移和保存，不能以普通物品结构强转替代。原服字段与旧版各类型升级字段的语义对应仍需继续核对，尚未据此开放装备出售。
+参考服 `0x514270` 将40字节实例记录偏移10起的14字节复制到100字节客户端记录偏移86；类型5/6对客户端记录偏移93的值另有限制。`0x4D0BC4` 则读取实例偏移10、11、12及武器偏移16参与计价。当前工程 `_TUSERITEMRCD::btValue[14]` 必须先完整加载、转移和保存，不能以普通物品结构强转替代。原服字段与旧版各类型升级字段的语义对应仍需继续核对，后续实现现已开放装备单件出售与回购，范围见下文。
 
 `InventoryEquipmentAttributes.csv` 已复现并覆盖当前工程数据库加载漏读第14项、转移SQL将第5项误写为第6项的问题；修复后验证14项独立值与耐久经过丢弃、拾取、保存、重登保持。数据库旧 MakeNewItem 分支同样修正第5项映射，但该管理创建路径尚无实际联调覆盖。
 
-当前 BuildSpecialItem 已改为发送未合并附加值的基础AC/MAC/DC，并将 btValue[14] 写到86–99；模式5/6在发送副本中将偏移93限制为5，保留服务器及数据库原值。真实CSV分别验证护甲的不裁剪分支和武器裁剪分支，以及基础值没有提前相加。魔法/元素属性布局和完整装备计价仍待继续接入。
+当前 BuildSpecialItem 已改为发送未合并附加值的基础AC/MAC/DC，并将 btValue[14] 写到86–99；模式5/6在发送副本中将偏移93限制为5，保留服务器及数据库原值。真实CSV分别验证护甲的不裁剪分支和武器裁剪分支，以及基础值没有提前相加。魔法/元素属性布局仍待继续接入；装备计价已按原始字节接入。
+
+装备附加价在肉/矿石预处理之后、公共耐久缩放之前计算，P/5为整数除法，逐次保留原服取整。新增单测覆盖护甲、武器5/6、P不能整除5、标准耐久为0、堆叠跳过、整数上限拒绝；Shop装备场景验证实际交易。装备库存保留完整 _TUSERITEMRCD，已有装备回购沿用身份，新库存购买通过已有数据库身份分配创建记录；数据库失败不消费库存或金币。尚未验证崩溃恢复、所有原服禁止交易标志或随机极品补货。

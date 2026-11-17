@@ -44,6 +44,14 @@ Record FromLegacy(const Legacy& item, std::uint32_t instance)
     return record;
 }
 
+// Reference 0x514270 copies 14 instance bonuses, clipping weapon strength only on the wire.
+inline void ApplyUpgrades(Record& record, const unsigned char* values) {
+    constexpr int UpgradeCount=14, FirstWeaponMode=5, LastWeaponMode=6, MaximumStrengthBonus=5;
+    std::memcpy(record.data()+Upgrades,values,UpgradeCount);
+    if (record[Mode]>=FirstWeaponMode && record[Mode]<=LastWeaponMode && record[WeaponStrengthBonus]>MaximumStrengthBonus)
+        record[WeaponStrengthBonus]=MaximumStrengthBonus;
+}
+
 // IDs live for one character connection. Resolve against owned items before use.
 // Equipment uses its full legacy key; general items also use their live record.
 // Equal potion keys describe equal attributes, not the same inventory instance.

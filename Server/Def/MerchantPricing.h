@@ -94,13 +94,21 @@ inline long long Premium(int price, int current, int maximum, bool ore)
     }
     return price+value;
 }
-inline int Base(int price, int standard, int current, int maximum, int mode, int stackMode)
+inline int Base(int price, int standard, int current, int maximum, int mode, int stackMode, const unsigned char* upgrades = nullptr)
 {
     if (price<0 || stackMode>=2 || !standard || !maximum) return price;
     long long value = price;
     if (mode==OreMode && maximum<MinimumOreMaximum) maximum=MinimumOreMaximum;
     if (mode==MeatMode || mode==OreMode) {
         value=current>maximum ? Premium(price,current,maximum,mode==OreMode) : Damage(price,current,maximum);
+        if (value>INT_MAX) return -1;
+    }
+    if (upgrades) {
+        int bonus=upgrades[0]+upgrades[1]+upgrades[2];
+        constexpr int FirstWeaponMode=5, LastWeaponMode=6, SpeedBonus=6, PositiveSpeedBase=10;
+        if (mode>=FirstWeaponMode && mode<=LastWeaponMode && upgrades[SpeedBonus]>PositiveSpeedBase)
+            bonus+=upgrades[SpeedBonus]-PositiveSpeedBase;
+        value+=bonus*(value/5);
         if (value>INT_MAX) return -1;
     }
     value=Scale(int(value),standard,maximum);

@@ -10,17 +10,9 @@ bool BuildSpecialItem(CUserInfo& owner, const _TUSERITEMRCD& item, Mir3Item::Rec
     _TCLIENTITEMRCD legacy = {};
     auto& standard = g_pStdItemSpecial[item.nStdIndex];
     standard.GetStandardItem(&legacy);
-    legacy.tStdItem.wAC = MAKEWORD(standard.wAC,standard.wAC2);
-    legacy.tStdItem.wMAC = MAKEWORD(standard.wMAC,standard.wMAC2);
-    legacy.tStdItem.wDC = MAKEWORD(standard.wDC,standard.wDC2);
     legacy.nDura = item.nDura; legacy.nDuraMax = item.nDuraMax;
     record = Mir3Item::FromLegacy(legacy, owner.m_itemIdentities.Get(item.szMakeIndex));
-    // Reference 0x514270 keeps base values and the 14 instance bonuses separate.
-    std::memcpy(record.data()+Mir3Item::Upgrades,item.btValue,sizeof(item.btValue));
-    constexpr int FirstWeaponMode=5, LastWeaponMode=6, MaximumStrengthBonus=5;
-    if (standard.wStdMode>=FirstWeaponMode && standard.wStdMode<=LastWeaponMode &&
-        record[Mir3Item::WeaponStrengthBonus]>MaximumStrengthBonus)
-        record[Mir3Item::WeaponStrengthBonus]=MaximumStrengthBonus;
+    Mir3Item::ApplyUpgrades(record,item.btValue);
     return true;
 }
 bool BuildGeneralItem(CUserInfo& owner, const _TGENERALITEMRCD& item, Mir3Item::Record& record)
@@ -2492,9 +2484,12 @@ void CPlayerObject::Operate()
                             char key[Mir3Item::LegacyKeySize+1]={}; int standard=0;
                             const DWORD instance=DWORD(lpProcessMsg->lParam2);
                             _LPTGENERALITEMRCD item=NULL;
-                            if (m_pUserInfo->ResolveItemRequest(instance,lpProcessMsg->pszData,key,standard) && key[0]=='G' && !IsEquipped(*m_pUserInfo,key))
-                                item=m_pUserInfo->GetUseGenItem(key,instance);
-                            npc->Sale(this,item,commit,lpProcessMsg->wParam);
+                            _LPTUSERITEMRCD equipment=NULL;
+                            if (m_pUserInfo->ResolveItemRequest(instance,lpProcessMsg->pszData,key,standard) && !IsEquipped(*m_pUserInfo,key)) {
+                                if (key[0]=='G') item=m_pUserInfo->GetUseGenItem(key,instance);
+                                else equipment=m_pUserInfo->GetItem(key);
+                            }
+                            npc->Sale(this,item,commit,lpProcessMsg->wParam,equipment);
                             handled=true; break;
                         }
                         if (!handled) {

@@ -1,0 +1,17 @@
++10
+%150
+[@main]
+#SAY
+Welcome\
+<Sell/@sell>\
+<Buy/@buy>
+[@sell]
+#SAY
+Sell goods\
+<Back/@main>
+[@buy]
+#SAY
+Buy goods\
+<Exit/@exit>
+[Goods]
+ShopEquipment 1 1

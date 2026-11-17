@@ -184,7 +184,7 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 `ShopBuy.csv` 验证两件同名药品购买、金币不足拒绝、关闭商店、数据库保存和重登恢复。`ShopStock.csv` 验证超库存拒绝、买空及买空后的再次拒绝；`ShopCapacity.csv` 使用59格背包购买2件，`ShopWeight.csv` 使用超负重商品，检查整笔拒绝、金币/库存/物品不变。购买仅在当前商人已打开商店且角色同地图、在视野内时处理。扣款前检查完整数量对应的库存、容量、负重和总价；成功后更新金币、独立物品实例、负重及购买者商品列表。notice.dismiss 可通过既有确认入口关闭普通提示，不提交输入或确认交易对话框。
 
-本阶段支持普通物品初始库存及定时补货，库存尚未跨服务器重启持久化，也未实现装备明细商品、装备出售/修理或所有在线顾客的即时库存广播。物品和金币沿用角色保存事务，已验证正常保存重登；尚未验证购买过程中的服务器崩溃恢复。
+本阶段支持普通物品初始库存及定时补货，库存尚未跨服务器重启持久化，已支持装备明细与单件出售，但尚未实现装备修理或所有在线顾客的即时库存广播。物品和金币沿用角色保存事务，已验证正常保存重登；尚未验证购买过程中的服务器崩溃恢复。
 
 `Shop/ShopPrice.csv` 使用标准价11和 `%150`，报价单价18，购买2件扣36；验证余额4的保存重登。单价按参考服 `base / 100 * percent * 1.1` 的 x87 扩展精度顺序计算，再取最近整数，报价和扣款共用单价。`ShopLowPrice.csv` 验证 `%0` 被忽略，`ShopInvalidPrice.csv` 验证非数字倍率保留默认100；`ShopPriceBelowMinimum.csv` / `ShopPriceMinimum.csv` 验证54/55边界；`ShopPriceRetained.csv` 验证无效、过低和溢出的倍率不覆盖先前有效值。`ShopZeroPrice.csv` 验证零基础价可以报价但不能购买。`ShopPriceRounding.csv` 验证基础价5/15/25/35对应单价6/17/28/38及按单价乘数量扣款。
 
@@ -202,7 +202,7 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 `ShopSell.csv` / `ShopSellDefault.csv` 验证%150/%100下收购价同为6（基础价11）、指定第二件同名物品、重复请求拒绝、原属性回购、保存重登；`ShopSellNewStock.csv` 验证收购物品不在[Goods]中时创建回购分类。`ShopSellRoundDown/Even/RoundUp.csv` 覆盖9/13/15的半价取偶数。`ShopSellGoldCap.csv`、`ShopSellRejectedType.csv` 验证金币上限和类型拒绝不丢物品；`ShopSellPowderLow/PowderBoundary/CandleLow.csv` 验证类型25/30的4000耐久门槛（这些场景标准耐久为0，未覆盖耐久折价计算）。
 
-本阶段支持现有独立实例的普通物品单件出售，已支持普通物品耐久折价和实例回购，尚未支持数量式堆叠出售、装备和附加属性计价；标准价只对已覆盖的普通物品报价路径验证。耐久非零的收购物品以原记录进入库存，回购保留原属性；库存列表不主动广播，仍随重新打开商店刷新。未配置[Goods]的收购物品没有定时补货目标，尚未实现原服库存文件保存及超额回收清理。
+本阶段支持现有独立实例的普通物品单件出售，已支持普通物品耐久折价和实例回购，装备及附加属性计价现已接入，尚未支持数量式堆叠出售；标准价只对已覆盖的普通物品报价路径验证。耐久非零的收购物品以原记录进入库存，回购保留原属性；库存列表不主动广播，仍随重新打开商店刷新。未配置[Goods]的收购物品没有定时补货目标，尚未实现原服库存文件保存及超额回收清理。
 
 `ShopSellContext.csv` 通过真实发包验证尚未打开出售模式、重新点击NPC导致旧出售上下文失效两种拒绝，之后重新打开出售仍可正常成交。
 
@@ -224,10 +224,20 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 每页最多10件；刷新保留未成交实例ID，补货创建新ID。出售和回购均按真实耐久计算，类型40肉、43矿石采用各自预处理。FLD_STACKMODE 缺列或 NULL 时使用旧类型推断，显式0表示不堆叠。批量路径目前仍生成独立记录，不代表已支持真实数量堆叠。
 
-ShopDurability/MeatPrice/MeatPremium/OrePrice/OreMinimum/MaximumLoss/PowderPrice 验证不同计价、成交和保存重登；ShopStackPriceBypass 验证堆叠模式跳过折价；ShopDetailPages/Shared/Restock/Capacity/Weight/Gold 验证分页、争买、补货及失败保留。双客户端 Shared 场景需 `--clients 2`。价格详情使用16位协议字段，超出范围拒绝；装备附加属性和原服溢出行为尚未实现。详见 [耐久计价核对](Shop/native-durability-audit.md)。
+ShopDurability/MeatPrice/MeatPremium/OrePrice/OreMinimum/MaximumLoss/PowderPrice 验证不同计价、成交和保存重登；ShopStackPriceBypass 验证堆叠模式跳过折价；ShopDetailPages/Shared/Restock/Capacity/Weight/Gold 验证分页、争买、补货及失败保留。双客户端 Shared 场景需 `--clients 2`。价格详情使用16位协议字段，超出范围拒绝；装备附加属性计价现已接入；原服溢出行为未模拟。详见 [耐久计价核对](Shop/native-durability-audit.md)。
 
 `Inventory/InventoryEquipmentAttributes.csv` 为装备的14个附加属性设置各不相同的值，经过真实客户端丢弃、拾取、保存与重登后检查数据库逐项保留，并检查当前/最大耐久。它覆盖了加载遗漏 FLD_VALUE14、转移 SQL 把 FLD_VALUE5 写成 VALUE6 的回归；不代表装备出售或全部附加属性显示已完成。
 
 装备回包状态新增 `upgrades`（14字节原始附加属性）、`base_defence`、`base_magic_defence`、`base_attack`，均读取客户端实际收到的100字节记录。InventoryEquipmentAttributes / InventoryWeaponAttributes 在背包、穿脱、丢弃拾取及重登时断言这些字段；武器模式5/6的强度附加值最多发送5，数据库原值不变。基础属性与附加属性分开发送，避免客户端提示把已合并值再次当作基础值。此处尚未覆盖所有魔法/元素字段或角色战斗能力中的附加值应用。
 
 `InventoryEquipmentDropFailure.csv` 用 SQLite 触发器拒绝装备转移更新；`InventoryEquipmentDropIgnored.csv` 用 RAISE(IGNORE) 使更新成功执行但影响零行。两者都验证连续两次丢弃收到失败回包、原背包实例恢复、无地面广播、数据库所有权保留和保存重登不复制装备。服务端在地面物品广播前检查持久化结果，失败则移除临时地面记录；普通物品仍沿用角色保存路径。这里不代表服务器崩溃时内存地面库存能够恢复。
+
+### 装备商店
+
+`ShopEquipment.csv`、`ShopWeapon.csv`、`ShopAccessory.csv` 覆盖护甲、武器、首饰的耐久与附加属性报价、指定实例出售、保留原身份回购、新库存生成独立身份、过期请求拒绝和保存重登。商人 [Goods] 同时查找普通物品表与装备标准表；装备库存使用单件详情，收购仍要求 +类型。
+
+`ShopEquipmentSaleFailure`、`ShopEquipmentRebuyFailure`、`ShopEquipmentCreateFailure` 注入数据库故障，验证不转移金币、不丢失背包/库存及不生成多余身份。`ShopEquipmentShared` 使用 `--clients 2` 验证争买；`ShopEquipmentRestock` 等待真实补货，验证新库存ID和旧ID拒绝。
+
+装备计价的附加量为前三个无符号附加字节之和，武器类型5/6还加第7字节超过10的部分；先执行整数基础价/5的加价，再计算最大耐久缩放与损耗。原始14项附加值完整保留，客户端强度裁剪只发生在发送副本。
+
+装备数据库身份与所有权在成交前更新，失败返回拒绝；金币仍随角色保存。因此当前不是装备所有权与角色金币跨崩溃的原子事务。商人库存尚未跨服务器重启保存，新装备目前按标准耐久生成且附加值为0，未接入随机极品生成及修理业务；完整原服交易限制仍需继续核对。

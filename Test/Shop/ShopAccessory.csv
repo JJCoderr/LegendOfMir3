@@ -1,0 +1,65 @@
+﻿step,name,target,action,params,expect
+1,credentials ready,Client,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+2,wrong password,Client,session.login,account=mirtest;password=wrong,result.status=submitted
+3,login rejected,Client,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+4,dismiss rejection,Client,notice.dismiss,,result.status=submitted
+5,login,Client,session.login,account=mirtest;password=test123,result.status=submitted
+6,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+7,authenticated,Client,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+8,dismiss billing,Client,notice.dismiss,,result.status=submitted
+9,unknown server rejected,Client,session.select_server,name=MissingServer,error.code=-32002
+10,select server,Client,session.select_server,name=Mir3Local,result.status=submitted
+11,roster ready,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+12,unknown character rejected,Client,session.enter,name=MissingRole,error.code=-32002
+13,enter character,Client,session.enter,name=MirProbe01,result.status=submitted
+140,NPC visible,Client,state.wait,,result.scene=world;result.actor_count=1;result.actors.0.npc=true;result.actors.0.dead=false;result.actors.0.x=460;result.actors.0.y=261
+150,query NPC name,Client,actor.query_name,index=0,result.status=submitted
+160,NPC name received,Client,state.wait,,result.actor_count=1;result.actors.0.name=NpcProbe;result.actors.0.npc=true
+170,dismiss arrival,Client,notice.dismiss,,result.status=submitted
+180,input ready,Client,state.wait,,result.input_delayed=false
+200,open merchant,Client,npc.click,index=0,result.status=submitted
+210,sale option ready,Client,state.wait,,result.npc_dialog.rows.1.command=@sell;result.npc_dialog.ready=true;result.bag_count=2;result.bag.0.id=1;result.bag.1.id=2
+220,open sale,Client,npc.select,option=0,result.status=submitted
+230,sale mode received,Client,state.wait,,result.merchant_service.mode=2;result.merchant_service.phase=choosing
+240,no quote no sale,Client,shop.sell,,error.code=-32002
+250,quote second identical item,Client,shop.quote,id=2,result.status=submitted
+260,half price independent of markup,Client,state.wait,,result.merchant_service.price=82;result.merchant_service.phase=quoted;result.merchant_service.item=2
+270,sell selected instance,Client,shop.sell,,result.status=submitted
+280,only selected instance removed,Client,state.wait,,result.gold=5082;result.bag_count=1;result.bag.0.id=1;result.merchant_service.phase=choosing
+281,equipment ownership transferred,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='WEMADE',rows=[[1]]
+290,removed instance rejected,Client,shop.quote,id=2,error.code=-32002
+291,server rejects repeated instance,Client,shop.sale_request,index=0;id=2;name=ShopAccessory,result.status=submitted
+292,repeat preserves inventory,Client,state.wait,,result.gold=5082;result.bag_count=1;result.bag.0.id=1;result.shop.notice=true
+293,dismiss repeated sale refusal,Client,notice.dismiss,,result.status=submitted
+294,server refusal packet,Client,wire.expect,message=SM_USERSELLITEM_FAIL;direction=received,count=1
+300,back ready,Client,state.wait,,result.npc_dialog.ready=true
+310,back to menu,Client,npc.select,option=0,result.status=submitted
+320,buy menu ready,Client,state.wait,,result.npc_dialog.rows.2.command=@buy;result.npc_dialog.ready=true
+330,open buy,Client,npc.select,option=1,result.status=submitted
+340,individual category,Client,state.wait,,result.shop.goods.0.stock=2;result.shop.goods.0.price=165;result.shop.goods.0.variants=1
+350,request instances,Client,shop.details,index=0,result.status=submitted
+360,full and damaged prices,Client,state.wait,,result.shop.details=true;result.shop.loading=false;result.shop.offers.0.id=1;result.shop.offers.0.price=165;result.shop.offers.0.durability=8000;result.shop.offers.1.id=2;result.shop.offers.1.price=272;result.shop.offers.1.durability=4000
+370,buy damaged instance,Client,shop.buy_offer,index=1,result.status=submitted
+380,paid instance quote,Client,state.wait,,result.gold=4810;result.bag_count=2;result.bag.1.durability=4000;result.bag.1.max_durability=8000;result.shop.goods.0.stock=1
+390,stale stock identity,Client,shop.buy_request,index=0;id=2;name=ShopAccessory,result.status=submitted
+400,stale request preserves gold,Client,state.wait,,result.gold=4810;result.bag_count=2;result.shop.notice=true
+410,dismiss stale refusal,Client,notice.dismiss,,result.status=submitted
+420,refusal packet,Client,wire.expect,message=SM_BUYITEM_FAIL;direction=received,count=1
+430,refresh instances,Client,shop.details,index=0,result.status=submitted
+440,original stock remains,Client,state.wait,,result.shop.details=true;result.shop.loading=false;result.shop.offers.0.id=1;result.shop.offers.0.price=165;result.shop.offers.0.durability=8000
+450,buy full instance,Client,shop.buy_offer,index=0,result.status=submitted
+460,full item delivered,Client,state.wait,,result.gold=4645;result.bag_count=3;result.bag.2.durability=8000;result.bag.2.max_durability=8000;result.shop.goods.0.stock=0
+465,dialog ready,Client,state.wait,,result.npc_dialog.ready=true
+470,close store,Client,npc.select,option=0,result.status=submitted
+480,closed,Client,state.wait,,result.shop.open=false;result.return_ready=true
+490,save,Client,session.return,,result.status=submitted
+500,saved,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+510,gold persisted,Database,query,SELECT FLD_GOLD FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01',rows=[[4645]]
+520,inventory persisted,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='MirProbe01',rows=[[3]]
+530,damaged attributes preserved,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='MirProbe01' AND FLD_DURA=4000 AND FLD_DURAMAX=8000 AND FLD_VALUE1=1 AND FLD_VALUE3=3 AND FLD_VALUE7=13 AND FLD_VALUE14=14,rows=[[2]]
+535,original database identity retained,Database,query,"SELECT FLD_CHARNAME,FLD_DURA,FLD_VALUE7 FROM TBL_CHARACTER_ITEM WHERE FLD_STDTYPE='C' AND FLD_MAKEDATE='261118' AND FLD_MAKEINDEX='00002'","rows=[[""MirProbe01"",4000,13]]"
+540,fresh full attributes,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='MirProbe01' AND FLD_DURA=8000 AND FLD_DURAMAX=8000 AND FLD_VALUE1=0 AND FLD_VALUE14=0,rows=[[1]]
+550,reenter,Client,session.enter,name=MirProbe01,result.status=submitted
+560,restored,Client,state.wait,,result.scene=world;result.gold=4645;result.bag_count=3;result.bag.0.durability=4000;result.bag.1.durability=4000;result.bag.2.durability=8000
+570,detail protocol,Client,wire.expect,message=SM_SENDDETAILGOODSLIST;direction=received,count=2
+580,coverage,Client,protocol.get,,

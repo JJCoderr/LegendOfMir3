@@ -37,6 +37,9 @@ CStdItemSpecial::CStdItemSpecial()
 
 void CStdItemSpecial::GetStandardItem(_LPTCLIENTITEMRCD lpClientItemRcd)
 {
+    lpClientItemRcd->tStdItem.wAC = MAKEWORD(wAC,wAC2);
+    lpClientItemRcd->tStdItem.wMAC = MAKEWORD(wMAC,wMAC2);
+    lpClientItemRcd->tStdItem.wDC = MAKEWORD(wDC,wDC2);
 	memcpy(lpClientItemRcd->tStdItem.szName, szName, memlen(szName));
 
 	lpClientItemRcd->tStdItem.btStdMode			= (BYTE)wStdMode;

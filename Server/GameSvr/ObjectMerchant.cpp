@@ -232,21 +232,43 @@ bool CMerchantObject::LoadGoods()
                 }
                 break;
             }
+            for (int i=0;i<g_nStdItemSpecial;++i) if (!strcmp(item,g_pStdItemSpecial[i].szName)) {
+                const auto price=MerchantPricing::Purchase(int(g_pStdItemSpecial[i].dwPrice),percent);
+                constexpr ULONGLONG MillisecondsPerHour=60ULL*60*1000;
+                if (price>=0 && price<=INT_MAX) {
+                    Good good{i,count,int(price),count,ULONGLONG(hours)*MillisecondsPerHour,GetTickCount64()};
+                    good.special=true; FillStock(good); m_goods.push_back(good);
+                }
+                break;
+            }
         }
         m_goodsLoaded = true;
     }
     return true;
 }
 
+CItem& CMerchantObject::Standard(const Good& good) {
+    return good.special ? static_cast<CItem&>(g_pStdItemSpecial[good.standard]) : static_cast<CItem&>(g_pStdItemEtc[good.standard]);
+}
+int CMerchantObject::StackMode(const Good& good) { return good.special ? 0 : g_pStdItemEtc[good.standard].stackMode; }
+int CMerchantObject::StandardDurability(const Good& good) { return good.special ? g_pStdItemSpecial[good.standard].wDuraMax : g_pStdItemEtc[good.standard].wStandardDurability; }
+
 void CMerchantObject::FillStock(Good& good)
 {
-    const auto& standard = g_pStdItemEtc[good.standard];
-    if (standard.stackMode>=2) return;
+    const auto& standard = Standard(good);
+    if (StackMode(good)>=2) return;
     if (good.items.size()>size_t(good.stock)) good.items.resize(good.stock);
     while (good.items.size()<size_t(good.stock)) {
         _TGENERALITEMRCD record{}; record.nStdIndex=good.standard;
-        standard.InitDurability(&record);
-        good.items.push_back({m_nextStockId++,record});
+        _TUSERITEMRCD equipment{};
+        if (good.special) {
+            const auto type=g_pStdItemSpecial[good.standard].btType;
+            equipment.szMakeIndex[0]=type==_ITEM_WEAPON ? 'A' : type==_ITEM_ARMOR ? 'B' : 'C';
+            equipment.nStdIndex=good.standard;
+            equipment.nDura=equipment.nDuraMax=standard.wDuraMax;
+            record.nDura=record.nDuraMax=standard.wDuraMax;
+        } else g_pStdItemEtc[good.standard].InitDurability(&record);
+        good.items.push_back({m_nextStockId++,record,equipment});
     }
 }
 
@@ -256,20 +278,21 @@ void CMerchantObject::Details(CPlayerObject* player, const char* name, DWORD off
     constexpr unsigned ItemsPerPage=10;
     std::string body; WORD count=0;
     for (const auto& good : m_goods) {
-        auto& standard=g_pStdItemEtc[good.standard];
-        if (strcmp(name,standard.szName) || standard.stackMode>=2) continue;
+        auto& standard=Standard(good);
+        if (strcmp(name,standard.szName) || StackMode(good)>=2) continue;
         if (offset>=good.items.size()) offset=good.items.size()>ItemsPerPage ? DWORD(good.items.size()-ItemsPerPage) : 0;
         for (size_t i=offset; i<good.items.size() && i<offset+ItemsPerPage; ++i) {
             const auto& offer=good.items[i];
-            const int base=MerchantPricing::Base(int(standard.dwPrice),standard.wStandardDurability,
-                offer.record.nDura,offer.record.nDuraMax,standard.wStdMode,standard.stackMode);
+            const int base=MerchantPricing::Base(int(standard.dwPrice),StandardDurability(good),
+                offer.record.nDura,offer.record.nDuraMax,standard.wStdMode,StackMode(good),good.special ? offer.equipment.btValue : nullptr);
             const long long price=base<0 ? -1 : MerchantPricing::Purchase(base,m_pricePercent);
             // The native detail record carries its quote in the 16-bit maximum slot.
             if (price<0 || price>USHRT_MAX) continue;
             _TCLIENTITEMRCD legacy{}; standard.GetStandardItem(&legacy);
             legacy.nDura=WORD(offer.record.nDura); legacy.nDuraMax=WORD(price);
             auto record=Mir3Item::FromLegacy(legacy,offer.id);
-            record[Mir3Item::StackMode]=standard.stackMode;
+            record[Mir3Item::StackMode]=StackMode(good);
+            if (good.special) Mir3Item::ApplyUpgrades(record,offer.equipment.btValue);
             char encoded[Mir3Item::EncodedSize+1]{};
             const int size=fnEncode6BitBufA(record.data(),encoded,int(record.size()),sizeof(encoded));
             body.append(encoded,size); body+='/'; ++count;
@@ -295,8 +318,8 @@ void CMerchantObject::SendGoods(CPlayerObject* player)
     constexpr int BulkGoods = 2, LastUniformMode = 4, BundleMode = 31, ReservedUniformMode = 42;
     std::string text;
     for (const auto& good : m_goods) {
-        const auto& item = g_pStdItemEtc[good.standard];
-        text += std::string(item.szName)+"/"+std::to_string(item.stackMode>=2 ? BulkGoods : int(item.wStdMode>LastUniformMode && item.wStdMode!=BundleMode && item.wStdMode!=ReservedUniformMode))+"/"+std::to_string(good.price)+"/"+
+        const auto& item = Standard(good);
+        text += std::string(item.szName)+"/"+std::to_string(StackMode(good)>=2 ? BulkGoods : int(item.wStdMode>LastUniformMode && item.wStdMode!=BundleMode && item.wStdMode!=ReservedUniformMode))+"/"+std::to_string(good.price)+"/"+
             std::to_string(good.stock)+"/"+std::to_string(item.dwLooks)+"/0/0/";
     }
     char encoded[8192];
@@ -315,21 +338,28 @@ void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity,
     int failure = Unavailable;
     CUserInfo* owner = player->m_pUserInfo;
     for (auto& good : m_goods) {
-        auto& item = g_pStdItemEtc[good.standard];
+        auto& item = Standard(good);
         if (strcmp(name, item.szName)) continue;
-        if (item.stackMode<2) {
+        if (StackMode(good)<2) {
             if (quantity) break;
             for (auto offer=good.items.begin(); offer!=good.items.end(); ++offer) {
                 if (offer->id!=instance) continue;
                 if (!owner->IsEnoughBag() || ULONGLONG(owner->CalcBagWeight())+item.wWeight>player->m_WAbility.MaxWeight) {
                     failure=CannotCarry; break;
                 }
-                const int base=MerchantPricing::Base(int(item.dwPrice),item.wStandardDurability,
-                    offer->record.nDura,offer->record.nDuraMax,item.wStdMode,item.stackMode);
+                const int base=MerchantPricing::Base(int(item.dwPrice),StandardDurability(good),
+                    offer->record.nDura,offer->record.nDuraMax,item.wStdMode,StackMode(good),good.special ? offer->equipment.btValue : nullptr);
                 const long long price=base<0 ? -1 : MerchantPricing::Purchase(base,m_pricePercent);
                 if (price<=0 || price>USHRT_MAX || price>owner->GetGold()) { failure=NotEnoughGold; break; }
-                auto* record=new _TGENERALITEMRCD(offer->record);
-                owner->DecGold(int(price)); owner->MakeGenItem(record);
+                if (good.special) {
+                    auto* record=new _TUSERITEMRCD(offer->equipment);
+                    if (!player->UpdateItemToDB(record,_ITEM_ACTION_PICKUP)) { delete record; break; }
+                    owner->m_lpTItemRcd.AddNewNode(record);
+                    owner->DecGold(int(price)); player->SendAddItem(record);
+                } else {
+                    auto* record=new _TGENERALITEMRCD(offer->record);
+                    owner->DecGold(int(price)); owner->MakeGenItem(record);
+                }
                 good.items.erase(offer); --good.stock;
                 player->WeightChanged(); failure=0; break;
             }
@@ -346,7 +376,7 @@ void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity,
         for (int i=0; i<quantity; ++i) {
             auto* record = new _TGENERALITEMRCD{};
             record->nStdIndex = good.standard;
-            item.InitDurability(record);
+            g_pStdItemEtc[good.standard].InitDurability(record);
             if (good.stock-i<=int(good.returnedItems.size())) {
                 *record = good.returnedItems.front();
                 good.returnedItems.erase(good.returnedItems.begin());
@@ -365,44 +395,57 @@ void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity,
     if (!failure) SendGoods(player);
 }
 
-void CMerchantObject::Sale(CPlayerObject* player, _LPTGENERALITEMRCD item, bool commit, int quantity)
+void CMerchantObject::Sale(CPlayerObject* player, _LPTGENERALITEMRCD item, bool commit, int quantity, _LPTUSERITEMRCD equipment)
 {
     std::lock_guard<std::mutex> lock(m_goodsMutex);
     auto* owner = player->m_pUserInfo;
+    _TGENERALITEMRCD equipmentValues{};
+    if (equipment) {
+        equipmentValues.nStdIndex=equipment->nStdIndex;
+        equipmentValues.nDura=equipment->nDura; equipmentValues.nDuraMax=equipment->nDuraMax;
+        item=&equipmentValues;
+    }
+    Good category{}; category.special=equipment!=NULL;
+    if (item) category.standard=item->nStdIndex;
     int price = -1;
     if (item && LoadGoods()) {
-        const auto& standard = g_pStdItemEtc[item->nStdIndex];
+        const auto& standard = Standard(category);
         bool allowed = false;
         for (int mode : m_purchaseTypes) if (mode==standard.wStdMode) allowed = true;
         if (allowed && standard.dwPrice<=INT_MAX) {
-            const int base = MerchantPricing::Base(int(standard.dwPrice),standard.wStandardDurability,
-                item->nDura,item->nDuraMax,standard.wStdMode,standard.stackMode);
+            const int base = MerchantPricing::Base(int(standard.dwPrice),StandardDurability(category),
+                item->nDura,item->nDuraMax,standard.wStdMode,StackMode(category),equipment ? equipment->btValue : nullptr);
             if (base>=0) price = base/2 + ((base%2 && (base/2)%2) ? 1 : 0);
         }
     }
     constexpr int PowderMode=25, CandleMode=30, MinimumSaleDurability=4000;
-    const bool lowQuality = item && (g_pStdItemEtc[item->nStdIndex].wStdMode==PowderMode ||
-        g_pStdItemEtc[item->nStdIndex].wStdMode==CandleMode) && item->nDura<MinimumSaleDurability;
+    const bool lowQuality = item && (Standard(category).wStdMode==PowderMode ||
+        Standard(category).wStdMode==CandleMode) && item->nDura<MinimumSaleDurability;
     bool sold = false;
     if (commit && !lowQuality && price>=0 && quantity==0 && ULONGLONG(owner->GetGold())+price<=BAGGOLD) {
         Good* stock = NULL;
         if (item->nDura>0) {
-            for (auto& good : m_goods) if (good.standard==item->nStdIndex) stock = &good;
+            for (auto& good : m_goods) if (good.standard==item->nStdIndex && good.special==category.special) stock = &good;
             if (!stock) {
-                const auto buyPrice = MerchantPricing::Purchase(int(g_pStdItemEtc[item->nStdIndex].dwPrice),m_pricePercent);
+                const auto buyPrice = MerchantPricing::Purchase(int(Standard(category).dwPrice),m_pricePercent);
                 if (buyPrice>=0 && buyPrice<=INT_MAX) {
                     m_goods.push_back({item->nStdIndex,0,int(buyPrice),0,~ULONGLONG(0),GetTickCount64()});
-                    stock = &m_goods.back();
+                    stock = &m_goods.back(); stock->special=category.special;
                 }
             }
         }
-        if ((!item->nDura || (stock && stock->stock<USHRT_MAX)) && owner->IncGold(price)) {
+        if ((!item->nDura || (stock && stock->stock<USHRT_MAX)) &&
+            (!equipment || player->UpdateItemToDB(equipment,_ITEM_ACTION_THROW)) && owner->IncGold(price)) {
             if (stock) {
-                if (g_pStdItemEtc[item->nStdIndex].stackMode>=2) stock->returnedItems.push_back(*item);
-                else stock->items.push_back({m_nextStockId++,*item});
+                if (StackMode(category)>=2) stock->returnedItems.push_back(*item);
+                else stock->items.push_back({m_nextStockId++,*item,equipment ? *equipment : _TUSERITEMRCD{}});
                 ++stock->stock;
             }
-            owner->RemoveGenItem(item);
+            if (equipment) {
+                for (auto node=owner->m_lpTItemRcd.GetHead();node;node=owner->m_lpTItemRcd.GetNext(node))
+                    if (owner->m_lpTItemRcd.GetData(node)==equipment) { owner->m_lpTItemRcd.RemoveNode(node); break; }
+                delete equipment;
+            } else owner->RemoveGenItem(item);
             player->WeightChanged();
             sold = true;
         }

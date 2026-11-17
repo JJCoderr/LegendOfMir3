@@ -20,8 +20,19 @@ int main() {
         const int got=MerchantPricing::Base(c.price,c.standard,c.current,c.maximum,c.mode,c.stack);
         if(got!=c.expected) { std::printf("FAIL mode=%d got=%d expected=%d\n",c.mode,got,c.expected);return 1; }
     }
+    const unsigned char bonuses[14]={1,2,3,4,5,6,13,8,9,10,11,12,13,14};
+    const Case upgraded[]={
+        {100,8000,4000,8000,10,0,165},{120,8000,4000,8000,5,0,252},
+        {120,8000,4000,8000,6,0,252},{11,8000,8000,8000,10,0,23},
+        {100,0,4000,8000,10,0,100},{100,8000,4000,8000,10,2,100},
+        {INT_MAX,8000,8000,8000,10,0,-1}
+    };
+    for(const auto& c:upgraded) {
+        const int got=MerchantPricing::Base(c.price,c.standard,c.current,c.maximum,c.mode,c.stack,bonuses);
+        if(got!=c.expected) { std::printf("FAIL upgraded mode=%d got=%d expected=%d\n",c.mode,got,c.expected);return 4; }
+    }
     __asm { fnstcw after }
     __asm { fldcw original }
     if(after!=unusual) return 2;
-    std::puts("PASS: 17 native pricing cases and caller x87 control restoration");
+    std::puts("PASS: 24 native pricing cases and caller x87 control restoration");
 }
