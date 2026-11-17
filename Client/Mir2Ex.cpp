@@ -70,6 +70,9 @@ public:
         if(groupPanel>=RolePresentationPreview::First && groupPanel<=RolePresentationPreview::Last) {
             connectionSelectionPreview=true;capturePath=RolePresentationPreview::Load(groupPanel);return;
         }
+        if(groupPanel>=CharacterInteractionPreview::NameAscii && groupPanel<=CharacterInteractionPreview::NameRestored) {
+            connectionSelectionPreview=true;capturePath=CharacterInteractionPreview::LoadName(groupPanel);return;
+        }
         if(groupPanel>=CharacterInteractionPreview::First && groupPanel<=CharacterInteractionPreview::Last) {
             connectionSelectionPreview=true;capturePath=CharacterInteractionPreview::Load(groupPanel);return;
         }
@@ -3752,6 +3755,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=modal-button-pressed")==0 ? 304 :
         strcmp(lpCmdLine,"--preview=modal-button-left")==0 ? 305 :
         strcmp(lpCmdLine,"--preview=modal-button-returned")==0 ? 306 :
+        strcmp(lpCmdLine,"--preview=creation-name-ascii")==0 ? CharacterInteractionPreview::NameAscii :
+        strcmp(lpCmdLine,"--preview=creation-name-chinese")==0 ? CharacterInteractionPreview::NameChinese :
+        strcmp(lpCmdLine,"--preview=creation-name-restored")==0 ? CharacterInteractionPreview::NameRestored :
         strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
         strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
         strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :

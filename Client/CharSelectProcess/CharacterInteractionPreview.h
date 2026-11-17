@@ -29,6 +29,41 @@ struct CharacterInteractionPreview {
         SetFocus(g_xMainWnd.GetSafehWnd());p.OnLButtonUp(0,MAKELPARAM(369,410));check("editor_margin_focus",GetFocus()==g_xChatEditBox.GetSafehWnd());
         p.DeleteProc();fclose(report);
     }
+    enum {NameAscii=307,NameChinese=308,NameRestored=309};
+    static const char* LoadName(int mode) {
+        LoginVisual::ResizeCanvas(640,480);
+        auto& p=g_xChrSelProc;p.Preview("create");
+        const HWND edit=g_xChatEditBox.GetSafehWnd();
+        FILE* report=fopen("creation-name-check.txt","wb");
+        const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+        check("visible_focused",IsWindowVisible(edit) && GetFocus()==edit);
+        check("name_limit",SendMessage(edit,EM_GETLIMITTEXT,0,0)==SelectionDialog::NameBytes);
+        const auto text=[&](){char value[128]={};GetWindowTextA(edit,value,sizeof(value));return std::string(value);};
+        SetWindowTextA(edit,"");SendMessageA(edit,EM_REPLACESEL,TRUE,(LPARAM)"1234567890123456");
+        check("ascii_limit",text()=="1234567890123");
+        SetWindowTextA(edit,"");SendMessageA(edit,EM_REPLACESEL,TRUE,(LPARAM)"传奇勇士测试中文");
+        check("chinese_limit_whole",text()=="传奇勇士测试");
+        SetWindowTextA(edit,"传奇勇士");SendMessage(edit,EM_SETSEL,0,1);SendMessageA(edit,EM_REPLACESEL,TRUE,(LPARAM)"神");
+        check("chinese_replace",text()=="神奇勇士");
+        SetWindowTextA(edit,"ABCDEFGHIJKL");SendMessage(edit,EM_SETSEL,6,6);
+        SendMessageA(edit,EM_REPLACESEL,TRUE,(LPARAM)"中");
+        check("dbcs_overflow_keeps_suffix",text()=="ABCDEFGHIJKL");
+        SetWindowTextA(edit,"ABCDEFGHIJK");SendMessage(edit,EM_SETSEL,5,5);
+        SendMessageA(edit,EM_REPLACESEL,TRUE,(LPARAM)"中");
+        check("dbcs_exact_fit_keeps_suffix",text()=="ABCDE中FGHIJK");
+
+        p.ShowNotice(SelectionDialog::NameExists);
+        check("error_hides_name",!IsWindowVisible(edit));p.OnKeyDown(VK_RETURN,0);
+        check("error_restores_empty_focus",IsWindowVisible(edit) && GetFocus()==edit && text().empty());
+        SetWindowTextA(edit,"传奇勇士");p.OnLButtonUp(0,MAKELPARAM(309,420));
+        check("job_preserves_name",text()=="传奇勇士" && p.m_SelectJob==1);
+        p.m_createBounds[1]={400,200,500,390};p.OnLButtonDown(0,MAKELPARAM(450,250));
+        check("gender_preserves_name",text()=="传奇勇士" && p.m_SelectSex==1);
+        p.OpenCreation();check("reopen_clears_name",text().empty() && GetFocus()==edit);
+        SetWindowTextA(edit,mode==NameAscii?"MirWarrior":mode==NameChinese?"传奇勇士":"再次创建");
+        if(report) fclose(report);
+        return mode==NameAscii?"creation-name-ascii.bmp":mode==NameChinese?"creation-name-chinese.bmp":"creation-name-restored.bmp";
+    }
     static const char* Load(int mode) {
         LoginVisual::ResizeCanvas(640,480);if(mode==First) Checks();
         auto& p=g_xChrSelProc;p.Preview(mode==First?"select-three":"create");

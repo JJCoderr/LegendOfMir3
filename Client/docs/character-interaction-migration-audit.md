@@ -17,3 +17,12 @@
 ## 剩余边界
 
 整体 GUI 仍需汇总各页面差异，未宣称与 MIR3.EXE 逐像素完全一致。原版三部影片缺失仍见 lobby-movie-migration-audit.md；真实登录/创建/删除/进游戏协议联调留待 GUI 验收后。
+
+
+## 2026-11-17 姓名输入内容与字节限制
+
+大厅整批截图中姓名为空，不能证明原生EDIT内容可见。新增307 creation-name-ascii、308 creation-name-chinese、309 creation-name-restored三种填入内容截图，显示英文、中文以及错误返回/重新打开后重新输入。实际查看out/creation-name三图，姓名位于参考(288,405)、75×13位置，无密码掩码。
+
+新增检查发现CharacterProcess未处理EN_CHANGE，原有EM_LIMITTEXT按字符计数，允许超13字节中文姓名。现接入既有ChatEdit.Changed/LimitAnsiEdit，按参考13字节截取且保留完整中文和编辑后缀。删除确认沿用其自身90字节限制。测试中EM_SETSEL按字符位置而非ANSI字节计数，已修正该夹具。
+
+12项新检查：可见/焦点、限制值、ASCII上限、中文完整边界、中文替换、超限插入保留后缀、恰好插入保留后缀、错误隐藏、错误恢复空文本焦点、职业/性别切换保留姓名、重开清空。加既有交互15、角色表现22、选角对话框23，共72检查通过。七目标构建通过out/creation-name-final.log，六页新鲜截图在out/creation-name，自启预览均停止。下一编号310。真实服务器创建请求仍未联调。

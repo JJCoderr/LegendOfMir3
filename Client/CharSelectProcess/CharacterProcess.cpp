@@ -184,6 +184,11 @@ LRESULT CCharacterProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, L
 {
 	switch ( uMsg )
 	{
+    case WM_COMMAND:
+        if((HWND)lParam==g_xChatEditBox.GetSafehWnd() && HIWORD(wParam)==EN_CHANGE) {
+            g_xChatEditBox.Changed();return 0;
+        }
+        break;
     case WM_CTLCOLOREDIT:
         if ((HWND)lParam == g_xChatEditBox.GetSafehWnd()) {
             SetBkColor((HDC)wParam, RGB(0, 0, 0));
