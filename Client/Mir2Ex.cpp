@@ -6,6 +6,7 @@
 #include "GameProcess/MerchantServiceIds.h"
 #include "GameProcess/EquipmentActionIds.h"
 #include "GameProcess/TradeWire.h"
+#include "GameProcess/GoldDrop.h"
 #include "GameProcess/SpellPreview.h"
 #include "GameProcess/GroundItemPreview.h"
 #include "GameProcess/LightingPreview.h"
@@ -1226,6 +1227,46 @@ public:
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
         }
+        if(groupPanel>=330 && groupPanel<=332) {
+            auto& game=g_xGameProc;auto& ui=game.m_xInterface;auto& bag=ui.m_xInventoryWnd;
+            FILE* report=fopen("gold-drop-check.txt","wb");const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+            const auto capture=[&](auto action,unsigned amount) {
+                SOCKET receiver=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP),sender=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);
+                bind(receiver,(sockaddr*)&address,sizeof(address));int size=sizeof(address);getsockname(receiver,(sockaddr*)&address,&size);connect(sender,(sockaddr*)&address,sizeof(address));DWORD timeout=30;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));
+                const SOCKET saved=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;action();g_xClientSocket.m_sockClient=saved;
+                char wire[128]={};const int length=recv(receiver,wire,sizeof(wire)-1,0);char extra[128];const bool single=recv(receiver,extra,sizeof(extra),0)==SOCKET_ERROR;closesocket(sender);closesocket(receiver);
+                if(!amount) return length==SOCKET_ERROR;
+                if(length!=DEFBLOCKSIZE+3) return false;_TDEFAULTMESSAGE packet={};fnDecodeMessage(&packet,wire+2);
+                return single && packet.wIdent==GoldDrop::Request && unsigned(packet.nRecog)==amount && !packet.wParam && !packet.wTag && !packet.wSeries;
+            };
+            game.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            if(!bag.m_bActive) ui.WindowActivate(_WND_ID_INVENTORY);hero.m_nGlod=100000;game.StartInputDelay(0);game.m_bRender=TRUE;
+            const RECT bounds=GoldDrop::InventoryBounds(bag.m_rcWnd);const POINT gold={bounds.left+1,bounds.top+1};
+            ui.OnLButtonDown(gold);check("gold_not_dragging",!ui.m_bMoveFocusedWnd && !ui.m_heldGold);
+            ui.OnLButtonUp(gold);check("release_lifts_gold",ui.m_heldGold);
+            const POINT slot={bag.m_rcWnd.left+25,bag.m_rcWnd.top+70};ui.OnLButtonDown(slot);ui.OnLButtonUp(slot);
+            check("gold_blocks_item_pickup",ui.m_heldGold && !ui.m_stCommonItem.bSetted);
+            game.StartInputDelay(InputDelay::Mount);game.OnLButtonDown(0,MAKELPARAM(400,200));check("delay_preserves_gold",ui.m_heldGold && !ui.m_xMsgBox.IsActive());game.AdvanceInputDelay(InputDelay::Mount);
+            check("open_no_packet",capture([&](){game.OnLButtonDown(0,MAKELPARAM(400,200));},0));
+            CLoginMessages captions;captions.Load("./CmList.dat");const HWND edit=g_xChatEditBox.GetSafehWnd();
+            check("gold_prompt",ui.HasInputDialog() && ui.m_nIdxMsgBox==GoldDrop::Dialog && captions.Get(GoldDrop::Prompt)==ui.m_xMsgBox.Text());
+            check("gold_released_editor_focused",!ui.m_heldGold && IsWindowVisible(edit) && GetFocus()==edit && SendMessage(edit,EM_GETLIMITTEXT,0,0)==90);
+            check("cancel_no_packet",capture([&](){ui.FinishNotice(CLICK_NO,false);},0));check("cancel_closes",!ui.HasInputDialog() && !IsWindowVisible(edit));
+            const char* invalid[]={"","0","-1","*","100000","100001","invalid"};bool rejected=true;
+            for(const char* value:invalid) {ui.OpenNameDialog(GoldDrop::Dialog);SetWindowTextA(edit,value);rejected &= capture([&](){ui.FinishNotice(CLICK_YES,false);},0);}
+            check("invalid_and_full_balance_rejected",rejected && hero.m_nGlod==100000);
+            ui.OpenNameDialog(GoldDrop::Dialog);SetWindowTextA(edit,"99999");check("native_enter_single_request",capture([&](){SendMessage(edit,WM_CHAR,VK_RETURN,0);},99999));
+            check("balance_waits_for_server",hero.m_nGlod==100000 && !ui.HasInputDialog());
+            ui.OpenNameDialog(GoldDrop::Dialog);strcpy(g_xChatEditBox.m_szInputMsg," 12gold");check("legacy_input_and_numeric_prefix",capture([&](){game.OnMsgInputted(0,0);},12));
+            _TDEFAULTMESSAGE reply={};fnMakeDefMessage(&reply,SM_GOLDCHANGE,99988,0,0,0);char encoded[64]={};fnEncodeMessage(&reply,encoded,sizeof(encoded));game.OnSocketMessageRecieve(encoded);
+            check("server_balance_applied",hero.m_nGlod==99988);
+            ui.m_stCommonItem.bSetted=TRUE;ui.OnLButtonUp(gold);check("item_blocks_gold_pickup",!ui.m_heldGold);ui.m_stCommonItem.bSetted=FALSE;
+            ui.m_bMoveFocusedWnd=TRUE;ui.OnLButtonUp(gold);check("drag_release_does_not_lift",!ui.m_heldGold);
+            ui.OnLButtonUp(gold);check("release_without_press_lifts",ui.m_heldGold);
+            auto& goldImage=game.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];check("gold_icon_resource",goldImage.NewSetIndex(GoldDrop::Icon) && goldImage.m_lpstNewCurrWilImageInfo->shWidth>0 && goldImage.m_lpstNewCurrWilImageInfo->shHeight>0);
+            if(groupPanel!=330) {game.OnLButtonDown(0,MAKELPARAM(400,200));if(groupPanel==332) SetWindowTextA(edit,"12000");}
+            if(report) fclose(report);mouse={400,200};capturePath=groupPanel==330?"gold-held.bmp":groupPanel==331?"gold-drop-dialog.bmp":"gold-drop-filled.bmp";
+        }
         if(groupPanel==328 || groupPanel==329) {
             auto& game=g_xGameProc;auto& ui=game.m_xInterface;auto& mount=ui.m_xHorseWnd;
             FILE* report=fopen("input-delay-check.txt","wb");const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
@@ -1296,6 +1337,8 @@ public:
             check("cancel_closes",!ui.m_xMsgBox.IsActive() && !IsWindowVisible(edit));
             submit();SetWindowTextA(edit,"传奇勇士");check("confirm_wire",capture([&](){SendMessage(edit,WM_CHAR,VK_RETURN,0);},CM_GUILDADDMEMBER,"传奇勇士"));
             check("confirm_closes",!ui.m_xMsgBox.IsActive() && !IsWindowVisible(edit));
+            submit();strcpy(g_xChatEditBox.m_szInputMsg,"旧入口勇士");check("legacy_submission_wire",capture([&](){g_xGameProc.OnMsgInputted(0,0);},CM_GUILDADDMEMBER,"旧入口勇士"));
+
             check("closed_no_repeat",capture([&](){g_xGameProc.OnKeyDown(VK_RETURN,1L<<30);},0,""));
             guild.m_manager=groupPanel!=326;submit();if(groupPanel==327) SetWindowTextA(edit,"传奇勇士");
             if(report) fclose(report);mouse={790,430};capturePath=groupPanel==325?"guild-add-member.bmp":groupPanel==326?"guild-add-denied.bmp":"guild-add-member-filled.bmp";
@@ -4063,6 +4106,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=guild-add-member-filled")==0 ? 327 :
         strcmp(lpCmdLine,"--preview=mount-input-delay")==0 ? 328 :
         strcmp(lpCmdLine,"--preview=mount-delay-dialog")==0 ? 329 :
+        strcmp(lpCmdLine,"--preview=gold-held")==0 ? 330 :
+        strcmp(lpCmdLine,"--preview=gold-drop-dialog")==0 ? 331 :
+        strcmp(lpCmdLine,"--preview=gold-drop-filled")==0 ? 332 :
         strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
         strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
         strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :

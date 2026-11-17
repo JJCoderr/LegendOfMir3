@@ -2,6 +2,7 @@
 #include "Common/ChatShortcuts.h"
 #include "Common/ChatLog.h"
 #include "Common/ChatCommandIds.h"
+#include "GoldDrop.h"
 #include "EffectRenderer.h"
 #include "SpellSpriteRenderer.h"
 #include "WeatherRenderer.h"
@@ -1837,6 +1838,10 @@ LRESULT CGameProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 
 	if ( !m_xInterface.OnLButtonDown(m_ptMousePos) )
 	{
+        if(m_xInterface.m_heldGold && m_xInterface.SpellPointerAvailable()) {
+            m_xInterface.m_heldGold=false;m_xInterface.OpenNameDialog(GoldDrop::Dialog);return 0L;
+        }
+
 		// 界面中没有要做的事情时.
 
 		// 1. 掉落物品。

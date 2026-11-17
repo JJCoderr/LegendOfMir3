@@ -16,6 +16,7 @@
 #include "Common/ChatLog.h"
 #include "Common/ChatCommandIds.h"
 #include "TradeWire.h"
+#include "GoldDrop.h"
 #include "MailWire.h"
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
@@ -55,6 +56,7 @@ VOID CInterface::Init()
 	m_nFstLine			= 0;
     previousHint.clear(); hintHeight=6; hintExpanding=true;
     ChatShortcuts().Clear();NativeChatLog().path.clear();
+    m_heldGold=false;
     m_chatMode = 0;
     m_chatModeChanged = false;
     for (int i=0;i<3;++i) { m_chatRejected[i]=false; m_chatReceptionFrame[i]=-1; m_chatReceptionHint[i]=i==0?2637:i==1?2639:2643; }
@@ -598,6 +600,14 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     m_xMailWnd.ShowAttachmentHint(ptMousePos);
     m_xConsignmentWnd.ShowItemHint(ptMousePos);m_xConsignmentRegistration.ShowItemHint(ptMousePos);
     m_xExchangeWnd.ShowHeld(ptMousePos);
+    if(m_heldGold && ptMousePos.x>=0 && ptMousePos.x<800 && ptMousePos.y>=0 && ptMousePos.y<600) {
+        auto& image=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];
+        if(image.NewSetIndex(GoldDrop::Icon)) {
+            const auto info=*image.m_lpstNewCurrWilImageInfo;
+            DrawSelectionFrame(image,GoldDrop::Icon,ptMousePos.x-info.shWidth/2,ptMousePos.y-info.shHeight/2,SelectionBlend::Normal,false);
+        }
+    }
+
 }
 
 
@@ -1526,6 +1536,11 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
     if(m_xMsgBox.IsActive()) {m_xMsgBox.OnButtonDown(ptMouse,false);return TRUE;}
     if(g_xGameProc.InputDelayed()) return TRUE;
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(0,ptMouse); return TRUE; }
+    if(GetWindowInMousePos(ptMouse)==_WND_ID_INVENTORY) {
+        const RECT gold=GoldDrop::InventoryBounds(m_xInventoryWnd.m_rcWnd);
+        if(PtInRect(&gold,ptMouse) || (m_heldGold && m_xInventoryWnd.SlotAt(ptMouse)>=0)) {m_bMoveFocusedWnd=FALSE;return TRUE;}
+    }
+
     const RECT siegeEntry=m_xSiegeWnd.EntryBounds();
     if(!m_xMsgBox.IsActive() && GetWindowInMousePos(ptMouse)==-1 && PtInRect(&siegeEntry,ptMouse)) {m_xSiegeWnd.entryPressed=true;return TRUE;}
     if (!m_xMsgBox.IsActive() && GetWindowInMousePos(ptMouse)==_WND_ID_MINIMAP && m_minimap.Pointer(0,ptMouse,(GetKeyState(VK_CONTROL)&0x8000)!=0)) {m_bMoveFocusedWnd=FALSE;return TRUE;}
@@ -1725,6 +1740,13 @@ void CInterface::ShowNotice(int message)
     m_xMsgBox.ShowMessageBox(captions.Get(message).c_str(),MSG_BTN_OK,1240);
 }
 
+bool CInterface::HasInputDialog() const
+{
+    return m_xMsgBox.IsActive() && (m_nIdxMsgBox==GoldDrop::Dialog || m_nIdxMsgBox==CM_GUILDADDMEMBER ||
+        (m_nIdxMsgBox>=1 && m_nIdxMsgBox<=11) || m_nIdxMsgBox==TradeWire::QuantityDialog ||
+        m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog || m_nIdxMsgBox==SiegeLayout::LoadDialog);
+}
+
 void CInterface::OpenNameDialog(int action)
 {
     static CLoginMessages captions;
@@ -1738,6 +1760,7 @@ void CInterface::OpenNameDialog(int action)
         prompt=captions.Get(ChatCommandIds::AddGuildMemberPrompt);
         const auto at=prompt.find("%s");if(at!=std::string::npos) prompt.replace(at,2,m_xGuildWnd.m_name);
     }
+    if(action==GoldDrop::Dialog) prompt=captions.Get(GoldDrop::Prompt);
     if(action==TradeWire::QuantityDialog) prompt=captions.Get(TradeWire::QuantityDialog);
     if(action==SiegeLayout::LoadDialog) prompt=captions.Get(SiegeLayout::LoadCaption);
     if(action==ConsignmentLayout::PriceDialog) prompt=captions.Get(ConsignmentLayout::PriceQuestion);
@@ -1777,7 +1800,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         (m_nIdxMsgBox==ConsignmentLayout::RegistrationDialog?m_xConsignmentRegistration:m_xConsignmentWnd).Confirm(hResult==CLICK_YES);
         return;
     }
-    if (m_nIdxMsgBox==CM_GUILDADDMEMBER || (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==TradeWire::QuantityDialog || m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog || m_nIdxMsgBox==SiegeLayout::LoadDialog) {
+    if (HasInputDialog()) {
         std::vector<char> answer(GetWindowTextLengthA(g_xChatEditBox.GetSafehWnd())+1);
         char* name=answer.data(); GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,int(answer.size()));
         if (mouse) g_xSound.PlayLobbyEffect("105.wav");
@@ -1794,7 +1817,14 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         if (m_nIdxMsgBox==7 && hResult!=CLICK_YES) m_xNPCWnd.ClearPrompt();
         if(m_nIdxMsgBox==TradeWire::QuantityDialog && hResult!=CLICK_YES) m_xExchangeWnd.SubmitOffer(name,false);
         if (hResult == CLICK_YES) {
-            if(m_nIdxMsgBox==CM_GUILDADDMEMBER) {
+            if(m_nIdxMsgBox==GoldDrop::Dialog) {
+                const long amount=strtol(name,nullptr,10);
+                if(amount>0 && DWORD(amount)<g_xGameProc.m_xMyHero.m_nGlod) {
+                    _TDEFAULTMESSAGE message;fnMakeDefMessage(&message,GoldDrop::Request,amount,0,0,0);
+                    g_xClientSocket.SendPacket(&message,nullptr);
+                }
+            }
+            else if(m_nIdxMsgBox==CM_GUILDADDMEMBER) {
                 _TDEFAULTMESSAGE message;fnMakeDefMessage(&message,CM_GUILDADDMEMBER,0,0,0,0);
                 g_xClientSocket.SendPacket(&message,name);
             }
@@ -1829,6 +1859,14 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
     if(m_xMsgBox.IsActive()) {
         m_bMoveFocusedWnd=FALSE;
         FinishNotice(m_xMsgBox.OnButtonUp(ptMouse),true);return TRUE;
+    }
+    if(!m_xGuildEditor.m_bActive && GetWindowInMousePos(ptMouse)==_WND_ID_INVENTORY) {
+        const RECT gold=GoldDrop::InventoryBounds(m_xInventoryWnd.m_rcWnd);
+        if(PtInRect(&gold,ptMouse)) {
+            if(!m_bMoveFocusedWnd && !m_stCommonItem.bSetted && !m_heldGold) {m_heldGold=true;g_xSound.PlayLobbyEffect("106.wav");}
+            m_bMoveFocusedWnd=FALSE;return TRUE;
+        }
+        if(m_heldGold && m_xInventoryWnd.SlotAt(ptMouse)>=0) return TRUE;
     }
     if(!m_xMsgBox.IsActive() && m_bMoveFocusedWnd && m_xOptionWnd.m_bActive && m_xOptionWnd.m_bFocused) {
         m_bMoveFocusedWnd=FALSE;m_xOptionWnd.SetStatusBtnInit();return TRUE;
@@ -2334,7 +2372,7 @@ bool CInterface::SpellPointerAvailable()
 
 LRESULT	CInterface::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 {
-    if (m_xMsgBox.IsActive() && ((m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==TradeWire::QuantityDialog || m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog || m_nIdxMsgBox==SiegeLayout::LoadDialog)) {
+    if (HasInputDialog()) {
         SetWindowTextA(g_xChatEditBox.GetSafehWnd(),g_xChatEditBox.m_szInputMsg);
         FinishNotice(CLICK_YES,false);
         return TRUE;

@@ -1755,3 +1755,9 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 输入命令/坐骑按钮启动300；GameProc和Interface左键、角色左右持续输入、新移动/攻击/挖取/转向、技能入口阻止新请求。通用弹窗优先，既有动作与服务端动画继续。
 - 新328/329，下一330；out/input-delay十图及九报告，新19+相关215=234通过；七目标input-delay-final-build.log成功。测试字段初次命名错误已修cast_at；两新增图查看，自启预览停。详见input-delay-migration-audit.md。
 - 仍需真实服骑乘/换图组合体验和整体登录链路；未将离线通过等同端到端完成。
+
+
+## 2026-11-17 金币拾取及丢弃金额框
+- 新GoldDrop.h命名102弹窗、1415提示、1016请求、124图标。背包释放拿金币并播放106.wav，地面打开原生金额输入，延迟阻止打开，回复更新余额。统一HasInputDialog修复行会1038旧提交入口。
+- 新330–332，下一333。新增Interface成员已clean Client；七目标gold-drop-build.log成功，最终增量gold-drop-final-build.log成功。金币18、行会13、模态27通过，另完成金额/背包/音效/延迟相关回归。out/gold-drop共11图，三种金币状态查看。
+- 截图发现离线预览漏载Inventory.wil，已补齐并增加资源断言；最终重跑五种状态。详见gold-drop-dialog-migration-audit.md。真实服落地金币与堆叠丢弃104仍待后续工作。
