@@ -2098,3 +2098,8 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 ### 多件怪物掉落
 - 非金币掉落按 FLD_COUNT 生成独立物品；数量 0 不掉落，每条配置只抽取一次概率，金币保留原数量规则。整理 MonGetRandomItems，去掉重复清零和失效注释。
 - MonstersLootCount.csv 43 步通过：两瓶药水分散掉落、逐件行走拾取、独立 ID、数据库数量 2 与重登恢复。MonstersEquipmentCount.csv 45 步通过：两件装备分配 00011/00012，穿戴一件、背包保留另一件并保存恢复。两场景包含数量 0 的负向配置。MonstersGold 40 步回归通过，EIServer Release 构建通过。日志 out/csv-validation/monster-loot-count.log、monster-equipment-count.log、count-gold-regression.log。
+
+### 背包容量与整笔存档
+- Client/Server 共用 Shared/Mir3InventoryLimits.h 的 60 格容量，服务端容量判断排除已穿戴物品，AddNewItem 同样使用该判断；RPC 状态新增 bag_count/bag_capacity。InventoryFull 46 步通过：60 瓶 + 已穿戴护甲、满包拒绝拾取、消费腾位后拾取、保存重登数量不变。
+- 满包测试暴露 DBSvr 保存无事务，数据库检查曾读到只写入 21 瓶的中间状态。角色/技能/普通物品现在同一事务保存，持管理器锁，任何写入失败回滚；按消息声明数量解析记录。InventorySaveFailure 34 步通过，触发器拒绝 INSERT 后药水和角色坐标回滚到先前存档。失败只记录服务端日志，尚无客户端保存失败通知。
+- Client/EIServer Release 构建通过；Inventory 71 步、Skills 29 步回归通过。日志 out/csv-validation/inventory-full.log、inventory-save-failure.log、full-inventory-regression.log、save-skills-regression.log。大尺寸物品布局空间与满包卸装尚未验证。

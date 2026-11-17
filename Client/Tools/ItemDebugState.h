@@ -31,6 +31,8 @@ inline std::string ItemDebugState(CGameProcess& game)
             + ",\"x\":" + std::to_string(window.m_rcWnd.left)
             + ",\"y\":" + std::to_string(window.m_rcWnd.top) + "}";
     };
+    int bagCount = 0;
+    for (const auto& slot : ui.m_xInventoryWnd.m_stInventoryItem) if (slot.bSetted) ++bagCount;
     std::string ground="[";
     auto& items=game.m_stMapItemList;items.MoveCurrentToTop();
     for(int i=0;i<items.GetCounter();++i) {
@@ -41,6 +43,8 @@ inline std::string ItemDebugState(CGameProcess& game)
     }
     ground+=']';
     return ",\"ground_items\":" + ground
+        + ",\"bag_count\":" + std::to_string(bagCount)
+        + ",\"bag_capacity\":" + std::to_string(_MAX_INVEN_ITEM)
         + ",\"drop_pending\":" + BoolJson(ui.m_xInventoryWnd.m_pendingDrop.bSetted != FALSE)
         + ",\"use_pending\":" + BoolJson(ui.m_xInventoryWnd.m_usePending)
         + ",\"dress\":" + std::to_string(game.m_xMyHero.m_stFeature.bDress)

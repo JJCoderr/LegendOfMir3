@@ -1,6 +1,7 @@
 
 #ifndef _LEGENDOFMIR2_PROTCOL
 #define _LEGENDOFMIR2_PROTCOL
+#include "../../Shared/Mir3InventoryLimits.h"
 
 #define DEFBLOCKSIZE			16
 #define HUMANRCDBLOCKSIZE		256
@@ -10,7 +11,7 @@
 
 #define HOWMANYMAGICS			31
 
-#define USERITEMMAX				65
+#define USERITEMMAX				MIR3_BAG_CAPACITY
 
 // For Login Process
 #define CM_PROTOCOL				2000

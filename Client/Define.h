@@ -1,5 +1,6 @@
 #ifndef _DEFINE_H
 #define _DEFINE_H
+#include "../Shared/Mir3InventoryLimits.h"
 
 
 
@@ -528,7 +529,7 @@
 #define _BELT_CELL_YSTART			220
 
 #define _MAX_INVEN_BTN				1//2
-#define _MAX_INVEN_ITEM				60
+#define _MAX_INVEN_ITEM				MIR3_BAG_CAPACITY
 #define _MAX_BELT_ITEM				6
 
 #define _BTN_ID_INVENCLOSE			0

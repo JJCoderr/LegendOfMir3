@@ -194,7 +194,7 @@ public:
 
 	__inline	int					GetMagicID(char *pszMakeIndex) { return GetGenItemVal2(pszMakeIndex); }
 
-	__inline	BOOL				IsEnoughBag() { if (m_lpTItemRcd.GetCount() + m_lpTGenItemRcd.GetCount() >= USERITEMMAX) return FALSE; return TRUE; }
+	BOOL IsEnoughBag();
 
 	__inline	DWORD				GetGold() { return m_THumanRcd.dwGold; }
 

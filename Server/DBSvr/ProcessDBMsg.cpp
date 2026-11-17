@@ -329,83 +329,41 @@ void GetLoadHumanRcd(CServerInfo* pServerInfo, _LPTLOADHUMAN lpLoadHuman, int nR
 	}
 }
 
-char *SaveHumanMagicRcd(char *pszUserID, char *pszCharName, char *pszEncodeRcd, int nCount)
+char *SaveHumanMagicRcd(char *user, char *name, char *encoded, int count, bool& saved)
 {
-	char szTmp[1024];
-
-	// Delete Magic Data
-	CRecordset *pRec = GetDBManager()->CreateRecordset();
-	sprintf(szTmp, "DELETE FROM TBL_CHARACTER_MAGIC WHERE FLD_CHARNAME = '%s'", pszCharName);
-	pRec->Execute(szTmp);
-	GetDBManager()->DestroyRecordset( pRec );
-
-	// Update Magic Data
-	char *pszEncode = pszEncodeRcd;
-	_THUMANMAGICRCD	tUserMagicRcd;
-
-	for (int i = 0; i < nCount; i++)
-	{
-		if ( memlen( pszEncode ) >= MAGICRCDBLOCKSIZE )
-		{
-			pRec = GetDBManager()->CreateRecordset();
-
-			fnDecode6BitBufA( pszEncode, (char *) &tUserMagicRcd, sizeof( _THUMANMAGICRCD ) );
-
-			sprintf(szTmp, "INSERT INTO TBL_CHARACTER_MAGIC(FLD_LOGINID, FLD_CHARNAME, FLD_MAGICID, FLD_LEVEL, FLD_USEKEY, FLD_CURRTRAIN) VALUES "
-							"( '%s', '%s', %d, %d, %d, %d )",
-							pszUserID, pszCharName, tUserMagicRcd.btMagicID, tUserMagicRcd.btLevel, tUserMagicRcd.btUseKey, tUserMagicRcd.nCurrTrain);
-			
-			if ( !pRec->Execute( szTmp ) || pRec->GetRowCount() <= 0 )
-				InsertLogMsg(_T("SaveHumanMagicRcd update error"));
-			
-			GetDBManager()->DestroyRecordset( pRec );
-
-			pszEncode += MAGICRCDBLOCKSIZE + 1;
-		}
-	}
-		
-	return pszEncode;
+    auto* record = GetDBManager()->CreateRecordset();
+    char sql[1024];
+    sprintf(sql, "DELETE FROM TBL_CHARACTER_MAGIC WHERE FLD_CHARNAME='%s'", name);
+    saved = record->Execute(sql);
+    for (int i = 0; saved && i < count; ++i) {
+        if (strlen(encoded) < MAGICRCDBLOCKSIZE + 1 || encoded[MAGICRCDBLOCKSIZE] != '/') { saved = false; break; }
+        _THUMANMAGICRCD magic = {};
+        fnDecode6BitBufA(encoded, (char*)&magic, sizeof(magic));
+        sprintf(sql, "INSERT INTO TBL_CHARACTER_MAGIC (FLD_LOGINID,FLD_CHARNAME,FLD_MAGICID,FLD_LEVEL,FLD_USEKEY,FLD_CURRTRAIN) VALUES ('%s','%s',%d,%d,%d,%d)",
+            user, name, magic.btMagicID, magic.btLevel, magic.btUseKey, magic.nCurrTrain);
+        saved = record->Execute(sql) && record->GetRowCount() == 1;
+        encoded += MAGICRCDBLOCKSIZE + 1;
+    }
+    GetDBManager()->DestroyRecordset(record);
+    return encoded;
 }
 
-void SaveGenItemRcd(char *pszUserID, char *pszCharName, char *pszEncodeRcd, int nCount)
+bool SaveGenItemRcd(char *user, char *name, char *encoded, int count)
 {
-	char szTmp[1024];
-
-	// Delete Magic Data
-	CRecordset *pRec = GetDBManager()->CreateRecordset();
-	sprintf(szTmp, "DELETE FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME = '%s'", pszCharName);
-	pRec->Execute(szTmp);
-	GetDBManager()->DestroyRecordset( pRec );
-
-	// Update General Item Data
-	sprintf( szTmp, "FLD_CHARNAME='%s'", pszCharName );
-
-	CQueryManager query;
-
-	char *pszEncode = pszEncodeRcd;
-	_TGENITEMRCD tItemRcd;
-
-	for (int i = 0; i < nCount; i++)
-	{
-		while ( memlen( pszEncode ) >= GENITEMRCDBLOCKSIZE )
-		{
-			pRec = GetDBManager()->CreateRecordset();
-		
-			ZeroMemory(&tItemRcd, sizeof(_TGENITEMRCD));
-
-			fnDecode6BitBufA( pszEncode, (char *) &tItemRcd, sizeof( _TGENITEMRCD ) );
-
-			sprintf(szTmp, "INSERT INTO TBL_CHARACTER_GENITEM (FLD_LOGINID, FLD_CHARNAME, FLD_ITEMINDEX) VALUES "
-							"( '%s', '%s', '%s' )", pszUserID, pszCharName, tItemRcd.szItem);
-
-			if ( !pRec->Execute( szTmp ) || pRec->GetRowCount() <= 0 )
-				InsertLogMsg(_T("SaveGenItemRcd update error"));
-
-			GetDBManager()->DestroyRecordset( pRec );
-
-			pszEncode += (GENITEMRCDBLOCKSIZE + 1);
-		}
-	}
+    auto* record = GetDBManager()->CreateRecordset();
+    char sql[1024];
+    sprintf(sql, "DELETE FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='%s'", name);
+    bool saved = record->Execute(sql);
+    for (int i = 0; saved && i < count; ++i) {
+        if (strlen(encoded) < GENITEMRCDBLOCKSIZE + 1 || encoded[GENITEMRCDBLOCKSIZE] != '/') { saved = false; break; }
+        _TGENITEMRCD item = {};
+        fnDecode6BitBufA(encoded, (char*)&item, sizeof(item));
+        sprintf(sql, "INSERT INTO TBL_CHARACTER_GENITEM (FLD_LOGINID,FLD_CHARNAME,FLD_ITEMINDEX) VALUES ('%s','%s','%s')", user, name, item.szItem);
+        saved = record->Execute(sql) && record->GetRowCount() == 1;
+        encoded += GENITEMRCDBLOCKSIZE + 1;
+    }
+    GetDBManager()->DestroyRecordset(record);
+    return saved;
 }
 
 BOOL SaveHumanRcd(CServerInfo* pServerInfo, _LPTLOADHUMAN lpLoadHuman, _LPTHUMANRCD lptHumanRcd, int nRecog)
@@ -557,9 +515,19 @@ UINT WINAPI ProcessDBMsg(LPVOID lpParameter)
 					break;
 				case DB_SAVEHUMANRCD:
 				{
-					SaveHumanRcd(pSendBuff->pServerInfo, &pSendBuff->HumanLoad, (_LPTHUMANRCD)pSendBuff->lpbtAddData, pSendBuff->DefMsg.nRecog);
-					char *pszData = SaveHumanMagicRcd(pSendBuff->HumanLoad.szUserID, pSendBuff->HumanLoad.szCharName, (char *)pSendBuff->lpbtAddData2, pSendBuff->DefMsg.wParam);
-					SaveGenItemRcd(pSendBuff->HumanLoad.szUserID, pSendBuff->HumanLoad.szCharName, pszData, pSendBuff->DefMsg.wTag);
+                    auto* manager = GetDBManager();
+                    manager->Lock();
+                    if (!manager->m_pConn->BeginTransaction()) {
+                        manager->Unlock();
+                        InsertLogMsg(_T("Save character transaction failed to begin"));
+                        break;
+                    }
+                    bool saved = SaveHumanRcd(pSendBuff->pServerInfo, &pSendBuff->HumanLoad, (_LPTHUMANRCD)pSendBuff->lpbtAddData, pSendBuff->DefMsg.nRecog);
+                    char* data = (char*)pSendBuff->lpbtAddData2;
+                    if (saved) data = SaveHumanMagicRcd(pSendBuff->HumanLoad.szUserID, pSendBuff->HumanLoad.szCharName, data, pSendBuff->DefMsg.wParam, saved);
+                    if (saved) saved = SaveGenItemRcd(pSendBuff->HumanLoad.szUserID, pSendBuff->HumanLoad.szCharName, data, pSendBuff->DefMsg.wTag);
+                    if (!manager->m_pConn->EndTransaction(saved) || !saved) InsertLogMsg(_T("Save character transaction rolled back"));
+                    manager->Unlock();
 					break;
 				}
 				case DB_MAKEITEMRCD:

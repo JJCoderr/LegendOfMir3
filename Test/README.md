@@ -65,7 +65,7 @@ step,name,target,action,params,expect
 | --- | --- | --- |
 | 登录 | `Login.csv` | 认证、选服、选角与进入地图 |
 | 角色 | `Character.csv`、`CharacterDelete.csv` | 创建角色、删除角色及持久化 |
-| 物品 | `Inventory.csv`、`InventoryDuplicates.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
+| 物品 | `Inventory.csv`、`InventoryDuplicates.csv`、`InventoryFull.csv`、`InventorySaveFailure.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
 | 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复、施法回包、扣蓝与受伤治疗 |
 | 怪物 | `MonstersSpawn.csv`、`MonstersLoot.csv`、`MonstersLootCount.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentCount.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
@@ -119,3 +119,7 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 `InventoryDuplicates.csv` 验证两瓶相同属性药水具有不同的客户端 ID；丢弃第二瓶、真实行走拾回、使用第二瓶时第一瓶仍在，保存重登后剩余数量为 1，再使用并保存后为 0。普通物品离开背包或被消耗后旧 ID 失效，拾回时分配新 ID；脚本应读取 state.get 获取当前 ID。装备仍按完整数据库身份映射。当前未验证多份相同符咒或火把的装备槽位语义。
 
 掉落数量场景：`MonstersLootCount.csv` 验证同一配置生成两瓶药水、分别行走拾取、独立客户端 ID 和保存重登数量；`MonstersEquipmentCount.csv` 验证生成两件装备、分别入库为 00011/00012，穿戴一件后另一件留在背包，保存重登保留两件。两份 fixture 同时包含数量为 0 的记录，断言无额外掉落。非金币配置命中一次概率后生成 FLD_COUNT 件独立物品；金币保持原随机数量规则。尚未验证大批掉落、周围格子全部被占用或背包满时的处理。
+
+背包边界：Client/Server 使用 Shared/Mir3InventoryLimits.h 的 60 格容量；服务端只计算未穿戴物品。state.get 提供 bag_count、bag_capacity。`InventoryFull.csv` 以 60 瓶药水和一件已穿戴装备验证满包拒绝拾取、地面物品保留、使用一瓶后拾取、完整保存及重登。尚未覆盖大尺寸物品造成的布局空间不足或满包卸装。
+
+保存原子性：DBSvr 将角色、技能和普通物品写入同一事务，并持有数据库管理器锁，全部成功后才提交。`InventorySaveFailure.csv` 通过触发器拒绝普通物品 INSERT，验证原有两瓶药水和角色位置保留、重登恢复上一次快照；保存失败会写服务端日志，当前没有新增客户端保存失败通知。

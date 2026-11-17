@@ -63,6 +63,21 @@ void CUserInfo::RandomUpgradeItem(WORD wStdMode, _LPTMAKEITEMRCD lpMakeItemRcd)
 		g_pStdItemAccessory[lpMakeItemRcd->nStdIndex - 1].UpgradeRandomItem(lpMakeItemRcd);
 }
 */
+BOOL CUserInfo::IsEnoughBag()
+{
+    const auto equipped = [&](const char* key) {
+        for (const auto& slot : m_THumanRcd.szTakeItem)
+            if (!memcmp(slot, key, Mir3Item::LegacyKeySize)) return true;
+        return false;
+    };
+    int count = 0;
+    for (auto node = m_lpTItemRcd.GetHead(); node; node = m_lpTItemRcd.GetNext(node))
+        if (!equipped(m_lpTItemRcd.GetData(node)->szMakeIndex)) ++count;
+    for (auto node = m_lpTGenItemRcd.GetHead(); node; node = m_lpTGenItemRcd.GetNext(node))
+        if (!equipped(m_lpTGenItemRcd.GetData(node)->szMakeIndex)) ++count;
+    return count < USERITEMMAX;
+}
+
 void CUserInfo::AddNewItem(char *pszItemName)
 {
 	int		i;
@@ -70,7 +85,7 @@ void CUserInfo::AddNewItem(char *pszItemName)
 
 	_TMAKEITEMRCD		MakeItemRcd;
 
-	if (m_lpTItemRcd.GetCount() + m_lpTGenItemRcd.GetCount() > USERITEMMAX) return;
+	if (!IsEnoughBag()) return;
 
 	int nLen = memlen(pszItemName) - 1;
 	int nCmpLen;
