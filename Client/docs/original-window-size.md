@@ -43,3 +43,11 @@ SetWindowPos(hwnd, 0, 0, 0, rect.right-rect.left, rect.bottom-rect.top, 0x16);
 这次只记录分析结论，未再次更改默认窗口大小。
 
 原始反编译/交叉引用输出位于out/ida-window-{xrefs,sizing,transitions,all-calls,verification}.json。
+
+## 最终显示策略（用户确认）
+
+保留DPI放大。原版尺寸作为内部画布尺寸，默认客户区用
+`MulDiv(canvasSize, systemDpi, USER_DEFAULT_SCREEN_DPI)`计算，
+系统DPI通过窗口DC的`LOGPIXELSX`读取；不硬编码150%或960×720/1200×900。
+当前清单是system DPI aware，因此使用系统DPI；这不是跨显示器逐屏DPI自适应。
+显式INI WindowWidth/WindowHeight仍为用户指定的物理尺寸。
