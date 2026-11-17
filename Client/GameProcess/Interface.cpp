@@ -13,6 +13,7 @@
 
 #include "StdAfx.h"
 #include "Common/ChatShortcuts.h"
+#include "Common/ChatLog.h"
 #include "TradeWire.h"
 #include "MailWire.h"
 #include "Common/LegacyPanel.h"
@@ -52,7 +53,7 @@ VOID CInterface::Init()
 	m_nIdxMsgBox		= 0;
 	m_nFstLine			= 0;
     previousHint.clear(); hintHeight=6; hintExpanding=true;
-    ChatShortcuts().Clear();
+    ChatShortcuts().Clear();NativeChatLog().path.clear();
     m_chatMode = 0;
     m_chatModeChanged = false;
     for (int i=0;i<3;++i) { m_chatRejected[i]=false; m_chatReceptionFrame[i]=-1; m_chatReceptionHint[i]=i==0?2637:i==1?2639:2643; }

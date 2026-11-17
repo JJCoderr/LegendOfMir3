@@ -13,6 +13,7 @@ namespace { constexpr int PreviewSpellGround=237,PreviewSpellOrbit=238,PreviewSp
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 #include "Common/ChatShortcuts.h"
+#include "Common/ChatLog.h"
 
 CMirSound			g_xSound;
 CWHDXGraphicWindow	g_xMainWnd(640, 480, _SCREEN_BPP);
@@ -1223,6 +1224,44 @@ public:
                 fprintf(report,"amount=%d left_scroll=%d right_scroll=%d released=%d stray=%d pending_blocked=%d outside_release=%d body_no_drag=%d header_drag=%d confirmed=%d\n",
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
+        }
+        if(groupPanel==323 || groupPanel==324) {
+            auto& ui=g_xGameProc.m_xInterface;auto& log=NativeChatLog();
+            FILE* report=fopen("chat-commands-check.txt","wb");
+            const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+            const auto command=[&](const char* text){strcpy(g_xChatEditBox.m_szInputMsg,text);g_xGameProc.CommandAnalyze();};
+            log.enabled=false;command("@chatsave extra");check("save_exact_command",!log.enabled);
+            command("@chatsave");check("save_on",log.enabled);command("@chatsave");check("save_off",!log.enabled);
+            g_xGameProc.m_weatherEnabled=true;command("@snow extra");check("snow_exact_command",g_xGameProc.m_weatherEnabled);
+            command("@snow");check("snow_off",!g_xGameProc.m_weatherEnabled);command("@snow");check("snow_on",g_xGameProc.m_weatherEnabled);
+            char directory[MAX_PATH],path[MAX_PATH];GetTempPathA(MAX_PATH,directory);GetTempFileNameA(directory,"m3l",0,path);log.path=path;
+            const auto receive=[&](int opcode,const std::string& text) {
+                _TDEFAULTMESSAGE packet={};packet.wIdent=opcode;packet.wParam=_CHAT_COLOR3;
+                char encoded[1600]={};fnEncodeMessage(&packet,encoded,sizeof(encoded));
+                fnEncode6BitBuf((BYTE*)text.data(),encoded+DEFBLOCKSIZE,int(text.size()),sizeof(encoded)-DEFBLOCKSIZE);
+                g_xGameProc.OnSocketMessageRecieve(encoded);
+            };
+            const int opcodes[]={SM_HEAR,SM_MONSTERSAY,SM_SYSMESSAGE,SM_CRY,SM_WHISPER,SM_GROUPMESSAGE,SM_GUILDMESSAGE};
+            const int expected[2][7]={{1,1,1,1,1,1,0},{2,2,1,2,2,2,1}};
+            for(int enabled=0;enabled<2;++enabled) for(int i=0;i<7;++i) {
+                FILE* file=fopen(path,"wb");fclose(file);log.enabled=enabled!=0;receive(opcodes[i],"中文日志");
+                file=fopen(path,"rb");char bytes[128]={};const auto size=fread(bytes,1,sizeof(bytes),file);fclose(file);
+                std::string wanted;for(int n=0;n<expected[enabled][i];++n) wanted+="中文日志\r\n";
+                char name[64];sprintf(name,"channel_%d_enabled_%d",opcodes[i],enabled);check(name,std::string(bytes,size)==wanted);
+            }
+            log.path.clear();log.enabled=false;DeleteFileA(path);
+            check("unrelated_not_logged",CNativeChatLog::Repetitions(SM_USERNAME,true)==0);
+            const DWORD palette[]={0,657930,0xffffff,255,65280,16750230,0x50ffff,33023};bool colors=true;
+            for(int i=0;i<8;++i) colors &= GetChatColor(BYTE(i))==palette[i];check("original_palette",colors);
+            ui.m_chatHistory.clear();ui.m_chatLines[0].clear();ui.m_chatLines[1].clear();ui.m_chatFirst[0]=ui.m_chatFirst[1]=ui.m_nFstLine=0;ui.ReflowChat();
+            strcpy(g_xChatEditBox.m_szInputMsg,"/传奇勇士 一起前往沙巴克。");g_xGameProc.OnMsgInputted(0,0);
+            check("private_echo",ui.m_chatHistory.size()==1 && ui.m_chatHistory.back().color==palette[5] && ui.m_chatHistory.back().background==0);
+            if(groupPanel==324) {
+                ui.m_chatExpanded=true;ui.LayoutChat();
+                const char* labels[]={"黑色消息","深灰消息","白色消息","红色消息","绿色消息","私聊淡蓝色消息","淡黄色消息","橙色消息"};
+                for(int i=0;i<8;++i) ui.MsgAdd(palette[i],i<2?0xffffff:0,const_cast<char*>(labels[i]));
+            }
+            if(report) fclose(report);mouse={790,430};capturePath=groupPanel==323?"chat-private-echo.bmp":"chat-palette.bmp";
         }
         if(groupPanel>=319 && groupPanel<=322) {
             chatShortcutPreview=groupPanel;
@@ -3942,6 +3981,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=chat-phrases")==0 ? 320 :
         strcmp(lpCmdLine,"--preview=chat-contacts-expanded")==0 ? 321 :
         strcmp(lpCmdLine,"--preview=chat-phrases-expanded")==0 ? 322 :
+        strcmp(lpCmdLine,"--preview=chat-private-echo")==0 ? 323 :
+        strcmp(lpCmdLine,"--preview=chat-palette")==0 ? 324 :
         strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
         strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
         strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :

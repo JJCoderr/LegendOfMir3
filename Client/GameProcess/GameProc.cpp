@@ -1,5 +1,6 @@
 #include "StdAfx.h"
 #include "Common/ChatShortcuts.h"
+#include "Common/ChatLog.h"
 #include "EffectRenderer.h"
 #include "SpellSpriteRenderer.h"
 #include "WeatherRenderer.h"
@@ -2276,8 +2277,8 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 
 	if ( g_xChatEditBox.m_szInputMsg[0] == '/' )
 	{
-		DWORD dwBack = GetChatColor(_CHAT_COLOR6);
-		DWORD dwFont = GetChatColor(_CHAT_COLOR3);
+		DWORD dwBack = GetChatColor(_CHAT_COLOR1);
+		DWORD dwFont = GetChatColor(_CHAT_COLOR6);
 		m_xInterface.MsgAdd(dwFont, dwBack, g_xChatEditBox.m_szInputMsg);
 	}
 
@@ -2385,7 +2386,8 @@ VOID CGameProcess::CommandAnalyze()
 			break;
 		}
 	}
-	else if(!strcmp(szCommand,"@snow")) { m_weatherEnabled=!m_weatherEnabled; }
+	else if(!strcmp(g_xChatEditBox.m_szInputMsg,"@snow")) { m_weatherEnabled=!m_weatherEnabled; }
+    else if(!strcmp(g_xChatEditBox.m_szInputMsg,"@chatsave")) { NativeChatLog().enabled=!NativeChatLog().enabled; }
 	else if ( !strcmp(szCommand, "@fps") )
 	{
 		m_bShowFPS = !m_bShowFPS;
@@ -3801,6 +3803,7 @@ VOID CGameProcess::OnSvrMsgLogon(_TDEFAULTMESSAGE	*ptdm, char *pszMsg)
 
 	strcpy(g_xGameProc.m_xMyHero.m_szName, g_szCharName);
     ChatShortcuts().SetIdentity(g_szCharName,g_xClientSocket.selectedServerName);
+    NativeChatLog().path="./Chat.txt";
 	
 	m_xMyHero.SetMapHandler(&m_xMap);
 
@@ -3828,6 +3831,7 @@ VOID CGameProcess::OnSvrMsgHear(_TDEFAULTMESSAGE *ptdm, char *pszMsg)
 
 	int nPos = fnDecode6BitBuf(pszMsg, szDecodeMsg, MaximumEncodedChat);
 	szDecodeMsg[nPos] = '\0';
+    NativeChatLog().Append(ptdm->wIdent,szDecodeMsg);
 
 	const bool guildMessage=ptdm->wIdent==SM_GUILDMESSAGE;
     DWORD dwBack = GetChatColor(guildMessage?_CHAT_COLOR1:LOBYTE(ptdm->wTag));

@@ -150,3 +150,8 @@ review_gui.ps1新增all套件：52个游戏内状态、38个大厅状态和20个
 ## 联系人/快捷短语新增四页
 
 详见chat-shortcuts-migration-audit.md。截图位于out/chat-shortcuts：chat-contacts.png、chat-phrases.png、chat-contacts-expanded.png、chat-phrases-expanded.png。普通/展开布局及选中行已查看。此四页是110图基线以外的新增原生页面，不将旧manifest改为包含尚未重跑的页面。
+
+
+## 聊天回显与调色板两页
+
+新增out/chat-commands/chat-private-echo.png及chat-palette.png，均查看；原生私聊淡蓝字黑底与八色列表。见chat-commands-migration-audit.md，未改写此前110图manifest。

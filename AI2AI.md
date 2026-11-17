@@ -1735,3 +1735,10 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 源码核对发现Godot chat_submission与draw_chat_shortcuts尚未移植。新增Common/ChatShortcuts.h，实现在ChatEditBox.cpp：原生列表绘制、Ctrl/Alt数字和上下选择、十条去重FIFO、#本地记短语、/私聊记联系人、ANSI slt/mlt按角色服务器读写。GameProc登录身份载入，Interface初始化清理并绘制。无类布局更改。
 - 四个新预览319–322；下一323。测试临时文件不进入Data联接目录。旧私聊回显颜色及chatsave/snow本地分派仍待审计，不能把整个聊天系统视为完成。
 - 构建chat-shortcuts-final-build.log七目标成功。快捷21+历史12+中文11+模态27+键盘34+音效15=120检查；九页out/chat-shortcuts，四新增图已查看。详见chat-shortcuts-migration-audit.md。所有自启预览停止后提交。
+
+
+## 2026-11-17 聊天命令日志及原版颜色
+- 新Common/ChatLog.h实现原版两个独立日志追加分支，GameProc真实登录启用./Chat.txt，Interface.Init清空路径。开关@chatsave；@snow从首token比较改为整条精确匹配。
+- 修复GetChatColor索引5/6以及私聊回显前景/背景；参照scene_chat.hpp调色板。
+- 新323私聊/324调色板，下一325。七目标最终chat-commands-final-build.log成功；143项检查（23本批+120相关回归），最后仅修截图夹具滚动位置，重跑23及两图。out/chat-commands八页；私聊/调色板已查看，自启进程全部停止。
+- 详见chat-commands-migration-audit.md。行会添加成员命令、坐骑命令延迟尚待对照；真实服务器链路仍未整体联调。
