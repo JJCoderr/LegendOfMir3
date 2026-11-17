@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-// DBSvr replies are %socket/#payload!$ frames, optionally followed by NUL padding.
+// LoginSvr/DBSvr replies are %socket/#payload!$ frames, optionally followed by NUL padding.
 class GateFrames {
     std::string pending;
 public:

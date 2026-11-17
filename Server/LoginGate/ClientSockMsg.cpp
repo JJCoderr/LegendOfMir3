@@ -74,14 +74,14 @@ LPARAM OnClientSockMsg(WPARAM wParam, LPARAM lParam)
 
 			if (nRecv)
 			{
-				char *pszPacket = new char[nRecv + 1];
-
-				nRecv = recv((SOCKET)wParam, pszPacket, nRecv, 0);
-
-				pszPacket[nRecv] = '\0';
-
-				if (!(g_xMsgQueue.PushQ((BYTE *)pszPacket)))
-					InsertLogMsg(_TEXT("[INFO] Not enough queue(g_xMsgQueue) buffer."));
+                char* packet=new char[sizeof(unsigned)+nRecv];
+                const int received=recv((SOCKET)wParam,packet+sizeof(unsigned),nRecv,0);
+                if (received<=0) {delete[] packet;break;}
+                *reinterpret_cast<unsigned*>(packet)=unsigned(received);
+                if (!g_xMsgQueue.PushQ((BYTE*)packet)) {
+                    delete[] packet;
+                    InsertLogMsg(_TEXT("[INFO] Not enough queue(g_xMsgQueue) buffer."));
+                }
 			}
 
 			break;

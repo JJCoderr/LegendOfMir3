@@ -2339,3 +2339,13 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 新增 LoginReturnShared.csv：两个真实客户端各连续三轮返回选角/重新进图，每轮检查角色归属及查询/回包精确次数。82 项通过；ShopEquipmentShared 两轮各 82 项、Character 34 项、CharacterDelete 38 项通过，合计 318 项。日志 out/csv-validation/gate-*.log。
 - 新 CSV 首次编写误假定每次重进都显示入图提示，实际仅首次显示，已按观察修正；保留初稿失败日志 gate-return-shared.log。最终日志 gate-return-shared-final.log。
 - 历史失败未采集 TCP 字节流，不能证明偶发等待唯一成因；本次证明并修复拆包确定性缺陷。LoginGate 存在相似旧拆包实现，尚未迁移；本轮只改 SelGate。其他网关发送短写/会话线程问题未审计。
+
+
+## 2026-11-18 登录网关分片修复与真实 TCP 代理验证
+
+- LoginGate 使用同样的旧残包拼接逻辑，会覆盖跨 recv 边界的残包；已改为复用 Def/GateFrames，接收队列保留实际字节数和 NUL 填充。其余认证和选服逻辑不变。
+- 新增根 Test/verify_gate_stream.py：隔离运行目录中将两条网关上游回包通过本地 TCP 代理逐字节转发，随后调用现有 launch_csv/Test.exe 执行子系统 CSV。不改变业务数据/游戏时钟。代理资源随本轮清理；连接重置可能来自启动程序结束时强制终止服务端，场景成功与否由 CSV 断言判定。
+- 修复前实测 Login 第 3 步密码错误提示丢失（login-fragments-before，2 秒期限，25 个字节已转发）；修复后同样期限已通过该步及选服提交，但在第 11 步因页面过渡超过 2 秒失败。恢复标准 15 秒后完整分片登录 24 项通过。
+- 分片双客户端三轮返回/重进 82 项通过（LoginGate 254 次单字节写入，SelGate 784 次）；无代理登录 24 项通过，共 130 项。日志 out/csv-validation/login-fragments-final、login-return-fragments、login-gate-normal.log。
+- EIServer Release 和 test_gate_frames 构建通过，36 种分片组合与残包续接通过。代理单字节写入不能保证 Windows 每次 recv 只读一个字节，精确边界覆盖由直接调用产品解析器的单元测试完成。
+- 尚未审计网关发送短写、LoginSvr/DBSvr 反向输入拆包，以及客户端非游戏接收缓冲累加逻辑；仍是后续网络链路核查范围。

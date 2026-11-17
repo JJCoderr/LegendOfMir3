@@ -266,3 +266,14 @@ python Test/launch_csv.py Test/Login/LoginReturnShared.csv --clients 2 --timeout
 ```
 
 网关 TCP 分片由 `Test/Login/GateFrames.cpp` 验证：遍历每个分割位置、逐字节输入、带 NUL 填充的连续多包、控制包和残包续接。构建 `test_gate_frames` 后运行 `build-eiserver/Release/test_gate_frames.exe`。测试直接调用选角网关使用的拆包实现；真实 CSV 验证两端流程，但不保证操作系统实际生成某种 TCP 分片。
+
+
+真实网关分片验证：`python Test/verify_gate_stream.py --log-dir out/login-fragments`。该辅助程序创建隔离运行目录，在 LoginSvr→LoginGate、DBSvr→SelGate 回包方向加入本地 TCP 代理，每次发送一个字节并保留 NUL 填充，然后执行现有 Login CSV。日志目录包含 `test.log` 和 `launcher.log`；退出码保留场景失败结果。TCP 接收端仍可能合并相邻写入，所有精确分割位置由 GateFrames 单元测试覆盖。
+
+双客户端分片回归使用：
+
+```powershell
+python Test/verify_gate_stream.py --scenario Test/Login/LoginReturnShared.csv --clients 2 --log-dir out/login-return-fragments
+```
+
+代理只改变测试环境的传输分段，不修改游戏时钟、业务回包或角色数据。默认单步骤等待 15 秒，包含正常页面过渡动画；不宜将完整登录场景的等待期限缩短到 2 秒。
