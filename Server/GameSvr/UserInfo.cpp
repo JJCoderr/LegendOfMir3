@@ -28,6 +28,25 @@ CUserInfo::CUserInfo()
 	m_dwLatestFireHitTime		= 0;
 }
 
+bool CUserInfo::ResolveItemRequest(DWORD instance, const char* encodedName, char* key, int& standardIndex)
+{
+    if (!encodedName || strlen(encodedName) > 40 || !m_itemIdentities.Resolve(instance, key)) return false;
+    char name[31] = {};
+    const int size = fnDecode6BitBufA(const_cast<char*>(encodedName), name, 30);
+    name[size] = 0;
+    const char* expected = NULL;
+    if (key[0] == 'G') {
+        const auto item = GetUseGenItem(key);
+        if (!item || item->nStdIndex < 0 || item->nStdIndex >= g_nStdItemEtc) return false;
+        standardIndex = item->nStdIndex; expected = g_pStdItemEtc[standardIndex].szName;
+    } else {
+        const auto item = GetItem(key);
+        if (!item || item->nStdIndex >= g_nStdItemSpecial) return false;
+        standardIndex = item->nStdIndex; expected = g_pStdItemSpecial[standardIndex].szName;
+    }
+    return size > 0 && !strcmp(name, expected);
+}
+
 bool CUserInfo::IsEmpty()
 {
 	return m_bEmpty;
@@ -132,23 +151,11 @@ void CUserInfo::MakeGenItem(_LPTGENERALITEMRCD lptGenItemRcd)
 
 		m_lpTGenItemRcd.AddNewNode(lptGenItemRcd);
 
-		_TCLIENTITEMRCD		tClientItemRcd;
-		_TDEFAULTMESSAGE	SendDefMsg;
-		char				szEncodeMsg[256];
-
-		fnMakeDefMessage(&SendDefMsg, SM_ADDITEM, (int)m_pxPlayerObject, 0, 0, 1);
-
-		// Get Standard General Item (STDITEM_ETC)
-		g_pStdItemEtc[lptGenItemRcd->nStdIndex].GetStandardItem(&tClientItemRcd);
-
-		memcpy(tClientItemRcd.szMakeIndex, lptGenItemRcd->szMakeIndex, 12);
-		tClientItemRcd.nDura		= lptGenItemRcd->nDura;
-		tClientItemRcd.nDuraMax		= lptGenItemRcd->nDuraMax;
-
-		int nIdx = 	fnEncode6BitBufA((unsigned char *)&tClientItemRcd, szEncodeMsg, sizeof(_TCLIENTITEMRCD), sizeof(szEncodeMsg));
-		szEncodeMsg[nIdx] = '\0';
-
-		m_pxPlayerObject->SendSocket(&SendDefMsg, szEncodeMsg);
+        _TUSERITEMRCD item = {};
+        memcpy(item.szMakeIndex, lptGenItemRcd->szMakeIndex, Mir3Item::LegacyKeySize);
+        item.nStdIndex = WORD(lptGenItemRcd->nStdIndex);
+        item.nDura = WORD(lptGenItemRcd->nDura); item.nDuraMax = WORD(lptGenItemRcd->nDuraMax);
+        m_pxPlayerObject->SendAddItem(&item);
 	}
 }
 
@@ -748,7 +755,7 @@ void CUserInfo::ProcessUserMessage(char *pszPacket)
 			break;
 		case CM_EAT:
 		case CM_DROPITEM:
-			m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, lpDefMsg->wSeries, 0, 0, 0, pszPacket + sizeof(_TDEFAULTMESSAGE));
+			m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, lpDefMsg->wSeries, lpDefMsg->nRecog, lpDefMsg->wParam, lpDefMsg->wTag, pszPacket + sizeof(_TDEFAULTMESSAGE));
 			break;
 		case CM_PICKUP:
 			m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, lpDefMsg->wSeries, lpDefMsg->nRecog, lpDefMsg->wTag, lpDefMsg->wParam);

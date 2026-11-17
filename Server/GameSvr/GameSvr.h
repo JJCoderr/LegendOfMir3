@@ -1,6 +1,7 @@
 
 
 #pragma once
+#include "../Def/Mir3Item.h"
 
 #include "../def/staticArray.h"
 #include "../def/_orzex/syncobj.h"
@@ -70,6 +71,8 @@ class CUserInfo	: public CIntLock, CStaticArray< CUserInfo >::IArrayData
 {
 public:
 	bool							m_bEmpty;
+    Mir3Item::Identities m_itemIdentities;
+    bool ResolveItemRequest(DWORD instance, const char* encodedName, char* key, int& standardIndex);
 
 	int								m_sock;
 

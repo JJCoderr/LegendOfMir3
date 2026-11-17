@@ -42,6 +42,7 @@ public:
 	void		RecalcLevelAbilitys();
 
 	void		SendBagItems();
+    void SendEquipmentItems();
 	void		SendMyMagics();
 
 	void		SendMapName();

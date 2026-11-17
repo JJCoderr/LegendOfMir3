@@ -195,23 +195,7 @@ void ProcReceiveBuffer(char *pszPacket, int nRecv)
 								
 								pUserInfo->m_lpTItemRcd.AddNewNode(lpTItemRcd);
 
-								fnMakeDefMessage(&SendDefMsg, SM_ADDITEM, (int)pUserInfo->m_pxPlayerObject, 0, 0, 1);
-
-								if (lpTItemRcd->szMakeIndex[0] != 'G')
-								{
-									g_pStdItemSpecial[lpTItemRcd->nStdIndex].GetStandardItem(&tClientItemRcd);
-									g_pStdItemSpecial[lpTItemRcd->nStdIndex].GetUpgradeStdItem(&tClientItemRcd, lpTItemRcd);
-								}
-
-								memcpy(tClientItemRcd.szMakeIndex, lpTItemRcd->szMakeIndex, 12);
-								
-								tClientItemRcd.nDura		= lpTItemRcd->nDura;
-								tClientItemRcd.nDuraMax		= lpTItemRcd->nDuraMax;
-
-								nPos = 	fnEncode6BitBufA((unsigned char *)&tClientItemRcd, szEncodeMsg, sizeof(_TCLIENTITEMRCD), sizeof(szEncodeMsg));
-								szEncodeMsg[nPos] = '\0';
-
-								pUserInfo->m_pxPlayerObject->SendSocket(&SendDefMsg, szEncodeMsg);
+								pUserInfo->m_pxPlayerObject->SendAddItem(lpTItemRcd);
 							}
 
 							break;
@@ -230,23 +214,7 @@ void ProcReceiveBuffer(char *pszPacket, int nRecv)
 								
 								pUserInfo->m_lpTItemRcd.AddNewNode(lpTItemRcd);
 
-								fnMakeDefMessage(&SendDefMsg, SM_ADDITEM, (int)pUserInfo->m_pxPlayerObject, 0, 0, 1);
-
-								if (lpTItemRcd->szMakeIndex[0] != 'G')
-								{
-									g_pStdItemSpecial[lpTItemRcd->nStdIndex].GetStandardItem(&tClientItemRcd);
-									g_pStdItemSpecial[lpTItemRcd->nStdIndex].GetUpgradeStdItem(&tClientItemRcd, lpTItemRcd);
-								}
-
-								memcpy(tClientItemRcd.szMakeIndex, lpTItemRcd->szMakeIndex, 12);
-								
-								tClientItemRcd.nDura		= lpTItemRcd->nDura;
-								tClientItemRcd.nDuraMax		= lpTItemRcd->nDuraMax;
-
-								nPos = 	fnEncode6BitBufA((unsigned char *)&tClientItemRcd, szEncodeMsg, sizeof(_TCLIENTITEMRCD), sizeof(szEncodeMsg));
-								szEncodeMsg[nPos] = '\0';
-
-								pUserInfo->m_pxPlayerObject->SendSocket(&SendDefMsg, szEncodeMsg);
+								pUserInfo->m_pxPlayerObject->SendAddItem(lpTItemRcd);
 							}
 
 							break;

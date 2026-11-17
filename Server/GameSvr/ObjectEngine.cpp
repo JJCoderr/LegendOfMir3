@@ -3267,9 +3267,10 @@ void CCharObject::SendSocket(_LPTDEFAULTMESSAGE lpDefMsg, char *pszPacket)
 		{
 			int nLength = memlen(pszPacket);
 
-			if (nLength >= 8096) 
+			if (nLength > sizeof(lpSendBuff->szData) - sizeof(_TMSGHEADER) - sizeof(_TDEFAULTMESSAGE) - 1)
 			{
 				InsertLogMsg(_TEXT("SendSocket:Packet is too long."));
+                delete lpSendBuff;
 				return;
 			}
 

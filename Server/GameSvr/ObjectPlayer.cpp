@@ -1,6 +1,45 @@
 #include "stdafx.h"
 #include "../Def/Mir3Ability.h"
 
+namespace {
+bool BuildSpecialItem(CUserInfo& owner, const _TUSERITEMRCD& item, Mir3Item::Record& record)
+{
+    if (item.nStdIndex >= g_nStdItemSpecial) return false;
+    _TCLIENTITEMRCD legacy = {};
+    g_pStdItemSpecial[item.nStdIndex].GetStandardItem(&legacy);
+    g_pStdItemSpecial[item.nStdIndex].GetUpgradeStdItem(&legacy, const_cast<_TUSERITEMRCD*>(&item));
+    legacy.nDura = item.nDura; legacy.nDuraMax = item.nDuraMax;
+    record = Mir3Item::FromLegacy(legacy, owner.m_itemIdentities.Get(item.szMakeIndex));
+    return true;
+}
+bool BuildGeneralItem(CUserInfo& owner, const _TGENERALITEMRCD& item, Mir3Item::Record& record)
+{
+    if (item.nStdIndex < 0 || item.nStdIndex >= g_nStdItemEtc) return false;
+    _TCLIENTITEMRCD legacy = {};
+    auto& standard = g_pStdItemEtc[item.nStdIndex];
+    standard.GetStandardItem(&legacy);
+    legacy.nDura = item.nDura; legacy.nDuraMax = item.nDuraMax;
+    record = Mir3Item::FromLegacy(legacy, owner.m_itemIdentities.Get(item.szMakeIndex));
+    if (standard.wStdMode == 0) {
+        Mir3Item::Word(record, Mir3Item::Defence, standard.wDuraMax);
+        Mir3Item::Word(record, Mir3Item::MagicDefence, standard.dwRSource);
+    }
+    return true;
+}
+void AppendItem(std::string& body, const Mir3Item::Record& record)
+{
+    char encoded[Mir3Item::EncodedSize + 1] = {};
+    const int size = fnEncode6BitBufA(const_cast<unsigned char*>(record.data()), encoded, record.size(), sizeof(encoded));
+    body.append(encoded, size); body += '/';
+}
+bool IsEquipped(const CUserInfo& owner, const char* key)
+{
+    for (const auto& equipped : owner.m_THumanRcd.szTakeItem)
+        if (!memcmp(equipped, key, Mir3Item::LegacyKeySize)) return true;
+    return false;
+}
+}
+
 #define _MSG_GOOD		"+GOOD/"
 #define _MSG_FAIL		"+FAIL/"
 
@@ -291,39 +330,22 @@ BOOL CPlayerObject::ServerGetEatItem(int nItemIndex, char *pszMakeIndex)
 	return fFlag;
 }
 
-void CPlayerObject::SendAddItem(_LPTUSERITEMRCD lpTItemRcd)
+void CPlayerObject::SendAddItem(_LPTUSERITEMRCD item)
 {
-	_TDEFAULTMESSAGE	SendDefMsg;
-	_TCLIENTITEMRCD		tClientItemRcd;
-	char				szEncodeMsg[256];
-
-	fnMakeDefMessage(&SendDefMsg, SM_ADDITEM, (int)this, 0, 0, 1);
-
-	if (lpTItemRcd->szMakeIndex[0] != 'G')
-	{
-		g_pStdItemSpecial[lpTItemRcd->nStdIndex].GetStandardItem(&tClientItemRcd);
-		g_pStdItemSpecial[lpTItemRcd->nStdIndex].GetUpgradeStdItem(&tClientItemRcd, lpTItemRcd);
-
-		if (strlen(lpTItemRcd->szPrefixName))
-			strcpy(tClientItemRcd.tStdItem.szPrefixName, lpTItemRcd->szPrefixName);
-		else
-			ZeroMemory(tClientItemRcd.tStdItem.szPrefixName, sizeof(tClientItemRcd.tStdItem.szPrefixName));
-	}
-	else
-	{
-		g_pStdItemEtc[lpTItemRcd->nStdIndex].GetStandardItem(&tClientItemRcd);
-		g_pStdItemEtc[lpTItemRcd->nStdIndex].GetUpgradeStdItem(&tClientItemRcd, lpTItemRcd);
-	}
-
-	memcpy(tClientItemRcd.szMakeIndex, lpTItemRcd->szMakeIndex, 12);
-	
-	tClientItemRcd.nDura		= lpTItemRcd->nDura;
-	tClientItemRcd.nDuraMax		= lpTItemRcd->nDuraMax;
-
-	int nPos = 	fnEncode6BitBufA((unsigned char *)&tClientItemRcd, szEncodeMsg, sizeof(_TCLIENTITEMRCD), sizeof(szEncodeMsg));
-	szEncodeMsg[nPos] = '\0';
-
-	SendSocket(&SendDefMsg, szEncodeMsg);
+    Mir3Item::Record record;
+    bool built = false;
+    if (item->szMakeIndex[0] == 'G') {
+        _TGENERALITEMRCD general = {};
+        memcpy(general.szMakeIndex, item->szMakeIndex, Mir3Item::LegacyKeySize);
+        general.nStdIndex = item->nStdIndex; general.nDura = item->nDura; general.nDuraMax = item->nDuraMax;
+        built = BuildGeneralItem(*m_pUserInfo, general, record);
+    } else built = BuildSpecialItem(*m_pUserInfo, *item, record);
+    if (!built) return;
+    char encoded[Mir3Item::EncodedSize + 1] = {};
+    fnEncode6BitBufA(const_cast<unsigned char*>(record.data()), encoded, record.size(), sizeof(encoded));
+    _TDEFAULTMESSAGE message;
+    fnMakeDefMessage(&message, SM_ADDITEM, (int)this, 0, 0, 1);
+    SendSocket(&message, encoded);
 }
 
 BOOL CPlayerObject::PickUp()
@@ -1000,81 +1022,45 @@ void CPlayerObject::SendMyMagics()
 
 void CPlayerObject::SendBagItems()
 {
-	char				szEncodeMsg[8096];
-	int					nCnt	= m_pUserInfo->m_lpTItemRcd.GetCount();
-	int					nGenCnt = m_pUserInfo->m_lpTGenItemRcd.GetCount();
-	int					nPos	= 0;
+    std::string body; int count = 0;
+    for (PLISTNODE node = m_pUserInfo->m_lpTItemRcd.GetHead(); node; node = m_pUserInfo->m_lpTItemRcd.GetNext(node)) {
+        const auto item = m_pUserInfo->m_lpTItemRcd.GetData(node);
+        Mir3Item::Record record;
+        if (item && !IsEquipped(*m_pUserInfo, item->szMakeIndex) && BuildSpecialItem(*m_pUserInfo, *item, record)) {
+            AppendItem(body, record); ++count;
+        }
+    }
+    for (PLISTNODE node = m_pUserInfo->m_lpTGenItemRcd.GetHead(); node; node = m_pUserInfo->m_lpTGenItemRcd.GetNext(node)) {
+        const auto item = m_pUserInfo->m_lpTGenItemRcd.GetData(node);
+        Mir3Item::Record record;
+        if (item && !IsEquipped(*m_pUserInfo, item->szMakeIndex) && BuildGeneralItem(*m_pUserInfo, *item, record)) {
+            AppendItem(body, record); ++count;
+        }
+    }
+    _TDEFAULTMESSAGE message;
+    fnMakeDefMessage(&message, SM_BAGITEMS, (int)this, 0, 0, count);
+    SendSocket(&message, const_cast<char*>(body.c_str()));
+}
 
-	_TCLIENTITEMRCD		tClientItemRcd;
-	_TDEFAULTMESSAGE	DefMsg;
-
-	if (nCnt)
-	{
-		PLISTNODE pListNode = m_pUserInfo->m_lpTItemRcd.GetHead();
-
-		while (pListNode)
-		{
-			_LPTUSERITEMRCD	lptUserItemRcd = m_pUserInfo->m_lpTItemRcd.GetData(pListNode);
-
-			if (lptUserItemRcd)
-			{
-				g_pStdItemSpecial[lptUserItemRcd->nStdIndex].GetStandardItem(&tClientItemRcd);
-				g_pStdItemSpecial[lptUserItemRcd->nStdIndex].GetUpgradeStdItem(&tClientItemRcd, lptUserItemRcd);
-
-				memcpy(tClientItemRcd.szMakeIndex, lptUserItemRcd->szMakeIndex, 12);
-				
-				tClientItemRcd.nDura		= lptUserItemRcd->nDura;
-				tClientItemRcd.nDuraMax		= lptUserItemRcd->nDuraMax;
-
-				if (strlen(lptUserItemRcd->szPrefixName))
-					strcpy(tClientItemRcd.tStdItem.szPrefixName, lptUserItemRcd->szPrefixName);
-				else
-					ZeroMemory(tClientItemRcd.tStdItem.szPrefixName, sizeof(tClientItemRcd.tStdItem.szPrefixName));
-
-				nPos +=	fnEncode6BitBufA((unsigned char *)&tClientItemRcd, &szEncodeMsg[nPos], sizeof(_TCLIENTITEMRCD), sizeof(szEncodeMsg) - nPos);
-
-				szEncodeMsg[nPos++] = '/';
-			}
-
-			pListNode = m_pUserInfo->m_lpTItemRcd.GetNext(pListNode);
-		}
-	}
-
-	if (nGenCnt)
-	{
-		char		szVal[5];
-
-		ZeroMemory(szVal, sizeof(szVal));
-
-		PLISTNODE pListNode = m_pUserInfo->m_lpTGenItemRcd.GetHead();
-
-		while (pListNode)
-		{
-			_LPTGENERALITEMRCD	lptGenItemRcd = m_pUserInfo->m_lpTGenItemRcd.GetData(pListNode);
-
-			if (lptGenItemRcd)
-			{
-				memcpy(tClientItemRcd.szMakeIndex, lptGenItemRcd->szMakeIndex, 12);
-		
-				tClientItemRcd.nDura		= lptGenItemRcd->nDura;
-				tClientItemRcd.nDuraMax		= lptGenItemRcd->nDuraMax;
-
-				g_pStdItemEtc[lptGenItemRcd->nStdIndex].GetStandardItem(&tClientItemRcd);
-
-				nPos +=	fnEncode6BitBufA((unsigned char *)&tClientItemRcd, &szEncodeMsg[nPos], sizeof(_TCLIENTITEMRCD), sizeof(szEncodeMsg) - nPos);
-
-				szEncodeMsg[nPos++] = '/';
-			}
-
-			pListNode = m_pUserInfo->m_lpTGenItemRcd.GetNext(pListNode);
-		}
-	}
-
-	szEncodeMsg[nPos] = '\0';
-
-	fnMakeDefMessage(&DefMsg, SM_BAGITEMS, (int)this, 0, 0, nCnt + nGenCnt);
-
-	SendSocket(&DefMsg, szEncodeMsg);
+void CPlayerObject::SendEquipmentItems()
+{
+    std::string body;
+    for (int slot = 0; slot < sizeof(m_pUserInfo->m_THumanRcd.szTakeItem) / Mir3Item::LegacyKeySize; ++slot) {
+        char* key = m_pUserInfo->m_THumanRcd.szTakeItem[slot];
+        Mir3Item::Record record;
+        bool present = false;
+        if (key[0] == 'G') {
+            const auto item = m_pUserInfo->GetUseGenItem(key);
+            present = item && BuildGeneralItem(*m_pUserInfo, *item, record);
+        } else {
+            const auto item = m_pUserInfo->GetItem(key);
+            present = item && BuildSpecialItem(*m_pUserInfo, *item, record);
+        }
+        if (present) { body += std::to_string(slot) + '/'; AppendItem(body, record); }
+    }
+    _TDEFAULTMESSAGE message;
+    fnMakeDefMessage(&message, SM_SENDUSEITEMS, 0, 0, 0, 0);
+    SendSocket(&message, const_cast<char*>(body.c_str()));
 }
 
 void CPlayerObject::RecalcLevelAbilitys()
@@ -2412,37 +2398,42 @@ void CPlayerObject::Operate()
 
 						break;
 					}
-					case CM_TAKEONITEM:
-					{
-						if (lpProcessMsg->pszData)
-						{
-							char	szDecodeData[16];
-
-							nPos = fnDecode6BitBufA(lpProcessMsg->pszData, szDecodeData, 12);
-							szDecodeData[nPos] = '\0';
-
-							if (szDecodeData[0] == 'G')
-								ServerGetTakeOnGenItem((WORD)lpProcessMsg->lParam2, szDecodeData);
-							else
-								ServerGetTakeOnItem((WORD)lpProcessMsg->lParam2, szDecodeData);
-						}
-
-						break;
-					}
-					case CM_TAKEOFFITEM:
-					{
-						if (lpProcessMsg->pszData)
-						{
-							char	szDecodeData[16];
-
-							nPos = fnDecode6BitBufA(lpProcessMsg->pszData, szDecodeData, 12);
-							szDecodeData[nPos] = '\0';
-
-							ServerGetTakeOffItem((WORD)lpProcessMsg->lParam2, szDecodeData);
-						}
-
-						break;
-					}
+                    case CM_TAKEONITEM:
+                    case CM_TAKEOFFITEM:
+                    {
+                        char key[Mir3Item::LegacyKeySize + 1] = {}; int standard = 0;
+                        const int slot = lpProcessMsg->lParam2;
+                        const bool takingOn = lpProcessMsg->wIdent == CM_TAKEONITEM;
+                        if (slot < 0 || slot >= sizeof(m_pUserInfo->m_THumanRcd.szTakeItem) / Mir3Item::LegacyKeySize ||
+                            !m_pUserInfo->ResolveItemRequest(DWORD(lpProcessMsg->lParam1), lpProcessMsg->pszData, key, standard)) {
+                            fnMakeDefMessage(&DefMsg, takingOn ? SM_TAKEON_FAIL : SM_TAKEOFF_FAIL, 2, 0, 0, 0);
+                            SendSocket(&DefMsg, NULL);
+                        } else {
+                            char previous[Mir3Item::LegacyKeySize + 1] = {};
+                            memcpy(previous, m_pUserInfo->m_THumanRcd.szTakeItem[slot], Mir3Item::LegacyKeySize);
+                            if (!takingOn) ServerGetTakeOffItem(WORD(slot), key);
+                            else if (key[0] == 'G') ServerGetTakeOnGenItem(WORD(slot), key);
+                            else ServerGetTakeOnItem(WORD(slot), key);
+                            // MIR3 clears the held item on success; return the removed record afterwards.
+                            const bool changed = memcmp(previous, m_pUserInfo->m_THumanRcd.szTakeItem[slot], Mir3Item::LegacyKeySize) != 0;
+                            if (changed) {
+                                if (previous[0] == 'G') {
+                                    const auto item = m_pUserInfo->GetUseGenItem(previous);
+                                    if (item) {
+                                        _TUSERITEMRCD returned = {};
+                                        memcpy(returned.szMakeIndex, item->szMakeIndex, Mir3Item::LegacyKeySize);
+                                        returned.nStdIndex = item->nStdIndex;
+                                        returned.nDura = item->nDura; returned.nDuraMax = item->nDuraMax;
+                                        SendAddItem(&returned);
+                                    }
+                                } else {
+                                    const auto item = m_pUserInfo->GetItem(previous);
+                                    if (item) SendAddItem(item);
+                                }
+                            }
+                        }
+                        break;
+                    }
 					case CM_QUERYUSERNAME:
 					{
 						GetQueryUserName((CCharObject*)lpProcessMsg->lParam1, lpProcessMsg->lParam2/*x*/, lpProcessMsg->lParam3/*y*/);
@@ -2454,61 +2445,34 @@ void CPlayerObject::Operate()
 
 						break;
 					}
-					case CM_EAT:
-					{
-						if (lpProcessMsg->pszData)
-						{
-							char	szDecodeData[16];
-
-							nPos = fnDecode6BitBufA(lpProcessMsg->pszData, szDecodeData, 12);
-							szDecodeData[nPos] = '\0';
-
-							ServerGetEatItem(lpProcessMsg->wParam, szDecodeData);
-						}
-
-						break;
-					}
+                    case CM_EAT:
+                    {
+                        char key[Mir3Item::LegacyKeySize + 1] = {}; int standard = 0;
+                        if (m_pUserInfo->ResolveItemRequest(DWORD(lpProcessMsg->lParam1), lpProcessMsg->pszData, key, standard) && key[0] == 'G') {
+                            ServerGetEatItem(standard, key);
+                        } else {
+                            fnMakeDefMessage(&DefMsg, SM_EAT_FAIL, 0, 0, 0, 0);
+                            SendSocket(&DefMsg, NULL);
+                        }
+                        break;
+                    }
 					case CM_MAGICKEYCHANGE:
 					{
 						ServerGetMagicKeyChange(lpProcessMsg->wParam, lpProcessMsg->lParam1);
 						break;
 					}
-					case CM_DROPITEM:
-					{
-						char	szDecodeData[16];
-						BOOL	fFlag = FALSE;
-
-						if (lpProcessMsg->pszData)
-						{
-							nPos = fnDecode6BitBufA(lpProcessMsg->pszData, szDecodeData, 12);
-							szDecodeData[nPos] = '\0';
-
-							if (szDecodeData[0] == 'G')
-							{
-								if (m_pUserInfo->UserDropGenItem(lpProcessMsg->wParam, szDecodeData))
-									fFlag = TRUE;
-							}
-							else
-							{
-								if (m_pUserInfo->UserDropItem(lpProcessMsg->wParam, szDecodeData))
-									fFlag = TRUE;
-							}
-
-							if (fFlag)
-								fnMakeDefMessage(&DefMsg, SM_DROPITEM_SUCCESS, 0, lpProcessMsg->wParam, 0, 0);
-							else
-								fnMakeDefMessage(&DefMsg, SM_DROPITEM_FAIL, 0, lpProcessMsg->wParam, 0, 0);
-						}
-						else
-							fnMakeDefMessage(&DefMsg, SM_DROPITEM_FAIL, 0, lpProcessMsg->wParam, 0, 0);
-
-						nPos =	fnEncode6BitBufA((unsigned char *)szDecodeData, szEncodeMsg, 12, sizeof(szEncodeMsg));
-						szEncodeMsg[nPos] = '\0';
-
-						SendSocket(&DefMsg, szEncodeMsg);
-
-						break;
-					}
+                    case CM_DROPITEM:
+                    {
+                        char key[Mir3Item::LegacyKeySize + 1] = {}; int standard = 0;
+                        const DWORD instance = DWORD(lpProcessMsg->lParam1);
+                        bool dropped = false;
+                        if (m_pUserInfo->ResolveItemRequest(instance, lpProcessMsg->pszData, key, standard) && !IsEquipped(*m_pUserInfo, key)) {
+                            dropped = key[0] == 'G' ? m_pUserInfo->UserDropGenItem(standard, key) : m_pUserInfo->UserDropItem(standard, key);
+                        }
+                        fnMakeDefMessage(&DefMsg, dropped ? SM_DROPITEM_SUCCESS : SM_DROPITEM_FAIL, instance, 0, 0, 0);
+                        SendSocket(&DefMsg, dropped ? NULL : lpProcessMsg->pszData);
+                        break;
+                    }
 					case CM_PICKUP:
 					{
 						if ((m_nCurrX == (int)lpProcessMsg->lParam3) && (m_nCurrY == (int)lpProcessMsg->lParam2))
@@ -2957,15 +2921,9 @@ void CPlayerObject::Operate()
 
 						break;
 					}
-					case RM_SENDUSEITEMS:
-					{
-						fnMakeDefMessage(&DefMsg, SM_SENDUSEITEMS, 0, 0, 0, 0);
-						nPos = fnEncode6BitBufA((unsigned char *)m_pUserInfo->m_THumanRcd.szTakeItem, szEncodeMsg, sizeof(m_pUserInfo->m_THumanRcd.szTakeItem), sizeof(szEncodeMsg));
-						szEncodeMsg[nPos] = '\0';
-						SendSocket(&DefMsg, szEncodeMsg);
-
-						break;
-					}
+                    case RM_SENDUSEITEMS:
+                        SendEquipmentItems();
+                        break;
 					case RM_SENDMYMAGIC:
 					{
 						SendMyMagics();

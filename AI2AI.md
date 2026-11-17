@@ -1802,3 +1802,12 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 全DBSvr CPP重新编译，七目标通过 out/ability-session-build.log。三次模拟游戏服断连后真实登录入场成功；20次断连/160个排队只读请求测试通过；前批非法索引测试通过。
 - 人物页等级1和各基本数值、背包负重3/50已实服截图，out/native-live-01/live-ability-status.png / live-ability-bag-weight.png。物品仍空，旧12字节实例ID与MIR3数值ID/100字节物品记录需双向适配。
 - 部署GameSvr/DBSvr并重启相关四服务；原LoginSvr/LoginGate保留。最终DB34264/SelGate23520/GameSvr17436/GameGate34804，测试客户端31952已退出。详见Client/docs/native-ability-session-audit.md；下一预览仍341。
+
+
+## 2026-11-17 基础物品记录与实例请求适配
+- 新 Mir3Item.h 100字节字段映射、每角色连接12字节旧标识与数值ID双向表；背包/装备/新增包统一，穿戴/卸装/使用/普通丢弃校验拥有关系和名称后还原旧标识。
+- GameSvr 类布局变化已全34 CPP重编，七目标通过；100字节黄金记录及ID测试、能力测试、真实非法索引回归通过。最终 out/item-wire-return-build.log。
+- 实服三件物品显示、首轮盔甲和武器穿戴/重量更新有截图。卸装原来缺SM_ADDITEM，已补成功后的返包（包括替换），但最终实服回归未闭环，不能宣称背包完成。
+- 重登盔甲未恢复到可选中的装备栏；测试角色HP下降死亡原因未知；跨面板快速点击出现面板移动。后续先追踪装备初始621及角色存活，再验证卸装/使用，勿重复宣称通过。详见 Client/docs/native-item-wire-audit.md。
+- 现有最小物品定义Looks均0，三图标为红药水是测试资料占位；未修改资源。会话ID不跨登录持久，魔法属性/堆叠/落地/拾取/满包未验收。
+- 截图 out/native-live-01/live-item-bag.png、live-item-equipped.png、live-item-relogin-pending.png。GameSvr33016/GameGate15264运行，测试客户端33232已退出。预览编号仍341。

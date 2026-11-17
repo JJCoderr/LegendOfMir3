@@ -53,6 +53,7 @@ void CGateInfo::OpenNewUser(char *pszPacket)
 
 		lpMsgHeader = (_LPTMSGHEADER)pszPacket;
 
+		pUserInfo->m_itemIdentities.Clear();
 		pUserInfo->m_sock			= lpMsgHeader->nSocket;
 		pUserInfo->m_pxPlayerObject	= NULL;
 
