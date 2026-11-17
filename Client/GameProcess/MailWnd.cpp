@@ -161,6 +161,7 @@ void CMailWnd::LayoutEditors()
     if(!visible) {for(HWND edit:edits) if(edit) ShowWindow(edit,SW_HIDE);return;}
     const auto& display=g_xMainWnd.m_rcWindow;
     const int width=display.right-display.left,height=display.bottom-display.top;
+    if(width<=0 || height<=0) return;
     const Box boxes[]={Recipient,view==View::Gift?GiftBody:ComposeBody};
     const int pixels=MulDiv(FontPixels,height,CanvasHeight);
     if(editFontHeight!=pixels) {

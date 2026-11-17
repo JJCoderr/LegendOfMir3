@@ -14,6 +14,7 @@ void CGuildEditor::LayoutEdit()
 {
     const auto& display=g_xMainWnd.m_rcWindow;
     const int width=display.right-display.left,height=display.bottom-display.top;
+    if(width<=0 || height<=0) return;
     const int x=display.left+MulDiv(m_rcWnd.left+46,width,800),y=display.top+MulDiv(m_rcWnd.top+54,height,600);
     const int editWidth=MulDiv(468,width,800),editHeight=MulDiv(170,height,600);
     RECT previous; GetWindowRect(edit,&previous);
@@ -104,7 +105,7 @@ HBRUSH CGuildEditor::EditColor(HDC dc)
 }
 void CGuildEditor::Show()
 {
-    if (!m_bActive) return;
+    if (!m_bActive) { if(edit) ShowWindow(edit,SW_HIDE); return; }
     if(g_xGameProc.m_xInterface.m_xMsgBox.IsActive()) {
         ShowWindow(edit,SW_HIDE);
         if(GetFocus()==edit) SetFocus(g_xMainWnd.GetSafehWnd());

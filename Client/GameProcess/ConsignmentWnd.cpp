@@ -192,6 +192,7 @@ void CConsignmentWnd::LayoutEditors()
     }
     const auto display=g_xMainWnd.m_rcWindow;
     const int width=display.right-display.left,height=display.bottom-display.top;
+    if(width<=0 || height<=0) return;
     const int pixels=MulDiv(FontPixels,height,CanvasHeight);
     if(pixels!=fontHeight) {
         const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};

@@ -1250,14 +1250,19 @@ public:
             const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
             const auto text=[](HWND edit){std::vector<char> value(GetWindowTextLengthA(edit)+1);GetWindowTextA(edit,value.data(),int(value.size()));return std::string(value.data());};
             const auto overflow=[](int limit){return std::string(limit-1,'A')+"中";};
+            auto& editor=ui.m_xGuildEditor;editor.Open(true);SetWindowTextA(editor.edit,"公告草稿\r\n第二行");editor.Show();
+            check("guild_editor_layout",CheckPanelEditorLayout(editor.edit,[&](){editor.Show();}));editor.Close(false);
             ui.WindowActivate(_WND_ID_MAIL);mail.SelectView(MailLayout::View::Compose);mail.SyncEditors(true);
             SetWindowTextA(mail.edits[0],"传奇勇士");SetWindowTextA(mail.edits[1],overflow(MailLayout::EditLimit).c_str());mail.Show();
             check("mail_body_whole_boundary",mail.draft==std::string(MailLayout::EditLimit-1,'A') && text(mail.edits[1])==mail.draft);
             SetWindowTextA(mail.edits[1],"写信草稿\r\n第二行中文");mail.Show();
             mail.SelectView(MailLayout::View::Gift);SetWindowTextA(mail.edits[0],"好友");SetWindowTextA(mail.edits[1],"赠送草稿");mail.Show();
             mail.SelectView(MailLayout::View::Compose);
+            check("compose_recipient_layout",CheckPanelEditorLayout(mail.edits[0],[&](){mail.SyncEditors(true);}));
+            check("compose_body_layout",CheckPanelEditorLayout(mail.edits[1],[&](){mail.SyncEditors(true);}));
             check("compose_draft_restored",text(mail.edits[0])=="传奇勇士" && text(mail.edits[1])=="写信草稿\r\n第二行中文");
             mail.SelectView(MailLayout::View::Gift);
+            check("gift_body_layout",CheckPanelEditorLayout(mail.edits[1],[&](){mail.SyncEditors(true);}));
             check("gift_draft_restored",text(mail.edits[0])=="好友" && text(mail.edits[1])=="赠送草稿");
             SetFocus(mail.edits[1]);ui.ShowNotice(4000);
             check("mail_modal_hides_editors",!IsWindowVisible(mail.edits[0]) && !IsWindowVisible(mail.edits[1]) && GetFocus()!=mail.edits[1]);
@@ -1267,6 +1272,8 @@ public:
             auto& browser=ui.m_xConsignmentWnd;ui.WindowActivate(ConsignmentLayout::BrowserId);browser.SyncEditors(true);
             SetWindowTextA(browser.edits[0],overflow(ConsignmentLayout::QueryLimit).c_str());
             SetWindowTextA(browser.edits[1],"传奇勇士");browser.Show();
+            check("query_name_layout",CheckPanelEditorLayout(browser.edits[0],[&](){browser.SyncEditors(true);}));
+            check("query_seller_layout",CheckPanelEditorLayout(browser.edits[1],[&](){browser.SyncEditors(true);}));
             check("query_whole_boundary",browser.nameQuery==std::string(ConsignmentLayout::QueryLimit-1,'A'));
             check("seller_query_preserved",browser.sellerQuery=="传奇勇士");ui.WindowActivate(ConsignmentLayout::BrowserId);
             auto& sale=ui.m_xConsignmentRegistration;ui.WindowActivate(ConsignmentLayout::RegistrationId);sale.SyncEditors(true);
@@ -1275,7 +1282,9 @@ public:
             SetWindowTextA(sale.edits[0],"出售装备\r\n欢迎咨询。");sale.Show();SetFocus(sale.edits[0]);ui.ShowNotice(4000);
             check("sale_modal_hides_editor",!IsWindowVisible(sale.edits[0]) && GetFocus()!=sale.edits[0]);
             ui.OnKeyDown(VK_RETURN,0);sale.SyncEditors(true);sale.Show();
+            check("registration_layout",CheckPanelEditorLayout(sale.edits[0],[&](){sale.SyncEditors(true);}));
             check("sale_modal_preserves_text",IsWindowVisible(sale.edits[0]) && text(sale.edits[0])=="出售装备\r\n欢迎咨询。");
+            editor.Show();check("closed_guild_editor_stays_hidden",!IsWindowVisible(editor.edit));
             if(groupPanel!=315) {
                 ui.WindowActivate(ConsignmentLayout::RegistrationId);ui.WindowActivate(_WND_ID_MAIL);
                 mail.SelectView(groupPanel==313?MailLayout::View::Compose:MailLayout::View::Gift);mail.SyncEditors(true);
