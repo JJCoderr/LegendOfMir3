@@ -2379,3 +2379,12 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - verify_gate_stream.py 新增 --game（仅 edge client），在隔离 Mir3.ini 修改 GameGatePort，将游戏请求/回包也纳入代理。
 - Client Release 和 test_packet_buffer 构建通过；最终版本双向分片 Inventory 71、ShopEquipment 67、ChatLocal 28、InventoryFull 46 项，共 212 项通过。满背包回包代理转发 26951 字节，覆盖60件物品保存/重进；因逐字节转发使用30秒单步骤期限。日志 out/csv-validation/game-queue-*。
 - 尚未验证所有游戏消息、技能战斗在分片延迟下的行为、极端持续流量/断连压力。动态队列移除人为包数上限，并不意味着无限内存负载已验证。
+
+
+## 2026-11-18 技能书学习与战斗分片回归
+
+- 根 Test/Skills 新增 SkillsLearning 及 SkillsBookJob、SkillsBookLevel、SkillsBookMissing，均配同名 fixture。学习场景覆盖新增技能、消耗一本书、重复学习拒绝保留第二本、F1绑定、数据库保存及重进；三个拒绝场景检查职业、等级、技能定义，失败后物品和技能存档均保留。
+- fixture 的书籍普通物品键第三段为技能编号，当前 GetMagicID 从该段读取。验证使用既有 item.use/skill.bind/session.return 响应，无新增绕过业务的 RPC。
+- 普通 SkillsLearning 31 项通过；全链路双向分片 SkillsLearning 31、三个拒绝场景各 27 项通过。另 SkillsCasting 26、SkillsHealing 24、CombatMagic 24 项通过，总计 217 项。证据 out/csv-validation/skills-learning.log、skills-book-*-fragments/test.log、game-stream-*/test.log。
+- 本轮未发现需要修改的技能业务代码；测试覆盖从未学习到保存重进的完整路径，不宣称技能系统全部完成。
+- 待扩展：商店购买技能书时，普通库存最大值与 GetMagicID 所读的第三字段是否正确保持（尤其技能编号不等于默认耐久时）；技能训练升级、技能保存故障回滚、其他职业及技能效果。学习实现 ReadBook 在 ClientMagicRecord 成功前先加入内存技能，相关失败边界尚未验证。

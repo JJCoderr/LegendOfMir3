@@ -302,3 +302,12 @@ python Test/verify_gate_stream.py --edge client --game --direction both --scenar
 ```
 
 游戏消息拼接专项测试：构建 `test_packet_buffer`，运行 `build-eiserver/Release/test_packet_buffer.exe`。该测试直接调用客户端使用的缓冲实现，覆盖所有分割位置、逐字节输入、2,000 条连续消息、32 KiB 残包及会话清空。32 KiB 用例验证缓冲容量，不表示业务协议接受任意长度的单条消息。游戏原始接收队列按当前快照批量消费，不再受旧 99 项环形队列限制。
+
+
+### 技能书学习
+
+`Skills/SkillsLearning.csv` 从未学习技能的角色开始：使用一本技能书、确认技能新增和物品消耗、重复学习拒绝且保留第二本、绑定 F1、保存并重新进图。数据库断言确认只保存一条技能记录和一本剩余书籍。
+
+`Skills/SkillsBookJob.csv`、`SkillsBookLevel.csv`、`SkillsBookMissing.csv` 分别验证职业不符、等级不足、技能定义缺失：服务器返回 SM_EAT_FAIL，客户端保留两本书且不新增技能，保存重进后仍一致。数据种子中的普通物品键第三段作为书籍技能编号，沿用当前 ReadBook/GetMagicID 逻辑。
+
+四个场景可使用 `launch_csv.py` 正常运行，也可用 `verify_gate_stream.py --edge client --game --direction both --scenario <CSV> --log-dir <目录>` 做全链路分片验证。这些场景不包含商店购买技能书、技能训练升级、所有职业技能效果或学习保存失败回滚。
