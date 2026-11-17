@@ -364,6 +364,12 @@ void CMonsterObject::Die()
 
 void CMonsterObject::ScatterBagItems()
 {
+    auto* general=m_xTGenItemRcd.GetHead();
+    while(general) {
+        auto* item=m_xTGenItemRcd.GetData(general);
+        DropItemDown(reinterpret_cast<_LPTUSERITEMRCD>(item),3,TRUE);
+        general=m_xTGenItemRcd.RemoveNode(general);
+    }
 	_LPTUSERITEMRCD lptUserItemRcd = NULL;
 
 	if (m_xTItemRcd.GetCount())
@@ -498,11 +504,11 @@ void CMonsterObject::MonGetRandomItems()
 			{
 				pMonItem = pMonRaceInfo->m_xMonItemList.GetData(pListNode);
 
-				if (pMonItem)
+				if (pMonItem && pMonItem->m_nPoint > 0 && rand() % pMonItem->m_nPoint == 0)
 				{
 //					if (1 >= rand() % pMonItem->m_nPoint)
 //					{
-						_LPTUSERITEMRCD lpTItemRcd = new _TUSERITEMRCD;
+
 
 						switch (pMonItem->m_btItemType)
 						{
@@ -513,6 +519,7 @@ void CMonsterObject::MonGetRandomItems()
 							case _ITEM_ARMOR:
 							case _ITEM_ACCESSORY:
 							{
+                                auto* lpTItemRcd=new _TUSERITEMRCD{};
 								ZeroMemory(lpTItemRcd->szPrefixName, sizeof(lpTItemRcd->szPrefixName));
 								ZeroMemory(lpTItemRcd->btValue, sizeof(lpTItemRcd->btValue));
 

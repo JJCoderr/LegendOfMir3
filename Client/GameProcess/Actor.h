@@ -479,6 +479,7 @@ public:
 
 	VOID  SetMotionState(BYTE bMtn, BYTE bDir, INT nMouseTargetID = NULL, BOOL bIsDead = FALSE, LPPOINT lpptPos = NULL, SHORT shSkill = -1);
 	VOID  SetMapHandler(CMapHandler* pxMap);
+    bool WalkAdjacent(POINT destination);
     bool CastShortcut(int slot,POINT target,int targetId,FEATURE feature,bool repeat=false);
 	VOID  SetMagic(LPCLIENTMAGICRCD	pstMagic, BYTE bKeyNum, BYTE bDir, INT nTargetID, FEATURE stTargetFeature, POINT ptTargetPos);
 	BOOL  SetOldPosition();

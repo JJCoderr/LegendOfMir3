@@ -2068,3 +2068,9 @@ skill.cast 新增 target 参数（当前 actors 下标），从真实客户端�
 state.get 新增 level/experience/next_experience/return_ready，后者复用 ExitFlow::Guard 的真实战斗冷却和退出转换状态。新增 CombatExperience.csv/fixture，击杀奖励1000经验；WinExp 原先 if 只升级一次，改为按新等级阈值循环扣除经验，限制在 MAXLEVEL 表内并排除零阈值。保持原 NEEDEXPS 和等级索引，没有更改经验平衡。
 
 Client/EIServer 构建通过。首次单级奖励250已验证2级剩50，但立即退出被正常战斗冷却拒绝；脚本补上拒绝断言和 return_ready 等待。最终跨级场景33步通过（out/csv-validation/combat-experience-multilevel.log，runtime rpc-q6af1hmr，15766ms）：1级→4级剩100，冷却前拒绝退出，冷却后保存数据库(4,100)，重登恢复及SM_WINEXP/SM_LEVELUP。CombatMagic增加小额经验断言(1级、1经验)，24步回归通过（out/csv-validation/experience-small-regression.log，8109ms）；各自RpcServer10步通过。等级上限、经验表与原版数值一致性、组队经验和召唤物归属尚未验证。
+
+## 普通怪物掉落、行走拾取与保存
+
+InitMonItemInfo 按数据库怪物编号映射掉落记录，跳过不存在定义，修正原来把FLD_MONSTER当数组下标及<=越界判断。原函数本来由InitMonRaceInfo末尾调用，本轮排查时新增的重复启动调用已移除，最终未改变初始化调用次数。ScatterBagItems补上m_xTGenItemRcd普通物品；MonGetRandomItems启用1/N概率(N<=0禁用)，装备实例只在装备分支分配，消除普通物品/金币分支无用的装备分配。
+
+客户端新增WalkAdjacent和world.walk(x,y)，检查相邻格、通行和动作时序，调用既有SetMotionState发真实CM_WALK；脚本没有改坐标或绕过服务器。MonstersLoot.csv/fixture验证稀疏怪物1007掉落药水、禁用概率0与不存在怪物1的记录无额外物品、远距离走路拒绝、走到散落格(459,260)、拾取、DB物品数1/位置一致、重登恢复。Client/EIServer构建通过（中途旧测试进程占用EXE导致一次LNK1168，在该测试终止后重新链接成功）；最终39步+RpcServer10步通过，out/csv-validation/monster-loot-final.log，runtime rpc-4ceovflh，场景16859ms。随机概率分布、FLD_COUNT多份同类物品、金币/装备掉落及背包满仍待完善验证，不能据此声称掉落系统全部完成。

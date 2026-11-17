@@ -5417,6 +5417,18 @@ VOID CMyHero::SetMagic(LPCLIENTMAGICRCD pstMagic, BYTE bKeyNum, BYTE bDir, INT n
 }
 
 
+bool CMyHero::WalkAdjacent(POINT destination) {
+    if(g_xGameProc.InputDelayed() || m_pendingAction || m_bMotionLock || m_bInputLock || m_bIsDead ||
+        !m_spellTiming.movement_ready(GetTickCount())) return false;
+    const int dx=abs(destination.x-m_wPosX),dy=abs(destination.y-m_wPosY);
+    if((!dx && !dy) || dx>1 || dy>1) return false;
+    const BYTE direction=CalcDirection(destination.x,destination.y);
+    POINT next{};
+    if(!m_pxMap->GetNextTileCanMove(m_wPosX,m_wPosY,direction,1,&next)) return false;
+    SetMotionState(m_stFeatureEx.bHorse==_HORSE_NONE?_MT_WALK:_MT_HORSEWALK,direction,0,FALSE,&next);
+    return true;
+}
+
 bool CMyHero::CastShortcut(int slot,POINT target,int targetId,FEATURE feature,bool repeat) {
     if(slot<1 || slot>SkillWire::ShortcutCount || g_xGameProc.InputDelayed() || m_pendingAction ||
         m_stFeatureEx.bHorse!=_HORSE_NONE ||

@@ -225,6 +225,10 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
             g_xClientSocket.SendQueryName(actor->m_dwIdentity,actor->m_wPosX,actor->m_wPosY);
             accepted=true;
         }
+    } else if (method == "world.walk" && g_bProcState == _GAME_PROC) {
+        const int x=Integer(params,"x"),y=Integer(params,"y");
+        if(x<=USHRT_MAX && y<=USHRT_MAX && !g_xGameProc.m_xNotice.IsActive())
+            accepted=g_xGameProc.m_xMyHero.WalkAdjacent(POINT{x,y});
     } else if (method == "skill.cast" && g_bProcState == _GAME_PROC) {
         const int key=Integer(params,"key");
         if(params.contains("target")) {

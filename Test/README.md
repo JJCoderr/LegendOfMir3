@@ -67,7 +67,7 @@ step,name,target,action,params,expect
 | 角色 | `Character.csv`、`CharacterDelete.csv` | 创建角色、删除角色及持久化 |
 | 物品 | `Inventory.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
 | 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复及施法回包、扣蓝 |
-| 怪物 | `MonstersSpawn.csv` | 稀疏编号刷新、无效编号、实体名称查询及受击治疗 |
+| 怪物 | `MonstersSpawn.csv`、`MonstersLoot.csv` | 稀疏编号刷新、无效编号、实体名称查询及受击治疗 |
 | 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡与无效目标拒绝 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
@@ -105,3 +105,5 @@ build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pi
 `CombatMagic.csv` 使用真实火球术击杀低血量怪物，检查 SM_STRUCK、SM_NOWDEATH、客户端 HP=0/dead=true 和扣蓝，拒绝不存在或已死亡的目标。`skill.cast` 可以传 `key=1;target=0`，target 是当前 actors 数组的零基下标；客户端从选中实体读取坐标、网络标识和外观，调用与键盘相同的施法入口。省略 target 时继续使用 x/y 坐标施法。actors 增加 hp/max_hp，未收到血量回包时 max_hp=0 表示血量尚未知。该场景验证致死伤害，不验证精确伤害公式、掉落、经验和重新刷新。
 
 `CombatExperience.csv` 验证击杀奖励、一次奖励跨多级、战斗退出冷却、数据库保存及重登恢复。fixture 奖励 1000 经验，按当前服务端经验表从 1 级升到 4 级并剩余 100 经验。state.get 增加 level、experience、next_experience、return_ready；return_ready 复用现有退出冷却判断，脚本通过 state.wait 等待，不跳过冷却或修改时钟。本次保持原经验表及等级索引，未校验其数值与原版资源是否一致。
+
+`MonstersLoot.csv` 验证击杀后普通药水掉落、真实行走到物品格、拾取、保存和重登恢复，同时检查不存在怪物的掉落记录与禁用掉落记录不会生成额外物品。`world.walk(x,y)` 只提交到相邻格的单步移动，复用地图通行检查、动作时序及现有移动协议；远距离请求拒绝。FLD_PROBABLY 使用 1/N 抽取，N<=0 禁用。本场景使用 N=1 确保结果可复现，尚未验证随机概率分布、金币和装备掉落、多个同类物品与背包满时的处理。

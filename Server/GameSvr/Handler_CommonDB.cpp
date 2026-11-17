@@ -246,7 +246,9 @@ void InitMonItemInfo()
 	{
 		while (pRec->Fetch())
 		{
-			nMonIndex = atoi( pRec->Get( "FLD_MONSTER" ));
+            const auto* monster=GetMonRaceInfo(atoi(pRec->Get("FLD_MONSTER")));
+            if(!monster) continue;
+            nMonIndex=monster->nIndex;
 
 			CMonItem* pMonItem = new CMonItem;
 
@@ -257,7 +259,7 @@ void InitMonItemInfo()
 				pMonItem->m_nPoint		= atoi( pRec->Get( "FLD_PROBABLY" ));
 				pMonItem->m_wCount		= atoi( pRec->Get( "FLD_COUNT" ));
 			
-				if (g_pMonRaceInfo && (nMonIndex <= g_nNumOfMonRaceInfo))
+				if (g_pMonRaceInfo && (nMonIndex < g_nNumOfMonRaceInfo))
 					g_pMonRaceInfo[nMonIndex].m_xMonItemList.AddNewNode(pMonItem);
 			}
 		}	
