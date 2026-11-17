@@ -6,10 +6,11 @@ import msvcrt
 import queue
 import threading
 import time
+import subprocess
 from pathlib import Path
 from ctypes import wintypes
 
-def run(suite_path, pid):
+def run(suite_path, pid, report=None):
     suite = json.loads(Path(suite_path).read_text(encoding='utf-8'))
     name = rf'\\.\pipe\Mir3.{suite["role"]}.{pid}'
     if not ctypes.windll.kernel32.WaitNamedPipeW(name, 10000):
@@ -32,7 +33,7 @@ def run(suite_path, pid):
             reader = threading.Thread(target=read, daemon=True)
             reader.start()
             try:
-                response = replies.get(timeout=35)
+                response = replies.get(timeout=65)
             except queue.Empty:
                 ctypes.windll.kernel32.CancelIoEx(wintypes.HANDLE(msvcrt.get_osfhandle(pipe.fileno())), None)
                 reader.join(timeout=1)
@@ -64,10 +65,53 @@ def run(suite_path, pid):
                 response = exchange(case.get('raw', json.dumps(case.get('request'), ensure_ascii=False)))
                 assert matches(response, case['expect']), (case['name'], case['expect'], response)
             print('PASS:', suite['role'], case['name'], flush=True)
+            if report is not None: report.append({'role':suite['role'],'case':case['name'],'status':'passed'})
+
+def launch(args):
+    from rpc_fixture import prepare
+    repo = Path(__file__).resolve().parents[2]
+    suite = json.loads(args.suite.read_text(encoding='utf-8'))
+    root = prepare(repo,args.bin_dir.resolve(),args.config_dir.resolve(),suite,args.port_offset)
+    print('Runtime:',root,flush=True)
+    processes, report = [], []
+    started = time.monotonic()
+    result = {'status':'running','cases':report}
+    try:
+        with (root/'runtime.log').open('wb') as log:
+            for role, binary, cases in (
+                ('Server',args.bin_dir.resolve()/'EIServer.exe',repo/'Server/Test/jsonrpc.json'),
+                ('Client',root/'Mir2Ex.exe',args.suite)):
+                process = subprocess.Popen([str(binary),'--debug-pipe'],cwd=root,stdout=log,stderr=log,
+                    creationflags=subprocess.CREATE_NO_WINDOW if role=='Server' else 0)
+                processes.append(process)
+                deadline = time.monotonic()+20
+                while not ctypes.windll.kernel32.WaitNamedPipeW(rf'\\.\pipe\Mir3.{role}.{process.pid}',100):
+                    if process.poll() is not None: raise RuntimeError(f'{role} exited {process.returncode}')
+                    if time.monotonic()>=deadline: raise TimeoutError(f'{role} debug pipe startup')
+                    time.sleep(.05)
+                run(cases,process.pid,report)
+        result['status']='passed'
+    except Exception as error:
+        result['status']='failed'
+        result['error']=str(error)
+        raise
+    finally:
+        for process in reversed(processes):
+            if process.poll() is None: process.terminate()
+            process.wait(timeout=5)
+        result['elapsed_seconds']=round(time.monotonic()-started,3)
+        (root/'result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('suite', type=Path)
-    parser.add_argument('--pid', type=int, required=True)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument('--pid', type=int)
+    mode.add_argument('--launch', action='store_true')
+    repo = Path(__file__).resolve().parents[2]
+    parser.add_argument('--bin-dir',type=Path,default=repo/'build-eiserver/Release')
+    parser.add_argument('--config-dir',type=Path,default=repo/'out/debug')
+    parser.add_argument('--port-offset',type=int,default=20000)
     args = parser.parse_args()
-    run(args.suite, args.pid)
+    if args.launch: launch(args)
+    else: run(args.suite, args.pid)

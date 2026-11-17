@@ -98,7 +98,8 @@ int Run()
             return static_cast<int>(msg.wParam);
         }
         rpc.Poll([&](const std::string& method, const std::string&) {
-            if (method != "state.get") throw mir3::JsonRpc::Error{-32601, "Method not found"};
+            if (method != "state.get" && method != "state.wait_ready") throw mir3::JsonRpc::Error{-32601, "Method not found"};
+            if (method == "state.wait_ready" && current < _countof(services)) throw mir3::JsonRpc::Pending{StartupTimeoutMs};
             return std::string("{\"schema\":1,\"ready\":") + mir3::BoolJson(current==_countof(services))
                 + ",\"services_ready\":" + std::to_string(current) + mir3::ServiceTcpState() + "}";
         });

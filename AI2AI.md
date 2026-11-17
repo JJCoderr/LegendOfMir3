@@ -1972,3 +1972,10 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - Client/Test/login.json覆盖密码错误及恢复、正常登录、通知确认、无效服务器/角色拒绝、选服、选角、进图，共13步；通用测试器增加await_state，经事件长轮询等待，不再按固定sleep或重复登录探测业务状态。
 - Client/EIServer Release构建通过。使用现有隔离fixture 3pjf0_jp，真实两端9项服务端RPC基础测试与13步客户端业务测试全部通过，单轮约5秒；日志out/rpc-login-runtime.log。测试进程结束，没有操作鼠标/截图。尚需独立fixture自动创建、全协议清单、角色创建删除及后续业务测试集；没有把局部通过当完整适配。
 - 已读取用户更新AGENTS.md：全部协议先经JSONRPC连通，最后统一UI调试；保留该用户修改未混入本提交。
+
+
+## 2026-11-18 独立JSON测试运行目录
+- run_rpc_tests.py新增--launch：从指定bin-dir/config-dir创建全新out/rpc-*运行目录，专用端口、独立SQLite、Data/Map/Sound目录链接及SoundList硬链接；只复制客户端二进制，EIServer二进制路径稳定。JSON测试集fixture数组定义参数化SQL种子，不再借用旧native-roundtrip目录。
+- 服务端EIServer.cpp新增state.wait_ready，主循环继续启动六个服务时RPC延迟响应；服务器JSON用例等待全部ready后再启动客户端。RPC读响应超时覆盖服务启动60秒上限。
+- 一条命令：python Client/Tools/run_rpc_tests.py Client/Test/login.json --launch。默认二进制build-eiserver/Release、资源配置out/debug，支持覆盖目录和端口偏移；--pid仍支持附着既有调试进程。结果及错误写入fixture/result.json，日志runtime.log，finally仅清理本次子进程。
+- EIServer Release重新构建通过；全新rpc-2_mwya81独立运行通过服务端10项和客户端13步，结果passed，运行5.165秒（不含目录准备）；已核对三个资源目录为Junction。未宣称非登录协议已完成，后续继续JSON业务覆盖。

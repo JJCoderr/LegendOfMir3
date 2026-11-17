@@ -103,6 +103,18 @@
         "id": null,
         "error.code": -32700
       }
+    },
+    {
+      "name": "all services ready",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": "ready",
+        "method": "state.wait_ready"
+      },
+      "expect": {
+        "result.ready": true,
+        "result.services_ready": 6
+      }
     }
   ]
 }
