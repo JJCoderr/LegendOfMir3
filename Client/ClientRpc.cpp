@@ -131,7 +131,8 @@ std::string ClientState() {
             actors.emplace_back(Object{{"id",Json(int64_t(actor->m_dwIdentity))},
                 {"name",Parse(mir3::QuoteLocalText(actor->m_szName))},
                 {"x",Json(int64_t(actor->m_wPosX))},{"y",Json(int64_t(actor->m_wPosY))},
-                {"dead",Json(bool(actor->m_bIsDead))}});
+                {"dead",Json(bool(actor->m_bIsDead))},{"hp",Json(int64_t(actor->m_wHP))},
+                {"max_hp",Json(int64_t(actor->m_wMAXHP))}});
         }
         state += ",\"actors\":"+Json(actors).serialize()+",\"actor_count\":"+std::to_string(actors.size());
         state += mir3::ItemDebugState(game);
@@ -220,9 +221,20 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
             accepted=true;
         }
     } else if (method == "skill.cast" && g_bProcState == _GAME_PROC) {
-        const int key=Integer(params,"key"),x=Integer(params,"x"),y=Integer(params,"y");
-        if(x<=USHRT_MAX && y<=USHRT_MAX && !g_xGameProc.m_xNotice.IsActive())
-            accepted=g_xGameProc.m_xMyHero.CastShortcut(key,POINT{x,y},0,FEATURE{});
+        const int key=Integer(params,"key");
+        if(params.contains("target")) {
+            const int index=Integer(params,"target");auto& actors=g_xGameProc.m_xActorList;
+            if(index<actors.GetCounter() && !g_xGameProc.m_xNotice.IsActive()) {
+                actors.MoveCurrentToTop();for(int i=0;i<index;++i) actors.MoveNextNode();
+                const auto* actor=actors.GetCurrentData();
+                if(!actor->m_bIsDead) accepted=g_xGameProc.m_xMyHero.CastShortcut(key,
+                    POINT{actor->m_wPosX,actor->m_wPosY},actor->m_dwIdentity,actor->m_stFeature);
+            }
+        } else {
+            const int x=Integer(params,"x"),y=Integer(params,"y");
+            if(x<=USHRT_MAX && y<=USHRT_MAX && !g_xGameProc.m_xNotice.IsActive())
+                accepted=g_xGameProc.m_xMyHero.CastShortcut(key,POINT{x,y},0,FEATURE{});
+        }
     } else if (method == "skill.bind" && g_bProcState == _GAME_PROC) {
         const int id=Integer(params,"id"),key=Integer(params,"key");
         auto& window=g_xGameProc.m_xInterface.m_xSkillWnd;

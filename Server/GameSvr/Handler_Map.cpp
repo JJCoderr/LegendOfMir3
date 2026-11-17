@@ -116,7 +116,7 @@ BOOL CMirMap::IsValidObject(int nX, int nY, int nCheckRange, CCharObject* pCharO
 
 							if (pOSObject->btType == OS_MOVINGOBJECT)
 							{
-								if (pCharObject = (CCharObject*)pOSObject->pObject)
+								if (pCharObject == (CCharObject*)pOSObject->pObject)
 									return TRUE;
 							}
 						}

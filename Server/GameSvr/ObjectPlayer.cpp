@@ -1631,6 +1631,8 @@ void CPlayerObject::ServerGetButch(CCharObject* pCharObject, int nX, int nY, int
 BOOL CPlayerObject::SpellXY(int nMagicID, int nTargetX, int nTargetY, int nTargetObj)
 {
 	if (!m_pUserInfo) return FALSE;
+    constexpr int TargetPositionTolerance=2;
+    if(nTargetObj && !m_pMap->IsValidObject(nTargetX,nTargetY,TargetPositionTolerance,(CCharObject*)nTargetObj)) return FALSE;
 
 	_LPTHUMANMAGICRCD	lptMagicRcd = m_pUserInfo->GetMagicRcdByID(nMagicID);
 	
@@ -2206,7 +2208,7 @@ void CPlayerObject::Operate()
 						CCharObject* pTargetObject = (CCharObject*)lpProcessMsg->lParam3;
 						int nMagPower = lpProcessMsg->wParam;
 
-						if (pTargetObject)
+						if (pTargetObject && m_pMap->IsValidObject(LOWORD(lpProcessMsg->lParam1),HIWORD(lpProcessMsg->lParam1),int(lpProcessMsg->lParam2),pTargetObject))
 						{
 							int n = pTargetObject->GetMagStruckDamage(nMagPower);
 

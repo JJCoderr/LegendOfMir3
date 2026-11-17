@@ -2056,3 +2056,9 @@ Client/EIServer/Test 构建通过；最终施法 CSV 26 步通过，真实两次
 怪物定义保存 TBL_MONSTER.FLD_INDEX 为 databaseId，保留 nIndex 的运行时数组下标语义；先加载定义，再将刷新配置 FLD_MONINDEX 按数据库编号解析一次为运行时下标，缺失编号标记 -1 并跳过。新增 MonstersSpawn.csv/fixture，数据库编号 3、1007，刷新 1007；额外不存在编号 1 不得误刷数组第 1 项。Client state.get 新增 actors(id/name/x/y/dead) 和 actor_count；actor.query_name(index) 使用当前可见数组下标调用现有 SendQueryName，验证 CM_QUERYUSERNAME/SM_USERNAME，不依赖鼠标悬停。怪物初次进入视野名字为空符合当前客户端按需查询路径，本次没有改动名称协议格式。
 
 Client/EIServer 构建通过。MonstersSpawn 29 步通过（out/csv-validation/monster-name.log，9203ms，runtime rpc-q861_yka）：仅一个实体、名称 HealingProbe、怪物受击 HP16→12、治疗 HP12→16/MP18→12、无效实体下标拒绝；原编号0的 SkillsHealing 24步回归通过（out/csv-validation/monster-id-zero-regression.log，9000ms），两次 RpcServer 各10步通过。未验证怪物死亡刷新/掉落、特殊召唤怪物硬编码索引和实体目标伤害。
+
+## 实体目标火球术与死亡协议
+
+skill.cast 新增 target 参数（当前 actors 下标），从真实客户端实体取得坐标、网络标识和 FEATURE，复用 CastShortcut；不存在/已死亡目标拒绝。actors 状态增加 hp/max_hp，max_hp=0 表示尚未收到血量。服务器 SpellXY 对非空目标使用地图对象校验，RM_DELAYMAGIC 生效前重新校验目标在原目标坐标容差内；修复 CMirMap::IsValidObject 将比较误写成赋值，原来只要找到任意移动对象就通过。
+
+新增 CombatMagic.csv / fixture：低血量怪物收到真实火球术后 HP=0、dead=true、MP18→12，验证 CM_SPELL/SM_STRUCK/SM_NOWDEATH，死亡和不存在目标拒绝及服务器健康。首次死亡断言期望 SM_DEATH 失败，实际抓到的是 SM_NOWDEATH(34)，按已有服务端 Die 路径修正场景断言，没有篡改死亡协议实现。Client/EIServer 构建通过；最终战斗24步通过（out/csv-validation/combat-magic-final.log，8125ms），坐标施法回归26步通过（out/csv-validation/combat-coordinate-regression.log，7313ms），两次 RpcServer各10步通过。尚未验证非致死精确伤害公式、怪物经验/掉落/重新刷新或无效原始网络标识攻击；没有界面截图操作。
