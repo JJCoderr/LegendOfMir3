@@ -2203,3 +2203,9 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - ShopSharedStock使用2真实客户端75步通过：过期库存请求拒绝，重新打开刷新剩余量，买空后另一客户端同样拒绝；数据库总物品3、金币80/90。交替请求验证共享库存，不是并发压力测试，尚无主动库存广播。
 - EIServer构建通过；总228步通过，日志 out/csv-validation/shop-price.log、shop-free.log、shop-invalid-price.log、shop-shared-stock.log、shop-price-default-regression.log。
 - 价格取整与原服务器完整边界仍待核对；补货、库存持久化、装备商品、出售/修理等仍未完成。
+
+## 商店参考服价格证据（实现待修复）
+
+- 已复核 Mud3/Eiserver.exe 的 Merchant.txt 构造链：默认倍率100，脚本只接受>=55的倍率，无效值保留原值。
+- 原单价函数0x4D0E44按base/100*percent*extended80(1.1)计算，再由x87 FISTP按默认最近偶数取整；购买拒绝总价<=0。当前floor算法和免费场景不兼容，下一步须修代码、边界用例和现有Shop CSV，再构建联调。
+- 可复核地址、哈希、指令与期望值记录于Test/Shop/native-price-audit.md；Test/README.md已标出旧价格说明的局限。此阶段仅完成静态证据，不代表价格修复或原服动态验证。

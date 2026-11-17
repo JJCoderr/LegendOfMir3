@@ -57,6 +57,8 @@ step,name,target,action,params,expect
 
 日志包含时间、步骤编号、目标端、动作、实际响应、PASS/FAIL、总数和耗时。首个失败立即停止，退出码为 1；全部通过为 0。正常请求参数不写日志。辅助程序另存 runtime.log、server-preflight.log、result.json；场景执行到 protocol.get 时生成 protocol-coverage.json。服务端当前 state.get 反映服务和网络连接状态，具体业务持久化仍由数据库断言验证。
 
+> 商店价格兼容性待修复：IDA 已确认参考服使用额外的 1.1 系数与 x87 ROUND，倍率下限为 55，且拒绝零总价购买。本文后面的价格/免费购买说明记录的是当前实现，不能作为原版行为依据。证据及待更新场景见 [商店价格核对](Shop/native-price-audit.md)。
+
 ## 子系统划分
 
 业务 CSV 统一放在根目录 `Test/<子系统>/`，文件名以子系统名称开头；一个子系统可以按场景拆成多个脚本，不要求把所有用例塞入一个文件。每个脚本可以连续调用 Client、Server 和 Database，完成一次完整联调。
