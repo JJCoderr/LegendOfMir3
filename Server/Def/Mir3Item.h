@@ -45,21 +45,29 @@ Record FromLegacy(const Legacy& item, std::uint32_t instance)
 }
 
 // IDs live for one character connection. Resolve against owned items before use.
-// Never truncate or hash the legacy key: two distinct keys must not alias.
+// Equipment uses its full legacy key; general items also use their live record.
+// Equal potion keys describe equal attributes, not the same inventory instance.
 class Identities {
-    std::vector<std::string> keys;
+    struct Entry { std::string key; const void* item; bool active; };
+    std::vector<Entry> keys;
 public:
     void Clear() { keys.clear(); }
-    std::uint32_t Get(const char* key) {
+    std::uint32_t Get(const char* key, const void* item = nullptr) {
         const std::string value(key, LegacyKeySize);
         for (std::size_t i = 0; i < keys.size(); ++i)
-            if (keys[i] == value) return static_cast<std::uint32_t>(i + 1);
-        keys.push_back(value);
+            if (keys[i].active && keys[i].key == value && keys[i].item == item) return static_cast<std::uint32_t>(i + 1);
+        keys.push_back({value, item, true});
         return static_cast<std::uint32_t>(keys.size());
     }
+    bool Matches(std::uint32_t id, const void* item) const {
+        return id && id <= keys.size() && keys[id - 1].active && keys[id - 1].item == item;
+    }
+    void Forget(const void* item) {
+        for (auto& entry : keys) if (entry.item == item) entry.active = false;
+    }
     bool Resolve(std::uint32_t id, char* key) const {
-        if (!id || id > keys.size()) return false;
-        std::memcpy(key, keys[id - 1].data(), LegacyKeySize);
+        if (!id || id > keys.size() || !keys[id - 1].active) return false;
+        std::memcpy(key, keys[id - 1].key.data(), LegacyKeySize);
         key[LegacyKeySize] = 0;
         return true;
     }

@@ -28,8 +28,8 @@ step,name,target,action,params,expect
 262,walk to dropped item,Client,world.walk,x=458;y=260,result.status=submitted
 264,arrived at dropped item,Client,state.wait,,result.x=458;result.y=260;result.cast_ready=true
 270,pickup potion,Client,item.pickup,,result.status=submitted
-280,potion recovered,Client,state.wait,,result.ground_items=[];result.bag.1.id=2;result.bag.1.name=Test potion
-290,consume recovered potion,Client,item.use,id=2,result.status=submitted
+280,potion recovered,Client,state.wait,,result.ground_items=[];result.bag.1.id=3;result.bag.1.name=Test potion
+290,consume recovered potion,Client,item.use,id=3,result.status=submitted
 300,server state after consume recovered potion,Server,state.get,,result.ready=true;result.services_ready=6
 310,potion consumed,Client,state.wait,,result.ground_items=[];result.use_pending=false;result.held_item=null;result.bag.0.id=1
 320,drop armor,Client,item.drop,id=1,result.status=submitted

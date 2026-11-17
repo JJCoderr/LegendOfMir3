@@ -37,7 +37,7 @@ bool CUserInfo::ResolveItemRequest(DWORD instance, const char* encodedName, char
     name[size] = 0;
     const char* expected = NULL;
     if (key[0] == 'G') {
-        const auto item = GetUseGenItem(key);
+        const auto item = GetUseGenItem(key, instance);
         if (!item || item->nStdIndex < 0 || item->nStdIndex >= g_nStdItemEtc) return false;
         standardIndex = item->nStdIndex; expected = g_pStdItemEtc[standardIndex].szName;
     } else {
@@ -152,11 +152,7 @@ void CUserInfo::MakeGenItem(_LPTGENERALITEMRCD lptGenItemRcd)
 
 		m_lpTGenItemRcd.AddNewNode(lptGenItemRcd);
 
-        _TUSERITEMRCD item = {};
-        memcpy(item.szMakeIndex, lptGenItemRcd->szMakeIndex, Mir3Item::LegacyKeySize);
-        item.nStdIndex = WORD(lptGenItemRcd->nStdIndex);
-        item.nDura = WORD(lptGenItemRcd->nDura); item.nDuraMax = WORD(lptGenItemRcd->nDuraMax);
-        m_pxPlayerObject->SendAddItem(&item);
+        m_pxPlayerObject->SendAddGeneralItem(lptGenItemRcd);
 	}
 }
 
@@ -220,7 +216,7 @@ _LPTUSERITEMRCD	CUserInfo::GetItem(char *pszMakeIndex)
 	return NULL;
 }
 
-_LPTGENERALITEMRCD CUserInfo::GetUseGenItem(char *pszMakeItemID)
+_LPTGENERALITEMRCD CUserInfo::GetUseGenItem(char *pszMakeItemID, DWORD instance)
 {
 	if (m_lpTGenItemRcd.GetCount())
 	{
@@ -230,7 +226,8 @@ _LPTGENERALITEMRCD CUserInfo::GetUseGenItem(char *pszMakeItemID)
 		{
 			_LPTGENERALITEMRCD lpTItemRcd = m_lpTGenItemRcd.GetData(pListNode);
 		
-			if (memcmp(pszMakeItemID, lpTItemRcd->szMakeIndex, _MAKEITEMINDEX) == 0)
+			if (memcmp(pszMakeItemID, lpTItemRcd->szMakeIndex, _MAKEITEMINDEX) == 0 &&
+                (!instance || m_itemIdentities.Matches(instance, lpTItemRcd)))
 				return lpTItemRcd;
 
 			pListNode = m_lpTGenItemRcd.GetNext(pListNode);
@@ -342,6 +339,7 @@ void CUserInfo::RemoveGenItem(_LPTGENERALITEMRCD lptItemRcd)
 			if (lptGenItemRcd == lptItemRcd)
 			{
 				m_lpTGenItemRcd.RemoveNode(pListNode);
+				m_itemIdentities.Forget(lptGenItemRcd);
 				delete lptGenItemRcd;
 				lptGenItemRcd = NULL;
 				return;
@@ -572,7 +570,7 @@ BOOL CUserInfo::UserDropItem(int nItemIndex, char *pszMakeIndex)
 	return FALSE;
 }
 
-BOOL CUserInfo::UserDropGenItem(int nItemIndex, char *pszMakeIndex)
+BOOL CUserInfo::UserDropGenItem(int nItemIndex, char *pszMakeIndex, DWORD instance)
 {
 	if (!m_pxPlayerObject) return FALSE;
 
@@ -584,11 +582,13 @@ BOOL CUserInfo::UserDropGenItem(int nItemIndex, char *pszMakeIndex)
 		{
 			_LPTGENERALITEMRCD lpTItemRcd = m_lpTGenItemRcd.GetData(pListNode);
 		
-			if (memcmp(pszMakeIndex, lpTItemRcd->szMakeIndex, _MAKEITEMINDEX) == 0)
+			if (memcmp(pszMakeIndex, lpTItemRcd->szMakeIndex, _MAKEITEMINDEX) == 0 &&
+                (!instance || m_itemIdentities.Matches(instance, lpTItemRcd)))
 			{
 				if (m_pxPlayerObject->DropItemDown((_LPTUSERITEMRCD)lpTItemRcd, 2, TRUE))
 				{
 //					delete lpTItemRcd;
+					m_itemIdentities.Forget(lpTItemRcd);
 					m_lpTGenItemRcd.RemoveNode(pListNode);
 
 					m_pxPlayerObject->WeightChanged();

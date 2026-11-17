@@ -65,7 +65,7 @@ step,name,target,action,params,expect
 | --- | --- | --- |
 | 登录 | `Login.csv` | 认证、选服、选角与进入地图 |
 | 角色 | `Character.csv`、`CharacterDelete.csv` | 创建角色、删除角色及持久化 |
-| 物品 | `Inventory.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
+| 物品 | `Inventory.csv`、`InventoryDuplicates.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
 | 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复、施法回包、扣蓝与受伤治疗 |
 | 怪物 | `MonstersSpawn.csv`、`MonstersLoot.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
@@ -115,3 +115,5 @@ build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pi
 `MonstersEquipment.csv` 验证击杀掉落装备、行走拾取、生成数据库身份、穿戴、保存及重登恢复。fixture 预置当天未补零的编号 9 和 10，断言新装备使用数值上的下一编号 00011。`MonstersEquipmentFailure.csv` 用 SQLite 触发器拒绝装备 INSERT，检查背包与装备栏为空、数据库无新增记录，并在返回选角再进图后确认物品仍在地面。新掉落装备在数据库事务提交后才加入背包和发送拾取成功；失败恢复地面物品。当前验证使用 SQLite，尚未覆盖 ODBC 并发分配、当天编号耗尽或背包满的装备拾取。
 
 Inventory 步骤编号调整：为补入真实行走与到达检查，原有步骤号统一乘以 10（原 20–40 对应 200–400）；新增 262/264 和 332/334 步行走到药水、装备掉落格。恢复地图搜索表后，主动丢弃物品散落在相邻格，不再假设物品位于角色脚下。调用该脚本的历史区间参数需按此换算。
+
+`InventoryDuplicates.csv` 验证两瓶相同属性药水具有不同的客户端 ID；丢弃第二瓶、真实行走拾回、使用第二瓶时第一瓶仍在，保存重登后剩余数量为 1，再使用并保存后为 0。普通物品离开背包或被消耗后旧 ID 失效，拾回时分配新 ID；脚本应读取 state.get 获取当前 ID。装备仍按完整数据库身份映射。当前未验证多份相同符咒或火把的装备槽位语义。

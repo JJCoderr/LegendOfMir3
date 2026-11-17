@@ -2089,3 +2089,8 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 新装备拾取改为同步创建数据库身份，事务提交后加入背包；失败恢复地面物品。移除原 DB_MAKEITEMRCD2 指针大小编码与提前移除物品的路径。当天编号按数值取最大值，兼容未补零记录。
 - MonstersEquipment.csv 41 步通过（含 9/10 -> 00011、穿戴与重登）；MonstersEquipmentFailure.csv 39 步通过，触发器拒绝 INSERT 后地面装备保留且数据库无新增。
 - Inventory 回归发现恢复搜索表后掉落位置改为相邻格，已补入真实行走；原步骤号乘以 10，新增到达检查，71 步通过。日志位于 out/csv-validation/monster-equipment.log、monster-equipment-failure.log、equipment-inventory-regression.log。EIServer Release 构建通过；尚未验证 ODBC 并发分配。
+
+### 相同普通物品的独立实例
+- 普通物品的旧 G 键描述属性，两瓶相同药水会相同；客户端 ID 现结合活跃记录分配，使用/丢弃按请求 ID 定位具体记录。消耗或丢弃使旧 ID 失效，拾回分配新 ID，避免旧请求操作另一瓶。普通物品发送直接使用真实记录，不再构造临时副本。
+- InventoryDuplicates.csv 39 步通过：两瓶相同药水、指定第二瓶丢弃拾回并使用、第一瓶保留、数据库数量 1 -> 重登 -> 使用 -> 0。Inventory 71 步、MonstersLoot 39 步、MonstersEquipment 41 步回归通过；EIServer Release 构建通过。日志位于 out/csv-validation/inventory-duplicates.log 和 duplicates-*-regression.log。
+- 相同符咒/火把的装备槽位仍使用旧属性键，尚未验证多份相同物品的装备行为。

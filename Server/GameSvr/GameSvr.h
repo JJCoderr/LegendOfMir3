@@ -133,7 +133,7 @@ public:
 	_LPTUSERITEMRCD					GetItem(char *pszMakeIndex);
 	__inline _LPTUSERITEMRCD		GetUseItem(int nPosition) { return GetItem(m_THumanRcd.szTakeItem[nPosition]); }
 	
-	_LPTGENERALITEMRCD				GetUseGenItem(char *pszMakeItemID);
+	_LPTGENERALITEMRCD				GetUseGenItem(char *pszMakeItemID, DWORD instance = 0);
 	void							RemoveGenItem(_LPTGENERALITEMRCD lptGenItemRcd);
 
 	int								EncodeMyMagicToServer(char *pszEncodeMsg, int nBuffSize, int& nPos);
@@ -161,7 +161,7 @@ public:
 	int								GetGenItemVal2(char *pszMakeIndex);
 
 	BOOL							UserDropItem(int nItemIndex, char *pszMakeIndex);
-	BOOL							UserDropGenItem(int nItemIndex, char *pszMakeIndex);
+	BOOL							UserDropGenItem(int nItemIndex, char *pszMakeIndex, DWORD instance = 0);
 
 	BOOL							IncGold(int nGold);
 	BOOL							DecGold(int nGold);

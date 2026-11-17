@@ -48,11 +48,12 @@ public:
 	void		SendMapName();
 	void		SendNewMap();
 	void		SendAddItem(_LPTUSERITEMRCD lpTItemRcd);
+    void SendAddGeneralItem(_LPTGENERALITEMRCD item);
 
 	BOOL		EatItem(char *pszMakeIndex);
 	BOOL		ReadBook(char *pszMakeIndex);
 	int			GetMagicID(char *pszMakeIndex);
-	BOOL		ServerGetEatItem(int nItemIndex, char *pszMakeIndex);
+	BOOL		ServerGetEatItem(int nItemIndex, char *pszMakeIndex, DWORD instance = 0);
 	BOOL		PickUp();
 
 	void		Whisper(char *pszChar, char *pszMsg);
