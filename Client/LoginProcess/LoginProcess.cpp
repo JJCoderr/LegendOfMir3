@@ -1143,6 +1143,17 @@ VOID CLoginProcess::SetErrorMessage(INT nMsg, CHAR* szMgs)
     else sprintf(szMgs, "Message %d (CmList.dat)", nMsg);
 }
 
+const char* CLoginProcess::DebugStage()
+{
+    if (m_xAvi.Opening()) return "opening";
+    switch (m_Progress) {
+    case PRG_LOGIN: return "credentials";
+    case PRG_SERVER_SELE: return "server_list";
+    case PRG_TO_SELECT_CHR: return "leaving";
+    default: return "other";
+    }
+}
+
 void CLoginProcess::LoginAction(HRESULT action)
 {
     if(action==CLogin::Submit) {

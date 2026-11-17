@@ -53,6 +53,9 @@ public:
 	virtual VOID		OnConnectToServer();
 	virtual char*		OnMessageReceive(CHAR* pszMessage);
 
+    const char* DebugStage();
+    bool HasNotice() { return m_xMsgBox.IsActive() != FALSE; }
+
 private:
     friend struct MoviePreview;
     friend struct LoginPreview;
