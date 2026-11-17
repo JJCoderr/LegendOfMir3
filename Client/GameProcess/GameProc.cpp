@@ -1808,7 +1808,7 @@ LRESULT CGameProcess::OnSysKeyDown(WPARAM wParam, LPARAM lParam)
 
 	if ( wParam == VK_F10 )
 	{
-		m_xInterface.OnSysKeyDown();
+		return OnKeyDown(wParam,lParam);
 	}
 	return 0L;
 }
@@ -1994,10 +1994,7 @@ LRESULT CGameProcess::OnKeyDown(WPARAM wParam, LPARAM lParam)
         if(m_xNotice.OnKeyDown(wParam)) m_xNotice.HideMessageBox();
         return 0L;
     }
-    if (m_xInterface.m_xMsgBox.IsActive()) {
-        m_xInterface.OnKeyDown(wParam,lParam);
-        return 0L;
-    }
+    if(m_xInterface.OnKeyDown(wParam,lParam)) return 0L;
 	INT		nTargetID;
 	POINT	ptTaretTilePos;
 	FEATURE stFeature;
@@ -2030,8 +2027,7 @@ LRESULT CGameProcess::OnKeyDown(WPARAM wParam, LPARAM lParam)
 		ZeroMemory(&stFeature, sizeof(FEATURE));
 	}
 
-	if ( !m_xInterface.OnKeyDown(wParam, lParam) )
-		m_xMyHero.OnKeyDown(wParam, lParam, m_ptMousePos, ptTaretTilePos, nTargetID, stFeature);
+	m_xMyHero.OnKeyDown(wParam, lParam, m_ptMousePos, ptTaretTilePos, nTargetID, stFeature);
 
 	switch ( wParam )
 	{

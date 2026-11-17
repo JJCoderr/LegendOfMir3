@@ -77,6 +77,12 @@ LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LP
 {
 	switch (nMsg)
 	{
+        case WM_SYSKEYDOWN:
+            if(wParam==VK_F10) {
+                SetFocus(g_xMainWnd.GetSafehWnd());
+                SendMessage(g_xMainWnd.GetSafehWnd(),WM_SYSKEYDOWN,wParam,lParam);return 0;
+            }
+            break;
 		case WM_KEYDOWN:
 		{
 			switch ( (INT)wParam )
@@ -89,6 +95,7 @@ LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LP
 			case VK_F6:
 			case VK_F7:
 			case VK_F8:
+            case VK_F9:case VK_F10:case VK_F11:case VK_F12:
 			case VK_ESCAPE:
 				{
 					HWND m_hMainWindow = g_xMainWnd.GetSafehWnd();

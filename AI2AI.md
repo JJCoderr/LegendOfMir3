@@ -1410,3 +1410,12 @@ StoreWnd::Receive补上705 wTag非零时的背包/快捷栏/鼠标持有数量�
 已完成上述审查对应的一整批：TradeWire.h命名常量、C键/HUD正前方玩家请求、673..687分派、放入/数量拆堆、取回、金币、确认/取消与失败恢复，音效及快捷引用同步。RestoreItems批量原子恢复，满背包保留pending；交易pending期间补齐背包按下/抬起与场景丢弃互斥。关闭数量/金额弹框统一清理，修正公会管理关闭按钮误切换交易窗口。不要按旧1025 CANCEL别名臆造取消报文。
 
 清理87/87、七目标109/109及修正后增量构建通过；新交易54项+相关回归108项=162项全过。实际UDP请求与GameProc编码回复、DirectSound状态均检查，真实双客户端联机尚未验证。截图out/trade-transaction.png、trade-quantity.png、trade-gold-input.png、trade-open-error.png、trade-cancelled.png已查看并展示；运行exe为out/mud3-01/Mir2Ex-trade-verified.exe。详见Client/docs/trade-transaction-audit.md。预览223..227，下一228。完整目标继续保持active。
+
+
+## 原生技能与面板键盘路由（2026-11-17）
+
+feafc67后完成GUI输入批次：F1..F12全绑定、F10系统路径、聊天编辑转发、未学习格清冲突、滚动/遮挡/模态保护；角色入口从GetMagicByKey改用独立低BYTE快捷表GetMagicByShortcut，陈旧表无对应记录不施放，移除A落入F1。E/Q/W/G/N与R及Escape按Godot处理，F9/F10/F11不再开旧窗口。GameProc消费GUI按键立即返回，避免N触发旧SetNextProc。技能布局旧预览切换改用E/Q。
+
+清理87/87、七目标109/109及最终增量通过；新增34+回归207=241项通过，含UDP1008和DirectSound既有音效回归。预览228..230，下一231；截图out/keyboard-skill-binding.png、keyboard-skill-shortcuts.png、keyboard-skill-covered.png。NPC固定左上角，遮挡夹具应移动技能窗而非单改NPC命中矩形。详见Client/docs/keyboard-routing-evidence.md。
+
+下一完整批次可核对退出/返回角色对话框与Alt+Q/X、战斗冷却和网络退出；技能路由、3017正文/时序及法术效果仍是旧Actor实现，已读取Godot skill-casting证据及request_skill_cast/SpellTiming/SpellRoutes，不能声称技能系统完成。全目标保持active。

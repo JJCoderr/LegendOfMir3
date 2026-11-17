@@ -145,7 +145,7 @@ public:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Message Funtion.
 //---------------------------------------------------------------------------------------------------------------//
-	VOID			OnSysKeyDown();
+    bool SpellPointerAvailable();
 	BOOL 			OnKeyDown(WPARAM wParam, LPARAM lParam);
 	BOOL 			OnKeyUp(WPARAM wParam, LPARAM lParam);
 	BOOL			OnLButtonDown(POINT ptMouse);

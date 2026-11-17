@@ -5447,22 +5447,10 @@ BOOL CMyHero::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTar
 	LPCLIENTMAGICRCD	pstMagic;
 	DWORD				dwCurrTick;
 
-	bMagicKey = 0;
-	ZeroMemory(&ptTargetTile, sizeof(POINT));
-
-	switch ( wParam )
-	{
-	case 'A':
-		{
-		}
-	case VK_F1:	{	bMagicKey = '1';	break;	}
-	case VK_F2:	{	bMagicKey = '2';	break;	}
-	case VK_F3:	{	bMagicKey = '3';	break;	}
-	case VK_F4:	{	bMagicKey = '4';	break;	}
-	case VK_F5:	{	bMagicKey = '5';	break;	}
-	case VK_F6:	{	bMagicKey = '6';	break;	}
-	case VK_F7:	{	bMagicKey = '7';	break;	}
-	case VK_F8:	{	bMagicKey = '8';	break;	}
+    const int skillSlot=CSkillWnd::PhysicalKeySlot(wParam);
+    bMagicKey=skillSlot?CSkillWnd::LegacyKey(skillSlot):0;
+    ZeroMemory(&ptTargetTile,sizeof(POINT));
+    switch(wParam) {
 	case VK_SPACE:
 		{
 			static INT nMode = 0;
@@ -5496,7 +5484,7 @@ BOOL CMyHero::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTar
 			else							ptMouseTilePos = ptTargetPos;
 
 			bDir = CalcDirection(ptMouseTilePos.x, ptMouseTilePos.y);
-			pstMagic = g_xGameProc.m_xInterface.m_xSkillWnd.GetMagicByKey(bMagicKey);
+			pstMagic = g_xGameProc.m_xInterface.m_xSkillWnd.GetMagicByShortcut(skillSlot);
 
 			if ( pstMagic )
 			{

@@ -5,7 +5,7 @@
 #include "GameProcess/MerchantServiceIds.h"
 #include "GameProcess/EquipmentActionIds.h"
 #include "GameProcess/TradeWire.h"
-namespace { constexpr int PreviewTradeTransaction=223,PreviewTradeQuantity=224,PreviewTradeCancelled=225,PreviewTradeGoldInput=226,PreviewTradeOpenError=227; constexpr int PreviewEquipSuccess=220,PreviewEquipFailure=221,PreviewEquipTakeOff=222; constexpr int PreviewStorageReply=219; constexpr int PreviewServiceRepair=215,PreviewServiceSell=216,PreviewServiceDeposit=217,PreviewServiceFailure=218; constexpr int PreviewItemUse=213,PreviewItemUseRestored=214; constexpr int PreviewInterfaceAudio=212; constexpr int PreviewNotice=210,PreviewNoticeMoved=211; constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewKeyboard=228,PreviewKeyboardShortcuts=229,PreviewKeyboardCovered=230; constexpr int PreviewTradeTransaction=223,PreviewTradeQuantity=224,PreviewTradeCancelled=225,PreviewTradeGoldInput=226,PreviewTradeOpenError=227; constexpr int PreviewEquipSuccess=220,PreviewEquipFailure=221,PreviewEquipTakeOff=222; constexpr int PreviewStorageReply=219; constexpr int PreviewServiceRepair=215,PreviewServiceSell=216,PreviewServiceDeposit=217,PreviewServiceFailure=218; constexpr int PreviewItemUse=213,PreviewItemUseRestored=214; constexpr int PreviewInterfaceAudio=212; constexpr int PreviewNotice=210,PreviewNoticeMoved=211; constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -73,7 +73,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewTradeOpenError) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewKeyboardCovered) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -335,10 +335,10 @@ public:
             const bool origin=skills.m_rcWnd.left==348 && skills.m_rcWnd.top==0 && skills.m_nWidth==360 && skills.m_nHeight==488;
             ui.OnLButtonDown(POINT{700,410}); ui.OnMouseMove(POINT{690,420}); ui.OnLButtonUp(POINT{690,420});
             const bool draggedWindow=skills.m_rcWnd.left==338 && skills.m_rcWnd.top==10 && ui.m_xStatusWnd.m_rcWnd.left==0;
-            ui.OnKeyDown(VK_F11,0); const bool hiddenSkill=!skills.GetGameWndActive() && ui.m_xStatusWnd.GetGameWndActive();
-            ui.OnKeyDown(VK_F11,0); const bool restoredSkills=skills.GetGameWndActive() && skills.m_rcWnd.left==338 && skills.m_rcWnd.top==10;
-            ui.OnSysKeyDown(); const bool hiddenStatus=!ui.m_xStatusWnd.GetGameWndActive() && skills.GetGameWndActive();
-            ui.OnSysKeyDown(); const bool restoredStatus=ui.m_xStatusWnd.GetGameWndActive() && ui.m_xStatusWnd.m_rcWnd.left==0;
+            ui.OnKeyDown('E',0); const bool hiddenSkill=!skills.GetGameWndActive() && ui.m_xStatusWnd.GetGameWndActive();
+            ui.OnKeyDown('E',0); const bool restoredSkills=skills.GetGameWndActive() && skills.m_rcWnd.left==338 && skills.m_rcWnd.top==10;
+            ui.OnKeyDown('Q',0); const bool hiddenStatus=!ui.m_xStatusWnd.GetGameWndActive() && skills.GetGameWndActive();
+            ui.OnKeyDown('Q',0); const bool restoredStatus=ui.m_xStatusWnd.GetGameWndActive() && ui.m_xStatusWnd.m_rcWnd.left==0;
             const bool distinctHit=ui.GetWindowInMousePos(POINT{100,100})==_WND_ID_STATUS && ui.GetWindowInMousePos(POINT{400,100})==_WND_ID_SKILL;
             skills.m_rcWnd={348,0,708,488};
             COMMONITEMSET held={}; POINT close={670,430};
@@ -1909,6 +1909,56 @@ public:
 
 
 
+        if(groupPanel>=PreviewKeyboard && groupPanel<=PreviewKeyboardCovered) {
+            auto& ui=g_xGameProc.m_xInterface;auto& skills=ui.m_xSkillWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].NewLoad("./Data/MIcon.wil");
+            skills.m_bMyMagicCnt=2;skills.m_pstMyMagic=new CLIENTMAGICRCD[2]{};
+            skills.m_pstMyMagic[0].stStdMagic.wMagicID=1;skills.m_pstMyMagic[0].bUseKey='1';skills.UpdateShortcut(skills.m_pstMyMagic[0],true);
+            skills.m_pstMyMagic[1].stStdMagic.wMagicID=5;skills.m_pstMyMagic[1].nCurrTrain=42;skills.m_pstMyMagic[1].stStdMagic.nTrain[0]=500;
+            lstrcpyA(skills.m_pstMyMagic[0].stStdMagic.szMagicName,"\xbb\xf0\xc7\xf2\xca\xf5");lstrcpyA(skills.m_pstMyMagic[1].stStdMagic.szMagicName,"\xb4\xf3\xbb\xf0\xc7\xf2");
+            const auto pointer=[&](POINT point) {g_xGameProc.m_ptMousePos=point;};
+            const auto hover=[&](int index) {const auto pos=SkillLayout::positions[skills.m_skillTab][index];pointer(POINT{skills.m_rcWnd.left+pos.x+5,skills.m_rcWnd.top+pos.y-skills.m_skillScroll+5});};
+            using Binding=std::pair<int,int>;
+            const auto capture=[&](auto action,const std::vector<Binding>& expected) {
+                SOCKET receiver=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP),sender=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);bind(receiver,(sockaddr*)&address,sizeof(address));int size=sizeof(address);getsockname(receiver,(sockaddr*)&address,&size);connect(sender,(sockaddr*)&address,sizeof(address));DWORD timeout=30;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));const SOCKET saved=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;action();g_xClientSocket.m_sockClient=saved;
+                std::vector<Binding> actual;bool valid=true;char wire[128]={};int length=0;while((length=recv(receiver,wire,sizeof(wire)-1,0))!=SOCKET_ERROR) {if(length<19) {valid=false;break;}_TDEFAULTMESSAGE packet={};fnDecodeMessage(&packet,wire+2);valid &= packet.wIdent==CM_MAGICKEYCHANGE && !packet.wTag && !packet.wSeries && length==DEFBLOCKSIZE+3;actual.emplace_back(packet.nRecog,packet.wParam);}
+                closesocket(sender);closesocket(receiver);return valid && actual==expected;
+            };
+            ui.OnKeyDown('E',0);const bool opened=skills.m_bActive;hover(1);
+            const bool conflict=capture([&](){ui.OnKeyDown(VK_F1,0);},{{1,0},{5,'1'}}) && skills.Shortcut(0)==5 && !skills.m_pstMyMagic[0].bUseKey;
+            const bool f12=capture([&](){ui.OnKeyDown(VK_F12,0);},{{5,'C'}}) && skills.Shortcut(11)==5 && !skills.Shortcut(0);
+            const bool f10=capture([&](){g_xGameProc.OnSysKeyDown(VK_F10,0);},{{5,'A'}}) && skills.Shortcut(9)==5 && !ui.m_xStatusWnd.m_bActive;
+            const bool f9=capture([&](){ui.OnKeyDown(VK_F9,0);},{{5,'9'}}) && skills.Shortcut(8)==5 && !ui.m_xInventoryWnd.m_bActive;
+            const bool f11=capture([&](){ui.OnKeyDown(VK_F11,0);},{{5,'B'}}) && skills.Shortcut(10)==5 && skills.m_bActive;
+            bool allKeys=true;for(int slot=1;slot<=SkillWire::ShortcutCount;++slot) {const BYTE key=CSkillWnd::LegacyKey(slot);std::vector<Binding> expected;if(skills.m_pstMyMagic[1].bUseKey==key) expected.emplace_back(5,0);expected.emplace_back(5,key);allKeys &= capture([&](){ui.OnKeyDown(VK_F1+slot-1,0);},expected) && skills.Shortcut(slot-1)==5;}
+            const bool repeated=capture([&](){for(int slot=1;slot<=12;++slot) ui.OnKeyDown(VK_F1+slot-1,1L<<30);},{}) && skills.Shortcut(11)==5;
+            hover(2);const bool unlearned=capture([&](){ui.OnKeyDown(VK_F12,0);},{{5,0}}) && !skills.Shortcut(11) && !skills.m_pstMyMagic[1].bUseKey;
+            hover(1);skills.m_skillScroll=30;hover(1);const bool scrolled=capture([&](){ui.OnKeyDown(VK_F12,0);},{{5,'C'}}) && skills.Shortcut(11)==5;skills.m_skillScroll=0;
+            hover(1);const bool editF12=capture([&](){g_xChatEditBox.ChatEditProc(g_xChatEditBox.GetSafehWnd(),WM_KEYDOWN,VK_F12,0);},{{5,0},{5,'C'}});
+            const bool editF10=capture([&](){g_xChatEditBox.ChatEditProc(g_xChatEditBox.GetSafehWnd(),WM_SYSKEYDOWN,VK_F10,0);},{{5,'A'}});
+            skills.BindMagic(5,'C');skills.m_rcWnd={0,0,360,488};hover(1);ui.m_xNPCWnd.SetScript(1,"“©µÍ¿œ∞Â/<π∫¬Ú/@buy>");if(!ui.m_xNPCWnd.m_bActive) ui.WindowActivate(_WND_ID_NPCCHAT);
+            const bool covered=capture([&](){ui.OnKeyDown(VK_F2,0);},{}) && skills.Shortcut(11)==5;ui.WindowActivate(_WND_ID_NPCCHAT);skills.m_rcWnd={348,0,708,488};hover(1);
+            ui.ShowNotice(1000);const bool modal=capture([&](){ui.OnKeyDown(VK_F3,0);},{}) && ui.m_xMsgBox.IsActive();ui.FinishNotice(CLICK_YES,false);
+            ui.m_xGuildEditor.m_bActive=TRUE;const bool editor=capture([&](){ui.OnKeyDown(VK_F3,0);},{}) && skills.Shortcut(11)==5;ui.m_xGuildEditor.m_bActive=FALSE;
+            pointer(POINT{150,150});const bool scene=!ui.OnKeyDown(VK_F12,0) && ui.SpellPointerAvailable();const bool unbound=ui.OnKeyDown(VK_F1,0)!=FALSE;
+            const bool repeatScene=ui.OnKeyDown(VK_F1,1L<<30) && !ui.OnKeyDown(VK_F12,1L<<30);
+            bool hud=true;for(POINT point:{POINT{-1,10},POINT{800,10},POINT{100,467},POINT{200,450},POINT{400,150}}) {pointer(point);hud &= ui.OnKeyDown(VK_F12,0)!=FALSE;}
+            pointer(POINT{150,150});ui.m_minimap.visible=true;const bool minimap=ui.OnKeyDown(VK_F12,0)!=FALSE;ui.m_minimap.visible=false;const bool resumed=!ui.OnKeyDown(VK_F12,0);
+            ui.OnKeyDown('R',0);pointer(POINT{200,300});const bool expanded=ui.m_chatExpanded && ui.OnKeyDown(VK_F12,0);ui.OnKeyDown('R',1L<<30);const bool chatRepeat=ui.m_chatExpanded;ui.OnKeyDown('R',0);const bool collapsed=!ui.m_chatExpanded && !ui.OnKeyDown(VK_F12,0);
+            skills.m_shortcuts[10]=5;skills.m_pstMyMagic[0].stStdMagic.wMagicID=261;const bool lowByte=skills.GetMagicByShortcut(11)==&skills.m_pstMyMagic[1];skills.m_bMyMagicCnt=1;const bool deleted=skills.GetMagicByShortcut(11)==nullptr;skills.m_bMyMagicCnt=2;skills.m_pstMyMagic[0].stStdMagic.wMagicID=1;
+            skills.m_pstMyMagic[0].bUseKey='1';skills.m_shortcuts[0]=5;skills.BindMagic(1,'3');const bool independent=skills.Shortcut(0)==5 && skills.Shortcut(2)==1;
+            ui.OnKeyDown('E',0);bool panels=true,repeatPanels=true;
+            const struct {WPARAM key;CGameWnd* panel;} panelKeys[]={{'E',&skills},{'Q',&ui.m_xStatusWnd},{'W',&ui.m_xInventoryWnd},{'G',&ui.m_xGroupWnd},{'N',&ui.m_xOptionWnd}};
+            for(const auto& binding:panelKeys) {g_xGameProc.OnKeyDown(binding.key,0);panels &= binding.panel->m_bActive!=FALSE;g_xGameProc.OnKeyDown(binding.key,1L<<30);repeatPanels &= binding.panel->m_bActive!=FALSE;g_xGameProc.OnKeyDown(binding.key,0);panels &= !binding.panel->m_bActive;}
+            ui.OnKeyDown('E',0);ui.OnKeyDown('Q',0);ui.OnKeyDown(VK_ESCAPE,0);const bool topClosed=skills.m_bActive && !ui.m_xStatusWnd.m_bActive;ui.OnKeyDown(VK_ESCAPE,0);const bool secondClosed=!skills.m_bActive;
+            ui.m_xExchangeWnd.Open("TradePartner");if(ui.m_xInventoryWnd.m_bActive) ui.WindowActivate(_WND_ID_INVENTORY);ui.OnKeyDown(VK_ESCAPE,0);const bool tradeKept=ui.m_xExchangeWnd.m_bActive;ui.m_xExchangeWnd.Close();
+            ui.WindowActivate(_WND_ID_STORE);ui.m_xStoreWnd.details=true;ui.OnKeyDown(VK_ESCAPE,0);const bool shopBack=ui.m_xStoreWnd.m_bActive && !ui.m_xStoreWnd.details;ui.OnKeyDown(VK_ESCAPE,0);const bool shopClosed=!ui.m_xStoreWnd.m_bActive;
+            ui.OnKeyDown('E',0);hover(1);skills.BindMagic(5,'C');ui.m_bShowKey=true;skills.m_skillSelected[0]=1;mouse=g_xGameProc.m_ptMousePos;capturePath="keyboard-skill-binding.bmp";
+            if(groupPanel==PreviewKeyboardShortcuts) {ui.OnKeyDown('E',0);mouse={150,150};pointer(mouse);capturePath="keyboard-skill-shortcuts.bmp";}
+            if(groupPanel==PreviewKeyboardCovered) {skills.m_rcWnd={0,0,360,488};hover(1);mouse=g_xGameProc.m_ptMousePos;ui.m_xNPCWnd.SetScript(1,"“©µÍ¿œ∞Â/<π∫¬Ú/@buy>");ui.WindowActivate(_WND_ID_NPCCHAT);capturePath="keyboard-skill-covered.bmp";}
+            if(FILE* report=fopen("keyboard-routing-check.txt","wb")) {fprintf(report,"opened=%d conflict=%d f12=%d f10=%d f9=%d f11=%d all_keys=%d repeat=%d unlearned=%d scrolled=%d edit_f12=%d edit_f10=%d covered=%d modal=%d editor=%d scene=%d unbound=%d repeat_scene=%d hud=%d minimap=%d resumed=%d expanded=%d chat_repeat=%d collapsed=%d low_byte=%d deleted=%d independent=%d panels=%d repeat_panels=%d top_closed=%d second_closed=%d trade_kept=%d shop_back=%d shop_closed=%d\n",opened,conflict,f12,f10,f9,f11,allKeys,repeated,unlearned,scrolled,editF12,editF10,covered,modal,editor,scene,unbound,repeatScene,hud,minimap,resumed,expanded,chatRepeat,collapsed,lowByte,deleted,independent,panels,repeatPanels,topClosed,secondClosed,tradeKept,shopBack,shopClosed);fclose(report);}
+        }
+
         if(groupPanel>=PreviewTradeTransaction && groupPanel<=PreviewTradeOpenError) {
             using namespace TradeWire;
             auto& ui=g_xGameProc.m_xInterface;auto& trade=ui.m_xExchangeWnd;auto& bag=ui.m_xInventoryWnd;auto& held=ui.m_stCommonItem;auto& quick=ui.m_xQuickWnd;
@@ -3329,6 +3379,9 @@ public:
         case WM_LBUTTONUP:
             mouse.x = (short)LOWORD(lp); mouse.y = (short)HIWORD(lp);
             ui.OnLButtonUp(mouse); ReleaseCapture(); return 0;
+        case WM_SYSKEYDOWN:
+            if(wp==VK_F10) {ui.OnKeyDown(wp,lp);return 0;}
+            break;
         case WM_KEYDOWN:
             ui.OnKeyDown(wp,lp); return 0;
         case WM_MOUSEWHEEL:
@@ -3442,6 +3495,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=keyboard-skill-binding")==0 ? PreviewKeyboard :
+        strcmp(lpCmdLine,"--preview=keyboard-skill-shortcuts")==0 ? PreviewKeyboardShortcuts :
+        strcmp(lpCmdLine,"--preview=keyboard-skill-covered")==0 ? PreviewKeyboardCovered :
         strcmp(lpCmdLine,"--preview=trade-open-error")==0 ? PreviewTradeOpenError :
         strcmp(lpCmdLine,"--preview=trade-transaction")==0 ? PreviewTradeTransaction :
         strcmp(lpCmdLine,"--preview=trade-quantity")==0 ? PreviewTradeQuantity :

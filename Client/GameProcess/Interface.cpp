@@ -2216,67 +2216,85 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
         if (!(lParam & (1L << 30))) FinishNotice(m_xMsgBox.OnKeyDown(wParam),false);
         return TRUE;
     }
+    const int skillSlot=CSkillWnd::PhysicalKeySlot(wParam);
+    if(skillSlot) {
+        const bool repeated=(lParam & (1L<<30))!=0;
+        if(repeated && skillSlot!=10 && skillSlot!=12) return TRUE;
+        if(GetWindowInMousePos(g_xGameProc.m_ptMousePos)==_WND_ID_SKILL &&
+            m_xSkillWnd.OnKeyDown(wParam,lParam,g_xGameProc.m_ptMousePos)) return TRUE;
+        return !SpellPointerAvailable() || !m_xSkillWnd.GetMagicByShortcut(skillSlot);
+    }
+    if(lParam & (1L<<30)) return TRUE;
+    const struct { WPARAM key;int window; } panels[]={
+        {'E',_WND_ID_SKILL},{'Q',_WND_ID_STATUS},{'W',_WND_ID_INVENTORY},{'G',_WND_ID_GROUP},{'N',_WND_ID_OPTION}};
+    for(const auto& panel:panels) if(wParam==panel.key) {WindowActivate(panel.window);return TRUE;}
+    if(wParam=='R') {m_chatExpanded=!m_chatExpanded;LayoutChat();return TRUE;}
+    if(wParam==VK_ESCAPE) {
+        if(m_xStoreWnd.m_bActive) {
+            if(m_xStoreWnd.details || m_xStoreWnd.bulk>=0) m_xStoreWnd.CloseOffers();
+            else WindowActivate(_WND_ID_STORE);
+            return TRUE;
+        }
+        m_xWndOrderList.MoveCurrentToTail();
+        for(int i=m_xWndOrderList.GetCounter();i>0;--i) {
+            const int window=*m_xWndOrderList.GetCurrentData();
+            switch(window) {
+            case _WND_ID_EXCHANGE:return TRUE;
+            case _WND_ID_GROUP:case _WND_ID_SKILL:case _WND_ID_STATUS:case _WND_ID_INVENTORY:
+            case _WND_ID_GUILD:case _WND_ID_OPTION:case _WND_ID_PORTRAIT:case _WND_ID_HORSE:
+            case _WND_ID_QUEST:case _WND_ID_QUICK:case _WND_ID_MAIL:case SiegeLayout::WindowId:
+            case ConsignmentLayout::BrowserId:case ConsignmentLayout::RegistrationId:
+                WindowActivate(window);return TRUE;
+            }
+            m_xWndOrderList.MovePreviousNode();
+        }
+        return TRUE;
+    }
     if(wParam>='1' && wParam<='6' && !(wParam<='2' && (GetKeyState(VK_SHIFT)&0x8000))) {
-        if(!(lParam & (1L<<30))) m_xQuickWnd.Activate(int(wParam-'1'),GetTickCount());
+        m_xQuickWnd.Activate(int(wParam-'1'),GetTickCount());
         return TRUE;
     }
     if(IsTopWindow(ConsignmentLayout::BrowserId) && m_xConsignmentWnd.KeyDown(wParam)) return TRUE;
     if(m_minimap.visible && (wParam=='T' || wParam=='Y')) {
-        if(!(lParam & (1L << 30))) {if(wParam=='T') {m_minimap.large=!m_minimap.large;m_minimap.Place();} else m_minimap.translucent=!m_minimap.translucent;}
+        if(wParam=='T') {m_minimap.large=!m_minimap.large;m_minimap.Place();} else m_minimap.translucent=!m_minimap.translucent;
         return TRUE;
     }
-    if(wParam=='P' && m_xSiegeWnd.controlled) {if(!(lParam & (1L<<30))) WindowActivate(SiegeLayout::WindowId);return TRUE;}
-    if(wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive && IsTopWindow(SiegeLayout::WindowId)) {WindowActivate(SiegeLayout::WindowId);return TRUE;}
-    if(wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive) for(auto* panel:{&m_xConsignmentWnd,&m_xConsignmentRegistration}) if(IsTopWindow(panel->m_nID)) {WindowActivate(panel->m_nID);return TRUE;}
-    if (wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive && IsTopWindow(_WND_ID_MAIL)) {WindowActivate(_WND_ID_MAIL);return TRUE;}
-    if (wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive && IsTopWindow(_WND_ID_PORTRAIT)) { WindowActivate(_WND_ID_PORTRAIT); return TRUE; }
+    if(wParam=='P' && m_xSiegeWnd.controlled) {WindowActivate(SiegeLayout::WindowId);return TRUE;}
 	switch ( wParam )
 	{
-    case 'C': if(!(lParam & (1L<<30))) m_xExchangeWnd.RequestTrade(); return TRUE;
-    case 'F': if (!(lParam & (1L << 30))) g_xClientSocket.SendGuildHome(); return TRUE;
-    case 'J': if (!(lParam & (1L << 30))) m_minimap.TogglePortrait(GetTickCount()); return TRUE;
-    case 'V': if (!(lParam & (1L << 30))) m_minimap.Toggle(GetTickCount(),1000); return TRUE;
+    case 'C': m_xExchangeWnd.RequestTrade(); return TRUE;
+    case 'F': g_xClientSocket.SendGuildHome(); return TRUE;
+    case 'J': m_minimap.TogglePortrait(GetTickCount()); return TRUE;
+    case 'V': m_minimap.Toggle(GetTickCount(),1000); return TRUE;
     case 'Z':
-        if (!(lParam & (1L << 30))) WindowActivate(_WND_ID_QUICK);
+        WindowActivate(_WND_ID_QUICK);
         return TRUE;
     case 'S':
-        if (!(lParam & (1L << 30))) WindowActivate(_WND_ID_HORSE);
+        WindowActivate(_WND_ID_HORSE);
         return TRUE;
     case 'D':
-        if (!(lParam & (1L << 30))) WindowActivate(_WND_ID_QUEST);
+        WindowActivate(_WND_ID_QUEST);
         return TRUE;
     case 'B':
-        if (!(lParam & (1L << 30))) m_bShowKey=!m_bShowKey;
+        m_bShowKey=!m_bShowKey;
         return TRUE;
 	case VK_RETURN:	
 		break;
-	case VK_F9:	
-		WindowActivate(_WND_ID_INVENTORY);			
-		break;
-	case VK_F11:
-        WindowActivate(_WND_ID_SKILL);
-        break;
+
 	}
 
-	INT nInterfaceWndInRect;
-	nInterfaceWndInRect = GetWindowInMousePos(g_xGameProc.m_ptMousePos);
-
-	if ( nInterfaceWndInRect != -1 )
-	{
-		if ( nInterfaceWndInRect == _WND_ID_SKILL )
-		{
-			if ( m_xSkillWnd.OnKeyDown(wParam, lParam, g_xGameProc.m_ptMousePos) )
-				return TRUE;
-		}
-	}
-		
 	return FALSE;
 }
 
 
-VOID CInterface::OnSysKeyDown()
+bool CInterface::SpellPointerAvailable()
 {
-    WindowActivate(_WND_ID_STATUS);
+    constexpr int CanvasWidth=800,CanvasHeight=600,SceneBottom=467,ChatLeft=178,ChatWidth=456,ExpandedChatTop=281,CollapsedChatTop=448;
+    const POINT point=g_xGameProc.m_ptMousePos;
+    const RECT scene={0,0,CanvasWidth,SceneBottom};
+    const RECT chat={ChatLeft,m_chatExpanded?ExpandedChatTop:CollapsedChatTop,ChatLeft+ChatWidth,CanvasHeight};
+    return !m_minimap.visible && !m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive &&
+        PtInRect(&scene,point) && !PtInRect(&chat,point) && GetWindowInMousePos(point)==-1;
 }
 
 LRESULT	CInterface::OnMsgInputted(WPARAM wParam, LPARAM lParam)

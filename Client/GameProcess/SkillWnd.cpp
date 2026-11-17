@@ -60,9 +60,11 @@ BOOL CSkillWnd::OnLButtonUp(POINT point)
 
 BOOL CSkillWnd::SetMagicKey(POINT point,BYTE key)
 {
-    const int index=SkillAt(point);
-    if (index<0) return FALSE;
-    BindMagic(m_pstMyMagic[index].stStdMagic.wMagicID,key);
+    if(!m_bActive || !PtInRect(&m_rcWnd,point)) return FALSE;
+    for(const auto pos:SkillLayout::positions[m_skillTab]) {
+        const RECT hit={m_rcWnd.left+pos.x,m_rcWnd.top+pos.y-m_skillScroll,m_rcWnd.left+pos.x+40,m_rcWnd.top+pos.y-m_skillScroll+40};
+        if(PtInRect(&hit,point)) BindMagic(pos.id,key);
+    }
     return TRUE;
 }
 
@@ -74,7 +76,7 @@ void CSkillWnd::BindMagic(int id,BYTE key)
         g_xClientSocket.SendMagicKeyChange(0,m_pstMyMagic[i].stStdMagic.wMagicID);
     }
     for (int i=0;i<m_bMyMagicCnt;++i) if (m_pstMyMagic[i].stStdMagic.wMagicID==id) {
-        const int old=KeyNumber(m_pstMyMagic[i].bUseKey);if(old) m_shortcuts[old-1]=0;
+        const int old=KeyNumber(m_pstMyMagic[i].bUseKey);if(old && m_shortcuts[old-1]==BYTE(id)) m_shortcuts[old-1]=0;
         m_pstMyMagic[i].bUseKey=key;
         const int slot=KeyNumber(key);if(slot) m_shortcuts[slot-1]=BYTE(id);
         g_xClientSocket.SendMagicKeyChange(key,id); break;
@@ -89,11 +91,18 @@ LPCLIENTMAGICRCD CSkillWnd::GetMagicByKey(BYTE bKey)
     return NULL;
 }
 
-BOOL CSkillWnd::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse)
+LPCLIENTMAGICRCD CSkillWnd::GetMagicByShortcut(int slot)
 {
-    if (SkillAt(ptMouse)<0) return FALSE;
-    if (wParam>=VK_F1 && wParam<=VK_F8) return SetMagicKey(ptMouse,BYTE('1'+wParam-VK_F1));
-    return FALSE;
+    if(slot<1 || slot>SkillWire::ShortcutCount) return nullptr;
+    const BYTE id=m_shortcuts[slot-1];if(!id) return nullptr;
+    for(int i=0;i<m_bMyMagicCnt;++i) if(m_pstMyMagic[i].stStdMagic.wMagicID==id) return &m_pstMyMagic[i];
+    return nullptr;
+}
+BOOL CSkillWnd::OnKeyDown(WPARAM key, LPARAM flags, POINT point)
+{
+    const int slot=PhysicalKeySlot(key);if(!slot) return FALSE;
+    if(flags & (1L<<30)) return m_bActive && PtInRect(&m_rcWnd,point);
+    return SetMagicKey(point,LegacyKey(slot));
 }
 
 VOID CSkillWnd::OnScrollDown()

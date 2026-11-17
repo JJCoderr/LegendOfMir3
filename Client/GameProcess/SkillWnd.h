@@ -75,6 +75,8 @@ public:
     bool SkillScrollInput(int kind,POINT point);
     BOOL SetMagicKey(POINT point,BYTE key);
     LPCLIENTMAGICRCD GetMagicByKey(BYTE key);
+    LPCLIENTMAGICRCD GetMagicByShortcut(int slot);
+    static int PhysicalKeySlot(WPARAM key) { return key>=VK_F1 && key<=VK_F12?int(key-VK_F1)+1:0; }
     BOOL OnKeyDown(WPARAM key,LPARAM flags,POINT point);
     BOOL OnLButtonDown(POINT point);
     BOOL OnLButtonUp(POINT point);
