@@ -34,6 +34,7 @@ public:
     void ClearSpellVoices();
     HRESULT InspectSpellAudio(std::int64_t key,DWORD& playing,LONG& volume,LONG& pan);
     bool PlayLobbyEffect(const char* file);
+    bool WavEnabled() const {return m_bPlay!=FALSE;}
     HRESULT InspectInterfaceAudio(bool opening,DWORD& playing,LONG& volume);
     static int ItemSoundSample(int mode, BYTE record31, const char* name);
     void PlayItemEffect(int mode, BYTE record31, const char* name);

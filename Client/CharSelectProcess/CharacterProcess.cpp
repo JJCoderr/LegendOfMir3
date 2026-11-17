@@ -167,6 +167,7 @@ VOID CCharacterProcess::SetNextProc()
 
 VOID CCharacterProcess::DeleteProc()
 {
+    m_xBGround.AllStopAvi();
 	
 	WSACleanup();
 	m_Image.Destroy();
@@ -217,21 +218,13 @@ LRESULT CCharacterProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, L
 
 LRESULT CCharacterProcess::OnKeyDown(WPARAM wParam, LPARAM lParam)
 {
-    if(m_xMsgBox.IsActive()) return 0;
-	switch ( wParam )
-	{
-	case VK_F1:
-		m_Progress=PRG_CHAR_SELE;
-		break;
-	case VK_F2:
-		m_Progress=PRG_CREATE_CHAR;
-		break;
-	}	
-	return 0L;
+    // Lobby movies cannot be skipped with the old F1/F2 debug shortcuts.
+    return 0L;
 }
 
 LRESULT CCharacterProcess::OnMouseMove(WPARAM wParam, LPARAM lParam)
 {
+    if(m_Progress==PRG_SEL_TO_CREA || m_Progress==PRG_CREA_TO_SEL || m_Progress==PRG_SEL_TO_GAME) return 0;
     m_ptMousePos = POINT{LOWORD(lParam), HIWORD(lParam)};
 	int		i;
 	BOOL	fOnButton = FALSE;
@@ -284,6 +277,7 @@ LRESULT CCharacterProcess::OnMouseMove(WPARAM wParam, LPARAM lParam)
 
 LRESULT CCharacterProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 {
+    if(m_Progress==PRG_SEL_TO_CREA || m_Progress==PRG_CREA_TO_SEL || m_Progress==PRG_SEL_TO_GAME) return 0;
     m_createPressed = -1;
     m_ptMousePos = POINT{LOWORD(lParam), HIWORD(lParam)};
     if (m_Progress == PRG_CREATE_CHAR && !m_xMsgBox.IsActive()) {
@@ -324,7 +318,8 @@ LRESULT CCharacterProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 }
 
 LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
-{	
+{
+    if(m_Progress==PRG_SEL_TO_CREA || m_Progress==PRG_CREA_TO_SEL || m_Progress==PRG_SEL_TO_GAME) return 0;
 	INT	nRecieve;
     m_createPressed = -1;
 	m_ptMousePos.x = LOWORD(lParam);
@@ -396,9 +391,11 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
                 RECT rect = {control.x, control.y, control.x + control.width, control.y + control.height};
                 if (!PtInRect(&rect, m_ptMousePos)) continue;
                 if (i == 1) {
-                    m_Progress = PRG_CHAR_SELE;
-                    m_xBGround.SetRenderState(_RENDER_STILL_1);
-                    m_xSelectChr.OpenWnd();
+                    g_xSound.UpdateLobbyAudio(CMirSound::LobbyPage::None,0);
+                    m_Progress = PRG_CREA_TO_SEL;
+                    m_xBGround.SetRenderState(_RENDER_AVI_OUT);
+                    ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
+                    g_xClientSocket.OnQueryChar();
                 } else if (i >= 2) {
                     if (m_SelectJob != i - 2) {
                         m_SelectJob = (BYTE)(i - 2);
@@ -516,9 +513,11 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 		case	SM_NEWCHR_SUCCESS:		// New character Create Success
 		{
 			m_bCreatePending = FALSE;
-			m_Progress = PRG_CHAR_SELE;
-			m_xBGround.SetRenderState(_RENDER_STILL_1);
-			g_xClientSocket.OnQueryChar();
+            g_xSound.UpdateLobbyAudio(CMirSound::LobbyPage::None,0);
+            m_Progress = PRG_CREA_TO_SEL;
+            m_xBGround.SetRenderState(_RENDER_AVI_OUT);
+            ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
+            g_xClientSocket.OnQueryChar();
 			break;
 		}
         case SM_NEWCHR_FAIL:
@@ -538,7 +537,11 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
             g_nServerPort = port ? atoi(port) :
                 GetPrivateProfileIntA("Initial","GameGatePort",7200,".\\Mir3.ini");
             g_xClientSocket.DisconnectToServer();
-            m_xSelectChr.m_nRenderState = 2;
+            g_xSound.UpdateLobbyAudio(CMirSound::LobbyPage::None,0);
+            g_xSound.PlayLobbyEffect("StartGame.wav");
+            m_xBGround.SetRenderState(_RENDER_AVI_START);
+            m_Progress=PRG_SEL_TO_GAME;m_xSelectChr.CloseWnd();
+            ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
             break;
         }
         case SM_STARTFAIL:
@@ -775,7 +778,7 @@ VOID CCharacterProcess::RenderScene(INT nLoopTime)
 			}
 			break;
 	}
-	m_xMsgBox.RenderMessageBox(0);
+	if(m_Progress!=PRG_SEL_TO_CREA && m_Progress!=PRG_CREA_TO_SEL && m_Progress!=PRG_SEL_TO_GAME) m_xMsgBox.RenderMessageBox(0);
 }
 
 VOID CCharacterProcess::ShowStatus(INT nStartX, INT nStartY)

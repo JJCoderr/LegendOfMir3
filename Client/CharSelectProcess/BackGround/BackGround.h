@@ -4,6 +4,7 @@
 
 #ifndef _BACK_GROUND_H
 #define _BACK_GROUND_H
+#include "AVI/NativeMovie.h"
 
 #if _MSC_VER > 1000
 #pragma once
@@ -35,8 +36,8 @@ protected:
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// Variable
 public:
-	CAvi				m_xCreateChrAvi;					// For Create Charector
-	CAvi				m_xStartGameAvi;					// For Create Start Game
+	CNativeMovie				m_xCreateChrAvi;					// For Create Charector
+	CNativeMovie				m_xStartGameAvi;					// For Create Start Game
 	INT					m_nRenderState;
 private:
 protected:

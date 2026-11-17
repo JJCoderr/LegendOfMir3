@@ -1,7 +1,7 @@
 #include "stdafx.h"
 
-#define AVI_CREATECHAR						".\\CreateChr.dat"
-#define AVI_STARTGAME						".\\StartGame.dat"
+#define AVI_CREATECHAR						".\\Data\\CreateChr.dat"
+#define AVI_STARTGAME						".\\Data\\StartGame.dat"
 
 #define IMG_IDX_SELECT_CHR_BACK				50
 
@@ -24,6 +24,7 @@ CBackGround::~CBackGround()
 
 VOID CBackGround::Create(CWHWilImageData* pxImage)
 {
+    AllStopAvi();m_nRenderState=_RENDER_STILL_1;
 	m_pxImage = pxImage;
 	m_xCreateChrAvi.InitAvi(g_xSound.GetSoundObject()->GetDS());
 	m_xStartGameAvi.InitAvi(g_xSound.GetSoundObject()->GetDS());
@@ -81,6 +82,7 @@ VOID CBackGround::Render(INT	nLoopTime)
 				if(!m_xCreateChrAvi.Draw(nLoopTime))
 				{
 					m_nRenderState = _RENDER_STILL_2;
+                    Render(0);
 				}
 				break;
 			}
@@ -94,8 +96,9 @@ VOID CBackGround::Render(INT	nLoopTime)
 			}
 			case _RENDER_AVI_OUT:
 			{
-				if(!m_xCreateChrAvi.Draw(nLoopTime))
-					m_nRenderState = _RENDER_STILL_1;
+				if(!m_xCreateChrAvi.Draw(nLoopTime)) {
+                    m_nRenderState = _RENDER_STILL_1;Render(0);
+                }
 				break;
 			}
 			case _RENDER_AVI_START:
@@ -115,17 +118,6 @@ VOID CBackGround::SetRenderState(INT nState)
 	SetRect(&tRect,0,0,640,480);
 
 	AllStopAvi();
-	switch(m_nRenderState)
-	{
-		case _RENDER_AVI_IN:
-		case _RENDER_AVI_OUT:
-			m_xCreateChrAvi.Stop();
-			break;
-		case _RENDER_AVI_START:
-			m_xStartGameAvi.Stop();
-			break;
-	}
-
 	m_nRenderState = nState;
 
 	switch(m_nRenderState)

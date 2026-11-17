@@ -95,9 +95,12 @@ void CLoginProcess::Load(bool connect, const LoginConfiguration* configuration)
 	m_xAvi.Create(&m_Image);
 	m_xLogin.Create(&m_Image);
 	m_xSelectSrv.Create(&m_Image,&m_SList);
-	m_xAvi.SetRenderAviState(9); // Static login background when movies are absent.
+	m_xAvi.SetRenderAviState(CLoginAvi::StaticBackground); // Static login background when movies are absent.
 	m_xLogin.OpenWnd();
-	if(connect) g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(), m_szServerIP, m_nServerPort);
+	if(connect) {
+        g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(), m_szServerIP, m_nServerPort);
+        m_xAvi.SetRenderAviState(CLoginAvi::OpeningMovie);m_xLogin.SetEditorVisible(false);
+    }
 
 }
 
@@ -196,7 +199,7 @@ LRESULT CLoginProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 
 LRESULT CLoginProcess::OnKeyDown(WPARAM wParam,LPARAM lParam)
 {
-    if(m_Progress==PRG_TO_SELECT_CHR) return 0;
+    if(m_Progress==PRG_TO_SELECT_CHR || m_xAvi.Opening()) return 0;
 	if (m_xMsgBox.IsActive()) {
 		if (wParam == VK_RETURN || wParam == VK_SPACE) {
 			m_xMsgBox.HideMessageBox();
@@ -229,7 +232,7 @@ LRESULT CLoginProcess::OnKeyDown(WPARAM wParam,LPARAM lParam)
 
 LRESULT CLoginProcess::OnLButtonDown( WPARAM wParam, LPARAM lParam )
 {
-    if(m_Progress==PRG_TO_SELECT_CHR) return 0;
+    if(m_Progress==PRG_TO_SELECT_CHR || m_xAvi.Opening()) return 0;
 //	RECT	tRect;
 //	int i;
 	if( m_xMsgBox.IsActive() )
@@ -265,7 +268,7 @@ LRESULT CLoginProcess::OnLButtonDown( WPARAM wParam, LPARAM lParam )
 
 LRESULT CLoginProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 {
-    if(m_Progress==PRG_TO_SELECT_CHR) return 0;
+    if(m_Progress==PRG_TO_SELECT_CHR || m_xAvi.Opening()) return 0;
 //	int i;
 //	INT MsgNum;
 	POINT	ptMouse;
@@ -660,6 +663,12 @@ LRESULT CLoginProcess::OnWindowMove(WPARAM wParam,LPARAM lParam)
 
 VOID CLoginProcess::RenderScene(INT nLoopTime)
 {
+    if(m_xAvi.Opening()) {
+        Clear(0);m_xAvi.Render(nLoopTime);
+        if(!m_xAvi.Opening() && m_Progress==PRG_LOGIN) m_xLogin.SetEditorVisible(true);
+        if(FAILED(g_xMainWnd.Present())) g_xMainWnd.RestoreSurfaces();
+        return;
+    }
     using Page = CMirSound::LobbyPage;
     g_xSound.UpdateLobbyAudio((m_Progress == PRG_LOGIN || m_Progress == PRG_SERVER_SELE || m_Progress == PRG_TO_SELECT_CHR) ? Page::Credentials : Page::None, nLoopTime);
 	static	DWORD	dwLastTick = 0;
@@ -742,7 +751,7 @@ VOID CLoginProcess::RenderIntro(INT nLoopTime)
 	{
 		m_nAnimationCounter++;
 		if(m_nAnimationCounter==50)
-			m_xAvi.SetRenderAviState(1);
+			m_xAvi.SetRenderAviState(CLoginAvi::OpeningMovie);
 		if(m_nAnimationCounter>500)
 		{
 			m_Progress = PRG_LOGIN;

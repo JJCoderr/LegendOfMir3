@@ -39,6 +39,7 @@ BYTE				g_bProcState = _LOGIN_PROC;
 #include "LoginProcess/LoginTransitionPreview.h"
 #include "ServerSelectProcess/ServerGroupsPreview.h"
 #include "Common/ConnectionPreview.h"
+#include "AVI/MoviePreview.h"
 
 // Offline visual review uses the real interface without map or network updates.
 class CHudPreviewProcess : public CWHDefProcess {
@@ -46,6 +47,7 @@ class CHudPreviewProcess : public CWHDefProcess {
     int damagePreview=0;
     bool levelPreview=false;
     bool loginPreview=false;
+    bool moviePreview=false;
     bool serverGroupsPreview=false;
     bool connectionPreview=false,connectionSelectionPreview=false;
     bool spellPreview=false,spellMapPreview=false;
@@ -60,6 +62,9 @@ public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
     void Load(bool expanded, int chatMode, bool exitDialog, int groupPanel) {
+        if(groupPanel>=MoviePreview::First && groupPanel<=MoviePreview::Last) {
+            moviePreview=true;capturePath=MoviePreview::Load(groupPanel);return;
+        }
         if(groupPanel>=LoginTransitionPreview::First && groupPanel<=LoginTransitionPreview::Last) {
             loginPreview=true;capturePath=LoginTransitionPreview::Load(groupPanel);return;
         }
@@ -3382,7 +3387,8 @@ public:
 
     }
     void Render(int elapsed) {
-        if(connectionSelectionPreview) g_xChrSelProc.RenderScene(elapsed);
+        if(moviePreview) MoviePreview::Render();
+        else if(connectionSelectionPreview) g_xChrSelProc.RenderScene(elapsed);
         else if(serverGroupsPreview) g_xServerGroups.RenderScene(0);
         else if(loginPreview) g_xLoginProc.RenderScene(0);
         else if(exitWaitingPreview) {
@@ -3578,7 +3584,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
 	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
-	const int previewGroup = strcmp(lpCmdLine,"--preview=login-transition-start")==0 ? LoginTransitionPreview::First :
+	const int previewGroup = strcmp(lpCmdLine,"--preview=movie-forward")==0 ? MoviePreview::First :
+        strcmp(lpCmdLine,"--preview=movie-reverse")==0 ? MoviePreview::Reverse :
+        strcmp(lpCmdLine,"--preview=movie-opening-return")==0 ? MoviePreview::Opening :
+        strcmp(lpCmdLine,"--preview=movie-creation-return")==0 ? MoviePreview::Creation :
+        strcmp(lpCmdLine,"--preview=login-transition-start")==0 ? LoginTransitionPreview::First :
         strcmp(lpCmdLine,"--preview=login-transition-half")==0 ? LoginTransitionPreview::Half :
         strcmp(lpCmdLine,"--preview=login-transition-end")==0 ? LoginTransitionPreview::Last :
         strcmp(lpCmdLine,"--preview=connection-error")==0 ? ConnectionPreview::First :

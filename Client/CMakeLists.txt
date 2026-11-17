@@ -81,6 +81,8 @@ set(MIR3_CLIENT_SOURCES
     Sound/SBuffer.cpp
     Sound/Sound.cpp
     AVI/Avi.cpp
+    AVI/LegacyMovie.cpp
+    AVI/NativeMovie.cpp
 
     Mir2Ex.cpp
     GFun.cpp

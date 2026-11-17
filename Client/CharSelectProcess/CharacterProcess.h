@@ -58,6 +58,7 @@ public:
 	BOOL				MessageBoxProcess(LPARAM lParam);
 	
 private:
+    friend struct MoviePreview;
 	void OpenDeleteNotice();
 	void DrawCreationDescription();
 	CLoginMessages m_messages;

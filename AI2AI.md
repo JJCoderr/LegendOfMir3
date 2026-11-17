@@ -1567,3 +1567,13 @@ spell-map预览改用生产LoadAllImage，而非只加载场景子集；60个实
 ## 2026-11-17：登录到选角淡出完整批次
 
 完成SM_SELECTSERVER_OK后2000ms全画布乘色淡出，服务器列表/帮助/提示一起变暗，禁用输入，保留Opening.wav，交接到选角仅一次且不提交明亮背景帧。移除旧静态scroll计数，Load/响应重置。SetNextProc离线模式Load(false)。预览265..267及截图out/login-transition-{start,half,end}.png，下一268。全七目标构建通过；转场12+账号27+分组33+音效15+连接20=107检查通过，最终防闪帧修正后转场复验。详见Client/docs/login-transition-migration-audit.md。影片wemade.dat/CreateChr.dat/StartGame.dat及内嵌音频尚未迁移，不要把旧LoginAvi静态背景当成完成；真实网关联调仍待GUI后进行。
+
+
+## 2026-11-17：大厅影片迁移进行中（未验收）
+
+基线5dec543，工作区已迁移Godot参考的独立LegacyMovie解码器并增加NativeMovie原生DirectDraw/DirectSound呈现，修改CLoginAvi开场与BackGround创建/入场/返回影片入口。正确路径为Data/*.dat；当前外部资源无这三部影片。角色返回取消/成功改反放，SM_STARTPLAY直接入场影片，删除F1/F2跳页。尚未构建测试提交；成员布局已变，后续必须clean Client再all7。下一预览268，需合成影片测试和截图，详细待办在Client/docs/lobby-movie-migration-audit.md。不能将现有代码宣称已完成；整个批次完成后再测试提交。
+
+
+## 2026-11-17：大厅影片批次验收完成
+
+接上前节未验收修改，原生LegacyMovie/NativeMovie已完成VFW解码、DirectDraw RGB565、DirectSound PCM；Data目录三个影片入口与正反时序/音效接入。创建取消/成功返回反放、SM_STARTPLAY直接入场、移除F1/F2跳页、影片禁鼠标旧提示操作，重载背景重置及关闭释放。clean90/90、all113/113、复核4/4成功；177检查通过（影片33/登录27/转场12/分组33/音效15/连接20/退出30/返回7）。预览268..271，下一272，截图out/movie-*.png。原版三部影片不存在；forward/reverse为标注合成测试影片，不能冒充原片。详细证据Client/docs/lobby-movie-migration-audit.md。下一步角色创建/删除/选择提示审计，SM_NEWCHR_FAIL/SM_STARTFAIL旧英文是已知缺口。真实服务器联调仍待GUI完成，目标保持active。

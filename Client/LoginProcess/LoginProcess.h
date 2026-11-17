@@ -54,6 +54,7 @@ public:
 	virtual char*		OnMessageReceive(CHAR* pszMessage);
 
 private:
+    friend struct MoviePreview;
     friend struct LoginPreview;
     friend struct LoginTransitionPreview;
     friend struct ServerGroupsPreview;
