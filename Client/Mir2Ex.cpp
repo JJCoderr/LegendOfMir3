@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -65,6 +65,15 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewMailGiftItem) {
+            // Review native controls at the same physical pixel size as the 800x600 backbuffer.
+            const HWND window=g_xMainWnd.GetSafehWnd();
+            RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
+            AdjustWindowRectEx(&bounds,GetWindowLong(window,GWL_STYLE),FALSE,GetWindowLong(window,GWL_EXSTYLE));
+            SetWindowPos(window,nullptr,0,0,bounds.right-bounds.left,bounds.bottom-bounds.top,SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);
+            GetClientRect(window,&g_xMainWnd.m_rcWindow);
+            MapWindowPoints(window,nullptr,(POINT*)&g_xMainWnd.m_rcWindow,2);
+        }
         g_xGameProc.m_xInterface.CreateInterface(&g_xGameProc.m_xImage);
         auto& hero = g_xGameProc.m_xMyHero;
         hero.m_bJob = 1;
@@ -1832,6 +1841,81 @@ public:
             if(FILE* report=fopen("equipment-durability-check.txt","wb")) {fprintf(report,"threshold=%d warning=%d raw=%d unit=%d special=%d negative=%d wide=%d ignored=%d drop=%d\n",threshold,warning,rawBytes,unit,special,negative,wide,ignored,drop);fclose(report);}
         }
 
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewMailGiftItem) {
+            auto& ui=g_xGameProc.m_xInterface;auto& mail=ui.m_xMailWnd;
+            ui.WindowActivate(_WND_ID_MAIL);
+            for(unsigned i=0;i<10;++i) {
+                CMailWnd::Message message;message.id=i+1;message.person=i%2?"沙巴克城主":"道馆掌柜";
+                message.subject=i%2?"行会活动通知":"欢迎来到玛法大陆";
+                message.body="勇士，欢迎来到玛法大陆。\r请在出发前整理背包，检查装备的持久力。\r";
+                for(int row=0;row<14;++row) message.body+="城镇中的商人可以为你修理装备，旅途中也别忘了与同伴互相照应。\r";
+                message.read=i%2!=0;message.attachment=i%3==0;message.loaded=true;
+                mail.inbox.push_back(message);message.person="远行的勇士";mail.outbox.push_back(message);
+            }
+            mail.selectedInbox=1;mail.selectedOutbox=0;mail.checkedInbox=0;mail.checkedOutbox=2;
+            mail.composeRecipient="远行的勇士";mail.composeDraft="你好！\r\n明天一起前往沙巴克，记得带上补给。\r\n祝一路平安。";
+            mail.giftRecipient="同行的伙伴";mail.giftDraft="这份礼物送给你。\r\n愿我们在玛法大陆再次相逢。";
+            const char* paths[]={"mail-inbox.bmp","mail-read.bmp","mail-compose.bmp","mail-gift.bmp","mail-outbox.bmp"};
+            const int page=groupPanel==PreviewMailChecks?0:groupPanel>=PreviewMailGold?int(MailLayout::View::Gift):groupPanel-PreviewMailInbox;
+            mail.SelectView(MailLayout::View(page));capturePath=paths[page];
+            mouse={700,400};
+            enum MailFixtureField { Icon=36, Instance=62 };
+            constexpr int GiftFixtureIcon=372;
+            const auto prepareGift=[&]() {
+                g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+                BYTE raw[MailLayout::ItemRecordBytes]={};strcpy((char*)raw,"送礼装备");
+                raw[Icon]=BYTE(GiftFixtureIcon);raw[Icon+1]=BYTE(GiftFixtureIcon>>8);raw[Instance]=77;
+                ui.m_stCommonItem.xItem.SetMir3Item(raw,0);ui.m_stCommonItem.bSetted=TRUE;
+                return mail.SelectGift(POINT{MailLayout::GiftCenterX,MailLayout::GiftCenterY});
+            };
+            if(groupPanel==PreviewMailGiftItem) {prepareGift();capturePath="mail-gift-item.bmp";}
+            if(groupPanel==PreviewMailGold) {
+                ui.OpenNameDialog(MailLayout::GoldDialogAction);SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"500");capturePath="mail-gift-gold.bmp";
+            }
+            if(groupPanel==PreviewMailChecks) {
+                const auto click=[&](MailLayout::Action action) {
+                    for(const auto& button:mail.VisibleButtons()) if(button.action==action) {
+                        POINT point={mail.m_rcWnd.left+button.x+2,mail.m_rcWnd.top+button.y+2};ui.OnLButtonDown(point);ui.OnLButtonUp(point);break;
+                    }
+                };
+                const bool hit=ui.GetWindowInMousePos(POINT{100,100})==_WND_ID_MAIL;
+                click(MailLayout::Action::Compose);
+                const bool editors=IsWindowVisible(mail.edits[0]) && IsWindowVisible(mail.edits[1]);
+                SetWindowTextA(mail.edits[0],"独立收件人");SetWindowTextA(mail.edits[1],"写信草稿");
+                click(MailLayout::Action::Gift);const bool giftDraft=mail.draft=="这份礼物送给你。\r\n愿我们在玛法大陆再次相逢。";
+                SetWindowTextA(mail.edits[1],"送礼草稿");click(MailLayout::Action::Compose);
+                const bool separate=mail.recipient=="独立收件人" && mail.draft=="写信草稿";
+                click(MailLayout::Action::SendCompose);
+                const bool request=mail.requests.size()==1 && mail.requests.back().recipient=="独立收件人" && mail.requests.back().body=="写信草稿";
+                click(MailLayout::Action::CancelCompose);
+                const bool cancel=mail.view==MailLayout::View::Compose && mail.recipient.empty() && mail.draft.empty();
+                const bool snapshot=mail.requests.back().body=="写信草稿";
+                click(MailLayout::Action::Outbox);mail.selectedOutbox=0;mail.outbox[0].body="";mail.OpenSelected();
+                const bool empty=mail.view==MailLayout::View::Read && mail.readSent && mail.CurrentMessage()==&mail.outbox[0];
+                click(MailLayout::Action::Next);const bool next=mail.selectedOutbox==1 && mail.CurrentMessage()==&mail.outbox[1];
+                mail.Wheel(1);const bool bodyScroll=mail.firstBody==1;
+                click(MailLayout::Action::Inbox);mail.Wheel(100);const bool bottom=mail.firstInbox==9;mail.Wheel(-100);
+                const POINT check={MailLayout::CheckBox.left+2,MailLayout::CheckBox.top+2};ui.OnLButtonDown(check);ui.OnLButtonUp(check);
+                const bool checked=mail.checkedInbox==-1;
+                click(MailLayout::Action::Gift);
+                const bool giftSelected=prepareGift() && mail.hasGiftItem && !ui.m_stCommonItem.bSetted && ui.m_xInventoryWnd.m_stInventoryItem[0].bSetted;
+                mail.RequestAction(MailLayout::Action::SendGift);
+                const bool giftRequest=mail.requests.back().action==MailLayout::Action::SendGift && mail.requests.back().item[Instance]==77;
+                click(MailLayout::Action::CancelGift);
+                const bool giftCancel=mail.view==MailLayout::View::Gift && !mail.hasGiftItem && ui.m_xInventoryWnd.m_stInventoryItem[0].bSetted;
+                mail.hasGiftItem=mail.giftIsGold=true;
+                const bool gold=!mail.SubmitGold("1001",1000) && !mail.SubmitGold("12x",1000) && mail.SubmitGold("500",1000) && mail.giftGold==500;
+                if(FILE* report=fopen("mail-gift-check.txt","wb")) {fprintf(report,"selected=%d request=%d cancel=%d gold=%d\n",giftSelected,giftRequest,giftCancel,gold);fclose(report);}
+                click(MailLayout::Action::Compose);mail.SyncEditors(false);
+                const bool hidden=!IsWindowVisible(mail.edits[0]) && !IsWindowVisible(mail.edits[1]);mail.SyncEditors(true);
+                SendMessage(mail.edits[0],WM_KEYDOWN,VK_TAB,0);const bool tab=GetFocus()==mail.edits[1];
+                SendMessage(mail.edits[1],WM_KEYDOWN,VK_ESCAPE,0);
+                const bool closed=!mail.m_bActive && !IsWindowVisible(mail.edits[0]) && ui.GetWindowInMousePos(POINT{100,100})!=_WND_ID_MAIL;
+                if(FILE* report=fopen("mail-gui-check.txt","wb")) {fprintf(report,"hit=%d editors=%d giftDraft=%d separate=%d request=%d cancel=%d snapshot=%d empty=%d next=%d bodyScroll=%d bottom=%d checked=%d hidden=%d tab=%d closed=%d\n",hit,editors,giftDraft,separate,request,cancel,snapshot,empty,next,bodyScroll,bottom,checked,hidden,tab,closed);fclose(report);}
+                ui.WindowActivate(_WND_ID_MAIL);mail.SelectView(MailLayout::View::Inbox);capturePath="mail-checks.bmp";
+            }
+        }
+
         if(groupPanel>=PreviewTradeLocal && groupPanel<=PreviewTradeHeld) {
             using namespace Mir3AccessoryHint;
             using Trade=CExchangeWnd;
@@ -2184,7 +2268,7 @@ public:
                 info.biSize=sizeof(info); info.biWidth=surface.dwWidth; info.biHeight=surface.dwHeight;
                 info.biPlanes=1; info.biBitCount=24; info.biSizeImage=(DWORD)pixels.size();
                 // Capture the real native edit control, then map its display pixels to the 800x600 review image.
-                const HWND edits[]={g_xChatEditBox.GetSafehWnd(),g_xGameProc.m_xInterface.m_xGuildEditor.edit};
+                const HWND edits[]={g_xChatEditBox.GetSafehWnd(),g_xGameProc.m_xInterface.m_xGuildEditor.edit,g_xGameProc.m_xInterface.m_xMailWnd.edits[0],g_xGameProc.m_xInterface.m_xMailWnd.edits[1]};
                 for (HWND edit:edits) if (IsWindowVisible(edit)) {
                     RECT editRect; GetWindowRect(edit,&editRect);
                     const RECT& display = g_xMainWnd.m_rcWindow;
@@ -2346,6 +2430,14 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=mail-inbox")==0 ? PreviewMailInbox :
+        strcmp(lpCmdLine,"--preview=mail-read")==0 ? PreviewMailRead :
+        strcmp(lpCmdLine,"--preview=mail-compose")==0 ? PreviewMailCompose :
+        strcmp(lpCmdLine,"--preview=mail-gift")==0 ? PreviewMailGift :
+        strcmp(lpCmdLine,"--preview=mail-outbox")==0 ? PreviewMailOutbox :
+        strcmp(lpCmdLine,"--preview=mail-checks")==0 ? PreviewMailChecks :
+        strcmp(lpCmdLine,"--preview=mail-gift-gold")==0 ? PreviewMailGold :
+        strcmp(lpCmdLine,"--preview=mail-gift-item")==0 ? PreviewMailGiftItem :
         strcmp(lpCmdLine,"--preview=trade-local-hint")==0 ? PreviewTradeLocal :
         strcmp(lpCmdLine,"--preview=trade-remote-hint")==0 ? PreviewTradeRemote :
         strcmp(lpCmdLine,"--preview=trade-held-hint")==0 ? PreviewTradeHeld :

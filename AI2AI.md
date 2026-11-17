@@ -1097,3 +1097,35 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - Client清理83步、全目标109步构建通过。trade-local/remote/held三预览八项local/remote/name/retained/multi/scroll/edge/invalid全1；原trade-list十项布局/交互回归全1，已检查双方提示与取回隐藏截图。
 - 装备首次截图未见提示，加入预览状态报告后复核window=status=1、slot5、held0、present1；新截图out/equipment-hover-audited.png正确显示在槽位+15。额外两次预览BMP SHA256均5595CE706CF0BE2542D57EC000C9FC5BC5CD8DE5C772D77EC8EDD02BA3C34755；首次差异原因未确定，不宣称已修复未知根因。报告equipment-hover-check.txt保留供复核。
 - 新入口SetOfferRecord仅供完整物品GUI数据使用，尚无真实交易回复调用；当前证明GUI数据、定位和绘制，不代表实服交易闭环。
+
+### 进行中：信件完整窗口
+- Godot参考分支无mail/letter实现，不能声称沿用完成页面；按原版458640确认0收件/1阅读/2写信/3送礼/4发件。38a4174b导出out/mail-original-{0x457f70,0x457ab0,0x458640,0x4586f0,0x458c20,0x459490,0x459670,0x459b80}.c。457540构造HexRays返回None，已转查实际控件初始化457F70。
+- 新MailLayout.h记录17按钮的原始帧/文案/初始坐标、五状态、七行24高列表、编辑4000字节、各框位置；仅定义，尚未运行/截图/提交。注意绘制各状态会重定位Refresh/Delete等按钮，不能始终套用初始化坐标；按钮帧同normal/pressed是原始初始化，交互后状态变化仍待跟踪。
+- 编辑器分别this1618/1636两个Win32 EDIT，CreateWindow样式-2147483580，body Compose(21,84)-(394,225)、Gift(21,84)-(214,225)，Recipient(68,62)-(216,77)；关闭键400,267；页签x183/228/273/318/363,y14。文字颜色Title16309498/Text16448250。
+- 下一步恢复页面基底资源及五状态绘制、点击处理/窗口入口和音效，完整功能后统一构建/测试/截图/中文提交；不按单页拆提交。当前尚无新页面完成。
+
+### 信件窗口实现继续（未完成/未提交）
+- 原HUD初始化4365EC..43660F确认通过457F50创建窗口ID21，资源0x7A8=1960、尺寸0x1B8x0x136=440x310、原点0,0。之前457F70无直接xref因457F50入口包装，不能据此误判缺调用。
+- 新MailWnd.h/.cpp定义CMailWnd五状态、消息列表/草稿数据、可见按钮及位置、背景和GDI文字绘制；尚未加入CMake/Interface，尚未构建测试。页签/编辑框/滚动/选中与标记绘制/发送请求/音效/窗口入口仍待完成。该骨架不算页面完成，不能用之宣称可用信件功能。
+- 补充导出out/mail-event-0x*.c(45AC50/45B420/45B6B0等)，45A110无法反编译需反汇编。按钮控制下标264Delete、444Refresh、624Outbox、804Gift、984Compose、1164Read、1344Inbox；45AC50是鼠标释放/页签切换路径，按调用时机后续核对。收件重定位Refresh286/Delete326，发件Refresh246/Cancel286/Delete326，y256。
+- 邮件布局初始化直接确认；列表发送方43..137、主题141..362,y65+24row；Read2010(1,51)、Compose2030(1,51)、Gift2050(1,50)、Outbox2070(1,51)。部分原版顶栏选中图标y使用this[6]+14(疑似原版x/y误用)，目前骨架尚未处理，不自行声称像素一致。
+
+### 信件窗口继续实现（未提交，尚未统一测试）
+- 按用户要求以完整功能作为测试/提交单位；本轮未启动构建或提交。
+- MailWnd 已接入 CMake、StdAfx、Interface 生命周期/窗口顺序/点击拖动/滚轮/双击/Escape，GameProc 编辑框着色和预览 EDIT 合成。Mail 窗口 ID 使用命名常量 `_WND_ID_MAIL=21`。
+- 增加收件/发件选择区分、正文 loaded 标志（空正文有效）、上/下一封、回复、复选标记、列表图标、滚动条、成对点击捕获、缩放字体。
+- 未完成：真实入口快捷键需原版证据；正文按原版 12px 行高分行/滚动；送礼物品/金币完整交互；按钮悬浮提示；原生 EDIT 遮挡和焦点处理；待发动作数据快照；五页预览、统一构建回归、截图、中文提交。当前 pendingAction 仅界面请求占位，不能宣称邮件协议已接通。
+- 原版依据见 out/mail-original-* 与 out/mail-event-*。注意 Read 顶部标签直接切换读取页，双击列表才请求/打开具体邮件。滚动范围原版允许第一行到最后一条（不是 count-visibleRows）。
+- 编码补充：Client/StdAfx.h、Client/CMakeLists.txt 是 UTF-8；Interface/GameProc/Mir2Ex/Define 等仍为 CP936。编辑前逐文件识别，保持原有换行。
+
+### 信件五页 GUI 批次（2026-11-17）
+- 新增 MailWnd/MailLayout，接入原生 CGameWnd/DirectDraw、Interface 窗口列表、鼠标捕获/拖动/滚轮/双击、按钮提示及关闭；无 Godot 运行时。原版五状态、17按钮资源、背景、七行列表/图标/复选框，写信/送礼使用 Win32 EDIT。
+- 正文依据 45BC70/45BEF0：355px 宽，CR 段落各至多11行；显示11行、12px行距、四向黑描边。收发件选择和读取来源分开；loaded 标识支持空正文。写信/送礼草稿独立；取消清空但停留本页（45A909/45A975）；关闭清空正文（45C450）。
+- EDIT 跟随窗口缩放/移动，Tab切换、Esc关闭，其他窗口/模态覆盖时隐藏并绘制静态内容。字体宋体9号。预览发现高DPI窗口再缩回800x600会导致编辑框字形有采样差异，邮件预览固定800x600实际客户区，保留真实应用缩放逻辑。
+- 送礼选择保留完整100字节物品记录并返回背包（45AAD3..45AB32），不提前扣物品/金币；金额输入复用原生对话框，使用命名 action=13，校验余额/数字；按钮105.wav、放入物品调用已有物品音效。未做音频回放听测。
+- 所有网络动作保留带消息ID/收发方向/收件人/正文/物品/金币的不可变 Request；真实收发、删除、撤回协议适配仍未接通，不能把离线GUI检查当作服务器成功。原版未发现独立邮件快捷键，未擅自添加；当前由 WindowActivate(_WND_ID_MAIL) 和预览进入，游戏实际入口仍需随服务器/NPC流程确认。
+- IDA 会话已换 d0afb8c0；新增证据 out/mail-more-*.c、mail-press.asm、mail-entry-refs.asm。45A110仍无法反编译，使用反汇编核对取消/送礼操作。
+- 构建：clean Client 84/84，通过；随后 Client/GameSvr/LoginSvr/DBSvr/LoginGate/SelGate/GameGate 全部通过。out/build-mail-review.log、build-mail-final.log、build-mail-cleanup.log。
+- 统一交互检查：out/mud3-01/mail-gui-check.txt 的15项全1；mail-gift-check.txt 的4项全1。覆盖窗口路由、编辑框/Tab/Esc、独立草稿、取消、请求快照、发件空正文、前后封/正文滚动/列表末端、复选、遮挡、物品保留、金币校验。
+- 预览编号154..161（Inbox/Read/Compose/Gift/Outbox/Checks/Gold/GiftItem），下一空闲162。截图 out/mail-{inbox,read,compose,gift,outbox,gift-item,gift-gold}-final.png，均真实原生渲染。
+- 尚需后续原版精校：页签选中重复绘制的x/y疑似原版bug；正文分段排版与原版482240逐像素比较；金币附件tooltip和送礼大图裁切/提示位置；服务端收发/删除/撤回及实际入口。此批完成页面/编辑和交互框架，不能宣称整个客户端GUI或邮件端到端完成。

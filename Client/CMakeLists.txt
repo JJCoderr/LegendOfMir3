@@ -47,6 +47,7 @@ set(MIR3_CLIENT_SOURCES
     GameProcess/GroupWnd.cpp
     GameProcess/GuildMasterWnd.cpp
     GameProcess/GuildEditor.cpp
+    GameProcess/MailWnd.cpp
     GameProcess/GuildWnd.cpp
     GameProcess/QuickWnd.cpp
     GameProcess/TargetDisplay.cpp

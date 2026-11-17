@@ -124,6 +124,7 @@ VOID CInterface::Destroy()
     m_xSkillWnd.Destroy();
     m_xQuestWnd.Destroy();
     m_xGuildEditor.Destroy();
+    m_xMailWnd.Destroy();
     m_xQuickWnd.Destroy();
     m_xHorseWnd.Destroy();
 	m_xGuildWnd.Destroy();
@@ -186,6 +187,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xStatusWnd.CreateStatusWnd(_WND_ID_STATUS, m_pxInterImg, 1280, 0, 0, 328, 466, TRUE);
     m_xSkillWnd.CreateGameWnd(_WND_ID_SKILL,m_pxInterImg,1620,TRUE,348,0,360,488);
     m_xPortraitWnd.CreateGameWnd(_WND_ID_PORTRAIT,m_pxInterImg,2090,FALSE,0,0,580,404);
+    m_xMailWnd.Create(m_pxInterImg,_WND_ID_MAIL);
     m_xPortraitWnd.SetCacheContext(g_xClientSocket.selectedServerName,g_szCharName);
 	m_xStoreWnd.CreateStoreWnd(_WND_ID_STORE, m_pxInterImg, _WNDIMGIDX_STORE, 0, 0, 0, 0, TRUE);
 	m_xExchangeWnd.CreateExchangeWnd(_WND_ID_EXCHANGE, m_pxInterImg, 1390, 0, 0, 494, 330, TRUE);
@@ -368,6 +370,7 @@ case _WND_ID_STATUS:
 			case _WND_ID_OPTION:
 				m_xOptionWnd.ShowOptionWnd();
 				break;
+            case _WND_ID_MAIL: m_xMailWnd.Show(); break;
             case _WND_ID_PORTRAIT: m_xPortraitWnd.Show(); break;
 			case _WND_ID_QUICK:
                 m_xQuickWnd.ShowQuickWnd();
@@ -540,8 +543,10 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     m_xSkillWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_SKILL);
     m_xHorseWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_HORSE);
     m_xNPCWnd.UpdatePointer(ptMousePos,hoveredWindow==_WND_ID_NPCCHAT);
+    m_xMailWnd.hoverRow=hoveredWindow==_WND_ID_MAIL?m_xMailWnd.RowAt(ptMousePos):-1;
     const RECT portraitHover={535,486,616,580};
     if (!m_chatExpanded && PtInRect(&portraitHover,ptMousePos)) DrawSelectionFrame(*m_pxInterImg,m_portraitEntryPressed?2097:2096,535,566,SelectionBlend::Normal,false);
+    m_xMailWnd.SyncEditors(IsTopWindow(_WND_ID_MAIL) && !m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive && !m_xStoreWnd.m_bActive && !m_xNPCWnd.m_bActive);
     ShowWndList();
     m_minimap.player={g_xGameProc.m_xMyHero.m_wPosX,g_xGameProc.m_xMyHero.m_wPosY};
     m_minimap.showMonsters=m_xOptionWnd.m_values[7];
@@ -561,6 +566,7 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 	m_xMsgBox.RenderMessageBox(0);
 
     ShowButtonHint(ptMousePos);
+    m_xMailWnd.ShowAttachmentHint(ptMousePos);
     m_xExchangeWnd.ShowHeld(ptMousePos);
 }
 
@@ -816,6 +822,7 @@ case _WND_ID_STATUS:
 			case _WND_ID_OPTION:
 				rcWnd = m_xOptionWnd.GetGameWndRect();
 				break;
+            case _WND_ID_MAIL: rcWnd=m_xMailWnd.m_rcWnd; break;
             case _WND_ID_PORTRAIT: rcWnd=m_xPortraitWnd.m_rcWnd; break;
 			case _WND_ID_QUICK:
                 rcWnd = m_xQuickWnd.GetGameWndRect();
@@ -1037,6 +1044,10 @@ case _WND_ID_STATUS:
 			}
 		}
 		break;
+    case _WND_ID_MAIL:
+        if(m_xMailWnd.m_bActive) {DeleteWindowToList(nID);m_xMailWnd.Close();}
+        else {AddWindowToList(nID);m_xMailWnd.m_bActive=TRUE;m_xMailWnd.SelectView(m_xMailWnd.view);bRet=TRUE;}
+        break;
     case _WND_ID_PORTRAIT:
         if (m_xPortraitWnd.m_bActive) { DeleteWindowToList(nID); m_xPortraitWnd.m_bActive=FALSE; m_xPortraitWnd.Close(); }
         else { AddWindowToList(nID); m_xPortraitWnd.m_bActive=TRUE; m_xPortraitWnd.Open(); bRet=TRUE; }
@@ -1517,6 +1528,8 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
 				if ( !m_xInventoryWnd.OnLButtonDown(&m_stCommonItem, ptMouse) )
 					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
 				break;
+            case _WND_ID_MAIL:
+                DeleteWindowToList(_WND_ID_MAIL);AddWindowToList(_WND_ID_MAIL);m_bMoveFocusedWnd=FALSE;m_xMailWnd.Pointer(0,ptMouse);break;
             case _WND_ID_PORTRAIT:
                 DeleteWindowToList(_WND_ID_PORTRAIT); AddWindowToList(_WND_ID_PORTRAIT); m_bMoveFocusedWnd=FALSE; m_xPortraitWnd.Pointer(0,ptMouse); break;
 			case _WND_ID_SKILL:
@@ -1620,6 +1633,7 @@ void CInterface::OpenNameDialog(int action)
     m_xMsgBox.SetOrigin(220,112,true);
     std::string prompt = action==4 ? "'"+m_xGuildWnd.m_name+"' "+captions.Get(4001) :
         captions.Get(action==6?1304:action==5?4002:action==3?1606:1605);
+    if (action==MailLayout::GoldDialogAction) prompt=captions.Get(MailLayout::GoldQuestion);
     if (action==7) prompt=m_xNPCWnd.prompt;
     if (action==8) prompt=captions.Get(2302);
     if (action==9) prompt=captions.Get(2301);
@@ -1642,7 +1656,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         m_xMsgBox.HideMessageBox();
         return;
     }
-    if (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) {
+    if ((m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==MailLayout::GoldDialogAction) {
         std::vector<char> answer(GetWindowTextLengthA(g_xChatEditBox.GetSafehWnd())+1);
         char* name=answer.data(); GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,int(answer.size()));
         if (mouse) g_xSound.PlayLobbyEffect("105.wav");
@@ -1657,7 +1671,8 @@ void CInterface::FinishNotice(int hResult, bool mouse)
             g_xMainWnd.m_rcWindow.top+(m_chatExpanded?534:575),m_chatExpanded?432:344,15,TRUE);
         if (m_nIdxMsgBox==7 && hResult!=CLICK_YES) m_xNPCWnd.ClearPrompt();
         if (hResult == CLICK_YES) {
-            if (m_nIdxMsgBox == 1) g_xClientSocket.SendCreateGroup(name);
+            if(m_nIdxMsgBox==MailLayout::GoldDialogAction) m_xMailWnd.SubmitGold(name,g_xGameProc.m_xMyHero.m_nGlod);
+            else if (m_nIdxMsgBox == 1) g_xClientSocket.SendCreateGroup(name);
             else if (m_nIdxMsgBox == 2) g_xClientSocket.SendAddGroupMember(name);
             else if (m_nIdxMsgBox == 3) g_xClientSocket.SendDelGroupMember(name);
             else if (m_nIdxMsgBox == 4) g_xClientSocket.SendGuildMemberRemoval(name);
@@ -1729,6 +1744,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
     }
     if (m_xNPCWnd.closePressed || m_xNPCWnd.arrowPressed) { m_xNPCWnd.OnLButtonUp(ptMouse); return TRUE; }
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(2,ptMouse); return TRUE; }
+    if(!m_xMsgBox.IsActive() && m_xMailWnd.captured) {m_xMailWnd.Pointer(2,ptMouse);if(!m_xMailWnd.m_bActive) DeleteWindowToList(_WND_ID_MAIL);return TRUE;}
     if (m_xExchangeWnd.captured>=0 || m_xExchangeWnd.confirmPressed || m_xExchangeWnd.headerPressed) { m_bMoveFocusedWnd=FALSE; m_xExchangeWnd.OnLButtonUp(ptMouse); return TRUE; }
     if (m_xQuickWnd.closePressed || m_xQuickWnd.backgroundPressed) {
         m_bMoveFocusedWnd=FALSE;
@@ -1919,6 +1935,7 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
     if (!m_xMsgBox.IsActive() && m_xPortraitWnd.scrolling) { m_xPortraitWnd.Pointer(1,ptMouse); return TRUE; }
     if (!m_xMsgBox.IsActive() && m_xStoreWnd.scrollCaptured) { m_xStoreWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(1,ptMouse); return TRUE; }
+    if(!m_xMsgBox.IsActive() && m_xMailWnd.captured) {m_xMailWnd.Pointer(1,ptMouse);return TRUE;}
     if (m_xExchangeWnd.captured>=0) { m_xExchangeWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xQuestWnd.scrollCaptured) { m_xQuestWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xSkillWnd.m_skillScrollCaptured) { m_xSkillWnd.OnMouseMove(ptMouse); return TRUE; }
@@ -1952,6 +1969,7 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
 		case _WND_ID_INVENTORY:
 			m_xInventoryWnd.OnMouseMove(ptMouse);
 			break;
+        case _WND_ID_MAIL: m_xMailWnd.Pointer(1,ptMouse);break;
         case _WND_ID_PORTRAIT: m_xPortraitWnd.Pointer(1,ptMouse); break;
 		case _WND_ID_SKILL:
 			m_xSkillWnd.OnMouseMove(ptMouse);
@@ -2009,6 +2027,7 @@ BOOL CInterface::OnScrollDown()
     if (m_xMsgBox.IsActive()) return TRUE;
     const int hovered=GetWindowInMousePos(g_xGameProc.m_ptMousePos);
     if (hovered==_WND_ID_MINIMAP) return TRUE;
+    if (hovered==_WND_ID_MAIL) {m_xMailWnd.Wheel(-1);return TRUE;}
     if (hovered==_WND_ID_PORTRAIT) { m_xPortraitWnd.Wheel(1); return TRUE; }
     if (hovered==_WND_ID_STORE) { m_xStoreWnd.OnScrollDown(); return TRUE; }
     if (hovered==_WND_ID_NPCCHAT) { m_xNPCWnd.OnScrollDown(); m_xNPCWnd.pressed=-1; m_xNPCWnd.arrowPressed=0; return TRUE; }
@@ -2046,6 +2065,7 @@ BOOL CInterface::OnScrollUp()
     if (m_xMsgBox.IsActive()) return TRUE;
     const int hovered=GetWindowInMousePos(g_xGameProc.m_ptMousePos);
     if (hovered==_WND_ID_MINIMAP) return TRUE;
+    if (hovered==_WND_ID_MAIL) {m_xMailWnd.Wheel(1);return TRUE;}
     if (hovered==_WND_ID_PORTRAIT) { m_xPortraitWnd.Wheel(-1); return TRUE; }
     if (hovered==_WND_ID_STORE) { m_xStoreWnd.OnScrollUp(); return TRUE; }
     if (hovered==_WND_ID_NPCCHAT) { m_xNPCWnd.OnScrollUp(); m_xNPCWnd.pressed=-1; m_xNPCWnd.arrowPressed=0; return TRUE; }
@@ -2081,6 +2101,14 @@ BOOL CInterface::OnLButtonDoubleClick(POINT ptMouse)
     if(GetWindowInMousePos(ptMouse)==_WND_ID_MINIMAP) return TRUE;
     if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) return TRUE;
+    if (GetWindowInMousePos(ptMouse)==_WND_ID_MAIL) {
+        const int row=m_xMailWnd.RowAt(ptMouse);
+        if(row>=0 && ptMouse.x>=m_xMailWnd.m_rcWnd.left+MailLayout::SubjectHit.left && ptMouse.x<m_xMailWnd.m_rcWnd.left+MailLayout::SubjectHit.right) {
+            (m_xMailWnd.view==MailLayout::View::Outbox?m_xMailWnd.selectedOutbox:m_xMailWnd.selectedInbox)=row;
+            m_xMailWnd.OpenSelected();
+        }
+        return TRUE;
+    }
     if (GetWindowInMousePos(ptMouse)==_WND_ID_STORE) { m_xStoreWnd.OnDoubleClick(ptMouse); return TRUE; }
     if (GetWindowInMousePos(ptMouse)==_WND_ID_SKILL && m_xSkillWnd.OpenKeyMenu(ptMouse)) {
         WindowFocusChangedAndSetReadyMove(_WND_ID_SKILL,ptMouse); m_bMoveFocusedWnd=FALSE;
@@ -2115,6 +2143,7 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
         if(!(lParam & (1L << 30))) {if(wParam=='T') {m_minimap.large=!m_minimap.large;m_minimap.Place();} else m_minimap.translucent=!m_minimap.translucent;}
         return TRUE;
     }
+    if (wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive && IsTopWindow(_WND_ID_MAIL)) {WindowActivate(_WND_ID_MAIL);return TRUE;}
     if (wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive && IsTopWindow(_WND_ID_PORTRAIT)) { WindowActivate(_WND_ID_PORTRAIT); return TRUE; }
 	switch ( wParam )
 	{
@@ -2165,7 +2194,7 @@ VOID CInterface::OnSysKeyDown()
 
 LRESULT	CInterface::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 {
-    if (m_xMsgBox.IsActive() && m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) {
+    if (m_xMsgBox.IsActive() && ((m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==MailLayout::GoldDialogAction)) {
         SetWindowTextA(g_xChatEditBox.GetSafehWnd(),g_xChatEditBox.m_szInputMsg);
         FinishNotice(CLICK_YES,false);
         return TRUE;
@@ -2186,6 +2215,9 @@ int CInterface::ButtonHintAt(POINT point,POINT& anchor)
         anchor={hit.right,hit.bottom}; return message;
     };
     switch (GetWindowInMousePos(point)) {
+    case _WND_ID_MAIL:
+        for(const auto& button:m_xMailWnd.VisibleButtons()) if(const int hint=resolve(m_xMailWnd.m_rcWnd,button.normal,button.x,button.y,button.caption,m_xMailWnd.pressed==int(button.action))) return hint;
+        return 0;
     case _WND_ID_MINIMAP: return m_minimap.HintAt(point,anchor,*m_pxInterImg);
     case _WND_ID_GROUP: {
         const int buttons[][4]={{1221,217,200,1052},{1362,38,192,1600},{1365,98,192,1601},{1368,158,192,1602}};
