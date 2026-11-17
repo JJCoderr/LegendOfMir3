@@ -29,9 +29,17 @@ public:
 
 	void RunRace();
     void Say(CPlayerObject* player, const char* section);
-    struct Good { int standard, stock, price, targetStock; ULONGLONG refillInterval, lastRefill; };
+    struct Good {
+        int standard, stock, price, targetStock;
+        ULONGLONG refillInterval, lastRefill;
+        std::vector<_TGENERALITEMRCD> returnedItems;
+    };
     std::vector<Good> m_goods;
     bool m_goodsLoaded = false;
+    int m_pricePercent = 100;
+    std::vector<int> m_purchaseTypes;
+    bool LoadGoods(); // Caller holds m_goodsMutex.
+    void Sale(CPlayerObject* player, _LPTGENERALITEMRCD item, bool commit, int quantity);
     std::mutex m_goodsMutex;
     ULONGLONG m_lastRefillCheck = GetTickCount64();
     void ShowGoods(CPlayerObject* player);

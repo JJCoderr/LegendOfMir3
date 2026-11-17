@@ -2235,3 +2235,11 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - IDA确认收购价0x4D0E90为ROUND(base/2)，不使用购买倍率和1.1；9/11/13/15对应4/6/6/8。商人脚本+类型构成收购白名单，0x4CD214检查；0x4CDAB4成交后会回收物品入库存。
 - 当前客户端InventoryWnd已有SelectServiceItem/ConfirmService/ReceiveService，但服务端UserInfo的出售分支仅在注释中，需补真实转发与ObjectPlayer处理；消息实例ID跨wParam/wTag，NPC在nRecog。
 - 字段、原服地址、单件/堆叠差异及待实现CSV清单在Test/Shop/native-sale-audit.md。此阶段只完成证据核对，未实现服务端出售，也未声称出售联调通过。
+
+## 普通物品单件出售、回购与实例验证
+
+- 服务端接入646/647/648/649及1012/1013消息，+类型收购列表、标准价半价取偶数、出售上下文/距离/归属/未装备校验、金币上限和25/30类型低于4000耐久拒绝。成交重新计算，不信任客户端报价。
+- 收购物品非零耐久时保存原记录进入库存，回购保留属性；原[Goods]未列出的商品可创建分类。Client切换到购买列表时清空旧出售服务状态。
+- RPC shop.quote(id)/shop.sell复用背包入口，merchant_service暴露实际阶段；shop.sale_request用于失效实例/上下文等真实协议拒绝测试。
+- Client/EIServer Release构建通过；12个ShopSell场景加购买/双端共享库存/真实补货/NPC/同名物品回归共17场景686步通过，日志out/csv-validation/sale-final-*.log。指定第二件同名实例、重复请求拒绝、%100/%150价格独立、9/11/13/15取偶数、上限/类型拒绝、原属性回购、保存重登均通过。
+- 本阶段仅完成独立实例普通物品单件路径；数量堆叠出售、装备/附加属性与耐久折价、库存文件持久化/超额回收清理仍待实现。完整目标保持进行中。

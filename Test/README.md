@@ -184,7 +184,7 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 `ShopBuy.csv` 验证两件同名药品购买、金币不足拒绝、关闭商店、数据库保存和重登恢复。`ShopStock.csv` 验证超库存拒绝、买空及买空后的再次拒绝；`ShopCapacity.csv` 使用59格背包购买2件，`ShopWeight.csv` 使用超负重商品，检查整笔拒绝、金币/库存/物品不变。购买仅在当前商人已打开商店且角色同地图、在视野内时处理。扣款前检查完整数量对应的库存、容量、负重和总价；成功后更新金币、独立物品实例、负重及购买者商品列表。notice.dismiss 可通过既有确认入口关闭普通提示，不提交输入或确认交易对话框。
 
-本阶段支持普通物品初始库存及定时补货，库存尚未跨服务器重启持久化，也未实现装备明细商品、出售/修理或所有在线顾客的即时库存广播。物品和金币沿用角色保存事务，已验证正常保存重登；尚未验证购买过程中的服务器崩溃恢复。
+本阶段支持普通物品初始库存及定时补货，库存尚未跨服务器重启持久化，也未实现装备明细商品、装备出售/修理或所有在线顾客的即时库存广播。物品和金币沿用角色保存事务，已验证正常保存重登；尚未验证购买过程中的服务器崩溃恢复。
 
 `Shop/ShopPrice.csv` 使用标准价11和 `%150`，报价单价18，购买2件扣36；验证余额4的保存重登。单价按参考服 `base / 100 * percent * 1.1` 的 x87 扩展精度顺序计算，再取最近整数，报价和扣款共用单价。`ShopLowPrice.csv` 验证 `%0` 被忽略，`ShopInvalidPrice.csv` 验证非数字倍率保留默认100；`ShopPriceBelowMinimum.csv` / `ShopPriceMinimum.csv` 验证54/55边界；`ShopPriceRetained.csv` 验证无效、过低和溢出的倍率不覆盖先前有效值。`ShopZeroPrice.csv` 验证零基础价可以报价但不能购买。`ShopPriceRounding.csv` 验证基础价5/15/25/35对应单价6/17/28/38及按单价乘数量扣款。
 
@@ -196,4 +196,12 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 本轮补货测试还定位并修复了旧NPC调度问题：CCharObject未初始化m_nViewRange，商人首次SearchViewRange可能扫描巨大的坐标区间、占住NPC线程。基类现在使用已有_RANGE_X初始化默认视野；玩家和怪物各自的显式视野配置仍生效。
 
-出售接口尚未接入服务端，客户端已有询价与成交入口。参考服收购类型、半价取整和消息字段见 [出售协议核对](Shop/native-sale-audit.md)，后续CSV应以这些规则为依据。
+普通物品单件出售已接入服务端，参考服收购类型、半价取整和消息字段见 [出售协议核对](Shop/native-sale-audit.md)。
+
+`shop.quote(id)` 通过真实背包询价入口选择实例，`shop.sell` 确认已报价物品；`state.get.merchant_service` 返回actor、mode、item、price和phase。`shop.sale_request(index,id,name)` 为协议测试入口，可发送正常UI无法产生的失效实例请求，服务端始终重新验证当前出售上下文、地图距离、物品归属、名称和未装备状态。
+
+`ShopSell.csv` / `ShopSellDefault.csv` 验证%150/%100下收购价同为6（基础价11）、指定第二件同名物品、重复请求拒绝、原属性回购、保存重登；`ShopSellNewStock.csv` 验证收购物品不在[Goods]中时创建回购分类。`ShopSellRoundDown/Even/RoundUp.csv` 覆盖9/13/15的半价取偶数。`ShopSellGoldCap.csv`、`ShopSellRejectedType.csv` 验证金币上限和类型拒绝不丢物品；`ShopSellQualityLow/QualityBoundary/OreLow.csv` 验证类型25/30的4000耐久门槛（这些场景标准耐久为0，未覆盖耐久折价计算）。
+
+本阶段支持现有独立实例的普通物品单件出售，尚未支持数量式堆叠出售、装备和附加属性/耐久折价计算；标准价只对已覆盖的普通物品报价路径验证。耐久非零的收购物品以原记录进入库存，回购保留原属性；库存列表不主动广播，仍随重新打开商店刷新。未配置[Goods]的收购物品没有定时补货目标，尚未实现原服库存文件保存及超额回收清理。
+
+`ShopSellContext.csv` 通过真实发包验证尚未打开出售模式、重新点击NPC导致旧出售上下文失效两种拒绝，之后重新打开出售仍可正常成交。

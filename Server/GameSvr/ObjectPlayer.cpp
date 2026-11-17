@@ -72,6 +72,7 @@ void CPlayerObject::Constructor()
     m_clientOptions = 0;
     m_dialogMerchant = NULL;
     m_shopMerchant = NULL;
+    m_sellMerchant = NULL;
     m_npcScriptFiles.clear();
     m_npcOptions.clear();
 
@@ -2468,6 +2469,30 @@ void CPlayerObject::Operate()
                         }
                         break;
                     }
+                    case CM_MERCHANTQUERYSELLPRICE:
+                    case CM_USERSELLITEM:
+                    {
+                        const bool commit = lpProcessMsg->wIdent==CM_USERSELLITEM;
+                        bool handled = false;
+                        for (auto node=g_xMerchantObjList.GetHead(); node; node=g_xMerchantObjList.GetNext(node)) {
+                            auto* npc=g_xMerchantObjList.GetData(node);
+                            if ((int)npc!=lpProcessMsg->lParam1) continue;
+                            if (m_fIsDead || npc!=m_dialogMerchant || npc!=m_sellMerchant || npc->m_pMap!=m_pMap ||
+                                abs(npc->m_nCurrX-m_nCurrX)>m_nViewRange || abs(npc->m_nCurrY-m_nCurrY)>m_nViewRange) break;
+                            char key[Mir3Item::LegacyKeySize+1]={}; int standard=0;
+                            const DWORD instance=DWORD(lpProcessMsg->lParam2);
+                            _LPTGENERALITEMRCD item=NULL;
+                            if (m_pUserInfo->ResolveItemRequest(instance,lpProcessMsg->pszData,key,standard) && key[0]=='G' && !IsEquipped(*m_pUserInfo,key))
+                                item=m_pUserInfo->GetUseGenItem(key,instance);
+                            npc->Sale(this,item,commit,lpProcessMsg->wParam);
+                            handled=true; break;
+                        }
+                        if (!handled) {
+                            fnMakeDefMessage(&DefMsg,commit ? SM_USERSELLITEM_FAIL : SM_SENDBUYPRICE,0,0,0,0);
+                            SendSocket(&DefMsg,NULL);
+                        }
+                        break;
+                    }
                     case CM_USERBUYITEM:
                     case CM_CLICKNPC:
                     case CM_MERCHANTDLGSELECT:
@@ -2484,6 +2509,7 @@ void CPlayerObject::Operate()
                             if (lpProcessMsg->wIdent == CM_CLICKNPC) {
                                 m_dialogMerchant = npc;
                                 m_shopMerchant = NULL;
+                                m_sellMerchant = NULL;
                                 m_npcScriptFiles.clear();
                                 m_npcOptions.clear();
                             } else if (m_dialogMerchant != npc) break;
@@ -2511,6 +2537,7 @@ void CPlayerObject::Operate()
                                 SendSocket(&DefMsg, NULL);
                                 m_dialogMerchant = NULL;
                                 m_shopMerchant = NULL;
+                                m_sellMerchant = NULL;
                                 m_npcScriptFiles.clear();
                                 m_npcOptions.clear();
                             } else npc->Say(this, section);

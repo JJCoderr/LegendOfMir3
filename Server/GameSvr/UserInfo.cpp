@@ -744,6 +744,11 @@ void CUserInfo::ProcessUserMessage(char *pszPacket)
 		case CM_RIDE:
 			m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, lpDefMsg->wTag, LOWORD(lpDefMsg->nRecog), HIWORD(lpDefMsg->nRecog), NULL);
 			break;
+        case CM_MERCHANTQUERYSELLPRICE:
+        case CM_USERSELLITEM:
+            m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, lpDefMsg->wSeries,
+                lpDefMsg->nRecog, MAKELONG(lpDefMsg->wParam,lpDefMsg->wTag), 0, pszPacket + sizeof(_TDEFAULTMESSAGE));
+            break;
         case CM_USERBUYITEM:
             m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, lpDefMsg->wSeries, lpDefMsg->nRecog, 0, 0, pszPacket + sizeof(_TDEFAULTMESSAGE));
             break;

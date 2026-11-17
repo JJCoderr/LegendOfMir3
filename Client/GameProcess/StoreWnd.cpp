@@ -59,6 +59,7 @@ bool CStoreWnd::SetGoods(int id,const char* text,int count)
         result.push_back(good);
     }
     if (*cursor) return false;
+    g_xGameProc.m_xInterface.m_xInventoryWnd.ClearService();
     CloseOffers(); Reset(); actor=id; goods=std::move(result); highlighted=goods.empty()?-1:0; return true;
 }
 void CStoreWnd::SetOffers(std::vector<Offer> list,int offset)

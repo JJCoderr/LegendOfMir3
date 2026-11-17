@@ -2,6 +2,7 @@
 #include "../Server/Def/picojson.h"
 #include <deque>
 #include "StdAfx.h"
+#include "GameProcess/MerchantServiceIds.h"
 #include "ClientRpc.h"
 #include "../Server/Def/JsonRpc.h"
 #include "../Shared/DebugState.h"
@@ -152,6 +153,11 @@ std::string ClientState() {
         state += ",\"npc_dialog\":"+Json(Object{{"open",Json(bool(npc.GetGameWndActive()))},
             {"id",Json(int64_t(npc.m_nNpcId))},{"rows",Json(npcRows)},
             {"ready",Json(!npc.lastAction || GetTickCount()-npc.lastAction>1000)}}).serialize();
+        const auto& service=game.m_xInterface.m_xInventoryWnd.service;
+        const char* phases[]={"choosing","quoting","quoted","unavailable","paying"};
+        state += ",\"merchant_service\":"+Json(Object{{"actor",Json(int64_t(service.actor))},
+            {"mode",Json(int64_t(service.mode))},{"item",Json(int64_t(service.item))},
+            {"price",Json(int64_t(service.price))},{"phase",Json(std::string(phases[int(service.phase)]))}}).serialize();
         auto& shop=game.m_xInterface.m_xStoreWnd;
         Array goods;
         for(const auto& good:shop.goods) goods.emplace_back(Object{
@@ -262,6 +268,30 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
             !g_xGameProc.m_xInterface.m_xMsgBox.IsActive() && !g_xGameProc.InputDelayed() && !g_xGameProc.m_xNotice.IsActive() && !g_xGameProc.m_xInterface.HasInputDialog()) {
             shop.highlighted=index;shop.OpenCategory();
             if(shop.bulk>=0) { shop.BuyBulk(std::to_string(quantity).c_str());accepted=true; }
+        }
+    } else if (method=="shop.sale_request" && g_bProcState==_GAME_PROC) {
+        // Real wire probe for stale IDs and requests the normal inventory UI cannot issue.
+        const int index=Integer(params,"index"),id=Integer(params,"id"); const auto name=Text(params,"name");
+        if(name.size()>30) throw JsonRpc::Error{-32602,"Item name too long"};
+        auto& actors=g_xGameProc.m_xActorList;
+        if(index<actors.GetCounter()) {
+            actors.MoveCurrentToTop();for(int i=0;i<index;++i) actors.MoveNextNode();
+            _TDEFAULTMESSAGE request;fnMakeDefMessage(&request,CM_USERSELLITEM,actors.GetCurrentData()->m_dwIdentity,LOWORD(id),HIWORD(id),0);
+            g_xClientSocket.SendPacket(&request,const_cast<char*>(name.c_str()));accepted=true;
+        }
+    } else if ((method=="shop.quote" || method=="shop.sell") && g_bProcState==_GAME_PROC) {
+        auto& ui=g_xGameProc.m_xInterface; auto& bag=ui.m_xInventoryWnd;
+        if(bag.service.actor && bag.service.mode==MerchantService::Sell && !g_xGameProc.InputDelayed() &&
+            !g_xGameProc.m_xNotice.IsActive() && !ui.HasInputDialog() && !ui.m_xMsgBox.IsActive()) {
+            if(method=="shop.quote") {
+                const int id=Integer(params,"id");
+                if(bag.service.phase!=CInventoryWnd::ServicePhase::Quoting && bag.service.phase!=CInventoryWnd::ServicePhase::Paying)
+                    for(int i=0;i<_MAX_INVEN_ITEM;++i) if(bag.m_stInventoryItem[i].bSetted && bag.m_stInventoryItem[i].xItem.m_stItemInfo.nMakeIndex==id) {
+                        bag.SelectServiceItem(i);accepted=true;break;
+                    }
+            } else if(bag.service.phase==CInventoryWnd::ServicePhase::Quoted) {
+                bag.ConfirmService();accepted=bag.service.phase==CInventoryWnd::ServicePhase::Paying;
+            }
         }
     } else if (method == "npc.click" && g_bProcState == _GAME_PROC) {
         const int index=Integer(params,"index");auto& actors=g_xGameProc.m_xActorList;

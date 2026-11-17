@@ -24,6 +24,7 @@ void CMerchantObject::RunRace()
             for (auto& good : m_goods) if (now-good.lastRefill > good.refillInterval) {
                 good.lastRefill = now;
                 good.stock = good.targetStock;
+                if (good.returnedItems.size()>size_t(good.stock)) good.returnedItems.resize(good.stock);
             }
         }
     }
@@ -208,28 +209,35 @@ void CMerchantObject::Say(CPlayerObject* player, const char* section)
     player->m_npcOptions = options;
     player->m_npcScriptFiles = files;
     player->SendSocket(&message, encoded);
-    if (!_stricmp(section, "@buy")) { player->m_shopMerchant = this; ShowGoods(player); }
+    if (!_stricmp(section, "@buy")) { player->m_sellMerchant = NULL; player->m_shopMerchant = this; ShowGoods(player); }
+    if (!_stricmp(section, "@sell")) {
+        player->m_shopMerchant = NULL; player->m_sellMerchant = this;
+        fnMakeDefMessage(&message, SM_SENDUSERSELL, (int)this, 0, 0, 0);
+        player->SendSocket(&message, NULL);
+    }
 }
 
-void CMerchantObject::ShowGoods(CPlayerObject* player)
+bool CMerchantObject::LoadGoods()
 {
-    std::lock_guard<std::mutex> lock(m_goodsMutex);
     if (!m_goodsLoaded) {
         const auto& info = g_pMerchantInfo[m_nIndex];
         const std::string name = info.scriptName.empty() ? m_szName : info.scriptName;
         std::vector<std::string> lines;
-        if (!LoadMerchantLines("Envir/Market_Def/"+name+"-"+info.szMapName+".txt", lines)) return;
+        if (!LoadMerchantLines("Envir/Market_Def/"+name+"-"+info.szMapName+".txt", lines)) return false;
         constexpr int MinimumPricePercent = 55;
         int percent = 100;
         for (const auto& line : lines) {
             if (line[0]=='[') break;
-            if (line[0]!='%') continue;
+            if (line[0]!='%' && line[0]!='+') continue;
             char* end;
             const char* number = line.c_str()+1;
             errno = 0;
             const long parsed = strtol(number, &end, 10);
-            if (end!=number && !*end && errno!=ERANGE && parsed>=MinimumPricePercent) percent = int(parsed);
+            if (end==number || *end || errno==ERANGE) continue;
+            if (line[0]=='+' && parsed>=0) m_purchaseTypes.push_back(int(parsed));
+            if (line[0]=='%' && parsed>=MinimumPricePercent) percent = int(parsed);
         }
+        m_pricePercent = percent;
         bool goods = false;
         for (const auto& line : lines) {
             if (line[0]=='[') { if (goods) break; goods = !_stricmp(line.c_str(), "[Goods]"); continue; }
@@ -246,7 +254,13 @@ void CMerchantObject::ShowGoods(CPlayerObject* player)
         }
         m_goodsLoaded = true;
     }
-    SendGoods(player);
+    return true;
+}
+
+void CMerchantObject::ShowGoods(CPlayerObject* player)
+{
+    std::lock_guard<std::mutex> lock(m_goodsMutex);
+    if (LoadGoods()) SendGoods(player);
 }
 
 void CMerchantObject::SendGoods(CPlayerObject* player)
@@ -289,6 +303,10 @@ void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity)
             record->nStdIndex = good.standard;
             record->nDura = item.wDuraMax;
             record->nDuraMax = item.dwRSource;
+            if (good.stock-i<=int(good.returnedItems.size())) {
+                *record = good.returnedItems.front();
+                good.returnedItems.erase(good.returnedItems.begin());
+            }
             owner->MakeGenItem(record);
         }
         good.stock -= quantity;
@@ -301,4 +319,47 @@ void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity)
         failure ? failure : owner->GetGold(), 0, 0, 0);
     player->SendSocket(&message, NULL);
     if (!failure) SendGoods(player);
+}
+
+void CMerchantObject::Sale(CPlayerObject* player, _LPTGENERALITEMRCD item, bool commit, int quantity)
+{
+    std::lock_guard<std::mutex> lock(m_goodsMutex);
+    auto* owner = player->m_pUserInfo;
+    int price = -1;
+    if (item && LoadGoods()) {
+        const auto& standard = g_pStdItemEtc[item->nStdIndex];
+        bool allowed = false;
+        for (int mode : m_purchaseTypes) if (mode==standard.wStdMode) allowed = true;
+        if (allowed && standard.dwPrice<=INT_MAX) {
+            const int base = int(standard.dwPrice);
+            price = base/2 + ((base%2 && (base/2)%2) ? 1 : 0);
+        }
+    }
+    constexpr int MeatMode=25, OreMode=30, MinimumSaleDurability=4000;
+    const bool lowQuality = item && (g_pStdItemEtc[item->nStdIndex].wStdMode==MeatMode ||
+        g_pStdItemEtc[item->nStdIndex].wStdMode==OreMode) && item->nDura<MinimumSaleDurability;
+    bool sold = false;
+    if (commit && !lowQuality && price>=0 && quantity==0 && ULONGLONG(owner->GetGold())+price<=BAGGOLD) {
+        Good* stock = NULL;
+        if (item->nDura>0) {
+            for (auto& good : m_goods) if (good.standard==item->nStdIndex) stock = &good;
+            if (!stock) {
+                const auto buyPrice = MerchantPrice(int(g_pStdItemEtc[item->nStdIndex].dwPrice),m_pricePercent);
+                if (buyPrice>=0 && buyPrice<=INT_MAX) {
+                    m_goods.push_back({item->nStdIndex,0,int(buyPrice),0,~ULONGLONG(0),GetTickCount64()});
+                    stock = &m_goods.back();
+                }
+            }
+        }
+        if ((!item->nDura || (stock && stock->stock<USHRT_MAX)) && owner->IncGold(price)) {
+            if (stock) { stock->returnedItems.push_back(*item); ++stock->stock; }
+            owner->RemoveGenItem(item);
+            player->WeightChanged();
+            sold = true;
+        }
+    }
+    _TDEFAULTMESSAGE message;
+    fnMakeDefMessage(&message, commit ? (sold ? SM_USERSELLITEM_OK : SM_USERSELLITEM_FAIL) : SM_SENDBUYPRICE,
+        commit ? (sold ? owner->GetGold() : 0) : (price<0 ? 0 : price), 0, 0, 0);
+    player->SendSocket(&message,NULL);
 }

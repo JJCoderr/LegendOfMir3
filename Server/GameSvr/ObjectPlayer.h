@@ -19,6 +19,7 @@ public:
     DWORD m_clientOptions;
     CCharObject* m_dialogMerchant;
     CCharObject* m_shopMerchant;
+    CCharObject* m_sellMerchant;
     std::vector<std::string> m_npcScriptFiles;
     std::vector<std::string> m_npcOptions;
 
