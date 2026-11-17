@@ -50,7 +50,7 @@ def main():
                     time.sleep(.05)
                 return process.pid
             server = start('Server', binaries/'EIServer.exe')
-            subprocess.run([str(binaries/'Test.exe'), str(repo/'Test/RpcServer.csv'),
+            subprocess.run([str(binaries/'Test.exe'), str(repo/'Test/Rpc/RpcServer.csv'),
                 '--server-pid', str(server), '--log', str(root/'server-preflight.log')], check=True)
             client = start('Client', root/'Mir2Ex.exe')
             command = [str(binaries/'Test.exe'), str(args.scenario.resolve()), '--client-pid', str(client),

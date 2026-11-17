@@ -2144,3 +2144,9 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 ### 喊话多人距离边界
 - ChatShoutRange.csv / ChatShoutRangeY.csv 分别验证横向、纵向 49 格收到喊话、50 格无喊话及普通广播；用后续私聊作为处理完成依据并确认私聊不受距离限制。均使用三个真实客户端，各 56 步通过。日志 out/csv-validation/chat-shout-range.log 与 chat-shout-range-y.log。
 - 本阶段仅新增测试和说明，未修改生产代码。验证现有 <50 的轴向范围规则，尚未核对原版服务器数值，跨地图和死亡角色过滤仍待验证。
+
+## 2026-11-18 按子系统组织 CSV
+
+- 场景和同名 fixture 移至 Test/Login、Character、Inventory、Skills、Monsters、Combat、Chat、Rpc；Runner 保持独立。文件内容及步骤编号不变。
+- launch_csv.py 服务端预检路径和 README 示例同步更新。旧记录中的 Test/<文件>.csv 路径需按子系统补上目录。
+- 验证：执行器 8 项通过；迁移后的 Login/Login.csv 24 步和 Rpc/RpcServer.csv 预检通过，日志 out/csv-validation/subsystem-login.log。
