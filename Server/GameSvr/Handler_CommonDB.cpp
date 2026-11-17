@@ -504,7 +504,7 @@ void InitMoveMapEventInfo()
 
 CMagicInfo*	GetMagicInfo(int nMagicID)
 {
- 	if (g_pMagicInfo[nMagicID].nIndex == nMagicID)
+	if (nMagicID>=0 && nMagicID<g_nNumOfMagicInfo && g_pMagicInfo[nMagicID].nIndex == nMagicID)
 		return &g_pMagicInfo[nMagicID];
 
 	for (int i = 0; i < g_nNumOfMagicInfo; i++)

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "MagicWire.h"
 
 void UpdateStatusBarUsers(BOOL fGrow);
 void SendRDBSocket(int nCertification, char *pszData1, char *pszData2, int nData2Len);
@@ -299,7 +300,7 @@ int CUserInfo::EncodeMyMagic(char *pszEncodeMsg, int nBuffSize, int& nPos)
 	if (m_lpTMagicRcd.GetCount())
 	{
 		_LPTHUMANMAGICRCD	lptUserMagicRcd;
-		_TCLIENTMAGICRCD	tClientMagicRcd;
+		Mir3Magic::Record tClientMagicRcd{};
 
 		PLISTNODE pListNode = m_lpTMagicRcd.GetHead();
 
@@ -309,19 +310,9 @@ int CUserInfo::EncodeMyMagic(char *pszEncodeMsg, int nBuffSize, int& nPos)
 
 			if (lptUserMagicRcd)
 			{
-				tClientMagicRcd.btMagicID	= lptUserMagicRcd->btMagicID;
-				tClientMagicRcd.btLevel		= lptUserMagicRcd->btLevel;
-				tClientMagicRcd.btUseKey	= lptUserMagicRcd->btUseKey;
-				tClientMagicRcd.nCurrTrain	= lptUserMagicRcd->nCurrTrain;
+                if(!ClientMagicRecord(*lptUserMagicRcd,tClientMagicRcd)) {pListNode=m_lpTMagicRcd.GetNext(pListNode);continue;}
 
-				tClientMagicRcd.tStdMagic.btEffect		= (BYTE)g_pMagicInfo[lptUserMagicRcd->btMagicID].sEffect;
-				tClientMagicRcd.tStdMagic.btEffectType	= (BYTE)g_pMagicInfo[lptUserMagicRcd->btMagicID].sEffectType;
-				memcpy(&tClientMagicRcd.tStdMagic.sNeed, g_pMagicInfo[lptUserMagicRcd->btMagicID].sNeed, sizeof(tClientMagicRcd.tStdMagic.sNeed));
-				memcpy(&tClientMagicRcd.tStdMagic.nTrain, g_pMagicInfo[lptUserMagicRcd->btMagicID].nTrain, sizeof(tClientMagicRcd.tStdMagic.nTrain));
-				tClientMagicRcd.tStdMagic.btDefSpell	= (BYTE)g_pMagicInfo[lptUserMagicRcd->btMagicID].sDefSpell;
-				tClientMagicRcd.tStdMagic.nDelayTime	= g_pMagicInfo[lptUserMagicRcd->btMagicID].sDelay;
-
-				nPos +=	fnEncode6BitBufA((unsigned char *)&tClientMagicRcd, pszEncodeMsg + nPos, sizeof(_TCLIENTMAGICRCD), nBuffSize - nPos);
+				nPos +=	fnEncode6BitBufA((unsigned char *)&tClientMagicRcd, pszEncodeMsg + nPos, sizeof(tClientMagicRcd), nBuffSize - nPos);
 
 				*(pszEncodeMsg + nPos) = '/';
 
@@ -746,6 +737,9 @@ void CUserInfo::ProcessUserMessage(char *pszPacket)
 														lpDefMsg->wTag/*MagicID*/, LOWORD(lpDefMsg->nRecog)/*TargetX*/, HIWORD(lpDefMsg->nRecog)/*TargetY*/, 
 														MAKELONG(lpDefMsg->wSeries, lpDefMsg->wParam)/*TargetObj*/, NULL);
 			break;
+        case CM_MAGICKEYCHANGE:
+            m_pxPlayerObject->AddProcess(m_pxPlayerObject,lpDefMsg->wIdent,WORD(lpDefMsg->nRecog),lpDefMsg->wParam,0,0,NULL);
+            break;
 		case CM_TAKEONITEM:
 		case CM_TAKEOFFITEM:
 			m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, lpDefMsg->wSeries, lpDefMsg->nRecog, lpDefMsg->wParam, lpDefMsg->wTag, pszPacket + sizeof(_TDEFAULTMESSAGE));

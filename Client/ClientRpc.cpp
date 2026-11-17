@@ -125,6 +125,16 @@ std::string ClientState() {
             + ",\"hp\":" + std::to_string(hero.m_stAbility.wHP)
             + ",\"mp\":" + std::to_string(hero.m_stAbility.wMP);
         state += mir3::ItemDebugState(game);
+        const auto& window=game.m_xInterface.m_xSkillWnd;Array skills,shortcuts;
+        for(int i=0;i<window.m_bMyMagicCnt;++i) {
+            const auto& skill=window.m_pstMyMagic[i];
+            skills.emplace_back(Object{{"id",Json(int64_t(skill.stStdMagic.wMagicID))},
+                {"name",Parse(mir3::QuoteLocalText(skill.stStdMagic.szMagicName))},
+                {"level",Json(int64_t(skill.bLevel))},{"training",Json(int64_t(skill.nCurrTrain))},
+                {"key",Json(int64_t(CSkillWnd::KeyNumber(BYTE(skill.bUseKey))))}});
+        }
+        for(auto skill:window.m_shortcuts) shortcuts.emplace_back(int64_t(skill));
+        state += ",\"skills\":"+Json(skills).serialize()+",\"skill_shortcuts\":"+Json(shortcuts).serialize();
     }
     return state;
 
@@ -186,6 +196,13 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
     } else if (method == "notice.dismiss" && g_bProcState == _GAME_PROC) {
         accepted=true;
         if(g_xGameProc.m_xNotice.IsActive()) g_xGameProc.m_xNotice.HideMessageBox();
+    } else if (method == "skill.bind" && g_bProcState == _GAME_PROC) {
+        const int id=Integer(params,"id"),key=Integer(params,"key");
+        auto& window=g_xGameProc.m_xInterface.m_xSkillWnd;
+        if(key<=SkillWire::ShortcutCount) for(int i=0;i<window.m_bMyMagicCnt;++i)
+            if(window.m_pstMyMagic[i].stStdMagic.wMagicID==id) {
+                window.BindMagic(id,key?CSkillWnd::LegacyKey(key):0);accepted=true;break;
+            }
     } else if (method == "session.return" && g_bProcState == _GAME_PROC) {
         accepted=g_xGameProc.ConfirmExit(ExitFlow::CharacterDialog,GetTickCount());
     } else if (g_bProcState == _GAME_PROC && (method=="item.equip" || method=="item.unequip" ||

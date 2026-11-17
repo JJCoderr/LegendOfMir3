@@ -2026,3 +2026,11 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 故障注入测试在删除装备时RAISE ABORT，验证已删角色与普通物品回滚、技能值完整、其他账号角色保留。Test/CharacterDelete.csv和fixture覆盖38步骤，加10服务端基础检查全部通过，rpc-m2xs0xwv耗时7.052秒（场景4.813秒），日志out/csv-validation/character-delete-verified.log。
 - 首轮删除检查通过后，保留角色进图触发真实EIServer退出：sqlite_minimal的技能宽表与GetHumanMagicRcd/SaveHumanMagicRcd逐技能行格式不符。已将新建脚本对齐FLD_MAGICID/LEVEL/USEKEY/CURRTRAIN及复合主键，带技能行进图复测通过。未迁移任何已有数据库；旧宽表数据迁移、技能语义全链路仍需继续。
 - 尚未覆盖多会话同时在线删除、名字复用冷却、账号认证全链路；不能视为角色/技能系统全面完成。
+
+
+## 2026-11-18 技能列表与快捷键持久化
+- ClientState暴露skills/skill_shortcuts；skill.bind调用现有BindMagic，先校验已学ID和0..12槽位，仍走CM_MAGICKEYCHANGE真实网络。
+- 服务端旧_TCLIENTMAGICRCD布局不符合客户端74字节MIR3记录；新增GameSvr/MagicWire.h统一转换全量列表和新增技能包，包含名称、需求、修炼、职业等字段并零初始化。GetMagicInfo索引快速路径补范围判断，列表转换按定义ID查找而非盲按数组下标；未知定义不再读越界数据。
+- 首轮Skills场景证明UI本地绑定改变但DB保持旧值：ProcessUserMessage默认分派丢弃wParam快捷键且把技能ID放错参数。为CM_MAGICKEYCHANGE明确传nRecog技能ID及wParam键值，复测保存/重进一致。
+- Skills.csv及fixture使用两条技能定义和学习记录，覆盖已学列表、非法ID/键位、F12绑定/占用冲突清理、DB级别/键值/修炼断言和重进。Client/EIServer Release构建通过；rpc-8y5uoicq的29步骤+10服务端基础检查全部通过，场景8.890秒，日志out/csv-validation/skills-final.log。
+- 未验证新增技能包实际学习流程、施法、升级、移除或大批量列表；服务端MagicHandler的旧技能常量与客户端Mir3SkillIds存在编号差异，施法效果映射仍需核对，不能以本轮列表/持久化通过宣称整个技能适配完成。

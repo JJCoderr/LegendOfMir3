@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "MagicWire.h"
 #include "../Def/Mir3Ability.h"
 
 namespace {
@@ -210,22 +211,12 @@ BOOL CPlayerObject::ReadBook(char *pszMakeIndex)
 				
 				RecalcAbilitys();
 
-				_TCLIENTMAGICRCD	tClientMagicRcd;
+				Mir3Magic::Record tClientMagicRcd{};
 
-				tClientMagicRcd.btMagicID	= lpHumanMagicRcd->btMagicID;
-				tClientMagicRcd.btLevel		= lpHumanMagicRcd->btLevel;
-				tClientMagicRcd.btUseKey	= lpHumanMagicRcd->btUseKey;
-				tClientMagicRcd.nCurrTrain	= lpHumanMagicRcd->nCurrTrain;
-
-				tClientMagicRcd.tStdMagic.btEffect		= (BYTE)g_pMagicInfo[lpHumanMagicRcd->btMagicID].sEffect;
-				tClientMagicRcd.tStdMagic.btEffectType	= (BYTE)g_pMagicInfo[lpHumanMagicRcd->btMagicID].sEffectType;
-				memcpy(&tClientMagicRcd.tStdMagic.sNeed, g_pMagicInfo[lpHumanMagicRcd->btMagicID].sNeed, sizeof(tClientMagicRcd.tStdMagic.sNeed));
-				memcpy(&tClientMagicRcd.tStdMagic.nTrain, g_pMagicInfo[lpHumanMagicRcd->btMagicID].nTrain, sizeof(tClientMagicRcd.tStdMagic.nTrain));
-				tClientMagicRcd.tStdMagic.btDefSpell	= (BYTE)g_pMagicInfo[lpHumanMagicRcd->btMagicID].sDefSpell;
-				tClientMagicRcd.tStdMagic.nDelayTime	= g_pMagicInfo[lpHumanMagicRcd->btMagicID].sDelay;
+                if(!ClientMagicRecord(*lpHumanMagicRcd,tClientMagicRcd)) return FALSE;
 
 				fnMakeDefMessage(&DefMsg, SM_ADDMAGIC, 0, 0, 0, 1);
-				int nPos = fnEncode6BitBufA((unsigned char *)&tClientMagicRcd, szEncodeMsg, sizeof(_TCLIENTMAGICRCD), sizeof(szEncodeMsg));
+				int nPos = fnEncode6BitBufA((unsigned char *)&tClientMagicRcd, szEncodeMsg, sizeof(tClientMagicRcd), sizeof(szEncodeMsg));
 				szEncodeMsg[nPos] = '\0';
 				SendSocket(&DefMsg, szEncodeMsg);
 
