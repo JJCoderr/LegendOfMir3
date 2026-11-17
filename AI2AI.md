@@ -1826,3 +1826,9 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - Window目标使用独立ServiceWindow.cpp薄界面调用对应LIB；MIR3_BUILD_EISERVER=OFF构建独立窗口程序，ON默认构建控制台。网络兼容层由宿主创建message-only接收对象，不是可见窗口；单一消息循环调度。
 - out/debug保留两EXE与配置数据库，Data/Map/Sound目录链接不变。控制台实测PID21804七端口同属一个进程、EnumWindows无顶层窗口、登录/选服/角色列表通过。Server/Tools/test_eiserver.py可复跑（测试账号mirtest/test123，需默认端口）。
 - 本轮验证启动及登录，控制台退出仍由进程终止收尾；协调停服、在线角色落库和独立窗口交互尚未验收，不应宣称通过。此前物品/网关并发的未提交改动保持独立。
+
+
+## 2026-11-17 EIServer 文件布局与配置清理
+- 按最终约定取消Server/EIServer子目录，入口为Server/EIServer.h、Server/EIServer.cpp，配置为Server/EIServer.ini。公共静态库构建模板、头文件、资源脚本及独立窗口入口移至Server/Service；Server/CMakeLists.txt构建控制台入口。
+- 逐项比对确认原Server/server.ini.example全部节和键值已包含于EIServer.ini，删除该示例文件。历史记录中复制server.ini.example的运行方式已废止，当前六服务统一使用运行目录中的EIServer.ini；保留其中SQLite与Game配置。
+- 已重新构建EIServer与LoginGateWindow并更新out/debug；最新PID25980测试七监听同进程、无顶层窗口、登录/选服/角色列表通过。目录不存在检查通过。

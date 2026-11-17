@@ -1,5 +1,5 @@
 #include "CoreHeaders.h"
-#include "EIServer.h"
+#include "../EIServer.h"
 namespace {
 constexpr int StartCommand=1;
 constexpr int StopCommand=2;

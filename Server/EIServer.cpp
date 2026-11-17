@@ -1,4 +1,4 @@
-#include "CoreHeaders.h"
+#include "Service/CoreHeaders.h"
 #include "EIServer.h"
 #include <iphlpapi.h>
 
@@ -52,8 +52,8 @@ int Run()
     GetModuleFileNameW(nullptr,path,MAX_PATH);
     std::wstring folder(path);folder.resize(folder.find_last_of(L"\\/"));
     SetCurrentDirectoryW(folder.c_str());
-    if(GetFileAttributesW(L"EISERVER.ini")==INVALID_FILE_ATTRIBUTES) {
-        fwprintf(stderr,L"EISERVER.ini is required beside EIServer.exe\n");return 1;
+    if(GetFileAttributesW(L"EIServer.ini")==INVALID_FILE_ATTRIBUTES) {
+        fwprintf(stderr,L"EIServer.ini is required beside EIServer.exe\n");return 1;
     }
     HINSTANCE instance=GetModuleHandleW(nullptr);
     HWND windows[_countof(services)]{};
@@ -78,7 +78,7 @@ int Run()
                 if(!core.initialize(instance,windows[current])) return 1;
                 core.start();starting=true;deadline=GetTickCount64()+StartupTimeoutMs;
             }
-            int port=GetPrivateProfileIntW(core.section,L"LocalPort",core.defaultPort,L".\\EISERVER.ini");
+            int port=GetPrivateProfileIntW(core.section,L"LocalPort",core.defaultPort,L".\\EIServer.ini");
             if(Listening(port)) {
                 wprintf(L"[%s] listening on %d\n",core.name,port);fflush(stdout);
                 ++current;starting=false;
