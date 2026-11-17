@@ -69,7 +69,7 @@ step,name,target,action,params,expect
 | 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复、施法回包、扣蓝与受伤治疗 |
 | 怪物 | `MonstersSpawn.csv`、`MonstersRespawn.csv`、`MonstersCorpse.csv`、`MonstersLoot.csv`、`MonstersLootCount.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentCount.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
-| 聊天 | `ChatLocal.csv`、`ChatShout.csv`、`ChatShoutLevel.csv`、`ChatWhisper.csv`、`ChatWhisperReject.csv`、`ChatWhisperIsolation.csv` | 普通聊天、中文编码、喊话等级及冷却拒绝 |
+| 聊天 | `ChatLocal.csv`、`ChatShout.csv`、`ChatShoutLevel.csv`、`ChatShoutRange.csv`、`ChatShoutRangeY.csv`、`ChatWhisper.csv`、`ChatWhisperReject.csv`、`ChatWhisperIsolation.csv` | 普通聊天、中文编码、喊话等级及冷却拒绝 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
 
@@ -142,3 +142,5 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 测试资源：辅助启动程序为 CmList.dat 与 SoundList.wwl 创建硬链接，优先使用 --config-dir 下的文件，缺失时从其 Data 资源目录的同级目录查找。chat.toggle_reception 的频道编号对应现有按钮：0 私聊、1 行会、2 所有人聊天；非法编号拒绝，缺少命令资源时也拒绝。当前服务器仅接通私聊拒收，行会及所有人聊天的开关仍待实现，不能将提交成功当作状态已确认。
 
 私聊旁观隔离：`python Test/launch_csv.py Test/ChatWhisperIsolation.csv --clients 3 --log out/chat-whisper-isolation.log`。三个不同账号同图在线，检查指定收件人收到私聊及回复，而旁观者仅收到两次普通广播、私聊回包为 0。以之后的普通广播确认队列已处理，再精确断言两种消息计数，避免只检查最后一条文本而漏掉误投。
+
+喊话距离：`ChatShoutRange.csv` / `ChatShoutRangeY.csv` 均用 `--clients 3` 运行，分别在横向和纵向放置距离 49 格、50 格的玩家。检查 49 格玩家收到 SM_CRY，50 格玩家的 SM_CRY/SM_HEAR 均为 0；之后发给边界玩家的私聊确认处理已完成，也证明私聊不受此范围限制。验证的是现有服务端同地图、两轴差值均小于 50 的规则；未校验该数值是否与原版服务器完全一致，也未覆盖跨地图和死亡角色过滤。

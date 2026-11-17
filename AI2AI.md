@@ -2140,3 +2140,7 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 ### 三客户端私聊旁观隔离
 - Test.exe 支持 Client3/--client3-pid，启动器支持 --clients 3。ChatWhisperIsolation.csv 使用三个真实账号同图，双向私聊指定收件人、旁观者私聊计数为 0，且只收到两次作为处理完成依据的普通广播。64 步通过，日志 out/csv-validation/chat-whisper-isolation.log；Test Release 构建与执行器 8 项检查通过。
 - 核对 Godot 参考仅得到聊天按钮及选项位，尚不能证明“所有人聊天”在服务端应过滤哪些频道，因此未猜测实现该开关。该项及行会拒收仍待结合服务器证据实现。
+
+### 喊话多人距离边界
+- ChatShoutRange.csv / ChatShoutRangeY.csv 分别验证横向、纵向 49 格收到喊话、50 格无喊话及普通广播；用后续私聊作为处理完成依据并确认私聊不受距离限制。均使用三个真实客户端，各 56 步通过。日志 out/csv-validation/chat-shout-range.log 与 chat-shout-range-y.log。
+- 本阶段仅新增测试和说明，未修改生产代码。验证现有 <50 的轴向范围规则，尚未核对原版服务器数值，跨地图和死亡角色过滤仍待验证。

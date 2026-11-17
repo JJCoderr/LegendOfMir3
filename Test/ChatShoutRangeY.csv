@@ -1,0 +1,57 @@
+step,name,target,action,params,expect
+10,credentials ready,Client,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+20,wrong password,Client,session.login,account=mirtest;password=wrong,result.status=submitted
+30,login rejected,Client,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+40,dismiss rejection,Client,notice.dismiss,,result.status=submitted
+50,login,Client,session.login,account=mirtest;password=test123,result.status=submitted
+60,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+70,authenticated,Client,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+80,dismiss billing,Client,notice.dismiss,,result.status=submitted
+90,unknown server rejected,Client,session.select_server,name=MissingServer,error.code=-32002
+100,select server,Client,session.select_server,name=Mir3Local,result.status=submitted
+110,roster ready,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+120,unknown character rejected,Client,session.enter,name=MissingRole,error.code=-32002
+130,enter character,Client,session.enter,name=MirProbe01,result.status=submitted
+140,world ready,Client,state.wait,,result.scene=world;result.level=8;result.x=459;result.y=261
+150,dismiss arrival,Client,notice.dismiss,,result.status=submitted
+160,chat ready,Client,state.wait,,result.scene=world;result.input_delayed=false;result.notice=false
+170,credentials ready,Client2,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+180,wrong password,Client2,session.login,account=mirtest2;password=wrong,result.status=submitted
+190,login rejected,Client2,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+200,dismiss rejection,Client2,notice.dismiss,,result.status=submitted
+210,login,Client2,session.login,account=mirtest2;password=test123,result.status=submitted
+220,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+230,authenticated,Client2,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+240,dismiss billing,Client2,notice.dismiss,,result.status=submitted
+250,unknown server rejected,Client2,session.select_server,name=MissingServer,error.code=-32002
+260,select server,Client2,session.select_server,name=Mir3Local,result.status=submitted
+270,roster ready,Client2,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+280,unknown character rejected,Client2,session.enter,name=MissingRole,error.code=-32002
+290,enter character,Client2,session.enter,name=MirProbe02,result.status=submitted
+300,world ready,Client2,state.wait,,result.scene=world;result.x=459;result.y=310
+310,dismiss arrival,Client2,notice.dismiss,,result.status=submitted
+320,chat ready,Client2,state.wait,,result.scene=world;result.input_delayed=false;result.notice=false
+330,credentials ready,Client3,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+340,wrong password,Client3,session.login,account=mirtest3;password=wrong,result.status=submitted
+350,login rejected,Client3,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+360,dismiss rejection,Client3,notice.dismiss,,result.status=submitted
+370,login,Client3,session.login,account=mirtest3;password=test123,result.status=submitted
+380,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+390,authenticated,Client3,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+400,dismiss billing,Client3,notice.dismiss,,result.status=submitted
+410,unknown server rejected,Client3,session.select_server,name=MissingServer,error.code=-32002
+420,select server,Client3,session.select_server,name=Mir3Local,result.status=submitted
+430,roster ready,Client3,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+440,unknown character rejected,Client3,session.enter,name=MissingRole,error.code=-32002
+450,enter character,Client3,session.enter,name=MirProbe03,result.status=submitted
+460,world ready,Client3,state.wait,,result.scene=world;result.x=459;result.y=311
+470,dismiss arrival,Client3,notice.dismiss,,result.status=submitted
+480,chat ready,Client3,state.wait,,result.scene=world;result.input_delayed=false;result.notice=false
+490,shout to nearby players,Client,chat.send,text=!Range probe,result.status=submitted
+500,player at 49 tiles receives shout,Client2,state.wait,,result.chat_last=(!)MirProbe01 : Range probe
+510,private fence to boundary player,Client,chat.send,text=/MirProbe03 Range fence,result.status=submitted
+520,boundary player receives private fence,Client3,state.wait,,result.chat_last=MirProbe01=> Range fence
+530,nearby player shout count,Client2,wire.expect,message=SM_CRY;direction=received;at_least=1,count=1
+540,boundary player receives no shout,Client3,wire.expect,message=SM_CRY;direction=received;at_least=0,count=0
+550,boundary player receives no ordinary broadcast,Client3,wire.expect,message=SM_HEAR;direction=received;at_least=0,count=0
+560,boundary private message remains available,Client3,wire.expect,message=SM_WHISPER;direction=received;at_least=1,count=1
