@@ -1602,3 +1602,8 @@ SelectionDialog集中CmList219..232，创建失败按nRecog映射224/226/232，�
 ## 2026-11-17：选项页释放与窗口拖动批次
 
 核对options_pointer/mount_pointer，选项普通开关/关闭改释放命中即执行，骑乘保留配对。Interface选项拖窗结束只消费释放；控件按下清除拖窗标记。预览300 options-interaction增加10项实际Interface输入检查；修正旧markers测试错误的孤立释放无效预期。增量七目标构建通过，输入10/音量9/服务端选项6/标记5/阴影4/光照6/伤害9/攻击5/音效15/骑乘13=82全过。截图out/options-interaction.png、mount-panel.png；详见options-interaction-migration-audit.md。下一301；多次交叉按下中间帧及其余面板终验仍待整体索引推进，真实网关未联调。
+
+
+## 2026-11-17：52页游戏内GUI整批视觉索引
+
+新增Tools/review_gui.ps1、gui_gallery.py；当前43d7c75产物逐进程重新截52个主要页面/弹窗，检测BMP时间，不混旧图。out/gui-review-current/index.html含52PNG/9原尺寸拼图/manifest版本SHA256/本批报告。9拼图均已查看，组队/行会源码静态绘制核对无新差异。未改生产代码，无须重编译。详情gui-visual-index.md；inventory-layout三项0属未执行摆放状态，不计失败，不盲目统计全报告通过。所有预览停止、无真实网关联调。下一301；继续错误/禁用/滚动/拖动状态及字体声音核对。
