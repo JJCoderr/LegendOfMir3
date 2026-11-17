@@ -1313,3 +1313,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - clean87/87、all111/111、最终增量通过；guild-history11、social-wire15、guild-editor17共43项全部1。截图out/guild-history.png已检查。新预览201，下一个空闲202。
 - IDA重开会话1a4e6f32；open.ps1需进程环境IDADIR=C:/Program Files/IDA Professional 9.1。分析库C:/Users/czx/AppData/Local/Temp/mir3-assess-205da311dc994a8bbd59010e1c6a9ce2/Mir3-unpacked-analysis.exe.i64。
 - 本批仅GUI数据链路与本地协议注入，不代表真实服务器联调完成。身份行会名称/职务数据等仍待审计。
+
+
+### 2026-11-17 人物页行会身份同步
+- 新增StatusWnd.ReceiveGuildIdentity，由SM_CHANGEGUILDNAME750接入；分别更新hero.m_szGuildName、m_identityTertiary职务、m_identityBadge称号，缺失时清除。Godot只提供四字段排版，协议依据原版42B859..42B970。
+- 星号前一字节按原版丢弃，通常数据为行会/职务/*称号；称号独立存在。行会与职务合计40 ANSI字节，截断职务；拒绝行会>40、称号>59的越界输入。750忽略nRecog更新本地；消息42旧流程仍待核对。
+- clean87/87、all109/109通过；identity8+history11+ability13共32项全1。两张截图out/guild-identity.png及guild-identity-cleared.png已查看。预览202/203，下一个空闲204。实际游戏服与扬声器输出未验证。

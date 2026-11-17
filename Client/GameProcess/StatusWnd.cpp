@@ -841,3 +841,32 @@ void CStatusWnd::UpdateDurability(WORD slot,LONG current,WORD maximum)
         g_xGameProc.m_xInterface.MsgAdd(0xffffff,33023,const_cast<char*>(message.c_str()));
     }
 }
+
+// MIR3 42B859: message 750 updates the local identity independently of nRecog.
+bool CStatusWnd::ReceiveGuildIdentity(const char* encoded)
+{
+    constexpr size_t MaximumEncoded=1364,MaximumGuildAndRank=40,MaximumBadge=59;
+    const size_t length=strlen(encoded);
+    if(length>MaximumEncoded) return false;
+    for(size_t i=0;i<length;++i) if(BYTE(encoded[i])<0x3c || BYTE(encoded[i])>0x7b) return false;
+    char decoded[1024]={};
+    const int count=fnDecode6BitBuf(const_cast<char*>(encoded),decoded,sizeof(decoded)-1);
+    decoded[count]=0;
+    std::string body=decoded,badge,guild,rank;
+    const auto star=body.find('*');
+    if(star!=std::string::npos) {
+        badge=body.substr(star+1);
+        // Original strchr receives 0x2f2a ('*'), then removes the preceding byte.
+        body.resize(star?star-1:0);
+    }
+    const auto slash=body.find('/');
+    if(slash!=std::string::npos) {
+        guild=body.substr(0,slash);rank=body.substr(slash+1);
+        if(guild.size()>MaximumGuildAndRank) return false;
+        rank.resize(min(rank.size(),MaximumGuildAndRank-guild.size()));
+    }
+    if(badge.size()>MaximumBadge) return false;
+    strcpy(g_xGameProc.m_xMyHero.m_szGuildName,guild.c_str());
+    m_identityTertiary=rank;m_identityBadge=badge;
+    return true;
+}

@@ -2,7 +2,7 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -67,7 +67,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewGuildHistory) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewNoGuildIdentity) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1890,6 +1890,30 @@ public:
         }
 
 
+
+        if(groupPanel==PreviewGuildIdentity || groupPanel==PreviewNoGuildIdentity) {
+            auto& ui=g_xGameProc.m_xInterface;auto& status=ui.m_xStatusWnd;auto& hero=g_xGameProc.m_xMyHero;
+            const auto encode=[](const std::string& text) {std::vector<char> value((text.size()*8+5)/6+1);fnEncode6BitBuf((BYTE*)text.data(),value.data(),int(text.size()),int(value.size()));return std::string(value.data());};
+            const auto receive=[&](const std::string& text) {
+                _TDEFAULTMESSAGE header={};header.wIdent=SM_CHANGEGUILDNAME;header.nRecog=123456;
+                char wire[2048]={};fnEncodeMessage(&header,wire,sizeof(wire));strcpy(wire+DEFBLOCKSIZE,encode(text).c_str());g_xGameProc.OnSocketMessageRecieve(wire);
+            };
+            receive("珐玛行会/掌门/*荣誉勇士");
+            const bool fields=std::string(hero.m_szGuildName)=="珐玛行会" && status.m_identityTertiary=="掌门" && status.m_identityBadge=="荣誉勇士";
+            receive("珐玛行会/成员");const bool rank=std::string(hero.m_szGuildName)=="珐玛行会" && status.m_identityTertiary=="成员" && status.m_identityBadge.empty();
+            receive("/*荣誉勇士");const bool badgeOnly=!hero.m_szGuildName[0] && status.m_identityTertiary.empty() && status.m_identityBadge=="荣誉勇士";
+            receive("退出行会");const bool cleared=!hero.m_szGuildName[0] && status.m_identityTertiary.empty() && status.m_identityBadge.empty();
+            receive("A/"+std::string(50,'B'));const bool limit=std::string(hero.m_szGuildName)=="A" && status.m_identityTertiary==std::string(39,'B');
+            receive("A/BC*D");const bool preceding=status.m_identityTertiary=="B" && status.m_identityBadge=="D";
+            const bool invalid=!status.ReceiveGuildIdentity("!") && status.m_identityTertiary=="B" && !status.ReceiveGuildIdentity(encode("/*"+std::string(60,'X')).c_str()) && status.m_identityBadge=="D";
+            receive("");const bool empty=!hero.m_szGuildName[0] && status.m_identityTertiary.empty() && status.m_identityBadge.empty();
+            strcpy(hero.m_szName,"珐玛勇士");hero.m_stAbility.bLevel=35;hero.m_stAbility.wHP=320;hero.m_stAbility.wMaxHP=400;hero.m_stAbility.wMP=160;hero.m_stAbility.wMaxMP=200;
+            if(groupPanel==PreviewGuildIdentity) receive("珐玛行会/掌门/*荣誉勇士");
+            ui.WindowActivate(_WND_ID_STATUS);mouse={790,430};
+            if(FILE* report=fopen("guild-identity-check.txt","wb")) {fprintf(report,"fields=%d rank=%d badgeOnly=%d cleared=%d limit=%d preceding=%d invalid=%d empty=%d\n",fields,rank,badgeOnly,cleared,limit,preceding,invalid,empty);fclose(report);}
+            capturePath=groupPanel==PreviewGuildIdentity?"guild-identity.bmp":"guild-identity-cleared.bmp";
+        }
+
         if(groupPanel==PreviewGuildHistory) {
             auto& ui=g_xGameProc.m_xInterface;auto& guild=ui.m_xGuildWnd;
             guild.m_pages[2].clear();guild.m_first=0;ui.WindowActivate(_WND_ID_GUILD);guild.m_tab=2;
@@ -3013,6 +3037,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=guild-identity")==0 ? PreviewGuildIdentity :
+        strcmp(lpCmdLine,"--preview=guild-identity-cleared")==0 ? PreviewNoGuildIdentity :
         strcmp(lpCmdLine,"--preview=guild-history")==0 ? PreviewGuildHistory :
         strcmp(lpCmdLine,"--preview=guild-wire")==0 ? PreviewGuildWire :
         strcmp(lpCmdLine,"--preview=guild-wire-members")==0 ? PreviewGuildMembers :

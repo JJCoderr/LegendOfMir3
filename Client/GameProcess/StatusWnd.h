@@ -34,6 +34,7 @@ public:
 public:
     static int EquipmentPreviewFrame(int mode,int slot);
     bool ReceiveEquipmentRecords(const char* encoded);
+    bool ReceiveGuildIdentity(const char* encoded);
     void UpdateDurability(WORD slot,LONG current,WORD maximum);
     std::string m_identityTertiary, m_identityBadge;
     BYTE m_elementValues[3][7]={};

@@ -30,3 +30,12 @@ F键与HUD原有1036主页查询一致，行会主页/成员按钮分别查询10
 - 使用 CLIENT 原有行会窗口、字体创建与声音路径；页签点击仍播放 105.wav。本次没有添加原版不存在的消息到达音效。音效扬声器输出未录音验证。
 - 干净构建 87/87，全目标构建 111/111，通过；最终增量构建通过。预览 guild-history 经真实 OnSocketMessageRecieve 分发验证 11 项全部为 1，guild-wire 15 项及 guild-editor 17 项全部为 1。
 - 截图：out/guild-history.png；预览号 201。截图内容为构造协议消息，尚未连接真实游戏服验证。
+
+
+## 人物页行会身份（2026-11-17）
+
+- Godot hud_view.cpp 的 set_character_identity / 人物页已完成四字段排版，CLIENT 原有 m_identityTertiary / m_identityBadge 之前仅由预览赋值。旧消息750把行会和职务拼成单行，且无分隔符时不清空。
+- 原版 4282C0 的 case750（42B859..42B970）不检查 nRecog，直接更新本地身份。先用 strchr(0x2f2a) 找 `*`；这是单字节查找，实际匹配星号；其后为称号，且原版删除星号前一个字节（通常为 `/`）。然后以首个 `/` 分割行会与职务。无分隔符清空这两项，无星号清空称号。
+- 原版行会与职务合计限制40个ANSI字节，截断职务；称号原始目标数组60字节。CLIENT拒绝超过40字节的行会名或超过59字节的称号，避免复现原版越界；合法数据保持原版字节截断，不改成Unicode字符计数。
+- CStatusWnd::ReceiveGuildIdentity 已由实际 SM_CHANGEGUILDNAME 分发调用，使用原有原生文字/图标。无额外音效（原版该消息分支没有音效调用）。消息42的角色名称流程未在本批改动，仍需另行核对。
+- clean87/87、全目标109/109通过；identity8 + history11 + ability13 = 32项检查全部1。预览202 guild-identity、203 guild-identity-cleared，经 OnSocketMessageRecieve 注入消息。截图 out/guild-identity.png、out/guild-identity-cleared.png 已检查；真实服务器尚未联调。

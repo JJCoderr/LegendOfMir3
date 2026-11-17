@@ -3549,23 +3549,9 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 
 				break;
 			}
-			case SM_CHANGEGUILDNAME:
-			{
-				char szDecodeMsg[1024];
-				char *pszGuildPos;
-
-				INT nPos = fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), szDecodeMsg, sizeof(szDecodeMsg));
-				szDecodeMsg[nPos] = '\0';
-
-				if (pszGuildPos = strchr(szDecodeMsg, '/'))
-				{
-					*pszGuildPos = ' ';
-
-					strcpy(m_xMyHero.m_szGuildName, szDecodeMsg);
-				}
-
-				break;
-			}
+            case SM_CHANGEGUILDNAME:
+                m_xInterface.m_xStatusWnd.ReceiveGuildIdentity(pszMsg+DEFBLOCKSIZE);
+                break;
             case 1309: // MIR3 human hit requires an existing human, never creates an actor from HP coordinates.
             {
                 CActor* actor=DWORD(tdm.nRecog)==m_xMyHero.m_dwIdentity?&m_xMyHero:FindActor(tdm.nRecog);
