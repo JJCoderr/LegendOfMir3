@@ -17,6 +17,8 @@ public:
     POINT PortraitOrigin() const;
     POINT PortraitMarker(POINT cell,bool self) const;
     void ShowPortrait();
+    POINT SiegeSource(POINT center) const;
+    void ShowSiege(POINT origin,POINT center);
     POINT position={672,0},dragOffset={},player={};
     int width=0,height=0;
     DWORD replyTime=0;

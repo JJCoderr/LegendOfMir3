@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -65,7 +65,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewConsignmentChecks) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewSiegeChecks) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1841,6 +1841,39 @@ public:
             if(FILE* report=fopen("equipment-durability-check.txt","wb")) {fprintf(report,"threshold=%d warning=%d raw=%d unit=%d special=%d negative=%d wide=%d ignored=%d drop=%d\n",threshold,warning,rawBytes,unit,special,negative,wide,ignored,drop);fclose(report);}
         }
 
+        if(groupPanel>=PreviewSiege && groupPanel<=PreviewSiegeChecks) {
+            using namespace SiegeLayout;
+            auto& ui=g_xGameProc.m_xInterface;auto& panel=ui.m_xSiegeWnd;auto& map=ui.m_minimap;
+            panel.controlled=panel.objectPresent=true;panel.objectCell={140,140};panel.style=1;panel.firstValue=50;panel.secondValue=100;
+            map.Init();map.Receive(1,GetTickCount());map.player={145,145};map.green={{150,150}};map.orange={{120,130}};
+            ui.WindowActivate(WindowId);capturePath="siege.bmp";mouse={790,460};
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            const auto holdAmmo=[&]() {
+                constexpr int IconOffset=36,InstanceOffset=62,CountOffset=71;
+                BYTE raw[100]={};strcpy((char*)raw,"ÅÚµ¯");raw[IconOffset]=BYTE(FirstAmmoIcon);raw[IconOffset+1]=BYTE(FirstAmmoIcon>>8);raw[InstanceOffset]=7;raw[CountOffset]=10;
+                ui.m_stCommonItem.xItem.SetMir3Item(raw,0);ui.m_stCommonItem.bSetted=TRUE;
+            };
+            if(groupPanel==PreviewSiegeLoad) {holdAmmo();panel.BeginLoad();SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"5");capturePath="siege-load.bmp";}
+            if(groupPanel==PreviewSiegeChecks) {
+                const bool hit=ui.GetWindowInMousePos(POINT{110,110})==WindowId;
+                const POINT origin=panel.MapOrigin(),crop=map.SiegeSource(panel.objectCell),center=Marker(panel.objectCell,origin,crop);
+                const POINT valid={center.x+65,center.y};panel.Pointer(0,valid);panel.Pointer(2,valid);
+                const bool selected=panel.target.x!=0 && panel.target.y!=0;
+                const POINT saved=panel.target;panel.Pointer(0,center);panel.Pointer(2,center);
+                const bool excluded=panel.target.x==saved.x && panel.target.y==saved.y;
+                panel.Activate(Action::Attack);const bool attack=panel.requests.size()==1 && panel.requests[0].target.x==saved.x;
+                panel.Activate(Action::Wait);panel.Activate(Action::Move);const bool move=panel.requests.size()==3 && !panel.target.x && !panel.target.y;
+                holdAmmo();const bool modal=panel.BeginLoad() && ui.m_xMsgBox.IsActive();ui.FinishNotice(CLICK_NO,false);
+                const bool cancel=ui.m_stCommonItem.bSetted && panel.requests.size()==3;
+                const bool limit=!panel.SubmitLoad("11") && !panel.SubmitLoad("0");
+                panel.BeginLoad();SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"");ui.FinishNotice(CLICK_YES,false);
+                const bool loaded=panel.requests.size()==4 && panel.requests.back().quantity==10 && !ui.m_stCommonItem.bSetted && ui.m_xInventoryWnd.m_stInventoryItem[0].bSetted;
+                ui.OnKeyDown('P',0);const bool shortcut=!panel.m_bActive;ui.OnKeyDown('P',0);
+                if(FILE* report=fopen("siege-gui-check.txt","wb")) {fprintf(report,"hit=%d selected=%d excluded=%d attack=%d move=%d modal=%d cancel=%d limit=%d loaded=%d shortcut=%d\n",hit,selected,excluded,attack,move,modal,cancel,limit,loaded,shortcut);fclose(report);}
+                capturePath="siege-checks.bmp";
+            }
+        }
+
         if(groupPanel>=PreviewConsignmentEmpty && groupPanel<=PreviewConsignmentChecks) {
             using namespace ConsignmentLayout;
             auto& ui=g_xGameProc.m_xInterface;auto& browser=ui.m_xConsignmentWnd;auto& registration=ui.m_xConsignmentRegistration;
@@ -2509,6 +2542,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=siege")==0 ? PreviewSiege :
+        strcmp(lpCmdLine,"--preview=siege-load")==0 ? PreviewSiegeLoad :
+        strcmp(lpCmdLine,"--preview=siege-checks")==0 ? PreviewSiegeChecks :
         strcmp(lpCmdLine,"--preview=consignment-empty")==0 ? PreviewConsignmentEmpty :
         strcmp(lpCmdLine,"--preview=consignment-list")==0 ? PreviewConsignmentList :
         strcmp(lpCmdLine,"--preview=consignment-registration")==0 ? PreviewConsignmentRegistration :

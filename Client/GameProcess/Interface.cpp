@@ -126,6 +126,7 @@ VOID CInterface::Destroy()
     m_xGuildEditor.Destroy();
     m_xMailWnd.Destroy();
     m_xConsignmentWnd.Destroy();m_xConsignmentRegistration.Destroy();
+    m_xSiegeWnd.Destroy();
     m_xQuickWnd.Destroy();
     m_xHorseWnd.Destroy();
 	m_xGuildWnd.Destroy();
@@ -190,6 +191,7 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
     m_xPortraitWnd.CreateGameWnd(_WND_ID_PORTRAIT,m_pxInterImg,2090,FALSE,0,0,580,404);
     m_xMailWnd.Create(m_pxInterImg,_WND_ID_MAIL);
     m_xConsignmentWnd.Create(m_pxInterImg,false);m_xConsignmentRegistration.Create(m_pxInterImg,true);
+    m_xSiegeWnd.Create(m_pxInterImg);
     m_xPortraitWnd.SetCacheContext(g_xClientSocket.selectedServerName,g_szCharName);
 	m_xStoreWnd.CreateStoreWnd(_WND_ID_STORE, m_pxInterImg, _WNDIMGIDX_STORE, 0, 0, 0, 0, TRUE);
 	m_xExchangeWnd.CreateExchangeWnd(_WND_ID_EXCHANGE, m_pxInterImg, 1390, 0, 0, 494, 330, TRUE);
@@ -372,6 +374,7 @@ case _WND_ID_STATUS:
 			case _WND_ID_OPTION:
 				m_xOptionWnd.ShowOptionWnd();
 				break;
+            case SiegeLayout::WindowId:m_xSiegeWnd.Show();break;
             case ConsignmentLayout::BrowserId:m_xConsignmentWnd.Show();break;
             case ConsignmentLayout::RegistrationId:m_xConsignmentRegistration.Show();break;
             case _WND_ID_MAIL: m_xMailWnd.Show(); break;
@@ -831,6 +834,7 @@ case _WND_ID_STATUS:
 			case _WND_ID_OPTION:
 				rcWnd = m_xOptionWnd.GetGameWndRect();
 				break;
+            case SiegeLayout::WindowId:rcWnd=m_xSiegeWnd.m_rcWnd;break;
             case ConsignmentLayout::BrowserId:rcWnd=m_xConsignmentWnd.m_rcWnd;break;
             case ConsignmentLayout::RegistrationId:rcWnd=m_xConsignmentRegistration.m_rcWnd;break;
             case _WND_ID_MAIL: rcWnd=m_xMailWnd.m_rcWnd; break;
@@ -1055,6 +1059,10 @@ case _WND_ID_STATUS:
 			}
 		}
 		break;
+    case SiegeLayout::WindowId:
+        if(m_xSiegeWnd.m_bActive) {DeleteWindowToList(nID);m_xSiegeWnd.Close(false);}
+        else {AddWindowToList(nID);m_xSiegeWnd.m_bActive=TRUE;bRet=TRUE;}
+        break;
     case ConsignmentLayout::BrowserId:case ConsignmentLayout::RegistrationId: {
         auto& panel=nID==ConsignmentLayout::BrowserId?m_xConsignmentWnd:m_xConsignmentRegistration;
         if(panel.m_bActive) {DeleteWindowToList(nID);panel.Close();}
@@ -1548,6 +1556,8 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
 				if ( !m_xInventoryWnd.OnLButtonDown(&m_stCommonItem, ptMouse) )
 					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
 				break;
+            case SiegeLayout::WindowId:
+                DeleteWindowToList(SiegeLayout::WindowId);AddWindowToList(SiegeLayout::WindowId);m_bMoveFocusedWnd=FALSE;m_xSiegeWnd.Pointer(0,ptMouse);break;
             case ConsignmentLayout::BrowserId:case ConsignmentLayout::RegistrationId: {
                 auto& panel=nInterfaceWndInRect==ConsignmentLayout::BrowserId?m_xConsignmentWnd:m_xConsignmentRegistration;
                 DeleteWindowToList(nInterfaceWndInRect);AddWindowToList(nInterfaceWndInRect);m_bMoveFocusedWnd=FALSE;panel.Pointer(0,ptMouse);break;
@@ -1657,6 +1667,7 @@ void CInterface::OpenNameDialog(int action)
     m_xMsgBox.SetOrigin(220,112,true);
     std::string prompt = action==4 ? "'"+m_xGuildWnd.m_name+"' "+captions.Get(4001) :
         captions.Get(action==6?1304:action==5?4002:action==3?1606:1605);
+    if(action==SiegeLayout::LoadDialog) prompt=captions.Get(SiegeLayout::LoadCaption);
     if(action==ConsignmentLayout::PriceDialog) prompt=captions.Get(ConsignmentLayout::PriceQuestion);
     if (action==MailLayout::GoldDialogAction) prompt=captions.Get(MailLayout::GoldQuestion);
     if (action==7) prompt=m_xNPCWnd.prompt;
@@ -1687,7 +1698,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         (m_nIdxMsgBox==ConsignmentLayout::RegistrationDialog?m_xConsignmentRegistration:m_xConsignmentWnd).Confirm(hResult==CLICK_YES);
         return;
     }
-    if ((m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog) {
+    if ((m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog || m_nIdxMsgBox==SiegeLayout::LoadDialog) {
         std::vector<char> answer(GetWindowTextLengthA(g_xChatEditBox.GetSafehWnd())+1);
         char* name=answer.data(); GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,int(answer.size()));
         if (mouse) g_xSound.PlayLobbyEffect("105.wav");
@@ -1702,7 +1713,8 @@ void CInterface::FinishNotice(int hResult, bool mouse)
             g_xMainWnd.m_rcWindow.top+(m_chatExpanded?534:575),m_chatExpanded?432:344,15,TRUE);
         if (m_nIdxMsgBox==7 && hResult!=CLICK_YES) m_xNPCWnd.ClearPrompt();
         if (hResult == CLICK_YES) {
-            if(m_nIdxMsgBox==ConsignmentLayout::PriceDialog) m_xConsignmentRegistration.SubmitPrice(name);
+            if(m_nIdxMsgBox==SiegeLayout::LoadDialog) m_xSiegeWnd.SubmitLoad(name);
+            else if(m_nIdxMsgBox==ConsignmentLayout::PriceDialog) m_xConsignmentRegistration.SubmitPrice(name);
             else if(m_nIdxMsgBox==MailLayout::GoldDialogAction) m_xMailWnd.SubmitGold(name,g_xGameProc.m_xMyHero.m_nGlod);
             else if (m_nIdxMsgBox == 1) g_xClientSocket.SendCreateGroup(name);
             else if (m_nIdxMsgBox == 2) g_xClientSocket.SendAddGroupMember(name);
@@ -1776,6 +1788,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
     }
     if (m_xNPCWnd.closePressed || m_xNPCWnd.arrowPressed) { m_xNPCWnd.OnLButtonUp(ptMouse); return TRUE; }
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(2,ptMouse); return TRUE; }
+    if(!m_xMsgBox.IsActive() && m_xSiegeWnd.captured) {m_xSiegeWnd.Pointer(2,ptMouse);if(!m_xSiegeWnd.m_bActive) DeleteWindowToList(SiegeLayout::WindowId);return TRUE;}
     if(!m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive) for(auto* panel:{&m_xConsignmentWnd,&m_xConsignmentRegistration}) if(panel->captured) {
         panel->Pointer(2,ptMouse);if(!panel->m_bActive) DeleteWindowToList(panel->m_nID);return TRUE;
     }
@@ -1970,6 +1983,7 @@ BOOL CInterface::OnMouseMove(POINT ptMouse)
     if (!m_xMsgBox.IsActive() && m_xPortraitWnd.scrolling) { m_xPortraitWnd.Pointer(1,ptMouse); return TRUE; }
     if (!m_xMsgBox.IsActive() && m_xStoreWnd.scrollCaptured) { m_xStoreWnd.OnMouseMove(ptMouse); return TRUE; }
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(1,ptMouse); return TRUE; }
+    if(!m_xMsgBox.IsActive() && m_xSiegeWnd.captured) {m_xSiegeWnd.Pointer(1,ptMouse);return TRUE;}
     if(!m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive) for(auto* panel:{&m_xConsignmentWnd,&m_xConsignmentRegistration}) if(panel->captured) {panel->Pointer(1,ptMouse);return TRUE;}
     if(!m_xMsgBox.IsActive() && m_xMailWnd.captured) {m_xMailWnd.Pointer(1,ptMouse);return TRUE;}
     if (m_xExchangeWnd.captured>=0) { m_xExchangeWnd.OnMouseMove(ptMouse); return TRUE; }
@@ -2181,6 +2195,8 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
         if(!(lParam & (1L << 30))) {if(wParam=='T') {m_minimap.large=!m_minimap.large;m_minimap.Place();} else m_minimap.translucent=!m_minimap.translucent;}
         return TRUE;
     }
+    if(wParam=='P' && m_xSiegeWnd.controlled) {if(!(lParam & (1L<<30))) WindowActivate(SiegeLayout::WindowId);return TRUE;}
+    if(wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive && IsTopWindow(SiegeLayout::WindowId)) {WindowActivate(SiegeLayout::WindowId);return TRUE;}
     if(wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive) for(auto* panel:{&m_xConsignmentWnd,&m_xConsignmentRegistration}) if(IsTopWindow(panel->m_nID)) {WindowActivate(panel->m_nID);return TRUE;}
     if (wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive && IsTopWindow(_WND_ID_MAIL)) {WindowActivate(_WND_ID_MAIL);return TRUE;}
     if (wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive && IsTopWindow(_WND_ID_PORTRAIT)) { WindowActivate(_WND_ID_PORTRAIT); return TRUE; }
@@ -2233,7 +2249,7 @@ VOID CInterface::OnSysKeyDown()
 
 LRESULT	CInterface::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 {
-    if (m_xMsgBox.IsActive() && ((m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog)) {
+    if (m_xMsgBox.IsActive() && ((m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog || m_nIdxMsgBox==SiegeLayout::LoadDialog)) {
         SetWindowTextA(g_xChatEditBox.GetSafehWnd(),g_xChatEditBox.m_szInputMsg);
         FinishNotice(CLICK_YES,false);
         return TRUE;
@@ -2254,6 +2270,7 @@ int CInterface::ButtonHintAt(POINT point,POINT& anchor)
         anchor={hit.right,hit.bottom}; return message;
     };
     switch (GetWindowInMousePos(point)) {
+    case SiegeLayout::WindowId:return m_xSiegeWnd.HintAt(point,anchor);
     case ConsignmentLayout::BrowserId:case ConsignmentLayout::RegistrationId: {
         auto& panel=GetWindowInMousePos(point)==ConsignmentLayout::BrowserId?m_xConsignmentWnd:m_xConsignmentRegistration;
         for(const auto& button:panel.Buttons()) if(const int hint=resolve(panel.m_rcWnd,button.normal,button.x,button.y,button.caption,panel.pressed==int(button.action))) return hint;

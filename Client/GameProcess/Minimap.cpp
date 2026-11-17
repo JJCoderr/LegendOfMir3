@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "SiegeLayout.h"
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 void CMinimap::Init()
@@ -179,4 +180,34 @@ void CMinimap::MapChanged()
     frame=-1;width=height=0;pixels.clear();monsters.clear();green.clear();orange.clear();
     portraitVisible=false;portraitPending=portraitMode;
     if(pending || portraitPending) Request();
+}
+
+// MIR3 45E370/45E430: ordinary maps use 180x130, full maps 256x256.
+POINT CMinimap::SiegeSource(POINT center) const
+{
+    const int w=full?256:180,h=full?256:130;
+    return {max(0,min(max(0,width-w),int(double(center.x)*1.5)-min(w,width)/2)),
+            max(0,min(max(0,height-h),int(center.y)-min(h,height)/2))};
+}
+void CMinimap::ShowSiege(POINT origin,POINT center)
+{
+    if(pixels.empty()) return;
+    const POINT crop=SiegeSource(center);const int sw=full?256:180,sh=full?256:130;
+    const RECT area={origin.x,origin.y,origin.x+SiegeLayout::MapWidth,origin.y+SiegeLayout::MapHeight};
+    DrawLegacyPanel(area,0,255,0,false);
+    DDSURFACEDESC2 surface={};surface.dwSize=sizeof(surface);auto* buffer=g_xMainWnd.GetBackBuffer();
+    if(FAILED(buffer->Lock(NULL,&surface,DDLOCK_WAIT,NULL))) return;
+    for(int dy=0;dy<SiegeLayout::MapHeight;++dy) {
+        const int y=origin.y+dy,sy=crop.y+(2*dy+1)*sh/(2*SiegeLayout::MapHeight);
+        if(y<0 || y>=int(surface.dwHeight) || sy>=height) continue;
+        auto* row=(WORD*)((BYTE*)surface.lpSurface+y*surface.lPitch);
+        for(int dx=0;dx<SiegeLayout::MapWidth;++dx) {
+            const int x=origin.x+dx,sx=crop.x+(2*dx+1)*sw/(2*SiegeLayout::MapWidth);
+            if(x<0 || x>=int(surface.dwWidth) || sx>=width) continue;
+            const WORD pixel=WORD(pixels[size_t(sy)*width+sx]);
+            const int r=(pixel>>11)*150/255,g=((pixel>>5)&63)*150/255,b=(pixel&31)*150/255;
+            row[x]=WORD((r<<11)|(g<<5)|b);
+        }
+    }
+    buffer->Unlock(NULL);
 }
