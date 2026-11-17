@@ -1242,6 +1242,24 @@ public:
                 check("input_dialog_escape_consumed",ui.m_xMsgBox.IsActive());
                 ui.OnKeyDown(VK_TAB,0);ui.OnKeyDown(VK_RETURN,0);
                 check("input_dialog_cancel_closes",!ui.m_xMsgBox.IsActive());
+                ui.m_xNPCWnd.prompt="Input focus check";ui.m_xNPCWnd.promptCommand="@@test";ui.OpenNameDialog(7);
+                const HWND input=g_xChatEditBox.GetSafehWnd();SetWindowTextA(input,"Draft");
+                SendMessage(input,WM_KEYDOWN,VK_ESCAPE,0);
+                check("native_escape_keeps_focus",ui.m_xMsgBox.IsActive() && GetFocus()==input);
+                SendMessage(input,WM_KEYDOWN,VK_F10,0);
+                check("native_function_keeps_focus",ui.m_xMsgBox.IsActive() && GetFocus()==input);
+                SendMessage(input,WM_CHAR,VK_TAB,0);
+                check("native_tab_keeps_focus",GetFocus()==input);
+                SendMessage(input,WM_CHAR,VK_RETURN,1L<<30);
+                check("native_repeat_does_not_submit",ui.m_xMsgBox.IsActive());
+                SendMessage(input,WM_CHAR,VK_RETURN,0);
+                check("native_cancel_clears_prompt",!ui.m_xMsgBox.IsActive() && ui.m_xNPCWnd.promptCommand.empty() && !IsWindowVisible(input));
+                ui.m_xMailWnd.giftGold=17;ui.m_xMailWnd.giftGoldConfirmed=true;
+                ui.OpenNameDialog(MailLayout::GoldDialogAction);SetWindowTextA(input,"23");
+                SendMessage(input,WM_CHAR,VK_TAB,0);SendMessage(input,WM_CHAR,VK_RETURN,0);
+                check("native_cancel_does_not_submit_gold",ui.m_xMailWnd.giftGold==17 && !ui.m_xMailWnd.giftGoldConfirmed);
+
+
 
 
                 const POINT confirm={360,303},outside={790,590};

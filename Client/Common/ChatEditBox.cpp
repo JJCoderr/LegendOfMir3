@@ -75,6 +75,16 @@ INT_PTR CALLBACK ChatEditDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
+    auto& ui=g_xGameProc.m_xInterface;
+    if(g_bProcState==_GAME_PROC && ui.m_xMsgBox.IsActive()) {
+        if(nMsg==WM_SYSKEYDOWN) return 0;
+        if((nMsg==WM_KEYDOWN && (wParam==VK_ESCAPE || (wParam>=VK_F1 && wParam<=VK_F12))) ||
+           (nMsg==WM_CHAR && (wParam==VK_RETURN || wParam==VK_TAB))) {
+            ui.OnKeyDown(wParam,lParam);
+            return 0;
+        }
+    }
+
 	switch (nMsg)
 	{
         case WM_SYSKEYDOWN:
