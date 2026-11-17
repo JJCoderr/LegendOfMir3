@@ -284,3 +284,12 @@ python Test/verify_gate_stream.py --scenario Test/Login/LoginReturnShared.csv --
 ```powershell
 python Test/verify_gate_stream.py --direction both --scenario Test/Character/CharacterDelete.csv --log-dir out/character-delete-fragments
 ```
+
+
+客户端接收链路使用 `--edge client`：代理放在客户端与 LoginGate/SelGate 之间，修改隔离目录的 Mir3.ini 登录/选角端口，覆盖客户端自己的分片接收。默认 `--edge gateway` 仍验证网关与服务器之间的连接。代理支持多个客户端及返回选角后的重新连接，例如：
+
+```powershell
+python Test/verify_gate_stream.py --edge client --direction both --scenario Test/Login/LoginReturnShared.csv --clients 2 --log-dir out/client-return-fragments
+```
+
+该模式未代理游戏端口；游戏内协议仍通过真实直连网关进行验证。

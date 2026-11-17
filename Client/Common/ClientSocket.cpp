@@ -237,52 +237,45 @@ LRESULT CClientSocket::OnSocketMessage(WPARAM wParam, LPARAM lParam)
 		}
 		case FD_READ:
 		{
-			int		nRecv, nCurRecv = 0;
-
-			if (g_bProcState == _GAME_PROC)
-			{
-				ioctlsocket((SOCKET)wParam, FIONREAD, (u_long *)&nRecv);
-
-				char* pszPacket = new char[nRecv + 1];
-
-				while (nRecv > nCurRecv)
-					nCurRecv	+= recv((SOCKET)wParam, &pszPacket[nCurRecv], nRecv - nCurRecv, 0);
-
-				pszPacket[nCurRecv] = '\0';
-
+            int nRecv=0;
+            if (ioctlsocket((SOCKET)wParam,FIONREAD,(u_long*)&nRecv)==SOCKET_ERROR) {
+                ConnectionFailed();break;
+            }
+            if (nRecv<=0) break;
+            if (g_bProcState==_GAME_PROC) {
+                char* packet=new char[nRecv+1];
+                const int received=recv((SOCKET)wParam,packet,nRecv,0);
+                if (received<=0) {
+                    delete[] packet;
+                    if (!received) DisconnectToServer();
+                    else if (WSAGetLastError()!=WSAEWOULDBLOCK) ConnectionFailed();
+                    break;
+                }
+                packet[received]='\0';
 #ifdef _DEBUG
-				_RPT1(_CRT_WARN, "RECV:%s\n", pszPacket);
+                _RPT1(_CRT_WARN, "RECV:%s\n", packet);
 #endif
-				PacketQ.PushQ((BYTE*)pszPacket);
-			}
-			else
-			{
-				ioctlsocket((SOCKET)wParam, FIONREAD, (u_long *)&nRecv);
-				
-				while (nRecv > nCurRecv)
-				{
-					nCurRecv	+= recv((SOCKET)wParam, &m_szBuff[m_nCurRecv], nRecv - nCurRecv, 0);
-					m_nCurRecv	+= nCurRecv;
-				}
-
-				m_szBuff[m_nCurRecv] = '\0';
-
-				if (m_pxDefProc)
-				{
-					char *pszRemain = m_pxDefProc->OnMessageReceive(m_szBuff);
-
-					if (pszRemain)
-					{
-						m_nCurRecv = strlen(pszRemain);
-						memcpy(m_szBuff, pszRemain, m_nCurRecv);
-					}
-					else
-					{
-						m_nCurRecv = 0;
-						ZeroMemory(m_szBuff, sizeof(m_szBuff));
-					}
-				}
-			}
+                if (!PacketQ.PushQ((BYTE*)packet)) delete[] packet;
+            } else {
+                nRecv=min(nRecv,int(sizeof(m_szBuff))-m_nCurRecv-1);
+                if (nRecv<=0) {DisconnectToServer();break;}
+                // recv may return fewer bytes than FIONREAD reported. WSAAsyncSelect
+                // schedules another FD_READ for remaining data after this recv.
+                const int received=recv((SOCKET)wParam,m_szBuff+m_nCurRecv,nRecv,0);
+                if (received<=0) {
+                    if (!received) DisconnectToServer();
+                    else if (WSAGetLastError()!=WSAEWOULDBLOCK) ConnectionFailed();
+                    break;
+                }
+                m_nCurRecv+=received;
+                m_szBuff[m_nCurRecv]='\0';
+                if (m_pxDefProc) {
+                    char* remaining=m_pxDefProc->OnMessageReceive(m_szBuff);
+                    m_nCurRecv=remaining?int(strlen(remaining)):0;
+                    if (remaining) memmove(m_szBuff,remaining,m_nCurRecv);
+                    m_szBuff[m_nCurRecv]='\0';
+                }
+            }
 
 			break;
 		}

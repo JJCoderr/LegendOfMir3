@@ -25,19 +25,22 @@ class FragmentProxy:
         self.stop = threading.Event()
         self.error = None
         self.fragments = {'requests': 0, 'replies': 0}
+        self.workers = []
         self.thread = threading.Thread(target=self.run, daemon=True)
         self.thread.start()
 
     def run(self):
+        while not self.stop.is_set():
+            try:
+                downstream, _ = self.listener.accept()
+            except socket.timeout:
+                continue
+            worker = threading.Thread(target=self.transfer, args=(downstream,), daemon=True)
+            self.workers.append(worker)
+            worker.start()
+
+    def transfer(self, downstream):
         try:
-            while not self.stop.is_set():
-                try:
-                    downstream, _ = self.listener.accept()
-                    break
-                except socket.timeout:
-                    continue
-            else:
-                return
             with downstream, socket.create_connection(('127.0.0.1', self.upstream), timeout=5) as upstream:
                 downstream.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                 upstream.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -68,12 +71,14 @@ class FragmentProxy:
         self.stop.set()
         self.thread.join(timeout=6)
         self.listener.close()
+        for worker in self.workers: worker.join(timeout=6)
 
 
 def main():
     repo = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--scenario', type=Path, default=repo/'Test/Login/Login.csv')
+    parser.add_argument('--edge', choices=('gateway', 'client'), default='gateway')
     parser.add_argument('--direction', choices=('requests', 'replies', 'both'), default='replies')
     parser.add_argument('--clients', type=int, default=1, choices=(1, 2, 3))
     parser.add_argument('--timeout-ms', type=int, default=15000)
@@ -88,12 +93,19 @@ def main():
     config = configparser.ConfigParser(interpolation=None)
     config.optionxform = str
     config.read(root/'EIServer.ini', encoding='utf-8')
+    client_config = configparser.ConfigParser(interpolation=None)
+    client_config.optionxform = str
+    client_config.read(root/'Mir3.ini', encoding='utf-8')
     proxies = []
     try:
-        for section in ('LoginGate', 'SelGate'):
-            proxy = FragmentProxy(int(config[section]['RemotePort']), args.direction)
+        for section, client_key in (('LoginGate', 'Param1'), ('SelGate', 'SelectGatePort')):
+            port_key = 'RemotePort' if args.edge == 'gateway' else 'LocalPort'
+            proxy = FragmentProxy(int(config[section][port_key]), args.direction)
             proxies.append((section, proxy))
-            config[section]['RemotePort'] = str(proxy.port)
+            if args.edge == 'gateway': config[section]['RemotePort'] = str(proxy.port)
+            else: client_config['Initial'][client_key] = str(proxy.port)
+        with (root/'Mir3.ini').open('w', encoding='utf-8') as target:
+            client_config.write(target, space_around_delimiters=False)
         with (root/'EIServer.ini').open('w', encoding='utf-8') as target:
             config.write(target, space_around_delimiters=False)
         with (args.log_dir/'launcher.log').open('w', encoding='utf-8') as output:

@@ -2358,3 +2358,13 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 双客户端反复进出时，LoginGate 转发请求 335 / 回包 254 字节，SelGate 请求 940 / 回包 784 字节；各三轮角色列表归属与精确协议计数通过。
 - 阅读 LoginSvr/DBSvr 的 ExtractPacket：按实际 bufLen 找 $，提取后保留残包；本轮未复现请求拆包错误，未修改服务端业务代码。不代表覆盖所有负载、长包或异常连接情形。
 - 后续：Client/Common/ClientSocket.cpp 非游戏 FD_READ 循环用累计 nCurRecv 再累加 m_nCurRecv，若同一循环多次短读会重复计数；同时 recv 请求未按缓冲剩余空间约束、残包移动使用 memcpy。应单独复现并验证客户端直连网关的分片接收，不能用本轮网关上游代理替代该覆盖。
+
+
+## 2026-11-18 客户端接收短读与残包处理
+
+- ClientSocket::FD_READ 改为按 recv 实际返回值处理一次读取，取消读满 FIONREAD 的循环；旧非游戏循环会把累计读数反复加入 m_nCurRecv（3、2 字节导致位置累计 8 而非 5）。游戏分支也不再在 recv=0/-1 时循环或回退指针。
+- 非游戏读取限制在缓冲剩余空间并保留终止符；残包使用 memmove，避免重叠 memcpy；游戏包入队失败释放缓冲。保留 Debug 收包输出。连接关闭/WSAEWOULDBLOCK/其他错误分别处理。
+- verify_gate_stream.py 增加 --edge client，代理客户端与 LoginGate/SelGate 之间，修改隔离 Mir3.ini 的 Param1/SelectGatePort；默认 gateway 不变。代理按连接分配线程，支持多个客户端和返回后的重连，最终停止并等待工作线程。
+- 修复前 client-edge 分片登录已通过，未通过真实网络强制复现同一 recv 循环连续短读；修复依据是源码确定的累加错误。不要宣称已经复现随机短读故障。
+- Client Release 构建通过；修复后 client-edge 双向分片创建角色 34、返回重进 82、删除角色 38，普通 Inventory 71、gateway-edge 双向分片 Login 24，共 249 项检查通过。日志 out/csv-validation/client-stream-*。
+- 下一步：GameProc::OnTimer 仍用 strcpy 将 PacketQ 的任意长 TCP 块追加到固定 8192 字节 szBuff，残包也用 memcpy，存在独立缓冲问题。本轮只调整 ClientSocket 接收入口，未解决游戏消息拼接。客户端代理目前未代理游戏端口。
