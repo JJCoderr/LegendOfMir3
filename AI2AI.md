@@ -2243,3 +2243,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - RPC shop.quote(id)/shop.sell复用背包入口，merchant_service暴露实际阶段；shop.sale_request用于失效实例/上下文等真实协议拒绝测试。
 - Client/EIServer Release构建通过；12个ShopSell场景加购买/双端共享库存/真实补货/NPC/同名物品回归共17场景686步通过，日志out/csv-validation/sale-final-*.log。指定第二件同名实例、重复请求拒绝、%100/%150价格独立、9/11/13/15取偶数、上限/类型拒绝、原属性回购、保存重登均通过。
 - 本阶段仅完成独立实例普通物品单件路径；数量堆叠出售、装备/附加属性与耐久折价、库存文件持久化/超额回收清理仍待实现。完整目标保持进行中。
+
+
+## 商店零耐久与零报价边界验证
+
+- 新增ShopSellZeroDurability（53步）：零耐久普通物品成交后不回收库存，购买原库存、余额52/背包4件、零耐久记录消失及重登通过。
+- 新增ShopSellZeroQuote（49步）：基础价1收购价0，UI拒绝确认；真实协议探测允许零价成交，重复实例拒绝，库存增加1、金币100/背包1件保存重登通过。绕过Paying阶段的探测不驱动即时客户端背包删除，以回包、库存、数据库和重登验证，未修改正常UI限制。
+- 两个真实客户端/服务器CSV共102步通过，日志out/csv-validation/sale-zero-durability.log和sale-zero-quote.log；本阶段仅新增测试与说明，未修改产品代码。装备、堆叠、耐久折价等剩余适配继续进行。

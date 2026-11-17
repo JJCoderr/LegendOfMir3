@@ -1,0 +1,50 @@
+﻿step,name,target,action,params,expect
+1,credentials ready,Client,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+2,wrong password,Client,session.login,account=mirtest;password=wrong,result.status=submitted
+3,login rejected,Client,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+4,dismiss rejection,Client,notice.dismiss,,result.status=submitted
+5,login,Client,session.login,account=mirtest;password=test123,result.status=submitted
+6,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+7,authenticated,Client,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+8,dismiss billing,Client,notice.dismiss,,result.status=submitted
+9,unknown server rejected,Client,session.select_server,name=MissingServer,error.code=-32002
+10,select server,Client,session.select_server,name=Mir3Local,result.status=submitted
+11,roster ready,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+12,unknown character rejected,Client,session.enter,name=MissingRole,error.code=-32002
+13,enter character,Client,session.enter,name=MirProbe01,result.status=submitted
+140,NPC visible,Client,state.wait,,result.scene=world;result.actor_count=1;result.actors.0.npc=true;result.actors.0.dead=false;result.actors.0.x=460;result.actors.0.y=261
+150,query NPC name,Client,actor.query_name,index=0,result.status=submitted
+160,NPC name received,Client,state.wait,,result.actor_count=1;result.actors.0.name=NpcProbe;result.actors.0.npc=true
+170,dismiss arrival,Client,notice.dismiss,,result.status=submitted
+180,input ready,Client,state.wait,,result.input_delayed=false
+200,open merchant,Client,npc.click,index=0,result.status=submitted
+210,sale option ready,Client,state.wait,,result.npc_dialog.rows.1.command=@sell;result.npc_dialog.ready=true;result.bag_count=2;result.bag.0.id=1;result.bag.1.id=2
+220,open sale,Client,npc.select,option=0,result.status=submitted
+230,sale mode received,Client,state.wait,,result.merchant_service.mode=2;result.merchant_service.phase=choosing
+240,no quote no sale,Client,shop.sell,,error.code=-32002
+250,quote second identical item,Client,shop.quote,id=2,result.status=submitted
+260,zero quote disables confirmation,Client,state.wait,,result.merchant_service.price=0;result.merchant_service.phase=unavailable;result.merchant_service.item=2
+270,UI rejects zero quote,Client,shop.sell,,error.code=-32002
+275,server accepts zero price sale,Client,shop.sale_request,index=0;id=2;name=ShopPotion,result.status=submitted
+291,server rejects repeated instance,Client,shop.sale_request,index=0;id=2;name=ShopPotion,result.status=submitted
+292,repeated wire sale refused,Client,state.wait,,result.gold=100;result.shop.notice=true
+293,dismiss repeated sale refusal,Client,notice.dismiss,,result.status=submitted
+294,server refusal packet,Client,wire.expect,message=SM_USERSELLITEM_FAIL;direction=received,count=1
+300,back ready,Client,state.wait,,result.npc_dialog.ready=true
+310,back to menu,Client,npc.select,option=0,result.status=submitted
+320,buy menu ready,Client,state.wait,,result.npc_dialog.rows.2.command=@buy;result.npc_dialog.ready=true
+330,open buy,Client,npc.select,option=1,result.status=submitted
+340,sold item in stock,Client,state.wait,,result.shop.goods.0.stock=4;result.shop.goods.0.price=2;result.merchant_service.actor=0
+370,sale success packet,Client,wire.expect,message=SM_USERSELLITEM_OK;direction=received,count=1
+380,exit ready,Client,state.wait,,result.npc_dialog.ready=true
+390,exit,Client,npc.select,option=0,result.status=submitted
+400,closed,Client,state.wait,,result.shop.open=false;result.merchant_service.actor=0;result.return_ready=true
+410,save,Client,session.return,,result.status=submitted
+420,saved,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+430,gold persisted,Database,query,SELECT FLD_GOLD FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01',rows=[[100]]
+440,item conservation,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='MirProbe01',rows=[[1]]
+450,retained original attributes,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='MirProbe01' AND FLD_ITEMINDEX='G00080008000',rows=[[1]]
+460,reenter,Client,session.enter,name=MirProbe01,result.status=submitted
+470,saved inventory restored,Client,state.wait,,result.scene=world;result.gold=100;result.bag_count=1
+480,server healthy,Server,state.get,,result.ready=true
+490,coverage,Client,protocol.get,,
