@@ -129,6 +129,7 @@ public:
 class CMerchantInfo
 {
 public:
+    std::string scriptName;
 	char		szMapName[14];
 	int			nPosX;
 	int			nPosY;

@@ -2489,7 +2489,12 @@ void CPlayerObject::Operate()
                                 section[size] = 0;
                                 if (section[0] != '@') break;
                             }
-                            npc->Say(this, section);
+                            if (!_stricmp(section, "@exit")) {
+                                fnMakeDefMessage(&DefMsg, SM_MERCHANTDLGCLOSE, (int)npc, 0, 0, 0);
+                                SendSocket(&DefMsg, NULL);
+                                m_dialogMerchant = NULL;
+                                m_npcScriptFiles.clear();
+                            } else npc->Say(this, section);
                             break;
                         }
                         break;

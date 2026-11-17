@@ -2179,3 +2179,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 跨文件共享32层/4096行限制。文件缺失、标签缺失、循环及非法文本指令不会发送半段回复。
 - EIServer 构建通过。NpcImports 44步、NpcContext 33步、等级边界回归39步、基础对话回归33步全部通过。日志 out/csv-validation/npc-imports-final.log、npc-context.log、npc-imports-level-regression.log、npc-imports-dialog-regression.log。
 - 仍待参考服独立脚本名映射、完整任务状态/变量、交易和更多脚本指令；引用路径所有变体及完整旧脚本语义尚未验证。
+
+## 2026-11-18 NPC 独立脚本名与退出对话
+
+- TBL_MERCHANT 可选 FLD_SCRIPT 保存脚本基础名；实际加载 Envir/Market_Def/<脚本名>-<地图>.txt。NPC 显示名保持不变。缺列/空值回退显示名，显式配置文件缺失不回退。SQLite 与 SQL Server 新建表定义已增加字段，不自动迁移旧库。
+- @exit 发送 SM_MERCHANTDLGCLOSE，清除角色当前商人及导入文件上下文，支持重新点击打开。
+- EIServer Release 构建通过。NpcMapping 32步、NpcLegacySchema（删除新列模拟旧表）32步、NpcMissingScript 24步、NpcImports回归44步通过，共132步。日志 out/csv-validation/npc-mapping.log、npc-legacy-schema.log、npc-missing-script.log、npc-mapping-imports-regression.log。
+- 现有 SQLite 想配置独立文件名需手工 ADD COLUMN FLD_SCRIPT TEXT NOT NULL DEFAULT ''。ODBC 新建表定义尚未执行验证。未导入 merchant.txt；仍待完整交易、任务状态与更多脚本指令。

@@ -137,8 +137,9 @@ bool ReadMerchantPage(const std::string& path, const std::string& section,
 
 void CMerchantObject::Say(CPlayerObject* player, const char* section)
 {
-    const std::string path = std::string("Envir/Market_Def/") + m_szName + "-" +
-        g_pMerchantInfo[m_nIndex].szMapName + ".txt";
+    const auto& info = g_pMerchantInfo[m_nIndex];
+    const std::string name = info.scriptName.empty() ? m_szName : info.scriptName;
+    const std::string path = "Envir/Market_Def/" + name + "-" + info.szMapName + ".txt";
     constexpr int MaximumScriptInstructions = 4096;
     int remaining = MaximumScriptInstructions;
     std::string body;

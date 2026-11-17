@@ -152,6 +152,7 @@
 #define SM_MAGIC_LVEXP          640
 #define SM_DURACHANGE           642
 #define SM_MERCHANTSAY          643
+#define SM_MERCHANTDLGCLOSE     644
 #define SM_GOLDCHANGED          653
 #define SM_CHANGELIGHT          654
 #define SM_CHANGENAMECOLOR      656

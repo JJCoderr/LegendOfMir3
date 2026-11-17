@@ -385,6 +385,8 @@ void InitMerchantInfo()
 				ChangeSpaceToNull(g_pMerchantInfo[i].szNPCName);
 				strcpy(g_pMerchantInfo[i].szMapName, pRec->Get( "FLD_MAPNAME" ) );
 				ChangeSpaceToNull(g_pMerchantInfo[i].szMapName);
+                const char* script = pRec->Get("FLD_SCRIPT");
+                g_pMerchantInfo[i].scriptName = script ? script : "";
 
 				g_pMerchantInfo[i].nPosX = atoi( pRec->Get( "FLD_POSX" ) );
 				g_pMerchantInfo[i].nPosY = atoi( pRec->Get( "FLD_POSY" ) );

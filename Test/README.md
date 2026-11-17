@@ -152,7 +152,7 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 场景可附带同名 `.files` 目录，例如 `Npc/NpcDialog.files/Envir/Market_Def/NpcProbe-01.txt`。启动器将其中的相对目录结构复制到隔离运行目录。CSV 仍只存测试动作与断言，NPC 文本由服务端实际读取。
 
-当前数据库商人的脚本约定为 `Envir/Market_Def/<NPC名称>-<地图名>.txt`（本地代码页），支持 `[@main]` / `[@选项]`、`#SAY`、反斜杠换行及 `<文字/@选项>`。已支持 #IF/checklevel、#ELSESAY、#ACT/#ELSEACT 下的 goto 和 break；已接入 #CALL/#INCLUDE；尚未接入参考服 merchant.txt 的独立脚本文件名映射、交易和任务指令。遇到未支持的条件或需要执行的指令时拒绝整个请求，不发送半段对话。本阶段不是完整旧脚本引擎。
+当前数据库商人的脚本路径为 `Envir/Market_Def/<FLD_SCRIPT或NPC名称>-<地图名>.txt`（本地代码页），支持 `[@main]` / `[@选项]`、`#SAY`、反斜杠换行及 `<文字/@选项>`。已支持 #IF/checklevel、#ELSESAY、#ACT/#ELSEACT 下的 goto 和 break；已接入 #CALL/#INCLUDE；数据库已支持独立脚本名映射；尚未直接导入参考服 merchant.txt，也未接入完整交易和任务指令。遇到未支持的条件或需要执行的指令时拒绝整个请求，不发送半段对话。本阶段不是完整旧脚本引擎。
 
 `Npc/NpcLevelLow.csv`、`Npc/NpcLevelBoundary.csv`、`Npc/NpcLevelHigh.csv` 分别使用 4、5、6 级角色，验证 `checklevel 5` 门槛及同一 #IF 中多个条件取 AND。脚本通过 #ACT/#ELSEACT 的 goto 调用页面，返回后继续执行，break 结束当前页面；#SAY/#ELSESAY 仅输出命中的分支。当前 checklevel 参数仅支持非负整数，判断为角色等级大于等于参数。
 
@@ -161,3 +161,9 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 `Npc/NpcImports.csv` 覆盖跨文件 #CALL、嵌套调用、#INCLUDE 中文文本、导入文件中的后续选项、跳回商人标签、缺失文件/标签、循环调用和文本段包含执行指令的拒绝。调用上下文属于角色当前交互的商人；失败请求不更新文件列表，也不发送部分文本。`Npc/NpcContext.csv` 在两个商人之间切换，双方都有 @next，验证不会沿用另一商人的导入脚本。
 
 当前路径规则：`#CALL [\Library\dialog.txt] @start` 从 `Envir/QuestDiary/Library/dialog.txt` 加载；`#INCLUDE [..\Convert_Def\Library\text.txt] @welcome` 相对 `Envir/Market_Def` 解析。引用文件使用服务器本地代码页，文本标签的独立 `{` / `}` 包裹行不发送给客户端。#INCLUDE 读取文本段，不执行其内的 #ACT 等指令。共享执行行数和嵌套限制跨文件生效。完整任务状态、变量替换、所有引用路径变体及旧脚本语义仍未全部实现或验证。
+
+`Npc/NpcMapping.csv` 使用 `TBL_MERCHANT.FLD_SCRIPT='StoryGuide'`，读取 `Envir/Market_Def/StoryGuide-01.txt`，NPC 显示名仍为 NpcProbe；同时放置同显示名的干扰脚本，验证配置优先。FLD_SCRIPT 填脚本基础名，不含 `-地图.txt` 后缀。空值或缺少此列时使用 NPC 名称；显式配置的文件不存在时不自动回退。`Npc/NpcMissingScript.csv` 验证后一种情况。
+
+`Npc/NpcLegacySchema.csv` 在启动前删除 FLD_SCRIPT 列，验证旧表仍能加载和对话。新建 SQLite/SQL Server 表定义已增加该列；不会自动修改现有数据库。已有 SQLite 数据库若需配置独立脚本名，可执行一次 `ALTER TABLE TBL_MERCHANT ADD COLUMN FLD_SCRIPT TEXT NOT NULL DEFAULT '';`。
+
+`@exit` 是当前商人的退出选项：服务端发送 SM_MERCHANTDLGCLOSE，并清除角色的对话脚本上下文。映射和旧表场景均验证关闭后窗口/行/身份重置、关闭后的选项拒绝、重新点击打开，以及两次关闭的精确回包计数。实际构建及联调使用 SQLite，SQL Server 新建表定义尚未在 ODBC 环境执行验证。
