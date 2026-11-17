@@ -9,6 +9,19 @@ SERVER = Path(__file__).resolve().parents[1]
 
 
 class MinimalSchemaTests(unittest.TestCase):
+    def test_armor_fixture_resource_migration(self):
+        schema = (SERVER / "SQL_Scripts/sqlite_minimal.sql").read_text(encoding="utf-8-sig")
+        with sqlite3.connect(":memory:") as db:
+            db.executescript(schema)
+            self.assertEqual(db.execute("SELECT FLD_LOOKS,FLD_SHAPE FROM TBL_STDITEM WHERE FLD_INDEX=33").fetchone(), (940,1))
+            self.assertEqual(db.execute("SELECT FLD_LOOKS,FLD_SHAPE FROM TBL_STDITEM WHERE FLD_INDEX=34").fetchone(), (950,1))
+            db.execute("UPDATE TBL_STDITEM SET FLD_LOOKS=0,FLD_SHAPE=0 WHERE FLD_INDEX=33")
+            db.execute("UPDATE TBL_STDITEM SET FLD_LOOKS=999,FLD_SHAPE=8 WHERE FLD_INDEX=34")
+            db.commit()
+            db.executescript(schema)
+            self.assertEqual(db.execute("SELECT FLD_LOOKS,FLD_SHAPE FROM TBL_STDITEM WHERE FLD_INDEX=33").fetchone(), (940,1))
+            self.assertEqual(db.execute("SELECT FLD_LOOKS,FLD_SHAPE FROM TBL_STDITEM WHERE FLD_INDEX=34").fetchone(), (999,8))
+
     def test_startup_queries(self):
         schema = (SERVER / "SQL_Scripts/sqlite_minimal.sql").read_text(encoding="utf-8-sig")
         source = (SERVER / "GameSvr/Handler_CommonDB.cpp").read_text(encoding="gbk")

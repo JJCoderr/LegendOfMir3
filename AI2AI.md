@@ -1930,3 +1930,9 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 首轮h_2pmnqk与复现i81t_yl8均在收到穿戴成功后访问冲突。启用构建目录/MAP后第二次故障RVA0x123998位于PlayItemEffect内联的音效索引查找；SoundList.wwl缺失时m_pWavListHeader为空，设置恢复m_bPlay后SeekFileName仍解引用。新增空索引检查，并把读取从全局构造移至InitMirSound（main已切换到EXE目录）；CreateFile按句柄判断成功，移除错误的GetLastError判断。
 - Release构建通过，已更新out/debug/Mir2Ex.exe。缺索引lwu97zw2、存在索引a5o6bjev全回归通过，两次客户端退出0，hp18/mp13稳定，面板坐标不变；装备重进/重登恢复，数据库仅一条B26111700001且FLD_DRESS_ID一致。out/debug/SoundList.wwl为资源原文件硬链接；测试可选硬链接该索引。
 - 尚不代表属性消息计数、替换装备、武器、消耗品和满背包全覆盖。旧GameGate锁及ObjectPlayer修改仍保留未提交，本轮没有把其独立变更混入。
+
+## 2026-11-17 修正测试布衣图标及外观协议
+- 用户指出拿药水往人物身上装。原测试盔甲Looks=0（Inventory帧0为红药）。直接解码资源确认男布衣Inventory/Equip帧940、女布衣950；Shape=1对应M-Hum第3000帧起的衣服段。初始化脚本迁移同名且Looks仍0的测试盔甲，out/debug数据库33/34各更新一行；没有修改实际自定义物品。资源检查器补V5000/V6000的21字节图像头支持。
+- 属性验证增加防御2–5、魔防1–3的测试值及客户端实际属性快照。此前mh0ff3en只验证属性通过，换成非零Shape后6nohe26k暴露GetFeatureToLong字节顺序不匹配：服务器gender/wear/hair/weapon，客户端gender/weapon/dress/hair。统一输出顺序；18ie4n1z又暴露SM_LOGON直接编码旧结构体，改为同一个GetFeatureToLong编码。
+- Client/EIServer Release构建通过并更新out/debug。最终t8e0ld87真实客户端三穿两脱、移动、返回选角/重进和重启重登全部通过；物品looks940/shape1，穿戴dress1、卸装dress0，重进重登仍dress1；防御/魔防按穿脱变化，hp18/mp13稳定，最终位置461,261一致。女布衣本轮只做资源/SQL核对，未做女性角色实服验收。
+- sqlite schema两项测试通过，覆盖初始化、旧测试定义迁移和保留自定义外观。未把先前HP/MP、网关锁等未提交改动混入本提交。

@@ -11,6 +11,8 @@ import struct
 def read_frames(path):
     data = path.read_bytes()
     index = path.with_suffix('.wix').read_bytes()
+    version = struct.unpack_from('<h', data, 22)[0]
+    frame_header = 21 if version in (5000, 6000) else 17
     count = struct.unpack_from('<i', index, 20)[0]
     header = len(index) - count * 4
     if count < 0 or header not in (24, 28):
@@ -19,11 +21,11 @@ def read_frames(path):
         offset = struct.unpack_from('<i', index, header + number * 4)[0]
         if offset == 0:
             continue
-        if offset < 0 or offset + 17 > len(data):
+        if offset < 0 or offset + frame_header > len(data):
             raise ValueError(f'Invalid frame offset: {number}')
         width, height = struct.unpack_from('<hh', data, offset)
         if width > 0 and height > 0:
-            yield number, width, height, data, offset + 17
+            yield number, width, height, data, offset + frame_header
 
 
 def decode(width, height, data, offset):

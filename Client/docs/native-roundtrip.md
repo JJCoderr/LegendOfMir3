@@ -39,6 +39,8 @@ python Client/Tools/test_native_roundtrip.py --hold-mouse
 python Client/Tools/test_native_roundtrip.py --equipment
 ```
 
-隔离数据库只放入一件测试盔甲，通过真实人物面板和背包完成三次穿戴、两次卸装。检查同一实例在背包、装备槽和鼠标持有状态之间转移，请求完成、面板位置固定、HP/MP保持，以及返回选角和重启客户端后的装备恢复。仅覆盖这件盔甲，不代表完整背包/装备系统验收。开启状态输出时新增 bag、equipment、held_item、equipment_pending 和面板位置字段。
+隔离数据库只放入一件测试盔甲，通过真实人物面板和背包完成三次穿戴、两次卸装。测试盔甲设定防御2–5、魔防1–3。检查同一实例在背包、装备槽和鼠标持有状态之间转移，请求完成、面板位置固定、HP/MP保持；每次穿戴等待防御/魔防增加，卸装等待恢复基础值，并检查返回选角和重启客户端后的装备与属性恢复。仅覆盖这件盔甲，不代表完整背包/装备系统验收。开启状态输出时新增 bag、equipment、held_item、equipment_pending 和面板位置字段；defence、magic_defence为客户端实际属性的最小值/最大值数组。
 
 如果 config-dir 中有 SoundList.wwl，测试通过硬链接共享该音效索引（须与测试目录位于同一卷）；没有则继续覆盖缺失音效索引的运行情况。开发目录中的该文件应链接资源目录原文件。
+
+测试布衣资源已与 V1.45 文件核对：男性 Looks=940，女性 Looks=950（Inventory.wil 与 Equip.wil 同编号），Shape=1 对应地图人物衣服段。原先 Looks=0 会误显示成药水；初始化脚本只迁移仍为0的同名测试盔甲，不覆盖自定义物品。--equipment 进一步检查客户端物品 looks/shape 和地图 dress，穿戴为1、卸装为0、重登仍为1。独立资源查看器已支持 V5000/V6000 的21字节图像头，可直接检查 Equip.wil，避免按17字节头解码错误。

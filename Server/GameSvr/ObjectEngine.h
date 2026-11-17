@@ -381,8 +381,9 @@ public:
 
 	__inline void SysMsg(char *pszMsg, int nMode) 
 		{ ( nMode == 1 ? AddProcess(this, RM_SYSMESSAGE2, 0, 0, 0, 0, pszMsg) : AddProcess(this, RM_SYSMESSAGE, 0, 0, 0, 0, pszMsg)); }
+    // MIR3 FEATURE byte order: gender, weapon, dress, hair.
 	__inline LONG GetFeatureToLong()
-		{ return (LONG) MAKELONG(MAKEWORD(m_tFeature.btGender, m_tFeature.btWear), MAKEWORD(m_tFeature.btHair, m_tFeature.btWeapon)); }
+		{ return (LONG) MAKELONG(MAKEWORD(m_tFeature.btGender, m_tFeature.btWeapon), MAKEWORD(m_tFeature.btWear, m_tFeature.btHair)); }
 	__inline BYTE GetRPow(WORD wPower)
 		{ if (HIBYTE(wPower) > LOBYTE(wPower)) return LOBYTE(wPower) + (rand() % (HIBYTE(wPower) - LOBYTE(wPower) + 1)); else return LOBYTE(wPower); }
 };

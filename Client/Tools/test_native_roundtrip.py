@@ -101,6 +101,7 @@ with sqlite3.connect(root/'mir3.sqlite3') as db:
     db.execute("INSERT INTO TBL_CHARACTER (FLD_LOGINID,FLD_CHARNAME,FLD_JOB,FLD_GENDER,FLD_LEVEL,FLD_MAPNAME,FLD_CX,FLD_CY) VALUES ('mirtest','MirProbe01','0','0',1,'01',459,261)")
 if args.equipment:
     with sqlite3.connect(root/'mir3.sqlite3') as db:
+        db.execute("UPDATE TBL_STDITEM SET FLD_AC=2,FLD_AC2=5,FLD_MAC=1,FLD_MAC2=3 WHERE FLD_INDEX=33")
         db.execute("INSERT INTO TBL_CHARACTER_ITEM (FLD_LOGINID,FLD_CHARNAME,FLD_STDTYPE,FLD_MAKEDATE,FLD_MAKEINDEX,FLD_STDINDEX,FLD_DURA,FLD_DURAMAX) VALUES ('mirtest','MirProbe01','B','261117','00001',33,5000,5000)")
 
 env=dict(os.environ,MIR3_DEBUG_STATE_DIR=str(root))
@@ -144,12 +145,15 @@ def equipment_roundtrip(h, state_path):
     bag = initial['bag_panel']; status = initial['equipment_panel']
     bag_point = (bag['x'] + 36, bag['y'] + 79)
     armor_point = (status['x'] + 120, status['y'] + 159)
+    assert initial['bag'][0]['looks']==940 and initial['bag'][0]['shape']==1,initial
     item_id = initial['bag'][0]['id']
+    expected_defence = [value + bonus for value, bonus in zip(initial['defence'], (2, 5))]
+    expected_magic = [value + bonus for value, bonus in zip(initial['magic_defence'], (1, 3))]
     for cycle in range(3):
         click(h, *bag_point)
         wait(state_path, lambda d:d.get('held_item', {}) and d['held_item']['id'] == item_id)
         click(h, *armor_point)
-        worn = wait(state_path, equipped)
+        worn = wait(state_path, lambda d:equipped(d) and d['defence']==expected_defence and d['magic_defence']==expected_magic and d['dress']==1)
         assert worn['equipment'][0]['slot'] == 0 and worn['equipment'][0]['id'] == item_id, worn
         assert worn['equipment_panel'] == status and worn['bag_panel'] == bag, worn
         assert (worn['hp'], worn['mp']) == (initial['hp'], initial['mp']), worn
@@ -158,7 +162,7 @@ def equipment_roundtrip(h, state_path):
         click(h, *armor_point)
         wait(state_path, lambda d:d.get('held_item', {}) and d['held_item']['id'] == item_id)
         click(h, *bag_point)
-        removed = wait(state_path, lambda d:len(d.get('bag', [])) == 1 and not d.get('equipment') and not d.get('held_item') and not d.get('equipment_pending'))
+        removed = wait(state_path, lambda d:len(d.get('bag', [])) == 1 and not d.get('equipment') and not d.get('held_item') and not d.get('equipment_pending') and d['defence']==initial['defence'] and d['magic_defence']==initial['magic_defence'] and d['dress']==0)
         assert removed['bag'][0]['id'] == item_id, removed
         print('armor removed', cycle, removed, flush=True)
     for key in ('Q', 'W'):
@@ -256,6 +260,8 @@ with (root/'server.log').open('wb') as log:
             else:
                 assert (world['x'],world['y'])==saved, (world,saved)
                 if args.equipment:
+                    assert world['equipment'][0]['looks']==940 and world['dress']==1,world
+                    assert world['defence']==[2,5] and world['magic_defence']==[1,3],world
                     assert len(world['equipment'])==1 and world['equipment'][0]['name']=='Test male armor' and not world['bag'],world
             if iteration==0:
                 u.PostMessageW(h,WM_SYSKEYDOWN,ord('X'),ALT_CONTEXT)
@@ -273,6 +279,8 @@ with (root/'server.log').open('wb') as log:
                 restored=wait(cs,lambda d:d.get('scene')=='world' and d.get('map') and d.get('remote_port')==ports[7200],20)
                 print('restored',restored,flush=True)
                 if args.equipment:
+                    assert restored['equipment'][0]['looks']==940 and restored['dress']==1,restored
+                    assert restored['defence']==[2,5] and restored['magic_defence']==[1,3],restored
                     assert len(restored['equipment'])==1 and restored['equipment'][0]['name']=='Test male armor' and not restored['bag'],restored
                 assert (restored['x'],restored['y'])==(moved['x'],moved['y']),(restored,moved)
                 wait(cs,lambda d:not d.get('input_delayed'))

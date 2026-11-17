@@ -4628,7 +4628,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                     + ",\"y\":" + std::to_string(hero.m_wPosY)
                     + ",\"hp\":" + std::to_string(hero.m_stAbility.wHP)
                     + ",\"mp\":" + std::to_string(hero.m_stAbility.wMP);
-                state += mir3::ItemDebugState(game.m_xInterface);
+                state += mir3::ItemDebugState(game);
             }
             return state;
         });

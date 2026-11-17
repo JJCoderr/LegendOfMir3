@@ -2492,7 +2492,8 @@ void CPlayerObject::Operate()
 						fnMakeDefMessage(&DefMsg, SM_LOGON, (int)this, 
 											(unsigned short)m_nCurrX, (unsigned short)m_nCurrY, MAKEWORD(m_nDirection, lpProcessMsg->pCharObject->m_btLight));
 
-						nPos = 	fnEncode6BitBufA((unsigned char *)&lpProcessMsg->pCharObject->m_tFeature, szEncodeMsg, sizeof(_TOBJECTFEATURE), sizeof(szEncodeMsg));
+                        const LONG feature = lpProcessMsg->pCharObject->GetFeatureToLong();
+                        nPos = fnEncode6BitBufA((unsigned char *)&feature, szEncodeMsg, sizeof(feature), sizeof(szEncodeMsg));
 						nPos +=	fnEncode6BitBufA((unsigned char *)&((CPlayerObject *)lpProcessMsg->pCharObject)->m_tFeatureEx, &szEncodeMsg[nPos], sizeof(_TOBJECTFEATUREEX), sizeof(szEncodeMsg) - nPos);
 						szEncodeMsg[nPos] = '\0';
 
