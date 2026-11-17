@@ -4,10 +4,12 @@ class CMinimap {
     CWHWilImageData maps,fullMaps;
     int frame=-1;
     bool full=false;
-    void Request();
     std::vector<DWORD> pixels;
     const char* optionsPath=nullptr;
 public:
+    static constexpr int MapRequestMessage=1033;
+    void Request();
+    POINT SiegeExtent() const { return full?POINT{256,256}:POINT{180,130}; }
     bool visible=false,pending=false,translucent=false,large=false,dragging=false,releaseCaptured=false,showMonsters=true;
     bool portraitMode=false,portraitPending=false,portraitVisible=false;
     int portraitBlink=0;

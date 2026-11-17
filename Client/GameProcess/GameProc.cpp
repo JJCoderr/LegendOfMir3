@@ -2895,7 +2895,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
                 }
                 break;
             case SiegeLayout::ObjectPositionMessage:
-                m_xInterface.m_xSiegeWnd.ReceiveObject(DWORD(tdm.nRecog),POINT{tdm.wParam,tdm.wTag});break;
+                m_xInterface.m_xSiegeWnd.ReceiveObject(DWORD(tdm.nRecog),POINT{tdm.wParam,tdm.wTag},tdm.wSeries);break;
             case SiegeLayout::ControlMessage:
             {
                 char body[8192]={};

@@ -1892,7 +1892,9 @@ public:
             using namespace SiegeLayout;
             auto& ui=g_xGameProc.m_xInterface;auto& panel=ui.m_xSiegeWnd;auto& map=ui.m_minimap;
             panel.controlled=panel.objectPresent=true;panel.objectCell={140,140};panel.style=1;panel.firstValue=50;panel.secondValue=100;
-            map.Init();map.Receive(1,GetTickCount());map.player={145,145};map.green={{150,150}};map.orange={{120,130}};
+            map.Init();map.Receive(1,GetTickCount());map.player={145,145};
+            panel.ReceiveObject(7,POINT{140,140});panel.ReceiveControl(MAKELONG(50,100),1,"engine\t7");
+            panel.ReceiveObject(9,POINT{150,150},0);panel.ReceiveObject(10,POINT{120,130},1);
             ui.WindowActivate(WindowId);capturePath="siege.bmp";mouse={790,460};
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
             const auto holdAmmo=[&]() {
@@ -1931,6 +1933,30 @@ public:
                 panel.ClearObjects();panel.ReceiveControl(0,1,"engine\t8");const bool cleared=!panel.objectPresent;
                 panel.ReceiveObject(8,POINT{140,140});ui.WindowActivate(WindowId);mouse=click;
                 if(FILE* report=fopen("siege-state-check.txt","wb")) {fprintf(report,"before=%d status=%d absent=%d after=%d hint=%d opened=%d released=%d hidden=%d cleared=%d\n",before,status,absent,after,hint,opened,released,hidden,cleared);fclose(report);}
+                const auto capturePacket=[&](auto perform,_TDEFAULTMESSAGE& packet,std::string& body) {
+                    SOCKET receiver=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP),sender=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+                    sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);
+                    bind(receiver,(sockaddr*)&address,sizeof(address));int addressLength=sizeof(address);getsockname(receiver,(sockaddr*)&address,&addressLength);
+                    connect(sender,(sockaddr*)&address,sizeof(address));DWORD timeout=500;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));
+                    const SOCKET saved=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;perform();g_xClientSocket.m_sockClient=saved;
+                    char wire[8192]={};const int received=recv(receiver,wire,sizeof(wire)-1,0);closesocket(sender);closesocket(receiver);
+                    if(received<19 || wire[0]!='#' || wire[received-1]!='!') return false;
+                    wire[received-1]=0;fnDecodeMessage(&packet,wire+2);
+                    char decoded[8192]={};const int length=fnDecode6BitBuf(wire+2+DEFBLOCKSIZE,decoded,sizeof(decoded));body.assign(decoded,length);return true;
+                };
+                _TDEFAULTMESSAGE packet={};std::string body;
+                ui.WindowActivate(WindowId);
+                const bool mapRequest=capturePacket([&](){ui.WindowActivate(WindowId);},packet,body) && packet.wIdent==CMinimap::MapRequestMessage && !packet.nRecog && !packet.wParam && body.empty() && !map.visible;
+                panel.target={0x1234,0x5678};
+                const bool attackWire=capturePacket([&](){panel.Activate(Action::Attack);},packet,body) && packet.wIdent==AttackMessage && DWORD(packet.nRecog)==0x56781234u && !packet.wParam && !packet.wTag && !packet.wSeries && body.empty();
+                const bool waitWire=capturePacket([&](){panel.Activate(Action::Wait);},packet,body) && packet.wIdent==SiegeLayout::WaitMessage && !packet.nRecog && body.empty();
+                const bool moveWire=capturePacket([&](){panel.Activate(Action::Move);},packet,body) && packet.wIdent==MoveMessage && !packet.nRecog && !panel.target.x && !panel.target.y && body.empty();
+                ui.m_xInventoryWnd.m_stInventoryItem[0].bSetted=FALSE;holdAmmo();
+                const bool loadWire=capturePacket([&](){panel.SubmitLoad("5");},packet,body) && packet.wIdent==LoadMessage && packet.nRecog==7 && packet.wParam==5 && !packet.wTag && !packet.wSeries && body=="ÅÚµ¯" && !ui.m_stCommonItem.bSetted && ui.m_xInventoryWnd.m_stInventoryItem[0].bSetted;
+                CSiegeWnd::Request emptyAttack={};emptyAttack.action=Action::Attack;const bool noTarget=!CSiegeWnd::BuildRequest(emptyAttack,packet,body);
+                emptyAttack.action=Action::Close;const bool noClosePacket=!CSiegeWnd::BuildRequest(emptyAttack,packet,body);
+                panel.ReceiveObject(9,POINT{150,150},0);panel.ReceiveObject(10,POINT{120,130},1);
+                if(FILE* report=fopen("siege-send-check.txt","wb")) {fprintf(report,"map=%d attack=%d wait=%d move=%d load=%d noTarget=%d noClosePacket=%d\n",mapRequest,attackWire,waitWire,moveWire,loadWire,noTarget,noClosePacket);fclose(report);}
                 capturePath="siege-checks.bmp";
             }
         }

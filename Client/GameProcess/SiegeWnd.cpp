@@ -62,6 +62,12 @@ void CSiegeWnd::Show()
         if(map.showMonsters) for(const auto& cell:map.monsters) marker(cell,RGB(255,255,0),0,false);
         for(const auto& cell:map.green) marker(cell,RGB(100,250,100),1,false);
         for(const auto& cell:map.orange) marker(cell,RGB(250,150,50),1,false);
+        const POINT extent=map.SiegeExtent();
+        for(const auto& entry:objects) if(entry.first!=objectId) {
+            const POINT at=Marker(entry.second.cell,origin,crop);
+            if(abs(at.x-center.x)<extent.x/2 && abs(at.y-center.y)<extent.y/2)
+                marker(entry.second.cell,entry.second.kind?RGB(250,150,50):RGB(100,250,100),1,false);
+        }
         marker(map.player,RGB(100,250,100),2,true);
         marker(objectCell,RGB(100,250,250),1,false);
         if(target.x && target.y) {
@@ -119,7 +125,7 @@ void CSiegeWnd::Activate(SiegeLayout::Action action)
     if(action==Action::Close) {Close(true);return;}
     if(action==Action::Attack && (!target.x || !target.y)) return;
     if(action==Action::Move) target={};
-    requests.push_back({action,target});
+    SendRequest({action,target});
 }
 
 bool CSiegeWnd::BeginLoad()
@@ -139,7 +145,7 @@ bool CSiegeWnd::SubmitLoad(const char* text)
     Request request;request.action=SiegeLayout::Action::Load;request.target=target;
     request.item=held.xItem;request.quantity=quantity;
     if(!ui.m_xInventoryWnd.AddInvenItem(held.xItem,held.xItem.m_shCellNum,TRUE)) return false;
-    requests.push_back(request);held.bSetted=FALSE;return true;
+    SendRequest(std::move(request));held.bSetted=FALSE;return true;
 }
 
 void CSiegeWnd::ReceiveStatus(DWORD values)
@@ -152,7 +158,7 @@ void CSiegeWnd::ReceiveControl(DWORD values,WORD rangeStyle,const char* descript
     if(separator) objectId=DWORD(std::strtoul(separator+1,nullptr,10));
     ReceiveStatus(values);style=rangeStyle;controlled=true;
     const auto found=objects.find(objectId);objectPresent=found!=objects.end();
-    if(objectPresent) objectCell=found->second;
+    if(objectPresent) objectCell=found->second.cell;
 }
 void CSiegeWnd::ReleaseControl()
 {
@@ -160,9 +166,9 @@ void CSiegeWnd::ReleaseControl()
     if(m_bActive) g_xGameProc.m_xInterface.WindowActivate(SiegeLayout::WindowId);
 }
 
-void CSiegeWnd::ReceiveObject(DWORD id,POINT cell)
+void CSiegeWnd::ReceiveObject(DWORD id,POINT cell,WORD kind)
 {
-    objects[id]=cell;
+    objects[id]={cell,kind};
     if(controlled && id==objectId) {objectCell=cell;objectPresent=true;}
 }
 void CSiegeWnd::ClearObjects()
@@ -183,4 +189,29 @@ void CSiegeWnd::ShowEntry()
 {
     const RECT area=EntryBounds();if(IsRectEmpty(&area)) return;
     DrawSelectionFrame(*m_pxWndImage,entryPressed?SiegeLayout::EntryPressed:SiegeLayout::EntryNormal,area.left,area.top,SelectionBlend::Normal,false);
+}
+
+bool CSiegeWnd::BuildRequest(const Request& request,_TDEFAULTMESSAGE& header,std::string& body)
+{
+    using namespace SiegeLayout;
+    WORD message=0,quantity=0;DWORD recognition=0;body.clear();
+    switch(request.action) {
+    case Action::Attack:
+        if(!request.target.x || !request.target.y) return false;
+        message=AttackMessage;recognition=DWORD(WORD(request.target.x))|(DWORD(WORD(request.target.y))<<16);break;
+    case Action::Wait:message=SiegeLayout::WaitMessage;break;
+    case Action::Move:message=MoveMessage;break;
+    case Action::Load:
+        message=LoadMessage;recognition=request.item.m_stItemInfo.nMakeIndex;quantity=WORD(request.quantity);body=request.item.Name();break;
+    default:return false;
+    }
+    fnMakeDefMessage(&header,message,recognition,quantity,0,0);return true;
+}
+void CSiegeWnd::SendRequest(Request request)
+{
+    _TDEFAULTMESSAGE header={};std::string body;
+    if(!BuildRequest(request,header,body)) return;
+    if(g_xClientSocket.m_sockClient!=INVALID_SOCKET)
+        g_xClientSocket.SendPacket(&header,body.empty()?nullptr:body.data());
+    requests.push_back(std::move(request));
 }

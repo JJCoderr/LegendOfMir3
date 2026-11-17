@@ -1247,3 +1247,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 455A30方向键上下选择0..12，左右1131/1132，删除此前客户端页码边界拦截；455930/455670空行也命中/高亮，但空行无交易请求。
 - 查询独立searchTick，翻页/刷新/交易actionTick，DWORD差严格>1000；取消确认不消耗间隔，购买确认记录时间，撤销确认再次校验。Close/Destroy清计时。主界面模态之后、顶部窗口处理方向键，EDIT光标不受影响。
 - 原生实现及交互批次clean Client+全部七目标通过，新增18项和既有99项回归全1。截图out/consignment-keyboard.png已检查；预览181 consignment-input，下一空闲182。实服与完整加密包回执仍待联调，不宣称全GUI目标完成。
+
+### 投石车动作、地图请求与对象标记（2026-11-17）
+- 接入1120目标坐标打包、1121移动清目标、1122等待、1123装填（实例ID/数量/名称），复用实际SendPacket；开窗请求1033，不激活普通小地图pending。P/HUD/统一开窗均生效，关闭不请求。
+- 1312位置缓存保存wSeries类别，投石车地图绘制缓存中的其他对象，0绿色/非0橙色，按地图源半宽高筛选；仍待恢复对象过期及人物/怪物标记条件。没有以完整动态地图完成为名结束目标。
+- clean后WaitMessage命名冲突已修复，全部七目标重建通过。新增7项含真实SendPacket本地UDP回环捕获+既有117项回归全1。截图out/siege-send.png、out/siege-load-send.png已检查；不代表实服操作成功。
+- 继续使用174/175/176预览，未新增ID；下一空闲仍182。证据Client/docs/window18-evidence.md与out/siege-load-and-objects.txt。

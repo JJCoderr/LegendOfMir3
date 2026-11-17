@@ -1064,7 +1064,7 @@ case _WND_ID_STATUS:
 		break;
     case SiegeLayout::WindowId:
         if(m_xSiegeWnd.m_bActive) {DeleteWindowToList(nID);m_xSiegeWnd.Close(false);}
-        else {AddWindowToList(nID);m_xSiegeWnd.m_bActive=TRUE;bRet=TRUE;}
+        else {AddWindowToList(nID);m_xSiegeWnd.m_bActive=TRUE;m_minimap.Request();bRet=TRUE;}
         break;
     case ConsignmentLayout::BrowserId:case ConsignmentLayout::RegistrationId: {
         auto& panel=nID==ConsignmentLayout::BrowserId?m_xConsignmentWnd:m_xConsignmentRegistration;

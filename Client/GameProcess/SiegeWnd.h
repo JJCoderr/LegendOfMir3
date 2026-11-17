@@ -1,6 +1,7 @@
 #pragma once
 #include "SiegeLayout.h"
 #include <vector>
+#include <string>
 #include <map>
 class CSiegeWnd : public CGameWnd {
 public:
@@ -13,7 +14,8 @@ public:
     void Create(CWHWilImageData* image);
     void ReceiveControl(DWORD values,WORD rangeStyle,const char* description);
     void ReceiveStatus(DWORD values);
-    void ReceiveObject(DWORD id,POINT cell);
+    void ReceiveObject(DWORD id,POINT cell,WORD kind=0);
+    static bool BuildRequest(const Request& request,_TDEFAULTMESSAGE& header,std::string& body);
     void ClearObjects();
     void ReleaseControl();
     void Destroy() override;
@@ -29,5 +31,7 @@ public:
     RECT EntryBounds() const;
     void ShowEntry();
 private:
-    std::map<DWORD,POINT> objects;
+    struct Object { POINT cell; WORD kind; };
+    std::map<DWORD,Object> objects;
+    void SendRequest(Request request);
 };

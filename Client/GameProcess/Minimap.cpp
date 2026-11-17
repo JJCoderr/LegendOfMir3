@@ -171,7 +171,8 @@ void CMinimap::ShowPortrait()
 
 void CMinimap::Request()
 {
-    _TDEFAULTMESSAGE message;fnMakeDefMessage(&message,1033,0,0,0,0);g_xClientSocket.SendPacket(&message,NULL);
+    _TDEFAULTMESSAGE message;fnMakeDefMessage(&message,MapRequestMessage,0,0,0,0);
+    if(g_xClientSocket.m_sockClient!=INVALID_SOCKET) g_xClientSocket.SendPacket(&message,NULL);
 }
 
 void CMinimap::MapChanged()
