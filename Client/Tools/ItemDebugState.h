@@ -9,19 +9,20 @@ inline std::string ItemDebugState(const CGameProcess& game)
     const auto range = [](WORD value) {
         return "[" + std::to_string(LOBYTE(value)) + "," + std::to_string(HIBYTE(value)) + "]";
     };
-    const auto item = [](const CItem& value, int slot) {
+    const auto item = [](const CItem& value, int slot, int cell = -1) {
         return std::string("{\"slot\":") + std::to_string(slot)
+            + ",\"cell\":" + std::to_string(cell)
             + ",\"id\":" + std::to_string(value.m_stItemInfo.nMakeIndex)
             + ",\"looks\":" + std::to_string(value.m_stItemInfo.stStdItem.wLooks)
             + ",\"shape\":" + std::to_string(value.m_stItemInfo.stStdItem.bShape)
             + ",\"name\":" + QuoteLocalText(value.Name()) + "}";
     };
-    const auto list = [&](const auto& slots) {
+    const auto list = [&](const auto& slots, bool bag = false) {
         std::string result = "[";
         for (int i = 0; i < _countof(slots); ++i) {
             if (!slots[i].bSetted) continue;
             if (result.size() > 1) result += ',';
-            result += item(slots[i].xItem, i);
+            result += item(slots[i].xItem, i, bag ? ui.m_xInventoryWnd.ItemAnchor(i) : -1);
         }
         return result + ']';
     };
@@ -33,7 +34,8 @@ inline std::string ItemDebugState(const CGameProcess& game)
     return ",\"dress\":" + std::to_string(game.m_xMyHero.m_stFeature.bDress)
         + ",\"defence\":" + range(ability.wAC)
         + ",\"magic_defence\":" + range(ability.wMAC)
-        + ",\"bag\":" + list(ui.m_xInventoryWnd.m_stInventoryItem)
+        + ",\"bag_scroll_row\":" + std::to_string(ui.m_xInventoryWnd.ScrollRow())
+        + ",\"bag\":" + list(ui.m_xInventoryWnd.m_stInventoryItem, true)
         + ",\"equipment\":" + list(ui.m_xStatusWnd.m_stEquipItem)
         + ",\"held_item\":" + (ui.m_stCommonItem.bSetted ? item(ui.m_stCommonItem.xItem, -1) : "null")
         + ",\"equipment_pending\":" + std::to_string(ui.m_xStatusWnd.m_equipmentRequest)

@@ -8,6 +8,7 @@ import configparser
 import ctypes as c
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import tempfile
@@ -43,6 +44,7 @@ parser.add_argument('--config-dir', type=Path, default=repo / 'out/debug')
 parser.add_argument('--port-offset', type=int, default=20000)
 parser.add_argument('--hold-mouse', action='store_true', help='Exercise real held mouse input; requires an unlocked foreground desktop')
 parser.add_argument('--equipment', action='store_true', help='Exercise armor equip/unequip and persistence through native panels')
+parser.add_argument('--consumable', action='store_true', help='Exercise consumption, rejected armor use and saved item removal')
 parser.add_argument('--gender', choices=('male', 'female'), default='male', help='Gender of the isolated test character')
 args = parser.parse_args()
 gender = 0 if args.gender == 'male' else 1
@@ -106,6 +108,11 @@ if args.equipment:
     with sqlite3.connect(root/'mir3.sqlite3') as db:
         db.execute("UPDATE TBL_STDITEM SET FLD_AC=2,FLD_AC2=5,FLD_MAC=1,FLD_MAC2=3 WHERE FLD_INDEX=?", (armor_index,))
         db.execute("INSERT INTO TBL_CHARACTER_ITEM (FLD_LOGINID,FLD_CHARNAME,FLD_STDTYPE,FLD_MAKEDATE,FLD_MAKEINDEX,FLD_STDINDEX,FLD_DURA,FLD_DURAMAX) VALUES ('mirtest','MirProbe01','B','261117','00001',?,5000,5000)", (armor_index,))
+if args.consumable:
+    with sqlite3.connect(root/'mir3.sqlite3') as db:
+        # Standard 0 and its twelve-byte key are DBSvr's existing starter consumable.
+        db.execute("UPDATE TBL_STDITEM_ETC SET FLD_NAME='Test potion',FLD_VAL1=10 WHERE FLD_INDEX=0")
+        db.execute("INSERT INTO TBL_CHARACTER_GENITEM VALUES ('mirtest','MirProbe01','G00080008000')")
 
 env=dict(os.environ,MIR3_DEBUG_STATE_DIR=str(root))
 processes=[]
@@ -172,6 +179,41 @@ def equipment_roundtrip(h, state_path):
         u.PostMessageW(h, WM_KEYDOWN, ord(key), 0)
         u.PostMessageW(h, WM_KEYUP, ord(key), 0)
     wait(state_path, lambda d:not d['bag_panel']['open'] and not d['equipment_panel']['open'])
+
+def consumable_roundtrip(h, state_path):
+    protocol = (repo/'Server/Def/Protocol.h').read_text()
+    def replies(name):
+        opcode = re.search(r'#define\s+' + name + r'\s+(\d+)', protocol)[1]
+        return (root/'server.log').read_bytes().count((' id=' + opcode + ' ').encode())
+    u.PostMessageW(h, WM_KEYDOWN, ord('W'), 0)
+    u.PostMessageW(h, WM_KEYUP, ord('W'), 0)
+    initial = wait(state_path, lambda d:d.get('bag_panel', {}).get('open') and any(i['name']=='Test potion' for i in d.get('bag', [])))
+    panel = initial['bag_panel']
+    def use(item, reply, accept):
+        # Native inventory is six columns, with 38-pixel cells.
+        cell = item['cell']
+        assert cell >= 0, item
+        point = (panel['x'] + 36 + cell % 6 * 38, panel['y'] + 79 + (cell // 6 - initial['bag_scroll_row']) * 38)
+        before = replies(reply)
+        click(h, *point)
+        time.sleep(.08)
+        click(h, *point)
+        result = wait(state_path, lambda d:replies(reply)>before and not d.get('held_item') and accept(d))
+        assert result['bag_panel']==panel, result
+        return result
+    if args.equipment:
+        armor = next(i for i in initial['bag'] if i['name']==armor_name)
+        rejected = use(armor, 'SM_EAT_FAIL', lambda d:sorted(i['id'] for i in d['bag'])==sorted(i['id'] for i in initial['bag']))
+        assert not rejected['equipment'], rejected
+        print('armor use rejected and restored', flush=True)
+        time.sleep(.35)  # Start a fresh double-release gesture.
+    potion = next(i for i in initial['bag'] if i['name']=='Test potion')
+    consumed = use(potion, 'SM_EAT_OK', lambda d:all(i['id']!=potion['id'] for i in d['bag']))
+    assert len(consumed['bag'])==len(initial['bag'])-1, consumed
+    print('potion consumed', consumed, flush=True)
+    u.PostMessageW(h, WM_KEYDOWN, ord('W'), 0)
+    u.PostMessageW(h, WM_KEYUP, ord('W'), 0)
+    wait(state_path, lambda d:not d['bag_panel']['open'])
 
 def hold_mouse(h, x, y, seconds=1.8):
     if any(u.GetAsyncKeyState(key) & 0x8000 for key in (VK_LBUTTON, VK_RBUTTON)):
@@ -247,6 +289,8 @@ with (root/'server.log').open('wb') as log:
                 # Acknowledge the arrival notice before using the map.
                 u.PostMessageW(h,WM_KEYDOWN,VK_RETURN,0);u.PostMessageW(h,WM_KEYUP,VK_RETURN,0)
                 print('input ready',wait(cs,lambda d:not d.get('notice') and not d.get('input_delayed')),flush=True)
+                if args.consumable:
+                    consumable_roundtrip(h,cs)
                 if args.equipment:
                     equipment_roundtrip(h,cs)
                 if args.hold_mouse:
@@ -262,6 +306,10 @@ with (root/'server.log').open('wb') as log:
                     assert moved['x'] >= world['x'] + 2 and moved['y'] == world['y'], ('held input must continue east', moved, world)
             else:
                 assert (world['x'],world['y'])==saved, (world,saved)
+                if args.consumable:
+                    assert all(i['name']!='Test potion' for i in world['bag']),world
+                    with sqlite3.connect(root/'mir3.sqlite3') as db:
+                        assert db.execute("SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='MirProbe01'").fetchone()[0]==0
                 if args.equipment:
                     assert world['equipment'][0]['looks']==armor_looks and world['dress']==1,world
                     assert world['defence']==[2,5] and world['magic_defence']==[1,3],world
