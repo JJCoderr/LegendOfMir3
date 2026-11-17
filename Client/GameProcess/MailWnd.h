@@ -55,9 +55,9 @@ public:
     std::string composeRecipient,composeDraft,giftRecipient,giftDraft;
     unsigned giftGold=0;
     CItem giftItem;
-    bool hasGiftItem=false,giftIsGold=false;
+    bool hasGiftItem=false,giftIsGold=false,giftGoldConfirmed=false;
     bool SelectGift(POINT point);
-    bool SubmitGold(const char* text,unsigned balance);
+    bool SubmitGold(const char* text);
     RECT GiftBounds();
     void DrawGift();
     void ShowAttachmentHint(POINT point);

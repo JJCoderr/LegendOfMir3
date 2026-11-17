@@ -279,7 +279,7 @@ bool CConsignmentWnd::SubmitPrice(const char* value)
     for(const char* p=value;*p;++p) if(*p<'0' || *p>'9') return false;
     const auto parsed=std::strtoull(value,nullptr,10);
     if(parsed>ConsignmentLayout::MaximumPrice) return false;
-    price=unsigned(parsed);return true;
+    if(parsed) price=unsigned(parsed);return true;
 }
 void CConsignmentWnd::Pointer(int kind,POINT point)
 {

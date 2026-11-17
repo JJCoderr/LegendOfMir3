@@ -135,7 +135,7 @@ void CMailWnd::Show()
         text(captions.Get(GiftInstruction),{GiftItem.left,105,GiftItem.right,120},TextColor,DT_CENTER|DT_SINGLELINE);
         text(captions.Get(GiftDropInstruction),{GiftItem.left,123,GiftItem.right,138},TextColor,DT_CENTER|DT_SINGLELINE);
     }
-    if(view==View::Gift && giftIsGold && giftGold) text(std::to_string(giftGold),{GiftItem.left,153,GiftItem.right,168},TextColor,DT_CENTER|DT_SINGLELINE);
+    if(view==View::Gift && giftIsGold && giftGoldConfirmed) text(std::to_string(giftGold),{GiftItem.left,153,GiftItem.right,168},TextColor,DT_CENTER|DT_SINGLELINE);
     if(!editorsAvailable && (view==View::Compose || view==View::Gift)) {
         text(recipient,Recipient,TextColor);
         text(draft,view==View::Gift?GiftBody:ComposeBody,TextColor,DT_LEFT|DT_WORDBREAK);
@@ -203,7 +203,7 @@ void CMailWnd::Destroy()
     view=MailLayout::View::Inbox;
     firstInbox=firstOutbox=firstBody=0;
     selectedInbox=selectedOutbox=checkedInbox=checkedOutbox=pressed=pressedRow=hoverRow=-1;
-    dragging=captured=scrolling=readSent=pressedCheck=hasGiftItem=giftIsGold=false;
+    dragging=captured=scrolling=readSent=pressedCheck=hasGiftItem=giftIsGold=giftGoldConfirmed=false;
     giftGold=0;editorsAvailable=true;notified=false;
     CGameWnd::Destroy();
 }
@@ -214,7 +214,7 @@ void CMailWnd::Close()
     draft.clear();composeDraft.clear();giftDraft.clear();
     if(edits[1]) SetWindowTextA(edits[1],"");
     m_bActive=FALSE;pressed=-1;dragging=captured=scrolling=false;
-    hasGiftItem=giftIsGold=false;giftGold=0;
+    hasGiftItem=giftIsGold=giftGoldConfirmed=false;giftGold=0;
     LayoutEditors();SetFocus(g_xMainWnd.GetSafehWnd());
 }
 CMailWnd::Message* CMailWnd::CurrentMessage()
@@ -284,7 +284,7 @@ void CMailWnd::Pointer(int kind,POINT point)
             recipient.clear();draft.clear();
             if(edits[0]) SetWindowTextA(edits[0],"");
             if(edits[1]) SetWindowTextA(edits[1],"");
-            if(action==Action::CancelGift) {giftGold=0;hasGiftItem=giftIsGold=false;}
+            if(action==Action::CancelGift) {giftGold=0;hasGiftItem=giftIsGold=giftGoldConfirmed=false;}
             return;
         case Action::Reply:
             if(readSent) return;
@@ -448,19 +448,20 @@ bool CMailWnd::SelectGift(POINT point)
     const bool gold=held.xItem.Name()==captions.Get(GoldCaption);
     // MIR3 keeps the selected item in the bag; the gift pane retains its record.
     if(!gold && !ui.m_xInventoryWnd.AddInvenItem(held.xItem,held.xItem.m_shCellNum,TRUE)) return false;
-    giftItem=held.xItem;hasGiftItem=true;giftIsGold=gold;giftGold=0;
+    giftItem=held.xItem;hasGiftItem=true;giftIsGold=gold;giftGold=0;giftGoldConfirmed=false;
     held.bSetted=FALSE;
     g_xSound.PlayItemEffect(giftItem.m_stItemInfo.stStdItem.bStdMode,giftItem.m_stItemInfo.stStdItem.bShape,giftItem.Name());
     if(gold) ui.OpenNameDialog(GoldDialogAction);
     return true;
 }
-bool CMailWnd::SubmitGold(const char* text,unsigned balance)
+bool CMailWnd::SubmitGold(const char* text)
 {
     if(!m_bActive || view!=MailLayout::View::Gift || !giftIsGold || !*text) return false;
     for(const char* p=text;*p;++p) if(*p<'0' || *p>'9') return false;
     const auto amount=std::strtoull(text,nullptr,10);
-    if(!amount || amount>balance) return false;
-    giftGold=unsigned(amount);return true;
+    if(amount>MailLayout::MaximumGiftGold) return false;
+    if(amount) giftGold=unsigned(amount);
+    giftGoldConfirmed=true;return true;
 }
 RECT CMailWnd::GiftBounds()
 {

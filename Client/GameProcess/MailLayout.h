@@ -35,6 +35,7 @@ constexpr int CanvasWidth=800, CanvasHeight=600, FontPixels=12;
 constexpr int ScrollFrame=1966, UnreadFrame=1970, ReadFrame=1971, AttachmentFrame=1972, AttachmentReadFrame=1973, RowMarkerFrame=1974;
 constexpr int ComposeFrame=2030, GiftFrame=2050, OutboxFrame=2070;
 constexpr int InboxTitle=4618, ReadTitle=4619, ComposeTitle=4620, GiftTitle=4617, OutboxTitle=4621;
+constexpr unsigned MaximumGiftGold=100000000;
 constexpr int GoldDialogAction=13, GoldCaption=1050;
 constexpr int GiftCenterX=315, GiftCenterY=138, GiftMaxHeight=170, GiftCroppedHeight=130;
 constexpr int GiftCroppedTop=78, GiftHintX=25, GiftHintY=22, AttachmentHintOffset=15;

@@ -2175,7 +2175,9 @@ public:
                 browser.Activate(Action::Register);
                 const bool bag=ui.m_xInventoryWnd.m_bActive && registration.m_bActive && ui.IsTopWindow(RegistrationId);
                 chooseItem();const bool itemKept=registration.hasItem && !ui.m_stCommonItem.bSetted && ui.m_xInventoryWnd.m_stInventoryItem[0].bSetted;
-                const bool badPrice=!registration.SubmitPrice("12x") && !registration.SubmitPrice("4294967296");
+                const bool badPrice=!registration.SubmitPrice("12x") && !registration.SubmitPrice("100000001") && !registration.SubmitPrice("4294967296");
+                const bool priceLimit=registration.SubmitPrice("100000000") && registration.price==100000000 && registration.SubmitPrice("0") && registration.price==100000000;
+                if(FILE* report=fopen("amount-price-check.txt","wb")) {fprintf(report,"limitAndZero=%d\n",priceLimit);fclose(report);}
                 ui.OpenNameDialog(PriceDialog);SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"12000");ui.FinishNotice(CLICK_YES,false);
                 const bool price=registration.price==12000;
                 SetWindowTextA(registration.edits[0],"¼ÄÊÛËµÃ÷");registration.Activate(Action::SubmitRegistration);
@@ -2277,7 +2279,13 @@ public:
                 click(MailLayout::Action::CancelGift);
                 const bool giftCancel=mail.view==MailLayout::View::Gift && !mail.hasGiftItem && ui.m_xInventoryWnd.m_stInventoryItem[0].bSetted;
                 mail.hasGiftItem=mail.giftIsGold=true;
-                const bool gold=!mail.SubmitGold("1001",1000) && !mail.SubmitGold("12x",1000) && mail.SubmitGold("500",1000) && mail.giftGold==500;
+                const bool gold=!mail.SubmitGold("100000001") && !mail.SubmitGold("12x") && mail.SubmitGold("500") && mail.giftGold==500;
+                const bool goldLimit=mail.SubmitGold("100000000") && mail.giftGold==100000000 && mail.giftGoldConfirmed;
+                const bool goldZero=mail.SubmitGold("0") && mail.giftGold==100000000 && mail.giftGoldConfirmed;
+                ui.OpenNameDialog(MailLayout::GoldDialogAction);ui.FinishNotice(CLICK_NO,false);
+                const bool goldCancel=!mail.giftGoldConfirmed && mail.giftGold==100000000;
+                mail.giftGold=0;const bool zeroConfirmed=mail.SubmitGold("0") && mail.giftGoldConfirmed && mail.giftGold==0;
+                if(FILE* report=fopen("amount-mail-check.txt","wb")) {fprintf(report,"limit=%d zero=%d cancel=%d zeroConfirmed=%d\n",goldLimit,goldZero,goldCancel,zeroConfirmed);fclose(report);}
                 if(FILE* report=fopen("mail-gift-check.txt","wb")) {fprintf(report,"selected=%d request=%d cancel=%d gold=%d\n",giftSelected,giftRequest,giftCancel,gold);fclose(report);}
                 click(MailLayout::Action::Compose);mail.SyncEditors(false);
                 const bool hidden=!IsWindowVisible(mail.edits[0]) && !IsWindowVisible(mail.edits[1]);mail.SyncEditors(true);

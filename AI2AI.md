@@ -1272,3 +1272,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - clean Client及全部七目标构建通过；新增15项+既有任务14项+相关141项，共170项全1。三截图out/quest-wire-list.png、quest-wire-detail.png、quest-wire-increment.png已检查。尚未验证完整加密包或实服流程。
 - 预览187/188/189，下一空闲190。全GUI与登录服务端目标仍未完成。
 - 下一批金额对话框待修：原版4256B0寄售价与邮件金币上限100000000；目前寄售MaximumPrice是0x7fffffff，邮件仅余额限制。原版输入0保留旧金额；证据out/extension-load-consumer.c，需整体核对交互后统一构建提交。
+
+### 金额输入对话框行为修正（2026-11-17）
+- 原版4256B0的r/v分支确认寄售和邮件金额上限100000000；零保留旧值。邮件不按余额限制，增加giftGoldConfirmed独立控制显示；取消输入清标志，关闭/取消送礼/换物品清状态。
+- 459670 +10364控制金额显示，确认零也显示0。详见Client/docs/amount-dialog-evidence.md。沿用原生控件/资源/音效。
+- clean Client与全部七目标构建通过；金额5项+相关80项回归共85项全1。两截图out/amount-consignment-price.png、amount-mail-gift-gold.png已核对。
+- 没有新增预览ID，下一空闲190。实服登录和全GUI仍未完成，送礼按钮没有已证实可接入的发送协议。

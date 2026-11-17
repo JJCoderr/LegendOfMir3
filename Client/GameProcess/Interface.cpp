@@ -1718,11 +1718,12 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         SetFocus(g_xMainWnd.GetSafehWnd());
         g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+185,
             g_xMainWnd.m_rcWindow.top+(m_chatExpanded?534:575),m_chatExpanded?432:344,15,TRUE);
+        if(m_nIdxMsgBox==MailLayout::GoldDialogAction && hResult!=CLICK_YES) m_xMailWnd.giftGoldConfirmed=false;
         if (m_nIdxMsgBox==7 && hResult!=CLICK_YES) m_xNPCWnd.ClearPrompt();
         if (hResult == CLICK_YES) {
             if(m_nIdxMsgBox==SiegeLayout::LoadDialog) m_xSiegeWnd.SubmitLoad(name);
             else if(m_nIdxMsgBox==ConsignmentLayout::PriceDialog) m_xConsignmentRegistration.SubmitPrice(name);
-            else if(m_nIdxMsgBox==MailLayout::GoldDialogAction) m_xMailWnd.SubmitGold(name,g_xGameProc.m_xMyHero.m_nGlod);
+            else if(m_nIdxMsgBox==MailLayout::GoldDialogAction) m_xMailWnd.SubmitGold(name);
             else if (m_nIdxMsgBox == 1) g_xClientSocket.SendCreateGroup(name);
             else if (m_nIdxMsgBox == 2) g_xClientSocket.SendAddGroupMember(name);
             else if (m_nIdxMsgBox == 3) g_xClientSocket.SendDelGroupMember(name);

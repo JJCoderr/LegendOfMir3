@@ -46,7 +46,7 @@ constexpr int PriceQuestion=4500, RegistrationTitleText=4503,
 constexpr DWORD RequestInterval=1000;
 constexpr int ActivityFirstFrame=1920, ActivityFrames=11, BusyInterval=100, IdleInterval=150;
 constexpr int QueryLimit=90, HeaderHeight=46;
-constexpr unsigned MaximumPrice=0x7fffffff;
+constexpr unsigned MaximumPrice=100000000;
 constexpr int CanvasWidth=800, CanvasHeight=600, FontPixels=12;
 constexpr int PriceDialog=14, PurchaseDialog=15, CancelDialog=16, RegistrationDialog=17;
 constexpr int GoldCaption=1050, ConfirmationFrame=1240;
