@@ -2119,3 +2119,7 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 ### 普通聊天协议联调
 - Client RPC 新增 chat.send(text)，复用回车使用的 OnMsgInputted 业务入口；state.get 提供真实聊天历史的 chat_count/chat_last。拒绝缺失、空、多行或超过 255 本地字节的输入。服务器解码保留终止符空间，避免写到缓冲区外。
 - ChatLocal.csv 28 步通过：英文/中文经 CM_SAY -> SM_HEAR 回显到历史，以及非法输入拒绝和历史不变。Client/EIServer Release 构建通过，日志 out/csv-validation/chat-local.log。多人广播、私聊、喊话、组队和行会聊天仍待接入验证。
+
+### 喊话消息类型与限制
+- 服务端 RM_CRY 改为发送客户端已有的 SM_CRY，而不是 SM_HEAR；普通聊天消息类型不变。
+- ChatShout.csv 24 步通过：8 级喊话、冷却内二次喊话不广播、普通消息作为处理完成依据并精确断言回包次数。ChatShoutLevel.csv 23 步通过：7 级收到等级不足提示、无喊话广播。EIServer Release 构建通过，日志 out/csv-validation/chat-shout.log 与 chat-shout-level.log。未验证冷却结束或多客户端范围边界。

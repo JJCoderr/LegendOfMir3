@@ -69,7 +69,7 @@ step,name,target,action,params,expect
 | 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复、施法回包、扣蓝与受伤治疗 |
 | 怪物 | `MonstersSpawn.csv`、`MonstersRespawn.csv`、`MonstersCorpse.csv`、`MonstersLoot.csv`、`MonstersLootCount.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentCount.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
-| 聊天 | `ChatLocal.csv` | 普通聊天回显、中文编码及非法输入拒绝 |
+| 聊天 | `ChatLocal.csv`、`ChatShout.csv`、`ChatShoutLevel.csv` | 普通聊天、中文编码、喊话等级及冷却拒绝 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
 
@@ -132,3 +132,5 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 `MonstersCorpse.csv` 在击杀和一分钟补充刷新后等待原尸体消失，检查 SM_DISAPPEAR，随后攻击剩余的新怪物，确认移除旧实体未影响新实体。使用真实三分钟尸体时序；运行命令为 `python Test/launch_csv.py Test/MonstersCorpse.csv --timeout-ms 190000 --log out/monsters-corpse.log`。超时参数只调整测试等待期限，不改变游戏计时。本场景不验证额外三分钟 Ghost 对象保留后的内存释放。
 
 `ChatLocal.csv` 通过 chat.send(text) 调用客户端与回车相同的 OnMsgInputted 入口，检查 CM_SAY/SM_HEAR 以及实际聊天历史中的英文、中文回显。state.get 增加 chat_count（历史条数）、chat_last（最后一条文本，空历史为 null）。RPC 只接受非空单行文本，按本地编码最多 255 字节；超长、参数缺失、空字符串和换行输入返回 -32602。当前仅验证普通聊天回显，不代表多人广播、私聊、喊话、组队与行会聊天已完成。
+
+喊话场景：`ChatShout.csv` 用 8 级角色发送 ! 前缀消息，验证 SM_CRY 与喊话文本；立即再次喊话后发送普通聊天作为处理完成的依据，断言喊话只收到 1 次、普通消息使用 SM_HEAR。`ChatShoutLevel.csv` 用 7 级角色验证等级不足提示和零喊话广播。当前验证发送者自身收到的广播及冷却内拒绝，未覆盖冷却结束后的再次喊话或多客户端距离边界。

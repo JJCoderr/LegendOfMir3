@@ -2547,7 +2547,7 @@ void CPlayerObject::Operate()
 									fnMakeDefMessage(&DefMsg, SM_HEAR, (int)lpProcessMsg->pCharObject, _CHAT_COLOR3, _CHAT_COLOR1, 0);
 									break;
 								case RM_CRY:
-									fnMakeDefMessage(&DefMsg, SM_HEAR, (int)lpProcessMsg->pCharObject, _CHAT_COLOR1, _CHAT_COLOR7, 0);
+									fnMakeDefMessage(&DefMsg, SM_CRY, (int)lpProcessMsg->pCharObject, _CHAT_COLOR1, _CHAT_COLOR7, 0);
 									break;
 								case RM_WHISPER:
 									fnMakeDefMessage(&DefMsg, SM_WHISPER, (int)lpProcessMsg->pCharObject, 7, _CHAT_COLOR1, 0);
