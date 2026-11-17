@@ -59,6 +59,7 @@ public:
 	
 private:
     friend struct CharacterInteractionPreview;
+    friend struct RolePresentationPreview;
     void OpenCreation();
     void ExitSelection();
     bool m_offline=false;
@@ -113,7 +114,7 @@ private:
 	char				m_szChrName[16];
 	CHAR				m_szErrorMsg[512];
 	int					m_Distance;
-	INT					m_Tick;
+    RoleAnimation m_creationAnimation[2];
 	POINT				m_PosName;
 	CLoginNotice		m_xMsgBox;
 /*	CAvi				m_xCreateChrAvi;					// For Create Charector

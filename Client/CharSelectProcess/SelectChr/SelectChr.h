@@ -1,5 +1,6 @@
 #include "Common/LoginMessages.h"
 #include "../SelectionRoster.h"
+#include "../RoleAnimation.h"
 // LoginProcess.h: interface for the CSelectChrProcess class.
 //
 //////////////////////////////////////////////////////////////////////
@@ -35,6 +36,7 @@ public:
 private:
     friend struct SelectionRosterPreview;
     friend struct CharacterInteractionPreview;
+    friend struct RolePresentationPreview;
 protected:
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// Variable
@@ -43,7 +45,7 @@ public:
 	INT					m_nSelectChr;
 private:
 protected:
-    struct RoleAnimation { int action = 0, frame = 0, elapsed = 0; };
+    POINT m_pointer={-1,-1};
     RoleAnimation m_roleAnimation[SelectionRoster::Capacity];
     int m_page = 0, m_pagePressed = -1;
     CWHWilImageData m_pageImages;

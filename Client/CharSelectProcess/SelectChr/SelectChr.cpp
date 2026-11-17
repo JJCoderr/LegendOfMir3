@@ -32,6 +32,7 @@ VOID CSelectChr::Create(CWHWilImageData* pxImage,CPDLList<SelectionRoleInfo>* px
 {
 	INT	nLoop;
 	m_messages.Load(".\\CmList.dat");
+    m_pointer={-1,-1};m_fIsButtonDown=FALSE;
     m_page = 0;
     m_pagePressed = -1;
     m_pageImages.Destroy();
@@ -97,6 +98,7 @@ int CSelectChr::PageHit(LPARAM position)
 
 HRESULT CSelectChr::OnButtonDown(WPARAM wParam, LPARAM lParam)
 {
+    m_pointer={LOWORD(lParam),HIWORD(lParam)};
     m_pagePressed = m_fIsActive ? PageHit(lParam) : -1;
 	if(m_fIsActive)
 		for (int i = ID_SEL_CHR_NEW_BTN; i <= ID_SEL_CHR_START_BTN; i++)
@@ -126,9 +128,7 @@ HRESULT CSelectChr::OnButtonDown(WPARAM wParam, LPARAM lParam)
                     m_roleAnimation[i]=RoleAnimation{};
                     m_roleAnimation[i].action=1;
                     m_nSelectChr=i;
-                    m_pxSList->MoveCurrentToTop();m_pxSList->MoveNode(i);
-                    const auto& role=*m_pxSList->GetCurrentData();
-                    g_xSound.PlayRoleVoice(false,role.Class,role.Gender);
+
                 }
                 break;
             }
@@ -147,6 +147,7 @@ HRESULT CSelectChr::OnButtonDown(POINT ptMouse)
 
 HRESULT CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
 {
+    m_pointer={LOWORD(lParam),HIWORD(lParam)};
     m_fIsButtonDown = FALSE;
     const int target = PageHit(lParam);
     if (m_fIsActive && target >= 0) {
@@ -231,6 +232,7 @@ HRESULT CSelectChr::OnButtonUp(POINT ptMouse)
 
 LRESULT	CSelectChr::OnMouseMove(WPARAM wParam, LPARAM lParam)
 {
+    m_pointer={LOWORD(lParam),HIWORD(lParam)};
 	INT	i;
 	BOOL	fOnButton = FALSE;
 	if(m_fIsActive&&(!m_fIsButtonDown))
@@ -278,17 +280,6 @@ VOID CSelectChr::Render(INT	nLoopTime)
 	{
 		m_xLightFog.ClearSavedLightColor();
 
-		// The resource background contains no button labels; draw every state.
-		for (i = ID_SEL_CHR_NEW_BTN; i <= ID_SEL_CHR_START_BTN; i++)
-		{
-			const int frame = m_pBtn[i]->m_nButtonID +
-				(m_fIsButtonDown && m_pBtn[i]->m_nState == BUTTON_STATE_DOWN ? 0 : 1);
-			if (m_pxImage->NewSetIndex(frame))
-				g_xMainWnd.DrawWithImageForComp(m_pBtn[i]->m_Rect.left, m_pBtn[i]->m_Rect.top,
-					m_pxImage->m_lpstNewCurrWilImageInfo->shWidth,
-					m_pxImage->m_lpstNewCurrWilImageInfo->shHeight,
-					(WORD*)m_pxImage->m_pbCurrImage);
-		}
 
 		dwTicks +=nLoopTime;
 
@@ -304,11 +295,6 @@ VOID CSelectChr::Render(INT	nLoopTime)
 			}
 		}
 
-        // Frame groups/anchors follow Mir3's CharacterSelectionPage.
-        static const int lastFrames[30] = {
-            10,19,11,7,17, 10,10,10,11,15, 10,11,10,10,14,
-            10,17,10,8,16, 10,16,19,11,16, 10,16,10,9,14
-        };
         m_pxSList->MoveCurrentToTop();
         m_pxrcList->MoveCurrentToTop();
         for (i = 0; i < m_nChrCount; ++i) {
@@ -316,30 +302,38 @@ VOID CSelectChr::Render(INT	nLoopTime)
             const int type = role->Gender + 2 * role->Class;
             if (i / 2 == m_page && type >= 0 && type < 6) {
                 auto& animation = m_roleAnimation[i];
-                animation.elapsed = WORD(animation.elapsed + nLoopTime);
-                if (animation.elapsed > 120) {
-                    animation.elapsed = 0;
-                    if (++animation.frame > lastFrames[animation.action + 5 * type]) {
-                        animation.frame = 0;
-                        if (animation.action == 1) animation.action = 2;
-                        else if (animation.action == 3) animation.action = 0;
-                    }
+                const int x=m_nChrCount==1?300:(i%2?350:250),y=i%2?250:210;
+                if(animation.Due(nLoopTime) && m_pxImage->NewSetIndex(animation.ImageFrame(role->Class,role->Gender)+1)) {
+                    const auto& info=*m_pxImage->m_lpstNewCurrWilImageInfo;
+                    CHRRECT* bounds=m_pxrcList->GetCurrentData();
+                    bounds->nLeft=x+info.shPX;bounds->nTop=y+info.shPY;
+                    bounds->nWidth=info.shWidth;bounds->nHeight=info.shHeight;
                 }
-                const int frame = 200 + 60 * (animation.action + 5 * type) + animation.frame;
-                const int x = m_nChrCount == 1 ? 300 : (i % 2 ? 350 : 250);
-                const int y = i % 2 ? 250 : 210;
-                DrawSelectionFrame(*m_pxImage, frame + 20, x, y, SelectionBlend::Shadow);
-                const RECT rect = DrawSelectionFrame(*m_pxImage, frame, x, y,
-                    animation.action ? SelectionBlend::Normal : SelectionBlend::Inactive);
-                DrawSelectionFrame(*m_pxImage, frame + 40, x, y, SelectionBlend::Additive);
-                CHRRECT* bounds = m_pxrcList->GetCurrentData();
-                bounds->nLeft = rect.left; bounds->nTop = rect.top;
-                bounds->nWidth = rect.right - rect.left; bounds->nHeight = rect.bottom - rect.top;
+                if(animation.Advance(nLoopTime,role->Class,role->Gender))
+                    g_xSound.PlayRoleVoice(false,role->Class,role->Gender);
+                const int frame=animation.ImageFrame(role->Class,role->Gender);
+                DrawSelectionFrame(*m_pxImage,frame+20,x,y,SelectionBlend::Shadow);
+                DrawSelectionFrame(*m_pxImage,frame,x,y,animation.action?SelectionBlend::Normal:SelectionBlend::Inactive);
+                DrawSelectionFrame(*m_pxImage,frame+40,x,y,SelectionBlend::Additive);
             }
             m_pxSList->MoveNextNode();
             m_pxrcList->MoveNextNode();
         }
 		m_xLightFog.ShowLightFog();
+
+		// The resource background contains no button labels; draw every state.
+		for (i = ID_SEL_CHR_NEW_BTN; i <= ID_SEL_CHR_START_BTN; i++)
+		{
+			const int frame = m_pBtn[i]->m_nButtonID +
+				(m_fIsButtonDown && m_pBtn[i]->m_nState == BUTTON_STATE_DOWN ? 0 : 1);
+			if (m_pxImage->NewSetIndex(frame))
+				g_xMainWnd.DrawWithImageForComp(m_pBtn[i]->m_Rect.left, m_pBtn[i]->m_Rect.top,
+					m_pxImage->m_lpstNewCurrWilImageInfo->shWidth,
+					m_pxImage->m_lpstNewCurrWilImageInfo->shHeight,
+					(WORD*)m_pxImage->m_pbCurrImage);
+            if(PtInRect(&m_pBtn[i]->m_Rect,m_pointer))
+                DrawLegacyPanel(m_pBtn[i]->m_Rect,RGB(150,100,50),50,RGB(200,150,100));
+		}
 
         if (m_nChrCount > 2) {
             for (int target = 0; target < 2; ++target) {

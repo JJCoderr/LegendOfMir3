@@ -43,6 +43,7 @@ BYTE				g_bProcState = _LOGIN_PROC;
 #include "CharSelectProcess/SelectionDialogPreview.h"
 #include "CharSelectProcess/SelectionRosterPreview.h"
 #include "CharSelectProcess/CharacterInteractionPreview.h"
+#include "CharSelectProcess/RolePresentationPreview.h"
 
 // Offline visual review uses the real interface without map or network updates.
 class CHudPreviewProcess : public CWHDefProcess {
@@ -65,6 +66,9 @@ public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
     void Load(bool expanded, int chatMode, bool exitDialog, int groupPanel) {
+        if(groupPanel>=RolePresentationPreview::First && groupPanel<=RolePresentationPreview::Last) {
+            connectionSelectionPreview=true;capturePath=RolePresentationPreview::Load(groupPanel);return;
+        }
         if(groupPanel>=CharacterInteractionPreview::First && groupPanel<=CharacterInteractionPreview::Last) {
             connectionSelectionPreview=true;capturePath=CharacterInteractionPreview::Load(groupPanel);return;
         }
@@ -3596,7 +3600,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
 	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
-	const int previewGroup = strcmp(lpCmdLine,"--preview=character-interaction-select")==0 ? CharacterInteractionPreview::First :
+	const int previewGroup = strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
+        strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :
+        strcmp(lpCmdLine,"--preview=role-male-tao")==0 ? RolePresentationPreview::First+2 :
+        strcmp(lpCmdLine,"--preview=role-female-warrior")==0 ? RolePresentationPreview::First+3 :
+        strcmp(lpCmdLine,"--preview=role-female-mage")==0 ? RolePresentationPreview::First+4 :
+        strcmp(lpCmdLine,"--preview=role-female-tao")==0 ? RolePresentationPreview::First+5 :
+        strcmp(lpCmdLine,"--preview=role-selection-hover")==0 ? RolePresentationPreview::First+6 :
+        strcmp(lpCmdLine,"--preview=role-selection-pressed")==0 ? RolePresentationPreview::First+7 :
+        strcmp(lpCmdLine,"--preview=character-interaction-select")==0 ? CharacterInteractionPreview::First :
         strcmp(lpCmdLine,"--preview=character-interaction-create")==0 ? CharacterInteractionPreview::Create :
         strcmp(lpCmdLine,"--preview=character-interaction-female")==0 ? CharacterInteractionPreview::Female :
         strcmp(lpCmdLine,"--preview=selection-roster-first")==0 ? SelectionRosterPreview::First+0 :

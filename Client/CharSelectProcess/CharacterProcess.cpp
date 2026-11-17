@@ -44,7 +44,7 @@ CCharacterProcess::~CCharacterProcess()
 
 VOID CCharacterProcess::Init()
 {
-	m_Tick = 0;
+    for(auto& role:m_creationAnimation) role.Start(RoleAnimation::Create);
 	ZeroMemory(m_createBounds, sizeof(m_createBounds));
 	m_SelectJob = 0;
 	m_SelectSex = 0;
@@ -291,8 +291,7 @@ LRESULT CCharacterProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
             for (int gender = 0; gender < 2; ++gender)
                 if (PtInRect(&m_createBounds[gender], m_ptMousePos) && gender != m_SelectSex) {
                     m_SelectSex = (BYTE)gender;
-                    m_Tick = 0;
-                    g_xSound.PlayRoleVoice(true, m_SelectJob, m_SelectSex);
+                    m_creationAnimation[gender].Start(RoleAnimation::Create);
                 }
 
         for (int i = 0; i < 5; ++i) {
@@ -405,8 +404,7 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
                     RequestRoster();
                 } else if (i >= 2) {
                     m_SelectJob = (BYTE)(i - 2);
-                    m_Tick = 0;
-                    g_xSound.PlayRoleVoice(true, m_SelectJob, m_SelectSex);
+                    for(auto& role:m_creationAnimation) role.Start(RoleAnimation::Create);
                 } else {
                     SubmitCreation();
                 }
@@ -813,17 +811,23 @@ VOID CCharacterProcess::RenderCharCreate(INT nLoopTime)
     DrawCreationDescription();
     // Mir3 br_godot_test_261115: CreateCharacterPage positions/action 4.
     static const POINT positions[6] = {{110,110},{110,120},{110,120},{400,160},{420,115},{425,118}};
-    static const int lastFrame[6] = {17,14,16,15,16,14};
-    m_Tick += nLoopTime;
+
     for (int gender = 0; gender < 2; ++gender) {
         const int role = m_SelectJob + 3 * gender;
-        const int first = 440 + 600 * m_SelectJob + 300 * gender;
-        const int frame = first + (gender == m_SelectSex ? (m_Tick / 121) % (lastFrame[role] + 1) : 0);
-        const auto& anchor = positions[role];
-        DrawSelectionFrame(m_Image, frame + 20, anchor.x, anchor.y, SelectionBlend::Shadow);
-        const bool selected = gender == m_SelectSex;
-        m_createBounds[gender] = DrawSelectionFrame(m_Image, frame, anchor.x, anchor.y,
-            selected ? SelectionBlend::Normal : SelectionBlend::Inactive);
+        auto& animation=m_creationAnimation[gender];
+        const auto& anchor=positions[role];
+        if(animation.Due(nLoopTime) && m_Image.NewSetIndex(animation.ImageFrame(m_SelectJob,gender)+1)) {
+            const auto& info=*m_Image.m_lpstNewCurrWilImageInfo;
+            const int x=anchor.x+info.shPX,y=anchor.y+info.shPY;
+            m_createBounds[gender]={x,y,x+info.shWidth,y+info.shHeight};
+        }
+        const bool voice=animation.Advance(nLoopTime,m_SelectJob,gender);
+        const bool selected=gender==m_SelectSex;
+        if(selected && voice) g_xSound.PlayRoleVoice(true,m_SelectJob,gender);
+        const int frame=animation.ImageFrame(m_SelectJob,gender);
+        DrawSelectionFrame(m_Image,frame+20,anchor.x,anchor.y,SelectionBlend::Shadow);
+        DrawSelectionFrame(m_Image,selected?frame:animation.FirstFrame(m_SelectJob,gender),anchor.x,anchor.y,
+            selected?SelectionBlend::Normal:SelectionBlend::Inactive);
         if (selected)
             DrawSelectionFrame(m_Image, frame + 40, anchor.x, anchor.y, SelectionBlend::Additive);
     }
@@ -936,7 +940,8 @@ BOOL CCharacterProcess::MessageBoxProcess(LPARAM parameter) {
 void CCharacterProcess::OpenCreation()
 {
     m_Progress=PRG_CREATE_CHAR;
-    m_SelectJob=0;m_Tick=0;m_createPressed=-1;m_bCreatePending=FALSE;
+    m_SelectJob=0;m_createPressed=-1;m_bCreatePending=FALSE;
+    for(auto& role:m_creationAnimation) role.Start(RoleAnimation::Create);
     ZeroMemory(m_createBounds,sizeof(m_createBounds));
     m_xMsgBox.HideMessageBox();m_nMessage=0;
     g_xChatEditBox.SetLimitText(SelectionDialog::NameBytes);
