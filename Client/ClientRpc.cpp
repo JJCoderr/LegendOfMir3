@@ -142,6 +142,9 @@ std::string ClientState() {
         state += std::string(",\"return_ready\":")+mir3::BoolJson(!game.m_exitTransition.active &&
             game.m_exitGuard.Allowed(GetTickCount(),hero.m_bCurrMtn));
         state += mir3::ItemDebugState(game);
+        Array rejected;
+        for(bool value:game.m_xInterface.m_chatRejected) rejected.emplace_back(value);
+        state += ",\"chat_rejected\":"+Json(rejected).serialize();
         const auto& chat=game.m_xInterface.m_chatHistory;
         state += ",\"chat_count\":"+std::to_string(chat.size())+
             ",\"chat_last\":"+(chat.empty()?"null":mir3::QuoteLocalText(chat.back().text.c_str()));

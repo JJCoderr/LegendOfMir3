@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../../Shared/Mir3ChatOptions.h"
 
 #define _MAX_USERCOMMAND_LIST	(IDS_USERCMD_SABUKDOOR - IDS_USERCMD_NOWHISPER1 + 1)
 
@@ -47,6 +48,17 @@ BOOL CPlayerObject::ProcessForUserSaid(char *pszData)
 	int nPos = fnDecode6BitBufA(pszData, szDecodeMsg, sizeof(szDecodeMsg) - 1);
 	
 	szDecodeMsg[nPos] = '\0';
+    wchar_t command[256] = {};
+    MultiByteToWideChar(CP_ACP, 0, szDecodeMsg, -1, command, _countof(command));
+    // CmList commands 1070 (chat bar) and 2126 (options dialog).
+    if (!wcscmp(command, L"@\u62d2\u7edd\u6084\u6084\u8bdd") || !wcscmp(command, L"@\u62d2\u7edd\u79c1\u804a")) {
+        m_clientOptions ^= Mir3ChatOptions::RejectWhisper;
+        _TDEFAULTMESSAGE reply;
+        fnMakeDefMessage(&reply, Mir3ChatOptions::Message, m_clientOptions, m_pUserInfo->GetAttackMode(), 0, 0);
+        SendSocket(&reply, NULL);
+        return TRUE;
+    }
+
 
 	if (szDecodeMsg[0] == '@')
 	{

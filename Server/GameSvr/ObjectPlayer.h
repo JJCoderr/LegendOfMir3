@@ -16,6 +16,7 @@ public:
 	BOOL					m_fAdminMode;
 
 	DWORD					m_dwLastCryTime;
+    DWORD m_clientOptions;
 
 	CWHList<CCharObject*>	m_xSlaveObjList;
 

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "MagicWire.h"
+#include "../../Shared/Mir3ChatOptions.h"
 #include "../Def/Mir3Ability.h"
 
 namespace {
@@ -68,6 +69,7 @@ void CPlayerObject::Constructor()
 	m_fAdminMode			= FALSE;
 	
 	m_dwLastCryTime			= 0;
+    m_clientOptions = 0;
 
 	m_fIsCapture			= FALSE;
 }
@@ -624,6 +626,10 @@ void CPlayerObject::Whisper(char *pszChar, char *pszMsg)
 
 	if (pPlayerObject)
 	{
+        if (pPlayerObject->m_clientOptions & Mir3ChatOptions::RejectWhisper) {
+            SysMsg("Private messages are disabled by the recipient.", 0);
+            return;
+        }
 		nLen = memlen(m_pUserInfo->m_szCharName);
 
 		memmove(szChatMsg, m_pUserInfo->m_szCharName, (nLen - 1));

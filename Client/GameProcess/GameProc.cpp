@@ -2,6 +2,7 @@
 #include "StdAfx.h"
 #include "Common/ChatShortcuts.h"
 #include "Common/ChatLog.h"
+#include "../../Shared/Mir3ChatOptions.h"
 #include "Common/ChatCommandIds.h"
 #include "GoldDrop.h"
 #include "ItemDrop.h"
@@ -2900,7 +2901,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
             case 711: // MIR3 minimap unavailable
                 m_xInterface.m_minimap.Unavailable(GetTickCount());
                 break;
-            case 1401: // MIR3 SM_CLIENT_OPTIONS
+            case Mir3ChatOptions::Message: // MIR3 SM_CLIENT_OPTIONS
                 m_xInterface.m_xOptionWnd.ReceiveServerOptions(DWORD(tdm.nRecog),tdm.wParam);
                 break;
 			case SM_SENDNOTICE:

@@ -69,7 +69,7 @@ step,name,target,action,params,expect
 | 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复、施法回包、扣蓝与受伤治疗 |
 | 怪物 | `MonstersSpawn.csv`、`MonstersRespawn.csv`、`MonstersCorpse.csv`、`MonstersLoot.csv`、`MonstersLootCount.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentCount.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
-| 聊天 | `ChatLocal.csv`、`ChatShout.csv`、`ChatShoutLevel.csv`、`ChatWhisper.csv` | 普通聊天、中文编码、喊话等级及冷却拒绝 |
+| 聊天 | `ChatLocal.csv`、`ChatShout.csv`、`ChatShoutLevel.csv`、`ChatWhisper.csv`、`ChatWhisperReject.csv` | 普通聊天、中文编码、喊话等级及冷却拒绝 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
 
@@ -136,3 +136,5 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 喊话场景：`ChatShout.csv` 用 8 级角色发送 ! 前缀消息，验证 SM_CRY 与喊话文本；立即再次喊话后发送普通聊天作为处理完成的依据，断言喊话只收到 1 次、普通消息使用 SM_HEAR。`ChatShoutLevel.csv` 用 7 级角色验证等级不足提示和零喊话广播。当前验证发送者自身收到的广播及冷却内拒绝，未覆盖冷却结束后的再次喊话或多客户端距离边界。
 
 双客户端私聊：`python Test/launch_csv.py Test/ChatWhisper.csv --clients 2 --log out/chat-whisper.log`。启动程序管理两个真实客户端；CSV 用 Client/Client2 交替登录不同账号、发送和断言消息，Test.exe 分别连接两个 PID 的 Client 管道。场景验证中文私聊、对方回复、错误角色名反馈，以及向已在线角色名加后缀发送时不会误投。普通聊天作为后续处理依据，随后精确检查私聊回包次数。仍未覆盖私聊拒收设置、跨服务器私聊或第三个旁观者的隔离。
+
+私聊拒收：`python Test/launch_csv.py Test/ChatWhisperReject.csv --clients 2 --log out/chat-whisper-reject.log`。通过当前 CmList 命令 @拒绝私聊（2126）和 @拒绝悄悄话（1070）切换服务器拒收状态；服务器回传客户端选项消息，state.get 的 chat_rejected 数组反映客户端实际确认状态。测试检查拒收提示、零私聊投递、普通聊天不受影响及恢复接收。拒收状态目前仅在本次角色会话内有效，未实现持久化、按名单拒收或其他聊天频道开关。

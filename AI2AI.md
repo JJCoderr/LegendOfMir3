@@ -2128,3 +2128,7 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - Test.exe 支持 Client2 目标与 --client2-pid；launch_csv.py --clients 2 启动和回收两个真实客户端。
 - GetUserHuman 从前缀 memcmp 改为完整 strcmp，防止向在线角色名加后缀的不存在收件人误投。ChatWhisper.csv 43 步通过：两个账号登录、中英文私聊/回复、错误名称反馈、普通聊天作为处理完成依据及精确 SM_WHISPER 次数。日志 out/csv-validation/chat-whisper.log。
 - Test/EIServer Release 构建通过，执行器 8 项检查通过。拒收设置、跨服务器及第三客户端旁观隔离仍待验证。
+
+### 私聊拒收与恢复
+- 服务端识别当前 CmList 的 @拒绝私聊 / @拒绝悄悄话 两入口命令，切换会话内拒收标志，回传 1401 客户端选项并保留当前攻击模式。拒收期间不给收件人投递，向发送者提示。Shared/Mir3ChatOptions.h 命名消息与位标志。
+- Client state.get 新增 chat_rejected，读取真实确认状态。ChatWhisperReject 44 步通过，普通 ChatWhisper 43 步回归通过；Client/EIServer Release 构建通过。日志 out/csv-validation/chat-whisper-reject.log 和 reject-whisper-regression.log。尚未实现持久化、按名单拒收、其他频道开关。
