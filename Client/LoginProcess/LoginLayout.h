@@ -1,5 +1,6 @@
 #pragma once
 namespace LoginLayout {
+constexpr int LeaveDuration=2000;
 constexpr int Width=640, Height=480, InputBytes=24;
 constexpr int Background=0, Fields=2, LoginButton=10, RegisterButton=12, PasswordButton=14, ExitButton=16;
 constexpr int MonthlyLastDay=102, MonthlyDays=103, HourlyRemaining=104, HourlyLast=105, PointsRemaining=106, CreditRemaining=107;

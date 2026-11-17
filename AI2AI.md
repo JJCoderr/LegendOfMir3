@@ -1562,3 +1562,8 @@ spell-map预览改用生产LoadAllImage，而非只加载场景子集；60个实
 ## 2026-11-17：连接失败与重试完整批次
 
 原生 MessageBoxA/CmList132/MB_YESNO，2秒同地址重连、禁用输入和冻结场景、否退出、正常关闭不重试、旧socket隔离。ConnectionRetry/ConnectionPreview 新增，ClientSocket布局改变后已clean构建，七目标通过。连接20+账号27+分组33+音效15+退出30+返回7=132检查全部通过。预览262..264，下一265。真实提示截图 out/selection-connection-error-1.jpg；桌面点击坐标越界，未计作UI点击验收。详见 Client/docs/connection-retry-migration-audit.md。测试exe务必从 build-ninja-sqlite/Mir2Ex.exe 复制，勿用运行目录旧Mir2Ex.exe；最终报告已重新生成。转场/影片及真实服务器流程仍待完成，目标保持active。
+
+
+## 2026-11-17：登录到选角淡出完整批次
+
+完成SM_SELECTSERVER_OK后2000ms全画布乘色淡出，服务器列表/帮助/提示一起变暗，禁用输入，保留Opening.wav，交接到选角仅一次且不提交明亮背景帧。移除旧静态scroll计数，Load/响应重置。SetNextProc离线模式Load(false)。预览265..267及截图out/login-transition-{start,half,end}.png，下一268。全七目标构建通过；转场12+账号27+分组33+音效15+连接20=107检查通过，最终防闪帧修正后转场复验。详见Client/docs/login-transition-migration-audit.md。影片wemade.dat/CreateChr.dat/StartGame.dat及内嵌音频尚未迁移，不要把旧LoginAvi静态背景当成完成；真实网关联调仍待GUI后进行。

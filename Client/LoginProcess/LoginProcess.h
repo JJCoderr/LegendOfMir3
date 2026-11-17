@@ -55,6 +55,7 @@ public:
 
 private:
     friend struct LoginPreview;
+    friend struct LoginTransitionPreview;
     friend struct ServerGroupsPreview;
     LoginConfiguration m_configuration;
     void LoginAction(HRESULT action);

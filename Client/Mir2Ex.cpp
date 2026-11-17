@@ -36,6 +36,7 @@ BYTE				g_bProcState = _LOGIN_PROC;
 
 
 #include "LoginProcess/LoginPreview.h"
+#include "LoginProcess/LoginTransitionPreview.h"
 #include "ServerSelectProcess/ServerGroupsPreview.h"
 #include "Common/ConnectionPreview.h"
 
@@ -59,6 +60,9 @@ public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
     void Load(bool expanded, int chatMode, bool exitDialog, int groupPanel) {
+        if(groupPanel>=LoginTransitionPreview::First && groupPanel<=LoginTransitionPreview::Last) {
+            loginPreview=true;capturePath=LoginTransitionPreview::Load(groupPanel);return;
+        }
         if(groupPanel>=ConnectionPreview::First && groupPanel<=ConnectionPreview::Last) {
             connectionPreview=true;connectionSelectionPreview=groupPanel==ConnectionPreview::Selection;loginPreview=!connectionSelectionPreview;
             capturePath=ConnectionPreview::Load(groupPanel);return;
@@ -3574,7 +3578,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
 	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
-	const int previewGroup = strcmp(lpCmdLine,"--preview=connection-error")==0 ? ConnectionPreview::First :
+	const int previewGroup = strcmp(lpCmdLine,"--preview=login-transition-start")==0 ? LoginTransitionPreview::First :
+        strcmp(lpCmdLine,"--preview=login-transition-half")==0 ? LoginTransitionPreview::Half :
+        strcmp(lpCmdLine,"--preview=login-transition-end")==0 ? LoginTransitionPreview::Last :
+        strcmp(lpCmdLine,"--preview=connection-error")==0 ? ConnectionPreview::First :
         strcmp(lpCmdLine,"--preview=selection-connection-error")==0 ? ConnectionPreview::Selection :
         strcmp(lpCmdLine,"--preview=connection-checks")==0 ? ConnectionPreview::ChecksOnly :
         strcmp(lpCmdLine,"--preview=server-groups")==0 ? ServerGroupsPreview::First :

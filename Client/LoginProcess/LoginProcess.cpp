@@ -65,7 +65,7 @@ void CLoginProcess::Load(bool connect, const LoginConfiguration* configuration)
 {	
 //	int i;
 	int nSrvCount;
-    m_offline=!connect;m_Progress=PRG_LOGIN;m_previewRequests=0;m_lastUrl.clear();
+    m_offline=!connect;m_Progress=PRG_LOGIN;m_nAnimationCounter=0;m_previewRequests=0;m_lastUrl.clear();
     m_xMsgBox.HideMessageBox();
     if(configuration) m_configuration=*configuration;else ReadIniFileData();
     lstrcpynA(m_szServerIP,m_configuration.host.c_str(),sizeof(m_szServerIP));m_nServerPort=m_configuration.port;
@@ -196,6 +196,7 @@ LRESULT CLoginProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 
 LRESULT CLoginProcess::OnKeyDown(WPARAM wParam,LPARAM lParam)
 {
+    if(m_Progress==PRG_TO_SELECT_CHR) return 0;
 	if (m_xMsgBox.IsActive()) {
 		if (wParam == VK_RETURN || wParam == VK_SPACE) {
 			m_xMsgBox.HideMessageBox();
@@ -227,7 +228,8 @@ LRESULT CLoginProcess::OnKeyDown(WPARAM wParam,LPARAM lParam)
 }
 
 LRESULT CLoginProcess::OnLButtonDown( WPARAM wParam, LPARAM lParam )
-{	
+{
+    if(m_Progress==PRG_TO_SELECT_CHR) return 0;
 //	RECT	tRect;
 //	int i;
 	if( m_xMsgBox.IsActive() )
@@ -262,7 +264,8 @@ LRESULT CLoginProcess::OnLButtonDown( WPARAM wParam, LPARAM lParam )
 }
 
 LRESULT CLoginProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
-{	
+{
+    if(m_Progress==PRG_TO_SELECT_CHR) return 0;
 //	int i;
 //	INT MsgNum;
 	POINT	ptMouse;
@@ -568,7 +571,7 @@ void CLoginProcess::OnSocketMessageRecieve(char *pszMsg)
             lstrcpynA(g_szServerIP,endpoint,16);
             m_nAnimationCounter = 0;
             g_xClientSocket.DisconnectToServer();
-            Clear(RGB(0,0,0));
+            m_xLogin.SetEditorVisible(false);
             m_Progress = PRG_TO_SELECT_CHR;
             break;
         }
@@ -633,7 +636,7 @@ VOID CLoginProcess::SetNextProc()
 {
 	DeleteProc();
 	g_xClientSocket.m_pxDefProc = g_xMainWnd.m_pxDefProcess = &g_xChrSelProc;
-	g_xChrSelProc.Load();
+	g_xChrSelProc.Load(!m_offline);
 	g_bProcState = _CHAR_SEL_PROC;
 }
 
@@ -658,7 +661,7 @@ LRESULT CLoginProcess::OnWindowMove(WPARAM wParam,LPARAM lParam)
 VOID CLoginProcess::RenderScene(INT nLoopTime)
 {
     using Page = CMirSound::LobbyPage;
-    g_xSound.UpdateLobbyAudio(m_Progress == PRG_LOGIN ? Page::Credentials : Page::None, nLoopTime);
+    g_xSound.UpdateLobbyAudio((m_Progress == PRG_LOGIN || m_Progress == PRG_SERVER_SELE || m_Progress == PRG_TO_SELECT_CHR) ? Page::Credentials : Page::None, nLoopTime);
 	static	DWORD	dwLastTick = 0;
 
 	m_Image.NewSetIndex(IMAGE_INDEX_LOGINBASE);
@@ -697,6 +700,7 @@ VOID CLoginProcess::RenderScene(INT nLoopTime)
 			{
 				ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
 				RenderScroll(nLoopTime);
+                if(m_nAnimationCounter>=LoginLayout::LeaveDuration) return;
 				break;
 			}
 			// Render For Server Selection
@@ -723,7 +727,7 @@ VOID CLoginProcess::RenderScene(INT nLoopTime)
 			}
 		}
 		if (m_xMsgBox.IsActive()) m_xLogin.SetEditorVisible(false);
-		m_xMsgBox.RenderMessageBox(0);
+		if(m_Progress!=PRG_TO_SELECT_CHR) m_xMsgBox.RenderMessageBox(0);
 		if ( FAILED(g_xMainWnd.Present()) )
 				g_xMainWnd.RestoreSurfaces();
 	}
@@ -873,22 +877,23 @@ VOID CLoginProcess::RenderNewAccountHelpTxt(VOID)
 
 VOID CLoginProcess::RenderScroll(INT nLoopTime)
 {
-	static INT	nScroll = 0;
-	static INT	nDelay = 0;
-	nDelay += nLoopTime;
-
-
-	if(nDelay > 40)
-	{	nScroll += 5;
-		if(nScroll >= 180)
-		{	
-			SetNextProc();												// 移动到角色选择服务器 (临时)
-			return;
-		}
-	}
-
-//	m_Image.NewSetIndex(IMG_IDX_LOGIN_BACK);
-//	g_xMainWnd.DrawWithImageForCompClipRgn(SCR_LEFT, SCR_TOP + nScroll, SCR_RIGHT, SCR_BOTTOM, (WORD*)(m_Image.m_pbCurrImage),SCR_LEFT,SCR_BOTTOM-nScroll);
+    if(m_nAnimationCounter>=LoginLayout::LeaveDuration) return;
+    const int remaining=LoginLayout::LeaveDuration-m_nAnimationCounter;
+    m_nAnimationCounter+=min(max(nLoopTime,0),remaining);
+    if(m_nAnimationCounter==LoginLayout::LeaveDuration) {SetNextProc();return;}
+    m_xSelectSrv.Render(0);
+    m_xMsgBox.RenderMessageBox(0);
+    const float brightness=max(0.f,float((255.0-double(m_nAnimationCounter)*255.0*double(0.0005f))*double(1.f/255.f)));
+    DDSURFACEDESC2 surface={};surface.dwSize=sizeof(surface);auto* buffer=g_xMainWnd.GetBackBuffer();
+    if(FAILED(buffer->Lock(nullptr,&surface,DDLOCK_WAIT,nullptr))) return;
+    for(DWORD y=0;y<surface.dwHeight;++y) {
+        WORD* row=(WORD*)((BYTE*)surface.lpSurface+y*surface.lPitch);
+        for(DWORD x=0;x<surface.dwWidth;++x) {
+            const WORD pixel=row[x];
+            row[x]=WORD((int((pixel>>11)*brightness)<<11)|(int(((pixel>>5)&63)*brightness)<<5)|int((pixel&31)*brightness));
+        }
+    }
+    buffer->Unlock(nullptr);
 }
 
 
