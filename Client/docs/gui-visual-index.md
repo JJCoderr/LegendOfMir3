@@ -175,3 +175,14 @@ out/gold-drop的gold-held、gold-drop-dialog、gold-drop-filled，以及out/item
 ## 通用弹窗替换状态
 
 out/modal-replacement/modal-replacement-alert.png与modal-replacement-input.png已查看，分别验证输入被提示替换后无编辑框残留、密码输入被普通金额框替换后正常显示。交互取消和无网络副作用以modal-replacement-migration-audit.md的221项检查为证据。
+
+
+## 2026-11-17 当前统一128状态复核
+
+生产源码4f65f9f08444345a6772494f691892f2e08bf90f，二进制SHA256 7B7399A73B9633966F9E6D0575C10D9889BBBEC18FAF2BB3BCD2D53A8FF19368。review_gui.ps1的all套件增加最近18个状态，共128个唯一预览；全部截图在对应进程启动后新鲜生成。输出out/gui-review-native-final/index.html、manifest.json、visual-review.json、128张PNG及22张原尺寸联系表。91张800×600，37张640×480，保持各原生页面实际输出尺寸。
+
+本轮全部22张联系表以1000px宽预览浏览，覆盖128状态；126状态未观察到新的明显布局缺陷。server-notice及server-notice-moved仍有已记录长文本越出边框，沿用现有资源与原版绘制参数，不计为视觉通过。本轮没有进行MIR3.EXE逐像素比较，联系表浏览也不替代逐页字体度量。
+
+本批49份新鲜check报告已扫描核对，未出现新的断言失败。group报告的字体高度/编辑框尺寸和90字节限制、skill-description的rows=13、inventory-layout的样本统计与静态moved/placement=0是数据/模式字段，不作为失败或累计通过数。音效沿用4f65f9f前同生产实现15项回归，此套件未重新运行独立音效预览。
+
+所有自启截图进程正常停止；只读确认六个既有服务器进程仍存在，没有停止或改动服务器。此批只扩充采集清单和验收记录，复用已构建二进制。目标仍未全部完成：原版缺失影片、公告资源对应关系、逐像素/实际听感、真实登录和游戏服务器端到端仍未据此证明。

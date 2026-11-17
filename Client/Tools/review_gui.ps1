@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Repository = (Resolve-Path "$PSScriptRoot/../..").Path,
     [string]$Output = 'out/gui-review-current',
     [ValidateSet('game','lobby','all')][string]$Suite = 'game'
@@ -32,7 +32,11 @@ if ($Suite -eq 'all') {
         'modal-scroll','modal-audio','modal-guild-editor','modal-button-pressed','modal-button-left','modal-button-returned',
         'chat-chinese-input','group-chinese-input','guild-chinese-input','mail-editor-restored','mail-gift-restored','consignment-editor-restored',
         'input-window-moved','server-notice','server-notice-moved',
-        'creation-name-ascii','creation-name-chinese','creation-name-restored','creation-return-cancelled','creation-return-created'
+        'creation-name-ascii','creation-name-chinese','creation-name-restored','creation-return-cancelled','creation-return-created',
+        'chat-contacts','chat-phrases','chat-contacts-expanded','chat-phrases-expanded','chat-private-echo','chat-palette',
+        'guild-add-member','guild-add-denied','guild-add-member-filled','mount-input-delay','mount-delay-dialog',
+        'gold-held','gold-drop-dialog','gold-drop-filled','item-drop-dialog','item-drop-filled',
+        'modal-replacement-alert','modal-replacement-input'
     )
 }
 $manifest = [ordered]@{

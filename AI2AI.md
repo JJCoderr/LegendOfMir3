@@ -1773,3 +1773,9 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - PrepareModal先对活动旧弹窗FinishNotice(CLICK_NO,false)，再重置指针/焦点。寄售Activate先清理旧弹窗后再设置新编号和confirmation，避免误清新请求。
 - 新335/336，下一337；18项替换检查及相关回归共221通过，七目标modal-replacement-build.log成功。首次夹具访问私有字段编译错误已改行为观察，无新增类布局。
 - out/modal-replacement十一图，两个替换状态查看；详见modal-replacement-migration-audit.md。自启进程停止；真实服组合响应仍待联调。
+
+
+## 2026-11-17 当前GUI统一128状态基线
+- review_gui.ps1 all加入319–336的18个近期状态，128/128新鲜截图成功。生产4f65f9f，SHA256 7B7399A73B9633966F9E6D0575C10D9889BBBEC18FAF2BB3BCD2D53A8FF19368；out/gui-review-native-final有HTML、manifest、visual-review和22联系表，全部联系表浏览。
+- 126状态未见新明显布局异常，2公告状态保留既有长文本溢出；49报告无新断言失败，统计/静态字段另记。非逐像素终验或真实服联调。
+- 本批仅工具/文档改动，不重建生产二进制。截图自启进程全部停止，六个既有服务器未改动。下一预览编号仍337。
