@@ -1398,3 +1398,15 @@ StoreWnd::Receive补上705 wTag非零时的背包/快捷栏/鼠标持有数量�
 ## 原生装备穿脱事务迁移（2026-11-17）
 
 已完成上一节审查的统一事务：StatusWnd记录穿上/脱下pending，普通与1124快速操作、错类/重复回包拒绝、失败恢复和音效；满背包返回物品保留鼠标持有，满装备槽保留pending。GameProc仅接受成功后更新外观，背包脱下通过RequestTakeOff，物品使用互斥覆盖脱下pending。长名称夹具修正为30字符。清理87/87、七目标111/111及72项集中检查通过，三种final_state通过。预览220..222，下一223；截图out/equipment-transaction.png、equipment-rollback.png、equipment-takeoff.png。详见Client/docs/equipment-transaction-audit.md。真实服务器穿脱和属性重算仍未验证，目标未完成。
+
+
+## 交易完整流程审查（2026-11-17，待实现）
+
+核对8ff102a发现ExchangeWnd仍只有页面与部分操作，pendingSlot没有放入路径，GameProc无673..687交易结果分派，HUD直接开本地窗。已读Godot完整交易模型/收发与取消完成逻辑，详细迁移范围和消息字段见Client/docs/trade-transaction-audit.md。下一步应整批迁移交易，避免只补一个回包。当前仅新增审查文档，无运行时变更/测试/提交，下一preview223。
+
+
+## 原生交易完整流程（2026-11-17）
+
+已完成上述审查对应的一整批：TradeWire.h命名常量、C键/HUD正前方玩家请求、673..687分派、放入/数量拆堆、取回、金币、确认/取消与失败恢复，音效及快捷引用同步。RestoreItems批量原子恢复，满背包保留pending；交易pending期间补齐背包按下/抬起与场景丢弃互斥。关闭数量/金额弹框统一清理，修正公会管理关闭按钮误切换交易窗口。不要按旧1025 CANCEL别名臆造取消报文。
+
+清理87/87、七目标109/109及修正后增量构建通过；新交易54项+相关回归108项=162项全过。实际UDP请求与GameProc编码回复、DirectSound状态均检查，真实双客户端联机尚未验证。截图out/trade-transaction.png、trade-quantity.png、trade-gold-input.png、trade-open-error.png、trade-cancelled.png已查看并展示；运行exe为out/mud3-01/Mir2Ex-trade-verified.exe。详见Client/docs/trade-transaction-audit.md。预览223..227，下一228。完整目标继续保持active。

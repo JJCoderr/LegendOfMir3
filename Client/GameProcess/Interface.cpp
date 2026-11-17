@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include "TradeWire.h"
 #include "MailWire.h"
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
@@ -1024,8 +1025,7 @@ case _WND_ID_STATUS:
 		{
 			if ( m_xExchangeWnd.GetGameWndActive() )
 			{
-				DeleteWindowToList(_WND_ID_EXCHANGE);
-				m_xExchangeWnd.SetGameWndActive(FALSE); m_xExchangeWnd.confirmPressed=m_xExchangeWnd.headerPressed=false; m_xExchangeWnd.captured=-1;
+				m_xExchangeWnd.Close();
 				bRet = FALSE;
 			}
 			else
@@ -1681,6 +1681,7 @@ void CInterface::OpenNameDialog(int action)
     m_xMsgBox.SetOrigin(220,112,true);
     std::string prompt = action==4 ? "'"+m_xGuildWnd.m_name+"' "+captions.Get(4001) :
         captions.Get(action==6?1304:action==5?4002:action==3?1606:1605);
+    if(action==TradeWire::QuantityDialog) prompt=captions.Get(TradeWire::QuantityDialog);
     if(action==SiegeLayout::LoadDialog) prompt=captions.Get(SiegeLayout::LoadCaption);
     if(action==ConsignmentLayout::PriceDialog) prompt=captions.Get(ConsignmentLayout::PriceQuestion);
     if (action==MailLayout::GoldDialogAction) prompt=captions.Get(MailLayout::GoldQuestion);
@@ -1712,7 +1713,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         (m_nIdxMsgBox==ConsignmentLayout::RegistrationDialog?m_xConsignmentRegistration:m_xConsignmentWnd).Confirm(hResult==CLICK_YES);
         return;
     }
-    if ((m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog || m_nIdxMsgBox==SiegeLayout::LoadDialog) {
+    if ((m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==TradeWire::QuantityDialog || m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog || m_nIdxMsgBox==SiegeLayout::LoadDialog) {
         std::vector<char> answer(GetWindowTextLengthA(g_xChatEditBox.GetSafehWnd())+1);
         char* name=answer.data(); GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,int(answer.size()));
         if (mouse) g_xSound.PlayLobbyEffect("105.wav");
@@ -1727,8 +1728,10 @@ void CInterface::FinishNotice(int hResult, bool mouse)
             g_xMainWnd.m_rcWindow.top+(m_chatExpanded?534:575),m_chatExpanded?432:344,15,TRUE);
         if(m_nIdxMsgBox==MailLayout::GoldDialogAction && hResult!=CLICK_YES) m_xMailWnd.giftGoldConfirmed=false;
         if (m_nIdxMsgBox==7 && hResult!=CLICK_YES) m_xNPCWnd.ClearPrompt();
+        if(m_nIdxMsgBox==TradeWire::QuantityDialog && hResult!=CLICK_YES) m_xExchangeWnd.SubmitOffer(name,false);
         if (hResult == CLICK_YES) {
-            if(m_nIdxMsgBox==SiegeLayout::LoadDialog) m_xSiegeWnd.SubmitLoad(name);
+            if(m_nIdxMsgBox==TradeWire::QuantityDialog) m_xExchangeWnd.SubmitOffer(name,true);
+            else if(m_nIdxMsgBox==SiegeLayout::LoadDialog) m_xSiegeWnd.SubmitLoad(name);
             else if(m_nIdxMsgBox==ConsignmentLayout::PriceDialog) m_xConsignmentRegistration.SubmitPrice(name);
             else if(m_nIdxMsgBox==MailLayout::GoldDialogAction) m_xMailWnd.SubmitGold(name);
             else if (m_nIdxMsgBox == 1) g_xClientSocket.SendCreateGroup(name);
@@ -1913,7 +1916,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
 				case _BTN_ID_OPTION:	WindowActivate(_WND_ID_OPTION);					break;
 				case _BTN_ID_HORSE:		WindowActivate(_WND_ID_HORSE);					break;
 
-				case _BTN_ID_CHANGE:	WindowActivate(_WND_ID_EXCHANGE);				break;
+				case _BTN_ID_CHANGE: m_xExchangeWnd.RequestTrade(); break;
 				case _BTN_ID_GUILD:		
 					g_xClientSocket.SendGuildHome();
 					break;
@@ -1962,7 +1965,7 @@ case _WND_ID_STATUS:		if ( m_xStatusWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )	
 			case _WND_ID_GUILDMASTER:
 			{
 				if ( m_xGuildMasterWnd.OnLButtonUp(ptMouse) )
-					WindowActivate(_WND_ID_EXCHANGE);
+					WindowActivate(_WND_ID_GUILDMASTER);
 				break;
 			}
 			case _WND_ID_GUILD:			if ( m_xGuildWnd.OnLButtonUp(ptMouse) )							WindowActivate(_WND_ID_GUILD);			break;
@@ -2229,6 +2232,7 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
     if (wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive && IsTopWindow(_WND_ID_PORTRAIT)) { WindowActivate(_WND_ID_PORTRAIT); return TRUE; }
 	switch ( wParam )
 	{
+    case 'C': if(!(lParam & (1L<<30))) m_xExchangeWnd.RequestTrade(); return TRUE;
     case 'F': if (!(lParam & (1L << 30))) g_xClientSocket.SendGuildHome(); return TRUE;
     case 'J': if (!(lParam & (1L << 30))) m_minimap.TogglePortrait(GetTickCount()); return TRUE;
     case 'V': if (!(lParam & (1L << 30))) m_minimap.Toggle(GetTickCount(),1000); return TRUE;
@@ -2277,7 +2281,7 @@ VOID CInterface::OnSysKeyDown()
 
 LRESULT	CInterface::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 {
-    if (m_xMsgBox.IsActive() && ((m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog || m_nIdxMsgBox==SiegeLayout::LoadDialog)) {
+    if (m_xMsgBox.IsActive() && ((m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==TradeWire::QuantityDialog || m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog || m_nIdxMsgBox==SiegeLayout::LoadDialog)) {
         SetWindowTextA(g_xChatEditBox.GetSafehWnd(),g_xChatEditBox.m_szInputMsg);
         FinishNotice(CLICK_YES,false);
         return TRUE;

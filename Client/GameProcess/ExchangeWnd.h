@@ -5,13 +5,27 @@
 class CExchangeWnd : public CGameWnd {
 public:
     static constexpr int RecordBytes=100, SlotsPerSide=200, GridColumns=5, CellSize=38, GridWidth=190, GridTop=56, LocalGridLeft=14, RemoteGridLeft=264;
-    struct Offer { bool present=false; int icon=0,width=1,height=1,count=1; unsigned makeIndex=0; std::string name; int stdMode=-1; BYTE record31=0; std::array<BYTE,RecordBytes> record={}; };
+    struct Offer { bool present=false; int icon=0,width=1,height=1,count=1; unsigned makeIndex=0; std::string name; int stdMode=-1; BYTE record31=0; std::array<BYTE,RecordBytes> record={}; int stackMode=0; CItem item; };
     Offer offers[2][200]={};
     std::string partner;
     unsigned gold[2]={};
     int first[2]={},captured=-1,pendingSlot=-1,returnSlot=-1;
     bool confirmed=false,confirmPressed=false,goldPending=false,returnPending=false,headerPressed=false;
     CExchangeWnd() { Init(); }
+    int offerCount=0;
+    static int Count(const Offer* items);
+    static bool Fits(const Offer* items,int slot,const Offer& item);
+    static int Insert(Offer* items,const Offer& item,int preferred=-1);
+    static Offer FromItem(const CItem& item);
+    static CItem ToItem(const Offer& offer);
+    bool RequestTrade();
+    void Open(const std::string& name);
+    void Close();
+    bool Receive(const _TDEFAULTMESSAGE& header,const char* body);
+    bool ReplyOffer(WORD opcode,WORD remaining,DWORD instance);
+    bool Cancel();
+    void SubmitOffer(const char* text,bool confirm);
+    void SendOffer(int quantity);
     void Init() override;
     void Destroy() override { CGameWnd::Destroy(); }
     void CreateExchangeWnd(INT id,CWHWilImageData* image,INT frame,INT x,INT y,INT width,INT height,BOOL movable);

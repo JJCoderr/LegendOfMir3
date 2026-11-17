@@ -966,6 +966,7 @@ BOOL CInventoryWnd::OnLButtonDown(LPCOMMONITEMSET pstCommonItemSet, POINT ptMous
 	INT nCnt, nInventoryNum, nBeltInventoryNum;
     m_closePressed=false;
     if (ServiceButton(ptMouse)) { service.pressed=true; return TRUE; }
+    if (g_xGameProc.m_xInterface.m_xExchangeWnd.pendingSlot>=0) return FALSE;
     if (service.actor && SlotAt(ptMouse)>=0) return TRUE;
     if (ScrollInput(0,ptMouse)) return TRUE;
 
@@ -1025,6 +1026,7 @@ BOOL CInventoryWnd::OnLButtonUp(LPCOMMONITEMSET pstCommonItemSet, POINT ptMouse)
     m_closePressed=false;
     if (close) { g_xSound.PlayLobbyEffect("105.wav"); return TRUE; }
     if (closePressed) return FALSE;
+    if (g_xGameProc.m_xInterface.m_xExchangeWnd.pendingSlot>=0) return FALSE;
     if (service.actor && SlotAt(ptMouse)>=0) { SelectServiceItem(GetInvenNum(ptMouse)); return FALSE; }
     auto& quick=g_xGameProc.m_xInterface.m_xQuickWnd;
     if (quick.heldSlot>=0) {
@@ -1415,4 +1417,17 @@ void CInventoryWnd::ReceiveService(const _TDEFAULTMESSAGE& message)
     }
     service.phase=ServicePhase::Choosing;
     if(!deposit) service.price=0;
+}
+
+bool CInventoryWnd::RestoreItems(const std::vector<CItem>& items)
+{
+    ITEMSET next[_MAX_INVEN_ITEM];std::copy(std::begin(m_stInventoryItem),std::end(m_stInventoryItem),std::begin(next));
+    CBagLayout layout=m_layout;
+    for(const auto& item:items) {
+        int id=0;while(id<_MAX_INVEN_ITEM && next[id].bSetted) ++id;
+        int x,y,width,height;
+        if(id==_MAX_INVEN_ITEM || !Placement(item,nullptr,x,y,width,height) || !layout.Place(id,width,height)) return false;
+        next[id]={TRUE,item};next[id].xItem.m_shCellNum=id;
+    }
+    std::copy(std::begin(next),std::end(next),std::begin(m_stInventoryItem));m_layout=layout;return true;
 }

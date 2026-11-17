@@ -45,6 +45,7 @@ public:
     bool UseBlocked() const;
     bool RequestUse(DWORD now);
     bool ApplyUseReply(WORD opcode,WORD remaining);
+    bool RestoreItems(const std::vector<CItem>& items);
     bool ClosePressed() const { return m_closePressed; }
 	ITEMSET		m_stInventoryItem[_MAX_INVEN_ITEM];
 	ITEMSET		m_stBeltItem[_MAX_BELT_ITEM];

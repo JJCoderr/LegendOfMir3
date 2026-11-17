@@ -4,7 +4,8 @@
 #include "GameProcess/ItemHintStyle.h"
 #include "GameProcess/MerchantServiceIds.h"
 #include "GameProcess/EquipmentActionIds.h"
-namespace { constexpr int PreviewEquipSuccess=220,PreviewEquipFailure=221,PreviewEquipTakeOff=222; constexpr int PreviewStorageReply=219; constexpr int PreviewServiceRepair=215,PreviewServiceSell=216,PreviewServiceDeposit=217,PreviewServiceFailure=218; constexpr int PreviewItemUse=213,PreviewItemUseRestored=214; constexpr int PreviewInterfaceAudio=212; constexpr int PreviewNotice=210,PreviewNoticeMoved=211; constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+#include "GameProcess/TradeWire.h"
+namespace { constexpr int PreviewTradeTransaction=223,PreviewTradeQuantity=224,PreviewTradeCancelled=225,PreviewTradeGoldInput=226,PreviewTradeOpenError=227; constexpr int PreviewEquipSuccess=220,PreviewEquipFailure=221,PreviewEquipTakeOff=222; constexpr int PreviewStorageReply=219; constexpr int PreviewServiceRepair=215,PreviewServiceSell=216,PreviewServiceDeposit=217,PreviewServiceFailure=218; constexpr int PreviewItemUse=213,PreviewItemUseRestored=214; constexpr int PreviewInterfaceAudio=212; constexpr int PreviewNotice=210,PreviewNoticeMoved=211; constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -72,7 +73,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewEquipTakeOff) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewTradeOpenError) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1908,6 +1909,86 @@ public:
 
 
 
+        if(groupPanel>=PreviewTradeTransaction && groupPanel<=PreviewTradeOpenError) {
+            using namespace TradeWire;
+            auto& ui=g_xGameProc.m_xInterface;auto& trade=ui.m_xExchangeWnd;auto& bag=ui.m_xInventoryWnd;auto& held=ui.m_stCommonItem;auto& quick=ui.m_xQuickWnd;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            const auto item=[](const char* name,DWORD identity,int quantity,int stack,int icon=0) {
+                BYTE raw[CExchangeWnd::RecordBytes]={};memcpy(raw,name,min(size_t(30),strlen(name)));raw[61]=BYTE(stack);
+                raw[36]=LOBYTE(icon);raw[37]=HIBYTE(icon);for(int i=0;i<4;++i) raw[62+i]=BYTE(identity>>(8*i));raw[71]=LOBYTE(quantity);raw[72]=HIBYTE(quantity);
+                CItem result;result.SetMir3Item(raw,0);return result;
+            };
+            const CItem potion=item("TradeLongName012345678901234567",4001,10,3),single=item("TradeSingle",4002,1,0),peer=item("PeerPotion",4003,8,3);
+            const auto receive=[&](WORD opcode,int recognition=0,WORD low=0,WORD high=0,const BYTE* body=nullptr,int bytes=0) {
+                _TDEFAULTMESSAGE message={};fnMakeDefMessage(&message,opcode,recognition,low,high,0);char encoded[256]={};fnEncodeMessage(&message,encoded,sizeof(encoded));if(bytes) fnEncode6BitBuf(const_cast<BYTE*>(body),encoded+DEFBLOCKSIZE,bytes,sizeof(encoded)-DEFBLOCKSIZE);g_xGameProc.OnSocketMessageRecieve(encoded);
+            };
+            const auto click=[&](POINT point) {ui.OnLButtonDown(point);ui.OnLButtonUp(point);};
+            const auto bagCount=[&]() {int n=0;for(const auto& slot:bag.m_stInventoryItem) if(slot.bSetted) ++n;return n;};
+            const auto reset=[&]() {
+                trade.pendingSlot=-1;trade.offerCount=0;trade.Close();bag.DeleteAllInvenItem();bag.m_usePending=false;bag.m_lastRelease=0;held=COMMONITEMSET{};quick.heldSlot=-1;for(auto& slot:quick.slots) slot=CQuickWnd::Slot{};
+                trade.m_rcWnd={0,0,494,330};hero.m_nGlod=100000;receive(TradeWire::Open,0,0,0,(const BYTE*)"TradePartner",12);
+            };
+            const auto pick=[&](const CItem& value) {bag.AddInvenItem(value,0,TRUE);bag.SetCommonFromInven(0,&held);};
+            const auto capture=[&](auto action,WORD opcode,int identity,WORD quantity,const char* name) {
+                SOCKET receiver=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP),sender=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);bind(receiver,(sockaddr*)&address,sizeof(address));int size=sizeof(address);getsockname(receiver,(sockaddr*)&address,&size);connect(sender,(sockaddr*)&address,sizeof(address));DWORD timeout=60;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));const SOCKET saved=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;action();g_xClientSocket.m_sockClient=saved;
+                char wire[256]={};const int length=recv(receiver,wire,sizeof(wire)-1,0);closesocket(sender);closesocket(receiver);if(!opcode) return length==SOCKET_ERROR;if(length<19) return false;
+                _TDEFAULTMESSAGE header={};fnDecodeMessage(&header,wire+2);wire[length-1]=0;char text[128]={};fnDecode6BitBuf(wire+2+DEFBLOCKSIZE,text,sizeof(text));return header.wIdent==opcode && header.nRecog==identity && !header.wParam && header.wTag==quantity && !header.wSeries && !strcmp(text,name);
+            };
+            reset();const bool opened=trade.m_bActive && bag.m_bActive && trade.partner=="TradePartner" && bag.m_rcWnd.left==518;
+            trade.first[0]=3;ui.WindowActivate(_WND_ID_INVENTORY);receive(TradeWire::Open);const bool reopened=bag.m_bActive && trade.first[0]==3 && trade.partner=="TradePartner";trade.first[0]=0;
+            trade.Close();auto* target=new CHero;target->m_stFeature.bGender=_GENDER_MAN;target->m_wPosX=hero.m_wPosX;target->m_wPosY=hero.m_wPosY-1;lstrcpyA(target->m_szName,"TradeTarget");hero.m_bCurrDir=0;g_xGameProc.m_xActorList.AddNode(target);
+            const bool request=capture([&](){ui.OnKeyDown('C',0);},Request,0,0,target->m_szName) && !trade.m_bActive;
+            const bool repeat=capture([&](){ui.OnKeyDown('C',1L<<30);},0,0,0,"");target->m_bIsDead=TRUE;const bool dead=!trade.RequestTrade();target->m_bIsDead=FALSE;target->m_wPosX++;const bool direction=!trade.RequestTrade();target->m_wPosX--;target->m_stFeature.bGender=_GENDER_MON;const bool monster=!trade.RequestTrade();g_xGameProc.m_xActorList.MoveCurrentToTop();g_xGameProc.m_xActorList.DeleteCurrentNodeEx();delete target;
+            reset();pick(potion);quick.slots[0]=CQuickWnd::FromItem(potion);click(POINT{30,75});const bool dialog=ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==QuantityDialog && trade.pendingSlot==0 && !trade.offerCount;
+            const bool addRequest=capture([&](){lstrcpyA(g_xChatEditBox.m_szInputMsg,"4");ui.OnMsgInputted(0,0);},Add,4001,4,potion.Name());
+            const bool pending=trade.offerCount==4 && held.bSetted && !ui.m_xMsgBox.IsActive();bag.OnLButtonUp(&held,POINT{550,80});quick.Activate(0,5000,false);
+            const bool locked=held.bSetted && !bagCount() && !bag.m_usePending && !bag.RequestUse(5000);
+            receive(RemoveOk);const bool wrong=trade.pendingSlot==0 && held.bSetted;receive(AddOk,5001,6);
+            const bool split=trade.offers[0][0].present && trade.offers[0][0].count==4 && trade.offers[0][0].makeIndex==5001 && !held.bSetted && trade.pendingSlot<0 && bagCount()==1 && bag.m_stInventoryItem[0].xItem.m_count==6;
+            const bool quickSplit=quick.slots[0].present && quick.slots[0].count==6 && quick.slots[0].item.m_count==6;
+            const bool record=trade.offers[0][0].record[62]==LOBYTE(5001) && trade.offers[0][0].record[63]==HIBYTE(5001) && trade.offers[0][0].record[71]==4;
+            DWORD playing=0;LONG volume=0;const bool itemSound=SUCCEEDED(g_xSound.InspectInterfaceAudio(false,playing,volume)) && (playing&DSBSTATUS_PLAYING);
+            receive(AddOk,5001,6);const bool duplicate=CExchangeWnd::Count(trade.offers[0])==1 && bagCount()==1;
+            click(POINT{30,75});const bool removeRequest=capture([&](){click(POINT{550,80});},Remove,5001,0,potion.Name());receive(RemoveOk);const bool merged=!trade.offers[0][0].present && bagCount()==1 && trade.returnSlot<0;
+            reset();pick(single);const bool wholeRequest=capture([&](){click(POINT{30,75});},Add,4002,1,single.Name());receive(AddOk);const bool whole=trade.offers[0][0].present && !held.bSetted && !bagCount();
+            click(POINT{30,75});click(POINT{550,80});receive(RemoveFail);const bool removeFail=trade.offers[0][0].present && trade.returnSlot<0 && !trade.returnPending && !bagCount();
+            click(POINT{30,75});click(POINT{550,80});receive(RemoveOk);const bool returned=bagCount()==1 && !CExchangeWnd::Count(trade.offers[0]);
+            reset();pick(single);click(POINT{30,75});receive(AddFail);const bool addFail=bagCount()==1 && !held.bSetted && !trade.offerCount && trade.pendingSlot<0;
+            reset();pick(potion);click(POINT{30,75});ui.FinishNotice(CLICK_NO,false);const bool quantityCancel=held.bSetted && trade.pendingSlot<0 && !trade.offerCount;
+            bool invalid=true;for(const char* value:{"0","-1","+1"," 1","1 ","11","9999999999999","1x",""}) {click(POINT{30,75});SetWindowTextA(g_xChatEditBox.GetSafehWnd(),value);invalid &= capture([&](){ui.FinishNotice(CLICK_YES,false);},0,0,0,"") && trade.pendingSlot<0 && held.bSetted;}
+            reset();pick(single);click(POINT{30,75});for(int i=0;i<_MAX_INVEN_ITEM;++i) bag.AddInvenItem(single,i,TRUE);receive(AddFail);const bool full=trade.pendingSlot==0 && held.bSetted && trade.offerCount==1 && !CExchangeWnd::Count(trade.offers[0]);bag.DeleteAllInvenItem();receive(AddFail);const bool recovered=bagCount()==1 && !held.bSetted && trade.pendingSlot<0;
+            reset();const auto offer=CExchangeWnd::FromItem(single);for(int i=0;i<MaximumOffers;++i) CExchangeWnd::Insert(trade.offers[0],offer);pick(single);const bool limit=capture([&](){click(POINT{180,180});},0,0,0,"") && CExchangeWnd::Count(trade.offers[0])==12 && trade.pendingSlot<0;
+            const auto history=ui.m_chatHistory.size();click(POINT{30,75});const bool occupied=ui.m_chatHistory.size()==history+1 && trade.pendingSlot<0;
+            auto wide=offer;wide.width=2;wide.height=3;std::array<CExchangeWnd::Offer,CExchangeWnd::SlotsPerSide> grid={};grid[0]=wide;
+            const bool bounds=!CExchangeWnd::Fits(grid.data(),4,wide) && !CExchangeWnd::Fits(grid.data(),195,wide) && !CExchangeWnd::Fits(grid.data(),5,offer) && CExchangeWnd::Insert(grid.data(),offer,5)==2;
+            reset();receive(PeerAdd,0,0,0,peer.m_serverRecord,CExchangeWnd::RecordBytes);const bool peerAdd=CExchangeWnd::Count(trade.offers[1])==1 && trade.offers[1][0].count==8;receive(PeerRemove,0,0,0,peer.m_serverRecord,CExchangeWnd::RecordBytes);const bool peerRemove=!CExchangeWnd::Count(trade.offers[1]);
+            receive(PeerAdd,0,0,0,peer.m_serverRecord,CExchangeWnd::RecordBytes-1);const bool shortRecord=!CExchangeWnd::Count(trade.offers[1]);
+            click(POINT{80,290});const bool goldDialog=ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==GoldDialog;
+            const bool goldRequest=capture([&](){SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"300");ui.FinishNotice(CLICK_YES,false);},Gold,300,0,"") && trade.goldPending && hero.m_nGlod==100000;
+            receive(LocalGold,300,LOWORD(99700),HIWORD(99700));receive(PeerGold,800);const bool goldReply=trade.gold[0]==300 && trade.gold[1]==800 && hero.m_nGlod==99700 && !trade.goldPending;
+            const bool goldSound=SUCCEEDED(g_xSound.InspectInterfaceAudio(false,playing,volume)) && (playing&DSBSTATUS_PLAYING);
+            const bool confirm=capture([&](){click(POINT{235,285});},Confirm,0,0,"") && trade.confirmed;
+            receive(PeerAdd,0,0,0,peer.m_serverRecord,CExchangeWnd::RecordBytes);receive(Complete);const bool complete=!trade.m_bActive && !bagCount() && hero.m_nGlod==99700 && !CExchangeWnd::Count(trade.offers[1]);
+            reset();pick(single);click(POINT{30,75});receive(AddOk);receive(LocalGold,300,LOWORD(99700),HIWORD(99700));receive(Cancelled);const bool cancel=!trade.m_bActive && bagCount()==1 && hero.m_nGlod==100000;
+            reset();pick(single);click(POINT{30,75});receive(Cancelled);const bool cancelPending=!trade.m_bActive && bagCount()==1 && !held.bSetted;
+            reset();pick(single);click(POINT{30,75});receive(AddOk);for(int i=0;i<_MAX_INVEN_ITEM;++i) bag.AddInvenItem(single,i,TRUE);receive(Cancelled);const bool cancelFull=trade.m_bActive && CExchangeWnd::Count(trade.offers[0])==1;bag.DeleteAllInvenItem();receive(Cancelled);const bool cancelRecovered=!trade.m_bActive && bagCount()==1;
+            reset();pick(potion);click(POINT{30,75});receive(Cancelled);const bool modalClosed=!ui.m_xMsgBox.IsActive() && !IsWindowVisible(g_xChatEditBox.GetSafehWnd()) && !trade.m_bActive && !held.bSetted && bagCount()==1;
+            reset();pick(single);click(POINT{30,75});trade.Close();const bool closeRestored=!trade.m_bActive && !held.bSetted && bagCount()==1;
+            reset();pick(potion);quick.slots[0]=CQuickWnd::FromItem(potion);click(POINT{30,75});SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"10");ui.FinishNotice(CLICK_YES,false);receive(AddOk);const bool quickRemoved=!quick.slots[0].present && trade.offers[0][0].count==10;
+            reset();CExchangeWnd::Insert(trade.offers[0],CExchangeWnd::FromItem(single));CExchangeWnd::Insert(trade.offers[0],CExchangeWnd::FromItem(single));for(int i=0;i<_MAX_INVEN_ITEM-1;++i) bag.AddInvenItem(single,i,TRUE);receive(Cancelled);const bool atomic=trade.m_bActive && CExchangeWnd::Count(trade.offers[0])==2 && bagCount()==_MAX_INVEN_ITEM-1;
+            reset();trade.Close();receive(TradeWire::Open,0,0,0,(const BYTE*)"a\0b",3);const bool nullName=!trade.m_bActive;const std::string longName(61,'a');receive(TradeWire::Open,0,0,0,(const BYTE*)longName.data(),int(longName.size()));const bool longPartner=!trade.m_bActive;
+            CLoginMessages tradeCaptions;tradeCaptions.Load("./CmList.dat");receive(OpenFail);const bool openError=ui.m_xMsgBox.IsActive() && !strcmp(ui.m_xMsgBox.Text(),tradeCaptions.Get(OpenError).c_str());ui.FinishNotice(CLICK_YES,false);
+            reset();pick(single);held.bIsEquipItem=TRUE;click(POINT{30,75});const bool equipmentBlocked=trade.pendingSlot<0;held.bIsEquipItem=FALSE;quick.heldSlot=0;click(POINT{30,75});const bool quickBlocked=trade.pendingSlot<0;quick.heldSlot=-1;bag.m_usePending=true;click(POINT{30,75});const bool useBlocked=trade.pendingSlot<0;bag.m_usePending=false;
+            reset();pick(potion);click(POINT{30,75});SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"4");ui.FinishNotice(CLICK_YES,false);receive(AddOk,5001,6);receive(PeerAdd,0,0,0,peer.m_serverRecord,CExchangeWnd::RecordBytes);receive(LocalGold,300,LOWORD(99700),HIWORD(99700));receive(PeerGold,800);
+            lstrcpyA(hero.m_szName,"MirPreview");capturePath="trade-transaction.bmp";
+            if(groupPanel==PreviewTradeQuantity) {bag.SetCommonFromInven(0,&held);click(POINT{75,75});SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"2");capturePath="trade-quantity.bmp";}
+            if(groupPanel==PreviewTradeCancelled) {reset();pick(single);click(POINT{30,75});receive(AddOk);receive(Cancelled);capturePath="trade-cancelled.bmp";}
+            if(groupPanel==PreviewTradeGoldInput) {trade.gold[0]=0;click(POINT{80,290});SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"300");capturePath="trade-gold-input.bmp";}
+            if(groupPanel==PreviewTradeOpenError) {reset();trade.Close();receive(OpenFail);capturePath="trade-open-error.bmp";}
+            mouse={790,430};
+            if(FILE* report=fopen("trade-transaction-check.txt","wb")) {fprintf(report,"opened=%d reopened=%d request=%d repeat=%d dead=%d direction=%d monster=%d dialog=%d add_request=%d pending=%d locked=%d wrong=%d split=%d record=%d item_sound=%d duplicate=%d remove_request=%d merged=%d whole_request=%d whole=%d remove_fail=%d returned=%d add_fail=%d quantity_cancel=%d invalid=%d full=%d recovered=%d limit=%d occupied=%d bounds=%d peer_add=%d peer_remove=%d short_record=%d gold_dialog=%d gold_request=%d gold_reply=%d gold_sound=%d confirm=%d complete=%d cancel=%d cancel_pending=%d cancel_full=%d cancel_recovered=%d modal_closed=%d close_restored=%d equipment_blocked=%d quick_blocked=%d use_blocked=%d quick_split=%d quick_removed=%d atomic=%d null_name=%d long_partner=%d open_error=%d\n",opened,reopened,request,repeat,dead,direction,monster,dialog,addRequest,pending,locked,wrong,split,record,itemSound,duplicate,removeRequest,merged,wholeRequest,whole,removeFail,returned,addFail,quantityCancel,invalid,full,recovered,limit,occupied,bounds,peerAdd,peerRemove,shortRecord,goldDialog,goldRequest,goldReply,goldSound,confirm,complete,cancel,cancelPending,cancelFull,cancelRecovered,modalClosed,closeRestored,equipmentBlocked,quickBlocked,useBlocked,quickSplit,quickRemoved,atomic,nullName,longPartner,openError);fclose(report);}
+        }
+
         if(groupPanel>=PreviewEquipSuccess && groupPanel<=PreviewEquipTakeOff) {
             auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;auto& status=ui.m_xStatusWnd;auto& held=ui.m_stCommonItem;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
@@ -3361,6 +3442,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=trade-open-error")==0 ? PreviewTradeOpenError :
+        strcmp(lpCmdLine,"--preview=trade-transaction")==0 ? PreviewTradeTransaction :
+        strcmp(lpCmdLine,"--preview=trade-quantity")==0 ? PreviewTradeQuantity :
+        strcmp(lpCmdLine,"--preview=trade-cancelled")==0 ? PreviewTradeCancelled :
+        strcmp(lpCmdLine,"--preview=trade-gold-input")==0 ? PreviewTradeGoldInput :
         strcmp(lpCmdLine,"--preview=equipment-transaction")==0 ? PreviewEquipSuccess :
         strcmp(lpCmdLine,"--preview=equipment-rollback")==0 ? PreviewEquipFailure :
         strcmp(lpCmdLine,"--preview=equipment-takeoff")==0 ? PreviewEquipTakeOff :

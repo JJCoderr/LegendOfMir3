@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "TradeWire.h"
 #include "MerchantServiceIds.h"
 #include "MailWire.h"
 #include "AbilityWire.h"
@@ -1873,7 +1874,7 @@ LRESULT CGameProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 		// 界面中没有要做的事情时.
 
 		// 1. 掉落物品。
-		if ( m_xInterface.m_stCommonItem.bSetted && !m_xInterface.m_stCommonItem.bWaitResponse && !m_xInterface.m_stCommonItem.bIsEquipItem && m_xInterface.m_xQuickWnd.heldSlot<0 )
+		if ( m_xInterface.m_stCommonItem.bSetted && !m_xInterface.m_stCommonItem.bWaitResponse && !m_xInterface.m_stCommonItem.bIsEquipItem && m_xInterface.m_xQuickWnd.heldSlot<0 && m_xInterface.m_xExchangeWnd.pendingSlot<0 )
 		{
 			g_xClientSocket.SendItemIndex(CM_DROPITEM, m_xInterface.m_stCommonItem.xItem.m_stItemInfo.nMakeIndex, m_xInterface.m_stCommonItem.xItem.m_stItemInfo.stStdItem.szName);
 			m_xInterface.m_stCommonItem.bWaitResponse = TRUE;
@@ -3295,6 +3296,13 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
             case SM_OPEN_REPAIR:
             case SM_STORAGE_OPEN:
                 if (tdm.nRecog) m_xInterface.m_xInventoryWnd.OpenService(tdm.nRecog,tdm.wIdent==SM_STORAGE_OPEN?3:tdm.wIdent==SM_SENDUSERSELL?2:1);
+                break;
+            case TradeWire::Open: case TradeWire::OpenFail:
+            case TradeWire::AddOk: case TradeWire::AddFail:
+            case TradeWire::RemoveOk: case TradeWire::RemoveFail:
+            case TradeWire::Cancelled: case TradeWire::PeerAdd: case TradeWire::PeerRemove:
+            case TradeWire::LocalGold: case TradeWire::PeerGold: case TradeWire::Complete:
+                m_xInterface.m_xExchangeWnd.Receive(tdm,pszMsg+DEFBLOCKSIZE);
                 break;
             case SM_USERSELLITEM_OK:
             case SM_USERSELLITEM_FAIL:
