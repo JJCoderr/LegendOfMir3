@@ -1228,6 +1228,43 @@ public:
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
         }
+        if(groupPanel==335 || groupPanel==336) {
+            auto& ui=g_xGameProc.m_xInterface;auto& trade=ui.m_xExchangeWnd;auto& npc=ui.m_xNPCWnd;auto& sale=ui.m_xConsignmentRegistration;
+            const HWND edit=g_xChatEditBox.GetSafehWnd();constexpr int Alert=4000;
+            FILE* report=fopen("modal-replacement-check.txt","wb");const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+            SOCKET receiver=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP),sender=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);
+            bind(receiver,(sockaddr*)&address,sizeof(address));int size=sizeof(address);getsockname(receiver,(sockaddr*)&address,&size);connect(sender,(sockaddr*)&address,sizeof(address));DWORD timeout=30;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));
+            const SOCKET saved=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;
+            ui.OpenNameDialog(TradeWire::QuantityDialog);trade.pendingSlot=2;SetWindowTextA(edit,"12");strcpy(g_xChatEditBox.m_szInputMsg,"12");
+            ui.ShowNotice(Alert);check("trade_pending_cancelled",trade.pendingSlot==-1);check("alert_active",ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==0);
+            char input[128]={};GetWindowTextA(edit,input,sizeof(input));check("old_text_cleared",!input[0] && !g_xChatEditBox.m_szInputMsg[0]);
+            check("editor_hidden_focus_released",!IsWindowVisible(edit) && GetFocus()==g_xMainWnd.GetSafehWnd());ui.OnKeyDown(VK_RETURN,0);
+            npc.prompt="Storage password";npc.promptCommand="@@*10_enter_stgpasswd";npc.promptActor=123;
+            ui.OpenNameDialog(7);SetWindowTextA(edit,"secret");check("password_was_masked",SendMessage(edit,EM_GETPASSWORDCHAR,0,0)=='*');
+            ui.OpenNameDialog(GoldDrop::Dialog);check("npc_context_cancelled",npc.promptCommand.empty() && npc.prompt.empty() && !npc.promptActor);
+            check("replacement_unmasked",SendMessage(edit,EM_GETPASSWORDCHAR,0,0)==0 && SendMessage(edit,EM_GETLIMITTEXT,0,0)==90);
+            GetWindowTextA(edit,input,sizeof(input));check("new_editor_empty_focused",!input[0] && IsWindowVisible(edit) && GetFocus()==edit && ui.m_nIdxMsgBox==GoldDrop::Dialog);
+            ui.FinishNotice(CLICK_NO,false);
+            auto& mail=ui.m_xMailWnd;mail.draft="Replacement draft";mail.recipient="Recipient";
+            ui.OpenNameDialog(MailLayout::GoldDialogAction);mail.giftGoldConfirmed=true;ui.ShowNotice(Alert);
+            check("gift_confirmation_cancelled",!mail.giftGoldConfirmed);check("mail_draft_preserved",mail.draft=="Replacement draft" && mail.recipient=="Recipient");ui.OnKeyDown(VK_RETURN,0);
+            sale.registration=true;sale.hasItem=true;sale.price=12000;sale.description="Sale draft";SetWindowTextA(sale.edits[0],"Sale draft");sale.requests.clear();
+            CLIENTITEMRCD record={};record.nMakeIndex=12345;record.stStdItem.wLooks=75;strcpy(record.stStdItem.szName,"≤‚ ‘ŒÔ∆∑");sale.item.SetItem(record,0);
+            sale.Activate(ConsignmentLayout::Action::SubmitRegistration);
+            check("registration_confirmation_open",ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==ConsignmentLayout::RegistrationDialog);
+            ui.ShowNotice(Alert);sale.Confirm(true);check("registration_cancelled",sale.requests.empty() && !sale.waiting);check("registration_draft_preserved",sale.hasItem && sale.price==12000 && sale.description=="Sale draft");
+            ui.OpenNameDialog(TradeWire::QuantityDialog);trade.pendingSlot=1;sale.Activate(ConsignmentLayout::Action::SubmitRegistration);
+            check("registration_replaces_old_identity",trade.pendingSlot==-1 && ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==ConsignmentLayout::RegistrationDialog);
+            ui.OpenNameDialog(GoldDrop::Dialog);sale.Confirm(true);check("input_cancels_registration",sale.requests.empty() && !sale.waiting && ui.HasInputDialog() && ui.m_nIdxMsgBox==GoldDrop::Dialog);ui.FinishNotice(CLICK_NO,false);
+            sale.waiting=true;trade.goldPending=true;ui.ShowNotice(Alert);ui.ShowNotice(Alert);
+            check("sent_requests_preserved",sale.waiting && trade.goldPending);sale.waiting=false;trade.goldPending=false;ui.OnKeyDown(VK_RETURN,0);
+            ui.m_stCommonItem.bSetted=TRUE;ui.m_stCommonItem.xItem=sale.item;ui.OpenNameDialog(ItemDrop::Dialog);ui.ShowNotice(Alert);
+            check("replacement_keeps_held_item",ui.m_stCommonItem.bSetted && ui.m_stCommonItem.xItem.m_stItemInfo.nMakeIndex==12345);ui.m_stCommonItem=COMMONITEMSET{};
+            char wire[512]={};check("all_replacements_no_packet",recv(receiver,wire,sizeof(wire),0)==SOCKET_ERROR);
+            g_xClientSocket.m_sockClient=saved;closesocket(sender);closesocket(receiver);
+            if(groupPanel==336) {ui.OpenNameDialog(GoldDrop::Dialog);SetWindowTextA(edit,"12000");}
+            if(report) fclose(report);mouse={400,430};capturePath=groupPanel==335?"modal-replacement-alert.bmp":"modal-replacement-input.bmp";
+        }
         if(groupPanel==333 || groupPanel==334) {
             auto& game=g_xGameProc;auto& ui=game.m_xInterface;auto& bag=ui.m_xInventoryWnd;auto& held=ui.m_stCommonItem;
             FILE* report=fopen("item-drop-check.txt","wb");const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
@@ -4162,6 +4199,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=guild-add-member-filled")==0 ? 327 :
         strcmp(lpCmdLine,"--preview=mount-input-delay")==0 ? 328 :
         strcmp(lpCmdLine,"--preview=mount-delay-dialog")==0 ? 329 :
+        strcmp(lpCmdLine,"--preview=modal-replacement-alert")==0 ? 335 :
+        strcmp(lpCmdLine,"--preview=modal-replacement-input")==0 ? 336 :
         strcmp(lpCmdLine,"--preview=item-drop-dialog")==0 ? 333 :
         strcmp(lpCmdLine,"--preview=item-drop-filled")==0 ? 334 :
         strcmp(lpCmdLine,"--preview=gold-held")==0 ? 330 :

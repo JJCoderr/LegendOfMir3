@@ -1767,3 +1767,9 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 新ItemDrop.h和Inventory RequestDrop/SubmitDropQuantity/ReceiveDrop及独立pendingDrop。104/1416输入，1101数量请求，上限100，部分回袋等1313；普通1000带时钟，600头成功清状态，601匹配失败回袋/回手。
 - 手持图标移至弹窗和提示之后，修复数量框遮挡。新增333/334，下一335。新类字段已clean重编；首次夹具BYTE参数错误修复后七目标item-drop-build.log成功，最终item-drop-final-build.log成功。
 - 新28及相关170共198项通过；out/item-drop十二图，两个新状态查看。最后仅1313常量命名整理，无行为更改。自启进程停。详见item-drop-dialog-migration-audit.md。真实服丢弃/落地/拾取与整体登录流程仍待联调。
+
+
+## 2026-11-17 通用弹窗替换取消状态
+- PrepareModal先对活动旧弹窗FinishNotice(CLICK_NO,false)，再重置指针/焦点。寄售Activate先清理旧弹窗后再设置新编号和confirmation，避免误清新请求。
+- 新335/336，下一337；18项替换检查及相关回归共221通过，七目标modal-replacement-build.log成功。首次夹具访问私有字段编译错误已改行为观察，无新增类布局。
+- out/modal-replacement十一图，两个替换状态查看；详见modal-replacement-migration-audit.md。自启进程停止；真实服组合响应仍待联调。

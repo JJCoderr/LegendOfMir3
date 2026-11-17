@@ -170,3 +170,8 @@ out/input-delay/mount-input-delay.png、mount-delay-dialog.png：坐骑命令后
 ## 金币和堆叠丢弃金额/数量框
 
 out/gold-drop的gold-held、gold-drop-dialog、gold-drop-filled，以及out/item-drop的item-drop-dialog、item-drop-filled均已有实际运行PNG并查看。后者包含弹窗上方手持图标。参见gold-drop-dialog-migration-audit.md与item-drop-dialog-migration-audit.md；没有改写旧110图基线。
+
+
+## 通用弹窗替换状态
+
+out/modal-replacement/modal-replacement-alert.png与modal-replacement-input.png已查看，分别验证输入被提示替换后无编辑框残留、密码输入被普通金额框替换后正常显示。交互取消和无网络副作用以modal-replacement-migration-audit.md的221项检查为证据。

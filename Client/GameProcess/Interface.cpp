@@ -1690,6 +1690,7 @@ case _WND_ID_STATUS:
 *******************************************************************************************************************/
 void CInterface::PrepareModal()
 {
+    if(m_xMsgBox.IsActive()) FinishNotice(CLICK_NO,false);
     m_bMoveFocusedWnd=FALSE;
     m_xScrlBar.m_bGrapsed=FALSE;
     for(auto& button:m_xInterBtn) button.SetBtnState(_BTN_STATE_NORMAL);
