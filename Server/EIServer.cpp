@@ -50,16 +50,10 @@ static LRESULT CALLBACK MessageReceiver(HWND window, UINT message, WPARAM w, LPA
 int Run()
 {
     wchar_t path[MAX_PATH];
-    const DWORD length = GetModuleFileNameW(nullptr, path, _countof(path));
-    if (!length || length == _countof(path)) return 1;
-    std::wstring folder(path);folder.resize(folder.find_last_of(L"\\/"));
-    if (GetFileAttributesW((folder + L"\\" + ConfigName).c_str()) == INVALID_FILE_ATTRIBUTES) {
-        const std::wstring debugFolder = MIR3_DEV_RUNTIME_DIR;
-        if (GetFileAttributesW((debugFolder + L"\\" + ConfigName).c_str()) != INVALID_FILE_ATTRIBUTES)
-            folder = debugFolder;
-    }
-    if (!SetCurrentDirectoryW(folder.c_str()) || GetFileAttributesW(ConfigName) == INVALID_FILE_ATTRIBUTES) {
-        mir3::ConsoleLog(L"EIServer", (std::wstring(L"Cannot read EIServer.ini in ") + folder).c_str());
+    if (!GetCurrentDirectoryW(_countof(path), path)) return 1;
+    const std::wstring folder(path);
+    if (GetFileAttributesW(ConfigName) == INVALID_FILE_ATTRIBUTES) {
+        mir3::ConsoleLog(L"EIServer", (std::wstring(L"Cannot read ./EIServer.ini in ") + folder).c_str());
         return 1;
     }
     mir3::ConsoleLog(L"EIServer", (std::wstring(L"Runtime directory: ") + folder).c_str());

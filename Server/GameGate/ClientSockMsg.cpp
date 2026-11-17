@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../Service/PacketLog.inl"
 
 DWORD WINAPI	ThreadFuncForMsg(LPVOID lpParameter);
 BOOL			CheckSocketError(LPARAM lParam);
@@ -83,6 +84,7 @@ void ProcMakeSocketStr(char *lpMsg)
 		}
 	}
 
+    if (nPos > _DEFBLOCKSIZE) TracePacket(L"TX", pSessionInfo->sock, pszData + 1);
 	pSessionInfo->nSendBufferLen += nPos;
 
 //	lpSendUserData->sock = (SOCKET)lpMsgHeader->nSocket;

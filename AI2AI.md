@@ -1879,3 +1879,10 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - Release构建通过。out/native-live-5u3_51lk真实客户端登录、移动、返回选角、再次进图及重新启动客户端登录全部通过，退出码0；退出前客户端位置、SQLite、重进位置均460,261。日志44行均匹配统一格式并能严格UTF-8解码。
 - 旧开发服务器34664在无客户端连接时通过Ctrl+C结束。out/debug/EIServer.exe已更新并用可见控制台启动PID33900；控制台IsWindowVisible=1，读取控制台缓冲区确认All services ready；快照六服务就绪、七默认端口正常。未重定向其标准输出，日志直接显示。
 - 此前单次坐标差一格未复现，尚不能定性为已修复。临时联调脚本仍在out/native-return-check.py，整理为正式脚本尚未完成。
+
+
+## 2026-11-17 协议正文日志与可见终端
+- LoginSvr/DBSvr业务边界及GameGate客户端收发边界增加MSG RX/TX日志，含socket、id、recog/param/tag/series及正文。六位正文解码后输出，控制字节/二进制高字节转义，不能整体解码的记录输出wire十六进制预览；正文最多512字节并标记截断。登录/注册/改密码/更新账号请求遮盖正文。Debug MessageLog默认1，设置0关闭（重启生效）。
+- 按用户要求移除CMake MIR3_DEV_RUNTIME_DIR，直接使用进程当前工作目录./中的EIServer.ini，不再回退开发机out路径。
+- Release构建成功，真实客户端日志out/native-live-oo8w1t1z验证2001遮盖、104正文Mir3Local及双向消息；该轮返回选角前数据库坐标460,262与客户端460,261不同，已保留失败证据，不宣称全流程通过。
+- 曾经ShowWindow/IsWindowVisible为1但窗口矩形0x0，不足以证明终端可见。最终通过wt.exe创建真实Windows Terminal窗口，标题EIServer - EIServer.exe，窗口矩形(322,329)-(1490,953)，已前置。当前服务器PID31528，七默认监听端口正常。运行目录out/debug，窗口由cmd /k保留便于看到启动错误。

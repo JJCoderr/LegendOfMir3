@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../Service/PacketLog.inl"
 
 #include <crtdbg.h>
 
@@ -74,7 +75,8 @@ DWORD WINAPI ThreadFuncForMsg(LPVOID lpParameter)
 									if (*(pSendBuff->szData + _DEFBLOCKSIZE + 2) == '!')	// 3[#? !]
 									{
 										*(pSendBuff->szData + _DEFBLOCKSIZE + 2) = '\0';
-										fnDecodeMessageA(&DefMsg, (pSendBuff->szData + 2));		// 2[#?] ? = Code
+										TracePacket(L"RX", pSendBuff->sock, pSendBuff->szData + 2);
+                                        fnDecodeMessageA(&DefMsg, (pSendBuff->szData + 2));		// 2[#?] ? = Code
 		
 										MsgHdr.nLength = sizeof(_TDEFAULTMESSAGE);
 										SendSocketMsgS(&MsgHdr, sizeof(_TDEFAULTMESSAGE), (char *)&DefMsg, 0, NULL);
@@ -86,7 +88,8 @@ DWORD WINAPI ThreadFuncForMsg(LPVOID lpParameter)
 										pData = pSendBuff->szData + _DEFBLOCKSIZE + 2;				
 										pData[nBodyLen] = '\0';
 
-										fnDecodeMessageA(&DefMsg, (pSendBuff->szData + 2));		// 2[#?] ? = Code
+										TracePacket(L"RX", pSendBuff->sock, pSendBuff->szData + 2);
+                                        fnDecodeMessageA(&DefMsg, (pSendBuff->szData + 2));		// 2[#?] ? = Code
 
 										if (DefMsg.wIdent == CM_SAY)
 										{

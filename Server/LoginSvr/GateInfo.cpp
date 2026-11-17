@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../Service/PacketLog.inl"
 #include "../def/dbmgr.h"
 #include <stdio.h>
 
@@ -82,6 +83,7 @@ void CGateInfo::Close()
 
 void CGateInfo::SendToGate(SOCKET cSock, char *pszPacket)
 {
+    TracePacket(L"TX", cSock, pszPacket);
 	char	szData[256];
 	WSABUF	buf;
 	DWORD	dwSendBytes;

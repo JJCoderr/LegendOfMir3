@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../Service/PacketLog.inl"
 
 extern CWHList<CGateInfo*>			g_xGateInfoList;
 extern BOOL							g_fTerminated;
@@ -44,7 +45,8 @@ UINT WINAPI ProcessGateMsg(LPVOID lpParameter)
 								{
 									*pszEnd = '\0';
 
-									fnDecodeMessageA(&DefaultMsg, (pszBegin + 2));	// 2 = "#?" ? = Check Code 
+									TracePacket(L"RX", pSendBuff->sock, pszBegin + 2);
+                                    fnDecodeMessageA(&DefaultMsg, (pszBegin + 2));	// 2 = "#?" ? = Check Code 
 
 									switch (DefaultMsg.wIdent)
 									{

@@ -4,6 +4,7 @@
 #define MIR3_DATABASE_CONFIG ".\\database.ini"
 #endif
 #include "stdafx.h"
+#include "../Service/PacketLog.inl"
 #include "dbsvr.h"
 #include "globalUserList.h"
 #include "../def/dbmgr.h"
@@ -86,6 +87,7 @@ void CGateInfo::ReceiveSendUser(char *pszPacket)
 
 void CGateInfo::SendToGate(SOCKET cSock, char *pszPacket)
 {
+    TracePacket(L"TX", cSock, pszPacket);
 	char	szData[256];
 	WSABUF	buf;
 	DWORD	dwSendBytes;
