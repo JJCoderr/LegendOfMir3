@@ -36,7 +36,8 @@ if ($Suite -eq 'all') {
         'chat-contacts','chat-phrases','chat-contacts-expanded','chat-phrases-expanded','chat-private-echo','chat-palette',
         'guild-add-member','guild-add-denied','guild-add-member-filled','mount-input-delay','mount-delay-dialog',
         'gold-held','gold-drop-dialog','gold-drop-filled','item-drop-dialog','item-drop-filled',
-        'modal-replacement-alert','modal-replacement-input'
+        'modal-replacement-alert','modal-replacement-input',
+        'notice-mail-hidden','notice-guild-hidden','notice-input-deferred','notice-input-restored'
     )
 }
 $manifest = [ordered]@{

@@ -181,7 +181,7 @@ void CConsignmentWnd::ReadEditors()
 }
 void CConsignmentWnd::SyncEditors(bool available)
 {
-    editorsAvailable=available;LayoutEditors();
+    editorsAvailable=available && !g_xGameProc.m_xNotice.IsActive();LayoutEditors();
 }
 void CConsignmentWnd::LayoutEditors()
 {

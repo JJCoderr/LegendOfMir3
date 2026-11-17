@@ -4,7 +4,7 @@
 #include <vector>
 class CNoticeBox {
 public:
-    enum { Frame=1250,AcceptFrame=1251,AcceptPressedFrame=1252 };
+    enum { Frame=1250,AcceptFrame=1251,AcceptPressedFrame=1252,CanvasWidth=800,CanvasHeight=600 };
     BOOL Load(CWHWilImageData* image);
     BOOL IsActive() const { return active; }
     BOOL IsInited() const { return image!=nullptr; }

@@ -346,7 +346,7 @@ bool CMailWnd::Scroll(int kind,POINT point)
 
 void CMailWnd::SyncEditors(bool available)
 {
-    editorsAvailable=available;
+    editorsAvailable=available && !g_xGameProc.m_xNotice.IsActive();
     LayoutEditors();
 }
 LRESULT CALLBACK CMailWnd::EditorProc(HWND window,UINT message,WPARAM key,LPARAM data)

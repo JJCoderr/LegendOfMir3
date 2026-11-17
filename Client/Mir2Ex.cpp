@@ -1228,6 +1228,46 @@ public:
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
         }
+        if(groupPanel>=337 && groupPanel<=340) {
+            auto& game=g_xGameProc;auto& ui=game.m_xInterface;auto& notice=game.m_xNotice;auto& mail=ui.m_xMailWnd;auto& sale=ui.m_xConsignmentRegistration;auto& guild=ui.m_xGuildEditor;
+            notice.Load(&game.m_xImage.m_xImageList[_IMAGE_INTER]);game.m_bRender=TRUE;
+            FILE* report=fopen("notice-editor-check.txt","wb");const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+            const auto receive=[&](const char* text){_TDEFAULTMESSAGE message={};fnMakeDefMessage(&message,SM_SENDNOTICE,0,0,0,0);char wire[4096]={};fnEncodeMessage(&message,wire,sizeof(wire));fnEncode6BitBuf((BYTE*)text,wire+DEFBLOCKSIZE,int(strlen(text)),sizeof(wire)-DEFBLOCKSIZE);game.OnSocketMessageRecieve(wire);};
+            const char* text="欢迎来到玛法大陆！\n请阅读公告后继续游戏。";
+            const HWND input=g_xChatEditBox.GetSafehWnd();
+            const auto render=[&](){ui.RenderInterface(0,POINT{790,430});};
+            const auto capture=[&](const auto& action,int opcode){
+                SOCKET receiver=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP),sender=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);
+                bind(receiver,(sockaddr*)&address,sizeof(address));int size=sizeof(address);getsockname(receiver,(sockaddr*)&address,&size);connect(sender,(sockaddr*)&address,sizeof(address));DWORD timeout=30;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));
+                const SOCKET saved=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;action();g_xClientSocket.m_sockClient=saved;
+                char wire[128]={},extra[128]={};const int length=recv(receiver,wire,sizeof(wire),0);const bool single=recv(receiver,extra,sizeof(extra),0)==SOCKET_ERROR;closesocket(sender);closesocket(receiver);
+                if(!opcode) return length==SOCKET_ERROR;if(length!=DEFBLOCKSIZE+3) return false;
+                _TDEFAULTMESSAGE message={};fnDecodeMessage(&message,wire+2);return single && message.wIdent==opcode && !message.nRecog && !message.wParam && !message.wTag && !message.wSeries;
+            };
+            ui.OpenNameDialog(TradeWire::QuantityDialog);ui.m_xExchangeWnd.pendingSlot=2;SetWindowTextA(input,"12");SetCapture(g_xMainWnd.GetSafehWnd());
+            check("notice_open_no_packet",capture([&](){receive(text);},0));check("old_quantity_cancelled",!ui.HasInputDialog() && ui.m_xExchangeWnd.pendingSlot==-1);
+            check("input_hidden_focus_released",!IsWindowVisible(input) && GetFocus()==g_xMainWnd.GetSafehWnd() && GetCapture()!=g_xMainWnd.GetSafehWnd());
+            const RECT centered=notice.Bounds();check("notice_centered_on_game_canvas",centered.left+centered.right==CNoticeBox::CanvasWidth && centered.top+centered.bottom==CNoticeBox::CanvasHeight);
+            const RECT display=g_xMainWnd.m_rcWindow;g_xMainWnd.m_rcWindow.right=display.left+CNoticeBox::CanvasWidth*3/2;g_xMainWnd.m_rcWindow.bottom=display.top+CNoticeBox::CanvasHeight*3/2;
+            notice.HideMessageBox();receive(text);const RECT scaled=notice.Bounds();check("window_scale_keeps_notice_bounds",EqualRect(&centered,&scaled));g_xMainWnd.m_rcWindow=display;notice.HideMessageBox();
+            ui.WindowActivate(_WND_ID_MAIL);mail.SelectView(MailLayout::View::Compose);mail.recipient="传奇勇士";mail.draft="邮件草稿保持不变。";mail.SyncEditors(true);SetWindowTextA(mail.edits[0],mail.recipient.c_str());SetWindowTextA(mail.edits[1],mail.draft.c_str());
+            check("mail_initially_visible",IsWindowVisible(mail.edits[0]) && IsWindowVisible(mail.edits[1]));receive(text);render();
+            check("mail_stays_hidden_after_render",!IsWindowVisible(mail.edits[0]) && !IsWindowVisible(mail.edits[1]));mail.SyncEditors(true);check("mail_direct_sync_hidden",!IsWindowVisible(mail.edits[0]) && !IsWindowVisible(mail.edits[1]));
+            notice.HideMessageBox();render();char value[128]={};GetWindowTextA(mail.edits[1],value,sizeof(value));check("mail_restored_with_draft",IsWindowVisible(mail.edits[1]) && mail.draft==value);ui.WindowActivate(_WND_ID_MAIL);
+            ui.WindowActivate(ConsignmentLayout::RegistrationId);sale.description="寄售说明保持不变。";sale.SyncEditors(true);SetWindowTextA(sale.edits[0],sale.description.c_str());
+            check("sale_initially_visible",IsWindowVisible(sale.edits[0]));receive(text);render();sale.SyncEditors(true);check("sale_stays_hidden",!IsWindowVisible(sale.edits[0]));notice.HideMessageBox();render();GetWindowTextA(sale.edits[0],value,sizeof(value));check("sale_restored_with_draft",IsWindowVisible(sale.edits[0]) && sale.description==value);ui.WindowActivate(ConsignmentLayout::RegistrationId);
+            guild.Open(true);SetWindowTextA(guild.edit,"行会公告草稿保持不变。");receive(text);render();check("guild_stays_hidden",!IsWindowVisible(guild.edit) && GetFocus()!=guild.edit);notice.HideMessageBox();render();GetWindowTextA(guild.edit,value,sizeof(value));check("guild_restored_with_draft",IsWindowVisible(guild.edit) && !strcmp(value,"行会公告草稿保持不变。"));guild.Close(false);
+            ui.OpenNameDialog(7);ui.m_xNPCWnd.promptActor=123;ui.m_xNPCWnd.promptCommand="@@*10_enter_stgpasswd";check("empty_notice_no_packet",capture([&](){receive("");},0));check("empty_notice_cancels_old_input",!notice.IsActive() && !ui.HasInputDialog() && ui.m_xNPCWnd.promptCommand.empty());
+            receive(text);ui.OpenNameDialog(GoldDrop::Dialog);SetWindowTextA(input,"12000");check("late_input_hidden_immediately",ui.HasInputDialog() && !IsWindowVisible(input) && GetFocus()!=input);render();check("late_input_hidden_after_render",!IsWindowVisible(input));
+            check("hidden_editor_keys_no_packet",capture([&](){SendMessage(input,WM_CHAR,'9',0);SendMessage(input,WM_CHAR,VK_TAB,0);SendMessage(input,WM_SYSKEYDOWN,'Q',1L<<29);},0));GetWindowTextA(input,value,sizeof(value));check("hidden_editor_text_preserved",!strcmp(value,"12000"));
+            check("hidden_editor_enter_only_notice",capture([&](){SendMessage(input,WM_CHAR,VK_RETURN,0);},CM_LOGINNOTICEOK) && !notice.IsActive() && ui.HasInputDialog());render();
+            check("late_input_restored_focused",IsWindowVisible(input) && GetFocus()==input && ui.m_nIdxMsgBox==GoldDrop::Dialog);ui.FinishNotice(CLICK_NO,false);
+            ui.OpenNameDialog(GoldDrop::Dialog);ShowWindow(input,SW_HIDE);render();check("unrelated_hidden_input_not_shown",!IsWindowVisible(input));ui.FinishNotice(CLICK_NO,false);
+            if(groupPanel==337) {ui.WindowActivate(_WND_ID_MAIL);mail.SelectView(MailLayout::View::Compose);mail.SyncEditors(true);receive(text);}
+            if(groupPanel==338) {guild.Open(true);SetWindowTextA(guild.edit,"行会公告草稿保持不变。");receive(text);}
+            if(groupPanel>=339) {receive(text);ui.OpenNameDialog(GoldDrop::Dialog);SetWindowTextA(input,"12000");if(groupPanel==340) notice.HideMessageBox();}
+            render();noticePreview=groupPanel!=340;mouse={790,430};const char* paths[]={"notice-mail-hidden.bmp","notice-guild-hidden.bmp","notice-input-deferred.bmp","notice-input-restored.bmp"};capturePath=paths[groupPanel-337];if(report) fclose(report);
+        }
         if(groupPanel==335 || groupPanel==336) {
             auto& ui=g_xGameProc.m_xInterface;auto& trade=ui.m_xExchangeWnd;auto& npc=ui.m_xNPCWnd;auto& sale=ui.m_xConsignmentRegistration;
             const HWND edit=g_xChatEditBox.GetSafehWnd();constexpr int Alert=4000;
@@ -4199,6 +4239,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=guild-add-member-filled")==0 ? 327 :
         strcmp(lpCmdLine,"--preview=mount-input-delay")==0 ? 328 :
         strcmp(lpCmdLine,"--preview=mount-delay-dialog")==0 ? 329 :
+        strcmp(lpCmdLine,"--preview=notice-mail-hidden")==0 ? 337 :
+        strcmp(lpCmdLine,"--preview=notice-guild-hidden")==0 ? 338 :
+        strcmp(lpCmdLine,"--preview=notice-input-deferred")==0 ? 339 :
+        strcmp(lpCmdLine,"--preview=notice-input-restored")==0 ? 340 :
         strcmp(lpCmdLine,"--preview=modal-replacement-alert")==0 ? 335 :
         strcmp(lpCmdLine,"--preview=modal-replacement-input")==0 ? 336 :
         strcmp(lpCmdLine,"--preview=item-drop-dialog")==0 ? 333 :

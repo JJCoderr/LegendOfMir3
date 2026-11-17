@@ -106,7 +106,7 @@ HBRUSH CGuildEditor::EditColor(HDC dc)
 void CGuildEditor::Show()
 {
     if (!m_bActive) { if(edit) ShowWindow(edit,SW_HIDE); return; }
-    if(g_xGameProc.m_xInterface.m_xMsgBox.IsActive()) {
+    if(g_xGameProc.m_xInterface.m_xMsgBox.IsActive() || g_xGameProc.m_xNotice.IsActive()) {
         ShowWindow(edit,SW_HIDE);
         if(GetFocus()==edit) SetFocus(g_xMainWnd.GetSafehWnd());
     } else if(!IsWindowVisible(edit)) {

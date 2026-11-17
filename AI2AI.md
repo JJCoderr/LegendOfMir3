@@ -1779,3 +1779,10 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - review_gui.ps1 all加入319–336的18个近期状态，128/128新鲜截图成功。生产4f65f9f，SHA256 7B7399A73B9633966F9E6D0575C10D9889BBBEC18FAF2BB3BCD2D53A8FF19368；out/gui-review-native-final有HTML、manifest、visual-review和22联系表，全部联系表浏览。
 - 126状态未见新明显布局异常，2公告状态保留既有长文本溢出；49报告无新断言失败，统计/静态字段另记。非逐像素终验或真实服联调。
 - 本批仅工具/文档改动，不重建生产二进制。截图自启进程全部停止，六个既有服务器未改动。下一预览编号仍337。
+
+
+## 2026-11-17 服务器公告编辑框隔离及逻辑居中
+- 658使用PrepareModal取消旧输入；邮件/寄售SyncEditors和GuildEditor.Show持续隐藏公告背后EDIT。迟到输入通过m_noticeInputDeferred恢复，其他隐藏原因不复显；共用EDIT回车只确认公告。
+- 截图发现公告按物理客户区居中却画到800×600画布，较大窗口按钮落到画面外。改用NoticeBox命名画布尺寸；未改324文字宽度/字体/皮肤。
+- 新337–340，下一341。新Interface字段clean90通过；最终七目标112通过。14状态、174断言通过，out/notice-editor四新图查看，自启进程停。详见notice-editor-migration-audit.md。
+- all采集清单未来132，旧128基线保留，未虚称全套重跑。真实服及长文本溢出仍未完成。

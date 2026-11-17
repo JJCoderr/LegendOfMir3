@@ -36,8 +36,7 @@ BOOL CNoticeBox::ShowMessageBox(char* text,int requestedFrame)
     if(active) return TRUE;
     if(!image || !text || !*text || strlen(text)>8191 || !image->NewSetIndex(requestedFrame)) return FALSE;
     const auto& info=*image->m_lpstNewCurrWilImageInfo;
-    const int width=g_xMainWnd.m_rcWindow.right-g_xMainWnd.m_rcWindow.left;
-    const int height=g_xMainWnd.m_rcWindow.bottom-g_xMainWnd.m_rcWindow.top;
+    const int width=CanvasWidth,height=CanvasHeight;
     bounds={(width-info.shWidth)/2,(height-info.shHeight)/2,(width+info.shWidth)/2,(height+info.shHeight)/2};
     frame=requestedFrame;LayoutText(text);pressed=dragging=false;active=true;return TRUE;
 }
@@ -77,7 +76,7 @@ BOOL CNoticeBox::RenderMessageBox(INT)
     const auto draw=[&](int index,int x,int y) {
         if(!image->NewSetIndex(index)) return;
         const auto& info=*image->m_lpstNewCurrWilImageInfo;
-        g_xMainWnd.DrawWithImageForCompClipRgn(x,y,info.shWidth,info.shHeight,(WORD*)image->m_pbCurrImage,800,600);
+        g_xMainWnd.DrawWithImageForCompClipRgn(x,y,info.shWidth,info.shHeight,(WORD*)image->m_pbCurrImage,CanvasWidth,CanvasHeight);
     };
     draw(frame,bounds.left,bounds.top);
     auto* surface=g_xMainWnd.GetBackBuffer();HDC dc;

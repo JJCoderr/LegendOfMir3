@@ -78,6 +78,10 @@ INT_PTR CALLBACK ChatEditDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
     if(g_bProcState==_GAME_PROC) {
+        if(g_xGameProc.m_xNotice.IsActive() && (nMsg==WM_CHAR || nMsg==WM_KEYDOWN || nMsg==WM_KEYUP || nMsg==WM_SYSKEYDOWN || nMsg==WM_SYSKEYUP || nMsg==WM_SYSCHAR)) {
+            if(nMsg==WM_CHAR && wParam==VK_RETURN) g_xGameProc.OnKeyDown(wParam,lParam);
+            return 0;
+        }
         auto& shortcuts=ChatShortcuts();
         if(!g_xGameProc.m_xInterface.m_xMsgBox.IsActive() && !g_xGameProc.m_xInterface.m_xGuildEditor.m_bActive && shortcuts.Input(nMsg,wParam)) return 0;
     }

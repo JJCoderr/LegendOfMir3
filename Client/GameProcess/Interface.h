@@ -17,6 +17,7 @@ public:
     void ShowButtonHint(POINT point);
     bool m_primaryStat[2] = {true,true};
     bool m_heldGold = false;
+    bool m_noticeInputDeferred = false;
     bool HasInputDialog() const;
     bool m_chatExpanded = false;
     int m_chatMode = 0;

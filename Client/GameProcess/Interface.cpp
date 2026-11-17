@@ -57,7 +57,7 @@ VOID CInterface::Init()
 	m_nFstLine			= 0;
     previousHint.clear(); hintHeight=6; hintExpanding=true;
     ChatShortcuts().Clear();NativeChatLog().path.clear();
-    m_heldGold=false;
+    m_heldGold=false;m_noticeInputDeferred=false;
     m_chatMode = 0;
     m_chatModeChanged = false;
     for (int i=0;i<3;++i) { m_chatRejected[i]=false; m_chatReceptionFrame[i]=-1; m_chatReceptionHint[i]=i==0?2637:i==1?2639:2643; }
@@ -486,6 +486,15 @@ VOID CInterface::ShowChatList()
 
 VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
 {
+    const HWND input=g_xChatEditBox.GetSafehWnd();
+    if(g_xGameProc.m_xNotice.IsActive()) {
+        if(HasInputDialog()) m_noticeInputDeferred=true;
+        ShowWindow(input,SW_HIDE);
+        if(GetFocus()==input) SetFocus(g_xMainWnd.GetSafehWnd());
+    } else if(m_noticeInputDeferred) {
+        m_noticeInputDeferred=false;
+        if(HasInputDialog()) {ShowWindow(input,SW_SHOW);SetFocus(input);}
+    }
     m_xSiegeWnd.ExpireObjects(GetTickCount());
     m_minimap.showMonsters=m_xOptionWnd.m_values[7];
     m_xPortraitWnd.SendRequest();
@@ -1778,13 +1787,15 @@ void CInterface::OpenNameDialog(int action)
     SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETPASSWORDCHAR,action==7 && m_xNPCWnd.promptCommand.compare(0,3,"@@*")==0?'*':0,0);
     g_xChatEditBox.m_szInputMsg[0]=0;
     SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"");
-    ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_SHOW);
-    SetFocus(g_xChatEditBox.GetSafehWnd());
+    const bool obscured=g_xGameProc.m_xNotice.IsActive();m_noticeInputDeferred=obscured;
+    ShowWindow(g_xChatEditBox.GetSafehWnd(),obscured?SW_HIDE:SW_SHOW);
+    SetFocus(obscured?g_xMainWnd.GetSafehWnd():g_xChatEditBox.GetSafehWnd());
 }
 
 void CInterface::FinishNotice(int hResult, bool mouse)
 {
     if (!hResult) return;
+    m_noticeInputDeferred=false;
     if(m_nIdxMsgBox==ExitFlow::ProgramDialog || m_nIdxMsgBox==ExitFlow::CharacterDialog) {
         const int action=m_nIdxMsgBox;m_nIdxMsgBox=0;
         if(mouse) g_xSound.PlayLobbyEffect("105.wav");

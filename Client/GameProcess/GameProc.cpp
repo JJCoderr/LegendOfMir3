@@ -2907,7 +2907,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 
 				nPos = fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), szDecodeMsg, sizeof(szDecodeMsg)-1);
 				szDecodeMsg[nPos] = '\0';
-				m_xInterface.m_xMsgBox.HideMessageBox();
+                m_xInterface.PrepareModal();
                 m_xNotice.ShowMessageBox(szDecodeMsg,CNoticeBox::Frame);
 
 				break;

@@ -186,3 +186,8 @@ out/modal-replacement/modal-replacement-alert.png与modal-replacement-input.png�
 本批49份新鲜check报告已扫描核对，未出现新的断言失败。group报告的字体高度/编辑框尺寸和90字节限制、skill-description的rows=13、inventory-layout的样本统计与静态moved/placement=0是数据/模式字段，不作为失败或累计通过数。音效沿用4f65f9f前同生产实现15项回归，此套件未重新运行独立音效预览。
 
 所有自启截图进程正常停止；只读确认六个既有服务器进程仍存在，没有停止或改动服务器。此批只扩充采集清单和验收记录，复用已构建二进制。目标仍未全部完成：原版缺失影片、公告资源对应关系、逐像素/实际听感、真实登录和游戏服务器端到端仍未据此证明。
+
+
+## 服务器公告原生编辑框四状态
+
+out/notice-editor/notice-mail-hidden.png、notice-guild-hidden.png、notice-input-deferred.png、notice-input-restored.png均已查看，公告正确居中且原生EDIT不穿透，关闭后金额框恢复。all采集入口扩为132；本批新增四图和相关14状态回归，未重跑此前128整套。详见notice-editor-migration-audit.md。
