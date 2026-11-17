@@ -110,7 +110,7 @@ UINT WINAPI ProcessNPC(LPVOID lpParameter)
 
 		wsprintf(wszThreadTime, _TEXT("%lu%lu ns"), ftTotalTimeElapsed.dwHighDateTime, ftTotalTimeElapsed.dwLowDateTime);
 		
-		SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(5, 0), (LPARAM)wszThreadTime);
+
 
 		SleepEx(1, TRUE);
 	}

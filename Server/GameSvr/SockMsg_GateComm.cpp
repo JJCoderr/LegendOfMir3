@@ -10,7 +10,7 @@ void UpdateStatusBarSession(BOOL fGrow)
 	
 	wsprintf(szText, _TEXT("%d Sessions"), nNumOfCurrSession);
 
-	SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(1, 0), (LPARAM)szText);
+
 }
 
 void UpdateStatusBarUsers(BOOL fGrow)
@@ -23,7 +23,7 @@ void UpdateStatusBarUsers(BOOL fGrow)
 	
 	wsprintf(szText, _TEXT("%d Users"), nNumOfUsers);
 
-	SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(2, 0), (LPARAM)szText);
+
 }
 
 DWORD WINAPI AcceptThread(LPVOID lpParameter)
@@ -144,7 +144,7 @@ DWORD WINAPI ServerWorkerThread(LPVOID CompletionPortID)
 				nLastTick = GetTickCount();
 				nBytes = 0;
 
-				SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(3, 0), (LPARAM)buf);
+
 			}	
 
 			pGateInfo->OverlappedEx[0].bufLen += dwBytesTransferred;
@@ -234,7 +234,7 @@ DWORD WINAPI ServerWorkerThread(LPVOID CompletionPortID)
 				nLastTick = GetTickCount();
 				nBytes = 0;
 
-				SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(4, 0), (LPARAM)buf);
+
 			}	
 /*			fprintf( fp, "sended\r\n" );
 

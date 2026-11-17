@@ -275,7 +275,7 @@ LPARAM OnClientSockMsg(WPARAM wParam, LPARAM lParam)
 				InitServerSocket(g_ssock, &g_saddr, _IDM_SERVERSOCK_MSG, nPort, 1);
 
 				InsertLogMsg(IDS_STARTSERVICE);
-				SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(0, 0), (LPARAM)_T("Ready"));
+
 			}
 			else
 			{

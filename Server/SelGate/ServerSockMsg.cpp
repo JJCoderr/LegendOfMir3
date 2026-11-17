@@ -25,7 +25,7 @@ void UpdateStatusBar(BOOL fGrow)
 	
 	wsprintf(szText, _TEXT("%d Sessions"), nNumOfCurrSession);
 
-	SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(3, 0), (LPARAM)szText);
+
 }
 
 //UINT WINAPI AcceptThread(LPVOID lpParameter)

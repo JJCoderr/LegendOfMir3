@@ -21,7 +21,7 @@ VOID WINAPI OnTimerProc(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
 			if (g_csock != INVALID_SOCKET)
 			{
 				SendExToServer(PACKET_KEEPALIVE);
-				SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(2, 0), (LPARAM)_TEXT("Check Activity"));
+
 			}
 
 			break;

@@ -21,7 +21,7 @@ void UpdateStatusBarGateSession(BOOL fGrow)
 	
 	wsprintf(szText, _TEXT("%d Sessions"), nNumOfCurrGateSession);
 
-	SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(4, 0), (LPARAM)szText);
+
 }
 
 BOOL InitGateCommSocket(SOCKET &s, SOCKADDR_IN* addr, UINT nMsgID, int nPort, long lEvent)

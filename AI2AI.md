@@ -1818,3 +1818,11 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 模块默认 --auto-start；服务配置、SQLite DSN 和起始地图统一读取 EIServer.ini。OFF 保留独立 EXE 构建；DBSvr LocalPort/GatePort、LoginSvr LocalPort 可配置。
 - 合并版与独立版 Release 构建通过。新 out/debug 仅放 EIServer.exe、Mir2Ex.exe、配置和初始化 SQLite；Data/Map/Sound 为指向 G:/传奇3/宝藏传奇3 的 junction。旧 out 已不存在，旧测试角色未迁移。
 - 新目录实测七个端口5000/5100/5500/6000/7000/7100/7200同属PID33888，登录、选服、角色列表通过；测试进程已结束。客户端编译通过，未做本轮GUI验收。
+
+
+## 2026-11-17 EIServer 静态库与窗口分离
+- 替换嵌入DLL宿主：EIServer.h/cpp为控制台入口，直接链接DBSvr/LoginSvr/GameSvr/LoginGate/SelGate/GameGate六个同名静态库，启动按监听就绪顺序推进，统一读取旁边EISERVER.ini。AdminCmd文字并入宿主字符串资源，不再加载业务DLL。
+- 每个服务明确列出LIB源码，初始化及启动逻辑移至Service.cpp；排除原入口、MainWndProc、配置/状态对话框及ModernUI。重复全局符号通过生成的namespace编译单元隔离，不使用DLL。dumpbin检查六库均无WinMain、MainWndProc、CreateWindow、DialogBox、ChooseColor、PropertySheet符号。
+- Window目标使用独立ServiceWindow.cpp薄界面调用对应LIB；MIR3_BUILD_EISERVER=OFF构建独立窗口程序，ON默认构建控制台。网络兼容层由宿主创建message-only接收对象，不是可见窗口；单一消息循环调度。
+- out/debug保留两EXE与配置数据库，Data/Map/Sound目录链接不变。控制台实测PID21804七端口同属一个进程、EnumWindows无顶层窗口、登录/选服/角色列表通过。Server/Tools/test_eiserver.py可复跑（测试账号mirtest/test123，需默认端口）。
+- 本轮验证启动及登录，控制台退出仍由进程终止收尾；协调停服、在线角色落库和独立窗口交互尚未验收，不应宣称通过。此前物品/网关并发的未提交改动保持独立。

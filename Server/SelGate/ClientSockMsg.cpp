@@ -6,7 +6,7 @@ BOOL			CheckSocketError(LPARAM lParam);
 
 VOID WINAPI		OnTimerProc(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 
-void			OnCommand(WPARAM wParam, LPARAM lParam);
+void			Stop();
 BOOL			InitThread(LPTHREAD_START_ROUTINE lpRoutine);
 
 extern SOCKET					g_csock;
@@ -42,7 +42,7 @@ LPARAM OnClientSockMsg(WPARAM wParam, LPARAM lParam)
 					SetTimer(g_hMainWnd, _ID_TIMER_KEEPALIVE, 5000, (TIMERPROC)OnTimerProc);
 
 					InsertLogMsg(IDS_CONNECT_LOGINSERVER);
-					SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(1, 0), (LPARAM)_TEXT("Connected"));
+
 				}
 			}
 			else
@@ -60,7 +60,7 @@ LPARAM OnClientSockMsg(WPARAM wParam, LPARAM lParam)
 			closesocket(g_csock);
 			g_csock = INVALID_SOCKET;
 
-			OnCommand(IDM_STOPSERVICE, 0);
+			Stop();
 
 			break;
 		}

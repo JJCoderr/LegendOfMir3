@@ -7,7 +7,7 @@
 // Legacy entry points are retained for the existing configuration dialogs.
 // Configuration is stored exclusively in server.ini in the working directory.
 #ifdef MIR3_EISERVER
-static const TCHAR* ConfigFile = _T(".\\EIServer.ini");
+static const TCHAR* ConfigFile = _T(".\\EISERVER.ini");
 #else
 static const TCHAR* ConfigFile = _T(".\\server.ini");
 #endif

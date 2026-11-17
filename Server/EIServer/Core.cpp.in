@@ -1,0 +1,10 @@
+// Isolate legacy service globals; compile only the explicit service source list.
+#include "CoreHeaders.h"
+namespace ei { namespace @role@ {
+static const wchar_t* ServiceName=L"@role@";
+void ReportServiceState(BOOL);
+inline int CoreLoadString(HINSTANCE h, UINT id, LPWSTR text, int count) { return ::LoadStringW(h, id + @string_base@, text, count); }
+inline int LoadAdminString(HINSTANCE h, UINT id, LPWSTR text, int count) { constexpr UINT AdminResourceBase=7*8192; return ::LoadStringW(h,id+AdminResourceBase,text,count); }
+#define LoadStringW CoreLoadString
+#include "@relative_source@"
+}}

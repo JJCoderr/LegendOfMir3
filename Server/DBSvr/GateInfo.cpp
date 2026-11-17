@@ -1,5 +1,5 @@
 #ifdef MIR3_EISERVER
-#define MIR3_DATABASE_CONFIG ".\\EIServer.ini"
+#define MIR3_DATABASE_CONFIG ".\\EISERVER.ini"
 #else
 #define MIR3_DATABASE_CONFIG ".\\database.ini"
 #endif

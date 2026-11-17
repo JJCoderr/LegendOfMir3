@@ -79,7 +79,7 @@ DWORD WINAPI ThreadFuncForMsg(LPVOID lpParameter)
 							if (*(pszFirst + 2) == '-')
 								InsertLogMsg(_TEXT("Kick User."));
 							else
-								SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(2, 0), (LPARAM)_TEXT("Activation"));	// Received keep alive check code from login server 
+									; // Received keep alive check code from login server
 						}
 						else
 						{
@@ -129,7 +129,7 @@ DWORD WINAPI ThreadFuncForMsg(LPVOID lpParameter)
 
 		wsprintf(wszThreadTime, _TEXT("%u%u ns"), ftTotalTimeElapsed.dwHighDateTime, ftTotalTimeElapsed.dwLowDateTime);
 		
-		SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(4, 0), (LPARAM)wszThreadTime);
+
 
 		SleepEx(1, TRUE);
 	}

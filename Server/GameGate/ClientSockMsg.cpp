@@ -124,7 +124,7 @@ void ProcReceiveBuffer(char *pszPacket, int nRecv)
 			switch (lpMsgHeader->wIdent)
 			{
 				case GM_CHECKSERVER:
-					SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(2, 0), (LPARAM)_TEXT("Activation"));	// Received keep alive check code from game server 
+						// Received keep alive check code from game server
 					break;
 				case GM_SERVERUSERINDEX:
 				{
@@ -225,7 +225,7 @@ LPARAM OnClientSockMsg(WPARAM wParam, LPARAM lParam)
 //					SetTimer(g_hMainWnd, _ID_TIMER_KEEPALIVE, 1000, (TIMERPROC)OnTimerProc);
 
 					InsertLogMsg(IDS_CONNECT_LOGINSERVER);
-					SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(1, 0), (LPARAM)_TEXT("Connected"));
+
 
 					//
 					UINT			dwThreadIDForMsg = 0;
@@ -256,7 +256,7 @@ LPARAM OnClientSockMsg(WPARAM wParam, LPARAM lParam)
 			SetTimer(g_hMainWnd, _ID_TIMER_CONNECTSERVER, 10000, (TIMERPROC)OnTimerProc);
 
 			InsertLogMsg(IDS_DISCONNECT_LOGINSERVER);
-			SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(1, 0), (LPARAM)_TEXT("Not Connected"));
+
 
 			break;
 		}

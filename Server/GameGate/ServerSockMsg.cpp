@@ -20,7 +20,7 @@ void UpdateStatusBar(BOOL fGrow)
 	
 	wsprintf(szText, _TEXT("%d Sessions"), nNumOfCurrSession);
 
-	SendMessage(g_hStatusBar, SB_SETTEXT, MAKEWORD(3, 0), (LPARAM)szText);
+
 }
 
 void SendSocketMsgS (_LPTMSGHEADER lpMsg, int nLen1, char *pszData1, int nLen2, char *pszData2)

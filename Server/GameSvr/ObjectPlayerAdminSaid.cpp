@@ -7,13 +7,13 @@ void InitAdminCommandList()
 	TCHAR	szCommand[64];
 	int		nLen;
 
-	HINSTANCE hInstance = LoadLibrary(_T("AdminCmd.DLL"));
+	HINSTANCE hInstance = GetModuleHandle(NULL);
 
 	if (hInstance)
 	{
 		for (int i = 0; i < _MAX_ADMINCOMMAND_LIST; i++)
 		{
-			LoadString(hInstance, IDS_COMMAND_MONGEN + i, szCommand, sizeof(szCommand)/sizeof(TCHAR));
+			LoadAdminString(hInstance, IDS_COMMAND_MONGEN + i, szCommand, sizeof(szCommand)/sizeof(TCHAR));
 
 			nLen = lstrlen(szCommand) * sizeof(TCHAR) + 1;
 
@@ -28,7 +28,7 @@ void InitAdminCommandList()
 
 		InsertLogMsgParam(IDS_LOAD_ADMINCOMMAND, &i, LOGPARAM_INT);
 
-		FreeLibrary(hInstance);
+
 	}
 }
 
