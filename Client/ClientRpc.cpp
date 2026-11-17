@@ -124,6 +124,7 @@ std::string ClientState() {
             + ",\"y\":" + std::to_string(hero.m_wPosY)
             + ",\"hp\":" + std::to_string(hero.m_stAbility.wHP)
             + ",\"mp\":" + std::to_string(hero.m_stAbility.wMP)
+            + ",\"gold\":" + std::to_string(hero.m_nGlod)
             + ",\"level\":" + std::to_string(hero.m_stAbility.bLevel)
             + ",\"experience\":" + std::to_string(hero.m_stAbility.dwExp)
             + ",\"next_experience\":" + std::to_string(hero.m_stAbility.dwMaxExp);

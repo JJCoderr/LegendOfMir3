@@ -107,3 +107,5 @@ build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pi
 `CombatExperience.csv` 验证击杀奖励、一次奖励跨多级、战斗退出冷却、数据库保存及重登恢复。fixture 奖励 1000 经验，按当前服务端经验表从 1 级升到 4 级并剩余 100 经验。state.get 增加 level、experience、next_experience、return_ready；return_ready 复用现有退出冷却判断，脚本通过 state.wait 等待，不跳过冷却或修改时钟。本次保持原经验表及等级索引，未校验其数值与原版资源是否一致。
 
 `MonstersLoot.csv` 验证击杀后普通药水掉落、真实行走到物品格、拾取、保存和重登恢复，同时检查不存在怪物的掉落记录与禁用掉落记录不会生成额外物品。`world.walk(x,y)` 只提交到相邻格的单步移动，复用地图通行检查、动作时序及现有移动协议；远距离请求拒绝。FLD_PROBABLY 使用 1/N 抽取，N<=0 禁用。本场景使用 N=1 确保结果可复现，尚未验证随机概率分布、金币和装备掉落、多个同类物品与背包满时的处理。
+
+金币掉落使用 `MonstersGold.csv`，检查掉落、行走拾取、SM_GOLDCHANGED、数据库余额和重登恢复；`MonstersGoldCap.csv` 检查达到当前服务端 BAGGOLD=5000000 时金币留在地面、余额不变，重登仍可见。客户端 state.get 的 gold 是角色当前余额。金币数量为0的配置不生成金币，数量为1保证至少1金币；多条金币配置累加。本轮未验证金币随机数量分布、玩家主动丢钱或混合物品散落顺序，未进行图标视觉检查。

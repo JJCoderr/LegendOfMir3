@@ -2074,3 +2074,9 @@ Client/EIServer 构建通过。首次单级奖励250已验证2级剩50，但立�
 InitMonItemInfo 按数据库怪物编号映射掉落记录，跳过不存在定义，修正原来把FLD_MONSTER当数组下标及<=越界判断。原函数本来由InitMonRaceInfo末尾调用，本轮排查时新增的重复启动调用已移除，最终未改变初始化调用次数。ScatterBagItems补上m_xTGenItemRcd普通物品；MonGetRandomItems启用1/N概率(N<=0禁用)，装备实例只在装备分支分配，消除普通物品/金币分支无用的装备分配。
 
 客户端新增WalkAdjacent和world.walk(x,y)，检查相邻格、通行和动作时序，调用既有SetMotionState发真实CM_WALK；脚本没有改坐标或绕过服务器。MonstersLoot.csv/fixture验证稀疏怪物1007掉落药水、禁用概率0与不存在怪物1的记录无额外物品、远距离走路拒绝、走到散落格(459,260)、拾取、DB物品数1/位置一致、重登恢复。Client/EIServer构建通过（中途旧测试进程占用EXE导致一次LNK1168，在该测试终止后重新链接成功）；最终39步+RpcServer10步通过，out/csv-validation/monster-loot-final.log，runtime rpc-4ceovflh，场景16859ms。随机概率分布、FLD_COUNT多份同类物品、金币/装备掉落及背包满仍待完善验证，不能据此声称掉落系统全部完成。
+
+## 怪物金币掉落与钱包上限
+
+ScatterBagItems新增金币地图物品：使用现有金币名称/金币图标编号、CMapItem.nCount金额和RM_ITEMSHOW，成功放入地图后清零怪物持有金币。修复金币配置数量0导致rand()%0及数量1恒为0，正数量至少1金币，多条配置累加。Client state.get新增gold，来自客户端实际余额m_nGlod。
+
+Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/monster-gold.log，rpc-risgzv86，16719ms）：余额100→101，SM_GOLDCHANGED、DB与重登一致，同时配置数量0未崩溃也未额外掉钱。MonstersGoldCap.csv39步通过（out/csv-validation/monster-gold-cap.log，16703ms）：5000000满额钱包不增加，金币不消失，保存和重登后仍在地面；两次RpcServer各10步通过。未验证玩家主动丢钱、概率/数量分布、多种物品混合散落、金币图标视觉及数值溢出极端配置。装备掉落、多份同类物品和死亡刷新仍需后续完成。

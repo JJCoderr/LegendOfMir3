@@ -364,6 +364,16 @@ void CMonsterObject::Die()
 
 void CMonsterObject::ScatterBagItems()
 {
+    if(m_dwGold) {
+        constexpr WORD GoldAppearance=124; // Client GoldDrop::Icon, item atlas.
+        auto* gold=new CMapItem{};
+        strcpy(gold->szName,g_szGoldName);gold->wLooks=GoldAppearance;gold->nCount=int(m_dwGold);
+        int x,y;m_pMap->GetDropPosition(m_nCurrX,m_nCurrY,3,x,y);
+        if(m_pMap->AddNewObject(x,y,OS_ITEMOBJECT,gold)) {
+            AddRefMsg(RM_ITEMSHOW,gold->wLooks,(int)gold,x,y,gold->szName);
+            m_dwGold=0;
+        } else delete gold;
+    }
     auto* general=m_xTGenItemRcd.GetHead();
     while(general) {
         auto* item=m_xTGenItemRcd.GetData(general);
@@ -513,7 +523,7 @@ void CMonsterObject::MonGetRandomItems()
 						switch (pMonItem->m_btItemType)
 						{
 							case _ITEM_GOLD:
-								m_dwGold = (pMonItem->m_wCount / 2) + (rand() % pMonItem->m_wCount);
+								if(pMonItem->m_wCount) m_dwGold += _MAX(1,(pMonItem->m_wCount / 2) + (rand() % pMonItem->m_wCount));
 								break;
 							case _ITEM_WEAPON:
 							case _ITEM_ARMOR:
