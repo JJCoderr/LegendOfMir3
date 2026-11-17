@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "ServerSelectProcess/SvrSelProc.h"
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
@@ -15,6 +16,7 @@ namespace { constexpr int PreviewSpellGround=237,PreviewSpellOrbit=238,PreviewSp
 CMirSound			g_xSound;
 CWHDXGraphicWindow	g_xMainWnd(640, 480, _SCREEN_BPP);
 CLoginProcess		g_xLoginProc;
+CSvrSelProcess g_xServerGroups;
 CCharacterProcess	g_xChrSelProc;
 CGameProcess		g_xGameProc;
 CSprite				g_xSpriteInfo;
@@ -34,6 +36,7 @@ BYTE				g_bProcState = _LOGIN_PROC;
 
 
 #include "LoginProcess/LoginPreview.h"
+#include "ServerSelectProcess/ServerGroupsPreview.h"
 
 // Offline visual review uses the real interface without map or network updates.
 class CHudPreviewProcess : public CWHDefProcess {
@@ -41,6 +44,7 @@ class CHudPreviewProcess : public CWHDefProcess {
     int damagePreview=0;
     bool levelPreview=false;
     bool loginPreview=false;
+    bool serverGroupsPreview=false;
     bool spellPreview=false,spellMapPreview=false;
     bool namePreview=false;
     bool speechPreview=false;
@@ -53,6 +57,9 @@ public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
     void Load(bool expanded, int chatMode, bool exitDialog, int groupPanel) {
+        if(groupPanel>=ServerGroupsPreview::First && groupPanel<=ServerGroupsPreview::Last) {
+            serverGroupsPreview=true;capturePath=ServerGroupsPreview::Load(groupPanel);return;
+        }
         if(groupPanel>=LoginPreview::First && groupPanel<=LoginPreview::Last) {
             loginPreview=true;capturePath=LoginPreview::Load(groupPanel);return;
         }
@@ -3365,7 +3372,8 @@ public:
 
     }
     void Render(int elapsed) {
-        if(loginPreview) g_xLoginProc.RenderScene(0);
+        if(serverGroupsPreview) g_xServerGroups.RenderScene(0);
+        else if(loginPreview) g_xLoginProc.RenderScene(0);
         else if(exitWaitingPreview) {
             if(g_bProcState==_GAME_PROC) {
                 g_xGameProc.ReturnToSelection();
@@ -3485,6 +3493,7 @@ public:
 
     }
     LRESULT DefMainWndProc(HWND window,UINT message,WPARAM wp,LPARAM lp) override {
+        if(serverGroupsPreview) return g_xServerGroups.DefMainWndProc(window,message,wp,lp);
         if(loginPreview) return g_xLoginProc.DefMainWndProc(window,message,wp,lp);
         auto& ui = g_xGameProc.m_xInterface;
         switch (message) {
@@ -3556,7 +3565,14 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
 	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
-	const int previewGroup = strcmp(lpCmdLine,"--preview=login")==0 ? LoginPreview::First :
+	const int previewGroup = strcmp(lpCmdLine,"--preview=server-groups")==0 ? ServerGroupsPreview::First :
+        strcmp(lpCmdLine,"--preview=server-group-hover")==0 ? ServerGroupsPreview::First+1 :
+        strcmp(lpCmdLine,"--preview=server-group-selected")==0 ? ServerGroupsPreview::First+2 :
+        strcmp(lpCmdLine,"--preview=server-group-row")==0 ? ServerGroupsPreview::First+3 :
+        strcmp(lpCmdLine,"--preview=server-group-scroll")==0 ? ServerGroupsPreview::First+4 :
+        strcmp(lpCmdLine,"--preview=server-group-exit")==0 ? ServerGroupsPreview::First+5 :
+        strcmp(lpCmdLine,"--preview=server-group-login")==0 ? ServerGroupsPreview::First+6 :
+        strcmp(lpCmdLine,"--preview=login")==0 ? LoginPreview::First :
         strcmp(lpCmdLine,"--preview=login-hover")==0 ? LoginPreview::First+1 :
         strcmp(lpCmdLine,"--preview=login-pressed")==0 ? LoginPreview::First+2 :
         strcmp(lpCmdLine,"--preview=login-error")==0 ? LoginPreview::First+3 :
@@ -3821,11 +3837,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 		g_xMainWnd.m_pxDefProcess = &g_xChrSelProc;
 		g_xChrSelProc.Preview(lpCmdLine + strlen(preview));
 		g_bProcState = _CHAR_SEL_PROC;
-	} else {
-		g_xClientSocket.m_pxDefProc = g_xMainWnd.m_pxDefProcess = &g_xLoginProc;
-		g_xLoginProc.Load();
-		g_bProcState = _LOGIN_PROC;
-	}
+    } else if(g_xServerGroups.Load()) {
+        g_xMainWnd.m_pxDefProcess=&g_xServerGroups;g_bProcState=_SVR_SEL_PROC;
+    } else {
+        g_xClientSocket.m_pxDefProc=g_xMainWnd.m_pxDefProcess=&g_xLoginProc;
+        g_xLoginProc.Load();g_bProcState=_LOGIN_PROC;
+    }
 
 	UpdateWindow(g_xMainWnd.GetSafehWnd());
 	ShowWindow(g_xMainWnd.GetSafehWnd(), SW_SHOW);
@@ -3858,6 +3875,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 			{
 				switch ( g_bProcState )
 				{
+				case _SVR_SEL_PROC:
+                    g_xServerGroups.RenderScene(dwDelay);break;
 				case _LOGIN_PROC:
 					g_xLoginProc.RenderScene(dwDelay);
 					break;

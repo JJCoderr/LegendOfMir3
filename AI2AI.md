@@ -1543,3 +1543,17 @@ spell-map预览改用生产LoadAllImage，而非只加载场景子集；60个实
 - 最终 Client 清理构建 87/87、全七目标 113/113 通过；登录 27、键盘路由 34、音效 15 共 76 检查通过。out/mud3-01/Mir2Ex-login-review.exe，日志 out/login-gui-clean-final.log、out/login-gui-all-final.log。
 - 预览编号 249..254（LoginPreview::First/Last）：login、login-hover、login-pressed、login-error、login-servers、login-billing；六张真实原生截图 out/login*.png。原生截图合成已改用实际后台宽高，兼容 640×480 和既有 800×600。
 - 下一批应优先迁移 800×600 LoginInterface/SelLogin.ini 服务器分组入口（现有 ServerSelectProcess 仍需核对）。真实登录连接/530 转场和选角/入场联调仍待 GUI 后进行；未声称 MIR3.EXE 同帧逐像素一致。
+
+
+## 2026-11-17：原生服务器分组入口完整批次
+
+- ServerSelectProcess 原为空壳且未编译。本批加入 Client/CMakeLists.txt 并实现为默认 800×600 入口；配置/必需资源缺失时回退既有 Mir3.ini 账号页。
+- 依据 Mir3 br_godot_test_261115 的 ServerGroups/hud_view 和 login-flow 证据，用 CLIENT 原生窗口事件、DirectDraw、GDI 显示 LoginInterface 0/3/4/7/8/11/12/13/15。当前外部帧 1 索引为零，选中光效按参考版可缺失。
+- SelLogin.ini 通过 Win32 INI 读取，缓存每组的登录配置；初始 selected=-1，最多 40 组/40 条，20 行可见，滚轮每次一项、分页十项、拖动到 count-1，严格 >10 ms 节流。标签四向描边，标题/服务器名宋体 9 号，按下即选组/进入。
+- Common/LoginConfiguration.h 传递网关、账号/改密 URL 和服务器列表。CLoginProcess::Load(bool,const LoginConfiguration*) 接收内存配置并重置提示框/画布；不修改 Mir3.ini。ClientSocket::OnSelectServer 对未出现在 Mir3.ini 的内存服务器也发送选择；旧 ServerNIndex 兼容分支仍保留，网络兼容性尚待真实联调。
+- 分组页停止大厅音频，参考版无额外分组点击声；进入账号页沿用已完成的 Opening.wav、105.wav 音效。更新配置节只是元数据，未实现更新下载。
+- 编号 255..261（ServerGroupsPreview::First/Last）：server-groups、server-group-hover、server-group-selected、server-group-row、server-group-scroll、server-group-exit、server-group-login。真实资源截图 out/server-group*.png；scroll 是明确标注 Preview server 的 40 行内存验收数据，未写回配置。
+- 七目标构建 112/112 成功，最后代码复核后的增量构建亦通过。原生检查分组 33 + 账号 27 + 音效 15 共 75 全通过。默认无参数启动另外通过 CUA 观察分组页，PID TCP 连接数为零；原目录及运行目录 SelLogin.ini、运行目录 Mir3.ini 哈希不变。运行程序 out/mud3-01/Mir2Ex-server-groups-review.exe；日志 out/server-groups-all.log、out/server-groups-final.log。
+- 本轮没有执行真实网关登录，也没有打开配置中的外部网址。原始外部配置仍指向旧公网地址；离线预览 m_offline=true。
+- computer-use 的旧 sky.get_window_state 返回了与请求不符的旧 Mir2ExGuiPreview 窗口对象，未据此交互；改用 cua_repl.getApp(实际 inventory ID) 完成只读截图确认并发送 completion_summary。正常启动测试 PID 已停止，未触碰原有六个服务器进程。
+- 下一步审计登录/选角的连接失败、重试及转场界面；现有 LoginProcess FD_CLOSE/FD_CONNECT 错误提示仍是旧文本流程，Intro/LoginAvi 仍用 ei_login.avi/ei_logo.avi，需对照参考 wemade.dat 和缺失影片行为。继续 GUI 优先，真实服务器流程随后统一调试。

@@ -1,6 +1,7 @@
 #include "Common/LoginMessages.h"
 #include "Common/LoginNotice.h"
 #include "LoginVisual.h"
+#include "Common/LoginConfiguration.h"
 // LoginProcess.h: interface for the CLoginProcess class.
 //
 //////////////////////////////////////////////////////////////////////
@@ -26,7 +27,7 @@ public:
 	virtual				~CLoginProcess();
 
 	VOID				Init(VOID);
-	void				Load(bool connect = true);
+	void				Load(bool connect = true, const LoginConfiguration* configuration = nullptr);
 	VOID				DeleteProc(VOID);
 	VOID				SetNextProc(VOID);
 	VOID				ReadIniFileData(VOID);
@@ -54,6 +55,8 @@ public:
 
 private:
     friend struct LoginPreview;
+    friend struct ServerGroupsPreview;
+    LoginConfiguration m_configuration;
     void LoginAction(HRESULT action);
     LoginAnnouncement m_announcement;
     bool m_offline=false;

@@ -86,7 +86,7 @@ set(MIR3_CLIENT_SOURCES
     GFun.cpp
     StdAfx.cpp
     Resource.rc
-    # ServerSelectProcess/SvrSelProc.cpp
+    ServerSelectProcess/SvrSelProc.cpp
 )
 
 add_executable(Client WIN32 ${MIR3_CLIENT_SOURCES})

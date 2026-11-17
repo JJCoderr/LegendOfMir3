@@ -383,20 +383,18 @@ VOID CClientSocket::OnLogin(char *pszID, char *pszPassword)
 
 VOID CClientSocket::OnSelectServer(char *pszServerName)
 {
-    const int count = GetPrivateProfileIntA("Server", "ServerCount", 0, ".\\Mir3.ini");
-    for (int i = 1; i <= count; ++i) {
-        char key[32], name[256];
-        sprintf(key, "Server%dName", i);
-        GetPrivateProfileStringA("Server",key,"",name,sizeof(name),".\\Mir3.ini");
-        if (pszServerName && strcmp(name,pszServerName) == 0) {
-            sprintf(key,"Server%dIndex",i);
-            const int index = GetPrivateProfileIntA("Server",key,i,".\\Mir3.ini");
-            selectedServerName=pszServerName;
-            fnMakeDefMessage(&DefMsg,CM_SELECTSERVER,0,(WORD)index,0,0);
-            SendPacket(&DefMsg,pszServerName);
-            return;
+    WORD legacyIndex=0;
+    const int count=GetPrivateProfileIntA("Server","ServerCount",0,"./Mir3.ini");
+    for(int i=1;i<=count;++i) {
+        char key[32],name[256];sprintf(key,"Server%dName",i);
+        GetPrivateProfileStringA("Server",key,"",name,sizeof(name),"./Mir3.ini");
+        if(strcmp(name,pszServerName)==0) {
+            sprintf(key,"Server%dIndex",i);legacyIndex=WORD(GetPrivateProfileIntA("Server",key,i,"./Mir3.ini"));break;
         }
     }
+    selectedServerName=pszServerName;
+    fnMakeDefMessage(&DefMsg,CM_SELECTSERVER,0,legacyIndex,0,0);
+    SendPacket(&DefMsg,pszServerName);
 }
 
 VOID CClientSocket::OnChangePassword(char *pszID, char *pszOldPassword, char *pszNewPassword)

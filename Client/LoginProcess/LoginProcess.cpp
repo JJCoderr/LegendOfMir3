@@ -37,31 +37,20 @@ VOID CLoginProcess::Init()
 
 VOID CLoginProcess::ReadIniFileData(VOID)
 {
-	CHAR	szFullPathFileName[MAX_PATH];
-	CHAR	szTemp[MAX_PATH];
-	INT		nServerCount;
-	INT		nLoop;
-
-	GetCurrentDirectory(MAX_PATH,szFullPathFileName);
-	strcat(szFullPathFileName+strlen(szFullPathFileName),"\\\0");
- 	strcat(szFullPathFileName,MIR2EI_INI_FILE_NAME);
-
-	// Get Server IP & PORT
-	GetPrivateProfileString( MIR2EI_INI_SECTION, LOGIN_SETVER_NAME, LOGIN_GATE_SERVER_IP, m_szServerIP, 16, szFullPathFileName );
-	m_nServerPort	=	GetPrivateProfileInt( MIR2EI_INI_SECTION, LOGIN_SERVER_PORT, LOGIN_SERVER_PORT_DATA, szFullPathFileName );
-	// Get ServerCounter
-	nServerCount	=	GetPrivateProfileInt( MIR2EI_SRV_SECTION, SERVER_COUNT, 0, szFullPathFileName);
-	// Read ServerList From Ini files
-	m_SList.ClearAllNodes();
-	for( nLoop = 0; nLoop < nServerCount; nLoop++ )
-	{
-		PServerList	SList = new ServerList;		
-		sprintf( szTemp, "%s%d%s", "server", nLoop+1, "caption");
-		GetPrivateProfileString( MIR2EI_SRV_SECTION,(LPCTSTR) szTemp, NULL, SList->Caption , MAX_PATH, szFullPathFileName );		
-		sprintf( szTemp, "%s%d%s", "server", nLoop+1, "name");
-		GetPrivateProfileString( MIR2EI_SRV_SECTION,(LPCTSTR) szTemp, NULL, SList->Name , MAX_PATH, szFullPathFileName );
-		m_SList.AddNode(SList);
-	}
+    m_configuration={};
+    char value[2048]={};
+    const char* path="./Mir3.ini";
+    GetPrivateProfileStringA("Initial","ServerAddr",LOGIN_GATE_SERVER_IP,value,sizeof(value),path);m_configuration.host=value;
+    m_configuration.port=WORD(GetPrivateProfileIntA("Initial","Param1",LOGIN_SERVER_PORT_DATA,path));
+    GetPrivateProfileStringA("Initial","Param2","http://account.wemade.com/main01.html",value,sizeof(value),path);m_configuration.accountUrl=value;
+    GetPrivateProfileStringA("Initial","Param3","http://account.wemade.com/main03.html",value,sizeof(value),path);m_configuration.passwordUrl=value;
+    const int count=GetPrivateProfileIntA("Server","ServerCount",0,path);
+    for(int i=1;i<=count;++i) {
+        const std::string prefix="server"+std::to_string(i);LoginConfiguration::Server server;
+        GetPrivateProfileStringA("Server",(prefix+"caption").c_str(),"",value,sizeof(value),path);server.caption=value;
+        GetPrivateProfileStringA("Server",(prefix+"name").c_str(),"",value,sizeof(value),path);server.name=value;
+        m_configuration.servers.push_back(std::move(server));
+    }
 }
 
 CLoginProcess::~CLoginProcess()
@@ -72,12 +61,20 @@ CLoginProcess::~CLoginProcess()
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //	Load
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-void CLoginProcess::Load(bool connect)
+void CLoginProcess::Load(bool connect, const LoginConfiguration* configuration)
 {	
 //	int i;
 	int nSrvCount;
     m_offline=!connect;m_Progress=PRG_LOGIN;m_previewRequests=0;m_lastUrl.clear();
-	ReadIniFileData();
+    m_xMsgBox.HideMessageBox();
+    if(configuration) m_configuration=*configuration;else ReadIniFileData();
+    lstrcpynA(m_szServerIP,m_configuration.host.c_str(),sizeof(m_szServerIP));m_nServerPort=m_configuration.port;
+    m_SList.ClearAllNodes();
+    for(const auto& server:m_configuration.servers) {
+        auto* row=new ServerList{};lstrcpynA(row->Caption,server.caption.c_str(),sizeof(row->Caption));
+        lstrcpynA(row->Name,server.name.c_str(),sizeof(row->Name));m_SList.AddNode(row);
+    }
+    LoginVisual::ResizeCanvas(LoginLayout::Width,LoginLayout::Height);
     m_announcement.Load("./Notice.ntc");
 	m_messages.Load(".\\CmList.dat");
 
@@ -1142,12 +1139,7 @@ void CLoginProcess::LoginAction(HRESULT action)
         else g_xClientSocket.OnLogin(const_cast<char*>(m_xLogin.m_values[0].c_str()),const_cast<char*>(m_xLogin.m_values[1].c_str()));
     } else if(action>=CLogin::Register && action<=CLogin::Exit) {
         if(action==CLogin::Exit) m_lastUrl=m_messages.Get(LoginLayout::ExitUrl);
-        else {
-            char url[2048]={};
-            GetPrivateProfileStringA("Initial",action==CLogin::Register?"Param2":"Param3",
-                action==CLogin::Register?"http://account.wemade.com/main01.html":"http://account.wemade.com/main03.html",url,sizeof(url),"./Mir3.ini");
-            m_lastUrl=url;
-        }
+        else m_lastUrl=action==CLogin::Register?m_configuration.accountUrl:m_configuration.passwordUrl;
         if(!m_offline) {
             g_xSound.UpdateLobbyAudio(CMirSound::LobbyPage::None,0);
             if(!m_lastUrl.empty()) ShellExecuteA(g_xMainWnd.GetSafehWnd(),"open",m_lastUrl.c_str(),nullptr,nullptr,SW_SHOWNORMAL);
