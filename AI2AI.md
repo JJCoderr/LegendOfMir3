@@ -1383,3 +1383,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 ## 商人服务结果回包（2026-11-17）
 
 已补全出售648/649/1314/1315、修理669/670、存入701/702/703的GameProc分派和InventoryWnd结果处理，结束Paying、同步余额/耐久/剩余量并显示原提示。服务使用完整物品名；UpdateStackCount新增removeWhenEmpty，原1313零数量语义不变。普通出售保留Godot/原版只删除背包槽的行为。MerchantServiceIds.h集中新增常量。清理87/87及七目标构建通过，78项集中检查通过；截图out/service-repair-reply.png、service-sell-reply.png、service-deposit-reply.png、service-failure-reply.png已查看。证据Client/docs/merchant-service-reply-evidence.md。预览215..218，下一219。在线服务器交易及存储仍待验证，目标未完成。
+
+
+## 仓库取回结果同步（2026-11-17）
+
+StoreWnd::Receive补上705 wTag非零时的背包/快捷栏/鼠标持有数量同步，继续用wParam更新仓库剩余量；705..707异常附加载荷不消费pending。与Godot原分支一致，零wTag不清背包。预览219 storage-withdraw-reply，下一220；74项集中回归及七目标增量构建通过，截图out/storage-withdraw-reply.png已查看。详见Client/docs/storage-withdraw-reply-evidence.md。真实服务器仓库事务仍待验证。

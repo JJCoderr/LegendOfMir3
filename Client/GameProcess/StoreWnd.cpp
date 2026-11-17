@@ -299,13 +299,17 @@ void CStoreWnd::Receive(const _TDEFAULTMESSAGE& header,const char* body)
     if (header.wIdent==SM_STORAGE_LIST) {
         if (SetStorageRecords(header.nRecog,body,header.wSeries) && !m_bActive) g_xGameProc.m_xInterface.WindowActivate(_WND_ID_STORE);
     } else if (header.wIdent>=SM_STORAGE_WITHDRAW_OK && header.wIdent<=SM_STORAGE_BAG_FULL) {
+        if(*body) return;
         if (header.wIdent!=SM_STORAGE_WITHDRAW_OK) g_xGameProc.m_xInterface.ShowNotice(header.wIdent==SM_STORAGE_WITHDRAW_FAIL?1445:1446);
         if (!storage || !storagePending) return;
         const DWORD instance=storagePending; storagePending=0;
-        if (header.wIdent==SM_STORAGE_WITHDRAW_OK) for (auto item=offers.begin();item!=offers.end();++item) if (item->id==instance) {
-            if (header.wParam) item->count=header.wParam;
-            else { offers.erase(item); offerIndex=-1; page=min(page,max(0,(int(offers.size())-1)/12)); }
-            break;
+        if (header.wIdent==SM_STORAGE_WITHDRAW_OK) {
+            if(header.wTag) g_xGameProc.m_xInterface.m_xInventoryWnd.UpdateStackCount(instance,header.wTag);
+            for (auto item=offers.begin();item!=offers.end();++item) if (item->id==instance) {
+                if (header.wParam) item->count=header.wParam;
+                else { offers.erase(item); offerIndex=-1; page=min(page,max(0,(int(offers.size())-1)/OffersPerPage)); }
+                break;
+            }
         }
     } else if (header.wIdent==SM_SENDGOODSLIST) {
         char decoded[10241]; const int length=fnDecode6BitBuf(const_cast<char*>(body),decoded,sizeof(decoded)-1); decoded[length]=0;
