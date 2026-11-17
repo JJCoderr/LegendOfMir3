@@ -2103,3 +2103,7 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - Client/Server 共用 Shared/Mir3InventoryLimits.h 的 60 格容量，服务端容量判断排除已穿戴物品，AddNewItem 同样使用该判断；RPC 状态新增 bag_count/bag_capacity。InventoryFull 46 步通过：60 瓶 + 已穿戴护甲、满包拒绝拾取、消费腾位后拾取、保存重登数量不变。
 - 满包测试暴露 DBSvr 保存无事务，数据库检查曾读到只写入 21 瓶的中间状态。角色/技能/普通物品现在同一事务保存，持管理器锁，任何写入失败回滚；按消息声明数量解析记录。InventorySaveFailure 34 步通过，触发器拒绝 INSERT 后药水和角色坐标回滚到先前存档。失败只记录服务端日志，尚无客户端保存失败通知。
 - Client/EIServer Release 构建通过；Inventory 71 步、Skills 29 步回归通过。日志 out/csv-validation/inventory-full.log、inventory-save-failure.log、full-inventory-regression.log、save-skills-regression.log。大尺寸物品布局空间与满包卸装尚未验证。
+
+### 满包卸装
+- ServerGetTakeOffItem 在清除装备槽前检查 IsEnoughBag；满包通过现有 SM_TAKEOFF_FAIL 回包让客户端恢复穿戴状态。
+- InventoryFullUnequip.csv 52 步通过：满包卸装失败回包、外观/装备不变、消费一瓶后卸装成功、重新穿戴后拾取、保存重登数量正确。EIServer Release 构建通过，日志 out/csv-validation/inventory-full-unequip.log。

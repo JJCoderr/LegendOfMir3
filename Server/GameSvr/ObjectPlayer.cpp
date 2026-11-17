@@ -1477,7 +1477,8 @@ void CPlayerObject::ServerGetTakeOffItem(WORD wWhere, char *pszItemIndex)
 //		{
 //			lpTItemRcd = m_pUserInfo->m_lpTItemRcd.GetData(pListNode);
 		
-	if (memcmp(m_pUserInfo->m_THumanRcd.szTakeItem[wWhere], pszItemIndex, _MAKEITEMINDEX) == 0)
+	if (m_pUserInfo->IsEnoughBag() &&
+        memcmp(m_pUserInfo->m_THumanRcd.szTakeItem[wWhere], pszItemIndex, _MAKEITEMINDEX) == 0)
 	{
 		ZeroMemory(m_pUserInfo->m_THumanRcd.szTakeItem[wWhere], _MAKEITEMINDEX);
 		memcpy(m_pUserInfo->m_THumanRcd.szTakeItem[wWhere], "0", 2);
