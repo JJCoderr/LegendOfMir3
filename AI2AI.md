@@ -2186,3 +2186,12 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - @exit 发送 SM_MERCHANTDLGCLOSE，清除角色当前商人及导入文件上下文，支持重新点击打开。
 - EIServer Release 构建通过。NpcMapping 32步、NpcLegacySchema（删除新列模拟旧表）32步、NpcMissingScript 24步、NpcImports回归44步通过，共132步。日志 out/csv-validation/npc-mapping.log、npc-legacy-schema.log、npc-missing-script.log、npc-mapping-imports-regression.log。
 - 现有 SQLite 想配置独立文件名需手工 ADD COLUMN FLD_SCRIPT TEXT NOT NULL DEFAULT ''。ODBC 新建表定义尚未执行验证。未导入 merchant.txt；仍待完整交易、任务状态与更多脚本指令。
+
+## 2026-11-18 普通商品购买与持久化联调
+
+- 商人 @buy 成功后加载同脚本 [Goods] 的普通物品初始库存，SM_SENDGOODSLIST 使用原客户端 bulk 分类；CM_USERBUYITEM 验证当前商人/已打开商店、同图视野、库存、完整数量的背包容量/负重及总价后扣款发物品。成功回复更新金币和商品列表。
+- IsEnoughBag 支持 requested 参数，默认仍为1；修复 DecGold 的 unsigned 减法下溢检查。普通物品通过 MakeGenItem/SendAddGeneralItem 创建独立实例，沿用已存在的角色保存事务。
+- Client shop.buy 复用 OpenCategory/BuyBulk；state.shop 暴露真实 goods 与提示状态；notice.dismiss 可确认普通提示，不能提交输入/交易确认。
+- 根据 CmList.dat 原资源，购买失败1/2/3分别为无货/无法装载/缺金币（1437/1438/1439）。没有截图或模拟回包。
+- Client/EIServer 构建通过。ShopBuy44步（含数据库断言与重登）、ShopStock37步、ShopCapacity30步、ShopWeight30步；InventoryFull46步和NpcMapping32步回归通过，共219步。日志 out/csv-validation/shop-*.log。
+- 仍未实现补货时钟、库存重启持久化、脚本%价格倍率、装备明细商品、出售修理、其他在线顾客库存广播、购买中崩溃恢复。不得据本阶段宣称完整商店已完成。

@@ -102,7 +102,7 @@ void CStoreWnd::Request(int opcode,const std::string& name,DWORD instance,WORD q
 void CStoreWnd::OpenCategory()
 {
     if (highlighted<0) return;
-    if (goods[highlighted].variants==2) {
+    if (goods[highlighted].variants==BulkCategory) {
         bulk=highlighted; details=loading=false; selected=offerIndex=-1; page=0; offers.clear(); Layout(); return;
     }
     bulk=-1;

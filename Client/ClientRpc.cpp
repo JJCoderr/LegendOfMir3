@@ -152,6 +152,14 @@ std::string ClientState() {
         state += ",\"npc_dialog\":"+Json(Object{{"open",Json(bool(npc.GetGameWndActive()))},
             {"id",Json(int64_t(npc.m_nNpcId))},{"rows",Json(npcRows)},
             {"ready",Json(!npc.lastAction || GetTickCount()-npc.lastAction>1000)}}).serialize();
+        auto& shop=game.m_xInterface.m_xStoreWnd;
+        Array goods;
+        for(const auto& good:shop.goods) goods.emplace_back(Object{
+            {"name",Parse(mir3::QuoteLocalText(good.name.c_str()))},
+            {"price",Json(int64_t(good.price))},{"stock",Json(int64_t(good.stock))}});
+        state += ",\"shop\":"+Json(Object{{"open",Json(bool(shop.GetGameWndActive()))},
+            {"actor",Json(int64_t(shop.actor))},{"goods",Json(goods)},
+            {"notice",Json(game.m_xInterface.m_xMsgBox.IsActive() && game.m_xInterface.m_nIdxMsgBox==0)}}).serialize();
         Array rejected;
         for(bool value:game.m_xInterface.m_chatRejected) rejected.emplace_back(value);
         state += ",\"chat_rejected\":"+Json(rejected).serialize();
@@ -232,6 +240,8 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
     } else if (method == "notice.dismiss" && g_bProcState == _GAME_PROC) {
         accepted=true;
         if(g_xGameProc.m_xNotice.IsActive()) g_xGameProc.m_xNotice.HideMessageBox();
+        auto& ui=g_xGameProc.m_xInterface;
+        if(ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==0) ui.FinishNotice(CLICK_OK,false);
     } else if (method == "chat.toggle_reception" && g_bProcState == _GAME_PROC) {
         if(!g_xGameProc.InputDelayed() && !g_xGameProc.m_xNotice.IsActive() && !g_xGameProc.m_xInterface.HasInputDialog())
             accepted=g_xGameProc.m_xInterface.ToggleChatReception(Integer(params,"channel"));
@@ -243,6 +253,15 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
         if(!g_xGameProc.InputDelayed() && !g_xGameProc.m_xNotice.IsActive() && !g_xGameProc.m_xInterface.HasInputDialog()) {
             memcpy(g_xChatEditBox.m_szInputMsg,text.c_str(),text.size()+1);
             g_xGameProc.OnMsgInputted(text[0]=='@',0);accepted=true;
+        }
+    } else if (method == "shop.buy" && g_bProcState == _GAME_PROC) {
+        const int index=Integer(params,"index"),quantity=Integer(params,"quantity");
+        if(quantity<1 || quantity>USHRT_MAX) throw JsonRpc::Error{-32602,"Invalid purchase quantity"};
+        auto& shop=g_xGameProc.m_xInterface.m_xStoreWnd;
+        if(shop.GetGameWndActive() && !shop.storage && index<int(shop.goods.size()) && shop.goods[index].variants==CStoreWnd::BulkCategory &&
+            !g_xGameProc.m_xInterface.m_xMsgBox.IsActive() && !g_xGameProc.InputDelayed() && !g_xGameProc.m_xNotice.IsActive() && !g_xGameProc.m_xInterface.HasInputDialog()) {
+            shop.highlighted=index;shop.OpenCategory();
+            if(shop.bulk>=0) { shop.BuyBulk(std::to_string(quantity).c_str());accepted=true; }
         }
     } else if (method == "npc.click" && g_bProcState == _GAME_PROC) {
         const int index=Integer(params,"index");auto& actors=g_xGameProc.m_xActorList;

@@ -63,7 +63,7 @@ void CUserInfo::RandomUpgradeItem(WORD wStdMode, _LPTMAKEITEMRCD lpMakeItemRcd)
 		g_pStdItemAccessory[lpMakeItemRcd->nStdIndex - 1].UpgradeRandomItem(lpMakeItemRcd);
 }
 */
-BOOL CUserInfo::IsEnoughBag()
+BOOL CUserInfo::IsEnoughBag(int requested)
 {
     const auto equipped = [&](const char* key) {
         for (const auto& slot : m_THumanRcd.szTakeItem)
@@ -75,7 +75,7 @@ BOOL CUserInfo::IsEnoughBag()
         if (!equipped(m_lpTItemRcd.GetData(node)->szMakeIndex)) ++count;
     for (auto node = m_lpTGenItemRcd.GetHead(); node; node = m_lpTGenItemRcd.GetNext(node))
         if (!equipped(m_lpTGenItemRcd.GetData(node)->szMakeIndex)) ++count;
-    return count < USERITEMMAX;
+    return requested > 0 && requested <= USERITEMMAX-count;
 }
 
 void CUserInfo::AddNewItem(char *pszItemName)
@@ -632,7 +632,7 @@ BOOL CUserInfo::IncGold(int nGold)
 
 BOOL CUserInfo::DecGold(int nGold)
 {
-	if (m_THumanRcd.dwGold - nGold >= 0)
+	if (nGold >= 0 && DWORD(nGold) <= m_THumanRcd.dwGold)
 	{
 		m_THumanRcd.dwGold  -= nGold;
 		return TRUE;
@@ -744,6 +744,9 @@ void CUserInfo::ProcessUserMessage(char *pszPacket)
 		case CM_RIDE:
 			m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, lpDefMsg->wTag, LOWORD(lpDefMsg->nRecog), HIWORD(lpDefMsg->nRecog), NULL);
 			break;
+        case CM_USERBUYITEM:
+            m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, lpDefMsg->wSeries, lpDefMsg->nRecog, 0, 0, pszPacket + sizeof(_TDEFAULTMESSAGE));
+            break;
         case CM_MERCHANTDLGSELECT:
             m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, 0, lpDefMsg->nRecog, 0, 0, pszPacket + sizeof(_TDEFAULTMESSAGE));
             break;

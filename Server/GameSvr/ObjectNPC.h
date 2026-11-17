@@ -28,6 +28,11 @@ public:
 
 	void RunRace();
     void Say(CPlayerObject* player, const char* section);
+    struct Good { int standard, stock; };
+    std::vector<Good> m_goods;
+    bool m_goodsLoaded = false;
+    void ShowGoods(CPlayerObject* player);
+    void Buy(CPlayerObject* player, const char* name, int quantity);
 
 	virtual WORD	GetThisCharColor() { return _CHAT_COLOR3; }
 	virtual void	GetCharName(char *pszCharName) { strcpy(pszCharName, m_szName); }

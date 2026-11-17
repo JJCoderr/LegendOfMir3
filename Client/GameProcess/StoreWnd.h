@@ -8,7 +8,7 @@ class CStoreWnd : public CGameWnd {
     void Layout();
     void Request(int opcode,const std::string& name,DWORD instance=0,WORD quantity=0);
 public:
-    static constexpr int ItemRecordBytes=100, OffersPerPage=12;
+    static constexpr int ItemRecordBytes=100, OffersPerPage=12, BulkCategory=2;
     struct Good { std::string name; int variants=0,price=0,stock=0,icon=0,requirementType=0,requirement=0; };
     struct Offer { std::string name; int icon=0,price=0; DWORD id=0; int count=1,stackMode=0; std::array<BYTE,ItemRecordBytes> record={}; };
     std::vector<Good> goods;

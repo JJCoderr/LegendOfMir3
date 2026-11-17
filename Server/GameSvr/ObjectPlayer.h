@@ -18,6 +18,7 @@ public:
 	DWORD					m_dwLastCryTime;
     DWORD m_clientOptions;
     CCharObject* m_dialogMerchant;
+    CCharObject* m_shopMerchant;
     std::vector<std::string> m_npcScriptFiles;
 
 	CWHList<CCharObject*>	m_xSlaveObjList;

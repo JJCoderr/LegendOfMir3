@@ -57,6 +57,7 @@
 
 // For game process
 // Client To Server Commands
+#define CM_USERBUYITEM          1014
 #define CM_CLICKNPC             1010
 #define CM_MERCHANTDLGSELECT    1011
 #define CM_QUERYUSERNAME        80
@@ -153,6 +154,9 @@
 #define SM_DURACHANGE           642
 #define SM_MERCHANTSAY          643
 #define SM_MERCHANTDLGCLOSE     644
+#define SM_SENDGOODSLIST        645
+#define SM_BUYITEM_SUCCESS      650
+#define SM_BUYITEM_FAIL         651
 #define SM_GOLDCHANGED          653
 #define SM_CHANGELIGHT          654
 #define SM_CHANGENAMECOLOR      656

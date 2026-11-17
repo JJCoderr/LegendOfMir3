@@ -194,7 +194,7 @@ public:
 
 	__inline	int					GetMagicID(char *pszMakeIndex) { return GetGenItemVal2(pszMakeIndex); }
 
-	BOOL IsEnoughBag();
+	BOOL IsEnoughBag(int requested = 1);
 
 	__inline	DWORD				GetGold() { return m_THumanRcd.dwGold; }
 

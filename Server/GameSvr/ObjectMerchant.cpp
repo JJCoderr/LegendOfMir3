@@ -157,4 +157,75 @@ void CMerchantObject::Say(CPlayerObject* player, const char* section)
     fnMakeDefMessage(&message, SM_MERCHANTSAY, (int)this, 0, 0, 1);
     player->m_npcScriptFiles = files;
     player->SendSocket(&message, encoded);
+    if (!_stricmp(section, "@buy")) { player->m_shopMerchant = this; ShowGoods(player); }
+}
+
+void CMerchantObject::ShowGoods(CPlayerObject* player)
+{
+    if (!m_goodsLoaded) {
+        const auto& info = g_pMerchantInfo[m_nIndex];
+        const std::string name = info.scriptName.empty() ? m_szName : info.scriptName;
+        std::vector<std::string> lines;
+        if (!LoadMerchantLines("Envir/Market_Def/"+name+"-"+info.szMapName+".txt", lines)) return;
+        bool goods = false;
+        for (const auto& line : lines) {
+            if (line[0]=='[') { if (goods) break; goods = !_stricmp(line.c_str(), "[Goods]"); continue; }
+            if (!goods) continue;
+            char item[20], extra; int count, hours;
+            if (sscanf(line.c_str(), "%19s %d %d %c", item, &count, &hours, &extra)!=3 || count<=0 || count>USHRT_MAX) continue;
+            for (int i=0; i<g_nStdItemEtc; ++i) if (!strcmp(item, g_pStdItemEtc[i].szName)) {
+                m_goods.push_back({i,count}); break;
+            }
+        }
+        m_goodsLoaded = true;
+    }
+    constexpr int BulkGoods = 2;
+    std::string text;
+    for (const auto& good : m_goods) {
+        const auto& item = g_pStdItemEtc[good.standard];
+        text += std::string(item.szName)+"/"+std::to_string(BulkGoods)+"/"+std::to_string(item.dwPrice)+"/"+
+            std::to_string(good.stock)+"/"+std::to_string(item.dwLooks)+"/0/0/";
+    }
+    char encoded[8192];
+    if (m_goods.size()>255 || text.size()*4/3+4>=sizeof(encoded)) return;
+    const int length = fnEncode6BitBufA((unsigned char*)text.data(), encoded, int(text.size()), sizeof(encoded)-1);
+    encoded[length] = 0;
+    _TDEFAULTMESSAGE message;
+    fnMakeDefMessage(&message, SM_SENDGOODSLIST, (int)this, WORD(m_goods.size()), 0, 0);
+    player->SendSocket(&message, encoded);
+}
+
+void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity)
+{
+    enum Failure { Unavailable = 1, CannotCarry = 2, NotEnoughGold = 3 };
+    int failure = Unavailable;
+    CUserInfo* owner = player->m_pUserInfo;
+    for (auto& good : m_goods) {
+        auto& item = g_pStdItemEtc[good.standard];
+        if (strcmp(name, item.szName)) continue;
+        if (quantity<=0 || quantity>good.stock) break;
+        if (!owner->IsEnoughBag(quantity) ||
+            static_cast<unsigned long long>(owner->CalcBagWeight())+static_cast<unsigned long long>(item.wWeight)*quantity>player->m_WAbility.MaxWeight) {
+            failure = CannotCarry; break;
+        }
+        const unsigned long long price = static_cast<unsigned long long>(item.dwPrice)*quantity;
+        if (price>owner->GetGold() || price>INT_MAX) { failure = NotEnoughGold; break; }
+        owner->DecGold(int(price));
+        for (int i=0; i<quantity; ++i) {
+            auto* record = new _TGENERALITEMRCD{};
+            record->nStdIndex = good.standard;
+            record->nDura = item.wDuraMax;
+            record->nDuraMax = item.dwRSource;
+            owner->MakeGenItem(record);
+        }
+        good.stock -= quantity;
+        player->WeightChanged();
+        failure = 0;
+        break;
+    }
+    _TDEFAULTMESSAGE message;
+    fnMakeDefMessage(&message, failure ? SM_BUYITEM_FAIL : SM_BUYITEM_SUCCESS,
+        failure ? failure : owner->GetGold(), 0, 0, 0);
+    player->SendSocket(&message, NULL);
+    if (!failure) ShowGoods(player);
 }
