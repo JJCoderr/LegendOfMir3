@@ -91,6 +91,8 @@ VOID CInterface::Init()
 
 	m_xChat.ClearAllNodes();
     m_chatHistory.clear();
+    for(auto& lines:m_chatLines) lines.clear();
+    m_chatFirst[0]=m_chatFirst[1]=0;m_chatLayoutMode=0;
 	m_xWndOrderList.ClearAllNodes();
 }
 
@@ -265,48 +267,54 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 
 VOID CInterface::MsgAdd(DWORD color, DWORD background, CHAR* message)
 {
-    if (!message || !*message) return;
+    constexpr int MaximumBytes=200,HistoryLimit=80;
+    if(!message || !*message || strlen(message)>MaximumBytes) return;
     m_xChatPopWnd.MsgAdd(color,background,message);
     m_chatHistory.push_back(ChatMessage{color,background,message});
-    if (m_chatHistory.size() > 50) m_chatHistory.erase(m_chatHistory.begin());
+    if(m_chatHistory.size()>=HistoryLimit) m_chatHistory.erase(m_chatHistory.begin());
+    m_chatFirst[m_chatLayoutMode]=m_nFstLine;
+    HDC dc=GetDC(g_xMainWnd.GetSafehWnd());
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font=g_xMainWnd.CreateGameFont(face,9);HGDIOBJ old=SelectObject(dc,font);
+    for(int mode=0;mode<2;++mode) {
+        const int width=mode?429:341;
+        std::string wrapped;int start=0,highBytes=0,count=1;
+        for(int i=0;message[i];++i) {
+            SIZE size={};GetTextExtentPoint32A(dc,message+start,i-start+1,&size);
+            const bool high=static_cast<signed char>(message[i])<0;
+            if(size.cx<=width) {if(high) ++highBytes;wrapped+=message[i];}
+            else if(high && highBytes%2) {wrapped.back()='`';start=i-1;i-=2;--highBytes;++count;}
+            else {wrapped+='`';start=i;--i;++count;}
+        }
+        char rows[5][260]={};
+        sscanf(wrapped.c_str(),"%259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c",rows[0],rows[1],rows[2],rows[3],rows[4]);
+        for(int row=0;row<min(count,mode?3:5);++row) {
+            // MIR3 43682E/436902 checks the expanded index in BOTH loops.
+            if(int(m_chatLines[1].size())-m_chatFirst[1]==14) ++m_chatFirst[1];
+            if(!mode && int(m_chatLines[0].size())-m_chatFirst[0]==5) ++m_chatFirst[0];
+            m_chatLines[mode].push_back(ChatMessage{color,background,rows[row]});
+        }
+    }
+    SelectObject(dc,old);DeleteObject(font);ReleaseDC(g_xMainWnd.GetSafehWnd(),dc);
+    for(int mode=0;mode<2;++mode) while(m_chatLines[mode].size()>=HistoryLimit) {
+        m_chatLines[mode].erase(m_chatLines[mode].begin());
+        if(m_chatFirst[mode]>0) --m_chatFirst[mode];
+    }
+    m_nFstLine=m_chatFirst[m_chatLayoutMode];
     ReflowChat();
 }
 
 void CInterface::ReflowChat()
 {
+    m_chatFirst[m_chatLayoutMode]=m_nFstLine;
+    m_chatLayoutMode=m_chatExpanded?1:0;
+    m_nFstLine=m_chatFirst[m_chatLayoutMode];
     m_xChat.ClearAllNodes();
-    HDC dc = GetDC(g_xMainWnd.GetSafehWnd());
-    const char face[] = {char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
-    HFONT font = g_xMainWnd.CreateGameFont(face,9);
-    HGDIOBJ old = SelectObject(dc,font);
-    const int width = m_chatExpanded ? 429 : 341;
-    for (const auto& message : m_chatHistory) {
-        const char* begin = message.text.c_str();
-        while (*begin) {
-            const char* end = begin;
-            while (*end && *end != '\n' && *end != '\r') {
-                const char* next = CharNextA(end);
-                SIZE size = {};
-                GetTextExtentPoint32A(dc,begin,int(next-begin),&size);
-                if (end > begin && (size.cx > width || next-begin >= MAX_PATH)) break;
-                end = next;
-            }
-            CHAT line = {};
-            line.dwFontColor = message.color;
-            line.dwBackColor = message.background;
-            memcpy(line.pszChat,begin,end-begin);
-            m_xChat.AddNode(line);
-            if (*end == '\r') ++end;
-            if (*end == '\n') ++end;
-            begin = end;
-        }
+    for(const auto& message:m_chatLines[m_chatLayoutMode]) {
+        CHAT line={};line.dwFontColor=message.color;line.dwBackColor=message.background;
+        strcpy(line.pszChat,message.text.c_str());m_xChat.AddNode(line);
     }
-    SelectObject(dc,old);
-    DeleteObject(font);
-    ReleaseDC(g_xMainWnd.GetSafehWnd(),dc);
-    m_nFstLine = max(0,m_xChat.GetCounter()-ChatRows());
 }
-
 
 /******************************************************************************************************************
 
@@ -2147,7 +2155,7 @@ BOOL CInterface::OnScrollUp()
 	{
 		if ( !m_xChatPopWnd.m_bActive )
 		{
-			if ( m_nFstLine < max(0, m_xChat.GetCounter()-ChatRows()) )
+			if ( m_nFstLine < max(0, m_xChat.GetCounter()-1) )
 			{
 				m_nFstLine++;
 			}

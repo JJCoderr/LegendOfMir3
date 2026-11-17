@@ -29,6 +29,8 @@ public:
     void LayoutChat();
     struct ChatMessage { DWORD color, background; std::string text; };
     std::vector<ChatMessage> m_chatHistory;
+    std::vector<ChatMessage> m_chatLines[2];
+    int m_chatFirst[2]={},m_chatLayoutMode=0;
     void ReflowChat();
     int VisibleButtons() const { return m_chatExpanded ? 23 : 16; }
     int ChatRows() const { return m_chatExpanded ? 14 : 5; }

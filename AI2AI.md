@@ -1326,3 +1326,10 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 场景DrawName按Godot宋体9pt、格中心、-30/-15/0偏移、四角描边；尚未实测动态地图中的定位，只验证固定格坐标原生渲染。
 - 重要纠错：前一批行会历史的聊天区颜色顺序错误。现按Godot post_chat与原版调用，wParam前景/wTag背景；104固定绿字黑底。早期color测试预期错误已纠正，out/guild-history.png更新并查看。
 - clean87/87、all109/109；scene-name10+history11+identity8+ability13共42全1。截图out/scene-identity.png已检查。预览204，下一个空闲205。真实服务器及动态地图仍未验证。
+
+
+### 2026-11-17 原生聊天双模式历史
+- Interface.MsgAdd移植Godot ChatHistory::post：200 ANSI字节上限，341/429px字节换行，两套行缓存各79行、独立滚动；保留原版expanded索引在两个插入循环中都检查的行为。ReflowChat改为当前缓存投影，切换模式不重排历史、不强制到底。
+- m_chatHistory保留最近消息供已有查询/测试使用，显示来自m_chatLines[2]；m_chatFirst[2]/m_chatLayoutMode跟踪各模式位置。用户拖动仍更新m_nFstLine，在新消息/布局变化时同步。普通向下滚动上限改为最后一行。
+- clean87/87、all111/111。chat12+guild-history11+progression14+scene-identity10共47项全1。截图out/chat-history-compact.png及chat-history-expanded.png已查看。预览205/206，下一个空闲207。详情Client/docs/chat-history-evidence.md。
+- 仍未实服收发验证；气泡换行/绘制、旧独立ChatPop窗口等需继续按原版审计。
