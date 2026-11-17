@@ -2062,3 +2062,9 @@ Client/EIServer 构建通过。MonstersSpawn 29 步通过（out/csv-validation/m
 skill.cast 新增 target 参数（当前 actors 下标），从真实客户端实体取得坐标、网络标识和 FEATURE，复用 CastShortcut；不存在/已死亡目标拒绝。actors 状态增加 hp/max_hp，max_hp=0 表示尚未收到血量。服务器 SpellXY 对非空目标使用地图对象校验，RM_DELAYMAGIC 生效前重新校验目标在原目标坐标容差内；修复 CMirMap::IsValidObject 将比较误写成赋值，原来只要找到任意移动对象就通过。
 
 新增 CombatMagic.csv / fixture：低血量怪物收到真实火球术后 HP=0、dead=true、MP18→12，验证 CM_SPELL/SM_STRUCK/SM_NOWDEATH，死亡和不存在目标拒绝及服务器健康。首次死亡断言期望 SM_DEATH 失败，实际抓到的是 SM_NOWDEATH(34)，按已有服务端 Die 路径修正场景断言，没有篡改死亡协议实现。Client/EIServer 构建通过；最终战斗24步通过（out/csv-validation/combat-magic-final.log，8125ms），坐标施法回归26步通过（out/csv-validation/combat-coordinate-regression.log，7313ms），两次 RpcServer各10步通过。尚未验证非致死精确伤害公式、怪物经验/掉落/重新刷新或无效原始网络标识攻击；没有界面截图操作。
+
+## 战斗经验、跨级与保存恢复
+
+state.get 新增 level/experience/next_experience/return_ready，后者复用 ExitFlow::Guard 的真实战斗冷却和退出转换状态。新增 CombatExperience.csv/fixture，击杀奖励1000经验；WinExp 原先 if 只升级一次，改为按新等级阈值循环扣除经验，限制在 MAXLEVEL 表内并排除零阈值。保持原 NEEDEXPS 和等级索引，没有更改经验平衡。
+
+Client/EIServer 构建通过。首次单级奖励250已验证2级剩50，但立即退出被正常战斗冷却拒绝；脚本补上拒绝断言和 return_ready 等待。最终跨级场景33步通过（out/csv-validation/combat-experience-multilevel.log，runtime rpc-q6af1hmr，15766ms）：1级→4级剩100，冷却前拒绝退出，冷却后保存数据库(4,100)，重登恢复及SM_WINEXP/SM_LEVELUP。CombatMagic增加小额经验断言(1级、1经验)，24步回归通过（out/csv-validation/experience-small-regression.log，8109ms）；各自RpcServer10步通过。等级上限、经验表与原版数值一致性、组队经验和召唤物归属尚未验证。

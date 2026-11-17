@@ -16,7 +16,7 @@
 150,dismiss arrival,Client,notice.dismiss,,result.status=submitted
 160,unknown target rejected,Client,skill.cast,key=1;target=1,error.code=-32002
 170,cast on monster,Client,skill.cast,key=1;target=0,result.status=submitted
-180,monster killed,Client,state.wait,,result.actors.0.dead=true;result.actors.0.hp=0;result.actors.0.max_hp=1;result.mp=12;result.spell_reply_id=1;result.cast_ready=true
+180,monster killed,Client,state.wait,,result.actors.0.dead=true;result.actors.0.hp=0;result.actors.0.max_hp=1;result.mp=12;result.spell_reply_id=1;result.cast_ready=true;result.level=1;result.experience=1
 190,dead target rejected,Client,skill.cast,key=1;target=0,error.code=-32002
 200,spell request,Client,wire.expect,message=CM_SPELL;direction=sent;at_least=1,
 210,damage reply,Client,wire.expect,message=SM_STRUCK;direction=received;at_least=1,

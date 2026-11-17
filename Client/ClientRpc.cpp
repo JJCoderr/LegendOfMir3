@@ -123,7 +123,10 @@ std::string ClientState() {
             + ",\"x\":" + std::to_string(hero.m_wPosX)
             + ",\"y\":" + std::to_string(hero.m_wPosY)
             + ",\"hp\":" + std::to_string(hero.m_stAbility.wHP)
-            + ",\"mp\":" + std::to_string(hero.m_stAbility.wMP);
+            + ",\"mp\":" + std::to_string(hero.m_stAbility.wMP)
+            + ",\"level\":" + std::to_string(hero.m_stAbility.bLevel)
+            + ",\"experience\":" + std::to_string(hero.m_stAbility.dwExp)
+            + ",\"next_experience\":" + std::to_string(hero.m_stAbility.dwMaxExp);
         Array actors;
         game.m_xActorList.MoveCurrentToTop();
         for(int i=0;i<game.m_xActorList.GetCounter();++i) {
@@ -135,6 +138,8 @@ std::string ClientState() {
                 {"max_hp",Json(int64_t(actor->m_wMAXHP))}});
         }
         state += ",\"actors\":"+Json(actors).serialize()+",\"actor_count\":"+std::to_string(actors.size());
+        state += std::string(",\"return_ready\":")+mir3::BoolJson(!game.m_exitTransition.active &&
+            game.m_exitGuard.Allowed(GetTickCount(),hero.m_bCurrMtn));
         state += mir3::ItemDebugState(game);
         state += ",\"spell_reply_id\":"+std::to_string(hero.m_lastSpellReplyId)
             +",\"cast_ready\":"+mir3::BoolJson(!game.InputDelayed() && !hero.m_pendingAction &&

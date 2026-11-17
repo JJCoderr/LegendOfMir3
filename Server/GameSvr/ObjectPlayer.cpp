@@ -697,7 +697,7 @@ void CPlayerObject::WinExp(int nExp)
 
 	AddProcess(this, RM_WINEXP, 0, nExp, 0, 0);
 
-	if (m_Ability.Exp >= m_Ability.MaxExp)
+	while (m_Ability.Level + 1 < MAXLEVEL && m_Ability.MaxExp > 0 && m_Ability.Exp >= m_Ability.MaxExp)
 	{
 		m_Ability.Exp	-= m_Ability.MaxExp;
 		m_Ability.Level++;
