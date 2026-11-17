@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 4.3.1)
 
-project(LegendOfMir3_Server VERSION 0.1 LANGUAGES CXX)
+project(LegendOfMir3_Server VERSION 0.1 LANGUAGES C CXX RC)
+
+if(PROJECT_IS_TOP_LEVEL)
+    option(MIR3_BUILD_EISERVER "Build the integrated single-process EIServer" ON)
+    set(CMAKE_CXX_STANDARD 14)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:forScope-")
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS _WINSOCK_DEPRECATED_NO_WARNINGS)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/EHsc> $<$<COMPILE_LANGUAGE:CXX>:/MP> $<$<COMPILE_LANGUAGE:CXX>:/wd4838>)
+endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 

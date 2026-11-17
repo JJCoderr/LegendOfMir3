@@ -1832,3 +1832,8 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 按最终约定取消Server/EIServer子目录，入口为Server/EIServer.h、Server/EIServer.cpp，配置为Server/EIServer.ini。公共静态库构建模板、头文件、资源脚本及独立窗口入口移至Server/Service；Server/CMakeLists.txt构建控制台入口。
 - 逐项比对确认原Server/server.ini.example全部节和键值已包含于EIServer.ini，删除该示例文件。历史记录中复制server.ini.example的运行方式已废止，当前六服务统一使用运行目录中的EIServer.ini；保留其中SQLite与Game配置。
 - 已重新构建EIServer与LoginGateWindow并更新out/debug；最新PID25980测试七监听同进程、无顶层窗口、登录/选服/角色列表通过。目录不存在检查通过。
+
+
+## 2026-11-17 Server 独立编译 EIServer
+- cmake -S Server 原先缺少 C/RC 支持，生成阶段无法确定 SQLite 的链接语言。Server/CMakeLists.txt 现在声明 C/C++/RC，并在独立配置时默认启用 EIServer 和旧源码所需的 MSVC 兼容选项。
+- Visual Studio 18 Win32 Release 已验证 Server 单独构建和仓库根目录构建。
