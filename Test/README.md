@@ -202,7 +202,7 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 `ShopSell.csv` / `ShopSellDefault.csv` 验证%150/%100下收购价同为6（基础价11）、指定第二件同名物品、重复请求拒绝、原属性回购、保存重登；`ShopSellNewStock.csv` 验证收购物品不在[Goods]中时创建回购分类。`ShopSellRoundDown/Even/RoundUp.csv` 覆盖9/13/15的半价取偶数。`ShopSellGoldCap.csv`、`ShopSellRejectedType.csv` 验证金币上限和类型拒绝不丢物品；`ShopSellPowderLow/PowderBoundary/CandleLow.csv` 验证类型25/30的4000耐久门槛（这些场景标准耐久为0，未覆盖耐久折价计算）。
 
-本阶段支持现有独立实例的普通物品单件出售，尚未支持数量式堆叠出售、装备和附加属性/耐久折价计算；标准价只对已覆盖的普通物品报价路径验证。耐久非零的收购物品以原记录进入库存，回购保留原属性；库存列表不主动广播，仍随重新打开商店刷新。未配置[Goods]的收购物品没有定时补货目标，尚未实现原服库存文件保存及超额回收清理。
+本阶段支持现有独立实例的普通物品单件出售，已支持普通物品耐久折价和实例回购，尚未支持数量式堆叠出售、装备和附加属性计价；标准价只对已覆盖的普通物品报价路径验证。耐久非零的收购物品以原记录进入库存，回购保留原属性；库存列表不主动广播，仍随重新打开商店刷新。未配置[Goods]的收购物品没有定时补货目标，尚未实现原服库存文件保存及超额回收清理。
 
 `ShopSellContext.csv` 通过真实发包验证尚未打开出售模式、重新点击NPC导致旧出售上下文失效两种拒绝，之后重新打开出售仍可正常成交。
 
@@ -217,3 +217,11 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 客户端state.get的bag/equipment/held_item物品记录增加`mode`、`standard_durability`、`durability`、`max_durability`，来自实际接收的物品属性。`Inventory/InventoryStandardDurability.csv`验证标准耐久1/65535与实例耐久8000、4000/8000互相独立；真实怪物造成伤害后使用药水，确认按药效恢复满血，再保存重登检查剩余物品。`Inventory/InventoryLegacyStandard.csv`删除新列后运行同样流程，确认旧数据库回退标准耐久0而不影响药效或实例属性。
 
 普通物品生成现已使用非零标准耐久，标准耐久为0时保留旧初值规则。12字节实例键增加G~扩展格式，支持完整16位字段；新旧存档兼容及业务覆盖见[普通物品实例键](Inventory/general-item-key.md)。耐久报价仍待接入。
+
+### 普通物品实例与耐久价格
+
+`shop.details(index)` 打开商品分类详情，`shop.page(page)` 请求从0开始的页码，`shop.buy_offer(index)` 购买当前页指定实例。均复用客户端商店入口。`state.get` 的 `shop.offers` 返回实例ID、名称、价格、当前耐久；另有 `offer_count/details/loading/page`。`shop.buy_request(index,id,name)` 仅用于过期实例等协议拒绝测试。
+
+每页最多10件；刷新保留未成交实例ID，补货创建新ID。出售和回购均按真实耐久计算，类型40肉、43矿石采用各自预处理。FLD_STACKMODE 缺列或 NULL 时使用旧类型推断，显式0表示不堆叠。批量路径目前仍生成独立记录，不代表已支持真实数量堆叠。
+
+ShopDurability/MeatPrice/MeatPremium/OrePrice/OreMinimum/MaximumLoss/PowderPrice 验证不同计价、成交和保存重登；ShopStackPriceBypass 验证堆叠模式跳过折价；ShopDetailPages/Shared/Restock/Capacity/Weight/Gold 验证分页、争买、补货及失败保留。双客户端 Shared 场景需 `--clients 2`。价格详情使用16位协议字段，超出范围拒绝；装备附加属性和原服溢出行为尚未实现。详见 [耐久计价核对](Shop/native-durability-audit.md)。

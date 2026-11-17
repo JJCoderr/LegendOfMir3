@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include <string>
 #include <cerrno>
+#include "../Def/MerchantPricing.h"
 
 CMerchantObject::CMerchantObject() : CCharObject(NULL)
 {
@@ -25,6 +26,7 @@ void CMerchantObject::RunRace()
                 good.lastRefill = now;
                 good.stock = good.targetStock;
                 if (good.returnedItems.size()>size_t(good.stock)) good.returnedItems.resize(good.stock);
+                FillStock(good);
             }
         }
     }
@@ -35,30 +37,6 @@ void CMerchantObject::RunRace()
 }
 
 namespace {
-// Match the reference server's extended-precision operations and ROUND.
-// See Test/Shop/native-price-audit.md; MSVC double/round changes half-way cases.
-long long MerchantPrice(int basePrice, int percent)
-{
-    static const float PercentDivisor = 100.0f;
-    static const unsigned char Surcharge[] = {0xcd,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0x8c,0xff,0x3f};
-    const unsigned short PriceControl = 0x037f; // 64-bit precision, nearest/even, masked exceptions.
-    unsigned short savedControl;
-    long long price;
-    __asm {
-        fnstcw savedControl
-        fldcw PriceControl
-        fild basePrice
-        fdiv PercentDivisor
-        fild percent
-        fmulp st(1), st(0)
-        fld tbyte ptr Surcharge
-        fmulp st(1), st(0)
-        fistp qword ptr price
-        fldcw savedControl
-    }
-    return price;
-}
-
 bool LoadMerchantLines(const std::string& path, std::vector<std::string>& lines)
 {
     FILE* input = fopen(path.c_str(), "rb");
@@ -245,16 +223,65 @@ bool CMerchantObject::LoadGoods()
             char item[20], extra; int count, hours;
             if (sscanf(line.c_str(), "%19s %d %d %c", item, &count, &hours, &extra)!=3 || count<=0 || count>USHRT_MAX || hours<0) continue;
             for (int i=0; i<g_nStdItemEtc; ++i) if (!strcmp(item, g_pStdItemEtc[i].szName)) {
-                const long long price = MerchantPrice(int(g_pStdItemEtc[i].dwPrice), percent);
+                const long long price = MerchantPricing::Purchase(int(g_pStdItemEtc[i].dwPrice), percent);
                 constexpr ULONGLONG MillisecondsPerHour = 60ULL*60*1000;
                 if (price>=0 && price<=INT_MAX)
+                    {
                     m_goods.push_back({i,count,int(price),count,ULONGLONG(hours)*MillisecondsPerHour,GetTickCount64()});
+                    FillStock(m_goods.back());
+                }
                 break;
             }
         }
         m_goodsLoaded = true;
     }
     return true;
+}
+
+void CMerchantObject::FillStock(Good& good)
+{
+    const auto& standard = g_pStdItemEtc[good.standard];
+    if (standard.stackMode>=2) return;
+    if (good.items.size()>size_t(good.stock)) good.items.resize(good.stock);
+    while (good.items.size()<size_t(good.stock)) {
+        _TGENERALITEMRCD record{}; record.nStdIndex=good.standard;
+        standard.InitDurability(&record);
+        good.items.push_back({m_nextStockId++,record});
+    }
+}
+
+void CMerchantObject::Details(CPlayerObject* player, const char* name, DWORD offset)
+{
+    std::lock_guard<std::mutex> lock(m_goodsMutex);
+    constexpr unsigned ItemsPerPage=10;
+    std::string body; WORD count=0;
+    for (const auto& good : m_goods) {
+        auto& standard=g_pStdItemEtc[good.standard];
+        if (strcmp(name,standard.szName) || standard.stackMode>=2) continue;
+        if (offset>=good.items.size()) offset=good.items.size()>ItemsPerPage ? DWORD(good.items.size()-ItemsPerPage) : 0;
+        for (size_t i=offset; i<good.items.size() && i<offset+ItemsPerPage; ++i) {
+            const auto& offer=good.items[i];
+            const int base=MerchantPricing::Base(int(standard.dwPrice),standard.wStandardDurability,
+                offer.record.nDura,offer.record.nDuraMax,standard.wStdMode,standard.stackMode);
+            const long long price=base<0 ? -1 : MerchantPricing::Purchase(base,m_pricePercent);
+            // The native detail record carries its quote in the 16-bit maximum slot.
+            if (price<0 || price>USHRT_MAX) continue;
+            _TCLIENTITEMRCD legacy{}; standard.GetStandardItem(&legacy);
+            legacy.nDura=WORD(offer.record.nDura); legacy.nDuraMax=WORD(price);
+            auto record=Mir3Item::FromLegacy(legacy,offer.id);
+            record[Mir3Item::StackMode]=standard.stackMode;
+            char encoded[Mir3Item::EncodedSize+1]{};
+            const int size=fnEncode6BitBufA(record.data(),encoded,int(record.size()),sizeof(encoded));
+            body.append(encoded,size); body+='/'; ++count;
+        }
+        break;
+    }
+    _TDEFAULTMESSAGE message;
+    fnMakeDefMessage(&message,SM_SENDDETAILGOODSLIST,(int)this,count,WORD(offset),0);
+    char encoded[2048];
+    const int size=fnEncode6BitBufA((unsigned char*)body.data(),encoded,int(body.size()),sizeof(encoded)-1);
+    encoded[size]=0;
+    player->SendSocket(&message,encoded);
 }
 
 void CMerchantObject::ShowGoods(CPlayerObject* player)
@@ -265,11 +292,11 @@ void CMerchantObject::ShowGoods(CPlayerObject* player)
 
 void CMerchantObject::SendGoods(CPlayerObject* player)
 {
-    constexpr int BulkGoods = 2;
+    constexpr int BulkGoods = 2, LastUniformMode = 4, BundleMode = 31, ReservedUniformMode = 42;
     std::string text;
     for (const auto& good : m_goods) {
         const auto& item = g_pStdItemEtc[good.standard];
-        text += std::string(item.szName)+"/"+std::to_string(BulkGoods)+"/"+std::to_string(good.price)+"/"+
+        text += std::string(item.szName)+"/"+std::to_string(item.stackMode>=2 ? BulkGoods : int(item.wStdMode>LastUniformMode && item.wStdMode!=BundleMode && item.wStdMode!=ReservedUniformMode))+"/"+std::to_string(good.price)+"/"+
             std::to_string(good.stock)+"/"+std::to_string(item.dwLooks)+"/0/0/";
     }
     char encoded[8192];
@@ -281,7 +308,7 @@ void CMerchantObject::SendGoods(CPlayerObject* player)
     player->SendSocket(&message, encoded);
 }
 
-void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity)
+void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity, DWORD instance)
 {
     std::lock_guard<std::mutex> lock(m_goodsMutex);
     enum Failure { Unavailable = 1, CannotCarry = 2, NotEnoughGold = 3 };
@@ -290,6 +317,24 @@ void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity)
     for (auto& good : m_goods) {
         auto& item = g_pStdItemEtc[good.standard];
         if (strcmp(name, item.szName)) continue;
+        if (item.stackMode<2) {
+            if (quantity) break;
+            for (auto offer=good.items.begin(); offer!=good.items.end(); ++offer) {
+                if (offer->id!=instance) continue;
+                if (!owner->IsEnoughBag() || ULONGLONG(owner->CalcBagWeight())+item.wWeight>player->m_WAbility.MaxWeight) {
+                    failure=CannotCarry; break;
+                }
+                const int base=MerchantPricing::Base(int(item.dwPrice),item.wStandardDurability,
+                    offer->record.nDura,offer->record.nDuraMax,item.wStdMode,item.stackMode);
+                const long long price=base<0 ? -1 : MerchantPricing::Purchase(base,m_pricePercent);
+                if (price<=0 || price>USHRT_MAX || price>owner->GetGold()) { failure=NotEnoughGold; break; }
+                auto* record=new _TGENERALITEMRCD(offer->record);
+                owner->DecGold(int(price)); owner->MakeGenItem(record);
+                good.items.erase(offer); --good.stock;
+                player->WeightChanged(); failure=0; break;
+            }
+            break;
+        }
         if (quantity<=0 || quantity>good.stock) break;
         if (!owner->IsEnoughBag(quantity) ||
             static_cast<unsigned long long>(owner->CalcBagWeight())+static_cast<unsigned long long>(item.wWeight)*quantity>player->m_WAbility.MaxWeight) {
@@ -330,8 +375,9 @@ void CMerchantObject::Sale(CPlayerObject* player, _LPTGENERALITEMRCD item, bool 
         bool allowed = false;
         for (int mode : m_purchaseTypes) if (mode==standard.wStdMode) allowed = true;
         if (allowed && standard.dwPrice<=INT_MAX) {
-            const int base = int(standard.dwPrice);
-            price = base/2 + ((base%2 && (base/2)%2) ? 1 : 0);
+            const int base = MerchantPricing::Base(int(standard.dwPrice),standard.wStandardDurability,
+                item->nDura,item->nDuraMax,standard.wStdMode,standard.stackMode);
+            if (base>=0) price = base/2 + ((base%2 && (base/2)%2) ? 1 : 0);
         }
     }
     constexpr int PowderMode=25, CandleMode=30, MinimumSaleDurability=4000;
@@ -343,7 +389,7 @@ void CMerchantObject::Sale(CPlayerObject* player, _LPTGENERALITEMRCD item, bool 
         if (item->nDura>0) {
             for (auto& good : m_goods) if (good.standard==item->nStdIndex) stock = &good;
             if (!stock) {
-                const auto buyPrice = MerchantPrice(int(g_pStdItemEtc[item->nStdIndex].dwPrice),m_pricePercent);
+                const auto buyPrice = MerchantPricing::Purchase(int(g_pStdItemEtc[item->nStdIndex].dwPrice),m_pricePercent);
                 if (buyPrice>=0 && buyPrice<=INT_MAX) {
                     m_goods.push_back({item->nStdIndex,0,int(buyPrice),0,~ULONGLONG(0),GetTickCount64()});
                     stock = &m_goods.back();
@@ -351,7 +397,11 @@ void CMerchantObject::Sale(CPlayerObject* player, _LPTGENERALITEMRCD item, bool 
             }
         }
         if ((!item->nDura || (stock && stock->stock<USHRT_MAX)) && owner->IncGold(price)) {
-            if (stock) { stock->returnedItems.push_back(*item); ++stock->stock; }
+            if (stock) {
+                if (g_pStdItemEtc[item->nStdIndex].stackMode>=2) stock->returnedItems.push_back(*item);
+                else stock->items.push_back({m_nextStockId++,*item});
+                ++stock->stock;
+            }
             owner->RemoveGenItem(item);
             player->WeightChanged();
             sold = true;

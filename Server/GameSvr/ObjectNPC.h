@@ -29,10 +29,13 @@ public:
 
 	void RunRace();
     void Say(CPlayerObject* player, const char* section);
+    struct StockItem { DWORD id; _TGENERALITEMRCD record; };
+    DWORD m_nextStockId = 1;
     struct Good {
         int standard, stock, price, targetStock;
         ULONGLONG refillInterval, lastRefill;
         std::vector<_TGENERALITEMRCD> returnedItems;
+        std::vector<StockItem> items;
     };
     std::vector<Good> m_goods;
     bool m_goodsLoaded = false;
@@ -44,7 +47,9 @@ public:
     ULONGLONG m_lastRefillCheck = GetTickCount64();
     void ShowGoods(CPlayerObject* player);
     void SendGoods(CPlayerObject* player); // Caller holds m_goodsMutex.
-    void Buy(CPlayerObject* player, const char* name, int quantity);
+    void FillStock(Good& good); // Caller holds m_goodsMutex.
+    void Details(CPlayerObject* player, const char* name, DWORD offset);
+    void Buy(CPlayerObject* player, const char* name, int quantity, DWORD instance);
 
 	virtual WORD	GetThisCharColor() { return _CHAT_COLOR3; }
 	virtual void	GetCharName(char *pszCharName) { strcpy(pszCharName, m_szName); }

@@ -111,6 +111,11 @@ void CStoreWnd::OpenCategory()
     selected=highlighted; page=0; loading=details; Layout();
     Request(CM_USERGETDETAILITEM,goods[selected].name);
 }
+bool CStoreWnd::RequestPage(int next)
+{
+    if (storage || selected<0 || loading || next<0 || next>6553) return false;
+    page=next; loading=true; Request(CM_USERGETDETAILITEM,goods[selected].name,10*page); return true;
+}
 void CStoreWnd::CloseOffers()
 {
     auto& ui=g_xGameProc.m_xInterface;
@@ -186,7 +191,7 @@ BOOL CStoreWnd::OnLButtonUp(POINT point)
     }
     else if ((control==-3 || control==-4) && selected>=0 && !loading) {
         const int next=max(0,min(6553,page+(control==-3?-1:1)));
-        if (next!=page) { page=next; loading=true; Request(CM_USERGETDETAILITEM,goods[selected].name,10*page); }
+        if (next!=page) RequestPage(next);
     } else if (control>=256) offerIndex=control-256;
     else if (control>=0) highlighted=control;
     return FALSE;

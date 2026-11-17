@@ -162,9 +162,14 @@ std::string ClientState() {
         Array goods;
         for(const auto& good:shop.goods) goods.emplace_back(Object{
             {"name",Parse(mir3::QuoteLocalText(good.name.c_str()))},
-            {"price",Json(int64_t(good.price))},{"stock",Json(int64_t(good.stock))}});
+            {"price",Json(int64_t(good.price))},{"stock",Json(int64_t(good.stock))},{"variants",Json(int64_t(good.variants))}});
+        Array offers;
+        for(const auto& offer:shop.offers) offers.emplace_back(Object{
+            {"id",Json(int64_t(offer.id))},{"name",Parse(mir3::QuoteLocalText(offer.name.c_str()))},
+            {"price",Json(int64_t(offer.price))},{"durability",Json(int64_t(offer.record[66]|(offer.record[67]<<8)))}});
         state += ",\"shop\":"+Json(Object{{"open",Json(bool(shop.GetGameWndActive()))},
-            {"actor",Json(int64_t(shop.actor))},{"goods",Json(goods)},
+            {"actor",Json(int64_t(shop.actor))},{"goods",Json(goods)},{"offers",Json(offers)},
+            {"offer_count",Json(int64_t(shop.offers.size()))},{"details",Json(shop.details)},{"loading",Json(shop.loading)},{"page",Json(int64_t(shop.page))},
             {"notice",Json(game.m_xInterface.m_xMsgBox.IsActive() && game.m_xInterface.m_nIdxMsgBox==0)}}).serialize();
         Array rejected;
         for(bool value:game.m_xInterface.m_chatRejected) rejected.emplace_back(value);
@@ -260,6 +265,20 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
             memcpy(g_xChatEditBox.m_szInputMsg,text.c_str(),text.size()+1);
             g_xGameProc.OnMsgInputted(text[0]=='@',0);accepted=true;
         }
+    } else if ((method=="shop.details" || method=="shop.page" || method=="shop.buy_offer") && g_bProcState==_GAME_PROC) {
+        auto& ui=g_xGameProc.m_xInterface; auto& shop=ui.m_xStoreWnd;
+        if(shop.GetGameWndActive() && !shop.storage && !ui.m_xMsgBox.IsActive() && !g_xGameProc.InputDelayed() &&
+            !g_xGameProc.m_xNotice.IsActive() && !ui.HasInputDialog()) {
+            if(method=="shop.page") accepted=shop.RequestPage(Integer(params,"page"));
+            else {
+                const int index=Integer(params,"index");
+                if(method=="shop.details" && index<int(shop.goods.size()) && shop.goods[index].variants!=CStoreWnd::BulkCategory) {
+                    shop.highlighted=index; shop.OpenCategory(); accepted=true;
+                } else if(method=="shop.buy_offer" && !shop.loading && shop.details && index<int(shop.offers.size())) {
+                    shop.offerIndex=index; shop.BuyOffer(); accepted=true;
+                }
+            }
+        }
     } else if (method == "shop.buy" && g_bProcState == _GAME_PROC) {
         const int index=Integer(params,"index"),quantity=Integer(params,"quantity");
         if(quantity<1 || quantity>USHRT_MAX) throw JsonRpc::Error{-32602,"Invalid purchase quantity"};
@@ -269,14 +288,14 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
             shop.highlighted=index;shop.OpenCategory();
             if(shop.bulk>=0) { shop.BuyBulk(std::to_string(quantity).c_str());accepted=true; }
         }
-    } else if (method=="shop.sale_request" && g_bProcState==_GAME_PROC) {
+    } else if ((method=="shop.sale_request" || method=="shop.buy_request") && g_bProcState==_GAME_PROC) {
         // Real wire probe for stale IDs and requests the normal inventory UI cannot issue.
         const int index=Integer(params,"index"),id=Integer(params,"id"); const auto name=Text(params,"name");
         if(name.size()>30) throw JsonRpc::Error{-32602,"Item name too long"};
         auto& actors=g_xGameProc.m_xActorList;
         if(index<actors.GetCounter()) {
             actors.MoveCurrentToTop();for(int i=0;i<index;++i) actors.MoveNextNode();
-            _TDEFAULTMESSAGE request;fnMakeDefMessage(&request,CM_USERSELLITEM,actors.GetCurrentData()->m_dwIdentity,LOWORD(id),HIWORD(id),0);
+            _TDEFAULTMESSAGE request;fnMakeDefMessage(&request,method=="shop.sale_request"?CM_USERSELLITEM:CM_USERBUYITEM,actors.GetCurrentData()->m_dwIdentity,LOWORD(id),HIWORD(id),0);
             g_xClientSocket.SendPacket(&request,const_cast<char*>(name.c_str()));accepted=true;
         }
     } else if ((method=="shop.quote" || method=="shop.sell") && g_bProcState==_GAME_PROC) {

@@ -22,6 +22,7 @@ bool BuildGeneralItem(CUserInfo& owner, const _TGENERALITEMRCD& item, Mir3Item::
     standard.GetStandardItem(&legacy);
     legacy.nDura = item.nDura; legacy.nDuraMax = item.nDuraMax;
     record = Mir3Item::FromLegacy(legacy, owner.m_itemIdentities.Get(item.szMakeIndex, &item));
+    record[Mir3Item::StackMode] = standard.stackMode;
     if (standard.wStdMode == 0) {
         Mir3Item::Word(record, Mir3Item::Defence, standard.wDuraMax);
         Mir3Item::Word(record, Mir3Item::MagicDefence, standard.dwRSource);
@@ -2494,6 +2495,7 @@ void CPlayerObject::Operate()
                         break;
                     }
                     case CM_USERBUYITEM:
+                    case CM_USERGETDETAILITEM:
                     case CM_CLICKNPC:
                     case CM_MERCHANTDLGSELECT:
                     {
@@ -2513,12 +2515,13 @@ void CPlayerObject::Operate()
                                 m_npcScriptFiles.clear();
                                 m_npcOptions.clear();
                             } else if (m_dialogMerchant != npc) break;
-                            if (lpProcessMsg->wIdent == CM_USERBUYITEM) {
+                            if (lpProcessMsg->wIdent == CM_USERBUYITEM || lpProcessMsg->wIdent == CM_USERGETDETAILITEM) {
                                 if (m_shopMerchant != npc || !lpProcessMsg->pszData) break;
                                 char name[128];
                                 const int length = fnDecode6BitBufA(lpProcessMsg->pszData, name, sizeof(name)-1);
                                 name[length] = 0;
-                                npc->Buy(this, name, lpProcessMsg->wParam);
+                                if (lpProcessMsg->wIdent == CM_USERBUYITEM) npc->Buy(this, name, lpProcessMsg->wParam, DWORD(lpProcessMsg->lParam2));
+                                else npc->Details(this, name, DWORD(lpProcessMsg->lParam2));
                                 break;
                             }
                             char section[256] = "@main";

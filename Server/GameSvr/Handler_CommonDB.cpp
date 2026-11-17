@@ -93,6 +93,8 @@ void InitStdItemEtcInfo()
 				g_pStdItemEtc[i].dwPrice	= atoi( pRec->Get( "FLD_PRICE" ) );
                 const char* durability = pRec->Get("FLD_DURAMAX");
                 g_pStdItemEtc[i].wStandardDurability = durability ? WORD(atoi(durability)) : 0;
+                const char* stack = pRec->Get("FLD_STACKMODE");
+                g_pStdItemEtc[i].stackMode = stack && *stack ? BYTE(atoi(stack)) : (g_pStdItemEtc[i].wStdMode==0 ? 3 : 0);
 			}
 		}
 

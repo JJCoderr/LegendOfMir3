@@ -31,6 +31,7 @@ public:
     void SetOffers(std::vector<Offer> list,int offset);
     bool SetDetailRecords(const char* body,int count,int offset);
     void OpenCategory();
+    bool RequestPage(int next);
     void CloseOffers();
     void BuyOffer();
     void BuyBulk(const char* quantity);

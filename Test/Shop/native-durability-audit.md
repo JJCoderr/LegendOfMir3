@@ -42,14 +42,16 @@
 
 除损耗的double落栈外，浮点操作使用x87扩展精度；2.0为0x4D0E34处的float32。类型40/43的预处理之后仍执行公共折价，并不是二选一。实例属性不被价格计算修改，类型43的M调整仅在函数局部副本中生效。
 
-## 当前工程的缺口与实现顺序
+## 当前接入状态
 
-- `CItem::wDuraMax`在普通物品中来自`TBL_STDITEM_ETC.FLD_VAL1`，药品把它用作回血量；`dwRSource`来自FLD_VAL2，用作回蓝量。不能把它们直接当成原服S与堆叠模式。
-- `BuildGeneralItem`将这两个药效值写入药品属性。现已新增独立FLD_DURAMAX及wStandardDurability，GetStandardItem改为发送此字段；旧表缺列取0。堆叠模式列仍未接入。
-- 当前Sale只取标准价半价；当前药粉/蜡烛边界CSV将FLD_VAL1设为0，仅验证成交门槛，不能证明折价正确。
-- 标准耐久传输已与药效分离；生成/存档现已通过G~扩展键支持16位耐久；后续需接入堆叠字段及上述计价顺序。装备另有附加属性及独立数据库身份，不能当作普通物品记录强转。
-- 回购物品还需按实例属性报价；现有Good按标准索引缓存统一单价，直接只修Sale会留下折价出售、按满属性价格回购的不一致。需同时核对原服商品列表分组和购买选择规则。
+普通物品通过独立 FLD_DURAMAX / wStandardDurability 传输标准耐久，FLD_VAL1/FLD_VAL2 仍用于药效。FLD_STACKMODE 可为空；缺列或 NULL 时沿用类型0为3、其他为0的旧规则，显式0表示不堆叠。
 
-本次完成字段与指令证据、错误命名修正及现有门槛回归；尚未实现耐久折价或完整堆叠/装备交易。
+`Server/Def/MerchantPricing.h` 按上述 x87 顺序实现无附加属性的普通物品基础价，保存和恢复调用者控制字。出售使用基础价半价取偶，购买在基础价上应用商人百分比。肉、矿石预处理和公共折价分别取整；不修改实例耐久。
 
-普通物品旧实例键`G%03d%04d%04d`无法容纳10000及以上耐久的问题现已修复：新增内部G~扩展键，并统一生成、保存、读取及操作解析；商店回购、怪物掉落、穿脱/丢弃/拾取和重登测试见[普通物品实例键](../Inventory/general-item-key.md)。此项不是耐久计价已完成的证据。
+参考服 0x4E0C38 的分类标志区分批量与实例商品；0x4CE5F0 每页最多返回10个实例，0x4CE1BC 按实例ID重新计价并成交。当前实现对应1015请求/652详情回包，沿用客户端商店详情窗口。详情记录先逐项编码，再整体编码；第68字节的 WORD 用作报价。商人物品ID在刷新和翻页时保留，售出后失效，补货分配新ID。回收物品保留真实当前/最大耐久。
+
+验证脚本包括 ShopDurability、ShopMeatPrice、ShopMeatPremium、ShopOrePrice、ShopOreMinimum、ShopMaximumLoss、ShopPowderPrice、ShopStackPriceBypass，以及 ShopDetailPages/Shared/Restock/Capacity/Weight/Gold。`test_merchant_pricing` 检查17个黄金价格及调用者 x87 控制字恢复。
+
+尚未实现装备附加属性定价和真实堆叠数量交易。当前普通物品仍逐条存储；堆叠模式只决定计价与购买分支。实例详情报价超过 WORD 上限时拒绝展示/成交，不模拟原服溢出；整数中间价溢出同样拒绝。SQL Server 运行路径尚未实测。
+
+普通物品16位耐久的生成、保存与读取使用内部 G~ 扩展键，见[普通物品实例键](../Inventory/general-item-key.md)。

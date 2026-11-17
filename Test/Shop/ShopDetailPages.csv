@@ -1,0 +1,47 @@
+﻿step,name,target,action,params,expect
+1,credentials ready,Client,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+2,wrong password,Client,session.login,account=mirtest;password=wrong,result.status=submitted
+3,login rejected,Client,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+4,dismiss rejection,Client,notice.dismiss,,result.status=submitted
+5,login,Client,session.login,account=mirtest;password=test123,result.status=submitted
+6,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+7,authenticated,Client,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+8,dismiss billing,Client,notice.dismiss,,result.status=submitted
+9,unknown server rejected,Client,session.select_server,name=MissingServer,error.code=-32002
+10,select server,Client,session.select_server,name=Mir3Local,result.status=submitted
+11,roster ready,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+12,unknown character rejected,Client,session.enter,name=MissingRole,error.code=-32002
+13,enter character,Client,session.enter,name=MirProbe01,result.status=submitted
+140,NPC visible,Client,state.wait,,result.scene=world;result.actor_count=1;result.actors.0.npc=true;result.actors.0.dead=false;result.actors.0.x=460;result.actors.0.y=261
+150,query NPC name,Client,actor.query_name,index=0,result.status=submitted
+160,NPC name received,Client,state.wait,,result.actor_count=1;result.actors.0.name=NpcProbe;result.actors.0.npc=true
+170,dismiss arrival,Client,notice.dismiss,,result.status=submitted
+180,input ready,Client,state.wait,,result.input_delayed=false
+190,closed shop rejects purchase,Client,shop.buy,index=0;quantity=1,error.code=-32002
+200,open merchant,Client,npc.click,index=0,result.status=submitted
+210,buy option ready,Client,state.wait,,result.npc_dialog.rows.1.command=@buy;result.npc_dialog.ready=true
+220,open shop,Client,npc.select,option=0,result.status=submitted
+230,goods from server,Client,state.wait,,result.shop.open=true;result.shop.goods.0.name=ShopPotion;result.shop.goods.0.price=11;result.shop.goods.0.stock=12;result.gold=100;result.bag_count=0
+240,first page,Client,shop.details,index=0,result.status=submitted
+250,ten instances,Client,state.wait,,result.shop.loading=false;result.shop.offer_count=10;result.shop.offers.0.id=1;result.shop.offers.9.id=10
+260,second page,Client,shop.page,page=1,result.status=submitted
+270,two final instances,Client,state.wait,,result.shop.loading=false;result.shop.page=1;result.shop.offer_count=2;result.shop.offers.0.id=11;result.shop.offers.1.id=12
+280,buy last instance,Client,shop.buy_offer,index=1,result.status=submitted
+290,first purchase,Client,state.wait,,result.gold=89;result.bag_count=1;result.shop.goods.0.stock=11
+300,refresh details,Client,shop.details,index=0,result.status=submitted
+310,first page refreshed,Client,state.wait,,result.shop.loading=false;result.shop.page=0;result.shop.offer_count=10
+320,second page again,Client,shop.page,page=1,result.status=submitted
+330,only eleventh remains,Client,state.wait,,result.shop.loading=false;result.shop.page=1;result.shop.offer_count=1;result.shop.offers.0.id=11
+340,buy eleventh,Client,shop.buy_offer,index=0,result.status=submitted
+350,second purchase,Client,state.wait,,result.gold=78;result.bag_count=2;result.shop.goods.0.stock=10
+360,stale page identity,Client,shop.buy_request,index=0;id=12;name=ShopPotion,result.status=submitted
+370,stale identity refused,Client,state.wait,,result.shop.notice=true;result.gold=78;result.bag_count=2
+380,dismiss refusal,Client,notice.dismiss,,result.status=submitted
+390,exit ready,Client,state.wait,,result.npc_dialog.ready=true
+400,close,Client,npc.select,option=0,result.status=submitted
+410,closed,Client,state.wait,,result.shop.open=false;result.return_ready=true
+420,save,Client,session.return,,result.status=submitted
+430,saved,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+440,gold persisted,Database,query,SELECT FLD_GOLD FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01',rows=[[78]]
+450,exact two instances persisted,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='MirProbe01' AND FLD_ITEMINDEX='G00080008000',rows=[[2]]
+460,coverage,Client,protocol.get,,

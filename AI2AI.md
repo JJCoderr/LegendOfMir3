@@ -2275,3 +2275,11 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - Test/Inventory/GeneralItemKey.cpp测试新旧黄金键、196608组完整16位字段往返、缓冲区哨兵和错误字符/高位拒绝；EIServer和test_general_item_key Release构建通过。
 - 新增ShopSellHighDurability（54步）、MonstersHighDurability（46步）、InventoryHighDurability（38步），验证10000新商品、65000/65535回购、1007标准索引掉落/使用、蜡烛穿脱及装备引用保存、丢弃/拾取和保存重登。装备槽2沿用FLD_LEFTHAND_ID列名。
 - 加上旧存档/同名实例、标准耐久、旧表、保存失败、出售和掉落回归，共9场景354步通过，日志out/csv-validation/key-*.log。编码说明Test/Inventory/general-item-key.md。SQL Server和管理命令发物品未实测；耐久报价/堆叠/完整装备交易仍待完成。
+
+## 2026-11-18 普通物品耐久计价与商店实例购买
+
+- MerchantPricing.h 对齐参考服 x87 基础价/购买价顺序，保留 double 损耗落栈与调用者控制字；普通物品出售、肉/矿石预处理和实例回购共用计价。
+- FLD_STACKMODE 可为空；缺列/NULL 沿用旧类型推断。详情1015/652每页10项，商人ID刷新保留、售出失效、补货重新分配；客户端RPC复用商店窗口入口。
+- 新增14个 Shop 子系统 CSV（757步），完成16个回归（692步），总计1449步通过；价格单测17项通过，全部89份fixture在当前SQLite建表脚本上执行通过。Client/EIServer Release构建通过。
+- 修复 ShopPriceRounding/ShopRestock 数据复制未指定列名的问题；InventoryLegacyStandard 同时覆盖缺少标准耐久与堆叠模式列。
+- 未完成：装备附加属性计价、真实堆叠数量交易、库存重启持久化、SQL Server运行验证。实例详情价格受WORD字段限制，超限拒绝，不模拟原服整数溢出。

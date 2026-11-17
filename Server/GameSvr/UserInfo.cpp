@@ -736,7 +736,8 @@ void CUserInfo::ProcessUserMessage(char *pszPacket)
                 lpDefMsg->nRecog, MAKELONG(lpDefMsg->wParam,lpDefMsg->wTag), 0, pszPacket + sizeof(_TDEFAULTMESSAGE));
             break;
         case CM_USERBUYITEM:
-            m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, lpDefMsg->wSeries, lpDefMsg->nRecog, 0, 0, pszPacket + sizeof(_TDEFAULTMESSAGE));
+        case CM_USERGETDETAILITEM:
+            m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, lpDefMsg->wSeries, lpDefMsg->nRecog, MAKELONG(lpDefMsg->wParam,lpDefMsg->wTag), 0, pszPacket + sizeof(_TDEFAULTMESSAGE));
             break;
         case CM_MERCHANTDLGSELECT:
             m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, 0, lpDefMsg->nRecog, 0, 0, pszPacket + sizeof(_TDEFAULTMESSAGE));
