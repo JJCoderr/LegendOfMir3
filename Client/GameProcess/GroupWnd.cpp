@@ -16,7 +16,7 @@ static const int groupButtons[5][3] = {
     {1221,217,200},{1362,38,192},{1365,98,192},{1368,158,192},{1370,23,47}
 };
 
-BOOL g_fAllowGroup = TRUE;
+BOOL g_fAllowGroup = FALSE;
 
 CGroupWnd::CGroupWnd()
 {
@@ -80,6 +80,7 @@ VOID CGroupWnd::ShowGroupWnd()
 VOID CGroupWnd::Init()
 {
 	CGameWnd::Init();
+    m_pressed=-1;m_xGroupList.ClearAllNodes();g_fAllowGroup=FALSE;
 }
 
 VOID CGroupWnd::Destroy()
@@ -122,4 +123,32 @@ BOOL CGroupWnd::OnLButtonDown(POINT point)
 
 VOID CGroupWnd::OnMouseMove(POINT point)
 {
+}
+
+bool CGroupWnd::Receive(const _TDEFAULTMESSAGE& header,const char* encoded)
+{
+    const int reason=header.nRecog;int caption=0;
+    switch(header.wIdent) {
+    case SM_CREATEGROUP_OK:g_fAllowGroup=TRUE;return true;
+    case SM_GROUPCANCEL:m_xGroupList.ClearAllNodes();return true;
+    case SM_GROUPMEMBERS: {
+        constexpr int MaximumDecoded=8192,MaximumEncoded=(MaximumDecoded*8+5)/6;
+        if(strlen(encoded)>MaximumEncoded) return false;
+        for(const unsigned char* p=reinterpret_cast<const unsigned char*>(encoded);*p;++p) if(*p<0x3c || *p>0x7b) return false;
+        char decoded[MaximumDecoded+1]={};const int length=fnDecode6BitBuf(const_cast<char*>(encoded),decoded,MaximumDecoded);
+        if((*encoded && !length) || memchr(decoded,0,length)) return false;
+        std::vector<std::string> names;const std::string text(decoded,length);size_t begin=0;
+        for(auto slash=text.find('/');slash!=text.npos;slash=text.find('/',begin)) {
+            if(slash-begin>=sizeof(CGroupMember::szMemberName)) return false;
+            names.push_back(text.substr(begin,slash-begin));begin=slash+1;
+        }
+        m_xGroupList.ClearAllNodes();for(const auto& name:names) {auto* member=new CGroupMember;strcpy(member->szMemberName,name.c_str());m_xGroupList.AddNode(member);}return true;
+    }
+    case SM_CREATEGROUP_FAIL:if(reason>=-4 && reason<=-1) caption=GuildWire::GroupCreateBase-reason;break;
+    case AddMemberFailed:
+        if(reason==-1) caption=GuildWire::GroupNoPermission;if(reason==-2) caption=GuildWire::GroupInvalidName;if(reason==-3) caption=GuildWire::GroupAlreadyJoined;if(reason==-4) caption=GuildWire::GroupOtherBase;if(reason==-5) caption=GuildWire::GroupFull;break;
+    case DeleteMemberFailed:if(reason>=-3 && reason<=-1) caption=reason==-3?GuildWire::GroupRemoveDenied:GuildWire::GroupOtherBase-reason;break;
+    default:return false;
+    }
+    if(caption) g_xGameProc.m_xInterface.ShowNotice(caption);return true;
 }

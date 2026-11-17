@@ -2,6 +2,7 @@
 #define _CGUILDWND_H
 #include <string>
 #include <vector>
+#include "GuildWire.h"
 
 
 class CGuildWnd : public CGameWnd
@@ -11,6 +12,11 @@ protected:
     int ButtonAt(POINT point);
 
 public:
+    GuildWire::GuildOverview m_overview;
+    bool m_overviewStarted=false;
+    bool Receive(const _TDEFAULTMESSAGE& header,const char* encoded);
+    bool ReceiveNotice(const _TDEFAULTMESSAGE& header);
+    void RequestMembers();
     bool m_manager = false;
     std::string m_name;
     std::vector<std::string> m_pages[3];

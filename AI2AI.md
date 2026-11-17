@@ -1298,3 +1298,10 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 独立12槽低BYTE技能ID表用于HUD/按键菜单，保留全量/删除不清表、新增A不绑定差异；退出角色清理。BindMagic同步表并沿用1008先取消后设置。熟练度DWORD完整显示，不再变负。
 - clean Client87/87与七目标构建通过；12新增+69相关回归共81项全1，图标/标记各12帧存在。193 skill-wire、194 skill-wire-progress截图out/skill-wire-list.png、skill-wire-progress.png已核对；下一空闲195。
 - 文档Client/docs/skill-wire-evidence.md。实际施法GetMagicByKey仍沿用当前CLIENT查记录；完整加密连接、服务器技能记录及施法/消耗/战斗不在本批验证范围，目标继续。
+
+### 行会主页成员与组队数据接入（2026-11-17）
+- 753原先误开旧GuildMaster；现在CGuildWnd解析名称/权限/公告敌对同盟并打开原生行会页。773/774续包和756/775/776成员按Godot纯C++模型移植，保留累积重复行为与编辑内容。
+- 补F键1036、主页/成员按钮1036/1037、成员成功后查询及原版失败原因提示；组队660/661/664/665/666/667接允许/名单/失败提示，解析失败原子保留，初始化清成员和允许状态。
+- 首次clean构建测试用了旧消息框m_szMsg导致失败，补CLoginNotice::Text只读接口后七目标构建通过。15项新检查（含25种原因组合）+30回归共45项全1；3种查询通过实际SendPacket UDP回环。
+- 195..200六预览guild-wire、guild-wire-members、guild-wire-editor、guild-wire-error、group-wire、group-wire-error，六截图out/guild-wire-{overview,members,editor,error}.png及out/group-wire-{members,error}.png已检查；下一空闲201。
+- 详见Client/docs/social-wire-evidence.md。待办：行会历史页m_pages[2]仍只预览填充，需原版追踪其追加入口，不能猜所有聊天都属于历史；身份职位/徽记实际赋值也未接。实服及登录仍待，目标保持完整。

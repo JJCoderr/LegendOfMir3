@@ -3492,97 +3492,18 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 
 				break;
 			}
-			case SM_CREATEGROUP_OK:
-			{
-//            changegroupmodetime := GetTickCount;
-//            AllowGroup := TRUE;
-				break;
-			}
-			case SM_CREATEGROUP_FAIL:
-			{
-//            changegroupmodetime := GetTickCount;
-				switch (tdm.nRecog)
-				{
-					case -1: 
-						//FrmDlg.DMessageDlg ('已加入该组。', [mbOk]);
-						break;
-					case -2: 
-						//FrmDlg.DMessageDlg ('要加入组的名称不正确.', [mbOk]);
-						break;
-					case -3: 
-						//FrmDlg.DMessageDlg ('想要一起参加的人正在参加其他队伍.', [mbOk]);
-						break;
-					case -4: 
-						//FrmDlg.DMessageDlg ('对方正在拒绝组队.', [mbOk]);
-						break;
-				}
-			}
-			case SM_GROUPMEMBERS:
-			{
-				char	szDecodeMsg[8192];
-				char	*pszMembers, *pszNext;
-
-				m_xInterface.m_xGroupWnd.m_xGroupList.ClearAllNodes();
-
-				nPos = fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), szDecodeMsg, sizeof(szDecodeMsg));
-				szDecodeMsg[nPos] = '\0';
-
-				pszMembers = szDecodeMsg;
-
-				while (pszNext = strchr(pszMembers, '/'))
-				{
-					*pszNext++ = '\0';
-
-					CGroupMember* pGroupMember = new CGroupMember;
-
-					if (pGroupMember)
-					{
-						strcpy(pGroupMember->szMemberName, pszMembers);
-						m_xInterface.m_xGroupWnd.m_xGroupList.AddNode(pGroupMember);
-					}
-
-					pszMembers = pszNext;
-				}
-
-				break;
-			}
-			case SM_GROUPCANCEL:
-			{
-				m_xInterface.m_xGroupWnd.m_xGroupList.ClearAllNodes();
-
-				break;
-			}
-			case SM_BUILDGUILD_OK:
-			{
-//         begin
-//            FrmDlg.LastestClickTime := GetTickCount;
-//          FrmDlg.DMessageDlg ('行会已创建.', [mbOk]);
-//         end;
-				break;
-			}
-			case SM_BUILDGUILD_FAIL:
-			{
-//         begin
-//            FrmDlg.LastestClickTime := GetTickCount;
-//            case msg.Recog of
-//               -1: FrmDlg.DMessageDlg ('已经加入行会了。', [mbOk]);
-//               -2: FrmDlg.DMessageDlg ('注册费用不足.', [mbOk]);
-//               -3: FrmDlg.DMessageDlg ('未拥有全部所需物品。', [mbOk]);
-//            end;
-//         end;
-				break;
-			}
-			case SM_OPENGUILDDLG:
-			{
-				char szDecodeMsg[8192];
-
-				INT nPos = fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), szDecodeMsg, sizeof(szDecodeMsg));
-				szDecodeMsg[nPos] = '\0';
-
-				m_xInterface.WindowActivate(_WND_ID_GUILDMASTER);	
-
-				break;
-			}
+            case SM_CREATEGROUP_OK:case SM_CREATEGROUP_FAIL:case SM_GROUPCANCEL:case SM_GROUPMEMBERS:
+            case CGroupWnd::AddMemberFailed:case CGroupWnd::DeleteMemberFailed:
+                m_xInterface.m_xGroupWnd.Receive(tdm,pszMsg+DEFBLOCKSIZE);break;
+            case SM_OPENGUILDDLG:case SM_SENDGUILDMEMBERLIST:
+            case GuildWire::SM_GUILD_OVERVIEW:case GuildWire::SM_GUILD_OVERVIEW_UPDATE:
+            case GuildWire::SM_GUILD_MEMBERS_UPDATE:case GuildWire::SM_GUILD_MEMBERS_REFRESH:
+                m_xInterface.m_xGuildWnd.Receive(tdm,pszMsg+DEFBLOCKSIZE);break;
+            case SM_OPENGUILDDLG_FAIL:case SM_GUILDADDMEMBER_OK:case SM_GUILDADDMEMBER_FAIL:
+            case SM_GUILDDELMEMBER_OK:case SM_GUILDDELMEMBER_FAIL:case SM_GUILDRANKUPDATE_FAIL:
+            case SM_BUILDGUILD_OK:case SM_BUILDGUILD_FAIL:case SM_GUILDMAKEALLY_OK:case SM_GUILDMAKEALLY_FAIL:
+            case SM_GUILDBREAKALLY_OK:case SM_GUILDBREAKALLY_FAIL:
+                m_xInterface.m_xGuildWnd.ReceiveNotice(tdm);break;
 			/*case SM_DOOROPEN:
 			{
 				BOOL bIsOpen = stDefMsg.nRecog;

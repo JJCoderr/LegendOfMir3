@@ -2215,6 +2215,7 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
     if (wParam==VK_ESCAPE && !m_xStoreWnd.m_bActive && IsTopWindow(_WND_ID_PORTRAIT)) { WindowActivate(_WND_ID_PORTRAIT); return TRUE; }
 	switch ( wParam )
 	{
+    case 'F': if (!(lParam & (1L << 30))) g_xClientSocket.SendGuildHome(); return TRUE;
     case 'J': if (!(lParam & (1L << 30))) m_minimap.TogglePortrait(GetTickCount()); return TRUE;
     case 'V': if (!(lParam & (1L << 30))) m_minimap.Toggle(GetTickCount(),1000); return TRUE;
     case 'Z':

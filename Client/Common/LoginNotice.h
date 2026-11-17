@@ -8,6 +8,7 @@ public:
     BOOL ShowMessageBox(const CHAR* message, INT type, INT ignoredFrame);
     BOOL HideMessageBox();
     void SetOrigin(int x, int y, bool compactConfirmation = true) { m_offset.x = x-140; m_offset.y = y-110; m_compactConfirmation = compactConfirmation; }
+    const char* Text() const { return m_text; }
     BOOL IsActive() const { return m_active; }
     HRESULT OnKeyDown(WPARAM key);
     HRESULT OnButtonDown(POINT point);

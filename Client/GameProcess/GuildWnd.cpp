@@ -35,7 +35,7 @@ VOID CGuildWnd::Init()
 	CGameWnd::Init();
     m_tab=0; m_pressed=-1; m_first=0;
     m_scrollCaptured=false; m_scrollTick=0;
-    m_name.clear(); m_manager=false;
+    m_name.clear(); m_manager=false;m_overview={};m_overviewStarted=false;
     for (int i=0;i<3;++i) m_pages[i].clear();
     for (auto& page:m_editable) page.clear();
 }
@@ -119,6 +119,8 @@ BOOL CGuildWnd::OnLButtonUp(POINT point)
     if (!clicked) return FALSE;
     g_xSound.PlayLobbyEffect("105.wav");
     if (hit>=1 && hit<=3) { m_tab=hit-1; m_first=0; }
+    if(hit==1) g_xClientSocket.SendGuildHome();
+    if(hit==2) RequestMembers();
     if (hit>=4 && hit<=8 && !m_manager) g_xGameProc.m_xInterface.ShowNotice(4000);
     else if (hit==4 || hit==7) g_xGameProc.m_xInterface.m_xGuildEditor.Open(hit==4);
     else if (hit==5 || hit==8) g_xGameProc.m_xInterface.OpenNameDialog(hit==5?4:5);
@@ -168,4 +170,54 @@ bool CGuildWnd::ScrollInput(int kind, POINT point)
     const float ratio=max(0.0f,min(1.0f,old+(point.y<thumb+6?-page:page)));
     m_first=int(double(max(0,count-1))*ratio);
     return true;
+}
+
+void CGuildWnd::RequestMembers()
+{
+    _TDEFAULTMESSAGE header={};fnMakeDefMessage(&header,CM_GUILDMEMBERLIST,0,0,0,0);
+    if(g_xClientSocket.m_sockClient!=INVALID_SOCKET) g_xClientSocket.SendPacket(&header,nullptr);
+}
+bool CGuildWnd::Receive(const _TDEFAULTMESSAGE& header,const char* encoded)
+{
+    using namespace GuildWire;
+    if(strlen(encoded)>MaximumEncoded) return false;
+    for(const unsigned char* p=reinterpret_cast<const unsigned char*>(encoded);*p;++p) if(*p<0x3c || *p>0x7b) return false;
+    char decoded[MaximumDecoded+1]={};const int length=fnDecode6BitBuf(const_cast<char*>(encoded),decoded,MaximumDecoded);
+    decoded[length]=0;if(*encoded && !length) return false;
+    const GuildReply reply{header.wIdent,std::string(decoded,length)};
+    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+    const auto rows=[&](const std::vector<GuildLine>& lines) {
+        std::vector<std::string> result;for(const auto& line:lines) result.push_back(line.message?captions.Get(line.message):line.ansi);return result;
+    };
+    if(header.wIdent==SM_SENDGUILDMEMBERLIST || header.wIdent==SM_GUILD_MEMBERS_UPDATE || header.wIdent==SM_GUILD_MEMBERS_REFRESH) {
+        GuildMembers members;if(!members.receive(reply,m_manager)) return false;
+        m_pages[1]=rows(members.members);m_editable[1]=std::move(members.editable_members);
+        if(m_tab==1) m_first=min(m_first,max(0,int(m_pages[1].size())-1));return true;
+    }
+    const bool initial=header.wIdent==SM_OPENGUILDDLG;
+    if(initial ? !m_overview.receive(reply) : !m_overviewStarted || !m_overview.receive_continuation(reply)) return false;
+    m_pages[0]=rows(m_overview.overview);m_editable[0]=m_overview.editable;
+    if(initial) {
+        m_overviewStarted=true;m_name=m_overview.name;m_manager=m_overview.manager;m_tab=m_first=0;
+        if(!m_bActive) g_xGameProc.m_xInterface.WindowActivate(_WND_ID_GUILD);
+    }
+    return true;
+}
+bool CGuildWnd::ReceiveNotice(const _TDEFAULTMESSAGE& header)
+{
+    const int reason=header.nRecog;int caption=0;bool refresh=false;
+    switch(header.wIdent) {
+    case SM_OPENGUILDDLG_FAIL:caption=GuildWire::OpenDenied;break;
+    case SM_GUILDADDMEMBER_OK:caption=GuildWire::MemberAdded;refresh=true;break;
+    case SM_GUILDDELMEMBER_OK:refresh=true;break;
+    case SM_GUILDADDMEMBER_FAIL:if(reason>=1 && reason<=5) caption=GuildWire::MemberAdded+reason;break;
+    case SM_GUILDDELMEMBER_FAIL:if(reason>=1 && reason<=4) caption=reason==1?GuildWire::MemberInvalid:GuildWire::DeleteFailureBase+reason;break;
+    case SM_GUILDRANKUPDATE_FAIL:if(reason>=-7 && reason<=-2) caption=GuildWire::RankFailureBase-reason;break;
+    case SM_BUILDGUILD_OK:caption=GuildWire::GuildCreated;break;
+    case SM_BUILDGUILD_FAIL:if(reason>=-3 && reason<=-1) caption=GuildWire::GuildCreated-reason;break;
+    case SM_GUILDMAKEALLY_OK:case SM_GUILDMAKEALLY_FAIL:if(reason>=-4 && reason<=-1) caption=GuildWire::AllianceFailureBase-reason;break;
+    case SM_GUILDBREAKALLY_OK:case SM_GUILDBREAKALLY_FAIL:if(reason>=-3 && reason<=-1) caption=reason==-1?GuildWire::AllianceMissing:GuildWire::BreakFailureBase-reason;break;
+    default:return false;
+    }
+    if(refresh) RequestMembers();if(caption) g_xGameProc.m_xInterface.ShowNotice(caption);return true;
 }

@@ -2,7 +2,7 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -67,7 +67,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewSkillProgress) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewGroupError) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1889,6 +1889,50 @@ public:
             if(groupPanel==PreviewMailNotify) {mouse=badgePoint;capturePath="mail-notification.bmp";}
         }
 
+        if(groupPanel>=PreviewGuildWire && groupPanel<=PreviewGroupError) {
+            auto& ui=g_xGameProc.m_xInterface;auto& guild=ui.m_xGuildWnd;auto& group=ui.m_xGroupWnd;
+            static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+            const auto header=[](WORD opcode,int reason=0) {_TDEFAULTMESSAGE value={};fnMakeDefMessage(&value,opcode,reason,0,0,0);return value;};
+            const auto encode=[](const std::string& text) {std::vector<char> value((text.size()*8+5)/6+1);fnEncode6BitBuf((BYTE*)text.data(),value.data(),int(text.size()),int(value.size()));return std::string(value.data());};
+            const auto receive=[&](WORD opcode,const std::string& text) {return guild.Receive(header(opcode),encode(text).c_str());};
+            const std::string overview="玛法行会\rignored\r1\r<Notice>\r欢迎加入行会。\r<KillGuilds>\r敌对行会\r<AllyGuilds>\r同盟行会\r尾";
+            const std::string members="#1/*掌门/会长/副会长/#2/*成员/战士/法师/";
+            const bool initial=receive(SM_OPENGUILDDLG,overview) && guild.m_bActive && !ui.m_xGuildMasterWnd.m_bActive && guild.m_manager && guild.m_name=="玛法行会" && guild.m_pages[0].size()==8 && guild.m_editable[0].size()==2;
+            const bool continuation=receive(GuildWire::SM_GUILD_OVERVIEW,"<Notice>\r续\rignored") && guild.m_pages[0].back()=="尾续" && guild.m_editable[0].back()=="尾续续";
+            const bool memberRows=receive(SM_SENDGUILDMEMBERLIST,members) && guild.m_pages[1].size()==7 && guild.m_pages[1][3]=="(1) <掌门>" && guild.m_editable[1][0]=="#1 <掌门>";
+            const auto saved=guild.m_pages[0];const bool malformed=!receive(SM_OPENGUILDDLG,"bad") && !guild.Receive(header(SM_SENDGUILDMEMBERLIST),"!") && guild.m_pages[0]==saved && guild.m_pages[1].size()==7;
+            receive(SM_OPENGUILDDLG,"普通行会\rignored\r0\r<Notice>\r公告\r");receive(GuildWire::SM_GUILD_MEMBERS_UPDATE,members);
+            const bool permission=!guild.m_manager && guild.m_pages[1][3]=="<掌门>";
+            guild.m_tab=1;guild.m_first=100;receive(GuildWire::SM_GUILD_MEMBERS_REFRESH,"");const bool emptyMembers=guild.m_pages[1].size()==3 && guild.m_first==2 && guild.m_editable[1].empty();
+            const auto capture=[&](auto action,WORD expected) {
+                SOCKET receiver=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP),sender=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+                sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);bind(receiver,(sockaddr*)&address,sizeof(address));int size=sizeof(address);getsockname(receiver,(sockaddr*)&address,&size);connect(sender,(sockaddr*)&address,sizeof(address));
+                DWORD timeout=500;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));const SOCKET savedSocket=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;action();g_xClientSocket.m_sockClient=savedSocket;
+                char wire[256]={};const int length=recv(receiver,wire,sizeof(wire)-1,0);closesocket(sender);closesocket(receiver);if(length!=19 || wire[0]!='#' || wire[length-1]!='!') return false;
+                _TDEFAULTMESSAGE packet={};fnDecodeMessage(&packet,wire+2);return packet.wIdent==expected && !packet.nRecog && !packet.wParam && !packet.wTag && !packet.wSeries;
+            };
+            const bool home=capture([&](){ui.OnKeyDown('F',0);},CM_GUILDHOME);
+            const bool memberRequest=capture([&](){const POINT point={guild.m_rcWnd.left+91,guild.m_rcWnd.top+387};guild.OnLButtonDown(point);guild.OnLButtonUp(point);},CM_GUILDMEMBERLIST);
+            const bool refresh=capture([&](){guild.ReceiveNotice(header(SM_GUILDADDMEMBER_OK));},CM_GUILDMEMBERLIST) && std::string(ui.m_xMsgBox.Text())==captions.Get(1474);ui.m_xMsgBox.HideMessageBox();
+            bool guildNotices=true;int noticeCount=0;
+            const int errors[][3]={{SM_OPENGUILDDLG_FAIL,0,1473},{SM_BUILDGUILD_OK,0,1504},{SM_BUILDGUILD_FAIL,-1,1505},{SM_BUILDGUILD_FAIL,-2,1506},{SM_BUILDGUILD_FAIL,-3,1507},{SM_GUILDADDMEMBER_FAIL,1,1475},{SM_GUILDADDMEMBER_FAIL,5,1479},{SM_GUILDDELMEMBER_FAIL,1,1475},{SM_GUILDDELMEMBER_FAIL,4,1482},{SM_GUILDRANKUPDATE_FAIL,-2,1483},{SM_GUILDRANKUPDATE_FAIL,-7,1488},{SM_GUILDMAKEALLY_OK,-1,1489},{SM_GUILDMAKEALLY_FAIL,-4,1492},{SM_GUILDBREAKALLY_OK,-1,1489},{SM_GUILDBREAKALLY_FAIL,-3,1494}};
+            for(const auto& item:errors) {guild.ReceiveNotice(header(WORD(item[0]),item[1]));guildNotices=guildNotices && ui.m_xMsgBox.IsActive() && std::string(ui.m_xMsgBox.Text())==captions.Get(item[2]);++noticeCount;ui.m_xMsgBox.HideMessageBox();}
+            guild.ReceiveNotice(header(SM_BUILDGUILD_FAIL,-99));const bool unknown=!ui.m_xMsgBox.IsActive();
+            const bool groupMembers=group.Receive(header(SM_GROUPMEMBERS),encode("队长/战士/法师/ignored").c_str()) && group.m_xGroupList.GetCounter()==3;
+            const bool groupBad=!group.Receive(header(SM_GROUPMEMBERS),encode(std::string(32,'A')+"/").c_str()) && group.m_xGroupList.GetCounter()==3;
+            group.Receive(header(SM_GROUPCANCEL),"");const bool cancelled=!group.m_xGroupList.GetCounter();
+            bool groupNotices=true;
+            const int groupErrors[][3]={{SM_CREATEGROUP_FAIL,-1,1495},{SM_CREATEGROUP_FAIL,-4,1498},{CGroupWnd::AddMemberFailed,-1,1499},{CGroupWnd::AddMemberFailed,-2,1500},{CGroupWnd::AddMemberFailed,-3,1501},{CGroupWnd::AddMemberFailed,-4,1498},{CGroupWnd::AddMemberFailed,-5,1502},{CGroupWnd::DeleteMemberFailed,-1,1499},{CGroupWnd::DeleteMemberFailed,-2,1500},{CGroupWnd::DeleteMemberFailed,-3,1503}};
+            for(const auto& item:groupErrors) {group.Receive(header(WORD(item[0]),item[1]),"");groupNotices=groupNotices && std::string(ui.m_xMsgBox.Text())==captions.Get(item[2]);ui.m_xMsgBox.HideMessageBox();}
+            receive(SM_OPENGUILDDLG,overview);receive(SM_SENDGUILDMEMBERLIST,members);group.Receive(header(SM_GROUPMEMBERS),encode("队长/战士/法师/").c_str());group.Receive(header(SM_CREATEGROUP_OK),"");
+            if(FILE* report=fopen("social-wire-check.txt","wb")) {fprintf(report,"initial=%d continuation=%d members=%d malformed=%d permission=%d empty=%d home=%d memberRequest=%d refresh=%d guildNotices=%d unknown=%d groupMembers=%d groupBad=%d cancelled=%d groupNotices=%d\n",initial,continuation,memberRows,malformed,permission,emptyMembers,home,memberRequest,refresh,guildNotices,unknown,groupMembers,groupBad,cancelled,groupNotices);fclose(report);}
+            mouse={790,430};capturePath="guild-wire-overview.bmp";
+            if(groupPanel==PreviewGuildMembers) {guild.m_tab=1;capturePath="guild-wire-members.bmp";}
+            if(groupPanel==PreviewGuildEditorWire) {guild.m_tab=1;ui.m_xGuildEditor.Open(false);capturePath="guild-wire-editor.bmp";}
+            if(groupPanel==PreviewGuildError) {guild.ReceiveNotice(header(SM_GUILDADDMEMBER_FAIL,5));capturePath="guild-wire-error.bmp";}
+            if(groupPanel>=PreviewGroupWire) {ui.WindowActivate(_WND_ID_GUILD);ui.WindowActivate(_WND_ID_GROUP);capturePath="group-wire-members.bmp";if(groupPanel==PreviewGroupError) {group.Receive(header(CGroupWnd::AddMemberFailed,-5),"");capturePath="group-wire-error.bmp";}}
+        }
+
         if(groupPanel==PreviewSkillWire || groupPanel==PreviewSkillProgress) {
             auto& ui=g_xGameProc.m_xInterface;auto& skills=ui.m_xSkillWnd;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].NewLoad("./Data/MIcon.wil");
@@ -2932,6 +2976,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=guild-wire")==0 ? PreviewGuildWire :
+        strcmp(lpCmdLine,"--preview=guild-wire-members")==0 ? PreviewGuildMembers :
+        strcmp(lpCmdLine,"--preview=guild-wire-editor")==0 ? PreviewGuildEditorWire :
+        strcmp(lpCmdLine,"--preview=guild-wire-error")==0 ? PreviewGuildError :
+        strcmp(lpCmdLine,"--preview=group-wire")==0 ? PreviewGroupWire :
+        strcmp(lpCmdLine,"--preview=group-wire-error")==0 ? PreviewGroupError :
         strcmp(lpCmdLine,"--preview=skill-wire")==0 ? PreviewSkillWire :
         strcmp(lpCmdLine,"--preview=skill-wire-progress")==0 ? PreviewSkillProgress :
         strcmp(lpCmdLine,"--preview=progression")==0 ? PreviewProgression :
