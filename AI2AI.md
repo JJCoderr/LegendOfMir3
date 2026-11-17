@@ -1837,3 +1837,8 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 ## 2026-11-17 Server 独立编译 EIServer
 - cmake -S Server 原先缺少 C/RC 支持，生成阶段无法确定 SQLite 的链接语言。Server/CMakeLists.txt 现在声明 C/C++/RC，并在独立配置时默认启用 EIServer 和旧源码所需的 MSVC 兼容选项。
 - Visual Studio 18 Win32 Release 已验证 Server 单独构建和仓库根目录构建。
+
+
+## 2026-11-17 EIServer 运行复验
+- 从仓库根目录重新构建 Win32 Release，使用独立临时运行目录和新初始化的 SQLite 验证。六服务自动启动，七个监听端口同属 PID 23120，无顶层服务窗口，登录、选服和角色列表均通过。
+- Server/CMakeLists.txt 在 f6a38c6 后还有本地编辑，本次验证使用当前工作区，未将已有本地编辑纳入提交。
