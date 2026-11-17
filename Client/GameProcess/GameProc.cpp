@@ -1746,7 +1746,7 @@ LRESULT CGameProcess::OnWheel(WPARAM wParam, LPARAM lParam)
 LRESULT CGameProcess::OnSysKeyDown(WPARAM wParam, LPARAM lParam)
 {
     if((lParam & (1L<<29)) && (wParam=='Q' || wParam=='X')) {
-        if(!(lParam & (1L<<30)) && !m_xInterface.m_xMsgBox.IsActive() && !m_xInterface.m_xGuildEditor.m_bActive)
+        if(!(lParam & (1L<<30)) && !m_xNotice.IsActive() && !m_xInterface.m_xMsgBox.IsActive() && !m_xInterface.m_xGuildEditor.m_bActive)
             m_xInterface.OpenExitDialog(wParam=='Q'?ExitFlow::ProgramDialog:ExitFlow::CharacterDialog);
         return 0L;
     }
@@ -1824,7 +1824,9 @@ LRESULT CGameProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 	// 游戏数据是否已加载...
 	if(m_xNotice.IsActive())
 	{
+        m_ptMousePos=POINT{LOWORD(lParam),HIWORD(lParam)};
 		m_xNotice.OnButtonDown(m_ptMousePos);
+        return 0L;
 	}
 
 	if ( !m_bRender )			return 0L;

@@ -1674,3 +1674,9 @@ Interface鼠标按下/抬起/移动优先模态，键盘模态先于行会编辑
 - 新CloseCreationEditor接取消和SM_NEWCHR_SUCCESS，清文本/缓存/密码、恢复90字节、释放焦点并隐藏，清按钮按下；符合参考close_character_creation。
 - 新316取消返回/317离线成功返回，下一318。返回11+姓名19+交互15+选角23+列表22=90检查通过。七目标构建creation-return-final.log通过，6页截图out/creation-return；两张等待页已查看，无残留姓名。
 - 最后仅补列表回复测试重跑返回模式。自启预览全停。成功回复为离线注入，不代表真实创建或原影片验证。
+
+
+## 2026-11-17 服务器公告输入隔离
+- 修复GameProc.OnLButtonDown公告后未返回且用旧坐标；公告按下现用当前消息坐标并立即返回，防止持物丢弃等后台动作。Alt+Q/X不叠加退出框。
+- 新5项回环UDP检查，公告11+隔离5+退出30+键盘34+模态27+音效15=122通过。七目标构建server-notice-isolation-build.log，6页图out/notice-isolation，默认/拖动公告已查看，自启预览全停。
+- 公告324px排版溢出当前344px底板是既有原版证据/资源对应未决问题，已复核server-notice-evidence.md，未擅改算法。下一编号318，真实游戏服尚未联调。
