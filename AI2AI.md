@@ -2115,3 +2115,7 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 ### 尸体自然消失联调
 - 新增 MonstersCorpse.csv，真实三分钟尸体保留后检查 SM_DISAPPEAR 和实体列表移除，再击杀仍存活的新怪物。31 步通过，189172ms，日志 out/csv-validation/monsters-corpse.log。未修改游戏时钟或尸体逻辑；额外三分钟 Ghost 保留后的内存释放尚未验证。
 - launch_csv.py 新增 --timeout-ms 透传 Test.exe；本场景使用 190000ms 单步等待期限。
+
+### 普通聊天协议联调
+- Client RPC 新增 chat.send(text)，复用回车使用的 OnMsgInputted 业务入口；state.get 提供真实聊天历史的 chat_count/chat_last。拒绝缺失、空、多行或超过 255 本地字节的输入。服务器解码保留终止符空间，避免写到缓冲区外。
+- ChatLocal.csv 28 步通过：英文/中文经 CM_SAY -> SM_HEAR 回显到历史，以及非法输入拒绝和历史不变。Client/EIServer Release 构建通过，日志 out/csv-validation/chat-local.log。多人广播、私聊、喊话、组队和行会聊天仍待接入验证。

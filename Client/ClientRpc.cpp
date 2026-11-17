@@ -142,6 +142,9 @@ std::string ClientState() {
         state += std::string(",\"return_ready\":")+mir3::BoolJson(!game.m_exitTransition.active &&
             game.m_exitGuard.Allowed(GetTickCount(),hero.m_bCurrMtn));
         state += mir3::ItemDebugState(game);
+        const auto& chat=game.m_xInterface.m_chatHistory;
+        state += ",\"chat_count\":"+std::to_string(chat.size())+
+            ",\"chat_last\":"+(chat.empty()?"null":mir3::QuoteLocalText(chat.back().text.c_str()));
         state += ",\"spell_reply_id\":"+std::to_string(hero.m_lastSpellReplyId)
             +",\"cast_ready\":"+mir3::BoolJson(!game.InputDelayed() && !hero.m_pendingAction &&
                 !hero.m_bMotionLock && !hero.m_bInputLock && hero.m_spellTiming.key_ready(GetTickCount()));
@@ -216,6 +219,15 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
     } else if (method == "notice.dismiss" && g_bProcState == _GAME_PROC) {
         accepted=true;
         if(g_xGameProc.m_xNotice.IsActive()) g_xGameProc.m_xNotice.HideMessageBox();
+    } else if (method == "chat.send" && g_bProcState == _GAME_PROC) {
+        const auto text=Text(params,"text");
+        constexpr size_t MaximumChatInputBytes=255; // Server's legacy decoded chat buffer, excluding NUL.
+        if(text.size()>MaximumChatInputBytes || text.find_first_of("\r\n")!=std::string::npos)
+            throw JsonRpc::Error{-32602,"Chat must be a single line of at most 255 local bytes"};
+        if(!g_xGameProc.InputDelayed() && !g_xGameProc.m_xNotice.IsActive() && !g_xGameProc.m_xInterface.HasInputDialog()) {
+            memcpy(g_xChatEditBox.m_szInputMsg,text.c_str(),text.size()+1);
+            g_xGameProc.OnMsgInputted(text[0]=='@',0);accepted=true;
+        }
     } else if (method == "actor.query_name" && g_bProcState == _GAME_PROC) {
         const int index=Integer(params,"index");
         auto& actors=g_xGameProc.m_xActorList;

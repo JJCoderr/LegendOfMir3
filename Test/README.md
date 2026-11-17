@@ -69,6 +69,7 @@ step,name,target,action,params,expect
 | 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复、施法回包、扣蓝与受伤治疗 |
 | 怪物 | `MonstersSpawn.csv`、`MonstersRespawn.csv`、`MonstersCorpse.csv`、`MonstersLoot.csv`、`MonstersLootCount.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentCount.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
+| 聊天 | `ChatLocal.csv` | 普通聊天回显、中文编码及非法输入拒绝 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
 
@@ -129,3 +130,5 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 `MonstersRespawn.csv` 使用 FLD_GENTIME=1（分钟）的真实刷新配置，击杀后等待新怪物出现、查询名称并再次击杀，再检查第二次补充刷新。刷新数量只统计未死亡且未进入 Ghost 状态的怪物；尸体和延迟释放对象仍按原时序保留，不阻塞刷新名额。场景约需两分钟，使用 state.wait 等待，不修改时钟。本场景验证两轮刷新与战斗，不覆盖尸体最终消失、Ghost 对象释放或长期运行稳定性。
 
 `MonstersCorpse.csv` 在击杀和一分钟补充刷新后等待原尸体消失，检查 SM_DISAPPEAR，随后攻击剩余的新怪物，确认移除旧实体未影响新实体。使用真实三分钟尸体时序；运行命令为 `python Test/launch_csv.py Test/MonstersCorpse.csv --timeout-ms 190000 --log out/monsters-corpse.log`。超时参数只调整测试等待期限，不改变游戏计时。本场景不验证额外三分钟 Ghost 对象保留后的内存释放。
+
+`ChatLocal.csv` 通过 chat.send(text) 调用客户端与回车相同的 OnMsgInputted 入口，检查 CM_SAY/SM_HEAR 以及实际聊天历史中的英文、中文回显。state.get 增加 chat_count（历史条数）、chat_last（最后一条文本，空历史为 null）。RPC 只接受非空单行文本，按本地编码最多 255 字节；超长、参数缺失、空字符串和换行输入返回 -32602。当前仅验证普通聊天回显，不代表多人广播、私聊、喊话、组队与行会聊天已完成。

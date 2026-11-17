@@ -44,7 +44,7 @@ BOOL CPlayerObject::ProcessForUserSaid(char *pszData)
 	char	szDecodeMsg[256];
 	char	szChatMsg[512];
 
-	int nPos = fnDecode6BitBufA(pszData, szDecodeMsg, sizeof(szDecodeMsg));
+	int nPos = fnDecode6BitBufA(pszData, szDecodeMsg, sizeof(szDecodeMsg) - 1);
 	
 	szDecodeMsg[nPos] = '\0';
 
