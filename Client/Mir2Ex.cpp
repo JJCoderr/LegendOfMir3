@@ -2,7 +2,7 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -66,7 +66,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewMailNotify) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewConsignmentWire) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1935,6 +1935,34 @@ public:
             }
         }
 
+        if(groupPanel==PreviewConsignmentWire) {
+            using namespace ConsignmentWire;
+            auto& ui=g_xGameProc.m_xInterface;auto& browser=ui.m_xConsignmentWnd;
+            BYTE record[RecordBytes]={};
+            strcpy((char*)record+Server,"玛法一区");strcpy((char*)record+Seller,"远行勇士");
+            strcpy((char*)record+Date,"11-17");strcpy((char*)record+Description,"旅途中收集的装备。\r欢迎有需要的勇士选购。");
+            constexpr unsigned FixtureId=7,FixturePrice=12000;
+            memcpy(record+Id,&FixtureId,sizeof(FixtureId));memcpy(record+Price,&FixturePrice,sizeof(FixturePrice));
+            constexpr int ItemIcon=372,IconField=36,InstanceField=62;
+            strcpy((char*)record+Item,"厚重的装备");record[Item+IconField]=BYTE(ItemIcon);record[Item+IconField+1]=BYTE(ItemIcon>>8);record[Item+InstanceField]=FixtureId;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            char encoded[RecordBytes*2]={};fnEncode6BitBuf(record,encoded,RecordBytes,sizeof(encoded));const std::string list=std::string(encoded)+"/";
+            browser.waiting=true;browser.ReceiveList(list.c_str(),1,2,3);
+            const bool decoded=browser.listings.size()==1 && browser.listings[0].id==FixtureId && browser.listings[0].price==FixturePrice && browser.listings[0].seller=="远行勇士" && browser.listings[0].server=="玛法一区";
+            const bool details=decoded && browser.listings[0].date=="11-17" && browser.listings[0].description=="旅途中收集的装备。\r欢迎有需要的勇士选购。";
+            const bool item=decoded && browser.listings[0].item.m_stItemInfo.stStdItem.wLooks==ItemIcon && strcmp(browser.listings[0].item.Name(),"厚重的装备")==0;
+            const bool state=browser.selected==0 && browser.hovered==-1 && !browser.waiting && browser.page==2 && browser.pages==3;
+            browser.ReceiveList("",0,0,0);const bool empty=browser.listings.empty() && browser.selected==-1 && browser.page==2;
+            browser.ReceiveList(encoded,1,1,1);const bool delimiter=browser.listings.empty();
+            browser.ReceiveList("abcd/",1,1,1);const bool shortRecord=browser.listings.empty();
+            const std::string multiple=list+list;browser.ReceiveList(multiple.c_str(),1,1,2);const bool count=browser.listings.size()==1;
+            browser.ReceiveList(multiple.c_str(),2,1,2);const bool multipleRows=browser.listings.size()==2;
+            browser.sessionId=42;browser.Close();const bool cleared=browser.sessionId==0 && browser.listings.empty();
+            browser.ReceiveList(list.c_str(),1,1,1);ui.WindowActivate(ConsignmentLayout::BrowserId);
+            if(FILE* report=fopen("consignment-wire-check.txt","wb")) {fprintf(report,"decoded=%d details=%d item=%d state=%d empty=%d delimiter=%d shortRecord=%d count=%d multiple=%d cleared=%d\n",decoded,details,item,state,empty,delimiter,shortRecord,count,multipleRows,cleared);fclose(report);}
+            capturePath="consignment-wire.bmp";mouse={790,460};
+        }
+
         if(groupPanel>=PreviewConsignmentEmpty && groupPanel<=PreviewConsignmentChecks) {
             using namespace ConsignmentLayout;
             auto& ui=g_xGameProc.m_xInterface;auto& browser=ui.m_xConsignmentWnd;auto& registration=ui.m_xConsignmentRegistration;
@@ -2607,6 +2635,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=consignment-wire")==0 ? PreviewConsignmentWire :
         strcmp(lpCmdLine,"--preview=mail-wire")==0 ? PreviewMailWire :
         strcmp(lpCmdLine,"--preview=mail-wire-read")==0 ? PreviewMailWireRead :
         strcmp(lpCmdLine,"--preview=mail-notification")==0 ? PreviewMailNotify :

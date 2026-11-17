@@ -248,7 +248,7 @@ void CConsignmentWnd::Destroy()
     for(auto& brush:editBackground) {if(brush) DeleteObject(brush);brush=nullptr;}
     if(editFont) DeleteObject(editFont);editFont=nullptr;editProcedure=nullptr;fontHeight=0;
     listings.clear();requests.clear();nameQuery.clear();sellerQuery.clear();description.clear();
-    selected=hovered=pressed=pressedRow=-1;page=pages=0;price=0;
+    selected=hovered=pressed=pressedRow=-1;page=pages=0;price=sessionId=0;
     captured=dragging=waiting=hasItem=confirmationPending=false;editorsAvailable=true;
     animationFrame=0;animationTick=0;
     CGameWnd::Destroy();
@@ -257,7 +257,7 @@ void CConsignmentWnd::Close()
 {
     ReadEditors();m_bActive=FALSE;captured=dragging=false;pressed=pressedRow=-1;
     if(registration) {hasItem=false;price=0;description.clear();if(edits[0]) SetWindowTextA(edits[0],"");}
-    else {listings.clear();selected=hovered=-1;page=pages=0;waiting=false;animationFrame=0;}
+    else {listings.clear();selected=hovered=-1;page=pages=0;sessionId=0;waiting=false;animationFrame=0;}
     LayoutEditors();SetFocus(g_xMainWnd.GetSafehWnd());
 }
 bool CConsignmentWnd::SelectItem(POINT point)
@@ -357,4 +357,31 @@ void CConsignmentWnd::ShowItemHint(POINT point)
         const RECT area={icon.left-15,icon.top-7,icon.right+15,icon.bottom+7};
         if(PtInRect(&area,point)) listings[selected].item.ShowItemStatus(area.left+35,area.top+22);
     }
+}
+
+void CConsignmentWnd::ReceiveList(const char* encoded,int count,int currentPage,int totalPages)
+{
+    using namespace ConsignmentWire;
+    listings.clear();selected=hovered=-1;waiting=false;
+    if(count<=0) return;
+    page=currentPage;pages=totalPages;
+    const char* begin=encoded;
+    for(int index=0;index<count;++index) {
+        const char* end=strchr(begin,'/');if(!end) break;
+        std::string part(begin,end);BYTE record[RecordBytes]={};begin=end+1;
+        if(fnDecode6BitBuf(part.data(),(char*)record,RecordBytes)!=RecordBytes) continue;
+        const auto text=[&](int offset,int length) {
+            const char* value=(char*)record+offset;
+            const char* terminator=(const char*)memchr(value,0,length);
+            return std::string(value,terminator?int(terminator-value):length);
+        };
+        Listing listing;
+        memcpy(&listing.id,record+Id,sizeof(listing.id));
+        memcpy(&listing.price,record+Price,sizeof(listing.price));
+        listing.server=text(Server,ServerBytes);listing.seller=text(Seller,SellerBytes);
+        listing.date=text(Date,DateBytes);listing.description=text(Description,DescriptionBytes);
+        listing.item.SetMir3Item(record+Item,0);
+        listings.push_back(std::move(listing));
+    }
+    if(!listings.empty()) selected=0;
 }

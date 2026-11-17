@@ -1231,3 +1231,8 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 已新增BuildCompose固定596字节及在线发送：recipient0限24、subject64限30（长标题28+4613）、body95限500，复用GuildEditor::Payload，保留DBCS边界。类未新增成员，完整功能后增量构建即可；目前尚未构建测试。下一步报文/中文边界/换行测试及删除撤回缓存失效核对，统一提交。
 
 邮件发送批次验证：客户端及六个服务器目标构建通过（out/build-mail-send-all.log）；新增发送10项及现有邮件/投石车/寄售67项检查全部通过。普通发送1141已适配固定596字节，送礼按钮原版为无操作，未伪造协议；实服回执仍未联调。
+
+### 寄售列表及页面状态接入（2026-11-17）
+- 1355恢复312字节记录，各段编码以/分隔；字段server0、id16、seller20、price72、date76、item91(100)、description191(121)。证据Client/docs/consignment-wire-evidence.md。
+- CConsignmentWnd::ReceiveList接已有原生页面，首条默认选中，清列表/等待状态，count>0更新页码；1355仅未打开时开窗口并保存recognition会话ID，1400按recognition==0设置等待动画。发送操作尚未适配。
+- clean Client通过，全七目标构建通过；新增10项列表解析/状态检查、既有77项相关回归全1。截图out/consignment-wire.png已核对；未验证完整加密包或实服。预览180 consignment-wire，下一空闲181。

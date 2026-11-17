@@ -2873,6 +2873,16 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
             }
             case MailWire::NotificationMessage:
                 m_xInterface.m_xMailWnd.notified=true;break;
+            case ConsignmentWire::ListMessage:
+                m_xInterface.m_xConsignmentWnd.ReceiveList(pszMsg+DEFBLOCKSIZE,tdm.wSeries,tdm.wParam,tdm.wTag);
+                if(!m_xInterface.m_xConsignmentWnd.m_bActive) {
+                    m_xInterface.WindowActivate(ConsignmentLayout::BrowserId);
+                    m_xInterface.m_xConsignmentWnd.sessionId=tdm.nRecog;
+                }
+                break;
+            case ConsignmentWire::WaitingMessage:
+                m_xInterface.m_xConsignmentWnd.waiting=tdm.nRecog==0;
+                break;
             case MailWire::ListMessage:
                 if(tdm.wParam==MailWire::Inbox || tdm.wParam==MailWire::Outbox)
                     m_xInterface.m_xMailWnd.ReceiveList(tdm.wParam==MailWire::Outbox,pszMsg+DEFBLOCKSIZE,tdm.wSeries);

@@ -1,5 +1,6 @@
 #pragma once
 #include "ConsignmentLayout.h"
+#include "ConsignmentWire.h"
 #include <string>
 #include <vector>
 
@@ -19,12 +20,13 @@ public:
     };
     bool registration=false,captured=false,dragging=false,waiting=false,hasItem=false;
     int selected=-1,hovered=-1,pressed=-1,pressedRow=-1,page=0,pages=0;
-    unsigned price=0;
+    unsigned price=0,sessionId=0;
     CItem item;
     std::string nameQuery,sellerQuery,description;
     std::vector<Listing> listings;
     std::vector<Request> requests;
     HWND edits[2]={};
+    void ReceiveList(const char* encoded,int count,int currentPage,int totalPages);
     void Create(CWHWilImageData* image,bool registerPage);
     void Destroy() override;
     void Close();
