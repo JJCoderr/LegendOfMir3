@@ -2,7 +2,7 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -67,7 +67,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewGroupError) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewGuildHistory) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1889,6 +1889,43 @@ public:
             if(groupPanel==PreviewMailNotify) {mouse=badgePoint;capturePath="mail-notification.bmp";}
         }
 
+
+        if(groupPanel==PreviewGuildHistory) {
+            auto& ui=g_xGameProc.m_xInterface;auto& guild=ui.m_xGuildWnd;
+            guild.m_pages[2].clear();guild.m_first=0;ui.WindowActivate(_WND_ID_GUILD);guild.m_tab=2;
+            const auto receive=[&](WORD opcode,const std::string& text) {
+                _TDEFAULTMESSAGE header={};header.wIdent=opcode;header.wParam=255;header.wTag=255;
+                char encoded[2048]={};fnEncodeMessage(&header,encoded,sizeof(encoded));
+                fnEncode6BitBuf((BYTE*)text.data(),encoded+DEFBLOCKSIZE,int(text.size()),sizeof(encoded)-DEFBLOCKSIZE);
+                g_xGameProc.OnSocketMessageRecieve(encoded);
+            };
+            receive(SM_GUILDMESSAGE,"行会通知：今晚八点在沙巴克集合。");
+            const bool routed=guild.m_pages[2].size()==1 && guild.m_pages[2][0]=="行会通知：今晚八点在沙巴克集合。";
+            const auto& chat=ui.m_chatHistory.back();
+            const bool color=chat.color==GetChatColor(0) && chat.background==GetChatColor(4);
+            receive(SM_SYSMESSAGE,"普通系统消息");receive(SM_GROUPMESSAGE,"组队消息");
+            const bool isolated=guild.m_pages[2].size()==1;
+            guild.m_pages[2].clear();guild.m_first=0;
+            for(int i=0;i<90;++i) {char row[32];sprintf(row,"历史通知 %02d",i);receive(SM_GUILDMESSAGE,row);}
+            const bool retained=guild.m_pages[2].size()==79 && guild.m_pages[2].front()=="历史通知 11" && guild.m_first==61;
+            guild.m_first=5;receive(SM_GUILDMESSAGE,"新增通知");const bool scrolled=guild.m_first==4;
+            guild.m_first=77;guild.OnScrollUp();guild.OnScrollUp();const bool scrollEnd=guild.m_first==78;guild.OnScrollDown();const bool scrollBack=guild.m_first==77;
+            guild.m_pages[2].clear();guild.m_first=0;
+            std::string longLine;for(int i=0;i<40;++i) longLine+="中文换行";
+            const auto chatSize=ui.m_chatHistory.size();receive(SM_GUILDMESSAGE,longLine);
+            std::string combined;for(const auto& row:guild.m_pages[2]) combined+=row;
+            const bool wrapped=combined==longLine && guild.m_pages[2].size()>1 && guild.m_pages[2].size()<=5;
+            const bool longChat=ui.m_chatHistory.size()==chatSize;
+            guild.m_pages[2].clear();guild.AppendHistory(std::string(1023,'W').c_str());const bool capped=guild.m_pages[2].size()==5;
+            guild.AppendHistory("");guild.AppendHistory(std::string(1024,'W').c_str());const bool bounds=guild.m_pages[2].size()==5;
+            guild.m_pages[2].clear();guild.m_first=0;guild.m_name="珐玛行会";
+            receive(SM_GUILDMESSAGE,"【行会通知】欢迎各位勇士回到珐玛大陆。");
+            receive(SM_GUILDMESSAGE,"今晚八点集合，请成员提前整理装备、药水和回城卷轴。长通知按原版字体宽度自动换行，中文字符保持完整。");
+            for(int i=1;i<=22;++i) {char row[100];sprintf(row,"历史通知 %02d：请各小队确认集合地点。",i);receive(SM_GUILDMESSAGE,row);}
+            if(FILE* report=fopen("guild-history-check.txt","wb")) {fprintf(report,"routed=%d color=%d isolated=%d retained=%d scrolled=%d wrapped=%d longChat=%d capped=%d bounds=%d scrollEnd=%d scrollBack=%d\n",routed,color,isolated,retained,scrolled,wrapped,longChat,capped,bounds,scrollEnd,scrollBack);fclose(report);}
+            guild.m_first=0;mouse={790,430};capturePath="guild-history.bmp";
+        }
+
         if(groupPanel>=PreviewGuildWire && groupPanel<=PreviewGroupError) {
             auto& ui=g_xGameProc.m_xInterface;auto& guild=ui.m_xGuildWnd;auto& group=ui.m_xGroupWnd;
             static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
@@ -2976,6 +3013,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=guild-history")==0 ? PreviewGuildHistory :
         strcmp(lpCmdLine,"--preview=guild-wire")==0 ? PreviewGuildWire :
         strcmp(lpCmdLine,"--preview=guild-wire-members")==0 ? PreviewGuildMembers :
         strcmp(lpCmdLine,"--preview=guild-wire-editor")==0 ? PreviewGuildEditorWire :

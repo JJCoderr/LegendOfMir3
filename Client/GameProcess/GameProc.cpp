@@ -4009,16 +4009,21 @@ VOID CGameProcess::OnSvrMsgHear(_TDEFAULTMESSAGE *ptdm, char *pszMsg)
 //	DWORD dwFontBackClr = m_xInterface.m_dwFontClrDfnList[ptdm->wParam];
 //	DWORD dwFontClr		= m_xInterface.m_dwFontClrDfnList[ptdm->wTag];
 
-	char szDecodeMsg[MAX_PATH];
+	constexpr size_t MaximumEncodedChat=1024;
+    if(strlen(pszMsg)>MaximumEncodedChat) return;
+    char szDecodeMsg[MaximumEncodedChat+1];
 
-	int nPos = fnDecode6BitBuf(pszMsg, szDecodeMsg, sizeof(szDecodeMsg));
+	int nPos = fnDecode6BitBuf(pszMsg, szDecodeMsg, MaximumEncodedChat);
 	szDecodeMsg[nPos] = '\0';
 
-	DWORD dwBack = GetChatColor(ptdm->wParam);
-	DWORD dwFont = GetChatColor(ptdm->wTag);
-	m_xInterface.MsgAdd(dwFont, dwBack, szDecodeMsg);
+	const bool guildMessage=ptdm->wIdent==SM_GUILDMESSAGE;
+    DWORD dwBack = GetChatColor(guildMessage?_CHAT_COLOR5:LOBYTE(ptdm->wParam));
+	DWORD dwFont = GetChatColor(guildMessage?_CHAT_COLOR1:LOBYTE(ptdm->wTag));
+    if(guildMessage) m_xInterface.m_xGuildWnd.AppendHistory(szDecodeMsg);
+    constexpr int MaximumChatBytes=200;
+    if(nPos<=MaximumChatBytes) m_xInterface.MsgAdd(dwFont, dwBack, szDecodeMsg);
 
-	if ( ptdm->wIdent == SM_HEAR || ptdm->wIdent == SM_MONSTERSAY )
+	if ( (ptdm->wIdent == SM_HEAR || ptdm->wIdent == SM_MONSTERSAY) && nPos<int(sizeof(m_xMyHero.m_szChatMsg)) )
 	{
 		if ( ptdm->nRecog == m_xMyHero.m_dwIdentity )
 		{

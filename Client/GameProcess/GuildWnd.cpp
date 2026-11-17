@@ -134,7 +134,7 @@ BOOL CGuildWnd::OnLButtonDown(POINT point)
 }
 VOID CGuildWnd::OnMouseMove(POINT point) { ScrollInput(1,point); }
 VOID CGuildWnd::OnScrollDown() { m_first=max(0,m_first-1); }
-VOID CGuildWnd::OnScrollUp() { m_first=min(max(0,int(m_pages[m_tab].size())-18),m_first+1); }
+VOID CGuildWnd::OnScrollUp() { m_first=min(max(0,int(m_pages[m_tab].size())-1),m_first+1); }
 
 bool CGuildWnd::ScrollInput(int kind, POINT point)
 {
@@ -220,4 +220,35 @@ bool CGuildWnd::ReceiveNotice(const _TDEFAULTMESSAGE& header)
     default:return false;
     }
     if(refresh) RequestMembers();if(caption) g_xGameProc.m_xInterface.ShowNotice(caption);return true;
+}
+
+// MIR3 4331C0: ANSI byte-prefix measurement and five sscanf rows.
+void CGuildWnd::AppendHistory(const char* message)
+{
+    constexpr int Width=514,VisibleRows=18,HistoryLimit=80,MaximumBytes=1023;
+    if(!message || !*message || strlen(message)>MaximumBytes) return;
+    HDC dc=GetDC(g_xMainWnd.GetSafehWnd());
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font=g_xMainWnd.CreateGameFont(face,9);
+    HGDIOBJ old=SelectObject(dc,font);
+    std::string wrapped;int start=0,highBytes=0,count=1;
+    for(int i=0;message[i];++i) {
+        SIZE extent={};GetTextExtentPoint32A(dc,message+start,i-start+1,&extent);
+        const bool high=static_cast<signed char>(message[i])<0;
+        if(extent.cx<=Width) {if(high) ++highBytes;wrapped+=message[i];}
+        else if(high && highBytes%2) {wrapped.back()='`';start=i-1;i-=2;--highBytes;++count;}
+        else {wrapped+='`';start=i;--i;++count;}
+    }
+    SelectObject(dc,old);DeleteObject(font);ReleaseDC(g_xMainWnd.GetSafehWnd(),dc);
+    char rows[5][260]={};
+    sscanf(wrapped.c_str(),"%259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c",rows[0],rows[1],rows[2],rows[3],rows[4]);
+    auto& history=m_pages[2];
+    for(int i=0;i<min(count,5);++i) {
+        if(int(history.size())-m_first==VisibleRows) ++m_first;
+        history.push_back(rows[i]);
+    }
+    while(history.size()>=HistoryLimit) {
+        history.erase(history.begin());
+        if(m_first>0) --m_first;
+    }
 }

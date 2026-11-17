@@ -1305,3 +1305,11 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 首次clean构建测试用了旧消息框m_szMsg导致失败，补CLoginNotice::Text只读接口后七目标构建通过。15项新检查（含25种原因组合）+30回归共45项全1；3种查询通过实际SendPacket UDP回环。
 - 195..200六预览guild-wire、guild-wire-members、guild-wire-editor、guild-wire-error、group-wire、group-wire-error，六截图out/guild-wire-{overview,members,editor,error}.png及out/group-wire-{members,error}.png已检查；下一空闲201。
 - 详见Client/docs/social-wire-evidence.md。待办：行会历史页m_pages[2]仍只预览填充，需原版追踪其追加入口，不能猜所有聊天都属于历史；身份职位/徽记实际赋值也未接。实服及登录仍待，目标保持完整。
+
+
+### 2026-11-17 行会聊天历史完整接入
+- 原版 42F380 -> 4331C0 证明只有 SM_GUILDMESSAGE104 写历史；不要把所有系统消息写进去。CLIENT AppendHistory 已接入实际消息分发，沿用 Godot 的 514px 宋体9pt字节换行、最多5行、79行历史、共享滚动位置逻辑。修正向下滚动上限为最后一行（433900）。
+- 消息编码上限1024；聊天显示上限200解码字节，长通知仍保留历史；气泡固定数组边界已限制。页签105.wav沿用，无新增到达音效。
+- clean87/87、all111/111、最终增量通过；guild-history11、social-wire15、guild-editor17共43项全部1。截图out/guild-history.png已检查。新预览201，下一个空闲202。
+- IDA重开会话1a4e6f32；open.ps1需进程环境IDADIR=C:/Program Files/IDA Professional 9.1。分析库C:/Users/czx/AppData/Local/Temp/mir3-assess-205da311dc994a8bbd59010e1c6a9ce2/Mir3-unpacked-analysis.exe.i64。
+- 本批仅GUI数据链路与本地协议注入，不代表真实服务器联调完成。身份行会名称/职务数据等仍待审计。

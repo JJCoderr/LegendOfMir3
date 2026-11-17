@@ -17,6 +17,7 @@ public:
     bool Receive(const _TDEFAULTMESSAGE& header,const char* encoded);
     bool ReceiveNotice(const _TDEFAULTMESSAGE& header);
     void RequestMembers();
+    void AppendHistory(const char* message);
     bool m_manager = false;
     std::string m_name;
     std::vector<std::string> m_pages[3];
