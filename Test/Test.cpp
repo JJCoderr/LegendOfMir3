@@ -223,7 +223,7 @@ int wmain(int argc,wchar_t** argv) {
         std::cout<<stamp<<message<<std::endl;if(log) log<<stamp<<message<<std::endl;
     };
     try {
-        if(argc<2) throw std::runtime_error("Usage: Test.exe scenario.csv --client-pid N --server-pid N [--from N --to N --log file --database file --timeout-ms N]");
+        if(argc<2) throw std::runtime_error("Usage: Test.exe scenario.csv --client-pid N --server-pid N [--client2-pid N --from N --to N --log file --database file --timeout-ms N]");
         fs::path csv=argv[1],logPath=L"test.log",database;
         std::map<std::string,DWORD> pids;unsigned from=1,to=UINT_MAX,timeout=65000;
         for(int i=2;i<argc;i+=2) {
@@ -232,6 +232,7 @@ int wmain(int argc,wchar_t** argv) {
             if(option==L"--log") logPath=value;
             else if(option==L"--database") database=value;
             else if(option==L"--client-pid") pids["Client"]=Number(value);
+            else if(option==L"--client2-pid") pids["Client2"]=Number(value);
             else if(option==L"--server-pid") pids["Server"]=Number(value);
             else if(option==L"--from") from=Number(value);
             else if(option==L"--to") to=Number(value);
@@ -266,10 +267,10 @@ int wmain(int argc,wchar_t** argv) {
                 if(action!="query" || database.empty()) throw std::runtime_error("Database query requires --database");
                 response=Query(database,row[4]);
             } else {
-                if(target!="Client" && target!="Server") throw std::runtime_error("Target must be Client, Server or Database");
+                if(target!="Client" && target!="Client2" && target!="Server") throw std::runtime_error("Target must be Client, Client2, Server or Database");
                 if(!pipes.count(target)) {
                     if(!pids[target]) throw std::runtime_error("Missing PID for "+target);
-                    pipes[target]=std::make_unique<Pipe>(target,pids[target]);
+                    pipes[target]=std::make_unique<Pipe>(target=="Client2"?"Client":target,pids[target]);
                 }
                 auto& pipe=*pipes[target];
                 const auto fields=Fields(action=="raw"?"":row[4]);

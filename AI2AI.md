@@ -2123,3 +2123,8 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 ### 喊话消息类型与限制
 - 服务端 RM_CRY 改为发送客户端已有的 SM_CRY，而不是 SM_HEAR；普通聊天消息类型不变。
 - ChatShout.csv 24 步通过：8 级喊话、冷却内二次喊话不广播、普通消息作为处理完成依据并精确断言回包次数。ChatShoutLevel.csv 23 步通过：7 级收到等级不足提示、无喊话广播。EIServer Release 构建通过，日志 out/csv-validation/chat-shout.log 与 chat-shout-level.log。未验证冷却结束或多客户端范围边界。
+
+### 双客户端私聊
+- Test.exe 支持 Client2 目标与 --client2-pid；launch_csv.py --clients 2 启动和回收两个真实客户端。
+- GetUserHuman 从前缀 memcmp 改为完整 strcmp，防止向在线角色名加后缀的不存在收件人误投。ChatWhisper.csv 43 步通过：两个账号登录、中英文私聊/回复、错误名称反馈、普通聊天作为处理完成依据及精确 SM_WHISPER 次数。日志 out/csv-validation/chat-whisper.log。
+- Test/EIServer Release 构建通过，执行器 8 项检查通过。拒收设置、跨服务器及第三客户端旁观隔离仍待验证。

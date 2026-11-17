@@ -14,7 +14,7 @@ CPlayerObject* GetUserHuman(char *pszCharName)
 			{
 				if (pUserInfo->m_pxPlayerObject)
 				{
-					if (memcmp(pUserInfo->m_szCharName, pszCharName, memlen(pUserInfo->m_szCharName) - 1) == 0)
+					if (strcmp(pUserInfo->m_szCharName, pszCharName) == 0)
 					{
 						if (!pUserInfo->m_pxPlayerObject->m_fIsDead)
 							return (CPlayerObject*)pUserInfo->m_pxPlayerObject;
