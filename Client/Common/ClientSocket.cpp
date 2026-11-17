@@ -32,52 +32,54 @@ unsigned long CClientSocket::GetINetAddr(CHAR* pszDotAddress)
 }
 
 
-BOOL CClientSocket::ConnectToServer(HWND hWnd, CHAR* szID, INT nPort)
+BOOL CClientSocket::ConnectToServer(HWND window, CHAR* host, INT port)
 {
-	SOCKADDR_IN		sockAddr;
-	CHAR strError[256]; 
-
-	if ( m_sockClient == INVALID_SOCKET )
-	{
-		m_sockClient = socket(AF_INET, SOCK_STREAM, 0);
-
-		if ( m_sockClient == INVALID_SOCKET )
-		{
-			wsprintf(strError, "socket() generated error %d\n", WSAGetLastError());
-			OutputDebugString(strError);
-			return FALSE;
-		}
-
-		sockAddr.sin_family		 = AF_INET;
-		sockAddr.sin_port		 = htons( nPort );
-		sockAddr.sin_addr.s_addr = inet_addr(szID);
-
-		if ( WSAAsyncSelect(m_sockClient, hWnd, ID_SOCKCLIENT_EVENT_MSG, FD_CONNECT|FD_READ|FD_CLOSE ) == SOCKET_ERROR)
-		{
-			wsprintf(strError, "WSAAsyncSelect() generated error %d\n", WSAGetLastError());
-			OutputDebugString(strError);
-			return FALSE;
-		}
-
-		if ( connect(m_sockClient, (const struct sockaddr FAR*)&sockAddr, sizeof(sockAddr)) == SOCKET_ERROR )
-		{
-			switch ( WSAGetLastError() )
-			{
-				case WSAEWOULDBLOCK:
-					OutputDebugString( "This socket is Non-Blocking Mode" );
-					break;
-			}
-		}
-
-		m_nSync = 1;
-	}
-
-	return TRUE;
+    if(m_sockClient!=INVALID_SOCKET) return TRUE;
+    m_connectionWindow=window;m_connectionHost=host;m_connectionPort=port;m_retry={};
+    m_sockClient=socket(AF_INET,SOCK_STREAM,0);
+    if(m_sockClient==INVALID_SOCKET) {ConnectionFailed();return FALSE;}
+    SOCKADDR_IN address={};address.sin_family=AF_INET;address.sin_port=htons(port);address.sin_addr.s_addr=inet_addr(host);
+    if(WSAAsyncSelect(m_sockClient,window,ID_SOCKCLIENT_EVENT_MSG,FD_CONNECT|FD_READ|FD_CLOSE)==SOCKET_ERROR) {
+        ConnectionFailed();return FALSE;
+    }
+    if(connect(m_sockClient,(const sockaddr*)&address,sizeof(address))==SOCKET_ERROR && WSAGetLastError()!=WSAEWOULDBLOCK) {
+        ConnectionFailed();return FALSE;
+    }
+    m_nSync=1;return TRUE;
 }
-
+void CClientSocket::ConnectionFailed()
+{
+    DisconnectToServer();m_retry.Fail();
+}
+void CClientSocket::AnswerConnection(bool retry,DWORD now)
+{
+    m_retry.Answer(retry,now);
+    if(retry) EnableWindow(m_connectionWindow,FALSE);
+    else PostMessage(m_connectionWindow,WM_CLOSE,0,0);
+}
+bool CClientSocket::PollConnection(DWORD now)
+{
+    if(m_retry.phase==ConnectionRetry::Phase::Prompt) {
+        static CLoginMessages messages;static const bool loaded=messages.Load("./CmList.dat");
+        m_retryFocus=GetFocus();
+        const int answer=MessageBoxA(m_connectionWindow,messages.Get(ConnectionRetry::Message).c_str(),ConnectionRetry::Title,MB_YESNO);
+        AnswerConnection(answer==IDYES,GetTickCount());
+        return true;
+    }
+    if(m_retry.Due(now)) {
+        EnableWindow(m_connectionWindow,TRUE);
+        const std::string host=m_connectionHost;
+        ConnectToServer(m_connectionWindow,const_cast<char*>(host.c_str()),m_connectionPort);
+        if(IsWindow(m_retryFocus)) SetFocus(m_retryFocus);
+        return true;
+    }
+    return m_retry.Blocks();
+}
 
 BOOL CClientSocket::DisconnectToServer()
 {
+    if(m_retry.phase==ConnectionRetry::Phase::Waiting) EnableWindow(m_connectionWindow,TRUE);
+    m_retry={};
 	if ( m_sockClient != INVALID_SOCKET )
 	{
         // Cancel queued notifications before Windows can reuse this socket handle.
@@ -147,70 +149,10 @@ VOID CClientSocket::SendRunLogin(CHAR* szLoginID, CHAR* szCharName, INT nCertifi
 	send(m_sockClient, szPacket, strlen(szPacket), 0);
 }
 
-BOOL CClientSocket::CheckSocketError(LPARAM lParam)
+BOOL CClientSocket::CheckSocketError(LPARAM parameter)
 {
-	switch ( WSAGETSELECTERROR(lParam) )
-	{
-		case WSANOTINITIALISED:
-//			MessageBox(NULL, "A successful WSAStartup must occur before using this function.", "", MB_OK);
-			return FALSE;
-		case WSAENETDOWN:
-//			MessageBox(NULL, "The network subsystem has failed.", "", MB_OK);
-			return FALSE;
-		case WSAEADDRINUSE:
-//			MessageBox(NULL, "The socket's local address is already in use and the socket was not marked to allow address reuse with SO_REUSEADDR. This error usually occurs when executing bind, but could be delayed until this function if the bind was to a partially wild-card address (involving ADDR_ANY) and if a specific address needs to be committed at the time of this function.", "", MB_OK);
-			return FALSE;
-		case WSAEINTR:
-//			MessageBox(NULL, "The (blocking) Windows Socket 1.1 call was canceled through WSACancelBlockingCall.", "", MB_OK);
-			return FALSE;
-		case WSAEINPROGRESS:
-//			MessageBox(NULL, "A blocking Windows Sockets 1.1 call is in progress, or the service provider is still processing a callback function.", "", MB_OK);
-			return FALSE;
-		case WSAEALREADY:
-//			MessageBox(NULL, "A nonblocking connect call is in progress on the specified socket. Note In order to preserve backward compatibility, this error is reported as WSAEINVAL to Windows Sockets 1.1 applications that link to either WINSOCK.DLL or WSOCK32.DLL.", "", MB_OK);
-			return FALSE;
-		case WSAEADDRNOTAVAIL:
-//			MessageBox(NULL, "The remote address is not a valid address (such as ADDR_ANY).", "", MB_OK);
-			return FALSE;
-		case WSAEAFNOSUPPORT:
-//			MessageBox(NULL, "Addresses in the specified family cannot be used with this socket.", "", MB_OK);
-			return FALSE;
-		case WSAECONNREFUSED:			// Can't Connect Server.
-			return FALSE;
-		case WSAETIMEDOUT:				// Time Out
-		{
-//			MessageBox(NULL, "Addresses in the specified family cannot be used with this socket.", "", MB_OK);
-			return FALSE;
-		}
-		case WSAEFAULT:
-//			MessageBox(NULL, "The name or the namelen parameter is not a valid part of the user address space, the namelen parameter is too small, or the name parameter contains incorrect address format for the associated address family.", "", MB_OK);
-			return FALSE;
-		case WSAEINVAL:
-//			MessageBox(NULL, "The parameter s is a listening socket, or the destination address specified is not consistent with that of the constrained group the socket belongs to.", "", MB_OK);
-			return FALSE;
-		case WSAEISCONN:
-//			MessageBox(NULL, "The socket is already connected (connection-oriented sockets only).", "", MB_OK);
-			return FALSE;
-		case WSAENETUNREACH:
-//			MessageBox(NULL, "The network cannot be reached from this host at this time.", "", MB_OK);
-			return FALSE;
-		case WSAENOBUFS:
-//			MessageBox(NULL, "No buffer space is available. The socket cannot be connected.", "", MB_OK);
-			return FALSE;
-		case WSAENOTSOCK:
-//			MessageBox(NULL, "The descriptor is not a socket.", "", MB_OK);
-			return FALSE;
-		case WSAEWOULDBLOCK:
-//			MessageBox(NULL, "The socket is marked as nonblocking and the connection cannot be completed immediately.", "", MB_OK);
-			return FALSE;
-		case WSAEACCES:
-//			MessageBox(NULL, "Attempt to connect datagram socket to broadcast address failed because setsockopt option SO_BROADCAST is not enabled.", "", MB_OK);
-			return FALSE;
-	}
-
-	return TRUE;
+    return WSAGETSELECTERROR(parameter)==0;
 }
-
 
 VOID CClientSocket::SendQueryMsg(WORD wIdent)
 {
@@ -267,10 +209,10 @@ VOID CClientSocket::SendButchAnimal(INT nX, INT nY, INT nDir, INT nActorID)
 
 LRESULT CClientSocket::OnSocketMessage(WPARAM wParam, LPARAM lParam)
 {
-    if((SOCKET)wParam!=m_sockClient) return FALSE;
+    if(m_sockClient==INVALID_SOCKET || (SOCKET)wParam!=m_sockClient) return FALSE;
 	if ( !CheckSocketError(lParam) )
 	{
-		PostQuitMessage(NULL);
+		ConnectionFailed();
 		return FALSE;
 	}
 

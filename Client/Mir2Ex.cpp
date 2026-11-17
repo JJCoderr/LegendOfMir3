@@ -37,6 +37,7 @@ BYTE				g_bProcState = _LOGIN_PROC;
 
 #include "LoginProcess/LoginPreview.h"
 #include "ServerSelectProcess/ServerGroupsPreview.h"
+#include "Common/ConnectionPreview.h"
 
 // Offline visual review uses the real interface without map or network updates.
 class CHudPreviewProcess : public CWHDefProcess {
@@ -45,6 +46,7 @@ class CHudPreviewProcess : public CWHDefProcess {
     bool levelPreview=false;
     bool loginPreview=false;
     bool serverGroupsPreview=false;
+    bool connectionPreview=false,connectionSelectionPreview=false;
     bool spellPreview=false,spellMapPreview=false;
     bool namePreview=false;
     bool speechPreview=false;
@@ -57,6 +59,10 @@ public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
     void Load(bool expanded, int chatMode, bool exitDialog, int groupPanel) {
+        if(groupPanel>=ConnectionPreview::First && groupPanel<=ConnectionPreview::Last) {
+            connectionPreview=true;connectionSelectionPreview=groupPanel==ConnectionPreview::Selection;loginPreview=!connectionSelectionPreview;
+            capturePath=ConnectionPreview::Load(groupPanel);return;
+        }
         if(groupPanel>=ServerGroupsPreview::First && groupPanel<=ServerGroupsPreview::Last) {
             serverGroupsPreview=true;capturePath=ServerGroupsPreview::Load(groupPanel);return;
         }
@@ -3372,7 +3378,8 @@ public:
 
     }
     void Render(int elapsed) {
-        if(serverGroupsPreview) g_xServerGroups.RenderScene(0);
+        if(connectionSelectionPreview) g_xChrSelProc.RenderScene(elapsed);
+        else if(serverGroupsPreview) g_xServerGroups.RenderScene(0);
         else if(loginPreview) g_xLoginProc.RenderScene(0);
         else if(exitWaitingPreview) {
             if(g_bProcState==_GAME_PROC) {
@@ -3491,8 +3498,10 @@ public:
             }
         }
 
+        if(connectionPreview) ConnectionPreview::AfterFrame();
     }
     LRESULT DefMainWndProc(HWND window,UINT message,WPARAM wp,LPARAM lp) override {
+        if(connectionSelectionPreview) return g_xChrSelProc.DefMainWndProc(window,message,wp,lp);
         if(serverGroupsPreview) return g_xServerGroups.DefMainWndProc(window,message,wp,lp);
         if(loginPreview) return g_xLoginProc.DefMainWndProc(window,message,wp,lp);
         auto& ui = g_xGameProc.m_xInterface;
@@ -3565,7 +3574,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
 	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
-	const int previewGroup = strcmp(lpCmdLine,"--preview=server-groups")==0 ? ServerGroupsPreview::First :
+	const int previewGroup = strcmp(lpCmdLine,"--preview=connection-error")==0 ? ConnectionPreview::First :
+        strcmp(lpCmdLine,"--preview=selection-connection-error")==0 ? ConnectionPreview::Selection :
+        strcmp(lpCmdLine,"--preview=connection-checks")==0 ? ConnectionPreview::ChecksOnly :
+        strcmp(lpCmdLine,"--preview=server-groups")==0 ? ServerGroupsPreview::First :
         strcmp(lpCmdLine,"--preview=server-group-hover")==0 ? ServerGroupsPreview::First+1 :
         strcmp(lpCmdLine,"--preview=server-group-selected")==0 ? ServerGroupsPreview::First+2 :
         strcmp(lpCmdLine,"--preview=server-group-row")==0 ? ServerGroupsPreview::First+3 :
@@ -3867,6 +3879,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 		}
         else
         {
+            if(g_xClientSocket.PollConnection(GetTickCount())) {
+                dwLastTime=timeGetTime();Sleep(1);continue;
+            }
 			dwTime = timeGetTime();
 			dwDelay = dwTime - dwLastTime;
 			dwLastTime = dwTime;

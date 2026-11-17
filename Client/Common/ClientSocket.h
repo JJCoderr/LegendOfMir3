@@ -5,6 +5,7 @@
 
 #include <assert.h>
 #include <string>
+#include "ConnectionRetry.h"
 
 class CClientSocket
 {
@@ -22,6 +23,16 @@ protected:
 
 public:
     std::string selectedServerName;
+    bool PollConnection(DWORD now);
+private:
+    friend struct ConnectionPreview;
+    void ConnectionFailed();
+    void AnswerConnection(bool retry,DWORD now);
+    ConnectionRetry m_retry;
+    HWND m_connectionWindow=nullptr,m_retryFocus=nullptr;
+    std::string m_connectionHost;
+    int m_connectionPort=0;
+public:
 	CClientSocket();
 	virtual ~CClientSocket();
 

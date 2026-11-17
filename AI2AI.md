@@ -1557,3 +1557,8 @@ spell-map预览改用生产LoadAllImage，而非只加载场景子集；60个实
 - 本轮没有执行真实网关登录，也没有打开配置中的外部网址。原始外部配置仍指向旧公网地址；离线预览 m_offline=true。
 - computer-use 的旧 sky.get_window_state 返回了与请求不符的旧 Mir2ExGuiPreview 窗口对象，未据此交互；改用 cua_repl.getApp(实际 inventory ID) 完成只读截图确认并发送 completion_summary。正常启动测试 PID 已停止，未触碰原有六个服务器进程。
 - 下一步审计登录/选角的连接失败、重试及转场界面；现有 LoginProcess FD_CLOSE/FD_CONNECT 错误提示仍是旧文本流程，Intro/LoginAvi 仍用 ei_login.avi/ei_logo.avi，需对照参考 wemade.dat 和缺失影片行为。继续 GUI 优先，真实服务器流程随后统一调试。
+
+
+## 2026-11-17：连接失败与重试完整批次
+
+原生 MessageBoxA/CmList132/MB_YESNO，2秒同地址重连、禁用输入和冻结场景、否退出、正常关闭不重试、旧socket隔离。ConnectionRetry/ConnectionPreview 新增，ClientSocket布局改变后已clean构建，七目标通过。连接20+账号27+分组33+音效15+退出30+返回7=132检查全部通过。预览262..264，下一265。真实提示截图 out/selection-connection-error-1.jpg；桌面点击坐标越界，未计作UI点击验收。详见 Client/docs/connection-retry-migration-audit.md。测试exe务必从 build-ninja-sqlite/Mir2Ex.exe 复制，勿用运行目录旧Mir2Ex.exe；最终报告已重新生成。转场/影片及真实服务器流程仍待完成，目标保持active。

@@ -134,12 +134,6 @@ LRESULT CLoginProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 			OnLButtonUp(wParam, lParam);
 			break;
 		case ID_SOCKCLIENT_EVENT_MSG:
-			if (WSAGETSELECTERROR(lParam) || WSAGETSELECTEVENT(lParam) == FD_CLOSE) {
-				g_xClientSocket.DisconnectToServer();
-				m_fIsConnected = CONNECT_FAIL;
-				m_xMsgBox.ShowMessageBox("连接服务器失败，请检查服务器后重新启动客户端。", 1, 0);
-				break;
-			}
 			g_xClientSocket.OnSocketMessage(wParam, lParam);
 			break;
 		case WM_KEYDOWN:
