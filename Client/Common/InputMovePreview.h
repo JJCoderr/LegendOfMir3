@@ -15,3 +15,24 @@ inline bool CheckInputWindowMove()
     SetWindowPos(main,nullptr,window.left,window.top,0,0,SWP_NOSIZE|SWP_NOZORDER|SWP_NOACTIVATE);
     return ok;
 }
+
+inline bool CheckInputWindowResize(bool minimize)
+{
+    const HWND edit=g_xChatEditBox.GetSafehWnd(),main=g_xMainWnd.GetSafehWnd();
+    RECT before,window;GetWindowRect(edit,&before);GetWindowRect(main,&window);
+    const RECT display=g_xMainWnd.m_rcWindow;const BOOL visible=IsWindowVisible(edit);
+    std::vector<char> text(GetWindowTextLengthA(edit)+1);GetWindowTextA(edit,text.data(),int(text.size()));
+    if(minimize) {ShowWindow(main,SW_MINIMIZE);ShowWindow(main,SW_RESTORE);}
+    else SetWindowPos(main,nullptr,0,0,window.right-window.left+160,window.bottom-window.top+120,SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);
+    RECT after;GetWindowRect(edit,&after);const RECT current=g_xMainWnd.m_rcWindow;
+    const int width=display.right-display.left,height=display.bottom-display.top;
+    const int nextWidth=current.right-current.left,nextHeight=current.bottom-current.top;
+    const bool aligned=abs(after.left-current.left-MulDiv(before.left-display.left,nextWidth,width))<=1 &&
+        abs(after.top-current.top-MulDiv(before.top-display.top,nextHeight,height))<=1 &&
+        abs(after.right-after.left-MulDiv(before.right-before.left,nextWidth,width))<=1 &&
+        abs(after.bottom-after.top-MulDiv(before.bottom-before.top,nextHeight,height))<=1;
+    std::vector<char> moved(GetWindowTextLengthA(edit)+1);GetWindowTextA(edit,moved.data(),int(moved.size()));
+    SetWindowPos(main,nullptr,window.left,window.top,window.right-window.left,window.bottom-window.top,SWP_NOZORDER|SWP_NOACTIVATE);
+    RECT restored;GetWindowRect(edit,&restored);
+    return aligned && EqualRect(&before,&restored) && IsWindowVisible(edit)==visible && text==moved;
+}

@@ -23,6 +23,8 @@ public:
 	~CChatEdit();
 protected:
 	HWND	m_hChatEdit;
+    RECT m_layout={};
+    bool m_hasLayout=false;
     int m_byteLimit=90;
     bool m_updating=false;
     std::string m_previous;
@@ -42,7 +44,7 @@ public:
 	BOOL		DestroyDialog();
 	BOOL		SetLimitText(INT nLimitText);
     void Changed();
-    void Relocate(const RECT& previousDisplay);
+    void Relocate();
 	VOID MoveScaled(INT x, INT y, INT width, INT height, BOOL repaint);
 	INT m_fontHeight = 12;
 	__inline	VOID SetSelectAll() { SendMessage(m_hChatEdit, EM_SETSEL, 0, (LPARAM)-1); }

@@ -39,6 +39,8 @@ struct CharacterInteractionPreview {
         const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
         check("visible_focused",IsWindowVisible(edit) && GetFocus()==edit);
         check("creation_editor_window_move",CheckInputWindowMove());
+        check("editor_window_resize",CheckInputWindowResize(false));
+        check("editor_minimize_restore",CheckInputWindowResize(true));
         check("name_limit",SendMessage(edit,EM_GETLIMITTEXT,0,0)==SelectionDialog::NameBytes);
         const auto text=[&](){char value[128]={};GetWindowTextA(edit,value,sizeof(value));return std::string(value);};
         SetWindowTextA(edit,"");SendMessageA(edit,EM_REPLACESEL,TRUE,(LPARAM)"1234567890123456");

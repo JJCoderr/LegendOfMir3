@@ -1693,3 +1693,10 @@ Interface鼠标按下/抬起/移动优先模态，键盘模态先于行会编辑
 - Common/InputMovePreview.h实际SetWindowPos验证相对位置/尺寸/内容/焦点/可见性，覆盖登录创建删除及三游戏输入态。新318 input-window-moved，下一319。
 - 七目标构建input-window-move-final.log；登录35+创建21+移动4+键盘34+模态27=121通过，6页图out/input-window-move，数量输入已查看。最后空句柄守卫后重跑登录/游戏启动，自启预览全停。
 - 未验证DPI/最小化/全屏切换。原影片和公告资源目录问题仍待用户答复，其他GUI可继续。
+
+
+## 2026-11-17 输入布局缩放最小化恢复
+- ChatEdit增加逻辑矩形/有效标记，MoveScaled记录布局，Relocate无参按当前客户区重排；零尺寸不创建无效字体。三个页面接WM_SIZE，WM_MOVE沿用Relocate。
+- 有类布局变化，执行clean客户端；首次WindHorn库引用客户端失败已撤销，改为页面入口后七目标input-resize-build.log成功。WindHorn源文件无最终改动。
+- 登录37+创建23+移动缩放6+键盘34+模态27+选角23+音效15=165检查通过。7图out/input-resize，中文创建/数量输入恢复图已查看，自启预览全停。
+- 跨显示器DPI和全屏切换尚未实测；无新编号，下一319。资源目录问题仍待答复。

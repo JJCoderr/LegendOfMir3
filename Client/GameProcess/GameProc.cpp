@@ -1789,9 +1789,8 @@ LRESULT CGameProcess::OnSysKeyUp(WPARAM wParam, LPARAM lParam)
 
 LRESULT CGameProcess::OnMove(WPARAM wParam, LPARAM lParam)
 {
-    const RECT previous=g_xMainWnd.m_rcWindow;
     g_xMainWnd.OnMove(wParam,lParam);
-    g_xChatEditBox.Relocate(previous);
+    g_xChatEditBox.Relocate();
     return 0L;
 }
 
@@ -2622,6 +2621,10 @@ LRESULT CGameProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
         return 0L;
 	switch ( uMsg )
 	{
+        case WM_SIZE: {
+            const LRESULT result=g_xMainWnd.OnSize(wParam,lParam);
+            g_xChatEditBox.Relocate();return result;
+        }
         case WM_COMMAND:
             if ((HWND)lParam==g_xChatEditBox.GetSafehWnd() && HIWORD(wParam)==EN_CHANGE) { g_xChatEditBox.Changed(); return 0; }
             if ((HWND)lParam==m_xInterface.m_xGuildEditor.edit && HIWORD(wParam)==EN_CHANGE) { m_xInterface.m_xGuildEditor.Changed(); return 0; }

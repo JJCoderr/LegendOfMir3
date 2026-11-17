@@ -217,8 +217,10 @@ void CChatEdit::Changed()
 VOID CChatEdit::MoveScaled(INT x, INT y, INT width, INT height, BOOL repaint)
 {
     const RECT& target = g_xMainWnd.m_rcWindow;
+    m_layout={x-target.left,y-target.top,x-target.left+width,y-target.top+height};m_hasLayout=true;
     const int displayWidth = target.right - target.left;
     const int displayHeight = target.bottom - target.top;
+    if(!displayWidth || !displayHeight) return;
     const int logicalWidth = g_xMainWnd.m_stDisplayInfo.wWidth;
     const int logicalHeight = g_xMainWnd.m_stDisplayInfo.wHeight;
     MoveWindow(m_hChatEdit, target.left + MulDiv(x - target.left, displayWidth, logicalWidth),
@@ -233,14 +235,10 @@ VOID CChatEdit::MoveScaled(INT x, INT y, INT width, INT height, BOOL repaint)
     }
 }
 
-void CChatEdit::Relocate(const RECT& previousDisplay)
+void CChatEdit::Relocate()
 {
-    if(!m_hChatEdit) return; // WM_MOVE can precede editor creation.
-    RECT editor;GetWindowRect(m_hChatEdit,&editor);
-    const int width=previousDisplay.right-previousDisplay.left,height=previousDisplay.bottom-previousDisplay.top;
+    if(!m_hChatEdit || !m_hasLayout) return;
     const auto& display=g_xMainWnd.m_rcWindow;
-    const auto& logical=g_xMainWnd.m_stDisplayInfo;
-    MoveScaled(display.left+MulDiv(editor.left-previousDisplay.left,logical.wWidth,width),
-        display.top+MulDiv(editor.top-previousDisplay.top,logical.wHeight,height),
-        MulDiv(editor.right-editor.left,logical.wWidth,width),MulDiv(editor.bottom-editor.top,logical.wHeight,height),TRUE);
+    MoveScaled(display.left+m_layout.left,display.top+m_layout.top,
+        m_layout.right-m_layout.left,m_layout.bottom-m_layout.top,TRUE);
 }

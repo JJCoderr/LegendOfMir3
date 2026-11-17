@@ -184,7 +184,11 @@ LRESULT CCharacterProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, L
 {
 	switch ( uMsg )
 	{
-    case WM_COMMAND:
+    case WM_SIZE: {
+            const LRESULT result=g_xMainWnd.OnSize(wParam,lParam);
+            g_xChatEditBox.Relocate();return result;
+        }
+        case WM_COMMAND:
         if((HWND)lParam==g_xChatEditBox.GetSafehWnd() && HIWORD(wParam)==EN_CHANGE) {
             g_xChatEditBox.Changed();return 0;
         }
@@ -434,9 +438,8 @@ LRESULT CCharacterProcess::OnMouseOn(WPARAM wParam, LPARAM lParam)
 LRESULT CCharacterProcess::OnWindowMove(WPARAM wParam,LPARAM lParam)
 {
 
-    const RECT previous=g_xMainWnd.m_rcWindow;
 	g_xMainWnd.OnMove(wParam, lParam);
-    g_xChatEditBox.Relocate(previous);
+    g_xChatEditBox.Relocate();
 	return 0L;
 }
 

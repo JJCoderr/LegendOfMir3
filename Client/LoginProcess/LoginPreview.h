@@ -17,6 +17,8 @@ struct LoginPreview {
         check("announcement_resource",!process.m_announcement.rows.empty());
         check("initial_account",login.m_field==0 && login.m_editorVisible);
         check("login_editor_window_move",CheckInputWindowMove());
+        check("editor_window_resize",CheckInputWindowResize(false));
+        check("editor_minimize_restore",CheckInputWindowResize(true));
         SetWindowTextA(edit,"1234567890123456789012345");g_xChatEditBox.Changed();
         check("account_byte_limit",GetWindowTextLengthA(edit)==LoginLayout::InputBytes);
         process.OnKeyDown(VK_TAB,0);

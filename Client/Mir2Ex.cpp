@@ -1234,6 +1234,8 @@ public:
             ui.LayoutChat();check("compact_chat_moves",moveCheck());
             ui.m_chatExpanded=true;ui.LayoutChat();check("expanded_chat_moves",moveCheck());
             ui.OpenNameDialog(TradeWire::QuantityDialog);check("dialog_moves",moveCheck());
+            check("dialog_resizes",CheckInputWindowResize(false));
+            check("dialog_minimize_restore",CheckInputWindowResize(true));
             ui.FinishNotice(CLICK_NO,false);ui.m_chatExpanded=false;ui.LayoutChat();
             ShowWindow(edit,SW_HIDE);RECT window;GetWindowRect(g_xMainWnd.GetSafehWnd(),&window);
             SetWindowPos(g_xMainWnd.GetSafehWnd(),nullptr,window.left+10,window.top+10,0,0,SWP_NOSIZE|SWP_NOZORDER|SWP_NOACTIVATE);
@@ -3807,6 +3809,7 @@ public:
             else if ((short)HIWORD(wp)<0) ui.OnScrollUp();
             return 0;
         case WM_MOVE: return g_xGameProc.OnMove(wp,lp);
+        case WM_SIZE: return g_xGameProc.DefMainWndProc(window,message,wp,lp);
         case WM_COMMAND:
         case WM_CTLCOLOREDIT:
             return g_xGameProc.DefMainWndProc(window,message,wp,lp);
