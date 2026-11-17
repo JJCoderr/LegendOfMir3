@@ -2229,3 +2229,9 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 实测发现旧CCharObject未初始化m_nViewRange，商人首次SearchViewRange进入巨量地图扫描并占满NPC线程。已用已有_RANGE_X初始化基类默认范围，玩家和怪物显式设置不变；临时追踪代码已移除。
 - Test.exe新增Runner/wait用于真实时间场景，不修改游戏时钟；执行器13项检查通过。ShopRestock真实等待两次31秒，验证买空/部分库存补回、1小时商品不提前补货和8件物品/余额12保存。
 - EIServer/Test Release构建通过，补货与购买、共享库存、负重、NPC、怪物回归共9场景376步通过；日志out/csv-validation/shop-restock-final.log与restock-*.log。完整一小时到期未实测；初始商品仍首次打开时加载，库存重启持久化/装备/出售修理仍待接入。
+
+## 商店出售接入前核对
+
+- IDA确认收购价0x4D0E90为ROUND(base/2)，不使用购买倍率和1.1；9/11/13/15对应4/6/6/8。商人脚本+类型构成收购白名单，0x4CD214检查；0x4CDAB4成交后会回收物品入库存。
+- 当前客户端InventoryWnd已有SelectServiceItem/ConfirmService/ReceiveService，但服务端UserInfo的出售分支仅在注释中，需补真实转发与ObjectPlayer处理；消息实例ID跨wParam/wTag，NPC在nRecog。
+- 字段、原服地址、单件/堆叠差异及待实现CSV清单在Test/Shop/native-sale-audit.md。此阶段只完成证据核对，未实现服务端出售，也未声称出售联调通过。
