@@ -41,6 +41,7 @@ BYTE				g_bProcState = _LOGIN_PROC;
 #include "Common/ConnectionPreview.h"
 #include "AVI/MoviePreview.h"
 #include "CharSelectProcess/SelectionDialogPreview.h"
+#include "CharSelectProcess/SelectionRosterPreview.h"
 
 // Offline visual review uses the real interface without map or network updates.
 class CHudPreviewProcess : public CWHDefProcess {
@@ -63,6 +64,9 @@ public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
     void Load(bool expanded, int chatMode, bool exitDialog, int groupPanel) {
+        if(groupPanel>=SelectionRosterPreview::First && groupPanel<=SelectionRosterPreview::Last) {
+            connectionSelectionPreview=true;capturePath=SelectionRosterPreview::Load(groupPanel);return;
+        }
         if(groupPanel>=SelectionDialogPreview::First && groupPanel<=SelectionDialogPreview::Last) {
             connectionSelectionPreview=true;capturePath=SelectionDialogPreview::Load(groupPanel);return;
         }
@@ -3588,7 +3592,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
 	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
-	const int previewGroup = strcmp(lpCmdLine,"--preview=character-name-exists")==0 ? SelectionDialogPreview::First+0 :
+	const int previewGroup = strcmp(lpCmdLine,"--preview=selection-roster-first")==0 ? SelectionRosterPreview::First+0 :
+        strcmp(lpCmdLine,"--preview=selection-roster-waiting")==0 ? SelectionRosterPreview::First+1 :
+        strcmp(lpCmdLine,"--preview=selection-roster-second")==0 ? SelectionRosterPreview::First+2 :
+        strcmp(lpCmdLine,"--preview=selection-roster-long-name")==0 ? SelectionRosterPreview::First+3 :
+        strcmp(lpCmdLine,"--preview=selection-roster-empty")==0 ? SelectionRosterPreview::First+4 :
+        strcmp(lpCmdLine,"--preview=character-name-exists")==0 ? SelectionDialogPreview::First+0 :
         strcmp(lpCmdLine,"--preview=character-full")==0 ? SelectionDialogPreview::First+1 :
         strcmp(lpCmdLine,"--preview=character-create-failed")==0 ? SelectionDialogPreview::First+2 :
         strcmp(lpCmdLine,"--preview=character-name-invalid")==0 ? SelectionDialogPreview::First+3 :

@@ -73,7 +73,7 @@ VOID CCharacterProcess::Load(bool connect)
 	g_xChatEditBox.SetLimitText(13);
 	SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETPASSWORDCHAR,NULL,0);
 
-	m_returnWaiting = false;
+	m_returnWaiting = false;m_selectionElapsed=SelectionRoster::Delay;m_pendingRoster.reset();m_pendingNotice=0;
     m_xMsgBox.HideMessageBox();
     m_xMsgBox.SetOrigin(140,110);
     m_CList.ClearAllNodes();m_CRectList.ClearAllNodes();
@@ -85,6 +85,8 @@ VOID CCharacterProcess::Load(bool connect)
 	m_Progress	= PRG_CHAR_SELE;							// Character Selection
 	m_xBGround.Create(&m_Image);
 	m_xBGround.OpenWnd();
+    m_xSelectChr.Create(&m_Image,&m_CList,&m_CRectList,0);m_xSelectChr.OpenWnd();
+    if(connect) BeginRosterWait();
 }	
 
 bool CCharacterProcess::PrepareReturn()
@@ -103,17 +105,13 @@ void CCharacterProcess::LoadReturn(bool connect)
     lstrcpynA(g_szServerIP,m_selectionHost,sizeof(g_szServerIP));
     g_nServerPort=m_selectionPort;
     Load(connect);
-    m_returnWaiting=true;
-    m_xMsgBox.SetOrigin(155,150,false);
-    m_xMsgBox.ShowMessageBox(m_messages.Get(ExitFlow::ConnectingCaption).c_str(),CLoginNotice::Waiting,CLoginNotice::WaitingFrame);
-    ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
-    SetFocus(g_xMainWnd.GetSafehWnd());
+    BeginRosterWait();
 }
 
 void CCharacterProcess::Preview(const char* page)
 {
     Load(false);
-    auto* role = new CHRINFO{};
+    auto* role = new SelectionRoleInfo{};
     lstrcpyA(role->ChrName, "MirPreview");
     role->Level = 12;
     m_CList.AddNode(role);
@@ -121,7 +119,7 @@ void CCharacterProcess::Preview(const char* page)
     m_ChrCount = 1;
     if (strcmp(page, "select-three") == 0) {
         for (int i = 1; i < 3; ++i) {
-            auto* extra = new CHRINFO{};
+            auto* extra = new SelectionRoleInfo{};
             lstrcpyA(extra->ChrName, i == 1 ? "MagePreview" : "TaoPreview");
             extra->Class = BYTE(i);
             extra->Level = 12;
@@ -169,7 +167,7 @@ VOID CCharacterProcess::SetNextProc()
 
 VOID CCharacterProcess::DeleteProc()
 {
-    m_xBGround.AllStopAvi();
+    m_xBGround.AllStopAvi();m_pendingRoster.reset();m_pendingNotice=0;
 	
 	WSACleanup();
 	m_Image.Destroy();
@@ -396,7 +394,7 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
                     m_Progress = PRG_CREA_TO_SEL;
                     m_xBGround.SetRenderState(_RENDER_AVI_OUT);
                     ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
-                    g_xClientSocket.OnQueryChar();
+                    RequestRoster();
                 } else if (i >= 2) {
                     if (m_SelectJob != i - 2) {
                         m_SelectJob = (BYTE)(i - 2);
@@ -476,33 +474,15 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 	{
         case SM_QUERYCHR:
         {
-            CHRINFO records[3] = {};
-            static_assert(sizeof(CHRINFO) == 23, "Character list wire layout changed");
-            if (tdm.wParam > 3) break;
-            const int count = tdm.wParam;
-            const int decoded = fnDecode6BitBuf(pszMsg + DEFBLOCKSIZE, (char*)records, sizeof(records));
-            if (decoded != count * sizeof(CHRINFO)) break;
-            if(m_returnWaiting) {m_returnWaiting=false;m_xMsgBox.HideMessageBox();m_xMsgBox.SetOrigin(140,110);}
-            m_CList.ClearAllNodes();
-            m_CRectList.ClearAllNodes();
-            m_ChrCount = count;
-            m_SelectChr = count ? SELECT_FIRST : SELECT_NONE;
-            for (int i = 0; i < count; ++i) {
-                records[i].ChrName[sizeof(records[i].ChrName) - 1] = 0;
-                CHRINFO* info = new CHRINFO(records[i]);
-                m_CList.AddNode(info);
-                CHRRECT* rect = new CHRRECT;
-                rect->nLeft = 200 + i * 100;
-                rect->nTop = 200;
-                rect->nWidth = 90;
-                rect->nHeight = 140;
-                m_CRectList.AddNode(rect);
-            }
-            if(m_nMessage==SelectionDialog::DeleteConfirmation && m_xMsgBox.IsActive()) FinishNotice(CLICK_NO);
-            m_xSelectChr.Create(&m_Image, &m_CList, &m_CRectList, count);
-            m_xSelectChr.OpenWnd();
-            if(!count) ShowNotice(SelectionDialog::Empty);
-            else {m_xMsgBox.HideMessageBox();m_nMessage=0;}
+            char body[256]={};
+            const int decoded=fnDecode6BitBuf(pszMsg+DEFBLOCKSIZE,body,sizeof(body));
+            if(decoded<0 || decoded>sizeof(body)) break;
+            SelectionRoster roster;
+            const bool legacy=tdm.nRecog==0 && tdm.wParam!=0;
+            if(!(legacy?roster.ParseLegacy(tdm.wParam,body,decoded):roster.Parse(unsigned(tdm.nRecog),std::string_view(body,decoded)))) break;
+            m_pendingNotice=0;
+            if(m_selectionElapsed<SelectionRoster::Delay) m_pendingRoster=roster;
+            else ApplyRoster(roster);
             break;
         }
 		case	SM_NEWCHR_SUCCESS:		// New character Create Success
@@ -512,7 +492,7 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
             m_Progress = PRG_CREA_TO_SEL;
             m_xBGround.SetRenderState(_RENDER_AVI_OUT);
             ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
-            g_xClientSocket.OnQueryChar();
+            RequestRoster();
 			break;
 		}
         case SM_NEWCHR_FAIL:
@@ -539,7 +519,7 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
         case SM_QUERYCHR_FAIL: ShowNotice(SelectionDialog::QueryFailed);break;
         case SM_OUTOFCONNECTION: ShowNotice(SelectionDialog::Disconnected);break;
         case SM_DELCHR_SUCCESS:
-        case SM_DELCHR_FAIL: g_xClientSocket.OnQueryChar();break;
+        case SM_DELCHR_FAIL: RequestRoster();break;
 
 	}
 /*	_TDEFAULTMESSAGE	tdm;
@@ -639,7 +619,7 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 	case	SM_NEWCHR_SUCCESS:		// New character Create Success
 		{
 		m_Progress = PRG_CREA_TO_SEL;
-		g_xClientSocket.OnQueryChar();
+		RequestRoster();
 		break;
 		}
 	case	SM_NEWCHR_FAIL:			// New character Create Fail
@@ -652,7 +632,7 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 		break; 
 	case	SM_DELCHR_SUCCESS:		// Delete character Success
 
-		g_xClientSocket.OnQueryChar();
+		RequestRoster();
 		m_Progress	= PRG_CHAR_SELE;	// Character Selection
 
 		break;
@@ -707,6 +687,7 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 		/**/
 VOID CCharacterProcess::RenderScene(INT nLoopTime)
 {
+    if(m_Progress==PRG_CHAR_SELE || m_Progress==PRG_CREATE_CHAR) AdvanceRoster(DWORD(max(0,nLoopTime)));
     using Page = CMirSound::LobbyPage;
     g_xSound.UpdateLobbyAudio(m_Progress == PRG_CHAR_SELE ? Page::Selection :
         m_Progress == PRG_CREATE_CHAR ? Page::Creation : Page::None, nLoopTime);
@@ -742,7 +723,7 @@ VOID CCharacterProcess::RenderScene(INT nLoopTime)
 					m_xSelectChr.m_nRenderState = 0;
 				}
 			}
-			m_xSelectChr.Render(nLoopTime);
+			m_xSelectChr.Render(m_returnWaiting?0:nLoopTime);
 			break;
 		}
 		case PRG_SEL_TO_CREA:
@@ -876,7 +857,36 @@ VOID CCharacterProcess::RenderCharCreate(INT nLoopTime)
     }
 }
 
+void CCharacterProcess::BeginRosterWait() {
+    if(m_nMessage==SelectionDialog::DeleteConfirmation && m_xMsgBox.IsActive()) FinishNotice(CLICK_NO);
+    m_selectionElapsed=0;m_pendingRoster.reset();m_pendingNotice=0;m_returnWaiting=true;m_nMessage=0;
+    m_xMsgBox.SetOrigin(155,150,false);
+    m_xMsgBox.ShowMessageBox(m_messages.Get(ExitFlow::ConnectingCaption).c_str(),CLoginNotice::Waiting,CLoginNotice::WaitingFrame);
+    ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);SetFocus(g_xMainWnd.GetSafehWnd());
+}
+void CCharacterProcess::RequestRoster() {BeginRosterWait();g_xClientSocket.OnQueryChar();}
+void CCharacterProcess::AdvanceRoster(DWORD elapsed) {
+    m_selectionElapsed+=min(elapsed,DWORD(SelectionRoster::Delay)-m_selectionElapsed);
+    if(m_pendingRoster && m_selectionElapsed>=SelectionRoster::Delay) {
+        const auto roster=*m_pendingRoster;const int notice=m_pendingNotice;
+        m_pendingRoster.reset();m_pendingNotice=0;ApplyRoster(roster);
+        if(notice) ShowNotice(notice);
+    }
+}
+void CCharacterProcess::ApplyRoster(const SelectionRoster& roster) {
+    if(m_returnWaiting) {m_returnWaiting=false;m_xMsgBox.HideMessageBox();m_xMsgBox.SetOrigin(140,110);}
+    if(m_nMessage==SelectionDialog::DeleteConfirmation && m_xMsgBox.IsActive()) FinishNotice(CLICK_NO);
+    m_CList.ClearAllNodes();m_CRectList.ClearAllNodes();
+    m_ChrCount=roster.count;m_SelectChr=m_ChrCount?SELECT_FIRST:SELECT_NONE;
+    for(int i=0;i<m_ChrCount;++i) {
+        m_CList.AddNode(new SelectionRoleInfo(roster.roles[i]));m_CRectList.AddNode(new CHRRECT{});
+    }
+    m_xSelectChr.Create(&m_Image,&m_CList,&m_CRectList,m_ChrCount);m_xSelectChr.OpenWnd();
+    if(!m_ChrCount) ShowNotice(SelectionDialog::Empty);
+    else {m_xMsgBox.HideMessageBox();m_nMessage=0;}
+}
 void CCharacterProcess::ShowNotice(int message) {
+    if(m_pendingRoster && m_selectionElapsed<SelectionRoster::Delay) {m_pendingNotice=message;return;}
     if(m_nMessage==SelectionDialog::DeleteConfirmation && m_xMsgBox.IsActive()) FinishNotice(CLICK_NO);
     m_returnWaiting=false;m_nMessage=message;m_xMsgBox.SetOrigin(140,110);
     m_xMsgBox.ShowMessageBox(m_messages.Get(message).c_str(),MSG_BTN_OK,0);
@@ -903,7 +913,7 @@ void CCharacterProcess::FinishNotice(HRESULT result) {
         if(result==CLICK_YES && m_xSelectChr.m_nSelectChr>=0 && m_xSelectChr.m_nSelectChr<m_ChrCount && g_szUserID[0]) {
             m_CList.MoveCurrentToTop();m_CList.MoveNode(m_xSelectChr.m_nSelectChr);
             g_xClientSocket.OnDelChar(m_CList.GetCurrentData()->ChrName,confirmation);
-            g_xClientSocket.OnQueryChar();
+            RequestRoster();
         }
     } else if(m_Progress==PRG_CREATE_CHAR) {
         SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"");ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_SHOW);

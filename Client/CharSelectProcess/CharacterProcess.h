@@ -58,8 +58,16 @@ public:
 	BOOL				MessageBoxProcess(LPARAM lParam);
 	
 private:
+    friend struct SelectionRosterPreview;
     friend struct SelectionDialogPreview;
     void ShowNotice(int message);
+    void ApplyRoster(const SelectionRoster& roster);
+    void BeginRosterWait();
+    void RequestRoster();
+    void AdvanceRoster(DWORD elapsed);
+    DWORD m_selectionElapsed=SelectionRoster::Delay;
+    std::optional<SelectionRoster> m_pendingRoster;
+    int m_pendingNotice=0;
     void FinishNotice(HRESULT result);
     void SubmitCreation();
     friend struct MoviePreview;
@@ -88,7 +96,7 @@ private:
 												// 2: login fail etc.
 	BOOL				m_fIsLButtonClicked;
 
-	CPDLList<CHRINFO>	m_CList;				// 角色 Info 保存 List
+	CPDLList<SelectionRoleInfo>	m_CList;				// 角色 Info 保存 List
 	CPDLList<CHRRECT>	m_CRectList;			// 角色 Rect 保存 List
 	// Buttons
 	CMirButton			*m_pBtn;

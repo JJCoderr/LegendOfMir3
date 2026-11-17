@@ -1,4 +1,5 @@
 #include "Common/LoginMessages.h"
+#include "../SelectionRoster.h"
 // LoginProcess.h: interface for the CSelectChrProcess class.
 //
 //////////////////////////////////////////////////////////////////////
@@ -18,7 +19,7 @@ public:
 	CSelectChr();
 	~CSelectChr();
 
-	virtual VOID		Create(CWHWilImageData* pxImage,CPDLList<CHRINFO>* pxList, CPDLList<CHRRECT>* pxrcList,INT nChrCount);
+	virtual VOID		Create(CWHWilImageData* pxImage,CPDLList<SelectionRoleInfo>* pxList, CPDLList<CHRRECT>* pxrcList,INT nChrCount);
 
 	virtual HRESULT		OnButtonDown(WPARAM wParam, LPARAM lParam);
 	virtual HRESULT		OnButtonDown(POINT ptMouse);
@@ -32,6 +33,7 @@ public:
 	VOID				ShowChrInfo(VOID);
 	virtual	VOID		Render(INT	nLoopTime);
 private:
+    friend struct SelectionRosterPreview;
 protected:
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// Variable
@@ -41,13 +43,13 @@ public:
 private:
 protected:
     struct RoleAnimation { int action = 0, frame = 0, elapsed = 0; };
-    RoleAnimation m_roleAnimation[3];
+    RoleAnimation m_roleAnimation[SelectionRoster::Capacity];
     int m_page = 0, m_pagePressed = -1;
     CWHWilImageData m_pageImages;
     int PageHit(LPARAM position);
 	CLoginMessages m_messages;
 	CLightFog			m_xLightFog;
-	CPDLList<CHRINFO>*	m_pxSList;
+	CPDLList<SelectionRoleInfo>*	m_pxSList;
 	CPDLList<CHRRECT>*	m_pxrcList;
 	CWHWilImageData		*m_pxImage;
 	CMirButton			**m_pBtn;

@@ -1582,3 +1582,8 @@ spell-map预览改用生产LoadAllImage，而非只加载场景子集；60个实
 ## 2026-11-17：角色提示框完整批次
 
 SelectionDialog集中CmList219..232，创建失败按nRecog映射224/226/232，名称13字节与ANSI双字节校验，两角色创建上限；Enter/空格关闭、Esc保持，关闭创建提示清名恢复焦点。删除确认90字节输入先读后清，键盘Tab/Enter和release-only按钮，CM_DELCHR改name/confirmation并回环验证；真实DBSvr兼容性尚待联调。空列表219及非空刷新清提示。clean90/all109/final3构建通过，200检查全通过。预览272..283，下一284，截图out/character-*.png及character-dialogs-1..3.png。详见Client/docs/selection-dialog-migration-audit.md。后续优先选角等待/500ms暂存、文本四槽与旧packed三槽兼容及翻页；GUI整体未完成、真实服务器尚未联调。
+
+
+## 2026-11-17：选角列表等待与四槽完整批次
+
+新增SelectionRoster/SelectionRoleInfo独立GUI结构，支持nRecog文本四槽/24字节姓名，并保留wParam旧packed三槽、23字节CHRINFO/43字节创建包不变。进入/刷新显示CmList200与1248等待面板；500ms暂存列表及错误，等待冻结输入/角色动画，影片暂停计时。四槽分页与WORD动画时间，释放命中翻页。OnSelChar改动态字符串避免账号24+姓名24溢出原32缓冲。clean90/all109通过，222检查全通过。预览284..288，下一289；截图out/selection-roster-*.png与selection-roster-pages.png。详见Client/docs/selection-roster-migration-audit.md。真实网关未联调，下一核对角色按钮/选择/退出网址/创建编辑器初始化，再整理GUI整体差异。

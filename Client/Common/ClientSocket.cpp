@@ -397,15 +397,11 @@ VOID CClientSocket::OnDelChar(const char* name,const char* confirmation)
 }
 
 
-VOID CClientSocket::OnSelChar( char *pszCharName)
+VOID CClientSocket::OnSelChar(char* name)
 {
-	char szPacket[32];
-
-	fnMakeDefMessage(&DefMsg, CM_SELCHR, 0, 0, 0, 0);
-
-	wsprintf( szPacket, "%s/%s", g_szUserID, pszCharName );
-
-	SendPacket(&DefMsg, szPacket);
+    const std::string body=std::string(g_szUserID)+"/"+name;
+    fnMakeDefMessage(&DefMsg,CM_SELCHR,0,0,0,0);
+    SendPacket(&DefMsg,const_cast<char*>(body.c_str()));
 }
 
 

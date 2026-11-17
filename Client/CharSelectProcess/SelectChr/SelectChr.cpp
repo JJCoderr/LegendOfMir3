@@ -27,7 +27,7 @@ CSelectChr::~CSelectChr()
 	}
 }
 
-VOID CSelectChr::Create(CWHWilImageData* pxImage,CPDLList<CHRINFO>* pxList, CPDLList<CHRRECT>* pxrcList,INT nChrCount)
+VOID CSelectChr::Create(CWHWilImageData* pxImage,CPDLList<SelectionRoleInfo>* pxList, CPDLList<CHRRECT>* pxrcList,INT nChrCount)
 {
 	INT	nLoop;
 	m_messages.Load(".\\CmList.dat");
@@ -55,9 +55,9 @@ VOID CSelectChr::Create(CWHWilImageData* pxImage,CPDLList<CHRINFO>* pxList, CPDL
 	m_pxrcList			= pxrcList;
 	m_nChrCount			= nChrCount;
 	m_nSelectChr = nChrCount ? 0 : SELECT_NONE;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < SelectionRoster::Capacity; ++i) {
         m_roleAnimation[i] = RoleAnimation{};
-        m_roleAnimation[i].action = i == 0 ? 1 : 0;
+        m_roleAnimation[i].action = i % 2 == 0 ? 1 : 0;
     }
 	
 	m_xLightFog.Init(RGB(125,125,125));
@@ -121,7 +121,7 @@ HRESULT CSelectChr::OnButtonDown(POINT ptMouse)
 HRESULT CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
 {
     const int target = PageHit(lParam);
-    if (m_fIsActive && target >= 0 && target == m_pagePressed) {
+    if (m_fIsActive && target >= 0) {
         m_roleAnimation[m_nSelectChr] = RoleAnimation{};
         m_page = target;
         m_nSelectChr = target * 2;
@@ -206,7 +206,7 @@ HRESULT CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
                         m_nSelectChr = i;
                         m_pxSList->MoveCurrentToTop();
                         m_pxSList->MoveNode(i);
-                        const CHRINFO& role = *m_pxSList->GetCurrentData();
+                        const SelectionRoleInfo& role = *m_pxSList->GetCurrentData();
                         g_xSound.PlayRoleVoice(false, role.Class, role.Gender);
                     }
 
@@ -310,11 +310,11 @@ VOID CSelectChr::Render(INT	nLoopTime)
         m_pxSList->MoveCurrentToTop();
         m_pxrcList->MoveCurrentToTop();
         for (i = 0; i < m_nChrCount; ++i) {
-            const CHRINFO* role = m_pxSList->GetCurrentData();
+            const SelectionRoleInfo* role = m_pxSList->GetCurrentData();
             const int type = role->Gender + 2 * role->Class;
             if (i / 2 == m_page && type >= 0 && type < 6) {
                 auto& animation = m_roleAnimation[i];
-                animation.elapsed += nLoopTime;
+                animation.elapsed = WORD(animation.elapsed + nLoopTime);
                 if (animation.elapsed > 120) {
                     animation.elapsed = 0;
                     if (++animation.frame > lastFrames[animation.action + 5 * type]) {
@@ -365,7 +365,7 @@ VOID CSelectChr::ShowChrInfo(VOID)
     if (m_nSelectChr < 0 || m_nSelectChr >= m_nChrCount) return;
     m_pxSList->MoveCurrentToTop();
     m_pxSList->MoveNode(m_nSelectChr);
-    const CHRINFO& role = *m_pxSList->GetCurrentData();
+    const SelectionRoleInfo& role = *m_pxSList->GetCurrentData();
     lstrcpynA(g_szCharName, role.ChrName, sizeof(g_szCharName));
     const std::string name = m_messages.Get(206) + "   " + role.ChrName;
     const std::string level = m_messages.Get(207) + "   " + std::to_string(role.Level);

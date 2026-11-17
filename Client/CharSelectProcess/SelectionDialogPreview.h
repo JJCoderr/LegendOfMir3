@@ -47,11 +47,11 @@ struct SelectionDialogPreview {
         _TDEFAULTMESSAGE decoded={};char body[256]={};
         if(size>DEFBLOCKSIZE+2) {fnDecodeMessage(&decoded,wire+2);fnDecode6BitBuf(wire+2+DEFBLOCKSIZE,body,sizeof(body)-1);}
         check("delete_preserves_input",decoded.wIdent==CM_DELCHR && body==expected);
-        check("delete_closes_editor",!p.m_xMsgBox.IsActive() && GetWindowTextLengthA(g_xChatEditBox.GetSafehWnd())==0);
+        check("delete_closes_editor",p.IsWaiting() && !IsWindowVisible(g_xChatEditBox.GetSafehWnd()) && GetWindowTextLengthA(g_xChatEditBox.GetSafehWnd())==0);
         g_xClientSocket.DisconnectToServer();closesocket(peer);closesocket(listener);memcpy(g_szUserID,account,sizeof(account));
         p.m_xSelectChr.m_nSelectChr=SELECT_NONE;p.OpenDeleteNotice();
         check("delete_missing_text",p.m_xMsgBox.Text()==p.m_messages.Get(SelectionDialog::DeleteMissing));
-        Reply(SM_QUERYCHR);check("empty_list_notice",p.m_ChrCount==0 && p.m_xMsgBox.Text()==p.m_messages.Get(SelectionDialog::Empty));
+        Reply(SM_QUERYCHR);p.AdvanceRoster(SelectionRoster::Delay);check("empty_list_notice",p.m_ChrCount==0 && p.m_xMsgBox.Text()==p.m_messages.Get(SelectionDialog::Empty));
         p.DeleteProc();fclose(report);
     }
     static const char* Load(int mode) {
