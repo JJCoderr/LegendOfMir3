@@ -55,6 +55,8 @@ public:
 	DWORD				m_dwIdentity;					// ID Index From Server.
 	CHAR				m_szName[64];					// 角色或怪物的名称.
 	CHAR				m_szGuildName[64];
+    char m_szGuildRank[64];
+    bool ReceiveName(const char* encoded,BYTE color);
 
 	FEATURE				m_stFeature;					// 决定角色的外观.
 	BYTE				m_bActorImgIdx;					// 当前 Actor 所拥有的图像结构体的编号。

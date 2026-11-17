@@ -3512,43 +3512,12 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				m_xMap.SetDoorState(bDoorIdx, bIsOpen);
 				break;
 			}*/
-			case SM_USERNAME:
-			{
-				char szDecodeMsg[1024];
-				char *pszGuildName;
-
-				INT nPos = fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), szDecodeMsg, sizeof(szDecodeMsg));
-				szDecodeMsg[nPos] = '\0';
-
-				if (pszGuildName = strchr(szDecodeMsg, '\\'))
-					*pszGuildName++ = '\0';
-
-				if ( tdm.nRecog == m_xMyHero.m_dwIdentity )
-				{				
-					m_xMyHero.m_dwNameClr = GetUserNameColor(tdm.wParam);
-
-					strcpy(m_xMyHero.m_szName, szDecodeMsg);
-
-					if (pszGuildName)
-						strcpy(m_xMyHero.m_szGuildName, pszGuildName);
-				}
-				else
-				{
-					CActor* pxActor = FindActor(tdm.nRecog);
-
-					if (pxActor)
-					{
-						pxActor->m_dwNameClr = GetUserNameColor(tdm.wParam);
-
-						strcpy(pxActor->m_szName, szDecodeMsg);
-
-						if (pszGuildName)
-							strcpy(pxActor->m_szGuildName, pszGuildName);
-					}
-				}
-
-				break;
-			}
+            case SM_USERNAME:
+            {
+                CActor* actor=DWORD(tdm.nRecog)==m_xMyHero.m_dwIdentity?&m_xMyHero:FindActor(tdm.nRecog);
+                if(actor) actor->ReceiveName(pszMsg+DEFBLOCKSIZE,LOBYTE(tdm.wParam));
+                break;
+            }
             case SM_CHANGEGUILDNAME:
                 m_xInterface.m_xStatusWnd.ReceiveGuildIdentity(pszMsg+DEFBLOCKSIZE);
                 break;
@@ -4003,8 +3972,8 @@ VOID CGameProcess::OnSvrMsgHear(_TDEFAULTMESSAGE *ptdm, char *pszMsg)
 	szDecodeMsg[nPos] = '\0';
 
 	const bool guildMessage=ptdm->wIdent==SM_GUILDMESSAGE;
-    DWORD dwBack = GetChatColor(guildMessage?_CHAT_COLOR5:LOBYTE(ptdm->wParam));
-	DWORD dwFont = GetChatColor(guildMessage?_CHAT_COLOR1:LOBYTE(ptdm->wTag));
+    DWORD dwBack = GetChatColor(guildMessage?_CHAT_COLOR1:LOBYTE(ptdm->wTag));
+	DWORD dwFont = GetChatColor(guildMessage?_CHAT_COLOR5:LOBYTE(ptdm->wParam));
     if(guildMessage) m_xInterface.m_xGuildWnd.AppendHistory(szDecodeMsg);
     constexpr int MaximumChatBytes=200;
     if(nPos<=MaximumChatBytes) m_xInterface.MsgAdd(dwFont, dwBack, szDecodeMsg);

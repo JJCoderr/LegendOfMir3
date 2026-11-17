@@ -867,6 +867,7 @@ bool CStatusWnd::ReceiveGuildIdentity(const char* encoded)
     }
     if(badge.size()>MaximumBadge) return false;
     strcpy(g_xGameProc.m_xMyHero.m_szGuildName,guild.c_str());
+    strcpy(g_xGameProc.m_xMyHero.m_szGuildRank,rank.c_str());
     m_identityTertiary=rank;m_identityBadge=badge;
     return true;
 }

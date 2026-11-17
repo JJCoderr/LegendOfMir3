@@ -1319,3 +1319,10 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 新增StatusWnd.ReceiveGuildIdentity，由SM_CHANGEGUILDNAME750接入；分别更新hero.m_szGuildName、m_identityTertiary职务、m_identityBadge称号，缺失时清除。Godot只提供四字段排版，协议依据原版42B859..42B970。
 - 星号前一字节按原版丢弃，通常数据为行会/职务/*称号；称号独立存在。行会与职务合计40 ANSI字节，截断职务；拒绝行会>40、称号>59的越界输入。750忽略nRecog更新本地；消息42旧流程仍待核对。
 - clean87/87、all109/109通过；identity8+history11+ability13共32项全1。两张截图out/guild-identity.png及guild-identity-cleared.png已查看。预览202/203，下一个空闲204。实际游戏服与扬声器输出未验证。
+
+
+### 2026-11-17 三行角色名称与聊天色修正
+- 完成SM_USERNAME42的Godot SceneName三行CR解析；末段斜杠截断、每行63字节、空字段清除。CActor.ReceiveName统一直接消息与队列，新增m_szGuildRank；本地同步Status职务，保留独立称号；750同步actor职务。Actor.Init清空三行。
+- 场景DrawName按Godot宋体9pt、格中心、-30/-15/0偏移、四角描边；尚未实测动态地图中的定位，只验证固定格坐标原生渲染。
+- 重要纠错：前一批行会历史的聊天区颜色顺序错误。现按Godot post_chat与原版调用，wParam前景/wTag背景；104固定绿字黑底。早期color测试预期错误已纠正，out/guild-history.png更新并查看。
+- clean87/87、all109/109；scene-name10+history11+identity8+ability13共42全1。截图out/scene-identity.png已检查。预览204，下一个空闲205。真实服务器及动态地图仍未验证。

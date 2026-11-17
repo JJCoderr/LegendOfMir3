@@ -103,6 +103,8 @@ VOID CActor::InitActor()
 	m_bEffectImgIdx		= _IMAGE_MAGIC;
 
 	ZeroMemory(m_szName, 64);
+    ZeroMemory(m_szGuildName,sizeof(m_szGuildName));
+    ZeroMemory(m_szGuildRank,sizeof(m_szGuildRank));
 	ZeroMemory(&m_stFeature,   sizeof(FEATURE));
 	ZeroMemory(&m_stHitter,    sizeof(FEATURE));
 	ZeroMemory(m_bLightRadius, sizeof(BYTE)*2);
@@ -853,12 +855,32 @@ VOID CActor::OnCharDescPacket(LPPACKETMSG lpPacketMsg)
 	ChangeFeature(stFeature);
 }
 
+bool CActor::ReceiveName(const char* encoded,BYTE color)
+{
+    constexpr size_t MaximumEncoded=1364;
+    const size_t length=strlen(encoded);
+    if(length>MaximumEncoded) return false;
+    for(size_t i=0;i<length;++i) if(BYTE(encoded[i])<0x3c || BYTE(encoded[i])>0x7b) return false;
+    char decoded[1024]={};
+    decoded[fnDecode6BitBuf(const_cast<char*>(encoded),decoded,sizeof(decoded)-1)]=0;
+    std::string remaining=decoded,lines[3];
+    for(auto& line:lines) {
+        const auto cr=remaining.find('\r');
+        line=remaining.substr(0,cr);
+        if(cr==std::string::npos) line=line.substr(0,line.find('/'));
+        if(line.size()>=sizeof(m_szName)) return false;
+        if(cr==std::string::npos) break;
+        remaining.erase(0,cr+1);
+    }
+    strcpy(m_szName,lines[0].c_str());strcpy(m_szGuildName,lines[1].c_str());strcpy(m_szGuildRank,lines[2].c_str());
+    m_dwNameClr=GetUserNameColor(color);
+    if(this==&g_xGameProc.m_xMyHero) g_xGameProc.m_xInterface.m_xStatusWnd.m_identityTertiary=lines[2];
+    return true;
+}
+
 VOID CActor::OnUserName(LPPACKETMSG lpPacketMsg)
 {
-	INT nPos = fnDecode6BitBuf(lpPacketMsg->szEncodeData, m_szName, sizeof(m_szName));
-	m_szName[nPos] = '\0';
-
-	m_dwNameClr = GetUserNameColor(lpPacketMsg->stDefMsg.wParam);
+    ReceiveName(lpPacketMsg->szEncodeData,LOBYTE(lpPacketMsg->stDefMsg.wParam));
 }
 
 VOID CActor::OnChangeNameClr(LPPACKETMSG lpPacketMsg)
@@ -1895,18 +1917,26 @@ VOID CActor::DrawHPBar()
 
 VOID CActor::DrawName()
 {
-	SIZE sizeLen;
-	sizeLen = g_xMainWnd.GetStrLength(NULL, NULL, m_szName);
-
-//	RECT rc = {m_shScrnPosX+(_CELL_WIDTH-sizeLen.cx)/2, m_shScrnPosY-25, m_shScrnPosX+(_CELL_WIDTH+sizeLen.cx)/2, m_shScrnPosY-25+20};
-	RECT rc = {m_rcActor.left + (m_rcActor.right-m_rcActor.left-sizeLen.cx)/2, m_rcActor.top + (m_rcActor.bottom-m_rcActor.top-sizeLen.cy)/2, 
-		       m_rcActor.left + (m_rcActor.right-m_rcActor.left+sizeLen.cx)/2, m_rcActor.top + (m_rcActor.bottom-m_rcActor.top+sizeLen.cy)/2};	
-	RECT rcLeft = {rc.left+1, rc.top-1, rc.right+1, rc.bottom-1};
-	g_xMainWnd.PutsHan(NULL, rc, RGB(10, 10, 10), RGB(0, 0, 0), m_szName);
-	g_xMainWnd.PutsHan(NULL, rcLeft, m_dwNameClr, RGB(0, 0, 0), m_szName);
+    auto* surface=g_xMainWnd.GetBackBuffer();HDC dc;
+    if(FAILED(surface->GetDC(&dc))) return;
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font=g_xMainWnd.CreateGameFont(face,9);HGDIOBJ old=SelectObject(dc,font);
+    SetBkMode(dc,TRANSPARENT);
+    const char* lines[]={m_szName,m_szGuildName,m_szGuildRank};
+    for(int line=0;line<3;++line) {
+        if(!*lines[line]) continue;
+        SIZE size={};GetTextExtentPoint32A(dc,lines[line],int(strlen(lines[line])),&size);
+        const int x=m_shScrnPosX+(_CELL_WIDTH-size.cx)/2;
+        const int y=m_shScrnPosY-30+line*15;
+        const auto text=[&](int dx,int dy,COLORREF color) {
+            RECT area={x+dx,y+dy,x+dx+size.cx,y+dy+15};SetTextColor(dc,color);
+            DrawTextA(dc,lines[line],-1,&area,DT_SINGLELINE|DT_CENTER|DT_VCENTER|DT_NOPREFIX);
+        };
+        for(int dx:{-1,1}) for(int dy:{-1,1}) text(dx,dy,RGB(10,10,10));
+        text(0,0,m_dwNameClr);
+    }
+    SelectObject(dc,old);DeleteObject(font);surface->ReleaseDC(dc);
 }
-
-
 
 VOID CActor::ChatMsgAdd()
 {

@@ -2,7 +2,7 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -32,6 +32,7 @@ class CHudPreviewProcess : public CWHDefProcess {
     POINT mouse = {0,0};
     int damagePreview=0;
     bool levelPreview=false;
+    bool namePreview=false;
     const char* capturePath = NULL;
 public:
     void OnConnectToServer() override {}
@@ -67,7 +68,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewNoGuildIdentity) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewSceneIdentity) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1891,6 +1892,34 @@ public:
 
 
 
+
+        if(groupPanel==PreviewSceneIdentity) {
+            auto& process=g_xGameProc;auto& hero=process.m_xMyHero;auto& ui=process.m_xInterface;auto& status=ui.m_xStatusWnd;
+            hero.m_dwIdentity=123;status.m_identityBadge="荣誉勇士";
+            const auto encode=[](const std::string& text) {std::vector<char> value((text.size()*8+5)/6+1);fnEncode6BitBuf((BYTE*)text.data(),value.data(),int(text.size()),int(value.size()));return std::string(value.data());};
+            const auto receive=[&](DWORD id,const std::string& text,BYTE color=255) {
+                _TDEFAULTMESSAGE header={};header.wIdent=SM_USERNAME;header.nRecog=id;header.wParam=color;
+                char wire[2048]={};fnEncodeMessage(&header,wire,sizeof(wire));strcpy(wire+DEFBLOCKSIZE,encode(text).c_str());process.OnSocketMessageRecieve(wire);
+            };
+            receive(123,"珐玛勇士\r珐玛行会\r掌门");
+            const bool three=std::string(hero.m_szName)=="珐玛勇士" && std::string(hero.m_szGuildName)=="珐玛行会" && std::string(hero.m_szGuildRank)=="掌门" && status.m_identityTertiary=="掌门" && status.m_identityBadge=="荣誉勇士";
+            receive(123,"新名/ignored",249);const bool cleared=std::string(hero.m_szName)=="新名" && !hero.m_szGuildName[0] && !hero.m_szGuildRank[0] && status.m_identityTertiary.empty() && hero.m_dwNameClr==RGB(255,0,0);
+            receive(123,"甲/乙\r行会\r成员/ignored");const bool delimiters=std::string(hero.m_szName)=="甲/乙" && std::string(hero.m_szGuildRank)=="成员";
+            receive(123,std::string(64,'A'));const bool invalid=std::string(hero.m_szName)=="甲/乙" && !hero.ReceiveName("!",255);
+            receive(123,std::string(63,'A'));const bool boundary=strlen(hero.m_szName)==63;
+            auto* remote=new CHero;remote->m_dwIdentity=456;process.m_xActorList.AddNode(remote);
+            receive(456,"远方勇士\r盟友行会\r成员",251);const bool other=std::string(remote->m_szGuildRank)=="成员" && remote->m_dwNameClr==RGB(255,255,0) && strlen(hero.m_szName)==63;
+            const int actors=process.m_xActorList.GetCounter();receive(789,"不存在的角色");const bool unknown=process.m_xActorList.GetCounter()==actors;
+            PACKETMSG packet={};packet.stDefMsg.wParam=254;strcpy(packet.szEncodeData,encode("队列角色\r行会\r成员").c_str());remote->OnUserName(&packet);
+            const bool queued=std::string(remote->m_szName)=="队列角色" && std::string(remote->m_szGuildRank)=="成员";
+            remote->OnChangeNameClr(&packet);const bool recolored=remote->m_dwNameClr==GetUserNameColor(254) && std::string(remote->m_szGuildRank)=="成员";
+            process.m_xActorList.MoveCurrentToTop();process.m_xActorList.DeleteCurrentNodeEx();delete remote;
+            receive(123,"");const bool empty=!hero.m_szName[0] && !hero.m_szGuildName[0] && !hero.m_szGuildRank[0];
+            receive(123,"珐玛勇士\r珐玛行会\r掌门",251);ui.WindowActivate(_WND_ID_STATUS);
+            hero.m_shScrnPosX=520;hero.m_shScrnPosY=220;namePreview=true;mouse={790,430};capturePath="scene-identity.bmp";
+            if(FILE* report=fopen("scene-identity-check.txt","wb")) {fprintf(report,"three=%d cleared=%d delimiters=%d invalid=%d boundary=%d other=%d unknown=%d queued=%d recolored=%d empty=%d\n",three,cleared,delimiters,invalid,boundary,other,unknown,queued,recolored,empty);fclose(report);}
+        }
+
         if(groupPanel==PreviewGuildIdentity || groupPanel==PreviewNoGuildIdentity) {
             auto& ui=g_xGameProc.m_xInterface;auto& status=ui.m_xStatusWnd;auto& hero=g_xGameProc.m_xMyHero;
             const auto encode=[](const std::string& text) {std::vector<char> value((text.size()*8+5)/6+1);fnEncode6BitBuf((BYTE*)text.data(),value.data(),int(text.size()),int(value.size()));return std::string(value.data());};
@@ -1926,7 +1955,7 @@ public:
             receive(SM_GUILDMESSAGE,"行会通知：今晚八点在沙巴克集合。");
             const bool routed=guild.m_pages[2].size()==1 && guild.m_pages[2][0]=="行会通知：今晚八点在沙巴克集合。";
             const auto& chat=ui.m_chatHistory.back();
-            const bool color=chat.color==GetChatColor(0) && chat.background==GetChatColor(4);
+            const bool color=chat.color==GetChatColor(4) && chat.background==GetChatColor(0);
             receive(SM_SYSMESSAGE,"普通系统消息");receive(SM_GROUPMESSAGE,"组队消息");
             const bool isolated=guild.m_pages[2].size()==1;
             guild.m_pages[2].clear();guild.m_first=0;
@@ -2836,6 +2865,7 @@ public:
             for(size_t i=0;i<effects.size();++i) g_xGameProc.m_levelEffects.DrawAt(effects[i],440+int(i)*180,300);
         }
         g_xGameProc.m_xInterface.RenderInterface(elapsed,mouse);
+        if(namePreview) g_xGameProc.m_xMyHero.DrawName();
         if(capturePath && !strcmp(capturePath,"equipment-hover-hint.bmp")) {
             auto& ui=g_xGameProc.m_xInterface;
             if(FILE* report=fopen("equipment-hover-check.txt","wb")) {fprintf(report,"window=%d status=%d slot=%d held=%d present=%d name=%s mouse=%ld,%ld\n",ui.GetWindowInMousePos(mouse),_WND_ID_STATUS,ui.m_xStatusWnd.GetEquipNum(mouse),ui.m_stCommonItem.bSetted,ui.m_xStatusWnd.m_stEquipItem[5].bSetted,ui.m_xStatusWnd.m_stEquipItem[5].xItem.Name(),mouse.x,mouse.y);fclose(report);}
@@ -3037,6 +3067,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=scene-identity")==0 ? PreviewSceneIdentity :
         strcmp(lpCmdLine,"--preview=guild-identity")==0 ? PreviewGuildIdentity :
         strcmp(lpCmdLine,"--preview=guild-identity-cleared")==0 ? PreviewNoGuildIdentity :
         strcmp(lpCmdLine,"--preview=guild-history")==0 ? PreviewGuildHistory :
