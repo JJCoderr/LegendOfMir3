@@ -1644,3 +1644,9 @@ Interface鼠标按下/抬起/移动优先模态，键盘模态先于行会编辑
 - 发现创建页只EM_LIMITTEXT按字符限长，未接EN_CHANGE字节限制。CharacterProcess接入ChatEdit.Changed，姓名13字节中文完整边界，删除确认依原90字节。
 - CharacterInteractionPreview新增307英文/308中文/309恢复后填入姓名，下一310。实际三图已查看：out/creation-name。测试EM_SETSEL按字符位置，已修正原测试的字节位置误解。
 - 新姓名12+交互15+角色表现22+选角弹窗23=72检查通过；七目标构建out/creation-name-final.log通过，6页截图，自启预览全停。真实创建/登录尚未联调。
+
+
+## 2026-11-17 创建与删除编辑框键盘行为
+- ChatEditProc按_CHAR_SEL_PROC统一转发控制键，创建空Enter不隐藏框、Escape/Tab不夺焦；删除Space执行选中按钮。CharacterProcess增加HasNotice只读查询。
+- 新增7项原生EDIT消息检查，姓名19+角色交互15+选角弹窗23+登录27+游戏模态27=111通过。七目标构建out/selection-editor-build.log；6页截图out/selection-editor，中文创建/删除确认已查看。自启预览全停。
+- 无新预览编号，下一310。整体GUI仍在核查，真实服务器创建/删除未联调。

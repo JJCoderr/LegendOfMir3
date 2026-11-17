@@ -18,6 +18,7 @@
 class CCharacterProcess: public CWHDefProcess  
 {
 public:
+    bool HasNotice() const { return m_xMsgBox.IsActive()!=FALSE; }
 						CCharacterProcess();
 	virtual				~CCharacterProcess();
 	VOID				Init();

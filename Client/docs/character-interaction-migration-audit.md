@@ -26,3 +26,10 @@
 新增检查发现CharacterProcess未处理EN_CHANGE，原有EM_LIMITTEXT按字符计数，允许超13字节中文姓名。现接入既有ChatEdit.Changed/LimitAnsiEdit，按参考13字节截取且保留完整中文和编辑后缀。删除确认沿用其自身90字节限制。测试中EM_SETSEL按字符位置而非ANSI字节计数，已修正该夹具。
 
 12项新检查：可见/焦点、限制值、ASCII上限、中文完整边界、中文替换、超限插入保留后缀、恰好插入保留后缀、错误隐藏、错误恢复空文本焦点、职业/性别切换保留姓名、重开清空。加既有交互15、角色表现22、选角对话框23，共72检查通过。七目标构建通过out/creation-name-final.log，六页新鲜截图在out/creation-name，自启预览均停止。下一编号310。真实服务器创建请求仍未联调。
+
+
+## 2026-11-17 创建与删除原生编辑框键盘转发
+
+参考hud_view.cpp 6112附近删除框使用Tab切换、Enter/Space执行当前按钮；7043附近创建姓名与删除输入保持编辑焦点。CLIENT原先沿用聊天转发，Escape/Tab夺焦，删除空格作为文本插入；创建空姓名Enter还隐藏输入框。ChatEditProc现按_CHAR_SEL_PROC转发这些控制键到CharacterProcess，保留编辑焦点，删除弹窗Space由提示框处理。普通姓名字符继续交给EDIT。新增HasNotice只读查询避免暴露私有提示框。
+
+创建姓名报告增加7项真实EDIT消息检查：创建Escape/Tab焦点、空Enter、删除Escape/Tab焦点、Space取消当前按钮、Enter取消当前按钮。共姓名19+角色交互15+选角弹窗23+登录27+游戏模态27=111检查通过。七目标构建out/selection-editor-build.log通过，6页截图在out/selection-editor；创建中文与删除确认图已查看，所有自启预览停止。无新增编号，下一310。真实创建/删除服务端请求联调仍未开展。
