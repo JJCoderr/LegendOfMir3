@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../SelectionDialog.h"
 #include "Common/LegacyPanel.h"
 
 #define CHR_ANI_COUNT			21
@@ -142,7 +143,7 @@ HRESULT CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
 				{	
 					case ID_SEL_CHR_NEW_BTN:
 					{
-						if(m_nChrCount<3)
+						if(m_nChrCount<SelectionDialog::CreationLimit)
 						{	m_nBlend = 0;
 							m_nRenderState = 1;
 							return RETURN_SELECT_NEW_BTN;

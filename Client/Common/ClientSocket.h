@@ -58,7 +58,7 @@ public:
 	// For Character Select
 	VOID		OnQueryChar();
 	VOID		OnNewChar( char *pszId, int nHair, int nJob, int nSex );
-	VOID		OnDelChar( char *pszCharName );
+	VOID		OnDelChar(const char* name,const char* confirmation);
 	VOID		OnSelChar( char *pszCharName );
 
 	// For Game playing

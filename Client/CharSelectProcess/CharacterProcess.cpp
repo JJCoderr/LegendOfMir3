@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "Common/LegacyPanel.h"
 #include <vector>
+#include "SelectionDialog.h"
 
 // Coordinates are shared by drawing and hit testing for the supplied UI frames.
 struct CreateControl { int frame, x, y, width, height; };
@@ -141,8 +142,9 @@ void CCharacterProcess::Preview(const char* page)
 
 void CCharacterProcess::OpenDeleteNotice()
 {
-    m_nMessage = 5;
-    m_xMsgBox.ShowMessageBox(m_messages.Get(228).c_str(), MSG_BTN_YESNO, 0);
+    if(m_xSelectChr.m_nSelectChr<0 || m_xSelectChr.m_nSelectChr>=m_ChrCount) {ShowNotice(SelectionDialog::DeleteMissing);return;}
+    m_nMessage = SelectionDialog::DeleteConfirmation;
+    m_xMsgBox.ShowMessageBox(m_messages.Get(SelectionDialog::DeleteConfirmation).c_str(), MSG_BTN_YESNO, 0);
     HWND editor = g_xChatEditBox.GetSafehWnd();
     g_xChatEditBox.SetLimitText(90);
     SetWindowTextA(editor, "");
@@ -198,6 +200,9 @@ LRESULT CCharacterProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, L
 		case ID_SOCKCLIENT_EVENT_MSG:
 			g_xClientSocket.OnSocketMessage(wParam, lParam);
 			break;
+        case _WM_USER_MSG_INPUTTED:
+            SetWindowTextA(g_xChatEditBox.GetSafehWnd(),g_xChatEditBox.m_szInputMsg);
+            OnKeyDown(VK_RETURN,0);return 0;
 		case WM_KEYDOWN:
 			OnKeyDown(wParam, lParam);
 			break;
@@ -218,7 +223,9 @@ LRESULT CCharacterProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, L
 
 LRESULT CCharacterProcess::OnKeyDown(WPARAM wParam, LPARAM lParam)
 {
-    // Lobby movies cannot be skipped with the old F1/F2 debug shortcuts.
+    if(m_returnWaiting || m_Progress==PRG_SEL_TO_CREA || m_Progress==PRG_CREA_TO_SEL || m_Progress==PRG_SEL_TO_GAME) return 0;
+    if(m_xMsgBox.IsActive()) FinishNotice(m_xMsgBox.OnKeyDown(wParam));
+    else if(m_Progress==PRG_CREATE_CHAR && wParam==VK_RETURN) SubmitCreation();
     return 0L;
 }
 
@@ -345,9 +352,7 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 					}
 					case RETURN_SELECT_NEW_ERR:
 					{
-						m_nMessage = 3;
-						SetErrorMessage(m_nMessage,m_szErrorMsg);
-						m_xMsgBox.ShowMessageBox(m_szErrorMsg,MSG_BTN_OK,_WNDIMGINDX_MSGBOX1);
+                        ShowNotice(SelectionDialog::Full);
 						break;
 					}
 					case RETURN_SELECT_DEL_BTN:
@@ -357,9 +362,7 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 					}
 					case RETURN_SELECT_DEL_ERR:
 					{
-						m_nMessage = 8;
-						SetErrorMessage(m_nMessage,m_szErrorMsg);
-						m_xMsgBox.ShowMessageBox(m_szErrorMsg,MSG_BTN_OK,_WNDIMGINDX_MSGBOX1);
+                        ShowNotice(SelectionDialog::DeleteMissing);
 						break;
 					}
 					case RETURN_SELECT_START_BTN:
@@ -368,9 +371,7 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 					}
 					case RETURN_SELECT_START_ERR:
 					{
-						m_nMessage = 7;
-						SetErrorMessage(m_nMessage,m_szErrorMsg);
-						m_xMsgBox.ShowMessageBox(m_szErrorMsg,MSG_BTN_OK,_WNDIMGINDX_MSGBOX1);
+                        ShowNotice(SelectionDialog::StartMissing);
 						break;
 					}
 				}
@@ -403,16 +404,7 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
                         g_xSound.PlayRoleVoice(true, m_SelectJob, m_SelectSex);
                     }
                 } else {
-                    GetWindowTextA(g_xChatEditBox.GetSafehWnd(), m_szChrName, sizeof(m_szChrName));
-                    if (!m_szChrName[0]) break;
-                    if (strpbrk(m_szChrName, " /@?'\"\\.,:;`~!#$%^&*()-_+=|[{}]<>")) {
-                        m_nMessage = 0;
-                        lstrcpynA(m_szErrorMsg, m_messages.Get(225).c_str(), sizeof(m_szErrorMsg));
-                        m_xMsgBox.ShowMessageBox(m_szErrorMsg, MSG_BTN_OK, 1240);
-                        break;
-                    }
-                    m_bCreatePending = TRUE;
-                    g_xClientSocket.OnNewChar(m_szChrName, 0, m_SelectJob, m_SelectSex);
+                    SubmitCreation();
                 }
                 break;
             }
@@ -506,8 +498,11 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
                 rect->nHeight = 140;
                 m_CRectList.AddNode(rect);
             }
+            if(m_nMessage==SelectionDialog::DeleteConfirmation && m_xMsgBox.IsActive()) FinishNotice(CLICK_NO);
             m_xSelectChr.Create(&m_Image, &m_CList, &m_CRectList, count);
             m_xSelectChr.OpenWnd();
+            if(!count) ShowNotice(SelectionDialog::Empty);
+            else {m_xMsgBox.HideMessageBox();m_nMessage=0;}
             break;
         }
 		case	SM_NEWCHR_SUCCESS:		// New character Create Success
@@ -521,12 +516,8 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 			break;
 		}
         case SM_NEWCHR_FAIL:
-            m_bCreatePending = FALSE;
-            m_Progress = PRG_CREATE_CHAR;
-            m_nMessage = 0;
-            sprintf(m_szErrorMsg, "Character creation failed (code %u).", tdm.wParam);
-            m_xMsgBox.ShowMessageBox(m_szErrorMsg, MSG_BTN_OK, 1240);
-            break;
+            m_bCreatePending=FALSE;m_Progress=PRG_CREATE_CHAR;
+            ShowNotice(SelectionDialog::CreationFailure(unsigned(tdm.nRecog)));break;
         case SM_STARTPLAY:
         {
             char endpoint[256] = {};
@@ -544,11 +535,11 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
             ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
             break;
         }
-        case SM_STARTFAIL:
-            m_nMessage = 0;
-            strcpy(m_szErrorMsg,"Game server is unavailable. Please try again.");
-            m_xMsgBox.ShowMessageBox(m_szErrorMsg,MSG_BTN_OK,1240);
-            break;
+        case SM_STARTFAIL: ShowNotice(SelectionDialog::StartFailed);break;
+        case SM_QUERYCHR_FAIL: ShowNotice(SelectionDialog::QueryFailed);break;
+        case SM_OUTOFCONNECTION: ShowNotice(SelectionDialog::Disconnected);break;
+        case SM_DELCHR_SUCCESS:
+        case SM_DELCHR_FAIL: g_xClientSocket.OnQueryChar();break;
 
 	}
 /*	_TDEFAULTMESSAGE	tdm;
@@ -724,7 +715,7 @@ VOID CCharacterProcess::RenderScene(INT nLoopTime)
 	{
 		case PRG_CHAR_SELE:
 		{
-			if (!m_xMsgBox.IsActive() || m_nMessage != 5)
+			if (!m_xMsgBox.IsActive() || m_nMessage != SelectionDialog::DeleteConfirmation)
 				ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
 			switch(m_xSelectChr.m_nRenderState)
 			{
@@ -885,132 +876,43 @@ VOID CCharacterProcess::RenderCharCreate(INT nLoopTime)
     }
 }
 
-VOID CCharacterProcess::SetErrorMessage(INT nMsg,CHAR* szMgs)
-{
-	HINSTANCE hLib;
-	hLib = LoadLibrary(MESSAGE_DLL_1); // Load Dll
-	if(nMsg!=99 && nMsg!=0)
-	{
-		LoadString(hLib,(nMsg+199),szMgs,512);
-	}
-	else 
-	{
-		if(nMsg!=0)
-			LoadString(hLib,9999,szMgs,512);
-		else
-			ZeroMemory(szMgs,512);
-	}
-	FreeLibrary(hLib);
+void CCharacterProcess::ShowNotice(int message) {
+    if(m_nMessage==SelectionDialog::DeleteConfirmation && m_xMsgBox.IsActive()) FinishNotice(CLICK_NO);
+    m_returnWaiting=false;m_nMessage=message;m_xMsgBox.SetOrigin(140,110);
+    m_xMsgBox.ShowMessageBox(m_messages.Get(message).c_str(),MSG_BTN_OK,0);
+    ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);SetFocus(g_xMainWnd.GetSafehWnd());
 }
-
-
-BOOL CCharacterProcess::MessageBoxProcess(LPARAM lParam)
-{
-	HRESULT hResult;
-	POINT	ptMouse;
-	ptMouse.x = LOWORD(lParam);
-	ptMouse.y = HIWORD(lParam);
-	hResult  = m_xMsgBox.OnButtonUp(ptMouse);
-    if (m_nMessage == 5 && (hResult == CLICK_YES || hResult == CLICK_NO)) {
-        HWND editor = g_xChatEditBox.GetSafehWnd();
-        SetWindowTextA(editor, "");
-        ShowWindow(editor, SW_HIDE);
-        g_xChatEditBox.SetLimitText(13);
+void CCharacterProcess::SubmitCreation() {
+    if(m_bCreatePending || m_xMsgBox.IsActive()) return;
+    char name[256]={};GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,sizeof(name));
+    if(!name[0]) return;
+    if(const int error=SelectionDialog::NameError(name)) {ShowNotice(error);return;}
+    if(!g_szUserID[0]) return;
+    lstrcpynA(m_szChrName,name,sizeof(m_szChrName));m_bCreatePending=TRUE;
+    g_xClientSocket.OnNewChar(m_szChrName,0,m_SelectJob,m_SelectSex);
+}
+void CCharacterProcess::FinishNotice(HRESULT result) {
+    if(result!=CLICK_OK && result!=CLICK_YES && result!=CLICK_NO) return;
+    const bool deleting=m_nMessage==SelectionDialog::DeleteConfirmation;
+    char confirmation[SelectionDialog::ConfirmationBytes+1]={};
+    if(deleting) GetWindowTextA(g_xChatEditBox.GetSafehWnd(),confirmation,sizeof(confirmation));
+    m_xMsgBox.HideMessageBox();m_nMessage=0;
+    if(deleting) {
+        SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"");ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
+        g_xChatEditBox.SetLimitText(SelectionDialog::NameBytes);
+        if(result==CLICK_YES && m_xSelectChr.m_nSelectChr>=0 && m_xSelectChr.m_nSelectChr<m_ChrCount && g_szUserID[0]) {
+            m_CList.MoveCurrentToTop();m_CList.MoveNode(m_xSelectChr.m_nSelectChr);
+            g_xClientSocket.OnDelChar(m_CList.GetCurrentData()->ChrName,confirmation);
+            g_xClientSocket.OnQueryChar();
+        }
+    } else if(m_Progress==PRG_CREATE_CHAR) {
+        SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"");ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_SHOW);
+        SetFocus(g_xChatEditBox.GetSafehWnd());g_xChatEditBox.SetSelectAll();
     }
-	if((hResult&HAVE_EDITOBOX)==HAVE_EDITOBOX)
-	{
-		// edit box exist
-		switch(hResult^HAVE_EDITOBOX)
-		{
-		case CLICK_OK:
-			{
-				m_xMsgBox.HideMessageBox();
-/*					switch(m_nMessage)
-				{
-				}*/
-				break;
-			}
-		case CLICK_YES:
-			{
-				m_xMsgBox.HideMessageBox();
-/*					switch(m_nMessage)
-				{
-				}*/
-				break;
-			}
-		case CLICK_NO:
-			{
-				m_xMsgBox.HideMessageBox();
-/*					switch(m_nMessage)
-				{
-				}*/
-				break;
-			}
-		case CLICK_CANCLE:
-			{
-				m_xMsgBox.HideMessageBox();
-/*					switch(m_nMessage)
-				{
-				}*/
-				break;
-			}
-		}
-	}
-	else
-	{
-		// edit box not exist
-		switch(hResult)
-		{
-		case CLICK_OK:
-			{
-				m_xMsgBox.HideMessageBox();
-				switch(m_nMessage)
-				{
-				case 103:	//
-					{
-						PostQuitMessage(NULL);
-						m_nMessage = 0;
-						break;
-					}
-				}
-				break;
-			}
-		case CLICK_YES:
-			{
-				m_xMsgBox.HideMessageBox();
-				switch(m_nMessage)
-				{
-					case 5:
-					{
-						m_CList.MoveCurrentToTop();
-						m_CList.MoveNode(m_xSelectChr.m_nSelectChr);
-						g_xClientSocket.OnDelChar(m_CList.GetCurrentData()->ChrName);
-
-						g_xClientSocket.OnQueryChar();
-
-						m_ChrCount =0 ;
-						break;
-					}
-				}
-				break;
-			}
-		case CLICK_NO:
-			{
-				m_xMsgBox.HideMessageBox();
-/*					switch(m_nMessage)
-				{
-				}*/
-				break;
-			}
-		case CLICK_CANCLE:
-			{
-				m_xMsgBox.HideMessageBox();
-/*					switch(m_nMessage)
-				{
-				}*/
-				break;
-			}
-		}
-	}
-	return TRUE;
+}
+VOID CCharacterProcess::SetErrorMessage(INT message,CHAR* text) {
+    lstrcpynA(text,m_messages.Get(message).c_str(),512);
+}
+BOOL CCharacterProcess::MessageBoxProcess(LPARAM parameter) {
+    FinishNotice(m_xMsgBox.OnButtonUp(POINT{LOWORD(parameter),HIWORD(parameter)},true));return TRUE;
 }

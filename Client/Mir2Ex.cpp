@@ -40,6 +40,7 @@ BYTE				g_bProcState = _LOGIN_PROC;
 #include "ServerSelectProcess/ServerGroupsPreview.h"
 #include "Common/ConnectionPreview.h"
 #include "AVI/MoviePreview.h"
+#include "CharSelectProcess/SelectionDialogPreview.h"
 
 // Offline visual review uses the real interface without map or network updates.
 class CHudPreviewProcess : public CWHDefProcess {
@@ -62,6 +63,9 @@ public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
     void Load(bool expanded, int chatMode, bool exitDialog, int groupPanel) {
+        if(groupPanel>=SelectionDialogPreview::First && groupPanel<=SelectionDialogPreview::Last) {
+            connectionSelectionPreview=true;capturePath=SelectionDialogPreview::Load(groupPanel);return;
+        }
         if(groupPanel>=MoviePreview::First && groupPanel<=MoviePreview::Last) {
             moviePreview=true;capturePath=MoviePreview::Load(groupPanel);return;
         }
@@ -3584,7 +3588,19 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
 	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
-	const int previewGroup = strcmp(lpCmdLine,"--preview=movie-forward")==0 ? MoviePreview::First :
+	const int previewGroup = strcmp(lpCmdLine,"--preview=character-name-exists")==0 ? SelectionDialogPreview::First+0 :
+        strcmp(lpCmdLine,"--preview=character-full")==0 ? SelectionDialogPreview::First+1 :
+        strcmp(lpCmdLine,"--preview=character-create-failed")==0 ? SelectionDialogPreview::First+2 :
+        strcmp(lpCmdLine,"--preview=character-name-invalid")==0 ? SelectionDialogPreview::First+3 :
+        strcmp(lpCmdLine,"--preview=character-query-failed")==0 ? SelectionDialogPreview::First+4 :
+        strcmp(lpCmdLine,"--preview=character-start-failed")==0 ? SelectionDialogPreview::First+5 :
+        strcmp(lpCmdLine,"--preview=character-disconnected")==0 ? SelectionDialogPreview::First+6 :
+        strcmp(lpCmdLine,"--preview=character-delete-confirm")==0 ? SelectionDialogPreview::First+7 :
+        strcmp(lpCmdLine,"--preview=character-delete-missing")==0 ? SelectionDialogPreview::First+8 :
+        strcmp(lpCmdLine,"--preview=character-start-missing")==0 ? SelectionDialogPreview::First+9 :
+        strcmp(lpCmdLine,"--preview=character-name-long")==0 ? SelectionDialogPreview::First+10 :
+        strcmp(lpCmdLine,"--preview=character-empty")==0 ? SelectionDialogPreview::First+11 :
+        strcmp(lpCmdLine,"--preview=movie-forward")==0 ? MoviePreview::First :
         strcmp(lpCmdLine,"--preview=movie-reverse")==0 ? MoviePreview::Reverse :
         strcmp(lpCmdLine,"--preview=movie-opening-return")==0 ? MoviePreview::Opening :
         strcmp(lpCmdLine,"--preview=movie-creation-return")==0 ? MoviePreview::Creation :

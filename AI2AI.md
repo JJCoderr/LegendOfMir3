@@ -1577,3 +1577,8 @@ spell-map预览改用生产LoadAllImage，而非只加载场景子集；60个实
 ## 2026-11-17：大厅影片批次验收完成
 
 接上前节未验收修改，原生LegacyMovie/NativeMovie已完成VFW解码、DirectDraw RGB565、DirectSound PCM；Data目录三个影片入口与正反时序/音效接入。创建取消/成功返回反放、SM_STARTPLAY直接入场、移除F1/F2跳页、影片禁鼠标旧提示操作，重载背景重置及关闭释放。clean90/90、all113/113、复核4/4成功；177检查通过（影片33/登录27/转场12/分组33/音效15/连接20/退出30/返回7）。预览268..271，下一272，截图out/movie-*.png。原版三部影片不存在；forward/reverse为标注合成测试影片，不能冒充原片。详细证据Client/docs/lobby-movie-migration-audit.md。下一步角色创建/删除/选择提示审计，SM_NEWCHR_FAIL/SM_STARTFAIL旧英文是已知缺口。真实服务器联调仍待GUI完成，目标保持active。
+
+
+## 2026-11-17：角色提示框完整批次
+
+SelectionDialog集中CmList219..232，创建失败按nRecog映射224/226/232，名称13字节与ANSI双字节校验，两角色创建上限；Enter/空格关闭、Esc保持，关闭创建提示清名恢复焦点。删除确认90字节输入先读后清，键盘Tab/Enter和release-only按钮，CM_DELCHR改name/confirmation并回环验证；真实DBSvr兼容性尚待联调。空列表219及非空刷新清提示。clean90/all109/final3构建通过，200检查全通过。预览272..283，下一284，截图out/character-*.png及character-dialogs-1..3.png。详见Client/docs/selection-dialog-migration-audit.md。后续优先选角等待/500ms暂存、文本四槽与旧packed三槽兼容及翻页；GUI整体未完成、真实服务器尚未联调。

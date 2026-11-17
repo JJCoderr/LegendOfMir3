@@ -48,10 +48,10 @@ HRESULT CLoginNotice::OnKeyDown(WPARAM key) {
     return CLICK_NONE;
 }
 
-HRESULT CLoginNotice::OnButtonDown(POINT point) { m_pressed = Hit(point); return 0; }
-HRESULT CLoginNotice::OnButtonUp(POINT point) {
+HRESULT CLoginNotice::OnButtonDown(POINT point) { m_pressed = Hit(point); if(m_pressed==CLICK_YES || m_pressed==CLICK_NO) m_selected=m_pressed; return 0; }
+HRESULT CLoginNotice::OnButtonUp(POINT point, bool releaseOnly) {
     const int hit = Hit(point);
-    const int result = hit == m_pressed ? hit : CLICK_NONE;
+    const int result = releaseOnly || hit == m_pressed ? hit : CLICK_NONE;
     m_pressed = 0;
     return result;
 }

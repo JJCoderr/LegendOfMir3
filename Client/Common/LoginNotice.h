@@ -14,7 +14,7 @@ public:
     BOOL IsActive() const { return m_active; }
     HRESULT OnKeyDown(WPARAM key);
     HRESULT OnButtonDown(POINT point);
-    HRESULT OnButtonUp(POINT point);
+    HRESULT OnButtonUp(POINT point, bool releaseOnly=false);
     VOID MoveWnd(POINT) {} // The reference notice is fixed, not draggable.
     BOOL RenderMessageBox(INT);
 private:

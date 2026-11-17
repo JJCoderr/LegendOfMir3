@@ -58,6 +58,10 @@ public:
 	BOOL				MessageBoxProcess(LPARAM lParam);
 	
 private:
+    friend struct SelectionDialogPreview;
+    void ShowNotice(int message);
+    void FinishNotice(HRESULT result);
+    void SubmitCreation();
     friend struct MoviePreview;
 	void OpenDeleteNotice();
 	void DrawCreationDescription();

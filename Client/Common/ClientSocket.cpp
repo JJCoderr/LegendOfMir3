@@ -389,11 +389,13 @@ VOID CClientSocket::OnNewChar(char *pszId, int nHair, int nJob, int nSex)
     SendPacket(&DefMsg, (char*)&character, sizeof(character));
 }
 
-VOID CClientSocket::OnDelChar( char *pszCharName)
+VOID CClientSocket::OnDelChar(const char* name,const char* confirmation)
 {
-	fnMakeDefMessage(&DefMsg, CM_DELCHR, 0, 0, 0, 0);
-	SendPacket(&DefMsg, pszCharName);
+    const std::string body=std::string(name)+"/"+confirmation;
+    fnMakeDefMessage(&DefMsg,CM_DELCHR,0,0,0,0);
+    SendPacket(&DefMsg,const_cast<char*>(body.c_str()));
 }
+
 
 VOID CClientSocket::OnSelChar( char *pszCharName)
 {
