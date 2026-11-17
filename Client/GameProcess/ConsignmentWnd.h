@@ -42,12 +42,13 @@ public:
     void ShowItemHint(POINT point);
     bool SelectItem(POINT point);
     bool SubmitPrice(const char* value);
-    void Activate(ConsignmentLayout::Action action);
-    void Confirm(bool accepted);
+    void Activate(ConsignmentLayout::Action action,DWORD now=GetTickCount());
+    void Confirm(bool accepted,DWORD now=GetTickCount());
+    bool KeyDown(WPARAM key,DWORD now=GetTickCount());
 private:
     HFONT editFont=nullptr;
     int fontHeight=0,animationFrame=0;
-    DWORD animationTick=0;
+    DWORD animationTick=0,actionTick=0,searchTick=0;
     bool editorsAvailable=true,confirmationPending=false;
     Request confirmation;
     HBRUSH editBackground[2]={};

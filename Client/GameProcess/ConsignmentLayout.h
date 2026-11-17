@@ -43,6 +43,7 @@ constexpr int BrowserTitleText=4408, ServerColumn=4409, ItemColumn=4410,
     CancelListingQuestion=4414, PurchaseQuestion=4415;
 constexpr int PriceQuestion=4500, RegistrationTitleText=4503,
     ItemInstruction=4504, DropInstruction=4505, RegistrationQuestion=4506;
+constexpr DWORD RequestInterval=1000;
 constexpr int ActivityFirstFrame=1920, ActivityFrames=11, BusyInterval=100, IdleInterval=150;
 constexpr int QueryLimit=90, HeaderHeight=46;
 constexpr unsigned MaximumPrice=0x7fffffff;

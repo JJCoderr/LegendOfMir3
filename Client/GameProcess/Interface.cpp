@@ -2201,6 +2201,7 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
         if (!(lParam & (1L << 30))) FinishNotice(m_xMsgBox.OnKeyDown(wParam),false);
         return TRUE;
     }
+    if(IsTopWindow(ConsignmentLayout::BrowserId) && m_xConsignmentWnd.KeyDown(wParam)) return TRUE;
     if(m_minimap.visible && (wParam=='T' || wParam=='Y')) {
         if(!(lParam & (1L << 30))) {if(wParam=='T') {m_minimap.large=!m_minimap.large;m_minimap.Place();} else m_minimap.translucent=!m_minimap.translucent;}
         return TRUE;

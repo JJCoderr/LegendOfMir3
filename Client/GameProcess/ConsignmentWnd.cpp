@@ -65,7 +65,7 @@ int CConsignmentWnd::RowAt(POINT point) const
     const int x=point.x-m_rcWnd.left,y=point.y-m_rcWnd.top;
     if(x<FirstRow.left || x>=FirstRow.right || y<FirstRow.top) return -1;
     const int row=(y-FirstRow.top)/RowHeight;
-    if(row>=VisibleRows || row>=int(listings.size()) || y>=FirstRow.bottom+row*RowHeight) return -1;
+    if(row>=VisibleRows || y>=FirstRow.bottom+row*RowHeight) return -1;
     return row;
 }
 RECT CConsignmentWnd::ItemBounds()
@@ -110,7 +110,7 @@ void CConsignmentWnd::Show()
             animationFrame=(animationFrame+1)%ActivityFrames;animationTick=tick;
         }
         frame(ActivityFirstFrame+animationFrame,390,14);
-        for(int row=0;row<min(VisibleRows,int(listings.size()));++row) {
+        for(int row=0;row<VisibleRows;++row) {
             const RECT area={x+FirstRow.left,y+FirstRow.top+row*RowHeight,x+FirstRow.right,y+FirstRow.bottom+row*RowHeight};
             if(row==hovered) DrawLegacyPanel(area,RGB(30,30,30),180,0,false);
             if(row==selected) DrawLegacyPanel(area,RGB(35,114,156),180,0,false);
@@ -250,12 +250,12 @@ void CConsignmentWnd::Destroy()
     listings.clear();requests.clear();nameQuery.clear();sellerQuery.clear();description.clear();
     selected=hovered=pressed=pressedRow=-1;page=pages=0;price=sessionId=0;
     captured=dragging=waiting=hasItem=confirmationPending=false;editorsAvailable=true;
-    animationFrame=0;animationTick=0;
+    animationFrame=0;animationTick=actionTick=searchTick=0;
     CGameWnd::Destroy();
 }
 void CConsignmentWnd::Close()
 {
-    ReadEditors();m_bActive=FALSE;captured=dragging=false;pressed=pressedRow=-1;sessionId=0;
+    ReadEditors();m_bActive=FALSE;captured=dragging=false;pressed=pressedRow=-1;sessionId=0;actionTick=searchTick=0;
     if(registration) {hasItem=false;price=0;description.clear();if(edits[0]) SetWindowTextA(edits[0],"");}
     else {listings.clear();selected=hovered=-1;page=pages=0;waiting=false;animationFrame=0;}
     LayoutEditors();SetFocus(g_xMainWnd.GetSafehWnd());
@@ -303,16 +303,21 @@ void CConsignmentWnd::Pointer(int kind,POINT point)
     } else if(row>=0 && row==pressedRow) selected=row;
     pressedRow=-1;
 }
-void CConsignmentWnd::Activate(ConsignmentLayout::Action action)
+void CConsignmentWnd::Activate(ConsignmentLayout::Action action,DWORD now)
 {
     using namespace ConsignmentLayout;
     auto& ui=g_xGameProc.m_xInterface;
     if(action==Action::Close) {Close();return;}
     if(action==Action::Register) {ui.WindowActivate(RegistrationId);ui.m_xConsignmentRegistration.sessionId=sessionId;return;}
     if(action==Action::CancelRegistration) {hasItem=false;price=0;return;}
+    const bool search=action==Action::SearchName || action==Action::SearchSeller;
+    const bool browse=action==Action::NextPage || action==Action::PreviousPage || action==Action::Refresh;
+    const bool transaction=action==Action::Buy || action==Action::CancelListing;
+    if(search) {if(DWORD(now-searchTick)<=RequestInterval) return;searchTick=now;}
+    if(browse || transaction) {if(DWORD(now-actionTick)<=RequestInterval) return;if(browse) actionTick=now;}
     ReadEditors();Request request;request.action=action;request.page=page;request.sessionId=sessionId;
-    if(action==Action::NextPage) {if(page>=pages) return;request.page=page+1;}
-    if(action==Action::PreviousPage) {if(page<=1) return;request.page=page-1;}
+    if(action==Action::NextPage) request.page=page+1;
+    if(action==Action::PreviousPage) request.page=page-1;
     if(action==Action::SearchName) request.query=nameQuery;
     if(action==Action::SearchSeller) request.query=sellerQuery;
     int caption=0,dialog=0;
@@ -337,10 +342,14 @@ void CConsignmentWnd::Activate(ConsignmentLayout::Action action)
     }
     SendRequest(std::move(request));
 }
-void CConsignmentWnd::Confirm(bool accepted)
+void CConsignmentWnd::Confirm(bool accepted,DWORD now)
 {
     if(!confirmationPending) return;
-    if(accepted) SendRequest(std::move(confirmation));
+    if(accepted && confirmation.action==ConsignmentLayout::Action::CancelListing && DWORD(now-actionTick)<=ConsignmentLayout::RequestInterval) accepted=false;
+    if(accepted) {
+        if(confirmation.action==ConsignmentLayout::Action::Buy || confirmation.action==ConsignmentLayout::Action::CancelListing) actionTick=now;
+        SendRequest(std::move(confirmation));
+    }
     confirmationPending=false;
 }
 void CConsignmentWnd::ShowItemHint(POINT point)
@@ -425,4 +434,17 @@ void CConsignmentWnd::SendRequest(Request request)
     const bool registered=request.action==ConsignmentLayout::Action::SubmitRegistration;
     waiting=true;requests.push_back(std::move(request));
     if(registered && m_bActive) g_xGameProc.m_xInterface.WindowActivate(ConsignmentLayout::RegistrationId);
+}
+
+bool CConsignmentWnd::KeyDown(WPARAM key,DWORD now)
+{
+    if(!m_bActive || registration) return false;
+    using namespace ConsignmentLayout;
+    switch(key) {
+    case VK_DOWN:selected=min(selected+1,VisibleRows-1);return true;
+    case VK_UP:selected=max(selected-1,0);return true;
+    case VK_RIGHT:Activate(Action::NextPage,now);return true;
+    case VK_LEFT:Activate(Action::PreviousPage,now);return true;
+    default:return false;
+    }
 }

@@ -2,7 +2,7 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -66,7 +66,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewConsignmentWire) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewConsignmentInput) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1985,7 +1985,7 @@ public:
             capturePath="consignment-wire.bmp";mouse={790,460};
         }
 
-        if(groupPanel>=PreviewConsignmentEmpty && groupPanel<=PreviewConsignmentChecks) {
+        if((groupPanel>=PreviewConsignmentEmpty && groupPanel<=PreviewConsignmentChecks) || groupPanel==PreviewConsignmentInput) {
             using namespace ConsignmentLayout;
             auto& ui=g_xGameProc.m_xInterface;auto& browser=ui.m_xConsignmentWnd;auto& registration=ui.m_xConsignmentRegistration;
             ui.WindowActivate(BrowserId);browser.page=1;browser.pages=3;
@@ -2014,14 +2014,59 @@ public:
             }
             if(groupPanel==PreviewConsignmentBuy) {browser.Activate(Action::Buy);capturePath="consignment-buy.bmp";}
             if(groupPanel==PreviewConsignmentCancel) {browser.Activate(Action::CancelListing);capturePath="consignment-cancel.bmp";}
+            if(groupPanel==PreviewConsignmentInput) {
+                constexpr DWORD StartTick=10001;
+                browser.page=browser.pages=1;
+                browser.Activate(Action::NextPage,StartTick);
+                const bool nextAtEnd=browser.requests.size()==1 && browser.requests.back().action==Action::NextPage;
+                browser.KeyDown(VK_RIGHT,StartTick+RequestInterval);
+                const bool exactBoundary=browser.requests.size()==1;
+                browser.KeyDown(VK_LEFT,StartTick+RequestInterval+1);
+                const bool previousAtStart=browser.requests.size()==2 && browser.requests.back().action==Action::PreviousPage;
+                browser.Activate(Action::SearchName,StartTick+RequestInterval+1);
+                const bool independent=browser.requests.size()==3;
+                browser.Activate(Action::SearchSeller,StartTick+RequestInterval+1);
+                const bool searchBlocked=browser.requests.size()==3;
+                browser.Activate(Action::SearchSeller,StartTick+2*(RequestInterval+1));
+                const bool searchReady=browser.requests.size()==4;
+                browser.selected=0;browser.Activate(Action::Buy,StartTick+2*(RequestInterval+1));
+                ui.OnKeyDown(VK_DOWN,0);const bool modal=ui.m_xMsgBox.IsActive() && browser.selected==0;
+                ui.m_xMsgBox.HideMessageBox();browser.Confirm(false,StartTick+2*(RequestInterval+1));
+                const bool cancelled=browser.requests.size()==4;
+                browser.Activate(Action::Buy,StartTick+2*(RequestInterval+1));
+                const bool retry=ui.m_xMsgBox.IsActive();ui.m_xMsgBox.HideMessageBox();browser.Confirm(true,StartTick+2*(RequestInterval+1));
+                browser.Activate(Action::Buy,StartTick+3*RequestInterval+2);
+                const bool transactionBlocked=browser.requests.size()==5 && !ui.m_xMsgBox.IsActive();
+                for(int i=0;i<VisibleRows+1;++i) ui.OnKeyDown(VK_DOWN,0);
+                const bool bottom=browser.selected==VisibleRows-1;
+                for(int i=0;i<VisibleRows+1;++i) ui.OnKeyDown(VK_UP,0);
+                const bool top=browser.selected==0;
+                browser.Activate(Action::Refresh,0xffffff00u);const auto beforeWrap=browser.requests.size();
+                browser.KeyDown(VK_RIGHT,RequestInterval-256);
+                const bool wrapBoundary=browser.requests.size()==beforeWrap;
+                browser.KeyDown(VK_RIGHT,RequestInterval-255);
+                const bool wrapReady=browser.requests.size()==beforeWrap+1;
+                const auto saved=browser.listings;browser.listings.clear();
+                const POINT emptyRow={browser.m_rcWnd.left+FirstRow.left+1,browser.m_rcWnd.top+FirstRow.top+(VisibleRows-1)*RowHeight+1};
+                const bool emptyHit=browser.RowAt(emptyRow)==VisibleRows-1;
+                browser.selected=VisibleRows-1;const auto beforeEmpty=browser.requests.size();browser.Activate(Action::Buy,StartTick);
+                const bool emptyBuy=browser.requests.size()==beforeEmpty && !ui.m_xMsgBox.IsActive();
+                ui.WindowActivate(BrowserId);
+                const bool closed=!browser.KeyDown(VK_RIGHT,StartTick);
+                ui.WindowActivate(BrowserId);browser.listings=saved;browser.selected=0;
+                const auto beforeReset=browser.requests.size();browser.Activate(Action::Refresh,RequestInterval+1);
+                const bool reset=browser.requests.size()==beforeReset+1;
+                if(FILE* report=fopen("consignment-input-check.txt","wb")) {fprintf(report,"nextAtEnd=%d exactBoundary=%d previousAtStart=%d independent=%d searchBlocked=%d searchReady=%d modal=%d cancelled=%d retry=%d transactionBlocked=%d bottom=%d top=%d wrapBoundary=%d wrapReady=%d closed=%d reset=%d emptyHit=%d emptyBuy=%d\n",nextAtEnd,exactBoundary,previousAtStart,independent,searchBlocked,searchReady,modal,cancelled,retry,transactionBlocked,bottom,top,wrapBoundary,wrapReady,closed,reset,emptyHit,emptyBuy);fclose(report);}
+                browser.selected=VisibleRows-1;capturePath="consignment-keyboard.bmp";
+            }
             if(groupPanel==PreviewConsignmentChecks) {
                 const bool hit=ui.GetWindowInMousePos(POINT{100,100})==BrowserId;
                 SetWindowTextA(browser.edits[0],"装备查询");browser.Activate(Action::SearchName);
                 const bool query=browser.requests.size()==1 && browser.requests.back().query=="装备查询";
                 browser.Activate(Action::NextPage);const bool next=browser.requests.back().page==2 && browser.page==1;
-                browser.Activate(Action::Buy);const bool purchaseModal=ui.m_xMsgBox.IsActive();ui.FinishNotice(CLICK_NO,false);
+                browser.Activate(Action::Buy,GetTickCount()+RequestInterval+1);const bool purchaseModal=ui.m_xMsgBox.IsActive();ui.FinishNotice(CLICK_NO,false);
                 const bool purchaseCancelled=browser.requests.size()==2;
-                browser.sessionId=123;browser.Activate(Action::Buy);browser.sessionId=456;browser.listings[0].price=2000;ui.FinishNotice(CLICK_YES,false);
+                browser.sessionId=123;browser.Activate(Action::Buy,GetTickCount()+RequestInterval+1);browser.sessionId=456;browser.listings[0].price=2000;ui.FinishNotice(CLICK_YES,false);
                 const bool purchaseSnapshot=browser.requests.back().price==1000 && g_xGameProc.m_xMyHero.m_nGlod==50000;
                 browser.Activate(Action::Register);
                 const bool bag=ui.m_xInventoryWnd.m_bActive && registration.m_bActive && ui.IsTopWindow(RegistrationId);
@@ -2658,6 +2703,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=consignment-input")==0 ? PreviewConsignmentInput :
         strcmp(lpCmdLine,"--preview=consignment-wire")==0 ? PreviewConsignmentWire :
         strcmp(lpCmdLine,"--preview=mail-wire")==0 ? PreviewMailWire :
         strcmp(lpCmdLine,"--preview=mail-wire-read")==0 ? PreviewMailWireRead :
