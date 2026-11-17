@@ -1341,3 +1341,18 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - GameProc启用SM_MONSTERSAY1501，统一FindActor分发40/1501；恢复NPC/怪物ShowMessage。不存在角色不生成实体。
 - clean87/87、all109/109；speech14+chat12+guild-history11共37项全1。截图out/speech-single.png、speech-multiline.png、speech-eight.png已查看。预览207/208/209，下一个空闲210。
 - 尚未实服或移动地图中验证；继续GUI完整性审计，勿据此标记全目标完成。
+
+
+### 2026-11-17 服务器公告原生迁移（视觉差异待核对）
+- CNoticeBox从旧资源0改为原版1250/按钮1251、1252，位置131,429；以宋体9pt按4815D0宽324、文字50,115排版，最多21行。移除旧StringDivideLen分配链表及失效背景指针，逐帧重取资源。
+- 658关闭通用提示再显示；活动公告不覆盖；确认由按下发送改为释放或回车1018全零，鼠标点击105.wav。补齐键盘/右键/滚轮/双击模态拦截。回环UDP验证请求。
+- 首次clean因测试CM_NOTICE未定义失败，改为CM_LOGINNOTICEOK后all111/111及最终增量通过。notice11+identity8+chat12共31项全1。
+- 重要待办：截图out/server-notice.png、server-notice-moved.png中长行溢出当前资源内框；原版反编译确实为324px且x+50，暂保留该规则。下一批需核对原版实际运行画面/资源版本，不可宣称公告视觉完全一致。预览210/211，下一个空闲212。
+- IDA旧会话失效，脚本重开同一库当前78ac321b。详情Client/docs/server-notice-evidence.md。
+
+
+### 2026-11-17 公告长行溢出复核
+- 已纠正资源来源：实际ImageHandler第14项GameInter.wil；1250尺寸344x462，1251/1252为84x30。Interface1c的1250为56x52，先前文档来源记错。
+- 原版4815D0确为x+50/宽324px；48BF93直接GetTextExtentPoint32A，48BCAF直接TextOutA，没有内框剪裁或缩放。因此当前素材下的溢出不是遗漏裁剪；保留已确认原版行为，不凭视觉擅改宽度。证据out/server-notice-original-render.c。
+- 资源与原版完整运行画面的最终对应关系仍未实机验收；未改运行代码、未重复测试。复核并入上一公告功能提交。
+- 补充只读IDA会话950bec4e为VB启动器、a507abb4为MyMir3.dll，不是公告实现来源；主参考仍78ac321b。

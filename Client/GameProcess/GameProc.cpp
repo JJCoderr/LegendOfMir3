@@ -1755,6 +1755,7 @@ LRESULT CGameProcess::OnTimer(WPARAM wParam, LPARAM lParam)
 
 LRESULT CGameProcess::OnLButtonDoubleClick(WPARAM wParam, LPARAM lParam)
 {
+    if(m_xNotice.IsActive()) return 0L;
 	m_ptMousePos.x = LOWORD(lParam);
 	m_ptMousePos.y = HIWORD(lParam);
 
@@ -1766,6 +1767,7 @@ LRESULT CGameProcess::OnLButtonDoubleClick(WPARAM wParam, LPARAM lParam)
 
 LRESULT CGameProcess::OnWheel(WPARAM wParam, LPARAM lParam)
 {
+    if(m_xNotice.IsActive()) return 0L;
 	INT nDelta;
 	nDelta = (short)HIWORD(wParam);
 	if ( nDelta > 0 )
@@ -1927,7 +1929,8 @@ LRESULT CGameProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 
 
 LRESULT CGameProcess::OnRButtonDown(WPARAM wParam, LPARAM lParam)
-{	
+{
+    if(m_xNotice.IsActive()) return 0L;
 	m_ptMousePos.x = LOWORD(lParam);
 	m_ptMousePos.y = HIWORD(lParam);
 	m_ptCurrTile.x = m_xMap.m_shStartViewTileX + (m_ptMousePos.x - _VIEW_CELL_X_START) / TILE_WIDTH;
@@ -1966,6 +1969,7 @@ LRESULT CGameProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 
 LRESULT CGameProcess::OnRButtonUp(WPARAM wParam, LPARAM lParam)
 {
+    if(m_xNotice.IsActive()) return 0L;
 	m_ptMousePos.x = LOWORD(lParam);
 	m_ptMousePos.y = HIWORD(lParam);
 	m_ptCurrTile.x = m_xMap.m_shStartViewTileX + (m_ptMousePos.x - _VIEW_CELL_X_START) / TILE_WIDTH;
@@ -1984,6 +1988,10 @@ LRESULT CGameProcess::OnKeyUp(WPARAM wParam, LPARAM lParam)
 
 LRESULT CGameProcess::OnKeyDown(WPARAM wParam, LPARAM lParam)
 {
+    if(m_xNotice.IsActive()) {
+        if(m_xNotice.OnKeyDown(wParam)) m_xNotice.HideMessageBox();
+        return 0L;
+    }
     if (m_xInterface.m_xMsgBox.IsActive()) {
         m_xInterface.OnKeyDown(wParam,lParam);
         return 0L;
@@ -2932,11 +2940,12 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
                 break;
 			case SM_SENDNOTICE:
 			{
-				char szDecodeMsg[8192];
+				char szDecodeMsg[8193];
 
-				nPos = fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), szDecodeMsg, sizeof(szDecodeMsg));
+				nPos = fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), szDecodeMsg, sizeof(szDecodeMsg)-1);
 				szDecodeMsg[nPos] = '\0';
-				m_xNotice.ShowMessageBox(szDecodeMsg, _IDX_IMG_NOTICEBOX);
+				m_xInterface.m_xMsgBox.HideMessageBox();
+                m_xNotice.ShowMessageBox(szDecodeMsg,CNoticeBox::Frame);
 
 				break;
 			}

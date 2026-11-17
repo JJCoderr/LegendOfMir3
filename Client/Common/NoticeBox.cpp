@@ -1,317 +1,92 @@
 #include "stdafx.h"
 
-#define WRITESTRLENTH 50
+BOOL CNoticeBox::Load(CWHWilImageData* source) { image=source;return image!=nullptr; }
+BOOL CNoticeBox::HideMessageBox() { active=false;pressed=false;dragging=false;return FALSE; }
+BOOL CNoticeBox::DestoryMessageBox() { HideMessageBox();lines.clear();image=nullptr;return FALSE; }
 
-#define BTN_POS_X	165
-#define BTN_POS_Y	483
-
-#define _IDX_UP_BTN_IMG			1
-#define _IDX_ON_BTN_IMG			2
-#define _IDX_DOWN_BTN_IMG		3
-
-
-CNoticeBox::CNoticeBox()
+void CNoticeBox::LayoutText(const char* text)
 {
-	m_bActive = FALSE;
-	m_bInited = FALSE;
-	m_bIsSelected = FALSE;
-	m_bSet = FALSE;
-	ZeroMemory(&m_rcWnd,sizeof(RECT));
+    constexpr int Width=324,MaximumRows=21;
+    lines.clear();
+    HDC dc=GetDC(g_xMainWnd.GetSafehWnd());
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font=g_xMainWnd.CreateGameFont(face,9);HGDIOBJ old=SelectObject(dc,font);
+    TEXTMETRICA metrics={};GetTextMetricsA(dc,&metrics);lineHeight=metrics.tmHeight+3;
+    SIZE size={};GetTextExtentPoint32A(dc,text,int(strlen(text)),&size);
+    if(size.cx<=Width) lines.push_back(text);
+    else {
+        std::string row,previous;
+        for(size_t i=0;text[i] && lines.size()<MaximumRows;++i) {
+            if(text[i]=='\n' || text[i]==27) {
+                // 4815D0 retains the previous buffer on consecutive separators.
+                lines.push_back(row.empty()?previous:row);previous=lines.back();row.clear();continue;
+            }
+            row+=text[i];
+            if(static_cast<signed char>(text[i])<0 && text[i+1]) row+=text[++i];
+            GetTextExtentPoint32A(dc,row.data(),int(row.size()),&size);
+            if(size.cx>=Width) {lines.push_back(row);previous=row;row.clear();}
+        }
+        if(!row.empty() && lines.size()<MaximumRows) lines.push_back(row);
+    }
+    SelectObject(dc,old);DeleteObject(font);ReleaseDC(g_xMainWnd.GetSafehWnd(),dc);
 }
 
-BOOL CNoticeBox::Load(CWHWilImageData* pxBtnImage=NULL)
+BOOL CNoticeBox::ShowMessageBox(char* text,int requestedFrame)
 {
-	if(pxBtnImage!=NULL)
-	{
-		// Init Button;
-		m_bSet			=	TRUE;
-		m_pxBtnImage	=	pxBtnImage;
-		m_xMsgBtn.CreateGameBtn(pxBtnImage, _IDX_ON_BTN_IMG, _IDX_DOWN_BTN_IMG, BTN_POS_X,BTN_POS_Y);
-	}
-	else
-	{
-		m_bSet = FALSE;
-	}
-	return m_bSet;
+    if(active) return TRUE;
+    if(!image || !text || !*text || strlen(text)>8191 || !image->NewSetIndex(requestedFrame)) return FALSE;
+    const auto& info=*image->m_lpstNewCurrWilImageInfo;
+    const int width=g_xMainWnd.m_rcWindow.right-g_xMainWnd.m_rcWindow.left;
+    const int height=g_xMainWnd.m_rcWindow.bottom-g_xMainWnd.m_rcWindow.top;
+    bounds={(width-info.shWidth)/2,(height-info.shHeight)/2,(width+info.shWidth)/2,(height+info.shHeight)/2};
+    frame=requestedFrame;LayoutText(text);pressed=dragging=false;active=true;return TRUE;
 }
 
-BOOL CNoticeBox::DestoryMessageBox(VOID)						// DestoryMessage box
+RECT CNoticeBox::ButtonBounds()
 {
-	m_bActive = FALSE;
-	m_bInited = FALSE;
-	m_bSet = FALSE;
-	m_xMsg.ClearAllNodes();
-	return FALSE;
+    if(!image || !image->NewSetIndex(AcceptFrame)) return {};
+    const auto& info=*image->m_lpstNewCurrWilImageInfo;
+    return {bounds.left+131,bounds.top+429,bounds.left+131+info.shWidth,bounds.top+429+info.shHeight};
 }
-
-BOOL CNoticeBox::HideMessageBox(VOID)							// Hide Message box
+HRESULT CNoticeBox::OnButtonDown(POINT point)
 {
-	m_bActive = FALSE;
-	return FALSE;
+    if(!active) return 0;
+    const RECT button=ButtonBounds();pressed=PtInRect(&button,point)!=0;
+    if(pressed) return 1;
+    dragging=PtInRect(&bounds,point)!=0;grab={point.x-bounds.left,point.y-bounds.top};return 0;
 }
-
-CNoticeBox::~CNoticeBox()										// Destructor
+HRESULT CNoticeBox::OnButtonUp(POINT point)
 {
+    const RECT button=ButtonBounds();const bool accepted=active && pressed && PtInRect(&button,point);
+    pressed=dragging=false;
+    if(accepted) {g_xSound.PlayLobbyEffect("105.wav");g_xClientSocket.SendNoticeOK();}
+    return accepted;
 }
-
-BOOL CNoticeBox::SetBoxImage(INT nImageIndex)
+bool CNoticeBox::OnKeyDown(WPARAM key)
 {
-	POINT xSize,xPos;
-	if(m_bSet)
-	{
-		m_pxBtnImage->NewSetIndex(nImageIndex);
-		m_wpData = (WORD*)m_pxBtnImage->m_pbCurrImage;
-		m_shWidth = m_pxBtnImage->m_lpstNewCurrWilImageInfo->shWidth;
-		m_shHeight = m_pxBtnImage->m_lpstNewCurrWilImageInfo->shHeight;
-		xSize.x = g_xMainWnd.m_rcWindow.right - g_xMainWnd.m_rcWindow.left;
-		xSize.y = g_xMainWnd.m_rcWindow.bottom - g_xMainWnd.m_rcWindow.top;
-		xPos.x = (xSize.x - m_shWidth)/2;
-		xPos.y = (xSize.y - m_shHeight)/2;
-
-		SetRect(&m_rcWnd, xPos.x, xPos.y, xPos.x + m_shWidth, xPos.y + m_shHeight);
-	}
-	return m_bSet;
+    if(!active || key!=VK_RETURN) return false;
+    g_xClientSocket.SendNoticeOK();return true;
 }
-
-BOOL CNoticeBox::ShowMessageBox(CHAR* szMsg,INT nImgIndex) // Show	Message box with Initialization
+void CNoticeBox::MoveWnd(POINT point)
 {
-	INT Lenth;
-	if(!m_bActive)
-	{
-		if(SetBoxImage(nImgIndex))
-		{
-			if(ShowMessage(szMsg))
-			{
-				m_xMsg.ClearAllNodes();
-				StringDivideLen(WRITESTRLENTH,Lenth, m_szMsg,&m_xMsg);
-
-				m_xMsgBtn.ChangeRect(m_rcWnd.left + BTN_POS_X, m_rcWnd.top + BTN_POS_Y);
-			}
-			else
-			{
-				m_bActive = FALSE;
-			}
-		}
-		else
-		{
-			m_bActive = FALSE;
-			m_bInited = FALSE;
-		}
-	}
-	return m_bActive;
+    if(active && dragging) OffsetRect(&bounds,point.x-grab.x-bounds.left,point.y-grab.y-bounds.top);
 }
-
-// Message Process
-HRESULT CNoticeBox::OnButtonDown(POINT tpMouse)		// Button Down
+BOOL CNoticeBox::RenderMessageBox(INT)
 {
-	HRESULT hResult=0;
-
-	if(m_xMsgBtn.OnLButtonDown(tpMouse))
-	{
-		g_xClientSocket.SendNoticeOK();
-		hResult = 1;
-	}
-
-	if(!hResult)
-	{
-		if(IsInRect(tpMouse.x,tpMouse.y,m_rcWnd))
-		{
-			m_bGrabbedMousePos.x  = tpMouse.x - m_rcWnd.left;
-			m_bGrabbedMousePos.y  = tpMouse.y - m_rcWnd.top;
-			m_bIsSelected = TRUE;
-			hResult = 0;
-		}
-	}
-
-	return hResult;
-}
-
-HRESULT	CNoticeBox::OnButtonUp(POINT tpMouse)			// Button Up
-{
-	m_bIsSelected = FALSE; 
-	HRESULT hResult=0;
-	if(m_xMsgBtn.OnLButtonUp(tpMouse))
-		hResult = 1; // Here
-	return hResult;
-}
-
-// Render Process
-BOOL CNoticeBox::RenderMessageBox(INT nLoopTIme)							// Render Function
-{
-	INT	nCount;
-
-	if(m_bActive&&m_bInited&&m_bSet)
-	{	
-		g_xMainWnd.DrawWithImageForCompClipRgn( m_rcWnd.left, m_rcWnd.top, m_shWidth, m_shHeight, m_wpData, 800, 600 );
-
-		POINT	xTxtPos;
-		nCount = m_xMsg.GetCounter();
-		m_xMsg.MoveCurrentToTop();
-
-		xTxtPos.x = m_rcWnd.left + 40;
-		xTxtPos.y = m_rcWnd.top	 + 20;
-
-		for(int i = 0 ; i < nCount ; i++)
-		{
-			g_xMainWnd.PutsHan(NULL,xTxtPos.x,xTxtPos.y,RGB(255,255,255),RGB(0,0,0),*m_xMsg.GetCurrentData());
-			xTxtPos.y = xTxtPos.y + 16;	// Line Skip
-
-			m_xMsg.MoveNextNode();
-		}
-		// Draw Button
-		m_xMsgBtn.ShowGameBtn();
-
-		return FALSE;
-	}
-	return TRUE;
-}
-
-VOID CNoticeBox::MoveWnd(POINT ptMouse)					// Move Window
-{
-	if ( m_bActive && m_bIsSelected)
-	{
-		SetRect(&m_rcWnd, ptMouse.x-m_bGrabbedMousePos.x, ptMouse.y-m_bGrabbedMousePos.y,
-				ptMouse.x-m_bGrabbedMousePos.x+m_shWidth, ptMouse.y-m_bGrabbedMousePos.y+m_shHeight);
-		m_xMsgBtn.ChangeRect(m_rcWnd.left + BTN_POS_X, m_rcWnd.top + BTN_POS_Y);
-	}
-	else
-	{
-		m_xMsgBtn.OnMouseMove(ptMouse);
-	}
-}
-
-
-BOOL CNoticeBox::ShowMessage(CHAR* szMsg)		// Show	Message box with Initialization
-{
-	if(SetMsg(szMsg))
-		m_bActive = TRUE;
-	else
-		m_bActive = FALSE;
-
-	return m_bActive;
-}
-
-BOOL CNoticeBox::SetMsg(CHAR* szMsg)				// Init Messages
-{
-	INT nLength;
-	nLength = strlen(szMsg);
-	if(nLength!=0)
-	{
-		ZeroMemory(m_szMsg,MAX_PATH);
-		strcpy(m_szMsg,szMsg);
-		m_bInited = TRUE;
-	}
-	else
-		m_bInited = FALSE;
-
-	return m_bInited;
-}
-
-BOOL CNoticeBox::StringDivideLen(INT nDivideLen, INT& nDividedLine, CHAR* szSrc,CDLList<CHAR*>* m_pxpStr)
-{
-	CHAR* szTmpCheck;
-	CHAR szResult[MAX_PATH];
-
-	INT nStartLen	= 0;
-	INT nEndLen		= 0;
-	INT nResultLen	= 0;
-	INT nWordCheck	= 0;
-
-	nDividedLine = 1;
-
-	if ( szSrc[0] != NULL )
-	{
-		ZeroMemory(szResult,MAX_PATH);
-
-		for ( INT nCnt = 0; nCnt < (INT)strlen(szSrc); nCnt++)
-		{
-			nEndLen = nCnt+1;
-
-			// 读取截至当前部分的字符串。
-			szTmpCheck = szSrc+nStartLen;
-			INT nsLen;
-			nsLen = strlen(szTmpCheck);
-
-			// 当前已读取的部分超出允许宽度时。
-			if (nsLen > nDivideLen )
-			{
-				// 当前如果是 2 字节字符. 
-				if ( szSrc[nEndLen-1] < 0 )
-				{
-					// 如果当前前面的字符不是 2 字节字符
-					if ( !(nWordCheck%2) )
-					{
-						nStartLen += strlen(szTmpCheck)-1;
-						nCnt--;
-						CHAR* pszNewLine;
-						pszNewLine = new CHAR[nResultLen+1];
-						memcpy(pszNewLine,szResult,nResultLen);
-						pszNewLine[nResultLen]=NULL;
-						m_pxpStr->AddNode(pszNewLine);
-						nResultLen = 0;
-						nDividedLine++;
-					}
-					else
-					{
-						nStartLen += strlen(szTmpCheck)-2;
-						nCnt -= 2;
-						CHAR* pszNewLine;
-						pszNewLine = new CHAR[nResultLen];
-						memcpy(pszNewLine,szResult,nResultLen-1);
-						pszNewLine[nResultLen-1]=NULL;
-						m_pxpStr->AddNode(pszNewLine);
-						nResultLen = 0;
-						nDividedLine++;
-						nWordCheck--;
-					}
-				}
-				// 1字节字符. 
-				// 只需考虑到比当前位置往前一个字节的部分即可。
-				else
-				{
-					nStartLen += strlen(szTmpCheck)-1;
-					nCnt--;
-					CHAR* pszNewLine;
-					pszNewLine = new CHAR[nResultLen+1];
-					memcpy(pszNewLine,szResult,nResultLen);
-					pszNewLine[nResultLen]=NULL;
-					m_pxpStr->AddNode(pszNewLine);
-					nResultLen=0;
-					nDividedLine++;
-				}
-			}
-			else if(szSrc[nEndLen-1] == '\n' || szSrc[nEndLen-1] == 0x1B)	// 强制换行     如果用 \n 则 Error ????
-
-			{
-				nStartLen += strlen(szTmpCheck)-1;
-				CHAR* pszNewLine;
-				pszNewLine = new CHAR[nResultLen+1];
-				memcpy(pszNewLine,szResult,nResultLen);
-				pszNewLine[nResultLen]=NULL;
-				m_pxpStr->AddNode(pszNewLine);
-				nResultLen=0;
-				nDividedLine++;
-			}
-			else
-			{
-				if ( szSrc[nEndLen-1] < 0 )
-					nWordCheck++;
-
-				szResult[nResultLen] = szSrc[nEndLen-1];
-				nResultLen++;
-			}
-		}
-		if(nResultLen!=0)
-		{
-			CHAR* pszNewLine;
-			pszNewLine = new CHAR[nResultLen+1];
-			memcpy(pszNewLine,szResult,nResultLen);
-			pszNewLine[nResultLen]=NULL;
-			m_pxpStr->AddNode(pszNewLine);
-			nDividedLine++;
-			nResultLen=0;
-		}
-		return TRUE;
-	}
-	return FALSE;
+    if(!active || !image) return TRUE;
+    const auto draw=[&](int index,int x,int y) {
+        if(!image->NewSetIndex(index)) return;
+        const auto& info=*image->m_lpstNewCurrWilImageInfo;
+        g_xMainWnd.DrawWithImageForCompClipRgn(x,y,info.shWidth,info.shHeight,(WORD*)image->m_pbCurrImage,800,600);
+    };
+    draw(frame,bounds.left,bounds.top);
+    auto* surface=g_xMainWnd.GetBackBuffer();HDC dc;
+    if(SUCCEEDED(surface->GetDC(&dc))) {
+        const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+        HFONT font=g_xMainWnd.CreateGameFont(face,9);HGDIOBJ old=SelectObject(dc,font);SetBkMode(dc,TRANSPARENT);SetTextColor(dc,RGB(255,255,255));
+        for(size_t row=0;row<lines.size();++row) TextOutA(dc,bounds.left+50,bounds.top+115+int(row)*lineHeight,lines[row].data(),int(lines[row].size()));
+        SelectObject(dc,old);DeleteObject(font);surface->ReleaseDC(dc);
+    }
+    draw(pressed?AcceptPressedFrame:AcceptFrame,bounds.left+131,bounds.top+429);
+    return FALSE;
 }
