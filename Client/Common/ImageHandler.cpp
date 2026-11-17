@@ -127,13 +127,14 @@ VOID CImageHandler::LoadAllImage(BOOL bIsMemMapped, BOOL bComp)
 		".\\Data\\MonMagic.wil",							//59
 
 		//~~~ ½Ó¿ÚEX Í¼Ïñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		".\\Data\\interfacec2.wil",							//60
+		nullptr, // Reserved legacy interface slot; native windows use their own image.							//60
 	};
 
 	InitAllImage();
 
 	for ( INT nCnt = 0; nCnt < _MAX_IMAGE; nCnt++ )
-		m_xImageList[nCnt].NewLoad(szFileList[nCnt], bIsMemMapped, bComp);
+        if (szFileList[nCnt])
+		    m_xImageList[nCnt].NewLoad(szFileList[nCnt], bIsMemMapped, bComp);
 }
 
 

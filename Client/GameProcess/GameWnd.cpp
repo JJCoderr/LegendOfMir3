@@ -170,7 +170,7 @@ VOID CGameWnd::SetGameWndActive(BOOL bActive)
 {
 	m_bActive = bActive;
 
-	g_xGameProc.m_xImage.AddTextr(_TEXTR_FILE_INTER, _IMAGE_INTEREX, m_nFrameImgIdx);
+    // Native window frames are drawn directly from m_pxWndImage.
 
 /*	if ( m_bActive )
 	{

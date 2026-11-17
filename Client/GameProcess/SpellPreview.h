@@ -222,16 +222,14 @@ inline void Scene(CGameProcess& game,int mode) {
     for(int i=0;i<(mode==0?9:mode==1?5:3);++i) game.AdvanceNativeSpells(81,game.m_nextNativeSpell);
 }
 inline bool MapScene(CGameProcess& game) {
-    game.ClearNativeSpells();
-    // Load only libraries used by this offline scene; obsolete interfacec2 is not a MIR3 asset.
-    const char* tiles[]={"tilesc","tiles30c","Tiles5c","smtilesc","housesc","cliffsc","dungeonsc",
-        "innersc","furnituresc","wallsc","smobjectsc","animationsc","object1c","object2c"};
-    for(int i=_IMAGE_TILES;i<=_IMAGE_OBJECT2;++i) {
-        const std::string path=std::string("Data/")+tiles[i]+".wil";
-        game.m_xImage.m_xImageList[i].NewLoad(const_cast<char*>(path.c_str()),TRUE,TRUE);
+    game.ClearNativeSpells();game.m_xImage.LoadAllImage();
+    if(FILE* report=fopen("scene-resource-check.txt","wb")) {
+        for(int index=0;index<_MAX_IMAGE;++index) {
+            const bool loaded=game.m_xImage.m_xImageList[index].m_stNewWixImgaeInfo.nIndexCount>0;
+            fprintf(report,"library_%d=%d\n",index,index==_IMAGE_INTEREX?!loaded:loaded);
+        }
+        fclose(report);
     }
-    game.m_xImage.m_xImageList[_IMAGE_M_HUMAN].NewLoad("Data/M-Hum.wil",TRUE,TRUE);
-    game.m_xImage.m_xImageList[_IMAGE_M_HAIR].NewLoad("Data/M-Hair.wil",TRUE,TRUE);
     game.m_xMap.LoadMapImage(&game.m_xImage);
     constexpr WORD HeroX=330,HeroY=270;
     game.m_xMap.SetStartViewTile(HeroX-_GAPX_TILE_CHAR_MAP,HeroY-_GAPY_TILE_CHAR_MAP);

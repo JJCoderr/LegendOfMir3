@@ -1502,3 +1502,10 @@ d7c70bb后核对当前源代码与Godot施法证据。重要纠正：原生74字
 最终同一可执行文件 `out/mud3-01/Mir2Ex-spell-review.exe`：施法76、快捷键34、交易54、装备25、界面音效15，全204项通过；退出守卫/发送/等待30项及回选角本地TCP7项通过，总241项。七目标构建成功；最终预览调整构建 `out/spell-map-build.log` [2/2]实际重新编译链接，基于此前七目标完整构建 `out/spell-queue-build.log` [112/112]。git空白检查通过。退出预览已执行，但未将单独程序退出状态额外计入断言数。
 
 本批以“原生施法动作、特效与空间音效”完整功能统一提交。仍待真实服务器联调、MIR3逐像素与听感验收；原生地图旧资源清单、天气与特效共享随机序列仍有已知差异。整个GUI与服务端接入目标尚未完成。
+
+
+### 正式进场资源加载修复（2026-11-17）
+
+已修复上一批发现的interfacec2缺失提示：CImageHandler::LoadAllImage保留旧索引布局，将不再使用的_IMAGE_INTEREX槽设为nullptr，仅加载真实资源。CGameWnd::SetGameWndActive移除旧三维纹理登记，当前ShowGameWnd使用m_pxWndImage直接二维绘制；其余三维引用位于旧注释代码中。未伪造或复制替代资源。
+
+spell-map预览改用生产LoadAllImage，而非只加载场景子集；60个实际库加载成功，1个废弃槽为空，61项断言通过。实际01.map+人物施法+HUD画面生成out/scene-resources.png，已检查。相同二进制的窗口/快捷键34项通过，共95项。七目标增量构建out/scene-resource-build.log [4/4]成功，git diff --check通过。程序已退出。此证据覆盖正式资源加载和原生窗口开关，不等于真实登录/服务器进场流程已通过。
