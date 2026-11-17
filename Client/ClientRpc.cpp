@@ -180,6 +180,7 @@ std::string ClientState() {
         state += ",\"spell_reply_id\":"+std::to_string(hero.m_lastSpellReplyId)
             +",\"cast_ready\":"+mir3::BoolJson(!game.InputDelayed() && !hero.m_pendingAction &&
                 !hero.m_bMotionLock && !hero.m_bInputLock && hero.m_spellTiming.key_ready(GetTickCount()));
+        state += std::string(",\"attack_ready\":")+mir3::BoolJson(hero.AttackReady());
         const auto& window=game.m_xInterface.m_xSkillWnd;Array skills,shortcuts;
         for(int i=0;i<window.m_bMyMagicCnt;++i) {
             const auto& skill=window.m_pstMyMagic[i];
@@ -346,6 +347,12 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
         const int x=Integer(params,"x"),y=Integer(params,"y");
         if(x<=USHRT_MAX && y<=USHRT_MAX && !g_xGameProc.m_xNotice.IsActive())
             accepted=g_xGameProc.m_xMyHero.WalkAdjacent(POINT{x,y});
+    } else if (method == "combat.attack" && g_bProcState == _GAME_PROC) {
+        const int index=Integer(params,"target");auto& actors=g_xGameProc.m_xActorList;
+        if(index<actors.GetCounter() && !g_xGameProc.m_xNotice.IsActive()) {
+            actors.MoveCurrentToTop();for(int i=0;i<index;++i) actors.MoveNextNode();
+            accepted=g_xGameProc.m_xMyHero.AttackAdjacent(*actors.GetCurrentData());
+        }
     } else if (method == "skill.cast" && g_bProcState == _GAME_PROC) {
         const int key=Integer(params,"key");
         if(params.contains("target")) {

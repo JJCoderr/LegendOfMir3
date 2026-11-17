@@ -22,5 +22,5 @@ public:
 	__inline UINT GetCurPushPos() { return m_btQPushPos; }
 	__inline UINT GetCurPopPos() { return m_btQPopPos; }
 
-	__inline UINT GetCount() { return m_btCount; }
+	__inline UINT GetCount() const { return m_btCount; }
 };

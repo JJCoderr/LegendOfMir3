@@ -1041,6 +1041,8 @@ VOID CActor::OnDigDown(LPPACKETMSG lpPacketMsg)
 
 VOID CActor::OnDeath(LPPACKETMSG lpPacketMsg)
 {
+    m_wHP=0;
+    m_bHPPercent=0;
 	BYTE bDir;
 	m_wPosX = lpPacketMsg->stDefMsg.wParam;
 	m_wPosY = lpPacketMsg->stDefMsg.wTag;
@@ -2687,6 +2689,8 @@ bool CHero::AdvanceForcedMotion(DWORD elapsed)
 
 VOID CHero::OnDeath(LPPACKETMSG lpPacketMsg)
 {
+    m_wHP=0;
+    m_bHPPercent=0;
     m_forcedMotion.reset();
 	BYTE bDir;
 	m_wPosX = lpPacketMsg->stDefMsg.wParam;
@@ -5080,10 +5084,7 @@ BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* l
 				if ( m_stFeatureEx.bHorse == _HORSE_NONE && !bIsDead )
 				{
 					// ½øĞĞ¹¥»÷.
-					ptTargetTile.x = m_wPosX;
-					ptTargetTile.y = m_wPosY;
-					bDir = CalcDirection(lpptTargetPos->x, lpptTargetPos->y);
-					SetMotionState(_MT_ONEHSWING, bDir, nTargetID, bIsDead, &ptTargetTile);
+                    if(auto* target=g_xGameProc.FindActor(nTargetID)) AttackAdjacent(*target);
 
 				}
 			}
@@ -5416,6 +5417,23 @@ VOID CMyHero::SetMagic(LPCLIENTMAGICRCD pstMagic, BYTE bKeyNum, BYTE bDir, INT n
     m_wMagicPKDelayTime=WORD(m_spellTiming.movement_delay);
 }
 
+
+bool CMyHero::AttackReady() const {
+    return !g_xGameProc.InputDelayed() && !m_pendingAction && !m_bMotionLock && !m_bInputLock &&
+        !m_bIsDead && !m_wABlendDelay && !m_spellAwaitingReply && !m_xPacketQueue.GetCount() &&
+        m_stFeatureEx.bHorse==_HORSE_NONE && DWORD(GetTickCount()-m_dwLastHitTime)>AttackInterval();
+}
+
+bool CMyHero::AttackAdjacent(CActor& target) {
+    if(!AttackReady() || target.m_bIsDead) return false;
+    const int dx=abs(int(target.m_wPosX)-m_wPosX),dy=abs(int(target.m_wPosY)-m_wPosY);
+    if((!dx && !dy) || dx>1 || dy>1) return false;
+    if(target.m_stFeature.bGender<2 &&
+        !g_xGameProc.m_xInterface.m_xOptionWnd.CanAttackHuman(target.m_dwNameClr,false)) return false;
+    POINT position{m_wPosX,m_wPosY};
+    SetMotionState(_MT_ONEHSWING,CalcDirection(target.m_wPosX,target.m_wPosY),target.m_dwIdentity,FALSE,&position);
+    return true;
+}
 
 bool CMyHero::WalkAdjacent(POINT destination) {
     if(g_xGameProc.InputDelayed() || m_pendingAction || m_bMotionLock || m_bInputLock || m_bIsDead ||

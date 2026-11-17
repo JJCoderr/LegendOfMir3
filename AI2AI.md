@@ -2418,3 +2418,12 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 新 SkillsTrainingLevel 预置可施放技能但角色等级不满足继续修炼条件；仍能扣蓝击杀，修炼值保持99、无 SM_MAGIC_LVEXP，保存重进一致。
 - EIServer Release 构建通过。上述5场景33+33+33+28+27，正常 SkillsLearning31、InventoryFull46，总计231项通过，日志 out/csv-validation/save-boundary-*。CSV表头/编号校验通过。
 - 保存失败仍无新客户端提示，回到选角后加载原存档；当前验证后端为SQLite，未验证ODBC触发器/运行行为。未扩展SQL名字转义、其他保存故障或所有技能条件。
+
+
+## 2026-11-18 普通近战 RPC 与死亡血量
+
+- 新增 combat.attack(target=actors 零基下标)，复用鼠标邻格普通攻击入口；保留攻击间隔、动作队列、骑乘、死亡、距离及普通玩家攻击限制。state.get 增加 attack_ready；不自动追赶或强制攻击。
+- 实测先造成 1 点伤害、再击杀 2 HP 怪物时，客户端 dead=true 但 hp 仍为 1；死亡处理此前没有清零。CActor/CHero 的 OnDeath 现在清零 HP 与血条比例。
+- Test/Combat/CombatMelee.csv 及同名 fixture 覆盖无效目标、连续攻击拒绝、两次伤害、死亡/经验、恰好两次 CM_HIT、SM_STRUCK/SM_NOWDEATH。1 级战士、怪物闪避 1、无防御，未改变运行时随机算法。
+- Client Release 构建通过；近战 27、全链路双向分片近战 27、魔法战斗回归 24，共 78 项通过。日志 out/csv-validation/combat-melee-fixed.log、combat-melee-fragments/test.log、combat-melee-magic-regression.log；失败复现 combat-melee-two-hit.log。
+- 当前未验证玩家对战、全部特殊近战技能与变身攻击；总体客户端/服务端适配目标继续。
