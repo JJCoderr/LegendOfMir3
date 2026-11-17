@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../Def/GeneralItemKey.h"
 #include "MagicWire.h"
 
 void UpdateStatusBarUsers(BOOL fGrow);
@@ -142,8 +143,7 @@ void CUserInfo::AddNewItem(char *pszItemName)
 				{
 //					lptGenItemRcd->szStdType	= g_pStdItemEtc[i].m_btType;
 					lptGenItemRcd->nStdIndex	= i;
-					lptGenItemRcd->nDura		= g_pStdItemEtc[i].wDuraMax;
-					lptGenItemRcd->nDuraMax		= g_pStdItemEtc[i].dwRSource;
+					g_pStdItemEtc[i].InitDurability(lptGenItemRcd);
 
 					MakeGenItem(lptGenItemRcd);
 				}
@@ -161,7 +161,7 @@ void CUserInfo::MakeGenItem(_LPTGENERALITEMRCD lptGenItemRcd)
 		// Make Item on Server
 		_TGENITEMRCD		GenItemRcd;
 
-		sprintf(GenItemRcd.szItem, "G%03d%04d%04d", lptGenItemRcd->nStdIndex, lptGenItemRcd->nDura, lptGenItemRcd->nDuraMax);
+		GeneralItemKey::Encode(GenItemRcd.szItem, lptGenItemRcd->nStdIndex, lptGenItemRcd->nDura, lptGenItemRcd->nDuraMax);
 
 		memcpy(lptGenItemRcd->szMakeIndex, GenItemRcd.szItem, 12);
 
@@ -373,7 +373,6 @@ int CUserInfo::EncodeGenItem(char *pszEncodeMsg, int nBuffSize, int& nPos)
 	{
 		_LPTGENERALITEMRCD	lptGenItemRcd;
 		_TGENITEMRCD		GenItemRcd;
-		TCHAR				wszItem[13];
 
 		PLISTNODE pListNode = m_lpTGenItemRcd.GetHead();
 
@@ -383,8 +382,7 @@ int CUserInfo::EncodeGenItem(char *pszEncodeMsg, int nBuffSize, int& nPos)
 
 			if (lptGenItemRcd)
 			{
-				wsprintf(wszItem, _TEXT("G%03d%04d%04d"), lptGenItemRcd->nStdIndex, lptGenItemRcd->nDura, lptGenItemRcd->nDuraMax);
-				WideCharToMultiByte(CP_ACP, 0, wszItem, -1, GenItemRcd.szItem, sizeof(GenItemRcd.szItem), NULL, NULL);
+				GeneralItemKey::Encode(GenItemRcd.szItem, lptGenItemRcd->nStdIndex, lptGenItemRcd->nDura, lptGenItemRcd->nDuraMax);
 
 				nPos +=	fnEncode6BitBufA((unsigned char *)&GenItemRcd, pszEncodeMsg + nPos, sizeof(_TGENITEMRCD), nBuffSize - nPos);
 
@@ -465,32 +463,20 @@ BOOL CUserInfo::AllowFireHitSkill()
 
 int CUserInfo::GetGenItemStdIdx(char *pszMakeIndex)
 {
-	char	szStdIdx[5];
-
-	ZeroMemory(szStdIdx, sizeof(szStdIdx));
-	memmove(szStdIdx, &pszMakeIndex[1], 3);
-
-	return AnsiStrToVal(szStdIdx);
+    GeneralItemKey::Fields fields;
+    return GeneralItemKey::Decode(pszMakeIndex,fields) ? fields.standard : -1;
 }
 
 int CUserInfo::GetGenItemVal1(char *pszMakeIndex)
 {
-	char	szVal1[5];
-
-	ZeroMemory(szVal1, sizeof(szVal1));
-	memmove(szVal1, &pszMakeIndex[4], 4);
-
-	return AnsiStrToVal(szVal1);
+    GeneralItemKey::Fields fields;
+    return GeneralItemKey::Decode(pszMakeIndex,fields) ? fields.durability : -1;
 }
 
 int CUserInfo::GetGenItemVal2(char *pszMakeIndex)
 {
-	char	szVal2[5];
-
-	ZeroMemory(szVal2, sizeof(szVal2));
-	memmove(szVal2, &pszMakeIndex[8], 4);
-
-	return AnsiStrToVal(szVal2);
+    GeneralItemKey::Fields fields;
+    return GeneralItemKey::Decode(pszMakeIndex,fields) ? fields.maximum : -1;
 }
 
 int CUserInfo::CalcBagWeight()

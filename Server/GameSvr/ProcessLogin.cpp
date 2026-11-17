@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../Def/GeneralItemKey.h"
 
 CMirMap* GetMap(char *pszMapName);
 
@@ -100,7 +101,6 @@ BOOL LoadPlayer(CReadyUserInfo2* pReadyUserInfo, CUserInfo* pUserInfo)
 			pUserInfo->m_nNumOfGenItems = pReadyUserInfo->m_nNumOfGenItem;
 
 			_TGENITEMRCD	GenItemRcd;
-			char			szVal[5];						
 
 			for (int i = 0; i < pReadyUserInfo->m_nNumOfGenItem; i++)
 			{
@@ -112,14 +112,13 @@ BOOL LoadPlayer(CReadyUserInfo2* pReadyUserInfo, CUserInfo* pUserInfo)
 					
 					memcpy(lptGenItemRcd->szMakeIndex, GenItemRcd.szItem, 12);
 
-					ZeroMemory(szVal, sizeof(szVal));
-
-					memcpy(szVal, &lptGenItemRcd->szMakeIndex[1], 3);
-					lptGenItemRcd->nStdIndex	= AnsiStrToVal(szVal);
-					memcpy(szVal, &lptGenItemRcd->szMakeIndex[4], 4);
-					lptGenItemRcd->nDura		= AnsiStrToVal(szVal);
-					memcpy(szVal, &lptGenItemRcd->szMakeIndex[8], 4);
-					lptGenItemRcd->nDuraMax		= AnsiStrToVal(szVal);
+					GeneralItemKey::Fields fields;
+					if (!GeneralItemKey::Decode(lptGenItemRcd->szMakeIndex,fields)) {
+					    delete lptGenItemRcd; pszData += GENITEMRCDBLOCKSIZE; continue;
+					}
+					lptGenItemRcd->nStdIndex = fields.standard;
+					lptGenItemRcd->nDura = fields.durability;
+					lptGenItemRcd->nDuraMax = fields.maximum;
 
 					pUserInfo->m_lpTGenItemRcd.AddNewNode(lptGenItemRcd);
 			

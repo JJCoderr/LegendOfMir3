@@ -43,6 +43,10 @@ class CStdItem : public CItem
 {
 public:
     WORD wStandardDurability{}; // Independent of legacy Val1/Val2 potion effects.
+    void InitDurability(_LPTGENERALITEMRCD item) const {
+        item->nDura = wStandardDurability ? wStandardDurability : wDuraMax;
+        item->nDuraMax = wStandardDurability ? wStandardDurability : dwRSource;
+    }
 	CStdItem() {};
 
 	virtual		void GetStandardItem(_LPTCLIENTITEMRCD lpClientItemRcd);

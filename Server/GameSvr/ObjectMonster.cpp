@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../Def/GeneralItemKey.h"
 
 BYTE g_SpitMap[8][5][5] = {
 							{	{0, 0, 1, 0, 0},     //DR_UP
@@ -490,7 +491,7 @@ void CMonsterObject::MakeGenItem(_LPTGENERALITEMRCD lptGenItemRcd)
 {
 	_TGENITEMRCD		GenItemRcd;
 
-	sprintf(GenItemRcd.szItem, "G%03d%04d%04d", lptGenItemRcd->nStdIndex, lptGenItemRcd->nDura, lptGenItemRcd->nDuraMax);
+	GeneralItemKey::Encode(GenItemRcd.szItem, lptGenItemRcd->nStdIndex, lptGenItemRcd->nDura, lptGenItemRcd->nDuraMax);
 
 	memcpy(lptGenItemRcd->szMakeIndex, GenItemRcd.szItem, 12);
 
@@ -528,8 +529,7 @@ void CMonsterObject::MonGetRandomItems()
             case _ITEM_ETC: {
                 auto* item = new _TGENERALITEMRCD{};
                 item->nStdIndex = drop->m_wItemIndex;
-                item->nDura = g_pStdItemEtc[item->nStdIndex].wDuraMax;
-                item->nDuraMax = g_pStdItemEtc[item->nStdIndex].dwRSource;
+                g_pStdItemEtc[item->nStdIndex].InitDurability(item);
                 MakeGenItem(item);
                 break;
             }

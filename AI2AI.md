@@ -2266,3 +2266,12 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 实测发现Client SetMir3Item此前未把收到的标准耐久写入本地物品结构，现补读38偏移。RPC/调试物品记录增加mode、standard_durability、durability、max_durability。
 - 新增InventoryStandardDurability/InventoryLegacyStandard，两者验证标准耐久1/65535（旧表0）与实例8000、4000/8000独立，真实怪物受伤后药水按FLD_VAL1恢复满血、保存重登保留实例属性。Client/EIServer Release构建通过；这两项及Inventory、InventoryDuplicates、ShopSell、MonstersLoot共6场景253步通过，日志out/csv-validation/standard-*.log。
 - 本轮未改生成/计价。新发现普通实例键G%03d%04d%04d写入13字节，耐久10000超出四位槽；须先统一扩展生成/保存/读取编码，不能把高标准耐久直接套到旧格式。SQL Server运行时、堆叠和耐久折价仍未验证/实现。
+
+
+## 普通物品高耐久生成与12字节扩展存档
+
+- 新增Def/GeneralItemKey.h：保留G+3/4/4位十进制旧键，超过旧槽时使用G~+十位base32承载标准索引/当前耐久/最大耐久三个16位值。身份长度、DBSvr字符串传输、SQL列宽与客户端实例ID不变；这是本工程内部扩展格式，旧GameSvr不支持读取扩展记录。
+- 普通物品生成、存档、两条角色读取路径及GetGenItem索引/属性解析统一用编解码器。CStdItem.InitDurability供购买、怪物掉落、AddNewItem共用：非零标准耐久生成满耐久，0沿用旧初值；回购覆盖回收记录保留原属性。
+- Test/Inventory/GeneralItemKey.cpp测试新旧黄金键、196608组完整16位字段往返、缓冲区哨兵和错误字符/高位拒绝；EIServer和test_general_item_key Release构建通过。
+- 新增ShopSellHighDurability（54步）、MonstersHighDurability（46步）、InventoryHighDurability（38步），验证10000新商品、65000/65535回购、1007标准索引掉落/使用、蜡烛穿脱及装备引用保存、丢弃/拾取和保存重登。装备槽2沿用FLD_LEFTHAND_ID列名。
+- 加上旧存档/同名实例、标准耐久、旧表、保存失败、出售和掉落回归，共9场景354步通过，日志out/csv-validation/key-*.log。编码说明Test/Inventory/general-item-key.md。SQL Server和管理命令发物品未实测；耐久报价/堆叠/完整装备交易仍待完成。

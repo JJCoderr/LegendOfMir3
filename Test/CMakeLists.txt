@@ -4,3 +4,5 @@ target_compile_definitions(Test PRIVATE NOMINMAX PICOJSON_USE_INT64)
 target_compile_options(Test PRIVATE /utf-8)
 target_link_libraries(Test PRIVATE mir_sqlite)
 set_target_properties(Test PROPERTIES DEBUG_POSTFIX "")
+
+add_executable(test_general_item_key EXCLUDE_FROM_ALL Inventory/GeneralItemKey.cpp)

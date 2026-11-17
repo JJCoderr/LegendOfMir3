@@ -301,8 +301,7 @@ void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity)
         for (int i=0; i<quantity; ++i) {
             auto* record = new _TGENERALITEMRCD{};
             record->nStdIndex = good.standard;
-            record->nDura = item.wDuraMax;
-            record->nDuraMax = item.dwRSource;
+            item.InitDurability(record);
             if (good.stock-i<=int(good.returnedItems.size())) {
                 *record = good.returnedItems.front();
                 good.returnedItems.erase(good.returnedItems.begin());

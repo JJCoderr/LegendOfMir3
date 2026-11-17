@@ -216,4 +216,4 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 客户端state.get的bag/equipment/held_item物品记录增加`mode`、`standard_durability`、`durability`、`max_durability`，来自实际接收的物品属性。`Inventory/InventoryStandardDurability.csv`验证标准耐久1/65535与实例耐久8000、4000/8000互相独立；真实怪物造成伤害后使用药水，确认按药效恢复满血，再保存重登检查剩余物品。`Inventory/InventoryLegacyStandard.csv`删除新列后运行同样流程，确认旧数据库回退标准耐久0而不影响药效或实例属性。
 
-本阶段未改普通物品生成和耐久报价。旧实例键的四位十进制耐久槽无法容纳10000，需要后续扩展保存格式，不能直接把新的高标准耐久套入旧生成路径。
+普通物品生成现已使用非零标准耐久，标准耐久为0时保留旧初值规则。12字节实例键增加G~扩展格式，支持完整16位字段；新旧存档兼容及业务覆盖见[普通物品实例键](Inventory/general-item-key.md)。耐久报价仍待接入。
