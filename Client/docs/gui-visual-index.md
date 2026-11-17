@@ -165,3 +165,8 @@ out/guild-add/guild-add-member.png、guild-add-denied.png、guild-add-member-fil
 ## 坐骑延迟交互截图
 
 out/input-delay/mount-input-delay.png、mount-delay-dialog.png：坐骑命令后的面板、延迟期间仍可操作的通用输入弹窗。计时边界以input-delay-migration-audit.md及报告验证，静态截图不代替时间测试。
+
+
+## 金币和堆叠丢弃金额/数量框
+
+out/gold-drop的gold-held、gold-drop-dialog、gold-drop-filled，以及out/item-drop的item-drop-dialog、item-drop-filled均已有实际运行PNG并查看。后者包含弹窗上方手持图标。参见gold-drop-dialog-migration-audit.md与item-drop-dialog-migration-audit.md；没有改写旧110图基线。

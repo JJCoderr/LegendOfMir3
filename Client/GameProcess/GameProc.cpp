@@ -3,6 +3,7 @@
 #include "Common/ChatLog.h"
 #include "Common/ChatCommandIds.h"
 #include "GoldDrop.h"
+#include "ItemDrop.h"
 #include "EffectRenderer.h"
 #include "SpellSpriteRenderer.h"
 #include "WeatherRenderer.h"
@@ -1847,8 +1848,7 @@ LRESULT CGameProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 		// 1. 掉落物品。
 		if ( m_xInterface.m_stCommonItem.bSetted && !m_xInterface.m_stCommonItem.bWaitResponse && !m_xInterface.m_stCommonItem.bIsEquipItem && m_xInterface.m_xQuickWnd.heldSlot<0 && m_xInterface.m_xExchangeWnd.pendingSlot<0 )
 		{
-			g_xClientSocket.SendItemIndex(CM_DROPITEM, m_xInterface.m_stCommonItem.xItem.m_stItemInfo.nMakeIndex, m_xInterface.m_stCommonItem.xItem.m_stItemInfo.stStdItem.szName);
-			m_xInterface.m_stCommonItem.bWaitResponse = TRUE;
+			m_xInterface.m_xInventoryWnd.RequestDrop();
 			return 0L;
 		}
 
@@ -2944,7 +2944,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
             case SM_SENDUSEITEMS:
                 m_xInterface.m_xStatusWnd.ReceiveEquipmentRecords(pszMsg+DEFBLOCKSIZE);
                 break;
-            case 1313: // MIR3 SM_INVENTITEM: header-only stack quantity update.
+            case ItemDrop::RemainingReply: // MIR3 SM_INVENTITEM: header-only stack quantity update.
                 if(!pszMsg[DEFBLOCKSIZE]) m_xInterface.m_xInventoryWnd.UpdateStackCount(tdm.nRecog,tdm.wParam);
                 break;
 			case SM_ADDITEM:
@@ -3286,49 +3286,10 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
                 m_xInterface.m_xStoreWnd.Receive(tdm,pszMsg+DEFBLOCKSIZE);
 				break;
 			}
-			case SM_DROPITEM_SCCESS: 
-			{
-				CHAR	pszItemName[15];
-				if (m_xInterface.m_stCommonItem.bWaitResponse )
-				{
-					if ( m_xInterface.m_stCommonItem.bSetted && m_xInterface.m_stCommonItem.xItem.m_stItemInfo.nMakeIndex == tdm.nRecog )
-					{
-						nPos = fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), (char*)pszItemName, sizeof(pszItemName));
-						pszItemName[nPos] = '\0';
-
-						if ( !strcmp(pszItemName, m_xInterface.m_stCommonItem.xItem.m_stItemInfo.stStdItem.szName) )
-						{
-							ZeroMemory(&m_xInterface.m_stCommonItem, sizeof(COMMONITEMSET));
-						}
-					}
-					m_xInterface.m_stCommonItem.bWaitResponse = FALSE;
-				}
-				break;
-			}
-			case SM_DROPITEM_FAIL:
-			{
-				// 重新放回背包.
-				CHAR	pszItemName[15];
-				if (m_xInterface.m_stCommonItem.bWaitResponse )
-				{
-					if ( m_xInterface.m_stCommonItem.bSetted && m_xInterface.m_stCommonItem.xItem.m_stItemInfo.nMakeIndex == tdm.nRecog )
-					{
-						nPos = fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), (char*)pszItemName, sizeof(pszItemName));
-						pszItemName[nPos] = '\0';
-
-						if ( !strcmp(pszItemName, m_xInterface.m_stCommonItem.xItem.m_stItemInfo.stStdItem.szName) )
-						{
-							if ( !m_xInterface.m_stCommonItem.bIsBeltItem )
-								m_xInterface.m_xInventoryWnd.AddInvenItem(m_xInterface.m_stCommonItem.xItem, m_xInterface.m_stCommonItem.xItem.m_shCellNum, TRUE);
-							else
-								m_xInterface.m_xInventoryWnd.AddBeltItem(m_xInterface.m_stCommonItem.xItem, m_xInterface.m_stCommonItem.xItem.m_shCellNum, TRUE);
-							ZeroMemory(&m_xInterface.m_stCommonItem, sizeof(COMMONITEMSET));
-						}
-					}
-					m_xInterface.m_stCommonItem.bWaitResponse = FALSE;
-				}
+            case SM_DROPITEM_SCCESS:
+            case SM_DROPITEM_FAIL:
+                m_xInterface.m_xInventoryWnd.ReceiveDrop(tdm,pszMsg+DEFBLOCKSIZE);
                 break;
-			}
             case SM_DURACHANGE:
                 m_xInterface.m_xStatusWnd.UpdateDurability(tdm.wParam,tdm.nRecog,tdm.wTag);
                 break;

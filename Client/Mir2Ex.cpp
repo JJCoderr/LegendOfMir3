@@ -7,6 +7,7 @@
 #include "GameProcess/EquipmentActionIds.h"
 #include "GameProcess/TradeWire.h"
 #include "GameProcess/GoldDrop.h"
+#include "GameProcess/ItemDrop.h"
 #include "GameProcess/SpellPreview.h"
 #include "GameProcess/GroundItemPreview.h"
 #include "GameProcess/LightingPreview.h"
@@ -1226,6 +1227,61 @@ public:
                 fprintf(report,"amount=%d left_scroll=%d right_scroll=%d released=%d stray=%d pending_blocked=%d outside_release=%d body_no_drag=%d header_drag=%d confirmed=%d\n",
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
+        }
+        if(groupPanel==333 || groupPanel==334) {
+            auto& game=g_xGameProc;auto& ui=game.m_xInterface;auto& bag=ui.m_xInventoryWnd;auto& held=ui.m_stCommonItem;
+            FILE* report=fopen("item-drop-check.txt","wb");const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+            game.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            if(!bag.m_bActive) ui.WindowActivate(_WND_ID_INVENTORY);game.StartInputDelay(0);game.m_bRender=TRUE;
+            CItem item;CLIENTITEMRCD record={};record.nMakeIndex=12345;record.stStdItem.wLooks=75;strcpy(record.stStdItem.szName,"≤‚ ‘“©∆∑");item.SetItem(record,0);item.m_stackMode=2;item.SetCount(30);
+            const auto reset=[&](){bag.DeleteAllInvenItem();bag.m_pendingDrop=ITEMSET{};held=COMMONITEMSET{};held.bSetted=TRUE;held.xItem=item;};
+            const auto capture=[&](const auto& action,int opcode,int quantity) {
+                SOCKET receiver=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP),sender=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);
+                bind(receiver,(sockaddr*)&address,sizeof(address));int size=sizeof(address);getsockname(receiver,(sockaddr*)&address,&size);connect(sender,(sockaddr*)&address,sizeof(address));DWORD timeout=30;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));
+                const SOCKET saved=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;const DWORD before=GetTickCount();action();const DWORD after=GetTickCount();g_xClientSocket.m_sockClient=saved;
+                char wire[512]={},extra[512]={};const int length=recv(receiver,wire,sizeof(wire),0);const bool single=recv(receiver,extra,sizeof(extra),0)==SOCKET_ERROR;closesocket(sender);closesocket(receiver);
+                if(!opcode) return length==SOCKET_ERROR;
+                if(length<=DEFBLOCKSIZE+3) return false;_TDEFAULTMESSAGE packet={};fnDecodeMessage(&packet,wire+2);char name[64]={};wire[length-1]=0;fnDecode6BitBuf(wire+2+DEFBLOCKSIZE,name,sizeof(name)-1);
+                const DWORD tick=DWORD(packet.wParam)|(DWORD(packet.wTag)<<16);
+                return single && packet.wIdent==opcode && packet.nRecog==12345 && !packet.wSeries && !strcmp(name,item.Name()) &&
+                    (opcode==CM_DROPITEM?(tick-before<=after-before):(!packet.wParam && packet.wTag==quantity));
+            };
+            const auto open=[&](){game.OnLButtonDown(0,MAKELPARAM(400,200));};
+            const auto submit=[&](const char* text){SetWindowTextA(g_xChatEditBox.GetSafehWnd(),text);SendMessage(g_xChatEditBox.GetSafehWnd(),WM_CHAR,VK_RETURN,0);};
+            reset();check("open_no_packet",capture(open,0,0));CLoginMessages captions;captions.Load("./CmList.dat");
+            check("prompt_and_focus",ui.HasInputDialog() && ui.m_nIdxMsgBox==ItemDrop::Dialog && captions.Get(ItemDrop::Prompt)==ui.m_xMsgBox.Text() && GetFocus()==g_xChatEditBox.GetSafehWnd());
+            check("cancel_no_packet",capture([&](){ui.FinishNotice(CLICK_NO,false);},0,0));check("cancel_preserves_held",held.bSetted && held.xItem.m_count==30 && !bag.m_pendingDrop.bSetted);
+            bool invalid=true;for(const char* value:{"0","-1","31","invalid"}) {open();invalid &= capture([&](){submit(value);},0,0) && held.bSetted && held.xItem.m_count==30;}
+            check("invalid_preserves_held",invalid);
+            open();check("partial_single_packet",capture([&](){submit("12");},ItemDrop::StackRequest,12));
+            check("partial_original_returned",!held.bSetted && !bag.m_pendingDrop.bSetted && bag.m_stInventoryItem[0].bSetted && bag.m_stInventoryItem[0].xItem.m_count==30);
+            _TDEFAULTMESSAGE update={};fnMakeDefMessage(&update,ItemDrop::RemainingReply,12345,18,0,0);char encoded[64]={};fnEncodeMessage(&update,encoded,sizeof(encoded));game.OnSocketMessageRecieve(encoded);
+            check("server_updates_remaining",bag.m_stInventoryItem[0].xItem.m_count==18);
+            reset();open();check("empty_full_packet",capture([&](){submit("");},ItemDrop::StackRequest,30));check("full_pending_not_held",!held.bSetted && bag.m_pendingDrop.bSetted);
+            check("pending_blocks_repeat",capture([&](){held.bSetted=TRUE;held.xItem=item;bag.RequestDrop();},0,0) && !ui.HasInputDialog());held=COMMONITEMSET{};
+            _TDEFAULTMESSAGE reply={};fnMakeDefMessage(&reply,SM_DROPITEM_FAIL,12346,0,0,0);char body[64]={};fnEncode6BitBuf((BYTE*)item.Name(),body,int(strlen(item.Name())),sizeof(body));
+            bag.ReceiveDrop(reply,body);check("unmatched_failure_keeps_pending",bag.m_pendingDrop.bSetted);
+            reply.nRecog=12345;bag.ReceiveDrop(reply,body);check("failure_restores_bag",!bag.m_pendingDrop.bSetted && bag.m_stInventoryItem[0].bSetted && bag.m_stInventoryItem[0].xItem.m_count==30);
+            reset();open();check("asterisk_full_packet",capture([&](){submit("*");},ItemDrop::StackRequest,30));fnMakeDefMessage(&reply,SM_DROPITEM_SCCESS,0,0,0,0);fnEncodeMessage(&reply,encoded,sizeof(encoded));game.OnSocketMessageRecieve(encoded);
+            check("header_only_success_clears",!bag.m_pendingDrop.bSetted && !held.bSetted);
+            reset();held.xItem.SetCount(150);open();check("quantity_capped_100",capture([&](){submit("*");},ItemDrop::StackRequest,100) && bag.m_stInventoryItem[0].xItem.m_count==150);
+            reset();for(auto& slot:bag.m_stInventoryItem) slot.bSetted=TRUE;open();check("full_bag_partial_no_packet",capture([&](){submit("12");},0,0) && held.bSetted && held.xItem.m_count==30);
+            reset();held.xItem.m_stackMode=0;held.xItem.SetCount(1);check("ordinary_clock_packet",capture(open,CM_DROPITEM,0) && bag.m_pendingDrop.bSetted && !held.bSetted);
+            for(auto& slot:bag.m_stInventoryItem) slot.bSetted=TRUE;fnMakeDefMessage(&reply,SM_DROPITEM_FAIL,12345,0,0,0);bag.ReceiveDrop(reply,body);
+            check("full_bag_failure_restores_held",held.bSetted && !bag.m_pendingDrop.bSetted);
+            reset();open();check("numeric_prefix_packet",capture([&](){submit(" 12items");},ItemDrop::StackRequest,12));
+            check("closed_enter_no_repeat",capture([&](){SendMessage(g_xChatEditBox.GetSafehWnd(),WM_CHAR,VK_RETURN,0);},0,0));
+            reset();open();capture([&](){submit("*");},ItemDrop::StackRequest,30);
+            fnMakeDefMessage(&reply,SM_DROPITEM_SCCESS,0,0,0,0);check("success_with_body_rejected",!bag.ReceiveDrop(reply,body) && bag.m_pendingDrop.bSetted);
+            fnMakeDefMessage(&reply,SM_DROPITEM_FAIL,12345,0,0,0);char other[64]={};fnEncode6BitBuf((BYTE*)"other",other,5,sizeof(other));bag.ReceiveDrop(reply,other);
+            check("wrong_name_keeps_pending",bag.m_pendingDrop.bSetted);
+            check("empty_failure_rejected",!bag.ReceiveDrop(reply,"") && bag.m_pendingDrop.bSetted);
+            for(auto& slot:bag.m_stInventoryItem) slot.bSetted=TRUE;held.bSetted=TRUE;held.xItem=item;held.xItem.m_stItemInfo.nMakeIndex=54321;
+            check("occupied_hand_preserves_both",!bag.ReceiveDrop(reply,body) && bag.m_pendingDrop.bSetted && held.xItem.m_stItemInfo.nMakeIndex==54321);
+            reset();held.bIsEquipItem=TRUE;check("equipment_not_dropped",capture([&](){bag.RequestDrop();},0,0) && held.bSetted && !ui.HasInputDialog());
+            reset();bag.m_usePending=true;check("pending_use_not_dropped",capture([&](){bag.RequestDrop();},0,0) && held.bSetted && !ui.HasInputDialog());bag.m_usePending=false;
+            reset();game.StartInputDelay(InputDelay::Mount);check("delay_blocks_dialog",capture(open,0,0) && !ui.HasInputDialog() && held.bSetted);game.StartInputDelay(0);
+            reset();open();if(groupPanel==334) SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"12");mouse={400,200};capturePath=groupPanel==333?"item-drop-dialog.bmp":"item-drop-filled.bmp";if(report) fclose(report);
         }
         if(groupPanel>=330 && groupPanel<=332) {
             auto& game=g_xGameProc;auto& ui=game.m_xInterface;auto& bag=ui.m_xInventoryWnd;
@@ -4106,6 +4162,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=guild-add-member-filled")==0 ? 327 :
         strcmp(lpCmdLine,"--preview=mount-input-delay")==0 ? 328 :
         strcmp(lpCmdLine,"--preview=mount-delay-dialog")==0 ? 329 :
+        strcmp(lpCmdLine,"--preview=item-drop-dialog")==0 ? 333 :
+        strcmp(lpCmdLine,"--preview=item-drop-filled")==0 ? 334 :
         strcmp(lpCmdLine,"--preview=gold-held")==0 ? 330 :
         strcmp(lpCmdLine,"--preview=gold-drop-dialog")==0 ? 331 :
         strcmp(lpCmdLine,"--preview=gold-drop-filled")==0 ? 332 :

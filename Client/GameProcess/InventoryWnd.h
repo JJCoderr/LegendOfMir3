@@ -39,6 +39,10 @@ protected:
     DWORD m_scrollTick=0;
 
 public:
+    ITEMSET m_pendingDrop={};
+    void RequestDrop();
+    void SubmitDropQuantity(const char* text);
+    bool ReceiveDrop(const _TDEFAULTMESSAGE& message,const char* body);
     DWORD m_lastUse=0,m_lastRelease=0;
     bool m_usePending=false;
     static bool UseAllowed(const CItem& item,DWORD elapsed);

@@ -1761,3 +1761,9 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 新GoldDrop.h命名102弹窗、1415提示、1016请求、124图标。背包释放拿金币并播放106.wav，地面打开原生金额输入，延迟阻止打开，回复更新余额。统一HasInputDialog修复行会1038旧提交入口。
 - 新330–332，下一333。新增Interface成员已clean Client；七目标gold-drop-build.log成功，最终增量gold-drop-final-build.log成功。金币18、行会13、模态27通过，另完成金额/背包/音效/延迟相关回归。out/gold-drop共11图，三种金币状态查看。
 - 截图发现离线预览漏载Inventory.wil，已补齐并增加资源断言；最终重跑五种状态。详见gold-drop-dialog-migration-audit.md。真实服落地金币与堆叠丢弃104仍待后续工作。
+
+
+## 2026-11-17 堆叠丢弃数量框及普通丢弃回复
+- 新ItemDrop.h和Inventory RequestDrop/SubmitDropQuantity/ReceiveDrop及独立pendingDrop。104/1416输入，1101数量请求，上限100，部分回袋等1313；普通1000带时钟，600头成功清状态，601匹配失败回袋/回手。
+- 手持图标移至弹窗和提示之后，修复数量框遮挡。新增333/334，下一335。新类字段已clean重编；首次夹具BYTE参数错误修复后七目标item-drop-build.log成功，最终item-drop-final-build.log成功。
+- 新28及相关170共198项通过；out/item-drop十二图，两个新状态查看。最后仅1313常量命名整理，无行为更改。自启进程停。详见item-drop-dialog-migration-audit.md。真实服丢弃/落地/拾取与整体登录流程仍待联调。

@@ -17,6 +17,7 @@
 #include "Common/ChatCommandIds.h"
 #include "TradeWire.h"
 #include "GoldDrop.h"
+#include "ItemDrop.h"
 #include "MailWire.h"
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
@@ -585,12 +586,6 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     ShowMagicKey();
     if (m_xNPCWnd.m_bActive) m_xNPCWnd.ShowNPCChatWnd();
     if (m_xStoreWnd.m_bActive) m_xStoreWnd.ShowStoreWnd();
-	if ( m_stCommonItem.bSetted && !m_stCommonItem.bIsHideItem )
-	{
-		nX = ptMousePos.x - _INVENTORY_CELL_WIDTH /2;
-		nY = ptMousePos.y - _INVENTORY_CELL_HEIGHT/2;
-		m_stCommonItem.xItem.DrawItem(nX, nY);
-	}
     m_xGuildEditor.Show();
     ChatShortcuts().Draw(m_chatExpanded);
     if(!m_chatExpanded) m_targetDisplay.ShowInformation(m_portraits);
@@ -600,6 +595,12 @@ VOID CInterface::RenderInterface(INT nLoopTime, POINT ptMousePos)
     m_xMailWnd.ShowAttachmentHint(ptMousePos);
     m_xConsignmentWnd.ShowItemHint(ptMousePos);m_xConsignmentRegistration.ShowItemHint(ptMousePos);
     m_xExchangeWnd.ShowHeld(ptMousePos);
+	if ( m_stCommonItem.bSetted && !m_stCommonItem.bIsHideItem && ptMousePos.x>=0 && ptMousePos.x<800 && ptMousePos.y>=0 && ptMousePos.y<600 )
+	{
+		nX = ptMousePos.x - _INVENTORY_CELL_WIDTH /2;
+		nY = ptMousePos.y - _INVENTORY_CELL_HEIGHT/2;
+		m_stCommonItem.xItem.DrawItem(nX, nY);
+	}
     if(m_heldGold && ptMousePos.x>=0 && ptMousePos.x<800 && ptMousePos.y>=0 && ptMousePos.y<600) {
         auto& image=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];
         if(image.NewSetIndex(GoldDrop::Icon)) {
@@ -1742,7 +1743,7 @@ void CInterface::ShowNotice(int message)
 
 bool CInterface::HasInputDialog() const
 {
-    return m_xMsgBox.IsActive() && (m_nIdxMsgBox==GoldDrop::Dialog || m_nIdxMsgBox==CM_GUILDADDMEMBER ||
+    return m_xMsgBox.IsActive() && (m_nIdxMsgBox==ItemDrop::Dialog || m_nIdxMsgBox==GoldDrop::Dialog || m_nIdxMsgBox==CM_GUILDADDMEMBER ||
         (m_nIdxMsgBox>=1 && m_nIdxMsgBox<=11) || m_nIdxMsgBox==TradeWire::QuantityDialog ||
         m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog || m_nIdxMsgBox==SiegeLayout::LoadDialog);
 }
@@ -1760,6 +1761,7 @@ void CInterface::OpenNameDialog(int action)
         prompt=captions.Get(ChatCommandIds::AddGuildMemberPrompt);
         const auto at=prompt.find("%s");if(at!=std::string::npos) prompt.replace(at,2,m_xGuildWnd.m_name);
     }
+    if(action==ItemDrop::Dialog) prompt=captions.Get(ItemDrop::Prompt);
     if(action==GoldDrop::Dialog) prompt=captions.Get(GoldDrop::Prompt);
     if(action==TradeWire::QuantityDialog) prompt=captions.Get(TradeWire::QuantityDialog);
     if(action==SiegeLayout::LoadDialog) prompt=captions.Get(SiegeLayout::LoadCaption);
@@ -1817,7 +1819,8 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         if (m_nIdxMsgBox==7 && hResult!=CLICK_YES) m_xNPCWnd.ClearPrompt();
         if(m_nIdxMsgBox==TradeWire::QuantityDialog && hResult!=CLICK_YES) m_xExchangeWnd.SubmitOffer(name,false);
         if (hResult == CLICK_YES) {
-            if(m_nIdxMsgBox==GoldDrop::Dialog) {
+            if(m_nIdxMsgBox==ItemDrop::Dialog) m_xInventoryWnd.SubmitDropQuantity(name);
+            else if(m_nIdxMsgBox==GoldDrop::Dialog) {
                 const long amount=strtol(name,nullptr,10);
                 if(amount>0 && DWORD(amount)<g_xGameProc.m_xMyHero.m_nGlod) {
                     _TDEFAULTMESSAGE message;fnMakeDefMessage(&message,GoldDrop::Request,amount,0,0,0);

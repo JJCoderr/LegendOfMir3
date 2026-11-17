@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include "ItemDrop.h"
 #include "ItemUseIds.h"
 #include "MerchantServiceIds.h"
 #include "ItemHintStyle.h"
@@ -43,7 +44,7 @@ VOID CInventoryWnd::Init()
 	INT nCnt;
 	CGameWnd::Init();
 	m_nStartLineNum	= 0;
-    m_closePressed=false; service=Service{};
+    m_closePressed=false; service=Service{};m_pendingDrop=ITEMSET{};
     m_lastUse=m_lastRelease=0; m_usePending=false;
     m_layout.Clear();
 	ZeroMemory(m_rcInvenCell, sizeof(RECT) *_INVEN_MAX_CELL);
@@ -1430,4 +1431,49 @@ bool CInventoryWnd::RestoreItems(const std::vector<CItem>& items)
         next[id]={TRUE,item};next[id].xItem.m_shCellNum=id;
     }
     std::copy(std::begin(next),std::end(next),std::begin(m_stInventoryItem));m_layout=layout;return true;
+}
+
+void CInventoryWnd::RequestDrop()
+{
+    auto& ui=g_xGameProc.m_xInterface;auto& held=ui.m_stCommonItem;
+    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+    if(m_pendingDrop.bSetted || m_usePending || !held.bSetted || held.bWaitResponse || held.bIsEquipItem ||
+       ui.m_xQuickWnd.heldSlot>=0 || ui.m_xExchangeWnd.pendingSlot>=0 || !held.xItem.m_stItemInfo.nMakeIndex ||
+       captions.Get(ItemDrop::ProtectedName)==held.xItem.Name()) return;
+    if(held.xItem.m_stackMode>=ItemDrop::StackMode && held.xItem.m_count>1) {ui.OpenNameDialog(ItemDrop::Dialog);return;}
+    m_pendingDrop.bSetted=TRUE;m_pendingDrop.xItem=held.xItem;held=COMMONITEMSET{};
+    const DWORD tick=GetTickCount();_TDEFAULTMESSAGE message;
+    fnMakeDefMessage(&message,CM_DROPITEM,m_pendingDrop.xItem.m_stItemInfo.nMakeIndex,WORD(tick),WORD(tick>>16),0);
+    g_xClientSocket.SendPacket(&message,const_cast<char*>(m_pendingDrop.xItem.Name()));
+}
+void CInventoryWnd::SubmitDropQuantity(const char* text)
+{
+    auto& held=g_xGameProc.m_xInterface.m_stCommonItem;
+    if(m_pendingDrop.bSetted || !held.bSetted || held.xItem.m_stackMode<ItemDrop::StackMode || held.xItem.m_count<=1) return;
+    const long requested=!*text || !strcmp(text,"*")?held.xItem.m_count:strtol(text,nullptr,10);
+    const int quantity=int((std::min)(requested,long(ItemDrop::MaximumQuantity)));
+    if(quantity<=0 || quantity>held.xItem.m_count) return;
+    const CItem item=held.xItem;
+    if(quantity<item.m_count) {if(!AddInvenItem(item,0,FALSE)) return;}
+    else {m_pendingDrop.bSetted=TRUE;m_pendingDrop.xItem=item;}
+    held=COMMONITEMSET{};
+    _TDEFAULTMESSAGE message;fnMakeDefMessage(&message,ItemDrop::StackRequest,item.m_stItemInfo.nMakeIndex,0,WORD(quantity),0);
+    g_xClientSocket.SendPacket(&message,const_cast<char*>(item.Name()));
+}
+bool CInventoryWnd::ReceiveDrop(const _TDEFAULTMESSAGE& message,const char* body)
+{
+    if(message.wIdent==SM_DROPITEM_SCCESS) {
+        if(*body) return false;
+        m_pendingDrop=ITEMSET{};return true;
+    }
+    if(strlen(body)>(ItemDrop::MaximumFailureName*8+5)/6) return false;
+    char name[ItemDrop::MaximumFailureName+1]={};const int size=fnDecode6BitBuf(const_cast<char*>(body),name,ItemDrop::MaximumFailureName);
+    if(size<=0) return false;
+    if(!m_pendingDrop.bSetted || m_pendingDrop.xItem.m_stItemInfo.nMakeIndex!=message.nRecog || strcmp(name,m_pendingDrop.xItem.Name())) return true;
+    if(!AddInvenItem(m_pendingDrop.xItem,0,FALSE)) {
+        auto& held=g_xGameProc.m_xInterface.m_stCommonItem;
+        if(held.bSetted) return false;
+        held=COMMONITEMSET{};held.bSetted=TRUE;held.xItem=m_pendingDrop.xItem;
+    }
+    m_pendingDrop=ITEMSET{};return true;
 }
