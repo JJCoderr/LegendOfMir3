@@ -13,6 +13,8 @@
 
 #include "StdAfx.h"
 #include "Common/AnsiInput.h"
+#include "Common/ChatShortcuts.h"
+#include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
 static const char* ChatInputFontFace()
@@ -75,6 +77,10 @@ INT_PTR CALLBACK ChatEditDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
+    if(g_bProcState==_GAME_PROC) {
+        auto& shortcuts=ChatShortcuts();
+        if(!g_xGameProc.m_xInterface.m_xMsgBox.IsActive() && !g_xGameProc.m_xInterface.m_xGuildEditor.m_bActive && shortcuts.Input(nMsg,wParam)) return 0;
+    }
     if(g_bProcState==_CHAR_SEL_PROC) {
         if(nMsg==WM_SYSKEYDOWN) return 0;
         if((nMsg==WM_KEYDOWN && (wParam==VK_ESCAPE || (wParam>=VK_F1 && wParam<=VK_F12))) ||
@@ -241,4 +247,113 @@ void CChatEdit::Relocate()
     const auto& display=g_xMainWnd.m_rcWindow;
     MoveScaled(display.left+m_layout.left,display.top+m_layout.top,
         m_layout.right-m_layout.left,m_layout.bottom-m_layout.top,TRUE);
+}
+
+CChatShortcuts& ChatShortcuts() { static CChatShortcuts value;return value; }
+void CChatShortcuts::Clear()
+{
+    contacts.clear();phrases.clear();privatePrefix.clear();storage.clear();
+    contactSelected=phraseSelected=0;controlDown=altDown=false;
+}
+void CChatShortcuts::Load(const std::string& base)
+{
+    Clear();storage=base;if(base.empty()) return;
+    for(bool phrase:{false,true}) {
+        FILE* file=fopen((storage+(phrase?".mlt":".slt")).c_str(),"rb");if(!file) continue;
+        fseek(file,0,SEEK_END);const long size=ftell(file);rewind(file);
+        if(size<0 || size>10240) {fclose(file);continue;}
+        std::string data(size,'\0');const auto read=fread(data.data(),1,data.size(),file);fclose(file);data.resize(read);
+        auto& values=phrase?phrases:contacts;size_t start=0;
+        while(values.size()<Capacity) {
+            const auto end=data.find('/',start);if(end==std::string::npos || end-start>1023) break;
+            values.push_back(data.substr(start,end-start));start=end+1;
+        }
+    }
+}
+void CChatShortcuts::Save(bool phrase) const
+{
+    if(storage.empty()) return;
+    FILE* file=fopen((storage+(phrase?".mlt":".slt")).c_str(),"wb");if(!file) return;
+    for(const auto& value:phrase?phrases:contacts) {fwrite(value.data(),1,value.size(),file);fputc('/',file);}
+    fclose(file);
+}
+bool CChatShortcuts::Remember(const std::string& input)
+{
+    if(input.empty() || (input[0]!='/' && input[0]!='#')) return false;
+    const bool phrase=input[0]=='#';auto& values=phrase?phrases:contacts;
+    std::string value=input.substr(1);
+    if(!phrase) {
+        const auto end=input.find(' ',1);
+        if(input.size()>1) privatePrefix="/"+input.substr(1,end==std::string::npos?end:end-1)+" ";
+        value=privatePrefix.empty()?std::string{}:privatePrefix.substr(1);
+    }
+    if(std::find(values.begin(),values.end(),value)==values.end()) {
+        values.push_back(value);if(values.size()>Capacity) values.erase(values.begin());Save(phrase);
+    }
+    return phrase;
+}
+bool CChatShortcuts::Select(bool phrase,int value,bool relative,std::string& output)
+{
+    const auto& values=phrase?phrases:contacts;auto& selected=phrase?phraseSelected:contactSelected;
+    if(relative) selected=value<0?max(0,selected-1):min(int(values.size())-1,selected+1);
+    else if(value>=0 && value<int(values.size())) selected=value;
+    if(selected<0 || selected>=int(values.size())) return false;
+    if(!phrase) privatePrefix="/"+values[selected];
+    output=phrase?values[selected]:privatePrefix;return true;
+}
+bool CChatShortcuts::Input(UINT message,WPARAM key)
+{
+    const bool down=message==WM_KEYDOWN || message==WM_SYSKEYDOWN;
+    const bool up=message==WM_KEYUP || message==WM_SYSKEYUP;
+    if(down || up) {
+        if(key==VK_CONTROL) {controlDown=down;return false;}
+        if(key==VK_MENU) {altDown=down;return true;}
+    }
+    if(GetFocus()!=g_xChatEditBox.GetSafehWnd() || (!controlDown && !altDown)) return false;
+    const bool number=key>='0' && key<='9';
+    if((message==WM_CHAR || message==WM_SYSCHAR) && number) return true;
+    if(!down || (!number && key!=VK_UP && key!=VK_DOWN)) return false;
+    std::string value;
+    if(Select(!controlDown,number?(key=='0'?9:int(key-'1')):(key==VK_UP?-1:1),!number,value)) {
+        const HWND edit=g_xChatEditBox.GetSafehWnd();SetWindowTextA(edit,value.c_str());
+        SendMessage(edit,EM_SETSEL,-1,-1);SetFocus(edit);
+    }
+    return true;
+}
+void CChatShortcuts::Draw(bool expanded)
+{
+    auto& ui=g_xGameProc.m_xInterface;
+    if(GetFocus()!=g_xChatEditBox.GetSafehWnd() || ui.m_xMsgBox.IsActive() || ui.m_xGuildEditor.m_bActive) return;
+    const int top=expanded?365:405;
+    for(bool phrase:{false,true}) {
+        const auto& values=phrase?phrases:contacts;
+        if(values.empty() || !(phrase?altDown:controlDown)) continue;
+        const int width=phrase && !expanded?100:99;
+        DrawLegacyPanel(RECT{PanelLeft,top,PanelLeft+width,top+PanelHeight},phrase?RGB(150,150,50):RGB(200,100,0),180,RGB(0,0,0));
+        const int selected=phrase?phraseSelected:contactSelected;
+        if(selected>=0 && selected<int(values.size())) DrawLegacyPanel(RECT{184,top+2+RowHeight*selected,182+width,top+2+RowHeight*(selected+1)},phrase?RGB(50,50,200):RGB(255,0,0),120,0,false);
+        HDC dc;auto* buffer=g_xMainWnd.GetBackBuffer();if(FAILED(buffer->GetDC(&dc))) continue;
+        const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};HFONT font=g_xMainWnd.CreateGameFont(face,9);auto old=SelectObject(dc,font);SetBkMode(dc,TRANSPARENT);
+        for(int i=0;i<int(values.size());++i) {
+            std::string caption=values[i];SIZE size;GetTextExtentPoint32A(dc,caption.c_str(),int(caption.size()),&size);
+            if(phrase && size.cx>358) caption=caption.substr(0,58)+"...";
+            SetTextColor(dc,RGB(10,10,10));TextOutA(dc,187,top+4+RowHeight*i,caption.c_str(),int(caption.size()));
+            SetTextColor(dc,RGB(255,255,255));TextOutA(dc,188,top+5+RowHeight*i,caption.c_str(),int(caption.size()));
+        }
+        SelectObject(dc,old);DeleteObject(font);buffer->ReleaseDC(dc);
+    }
+}
+
+void CChatShortcuts::SetIdentity(const std::string& character,const std::string& server)
+{
+    const auto valid=[](const std::string& name) {
+        if(name.empty() || name=="." || name=="..") return false;
+        for(size_t i=0;i<name.size();++i) {
+            if(IsDBCSLeadByteEx(CP_ACP,BYTE(name[i])) && i+1<name.size()) {++i;continue;}
+            if(strchr("/\\:*?\"<>|",name[i])) return false;
+        }
+        return true;
+    };
+    if(!valid(character) || !valid(server)) {Clear();return;}
+    Load("./Data/"+character+"("+server+")");
 }

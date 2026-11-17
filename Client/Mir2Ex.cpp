@@ -12,6 +12,7 @@
 namespace { constexpr int PreviewSpellGround=237,PreviewSpellOrbit=238,PreviewSpellStaged=239,PreviewSpellMap=240,PreviewGroundItems=241,PreviewGroundCoin=242,PreviewLightingDay=243,PreviewLightingNight=244,PreviewLightingDawn=245,PreviewWeatherSnow=246,PreviewWeatherRain=247,PreviewWeatherFog=248; constexpr int PreviewExitProgram=231,PreviewExitCharacter=232,PreviewExitBlocked=233,PreviewExitFade=234,PreviewExitWaiting=235,PreviewExitQuit=236; constexpr int PreviewKeyboard=228,PreviewKeyboardShortcuts=229,PreviewKeyboardCovered=230; constexpr int PreviewTradeTransaction=223,PreviewTradeQuantity=224,PreviewTradeCancelled=225,PreviewTradeGoldInput=226,PreviewTradeOpenError=227; constexpr int PreviewEquipSuccess=220,PreviewEquipFailure=221,PreviewEquipTakeOff=222; constexpr int PreviewStorageReply=219; constexpr int PreviewServiceRepair=215,PreviewServiceSell=216,PreviewServiceDeposit=217,PreviewServiceFailure=218; constexpr int PreviewItemUse=213,PreviewItemUseRestored=214; constexpr int PreviewInterfaceAudio=212; constexpr int PreviewNotice=210,PreviewNoticeMoved=211; constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
+#include "Common/ChatShortcuts.h"
 
 CMirSound			g_xSound;
 CWHDXGraphicWindow	g_xMainWnd(640, 480, _SCREEN_BPP);
@@ -49,7 +50,7 @@ BYTE				g_bProcState = _LOGIN_PROC;
 class CHudPreviewProcess : public CWHDefProcess {
     POINT mouse = {0,0};
     int damagePreview=0;
-    int modalPointerPreview=0;
+    int modalPointerPreview=0,chatShortcutPreview=0;
     bool levelPreview=false;
     bool loginPreview=false;
     bool moviePreview=false;
@@ -1222,6 +1223,54 @@ public:
                 fprintf(report,"amount=%d left_scroll=%d right_scroll=%d released=%d stray=%d pending_blocked=%d outside_release=%d body_no_drag=%d header_drag=%d confirmed=%d\n",
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
+        }
+        if(groupPanel>=319 && groupPanel<=322) {
+            chatShortcutPreview=groupPanel;
+            auto& ui=g_xGameProc.m_xInterface;auto& shortcuts=ChatShortcuts();
+            const HWND edit=g_xChatEditBox.GetSafehWnd();
+            FILE* report=fopen("chat-shortcuts-check.txt","wb");
+            const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+            shortcuts.Clear();
+            check("phrase_local",shortcuts.Remember("#欢迎来到玛法大陆"));
+            check("phrase_duplicate",shortcuts.Remember("#欢迎来到玛法大陆") && shortcuts.phrases.size()==1);
+            check("contact_sends",!shortcuts.Remember("/传奇勇士 你好") && shortcuts.contacts[0]=="传奇勇士 ");
+            shortcuts.Remember("/传奇勇士 再见");check("contact_duplicate",shortcuts.contacts.size()==1);
+            for(int i=0;i<12;++i) shortcuts.Remember("#phrase"+std::to_string(i));
+            check("capacity",shortcuts.phrases.size()==CChatShortcuts::Capacity && shortcuts.phrases.front()=="phrase2");
+            std::string selected;shortcuts.Select(true,9,false,selected);check("tenth",selected=="phrase11");
+            shortcuts.Select(true,1,true,selected);check("last_clamped",selected=="phrase11");
+            shortcuts.Select(true,0,false,selected);shortcuts.Select(true,-1,true,selected);check("first_clamped",selected=="phrase2");
+            shortcuts.Select(false,0,false,selected);check("private_prefix",selected=="/传奇勇士 ");
+            char directory[MAX_PATH],temporary[MAX_PATH];GetTempPathA(MAX_PATH,directory);GetTempFileNameA(directory,"m3c",0,temporary);
+            CChatShortcuts stored;stored.Load(temporary);stored.Remember("#中文短语");stored.Remember("/甲 你好");stored.Load(temporary);
+            check("ansi_disk_roundtrip",stored.phrases.size()==1 && stored.phrases[0]=="中文短语" && stored.contacts.size()==1 && stored.contacts[0]=="甲 ");
+            stored.Load(std::string(temporary)+"-other");check("identity_reset",stored.contacts.empty() && stored.phrases.empty() && stored.privatePrefix.empty());
+            DeleteFileA((std::string(temporary)+".slt").c_str());DeleteFileA((std::string(temporary)+".mlt").c_str());DeleteFileA(temporary);
+            ui.LayoutChat();ShowWindow(edit,SW_SHOW);SetFocus(edit);
+            SendMessage(edit,WM_KEYDOWN,VK_CONTROL,0);SendMessage(edit,WM_KEYDOWN,'1',0);
+            char input[128]={};GetWindowTextA(edit,input,sizeof(input));check("native_contact_key",std::string(input)=="/传奇勇士 ");
+            SendMessage(edit,WM_KEYUP,VK_CONTROL,0);SendMessage(edit,WM_SYSKEYDOWN,VK_MENU,0);SendMessage(edit,WM_SYSKEYDOWN,'0',0);
+            GetWindowTextA(edit,input,sizeof(input));check("native_phrase_key",std::string(input)=="phrase11");
+            SendMessage(edit,WM_SYSCHAR,'0',0);GetWindowTextA(edit,input,sizeof(input));check("shortcut_digit_not_inserted",std::string(input)=="phrase11");
+            SendMessage(edit,WM_SYSKEYUP,VK_MENU,0);check("release_hides",!shortcuts.altDown && !shortcuts.controlDown);
+            SendMessage(edit,WM_KEYDOWN,VK_CONTROL,0);SetFocus(g_xMainWnd.GetSafehWnd());check("focus_released",GetFocus()!=edit);
+            g_xGameProc.DefMainWndProc(g_xMainWnd.GetSafehWnd(),WM_ACTIVATEAPP,FALSE,0);
+            check("deactivation_clears_modifiers",!shortcuts.controlDown && !shortcuts.altDown);
+            g_xGameProc.DefMainWndProc(g_xMainWnd.GetSafehWnd(),WM_KEYDOWN,VK_CONTROL,0);
+            check("main_modifier_received",shortcuts.controlDown);
+            SetFocus(edit);check("focus_preserves_modifier",shortcuts.controlDown);SendMessage(edit,WM_KEYDOWN,'1',0);GetWindowTextA(edit,input,sizeof(input));
+            check("modifier_before_focus",std::string(input)=="/传奇勇士 " && shortcuts.controlDown);
+            SendMessage(edit,WM_KEYUP,VK_CONTROL,0);
+            shortcuts.Clear();strcpy(g_xChatEditBox.m_szInputMsg,"#原生提交的短语");g_xGameProc.OnMsgInputted(0,0);
+            check("native_submit_phrase",shortcuts.phrases.size()==1 && shortcuts.phrases[0]=="原生提交的短语" && !g_xChatEditBox.m_szInputMsg[0]);
+            shortcuts.Clear();shortcuts.Remember("/传奇勇士 你好");shortcuts.Remember("/行会会长 一起出发");
+            shortcuts.Remember("#欢迎来到玛法大陆");shortcuts.Remember("#组队出发，请到城门集合。");shortcuts.Remember("#出售装备，需要的勇士请联系我。");
+            ui.m_chatExpanded=groupPanel>=321;ui.LayoutChat();ShowWindow(edit,SW_SHOW);SetFocus(edit);
+            const bool phrase=groupPanel==320 || groupPanel==322;
+            SendMessage(edit,phrase?WM_SYSKEYDOWN:WM_KEYDOWN,phrase?VK_MENU:VK_CONTROL,0);
+            SendMessage(edit,phrase?WM_SYSKEYDOWN:WM_KEYDOWN,'2',0);
+            if(report) fclose(report);mouse={790,430};
+            capturePath=groupPanel==319?"chat-contacts.bmp":groupPanel==320?"chat-phrases.bmp":groupPanel==321?"chat-contacts-expanded.bmp":"chat-phrases-expanded.bmp";
         }
         if(groupPanel==318) {
             auto& ui=g_xGameProc.m_xInterface;const HWND edit=g_xChatEditBox.GetSafehWnd();
@@ -3708,6 +3757,11 @@ public:
             if(modalPointerPreview>=305) {ui.OnMouseMove(outside);mouse=outside;}
             if(modalPointerPreview==306) {ui.OnMouseMove(button);mouse=button;}
         }
+        if(chatShortcutPreview && capturePath) {
+            const HWND edit=g_xChatEditBox.GetSafehWnd();ShowWindow(edit,SW_SHOW);SetFocus(edit);
+            const bool phrase=chatShortcutPreview==320 || chatShortcutPreview==322;
+            SendMessage(edit,phrase?WM_SYSKEYDOWN:WM_KEYDOWN,phrase?VK_MENU:VK_CONTROL,0);
+        }
         g_xGameProc.m_xInterface.RenderInterface(elapsed,mouse);
         }
         if(namePreview) g_xGameProc.m_xMyHero.DrawName();
@@ -3884,6 +3938,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=creation-return-cancelled")==0 ? CharacterInteractionPreview::ReturnCancelled :
         strcmp(lpCmdLine,"--preview=creation-return-created")==0 ? CharacterInteractionPreview::ReturnCreated :
         strcmp(lpCmdLine,"--preview=input-window-moved")==0 ? 318 :
+        strcmp(lpCmdLine,"--preview=chat-contacts")==0 ? 319 :
+        strcmp(lpCmdLine,"--preview=chat-phrases")==0 ? 320 :
+        strcmp(lpCmdLine,"--preview=chat-contacts-expanded")==0 ? 321 :
+        strcmp(lpCmdLine,"--preview=chat-phrases-expanded")==0 ? 322 :
         strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
         strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
         strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :

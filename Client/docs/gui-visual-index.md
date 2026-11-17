@@ -145,3 +145,8 @@ review_gui.ps1新增all套件：52个游戏内状态、38个大厅状态和20个
 - 不从图片推断音效、影片、缩放/DPI、拖动或服务器操作通过。52/38旧基线保留来源，但当前静态布局浏览证据以本批为准。
 
 下一步需解决公告在当前资源上的排版验收依据，并针对具体页面做参考坐标/字体核对；不以110图齐全替代最终GUI验收。用户已明确无额外原版目录，不再等待该问题的用户回复。
+
+
+## 联系人/快捷短语新增四页
+
+详见chat-shortcuts-migration-audit.md。截图位于out/chat-shortcuts：chat-contacts.png、chat-phrases.png、chat-contacts-expanded.png、chat-phrases-expanded.png。普通/展开布局及选中行已查看。此四页是110图基线以外的新增原生页面，不将旧manifest改为包含尚未重跑的页面。

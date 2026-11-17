@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "Common/ChatShortcuts.h"
 #include "EffectRenderer.h"
 #include "SpellSpriteRenderer.h"
 #include "WeatherRenderer.h"
@@ -2130,6 +2131,9 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 
 	if ( g_xChatEditBox.m_szInputMsg[0] == NULL )
 		return 0L;
+    if(ChatShortcuts().Remember(g_xChatEditBox.m_szInputMsg)) {
+        ZeroMemory(g_xChatEditBox.m_szInputMsg,sizeof(g_xChatEditBox.m_szInputMsg));return 0;
+    }
 
 	// ÃüÁîÏûÏ¢.
 	if ( wParam )
@@ -2614,11 +2618,15 @@ VOID CGameProcess::RenderMapTileGrid()
 
 LRESULT CGameProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    if(uMsg==WM_ACTIVATEAPP && !wParam) ChatShortcuts().controlDown=ChatShortcuts().altDown=false;
     if(m_exitTransition.active && ((uMsg>=WM_KEYFIRST && uMsg<=WM_KEYLAST) ||
        (uMsg>=WM_MOUSEFIRST && uMsg<=WM_MOUSELAST) || uMsg==WM_COMMAND)) return 0L;
     if ((m_xInterface.m_xMsgBox.IsActive() || m_xInterface.m_xGuildEditor.m_bActive) &&
         (uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP || uMsg == WM_SYSKEYDOWN || uMsg == WM_SYSKEYUP))
         return 0L;
+    if((uMsg==WM_KEYDOWN || uMsg==WM_KEYUP || uMsg==WM_SYSKEYDOWN || uMsg==WM_SYSKEYUP) &&
+       !m_xInterface.m_xMsgBox.IsActive() && !m_xInterface.m_xGuildEditor.m_bActive &&
+       ChatShortcuts().Input(uMsg,wParam)) return 0;
 	switch ( uMsg )
 	{
         case WM_SIZE: {
@@ -3792,6 +3800,7 @@ VOID CGameProcess::OnSvrMsgLogon(_TDEFAULTMESSAGE	*ptdm, char *pszMsg)
 //		m_xMyHero.Create(&m_xImage, _MT_HORSESTAND, bDir, m_xMyHero.m_wPosX, m_xMyHero.m_wPosY, stFeature, stFeatureEx);
 
 	strcpy(g_xGameProc.m_xMyHero.m_szName, g_szCharName);
+    ChatShortcuts().SetIdentity(g_szCharName,g_xClientSocket.selectedServerName);
 	
 	m_xMyHero.SetMapHandler(&m_xMap);
 

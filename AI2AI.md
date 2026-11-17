@@ -1729,3 +1729,9 @@ review_gui.ps1新增all套件：52个游戏内状态、38个大厅状态和20个
 CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体句柄、放大后位置/尺寸/字体按比例变化（容许1像素舍入）、恢复后精确矩形、文本及可见性。行会通过正常Show布局，邮件/寄售通过正常SyncEditors布局。未据此宣称跨显示器DPI或全屏已验证。
 
 最终七目标构建out/panel-layout-final-build.log成功。面板18+行会17+共用输入6+模态27+键盘34+音效15=117项检查通过，voiceCount计数另计。九页新鲜截图在out/panel-layout；邮件恢复、寄售恢复、行会公告原图已查看。全部自启预览停止。无类布局更改，无新预览编号，下一319。
+
+
+## 2026-11-17 原生联系人与快捷短语列表
+- 源码核对发现Godot chat_submission与draw_chat_shortcuts尚未移植。新增Common/ChatShortcuts.h，实现在ChatEditBox.cpp：原生列表绘制、Ctrl/Alt数字和上下选择、十条去重FIFO、#本地记短语、/私聊记联系人、ANSI slt/mlt按角色服务器读写。GameProc登录身份载入，Interface初始化清理并绘制。无类布局更改。
+- 四个新预览319–322；下一323。测试临时文件不进入Data联接目录。旧私聊回显颜色及chatsave/snow本地分派仍待审计，不能把整个聊天系统视为完成。
+- 构建chat-shortcuts-final-build.log七目标成功。快捷21+历史12+中文11+模态27+键盘34+音效15=120检查；九页out/chat-shortcuts，四新增图已查看。详见chat-shortcuts-migration-audit.md。所有自启预览停止后提交。
