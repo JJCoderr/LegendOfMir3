@@ -1903,3 +1903,9 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 ## 2026-11-17 EIServer 消息循环日志
 - Run() 打印每条 GetMessage 返回的 MSG：hwnd、message、wParam、lParam、time、pt，包括 WM_TIMER 和 WM_QUIT；GetMessage 失败打印错误码并返回失败，WM_QUIT 记录并返回退出码。
 - Release EIServer 构建通过，已更新 out/debug/EIServer.exe。实际启动六个服务就绪，注入 WM_APP 的 0x1234/0x5678 参数可见，WM_QUIT 正常记录且退出码为 0；日志 out/debug/msg-loop-check.log。
+
+## 2026-11-17 将真实客户端联调回归纳入源码
+- 新增 Client/Tools/test_native_roundtrip.py 与 Client/docs/native-roundtrip.md，覆盖原生窗口登录、移动、返回选角、再次进图、退出重启后的坐标持久化，不截图、不用协议客户端替代。可选构建/配置目录和端口偏移，验证进程存活及状态文件时效。
+- EIServer从固定bin-dir运行，cwd指向每轮隔离目录；客户端会主动切换到自身EXE目录，必须复制客户端到隔离目录，否则会读开发配置。已增加输入账号前的端口断言。服务端数据库、互联端口与地址显式覆盖到隔离环境，资源为目录链接。
+- 默认端口偏移20000回归 out/native-roundtrip-qj1cixoz 通过：两次客户端退出0，坐标460,261一致。
+- 配置键改为显式覆盖后，以偏移21000回归 out/native-roundtrip-8gezfrph：六服务、登录/移动/返回选角/重进通过，但重启恢复断言失败。第一次返回前461,261，DB和重进一致；重进后23:19:19.244又收到3011请求，下一次登录462,261，脚本退出时读到461,261。需检查真实按键轮询/重进动作和断开落库时序，不能宣称完整回归通过。脚本保留失败断言，未放宽标准。测试实例均已退出。

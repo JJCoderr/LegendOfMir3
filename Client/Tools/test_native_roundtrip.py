@@ -1,0 +1,211 @@
+"""Real Windows client login/movement/return/relogin regression; no screenshots.
+
+Keeps its isolated database and logs under out/native-roundtrip-*.
+Requires the standard development INI files and Data/Map/Sound resource links.
+"""
+import argparse
+import configparser
+import ctypes as c
+import json
+import os
+import sqlite3
+import subprocess
+import tempfile
+import time
+import shutil
+from ctypes import wintypes as w
+from pathlib import Path
+
+WM_SETTEXT = 0x000C
+WM_GETTEXTLENGTH = 0x000E
+WM_KEYDOWN = 0x0100
+WM_KEYUP = 0x0101
+WM_SYSKEYDOWN = 0x0104
+WM_MOUSEMOVE = 0x0200
+WM_LBUTTONDOWN = 0x0201
+WM_LBUTTONUP = 0x0202
+EM_GETPASSWORDCHAR = 0x00D2
+VK_RETURN = 13
+MK_LBUTTON = 1
+ALT_CONTEXT = 1 << 29
+
+u=c.windll.user32
+cb=c.WINFUNCTYPE(w.BOOL,w.HWND,w.LPARAM)
+u.SetProcessDPIAware()
+repo = Path(__file__).resolve().parents[2]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--bin-dir', type=Path, default=repo / 'out/debug')
+parser.add_argument('--config-dir', type=Path, default=repo / 'out/debug')
+parser.add_argument('--port-offset', type=int, default=20000)
+args = parser.parse_args()
+exe = args.bin_dir.resolve()
+config_dir = args.config_dir.resolve()
+ports = {p: p + args.port_offset for p in (5000,5100,5500,6000,7000,7100,7200)}
+if any(p < 1024 or p > 65535 for p in ports.values()):
+    parser.error('Test ports must be between 1024 and 65535')
+for name in ('EIServer.exe', 'Mir2Ex.exe'):
+    if not (exe/name).is_file():parser.error(f'Missing binary: {exe/name}')
+(repo/'out').mkdir(exist_ok=True)
+root=Path(tempfile.mkdtemp(prefix='native-roundtrip-',dir=repo/'out'))
+# EIServer uses cwd; Mir2Ex changes cwd to its executable directory.
+# Keep the listening server binary stable and isolate the outbound-only client.
+shutil.copy2(exe/"Mir2Ex.exe", root/"Mir2Ex.exe")
+# Override endpoint and DB keys explicitly so test writes stay in the fixture.
+for name in ('EIServer.ini', 'Mir3.ini'):
+    config = configparser.ConfigParser(interpolation=None)
+    config.optionxform = str
+    with (config_dir/name).open(encoding='utf-8-sig') as source:
+        config.read_file(source)
+    if name == 'EIServer.ini':
+        for section, key, port in (
+            ('DatabaseSvr', 'LocalPort', 6000), ('DatabaseSvr', 'GatePort', 5100),
+            ('GameServer', 'LocalPort', 5000), ('GameServer', 'DBServerPort', 6000),
+            ('LoginSvr', 'LocalPort', 5500), ('LoginGate', 'LocalPort', 7000),
+            ('LoginGate', 'RemotePort', 5500), ('SelGate', 'LocalPort', 7100),
+            ('SelGate', 'RemotePort', 5100), ('GameGate', 'LocalPort', 7200),
+            ('GameGate', 'RemotePort', 5000)):
+            config[section][key] = str(ports[port])
+        config['GameServer']['DBServerIP'] = '127.0.0.1'
+        config['GameServer']['MapFileLoc'] = 'Map'
+        for section in ('LoginGate', 'SelGate', 'GameGate'):
+            config[section]['RemoteIP'] = '127.0.0.1'
+        server = config[r'LoginSvr\Servers\1']
+        server['Gate'] = f'127.0.0.1:{ports[7100]}'
+        server['PrivateIP'] = server['PublicIP'] = '127.0.0.1'
+        for key in ('Mir2_Account', 'Mir2_Common', 'Mir2_Game'):
+            config['SQLite'][key] = 'mir3.sqlite3'
+        config['Game']['StartMap'] = '01'
+    else:
+        for key, port in (('Param1', 7000), ('SelectGatePort', 7100), ('GameGatePort', 7200)):
+            config['Initial'][key] = str(ports[port])
+        config['Initial']['ServerAddr'] = '127.0.0.1'
+    with (root/name).open('w', encoding='utf-8') as output:
+        config.write(output, space_around_delimiters=False)
+for name in ('Data','Map','Sound'):
+    target=(config_dir/name).resolve()
+    if not target.is_dir():parser.error(f'Missing resource directory: {target}')
+    link_env=dict(os.environ,MIR3_TEST_LINK=str(root/name),MIR3_TEST_TARGET=str(target))
+    subprocess.run(['powershell','-NoProfile','-Command',
+        '$ErrorActionPreference="Stop"; New-Item -ItemType Junction -Path $env:MIR3_TEST_LINK -Target $env:MIR3_TEST_TARGET | Out-Null'],env=link_env,check=True)
+with sqlite3.connect(root/'mir3.sqlite3') as db:
+    db.executescript((repo/'Server/SQL_Scripts/sqlite_minimal.sql').read_text(encoding='utf-8-sig'))
+    db.execute("INSERT INTO TBL_CHARACTER (FLD_LOGINID,FLD_CHARNAME,FLD_JOB,FLD_GENDER,FLD_LEVEL,FLD_MAPNAME,FLD_CX,FLD_CY) VALUES ('mirtest','MirProbe01','0','0',1,'01',459,261)")
+env=dict(os.environ,MIR3_DEBUG_STATE_DIR=str(root))
+processes=[]
+print(root,flush=True)
+def launch(role,**kw):
+    binary=(exe if role=='EIServer' else root)/(role+'.exe')
+    p=subprocess.Popen([str(binary)],cwd=root,env=env,**kw)
+    processes.append(p);return p,root/f'{role}-{p.pid}.json'
+def wait(path,accept,seconds=12):
+    data={}
+    owner=next(p for p in processes if str(p.pid)==path.stem.rsplit("-",1)[1])
+    for _ in range(seconds*10):
+        if owner.poll() is not None:raise RuntimeError(f"{path.stem} exited {owner.returncode}; logs: {root}")
+        try:data=json.loads(path.read_bytes())
+        except (OSError,ValueError):pass
+        if path.exists() and time.time()-path.stat().st_mtime<2 and accept(data):return data
+        time.sleep(.1)
+    raise RuntimeError(data)
+def windows(pid):
+    result={}
+    @cb
+    def visit(h,_):
+        owner=w.DWORD();u.GetWindowThreadProcessId(h,c.byref(owner))
+        if owner.value==pid:
+            name=c.create_unicode_buffer(100);u.GetClassNameW(h,name,100);result[name.value]=h
+        return True
+    u.EnumWindows(visit,0)
+    return result
+def click(h,x,y):
+    x=round(x*u.GetDpiForSystem()/96);y=round(y*u.GetDpiForSystem()/96)
+    pos=(y<<16)|x
+    for msg,wp in ((WM_MOUSEMOVE,0),(WM_LBUTTONDOWN,MK_LBUTTON),(WM_LBUTTONUP,0)):u.PostMessageW(h,msg,wp,pos)
+def size(h):
+    r=w.RECT();u.GetClientRect(h,c.byref(r));return r.right,r.bottom
+with (root/'server.log').open('wb') as log:
+    try:
+        s,ss=launch('EIServer',stdout=log,stderr=log,creationflags=subprocess.CREATE_NO_WINDOW)
+        print('server',wait(ss,lambda d:d.get('ready')),flush=True)
+        for iteration in range(2):
+            p,cs=launch('Mir2Ex')
+            login=wait(cs,lambda d:d.get('connected'))
+            assert login.get('remote_port')==ports[7000],login
+            print('login',login,flush=True)
+            ws=windows(p.pid)
+            print(ws,flush=True)
+            edit=ws.pop('Edit');h=ws['WH GEngine']
+            assert size(h)==tuple(round(v*u.GetDpiForSystem()/96) for v in (640,480)),size(h)
+            for _ in range(100):
+                if u.IsWindowVisible(edit):break
+                time.sleep(.1)
+            assert u.IsWindowVisible(edit),'login editor not shown'
+            for x,word in ((150,'mirtest'),(350,'test123')):
+                click(h,x,446);time.sleep(.25)
+                assert u.SendMessageW(edit,WM_SETTEXT,0,c.c_wchar_p(word))
+                print('editor length/mask',u.SendMessageW(edit,WM_GETTEXTLENGTH,0,0),u.SendMessageW(edit,EM_GETPASSWORDCHAR,0,0),flush=True)
+            click(h,466,442)
+            login=wait(cs,lambda d:d.get('stage')=='server_list' or d.get('notice'))
+            print('authenticated',login,flush=True)
+            assert login.get('stage')=='server_list',login
+            if login.get('notice'):
+                u.PostMessageW(h,WM_KEYDOWN,VK_RETURN,0);u.PostMessageW(h,WM_KEYUP,VK_RETURN,0)
+                wait(cs,lambda d:not d.get('notice'))
+            click(h,60,80)
+            print('character',wait(cs,lambda d:d.get('scene')=='character_select'),size(h),flush=True)
+            assert size(h)==tuple(round(v*u.GetDpiForSystem()/96) for v in (640,480)),size(h)
+            time.sleep(3)
+            click(h,275,61)
+            world=wait(cs,lambda d:d.get('map') and d.get('remote_port')==ports[7200],20)
+            print('world',world,size(h),flush=True)
+            assert size(h)==tuple(round(v*u.GetDpiForSystem()/96) for v in (800,600)),size(h)
+            if iteration==0:
+                # Acknowledge the arrival notice before using the map.
+                u.PostMessageW(h,WM_KEYDOWN,VK_RETURN,0);u.PostMessageW(h,WM_KEYUP,VK_RETURN,0)
+                print('input ready',wait(cs,lambda d:not d.get('notice') and not d.get('input_delayed')),flush=True)
+                click(h,448,240)
+                moved=wait(cs,lambda d:d.get('scene')=='world' and (d.get('x'),d.get('y'))!=(459,261))
+                print('moved',moved,flush=True)
+                time.sleep(1)
+                moved=json.loads(cs.read_bytes())
+                print('settled before logout',moved,flush=True)
+            else:
+                assert (world['x'],world['y'])==saved, (world,saved)
+            if iteration==0:
+                u.PostMessageW(h,WM_SYSKEYDOWN,ord('X'),ALT_CONTEXT)
+                time.sleep(.5)
+                u.PostMessageW(h,WM_KEYDOWN,VK_RETURN,0);u.PostMessageW(h,WM_KEYUP,VK_RETURN,0)
+                returned=wait(cs,lambda d:d.get('scene')=='character_select' and d.get('connected') and d.get('remote_port')==ports[7100],20)
+                print('returned',returned,flush=True)
+                assert size(h)==tuple(round(v*u.GetDpiForSystem()/96) for v in (640,480)),size(h)
+                wait(cs,lambda d:not d.get('waiting') and not d.get('notice'))
+                with sqlite3.connect(root/'mir3.sqlite3') as db:
+                    persisted=db.execute("SELECT FLD_CX,FLD_CY FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01'").fetchone()
+                print('saved before reentry',persisted,flush=True)
+                assert persisted==(moved['x'],moved['y']),(persisted,moved)
+                click(h,275,61)
+                restored=wait(cs,lambda d:d.get('scene')=='world' and d.get('map') and d.get('remote_port')==ports[7200],20)
+                print('restored',restored,flush=True)
+                assert (restored['x'],restored['y'])==(moved['x'],moved['y']),(restored,moved)
+                wait(cs,lambda d:not d.get('input_delayed'))
+            # Alt+Q and Enter exercise the client's normal confirmed exit.
+            u.PostMessageW(h,WM_SYSKEYDOWN,ord('Q'),ALT_CONTEXT)
+            time.sleep(.5)
+            u.PostMessageW(h,WM_KEYDOWN,VK_RETURN,0);u.PostMessageW(h,WM_KEYUP,VK_RETURN,0)
+            exit_code=p.wait(timeout=15)
+            assert exit_code==0,exit_code
+            print('client exit',exit_code,flush=True)
+            if iteration==0:
+                for attempt in range(100):
+                    with sqlite3.connect(root/'mir3.sqlite3') as db:
+                        saved=db.execute("SELECT FLD_CX,FLD_CY FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01'").fetchone()
+                    if saved!=(459,261):break
+                    time.sleep(.1)
+                assert saved!=(459,261),saved
+                print('persisted',saved,flush=True)
+
+    finally:
+        for p in reversed(processes):
+            if p.poll() is None:p.terminate()
+            p.wait(timeout=5)
+print('PASS: native login, movement, return, reentry and persisted position after client restart',flush=True)
