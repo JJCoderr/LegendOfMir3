@@ -52,3 +52,12 @@
 新增310 chat-chinese-input、311 group-chinese-input、312 guild-chinese-input；下一313。三张填入中文截图out/game-input-boundary已查看。初次行会夹具误用组队action3，截图发现后改为行会成员移除action4并重跑三态；生产实现无再次变化。
 
 七目标构建out/game-input-boundary-final.log通过。输入11+建组5+行会编辑17+音效15+键盘34+模态27+NPC密码10=119项通过（音效voiceCount另计）。共9页新鲜截图，所有自启预览停止。真实服务器联调仍留后。
+
+
+## 2026-11-17 邮件与寄售独立编辑框状态补验
+
+这两个面板使用独立EDIT，不经过共用ChatEdit。ReadEditors已有LimitAnsiEdit：邮件正文与寄售说明4000字节，寄售查询90字节。未据此改写生产代码；新增运行态验证其与模态提示的组合。
+
+10项新检查：邮件正文中文边界、写信与赠送独立草稿、邮件弹窗隐藏/正文保留、寄售查询中文边界/卖家文本保留、登记说明中文边界、寄售弹窗隐藏/说明保留。新增313 mail-editor-restored、314 mail-gift-restored、315 consignment-editor-restored；下一316。三张恢复后填入中文截图out/panel-editor均已查看。寄售打开背包的现有行为保留，邮件截图右侧背包为此前打开寄售的背景状态。
+
+七目标构建out/panel-editor-build.log通过。新增10+模态27+邮件GUI15+赠送4+滚动3+金额4+寄售GUI16+寄售输入18+价格1=98检查通过，另生成六页新鲜截图。所有自启预览停止。仅增加预览验证，不声称线上邮件/寄售交易已通过。

@@ -1220,6 +1220,46 @@ public:
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
         }
+        if(groupPanel>=313 && groupPanel<=315) {
+            auto& ui=g_xGameProc.m_xInterface;auto& mail=ui.m_xMailWnd;
+            FILE* report=fopen("panel-editor-check.txt","wb");
+            const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+            const auto text=[](HWND edit){std::vector<char> value(GetWindowTextLengthA(edit)+1);GetWindowTextA(edit,value.data(),int(value.size()));return std::string(value.data());};
+            const auto overflow=[](int limit){return std::string(limit-1,'A')+"中";};
+            ui.WindowActivate(_WND_ID_MAIL);mail.SelectView(MailLayout::View::Compose);mail.SyncEditors(true);
+            SetWindowTextA(mail.edits[0],"传奇勇士");SetWindowTextA(mail.edits[1],overflow(MailLayout::EditLimit).c_str());mail.Show();
+            check("mail_body_whole_boundary",mail.draft==std::string(MailLayout::EditLimit-1,'A') && text(mail.edits[1])==mail.draft);
+            SetWindowTextA(mail.edits[1],"写信草稿\r\n第二行中文");mail.Show();
+            mail.SelectView(MailLayout::View::Gift);SetWindowTextA(mail.edits[0],"好友");SetWindowTextA(mail.edits[1],"赠送草稿");mail.Show();
+            mail.SelectView(MailLayout::View::Compose);
+            check("compose_draft_restored",text(mail.edits[0])=="传奇勇士" && text(mail.edits[1])=="写信草稿\r\n第二行中文");
+            mail.SelectView(MailLayout::View::Gift);
+            check("gift_draft_restored",text(mail.edits[0])=="好友" && text(mail.edits[1])=="赠送草稿");
+            SetFocus(mail.edits[1]);ui.ShowNotice(4000);
+            check("mail_modal_hides_editors",!IsWindowVisible(mail.edits[0]) && !IsWindowVisible(mail.edits[1]) && GetFocus()!=mail.edits[1]);
+            ui.OnKeyDown(VK_RETURN,0);mail.SyncEditors(true);mail.Show();
+            check("mail_modal_preserves_text",IsWindowVisible(mail.edits[1]) && text(mail.edits[1])=="赠送草稿");
+            ui.WindowActivate(_WND_ID_MAIL);
+            auto& browser=ui.m_xConsignmentWnd;ui.WindowActivate(ConsignmentLayout::BrowserId);browser.SyncEditors(true);
+            SetWindowTextA(browser.edits[0],overflow(ConsignmentLayout::QueryLimit).c_str());
+            SetWindowTextA(browser.edits[1],"传奇勇士");browser.Show();
+            check("query_whole_boundary",browser.nameQuery==std::string(ConsignmentLayout::QueryLimit-1,'A'));
+            check("seller_query_preserved",browser.sellerQuery=="传奇勇士");ui.WindowActivate(ConsignmentLayout::BrowserId);
+            auto& sale=ui.m_xConsignmentRegistration;ui.WindowActivate(ConsignmentLayout::RegistrationId);sale.SyncEditors(true);
+            SetWindowTextA(sale.edits[0],overflow(ConsignmentLayout::DescriptionLimit).c_str());sale.Show();
+            check("description_whole_boundary",sale.description==std::string(ConsignmentLayout::DescriptionLimit-1,'A'));
+            SetWindowTextA(sale.edits[0],"出售装备\r\n欢迎咨询。");sale.Show();SetFocus(sale.edits[0]);ui.ShowNotice(4000);
+            check("sale_modal_hides_editor",!IsWindowVisible(sale.edits[0]) && GetFocus()!=sale.edits[0]);
+            ui.OnKeyDown(VK_RETURN,0);sale.SyncEditors(true);sale.Show();
+            check("sale_modal_preserves_text",IsWindowVisible(sale.edits[0]) && text(sale.edits[0])=="出售装备\r\n欢迎咨询。");
+            if(groupPanel!=315) {
+                ui.WindowActivate(ConsignmentLayout::RegistrationId);ui.WindowActivate(_WND_ID_MAIL);
+                mail.SelectView(groupPanel==313?MailLayout::View::Compose:MailLayout::View::Gift);mail.SyncEditors(true);
+                SetWindowTextA(mail.edits[0],"传奇勇士");SetWindowTextA(mail.edits[1],"你好！\r\n这里是中文正文。\r\n祝你游戏愉快。");
+            }
+            if(report) fclose(report);mouse={790,430};
+            capturePath=groupPanel==313?"mail-editor-restored.bmp":groupPanel==314?"mail-gift-restored.bmp":"consignment-editor-restored.bmp";
+        }
         if(groupPanel>=310 && groupPanel<=312) {
             auto& ui=g_xGameProc.m_xInterface;const HWND edit=g_xChatEditBox.GetSafehWnd();
             constexpr int GroupCreateDialog=1,GuildRemoveMemberDialog=4;
@@ -3789,6 +3829,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=chat-chinese-input")==0 ? 310 :
         strcmp(lpCmdLine,"--preview=group-chinese-input")==0 ? 311 :
         strcmp(lpCmdLine,"--preview=guild-chinese-input")==0 ? 312 :
+        strcmp(lpCmdLine,"--preview=mail-editor-restored")==0 ? 313 :
+        strcmp(lpCmdLine,"--preview=mail-gift-restored")==0 ? 314 :
+        strcmp(lpCmdLine,"--preview=consignment-editor-restored")==0 ? 315 :
         strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
         strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
         strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :
