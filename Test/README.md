@@ -60,3 +60,5 @@ step,name,target,action,params,expect
 测试脚本按子系统组织：登录使用 `Login.csv`，物品使用 `Inventory.csv`；后续角色、聊天、商店、战斗各自新增脚本。目标端由每行 target 决定，不按客户端/服务器分业务目录。RPC 基础测试独立于业务场景。
 
 执行器自身验证：`python Test/verify_runner.py`。Runner 目录含用于验证失败处理的预期失败 CSV，应通过该验证程序执行。
+
+`Character.csv` 覆盖创建角色：非法职业/性别/名字拒绝、重名服务器回包、失败恢复、创建女性法师、角色列表刷新、客户端人数上限、初始物品数据库检查及新角色进图。删除角色流程尚待接入。

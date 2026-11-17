@@ -503,6 +503,7 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 		case	SM_NEWCHR_SUCCESS:		// New character Create Success
 		{
 			m_bCreatePending = FALSE;
+            m_creationResult="succeeded";
             g_xSound.UpdateLobbyAudio(CMirSound::LobbyPage::None,0);
             m_Progress = PRG_CREA_TO_SEL;
             m_xBGround.SetRenderState(_RENDER_AVI_OUT);
@@ -510,9 +511,15 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
             RequestRoster();
 			break;
 		}
-        case SM_NEWCHR_FAIL:
+        case SM_NEWCHR_FAIL: {
             m_bCreatePending=FALSE;m_Progress=PRG_CREATE_CHAR;
-            ShowNotice(SelectionDialog::CreationFailure(unsigned(tdm.nRecog)));break;
+            // Integrated DBSvr reports legacy errors in wParam; MIR3 uses nRecog.
+            const int message=tdm.nRecog?SelectionDialog::CreationFailure(unsigned(tdm.nRecog)):
+                SelectionDialog::LegacyCreationFailure(tdm.wParam);
+            m_creationResult=message==SelectionDialog::NameExists?"name_exists":
+                message==SelectionDialog::Full?"full":"failed";
+            ShowNotice(message);break;
+        }
         case SM_STARTPLAY:
         {
             char endpoint[256] = {};
@@ -916,11 +923,30 @@ void CCharacterProcess::ShowNotice(int message) {
 void CCharacterProcess::SubmitCreation() {
     if(m_bCreatePending || m_xMsgBox.IsActive()) return;
     char name[256]={};GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,sizeof(name));
-    if(!name[0]) return;
-    if(const int error=SelectionDialog::NameError(name)) {ShowNotice(error);return;}
-    if(!g_szUserID[0]) return;
-    lstrcpynA(m_szChrName,name,sizeof(m_szChrName));m_bCreatePending=TRUE;
+    CreateCharacter(name,m_SelectJob,m_SelectSex);
+}
+bool CCharacterProcess::CreateCharacter(const std::string& name,int job,int gender) {
+    if(IsWaiting() || HasNotice() || m_bCreatePending || !g_szUserID[0] || name.empty()) return false;
+    if(job<0 || job>2 || gender<0 || gender>1) return false;
+    if(const int error=SelectionDialog::NameError(name)) {ShowNotice(error);return false;}
+    if(m_ChrCount>=SelectionDialog::CreationLimit) {m_creationResult="full";ShowNotice(SelectionDialog::Full);return false;}
+    lstrcpynA(m_szChrName,name.c_str(),sizeof(m_szChrName));
+    m_SelectJob=BYTE(job);m_SelectSex=BYTE(gender);
+    m_bCreatePending=TRUE;m_creationResult="pending";
     g_xClientSocket.OnNewChar(m_szChrName,0,m_SelectJob,m_SelectSex);
+    return true;
+}
+SelectionRoster CCharacterProcess::Roster() {
+    SelectionRoster roster;roster.count=m_ChrCount;
+    for(int i=0;i<roster.count;++i) {
+        m_CList.MoveCurrentToTop();m_CList.MoveNode(i);
+        roster.roles[i]=*m_CList.GetCurrentData();
+    }
+    return roster;
+}
+bool CCharacterProcess::DismissNotice() {
+    if(!HasNotice() || IsWaiting() || m_nMessage==SelectionDialog::DeleteConfirmation) return false;
+    FinishNotice(CLICK_OK);return true;
 }
 void CCharacterProcess::FinishNotice(HRESULT result) {
     if(result!=CLICK_OK && result!=CLICK_YES && result!=CLICK_NO) return;

@@ -2009,3 +2009,10 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - PicoJSON通用相等比较会把int64转double并改写值；执行器采用精确递归比较，新增相邻大整数拒绝验证，未修改第三方头文件。
 - Test Release构建通过；真实全场景rpc-4v69c9op含67步骤+10服务端检查全部通过，场景9.329秒，日志out/csv-validation/items-final.log。客户端基础协议也通过；8项执行器验证覆盖CSV字段、起止范围、空/逆序范围、精度和失败停止。按子系统重命名后rpc-mz7a0_87再次验证指定第6步及自定义日志成功。
 - 角色创建删除未在本轮修改：用户要求优先改CSV执行器。后续继续各子系统协议闭环，不做截图调试，也未宣称整体适配完成。
+
+
+## 2026-11-18 角色创建RPC与Character场景
+- CreateCharacter抽为UI/RPC共用业务入口，新增character.create及选角notice.dismiss；state.get暴露characters和creation_result。待创建回包时禁止进入角色，沿用现有客户端两角色上限；服务端旧三角色上限仍未统一，本轮未绕过客户端验证服务端满员分支。
+- 修复SM_NEWCHR_FAIL：集成DBSvr通过wParam报告旧错误码，客户端此前只读nRecog；兼容原有nRecog映射，正确识别重名并恢复后续创建。
+- Test/Character.csv及同名fixture新增完整创建场景：非法职业/性别/名字、重名请求回包、恢复、女性法师创建、列表刷新、客户端上限、数据库角色/初始装备/药水及真实进图。Client Release构建通过；rpc-leoyrz4q的34步骤与10服务端基础检查全部通过，场景3.796秒，日志out/csv-validation/character-final.log。
+- 删除仍未实现：OnDelChar发送name/confirmation，DBSvr却解为_TCREATECHR且忽略SQL失败，后续需要核对确认语义和账号绑定后修复；本轮只完成创建闭环，不宣称角色子系统或全部协议完成。

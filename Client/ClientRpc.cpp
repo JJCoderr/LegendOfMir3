@@ -102,7 +102,15 @@ std::string ClientState() {
             + ",\"notice\":" + mir3::BoolJson(g_xLoginProc.HasNotice());
     } else if (g_bProcState == _CHAR_SEL_PROC && g_xMainWnd.m_pxDefProcess == &g_xChrSelProc) {
         state += ",\"waiting\":" + std::string(mir3::BoolJson(g_xChrSelProc.IsWaiting()))
-            + ",\"notice\":" + mir3::BoolJson(g_xChrSelProc.HasNotice());
+            + ",\"notice\":" + mir3::BoolJson(g_xChrSelProc.HasNotice())
+            + ",\"creation_result\":" + mir3::QuoteLocalText(g_xChrSelProc.CreationResult());
+        const auto roster=g_xChrSelProc.Roster();Array characters;
+        for(int i=0;i<roster.count;++i) {
+            const auto& role=roster.roles[i];
+            characters.emplace_back(Object{{"name",Parse(mir3::QuoteLocalText(role.ChrName))},
+                {"job",Json(int64_t(role.Class))},{"gender",Json(int64_t(role.Gender))},{"level",Json(int64_t(role.Level))}});
+        }
+        state += ",\"characters\":" + Json(characters).serialize();
     }
     if (connected) state += ",\"remote_port\":" + std::to_string(ntohs(peer.sin_port));
     if (g_xMainWnd.m_pxDefProcess == &g_xGameProc && g_xGameProc.m_bRender) {
@@ -165,6 +173,10 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
         accepted=g_xLoginProc.SelectServer(Text(params,"name"));
     else if (method == "session.enter" && g_bProcState == _CHAR_SEL_PROC)
         accepted=g_xChrSelProc.EnterCharacter(Text(params,"name"));
+    else if (method == "character.create" && g_bProcState == _CHAR_SEL_PROC)
+        accepted=g_xChrSelProc.CreateCharacter(Text(params,"name"),Integer(params,"job"),Integer(params,"gender"));
+    else if (method == "notice.dismiss" && g_bProcState == _CHAR_SEL_PROC)
+        accepted=g_xChrSelProc.DismissNotice();
     else if (method == "notice.dismiss" && g_bProcState == _LOGIN_PROC) {
         accepted=g_xLoginProc.HasNotice();
         if (accepted) g_xLoginProc.DismissNotice();

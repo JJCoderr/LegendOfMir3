@@ -18,7 +18,11 @@
 class CCharacterProcess: public CWHDefProcess  
 {
 public:
-    bool EnterCharacter(const std::string& name) { return !IsWaiting() && !HasNotice() && m_xSelectChr.EnterCharacter(name); }
+    bool EnterCharacter(const std::string& name) { return !IsWaiting() && !HasNotice() && !m_bCreatePending && m_xSelectChr.EnterCharacter(name); }
+    bool CreateCharacter(const std::string& name,int job,int gender);
+    SelectionRoster Roster();
+    const char* CreationResult() const { return m_creationResult; }
+    bool DismissNotice();
     bool HasNotice() const { return m_xMsgBox.IsActive()!=FALSE; }
 						CCharacterProcess();
 	virtual				~CCharacterProcess();
@@ -66,6 +70,7 @@ private:
     void CloseCreationEditor();
     void ExitSelection();
     bool m_offline=false;
+    const char* m_creationResult="idle";
     std::string m_lastUrl;
     friend struct SelectionRosterPreview;
     friend struct SelectionDialogPreview;
