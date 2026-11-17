@@ -120,7 +120,6 @@ void CMailWnd::Show()
             text(message->person,Recipient,TextColor);
             text(message->date,{275,62,377,79},TextColor);
             const int saved=SaveDC(dc);
-            IntersectClipRect(dc,x+BodyX-1,y+BodyY-1,x+BodyX+BodyWidth+1,y+BodyY+BodyRows*BodyLineHeight+1);
             for(int row=0;row<BodyRows && firstBody+row<int(bodyLines.size());++row) {
                 const auto& line=bodyLines[firstBody+row];
                 const int left=x+BodyX,top=y+BodyY+row*BodyLineHeight;
@@ -310,7 +309,8 @@ int CMailWnd::ScrollTop() const
     using namespace MailLayout;
     const int count=view==View::Read?int(bodyLines.size()):int((view==View::Inbox?inbox:outbox).size());
     const int first=view==View::Read?firstBody:view==View::Inbox?firstInbox:firstOutbox;
-    return ScrollY+(count>1?int(ScrollTravel*double(first)/(count-1)):0);
+    const float ratio=count>1?float(double(first)/(count-1)):0;
+    return ScrollY+int(ScrollTravel*double(ratio));
 }
 bool CMailWnd::Scroll(int kind,POINT point)
 {
@@ -321,12 +321,24 @@ bool CMailWnd::Scroll(int kind,POINT point)
     const auto image=*m_pxWndImage->m_lpstNewCurrWilImageInfo;
     const int x=point.x-m_rcWnd.left,y=point.y-m_rcWnd.top;
     const RECT track={ScrollX,ScrollY,ScrollX+image.shWidth,ScrollY+ScrollTravel+image.shHeight};
-    if(kind==0 && PtInRect(&track,POINT{x,y})) {scrolling=true;captured=true;}
-    if(!scrolling || kind==2) return false;
     const int count=view==View::Read?int(bodyLines.size()):int((view==View::Inbox?inbox:outbox).size());
     int& first=view==View::Read?firstBody:view==View::Inbox?firstInbox:firstOutbox;
-    const double ratio=max(0.0,min(1.0,double(y-ScrollY)/(ScrollTravel+image.shHeight)));
-    first=max(0,min(int(count*ratio),count-1));
+    if(kind==0) {
+        if(!PtInRect(&track,POINT{x,y})) return false;
+        captured=true;pressed=pressedRow=-1;
+        const int thumb=ScrollTop();
+        if(y>=thumb && y<thumb+image.shHeight) scrolling=true;
+        else {
+            const float position=count>1?float(double(first)/(count-1)):0;
+            const float page=count?float(double(VisibleRows)/count):0;
+            const float next=position+(y<thumb+image.shHeight/2?-page:page);
+            first=max(0,min(int(count*double(max(0.f,min(1.f,next)))),count-1));
+        }
+        return true;
+    }
+    if(!scrolling || kind!=1) return false;
+    const float ratio=float(max(0.0,min(1.0,double(y-ScrollY)/(ScrollTravel+image.shHeight))));
+    first=max(0,min(int(count*double(ratio)),count-1));
     return true;
 }
 
@@ -360,23 +372,28 @@ void CMailWnd::LayoutBody()
     // MIR3 45BC70/45BEF0: CR-separated paragraphs, at most eleven wrapped rows per paragraph.
     size_t paragraph=0;
     while(paragraph<body.size()) {
-        const auto delimiter=body.find_first_of("\r\n",paragraph);
+        const auto delimiter=body.find('\r',paragraph);
         const size_t end=delimiter==std::string::npos?body.size():delimiter;
-        size_t start=paragraph;int rows=0;
-        while(start<end && rows<BodyRows) {
-            size_t next=start,fit=start;
-            while(next<end) {
-                next+=IsDBCSLeadByteEx(CP_ACP,BYTE(body[next])) && next+1<end?2:1;
-                SIZE extent={};GetTextExtentPoint32A(dc,body.data()+start,int(next-start),&extent);
-                if(extent.cx>BodyWidth && fit>start) break;
-                fit=next;
+        size_t cursor=paragraph;
+        int rows=0;
+        while(cursor<end && rows<BodyRows) {
+            std::string line;
+            bool lead=false;
+            for(;;) {
+                SIZE extent={};GetTextExtentPoint32A(dc,line.data(),int(line.size()),&extent);
+                // 482240 measures the existing row before appending its next byte.
+                if(extent.cx>=BodyWidth || cursor==end) {
+                    if(lead) {line.pop_back();--cursor;}
+                    break;
+                }
+                const char byte=body[cursor++];
+                lead=lead?false:static_cast<signed char>(byte)<0;
+                line+=byte;
             }
-            bodyLines.push_back(body.substr(start,fit-start));start=fit;++rows;
+            bodyLines.push_back(std::move(line));++rows;
         }
-        if(start==paragraph && start==end) bodyLines.emplace_back();
         if(delimiter==std::string::npos) break;
         paragraph=delimiter+1;
-        if(body[delimiter]=='\r' && paragraph<body.size() && body[paragraph]=='\n') ++paragraph;
     }
     SelectObject(dc,previous);DeleteObject(font);DeleteDC(dc);
 }
@@ -437,19 +454,26 @@ bool CMailWnd::SubmitGold(const char* text,unsigned balance)
     if(!amount || amount>balance) return false;
     giftGold=unsigned(amount);return true;
 }
-void CMailWnd::DrawGift()
+RECT CMailWnd::GiftBounds()
 {
     using namespace MailLayout;
     auto& icons=g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY];
-    if(!icons.NewSetIndex(giftItem.m_stItemInfo.stStdItem.wLooks)) return;
+    if(!icons.NewSetIndex(giftItem.m_stItemInfo.stStdItem.wLooks)) return {};
     const auto info=*icons.m_lpstNewCurrWilImageInfo;
     const int left=m_rcWnd.left+GiftCenterX-info.shWidth/2;
-    const int top=info.shHeight>GiftMaxHeight?78:m_rcWnd.top+GiftCenterY-info.shHeight/2;
+    // 459670 uses an absolute y=78 for oversized icons; retain that original behavior.
+    const int top=info.shHeight>GiftMaxHeight?GiftCroppedTop:m_rcWnd.top+GiftCenterY-info.shHeight/2;
     const int height=info.shHeight>GiftMaxHeight?GiftCroppedHeight:info.shHeight;
-    const RECT border={left-15,top-7,left+info.shWidth+15,top+height+7};
+    return {left,top,left+info.shWidth,top+height};
+}
+void CMailWnd::DrawGift()
+{
+    using namespace MailLayout;
+    const RECT clip=GiftBounds();
+    if(IsRectEmpty(&clip)) return;
+    const RECT border={clip.left-GiftBorderX,clip.top-GiftBorderY,clip.right+GiftBorderX,clip.bottom+GiftBorderY};
     DrawLegacyPanel(border,RGB(30,30,30),180,RGB(200,200,200));
-    const RECT clip={left,top,left+info.shWidth,top+height};
-    giftItem.DrawItem(left,top,_ITEM_TYPE_INVENTORY,&clip);
+    giftItem.DrawItem(clip.left,clip.top,_ITEM_TYPE_INVENTORY,&clip);
 }
 
 void CMailWnd::ShowAttachmentHint(POINT point)
@@ -461,10 +485,27 @@ void CMailWnd::ShowAttachmentHint(POINT point)
     const RECT bounds={m_rcWnd.left+box.left,m_rcWnd.top+box.top,m_rcWnd.left+box.right,m_rcWnd.top+box.bottom};
     if(!PtInRect(&bounds,point)) return;
     if(view==View::Gift && hasGiftItem && !giftIsGold) {
-        giftItem.ShowItemStatus(bounds.left+15,bounds.top+15);
+        const RECT icon=GiftBounds();
+        if(!IsRectEmpty(&icon)) giftItem.ShowItemStatus(icon.left+GiftHintX,icon.top+GiftHintY);
     } else if(view==View::Read) {
-        if(auto* message=CurrentMessage()) if(message->item[0]) {
-            CItem item;item.SetMir3Item(message->item.data(),0);item.ShowItemStatus(bounds.left+15,bounds.top+15);
+        const auto* message=CurrentMessage();
+        if(!message) return;
+        if(message->item[0]) {
+            CItem item;item.SetMir3Item(message->item.data(),0);
+            item.ShowItemStatus(bounds.left+AttachmentHintOffset,bounds.top+AttachmentHintOffset);
+        } else if(message->gold) {
+            // 458C20: the money attachment uses its own fixed 90x20 tooltip.
+            const RECT box={bounds.left+10,bounds.top+15,bounds.left+100,bounds.top+35};
+            DrawLegacyPanel(box,RGB(90,90,45),230,GoldHintBorderColor);
+            static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+            const auto label=captions.Get(GoldCaption)+" "+std::to_string(message->gold);
+            HDC dc;auto* surface=g_xMainWnd.GetBackBuffer();
+            if(FAILED(surface->GetDC(&dc))) return;
+            const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+            HFONT font=g_xMainWnd.CreateGameFont(face,9);const auto previous=SelectObject(dc,font);
+            SetBkMode(dc,TRANSPARENT);SetTextColor(dc,GoldHintTextColor);
+            RECT text=box;DrawTextA(dc,label.data(),int(label.size()),&text,DT_LEFT|DT_SINGLELINE|DT_VCENTER);
+            SelectObject(dc,previous);DeleteObject(font);surface->ReleaseDC(dc);
         }
     }
 }

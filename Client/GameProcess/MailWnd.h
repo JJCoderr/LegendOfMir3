@@ -48,6 +48,7 @@ public:
     bool hasGiftItem=false,giftIsGold=false;
     bool SelectGift(POINT point);
     bool SubmitGold(const char* text,unsigned balance);
+    RECT GiftBounds();
     void DrawGift();
     void ShowAttachmentHint(POINT point);
     int firstBody=0;

@@ -1129,3 +1129,11 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 统一交互检查：out/mud3-01/mail-gui-check.txt 的15项全1；mail-gift-check.txt 的4项全1。覆盖窗口路由、编辑框/Tab/Esc、独立草稿、取消、请求快照、发件空正文、前后封/正文滚动/列表末端、复选、遮挡、物品保留、金币校验。
 - 预览编号154..161（Inbox/Read/Compose/Gift/Outbox/Checks/Gold/GiftItem），下一空闲162。截图 out/mail-{inbox,read,compose,gift,outbox,gift-item,gift-gold}-final.png，均真实原生渲染。
 - 尚需后续原版精校：页签选中重复绘制的x/y疑似原版bug；正文分段排版与原版482240逐像素比较；金币附件tooltip和送礼大图裁切/提示位置；服务端收发/删除/撤回及实际入口。此批完成页面/编辑和交互框架，不能宣称整个客户端GUI或邮件端到端完成。
+
+### 信件排版、滚动与附件提示校准（2026-11-17）
+- IDA 原会话 worker 不可达；通过 bundled open.ps1 重新打开为 ed4a8612。导出 out/mail-layout-0x482240.c、0x41fed0.c、0x41fe80.asm、0x420200.asm；420180 可反编译确认拖动比例按完整轨道长度计算。
+- 482240 是先测量已累积字节宽度再追加字节，因此行可略超355px；原先预测下一个完整字符导致提前换行。现保留原版高字节配对及半字符回退、每CR段至多11行；空CR段不添加空白行；取消额外355px裁切，以保留原版末字。正文仍采用当前原生GDI字体，不声称所有字节组合已做机器码穷举。
+- 滚动条空白处按7/count翻页，按滑块不跳动，拖动以完整轨道作比例；使用原版float中间结果，例如10项第一下页结果6，已在原生运行中验证。
+- 金币附件提示按458C20固定90x20、CmList1050、颜色64250/边框3315350；礼物图标绘制与tooltip共享GiftBounds，提示锚点为图标+25,+22。保留459670超高图标绝对y=78、裁130的原版行为。
+- 合并验证：build-mail-fidelity-final.log全部目标构建通过；mail-gui-check15项、mail-gift-check4项、mail-scroll-check3项全1。图像：out/mail-body-boundary.png、mail-gold-hint.png、mail-gift-hint.png，已逐张检查。
+- 预览新增162正文边界、163金币提示、164礼物提示，下一空闲165。邮件实际入口及协议仍待接入；页签重复绘制坐标疑似原版bug、图标边框的混合顺序等尚不能称逐像素完全一致。

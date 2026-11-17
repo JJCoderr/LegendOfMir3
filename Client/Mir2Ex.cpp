@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -65,7 +65,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewMailGiftItem) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewMailGiftHint) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1841,7 +1841,7 @@ public:
             if(FILE* report=fopen("equipment-durability-check.txt","wb")) {fprintf(report,"threshold=%d warning=%d raw=%d unit=%d special=%d negative=%d wide=%d ignored=%d drop=%d\n",threshold,warning,rawBytes,unit,special,negative,wide,ignored,drop);fclose(report);}
         }
 
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewMailGiftItem) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewMailGiftHint) {
             auto& ui=g_xGameProc.m_xInterface;auto& mail=ui.m_xMailWnd;
             ui.WindowActivate(_WND_ID_MAIL);
             for(unsigned i=0;i<10;++i) {
@@ -1856,7 +1856,7 @@ public:
             mail.composeRecipient="远行的勇士";mail.composeDraft="你好！\r\n明天一起前往沙巴克，记得带上补给。\r\n祝一路平安。";
             mail.giftRecipient="同行的伙伴";mail.giftDraft="这份礼物送给你。\r\n愿我们在玛法大陆再次相逢。";
             const char* paths[]={"mail-inbox.bmp","mail-read.bmp","mail-compose.bmp","mail-gift.bmp","mail-outbox.bmp"};
-            const int page=groupPanel==PreviewMailChecks?0:groupPanel>=PreviewMailGold?int(MailLayout::View::Gift):groupPanel-PreviewMailInbox;
+            const int page=groupPanel==PreviewMailChecks?0:(groupPanel==PreviewMailBody || groupPanel==PreviewMailGoldHint)?int(MailLayout::View::Read):groupPanel>=PreviewMailGold?int(MailLayout::View::Gift):groupPanel-PreviewMailInbox;
             mail.SelectView(MailLayout::View(page));capturePath=paths[page];
             mouse={700,400};
             enum MailFixtureField { Icon=36, Instance=62 };
@@ -1868,7 +1868,18 @@ public:
                 ui.m_stCommonItem.xItem.SetMir3Item(raw,0);ui.m_stCommonItem.bSetted=TRUE;
                 return mail.SelectGift(POINT{MailLayout::GiftCenterX,MailLayout::GiftCenterY});
             };
-            if(groupPanel==PreviewMailGiftItem) {prepareGift();capturePath="mail-gift-item.bmp";}
+            if(groupPanel==PreviewMailGiftItem || groupPanel==PreviewMailGiftHint) {
+                prepareGift();capturePath=groupPanel==PreviewMailGiftHint?"mail-gift-hint.bmp":"mail-gift-item.bmp";
+                if(groupPanel==PreviewMailGiftHint) mouse={MailLayout::GiftCenterX,MailLayout::GiftCenterY};
+            }
+            if(groupPanel==PreviewMailBody) {
+                mail.inbox[1].body=std::string(59,'A')+"B\r\r中文边界："+std::string(110,'C')+"\r末行";
+                capturePath="mail-body-boundary.bmp";
+            }
+            if(groupPanel==PreviewMailGoldHint) {
+                mail.inbox[1].attachment=true;mail.inbox[1].gold=500;
+                mouse={MailLayout::Attachment.left+2,MailLayout::Attachment.top+2};capturePath="mail-gold-hint.bmp";
+            }
             if(groupPanel==PreviewMailGold) {
                 ui.OpenNameDialog(MailLayout::GoldDialogAction);SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"500");capturePath="mail-gift-gold.bmp";
             }
@@ -1879,6 +1890,18 @@ public:
                     }
                 };
                 const bool hit=ui.GetWindowInMousePos(POINT{100,100})==_WND_ID_MAIL;
+                const POINT track={MailLayout::ScrollX+2,MailLayout::ScrollY+MailLayout::ScrollTravel-2};
+                ui.OnLButtonDown(track);ui.OnLButtonUp(track);
+                // Original 420200 stores 7/10 as float before multiplying by ten: truncation yields six.
+                const bool pageScroll=mail.firstInbox==6 && !mail.scrolling && !mail.captured;
+                const POINT thumb={MailLayout::ScrollX+2,mail.ScrollTop()+2};
+                ui.OnLButtonDown(thumb);const bool thumbStable=mail.firstInbox==6 && mail.scrolling;
+                ui.OnMouseMove(POINT{MailLayout::ScrollX+2,MailLayout::CanvasHeight});
+                ui.OnLButtonUp(POINT{MailLayout::ScrollX+2,MailLayout::CanvasHeight});
+                const bool dragEnd=mail.firstInbox==9 && !mail.scrolling && !mail.captured;
+                mail.Wheel(-100);
+                if(FILE* report=fopen("mail-scroll-check.txt","wb")) {fprintf(report,"page=%d thumb=%d end=%d\n",pageScroll,thumbStable,dragEnd);fclose(report);}
+
                 click(MailLayout::Action::Compose);
                 const bool editors=IsWindowVisible(mail.edits[0]) && IsWindowVisible(mail.edits[1]);
                 SetWindowTextA(mail.edits[0],"独立收件人");SetWindowTextA(mail.edits[1],"写信草稿");
@@ -2438,6 +2461,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=mail-checks")==0 ? PreviewMailChecks :
         strcmp(lpCmdLine,"--preview=mail-gift-gold")==0 ? PreviewMailGold :
         strcmp(lpCmdLine,"--preview=mail-gift-item")==0 ? PreviewMailGiftItem :
+        strcmp(lpCmdLine,"--preview=mail-body-boundary")==0 ? PreviewMailBody :
+        strcmp(lpCmdLine,"--preview=mail-gold-hint")==0 ? PreviewMailGoldHint :
+        strcmp(lpCmdLine,"--preview=mail-gift-hint")==0 ? PreviewMailGiftHint :
         strcmp(lpCmdLine,"--preview=trade-local-hint")==0 ? PreviewTradeLocal :
         strcmp(lpCmdLine,"--preview=trade-remote-hint")==0 ? PreviewTradeRemote :
         strcmp(lpCmdLine,"--preview=trade-held-hint")==0 ? PreviewTradeHeld :
