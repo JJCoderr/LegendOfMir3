@@ -2388,3 +2388,12 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 普通 SkillsLearning 31 项通过；全链路双向分片 SkillsLearning 31、三个拒绝场景各 27 项通过。另 SkillsCasting 26、SkillsHealing 24、CombatMagic 24 项通过，总计 217 项。证据 out/csv-validation/skills-learning.log、skills-book-*-fragments/test.log、game-stream-*/test.log。
 - 本轮未发现需要修改的技能业务代码；测试覆盖从未学习到保存重进的完整路径，不宣称技能系统全部完成。
 - 待扩展：商店购买技能书时，普通库存最大值与 GetMagicID 所读的第三字段是否正确保持（尤其技能编号不等于默认耐久时）；技能训练升级、技能保存故障回滚、其他职业及技能效果。学习实现 ReadBook 在 ClientMagicRecord 成功前先加入内存技能，相关失败边界尚未验证。
+
+
+## 2026-11-18 商店技能书购买到学习完整链路
+
+- 新增 Test/Shop/ShopSkillBook.csv、fixture 和商店脚本：购买治疗术书、库存/金币、保存书籍重进、学习、F1绑定、再次保存重进。数据 Val1=100、Val2=2，另预置编号1对照技能，确保学习编号来自正确物品字段。
+- 普通物品 InitDurability 在 FLD_DURAMAX=0 时保留 Val1/Val2；GetMagicID 读取物品键第三段。实际购买后保存键为 G00001000002，正确学习 Healing(2)，无 WrongSkill(1)，用书后数据库剩余0本且技能记录为 [2,0,49]。
+- 初次 fixture 写 FLD_DURAMAX=NULL 触发 SQLite NOT NULL 约束，已改为0以采用既有默认初始化规则；未修改数据库schema或业务实现。
+- 最终48步场景普通连接与全链路双向分片各通过，共96项。日志 out/csv-validation/shop-skill-book-final.log 与 shop-skill-book-fragments/test.log。最终验证含学习后的再次进图，不只检查数据库。
+- 未发现默认技能书购买流程的编号丢失，未改产品代码。非零 FLD_DURAMAX 的技能书配置、卖书回购、训练升级与学习保存失败仍待覆盖；不要将该默认路径通过当成所有技能书规则与原版一致。

@@ -311,3 +311,15 @@ python Test/verify_gate_stream.py --edge client --game --direction both --scenar
 `Skills/SkillsBookJob.csv`、`SkillsBookLevel.csv`、`SkillsBookMissing.csv` 分别验证职业不符、等级不足、技能定义缺失：服务器返回 SM_EAT_FAIL，客户端保留两本书且不新增技能，保存重进后仍一致。数据种子中的普通物品键第三段作为书籍技能编号，沿用当前 ReadBook/GetMagicID 逻辑。
 
 四个场景可使用 `launch_csv.py` 正常运行，也可用 `verify_gate_stream.py --edge client --game --direction both --scenario <CSV> --log-dir <目录>` 做全链路分片验证。这些场景不包含商店购买技能书、技能训练升级、所有职业技能效果或学习保存失败回滚。
+
+
+### 商店技能书到学习
+
+`Shop/ShopSkillBook.csv` 验证完整跨子系统流程：从商店购买治疗术技能书、检查库存与金币、保存书籍后重新进图、使用书籍学习正确技能、绑定 F1、再次保存并重登。fixture 将物品数据设置为 Val1=100、Val2=2，并预置编号 1 的对照技能，避免因两个字段恰好相同而漏掉编号丢失。`FLD_DURAMAX=0` 使用当前普通物品的 Val1/Val2 初始化规则，数据库中的键必须是 `G00001000002`。
+
+```powershell
+python Test/launch_csv.py Test/Shop/ShopSkillBook.csv --log out/shop-skill-book.log
+python Test/verify_gate_stream.py --edge client --game --direction both --scenario Test/Shop/ShopSkillBook.csv --log-dir out/shop-skill-book-fragments
+```
+
+本场景验证当前数据规则下的购买、学习和保存，不覆盖为技能书显式设置非零 FLD_DURAMAX、技能书出售回购或技能训练升级。

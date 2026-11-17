@@ -1,0 +1,49 @@
+﻿step,name,target,action,params,expect
+1,credentials ready,Client,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+2,wrong password,Client,session.login,account=mirtest;password=wrong,result.status=submitted
+3,login rejected,Client,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+4,dismiss rejection,Client,notice.dismiss,,result.status=submitted
+5,login,Client,session.login,account=mirtest;password=test123,result.status=submitted
+6,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+7,authenticated,Client,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+8,dismiss billing,Client,notice.dismiss,,result.status=submitted
+9,unknown server rejected,Client,session.select_server,name=MissingServer,error.code=-32002
+10,select server,Client,session.select_server,name=Mir3Local,result.status=submitted
+11,roster ready,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+12,unknown character rejected,Client,session.enter,name=MissingRole,error.code=-32002
+13,enter character,Client,session.enter,name=MirProbe01,result.status=submitted
+140,NPC visible,Client,state.wait,,result.scene=world;result.actor_count=1;result.actors.0.npc=true;result.actors.0.dead=false;result.actors.0.x=460;result.actors.0.y=261
+150,query NPC name,Client,actor.query_name,index=0,result.status=submitted
+160,NPC name received,Client,state.wait,,result.actor_count=1;result.actors.0.name=NpcProbe;result.actors.0.npc=true
+170,dismiss arrival,Client,notice.dismiss,,result.status=submitted
+180,input ready,Client,state.wait,,result.input_delayed=false
+190,closed shop rejects purchase,Client,shop.buy,index=0;quantity=1,error.code=-32002
+200,open merchant,Client,npc.click,index=0,result.status=submitted
+210,buy option ready,Client,state.wait,,result.npc_dialog.rows.1.command=@buy;result.npc_dialog.ready=true
+220,open shop,Client,npc.select,option=0,result.status=submitted
+230,book stock ready,Client,state.wait,,result.shop.open=true;result.shop.goods.0.name=HealingBook;result.bag_count=0;result.gold=500
+240,book offers,Client,shop.details,index=0,result.status=submitted
+250,book offer ready,Client,state.wait,,result.shop.loading=false;result.shop.offers.0.id=1;result.shop.offers.0.price=110
+260,buy book,Client,shop.buy_offer,index=0,result.status=submitted
+270,purchased book metadata,Client,state.wait,,result.bag_count=1;result.gold=390;result.bag.0.name=HealingBook;result.bag.0.durability=100;result.bag.0.max_durability=2;result.skills=[];result.shop.goods.0.stock=0
+280,exit ready,Client,state.wait,,result.npc_dialog.ready=true
+290,close merchant,Client,npc.select,option=0,result.status=submitted
+300,ready to save,Client,state.wait,,result.shop.open=false;result.npc_dialog.open=false;result.return_ready=true
+310,save purchased book,Client,session.return,,result.status=submitted
+320,selection restored,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+330,purchased metadata saved,Database,query,SELECT FLD_ITEMINDEX FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='MirProbe01',"rows=[[""G00001000002""]]"
+340,gold saved,Database,query,SELECT FLD_GOLD FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01',rows=[[390]]
+350,reenter with book,Client,session.enter,name=MirProbe01,result.status=submitted
+360,book restored,Client,state.wait,,result.scene=world;result.bag_count=1;result.bag.0.id=1;result.bag.0.max_durability=2;result.input_delayed=false;result.notice=false
+370,learn purchased book,Client,item.use,id=1,result.status=submitted
+380,correct skill learned,Client,state.wait,,result.bag_count=0;result.use_pending=false;result.skills.0.id=2;result.skills.0.name=Healing;result.skills.0.level=0;result.skills.0.training=0
+390,learn reply,Client,wire.expect,message=SM_ADDMAGIC;direction=received,count=1
+400,bind healing,Client,skill.bind,id=2;key=1,result.status=submitted
+410,save ready,Client,state.wait,,result.return_ready=true;result.skill_shortcuts.0=2
+420,save learned book,Client,session.return,,result.status=submitted
+430,saved selection,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+440,correct skill persisted,Database,query,"SELECT FLD_MAGICID,FLD_LEVEL,FLD_USEKEY FROM TBL_CHARACTER_MAGIC WHERE FLD_CHARNAME='MirProbe01'","rows=[[2,0,49]]"
+450,book consumed persistently,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='MirProbe01',rows=[[0]]
+460,reenter learned skill,Client,session.enter,name=MirProbe01,result.status=submitted
+470,learned skill restored,Client,state.wait,,result.scene=world;result.bag_count=0;result.skills.0.id=2;result.skills.0.name=Healing;result.skills.0.key=1;result.skill_shortcuts.0=2
+480,coverage,Client,protocol.get,,
