@@ -2408,3 +2408,13 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - EIServer Release 构建通过。四场景106项，高位场景全链路分片26项（也核对三处值），施法26、治疗24、日志编码回归登录24，共206项通过。证据 out/csv-validation/skills-training-comparison、skills-training-high-fragments、skills-training-*-regression.log、skills-training-utf8-launcher。
 - 分片辅助程序子进程 stdout 原随本地代码页，导致 launcher.log 中文路径无法UTF-8读取；显式 PYTHONIOENCODING=utf-8 后验证通过。结果CSV日志原本已是UTF-8。
 - 未核对修炼数值与原版服务器、未改变现有 fTrain 条件使用方式，未覆盖所有技能效果、被动属性重算、多技能快速连续回包与学习保存故障。ObjectPlayerAdmin 的 RM_MAGIC_LVEXP 参数顺序仍需单独核查。
+
+
+## 2026-11-18 技能与物品保存删除校验
+
+- SkillsLearningDeleteIgnored 故障注入复现：旧普通物品 DELETE 被忽略，DBSvr 仍插入并提交，存档变成技能1条/书籍3本；step270 本应为未学习却实际1条，证据 skills-delete-before.log。
+- SaveHumanMagicRcd、SaveGenItemRcd 在删除旧快照后 SELECT COUNT 确认该角色记录已清空；有残留即返回失败，由已有角色/技能/物品整体事务回滚。产品修改仅两处各4行，复用已有数据库接口。
+- 新增 SkillsLearningSaveFailure、SaveIgnored、DeleteIgnored、SkillsTrainingDeleteIgnored：覆盖 INSERT ABORT/IGNORE 及普通物品/技能 DELETE IGNORE。检查原快照重进恢复、其他角色技能与物品保留。四个独立 runtime 均观察到 Save character transaction rolled back 日志。
+- 新 SkillsTrainingLevel 预置可施放技能但角色等级不满足继续修炼条件；仍能扣蓝击杀，修炼值保持99、无 SM_MAGIC_LVEXP，保存重进一致。
+- EIServer Release 构建通过。上述5场景33+33+33+28+27，正常 SkillsLearning31、InventoryFull46，总计231项通过，日志 out/csv-validation/save-boundary-*。CSV表头/编号校验通过。
+- 保存失败仍无新客户端提示，回到选角后加载原存档；当前验证后端为SQLite，未验证ODBC触发器/运行行为。未扩展SQL名字转义、其他保存故障或所有技能条件。

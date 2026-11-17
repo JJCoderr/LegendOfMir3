@@ -1,0 +1,34 @@
+﻿step,name,target,action,params,expect
+10,credentials ready,Client,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+20,wrong password,Client,session.login,account=mirtest;password=wrong,result.status=submitted
+30,login rejected,Client,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+40,dismiss rejection,Client,notice.dismiss,,result.status=submitted
+50,login,Client,session.login,account=mirtest;password=test123,result.status=submitted
+60,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+70,authenticated,Client,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+80,dismiss billing,Client,notice.dismiss,,result.status=submitted
+90,unknown server rejected,Client,session.select_server,name=MissingServer,error.code=-32002
+100,select server,Client,session.select_server,name=Mir3Local,result.status=submitted
+110,roster ready,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+120,unknown character rejected,Client,session.enter,name=MissingRole,error.code=-32002
+130,enter character,Client,session.enter,name=MirProbe01,result.status=submitted
+140,books ready,Client,state.wait,,result.scene=world;result.bag_count=2;result.skills=[];result.input_delayed=false;result.bag.0.name=FireballBook
+150,dismiss arrival,Client,notice.dismiss,,result.status=submitted
+160,read first book,Client,item.use,id=1,result.status=submitted
+170,skill learned and book consumed,Client,state.wait,,result.bag_count=1;result.use_pending=false;result.held_item=null;result.skills.0.id=1;result.skills.0.name=Fireball;result.skills.0.level=0;result.skills.0.training=0;result.skills.0.key=0
+180,read duplicate book,Client,item.use,id=2,result.status=submitted
+190,duplicate book preserved,Client,state.wait,,result.bag_count=1;result.use_pending=false;result.held_item=null;result.skills.0.id=1;result.skills.0.level=0
+200,single learning reply,Client,wire.expect,message=SM_ADDMAGIC;direction=received,count=1
+210,single use success,Client,wire.expect,message=SM_EAT_OK;direction=received,count=1
+220,duplicate refused,Client,wire.expect,message=SM_EAT_FAIL;direction=received,count=1
+230,bind learned skill,Client,skill.bind,id=1;key=1,result.status=submitted
+240,binding ready,Client,state.wait,,result.skills.0.key=1;result.skill_shortcuts.0=1;result.return_ready=true
+250,save learned skill,Client,session.return,,result.status=submitted
+260,selection restored,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+270,failed save adds no skill,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_MAGIC WHERE FLD_CHARNAME='MirProbe01',rows=[[0]]
+280,old books retained,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='MirProbe01',rows=[[2]]
+285,other skill preserved,Database,query,"SELECT FLD_LEVEL,FLD_CURRTRAIN FROM TBL_CHARACTER_MAGIC WHERE FLD_CHARNAME='OtherRole'","rows=[[2,37]]"
+286,other book preserved,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='OtherRole',rows=[[1]]
+290,reenter,Client,session.enter,name=MirProbe01,result.status=submitted
+300,previous snapshot restored,Client,state.wait,,result.scene=world;result.bag_count=2;result.skills=[];result.skill_shortcuts.0=0
+310,coverage,Client,protocol.get,,

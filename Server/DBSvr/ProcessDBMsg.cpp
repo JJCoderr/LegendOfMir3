@@ -336,6 +336,10 @@ char *SaveHumanMagicRcd(char *user, char *name, char *encoded, int count, bool& 
     char sql[1024];
     sprintf(sql, "DELETE FROM TBL_CHARACTER_MAGIC WHERE FLD_CHARNAME='%s'", name);
     saved = record->Execute(sql);
+    if (saved) {
+        sprintf(sql, "SELECT COUNT(*) AS REMAINING FROM TBL_CHARACTER_MAGIC WHERE FLD_CHARNAME='%s'", name);
+        saved = record->Execute(sql) && record->Fetch() && atoi(record->Get("REMAINING")) == 0;
+    }
     for (int i = 0; saved && i < count; ++i) {
         if (strlen(encoded) < MAGICRCDBLOCKSIZE + 1 || encoded[MAGICRCDBLOCKSIZE] != '/') { saved = false; break; }
         _THUMANMAGICRCD magic = {};
@@ -355,6 +359,10 @@ bool SaveGenItemRcd(char *user, char *name, char *encoded, int count)
     char sql[1024];
     sprintf(sql, "DELETE FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='%s'", name);
     bool saved = record->Execute(sql);
+    if (saved) {
+        sprintf(sql, "SELECT COUNT(*) AS REMAINING FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='%s'", name);
+        saved = record->Execute(sql) && record->Fetch() && atoi(record->Get("REMAINING")) == 0;
+    }
     for (int i = 0; saved && i < count; ++i) {
         if (strlen(encoded) < GENITEMRCDBLOCKSIZE + 1 || encoded[GENITEMRCDBLOCKSIZE] != '/') { saved = false; break; }
         _TGENITEMRCD item = {};

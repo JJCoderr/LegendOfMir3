@@ -336,3 +336,12 @@ python Test/verify_skill_training.py --log-dir out/skill-training
 ```
 
 服务端沿用原有每次 1–3 点（快速修炼时乘 3）的规则和角色等级条件；本轮接通原先未调用的升级检查及进度通知，升级延迟 800 毫秒、普通进度延迟 1000 毫秒。未验证这些数值与原版服务器完全一致，也未覆盖所有技能的可修炼条件、被动技能属性重算或多技能并发回包。
+
+
+### 技能学习保存失败与修炼等级限制
+
+`SkillsLearningSaveFailure.csv` / `SkillsLearningSaveIgnored.csv` 分别让技能 INSERT 报错或被忽略；`SkillsLearningDeleteIgnored.csv` 让旧书籍 DELETE 被忽略；`SkillsTrainingDeleteIgnored.csv` 让旧技能 DELETE 被忽略。四个场景均检查整次保存回滚、原存档重进恢复，以及其他角色的技能/物品未受影响。删除旧快照后必须确认该角色记录已清空，否则不能继续插入并提交。
+
+`SkillsTrainingLevel.csv` 预置可施放技能，但角色等级低于下一修炼条件，验证施法扣蓝和击杀仍完成、修炼值保持 99、不发送修炼更新，保存重进后仍一致。这与技能满级不增长是独立条件。
+
+保存失败目前记录服务器日志并保留旧存档，未新增客户端保存失败通知。故障注入使用隔离 SQLite 触发器，未验证 SQL Server 的运行行为。
