@@ -73,7 +73,28 @@ int Run()
     ULONGLONG deadline=0;
     bool starting=false;
     mir3::DebugState debugState(L"EIServer");
-    while(GetMessage(&msg,nullptr,0,0)>0) {
+    for (;;) {
+        const BOOL result = GetMessage(&msg,nullptr,0,0);
+        wchar_t message[256];
+        if (result == -1) {
+            const DWORD error = GetLastError();
+            swprintf_s(message, L"GetMessage failed: error=%lu", error);
+            mir3::ConsoleLog(L"EIServer", message);
+            return 1;
+        }
+        swprintf_s(message,
+            L"MSG hwnd=%p message=0x%04X wParam=0x%llX lParam=0x%llX time=%lu pt=(%ld,%ld)",
+            static_cast<void*>(msg.hwnd), msg.message,
+            static_cast<unsigned long long>(msg.wParam),
+            static_cast<unsigned long long>(static_cast<ULONG_PTR>(msg.lParam)),
+            msg.time, msg.pt.x, msg.pt.y);
+        mir3::ConsoleLog(L"EIServer", message);
+        if (result == 0) {
+            swprintf_s(message, L"WM_QUIT received: exitCode=%llu",
+                static_cast<unsigned long long>(msg.wParam));
+            mir3::ConsoleLog(L"EIServer", message);
+            return static_cast<int>(msg.wParam);
+        }
         if(!msg.hwnd && msg.message==WM_TIMER) {
             debugState.Poll([&] {
                 return std::string(",\"ready\":") + mir3::BoolJson(current==_countof(services))
@@ -102,7 +123,6 @@ int Run()
             TranslateMessage(&msg);DispatchMessage(&msg);
         }
     }
-    return 0;
 }
 }
 int main() { const int result=ei::Run();ExitProcess(result); }

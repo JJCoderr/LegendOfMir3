@@ -1899,3 +1899,7 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - out/native-live-oo8w1t1z日志明确显示1009退出消息后仍有3011走路请求，导致客户端快照460,261与数据库460,262不同。DefMainWndProc只拦截窗口消息，但角色UpdateMotionState仍轮询鼠标，且动作队列可能尚有待发操作。
 - InputDelayed同时判断退出过渡，统一阻止鼠标轮询和动作入口；ConfirmExit在发送Logout前清空待发动作。保持场景过渡动画和网络接收。
 - Release构建通过。退出回归32项全通过，包括新增加的pending取消、轮询输入零发包。真实客户端out/native-live-_1yoqbtd验证移动、返回选角、重进与重登，客户端/SQLite位置均460,261；日志1009到选角重新连接之间无3011/3013。out/debug/Mir2Ex.exe已更新。
+
+## 2026-11-17 EIServer 消息循环日志
+- Run() 打印每条 GetMessage 返回的 MSG：hwnd、message、wParam、lParam、time、pt，包括 WM_TIMER 和 WM_QUIT；GetMessage 失败打印错误码并返回失败，WM_QUIT 记录并返回退出码。
+- Release EIServer 构建通过，已更新 out/debug/EIServer.exe。实际启动六个服务就绪，注入 WM_APP 的 0x1234/0x5678 参数可见，WM_QUIT 正常记录且退出码为 0；日志 out/debug/msg-loop-check.log。
