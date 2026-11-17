@@ -89,6 +89,10 @@ static HRESULT CALLBACK TextureSearchCallback(DDPIXELFORMAT* pddpf, VOID* param)
     if ( (ptsi->bUseAlpha==FALSE) && (pddpf->dwFlags&DDPF_ALPHAPIXELS) )
         return DDENUMRET_OK;
 
+    // WIL pixels are RGB565 and are copied without color conversion.
+    if (pddpf->dwRBitMask != 0xf800 || pddpf->dwGBitMask != 0x07e0 || pddpf->dwBBitMask != 0x001f)
+        return DDENUMRET_OK;
+
     if ( pddpf->dwRGBBitCount == ptsi->dwDesiredBPP )
     {
         memcpy(ptsi->pddpf, pddpf, sizeof(DDPIXELFORMAT));
@@ -169,7 +173,7 @@ HRESULT WILTextureContainer::Restore(LPDIRECT3DDEVICE7 pd3dDevice)
     DDSURFACEDESC2 ddsd;
     D3DUtil_InitSurfaceDesc( ddsd );
     ddsd.dwFlags         = DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|
-                           /*DDSD_PIXELFORMAT|*/DDSD_TEXTURESTAGE;
+                           DDSD_PIXELFORMAT|DDSD_TEXTURESTAGE;
     ddsd.ddsCaps.dwCaps  = DDSCAPS_TEXTURE;
     ddsd.dwTextureStage  = 0;
     ddsd.dwWidth         = m_dwWidth;
@@ -249,7 +253,7 @@ HRESULT WILTextureContainer::CopyDataToSurfaceToSurface()
     DDSURFACEDESC2 ddsd;
     ddsd.dwSize = sizeof(ddsd);
     m_pddsSurface->GetSurfaceDesc(&ddsd);
-    ddsd.dwFlags         = DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|//DDSD_PIXELFORMAT|
+    ddsd.dwFlags         = DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|DDSD_PIXELFORMAT|
                            DDSD_TEXTURESTAGE;
     ddsd.ddsCaps.dwCaps  = DDSCAPS_TEXTURE|DDSCAPS_SYSTEMMEMORY;
     ddsd.ddsCaps.dwCaps2 = 0L;
@@ -268,6 +272,7 @@ HRESULT WILTextureContainer::CopyDataToSurfaceToSurface()
 
     DWORD lPitch = ddsd.lPitch;
     WORD* pwData = (WORD*)ddsd.lpSurface;
+    memset(ddsd.lpSurface, 0, ddsd.lPitch * ddsd.dwHeight);
 
 
 
@@ -312,7 +317,7 @@ HRESULT WILTextureContainer::CopyDataToSurfaceToSurface()
 				x++;
 				nCurrWidth += nCntCopyWord;
 			}
-			else if ( m_pwData[x] == 0xC1 )
+			else if ( m_pwData[x] >= 0xC1 && m_pwData[x] <= 0xC3 )
 			{
 				x++;
 				nCntCopyWord = m_pwData[x];
@@ -378,7 +383,7 @@ HRESULT WILTextureContainer::CopyDataToSurface()
     DDSURFACEDESC2 ddsd;
     ddsd.dwSize = sizeof(ddsd);
     m_pddsSurface->GetSurfaceDesc(&ddsd);
-    ddsd.dwFlags         = DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|//DDSD_PIXELFORMAT|
+    ddsd.dwFlags         = DDSD_CAPS|DDSD_HEIGHT|DDSD_WIDTH|DDSD_PIXELFORMAT|
                            DDSD_TEXTURESTAGE;
     ddsd.ddsCaps.dwCaps  = DDSCAPS_TEXTURE|DDSCAPS_SYSTEMMEMORY;
     ddsd.ddsCaps.dwCaps2 = 0L;
@@ -422,6 +427,7 @@ HRESULT WILTextureContainer::CopyDataToSurface()
 	WORD* pwdDst;
 
 	pwdDst = (WORD*)ddsd.lpSurface;
+    memset(ddsd.lpSurface, 0, ddsd.lPitch * ddsd.dwHeight);
 
 	INT nWidthStart	= 0;
 	INT nWidthEnd	= 0;
@@ -456,7 +462,7 @@ HRESULT WILTextureContainer::CopyDataToSurface()
 				x++;
 				nCurrWidth += nCntCopyWord;
 			}
-			else if ( m_pwData[x] == 0xC1 )
+			else if ( m_pwData[x] >= 0xC1 && m_pwData[x] <= 0xC3 )
 			{
 				x++;
 				nCntCopyWord = m_pwData[x];

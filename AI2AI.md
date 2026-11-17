@@ -1886,3 +1886,10 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 按用户要求移除CMake MIR3_DEV_RUNTIME_DIR，直接使用进程当前工作目录./中的EIServer.ini，不再回退开发机out路径。
 - Release构建成功，真实客户端日志out/native-live-oo8w1t1z验证2001遮盖、104正文Mir3Local及双向消息；该轮返回选角前数据库坐标460,262与客户端460,261不同，已保留失败证据，不宣称全流程通过。
 - 曾经ShowWindow/IsWindowVisible为1但窗口矩形0x0，不足以证明终端可见。最终通过wt.exe创建真实Windows Terminal窗口，标题EIServer - EIServer.exe，窗口矩形(322,329)-(1490,953)，已前置。当前服务器PID31528，七默认监听端口正常。运行目录out/debug，窗口由cmd /k保留便于看到启动错误。
+
+
+## 2026-11-17 进图角色后方特效彩色失真修复
+- 用户指出角色后方入场特效五颜六色。SM_LOGON创建_SKILL_SPACEMOVE2，旧表指向Magic.wil110..128，其中实际有效帧110..119，资源解码显示蓝白传送光柱。
+- 像素回读复现：WHWilTexture枚举16位格式，但CreateSurface的DDSD_PIXELFORMAT被注释，实际返回32位00ff0000/0000ff00/000000ff；上传仍按WORD逐像素复制，导致颜色/布局错乱。恢复纹理及中间面的格式标志，明确选择RGB565，上传前清零透明区域，并支持C1/C2/C3有色游程。
+- 增加--check-arrival-textures：使用真实DirectDraw纹理与独立WIL解码像素比较，不截图。修复前10帧rgb565=0；修复后10帧rgb565=1、透明像素正确、mismatch=0，退出0。报告out/debug/arrival-texture-check.txt。
+- Release构建成功，out/debug/Mir2Ex.exe已更新。out/arrival-live-check.py隔离实测登录进图并在入场播放后保持存活，目录out/native-live-siyddt4d。未完成原版入场特效全调用链反编译，不把资源核对写成完整IDA验收。

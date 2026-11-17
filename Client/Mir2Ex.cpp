@@ -51,6 +51,8 @@ BYTE				g_bProcState = _LOGIN_PROC;
 #include "CharSelectProcess/CharacterInteractionPreview.h"
 #include "CharSelectProcess/RolePresentationPreview.h"
 
+#include "Tools/ArrivalTextureCheck.h"
+
 // Offline visual review uses the real interface without map or network updates.
 class CHudPreviewProcess : public CWHDefProcess {
     POINT mouse = {0,0};
@@ -4189,6 +4191,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     g_xGameProc.m_xInterface.m_minimap.LoadOptions(strstr(lpCmdLine,"--preview=") ? nullptr : "./Config.ini");
     g_xGameProc.m_xInterface.m_xOptionWnd.LoadAudioOptions(strstr(lpCmdLine,"--preview=") ? nullptr : "./Config.ini");
 	g_xSpriteInfo.SetInfo();
+    if (!strcmp(lpCmdLine, "--check-arrival-textures")) return CheckArrivalTextures();
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ±à¼­¿ò´´½¨.
 	g_xChatEditBox.Create(g_xMainWnd.GetSafehInstance(), g_xMainWnd.GetSafehWnd(), 0, 0, 0, 0);
