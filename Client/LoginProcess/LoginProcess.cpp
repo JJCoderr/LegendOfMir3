@@ -380,7 +380,7 @@ LRESULT CLoginProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 		}
 	}
 	else if(m_xMsgBox.IsActive())
-			if(m_xMsgBox.OnButtonUp(ptMouse)==CLICK_OK) {
+			if(m_xMsgBox.OnButtonUp(ptMouse,true)==CLICK_OK) {
 				m_xMsgBox.HideMessageBox();
 				if (m_Progress == PRG_LOGIN) m_xLogin.ResetPassword();
 			}
