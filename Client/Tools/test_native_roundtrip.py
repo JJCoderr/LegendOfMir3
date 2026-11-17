@@ -188,9 +188,16 @@ with (root/'server.log').open('wb') as log:
                 print('restored',restored,flush=True)
                 assert (restored['x'],restored['y'])==(moved['x'],moved['y']),(restored,moved)
                 wait(cs,lambda d:not d.get('input_delayed'))
+                # Make the second save distinct from the earlier return-to-selection save.
+                click(h,448,240)
+                wait(cs,lambda d:(d.get('x'),d.get('y'))!=(restored['x'],restored['y']))
+                time.sleep(1)
             # Alt+Q and Enter exercise the client's normal confirmed exit.
             u.PostMessageW(h,WM_SYSKEYDOWN,ord('Q'),ALT_CONTEXT)
-            time.sleep(.5)
+            dialog_opened=time.time()
+            before_exit=wait(cs,lambda d:cs.stat().st_mtime>dialog_opened and d.get('scene')=='world')
+            final_position=(before_exit['x'],before_exit['y'])
+            print('position before confirmed exit',final_position,flush=True)
             u.PostMessageW(h,WM_KEYDOWN,VK_RETURN,0);u.PostMessageW(h,WM_KEYUP,VK_RETURN,0)
             exit_code=p.wait(timeout=15)
             assert exit_code==0,exit_code
@@ -199,9 +206,9 @@ with (root/'server.log').open('wb') as log:
                 for attempt in range(100):
                     with sqlite3.connect(root/'mir3.sqlite3') as db:
                         saved=db.execute("SELECT FLD_CX,FLD_CY FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01'").fetchone()
-                    if saved!=(459,261):break
+                    if saved==final_position:break
                     time.sleep(.1)
-                assert saved!=(459,261),saved
+                assert saved==final_position,(saved,final_position)
                 print('persisted',saved,flush=True)
 
     finally:
