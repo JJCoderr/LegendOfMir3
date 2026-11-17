@@ -2084,3 +2084,8 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 ### CSV 子系统归属约定
 - Test/README.md 按主要验证目标维护脚本索引；跨客户端、服务端与数据库的步骤保留在同一场景。补齐金币场景与战斗经验范围。
 - Test.exe 的文件、步骤区间和日志参数保持不变；verify_runner.py 的 8 项检查通过。
+
+### 怪物装备拾取事务与回归
+- 新装备拾取改为同步创建数据库身份，事务提交后加入背包；失败恢复地面物品。移除原 DB_MAKEITEMRCD2 指针大小编码与提前移除物品的路径。当天编号按数值取最大值，兼容未补零记录。
+- MonstersEquipment.csv 41 步通过（含 9/10 -> 00011、穿戴与重登）；MonstersEquipmentFailure.csv 39 步通过，触发器拒绝 INSERT 后地面装备保留且数据库无新增。
+- Inventory 回归发现恢复搜索表后掉落位置改为相邻格，已补入真实行走；原步骤号乘以 10，新增到达检查，71 步通过。日志位于 out/csv-validation/monster-equipment.log、monster-equipment-failure.log、equipment-inventory-regression.log。EIServer Release 构建通过；尚未验证 ODBC 并发分配。

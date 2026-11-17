@@ -481,35 +481,43 @@ int CPlayerObject::UpdateItemToDB(_LPTUSERITEMRCD lpMakeItemRcd, int nAction)
 	memcpy(szMakeDay, &lpMakeItemRcd->szMakeIndex[1], 6);
 	memcpy(szMakeIndex, &lpMakeItemRcd->szMakeIndex[7], 5);
 
-	if (atoi(szMakeDay) == 0 && atoi(szMakeIndex) == 0)
-	{
-		_TMAKEITEMRCD	tMakeItemRcd;
-
-		tMakeItemRcd.szStdType	= lpMakeItemRcd->szMakeIndex[0];
-		tMakeItemRcd.nDura		= lpMakeItemRcd->nDura;
-		tMakeItemRcd.nDuraMax	= lpMakeItemRcd->nDuraMax;
-		tMakeItemRcd.nStdIndex	= lpMakeItemRcd->nStdIndex;
-		memcpy(tMakeItemRcd.btValue, lpMakeItemRcd->btValue, sizeof(lpMakeItemRcd->btValue));
-
-		_TDEFAULTMESSAGE	Def;
-		char				szEncodeMsg1[24];
-		char				szEncodeMsg2[128];
-
-		fnMakeDefMessage(&Def, DB_MAKEITEMRCD2, (int)this, 0, 0, 0);
-
-		int nPos	= fnEncodeMessageA(&Def, szEncodeMsg1, sizeof(szEncodeMsg1));
-		szEncodeMsg1[nPos] = '\0';
-		
-		nPos	= fnEncode6BitBufA((unsigned char *)lpMakeItemRcd, szEncodeMsg2, sizeof(_LPTMAKEITEMRCD), sizeof(szEncodeMsg2));
-		
-		strcpy(&szEncodeMsg2[nPos], m_pUserInfo->m_szUserID);
-		strcat(szEncodeMsg2, "/");
-		strcat(szEncodeMsg2, m_pUserInfo->m_szCharName);
-
-		SendRDBSocket(2, szEncodeMsg1, szEncodeMsg2, strlen(szEncodeMsg2));
-
-		return 1;
-	}
+    // Commit the new identity before PickUp completes the transfer or notifies the client.
+    if (atoi(szMakeDay) == 0 && atoi(szMakeIndex) == 0) {
+        const auto sqlText=[](const char* text) {
+            std::string result="'";
+            for(;*text;++text) {result+=*text;if(*text=='\'') result+='\'';}
+            return result+"'";
+        };
+        SYSTEMTIME now;GetLocalTime(&now);
+        char date[7];sprintf(date,"%02u%02u%02u",now.wYear%100,now.wMonth,now.wDay);
+        char category[2]={lpMakeItemRcd->szMakeIndex[0],0};
+        auto* record=g_pConnGame->CreateRecordset();
+        if(!record) return 0;
+        if(!g_pConnGame->BeginTransaction()) {g_pConnGame->DestroyRecordset(record);return 0;}
+        std::string query="SELECT MAX(CAST(FLD_MAKEINDEX AS INT)) AS LAST_INDEX FROM TBL_CHARACTER_ITEM WHERE FLD_STDTYPE="+
+            sqlText(category)+" AND FLD_MAKEDATE="+sqlText(date);
+        bool saved=record->Execute(&query[0]) && record->Fetch();
+        const int next=saved?atoi(record->Get("LAST_INDEX"))+1:0;
+        constexpr int MaximumDailyItemIndex=99999;
+        char serial[6]={};
+        if(saved && next<=MaximumDailyItemIndex) {
+            sprintf(serial,"%05d",next);
+            query="INSERT INTO TBL_CHARACTER_ITEM (FLD_LOGINID,FLD_CHARNAME,FLD_STDTYPE,FLD_MAKEDATE,FLD_MAKEINDEX,FLD_STDINDEX,FLD_DURA,FLD_DURAMAX,FLD_PREFIXNAME,FLD_LASTOWNER,FLD_LASTACTION";
+            for(int i=1;i<=_countof(lpMakeItemRcd->btValue);++i) query+=",FLD_VALUE"+std::to_string(i);
+            query+=") VALUES ("+sqlText(m_pUserInfo->m_szUserID)+","+sqlText(m_pUserInfo->m_szCharName)+","+
+                sqlText(category)+","+sqlText(date)+","+sqlText(serial)+","+std::to_string(lpMakeItemRcd->nStdIndex)+","+
+                std::to_string(lpMakeItemRcd->nDura)+","+std::to_string(lpMakeItemRcd->nDuraMax)+","+
+                sqlText(lpMakeItemRcd->szPrefixName)+","+sqlText(m_pUserInfo->m_szCharName)+","+std::to_string(_ITEM_ACTION_PICKUP);
+            for(auto value:lpMakeItemRcd->btValue) query+=","+std::to_string(value);
+            query+=")";
+            saved=record->Execute(&query[0]) && record->GetRowCount()==1;
+        } else saved=false;
+        saved=g_pConnGame->EndTransaction(saved) && saved;
+        g_pConnGame->DestroyRecordset(record);
+        if(!saved) return 0;
+        memcpy(lpMakeItemRcd->szMakeIndex+1,date,6);memcpy(lpMakeItemRcd->szMakeIndex+7,serial,5);
+        return 2;
+    }
 
 	switch (nAction)
 	{

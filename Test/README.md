@@ -8,7 +8,7 @@ Test.exe 是独立控制台程序，读取 CSV，逐行向 Client 或 Server 转
 
 ```powershell
 cmake --build build-eiserver --config Release --target Test --parallel 6
-build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pid 5678 --from 20 --to 40 --log out/item-segment.log --database out/runtime/mir3.sqlite3
+build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pid 5678 --from 200 --to 400 --log out/item-segment.log --database out/runtime/mir3.sqlite3
 ```
 
 - 第一个参数指定 CSV。
@@ -67,7 +67,7 @@ step,name,target,action,params,expect
 | 角色 | `Character.csv`、`CharacterDelete.csv` | 创建角色、删除角色及持久化 |
 | 物品 | `Inventory.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
 | 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复、施法回包、扣蓝与受伤治疗 |
-| 怪物 | `MonstersSpawn.csv`、`MonstersLoot.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv` | 刷新、实体名称、普通物品掉落拾取、金币更新与满额保留 |
+| 怪物 | `MonstersSpawn.csv`、`MonstersLoot.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
@@ -87,7 +87,7 @@ step,name,target,action,params,expect
 例如执行物品子系统的指定区间：
 
 ```powershell
-build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pid 5678 --database out/runtime/mir3.sqlite3 --from 20 --to 40 --log out/logs/inventory-20-40.log
+build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pid 5678 --database out/runtime/mir3.sqlite3 --from 200 --to 400 --log out/logs/inventory-200-400.log
 ```
 
 执行器自身验证：`python Test/verify_runner.py`。Runner 目录含用于验证失败处理的预期失败 CSV，应通过该验证程序执行。
@@ -111,3 +111,7 @@ build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pi
 `MonstersLoot.csv` 验证击杀后普通药水掉落、真实行走到物品格、拾取、保存和重登恢复，同时检查不存在怪物的掉落记录与禁用掉落记录不会生成额外物品。`world.walk(x,y)` 只提交到相邻格的单步移动，复用地图通行检查、动作时序及现有移动协议；远距离请求拒绝。FLD_PROBABLY 使用 1/N 抽取，N<=0 禁用。本场景使用 N=1 确保结果可复现，尚未验证随机概率分布、金币和装备掉落、多个同类物品与背包满时的处理。
 
 金币掉落使用 `MonstersGold.csv`，检查掉落、行走拾取、SM_GOLDCHANGED、数据库余额和重登恢复；`MonstersGoldCap.csv` 检查达到当前服务端 BAGGOLD=5000000 时金币留在地面、余额不变，重登仍可见。客户端 state.get 的 gold 是角色当前余额。金币数量为0的配置不生成金币，数量为1保证至少1金币；多条金币配置累加。本轮未验证金币随机数量分布、玩家主动丢钱或混合物品散落顺序，未进行图标视觉检查。
+
+`MonstersEquipment.csv` 验证击杀掉落装备、行走拾取、生成数据库身份、穿戴、保存及重登恢复。fixture 预置当天未补零的编号 9 和 10，断言新装备使用数值上的下一编号 00011。`MonstersEquipmentFailure.csv` 用 SQLite 触发器拒绝装备 INSERT，检查背包与装备栏为空、数据库无新增记录，并在返回选角再进图后确认物品仍在地面。新掉落装备在数据库事务提交后才加入背包和发送拾取成功；失败恢复地面物品。当前验证使用 SQLite，尚未覆盖 ODBC 并发分配、当天编号耗尽或背包满的装备拾取。
+
+Inventory 步骤编号调整：为补入真实行走与到达检查，原有步骤号统一乘以 10（原 20–40 对应 200–400）；新增 262/264 和 332/334 步行走到药水、装备掉落格。恢复地图搜索表后，主动丢弃物品散落在相邻格，不再假设物品位于角色脚下。调用该脚本的历史区间参数需按此换算。
