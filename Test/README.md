@@ -39,7 +39,7 @@ step,name,target,action,params,expect
 30,等待登录完成,Client,state.wait,,result.stage=server_list;result.notice=true
 ```
 
-- target：`Client`、`Client2`、`Server`、`Database`。Client2 是第二个真实客户端，用 `--client2-pid` 指定其进程。
+- target：`Client`、`Client2`、`Client3`、`Server`、`Database`。Client2/Client3 是额外的真实客户端，用 `--client2-pid` / `--client3-pid` 指定进程。
 - action：通常直接填写 RPC 方法名。
 - params：`参数=值;参数=值`；空白表示无参数。
 - expect：`响应路径=值;响应路径=值`，支持 `result.equipment.0.name` 等路径；留空表示只要求 RPC 正常返回。预期错误必须明确填写 `error.code`。
@@ -69,7 +69,7 @@ step,name,target,action,params,expect
 | 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复、施法回包、扣蓝与受伤治疗 |
 | 怪物 | `MonstersSpawn.csv`、`MonstersRespawn.csv`、`MonstersCorpse.csv`、`MonstersLoot.csv`、`MonstersLootCount.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentCount.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
-| 聊天 | `ChatLocal.csv`、`ChatShout.csv`、`ChatShoutLevel.csv`、`ChatWhisper.csv`、`ChatWhisperReject.csv` | 普通聊天、中文编码、喊话等级及冷却拒绝 |
+| 聊天 | `ChatLocal.csv`、`ChatShout.csv`、`ChatShoutLevel.csv`、`ChatWhisper.csv`、`ChatWhisperReject.csv`、`ChatWhisperIsolation.csv` | 普通聊天、中文编码、喊话等级及冷却拒绝 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
 
@@ -140,3 +140,5 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 私聊拒收：`python Test/launch_csv.py Test/ChatWhisperReject.csv --clients 2 --log out/chat-whisper-reject.log`。通过 chat.toggle_reception(channel=0) 复用聊天栏按钮入口，从 CmList.dat 读取 @拒绝悄悄话（1070）命令切换服务器拒收状态；服务器也支持选项入口的 @拒绝私聊（2126）。服务器回传客户端选项消息，state.get 的 chat_rejected 数组反映客户端实际确认状态。测试检查拒收提示、零私聊投递、普通聊天不受影响及恢复接收。拒收状态目前仅在本次角色会话内有效，未实现持久化、按名单拒收或其他聊天频道开关。
 
 测试资源：辅助启动程序为 CmList.dat 与 SoundList.wwl 创建硬链接，优先使用 --config-dir 下的文件，缺失时从其 Data 资源目录的同级目录查找。chat.toggle_reception 的频道编号对应现有按钮：0 私聊、1 行会、2 所有人聊天；非法编号拒绝，缺少命令资源时也拒绝。当前服务器仅接通私聊拒收，行会及所有人聊天的开关仍待实现，不能将提交成功当作状态已确认。
+
+私聊旁观隔离：`python Test/launch_csv.py Test/ChatWhisperIsolation.csv --clients 3 --log out/chat-whisper-isolation.log`。三个不同账号同图在线，检查指定收件人收到私聊及回复，而旁观者仅收到两次普通广播、私聊回包为 0。以之后的普通广播确认队列已处理，再精确断言两种消息计数，避免只检查最后一条文本而漏掉误投。

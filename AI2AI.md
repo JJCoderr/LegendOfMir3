@@ -2136,3 +2136,7 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 ### 真实聊天栏入口与命令资源
 - 核对 CmList 后确认聊天栏 0/1/2 是私聊/行会/所有人聊天，不能当成独立喊话开关。提取 CInterface::ToggleChatReception，由按钮与 RPC chat.toggle_reception 共用，读取真实资源命令；空命令或非法频道拒绝。
 - 隔离测试目录为 CmList.dat/SoundList.wwl 建硬链接，优先配置目录，缺失则从 Data 链接目标同级查找。ChatWhisperReject 改为真实按钮命令入口，45 步通过；ChatLocal 28 步回归通过，Client Release 构建通过。日志 out/csv-validation/chat-reception.log、reception-local-regression.log。服务器仍仅接通私聊拒收，行会与所有人频道待实现。
+
+### 三客户端私聊旁观隔离
+- Test.exe 支持 Client3/--client3-pid，启动器支持 --clients 3。ChatWhisperIsolation.csv 使用三个真实账号同图，双向私聊指定收件人、旁观者私聊计数为 0，且只收到两次作为处理完成依据的普通广播。64 步通过，日志 out/csv-validation/chat-whisper-isolation.log；Test Release 构建与执行器 8 项检查通过。
+- 核对 Godot 参考仅得到聊天按钮及选项位，尚不能证明“所有人聊天”在服务端应过滤哪些频道，因此未猜测实现该开关。该项及行会拒收仍待结合服务器证据实现。

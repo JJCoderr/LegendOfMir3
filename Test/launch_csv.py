@@ -20,7 +20,7 @@ def main():
     parser.add_argument('--from', dest='first', type=int, default=1)
     parser.add_argument('--to', dest='last', type=int)
     parser.add_argument('--log', type=Path)
-    parser.add_argument('--clients', type=int, choices=(1,2), default=1)
+    parser.add_argument('--clients', type=int, choices=(1,2,3), default=1)
     parser.add_argument('--timeout-ms', type=int, help='RPC/state wait timeout per step; forwarded to Test.exe')
     args = parser.parse_args()
     binaries = args.bin_dir.resolve()
@@ -56,7 +56,8 @@ def main():
             command = [str(binaries/'Test.exe'), str(args.scenario.resolve()), '--client-pid', str(client),
                 '--server-pid', str(server), '--database', str(root/'mir3.sqlite3'),
                 '--from', str(args.first), '--log', str(log_path)]
-            if args.clients == 2: command.extend(['--client2-pid', str(start('Client', root/'Mir2Ex.exe'))])
+            for index in range(2,args.clients+1):
+                command.extend([f'--client{index}-pid', str(start('Client', root/'Mir2Ex.exe'))])
             if args.last is not None: command.extend(['--to', str(args.last)])
             if args.timeout_ms is not None: command.extend(['--timeout-ms', str(args.timeout_ms)])
             subprocess.run(command, check=True)
