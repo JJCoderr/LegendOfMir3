@@ -11,6 +11,6 @@ Second page\
 
 [@unsafe]
 #IF
-checklevel 99
+checkquest 99
 #SAY
 Must not appear

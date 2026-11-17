@@ -1,0 +1,46 @@
+[@main]
+#IF
+checklevel 5
+#ACT
+goto @eligible
+break
+#ELSEACT
+goto @low
+break
+[@eligible]
+#IF
+checklevel 5
+checklevel 6
+#SAY
+Above boundary\
+#ELSESAY
+At boundary\
+#ACT
+goto @options
+break
+#ELSEACT
+goto @options
+break
+[@low]
+#SAY
+Below boundary\
+#ACT
+goto @options
+break
+[@options]
+#SAY
+<Loop/@loop>\
+<Missing/@missing>\
+<Malformed/@malformed>\
+<Again/@main>
+[@loop]
+#ACT
+goto @loop
+break
+[@malformed]
+#IF
+checklevel five
+#SAY
+Must not appear
+#ELSESAY
+Must not appear either

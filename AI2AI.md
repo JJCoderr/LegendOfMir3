@@ -2164,3 +2164,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - Client ClickNPC 与 CNPCWnd::SelectOption 由鼠标和 RPC 共用；npc_dialog 状态来自真实窗口解析结果。Test/launch_csv.py 复制同名 .files 脚本资源到隔离目录。
 - Client/EIServer 构建通过；Test/Npc/NpcDialog.csv 33 步通过，日志 out/csv-validation/npc-dialog-final.log。检查两页对话、非法索引/选项、未支持条件页拒绝和正常页恢复。
 - 参考 Mud3/Envir 的真实脚本为 [@section]/#SAY，且依赖 #IF/#ACT/#CALL/#INCLUDE。当前仅基础文本页，不能忽略条件执行其后文本。后续仍需独立脚本文件名映射、条件/动作解释、交易/任务支持；不是完整NPC子系统。
+
+## 2026-11-18 NPC 等级条件与分支
+
+- ObjectMerchant 支持 #IF/checklevel、AND 条件、#SAY/#ELSESAY、#ACT/#ELSEACT 内 goto/break。checklevel N 为等级 >= N；goto 调用同文件页面后返回，break 结束当前页面。仍无状态修改类动作。
+- 单次解释限制 4096 行、32 层调用。缺失标签、循环、错误数值和未支持条件/执行指令取消本次输出；避免显示半段条件文本。未支持指令回归夹具由 checklevel 改为 checkquest。
+- 新增 Test/Npc/NpcLevelLow、NpcLevelBoundary、NpcLevelHigh，真实4/5/6级角色分别39步通过；NpcDialog 33步回归通过。EIServer Release 构建通过。日志 out/csv-validation/npc-level-{low,boundary,high}.log 与 npc-conditions-regression.log。
+- 参考 Mud3/Envir/Market_Def/01Meet_Bichon1-0.txt 的条件分支格式；完整参考服脚本映射、#CALL/#INCLUDE、交易/任务及更多指令仍待接入和核对。

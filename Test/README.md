@@ -70,7 +70,7 @@ step,name,target,action,params,expect
 | 怪物 | `Monsters/MonstersSpawn.csv`、`Monsters/MonstersRespawn.csv`、`Monsters/MonstersCorpse.csv`、`Monsters/MonstersLoot.csv`、`Monsters/MonstersLootCount.csv`、`Monsters/MonstersGold.csv`、`Monsters/MonstersGoldCap.csv`、`Monsters/MonstersEquipment.csv`、`Monsters/MonstersEquipmentCount.csv`、`Monsters/MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `Combat/CombatMagic.csv`、`Combat/CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
 | 聊天 | `Chat/ChatLocal.csv`、`Chat/ChatShout.csv`、`Chat/ChatShoutLevel.csv`、`Chat/ChatShoutRange.csv`、`Chat/ChatShoutRangeY.csv`、`Chat/ChatWhisper.csv`、`Chat/ChatWhisperReject.csv`、`Chat/ChatWhisperIsolation.csv` | 普通聊天、中文编码、喊话等级及冷却拒绝 |
-| NPC | `Npc/NpcSpawn.csv`、`Npc/NpcDialog.csv` | 商人生成、NPC 类型、名称同步、基础对话及选项跳转 |
+| NPC | `Npc/NpcSpawn.csv`、`Npc/NpcDialog.csv`、`Npc/NpcLevel*.csv` | 商人生成、NPC 类型、名称同步、基础对话及选项跳转 |
 | RPC 基础 | `Rpc/RpcClient.csv`、`Rpc/RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
 
@@ -152,4 +152,8 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 场景可附带同名 `.files` 目录，例如 `Npc/NpcDialog.files/Envir/Market_Def/NpcProbe-01.txt`。启动器将其中的相对目录结构复制到隔离运行目录。CSV 仍只存测试动作与断言，NPC 文本由服务端实际读取。
 
-当前数据库商人的脚本约定为 `Envir/Market_Def/<NPC名称>-<地图名>.txt`（本地代码页），支持 `[@main]` / `[@选项]`、`#SAY`、反斜杠换行及 `<文字/@选项>`。尚未接入参考服 merchant.txt 的独立脚本文件名映射、#IF/#ACT/#CALL/#INCLUDE、交易和任务指令；包含这些指令的页面直接拒绝执行。本阶段不是完整旧脚本引擎。
+当前数据库商人的脚本约定为 `Envir/Market_Def/<NPC名称>-<地图名>.txt`（本地代码页），支持 `[@main]` / `[@选项]`、`#SAY`、反斜杠换行及 `<文字/@选项>`。已支持 #IF/checklevel、#ELSESAY、#ACT/#ELSEACT 下的 goto 和 break；尚未接入参考服 merchant.txt 的独立脚本文件名映射、#CALL/#INCLUDE、交易和任务指令。遇到未支持的条件或需要执行的指令时拒绝整个请求，不发送半段对话。本阶段不是完整旧脚本引擎。
+
+`Npc/NpcLevelLow.csv`、`Npc/NpcLevelBoundary.csv`、`Npc/NpcLevelHigh.csv` 分别使用 4、5、6 级角色，验证 `checklevel 5` 门槛及同一 #IF 中多个条件取 AND。脚本通过 #ACT/#ELSEACT 的 goto 调用页面，返回后继续执行，break 结束当前页面；#SAY/#ELSESAY 仅输出命中的分支。当前 checklevel 参数仅支持非负整数，判断为角色等级大于等于参数。
+
+每个等级场景还验证循环跳转、缺失标签、非数字等级参数不产生对话回包，之后正常页面仍可访问。单次请求最多执行 4096 行、嵌套 32 层，避免错误脚本占住游戏线程。以上是当前实现的联调覆盖；完整参考服任务脚本及全部指令语义仍待迁移核对。
