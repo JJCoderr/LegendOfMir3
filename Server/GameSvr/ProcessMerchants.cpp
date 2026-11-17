@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../../Shared/Mir3ActorKinds.h"
 
 CMirMap* GetMap(char *pszMapName);
 
@@ -32,7 +33,7 @@ void WINAPI ProcessMerchants()
 				pMerchantObject->m_wObjectType			= _OBJECT_NPC;
 				pMerchantObject->m_nIndex				= i;
 
-				pMerchantObject->m_tFeature.btGender	= 2;
+				pMerchantObject->m_tFeature.btGender	= MIR3_ACTOR_NPC;
 				pMerchantObject->m_tFeature.btWear		= (BYTE)g_pMerchantInfo[i].sBody;
 
 				pMerchantObject->m_nCurrX				= g_pMerchantInfo[i].nPosX;

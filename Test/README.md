@@ -70,6 +70,7 @@ step,name,target,action,params,expect
 | 怪物 | `Monsters/MonstersSpawn.csv`、`Monsters/MonstersRespawn.csv`、`Monsters/MonstersCorpse.csv`、`Monsters/MonstersLoot.csv`、`Monsters/MonstersLootCount.csv`、`Monsters/MonstersGold.csv`、`Monsters/MonstersGoldCap.csv`、`Monsters/MonstersEquipment.csv`、`Monsters/MonstersEquipmentCount.csv`、`Monsters/MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `Combat/CombatMagic.csv`、`Combat/CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
 | 聊天 | `Chat/ChatLocal.csv`、`Chat/ChatShout.csv`、`Chat/ChatShoutLevel.csv`、`Chat/ChatShoutRange.csv`、`Chat/ChatShoutRangeY.csv`、`Chat/ChatWhisper.csv`、`Chat/ChatWhisperReject.csv`、`Chat/ChatWhisperIsolation.csv` | 普通聊天、中文编码、喊话等级及冷却拒绝 |
+| NPC | `Npc/NpcSpawn.csv` | 商人生成、NPC 类型、位置与名称同步、无效地图不生成 |
 | RPC 基础 | `Rpc/RpcClient.csv`、`Rpc/RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
 
@@ -144,3 +145,5 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 私聊旁观隔离：`python Test/launch_csv.py Test/Chat/ChatWhisperIsolation.csv --clients 3 --log out/chat-whisper-isolation.log`。三个不同账号同图在线，检查指定收件人收到私聊及回复，而旁观者仅收到两次普通广播、私聊回包为 0。以之后的普通广播确认队列已处理，再精确断言两种消息计数，避免只检查最后一条文本而漏掉误投。
 
 喊话距离：`Chat/ChatShoutRange.csv` / `Chat/ChatShoutRangeY.csv` 均用 `--clients 3` 运行，分别在横向和纵向放置距离 49 格、50 格的玩家。检查 49 格玩家收到 SM_CRY，50 格玩家的 SM_CRY/SM_HEAR 均为 0；之后发给边界玩家的私聊确认处理已完成，也证明私聊不受此范围限制。验证的是现有服务端同地图、两轴差值均小于 50 的规则；未校验该数值是否与原版服务器完全一致，也未覆盖跨地图和死亡角色过滤。
+
+`Npc/NpcSpawn.csv` 通过 TBL_MERCHANT 加载真实商人，检查 actors[].npc、坐标、名称请求与回包。使用稀疏商人 ID，并放置一条不存在地图的记录，确认不会生成额外实体。服务端与客户端共用 MIR3_ACTOR_NPC 类型常量；旧服务端的类型 2 与客户端 NPC 类型 50 不一致。此场景尚未覆盖 NPC 点击、对话、选项或商店交易。

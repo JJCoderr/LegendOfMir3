@@ -1,6 +1,7 @@
 #ifndef _DEFINE_H
 #define _DEFINE_H
 #include "../Shared/Mir3InventoryLimits.h"
+#include "../Shared/Mir3ActorKinds.h"
 
 
 
@@ -168,7 +169,7 @@
 *******************************************************************************************************************/
 #define _GENDER_MAN					0
 #define _GENDER_WOMAN				1
-#define _GENDER_NPC					50
+#define _GENDER_NPC					MIR3_ACTOR_NPC
 #define _GENDER_MON					3//77
 #define _MAX_GENDER					4
 

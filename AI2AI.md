@@ -2150,3 +2150,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 场景和同名 fixture 移至 Test/Login、Character、Inventory、Skills、Monsters、Combat、Chat、Rpc；Runner 保持独立。文件内容及步骤编号不变。
 - launch_csv.py 服务端预检路径和 README 示例同步更新。旧记录中的 Test/<文件>.csv 路径需按子系统补上目录。
 - 验证：执行器 8 项通过；迁移后的 Login/Login.csv 24 步和 Rpc/RpcServer.csv 预检通过，日志 out/csv-validation/subsystem-login.log。
+
+## 2026-11-18 NPC 生成与类型同步
+
+- 新增 Test/Npc/NpcSpawn.csv 和 fixture，验证真实商人加载、坐标、NPC 类型及名称往返，无效地图不生成。
+- 首轮真实测试暴露商人 feature.btGender=2，而客户端 _GENDER_NPC=50。Shared/Mir3ActorKinds.h 统一两端 NPC 类型，Client state.get 的 actors 新增 npc 字段。
+- Client/EIServer Release 构建通过，NpcSpawn 21 步通过：out/csv-validation/npc-spawn-fixed.log。
+- NPC 点击与对话尚未接通：服务端没有 CM_CLICKNPC 处理；RM_MERCHANTSAY 只有发送分支。下一步需确定真实对话脚本来源并接通请求/选项处理，不能用测试固定文本代替业务。

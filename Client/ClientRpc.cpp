@@ -135,6 +135,7 @@ std::string ClientState() {
             actors.emplace_back(Object{{"id",Json(int64_t(actor->m_dwIdentity))},
                 {"name",Parse(mir3::QuoteLocalText(actor->m_szName))},
                 {"x",Json(int64_t(actor->m_wPosX))},{"y",Json(int64_t(actor->m_wPosY))},
+                {"npc",Json(actor->m_stFeature.bGender==_GENDER_NPC)},
                 {"dead",Json(bool(actor->m_bIsDead))},{"hp",Json(int64_t(actor->m_wHP))},
                 {"max_hp",Json(int64_t(actor->m_wMAXHP))}});
         }
