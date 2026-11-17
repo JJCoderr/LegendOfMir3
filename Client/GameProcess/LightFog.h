@@ -26,6 +26,10 @@ protected:
 	DWORD				m_dwLightColor;	
 
 public:
+    DWORD ColorAt(int column,int row) const {return m_avLight[row][column].color;}
+    bool DiagonalAt(int column,int row) const {
+        return m_pwLightIndices[(column+row*NUM_CNTX_LIGHTTILE)*6+2]==column+(NUM_CNTX_LIGHTTILE+1)*row+NUM_CNTX_LIGHTTILE+2;
+    }
 	VOID	Init(DWORD dwLightColor);
 	VOID	ShowLightFog(WORD wScrnWidth = 400, WORD wScrnHeight =300);
 	// 将新变更的颜色保存到 m_avSaveLight 中.

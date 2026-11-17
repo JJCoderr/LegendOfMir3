@@ -3626,23 +3626,7 @@ BOOL CHero::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, B
 	DrawEffect();
 	ShowShield();
 
-	if ( !bDrawShadow )
-		return TRUE;
-
-	if ( bUseScrnPos )
-	{
-		if ( m_bLightSize == 2 )
-			g_xGameProc.m_xLightFog.SetLightRadiusWithCircle(m_rcActor.left+_CELL_WIDTH/2, m_rcActor.top+_CELL_HEIGHT/2, 3, 100, 100, 100);
-		else
-			g_xGameProc.m_xLightFog.SetLightRadiusWithCircle(m_rcActor.left+_CELL_WIDTH/2, m_rcActor.top+_CELL_HEIGHT/2, m_bLightSize, 255, 255, 255);
-	}
-	else
-	{
-		if ( m_bLightSize == 2 )
-			g_xGameProc.m_xLightFog.SetLightRadiusWithCircle(400, 242, 3, 100, 100, 100);
-		else
-			g_xGameProc.m_xLightFog.SetLightRadiusWithCircle(400, 242, m_bLightSize, 255, 255, 255);
-	}
+    // Scene lights are collected after all actors, independently of shadow rendering.
 	return TRUE;
 }
 

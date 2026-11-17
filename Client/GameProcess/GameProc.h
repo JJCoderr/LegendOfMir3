@@ -13,6 +13,8 @@
 #ifndef _GAMEPROC_H
 #define	_GAMEPROC_H
 #include "LevelEffects.h"
+#include "SceneLighting.h"
+#include "SceneWeather.h"
 #include "ExitFlow.h"
 #include "SpellPlayback.h"
 #include "StagedSpell.h"
@@ -41,6 +43,11 @@ protected:
 	VOID	OnSvrMsgHear(_TDEFAULTMESSAGE *ptdm, char *pszMsg);
 
 public:
+    mir3::SceneAmbient m_sceneAmbient;
+    void EnterSceneAmbient(WORD mode);
+    void AdvanceSceneAmbient(DWORD elapsed);
+    void LightSceneMap();
+    void LightSceneActors();
     ExitFlow::Guard m_exitGuard;
     ExitFlow::Transition m_exitTransition;
     bool CheckExitAllowed(DWORD now);
@@ -73,7 +80,8 @@ public:
     static constexpr int FireMark=220,IceMark=260,FirstEmber=330,LastEmber=334;
     std::vector<SpellMark> m_spellMarks;
     mir3::SpellParticlePool m_spellParticles;
-    mir3::EffectRandom m_effectRandom;
+    mir3::SnowWeather m_weather;
+    bool m_weatherEnabled=true;
     std::map<WORD,POINT> m_spellLibraryOffsets;
     void ClearNativeSpells();
     void DrawSpellMarks();
@@ -92,9 +100,6 @@ public:
 	BOOL					m_bObj1View;
 	BOOL					m_bObj2View;
 	BOOL					m_bStopPtView;
-	BOOL					m_bShowSnow;
-	BOOL					m_bShowMist;
-	BOOL					m_bShowRain;
     void SetShadowBlend(bool enabled);
 	BOOL					m_bShadowABlend;
 	BOOL					m_bShowFPS;
@@ -120,9 +125,6 @@ public:
 	BYTE					m_bDayState;
 	BYTE					m_bFogState;
 	CLightFog				m_xLightFog;
-	CMist					m_xMist;
-	CSnow					m_xSnow;
-	CRain					m_xRain;
 	CFlyingTail				m_xFlyingTail;
 	CSmoke					m_xSmoke;
 

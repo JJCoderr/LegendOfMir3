@@ -1,4 +1,5 @@
 #include "StdAfx.h"
+#include "SceneLighting.h"
 
 
 CLightFog::CLightFog()
@@ -20,27 +21,14 @@ VOID CLightFog::Init(DWORD dwLightColor)
 	{
 		for ( INT nCntX = 0; nCntX < (NUM_CNTX_LIGHTTILE+1); nCntX++ )
 		{
-			m_avLight[nCntY][nCntX] = D3DLVERTEX(D3DVECTOR((FLOAT)(TILE_START_XPOS+(nCntX*TILE_WIDTH)), (FLOAT)(-TILE_START_YPOS-(nCntY*TILE_HEIGHT)), 0),
+			m_avLight[nCntY][nCntX] = D3DLVERTEX(D3DVECTOR((FLOAT)(nCntX*TILE_WIDTH), (FLOAT)(-nCntY*TILE_HEIGHT), 0),
 								  			     m_dwLightColor, RGB(0, 0, 0),  0, 0); 
 		}
 	}
 
 	memcpy(m_avSaveLight, m_avLight, sizeof(D3DLVERTEX)*(NUM_CNTY_LIGHTTILE+1)*(NUM_CNTX_LIGHTTILE+1));
 
-	// 生成图块多边形的索引.
-    WORD* pwIndex = m_pwLightIndices;
-	for ( nCntY = 0; nCntY < NUM_CNTY_LIGHTTILE; nCntY++ )
-	{
-		for ( INT nCntX = 0; nCntX < NUM_CNTX_LIGHTTILE; nCntX++ )
-		{
-			*pwIndex++ = (nCntX+1)+((NUM_CNTX_LIGHTTILE+1)*nCntY);  
-			*pwIndex++ = nCntX+((NUM_CNTX_LIGHTTILE+1)*(nCntY+1));  
-			*pwIndex++ = (nCntX+1)+((NUM_CNTX_LIGHTTILE+1)*(nCntY+1));
-			*pwIndex++ = nCntX+((NUM_CNTX_LIGHTTILE+1)*(nCntY+1));  
-			*pwIndex++ = (nCntX+1)+((NUM_CNTX_LIGHTTILE+1)*nCntY);  
-			*pwIndex++ = (nCntX)+((NUM_CNTX_LIGHTTILE+1)*nCntY);
-		}
-	}
+    ClearSavedLightColor();
 }
 
 
@@ -64,6 +52,12 @@ VOID CLightFog::ChangeLightColor(DWORD dwColor)
 VOID CLightFog::ClearSavedLightColor()
 {
 	memcpy(m_avLight, m_avSaveLight, sizeof(D3DLVERTEX)*(NUM_CNTY_LIGHTTILE+1)*(NUM_CNTX_LIGHTTILE+1));
+    for(int row=0;row<NUM_CNTY_LIGHTTILE;++row) for(int column=0;column<NUM_CNTX_LIGHTTILE;++column) {
+        const WORD a=WORD(column+(NUM_CNTX_LIGHTTILE+1)*row),b=a+1,d=a+NUM_CNTX_LIGHTTILE+1,c=d+1;
+        const WORD triangles[]={a,b,d,b,c,d};
+        memcpy(m_pwLightIndices+(column+row*NUM_CNTX_LIGHTTILE)*6,triangles,sizeof(triangles));
+    }
+
 }
 
 
@@ -76,111 +70,36 @@ BOOL CLightFog::GetScreenPosToLightTile(INT nX, INT nY, INT* nTileX, INT* nTileY
 }
 
 
-BOOL CLightFog::SetLightRadiusWithRing(INT XLightPos, INT YLightPos, 
-									   INT nSmallRadius, 
-									   INT nSmallRed, INT nSmallGreen, INT nSmallBlue, 
-									   INT nLargeRadius,
-									   INT nLargeRed, INT nLargeGreen, INT nLargeBlue)
+BOOL CLightFog::SetLightRadiusWithRing(INT x,INT y,INT innerRadius,
+    INT innerRed,INT innerGreen,INT innerBlue,INT outerRadius,INT outerRed,INT outerGreen,INT outerBlue)
 {
-	INT nX, nY;
-	GetScreenPosToLightTile(XLightPos, YLightPos, &nX, &nY);
-
-	INT nStartTileX			= nX - nLargeRadius;
-	INT nStartTileY			= nY - nLargeRadius;
-	INT nEndTileX			= nX + nLargeRadius + 1;
-	INT nEndTileY			= nY + nLargeRadius + 1;
-
-	// 以 y 为轴计算最暗的部分.(因为 y 比 x 更小)
-	nLargeRadius = (nLargeRadius*TILE_HEIGHT);
-	nSmallRadius = (nSmallRadius*TILE_HEIGHT);
-
-	DOUBLE rLengthCnt		= 0;
-	INT nSelectedRedValue	= 0; 
-	INT nSelectedGreenValue	= 0;
-	INT nSelectedBlueValue	= 0;
-
-	if ( nStartTileX < 0 )					nStartTileX = 0;
-	if ( nStartTileY < 0 )					nStartTileY = 0;
-	if ( nEndTileX > NUM_CNTX_LIGHTTILE+1 )	nEndTileX = NUM_CNTX_LIGHTTILE+1;
-	if ( nEndTileY > NUM_CNTY_LIGHTTILE+1 )	nEndTileY = NUM_CNTY_LIGHTTILE+1;	
-
-	for ( INT nCntY = nStartTileY; nCntY < nEndTileY; nCntY++ )
-	{
-		for ( INT nCntX = nStartTileX; nCntX < nEndTileX; nCntX++ )
-		{			
-			rLengthCnt	= sqrt((double)(XLightPos-(nCntX*TILE_WIDTH+TILE_START_XPOS))*(XLightPos-(nCntX*TILE_WIDTH+TILE_START_XPOS)) + 
-							   (YLightPos-(nCntY*TILE_HEIGHT+TILE_START_YPOS))*(YLightPos-(nCntY*TILE_HEIGHT+TILE_START_YPOS)));
-			if ( nCntX < NUM_CNTX_LIGHTTILE && nCntY < NUM_CNTY_LIGHTTILE )
-			{
-				// 不含点坐标的左下. 不含点坐标的右上.
-				if ( (nCntX > nX && nCntY < nY) || (nCntX < nX && nCntY > nY) )
-				{
-					WORD* pwIndex = ((WORD*)m_pwLightIndices+(nCntX+nCntY*(NUM_CNTX_LIGHTTILE))*6);
-					*pwIndex++ = (nCntX)+((NUM_CNTX_LIGHTTILE+1)*nCntY);
-					*pwIndex++ = (nCntX+1)+((NUM_CNTX_LIGHTTILE+1)*nCntY);  
-					*pwIndex++ = (nCntX+1)+((NUM_CNTX_LIGHTTILE+1)*(nCntY+1));
-					*pwIndex++ = (nCntX)+((NUM_CNTX_LIGHTTILE+1)*nCntY);
-					*pwIndex++ = nCntX+((NUM_CNTX_LIGHTTILE+1)*(nCntY+1));  
-					*pwIndex++ = (nCntX+1)+((NUM_CNTX_LIGHTTILE+1)*(nCntY+1));
-				}
-				else
-				{
-					WORD* pwIndex = ((WORD*)m_pwLightIndices+(nCntX+nCntY*(NUM_CNTX_LIGHTTILE))*6);
-					*pwIndex++ = (nCntX+1)+((NUM_CNTX_LIGHTTILE+1)*nCntY);  
-					*pwIndex++ = nCntX+((NUM_CNTX_LIGHTTILE+1)*(nCntY+1));  
-					*pwIndex++ = (nCntX+1)+((NUM_CNTX_LIGHTTILE+1)*(nCntY+1));
-					*pwIndex++ = nCntX+((NUM_CNTX_LIGHTTILE+1)*(nCntY+1));  
-					*pwIndex++ = (nCntX+1)+((NUM_CNTX_LIGHTTILE+1)*nCntY);  
-					*pwIndex++ = (nCntX)+((NUM_CNTX_LIGHTTILE+1)*nCntY);
-				}
-			}
-
-			if ( rLengthCnt	< nSmallRadius )
-			{
-				nSelectedRedValue	= nSmallRed - INT((nSmallRed*rLengthCnt)/(nLargeRadius));
-				nSelectedGreenValue	= nSmallGreen - INT((nSmallGreen*rLengthCnt)/(nLargeRadius));
-				nSelectedBlueValue	= nSmallBlue - INT((nSmallBlue*rLengthCnt)/(nLargeRadius));
-			}
-			else if ( rLengthCnt >= nSmallRadius && rLengthCnt <= nLargeRadius )
-			{
-				nSelectedRedValue	= nLargeRed - INT((nLargeRed*rLengthCnt)/(nLargeRadius));
-				nSelectedGreenValue	= nLargeGreen - INT((nLargeGreen*rLengthCnt)/(nLargeRadius));
-				nSelectedBlueValue	= nLargeBlue - INT((nLargeBlue*rLengthCnt)/(nLargeRadius));
-			}
-			else
-			{
-				nSelectedRedValue = nSelectedGreenValue = nSelectedBlueValue = 0;
-			}
-
-			if ( nSelectedRedValue	 < 0 )		nSelectedRedValue	= 0;
-			if ( nSelectedGreenValue < 0 )		nSelectedGreenValue = 0;
-			if ( nSelectedBlueValue	 < 0 )		nSelectedBlueValue	= 0;
-
-			if ( m_avLight[nCntY][nCntX].color == 0 )
-				m_avLight[nCntY][nCntX].color = RGB(nSelectedRedValue, nSelectedGreenValue, nSelectedBlueValue); 
-			else
-			{
-				nSelectedRedValue += (INT)RGB_GETBLUE(m_avLight[nCntY][nCntX].color);
-				nSelectedGreenValue += (INT)RGB_GETGREEN(m_avLight[nCntY][nCntX].color);
-				nSelectedBlueValue += (INT)RGB_GETRED(m_avLight[nCntY][nCntX].color);
-
-				if ( nSelectedRedValue	 > 255 )		nSelectedRedValue	= 255;
-				if ( nSelectedGreenValue > 255 )		nSelectedGreenValue = 255;
-				if ( nSelectedBlueValue	 > 255 )		nSelectedBlueValue	= 255;
-
-				m_avLight[nCntY][nCntX].color =  RGB(nSelectedRedValue, nSelectedGreenValue, nSelectedBlueValue);
-			}
-		}
-	}
-
-	return TRUE;
+    const mir3::SceneLight light{x,y,innerRadius,{innerRed,innerGreen,innerBlue},outerRadius,{outerRed,outerGreen,outerBlue}};
+    const int cx=(x+8)/48,cy=(y+29)/32;
+    for(int row=max(0,cy-outerRadius);row<=min(NUM_CNTY_LIGHTTILE,cy+outerRadius);++row)
+        for(int column=max(0,cx-outerRadius);column<=min(NUM_CNTX_LIGHTTILE,cx+outerRadius);++column) {
+            const auto value=light.sample(column,row);auto& color=m_avLight[row][column].color;
+            const int red=min(255,int((color>>16)&255)+value[0]);
+            const int green=min(255,int((color>>8)&255)+value[1]);
+            const int blue=min(255,int(color&255)+value[2]);
+            color=(red<<16)|(green<<8)|blue;
+            if(column==NUM_CNTX_LIGHTTILE || row==NUM_CNTY_LIGHTTILE) continue;
+            const WORD a=WORD(column+(NUM_CNTX_LIGHTTILE+1)*row),b=a+1,d=a+NUM_CNTX_LIGHTTILE+1,c=d+1;
+            WORD* indices=m_pwLightIndices+(column+row*NUM_CNTX_LIGHTTILE)*6;
+            if(light.diagonal_top_left_to_bottom_right(column,row)) {
+                const WORD triangle[]={a,b,c,a,c,d};memcpy(indices,triangle,sizeof(triangle));
+            } else {
+                const WORD triangle[]={a,b,d,b,c,d};memcpy(indices,triangle,sizeof(triangle));
+            }
+        }
+    return TRUE;
 }
-
 
 BOOL CLightFog::SetLightRadiusWithCircle(INT XLightPos, INT YLightPos, INT nRadius, 
 										 INT nRedValue, INT nGreenValue, INT nBlueValue, 
 										 FLOAT rDrakRate)
 {
+    if(rDrakRate==1.0f) return SetLightRadiusWithRing(XLightPos,YLightPos,0,0,0,0,nRadius,nRedValue,nGreenValue,nBlueValue);
+
 	INT nX, nY;
 	GetScreenPosToLightTile(XLightPos, YLightPos, &nX, &nY);
 

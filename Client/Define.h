@@ -543,7 +543,7 @@
 	#1. Light fog
 *******************************************************************************************************************/
 #define NUM_CNTX_LIGHTTILE			17
-#define NUM_CNTY_LIGHTTILE			21
+#define NUM_CNTY_LIGHTTILE			18
 #define TILE_START_XPOS				-8
 #define TILE_START_YPOS				-29
 

@@ -1519,3 +1519,16 @@ spell-map预览改用生产LoadAllImage，而非只加载场景子集；60个实
 ### 地面物品GUI整批完成（2026-11-17）
 
 已实现消息校验/stack_mode、独立100容量、堆叠名称/金币名称、原高亮/无旧阴影、40..49闪光与DWORD时钟、24格半开剔除及换图释放，鼠标格补滚动偏移并每帧更新。干净87/87、七目标111/111构建及同版228项检查通过；截图out/ground-items.png、out/ground-coin.png已展示。预览241/242，下一243。证据Client/docs/ground-items-migration-audit.md。没有真实服务器拾取或MIR3同帧像素验收，完整目标仍active。
+
+
+### 场景光照迁移进行中（2026-11-17）
+
+基线2098af4。已接SceneAmbient进入/消息/逐帧渐变，改18x19光照网格与Ring采样/颜色/每帧对角线；核对地面闪光shader后修正为Additive alpha1。人物灯、地图灯顺序/范围、天气共享随机及旧调试入口仍待完成，未构建测试提交，下一预览243。详见Client/docs/scene-lighting-migration-audit.md，不能把当前未验收代码宣称完成。
+
+
+场景光照继续：地图灯接真实packed颜色/半径与扩大采集范围；人/NPC/怪物灯集中收集，不再依赖阴影开关；升级灯移到人施法灯之后，旧U/@timeshift同步SceneAmbient。天气完整模型与雪雨雾绘制已读但尚未接入，人物灯本帧可见性/顺序仍需核对。未构建测试提交，详见scene-lighting-migration-audit末节。
+
+
+### 昼夜光照与雨雪雾集中验收（2026-11-17）
+
+已完成SceneAmbient、18x19采样网格、地图及人物/NPC/怪物灯、天气46/地图消息接入，共享天气/施法PRNG，原生天气Quad/快照/混合，清除旧天气实例。本帧绘制标志与分类+ID灯光顺序已接；地面闪光alpha1补正。最终clean87/87、all109/109与同版257项检查全通过。截图out/lighting-{day,night,dawn}.png及out/weather-{snow,rain,fog}.png已查看。预览243..248，下一249。证据Client/docs/scene-lighting-migration-audit.md记载首轮断言/包含错误和修复。真实服务器、原版逐像素、近战特殊灯序仍未验收，整个目标继续active。

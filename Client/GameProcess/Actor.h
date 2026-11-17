@@ -136,6 +136,7 @@ public:
 	DWORD				m_dwNameClr;
 
 	BOOL				m_bIsDead;
+    bool m_drawnThisFrame=false;
 
 	FEATURE				m_stHitter;
 

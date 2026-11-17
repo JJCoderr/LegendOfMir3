@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 #include "EffectRenderer.h"
 #include "SpellSpriteRenderer.h"
+#include "WeatherRenderer.h"
 #include "TradeWire.h"
 #include "MerchantServiceIds.h"
 #include "MailWire.h"
@@ -26,6 +27,7 @@ int		nBuff = 0;
 CGameProcess::CGameProcess()
 {
 	Init();
+    m_weather.random_state=GetTickCount();
 }
 
 
@@ -37,6 +39,8 @@ CGameProcess::~CGameProcess()
 
 VOID CGameProcess::Init()
 {
+    m_sceneAmbient={};
+    m_weather.select(0);m_weather.particles={};m_weather.active=0;m_weather.clear_rain();
     m_exitGuard={};m_exitTransition={};
 	m_bTileView				= FALSE;
 	m_bObj1View				= FALSE;
@@ -45,9 +49,6 @@ VOID CGameProcess::Init()
 	m_bStatusView			= FALSE;
 	m_bStopPtView			= FALSE;
 	m_bRender				= FALSE;
-	m_bShowSnow				= FALSE;
-	m_bShowMist				= FALSE;
-	m_bShowRain				= FALSE;
 	m_bShadowABlend			= FALSE;
 
 	m_bShowFPS				= FALSE;
@@ -94,12 +95,9 @@ VOID CGameProcess::Init()
 	m_xMyHero.InitActor();
 	m_xMap.InitMapHandler();
 	m_xLightFog.Init(RGB(255, 255, 255));
-	m_xMist.Init();
 	m_xFlyingTail.InitSystem();
 	m_xSmoke.InitSystem();
 
-	m_xSnow.InitSystem();
-	m_xRain.InitSystem();
 
 //	m_xElec.InitElec();
 
@@ -153,10 +151,7 @@ VOID CGameProcess::DeleteProc()
 	m_xMap.DestroyMapHandler();
 	m_xInterface.Destroy();
 	m_xMyHero.DestroyActor();
-	m_xMist.Destory();
 
-	m_xSnow.DestroySystem();
-	m_xRain.DestroySystem();
 
 	m_xActorList.ClearAllNodes();
 	m_xMagicList.ClearAllNodes();
@@ -228,13 +223,8 @@ VOID CGameProcess::Load()
 		}
 	}
 */
-	m_xMist.Create();
 
-	m_xSnow.InitSystem();
-	m_xSnow.SetupSystem();
 
-	m_xRain.InitSystem();
-	m_xRain.SetupSystem();
 
 	m_xFlyingTail.InitSystem();
 	m_xFlyingTail.SetupSystem();
@@ -448,19 +438,19 @@ VOID CGameProcess::CheckMappedData(INT nLoopTime, BOOL bIsMoveTime)
 							{
 								CHero* pxHero;
 								pxHero = (CHero*)pxActor;
-								pxHero->DrawActor(&m_xMap, bFocused);
+								pxHero->m_drawnThisFrame |= pxHero->DrawActor(&m_xMap, bFocused);
 							}
 							break;
 						case _GENDER_NPC:
 							{
 								CNPC* pxNPC;
 								pxNPC = (CNPC*)pxActor;
-								pxNPC->DrawActor(&m_xMap, bFocused);
+								pxNPC->m_drawnThisFrame |= pxNPC->DrawActor(&m_xMap, bFocused);
 							}
 							break;
 						case _GENDER_MON:
 							{
-								pxActor->DrawActor(&m_xMap, bFocused);
+								pxActor->m_drawnThisFrame |= pxActor->DrawActor(&m_xMap, bFocused);
 							}
 							break;
 						}
@@ -752,6 +742,66 @@ VOID CGameProcess::DropItemShow()
     DeleteObject(font);
 }
 
+void CGameProcess::LightSceneMap()
+{
+    if(!m_xMap.m_pstCellInfo) return;
+    constexpr int radii[]={4,8,12,20};
+    constexpr int colors[][3]={{173,198,214},{90,140,165},{41,57,115},{222,198,99},{41,115,49},
+        {255,255,255},{255,255,255},{255,255,255},{255,255,255},{255,255,255}};
+    const int cameraX=m_xMap.m_shStartViewTileX*_CELL_WIDTH+m_xMap.m_shViewOffsetX-_VIEW_CELL_X_START;
+    const int cameraY=m_xMap.m_shStartViewTileY*_CELL_HEIGHT+m_xMap.m_shViewOffsetY-_VIEW_CELL_Y_START;
+    for(int y=max(0,cameraY/32-20);y<=min(int(m_xMap.m_stMapFileHeader.shHeight)-1,cameraY/32+38);++y)
+        for(int x=max(0,cameraX/48-20);x<=min(int(m_xMap.m_stMapFileHeader.shWidth)-1,cameraX/48+37);++x) {
+            const WORD packed=m_xMap.m_pstCellInfo[y+x*m_xMap.m_stMapFileHeader.shHeight].wLigntNEvent;
+            const int color=(packed>>4)&255;
+            if(!packed || color>=10) continue;
+            m_xLightFog.SetLightRadiusWithRing(x*48-cameraX,y*32-cameraY,0,0,0,0,
+                radii[packed>>14],colors[color][0],colors[color][1],colors[color][2]);
+        }
+}
+
+void CGameProcess::LightSceneActors()
+{
+    const auto add=[&](const mir3::SceneLight& light) {
+        m_xLightFog.SetLightRadiusWithRing(light.x,light.y,light.inner_radius,
+            light.inner[0],light.inner[1],light.inner[2],light.outer_radius_cells,
+            light.outer[0],light.outer[1],light.outer[2]);
+    };
+    add(mir3::SceneLight::actor(m_xMyHero.m_shScrnPosX,m_xMyHero.m_shScrnPosY,m_xMyHero.m_bLightSize,true));
+    const RECT viewport={0,0,800,600};
+    std::vector<CActor*> actors;
+    m_xActorList.MoveCurrentToTop();
+    for(int i=0;i<m_xActorList.GetCounter();++i) {
+        auto* actor=m_xActorList.GetCurrentData();m_xActorList.MoveNextNode();
+        if(actor->m_drawnThisFrame) actors.push_back(actor);
+    }
+    const auto rank=[](CActor* actor) {return actor->m_stFeature.bGender==_GENDER_NPC?1:actor->m_stFeature.bGender==_GENDER_MON?2:0;};
+    std::sort(actors.begin(),actors.end(),[&](CActor* a,CActor* b) {
+        return rank(a)!=rank(b)?rank(a)<rank(b):int(a->m_dwIdentity)<int(b->m_dwIdentity);
+    });
+    for(auto* actor:actors) {
+        const auto gender=actor->m_stFeature.bGender;
+        if(gender!=_GENDER_MAN && gender!=_GENDER_WOMAN && gender!=_GENDER_NPC && gender!=_GENDER_MON) continue;
+        if(gender==_GENDER_MON && actor->m_bAppearState==_DIG_DOWNDEL) continue;
+        if(gender!=_GENDER_NPC && actor->m_bIsDead) continue;
+        RECT visible={};if(!IntersectRect(&visible,&viewport,&actor->m_rcActor)) continue;
+        add(mir3::SceneLight::actor(actor->m_shScrnPosX+24,actor->m_shScrnPosY+16,actor->m_bLightSize,false));
+    }
+}
+
+void CGameProcess::EnterSceneAmbient(WORD mode)
+{
+    m_sceneAmbient.enter(mode);m_bFogState=m_sceneAmbient.mode;
+    m_fDarkRate=float(m_sceneAmbient.level());
+    m_xLightFog.ChangeLightColor(RGB(int(m_fDarkRate),int(m_fDarkRate),int(m_fDarkRate)));
+}
+
+void CGameProcess::AdvanceSceneAmbient(DWORD elapsed)
+{
+    m_sceneAmbient.advance(elapsed);m_fDarkRate=float(m_sceneAmbient.level());
+    m_xLightFog.ChangeLightColor(RGB(int(m_fDarkRate),int(m_fDarkRate),int(m_fDarkRate)));
+}
+
 VOID CGameProcess::RenderScene(INT nLoopTime)
 {
     if(m_exitTransition.Advance(DWORD(nLoopTime))) {ReturnToSelection();return;}
@@ -784,11 +834,18 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 	{
         m_ptCurrTile.x=m_xMap.m_shStartViewTileX+(m_ptMousePos.x-_VIEW_CELL_X_START+m_xMap.m_shViewOffsetX)/_CELL_WIDTH;
         m_ptCurrTile.y=m_xMap.m_shStartViewTileY+(m_ptMousePos.y-_VIEW_CELL_Y_START+m_xMap.m_shViewOffsetY)/_CELL_HEIGHT;
+        m_weather.advance(nLoopTime,m_weatherEnabled);
+        AdvanceSceneAmbient(DWORD(nLoopTime));
 		m_xLightFog.ClearSavedLightColor();
+        m_xActorList.MoveCurrentToTop();
+        for(int i=0;i<m_xActorList.GetCounter();++i) {
+            m_xActorList.GetCurrentData()->m_drawnThisFrame=false;m_xActorList.MoveNextNode();
+        }
         const auto nativeSpellBoundary=m_nextNativeSpell;
-        m_levelEffects.Advance(nLoopTime);m_levelEffects.Light();
+        m_levelEffects.Advance(nLoopTime);
 
 		m_xMyHero.UpdateMotionState(nLoopTime, bIsMoveTime);
+        LightSceneMap();
 		// 绘制地图.
 //		Clear(0);
 		g_xMainWnd.DrawWithImagePerLineClipRgn(
@@ -857,18 +914,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 		}
 
 
-		if ( m_bShowMist )			m_xMist.ProgressMist();
-		if ( m_bShowSnow )			
-		{
-			m_xSnow.UpdateSystem(nLoopTime);
-			m_xSnow.RenderSystem(g_xMainWnd.Get3DDevice());
-		}
-
-		if ( m_bShowRain )			
-		{
-			m_xRain.UpdateSystem(nLoopTime);
-			m_xRain.RenderSystem(g_xMainWnd.Get3DDevice());
-		}
+        NativeWeather::Draw(m_weather,m_weatherEnabled);
 
 		m_xFlyingTail.UpdateSystem(nLoopTime);
 		m_xFlyingTail.RenderSystem(g_xMainWnd.Get3DDevice());
@@ -880,7 +926,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 //		m_xElec.RenderElec(g_xMainWnd.Get3DDevice());
 
 
-        LightNativeSpells();
+        m_levelEffects.Light();LightNativeSpells();LightSceneActors();
 		m_xLightFog.ShowLightFog();
 
 		m_xMyHero.ShowMessage(nLoopTime);
@@ -928,7 +974,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
             if(item->sparkle.frame>=0) {
                 const int x=(item->shTileX-m_xMap.m_shStartViewTileX)*_CELL_WIDTH+_VIEW_CELL_X_START-m_xMap.m_shViewOffsetX+8;
                 const int y=(item->shTileY-m_xMap.m_shStartViewTileY)*_CELL_HEIGHT+_VIEW_CELL_Y_START-m_xMap.m_shViewOffsetY;
-                DrawSelectionFrame(m_xImage.m_xImageList[_IMAGE_PROGUSE],GroundItemDisplay::SparkleFirst+item->sparkle.frame,x,y,SelectionBlend::Normal,false);
+                DrawSelectionFrame(m_xImage.m_xImageList[_IMAGE_PROGUSE],GroundItemDisplay::SparkleFirst+item->sparkle.frame,x,y,SelectionBlend::Additive,false,1);
             }
             m_stMapItemList.MoveNextNode();
         }
@@ -1128,13 +1174,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Test : 为了光源，再多取 -4 到 +5 的区域。
-			LIGHTINFO stLight = m_xMap.GetTileLightInfo(nXCnt, nYCnt);
-			if ( stLight.bIsLight )
-			{
-				m_xLightFog.SetLightRadiusWithCircle((nXCnt-m_xMap.m_shStartViewTileX)*_CELL_WIDTH-m_xMap.m_shViewOffsetX+_VIEW_CELL_X_START,
-													 (nYCnt-m_xMap.m_shStartViewTileY)*_CELL_HEIGHT-m_xMap.m_shViewOffsetY+_VIEW_CELL_Y_START, 
-													 12, m_fTileLightBlue, m_fTileLightGreen, m_fTileLightRed);
-			}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 			nArrayNum = nYCnt + nXCnt*m_xMap.m_stMapFileHeader.shHeight;
@@ -1511,7 +1551,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 								CHero* pxHero;
 								pxHero = (CHero*)pxActor;
 
-								pxHero->DrawActor(&m_xMap, bFocused, m_bShadowABlend, TRUE, bDrawShadow);
+								pxHero->m_drawnThisFrame |= pxHero->DrawActor(&m_xMap, bFocused, m_bShadowABlend, TRUE, bDrawShadow);
 							}
 							break;
 						case _GENDER_NPC:
@@ -1519,12 +1559,12 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 								CNPC* pxNPC;
 								pxNPC = (CNPC*)pxActor;
 
-								pxNPC->DrawActor(&m_xMap, bFocused, m_bShadowABlend, TRUE, bDrawShadow);
+								pxNPC->m_drawnThisFrame |= pxNPC->DrawActor(&m_xMap, bFocused, m_bShadowABlend, TRUE, bDrawShadow);
 							}
 							break;
 						case _GENDER_MON:
 							{
-								pxActor->DrawActor(&m_xMap, bFocused, m_bShadowABlend, TRUE, bDrawShadow);
+								pxActor->m_drawnThisFrame |= pxActor->DrawActor(&m_xMap, bFocused, m_bShadowABlend, TRUE, bDrawShadow);
 
 /*								// 马匹时.
 								RECT rc, rcIntersect;
@@ -1638,39 +1678,9 @@ LRESULT CGameProcess::OnDestroy(WPARAM wParam, LPARAM lParam)
 
 LRESULT CGameProcess::OnTimer(WPARAM wParam, LPARAM lParam)
 {
-	if ( wParam == _TIMER_ID )
-	{
-		DWORD	dwFogColor;
-		FLOAT	fDstDarkRate;
-		switch ( m_bFogState )
-		{
-		case _FOGSTATE_DAWN:
-			{
-				fDstDarkRate = 50;
-			}
-			break;
-		case _FOGSTATE_DAY:
-			{
-				fDstDarkRate = 255;
-			}
-			break;
-		case _FOGSTATE_NIGHT:
-			{
-				fDstDarkRate = 10;
-			}
-			break;
-		}
-
-		if		( m_fDarkRate > fDstDarkRate )	m_fDarkRate -= 0.5f;
-		else if ( m_fDarkRate < fDstDarkRate )	m_fDarkRate += 0.5f;
-		else	
-		{
-			KillTimer(g_xMainWnd.GetSafehWnd(), _TIMER_ID);
-		}
-
-		dwFogColor = RGB(m_fDarkRate, m_fDarkRate, m_fDarkRate); 
-		m_xLightFog.ChangeLightColor(dwFogColor);
-	}
+    if(wParam==_TIMER_ID) {
+        KillTimer(g_xMainWnd.GetSafehWnd(),_TIMER_ID);
+    }
 	else	// Temp
 	{
 		if (PacketQ.GetCount())
@@ -2015,39 +2025,9 @@ LRESULT CGameProcess::OnKeyDown(WPARAM wParam, LPARAM lParam)
             m_xInterface.FocusChatMode();
 		}
 		break;
-	case 'U':
-		{
-			DWORD dwFogColor;
-
-			m_bFogState++;
-
-			if ( m_bFogState > _FOGSTATE_DAWN )			m_bFogState = _FOGSTATE_DAY;
-
-			switch ( m_bFogState )
-			{
-			case _FOGSTATE_DAY:
-				{
-					m_fDarkRate = 255.0f;
-					dwFogColor = RGB(m_fDarkRate, m_fDarkRate, m_fDarkRate);
-					break;
-				}
-			case _FOGSTATE_NIGHT:
-				{
-					m_fDarkRate = 10.0f;
-					dwFogColor = RGB(m_fDarkRate, m_fDarkRate, m_fDarkRate);
-					break;
-				}
-			case _FOGSTATE_DAWN:
-				{
-					m_fDarkRate = 50.0f;
-					dwFogColor = RGB(m_fDarkRate, m_fDarkRate, m_fDarkRate);
-					break;
-				}
-			}
-
-			m_xLightFog.ChangeLightColor(dwFogColor);
-		}
-		break;
+    case 'U':
+        EnterSceneAmbient((m_sceneAmbient.mode+1)%3);
+        break;
 	case VK_LEFT:
 		{
 			vTrans.x = -2.0f;
@@ -2220,7 +2200,7 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 	{
 		m_bDayState = atoi(szArg1);
 		m_bFogState = atoi(szArg2);
-		SetTimer(g_xMainWnd.GetSafehWnd(), _TIMER_ID, 50, NULL);
+        m_sceneAmbient.update(WORD(atoi(szArg2)));
 	}	
 /*	else if ( !strcmp(szCommand, "@刷怪点") )
 	{
@@ -2402,6 +2382,7 @@ VOID CGameProcess::CommandAnalyze()
 			break;
 		}
 	}
+	else if(!strcmp(szCommand,"@snow")) { m_weatherEnabled=!m_weatherEnabled; }
 	else if ( !strcmp(szCommand, "@fps") )
 	{
 		m_bShowFPS = !m_bShowFPS;
@@ -2410,15 +2391,15 @@ VOID CGameProcess::CommandAnalyze()
 	{
 		if ( !strcmp(szArg1, "snow") )
 		{
-			m_bShowSnow = !m_bShowSnow;
+			m_weather.snow=!m_weather.snow;
 		}
 		else if ( !strcmp(szArg1, "rain") )
 		{
-			m_bShowRain = !m_bShowRain;
+			m_weather.other=!m_weather.other;
 		}
 		else if ( !strcmp(szArg1, "fog2") )
 		{
-			m_bShowMist = !m_bShowMist;
+			m_weather.fog=!m_weather.fog;
 		}
 		else if ( !strcmp(szArg1, "state") )
 		{
@@ -3190,14 +3171,15 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				}	
 				break;
 			}
-			case SM_DAYCHANGING:
-			{
-				m_bDayState = tdm.wParam;
-				m_bFogState = tdm.wTag;
-
-				SetTimer(g_xMainWnd.GetSafehWnd(), _TIMER_ID, 50, NULL);
-				break;
-			}
+            case SM_DAYCHANGING:
+            {
+                if(pszMsg[DEFBLOCKSIZE]) break;
+                m_bDayState=BYTE(tdm.wParam);m_bFogState=BYTE(tdm.wTag);
+                m_sceneAmbient.select_base(BYTE(tdm.wParam),m_weather.random());
+                m_sceneAmbient.update(tdm.wTag);
+                m_weather.select(tdm.wSeries);
+                break;
+            }
 			case SM_AREASTATE:
 			{
 				break;
@@ -3598,28 +3580,8 @@ VOID CGameProcess::ProcessPacket()
 
 					LoadMapChanged(szDecodeMsg);
 
-					m_bFogState = LOBYTE(lpPacketMsg->stDefMsg.wSeries);
-
-					switch ( m_bFogState )
-					{
-					case _FOGSTATE_DAY:
-						{
-							dwFogColor = RGB(240, 240, 240);
-							break;
-						}
-					case _FOGSTATE_NIGHT:
-						{
-							dwFogColor = RGB(10, 10, 10);
-							break;
-						}
-					case _FOGSTATE_DAWN:
-						{
-							dwFogColor = RGB(50, 50, 50);
-							break;
-						}
-					}
-
-					m_xLightFog.ChangeLightColor(dwFogColor);
+                    EnterSceneAmbient(LOBYTE(lpPacketMsg->stDefMsg.wSeries));
+                    m_weather.select(HIBYTE(lpPacketMsg->stDefMsg.wSeries),true);
 
 					// gadget			
 					m_wInputDelayTime = 2300;
@@ -3798,29 +3760,8 @@ VOID CGameProcess::OnSvrMsgNewMap(_TDEFAULTMESSAGE	*ptdm, char *pszMapName)
     m_levelEffects.Clear();ClearNativeSpells();m_stMapItemList.ClearAllNodes();
     m_xInterface.m_targetDisplay.Clear();
 
-	switch ( m_bFogState )
-	{
-	case _FOGSTATE_DAY:
-		{
-			m_fDarkRate = 255.0f;
-			dwFogColor = RGB(m_fDarkRate, m_fDarkRate, m_fDarkRate);
-			break;
-		}
-	case _FOGSTATE_NIGHT:
-		{
-			m_fDarkRate = 10.0f;
-			dwFogColor = RGB(m_fDarkRate, m_fDarkRate, m_fDarkRate);
-			break;
-		}
-	case _FOGSTATE_DAWN:
-		{
-			m_fDarkRate = 50.0f;
-			dwFogColor = RGB(m_fDarkRate, m_fDarkRate, m_fDarkRate);
-			break;
-		}
-	}
-
-	m_xLightFog.ChangeLightColor(dwFogColor);
+    EnterSceneAmbient(LOBYTE(ptdm->wSeries));
+    m_weather.select(HIBYTE(ptdm->wSeries),true);
 
 /*	g_xSound.PlayBkMusicMp3(TRUE, 0);
 */
@@ -4173,13 +4114,13 @@ void CGameProcess::AdvanceNativeSpells(DWORD elapsed,std::uint64_t before)
                 const auto change=mir3::GroundSpell::next(id,playback.frame,int(playback.resource->first),int(playback.resource->end),walkable);
                 const float x=float(effect.cell.x*_CELL_WIDTH+originX+_CELL_WIDTH/2);
                 const float y=float(effect.cell.y*_CELL_HEIGHT+originY);
-                if(change.lightning) m_spellParticles.emit_lightning({x,y-_CELL_HEIGHT/2},m_effectRandom);
+                if(change.lightning) m_spellParticles.emit_lightning({x,y-_CELL_HEIGHT/2},m_weather);
                 if(change.residue) {
                     const bool fire=id==mir3::MagicEffectId::fire_wave;
-                    if(fire) embers.push_back({effect.cell,m_effectRandom.between(FirstEmber,LastEmber)});
-                    m_spellMarks.push_back({effect.cell,fire?FireMark:IceMark+m_effectRandom.between(0,1),elapsed});
+                    if(fire) embers.push_back({effect.cell,m_weather.between(FirstEmber,LastEmber)});
+                    m_spellMarks.push_back({effect.cell,fire?FireMark:IceMark+m_weather.between(0,1),elapsed});
                 }
-                if(change.ice_particles) m_spellParticles.emit_ice({x,y},m_effectRandom);
+                if(change.ice_particles) m_spellParticles.emit_ice({x,y},m_weather);
                 if(change.finished) {
                     if(!playback.light) playback.stop();
                     else {playback.tail=true;--playback.frame;}
@@ -4231,7 +4172,7 @@ void CGameProcess::AdvanceNativeSpells(DWORD elapsed,std::uint64_t before)
             playback.position={float(pixel[0]),float(pixel[1])};
             const auto offset=m_spellLibraryOffsets[playback.resource->library];
             const auto emitter=mir3::SpellOrbit::emitter({pixel[0]+originX,pixel[1]+originY},effect.orbitDirection,offset.x,offset.y);
-            m_spellParticles.emit({float(emitter[0]),float(emitter[1])},m_effectRandom);
+            m_spellParticles.emit({float(emitter[0]),float(emitter[1])},m_weather);
         }
         rememberFrame();
         if(change==mir3::SpellPlayback::Change::impact && effect.playback.bound) {
@@ -4240,7 +4181,7 @@ void CGameProcess::AdvanceNativeSpells(DWORD elapsed,std::uint64_t before)
         }
     }
     for(const auto& ember:embers) StartSpellEmber(ember.first,ember.second);
-    if(elapsed) m_spellParticles.advance(int(elapsed),m_effectRandom);
+    if(elapsed) m_spellParticles.advance(int(elapsed),m_weather);
     g_xSound.RefreshSpellVoices();
     m_nativeSpells.erase(std::remove_if(m_nativeSpells.begin(),m_nativeSpells.end(),[](const NativeSpell& effect){return effect.playback.finished;}),m_nativeSpells.end());
 }
