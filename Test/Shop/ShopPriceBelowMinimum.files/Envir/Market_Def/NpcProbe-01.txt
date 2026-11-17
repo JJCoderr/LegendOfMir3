@@ -1,0 +1,11 @@
+%54
+[@main]
+#SAY
+Welcome\
+<Buy/@buy>
+[@buy]
+#SAY
+Select goods\
+<Exit/@exit>
+[Goods]
+ShopPotion 3 1

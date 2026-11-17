@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include <string>
+#include <cerrno>
 
 CMerchantObject::CMerchantObject() : CCharObject(NULL)
 {
@@ -21,6 +22,30 @@ void CMerchantObject::RunRace()
 }
 
 namespace {
+// Match the reference server's extended-precision operations and ROUND.
+// See Test/Shop/native-price-audit.md; MSVC double/round changes half-way cases.
+long long MerchantPrice(int basePrice, int percent)
+{
+    static const float PercentDivisor = 100.0f;
+    static const unsigned char Surcharge[] = {0xcd,0xcc,0xcc,0xcc,0xcc,0xcc,0xcc,0x8c,0xff,0x3f};
+    const unsigned short PriceControl = 0x037f; // 64-bit precision, nearest/even, masked exceptions.
+    unsigned short savedControl;
+    long long price;
+    __asm {
+        fnstcw savedControl
+        fldcw PriceControl
+        fild basePrice
+        fdiv PercentDivisor
+        fild percent
+        fmulp st(1), st(0)
+        fld tbyte ptr Surcharge
+        fmulp st(1), st(0)
+        fistp qword ptr price
+        fldcw savedControl
+    }
+    return price;
+}
+
 bool LoadMerchantLines(const std::string& path, std::vector<std::string>& lines)
 {
     FILE* input = fopen(path.c_str(), "rb");
@@ -167,14 +192,16 @@ void CMerchantObject::ShowGoods(CPlayerObject* player)
         const std::string name = info.scriptName.empty() ? m_szName : info.scriptName;
         std::vector<std::string> lines;
         if (!LoadMerchantLines("Envir/Market_Def/"+name+"-"+info.szMapName+".txt", lines)) return;
-        unsigned long percent = 100;
+        constexpr int MinimumPricePercent = 55;
+        int percent = 100;
         for (const auto& line : lines) {
             if (line[0]=='[') break;
             if (line[0]!='%') continue;
             char* end;
             const char* number = line.c_str()+1;
-            percent = strtoul(number, &end, 10);
-            if (end==number || *end || percent>INT_MAX) return;
+            errno = 0;
+            const long parsed = strtol(number, &end, 10);
+            if (end!=number && !*end && errno!=ERANGE && parsed>=MinimumPricePercent) percent = int(parsed);
         }
         bool goods = false;
         for (const auto& line : lines) {
@@ -183,8 +210,8 @@ void CMerchantObject::ShowGoods(CPlayerObject* player)
             char item[20], extra; int count, hours;
             if (sscanf(line.c_str(), "%19s %d %d %c", item, &count, &hours, &extra)!=3 || count<=0 || count>USHRT_MAX) continue;
             for (int i=0; i<g_nStdItemEtc; ++i) if (!strcmp(item, g_pStdItemEtc[i].szName)) {
-                const unsigned long long price = static_cast<unsigned long long>(g_pStdItemEtc[i].dwPrice)*percent/100;
-                if (price<=INT_MAX) m_goods.push_back({i,count,int(price)});
+                const long long price = MerchantPrice(int(g_pStdItemEtc[i].dwPrice), percent);
+                if (price>=0 && price<=INT_MAX) m_goods.push_back({i,count,int(price)});
                 break;
             }
         }
@@ -220,7 +247,7 @@ void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity)
             failure = CannotCarry; break;
         }
         const unsigned long long price = static_cast<unsigned long long>(good.price)*quantity;
-        if (price>owner->GetGold() || price>INT_MAX) { failure = NotEnoughGold; break; }
+        if (!price || price>owner->GetGold() || price>INT_MAX) { failure = NotEnoughGold; break; }
         owner->DecGold(int(price));
         for (int i=0; i<quantity; ++i) {
             auto* record = new _TGENERALITEMRCD{};

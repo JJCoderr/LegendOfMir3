@@ -2209,3 +2209,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 已复核 Mud3/Eiserver.exe 的 Merchant.txt 构造链：默认倍率100，脚本只接受>=55的倍率，无效值保留原值。
 - 原单价函数0x4D0E44按base/100*percent*extended80(1.1)计算，再由x87 FISTP按默认最近偶数取整；购买拒绝总价<=0。当前floor算法和免费场景不兼容，下一步须修代码、边界用例和现有Shop CSV，再构建联调。
 - 可复核地址、哈希、指令与期望值记录于Test/Shop/native-price-audit.md；Test/README.md已标出旧价格说明的局限。此阶段仅完成静态证据，不代表价格修复或原服动态验证。
+
+## 商店普通物品价格适配完成
+
+- ObjectMerchant.cpp按参考服x87扩展精度指令计算单价，保存/恢复控制字；倍率默认100、下限55，无效/溢出值保留先前倍率；拒绝零总价交易。超出INT_MAX报价/总价不复现原服溢出行为。
+- ShopFree更名ShopLowPrice，修正全部现有Shop报价/余额；增加倍率54/55、有效值保留、零价拒购和扩展精度舍入CSV。基础价15得到17、35得到38，避免用普通double或十进制偶数取整替代。
+- EIServer Release构建通过；全部13个Shop场景515步通过（含双客户端共享库存、保存重登、容量/负重拒绝），日志out/csv-validation/shop-native-price.log与native-Shop*.log。原服静态证据和实现边界在Test/Shop/native-price-audit.md。
+- 整体适配仍未完成：装备交易、出售/修理、补货等仍待接入；NPC选项需继续核对原服只允许已展示选项的服务端校验。

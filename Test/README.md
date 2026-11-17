@@ -57,7 +57,7 @@ step,name,target,action,params,expect
 
 日志包含时间、步骤编号、目标端、动作、实际响应、PASS/FAIL、总数和耗时。首个失败立即停止，退出码为 1；全部通过为 0。正常请求参数不写日志。辅助程序另存 runtime.log、server-preflight.log、result.json；场景执行到 protocol.get 时生成 protocol-coverage.json。服务端当前 state.get 反映服务和网络连接状态，具体业务持久化仍由数据库断言验证。
 
-> 商店价格兼容性待修复：IDA 已确认参考服使用额外的 1.1 系数与 x87 ROUND，倍率下限为 55，且拒绝零总价购买。本文后面的价格/免费购买说明记录的是当前实现，不能作为原版行为依据。证据及待更新场景见 [商店价格核对](Shop/native-price-audit.md)。
+商店价格按参考服 x87 运算顺序实现，具体指令、舍入边界与范围限制见 [商店价格核对](Shop/native-price-audit.md)。
 
 ## 子系统划分
 
@@ -177,6 +177,6 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 本阶段仅支持普通物品和初始库存，补货小时已读取但尚未执行定时补货，库存尚未跨服务器重启持久化，也未实现装备明细商品、出售/修理或所有在线顾客的即时库存广播。物品和金币沿用角色保存事务，已验证正常保存重登；尚未验证购买过程中的服务器崩溃恢复。
 
-`Shop/ShopPrice.csv` 使用标准价11和 `%150`，报价单价16，购买2件扣32；验证金币不足拒绝及余额8的保存重登。当前实现先对单价向下取整，再乘数量，报价和扣款共用缓存单价；未标倍率默认为100。`Shop/ShopFree.csv` 验证 `%0`，零金币角色可领取库存内的免费商品；`Shop/ShopInvalidPrice.csv` 验证非数字倍率不会打开商店或默认为免费。倍率语法来自参考服 `%150` / `%200` 文件；所有原版价格取整边界尚未通过原服务器逐项核对。
+`Shop/ShopPrice.csv` 使用标准价11和 `%150`，报价单价18，购买2件扣36；验证余额4的保存重登。单价按参考服 `base / 100 * percent * 1.1` 的 x87 扩展精度顺序计算，再取最近整数，报价和扣款共用单价。`ShopLowPrice.csv` 验证 `%0` 被忽略，`ShopInvalidPrice.csv` 验证非数字倍率保留默认100；`ShopPriceBelowMinimum.csv` / `ShopPriceMinimum.csv` 验证54/55边界；`ShopPriceRetained.csv` 验证无效、过低和溢出的倍率不覆盖先前有效值。`ShopZeroPrice.csv` 验证零基础价可以报价但不能购买。`ShopPriceRounding.csv` 验证基础价5/15/25/35对应单价6/17/28/38及按单价乘数量扣款。
 
-`python Test/launch_csv.py Test/Shop/ShopSharedStock.csv --clients 2 --log out/shop-shared-stock.log` 启动两个真实角色，双方看到同一初始库存后交替购买。第一位买2件后，第二位按旧列表购买2件被服务器拒绝；重新打开商店获得真实剩余1件并买走；第一位的过期购买也被拒绝。保存后检查总物品数3与双方余额80/90。该场景证明交替请求使用共享服务端库存，不是并发压力测试；尚未向其他顾客主动广播库存变化。
+`python Test/launch_csv.py Test/Shop/ShopSharedStock.csv --clients 2 --log out/shop-shared-stock.log` 启动两个真实角色，双方看到同一初始库存后交替购买。第一位买2件后，第二位按旧列表购买2件被服务器拒绝；重新打开商店获得真实剩余1件并买走；第一位的过期购买也被拒绝。保存后检查总物品数3与双方余额78/89。该场景证明交替请求使用共享服务端库存，不是并发压力测试；尚未向其他顾客主动广播库存变化。

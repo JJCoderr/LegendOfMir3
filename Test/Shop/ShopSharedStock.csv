@@ -42,7 +42,7 @@ step,name,target,action,params,expect
 410,second open shop,Client2,npc.select,option=0,result.status=submitted
 420,second stock snapshot,Client2,state.wait,,result.shop.open=true;result.shop.goods.0.stock=3;result.gold=100
 430,first buys two,Client,shop.buy,index=0;quantity=2,result.status=submitted
-440,first purchase complete,Client,state.wait,,result.bag_count=2;result.gold=80;result.shop.goods.0.stock=1
+440,first purchase complete,Client,state.wait,,result.bag_count=2;result.gold=78;result.shop.goods.0.stock=1
 450,second submits stale quantity,Client2,shop.buy,index=0;quantity=2,result.status=submitted
 460,stale request refused,Client2,state.wait,,result.shop.notice=true;result.bag_count=0;result.gold=100;result.shop.goods.0.stock=3
 470,dismiss stale refusal,Client2,notice.dismiss,,result.status=submitted
@@ -51,9 +51,9 @@ step,name,target,action,params,expect
 500,refresh stock,Client2,npc.select,option=0,result.status=submitted
 510,real stock received,Client2,state.wait,,result.shop.goods.0.stock=1
 520,buy final item,Client2,shop.buy,index=0;quantity=1,result.status=submitted
-530,final item received,Client2,state.wait,,result.bag_count=1;result.gold=90;result.shop.goods.0.stock=0
+530,final item received,Client2,state.wait,,result.bag_count=1;result.gold=89;result.shop.goods.0.stock=0
 540,first submits stale final item,Client,shop.buy,index=0;quantity=1,result.status=submitted
-550,sold out across clients,Client,state.wait,,result.shop.notice=true;result.bag_count=2;result.gold=80;result.shop.goods.0.stock=1
+550,sold out across clients,Client,state.wait,,result.shop.notice=true;result.bag_count=2;result.gold=78;result.shop.goods.0.stock=1
 560,dismiss sold out,Client,notice.dismiss,,result.status=submitted
 570,exit option ready,Client,state.wait,,result.npc_dialog.ready=true
 580,close shop,Client,npc.select,option=0,result.status=submitted
@@ -70,7 +70,7 @@ step,name,target,action,params,expect
 690,save character,Client2,session.return,,result.status=submitted
 700,saved selection,Client2,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
 710,total stock conservation,Database,query,"SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME IN ('MirProbe01','MirProbe02')",rows=[[3]]
-720,both balances,Database,query,"SELECT FLD_GOLD FROM TBL_CHARACTER WHERE FLD_CHARNAME IN ('MirProbe01','MirProbe02') ORDER BY FLD_CHARNAME","rows=[[80],[90]]"
+720,both balances,Database,query,"SELECT FLD_GOLD FROM TBL_CHARACTER WHERE FLD_CHARNAME IN ('MirProbe01','MirProbe02') ORDER BY FLD_CHARNAME","rows=[[78],[89]]"
 730,server healthy,Server,state.get,,result.ready=true
 740,first coverage,Client,protocol.get,,
 750,second coverage,Client2,protocol.get,,

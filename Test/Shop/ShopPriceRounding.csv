@@ -1,0 +1,34 @@
+﻿step,name,target,action,params,expect
+1,credentials ready,Client,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+2,wrong password,Client,session.login,account=mirtest;password=wrong,result.status=submitted
+3,login rejected,Client,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+4,dismiss rejection,Client,notice.dismiss,,result.status=submitted
+5,login,Client,session.login,account=mirtest;password=test123,result.status=submitted
+6,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+7,authenticated,Client,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+8,dismiss billing,Client,notice.dismiss,,result.status=submitted
+9,unknown server rejected,Client,session.select_server,name=MissingServer,error.code=-32002
+10,select server,Client,session.select_server,name=Mir3Local,result.status=submitted
+11,roster ready,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+12,unknown character rejected,Client,session.enter,name=MissingRole,error.code=-32002
+13,enter character,Client,session.enter,name=MirProbe01,result.status=submitted
+140,NPC visible,Client,state.wait,,result.scene=world;result.actor_count=1;result.actors.0.npc=true;result.actors.0.dead=false;result.actors.0.x=460;result.actors.0.y=261
+150,query NPC name,Client,actor.query_name,index=0,result.status=submitted
+160,NPC name received,Client,state.wait,,result.actor_count=1;result.actors.0.name=NpcProbe;result.actors.0.npc=true
+170,dismiss arrival,Client,notice.dismiss,,result.status=submitted
+180,input ready,Client,state.wait,,result.input_delayed=false
+190,closed shop rejects purchase,Client,shop.buy,index=0;quantity=1,error.code=-32002
+200,open merchant,Client,npc.click,index=0,result.status=submitted
+210,buy option ready,Client,state.wait,,result.npc_dialog.rows.1.command=@buy;result.npc_dialog.ready=true
+220,open shop,Client,npc.select,option=0,result.status=submitted
+230,extended precision quotes,Client,state.wait,,result.shop.open=true;result.gold=1000;result.bag_count=0;result.shop.goods.0.price=6;result.shop.goods.1.price=17;result.shop.goods.2.price=28;result.shop.goods.3.price=38
+240,buy rounded pair 0,Client,shop.buy,index=0;quantity=2,result.status=submitted
+250,unit quote times quantity 0,Client,state.wait,,result.gold=988;result.bag_count=2;result.shop.goods.0.stock=1
+260,buy rounded pair 1,Client,shop.buy,index=1;quantity=2,result.status=submitted
+270,unit quote times quantity 1,Client,state.wait,,result.gold=954;result.bag_count=4;result.shop.goods.1.stock=1
+280,buy rounded pair 2,Client,shop.buy,index=2;quantity=2,result.status=submitted
+290,unit quote times quantity 2,Client,state.wait,,result.gold=898;result.bag_count=6;result.shop.goods.2.stock=1
+300,buy rounded pair 3,Client,shop.buy,index=3;quantity=2,result.status=submitted
+310,unit quote times quantity 3,Client,state.wait,,result.gold=822;result.bag_count=8;result.shop.goods.3.stock=1
+330,all purchases acknowledged,Client,wire.expect,message=SM_BUYITEM_SUCCESS;direction=received,count=4
+340,no refusal,Client,wire.expect,message=SM_BUYITEM_FAIL;direction=received;at_least=0,count=0

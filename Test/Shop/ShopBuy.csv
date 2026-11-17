@@ -21,13 +21,13 @@ step,name,target,action,params,expect
 200,open merchant,Client,npc.click,index=0,result.status=submitted
 210,buy option ready,Client,state.wait,,result.npc_dialog.rows.1.command=@buy;result.npc_dialog.ready=true
 220,open shop,Client,npc.select,option=0,result.status=submitted
-230,goods from server,Client,state.wait,,result.shop.open=true;result.shop.goods.0.name=ShopPotion;result.shop.goods.0.price=10;result.shop.goods.0.stock=3;result.gold=25;result.bag_count=0
+230,goods from server,Client,state.wait,,result.shop.open=true;result.shop.goods.0.name=ShopPotion;result.shop.goods.0.price=11;result.shop.goods.0.stock=3;result.gold=25;result.bag_count=0
 240,invalid category rejected,Client,shop.buy,index=99;quantity=1,error.code=-32002
 250,zero quantity rejected,Client,shop.buy,index=0;quantity=0,error.code=-32602
 260,buy two potions,Client,shop.buy,index=0;quantity=2,result.status=submitted
-270,items gold stock synchronized,Client,state.wait,,result.bag_count=2;result.bag.0.name=ShopPotion;result.bag.1.name=ShopPotion;result.gold=5;result.shop.goods.0.stock=1
+270,items gold stock synchronized,Client,state.wait,,result.bag_count=2;result.bag.0.name=ShopPotion;result.bag.1.name=ShopPotion;result.gold=3;result.shop.goods.0.stock=1
 280,insufficient gold purchase,Client,shop.buy,index=0;quantity=1,result.status=submitted
-290,gold refusal leaves state intact,Client,state.wait,,result.shop.notice=true;result.bag_count=2;result.gold=5;result.shop.goods.0.stock=1
+290,gold refusal leaves state intact,Client,state.wait,,result.shop.notice=true;result.bag_count=2;result.gold=3;result.shop.goods.0.stock=1
 300,dismiss refusal,Client,notice.dismiss,,result.status=submitted
 310,exit ready,Client,state.wait,,result.npc_dialog.ready=true;result.shop.notice=false
 320,close shop through NPC,Client,npc.select,option=0,result.status=submitted
@@ -37,9 +37,9 @@ step,name,target,action,params,expect
 360,buy requests wire,Client,wire.expect,message=CM_USERBUYITEM;direction=sent,count=2
 370,save and return,Client,session.return,,result.status=submitted
 380,selection after save,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
-390,gold persisted,Database,query,SELECT FLD_GOLD FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01',rows=[[5]]
+390,gold persisted,Database,query,SELECT FLD_GOLD FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01',rows=[[3]]
 400,items persisted,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME='MirProbe01',rows=[[2]]
 410,reenter,Client,session.enter,name=MirProbe01,result.status=submitted
-420,purchased inventory restored,Client,state.wait,,result.scene=world;result.bag_count=2;result.bag.0.name=ShopPotion;result.bag.1.name=ShopPotion;result.gold=5
+420,purchased inventory restored,Client,state.wait,,result.scene=world;result.bag_count=2;result.bag.0.name=ShopPotion;result.bag.1.name=ShopPotion;result.gold=3
 430,server healthy,Server,state.get,,result.ready=true
 440,coverage,Client,protocol.get,,

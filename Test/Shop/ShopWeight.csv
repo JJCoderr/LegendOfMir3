@@ -21,7 +21,7 @@ step,name,target,action,params,expect
 200,open merchant,Client,npc.click,index=0,result.status=submitted
 210,buy option ready,Client,state.wait,,result.npc_dialog.rows.1.command=@buy;result.npc_dialog.ready=true
 220,open shop,Client,npc.select,option=0,result.status=submitted
-230,goods from server,Client,state.wait,,result.shop.open=true;result.shop.goods.0.name=ShopPotion;result.shop.goods.0.price=10;result.shop.goods.0.stock=3;result.gold=100;result.bag_count=0
+230,goods from server,Client,state.wait,,result.shop.open=true;result.shop.goods.0.name=ShopPotion;result.shop.goods.0.price=11;result.shop.goods.0.stock=3;result.gold=100;result.bag_count=0
 240,rejected purchase,Client,shop.buy,index=0;quantity=1,result.status=submitted
 250,no partial purchase,Client,state.wait,,result.shop.notice=true;result.bag_count=0;result.gold=100;result.shop.goods.0.stock=3
 260,dismiss refusal,Client,notice.dismiss,,result.status=submitted
