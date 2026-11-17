@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "LoginProcess/LoginLayout.h"
 #include "Common/LegacyPanel.h"
 #include <vector>
 #include "SelectionDialog.h"
@@ -56,6 +57,7 @@ VOID CCharacterProcess::Init()
 
 VOID CCharacterProcess::Load(bool connect)
 {
+    m_offline=!connect;m_lastUrl.clear();
 	WSAStartup(MAKEWORD(2, 2), &m_wsd);
 	m_Image.NewLoad(".\\Data\\interface1c.wil", TRUE, TRUE);
 	m_Image2.NewLoad(".\\Data\\GameInter.wil", TRUE, TRUE);
@@ -132,7 +134,7 @@ void CCharacterProcess::Preview(const char* page)
     m_xSelectChr.OpenWnd();
     if (strcmp(page, "create") == 0) {
         m_xBGround.SetRenderState(_RENDER_STILL_2);
-        m_Progress = PRG_CREATE_CHAR;
+        OpenCreation();
     } else if (strcmp(page, "delete") == 0) {
         OpenDeleteNotice();
     }
@@ -285,7 +287,14 @@ LRESULT CCharacterProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
     if(m_Progress==PRG_SEL_TO_CREA || m_Progress==PRG_CREA_TO_SEL || m_Progress==PRG_SEL_TO_GAME) return 0;
     m_createPressed = -1;
     m_ptMousePos = POINT{LOWORD(lParam), HIWORD(lParam)};
-    if (m_Progress == PRG_CREATE_CHAR && !m_xMsgBox.IsActive()) {
+    if (m_Progress == PRG_CREATE_CHAR && !m_xMsgBox.IsActive() && !m_bCreatePending) {
+            for (int gender = 0; gender < 2; ++gender)
+                if (PtInRect(&m_createBounds[gender], m_ptMousePos) && gender != m_SelectSex) {
+                    m_SelectSex = (BYTE)gender;
+                    m_Tick = 0;
+                    g_xSound.PlayRoleVoice(true, m_SelectJob, m_SelectSex);
+                }
+
         for (int i = 0; i < 5; ++i) {
             const auto& c = createControls[i];
             RECT r = {c.x,c.y,c.x+c.width,c.y+c.height};
@@ -348,6 +357,8 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
 					{
 						break;
 					}
+					case RETURN_SELECT_EXIT_BTN:
+                        ExitSelection();break;
 					case RETURN_SELECT_NEW_ERR:
 					{
                         ShowNotice(SelectionDialog::Full);
@@ -379,16 +390,13 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
         case PRG_CREATE_CHAR:
         {
             if (m_bCreatePending) break;
-            for (int gender = 0; gender < 2; ++gender)
-                if (PtInRect(&m_createBounds[gender], m_ptMousePos) && gender != m_SelectSex) {
-                    m_SelectSex = (BYTE)gender;
-                    m_Tick = 0;
-                    g_xSound.PlayRoleVoice(true, m_SelectJob, m_SelectSex);
-                }
+            RECT editorFocus={294,404,371,419};
+            if(PtInRect(&editorFocus,m_ptMousePos)) SetFocus(g_xChatEditBox.GetSafehWnd());
             for (int i = 0; i < 5; ++i) {
                 const CreateControl& control = createControls[i];
                 RECT rect = {control.x, control.y, control.x + control.width, control.y + control.height};
                 if (!PtInRect(&rect, m_ptMousePos)) continue;
+                g_xSound.PlayLobbyEffect(LoginLayout::ClickSound);
                 if (i == 1) {
                     g_xSound.UpdateLobbyAudio(CMirSound::LobbyPage::None,0);
                     m_Progress = PRG_CREA_TO_SEL;
@@ -396,11 +404,9 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
                     ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
                     RequestRoster();
                 } else if (i >= 2) {
-                    if (m_SelectJob != i - 2) {
-                        m_SelectJob = (BYTE)(i - 2);
-                        m_Tick = 0;
-                        g_xSound.PlayRoleVoice(true, m_SelectJob, m_SelectSex);
-                    }
+                    m_SelectJob = (BYTE)(i - 2);
+                    m_Tick = 0;
+                    g_xSound.PlayRoleVoice(true, m_SelectJob, m_SelectSex);
                 } else {
                     SubmitCreation();
                 }
@@ -729,7 +735,7 @@ VOID CCharacterProcess::RenderScene(INT nLoopTime)
 		case PRG_SEL_TO_CREA:
 			ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
 			if(m_xBGround.GetRenderState()==_RENDER_STILL_2)
-				m_Progress = PRG_CREATE_CHAR;
+				OpenCreation();
 			break;
 		case PRG_CREATE_CHAR:
 			ShowWindow(g_xChatEditBox.GetSafehWnd(), m_xMsgBox.IsActive() ? SW_HIDE : SW_SHOW);
@@ -925,4 +931,27 @@ VOID CCharacterProcess::SetErrorMessage(INT message,CHAR* text) {
 }
 BOOL CCharacterProcess::MessageBoxProcess(LPARAM parameter) {
     FinishNotice(m_xMsgBox.OnButtonUp(POINT{LOWORD(parameter),HIWORD(parameter)},true));return TRUE;
+}
+
+void CCharacterProcess::OpenCreation()
+{
+    m_Progress=PRG_CREATE_CHAR;
+    m_SelectJob=0;m_Tick=0;m_createPressed=-1;m_bCreatePending=FALSE;
+    ZeroMemory(m_createBounds,sizeof(m_createBounds));
+    m_xMsgBox.HideMessageBox();m_nMessage=0;
+    g_xChatEditBox.SetLimitText(SelectionDialog::NameBytes);
+    SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETPASSWORDCHAR,0,0);
+    g_xChatEditBox.MoveScaled(g_xMainWnd.m_rcWindow.left+288,g_xMainWnd.m_rcWindow.top+405,75,13,TRUE);
+    SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"");
+    ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_SHOW);
+    SetFocus(g_xChatEditBox.GetSafehWnd());
+}
+
+void CCharacterProcess::ExitSelection()
+{
+    m_lastUrl=m_messages.Get(LoginLayout::ExitUrl);
+    if(m_offline) return;
+    g_xSound.UpdateLobbyAudio(CMirSound::LobbyPage::None,0);
+    if(!m_lastUrl.empty()) ShellExecuteA(g_xMainWnd.GetSafehWnd(),"open",m_lastUrl.c_str(),nullptr,nullptr,SW_SHOWNORMAL);
+    PostMessage(g_xMainWnd.GetSafehWnd(),WM_CLOSE,0,0);
 }

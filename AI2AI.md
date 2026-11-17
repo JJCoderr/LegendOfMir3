@@ -1587,3 +1587,8 @@ SelectionDialog集中CmList219..232，创建失败按nRecog映射224/226/232，�
 ## 2026-11-17：选角列表等待与四槽完整批次
 
 新增SelectionRoster/SelectionRoleInfo独立GUI结构，支持nRecog文本四槽/24字节姓名，并保留wParam旧packed三槽、23字节CHRINFO/43字节创建包不变。进入/刷新显示CmList200与1248等待面板；500ms暂存列表及错误，等待冻结输入/角色动画，影片暂停计时。四槽分页与WORD动画时间，释放命中翻页。OnSelChar改动态字符串避免账号24+姓名24溢出原32缓冲。clean90/all109通过，222检查全通过。预览284..288，下一289；截图out/selection-roster-*.png与selection-roster-pages.png。详见Client/docs/selection-roster-migration-audit.md。真实网关未联调，下一核对角色按钮/选择/退出网址/创建编辑器初始化，再整理GUI整体差异。
+
+
+## 2026-11-17：角色页交互完整批次
+
+选角/性别改按下选中，矩形左上边界包含且角色重叠取首项；新建取消旧渐变等待，按钮/分页/创建补点击音；退出CmList1077网址+关闭（offline仅记录）。OpenCreation统一职业/姓名/13字节非密码/焦点/动画/等待初始化，保留性别，同职业重复点击重启动画。clean90/all109/final增量通过，147检查通过（交互15/列表22/提示23/影片33/登录27/转场12/音效15），最后命中简化复验37。预览289..291，下一292；截图out/character-interaction-{select,create,female}.png。详见Client/docs/character-interaction-migration-audit.md。所有测试进程已停止，真实网关未联调；接下来汇总GUI整体差异和剩余页面，目标保持active。

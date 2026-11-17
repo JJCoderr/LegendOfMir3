@@ -42,6 +42,7 @@ BYTE				g_bProcState = _LOGIN_PROC;
 #include "AVI/MoviePreview.h"
 #include "CharSelectProcess/SelectionDialogPreview.h"
 #include "CharSelectProcess/SelectionRosterPreview.h"
+#include "CharSelectProcess/CharacterInteractionPreview.h"
 
 // Offline visual review uses the real interface without map or network updates.
 class CHudPreviewProcess : public CWHDefProcess {
@@ -64,6 +65,9 @@ public:
     void OnConnectToServer() override {}
     char* OnMessageReceive(CHAR*) override { return NULL; }
     void Load(bool expanded, int chatMode, bool exitDialog, int groupPanel) {
+        if(groupPanel>=CharacterInteractionPreview::First && groupPanel<=CharacterInteractionPreview::Last) {
+            connectionSelectionPreview=true;capturePath=CharacterInteractionPreview::Load(groupPanel);return;
+        }
         if(groupPanel>=SelectionRosterPreview::First && groupPanel<=SelectionRosterPreview::Last) {
             connectionSelectionPreview=true;capturePath=SelectionRosterPreview::Load(groupPanel);return;
         }
@@ -3592,7 +3596,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
 	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
-	const int previewGroup = strcmp(lpCmdLine,"--preview=selection-roster-first")==0 ? SelectionRosterPreview::First+0 :
+	const int previewGroup = strcmp(lpCmdLine,"--preview=character-interaction-select")==0 ? CharacterInteractionPreview::First :
+        strcmp(lpCmdLine,"--preview=character-interaction-create")==0 ? CharacterInteractionPreview::Create :
+        strcmp(lpCmdLine,"--preview=character-interaction-female")==0 ? CharacterInteractionPreview::Female :
+        strcmp(lpCmdLine,"--preview=selection-roster-first")==0 ? SelectionRosterPreview::First+0 :
         strcmp(lpCmdLine,"--preview=selection-roster-waiting")==0 ? SelectionRosterPreview::First+1 :
         strcmp(lpCmdLine,"--preview=selection-roster-second")==0 ? SelectionRosterPreview::First+2 :
         strcmp(lpCmdLine,"--preview=selection-roster-long-name")==0 ? SelectionRosterPreview::First+3 :

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "LoginProcess/LoginLayout.h"
 #include "../SelectionDialog.h"
 #include "Common/LegacyPanel.h"
 
@@ -109,6 +110,32 @@ HRESULT CSelectChr::OnButtonDown(WPARAM wParam, LPARAM lParam)
 				m_pBtn[i]->m_nState = BUTTON_STATE_UP;
 		}
 
+    if(m_fIsActive) {
+        m_pxrcList->MoveCurrentToTop();
+        POINT point={LOWORD(lParam),HIWORD(lParam)};
+        for(int i=0;i<m_pxrcList->ListLength();++i) {
+            const auto& roleBounds=*m_pxrcList->GetCurrentData();
+            RECT bounds={roleBounds.nLeft,roleBounds.nTop,
+                roleBounds.nLeft+roleBounds.nWidth,roleBounds.nTop+roleBounds.nHeight};
+            if(i/2==m_page && PtInRect(&bounds,point)) {
+                if(m_nSelectChr!=i) {
+                    if(m_nSelectChr>=0) {
+                        m_roleAnimation[m_nSelectChr]=RoleAnimation{};
+                        m_roleAnimation[m_nSelectChr].action=3;
+                    }
+                    m_roleAnimation[i]=RoleAnimation{};
+                    m_roleAnimation[i].action=1;
+                    m_nSelectChr=i;
+                    m_pxSList->MoveCurrentToTop();m_pxSList->MoveNode(i);
+                    const auto& role=*m_pxSList->GetCurrentData();
+                    g_xSound.PlayRoleVoice(false,role.Class,role.Gender);
+                }
+                break;
+            }
+            m_pxrcList->MoveNextNode();
+        }
+    }
+
 	return 0;
 }
 
@@ -120,8 +147,10 @@ HRESULT CSelectChr::OnButtonDown(POINT ptMouse)
 
 HRESULT CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
 {
+    m_fIsButtonDown = FALSE;
     const int target = PageHit(lParam);
     if (m_fIsActive && target >= 0) {
+        g_xSound.PlayLobbyEffect(LoginLayout::ClickSound);
         m_roleAnimation[m_nSelectChr] = RoleAnimation{};
         m_page = target;
         m_nSelectChr = target * 2;
@@ -133,19 +162,20 @@ HRESULT CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
     }
     m_pagePressed = -1;
 	INT		i;
-	int		Px,Py;
 	if(m_fIsActive)
 	{
 		for(i = ID_SEL_CHR_NEW_BTN; i <= ID_SEL_CHR_START_BTN; i++)
 		{	m_pBtn[i]->m_nState = BUTTON_STATE_UP;
 			if (IsInRect(m_pBtn[i]->m_Rect,LOWORD(lParam), HIWORD(lParam)))
-			{	switch(i)
+			{
+                g_xSound.PlayLobbyEffect(LoginLayout::ClickSound);
+                switch(i)
 				{	
 					case ID_SEL_CHR_NEW_BTN:
 					{
 						if(m_nChrCount<SelectionDialog::CreationLimit)
 						{	m_nBlend = 0;
-							m_nRenderState = 1;
+							m_nRenderState = 11;
 							return RETURN_SELECT_NEW_BTN;
 						}
 						else
@@ -164,8 +194,7 @@ HRESULT CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
 					}
 					case ID_SEL_CHR_EXIT_BTN:
 					{
-						SendMessage(g_xMainWnd.GetSafehWnd(), WM_DESTROY, NULL, NULL);
-						return 0L;
+						return RETURN_SELECT_EXIT_BTN;
 					}
 					case ID_SEL_CHR_START_BTN:
 					{
@@ -186,34 +215,7 @@ HRESULT CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
 			}
 		}
 
-		m_pxrcList->MoveCurrentToTop();
-		m_pxSList->MoveCurrentToTop();
-		for(i=0; i < m_pxrcList->ListLength(); i++)
-		{
-			Px = m_pxrcList->GetCurrentData()->nLeft - LOWORD(lParam);
-			Py = m_pxrcList->GetCurrentData()->nTop - HIWORD(lParam);
-			if(i / 2 == m_page && Px < 0 && ((Px +m_pxrcList->GetCurrentData()->nWidth)>0))
-			{
-				if(Py<0 && ((Py+m_pxrcList->GetCurrentData()->nHeight)>0))
-				{
-                    if (m_nSelectChr != i) {
-                        if (m_nSelectChr >= 0) {
-                            m_roleAnimation[m_nSelectChr] = RoleAnimation{};
-                            m_roleAnimation[m_nSelectChr].action = 3;
-                        }
-                        m_roleAnimation[i] = RoleAnimation{};
-                        m_roleAnimation[i].action = 1;
-                        m_nSelectChr = i;
-                        m_pxSList->MoveCurrentToTop();
-                        m_pxSList->MoveNode(i);
-                        const SelectionRoleInfo& role = *m_pxSList->GetCurrentData();
-                        g_xSound.PlayRoleVoice(false, role.Class, role.Gender);
-                    }
 
-				}
-			}
-			m_pxrcList->MoveNextNode();
-		}
 	}
 
 	m_fIsButtonDown = FALSE;

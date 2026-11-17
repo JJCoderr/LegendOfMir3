@@ -34,6 +34,7 @@ public:
 	virtual	VOID		Render(INT	nLoopTime);
 private:
     friend struct SelectionRosterPreview;
+    friend struct CharacterInteractionPreview;
 protected:
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// Variable

@@ -58,6 +58,11 @@ public:
 	BOOL				MessageBoxProcess(LPARAM lParam);
 	
 private:
+    friend struct CharacterInteractionPreview;
+    void OpenCreation();
+    void ExitSelection();
+    bool m_offline=false;
+    std::string m_lastUrl;
     friend struct SelectionRosterPreview;
     friend struct SelectionDialogPreview;
     void ShowNotice(int message);

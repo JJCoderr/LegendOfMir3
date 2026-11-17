@@ -135,3 +135,4 @@ typedef struct tagChrRect
 #define MP3_STARTGAME						".\\Sound\\StartGame.mp3"
 
 #endif // _CHRSEL_DEFINE_H
+#define RETURN_SELECT_EXIT_BTN 7
