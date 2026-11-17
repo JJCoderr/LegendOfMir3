@@ -1680,3 +1680,9 @@ Interface鼠标按下/抬起/移动优先模态，键盘模态先于行会编辑
 - 修复GameProc.OnLButtonDown公告后未返回且用旧坐标；公告按下现用当前消息坐标并立即返回，防止持物丢弃等后台动作。Alt+Q/X不叠加退出框。
 - 新5项回环UDP检查，公告11+隔离5+退出30+键盘34+模态27+音效15=122通过。七目标构建server-notice-isolation-build.log，6页图out/notice-isolation，默认/拖动公告已查看，自启预览全停。
 - 公告324px排版溢出当前344px底板是既有原版证据/资源对应未决问题，已复核server-notice-evidence.md，未擅改算法。下一编号318，真实游戏服尚未联调。
+
+
+## 2026-11-17 GUI素材归档盘点
+- 只读盘点工作区GameInter与四归档：经典复刻RAR实际Mir3Server2610条；mir2x资源ZIP490624条只有同名MP3；Wood/DATA.zip4项人物WIL/WIX；服务器7z无目标素材命中。
+- 仍仅找到一套GameInter，哈希/帧尺寸已写Client/docs/gui-resource-inventory.md，原始证据out/gui-resource-audit.json等。公告原帧缩略图notice-source-frames.png已查看。未改资源或生产代码，因此未重复构建。
+- 已异步询问用户其他原版客户端本机路径，尚未得到答复。原影片缺失、公告版本对应仍未解决；可继续其他GUI核查，目标active。下一预览318。
