@@ -124,7 +124,7 @@ DWORD WINAPI AcceptThread(LPVOID lpParameter)
 
 			CreateIoCompletionPort((HANDLE)Accept, g_hIOCP, (DWORD)pNewSessionInfo, 0);
 
-			pNewSessionInfo->Recv();
+			// Wait for GM_SERVERUSERINDEX before receiving client packets.
 
 			UpdateStatusBar(TRUE);
 

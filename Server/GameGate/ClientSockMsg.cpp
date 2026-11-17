@@ -130,8 +130,11 @@ void ProcReceiveBuffer(char *pszPacket, int nRecv)
 				{
 					CSessionInfo* pSessionInfo = g_UserInfoArray.GetData(lpMsgHeader->wUserGateIndex);
 
-					if (pSessionInfo)
+					if (pSessionInfo && pSessionInfo->sock == (SOCKET)lpMsgHeader->nSocket)
+					{
 						pSessionInfo->nServerUserIndex = lpMsgHeader->wUserListIndex;
+						pSessionInfo->Recv();
+					}
 
 					break;
 				}

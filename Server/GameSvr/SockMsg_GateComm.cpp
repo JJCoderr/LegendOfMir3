@@ -167,6 +167,9 @@ DWORD WINAPI ServerWorkerThread(LPVOID CompletionPortID)
 					}
 					case GM_CLOSE:
 					{
+						if (pMsgHeader->wUserListIndex >= g_xUserInfoArr.m_nSize)
+							break;
+
 						CUserInfo *pUserInfo = &g_xUserInfoArr[ pMsgHeader->wUserListIndex ];
 
 						if (pUserInfo)
@@ -188,6 +191,9 @@ DWORD WINAPI ServerWorkerThread(LPVOID CompletionPortID)
 					}
 					case GM_DATA:
 					{
+						if (pMsgHeader->wUserListIndex >= g_xUserInfoArr.m_nSize)
+							break;
+
 						CUserInfo *pUserInfo = &g_xUserInfoArr[ pMsgHeader->wUserListIndex ];
 
 						if ( !pUserInfo->IsEmpty() )

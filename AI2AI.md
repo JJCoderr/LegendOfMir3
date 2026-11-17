@@ -1786,3 +1786,11 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 截图发现公告按物理客户区居中却画到800×600画布，较大窗口按钮落到画面外。改用NoticeBox命名画布尺寸；未改324文字宽度/字体/皮肤。
 - 新337–340，下一341。新Interface字段clean90通过；最终七目标112通过。14状态、174断言通过，out/notice-editor四新图查看，自启进程停。详见notice-editor-migration-audit.md。
 - all采集清单未来132，旧128基线保留，未虚称全套重跑。真实服及长文本溢出仍未完成。
+
+
+## 2026-11-17 原生客户端真实入场握手修复
+- 独立 out/native-live-01 客户端通过真实本机登录/选服/选角。首次入场 GameSvr 因 GameGate 在索引回复前转发数据越界崩溃；改为 GM_SERVERUSERINDEX 后 Recv，并校验 socket，游戏服 GM_DATA/GM_CLOSE 拒绝越界索引。
+- 随后发现运行库未应用既有初始物品定义，背包序列化再次崩溃。SQLite backup 后应用既有 sqlite_minimal.sql，保留账户角色及自定义数据。原程序/库备份在 out/native-live-01/server-backup。
+- 最终真实地图01、人物/HUD、点击移动通过，技能/背包面板可开，退出客户端后服务仍运行。背包空白和属性不正确仍待旧服务端/MIR3记录格式对接，不能声称背包完成。
+- 七目标构建通过；新增真实TCP越界索引探测及既有SQLite测试通过。截图/失败转储证据/部署细节见 Client/docs/native-live-entry-audit.md。测试客户端已退出，六服务保留运行，GameSvr28188/GameGate31804为本次PID。
+- GameGate崩溃后不自动重连，已手动重启恢复；ProcessLogin ready-list游标赋值也待独立验证修复。未动GUI预览编号，下一341。
