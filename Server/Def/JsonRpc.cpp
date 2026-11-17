@@ -1,5 +1,7 @@
+#define NOMINMAX
 #include "JsonRpc.h"
-#include "json.hpp"
+#define PICOJSON_USE_INT64
+#include "picojson.h"
 #include <sstream>
 #include <stdexcept>
 
@@ -49,42 +51,52 @@ void JsonRpc::PollRaw(void* context, Handler handler)
     if (newline == std::string::npos) return;
     const auto request = input.substr(0, newline);
     input.erase(0, newline + 1);
-    using Json = nlohmann::json;
+    using Json = picojson::value;
+    using Object = picojson::object;
+    using Array = picojson::array;
+    const auto parse = [](Json& value, const std::string& text) {
+        std::string error;
+        auto end = picojson::parse(value, text.begin(), text.end(), &error);
+        while (end != text.end() && (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n')) ++end;
+        return error.empty() && end == text.end();
+    };
     const auto error = [](const Json& id, int code, const std::string& message) {
-        return Json{{"jsonrpc", "2.0"}, {"id", id}, {"error", {{"code", code}, {"message", message}}}};
+        return Json(Object{{"jsonrpc", Json(std::string("2.0"))}, {"id", id},
+            {"error", Json(Object{{"code", Json(double(code))}, {"message", Json(message)}})}});
     };
     const auto call = [&](const Json& value) -> Json {
-        if (!value.is_object() || !value.contains("jsonrpc") || value["jsonrpc"] != "2.0" ||
-            !value.contains("method") || !value["method"].is_string())
-            return error(nullptr, -32600, "Invalid Request");
-        const Json id = value.value("id", Json());
-        if (!(id.is_null() || id.is_string() || id.is_number()))
-            return error(nullptr, -32600, "Invalid Request");
+        if (!value.is<Object>() || value.get("jsonrpc") != Json(std::string("2.0")) ||
+            !value.get("method").is<std::string>())
+            return error(Json(), -32600, "Invalid Request");
+        const Json id = value.get("id");
+        if (!(id.is<picojson::null>() || id.is<std::string>() || id.is<double>() || id.is<int64_t>()))
+            return error(Json(), -32600, "Invalid Request");
         const bool notification = !value.contains("id");
         Json result;
         try {
-            const Json params = value.value("params", Json::object());
-            if (!(params.is_object() || params.is_array())) throw Error{-32602, "Invalid params"};
-            result = Json{{"jsonrpc", "2.0"}, {"id", id},
-                {"result", Json::parse(handler(context, value["method"].get<std::string>(), params.dump()))}};
+            const Json params = value.contains("params") ? value.get("params") : Json(Object());
+            if (!(params.is<Object>() || params.is<Array>())) throw Error{-32602, "Invalid params"};
+            Json body;
+            if (!parse(body, handler(context, value.get("method").get<std::string>(), params.serialize())))
+                throw Error{-32603, "Internal error"};
+            result = Json(Object{{"jsonrpc", Json(std::string("2.0"))}, {"id", id}, {"result", body}});
         } catch (const Error& e) { result = error(id, e.code, e.message); }
           catch (const std::exception&) { result = error(id, -32603, "Internal error"); }
         return notification ? Json() : result;
     };
-    Json response;
-    const Json value = Json::parse(request, nullptr, false);
-    if (value.is_discarded()) response = error(nullptr, -32700, "Parse error");
-    else if (value.is_array()) {
-        if (value.empty()) response = error(nullptr, -32600, "Invalid Request");
+    Json response, value;
+    if (!parse(value, request)) response = error(Json(), -32700, "Parse error");
+    else if (value.is<Array>()) {
+        if (value.get<Array>().empty()) response = error(Json(), -32600, "Invalid Request");
         else {
-            response = Json::array();
-            for (const auto& entry : value) {
+            Array replies;
+            for (const auto& entry : value.get<Array>()) {
                 const auto reply = call(entry);
-                if (!reply.is_null()) response.push_back(reply);
+                if (!reply.is<picojson::null>()) replies.push_back(reply);
             }
-            if (response.empty()) response = nullptr;
+            if (!replies.empty()) response = Json(replies);
         }
     } else response = call(value);
-    if (!response.is_null()) output = response.dump() + "\n";
+    if (!response.is<picojson::null>()) output = response.serialize() + "\n";
 }
 }

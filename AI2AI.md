@@ -1958,3 +1958,9 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - JSON解析使用nlohmann/json v3.11.3单头文件（MIT许可在文件头），来源https://github.com/nlohmann/json/releases/tag/v3.11.3，已校验官方SHA256 9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6。只在独立JsonRpc.cpp包含，不能放入六个服务命名空间封装源列表。
 - Client/EIServer Release构建通过。Client/Tools/run_rpc_tests.py以真实进程--pid运行JSON用例；客户端及服务器各6项通过（状态、未知方法、参数类型、请求格式、解析错误、批量通知），无登录点击/截图。初版测试器读写同一同步句柄并发阻塞，改为先写再读已通过。
 - 丢弃拾取检查发现通用物品被当装备记录处理及DB失败未返地图；ObjectPlayer.cpp有本轮修复但尚未通过真实业务RPC验证，未混入本提交，未部署新EIServer到out/debug。
+
+
+## 2026-11-18 精简JSON解析依赖
+- 按用户要求移除919975字节/24765行的nlohmann json.hpp，换成PicoJSON v1.3.0单头文件26102字节/1010行（BSD-2-Clause许可保留在文件头），体积减少97.2%。来源https://github.com/kazuho/picojson/blob/v1.3.0/picojson.h；SHA256 5ddf7276d04926da7be243e7af49258e78cc27278ee9097ba45b942c7a6b5f9d。
+- JSON-RPC架构与方法保持不变；启用64位整数保证大整数请求ID精度，检查解析结束位置拒绝尾随内容。业务实现仍与解析库隔离。
+- Client/EIServer Release构建通过，真实两端各9项JSON测试全部通过，新增9007199254740993 ID、Unicode代理对/转义字符和尾随非法数据。构建日志out/jsonrpc-small-build.log。

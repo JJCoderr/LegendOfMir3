@@ -75,6 +75,34 @@
         "0.id": 6,
         "0.result.schema": 1
       }
+    },
+    {
+      "name": "large integer id",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 9007199254740993,
+        "method": "state.get"
+      },
+      "expect": {
+        "id": 9007199254740993,
+        "result.schema": 1
+      }
+    },
+    {
+      "name": "escaped unicode id",
+      "raw": "{\"jsonrpc\":\"2.0\",\"id\":\"\\u6d4b\\u8bd5\\ud83d\\ude00\\n\\\"\",\"method\":\"state.get\"}",
+      "expect": {
+        "id": "测试😀\n\"",
+        "result.schema": 1
+      }
+    },
+    {
+      "name": "trailing data",
+      "raw": "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"state.get\"} garbage",
+      "expect": {
+        "id": null,
+        "error.code": -32700
+      }
     }
   ]
 }
