@@ -1794,3 +1794,11 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 最终真实地图01、人物/HUD、点击移动通过，技能/背包面板可开，退出客户端后服务仍运行。背包空白和属性不正确仍待旧服务端/MIR3记录格式对接，不能声称背包完成。
 - 七目标构建通过；新增真实TCP越界索引探测及既有SQLite测试通过。截图/失败转储证据/部署细节见 Client/docs/native-live-entry-audit.md。测试客户端已退出，六服务保留运行，GameSvr28188/GameGate31804为本次PID。
 - GameGate崩溃后不自动重连，已手动重启恢复；ProcessLogin ready-list游标赋值也待独立验证修复。未动GUI预览编号，下一341。
+
+
+## 2026-11-17 实服能力记录和数据库连接生命周期
+- GameSvr 的 RM_ABILITY / RM_LEVELUP 不再直接编码旧 CObjectAbility，使用 Server/Def/Mir3Ability.h 显式生成63字节原版记录。基础属性、32位经验及重量映射；旧五元素没有七元素映射证据，扩展保留零。黄金字节测试通过，未改客户端GUI/解析。
+- 重启实测发现 DBSvr 断连释放对象却未移除 g_xServerList，选角命中失效对象而黑屏。加读写锁保护列表和选角发送、断连移除；排队DB请求引用保活，完成后释放引用及附加数据，关闭socket时防复用误发。
+- 全DBSvr CPP重新编译，七目标通过 out/ability-session-build.log。三次模拟游戏服断连后真实登录入场成功；20次断连/160个排队只读请求测试通过；前批非法索引测试通过。
+- 人物页等级1和各基本数值、背包负重3/50已实服截图，out/native-live-01/live-ability-status.png / live-ability-bag-weight.png。物品仍空，旧12字节实例ID与MIR3数值ID/100字节物品记录需双向适配。
+- 部署GameSvr/DBSvr并重启相关四服务；原LoginSvr/LoginGate保留。最终DB34264/SelGate23520/GameSvr17436/GameGate34804，测试客户端31952已退出。详见Client/docs/native-ability-session-audit.md；下一预览仍341。

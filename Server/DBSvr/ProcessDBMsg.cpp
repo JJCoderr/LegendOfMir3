@@ -549,6 +549,7 @@ UINT WINAPI ProcessDBMsg(LPVOID lpParameter)
 
 		if (pSendBuff)
 		{
+            ServerConnectionReadLock connectionLock;
 			switch (pSendBuff->DefMsg.wIdent)
 			{
 				case DB_LOADHUMANRCD:
@@ -580,6 +581,9 @@ UINT WINAPI ProcessDBMsg(LPVOID lpParameter)
 				}
 			} // switch
 
+            pSendBuff->pServerInfo->Release();
+            delete[] pSendBuff->lpbtAddData;
+            delete[] pSendBuff->lpbtAddData2;
 			delete pSendBuff;
 		} // if (pSendBuff)
 

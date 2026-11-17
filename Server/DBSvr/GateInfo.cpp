@@ -340,6 +340,7 @@ void CGateInfo::MakeNewCharacter(SOCKET s, _LPTCREATECHR lpTCreateChr)
 
 void CGateInfo::GetSelectCharacter(SOCKET s, char *pszPacket)
 {
+    ServerConnectionReadLock connectionLock;
 	char				szDecodeMsg[128];
 	char				szServerIP[32];
 	char				szEncodeMsg[32];

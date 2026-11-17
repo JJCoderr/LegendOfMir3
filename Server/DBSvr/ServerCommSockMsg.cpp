@@ -8,6 +8,7 @@ extern SOCKET				g_ssock;
 extern BOOL					g_fTerminated;
 
 CWHList<CServerInfo*>		g_xServerList;
+SRWLOCK g_serverConnectionsLock = SRWLOCK_INIT;
 
 CWHQueue					g_DBMsgQ;
 CWHQueue					g_ServerMsgQ;
@@ -47,10 +48,15 @@ DWORD WINAPI AcceptThread(LPVOID lpParameter)
 		if (pServerInfo)
 		{
 			pServerInfo->m_sock	= Accept;
+            pServerInfo->references = 1;
 
 			CreateIoCompletionPort((HANDLE)pServerInfo->m_sock, g_hIOCP, (DWORD)pServerInfo, 0);
 
-			if (g_xServerList.AddNewNode(pServerInfo))
+			AcquireSRWLockExclusive(&g_serverConnectionsLock);
+            const BOOL added = g_xServerList.AddNewNode(pServerInfo);
+            ReleaseSRWLockExclusive(&g_serverConnectionsLock);
+
+            if (added)
 			{
 				int zero = 0;
 				
@@ -107,8 +113,12 @@ DWORD WINAPI ServerWorkerThread(LPVOID CompletionPortID)
 
 		if (dwBytesTransferred == 0)
 		{
-			closesocket(pServerInfo->m_sock);
-			if (pServerInfo) GlobalFree(pServerInfo);
+			AcquireSRWLockExclusive(&g_serverConnectionsLock);
+            g_xServerList.RemoveNodeByData(pServerInfo);
+            closesocket(pServerInfo->m_sock);
+            pServerInfo->m_sock = INVALID_SOCKET;
+            ReleaseSRWLockExclusive(&g_serverConnectionsLock);
+            pServerInfo->Release();
 
 			UpdateStatusBarSession(FALSE);
 			
@@ -213,7 +223,13 @@ DWORD WINAPI ServerWorkerThread(LPVOID CompletionPortID)
 										}
 									}
 									
-									g_DBMsgQ.PushQ((BYTE *)lpSendUserData);
+									pServerInfo->AddRef();
+                                    if (!g_DBMsgQ.PushQ((BYTE *)lpSendUserData)) {
+                                        pServerInfo->Release();
+                                        delete[] lpSendUserData->lpbtAddData;
+                                        delete[] lpSendUserData->lpbtAddData2;
+                                        delete lpSendUserData;
+                                    }
 								}
 								else
 									g_ServerMsgQ.PushQ((BYTE *)lpSendUserData);

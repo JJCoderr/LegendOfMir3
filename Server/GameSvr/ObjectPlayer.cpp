@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "../Def/Mir3Ability.h"
 
 #define _MSG_GOOD		"+GOOD/"
 #define _MSG_FAIL		"+FAIL/"
@@ -2867,7 +2868,8 @@ void CPlayerObject::Operate()
 					case RM_ABILITY:
 					{
 						fnMakeDefMessage(&DefMsg, SM_ABILITY, m_pUserInfo->m_THumanRcd.dwGold, m_pUserInfo->m_THumanRcd.btJob, 0, 0);
-						nPos = fnEncode6BitBufA((unsigned char *)&m_WAbility, szEncodeMsg, sizeof(m_WAbility), sizeof(szEncodeMsg));
+						const auto abilityRecord = Mir3Ability::FromAbility(m_WAbility);
+						nPos = fnEncode6BitBufA((unsigned char *)&abilityRecord, szEncodeMsg, sizeof(abilityRecord), sizeof(szEncodeMsg));
 						szEncodeMsg[nPos] = '\0';
 						SendSocket(&DefMsg, szEncodeMsg);
 
@@ -2916,7 +2918,8 @@ void CPlayerObject::Operate()
 						SendSocket(&DefMsg, NULL);
 
 						fnMakeDefMessage(&DefMsg, SM_ABILITY, m_pUserInfo->m_THumanRcd.dwGold, m_pUserInfo->m_THumanRcd.btJob, 0, 0);
-						nPos = fnEncode6BitBufA((unsigned char *)&m_WAbility, szEncodeMsg, sizeof(m_WAbility), sizeof(szEncodeMsg));
+						const auto abilityRecord = Mir3Ability::FromAbility(m_WAbility);
+						nPos = fnEncode6BitBufA((unsigned char *)&abilityRecord, szEncodeMsg, sizeof(abilityRecord), sizeof(szEncodeMsg));
 						szEncodeMsg[nPos] = '\0';
 						SendSocket(&DefMsg, szEncodeMsg);
 

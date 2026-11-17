@@ -6,10 +6,21 @@
 #define LOGPARAM_STR			1
 #define LOGPARAM_INT			2
 
+extern SRWLOCK g_serverConnectionsLock;
+
+class ServerConnectionReadLock {
+public:
+    ServerConnectionReadLock() { AcquireSRWLockShared(&g_serverConnectionsLock); }
+    ~ServerConnectionReadLock() { ReleaseSRWLockShared(&g_serverConnectionsLock); }
+};
+
 class CServerInfo
 {
 public:
 	SOCKET					m_sock;
+    LONG references; // Receive lifetime plus each queued database request.
+    void AddRef() { InterlockedIncrement(&references); }
+    void Release() { if (!InterlockedDecrement(&references)) GlobalFree(this); }
 
 	// For Overlapped I/O
 	OVERLAPPED				Overlapped;
