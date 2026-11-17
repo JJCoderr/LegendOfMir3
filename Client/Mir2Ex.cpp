@@ -14,6 +14,7 @@ namespace { constexpr int PreviewSpellGround=237,PreviewSpellOrbit=238,PreviewSp
 #include "Common/LoginMessages.h"
 #include "Common/ChatShortcuts.h"
 #include "Common/ChatLog.h"
+#include "Common/ChatCommandIds.h"
 
 CMirSound			g_xSound;
 CWHDXGraphicWindow	g_xMainWnd(640, 480, _SCREEN_BPP);
@@ -1224,6 +1225,41 @@ public:
                 fprintf(report,"amount=%d left_scroll=%d right_scroll=%d released=%d stray=%d pending_blocked=%d outside_release=%d body_no_drag=%d header_drag=%d confirmed=%d\n",
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
+        }
+        if(groupPanel>=325 && groupPanel<=327) {
+            auto& ui=g_xGameProc.m_xInterface;auto& guild=ui.m_xGuildWnd;const HWND edit=g_xChatEditBox.GetSafehWnd();
+            CLoginMessages captions;captions.Load("./CmList.dat");
+            FILE* report=fopen("guild-add-dialog-check.txt","wb");
+            const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+            const auto capture=[&](auto action,int opcode,const char* expected) {
+                SOCKET receiver=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP),sender=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+                sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);
+                bind(receiver,(sockaddr*)&address,sizeof(address));int size=sizeof(address);getsockname(receiver,(sockaddr*)&address,&size);connect(sender,(sockaddr*)&address,sizeof(address));
+                DWORD timeout=30;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));
+                const SOCKET saved=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;action();g_xClientSocket.m_sockClient=saved;
+                char wire[512]={};const int length=recv(receiver,wire,sizeof(wire)-1,0);const bool single=recv(receiver,wire+256,255,0)==SOCKET_ERROR;
+                closesocket(sender);closesocket(receiver);if(!opcode) return length==SOCKET_ERROR;
+                if(length<19) return false;wire[length-1]=0;_TDEFAULTMESSAGE packet={};fnDecodeMessage(&packet,wire+2);
+                char body[128]={};fnDecode6BitBuf(wire+2+DEFBLOCKSIZE,body,sizeof(body));
+                return single && packet.wIdent==opcode && !packet.nRecog && !packet.wParam && !packet.wTag && !packet.wSeries && !strcmp(body,expected);
+            };
+            const auto submit=[&]() {lstrcpynA(g_xChatEditBox.m_szInputMsg,captions.Get(ChatCommandIds::AddGuildMember).c_str(),MAX_PATH);g_xGameProc.OnMsgInputted(TRUE,0);};
+            guild.m_name="传奇行会";guild.m_manager=false;
+            check("denied_no_packet",capture(submit,0,""));
+            check("denied_caption",ui.m_xMsgBox.IsActive() && !strcmp(ui.m_xMsgBox.Text(),captions.Get(ChatCommandIds::AddGuildMemberDenied).c_str()));
+            check("denied_editor_hidden",!IsWindowVisible(edit));ui.FinishNotice(CLICK_YES,false);
+            guild.m_manager=true;check("open_no_packet",capture(submit,0,""));
+            std::string prompt=captions.Get(ChatCommandIds::AddGuildMemberPrompt);const auto at=prompt.find("%s");if(at!=std::string::npos) prompt.replace(at,2,guild.m_name);
+            check("guild_prompt",ui.m_nIdxMsgBox==CM_GUILDADDMEMBER && prompt==ui.m_xMsgBox.Text());
+            check("editor_focused",IsWindowVisible(edit) && GetFocus()==edit && SendMessage(edit,EM_GETLIMITTEXT,0,0)==90);
+            SetWindowTextA(edit,"传奇勇士");SendMessage(edit,WM_KEYDOWN,VK_ESCAPE,0);check("escape_consumed",ui.m_xMsgBox.IsActive() && GetFocus()==edit);
+            check("cancel_no_packet",capture([&](){SendMessage(edit,WM_CHAR,VK_TAB,0);SendMessage(edit,WM_CHAR,VK_RETURN,0);},0,""));
+            check("cancel_closes",!ui.m_xMsgBox.IsActive() && !IsWindowVisible(edit));
+            submit();SetWindowTextA(edit,"传奇勇士");check("confirm_wire",capture([&](){SendMessage(edit,WM_CHAR,VK_RETURN,0);},CM_GUILDADDMEMBER,"传奇勇士"));
+            check("confirm_closes",!ui.m_xMsgBox.IsActive() && !IsWindowVisible(edit));
+            check("closed_no_repeat",capture([&](){g_xGameProc.OnKeyDown(VK_RETURN,1L<<30);},0,""));
+            guild.m_manager=groupPanel!=326;submit();if(groupPanel==327) SetWindowTextA(edit,"传奇勇士");
+            if(report) fclose(report);mouse={790,430};capturePath=groupPanel==325?"guild-add-member.bmp":groupPanel==326?"guild-add-denied.bmp":"guild-add-member-filled.bmp";
         }
         if(groupPanel==323 || groupPanel==324) {
             auto& ui=g_xGameProc.m_xInterface;auto& log=NativeChatLog();
@@ -3983,6 +4019,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=chat-phrases-expanded")==0 ? 322 :
         strcmp(lpCmdLine,"--preview=chat-private-echo")==0 ? 323 :
         strcmp(lpCmdLine,"--preview=chat-palette")==0 ? 324 :
+        strcmp(lpCmdLine,"--preview=guild-add-member")==0 ? 325 :
+        strcmp(lpCmdLine,"--preview=guild-add-denied")==0 ? 326 :
+        strcmp(lpCmdLine,"--preview=guild-add-member-filled")==0 ? 327 :
         strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
         strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
         strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :

@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 #include "Common/ChatShortcuts.h"
 #include "Common/ChatLog.h"
+#include "Common/ChatCommandIds.h"
 #include "EffectRenderer.h"
 #include "SpellSpriteRenderer.h"
 #include "WeatherRenderer.h"
@@ -2132,6 +2133,13 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
 
 	if ( g_xChatEditBox.m_szInputMsg[0] == NULL )
 		return 0L;
+    static CLoginMessages chatCaptions;static const bool chatCaptionsLoaded=chatCaptions.Load("./CmList.dat");
+    if(chatCaptions.Get(ChatCommandIds::AddGuildMember)==g_xChatEditBox.m_szInputMsg) {
+        g_xChatEditBox.m_szInputMsg[0]=0;
+        if(m_xInterface.m_xGuildWnd.m_manager) m_xInterface.OpenNameDialog(CM_GUILDADDMEMBER);
+        else m_xInterface.ShowNotice(ChatCommandIds::AddGuildMemberDenied);
+        return 0;
+    }
     if(ChatShortcuts().Remember(g_xChatEditBox.m_szInputMsg)) {
         ZeroMemory(g_xChatEditBox.m_szInputMsg,sizeof(g_xChatEditBox.m_szInputMsg));return 0;
     }

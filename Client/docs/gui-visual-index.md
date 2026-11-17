@@ -155,3 +155,8 @@ review_gui.ps1新增all套件：52个游戏内状态、38个大厅状态和20个
 ## 聊天回显与调色板两页
 
 新增out/chat-commands/chat-private-echo.png及chat-palette.png，均查看；原生私聊淡蓝字黑底与八色列表。见chat-commands-migration-audit.md，未改写此前110图manifest。
+
+
+## 添加行会成员三状态
+
+out/guild-add/guild-add-member.png、guild-add-denied.png、guild-add-member-filled.png均查看，覆盖会长空输入、非会长提示和中文角色名。详见guild-add-dialog-migration-audit.md。

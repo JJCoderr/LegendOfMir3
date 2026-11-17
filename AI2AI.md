@@ -1742,3 +1742,9 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 修复GetChatColor索引5/6以及私聊回显前景/背景；参照scene_chat.hpp调色板。
 - 新323私聊/324调色板，下一325。七目标最终chat-commands-final-build.log成功；143项检查（23本批+120相关回归），最后仅修截图夹具滚动位置，重跑23及两图。out/chat-commands八页；私聊/调色板已查看，自启进程全部停止。
 - 详见chat-commands-migration-audit.md。行会添加成员命令、坐骑命令延迟尚待对照；真实服务器链路仍未整体联调。
+
+
+## 2026-11-17 添加行会成员命令弹窗
+- 补Godot ChatSubmission的1425命令分派：会长OpenNameDialog(CM_GUILDADDMEMBER)，非会长ShowNotice1427。1426提示替换行会名，原生输入沿用90字节，FinishNotice确认发送1038全零参数及姓名，无列表附加请求。
+- 新325/326/327输入、拒绝、中文填入截图out/guild-add；下一328。新增回环12检查及相关回归共149通过，最终七目标guild-add-final-build.log成功；最后只加强重复Enter夹具，重跑12和三图。详见guild-add-dialog-migration-audit.md。
+- 发现m_wInputDelayTime仅计时未拦截输入，参考map_input_delay的300ms坐骑延迟需要完整接入HUD左键/地图动作/技能，而不是只赋值；留待下一批。真实服务器流程仍未整体完成。

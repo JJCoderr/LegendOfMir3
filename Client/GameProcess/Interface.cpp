@@ -14,6 +14,7 @@
 #include "StdAfx.h"
 #include "Common/ChatShortcuts.h"
 #include "Common/ChatLog.h"
+#include "Common/ChatCommandIds.h"
 #include "TradeWire.h"
 #include "MailWire.h"
 #include "Common/LegacyPanel.h"
@@ -1732,6 +1733,10 @@ void CInterface::OpenNameDialog(int action)
     m_xMsgBox.SetOrigin(220,112,true);
     std::string prompt = action==4 ? "'"+m_xGuildWnd.m_name+"' "+captions.Get(4001) :
         captions.Get(action==6?1304:action==5?4002:action==3?1606:1605);
+    if(action==CM_GUILDADDMEMBER) {
+        prompt=captions.Get(ChatCommandIds::AddGuildMemberPrompt);
+        const auto at=prompt.find("%s");if(at!=std::string::npos) prompt.replace(at,2,m_xGuildWnd.m_name);
+    }
     if(action==TradeWire::QuantityDialog) prompt=captions.Get(TradeWire::QuantityDialog);
     if(action==SiegeLayout::LoadDialog) prompt=captions.Get(SiegeLayout::LoadCaption);
     if(action==ConsignmentLayout::PriceDialog) prompt=captions.Get(ConsignmentLayout::PriceQuestion);
@@ -1771,7 +1776,7 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         (m_nIdxMsgBox==ConsignmentLayout::RegistrationDialog?m_xConsignmentRegistration:m_xConsignmentWnd).Confirm(hResult==CLICK_YES);
         return;
     }
-    if ((m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==TradeWire::QuantityDialog || m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog || m_nIdxMsgBox==SiegeLayout::LoadDialog) {
+    if (m_nIdxMsgBox==CM_GUILDADDMEMBER || (m_nIdxMsgBox >= 1 && m_nIdxMsgBox <= 11) || m_nIdxMsgBox==TradeWire::QuantityDialog || m_nIdxMsgBox==MailLayout::GoldDialogAction || m_nIdxMsgBox==ConsignmentLayout::PriceDialog || m_nIdxMsgBox==SiegeLayout::LoadDialog) {
         std::vector<char> answer(GetWindowTextLengthA(g_xChatEditBox.GetSafehWnd())+1);
         char* name=answer.data(); GetWindowTextA(g_xChatEditBox.GetSafehWnd(),name,int(answer.size()));
         if (mouse) g_xSound.PlayLobbyEffect("105.wav");
@@ -1788,7 +1793,11 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         if (m_nIdxMsgBox==7 && hResult!=CLICK_YES) m_xNPCWnd.ClearPrompt();
         if(m_nIdxMsgBox==TradeWire::QuantityDialog && hResult!=CLICK_YES) m_xExchangeWnd.SubmitOffer(name,false);
         if (hResult == CLICK_YES) {
-            if(m_nIdxMsgBox==TradeWire::QuantityDialog) m_xExchangeWnd.SubmitOffer(name,true);
+            if(m_nIdxMsgBox==CM_GUILDADDMEMBER) {
+                _TDEFAULTMESSAGE message;fnMakeDefMessage(&message,CM_GUILDADDMEMBER,0,0,0,0);
+                g_xClientSocket.SendPacket(&message,name);
+            }
+            else if(m_nIdxMsgBox==TradeWire::QuantityDialog) m_xExchangeWnd.SubmitOffer(name,true);
             else if(m_nIdxMsgBox==SiegeLayout::LoadDialog) m_xSiegeWnd.SubmitLoad(name);
             else if(m_nIdxMsgBox==ConsignmentLayout::PriceDialog) m_xConsignmentRegistration.SubmitPrice(name);
             else if(m_nIdxMsgBox==MailLayout::GoldDialogAction) m_xMailWnd.SubmitGold(name);
