@@ -5,7 +5,11 @@
 
 #include <assert.h>
 #include <string>
+#include <deque>
 #include "ConnectionRetry.h"
+
+// Both socket notifications and game timers run on the window thread.
+extern std::deque<std::string> PacketQ;
 
 class CClientSocket
 {

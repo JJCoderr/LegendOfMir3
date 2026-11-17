@@ -2368,3 +2368,14 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 修复前 client-edge 分片登录已通过，未通过真实网络强制复现同一 recv 循环连续短读；修复依据是源码确定的累加错误。不要宣称已经复现随机短读故障。
 - Client Release 构建通过；修复后 client-edge 双向分片创建角色 34、返回重进 82、删除角色 38，普通 Inventory 71、gateway-edge 双向分片 Login 24，共 249 项检查通过。日志 out/csv-validation/client-stream-*。
 - 下一步：GameProc::OnTimer 仍用 strcpy 将 PacketQ 的任意长 TCP 块追加到固定 8192 字节 szBuff，残包也用 memcpy，存在独立缓冲问题。本轮只调整 ClientSocket 接收入口，未解决游戏消息拼接。客户端代理目前未代理游戏端口。
+
+
+## 2026-11-18 游戏消息缓冲与原始收包队列
+
+- GameProc 原有固定 8192 字节 szBuff + strcpy 拼接改为 Common/PacketBuffer 的动态字符串缓冲。沿用既有消息解析器，只保留它返回的残包；返回选角清空缓冲。
+- 首次游戏端口逐字节分片时，Inventory 在 step 140 血量仍为 0、聊天文本丢字节（game-buffer-inventory）。发现原始 PacketQ 为容量 99 的固定环形队列，游戏定时器每次只消费一项；改为每次处理当前快照后，同场景 71 项通过（game-buffer-inventory-final）。
+- 最终将仅用于原始 TCP 数据的 PacketQ 改为 deque<string>，避免依赖 99 项限制及手工 new/delete；收包通知与游戏定时器均在窗口线程。每次消费当前队列快照，后续数据留到下次，返回选角同时清空队列。其他角色动作队列未修改。
+- Test/Rpc/PacketBuffer.cpp 直接测试产品缓冲：全部分割点、逐字节、2000 连续帧、32KiB 残包、会话重置通过。32KiB 测试是缓冲验证，不代表单条业务协议允许任意长度。
+- verify_gate_stream.py 新增 --game（仅 edge client），在隔离 Mir3.ini 修改 GameGatePort，将游戏请求/回包也纳入代理。
+- Client Release 和 test_packet_buffer 构建通过；最终版本双向分片 Inventory 71、ShopEquipment 67、ChatLocal 28、InventoryFull 46 项，共 212 项通过。满背包回包代理转发 26951 字节，覆盖60件物品保存/重进；因逐字节转发使用30秒单步骤期限。日志 out/csv-validation/game-queue-*。
+- 尚未验证所有游戏消息、技能战斗在分片延迟下的行为、极端持续流量/断连压力。动态队列移除人为包数上限，并不意味着无限内存负载已验证。

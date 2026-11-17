@@ -78,12 +78,14 @@ def main():
     repo = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--scenario', type=Path, default=repo/'Test/Login/Login.csv')
+    parser.add_argument('--game', action='store_true', help='Also proxy the client game connection (requires --edge client)')
     parser.add_argument('--edge', choices=('gateway', 'client'), default='gateway')
     parser.add_argument('--direction', choices=('requests', 'replies', 'both'), default='replies')
     parser.add_argument('--clients', type=int, default=1, choices=(1, 2, 3))
     parser.add_argument('--timeout-ms', type=int, default=15000)
     parser.add_argument('--log-dir', type=Path, default=repo/'out/gate-stream')
     args = parser.parse_args()
+    if args.game and args.edge != 'client': parser.error('--game requires --edge client')
     args.log_dir.mkdir(parents=True, exist_ok=True)
     with args.scenario.with_suffix('.fixture.csv').open(encoding='utf-8-sig', newline='') as source:
         fixture = list(csv.DictReader(source))
@@ -98,7 +100,9 @@ def main():
     client_config.read(root/'Mir3.ini', encoding='utf-8')
     proxies = []
     try:
-        for section, client_key in (('LoginGate', 'Param1'), ('SelGate', 'SelectGatePort')):
+        endpoints = [('LoginGate', 'Param1'), ('SelGate', 'SelectGatePort')]
+        if args.game: endpoints.append(('GameGate', 'GameGatePort'))
+        for section, client_key in endpoints:
             port_key = 'RemotePort' if args.edge == 'gateway' else 'LocalPort'
             proxy = FragmentProxy(int(config[section][port_key]), args.direction)
             proxies.append((section, proxy))

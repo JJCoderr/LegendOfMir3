@@ -1,4 +1,5 @@
 #include "ClientRpc.h"
+#include "Common/PacketBuffer.h"
 #include "StdAfx.h"
 #include "Common/ChatShortcuts.h"
 #include "Common/ChatLog.h"
@@ -18,10 +19,7 @@
 #include "Common/LegacyPanel.h"
 
 
-extern CWHQueue	PacketQ;
-
-char	szBuff[8192];
-int		nBuff = 0;
+static PacketBuffer gamePackets;
 
 
 
@@ -1685,31 +1683,12 @@ LRESULT CGameProcess::OnTimer(WPARAM wParam, LPARAM lParam)
     }
 	else	// Temp
 	{
-		if (PacketQ.GetCount())
-		{
-			char *pszPacket = (char*)PacketQ.PopQ();
-
-			if (pszPacket)
-			{
-				strcpy(&szBuff[nBuff], pszPacket);
-
-				char *pszRemain = OnMessageReceive(szBuff);
-
-				if (pszRemain)
-				{
-					nBuff = strlen(pszRemain);
-					memcpy(szBuff, pszRemain, nBuff);
-					szBuff[nBuff] = '\0';
-				}
-				else
-				{
-					nBuff = 0;
-					ZeroMemory(szBuff, sizeof(szBuff));
-				}
-
-				delete [] pszPacket;
-			}
-		}
+        const size_t queued=PacketQ.size();
+        for (size_t i=0;i<queued;++i) {
+            std::string packet=std::move(PacketQ.front());
+            PacketQ.pop_front();
+            gamePackets.Append(packet.c_str(),[this](char* data) {return OnMessageReceive(data);});
+        }
 
 		ProcessPacket();
 		ProcessDefaultPacket();
@@ -3957,8 +3936,8 @@ void CGameProcess::DrawExitTransition()
 void CGameProcess::ReturnToSelection()
 {
     g_xSound.StopSceneAudio();
-    while(PacketQ.GetCount()) delete[] (char*)PacketQ.PopQ();
-    nBuff=0;szBuff[0]=0;
+    PacketQ.clear();
+    gamePackets.Clear();
     DeleteProc();
     g_xClientSocket.m_pxDefProc=g_xMainWnd.m_pxDefProcess=&g_xChrSelProc;g_bProcState=_CHAR_SEL_PROC;
     g_xMainWnd.ResetDXG(640,480,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,_DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);

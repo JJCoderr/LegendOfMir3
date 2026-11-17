@@ -292,4 +292,13 @@ python Test/verify_gate_stream.py --direction both --scenario Test/Character/Cha
 python Test/verify_gate_stream.py --edge client --direction both --scenario Test/Login/LoginReturnShared.csv --clients 2 --log-dir out/client-return-fragments
 ```
 
-该模式未代理游戏端口；游戏内协议仍通过真实直连网关进行验证。
+未指定 `--game` 时，该模式只代理登录和选角端口；增加 `--game` 可同时代理 GameGate，验证游戏内请求和回包的分片。`--game` 必须配合 `--edge client`。
+
+
+游戏端口分片示例：
+
+```powershell
+python Test/verify_gate_stream.py --edge client --game --direction both --scenario Test/Inventory/Inventory.csv --log-dir out/game-inventory-fragments
+```
+
+游戏消息拼接专项测试：构建 `test_packet_buffer`，运行 `build-eiserver/Release/test_packet_buffer.exe`。该测试直接调用客户端使用的缓冲实现，覆盖所有分割位置、逐字节输入、2,000 条连续消息、32 KiB 残包及会话清空。32 KiB 用例验证缓冲容量，不表示业务协议接受任意长度的单条消息。游戏原始接收队列按当前快照批量消费，不再受旧 99 项环形队列限制。

@@ -1,7 +1,7 @@
 #include "ClientRpc.h"
 #include "stdafx.h"
 
-CWHQueue PacketQ;
+std::deque<std::string> PacketQ;
 
 CClientSocket::CClientSocket()
 {
@@ -243,19 +243,18 @@ LRESULT CClientSocket::OnSocketMessage(WPARAM wParam, LPARAM lParam)
             }
             if (nRecv<=0) break;
             if (g_bProcState==_GAME_PROC) {
-                char* packet=new char[nRecv+1];
-                const int received=recv((SOCKET)wParam,packet,nRecv,0);
+                std::string packet(nRecv,'\0');
+                const int received=recv((SOCKET)wParam,&packet[0],nRecv,0);
                 if (received<=0) {
-                    delete[] packet;
                     if (!received) DisconnectToServer();
                     else if (WSAGetLastError()!=WSAEWOULDBLOCK) ConnectionFailed();
                     break;
                 }
-                packet[received]='\0';
+                packet.resize(received);
 #ifdef _DEBUG
-                _RPT1(_CRT_WARN, "RECV:%s\n", packet);
+                _RPT1(_CRT_WARN, "RECV:%s\n", packet.c_str());
 #endif
-                if (!PacketQ.PushQ((BYTE*)packet)) delete[] packet;
+                PacketQ.push_back(std::move(packet));
             } else {
                 nRecv=min(nRecv,int(sizeof(m_szBuff))-m_nCurRecv-1);
                 if (nRecv<=0) {DisconnectToServer();break;}
