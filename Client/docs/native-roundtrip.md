@@ -23,4 +23,12 @@ cmake --build build-eiserver --config Release --target InputCoordinatesCheck
 ./build-eiserver/Release/InputCoordinatesCheck.exe
 ```
 
-检查真实 Win32 客户区在 100%、150% 和横纵不同缩放下的坐标换算，以及窗口外负坐标。窗口消息与角色持续按键轮询共用该换算；本检查不模拟物理按键持续按住的完整游戏行为。
+检查真实 Win32 客户区在 100%、150% 和横纵不同缩放下的坐标换算，以及窗口外负坐标。窗口消息与角色持续按键轮询共用该换算；该独立坐标检查不模拟物理按键持续按住的完整游戏行为。
+
+长按输入回归：
+
+```powershell
+python Client/Tools/test_native_roundtrip.py --hold-mouse
+```
+
+此模式需要可交互桌面，并会短暂激活客户端、移动指针并注入左键按住事件约 1.8 秒，随后释放并恢复指针位置。检测到其他鼠标键已按下或无法取得前台焦点时失败退出，不将该情况视为通过。运行时请暂停鼠标操作。断言角色至少连续向东走两格且纵坐标不变，再执行返回选角、再次移动、保存和重登检查。

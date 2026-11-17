@@ -26,6 +26,10 @@ WM_LBUTTONDOWN = 0x0201
 WM_LBUTTONUP = 0x0202
 EM_GETPASSWORDCHAR = 0x00D2
 VK_RETURN = 13
+VK_LBUTTON = 1
+VK_RBUTTON = 2
+MOUSEEVENTF_LEFTDOWN = 0x0002
+MOUSEEVENTF_LEFTUP = 0x0004
 MK_LBUTTON = 1
 ALT_CONTEXT = 1 << 29
 
@@ -37,6 +41,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--bin-dir', type=Path, default=repo / 'out/debug')
 parser.add_argument('--config-dir', type=Path, default=repo / 'out/debug')
 parser.add_argument('--port-offset', type=int, default=20000)
+parser.add_argument('--hold-mouse', action='store_true', help='Exercise real held mouse input; requires an unlocked foreground desktop')
 args = parser.parse_args()
 exe = args.bin_dir.resolve()
 config_dir = args.config_dir.resolve()
@@ -121,6 +126,38 @@ def click(h,x,y):
     x=round(x*u.GetDpiForSystem()/96);y=round(y*u.GetDpiForSystem()/96)
     pos=(y<<16)|x
     for msg,wp in ((WM_MOUSEMOVE,0),(WM_LBUTTONDOWN,MK_LBUTTON),(WM_LBUTTONUP,0)):u.PostMessageW(h,msg,wp,pos)
+def hold_mouse(h, x, y, seconds=1.8):
+    if any(u.GetAsyncKeyState(key) & 0x8000 for key in (VK_LBUTTON, VK_RBUTTON)):
+        raise RuntimeError('A mouse button is already held; refusing to interfere')
+    foreground_thread = u.GetWindowThreadProcessId(u.GetForegroundWindow(), None)
+    current_thread = c.windll.kernel32.GetCurrentThreadId()
+    attached = u.AttachThreadInput(current_thread, foreground_thread, True)
+    try:
+        u.SetForegroundWindow(h)
+    finally:
+        if attached:
+            u.AttachThreadInput(current_thread, foreground_thread, False)
+    for _ in range(20):
+        if u.GetForegroundWindow() == h:
+            break
+        time.sleep(.1)
+    else:
+        raise RuntimeError(f'Cannot activate client {h}; foreground={u.GetForegroundWindow()}')
+    previous = w.POINT()
+    u.GetCursorPos(c.byref(previous))
+    width, height = size(h)
+    point = w.POINT(round(x * width / 800), round(y * height / 600))
+    if not u.ClientToScreen(h, c.byref(point)):
+        raise RuntimeError('Cannot locate the client on screen')
+    try:
+        if not u.SetCursorPos(point.x, point.y):
+            raise RuntimeError('Cannot position the mouse')
+        u.mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+        time.sleep(seconds)
+    finally:
+        u.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+        u.SetCursorPos(previous.x, previous.y)
+
 def size(h):
     r=w.RECT();u.GetClientRect(h,c.byref(r));return r.right,r.bottom
 with (root/'server.log').open('wb') as log:
@@ -163,12 +200,17 @@ with (root/'server.log').open('wb') as log:
                 # Acknowledge the arrival notice before using the map.
                 u.PostMessageW(h,WM_KEYDOWN,VK_RETURN,0);u.PostMessageW(h,WM_KEYUP,VK_RETURN,0)
                 print('input ready',wait(cs,lambda d:not d.get('notice') and not d.get('input_delayed')),flush=True)
-                click(h,448,240)
+                if args.hold_mouse:
+                    hold_mouse(h,448,240)
+                else:
+                    click(h,448,240)
                 moved=wait(cs,lambda d:d.get('scene')=='world' and (d.get('x'),d.get('y'))!=(459,261))
                 print('moved',moved,flush=True)
                 time.sleep(1)
                 moved=json.loads(cs.read_bytes())
                 print('settled before logout',moved,flush=True)
+                if args.hold_mouse:
+                    assert moved['x'] >= world['x'] + 2 and moved['y'] == world['y'], ('held input must continue east', moved, world)
             else:
                 assert (world['x'],world['y'])==saved, (world,saved)
             if iteration==0:
