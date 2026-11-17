@@ -16,3 +16,15 @@
 - 回归guild-history11、progression14、scene-identity10全部1；总计47项。
 - 预览205 chat-history、206 chat-history-expanded。截图out/chat-history-compact.png、out/chat-history-expanded.png均已查看，使用CLIENT原生界面。
 - 当前验证为本地消息注入与原生渲染；真实游戏服收发、扬声器录音尚未验证。
+
+
+## 角色聊天气泡（2026-11-17）
+
+- 对照Godot hud/speech_bubble.hpp、chat/chat_history.cpp::wrap_speech、hud_view.cpp::draw_scene_speech；原版入口42F380，计时40FAC1。
+- 普通说话40和怪物说话1501生成气泡，其他频道只写聊天。恢复1501消息分发以及NPC/怪物ShowMessage绘制；未知角色不创建实体或气泡。
+- 原生宋体9pt、144px ANSI字节前缀测宽、最多8行，每条最多259字节；超限不替换当前气泡。ReceiveSpeech先完成分行再提交，空消息清空。
+- 单行背景宽度取文字测量，中心偏移x+28，顶部y-73；多行背景x-44、宽144、底部y-55，高14*行数+4。最后一行居中。白字及右下1px深灰阴影。
+- 背景沿用CLIENT DrawLegacyPanel，与Godot预乘矩形公式一致：RGB(80,60,40)、alpha120。取代旧重复D3D状态设置，支持已有RGB565剪裁。
+- 时长严格大于3000ms后清空，等于3000仍可见；新消息计时归零。无新增音效，原版此分支没有播放调用。
+- clean87/87、all109/109；speech14+chat-history12+guild-history11共37项全1。预览207 speech-single、208 speech-multiline、209 speech-eight；三张同名PNG位于out，均已查看。
+- 截图使用固定屏幕坐标和实际消息分发；尚未验证真实游戏服、移动角色与地图遮挡的整体验证。

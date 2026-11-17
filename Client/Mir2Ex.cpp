@@ -2,7 +2,7 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -33,6 +33,7 @@ class CHudPreviewProcess : public CWHDefProcess {
     int damagePreview=0;
     bool levelPreview=false;
     bool namePreview=false;
+    bool speechPreview=false;
     const char* capturePath = NULL;
 public:
     void OnConnectToServer() override {}
@@ -68,7 +69,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewChatHistoryExpanded) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewSpeechEight) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1894,6 +1895,38 @@ public:
 
 
 
+
+        if(groupPanel>=PreviewSpeechSingle && groupPanel<=PreviewSpeechEight) {
+            auto& process=g_xGameProc;auto& hero=process.m_xMyHero;hero.m_dwIdentity=123;
+            hero.m_shScrnPosX=380;hero.m_shScrnPosY=300;
+            const auto receive=[&](WORD opcode,DWORD id,const std::string& text) {
+                _TDEFAULTMESSAGE header={};header.wIdent=opcode;header.nRecog=id;header.wParam=2;
+                char wire[2048]={};fnEncodeMessage(&header,wire,sizeof(wire));fnEncode6BitBuf((BYTE*)text.data(),wire+DEFBLOCKSIZE,int(text.size()),sizeof(wire)-DEFBLOCKSIZE);process.OnSocketMessageRecieve(wire);
+            };
+            receive(SM_HEAR,123,"你好，勇士。");const RECT single=hero.SpeechBounds();
+            const bool routed=hero.m_nDividedChatLine==1 && std::string(hero.m_szChatMsg)=="你好，勇士。";
+            const bool geometry=single.left==408-hero.m_speechWidths[0]/2 && single.top==227 && single.bottom==245 && hero.SpeechPosition(0).y==231;
+            receive(SM_GROUPMESSAGE,123,"不会覆盖气泡");const bool channels=std::string(hero.m_szChatMsg)=="你好，勇士。";
+            std::string longLine;for(int i=0;i<16;++i) longLine+="中文换行";receive(SM_HEAR,123,longLine);
+            std::string combined;bool widths=true;for(int i=0;i<hero.m_nDividedChatLine;++i) {combined+=hero.m_szChatMsgArg[i];widths=widths && hero.m_speechWidths[i]<=144;}
+            const bool wrapped=combined==longLine && hero.m_nDividedChatLine>1;
+            const auto last=hero.SpeechPosition(hero.m_nDividedChatLine-1);const bool centered=last.x==336+(144-hero.m_speechWidths[hero.m_nDividedChatLine-1])/2 && last.y==231;
+            hero.ShowMessage(3000);const bool boundary=hero.m_nDividedChatLine>0;hero.ShowMessage(1);const bool expired=!hero.m_nDividedChatLine && !hero.m_szChatMsg[0];
+            std::string eight;for(int i=1;i<=259;++i) {std::string candidate(i,'W');if(!hero.ReceiveSpeech(candidate.c_str())) break;if(hero.m_nDividedChatLine==8) eight=candidate;}
+            hero.ReceiveSpeech(eight.c_str());const bool eightRows=hero.m_nDividedChatLine==8;
+            const bool oversized=!hero.ReceiveSpeech(std::string(260,'W').c_str()) && hero.m_nDividedChatLine==8;
+            const bool excessRows=!hero.ReceiveSpeech(std::string(259,'W').c_str()) && std::string(hero.m_szChatMsg)==eight;
+            receive(SM_HEAR,123,"");const bool cleared=!hero.m_nDividedChatLine;
+            auto* remote=new CActor;remote->m_dwIdentity=456;remote->m_stFeature.bGender=_GENDER_MON;process.m_xActorList.AddNode(remote);
+            receive(SM_MONSTERSAY,456,"怪物发言");const bool monster=std::string(remote->m_szChatMsg)=="怪物发言" && remote->m_nDividedChatLine==1;
+            receive(SM_MONSTERSAY,789,"未知对象");const bool unknown=process.m_xActorList.GetCounter()==1 && !hero.m_nDividedChatLine;
+            process.m_xActorList.MoveCurrentToTop();process.m_xActorList.DeleteCurrentNodeEx();delete remote;
+            const std::string display=groupPanel==PreviewSpeechSingle?"你好，勇士。":groupPanel==PreviewSpeechEight?eight:"请大家带好药水和回城卷轴，今晚八点在沙巴克城门集合。";
+            receive(SM_HEAR,123,display);speechPreview=true;mouse={790,430};
+            capturePath=groupPanel==PreviewSpeechSingle?"speech-single.bmp":groupPanel==PreviewSpeechEight?"speech-eight.bmp":"speech-multiline.bmp";
+            if(FILE* report=fopen("speech-check.txt","wb")) {fprintf(report,"routed=%d geometry=%d channels=%d widths=%d wrapped=%d centered=%d boundary=%d expired=%d eightRows=%d oversized=%d excessRows=%d cleared=%d monster=%d unknown=%d\n",routed,geometry,channels,widths,wrapped,centered,boundary,expired,eightRows,oversized,excessRows,cleared,monster,unknown);fclose(report);}
+        }
+
         if(groupPanel==PreviewChatHistory || groupPanel==PreviewChatHistoryExpanded) {
             auto& ui=g_xGameProc.m_xInterface;
             const auto reset=[&]() {ui.m_chatHistory.clear();ui.m_chatLines[0].clear();ui.m_chatLines[1].clear();ui.m_chatFirst[0]=ui.m_chatFirst[1]=ui.m_nFstLine=0;ui.m_chatExpanded=false;ui.m_chatLayoutMode=0;ui.LayoutChat();};
@@ -2892,6 +2925,7 @@ public:
         }
         g_xGameProc.m_xInterface.RenderInterface(elapsed,mouse);
         if(namePreview) g_xGameProc.m_xMyHero.DrawName();
+        if(speechPreview) g_xGameProc.m_xMyHero.ShowMessage(0);
         if(capturePath && !strcmp(capturePath,"equipment-hover-hint.bmp")) {
             auto& ui=g_xGameProc.m_xInterface;
             if(FILE* report=fopen("equipment-hover-check.txt","wb")) {fprintf(report,"window=%d status=%d slot=%d held=%d present=%d name=%s mouse=%ld,%ld\n",ui.GetWindowInMousePos(mouse),_WND_ID_STATUS,ui.m_xStatusWnd.GetEquipNum(mouse),ui.m_stCommonItem.bSetted,ui.m_xStatusWnd.m_stEquipItem[5].bSetted,ui.m_xStatusWnd.m_stEquipItem[5].xItem.Name(),mouse.x,mouse.y);fclose(report);}
@@ -3093,6 +3127,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=speech-single")==0 ? PreviewSpeechSingle :
+        strcmp(lpCmdLine,"--preview=speech-multiline")==0 ? PreviewSpeechMultiple :
+        strcmp(lpCmdLine,"--preview=speech-eight")==0 ? PreviewSpeechEight :
         strcmp(lpCmdLine,"--preview=chat-history")==0 ? PreviewChatHistory :
         strcmp(lpCmdLine,"--preview=chat-history-expanded")==0 ? PreviewChatHistoryExpanded :
         strcmp(lpCmdLine,"--preview=scene-identity")==0 ? PreviewSceneIdentity :

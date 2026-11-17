@@ -143,7 +143,7 @@ public:
 	INT					m_nDividedChatLine;
 	DWORD				m_wCurrChatDelay;
 	CHAR				m_szChatMsg[MAX_PATH];			// 聊天消息。
-	CHAR				m_szChatMsgArg[5][MAX_PATH];	// 将聊天消息分为 5 个字符串。
+	CHAR				m_szChatMsgArg[8][MAX_PATH];	// 将聊天消息分为 5 个字符串。
 
 public:
 //---------------------------------------------------------------------------------------------------------------//
@@ -177,7 +177,10 @@ public:
 	WORD GetCharState();
 //---------------------------------------------------------------------------------------------------------------//
 
-	VOID ChatMsgAdd();
+	bool ReceiveSpeech(const char* message);
+    RECT SpeechBounds() const;
+    POINT SpeechPosition(int row) const;
+    int m_speechWidths[8]={};
 	VOID ShowMessage(INT nLoopTime);
 	VOID StruckMsgReassign();
 	

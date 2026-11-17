@@ -110,7 +110,8 @@ VOID CActor::InitActor()
 	ZeroMemory(m_bLightRadius, sizeof(BYTE)*2);
 	ZeroMemory(m_bLightColor , sizeof(BYTE)*2*3);
 	ZeroMemory(m_szChatMsg, MAX_PATH);
-	ZeroMemory(m_szChatMsgArg, MAX_PATH*5);
+	ZeroMemory(m_szChatMsgArg, sizeof(m_szChatMsgArg));
+    ZeroMemory(m_speechWidths,sizeof(m_speechWidths));
 	ZeroMemory(&m_rcActor, sizeof(RECT));
 	ZeroMemory(&m_rcTargetRgn, sizeof(RECT));
 
@@ -1938,153 +1939,66 @@ VOID CActor::DrawName()
     SelectObject(dc,old);DeleteObject(font);surface->ReleaseDC(dc);
 }
 
-VOID CActor::ChatMsgAdd()
+bool CActor::ReceiveSpeech(const char* message)
 {
-	CHAR szDivied[MAX_PATH*2];
-	ZeroMemory(szDivied, MAX_PATH*2);
-
-	g_xMainWnd.StringDivide(_CHAT_WIDTH, m_nDividedChatLine, m_szChatMsg, szDivied);
-	sscanf(szDivied, "%[^`]%*c %[^`]%*c %[^`]%*c %[^`]%*c %[^`]%*c", 
-		   m_szChatMsgArg[0], m_szChatMsgArg[1], m_szChatMsgArg[2], m_szChatMsgArg[3], m_szChatMsgArg[4]);
-
-	m_wCurrChatDelay = 0;
+    if(strlen(message)>=sizeof(m_szChatMsg)) return false;
+    char rows[8][MAX_PATH]={};int widths[8]={};int count=*message?1:0;
+    HDC dc=GetDC(g_xMainWnd.GetSafehWnd());
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font=g_xMainWnd.CreateGameFont(face,9);HGDIOBJ old=SelectObject(dc,font);
+    std::string wrapped;int start=0,highBytes=0;
+    for(int i=0;message[i];++i) {
+        SIZE size={};GetTextExtentPoint32A(dc,message+start,i-start+1,&size);
+        const bool high=static_cast<signed char>(message[i])<0;
+        if(size.cx<=_CHAT_WIDTH) {if(high) ++highBytes;wrapped+=message[i];}
+        else if(high && highBytes%2) {wrapped.back()='`';start=i-1;i-=2;--highBytes;++count;}
+        else {wrapped+='`';start=i;--i;++count;}
+    }
+    if(count<=8) {
+        sscanf(wrapped.c_str(),"%259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c %259[^`]%*c",rows[0],rows[1],rows[2],rows[3],rows[4],rows[5],rows[6],rows[7]);
+        for(int i=0;i<count;++i) {SIZE size={};GetTextExtentPoint32A(dc,rows[i],int(strlen(rows[i])),&size);widths[i]=size.cx;}
+    }
+    SelectObject(dc,old);DeleteObject(font);ReleaseDC(g_xMainWnd.GetSafehWnd(),dc);
+    if(count>8) return false;
+    strcpy(m_szChatMsg,message);memcpy(m_szChatMsgArg,rows,sizeof(rows));memcpy(m_speechWidths,widths,sizeof(widths));
+    m_nDividedChatLine=count;m_wCurrChatDelay=0;return true;
 }
 
+RECT CActor::SpeechBounds() const
+{
+    if(!m_nDividedChatLine) return {};
+    const int width=m_nDividedChatLine==1?m_speechWidths[0]:_CHAT_WIDTH;
+    const int x=m_shScrnPosX+28-width/2,y=m_shScrnPosY-55;
+    return {x,y-14*m_nDividedChatLine-4,x+width,y};
+}
+
+POINT CActor::SpeechPosition(int row) const
+{
+    int x=SpeechBounds().left;
+    if(m_nDividedChatLine>1 && row==m_nDividedChatLine-1) x+=(_CHAT_WIDTH-m_speechWidths[row])/2;
+    return {x,m_shScrnPosY-55+14*(row-m_nDividedChatLine)};
+}
 
 VOID CActor::ShowMessage(INT nLoopTime)
 {
-	if ( m_szChatMsg[0] != NULL )
-	{
-		m_wCurrChatDelay += nLoopTime;
-	}
-
-	if ( m_wCurrChatDelay > 3000 )
-	{
-		m_wCurrChatDelay = 0;
-		ZeroMemory(m_szChatMsg, MAX_PATH);
-		ZeroMemory(m_szChatMsgArg, MAX_PATH*5);
-	}
-
-	if ( m_szChatMsg[0] != NULL )
-	{
-		INT nStartX = m_shScrnPosX + 28 - _CHAT_WIDTH/2;
-		INT nStartY;
-
-/*		if ( m_stFeatureEx.bHorse == _HORSE_NONE )
-			nStartY = m_shScrnPosY - 55;
-		else
-*/			nStartY = m_shScrnPosY - 55;
-
-
-		RECT rcBack;
-		if ( m_nDividedChatLine == 1 )
-		{
-			SIZE sizeLen;
-			sizeLen = g_xMainWnd.GetStrLength(NULL, NULL, m_szChatMsgArg[0]);
-			nStartX = m_shScrnPosX + 28 - sizeLen.cx/2;
-			SetRect(&rcBack, nStartX, nStartY-14-4, nStartX+sizeLen.cx, nStartY);
-		}
-		else
-			SetRect(&rcBack, nStartX, nStartY-m_nDividedChatLine*14-4, nStartX+_CHAT_WIDTH, nStartY);
-
-		if ( g_xMainWnd.Get3DDevice() )
-		{
-			if( SUCCEEDED(g_xMainWnd.Get3DDevice()->BeginScene()) )
-			{
-				D3DVECTOR vTrans;
-				D3DMATRIX matTrans;
-				D3DMATRIX matScale;
-				D3DMATRIX matWorld;
-				D3DMATRIX matWorldOriginal;
-
-				g_xMainWnd.Get3DDevice()->GetTransform(D3DTRANSFORMSTATE_WORLD, &matWorldOriginal);
-
-				D3DMATERIAL7 mtrl;
-
-				vTrans.x = (FLOAT)nStartX-400+(rcBack.right-rcBack.left)/2;  
-				vTrans.y = (FLOAT)-nStartY+300+(rcBack.bottom-rcBack.top)/2; 
-				vTrans.z = 0;
-				D3DUtil_SetTranslateMatrix(matTrans, vTrans);
-				D3DUtil_SetScaleMatrix(matScale, (FLOAT)rcBack.right-rcBack.left, (FLOAT)rcBack.bottom-rcBack.top, 0.0f);
-				D3DMath_MatrixMultiply(matWorld, matScale, matTrans);
-				g_xMainWnd.Get3DDevice()->SetTransform(D3DTRANSFORMSTATE_WORLD, &matWorld);				
-
-				D3DUtil_InitMaterial(mtrl, 
-									 (FLOAT)80/255.0f,
-									 (FLOAT)60/255.0f, 
-									 (FLOAT)40/255.0f);
-				mtrl.diffuse.a = 120/255.0f;
-				g_xMainWnd.Get3DDevice()->SetMaterial(&mtrl);
-
-				g_xMainWnd.Get3DDevice()->SetRenderState( D3DRENDERSTATE_ALPHABLENDENABLE, TRUE );
-				g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_COLORKEYENABLE, TRUE);
-				g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-				g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_ALPHAOP,   D3DTOP_MODULATE);
-				g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-
-				g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ONE);
-				g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
-
-				g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_ONE);
-				g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
-
-				g_xMainWnd.Get3DDevice()->SetTexture(0, NULL);
-				g_xMainWnd.Get3DDevice()->DrawPrimitive(D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, m_avBoard, 4, NULL);
-
-				// »Ö¸´Ô­×´.
-				ZeroMemory(&mtrl, sizeof(mtrl));
-				mtrl.diffuse.r = mtrl.diffuse.g = mtrl.diffuse.b = 0.1f;
-				mtrl.ambient.r = mtrl.ambient.g = mtrl.ambient.b = 1.0f;
-				g_xMainWnd.Get3DDevice()->SetMaterial(&mtrl);
-
-				g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-				g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_COLOROP,   D3DTOP_MODULATE);
-				g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-				g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-				g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_ALPHAOP,   D3DTOP_SELECTARG1);
-				g_xMainWnd.Get3DDevice()->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-
-				g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
-				g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_COLORKEYENABLE, FALSE);
-				g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_SRCBLEND , D3DBLEND_ONE);
-				g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_ZERO);
-				g_xMainWnd.Get3DDevice()->SetTransform(D3DTRANSFORMSTATE_WORLD, &matWorldOriginal);
-
-				g_xMainWnd.Get3DDevice()->EndScene();
-
-			}
-		}
-
-		for ( INT nCnt = 0; nCnt < m_nDividedChatLine; nCnt++ )
-		{
-			SIZE sizeLen;
-			sizeLen = g_xMainWnd.GetStrLength(NULL, NULL, m_szChatMsgArg[nCnt]);
-
-			if ( m_nDividedChatLine != 1 )
-			{
-				if ( nCnt == m_nDividedChatLine-1 )
-				{
-					nStartX += (_CHAT_WIDTH-sizeLen.cx)/2;
-				}
-			}
-
-			g_xMainWnd.PutsHan(g_xMainWnd.GetBackBuffer(),
-							   nStartX, nStartY-(m_nDividedChatLine-nCnt)*14,
-							   RGB(255,255,255), RGB(0,0,0), m_szChatMsgArg[nCnt]);
-		}
-	}
+    if(!m_nDividedChatLine) return;
+    m_wCurrChatDelay+=nLoopTime;
+    if(m_wCurrChatDelay>3000) {
+        m_wCurrChatDelay=0;m_nDividedChatLine=0;m_szChatMsg[0]=0;
+        ZeroMemory(m_szChatMsgArg,sizeof(m_szChatMsgArg));ZeroMemory(m_speechWidths,sizeof(m_speechWidths));return;
+    }
+    DrawLegacyPanel(SpeechBounds(),RGB(80,60,40),120,0,false);
+    auto* surface=g_xMainWnd.GetBackBuffer();HDC dc;
+    if(FAILED(surface->GetDC(&dc))) return;
+    const char face[]={char(0xcb),char(0xce),char(0xcc),char(0xe5),0};
+    HFONT font=g_xMainWnd.CreateGameFont(face,9);HGDIOBJ old=SelectObject(dc,font);SetBkMode(dc,TRANSPARENT);
+    for(int row=0;row<m_nDividedChatLine;++row) {
+        const POINT point=SpeechPosition(row);const int length=int(strlen(m_szChatMsgArg[row]));
+        SetTextColor(dc,RGB(10,10,10));TextOutA(dc,point.x+1,point.y+1,m_szChatMsgArg[row],length);
+        SetTextColor(dc,RGB(255,255,255));TextOutA(dc,point.x,point.y,m_szChatMsgArg[row],length);
+    }
+    SelectObject(dc,old);DeleteObject(font);surface->ReleaseDC(dc);
 }
-
-
-
-
-
-
-
-
-
-
-
 
 /******************************************************************************************************************
 

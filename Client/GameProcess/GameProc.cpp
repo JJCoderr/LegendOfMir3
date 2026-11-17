@@ -958,7 +958,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 				case _GENDER_NPC:
 				case _GENDER_MON:
 					{
-//						pxActor->ShowMessage(nLoopTime);
+						pxActor->ShowMessage(nLoopTime);
 						pxActor->DrawHPBar();
 					}
 					break;
@@ -3322,7 +3322,7 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			case SM_CRY:
 			case SM_WHISPER:
 			case SM_GROUPMESSAGE:
-//			case SM_MONSTERSAY:
+			case SM_MONSTERSAY:
 				OnSvrMsgHear(&tdm, (pszMsg + DEFBLOCKSIZE));
 				break;
 			case SM_DISAPPEAR:
@@ -3978,40 +3978,10 @@ VOID CGameProcess::OnSvrMsgHear(_TDEFAULTMESSAGE *ptdm, char *pszMsg)
     constexpr int MaximumChatBytes=200;
     if(nPos<=MaximumChatBytes) m_xInterface.MsgAdd(dwFont, dwBack, szDecodeMsg);
 
-	if ( (ptdm->wIdent == SM_HEAR || ptdm->wIdent == SM_MONSTERSAY) && nPos<int(sizeof(m_xMyHero.m_szChatMsg)) )
-	{
-		if ( ptdm->nRecog == m_xMyHero.m_dwIdentity )
-		{
-			strcpy(m_xMyHero.m_szChatMsg, szDecodeMsg);
-			
-			m_xMyHero.ChatMsgAdd();
-			m_xMyHero.m_wCurrChatDelay = 0;
-		}
-		else
-		{
-			m_xActorList.MoveCurrentToTop();
-			
-			CActor* pxActor;
-			
-			if ( m_xActorList.GetCounter() != 0 )
-			{
-				for ( INT nCnt = 0; nCnt <= m_xActorList.GetCounter(); nCnt++ )
-				{ 
-					pxActor = m_xActorList.GetCurrentData();
-
-					if ( pxActor->m_dwIdentity == ptdm->nRecog )
-					{
-						strcpy(pxActor->m_szChatMsg, szDecodeMsg);
-
-						pxActor->ChatMsgAdd();
-						pxActor->m_wCurrChatDelay = 0;
-					}
-
-					m_xActorList.MoveNextNode();							
-				}
-			}
-		}
-	}
+    if(ptdm->wIdent==SM_HEAR || ptdm->wIdent==SM_MONSTERSAY) {
+        CActor* actor=DWORD(ptdm->nRecog)==m_xMyHero.m_dwIdentity?&m_xMyHero:FindActor(ptdm->nRecog);
+        if(actor) actor->ReceiveSpeech(szDecodeMsg);
+    }
 }
 
 void CGameProcess::SetShadowBlend(bool enabled)

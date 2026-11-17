@@ -1333,3 +1333,11 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - m_chatHistory保留最近消息供已有查询/测试使用，显示来自m_chatLines[2]；m_chatFirst[2]/m_chatLayoutMode跟踪各模式位置。用户拖动仍更新m_nFstLine，在新消息/布局变化时同步。普通向下滚动上限改为最后一行。
 - clean87/87、all111/111。chat12+guild-history11+progression14+scene-identity10共47项全1。截图out/chat-history-compact.png及chat-history-expanded.png已查看。预览205/206，下一个空闲207。详情Client/docs/chat-history-evidence.md。
 - 仍未实服收发验证；气泡换行/绘制、旧独立ChatPop窗口等需继续按原版审计。
+
+
+### 2026-11-17 原生聊天气泡
+- Actor.ReceiveSpeech取代ChatMsgAdd，移植Godot144px/宋体9pt字节换行与8行上限，259字节超限或>8行保持旧气泡。空消息清空；ShowMessage严格>3000ms过期。新增SpeechBounds/SpeechPosition用于实际绘制和几何检查。
+- DrawLegacyPanel绘制RGB80/60/40 alpha120预乘底色，白字右下深灰阴影，多行末行居中。删去旧重复D3D背景代码。Actor数组5改8，清理按sizeof；已干净构建。
+- GameProc启用SM_MONSTERSAY1501，统一FindActor分发40/1501；恢复NPC/怪物ShowMessage。不存在角色不生成实体。
+- clean87/87、all109/109；speech14+chat12+guild-history11共37项全1。截图out/speech-single.png、speech-multiline.png、speech-eight.png已查看。预览207/208/209，下一个空闲210。
+- 尚未实服或移动地图中验证；继续GUI完整性审计，勿据此标记全目标完成。
