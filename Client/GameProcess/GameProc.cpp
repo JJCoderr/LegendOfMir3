@@ -2670,6 +2670,7 @@ LRESULT CGameProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
             break;
 		case WM_CTLCOLOREDIT:
 		{
+            for(auto* panel:{&m_xInterface.m_xConsignmentWnd,&m_xInterface.m_xConsignmentRegistration}) for(HWND edit:panel->edits) if(edit && edit==(HWND)lParam) return (LRESULT)panel->EditColor(edit,(HDC)wParam);
             if ((HWND)lParam==m_xInterface.m_xMailWnd.edits[0] || (HWND)lParam==m_xInterface.m_xMailWnd.edits[1]) return (LRESULT)m_xInterface.m_xMailWnd.EditColor((HWND)lParam,(HDC)wParam);
             if ((HWND)lParam==m_xInterface.m_xGuildEditor.edit) return (LRESULT)m_xInterface.m_xGuildEditor.EditColor((HDC)wParam);
 			if ((HWND)lParam == g_xChatEditBox.GetSafehWnd())

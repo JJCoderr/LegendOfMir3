@@ -75,6 +75,7 @@
 #include "GameProcess/GuildWnd.h"
 #include "GameProcess/GuildEditor.h"
 #include "GameProcess/MailWnd.h"
+#include "GameProcess/ConsignmentWnd.h"
 #include "GameProcess/GroupWnd.h"
 #include "GameProcess/GroupPopWnd.h"
 #include "GameProcess/ChatPopWnd.h"

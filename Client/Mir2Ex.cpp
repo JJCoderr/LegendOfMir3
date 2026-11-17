@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -65,7 +65,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewMailGiftHint) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewConsignmentChecks) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1841,6 +1841,62 @@ public:
             if(FILE* report=fopen("equipment-durability-check.txt","wb")) {fprintf(report,"threshold=%d warning=%d raw=%d unit=%d special=%d negative=%d wide=%d ignored=%d drop=%d\n",threshold,warning,rawBytes,unit,special,negative,wide,ignored,drop);fclose(report);}
         }
 
+        if(groupPanel>=PreviewConsignmentEmpty && groupPanel<=PreviewConsignmentChecks) {
+            using namespace ConsignmentLayout;
+            auto& ui=g_xGameProc.m_xInterface;auto& browser=ui.m_xConsignmentWnd;auto& registration=ui.m_xConsignmentRegistration;
+            ui.WindowActivate(BrowserId);browser.page=1;browser.pages=3;
+            constexpr int ItemIcon=372, IconField=36, InstanceField=62, RecordBytes=100;
+            g_xGameProc.m_xImage.m_xImageList[_IMAGE_ITEM_INVENTORY].NewLoad("./Data/Inventory.wil");
+            BYTE raw[RecordBytes]={};strcpy((char*)raw,"珍藏的装备");raw[IconField]=BYTE(ItemIcon);raw[IconField+1]=BYTE(ItemIcon>>8);raw[InstanceField]=7;
+            if(groupPanel!=PreviewConsignmentEmpty) for(int i=0;i<VisibleRows;++i) {
+                CConsignmentWnd::Listing listing;listing.id=i+1;listing.price=1000*(i+1);listing.seller=i%2?"行会商人":"远行勇士";
+                listing.server="玛法一区";listing.date="11-17";listing.description="旅途中收集的装备。\r欢迎有需要的勇士选购。";
+                listing.item.SetMir3Item(raw,i);browser.listings.push_back(listing);
+            }
+            browser.selected=browser.listings.empty()?-1:0;g_xGameProc.m_xMyHero.m_nGlod=50000;
+            capturePath=groupPanel==PreviewConsignmentEmpty?"consignment-empty.bmp":"consignment-list.bmp";mouse={790,460};
+            const auto chooseItem=[&]() {
+                ui.m_stCommonItem.xItem.SetMir3Item(raw,0);ui.m_stCommonItem.bSetted=TRUE;
+                POINT point={registration.m_rcWnd.left+RegistrationIconX,registration.m_rcWnd.top+RegistrationIconY};
+                ui.OnLButtonDown(point);ui.OnLButtonUp(point);
+            };
+            if(groupPanel>=PreviewConsignmentRegistration && groupPanel<=PreviewConsignmentConfirm && groupPanel!=PreviewConsignmentBuy && groupPanel!=PreviewConsignmentCancel) {
+                ui.WindowActivate(BrowserId);ui.WindowActivate(RegistrationId);
+                capturePath="consignment-registration.bmp";
+                SetWindowTextA(registration.edits[0],"这件装备陪伴我走过许多旅程。\r\n希望能找到珍惜它的新主人。");
+                if(groupPanel!=PreviewConsignmentRegistration) {chooseItem();registration.SubmitPrice("12000");capturePath="consignment-item.bmp";}
+                if(groupPanel==PreviewConsignmentPrice) {ui.OpenNameDialog(PriceDialog);SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"12000");capturePath="consignment-price.bmp";}
+                if(groupPanel==PreviewConsignmentConfirm) {registration.Activate(Action::SubmitRegistration);capturePath="consignment-confirm.bmp";}
+            }
+            if(groupPanel==PreviewConsignmentBuy) {browser.Activate(Action::Buy);capturePath="consignment-buy.bmp";}
+            if(groupPanel==PreviewConsignmentCancel) {browser.Activate(Action::CancelListing);capturePath="consignment-cancel.bmp";}
+            if(groupPanel==PreviewConsignmentChecks) {
+                const bool hit=ui.GetWindowInMousePos(POINT{100,100})==BrowserId;
+                SetWindowTextA(browser.edits[0],"装备查询");browser.Activate(Action::SearchName);
+                const bool query=browser.requests.size()==1 && browser.requests.back().query=="装备查询";
+                browser.Activate(Action::NextPage);const bool next=browser.requests.back().page==2 && browser.page==1;
+                browser.Activate(Action::Buy);const bool purchaseModal=ui.m_xMsgBox.IsActive();ui.FinishNotice(CLICK_NO,false);
+                const bool purchaseCancelled=browser.requests.size()==2;
+                browser.Activate(Action::Buy);browser.listings[0].price=2000;ui.FinishNotice(CLICK_YES,false);
+                const bool purchaseSnapshot=browser.requests.back().price==1000 && g_xGameProc.m_xMyHero.m_nGlod==50000;
+                browser.Activate(Action::Register);
+                const bool bag=ui.m_xInventoryWnd.m_bActive && registration.m_bActive && ui.IsTopWindow(RegistrationId);
+                chooseItem();const bool itemKept=registration.hasItem && !ui.m_stCommonItem.bSetted && ui.m_xInventoryWnd.m_stInventoryItem[0].bSetted;
+                const bool badPrice=!registration.SubmitPrice("12x") && !registration.SubmitPrice("4294967296");
+                ui.OpenNameDialog(PriceDialog);SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"12000");ui.FinishNotice(CLICK_YES,false);
+                const bool price=registration.price==12000;
+                SetWindowTextA(registration.edits[0],"寄售说明");registration.Activate(Action::SubmitRegistration);
+                const bool registerModal=ui.m_xMsgBox.IsActive();ui.FinishNotice(CLICK_YES,false);
+                const bool submit=registration.requests.size()==1 && registration.requests[0].description=="寄售说明" && registration.requests[0].price==12000;
+                registration.Activate(Action::CancelRegistration);const bool cancel=!registration.hasItem && !registration.price && ui.m_xInventoryWnd.m_stInventoryItem[0].bSetted;
+                registration.SyncEditors(false);const bool hidden=!IsWindowVisible(registration.edits[0]);registration.SyncEditors(true);
+                SendMessage(registration.edits[0],WM_KEYDOWN,VK_ESCAPE,0);const bool close=!registration.m_bActive && !IsWindowVisible(registration.edits[0]);
+                browser.Close();const bool browserReset=browser.listings.empty() && browser.selected==-1 && !browser.page && !browser.pages && !browser.waiting;
+                if(FILE* report=fopen("consignment-gui-check.txt","wb")) {fprintf(report,"hit=%d query=%d next=%d purchaseModal=%d purchaseCancelled=%d purchaseSnapshot=%d bag=%d itemKept=%d badPrice=%d price=%d registerModal=%d submit=%d cancel=%d hidden=%d close=%d browserReset=%d\n",hit,query,next,purchaseModal,purchaseCancelled,purchaseSnapshot,bag,itemKept,badPrice,price,registerModal,submit,cancel,hidden,close,browserReset);fclose(report);}
+                ui.WindowActivate(_WND_ID_INVENTORY);capturePath="consignment-checks.bmp";
+            }
+        }
+
         if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewMailGiftHint) {
             auto& ui=g_xGameProc.m_xInterface;auto& mail=ui.m_xMailWnd;
             ui.WindowActivate(_WND_ID_MAIL);
@@ -2291,7 +2347,7 @@ public:
                 info.biSize=sizeof(info); info.biWidth=surface.dwWidth; info.biHeight=surface.dwHeight;
                 info.biPlanes=1; info.biBitCount=24; info.biSizeImage=(DWORD)pixels.size();
                 // Capture the real native edit control, then map its display pixels to the 800x600 review image.
-                const HWND edits[]={g_xChatEditBox.GetSafehWnd(),g_xGameProc.m_xInterface.m_xGuildEditor.edit,g_xGameProc.m_xInterface.m_xMailWnd.edits[0],g_xGameProc.m_xInterface.m_xMailWnd.edits[1]};
+                const HWND edits[]={g_xChatEditBox.GetSafehWnd(),g_xGameProc.m_xInterface.m_xGuildEditor.edit,g_xGameProc.m_xInterface.m_xMailWnd.edits[0],g_xGameProc.m_xInterface.m_xMailWnd.edits[1],g_xGameProc.m_xInterface.m_xConsignmentWnd.edits[0],g_xGameProc.m_xInterface.m_xConsignmentWnd.edits[1],g_xGameProc.m_xInterface.m_xConsignmentRegistration.edits[0]};
                 for (HWND edit:edits) if (IsWindowVisible(edit)) {
                     RECT editRect; GetWindowRect(edit,&editRect);
                     const RECT& display = g_xMainWnd.m_rcWindow;
@@ -2453,6 +2509,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=consignment-empty")==0 ? PreviewConsignmentEmpty :
+        strcmp(lpCmdLine,"--preview=consignment-list")==0 ? PreviewConsignmentList :
+        strcmp(lpCmdLine,"--preview=consignment-registration")==0 ? PreviewConsignmentRegistration :
+        strcmp(lpCmdLine,"--preview=consignment-item")==0 ? PreviewConsignmentItem :
+        strcmp(lpCmdLine,"--preview=consignment-price")==0 ? PreviewConsignmentPrice :
+        strcmp(lpCmdLine,"--preview=consignment-buy")==0 ? PreviewConsignmentBuy :
+        strcmp(lpCmdLine,"--preview=consignment-cancel")==0 ? PreviewConsignmentCancel :
+        strcmp(lpCmdLine,"--preview=consignment-confirm")==0 ? PreviewConsignmentConfirm :
+        strcmp(lpCmdLine,"--preview=consignment-checks")==0 ? PreviewConsignmentChecks :
         strcmp(lpCmdLine,"--preview=mail-inbox")==0 ? PreviewMailInbox :
         strcmp(lpCmdLine,"--preview=mail-read")==0 ? PreviewMailRead :
         strcmp(lpCmdLine,"--preview=mail-compose")==0 ? PreviewMailCompose :

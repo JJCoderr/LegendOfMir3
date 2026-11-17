@@ -83,6 +83,7 @@ public:
     bool PortraitEntryHit(POINT point);
     CGuildEditor m_xGuildEditor;
     CMailWnd m_xMailWnd;
+    CConsignmentWnd m_xConsignmentWnd,m_xConsignmentRegistration;
 	CStatusWnd			m_xStatusWnd;					//角色信息查看窗口(3个)。
 	CStoreWnd			m_xStoreWnd;					//商店窗口.
 	CExchangeWnd		m_xExchangeWnd;					//交易窗口.
