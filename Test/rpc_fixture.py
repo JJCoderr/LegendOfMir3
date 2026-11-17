@@ -20,7 +20,10 @@ def prepare(repo, binaries, resources, suite, offset):
     (repo/'out').mkdir(exist_ok=True)
     root = Path(tempfile.mkdtemp(prefix='rpc-',dir=repo/'out'))
     shutil.copy2(binaries/'Mir2Ex.exe',root/'Mir2Ex.exe')
-    if (resources/'SoundList.wwl').is_file(): os.link(resources/'SoundList.wwl',root/'SoundList.wwl')
+    for name in ('SoundList.wwl', 'CmList.dat'):
+        source = resources/name
+        if not source.is_file(): source = (resources/'Data').resolve().parent/name
+        if source.is_file(): os.link(source, root/name)
     for name in ('EIServer.ini','Mir3.ini'):
         config = configparser.ConfigParser(interpolation=None)
         config.optionxform = str

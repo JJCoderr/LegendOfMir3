@@ -137,4 +137,6 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 双客户端私聊：`python Test/launch_csv.py Test/ChatWhisper.csv --clients 2 --log out/chat-whisper.log`。启动程序管理两个真实客户端；CSV 用 Client/Client2 交替登录不同账号、发送和断言消息，Test.exe 分别连接两个 PID 的 Client 管道。场景验证中文私聊、对方回复、错误角色名反馈，以及向已在线角色名加后缀发送时不会误投。普通聊天作为后续处理依据，随后精确检查私聊回包次数。仍未覆盖私聊拒收设置、跨服务器私聊或第三个旁观者的隔离。
 
-私聊拒收：`python Test/launch_csv.py Test/ChatWhisperReject.csv --clients 2 --log out/chat-whisper-reject.log`。通过当前 CmList 命令 @拒绝私聊（2126）和 @拒绝悄悄话（1070）切换服务器拒收状态；服务器回传客户端选项消息，state.get 的 chat_rejected 数组反映客户端实际确认状态。测试检查拒收提示、零私聊投递、普通聊天不受影响及恢复接收。拒收状态目前仅在本次角色会话内有效，未实现持久化、按名单拒收或其他聊天频道开关。
+私聊拒收：`python Test/launch_csv.py Test/ChatWhisperReject.csv --clients 2 --log out/chat-whisper-reject.log`。通过 chat.toggle_reception(channel=0) 复用聊天栏按钮入口，从 CmList.dat 读取 @拒绝悄悄话（1070）命令切换服务器拒收状态；服务器也支持选项入口的 @拒绝私聊（2126）。服务器回传客户端选项消息，state.get 的 chat_rejected 数组反映客户端实际确认状态。测试检查拒收提示、零私聊投递、普通聊天不受影响及恢复接收。拒收状态目前仅在本次角色会话内有效，未实现持久化、按名单拒收或其他聊天频道开关。
+
+测试资源：辅助启动程序为 CmList.dat 与 SoundList.wwl 创建硬链接，优先使用 --config-dir 下的文件，缺失时从其 Data 资源目录的同级目录查找。chat.toggle_reception 的频道编号对应现有按钮：0 私聊、1 行会、2 所有人聊天；非法编号拒绝，缺少命令资源时也拒绝。当前服务器仅接通私聊拒收，行会及所有人聊天的开关仍待实现，不能将提交成功当作状态已确认。

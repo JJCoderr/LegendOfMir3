@@ -1965,17 +1965,7 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
                 case 20:
                 case 21:
                 case 22:
-                    {
-                        const int channel = nCnt-20;
-                        // The server owns rejection state; a click only predicts the overlay.
-                        m_chatReceptionHint[channel]=(channel==0?2637:channel==1?2639:2643)+(m_chatRejected[channel]?0:1);
-                        m_chatReceptionFrame[channel] = m_chatRejected[channel] ? -1 : 1338+channel*2;
-                        static CLoginMessages captions;
-                        static const bool loaded = captions.Load(".\\CmList.dat");
-                        const int commandId = channel == 0 ? 1070 : channel == 1 ? 1071 : 1073;
-                        std::string command = captions.Get(commandId);
-                        g_xClientSocket.SendSay(const_cast<char*>(command.c_str()));
-                    }
+                    ToggleChatReception(nCnt-20);
                     break;
                 case 18:
                 case 19:
@@ -2383,6 +2373,21 @@ bool CInterface::SpellPointerAvailable()
     const RECT chat={ChatLeft,m_chatExpanded?ExpandedChatTop:CollapsedChatTop,ChatLeft+ChatWidth,CanvasHeight};
     return !m_minimap.visible && !m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive &&
         PtInRect(&scene,point) && !PtInRect(&chat,point) && GetWindowInMousePos(point)==-1;
+}
+
+bool CInterface::ToggleChatReception(int channel)
+{
+    if (channel < 0 || channel >= _countof(m_chatRejected)) return false;
+    static CLoginMessages captions;
+    static const bool loaded = captions.Load("./CmList.dat");
+    const int commands[] = {1070, 1071, 1073};
+    const auto& command = captions.Get(commands[channel]);
+    if (command.empty()) return false;
+    // Only predict the overlay; the server reply owns the rejection state.
+    m_chatReceptionHint[channel]=(channel==0?2637:channel==1?2639:2643)+(m_chatRejected[channel]?0:1);
+    m_chatReceptionFrame[channel]=m_chatRejected[channel]?-1:1338+channel*2;
+    g_xClientSocket.SendSay(const_cast<char*>(command.c_str()));
+    return true;
 }
 
 LRESULT	CInterface::OnMsgInputted(WPARAM wParam, LPARAM lParam)

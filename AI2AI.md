@@ -2132,3 +2132,7 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 ### 私聊拒收与恢复
 - 服务端识别当前 CmList 的 @拒绝私聊 / @拒绝悄悄话 两入口命令，切换会话内拒收标志，回传 1401 客户端选项并保留当前攻击模式。拒收期间不给收件人投递，向发送者提示。Shared/Mir3ChatOptions.h 命名消息与位标志。
 - Client state.get 新增 chat_rejected，读取真实确认状态。ChatWhisperReject 44 步通过，普通 ChatWhisper 43 步回归通过；Client/EIServer Release 构建通过。日志 out/csv-validation/chat-whisper-reject.log 和 reject-whisper-regression.log。尚未实现持久化、按名单拒收、其他频道开关。
+
+### 真实聊天栏入口与命令资源
+- 核对 CmList 后确认聊天栏 0/1/2 是私聊/行会/所有人聊天，不能当成独立喊话开关。提取 CInterface::ToggleChatReception，由按钮与 RPC chat.toggle_reception 共用，读取真实资源命令；空命令或非法频道拒绝。
+- 隔离测试目录为 CmList.dat/SoundList.wwl 建硬链接，优先配置目录，缺失则从 Data 链接目标同级查找。ChatWhisperReject 改为真实按钮命令入口，45 步通过；ChatLocal 28 步回归通过，Client Release 构建通过。日志 out/csv-validation/chat-reception.log、reception-local-regression.log。服务器仍仅接通私聊拒收，行会与所有人频道待实现。

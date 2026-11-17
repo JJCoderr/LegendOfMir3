@@ -31,15 +31,16 @@ step,name,target,action,params,expect
 300,world ready,Client2,state.wait,,"result.scene=world;result.map=""01"";result.hp=18"
 310,dismiss arrival,Client2,notice.dismiss,,result.status=submitted
 320,chat ready,Client2,state.wait,,result.scene=world;result.input_delayed=false;result.notice=false
-330,recipient rejects private messages,Client2,chat.send,text=@拒绝私聊,result.status=submitted
+330,recipient rejects private messages,Client2,chat.toggle_reception,channel=0,result.status=submitted
 340,rejection confirmed,Client2,state.wait,,result.chat_rejected.0=true
 350,send while rejected,Client,chat.send,text=/MirProbe02 Blocked private,result.status=submitted
 360,sender informed,Client,state.wait,,result.chat_last=Private messages are disabled by the recipient.
 370,normal fence,Client,chat.send,text=Rejection fence,result.status=submitted
 380,recipient still hears normal chat,Client2,state.wait,,result.chat_last=MirProbe01 : Rejection fence
 390,private delivery blocked,Client2,wire.expect,message=SM_WHISPER;direction=received;at_least=0,count=0
-400,recipient allows via chat bar alias,Client2,chat.send,text=@拒绝悄悄话,result.status=submitted
+400,recipient allows via chat bar alias,Client2,chat.toggle_reception,channel=0,result.status=submitted
 410,allow confirmed,Client2,state.wait,,result.chat_rejected.0=false
 420,private messages restored,Client,chat.send,text=/MirProbe02 Restored private,result.status=submitted
 430,recipient receives again,Client2,state.wait,,result.chat_last=MirProbe01=> Restored private
 440,one private delivery,Client2,wire.expect,message=SM_WHISPER;direction=received;at_least=1,count=1
+450,unknown reception channel rejected,Client2,chat.toggle_reception,channel=3,error.code=-32002

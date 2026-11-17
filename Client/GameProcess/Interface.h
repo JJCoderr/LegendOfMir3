@@ -26,6 +26,7 @@ public:
     int m_chatReceptionHint[3] = {2637,2639,2643};
     int m_chatReceptionFrame[3] = {-1,-1,-1};
     void FocusChatMode();
+    bool ToggleChatReception(int channel);
     void PrepareModal();
     void ShowNotice(int message);
     void OpenNameDialog(int action);

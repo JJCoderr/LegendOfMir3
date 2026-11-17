@@ -222,6 +222,9 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
     } else if (method == "notice.dismiss" && g_bProcState == _GAME_PROC) {
         accepted=true;
         if(g_xGameProc.m_xNotice.IsActive()) g_xGameProc.m_xNotice.HideMessageBox();
+    } else if (method == "chat.toggle_reception" && g_bProcState == _GAME_PROC) {
+        if(!g_xGameProc.InputDelayed() && !g_xGameProc.m_xNotice.IsActive() && !g_xGameProc.m_xInterface.HasInputDialog())
+            accepted=g_xGameProc.m_xInterface.ToggleChatReception(Integer(params,"channel"));
     } else if (method == "chat.send" && g_bProcState == _GAME_PROC) {
         const auto text=Text(params,"text");
         constexpr size_t MaximumChatInputBytes=255; // Server's legacy decoded chat buffer, excluding NUL.
