@@ -70,6 +70,8 @@ void CPlayerObject::Constructor()
 	
 	m_dwLastCryTime			= 0;
     m_clientOptions = 0;
+    m_dialogMerchant = NULL;
+    m_npcScriptFiles.clear();
 
 	m_fIsCapture			= FALSE;
 }
@@ -2476,6 +2478,10 @@ void CPlayerObject::Operate()
                             if (m_fIsDead || npc->m_pMap != m_pMap ||
                                 abs(npc->m_nCurrX-m_nCurrX)>m_nViewRange ||
                                 abs(npc->m_nCurrY-m_nCurrY)>m_nViewRange) break;
+                            if (lpProcessMsg->wIdent == CM_CLICKNPC) {
+                                m_dialogMerchant = npc;
+                                m_npcScriptFiles.clear();
+                            } else if (m_dialogMerchant != npc) break;
                             char section[256] = "@main";
                             if (lpProcessMsg->wIdent == CM_MERCHANTDLGSELECT) {
                                 if (!lpProcessMsg->pszData) break;

@@ -1,0 +1,8 @@
+[@details]
+{
+#SAY
+#INCLUDE [..\Convert_Def\Library\text.txt] @details
+#ACT
+goto @root_back
+break
+}

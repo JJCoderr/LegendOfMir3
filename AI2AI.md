@@ -2171,3 +2171,11 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 单次解释限制 4096 行、32 层调用。缺失标签、循环、错误数值和未支持条件/执行指令取消本次输出；避免显示半段条件文本。未支持指令回归夹具由 checklevel 改为 checkquest。
 - 新增 Test/Npc/NpcLevelLow、NpcLevelBoundary、NpcLevelHigh，真实4/5/6级角色分别39步通过；NpcDialog 33步回归通过。EIServer Release 构建通过。日志 out/csv-validation/npc-level-{low,boundary,high}.log 与 npc-conditions-regression.log。
 - 参考 Mud3/Envir/Market_Def/01Meet_Bichon1-0.txt 的条件分支格式；完整参考服脚本映射、#CALL/#INCLUDE、交易/任务及更多指令仍待接入和核对。
+
+## 2026-11-18 NPC 跨文件引用与角色对话上下文
+
+- 支持 #CALL [\path] @label（Envir/QuestDiary）与 #INCLUDE [..\Convert_Def\path] @label（相对 Envir/Market_Def）。依据 Mud3/Envir/Market_Def、QuestDiary 和 Convert_Def 实际文件布局；独立大括号包裹行不作为文本。
+- 导入脚本可 goto 回商人标签；后续选项在该角色已成功加载的脚本中解析。CPlayerObject 保存当前商人和脚本文件列表，点击商人重置；失败解释不提交新上下文。文本 INCLUDE 不执行 #ACT 等指令。
+- 跨文件共享32层/4096行限制。文件缺失、标签缺失、循环及非法文本指令不会发送半段回复。
+- EIServer 构建通过。NpcImports 44步、NpcContext 33步、等级边界回归39步、基础对话回归33步全部通过。日志 out/csv-validation/npc-imports-final.log、npc-context.log、npc-imports-level-regression.log、npc-imports-dialog-regression.log。
+- 仍待参考服独立脚本名映射、完整任务状态/变量、交易和更多脚本指令；引用路径所有变体及完整旧脚本语义尚未验证。

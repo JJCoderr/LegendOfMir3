@@ -1,0 +1,24 @@
+[@main]
+#CALL [\Library\dialog.txt] @start
+[@root_options]
+#SAY
+<Continue/@next>\
+<Missing file/@badfile>\
+<Missing section/@badsection>\
+<Loop/@loop>\
+<Bad include/@badinclude>
+[@root_back]
+#SAY
+<Again/@main>
+[@badfile]
+#SAY
+Partial text must not appear\
+#CALL [\Library\missing.txt] @missing
+[@badsection]
+#SAY
+#INCLUDE [..\Convert_Def\Library\text.txt] @missing
+[@loop]
+#CALL [\Library\cycle.txt] @loop
+[@badinclude]
+#SAY
+#INCLUDE [..\Convert_Def\Library\text.txt] @bad

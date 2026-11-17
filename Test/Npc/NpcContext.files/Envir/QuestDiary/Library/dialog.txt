@@ -1,0 +1,12 @@
+[@start]
+{
+#IF
+checklevel 1
+#SAY
+#INCLUDE [..\Convert_Def\Library\text.txt] @welcome
+#ACT
+goto @root_options
+break
+[@next]
+#CALL [\Library\nested.txt] @details
+}
