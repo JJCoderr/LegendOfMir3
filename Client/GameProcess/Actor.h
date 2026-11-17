@@ -274,9 +274,10 @@ public:
 typedef struct tagFEATUREEX
 {
 	BYTE		bHorse;
-	BYTE		wHairColor;
-	BYTE		wDressColor;
+	WORD		wHairColor;
+	WORD		wDressColor;
 }FEATUREEX, *LPFEATUREEX;
+static_assert(sizeof(FEATUREEX)==5, "Appearance extension wire size");
 #pragma pack(8)
 
 class CHero : public CActor

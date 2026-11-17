@@ -2436,3 +2436,13 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 新增 Chat/ChatMapIsolation 与 Combat/CombatMapIsolation（各自 CSV/fixture，--clients 3）。两个客户端在 01，第三个在 0；验证同图聊天/攻击/伤害/死亡，异图无回包与经验泄漏。聊天另验证返回选角保存的地图为 0，重进仍为 0。
 - EIServer Release 构建成功；聊天基础 60、战斗 66、包含保存重进的双向分片聊天 65，共 191 项通过。日志 out/csv-validation/chat-map-isolation-fixed.log、combat-map-isolation.log、chat-map-isolation-fragments/test.log；前缀错误复现 chat-map-isolation.log。
 - 尚未强制复现 500ms 广播缓存有效期内换图的时序；赋值错误由代码路径直接确认，多地图 CSV 不等价于该竞争时序验证。总体适配继续。
+
+
+## 2026-11-18 人物扩展外观与姓名同步
+
+- 多客户端日志发现姓名带三个异常字节。CharacterAppearance 的步骤 330 在修改前稳定失败，实际名字为三个 0xFF 后跟 MirProbe01。
+- 服务端 _TOBJECTFEATUREEX 原为含填充的 6 字节，客户端 FEATUREEX 原为 3 字节；参考 Mir3/client/src/protocol/login_actor.hpp、godot/hud_view.cpp 的独立 5 字节扩展段，将服务端紧凑打包，客户端两项颜色恢复 WORD，六位编码段长度改为 7。两端 static_assert 验证大小。
+- CHero::Create 接收扩展外观，缺省颜色保持 0xFFFF；登录分别解析基础 feature 与扩展段。OnTurn 在完整扩展段之后读取姓名，并为姓名终止符预留空间。
+- RPC 状态增加本地/远端人物 horse、hair_color、dress_color。Character/CharacterAppearance.csv + fixture 覆盖首次姓名、中文姓名查询、移动保持、保存重进与完整 16 位默认颜色。
+- Client/EIServer Release 构建成功；外观身份 47、全链路双向分片 47、三客户端战斗隔离回归 66，共 160 项通过。日志 out/csv-validation/character-appearance-fixed.log、character-appearance-fragments/test.log、character-appearance-combat-regression.log；失败复现 character-appearance-before.log。
+- 本轮只对齐扩展段，既有基础外观/登录包尚未全面迁移至 Godot 所示 V1.45 完整结构；染色视觉效果、非默认染色及骑乘场景尚未验证。总体适配继续。

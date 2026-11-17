@@ -3731,7 +3731,8 @@ VOID CGameProcess::OnSvrMsgNewMap(_TDEFAULTMESSAGE	*ptdm, char *pszMapName)
 
 VOID CGameProcess::OnSvrMsgLogon(_TDEFAULTMESSAGE	*ptdm, char *pszMsg)
 {
-	MESSAGEBODYWL wl;
+	FEATURE feature{};
+    FEATUREEX extension{};
 
 	m_xMyHero.m_dwIdentity	= ptdm->nRecog;
 	m_xMyHero.m_bLightSize	= HIBYTE(ptdm->wSeries);
@@ -3742,10 +3743,11 @@ VOID CGameProcess::OnSvrMsgLogon(_TDEFAULTMESSAGE	*ptdm, char *pszMsg)
 		bDir = 0;
 
 	// ¸½¼Ó´úÂë
-	fnDecode6BitBuf(pszMsg, (char*)&wl, sizeof(wl));
+	fnDecode6BitBuf(pszMsg, (char*)&feature, sizeof(feature));
+    fnDecode6BitBuf(pszMsg+_FEATURESIZE, (char*)&extension, sizeof(extension));
 
 //	if ( stFeatureEx.bHorse == _HORSE_NONE )
-		m_xMyHero.Create(&m_xImage, _MT_STAND, bDir, ptdm->wParam/*x*/, ptdm->wTag/*y*/, (FEATURE *)&wl.lParam1, NULL);
+		m_xMyHero.Create(&m_xImage, _MT_STAND, bDir, ptdm->wParam/*x*/, ptdm->wTag/*y*/, &feature, &extension);
 //	else
 //		m_xMyHero.Create(&m_xImage, _MT_HORSESTAND, bDir, m_xMyHero.m_wPosX, m_xMyHero.m_wPosY, stFeature, stFeatureEx);
 

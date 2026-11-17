@@ -3,7 +3,7 @@
 #define _DEFBLOCKSIZE		16
 #define _FEATURESIZE		6
 #define _CHARDESCSIZE		11
-#define _FEATURESIZEEX		4
+#define _FEATURESIZEEX		7
 
 typedef struct tag_TDEFAULTMESSAGE
 {

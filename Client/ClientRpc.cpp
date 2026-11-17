@@ -129,6 +129,9 @@ std::string ClientState() {
             + ",\"level\":" + std::to_string(hero.m_stAbility.bLevel)
             + ",\"experience\":" + std::to_string(hero.m_stAbility.dwExp)
             + ",\"next_experience\":" + std::to_string(hero.m_stAbility.dwMaxExp);
+        state += ",\"hair_color\":"+std::to_string(hero.m_stFeatureEx.wHairColor)
+            +",\"dress_color\":"+std::to_string(hero.m_stFeatureEx.wDressColor)
+            +",\"horse\":"+std::to_string(hero.m_stFeatureEx.bHorse);
         Array actors;
         game.m_xActorList.MoveCurrentToTop();
         for(int i=0;i<game.m_xActorList.GetCounter();++i) {
@@ -139,6 +142,13 @@ std::string ClientState() {
                 {"npc",Json(actor->m_stFeature.bGender==_GENDER_NPC)},
                 {"dead",Json(bool(actor->m_bIsDead))},{"hp",Json(int64_t(actor->m_wHP))},
                 {"max_hp",Json(int64_t(actor->m_wMAXHP))}});
+            if(actor->m_stFeature.bGender==_GENDER_MAN || actor->m_stFeature.bGender==_GENDER_WOMAN) {
+                const auto& extension=static_cast<const CHero*>(actor)->m_stFeatureEx;
+                auto& entry=actors.back().get<Object>();
+                entry["horse"]=Json(int64_t(extension.bHorse));
+                entry["hair_color"]=Json(int64_t(extension.wHairColor));
+                entry["dress_color"]=Json(int64_t(extension.wDressColor));
+            }
         }
         state += ",\"actors\":"+Json(actors).serialize()+",\"actor_count\":"+std::to_string(actors.size());
         state += std::string(",\"return_ready\":")+mir3::BoolJson(!game.m_exitTransition.active &&

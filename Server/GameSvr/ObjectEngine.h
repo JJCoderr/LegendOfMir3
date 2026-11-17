@@ -82,12 +82,15 @@ typedef struct tag_TOBJECTFEATURE
 	BYTE		btWeapon;
 } _TOBJECTFEATURE, _LPTOBJECTFEATURE;
 
+#pragma pack(push, 1)
 typedef struct tag_TOBJECTFEATUREEX
 {
 	BYTE		btHorse;
 	WORD		dwHairColor;
 	WORD		dwWearColor;
 } _TOBJECTFEATUREEX, _LPTOBJECTFEATUREEX;
+#pragma pack(pop)
+static_assert(sizeof(_TOBJECTFEATUREEX)==5, "Appearance extension wire size");
 
 class CVisibleObject
 {

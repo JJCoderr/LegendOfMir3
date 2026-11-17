@@ -2267,8 +2267,9 @@ BOOL CHero::Create(CImageHandler* pxImgHandler, BYTE bMtn, BYTE bDir, WORD wPosX
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		m_stFeatureEx.bHorse = 0;
-		m_stFeatureEx.wDressColor = 0XFF;
-		m_stFeatureEx.wHairColor = 0XFF;
+		m_stFeatureEx.wDressColor = 0XFFFF;
+		m_stFeatureEx.wHairColor = 0XFFFF;
+        if(pstFeatureEx) m_stFeatureEx=*pstFeatureEx;
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -2783,11 +2784,12 @@ VOID CHero::OnTurn(LPPACKETMSG lpPacketMsg)
 	m_bLightSize = HIBYTE(lpPacketMsg->stDefMsg.wSeries);
 
 	fnDecode6BitBuf(lpPacketMsg->szEncodeData, (char*)&stCharDesc, sizeof(CHARDESC));
-	fnDecode6BitBuf(&lpPacketMsg->szEncodeData[_CHARDESCSIZE], (char*)&m_stFeatureEx , sizeof(FEATUREEX));
+    if(strlen(lpPacketMsg->szEncodeData)>=_CHARDESCSIZE+_FEATURESIZEEX)
+        fnDecode6BitBuf(&lpPacketMsg->szEncodeData[_CHARDESCSIZE], (char*)&m_stFeatureEx , sizeof(FEATUREEX));
 
-	if (strlen(lpPacketMsg->szEncodeData) > _CHARDESCSIZE)
+	if (strlen(lpPacketMsg->szEncodeData) > _CHARDESCSIZE+_FEATURESIZEEX)
 	{
-		nPos = fnDecode6BitBuf(&lpPacketMsg->szEncodeData[_CHARDESCSIZE +_FEATURESIZEEX], m_szName, sizeof(m_szName));
+		nPos = fnDecode6BitBuf(&lpPacketMsg->szEncodeData[_CHARDESCSIZE +_FEATURESIZEEX], m_szName, sizeof(m_szName)-1);
 		m_szName[nPos] = '\0';
 
 		CHAR* szClr = strrchr(m_szName, '/');
