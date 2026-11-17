@@ -66,7 +66,7 @@ step,name,target,action,params,expect
 | 登录 | `Login.csv` | 认证、选服、选角与进入地图 |
 | 角色 | `Character.csv`、`CharacterDelete.csv` | 创建角色、删除角色及持久化 |
 | 物品 | `Inventory.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
-| 技能 | `Skills.csv`、`SkillsCasting.csv` | 技能列表、快捷键、保存恢复及施法回包、扣蓝 |
+| 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复及施法回包、扣蓝 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
 
@@ -95,3 +95,5 @@ build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pi
 `Skills.csv` 验证已学技能列表、名称/等级/修炼值、F12绑定与占用替换、非法绑定拒绝、退出保存及重新登录恢复。当前不包含施法效果、技能学习、升级或删除。
 
 `SkillsCasting.csv` 经真实客户端与服务器验证火球术快捷键施法、两次扣蓝及回包、未绑定快捷键与蓝量不足拒绝。当前只覆盖地图坐标目标，不包含实体目标伤害、其他技能效果。`skill.cast` 参数为 `key`（1–12）、`x`、`y`（地图格坐标），复用客户端快捷键业务；`state.get` 的 `spell_reply_id` 记录已解析的施法回包技能，`cast_ready` 表示动作时序允许尝试施法，具体技能还需满足已绑定、蓝量等条件。等待断言失败期间，执行器仅在响应状态变化时输出 WAIT，便于定位回包和状态更新。
+
+`SkillsHealing.csv` 配置真实怪物攻击，将角色 HP 从 16 降到 12，再通过客户端治疗术恢复到 16、MP 从 18 降到 12；断言受击、施法和血蓝回包及服务器存活。fixture 中怪物攻击间隔为 60 秒，行动间隔为 500 毫秒，避免治疗期间连续伤害。服务端恢复数据库怪物刷新；缺少或不完整的 `Map/searchTable.tbl` 使用按距离排列的默认 15 圈搜索偏移。暂未覆盖怪物死亡后刷新、掉落、所有怪物类型与技能目标伤害。

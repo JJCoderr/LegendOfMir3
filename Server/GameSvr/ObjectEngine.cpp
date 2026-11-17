@@ -2110,7 +2110,7 @@ BOOL CCharObject::_Attack(WORD wHitMode, CCharObject* pObject)
 	if (nPower > 0)
 	{
 		nPower			= pObject->GetHitStruckDamage(nPower);
-		nWeaponDamage	= (rand() % 5) + 2 - m_AddAbility.WeaponStrong;
+		nWeaponDamage = m_pUserInfo ? (rand() % 5) + 2 - m_AddAbility.WeaponStrong : 0;
 	
 /*		if (m_wObjectType & _OBJECT_HUMAN)
 		{

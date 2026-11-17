@@ -2044,3 +2044,9 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 新增 Test/SkillsCasting.csv 及同名 fixture，skill.cast(key,x,y) 复用 CMyHero::CastShortcut 与键盘施法入口；RPC 报告已解析的 spell_reply_id 和动作时序 cast_ready。技能编号抽到 Shared/Mir3SkillIds.h，客户端原路径保留转发头，服务端 _SKILL_ 常量映射到同一 MIR3 枚举。服务端 SpellXY 按 CM_SPELL 的技能 ID 查找已学记录，并修正目标标识高低字组合。SM_HEALTHSPELLCHANGED 原来只更新旧 HP/MP 字段，现统一调用 OnHealthSpellChanged 同步能力字段和旧字段，修复回包扣蓝但客户端仍显示旧 MP 的问题。保留直接技能在动作锁期间的原有分发路径。
 
 Client/EIServer/Test 构建通过；最终施法 CSV 26 步通过，真实两次 CM_SPELL/SM_MAGICFIRE/SM_HEALTHSPELLCHANGED，MP 18→12→6，未绑定与低蓝拒绝。日志 out/csv-validation/skills-casting-verified.log。回归 Inventory 67 步、Skills 29 步通过，各自运行前 RpcServer 10 项通过；verify_runner.py 的 8 项通过。Test.exe 的 state.wait 仅在响应变化时输出 WAIT。实体目标伤害、其他技能效果和旧数据库技能表迁移仍未验证/完成，不能把本次火球术坐标场景视为全部战斗适配完成。
+
+## 怪物受击与治疗术联调
+
+新增 Test/SkillsHealing.csv / fixture，真实怪物攻击使 HP 16→12，客户端治疗术使 HP 12→16、MP 18→12，断言 SM_STRUCK、SM_MAGICFIRE、SM_HEALTHSPELLCHANGED 和服务端健康。恢复 ProcessMonster 中整段被注释的数据库刷新循环，跳过未配置刷新组的轮询；校验刷新地图/怪物数组索引。修复怪物名称错误使用行为类型二次索引种族数组。当前资源没有 searchTable.tbl，新增 LoadSearchTable：有效文件仍加载，缺失/短读时生成 15 圈共 960 个由近到远的搜索偏移，统一服务和独立窗口入口。
+
+恢复搜索后复现 EIServer 0xc0000005：怪物攻击误用 m_pUserInfo->GetWeapon，已将武器损耗计算限定到具有玩家记录的角色。去掉临时 MONDBG 诊断。EIServer 构建通过；SkillsHealing 最终 24 步通过（out/csv-validation/skills-healing-final.log，9016ms），SkillsCasting 回归 26 步通过（out/csv-validation/healing-casting-regression.log），两次 RpcServer 各 10 步通过。没有截图或物理输入测试。怪物死亡后刷新、掉落、各行为类型、实体技能伤害尚需后续验证；当前刷新配置仍使用旧服务端怪物数组索引语义，稀疏数据库 ID 映射尚未处理。

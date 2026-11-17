@@ -69,7 +69,6 @@ UINT WINAPI InitializingServer(LPVOID lpParameter)
 {
 	TCHAR		wszPath[128];
 	TCHAR		wszFullPath[256];
-	DWORD		dwReadLen;
 
 	ZeroMemory(wszPath, sizeof(wszPath));
 	ZeroMemory(wszFullPath, sizeof(wszFullPath));
@@ -84,13 +83,7 @@ UINT WINAPI InitializingServer(LPVOID lpParameter)
 	lstrcat(wszFullPath, _TEXT("\\"));
 	lstrcat(wszFullPath, _TEXT("searchTable.tbl"));
 
-	HANDLE hFile = CreateFile(wszFullPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-
-	if ( hFile != INVALID_HANDLE_VALUE )
-	{
-		ReadFile(hFile, &g_SearchTable, sizeof(g_SearchTable), &dwReadLen, NULL);
-	 	CloseHandle(hFile);
-	}
+    LoadSearchTable(wszFullPath);
 
 	CMapInfo* pMapInfo = (CMapInfo*)lpParameter;
 

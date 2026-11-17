@@ -80,13 +80,15 @@ CMonsterObject* AddCreature(CMirMap* pMap, int nX, int nY, int nMonRace, BOOL fS
 BOOL RegenMonster(CMonsterGenInfo* pMonGenInfo, int nCount)
 {
 	DWORD dwStart	= GetTickCount();
+    CMirMap* map=GetMap(pMonGenInfo->szMapName);
+    if(!map || pMonGenInfo->nMonIndex<0 || pMonGenInfo->nMonIndex>=g_nNumOfMonRaceInfo) return FALSE;
 
 	for (int i = 0; i < nCount; i++)
 	{
 		int nX = pMonGenInfo->nX - pMonGenInfo->nAreaX + (rand() % (pMonGenInfo->nAreaX * 2 + 1));
 		int nY = pMonGenInfo->nY - pMonGenInfo->nAreaY + (rand() % (pMonGenInfo->nAreaY * 2 + 1));
 
-		if (CMonsterObject* pMonsterObject = AddCreature(GetMap(pMonGenInfo->szMapName), nX, nY, pMonGenInfo->nMonIndex, TRUE))
+		if (CMonsterObject* pMonsterObject = AddCreature(map, nX, nY, pMonGenInfo->nMonIndex, TRUE))
 			pMonGenInfo->xMonsterObjList.AddNewNode(pMonsterObject);
 
 		if (GetTickCount() - dwStart > 3000/*ZenLimitTime*/)
@@ -119,6 +121,8 @@ UINT WINAPI ProcessMonster(LPVOID lpParameter)
 {
 	int		nCurrMonGen		= 0;
 	DWORD	dwCurrentTick	= GetTickCount();
+    DWORD dwLastGenTick=dwCurrentTick;
+    constexpr DWORD GenerationIntervalMs=200;
 
 	while (TRUE)
 	{
@@ -127,8 +131,8 @@ UINT WINAPI ProcessMonster(LPVOID lpParameter)
 			return 0L;
 		}
 
-		/* Generate Monster
-		if (GetTickCount() - dwLastGenTick > 200)
+		// Generate configured monsters.
+		if (g_nNumOfMonGenInfo > 0 && GetTickCount() - dwLastGenTick > GenerationIntervalMs)
 		{
 			dwLastGenTick = GetTickCount();
 
@@ -151,7 +155,6 @@ UINT WINAPI ProcessMonster(LPVOID lpParameter)
 				}
 			}
 		}
-		*/
 
 		// Execute Monster A.I
 		for (int i = 0; i < g_nNumOfMonGenInfo + 1; i++)

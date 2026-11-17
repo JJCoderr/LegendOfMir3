@@ -135,3 +135,23 @@ HANDLE							g_hThreadForComm = NULL;
 HANDLE							g_hSvrMsgEvnt = NULL;
 
 CWHList<CScripterObject*>		g_xScripterList;
+
+// Visit complete square rings, nearest first; radius r contains 4*r*(r+1) cells.
+void LoadSearchTable(LPCTSTR path)
+{
+    HANDLE file=CreateFile(path,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
+    if(file!=INVALID_HANDLE_VALUE) {
+        DWORD bytes=0;
+        const BOOL loaded=ReadFile(file,g_SearchTable,sizeof(g_SearchTable),&bytes,NULL);
+        CloseHandle(file);
+        if(loaded && bytes==sizeof(g_SearchTable)) return;
+    }
+    int index=0;
+    for(int radius=1;index<_MAX_SEARCHTABLE;++radius) {
+        const auto append=[&](int x,int y) {g_SearchTable[index++]={char(x),char(y)};};
+        for(int x=-radius;x<radius;++x) append(x,-radius);
+        for(int y=-radius;y<radius;++y) append(radius,y);
+        for(int x=radius;x>-radius;--x) append(x,radius);
+        for(int y=radius;y>-radius;--y) append(-radius,y);
+    }
+}

@@ -425,7 +425,7 @@ end;
 */
 void CMonsterObject::Initialize()
 {
-	memcpy(m_szName, g_pMonRaceInfo[g_pMonRaceInfo[m_nRace].wRaceIndex].szMonName, memlen(g_pMonRaceInfo[g_pMonRaceInfo[m_nRace].wRaceIndex].szMonName));
+	memcpy(m_szName, g_pMonRaceInfo[m_nRace].szMonName, memlen(g_pMonRaceInfo[m_nRace].szMonName));
 
 	MonGetRandomItems();
 
