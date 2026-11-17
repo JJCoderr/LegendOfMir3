@@ -70,6 +70,9 @@ public:
         if(groupPanel>=RolePresentationPreview::First && groupPanel<=RolePresentationPreview::Last) {
             connectionSelectionPreview=true;capturePath=RolePresentationPreview::Load(groupPanel);return;
         }
+        if(groupPanel>=CharacterInteractionPreview::ReturnCancelled && groupPanel<=CharacterInteractionPreview::ReturnCreated) {
+            connectionSelectionPreview=true;capturePath=CharacterInteractionPreview::LoadReturn(groupPanel);return;
+        }
         if(groupPanel>=CharacterInteractionPreview::NameAscii && groupPanel<=CharacterInteractionPreview::NameRestored) {
             connectionSelectionPreview=true;capturePath=CharacterInteractionPreview::LoadName(groupPanel);return;
         }
@@ -3832,6 +3835,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=mail-editor-restored")==0 ? 313 :
         strcmp(lpCmdLine,"--preview=mail-gift-restored")==0 ? 314 :
         strcmp(lpCmdLine,"--preview=consignment-editor-restored")==0 ? 315 :
+        strcmp(lpCmdLine,"--preview=creation-return-cancelled")==0 ? CharacterInteractionPreview::ReturnCancelled :
+        strcmp(lpCmdLine,"--preview=creation-return-created")==0 ? CharacterInteractionPreview::ReturnCreated :
         strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
         strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
         strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :

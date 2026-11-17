@@ -62,6 +62,7 @@ private:
     friend struct CharacterInteractionPreview;
     friend struct RolePresentationPreview;
     void OpenCreation();
+    void CloseCreationEditor();
     void ExitSelection();
     bool m_offline=false;
     std::string m_lastUrl;

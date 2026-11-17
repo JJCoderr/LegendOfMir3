@@ -33,3 +33,10 @@
 参考hud_view.cpp 6112附近删除框使用Tab切换、Enter/Space执行当前按钮；7043附近创建姓名与删除输入保持编辑焦点。CLIENT原先沿用聊天转发，Escape/Tab夺焦，删除空格作为文本插入；创建空姓名Enter还隐藏输入框。ChatEditProc现按_CHAR_SEL_PROC转发这些控制键到CharacterProcess，保留编辑焦点，删除弹窗Space由提示框处理。普通姓名字符继续交给EDIT。新增HasNotice只读查询避免暴露私有提示框。
 
 创建姓名报告增加7项真实EDIT消息检查：创建Escape/Tab焦点、空Enter、删除Escape/Tab焦点、Space取消当前按钮、Enter取消当前按钮。共姓名19+角色交互15+选角弹窗23+登录27+游戏模态27=111检查通过。七目标构建out/selection-editor-build.log通过，6页截图在out/selection-editor；创建中文与删除确认图已查看，所有自启预览停止。无新增编号，下一310。真实创建/删除服务端请求联调仍未开展。
+
+
+## 2026-11-17 关闭创建页的输入状态清理
+
+参考close_character_creation清空输入、释放焦点、隐藏并恢复普通字节限制。CLIENT取消和SM_NEWCHR_SUCCESS原先仅隐藏EDIT，遗留姓名和13字节限制。新增CloseCreationEditor并接入这两条实际返回路径：清空EDIT与旧输入缓存、取消密码掩码、恢复90字节、隐藏并交回主窗焦点、清除按下状态。
+
+新增316 creation-return-cancelled、317 creation-return-created（成功为离线注入回复），下一318。11项检查覆盖两路径清理、重开13字节、收到列表后保持隐藏、再次创建恢复输入。加姓名19、交互15、选角弹窗23、列表22，共90检查通过。七目标构建creation-return-final.log通过。六页新鲜截图在out/creation-return，取消/成功均显示返回选角的等待页且无残留编辑器；两张已查看。最后仅补列表回复测试，重跑返回模式，生产实现未再变化。所有自启预览停止；不代表服务器创建成功或原版返回影片已验收。

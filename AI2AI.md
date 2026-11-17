@@ -1668,3 +1668,9 @@ Interface鼠标按下/抬起/移动优先模态，键盘模态先于行会编辑
 - GameInter 1241..1246为80×32，现有命中矩形正确。参考login_input在按钮内释放关闭，原CLIENT错误要求成对点击；登录改传releaseOnly=true，游戏仍保留成对/移出取消。
 - 新7边界与恢复检查；登录34+选角23+游戏鼠标9=66通过。七目标构建login-notice-pointer-build.log，5页新鲜图out/login-notice-pointer，错误/计费两图已查看。自启预览全停。
 - 无新编号，下一316。真实登录链路仍未联调。
+
+
+## 2026-11-17 创建返回选角输入状态
+- 新CloseCreationEditor接取消和SM_NEWCHR_SUCCESS，清文本/缓存/密码、恢复90字节、释放焦点并隐藏，清按钮按下；符合参考close_character_creation。
+- 新316取消返回/317离线成功返回，下一318。返回11+姓名19+交互15+选角23+列表22=90检查通过。七目标构建creation-return-final.log通过，6页截图out/creation-return；两张等待页已查看，无残留姓名。
+- 最后仅补列表回复测试重跑返回模式。自启预览全停。成功回复为离线注入，不代表真实创建或原影片验证。

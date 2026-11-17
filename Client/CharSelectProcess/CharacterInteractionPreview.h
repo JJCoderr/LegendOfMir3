@@ -81,6 +81,38 @@ struct CharacterInteractionPreview {
         if(report) fclose(report);
         return mode==NameAscii?"creation-name-ascii.bmp":mode==NameChinese?"creation-name-chinese.bmp":"creation-name-restored.bmp";
     }
+    enum {ReturnCancelled=316,ReturnCreated=317};
+    static const char* LoadReturn(int mode) {
+        LoginVisual::ResizeCanvas(640,480);
+        auto& p=g_xChrSelProc;p.Preview("create");const HWND edit=g_xChatEditBox.GetSafehWnd();
+        FILE* report=fopen("creation-return-check.txt","wb");
+        const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+        const auto leave=[&](bool success) {
+            SetWindowTextA(edit,"´«ÆæÓÂÊ¿");strcpy(g_xChatEditBox.m_szInputMsg,"stale_name");p.m_createPressed=1;
+            if(success) SelectionDialogPreview::Reply(SM_NEWCHR_SUCCESS);
+            else p.OnLButtonUp(0,MAKELPARAM(500,450));
+        };
+        leave(false);
+        check("cancel_clears_text",GetWindowTextLengthA(edit)==0 && !g_xChatEditBox.m_szInputMsg[0]);
+        check("cancel_hides_releases_focus",!IsWindowVisible(edit) && GetFocus()!=edit);
+        check("cancel_restores_limit",SendMessage(edit,EM_GETLIMITTEXT,0,0)==90);
+        check("cancel_clears_press",p.m_createPressed==-1 && p.IsWaiting());
+        p.OpenCreation();check("reopen_name_limit",SendMessage(edit,EM_GETLIMITTEXT,0,0)==SelectionDialog::NameBytes && GetWindowTextLengthA(edit)==0 && GetFocus()==edit);
+        p.DeleteProc();p.Preview("create");leave(true);
+        check("success_clears_text",GetWindowTextLengthA(edit)==0 && !g_xChatEditBox.m_szInputMsg[0]);
+        check("success_hides_releases_focus",!IsWindowVisible(edit) && GetFocus()!=edit);
+        check("success_restores_limit",SendMessage(edit,EM_GETLIMITTEXT,0,0)==90 && !SendMessage(edit,EM_GETPASSWORDCHAR,0,0));
+        check("success_clears_press",p.m_createPressed==-1 && p.IsWaiting() && !p.m_bCreatePending);
+        p.RenderScene(0);p.RenderScene(0);
+        SelectionDialogPreview::Reply(SM_QUERYCHR);p.AdvanceRoster(SelectionRoster::Delay);
+        check("roster_reply_keeps_editor_hidden",!p.IsWaiting() && !IsWindowVisible(edit) && GetWindowTextLengthA(edit)==0);
+        p.OnKeyDown(VK_RETURN,0);p.OpenCreation();
+        check("create_after_reply_restores_input",GetFocus()==edit && IsWindowVisible(edit) && SendMessage(edit,EM_GETLIMITTEXT,0,0)==SelectionDialog::NameBytes);
+
+        p.DeleteProc();p.Preview("create");leave(mode==ReturnCreated);
+        if(report) fclose(report);
+        return mode==ReturnCreated?"creation-return-created.bmp":"creation-return-cancelled.bmp";
+    }
     static const char* Load(int mode) {
         LoginVisual::ResizeCanvas(640,480);if(mode==First) Checks();
         auto& p=g_xChrSelProc;p.Preview(mode==First?"select-three":"create");

@@ -405,7 +405,7 @@ LRESULT CCharacterProcess::OnLButtonUp(WPARAM wParam, LPARAM lParam)
                     g_xSound.UpdateLobbyAudio(CMirSound::LobbyPage::None,0);
                     m_Progress = PRG_CREA_TO_SEL;
                     m_xBGround.SetRenderState(_RENDER_AVI_OUT);
-                    ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
+                    CloseCreationEditor();
                     RequestRoster();
                 } else if (i >= 2) {
                     m_SelectJob = (BYTE)(i - 2);
@@ -500,7 +500,7 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
             g_xSound.UpdateLobbyAudio(CMirSound::LobbyPage::None,0);
             m_Progress = PRG_CREA_TO_SEL;
             m_xBGround.SetRenderState(_RENDER_AVI_OUT);
-            ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
+            CloseCreationEditor();
             RequestRoster();
 			break;
 		}
@@ -940,6 +940,16 @@ VOID CCharacterProcess::SetErrorMessage(INT message,CHAR* text) {
 }
 BOOL CCharacterProcess::MessageBoxProcess(LPARAM parameter) {
     FinishNotice(m_xMsgBox.OnButtonUp(POINT{LOWORD(parameter),HIWORD(parameter)},true));return TRUE;
+}
+
+void CCharacterProcess::CloseCreationEditor()
+{
+    const HWND edit=g_xChatEditBox.GetSafehWnd();
+    SetWindowTextA(edit,"");g_xChatEditBox.m_szInputMsg[0]=0;
+    SendMessage(edit,EM_SETPASSWORDCHAR,0,0);
+    g_xChatEditBox.SetLimitText(90);
+    ShowWindow(edit,SW_HIDE);SetFocus(g_xMainWnd.GetSafehWnd());
+    m_createPressed=-1;
 }
 
 void CCharacterProcess::OpenCreation()
