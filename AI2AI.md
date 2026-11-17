@@ -1612,3 +1612,10 @@ SelectionDialog集中CmList219..232，创建失败按nRecog映射224/226/232，�
 ## 2026-11-17：模态提示跨面板输入与EDIT遮挡完整批次
 
 Interface鼠标按下/抬起/移动优先模态，键盘模态先于行会编辑器，修复任务/音量/快捷/骑乘捕获抢事件。实图发现GuildEditor原生EDIT盖住提示，ShowNotice即时隐藏并交焦点主窗，Editor.Show按模态同步隐藏/恢复焦点且保留草稿。七目标增量通过；新增14+任务14+行会17+选项10+音效15+键盘34+退出30=134全过。预览301..303，下一304；out/modal-{scroll,audio,guild-editor}.png均查看，测试文本CmList4000仅离线夹具。详见modal-input-migration-audit.md。进程全停止，真实网关未操作，52页旧版本索引不覆盖。
+
+
+## 2026-11-17 模态弹窗生命周期修正
+- 纠正1968a17仅冻结后台捕获的推断：Godot open_group_dialog 先 cancel_pointer_interactions。CLIENT新增 PrepareModal，接普通提示、输入、退出、寄售确认；取消GUI临时拖动/按下并释放焦点/捕获，保留业务状态和草稿。
+- Escape按参考吞键不关闭；Tab选取消再Enter关闭。新增测试初始错误预期已修正。
+- 七目标构建通过；模态21+任务14+行会17+选项10+音效15+键盘34+退出30=141检查通过。11页截图 out/modal-lifecycle；最后仅调整测试后重跑模态。三个叠放截图已查看。所有自启预览已停。
+- 文档 Client/docs/modal-input-migration-audit.md 已纠正旧说明。下一预览304。整体GUI仍需继续核查，原电影资源仍缺，真实服务器流程留后。

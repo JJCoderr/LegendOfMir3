@@ -31,6 +31,7 @@ public:
     bool ReleaseEquipment(POINT point,DWORD now);
     bool RequestTakeOff();
     bool ApplyEquipmentReply(WORD opcode);
+    void CancelPointer() { m_nativeClosePressed=false; }
     bool ClosePressed() const { return m_nativeClosePressed; }
 	CHAR				m_szEquipItemIdx[_EQUIP_MAX_CELL][12];
 	ITEMSET				m_stEquipItem[_EQUIP_MAX_CELL];

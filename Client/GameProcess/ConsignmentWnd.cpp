@@ -337,6 +337,7 @@ void CConsignmentWnd::Activate(ConsignmentLayout::Action action,DWORD now)
         static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
         confirmation=std::move(request);confirmationPending=true;
         ui.m_nIdxMsgBox=dialog;ui.m_xMsgBox.SetOrigin(220,112,false);
+        ui.PrepareModal();
         ui.m_xMsgBox.ShowMessageBox(captions.Get(caption).c_str(),MSG_BTN_YESNO,ConfirmationFrame);
         return;
     }

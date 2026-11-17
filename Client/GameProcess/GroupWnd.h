@@ -14,6 +14,7 @@ class CGroupWnd : public CGameWnd
 public:
     static constexpr WORD AddMemberFailed=664,DeleteMemberFailed=665;
     bool Receive(const _TDEFAULTMESSAGE& header,const char* encoded);
+    void CancelPointer() { m_pressed=-1; }
     int PressedButton() const { return m_pressed; }
 	CPDLList<CGroupMember>	m_xGroupList;
 

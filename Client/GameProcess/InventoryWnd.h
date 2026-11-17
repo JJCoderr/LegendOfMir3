@@ -46,6 +46,7 @@ public:
     bool RequestUse(DWORD now);
     bool ApplyUseReply(WORD opcode,WORD remaining);
     bool RestoreItems(const std::vector<CItem>& items);
+    void CancelPointer() { m_closePressed=false; m_scrollCaptured=false; service.pressed=false; SetInvenBtnInit(); }
     bool ClosePressed() const { return m_closePressed; }
 	ITEMSET		m_stInventoryItem[_MAX_INVEN_ITEM];
 	ITEMSET		m_stBeltItem[_MAX_BELT_ITEM];

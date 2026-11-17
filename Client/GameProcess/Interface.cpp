@@ -1666,10 +1666,42 @@ case _WND_ID_STATUS:
 	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
+void CInterface::PrepareModal()
+{
+    m_bMoveFocusedWnd=FALSE;
+    m_xScrlBar.m_bGrapsed=FALSE;
+    for(auto& button:m_xInterBtn) button.SetBtnState(_BTN_STATE_NORMAL);
+    m_minimap.dragging=m_minimap.releaseCaptured=false;
+    m_portraitEntryPressed=false;
+    m_xPortraitWnd.scrolling=false; m_xPortraitWnd.pressed=-1;
+    m_xInventoryWnd.CancelPointer(); m_xStatusWnd.CancelPointer(); m_xGroupWnd.CancelPointer();
+    m_xQuickWnd.closePressed=m_xQuickWnd.backgroundPressed=false;
+    m_xExchangeWnd.captured=-1; m_xExchangeWnd.confirmPressed=m_xExchangeWnd.headerPressed=false;
+    m_xHorseWnd.pressed=-1;
+    m_xQuestWnd.pressed=-1; m_xQuestWnd.scrollCaptured=false;
+    m_xOptionWnd.SetStatusBtnInit(); m_xOptionWnd.m_audioDrag=-1;
+    m_xGuildWnd.m_pressed=-1; m_xGuildWnd.m_scrollCaptured=false;
+    m_xGuildEditor.dragging=false; m_xGuildEditor.pressed=-1;
+    m_xSkillWnd.m_skillPressed=-1; m_xSkillWnd.m_skillScrollCaptured=false;
+    m_xNPCWnd.closePressed=false; m_xNPCWnd.arrowPressed=0; m_xNPCWnd.pressed=-1;
+    m_xStoreWnd.pressed=-1; m_xStoreWnd.scrollCaptured=false;
+    m_xMailWnd.dragging=m_xMailWnd.captured=m_xMailWnd.scrolling=m_xMailWnd.pressedCheck=false;
+    m_xMailWnd.pressed=m_xMailWnd.pressedRow=-1; m_xMailWnd.SyncEditors(false);
+    for(auto* panel:{&m_xConsignmentWnd,&m_xConsignmentRegistration}) {
+        panel->captured=panel->dragging=false; panel->pressed=panel->pressedRow=-1; panel->SyncEditors(false);
+    }
+    m_xSiegeWnd.captured=m_xSiegeWnd.dragging=m_xSiegeWnd.entryPressed=false; m_xSiegeWnd.pressed=-1;
+    if(GetCapture()==g_xMainWnd.GetSafehWnd()) ReleaseCapture();
+    if(m_xGuildEditor.m_bActive) ShowWindow(m_xGuildEditor.edit,SW_HIDE);
+    ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
+    SetFocus(g_xMainWnd.GetSafehWnd());
+}
+
 void CInterface::OpenExitDialog(int action)
 {
     if(g_bProcState!=_GAME_PROC || g_xGameProc.m_exitTransition.active || !g_xGameProc.CheckExitAllowed(GetTickCount())) return;
     static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+    PrepareModal();
     m_nIdxMsgBox=action;
     m_xMsgBox.SetOrigin(220,112,false);
     m_xMsgBox.ShowMessageBox(captions.Get(action==ExitFlow::ProgramDialog?ExitFlow::ProgramCaption:ExitFlow::CharacterCaption).c_str(),MSG_BTN_YESNO,1240);
@@ -1681,16 +1713,17 @@ void CInterface::ShowNotice(int message)
 {
     static CLoginMessages captions;
     static const bool loaded=captions.Load("./CmList.dat");
+    PrepareModal();
     m_nIdxMsgBox=0;
     m_xMsgBox.SetOrigin(220,112,false);
     m_xMsgBox.ShowMessageBox(captions.Get(message).c_str(),MSG_BTN_OK,1240);
-    if(m_xGuildEditor.m_bActive) {ShowWindow(m_xGuildEditor.edit,SW_HIDE);SetFocus(g_xMainWnd.GetSafehWnd());}
 }
 
 void CInterface::OpenNameDialog(int action)
 {
     static CLoginMessages captions;
     static const bool loaded = captions.Load("./CmList.dat");
+    PrepareModal();
     m_nIdxMsgBox = action;
     m_xMsgBox.SetOrigin(220,112,true);
     std::string prompt = action==4 ? "'"+m_xGuildWnd.m_name+"' "+captions.Get(4001) :
