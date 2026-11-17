@@ -57,7 +57,34 @@ step,name,target,action,params,expect
 
 日志包含时间、步骤编号、目标端、动作、实际响应、PASS/FAIL、总数和耗时。首个失败立即停止，退出码为 1；全部通过为 0。正常请求参数不写日志。辅助程序另存 runtime.log、server-preflight.log、result.json；场景执行到 protocol.get 时生成 protocol-coverage.json。服务端当前 state.get 反映服务和网络连接状态，具体业务持久化仍由数据库断言验证。
 
-测试脚本按子系统组织：登录使用 `Login.csv`，物品使用 `Inventory.csv`；后续角色、聊天、商店、战斗各自新增脚本。目标端由每行 target 决定，不按客户端/服务器分业务目录。RPC 基础测试独立于业务场景。
+## 子系统划分
+
+业务 CSV 统一放在根目录 `Test/`，以子系统名称开头；一个子系统可以按场景拆成多个脚本，不要求把所有用例塞入一个文件。每个脚本可以连续调用 Client、Server 和 Database，完成一次完整联调。
+
+| 子系统 | CSV 脚本 | 测试范围 |
+| --- | --- | --- |
+| 登录 | `Login.csv` | 认证、选服、选角与进入地图 |
+| 角色 | `Character.csv`、`CharacterDelete.csv` | 创建角色、删除角色及持久化 |
+| 物品 | `Inventory.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
+| 技能 | `Skills.csv` | 技能列表、快捷键、保存与恢复 |
+| RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
+| 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
+
+后续场景使用 `<子系统><场景>.csv`，例如 `SkillsCasting.csv`、`ChatChannel.csv`、`ShopBuySell.csv`、`CombatDamage.csv`、`NpcDialog.csv`。这些名称是扩展约定，不表示对应场景已经实现或验证。
+
+编写规则：
+
+- 每个业务脚本从准备好的初始状态开始，写清登录、进图等必要前置步骤，再执行本子系统的动作、结果断言、失败分支和持久化检查。
+- 数据种子放在同目录的同名 `.fixture.csv` 中，例如 `Inventory.fixture.csv`；辅助启动程序按文件名自动配对。
+- `step` 是脚本内稳定、严格递增的步骤编号；新增脚本建议以 10 为间隔，便于插入检查。既有脚本保留编号，避免改变区间参数的含义。
+- 动作返回 `submitted` 后，另用 `state.wait` 或数据库断言验证实际结果；服务器 `ready` 只能证明服务可用，不能代替业务结果断言。
+- 一条长场景允许在客户端动作后立即查询服务器；`--from` / `--to` 选择该文件的步骤区间，`--log` 指定本次日志。截取中间区间时，调用者必须先满足该区间的前置状态。
+
+例如执行物品子系统的指定区间：
+
+```powershell
+build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pid 5678 --database out/runtime/mir3.sqlite3 --from 20 --to 40 --log out/logs/inventory-20-40.log
+```
 
 执行器自身验证：`python Test/verify_runner.py`。Runner 目录含用于验证失败处理的预期失败 CSV，应通过该验证程序执行。
 

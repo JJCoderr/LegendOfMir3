@@ -2034,3 +2034,7 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 首轮Skills场景证明UI本地绑定改变但DB保持旧值：ProcessUserMessage默认分派丢弃wParam快捷键且把技能ID放错参数。为CM_MAGICKEYCHANGE明确传nRecog技能ID及wParam键值，复测保存/重进一致。
 - Skills.csv及fixture使用两条技能定义和学习记录，覆盖已学列表、非法ID/键位、F12绑定/占用冲突清理、DB级别/键值/修炼断言和重进。Client/EIServer Release构建通过；rpc-8y5uoicq的29步骤+10服务端基础检查全部通过，场景8.890秒，日志out/csv-validation/skills-final.log。
 - 未验证新增技能包实际学习流程、施法、升级、移除或大批量列表；服务端MagicHandler的旧技能常量与客户端Mir3SkillIds存在编号差异，施法效果映射仍需核对，不能以本轮列表/持久化通过宣称整个技能适配完成。
+
+## CSV 子系统组织约定
+
+业务脚本统一放在根 Test，按子系统及场景命名；同一场景可交替调用 Client/Server/Database。Test/README.md 已列出登录、角色、物品、技能及 RPC/Runner 基础检查，并说明同名 fixture、稳定 step 编号、区间前置状态和自定义日志。已检查七个现有子系统脚本的表头、步骤编号、目标端及业务 fixture 配对；此次只完善组织说明，未修改业务实现。
