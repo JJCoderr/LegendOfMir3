@@ -154,6 +154,7 @@ VOID CGameProcess::DeleteProc()
 
 	m_xActorList.ClearAllNodes();
 	m_xMagicList.ClearAllNodes();
+    m_levelEffects.Clear();m_weaponTraining=0;
 	m_xGroundMagicList.ClearAllNodes();
 	m_stMapItemList.ClearAllNodes();
 
@@ -270,6 +271,7 @@ VOID CGameProcess::LoadMapChanged(CHAR* szMap)
 	m_xMap.LoadMapData(szMap);
     m_xInterface.m_minimap.MapChanged();
     m_xInterface.m_xSiegeWnd.ClearObjects();
+    m_levelEffects.Clear();
     m_xInterface.m_targetDisplay.Clear();
 
 	ZeroMemory(m_stMemMappedID, sizeof(MEMMAPPEDID)*_VIEW_CELL_X_COUNT* _VIEW_CELL_Y_COUNT);
@@ -843,6 +845,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 	if ( m_bRender )
 	{
 		m_xLightFog.ClearSavedLightColor();
+        m_levelEffects.Advance(nLoopTime);m_levelEffects.Light();
 
 		m_xMyHero.UpdateMotionState(nLoopTime, bIsMoveTime);
 		// ªÊ÷∆µÿÕº.
@@ -966,6 +969,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 		}
 
 		DropItemShow();
+        m_levelEffects.Draw();
 //		RenderShine(nLoopTime);
 
 		if ( m_xMagicList.GetCounter() != 0 )
@@ -2949,32 +2953,12 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
             case SM_ABILITY:
                 ReceiveAbility(tdm,pszMsg+DEFBLOCKSIZE);
                 break;
-			case SM_WINEXP:
-			{
-				CHAR szExp[MAX_PATH];
-				
-				m_xMyHero.m_stAbility.dwExp = tdm.nRecog;
-				
-				sprintf(szExp, "You gained %d experience.", tdm.wParam);
-				
-				DWORD dwFont = GetChatColor(_CHAT_COLOR4);
-				DWORD dwBack = GetChatColor(_CHAT_COLOR3);
-				m_xInterface.MsgAdd(dwFont, dwBack, szExp);
-
-				break;
-			}
-			case SM_SUBABILITY:
-			{
-				m_xMyHero.m_stSubAbility.wAntiMagic		= LOWORD(LOBYTE(tdm.nRecog));	
-				m_xMyHero.m_stSubAbility.bHitPoint		= LOBYTE(tdm.wParam);	
-				m_xMyHero.m_stSubAbility.bSpeedPoint	= HIBYTE(tdm.wParam);	
-				m_xMyHero.m_stSubAbility.bAntiPoison	= LOBYTE(tdm.wTag);	
-				m_xMyHero.m_stSubAbility.bPoisonRecover = HIBYTE(tdm.wTag);				
-				m_xMyHero.m_stSubAbility.bHealthRecover = LOBYTE(tdm.wSeries);
-				m_xMyHero.m_stSubAbility.bSpellRecover	= HIBYTE(tdm.wSeries);
-
-				break;
-			}
+            case SM_WINEXP:
+            case SM_SUBABILITY:
+            case SM_LEVELUP:
+            case SM_WEIGHTCHANGED:
+                ReceiveProgression(tdm);
+                break;
 			case SM_SENDMYMAGIC:
 			{
 				delete[] m_xInterface.m_xSkillWnd.m_pstMyMagic; m_xInterface.m_xSkillWnd.m_pstMyMagic=NULL;
@@ -3369,14 +3353,6 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				}	
 				break;
 			}
-			case SM_LEVELUP:
-			{
-				m_xMyHero.m_stAbility.dwExp = tdm.nRecog;
-				m_xMyHero.m_stAbility.bLevel = tdm.wParam;
-
-				m_xInterface.m_xClientSysMsg.AddSysMsg("Level up!");
-				break;
-			}
 			case SM_DAYCHANGING:
 			{
 				m_bDayState = tdm.wParam;
@@ -3497,13 +3473,6 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			case SM_GOLDCHANGE:
 			{
                 m_xInterface.m_xInventoryWnd.UpdateGold(UINT(tdm.nRecog));
-				break;
-			}
-			case SM_WEIGHTCHANGED:
-			{
-				m_xMyHero.m_stAbility.wWeight	  = tdm.nRecog;
-				m_xMyHero.m_stAbility.bWearWeight = tdm.wParam;
-				m_xMyHero.m_stAbility.bHandWeight = tdm.wTag;											
 				break;
 			}
 			case SM_RIDEHORSE:
@@ -4094,6 +4063,7 @@ VOID CGameProcess::OnSvrMsgNewMap(_TDEFAULTMESSAGE	*ptdm, char *pszMapName)
 	m_xMap.LoadMapData(szMapName);
     m_xInterface.m_minimap.MapChanged();
     m_xInterface.m_xSiegeWnd.ClearObjects();
+    m_levelEffects.Clear();
     m_xInterface.m_targetDisplay.Clear();
 
 	switch ( m_bFogState )
@@ -4271,4 +4241,52 @@ bool CGameProcess::ReceiveAbility(const _TDEFAULTMESSAGE& header,const char* enc
         status.m_elementValues[2][i]=bytes[WeaknessElements+i];
     }
     return true;
+}
+
+bool CGameProcess::ReceiveProgression(const _TDEFAULTMESSAGE& header)
+{
+    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+    const auto post=[&](const std::string& text,int background=_CHAT_COLOR4) {
+        m_xInterface.MsgAdd(GetChatColor(_CHAT_COLOR3),GetChatColor(background),const_cast<char*>(text.c_str()));
+    };
+    auto& ability=m_xMyHero.m_stAbility;
+    switch(header.wIdent) {
+    case SM_WINEXP: {
+        ability.dwExp=DWORD(header.nRecog);
+        if(header.wTag) m_weaponTraining=LOBYTE(header.wSeries)?header.wTag:WORD(m_weaponTraining+header.wTag);
+        if(HIBYTE(header.wSeries)) post(captions.Get(Progression::ExtraCaption));
+        std::string text=captions.Get(header.wTag?Progression::TrainingCaption:Progression::ExperienceCaption);
+        size_t begin=0;const unsigned values[]={header.wParam,header.wTag};
+        for(int i=0;i<(header.wTag?2:1);++i) {
+            const auto at=text.find("%d",begin);if(at==text.npos) break;
+            const auto value=std::to_string(values[i]);text.replace(at,2,value);begin=at+value.size();
+        }
+        post(text);return true;
+    }
+    case SM_SUBABILITY: {
+        auto& value=m_xMyHero.m_stSubAbility;
+        value.wAntiMagic=LOBYTE(header.nRecog);value.bHitPoint=LOBYTE(header.wParam);value.bSpeedPoint=HIBYTE(header.wParam);
+        value.bAntiPoison=LOBYTE(header.wTag);value.bPoisonRecover=HIBYTE(header.wTag);
+        value.bHealthRecover=LOBYTE(header.wSeries);value.bSpellRecover=HIBYTE(header.wSeries);return true;
+    }
+    case SM_WEIGHTCHANGED:
+        ability.wWeight=WORD(header.nRecog);ability.bWearWeight=LOBYTE(header.wParam);ability.bHandWeight=LOBYTE(header.wTag);return true;
+    case SM_LEVELUP: {
+        CActor* actor=nullptr;
+        if(header.wSeries==0) {ability.dwExp=DWORD(header.nRecog);ability.bLevel=LOBYTE(header.wParam);actor=&m_xMyHero;}
+        else if(header.wSeries==1) {
+            m_xActorList.MoveCurrentToTop();
+            for(int i=0;i<m_xActorList.GetCounter();++i) {
+                auto* candidate=m_xActorList.GetCurrentData();m_xActorList.MoveNextNode();
+                if(candidate->m_dwIdentity==DWORD(header.nRecog) && (candidate->m_stFeature.bGender==_GENDER_MAN || candidate->m_stFeature.bGender==_GENDER_WOMAN)) {actor=candidate;break;}
+            }
+        } else return true;
+        if(!actor) return true;
+        actor->SetMotionFrame(_MT_ATTACKMODE,Progression::LevelDirection);
+        m_levelEffects.Start({actor->m_wPosX,actor->m_wPosY});
+        if(header.wSeries==0) post(captions.Get(Progression::LevelCaption),_CHAT_COLOR8);
+        return true;
+    }
+    default:return false;
+    }
 }

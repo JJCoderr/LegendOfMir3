@@ -42,6 +42,7 @@ set(MIR3_CLIENT_SOURCES
     GameProcess/ExchangeWnd.cpp
     GameProcess/GameBtn.cpp
     GameProcess/GameProc.cpp
+    GameProcess/LevelEffects.cpp
     GameProcess/GameWnd.cpp
     GameProcess/GroupPopWnd.cpp
     GameProcess/GroupWnd.cpp

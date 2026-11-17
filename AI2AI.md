@@ -1284,3 +1284,11 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 新AbilityWire.h命名字段；原始扩展28字节与4头选项保留，StatusWnd::Init清空。强弱元素signed显示保持，不触发伤害跳字。
 - clean Client及七目标构建通过；新增13项+相关63项共76项全1。190 ability-wire截图out/ability-wire.png已核对；下一空闲191。
 - 详见Client/docs/ability-wire-evidence.md。Server/GameSvr/ObjectPlayer.cpp两处仍直接发送CObjectAbility，顺序及五元素与原版不同，后续服务端阶段必须显式序列化；没有将当前截图当作实服联通。全GUI与登录目标保持进行中。
+
+### 属性增量及原生升级反馈（2026-11-17）
+- ReceiveProgression统一接经验44、升级45、负重及附加属性；经验按1459/1460/1513中文白字红底，武器修炼WORD按累加/覆盖/零不改，完整能力消息不覆盖修炼值。
+- 升级wSeries0本地、1远端人物、其他忽略；动作7/方向4，本地1469通知。修正本地骑乘动作结束错误回站立。
+- 新LevelEffects.h/.cpp从MInfo.dat读取422/库137，加载MagicEx.wil，原地多实例、严格帧间隔、末帧光尾和回收。Native DrawSelectionFrame增加Screen混合与RGB染色；照明接CLightFog，换图/退出清理。
+- 原音效14222已请求，当前SoundList.wwl没有映射，无法验收可听输出。运行目录缺失MInfo已从原资源复制；部署需此文件。
+- clean Client87/87及全部七目标通过；新增15项+相关60项共75项全1。191 progression、192 level-tail截图out/progression.png、level-tail.png已检查；下一空闲193。
+- 文档Client/docs/progression-evidence.md。预览特效固定两屏幕位置便于检查，实服实际地图投影；夜间实景/全部移动边界/实服时序仍待验证，目标未完成。

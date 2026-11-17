@@ -4419,7 +4419,9 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 					}
 				case _MT_ATTACKMODE:
 					{
-						if ( !m_bWarMode )
+						if ( m_stFeatureEx.bHorse != _HORSE_NONE )
+                            SetMotionFrame(_MT_HORSESTAND, m_bCurrDir);
+                        else if ( !m_bWarMode )
 							SetMotionFrame(_MT_STAND, m_bCurrDir);
 						else
 						{

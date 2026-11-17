@@ -12,6 +12,7 @@
 
 #ifndef _GAMEPROC_H
 #define	_GAMEPROC_H
+#include "LevelEffects.h"
 
 
 
@@ -32,6 +33,9 @@ protected:
 	VOID	OnSvrMsgHear(_TDEFAULTMESSAGE *ptdm, char *pszMsg);
 
 public:
+    CLevelEffects m_levelEffects;
+    WORD m_weaponTraining=0;
+    bool ReceiveProgression(const _TDEFAULTMESSAGE& header);
     bool ReceiveAbility(const _TDEFAULTMESSAGE& header,const char* encoded);
 	 CGameProcess();
 	~CGameProcess();

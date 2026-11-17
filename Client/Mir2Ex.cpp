@@ -2,7 +2,7 @@
 #include "GameProcess/MailWire.h"
 #include "GameProcess/AccessoryHintIds.h"
 #include "GameProcess/ItemHintStyle.h"
-namespace { constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -31,6 +31,7 @@ BYTE				g_bProcState = _LOGIN_PROC;
 class CHudPreviewProcess : public CWHDefProcess {
     POINT mouse = {0,0};
     int damagePreview=0;
+    bool levelPreview=false;
     const char* capturePath = NULL;
 public:
     void OnConnectToServer() override {}
@@ -66,7 +67,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewAbility) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewLevelTail) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1888,6 +1889,51 @@ public:
             if(groupPanel==PreviewMailNotify) {mouse=badgePoint;capturePath="mail-notification.bmp";}
         }
 
+        if(groupPanel==PreviewProgression || groupPanel==PreviewLevelTail) {
+            auto& process=g_xGameProc;auto& ui=process.m_xInterface;auto& effects=process.m_levelEffects;
+            const auto receive=[&](WORD opcode,int recognition,WORD param,WORD tag,WORD series) {
+                _TDEFAULTMESSAGE header={};fnMakeDefMessage(&header,opcode,recognition,param,tag,series);return process.ReceiveProgression(header);
+            };
+            hero.m_stAbility.dwMaxExp=100000;hero.m_stAbility.wMaxWeight=200;hero.m_stAbility.bMaxWearWeight=40;hero.m_stAbility.bMaxHandWeight=15;
+            process.m_weaponTraining=65530;receive(SM_WINEXP,12000,250,10,0);
+            const bool experience=hero.m_stAbility.dwExp==12000 && hero.m_stAbility.dwMaxExp==100000 && process.m_weaponTraining==4;
+            receive(SM_WINEXP,15000,3000,75,0x0101);const bool training=process.m_weaponTraining==75;
+            receive(SM_WINEXP,16000,1000,0,1);const bool zero=process.m_weaponTraining==75;
+            receive(SM_WEIGHTCHANGED,0x1007B,0x102,0x103,0);
+            const bool weight=hero.m_stAbility.wWeight==123 && hero.m_stAbility.bWearWeight==2 && hero.m_stAbility.bHandWeight==3 && hero.m_stAbility.wMaxWeight==200 && hero.m_stAbility.bMaxWearWeight==40;
+            receive(SM_SUBABILITY,0x1234,MAKEWORD(15,20),MAKEWORD(3,4),MAKEWORD(5,6));const auto& sub=hero.m_stSubAbility;
+            const bool bonuses=sub.wAntiMagic==0x34 && sub.bHitPoint==15 && sub.bSpeedPoint==20 && sub.bAntiPoison==3 && sub.bPoisonRecover==4 && sub.bHealthRecover==5 && sub.bSpellRecover==6;
+            effects.Clear();const bool resource=effects.Load() && effects.resource.dwFstFrm==2020 && effects.resource.dwEndFrm==2030 && effects.resource.wDelay==80 && effects.resource.wImgIdx==Progression::LevelLibrary;
+            receive(SM_LEVELUP,17000,43,0,0);
+            const bool local=hero.m_stAbility.bLevel==43 && hero.m_stAbility.dwExp==17000 && hero.m_bCurrMtn==_MT_ATTACKMODE && hero.m_bCurrDir==Progression::LevelDirection && effects.active.size()==1;
+            auto* remote=new CHero;remote->m_dwIdentity=12345;remote->m_stFeature.bGender=_GENDER_MAN;remote->m_wPosX=5;remote->m_wPosY=7;process.m_xActorList.AddNode(remote);
+            receive(SM_LEVELUP,12345,99,0,1);
+            const bool other=hero.m_stAbility.bLevel==43 && hero.m_stAbility.dwExp==17000 && remote->m_bCurrMtn==_MT_ATTACKMODE && effects.active.size()==2;
+            receive(SM_LEVELUP,12346,99,0,1);receive(SM_LEVELUP,0,0,0,2);const bool ignored=effects.active.size()==2 && hero.m_stAbility.bLevel==43;
+            process.m_xActorList.MoveCurrentToTop();process.m_xActorList.DeleteCurrentNodeEx();delete remote;
+            bool boundary=false,tail=false,finished=false,stationary=false;
+            if(effects.active.size()==2) {
+                const POINT cell=effects.active[0].cell;hero.m_wPosX+=2;
+                effects.Advance(80);boundary=effects.active[0].frame==2020;effects.Advance(1);boundary=boundary && effects.active[0].frame==2021;
+                stationary=effects.active[0].cell.x==cell.x;
+                for(int i=0;i<9;++i) effects.Advance(81);
+                tail=!effects.active.empty() && effects.active[0].phase==1 && effects.active[0].frame==2029;
+                for(int i=0;i<20;++i) effects.Advance(51);finished=effects.active.empty();
+            }
+            hero.m_stFeatureEx.bHorse=1;hero.m_bWarMode=FALSE;hero.m_bMotionLock=FALSE;
+            receive(SM_LEVELUP,17000,43,0,0);hero.m_dwCurrFrame=hero.m_dwEndFrame-1;
+            hero.UpdateMotionState(hero.m_wDelay+1,FALSE);
+            const bool mounted=hero.m_stFeatureEx.bHorse==1 && hero.m_bCurrMtn==_MT_HORSESTAND;
+            hero.m_stFeatureEx.bHorse=0;effects.Clear();
+            if(FILE* report=fopen("progression-mounted-check.txt","wb")) {fprintf(report,"restored=%d\n",mounted);fclose(report);}
+            const bool unknown=!receive(SM_ABILITY,0,0,0,0);
+            effects.Start({hero.m_wPosX,hero.m_wPosY});effects.Start({5,7});
+            if(groupPanel==PreviewLevelTail) for(int i=0;i<10;++i) effects.Advance(81);
+            else for(int i=0;i<4;++i) effects.Advance(81);
+            if(FILE* report=fopen("progression-check.txt","wb")) {fprintf(report,"experience=%d training=%d zero=%d weight=%d bonuses=%d resource=%d local=%d remote=%d ignored=%d boundary=%d stationary=%d tail=%d finished=%d unknown=%d\n",experience,training,zero,weight,bonuses,resource,local,other,ignored,boundary,stationary,tail,finished,unknown);fclose(report);}
+            ui.WindowActivate(_WND_ID_STATUS);levelPreview=true;mouse={790,430};capturePath=groupPanel==PreviewLevelTail?"level-tail.bmp":"progression.bmp";
+        }
+
         if(groupPanel==PreviewAbility) {
             auto& ui=g_xGameProc.m_xInterface;auto& status=ui.m_xStatusWnd;
             // Independent wire fixture: level, five ranges, HP/MP, experience, loads, seven elements.
@@ -2643,6 +2689,10 @@ public:
     void Render(int elapsed) {
         RECT canvas = {0,0,800,600};
         DrawLegacyPanel(canvas,RGB(20,24,28),255,0,false);
+        if(levelPreview) {
+            const auto& effects=g_xGameProc.m_levelEffects.active;
+            for(size_t i=0;i<effects.size();++i) g_xGameProc.m_levelEffects.DrawAt(effects[i],440+int(i)*180,300);
+        }
         g_xGameProc.m_xInterface.RenderInterface(elapsed,mouse);
         if(capturePath && !strcmp(capturePath,"equipment-hover-hint.bmp")) {
             auto& ui=g_xGameProc.m_xInterface;
@@ -2845,6 +2895,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=progression")==0 ? PreviewProgression :
+        strcmp(lpCmdLine,"--preview=level-tail")==0 ? PreviewLevelTail :
         strcmp(lpCmdLine,"--preview=ability-wire")==0 ? PreviewAbility :
         strcmp(lpCmdLine,"--preview=quest-wire")==0 ? PreviewQuestWire :
         strcmp(lpCmdLine,"--preview=quest-wire-detail")==0 ? PreviewQuestDetail :
