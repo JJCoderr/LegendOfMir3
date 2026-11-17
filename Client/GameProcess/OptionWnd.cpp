@@ -94,8 +94,8 @@ BOOL COptionWnd::OnLButtonDown(POINT point) { if (AudioInput(0,point)) return TR
 BOOL COptionWnd::OnLButtonUp(POINT point)
 {
     if (AudioInput(2,point)) return FALSE;
-    const int hit=ButtonAt(point); const bool clicked=hit>=0 && hit==m_pressed; m_pressed=-1;
-    if (!clicked) return FALSE;
+    const int hit=ButtonAt(point); m_pressed=-1;
+    if (hit<0) return FALSE;
     g_xSound.PlayLobbyEffect("105.wav");
     if (hit==1) { m_values[1]=!m_values[1]; if (m_values[1]) g_xSound.SetEnableBGM(); else g_xSound.SetDisableBGM(); }
     if (hit==2) { m_values[2]=!m_values[2]; if (m_values[2]) g_xSound.SetEnablePlay(); else g_xSound.SetDisablePlay(); }

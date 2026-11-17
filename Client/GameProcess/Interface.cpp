@@ -1627,9 +1627,10 @@ case _WND_ID_STATUS:
                 if (m_xQuestWnd.OnLButtonDown(ptMouse)) m_bMoveFocusedWnd=FALSE;
                 break;
 			case _WND_ID_OPTION:
-				if ( !m_xOptionWnd.OnLButtonDown(ptMouse) )
-					WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect, ptMouse);
-				break;
+                if (!m_xOptionWnd.OnLButtonDown(ptMouse))
+                    WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect,ptMouse);
+                else m_bMoveFocusedWnd=FALSE;
+                break;
 			case _WND_ID_QUICK:
                 WindowFocusChangedAndSetReadyMove(nInterfaceWndInRect,ptMouse);
                 if (m_xQuickWnd.OnLButtonDown(ptMouse)) m_bMoveFocusedWnd=FALSE;
@@ -1776,6 +1777,9 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
+    if(!m_xMsgBox.IsActive() && m_bMoveFocusedWnd && m_xOptionWnd.m_bActive && m_xOptionWnd.m_bFocused) {
+        m_bMoveFocusedWnd=FALSE;m_xOptionWnd.SetStatusBtnInit();return TRUE;
+    }
     m_portraitEntryPressed=false;
     if(m_minimap.releaseCaptured) {m_minimap.Pointer(2,ptMouse,false);return TRUE;}
     if (!m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive) {

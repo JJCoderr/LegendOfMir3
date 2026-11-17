@@ -1597,3 +1597,8 @@ SelectionDialog集中CmList219..232，创建失败按nRecog映射224/226/232，�
 ## 2026-11-17：角色呈现、动画与语音完整批次
 
 共享RoleAnimation取代创建总时间除法和选角重复帧表，WORD时钟严格>120ms推进一次；双性别独立动画/阴影，选择仅重置新性别，职业重置两者。语音改首帧推进时发声，包含初次选角/翻页/创建循环；命中矩形取推进下一帧且静态绘制不覆盖。选角按钮增加棕色悬停覆盖并移到角色之后绘制。clean90/all109通过，新增22+交互15+列表22+提示23+影片33+音效15=130检查通过。预览292..299，下一300；截图out/role-*.png及role-creation-six.png。详见role-presentation-migration-audit；gui-completion-audit新增完整功能族索引及未成立终验条件。所有预览停止、无真实网关联调；下一游戏内面板/弹窗视觉索引和字体布局复核。
+
+
+## 2026-11-17：选项页释放与窗口拖动批次
+
+核对options_pointer/mount_pointer，选项普通开关/关闭改释放命中即执行，骑乘保留配对。Interface选项拖窗结束只消费释放；控件按下清除拖窗标记。预览300 options-interaction增加10项实际Interface输入检查；修正旧markers测试错误的孤立释放无效预期。增量七目标构建通过，输入10/音量9/服务端选项6/标记5/阴影4/光照6/伤害9/攻击5/音效15/骑乘13=82全过。截图out/options-interaction.png、mount-panel.png；详见options-interaction-migration-audit.md。下一301；多次交叉按下中间帧及其余面板终验仍待整体索引推进，真实网关未联调。

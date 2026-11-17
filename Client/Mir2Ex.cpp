@@ -1216,6 +1216,31 @@ public:
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
         }
+        if(groupPanel==300) {
+            auto& ui=g_xGameProc.m_xInterface;auto& o=ui.m_xOptionWnd;
+            ui.WindowActivate(_WND_ID_OPTION);o.LoadAudioOptions(nullptr);
+            FILE* report=fopen("options-interaction-check.txt","wb");
+            const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+            const auto point=[&](int x,int y){return POINT{o.m_rcWnd.left+x,o.m_rcWnd.top+y};};
+            const bool before=o.m_values[3];ui.OnLButtonUp(point(432,207));
+            check("release_toggles",o.m_values[3]!=before && g_xSound.m_reversePan==o.m_values[3]);
+            const bool music=o.m_values[1],effects=o.m_values[2];
+            ui.OnLButtonDown(point(432,87));ui.OnLButtonUp(point(432,147));
+            check("release_target",o.m_values[1]==music && o.m_values[2]!=effects);
+            ui.OnLButtonUp(point(432,147));check("effects_restored",o.m_values[2]==effects);
+            const bool local=o.m_values[7];ui.OnLButtonUp(point(188,57));
+            check("local_release",o.m_values[7]!=local);
+            ui.OnLButtonDown(point(188,57));ui.OnLButtonUp(POINT{790,590});
+            check("outside_no_toggle",o.m_values[7]!=local);
+            const bool reverse=o.m_values[3];ui.OnLButtonDown(point(50,20));
+            check("background_drag",ui.m_bMoveFocusedWnd && o.m_bFocused);
+            ui.OnLButtonUp(point(432,207));check("drag_release_no_toggle",o.m_values[3]==reverse && !ui.m_bMoveFocusedWnd);
+            ui.OnLButtonDown(point(432,207));check("control_no_drag",!ui.m_bMoveFocusedWnd);
+            ui.OnLButtonUp(point(432,207));check("paired_still_works",o.m_values[3]!=reverse);
+            ui.OnLButtonUp(point(450,417));check("release_closes",!o.m_bActive);
+            ui.WindowActivate(_WND_ID_OPTION);o.LoadAudioOptions(nullptr);o.SetStatusBtnInit();
+            if(report) fclose(report);mouse=POINT{790,430};capturePath="options-interaction.bmp";
+        }
         if (groupPanel==11) {
             auto& ui=g_xGameProc.m_xInterface;
             auto& options=ui.m_xOptionWnd;
@@ -1512,7 +1537,8 @@ public:
             auto& ui=g_xGameProc.m_xInterface;auto& options=ui.m_xOptionWnd;auto& map=ui.m_minimap;
             options.LoadAudioOptions("./preview-marker-options.ini");options.m_values[7]=true;options.SaveAudioOptions();
             ui.WindowActivate(_WND_ID_OPTION);const POINT toggle={options.m_rcWnd.left+189,options.m_rcWnd.top+58};
-            ui.OnLButtonUp(toggle);const bool stray=options.m_values[7];
+            ui.OnLButtonUp(toggle);const bool releaseToggle=!options.m_values[7];
+            ui.OnLButtonUp(toggle);
             ui.OnLButtonDown(toggle);ui.OnLButtonUp(toggle);const bool disabled=!options.m_values[7];
             options.LoadAudioOptions(nullptr);const bool defaults=options.m_values[7];options.LoadAudioOptions("./preview-marker-options.ini");const bool persisted=!options.m_values[7];
             ui.OnLButtonDown(toggle);ui.OnLButtonUp(toggle);const bool enabled=options.m_values[7];
@@ -1520,7 +1546,7 @@ public:
             const bool finalValue=options.m_values[7];options.LoadAudioOptions(nullptr);options.m_values[7]=finalValue;
             map.pending=true;map.Receive(1001,0);hero.m_wPosX=337;hero.m_wPosY=267;map.monsters={{322,251}};map.green={{350,284}};map.orange={{360,276}};
             mouse=POINT{400,460};g_xGameProc.m_ptMousePos=mouse;capturePath=groupPanel==89?"options-markers-on.bmp":"options-markers-off.bmp";
-            if(FILE* report=fopen("options-markers-check.txt","wb")) {fprintf(report,"stray=%d disabled=%d defaults=%d persisted=%d enabled=%d\n",stray,disabled,defaults,persisted,enabled);fclose(report);}
+            if(FILE* report=fopen("options-markers-check.txt","wb")) {fprintf(report,"release_toggle=%d disabled=%d defaults=%d persisted=%d enabled=%d\n",releaseToggle,disabled,defaults,persisted,enabled);fclose(report);}
         }
 
 
@@ -3600,7 +3626,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
 	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
-	const int previewGroup = strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
+	const int previewGroup = strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
+        strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
         strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :
         strcmp(lpCmdLine,"--preview=role-male-tao")==0 ? RolePresentationPreview::First+2 :
         strcmp(lpCmdLine,"--preview=role-female-warrior")==0 ? RolePresentationPreview::First+3 :
