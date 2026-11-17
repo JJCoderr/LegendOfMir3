@@ -1524,6 +1524,7 @@ BOOL CInterface::IsTopWindow(INT nID)
 BOOL CInterface::OnLButtonDown(POINT ptMouse)
 {
     if(m_xMsgBox.IsActive()) {m_xMsgBox.OnButtonDown(ptMouse,false);return TRUE;}
+    if(g_xGameProc.InputDelayed()) return TRUE;
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(0,ptMouse); return TRUE; }
     const RECT siegeEntry=m_xSiegeWnd.EntryBounds();
     if(!m_xMsgBox.IsActive() && GetWindowInMousePos(ptMouse)==-1 && PtInRect(&siegeEntry,ptMouse)) {m_xSiegeWnd.entryPressed=true;return TRUE;}
@@ -2256,7 +2257,7 @@ BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
         if(repeated && skillSlot!=10 && skillSlot!=12) return TRUE;
         if(GetWindowInMousePos(g_xGameProc.m_ptMousePos)==_WND_ID_SKILL &&
             m_xSkillWnd.OnKeyDown(wParam,lParam,g_xGameProc.m_ptMousePos)) return TRUE;
-        return !SpellPointerAvailable() || !m_xSkillWnd.GetMagicByShortcut(skillSlot);
+        return g_xGameProc.InputDelayed() || !SpellPointerAvailable() || !m_xSkillWnd.GetMagicByShortcut(skillSlot);
     }
     if(lParam & (1L<<30)) return TRUE;
     const struct { WPARAM key;int window; } panels[]={

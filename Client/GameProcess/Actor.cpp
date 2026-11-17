@@ -3943,6 +3943,8 @@ VOID CMyHero::SetMotionState(BYTE motion,BYTE direction,INT target,BOOL targetDe
     if(m_pendingAction) return;
     const bool movement=motion==_MT_WALK || motion==_MT_RUN || motion==_MT_HORSEWALK || motion==_MT_HORSERUN;
     const bool attack=motion==_MT_ONEHSWING;
+    const bool turn=(motion==_MT_STAND || motion==_MT_HORSESTAND) && direction!=m_bCurrDir;
+    if(g_xGameProc.InputDelayed() && (movement || attack || turn || motion==_MT_CUT)) return;
     if(!m_bIsMon && (movement || attack)) {
         if(!position || m_bIsDead || m_spellAwaitingReply || (movement && m_xPacketQueue.GetCount())) return;
         if(attack && !CanNextHit()) return;
@@ -4981,6 +4983,7 @@ BOOL CMyHero::CanRun()
 
 BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* lpptTargetPos)
 {
+    if(g_xGameProc.InputDelayed()) return FALSE;
 	POINT ptTargetTile;
 	POINT ptMouseTilePos;
 	BYTE  bDir;
@@ -5159,6 +5162,7 @@ BOOL CMyHero::OnLButtonDown(POINT ptMouse, INT nTargetID, BOOL bIsDead, POINT* l
 
 BOOL CMyHero::OnRButtonDown(POINT ptMouse)
 {
+    if(g_xGameProc.InputDelayed()) return FALSE;
 	POINT ptTargetTile;
 	POINT ptMouseTilePos;
 	BYTE  bDir;
@@ -5341,6 +5345,7 @@ BOOL CMyHero::OnRButtonDown(POINT ptMouse)
 
 VOID CMyHero::SetMagic(LPCLIENTMAGICRCD pstMagic, BYTE bKeyNum, BYTE bDir, INT nTargetID, FEATURE stTargetFeature, POINT ptTargetPos)
 {
+    if(g_xGameProc.InputDelayed()) return;
     if(m_pendingAction) return;
     using namespace mir3;
     const DWORD now=GetTickCount();
@@ -5408,6 +5413,7 @@ BOOL CMyHero::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTar
 	DWORD				dwCurrTick;
 
     const int skillSlot=CSkillWnd::PhysicalKeySlot(wParam);
+    if(skillSlot && g_xGameProc.InputDelayed()) return FALSE;
     bMagicKey=skillSlot?CSkillWnd::LegacyKey(skillSlot):0;
     ZeroMemory(&ptTargetTile,sizeof(POINT));
     switch(wParam) {

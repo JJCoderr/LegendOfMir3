@@ -160,3 +160,8 @@ review_gui.ps1新增all套件：52个游戏内状态、38个大厅状态和20个
 ## 添加行会成员三状态
 
 out/guild-add/guild-add-member.png、guild-add-denied.png、guild-add-member-filled.png均查看，覆盖会长空输入、非会长提示和中文角色名。详见guild-add-dialog-migration-audit.md。
+
+
+## 坐骑延迟交互截图
+
+out/input-delay/mount-input-delay.png、mount-delay-dialog.png：坐骑命令后的面板、延迟期间仍可操作的通用输入弹窗。计时边界以input-delay-migration-audit.md及报告验证，静态截图不代替时间测试。

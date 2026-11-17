@@ -43,6 +43,7 @@ BOOL CHorseWnd::OnLButtonUp(POINT point)
     if (const int id=Command(hit)) {
         static CLoginMessages captions; static const bool loaded=captions.Load("./CmList.dat");
         std::string command=captions.Get(id); g_xClientSocket.SendSay(const_cast<char*>(command.c_str()));
+        g_xGameProc.StartInputDelay(InputDelay::Mount);
     }
     return FALSE;
 }

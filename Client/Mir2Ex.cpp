@@ -1226,6 +1226,45 @@ public:
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
         }
+        if(groupPanel==328 || groupPanel==329) {
+            auto& game=g_xGameProc;auto& ui=game.m_xInterface;auto& mount=ui.m_xHorseWnd;
+            FILE* report=fopen("input-delay-check.txt","wb");const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+            game.StartInputDelay(InputDelay::Mount);game.AdvanceInputDelay(0);game.AdvanceInputDelay(-1);check("nonpositive_keeps_delay",game.m_wCurrInputDelayTime==0 && game.InputDelayed());
+            game.AdvanceInputDelay(299);check("mount_299_blocked",game.InputDelayed());game.AdvanceInputDelay(1);check("mount_300_released",!game.InputDelayed());
+            game.StartInputDelay(InputDelay::EnterScene);game.AdvanceInputDelay(1499);check("scene_1499_blocked",game.InputDelayed());game.AdvanceInputDelay(1);check("scene_1500_released",!game.InputDelayed());
+            game.StartInputDelay(InputDelay::Mount);game.AdvanceInputDelay(65536);check("long_frame_no_wrap",!game.InputDelayed());
+            CLoginMessages captions;captions.Load("./CmList.dat");bool commandDelay=true;
+            for(int id:{InputDelay::MountCommand,InputDelay::UnmountCommand,InputDelay::RecallCommand}) {
+                game.StartInputDelay(0);lstrcpynA(g_xChatEditBox.m_szInputMsg,captions.Get(id).c_str(),MAX_PATH);game.OnMsgInputted(TRUE,0);
+                commandDelay &= game.m_wInputDelayTime==InputDelay::Mount && game.m_wCurrInputDelayTime==0;
+            }
+            check("three_typed_commands_delay",commandDelay);
+            game.StartInputDelay(0);std::string extra=captions.Get(InputDelay::MountCommand)+" extra";lstrcpynA(g_xChatEditBox.m_szInputMsg,extra.c_str(),MAX_PATH);game.OnMsgInputted(TRUE,0);check("typed_exact_match",!game.InputDelayed());
+            ui.WindowActivate(_WND_ID_HORSE);mount.shape=0;const POINT button={30,245};
+            ui.OnLButtonDown(button);ui.OnLButtonUp(button);check("mount_button_starts_delay",game.m_wInputDelayTime==InputDelay::Mount);
+            ui.OnLButtonDown(button);check("button_blocked",mount.pressed==-1);
+            game.AdvanceInputDelay(299);ui.OnLButtonDown(button);check("button_still_blocked_at_299",mount.pressed==-1);
+            game.AdvanceInputDelay(1);ui.OnLButtonDown(button);check("button_recovers_at_300",mount.pressed==1);ui.OnLButtonUp(POINT{790,430});
+            game.StartInputDelay(InputDelay::Mount);ui.ShowNotice(4000);ui.OnLButtonDown(POINT{360,303});ui.OnLButtonUp(POINT{360,303});check("modal_operates_during_delay",!ui.m_xMsgBox.IsActive());
+            SOCKET receiver=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP),sender=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);
+            bind(receiver,(sockaddr*)&address,sizeof(address));int size=sizeof(address);getsockname(receiver,(sockaddr*)&address,&size);connect(sender,(sockaddr*)&address,sizeof(address));DWORD timeout=30;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));
+            const SOCKET saved=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;
+            const BOOL rendered=game.m_bRender;game.m_bRender=TRUE;ui.m_stCommonItem.bSetted=TRUE;ui.m_stCommonItem.bWaitResponse=FALSE;
+            game.OnLButtonDown(0,MAKELPARAM(700,200));char wire[512]={};check("held_item_no_drop_packet",recv(receiver,wire,sizeof(wire),0)==SOCKET_ERROR && !ui.m_stCommonItem.bWaitResponse);
+            ui.m_stCommonItem.bSetted=FALSE;game.OnLButtonDoubleClick(0,MAKELPARAM(700,200));check("double_click_no_packet",recv(receiver,wire,sizeof(wire),0)==SOCKET_ERROR);
+            POINT destination={hero.m_wPosX+1,hero.m_wPosY};hero.m_pendingAction.reset();const BYTE motion=hero.m_bCurrMtn;
+            for(BYTE next:{BYTE(_MT_WALK),BYTE(_MT_RUN),BYTE(_MT_ONEHSWING),BYTE(_MT_CUT)}) hero.SetMotionState(next,0,0,FALSE,&destination);
+            check("movement_attack_cut_blocked",!hero.m_pendingAction && hero.m_bCurrMtn==motion && recv(receiver,wire,sizeof(wire),0)==SOCKET_ERROR);
+            const BYTE direction=hero.m_bCurrDir;hero.SetMotionState(_MT_STAND,BYTE((direction+1)%8));
+            check("turn_no_packet",hero.m_bCurrDir==direction && recv(receiver,wire,sizeof(wire),0)==SOCKET_ERROR);
+            hero.OnLButtonDown(POINT{700,200});hero.OnRButtonDown(POINT{700,200});
+            check("held_pointer_no_packet",recv(receiver,wire,sizeof(wire),0)==SOCKET_ERROR && !hero.m_pendingAction);
+            CLIENTMAGICRCD magic={};const DWORD directed=hero.m_spellTiming.cast_at;
+            hero.SetMagic(&magic,1,0,0,FEATURE{},POINT{});check("spell_no_packet",recv(receiver,wire,sizeof(wire),0)==SOCKET_ERROR && hero.m_spellTiming.cast_at==directed);
+            g_xClientSocket.m_sockClient=saved;closesocket(sender);closesocket(receiver);game.m_bRender=rendered;
+            if(groupPanel==329) ui.OpenNameDialog(CM_GUILDADDMEMBER);
+            if(report) fclose(report);mouse={790,430};capturePath=groupPanel==328?"mount-input-delay.bmp":"mount-delay-dialog.bmp";
+        }
         if(groupPanel>=325 && groupPanel<=327) {
             auto& ui=g_xGameProc.m_xInterface;auto& guild=ui.m_xGuildWnd;const HWND edit=g_xChatEditBox.GetSafehWnd();
             CLoginMessages captions;captions.Load("./CmList.dat");
@@ -4022,6 +4061,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=guild-add-member")==0 ? 325 :
         strcmp(lpCmdLine,"--preview=guild-add-denied")==0 ? 326 :
         strcmp(lpCmdLine,"--preview=guild-add-member-filled")==0 ? 327 :
+        strcmp(lpCmdLine,"--preview=mount-input-delay")==0 ? 328 :
+        strcmp(lpCmdLine,"--preview=mount-delay-dialog")==0 ? 329 :
         strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
         strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
         strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :

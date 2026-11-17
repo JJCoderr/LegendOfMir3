@@ -1748,3 +1748,10 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 补Godot ChatSubmission的1425命令分派：会长OpenNameDialog(CM_GUILDADDMEMBER)，非会长ShowNotice1427。1426提示替换行会名，原生输入沿用90字节，FinishNotice确认发送1038全零参数及姓名，无列表附加请求。
 - 新325/326/327输入、拒绝、中文填入截图out/guild-add；下一328。新增回环12检查及相关回归共149通过，最终七目标guild-add-final-build.log成功；最后只加强重复Enter夹具，重跑12和三图。详见guild-add-dialog-migration-audit.md。
 - 发现m_wInputDelayTime仅计时未拦截输入，参考map_input_delay的300ms坐骑延迟需要完整接入HUD左键/地图动作/技能，而不是只赋值；留待下一批。真实服务器流程仍未整体完成。
+
+
+## 2026-11-17 坐骑及换图输入延迟
+- 新GameProcess/InputDelay.h常量300/1500与三个命令ID。GameProc复用原字段增加开始/推进/active方法；大帧不WORD绕回。两处换图输入2300改1500，人物独立混合2300保留。
+- 输入命令/坐骑按钮启动300；GameProc和Interface左键、角色左右持续输入、新移动/攻击/挖取/转向、技能入口阻止新请求。通用弹窗优先，既有动作与服务端动画继续。
+- 新328/329，下一330；out/input-delay十图及九报告，新19+相关215=234通过；七目标input-delay-final-build.log成功。测试字段初次命名错误已修cast_at；两新增图查看，自启预览停。详见input-delay-migration-audit.md。
+- 仍需真实服骑乘/换图组合体验和整体登录链路；未将离线通过等同端到端完成。

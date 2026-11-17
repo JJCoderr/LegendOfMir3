@@ -16,6 +16,7 @@
 #include "SceneLighting.h"
 #include "SceneWeather.h"
 #include "ExitFlow.h"
+#include "InputDelay.h"
 #include "SpellPlayback.h"
 #include "StagedSpell.h"
 #include "GroundSpell.h"
@@ -141,6 +142,14 @@ public:
 
 	WORD					m_wInputDelayTime;
 	WORD					m_wCurrInputDelayTime;
+    bool InputDelayed() const { return m_wInputDelayTime>m_wCurrInputDelayTime; }
+    void StartInputDelay(WORD duration) { m_wInputDelayTime=duration;m_wCurrInputDelayTime=0; }
+    void AdvanceInputDelay(int elapsed) {
+        if(elapsed<=0 || !m_wInputDelayTime) return;
+        if(elapsed>=int(m_wInputDelayTime)-m_wCurrInputDelayTime) m_wInputDelayTime=m_wCurrInputDelayTime=0;
+        else m_wCurrInputDelayTime+=WORD(elapsed);
+    }
+
 
 	FLOAT					m_fDarkRate;
 

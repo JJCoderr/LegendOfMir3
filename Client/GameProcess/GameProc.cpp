@@ -813,14 +813,9 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 	static DWORD dwReceiveTime	= 0;
 
 	wMoveTime			  += nLoopTime;
-	m_wCurrInputDelayTime += nLoopTime;
+	AdvanceInputDelay(nLoopTime);
 
 	if ( nLoopTime < 10000 )		dwReceiveTime += nLoopTime;
-	if ( m_wCurrInputDelayTime >= m_wInputDelayTime )
-	{
-		m_wCurrInputDelayTime	= 0;
-		m_wInputDelayTime		= 0;
-	}
 	if ( wMoveTime > 100 )
 	{
 		bIsMoveTime = TRUE;
@@ -1722,6 +1717,7 @@ LRESULT CGameProcess::OnTimer(WPARAM wParam, LPARAM lParam)
 
 LRESULT CGameProcess::OnLButtonDoubleClick(WPARAM wParam, LPARAM lParam)
 {
+    if(InputDelayed()) return 0L;
     if(m_xNotice.IsActive()) return 0L;
 	m_ptMousePos.x = LOWORD(lParam);
 	m_ptMousePos.y = HIWORD(lParam);
@@ -1829,6 +1825,7 @@ LRESULT CGameProcess::OnLButtonDown(WPARAM wParam, LPARAM lParam)
         return 0L;
 	}
 
+    if(InputDelayed() && !m_xInterface.m_xMsgBox.IsActive()) return 0L;
 	if ( !m_bRender )			return 0L;
 
 	m_pxSavedTargetActor = NULL;
@@ -2140,6 +2137,8 @@ LRESULT CGameProcess::OnMsgInputted(WPARAM wParam, LPARAM lParam)
         else m_xInterface.ShowNotice(ChatCommandIds::AddGuildMemberDenied);
         return 0;
     }
+    for(int id:{InputDelay::MountCommand,InputDelay::UnmountCommand,InputDelay::RecallCommand})
+        if(chatCaptions.Get(id)==g_xChatEditBox.m_szInputMsg) StartInputDelay(InputDelay::Mount);
     if(ChatShortcuts().Remember(g_xChatEditBox.m_szInputMsg)) {
         ZeroMemory(g_xChatEditBox.m_szInputMsg,sizeof(g_xChatEditBox.m_szInputMsg));return 0;
     }
@@ -3605,7 +3604,7 @@ VOID CGameProcess::ProcessPacket()
                     m_weather.select(HIBYTE(lpPacketMsg->stDefMsg.wSeries),true);
 
 					// gadget			
-					m_wInputDelayTime = 2300;
+					m_wInputDelayTime = InputDelay::EnterScene;
 					m_wCurrInputDelayTime = 0;
 					m_xMyHero.m_wABlendCurrDelay = 0;
 					m_xMyHero.m_wABlendDelay = 2300;
@@ -3820,7 +3819,7 @@ VOID CGameProcess::OnSvrMsgLogon(_TDEFAULTMESSAGE	*ptdm, char *pszMsg)
 	pxMagic->CreateMagic(_SKILL_SPACEMOVE2, m_xMyHero.m_wPosX, m_xMyHero.m_wPosY, m_xMyHero.m_wPosX, m_xMyHero.m_wPosY, NULL, m_xMyHero.m_dwIdentity);
 	m_xMagicList.AddNode(pxMagic);	
 	
-	m_wInputDelayTime				= 2300;
+	m_wInputDelayTime				= InputDelay::EnterScene;
 	m_wCurrInputDelayTime			= 0;
 	m_xMyHero.m_wABlendCurrDelay	= 0;
 	m_xMyHero.m_wABlendDelay		= 2300;
