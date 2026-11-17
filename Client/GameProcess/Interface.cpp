@@ -1518,6 +1518,7 @@ BOOL CInterface::IsTopWindow(INT nID)
 *******************************************************************************************************************/
 BOOL CInterface::OnLButtonDown(POINT ptMouse)
 {
+    if(m_xMsgBox.IsActive()) {m_xMsgBox.OnButtonDown(ptMouse);return TRUE;}
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(0,ptMouse); return TRUE; }
     const RECT siegeEntry=m_xSiegeWnd.EntryBounds();
     if(!m_xMsgBox.IsActive() && GetWindowInMousePos(ptMouse)==-1 && PtInRect(&siegeEntry,ptMouse)) {m_xSiegeWnd.entryPressed=true;return TRUE;}
@@ -1683,6 +1684,7 @@ void CInterface::ShowNotice(int message)
     m_nIdxMsgBox=0;
     m_xMsgBox.SetOrigin(220,112,false);
     m_xMsgBox.ShowMessageBox(captions.Get(message).c_str(),MSG_BTN_OK,1240);
+    if(m_xGuildEditor.m_bActive) {ShowWindow(m_xGuildEditor.edit,SW_HIDE);SetFocus(g_xMainWnd.GetSafehWnd());}
 }
 
 void CInterface::OpenNameDialog(int action)
@@ -1777,6 +1779,10 @@ void CInterface::FinishNotice(int hResult, bool mouse)
 
 BOOL CInterface::OnLButtonUp(POINT ptMouse)
 {
+    if(m_xMsgBox.IsActive()) {
+        m_bMoveFocusedWnd=FALSE;
+        FinishNotice(m_xMsgBox.OnButtonUp(ptMouse),true);return TRUE;
+    }
     if(!m_xMsgBox.IsActive() && m_bMoveFocusedWnd && m_xOptionWnd.m_bActive && m_xOptionWnd.m_bFocused) {
         m_bMoveFocusedWnd=FALSE;m_xOptionWnd.SetStatusBtnInit();return TRUE;
     }
@@ -1984,6 +1990,7 @@ case _WND_ID_STATUS:		if ( m_xStatusWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )	
 *******************************************************************************************************************/
 BOOL CInterface::OnMouseMove(POINT ptMouse)
 {
+    if(m_xMsgBox.IsActive()) return TRUE;
     if(!m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive && GetWindowInMousePos(ptMouse)==_WND_ID_MINIMAP && m_minimap.Pointer(1,ptMouse,(GetKeyState(VK_CONTROL)&0x8000)!=0)) return TRUE;
     if (!m_xMsgBox.IsActive() && m_xPortraitWnd.scrolling) { m_xPortraitWnd.Pointer(1,ptMouse); return TRUE; }
     if (!m_xMsgBox.IsActive() && m_xStoreWnd.scrollCaptured) { m_xStoreWnd.OnMouseMove(ptMouse); return TRUE; }
@@ -2192,11 +2199,11 @@ BOOL CInterface::OnKeyUp(WPARAM wParam, LPARAM lParam)
 
 BOOL CInterface::OnKeyDown(WPARAM wParam, LPARAM lParam)
 {
-    if (m_xGuildEditor.m_bActive) {  return TRUE; }
     if (m_xMsgBox.IsActive()) {
         if (!(lParam & (1L << 30))) FinishNotice(m_xMsgBox.OnKeyDown(wParam),false);
         return TRUE;
     }
+    if (m_xGuildEditor.m_bActive) return TRUE;
     const int skillSlot=CSkillWnd::PhysicalKeySlot(wParam);
     if(skillSlot) {
         const bool repeated=(lParam & (1L<<30))!=0;

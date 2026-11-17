@@ -1216,6 +1216,50 @@ public:
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
         }
+        if(groupPanel>=301 && groupPanel<=303) {
+            auto& ui=g_xGameProc.m_xInterface;
+            if(groupPanel==301) {
+                FILE* report=fopen("modal-input-check.txt","wb");
+                const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+                constexpr int PermissionNotice=4000;
+                const POINT confirm={360,303},outside={790,590};
+                auto& quest=ui.m_xQuestWnd;ui.WindowActivate(_WND_ID_QUEST);
+                quest.entries.resize(30);for(auto& e:quest.entries) e.title="Quest";
+                quest.first=0;quest.scrollCaptured=true;ui.ShowNotice(PermissionNotice);
+                ui.OnMouseMove(outside);check("quest_scroll_blocked",quest.first==0 && quest.scrollCaptured);
+                g_xGameProc.m_ptMousePos=outside;ui.OnScrollUp();ui.OnScrollDown();check("wheel_blocked",quest.first==0);
+                ui.OnLButtonDown(confirm);ui.OnLButtonUp(confirm);check("notice_click_over_scroll",!ui.m_xMsgBox.IsActive() && quest.scrollCaptured);
+                ui.OnLButtonUp(outside);check("quest_release_after_notice",!quest.scrollCaptured);
+                ui.WindowActivate(_WND_ID_QUEST);
+                auto& options=ui.m_xOptionWnd;ui.WindowActivate(_WND_ID_OPTION);options.LoadAudioOptions(nullptr);
+                options.m_audioDrag=0;options.m_musicLevel=-50;ui.ShowNotice(PermissionNotice);
+                ui.OnMouseMove(outside);check("audio_drag_blocked",options.m_musicLevel==-50 && options.m_audioDrag==0);
+                ui.OnLButtonDown(confirm);ui.OnLButtonUp(confirm);check("notice_click_over_audio",!ui.m_xMsgBox.IsActive() && options.m_audioDrag==0);
+                ui.OnLButtonUp(outside);check("audio_release_after_notice",options.m_audioDrag==-1);
+                ui.WindowActivate(_WND_ID_OPTION);
+                ui.m_xGuildEditor.Open(true);auto& editor=ui.m_xGuildEditor;
+                editor.dragging=true;const RECT before=editor.m_rcWnd;
+                SetWindowTextA(editor.edit,"Preserved draft");ui.ShowNotice(PermissionNotice);editor.Show();
+                check("editor_hidden_behind_notice",!IsWindowVisible(editor.edit) && GetFocus()!=editor.edit);
+                ui.OnMouseMove(outside);check("editor_drag_blocked",EqualRect(&before,&editor.m_rcWnd));
+                ui.OnLButtonDown(confirm);ui.OnLButtonUp(confirm);check("notice_click_over_editor",!ui.m_xMsgBox.IsActive() && editor.m_bActive);
+                editor.Show();char draft[64]={};GetWindowTextA(editor.edit,draft,sizeof(draft));
+                check("editor_restored_with_draft",IsWindowVisible(editor.edit) && GetFocus()==editor.edit && !strcmp(draft,"Preserved draft"));
+                ui.ShowNotice(PermissionNotice);ui.OnKeyDown(VK_RETURN,0);
+                check("notice_keyboard_over_editor",!ui.m_xMsgBox.IsActive() && editor.m_bActive);
+                editor.dragging=false;editor.Close(false);
+                ui.m_xQuickWnd.closePressed=true;ui.ShowNotice(PermissionNotice);
+                ui.OnLButtonDown(confirm);ui.OnLButtonUp(confirm);check("notice_over_quick_capture",!ui.m_xMsgBox.IsActive() && ui.m_xQuickWnd.closePressed);
+                ui.m_xQuickWnd.closePressed=false;
+                ui.m_xHorseWnd.pressed=0;ui.ShowNotice(PermissionNotice);
+                ui.OnLButtonDown(confirm);ui.OnLButtonUp(confirm);check("notice_over_mount_capture",!ui.m_xMsgBox.IsActive() && ui.m_xHorseWnd.pressed==0);
+                ui.m_xHorseWnd.pressed=-1;
+                ui.WindowActivate(_WND_ID_QUEST);quest.scrollCaptured=true;
+                if(report) fclose(report);
+            } else if(groupPanel==302) ui.WindowActivate(_WND_ID_OPTION);
+            else ui.m_xGuildEditor.Open(true);
+            ui.ShowNotice(4000);mouse={790,430};capturePath=groupPanel==301?"modal-scroll.bmp":groupPanel==302?"modal-audio.bmp":"modal-guild-editor.bmp";
+        }
         if(groupPanel==300) {
             auto& ui=g_xGameProc.m_xInterface;auto& o=ui.m_xOptionWnd;
             ui.WindowActivate(_WND_ID_OPTION);o.LoadAudioOptions(nullptr);
@@ -3626,7 +3670,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const char* preview = "--preview=";
 	CHudPreviewProcess hudPreview;
 	const int previewChatMode = strcmp(lpCmdLine,"--preview=hud-group")==0 ? 1 : strcmp(lpCmdLine,"--preview=hud-guild")==0 ? 2 : 0;
-	const int previewGroup = strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
+	const int previewGroup = strcmp(lpCmdLine,"--preview=modal-scroll")==0 ? 301 :
+        strcmp(lpCmdLine,"--preview=modal-audio")==0 ? 302 :
+        strcmp(lpCmdLine,"--preview=modal-guild-editor")==0 ? 303 :
+        strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
         strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
         strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :
         strcmp(lpCmdLine,"--preview=role-male-tao")==0 ? RolePresentationPreview::First+2 :

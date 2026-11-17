@@ -1607,3 +1607,8 @@ SelectionDialog集中CmList219..232，创建失败按nRecog映射224/226/232，�
 ## 2026-11-17：52页游戏内GUI整批视觉索引
 
 新增Tools/review_gui.ps1、gui_gallery.py；当前43d7c75产物逐进程重新截52个主要页面/弹窗，检测BMP时间，不混旧图。out/gui-review-current/index.html含52PNG/9原尺寸拼图/manifest版本SHA256/本批报告。9拼图均已查看，组队/行会源码静态绘制核对无新差异。未改生产代码，无须重编译。详情gui-visual-index.md；inventory-layout三项0属未执行摆放状态，不计失败，不盲目统计全报告通过。所有预览停止、无真实网关联调。下一301；继续错误/禁用/滚动/拖动状态及字体声音核对。
+
+
+## 2026-11-17：模态提示跨面板输入与EDIT遮挡完整批次
+
+Interface鼠标按下/抬起/移动优先模态，键盘模态先于行会编辑器，修复任务/音量/快捷/骑乘捕获抢事件。实图发现GuildEditor原生EDIT盖住提示，ShowNotice即时隐藏并交焦点主窗，Editor.Show按模态同步隐藏/恢复焦点且保留草稿。七目标增量通过；新增14+任务14+行会17+选项10+音效15+键盘34+退出30=134全过。预览301..303，下一304；out/modal-{scroll,audio,guild-editor}.png均查看，测试文本CmList4000仅离线夹具。详见modal-input-migration-audit.md。进程全停止，真实网关未操作，52页旧版本索引不覆盖。
