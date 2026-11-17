@@ -4610,6 +4610,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             if (g_xMainWnd.m_pxDefProcess == &g_xGameProc && g_xGameProc.m_bRender) {
                 const auto& game = g_xGameProc;
                 const auto& hero = game.m_xMyHero;
+                state += ",\"notice\":" + std::string(mir3::BoolJson(g_xGameProc.m_xNotice.IsActive()))
+                    + ",\"input_delayed\":" + mir3::BoolJson(game.InputDelayed());
                 state += ",\"map\":" + mir3::QuoteLocalText(game.m_szMapName)
                     + ",\"x\":" + std::to_string(hero.m_wPosX)
                     + ",\"y\":" + std::to_string(hero.m_wPosY)

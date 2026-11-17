@@ -1859,3 +1859,11 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - out/native-live-check.py 在独立 SQLite 与资源目录链接下使用 25000/25100/25500/26000/27000/27100/27200 端口，以真实 Mir2Ex 窗口输入登录、确认计费提示、选服、选角进入游戏。记录见 out/native-live-5hib8t9g；登录/选角640x480、游戏800x600，map=01 x=459 y=261 hp=18 mp=13。没有用协议模拟代替客户端，也没有截图。
 - 构建目录的 EIServer PID34664 复验仍在运行，开发端口5000/5100/5500/6000/7000/7100/7200持续监听，保留供联调。测试实例已退出。
 - 这证明启动及进入游戏链路；长期稳定性、协调停服、完整字体颜色与其他业务系统仍需后续验证。强制终止后状态文件可能残留，读取时必须同时检查 PID 与更新时间。
+
+
+## 2026-11-17 修正高 DPI 下客户端整体窗口偏小
+- 用户确认整体窗口偏小。此前按物理像素640x480/800x600验收不足：公共manifest声明system DPI aware，当前桌面144 DPI/150%，不会由Windows自动放大。
+- CreatePrimarySurface将默认客户区按系统DPI/96放大，内部画布保持640x480/800x600；Display WindowWidth/WindowHeight显式配置仍表示物理像素。没有修改公共manifest或服务窗口。
+- Win32 Release构建通过。真实客户端隔离测试 out/native-live-btta88ru 实测登录/选角960x720、游戏1200x900，缩放后鼠标输入正常；移动459,261到460,261，Alt+Q确认正常退出0，SQLite保存460,261，第二次登录恢复同坐标且再次正常退出0。out/debug/Mir2Ex.exe已更新。
+- 状态增加notice/input_delayed：前一次移动失败因进图后的输入等待未解除，测试已按状态等待。
+- IDA启动服务可复用，但open仍因未找到IDA安装目录失败；bootstrap ida返回missing-definition。原版运行曾观测到DPI unaware，不能据此宣称已完成原版各页面尺寸反编译验证。

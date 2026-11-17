@@ -508,9 +508,15 @@ HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
 		
 		// 设置客户端区域大小的部分与窗口的创建有关.
 		// 获取屏幕分辨率即客户端矩形区域的大小。
-		// Match Godot: the active canvas defines the default client area in pixels.
-		const int windowWidth = GetPrivateProfileInt("Display", "WindowWidth", m_stDisplayInfo.wWidth, ".\\Mir3.ini");
-		const int windowHeight = GetPrivateProfileInt("Display", "WindowHeight", m_stDisplayInfo.wHeight, ".\\Mir3.ini");
+		// Keep the legacy canvas in logical pixels; scale the window for the desktop DPI.
+		HDC windowDC = GetDC(m_hWnd);
+		const int dpi = GetDeviceCaps(windowDC, LOGPIXELSX);
+		ReleaseDC(m_hWnd, windowDC);
+		const int defaultWidth = MulDiv(m_stDisplayInfo.wWidth, dpi, USER_DEFAULT_SCREEN_DPI);
+		const int defaultHeight = MulDiv(m_stDisplayInfo.wHeight, dpi, USER_DEFAULT_SCREEN_DPI);
+		// Explicit Display overrides remain physical pixel sizes.
+		const int windowWidth = GetPrivateProfileInt("Display", "WindowWidth", defaultWidth, ".\\Mir3.ini");
+		const int windowHeight = GetPrivateProfileInt("Display", "WindowHeight", defaultHeight, ".\\Mir3.ini");
 		SetRect(&rcTemp, 0, 0, windowWidth, windowHeight);
 
 		// 从客户端矩形区域大小转换为整个窗口区域的大小.
