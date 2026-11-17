@@ -1,0 +1,15 @@
+[@main]
+#SAY
+Welcome\
+<Continue/@next>\
+{FCOLOR/<Invisible/@colorhidden>}
+[@next]
+#SAY
+Second page\
+<Exit/@exit>
+[@hidden]
+#SAY
+Hidden page
+[@colorhidden]
+#SAY
+Color hidden page

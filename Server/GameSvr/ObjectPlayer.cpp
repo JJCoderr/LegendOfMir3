@@ -73,6 +73,7 @@ void CPlayerObject::Constructor()
     m_dialogMerchant = NULL;
     m_shopMerchant = NULL;
     m_npcScriptFiles.clear();
+    m_npcOptions.clear();
 
 	m_fIsCapture			= FALSE;
 }
@@ -2484,6 +2485,7 @@ void CPlayerObject::Operate()
                                 m_dialogMerchant = npc;
                                 m_shopMerchant = NULL;
                                 m_npcScriptFiles.clear();
+                                m_npcOptions.clear();
                             } else if (m_dialogMerchant != npc) break;
                             if (lpProcessMsg->wIdent == CM_USERBUYITEM) {
                                 if (m_shopMerchant != npc || !lpProcessMsg->pszData) break;
@@ -2499,6 +2501,10 @@ void CPlayerObject::Operate()
                                 const int size = fnDecode6BitBufA(lpProcessMsg->pszData, section, sizeof(section)-1);
                                 section[size] = 0;
                                 if (section[0] != '@') break;
+                                // Only options in the last delivered page may invoke script labels.
+                                bool allowed = !_stricmp(section, "@main") || !_stricmp(section, "@exit");
+                                for (const auto& option : m_npcOptions) if (option == section) allowed = true;
+                                if (!allowed) break;
                             }
                             if (!_stricmp(section, "@exit")) {
                                 fnMakeDefMessage(&DefMsg, SM_MERCHANTDLGCLOSE, (int)npc, 0, 0, 0);
@@ -2506,6 +2512,7 @@ void CPlayerObject::Operate()
                                 m_dialogMerchant = NULL;
                                 m_shopMerchant = NULL;
                                 m_npcScriptFiles.clear();
+                                m_npcOptions.clear();
                             } else npc->Say(this, section);
                             break;
                         }

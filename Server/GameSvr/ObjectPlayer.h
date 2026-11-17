@@ -20,6 +20,7 @@ public:
     CCharObject* m_dialogMerchant;
     CCharObject* m_shopMerchant;
     std::vector<std::string> m_npcScriptFiles;
+    std::vector<std::string> m_npcOptions;
 
 	CWHList<CCharObject*>	m_xSlaveObjList;
 

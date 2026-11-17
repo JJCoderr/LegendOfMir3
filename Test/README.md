@@ -153,6 +153,13 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 `Npc/NpcDialog.csv` 通过真实 npc.click / npc.select 入口验证 CM_CLICKNPC、CM_MERCHANTDLGSELECT 和 SM_MERCHANTSAY。state.get 的 npc_dialog 包含 open、id、rows 和选项冷却 ready；rows 来自客户端实际接收并解析的对话。33 步覆盖两页跳转、无效实体/选项拒绝、未支持条件页不回传，以及后续正常页面可用。
 
+`Npc/NpcOptions.csv` 验证服务端只接受最近一次成功返回页面中的选项。隐藏标签、颜色控制标签内部的伪选项、前页过期选项和关闭后的请求均不触发页面；拒绝后合法选项仍可使用。`@main` / `@exit` 是当前NPC上下文中的特殊入口，不必显示在页面里；关闭后必须重新点击NPC。页面执行失败时保留原选项，切换NPC或关闭时清空，导入脚本中的选项随实际返回页面更新。
+
+`npc.request(index,command)` 是专供协议校验的客户端RPC：index取当前actors数组下标，command最多255个本地编码字节；调用真实SendNPCMessage发送CM_MERCHANTDLGSELECT，故意不经过UI选项列表与冷却判断，便于测试服务端拒绝路径。通常游戏流程仍使用 `npc.click` / `npc.select`。测试用后续聊天回包作为同连接处理屏障，再核对页面回包数，避免把尚未处理误判为拒绝。
+
+参考依据：`Mud3/Eiserver.exe`（SHA-256见Shop/native-price-audit.md）中的 `0x4E11C0` 检查角色当前对话选项列表，对 `@main` / `@exit` 放行；其他不存在的标签不执行页面。本轮未实现输入型 `@@` 参数、完整任务指令或出售/修理业务。
+
+
 场景可附带同名 `.files` 目录，例如 `Npc/NpcDialog.files/Envir/Market_Def/NpcProbe-01.txt`。启动器将其中的相对目录结构复制到隔离运行目录。CSV 仍只存测试动作与断言，NPC 文本由服务端实际读取。
 
 当前数据库商人的脚本路径为 `Envir/Market_Def/<FLD_SCRIPT或NPC名称>-<地图名>.txt`（本地代码页），支持 `[@main]` / `[@选项]`、`#SAY`、反斜杠换行及 `<文字/@选项>`。已支持 #IF/checklevel、#ELSESAY、#ACT/#ELSEACT 下的 goto 和 break；已接入 #CALL/#INCLUDE；数据库已支持独立脚本名映射；尚未直接导入参考服 merchant.txt，也未接入完整交易和任务指令。遇到未支持的条件或需要执行的指令时拒绝整个请求，不发送半段对话。本阶段不是完整旧脚本引擎。

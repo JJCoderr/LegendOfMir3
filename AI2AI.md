@@ -2216,3 +2216,9 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - ShopFree更名ShopLowPrice，修正全部现有Shop报价/余额；增加倍率54/55、有效值保留、零价拒购和扩展精度舍入CSV。基础价15得到17、35得到38，避免用普通double或十进制偶数取整替代。
 - EIServer Release构建通过；全部13个Shop场景515步通过（含双客户端共享库存、保存重登、容量/负重拒绝），日志out/csv-validation/shop-native-price.log与native-Shop*.log。原服静态证据和实现边界在Test/Shop/native-price-audit.md。
 - 整体适配仍未完成：装备交易、出售/修理、补货等仍待接入；NPC选项需继续核对原服只允许已展示选项的服务端校验。
+
+## NPC当前选项校验与真实协议拒绝测试
+
+- 参照原服0x4E11C0，服务端保存最近成功返回页面的选项；只接受列表内标签以及当前上下文的@main/@exit。页面失败保留原列表，点击另一NPC或退出清空。颜色控制标签中的伪选项不计入。
+- 客户端新增npc.request(index,command)诊断RPC，经真实SendNPCMessage发包，专门绕过UI选项过滤以测试服务端；正常流程继续用npc.select。NpcOptions.csv的50步验证隐藏/过期/关闭后请求拒绝与合法恢复，聊天回包作为处理屏障。
+- Client/EIServer Release构建通过；11个NPC场景加ShopBuy/ShopSharedStock共13场景505步通过，日志out/csv-validation/npc-options*.log。输入型@@参数和完整任务/交易指令仍待实现。

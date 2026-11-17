@@ -180,6 +180,20 @@ void CMerchantObject::Say(CPlayerObject* player, const char* section)
     encoded[length] = 0;
     _TDEFAULTMESSAGE message;
     fnMakeDefMessage(&message, SM_MERCHANTSAY, (int)this, 0, 0, 1);
+    // Commit options with the successfully rendered page; failed pages keep the old context.
+    std::vector<std::string> options;
+    size_t position = 0;
+    while ((position = body.find_first_of("<{\\", position)) != std::string::npos) {
+        if (body[position]=='\\') { ++position; continue; }
+        const bool optionTag = body[position]=='<';
+        const auto close = body.find(optionTag ? '>' : '}', position+1);
+        if (close == std::string::npos) break;
+        const auto slash = body.find('/', position+1);
+        if (optionTag && slash != std::string::npos && slash+1 < close && body[slash+1]=='@')
+            options.push_back(body.substr(slash+1, close-slash-1));
+        position = close+1;
+    }
+    player->m_npcOptions = options;
     player->m_npcScriptFiles = files;
     player->SendSocket(&message, encoded);
     if (!_stricmp(section, "@buy")) { player->m_shopMerchant = this; ShowGoods(player); }

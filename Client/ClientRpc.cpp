@@ -269,6 +269,17 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
             actors.MoveCurrentToTop();for(int i=0;i<index;++i) actors.MoveNextNode();
             accepted=g_xGameProc.ClickNPC(actors.GetCurrentData());
         }
+    } else if (method == "npc.request" && g_bProcState == _GAME_PROC) {
+        // Protocol probe: deliberately bypass the UI option list to test server validation.
+        const auto command=Text(params,"command");
+        constexpr size_t MaximumNpcCommandBytes=255;
+        if(command.size()>MaximumNpcCommandBytes) throw JsonRpc::Error{-32602,"NPC command too long"};
+        const int index=Integer(params,"index");auto& actors=g_xGameProc.m_xActorList;
+        if(index<actors.GetCounter()) {
+            actors.MoveCurrentToTop();for(int i=0;i<index;++i) actors.MoveNextNode();
+            g_xClientSocket.SendNPCMessage(CM_MERCHANTDLGSELECT,actors.GetCurrentData()->m_dwIdentity,0,const_cast<char*>(command.c_str()));
+            accepted=true;
+        }
     } else if (method == "npc.select" && g_bProcState == _GAME_PROC) {
         if(!g_xGameProc.InputDelayed() && !g_xGameProc.m_xNotice.IsActive() && !g_xGameProc.m_xInterface.HasInputDialog())
             accepted=g_xGameProc.m_xInterface.m_xNPCWnd.SelectOption(Integer(params,"option"));
