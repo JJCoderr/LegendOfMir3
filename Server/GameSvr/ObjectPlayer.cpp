@@ -544,7 +544,7 @@ int CPlayerObject::UpdateItemToDB(_LPTUSERITEMRCD lpMakeItemRcd, int nAction)
 								pszUserID, pszCharName, lpMakeItemRcd->szMakeIndex[0], g_szYesterDay, g_nItemIndexCnt,
 								lpMakeItemRcd->nStdIndex, lpMakeItemRcd->nDura,	lpMakeItemRcd->nDuraMax, 
 								lpMakeItemRcd->btValue[0], lpMakeItemRcd->btValue[1], lpMakeItemRcd->btValue[2], lpMakeItemRcd->btValue[3], 
-								lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[6], lpMakeItemRcd->btValue[7], 
+								lpMakeItemRcd->btValue[4], lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[6], lpMakeItemRcd->btValue[7],
 								lpMakeItemRcd->btValue[8], lpMakeItemRcd->btValue[9], lpMakeItemRcd->btValue[10], lpMakeItemRcd->btValue[11], 
 								lpMakeItemRcd->btValue[12], lpMakeItemRcd->btValue[13], pszCharName, _ITEM_ACTION_CREATE);
 */			break;
@@ -558,7 +558,7 @@ int CPlayerObject::UpdateItemToDB(_LPTUSERITEMRCD lpMakeItemRcd, int nAction)
 								"WHERE FLD_STDTYPE='%c' AND FLD_MAKEDATE='%s' AND FLD_MAKEINDEX='%s' AND FLD_STDINDEX=%d",
 								"0", "WEMADE", lpMakeItemRcd->nDura, lpMakeItemRcd->nDuraMax, 
 								lpMakeItemRcd->btValue[0], lpMakeItemRcd->btValue[1], lpMakeItemRcd->btValue[2], lpMakeItemRcd->btValue[3], 
-								lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[6], lpMakeItemRcd->btValue[7], 
+								lpMakeItemRcd->btValue[4], lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[6], lpMakeItemRcd->btValue[7],
 								lpMakeItemRcd->btValue[8], lpMakeItemRcd->btValue[9], lpMakeItemRcd->btValue[10], lpMakeItemRcd->btValue[11], 
 								lpMakeItemRcd->btValue[12], lpMakeItemRcd->btValue[13], m_pUserInfo->m_szCharName, _ITEM_ACTION_THROW,
 								lpMakeItemRcd->szMakeIndex[0], szMakeDay, szMakeIndex, lpMakeItemRcd->nStdIndex);
@@ -573,7 +573,7 @@ int CPlayerObject::UpdateItemToDB(_LPTUSERITEMRCD lpMakeItemRcd, int nAction)
 								"WHERE FLD_STDTYPE='%c' AND FLD_MAKEDATE='%s' AND FLD_MAKEINDEX='%s' AND FLD_STDINDEX=%d",
 								m_pUserInfo->m_szUserID, m_pUserInfo->m_szCharName, lpMakeItemRcd->nDura, lpMakeItemRcd->nDuraMax, 
 								lpMakeItemRcd->btValue[0], lpMakeItemRcd->btValue[1], lpMakeItemRcd->btValue[2], lpMakeItemRcd->btValue[3], 
-								lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[6], lpMakeItemRcd->btValue[7], 
+								lpMakeItemRcd->btValue[4], lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[6], lpMakeItemRcd->btValue[7],
 								lpMakeItemRcd->btValue[8], lpMakeItemRcd->btValue[9], lpMakeItemRcd->btValue[10], lpMakeItemRcd->btValue[11], 
 								lpMakeItemRcd->btValue[12], lpMakeItemRcd->btValue[13], "WEMADE", _ITEM_ACTION_PICKUP,
 								lpMakeItemRcd->szMakeIndex[0], szMakeDay, szMakeIndex, lpMakeItemRcd->nStdIndex);
@@ -588,7 +588,7 @@ int CPlayerObject::UpdateItemToDB(_LPTUSERITEMRCD lpMakeItemRcd, int nAction)
 								"WHERE FLD_STDTYPE='%c' AND FLD_MAKEDATE='%s' AND FLD_MAKEINDEX='%s' AND FLD_STDINDEX=%d",
 								lpMakeItemRcd->nDura, lpMakeItemRcd->nDuraMax, 
 								lpMakeItemRcd->btValue[0], lpMakeItemRcd->btValue[1], lpMakeItemRcd->btValue[2], lpMakeItemRcd->btValue[3], 
-								lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[6], lpMakeItemRcd->btValue[7], 
+								lpMakeItemRcd->btValue[4], lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[6], lpMakeItemRcd->btValue[7],
 								lpMakeItemRcd->btValue[8], lpMakeItemRcd->btValue[9], lpMakeItemRcd->btValue[10], lpMakeItemRcd->btValue[11], 
 								lpMakeItemRcd->btValue[12], lpMakeItemRcd->btValue[13], m_pUserInfo->m_szCharName, _ITEM_ACTION_UPDATE, lpMakeItemRcd->szPrefixName,
 								lpMakeItemRcd->szMakeIndex[0], szMakeDay, szMakeIndex, lpMakeItemRcd->nStdIndex);

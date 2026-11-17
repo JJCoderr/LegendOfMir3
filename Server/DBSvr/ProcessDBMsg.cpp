@@ -148,6 +148,7 @@ void GetHumanItemRcd(char *szName, CWHList<_LPTUSERITEMRCD>	*pxUserItemRcdList)
 			pItem->btValue[10]	= atoi( pRec->Get( "FLD_VALUE11" ) );
 			pItem->btValue[11]	= atoi( pRec->Get( "FLD_VALUE12" ) );
 			pItem->btValue[12]	= atoi( pRec->Get( "FLD_VALUE13" ) );
+			pItem->btValue[13]	= atoi( pRec->Get( "FLD_VALUE14" ) );
 
 			ZeroMemory(pItem->szPrefixName, sizeof(pItem->szPrefixName));
 			strcpy( pItem->szPrefixName, pRec->Get( "FLD_PREFIXNAME") );
@@ -453,7 +454,7 @@ BOOL MakeNewItem(CServerInfo* pServerInfo, _LPTLOADHUMAN lpHumanLoad, _LPTMAKEIT
 						szUserID, szCharName, lpMakeItemRcd->szStdType, g_szYesterDay, g_nItemIndexCnt,
 						lpMakeItemRcd->nStdIndex, lpMakeItemRcd->nDura,	lpMakeItemRcd->nDuraMax, 
 						lpMakeItemRcd->btValue[0], lpMakeItemRcd->btValue[1], lpMakeItemRcd->btValue[2], lpMakeItemRcd->btValue[3], 
-						lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[6], lpMakeItemRcd->btValue[7], 
+						lpMakeItemRcd->btValue[4], lpMakeItemRcd->btValue[5], lpMakeItemRcd->btValue[6], lpMakeItemRcd->btValue[7],
 						lpMakeItemRcd->btValue[8], lpMakeItemRcd->btValue[9], lpMakeItemRcd->btValue[10], lpMakeItemRcd->btValue[11], 
 						lpMakeItemRcd->btValue[12], lpMakeItemRcd->btValue[13], szCharName, 1, "");
 	

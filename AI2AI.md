@@ -2283,3 +2283,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 新增14个 Shop 子系统 CSV（757步），完成16个回归（692步），总计1449步通过；价格单测17项通过，全部89份fixture在当前SQLite建表脚本上执行通过。Client/EIServer Release构建通过。
 - 修复 ShopPriceRounding/ShopRestock 数据复制未指定列名的问题；InventoryLegacyStandard 同时覆盖缺少标准耐久与堆叠模式列。
 - 未完成：装备附加属性计价、真实堆叠数量交易、库存重启持久化、SQL Server运行验证。实例详情价格受WORD字段限制，超限拒绝，不模拟原服整数溢出。
+
+## 2026-11-18 装备附加属性保存修复
+
+- 装备出售前置核对发现现有加载漏读 FLD_VALUE14，丢弃/拾取/更新及旧创建SQL重复使用 btValue[5]，丢失第5项。已按14项记录修正，保留原文件GBK/CRLF。
+- 新增 Inventory/InventoryEquipmentAttributes.csv，以1至14的独立值覆盖真实丢弃、拾取、保存与重登。修复前第190步复现值5被6覆盖、值14为0；修复后31步通过。
+- 背包完整流程71步、怪物装备掉落41步、入库失败39步通过；合计182步。最终EIServer Release重建并复跑31步属性场景通过。旧管理创建分支映射已修正，尚无实际运行覆盖。
+- IDA核对参考服0x514270将实例偏移10起14字节发送到客户端记录偏移86，武器偏移93另有限制。装备出售仍待完整属性语义、库存与持久化转移接入；不得视为交易功能已完成。

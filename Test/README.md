@@ -225,3 +225,5 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 每页最多10件；刷新保留未成交实例ID，补货创建新ID。出售和回购均按真实耐久计算，类型40肉、43矿石采用各自预处理。FLD_STACKMODE 缺列或 NULL 时使用旧类型推断，显式0表示不堆叠。批量路径目前仍生成独立记录，不代表已支持真实数量堆叠。
 
 ShopDurability/MeatPrice/MeatPremium/OrePrice/OreMinimum/MaximumLoss/PowderPrice 验证不同计价、成交和保存重登；ShopStackPriceBypass 验证堆叠模式跳过折价；ShopDetailPages/Shared/Restock/Capacity/Weight/Gold 验证分页、争买、补货及失败保留。双客户端 Shared 场景需 `--clients 2`。价格详情使用16位协议字段，超出范围拒绝；装备附加属性和原服溢出行为尚未实现。详见 [耐久计价核对](Shop/native-durability-audit.md)。
+
+`Inventory/InventoryEquipmentAttributes.csv` 为装备的14个附加属性设置各不相同的值，经过真实客户端丢弃、拾取、保存与重登后检查数据库逐项保留，并检查当前/最大耐久。它覆盖了加载遗漏 FLD_VALUE14、转移 SQL 把 FLD_VALUE5 写成 VALUE6 的回归；不代表装备出售或全部附加属性显示已完成。
