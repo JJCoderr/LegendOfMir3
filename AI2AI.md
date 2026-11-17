@@ -2094,3 +2094,7 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 普通物品的旧 G 键描述属性，两瓶相同药水会相同；客户端 ID 现结合活跃记录分配，使用/丢弃按请求 ID 定位具体记录。消耗或丢弃使旧 ID 失效，拾回分配新 ID，避免旧请求操作另一瓶。普通物品发送直接使用真实记录，不再构造临时副本。
 - InventoryDuplicates.csv 39 步通过：两瓶相同药水、指定第二瓶丢弃拾回并使用、第一瓶保留、数据库数量 1 -> 重登 -> 使用 -> 0。Inventory 71 步、MonstersLoot 39 步、MonstersEquipment 41 步回归通过；EIServer Release 构建通过。日志位于 out/csv-validation/inventory-duplicates.log 和 duplicates-*-regression.log。
 - 相同符咒/火把的装备槽位仍使用旧属性键，尚未验证多份相同物品的装备行为。
+
+### 多件怪物掉落
+- 非金币掉落按 FLD_COUNT 生成独立物品；数量 0 不掉落，每条配置只抽取一次概率，金币保留原数量规则。整理 MonGetRandomItems，去掉重复清零和失效注释。
+- MonstersLootCount.csv 43 步通过：两瓶药水分散掉落、逐件行走拾取、独立 ID、数据库数量 2 与重登恢复。MonstersEquipmentCount.csv 45 步通过：两件装备分配 00011/00012，穿戴一件、背包保留另一件并保存恢复。两场景包含数量 0 的负向配置。MonstersGold 40 步回归通过，EIServer Release 构建通过。日志 out/csv-validation/monster-loot-count.log、monster-equipment-count.log、count-gold-regression.log。

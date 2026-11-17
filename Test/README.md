@@ -67,7 +67,7 @@ step,name,target,action,params,expect
 | 角色 | `Character.csv`、`CharacterDelete.csv` | 创建角色、删除角色及持久化 |
 | 物品 | `Inventory.csv`、`InventoryDuplicates.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
 | 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复、施法回包、扣蓝与受伤治疗 |
-| 怪物 | `MonstersSpawn.csv`、`MonstersLoot.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
+| 怪物 | `MonstersSpawn.csv`、`MonstersLoot.csv`、`MonstersLootCount.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv`、`MonstersEquipment.csv`、`MonstersEquipmentCount.csv`、`MonstersEquipmentFailure.csv` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
 | 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
@@ -117,3 +117,5 @@ build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pi
 Inventory 步骤编号调整：为补入真实行走与到达检查，原有步骤号统一乘以 10（原 20–40 对应 200–400）；新增 262/264 和 332/334 步行走到药水、装备掉落格。恢复地图搜索表后，主动丢弃物品散落在相邻格，不再假设物品位于角色脚下。调用该脚本的历史区间参数需按此换算。
 
 `InventoryDuplicates.csv` 验证两瓶相同属性药水具有不同的客户端 ID；丢弃第二瓶、真实行走拾回、使用第二瓶时第一瓶仍在，保存重登后剩余数量为 1，再使用并保存后为 0。普通物品离开背包或被消耗后旧 ID 失效，拾回时分配新 ID；脚本应读取 state.get 获取当前 ID。装备仍按完整数据库身份映射。当前未验证多份相同符咒或火把的装备槽位语义。
+
+掉落数量场景：`MonstersLootCount.csv` 验证同一配置生成两瓶药水、分别行走拾取、独立客户端 ID 和保存重登数量；`MonstersEquipmentCount.csv` 验证生成两件装备、分别入库为 00011/00012，穿戴一件后另一件留在背包，保存重登保留两件。两份 fixture 同时包含数量为 0 的记录，断言无额外掉落。非金币配置命中一次概率后生成 FLD_COUNT 件独立物品；金币保持原随机数量规则。尚未验证大批掉落、周围格子全部被占用或背包满时的处理。

@@ -499,89 +499,43 @@ void CMonsterObject::MakeGenItem(_LPTGENERALITEMRCD lptGenItemRcd)
 
 void CMonsterObject::MonGetRandomItems()
 {
-	CMonItem*			pMonItem = NULL;
-	CMonRaceInfo*		pMonRaceInfo = &g_pMonRaceInfo[m_nRace];
-
-//	_TMAKEITEMRCD		MakeItemRcd;
-
-	if (pMonRaceInfo)
-	{
-		if (pMonRaceInfo->m_xMonItemList.GetCount())
-		{
-			PLISTNODE pListNode = pMonRaceInfo->m_xMonItemList.GetHead();
-
-			while (pListNode)
-			{
-				pMonItem = pMonRaceInfo->m_xMonItemList.GetData(pListNode);
-
-				if (pMonItem && pMonItem->m_nPoint > 0 && rand() % pMonItem->m_nPoint == 0)
-				{
-//					if (1 >= rand() % pMonItem->m_nPoint)
-//					{
-
-
-						switch (pMonItem->m_btItemType)
-						{
-							case _ITEM_GOLD:
-								if(pMonItem->m_wCount) m_dwGold += _MAX(1,(pMonItem->m_wCount / 2) + (rand() % pMonItem->m_wCount));
-								break;
-							case _ITEM_WEAPON:
-							case _ITEM_ARMOR:
-							case _ITEM_ACCESSORY:
-							{
-                                auto* lpTItemRcd=new _TUSERITEMRCD{};
-								ZeroMemory(lpTItemRcd->szPrefixName, sizeof(lpTItemRcd->szPrefixName));
-								ZeroMemory(lpTItemRcd->btValue, sizeof(lpTItemRcd->btValue));
-
-								lpTItemRcd->nStdIndex = pMonItem->m_wItemIndex;
-								
-								switch (pMonItem->m_btItemType)
-								{
-									case 0:
-										memcpy(lpTItemRcd->szMakeIndex, "A00000000000", 12);
-										break;
-									case 1:
-										memcpy(lpTItemRcd->szMakeIndex, "B00000000000", 12);
-										break;
-									case 2:
-										memcpy(lpTItemRcd->szMakeIndex, "C00000000000", 12);
-										break;
-								}
-
-								lpTItemRcd->nDura		= g_pStdItemSpecial[pMonItem->m_wItemIndex].wDuraMax;
-								lpTItemRcd->nDuraMax	= g_pStdItemSpecial[pMonItem->m_wItemIndex].wDuraMax;
-
-								if (rand() % 10 == 0)
-									g_pStdItemSpecial[pMonItem->m_wItemIndex].UpgradeRandomItem(lpTItemRcd->btValue, lpTItemRcd->nDura, lpTItemRcd->nDuraMax);
-
-								m_xTItemRcd.AddNewNode(lpTItemRcd);
-//								MakeItemToDB(&MakeItemRcd);
-
-								break;
-							}
-							case _ITEM_ETC:
-							{
-								_LPTGENERALITEMRCD	lptGenItemRcd = new _TGENERALITEMRCD;
-
-								if (lptGenItemRcd)
-								{
-									lptGenItemRcd->nStdIndex	= pMonItem->m_wItemIndex;
-									lptGenItemRcd->nDura		= g_pStdItemEtc[pMonItem->m_wItemIndex].wDuraMax;
-									lptGenItemRcd->nDuraMax		= g_pStdItemEtc[pMonItem->m_wItemIndex].dwRSource;
-
-									MakeGenItem(lptGenItemRcd);
-								}
-
-								break;
-							}
-						}
-//					}
-				}
-
-				pListNode = pMonRaceInfo->m_xMonItemList.GetNext(pListNode);
-			}
-		}
-	}
+    auto& drops = g_pMonRaceInfo[m_nRace].m_xMonItemList;
+    for (auto node = drops.GetHead(); node; node = drops.GetNext(node)) {
+        const auto drop = drops.GetData(node);
+        if (!drop || !drop->m_wCount || drop->m_nPoint <= 0 || rand() % drop->m_nPoint != 0) continue;
+        if (drop->m_btItemType == _ITEM_GOLD) {
+            m_dwGold += _MAX(1, (drop->m_wCount / 2) + (rand() % drop->m_wCount));
+            continue;
+        }
+        for (unsigned count = 0; count < drop->m_wCount; ++count) {
+            switch (drop->m_btItemType) {
+            case _ITEM_WEAPON:
+            case _ITEM_ARMOR:
+            case _ITEM_ACCESSORY: {
+                auto* item = new _TUSERITEMRCD{};
+                item->nStdIndex = drop->m_wItemIndex;
+                switch (drop->m_btItemType) {
+                case _ITEM_WEAPON: memcpy(item->szMakeIndex, "A00000000000", 12); break;
+                case _ITEM_ARMOR: memcpy(item->szMakeIndex, "B00000000000", 12); break;
+                case _ITEM_ACCESSORY: memcpy(item->szMakeIndex, "C00000000000", 12); break;
+                }
+                auto& standard = g_pStdItemSpecial[item->nStdIndex];
+                item->nDura = item->nDuraMax = standard.wDuraMax;
+                if (rand() % 10 == 0) standard.UpgradeRandomItem(item->btValue, item->nDura, item->nDuraMax);
+                m_xTItemRcd.AddNewNode(item);
+                break;
+            }
+            case _ITEM_ETC: {
+                auto* item = new _TGENERALITEMRCD{};
+                item->nStdIndex = drop->m_wItemIndex;
+                item->nDura = g_pStdItemEtc[item->nStdIndex].wDuraMax;
+                item->nDuraMax = g_pStdItemEtc[item->nStdIndex].dwRSource;
+                MakeGenItem(item);
+                break;
+            }
+            }
+        }
+    }
 }
 /*
 function  TUserEngine.MonGetRandomItems (mon: TCreature): integer;
