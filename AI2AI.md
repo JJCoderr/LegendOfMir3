@@ -1278,3 +1278,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 459670 +10364控制金额显示，确认零也显示0。详见Client/docs/amount-dialog-evidence.md。沿用原生控件/资源/音效。
 - clean Client与全部七目标构建通过；金额5项+相关80项回归共85项全1。两截图out/amount-consignment-price.png、amount-mail-gift-gold.png已核对。
 - 没有新增预览ID，下一空闲190。实服登录和全GUI仍未完成，送礼按钮没有已证实可接入的发送协议。
+
+### 状态页与HUD能力记录接入（2026-11-17）
+- 审计发现SM_ABILITY仍直接解码旧ACTORABILITY，元素只有预览赋值。现按Godot actor_ability.hpp及MIR3 42F5A0/4390E0/4710F0接63字节记录，显式更新原生属性、金币、职业、生命/血条及元素。
+- 新AbilityWire.h命名字段；原始扩展28字节与4头选项保留，StatusWnd::Init清空。强弱元素signed显示保持，不触发伤害跳字。
+- clean Client及七目标构建通过；新增13项+相关63项共76项全1。190 ability-wire截图out/ability-wire.png已核对；下一空闲191。
+- 详见Client/docs/ability-wire-evidence.md。Server/GameSvr/ObjectPlayer.cpp两处仍直接发送CObjectAbility，顺序及五元素与原版不同，后续服务端阶段必须显式序列化；没有将当前截图当作实服联通。全GUI与登录目标保持进行中。

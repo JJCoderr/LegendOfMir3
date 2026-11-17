@@ -42,6 +42,8 @@ VOID CStatusWnd::Init()
 	CGameWnd::Init();
 
     m_nativeClosePressed=false;
+    ZeroMemory(m_abilityExtension,sizeof(m_abilityExtension));
+    ZeroMemory(m_abilityHeaderOptions,sizeof(m_abilityHeaderOptions));
     ZeroMemory(m_elementValues,sizeof(m_elementValues)); m_showNativeHint=false;
     m_identityTertiary.clear(); m_identityBadge.clear();
 	ZeroMemory(&m_rcCell, sizeof(RECT)*_EQUIP_MAX_CELL);

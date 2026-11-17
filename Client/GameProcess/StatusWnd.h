@@ -1,6 +1,7 @@
 #ifndef _CSTATUSWND_H
 #define _CSTATUSWND_H
 #include <string>
+#include "AbilityWire.h"
 
 
 
@@ -36,6 +37,7 @@ public:
     void UpdateDurability(WORD slot,LONG current,WORD maximum);
     std::string m_identityTertiary, m_identityBadge;
     BYTE m_elementValues[3][7]={};
+    BYTE m_abilityExtension[AbilityWire::ExtensionSize]={},m_abilityHeaderOptions[4]={};
     int ElementValue(int row,int column) const {
         const int value=m_elementValues[row][column];
         return row==0 || value<128 ? value : value-256;

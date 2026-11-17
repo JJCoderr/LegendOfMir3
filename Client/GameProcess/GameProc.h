@@ -32,6 +32,7 @@ protected:
 	VOID	OnSvrMsgHear(_TDEFAULTMESSAGE *ptdm, char *pszMsg);
 
 public:
+    bool ReceiveAbility(const _TDEFAULTMESSAGE& header,const char* encoded);
 	 CGameProcess();
 	~CGameProcess();
 public:

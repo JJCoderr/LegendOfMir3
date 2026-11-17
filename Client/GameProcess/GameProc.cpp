@@ -1,5 +1,6 @@
 #include "StdAfx.h"
 #include "MailWire.h"
+#include "AbilityWire.h"
 #include "Common/Mir3HumanAppearance.h"
 #include "Common/LoginMessages.h"
 
@@ -2945,15 +2946,9 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 				nPos = fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), (char*)m_szMapName, sizeof(m_szMapName));
 				m_szMapName[nPos] = '\0';
 				break;
-			case SM_ABILITY:
-			{
-				m_xMyHero.m_nGlod	= tdm.nRecog;
-				m_xMyHero.m_bJob	= tdm.wParam;
-
-				fnDecode6BitBuf((pszMsg + DEFBLOCKSIZE), (char*)&m_xMyHero.m_stAbility, sizeof(ACTORABILITY));
-
-				break;
-			}
+            case SM_ABILITY:
+                ReceiveAbility(tdm,pszMsg+DEFBLOCKSIZE);
+                break;
 			case SM_WINEXP:
 			{
 				CHAR szExp[MAX_PATH];
@@ -4242,4 +4237,38 @@ void CGameProcess::UpdateTargetDisplay(CActor* actor,DWORD now)
             g_xClientSocket.SendPacket(&packet,NULL);
         }
     } else target.Focus(0,now);
+}
+
+// Update the native status page and HUD from the same validated MIR3 record.
+bool CGameProcess::ReceiveAbility(const _TDEFAULTMESSAGE& header,const char* encoded)
+{
+    using namespace AbilityWire;
+    if(header.wIdent!=SM_ABILITY || LOBYTE(header.wParam)>MaximumProfession || strlen(encoded)!=EncodedSize) return false;
+    BYTE bytes[Size+1]={};
+    if(fnDecode6BitBuf(const_cast<char*>(encoded),reinterpret_cast<char*>(bytes),sizeof(bytes))!=Size) return false;
+    const auto word=[&](int at) {return MAKEWORD(bytes[at],bytes[at+1]);};
+    const auto dword=[&](int at) {return DWORD(word(at))|(DWORD(word(at+2))<<16);};
+    ACTORABILITY ability={};
+    ability.bLevel=bytes[Level];ability.wAC=word(Defence);ability.wMAC=word(MagicDefence);
+    ability.wDC=word(Attack);ability.wMC=word(Magic);ability.wSC=word(Spirit);
+    ability.wHP=word(Health);ability.wMP=word(Mana);ability.wMaxHP=word(MaxHealth);ability.wMaxMP=word(MaxMana);
+    ability.dwExp=dword(Experience);ability.dwMaxExp=dword(NextExperience);
+    ability.wWeight=word(Weight);ability.wMaxWeight=word(MaxWeight);
+    ability.bWearWeight=bytes[Wear];ability.bMaxWearWeight=bytes[MaxWear];
+    ability.bHandWeight=bytes[Hand];ability.bMaxHandWeight=bytes[MaxHand];
+    m_xMyHero.m_stAbility=ability;m_xMyHero.m_nGlod=DWORD(header.nRecog);m_xMyHero.m_bJob=LOBYTE(header.wParam);
+    m_xMyHero.m_wHP=ability.wHP;m_xMyHero.m_wMAXHP=ability.wMaxHP;m_xMyHero.m_wMP=ability.wMP;
+    m_xMyHero.m_bHPPercent=ability.wMaxHP?BYTE(min(100u,unsigned(ability.wHP)*100/ability.wMaxHP)):0;
+    auto& status=m_xInterface.m_xStatusWnd;
+    memcpy(status.m_abilityExtension,bytes+Extension,ExtensionSize);
+    status.m_abilityHeaderOptions[0]=LOBYTE(header.wTag);
+    status.m_abilityHeaderOptions[1]=BYTE(HIBYTE(header.wTag)*16);
+    status.m_abilityHeaderOptions[2]=BYTE(LOBYTE(header.wSeries)*16);
+    status.m_abilityHeaderOptions[3]=BYTE(HIBYTE(header.wSeries)*16);
+    for(int i=0;i<ElementCount;++i) {
+        status.m_elementValues[0][i]=bytes[AttackElements+2*i];
+        status.m_elementValues[1][i]=bytes[StrengthElements+i];
+        status.m_elementValues[2][i]=bytes[WeaknessElements+i];
+    }
+    return true;
 }
