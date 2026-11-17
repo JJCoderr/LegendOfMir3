@@ -1,5 +1,7 @@
 """Run JSON test cases against a real process started with --debug-pipe."""
 import argparse
+import logging
+import tempfile
 import ctypes
 import json
 import msvcrt
@@ -77,11 +79,11 @@ def run(suite_path, pid, report=None):
                 assert matches(response, case['expect']), (case['name'], case['expect'], response)
                 if isinstance(response, dict) and 'sequence' in response.get('result', {}):
                     after = response['result']['sequence']
-            print('PASS:', suite['role'], case['name'], flush=True)
+            logging.info('PASS: %s %s', suite['role'], case['name'])
             if report is not None: report.append({'role':suite['role'],'case':case['name'],'status':'passed'})
         if suite['role']=='Client':
             from protocol_catalog import definitions, number, coverage
-            entries = definitions(Path(__file__).resolve().parents[2])
+            entries = definitions(Path(__file__).resolve().parents[1])
             wire = exchange(json.dumps({'jsonrpc':'2.0','id':'wire coverage','method':'protocol.get'}))
             observed = wire['result']['observed']
             for check in suite.get('wire_expect', []):
@@ -89,22 +91,22 @@ def run(suite_path, pid, report=None):
                 count = sum(e['count'] for e in observed if e['direction']==check['direction'] and e['opcode']==opcode)
                 assert count >= check.get('at_least',1), (check,count)
                 if report is not None: report.append({'role':'Wire','case':check['message'],'status':'passed','count':count})
-                print('PASS: Wire',check['direction'],check['message'],count,flush=True)
+                logging.info('PASS: Wire %s %s %s',check['direction'],check['message'],count)
             return coverage(entries,observed)
 
 def launch(args):
     from rpc_fixture import prepare
-    repo = Path(__file__).resolve().parents[2]
+    repo = Path(__file__).resolve().parents[1]
     suite = load_suite(args.suite)
     root = prepare(repo,args.bin_dir.resolve(),args.config_dir.resolve(),suite,args.port_offset)
-    print('Runtime:',root,flush=True)
+    start_log(root)
     processes, report = [], []
     started = time.monotonic()
     result = {'status':'running','cases':report}
     try:
         with (root/'runtime.log').open('wb') as log:
             for role, binary, cases in (
-                ('Server',args.bin_dir.resolve()/'EIServer.exe',repo/'Server/Test/jsonrpc.json'),
+                ('Server',args.bin_dir.resolve()/'EIServer.exe',repo/'Test/Server/jsonrpc.json'),
                 ('Client',root/'Mir2Ex.exe',args.suite)):
                 process = subprocess.Popen([str(binary),'--debug-pipe'],cwd=root,stdout=log,stderr=log,
                     creationflags=subprocess.CREATE_NO_WINDOW if role=='Server' else 0)
@@ -122,18 +124,50 @@ def launch(args):
                     rows = [list(row) for row in db.execute(check['sql'],check.get('params', []))]
                     assert rows == check['rows'], (check['name'],rows,check['rows'])
                     report.append({'role':'Database','case':check['name'],'status':'passed'})
-                    print('PASS: Database',check['name'],flush=True)
+                    logging.info('PASS: Database %s',check['name'])
         result['status']='passed'
     except Exception as error:
         result['status']='failed'
         result['error']=str(error)
+        logging.exception('FAIL')
         raise
     finally:
         for process in reversed(processes):
             if process.poll() is None: process.terminate()
             process.wait(timeout=5)
-        result['elapsed_seconds']=round(time.monotonic()-started,3)
-        (root/'result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+        save_result(root, result, started)
+
+def start_log(root):
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s',
+        handlers=[logging.StreamHandler(), logging.FileHandler(root/'test.log', encoding='utf-8')], force=True)
+    logging.info('Runtime: %s', root)
+
+
+def save_result(root, result, started):
+    result['elapsed_seconds'] = round(time.monotonic()-started, 3)
+    (root/'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
+    logging.info('Result: %s; %s checks passed; %.3fs', result['status'], len(result['cases']), result['elapsed_seconds'])
+
+
+def attach(args):
+    output = Path(__file__).resolve().parents[1]/'out'
+    output.mkdir(exist_ok=True)
+    root = Path(tempfile.mkdtemp(prefix='rpc-', dir=output))
+    start_log(root)
+    started = time.monotonic()
+    result = {'status':'running', 'cases':[]}
+    try:
+        wire = run(args.suite, args.pid, result['cases'])
+        if wire is not None:
+            (root/'protocol-coverage.json').write_text(json.dumps(wire, ensure_ascii=False, indent=2), encoding='utf-8')
+        result['status'] = 'passed'
+    except Exception as error:
+        result.update(status='failed', error=str(error))
+        logging.exception('FAIL')
+        raise
+    finally:
+        save_result(root, result, started)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
@@ -141,10 +175,10 @@ if __name__ == '__main__':
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument('--pid', type=int)
     mode.add_argument('--launch', action='store_true')
-    repo = Path(__file__).resolve().parents[2]
+    repo = Path(__file__).resolve().parents[1]
     parser.add_argument('--bin-dir',type=Path,default=repo/'build-eiserver/Release')
     parser.add_argument('--config-dir',type=Path,default=repo/'out/debug')
     parser.add_argument('--port-offset',type=int,default=20000)
     args = parser.parse_args()
     if args.launch: launch(args)
-    else: run(args.suite, args.pid)
+    else: attach(args)

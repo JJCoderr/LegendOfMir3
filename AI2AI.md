@@ -1994,3 +1994,9 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 仅RPC启用时记录真实SendPacket完成/失败以及登录、选角、游戏解码入口的消息码和长度；不记录账号密码正文。事件含packet.sent/received/send_failed，protocol.get提供会话累计计数，避免环形事件历史过期后丢失覆盖统计。收到消息并不等于业务解析成功，业务仍由状态/数据库断言证明。
 - JSON测试wire_expect按协议符号断言真实收发次数；登录与物品共新增21项消息断言。测试器每轮输出protocol-coverage.json，汇总Client/Common/Protocol.h、Client/Define.h、Server/Def/Protocol.h中声明的CM/SM消息与源位置/别名，列出未观察项和未知实际消息。范围明确不含其他命名空间常量及源文件直接数字opcode，尚不能叫全部协议最终清单。
 - Client Release构建通过。rpc-lpyhxjr0完整72项通过，运行10.408秒；199个已声明方向/消息码组合，本轮观察38个。新增注册/改密、创建删除角色、移动战斗、组队、技能等仍在缺口清单，后续按完整场景补齐。
+
+
+## 2026-11-18 根目录统一测试编排
+- 所有 JSON 测试集迁移至 Test/Client、Test/Server，通用执行器和 fixture/协议统计工具从 Client/Tools 迁至 Test。Client/Server 仅承担 RPC 入口和业务响应。
+- 新入口：python Test/run_rpc_tests.py Test/Client/items.json --launch。自动启动及 --pid 附着均输出 out/rpc-*/test.log 和 result.json；客户端另有协议统计，自动启动保留 runtime.log。Test/README.md 说明用法和边界。
+- 真实两端回归 rpc-w212xy2b：72 项全部通过，10.882 秒；附着不存在 PID 的失败路径 rpc-5mjj41jc：日志和 failed 结果正确落盘，退出码 1。仅迁移 Python/JSON，无需重编 C++。

@@ -27,3 +27,6 @@ CMakeUserPresets.json
 *.clw
 *.scc
 *.positions
+
+# Python test runner cache
+__pycache__/
