@@ -13,7 +13,8 @@ public:
     const char* Text() const { return m_text; }
     BOOL IsActive() const { return m_active; }
     HRESULT OnKeyDown(WPARAM key);
-    HRESULT OnButtonDown(POINT point);
+    HRESULT OnButtonDown(POINT point, bool selectWithMouse=true);
+    void OnMouseMove(POINT point);
     HRESULT OnButtonUp(POINT point, bool releaseOnly=false);
     VOID MoveWnd(POINT) {} // The reference notice is fixed, not draggable.
     BOOL RenderMessageBox(INT);

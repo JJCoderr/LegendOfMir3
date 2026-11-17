@@ -1518,7 +1518,7 @@ BOOL CInterface::IsTopWindow(INT nID)
 *******************************************************************************************************************/
 BOOL CInterface::OnLButtonDown(POINT ptMouse)
 {
-    if(m_xMsgBox.IsActive()) {m_xMsgBox.OnButtonDown(ptMouse);return TRUE;}
+    if(m_xMsgBox.IsActive()) {m_xMsgBox.OnButtonDown(ptMouse,false);return TRUE;}
     if (m_xGuildEditor.m_bActive) { m_xGuildEditor.Pointer(0,ptMouse); return TRUE; }
     const RECT siegeEntry=m_xSiegeWnd.EntryBounds();
     if(!m_xMsgBox.IsActive() && GetWindowInMousePos(ptMouse)==-1 && PtInRect(&siegeEntry,ptMouse)) {m_xSiegeWnd.entryPressed=true;return TRUE;}
@@ -1531,7 +1531,7 @@ BOOL CInterface::OnLButtonDown(POINT ptMouse)
     if (!m_xMsgBox.IsActive() && !PtInRect(&m_xSkillWnd.m_keyMenu,ptMouse)) m_xSkillWnd.m_keyMenu={};
 	if(m_xMsgBox.IsActive())	// ÓÂÆø
 	{
-		m_xMsgBox.OnButtonDown(ptMouse);
+		m_xMsgBox.OnButtonDown(ptMouse,false);
 		return TRUE;
 	}
 	else
@@ -2023,7 +2023,7 @@ case _WND_ID_STATUS:		if ( m_xStatusWnd.OnLButtonUp(&m_stCommonItem, ptMouse) )	
 *******************************************************************************************************************/
 BOOL CInterface::OnMouseMove(POINT ptMouse)
 {
-    if(m_xMsgBox.IsActive()) return TRUE;
+    if(m_xMsgBox.IsActive()) {m_xMsgBox.OnMouseMove(ptMouse);return TRUE;}
     if(!m_xMsgBox.IsActive() && !m_xGuildEditor.m_bActive && GetWindowInMousePos(ptMouse)==_WND_ID_MINIMAP && m_minimap.Pointer(1,ptMouse,(GetKeyState(VK_CONTROL)&0x8000)!=0)) return TRUE;
     if (!m_xMsgBox.IsActive() && m_xPortraitWnd.scrolling) { m_xPortraitWnd.Pointer(1,ptMouse); return TRUE; }
     if (!m_xMsgBox.IsActive() && m_xStoreWnd.scrollCaptured) { m_xStoreWnd.OnMouseMove(ptMouse); return TRUE; }

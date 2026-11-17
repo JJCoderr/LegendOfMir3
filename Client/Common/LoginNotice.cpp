@@ -48,7 +48,8 @@ HRESULT CLoginNotice::OnKeyDown(WPARAM key) {
     return CLICK_NONE;
 }
 
-HRESULT CLoginNotice::OnButtonDown(POINT point) { m_pressed = Hit(point); if(m_pressed==CLICK_YES || m_pressed==CLICK_NO) m_selected=m_pressed; return 0; }
+HRESULT CLoginNotice::OnButtonDown(POINT point, bool selectWithMouse) { m_pressed = Hit(point); if(selectWithMouse && (m_pressed==CLICK_YES || m_pressed==CLICK_NO)) m_selected=m_pressed; return 0; }
+void CLoginNotice::OnMouseMove(POINT point) { if(Hit(point)!=m_pressed) m_pressed=CLICK_NONE; }
 HRESULT CLoginNotice::OnButtonUp(POINT point, bool releaseOnly) {
     const int hit = Hit(point);
     const int result = releaseOnly || hit == m_pressed ? hit : CLICK_NONE;

@@ -49,6 +49,7 @@ BYTE				g_bProcState = _LOGIN_PROC;
 class CHudPreviewProcess : public CWHDefProcess {
     POINT mouse = {0,0};
     int damagePreview=0;
+    int modalPointerPreview=0;
     bool levelPreview=false;
     bool loginPreview=false;
     bool moviePreview=false;
@@ -1215,6 +1216,34 @@ public:
                 fprintf(report,"amount=%d left_scroll=%d right_scroll=%d released=%d stray=%d pending_blocked=%d outside_release=%d body_no_drag=%d header_drag=%d confirmed=%d\n",
                     amount,left,right,released,stray,pending,cancelled,bodyNoDrag,moved,confirmed); fclose(report);
             }
+        }
+        if(groupPanel>=304 && groupPanel<=306) {
+            modalPointerPreview=groupPanel;
+            auto& ui=g_xGameProc.m_xInterface;
+            const POINT yes={280,310},no={490,310},outside={790,430};
+            const auto open=[&](){ui.OpenNameDialog(MailLayout::GoldDialogAction);SetWindowTextA(g_xChatEditBox.GetSafehWnd(),"23");};
+            FILE* report=fopen("modal-pointer-check.txt","wb");
+            const auto check=[&](const char* name,bool ok){if(report) fprintf(report,"%s=%d\n",name,ok);};
+            open();ui.OnLButtonUp(yes);check("release_requires_press",ui.m_xMsgBox.IsActive());
+            ui.OnLButtonDown(yes);ui.OnMouseMove(outside);ui.OnMouseMove(yes);ui.OnLButtonUp(yes);
+            check("leave_return_cancels_click",ui.m_xMsgBox.IsActive());
+            ui.OnLButtonDown(yes);ui.OnLButtonUp(no);check("cross_button_cancels",ui.m_xMsgBox.IsActive());
+            ui.OnLButtonDown(no);ui.OnMouseMove(outside);
+            check("mouse_keeps_keyboard_yes",ui.m_xMsgBox.OnKeyDown(VK_RETURN)==CLICK_YES);
+            ui.OnKeyDown(VK_TAB,0);ui.OnLButtonDown(yes);ui.OnMouseMove(outside);
+            check("mouse_keeps_keyboard_no",ui.m_xMsgBox.OnKeyDown(VK_RETURN)==CLICK_NO);
+            ui.OnKeyDown(VK_RETURN,0);check("keyboard_cancel_closes",!ui.m_xMsgBox.IsActive());
+            open();ui.OnLButtonDown(no);ui.OnMouseMove(no);ui.OnLButtonUp(no);
+            check("paired_cancel_closes",!ui.m_xMsgBox.IsActive());
+            ui.ShowNotice(4000);const POINT ok={370,310};
+            ui.OnLButtonDown(ok);ui.OnMouseMove(outside);ui.OnMouseMove(ok);ui.OnLButtonUp(ok);
+            check("alert_leave_return_cancels",ui.m_xMsgBox.IsActive());
+            ui.OnLButtonDown(ok);ui.OnLButtonUp(ok);check("alert_pair_closes",!ui.m_xMsgBox.IsActive());
+            if(report) fclose(report);
+            open();ui.OnLButtonDown(yes);mouse=yes;
+            if(groupPanel>=305) {ui.OnMouseMove(outside);mouse=outside;}
+            if(groupPanel==306) {ui.OnMouseMove(yes);mouse=yes;}
+            capturePath=groupPanel==304?"modal-button-pressed.bmp":groupPanel==305?"modal-button-left.bmp":"modal-button-returned.bmp";
         }
         if(groupPanel>=301 && groupPanel<=303) {
             auto& ui=g_xGameProc.m_xInterface;
@@ -3554,6 +3583,13 @@ public:
             for(size_t i=0;i<effects.size();++i) g_xGameProc.m_levelEffects.DrawAt(effects[i],440+int(i)*180,300);
         }
         if(spellPreview) {g_xGameProc.DrawSpellMarks();g_xGameProc.DrawNativeSpells();g_xGameProc.DrawSpellParticles();}
+        if(modalPointerPreview && capturePath) {
+            auto& ui=g_xGameProc.m_xInterface;
+            const POINT button={280,310},outside={790,430};
+            ui.OnLButtonDown(button);mouse=button;
+            if(modalPointerPreview>=305) {ui.OnMouseMove(outside);mouse=outside;}
+            if(modalPointerPreview==306) {ui.OnMouseMove(button);mouse=button;}
+        }
         g_xGameProc.m_xInterface.RenderInterface(elapsed,mouse);
         }
         if(namePreview) g_xGameProc.m_xMyHero.DrawName();
@@ -3713,6 +3749,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const int previewGroup = strcmp(lpCmdLine,"--preview=modal-scroll")==0 ? 301 :
         strcmp(lpCmdLine,"--preview=modal-audio")==0 ? 302 :
         strcmp(lpCmdLine,"--preview=modal-guild-editor")==0 ? 303 :
+        strcmp(lpCmdLine,"--preview=modal-button-pressed")==0 ? 304 :
+        strcmp(lpCmdLine,"--preview=modal-button-left")==0 ? 305 :
+        strcmp(lpCmdLine,"--preview=modal-button-returned")==0 ? 306 :
         strcmp(lpCmdLine,"--preview=options-interaction")==0 ? 300 :
         strcmp(lpCmdLine,"--preview=role-male-warrior")==0 ? RolePresentationPreview::First+0 :
         strcmp(lpCmdLine,"--preview=role-male-mage")==0 ? RolePresentationPreview::First+1 :
