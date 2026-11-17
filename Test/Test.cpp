@@ -278,6 +278,7 @@ int wmain(int argc,wchar_t** argv) {
                     {"method",Json(action=="state.wait"?std::string("state.get"):action=="wire.expect"?std::string("protocol.get"):action)},
                     {"params",Json(action=="wire.expect"?Object{}:fields)}}).serialize();
                 const auto deadline=GetTickCount64()+timeout;
+                std::string previousWaitingState;
                 do {
                     const auto now=GetTickCount64();
                     if(now>=deadline) throw std::runtime_error("State wait timeout: "+Difference(response,expected));
@@ -285,6 +286,8 @@ int wmain(int argc,wchar_t** argv) {
                     if(action!="raw" && (!response.is<Object>() || !Equal(response.get("id"),Json(int64_t(step))) || response.get("jsonrpc")!=Json(std::string("2.0"))))
                         throw std::runtime_error("RPC response ID/version mismatch");
                     if(action!="state.wait" || Difference(response,expected).empty()) break;
+                    const auto current=response.serialize();
+                    if(current!=previousWaitingState) {output("WAIT "+std::to_string(step)+" response="+current);previousWaitingState=current;}
                     if(response.contains("error")) throw std::runtime_error("RPC error: "+response.get("error").serialize());
                     Sleep(20);
                 } while(true);

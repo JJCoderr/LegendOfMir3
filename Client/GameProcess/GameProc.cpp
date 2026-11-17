@@ -3339,15 +3339,8 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 			{
 				if ( tdm.nRecog == m_xMyHero.m_dwIdentity )
 				{
-                    m_xMyHero.HealthDamage(m_xMyHero.m_wHP,tdm.wParam);
-					m_xMyHero.m_wHP			= tdm.wParam;
-					m_xMyHero.m_wMP			= tdm.wTag;
-					m_xMyHero.m_wMAXHP		= tdm.wSeries;
-					FLOAT wHPRate			= (FLOAT)((FLOAT)m_xMyHero.m_wHP/(FLOAT)m_xMyHero.m_wMAXHP);
-					m_xMyHero.m_bHPPercent  = wHPRate * 100;
-#ifdef _DEBUG
-					_RPT2(_CRT_WARN, "HP:%d, MAXHP:%d\n", tdm.wParam, tdm.wSeries);
-#endif
+                    PACKETMSG packet{};packet.stDefMsg=tdm;
+                    m_xMyHero.OnHealthSpellChanged(&packet);
 				}
 				else
 				{

@@ -287,6 +287,7 @@ public:
     void BeginForcedMotion(LPPACKETMSG packet);
     bool AdvanceForcedMotion(DWORD elapsed);
     DWORD m_spellFrameElapsed=0;
+    WORD m_lastSpellReplyId=0;
     bool AdvanceSpellAnimation(DWORD elapsed);
 
 	FEATUREEX			m_stFeatureEx;
@@ -478,6 +479,7 @@ public:
 
 	VOID  SetMotionState(BYTE bMtn, BYTE bDir, INT nMouseTargetID = NULL, BOOL bIsDead = FALSE, LPPOINT lpptPos = NULL, SHORT shSkill = -1);
 	VOID  SetMapHandler(CMapHandler* pxMap);
+    bool CastShortcut(int slot,POINT target,int targetId,FEATURE feature,bool repeat=false);
 	VOID  SetMagic(LPCLIENTMAGICRCD	pstMagic, BYTE bKeyNum, BYTE bDir, INT nTargetID, FEATURE stTargetFeature, POINT ptTargetPos);
 	BOOL  SetOldPosition();
 	BOOL  CheckMyPostion();

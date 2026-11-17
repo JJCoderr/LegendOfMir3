@@ -11,6 +11,7 @@
 #include <array>
 #include <cctype>
 #include <cstdint>
+#include "../../Shared/Mir3SkillIds.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

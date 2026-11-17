@@ -78,7 +78,7 @@ public:
 
 	void		TrainSkill(_LPTHUMANMAGICRCD lptMagicRcd, int nTrain);
 	BOOL		DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int TargetY, CCharObject* pTargetObject);
-	BOOL		SpellXY(int nKey, int nTargetX, int nTargetY, int nTargetObj);
+	BOOL		SpellXY(int nMagicID, int nTargetX, int nTargetY, int nTargetObj);
 	
 	BOOL		MakeSlave(int nMonRace, int nX, int nY, int nLevel, int nMax, DWORD dwRoyaltySec);
 

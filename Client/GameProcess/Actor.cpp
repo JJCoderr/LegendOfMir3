@@ -2954,6 +2954,7 @@ VOID CHero::OnMagicFire(LPPACKETMSG lpPacketMsg)
 {
     const auto reply=SpellWire::Reply::Parse(lpPacketMsg->stDefMsg,lpPacketMsg->szEncodeData);
     if(!reply || reply->multiple) return;
+    m_lastSpellReplyId=reply->skill;
     POINT ptPos={reply->x,reply->y};
     const INT nMagicTargetID=INT(reply->targets.front());
     // 413150 ignores these replies without changing the actor's current spell.
@@ -3674,7 +3675,7 @@ CMyHero::~CMyHero()
 
 VOID CMyHero::InitActor()
 {
-    m_spellTiming={};m_actionClock={};m_pendingAction.reset();m_spellAwaitingReply=false;m_spellReplyElapsed=0;
+    m_spellTiming={};m_actionClock={};m_pendingAction.reset();m_spellAwaitingReply=false;m_spellReplyElapsed=0;m_lastSpellReplyId=0;
 	CHero::InitActor();
 
 	m_wOldPosX			= 0;
@@ -3763,6 +3764,7 @@ VOID CMyHero::OnHealthSpellChanged(LPPACKETMSG lpPacketMsg)
 	m_stAbility.wHP	   = lpPacketMsg->stDefMsg.wParam;
 	m_stAbility.wMaxHP = lpPacketMsg->stDefMsg.wSeries;
 	m_stAbility.wMP    = lpPacketMsg->stDefMsg.wTag;
+    m_wHP=m_stAbility.wHP;m_wMP=m_stAbility.wMP;m_wMAXHP=m_stAbility.wMaxHP;
 
 	if ( m_stAbility.wHP <= 0 )			m_stAbility.wHP = m_bHPPercent = 0;
 	else
@@ -5415,12 +5417,29 @@ VOID CMyHero::SetMagic(LPCLIENTMAGICRCD pstMagic, BYTE bKeyNum, BYTE bDir, INT n
 }
 
 
+bool CMyHero::CastShortcut(int slot,POINT target,int targetId,FEATURE feature,bool repeat) {
+    if(slot<1 || slot>SkillWire::ShortcutCount || g_xGameProc.InputDelayed() || m_pendingAction ||
+        m_stFeatureEx.bHorse!=_HORSE_NONE ||
+        !m_spellTiming.key_ready(GetTickCount(),slot,repeat)) return false;
+    auto* skill=g_xGameProc.m_xInterface.m_xSkillWnd.GetMagicByShortcut(slot);
+    if(!skill) return false;
+    const auto& route=mir3::SpellRoutes::get(skill->stStdMagic.wMagicID);
+    if(route.direct==mir3::DirectSpell::none && (m_bMotionLock || m_bInputLock)) return false;
+    if(!route.bypass_mana && (10+skill->stStdMagic.bDefSpell)>m_stAbility.wMP) {
+        constexpr int InsufficientManaCaption=1000;
+        static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+        g_xGameProc.m_xInterface.m_xClientSysMsg.AddSysMsg(const_cast<char*>(captions.Get(InsufficientManaCaption).c_str()));
+        return false;
+    }
+    m_shCurrMagicID=skill->stStdMagic.wMagicID;
+    SetMagic(skill,CSkillWnd::LegacyKey(slot),CalcDirection(target.x,target.y),targetId,feature,target);
+    return true;
+}
+
 BOOL CMyHero::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTargetPos, INT nMosueTargetID, FEATURE stTargetFeature)
 {
-	BYTE				bDir, bMagicKey;
+	BYTE bMagicKey;
 	POINT				ptTargetTile, ptMouseTilePos;
-	LPCLIENTMAGICRCD	pstMagic;
-	DWORD				dwCurrTick;
 
     const int skillSlot=CSkillWnd::PhysicalKeySlot(wParam);
     if(skillSlot && g_xGameProc.InputDelayed()) return FALSE;
@@ -5449,35 +5468,10 @@ BOOL CMyHero::OnKeyDown(WPARAM wParam, LPARAM lParam, POINT ptMouse, POINT ptTar
 		}
 	}
 
-	dwCurrTick = GetTickCount();
-	// 魔法可用 Delay Time Check.
-	if ( m_stFeatureEx.bHorse==_HORSE_NONE && m_spellTiming.key_ready(dwCurrTick,skillSlot,(lParam & (1L<<30))!=0) )
-	{
-		// 检查魔法是否已正确设置 Check.
-		if ( bMagicKey )
-		{
-			if ( nMosueTargetID == NULL )	ptMouseTilePos = GetPosMouseToTile(ptMouse.x, ptMouse.y);
-			else							ptMouseTilePos = ptTargetPos;
-
-			bDir = CalcDirection(ptMouseTilePos.x, ptMouseTilePos.y);
-			pstMagic = g_xGameProc.m_xInterface.m_xSkillWnd.GetMagicByShortcut(skillSlot);
-
-			if ( pstMagic )
-			{
-				if ( mir3::SpellRoutes::get(pstMagic->stStdMagic.wMagicID).bypass_mana || (10 + pstMagic->stStdMagic.bDefSpell) <= m_stAbility.wMP )
-				{
-					m_shCurrMagicID = pstMagic->stStdMagic.wMagicID;
-					SetMagic(pstMagic, bMagicKey, bDir, nMosueTargetID, stTargetFeature, ptMouseTilePos);
-				}
-				else
-					{
-                    constexpr int InsufficientManaCaption=1000;
-                    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
-                    g_xGameProc.m_xInterface.m_xClientSysMsg.AddSysMsg(const_cast<char*>(captions.Get(InsufficientManaCaption).c_str()));
-                }
-			}
-		}
-	}
+    if(bMagicKey) {
+        ptMouseTilePos=nMosueTargetID?ptTargetPos:GetPosMouseToTile(ptMouse.x,ptMouse.y);
+        CastShortcut(skillSlot,ptMouseTilePos,nMosueTargetID,stTargetFeature,(lParam & (1L<<30))!=0);
+    }
 
 	return TRUE;
 }

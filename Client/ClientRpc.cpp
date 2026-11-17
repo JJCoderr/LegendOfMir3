@@ -125,6 +125,9 @@ std::string ClientState() {
             + ",\"hp\":" + std::to_string(hero.m_stAbility.wHP)
             + ",\"mp\":" + std::to_string(hero.m_stAbility.wMP);
         state += mir3::ItemDebugState(game);
+        state += ",\"spell_reply_id\":"+std::to_string(hero.m_lastSpellReplyId)
+            +",\"cast_ready\":"+mir3::BoolJson(!game.InputDelayed() && !hero.m_pendingAction &&
+                !hero.m_bMotionLock && !hero.m_bInputLock && hero.m_spellTiming.key_ready(GetTickCount()));
         const auto& window=game.m_xInterface.m_xSkillWnd;Array skills,shortcuts;
         for(int i=0;i<window.m_bMyMagicCnt;++i) {
             const auto& skill=window.m_pstMyMagic[i];
@@ -196,6 +199,10 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
     } else if (method == "notice.dismiss" && g_bProcState == _GAME_PROC) {
         accepted=true;
         if(g_xGameProc.m_xNotice.IsActive()) g_xGameProc.m_xNotice.HideMessageBox();
+    } else if (method == "skill.cast" && g_bProcState == _GAME_PROC) {
+        const int key=Integer(params,"key"),x=Integer(params,"x"),y=Integer(params,"y");
+        if(x<=USHRT_MAX && y<=USHRT_MAX && !g_xGameProc.m_xNotice.IsActive())
+            accepted=g_xGameProc.m_xMyHero.CastShortcut(key,POINT{x,y},0,FEATURE{});
     } else if (method == "skill.bind" && g_bProcState == _GAME_PROC) {
         const int id=Integer(params,"id"),key=Integer(params,"key");
         auto& window=g_xGameProc.m_xInterface.m_xSkillWnd;

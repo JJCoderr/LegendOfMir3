@@ -735,7 +735,7 @@ void CUserInfo::ProcessUserMessage(char *pszPacket)
 		case CM_SPELL:
 			m_pxPlayerObject->AddProcess(m_pxPlayerObject, lpDefMsg->wIdent, 
 														lpDefMsg->wTag/*MagicID*/, LOWORD(lpDefMsg->nRecog)/*TargetX*/, HIWORD(lpDefMsg->nRecog)/*TargetY*/, 
-														MAKELONG(lpDefMsg->wSeries, lpDefMsg->wParam)/*TargetObj*/, NULL);
+														MAKELONG(lpDefMsg->wParam, lpDefMsg->wSeries)/*TargetObj*/, NULL);
 			break;
         case CM_MAGICKEYCHANGE:
             m_pxPlayerObject->AddProcess(m_pxPlayerObject,lpDefMsg->wIdent,WORD(lpDefMsg->nRecog),lpDefMsg->wParam,0,0,NULL);

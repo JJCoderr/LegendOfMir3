@@ -66,11 +66,11 @@ step,name,target,action,params,expect
 | 登录 | `Login.csv` | 认证、选服、选角与进入地图 |
 | 角色 | `Character.csv`、`CharacterDelete.csv` | 创建角色、删除角色及持久化 |
 | 物品 | `Inventory.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
-| 技能 | `Skills.csv` | 技能列表、快捷键、保存与恢复 |
+| 技能 | `Skills.csv`、`SkillsCasting.csv` | 技能列表、快捷键、保存恢复及施法回包、扣蓝 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
 
-后续场景使用 `<子系统><场景>.csv`，例如 `SkillsCasting.csv`、`ChatChannel.csv`、`ShopBuySell.csv`、`CombatDamage.csv`、`NpcDialog.csv`。这些名称是扩展约定，不表示对应场景已经实现或验证。
+后续场景使用 `<子系统><场景>.csv`，例如 `ChatChannel.csv`、`ShopBuySell.csv`、`CombatDamage.csv`、`NpcDialog.csv`。这些名称是扩展约定，不表示对应场景已经实现或验证。
 
 编写规则：
 
@@ -93,3 +93,5 @@ build-eiserver/Release/Test.exe Test/Inventory.csv --client-pid 1234 --server-pi
 删除请求为角色名/分区登录密码；当前账号后端使用 Mir2_Account 中的 FLD_PASSWORD。SQLite 新建脚本的技能表已与服务端逐技能记录格式对齐。已有旧版 FLD_LEVEL0..30 宽表数据库不会由 CREATE IF NOT EXISTS 自动迁移，需另行迁移后使用技能记录；本轮没有修改现有数据库。
 
 `Skills.csv` 验证已学技能列表、名称/等级/修炼值、F12绑定与占用替换、非法绑定拒绝、退出保存及重新登录恢复。当前不包含施法效果、技能学习、升级或删除。
+
+`SkillsCasting.csv` 经真实客户端与服务器验证火球术快捷键施法、两次扣蓝及回包、未绑定快捷键与蓝量不足拒绝。当前只覆盖地图坐标目标，不包含实体目标伤害、其他技能效果。`skill.cast` 参数为 `key`（1–12）、`x`、`y`（地图格坐标），复用客户端快捷键业务；`state.get` 的 `spell_reply_id` 记录已解析的施法回包技能，`cast_ready` 表示动作时序允许尝试施法，具体技能还需满足已绑定、蓝量等条件。等待断言失败期间，执行器仅在响应状态变化时输出 WAIT，便于定位回包和状态更新。

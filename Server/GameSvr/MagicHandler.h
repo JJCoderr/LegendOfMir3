@@ -1,41 +1,42 @@
 #ifndef _MAGIC_HANDLER
 #define _MAGIC_HANDLER
+#include "../../Shared/Mir3SkillIds.h"
 
-#define _SKILL_BANWOL				0			// 半月.
-#define _SKILL_AMYOUNSUL			1			// 暗然术.
-#define _SKILL_FIREWIND				2			// 火焰风.
-#define _SKILL_HANGMAJINBUB			3			// 降魔阵法.
-#define _SKILL_DEJIWONHO			4			// 大地援护.
-#define _SKILL_FIRE					5			// 盐社长.
-#define _SKILL_MOOTEBO				6			// 武太步。
+#define _SKILL_BANWOL static_cast<int>(::mir3::SkillId::banwol)			// 半月.
+#define _SKILL_AMYOUNSUL static_cast<int>(::mir3::SkillId::amyounsul)			// 暗然术.
+#define _SKILL_FIREWIND static_cast<int>(::mir3::SkillId::firewind)			// 火焰风.
+#define _SKILL_HANGMAJINBUB static_cast<int>(::mir3::SkillId::hangmajinbub)			// 降魔阵法.
+#define _SKILL_DEJIWONHO static_cast<int>(::mir3::SkillId::dejiwonho)			// 大地援护.
+#define _SKILL_FIRE static_cast<int>(::mir3::SkillId::fire)			// 盐社长.
+#define _SKILL_MOOTEBO static_cast<int>(::mir3::SkillId::mootebo)			// 武太步。
 
-#define _SKILL_TAMMING				7			// 雷魂击.
-#define _SKILL_SPACEMOVE			8			// 我空行法.
-#define _SKILL_KILLUNDEAD			9			// 狮子轮回.
+#define _SKILL_TAMMING static_cast<int>(::mir3::SkillId::tamming)			// 雷魂击.
+#define _SKILL_SPACEMOVE static_cast<int>(::mir3::SkillId::spacemove)			// 我空行法.
+#define _SKILL_KILLUNDEAD static_cast<int>(::mir3::SkillId::killundead)			// 狮子轮回.
 
-#define _SKILL_FIREBALL				10			// 火焰场.
-#define _SKILL_HEALLING				11			// 恢复术.
-#define _SKILL_HOLYSHIELD			12			// 结界.
-#define _SKILL_BIGHEALLING			13			// 大恢复.
-#define _SKILL_LIGHTFLOWER			14			// 雷雪火.
-#define _SKILL_SHOOTLIGHTEN			15			// 雷印.
-#define _SKILL_SKELLETON			16			// 白骨召唤术.
-#define _SKILL_SNOWWIND				17			// 冰旋风.
-#define _SKILL_BIGCLOAK				18			// 大隐身.
-#define _SKILL_SHIELD				19			// 咒术之幕.
-#define _SKILL_SHOWHP				20			// 探气破延.
-#define _SKILL_EATTHFIRE			21			// 地炎术。
-#define _SKILL_FIRECHARM			22			// 爆杀系.
-#define _SKILL_FIREBOOM				23			// 爆裂波.
-#define _SKILL_FIREBALL2			24			// 金刚火焰掌.
-#define _SKILL_YEDO					25			// 锐刀.
-#define _SKILL_ERGUM				26			// 御剑术.
-#define _SKILL_LIGHTENING			27			// 强击.
-#define _SKILL_FIRESWORD			28			// 焰火诀.
-#define _SKILL_CLOAK				29			// 隐身.
-#define _SKILL_SINSU				30			// 神兽召唤.
-#define _SKILL_ILKWANG				31			// 日光剑法.
-#define _SKILL_ONESWORD				32			// 外手剑法。
+#define _SKILL_FIREBALL static_cast<int>(::mir3::SkillId::fireball)			// 火焰场.
+#define _SKILL_HEALLING static_cast<int>(::mir3::SkillId::healling)			// 恢复术.
+#define _SKILL_HOLYSHIELD static_cast<int>(::mir3::SkillId::holyshield)			// 结界.
+#define _SKILL_BIGHEALLING static_cast<int>(::mir3::SkillId::bighealling)			// 大恢复.
+#define _SKILL_LIGHTFLOWER static_cast<int>(::mir3::SkillId::lightflower)			// 雷雪火.
+#define _SKILL_SHOOTLIGHTEN static_cast<int>(::mir3::SkillId::shootlighten)			// 雷印.
+#define _SKILL_SKELLETON static_cast<int>(::mir3::SkillId::skelleton)			// 白骨召唤术.
+#define _SKILL_SNOWWIND static_cast<int>(::mir3::SkillId::snowwind)			// 冰旋风.
+#define _SKILL_BIGCLOAK static_cast<int>(::mir3::SkillId::bigcloak)			// 大隐身.
+#define _SKILL_SHIELD static_cast<int>(::mir3::SkillId::shield)			// 咒术之幕.
+#define _SKILL_SHOWHP static_cast<int>(::mir3::SkillId::showhp)			// 探气破延.
+#define _SKILL_EATTHFIRE static_cast<int>(::mir3::SkillId::earthfire)			// 地炎术。
+#define _SKILL_FIRECHARM static_cast<int>(::mir3::SkillId::firecharm)			// 爆杀系.
+#define _SKILL_FIREBOOM static_cast<int>(::mir3::SkillId::fireboom)			// 爆裂波.
+#define _SKILL_FIREBALL2 static_cast<int>(::mir3::SkillId::fireball2)			// 金刚火焰掌.
+#define _SKILL_YEDO static_cast<int>(::mir3::SkillId::yedo)			// 锐刀.
+#define _SKILL_ERGUM static_cast<int>(::mir3::SkillId::ergum)			// 御剑术.
+#define _SKILL_LIGHTENING static_cast<int>(::mir3::SkillId::lightening)			// 强击.
+#define _SKILL_FIRESWORD static_cast<int>(::mir3::SkillId::firesword)			// 焰火诀.
+#define _SKILL_CLOAK static_cast<int>(::mir3::SkillId::cloak)			// 隐身.
+#define _SKILL_SINSU static_cast<int>(::mir3::SkillId::sinsu)			// 神兽召唤.
+#define _SKILL_ILKWANG static_cast<int>(::mir3::SkillId::ilkwang)			// 日光剑法.
+#define _SKILL_ONESWORD static_cast<int>(::mir3::SkillId::onesword)			// 外手剑法。
 
 class CMagicInfo
 {

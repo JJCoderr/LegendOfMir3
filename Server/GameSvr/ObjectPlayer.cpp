@@ -1628,11 +1628,11 @@ void CPlayerObject::ServerGetButch(CCharObject* pCharObject, int nX, int nY, int
 	AddRefMsg(RM_BUTCH, nDir, m_nCurrX, m_nCurrY, 0, NULL);
 }
 
-BOOL CPlayerObject::SpellXY(int nKey, int nTargetX, int nTargetY, int nTargetObj)
+BOOL CPlayerObject::SpellXY(int nMagicID, int nTargetX, int nTargetY, int nTargetObj)
 {
 	if (!m_pUserInfo) return FALSE;
 
-	_LPTHUMANMAGICRCD	lptMagicRcd = m_pUserInfo->GetMagicRcdByKey(nKey);
+	_LPTHUMANMAGICRCD	lptMagicRcd = m_pUserInfo->GetMagicRcdByID(nMagicID);
 	
 	if (lptMagicRcd)
 	{
