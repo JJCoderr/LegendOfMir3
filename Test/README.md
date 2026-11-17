@@ -71,7 +71,7 @@ step,name,target,action,params,expect
 | 战斗 | `Combat/CombatMagic.csv`、`Combat/CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
 | 聊天 | `Chat/ChatLocal.csv`、`Chat/ChatShout.csv`、`Chat/ChatShoutLevel.csv`、`Chat/ChatShoutRange.csv`、`Chat/ChatShoutRangeY.csv`、`Chat/ChatWhisper.csv`、`Chat/ChatWhisperReject.csv`、`Chat/ChatWhisperIsolation.csv` | 普通聊天、中文编码、喊话等级及冷却拒绝 |
 | NPC | `Npc/NpcSpawn.csv`、`Npc/NpcDialog.csv`、`Npc/NpcLevel*.csv`、`Npc/NpcImports.csv`、`Npc/NpcContext.csv` | 商人生成、NPC 类型、名称同步、基础对话及选项跳转 |
-| 商店 | `Shop/ShopBuy.csv`、`Shop/ShopStock.csv`、`Shop/ShopCapacity.csv`、`Shop/ShopWeight.csv` | 普通物品购买、金币/库存/背包同步、失败保留、保存重登 |
+| 商店 | `Shop/Shop*.csv` | 普通物品购买、金币/库存/背包同步、失败保留、保存重登 |
 | RPC 基础 | `Rpc/RpcClient.csv`、`Rpc/RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
 
@@ -169,8 +169,12 @@ Inventory 步骤编号调整：为补入真实行走与到达检查，原有步�
 
 `@exit` 是当前商人的退出选项：服务端发送 SM_MERCHANTDLGCLOSE，并清除角色的对话脚本上下文。映射和旧表场景均验证关闭后窗口/行/身份重置、关闭后的选项拒绝、重新点击打开，以及两次关闭的精确回包计数。实际构建及联调使用 SQLite，SQL Server 新建表定义尚未在 ODBC 环境执行验证。
 
-商店基础链路：商人 `@buy` 页面成功显示后，服务端读取同一脚本 `[Goods]` 中的 `物品名 数量 补货小时` 行，按 TBL_STDITEM_ETC 的名称匹配普通物品，以数据库 FLD_PRICE 为单价发送 SM_SENDGOODSLIST。`shop.buy(index,quantity)` 复用客户端商品分类与 BuyBulk 入口，实际发送 CM_USERBUYITEM；state.get 的 shop 来自真实商品列表与通知窗口。
+商店基础链路：商人 `@buy` 页面成功显示后，服务端读取同一脚本 `[Goods]` 中的 `物品名 数量 补货小时` 行，按 TBL_STDITEM_ETC 的名称匹配普通物品，以数据库 FLD_PRICE 和脚本头部 % 倍率计算单价后发送 SM_SENDGOODSLIST。`shop.buy(index,quantity)` 复用客户端商品分类与 BuyBulk 入口，实际发送 CM_USERBUYITEM；state.get 的 shop 来自真实商品列表与通知窗口。
 
 `ShopBuy.csv` 验证两件同名药品购买、金币不足拒绝、关闭商店、数据库保存和重登恢复。`ShopStock.csv` 验证超库存拒绝、买空及买空后的再次拒绝；`ShopCapacity.csv` 使用59格背包购买2件，`ShopWeight.csv` 使用超负重商品，检查整笔拒绝、金币/库存/物品不变。购买仅在当前商人已打开商店且角色同地图、在视野内时处理。扣款前检查完整数量对应的库存、容量、负重和总价；成功后更新金币、独立物品实例、负重及购买者商品列表。notice.dismiss 可通过既有确认入口关闭普通提示，不提交输入或确认交易对话框。
 
-本阶段仅支持普通物品和初始库存，补货小时已读取但尚未执行定时补货，库存尚未跨服务器重启持久化，也未实现脚本 % 价格倍率、装备明细商品、出售/修理或所有在线顾客的即时库存广播。物品和金币沿用角色保存事务，已验证正常保存重登；尚未验证购买过程中的服务器崩溃恢复。
+本阶段仅支持普通物品和初始库存，补货小时已读取但尚未执行定时补货，库存尚未跨服务器重启持久化，也未实现装备明细商品、出售/修理或所有在线顾客的即时库存广播。物品和金币沿用角色保存事务，已验证正常保存重登；尚未验证购买过程中的服务器崩溃恢复。
+
+`Shop/ShopPrice.csv` 使用标准价11和 `%150`，报价单价16，购买2件扣32；验证金币不足拒绝及余额8的保存重登。当前实现先对单价向下取整，再乘数量，报价和扣款共用缓存单价；未标倍率默认为100。`Shop/ShopFree.csv` 验证 `%0`，零金币角色可领取库存内的免费商品；`Shop/ShopInvalidPrice.csv` 验证非数字倍率不会打开商店或默认为免费。倍率语法来自参考服 `%150` / `%200` 文件；所有原版价格取整边界尚未通过原服务器逐项核对。
+
+`python Test/launch_csv.py Test/Shop/ShopSharedStock.csv --clients 2 --log out/shop-shared-stock.log` 启动两个真实角色，双方看到同一初始库存后交替购买。第一位买2件后，第二位按旧列表购买2件被服务器拒绝；重新打开商店获得真实剩余1件并买走；第一位的过期购买也被拒绝。保存后检查总物品数3与双方余额80/90。该场景证明交替请求使用共享服务端库存，不是并发压力测试；尚未向其他顾客主动广播库存变化。

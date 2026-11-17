@@ -1,0 +1,76 @@
+step,name,target,action,params,expect
+10,credentials ready,Client,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+20,wrong password,Client,session.login,account=mirtest;password=wrong,result.status=submitted
+30,login rejected,Client,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+40,dismiss rejection,Client,notice.dismiss,,result.status=submitted
+50,login,Client,session.login,account=mirtest;password=test123,result.status=submitted
+60,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+70,authenticated,Client,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+80,dismiss billing,Client,notice.dismiss,,result.status=submitted
+90,unknown server rejected,Client,session.select_server,name=MissingServer,error.code=-32002
+100,select server,Client,session.select_server,name=Mir3Local,result.status=submitted
+110,roster ready,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+120,unknown character rejected,Client,session.enter,name=MissingRole,error.code=-32002
+130,enter character,Client,session.enter,name=MirProbe01,result.status=submitted
+140,world ready,Client,state.wait,,"result.scene=world;result.map=""01"";result.hp=18"
+150,dismiss arrival,Client,notice.dismiss,,result.status=submitted
+160,chat ready,Client,state.wait,,result.scene=world;result.input_delayed=false;result.notice=false
+170,credentials ready,Client2,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+180,wrong password,Client2,session.login,account=mirtest2;password=wrong,result.status=submitted
+190,login rejected,Client2,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+200,dismiss rejection,Client2,notice.dismiss,,result.status=submitted
+210,login,Client2,session.login,account=mirtest2;password=test123,result.status=submitted
+220,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+230,authenticated,Client2,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+240,dismiss billing,Client2,notice.dismiss,,result.status=submitted
+250,unknown server rejected,Client2,session.select_server,name=MissingServer,error.code=-32002
+260,select server,Client2,session.select_server,name=Mir3Local,result.status=submitted
+270,roster ready,Client2,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+280,unknown character rejected,Client2,session.enter,name=MissingRole,error.code=-32002
+290,enter character,Client2,session.enter,name=MirProbe02,result.status=submitted
+300,world ready,Client2,state.wait,,"result.scene=world;result.map=""01"";result.hp=18"
+310,dismiss arrival,Client2,notice.dismiss,,result.status=submitted
+320,chat ready,Client2,state.wait,,result.scene=world;result.input_delayed=false;result.notice=false
+330,first NPC visible,Client,state.wait,,result.actor_count=2;result.actors.0.npc=true
+340,second NPC visible,Client2,state.wait,,result.actor_count=2;result.actors.1.npc=true
+350,first open NPC,Client,npc.click,index=0,result.status=submitted
+360,first menu ready,Client,state.wait,,result.npc_dialog.rows.1.command=@buy;result.npc_dialog.ready=true
+370,first open shop,Client,npc.select,option=0,result.status=submitted
+380,first stock snapshot,Client,state.wait,,result.shop.open=true;result.shop.goods.0.stock=3;result.gold=100
+390,second open NPC,Client2,npc.click,index=1,result.status=submitted
+400,second menu ready,Client2,state.wait,,result.npc_dialog.rows.1.command=@buy;result.npc_dialog.ready=true
+410,second open shop,Client2,npc.select,option=0,result.status=submitted
+420,second stock snapshot,Client2,state.wait,,result.shop.open=true;result.shop.goods.0.stock=3;result.gold=100
+430,first buys two,Client,shop.buy,index=0;quantity=2,result.status=submitted
+440,first purchase complete,Client,state.wait,,result.bag_count=2;result.gold=80;result.shop.goods.0.stock=1
+450,second submits stale quantity,Client2,shop.buy,index=0;quantity=2,result.status=submitted
+460,stale request refused,Client2,state.wait,,result.shop.notice=true;result.bag_count=0;result.gold=100;result.shop.goods.0.stock=3
+470,dismiss stale refusal,Client2,notice.dismiss,,result.status=submitted
+480,reopen second NPC,Client2,npc.click,index=1,result.status=submitted
+490,second menu again,Client2,state.wait,,result.npc_dialog.rows.1.command=@buy;result.npc_dialog.ready=true
+500,refresh stock,Client2,npc.select,option=0,result.status=submitted
+510,real stock received,Client2,state.wait,,result.shop.goods.0.stock=1
+520,buy final item,Client2,shop.buy,index=0;quantity=1,result.status=submitted
+530,final item received,Client2,state.wait,,result.bag_count=1;result.gold=90;result.shop.goods.0.stock=0
+540,first submits stale final item,Client,shop.buy,index=0;quantity=1,result.status=submitted
+550,sold out across clients,Client,state.wait,,result.shop.notice=true;result.bag_count=2;result.gold=80;result.shop.goods.0.stock=1
+560,dismiss sold out,Client,notice.dismiss,,result.status=submitted
+570,exit option ready,Client,state.wait,,result.npc_dialog.ready=true
+580,close shop,Client,npc.select,option=0,result.status=submitted
+590,shop closed,Client,state.wait,,result.shop.open=false;result.npc_dialog.open=false;result.return_ready=true
+600,single success,Client,wire.expect,message=SM_BUYITEM_SUCCESS;direction=received,count=1
+610,single refusal,Client,wire.expect,message=SM_BUYITEM_FAIL;direction=received,count=1
+620,save character,Client,session.return,,result.status=submitted
+630,saved selection,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+640,exit option ready,Client2,state.wait,,result.npc_dialog.ready=true
+650,close shop,Client2,npc.select,option=0,result.status=submitted
+660,shop closed,Client2,state.wait,,result.shop.open=false;result.npc_dialog.open=false;result.return_ready=true
+670,single success,Client2,wire.expect,message=SM_BUYITEM_SUCCESS;direction=received,count=1
+680,single refusal,Client2,wire.expect,message=SM_BUYITEM_FAIL;direction=received,count=1
+690,save character,Client2,session.return,,result.status=submitted
+700,saved selection,Client2,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+710,total stock conservation,Database,query,"SELECT COUNT(*) FROM TBL_CHARACTER_GENITEM WHERE FLD_CHARNAME IN ('MirProbe01','MirProbe02')",rows=[[3]]
+720,both balances,Database,query,"SELECT FLD_GOLD FROM TBL_CHARACTER WHERE FLD_CHARNAME IN ('MirProbe01','MirProbe02') ORDER BY FLD_CHARNAME","rows=[[80],[90]]"
+730,server healthy,Server,state.get,,result.ready=true
+740,first coverage,Client,protocol.get,,
+750,second coverage,Client2,protocol.get,,

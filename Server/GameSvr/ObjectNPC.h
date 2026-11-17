@@ -28,7 +28,7 @@ public:
 
 	void RunRace();
     void Say(CPlayerObject* player, const char* section);
-    struct Good { int standard, stock; };
+    struct Good { int standard, stock, price; };
     std::vector<Good> m_goods;
     bool m_goodsLoaded = false;
     void ShowGoods(CPlayerObject* player);

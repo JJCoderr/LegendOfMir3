@@ -2195,3 +2195,11 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 根据 CmList.dat 原资源，购买失败1/2/3分别为无货/无法装载/缺金币（1437/1438/1439）。没有截图或模拟回包。
 - Client/EIServer 构建通过。ShopBuy44步（含数据库断言与重登）、ShopStock37步、ShopCapacity30步、ShopWeight30步；InventoryFull46步和NpcMapping32步回归通过，共219步。日志 out/csv-validation/shop-*.log。
 - 仍未实现补货时钟、库存重启持久化、脚本%价格倍率、装备明细商品、出售修理、其他在线顾客库存广播、购买中崩溃恢复。不得据本阶段宣称完整商店已完成。
+
+## 2026-11-18 商店价格倍率与双客户端共享库存
+
+- 商店解析脚本头部 % 倍率（参考 Market_Def 的 %150/%200），默认100；Good 缓存计算后的单价，商品列表和购买共用。当前按 FLD_PRICE*倍率/100 整数向下取整，再乘数量；溢出商品不列出，非法倍率拒绝加载，显式%0允许免费商品。
+- ShopPrice44步验证11*150%=16单价、2件扣32及余额8保存重登；ShopFree37步验证零金币免费购买；ShopInvalidPrice28步验证坏倍率不打开商店；默认ShopBuy回归44步。
+- ShopSharedStock使用2真实客户端75步通过：过期库存请求拒绝，重新打开刷新剩余量，买空后另一客户端同样拒绝；数据库总物品3、金币80/90。交替请求验证共享库存，不是并发压力测试，尚无主动库存广播。
+- EIServer构建通过；总228步通过，日志 out/csv-validation/shop-price.log、shop-free.log、shop-invalid-price.log、shop-shared-stock.log、shop-price-default-regression.log。
+- 价格取整与原服务器完整边界仍待核对；补货、库存持久化、装备商品、出售/修理等仍未完成。
