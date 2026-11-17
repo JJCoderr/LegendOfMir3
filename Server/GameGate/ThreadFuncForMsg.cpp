@@ -124,23 +124,13 @@ DWORD WINAPI ThreadFuncForMsg(LPVOID lpParameter)
 
 			if (pSessionInfo)
 			{
-				if (pSessionInfo->nSendBufferLen)
-				{
-					WSABUF	Buf;
-
-					Buf.len = memlen(pSessionInfo->SendBuffer) - 1;
-					Buf.buf = pSessionInfo->SendBuffer;
-
-					WSASend(pSessionInfo->sock, &Buf, 1, &dwBytesSends, 0, NULL, NULL);
-
-					if (dwBytesSends < Buf.len)
-						_RPT2(_CRT_WARN, "%d:%s\n", memlen(pSessionInfo->SendBuffer) - 1, pSessionInfo->SendBuffer);
-
-/*#ifdef _DEBUG
-					_RPT3(_CRT_WARN, "(%d)%d:%s\n", pSessionInfo->sock, memlen(pSessionInfo->SendBuffer) - 1, pSessionInfo->SendBuffer);
-#endif*/
-					pSessionInfo->nSendBufferLen = 0;
-				}
+                AcquireSRWLockExclusive(&pSessionInfo->sendLock);
+                const int error = gatewire::SendPending(pSessionInfo->sock, pSessionInfo->SendBuffer);
+                if (error) {
+                    shutdown(pSessionInfo->sock, SD_BOTH);
+                    pSessionInfo->SendBuffer.clear();
+                }
+                ReleaseSRWLockExclusive(&pSessionInfo->sendLock);
 			}
 		}
 

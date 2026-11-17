@@ -114,13 +114,15 @@ DWORD WINAPI AcceptThread(LPVOID lpParameter)
 		{
 			CSessionInfo* pNewSessionInfo = g_UserInfoArray.GetEmptyElement(nIndex);
 
+            AcquireSRWLockExclusive(&pNewSessionInfo->sendLock);
 			pNewSessionInfo->sock				= Accept;
 			pNewSessionInfo->nGateIndex			= nIndex;
 			// Initializing Session Information
 			pNewSessionInfo->nCrackWarningLevel	= 0;
 			pNewSessionInfo->fLoginCode			= TRUE;
 
-			pNewSessionInfo->nSendBufferLen		= 0;
+			pNewSessionInfo->SendBuffer.clear();
+            ReleaseSRWLockExclusive(&pNewSessionInfo->sendLock);
 
 			CreateIoCompletionPort((HANDLE)Accept, g_hIOCP, (DWORD)pNewSessionInfo, 0);
 
@@ -143,9 +145,12 @@ DWORD WINAPI AcceptThread(LPVOID lpParameter)
 
 void CloseSession(CSessionInfo* pSessionInfo)
 {
-	g_UserInfoArray.SetEmptyElement(pSessionInfo->nGateIndex, pSessionInfo);
-
-	closesocket(pSessionInfo->sock);
+    AcquireSRWLockExclusive(&pSessionInfo->sendLock);
+    closesocket(pSessionInfo->sock);
+    pSessionInfo->sock = INVALID_SOCKET;
+    pSessionInfo->SendBuffer.clear();
+    ReleaseSRWLockExclusive(&pSessionInfo->sendLock);
+    g_UserInfoArray.SetEmptyElement(pSessionInfo->nGateIndex, pSessionInfo);
 
 	UpdateStatusBar(FALSE);
 }

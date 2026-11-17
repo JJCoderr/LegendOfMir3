@@ -1,6 +1,7 @@
 
 #ifndef _GAMEGATE_DEFINE
 #define _GAMEGATE_DEFINE
+#include "ClientSendBuffer.h"
 
 class CSessionInfo
 {
@@ -16,8 +17,8 @@ public:
 	int				nPreviousCheckCode;
 	int				nCrackWarningLevel;
 
-	CHAR			SendBuffer[DATA_BUFSIZE];
-	int				nSendBufferLen;
+    SRWLOCK sendLock;
+    std::string SendBuffer;
     //SocData: string;   //接收到的缓冲区
     //SendData: string;  //还有要发送的内容
 
@@ -42,6 +43,8 @@ public:
 
 	CSessionInfo()
 	{
+        InitializeSRWLock(&sendLock);
+        sock = INVALID_SOCKET;
 		bufLen	= 0;
 	}
 

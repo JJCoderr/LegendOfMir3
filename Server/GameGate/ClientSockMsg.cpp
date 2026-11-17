@@ -27,77 +27,32 @@ WSAEVENT						g_ClientIoEvent;
 
 void ProcMakeSocketStr(char *lpMsg)
 {
-//	_LPTSENDBUFF	lpSendUserData = new _TSENDBUFF;
-	int				nPos = 0;
-
-	_LPTMSGHEADER	lpMsgHeader = (_LPTMSGHEADER)lpMsg;
-
-	CSessionInfo* pSessionInfo = g_UserInfoArray.GetData(lpMsgHeader->wUserGateIndex);
-	
-	if (!pSessionInfo)
-	{
-#ifdef _DEBUG
-		_RPT0(_CRT_WARN, "Session Not Found\n");
-#endif
-		
-		return;
-	}
-
-	char *pszData = &pSessionInfo->SendBuffer[pSessionInfo->nSendBufferLen];
-
-	if (lpMsgHeader->nLength < 0)
-	{
-//		wsprintf(szPacket, _TEXT("#%s!"), (lpMsg + sizeof(_TMSGHEADER))); // Walk
-		pszData[0]		= '#';
-		nPos = abs(lpMsgHeader->nLength);//memlen(lpMsg + sizeof(_TMSGHEADER));
-		memmove(&pszData[1], (lpMsg + sizeof(_TMSGHEADER)), nPos);
-		pszData[++nPos] = '!';
-		pszData[++nPos] = '\0';
-
-//		nPos = lstrlen(szPacket);
-//		nPos += 2;
-	}
-	else
-	{
-		if (lpMsgHeader->nLength >= sizeof(_TDEFAULTMESSAGE))
-		{
-			_LPTDEFAULTMESSAGE lpDefMsg = (_LPTDEFAULTMESSAGE)(lpMsg + sizeof(_TMSGHEADER));
-
-			pszData[0] = '#';
-
-			if (lpMsgHeader->nLength > sizeof(_TDEFAULTMESSAGE))
-			{
-				nPos = fnEncodeMessageA(lpDefMsg, &pszData[1], sizeof(pSessionInfo->SendBuffer) - pSessionInfo->nSendBufferLen - 1);
-//				nPos = fnEncodeMessage((char *)lpDefMsg + sizeof(_TDEFAULTMESSAGE) , &szPacket[nPos + 1], sizeof(szPacket) - nPos - 1);
-				memmove(&pszData[nPos + 1], (lpMsg + sizeof(_TMSGHEADER) + sizeof(_TDEFAULTMESSAGE)), lpMsgHeader->nLength - sizeof(_TDEFAULTMESSAGE));
-
-				nPos += lpMsgHeader->nLength - sizeof(_TDEFAULTMESSAGE);
-			}
-			else
-			{
-				nPos = fnEncodeMessageA(lpDefMsg, &pszData[1], sizeof(pSessionInfo->SendBuffer) - pSessionInfo->nSendBufferLen - 1);
-				nPos++;
-			}
-
-			pszData[nPos] = '!';
-			pszData[++nPos] = '\0';
-		}
-	}
-
-    if (nPos > _DEFBLOCKSIZE) TracePacket(L"TX", pSessionInfo->sock, pszData + 1);
-	pSessionInfo->nSendBufferLen += nPos;
-
-//	lpSendUserData->sock = (SOCKET)lpMsgHeader->nSocket;
-
-//	g_SendToUserQ.PushQ((BYTE *)lpSendUserData);
-
-/*	WSABUF	Buf;
-	DWORD	dwBytesSends;
-
-	Buf.len = nPos;
-	Buf.buf = szPacket;
-
-	WSASend((SOCKET)lpMsgHeader->nSocket, &Buf, 1, &dwBytesSends, 0, NULL, NULL); */
+    const auto message = reinterpret_cast<_LPTMSGHEADER>(lpMsg);
+    auto session = g_UserInfoArray.GetData(message->wUserGateIndex);
+    if (!session) return;
+    const char* body = lpMsg + sizeof(_TMSGHEADER);
+    size_t bodySize;
+    char header[_DEFBLOCKSIZE + 1]{};
+    size_t headerSize = 0;
+    if (message->nLength < 0) {
+        bodySize = static_cast<size_t>(-static_cast<long long>(message->nLength));
+    } else {
+        if (message->nLength < sizeof(_TDEFAULTMESSAGE)) return;
+        headerSize = fnEncodeMessageA(reinterpret_cast<_LPTDEFAULTMESSAGE>(const_cast<char*>(body)), header, sizeof(header));
+        body += sizeof(_TDEFAULTMESSAGE);
+        bodySize = message->nLength - sizeof(_TDEFAULTMESSAGE);
+    }
+    AcquireSRWLockExclusive(&session->sendLock);
+    if (session->sock == SOCKET(message->nSocket)) {
+        const size_t start = session->SendBuffer.size();
+        if (gatewire::AppendFrame(session->SendBuffer, header, headerSize, body, bodySize)) {
+            TracePacket(L"TX", session->sock, session->SendBuffer.c_str() + start + 1);
+        } else {
+            mir3::ConsoleLog(L"GameGate", L"Client send queue limit exceeded; disconnecting.");
+            shutdown(session->sock, SD_BOTH);
+        }
+    }
+    ReleaseSRWLockExclusive(&session->sendLock);
 }
 
 void ProcReceiveBuffer(char *pszPacket, int nRecv)

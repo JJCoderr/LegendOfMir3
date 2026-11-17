@@ -43,7 +43,10 @@ parser.add_argument('--config-dir', type=Path, default=repo / 'out/debug')
 parser.add_argument('--port-offset', type=int, default=20000)
 parser.add_argument('--hold-mouse', action='store_true', help='Exercise real held mouse input; requires an unlocked foreground desktop')
 parser.add_argument('--equipment', action='store_true', help='Exercise armor equip/unequip and persistence through native panels')
+parser.add_argument('--gender', choices=('male', 'female'), default='male', help='Gender of the isolated test character')
 args = parser.parse_args()
+gender = 0 if args.gender == 'male' else 1
+armor_index, armor_looks, armor_name = (33, 940, 'Test male armor') if gender == 0 else (34, 950, 'Test female armor')
 exe = args.bin_dir.resolve()
 config_dir = args.config_dir.resolve()
 ports = {p: p + args.port_offset for p in (5000,5100,5500,6000,7000,7100,7200)}
@@ -98,11 +101,11 @@ for name in ('Data','Map','Sound'):
         '$ErrorActionPreference="Stop"; New-Item -ItemType Junction -Path $env:MIR3_TEST_LINK -Target $env:MIR3_TEST_TARGET | Out-Null'],env=link_env,check=True)
 with sqlite3.connect(root/'mir3.sqlite3') as db:
     db.executescript((repo/'Server/SQL_Scripts/sqlite_minimal.sql').read_text(encoding='utf-8-sig'))
-    db.execute("INSERT INTO TBL_CHARACTER (FLD_LOGINID,FLD_CHARNAME,FLD_JOB,FLD_GENDER,FLD_LEVEL,FLD_MAPNAME,FLD_CX,FLD_CY) VALUES ('mirtest','MirProbe01','0','0',1,'01',459,261)")
+    db.execute("INSERT INTO TBL_CHARACTER (FLD_LOGINID,FLD_CHARNAME,FLD_JOB,FLD_GENDER,FLD_LEVEL,FLD_MAPNAME,FLD_CX,FLD_CY) VALUES ('mirtest','MirProbe01','0',?,1,'01',459,261)", (str(gender),))
 if args.equipment:
     with sqlite3.connect(root/'mir3.sqlite3') as db:
-        db.execute("UPDATE TBL_STDITEM SET FLD_AC=2,FLD_AC2=5,FLD_MAC=1,FLD_MAC2=3 WHERE FLD_INDEX=33")
-        db.execute("INSERT INTO TBL_CHARACTER_ITEM (FLD_LOGINID,FLD_CHARNAME,FLD_STDTYPE,FLD_MAKEDATE,FLD_MAKEINDEX,FLD_STDINDEX,FLD_DURA,FLD_DURAMAX) VALUES ('mirtest','MirProbe01','B','261117','00001',33,5000,5000)")
+        db.execute("UPDATE TBL_STDITEM SET FLD_AC=2,FLD_AC2=5,FLD_MAC=1,FLD_MAC2=3 WHERE FLD_INDEX=?", (armor_index,))
+        db.execute("INSERT INTO TBL_CHARACTER_ITEM (FLD_LOGINID,FLD_CHARNAME,FLD_STDTYPE,FLD_MAKEDATE,FLD_MAKEINDEX,FLD_STDINDEX,FLD_DURA,FLD_DURAMAX) VALUES ('mirtest','MirProbe01','B','261117','00001',?,5000,5000)", (armor_index,))
 
 env=dict(os.environ,MIR3_DEBUG_STATE_DIR=str(root))
 processes=[]
@@ -145,7 +148,7 @@ def equipment_roundtrip(h, state_path):
     bag = initial['bag_panel']; status = initial['equipment_panel']
     bag_point = (bag['x'] + 36, bag['y'] + 79)
     armor_point = (status['x'] + 120, status['y'] + 159)
-    assert initial['bag'][0]['looks']==940 and initial['bag'][0]['shape']==1,initial
+    assert initial['bag'][0]['looks']==armor_looks and initial['bag'][0]['shape']==1,initial
     item_id = initial['bag'][0]['id']
     expected_defence = [value + bonus for value, bonus in zip(initial['defence'], (2, 5))]
     expected_magic = [value + bonus for value, bonus in zip(initial['magic_defence'], (1, 3))]
@@ -260,9 +263,9 @@ with (root/'server.log').open('wb') as log:
             else:
                 assert (world['x'],world['y'])==saved, (world,saved)
                 if args.equipment:
-                    assert world['equipment'][0]['looks']==940 and world['dress']==1,world
+                    assert world['equipment'][0]['looks']==armor_looks and world['dress']==1,world
                     assert world['defence']==[2,5] and world['magic_defence']==[1,3],world
-                    assert len(world['equipment'])==1 and world['equipment'][0]['name']=='Test male armor' and not world['bag'],world
+                    assert len(world['equipment'])==1 and world['equipment'][0]['name']==armor_name and not world['bag'],world
             if iteration==0:
                 u.PostMessageW(h,WM_SYSKEYDOWN,ord('X'),ALT_CONTEXT)
                 time.sleep(.5)
@@ -279,9 +282,9 @@ with (root/'server.log').open('wb') as log:
                 restored=wait(cs,lambda d:d.get('scene')=='world' and d.get('map') and d.get('remote_port')==ports[7200],20)
                 print('restored',restored,flush=True)
                 if args.equipment:
-                    assert restored['equipment'][0]['looks']==940 and restored['dress']==1,restored
+                    assert restored['equipment'][0]['looks']==armor_looks and restored['dress']==1,restored
                     assert restored['defence']==[2,5] and restored['magic_defence']==[1,3],restored
-                    assert len(restored['equipment'])==1 and restored['equipment'][0]['name']=='Test male armor' and not restored['bag'],restored
+                    assert len(restored['equipment'])==1 and restored['equipment'][0]['name']==armor_name and not restored['bag'],restored
                 assert (restored['x'],restored['y'])==(moved['x'],moved['y']),(restored,moved)
                 wait(cs,lambda d:not d.get('input_delayed'))
                 # Make the second save distinct from the earlier return-to-selection save.
