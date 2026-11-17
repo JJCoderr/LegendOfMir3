@@ -181,11 +181,7 @@ INT CStatusWnd::GetEquipNum(POINT ptMouse)
 
 BOOL CStatusWnd::CheckEquipItem(CItem* item,BYTE slot,POINT point)
 {
-    if (GetEquipNum(point)!=slot) return FALSE;
-    if (item->m_stItemInfo.stStdItem.bStdMode==25) return slot==5 || slot==9;
-    if (item->m_bAttr==5 || item->m_bAttr==6) return slot==5 || slot==6;
-    if (item->m_bAttr==7 || item->m_bAttr==8) return slot==7 || slot==8;
-    return item->m_bAttr==slot;
+    return GetEquipNum(point)==slot && CanEquipItem(*item,slot);
 }
 
 
@@ -602,6 +598,23 @@ bool CStatusWnd::ReleaseEquipment(POINT point,DWORD now)
         if(m_stEquipItem[slot].bSetted) return false;
         SetEquipFromCommon(held.xItem.m_shCellNum,&held);return true;
     }
+    return RequestTakeOn(slot);
+}
+
+bool CStatusWnd::CanEquipItem(const CItem& item, int slot) const
+{
+    if (slot<0 || slot>=_EQUIP_MAX_CELL) return false;
+    if (item.m_stItemInfo.stStdItem.bStdMode==25) return slot==5 || slot==9;
+    if (item.m_bAttr==5 || item.m_bAttr==6) return slot==5 || slot==6;
+    if (item.m_bAttr==7 || item.m_bAttr==8) return slot==7 || slot==8;
+    return item.m_bAttr==slot;
+}
+bool CStatusWnd::RequestTakeOn(int slot)
+{
+    auto& ui=g_xGameProc.m_xInterface;auto& held=ui.m_stCommonItem;
+    if (m_equipmentRequest || held.bWaitResponse || !held.bSetted || held.bIsEquipItem ||
+        ui.m_xInventoryWnd.m_usePending || ui.m_xExchangeWnd.pendingSlot>=0 || ui.m_xExchangeWnd.returnSlot>=0 ||
+        !CanEquipItem(held.xItem,slot)) return false;
     SetTakeOnFromCommon(slot,&held);
     if(m_stEquipItem[slot].bSetted) SetCommonFromEquip(slot,&held);
     m_equipmentRequest=CM_TAKEONITEM;m_equipmentSlot=slot;held.bWaitResponse=TRUE;

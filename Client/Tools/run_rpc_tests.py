@@ -7,11 +7,20 @@ import queue
 import threading
 import time
 import subprocess
+import sqlite3
 from pathlib import Path
 from ctypes import wintypes
 
+def load_suite(path):
+    path = Path(path)
+    suite = json.loads(path.read_text(encoding='utf-8'))
+    inherited = [load_suite(path.parent/name) for name in suite.get('include', [])]
+    for key in ('cases','fixture','database_expect'):
+        suite[key] = [entry for base in inherited for entry in base.get(key, [])] + suite.get(key, [])
+    return suite
+
 def run(suite_path, pid, report=None):
-    suite = json.loads(Path(suite_path).read_text(encoding='utf-8'))
+    suite = load_suite(suite_path)
     name = rf'\\.\pipe\Mir3.{suite["role"]}.{pid}'
     if not ctypes.windll.kernel32.WaitNamedPipeW(name, 10000):
         raise ctypes.WinError()
@@ -53,7 +62,9 @@ def run(suite_path, pid, report=None):
         for case in suite['cases']:
             if 'await_state' in case:
                 deadline = time.monotonic() + 30
-                while True:
+                current = exchange(json.dumps({'jsonrpc':'2.0','id':case['name'],'method':'state.get'}))
+                satisfied = matches(current.get('result', {}), case['await_state'])
+                while not satisfied:
                     response = exchange(json.dumps({'jsonrpc':'2.0','id':case['name'], 'method':'events.wait',
                         'params':{'after':after,'timeout_ms':10000}}))
                     assert 'result' in response, (case['name'], response)
@@ -64,13 +75,15 @@ def run(suite_path, pid, report=None):
             else:
                 response = exchange(case.get('raw', json.dumps(case.get('request'), ensure_ascii=False)))
                 assert matches(response, case['expect']), (case['name'], case['expect'], response)
+                if isinstance(response, dict) and 'sequence' in response.get('result', {}):
+                    after = response['result']['sequence']
             print('PASS:', suite['role'], case['name'], flush=True)
             if report is not None: report.append({'role':suite['role'],'case':case['name'],'status':'passed'})
 
 def launch(args):
     from rpc_fixture import prepare
     repo = Path(__file__).resolve().parents[2]
-    suite = json.loads(args.suite.read_text(encoding='utf-8'))
+    suite = load_suite(args.suite)
     root = prepare(repo,args.bin_dir.resolve(),args.config_dir.resolve(),suite,args.port_offset)
     print('Runtime:',root,flush=True)
     processes, report = [], []
@@ -90,6 +103,12 @@ def launch(args):
                     if time.monotonic()>=deadline: raise TimeoutError(f'{role} debug pipe startup')
                     time.sleep(.05)
                 run(cases,process.pid,report)
+            with sqlite3.connect(root/'mir3.sqlite3') as db:
+                for check in suite.get('database_expect', []):
+                    rows = [list(row) for row in db.execute(check['sql'],check.get('params', []))]
+                    assert rows == check['rows'], (check['name'],rows,check['rows'])
+                    report.append({'role':'Database','case':check['name'],'status':'passed'})
+                    print('PASS: Database',check['name'],flush=True)
         result['status']='passed'
     except Exception as error:
         result['status']='failed'

@@ -379,21 +379,32 @@ BOOL CPlayerObject::PickUp()
 			{
 				if (m_pMap->RemoveObject(m_nCurrX, m_nCurrY, OS_ITEMOBJECT, (VOID *)pMapItem))
 				{
-					_LPTUSERITEMRCD lptItemRcd = (_LPTUSERITEMRCD)pMapItem->pItem;
-
-					if (int nUpdate = UpdateItemToDB(lptItemRcd, _ITEM_ACTION_PICKUP))
-					{
-						AddRefMsg(RM_ITEMHIDE, 0, (int)pMapItem, m_nCurrX, m_nCurrY, NULL);
-
-						if (nUpdate == 2)
-						{
-							SendAddItem(lptItemRcd);
-							m_pUserInfo->m_lpTItemRcd.AddNewNode(lptItemRcd);
-						}
-						
-						delete pMapItem;
-						pMapItem = NULL;
-					}
+                    const auto key = reinterpret_cast<const char*>(pMapItem->pItem);
+                    if (key[0] == 'G') {
+                        const auto general = reinterpret_cast<_LPTGENERALITEMRCD>(pMapItem->pItem);
+                        m_pUserInfo->m_lpTGenItemRcd.AddNewNode(general);
+                        _TUSERITEMRCD packet = {};
+                        memcpy(packet.szMakeIndex, general->szMakeIndex, Mir3Item::LegacyKeySize);
+                        packet.nStdIndex = general->nStdIndex;
+                        packet.nDura = general->nDura;
+                        packet.nDuraMax = general->nDuraMax;
+                        SendAddItem(&packet);
+                    } else {
+                        const auto item = reinterpret_cast<_LPTUSERITEMRCD>(pMapItem->pItem);
+                        const int updated = UpdateItemToDB(item, _ITEM_ACTION_PICKUP);
+                        if (!updated) {
+                            m_pMap->AddNewObject(m_nCurrX, m_nCurrY, OS_ITEMOBJECT, pMapItem);
+                            return FALSE;
+                        }
+                        if (updated == 2) {
+                            m_pUserInfo->m_lpTItemRcd.AddNewNode(item);
+                            SendAddItem(item);
+                        }
+                    }
+                    AddRefMsg(RM_ITEMHIDE, 0, (int)pMapItem, m_nCurrX, m_nCurrY, NULL);
+                    delete pMapItem;
+                    WeightChanged();
+                    return TRUE;
 				}
 			}
 		}
@@ -866,6 +877,7 @@ void CPlayerObject::RecalcHitSpeed()
 
 void CPlayerObject::RecalcAbilitys()
 {
+    const WORD currentHP = m_WAbility.HP, currentMP = m_WAbility.MP;
 	BOOL fCGHI[4];
 
 	m_btAntiPoison		= 0;
@@ -968,6 +980,8 @@ void CPlayerObject::RecalcAbilitys()
 
 	m_WAbility.MaxHP	= m_Ability.MaxHP + m_AddAbility.HP;
 	m_WAbility.MaxMP	= m_Ability.MaxMP + m_AddAbility.MP;
+    m_WAbility.HP = _MIN(currentHP, m_WAbility.MaxHP);
+    m_WAbility.MP = _MIN(currentMP, m_WAbility.MaxMP);
 	m_WAbility.AC		= MAKEWORD(LOBYTE(m_AddAbility.AC)  + LOBYTE(m_Ability.AC),  HIBYTE(m_AddAbility.AC)  + HIBYTE(m_Ability.AC));
 	m_WAbility.MAC		= MAKEWORD(LOBYTE(m_AddAbility.MAC) + LOBYTE(m_Ability.MAC), HIBYTE(m_AddAbility.MAC) + HIBYTE(m_Ability.MAC));
 	m_WAbility.DC		= MAKEWORD(LOBYTE(m_AddAbility.DC)  + LOBYTE(m_Ability.DC),  HIBYTE(m_AddAbility.DC)  + HIBYTE(m_Ability.DC));
@@ -1158,6 +1172,9 @@ void CPlayerObject::Initialize()
 		m_Ability.MaxExp	= NEEDEXPS[m_Ability.Level];
 
 		RecalcLevelAbilitys();
+        // The legacy character record stores no current HP/MP. Initialize this login explicitly.
+        m_WAbility.HP = m_Ability.MaxHP;
+        m_WAbility.MP = m_Ability.MaxMP;
 		RecalcAbilitys();
 
 		m_btBright = g_nMirDayTime;

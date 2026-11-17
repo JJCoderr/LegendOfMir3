@@ -36,6 +36,44 @@ std::string Text(const Json& params, const char* key) {
     if (substituted) throw JsonRpc::Error{-32602,"Text not representable in client encoding"};
     return local;
 }
+int Integer(const Json& params,const char* key) {
+    const auto value=params.get(key);
+    if(!value.is<int64_t>() || value.get<int64_t>()<0 || value.get<int64_t>()>INT_MAX)
+        throw JsonRpc::Error{-32602,"Expected nonnegative integer"};
+    return int(value.get<int64_t>());
+}
+bool ItemAction(const std::string& method,const Json& params) {
+    auto& ui=g_xGameProc.m_xInterface;auto& bag=ui.m_xInventoryWnd;
+    auto& status=ui.m_xStatusWnd;auto& held=ui.m_stCommonItem;
+    if(g_xGameProc.InputDelayed() || g_xGameProc.m_xNotice.IsActive() || held.bSetted ||
+        status.m_equipmentRequest || bag.m_usePending || bag.m_pendingDrop.bSetted) return false;
+    if(method=="item.pickup") {
+        g_xClientSocket.SendPickUp(g_xGameProc.m_xMyHero.m_wPosX,g_xGameProc.m_xMyHero.m_wPosY);
+        return true;
+    }
+    if(method=="item.unequip") {
+        const int slot=Integer(params,"slot");
+        if(slot>=_EQUIP_MAX_CELL || !status.m_stEquipItem[slot].bSetted) return false;
+        status.SetCommonFromEquip(slot,&held);
+        if(status.RequestTakeOff()) return true;
+        status.SetEquipFromCommon(slot,&held);return false;
+    }
+    const int id=Integer(params,"id");
+    const int slot=method=="item.equip"?Integer(params,"slot"):-1;
+    for(int i=0;i<_MAX_INVEN_ITEM;++i) {
+        const auto& item=bag.m_stInventoryItem[i];
+        if(!item.bSetted || item.xItem.m_stItemInfo.nMakeIndex!=id) continue;
+        if(method=="item.use" && !bag.UseAllowed(item.xItem,GetTickCount()-bag.m_lastUse)) return false;
+        bag.SetCommonFromInven(i,&held);
+        bool sent=false;
+        if(method=="item.equip") sent=status.RequestTakeOn(slot);
+        else if(method=="item.use") sent=bag.RequestUse(GetTickCount());
+        else if(method=="item.drop") {bag.RequestDrop();sent=bag.m_pendingDrop.bSetted!=FALSE;}
+        if(!sent && held.bSetted && bag.AddInvenItem(held.xItem,i,TRUE)) held=COMMONITEMSET{};
+        return sent;
+    }
+    return false;
+}
 }
 
 std::string ClientState() {
@@ -66,7 +104,7 @@ std::string ClientState() {
     }
     if (connected) state += ",\"remote_port\":" + std::to_string(ntohs(peer.sin_port));
     if (g_xMainWnd.m_pxDefProcess == &g_xGameProc && g_xGameProc.m_bRender) {
-        const auto& game = g_xGameProc;
+        auto& game = g_xGameProc;
         const auto& hero = game.m_xMyHero;
         state += ",\"notice\":" + std::string(mir3::BoolJson(g_xGameProc.m_xNotice.IsActive()))
             + ",\"input_delayed\":" + mir3::BoolJson(game.InputDelayed());
@@ -116,7 +154,14 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
     else if (method == "notice.dismiss" && g_bProcState == _LOGIN_PROC) {
         accepted=g_xLoginProc.HasNotice();
         if (accepted) g_xLoginProc.DismissNotice();
-    } else throw JsonRpc::Error{-32601,"Method unavailable in this scene"};
+    } else if (method == "notice.dismiss" && g_bProcState == _GAME_PROC) {
+        accepted=true;
+        if(g_xGameProc.m_xNotice.IsActive()) g_xGameProc.m_xNotice.HideMessageBox();
+    } else if (method == "session.return" && g_bProcState == _GAME_PROC) {
+        accepted=g_xGameProc.ConfirmExit(ExitFlow::CharacterDialog,GetTickCount());
+    } else if (g_bProcState == _GAME_PROC && (method=="item.equip" || method=="item.unequip" ||
+        method=="item.use" || method=="item.drop" || method=="item.pickup")) accepted=ItemAction(method,params);
+    else throw JsonRpc::Error{-32601,"Method unavailable in this scene"};
     if (!accepted) throw JsonRpc::Error{-32002,"Action rejected by client state"};
     Record("submitted",Json(Object{{"method",Json(method)}}));
     return Json(Object{{"status",Json(std::string("submitted"))},{"sequence",Json(int64_t(eventSequence))}}).serialize();

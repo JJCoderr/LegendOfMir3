@@ -2,7 +2,7 @@
 
 // Included after StdAfx.h and Shared/DebugState.h. Captured only when debug state is enabled.
 namespace mir3 {
-inline std::string ItemDebugState(const CGameProcess& game)
+inline std::string ItemDebugState(CGameProcess& game)
 {
     const auto& ui = game.m_xInterface;
     const auto& ability = game.m_xMyHero.m_stAbility;
@@ -31,7 +31,19 @@ inline std::string ItemDebugState(const CGameProcess& game)
             + ",\"x\":" + std::to_string(window.m_rcWnd.left)
             + ",\"y\":" + std::to_string(window.m_rcWnd.top) + "}";
     };
-    return ",\"dress\":" + std::to_string(game.m_xMyHero.m_stFeature.bDress)
+    std::string ground="[";
+    auto& items=game.m_stMapItemList;items.MoveCurrentToTop();
+    for(int i=0;i<items.GetCounter();++i) {
+        const auto item=items.GetCurrentData();if(i) ground+=',';
+        ground+="{\"id\":"+std::to_string(item->nRecog)+",\"x\":"+std::to_string(item->shTileX)
+            +",\"y\":"+std::to_string(item->shTileY)+",\"name\":"+QuoteLocalText(item->szItemName)+"}";
+        items.MoveNextNode();
+    }
+    ground+=']';
+    return ",\"ground_items\":" + ground
+        + ",\"drop_pending\":" + BoolJson(ui.m_xInventoryWnd.m_pendingDrop.bSetted != FALSE)
+        + ",\"use_pending\":" + BoolJson(ui.m_xInventoryWnd.m_usePending)
+        + ",\"dress\":" + std::to_string(game.m_xMyHero.m_stFeature.bDress)
         + ",\"defence\":" + range(ability.wAC)
         + ",\"magic_defence\":" + range(ability.wMAC)
         + ",\"bag_scroll_row\":" + std::to_string(ui.m_xInventoryWnd.ScrollRow())

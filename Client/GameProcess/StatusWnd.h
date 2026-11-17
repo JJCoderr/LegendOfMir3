@@ -30,6 +30,8 @@ public:
     DWORD m_equipmentRelease=0;
     bool ReleaseEquipment(POINT point,DWORD now);
     bool RequestTakeOff();
+    bool RequestTakeOn(int slot);
+    bool CanEquipItem(const CItem& item, int slot) const;
     bool ApplyEquipmentReply(WORD opcode);
     void CancelPointer() { m_nativeClosePressed=false; }
     bool ClosePressed() const { return m_nativeClosePressed; }

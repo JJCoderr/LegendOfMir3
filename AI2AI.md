@@ -1979,3 +1979,12 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 服务端EIServer.cpp新增state.wait_ready，主循环继续启动六个服务时RPC延迟响应；服务器JSON用例等待全部ready后再启动客户端。RPC读响应超时覆盖服务启动60秒上限。
 - 一条命令：python Client/Tools/run_rpc_tests.py Client/Test/login.json --launch。默认二进制build-eiserver/Release、资源配置out/debug，支持覆盖目录和端口偏移；--pid仍支持附着既有调试进程。结果及错误写入fixture/result.json，日志runtime.log，finally仅清理本次子进程。
 - EIServer Release重新构建通过；全新rpc-2_mwya81独立运行通过服务端10项和客户端13步，结果passed，运行5.165秒（不含目录准备）；已核对三个资源目录为Junction。未宣称非登录协议已完成，后续继续JSON业务覆盖。
+
+
+## 2026-11-18 物品业务RPC、拾取修复及持久化闭环
+- ClientRpc接入item.equip/unequip/use/drop/pickup、游戏公告关闭和session.return。装备规则与RequestTakeOn从鼠标处理抽为共用业务方法；RPC使用既有背包提取、穿脱请求、消耗、丢弃、拾取网络入口。状态增加ground_items/use_pending/drop_pending。没有用坐标输入或截图。
+- 修复通用物品拾取：按G标识恢复GENERALITEMRCD并放入通用物品列表，正确转换发送记录，避免按装备结构读取并错误访问装备表。装备拾取DB更新失败则放回地图；成功更新重量并返回成功。数据库失败回退分支本轮仅代码核对，未做故障注入。
+- 同批纳入此前保留的HP/MP修复：属性重算保留当前HP/MP并限制新上限，登录因旧记录没有当前HP/MP字段而明确初始化。正常穿脱及重进hp18/mp13稳定；尚未验证受伤状态重算或战斗回血量。
+- JSON测试支持include复用登录流程、继承fixture和database_expect，动作回执后更新事件游标，await_state先检查当前状态再等新事件，避免漏掉已完成状态。入场公告并非每次存在，关闭操作可重复调用。
+- Client/Test/items.json完整覆盖错误槽位返包/不存在物品拒绝、穿脱、药水落地拾取使用、装备落地拾取、重新穿戴、退选保存及重进。Client/EIServer Release构建通过；rpc-6cpl29oa的51项断言全部通过，运行10.809秒。数据库确认药水0条、盔甲1条、FLD_DRESS_ID=B26111800001。
+- 尚未覆盖堆叠、快捷栏、满背包、交易/商店、跨角色拾取、地图重启落地保存；不能将本批当整个物品或全部协议适配完成。早先equipment-pointer临时日志与其他无关改动未混入本提交。
