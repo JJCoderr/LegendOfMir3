@@ -32,6 +32,8 @@ if(MIR3_BUILD_EISERVER)
     add_executable(EIServer EIServer.cpp "${MIR3_SERVICE_STRINGS}")
     target_include_directories(EIServer PRIVATE . Def Def/_OrzEx)
     target_compile_definitions(EIServer PRIVATE UNICODE _UNICODE MIR3_EISERVER)
+    target_compile_definitions(EIServer PRIVATE
+        "MIR3_DEV_RUNTIME_DIR=L\"${CMAKE_CURRENT_SOURCE_DIR}/../out/debug\"")
     target_link_libraries(EIServer PRIVATE ${core_libraries} mir_sqlite ws2_32 advapi32 odbc32 odbccp32 comctl32 iphlpapi)
 
 endif()

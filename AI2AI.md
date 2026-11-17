@@ -1847,3 +1847,8 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 ## 2026-11-17 客户端窗口尺寸按 Godot 页面规格
 - 以 G:/传奇3/Mir3/client/src/godot/hud_view.cpp 的页面切换为依据，服务器分组/游戏用800x600，登录/选角用640x480。Win32 默认客户区取当前画布尺寸，以物理像素计算，Mir3.ini Display 的显式宽高仍能覆盖。移除 LoginVisual 的第二次窗口缩放。
 - Win32 Release 构建成功，144 DPI 下用实际客户端和 GetClientRect 验证登录640x480、服务器分组800x600，已更新 out/debug/Mir2Ex.exe。选角与在线进图尺寸未实测，字体颜色未改。IDA 旧会话失效，未从原版二进制确认尺寸常量。
+
+
+## 2026-11-17 EIServer 构建产物启动目录
+- 复现 Release 目录直接启动因 EXE 旁缺 EIServer.ini 退出 1。CMake 为构建版提供 out/debug 路径，程序优先使用 EXE 旁的配置，仅缺失时回退至有配置的联调目录。初始化失败输出服务名和运行路径。
+- Release 构建通过，Exe 从构建目录启动后六服务就绪、七端口监听。MIR3_DEBUG_STATE_DIR 启用的服务器状态快照也随本批接入。

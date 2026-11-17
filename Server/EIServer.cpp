@@ -1,6 +1,6 @@
 #include "Service/CoreHeaders.h"
 #include "EIServer.h"
-#include <iphlpapi.h>
+#include "Def/DebugService.h"
 
 namespace ei {
 static const ServiceCore services[] = {
@@ -13,6 +13,7 @@ static const ServiceCore services[] = {
 };
 constexpr UINT_PTR StartupTimer = 1;
 constexpr DWORD StartupTimeoutMs = 60000;
+constexpr wchar_t ConfigName[] = L"EIServer.ini";
 static DWORD mainThread;
 static BOOL WINAPI ConsoleControl(DWORD event)
 {
@@ -49,12 +50,20 @@ static LRESULT CALLBACK MessageReceiver(HWND window, UINT message, WPARAM w, LPA
 int Run()
 {
     wchar_t path[MAX_PATH];
-    GetModuleFileNameW(nullptr,path,MAX_PATH);
+    const DWORD length = GetModuleFileNameW(nullptr, path, _countof(path));
+    if (!length || length == _countof(path)) return 1;
     std::wstring folder(path);folder.resize(folder.find_last_of(L"\\/"));
-    SetCurrentDirectoryW(folder.c_str());
-    if(GetFileAttributesW(L"EIServer.ini")==INVALID_FILE_ATTRIBUTES) {
-        fwprintf(stderr,L"EIServer.ini is required beside EIServer.exe\n");return 1;
+    if (GetFileAttributesW((folder + L"\\" + ConfigName).c_str()) == INVALID_FILE_ATTRIBUTES) {
+        const std::wstring debugFolder = MIR3_DEV_RUNTIME_DIR;
+        if (GetFileAttributesW((debugFolder + L"\\" + ConfigName).c_str()) != INVALID_FILE_ATTRIBUTES)
+            folder = debugFolder;
     }
+    if (!SetCurrentDirectoryW(folder.c_str()) || GetFileAttributesW(ConfigName) == INVALID_FILE_ATTRIBUTES) {
+        fwprintf(stderr, L"Cannot read %ls in %ls\n", ConfigName, folder.c_str());
+        return 1;
+    }
+    wprintf(L"Runtime directory: %ls\n", folder.c_str());
+    fflush(stdout);
     HINSTANCE instance=GetModuleHandleW(nullptr);
     HWND windows[_countof(services)]{};
     for(unsigned i=0;i<_countof(services);++i) {
@@ -70,12 +79,22 @@ int Run()
     unsigned current=0;
     ULONGLONG deadline=0;
     bool starting=false;
+    mir3::DebugState debugState(L"EIServer");
     while(GetMessage(&msg,nullptr,0,0)>0) {
+        if(!msg.hwnd && msg.message==WM_TIMER) {
+            debugState.Poll([&] {
+                return std::string(",\"ready\":") + mir3::BoolJson(current==_countof(services))
+                    + ",\"services_ready\":" + std::to_string(current) + mir3::ServiceTcpState();
+            });
+        }
         if(!msg.hwnd && msg.message==WM_TIMER && current<_countof(services)) {
             const auto& core=services[current];
             if(!starting) {
                 wprintf(L"[%s] starting\n",core.name);fflush(stdout);
-                if(!core.initialize(instance,windows[current])) return 1;
+                if(!core.initialize(instance,windows[current])) {
+                    fwprintf(stderr, L"[%ls] initialization failed in %ls\n", core.name, folder.c_str());
+                    return 1;
+                }
                 core.start();starting=true;deadline=GetTickCount64()+StartupTimeoutMs;
             }
             int port=GetPrivateProfileIntW(core.section,L"LocalPort",core.defaultPort,L".\\EIServer.ini");
