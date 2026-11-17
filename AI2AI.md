@@ -2080,3 +2080,7 @@ InitMonItemInfo 按数据库怪物编号映射掉落记录，跳过不存在定�
 ScatterBagItems新增金币地图物品：使用现有金币名称/金币图标编号、CMapItem.nCount金额和RM_ITEMSHOW，成功放入地图后清零怪物持有金币。修复金币配置数量0导致rand()%0及数量1恒为0，正数量至少1金币，多条配置累加。Client state.get新增gold，来自客户端实际余额m_nGlod。
 
 Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/monster-gold.log，rpc-risgzv86，16719ms）：余额100→101，SM_GOLDCHANGED、DB与重登一致，同时配置数量0未崩溃也未额外掉钱。MonstersGoldCap.csv39步通过（out/csv-validation/monster-gold-cap.log，16703ms）：5000000满额钱包不增加，金币不消失，保存和重登后仍在地面；两次RpcServer各10步通过。未验证玩家主动丢钱、概率/数量分布、多种物品混合散落、金币图标视觉及数值溢出极端配置。装备掉落、多份同类物品和死亡刷新仍需后续完成。
+
+### CSV 子系统归属约定
+- Test/README.md 按主要验证目标维护脚本索引；跨客户端、服务端与数据库的步骤保留在同一场景。补齐金币场景与战斗经验范围。
+- Test.exe 的文件、步骤区间和日志参数保持不变；verify_runner.py 的 8 项检查通过。

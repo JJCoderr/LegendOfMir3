@@ -66,13 +66,15 @@ step,name,target,action,params,expect
 | 登录 | `Login.csv` | 认证、选服、选角与进入地图 |
 | 角色 | `Character.csv`、`CharacterDelete.csv` | 创建角色、删除角色及持久化 |
 | 物品 | `Inventory.csv` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
-| 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复及施法回包、扣蓝 |
-| 怪物 | `MonstersSpawn.csv`、`MonstersLoot.csv` | 稀疏编号刷新、无效编号、实体名称查询及受击治疗 |
-| 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡与无效目标拒绝 |
+| 技能 | `Skills.csv`、`SkillsCasting.csv`、`SkillsHealing.csv` | 技能列表、快捷键、保存恢复、施法回包、扣蓝与受伤治疗 |
+| 怪物 | `MonstersSpawn.csv`、`MonstersLoot.csv`、`MonstersGold.csv`、`MonstersGoldCap.csv` | 刷新、实体名称、普通物品掉落拾取、金币更新与满额保留 |
+| 战斗 | `CombatMagic.csv`、`CombatExperience.csv` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
 | RPC 基础 | `RpcClient.csv`、`RpcServer.csv` | 两端接口与错误响应 |
 | 执行器 | `Runner/*.csv` | CSV 解析、执行区间、断言与失败处理 |
 
 后续场景使用 `<子系统><场景>.csv`，例如 `ChatChannel.csv`、`ShopBuySell.csv`、`CombatDamage.csv`、`NpcDialog.csv`。这些名称是扩展约定，不表示对应场景已经实现或验证。
+
+归属规则：按场景的主要验证目标划分子系统。例如击杀后检查掉落属于 Monsters，检查经验升级属于 Combat，检查治疗效果属于 Skills。登录和进图是这些场景的前置步骤，不必另拆为 Client/Server 两份脚本。每个 CSV 的步骤号独立，运行时先选文件，再用步骤范围选择片段。
 
 编写规则：
 
