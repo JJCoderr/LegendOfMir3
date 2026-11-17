@@ -1,4 +1,11 @@
-add_executable(LoginSvr WIN32 
+if(MIR3_BUILD_EISERVER)
+    add_library(LoginSvr SHARED)
+    target_sources(LoginSvr PRIVATE ../EIServer/Module.cpp)
+    target_compile_definitions(LoginSvr PRIVATE MIR3_EISERVER)
+else()
+    add_executable(LoginSvr WIN32)
+endif()
+target_sources(LoginSvr PRIVATE
     AddSvrListFunc.cpp
     ConfigDlgFunc.cpp
     GateCommSockMsg.cpp

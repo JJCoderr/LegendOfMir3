@@ -1,4 +1,11 @@
-add_executable(SelGate WIN32 
+if(MIR3_BUILD_EISERVER)
+    add_library(SelGate SHARED)
+    target_sources(SelGate PRIVATE ../EIServer/Module.cpp)
+    target_compile_definitions(SelGate PRIVATE MIR3_EISERVER)
+else()
+    add_executable(SelGate WIN32)
+endif()
+target_sources(SelGate PRIVATE
     ClientSockMsg.cpp
     ConfigDlgFunc.cpp
     MainWndProc.cpp

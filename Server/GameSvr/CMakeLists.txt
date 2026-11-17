@@ -1,4 +1,11 @@
-add_executable(GameSvr WIN32
+if(MIR3_BUILD_EISERVER)
+    add_library(GameSvr SHARED)
+    target_sources(GameSvr PRIVATE ../EIServer/Module.cpp)
+    target_compile_definitions(GameSvr PRIVATE MIR3_EISERVER)
+else()
+    add_executable(GameSvr WIN32)
+endif()
+target_sources(GameSvr PRIVATE
     ConfigDlgFunc.cpp
     GameSvr.cpp
     GateInfo.cpp

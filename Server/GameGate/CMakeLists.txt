@@ -1,4 +1,11 @@
-add_executable(GameGate WIN32 
+if(MIR3_BUILD_EISERVER)
+    add_library(GameGate SHARED)
+    target_sources(GameGate PRIVATE ../EIServer/Module.cpp)
+    target_compile_definitions(GameGate PRIVATE MIR3_EISERVER)
+else()
+    add_executable(GameGate WIN32)
+endif()
+target_sources(GameGate PRIVATE
     Abusive.cpp
     ClientSockMsg.cpp
     ConfigDlgFunc.cpp

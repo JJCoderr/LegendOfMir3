@@ -47,5 +47,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:forScope-")
 # 清单文件是仓库根目录的 app.manifest，各程序在自己的 *.rc 里以
 #   1 RT_MANIFEST "..\..\app.manifest"
 # 嵌入，并加 /MANIFEST:NO 关掉链接器自动生成的清单。
+option(MIR3_BUILD_EISERVER "Build the integrated single-process EIServer" ON)
 add_subdirectory(Client)
 add_subdirectory(Server)

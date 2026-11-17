@@ -1,4 +1,11 @@
-add_executable(DBSvr WIN32 
+if(MIR3_BUILD_EISERVER)
+    add_library(DBSvr SHARED)
+    target_sources(DBSvr PRIVATE ../EIServer/Module.cpp)
+    target_compile_definitions(DBSvr PRIVATE MIR3_EISERVER)
+else()
+    add_executable(DBSvr WIN32)
+endif()
+target_sources(DBSvr PRIVATE
     ConfigDlgFunc.cpp
     DBSvr.cpp
     GameGateSockMsg.cpp

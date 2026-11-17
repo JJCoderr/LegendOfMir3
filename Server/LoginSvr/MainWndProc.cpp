@@ -3,8 +3,8 @@
 #include "../def/dbmgr.h"
 
 
-BOOL			jRegSetKey(LPCSTR pSubKeyName, LPCSTR pValueName, DWORD dwFlags, LPBYTE pValue, DWORD nValueSize);
-BOOL			jRegGetKey(LPCSTR pSubKeyName, LPCSTR pValueName, LPBYTE pValue);
+BOOL			jRegSetKey(LPCTSTR pSubKeyName, LPCTSTR pValueName, DWORD dwFlags, LPBYTE pValue, DWORD nValueSize);
+BOOL			jRegGetKey(LPCTSTR pSubKeyName, LPCTSTR pValueName, LPBYTE pValue);
 
 BOOL CALLBACK	ConfigDlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 BOOL CALLBACK	ServerListProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -143,7 +143,9 @@ UINT WINAPI LoadAccountRecords(LPVOID lpParameter)
 
 	InitServerThreadForMsg();
 
-	if (InitServerSocket(g_gcSock, &g_gcAddr, _IDM_GATECOMMSOCK_MSG, 5500, 1))
+	int port = 5500;
+	jRegGetKey(_LOGIN_SERVER_REGISTRY, _TEXT("LocalPort"), (LPBYTE)&port);
+	if (InitServerSocket(g_gcSock, &g_gcAddr, _IDM_GATECOMMSOCK_MSG, port, 1))
 		SwitchMenuItem(TRUE);
 
 	return 0L;

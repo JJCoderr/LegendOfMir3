@@ -143,12 +143,13 @@ void OnCommand(WPARAM wParam, LPARAM lParam)
 			g_fTerminated = FALSE;
 
 			if (!jRegGetKey(_DB_SERVER_REGISTRY, _TEXT("LocalPort"), (LPBYTE)&nPort))
-				nPort = 5000;
+				nPort = 6000;
 	
 			LoadCharacterRecords();
 
-			InitServerSocket(g_ssock, &g_saddr, _IDM_GATECOMMSOCK_MSG, 6000, 1);
-			InitGateCommSocket(g_gssock, &g_gsaddr, _IDM_GATECOMMSOCK_MSG, 5100, FD_ACCEPT|FD_READ|FD_CLOSE);
+			InitServerSocket(g_ssock, &g_saddr, _IDM_GATECOMMSOCK_MSG, nPort, 1);
+			if (!jRegGetKey(_DB_SERVER_REGISTRY, _TEXT("GatePort"), (LPBYTE)&nPort)) nPort = 5100;
+			InitGateCommSocket(g_gssock, &g_gsaddr, _IDM_GATECOMMSOCK_MSG, nPort, FD_ACCEPT|FD_READ|FD_CLOSE);
 
 			UINT	dwThreadIDForMsg = 0;
 

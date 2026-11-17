@@ -1,4 +1,11 @@
-add_executable(LoginGate WIN32
+if(MIR3_BUILD_EISERVER)
+    add_library(LoginGate SHARED)
+    target_sources(LoginGate PRIVATE ../EIServer/Module.cpp)
+    target_compile_definitions(LoginGate PRIVATE MIR3_EISERVER)
+else()
+    add_executable(LoginGate WIN32)
+endif()
+target_sources(LoginGate PRIVATE
     ClientSockMsg.cpp
     ConfigDlgFunc.cpp
     LoginGate.cpp

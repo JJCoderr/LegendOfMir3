@@ -17,3 +17,7 @@ add_subdirectory(SelGate)
 add_subdirectory(ManConsole)
 add_subdirectory(VirtualClient)
 add_subdirectory(Tools)
+
+if(MIR3_BUILD_EISERVER)
+    add_subdirectory(EIServer)
+endif()

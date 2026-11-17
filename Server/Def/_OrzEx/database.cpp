@@ -1,3 +1,8 @@
+#ifdef MIR3_EISERVER
+#define MIR3_DATABASE_CONFIG ".\\EIServer.ini"
+#else
+#define MIR3_DATABASE_CONFIG ".\\database.ini"
+#endif
 
 
 #include "stdafx.h"
@@ -167,7 +172,7 @@ CConnection::~CConnection()
 bool CConnection::Init( SQLHENV hEnv, char *pDSN, char *pID, char *pPassword )
 {
     char mapped[MAX_PATH] = {};
-    GetPrivateProfileStringA("SQLite", pDSN ? pDSN : "", "", mapped, MAX_PATH, ".\\database.ini");
+    GetPrivateProfileStringA("SQLite", pDSN ? pDSN : "", "", mapped, MAX_PATH, MIR3_DATABASE_CONFIG);
     if (mapped[0]) return InitSQLite(mapped);
     if (pDSN && strncmp(pDSN, "sqlite:", 7) == 0) return InitSQLite(pDSN + 7);
 

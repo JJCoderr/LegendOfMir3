@@ -30,3 +30,7 @@ target_compile_definitions(Def PRIVATE UNICODE _UNICODE)
 target_link_libraries(Def PUBLIC mir_sqlite ws2_32 advapi32 odbc32 odbccp32)
 
 # List.cpp / Queue.cpp / DynamicArray.cpp �?VC6 遗留实现，与现行头文件冲突，不编�?
+
+if(MIR3_BUILD_EISERVER)
+    target_compile_definitions(Def PRIVATE MIR3_EISERVER)
+endif()

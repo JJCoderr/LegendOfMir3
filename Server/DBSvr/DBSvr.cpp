@@ -61,6 +61,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		if (!InitInstance(hInstance, nCmdShow))
 			return (FALSE);
 
+		if (strcmp(lpCmdLine, "--auto-start") == 0)
+			PostMessage(g_hMainWnd, WM_COMMAND, IDM_STARTSERVICE, 0);
+
 		while (GetMessage(&msg, NULL, 0, 0))
 		{
 			TranslateMessage(&msg);

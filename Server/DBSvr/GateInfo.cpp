@@ -1,3 +1,8 @@
+#ifdef MIR3_EISERVER
+#define MIR3_DATABASE_CONFIG ".\\EIServer.ini"
+#else
+#define MIR3_DATABASE_CONFIG ".\\database.ini"
+#endif
 #include "stdafx.h"
 #include "dbsvr.h"
 #include "globalUserList.h"
@@ -263,7 +268,7 @@ void CGateInfo::MakeNewCharacter(SOCKET s, _LPTCREATECHR lpTCreateChr)
 		GetDBManager()->DestroyRecordset( pRec );
 
 		char startMap[15] = {};
-        GetPrivateProfileStringA("Game", "StartMap", "4", startMap, sizeof(startMap), ".\\database.ini");
+        GetPrivateProfileStringA("Game", "StartMap", "4", startMap, sizeof(startMap), MIR3_DATABASE_CONFIG);
         CTblStartPoint::TABLE *table = GetTblStartPoint()->Get(startMap);
         if (!table) {
             fnMakeDefMessageA(&DefaultMsg, SM_NEWCHR_FAIL, 0, 4, 0, 0);

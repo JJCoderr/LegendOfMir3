@@ -1811,3 +1811,10 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - 重登盔甲未恢复到可选中的装备栏；测试角色HP下降死亡原因未知；跨面板快速点击出现面板移动。后续先追踪装备初始621及角色存活，再验证卸装/使用，勿重复宣称通过。详见 Client/docs/native-item-wire-audit.md。
 - 现有最小物品定义Looks均0，三图标为红药水是测试资料占位；未修改资源。会话ID不跨登录持久，魔法属性/堆叠/落地/拾取/满包未验收。
 - 截图 out/native-live-01/live-item-bag.png、live-item-equipped.png、live-item-relogin-pending.png。GameSvr33016/GameGate15264运行，测试客户端33232已退出。预览编号仍341。
+
+
+## 2026-11-17 EIServer 合并构建和新调试目录
+- MIR3_BUILD_EISERVER 默认 ON；六服务编译为隔离 DLL 并嵌入 EIServer.exe，同一进程的独立消息线程运行。启动会释放模块到临时目录；目前临时模块文件需后续清理。关闭任一服务窗口结束整个集成进程，尚未实现协调停服保存流程。
+- 模块默认 --auto-start；服务配置、SQLite DSN 和起始地图统一读取 EIServer.ini。OFF 保留独立 EXE 构建；DBSvr LocalPort/GatePort、LoginSvr LocalPort 可配置。
+- 合并版与独立版 Release 构建通过。新 out/debug 仅放 EIServer.exe、Mir2Ex.exe、配置和初始化 SQLite；Data/Map/Sound 为指向 G:/传奇3/宝藏传奇3 的 junction。旧 out 已不存在，旧测试角色未迁移。
+- 新目录实测七个端口5000/5100/5500/6000/7000/7100/7200同属PID33888，登录、选服、角色列表通过；测试进程已结束。客户端编译通过，未做本轮GUI验收。
