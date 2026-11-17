@@ -78,7 +78,7 @@ LRESULT CALLBACK CChatEdit::ChatEditProc(HWND hWnd, UINT nMsg, WPARAM wParam, LP
 	switch (nMsg)
 	{
         case WM_SYSKEYDOWN:
-            if(wParam==VK_F10) {
+            if(wParam==VK_F10 || ((lParam & (1L<<29)) && (wParam=='Q' || wParam=='X'))) {
                 SetFocus(g_xMainWnd.GetSafehWnd());
                 SendMessage(g_xMainWnd.GetSafehWnd(),WM_SYSKEYDOWN,wParam,lParam);return 0;
             }

@@ -3,6 +3,8 @@
 // Login/selection notice layout from Mir3's Godot client. Uses GameInter art.
 class CLoginNotice {
 public:
+    static constexpr int Waiting = 0;
+    static constexpr int WaitingFrame = 1248;
     CLoginNotice();
     BOOL CreateWnd(CWHWilImageData* image, BOOL, INT, INT, INT, INT);
     BOOL ShowMessageBox(const CHAR* message, INT type, INT ignoredFrame);

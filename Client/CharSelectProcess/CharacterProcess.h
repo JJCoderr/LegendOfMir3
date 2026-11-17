@@ -22,6 +22,9 @@ public:
 	virtual				~CCharacterProcess();
 	VOID				Init();
 	VOID				Load(bool connect = true);
+	bool PrepareReturn();
+	void LoadReturn(bool connect = true);
+	bool IsWaiting() const { return m_returnWaiting; }
 	void Preview(const char* page);
 
 // Message Function
@@ -63,7 +66,9 @@ private:
 	RECT m_createBounds[2];
 	CBackGround			m_xBGround;
 	CSelectChr			m_xSelectChr;
-	char				m_ServerIP[15];
+	char m_selectionHost[256] = {};
+	int m_selectionPort = 0;
+	bool m_returnWaiting = false;
 	WSADATA				m_wsd;
 	CWHWilImageData		m_Image;
 	CWHWilImageData		m_Image2;

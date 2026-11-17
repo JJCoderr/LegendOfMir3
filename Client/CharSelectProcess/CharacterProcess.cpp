@@ -62,12 +62,21 @@ VOID CCharacterProcess::Load(bool connect)
 	//
 	m_ConnectionState = CONNECT_FAIL;
 
-	if (connect) g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(), g_szServerIP, g_nServerPort);
+	if (connect) {
+        lstrcpynA(m_selectionHost,g_szServerIP,sizeof(m_selectionHost));
+        m_selectionPort=g_nServerPort;
+        g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(),g_szServerIP,g_nServerPort);
+    }
 	m_messages.Load(".\\CmList.dat");
 
 	g_xChatEditBox.SetLimitText(13);
 	SendMessage(g_xChatEditBox.GetSafehWnd(),EM_SETPASSWORDCHAR,NULL,0);
 
+	m_returnWaiting = false;
+    m_xMsgBox.HideMessageBox();
+    m_xMsgBox.SetOrigin(140,110);
+    m_CList.ClearAllNodes();m_CRectList.ClearAllNodes();
+    m_xSelectChr.CloseWnd();m_xSelectChr.m_nRenderState=0;
 	m_ChrCount =0;
 	m_nMessage = 0;
 //	m_xMsgBox.Load(&m_Image2);
@@ -76,6 +85,29 @@ VOID CCharacterProcess::Load(bool connect)
 	m_xBGround.Create(&m_Image);
 	m_xBGround.OpenWnd();
 }	
+
+bool CCharacterProcess::PrepareReturn()
+{
+    CWHWilImageData selection,notice;
+    if(!selection.NewLoad("./Data/interface1c.wil",TRUE,TRUE) ||
+       !notice.NewLoad("./Data/GameInter.wil",TRUE,TRUE)) return false;
+    constexpr int SelectionBackground=50,SelectionLastFrame=58;
+    for(int frame=SelectionBackground;frame<=SelectionLastFrame;++frame)
+        if(!selection.NewSetIndex(frame)) return false;
+    return notice.NewSetIndex(CLoginNotice::WaitingFrame)!=FALSE;
+}
+
+void CCharacterProcess::LoadReturn(bool connect)
+{
+    lstrcpynA(g_szServerIP,m_selectionHost,sizeof(g_szServerIP));
+    g_nServerPort=m_selectionPort;
+    Load(connect);
+    m_returnWaiting=true;
+    m_xMsgBox.SetOrigin(155,150,false);
+    m_xMsgBox.ShowMessageBox(m_messages.Get(ExitFlow::ConnectingCaption).c_str(),CLoginNotice::Waiting,CLoginNotice::WaitingFrame);
+    ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);
+    SetFocus(g_xMainWnd.GetSafehWnd());
+}
 
 void CCharacterProcess::Preview(const char* page)
 {
@@ -185,6 +217,7 @@ LRESULT CCharacterProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, L
 
 LRESULT CCharacterProcess::OnKeyDown(WPARAM wParam, LPARAM lParam)
 {
+    if(m_xMsgBox.IsActive()) return 0;
 	switch ( wParam )
 	{
 	case VK_F1:
@@ -460,6 +493,7 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
             const int count = tdm.wParam;
             const int decoded = fnDecode6BitBuf(pszMsg + DEFBLOCKSIZE, (char*)records, sizeof(records));
             if (decoded != count * sizeof(CHRINFO)) break;
+            if(m_returnWaiting) {m_returnWaiting=false;m_xMsgBox.HideMessageBox();m_xMsgBox.SetOrigin(140,110);}
             m_CList.ClearAllNodes();
             m_CRectList.ClearAllNodes();
             m_ChrCount = count;

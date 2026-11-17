@@ -34,6 +34,7 @@ CGameProcess::~CGameProcess()
 
 VOID CGameProcess::Init()
 {
+    m_exitGuard={};m_exitTransition={};
 	m_bTileView				= FALSE;
 	m_bObj1View				= FALSE;
 	m_bObj2View				= FALSE;
@@ -819,6 +820,7 @@ VOID CGameProcess::DropItemShow()
 
 VOID CGameProcess::RenderScene(INT nLoopTime)
 {
+    if(m_exitTransition.Advance(DWORD(nLoopTime))) {ReturnToSelection();return;}
 	BOOL		 bIsMoveTime	= FALSE;
 	static WORD	 wMoveTime		= 0;
 	static DWORD dwReceiveTime	= 0;
@@ -1024,6 +1026,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 
 //g_xMainWnd.DrawWithGrayBackBuffer();
 	m_xNotice.RenderMessageBox(nLoopTime);
+    DrawExitTransition();
 }
 
 
@@ -1783,6 +1786,11 @@ LRESULT CGameProcess::OnWheel(WPARAM wParam, LPARAM lParam)
 
 LRESULT CGameProcess::OnSysKeyDown(WPARAM wParam, LPARAM lParam)
 {
+    if((lParam & (1L<<29)) && (wParam=='Q' || wParam=='X')) {
+        if(!(lParam & (1L<<30)) && !m_xInterface.m_xMsgBox.IsActive() && !m_xInterface.m_xGuildEditor.m_bActive)
+            m_xInterface.OpenExitDialog(wParam=='Q'?ExitFlow::ProgramDialog:ExitFlow::CharacterDialog);
+        return 0L;
+    }
 	if ( wParam == VK_RETURN )
 	{
 		m_bRender = FALSE;
@@ -2677,6 +2685,8 @@ VOID CGameProcess::RenderMapTileGrid()
 
 LRESULT CGameProcess::DefMainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    if(m_exitTransition.active && ((uMsg>=WM_KEYFIRST && uMsg<=WM_KEYLAST) ||
+       (uMsg>=WM_MOUSEFIRST && uMsg<=WM_MOUSELAST) || uMsg==WM_COMMAND)) return 0L;
     if ((m_xInterface.m_xMsgBox.IsActive() || m_xInterface.m_xGuildEditor.m_bActive) &&
         (uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP || uMsg == WM_SYSKEYDOWN || uMsg == WM_SYSKEYUP))
         return 0L;
@@ -4044,4 +4054,44 @@ bool CGameProcess::ReceiveProgression(const _TDEFAULTMESSAGE& header)
     }
     default:return false;
     }
+}
+
+
+bool CGameProcess::CheckExitAllowed(DWORD now)
+{
+    if(m_exitGuard.Allowed(now,m_xMyHero.m_bCurrMtn)) return true;
+    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+    m_xInterface.MsgAdd(GetChatColor(_CHAT_COLOR3),GetChatColor(_CHAT_COLOR4),const_cast<char*>(captions.Get(ExitFlow::BlockedCaption).c_str()));
+    return false;
+}
+bool CGameProcess::ConfirmExit(int action,DWORD now)
+{
+    if(g_bProcState!=_GAME_PROC || m_exitTransition.active || (action!=ExitFlow::ProgramDialog && action!=ExitFlow::CharacterDialog) || !CheckExitAllowed(now)) return false;
+    if(action==ExitFlow::ProgramDialog) {SendMessage(g_xMainWnd.GetSafehWnd(),WM_DESTROY,0,0);return true;}
+    if(!g_xChrSelProc.PrepareReturn()) return false;
+    g_xClientSocket.SendQueryMsg(ExitFlow::Logout);
+    m_xInterface.m_xInventoryWnd.SaveItemPos(m_xMyHero.m_szName);
+    m_exitTransition.Begin();return true;
+}
+void CGameProcess::DrawExitTransition()
+{
+    if(!m_exitTransition.active) return;
+    DDSURFACEDESC2 surface={};surface.dwSize=sizeof(surface);auto* buffer=g_xMainWnd.GetBackBuffer();
+    if(FAILED(buffer->Lock(nullptr,&surface,DDLOCK_WAIT,nullptr))) return;
+    const float brightness=m_exitTransition.Brightness();
+    for(DWORD y=0;y<surface.dwHeight;++y) {
+        WORD* row=(WORD*)((BYTE*)surface.lpSurface+y*surface.lPitch);
+        for(DWORD x=0;x<surface.dwWidth;++x) {const WORD p=row[x];row[x]=WORD((int((p>>11)*brightness)<<11)|(int(((p>>5)&63)*brightness)<<5)|int((p&31)*brightness));}
+    }
+    buffer->Unlock(nullptr);
+}
+void CGameProcess::ReturnToSelection()
+{
+    g_xSound.StopSceneAudio();
+    while(PacketQ.GetCount()) delete[] (char*)PacketQ.PopQ();
+    nBuff=0;szBuff[0]=0;
+    DeleteProc();
+    g_xClientSocket.m_pxDefProc=g_xMainWnd.m_pxDefProcess=&g_xChrSelProc;g_bProcState=_CHAR_SEL_PROC;
+    g_xMainWnd.ResetDXG(640,480,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,_DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
+    g_xChrSelProc.LoadReturn();
 }

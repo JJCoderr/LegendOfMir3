@@ -23,6 +23,7 @@ public:
 
     enum class LobbyPage { None, Credentials, Selection, Creation };
     void UpdateLobbyAudio(LobbyPage page, DWORD elapsed);
+    void StopSceneAudio();
     bool PlayLobbyEffect(const char* file);
     HRESULT InspectInterfaceAudio(bool opening,DWORD& playing,LONG& volume);
     static int ItemSoundSample(int mode, BYTE record31, const char* name);

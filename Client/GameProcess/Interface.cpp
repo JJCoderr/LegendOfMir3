@@ -1664,6 +1664,17 @@ case _WND_ID_STATUS:
 	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
+void CInterface::OpenExitDialog(int action)
+{
+    if(g_bProcState!=_GAME_PROC || g_xGameProc.m_exitTransition.active || !g_xGameProc.CheckExitAllowed(GetTickCount())) return;
+    static CLoginMessages captions;static const bool loaded=captions.Load("./CmList.dat");
+    m_nIdxMsgBox=action;
+    m_xMsgBox.SetOrigin(220,112,false);
+    m_xMsgBox.ShowMessageBox(captions.Get(action==ExitFlow::ProgramDialog?ExitFlow::ProgramCaption:ExitFlow::CharacterCaption).c_str(),MSG_BTN_YESNO,1240);
+    ShowWindow(g_xChatEditBox.GetSafehWnd(),SW_HIDE);SetFocus(g_xMainWnd.GetSafehWnd());
+    m_bMoveFocusedWnd=FALSE;
+}
+
 void CInterface::ShowNotice(int message)
 {
     static CLoginMessages captions;
@@ -1702,6 +1713,13 @@ void CInterface::OpenNameDialog(int action)
 void CInterface::FinishNotice(int hResult, bool mouse)
 {
     if (!hResult) return;
+    if(m_nIdxMsgBox==ExitFlow::ProgramDialog || m_nIdxMsgBox==ExitFlow::CharacterDialog) {
+        const int action=m_nIdxMsgBox;m_nIdxMsgBox=0;
+        if(mouse) g_xSound.PlayLobbyEffect("105.wav");
+        m_xMsgBox.HideMessageBox();
+        if(hResult==CLICK_YES) g_xGameProc.ConfirmExit(action,GetTickCount());
+        return;
+    }
     if (m_nIdxMsgBox==0) {
         if (mouse) g_xSound.PlayLobbyEffect("105.wav");
         m_xMsgBox.HideMessageBox();
@@ -1753,40 +1771,6 @@ void CInterface::FinishNotice(int hResult, bool mouse)
         }
         return;
     }
-
-            if (mouse) g_xSound.PlayLobbyEffect("105.wav");
-			switch ( m_nIdxMsgBox )
-			{
-			case 12:
-				{
-					switch ( hResult )	// 没有编辑框.
-					{
-					case 2:
-						{
-						   DWORD dwCurrTick = timeGetTime();
-						   if ( (dwCurrTick - g_xGameProc.m_xMyHero.m_dwLastPKStruckTime> 10000) &&
-								(dwCurrTick - g_xGameProc.m_xMyHero.m_dwLastMagicTime   > 10000) &&
-								(dwCurrTick - g_xGameProc.m_xMyHero.m_dwLastHitTime		> 10000) ||
-								(g_xGameProc.m_xMyHero.m_bCurrMtn					== _MT_DIE ) )
-								SendMessage(g_xMainWnd.GetSafehWnd(), WM_DESTROY, NULL, NULL);
-						   else
-						   {
-							   DWORD dwFont, dwBack;
-
-							   dwFont = GetChatColor(3);
-							   dwBack = GetChatColor(2);
-
-							   MsgAdd(dwFont, dwBack, "You cannot disconnect during combat.");
-						   }
-						}
-						break;
-					case 4:
-						m_xMsgBox.HideMessageBox();
-						break;
-					}
-				}
-				break;
-			}
 
 }
 
@@ -1929,15 +1913,8 @@ BOOL CInterface::OnLButtonUp(POINT ptMouse)
                     m_chatExpanded = !m_chatExpanded;
                     LayoutChat();
                     break;
-                case _BTN_ID_EXIT:
-                    {
-                        static CLoginMessages captions;
-                        static const bool loaded = captions.Load("./CmList.dat");
-                        m_nIdxMsgBox = 12;
-                        m_xMsgBox.SetOrigin(220,112,false);
-                        m_xMsgBox.ShowMessageBox(captions.Get(2636).c_str(),MSG_BTN_YESNO,1240);
-                    }
-                    break;
+                case _BTN_ID_EXIT: OpenExitDialog(ExitFlow::ProgramDialog);break;
+                case _BTN_ID_LOGOUT: OpenExitDialog(ExitFlow::CharacterDialog);break;
 				case _BTN_ID_MAGIC:
                     WindowActivate(_WND_ID_SKILL);
                     break;

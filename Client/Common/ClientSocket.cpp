@@ -80,6 +80,10 @@ BOOL CClientSocket::DisconnectToServer()
 {
 	if ( m_sockClient != INVALID_SOCKET )
 	{
+        // Cancel queued notifications before Windows can reuse this socket handle.
+        WSAAsyncSelect(m_sockClient,g_xMainWnd.GetSafehWnd(),ID_SOCKCLIENT_EVENT_MSG,0);
+        MSG pending;
+        while(PeekMessage(&pending,g_xMainWnd.GetSafehWnd(),ID_SOCKCLIENT_EVENT_MSG,ID_SOCKCLIENT_EVENT_MSG,PM_REMOVE)) {}
 		closesocket(m_sockClient);
 		m_sockClient = INVALID_SOCKET;
 
@@ -263,6 +267,7 @@ VOID CClientSocket::SendButchAnimal(INT nX, INT nY, INT nDir, INT nActorID)
 
 LRESULT CClientSocket::OnSocketMessage(WPARAM wParam, LPARAM lParam)
 {
+    if((SOCKET)wParam!=m_sockClient) return FALSE;
 	if ( !CheckSocketError(lParam) )
 	{
 		PostQuitMessage(NULL);

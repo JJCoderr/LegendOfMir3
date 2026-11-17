@@ -1419,3 +1419,14 @@ feafc67后完成GUI输入批次：F1..F12全绑定、F10系统路径、聊天编
 清理87/87、七目标109/109及最终增量通过；新增34+回归207=241项通过，含UDP1008和DirectSound既有音效回归。预览228..230，下一231；截图out/keyboard-skill-binding.png、keyboard-skill-shortcuts.png、keyboard-skill-covered.png。NPC固定左上角，遮挡夹具应移动技能窗而非单改NPC命中矩形。详见Client/docs/keyboard-routing-evidence.md。
 
 下一完整批次可核对退出/返回角色对话框与Alt+Q/X、战斗冷却和网络退出；技能路由、3017正文/时序及法术效果仍是旧Actor实现，已读取Godot skill-casting证据及request_skill_cast/SpellTiming/SpellRoutes，不能声称技能系统完成。全目标保持active。
+
+
+## 原生退出与返回选角完整链路（2026-11-17）
+
+基线83ec303，本批统一完成HUD退出/返回及Alt+Q/X、101/109确认框、8秒打开/确认双检查、死亡19豁免、1009公共发送器、严格>2500ms整屏乘法渐暗、清原始包/旧场景/声音、恢复保存选角地址及640x480无按钮1248等待框。收到合法SM_QUERYCHR才关闭等待；没有用本地英雄伪造角色。独立退出时钟连接CMyHero受击、攻击准入和指定技能尾部，完整法术路由仍待迁移。
+
+取消socket异步事件并清队列后关闭，过滤旧socket事件，避免Windows句柄复用误关闭新连接。真实本机TCP夹具验证保存端口恢复、重连查询及非法/合法列表；公共发送器连接重置状态1，首次发送递增为线上序号2。
+
+清理87/87、七目标109/109及最终增量通过；退出30+重连7+键盘34/交易54/装备25/音效15回归=165项全部通过。程序退出用独立子进程自然结束；select-three/create/delete也运行检查。运行文件out/mud3-01/Mir2Ex-exit-verified.exe，报告out/exit-regression，截图out/exit-{program,character,blocked,fade,waiting}.png。预览231..236，下一237。详见Client/docs/exit-flow-migration-audit.md。
+
+完整目标保持active。真实账号登录、战斗、角色保存和再次进入游戏尚未联机验收；后续继续GUI缺口及技能路由批次，不能把本机TCP夹具当真实服务器登录流程完成。

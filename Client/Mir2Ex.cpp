@@ -5,7 +5,7 @@
 #include "GameProcess/MerchantServiceIds.h"
 #include "GameProcess/EquipmentActionIds.h"
 #include "GameProcess/TradeWire.h"
-namespace { constexpr int PreviewKeyboard=228,PreviewKeyboardShortcuts=229,PreviewKeyboardCovered=230; constexpr int PreviewTradeTransaction=223,PreviewTradeQuantity=224,PreviewTradeCancelled=225,PreviewTradeGoldInput=226,PreviewTradeOpenError=227; constexpr int PreviewEquipSuccess=220,PreviewEquipFailure=221,PreviewEquipTakeOff=222; constexpr int PreviewStorageReply=219; constexpr int PreviewServiceRepair=215,PreviewServiceSell=216,PreviewServiceDeposit=217,PreviewServiceFailure=218; constexpr int PreviewItemUse=213,PreviewItemUseRestored=214; constexpr int PreviewInterfaceAudio=212; constexpr int PreviewNotice=210,PreviewNoticeMoved=211; constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
+namespace { constexpr int PreviewExitProgram=231,PreviewExitCharacter=232,PreviewExitBlocked=233,PreviewExitFade=234,PreviewExitWaiting=235,PreviewExitQuit=236; constexpr int PreviewKeyboard=228,PreviewKeyboardShortcuts=229,PreviewKeyboardCovered=230; constexpr int PreviewTradeTransaction=223,PreviewTradeQuantity=224,PreviewTradeCancelled=225,PreviewTradeGoldInput=226,PreviewTradeOpenError=227; constexpr int PreviewEquipSuccess=220,PreviewEquipFailure=221,PreviewEquipTakeOff=222; constexpr int PreviewStorageReply=219; constexpr int PreviewServiceRepair=215,PreviewServiceSell=216,PreviewServiceDeposit=217,PreviewServiceFailure=218; constexpr int PreviewItemUse=213,PreviewItemUseRestored=214; constexpr int PreviewInterfaceAudio=212; constexpr int PreviewNotice=210,PreviewNoticeMoved=211; constexpr int PreviewSpeechSingle=207,PreviewSpeechMultiple=208,PreviewSpeechEight=209; constexpr int PreviewChatHistory=205,PreviewChatHistoryExpanded=206; constexpr int PreviewSceneIdentity=204; constexpr int PreviewGuildIdentity=202,PreviewNoGuildIdentity=203; constexpr int PreviewGuildHistory=201; constexpr int PreviewGuildWire=195,PreviewGuildMembers=196,PreviewGuildEditorWire=197,PreviewGuildError=198,PreviewGroupWire=199,PreviewGroupError=200; constexpr int PreviewSkillWire=193,PreviewSkillProgress=194; constexpr int PreviewProgression=191,PreviewLevelTail=192; constexpr int PreviewAbility=190; constexpr int PreviewQuestWire=187,PreviewQuestDetail=188,PreviewQuestIncrement=189; constexpr int PreviewSceneMap=183,PreviewScenePortrait=184,PreviewSceneSiege=185,PreviewSceneHidden=186; constexpr int PreviewSiegeExpired=182; constexpr int PreviewConsignmentInput=181; constexpr int PreviewConsignmentWire=180; constexpr int PreviewMailWire=177,PreviewMailWireRead=178,PreviewMailNotify=179; constexpr int PreviewSiege=174,PreviewSiegeLoad=175,PreviewSiegeChecks=176; constexpr int PreviewConsignmentEmpty=165, PreviewConsignmentList=166, PreviewConsignmentRegistration=167, PreviewConsignmentItem=168, PreviewConsignmentPrice=169, PreviewConsignmentBuy=170, PreviewConsignmentCancel=171, PreviewConsignmentConfirm=172, PreviewConsignmentChecks=173; constexpr int PreviewMailInbox=154, PreviewMailRead=155, PreviewMailCompose=156, PreviewMailGift=157, PreviewMailOutbox=158, PreviewMailChecks=159, PreviewMailGold=160, PreviewMailGiftItem=161, PreviewMailBody=162, PreviewMailGoldHint=163, PreviewMailGiftHint=164; constexpr int PreviewTradeLocal=151, PreviewTradeRemote=152, PreviewTradeHeld=153; constexpr int PreviewRedArmor=149, PreviewBlueArmor=150; constexpr int PreviewShopArmorHint=148; constexpr int PreviewSpecialHint=145, PreviewShopHint=146, PreviewStorageHint=147; constexpr int PreviewVitalAccessory=141, PreviewDefenseAccessory=142, PreviewRecoveryAccessory=143, PreviewAccuracyBracelet=144; }
 #include "Common/LegacyPanel.h"
 #include "Common/LoginMessages.h"
 
@@ -38,6 +38,9 @@ class CHudPreviewProcess : public CWHDefProcess {
     bool namePreview=false;
     bool speechPreview=false;
     bool noticePreview=false;
+    bool exitFadePreview=false,exitWaitingPreview=false,exitQuitPreview=false;
+    SOCKET exitListener=INVALID_SOCKET,exitPeer=INVALID_SOCKET;
+    int exitPort=0,exitNetworkStage=0;
     const char* capturePath = NULL;
 public:
     void OnConnectToServer() override {}
@@ -73,7 +76,7 @@ public:
         if (groupPanel>=12 && groupPanel<=14) capturePath=groupPanel==13?"inventory-place.bmp":groupPanel==14?"inventory-conflict.bmp":"inventory-panel.bmp";
         g_xMainWnd.ResetDXG(800,600,_SCREEN_BPP,_DXG_SCREENMODE_WINDOW,
             _DXG_DEVICEMODE_PRIMARY|_DXG_DEVICEMODE_D3D);
-        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewKeyboardCovered) {
+        if(groupPanel>=PreviewMailInbox && groupPanel<=PreviewExitQuit) {
             // Review native controls at the same physical pixel size as the 800x600 backbuffer.
             const HWND window=g_xMainWnd.GetSafehWnd();
             RECT bounds={0,0,MailLayout::CanvasWidth,MailLayout::CanvasHeight};
@@ -1909,6 +1912,57 @@ public:
 
 
 
+        if(groupPanel>=PreviewExitProgram && groupPanel<=PreviewExitQuit) {
+            using namespace ExitFlow;
+            auto& game=g_xGameProc;auto& ui=game.m_xInterface;
+            FILE* report=fopen("exit-flow-check.txt","wb");
+            const auto check=[&](const char* name,bool value) {if(report) fprintf(report,"%s=%d\n",name,int(value));};
+            const DWORD now=100000;
+            Guard guard;check("initial",guard.Allowed(now,0));
+            for(int clock=Struck;clock<=Attack;++clock) {
+                guard={};guard.ticks[clock]=now-CombatDelay;
+                check(clock==Struck?"struck_8000":clock==Spell?"spell_8000":"attack_8000",!guard.Allowed(now,0));
+                check(clock==Struck?"struck_8001":clock==Spell?"spell_8001":"attack_8001",guard.Allowed(now+1,0));
+            }
+            guard.ticks={now,now,now};check("death_exempt",guard.Allowed(now,DeathAction));check("action18_blocked",!guard.Allowed(now,18));
+            guard.ticks={DWORD(0xfffffff0),DWORD(0xfffffff0),DWORD(0xfffffff0)};check("wrap_blocked",!guard.Allowed(0x10,0));check("wrap_allowed",guard.Allowed(0x2000,0));
+            Transition fade;fade.Begin();check("fade_start",fade.Brightness()>0.999f);check("fade_2500",!fade.Advance(TransitionDuration) && fade.active && fade.Brightness()>0 && fade.Brightness()<0.02f);check("fade_2501",fade.Advance(1) && !fade.active);check("fade_once",!fade.Advance(1));
+            check("spell_ids",RestrictsExit(1) && RestrictsExit(150) && !RestrictsExit(2) && !RestrictsExit(149));
+            game.m_exitGuard={};hero.m_bCurrMtn=0;
+            game.OnSysKeyDown('Q',1L<<29);check("alt_q",ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==ProgramDialog);
+            ui.OnKeyDown(VK_ESCAPE,0);check("escape_modal",ui.m_xMsgBox.IsActive());
+            ui.OnKeyDown(VK_TAB,0);ui.OnKeyDown(VK_RETURN,0);check("tab_cancel",!ui.m_xMsgBox.IsActive() && !game.m_exitTransition.active);
+            game.OnSysKeyDown('X',1L<<29);check("alt_x",ui.m_xMsgBox.IsActive() && ui.m_nIdxMsgBox==CharacterDialog);
+            game.m_exitGuard.ticks[Struck]=GetTickCount();ui.FinishNotice(CLICK_YES,false);check("confirm_recheck",!ui.m_xMsgBox.IsActive() && !game.m_exitTransition.active);
+            ui.OpenExitDialog(ProgramDialog);check("open_blocked",!ui.m_xMsgBox.IsActive());
+            game.m_exitGuard={};hero.m_bCurrMtn=DeathAction;ui.OpenExitDialog(ProgramDialog);check("death_dialog",ui.m_xMsgBox.IsActive());ui.FinishNotice(CLICK_NO,false);hero.m_bCurrMtn=0;
+            check("assets",g_xChrSelProc.PrepareReturn());
+            SOCKET receiver=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP),sender=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+            sockaddr_in address={};address.sin_family=AF_INET;address.sin_addr.s_addr=htonl(INADDR_LOOPBACK);bind(receiver,(sockaddr*)&address,sizeof(address));int size=sizeof(address);getsockname(receiver,(sockaddr*)&address,&size);connect(sender,(sockaddr*)&address,sizeof(address));DWORD timeout=30;setsockopt(receiver,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(timeout));
+            const SOCKET saved=g_xClientSocket.m_sockClient;g_xClientSocket.m_sockClient=sender;
+            ui.OpenExitDialog(CharacterDialog);ui.FinishNotice(CLICK_NO,false);char wire[128]={};check("cancel_no_packet",recv(receiver,wire,sizeof(wire),0)==SOCKET_ERROR);
+            const bool accepted=game.ConfirmExit(CharacterDialog,GetTickCount());const int length=recv(receiver,wire,sizeof(wire)-1,0);_TDEFAULTMESSAGE packet={};if(length>2) fnDecodeMessage(&packet,wire+2);
+            check("logout_wire",accepted && length==DEFBLOCKSIZE+3 && packet.wIdent==Logout && !packet.nRecog && !packet.wParam && !packet.wTag && !packet.wSeries);
+            check("repeat_rejected",!game.ConfirmExit(CharacterDialog,GetTickCount()) && recv(receiver,wire,sizeof(wire),0)==SOCKET_ERROR);
+            game.m_exitTransition={};g_xClientSocket.m_sockClient=saved;closesocket(sender);closesocket(receiver);
+            g_bProcState=_CHAR_SEL_PROC;check("old_page_rejected",!game.ConfirmExit(CharacterDialog,GetTickCount()));g_bProcState=_GAME_PROC;
+            CLoginNotice waiting;waiting.ShowMessageBox("Waiting",CLoginNotice::Waiting,0);check("waiting_keys",!waiting.OnKeyDown(VK_RETURN) && !waiting.OnKeyDown(VK_SPACE) && !waiting.OnKeyDown(VK_ESCAPE));waiting.OnButtonDown(POINT{300,310});check("waiting_mouse",!waiting.OnButtonUp(POINT{300,310}));
+            if(report) fclose(report);
+            mouse={790,430};capturePath="exit-program.bmp";
+            if(groupPanel==PreviewExitWaiting) {
+                exitWaitingPreview=true;capturePath="exit-waiting.bmp";
+                exitListener=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);sockaddr_in endpoint={};endpoint.sin_family=AF_INET;endpoint.sin_addr.s_addr=htonl(INADDR_LOOPBACK);
+                bind(exitListener,(sockaddr*)&endpoint,sizeof(endpoint));listen(exitListener,2);int bytes=sizeof(endpoint);getsockname(exitListener,(sockaddr*)&endpoint,&bytes);exitPort=ntohs(endpoint.sin_port);
+                lstrcpyA(g_szServerIP,"127.0.0.1");g_nServerPort=exitPort;g_xChrSelProc.Load(true);
+                SOCKET initial=accept(exitListener,nullptr,nullptr);closesocket(initial);PostMessage(g_xMainWnd.GetSafehWnd(),ID_SOCKCLIENT_EVENT_MSG,g_xClientSocket.m_sockClient,WSAMAKESELECTREPLY(FD_CLOSE,WSAECONNRESET));g_xClientSocket.DisconnectToServer();g_xChrSelProc.DeleteProc();
+                lstrcpyA(g_szServerIP,"127.0.0.2");g_nServerPort=1;
+                u_long nonblocking=1;ioctlsocket(exitListener,FIONBIO,&nonblocking);
+            }
+            else if(groupPanel==PreviewExitBlocked) {game.m_exitGuard.ticks[Struck]=GetTickCount();ui.OpenExitDialog(CharacterDialog);capturePath="exit-blocked.bmp";}
+            else if(groupPanel==PreviewExitFade) {exitFadePreview=true;game.m_exitTransition.Begin();game.m_exitTransition.Advance(1200);capturePath="exit-fade.bmp";}
+            else {ui.OpenExitDialog(groupPanel==PreviewExitCharacter?CharacterDialog:ProgramDialog);if(groupPanel==PreviewExitCharacter) capturePath="exit-character.bmp";}
+            exitQuitPreview=groupPanel==PreviewExitQuit;
+        }
         if(groupPanel>=PreviewKeyboard && groupPanel<=PreviewKeyboardCovered) {
             auto& ui=g_xGameProc.m_xInterface;auto& skills=ui.m_xSkillWnd;
             g_xGameProc.m_xImage.m_xImageList[_IMAGE_MICON].NewLoad("./Data/MIcon.wil");
@@ -3281,6 +3335,34 @@ public:
 
     }
     void Render(int elapsed) {
+        if(exitWaitingPreview) {
+            if(g_bProcState==_GAME_PROC) {
+                g_xGameProc.ReturnToSelection();
+                if(FILE* report=fopen("exit-return-check.txt","wb")) {
+                    fprintf(report,"selection_endpoint=%d\nscene_cleared=%d\nwaiting_page=%d\n",g_nServerPort==exitPort && !strcmp(g_szServerIP,"127.0.0.1"),!g_xGameProc.m_xInterface.m_stCommonItem.bSetted && !g_xGameProc.m_xActorList.ListLength() && !g_xGameProc.m_exitTransition.active,g_bProcState==_CHAR_SEL_PROC && g_xChrSelProc.IsWaiting());fclose(report);
+                }
+                const SOCKET active=g_xClientSocket.m_sockClient;
+                g_xClientSocket.OnSocketMessage(INVALID_SOCKET,WSAMAKESELECTREPLY(FD_CLOSE,WSAECONNRESET));
+                if(FILE* report=fopen("exit-return-check.txt","ab")) {fprintf(report,"stale_socket_ignored=%d\n",g_xClientSocket.m_sockClient==active);fclose(report);}
+                g_xChrSelProc.OnKeyDown(VK_F2,0);
+            }
+            if(exitPeer==INVALID_SOCKET) exitPeer=accept(exitListener,nullptr,nullptr);
+            if(exitPeer!=INVALID_SOCKET && exitNetworkStage==0) {
+                char query[256]={};const int count=recv(exitPeer,query,sizeof(query)-1,0);
+                if(count>0) {
+                    _TDEFAULTMESSAGE request={};fnDecodeMessage(&request,query+2);
+                    if(FILE* report=fopen("exit-return-check.txt","ab")) {fprintf(report,"query_on_new_socket=%d\n",query[0]=='#' && query[1]=='2' && request.wIdent==CM_QUERYCHR);fclose(report);}
+                    // Send an invalid list first: the waiting state must survive it.
+                    _TDEFAULTMESSAGE reply={};fnMakeDefMessage(&reply,SM_QUERYCHR,0,4,0,0);char encoded[128]={};fnEncodeMessage(&reply,encoded,sizeof(encoded));std::string wire=std::string("#")+encoded+"!";send(exitPeer,wire.c_str(),int(wire.size()),0);exitNetworkStage=1;
+                }
+            } else if(exitNetworkStage==1 && !capturePath) {
+                if(FILE* report=fopen("exit-return-check.txt","ab")) {fprintf(report,"invalid_list_waits=%d\n",g_xChrSelProc.IsWaiting());fclose(report);}
+                _TDEFAULTMESSAGE reply={};fnMakeDefMessage(&reply,SM_QUERYCHR,0,0,0,0);char encoded[128]={};fnEncodeMessage(&reply,encoded,sizeof(encoded));std::string wire=std::string("#")+encoded+"!";send(exitPeer,wire.c_str(),int(wire.size()),0);exitNetworkStage=2;
+            } else if(exitNetworkStage==2 && !g_xChrSelProc.IsWaiting()) {
+                if(FILE* report=fopen("exit-return-check.txt","ab")) {fprintf(report,"real_list_clears_wait=%d\n",!g_xChrSelProc.IsWaiting());fclose(report);}exitNetworkStage=3;
+            }
+            g_xChrSelProc.RenderScene(elapsed);
+        } else {
         RECT canvas = {0,0,800,600};
         DrawLegacyPanel(canvas,RGB(20,24,28),255,0,false);
         if(levelPreview) {
@@ -3302,6 +3384,8 @@ public:
                 actor.m_damage=CDamageNumbers{};actor.m_shScrnPosX=30+i*125;actor.m_shScrnPosY=55;
                 actor.AddDamage(amounts[i]);actor.DrawDamage();
             }
+        }
+        if(exitFadePreview) g_xGameProc.DrawExitTransition();
         }
         // Button hints expand over several frames; capture their final readable state.
         POINT hintAnchor={};
@@ -3360,6 +3444,7 @@ public:
                     fwrite(pixels.data(),pixels.size(),1,output); fclose(output);
                 }
                 capturePath=NULL;
+                if(exitQuitPreview) g_xGameProc.m_xInterface.FinishNotice(CLICK_YES,false);
             }
         }
 
@@ -3495,6 +3580,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         strcmp(lpCmdLine,"--preview=npc-password")==0 ? 58 :
         strcmp(lpCmdLine,"--preview=npc-shop-layering")==0 ? 59 :
         strcmp(lpCmdLine,"--preview=portrait-cache-version-match")==0 ? 116 :
+        strcmp(lpCmdLine,"--preview=exit-program")==0 ? PreviewExitProgram :
+        strcmp(lpCmdLine,"--preview=exit-character")==0 ? PreviewExitCharacter :
+        strcmp(lpCmdLine,"--preview=exit-blocked")==0 ? PreviewExitBlocked :
+        strcmp(lpCmdLine,"--preview=exit-fade")==0 ? PreviewExitFade :
+        strcmp(lpCmdLine,"--preview=exit-waiting")==0 ? PreviewExitWaiting :
+        strcmp(lpCmdLine,"--preview=exit-quit")==0 ? PreviewExitQuit :
         strcmp(lpCmdLine,"--preview=keyboard-skill-binding")==0 ? PreviewKeyboard :
         strcmp(lpCmdLine,"--preview=keyboard-skill-shortcuts")==0 ? PreviewKeyboardShortcuts :
         strcmp(lpCmdLine,"--preview=keyboard-skill-covered")==0 ? PreviewKeyboardCovered :
@@ -3669,6 +3760,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const bool previewHud = strcmp(lpCmdLine,"--preview=hud")==0 || strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0 || previewExit || previewGroup;
 	if (previewHud) {
 		g_xMainWnd.m_pxDefProcess = &hudPreview;
+		g_bProcState = _GAME_PROC;
 		hudPreview.Load(strcmp(lpCmdLine,"--preview=hud-expanded")==0 || previewChatMode != 0,previewChatMode,previewExit,previewGroup);
 		g_bProcState = _GAME_PROC;
 	} else if (strncmp(lpCmdLine, preview, strlen(preview)) == 0) {
@@ -3716,7 +3808,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 					g_xLoginProc.RenderScene(dwDelay);
 					break;
 				case _CHAR_SEL_PROC:
-					g_xChrSelProc.RenderScene(dwDelay);
+					if(previewHud) hudPreview.Render(dwDelay);
+                    else g_xChrSelProc.RenderScene(dwDelay);
 					break;
 				case _GAME_PROC:
 					if (previewHud) hudPreview.Render(dwDelay);

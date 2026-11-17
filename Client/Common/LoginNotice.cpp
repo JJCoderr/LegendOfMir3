@@ -27,7 +27,7 @@ BOOL CLoginNotice::HideMessageBox() {
 }
 
 int CLoginNotice::Hit(POINT point) const {
-    if (!m_active) return CLICK_NONE;
+    if (!m_active || m_type == Waiting) return CLICK_NONE;
     point.x -= m_offset.x; point.y -= m_offset.y;
     if ((m_type & 127) == MSG_BTN_YESNO) {
         RECT yes = {181,298,261,330}, no = {374,298,454,330};
@@ -41,7 +41,7 @@ int CLoginNotice::Hit(POINT point) const {
 }
 
 HRESULT CLoginNotice::OnKeyDown(WPARAM key) {
-    if (!m_active) return CLICK_NONE;
+    if (!m_active || m_type == Waiting) return CLICK_NONE;
     if (key == VK_TAB && (m_type & 127) == MSG_BTN_YESNO)
         m_selected = m_selected == CLICK_YES ? CLICK_NO : CLICK_YES;
     if (key == VK_RETURN || key == VK_SPACE) return m_selected;
@@ -64,11 +64,11 @@ void CLoginNotice::Draw(int frame, int x, int y) {
 
 BOOL CLoginNotice::RenderMessageBox(INT) {
     if (!m_active) return FALSE;
-    Draw(1240,140,110);
+    Draw(m_type == Waiting ? WaitingFrame : 1240,140,110);
     if ((m_type & 127) == MSG_BTN_YESNO) {
         Draw(m_pressed == CLICK_YES ? 1242 : 1241,181,298);
         Draw(m_pressed == CLICK_NO ? 1246 : 1245,374,298);
-    } else Draw(m_pressed == CLICK_OK ? 1244 : 1243,277,298);
+    } else if (m_type != Waiting) Draw(m_pressed == CLICK_OK ? 1244 : 1243,277,298);
     // Match native_text.cpp dialog layout: measured wrapping and vertical centering.
     const bool confirmation = (m_type & 127) == MSG_BTN_YESNO && m_compactConfirmation;
     RECT rect = confirmation ? RECT{183,194,461,269} : RECT{163,194,471,289};

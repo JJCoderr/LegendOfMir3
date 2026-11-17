@@ -1208,3 +1208,9 @@ BOOL CMirSound::ChgPlayingSet(INT nWavIdx,INT nBufferIdx,INT Sx,INT Sy,INT Dx,IN
 		return FALSE;
 	}
 }
+void CMirSound::StopSceneAudio()
+{
+    StopAllSound();m_lobbyEffect.Stop();m_lobbyOpening.Stop();m_CommonWavBuffer.Stop();
+    if(m_bAmbiance) for(int i=0;i<MAX_AMBIANCE_COUNT;++i) m_pAmbianceBuffer[i]->Stop();
+    StopBkMusicMp3();UpdateLobbyAudio(LobbyPage::None,0);
+}

@@ -13,6 +13,7 @@
 #ifndef _GAMEPROC_H
 #define	_GAMEPROC_H
 #include "LevelEffects.h"
+#include "ExitFlow.h"
 
 
 
@@ -33,6 +34,12 @@ protected:
 	VOID	OnSvrMsgHear(_TDEFAULTMESSAGE *ptdm, char *pszMsg);
 
 public:
+    ExitFlow::Guard m_exitGuard;
+    ExitFlow::Transition m_exitTransition;
+    bool CheckExitAllowed(DWORD now);
+    bool ConfirmExit(int action,DWORD now);
+    void ReturnToSelection();
+    void DrawExitTransition();
     CLevelEffects m_levelEffects;
     WORD m_weaponTraining=0;
     bool ReceiveProgression(const _TDEFAULTMESSAGE& header);

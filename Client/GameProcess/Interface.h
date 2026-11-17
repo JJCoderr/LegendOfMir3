@@ -145,6 +145,7 @@ public:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // Message Funtion.
 //---------------------------------------------------------------------------------------------------------------//
+    void OpenExitDialog(int action);
     bool SpellPointerAvailable();
 	BOOL 			OnKeyDown(WPARAM wParam, LPARAM lParam);
 	BOOL 			OnKeyUp(WPARAM wParam, LPARAM lParam);

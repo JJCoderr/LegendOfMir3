@@ -3835,6 +3835,7 @@ BOOL CMyHero::UpdatePacketState()
 							m_dwLastPKStruckTime = timeGetTime();
 						}
 						m_dwLastStruckTime = timeGetTime();
+                        g_xGameProc.m_exitGuard.ticks[ExitFlow::Struck]=GetTickCount();
 						break;
 					}
 					case SM_RUSH:
@@ -4955,6 +4956,7 @@ BOOL CMyHero::CanNextHit()
 	if ( dwCurrTick - m_dwLastHitTime > nNextHit )
 	{
 		m_dwLastHitTime = dwCurrTick;
+        g_xGameProc.m_exitGuard.ticks[ExitFlow::Attack]=GetTickCount();
 		return TRUE;
 	}
 
@@ -5431,6 +5433,8 @@ VOID CMyHero::SetMagic(LPCLIENTMAGICRCD	pstMagic, BYTE bKeyNum, BYTE bDir, INT n
 	}
 
 	// ¹¥»÷ÈËÊ±ÒÆ¶¯³Í·£ Delay¡£
+    if(ExitFlow::RestrictsExit(WORD(m_shCurrMagicID)))
+        g_xGameProc.m_exitGuard.ticks[ExitFlow::Spell]=GetTickCount();
 	m_wMagicPKDelayTime = 0;
 	if ( nTargetID )
 	{
