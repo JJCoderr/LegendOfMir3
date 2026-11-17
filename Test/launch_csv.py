@@ -21,20 +21,24 @@ def main():
     parser.add_argument('--from', dest='first', type=int, default=1)
     parser.add_argument('--to', dest='last', type=int)
     parser.add_argument('--log', type=Path)
+    parser.add_argument('--resume-runtime', type=Path, help='Reuse an isolated runtime without reapplying fixtures')
     parser.add_argument('--clients', type=int, choices=(1,2,3), default=1)
     parser.add_argument('--timeout-ms', type=int, help='RPC/state wait timeout per step; forwarded to Test.exe')
     args = parser.parse_args()
     binaries = args.bin_dir.resolve()
     if not (binaries/'Test.exe').is_file():
         raise FileNotFoundError(binaries/'Test.exe')
-    fixture = args.scenario.with_suffix('.fixture.csv')
-    statements = []
-    if fixture.exists():
-        with fixture.open(encoding='utf-8-sig', newline='') as source:
-            statements = list(csv.DictReader(source))
-    root = prepare(repo, binaries, args.config_dir.resolve(), {'fixture':statements}, args.port_offset)
-    assets = args.scenario.with_suffix('.files')
-    if assets.is_dir(): shutil.copytree(assets, root, dirs_exist_ok=True)
+    if args.resume_runtime:
+        root = args.resume_runtime.resolve(strict=True)
+    else:
+        fixture = args.scenario.with_suffix('.fixture.csv')
+        statements = []
+        if fixture.exists():
+            with fixture.open(encoding='utf-8-sig', newline='') as source:
+                statements = list(csv.DictReader(source))
+        root = prepare(repo, binaries, args.config_dir.resolve(), {'fixture':statements}, args.port_offset)
+        assets = args.scenario.with_suffix('.files')
+        if assets.is_dir(): shutil.copytree(assets, root, dirs_exist_ok=True)
     log_path = args.log.resolve() if args.log else root/'test.log'
     print('Runtime:', root, flush=True)
     processes = []
@@ -69,7 +73,8 @@ def main():
         result.update(status='failed', error=str(error))
         raise
     finally:
-        for process in reversed(processes):
+        # Stop the server first: client teardown must not trigger a disconnect save.
+        for process in processes:
             if process.poll() is None: process.terminate()
             process.wait(timeout=5)
         result['elapsed_seconds'] = round(time.monotonic()-started, 3)

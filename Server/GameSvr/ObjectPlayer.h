@@ -65,6 +65,10 @@ public:
 	void		Whisper(char *pszChar, char *pszMsg);
 
 	int			UpdateItemToDB(_LPTUSERITEMRCD lpMakeItemRcd, int nAction);
+    bool TradeItemToDB(_LPTUSERITEMRCD item, int action, int gold);
+private:
+    int WriteItemRecord(_LPTUSERITEMRCD item, int action); // Caller owns the transaction.
+public:
 
 	BOOL		CheckTakeOnItem(WORD wWhere, _LPTUSERITEMRCD lpTItemRcd);
 	void		ServerGetTakeOnGenItem(WORD wWhere, char *pszItemIndex);

@@ -27,6 +27,7 @@
 270,sell selected instance,Client,shop.sell,,result.status=submitted
 280,only selected instance removed,Client,state.wait,,result.gold=5126;result.bag_count=1;result.bag.0.id=1;result.merchant_service.phase=choosing
 281,equipment ownership transferred,Database,query,SELECT COUNT(*) FROM TBL_CHARACTER_ITEM WHERE FLD_CHARNAME='WEMADE',rows=[[1]]
+282,trade balance committed immediately,Database,query,SELECT FLD_GOLD FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01',rows=[[5126]]
 290,removed instance rejected,Client,shop.quote,id=2,error.code=-32002
 291,server rejects repeated instance,Client,shop.sale_request,index=0;id=2;name=ShopWeapon,result.status=submitted
 292,repeat preserves inventory,Client,state.wait,,result.gold=5126;result.bag_count=1;result.bag.0.id=1;result.shop.notice=true
@@ -41,6 +42,7 @@
 360,full and damaged prices,Client,state.wait,,result.shop.details=true;result.shop.loading=false;result.shop.offers.0.id=1;result.shop.offers.0.price=198;result.shop.offers.0.durability=8000;result.shop.offers.1.id=2;result.shop.offers.1.price=416;result.shop.offers.1.durability=4000
 370,buy damaged instance,Client,shop.buy_offer,index=1,result.status=submitted
 380,paid instance quote,Client,state.wait,,result.gold=4710;result.bag_count=2;result.bag.1.durability=4000;result.bag.1.max_durability=8000;result.shop.goods.0.stock=1
+385,trade balance committed immediately,Database,query,SELECT FLD_GOLD FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01',rows=[[4710]]
 390,stale stock identity,Client,shop.buy_request,index=0;id=2;name=ShopWeapon,result.status=submitted
 400,stale request preserves gold,Client,state.wait,,result.gold=4710;result.bag_count=2;result.shop.notice=true
 410,dismiss stale refusal,Client,notice.dismiss,,result.status=submitted
@@ -49,6 +51,7 @@
 440,original stock remains,Client,state.wait,,result.shop.details=true;result.shop.loading=false;result.shop.offers.0.id=1;result.shop.offers.0.price=198;result.shop.offers.0.durability=8000
 450,buy full instance,Client,shop.buy_offer,index=0,result.status=submitted
 460,full item delivered,Client,state.wait,,result.gold=4512;result.bag_count=3;result.bag.2.durability=8000;result.bag.2.max_durability=8000;result.shop.goods.0.stock=0
+462,trade balance committed immediately,Database,query,SELECT FLD_GOLD FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01',rows=[[4512]]
 465,dialog ready,Client,state.wait,,result.npc_dialog.ready=true
 470,close store,Client,npc.select,option=0,result.status=submitted
 480,closed,Client,state.wait,,result.shop.open=false;result.return_ready=true

@@ -353,7 +353,7 @@ void CMerchantObject::Buy(CPlayerObject* player, const char* name, int quantity,
                 if (price<=0 || price>USHRT_MAX || price>owner->GetGold()) { failure=NotEnoughGold; break; }
                 if (good.special) {
                     auto* record=new _TUSERITEMRCD(offer->equipment);
-                    if (!player->UpdateItemToDB(record,_ITEM_ACTION_PICKUP)) { delete record; break; }
+                    if (!player->TradeItemToDB(record,_ITEM_ACTION_PICKUP,int(owner->GetGold())-int(price))) { delete record; break; }
                     owner->m_lpTItemRcd.AddNewNode(record);
                     owner->DecGold(int(price)); player->SendAddItem(record);
                 } else {
@@ -435,7 +435,7 @@ void CMerchantObject::Sale(CPlayerObject* player, _LPTGENERALITEMRCD item, bool 
             }
         }
         if ((!item->nDura || (stock && stock->stock<USHRT_MAX)) &&
-            (!equipment || player->UpdateItemToDB(equipment,_ITEM_ACTION_THROW)) && owner->IncGold(price)) {
+            (!equipment || player->TradeItemToDB(equipment,_ITEM_ACTION_THROW,int(owner->GetGold())+price)) && owner->IncGold(price)) {
             if (stock) {
                 if (StackMode(category)>=2) stock->returnedItems.push_back(*item);
                 else stock->items.push_back({m_nextStockId++,*item,equipment ? *equipment : _TUSERITEMRCD{}});

@@ -52,4 +52,4 @@ ROUND使用x87最近偶数取整（控制字证据见native-price-audit.md）。
 
 耐久/附加属性计价、类型25/30真实含义和标准物品字段映射见[native-durability-audit.md](native-durability-audit.md)。此前MeatMode/OreMode及OreLow场景命名有误，实际分别为药粉和蜡烛；类型40/43才是肉和矿石。
 
-装备验证见 ShopEquipment/ShopWeapon/ShopAccessory 及 EquipmentSaleFailure/RebuyFailure/CreateFailure/Shared/Restock 系列。装备出售先检查数据库更新，再转移内存物品和金币；装备回购/新购先确认数据库身份更新或创建成功。数据库拒绝时保持原物品和余额。金币保存与装备即时更新仍是不同操作，不应当作崩溃原子事务已完成的证据。
+装备验证见 ShopEquipment/ShopWeapon/ShopAccessory 及 EquipmentSaleFailure/RebuyFailure/CreateFailure/Shared/Restock 系列。装备出售先检查数据库更新，再转移内存物品和金币；装备回购/新购先确认数据库身份更新或创建成功。数据库拒绝时保持原物品和余额。装备更新与成交金币现已合并到同一个数据库事务；金币更新被拒绝或影响零行时一起回滚。进程重启验证见 verify_equipment_recovery.py；商人库存及完整世界状态恢复仍未完成。

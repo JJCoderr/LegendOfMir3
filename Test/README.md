@@ -240,4 +240,12 @@ ShopDurability/MeatPrice/MeatPremium/OrePrice/OreMinimum/MaximumLoss/PowderPrice
 
 装备计价的附加量为前三个无符号附加字节之和，武器类型5/6还加第7字节超过10的部分；先执行整数基础价/5的加价，再计算最大耐久缩放与损耗。原始14项附加值完整保留，客户端强度裁剪只发生在发送副本。
 
-装备数据库身份与所有权在成交前更新，失败返回拒绝；金币仍随角色保存。因此当前不是装备所有权与角色金币跨崩溃的原子事务。商人库存尚未跨服务器重启保存，新装备目前按标准耐久生成且附加值为0，未接入随机极品生成及修理业务；完整原服交易限制仍需继续核对。
+装备数据库身份/所有权与成交后金币现已在同一事务内提交；提交失败不改变内存身份、背包、库存或金币。商人库存尚未跨服务器重启保存，新装备目前按标准耐久生成且附加值为0，未接入随机极品生成及修理业务；完整原服交易限制仍需继续核对。
+
+装备成交事务增加 `ShopEquipmentSaleGoldFailure`、`ShopEquipmentRebuyGoldFailure`、`ShopEquipmentCreateGoldFailure`、`ShopEquipmentCreateGoldIgnored`，分别在物品已写入事务后拒绝金币更新，检查物品与金币同时回滚；最后一项覆盖更新影响零行而不报SQL异常的路径。正常装备场景也在角色保存前读取数据库金币。
+
+重启验证运行 `python Test/verify_equipment_recovery.py --log-dir out/equipment-recovery`。脚本在出售、回购、新购成功后截断CSV，先强制终止测试服务器，再终止客户端，避免断线保存；随后复用同一数据库运行对应 `ShopEquipmentRecovery*.csv`，检查金币、物品数量、独立身份与归属。恢复CSV需要此前的运行状态，不能当作独立新环境场景。
+
+辅助启动器新增 `--resume-runtime out/rpc-xxx`：复用一个已停止的隔离环境，跳过SQL种子和资源覆盖，仍启动并清理自己的进程。恢复时使用该目录原有客户端与配置，以及 `--bin-dir` 中的服务器/Test.exe；保持两端版本一致。
+
+这只验证装备成交的数据库事务和进程重启恢复，不代表整个游戏世界已具备统一崩溃恢复：商人库存未持久化，其他未保存的普通物品、地图及角色状态仍需统一处理。SQL Server事务路径尚未实测。

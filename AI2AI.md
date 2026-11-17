@@ -2312,3 +2312,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 装备数据库更新/创建成功后才转移金币和库存；失败保留原状态。已有身份回购保持原装备键，新购生成不同数据库键。装备所有权即时更新与金币角色保存仍非跨崩溃原子事务，商人库存重启恢复及随机极品生成尚未实现。
 - 新增8组Shop CSV：Equipment/Weapon/Accessory、SaleFailure/RebuyFailure/CreateFailure、Shared/Restock。13项联调（含普通物品与武器属性回归）共711步通过，双端Release构建通过，24个价格黄金用例及x87控制字恢复通过。
 - 后续：装备/金币事务一致性、完整魔法元素字段与属性应用、原服交易限制、修理、真实数量堆叠、库存持久化。未将本阶段标记为整体适配完成。
+
+## 2026-11-18 装备成交与金币共同提交
+
+- UpdateItemToDB / TradeItemToDB 统一由调用层管理事务，私有 WriteItemRecord 只写候选副本。装备交易将物品身份/归属和成交后 FLD_GOLD 一起提交；失败不发布候选身份，也不消费内存金币或库存。
+- 增加出售/回购/新购金币更新拒绝与零行更新CSV；正常交易在角色保存前验证数据库金币。15项联调与既有物品失败/争买回归共768步通过，EIServer Release重建通过。
+- launch_csv.py 新增 --resume-runtime，跳过fixture重置；清理时先终止自有服务器再终止客户端，排除断线保存。verify_equipment_recovery.py 分别在出售、回购、新购后截断CSV并强制终止，再同库启动执行Recovery系列CSV。最终3次重启（6个执行段177步）全部通过。
+- 已验证的是装备成交事务及进程重启，不是整个世界的统一恢复。商人库存未持久化；其他未保存普通物品/角色/地图状态与经济快照仍需统一，SQL Server事务路径未实测。
