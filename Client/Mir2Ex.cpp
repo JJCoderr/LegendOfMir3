@@ -1960,6 +1960,28 @@ public:
             browser.sessionId=42;browser.Close();const bool cleared=browser.sessionId==0 && browser.listings.empty();
             browser.ReceiveList(list.c_str(),1,1,1);ui.WindowActivate(ConsignmentLayout::BrowserId);
             if(FILE* report=fopen("consignment-wire-check.txt","wb")) {fprintf(report,"decoded=%d details=%d item=%d state=%d empty=%d delimiter=%d shortRecord=%d count=%d multiple=%d cleared=%d\n",decoded,details,item,state,empty,delimiter,shortRecord,count,multipleRows,cleared);fclose(report);}
+            CConsignmentWnd::Request request={};_TDEFAULTMESSAGE packet={};std::string payload;
+            constexpr unsigned Session=123,ListingId=0x12345678;
+            request.sessionId=Session;request.id=ListingId;request.item=browser.listings[0].item;
+            request.action=ConsignmentLayout::Action::NextPage;
+            const bool nextPage=CConsignmentWnd::BuildRequest(request,packet,payload) && packet.wIdent==NextPage && packet.nRecog==Session && !packet.wParam && !packet.wTag && payload.empty();
+            request.action=ConsignmentLayout::Action::PreviousPage;const bool previous=CConsignmentWnd::BuildRequest(request,packet,payload) && packet.wIdent==PreviousPage;
+            request.action=ConsignmentLayout::Action::Refresh;const bool refresh=CConsignmentWnd::BuildRequest(request,packet,payload) && packet.wIdent==Refresh;
+            request.query="装备";request.action=ConsignmentLayout::Action::SearchName;
+            const bool name=CConsignmentWnd::BuildRequest(request,packet,payload) && packet.wIdent==Search && payload=="*\r装备\r0";
+            request.action=ConsignmentLayout::Action::SearchSeller;const bool seller=CConsignmentWnd::BuildRequest(request,packet,payload) && payload=="装备\r*\r0";
+            request.query.clear();const bool wildcard=CConsignmentWnd::BuildRequest(request,packet,payload) && payload=="*\r*\r0";
+            request.action=ConsignmentLayout::Action::Buy;
+            const bool purchase=CConsignmentWnd::BuildRequest(request,packet,payload) && packet.wIdent==Buy && packet.wParam==LOWORD(ListingId) && packet.wTag==HIWORD(ListingId) && payload==request.item.Name();
+            request.action=ConsignmentLayout::Action::CancelListing;
+            const bool cancel=CConsignmentWnd::BuildRequest(request,packet,payload) && packet.wIdent==Cancel && packet.wParam==LOWORD(ListingId) && packet.wTag==HIWORD(ListingId) && payload.empty();
+            request.action=ConsignmentLayout::Action::SubmitRegistration;request.price=12000;request.description="说明\r\n\r\n结束";request.item.m_stackMode=2;request.item.SetCount(9);
+            const bool registration=CConsignmentWnd::BuildRequest(request,packet,payload) && packet.wIdent==Register && packet.nRecog==Session && packet.wParam==9 && packet.wTag==0 && payload=="厚重的装备\r7\r12000\r说明\r \r结束";
+            request.item.m_stackMode=0;const bool unstacked=CConsignmentWnd::BuildRequest(request,packet,payload) && packet.wParam==0;
+            request.description=std::string(RegistrationDescriptionLimit-1,'a')+"中文";
+            CConsignmentWnd::BuildRequest(request,packet,payload);const bool boundary=payload.substr(payload.find_last_of('\r')+1)==std::string(RegistrationDescriptionLimit-1,'a');
+            request.action=ConsignmentLayout::Action::Close;const bool unsupported=!CConsignmentWnd::BuildRequest(request,packet,payload);
+            if(FILE* report=fopen("consignment-send-check.txt","wb")) {fprintf(report,"next=%d previous=%d refresh=%d name=%d seller=%d wildcard=%d purchase=%d cancel=%d registration=%d unstacked=%d boundary=%d unsupported=%d\n",nextPage,previous,refresh,name,seller,wildcard,purchase,cancel,registration,unstacked,boundary,unsupported);fclose(report);}
             capturePath="consignment-wire.bmp";mouse={790,460};
         }
 
@@ -1999,7 +2021,7 @@ public:
                 browser.Activate(Action::NextPage);const bool next=browser.requests.back().page==2 && browser.page==1;
                 browser.Activate(Action::Buy);const bool purchaseModal=ui.m_xMsgBox.IsActive();ui.FinishNotice(CLICK_NO,false);
                 const bool purchaseCancelled=browser.requests.size()==2;
-                browser.Activate(Action::Buy);browser.listings[0].price=2000;ui.FinishNotice(CLICK_YES,false);
+                browser.sessionId=123;browser.Activate(Action::Buy);browser.sessionId=456;browser.listings[0].price=2000;ui.FinishNotice(CLICK_YES,false);
                 const bool purchaseSnapshot=browser.requests.back().price==1000 && g_xGameProc.m_xMyHero.m_nGlod==50000;
                 browser.Activate(Action::Register);
                 const bool bag=ui.m_xInventoryWnd.m_bActive && registration.m_bActive && ui.IsTopWindow(RegistrationId);
@@ -2009,8 +2031,9 @@ public:
                 const bool price=registration.price==12000;
                 SetWindowTextA(registration.edits[0],"寄售说明");registration.Activate(Action::SubmitRegistration);
                 const bool registerModal=ui.m_xMsgBox.IsActive();ui.FinishNotice(CLICK_YES,false);
-                const bool submit=registration.requests.size()==1 && registration.requests[0].description=="寄售说明" && registration.requests[0].price==12000;
+                const bool submit=registration.requests.size()==1 && registration.requests[0].description=="寄售说明" && registration.requests[0].price==12000 && registration.requests[0].sessionId==456 && !registration.m_bActive && registration.sessionId==0;
                 registration.Activate(Action::CancelRegistration);const bool cancel=!registration.hasItem && !registration.price && ui.m_xInventoryWnd.m_stInventoryItem[0].bSetted;
+                ui.WindowActivate(RegistrationId);
                 registration.SyncEditors(false);const bool hidden=!IsWindowVisible(registration.edits[0]);registration.SyncEditors(true);
                 SendMessage(registration.edits[0],WM_KEYDOWN,VK_ESCAPE,0);const bool close=!registration.m_bActive && !IsWindowVisible(registration.edits[0]);
                 browser.Close();const bool browserReset=browser.listings.empty() && browser.selected==-1 && !browser.page && !browser.pages && !browser.waiting;

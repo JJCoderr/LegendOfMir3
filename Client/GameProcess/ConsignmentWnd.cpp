@@ -255,9 +255,9 @@ void CConsignmentWnd::Destroy()
 }
 void CConsignmentWnd::Close()
 {
-    ReadEditors();m_bActive=FALSE;captured=dragging=false;pressed=pressedRow=-1;
+    ReadEditors();m_bActive=FALSE;captured=dragging=false;pressed=pressedRow=-1;sessionId=0;
     if(registration) {hasItem=false;price=0;description.clear();if(edits[0]) SetWindowTextA(edits[0],"");}
-    else {listings.clear();selected=hovered=-1;page=pages=0;sessionId=0;waiting=false;animationFrame=0;}
+    else {listings.clear();selected=hovered=-1;page=pages=0;waiting=false;animationFrame=0;}
     LayoutEditors();SetFocus(g_xMainWnd.GetSafehWnd());
 }
 bool CConsignmentWnd::SelectItem(POINT point)
@@ -308,9 +308,9 @@ void CConsignmentWnd::Activate(ConsignmentLayout::Action action)
     using namespace ConsignmentLayout;
     auto& ui=g_xGameProc.m_xInterface;
     if(action==Action::Close) {Close();return;}
-    if(action==Action::Register) {ui.WindowActivate(RegistrationId);return;}
+    if(action==Action::Register) {ui.WindowActivate(RegistrationId);ui.m_xConsignmentRegistration.sessionId=sessionId;return;}
     if(action==Action::CancelRegistration) {hasItem=false;price=0;return;}
-    ReadEditors();Request request;request.action=action;request.page=page;
+    ReadEditors();Request request;request.action=action;request.page=page;request.sessionId=sessionId;
     if(action==Action::NextPage) {if(page>=pages) return;request.page=page+1;}
     if(action==Action::PreviousPage) {if(page<=1) return;request.page=page-1;}
     if(action==Action::SearchName) request.query=nameQuery;
@@ -335,12 +335,12 @@ void CConsignmentWnd::Activate(ConsignmentLayout::Action action)
         ui.m_xMsgBox.ShowMessageBox(captions.Get(caption).c_str(),MSG_BTN_YESNO,ConfirmationFrame);
         return;
     }
-    waiting=true;requests.push_back(std::move(request));
+    SendRequest(std::move(request));
 }
 void CConsignmentWnd::Confirm(bool accepted)
 {
     if(!confirmationPending) return;
-    if(accepted) requests.push_back(std::move(confirmation));
+    if(accepted) SendRequest(std::move(confirmation));
     confirmationPending=false;
 }
 void CConsignmentWnd::ShowItemHint(POINT point)
@@ -384,4 +384,45 @@ void CConsignmentWnd::ReceiveList(const char* encoded,int count,int currentPage,
         listings.push_back(std::move(listing));
     }
     if(!listings.empty()) selected=0;
+}
+
+bool CConsignmentWnd::BuildRequest(const Request& request,_TDEFAULTMESSAGE& header,std::string& body)
+{
+    using ConsignmentLayout::Action;
+    using namespace ConsignmentWire;
+    WORD message=0;DWORD parameter=0;body.clear();
+    switch(request.action) {
+    case Action::NextPage:message=NextPage;break;
+    case Action::PreviousPage:message=PreviousPage;break;
+    case Action::Refresh:message=Refresh;break;
+    case Action::SearchName:case Action::SearchSeller: {
+        message=Search;
+        const auto query=request.query.empty()?"*":request.query;
+        body=request.action==Action::SearchName?"*\r"+query+"\r0":query+"\r*\r0";
+        break;
+    }
+    case Action::Buy:message=Buy;parameter=request.id;body=request.item.Name();break;
+    case Action::CancelListing:message=Cancel;parameter=request.id;break;
+    case Action::SubmitRegistration: {
+        message=Register;
+        parameter=request.item.m_stackMode>=2?request.item.m_count:0;
+        const auto name=LimitAnsiEdit("",request.item.Name(),RegistrationNameLimit);
+        const auto description=LimitAnsiEdit("",CGuildEditor::Payload(request.description),RegistrationDescriptionLimit);
+        body=name+"\r"+std::to_string(request.item.m_stItemInfo.nMakeIndex)+"\r"+std::to_string(request.price)+"\r"+description;
+        break;
+    }
+    default:return false;
+    }
+    fnMakeDefMessage(&header,message,request.sessionId,LOWORD(parameter),HIWORD(parameter),0);
+    return true;
+}
+void CConsignmentWnd::SendRequest(Request request)
+{
+    _TDEFAULTMESSAGE header={};std::string body;
+    if(!BuildRequest(request,header,body)) return;
+    if(g_xClientSocket.m_sockClient!=INVALID_SOCKET)
+        g_xClientSocket.SendPacket(&header,body.empty()?nullptr:body.data());
+    const bool registered=request.action==ConsignmentLayout::Action::SubmitRegistration;
+    waiting=true;requests.push_back(std::move(request));
+    if(registered && m_bActive) g_xGameProc.m_xInterface.WindowActivate(ConsignmentLayout::RegistrationId);
 }

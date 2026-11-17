@@ -13,7 +13,7 @@ public:
     };
     struct Request {
         ConsignmentLayout::Action action;
-        unsigned id=0,price=0;
+        unsigned id=0,price=0,sessionId=0;
         int page=0;
         std::string query,description;
         CItem item;
@@ -26,6 +26,7 @@ public:
     std::vector<Listing> listings;
     std::vector<Request> requests;
     HWND edits[2]={};
+    static bool BuildRequest(const Request& request,_TDEFAULTMESSAGE& header,std::string& body);
     void ReceiveList(const char* encoded,int count,int currentPage,int totalPages);
     void Create(CWHWilImageData* image,bool registerPage);
     void Destroy() override;
@@ -52,6 +53,7 @@ private:
     HBRUSH editBackground[2]={};
     WNDPROC editProcedure=nullptr;
     static LRESULT CALLBACK EditorProc(HWND,UINT,WPARAM,LPARAM);
+    void SendRequest(Request request);
     void ReadEditors();
     void LayoutEditors();
     void DrawItemPreview();

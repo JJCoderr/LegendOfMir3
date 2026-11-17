@@ -19,3 +19,17 @@ ConsignmentWire统一消息和字段常量；原生CConsignmentWnd接收列表�
 ## 验证（2026-11-17）
 
 客户端clean构建通过，全部七目标构建通过（out/build-consignment-wire-clean.log、out/build-consignment-wire-all.log）。预览consignment-wire（编号180）先构造原记录、六位编码再走ReceiveList，10项检查全部通过；寄售GUI16项、邮件42项、投石车19项回归全部通过。截图out/consignment-wire.png确认四列、首条选择、日期、CR换行及物品图标。尚未通过完整加密网络包注入验证1355分派，也未连接实服。
+
+## 操作发送恢复
+
+- 47D030/47D060/47D090分别1131下一页、1132上一页、1134刷新，recognition为窗口会话标识，其他参数0。455360按钮分支传入对象+0x7D4。
+- 455F80查询调用47D100发送1136：名称查询正文 `*<CR>名称<CR>0`，卖家查询 `卖家<CR>*<CR>0`，空查询为 `*<CR>*<CR>0`。
+- 456290购买调用47D0C0发送1133，recognition会话ID，商品ID拆低高WORD到wParam/wTag，正文物品名；4562F0撤销调用47D1D0发送1135，参数相同但正文空。商品ID取列表记录+16。
+- 4554F9将浏览窗口会话标识复制到登记窗口。457370登记调用47D140发送1130，recognition会话ID；堆叠模式>=2时WORD参数为数量，非堆叠为0；正文为 `物品名<CR>实例ID<CR>价格<CR>说明`。说明复用原版编辑器CRLF转换，空行保留空格CR。调用后关闭登记窗口，背包不做本地扣减。
+- 原版先用160字节栈记录（name0、instance28、price32、description36）暂存再sprintf拼包；不复制其越界写入行为，发送名限27、说明限123字节并保留DBCS边界。输入控件仍保留原版长文本编辑能力。
+
+所有操作的会话标识随Request不可变快照保存，确认后从快照构造报文。原版的重复操作时间限制、完整网络注入及实服交易回执尚待验证，不把成功构造或调用send视为交易成功。只读导出见out/consignment-send.txt、out/consignment-transaction.txt。
+
+### 发送适配验证（2026-11-17）
+
+客户端clean构建及全部七目标构建通过；新增12项报文检查和原有87项回归全部通过。现有GUI检查同时覆盖确认期间会话改变时保留快照、登记关闭并清会话。日志out/build-consignment-send-clean.log、out/build-consignment-send-all.log，报告out/mud3-01/consignment-send-check.txt。截图out/consignment-send-confirm.png逐张检查通过。没有执行实服交易。

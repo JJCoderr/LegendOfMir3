@@ -1236,3 +1236,9 @@ Win32 消息驱动（`WM_COMMAND` + `EnumWindows` 轮询窗口出现时刻，测
 - 1355恢复312字节记录，各段编码以/分隔；字段server0、id16、seller20、price72、date76、item91(100)、description191(121)。证据Client/docs/consignment-wire-evidence.md。
 - CConsignmentWnd::ReceiveList接已有原生页面，首条默认选中，清列表/等待状态，count>0更新页码；1355仅未打开时开窗口并保存recognition会话ID，1400按recognition==0设置等待动画。发送操作尚未适配。
 - clean Client通过，全七目标构建通过；新增10项列表解析/状态检查、既有77项相关回归全1。截图out/consignment-wire.png已核对；未验证完整加密包或实服。预览180 consignment-wire，下一空闲181。
+
+### 寄售操作发送适配（2026-11-17）
+- 已按原版接1130登记、1131/1132翻页、1133购买、1134刷新、1135撤销、1136查询。recognition为会话ID，商品ID低高WORD；购买正文物品名，查询CR分隔条件，登记正文名/实例/价格/说明，堆叠数量放WORD。
+- 浏览器开登记时复制会话标识；Request保存不可变会话快照，确认期间列表变化不换目标。登记确认调用后关闭窗口/清会话，不本地扣背包；说明转换CRLF，安全上限123字节，DBCS不截断。
+- clean Client和全部七目标构建通过，12项发送检查+原有87项回归全1；追加快照和登记关闭断言通过。截图out/consignment-send-confirm.png已检查。
+- 原版1秒重复操作时限、完整加密网络注入和实服事务回执仍未完成；发送适配并非交易成功。证据Client/docs/consignment-wire-evidence.md；没有新增预览ID，180继续包含接收与发送检查。
