@@ -15,7 +15,7 @@ def load_suite(path):
     path = Path(path)
     suite = json.loads(path.read_text(encoding='utf-8'))
     inherited = [load_suite(path.parent/name) for name in suite.get('include', [])]
-    for key in ('cases','fixture','database_expect'):
+    for key in ('cases','fixture','database_expect','wire_expect'):
         suite[key] = [entry for base in inherited for entry in base.get(key, [])] + suite.get(key, [])
     return suite
 
@@ -79,6 +79,18 @@ def run(suite_path, pid, report=None):
                     after = response['result']['sequence']
             print('PASS:', suite['role'], case['name'], flush=True)
             if report is not None: report.append({'role':suite['role'],'case':case['name'],'status':'passed'})
+        if suite['role']=='Client':
+            from protocol_catalog import definitions, number, coverage
+            entries = definitions(Path(__file__).resolve().parents[2])
+            wire = exchange(json.dumps({'jsonrpc':'2.0','id':'wire coverage','method':'protocol.get'}))
+            observed = wire['result']['observed']
+            for check in suite.get('wire_expect', []):
+                opcode = number(entries, check['message'])
+                count = sum(e['count'] for e in observed if e['direction']==check['direction'] and e['opcode']==opcode)
+                assert count >= check.get('at_least',1), (check,count)
+                if report is not None: report.append({'role':'Wire','case':check['message'],'status':'passed','count':count})
+                print('PASS: Wire',check['direction'],check['message'],count,flush=True)
+            return coverage(entries,observed)
 
 def launch(args):
     from rpc_fixture import prepare
@@ -102,7 +114,9 @@ def launch(args):
                     if process.poll() is not None: raise RuntimeError(f'{role} exited {process.returncode}')
                     if time.monotonic()>=deadline: raise TimeoutError(f'{role} debug pipe startup')
                     time.sleep(.05)
-                run(cases,process.pid,report)
+                wire = run(cases,process.pid,report)
+                if wire is not None:
+                    (root/'protocol-coverage.json').write_text(json.dumps(wire,ensure_ascii=False,indent=2),encoding='utf-8')
             with sqlite3.connect(root/'mir3.sqlite3') as db:
                 for check in suite.get('database_expect', []):
                     rows = [list(row) for row in db.execute(check['sql'],check.get('params', []))]

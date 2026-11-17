@@ -1,3 +1,4 @@
+#include "ClientRpc.h"
 // LoginProcess.cpp: implementation of the CLoginProcess class.
 //
 //////////////////////////////////////////////////////////////////////
@@ -455,6 +456,7 @@ void CLoginProcess::OnSocketMessageRecieve(char *pszMsg)
 	_TDEFAULTMESSAGE	tdm;
 
 	fnDecodeMessage(&tdm, pszMsg);
+    mir3::ClientRpcPacket("received",tdm.wIdent,int(strlen(pszMsg)));
 
 	switch(tdm.wIdent)
 	{

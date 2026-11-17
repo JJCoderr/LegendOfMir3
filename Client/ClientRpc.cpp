@@ -12,6 +12,8 @@ using Json = picojson::value;
 using Object = picojson::object;
 using Array = picojson::array;
 uint64_t eventSequence = 0;
+bool enabled = false;
+std::map<std::pair<std::string,int>,uint64_t> packetCounts;
 std::string lastState;
 std::deque<Json> events;
 void Record(const std::string& kind, const Json& data) {
@@ -119,12 +121,24 @@ std::string ClientState() {
 
 }
 void ClientRpcTick() {
+    enabled = true;
     const auto state = std::string("{\"schema\":1") + ClientState() + "}";
     if (state != lastState) { lastState=state; Record("state",Parse(state)); }
+}
+void ClientRpcPacket(const char* direction,int opcode,int bytes) {
+    if(!enabled) return;
+    ++packetCounts[{direction,opcode}];
+    Record(std::string("packet.")+direction,Json(Object{{"opcode",Json(double(opcode))},{"bytes",Json(double(bytes))}}));
 }
 std::string ClientRpc(const std::string& method, const std::string& arguments) {
     ClientRpcTick();
     if (method == "state.get") return lastState;
+    if (method == "protocol.get") {
+        Array observed;
+        for(const auto& entry:packetCounts) observed.emplace_back(Object{
+            {"direction",Json(entry.first.first)},{"opcode",Json(double(entry.first.second))},{"count",Json(int64_t(entry.second))}});
+        return Json(Object{{"observed",Json(observed)}}).serialize();
+    }
     const auto params=Parse(arguments);
     if (!params.is<Object>()) throw JsonRpc::Error{-32602,"Expected named parameters"};
     if (method == "events.wait") {

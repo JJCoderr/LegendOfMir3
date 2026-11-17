@@ -361,5 +361,55 @@
         ]
       ]
     }
+  ],
+  "wire_expect": [
+    {
+      "direction": "sent",
+      "message": "CM_TAKEONITEM"
+    },
+    {
+      "direction": "sent",
+      "message": "CM_TAKEOFFITEM"
+    },
+    {
+      "direction": "sent",
+      "message": "CM_DROPITEM"
+    },
+    {
+      "direction": "sent",
+      "message": "CM_PICKUP"
+    },
+    {
+      "direction": "sent",
+      "message": "CM_EAT"
+    },
+    {
+      "direction": "received",
+      "message": "SM_TAKEON_OK"
+    },
+    {
+      "direction": "received",
+      "message": "SM_TAKEOFF_OK"
+    },
+    {
+      "direction": "received",
+      "message": "SM_ITEMSHOW"
+    },
+    {
+      "direction": "received",
+      "message": "SM_ITEMHIDE"
+    },
+    {
+      "direction": "received",
+      "message": "SM_ADDITEM"
+    },
+    {
+      "direction": "received",
+      "message": "SM_EAT_OK"
+    },
+    {
+      "direction": "received",
+      "message": "SM_DROPITEM_SCCESS"
+    }
   ]
 }

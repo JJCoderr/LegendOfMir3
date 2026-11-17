@@ -1,3 +1,4 @@
+#include "ClientRpc.h"
 #include "stdafx.h"
 
 CWHQueue PacketQ;
@@ -304,7 +305,9 @@ VOID CClientSocket::SendPacket(_TDEFAULTMESSAGE* lpDefMsg, char *pszData, int da
 	else
 		sprintf(m_szPacket, "#%d%s!", m_nSync, m_szEncodeDefMsg);
 
-	send(m_sockClient, m_szPacket, strlen(m_szPacket), 0);
+    const int length=int(strlen(m_szPacket));
+    const int sent=send(m_sockClient, m_szPacket, length, 0);
+    mir3::ClientRpcPacket(sent==length?"sent":"send_failed",lpDefMsg->wIdent,sent);
 }
 
 // **************************************************************************************

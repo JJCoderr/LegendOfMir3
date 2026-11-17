@@ -1,3 +1,4 @@
+#include "ClientRpc.h"
 // CharacterProcess.cpp: implementation of the CCharacterProcess class.
 //
 //////////////////////////////////////////////////////////////////////
@@ -482,6 +483,7 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 	INT	nChrPos[] = { 350, 280, 350, 250, 320, 390 };
 
 	fnDecodeMessage(&tdm, pszMsg);
+    mir3::ClientRpcPacket("received",tdm.wIdent,int(strlen(pszMsg)));
 
 	switch(tdm.wIdent)
 	{

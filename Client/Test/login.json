@@ -165,5 +165,44 @@
         261
       ]
     }
+  ],
+  "wire_expect": [
+    {
+      "direction": "sent",
+      "message": "CM_IDPASSWORD",
+      "at_least": 2
+    },
+    {
+      "direction": "sent",
+      "message": "CM_SELECTSERVER"
+    },
+    {
+      "direction": "sent",
+      "message": "CM_QUERYCHR"
+    },
+    {
+      "direction": "sent",
+      "message": "CM_SELCHR"
+    },
+    {
+      "direction": "received",
+      "message": "SM_PASSWD_FAIL"
+    },
+    {
+      "direction": "received",
+      "message": "SM_PASSOK_SELECTSERVER"
+    },
+    {
+      "direction": "received",
+      "message": "SM_SELECTSERVER_OK"
+    },
+    {
+      "direction": "received",
+      "message": "SM_QUERYCHR"
+    },
+    {
+      "direction": "received",
+      "message": "SM_STARTPLAY"
+    }
   ]
 }

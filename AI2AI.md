@@ -1988,3 +1988,9 @@ CheckPanelEditorLayout覆盖七类编辑框，检查最小化不改矩形/字体
 - JSON测试支持include复用登录流程、继承fixture和database_expect，动作回执后更新事件游标，await_state先检查当前状态再等新事件，避免漏掉已完成状态。入场公告并非每次存在，关闭操作可重复调用。
 - Client/Test/items.json完整覆盖错误槽位返包/不存在物品拒绝、穿脱、药水落地拾取使用、装备落地拾取、重新穿戴、退选保存及重进。Client/EIServer Release构建通过；rpc-6cpl29oa的51项断言全部通过，运行10.809秒。数据库确认药水0条、盔甲1条、FLD_DRESS_ID=B26111800001。
 - 尚未覆盖堆叠、快捷栏、满背包、交易/商店、跨角色拾取、地图重启落地保存；不能将本批当整个物品或全部协议适配完成。早先equipment-pointer临时日志与其他无关改动未混入本提交。
+
+
+## 2026-11-18 实际收发证据与协议覆盖清单
+- 仅RPC启用时记录真实SendPacket完成/失败以及登录、选角、游戏解码入口的消息码和长度；不记录账号密码正文。事件含packet.sent/received/send_failed，protocol.get提供会话累计计数，避免环形事件历史过期后丢失覆盖统计。收到消息并不等于业务解析成功，业务仍由状态/数据库断言证明。
+- JSON测试wire_expect按协议符号断言真实收发次数；登录与物品共新增21项消息断言。测试器每轮输出protocol-coverage.json，汇总Client/Common/Protocol.h、Client/Define.h、Server/Def/Protocol.h中声明的CM/SM消息与源位置/别名，列出未观察项和未知实际消息。范围明确不含其他命名空间常量及源文件直接数字opcode，尚不能叫全部协议最终清单。
+- Client Release构建通过。rpc-lpyhxjr0完整72项通过，运行10.408秒；199个已声明方向/消息码组合，本轮观察38个。新增注册/改密、创建删除角色、移动战斗、组队、技能等仍在缺口清单，后续按完整场景补齐。
