@@ -5458,11 +5458,13 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
         PaintLocalScene, &view, sizeof view);
     cui_pop_disabled(ui);
     const bool cutRelease=scene.crouchPointerCaptured && cui_mouse_released(ui,CUI_MOUSE_LEFT);
+    const bool swingRelease=scene.meleePointerCaptured && cui_mouse_released(ui,CUI_MOUSE_LEFT);
     if (!cui_mouse_down(ui,CUI_MOUSE_LEFT)) {
         scene.crouchHoldAt=0;
         scene.crouchPointerCaptured=false;
+        scene.meleePointerCaptured=false;
     }
-    if (!interactive || delayed || !view.terrainReady || !canvas.hovered || cutRelease) return;
+    if (!interactive || delayed || !view.terrainReady || !canvas.hovered || cutRelease || swingRelease) return;
     if (nativeInventory && (client.inventory.heldGold || client.HeldItem())) {
         if (cui_mouse_clicked(ui,CUI_MOUSE_LEFT)) client.BeginHeldDrop();
         return;
@@ -5474,18 +5476,20 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
     const bool altCut=art.sprites && (mods&(CUI_MOD_ALT|CUI_MOD_SHIFT))==CUI_MOD_ALT;
     const bool cutPress=!run && altCut && cui_mouse_clicked(ui,CUI_MOUSE_LEFT);
     const bool cutRepeat=altCut && scene.crouchHoldAt && now-scene.crouchHoldAt>=300;
+    const bool swingHeld=art.sprites && !run && !altCut && canvas.pressed &&
+        (scene.meleePointerCaptured || cui_mouse_clicked(ui,CUI_MOUSE_LEFT));
     if (cutPress) scene.crouchPointerCaptured=true;
-    if (!canvas.clicked && !run && !cutPress && !cutRepeat) return;
+    if (!canvas.clicked && !run && !cutPress && !cutRepeat && !swingHeld) return;
     if (art.sprites) {
         const float scale=canvas.rect.w/800;
         const float viewX=canvas.mouse.x/scale, viewY=canvas.mouse.y/scale;
-        if (!run && (canvas.clicked || cutPress)) {
+        if (!run && (canvas.clicked || cutPress || swingHeld)) {
             const auto& npcs=*art.npcs;
             const auto hit=std::find_if(npcs.rbegin(),npcs.rend(),[&](const SceneActorHit& npc) {
                 const auto& r=npc.bounds;
                 return viewX>=r.x && viewX<r.x+r.w && viewY>=r.y && viewY<r.y+r.h;
             });
-            if (hit!=npcs.rend() && client.ClickNpcActor(hit->actor)) return;
+            if (hit!=npcs.rend() && ((canvas.clicked || cutPress) ? client.ClickNpcActor(hit->actor) : swingHeld)) return;
         }
         const int x=static_cast<int>(viewX+art.cameraX)/48;
         const int y=static_cast<int>(viewY+art.cameraY)/32;
@@ -5508,6 +5512,21 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
             client.CrouchInScene(x,y,humanCorpse ? humanCorpse : monsterCorpse);
             return;
         }
+        if (!run && art.targets) {
+            const auto& targets=*art.targets;
+            const auto hit=std::find_if(targets.rbegin(),targets.rend(),[&](const SceneActorHit& target) {
+                const auto& r=target.bounds;
+                return viewX>=r.x && viewX<r.x+r.w && viewY>=r.y && viewY<r.y+r.h;
+            });
+            if (client.MeleeInScene(x,y,hit==targets.rend() ? 0 : hit->actor,(mods&CUI_MOD_SHIFT)!=0)) {
+                if (swingHeld) {
+                    scene.meleePointerCaptured=true;
+                    cui_request_wakeup(ui,0.016f);
+                }
+                return;
+            }
+        }
+        if (swingHeld) return;
         client.MoveInScene(x,y,run);
         return;
     }
@@ -6374,7 +6393,9 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
             const int crouch=CrouchPose(actor.crouchedAt,monsterNow);
             const int level=mir3::level_up_pose(actor.levelPoseAt,monsterNow);
             const int cast=actor.casting.pose();
-            const int pose=actor.dead ? HumanCorpsePose : cast>=0 ? cast : level>=0 ? level : crouch>=0 ? crouch : idle;
+            const int stance=!actor.mount && monsterNow<actor.combatUntil ?
+                560+int((monsterNow-actor.combatIdleAt)/201%3) : idle;
+            const int pose=actor.dead ? HumanCorpsePose : cast>=0 ? cast : level>=0 ? level : crouch>=0 ? crouch : stance;
             bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,pose,client.shadowBlend,actor.mount);
             if (bounds.w>0) {
                 const int x=int(actor.x)*48-camera.cameraX, y=int(actor.y)*32-camera.cameraY;
@@ -6492,9 +6513,10 @@ void Dialogs::Assets::PrepareCast(cui_ctx* ui, const mir3::CastVisual& cast, int
 {
     if (!cast.resource || cast.clock.finished()) return;
     const auto& resource=*cast.resource;
-    const int relative=cast.clock.spell_frame();
+    const int relative=cast.weapon ? cast.clock.frame() : cast.clock.spell_frame();
     const int limit=cast.clock.spell_frame_limit();
-    const int radius=relative<limit/2 ? relative+1 : limit-relative;
+    const int radius=cast.weapon ? (resource.end-resource.first<=8 ? relative : relative/2)+3 :
+        (relative<limit/2 ? relative+1 : limit-relative);
     if (radius>0 && resource.outer_radius) {
         const auto& inner=resource.inner_color;
         const auto& outer=resource.outer_color;

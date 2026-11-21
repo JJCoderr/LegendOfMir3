@@ -4,6 +4,28 @@
 namespace mir3 {
 struct HumanAction { std::uint16_t start, count, interval_ms; };
 struct HumanActions {
+    static int weapon_attack(std::uint8_t weapon,bool ordinary=true) {
+        int action=9;
+        switch (weapon) {
+        case 2: case 3: case 6: case 16: case 17: case 19: action=13; break;
+        case 4: case 5: case 7: case 15: action=10; break;
+        default: break;
+        }
+        return ordinary ? action : (action==13 ? 14 : action+2);
+    }
+    static int weapon_swing_sound(std::uint8_t weapon) {
+        switch (weapon) {
+        case 1: case 4: case 11: case 13: case 14: case 20: case 25:
+        case 29: case 31: case 33: case 38: case 40: case 45: case 46: return 53;
+        case 2: case 3: case 6: case 7: case 16: case 17: case 19: case 24: return 56;
+        case 5: case 10: case 12: return 54;
+        case 8: case 9: return 51;
+        case 15: return 55;
+        case 18: case 22: case 23: case 26: case 27: case 28: case 30: case 32: return 52;
+        case 21: return 50;
+        default: return 57;
+        }
+    }
     // 0x46EFA0 ->0x4872D0; 33 six-byte records at0x8FBA68.
     static constexpr std::array<HumanAction,33> table{{
         {0,4,200}, // action 0

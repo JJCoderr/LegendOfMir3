@@ -12,10 +12,14 @@ struct CastVisual {
     int direction = 0;
     std::array<std::uint8_t,3> tint{};
     std::uint64_t tick = 0;
+    bool weapon = false;
+    bool harvest = false;
+    int meleeSound = 0;
+    std::uint32_t flags = 0;
 
     void advance(std::uint64_t now) {
         if (clock.finished()) return;
-        clock.advance(static_cast<std::uint32_t>(now-tick));
+        clock.advance(static_cast<std::uint32_t>(now-tick),flags);
         tick=now;
     }
     int pose() const {

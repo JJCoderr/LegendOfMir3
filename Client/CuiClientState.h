@@ -17,6 +17,9 @@
 #include "CuiMapTerrain.h"
 #include "CuiLegacy/hud/ground_items.hpp"
 #include "CuiLegacy/hud/casting.hpp"
+#include "CuiLegacy/hud/local_action_clock.hpp"
+#include "CuiLegacy/hud/melee_cooldown.hpp"
+#include "CuiLegacy/magic/melee_spells.hpp"
 #include "CuiLegacy/hud/level_up_effect.hpp"
 #include "CuiLegacy/magic/spell_color.hpp"
 #include "CuiLegacy/magic/spell_effects.hpp"
@@ -97,12 +100,16 @@ inline constexpr WORD GameWalk = 11;
 inline constexpr WORD GameCrouch = 12, GameButcher = 637;
 inline constexpr WORD GameRun = 13;
 inline constexpr WORD GameMonsterAttack = 14, GameMonsterAttackSpecial = 1317;
+inline constexpr WORD GameFireHit=8, GameMiningHit=15, GamePowerHit=18, GameLongHit=19,
+    GameWideHit=24, GameWideHit2=25, GameRoundHit=1306, GameBackHit=1307,
+    GameHumanAction18=1308, GameHumanAttack=1319;
 inline constexpr WORD GameMonsterDigUp = 20, GameMonsterRise = 27;
 inline constexpr WORD GameActorExit = 29;
 inline constexpr WORD GameActorDisappear = 30;
 inline constexpr WORD GameActorDeath = 32;
 inline constexpr WORD GameMonsterSkeleton = 33;
 inline constexpr WORD GameMonsterStatus = 657;
+inline constexpr WORD GameHumanStatus801=801, GameHumanStatus=807, GameHumanStatus808=808;
 inline constexpr WORD GameActorStruck = 31;
 inline constexpr WORD GameActorDead = 34;
 inline constexpr WORD GameActorName = 42;
@@ -185,7 +192,9 @@ inline int CrouchPose(std::uint64_t since, std::uint64_t now)
 
 struct LocalScene {
     struct RemoteCast { int skill, x, y; };
-    using RemoteSpell = std::variant<RemoteCast,mir3::SpellReply>;
+    struct RemoteMelee { unsigned x,y,facing,element,opcode; bool harvest; };
+    using RemoteSpell = std::variant<RemoteCast,mir3::SpellReply,RemoteMelee>;
+    struct PendingMelee { unsigned x,y,facing; WORD opcode; std::uint64_t at; };
     struct Movement {
         unsigned x = 0, y = 0, facing = 0;
         std::uint64_t deadline = 0;
@@ -204,6 +213,8 @@ struct LocalScene {
         std::uint64_t levelPoseAt = 0;
         mir3::CastVisual casting;
         std::deque<RemoteSpell> queuedCasts;
+        std::uint32_t actionFlags = 0;
+        std::uint64_t combatUntil = 0, combatIdleAt = 0;
         bool dead = false;
         unsigned npcType = 0;
         mir3_cui::CharacterAppearance appearance;
@@ -271,6 +282,12 @@ struct LocalScene {
     mir3::SpellTiming spellTiming;
     std::uint32_t lockedSpellActor = 0;
     std::uint64_t spellReplyUntil = 0, mapEnteredAt = 0;
+    mir3::MeleeSpells meleeSpells;
+    mir3::MeleeCooldown meleeCooldown;
+    mir3::LocalActionClock actionClock;
+    std::optional<PendingMelee> pendingMelee;
+    bool meleePointerCaptured = false;
+    std::uint32_t actionFlags = 0;
     unsigned spellOriginalFacing = 0;
     std::map<std::uint32_t, Player> players;
     mir3::GroundItems groundItems;
@@ -1465,7 +1482,7 @@ public:
     void CrouchInScene(int targetX, int targetY, std::uint32_t corpse)
     {
         const auto now=GetTickCount64();
-        if (stage!=Stage::GameSession || showSignOut || !scene.terrain.Ready() || scene.pending.deadline ||
+        if (stage!=Stage::GameSession || showSignOut || !scene.terrain.Ready() || scene.pending.deadline || scene.pendingMelee ||
             scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 || mount.shape || !characterStatus.hp[0] ||
             output_.size()>8192-2*(DEFBLOCKSIZE+3)) return;
         const int x=int(scene.x), y=int(scene.y), dx=targetX-x, dy=targetY-y;
@@ -1484,7 +1501,7 @@ public:
     {
         const auto tick=GetTickCount64();
         if (stage!=Stage::GameSession || showSignOut || !scene.terrain.Ready() || mount.shape ||
-            (characterStatus.hp[1] && !characterStatus.hp[0]) || scene.pending.deadline || minimap.visible ||
+            (characterStatus.hp[1] && !characterStatus.hp[0]) || scene.pending.deadline || scene.pendingMelee || minimap.visible ||
             scene.InputDelayed(tick) || output_.size()>=8192 || slot<1 || slot>12) return;
         auto& timing=scene.spellTiming;
         const auto now=static_cast<std::uint32_t>(tick);
@@ -1565,12 +1582,55 @@ public:
         } else timing.movement_delay=0;
     }
 
+    bool MeleeInScene(int x,int y,std::uint32_t target,bool force)
+    {
+        using Attack=mir3::MeleeSpells;
+        const auto weapon=characterAppearance.weapon;
+        if (weapon>=34 && weapon<=37) return false;
+        if (target) {
+            const auto& actor=scene.players.at(target);
+            if (actor.IsMonster()) {
+                const auto shape=actor.npcShape;
+                const auto low=shape&255;
+                if (low==26 || low==86 || (low>=113 && low<=115) || low==165 || low==166 ||
+                    (shape>=530 && shape<=533 && actor.facing==7)) return true;
+            } else if (!force && !forceAttack && actor.identity.color!=255 && actor.identity.color!=27631) return true;
+            x=int(actor.x); y=int(actor.y);
+        }
+        const bool same=x==int(scene.x) && y==int(scene.y);
+        const unsigned heading=same ? scene.facing : SpellFacing(int(scene.x),int(scene.y),x,y);
+        const bool adjacent=target && std::max(std::abs(x-int(scene.x)),std::abs(y-int(scene.y)))==1;
+        const auto blocked=[&](unsigned face) {
+            const auto [dx,dy]=SceneDirections[face];
+            const int col=int(scene.x)+dx,row=int(scene.y)+dy;
+            const auto ground=scene.GroundAt(col,row);
+            return (ground!=mir3_cui::GroundCell::Walkable && ground!=mir3_cui::GroundCell::DoorOpen) ||
+                scene.Occupied(col,row);
+        };
+        const bool mining=!target && weapon==7 && (force || (!same && blocked(heading) && blocked(scene.facing)));
+        if (!adjacent && !mining && !(force && (target || weapon!=7))) return false;
+        const auto now=GetTickCount64();
+        if (stage!=Stage::GameSession || showSignOut || scene.InputDelayed(now) || !scene.terrain.Ready() ||
+            mount.shape || !characterStatus.hp[0] || scene.pending.deadline || scene.pendingMelee ||
+            scene.spellReplyUntil || scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 ||
+            !scene.casting.clock.finished() || output_.size()>=8192) return true;
+        const auto tick=static_cast<std::uint32_t>(now);
+        const auto& hand=characterStatus.hand;
+        const auto level=characterStatus.level;
+        if (!scene.meleeCooldown.accept(tick,level,hand[0],hand[1])) return true;
+        const auto interval=mir3::MeleeCooldown::interval(level,scene.meleeCooldown.speed,hand[0],hand[1]);
+        scene.pendingMelee=LocalScene::PendingMelee{scene.x,scene.y,mining && !force ? scene.facing : heading,
+            mining ? Attack::forcehit : Attack::hit, now+scene.actionClock.shared_wait(tick,interval)};
+        AdvanceMelee(now);
+        return true;
+    }
+
     void MoveInScene(int targetX, int targetY, bool run)
     {
         using mir3_cui::GroundCell;
         const auto now = GetTickCount64();
         if (stage != Stage::GameSession || showSignOut || !scene.terrain.Ready() || scene.pending.deadline || scene.spellReplyUntil ||
-            scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 || !scene.casting.clock.finished() ||
+            scene.pendingMelee || scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 || !scene.casting.clock.finished() ||
             (scene.spellTiming.cast_at && !scene.spellTiming.movement_ready(static_cast<std::uint32_t>(now))) ||
             output_.size() >= 8192 || (characterStatus.hp[1] && !characterStatus.hp[0])) return;
         if (!scene.terrain.Contains(targetX,targetY)) return;
@@ -1644,6 +1704,7 @@ public:
             static_cast<WORD>(facing));
         scene.pending = {static_cast<unsigned>(nextX), static_cast<unsigned>(nextY), facing, now + 8000};
         scene.lastMove = now;
+        scene.actionClock.moved=tick;
     }
 
     void RequestInventory()
@@ -2152,10 +2213,13 @@ public:
             AdvanceMonsterActions(now);
             AdvanceGroundItems(static_cast<std::uint32_t>(now));
             if (scene.spellReplyUntil && now>=scene.spellReplyUntil) scene.spellReplyUntil=0;
-            scene.casting.advance(now);
+            AdvanceMelee(now);
+            AdvanceHumanAction(scene.casting,0,scene.x,scene.y,characterAppearance.weapon,now);
             AdvanceSpellEffects(now);
             for (auto& [id,actor]:scene.players) {
-                actor.casting.advance(now);
+                const bool wasActing=!actor.casting.clock.finished();
+                AdvanceHumanAction(actor.casting,id,actor.x,actor.y,actor.appearance.weapon,now);
+                if (wasActing && actor.casting.clock.finished()) actor.combatIdleAt=now;
                 if (!actor.casting.clock.finished() || actor.queuedCasts.empty()) continue;
                 auto message=std::move(actor.queuedCasts.front());
                 const bool catchUp=actor.queuedCasts.size()>=3;
@@ -2165,6 +2229,10 @@ public:
                     continue;
                 }
                 if (actor.dead) continue;
+                if (const auto* melee=std::get_if<LocalScene::RemoteMelee>(&message)) {
+                    StartRemoteMelee(actor,id,*melee,now,catchUp);
+                    continue;
+                }
                 const auto& next=std::get<LocalScene::RemoteCast>(message);
                 actor.facing=SpellFacing(int(actor.x),int(actor.y),next.x,next.y);
                 actor.levelPoseAt=actor.crouchedAt=0;
@@ -2807,6 +2875,7 @@ private:
 
     void HandleGameFrame()
     {
+        if (stage==Stage::GameSession && scene.meleeSpells.receive(input_)) return;
         if (input_.compare(0, 5, "+GOOD") == 0) {
             scene.spellReplyUntil=0;
             scene.crouchReplyAt=0;
@@ -2985,12 +3054,24 @@ private:
             ApplyTargetPortrait(actor,first | (std::uint32_t(second)<<16));
         } else if (stage == Stage::GameSession && opcode == GameTargetAttributes) {
             ApplyMonsterAttributes(actor,first,second);
-        } else if (stage == Stage::GameSession && opcode == GameMonsterStatus) {
+        } else if (stage == Stage::GameSession && (opcode == GameMonsterStatus || opcode == GameHumanStatus801 ||
+                   opcode == GameHumanStatus || opcode == GameHumanStatus808)) {
             const auto found=scene.players.find(actor);
-            if (input_.size()==DEFBLOCKSIZE && found!=scene.players.end() && found->second.IsMonster())
-                found->second.monsterStatus=std::uint32_t(first)|(std::uint32_t(second)<<16);
+            if (input_.size()!=DEFBLOCKSIZE) return;
+            const auto flags=std::uint32_t(first)|(std::uint32_t(second)<<16);
+            if (actor==localActor_) {
+                scene.actionFlags=flags;
+                scene.meleeCooldown.speed=std::bit_cast<std::int16_t>(third);
+            } else if (found!=scene.players.end()) {
+                if (found->second.IsMonster()) {
+                    if (opcode==GameMonsterStatus) found->second.monsterStatus=flags;
+                }
+                else if (!found->second.IsNpc()) found->second.actionFlags=flags;
+            }
+        } else if (stage == Stage::GameSession && IsMeleeMessage(opcode)) {
+            HandleMeleeMessage(opcode,actor,first,second,third);
         } else if (stage == Stage::GameSession && (opcode == GameActorStruck || opcode == GameActorStruckWithSource ||
-                   opcode == GameMonsterAttack || opcode == GameMonsterAttackSpecial)) {
+                   opcode == GameMonsterAttackSpecial)) {
             HandleMonsterCombat(opcode,actor,first,second,third);
         } else if (stage == Stage::GameSession && opcode == GameNpcDialogue) {
             if (actor && actor <= 0x7fffffffu && input_.size() <= DEFBLOCKSIZE + (8192 * 4 + 2) / 3) {
@@ -3561,6 +3642,8 @@ private:
         scene.spellSounds={};
         scene.lockedSpellActor=0;
         scene.spellReplyUntil=0;
+        scene.pendingMelee.reset();
+        scene.meleePointerCaptured=false;
         audio.ClearSceneEffects();
         scene.pickupBagFull=false;
         scene.x = x;
@@ -3982,6 +4065,7 @@ private:
         if (opcode == GameActorDeath || opcode == GameActorDead) {
             next.dead = true;
             next.casting={};
+            next.combatUntil=next.combatIdleAt=0;
             next.queuedCasts.clear();
         }
         else if (opcode == GameActorRevive || opcode == GameActorReviveRefresh) next.dead = false;
@@ -4101,6 +4185,143 @@ private:
         const auto sound=sceneSoundList_.file(sample);
         if (sound.empty()) return;
         PlaySceneSample(actor,sound,int(x),int(y));
+    }
+
+    static bool IsMeleeMessage(unsigned opcode)
+    {
+        switch (opcode) {
+        case GameFireHit: case GameMonsterAttack: case GameMiningHit: case GamePowerHit: case GameLongHit:
+        case GameWideHit: case GameWideHit2: case GameRoundHit: case GameBackHit:
+        case GameHumanAction18: case GameHumanAttack: return true;
+        default: return false;
+        }
+    }
+
+    void HandleMeleeMessage(unsigned opcode,std::uint32_t actor,WORD x,WORD y,WORD direction)
+    {
+        const unsigned facing=direction&255;
+        const bool miningBody=opcode==GameMiningHit && input_.size()==DEFBLOCKSIZE+1;
+        const bool harvest=miningBody && input_[DEFBLOCKSIZE]!=0;
+        const auto found=scene.players.find(actor);
+        if (actor!=localActor_ && found!=scene.players.end() && found->second.IsMonster()) {
+            if (opcode==GameMonsterAttack) HandleMonsterCombat(opcode,actor,x,y,direction);
+            return;
+        }
+        if (facing>=8 || (input_.size()!=DEFBLOCKSIZE && !miningBody)) return;
+        if (actor==localActor_) {
+            if (opcode!=GameMiningHit || !characterStatus.hp[0]) return;
+            auto& cast=scene.casting;
+            const int action=mir3::HumanActions::weapon_attack(characterAppearance.weapon);
+            if (cast.clock.finished() || cast.clock.action()!=action || scene.facing!=facing || cast.clock.frame()>=3) {
+                scene.pending={};
+                scene.pendingMelee.reset();
+                scene.facing=facing;
+                scene.crouchedAt=scene.levelPoseAt=0;
+                StartMelee(cast,action,0,facing,0,scene.actionFlags,0,scene.x,scene.y,GetTickCount64());
+            }
+            cast.harvest=harvest;
+            return;
+        }
+        if (found==scene.players.end() || found->second.IsNpc()) return;
+        if ((opcode==GameRoundHit || opcode==GameBackHit || opcode==GameHumanAction18) &&
+            !scene.terrain.BaseWalkable(x,y)) return;
+        auto& player=found->second;
+        if (player.queuedCasts.size()<64 && scene.terrain.Contains(x,y))
+            player.queuedCasts.emplace_back(LocalScene::RemoteMelee{x,y,facing,unsigned(direction>>8),opcode,harvest});
+    }
+
+    void StartRemoteMelee(LocalScene::Player& player,std::uint32_t actor,const LocalScene::RemoteMelee& next,
+        std::uint64_t tick,bool catchUp)
+    {
+        if (player.mount) return;
+        using S=mir3::SkillId;
+        int skill=0,action=mir3::HumanActions::weapon_attack(player.appearance.weapon);
+        switch (next.opcode) {
+        case GameFireHit: skill=int(S::firesword); break;
+        case GamePowerHit: skill=int(S::yedo); break;
+        case GameLongHit: skill=int(S::ergum); break;
+        case GameWideHit: case GameWideHit2:
+            skill=int(next.opcode==GameWideHit ? S::banwol : S::original_103);
+            action=mir3::HumanActions::weapon_attack(player.appearance.weapon,false);
+            break;
+        case GameRoundHit: skill=int(S::randswing); action=17; break;
+        case GameBackHit: skill=int(S::spacemove2); action=16; break;
+        case GameHumanAction18: action=18; break;
+        case GameHumanAttack: action=9; break;
+        }
+        if (next.opcode!=GameBackHit) player.facing=next.facing;
+        player.x=next.x; player.y=next.y;
+        player.crouchedAt=player.levelPoseAt=0;
+        if (tick>=player.combatUntil) player.combatUntil=tick+5001;
+        const auto* resource=effectCatalog_.find(mir3::EffectCatalog::Section::spell,WORD(skill));
+        const int sound=resource && skill ? mir3::MeleeSpells::frame_sound(skill,player.appearance.body) : 0;
+        const int effect=next.opcode==GameMonsterAttack ? mir3::SpellColor::weapon_effect(next.element) : skill;
+        StartMelee(player.casting,action,effect,next.opcode==GameWideHit2 ? 0 : next.facing,sound,player.actionFlags,
+            actor,player.x,player.y,tick,next.element,catchUp);
+        player.casting.harvest=next.harvest;
+    }
+
+    void AdvanceMelee(std::uint64_t now)
+    {
+        if (!scene.pendingMelee || now<scene.pendingMelee->at) return;
+        const auto pending=*scene.pendingMelee;
+        scene.pendingMelee.reset();
+        if (showSignOut || mount.shape || !characterStatus.hp[0] || !scene.terrain.Ready() ||
+            scene.x!=pending.x || scene.y!=pending.y || output_.size()>=8192) return;
+        const auto tick=static_cast<std::uint32_t>(now);
+        const auto [dx,dy]=SceneDirections[pending.facing];
+        const int x=int(scene.x),y=int(scene.y);
+        using Attack=mir3::MeleeSpells;
+        const auto weapon=characterAppearance.weapon;
+        Attack::Attack selected{0,pending.opcode,mir3::HumanActions::weapon_attack(weapon),int(pending.facing),0};
+        if (pending.opcode==Attack::hit)
+            selected=scene.meleeSpells.select(weapon,int(pending.facing),characterStatus.mp[0],
+                scene.Occupied(x+2*dx,y+2*dy),characterAppearance.body);
+        scene.spellOriginalFacing=scene.facing;
+        scene.spellReplyUntil=now+8000;
+        scene.facing=pending.facing;
+        scene.levelPoseAt=scene.crouchedAt=scene.crouchReplyAt=0;
+        scene.actionClock.attacked=tick;
+        const auto& record=equipment.slots[1].serverRecord;
+        const int effect=selected.skill ? selected.skill : mir3::SpellColor::local_weapon_effect(record);
+        StartMelee(scene.casting,selected.action,effect,selected.facing,selected.sound,scene.actionFlags,0,scene.x,scene.y,now);
+        Queue(WORD(selected.opcode),WORD(tick),"",scene.x|(std::uint32_t(scene.y)<<16),WORD(tick>>16),WORD(scene.facing));
+    }
+
+    void StartMelee(mir3::CastVisual& cast,int action,int effect,unsigned facing,int sound,std::uint32_t flags,
+        std::uint32_t actor,unsigned x,unsigned y,std::uint64_t tick,unsigned element=255,bool catchUp=false)
+    {
+        cast={};
+        cast.weapon=true;
+        cast.clock.start(action,catchUp);
+        cast.flags=flags;
+        cast.tick=tick;
+        cast.direction=int(facing);
+        cast.meleeSound=sound;
+        if (effect) if (const auto* resource=effectCatalog_.find(mir3::EffectCatalog::Section::spell,WORD(effect))) {
+            cast.resource=*resource;
+            cast.tint=resource->tint;
+            if (!actor) cast.tint=mir3::SpellColor::local_weapon_color(equipment.slots[1].serverRecord,characterStatus.attackElements,cast.tint);
+            else if (element<mir3::SpellColor::palette.size()) cast.tint=mir3::SpellColor::palette[element];
+            PlaySpellSound(10*(effect+1000),{int(x),int(y)});
+        }
+    }
+
+    void AdvanceHumanAction(mir3::CastVisual& cast,std::uint32_t actor,unsigned x,unsigned y,unsigned weapon,std::uint64_t now)
+    {
+        const int previous=cast.clock.frame();
+        cast.advance(now);
+        const int frame=cast.clock.frame();
+        if (!cast.weapon || previous==frame) return;
+        const int action=cast.clock.action();
+        if (frame==1 && cast.meleeSound) PlaySpellSound(cast.meleeSound,{int(x),int(y)});
+        else if (frame==1 && (action==16 || action==17)) PlaySceneSound(actor,action==16 ? 141 : 140,x,y);
+        if (frame==2 && action>=9 && action<=14)
+            PlaySceneSound(actor,mir3::HumanActions::weapon_swing_sound(weapon),x,y);
+        if (frame==3 && cast.harvest)
+            SceneEffects().harvest(effectCatalog_,{int(x),int(y)},[this](int sound,mir3::SpellCell cell) {
+                return PlaySpellSound(sound,cell);
+            });
     }
 
     void StartCast(mir3::CastVisual& cast,int skill,mir3::SpellAction action,std::uint32_t actor,
@@ -4373,6 +4594,7 @@ private:
         if (end != std::string::npos) name.resize(end);
         const auto label = ConvertText(name, 936, CP_UTF8);
         if (label.empty()) return false;
+        std::copy(record.begin(),record.end(),item.serverRecord.begin());
         item.key = {word(62) | (std::uint32_t(word(64)) << 16), std::move(name)};
         item.label = label;
         item.icon = word(36);

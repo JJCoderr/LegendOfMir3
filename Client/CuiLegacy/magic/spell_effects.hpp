@@ -101,6 +101,16 @@ public:
     MapEvents mapEvents;
     std::array<std::array<int,2>,150> archiveOffsets{};
 
+    template<class Sound>
+    void harvest(const EffectCatalog& catalog,SpellCell cell,Sound sound) {
+        for (auto& [id,tile]:mapEvents.ground) {
+            if (tile.cell!=cell || tile.hidden || tile.frame<230 || tile.frame>234) continue;
+            tile.frame=std::min(tile.frame+1,234);
+            break;
+        }
+        append(catalog,335,cell,0,0,false,sound);
+    }
+
     void forgetActor(std::uint32_t id)
     {
         for (auto& effect:effects) {

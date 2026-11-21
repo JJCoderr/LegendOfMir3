@@ -32,6 +32,7 @@ struct InventoryItem {
     int cell = -1;
     int width = 1, height = 1;
     unsigned groundLooks = 0;
+    std::array<std::uint8_t,100> serverRecord{};
 
     bool Stacks() const { return stackMode >= 2; }
     bool IsGold() const { return key.name == "\xbd\xf0\xb1\xd2"; }
