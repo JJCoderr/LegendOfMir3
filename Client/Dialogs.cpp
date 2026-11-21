@@ -5994,7 +5994,8 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
         animated|=count>1;
     }
     const int idle=static_cast<int>(tick/201%4);
-    for (const auto& [id,actor]:scene.players) {
+    std::vector<SceneSprite> combatText;
+    for (auto& [id,actor]:scene.players) {
         if (actor.IsNpc() || actor.dead || !visible(actor)) continue;
         cui_rect bounds{};
         if (actor.IsMonster()) {
@@ -6008,10 +6009,12 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
             else if (library==141) archive="Mon-54";
             else continue;
             const bool walking=actor.monsterWalkFrame>=0;
+            const bool combat=actor.monsterCombatFrame>=0;
             int facing=actor.facing;
             switch (shape) {
-            case 31: if (!walking) facing=0; break;
-            case 67: case 73: case 104: case 127: case 153: case 179:
+            case 31: if (!walking && !combat) facing=0; break;
+            case 67: facing=combat && actor.monsterCombatMotion.base==160 ? 1 : 0; break;
+            case 73: case 104: case 127: case 153: case 179:
             case 187: case 188: case 189: case 534: case 535: case 536: case 537: facing=0; break;
             case 106: facing=1; break;
             }
@@ -6023,8 +6026,9 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
             const int group=shape<1000 ? shape%10 : (shape-2000)/10;
             const int walk=actor.monsterWalkFrame;
             const auto idleElapsed=actor.monsterIdleAt ? monsterNow-actor.monsterIdleAt : tick;
-            const int pose=walking ? 80+(actor.monsterBackstep ? 5-walk : walk) :
-                (single ? 0 : int(idleElapsed/interval%4));
+            int pose=single ? 0 : int(idleElapsed/interval%4);
+            if (walking) pose=80+(actor.monsterBackstep ? 5-walk : walk);
+            else if (combat) pose=actor.monsterCombatMotion.base+actor.monsterCombatFrame;
             if (walking && actor.monsterNextStep>monsterNow)
                 cui_request_wakeup(ui,float(actor.monsterNextStep-monsterNow)*0.001f);
             const int frame=group*1000+facing*10+pose;
@@ -6041,7 +6045,14 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
             worldSprites_.push_back({sprite.image.texture,x,y,sprite.image.width,sprite.image.height,int(actor.y)});
             const int width=(std::min)(58,sprite.image.width), height=(std::min)(40,sprite.image.height);
             bounds={float(x+(sprite.image.width-width)/2),float(y+(sprite.image.height-height)/2),float(width),float(height)};
-            animated|=walking || !single;
+            animated|=walking || combat || !single;
+            actor.monsterDamage.enabled=client.damageNumbers;
+            const auto glyphs=actor.monsterDamage.draw(x-sprite.x,y-sprite.y,false);
+            for (const auto& glyph:glyphs) {
+                const auto& image=gameHudFrames_.at(glyph.frame);
+                if (image.texture) combatText.push_back({image.texture,glyph.x,glyph.y,image.width,image.height,0});
+            }
+            animated|=!glyphs.empty();
         } else bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,idle);
         if (bounds.w>0) worldTargets_.push_back({bounds,id,actor.y,actor.IsMonster()});
     }
@@ -6052,6 +6063,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
     std::stable_sort(worldSprites_.begin(),worldSprites_.end(),[](const SceneSprite& a,const SceneSprite& b) {
         return a.row<b.row;
     });
+    worldSprites_.insert(worldSprites_.end(),combatText.begin(),combatText.end());
     std::stable_sort(worldNpcs_.begin(),worldNpcs_.end(),[](const SceneActorHit& a,const SceneActorHit& b) {
         return a.row<b.row;
     });
@@ -6068,6 +6080,8 @@ void Dialogs::Assets::OpenGameHud(cui_ctx* ui, mir3::WilArchive& archive, const 
     using Layout = mir3::HudLayout;
     for (const int id : {1160,1161,1162,1163,1164,1165,1166,1167,1200,1201,1202,1203,1207,1490,1500,1501,1502,1503,1334,1336})
         gameHudFrames_[id] = UploadFrame(ui,archive,id);
+    for (const auto& range : {std::pair{1790,1800},std::pair{1810,1821},std::pair{1830,1840},std::pair{1850,1850}})
+        for (int id=range.first;id<=range.second;++id) gameHudFrames_[id]=UploadFrame(ui,archive,id,true);
     for (std::size_t i=0;i<Layout::buttons.size();++i) {
         const int id=Layout::buttons[i][0];
         auto& frame=gameHudFrames_[id];
