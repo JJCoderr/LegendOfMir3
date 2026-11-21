@@ -7841,9 +7841,14 @@ void Dialogs::Assets::GameHudInput(cui_ctx* ui, LoginClient& client, cui_vec2 po
         return;
     }
     const cui_rect field{185.f,chat.expanded ? 534.f : 575.f,chat.expanded ? 432.f : 344.f,15.f};
-    if ((down && !pointerCovered && Contains(field,pointer)) ||
-        (!chat.composing && (cui_key_pressed(ui,CUI_KEY_ENTER) || cui_key_pressed(ui,CUI_KEY_SPACE)))) {
-        if (!chat.composing) ++chat.editor;
+    const bool openWithSpace = !chat.composing && cui_key_pressed(ui,CUI_KEY_SPACE);
+    const bool openWithKey = openWithSpace || (!chat.composing && cui_key_pressed(ui,CUI_KEY_ENTER));
+    if (openWithKey || (down && !pointerCovered && Contains(field,pointer))) {
+        if (!chat.composing) {
+            if (openWithSpace) cui_input_consume_text_prefix(ui," ");
+            if (openWithKey && chat.channel) chat.FillDraft(chat.ChannelPrefix());
+            else ++chat.editor;
+        }
         chat.composing=true;
     } else if (chat.composing && cui_key_pressed(ui,CUI_KEY_ESCAPE)) {
         chat.composing=false;
@@ -8116,11 +8121,14 @@ void Dialogs::Assets::DrawGameHud(cui_ctx* ui, LoginClient& client, bool pointer
         opts.height=field.h;
         opts.font_size=12*base.scale;
         opts.font=editorFont_;
+        opts.text_color={223,223,223,255};
+        opts.caret_color={243,243,243,255};
+        opts.solid_caret=true;
         opts.byte_limit=90;
         opts.measure_bytes=AnsiBytes;
         const int input = cui_input_ex(ui,"hud-chat",chat.draft,sizeof chat.draft,&opts);
         const bool submitted = wasComposing && (input&CUI_SUBMITTED);
-        if (submitted) client.SendChat();
+        if (submitted) client.SendChat(false);
         if ((input&CUI_BLURRED) || (submitted && !chat.draft[0])) {
             chat.composing = false;
             gameChatFocused_ = false;
@@ -8156,7 +8164,16 @@ void Dialogs::Assets::PrepareChatShortcuts(cui_ctx* ui, mir3_cui::ChatPanel& cha
                 break;
             }
         }
-        if (chosen && selected>=0 && selected<=last) chat.FillDraft(history[selected]);
+        if (chosen && selected>=0 && selected<=last) {
+            const auto ansi = ConvertText(history[selected],CP_UTF8,936);
+            std::size_t end = 0;
+            while (end<ansi.size()) {
+                const auto next = end+(IsDBCSLeadByteEx(936,static_cast<BYTE>(ansi[end])) ? 2u : 1u);
+                if (next>90 || next>ansi.size()) break;
+                end = next;
+            }
+            chat.FillDraft(ConvertText(ansi.substr(0,end),936,CP_UTF8));
+        }
     }
 
     for (int kind=0;kind<2;++kind) {

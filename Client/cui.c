@@ -7878,6 +7878,14 @@ void cui_input_text(cui_ctx *ui, const char *utf8) {
     cui__poke(ui);
 }
 
+void cui_input_consume_text_prefix(cui_ctx *ui, const char *utf8) {
+    if (!utf8 || !*utf8) return;
+    size_t len = strlen(utf8);
+    if (len > (size_t)ui->text_in_len || memcmp(ui->text_in, utf8, len) != 0) return;
+    ui->text_in_len -= (int)len;
+    memmove(ui->text_in, ui->text_in + len, (size_t)ui->text_in_len + 1);
+}
+
 void cui_input_focus(cui_ctx *ui, bool focused) {
     ui->window_focused = focused;
     if (!focused) {
@@ -60234,8 +60242,9 @@ static cui_glyph *cui__glyph_get(cui_ctx *ui, cui_font font, int gi, float px_si
         if (!fd->is_icon) {
             for (int y = 0; y < hgt; y++) {
                 uint8_t *row = dst + (size_t)y * (size_t)ui->atlas_w;
+                /* The unhinted raster can put narrow strokes below half coverage. */
                 for (int x = 0; x < w; x++)
-                    row[x] = fd->monochrome ? (row[x]>=128 ? 255 : 0) : cui__gamma_lut[row[x]];
+                    row[x] = fd->monochrome ? (row[x]>=64 ? 255 : 0) : cui__gamma_lut[row[x]];
             }
         }
         if (!ui->atlas_dirty) { ui->dirty_x0 = ax; ui->dirty_y0 = ay; ui->dirty_x1 = ax + w; ui->dirty_y1 = ay + hgt; }

@@ -448,6 +448,8 @@ CUI_API void cui_input_mouse_leave(cui_ctx *ui);
 CUI_API void cui_input_scroll(cui_ctx *ui, float dx, float dy);  /* in lines; +dy scrolls up */
 CUI_API void cui_input_key(cui_ctx *ui, cui_key key, bool down, int mods);
 CUI_API void cui_input_text(cui_ctx *ui, const char *utf8);
+/* Consume matching queued text when a key has already been handled as a shortcut. */
+CUI_API void cui_input_consume_text_prefix(cui_ctx *ui, const char *utf8);
 CUI_API void cui_input_focus(cui_ctx *ui, bool window_focused);
 /* Files dragged from the OS: hover while a drag is over the window (where the
  * platform reports it), then the drop itself. Paths are UTF-8 and copied. */

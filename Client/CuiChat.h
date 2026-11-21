@@ -85,6 +85,8 @@ struct ChatPanel {
     ChatReception reception;
     std::string error;
 
+    const char* ChannelPrefix() const { return channel == 1 ? "!!" : channel == 2 ? "!~" : ""; }
+
     void Append(unsigned opcode, const std::string& text, unsigned ink = 0xffffff, unsigned backing = 0)
     {
         if (lines.size() == 79) lines.pop_front();

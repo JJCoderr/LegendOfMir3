@@ -836,7 +836,7 @@ public:
         }
     }
 
-    void SendChat()
+    void SendChat(bool addChannelPrefix = true)
     {
         if (stage != Stage::GameSession || showSignOut || chat.receptionOpen || party.open || party.notice.id ||
             guild.open || guild.requested || guild.notice || guild.action != mir3_cui::GuildAction::None ||
@@ -845,8 +845,7 @@ public:
         const std::string draft = chat.draft;
         const bool command = draft.front() == '/' || draft.front() == '@' ||
             draft.front() == '#' || draft.front() == '!';
-        static const char* const prefixes[] = {"", "!!", "!~"};
-        const std::string text = command ? draft : prefixes[chat.channel] + draft;
+        const std::string text = addChannelPrefix && !command ? chat.ChannelPrefix() + draft : draft;
         const auto wire = ConvertText(text, CP_UTF8, 936);
         if (wire.empty() || wire.size() > 90 || draft.find_first_of("\r\n") != std::string::npos) {
             chat.error = "The message must fit within 90 GBK bytes.";
