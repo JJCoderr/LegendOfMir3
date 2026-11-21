@@ -5,6 +5,7 @@
 #include "cui.h"
 #include "CuiAudio.h"
 #include "CuiChat.h"
+#include "CuiParty.h"
 #include "CuiServerOptions.h"
 #include "Common/EnDecode.h"
 #include "Common/Protocol.h"
@@ -370,6 +371,7 @@ public:
     bool showSignOut = false;
     mir3_cui::ChatPanel chat;
     mir3_cui::ServerOptions serverOptions;
+    mir3_cui::PartyPanel party;
     mir3_cui::AudioOptions audioOptions;
     mir3_cui::AudioPlayer audio;
     std::wstring audioOptionsPath;
@@ -405,6 +407,7 @@ public:
         showSignOut = false;
         chat = {};
         serverOptions = {};
+        party = {};
         audioOpen = false;
         characters.clear();
         characterIndex = -1;
@@ -560,7 +563,7 @@ public:
 
     void SendChat()
     {
-        if (stage != Stage::GameSession || showSignOut || chat.receptionOpen ||
+        if (stage != Stage::GameSession || showSignOut || chat.receptionOpen || party.open || party.notice.id ||
             serverOptions.open || !chat.draft[0]) return;
         const std::string draft = chat.draft;
         const bool command = draft.front() == '/' || draft.front() == '@' ||
@@ -607,6 +610,34 @@ public:
     {
         if (SendOptionCommand(mir3_cui::AttackModeCommand, serverOptions.error))
             serverOptions.attackModePending = true;
+    }
+
+    void SetPartyAllowed(bool enabled)
+    {
+        if (stage != Stage::GameSession || showSignOut) return;
+        if (output_.size() >= 8192) {
+            party.error = "The connection is busy. Try changing the party setting again.";
+            return;
+        }
+        Queue(mir3_cui::PartyMode, enabled ? 1 : 0, "");
+        party.allowed = enabled;
+        party.error.clear();
+    }
+
+    void SubmitPartyMember()
+    {
+        if (stage != Stage::GameSession || party.action == mir3_cui::PartyAction::None) return;
+        const auto name = ConvertText(party.name, CP_UTF8, 936);
+        if (name.empty() || name.size() > 31 || name.find_first_of("/\r\n") != std::string::npos) {
+            party.error = "Enter a character name of up to 31 GBK bytes without a slash.";
+            return;
+        }
+        if (output_.size() >= 8192) {
+            party.error = "The connection is busy. Try submitting the name again.";
+            return;
+        }
+        Queue(static_cast<WORD>(party.action), 0, name);
+        party.Begin(mir3_cui::PartyAction::None);
     }
 
     bool SaveAudioSettings()
@@ -1008,6 +1039,10 @@ private:
                 const auto changed = serverOptions.Apply(actor, mode);
                 chat.reception.Apply(actor, changed);
             }
+        } else if (stage == Stage::GameSession &&
+                   opcode >= static_cast<unsigned>(mir3_cui::PartyReply::Created) &&
+                   opcode <= static_cast<unsigned>(mir3_cui::PartyReply::Roster)) {
+            HandlePartyReply(static_cast<mir3_cui::PartyReply>(opcode), actor);
         } else if (mir3_cui::ChatChannel(opcode) && stage == Stage::GameSession &&
                    input_.size() <= DEFBLOCKSIZE + 1024) {
             auto body = ReadGameBody();
@@ -1020,6 +1055,40 @@ private:
             if (chat.logging) {
                 std::ofstream log("Chat.txt", std::ios::binary | std::ios::app);
                 log << body << "\r\n";
+            }
+        }
+    }
+
+    void HandlePartyReply(mir3_cui::PartyReply reply, std::uint32_t value)
+    {
+        using mir3_cui::PartyReply;
+        if (reply == PartyReply::Roster) {
+            const auto size = input_.size() - DEFBLOCKSIZE;
+            if (size > (8192 * 4 + 2) / 3) return;
+            const auto body = ReadGameBody();
+            if ((size && body.empty()) || body.size() > 8192 || body.find('\0') != std::string::npos)
+                return;
+            std::vector<std::string> members;
+            size_t start = 0;
+            for (auto end = body.find('/'); end != std::string::npos; end = body.find('/', start)) {
+                if (end - start > 31) return;
+                const auto name = body.substr(start, end - start);
+                auto label = ConvertText(name, 936, CP_UTF8);
+                if (label.empty() && !name.empty()) return;
+                members.push_back(std::move(label));
+                start = end + 1;
+            }
+            party.members = std::move(members);
+            return;
+        }
+        if (input_.size() != DEFBLOCKSIZE) return;
+        if (reply == PartyReply::Created) party.allowed = true;
+        else if (reply == PartyReply::Cancelled) party.members.clear();
+        else {
+            const auto notice = mir3_cui::PartyFailure(reply, value);
+            if (notice.id) {
+                party.Begin(mir3_cui::PartyAction::None);
+                party.notice = notice;
             }
         }
     }
@@ -1491,7 +1560,8 @@ void ChatShortcuts(cui_ctx* ui, mir3_cui::ChatPanel& chat, bool phrase)
 void DrawGameChat(cui_ctx* ui, LoginClient& client)
 {
     auto& chat = client.chat;
-    const bool hadOverlay = client.showSignOut || chat.receptionOpen || client.serverOptions.open || client.audioOpen;
+    const bool hadOverlay = client.showSignOut || chat.receptionOpen || client.serverOptions.open ||
+        client.audioOpen || client.party.open || client.party.notice.id;
     cui_push_disabled(ui, hadOverlay);
     cui_box row = {};
     row.width = CUI_FILL;
@@ -1504,13 +1574,16 @@ void DrawGameChat(cui_ctx* ui, LoginClient& client)
     cui_spacer(ui);
     if (Button(ui, chat.expanded ? "Compact" : "Expand")) chat.expanded = !chat.expanded;
     if (Button(ui, "Reception")) chat.receptionOpen = true;
+    if (Button(ui, "Party") || (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_G)))
+        client.party.open = true;
     if (Button(ui, "Server options") ||
         (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_N)))
         client.serverOptions.open = true;
     if (Button(ui, "Audio")) client.audioOpen = true;
     if (Button(ui, "Sign out")) client.showSignOut = true;
     cui_box_end(ui);
-    const bool overlay = client.showSignOut || chat.receptionOpen || client.serverOptions.open || client.audioOpen;
+    const bool overlay = client.showSignOut || chat.receptionOpen || client.serverOptions.open ||
+        client.audioOpen || client.party.open || client.party.notice.id;
 
     cui_scroll_opts list = {};
     list.id = "chat-history";
@@ -1584,6 +1657,90 @@ void DrawChatReception(cui_ctx* ui, LoginClient& client)
     if (!chat.reception.error.empty()) cui_secondary(ui, chat.reception.error.c_str());
     cui_dialog_footer_begin(ui);
     if (Button(ui, "Done", true)) chat.receptionOpen = false;
+    cui_dialog_footer_end(ui);
+    cui_dialog_end(ui);
+}
+
+void DrawParty(cui_ctx* ui, LoginClient& client)
+{
+    using mir3_cui::PartyAction;
+    auto& party = client.party;
+    cui_dialog_opts dialog = {};
+    dialog.persistent = true;
+    dialog.no_close_button = true;
+    bool open = true;
+
+    if (party.notice.id) {
+        if (!cui_dialog_begin(ui, "Party notice", &open, &dialog)) return;
+        cui_textf(ui, "%s failed (server code %d).", party.notice.action, party.notice.reason);
+        cui_dialog_footer_begin(ui);
+        const bool dismiss = Button(ui, "OK", true) || cui_key_pressed(ui, CUI_KEY_ENTER) ||
+            cui_key_pressed(ui, CUI_KEY_SPACE);
+        cui_dialog_footer_end(ui);
+        cui_dialog_end(ui);
+        if (dismiss) party.notice = {};
+        return;
+    }
+
+    if (party.action != PartyAction::None) {
+        const char* title = party.action == PartyAction::Create ? "Create party" :
+            party.action == PartyAction::Invite ? "Invite member" : "Remove member";
+        if (!cui_dialog_begin(ui, title, &open, &dialog)) return;
+        cui_push_id_int(ui, party.editor);
+        const int input = Input(ui, "Character name", party.name, sizeof party.name, false, true);
+        cui_pop_id(ui);
+        if (input & CUI_FOCUSED) party.editorFocused = true;
+        if (input & CUI_BLURRED) party.editorFocused = false;
+        const bool tab = cui_key_down(ui, CUI_KEY_TAB);
+        if (tab && !party.tabDown) party.cancelSelected = !party.cancelSelected;
+        party.tabDown = tab;
+        const bool activate = (input & CUI_SUBMITTED) || cui_key_pressed(ui, CUI_KEY_ENTER) ||
+            (!party.editorFocused && cui_key_pressed(ui, CUI_KEY_SPACE));
+        if (!party.error.empty()) cui_secondary(ui, party.error.c_str());
+        cui_dialog_footer_begin(ui);
+        const bool cancel = Button(ui, "Cancel", party.cancelSelected);
+        const bool confirm = Button(ui, "Confirm", !party.cancelSelected);
+        cui_dialog_footer_end(ui);
+        cui_dialog_end(ui);
+        if (activate) {
+            if (party.cancelSelected) party.Begin(PartyAction::None);
+            else client.SubmitPartyMember();
+        } else if (cancel) {
+            party.Begin(PartyAction::None);
+        } else if (confirm) {
+            client.SubmitPartyMember();
+        }
+        return;
+    }
+
+    if (!cui_dialog_begin(ui, "Party", &party.open, nullptr)) return;
+    cui_label(ui, client.gameCharacter.c_str());
+    bool allowed = party.allowed;
+    if (cui_checkbox_ex(ui, "Allow party invitations", &allowed, nullptr)) client.SetPartyAllowed(allowed);
+    if (party.members.empty()) {
+        cui_secondary(ui, "No party members.");
+    } else {
+        cui_scroll_opts list = {};
+        list.id = "party-roster";
+        list.width = CUI_FILL;
+        list.height = CUI_PX(144);
+        list.gap = 6;
+        cui_scroll_begin(ui, &list);
+        for (const auto& member : party.members) cui_text_ex(ui, member.c_str(), nullptr);
+        cui_scroll_end(ui);
+    }
+    if (!party.error.empty()) cui_secondary(ui, party.error.c_str());
+    cui_box row = {};
+    row.width = CUI_FILL;
+    row.gap = 8;
+    row.wrap = true;
+    cui_row_begin(ui, &row);
+    if (Button(ui, "Create party")) party.Begin(PartyAction::Create);
+    if (Button(ui, "Invite member")) party.Begin(PartyAction::Invite);
+    if (Button(ui, "Remove member")) party.Begin(PartyAction::Remove);
+    cui_box_end(ui);
+    cui_dialog_footer_begin(ui);
+    if (Button(ui, "Done", true) || cui_shortcut(ui, 0, CUI_KEY_G)) party.open = false;
     cui_dialog_footer_end(ui);
     cui_dialog_end(ui);
 }
@@ -1703,6 +1860,7 @@ void Draw(cui_ctx* ui, LoginClient& client)
         if (client.chat.receptionOpen) DrawChatReception(ui, client);
         else if (client.serverOptions.open) DrawServerOptions(ui, client);
         else if (client.audioOpen) DrawAudioSettings(ui, client);
+        else if (client.party.open || client.party.notice.id) DrawParty(ui, client);
         if (!client.showSignOut) return;
     } else {
         cui_heading(ui, "Mir3 Client", 1);
