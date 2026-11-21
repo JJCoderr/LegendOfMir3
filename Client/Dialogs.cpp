@@ -451,6 +451,19 @@ private:
     std::string font_, account_, password_, exitUrl_;
     std::filesystem::path clickSound_;
     cui_font editorFont_ = CUI_FONT_BODY;
+    cui_input_opts ModalEditorOptions(float height, float scale) const
+    {
+        cui_input_opts opts{};
+        opts.bare = opts.keep_tab = opts.keep_escape = true;
+        opts.width = CUI_FILL;
+        opts.height = height;
+        opts.font_size = 12*scale;
+        opts.font = editorFont_;
+        opts.text_color = {223,223,223,255};
+        opts.caret_color = {243,243,243,255};
+        opts.solid_caret = true;
+        return opts;
+    }
     int field_ = 0, pressedButton_ = -1;
     unsigned noticeDismissals_ = 0;
     bool selectField_ = true, showAccount_ = false, showPassword_ = true, hoverSignIn_ = false;
@@ -618,6 +631,7 @@ private:
     void OpenShop(cui_ctx* ui, mir3::WilArchive& archive, const std::filesystem::path& items);
     void ShopInput(cui_ctx* ui, LoginClient& client, cui_vec2 pointer, int wheel);
     void ShopModalInput(cui_ctx* ui, LoginClient& client, cui_vec2 pointer);
+    void FinishShopQuantity(LoginClient& client, bool confirm);
     void RefreshShop(cui_ctx* ui, const LoginClient& client);
     void PaintShop(cui_ctx* ui, cui_rect rect) const;
     void CacheItem(cui_ctx* ui, unsigned id);
@@ -2627,13 +2641,12 @@ void Dialogs::Assets::NpcPromptInput(cui_ctx* ui, LoginClient& client, cui_vec2 
     const bool click = up && button >= 0 && button == npcPromptPressed_;
     if (up) npcPromptPressed_ = -1;
     const bool tab = cui_key_down(ui,CUI_KEY_TAB);
-    if (cui_key_pressed(ui,CUI_KEY_TAB) || (tab && !npcTabDown_)) npcPromptCancel_ = !npcPromptCancel_;
+    if (!npcTabDown_ && (tab || cui_key_pressed(ui,CUI_KEY_TAB))) npcPromptCancel_ = !npcPromptCancel_;
     npcTabDown_ = tab;
-    const bool key = cui_key_pressed(ui,CUI_KEY_ENTER);
-    if (click || key) {
-        if (click && client.audioOptions.effects && std::filesystem::exists(clickSound_))
+    if (click) {
+        if (client.audioOptions.effects && std::filesystem::exists(clickSound_))
             client.audio.PlayEffect(clickSound_.c_str(),client.audioOptions);
-        client.EndNpcPrompt(click ? button == 0 : !npcPromptCancel_);
+        client.EndNpcPrompt(button == 0);
         cui_request_redraw(ui);
     }
 }
@@ -2649,25 +2662,24 @@ void Dialogs::Assets::DrawNpcPanel(cui_ctx* ui, LoginClient& client, bool intera
     auto point = base.ToLocal(cui_mouse_pos(ui));
     const bool down = interactive && cui_mouse_clicked(ui,CUI_MOUSE_LEFT), up = interactive && cui_mouse_released(ui,CUI_MOUSE_LEFT);
     npcCloseHover_ = false;
-    if (npcEditor_ != npc.editor) {
-        npcPromptCancel_ = npcTabDown_ = false;
-        npcPromptPressed_ = -1;
-    }
-    if (interactive) {
-        if (npc.prompt.command.empty()) {
-            if (!down && !up && (point.x != npcPointer_.x || point.y != npcPointer_.y)) {
-                npcClosePressed_ = false;
-                npcArrowPressed_ = 0;
-                npcOptionPressed_ = -1;
-            }
-            NpcInput(ui,client,point,down,up,wheel);
+    const bool hadPrompt = !npc.prompt.command.empty();
+    if (interactive && !hadPrompt) {
+        if (!down && !up && (point.x != npcPointer_.x || point.y != npcPointer_.y)) {
+            npcClosePressed_ = false;
+            npcArrowPressed_ = 0;
+            npcOptionPressed_ = -1;
         }
-        else NpcPromptInput(ui,client,point,down,up);
-    } else {
+        NpcInput(ui,client,point,down,up,wheel);
+    } else if (!interactive) {
         npcClosePressed_ = false;
         npcArrowPressed_ = 0;
         npcOptionPressed_ = -1;
     }
+    if (npcEditor_ != npc.editor) {
+        npcPromptCancel_ = npcTabDown_ = false;
+        npcPromptPressed_ = -1;
+    }
+    if (interactive && hadPrompt) NpcPromptInput(ui,client,point,down,up);
     npcPointer_ = point;
     if (!npc.actor) return;
     npcPromptVisible_ = !npc.prompt.command.empty();
@@ -2705,20 +2717,20 @@ void Dialogs::Assets::DrawNpcPanel(cui_ctx* ui, LoginClient& client, bool intera
         const auto field = base.Rect(x,y,309,15);
         cui_overlay_begin(ui,field);
         cui_push_id_int(ui,npc.editor);
-        if (npcEditor_ != npc.editor || (down && !Contains(field,cui_mouse_pos(ui))))
+        const bool enter = cui_key_pressed(ui,CUI_KEY_ENTER);
+        if (enter || npcEditor_ != npc.editor || (down && !Contains(field,cui_mouse_pos(ui))))
             cui_text_field_focus(ui,"npc-answer",false);
         npcEditor_ = npc.editor;
-        cui_input_opts options{};
-        options.bare = options.keep_escape = options.keep_tab = true;
+        auto options = ModalEditorOptions(field.h,base.scale);
         options.password = npc.prompt.command.starts_with("@@*");
         options.password_mask = '*';
-        options.width = CUI_FILL;
-        options.height = field.h;
-        options.font_size = 12*base.scale;
-        options.font = editorFont_;
         options.byte_limit = client.NpcAnswerLimit();
         options.measure_bytes = AnsiBytes;
         cui_input_ex(ui,"npc-answer",npc.answer,sizeof npc.answer,&options);
+        if (enter) {
+            client.EndNpcPrompt(!npcPromptCancel_);
+            cui_request_redraw(ui);
+        }
         cui_pop_id(ui);
         cui_box_end(ui);
     }
@@ -3460,13 +3472,6 @@ void Dialogs::Assets::ShopModalInput(cui_ctx* ui, LoginClient& client, cui_vec2 
         return Contains({float(x+dx),float(y+188),float(art.width),float(art.height)},pointer);
     };
     const bool alert = shop.notice != 0;
-    if (!alert && cui_key_pressed(ui,CUI_KEY_ESCAPE)) {
-        shopBulkPrompt_ = false;
-        shop.withdrawalPrompt = false;
-        shop.quantity[0] = 0;
-        shopModalPress_ = -1;
-        return;
-    }
     const int button = alert ? (hit(dialog_[1],137) ? 0 : -1) :
         hit(selectionButtons_.at(1241),41) ? 0 : hit(selectionButtons_.at(1245),234) ? 1 : -1;
     if (shopModalPress_ >= 0 && shopModalPress_ != button) shopModalPress_ = -1;
@@ -3475,22 +3480,26 @@ void Dialogs::Assets::ShopModalInput(cui_ctx* ui, LoginClient& client, cui_vec2 
     const bool click = up && button >= 0 && button == shopModalPress_;
     if (up) shopModalPress_ = -1;
     const bool tab = cui_key_down(ui,CUI_KEY_TAB);
-    if (!alert && (cui_key_pressed(ui,CUI_KEY_TAB) || (tab && !shopTabDown_))) shopCancel_ = !shopCancel_;
+    if (!alert && !shopTabDown_ && (tab || cui_key_pressed(ui,CUI_KEY_TAB))) shopCancel_ = !shopCancel_;
     shopTabDown_ = tab;
-    const bool key = cui_key_pressed(ui,CUI_KEY_ENTER) || (alert && cui_key_pressed(ui,CUI_KEY_SPACE));
+    const bool key = alert && (cui_key_pressed(ui,CUI_KEY_ENTER) || cui_key_pressed(ui,CUI_KEY_SPACE));
     if (!key && !click) return;
     if (click && client.audioOptions.effects && std::filesystem::exists(clickSound_))
         client.audio.PlayEffect(clickSound_.c_str(),client.audioOptions);
     if (alert) shop.notice = 0;
-    else {
-        shopBulkPrompt_ = false;
-        if (click ? button == 0 : !shopCancel_) {
-            if (shop.storage) client.SubmitStorageQuantity();
-            else client.BuyShopItem();
-        } else shop.withdrawalPrompt = false;
-        shop.quantity[0] = 0;
-    }
+    else FinishShopQuantity(client,button == 0);
     cui_request_redraw(ui);
+}
+
+void Dialogs::Assets::FinishShopQuantity(LoginClient& client, bool confirm)
+{
+    auto& shop = client.shop;
+    shopBulkPrompt_ = false;
+    if (confirm) {
+        if (shop.storage) client.SubmitStorageQuantity();
+        else client.BuyShopItem();
+    } else shop.withdrawalPrompt = false;
+    shop.quantity[0] = 0;
 }
 
 
@@ -3635,16 +3644,16 @@ void Dialogs::Assets::DrawShopPanel(cui_ctx* ui, LoginClient& client, int wheel,
         const auto field = base.Rect(400-dialog_[0].width/2+24,246-dialog_[0].height/2+228,309,15);
         cui_overlay_begin(ui,field);
         cui_push_id_int(ui,shopEditGeneration_);
-        if (std::exchange(shopInputFocus_,false) ||
+        const bool enter = cui_key_pressed(ui,CUI_KEY_ENTER);
+        if (std::exchange(shopInputFocus_,false) || enter ||
             (cui_mouse_clicked(ui,CUI_MOUSE_LEFT) && !Contains(field,cui_mouse_pos(ui))))
             cui_text_field_focus(ui,"shop-quantity",false);
-        cui_input_opts opts{};
-        opts.bare = opts.keep_tab = opts.keep_escape = true;
-        opts.width = CUI_FILL;
-        opts.height = field.h;
-        opts.font_size = 12*base.scale;
-        opts.font = editorFont_;
+        const auto opts = ModalEditorOptions(field.h,base.scale);
         cui_input_ex(ui,"shop-quantity",shop.quantity,sizeof shop.quantity,&opts);
+        if (enter) {
+            FinishShopQuantity(client,!shopCancel_);
+            cui_request_redraw(ui);
+        }
         cui_pop_id(ui);
         cui_box_end(ui);
     }
@@ -7670,15 +7679,7 @@ void Dialogs::Assets::DrawTradePrompt(cui_ctx* ui, LoginClient& client)
         cui_push_id_int(ui,trade.editor);
         if (reset || (cui_mouse_clicked(ui,CUI_MOUSE_LEFT) && !Contains(field,cui_mouse_pos(ui))))
             cui_text_field_focus(ui,"trade-amount",false);
-        cui_input_opts input{};
-        input.bare = input.keep_tab = input.keep_escape = true;
-        input.width = CUI_FILL;
-        input.height = field.h;
-        input.font_size = 12*base.scale;
-        input.font = editorFont_;
-        input.text_color = {223,223,223,255};
-        input.caret_color = {243,243,243,255};
-        input.solid_caret = true;
+        const auto input = ModalEditorOptions(field.h,base.scale);
         cui_input_ex(ui,"trade-amount",trade.input,sizeof trade.input,&input);
         cui_pop_id(ui);
         cui_box_end(ui);
