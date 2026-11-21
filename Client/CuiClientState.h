@@ -79,6 +79,7 @@ inline constexpr WORD GameActorExit = 29;
 inline constexpr WORD GameActorDisappear = 30;
 inline constexpr WORD GameActorDeath = 32;
 inline constexpr WORD GameMonsterSkeleton = 33;
+inline constexpr WORD GameMonsterStatus = 657;
 inline constexpr WORD GameActorStruck = 31;
 inline constexpr WORD GameActorDead = 34;
 inline constexpr WORD GameActorName = 42;
@@ -143,6 +144,8 @@ struct Gateway {
     unsigned port = 0;
 };
 
+inline constexpr std::uint64_t MonsterMovementTick = 96;
+
 struct LocalScene {
     struct Movement {
         unsigned x = 0, y = 0, facing = 0;
@@ -150,6 +153,11 @@ struct LocalScene {
     };
 
     struct Player {
+        struct MonsterMove {
+            unsigned x, y, facing, shape;
+            std::uint32_t status;
+            WORD opcode;
+        };
         unsigned x = 0, y = 0, facing = 0;
         bool dead = false;
         unsigned npcType = 0;
@@ -159,6 +167,11 @@ struct LocalScene {
         mir3::TargetPortraitVitals monsterVitals;
         mir3::TargetAttributes monsterAttributes;
         bool monsterAttributesRequested = false;
+        std::deque<MonsterMove> monsterMoves;
+        std::uint32_t monsterStatus = 0;
+        std::uint64_t monsterNextStep = 0, monsterIdleAt = 0;
+        int monsterWalkFrame = -1;
+        bool monsterBackstep = false, monsterCatchUp = false, monsterSkipStep = false;
         std::uint32_t portraitVersion = 0;
         std::uint32_t resolvedPortraitVersion = 0;
         std::string portraitJpeg;
@@ -1889,6 +1902,7 @@ public:
     void Poll()
     {
         const auto now = GetTickCount64();
+        if (stage==Stage::GameSession) AdvanceMonsterMovement(now);
         if (returnToCharactersAt && now>=returnToCharactersAt && (!Active() || output_.empty() || now>=deadline_)) {
             Close();
             ClearGameState();
@@ -2614,6 +2628,10 @@ private:
             ApplyTargetPortrait(actor,first | (std::uint32_t(second)<<16));
         } else if (stage == Stage::GameSession && opcode == GameTargetAttributes) {
             ApplyMonsterAttributes(actor,first,second);
+        } else if (stage == Stage::GameSession && opcode == GameMonsterStatus) {
+            const auto found=scene.players.find(actor);
+            if (input_.size()==DEFBLOCKSIZE && found!=scene.players.end() && found->second.IsMonster())
+                found->second.monsterStatus=std::uint32_t(first)|(std::uint32_t(second)<<16);
         } else if (stage == Stage::GameSession && (opcode == GameActorStruck || opcode == GameActorStruckWithSource)) {
             if (input_.size()==DEFBLOCKSIZE+22) {
                 const auto feature=ReadGameBody();
@@ -3261,6 +3279,49 @@ private:
         found->second.monsterVitals={static_cast<std::uint8_t>(percent),maximum,current};
     }
 
+    static void StartMonsterMove(LocalScene::Player& monster, const LocalScene::Player::MonsterMove& move,
+                                 std::uint64_t now, bool catchUp)
+    {
+        monster.x=move.x;
+        monster.y=move.y;
+        monster.facing=move.facing;
+        monster.npcShape=move.shape;
+        monster.monsterStatus=move.status;
+        monster.monsterBackstep=move.opcode==GameBackstep;
+        monster.monsterCatchUp=catchUp;
+        monster.monsterSkipStep=false;
+        if (move.opcode==GameWalk || monster.monsterBackstep) {
+            monster.monsterWalkFrame=0;
+            monster.monsterNextStep=now+MonsterMovementTick;
+        } else {
+            monster.monsterWalkFrame=-1;
+            monster.monsterNextStep=0;
+            monster.monsterIdleAt=now;
+        }
+    }
+
+    void AdvanceMonsterMovement(std::uint64_t now)
+    {
+        for (auto& [id,monster]:scene.players) {
+            if (monster.monsterWalkFrame>=0) {
+                if (now<monster.monsterNextStep) continue;
+                monster.monsterNextStep=(now-monster.monsterNextStep>=MonsterMovementTick ? now : monster.monsterNextStep)+MonsterMovementTick;
+                const bool slowed=(monster.monsterStatus&0x08000000u) && !monster.monsterBackstep;
+                const bool advance=!slowed || !monster.monsterSkipStep;
+                monster.monsterSkipStep=slowed && advance;
+                if (advance) monster.monsterWalkFrame+=(monster.monsterBackstep || monster.monsterCatchUp) ? 2 : 1;
+                if (monster.monsterWalkFrame<6) continue;
+                monster.monsterWalkFrame=-1;
+                monster.monsterIdleAt=now;
+            }
+            if (monster.monsterMoves.empty()) continue;
+            const bool catchUp=monster.monsterMoves.size()>=3;
+            const auto move=monster.monsterMoves.front();
+            monster.monsterMoves.pop_front();
+            StartMonsterMove(monster,move,now,catchUp);
+        }
+    }
+
     void HandleRemotePlayer(unsigned opcode, std::uint32_t actor, WORD x, WORD y, unsigned facing)
     {
         if (!actor || actor > 0x7fffffffu || facing >= 8 ||
@@ -3271,21 +3332,32 @@ private:
         const unsigned type = feature.size() == 16 ? static_cast<unsigned char>(feature[0]) : 0;
         if (type == 3) {
             const auto existing=scene.players.find(actor);
+            const bool known=existing!=scene.players.end() && existing->second.IsMonster();
             if ((opcode==GameActorDead || opcode==GameActorRevive || opcode==GameActorReviveRefresh) &&
-                (existing==scene.players.end() || !existing->second.IsMonster())) return;
+                !known) return;
+            if (opcode==GameRun && known) return;
             const auto shape=unsigned(static_cast<unsigned char>(feature[2])) |
                 (unsigned(static_cast<unsigned char>(feature[3]))<<8);
+            std::uint32_t status=0;
+            for (unsigned i=0;i<4;++i) status|=std::uint32_t(static_cast<unsigned char>(feature[4+i]))<<(8*i);
             auto name=size>22 ? DecodeGameBytes(input_.substr(DEFBLOCKSIZE+22)) : std::string{};
             if (size>22 && (name.empty() || name.size()>64)) return;
             auto& monster=scene.players[actor];
-            if (!monster.IsMonster()) monster={};
-            monster.x=x;
-            monster.y=y;
-            monster.facing=facing;
+            if (!known) monster={};
             monster.npcType=type;
-            monster.npcShape=shape;
-            if (opcode==GameActorDeath || opcode==GameActorDead || opcode==GameMonsterSkeleton) monster.dead=true;
-            else if (opcode==GameActorRevive || opcode==GameActorReviveRefresh || opcode==GameMonsterRise) monster.dead=false;
+            const LocalScene::Player::MonsterMove move{x,y,opcode==GameRun ? 0u : facing,shape,status,static_cast<WORD>(opcode)};
+            if (opcode==GameWalk || opcode==GameBackstep || opcode==GameTurn) {
+                if (monster.dead && opcode!=GameTurn) return;
+                if (monster.monsterWalkFrame>=0 || !monster.monsterMoves.empty()) {
+                    if (monster.monsterMoves.size()>=64) return;
+                    monster.monsterMoves.push_back(move);
+                } else StartMonsterMove(monster,move,GetTickCount64(),false);
+            } else {
+                monster.monsterMoves.clear();
+                StartMonsterMove(monster,move,GetTickCount64(),false);
+                if (opcode==GameActorDeath || opcode==GameActorDead || opcode==GameMonsterSkeleton) monster.dead=true;
+                else if (opcode==GameActorRevive || opcode==GameActorReviveRefresh || opcode==GameMonsterRise) monster.dead=false;
+            }
             if (!name.empty()) SetRemoteName(monster,std::move(name));
             return;
         }

@@ -5949,6 +5949,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
     }
     bool animated=false;
     const auto tick=static_cast<std::uint64_t>(cui_time(ui)*1000);
+    const auto monsterNow=GetTickCount64();
     using View=mir3_cui::MapTerrain::GraphicsView;
     constexpr int columns=View::LastColumn-View::FirstColumn;
     constexpr std::array periods{150,200,250,300,350,400,420,450};
@@ -6006,9 +6007,11 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
             else if (library==136) archive="DMonS-1";
             else if (library==141) archive="Mon-54";
             else continue;
+            const bool walking=actor.monsterWalkFrame>=0;
             int facing=actor.facing;
             switch (shape) {
-            case 31: case 67: case 73: case 104: case 127: case 153: case 179:
+            case 31: if (!walking) facing=0; break;
+            case 67: case 73: case 104: case 127: case 153: case 179:
             case 187: case 188: case 189: case 534: case 535: case 536: case 537: facing=0; break;
             case 106: facing=1; break;
             }
@@ -6018,13 +6021,27 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
             else if (shape==158) interval=200;
             else if (shape==161 || shape==165 || shape==166) interval=250;
             const int group=shape<1000 ? shape%10 : (shape-2000)/10;
-            const int frame=group*1000+facing*10+(single ? 0 : int(tick/interval%4));
+            const int walk=actor.monsterWalkFrame;
+            const auto idleElapsed=actor.monsterIdleAt ? monsterNow-actor.monsterIdleAt : tick;
+            const int pose=walking ? 80+(actor.monsterBackstep ? 5-walk : walk) :
+                (single ? 0 : int(idleElapsed/interval%4));
+            if (walking && actor.monsterNextStep>monsterNow)
+                cui_request_wakeup(ui,float(actor.monsterNextStep-monsterNow)*0.001f);
+            const int frame=group*1000+facing*10+pose;
             const auto& sprite=GetWorldFrame(ui,archive,frame);
             if (!sprite.image.texture) continue;
-            const int x=int(actor.x)*48-camera.cameraX+sprite.x, y=int(actor.y)*32-camera.cameraY+sprite.y;
+            int x=int(actor.x)*48-camera.cameraX+sprite.x, y=int(actor.y)*32-camera.cameraY+sprite.y;
+            if (walking) {
+                const auto [dx,dy]=SceneDirections[(actor.facing+(actor.monsterBackstep ? 4 : 0))%8];
+                const int step=walk+1;
+                const bool reanchored=actor.monsterBackstep && walk>=(actor.facing==7 ? 4 : 1);
+                x-=dx*8*(6-step);
+                y-=dy*(reanchored ? 5*(6-step) : 32-(dx==0 ? 32*step/6 : 5*step));
+            }
             worldSprites_.push_back({sprite.image.texture,x,y,sprite.image.width,sprite.image.height,int(actor.y)});
-            bounds={float(x),float(y),float(sprite.image.width),float(sprite.image.height)};
-            animated|=!single;
+            const int width=(std::min)(58,sprite.image.width), height=(std::min)(40,sprite.image.height);
+            bounds={float(x+(sprite.image.width-width)/2),float(y+(sprite.image.height-height)/2),float(width),float(height)};
+            animated|=walking || !single;
         } else bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,idle);
         if (bounds.w>0) worldTargets_.push_back({bounds,id,actor.y,actor.IsMonster()});
     }
