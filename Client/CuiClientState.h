@@ -223,8 +223,21 @@ struct LocalScene {
         bool walking() const { return opcode==GameWalk || opcode==GameRun || opcode==GameActorReviveRefresh; }
         bool predicted() const { return opcode==GameWalk || opcode==GameRun; }
     };
+    struct RemoteMovement {
+        WORD opcode,x,y,direction;
+        mir3_cui::CharacterAppearance appearance;
+        unsigned mount=0;
+        std::uint32_t flags=0,portrait=0;
+        std::string name;
+    };
+    struct RemoteStep {
+        int frame=-1,dx=0,dy=0;
+        unsigned destinationX=0,destinationY=0;
+        WORD opcode=0;
+        bool catchUp=false;
+    };
     using LocalAction = std::variant<HumanHit,LocalLifeAction>;
-    using RemoteSpell = std::variant<RemoteCast,mir3::SpellReply,RemoteMelee,HumanHit>;
+    using RemoteAction = std::variant<RemoteCast,mir3::SpellReply,RemoteMelee,HumanHit,RemoteMovement>;
     struct PendingMelee { unsigned x,y,facing; WORD opcode; std::uint64_t at; };
     struct Movement {
         unsigned x = 0, y = 0, facing = 0;
@@ -249,7 +262,9 @@ struct LocalScene {
         std::uint64_t levelPoseAt = 0;
         mir3::CastVisual casting;
         HumanHealth health;
-        std::deque<RemoteSpell> queuedCasts;
+        std::deque<RemoteAction> remoteActions;
+        RemoteStep remoteStep;
+        bool remoteSlowTick=false;
         std::uint32_t actionFlags = 0;
         std::uint64_t combatUntil = 0, combatIdleAt = 0;
         bool dead = false;
@@ -320,6 +335,7 @@ struct LocalScene {
     std::deque<LocalAction> localActions;
     bool dead=false,dying=false;
     LocalStep localStep;
+    std::uint64_t remoteMovementAt=0;
     std::uint64_t lastSpecialHit=0;
     unsigned foldedHits=0;
     std::deque<mir3::SpellReply> spellMessages;
@@ -412,6 +428,13 @@ inline std::array<int,2> LocalActorCamera(const LocalScene& scene)
 inline mir3::SpellPixel ActorWorldPixel(const LocalScene::Player& actor)
 {
     int x=int(actor.x)*48,y=int(actor.y)*32;
+    const auto& step=actor.remoteStep;
+    if (step.frame>=0) {
+        const bool committed=step.frame>=(actor.facing==7 ? 4 : 1);
+        const int offset=committed ? step.frame-5 : step.frame+1;
+        x+=step.dx*8*offset;
+        y+=step.opcode==GameBackstep && !committed ? 32*step.dy*offset/6 : 5*step.dy*offset;
+    }
     if (actor.monsterWalkFrame>=0) {
         const auto [dx,dy]=SceneDirections[(actor.facing+(actor.monsterBackstep ? 4 : 0))%8];
         const int step=actor.monsterWalkFrame+1;
@@ -2289,21 +2312,29 @@ public:
             AdvanceWalk(now);
             AdvanceHumanAction(scene.casting,0,scene.x,scene.y,characterAppearance,now);
             AdvanceLocalLife(now);
+            const bool remoteMovementTick=now>=scene.remoteMovementAt;
+            if (remoteMovementTick) scene.remoteMovementAt=now+LocalScene::LocalStep::FrameMs;
+            for (auto& [id,actor]:scene.players)
+                if (remoteMovementTick && actor.remoteStep.frame>=0) AdvanceRemoteMovement(actor,id,now);
             AdvanceSpellEffects(now);
             for (auto& [id,actor]:scene.players) {
                 const bool wasActing=!actor.casting.clock.finished();
                 AdvanceHumanAction(actor.casting,id,actor.x,actor.y,actor.appearance,now);
                 if (wasActing && actor.casting.clock.finished()) actor.combatIdleAt=now;
-                if (!actor.casting.clock.finished() || actor.queuedCasts.empty()) continue;
-                auto message=std::move(actor.queuedCasts.front());
-                const bool catchUp=actor.queuedCasts.size()>=3;
-                actor.queuedCasts.pop_front();
+                if (actor.remoteStep.frame>=0 || !actor.casting.clock.finished() || actor.remoteActions.empty()) continue;
+                auto message=std::move(actor.remoteActions.front());
+                const bool catchUp=actor.remoteActions.size()>=3;
+                actor.remoteActions.pop_front();
                 if (const auto* reply=std::get_if<mir3::SpellReply>(&message)) {
                     PlaySpellEffects(*reply,actor.x,actor.y,actor.facing);
                     continue;
                 }
                 if (const auto* hit=std::get_if<LocalScene::HumanHit>(&message)) {
                     StartRemoteHit(actor,id,*hit,now,catchUp);
+                    continue;
+                }
+                if (const auto* motion=std::get_if<LocalScene::RemoteMovement>(&message)) {
+                    StartRemoteMovement(actor,*motion,catchUp);
                     continue;
                 }
                 if (actor.dead) continue;
@@ -3119,7 +3150,7 @@ private:
         } else if (stage == Stage::GameSession && opcode == GameSpell && actor!=localActor_) {
             const auto found=scene.players.find(actor);
             if (found!=scene.players.end() && !found->second.IsNpc() && !found->second.IsMonster() &&
-                input_.size()<=DEFBLOCKSIZE+16 && found->second.queuedCasts.size()<64) {
+                input_.size()<=DEFBLOCKSIZE+16 && found->second.remoteActions.size()<64) {
                 const auto* text=input_.c_str()+DEFBLOCKSIZE;
                 char* end=nullptr;
                 const auto skill=std::strtol(text,&end,10);
@@ -3134,7 +3165,7 @@ private:
                     (opcode==GameActorReviveRefresh && (actor==localActor_ || !scene.players.contains(actor))))) {
             HandleLocalLife(opcode,first,second,third);
         } else if (stage == Stage::GameSession &&
-                   (opcode == GameBackstep || opcode == GameTurn || opcode == GameWalk || opcode == GameRun)) {
+                   (opcode == GameBackstep || opcode == GameTurn || opcode == GameWalk || opcode == GameRun || opcode == GameBump)) {
             if (actor == localActor_) HandleLocalMovement(opcode, first, second, third);
             else HandleRemotePlayer(opcode, actor, first, second, third);
         } else if (stage == Stage::GameSession &&
@@ -3158,10 +3189,7 @@ private:
             const auto direction=third&0xffu;
             if (actor!=localActor_ && player!=scene.players.end() && !player->second.npcType && direction<8 &&
                 scene.terrain.Contains(first,second)) {
-                player->second.x=first;
-                player->second.y=second;
-                player->second.facing=direction;
-                if (!player->second.dead) player->second.crouchedAt=GetTickCount64();
+                QueueRemotePosition(player->second,{WORD(opcode),first,second,WORD(direction)});
             }
         } else if (stage == Stage::GameSession && opcode == GameTargetPortrait) {
             ApplyTargetPortrait(actor,first | (std::uint32_t(second)<<16));
@@ -3758,6 +3786,7 @@ private:
         scene.health={};
         scene.localActions.clear();
         scene.localStep={};
+        scene.remoteMovementAt=0;
         scene.lastSpecialHit=0;
         scene.foldedHits=0;
         scene.spellMessages.clear();
@@ -4225,10 +4254,10 @@ private:
         QueueMonsterAction(found->second,move);
     }
 
-    void QueueHumanAction(LocalScene::Player& player,LocalScene::RemoteSpell action)
+    void QueueHumanAction(LocalScene::Player& player,LocalScene::RemoteAction action)
     {
-        auto& queue=player.queuedCasts;
-        if (queue.size()>=2) std::erase_if(queue,[&](const LocalScene::RemoteSpell& record) {
+        auto& queue=player.remoteActions;
+        if (queue.size()>=2) std::erase_if(queue,[&](const LocalScene::RemoteAction& record) {
             const auto* hit=std::get_if<LocalScene::HumanHit>(&record);
             if (!hit || hit->opcode!=GameActorStruck) return false;
             player.health.current=hit->current;
@@ -4345,10 +4374,10 @@ private:
         health.current=hit.current;
         health.maximum=hit.maximum;
         if (!hit.appearance.available) return;
-        if (hit.opcode==GameActorStruckWithSource && player.queuedCasts.size()<64) {
+        if (hit.opcode==GameActorStruckWithSource && player.remoteActions.size()<64) {
             auto relay=hit;
             relay.opcode=GameActorStruck;
-            player.queuedCasts.emplace_back(relay);
+            player.remoteActions.emplace_back(relay);
         }
         PlayHitSource(health,actor,hit.source,player.x,player.y);
         if (player.dead) return;
@@ -4419,6 +4448,7 @@ private:
         if (size > 344) return;
         const auto feature = size >= 22 ? DecodeGameBytes(input_.substr(DEFBLOCKSIZE, 22)) : std::string();
         const unsigned type = feature.size() == 16 ? static_cast<unsigned char>(feature[0]) : 0;
+        if (opcode==GameBump && (type>=3 || !scene.players.contains(actor) || scene.players.at(actor).npcType)) return;
         if (type == 3) {
             const auto existing=scene.players.find(actor);
             const bool known=existing!=scene.players.end() && existing->second.IsMonster();
@@ -4462,48 +4492,118 @@ private:
         if (!named && size != 0 && size != 22 && size != 29) return;
         auto found = scene.players.find(actor);
         const bool newPlayer = found == scene.players.end();
-        if (!newPlayer && found->second.IsMonster() && !size) return;
+        if (!newPlayer && found->second.npcType) return;
         if (newPlayer && size < 29) return;
-        LocalScene::Player next = newPlayer ? LocalScene::Player{} : found->second;
+        LocalScene::RemoteMovement move{WORD(opcode),x,y,direction};
         if (size) {
-            if (feature.size() != 16 || !next.appearance.Apply(PackedAppearance(feature))) return;
-            next.npcType = 0;
-            std::uint32_t portraitVersion = 0;
-            for (unsigned i=0;i<4;++i)
-                portraitVersion |= std::uint32_t(static_cast<unsigned char>(feature[8+i]))<<(8*i);
-            if (next.portraitVersion!=portraitVersion) {
-                next.portraitVersion = portraitVersion;
-                next.resolvedPortraitVersion = 0;
-                next.portraitJpeg.clear();
-                next.portraitQueryAt = 0;
+            if (feature.size()!=16 || !move.appearance.Apply(PackedAppearance(feature))) return;
+            for (unsigned i=0;i<4;++i) {
+                move.flags|=std::uint32_t(std::uint8_t(feature[4+i]))<<(8*i);
+                move.portrait|=std::uint32_t(std::uint8_t(feature[8+i]))<<(8*i);
             }
             const auto extra=size>=29 ? DecodeGameBytes(input_.substr(DEFBLOCKSIZE+22,7)) : std::string{};
             if (size>=29 && extra.size()!=5) return;
-            if (opcode!=GameActorDeath && opcode!=GameActorDead) {
-                const auto shape=extra.empty() ? 0 : static_cast<unsigned char>(extra[0]);
-                next.mount=shape<4 ? shape : 0;
-            }
+            const unsigned shape=extra.empty() ? 0 : std::uint8_t(extra[0]);
+            move.mount=shape<4 ? shape : 0;
             if (size > 29) {
-                auto name = DecodeGameBytes(input_.substr(DEFBLOCKSIZE + 29));
-                if (name.empty()) return;
-                SetRemoteName(next, std::move(name));
+                move.name=DecodeGameBytes(input_.substr(DEFBLOCKSIZE+29));
+                if (move.name.empty()) return;
             }
         }
-        next.x = x;
-        next.y = y;
-        next.facing = facing;
-        if (opcode==GameTurn || opcode==GameWalk || opcode==GameRun ||
-            opcode==GameActorRevive || opcode==GameActorReviveRefresh) next.light=direction>>8;
-        next.crouchedAt=0;
-        if (opcode == GameActorDeath || opcode == GameActorDead) {
-            next.dead = true;
-            next.casting={};
-            next.combatUntil=next.combatIdleAt=0;
-            next.queuedCasts.clear();
+        if (newPlayer) {
+            LocalScene::Player player;
+            if (StartRemoteMovement(player,move,false)) scene.players.emplace(actor,std::move(player));
+            return;
         }
-        else if (opcode == GameActorRevive || opcode == GameActorReviveRefresh) next.dead = false;
-        if (newPlayer) scene.players.emplace(actor, std::move(next));
-        else found->second = std::move(next);
+        QueueRemotePosition(found->second,std::move(move));
+    }
+
+    void QueueRemotePosition(LocalScene::Player& player,LocalScene::RemoteMovement move)
+    {
+        if (player.remoteStep.frame>=0 || !player.casting.clock.finished() || !player.remoteActions.empty())
+            QueueHumanAction(player,std::move(move));
+        else StartRemoteMovement(player,move,false);
+    }
+
+    bool StartRemoteMovement(LocalScene::Player& player,const LocalScene::RemoteMovement& move,bool catchUp)
+    {
+        const auto opcode=move.opcode;
+        const bool moving=opcode==GameWalk || opcode==GameRun || opcode==GameBackstep || opcode==GameBump;
+        if (moving && player.dead) return false;
+        const unsigned facing=move.direction&255;
+        const unsigned mount=move.appearance.available ? move.mount : player.mount;
+        const int distance=opcode==GameRun ? (mount ? 3 : 2) : moving ? 1 : 0;
+        const auto [dx,dy]=SceneDirections[(facing+(opcode==GameBackstep ? 4 : 0))%8];
+        const int originX=int(move.x)-distance*dx,originY=int(move.y)-distance*dy;
+        if (moving && !scene.terrain.Contains(originX,originY)) return false;
+        const bool death=opcode==GameActorDeath || opcode==GameActorDead;
+        if (move.appearance.available) {
+            player.appearance=move.appearance;
+            player.actionFlags=move.flags;
+            if (!death) player.mount=move.mount;
+            if (player.portraitVersion!=move.portrait) {
+                player.portraitVersion=move.portrait;
+                player.resolvedPortraitVersion=0;
+                player.portraitJpeg.clear();
+                player.portraitQueryAt=0;
+            }
+            if (!move.name.empty()) SetRemoteName(player,move.name);
+        }
+        player.facing=facing;
+        player.crouchedAt=0;
+        player.x=unsigned(originX);
+        player.y=unsigned(originY);
+        if (opcode==GameCrouch || opcode==GameButcher) {
+            if (!player.dead) player.crouchedAt=GetTickCount64();
+            return true;
+        }
+        if (opcode!=GameBump && !death) player.light=move.direction>>8;
+        if (death) {
+            player.dead=true;
+            player.casting={};
+            player.combatUntil=player.combatIdleAt=0;
+        } else if (opcode==GameActorRevive || opcode==GameActorReviveRefresh) player.dead=false;
+        if (moving) {
+            player.levelPoseAt=0;
+            player.remoteStep={0,distance*dx,distance*dy,move.x,move.y,opcode,catchUp};
+        }
+        return true;
+    }
+
+    void AdvanceRemoteMovement(LocalScene::Player& player,std::uint32_t actor,std::uint64_t now)
+    {
+        if (player.actionFlags&0x08000000u) {
+            player.remoteSlowTick=!player.remoteSlowTick;
+            if (player.remoteSlowTick) return;
+        }
+        auto& step=player.remoteStep;
+        if (step.opcode==GameBump || step.opcode==GameBackstep) step.frame+=2;
+        else {
+            ++step.frame;
+            const char* sample=nullptr;
+            if (player.mount && step.opcode==GameRun) {
+                if (step.frame==3) sample="35.wav";
+            } else if (step.frame==1 || step.frame==4) sample=!player.mount ? "1.wav" : step.frame==1 ? "33.wav" : "34.wav";
+            if (sample) PlaySceneSample(actor,sample,int(player.x),int(player.y));
+            step.frame+=int(step.catchUp);
+        }
+        if (step.opcode==GameBump && step.frame>=4) {
+            player.x=unsigned(int(step.destinationX)-step.dx);
+            player.y=unsigned(int(step.destinationY)-step.dy);
+            step={};
+            player.casting={};
+            player.casting.tick=now;
+            player.casting.clock.start(7);
+            return;
+        }
+        if (step.frame>=(player.facing==7 ? 4 : 1)) {
+            player.x=step.destinationX;
+            player.y=step.destinationY;
+        }
+        if (step.frame>=6) {
+            step={};
+            player.combatIdleAt=now;
+        }
     }
 
     static unsigned SpellFacing(int sourceX, int sourceY, int x, int y)
@@ -4538,7 +4638,7 @@ private:
         if (actor && actor==localActor_) {
             if (scene.spellMessages.size()<64) scene.spellMessages.push_back(std::move(*reply));
         } else if (const auto it=scene.players.find(actor);it!=scene.players.end() &&
-            !it->second.IsNpc() && !it->second.IsMonster() && it->second.queuedCasts.size()<64) {
+            !it->second.IsNpc() && !it->second.IsMonster() && it->second.remoteActions.size()<64) {
             QueueHumanAction(it->second,std::move(*reply));
         }
     }

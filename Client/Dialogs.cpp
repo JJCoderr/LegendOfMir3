@@ -6358,6 +6358,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
     for (auto& [id,actor]:scene.players) {
         if (actor.IsNpc() || !visible(actor)) continue;
         cui_rect bounds{};
+        unsigned actorRow=actor.y;
         if (actor.IsMonster()) {
             const int shape=actor.npcShape;
             const int library=shape<1000 ? 88+shape/10 : shape>=2000 ? ((shape-2000)/100-121)&255 : -1;
@@ -6431,10 +6432,28 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
             const int cast=actor.casting.pose();
             const int stance=!actor.mount && monsterNow<actor.combatUntil ?
                 560+int((monsterNow-actor.combatIdleAt)/201%3) : idle;
-            const int pose=actor.dead ? HumanCorpsePose : cast>=0 ? cast : level>=0 ? level : crouch>=0 ? crouch : stance;
-            bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,pose,client.shadowBlend,actor.mount);
+            int pose=actor.dead ? HumanCorpsePose : cast>=0 ? cast : level>=0 ? level : crouch>=0 ? crouch : stance;
+            unsigned mount=actor.dead ? 0 : actor.mount;
+            const auto& step=actor.remoteStep;
+            const auto pixel=ActorWorldPixel(actor);
+            auto actorCamera=camera;
+            actorCamera.cameraX+=int(actor.x)*48-int(pixel[0]);
+            actorCamera.cameraY+=int(actor.y)*32-int(pixel[1]);
+            if (step.frame>=0) {
+                if (step.opcode==GameBackstep || step.opcode==GameBump) {
+                    pose=step.opcode==GameBackstep ? 400 : 1840+step.frame;
+                    mount=0;
+                } else {
+                    const int base=step.opcode==GameRun ? (mount ? 2480 : 1760) : (mount ? 2400 : 1680);
+                    pose=base+step.frame;
+                }
+                actorRow=(int(pixel[1])+16)/32;
+            }
+            const auto firstLayer=worldSprites_.size();
+            bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,actorCamera,pose,client.shadowBlend,mount);
+            for (std::size_t i=firstLayer;i<worldSprites_.size();++i) worldSprites_[i].row=int(actorRow);
             if (bounds.w>0) {
-                const int x=int(actor.x)*48-camera.cameraX, y=int(actor.y)*32-camera.cameraY;
+                const int x=int(pixel[0])-camera.cameraX,y=int(pixel[1])-camera.cameraY;
                 worldAnchors_.push_back({id,bounds,x,y,2});
                 if (!actor.dead) PrepareCast(ui,actor.casting,x,y,actor.y);
                 humanDamage(actor.health.damage,x,y);
@@ -6444,7 +6463,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
             animated|=!actor.dead;
         }
         if (bounds.w<=0) continue;
-        if (!actor.dead) worldTargets_.push_back({bounds,id,actor.y,actor.IsMonster()});
+        if (!actor.dead) worldTargets_.push_back({bounds,id,actorRow,actor.IsMonster()});
         else if (actor.CanBeButchered()) worldCorpses_.push_back({bounds,id,actor.y,actor.IsMonster()});
     }
     if (client.characterAppearance.available) {
