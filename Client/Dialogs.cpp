@@ -851,7 +851,6 @@ private:
     BagText tradePromptText_;
     HudHint tradeHint_;
     cui_vec2 tradePointer_{-1,-1};
-    bool tradeHovered_ = false;
     int tradeHintHeight_ = 0, tradePromptPressed_ = -1;
     unsigned tradeRevision_ = 0, tradePromptEditor_ = 0;
     bool tradePromptCancel_ = false, tradePromptTab_ = false;
@@ -3121,10 +3120,12 @@ void Dialogs::Assets::RefreshInventory(cui_ctx* ui, LoginClient& client, cui_vec
     inventoryHeld_ = {};
     inventoryFootprint_ = {};
     if (const auto* held = client.HeldItem(); held || bag.heldGold) {
-        const auto icon = bag.heldGold ? 124u : held->icon;
-        CacheItem(ui,icon);
-        inventoryHeld_ = itemFrames_.at(icon);
-        if (held && !bag.heldGold && bag.open && !inventoryAlert_ && !inventoryQuantity_ &&
+        if (!GameHudReady() || inventoryAlert_ || inventoryQuantity_) {
+            const auto icon = bag.heldGold ? 124u : held->icon;
+            CacheItem(ui,icon);
+            inventoryHeld_ = itemFrames_.at(icon);
+        }
+        if (held && !bag.heldGold && bag.open && !inventoryAlert_ && !inventoryQuantity_ && !pointerCoversPanel_ &&
             Contains({float(inventoryX_+17),float(inventoryY_+60),228,304},pointer)) {
             const int x = static_cast<int>(pointer.x)-inventoryX_-17, y = static_cast<int>(pointer.y)-inventoryY_-60;
             const int column = x/38-held->width/2+(held->width%2 == 0 && x%38 >= 19);
@@ -7496,7 +7497,6 @@ bool Dialogs::Assets::HandleTradeInput(cui_ctx* ui, LoginClient& client, bool bl
 {
     auto& trade = client.trade;
     tradeHintHeight_ = 0;
-    tradeHovered_ = false;
     const auto size = cui_viewport_size(ui);
     const HudPoint base({0,0,size.x,size.y});
     if (base.scale<=0) return false;
@@ -7507,7 +7507,6 @@ bool Dialogs::Assets::HandleTradeInput(cui_ctx* ui, LoginClient& client, bool bl
     const bool captured = trade.dragging || trade.confirmPressed || trade.scroll.captured>=0;
     const bool inside = Contains({float(x),float(y),float(w),float(h)},pointer);
     if (blocked && !captured) return false;
-    tradeHovered_ = inside && !blocked;
     const bool down = cui_mouse_clicked(ui,CUI_MOUSE_LEFT), up = cui_mouse_released(ui,CUI_MOUSE_LEFT);
     if (inside && !blocked) cui_take_mouse_scroll(ui);
     const auto scroll = [&](int kind) {
@@ -7603,10 +7602,8 @@ void Dialogs::Assets::DrawTradePanel(cui_ctx* ui, const LoginClient& client)
 void Dialogs::Assets::DrawPanelHeld(cui_ctx* ui, LoginClient& client)
 {
     const auto* item = client.trade.SelectedReturn();
-    const bool covered = (client.trade.visible && tradeHovered_ && client.trade.prompt==mir3_cui::TradePrompt::None) ||
-        (StatusReady() && client.equipment.open && statusPointer_.x>=0);
-    if (!item && covered) item = client.HeldItem();
-    const bool gold = covered && client.inventory.heldGold;
+    if (!item) item = client.HeldItem();
+    const bool gold = client.inventory.heldGold;
     if (!item && !gold) return;
     const unsigned icon = gold ? 124 : item->icon;
     CacheItem(ui,icon);
@@ -7616,7 +7613,7 @@ void Dialogs::Assets::DrawPanelHeld(cui_ctx* ui, LoginClient& client)
     const HudPoint base({0,0,size.x,size.y});
     const auto mouse = base.ToLocal(cui_mouse_pos(ui));
     if (!Contains({0,0,800,600},mouse)) return;
-    const auto where = base.Rect(int(mouse.x)-art.width/2,int(mouse.y)-art.height/2,art.width,art.height);
+    const auto where = base.Rect(std::floor(mouse.x-art.width*.5f),std::floor(mouse.y-art.height*.5f),art.width,art.height);
     cui_overlay_begin(ui,where);
     const auto texture = art.texture;
     cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect r,void* value) {
@@ -7781,7 +7778,7 @@ bool Dialogs::Assets::HandleUtilityPanels(cui_ctx* ui, LoginClient& client, bool
         }
         escape = true;
     }
-    pointerCoversPanel_ = coveredOutsideBag || portraitNotice_ || client.showSignOut || client.returnToCharactersAt;
+    pointerCoversPanel_ = coveredOutsideBag || foreground || portraitNotice_ || client.showSignOut || client.returnToCharactersAt;
     return covered;
 }
 
@@ -8239,10 +8236,11 @@ void Dialogs::Assets::DrawGameHud(cui_ctx* ui, LoginClient& client, bool pointer
     const auto map = client.characterAppearance.available ? PrepareMapArt(ui,client) : SceneMapArt{};
     const bool interactive=!pointerCovered && !modal && !overHud;
     RefreshTargetPortrait(ui,client,map,pointer,interactive);
+    const bool sceneInput=interactive && !client.minimap.visible;
     if (client.characterAppearance.available) {
         cui_overlay_begin(ui,base.Rect(0,0,800,map.sprites ? 600 : 467));
-        cui_push_disabled(ui,!interactive);
-        DrawLocalScene(ui,client,interactive,InventoryReady(),true,map);
+        cui_push_disabled(ui,!sceneInput);
+        DrawLocalScene(ui,client,sceneInput,InventoryReady(),true,map);
         cui_pop_disabled(ui);
         cui_box_end(ui);
     }
