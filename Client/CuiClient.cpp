@@ -385,6 +385,7 @@ public:
     bool audioOpen = false;
     bool audioDirty = false;
     std::string chatHistoryDirectory = "CuiChatHistory";
+    std::string itemShortcutDirectory = "CuiItemShortcuts";
     std::vector<Character> characters;
     int characterIndex = -1;
     int characterPage = 0;
@@ -662,15 +663,53 @@ public:
 
     void UseInventoryItem()
     {
-        using mir3_cui::ItemRequest;
-        if (!InventoryCanQueue()) return;
         const auto* item = inventory.Find(inventory.selection);
-        if (!item || item->IsGold()) return;
-        const DWORD tick = GetTickCount();
-        Queue(1006, static_cast<WORD>(tick), item->key.name, item->key.id, static_cast<WORD>(tick >> 16));
-        inventory.pending = *item;
-        inventory.request = ItemRequest::Use;
-        inventory.deadline = GetTickCount64() + 10000;
+        if (item) UseItem(*item);
+    }
+
+    void ToggleItemShortcuts()
+    {
+        inventory.shortcutsVisible = !inventory.shortcutsVisible;
+        inventory.clickedShortcut = -1;
+        if (inventory.shortcutsVisible && !inventory.initialized && !inventory.waiting) RequestInventory();
+    }
+
+    void UseItemShortcut(std::size_t slot)
+    {
+        const auto* item = inventory.ResolveShortcut(slot);
+        if (!item) {
+            inventory.shortcutStatus = "No usable item is bound to that slot.";
+            if (!inventory.shortcuts[slot].name.empty() && !inventory.initialized && !inventory.waiting)
+                RequestInventory();
+            return;
+        }
+        UseItem(*item);
+        inventory.shortcutStatus = inventory.status;
+    }
+
+    void BindItemShortcut(std::size_t slot)
+    {
+        if (stage != Stage::GameSession || inventory.request != mir3_cui::ItemRequest::None) return;
+        const auto* selected = inventory.Find(inventory.selection);
+        if (!selected || !selected->QuickEligible() || selected->key.name.find_first_of("\r\n") != std::string::npos)
+            return;
+        for (auto& key : inventory.shortcuts) if (key.name == selected->key.name) key = {};
+        inventory.shortcuts[slot] = selected->key;
+        inventory.shortcutsVisible = true;
+        inventory.bindingShortcut = false;
+        inventory.clickedShortcut = -1;
+        inventory.shortcutStatus.clear();
+        SaveItemShortcuts();
+    }
+
+    void ClearItemShortcut(std::size_t slot)
+    {
+        if (stage != Stage::GameSession || inventory.request != mir3_cui::ItemRequest::None ||
+            inventory.shortcuts[slot].name.empty()) return;
+        inventory.shortcuts[slot] = {};
+        inventory.clickedShortcut = -1;
+        inventory.shortcutStatus.clear();
+        SaveItemShortcuts();
     }
 
     void BeginInventoryDrop(mir3_cui::DropDialog drop)
@@ -939,6 +978,23 @@ public:
     }
 
 private:
+    void UseItem(const mir3_cui::InventoryItem& item)
+    {
+        if (!InventoryCanQueue() || item.IsGold()) return;
+        const auto now = GetTickCount64();
+        const bool fast = item.mode == 0 && (item.icon == 20 || item.icon == 21 || item.icon == 70);
+        if (item.Medicine() && inventory.lastUse && now - inventory.lastUse <= (fast ? 1000u : 2000u)) {
+            inventory.status = "This item is cooling down.";
+            return;
+        }
+        const auto tick = static_cast<DWORD>(now);
+        Queue(1006, static_cast<WORD>(tick), item.key.name, item.key.id, static_cast<WORD>(tick >> 16));
+        inventory.pending = item;
+        inventory.request = mir3_cui::ItemRequest::Use;
+        inventory.deadline = now + 10000;
+        if (item.Medicine()) inventory.lastUse = now;
+    }
+
     bool InventoryCanQueue()
     {
         if (stage != Stage::GameSession) return false;
@@ -1000,10 +1056,10 @@ private:
     std::array<unsigned char, 4> sceneKey_ = {};
     std::uint32_t localActor_ = 0;
 
-    std::string ChatHistoryPath() const
+    std::string CharacterStoragePath(const std::string& directory) const
     {
         static const char hex[] = "0123456789abcdef";
-        std::string file = chatHistoryDirectory + '/' + host + '-' + port + '-';
+        std::string file = directory + '/' + host + '-' + port + '-';
         for (const auto* identity : {&realm_, &gameRole_}) {
             for (unsigned char ch : *identity) {
                 file += hex[ch >> 4];
@@ -1016,7 +1072,7 @@ private:
 
     void LoadChatHistory()
     {
-        std::ifstream file(ChatHistoryPath(), std::ios::binary);
+        std::ifstream file(CharacterStoragePath(chatHistoryDirectory), std::ios::binary);
         std::string line;
         while (std::getline(file, line)) {
             if (line.size() < 2 || line.size() > sizeof chat.draft || line.find('\0') != std::string::npos)
@@ -1029,7 +1085,7 @@ private:
 
     void SaveChatHistory()
     {
-        const auto path = ChatHistoryPath();
+        const auto path = CharacterStoragePath(chatHistoryDirectory);
         const auto temporary = path + '.' + std::to_string(GetCurrentProcessId()) + ".tmp";
         CreateDirectoryA(chatHistoryDirectory.c_str(), nullptr);
         std::ofstream file(temporary, std::ios::binary | std::ios::trunc);
@@ -1040,6 +1096,50 @@ private:
             DeleteFileA(temporary.c_str());
             chat.error = "Could not save chat shortcuts.";
         }
+    }
+
+    void LoadItemShortcuts()
+    {
+        std::ifstream file(CharacterStoragePath(itemShortcutDirectory), std::ios::binary);
+        std::string name;
+        for (auto& key : inventory.shortcuts) {
+            if (!std::getline(file, name)) break;
+            if (!name.empty() && name.size() <= 30 && name.find('\0') == std::string::npos &&
+                name.find('\r') == std::string::npos &&
+                std::none_of(inventory.shortcuts.begin(), inventory.shortcuts.end(), [&](const auto& bound) {
+                    return bound.name == name;
+                }))
+                key = {0, name};
+        }
+    }
+
+    void SaveItemShortcuts()
+    {
+        const auto path = CharacterStoragePath(itemShortcutDirectory);
+        const auto temporary = path + '.' + std::to_string(GetCurrentProcessId()) + ".tmp";
+        CreateDirectoryA(itemShortcutDirectory.c_str(), nullptr);
+        std::ofstream file(temporary, std::ios::binary | std::ios::trunc);
+        for (const auto& key : inventory.shortcuts) file << key.name << '\n';
+        file.close();
+        if (!file || !MoveFileExA(temporary.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+            DeleteFileA(temporary.c_str());
+            inventory.shortcutStatus = "Could not save item shortcuts.";
+        }
+    }
+
+    void RemoveInventoryItem(const mir3_cui::ItemKey& key)
+    {
+        // Resolve references before erasing the record they may be bound to.
+        bool changed = false;
+        for (std::size_t i = 0; i < inventory.shortcuts.size(); ++i) {
+            const auto* item = inventory.ResolveShortcut(i);
+            if (item && item->key == key) {
+                inventory.shortcuts[i] = {};
+                changed = true;
+            }
+        }
+        inventory.Remove(key);
+        if (changed) SaveItemShortcuts();
     }
 
     bool IsGameConnection() const
@@ -1282,6 +1382,7 @@ private:
             stage = Stage::GameSession;
             localActor_ = actor;
             LoadChatHistory();
+            LoadItemShortcuts();
             status = "Signed in to the game gateway.";
         } else if (opcode == SM_CERTIFICATION_FAIL || opcode == SM_OUTOFCONNECTION) {
             EndGameSession(opcode == SM_CERTIFICATION_FAIL ? "The game gateway rejected sign-in."
@@ -1352,7 +1453,7 @@ private:
             if ((inventory.request == ItemRequest::Drop || inventory.request == ItemRequest::DropStack) &&
                 (!actor || actor == inventory.pending.key.id)) {
                 if (inventory.request == ItemRequest::Drop || inventory.dropCount >= inventory.pending.count)
-                    inventory.Remove(inventory.pending.key);
+                    RemoveInventoryItem(inventory.pending.key);
                 inventory.request = ItemRequest::None;
                 inventory.status.clear();
             }
@@ -1363,15 +1464,17 @@ private:
             inventory.request = ItemRequest::None;
             if (opcode == 636) {
                 inventory.status = "The server declined to use " + inventory.pending.label + ".";
+                inventory.shortcutStatus = inventory.status;
                 inventory.notice = inventory.pending.mode == 51;
                 break;
             }
             if (inventory.pending.stackMode == 3 && inventory.pending.count > 1 && first) {
                 if (auto* item = inventory.Find(inventory.pending.key)) item->count = first;
             } else {
-                inventory.Remove(inventory.pending.key);
+                RemoveInventoryItem(inventory.pending.key);
             }
             inventory.status = "Used " + inventory.pending.label + ".";
+            inventory.shortcutStatus = inventory.status;
             break;
         case 653:
             inventory.gold = actor;
@@ -1385,11 +1488,11 @@ private:
                 if (item.key.id == actor) item.count = first;
             }
             if (!first) {
-                auto& items = inventory.items;
-                items.erase(std::remove_if(items.begin(), items.end(), [&](const auto& item) {
-                    return item.key.id == actor && item.Stacks();
-                }), items.end());
-                if (!inventory.Find(inventory.selection)) inventory.selection = {};
+                std::vector<mir3_cui::ItemKey> emptyStacks;
+                for (const auto& item : inventory.items) {
+                    if (item.key.id == actor && item.Stacks()) emptyStacks.push_back(item.key);
+                }
+                for (const auto& key : emptyStacks) RemoveInventoryItem(key);
             }
             if (inventory.request == ItemRequest::DropStack && inventory.pending.key.id == actor) {
                 inventory.request = ItemRequest::None;
@@ -1425,6 +1528,7 @@ private:
             mir3_cui::InventoryItem item;
             item.key = {word(62) | (std::uint32_t(word(64)) << 16), std::move(name)};
             item.label = label;
+            item.icon = word(36);
             item.count = word(71);
             item.durability = word(66);
             item.maxDurability = word(68);
@@ -1443,7 +1547,7 @@ private:
 
         auto& item = records.front();
         auto* current = inventory.Find(item.key);
-        if (opcode == 202) inventory.Remove(item.key);
+        if (opcode == 202) RemoveInventoryItem(item.key);
         else if (current) *current = std::move(item);
         else if (opcode == 200 && inventory.items.size() < 46) inventory.items.push_back(std::move(item));
     }
@@ -2057,6 +2161,44 @@ void ChatShortcuts(cui_ctx* ui, mir3_cui::ChatPanel& chat, bool phrase)
     }
 }
 
+void DrawItemShortcuts(cui_ctx* ui, LoginClient& client, bool active)
+{
+    auto& bag = client.inventory;
+    cui_box row = {};
+    row.width = CUI_FILL;
+    row.gap = 5;
+    row.wrap = true;
+    cui_row_begin(ui, &row);
+    for (std::size_t slot = 0; slot < bag.shortcuts.size(); ++slot) {
+        const auto* item = bag.ResolveShortcut(slot);
+        std::string title = std::to_string(slot + 1);
+        if (item) {
+            title += " " + item->label;
+            if (item->Stacks()) title += " x" + std::to_string(item->count);
+        } else if (!bag.shortcuts[slot].name.empty()) {
+            title += " Unavailable";
+        }
+        title += "###quick-slot";
+        cui_push_id_int(ui, static_cast<int>(slot));
+        if (Button(ui, title.c_str()) && active) {
+            const auto now = GetTickCount64();
+            if (bag.clickedShortcut == static_cast<int>(slot) && now - bag.shortcutClickTime <= 300) {
+                client.UseItemShortcut(slot);
+                bag.clickedShortcut = -1;
+            } else {
+                bag.clickedShortcut = static_cast<int>(slot);
+                bag.shortcutClickTime = now;
+            }
+        }
+        if (active && cui_last_hovered(ui) && cui_mouse_clicked(ui, CUI_MOUSE_RIGHT))
+            client.ClearItemShortcut(slot);
+        cui_pop_id(ui);
+    }
+    cui_box_end(ui);
+    if (!bag.shortcutStatus.empty()) cui_secondary(ui, bag.shortcutStatus.c_str());
+    else cui_muted(ui, "Double-click to use. Right-click to clear.");
+}
+
 void DrawGameChat(cui_ctx* ui, LoginClient& client)
 {
     auto& chat = client.chat;
@@ -2087,6 +2229,9 @@ void DrawGameChat(cui_ctx* ui, LoginClient& client)
         client.OpenQuests();
     if (Button(ui, "Inventory") || (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_W)))
         client.OpenInventory();
+    if (Button(ui, client.inventory.shortcutsVisible ? "Hide shortcuts" : "Item shortcuts") ||
+        (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_Z)))
+        client.ToggleItemShortcuts();
     if (Button(ui, "Server options") ||
         (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_N)))
         client.serverOptions.open = true;
@@ -2094,11 +2239,18 @@ void DrawGameChat(cui_ctx* ui, LoginClient& client)
     if (Button(ui, "Sign out")) client.showSignOut = true;
     cui_box_end(ui);
     const bool overlay = hasOverlay();
+    if (!overlay && !chat.composing) {
+        for (std::size_t slot = 0; slot < client.inventory.shortcuts.size(); ++slot) {
+            if (cui_shortcut(ui, 0, static_cast<cui_key>(CUI_KEY_1 + slot)))
+                client.UseItemShortcut(slot);
+        }
+    }
+    if (client.inventory.shortcutsVisible) DrawItemShortcuts(ui, client, !overlay);
 
     cui_scroll_opts list = {};
     list.id = "chat-history";
     list.width = CUI_FILL;
-    list.height = chat.expanded ? CUI_FILL : CUI_PX(174);
+    list.height = chat.expanded ? CUI_FILL : CUI_PX(client.inventory.shortcutsVisible ? 106 : 174);
     list.gap = 6;
     if (chat.scrollToEnd) {
         cui_scroll_to(ui, list.id, 100000.0f);
@@ -2443,6 +2595,27 @@ void DrawInventory(cui_ctx* ui, LoginClient& client)
     using mir3_cui::DropDialog;
     using mir3_cui::ItemRequest;
     auto& bag = client.inventory;
+    if (bag.bindingShortcut) {
+        if (!cui_dialog_begin(ui, "Bind item shortcut", &bag.bindingShortcut, nullptr)) return;
+        const auto* selected = bag.Find(bag.selection);
+        if (selected) cui_label(ui, selected->label.c_str());
+        for (std::size_t slot = 0; slot < bag.shortcuts.size(); ++slot) {
+            cui_push_id_int(ui, static_cast<int>(slot));
+            const auto* item = bag.ResolveShortcut(slot);
+            const auto label = "Bind " + std::to_string(slot + 1) +
+                (item ? " (" + item->label + ')' : "") + "###bind-slot";
+            cui_push_disabled(ui, !selected || !selected->QuickEligible());
+            if (Button(ui, label.c_str()) || cui_shortcut(ui, 0, static_cast<cui_key>(CUI_KEY_1 + slot)))
+                client.BindItemShortcut(slot);
+            cui_pop_disabled(ui);
+            cui_pop_id(ui);
+        }
+        cui_dialog_footer_begin(ui);
+        if (Button(ui, "Cancel")) bag.bindingShortcut = false;
+        cui_dialog_footer_end(ui);
+        cui_dialog_end(ui);
+        return;
+    }
     if (bag.notice) {
         cui_dialog_opts alert = {};
         alert.persistent = true;
@@ -2529,6 +2702,9 @@ void DrawInventory(cui_ctx* ui, LoginClient& client)
     cui_push_disabled(ui, bag.request != ItemRequest::None || !selected || selected->IsGold());
     if (Button(ui, "Use", true)) client.UseInventoryItem();
     if (Button(ui, "Drop item")) client.BeginInventoryDrop(DropDialog::Item);
+    cui_pop_disabled(ui);
+    cui_push_disabled(ui, bag.request != ItemRequest::None || !selected || !selected->QuickEligible());
+    if (Button(ui, "Bind shortcut")) bag.bindingShortcut = true;
     cui_pop_disabled(ui);
     cui_push_disabled(ui, bag.request != ItemRequest::None || bag.gold < 2);
     if (Button(ui, "Drop gold")) client.BeginInventoryDrop(DropDialog::Gold);
