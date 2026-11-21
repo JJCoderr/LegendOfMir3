@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include "cui.h"
+#include "CuiChat.h"
 #include "Common/EnDecode.h"
 #include "Common/Protocol.h"
 
@@ -13,6 +14,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <map>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -26,6 +28,8 @@ enum class Stage {
 enum class CharacterDialog { None, Create, Delete };
 constexpr WORD GameLogon = 50;
 constexpr WORD GameLogout = 1009;
+constexpr WORD GameDecodeKey = 1330;
+constexpr WORD GameDecodeKeyResponse = 1150;
 
 struct Gateway {
     std::string host;
@@ -359,6 +363,8 @@ public:
     Gateway gameGateway;
     std::string gameCharacter;
     bool showSignOut = false;
+    mir3_cui::ChatPanel chat;
+    std::string chatHistoryDirectory = "CuiChatHistory";
     std::vector<Character> characters;
     int characterIndex = -1;
     int characterPage = 0;
@@ -385,6 +391,7 @@ public:
         gameGateway = {};
         gameCharacter.clear();
         showSignOut = false;
+        chat = {};
         characters.clear();
         characterIndex = -1;
         characterPage = 0;
@@ -393,6 +400,7 @@ public:
         CloseCharacterDialog();
         signedInAccount_.clear();
         gameRole_.clear();
+        realm_.clear();
         stage = Stage::Login;
         status = message;
         SecureZeroMemory(password, sizeof password);
@@ -469,6 +477,7 @@ public:
     void Select(const Server& server)
     {
         if (stage != Stage::Servers || billing.message) return;
+        realm_ = server.name;
         Queue(CM_SELECTSERVER, server.index, legacy ? "" : server.name);
         Wait(Stage::Selecting, "Waiting for the selection endpoint...");
     }
@@ -533,6 +542,39 @@ public:
         showSignOut = false;
         Queue(GameLogout, 0, "");
         Wait(Stage::SigningOutGame, "Signing out...");
+    }
+
+    void SendChat()
+    {
+        if (stage != Stage::GameSession || showSignOut || !chat.draft[0]) return;
+        const std::string draft = chat.draft;
+        const bool command = draft.front() == '/' || draft.front() == '@' ||
+            draft.front() == '#' || draft.front() == '!';
+        static const char* const prefixes[] = {"", "!!", "!~"};
+        const std::string text = command ? draft : prefixes[chat.channel] + draft;
+        const auto wire = ConvertText(text, CP_UTF8, 936);
+        if (wire.empty() || wire.size() > 90 || draft.find_first_of("\r\n") != std::string::npos) {
+            chat.error = "The message must fit within 90 GBK bytes.";
+            return;
+        }
+        if (draft.front() != '#' && output_.size() >= 8192) {
+            chat.error = "The connection is busy. Try sending again.";
+            return;
+        }
+        chat.error.clear();
+        chat.draft[0] = '\0';
+        if (draft.front() == '#') {
+            if (chat.Remember(chat.phrases, draft.substr(1))) SaveChatHistory();
+            return;
+        }
+        if (draft.front() == '/') {
+            const auto end = draft.find(' ');
+            if (draft.size() > 1 && end != 1 && chat.Remember(chat.contacts, draft.substr(0, end) + ' '))
+                SaveChatHistory();
+            chat.Append(103, draft);
+        }
+        if (draft == "@chatsave") chat.logging = !chat.logging;
+        Queue(mir3_cui::Say, 0, wire);
     }
 
     void Poll()
@@ -612,6 +654,51 @@ private:
     size_t sent_ = 0;
     std::string signedInAccount_;
     std::string gameRole_;
+    std::string realm_;
+    std::array<unsigned char, 4> sceneKey_ = {};
+    std::uint32_t localActor_ = 0;
+
+    std::string ChatHistoryPath() const
+    {
+        static const char hex[] = "0123456789abcdef";
+        std::string file = chatHistoryDirectory + '/' + host + '-' + port + '-';
+        for (const auto* identity : {&realm_, &gameRole_}) {
+            for (unsigned char ch : *identity) {
+                file += hex[ch >> 4];
+                file += hex[ch & 15];
+            }
+            file += '-';
+        }
+        return file + ".txt";
+    }
+
+    void LoadChatHistory()
+    {
+        std::ifstream file(ChatHistoryPath(), std::ios::binary);
+        std::string line;
+        while (std::getline(file, line)) {
+            if (line.size() < 2 || line.size() > sizeof chat.draft || line.find('\0') != std::string::npos)
+                continue;
+            const auto value = line.substr(1);
+            if (line.front() == 'P') chat.Remember(chat.phrases, value);
+            if (line.front() == 'C') chat.Remember(chat.contacts, value);
+        }
+    }
+
+    void SaveChatHistory()
+    {
+        const auto path = ChatHistoryPath();
+        const auto temporary = path + '.' + std::to_string(GetCurrentProcessId()) + ".tmp";
+        CreateDirectoryA(chatHistoryDirectory.c_str(), nullptr);
+        std::ofstream file(temporary, std::ios::binary | std::ios::trunc);
+        for (const auto& line : chat.contacts) file << 'C' << line << '\n';
+        for (const auto& line : chat.phrases) file << 'P' << line << '\n';
+        file.close();
+        if (!file || !MoveFileExA(temporary.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+            DeleteFileA(temporary.c_str());
+            chat.error = "Could not save chat shortcuts.";
+        }
+    }
 
     bool IsGameConnection() const
     {
@@ -629,6 +716,8 @@ private:
 
     void AuthenticateGame()
     {
+        sceneKey_ = {};
+        localActor_ = 0;
         // The first game frame has a sequence digit and an encoded body, with no default header.
         constexpr std::uint32_t version = 0x0131a4f0u;
         const auto session = static_cast<std::uint32_t>(selectionSession);
@@ -839,17 +928,83 @@ private:
         std::array<unsigned char, 12> header = {};
         if (fnDecode6BitBuf(&input_[0], reinterpret_cast<char*>(header.data()), static_cast<int>(header.size())) != 12)
             return;
-        const unsigned opcode = header[0] | (static_cast<unsigned>(header[4]) << 8);
-        const std::uint32_t actor = header[5] | (std::uint32_t(header[7]) << 8) |
+        const unsigned opcode = (header[0] ^ sceneKey_[0]) |
+            (static_cast<unsigned>(header[4] ^ sceneKey_[2] ^ sceneKey_[1]) << 8);
+        const std::uint32_t actor = (header[5] ^ sceneKey_[3]) | (std::uint32_t(header[7]) << 8) |
             (std::uint32_t(header[9]) << 16) | (std::uint32_t(header[11]) << 24);
         if (opcode == GameLogon && actor && actor <= 0x7fffffffu &&
             stage == Stage::AuthenticatingGame && input_.size() == DEFBLOCKSIZE + 51) {
             stage = Stage::GameSession;
+            localActor_ = actor;
+            LoadChatHistory();
             status = "Signed in to the game gateway.";
         } else if (opcode == SM_CERTIFICATION_FAIL || opcode == SM_OUTOFCONNECTION) {
             EndGameSession(opcode == SM_CERTIFICATION_FAIL ? "The game gateway rejected sign-in."
                                                          : "The game gateway ended the session.");
+        } else if (opcode == GameDecodeKey && stage == Stage::GameSession) {
+            const auto body = ReadGameBody();
+            if (body.size() == 60 && body.find('\0') == std::string::npos) ApplySceneKey(body);
+        } else if (mir3_cui::ChatChannel(opcode) && stage == Stage::GameSession &&
+                   input_.size() <= DEFBLOCKSIZE + 1024) {
+            auto body = ReadGameBody();
+            const auto terminator = body.find('\0');
+            if (terminator != std::string::npos) body.resize(terminator);
+            if ((opcode == 40 || opcode == 1501) && body.size() > 259) return;
+            const auto text = ConvertText(body, 936, CP_UTF8);
+            if (text.empty()) return;
+            chat.Append(opcode, text);
+            if (chat.logging) {
+                std::ofstream log("Chat.txt", std::ios::binary | std::ios::app);
+                log << body << "\r\n";
+            }
         }
+    }
+
+    std::string ReadGameBody()
+    {
+        const size_t encodedSize = input_.size() - DEFBLOCKSIZE;
+        if (!encodedSize || encodedSize % 4 == 1) return {};
+        const unsigned padding = static_cast<unsigned>((encodedSize * 6) % 8);
+        if ((input_.back() - 60) & ((1u << padding) - 1)) return {};
+        std::string body(encodedSize * 3 / 4, '\0');
+        body.resize(fnDecode6BitBuf(&input_[DEFBLOCKSIZE], &body[0], static_cast<int>(body.size())));
+        return body;
+    }
+
+    void ApplySceneKey(const std::string& challenge)
+    {
+        const auto decodeWord = [&](size_t start) {
+            unsigned bits = 0;
+            for (size_t group = 0; group < 2; ++group) {
+                const size_t at = start + group * 10;
+                const unsigned threshold = static_cast<unsigned char>(challenge[at]) +
+                    static_cast<unsigned char>(challenge[at + 9]);
+                for (size_t bit = 0; bit < 8; ++bit) {
+                    if (static_cast<unsigned char>(challenge[at + bit + 1]) >= threshold)
+                        bits |= 0x8000u >> (group * 8 + bit);
+                }
+            }
+            return ((bits & 255) ^ 0x87u) << 8 | ((bits >> 8) ^ 0x87u);
+        };
+        const unsigned identity = decodeWord(0);
+        const unsigned message = decodeWord(40);
+        std::random_device random;
+        const auto pick = [&](int high) { return std::uniform_int_distribution<int>(0, high)(random); };
+        std::string response(40, '\0');
+        for (size_t group = 0; group < 4; ++group) {
+            const auto value = ((localActor_ >> (group * 8)) & 255u) ^ 0x87u;
+            const int base = 10 + pick(49);
+            const int threshold = 10 + pick(19);
+            const auto at = group * 10;
+            response[at] = static_cast<char>(base);
+            response[at + 9] = static_cast<char>(threshold);
+            for (size_t bit = 0; bit < 8; ++bit)
+                response[at + bit + 1] = static_cast<char>(base + pick(threshold - 1) +
+                    ((value & (0x80u >> bit)) ? threshold : 0));
+        }
+        Queue(GameDecodeKeyResponse, 0, response);
+        sceneKey_ = {static_cast<unsigned char>(message), static_cast<unsigned char>(message >> 8),
+            static_cast<unsigned char>(identity), static_cast<unsigned char>(identity >> 8)};
     }
 
     void HandleFrame()
@@ -1242,6 +1397,104 @@ void DrawCharacterDialog(cui_ctx* ui, LoginClient& client, cui_dialog_opts modal
     }
 }
 
+void ChatShortcuts(cui_ctx* ui, mir3_cui::ChatPanel& chat, bool phrase)
+{
+    const auto& history = phrase ? chat.phrases : chat.contacts;
+    if (history.empty()) return;
+    auto& selected = phrase ? chat.phraseIndex : chat.contactIndex;
+    const int last = static_cast<int>(history.size()) - 1;
+    int target = -1;
+    if (cui_key_pressed(ui, CUI_KEY_UP)) target = (std::max)(0, selected - 1);
+    if (cui_key_pressed(ui, CUI_KEY_DOWN)) target = (std::min)(last, selected + 1);
+    for (int i = 0; i <= last; ++i) {
+        const auto digit = static_cast<cui_key>(CUI_KEY_0 + (i + 1) % 10);
+        if (cui_key_pressed(ui, digit)) target = i;
+    }
+    cui_label(ui, phrase ? "Quick phrases" : "Recent contacts");
+    for (int i = 0; i <= last; ++i) {
+        cui_push_id_int(ui, i);
+        const auto label = std::to_string((i + 1) % 10) + "  " + history[i] + "###shortcut";
+        if (Button(ui, label.c_str(), i == selected)) target = i;
+        cui_pop_id(ui);
+    }
+    if (target >= 0) {
+        selected = target;
+        chat.FillDraft(history[target]);
+    }
+}
+
+void DrawGameChat(cui_ctx* ui, LoginClient& client)
+{
+    auto& chat = client.chat;
+    cui_push_disabled(ui, client.showSignOut);
+    cui_box row = {};
+    row.width = CUI_FILL;
+    row.gap = 10;
+    row.align = CUI_ALIGN_CENTER;
+    cui_row_begin(ui, &row);
+    cui_heading(ui, "Chat", 1);
+    cui_spacer(ui);
+    if (Button(ui, chat.expanded ? "Compact" : "Expand")) chat.expanded = !chat.expanded;
+    if (Button(ui, "Sign out")) client.showSignOut = true;
+    cui_box_end(ui);
+
+    cui_scroll_opts list = {};
+    list.id = "chat-history";
+    list.width = CUI_FILL;
+    list.height = chat.expanded ? CUI_FILL : CUI_PX(174);
+    list.gap = 6;
+    if (chat.scrollToEnd) {
+        cui_scroll_to(ui, list.id, 100000.0f);
+        chat.scrollToEnd = false;
+    }
+    cui_scroll_begin(ui, &list);
+    for (const auto& line : chat.lines) {
+        const auto text = std::string("[") + mir3_cui::ChatChannel(line.opcode) + "] " + line.text;
+        cui_text_ex(ui, text.c_str(), nullptr);
+    }
+    if (chat.lines.empty()) cui_secondary(ui, "No messages yet.");
+    cui_scroll_end(ui);
+
+    const int mods = cui_key_mods(ui);
+    if (chat.composing && !client.showSignOut && (mods & (CUI_MOD_CTRL | CUI_MOD_ALT))) {
+        cui_box shortcuts = {};
+        shortcuts.width = CUI_FILL;
+        shortcuts.gap = 6;
+        shortcuts.wrap = true;
+        cui_row_begin(ui, &shortcuts);
+        ChatShortcuts(ui, chat, (mods & CUI_MOD_ALT) != 0);
+        cui_box_end(ui);
+    }
+
+    if (!chat.composing) {
+        if (Button(ui, "Write a message") || (!client.showSignOut &&
+            (cui_key_pressed(ui, CUI_KEY_ENTER) || cui_key_pressed(ui, CUI_KEY_SPACE)))) {
+            chat.composing = true;
+            ++chat.editor;
+        }
+    } else {
+        const char* const channels[] = {"Nearby", "Party", "Guild"};
+        cui_segmented_ex(ui, "chat-channel", channels, 3, &chat.channel, nullptr);
+        cui_row_begin(ui, &row);
+        cui_box editor = {};
+        editor.width = CUI_FILL;
+        cui_column_begin(ui, &editor);
+        cui_push_id_int(ui, chat.editor);
+        const int input = Input(ui, "Message", chat.draft, sizeof chat.draft, false, true);
+        cui_pop_id(ui);
+        cui_box_end(ui);
+        const bool send = Button(ui, "Send", true);
+        cui_box_end(ui);
+        if (!client.showSignOut && cui_key_pressed(ui, CUI_KEY_ESCAPE)) {
+            chat.composing = false;
+        } else if (!client.showSignOut && (send || (input & CUI_SUBMITTED))) {
+            client.SendChat();
+        }
+    }
+    if (!chat.error.empty()) cui_secondary(ui, chat.error.c_str());
+    cui_pop_disabled(ui);
+}
+
 void Draw(cui_ctx* ui, LoginClient& client)
 {
     cui_box page = {};
@@ -1265,14 +1518,20 @@ void Draw(cui_ctx* ui, LoginClient& client)
         if (client.stage == Stage::Characters) DrawCharacterDialog(ui, client, modal);
         return;
     }
-    cui_heading(ui, "Mir3 Client", 1);
-    cui_spacer(ui);
-    if (client.stage == Stage::Login) {
-        cui_push_disabled(ui, !client.status.empty() || client.settingsOpen);
-        DrawAccount(ui, client);
-        cui_pop_disabled(ui);
+    if (client.stage == Stage::GameSession) {
+        DrawGameChat(ui, client);
+        cui_box_end(ui);
+        if (!client.showSignOut) return;
+    } else {
+        cui_heading(ui, "Mir3 Client", 1);
+        cui_spacer(ui);
+        if (client.stage == Stage::Login) {
+            cui_push_disabled(ui, !client.status.empty() || client.settingsOpen);
+            DrawAccount(ui, client);
+            cui_pop_disabled(ui);
+        }
+        cui_box_end(ui);
     }
-    cui_box_end(ui);
 
     cui_dialog_opts modal = {};
     modal.width = 340;
@@ -1366,7 +1625,6 @@ void Draw(cui_ctx* ui, LoginClient& client)
     case Stage::SigningOutGame:
     case Stage::GameDisconnected: {
         const bool disconnected = client.stage == Stage::GameDisconnected;
-        const bool signedIn = client.stage == Stage::GameSession;
         modal.description = client.showSignOut ? "End the current game session?" : client.status.c_str();
         if (cui_dialog_begin(ui, client.showSignOut ? "Sign out" : "Game gateway", &open, &modal)) {
             const auto address = client.gameGateway.host + ':' + std::to_string(client.gameGateway.port);
@@ -1376,8 +1634,6 @@ void Draw(cui_ctx* ui, LoginClient& client)
             if (client.showSignOut) {
                 if (Button(ui, "Cancel")) client.showSignOut = false;
                 else if (Button(ui, "Confirm", true)) client.SignOutGame();
-            } else if (signedIn) {
-                if (Button(ui, "Sign out")) client.showSignOut = true;
             } else if (disconnected) {
                 if (Button(ui, "Back to sign-in")) client.Reset();
             } else if (client.stage != Stage::SigningOutGame && Button(ui, "Cancel")) {
