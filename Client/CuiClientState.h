@@ -121,6 +121,8 @@ inline constexpr WORD GameClearActors = 633;
 inline constexpr WORD GameActorRemove = 803;
 inline constexpr WORD GameActorRevive = 1316;
 inline constexpr WORD GameActorReviveRefresh = 1321;
+inline constexpr WORD GameRush = 6, GameBump = 7;
+inline constexpr WORD ClientQueryBag = 81;
 inline constexpr WORD GameNpcDialogue = 643;
 inline constexpr WORD GameNpcClose = 644;
 inline constexpr WORD GameShopGoods = 645;
@@ -206,6 +208,20 @@ struct LocalScene {
         std::uint64_t registeredUntil=0;
         std::optional<std::uint8_t> lastMonster;
     };
+    struct LocalLifeAction {
+        WORD opcode,x,y,direction;
+        mir3_cui::CharacterAppearance appearance;
+        unsigned mount;
+        std::uint32_t flags;
+    };
+    struct ForcedStep {
+        static constexpr std::uint64_t FrameMs=96;
+        int frame=-1,dx=0,dy=0;
+        unsigned destinationX=0,destinationY=0;
+        WORD opcode=0;
+        std::uint64_t frameAt=0;
+    };
+    using LocalAction = std::variant<HumanHit,LocalLifeAction>;
     using RemoteSpell = std::variant<RemoteCast,mir3::SpellReply,RemoteMelee,HumanHit>;
     struct PendingMelee { unsigned x,y,facing; WORD opcode; std::uint64_t at; };
     struct Movement {
@@ -290,7 +306,9 @@ struct LocalScene {
     std::uint64_t levelPoseAt = 0;
     mir3::CastVisual casting;
     HumanHealth health;
-    std::deque<HumanHit> receivedHits;
+    std::deque<LocalAction> localActions;
+    bool dead=false,dying=false;
+    ForcedStep forcedStep;
     std::uint64_t lastSpecialHit=0;
     unsigned foldedHits=0;
     std::deque<mir3::SpellReply> spellMessages;
@@ -306,8 +324,8 @@ struct LocalScene {
     std::optional<PendingMelee> pendingMelee;
     bool meleePointerCaptured = false;
     std::uint32_t actionFlags = 0;
-    bool TakingHit() const {
-        return !receivedHits.empty() || (!casting.clock.finished() &&
+    bool ActionInputBlocked() const {
+        return dead || forcedStep.frame>=0 || !localActions.empty() || (!casting.clock.finished() &&
             (casting.clock.action()==15 || casting.clock.action()==32));
     }
     unsigned spellOriginalFacing = 0;
@@ -357,6 +375,28 @@ inline constexpr std::array<std::array<int, 2>, 8> SceneDirections{{
     {0,-1},{1,-1},{1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1}
 }};
 inline constexpr float SceneCellPitch = 24;
+
+inline std::array<int,2> LocalActorPixel(const LocalScene& scene)
+{
+    std::array pixel{int(scene.x)*48,int(scene.y)*32};
+    const auto& step=scene.forcedStep;
+    if (step.frame<0) return pixel;
+    const unsigned direction=(scene.facing+(step.opcode==GameBackstep ? 4 : 0))%8;
+    const bool committed=step.frame>=(direction==7 ? 4 : 1);
+    const int scale=committed ? step.frame-5 : step.frame+1;
+    pixel[0]+=step.dx*8*scale;
+    pixel[1]+=(committed && direction%2 ? 32*step.dy/6 : step.dy*5)*scale;
+    return pixel;
+}
+
+inline std::array<int,2> LocalActorCamera(const LocalScene& scene)
+{
+    const auto& step=scene.forcedStep;
+    if (step.frame<0) return {int(scene.x)*48-376,int(scene.y)*32-227};
+    constexpr std::array x{8,16,24,32,40,48},y{5,11,16,21,27,32};
+    return {(int(step.destinationX)-step.dx)*48-376+step.dx*x[step.frame],
+            (int(step.destinationY)-step.dy)*32-227+step.dy*y[step.frame]};
+}
 
 inline mir3::SpellPixel ActorWorldPixel(const LocalScene::Player& actor)
 {
@@ -1434,7 +1474,7 @@ public:
         if (found == scene.players.end() || !found->second.IsNpc() || found->second.dead) return false;
         const auto& npc = found->second;
         const auto now = GetTickCount64();
-        if (stage == Stage::GameSession && (!lastNpcClick || now - lastNpcClick > 1500) &&
+        if (stage == Stage::GameSession && !scene.dead && (!lastNpcClick || now - lastNpcClick > 1500) &&
             std::abs(static_cast<int>(scene.x) - static_cast<int>(npc.x)) <= 2 &&
             std::abs(static_cast<int>(scene.y) - static_cast<int>(npc.y)) <= 2 &&
             output_.size() < 8192) {
@@ -1505,7 +1545,7 @@ public:
     {
         const auto now=GetTickCount64();
         if (stage!=Stage::GameSession || showSignOut || !scene.terrain.Ready() || scene.pending.deadline || scene.pendingMelee ||
-            scene.TakingHit() || scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 || mount.shape || !characterStatus.hp[0] ||
+            scene.ActionInputBlocked() || scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 || mount.shape || !characterStatus.hp[0] ||
             output_.size()>8192-2*(DEFBLOCKSIZE+3)) return;
         const int x=int(scene.x), y=int(scene.y), dx=targetX-x, dy=targetY-y;
         const std::array direction{std::abs(dy)>2 && std::abs(dx)<=1 ? 0 : (dx>0)-(dx<0),
@@ -1524,7 +1564,7 @@ public:
         const auto tick=GetTickCount64();
         if (stage!=Stage::GameSession || showSignOut || !scene.terrain.Ready() || mount.shape ||
             (characterStatus.hp[1] && !characterStatus.hp[0]) || scene.pending.deadline || scene.pendingMelee || minimap.visible ||
-            scene.TakingHit() || scene.InputDelayed(tick) || output_.size()>=8192 || slot<1 || slot>12) return;
+            scene.ActionInputBlocked() || scene.InputDelayed(tick) || output_.size()>=8192 || slot<1 || slot>12) return;
         auto& timing=scene.spellTiming;
         const auto now=static_cast<std::uint32_t>(tick);
         if (!timing.key_ready(now,slot,repeat)) return;
@@ -1634,8 +1674,8 @@ public:
         const auto now=GetTickCount64();
         if (stage!=Stage::GameSession || showSignOut || scene.InputDelayed(now) || !scene.terrain.Ready() ||
             mount.shape || !characterStatus.hp[0] || scene.pending.deadline || scene.pendingMelee ||
-            scene.spellReplyUntil || scene.TakingHit() || scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 ||
-            !scene.casting.clock.finished() || output_.size()>=8192) return true;
+            scene.spellReplyUntil || scene.ActionInputBlocked() || scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 ||
+            (!scene.casting.clock.finished() && scene.casting.clock.action()!=7) || output_.size()>=8192) return true;
         const auto tick=static_cast<std::uint32_t>(now);
         const auto& hand=characterStatus.hand;
         const auto level=characterStatus.level;
@@ -1652,7 +1692,8 @@ public:
         using mir3_cui::GroundCell;
         const auto now = GetTickCount64();
         if (stage != Stage::GameSession || showSignOut || !scene.terrain.Ready() || scene.pending.deadline || scene.spellReplyUntil ||
-            scene.pendingMelee || scene.TakingHit() || scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 || !scene.casting.clock.finished() ||
+            scene.pendingMelee || scene.ActionInputBlocked() || scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 ||
+            (!scene.casting.clock.finished() && scene.casting.clock.action()!=7) ||
             (scene.spellTiming.cast_at && !scene.spellTiming.movement_ready(static_cast<std::uint32_t>(now))) ||
             output_.size() >= 8192 || (characterStatus.hp[1] && !characterStatus.hp[0])) return;
         if (!scene.terrain.Contains(targetX,targetY)) return;
@@ -2237,8 +2278,7 @@ public:
             if (scene.spellReplyUntil && now>=scene.spellReplyUntil) scene.spellReplyUntil=0;
             AdvanceMelee(now);
             AdvanceHumanAction(scene.casting,0,scene.x,scene.y,characterAppearance,now);
-            if (!scene.pending.deadline && !scene.pendingMelee && scene.casting.clock.finished() && !scene.receivedHits.empty())
-                StartLocalHit(now);
+            AdvanceLocalLife(now);
             AdvanceSpellEffects(now);
             for (auto& [id,actor]:scene.players) {
                 const bool wasActing=!actor.casting.clock.finished();
@@ -2907,7 +2947,7 @@ private:
         if (input_.compare(0, 5, "+GOOD") == 0) {
             scene.spellReplyUntil=0;
             scene.crouchReplyAt=0;
-            if (scene.pending.deadline) {
+            if (scene.pending.deadline && !scene.dead) {
                 scene.SetCell(scene.pending.x, scene.pending.y);
                 scene.facing = scene.pending.facing;
                 scene.pending = {};
@@ -2915,7 +2955,7 @@ private:
             return;
         }
         if (input_.compare(0, 5, "+FAIL") == 0) {
-            if (std::exchange(scene.spellReplyUntil,0)) {
+            if (std::exchange(scene.spellReplyUntil,0) && !scene.dead) {
                 scene.facing=scene.spellOriginalFacing;
                 scene.casting={};
                 audio.StopSceneEffect(0);
@@ -2940,7 +2980,8 @@ private:
         const auto first = static_cast<WORD>(header[1] | (header[6] << 8));
         const auto second = static_cast<WORD>(header[2] | (header[8] << 8));
         const auto third = static_cast<WORD>(header[3] | (header[10] << 8));
-        if (opcode == GameLogon && stage == Stage::AuthenticatingGame) {
+        if (opcode == GameLogon && (stage == Stage::AuthenticatingGame ||
+                                    (stage==Stage::GameSession && actor==localActor_))) {
             if (!actor || actor > 0x7fffffffu || input_.size() != DEFBLOCKSIZE + 51 ||
                 (third & 0xff) >= 8) return;
             // These sections have independent six-bit padding.
@@ -2951,7 +2992,18 @@ private:
             mir3_cui::CharacterAppearance appearance;
             if (!appearance.Apply(PackedAppearance(feature)) || appearance.profession > 2) return;
 
+            const bool reentry=stage==Stage::GameSession;
+            if (reentry) {
+                using Terrain=mir3_cui::MapTerrain;
+                using Cell=mir3_cui::GroundCell;
+                const auto view=scene.terrain.ReadView(first,second);
+                const auto cell=view[Terrain::ViewRows/2*Terrain::ViewColumns+Terrain::ViewColumns/2];
+                if (cell!=Cell::Walkable && cell!=Cell::DoorOpen) return;
+            }
             stage = Stage::GameSession;
+            scene.dead=scene.dying=false;
+            ResetLocalActorActions();
+            scene.health={};
             characterAppearance = appearance;
             const auto mountShape = static_cast<unsigned char>(extension[0]);
             mount.shape = mountShape < 4 ? mountShape : 0;
@@ -2960,8 +3012,13 @@ private:
             scene.SetCell(first, second);
             scene.facing = third & 0xff;
             scene.light = third >> 8;
-            LoadChatHistory();
-            LoadItemShortcuts();
+            scene.actionFlags=0;
+            for (unsigned i=0;i<4;++i) scene.actionFlags|=std::uint32_t(std::uint8_t(feature[4+i]))<<(8*i);
+            if (reentry) Queue(ClientQueryBag,0,"");
+            else {
+                LoadChatHistory();
+                LoadItemShortcuts();
+            }
             if (portraitMapMode && !scene.mapId.empty()) {
                 portraitMapPending=true;
                 RequestMinimap();
@@ -3048,6 +3105,11 @@ private:
             }
         } else if (stage == Stage::GameSession && opcode == GameGroundItemHide) {
             if (actor && actor<=0x7fffffffu && input_.size()==DEFBLOCKSIZE) scene.groundItems.hide(static_cast<int>(actor));
+        } else if (stage==Stage::GameSession && localActor_ &&
+                   ((actor==localActor_ && (opcode==GameActorDeath || opcode==GameActorDead || opcode==GameBackstep ||
+                                            opcode==GameRush || opcode==GameBump)) ||
+                    (opcode==GameActorReviveRefresh && (actor==localActor_ || !scene.players.contains(actor))))) {
+            HandleLocalLife(opcode,first,second,third);
         } else if (stage == Stage::GameSession &&
                    (opcode == GameBackstep || opcode == GameTurn || opcode == GameWalk || opcode == GameRun)) {
             if (actor == localActor_) HandleLocalMovement(opcode, first, second, third);
@@ -3665,9 +3727,10 @@ private:
         scene.speech.clear();
         scene.levelEffects.clear();
         scene.levelPoseAt=0;
-        scene.casting={};
+        if (!scene.dying) scene.casting={};
         scene.health={};
-        scene.receivedHits.clear();
+        scene.localActions.clear();
+        scene.forcedStep={};
         scene.lastSpecialHit=0;
         scene.foldedHits=0;
         scene.spellMessages.clear();
@@ -3752,7 +3815,7 @@ private:
     void HandleLocalMovement(unsigned opcode, WORD x, WORD y, WORD direction)
     {
         const unsigned facing=direction&255;
-        if (facing >= 8) return;
+        if (facing>=8 || scene.forcedStep.frame>=0 || (scene.terrain.Ready() && !scene.terrain.Contains(x,y))) return;
         const auto size = input_.size() - DEFBLOCKSIZE;
         if (opcode == GameBackstep && size != 29) return;
         if (opcode == GameTurn && (size < 29 || size > 1024)) return;
@@ -3769,6 +3832,113 @@ private:
         if (opcode!=GameBackstep) scene.light=direction>>8;
         scene.pending = {};
         if (opcode==GameWalk || opcode==GameRun || opcode==GameBackstep) scene.crouchedAt=scene.crouchReplyAt=0;
+    }
+
+    void ResetLocalActorActions()
+    {
+        scene.pending={};
+        scene.forcedStep={};
+        scene.pendingMelee.reset();
+        scene.localActions.clear();
+        scene.casting={};
+        scene.spellMessages.clear();
+        scene.spellReplyUntil=scene.levelPoseAt=scene.lastMove=0;
+        scene.crouchedAt=scene.crouchReplyAt=scene.crouchHoldAt=0;
+        scene.crouchPointerCaptured=scene.meleePointerCaptured=false;
+        scene.lastSpecialHit=0;
+        scene.foldedHits=0;
+        scene.spellTiming={};
+        scene.lockedSpellActor=0;
+        audio.StopSceneEffect(0);
+    }
+
+    void HandleLocalLife(unsigned opcode,WORD x,WORD y,WORD direction)
+    {
+        const bool death=opcode==GameActorDeath || opcode==GameActorDead;
+        const auto size=input_.size()-DEFBLOCKSIZE;
+        if ((size!=29 && !(death && size==22)) || (direction&255)>=8 ||
+            !scene.terrain.Contains(x,y) || scene.localActions.size()>=64) return;
+        const auto feature=DecodeGameBytes(input_.substr(DEFBLOCKSIZE,22));
+        const auto extra=size==29 ? DecodeGameBytes(input_.substr(DEFBLOCKSIZE+22,7)) : std::string(5,0);
+        LocalScene::LocalLifeAction action{WORD(opcode),x,y,direction};
+        if (feature.size()!=16 || extra.size()!=5 || !action.appearance.Apply(PackedAppearance(feature))) return;
+        const auto [dx,dy]=SceneDirections[((direction&255)+(opcode==GameBackstep ? 4 : 0))%8];
+        if (!death && !scene.terrain.Contains(int(x)-dx,int(y)-dy)) return;
+        const unsigned shape=std::uint8_t(extra[0]);
+        action.mount=shape<4 ? shape : 0;
+        for (unsigned i=0;i<4;++i) action.flags|=std::uint32_t(std::uint8_t(feature[4+i]))<<(8*i);
+        scene.localActions.emplace_back(action);
+    }
+
+    void AdvanceLocalLife(std::uint64_t now)
+    {
+        if (scene.dying && scene.casting.clock.frame()>=9) {
+            scene.dying=false;
+            scene.casting={};
+        }
+        if (scene.dead && !scene.dying) characterStatus.hp[0]=0;
+        auto& step=scene.forcedStep;
+        if (step.frame>=0) {
+            if (now<step.frameAt) return;
+            step.frameAt=now+LocalScene::ForcedStep::FrameMs;
+            step.frame+=step.opcode==GameActorReviveRefresh ? 1 : 2;
+            if (step.opcode==GameActorReviveRefresh && (step.frame==1 || step.frame==4)) {
+                const char* sample=!mount.shape ? "1.wav" : step.frame==1 ? "33.wav" : "34.wav";
+                PlaySceneSample(0,sample,int(scene.x),int(scene.y));
+            }
+            if (step.opcode==GameBump && step.frame>=4) {
+                scene.SetCell(int(step.destinationX)-step.dx,int(step.destinationY)-step.dy);
+                step={};
+                scene.casting.tick=now;
+                scene.casting.clock.start(7);
+            } else {
+                const auto direction=(scene.facing+(step.opcode==GameBackstep ? 4 : 0))%8;
+                if (step.frame>=(direction==7 ? 4 : 1)) scene.SetCell(step.destinationX,step.destinationY);
+                if (step.frame<6) return;
+                step={};
+            }
+        }
+        if (scene.pendingMelee || scene.localActions.empty() ||
+            (!scene.casting.clock.finished() && scene.casting.clock.action()!=7)) return;
+        if (!scene.dead && scene.lastMove && now-scene.lastMove<6*LocalScene::ForcedStep::FrameMs) return;
+        if (scene.pending.deadline) {
+            if (!scene.lastMove) return;
+            scene.SetCell(scene.pending.x,scene.pending.y);
+            scene.facing=scene.pending.facing;
+            scene.pending={};
+        }
+        auto record=std::move(scene.localActions.front());
+        scene.localActions.pop_front();
+        if (const auto* hit=std::get_if<LocalScene::HumanHit>(&record)) StartLocalHit(*hit,now);
+        else ApplyLocalLife(std::get<LocalScene::LocalLifeAction>(record),now);
+    }
+
+    void ApplyLocalLife(const LocalScene::LocalLifeAction& action,std::uint64_t now)
+    {
+        characterAppearance=action.appearance;
+        scene.pending={};
+        scene.spellReplyUntil=0;
+        scene.casting={};
+        scene.crouchedAt=scene.crouchReplyAt=scene.levelPoseAt=0;
+        scene.facing=action.direction&255;
+        scene.light=action.direction>>8;
+        scene.actionFlags=action.flags;
+        if (action.opcode==GameActorDeath || action.opcode==GameActorDead) {
+            scene.dying=!scene.dead && action.opcode==GameActorDead;
+            scene.dead=true;
+            scene.lockedSpellActor=0;
+            scene.SetCell(action.x,action.y);
+            if (scene.dying) {
+                scene.casting.tick=now;
+                scene.casting.clock.start(19);
+            } else characterStatus.hp[0]=0;
+            return;
+        }
+        if (action.opcode!=GameRush && action.opcode!=GameBump) mount.shape=action.mount;
+        const auto [dx,dy]=SceneDirections[(scene.facing+(action.opcode==GameBackstep ? 4 : 0))%8];
+        scene.SetCell(int(action.x)-dx,int(action.y)-dy);
+        if (!scene.dead)
+            scene.forcedStep={0,dx,dy,action.x,action.y,action.opcode,now+LocalScene::ForcedStep::FrameMs};
     }
 
     static void SetRemoteName(LocalScene::Player& player, std::string body, int palette=-1)
@@ -4001,18 +4171,19 @@ private:
             QueueHumanAction(found->second,hit);
             return;
         }
-        auto& queue=scene.receivedHits;
+        auto& queue=scene.localActions;
         if (queue.size()>=64) return;
-        if (opcode==GameActorStruck) {
+        if (opcode==GameActorStruck && !scene.dead) {
             if (scene.lastSpecialHit && GetTickCount64()-scene.lastSpecialHit<500) {
                 characterStatus.hp={hp,maximum};
                 if (hp) return;
             }
             scene.foldedHits=0;
             if (queue.size()>1) {
-                std::erase_if(queue,[&](const LocalScene::HumanHit& older) {
-                    if (older.opcode!=GameActorStruck) return false;
-                    characterStatus.hp={older.current,older.maximum};
+                std::erase_if(queue,[&](const LocalScene::LocalAction& record) {
+                    const auto* older=std::get_if<LocalScene::HumanHit>(&record);
+                    if (!older || older->opcode!=GameActorStruck) return false;
+                    characterStatus.hp={older->current,older->maximum};
                     ++scene.foldedHits;
                     return true;
                 });
@@ -4052,15 +4223,13 @@ private:
         }
     }
 
-    void StartLocalHit(std::uint64_t now)
+    void StartLocalHit(LocalScene::HumanHit hit,std::uint64_t now)
     {
-        auto hit=scene.receivedHits.front();
-        scene.receivedHits.pop_front();
         characterStatus.hp={hit.current,hit.maximum};
         characterAppearance=hit.appearance;
         scene.health.damage.enabled=damageNumbers;
-        scene.health.damage.push(-int(hit.damage));
-        if (hit.damage) {
+        if (!scene.dead) scene.health.damage.push(-int(hit.damage));
+        if (!scene.dead && hit.damage) {
             scene.crouchedAt=scene.crouchReplyAt=scene.levelPoseAt=0;
             auto& cast=scene.casting;
             cast={};
@@ -4072,10 +4241,11 @@ private:
             PlayHumanImpact(400+hit.variant,localActor_,scene.x,scene.y);
         }
         PlayHitSource(scene.health,localActor_,hit.source,scene.x,scene.y);
+        if (scene.dead) characterStatus.hp[0]=0;
         if (hit.variant) scene.lastSpecialHit=now;
-        if (hit.opcode==GameActorStruckWithSource && scene.receivedHits.size()<64) {
+        if (hit.opcode==GameActorStruckWithSource && scene.localActions.size()<64) {
             hit.opcode=GameActorStruck;
-            scene.receivedHits.push_back(hit);
+            scene.localActions.push_back(hit);
         }
     }
 
@@ -4286,7 +4456,10 @@ private:
 
     std::optional<mir3::SpellPixel> SpellTarget(std::uint32_t actor) const
     {
-        if (actor && actor==localActor_) return mir3::spell_pixel({int(scene.x),int(scene.y)});
+        if (actor && actor==localActor_) {
+            const auto pixel=LocalActorPixel(scene);
+            return mir3::SpellPixel{float(pixel[0]),float(pixel[1])};
+        }
         if (const auto it=scene.players.find(actor);it!=scene.players.end()) return ActorWorldPixel(it->second);
         return {};
     }
@@ -4313,7 +4486,7 @@ private:
     {
         if (scene.spellEffects && now>scene.spellEffectsTick) {
             const auto ms=(std::min)(now-scene.spellEffectsTick,std::uint64_t(250));
-            const mir3::SpellCell camera{int(scene.x)*48-376,int(scene.y)*32-227};
+            const auto camera=LocalActorCamera(scene);
             scene.spellEffects->advance(effectCatalog_,static_cast<unsigned>(ms),camera,
                 [&](auto actor) { return SpellTarget(actor); },
                 [&](int sample,mir3::SpellCell cell) { return PlaySpellSound(sample,cell); },
@@ -4349,7 +4522,8 @@ private:
 
     void PlaySceneSample(std::int64_t actor,const std::string& sound,int x,int y)
     {
-        const auto mix=mir3::SoundPosition::from_view((x-int(scene.x))*48+376,(y-int(scene.y))*32+227);
+        const auto camera=LocalActorCamera(scene);
+        const auto mix=mir3::SoundPosition::from_view(x*48-camera[0],y*32-camera[1]);
         const auto path=resourceRoot_/"Sound"/std::filesystem::u8path(sound).filename();
         audio.PlaySceneEffect(actor,path.c_str(),mix.volume,mix.pan,audioOptions);
     }
@@ -4383,7 +4557,7 @@ private:
         }
         if (facing>=8 || (input_.size()!=DEFBLOCKSIZE && !miningBody)) return;
         if (actor==localActor_) {
-            if (opcode!=GameMiningHit || !characterStatus.hp[0]) return;
+            if (opcode!=GameMiningHit || scene.dead || !characterStatus.hp[0]) return;
             auto& cast=scene.casting;
             const int action=mir3::HumanActions::weapon_attack(characterAppearance.weapon);
             if (cast.clock.finished() || cast.clock.action()!=action || scene.facing!=facing || cast.clock.frame()>=3) {
@@ -4440,7 +4614,7 @@ private:
         if (!scene.pendingMelee || now<scene.pendingMelee->at) return;
         const auto pending=*scene.pendingMelee;
         scene.pendingMelee.reset();
-        if (showSignOut || mount.shape || !characterStatus.hp[0] || !scene.terrain.Ready() ||
+        if (showSignOut || scene.dead || mount.shape || !characterStatus.hp[0] || !scene.terrain.Ready() ||
             scene.x!=pending.x || scene.y!=pending.y || output_.size()>=8192) return;
         const auto tick=static_cast<std::uint32_t>(now);
         const auto [dx,dy]=SceneDirections[pending.facing];
@@ -4535,8 +4709,10 @@ private:
             scene.facing=4;
             scene.pending={};
             scene.crouchedAt=scene.crouchReplyAt=0;
-            scene.levelPoseAt=now;
-            scene.casting={};
+            if (!scene.dead && scene.forcedStep.frame<0) {
+                scene.levelPoseAt=now;
+                scene.casting={};
+            }
             const auto text=ConvertText(sceneMessages_.get(1469),936,CP_UTF8);
             chat.Append(100,text.empty() ? "Level up: "+std::to_string(characterStatus.level) : text,0xffffff,33023);
         } else {

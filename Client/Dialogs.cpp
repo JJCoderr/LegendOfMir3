@@ -6173,7 +6173,7 @@ cui_rect Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAp
     int motion=facing*10+pose;
     const auto library=prefix+"Hum";
     const WorldFrame* horse=nullptr;
-    if (mount>=1 && mount<=3 && (pose<4 || (pose>=2560 && pose<2563))) {
+    if (mount>=1 && mount<=3 && (pose<4 || (pose>=2560 && pose<2563) || (pose>=2400 && pose<2406))) {
         const int mountedMotion=pose<4 ? motion+2320 : motion;
         const auto& frame=GetWorldFrame(ui,"Horse",400*(mount-1)+mountedMotion-2320);
         if (frame.image.texture && GetWorldFrame(ui,library,int(actor.clothing)*3000+mountedMotion).image.texture) {
@@ -6219,8 +6219,10 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
 {
     auto& scene=client.scene;
     if (!scene.terrain.Ready()) return {};
+    const auto playerPixel=LocalActorPixel(scene);
+    const auto mapCamera=LocalActorCamera(scene);
     SceneMapArt camera{&worldSprites_,&worldNpcs_,&worldTargets_,&worldCorpses_,&worldGroundLabels_,&worldNames_,&worldSpeech_,
-        static_cast<int>(scene.x)*48-376,static_cast<int>(scene.y)*32-227};
+        mapCamera[0],mapCamera[1]};
     const int startX=camera.cameraX/96*2, startY=camera.cameraY/64*2;
     const int originX=startX*48-camera.cameraX, originY=startY*32-camera.cameraY;
     if (mapGraphicsName_!=scene.mapId || mapGraphicsRevision_!=scene.terrain.Revision() ||
@@ -6433,14 +6435,32 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         const int crouch=CrouchPose(scene.crouchedAt,monsterNow);
         const int level=mir3::level_up_pose(scene.levelPoseAt,monsterNow);
         const int cast=scene.casting.pose();
-        const unsigned mount=cast>=0 && scene.casting.clock.action()==32 ? 0 : client.mount.shape;
-        const auto localBounds=AddWorldActor(ui,client.characterAppearance,scene.facing,scene.x,scene.y,camera,
-            cast>=0 ? cast : level>=0 ? level : crouch>=0 ? crouch : idle,client.shadowBlend,mount);
+        const auto& step=scene.forcedStep;
+        int pose=cast>=0 ? cast : level>=0 ? level : crouch>=0 ? crouch : idle;
+        unsigned mount=cast>=0 && scene.casting.clock.action()==32 ? 0 : client.mount.shape;
+        if (scene.dead) {
+            pose=scene.dying ? cast : HumanCorpsePose;
+            mount=0;
+        } else if (step.frame>=0) {
+            if (step.opcode==GameActorReviveRefresh) pose=(mount ? 2400 : 1680)+step.frame;
+            else {
+                pose=step.opcode==GameBackstep ? 400 : 1840+step.frame;
+                mount=0;
+            }
+        }
+        auto localCamera=camera;
+        localCamera.cameraX+=int(scene.x)*48-playerPixel[0];
+        localCamera.cameraY+=int(scene.y)*32-playerPixel[1];
+        const auto firstLayer=worldSprites_.size();
+        const auto localBounds=AddWorldActor(ui,client.characterAppearance,scene.facing,scene.x,scene.y,localCamera,
+            pose,client.shadowBlend,mount);
+        if (step.frame>=0) for (std::size_t i=firstLayer;i<worldSprites_.size();++i)
+            worldSprites_[i].row=(playerPixel[1]+16)/32;
         if (localBounds.w>0) {
-            const int x=int(scene.x)*48-camera.cameraX, y=int(scene.y)*32-camera.cameraY;
+            const int x=playerPixel[0]-camera.cameraX, y=playerPixel[1]-camera.cameraY;
             worldAnchors_.push_back({0,localBounds,x,y,3});
             PrepareCast(ui,scene.casting,x,y,scene.y);
-            humanBar(client.characterStatus.hp[0],client.characterStatus.hp[1],x,y);
+            humanBar(scene.dead ? 0 : client.characterStatus.hp[0],client.characterStatus.hp[1],x,y);
             humanDamage(scene.health.damage,x,y);
         }
         animated=true;
