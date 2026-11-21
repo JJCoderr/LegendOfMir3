@@ -18,6 +18,7 @@
 #include "CuiLegacy/hud/minimap.hpp"
 #include "CuiLegacy/hud/mount_panel.hpp"
 #include "CuiLegacy/hud/skill_panel.hpp"
+#include "CuiLegacy/hud/target_portrait.hpp"
 #include "CuiNpcDialogue.h"
 #include "CuiNpcShop.h"
 #include "CuiParty.h"
@@ -73,12 +74,17 @@ inline constexpr WORD GameBackstep = 9;
 inline constexpr WORD GameTurn = 10;
 inline constexpr WORD GameWalk = 11;
 inline constexpr WORD GameRun = 13;
+inline constexpr WORD GameMonsterDigUp = 20, GameMonsterRise = 27;
 inline constexpr WORD GameActorExit = 29;
 inline constexpr WORD GameActorDisappear = 30;
 inline constexpr WORD GameActorDeath = 32;
+inline constexpr WORD GameMonsterSkeleton = 33;
+inline constexpr WORD GameActorStruck = 31;
 inline constexpr WORD GameActorDead = 34;
 inline constexpr WORD GameActorName = 42;
 inline constexpr WORD GameTargetPortrait = 1403;
+inline constexpr WORD GameTargetAttributes = 1304, ClientTargetAttributes = 1047;
+inline constexpr WORD GameActorStruckWithSource = 1309;
 inline constexpr WORD GameClearActors = 633;
 inline constexpr WORD GameActorRemove = 803;
 inline constexpr WORD GameActorRevive = 1316;
@@ -150,10 +156,16 @@ struct LocalScene {
         mir3_cui::CharacterAppearance appearance;
         std::string name;
         unsigned npcShape = 0;
+        mir3::TargetPortraitVitals monsterVitals;
+        mir3::TargetAttributes monsterAttributes;
+        bool monsterAttributesRequested = false;
         std::uint32_t portraitVersion = 0;
         std::uint32_t resolvedPortraitVersion = 0;
         std::string portraitJpeg;
         std::uint64_t portraitQueryAt = 0;
+
+        bool IsMonster() const { return npcType == 3; }
+        bool IsNpc() const { return npcType == 4 || npcType == 5; }
     };
 
     Movement pending;
@@ -1231,7 +1243,7 @@ public:
     {
         const auto found = std::find_if(scene.players.begin(), scene.players.end(), [&](const auto& entry) {
             const auto& actor = entry.second;
-            return actor.npcType && !actor.dead && static_cast<int>(actor.x) == x && static_cast<int>(actor.y) == y;
+            return actor.IsNpc() && !actor.dead && static_cast<int>(actor.x) == x && static_cast<int>(actor.y) == y;
         });
         return found != scene.players.end() && ClickNpcActor(found->first);
     }
@@ -1239,7 +1251,7 @@ public:
     bool ClickNpcActor(std::uint32_t id)
     {
         const auto found = scene.players.find(id);
-        if (found == scene.players.end() || !found->second.npcType || found->second.dead) return false;
+        if (found == scene.players.end() || !found->second.IsNpc() || found->second.dead) return false;
         const auto& npc = found->second;
         const auto now = GetTickCount64();
         if (stage == Stage::GameSession && (!lastNpcClick || now - lastNpcClick > 1500) &&
@@ -1250,6 +1262,13 @@ public:
             lastNpcClick = now;
         }
         return true;
+    }
+
+    void RequestMonsterAttributes(std::uint32_t id, LocalScene::Player& monster)
+    {
+        if (stage != Stage::GameSession || monster.monsterAttributes.icon != -1 || output_.size() >= 8192) return;
+        Queue(ClientTargetAttributes, static_cast<WORD>(monster.x), "", id, 0, static_cast<WORD>(monster.y));
+        monster.monsterAttributesRequested = true;
     }
 
     void ChooseNpcOption(const mir3_cui::NpcDialogue::Row& option)
@@ -2582,7 +2601,8 @@ private:
             else HandleRemotePlayer(opcode, actor, first, second, third & 0xff);
         } else if (stage == Stage::GameSession &&
                    (opcode == GameActorDeath || opcode == GameActorDead ||
-                    opcode == GameActorRevive || opcode == GameActorReviveRefresh)) {
+                    opcode == GameActorRevive || opcode == GameActorReviveRefresh ||
+                    opcode == GameMonsterDigUp || opcode == GameMonsterRise || opcode == GameMonsterSkeleton)) {
             if (actor != localActor_) HandleRemotePlayer(opcode, actor, first, second, third & 0xff);
         } else if (stage == Stage::GameSession && opcode == GameActorName) {
             const auto player = scene.players.find(actor);
@@ -2592,6 +2612,13 @@ private:
             }
         } else if (stage == Stage::GameSession && opcode == GameTargetPortrait) {
             ApplyTargetPortrait(actor,first | (std::uint32_t(second)<<16));
+        } else if (stage == Stage::GameSession && opcode == GameTargetAttributes) {
+            ApplyMonsterAttributes(actor,first,second);
+        } else if (stage == Stage::GameSession && (opcode == GameActorStruck || opcode == GameActorStruckWithSource)) {
+            if (input_.size()==DEFBLOCKSIZE+22) {
+                const auto feature=ReadGameBody();
+                if (feature.size()==16 && feature[0]==3) ApplyMonsterVitals(actor,first,second);
+            }
         } else if (stage == Stage::GameSession && opcode == GameNpcDialogue) {
             if (actor && actor <= 0x7fffffffu && input_.size() <= DEFBLOCKSIZE + (8192 * 4 + 2) / 3) {
                 auto body = ReadGameBody();
@@ -3210,6 +3237,30 @@ private:
         target.resolvedPortraitVersion = version;
     }
 
+    void ApplyMonsterAttributes(std::uint32_t actor, WORD category, WORD state)
+    {
+        const auto found=scene.players.find(actor);
+        if (found==scene.players.end() || !found->second.IsMonster() || !found->second.monsterAttributesRequested ||
+            input_.size()!=DEFBLOCKSIZE+14) return;
+        const auto body=ReadGameBody();
+        if (body.size()!=10) return;
+        auto& attributes=found->second.monsterAttributes;
+        attributes.category=category;
+        attributes.state=state;
+        attributes.icon=static_cast<std::int8_t>(body[0]);
+        attributes.element=static_cast<unsigned char>(body[2]);
+        for (std::size_t i=0; i<attributes.modifiers.size(); ++i)
+            attributes.modifiers[i]=static_cast<std::int8_t>(body[i+3]);
+    }
+
+    void ApplyMonsterVitals(std::uint32_t actor, WORD current, WORD maximum)
+    {
+        const auto found=scene.players.find(actor);
+        if (found==scene.players.end() || !found->second.IsMonster()) return;
+        const auto percent=maximum ? (std::min)(unsigned(current)*100/maximum,100u) : 0u;
+        found->second.monsterVitals={static_cast<std::uint8_t>(percent),maximum,current};
+    }
+
     void HandleRemotePlayer(unsigned opcode, std::uint32_t actor, WORD x, WORD y, unsigned facing)
     {
         if (!actor || actor > 0x7fffffffu || facing >= 8 ||
@@ -3218,8 +3269,30 @@ private:
         if (size > 344) return;
         const auto feature = size >= 22 ? DecodeGameBytes(input_.substr(DEFBLOCKSIZE, 22)) : std::string();
         const unsigned type = feature.size() == 16 ? static_cast<unsigned char>(feature[0]) : 0;
+        if (type == 3) {
+            const auto existing=scene.players.find(actor);
+            if ((opcode==GameActorDead || opcode==GameActorRevive || opcode==GameActorReviveRefresh) &&
+                (existing==scene.players.end() || !existing->second.IsMonster())) return;
+            const auto shape=unsigned(static_cast<unsigned char>(feature[2])) |
+                (unsigned(static_cast<unsigned char>(feature[3]))<<8);
+            auto name=size>22 ? DecodeGameBytes(input_.substr(DEFBLOCKSIZE+22)) : std::string{};
+            if (size>22 && (name.empty() || name.size()>64)) return;
+            auto& monster=scene.players[actor];
+            if (!monster.IsMonster()) monster={};
+            monster.x=x;
+            monster.y=y;
+            monster.facing=facing;
+            monster.npcType=type;
+            monster.npcShape=shape;
+            if (opcode==GameActorDeath || opcode==GameActorDead || opcode==GameMonsterSkeleton) monster.dead=true;
+            else if (opcode==GameActorRevive || opcode==GameActorReviveRefresh || opcode==GameMonsterRise) monster.dead=false;
+            if (!name.empty()) SetRemoteName(monster,std::move(name));
+            return;
+        }
+        if (opcode==GameMonsterDigUp || opcode==GameMonsterRise || opcode==GameMonsterSkeleton) return;
         if (type == 4 || type == 5) {
             auto& npc = scene.players[actor];
+            if (!npc.IsNpc()) npc={};
             npc.x = x;
             npc.y = y;
             npc.facing = facing;
@@ -3238,6 +3311,7 @@ private:
         if (!named && size != 0 && size != 22 && size != 29) return;
         auto found = scene.players.find(actor);
         const bool newPlayer = found == scene.players.end();
+        if (!newPlayer && found->second.IsMonster() && !size) return;
         if (newPlayer && size < 29) return;
         LocalScene::Player next = newPlayer ? LocalScene::Player{} : found->second;
         if (size) {
@@ -3282,7 +3356,7 @@ private:
                 stats.hp = {first, third};
                 stats.mp[0] = second;
                 if (third && !first) scene.pending = {};
-            }
+            } else ApplyMonsterVitals(actor,first,third);
             break;
         case GameWeight:
             stats.weight[0] = actor & 0xffff;

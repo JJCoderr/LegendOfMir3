@@ -35,12 +35,13 @@ struct SceneActorHit {
     cui_rect bounds{};
     std::uint32_t actor = 0;
     unsigned row = 0;
+    bool monster = false;
 };
 
 struct SceneMapArt {
     const std::vector<SceneSprite>* sprites = nullptr;
     const std::vector<SceneActorHit>* npcs = nullptr;
-    const std::vector<SceneActorHit>* humans = nullptr;
+    const std::vector<SceneActorHit>* targets = nullptr;
     int cameraX = 0, cameraY = 0;
 };
 
@@ -118,6 +119,7 @@ public:
     void PrepareMinimap(cui_ctx* ui, LoginClient& client);
     bool HandleMinimapInput(cui_ctx* ui, LoginClient& client, bool modal);
     void DrawMinimapPanel(cui_ctx* ui, const LoginClient& client);
+    void DrawTargetDetails(cui_ctx* ui, bool attributes);
     bool OptionsReady() const { return optionsFrames_[0].texture != 0; }
     bool HandleOptionsInput(cui_ctx* ui, LoginClient& client, bool blocked);
     void DrawOptionsPanel(cui_ctx* ui, const LoginClient& client);
@@ -670,7 +672,7 @@ private:
     std::map<std::string,mir3::WilArchive> worldArchives_;
     std::map<WorldFrameKey,WorldFrame> worldFrames_;
     std::vector<SceneSprite> worldSprites_;
-    std::vector<SceneActorHit> worldNpcs_, worldHumans_;
+    std::vector<SceneActorHit> worldNpcs_, worldTargets_;
     mir3_cui::MapTerrain::GraphicsView mapGraphics_;
     std::uint64_t worldFrame_ = 0, mapGraphicsRevision_ = 0;
     std::uint64_t worldTextureBytes_ = 0;
@@ -819,10 +821,20 @@ private:
     BagText portraitNoticeText_;
     Image portraitPreview_, portraitEquipped_;
     Image targetPortrait_, targetCustomPortrait_;
+    mir3::WilArchive monsterPortraitArchive_;
+    std::map<int,Image> monsterPortraits_;
+    std::array<BagText,3> targetVitalsText_{};
+    std::array<BagText,7> targetModifierText_{};
+    mir3::TargetAttributes targetAttributes_;
+    int targetBadge_=-1, targetHealthWidth_=0;
+    bool targetMonster_=false, targetInformation_=false;
+    std::uint32_t lastPortraitActor_=0;
     std::string targetPortraitBytes_;
     std::uint32_t targetActor_ = 0;
     std::uint64_t targetChangedAt_ = 0;
     void RefreshTargetPortrait(cui_ctx* ui, LoginClient& client, const SceneMapArt& scene, cui_vec2 pointer, bool interactive);
+    void RefreshMonsterPortrait(cui_ctx* ui, const LocalScene::Player& actor);
+    void PaintTargetDetails(cui_ctx* ui, const HudPoint& base, bool attributes) const;
     HudHint portraitHint_;
     int portraitPressed_ = -1, portraitHovered_ = -1, portraitHintHeight_ = 0, portraitEntryHintHeight_ = 0;
     int portraitNotice_ = 0;
@@ -5904,7 +5916,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
 {
     auto& scene=client.scene;
     if (!scene.terrain.Ready()) return {};
-    SceneMapArt camera{&worldSprites_,&worldNpcs_,&worldHumans_,
+    SceneMapArt camera{&worldSprites_,&worldNpcs_,&worldTargets_,
         static_cast<int>(scene.x)*48-376,static_cast<int>(scene.y)*32-227};
     const int startX=camera.cameraX/96*2, startY=camera.cameraY/64*2;
     const int originX=startX*48-camera.cameraX, originY=startY*32-camera.cameraY;
@@ -5919,7 +5931,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
     ++worldFrame_;
     worldSprites_.clear();
     worldNpcs_.clear();
-    worldHumans_.clear();
+    worldTargets_.clear();
     constexpr std::array<const char*,15> packages{"Tilesc","Tiles30c","Tiles5c","SmTilesc","Housesc","Cliffsc",
         "Dungeonsc","Innersc","Furnituresc","Wallsc","SmObjectsc","Animationsc","Object1c","Object2c","Custom"};
     constexpr std::array<const char*,5> regions{"","Wood/","Sand/","Snow/","Forest/"};
@@ -5961,7 +5973,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
             static_cast<int>(actor.y)>=startY+View::FirstRow && static_cast<int>(actor.y)<startY+View::LastRow;
     };
     for (const auto& [id,actor]:scene.players) {
-        if (!actor.npcType || actor.dead || !visible(actor)) continue;
+        if (!actor.IsNpc() || actor.dead || !visible(actor)) continue;
         int count=4, interval=300;
         if (actor.npcType==4 && actor.npcShape==10) { count=10; interval=150; }
         if (actor.npcType==5) {
@@ -5982,9 +5994,39 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
     }
     const int idle=static_cast<int>(tick/201%4);
     for (const auto& [id,actor]:scene.players) {
-        if (actor.npcType || actor.dead || !visible(actor)) continue;
-        const auto bounds = AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,idle);
-        if (bounds.w>0) worldHumans_.push_back({bounds,id,actor.y});
+        if (actor.IsNpc() || actor.dead || !visible(actor)) continue;
+        cui_rect bounds{};
+        if (actor.IsMonster()) {
+            const int shape=actor.npcShape;
+            const int library=shape<1000 ? 88+shape/10 : shape>=2000 ? ((shape-2000)/100-121)&255 : -1;
+            std::string archive;
+            if (library>=88 && library<=107) archive="Mon-"+std::to_string(library-87);
+            else if (library>=108 && library<=127) archive="MonS-"+std::to_string(library-107);
+            else if (library==135) archive="DMon-1";
+            else if (library==136) archive="DMonS-1";
+            else if (library==141) archive="Mon-54";
+            else continue;
+            int facing=actor.facing;
+            switch (shape) {
+            case 31: case 67: case 73: case 104: case 127: case 153: case 179:
+            case 187: case 188: case 189: case 534: case 535: case 536: case 537: facing=0; break;
+            case 106: facing=1; break;
+            }
+            const bool single=shape<10 || shape==95 || mir3::TargetPortrait::special_shape(shape) || shape==538;
+            int interval=300;
+            if (shape>=145 && shape<=147) interval=150;
+            else if (shape==158) interval=200;
+            else if (shape==161 || shape==165 || shape==166) interval=250;
+            const int group=shape<1000 ? shape%10 : (shape-2000)/10;
+            const int frame=group*1000+facing*10+(single ? 0 : int(tick/interval%4));
+            const auto& sprite=GetWorldFrame(ui,archive,frame);
+            if (!sprite.image.texture) continue;
+            const int x=int(actor.x)*48-camera.cameraX+sprite.x, y=int(actor.y)*32-camera.cameraY+sprite.y;
+            worldSprites_.push_back({sprite.image.texture,x,y,sprite.image.width,sprite.image.height,int(actor.y)});
+            bounds={float(x),float(y),float(sprite.image.width),float(sprite.image.height)};
+            animated|=!single;
+        } else bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,idle);
+        if (bounds.w>0) worldTargets_.push_back({bounds,id,actor.y,actor.IsMonster()});
     }
     if (client.characterAppearance.available) {
         AddWorldActor(ui,client.characterAppearance,scene.facing,scene.x,scene.y,camera,idle);
@@ -5996,8 +6038,8 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
     std::stable_sort(worldNpcs_.begin(),worldNpcs_.end(),[](const SceneActorHit& a,const SceneActorHit& b) {
         return a.row<b.row;
     });
-    std::stable_sort(worldHumans_.begin(),worldHumans_.end(),[](const SceneActorHit& a,const SceneActorHit& b) {
-        return a.row<b.row;
+    std::stable_sort(worldTargets_.begin(),worldTargets_.end(),[](const SceneActorHit& a,const SceneActorHit& b) {
+        return a.row==b.row ? a.monster && !b.monster : a.row<b.row;
     });
     if (animated) cui_request_wakeup(ui,0.05f);
     TrimWorldFrames(ui);
@@ -6018,8 +6060,12 @@ void Dialogs::Assets::OpenGameHud(cui_ctx* ui, mir3::WilArchive& archive, const 
     }
     for (int id=2600;id<=2644;++id) gameHudHints_[id]=MakeHudHint(ui,id);
     mir3::WilArchive portraitsArchive;
-    if (portraitsArchive.open(portraits))
-        for (int id : {0,650,651,652,653,654,655}) gamePortraits_[id]=UploadFrame(ui,portraitsArchive,id,true);
+    if (portraitsArchive.open(portraits)) {
+        for (int id : {0,631,632,634,635,650,651,652,653,654,655,660,661})
+            gamePortraits_[id]=UploadFrame(ui,portraitsArchive,id,true);
+        for (int id=600; id<=629; ++id) gamePortraits_[id]=UploadFrame(ui,portraitsArchive,id,true);
+    }
+    monsterPortraitArchive_.open(portraits.parent_path()/"MonImg");
     for (int i=0;i<7;++i) minimapFrames_[i]=UploadFrame(ui,archive,1482+i,true);
     for (int i=0;i<4;++i) minimapHints_[i]=MakeHudHint(ui,1800+i);
     minimapArchive_.open(portraits.parent_path()/"Mmap");
@@ -6767,6 +6813,7 @@ void Dialogs::Assets::LeavePortraitPicker(cui_ctx* ui)
     targetPortraitBytes_.clear();
     targetPortrait_ = {};
     targetActor_ = 0;
+    lastPortraitActor_ = 0;
     portraitPicker_.last_upload = 0;
     portraitNotice_ = 0;
     portraitEntryVisible_ = portraitEntryPressed_ = false;
@@ -6786,31 +6833,40 @@ void Dialogs::Assets::RefreshTargetPortrait(cui_ctx* ui, LoginClient& client, co
 {
     const auto now = GetTickCount64();
     std::uint32_t hovered = 0;
-    if (interactive && scene.humans) {
-        const auto& humans = *scene.humans;
-        const auto hit = std::find_if(humans.rbegin(),humans.rend(),
+    if (interactive && scene.targets) {
+        const auto& targets = *scene.targets;
+        const auto hit = std::find_if(targets.rbegin(),targets.rend(),
             [&](const SceneActorHit& actor) { return Contains(actor.bounds,pointer); });
-        if (hit!=humans.rend()) hovered = hit->actor;
+        if (hit!=targets.rend()) hovered = hit->actor;
     }
+    const bool focusChanged=hovered && lastPortraitActor_!=hovered;
     if (hovered) {
         if (targetActor_!=hovered) targetChangedAt_ = now;
-        targetActor_ = hovered;
+        targetActor_ = lastPortraitActor_ = hovered;
     } else if (now-targetChangedAt_>800) {
         targetActor_ = 0;
     }
     auto target = client.scene.players.find(targetActor_);
-    if (!scene.humans || target==client.scene.players.end() || target->second.dead || target->second.npcType) {
+    targetMonster_ = targetInformation_ = false;
+    targetBadge_ = -1;
+    if (!scene.targets || target==client.scene.players.end() || target->second.dead || target->second.IsNpc()) {
         targetActor_ = 0;
+        if (!scene.targets || !client.scene.players.contains(lastPortraitActor_)) lastPortraitActor_=0;
         targetPortrait_ = {};
         targetPortraitBytes_.clear();
         Destroy(ui,targetCustomPortrait_);
         return;
     }
     auto& actor = target->second;
+    if (!hovered) cui_request_wakeup(ui,float(801-(now-targetChangedAt_))*0.001f);
+    if (actor.IsMonster()) {
+        if (focusChanged) client.RequestMonsterAttributes(targetActor_,actor);
+        RefreshMonsterPortrait(ui,actor);
+        return;
+    }
     if (hovered) client.RequestTargetPortrait(actor);
-    else cui_request_wakeup(ui,float(801-(now-targetChangedAt_))*0.001f);
     const auto& appearance = actor.appearance;
-    const int frame = appearance.profession<=2 ? 650+2*appearance.profession+appearance.body : 0;
+    const int frame = mir3::TargetPortrait::human_frame(appearance.profession,appearance.body);
     if (const auto it=gamePortraits_.find(frame);it!=gamePortraits_.end()) targetPortrait_ = it->second;
     else targetPortrait_ = {};
     const std::string_view jpeg = client.userPhotos ? std::string_view(actor.portraitJpeg) : std::string_view{};
@@ -6823,6 +6879,95 @@ void Dialogs::Assets::RefreshTargetPortrait(cui_ctx* ui, LoginClient& client, co
             actor.portraitJpeg.clear();
             actor.resolvedPortraitVersion = 0;
         }
+    }
+}
+
+void Dialogs::Assets::RefreshMonsterPortrait(cui_ctx* ui, const LocalScene::Player& actor)
+{
+    targetPortraitBytes_.clear();
+    Destroy(ui,targetCustomPortrait_);
+    targetPortrait_={};
+    const auto shape=static_cast<std::uint16_t>(actor.npcShape);
+    const int frame=mir3::TargetPortrait::monster_frame(3,shape,false);
+    if (frame<0) return;
+    const auto portrait=[&](int id) {
+        auto [entry,added]=monsterPortraits_.try_emplace(id);
+        if (added) entry->second=UploadFrame(ui,monsterPortraitArchive_,id,true);
+        return entry->second;
+    };
+    targetPortrait_=portrait(frame);
+    if (!targetPortrait_.texture) targetPortrait_=portrait(mir3::TargetPortrait::fallback_frame(frame,false));
+    targetMonster_=targetPortrait_.texture!=0;
+    targetInformation_=!mir3::TargetPortrait::special_shape(shape);
+    targetBadge_=mir3::TargetPortrait::badge(shape,actor.monsterAttributes.state);
+    targetHealthWidth_=actor.monsterVitals.bar_width();
+    targetAttributes_=actor.monsterAttributes;
+    for (int i=0;i<3;++i) {
+        const auto rect=mir3::TargetPortraitVitals::text_rect(i);
+        SetBagText(ui,targetVitalsText_[i],actor.monsterVitals.text(i),rect[2],rect[3],true);
+    }
+    for (std::size_t i=0;i<targetModifierText_.size();++i) {
+        const int value=targetAttributes_.modifiers[i];
+        SetBagText(ui,targetModifierText_[i],value ? (value>0 ? " +" : " ")+std::to_string(value)+"%" : "",40,18,false);
+    }
+}
+
+void Dialogs::Assets::DrawTargetDetails(cui_ctx* ui, bool attributes)
+{
+    if (gameHud_.layout.expanded || !targetActor_ || (attributes ? !targetInformation_ : !targetMonster_)) return;
+    const auto size=cui_viewport_size(ui);
+    cui_overlay_begin(ui,{0,0,size.x,size.y});
+    const struct { const Assets* assets; bool attributes; } draw{this,attributes};
+    cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect rect,void* value) {
+        const auto& data=*static_cast<decltype(draw)*>(value);
+        data.assets->PaintTargetDetails(ui,HudPoint(rect),data.attributes);
+    },&draw,sizeof draw);
+    cui_box_end(ui);
+}
+
+void Dialogs::Assets::PaintTargetDetails(cui_ctx* ui, const HudPoint& base, bool attributes) const
+{
+    using Layout=mir3::HudLayout;
+    const auto image=[&](const Image& art,int x,int y,cui_color tint) {
+        if (art.texture) cui_draw_image(ui,art.texture,base.Rect(x,y,art.width,art.height),{0,0,1,1},{},tint);
+    };
+    const auto icon=[&](int id,int x,int y) {
+        if (const auto it=gamePortraits_.find(id);it!=gamePortraits_.end()) image(it->second,x,y,{255,255,255,255});
+    };
+    constexpr cui_color ink{230,230,230,255};
+    if (!attributes) {
+        for (int i=0;i<3;++i) {
+            const auto rect=mir3::TargetPortraitVitals::text_rect(i);
+            image(targetVitalsText_[i].image,rect[0],rect[1],ink);
+        }
+        const auto edge=Layout::image_position(Layout::Image::target_hp_border);
+        const auto fill=Layout::image_position(Layout::Image::target_hp_fill);
+        icon(660,edge[0],edge[1]);
+        const auto bar=gamePortraits_.find(661);
+        if (bar!=gamePortraits_.end() && bar->second.texture && targetHealthWidth_>0) {
+            const auto& art=bar->second;
+            const int width=(std::min)(targetHealthWidth_,art.width);
+            cui_draw_image(ui,art.texture,base.Rect(fill[0],fill[1],width,art.height),
+                {0,0,float(width)/art.width,1},{},{255,255,255,255});
+        }
+        return;
+    }
+    cui_draw_rect_premultiplied(ui,base.Rect(615,487,105,85),{50,50,50,230});
+    constexpr cui_color outline{120,120,120,255};
+    for (const auto& edge : std::array{base.Rect(615,487,105,1),base.Rect(615,571,105,1),
+        base.Rect(615,488,1,83),base.Rect(719,488,1,83)}) cui_draw_rect(ui,edge,{},outline);
+    if (!targetAttributes_.visible()) return;
+    icon(targetAttributes_.category==0 ? 632 : 631,620,490);
+    if (targetAttributes_.element>=1 && targetAttributes_.element<=7) icon(599+targetAttributes_.element,641,490);
+    if (targetAttributes_.icon>=0 && targetAttributes_.icon<=9)
+        icon(620+targetAttributes_.icon,targetAttributes_.element ? 662 : 641,490);
+    int slot=0;
+    for (const int index:targetAttributes_.order()) {
+        if (!targetAttributes_.modifiers[index]) break;
+        const int x=620+32*(slot%3), y=510+20*(slot/3);
+        icon(610+index,x,y);
+        image(targetModifierText_[index].image,x+15,y+5,ink);
+        ++slot;
     }
 }
 
@@ -8138,6 +8283,8 @@ void Dialogs::Assets::PaintGameHud(cui_ctx* ui, cui_rect rect) const
         } else {
             image(targetPortrait_,p);
         }
+        if (const auto badge=gamePortraits_.find(targetBadge_);badge!=gamePortraits_.end())
+            image(badge->second,Layout::image_position(Layout::Image::target_badge));
     } else cui_draw_rect_premultiplied(ui,bounds(Layout::chat_backing),{30,30,30,150});
     sprite(1160,Layout::origin);
     const auto chat=Layout::chat_frame(expanded);
@@ -8234,13 +8381,12 @@ void Dialogs::Assets::DrawGameHud(cui_ctx* ui, LoginClient& client, bool pointer
             float(mir3::ChatScrollLayout::travel(chat.expanded)+thumb.height)},pointer) ||
         Contains({float(chatFrame[0]),float(chatFrame[1]),float(chatFrame[2]),float(chatFrame[3])},pointer);
     const auto map = client.characterAppearance.available ? PrepareMapArt(ui,client) : SceneMapArt{};
-    const bool interactive=!pointerCovered && !modal && !overHud;
+    const bool interactive=!pointerCovered && !modal && !overHud && !client.minimap.visible;
     RefreshTargetPortrait(ui,client,map,pointer,interactive);
-    const bool sceneInput=interactive && !client.minimap.visible;
     if (client.characterAppearance.available) {
         cui_overlay_begin(ui,base.Rect(0,0,800,map.sprites ? 600 : 467));
-        cui_push_disabled(ui,!sceneInput);
-        DrawLocalScene(ui,client,sceneInput,InventoryReady(),true,map);
+        cui_push_disabled(ui,!interactive);
+        DrawLocalScene(ui,client,interactive,InventoryReady(),true,map);
         cui_pop_disabled(ui);
         cui_box_end(ui);
     }
@@ -8576,6 +8722,7 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
         if (nativeHud) {
             loginArt->DrawUtilityPanels(ui,client,inventoryModal);
             loginArt->DrawMinimapPanel(ui,client);
+            loginArt->DrawTargetDetails(ui,false);
             if (loginArt->SkillsReady()) loginArt->DrawSkillShortcuts(ui,client);
         }
         if (nativeNpc) {
@@ -8602,6 +8749,7 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
         }
         if (nativeInventory && inventoryModal) loginArt->DrawInventoryPanel(ui,client,!bagOverlay,inventoryWasOpen);
         if (nativeHud && !fading && !portraitNotice && !client.showSignOut && !partyNotice && !guildNotice && !inventoryModal) {
+            loginArt->DrawTargetDetails(ui,true);
             loginArt->DrawChatShortcutOverlay(ui,client.chat);
             loginArt->DrawPanelHeld(ui,client);
             loginArt->DrawTradePrompt(ui,client);
