@@ -6,18 +6,35 @@
 #include "Common/EnDecode.h"
 #include "Common/Protocol.h"
 
+#include <cerrno>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
 namespace {
 
-enum class Stage { Login, Connecting, SigningIn, Servers, Selecting, Complete };
+enum class Stage { Login, Connecting, SigningIn, Servers, Selecting, Handoff, Complete };
 
 struct Server {
     std::string name;
     std::string label;
     WORD index = 0;
+    unsigned load = 0;
 };
+
+struct BillingNotice {
+    int message = 0;
+    int argument = 0;
+};
+
+BillingNotice ReadBilling(const _TDEFAULTMESSAGE& header)
+{
+    if (header.wTag) return header.wTag == 1 ? BillingNotice{102} : BillingNotice{103, header.wTag - 1};
+    if (header.wSeries) return header.wSeries == 1 ? BillingNotice{105} : BillingNotice{104, header.wSeries - 1};
+    if (header.wParam) return header.wParam <= 100 ? BillingNotice{106, header.wParam} : BillingNotice{};
+    if (header.nRecog > 0) return {107, header.nRecog};
+    return {};
+}
 
 unsigned Number(const std::string& text, unsigned maximum)
 {
@@ -50,7 +67,8 @@ std::string ConvertText(const std::string& text, UINT source, UINT destination)
 }
 
 void ReadSettings(char* host, DWORD hostSize, char* port, DWORD portSize, bool& legacy,
-    char* registration, DWORD registrationSize, char* recovery, DWORD recoverySize)
+    char* registration, DWORD registrationSize, char* recovery, DWORD recoverySize,
+    std::vector<Server>& configuredServers)
 {
     wchar_t path[MAX_PATH];
     DWORD length = GetFullPathNameW(L"Mir3.ini", MAX_PATH, path, nullptr);
@@ -60,17 +78,27 @@ void ReadSettings(char* host, DWORD hostSize, char* port, DWORD portSize, bool& 
         if (!length || length >= MAX_PATH) return;
         legacy = GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES;
     }
-    const auto read = [&](const wchar_t* key, char* value, DWORD capacity) {
+    const auto read = [&](const wchar_t* section, const wchar_t* key, char* value, DWORD capacity) {
         wchar_t setting[512];
-        const DWORD count = GetPrivateProfileStringW(L"Initial", key, L"", setting, 512, path);
+        const DWORD count = GetPrivateProfileStringW(section, key, L"", setting, 512, path);
         if (count && count < 511 &&
             WideCharToMultiByte(CP_UTF8, 0, setting, -1, nullptr, 0, nullptr, nullptr) <= static_cast<int>(capacity))
             WideCharToMultiByte(CP_UTF8, 0, setting, -1, value, capacity, nullptr, nullptr);
     };
-    read(L"ServerAddr", host, hostSize);
-    read(L"Param1", port, portSize);
-    read(L"Param2", registration, registrationSize);
-    read(L"Param3", recovery, recoverySize);
+    read(L"Initial", L"ServerAddr", host, hostSize);
+    read(L"Initial", L"Param1", port, portSize);
+    read(L"Initial", L"Param2", registration, registrationSize);
+    read(L"Initial", L"Param3", recovery, recoverySize);
+    const UINT count = GetPrivateProfileIntW(L"Server", L"ServerCount", 0, path);
+    for (UINT i = 1; i <= count && i <= 256; ++i) {
+        const std::wstring key = L"server" + std::to_wstring(i);
+        char name[512] = {};
+        char caption[512] = {};
+        read(L"Server", (key + L"name").c_str(), name, sizeof name);
+        read(L"Server", (key + L"caption").c_str(), caption, sizeof caption);
+        const auto wireName = ConvertText(name, CP_UTF8, 936);
+        if (!wireName.empty()) configuredServers.push_back({wireName, caption[0] ? caption : name});
+    }
 }
 
 void LoadChineseFont(cui_ctx* ui)
@@ -102,7 +130,10 @@ public:
     bool settingsOpen = false;
     unsigned noticeDismissals = 0;
     Stage stage = Stage::Login;
+    std::vector<Server> configuredServers;
     std::vector<Server> servers;
+    BillingNotice billing;
+    int selectionSession = 0;
     std::string status;
 
     ~LoginClient() { Reset(); }
@@ -111,6 +142,8 @@ public:
     {
         Close();
         servers.clear();
+        billing = {};
+        selectionSession = 0;
         stage = Stage::Login;
         status = message;
         SecureZeroMemory(password, sizeof password);
@@ -175,13 +208,14 @@ public:
 
     void Select(const Server& server)
     {
-        if (stage != Stage::Servers) return;
+        if (stage != Stage::Servers || billing.message) return;
         Queue(CM_SELECTSERVER, server.index, legacy ? "" : server.name);
         Wait(Stage::Selecting, "Waiting for the selection endpoint...");
     }
 
     void Poll()
     {
+        if (stage == Stage::Handoff && GetTickCount64() >= deadline_) stage = Stage::Complete;
         if (!Active()) return;
         if (stage != Stage::Servers && GetTickCount64() >= deadline_) {
             Reset("The login gateway timed out.");
@@ -343,7 +377,11 @@ private:
             return;
         }
         if (header.wIdent == SM_PASSOK_SELECTSERVER && stage == Stage::SigningIn) {
-            ReadServers(body);
+            if (!ReadServers(body)) {
+                Reset("The login gateway sent an invalid server list.");
+                return;
+            }
+            billing = legacy ? BillingNotice{} : ReadBilling(header);
             stage = Stage::Servers;
             status = servers.empty() ? "The gateway returned no selectable servers." : "";
         } else if (header.wIdent == SM_SELECTSERVER_OK &&
@@ -357,22 +395,25 @@ private:
                 return;
             }
             status = body.substr(0, slash) + ':' + body.substr(slash + 1, end - slash - 1);
+            selectionSession = header.nRecog;
             Close();
-            stage = Stage::Complete;
+            stage = legacy ? Stage::Complete : Stage::Handoff;
+            deadline_ = GetTickCount64() + 2000;
         }
     }
 
-    void ReadServers(const std::string& body)
+    bool ReadServers(const std::string& body)
     {
-        servers.clear();
+        servers = legacy ? std::vector<Server>{} : configuredServers;
         size_t start = 0;
         const char separator = legacy ? ',' : ';';
-        while (start < body.size() && servers.size() < 64) {
+        while (start < body.size()) {
             const size_t end = body.find(separator, start);
             if (end == std::string::npos) break;
             auto name = body.substr(start, end - start);
             start = end + 1;
             WORD index = 0;
+            unsigned load = 0;
             if (legacy) {
                 const size_t nameEnd = body.find(',', start);
                 if (nameEnd == std::string::npos) break;
@@ -382,13 +423,28 @@ private:
                 name = body.substr(start, nameEnd - start);
                 start = nameEnd + 1;
             } else {
-                const size_t load = name.rfind('(');
-                if (load == std::string::npos || name.back() != ')') continue;
-                name.resize(load);
+                const size_t open = name.rfind('(');
+                if (open == std::string::npos || name.back() != ')') return false;
+                const auto value = name.substr(open + 1, name.size() - open - 2);
+                char* end = nullptr;
+                errno = 0;
+                const long parsed = std::strtol(value.c_str(), &end, 10);
+                if (value.empty() || (value.front() != '-' && (value.front() < '0' || value.front() > '9')) ||
+                    *end || errno == ERANGE)
+                    return false;
+                if (parsed >= 1 && parsed <= 3) load = static_cast<unsigned>(parsed);
+                name.resize(open);
+                if (!configuredServers.empty()) {
+                    for (auto& server : servers) {
+                        if (server.name == name) server.load = load;
+                    }
+                    continue;
+                }
             }
             const std::string label = ConvertText(name, 936, CP_UTF8);
-            if (!label.empty()) servers.push_back({name, label, index});
+            if (!label.empty() && servers.size() < 256) servers.push_back({name, label, index, load});
         }
+        return true;
     }
 };
 
@@ -408,6 +464,20 @@ bool Button(cui_ctx* ui, const char* label, bool primary = false)
     cui_button_opts options = {};
     options.variant = primary ? CUI_BUTTON_PRIMARY : CUI_BUTTON_SECONDARY;
     return cui_button_ex(ui, label, &options);
+}
+
+std::string BillingText(const BillingNotice& notice)
+{
+    const auto amount = std::to_string(notice.argument);
+    switch (notice.message) {
+    case 102: return "The gateway reports a billing notice for this account.";
+    case 103: return "The gateway reports a billing balance of " + amount + " for this account.";
+    case 105: return "The gateway reports a subscription notice for this account.";
+    case 104: return "The gateway reports a subscription balance of " + amount + " for this account.";
+    case 106: return "The gateway reports a remaining balance of " + amount + ".";
+    case 107: return "The gateway reports an account balance of " + amount + ".";
+    default: return {};
+    }
 }
 
 bool IsAccountUrl(const std::string& url)
@@ -496,8 +566,24 @@ void Draw(cui_ctx* ui, LoginClient& client)
         }
         break;
     }
-    case Stage::Servers: {
+    case Stage::Servers:
+    case Stage::Handoff: {
+        const bool handingOff = client.stage == Stage::Handoff;
+        if (client.billing.message) {
+            const auto description = BillingText(client.billing);
+            modal.description = description.c_str();
+            if (cui_dialog_begin(ui, "Account notice", &open, &modal)) {
+                cui_dialog_footer_begin(ui);
+                if (Button(ui, "OK", true) || cui_key_pressed(ui, CUI_KEY_ENTER) ||
+                    cui_key_pressed(ui, CUI_KEY_SPACE))
+                    client.billing = {};
+                cui_dialog_footer_end(ui);
+                cui_dialog_end(ui);
+            }
+            break;
+        }
         if (!cui_dialog_begin(ui, "Select a server", &open, &modal)) break;
+        cui_push_disabled(ui, handingOff);
         if (!client.servers.empty()) {
             cui_scroll_opts list = {};
             list.id = "servers";
@@ -507,7 +593,10 @@ void Draw(cui_ctx* ui, LoginClient& client)
             cui_scroll_begin(ui, &list);
             for (size_t i = 0; i < client.servers.size(); ++i) {
                 cui_push_id_int(ui, static_cast<int>(i));
-                if (Button(ui, client.servers[i].label.c_str())) client.Select(client.servers[i]);
+                const auto& server = client.servers[i];
+                static const char* const loads[] = {"", " (Low load)", " (Medium load)", " (High load)"};
+                const std::string label = server.label + loads[server.load < 4 ? server.load : 0] + "###server";
+                if (Button(ui, label.c_str())) client.Select(server);
                 cui_pop_id(ui);
             }
             cui_scroll_end(ui);
@@ -517,6 +606,8 @@ void Draw(cui_ctx* ui, LoginClient& client)
         cui_dialog_footer_begin(ui);
         if (Button(ui, "Back")) client.Reset();
         cui_dialog_footer_end(ui);
+        cui_pop_disabled(ui);
+        if (handingOff) cui_secondary(ui, "Opening character selection...");
         cui_dialog_end(ui);
         break;
     }
@@ -560,13 +651,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     if (app) {
         LoginClient client;
         ReadSettings(client.host, sizeof client.host, client.port, sizeof client.port, client.legacy,
-            client.registration, sizeof client.registration, client.recovery, sizeof client.recovery);
+            client.registration, sizeof client.registration, client.recovery, sizeof client.recovery,
+            client.configuredServers);
         LoadChineseFont(cui_app_ui(app));
         while (cui_app_frame(app)) {
             auto* ui = cui_app_ui(app);
             client.Poll();
             Draw(ui, client);
-            if (client.Active()) cui_request_wakeup(ui, 0.03f);
+            if (client.Active() || client.stage == Stage::Handoff) cui_request_wakeup(ui, 0.03f);
         }
         cui_app_destroy(app);
     }
