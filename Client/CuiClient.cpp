@@ -7,6 +7,7 @@
 #include "CuiChat.h"
 #include "CuiGuild.h"
 #include "CuiParty.h"
+#include "CuiQuests.h"
 #include "CuiServerOptions.h"
 #include "Common/EnDecode.h"
 #include "Common/Protocol.h"
@@ -374,6 +375,7 @@ public:
     mir3_cui::ServerOptions serverOptions;
     mir3_cui::PartyPanel party;
     mir3_cui::GuildPanel guild;
+    mir3_cui::QuestPanel quests;
     mir3_cui::AudioOptions audioOptions;
     mir3_cui::AudioPlayer audio;
     std::wstring audioOptionsPath;
@@ -411,6 +413,7 @@ public:
         serverOptions = {};
         party = {};
         guild = {};
+        quests = {};
         audioOpen = false;
         characters.clear();
         characterIndex = -1;
@@ -567,7 +570,7 @@ public:
     void SendChat()
     {
         if (stage != Stage::GameSession || showSignOut || chat.receptionOpen || party.open || party.notice.id ||
-            guild.open || guild.requested || guild.notice || guild.action != mir3_cui::GuildAction::None ||
+            guild.open || guild.requested || guild.notice || guild.action != mir3_cui::GuildAction::None || quests.open ||
             serverOptions.open || !chat.draft[0]) return;
         const std::string draft = chat.draft;
         const bool command = draft.front() == '/' || draft.front() == '@' ||
@@ -630,6 +633,40 @@ public:
         Queue(mir3_cui::PartyMode, enabled ? 1 : 0, "");
         party.allowed = enabled;
         party.error.clear();
+    }
+
+    void OpenQuests()
+    {
+        if (stage != Stage::GameSession) return;
+        quests.open = true;
+        if (!quests.initialized && quests.entries.empty()) RequestQuests();
+    }
+
+    void RequestQuests()
+    {
+        if (!QuestCanQueue()) return;
+        Queue(mir3_cui::QuestQuery, 0, "");
+        quests.waiting = true;
+    }
+
+    void SelectQuest(int id, int child = -1)
+    {
+        quests.parent = id;
+        quests.child = child;
+        quests.resetDescription = true;
+        const auto* summary = quests.Description();
+        if (child >= 0 && child <= 65535 && id <= 65535 && summary && summary->empty() && QuestCanQueue())
+            Queue(mir3_cui::QuestTextQuery, 0, "", child, static_cast<WORD>(id));
+    }
+
+    void ExpandQuest(mir3_cui::QuestEntry& entry)
+    {
+        const int id = entry.record.id;
+        quests.expanded = quests.expanded == id ? -1 : id;
+        if (quests.expanded < 0) return;
+        SelectQuest(id);
+        if (!entry.childrenLoaded && id <= 65535 && QuestCanQueue())
+            Queue(mir3_cui::QuestChildrenQuery, 0, "", 0, static_cast<WORD>(id));
     }
 
     void RequestGuildPage(int page)
@@ -814,6 +851,17 @@ public:
     }
 
 private:
+    bool QuestCanQueue()
+    {
+        if (stage != Stage::GameSession) return false;
+        if (output_.size() >= 8192) {
+            quests.error = "The connection is busy. Try again.";
+            return false;
+        }
+        quests.error.clear();
+        return true;
+    }
+
     bool GuildCanQueue()
     {
         if (output_.size() < 8192) {
@@ -1059,11 +1107,11 @@ private:
         deadline_ = GetTickCount64() + 10000;
     }
 
-    void Queue(WORD opcode, WORD parameter, const std::string& body)
+    void Queue(WORD opcode, WORD parameter, const std::string& body, int recognition = 0, WORD series = 0)
     {
         _TDEFAULTMESSAGE header;
         static_assert(sizeof(header) == 12, "Login header wire size");
-        fnMakeDefMessage(&header, opcode, 0, parameter, 0, 0);
+        fnMakeDefMessage(&header, opcode, recognition, parameter, 0, series);
         char encodedHeader[DEFBLOCKSIZE + 1];
         fnEncodeMessage(&header, encodedHeader, sizeof encodedHeader);
         QueueFrame(encodedHeader, body);
@@ -1149,6 +1197,11 @@ private:
             HandlePartyReply(static_cast<mir3_cui::PartyReply>(opcode), actor);
         } else if (stage == Stage::GameSession && opcode >= 753 && opcode <= 776) {
             HandleGuildReply(opcode, actor);
+        } else if (stage == Stage::GameSession &&
+                   ((opcode >= 1301 && opcode <= 1303) || opcode == 1310 || opcode == 1311)) {
+            const auto first = static_cast<WORD>(header[1] | (header[6] << 8));
+            const auto third = static_cast<WORD>(header[3] | (header[10] << 8));
+            HandleQuestReply(static_cast<mir3_cui::QuestReply>(opcode), first, third);
         } else if (mir3_cui::ChatChannel(opcode) && stage == Stage::GameSession &&
                    input_.size() <= DEFBLOCKSIZE + 1024) {
             auto body = ReadGameBody();
@@ -1161,6 +1214,66 @@ private:
             if (chat.logging) {
                 std::ofstream log("Chat.txt", std::ios::binary | std::ios::app);
                 log << body << "\r\n";
+            }
+        }
+    }
+
+    void HandleQuestReply(mir3_cui::QuestReply reply, WORD first, WORD third)
+    {
+        using mir3_cui::QuestReply;
+        const bool text = reply == QuestReply::Text;
+        const auto size = input_.size() - DEFBLOCKSIZE;
+        if (size > (text ? 1366u : 10922u)) return;
+        auto body = ReadGameBody();
+        if (size && body.empty()) return;
+        const auto zero = body.find('\0');
+        if (zero != std::string::npos) body.resize(zero);
+        if (text) {
+            if (body.size() > 1023) return;
+            auto* entry = quests.Find(third);
+            auto* child = entry ? entry->FindChild(first) : nullptr;
+            if (!child) return;
+            const auto decoded = ConvertText(body, 936, CP_UTF8);
+            if (decoded.empty() && !body.empty()) return;
+            child->summary = decoded;
+            if (quests.parent == third && quests.child == first) quests.resetDescription = true;
+            return;
+        }
+
+        const bool full = reply == QuestReply::Full;
+        const bool children = reply == QuestReply::Children;
+        int parentId = third;
+        std::vector<mir3_cui::QuestRecord> records;
+        if (!mir3_cui::DecodeQuestRecords(reply, body, full || children ? first : third, parentId, records)) return;
+        for (auto& record : records) {
+            record.title = ConvertText(record.title, 936, CP_UTF8);
+            const auto summary = ConvertText(record.summary, 936, CP_UTF8);
+            if (record.title.empty() || (summary.empty() && !record.summary.empty())) return;
+            record.summary = summary;
+        }
+        if (!full && !quests.initialized) {
+            RequestQuests();
+            return;
+        }
+        if (full || reply == QuestReply::Added) {
+            quests.Sync(records, full);
+            return;
+        }
+        auto* entry = quests.Find(parentId);
+        if (!entry || records.empty()) return;
+        if (children) {
+            entry->children = std::move(records);
+            entry->childrenLoaded = true;
+            if (quests.parent == parentId) {
+                quests.child = -1;
+                quests.resetDescription = true;
+            }
+        } else {
+            auto* duplicateParent = quests.Find(first);
+            for (auto& record : records) {
+                if ((duplicateParent && duplicateParent->FindChild(record.id)) || entry->children.size() >= 2048)
+                    break;
+                entry->children.push_back(std::move(record));
             }
         }
     }
@@ -1714,7 +1827,7 @@ void DrawGameChat(cui_ctx* ui, LoginClient& client)
     const auto hasOverlay = [&]() {
         return client.showSignOut || chat.receptionOpen || client.serverOptions.open || client.audioOpen ||
             client.party.open || client.party.notice.id || client.guild.open || client.guild.requested ||
-            client.guild.notice || client.guild.action != mir3_cui::GuildAction::None;
+            client.guild.notice || client.guild.action != mir3_cui::GuildAction::None || client.quests.open;
     };
     const bool hadOverlay = hasOverlay();
     cui_push_disabled(ui, hadOverlay);
@@ -1733,6 +1846,8 @@ void DrawGameChat(cui_ctx* ui, LoginClient& client)
         client.party.open = true;
     if (Button(ui, "Guild") || (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_F)))
         client.RequestGuildPage(0);
+    if (Button(ui, "Quests") || (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_D)))
+        client.OpenQuests();
     if (Button(ui, "Server options") ||
         (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_N)))
         client.serverOptions.open = true;
@@ -2014,6 +2129,76 @@ void DrawGuild(cui_ctx* ui, LoginClient& client)
     cui_dialog_end(ui);
 }
 
+void DrawQuests(cui_ctx* ui, LoginClient& client)
+{
+    auto& quests = client.quests;
+    cui_dialog_opts dialog = {};
+    dialog.width = 510;
+    if (!cui_dialog_begin(ui, "Quests", &quests.open, &dialog)) return;
+    cui_scroll_opts list = {};
+    list.id = "quest-list";
+    list.width = CUI_FILL;
+    list.height = CUI_PX(150);
+    list.gap = 6;
+    if (quests.resetScroll) {
+        cui_scroll_to(ui, list.id, 0);
+        quests.resetScroll = false;
+    }
+    cui_scroll_begin(ui, &list);
+    if (quests.entries.empty())
+        cui_secondary(ui, quests.waiting ? "Waiting for the quest list..." : "No quests.");
+
+    cui_box row = {};
+    row.width = CUI_FILL;
+    row.gap = 6;
+    for (auto& entry : quests.entries) {
+        const auto& quest = entry.record;
+        cui_push_id_int(ui, quest.id);
+        cui_row_begin(ui, &row);
+        const std::string title = quest.title + (quest.completed ? " (Completed)" : "") + "###quest";
+        if (Button(ui, title.c_str(), quests.parent == quest.id && quests.child < 0, true))
+            client.SelectQuest(quest.id);
+        if (quest.childCount || !entry.children.empty()) {
+            if (Button(ui, quests.expanded == quest.id ? "Collapse" : "Expand"))
+                client.ExpandQuest(entry);
+        }
+        cui_box_end(ui);
+        if (quests.expanded == quest.id) {
+            if (entry.children.empty()) cui_muted(ui, entry.childrenLoaded ? "No steps." : "Waiting for quest steps...");
+            for (const auto& child : entry.children) {
+                cui_push_id_int(ui, child.id);
+                const std::string label = "  " + child.title + "###step";
+                if (Button(ui, label.c_str(), quests.parent == quest.id && quests.child == child.id, true))
+                    client.SelectQuest(quest.id, child.id);
+                cui_pop_id(ui);
+            }
+        }
+        cui_pop_id(ui);
+    }
+    cui_scroll_end(ui);
+    cui_separator(ui);
+    cui_label(ui, "Description");
+    cui_scroll_opts description = {};
+    description.id = "quest-description";
+    description.width = CUI_FILL;
+    description.height = CUI_PX(96);
+    if (quests.resetDescription) {
+        cui_scroll_to(ui, description.id, 0);
+        quests.resetDescription = false;
+    }
+    cui_scroll_begin(ui, &description);
+    const auto* text = quests.Description();
+    if (text && !text->empty()) cui_text_ex(ui, text->c_str(), nullptr);
+    else cui_secondary(ui, quests.parent < 0 ? "Select a quest." : "No description yet.");
+    cui_scroll_end(ui);
+    if (!quests.error.empty()) cui_secondary(ui, quests.error.c_str());
+    cui_dialog_footer_begin(ui);
+    if (Button(ui, "Refresh")) client.RequestQuests();
+    if (Button(ui, "Done", true) || cui_shortcut(ui, 0, CUI_KEY_D)) quests.open = false;
+    cui_dialog_footer_end(ui);
+    cui_dialog_end(ui);
+}
+
 void DrawServerOptions(cui_ctx* ui, LoginClient& client)
 {
     auto& options = client.serverOptions;
@@ -2133,6 +2318,7 @@ void Draw(cui_ctx* ui, LoginClient& client)
         else if (client.guild.open || client.guild.requested || client.guild.notice ||
                  client.guild.action != mir3_cui::GuildAction::None)
             DrawGuild(ui, client);
+        else if (client.quests.open) DrawQuests(ui, client);
         if (!client.showSignOut) return;
     } else {
         cui_heading(ui, "Mir3 Client", 1);
