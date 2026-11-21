@@ -29,6 +29,7 @@ namespace {
 struct SceneSprite {
     cui_texture texture = 0;
     int x = 0, y = 0, width = 0, height = 0, row = 0;
+    std::uint8_t opacity = 255;
 };
 
 struct SceneActorHit {
@@ -678,6 +679,7 @@ private:
     std::uint64_t worldTextureBytes_ = 0;
     int mapGraphicsX_ = 0, mapGraphicsY_ = 0;
     const WorldFrame& GetWorldFrame(cui_ctx* ui, const std::string& library, int frame);
+    const WorldFrame& GetProjectedMonsterShadow(cui_ctx* ui, const std::string& library, int frame, bool flat);
     SceneMapArt PrepareMapArt(cui_ctx* ui, LoginClient& client);
     cui_rect AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAppearance& actor, int facing, int x, int y,
         const SceneMapArt& camera, int idle);
@@ -5227,7 +5229,7 @@ void PaintLocalScene(cui_ctx* ui, cui_rect rect, void* user)
         const float scale=rect.w/800;
         for (const auto& sprite:*model.art.sprites) {
             cui_draw_image(ui,sprite.texture,{rect.x+sprite.x*scale,rect.y+sprite.y*scale,
-                sprite.width*scale,sprite.height*scale},{0,0,1,1},{},{255,255,255,255});
+                sprite.width*scale,sprite.height*scale},{0,0,1,1},{},{255,255,255,sprite.opacity});
         }
         cui_pop_clip(ui);
         return;
@@ -5867,6 +5869,33 @@ const Dialogs::Assets::WorldFrame& Dialogs::Assets::GetWorldFrame(cui_ctx* ui, c
     return result;
 }
 
+const Dialogs::Assets::WorldFrame& Dialogs::Assets::GetProjectedMonsterShadow(cui_ctx* ui, const std::string& library,
+                                                                             int frame, bool flat)
+{
+    auto [entry,inserted]=worldFrames_.try_emplace({library+(flat ? ":flat-shadow" : ":shadow"),frame});
+    auto& result=entry->second;
+    result.used=worldFrame_;
+    if (!inserted) return result;
+    const auto body=worldArchives_.at(library).frame(frame);
+    if (!body || (!flat && body->shadow_mode!=49 && body->shadow_mode!=50)) return result;
+    const bool shear=!flat && body->shadow_mode==49;
+    const int width=body->width+(shear ? body->height/2 : 0);
+    const int height=shear ? (body->height+1)/2 : body->height;
+    std::vector<std::uint8_t> rgba(std::size_t(width)*height*4);
+    for (int row=0;row<body->height;row+=shear ? 2 : 1) {
+        const int offset=shear ? (body->height-row)/2 : 0;
+        const int y=shear ? row/2 : row;
+        for (int x=0;x<body->width;++x)
+            if (body->pixels.regions[std::size_t(row)*body->width+x])
+                rgba[(std::size_t(y)*width+x+offset)*4+3]=255;
+    }
+    result.image=Upload(ui,width,height,rgba);
+    result.x=flat ? body->offset_x+3 : body->shadow_x;
+    result.y=flat ? body->offset_y+2 : body->shadow_y;
+    if (result.image.texture) worldTextureBytes_+=std::uint64_t(width)*height*4;
+    return result;
+}
+
 void Dialogs::Assets::TrimWorldFrames(cui_ctx* ui)
 {
     constexpr std::uint64_t textureBudget=128ull*1024*1024;
@@ -5996,7 +6025,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
     const int idle=static_cast<int>(tick/201%4);
     std::vector<SceneSprite> combatText;
     for (auto& [id,actor]:scene.players) {
-        if (actor.IsNpc() || actor.dead || !visible(actor)) continue;
+        if (actor.IsNpc() || (actor.dead && !actor.IsMonster()) || !visible(actor)) continue;
         cui_rect bounds{};
         if (actor.IsMonster()) {
             const int shape=actor.npcShape;
@@ -6010,14 +6039,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
             else continue;
             const bool walking=actor.monsterWalkFrame>=0;
             const bool combat=actor.monsterCombatFrame>=0;
-            int facing=actor.facing;
-            switch (shape) {
-            case 31: if (!walking && !combat) facing=0; break;
-            case 67: facing=combat && actor.monsterCombatMotion.base==160 ? 1 : 0; break;
-            case 73: case 104: case 127: case 153: case 179:
-            case 187: case 188: case 189: case 534: case 535: case 536: case 537: facing=0; break;
-            case 106: facing=1; break;
-            }
+            const bool corpse=actor.monsterDeathFrame>=0;
             const bool single=shape<10 || shape==95 || mir3::TargetPortrait::special_shape(shape) || shape==538;
             int interval=300;
             if (shape>=145 && shape<=147) interval=150;
@@ -6026,12 +6048,18 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
             const int group=shape<1000 ? shape%10 : (shape-2000)/10;
             const int walk=actor.monsterWalkFrame;
             const auto idleElapsed=actor.monsterIdleAt ? monsterNow-actor.monsterIdleAt : tick;
+            const int action=corpse ? (actor.monsterSkeleton ? 880 : 320) : walking ? 80 :
+                combat ? actor.monsterCombatMotion.base : 0;
+            const int facing=mir3::monster_resource_direction(shape,action,actor.facing);
             int pose=single ? 0 : int(idleElapsed/interval%4);
-            if (walking) pose=80+(actor.monsterBackstep ? 5-walk : walk);
-            else if (combat) pose=actor.monsterCombatMotion.base+actor.monsterCombatFrame;
+            if (corpse) pose=actor.monsterDeathFrame;
+            else if (walking) pose=actor.monsterBackstep ? 5-walk : walk;
+            else if (combat) pose=actor.monsterCombatFrame;
             if (walking && actor.monsterNextStep>monsterNow)
                 cui_request_wakeup(ui,float(actor.monsterNextStep-monsterNow)*0.001f);
-            const int frame=group*1000+facing*10+pose;
+            const int rowBase=action==320 ? mir3::monster_death_motion(shape).base : action;
+            const int directionStride=action==320 && shape==141 ? 20 : 10;
+            const int frame=group*1000+rowBase+facing*directionStride+pose;
             const auto& sprite=GetWorldFrame(ui,archive,frame);
             if (!sprite.image.texture) continue;
             int x=int(actor.x)*48-camera.cameraX+sprite.x, y=int(actor.y)*32-camera.cameraY+sprite.y;
@@ -6042,10 +6070,27 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
                 x-=dx*8*(6-step);
                 y-=dy*(reanchored ? 5*(6-step) : 32-(dx==0 ? 32*step/6 : 5*step));
             }
-            worldSprites_.push_back({sprite.image.texture,x,y,sprite.image.width,sprite.image.height,int(actor.y)});
+            std::uint8_t opacity=255;
+            const auto reviveAge=actor.monsterReviveAt ? monsterNow-actor.monsterReviveAt : MonsterReviveDuration;
+            if (reviveAge<MonsterReviveDuration) opacity=static_cast<std::uint8_t>((31*reviveAge/MonsterReviveDuration)*255/31);
+            if (!mir3::TargetPortrait::special_shape(shape)) {
+                const WorldFrame* shadow=nullptr;
+                if (library>=88 && library<=107) shadow=&GetWorldFrame(ui,"MonS-"+std::to_string(library-87),frame);
+                else if (shape>=2000 && library==135) shadow=&GetWorldFrame(ui,"DMonS-1",frame);
+                if (!shadow || !shadow->image.texture) {
+                    const bool flat=corpse && shape!=127 && shape!=153 && !actor.MonsterDying();
+                    shadow=&GetProjectedMonsterShadow(ui,archive,frame,flat);
+                }
+                if (shadow->image.texture) {
+                    const std::uint8_t shadowOpacity=client.shadowBlend || reviveAge<MonsterReviveDuration ? 104 : 255;
+                    worldSprites_.push_back({shadow->image.texture,x-sprite.x+shadow->x,y-sprite.y+shadow->y,
+                        shadow->image.width,shadow->image.height,int(actor.y),shadowOpacity});
+                }
+            }
+            worldSprites_.push_back({sprite.image.texture,x,y,sprite.image.width,sprite.image.height,int(actor.y),opacity});
             const int width=(std::min)(58,sprite.image.width), height=(std::min)(40,sprite.image.height);
             bounds={float(x+(sprite.image.width-width)/2),float(y+(sprite.image.height-height)/2),float(width),float(height)};
-            animated|=walking || combat || !single;
+            animated|=actor.MonsterAnimating() || (!corpse && !single) || reviveAge<MonsterReviveDuration;
             actor.monsterDamage.enabled=client.damageNumbers;
             const auto glyphs=actor.monsterDamage.draw(x-sprite.x,y-sprite.y,false);
             for (const auto& glyph:glyphs) {
@@ -6054,7 +6099,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
             }
             animated|=!glyphs.empty();
         } else bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,idle);
-        if (bounds.w>0) worldTargets_.push_back({bounds,id,actor.y,actor.IsMonster()});
+        if (bounds.w>0 && !actor.dead) worldTargets_.push_back({bounds,id,actor.y,actor.IsMonster()});
     }
     if (client.characterAppearance.available) {
         AddWorldActor(ui,client.characterAppearance,scene.facing,scene.x,scene.y,camera,idle);

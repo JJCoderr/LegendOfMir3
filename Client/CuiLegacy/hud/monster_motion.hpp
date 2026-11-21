@@ -50,4 +50,35 @@ inline MonsterMotion monster_struck_motion(int shape) {
     return {240,2,180};
 }
 
+inline MonsterMotion monster_death_motion(int shape) {
+    switch (shape) {
+    case 8: case 86: case 94: case 105: return {320,10,130};
+    case 30: case 37: return {320,4,220};
+    case 104: return {320,20,120};
+    case 127: case 153: case 179: case 187: case 188: case 189:
+    case 534: case 535: case 536: case 537: return {320,9,120};
+    case 141: return {720,20,120};
+    case 145: case 146: case 147: case 154: case 155: return {320,10,95};
+    case 149: case 162: case 163: case 164: return {320,10,120};
+    case 156: case 157: return {320,10,145};
+    case 158: case 165: case 166: return {320,10,150};
+    case 159: case 160: case 161: return {320,10,110};
+    case 530: case 531: case 532: case 533: case 538: return {320,8,120};
+    default: return {320,10,140};
+    }
+}
+
+inline int monster_resource_direction(int shape,int action_base,int facing) {
+    // 406750 applies the direction rules again whenever the monster starts an action.
+    switch (shape) {
+    case 31: return action_base==0?0:facing;
+    case 67: return action_base==160?1:0;
+    case 73: case 104: case 127: case 153: case 179:
+    case 187: case 188: case 189: case 534: case 535: case 536: case 537: return 0;
+    case 530: case 531: case 532: case 533: case 538: return action_base==320?0:facing;
+    case 106: return 1;
+    default: return facing;
+    }
+}
+
 }

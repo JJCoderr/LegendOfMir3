@@ -148,6 +148,7 @@ struct Gateway {
 };
 
 inline constexpr std::uint64_t MonsterMovementTick = 96;
+inline constexpr std::uint64_t MonsterReviveDuration = 600;
 
 struct LocalScene {
     struct Movement {
@@ -179,6 +180,9 @@ struct LocalScene {
         mir3::MonsterMotion monsterCombatMotion;
         std::uint64_t monsterCombatAt = 0;
         int monsterCombatFrame = -1;
+        int monsterDeathFrame = -1;
+        bool monsterSkeleton = false;
+        std::uint64_t monsterDeathAt = 0, monsterReviveAt = 0;
         std::uint32_t portraitVersion = 0;
         std::uint32_t resolvedPortraitVersion = 0;
         std::string portraitJpeg;
@@ -186,7 +190,10 @@ struct LocalScene {
 
         bool IsMonster() const { return npcType == 3; }
         bool IsNpc() const { return npcType == 4 || npcType == 5; }
-        bool MonsterAnimating() const { return monsterWalkFrame>=0 || monsterCombatFrame>=0; }
+        bool MonsterDying() const {
+            return monsterDeathFrame>=0 && !monsterSkeleton && monsterDeathFrame<mir3::monster_death_motion(npcShape).frames-1;
+        }
+        bool MonsterAnimating() const { return monsterWalkFrame>=0 || monsterCombatFrame>=0 || MonsterDying(); }
     };
 
     Movement pending;
@@ -3289,6 +3296,19 @@ private:
             (unsigned(static_cast<unsigned char>(feature[3]))<<8);
     }
 
+    static void BeginMonsterDeath(LocalScene::Player& monster, WORD opcode, std::uint64_t now, bool catchUp)
+    {
+        const bool animate=opcode==GameActorDead && !monster.dead;
+        monster.dead=true;
+        monster.monsterWalkFrame=monster.monsterCombatFrame=-1;
+        monster.monsterSkeleton=opcode==GameMonsterSkeleton;
+        monster.monsterDeathFrame=monster.monsterSkeleton || animate ? 0 : mir3::monster_death_motion(monster.npcShape).frames-1;
+        monster.monsterDeathAt=now;
+        monster.monsterReviveAt=0;
+        monster.monsterCatchUp=catchUp;
+        monster.monsterVitals.percent=0;
+    }
+
     void StartMonsterAction(LocalScene::Player& monster, const LocalScene::Player::MonsterAction& move,
                             std::uint64_t now, bool catchUp)
     {
@@ -3302,8 +3322,15 @@ private:
                 relayed.opcode=GameActorStruck;
                 monster.monsterActions.push_back(relayed);
             }
-            if (!move.current) monster.dead=true;
-            if (monster.dead || !move.damage) return;
+            if (monster.dead) {
+                if (move.damage || !monster.monsterSkeleton) BeginMonsterDeath(monster,GameActorDeath,now,false);
+                return;
+            }
+            if (!move.current) {
+                BeginMonsterDeath(monster,GameActorDead,now,catchUp);
+                return;
+            }
+            if (!move.damage) return;
             monster.monsterCombatMotion=mir3::monster_struck_motion(monster.npcShape);
             monster.monsterCombatFrame=0;
             monster.monsterCombatAt=now;
@@ -3335,6 +3362,16 @@ private:
         monster.monsterCatchUp=catchUp;
         monster.monsterSkipStep=false;
         monster.monsterCombatFrame=-1;
+        if (move.opcode==GameActorDeath || move.opcode==GameActorDead || move.opcode==GameMonsterSkeleton) {
+            BeginMonsterDeath(monster,move.opcode,now,catchUp);
+        } else if (move.opcode==GameActorRevive || move.opcode==GameActorReviveRefresh || move.opcode==GameMonsterRise) {
+            monster.dead=false;
+            monster.monsterDeathFrame=-1;
+            monster.monsterSkeleton=false;
+            if (move.opcode==GameActorRevive) monster.monsterReviveAt=now;
+        } else if (monster.dead && move.opcode==GameTurn) {
+            BeginMonsterDeath(monster,GameActorDeath,now,false);
+        }
         if (move.opcode==GameWalk || monster.monsterBackstep) {
             monster.monsterWalkFrame=0;
             monster.monsterNextStep=now+MonsterMovementTick;
@@ -3384,6 +3421,17 @@ private:
     void AdvanceMonsterActions(std::uint64_t now)
     {
         for (auto& [id,monster]:scene.players) {
+            if (monster.monsterReviveAt && now-monster.monsterReviveAt>=MonsterReviveDuration) monster.monsterReviveAt=0;
+            if (monster.MonsterDying()) {
+                const auto death=mir3::monster_death_motion(monster.npcShape);
+                const bool fast=monster.monsterCatchUp && monster.monsterDeathFrame>0;
+                const bool slowed=monster.monsterStatus&0x08000000u;
+                const int interval=(fast ? death.interval/2 : death.interval)*(slowed ? 2 : 1);
+                if (now-monster.monsterDeathAt<=static_cast<std::uint64_t>(interval)) continue;
+                monster.monsterDeathAt=now;
+                ++monster.monsterDeathFrame;
+                if (monster.MonsterDying()) continue;
+            }
             if (monster.monsterWalkFrame>=0) {
                 if (now<monster.monsterNextStep) continue;
                 monster.monsterNextStep=(now-monster.monsterNextStep>=MonsterMovementTick ? now : monster.monsterNextStep)+MonsterMovementTick;
@@ -3437,14 +3485,7 @@ private:
             if (!known) monster={};
             monster.npcType=type;
             const LocalScene::Player::MonsterAction move{x,y,opcode==GameRun ? 0u : facing,shape,status,static_cast<WORD>(opcode)};
-            if (opcode==GameWalk || opcode==GameBackstep || opcode==GameTurn) {
-                QueueMonsterAction(monster,move);
-            } else {
-                monster.monsterActions.clear();
-                StartMonsterAction(monster,move,GetTickCount64(),false);
-                if (opcode==GameActorDeath || opcode==GameActorDead || opcode==GameMonsterSkeleton) monster.dead=true;
-                else if (opcode==GameActorRevive || opcode==GameActorReviveRefresh || opcode==GameMonsterRise) monster.dead=false;
-            }
+            QueueMonsterAction(monster,move);
             if (!name.empty()) SetRemoteName(monster,std::move(name));
             return;
         }
