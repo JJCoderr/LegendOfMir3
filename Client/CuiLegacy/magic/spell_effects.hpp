@@ -74,6 +74,7 @@ struct SpellEffect {
     std::uint32_t follow=0;
     bool repeat=false, wave=false, baseWalkable=false, light=false, tail=false, finished=false;
     bool timedResidue=false;
+    bool monsterEffect=false;
     std::optional<SpellFlight> flight;
     std::optional<StagedSpell> staged;
 
@@ -87,7 +88,7 @@ struct SpellEffect {
     }
     bool drawsSprite() const {
         return !delay && !finished && !(flight && flight->orbit) && resource.id!=int(MagicEffectId::lightning_trail) &&
-            !(tail && !wave);
+            (!tail || wave || monsterEffect);
     }
 };
 
@@ -120,14 +121,33 @@ public:
         append(catalog,id,cell,0,0,false,[](int,SpellCell) { return 0; });
     }
 
-    void forgetActor(std::uint32_t id,std::optional<SpellPixel> position={})
+    template<class Sound>
+    void monsterAttack(const EffectCatalog& catalog,int id,SpellCell source,SpellCell target,std::uint32_t actor,
+                       int offset,unsigned delay,bool projectile,bool light,Sound sound)
+    {
+        if (auto* effect=append(catalog,id,source,offset,delay,projectile,sound)) {
+            effect->monsterEffect=true;
+            effect->light=light && effect->resource.outer_radius>0;
+            effect->repeat=projectile;
+            if (projectile) effect->flight.emplace(effect->position,spell_pixel(target),actor,false);
+            else effect->follow=actor;
+        }
+    }
+
+    void forgetActor(std::uint32_t id,std::optional<SpellPixel> position={},std::optional<SpellCell> lastCell={})
     {
         for (auto& effect:effects) {
             if (effect.follow==id) {
-                if (position) effect.position=*position;
+                if (effect.monsterEffect && lastCell) {
+                    effect.cell=*lastCell;
+                    effect.position=spell_pixel(*lastCell);
+                } else if (position) effect.position=*position;
                 effect.follow=0;
             }
-            if (effect.flight && effect.flight->target==id) effect.flight->target=0;
+            if (effect.flight && effect.flight->target==id) {
+                if (effect.monsterEffect && lastCell) effect.flight->destination=spell_pixel(*lastCell);
+                effect.flight->target=0;
+            }
         }
     }
 
@@ -175,8 +195,18 @@ public:
             unsigned activeMs=ms;
             if (e.delay) {
                 if (ms<e.delay) { e.delay-=ms; continue; }
-                activeMs=e.flight ? ms : ms-e.delay;
+                activeMs=e.flight && !e.monsterEffect ? ms : ms-e.delay;
                 e.delay=0;
+            }
+            if (e.monsterEffect && e.flight) {
+                if (advanceFlight(e,catalog,activeMs,camera,track,sound,random)) {
+                    if (!e.finished) e.elapsed+=activeMs;
+                    continue;
+                }
+            }
+            if (e.monsterEffect) {
+                advanceLight(e,activeMs);
+                if (e.finished) continue;
             }
             if (e.timedResidue) {
                 e.remaining=e.remaining>ms ? e.remaining-ms : 0;
@@ -197,9 +227,9 @@ public:
                 if (change==StagedSpell::Change::finished) {e.tail=true; --e.frame;}
             }
             if (!e.wave && !e.staged && !e.tail) advanceFrame(e,activeMs);
-            if (e.flight && advanceFlight(e,catalog,activeMs,camera,track,sound,random)) continue;
+            if (!e.monsterEffect && e.flight && advanceFlight(e,catalog,activeMs,camera,track,sound,random)) continue;
             if (e.flight && e.soundVoice) positionSound(e.soundVoice,e.resource.id*10+10001,e.position);
-            advanceLight(e,activeMs);
+            if (!e.monsterEffect) advanceLight(e,activeMs);
             if (e.wave && !e.tail) advanceWave(e,activeMs,camera,random,embers);
             if (e.tail && !e.light) e.finished=true;
         }
@@ -361,7 +391,7 @@ private:
         if (!e.light) return;
         e.lightClock+=ms;
         const auto& r=e.resource;
-        if (e.tail && (e.wave || SpellLight::fades(static_cast<SkillId>(r.id)))) {
+        if (e.tail && (e.wave || (!e.monsterEffect && SpellLight::fades(static_cast<SkillId>(r.id))))) {
             e.lightStep=0;
             e.fade+=2;
             int brightest=0;
