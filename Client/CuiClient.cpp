@@ -9,6 +9,7 @@
 #include <cerrno>
 #include <array>
 #include <cstdio>
+#include <cstdint>
 #include <cstdlib>
 #include <fstream>
 #include <map>
@@ -19,9 +20,12 @@ namespace {
 
 enum class Stage {
     Groups, Login, Connecting, SigningIn, Servers, Selecting, Handoff,
-    ConnectingCharacters, Characters, Complete, GameEndpoint
+    ConnectingCharacters, Characters, Complete, ConnectingGame, AuthenticatingGame,
+    GameSession, SigningOutGame, GameDisconnected
 };
 enum class CharacterDialog { None, Create, Delete };
+constexpr WORD GameLogon = 50;
+constexpr WORD GameLogout = 1009;
 
 struct Gateway {
     std::string host;
@@ -353,6 +357,8 @@ public:
     int selectionSession = 0;
     Gateway selectionGateway;
     Gateway gameGateway;
+    std::string gameCharacter;
+    bool showSignOut = false;
     std::vector<Character> characters;
     int characterIndex = -1;
     int characterPage = 0;
@@ -377,6 +383,8 @@ public:
         selectionSession = 0;
         selectionGateway = {};
         gameGateway = {};
+        gameCharacter.clear();
+        showSignOut = false;
         characters.clear();
         characterIndex = -1;
         characterPage = 0;
@@ -384,6 +392,7 @@ public:
         characterNotice.clear();
         CloseCharacterDialog();
         signedInAccount_.clear();
+        gameRole_.clear();
         stage = Stage::Login;
         status = message;
         SecureZeroMemory(password, sizeof password);
@@ -518,17 +527,29 @@ public:
         RequestCharacter(CM_SELCHR, signedInAccount_ + '/' + characters[characterIndex].name);
     }
 
+    void SignOutGame()
+    {
+        if (stage != Stage::GameSession) return;
+        showSignOut = false;
+        Queue(GameLogout, 0, "");
+        Wait(Stage::SigningOutGame, "Signing out...");
+    }
+
     void Poll()
     {
         if (stage == Stage::Handoff && GetTickCount64() >= deadline_) OpenCharacters();
+        if (stage == Stage::ConnectingGame && !Active()) OpenGameGateway();
         if (!Active()) return;
         const bool characterConnection = stage == Stage::Characters || stage == Stage::ConnectingCharacters;
-        if (stage != Stage::Servers && (stage != Stage::Characters || characterRequest) &&
+        const bool gameConnection = IsGameConnection();
+        if (stage != Stage::Servers && stage != Stage::GameSession &&
+            (stage != Stage::Characters || characterRequest) &&
             GetTickCount64() >= deadline_) {
-            Reset(characterConnection ? "The character gateway timed out." : "The login gateway timed out.");
+            if (gameConnection) EndGameSession("The game gateway timed out.");
+            else Reset(characterConnection ? "The character gateway timed out." : "The login gateway timed out.");
             return;
         }
-        if (stage == Stage::Connecting || stage == Stage::ConnectingCharacters) {
+        if (stage == Stage::Connecting || stage == Stage::ConnectingCharacters || stage == Stage::ConnectingGame) {
             fd_set writable, failed;
             FD_ZERO(&writable);
             FD_ZERO(&failed);
@@ -537,12 +558,15 @@ public:
             timeval timeout = {};
             if (select(0, nullptr, &writable, &failed, &timeout) == SOCKET_ERROR ||
                 FD_ISSET(socket_, &failed)) {
-                Reset(characterConnection ? "Could not connect to the character gateway."
-                                          : "Could not connect to the login gateway.");
+                if (gameConnection) EndGameSession("Could not connect to the game gateway.");
+                else Reset(characterConnection ? "Could not connect to the character gateway."
+                                               : "Could not connect to the login gateway.");
                 return;
             }
             if (!FD_ISSET(socket_, &writable)) return;
-            if (characterConnection) {
+            if (gameConnection) {
+                AuthenticateGame();
+            } else if (characterConnection) {
                 stage = Stage::Characters;
                 QueryCharacters();
             } else {
@@ -557,16 +581,22 @@ public:
                 sent_ += sent;
                 if (sent_ == output_.size()) ClearOutput();
             } else if (sent == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK) {
-                Reset(characterConnection ? "Could not send to the character gateway."
-                                          : "Could not send to the login gateway.");
+                if (gameConnection) EndGameSession("Could not send to the game gateway.");
+                else Reset(characterConnection ? "Could not send to the character gateway."
+                                               : "Could not send to the login gateway.");
                 return;
             }
         }
 
+        if (stage == Stage::SigningOutGame && output_.empty()) {
+            EndGameSession("You signed out.");
+            return;
+        }
         char buffer[4096];
         const int count = recv(socket_, buffer, sizeof buffer, 0);
         if (count == 0 || (count == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)) {
-            Reset(characterConnection ? "The character gateway disconnected." : "The login gateway disconnected.");
+            if (gameConnection) EndGameSession("The game gateway disconnected.");
+            else Reset(characterConnection ? "The character gateway disconnected." : "The login gateway disconnected.");
             return;
         }
         for (int i = 0; i < count && Active(); ++i) Receive(buffer[i]);
@@ -581,6 +611,50 @@ private:
     std::string output_;
     size_t sent_ = 0;
     std::string signedInAccount_;
+    std::string gameRole_;
+
+    bool IsGameConnection() const
+    {
+        return stage == Stage::ConnectingGame || stage == Stage::AuthenticatingGame ||
+            stage == Stage::GameSession || stage == Stage::SigningOutGame;
+    }
+
+    void EndGameSession(const char* message)
+    {
+        Close();
+        stage = Stage::GameDisconnected;
+        status = message;
+        showSignOut = false;
+    }
+
+    void AuthenticateGame()
+    {
+        // The first game frame has a sequence digit and an encoded body, with no default header.
+        constexpr std::uint32_t version = 0x0131a4f0u;
+        const auto session = static_cast<std::uint32_t>(selectionSession);
+        const auto signedText = [](std::uint32_t value) {
+            return std::to_string(static_cast<std::int64_t>(value) -
+                (value >= 0x80000000u ? 0x100000000LL : 0));
+        };
+        const std::string body = "**" + signedInAccount_ + '/' + gameRole_ + '/' +
+            signedText(session ^ 0x3eb2c5ccu) + '/' +
+            signedText(version ^ session ^ 0x5580af27u) + '/' +
+            signedText(version ^ 0xfa0280afu) + "/1";
+        QueueFrame(nullptr, body);
+        Wait(Stage::AuthenticatingGame, "Waiting for game sign-in...");
+    }
+
+    void OpenGameGateway()
+    {
+        sockaddr_in address = {};
+        address.sin_family = AF_INET;
+        address.sin_port = htons(static_cast<u_short>(gameGateway.port));
+        InetPtonA(AF_INET, gameGateway.host.c_str(), &address.sin_addr);
+        const int result = Connect(address);
+        if (result == SOCKET_ERROR) EndGameSession("Could not connect to the game gateway.");
+        else if (result == 0) AuthenticateGame();
+        else Wait(Stage::ConnectingGame, "Connecting to the game gateway...");
+    }
 
     int Connect(const sockaddr_in& address)
     {
@@ -663,8 +737,10 @@ private:
                 characterNotice = "The character gateway returned an invalid game address.";
                 break;
             }
+            gameRole_ = characters[characterIndex].name;
+            gameCharacter = characters[characterIndex].label;
             Close();
-            stage = Stage::GameEndpoint;
+            Wait(Stage::ConnectingGame, "Connecting to the game gateway...");
             break;
         case SM_STARTFAIL:
             if (characterRequest != CM_SELCHR) break;
@@ -708,13 +784,18 @@ private:
         fnMakeDefMessage(&header, opcode, 0, parameter, 0, 0);
         char encodedHeader[DEFBLOCKSIZE + 1];
         fnEncodeMessage(&header, encodedHeader, sizeof encodedHeader);
+        QueueFrame(encodedHeader, body);
+    }
+
+    void QueueFrame(const char* encodedHeader, const std::string& body)
+    {
         std::vector<char> encodedBody((body.size() * 4 + 2) / 3 + 1);
         fnEncode6BitBuf(reinterpret_cast<unsigned char*>(const_cast<char*>(body.data())),
             encodedBody.data(), static_cast<int>(body.size()), static_cast<int>(encodedBody.size()));
         sequence_ = sequence_ % 9 + 1;
         output_ += '#';
         output_ += static_cast<char>('0' + sequence_);
-        output_ += encodedHeader;
+        if (encodedHeader) output_ += encodedHeader;
         output_ += encodedBody.data();
         output_ += '!';
         SecureZeroMemory(encodedBody.data(), encodedBody.size());
@@ -724,7 +805,8 @@ private:
     {
         if (byte == '*') {
             if (output_.size() >= 8192) {
-                Reset("The login gateway sent too many pending heartbeats.");
+                if (IsGameConnection()) EndGameSession("The game gateway sent too many pending heartbeats.");
+                else Reset("The gateway sent too many pending heartbeats.");
                 return;
             }
             output_ += '*';
@@ -736,16 +818,46 @@ private:
                 receiving_ = false;
                 HandleFrame();
                 input_.clear();
-            } else if (byte < 60 || byte > 123 || input_.size() >= 4096) {
-                Reset("The login gateway sent an invalid reply.");
             } else {
+                const bool game = IsGameConnection();
+                if (input_.size() >= (game ? 65536u : 4096u) || (!game && (byte < 60 || byte > 123))) {
+                    if (game) EndGameSession("The game gateway sent an oversized reply.");
+                    else Reset("The gateway sent an invalid reply.");
+                    return;
+                }
                 input_ += byte;
             }
         }
     }
 
+    void HandleGameFrame()
+    {
+        if (input_.size() < DEFBLOCKSIZE) return;
+        for (char byte : input_) {
+            if (byte < 60 || byte > 123) return;
+        }
+        std::array<unsigned char, 12> header = {};
+        if (fnDecode6BitBuf(&input_[0], reinterpret_cast<char*>(header.data()), static_cast<int>(header.size())) != 12)
+            return;
+        const unsigned opcode = header[0] | (static_cast<unsigned>(header[4]) << 8);
+        const std::uint32_t actor = header[5] | (std::uint32_t(header[7]) << 8) |
+            (std::uint32_t(header[9]) << 16) | (std::uint32_t(header[11]) << 24);
+        if (opcode == GameLogon && actor && actor <= 0x7fffffffu &&
+            stage == Stage::AuthenticatingGame && input_.size() == DEFBLOCKSIZE + 51) {
+            stage = Stage::GameSession;
+            status = "Signed in to the game gateway.";
+        } else if (opcode == SM_CERTIFICATION_FAIL || opcode == SM_OUTOFCONNECTION) {
+            EndGameSession(opcode == SM_CERTIFICATION_FAIL ? "The game gateway rejected sign-in."
+                                                         : "The game gateway ended the session.");
+        }
+    }
+
     void HandleFrame()
     {
+        if (IsGameConnection()) {
+            HandleGameFrame();
+            return;
+        }
         _TDEFAULTMESSAGE header = {};
         if (input_.size() < DEFBLOCKSIZE || fnDecodeMessage(&header, &input_[0]) != sizeof header) {
             Reset("The login gateway sent an invalid reply.");
@@ -1248,16 +1360,34 @@ void Draw(cui_ctx* ui, LoginClient& client)
             cui_dialog_end(ui);
         }
         break;
-    case Stage::GameEndpoint:
-        if (cui_dialog_begin(ui, "Game gateway", &open, &modal)) {
+    case Stage::ConnectingGame:
+    case Stage::AuthenticatingGame:
+    case Stage::GameSession:
+    case Stage::SigningOutGame:
+    case Stage::GameDisconnected: {
+        const bool disconnected = client.stage == Stage::GameDisconnected;
+        const bool signedIn = client.stage == Stage::GameSession;
+        modal.description = client.showSignOut ? "End the current game session?" : client.status.c_str();
+        if (cui_dialog_begin(ui, client.showSignOut ? "Sign out" : "Game gateway", &open, &modal)) {
             const auto address = client.gameGateway.host + ':' + std::to_string(client.gameGateway.port);
             cui_code(ui, address.c_str());
+            cui_label(ui, client.gameCharacter.c_str());
             cui_dialog_footer_begin(ui);
-            if (Button(ui, "Back to sign-in")) client.Reset();
+            if (client.showSignOut) {
+                if (Button(ui, "Cancel")) client.showSignOut = false;
+                else if (Button(ui, "Confirm", true)) client.SignOutGame();
+            } else if (signedIn) {
+                if (Button(ui, "Sign out")) client.showSignOut = true;
+            } else if (disconnected) {
+                if (Button(ui, "Back to sign-in")) client.Reset();
+            } else if (client.stage != Stage::SigningOutGame && Button(ui, "Cancel")) {
+                client.Reset();
+            }
             cui_dialog_footer_end(ui);
             cui_dialog_end(ui);
         }
         break;
+    }
     default:
         modal.description = client.status.c_str();
         if (cui_dialog_begin(ui, "Connecting", &open, &modal)) {
@@ -1298,7 +1428,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             auto* ui = cui_app_ui(app);
             client.Poll();
             Draw(ui, client);
-            if (client.Active() || client.stage == Stage::Handoff) cui_request_wakeup(ui, 0.03f);
+            if (client.Active() || client.stage == Stage::Handoff || client.stage == Stage::ConnectingGame)
+                cui_request_wakeup(ui, 0.03f);
         }
         cui_app_destroy(app);
     }
