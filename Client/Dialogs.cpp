@@ -52,6 +52,14 @@ struct SceneCaption {
     cui_color color;
 };
 
+struct SceneWeatherSprite {
+    cui_texture texture;
+    std::array<cui_vec2,4> corners;
+    cui_color tint;
+    bool fog;
+    bool screen;
+};
+
 struct SceneActorAnchor {
     std::uint32_t actor;
     cui_rect bounds;
@@ -69,6 +77,7 @@ struct SceneMapArt {
     int cameraX = 0, cameraY = 0;
     std::size_t overlayStart = 0;
     const mir3::SceneLightGrid* light = nullptr;
+    const std::vector<SceneWeatherSprite>* weather = nullptr;
 };
 
 }
@@ -702,6 +711,7 @@ private:
     std::vector<GroundLabel> worldGroundLabels_;
     std::vector<SceneActorAnchor> worldAnchors_;
     std::vector<SceneCaption> worldNames_, worldSpeech_;
+    std::vector<SceneWeatherSprite> worldWeather_;
     std::map<std::pair<std::string,int>,Image> worldText_;
     mir3::SceneLightGrid worldLight_{255};
     mir3_cui::MapTerrain::LightView mapLights_{};
@@ -719,6 +729,7 @@ private:
     SceneMapArt PrepareMapArt(cui_ctx* ui, LoginClient& client, cui_vec2 pointer, bool interactive);
     void PrepareWorldText(cui_ctx* ui, const LoginClient& client, cui_vec2 pointer, bool interactive);
     void PrepareSceneLight(LocalScene& scene, SceneMapArt& camera);
+    void PrepareWeather(cui_ctx* ui, const LoginClient& client, SceneMapArt& camera);
     void PrepareGroundItems(cui_ctx* ui, const LocalScene& scene, const SceneMapArt& camera,
                             int startX, int startY, cui_vec2 pointer, bool interactive, std::vector<SceneSprite>& overlays);
     const WorldFrame& GroundFrame(cui_ctx* ui, int looks, bool highlighted);
@@ -5274,6 +5285,16 @@ void PaintLocalScene(cui_ctx* ui, cui_rect rect, void* user)
         };
         const auto& sprites=*model.art.sprites;
         for (std::size_t i=0;i<model.art.overlayStart;++i) drawSprite(sprites[i]);
+        if (model.art.weather) {
+            constexpr cui_vec2 fogUV[]{{0,0},{1,0},{1,1},{0,1}};
+            constexpr cui_vec2 particleUV[]{{1,1},{1,0},{0,0},{0,1}};
+            for (const auto& sprite:*model.art.weather) {
+                cui_vec2 positions[4];
+                for (int k=0;k<4;++k)
+                    positions[k]={rect.x+sprite.corners[k].x*scale,rect.y+sprite.corners[k].y*scale};
+                cui_draw_effect_quad(ui,sprite.texture,positions,sprite.fog ? fogUV : particleUV,sprite.tint,sprite.screen);
+            }
+        }
         if (const auto* grid=model.art.light) {
             const auto triangle=[&](const std::array<int,3>& vertices) {
                 cui_vec2 points[3];
@@ -6339,10 +6360,50 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         return a.row==b.row ? a.monster && !b.monster : a.row<b.row;
     });
     if (animated) cui_request_wakeup(ui,0.05f);
+    PrepareWeather(ui,client,camera);
     PrepareSceneLight(scene,camera);
     PrepareWorldText(ui,client,pointer,interactive);
     TrimWorldFrames(ui);
     return camera;
+}
+
+void Dialogs::Assets::PrepareWeather(cui_ctx* ui, const LoginClient& client, SceneMapArt& camera)
+{
+    const auto& weather=client.scene.weather;
+    if ((!client.snowEnabled || !weather.fog) && !weather.other) return;
+    worldWeather_.clear();
+    camera.weather=&worldWeather_;
+    const auto frame=[&](int index) { return GetWorldFrame(ui,"ProgUse",index).image.texture; };
+    if (client.snowEnabled && weather.fog) {
+        if (const auto texture=frame(550)) {
+            const float x=-1600+weather.fog_x, y=-300-weather.fog_y;
+            worldWeather_.push_back({texture,{{{x,y},{x+4000,y},{x+4000,y+1200},{x,y+1200}}},{100,200,200,255},true,true});
+        }
+    }
+    const auto particle=[&](const mir3::SnowWeather::Particle& p,cui_texture texture,float halfWidth,float halfHeight,float angle,bool screen) {
+        if (!texture || p.x+halfWidth+halfHeight<0 || p.x-halfWidth-halfHeight>800 ||
+            p.y+halfWidth+halfHeight<0 || p.y-halfWidth-halfHeight>600) return;
+        SceneWeatherSprite sprite{texture,{{{-halfWidth,-halfHeight},{halfWidth,-halfHeight},
+            {halfWidth,halfHeight},{-halfWidth,halfHeight}}},{p.rgb[0],p.rgb[1],p.rgb[2],255},false,screen};
+        const float sn=std::sin(angle), cs=std::cos(angle);
+        for (auto& point:sprite.corners) {
+            const auto [x,y]=point;
+            point={p.x+x*cs-y*sn,p.y+x*sn+y*cs};
+        }
+        worldWeather_.push_back(sprite);
+    };
+    if (client.snowEnabled && weather.snow) {
+        const auto texture=frame(500);
+        for (const auto& p:weather.particles)
+            if (p.active) particle(p,texture,p.size*0.5f,p.size*0.5f,0,false);
+    }
+    if (weather.other) for (const auto& p:weather.rain_particles) {
+        if (!p.active) continue;
+        const float dx=p.x-p.previous_x;
+        const float angle=dx==0 ? 0.0f : std::atan2((p.y-p.previous_y)/dx,1.0f)-1.57079632679f;
+        particle(p,frame(p.texture_frame()),p.splash() ? 16.0f : 0.75f,p.splash() ? 16.0f : p.size*0.5f,angle,true);
+    }
+    cui_request_wakeup(ui,0.016f);
 }
 
 void Dialogs::Assets::PrepareSceneLight(LocalScene& scene, SceneMapArt& camera)

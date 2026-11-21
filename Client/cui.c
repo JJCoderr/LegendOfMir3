@@ -214,7 +214,7 @@ typedef struct cui_draw_list {
     cui_rect clip_stack[64]; int clip_depth;
     cui_xform xform_stack[32]; int xform_depth;
     cui_texture cur_tex;
-    bool multiply;
+    uint8_t blend;
 } cui_draw_list;
 
 void cui__draw_reset(cui_ctx *ui);
@@ -17602,19 +17602,21 @@ void cui_dockspace_end(cui_ctx *ui) {
  * and shadows are signed distance fields evaluated per pixel, so corners
  * stay smooth at any size and DPI. Paths use feathered geometry. */
 
+enum { CUI__BLEND_OVER, CUI__BLEND_MULTIPLY, CUI__BLEND_SCREEN };
+
 static cui_draw_cmd *cui__cmd(cui_ctx *ui) {
     cui_draw_list *dl = &ui->dl;
     cui_rect clip = dl->clip_stack[dl->clip_depth - 1];
     if (dl->cmd_count > 0) {
         cui_draw_cmd *c = &dl->cmd[dl->cmd_count - 1];
-        if (c->texture == dl->cur_tex && c->multiply == dl->multiply && memcmp(&c->clip, &clip, sizeof clip) == 0) return c;
-        if (c->index_count == 0) { c->texture = dl->cur_tex; c->multiply = dl->multiply; c->clip = clip; return c; }
+        if (c->texture == dl->cur_tex && c->blend == dl->blend && memcmp(&c->clip, &clip, sizeof clip) == 0) return c;
+        if (c->index_count == 0) { c->texture = dl->cur_tex; c->blend = dl->blend; c->clip = clip; return c; }
     }
     CUI__GROW(ui, dl->cmd, dl->cmd_count, dl->cmd_cap, 1);
     cui_draw_cmd *c = &dl->cmd[dl->cmd_count++];
     c->clip = clip;
     c->texture = dl->cur_tex;
-    c->multiply = dl->multiply;
+    c->blend = dl->blend;
     c->index_offset = (uint32_t)dl->idx_count;
     c->index_count = 0;
     return c;
@@ -17630,7 +17632,7 @@ void cui__draw_reset(cui_ctx *ui) {
     cui_xform id = { 1, 0, 0, 1, 0, 0 };
     dl->xform_stack[0] = id;
     dl->cur_tex = 0;
-    dl->multiply = false;
+    dl->blend = CUI__BLEND_OVER;
 }
 
 /* Composite transform: p' = p * scale + (tx, ty) (stored in ox/oy), alpha. */
@@ -17933,10 +17935,10 @@ void cui_draw_multiply_triangle(cui_ctx *ui, const cui_vec2 points[3], const cui
     if (x.alpha <= 0) return;
     float scale = ui->scale * x.scale;
     cui__set_texture(ui, 0);
-    ui->dl.multiply = true;
+    ui->dl.blend = CUI__BLEND_MULTIPLY;
     uint32_t base;
     cui_vertex *v = cui__reserve(ui, 3, 3, &base);
-    ui->dl.multiply = false;
+    ui->dl.blend = CUI__BLEND_OVER;
     for (int i = 0; i < 3; ++i) {
         v[i].x = points[i].x * scale + x.ox;
         v[i].y = points[i].y * scale + x.oy;
@@ -17948,6 +17950,30 @@ void cui_draw_multiply_triangle(cui_ctx *ui, const cui_vec2 points[3], const cui
     }
     uint32_t *ix = cui__idx(ui, 3);
     ix[0] = base; ix[1] = base + 1; ix[2] = base + 2;
+}
+
+void cui_draw_effect_quad(cui_ctx *ui, cui_texture tex, const cui_vec2 points[4],
+    const cui_vec2 uv[4], cui_color tint, bool screen) {
+    cui_xform x = cui__xf(ui);
+    tint = cui__xa(tint, x.alpha);
+    if (!tex || !tint.a) return;
+    float scale = ui->scale * x.scale;
+    cui__set_texture(ui, tex);
+    ui->dl.blend = screen ? CUI__BLEND_SCREEN : CUI__BLEND_OVER;
+    uint32_t base;
+    cui_vertex *v = cui__reserve(ui, 4, 6, &base);
+    ui->dl.blend = CUI__BLEND_OVER;
+    for (int i = 0; i < 4; ++i) {
+        v[i].x = points[i].x * scale + x.ox;
+        v[i].y = points[i].y * scale + x.oy;
+        v[i].u = uv[i].x;
+        v[i].v = uv[i].y;
+        v[i].mode = screen ? CUI_SHADE_IMAGE_SCREEN : CUI_SHADE_IMAGE_PARTICLE;
+        v[i].color = tint;
+    }
+    uint32_t *ix = cui__idx(ui, 6);
+    ix[0] = base; ix[1] = base + 1; ix[2] = base + 2;
+    ix[3] = base; ix[4] = base + 2; ix[5] = base + 3;
 }
 
 void cui_draw_polyline(cui_ctx *ui, const cui_vec2 *pts, int n, float thick, cui_color col, bool closed) {
@@ -69219,7 +69245,7 @@ static void cui__blend_run(uint8_t *p, int n, cui__px o, bool bgra, cui__blend_l
 }
 
 static void cui__raster_tri(const cui__sw_job *job, const cui_vertex *a, const cui_vertex *b, const cui_vertex *c,
-                            const cui__sw_tex *tex, int cx0, int cy0, int cx1, int cy1, bool multiply) {
+                            const cui__sw_tex *tex, int cx0, int cy0, int cx1, int cy1, uint8_t blend) {
     float area = (b->x - a->x) * (c->y - a->y) - (b->y - a->y) * (c->x - a->x);
     if (fabsf(area) < 1e-8f) return;
     float minx = CUI_MIN(a->x, CUI_MIN(b->x, c->x)), maxx = CUI_MAX(a->x, CUI_MAX(b->x, c->x));
@@ -69276,7 +69302,7 @@ static void cui__raster_tri(const cui__sw_job *job, const cui_vertex *a, const c
                 cb = (a->color.b * w0 + b->color.b * w1 + c->color.b * w2) / 255.0f;
                 ca = (a->color.a * w0 + b->color.a * w1 + c->color.a * w2) / 255.0f;
             }
-            if (multiply) {
+            if (blend == CUI__BLEND_MULTIPLY) {
                 uint8_t *dst = row + (size_t)x * 4;
                 int ri = bgra ? 2 : 0, bi = bgra ? 0 : 2;
                 dst[ri] = cui__blend_ch(0, dst[ri], cr);
@@ -69285,7 +69311,23 @@ static void cui__raster_tri(const cui__sw_job *job, const cui_vertex *a, const c
                 continue;
             }
             cui__px o;
-            if (mode == CUI_SHADE_SOLID || mode == CUI_SHADE_SOLID_PREMULTIPLIED) {
+            if (mode == CUI_SHADE_IMAGE_PARTICLE || mode == CUI_SHADE_IMAGE_SCREEN) {
+                if (!tex) continue;
+                float u = a->u * w0 + b->u * w1 + c->u * w2, v = a->v * w0 + b->v * w1 + c->v * w2;
+                cui__px t = cui__sample_rgba(tex, u, v);
+                if (t.a == 0) continue;
+                if (blend == CUI__BLEND_SCREEN) {
+                    uint8_t *dst = row + (size_t)x * 4;
+                    int ri = bgra ? 2 : 0, bi = bgra ? 0 : 2;
+                    cr *= t.r * ca; cg *= t.g * ca; cb *= t.b * ca;
+                    dst[ri] = cui__blend_ch(cr, dst[ri], 1 - cr);
+                    dst[1] = cui__blend_ch(cg, dst[1], 1 - cg);
+                    dst[bi] = cui__blend_ch(cb, dst[bi], 1 - cb);
+                    continue;
+                }
+                const float coverage = t.a * ca;
+                o = (cui__px){t.r * cr * coverage, t.g * cg * coverage, t.b * cb * coverage, coverage / 255.0f};
+            } else if (mode == CUI_SHADE_SOLID || mode == CUI_SHADE_SOLID_PREMULTIPLIED) {
                 float k = mode == CUI_SHADE_SOLID_PREMULTIPLIED ? 1.0f : ca;
                 o.r = cr * k; o.g = cg * k; o.b = cb * k; o.a = ca;
             } else if (mode == CUI_SHADE_TEXT) {
@@ -69333,6 +69375,7 @@ static bool cui__raster_quad(const cui__sw_job *job, const cui_vertex *v0, const
     if (v0->x >= v1->x || v0->y >= v3->y) return false;
     if (memcmp(&v0->color, &v1->color, 4) != 0 || memcmp(&v2->color, &v3->color, 4) != 0) return false;
     int mode = (int)(v0->mode + 0.5f);
+    if (mode == CUI_SHADE_IMAGE_PARTICLE || mode == CUI_SHADE_IMAGE_SCREEN) return false;
     float qx0 = v0->x, qy0 = v0->y, qx1 = v1->x, qy1 = v3->y;
     int x0 = CUI_MAX(cx0, (int)ceilf(qx0 - 0.5f)), x1 = CUI_MIN(cx1, (int)ceilf(qx1 - 0.5f));
     int y0 = CUI_MAX(cy0, (int)ceilf(qy0 - 0.5f)), y1 = CUI_MIN(cy1, (int)ceilf(qy1 - 0.5f));
@@ -69481,11 +69524,11 @@ static void cui__sw_run(cui__sw_job *job) {
         const cui__sw_tex *tex = (slot >= 0 && slot < r->tex_count && r->tex[slot].used) ? &r->tex[slot] : NULL;
         for (uint32_t k = 0; k + 2 < cmd->index_count; k += 3) {
             const uint32_t *ix = dd->indices + cmd->index_offset + k;
-            if (!cmd->multiply && k + 5 < cmd->index_count && ix[3] == ix[0] && ix[4] == ix[2] && ix[1] == ix[0] + 1 && ix[2] == ix[0] + 2 && ix[5] == ix[0] + 3) {
+            if (cmd->blend == CUI__BLEND_OVER && k + 5 < cmd->index_count && ix[3] == ix[0] && ix[4] == ix[2] && ix[1] == ix[0] + 1 && ix[2] == ix[0] + 2 && ix[5] == ix[0] + 3) {
                 const cui_vertex *q = &dd->vertices[ix[0]];
                 if (cui__raster_quad(job, &q[0], &q[1], &q[2], &q[3], tex, cx0, cy0, cx1, cy1)) { k += 3; continue; }
             }
-            cui__raster_tri(job, &dd->vertices[ix[0]], &dd->vertices[ix[1]], &dd->vertices[ix[2]], tex, cx0, cy0, cx1, cy1, cmd->multiply);
+            cui__raster_tri(job, &dd->vertices[ix[0]], &dd->vertices[ix[1]], &dd->vertices[ix[2]], tex, cx0, cy0, cx1, cy1, cmd->blend);
         }
     }
 }
@@ -69553,7 +69596,7 @@ static void cui__sw_tile_hashes(cui_sw_renderer *r, const cui_draw_data *dd, uin
         const cui_draw_cmd *cmd = &dd->commands[ci];
         cui_texture tid = cmd->texture ? cmd->texture : dd->font_atlas;
         uint64_t ch = cui__sw_hash_bytes(&cmd->clip, sizeof cmd->clip, (uint64_t)tid + 7);
-        ch = cui__sw_hash_bytes(&cmd->multiply, sizeof cmd->multiply, ch);
+        ch = cui__sw_hash_bytes(&cmd->blend, sizeof cmd->blend, ch);
         /* a changed part of this command's texture, in texture pixels */
         int cx0 = 0, cy0 = 0, cx1 = 0, cy1 = 0;
         float tw_px = 1, th_px = 1;
@@ -71428,6 +71471,7 @@ typedef unsigned int GLbitfield_;
 #define GL_CULL_FACE_ 0x0B44
 #define GL_ONE_ 1
 #define GL_ONE_MINUS_SRC_ALPHA_ 0x0303
+#define GL_ONE_MINUS_SRC_COLOR_ 0x0301
 #define GL_DST_COLOR_ 0x0306
 #define GL_FUNC_ADD_ 0x8006
 #define GL_TEXTURE_2D_ 0x0DE1
@@ -71564,6 +71608,13 @@ static const char *cui__fs_src =
     "  vec4 c = v_color;\n"
     "  if (mode == 4) { frag = vec4(c.rgb * c.a, c.a); return; }\n"
     "  if (mode == 5) { frag = c; return; }\n"
+    "  if (mode == 7 || mode == 8) {\n"
+    "    vec4 t = texture(u_tex, v_uv);\n"
+    "    if (t.a == 0.0) discard;\n"
+    "    float k = t.a * c.a;\n"
+    "    frag = mode == 8 ? vec4(t.rgb * c.rgb * c.a, 0.0) : vec4(t.rgb * c.rgb * k, k / 255.0);\n"
+    "    return;\n"
+    "  }\n"
     "  if (mode == 0) { float a = c.a * texture(u_tex, v_uv).r; frag = vec4(c.rgb * a, a); return; }\n"
     "  float d = sd_rrect(v_local, v_half, v_radii);\n"
     "  if (mode == 1) {\n"
@@ -71786,7 +71837,7 @@ void cui_gl_render(cui_gl_renderer *r, const cui_draw_data *dd, bool clear) {
     r->gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER_, r->ebo);
     r->gl.BufferData(GL_ELEMENT_ARRAY_BUFFER_, (GLsizeiptr_)(sizeof(uint32_t) * (size_t)dd->index_count), dd->indices, GL_STREAM_DRAW_);
     GLuint_ bound = (GLuint_)-1;
-    bool multiply = false;
+    uint8_t blend = CUI__BLEND_OVER;
     for (int i = 0; i < dd->command_count; i++) {
         const cui_draw_cmd *c = &dd->commands[i];
         if (!c->index_count) continue;
@@ -71794,9 +71845,11 @@ void cui_gl_render(cui_gl_renderer *r, const cui_draw_data *dd, bool clear) {
         int x1 = (int)ceilf(c->clip.x + c->clip.w), y1 = (int)ceilf(c->clip.y + c->clip.h);
         if (x1 <= x0 || y1 <= y0) continue;
         r->gl.Scissor(x0, H - y1, x1 - x0, y1 - y0);
-        if (multiply != c->multiply) {
-            multiply = c->multiply;
-            r->gl.BlendFunc(multiply ? GL_DST_COLOR_ : GL_ONE_, multiply ? 0 : GL_ONE_MINUS_SRC_ALPHA_);
+        if (blend != c->blend) {
+            blend = c->blend;
+            if (blend == CUI__BLEND_MULTIPLY) r->gl.BlendFunc(GL_DST_COLOR_, 0);
+            else if (blend == CUI__BLEND_SCREEN) r->gl.BlendFunc(GL_ONE_, GL_ONE_MINUS_SRC_COLOR_);
+            else r->gl.BlendFunc(GL_ONE_, GL_ONE_MINUS_SRC_ALPHA_);
         }
         cui_texture t = c->texture ? c->texture : dd->font_atlas;
         int slot = (int)t - 1;
@@ -71804,7 +71857,7 @@ void cui_gl_render(cui_gl_renderer *r, const cui_draw_data *dd, bool clear) {
         if (tid != bound) { r->gl.BindTexture(GL_TEXTURE_2D_, tid); bound = tid; }
         r->gl.DrawElements(GL_TRIANGLES_, (GLsizei_)c->index_count, GL_UNSIGNED_INT_, (const void *)(uintptr_t)(c->index_offset * sizeof(uint32_t)));
     }
-    if (multiply) r->gl.BlendFunc(GL_ONE_, GL_ONE_MINUS_SRC_ALPHA_);
+    if (blend != CUI__BLEND_OVER) r->gl.BlendFunc(GL_ONE_, GL_ONE_MINUS_SRC_ALPHA_);
     r->gl.Disable(GL_SCISSOR_TEST_);
     r->gl.BindVertexArray(0);
     r->gl.UseProgram(0);

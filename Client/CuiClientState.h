@@ -23,6 +23,7 @@
 #include "CuiLegacy/hud/scene_lighting.hpp"
 #include "CuiLegacy/hud/scene_name.hpp"
 #include "CuiLegacy/hud/speech_bubble.hpp"
+#include "CuiLegacy/hud/snow_weather.hpp"
 #include "CuiLegacy/hud/skill_panel.hpp"
 #include "CuiLegacy/hud/target_portrait.hpp"
 #include "CuiNpcDialogue.h"
@@ -233,6 +234,8 @@ struct LocalScene {
     mir3_cui::MapTerrain::View ground{};
     mir3::SceneAmbient ambient;
     std::uint64_t ambientTick = 0;
+    mir3::SnowWeather weather;
+    std::uint64_t weatherTick = 0;
     unsigned light = 0;
     std::map<std::uint32_t, Player> players;
     mir3::GroundItems groundItems;
@@ -584,6 +587,7 @@ public:
     bool minimapUnavailable = false, minimapShowActors = true;
     bool portraitMapMode = false, portraitMapPending = false, portraitMapReady = false;
     bool forceAttack = true, magicLight = true, damageNumbers = true, shadowBlend = false, userPhotos = true;
+    bool snowEnabled = true;
     struct LocalOption {
         bool LoginClient::*value;
         const wchar_t* key;
@@ -949,6 +953,7 @@ public:
             chat.Append(103, draft, 16750230);
         }
         if (draft == "@chatsave") chat.logging = !chat.logging;
+        if (draft == "@snow") snowEnabled = !snowEnabled;
         Queue(mir3_cui::Say, 0, wire);
     }
 
@@ -1996,6 +2001,12 @@ public:
                 scene.ambient.advance(double(now-scene.ambientTick));
                 scene.ambientTick=now;
             }
+            const auto weatherElapsed=now-scene.weatherTick;
+            if ((!snowEnabled || !scene.weather.fog) && !scene.weather.other) scene.weatherTick=now;
+            else if (scene.terrain.Ready() && weatherElapsed>=16) {
+                scene.weather.advance(int((std::min)(weatherElapsed,std::uint64_t(250))),snowEnabled);
+                scene.weatherTick=now;
+            }
         }
         if (returnToCharactersAt && now>=returnToCharactersAt && (!Active() || output_.empty() || now>=deadline_)) {
             Close();
@@ -2659,6 +2670,7 @@ private:
             const auto mountShape = static_cast<unsigned char>(extension[0]);
             mount.shape = mountShape < 4 ? mountShape : 0;
             localActor_ = actor;
+            scene.weather.random_state=static_cast<std::uint32_t>(GetTickCount64());
             scene.SetCell(first, second);
             scene.facing = third & 0xff;
             scene.light = third >> 8;
@@ -2679,9 +2691,11 @@ private:
             HandleMapUpdate(opcode, first, second, third);
         } else if (stage == Stage::GameSession && opcode == GameDayChanging) {
             if (input_.size()==DEFBLOCKSIZE) {
-                scene.ambient.select_base(first&255,std::rand());
+                scene.ambient.select_base(first&255,scene.weather.random());
                 if (second!=scene.ambient.mode) scene.ambientTick=GetTickCount64();
                 scene.ambient.update(second);
+                scene.weather.select(third);
+                scene.weatherTick=GetTickCount64();
             }
         } else if (stage == Stage::GameSession && (opcode == GameChangeLight || opcode == GameActorLight)) {
             if (input_.size()==DEFBLOCKSIZE) {
@@ -3323,7 +3337,11 @@ private:
         scene.y = y;
         scene.terrain.Open(scene.mapId,resourceRoot_/"Map");
         scene.ground = scene.terrain.ReadView(x, y);
-        if (scene.terrain.Ready()) scene.ambient.enter(atmosphere);
+        if (scene.terrain.Ready()) {
+            scene.ambient.enter(atmosphere);
+            scene.weather.select(atmosphere>>8,true);
+            scene.weatherTick=GetTickCount64();
+        }
         const bool reopen=minimap.visible || minimap.pending;
         const bool large=minimap.large, translucent=minimap.translucent;
         ClearMinimap();
