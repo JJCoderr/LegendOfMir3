@@ -500,7 +500,6 @@ public:
     mir3_cui::TradePanel trade;
     std::uint64_t mountInputUntil = 0;
     bool skillShortcutsVisible = false;
-    unsigned skillListRevision = 0;
     mir3::Minimap minimap;
     WORD minimapReply = 0;
     bool minimapUnavailable = false, minimapShowActors = true;
@@ -638,7 +637,6 @@ private:
         trade = {};
         mountInputUntil = 0;
         skillShortcutsVisible = false;
-        ++skillListRevision;
         inventory = {};
         itemShortcutFilePresent_ = false;
         equipment = {};
@@ -2268,7 +2266,6 @@ private:
         trade = {};
         mountInputUntil = 0;
         skillShortcutsVisible = false;
-        ++skillListRevision;
         ClearMinimap();
         stage = Stage::GameDisconnected;
         status = message;
@@ -3100,11 +3097,13 @@ private:
             if (full) body.remove_prefix(end+1);
         }
         const int previous = next.tab;
-        if (full) next.tab = 0;
+        if (full) {
+            next.tab = 0;
+            next.menu_target = -1;
+        }
         next.select_nonempty();
         if (full && next.learned[next.tab].empty()) next.tab = previous;
         skills = std::move(next);
-        if (full) ++skillListRevision;
     }
 
     void HandleMapUpdate(unsigned opcode, WORD x, WORD y)

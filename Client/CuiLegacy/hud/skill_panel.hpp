@@ -61,6 +61,7 @@ struct SkillPanel : DraggablePanel {
     std::array<int,8> selected{-1,-1,-1,-1,-1,-1,-1,-1};
     std::array<int,13> bindings{}; // Original shortcut slots store the low byte of each skill ID.
     int tab=0,scroll=0,pressed=-1;
+    int menu_target=-1; // -1 closes the menu, 0 leaves it open without a target.
     const SkillDisplay* find(int id) const {
         const auto& group = learned[SkillLayout::category(id)];
         const auto skill = std::find_if(group.begin(),group.end(),[id](const auto& entry) { return entry.id==id; });
@@ -72,6 +73,7 @@ struct SkillPanel : DraggablePanel {
         const bool removed=skill!=group.end();
         if (removed) {
             group.erase(skill);
+            if (menu_target==id) menu_target=-1;
         }
         select_nonempty();
         return removed;

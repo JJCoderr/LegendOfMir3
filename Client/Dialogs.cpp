@@ -729,7 +729,7 @@ private:
     void OpenSkills(cui_ctx* ui, mir3::WilArchive& archive, const std::filesystem::path& root);
     void PaintSkills(cui_ctx* ui, cui_rect rect, const LoginClient& client) const;
     void PaintSkillShortcuts(cui_ctx* ui, cui_rect rect, const LoginClient& client) const;
-    int SkillAt(cui_vec2 point, const mir3::SkillPanel& skills) const;
+    const mir3::SkillPosition* SkillAt(cui_vec2 point, const mir3::SkillPanel& skills) const;
     mir3::WilArchive skillIconArchive_;
     mir3::SkillDescriptions skillDescriptions_;
     std::map<int,Image> skillFrames_, skillIcons_;
@@ -740,8 +740,7 @@ private:
     BagText skillDescriptionProgress_;
     cui_rect skillMenu_{};
     cui_vec2 skillPointer_{-1,-1};
-    int skillMenuTarget_ = 0, skillDescriptionId_ = 0;
-    unsigned skillListRevision_ = 0;
+    int skillDescriptionId_ = 0;
     enum class UtilityPanel { Party, Guild, Quest, Skills, Status, Inventory, Options, Portrait, Mount, Trade, Quick };
     static constexpr std::array<UtilityPanel,11> initialUtilityOrder_{
         UtilityPanel::Party,UtilityPanel::Guild,UtilityPanel::Quest,UtilityPanel::Skills,UtilityPanel::Status,
@@ -6433,25 +6432,22 @@ void Dialogs::Assets::ToggleSkills(LoginClient& client)
     client.skills.pressed = -1;
     client.skills.scroll_captured = false;
     skillMenu_ = {};
-    skillMenuTarget_ = skillDescriptionId_ = 0;
+    client.skills.menu_target = -1;
+    skillDescriptionId_ = 0;
 }
 
-int Dialogs::Assets::SkillAt(cui_vec2 point, const mir3::SkillPanel& skills) const
+const mir3::SkillPosition* Dialogs::Assets::SkillAt(cui_vec2 point, const mir3::SkillPanel& skills) const
 {
     for (const auto& position : mir3::SkillLayout::positions[skills.tab])
-        if (position.id && Contains({float(skills.rect[0]+position.x),float(skills.rect[1]+position.y-skills.scroll),40,40},point))
-            return position.id;
-    return 0;
+        if (Contains({float(skills.rect[0]+position.x),float(skills.rect[1]+position.y-skills.scroll),40,40},point))
+            return &position;
+    return nullptr;
 }
 
 bool Dialogs::Assets::HandleSkillInput(cui_ctx* ui, LoginClient& client, bool blocked, bool keyboard)
 {
     auto& skills = client.skills;
-    if (std::exchange(skillListRevision_,client.skillListRevision) != client.skillListRevision ||
-        (skillMenuTarget_ && !skills.find(skillMenuTarget_))) {
-        skillMenu_ = {};
-        skillMenuTarget_ = 0;
-    }
+    if (skills.menu_target<0) skillMenu_ = {};
     skillDescriptionId_ = 0;
     if (!skills.visible) return false;
     const auto view = cui_viewport_size(ui);
@@ -6464,20 +6460,27 @@ bool Dialogs::Assets::HandleSkillInput(cui_ctx* ui, LoginClient& client, bool bl
     const bool down = cui_mouse_clicked(ui,CUI_MOUSE_LEFT), up = cui_mouse_released(ui,CUI_MOUSE_LEFT);
     const bool captured = skills.dragging || skills.scroll_captured || skills.pressed>=0;
     if (blocked && !captured) return false;
-    if (!blocked && Contains(skillMenu_,point)) {
-        if (up && skillMenuTarget_) client.BindSkill(skillMenuTarget_,int(point.y-skillMenu_.y)/40*4+int(point.x-skillMenu_.x)/40+1);
-        cui_take_mouse_scroll(ui);
-        return true;
-    }
-    if (down && !blocked) skillMenu_ = {};
+    const bool onMenu = !blocked && Contains(skillMenu_,point);
     if (inside && !blocked) {
         const int steps = static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y));
         if (steps) skills.scroll = std::clamp(skills.scroll-30*steps,0,190);
-        const int id = SkillAt(point,skills);
-        if (keyboard && id)
-            for (int i=0;i<12;++i)
-                if (cui_shortcut(ui,0,static_cast<cui_key>(CUI_KEY_F1+i))) client.BindSkill(id,i+1);
-        if (!skills.scroll_captured && skillMenu_.w==0) skillDescriptionId_ = id;
+        if (const auto* position = SkillAt(point,skills)) {
+            if (keyboard)
+                for (int i=0;i<12;++i)
+                    if (cui_shortcut(ui,0,static_cast<cui_key>(CUI_KEY_F1+i))) client.BindSkill(position->id,i+1);
+            if (!skills.scroll_captured && (skillMenu_.w==0 || (down && !onMenu)))
+                skillDescriptionId_ = position->id;
+        }
+    }
+    if (onMenu) {
+        if (up && skills.menu_target>0 && skills.find(skills.menu_target))
+            client.BindSkill(skills.menu_target,int(point.y-skillMenu_.y)/40*4+int(point.x-skillMenu_.x)/40+1);
+        cui_take_mouse_scroll(ui);
+        return true;
+    }
+    if (down && !blocked) {
+        skillMenu_ = {};
+        skills.menu_target = -1;
     }
     const auto& positions = mir3::SkillLayout::positions[skills.tab];
     if (inside && !blocked && cui_mouse_double_clicked(ui)) {
@@ -6485,7 +6488,7 @@ bool Dialogs::Assets::HandleSkillInput(cui_ctx* ui, LoginClient& client, bool bl
             const auto [id,left,top] = positions[i];
             if (!id || !skills.find(id) || !Contains({float(x+left),float(y+top),40,40},point)) continue;
             const int selected = skills.selected[skills.tab];
-            skillMenuTarget_ = selected>=0 && selected<static_cast<int>(positions.size()) ? positions[selected].id : 0;
+            skills.menu_target = selected>=0 && selected<static_cast<int>(positions.size()) ? positions[selected].id : 0;
             const float menuX = static_cast<float>((std::min)(int(point.x),x+w-160));
             const float menuY = static_cast<float>((point.y+160>x+w ? y+h-120 : int(point.y))+40);
             skillMenu_ = {menuX,menuY,160,120};
