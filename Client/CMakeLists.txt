@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 4.3.1)
 
-project(LegendOfMir3_Client VERSION 0.1 LANGUAGES CXX)
+project(LegendOfMir3_Client VERSION 0.1 LANGUAGES C CXX)
 
 add_subdirectory(WindHorn)
 
@@ -95,3 +95,8 @@ target_include_directories(Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Sound
     ${CMAKE_CURRENT_SOURCE_DIR}/AVI
 )
+
+add_executable(Mir3CuiClient WIN32 CuiClient.cpp cui.c Common/EnDecode.cpp)
+set_target_properties(Mir3CuiClient PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED ON)
+set_property(SOURCE cui.c APPEND PROPERTY COMPILE_OPTIONS /utf-8)
+target_link_libraries(Mir3CuiClient PRIVATE ws2_32 opengl32 gdi32 user32 imm32 comdlg32 shell32 ole32)
