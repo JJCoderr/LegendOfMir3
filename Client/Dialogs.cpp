@@ -81,6 +81,7 @@ struct SceneMapArt {
     const mir3::SceneLightGrid* light = nullptr;
     const std::vector<SceneEffectQuad>* weather = nullptr;
     const std::vector<SceneEffectQuad>* levelEffects = nullptr;
+    const std::vector<SceneEffectQuad>* spellEffects = nullptr;
 };
 
 }
@@ -714,7 +715,7 @@ private:
     std::vector<GroundLabel> worldGroundLabels_;
     std::vector<SceneActorAnchor> worldAnchors_;
     std::vector<SceneCaption> worldNames_, worldSpeech_;
-    std::vector<SceneEffectQuad> worldWeather_, worldLevelEffects_;
+    std::vector<SceneEffectQuad> worldWeather_, worldLevelEffects_, worldSpellEffects_;
     std::vector<mir3::SceneLight> worldSpellLights_;
     std::map<std::pair<std::string,int>,Image> worldText_;
     mir3::SceneLightGrid worldLight_{255};
@@ -735,6 +736,7 @@ private:
     void PrepareSceneLight(LoginClient& client, SceneMapArt& camera);
     void PrepareWeather(cui_ctx* ui, const LoginClient& client, SceneMapArt& camera);
     void PrepareLevelEffects(cui_ctx* ui, const LocalScene& scene, SceneMapArt& camera);
+    void PrepareSpellEffects(cui_ctx* ui, LocalScene& scene, SceneMapArt& camera);
     void PrepareCast(cui_ctx* ui, const mir3::CastVisual& cast, int x, int y, int row);
     void PrepareGroundItems(cui_ctx* ui, const LocalScene& scene, const SceneMapArt& camera,
                             int startX, int startY, cui_vec2 pointer, bool interactive, std::vector<SceneSprite>& overlays);
@@ -5337,6 +5339,7 @@ void PaintLocalScene(cui_ctx* ui, cui_rect rect, void* user)
             }
         }
         effects(model.art.levelEffects);
+        effects(model.art.spellEffects);
         const auto captions=[&](const std::vector<SceneCaption>* lines) {
             if (!lines) return;
             for (const auto& line:*lines) {
@@ -6252,6 +6255,12 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         }
     }
     if (worldSprites_.empty()) return {};
+    if (scene.spellEffects) for (const auto& mark:scene.spellEffects->marks) {
+        const auto& frame=GetWorldFrame(ui,"ProgUse",mark.frame);
+        if (frame.image.texture) worldSprites_.push_back({frame.image.texture,
+            mark.cell[0]*48-camera.cameraX+frame.x,mark.cell[1]*32-camera.cameraY+frame.y,
+            frame.image.width,frame.image.height,underActors,180});
+    }
     std::vector<SceneSprite> overlays;
     PrepareGroundItems(ui,scene,camera,startX,startY,pointer,interactive,overlays);
     const auto visible=[&](const LocalScene::Player& actor) {
@@ -6318,14 +6327,8 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
             const int frame=group*1000+rowBase+facing*directionStride+pose;
             const auto& sprite=GetWorldFrame(ui,archive,frame);
             if (!sprite.image.texture) continue;
-            int x=int(actor.x)*48-camera.cameraX+sprite.x, y=int(actor.y)*32-camera.cameraY+sprite.y;
-            if (walking) {
-                const auto [dx,dy]=SceneDirections[(actor.facing+(actor.monsterBackstep ? 4 : 0))%8];
-                const int step=walk+1;
-                const bool reanchored=actor.monsterBackstep && walk>=(actor.facing==7 ? 4 : 1);
-                x-=dx*8*(6-step);
-                y-=dy*(reanchored ? 5*(6-step) : 32-(dx==0 ? 32*step/6 : 5*step));
-            }
+            const auto pixel=ActorWorldPixel(actor);
+            const int x=int(pixel[0])-camera.cameraX+sprite.x, y=int(pixel[1])-camera.cameraY+sprite.y;
             std::uint8_t opacity=255;
             const auto reviveAge=actor.monsterReviveAt ? monsterNow-actor.monsterReviveAt : MonsterReviveDuration;
             if (reviveAge<MonsterReviveDuration) opacity=static_cast<std::uint8_t>((31*reviveAge/MonsterReviveDuration)*255/31);
@@ -6410,6 +6413,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
     PrepareWeather(ui,client,camera);
     PrepareSceneLight(client,camera);
     PrepareLevelEffects(ui,scene,camera);
+    PrepareSpellEffects(ui,scene,camera);
     PrepareWorldText(ui,client,pointer,interactive);
     TrimWorldFrames(ui);
     return camera;
@@ -6485,20 +6489,8 @@ void Dialogs::Assets::PrepareCast(cui_ctx* ui, const mir3::CastVisual& cast, int
         const auto& outer=resource.outer_color;
         worldSpellLights_.push_back({x+24,y+16,radius-1,{inner[0],inner[1],inner[2]},radius,{outer[0],outer[1],outer[2]}});
     }
-    const char* archive=nullptr;
-    switch (resource.library) {
-    case 81: archive="Magic"; break;
-    case 91: archive="Mon-4"; break;
-    case 129: archive="MonMagic"; break;
-    case 137: archive="MagicEx"; break;
-    case 138: archive="MonMagicEx"; break;
-    case 140: archive="MonMagicEx2"; break;
-    case 143: archive="MonMagicEx3"; break;
-    case 148: archive="MonMagicEx4"; break;
-    case 149: archive="MagicEx2"; break;
-    default: return;
-    }
-    if (resource.blend>2 || resource.first>INT_MAX-100) return;
+    const auto* archive=mir3::spell_archive(resource.library);
+    if (!archive || resource.blend>2 || resource.first>INT_MAX-100) return;
     const int index=int(resource.first)+10*cast.direction+relative;
     const auto& frame=GetWorldFrame(ui,archive,index);
     if (!frame.image.texture) return;
@@ -6508,6 +6500,44 @@ void Dialogs::Assets::PrepareCast(cui_ctx* ui, const mir3::CastVisual& cast, int
     worldSprites_.push_back({frame.image.texture,x+frame.x,y+frame.y,frame.image.width,frame.image.height,row,255,1,
         blend,{tint[0],tint[1],tint[2],resource.blend==0 ? resource.opacity : std::uint8_t(255)}});
     cui_request_wakeup(ui,0.016f);
+}
+
+void Dialogs::Assets::PrepareSpellEffects(cui_ctx* ui,LocalScene& scene,SceneMapArt& camera)
+{
+    if (!scene.spellEffects) return;
+    auto& spells=*scene.spellEffects;
+    worldSpellEffects_.clear();
+    for (const auto& effect:spells.effects) {
+        if (!effect.drawsSprite()) continue;
+        const auto* archive=mir3::spell_archive(effect.resource.library);
+        if (!archive) continue;
+        const auto& frame=GetWorldFrame(ui,archive,effect.frame);
+        const auto& image=frame.image;
+        if (!image.texture) continue;
+        spells.archiveOffsets[effect.resource.library]={frame.x,frame.y};
+        const float x=effect.position[0]-camera.cameraX+frame.x, y=effect.position[1]-camera.cameraY+frame.y;
+        const auto& tint=effect.resource.tint;
+        const auto blend=effect.resource.blend==0 ? CUI_EFFECT_PREMULTIPLIED :
+            effect.resource.blend==1 ? CUI_EFFECT_ADD : CUI_EFFECT_SCREEN;
+        const auto strength=effect.timedResidue ? std::uint8_t(255-effect.fade) : std::uint8_t(255);
+        const cui_color color=effect.timedResidue ? cui_color{strength,strength,strength,255} :
+            cui_color{tint[0],tint[1],tint[2],effect.resource.blend==0 ? effect.resource.opacity : std::uint8_t(255)};
+        worldSpellEffects_.push_back({image.texture,
+            {{{x,y},{x+image.width,y},{x+image.width,y+image.height},{x,y+image.height}}},color,true,blend});
+    }
+    for (const auto* slots:{&spells.particles.sparks,&spells.particles.glows,&spells.particles.fragments}) {
+        for (const auto& slot:*slots) {
+            if (!slot || slot->size<=0) continue;
+            const auto& p=*slot;
+            const auto& image=GetWorldFrame(ui,"ProgUse",p.resource_frame()).image;
+            if (!image.texture) continue;
+            const float x=p.position[0]-p.size/2, y=p.position[1]-p.size/2;
+            worldSpellEffects_.push_back({image.texture,{{{x,y},{x+p.size,y},{x+p.size,y+p.size},{x,y+p.size}}},
+                {p.color[0],p.color[1],p.color[2],255},true,p.glow() ? CUI_EFFECT_SCREEN : CUI_EFFECT_SPARK});
+        }
+    }
+    camera.spellEffects=&worldSpellEffects_;
+    if (!spells.effects.empty() || !spells.marks.empty() || !worldSpellEffects_.empty()) cui_request_wakeup(ui,0.016f);
 }
 
 void Dialogs::Assets::PrepareSceneLight(LoginClient& client, SceneMapArt& camera)
@@ -6536,6 +6566,8 @@ void Dialogs::Assets::PrepareSceneLight(LoginClient& client, SceneMapArt& camera
     if (client.magicLight) {
         for (const auto& light:worldSpellLights_) worldLight_.add(light);
         for (const auto& playback:scene.levelEffects) worldLight_.add(playback.effect.light(camera.cameraX,camera.cameraY));
+        if (scene.spellEffects) for (const auto& effect:scene.spellEffects->effects)
+            if (!effect.delay && effect.light) worldLight_.add(effect.illumination(camera.cameraX,camera.cameraY));
     }
     worldLight_.add(mir3::SceneLight::actor(int(scene.x)*48-camera.cameraX,int(scene.y)*32-camera.cameraY,scene.light,true));
     for (int kind : {2,0,1}) for (const auto& anchor:worldAnchors_) {

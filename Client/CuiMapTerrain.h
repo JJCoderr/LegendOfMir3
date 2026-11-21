@@ -58,6 +58,12 @@ public:
     std::uint64_t Revision() const { return revision_; }
     bool Contains(int x, int y) const { return x >= 0 && y >= 0 && x < width_ && y < height_; }
 
+    bool BaseWalkable(int x,int y)
+    {
+        std::array<unsigned char,CellSize> cell{};
+        return Contains(x,y) && ReadColumn(x,y,1,cell.data()) && (cell[0]&1);
+    }
+
     unsigned DoorAt(int x, int y)
     {
         if (!Contains(x, y)) return 0;

@@ -204,7 +204,7 @@ void AudioPlayer::PlayEffect(const wchar_t* path, const AudioOptions& options)
     Start(effect_, false, options);
 }
 
-bool AudioPlayer::PlaySceneEffect(std::uint32_t actor, const wchar_t* path, int volume, int pan,
+bool AudioPlayer::PlaySceneEffect(std::int64_t actor, const wchar_t* path, int volume, int pan,
                                   const AudioOptions& options)
 {
     if (!options.effects || volume + options.effectsLevel * 40 <= -10000) return false;
@@ -226,7 +226,25 @@ bool AudioPlayer::PlaySceneEffect(std::uint32_t actor, const wchar_t* path, int 
     return false;
 }
 
-void AudioPlayer::StopSceneEffect(std::uint32_t actor)
+bool AudioPlayer::SceneEffectPlaying(std::int64_t actor) const
+{
+    const auto found=scene_.find(actor);
+    if (found==scene_.end() || !found->second.audio.voice) return false;
+    XAUDIO2_VOICE_STATE state{};
+    found->second.audio.voice->GetState(&state,XAUDIO2_VOICE_NOSAMPLESPLAYED);
+    return state.BuffersQueued!=0;
+}
+
+void AudioPlayer::MoveSceneEffect(std::int64_t actor,int volume,int pan,const AudioOptions& options)
+{
+    const auto found=scene_.find(actor);
+    if (found==scene_.end()) return;
+    found->second.volume=volume;
+    found->second.pan=pan;
+    ApplySceneTrack(found->second,options);
+}
+
+void AudioPlayer::StopSceneEffect(std::int64_t actor)
 {
     const auto found=scene_.find(actor);
     if (found==scene_.end()) return;
@@ -237,7 +255,7 @@ void AudioPlayer::StopSceneEffect(std::uint32_t actor)
 void AudioPlayer::ClearSceneEffects(bool keepLocal)
 {
     for (auto it=scene_.begin();it!=scene_.end();) {
-        if (keepLocal && it->first==0) { ++it; continue; }
+        if (keepLocal && it->first<=0) { ++it; continue; }
         it->second.audio.Clear();
         it=scene_.erase(it);
     }
@@ -283,20 +301,23 @@ void AudioPlayer::Apply(const AudioOptions& options)
         track->voice->SetVolume(Volume(options.effects, options.effectsLevel));
         if (track->format.nChannels == 2) track->voice->SetOutputMatrix(output_, 2, 2, matrix);
     }
-    for (auto& [actor,sound]:scene_) {
-        const auto& track=sound.audio;
-        if (!track.voice) continue;
-        const float attenuation=static_cast<float>(std::pow(10.0,sound.volume/2000.0));
-        track.voice->SetVolume(Volume(options.effects,options.effectsLevel)*attenuation);
-        const double pan=(options.reversePan ? -sound.pan : sound.pan)/2000.0;
-        const float left=static_cast<float>(pan>0 ? std::pow(10.0,-pan) : 1.0);
-        const float right=static_cast<float>(pan<0 ? std::pow(10.0,pan) : 1.0);
-        const float panMatrix[]{left,right};
-        if (track.format.nChannels==1) track.voice->SetOutputMatrix(output_,1,2,panMatrix);
-        else {
-            const float stereo[]{left,0,0,right};
-            track.voice->SetOutputMatrix(output_,2,2,stereo);
-        }
+    for (const auto& [actor,sound]:scene_) ApplySceneTrack(sound,options);
+}
+
+void AudioPlayer::ApplySceneTrack(const SceneTrack& sound,const AudioOptions& options)
+{
+    const auto& track=sound.audio;
+    if (!track.voice) return;
+    const float attenuation=static_cast<float>(std::pow(10.0,sound.volume/2000.0));
+    track.voice->SetVolume(Volume(options.effects,options.effectsLevel)*attenuation);
+    const double pan=(options.reversePan ? -sound.pan : sound.pan)/2000.0;
+    const float left=static_cast<float>(pan>0 ? std::pow(10.0,-pan) : 1.0);
+    const float right=static_cast<float>(pan<0 ? std::pow(10.0,pan) : 1.0);
+    const float panMatrix[]{left,right};
+    if (track.format.nChannels==1) track.voice->SetOutputMatrix(output_,1,2,panMatrix);
+    else {
+        const float stereo[]{left,0,0,right};
+        track.voice->SetOutputMatrix(output_,2,2,stereo);
     }
 }
 

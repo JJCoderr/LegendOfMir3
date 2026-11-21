@@ -42,8 +42,10 @@ public:
     void SetMusic(const wchar_t* path, const AudioOptions& options);
     void PauseMusic(bool pause);
     void PlayEffect(const wchar_t* path, const AudioOptions& options);
-    bool PlaySceneEffect(std::uint32_t actor, const wchar_t* path, int volume, int pan, const AudioOptions& options);
-    void StopSceneEffect(std::uint32_t actor);
+    bool PlaySceneEffect(std::int64_t actor, const wchar_t* path, int volume, int pan, const AudioOptions& options);
+    bool SceneEffectPlaying(std::int64_t actor) const;
+    void MoveSceneEffect(std::int64_t actor,int volume,int pan,const AudioOptions& options);
+    void StopSceneEffect(std::int64_t actor);
     void ClearSceneEffects(bool keepLocal = false);
     void PlayMovieAudio(const std::vector<unsigned char>& samples, int channels, int rate, int bits,
                         const AudioOptions& options);
@@ -68,7 +70,7 @@ private:
         Track audio;
         int volume = 0, pan = 0;
     };
-    std::map<std::uint32_t, SceneTrack> scene_;
+    std::map<std::int64_t, SceneTrack> scene_;
     bool musicPaused_ = false;
     std::wstring musicPath_;
     std::string error_;
@@ -76,6 +78,7 @@ private:
     bool Open();
     bool LoadWave(const wchar_t* path, Track& track);
     bool Start(Track& track, bool loop, const AudioOptions& options);
+    void ApplySceneTrack(const SceneTrack& sound,const AudioOptions& options);
 };
 
 } // namespace mir3_cui

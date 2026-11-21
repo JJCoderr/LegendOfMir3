@@ -19,6 +19,8 @@
 #include "CuiLegacy/hud/casting.hpp"
 #include "CuiLegacy/hud/level_up_effect.hpp"
 #include "CuiLegacy/magic/spell_color.hpp"
+#include "CuiLegacy/magic/spell_effects.hpp"
+#include "CuiLegacy/magic/spell_sound_voices.hpp"
 #include "CuiLegacy/magic/spell_timing.hpp"
 #include "CuiLegacy/hud/sound_position.hpp"
 #include "CuiLegacy/resources/sound_list.hpp"
@@ -53,9 +55,11 @@
 #include <deque>
 #include <fstream>
 #include <map>
+#include <memory>
 #include <random>
 #include <string>
 #include <vector>
+#include <variant>
 
 namespace mir3_client {
 
@@ -71,7 +75,7 @@ inline constexpr wchar_t ClickSound[] = L"CuiAudio/Click.wav";
 inline constexpr WORD GameLogon = 50;
 inline constexpr WORD GameNewMap = 51;
 inline constexpr WORD GameDayChanging = 46, GameChangeLight = 654, GameActorLight = 1100;
-inline constexpr WORD GameSpell = 17, ClientSpell = 3017;
+inline constexpr WORD GameSpell = 17, GameMagicFire = 638, GameMagicFireList = 1410, ClientSpell = 3017;
 inline constexpr WORD GameMapDescription = 54;
 inline constexpr WORD GameMinimap = 710;
 inline constexpr WORD GameMinimapUnavailable = 711;
@@ -179,6 +183,7 @@ inline int CrouchPose(std::uint64_t since, std::uint64_t now)
 
 struct LocalScene {
     struct RemoteCast { int skill, x, y; };
+    using RemoteSpell = std::variant<RemoteCast,mir3::SpellReply>;
     struct Movement {
         unsigned x = 0, y = 0, facing = 0;
         std::uint64_t deadline = 0;
@@ -196,7 +201,7 @@ struct LocalScene {
         unsigned mount = 0;
         std::uint64_t levelPoseAt = 0;
         mir3::CastVisual casting;
-        std::deque<RemoteCast> queuedCasts;
+        std::deque<RemoteSpell> queuedCasts;
         bool dead = false;
         unsigned npcType = 0;
         mir3_cui::CharacterAppearance appearance;
@@ -257,6 +262,10 @@ struct LocalScene {
     std::vector<LevelPlayback> levelEffects;
     std::uint64_t levelPoseAt = 0;
     mir3::CastVisual casting;
+    std::deque<mir3::SpellReply> spellMessages;
+    std::unique_ptr<mir3::SpellEffects> spellEffects;
+    std::uint64_t spellEffectsTick=0;
+    mir3::SpellSoundVoices spellSounds;
     mir3::SpellTiming spellTiming;
     std::uint32_t lockedSpellActor = 0;
     std::uint64_t spellReplyUntil = 0, mapEnteredAt = 0;
@@ -302,6 +311,19 @@ inline constexpr std::array<std::array<int, 2>, 8> SceneDirections{{
     {0,-1},{1,-1},{1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1}
 }};
 inline constexpr float SceneCellPitch = 24;
+
+inline mir3::SpellPixel ActorWorldPixel(const LocalScene::Player& actor)
+{
+    int x=int(actor.x)*48,y=int(actor.y)*32;
+    if (actor.monsterWalkFrame>=0) {
+        const auto [dx,dy]=SceneDirections[(actor.facing+(actor.monsterBackstep ? 4 : 0))%8];
+        const int step=actor.monsterWalkFrame+1;
+        const bool reanchored=actor.monsterBackstep && actor.monsterWalkFrame>=(actor.facing==7 ? 4 : 1);
+        x-=dx*8*(6-step);
+        y-=dy*(reanchored ? 5*(6-step) : 32-(dx==0 ? 32*step/6 : 5*step));
+    }
+    return {float(x),float(y)};
+}
 
 struct Character {
     std::string name;
@@ -2124,12 +2146,19 @@ public:
             AdvanceGroundItems(static_cast<std::uint32_t>(now));
             if (scene.spellReplyUntil && now>=scene.spellReplyUntil) scene.spellReplyUntil=0;
             scene.casting.advance(now);
+            AdvanceSpellEffects(now);
             for (auto& [id,actor]:scene.players) {
                 actor.casting.advance(now);
-                if (actor.dead || !actor.casting.clock.finished() || actor.queuedCasts.empty()) continue;
-                const auto next=actor.queuedCasts.front();
+                if (!actor.casting.clock.finished() || actor.queuedCasts.empty()) continue;
+                auto message=std::move(actor.queuedCasts.front());
                 const bool catchUp=actor.queuedCasts.size()>=3;
                 actor.queuedCasts.pop_front();
+                if (const auto* reply=std::get_if<mir3::SpellReply>(&message)) {
+                    PlaySpellEffects(*reply,actor.x,actor.y,actor.facing);
+                    continue;
+                }
+                if (actor.dead) continue;
+                const auto& next=std::get<LocalScene::RemoteCast>(message);
                 actor.facing=SpellFacing(int(actor.x),int(actor.y),next.x,next.y);
                 actor.levelPoseAt=actor.crouchedAt=0;
                 StartCast(actor.casting,next.skill,mir3::SpellRoutes::remote_action(next.skill),id,
@@ -2888,6 +2917,8 @@ private:
                 scene.ground = scene.terrain.ReadView(scene.x, scene.y);
         } else if (stage == Stage::GameSession && opcode == GameGroundItemShow) {
             ApplyGroundItem(actor,first,second,third);
+        } else if (stage == Stage::GameSession && (opcode==GameMagicFire || opcode==GameMagicFireList)) {
+            HandleSpellEffects(opcode==GameMagicFireList,actor,first,second,third);
         } else if (stage == Stage::GameSession && opcode == GameSpell && actor!=localActor_) {
             const auto found=scene.players.find(actor);
             if (found!=scene.players.end() && !found->second.IsNpc() && !found->second.IsMonster() &&
@@ -2896,7 +2927,7 @@ private:
                 char* end=nullptr;
                 const auto skill=std::strtol(text,&end,10);
                 if (end!=text && skill>0 && skill<=65535)
-                    found->second.queuedCasts.push_back({int(skill),first,second});
+                    found->second.queuedCasts.emplace_back(LocalScene::RemoteCast{int(skill),first,second});
             }
         } else if (stage == Stage::GameSession && opcode == GameGroundItemHide) {
             if (actor && actor<=0x7fffffffu && input_.size()==DEFBLOCKSIZE) scene.groundItems.hide(static_cast<int>(actor));
@@ -2972,11 +3003,14 @@ private:
                     opcode == GameClearActors)) {
             if (input_.size() == DEFBLOCKSIZE) {
                 if (opcode == GameClearActors) {
+                    if (scene.spellEffects) for (const auto& [id,actor]:scene.players)
+                        scene.spellEffects->forgetActor(id);
                     scene.players.clear();
                     scene.lockedSpellActor=0;
                     audio.ClearSceneEffects(true);
                     std::erase_if(scene.speech,[](const auto& entry) { return entry.first!=0; });
                 } else {
+                    if (scene.spellEffects) scene.spellEffects->forgetActor(actor);
                     scene.players.erase(actor);
                     if (scene.lockedSpellActor==actor) scene.lockedSpellActor=0;
                     audio.StopSceneEffect(actor);
@@ -3502,6 +3536,9 @@ private:
         scene.levelEffects.clear();
         scene.levelPoseAt=0;
         scene.casting={};
+        scene.spellMessages.clear();
+        scene.spellEffects.reset();
+        scene.spellSounds={};
         scene.lockedSpellActor=0;
         scene.spellReplyUntil=0;
         audio.ClearSceneEffects();
@@ -3959,13 +3996,91 @@ private:
         }
     }
 
+    void HandleSpellEffects(bool multiple,std::uint32_t actor,WORD x,WORD y,WORD series)
+    {
+        if ((!multiple && input_.size()!=DEFBLOCKSIZE+6) || input_.size()>DEFBLOCKSIZE+1366) return;
+        const auto decoded=ReadGameBody();
+        if (decoded.empty() && input_.size()!=DEFBLOCKSIZE) return;
+        auto reply=mir3::SpellReply::parse(x,y,series,multiple,decoded);
+        if (!reply) return;
+        if (actor && actor==localActor_) {
+            if (scene.spellMessages.size()<64) scene.spellMessages.push_back(std::move(*reply));
+        } else if (const auto it=scene.players.find(actor);it!=scene.players.end() &&
+            !it->second.IsNpc() && !it->second.IsMonster() && it->second.queuedCasts.size()<64) {
+            it->second.queuedCasts.emplace_back(std::move(*reply));
+        }
+    }
+
+    std::optional<mir3::SpellPixel> SpellTarget(std::uint32_t actor) const
+    {
+        if (actor && actor==localActor_) return mir3::spell_pixel({int(scene.x),int(scene.y)});
+        if (const auto it=scene.players.find(actor);it!=scene.players.end()) return ActorWorldPixel(it->second);
+        return {};
+    }
+
+    void PlaySpellEffects(const mir3::SpellReply& reply,unsigned x,unsigned y,unsigned facing)
+    {
+        if (!scene.terrain.Ready()) return;
+        if (!scene.spellEffects) {
+            scene.spellEffects=std::make_unique<mir3::SpellEffects>();
+            scene.spellEffectsTick=GetTickCount64();
+        }
+        scene.spellEffects->play(effectCatalog_,reply,{int(x),int(y)},facing,
+            [&](auto actor) { return SpellTarget(actor); },
+            [&](int sample,mir3::SpellCell cell) { return PlaySpellSound(sample,cell); },
+            [&](mir3::SpellCell cell) { return scene.terrain.BaseWalkable(cell[0],cell[1]); });
+    }
+
+    void AdvanceSpellEffects(std::uint64_t now)
+    {
+        if (scene.spellEffects && now>scene.spellEffectsTick) {
+            const auto ms=(std::min)(now-scene.spellEffectsTick,std::uint64_t(250));
+            const mir3::SpellCell camera{int(scene.x)*48-376,int(scene.y)*32-227};
+            scene.spellEffects->advance(effectCatalog_,static_cast<unsigned>(ms),camera,
+                [&](auto actor) { return SpellTarget(actor); },
+                [&](int sample,mir3::SpellCell cell) { return PlaySpellSound(sample,cell); },
+                [&](std::int64_t voice,int sample,mir3::SpellPixel pixel) {
+                    using Voices=mir3::SpellSoundVoices;
+                    const auto index=Voices::key(0,0)-voice;
+                    if (index<0 || index>=Voices::samples*Voices::voices || index%Voices::voices>=5 ||
+                        scene.spellSounds.cache[index/Voices::voices].id!=sample) return;
+                    const auto mix=mir3::SoundPosition::from_view(int(pixel[0]/48)*48-camera[0],int(pixel[1]/32)*32-camera[1]);
+                    audio.MoveSceneEffect(voice,mix.volume,mix.pan,audioOptions);
+                },scene.weather);
+            scene.spellEffectsTick=now;
+        }
+        if (scene.spellMessages.empty() || scene.pending.deadline || !scene.casting.clock.finished()) return;
+        const auto reply=std::move(scene.spellMessages.front());
+        scene.spellMessages.pop_front();
+        PlaySpellEffects(reply,scene.x,scene.y,scene.facing);
+    }
+
+    std::int64_t PlaySpellSound(int sample,mir3::SpellCell cell)
+    {
+        if (!audioOptions.effects) return 0;
+        const auto sound=sceneSoundList_.file(sample);
+        if (sound.empty()) return 0;
+        const auto voice=scene.spellSounds.select(sample,GetTickCount(),
+            [&](std::int64_t key) { return audio.SceneEffectPlaying(key); });
+        if (!voice) return 0;
+        if (voice->replaced) for (int i=0;i<mir3::SpellSoundVoices::voices;++i)
+            audio.StopSceneEffect(mir3::SpellSoundVoices::key(voice->cache,i));
+        if (voice->play) PlaySceneSample(voice->key,sound,cell[0],cell[1]);
+        return voice->key;
+    }
+
+    void PlaySceneSample(std::int64_t actor,const std::string& sound,int x,int y)
+    {
+        const auto mix=mir3::SoundPosition::from_view((x-int(scene.x))*48+376,(y-int(scene.y))*32+227);
+        const auto path=resourceRoot_/"Sound"/std::filesystem::u8path(sound).filename();
+        audio.PlaySceneEffect(actor,path.c_str(),mix.volume,mix.pan,audioOptions);
+    }
+
     void PlaySceneSound(std::uint32_t actor,int sample,unsigned x,unsigned y)
     {
         const auto sound=sceneSoundList_.file(sample);
         if (sound.empty()) return;
-        const auto mix=mir3::SoundPosition::from_view((int(x)-int(scene.x))*48+376,(int(y)-int(scene.y))*32+227);
-        const auto path=resourceRoot_/"Sound"/std::filesystem::u8path(sound).filename();
-        audio.PlaySceneEffect(actor,path.c_str(),mix.volume,mix.pan,audioOptions);
+        PlaySceneSample(actor,sound,int(x),int(y));
     }
 
     void StartCast(mir3::CastVisual& cast,int skill,mir3::SpellAction action,std::uint32_t actor,
