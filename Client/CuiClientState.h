@@ -76,6 +76,7 @@ inline constexpr WORD GameLogon = 50;
 inline constexpr WORD GameNewMap = 51;
 inline constexpr WORD GameDayChanging = 46, GameChangeLight = 654, GameActorLight = 1100;
 inline constexpr WORD GameSpell = 17, GameMagicFire = 638, GameMagicFireList = 1410, ClientSpell = 3017;
+inline constexpr WORD GameShowMapEvent = 804, GameHideMapEvent = 805;
 inline constexpr WORD GameMapDescription = 54;
 inline constexpr WORD GameMinimap = 710;
 inline constexpr WORD GameMinimapUnavailable = 711;
@@ -2917,6 +2918,14 @@ private:
                 scene.ground = scene.terrain.ReadView(scene.x, scene.y);
         } else if (stage == Stage::GameSession && opcode == GameGroundItemShow) {
             ApplyGroundItem(actor,first,second,third);
+        } else if (stage == Stage::GameSession && opcode == GameShowMapEvent) {
+            if (input_.size()==DEFBLOCKSIZE+6 && scene.terrain.Contains(second,third) &&
+                (first==3 || first==4 || first==5 || first==6 || first==9) && ReadGameBody().size()==4)
+                SceneEffects().mapEvents.show(effectCatalog_,actor,first,{second,third},
+                    first==9 && scene.terrain.BaseWalkable(second,third),scene.weather);
+        } else if (stage == Stage::GameSession && opcode == GameHideMapEvent) {
+            if (input_.size()==DEFBLOCKSIZE && scene.spellEffects)
+                scene.spellEffects->mapEvents.hide(effectCatalog_,actor,scene.weather);
         } else if (stage == Stage::GameSession && (opcode==GameMagicFire || opcode==GameMagicFireList)) {
             HandleSpellEffects(opcode==GameMagicFireList,actor,first,second,third);
         } else if (stage == Stage::GameSession && opcode == GameSpell && actor!=localActor_) {
@@ -4018,14 +4027,19 @@ private:
         return {};
     }
 
-    void PlaySpellEffects(const mir3::SpellReply& reply,unsigned x,unsigned y,unsigned facing)
+    mir3::SpellEffects& SceneEffects()
     {
-        if (!scene.terrain.Ready()) return;
         if (!scene.spellEffects) {
             scene.spellEffects=std::make_unique<mir3::SpellEffects>();
             scene.spellEffectsTick=GetTickCount64();
         }
-        scene.spellEffects->play(effectCatalog_,reply,{int(x),int(y)},facing,
+        return *scene.spellEffects;
+    }
+
+    void PlaySpellEffects(const mir3::SpellReply& reply,unsigned x,unsigned y,unsigned facing)
+    {
+        if (!scene.terrain.Ready()) return;
+        SceneEffects().play(effectCatalog_,reply,{int(x),int(y)},facing,
             [&](auto actor) { return SpellTarget(actor); },
             [&](int sample,mir3::SpellCell cell) { return PlaySpellSound(sample,cell); },
             [&](mir3::SpellCell cell) { return scene.terrain.BaseWalkable(cell[0],cell[1]); });

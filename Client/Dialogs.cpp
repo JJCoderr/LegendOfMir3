@@ -6255,11 +6255,19 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         }
     }
     if (worldSprites_.empty()) return {};
-    if (scene.spellEffects) for (const auto& mark:scene.spellEffects->marks) {
-        const auto& frame=GetWorldFrame(ui,"ProgUse",mark.frame);
-        if (frame.image.texture) worldSprites_.push_back({frame.image.texture,
-            mark.cell[0]*48-camera.cameraX+frame.x,mark.cell[1]*32-camera.cameraY+frame.y,
-            frame.image.width,frame.image.height,underActors,180});
+    if (scene.spellEffects) {
+        const auto ground=[&](mir3::SpellCell cell,int index,std::uint8_t opacity) {
+            const auto& frame=GetWorldFrame(ui,"ProgUse",index);
+            if (frame.image.texture) worldSprites_.push_back({frame.image.texture,
+                cell[0]*48-camera.cameraX+frame.x,cell[1]*32-camera.cameraY+frame.y,
+                frame.image.width,frame.image.height,underActors,opacity});
+        };
+        const auto& spells=*scene.spellEffects;
+        for (const auto& [id,tile]:spells.mapEvents.ground)
+            if (tile.age) ground(tile.cell,tile.frame,tile.opacity);
+        for (const auto& mark:spells.marks) ground(mark.cell,mark.frame,180);
+        for (const auto& [cell,mark]:spells.mapEvents.iceMarks)
+            if (mark.age) ground(cell,mark.frame,mark.opacity);
     }
     std::vector<SceneSprite> overlays;
     PrepareGroundItems(ui,scene,camera,startX,startY,pointer,interactive,overlays);
@@ -6507,23 +6515,38 @@ void Dialogs::Assets::PrepareSpellEffects(cui_ctx* ui,LocalScene& scene,SceneMap
     if (!scene.spellEffects) return;
     auto& spells=*scene.spellEffects;
     worldSpellEffects_.clear();
+    const auto sprite=[&](unsigned library,int index,mir3::SpellPixel position,cui_color color,cui_effect_blend blend) {
+        const auto* archive=mir3::spell_archive(library);
+        if (!archive) return;
+        const auto& frame=GetWorldFrame(ui,archive,index);
+        const auto& image=frame.image;
+        if (!image.texture) return;
+        spells.archiveOffsets[library]={frame.x,frame.y};
+        const float x=position[0]-camera.cameraX+frame.x, y=position[1]-camera.cameraY+frame.y;
+        worldSpellEffects_.push_back({image.texture,
+            {{{x,y},{x+image.width,y},{x+image.width,y+image.height},{x,y+image.height}}},color,true,blend});
+    };
     for (const auto& effect:spells.effects) {
         if (!effect.drawsSprite()) continue;
-        const auto* archive=mir3::spell_archive(effect.resource.library);
-        if (!archive) continue;
-        const auto& frame=GetWorldFrame(ui,archive,effect.frame);
-        const auto& image=frame.image;
-        if (!image.texture) continue;
-        spells.archiveOffsets[effect.resource.library]={frame.x,frame.y};
-        const float x=effect.position[0]-camera.cameraX+frame.x, y=effect.position[1]-camera.cameraY+frame.y;
         const auto& tint=effect.resource.tint;
         const auto blend=effect.resource.blend==0 ? CUI_EFFECT_PREMULTIPLIED :
             effect.resource.blend==1 ? CUI_EFFECT_ADD : CUI_EFFECT_SCREEN;
         const auto strength=effect.timedResidue ? std::uint8_t(255-effect.fade) : std::uint8_t(255);
         const cui_color color=effect.timedResidue ? cui_color{strength,strength,strength,255} :
             cui_color{tint[0],tint[1],tint[2],effect.resource.blend==0 ? effect.resource.opacity : std::uint8_t(255)};
-        worldSpellEffects_.push_back({image.texture,
-            {{{x,y},{x+image.width,y},{x+image.width,y+image.height},{x,y+image.height}}},color,true,blend});
+        sprite(effect.resource.library,effect.frame,effect.position,color,blend);
+    }
+    for (const auto& [id,event]:spells.mapEvents.sprites) {
+        const auto& tint=event.resource.tint;
+        const auto strength=event.residueTint;
+        const auto color=event.remaining<0 ? cui_color{tint[0],tint[1],tint[2],255} : cui_color{strength,strength,strength,255};
+        auto position=mir3::spell_pixel(event.cell);
+        sprite(event.resource.library,event.frame,position,color,CUI_EFFECT_SCREEN);
+        if (event.layered && event.frame<=100) {
+            position[0]+=12;
+            position[1]+=8;
+            sprite(event.resource.library,event.frame+20,position,color,CUI_EFFECT_SCREEN);
+        }
     }
     for (const auto* slots:{&spells.particles.sparks,&spells.particles.glows,&spells.particles.fragments}) {
         for (const auto& slot:*slots) {
@@ -6537,7 +6560,8 @@ void Dialogs::Assets::PrepareSpellEffects(cui_ctx* ui,LocalScene& scene,SceneMap
         }
     }
     camera.spellEffects=&worldSpellEffects_;
-    if (!spells.effects.empty() || !spells.marks.empty() || !worldSpellEffects_.empty()) cui_request_wakeup(ui,0.016f);
+    if (!spells.effects.empty() || !spells.marks.empty() || spells.mapEvents.active() || !worldSpellEffects_.empty())
+        cui_request_wakeup(ui,0.016f);
 }
 
 void Dialogs::Assets::PrepareSceneLight(LoginClient& client, SceneMapArt& camera)

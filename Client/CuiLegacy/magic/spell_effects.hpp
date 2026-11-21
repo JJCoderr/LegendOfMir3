@@ -2,6 +2,7 @@
 
 #include "hud/scene_lighting.hpp"
 #include "magic/magic_rules.hpp"
+#include "magic/map_events.hpp"
 #include "magic/spell_light.hpp"
 #include "magic/spell_orbit.hpp"
 #include "magic/spell_particle_pool.hpp"
@@ -97,6 +98,7 @@ public:
     std::vector<SpellEffect> effects;
     std::vector<SpellGroundMark> marks;
     SpellParticlePool particles;
+    MapEvents mapEvents;
     std::array<std::array<int,2>,150> archiveOffsets{};
 
     void forgetActor(std::uint32_t id)
@@ -186,6 +188,9 @@ public:
                 effect->remaining=10000;
                 effect->timedResidue=true;
             }
+        mapEvents.advance(ms,[&](SpellCell cell) {
+            particles.emit_ice({float(cell[0]*48+24-camera[0]),float(cell[1]*32-camera[1])},random);
+        });
         particles.advance(int(ms),random);
     }
 
