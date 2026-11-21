@@ -2091,6 +2091,10 @@ private:
     void LoadChatHistory()
     {
         std::ifstream file(CharacterStoragePath(chatHistoryDirectory), std::ios::binary);
+        if (!file) {
+            LoadLegacyChatHistory();
+            return;
+        }
         std::string line;
         while (std::getline(file, line)) {
             if (line.size() < 2 || line.size() > sizeof chat.draft || line.find('\0') != std::string::npos)
@@ -2098,6 +2102,41 @@ private:
             const auto value = line.substr(1);
             if (line.front() == 'P') chat.Remember(chat.phrases, value);
             if (line.front() == 'C') chat.Remember(chat.contacts, value);
+        }
+    }
+
+    void LoadLegacyChatHistory()
+    {
+        const auto role = ConvertText(gameRole_,936,CP_UTF8);
+        const auto realm = ConvertText(realm_,936,CP_UTF8);
+        const auto safe = [](const std::string& name) {
+            return !name.empty() && name!="." && name!=".." &&
+                name.find_first_of("/\\:\"<>|?*")==std::string::npos &&
+                std::none_of(name.begin(),name.end(),[](unsigned char byte) { return byte<32; });
+        };
+        if (!safe(role) || !safe(realm)) return;
+        for (bool phrase : {false,true}) {
+            const auto suffix = phrase ? ".mlt" : ".slt";
+            const auto path = resourceRoot_/"Data"/std::filesystem::u8path(role+"("+realm+")"+suffix);
+            std::ifstream file(path,std::ios::binary);
+            if (!file) continue;
+            std::array<char,10241> bytes{};
+            file.read(bytes.data(),bytes.size());
+            if (!file.eof() || file.bad()) continue;
+            const std::string_view contents(bytes.data(),static_cast<std::size_t>(file.gcount()));
+            auto& history = phrase ? chat.phrases : chat.contacts;
+            std::size_t start = 0;
+            while (history.size()<10) {
+                const auto end = contents.find('/',start);
+                if (end==contents.npos || end-start>1023) break;
+                auto entry = ConvertText(std::string(contents.substr(start,end-start)),936,CP_UTF8);
+                if (!entry.empty() && entry.size()+1<sizeof chat.draft && entry.find_first_of("\r\n")==std::string::npos &&
+                    entry.find('\0')==std::string::npos) {
+                    if (!phrase) entry.insert(entry.begin(),'/');
+                    chat.Remember(history,entry);
+                }
+                start = end+1;
+            }
         }
     }
 

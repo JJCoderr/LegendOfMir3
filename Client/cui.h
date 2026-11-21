@@ -837,6 +837,7 @@ typedef struct cui_input_opts {
 /* Single line text field. Returns CUI_CHANGED / CUI_SUBMITTED (Enter) flags. */
 CUI_API int cui_input_ex(cui_ctx *ui, const char *id, char *buf, size_t cap, const cui_input_opts *opts);
 CUI_API void cui_text_field_focus(cui_ctx *ui, const char *id, bool select_all);
+CUI_API void cui_text_field_focus_end(cui_ctx *ui, const char *id);
 /* Multi-line text area with word wrap. */
 CUI_API int cui_textarea_ex(cui_ctx *ui, const char *id, char *buf, size_t cap, const cui_input_opts *opts);
 /* Search field with a search icon and a clear button. */

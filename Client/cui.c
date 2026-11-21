@@ -606,6 +606,7 @@ struct cui_ctx {
     cui_font tf_font;
     float tf_size;
     cui_id tf_select_all;      /* this field selects all of its text when it next has focus */
+    cui_id tf_caret_end;       /* this field moves the insertion point to the end when focused */
     /* files dropped from the OS, valid for one frame */
     char *drop_buf; size_t drop_used, drop_cap;
     int drop_off[64]; int drop_count;
@@ -61252,12 +61253,13 @@ int cui__text_field(cui_ctx *ui, cui_id id, char *buf, size_t cap, const cui_inp
     /* the text area itself takes focus; clicks on padding also land on the field */
     cui_interact rf = cui__interact(ui, id, CUI_IF_FOCUSABLE | CUI_IF_TEXT | CUI_IF_DRAG);
     cui_pop_disabled(ui);
-    if (ui->tf_select_all == id && ui->focus == id) {
-        e->anchor = 0;
+    if ((ui->tf_select_all == id || ui->tf_caret_end == id) && ui->focus == id) {
         e->cursor = (int)strlen(buf);
+        e->anchor = ui->tf_caret_end == id ? e->cursor : 0;
         e->scroll_x = 0;
         rf.active = false;
         ui->tf_select_all = 0;
+        ui->tf_caret_end = 0;
     }
     if (rf.hovered) cui__set_cursor(ui, CUI_CURSOR_TEXT);
     bool was_focused = ui->focus == id;
@@ -61443,6 +61445,10 @@ int cui_input_ex(cui_ctx *ui, const char *id, char *buf, size_t cap, const cui_i
 void cui_text_field_focus(cui_ctx *ui, const char *id, bool select_all) {
     ui->focus = cui_make_id(ui, id);
     if (select_all) ui->tf_select_all = ui->focus;
+}
+
+void cui_text_field_focus_end(cui_ctx *ui, const char *id) {
+    ui->focus = ui->tf_caret_end = cui_make_id(ui, id);
 }
 
 int cui_textarea_ex(cui_ctx *ui, const char *id, char *buf, size_t cap, const cui_input_opts *o) {

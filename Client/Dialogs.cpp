@@ -114,6 +114,7 @@ public:
     bool Ready() const { return ready_; }
     bool GameHudReady() const { return gameHudReady_; }
     void DrawGameHud(cui_ctx* ui, LoginClient& client, bool pointerCovered, bool modal);
+    void DrawChatShortcutOverlay(cui_ctx* ui, const mir3_cui::ChatPanel& chat);
     void PrepareMinimap(cui_ctx* ui, LoginClient& client);
     bool HandleMinimapInput(cui_ctx* ui, LoginClient& client, bool modal);
     void DrawMinimapPanel(cui_ctx* ui, const LoginClient& client);
@@ -662,6 +663,9 @@ private:
     void TrimWorldFrames(cui_ctx* ui);
     std::array<HudChatRow,14> gameChatRows_;
     std::array<BagText,4> gameHudText_;
+    struct ChatShortcutLabel { std::string source; BagText text; };
+    std::array<std::array<ChatShortcutLabel,10>,2> chatShortcutLabels_{};
+    std::array<bool,2> chatShortcutVisible_{};
     std::map<int,Image> gameHudFrames_, gamePortraits_, gameHudHints_;
     mir3::HudModel gameHud_;
     HudHint gameButtonHint_;
@@ -836,6 +840,7 @@ private:
     bool gameExitCancel_ = false;
     void RefreshGameHud(cui_ctx* ui, const LoginClient& client);
     void PaintGameHud(cui_ctx* ui, cui_rect rect) const;
+    void PrepareChatShortcuts(cui_ctx* ui, mir3_cui::ChatPanel& chat, bool editing);
     void GameHudInput(cui_ctx* ui, LoginClient& client, cui_vec2 pointer, bool pointerCovered, bool modal);
     void SetBagText(cui_ctx* ui, BagText& text, std::string value, int width, int height,
                     bool centered = false, mir3::TextFont font = mir3::TextFont::normal, bool inverted = false);
@@ -8069,6 +8074,7 @@ void Dialogs::Assets::DrawGameHud(cui_ctx* ui, LoginClient& client, bool pointer
     if (base.scale<=0) return;
     const auto pointer=base.ToLocal(cui_mouse_pos(ui));
     const auto& thumb=gameHudFrames_.at(1207);
+    const bool wasComposing = client.chat.composing;
     GameHudInput(ui,client,pointer,pointerCovered,modal);
     portraitMapMode_=client.portraitMapMode;
     portraitMapReady_=client.portraitMapReady;
@@ -8094,17 +8100,13 @@ void Dialogs::Assets::DrawGameHud(cui_ctx* ui, LoginClient& client, bool pointer
     cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect rect,void* user) {
         (*static_cast<Assets**>(user))->PaintGameHud(ui,rect);
     },&self,sizeof self);
-    const int mods=cui_key_mods(ui);
-    if (chat.composing && !modal && (mods&(CUI_MOD_CTRL|CUI_MOD_ALT))) {
-        cui_overlay_begin(ui,base.Rect(185,chat.expanded ? 325 : 318,345,145));
-        ChatShortcuts(ui,chat,(mods&CUI_MOD_ALT)!=0);
-        cui_box_end(ui);
-    }
-    if (chat.composing && !modal) {
+    const bool editing = chat.composing && !modal && !client.showSignOut;
+    PrepareChatShortcuts(ui,chat,editing);
+    if (editing) {
         const auto field=base.Rect(185,chat.expanded ? 534 : 575,chat.expanded ? 432 : 344,15);
         cui_overlay_begin(ui,field);
         cui_push_id_int(ui,chat.editor);
-        if (!gameChatFocused_ || gameChatEditor_!=chat.editor) cui_text_field_focus(ui,"hud-chat",false);
+        if (!gameChatFocused_ || gameChatEditor_!=chat.editor) cui_text_field_focus_end(ui,"hud-chat");
         gameChatFocused_=true;
         gameChatEditor_=chat.editor;
         cui_input_opts opts{};
@@ -8116,10 +8118,98 @@ void Dialogs::Assets::DrawGameHud(cui_ctx* ui, LoginClient& client, bool pointer
         opts.font=editorFont_;
         opts.byte_limit=90;
         opts.measure_bytes=AnsiBytes;
-        if (cui_input_ex(ui,"hud-chat",chat.draft,sizeof chat.draft,&opts)&CUI_SUBMITTED) client.SendChat();
+        const int input = cui_input_ex(ui,"hud-chat",chat.draft,sizeof chat.draft,&opts);
+        const bool submitted = wasComposing && (input&CUI_SUBMITTED);
+        if (submitted) client.SendChat();
+        if ((input&CUI_BLURRED) || (submitted && !chat.draft[0])) {
+            chat.composing = false;
+            gameChatFocused_ = false;
+            chatShortcutVisible_ = {};
+        }
         cui_pop_id(ui);
         cui_box_end(ui);
     } else gameChatFocused_=false;
+    cui_box_end(ui);
+}
+
+void Dialogs::Assets::PrepareChatShortcuts(cui_ctx* ui, mir3_cui::ChatPanel& chat, bool editing)
+{
+    const int mods = cui_key_mods(ui);
+    chatShortcutVisible_ = {editing && (mods&CUI_MOD_CTRL) && !chat.contacts.empty(),
+        editing && (mods&CUI_MOD_ALT) && !chat.phrases.empty()};
+    if (!editing || !(mods&(CUI_MOD_CTRL|CUI_MOD_ALT))) return;
+
+    const bool usePhrases = !(mods&CUI_MOD_CTRL);
+    const auto& history = usePhrases ? chat.phrases : chat.contacts;
+    auto& selected = usePhrases ? chat.phraseIndex : chat.contactIndex;
+    if (!history.empty()) {
+        const int last = static_cast<int>((std::min)(history.size(),chatShortcutLabels_[0].size()))-1;
+        bool chosen = true;
+        if (cui_key_pressed(ui,CUI_KEY_UP)) selected = (std::max)(0,selected-1);
+        else if (cui_key_pressed(ui,CUI_KEY_DOWN)) selected = (std::min)(last,selected+1);
+        else {
+            chosen = false;
+            for (int i=0;i<10;++i) {
+                if (!cui_key_pressed(ui,static_cast<cui_key>(CUI_KEY_0+(i+1)%10))) continue;
+                if (i<=last) selected = i;
+                chosen = true;
+                break;
+            }
+        }
+        if (chosen && selected>=0 && selected<=last) chat.FillDraft(history[selected]);
+    }
+
+    for (int kind=0;kind<2;++kind) {
+        if (!chatShortcutVisible_[kind]) continue;
+        const auto& values = kind ? chat.phrases : chat.contacts;
+        auto& labels = chatShortcutLabels_[kind];
+        for (std::size_t i=0;i<labels.size() && i<values.size();++i) {
+            if (labels[i].source==values[i]) continue;
+            labels[i].source = values[i];
+            std::string caption = values[i];
+            if (!kind && caption.starts_with('/')) caption.erase(0,1);
+            if (kind && mir3::raster_text(caption,1,1,false,mir3::TextFont::normal,font_).text_width>358) {
+                auto ansi = mir3::utf8_to_ansi(caption);
+                caption = mir3::ansi_to_utf8(ansi.substr(0,58)+"...");
+            }
+            SetBagText(ui,labels[i].text,std::move(caption),600,16);
+        }
+    }
+}
+
+void Dialogs::Assets::DrawChatShortcutOverlay(cui_ctx* ui, const mir3_cui::ChatPanel& chat)
+{
+    if (!chatShortcutVisible_[0] && !chatShortcutVisible_[1]) return;
+    const auto view = cui_viewport_size(ui);
+    cui_overlay_begin(ui,{0,0,view.x,view.y});
+    const struct { const Assets* assets; std::array<int,2> count, selected; bool expanded; } data{
+        this,{int(chat.contacts.size()),int(chat.phrases.size())},{chat.contactIndex,chat.phraseIndex},chat.expanded};
+    cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect rect,void* value) {
+        const auto& draw = *static_cast<decltype(data)*>(value);
+        const HudPoint base(rect);
+        const int top = draw.expanded ? 365 : 405;
+        constexpr cui_color border{0,0,0,255}, shadow{10,10,10,255}, white{255,255,255,255};
+        constexpr std::array<cui_color,2> background{{{200,100,0,180},{150,150,50,180}}};
+        constexpr std::array<cui_color,2> highlight{{{255,0,0,120},{50,50,200,120}}};
+        for (int kind=0;kind<2;++kind) {
+            if (!draw.assets->chatShortcutVisible_[kind]) continue;
+            const int width = kind && !draw.expanded ? 100 : 99;
+            cui_draw_rect_premultiplied(ui,base.Rect(183,top,width,165),background[kind]);
+            cui_draw_rect(ui,base.Rect(183,top,width,1),{},border);
+            cui_draw_rect(ui,base.Rect(183,top+164,width,1),{},border);
+            cui_draw_rect(ui,base.Rect(183,top+1,1,163),{},border);
+            cui_draw_rect(ui,base.Rect(182+width,top+1,1,163),{},border);
+            const auto& labels = draw.assets->chatShortcutLabels_[kind];
+            for (int i=0;i<draw.count[kind] && i<static_cast<int>(labels.size());++i) {
+                if (i==draw.selected[kind])
+                    cui_draw_rect_premultiplied(ui,base.Rect(184,top+2+16*i,width-2,16),highlight[kind]);
+                const auto& art = labels[i].text.image;
+                if (!art.texture) continue;
+                cui_draw_image(ui,art.texture,base.Rect(187,top+4+16*i,art.width,art.height),{0,0,1,1},{},shadow);
+                cui_draw_image(ui,art.texture,base.Rect(188,top+5+16*i,art.width,art.height),{0,0,1,1},{},white);
+            }
+        }
+    },&data,sizeof data);
     cui_box_end(ui);
 }
 
@@ -8341,6 +8431,7 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
         }
         if (nativeInventory && inventoryModal) loginArt->DrawInventoryPanel(ui,client,!bagOverlay,inventoryWasOpen);
         if (nativeHud && !fading && !portraitNotice && !client.showSignOut && !partyNotice && !guildNotice && !inventoryModal) {
+            loginArt->DrawChatShortcutOverlay(ui,client.chat);
             loginArt->DrawPanelHeld(ui,client);
             loginArt->DrawTradePrompt(ui,client);
         }
