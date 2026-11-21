@@ -20,7 +20,7 @@ struct MapEventSprite {
 struct MapEventGround {
     std::array<int,2> cell;
     int frame;
-    unsigned age=0, lifetime=65535;
+    int age=0, lifetime=65535;
     std::uint8_t opacity=255;
     bool hidden=false;
 };
@@ -28,10 +28,15 @@ struct MapEventGround {
 class MapEvents {
 public:
     std::map<std::uint32_t,MapEventSprite> sprites;
-    std::map<std::uint32_t,MapEventGround> ground;
+    std::map<std::uint64_t,MapEventGround> ground;
     std::map<std::array<int,2>,MapEventGround> iceMarks;
 
     bool active() const { return !sprites.empty() || !ground.empty() || !iceMarks.empty(); }
+
+    void emergenceMark(std::array<int,2> cell,int frame)
+    {
+        if (ground.size()<1024) ground.emplace(nextLocalGround++,MapEventGround{cell,frame,-1200,58800});
+    }
 
     template<class Random>
     void show(const EffectCatalog& catalog,std::uint32_t id,unsigned kind,std::array<int,2> cell,bool walkable,Random& random)
@@ -65,7 +70,7 @@ public:
                 event.frame=int(resource->first);
                 event.elapsed=0;
                 event.remaining=duration;
-                ground.emplace(id,MapEventGround{event.cell,220,0,unsigned(duration+800),180});
+                ground.emplace(id,MapEventGround{event.cell,220,0,duration+800,180});
                 return;
             }
         }
@@ -77,7 +82,7 @@ public:
     {
         if (!ms) return;
         const auto expire=[&](auto& tiles) {
-            for (auto& [id,tile]:tiles) tile.age+=ms;
+            for (auto& [id,tile]:tiles) tile.age+=int(ms);
             std::erase_if(tiles,[](const auto& entry) { return entry.second.hidden || entry.second.age>entry.second.lifetime; });
         };
         expire(ground);
@@ -89,6 +94,8 @@ public:
     }
 
 private:
+    std::uint64_t nextLocalGround=std::uint64_t{1}<<32;
+
     static const EffectResource* find(const EffectCatalog& catalog,std::uint16_t id,std::uint16_t library)
     {
         const auto* resource=catalog.find(EffectCatalog::Section::magic,id);

@@ -6345,7 +6345,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         };
         const auto& spells=*scene.spellEffects;
         for (const auto& [id,tile]:spells.mapEvents.ground)
-            if (tile.age) ground(tile.cell,tile.frame,tile.opacity);
+            if (tile.age>0) ground(tile.cell,tile.frame,tile.opacity);
         for (const auto& mark:spells.marks) ground(mark.cell,mark.frame,180);
         for (const auto& [cell,mark]:spells.mapEvents.iceMarks)
             if (mark.age) ground(cell,mark.frame,mark.opacity);
@@ -6399,7 +6399,8 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         if (actor.IsNpc() || !visible(actor)) continue;
         cui_rect bounds{};
         unsigned actorRow=actor.y;
-        const bool highlighted=!actor.dead && (hoveredActor==id || scene.lockedSpellActor==id);
+        const bool targetable=!actor.dead && actor.monsterBurrowFrame<0;
+        const bool highlighted=targetable && (hoveredActor==id || scene.lockedSpellActor==id);
         if (actor.IsMonster()) {
             const int shape=actor.npcShape;
             const int library=shape<1000 ? 88+shape/10 : shape>=2000 ? ((shape-2000)/100-121)&255 : -1;
@@ -6413,6 +6414,8 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
             const bool walking=actor.monsterWalkFrame>=0;
             const bool combat=actor.monsterCombatFrame>=0;
             const bool corpse=actor.monsterDeathFrame>=0;
+            const bool burrowing=actor.monsterBurrowFrame>=0;
+            const bool dormant=actor.monsterDormant && !walking && !combat && !corpse && !burrowing;
             const bool single=shape<10 || shape==95 || mir3::TargetPortrait::special_shape(shape) || shape==538;
             int interval=300;
             if (shape>=145 && shape<=147) interval=150;
@@ -6421,11 +6424,15 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
             const int group=shape<1000 ? shape%10 : (shape-2000)/10;
             const int walk=actor.monsterWalkFrame;
             const auto idleElapsed=actor.monsterIdleAt ? monsterNow-actor.monsterIdleAt : tick;
-            const int action=corpse ? (actor.monsterSkeleton ? 880 : 320) : walking ? 80 :
-                combat ? actor.monsterCombatMotion.base : 0;
-            const int facing=mir3::monster_resource_direction(shape,action,actor.facing);
+            const auto burrow=mir3::monster_burrow_motion(shape);
+            const int action=burrowing || dormant ? burrow.base : corpse ? (actor.monsterSkeleton ? 880 : 320) :
+                walking ? 80 : combat ? actor.monsterCombatMotion.base : 0;
+            const int facing=mir3::monster_resource_direction(shape,action,dormant ? 0 : actor.facing);
             int pose=single ? 0 : int(idleElapsed/interval%4);
-            if (corpse) pose=actor.monsterDeathFrame;
+            if (burrowing)
+                pose=actor.monsterBurrowReverse ? burrow.frames-1-actor.monsterBurrowFrame : actor.monsterBurrowFrame;
+            else if (dormant) pose=0;
+            else if (corpse) pose=actor.monsterDeathFrame;
             else if (walking) pose=actor.monsterBackstep ? 5-walk : walk;
             else if (combat) pose=actor.monsterCombatFrame;
             if (walking && actor.monsterNextStep>monsterNow)
@@ -6440,6 +6447,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
             const auto status=mir3::actor_status_color(actor.monsterStatus);
             const bool shadeHighlight=highlighted && (status!=65535 || appearanceWeight<0);
             const auto& sprite=GetWorldFrame(ui,archive,frame,status,shadeHighlight,mir3::monster_body_dye(shape));
+            animated|=actor.MonsterAnimating() || (!corpse && !single && !dormant) || appearanceWeight>=0;
             if (!sprite.image.texture) continue;
             const auto pixel=ActorWorldPixel(actor);
             const int x=int(pixel[0])-camera.cameraX+sprite.x, y=int(pixel[1])-camera.cameraY+sprite.y;
@@ -6465,7 +6473,6 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
                 x-sprite.x,y-sprite.y,1});
             const int width=(std::min)(58,sprite.image.width), height=(std::min)(40,sprite.image.height);
             bounds={float(x+(sprite.image.width-width)/2),float(y+(sprite.image.height-height)/2),float(width),float(height)};
-            animated|=actor.MonsterAnimating() || (!corpse && !single) || appearanceWeight>=0;
             actor.monsterDamage.enabled=client.damageNumbers;
             const auto glyphs=actor.monsterDamage.draw(x-sprite.x,y-sprite.y,false);
             for (const auto& glyph:glyphs) {
@@ -6513,7 +6520,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
             animated|=!actor.dead || actor.dying;
         }
         if (bounds.w<=0) continue;
-        if (!actor.dead) worldTargets_.push_back({bounds,id,actorRow,actor.IsMonster()});
+        if (targetable) worldTargets_.push_back({bounds,id,actorRow,actor.IsMonster()});
         else if (actor.CanBeButchered()) worldCorpses_.push_back({bounds,id,actor.y,actor.IsMonster()});
     }
     if (client.characterAppearance.available) {

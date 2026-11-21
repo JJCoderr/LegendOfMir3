@@ -4,6 +4,22 @@ namespace mir3 {
 
 struct MonsterMotion { int base=0, frames=0, interval=0; };
 
+inline bool monster_gate(unsigned shape) {
+    return (shape>=530 && shape<=533) || shape==538;
+}
+
+inline bool monster_dormant(unsigned shape,unsigned flags) {
+    return shape>=83 && shape<=85 && (flags&1);
+}
+
+inline MonsterMotion monster_burrow_motion(unsigned shape) {
+    if (shape==83 || shape==84) return {640,6,120};
+    if (shape==85) return {640,20,120};
+    if (shape==90) return {640,10,100};
+    if (monster_gate(shape)) return {640,7,120};
+    return {640,10,120};
+}
+
 inline MonsterMotion monster_attack_motion(int shape,int action) {
     if (action==7) return shape==141?MonsterMotion{560,6,120}:MonsterMotion{560,10,150};
     if (action==5) {

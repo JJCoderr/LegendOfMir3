@@ -116,6 +116,10 @@ public:
         if (auto* effect=append(catalog,id,cell,0,0,false,sound)) effect->follow=actor;
     }
 
+    void groundImpact(const EffectCatalog& catalog,int id,SpellCell cell) {
+        append(catalog,id,cell,0,0,false,[](int,SpellCell) { return 0; });
+    }
+
     void forgetActor(std::uint32_t id,std::optional<SpellPixel> position={})
     {
         for (auto& effect:effects) {
