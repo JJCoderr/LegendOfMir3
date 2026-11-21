@@ -1756,8 +1756,9 @@ public:
 
     void RequestGuildPage(int page)
     {
-        if (stage != Stage::GameSession || !GuildCanQueue()) return;
+        if (stage != Stage::GameSession || (page != 2 && !GuildCanQueue())) return;
         guild.tab = page;
+        guild.first = 0;
         if (page == 0) {
             Queue(mir3_cui::GuildHome, 0, "");
             guild.requested = !guild.open;
@@ -2671,6 +2672,10 @@ private:
             const auto color = [&](unsigned index) { return index < palette.size() ? palette[index] : 0u; };
             chat.Append(opcode, text, color(opcode == 104 ? 4 : first & 255u),
                 color(opcode == 104 ? 0 : second & 255u));
+            if (opcode == 104) {
+                for (auto& row : mir3::wrap_system_notice(text))
+                    guild.AppendHistory({0,std::move(row)});
+            }
         }
     }
 
@@ -3638,7 +3643,6 @@ private:
                 if (guild.overview.Apply(body, opcode == 753) && opcode == 753) {
                     if (guild.overview.name != previous) {
                         guild.roster = {};
-                        guild.history.clear();
                         guild.Begin(mir3_cui::GuildAction::None);
                     } else if (!guild.overview.manager) {
                         guild.Begin(mir3_cui::GuildAction::None);
@@ -3646,6 +3650,7 @@ private:
                     guild.open = true;
                     guild.requested = false;
                     guild.tab = 0;
+                    guild.first = 0;
                     ++guild.overviewRevision;
                 }
             } else {
@@ -3661,10 +3666,7 @@ private:
         if (notice) {
             guild.Begin(mir3_cui::GuildAction::None);
             guild.notice = notice;
-            if (!guild.overview.name.empty()) {
-                if (guild.history.size() == 79) guild.history.erase(guild.history.begin());
-                guild.history.push_back(notice);
-            }
+            if (!guild.overview.name.empty()) guild.AppendHistory({notice,{}});
         }
     }
 

@@ -525,7 +525,7 @@ private:
     mir3::GuildLayout guildLayout_;
     mir3::GuildScroll guildScroll_;
     cui_vec2 guildPointer_{};
-    int guildFirst_ = 0, guildCount_ = 0, guildPressed_ = -1, guildEditorId_ = -1;
+    int guildThumbY_ = 0, guildCount_ = 0, guildPressed_ = -1, guildEditorId_ = -1;
     int guildHint_ = -1, guildHintHeight_ = 0, guildLineHeight_ = 15;
     unsigned guildRevision_ = 0;
     std::map<int, Image> guildFrames_;
@@ -2090,14 +2090,14 @@ void Dialogs::Assets::GuildInput(cui_ctx* ui, LoginClient& client, cui_vec2 mous
     const bool inside = Contains(guildPosition_.Rect(), mouse);
     if (inside) {
         const int wheel = -static_cast<int>(std::lround(cui_mouse_scroll(ui).y));
-        guildFirst_ = std::clamp(guildFirst_ + wheel, 0, (std::max)(0, guildCount_ - 1));
+        guild.first = std::clamp(guild.first + wheel, 0, (std::max)(0, guildCount_ - 1));
     }
 
     const auto& thumb = guildFrames_.at(1225);
     const auto now = static_cast<std::uint32_t>(cui_time(ui) * 1000);
     const auto scroll = [&](int kind) {
         return guildScroll_.input(kind, static_cast<int>(mouse.x), static_cast<int>(mouse.y), x, y,
-                                  thumb.width, thumb.height, guildCount_, guildFirst_, now);
+                                  thumb.width, thumb.height, guildCount_, guild.first, now);
     };
     const bool moved = mouse.x != guildPointer_.x || mouse.y != guildPointer_.y;
     if ((down && scroll(0)) || (moved && scroll(1) && !up) || (up && scroll(2))) return;
@@ -2122,7 +2122,6 @@ void Dialogs::Assets::GuildInput(cui_ctx* ui, LoginClient& client, cui_vec2 mous
             if (hit == 0) guild.open = false;
             if (hit >= 1 && hit <= 3) {
                 client.RequestGuildPage(hit - 1);
-                guildFirst_ = 0;
             }
             if (mir3::GuildLayout::denial(hit, guild.overview.manager) == 4000) guild.notice = 4000;
             else if (hit == 7 && !guild.roster.received) guild.notice = 4017;
@@ -2191,11 +2190,10 @@ void Dialogs::Assets::DrawGuildPanel(cui_ctx* ui, LoginClient& client)
     if (base.scale <= 0) return;
     if (guildRevision_ != guild.overviewRevision) {
         guildRevision_ = guild.overviewRevision;
-        guildFirst_ = 0;
         guildScroll_.captured = false;
     }
     guildCount_ = GuildRowCount(guild);
-    guildFirst_ = std::clamp(guildFirst_, 0, (std::max)(0,guildCount_-1));
+    guild.first = std::clamp(guild.first, 0, (std::max)(0,guildCount_-1));
     guildLayout_.tab = guild.tab;
     const auto mouse = base.ToLocal(cui_mouse_pos(ui));
     const bool down = cui_mouse_clicked(ui, CUI_MOUSE_LEFT), up = cui_mouse_released(ui, CUI_MOUSE_LEFT);
@@ -2267,7 +2265,7 @@ void Dialogs::Assets::RefreshGuildText(cui_ctx* ui, const mir3_cui::GuildPanel& 
         guildLineHeight_ = metrics.text_height > 0 ? metrics.text_height : 15;
     }
     for (int i = 0; i < static_cast<int>(guildRows_.size()); ++i) {
-        const int index = guildFirst_ + i;
+        const int index = guild.first + i;
         std::string line;
         bool heading = false;
         if (index < guildCount_) {
@@ -2284,8 +2282,9 @@ void Dialogs::Assets::RefreshGuildText(cui_ctx* ui, const mir3_cui::GuildPanel& 
                 else if (index == 2) { line = Message(4007); heading = true; }
                 else line = ConvertText(guild.roster.rows[index-3],936,CP_UTF8);
             } else {
-                line = Message(guild.history[index]);
-                if (line.empty()) line = mir3_cui::GuildNoticeText(guild.history[index]);
+                const auto& entry = guild.history[index];
+                line = entry.messageId ? Message(entry.messageId) : entry.text;
+                if (line.empty() && entry.messageId) line = mir3_cui::GuildNoticeText(entry.messageId);
             }
         }
         auto& row = guildRows_[i];
@@ -2297,6 +2296,7 @@ void Dialogs::Assets::RefreshGuildText(cui_ctx* ui, const mir3_cui::GuildPanel& 
         }
         row.color = guild.tab == 2 ? cui_color{0,255,0,255} : heading ? cui_color{255,150,0,255} : cui_color{255,255,255,255};
     }
+    guildThumbY_ = mir3::GuildScroll::thumb_y(guild.first,guildCount_,guildPosition_.y);
 
     using Action = mir3_cui::GuildAction;
     auto caption = guildDrawAlert_ ? Message(guild.notice) : guildDrawPrompt_ ?
@@ -2345,7 +2345,7 @@ void Dialogs::Assets::PaintGuild(cui_ctx* ui, cui_rect rect) const
             if (guildLayout_.tab == 2) image(row.image,x+34,top-1,{10,20,10,255});
             image(row.image,x+35,top,row.color);
         }
-        sprite(1225,x+557,mir3::GuildScroll::thumb_y(guildFirst_,guildCount_,y));
+        sprite(1225,x+557,guildThumbY_);
         for (int i = 0; i < 9; ++i) {
             const auto& spec = mir3::GuildLayout::buttons[i];
             sprite(guildLayout_.frames(i)[0],x+spec[1],y+spec[2]);
@@ -4717,7 +4717,8 @@ void DrawGuild(cui_ctx* ui, LoginClient& client)
     cui_scroll_begin(ui, &list);
     if (guild.tab == 2) {
         if (guild.history.empty()) cui_secondary(ui, "No entries.");
-        for (const auto notice : guild.history) cui_text_ex(ui, mir3_cui::GuildNoticeText(notice), nullptr);
+        for (const auto& entry : guild.history)
+            cui_text_ex(ui, entry.messageId ? mir3_cui::GuildNoticeText(entry.messageId) : entry.text.c_str(), nullptr);
     } else {
         if (rows.empty()) cui_secondary(ui, "No entries.");
         for (const auto& row : rows) cui_text_ex(ui, ConvertText(row, 936, CP_UTF8).c_str(), nullptr);

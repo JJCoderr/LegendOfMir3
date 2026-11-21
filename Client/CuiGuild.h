@@ -151,13 +151,18 @@ inline const char* GuildNoticeText(int id)
 }
 
 struct GuildPanel {
+    struct HistoryRow {
+        int messageId = 0;
+        std::string text;
+    };
     bool open = false;
     bool requested = false;
     int tab = 0;
+    int first = 0;
     GuildAction action = GuildAction::None;
     GuildOverview overview;
     GuildRoster roster;
-    std::vector<int> history;
+    std::vector<HistoryRow> history;
     unsigned overviewRevision = 0;
     int notice = 0;
     int editor = 0;
@@ -165,6 +170,17 @@ struct GuildPanel {
     std::string error;
 
     bool Multiline() const { return action == GuildAction::Notice || action == GuildAction::Ranks; }
+
+    void AppendHistory(HistoryRow row)
+    {
+        if (static_cast<int>(history.size())-first == 18) ++first;
+        history.push_back(std::move(row));
+        if (history.size() >= 80) {
+            history.erase(history.begin());
+            if (first > 0) --first;
+        }
+    }
+
     void Begin(GuildAction next)
     {
         action = next;
