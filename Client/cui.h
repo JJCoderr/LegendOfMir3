@@ -4446,6 +4446,8 @@ typedef struct cui_corners { float tl, tr, br, bl; } cui_corners;
 CUI_API void cui_draw_rect(cui_ctx *ui, cui_rect r, cui_corners radius, cui_color fill);
 /* Draw a solid rectangle with RGB already supplied in premultiplied form. */
 CUI_API void cui_draw_rect_premultiplied(cui_ctx *ui, cui_rect r, cui_color fill);
+/* Multiply the existing RGB by interpolated vertex colors. Color alpha is ignored. */
+CUI_API void cui_draw_multiply_triangle(cui_ctx *ui, const cui_vec2 points[3], const cui_color colors[3]);
 CUI_API void cui_draw_rect_border(cui_ctx *ui, cui_rect r, cui_corners radius, cui_color fill, cui_color border, float border_width);
 CUI_API void cui_draw_rect_gradient(cui_ctx *ui, cui_rect r, cui_corners radius, cui_color top, cui_color bottom);
 CUI_API void cui_draw_shadow(cui_ctx *ui, cui_rect r, cui_corners radius, float blur, float spread, cui_vec2 offset, cui_color color);
@@ -4506,6 +4508,7 @@ typedef struct cui_draw_cmd {
     cui_texture texture;   /* 0 = font atlas */
     uint32_t index_offset;
     uint32_t index_count;
+    bool multiply;
 } cui_draw_cmd;
 
 typedef struct cui_draw_data {

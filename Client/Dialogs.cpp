@@ -68,6 +68,7 @@ struct SceneMapArt {
     const std::vector<SceneCaption>* speech = nullptr;
     int cameraX = 0, cameraY = 0;
     std::size_t overlayStart = 0;
+    const mir3::SceneLightGrid* light = nullptr;
 };
 
 }
@@ -702,6 +703,11 @@ private:
     std::vector<SceneActorAnchor> worldAnchors_;
     std::vector<SceneCaption> worldNames_, worldSpeech_;
     std::map<std::pair<std::string,int>,Image> worldText_;
+    mir3::SceneLightGrid worldLight_{255};
+    mir3_cui::MapTerrain::LightView mapLights_{};
+    std::string lightMapName_;
+    std::uint64_t lightMapRevision_ = 0;
+    int lightLeft_ = 0, lightTop_ = 0;
     struct GroundName { std::string name; Image image; };
     std::array<GroundName,mir3::GroundItems::cell_capacity> groundNames_;
     mir3_cui::MapTerrain::GraphicsView mapGraphics_;
@@ -712,6 +718,7 @@ private:
     const WorldFrame& GetProjectedWorldShadow(cui_ctx* ui, const std::string& library, int frame, bool flat);
     SceneMapArt PrepareMapArt(cui_ctx* ui, LoginClient& client, cui_vec2 pointer, bool interactive);
     void PrepareWorldText(cui_ctx* ui, const LoginClient& client, cui_vec2 pointer, bool interactive);
+    void PrepareSceneLight(LocalScene& scene, SceneMapArt& camera);
     void PrepareGroundItems(cui_ctx* ui, const LocalScene& scene, const SceneMapArt& camera,
                             int startX, int startY, cui_vec2 pointer, bool interactive, std::vector<SceneSprite>& overlays);
     const WorldFrame& GroundFrame(cui_ctx* ui, int looks, bool highlighted);
@@ -5267,6 +5274,29 @@ void PaintLocalScene(cui_ctx* ui, cui_rect rect, void* user)
         };
         const auto& sprites=*model.art.sprites;
         for (std::size_t i=0;i<model.art.overlayStart;++i) drawSprite(sprites[i]);
+        if (const auto* grid=model.art.light) {
+            const auto triangle=[&](const std::array<int,3>& vertices) {
+                cui_vec2 points[3];
+                cui_color colors[3];
+                for (int k=0;k<3;++k) {
+                    const int index=vertices[k];
+                    points[k]={rect.x+(index%18)*48*scale,rect.y+(index/18)*32*scale};
+                    const auto& rgb=grid->samples[index];
+                    colors[k]={std::uint8_t(rgb[0]),std::uint8_t(rgb[1]),std::uint8_t(rgb[2]),255};
+                }
+                cui_draw_multiply_triangle(ui,points,colors);
+            };
+            for (int y=0;y<18;++y) for (int x=0;x<17;++x) {
+                const int a=y*18+x, b=a+1, d=a+18, c=d+1;
+                if (grid->diagonals[y*17+x]) {
+                    triangle({a,b,c});
+                    triangle({a,c,d});
+                } else {
+                    triangle({a,b,d});
+                    triangle({b,c,d});
+                }
+            }
+        }
         const auto captions=[&](const std::vector<SceneCaption>* lines) {
             if (!lines) return;
             for (const auto& line:*lines) {
@@ -6309,9 +6339,42 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         return a.row==b.row ? a.monster && !b.monster : a.row<b.row;
     });
     if (animated) cui_request_wakeup(ui,0.05f);
+    PrepareSceneLight(scene,camera);
     PrepareWorldText(ui,client,pointer,interactive);
     TrimWorldFrames(ui);
     return camera;
+}
+
+void Dialogs::Assets::PrepareSceneLight(LocalScene& scene, SceneMapArt& camera)
+{
+    if (scene.ambient.level()==255) return;
+    using Terrain=mir3_cui::MapTerrain;
+    const int left=camera.cameraX/48-20, top=camera.cameraY/32-20;
+    if (lightMapName_!=scene.mapId || lightMapRevision_!=scene.terrain.Revision() || lightLeft_!=left || lightTop_!=top) {
+        mapLights_=scene.terrain.ReadLights(left,top);
+        lightMapName_=scene.mapId;
+        lightMapRevision_=scene.terrain.Revision();
+        lightLeft_=left;
+        lightTop_=top;
+    }
+    worldLight_=mir3::SceneLightGrid(scene.ambient.level());
+    constexpr std::array radii{4,8,12,20};
+    constexpr std::array<mir3::SceneLight::Rgb,10> colors{{
+        {173,198,214},{90,140,165},{41,57,115},{222,198,99},{41,115,49},
+        {255,255,255},{255,255,255},{255,255,255},{255,255,255},{255,255,255}}};
+    for (int y=0;y<Terrain::LightRows;++y) for (int x=0;x<Terrain::LightColumns;++x) {
+        const auto packed=mapLights_[x*Terrain::LightRows+y];
+        if (packed) worldLight_.add({(x+left)*48-camera.cameraX,(y+top)*32-camera.cameraY,
+            0,{},radii[packed>>14],colors[(packed>>4)&255]});
+    }
+    worldLight_.add(mir3::SceneLight::actor(int(scene.x)*48-camera.cameraX,int(scene.y)*32-camera.cameraY,scene.light,true));
+    for (int kind : {2,0,1}) for (const auto& anchor:worldAnchors_) {
+        if (anchor.order!=kind) continue;
+        const auto& actor=scene.players.at(anchor.actor);
+        if (actor.IsMonster() && actor.dead) continue;
+        worldLight_.add(mir3::SceneLight::actor(anchor.x+24,anchor.y+16,actor.light,false));
+    }
+    camera.light=&worldLight_;
 }
 
 void Dialogs::Assets::PrepareWorldText(cui_ctx* ui, const LoginClient& client, cui_vec2 pointer, bool interactive)

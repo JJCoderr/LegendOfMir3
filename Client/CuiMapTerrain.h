@@ -17,6 +17,8 @@ public:
     static constexpr int ViewColumns = 41;
     static constexpr int ViewRows = 9;
     using View = std::array<GroundCell, ViewColumns * ViewRows>;
+    static constexpr int LightColumns = 58, LightRows = 59;
+    using LightView = std::array<unsigned, LightColumns * LightRows>;
 
     struct Graphic {
         int package = 255, frame = 65535, animation = 255;
@@ -85,6 +87,22 @@ public:
                 } else {
                     cell = (row[0] & 1) ? GroundCell::Walkable : GroundCell::Blocked;
                 }
+            }
+        }
+        return view;
+    }
+
+    LightView ReadLights(int left, int top)
+    {
+        LightView view{};
+        const int first=(std::max)(0,top), last=(std::min)(height_,top+LightRows);
+        if (last<=first) return view;
+        std::array<unsigned char,LightRows*CellSize> cells{};
+        for (int x=(std::max)(0,left);x<(std::min)(width_,left+LightColumns);++x) {
+            if (!ReadColumn(x,first,last-first,cells.data())) continue;
+            for (int y=first;y<last;++y) {
+                const unsigned packed=Word(cells.data()+(y-first)*CellSize+12);
+                if (((packed>>4)&255)<10) view[(x-left)*LightRows+y-top]=packed;
             }
         }
         return view;

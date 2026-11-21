@@ -20,6 +20,7 @@
 #include "CuiLegacy/hud/damage_numbers.hpp"
 #include "CuiLegacy/hud/monster_motion.hpp"
 #include "CuiLegacy/hud/mount_panel.hpp"
+#include "CuiLegacy/hud/scene_lighting.hpp"
 #include "CuiLegacy/hud/scene_name.hpp"
 #include "CuiLegacy/hud/speech_bubble.hpp"
 #include "CuiLegacy/hud/skill_panel.hpp"
@@ -61,6 +62,7 @@ inline constexpr wchar_t SessionMusic[] = L"CuiAudio/Session.wav";
 inline constexpr wchar_t ClickSound[] = L"CuiAudio/Click.wav";
 inline constexpr WORD GameLogon = 50;
 inline constexpr WORD GameNewMap = 51;
+inline constexpr WORD GameDayChanging = 46, GameChangeLight = 654, GameActorLight = 1100;
 inline constexpr WORD GameMapDescription = 54;
 inline constexpr WORD GameMinimap = 710;
 inline constexpr WORD GameMinimapUnavailable = 711;
@@ -177,8 +179,10 @@ struct LocalScene {
             unsigned x=0, y=0, facing=0, shape=0;
             std::uint32_t status=0;
             WORD opcode=0, current=0, maximum=0, damage=0;
+            int light=-1;
         };
         unsigned x = 0, y = 0, facing = 0;
+        unsigned light = 0;
         bool dead = false;
         unsigned npcType = 0;
         mir3_cui::CharacterAppearance appearance;
@@ -227,6 +231,9 @@ struct LocalScene {
     std::string mapDescription;
     mir3_cui::MapTerrain terrain;
     mir3_cui::MapTerrain::View ground{};
+    mir3::SceneAmbient ambient;
+    std::uint64_t ambientTick = 0;
+    unsigned light = 0;
     std::map<std::uint32_t, Player> players;
     mir3::GroundItems groundItems;
     std::map<std::uint32_t,mir3::SpeechBubble> speech;
@@ -1985,6 +1992,10 @@ public:
             AdvanceMonsterActions(now);
             AdvanceGroundItems(static_cast<std::uint32_t>(now));
             std::erase_if(scene.speech,[&](const auto& entry) { return now>entry.second.expiresAt; });
+            if (scene.ambient.fading) {
+                scene.ambient.advance(double(now-scene.ambientTick));
+                scene.ambientTick=now;
+            }
         }
         if (returnToCharactersAt && now>=returnToCharactersAt && (!Active() || output_.empty() || now>=deadline_)) {
             Close();
@@ -2650,6 +2661,7 @@ private:
             localActor_ = actor;
             scene.SetCell(first, second);
             scene.facing = third & 0xff;
+            scene.light = third >> 8;
             LoadChatHistory();
             LoadItemShortcuts();
             if (portraitMapMode && !scene.mapId.empty()) {
@@ -2664,7 +2676,19 @@ private:
             const auto body = ReadGameBody();
             if (body.size() == 60 && body.find('\0') == std::string::npos) ApplySceneKey(body);
         } else if (opcode == GameNewMap || opcode == GameChangeMap || opcode == GameMapDescription) {
-            HandleMapUpdate(opcode, first, second);
+            HandleMapUpdate(opcode, first, second, third);
+        } else if (stage == Stage::GameSession && opcode == GameDayChanging) {
+            if (input_.size()==DEFBLOCKSIZE) {
+                scene.ambient.select_base(first&255,std::rand());
+                if (second!=scene.ambient.mode) scene.ambientTick=GetTickCount64();
+                scene.ambient.update(second);
+            }
+        } else if (stage == Stage::GameSession && (opcode == GameChangeLight || opcode == GameActorLight)) {
+            if (input_.size()==DEFBLOCKSIZE) {
+                if (actor && actor==localActor_ && opcode==GameActorLight) scene.light=first&255;
+                else if (const auto player=scene.players.find(actor);player!=scene.players.end() && !player->second.IsNpc() &&
+                    (player->second.IsMonster()==(opcode==GameChangeLight))) player->second.light=first&255;
+            }
         } else if (stage == Stage::GameSession && (opcode == GameMinimap || opcode == GameMinimapUnavailable)) {
             if (input_.size() != DEFBLOCKSIZE) return;
             if (opcode == GameMinimap) {
@@ -2701,13 +2725,13 @@ private:
             if (actor && actor<=0x7fffffffu && input_.size()==DEFBLOCKSIZE) scene.groundItems.hide(static_cast<int>(actor));
         } else if (stage == Stage::GameSession &&
                    (opcode == GameBackstep || opcode == GameTurn || opcode == GameWalk || opcode == GameRun)) {
-            if (actor == localActor_) HandleLocalMovement(opcode, first, second, third & 0xff);
-            else HandleRemotePlayer(opcode, actor, first, second, third & 0xff);
+            if (actor == localActor_) HandleLocalMovement(opcode, first, second, third);
+            else HandleRemotePlayer(opcode, actor, first, second, third);
         } else if (stage == Stage::GameSession &&
                    (opcode == GameActorDeath || opcode == GameActorDead ||
                     opcode == GameActorRevive || opcode == GameActorReviveRefresh ||
                     opcode == GameMonsterDigUp || opcode == GameMonsterRise || opcode == GameMonsterSkeleton)) {
-            if (actor != localActor_) HandleRemotePlayer(opcode, actor, first, second, third & 0xff);
+            if (actor != localActor_) HandleRemotePlayer(opcode, actor, first, second, third);
         } else if (stage == Stage::GameSession && (opcode == GameActorName || opcode == GameActorNameColor)) {
             const auto player = scene.players.find(actor);
             if (player != scene.players.end() && input_.size() <= DEFBLOCKSIZE + 344) {
@@ -3269,7 +3293,7 @@ private:
         skills = std::move(next);
     }
 
-    void HandleMapUpdate(unsigned opcode, WORD x, WORD y)
+    void HandleMapUpdate(unsigned opcode, WORD x, WORD y, WORD atmosphere)
     {
         if (input_.size() > DEFBLOCKSIZE + 1024) return;
         auto body = ReadGameBody();
@@ -3299,6 +3323,7 @@ private:
         scene.y = y;
         scene.terrain.Open(scene.mapId,resourceRoot_/"Map");
         scene.ground = scene.terrain.ReadView(x, y);
+        if (scene.terrain.Ready()) scene.ambient.enter(atmosphere);
         const bool reopen=minimap.visible || minimap.pending;
         const bool large=minimap.large, translucent=minimap.translucent;
         ClearMinimap();
@@ -3364,8 +3389,9 @@ private:
         portraitMapPending=portraitMapReady=false;
     }
 
-    void HandleLocalMovement(unsigned opcode, WORD x, WORD y, unsigned facing)
+    void HandleLocalMovement(unsigned opcode, WORD x, WORD y, WORD direction)
     {
+        const unsigned facing=direction&255;
         if (facing >= 8) return;
         const auto size = input_.size() - DEFBLOCKSIZE;
         if (opcode == GameBackstep && size != 29) return;
@@ -3380,6 +3406,7 @@ private:
         }
         scene.SetCell(x, y);
         scene.facing = facing;
+        if (opcode!=GameBackstep) scene.light=direction>>8;
         scene.pending = {};
         if (opcode==GameWalk || opcode==GameRun || opcode==GameBackstep) scene.crouchedAt=scene.crouchReplyAt=0;
     }
@@ -3518,6 +3545,7 @@ private:
         monster.facing=move.facing;
         monster.npcShape=move.shape;
         monster.monsterStatus=move.status;
+        if (move.light>=0) monster.light=move.light;
         monster.monsterBackstep=move.opcode==GameBackstep;
         monster.monsterCatchUp=catchUp;
         monster.monsterSkipStep=false;
@@ -3622,8 +3650,9 @@ private:
         }
     }
 
-    void HandleRemotePlayer(unsigned opcode, std::uint32_t actor, WORD x, WORD y, unsigned facing)
+    void HandleRemotePlayer(unsigned opcode, std::uint32_t actor, WORD x, WORD y, WORD direction)
     {
+        const unsigned facing=direction&255;
         if (!actor || actor > 0x7fffffffu || facing >= 8 ||
             (scene.terrain.Ready() && !scene.terrain.Contains(x, y))) return;
         const auto size = input_.size() - DEFBLOCKSIZE;
@@ -3644,7 +3673,8 @@ private:
             auto& monster=scene.players[actor];
             if (!known) monster={};
             monster.npcType=type;
-            const LocalScene::Player::MonsterAction move{x,y,opcode==GameRun ? 0u : facing,shape,status,static_cast<WORD>(opcode)};
+            LocalScene::Player::MonsterAction move{x,y,opcode==GameRun ? 0u : facing,shape,status,static_cast<WORD>(opcode)};
+            if (opcode!=GameBackstep) move.light=direction>>8;
             QueueMonsterAction(monster,move);
             if (!name.empty()) SetRemoteName(monster,std::move(name));
             return;
@@ -3656,6 +3686,7 @@ private:
             npc.x = x;
             npc.y = y;
             npc.facing = facing;
+            npc.light = direction >> 8;
             npc.npcType = type;
             npc.npcShape = static_cast<unsigned char>(feature[type == 4 ? 1 : 2]);
             npc.dead = opcode == GameActorDeath || opcode == GameActorDead;
@@ -3696,6 +3727,8 @@ private:
         next.x = x;
         next.y = y;
         next.facing = facing;
+        if (opcode==GameTurn || opcode==GameWalk || opcode==GameRun ||
+            opcode==GameActorRevive || opcode==GameActorReviveRefresh) next.light=direction>>8;
         next.crouchedAt=0;
         if (opcode == GameActorDeath || opcode == GameActorDead) next.dead = true;
         else if (opcode == GameActorRevive || opcode == GameActorReviveRefresh) next.dead = false;
