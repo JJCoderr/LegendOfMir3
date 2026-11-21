@@ -78,6 +78,7 @@ inline constexpr WORD GameActorDisappear = 30;
 inline constexpr WORD GameActorDeath = 32;
 inline constexpr WORD GameActorDead = 34;
 inline constexpr WORD GameActorName = 42;
+inline constexpr WORD GameTargetPortrait = 1403;
 inline constexpr WORD GameClearActors = 633;
 inline constexpr WORD GameActorRemove = 803;
 inline constexpr WORD GameActorRevive = 1316;
@@ -149,6 +150,10 @@ struct LocalScene {
         mir3_cui::CharacterAppearance appearance;
         std::string name;
         unsigned npcShape = 0;
+        std::uint32_t portraitVersion = 0;
+        std::uint32_t resolvedPortraitVersion = 0;
+        std::string portraitJpeg;
+        std::uint64_t portraitQueryAt = 0;
     };
 
     Movement pending;
@@ -568,6 +573,18 @@ public:
         if (stage!=Stage::GameSession || jpeg.size()>4095 || output_.size()>=8192) return false;
         Queue(GamePortraitUpload,0,jpeg);
         return true;
+    }
+
+    void RequestTargetPortrait(LocalScene::Player& player)
+    {
+        if (stage!=Stage::GameSession || !userPhotos || player.npcType || player.name.empty() ||
+            player.portraitVersion==player.resolvedPortraitVersion || output_.size()>=8192) return;
+        const auto now = GetTickCount64();
+        if (now-player.portraitQueryAt<=1000) return;
+        const auto name = ConvertText(player.name,CP_UTF8,936);
+        if (name.empty()) return;
+        Queue(1152,0,name);
+        player.portraitQueryAt = now;
     }
 
     void Reset(const char* message = "")
@@ -2537,6 +2554,8 @@ private:
                 auto body = ReadGameBody();
                 if (!body.empty()) SetRemoteName(player->second, std::move(body));
             }
+        } else if (stage == Stage::GameSession && opcode == GameTargetPortrait) {
+            ApplyTargetPortrait(actor,first | (std::uint32_t(second)<<16));
         } else if (stage == Stage::GameSession && opcode == GameNpcDialogue) {
             if (actor && actor <= 0x7fffffffu && input_.size() <= DEFBLOCKSIZE + (8192 * 4 + 2) / 3) {
                 auto body = ReadGameBody();
@@ -3120,7 +3139,30 @@ private:
         if (separator != std::string::npos) body.resize(separator);
         if (body.size() > 63) return;
         const auto name = ConvertText(body, 936, CP_UTF8);
-        if (body.empty() || !name.empty()) player.name = name;
+        if ((body.empty() || !name.empty()) && player.name!=name) {
+            player.name = name;
+            player.portraitJpeg.clear();
+            player.resolvedPortraitVersion = 0;
+            player.portraitQueryAt = 0;
+        }
+    }
+
+    void ApplyTargetPortrait(std::uint32_t actor, std::uint32_t version)
+    {
+        const auto player = scene.players.find(actor);
+        if (player==scene.players.end() || player->second.npcType) return;
+        auto& target = player->second;
+        if (!version && input_.size()==DEFBLOCKSIZE) {
+            target.portraitJpeg.clear();
+            target.resolvedPortraitVersion = target.portraitVersion;
+            return;
+        }
+        if (!version || version!=target.portraitVersion || input_.size()>DEFBLOCKSIZE+5462) return;
+        if (target.resolvedPortraitVersion==version && !target.portraitJpeg.empty()) return;
+        auto bytes = ReadGameBody();
+        if (bytes.size()<2 || bytes.size()>4096 || bytes.compare(0,2,"\xff\xd8")!=0) return;
+        target.portraitJpeg = std::move(bytes);
+        target.resolvedPortraitVersion = version;
     }
 
     void HandleRemotePlayer(unsigned opcode, std::uint32_t actor, WORD x, WORD y, unsigned facing)
@@ -3156,6 +3198,15 @@ private:
         if (size) {
             if (feature.size() != 16 || !next.appearance.Apply(PackedAppearance(feature))) return;
             next.npcType = 0;
+            std::uint32_t portraitVersion = 0;
+            for (unsigned i=0;i<4;++i)
+                portraitVersion |= std::uint32_t(static_cast<unsigned char>(feature[8+i]))<<(8*i);
+            if (next.portraitVersion!=portraitVersion) {
+                next.portraitVersion = portraitVersion;
+                next.resolvedPortraitVersion = 0;
+                next.portraitJpeg.clear();
+                next.portraitQueryAt = 0;
+            }
             if (size >= 29 && DecodeGameBytes(input_.substr(DEFBLOCKSIZE + 22, 7)).size() != 5) return;
             if (size > 29) {
                 auto name = DecodeGameBytes(input_.substr(DEFBLOCKSIZE + 29));

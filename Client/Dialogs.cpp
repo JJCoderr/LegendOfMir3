@@ -31,7 +31,7 @@ struct SceneSprite {
     int x = 0, y = 0, width = 0, height = 0, row = 0;
 };
 
-struct SceneNpcHit {
+struct SceneActorHit {
     cui_rect bounds{};
     std::uint32_t actor = 0;
     unsigned row = 0;
@@ -39,7 +39,8 @@ struct SceneNpcHit {
 
 struct SceneMapArt {
     const std::vector<SceneSprite>* sprites = nullptr;
-    const std::vector<SceneNpcHit>* npcs = nullptr;
+    const std::vector<SceneActorHit>* npcs = nullptr;
+    const std::vector<SceneActorHit>* humans = nullptr;
     int cameraX = 0, cameraY = 0;
 };
 
@@ -649,14 +650,14 @@ private:
     std::map<std::string,mir3::WilArchive> worldArchives_;
     std::map<WorldFrameKey,WorldFrame> worldFrames_;
     std::vector<SceneSprite> worldSprites_;
-    std::vector<SceneNpcHit> worldNpcs_;
+    std::vector<SceneActorHit> worldNpcs_, worldHumans_;
     mir3_cui::MapTerrain::GraphicsView mapGraphics_;
     std::uint64_t worldFrame_ = 0, mapGraphicsRevision_ = 0;
     std::uint64_t worldTextureBytes_ = 0;
     int mapGraphicsX_ = 0, mapGraphicsY_ = 0;
     const WorldFrame& GetWorldFrame(cui_ctx* ui, const std::string& library, int frame);
     SceneMapArt PrepareMapArt(cui_ctx* ui, LoginClient& client);
-    void AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAppearance& actor, int facing, int x, int y,
+    cui_rect AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAppearance& actor, int facing, int x, int y,
         const SceneMapArt& camera, int idle);
     void TrimWorldFrames(cui_ctx* ui);
     std::array<HudChatRow,14> gameChatRows_;
@@ -790,6 +791,11 @@ private:
     std::array<BagText,mir3::PortraitPicker::visible_rows> portraitFileLabels_{};
     BagText portraitNoticeText_;
     Image portraitPreview_, portraitEquipped_;
+    Image targetPortrait_, targetCustomPortrait_;
+    std::string targetPortraitBytes_;
+    std::uint32_t targetActor_ = 0;
+    std::uint64_t targetChangedAt_ = 0;
+    void RefreshTargetPortrait(cui_ctx* ui, LoginClient& client, const SceneMapArt& scene, cui_vec2 pointer, bool interactive);
     HudHint portraitHint_;
     int portraitPressed_ = -1, portraitHovered_ = -1, portraitHintHeight_ = 0, portraitEntryHintHeight_ = 0;
     int portraitNotice_ = 0;
@@ -5198,7 +5204,7 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
         const float viewX=canvas.mouse.x/scale, viewY=canvas.mouse.y/scale;
         if (!run) {
             const auto& npcs=*art.npcs;
-            const auto hit=std::find_if(npcs.rbegin(),npcs.rend(),[&](const SceneNpcHit& npc) {
+            const auto hit=std::find_if(npcs.rbegin(),npcs.rend(),[&](const SceneActorHit& npc) {
                 const auto& r=npc.bounds;
                 return viewX>=r.x && viewX<r.x+r.w && viewY>=r.y && viewY<r.y+r.h;
             });
@@ -5746,13 +5752,13 @@ void Dialogs::Assets::TrimWorldFrames(cui_ctx* ui)
     }
 }
 
-void Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAppearance& actor, int facing,
+cui_rect Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAppearance& actor, int facing,
     int x, int y, const SceneMapArt& camera, int idle)
 {
     const std::string prefix=actor.body ? "WM-" : "M-";
     const int motion=facing*10+idle;
     const auto& body=GetWorldFrame(ui,prefix+"Hum",static_cast<int>(actor.clothing)*3000+motion);
-    if (!body.image.texture) return;
+    if (!body.image.texture) return {};
     const auto add=[&](const WorldFrame& layer) {
         const auto& art=layer.image;
         if (art.texture) worldSprites_.push_back({art.texture,x*48-camera.cameraX+layer.x,
@@ -5770,13 +5776,16 @@ void Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAppear
         add(GetWorldFrame(ui,prefix+(actor.hair<=10 ? "Hair" : actor.hair<=20 ? "Helmet1" : "Helmet2"),
             static_cast<int>((actor.hair-1)%10)*3000+motion));
     if (!behind) weapon();
+    return {float(x*48-camera.cameraX+body.x),float(y*32-camera.cameraY+body.y),
+        float(body.image.width),float(body.image.height)};
 }
 
 SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
 {
     auto& scene=client.scene;
     if (!scene.terrain.Ready()) return {};
-    SceneMapArt camera{&worldSprites_,&worldNpcs_,static_cast<int>(scene.x)*48-376,static_cast<int>(scene.y)*32-227};
+    SceneMapArt camera{&worldSprites_,&worldNpcs_,&worldHumans_,
+        static_cast<int>(scene.x)*48-376,static_cast<int>(scene.y)*32-227};
     const int startX=camera.cameraX/96*2, startY=camera.cameraY/64*2;
     const int originX=startX*48-camera.cameraX, originY=startY*32-camera.cameraY;
     if (mapGraphicsName_!=scene.mapId || mapGraphicsRevision_!=scene.terrain.Revision() ||
@@ -5790,6 +5799,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
     ++worldFrame_;
     worldSprites_.clear();
     worldNpcs_.clear();
+    worldHumans_.clear();
     constexpr std::array<const char*,15> packages{"Tilesc","Tiles30c","Tiles5c","SmTilesc","Housesc","Cliffsc",
         "Dungeonsc","Innersc","Furnituresc","Wallsc","SmObjectsc","Animationsc","Object1c","Object2c","Custom"};
     constexpr std::array<const char*,5> regions{"","Wood/","Sand/","Snow/","Forest/"};
@@ -5851,9 +5861,11 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
         animated|=count>1;
     }
     const int idle=static_cast<int>(tick/201%4);
-    for (const auto& [id,actor]:scene.players)
-        if (!actor.npcType && !actor.dead && visible(actor))
-            AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,idle);
+    for (const auto& [id,actor]:scene.players) {
+        if (actor.npcType || actor.dead || !visible(actor)) continue;
+        const auto bounds = AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,idle);
+        if (bounds.w>0) worldHumans_.push_back({bounds,id,actor.y});
+    }
     if (client.characterAppearance.available) {
         AddWorldActor(ui,client.characterAppearance,scene.facing,scene.x,scene.y,camera,idle);
         animated=true;
@@ -5861,7 +5873,10 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
     std::stable_sort(worldSprites_.begin(),worldSprites_.end(),[](const SceneSprite& a,const SceneSprite& b) {
         return a.row<b.row;
     });
-    std::stable_sort(worldNpcs_.begin(),worldNpcs_.end(),[](const SceneNpcHit& a,const SceneNpcHit& b) {
+    std::stable_sort(worldNpcs_.begin(),worldNpcs_.end(),[](const SceneActorHit& a,const SceneActorHit& b) {
+        return a.row<b.row;
+    });
+    std::stable_sort(worldHumans_.begin(),worldHumans_.end(),[](const SceneActorHit& a,const SceneActorHit& b) {
         return a.row<b.row;
     });
     if (animated) cui_request_wakeup(ui,0.05f);
@@ -5884,7 +5899,7 @@ void Dialogs::Assets::OpenGameHud(cui_ctx* ui, mir3::WilArchive& archive, const 
     for (int id=2600;id<=2644;++id) gameHudHints_[id]=MakeHudHint(ui,id);
     mir3::WilArchive portraitsArchive;
     if (portraitsArchive.open(portraits))
-        for (int id=650;id<=655;++id) gamePortraits_[id]=UploadFrame(ui,portraitsArchive,id);
+        for (int id : {0,650,651,652,653,654,655}) gamePortraits_[id]=UploadFrame(ui,portraitsArchive,id,true);
     for (int i=0;i<7;++i) minimapFrames_[i]=UploadFrame(ui,archive,1482+i,true);
     for (int i=0;i<4;++i) minimapHints_[i]=MakeHudHint(ui,1800+i);
     minimapArchive_.open(portraits.parent_path()/"Mmap");
@@ -6619,6 +6634,10 @@ void Dialogs::Assets::LeavePortraitPicker(cui_ctx* ui)
     if (portraitPickerVisible_) TogglePortraitPicker(ui);
     portraitCachePath_.clear();
     Destroy(ui,portraitEquipped_);
+    Destroy(ui,targetCustomPortrait_);
+    targetPortraitBytes_.clear();
+    targetPortrait_ = {};
+    targetActor_ = 0;
     portraitPicker_.last_upload = 0;
     portraitNotice_ = 0;
     portraitEntryVisible_ = portraitEntryPressed_ = false;
@@ -6626,11 +6645,56 @@ void Dialogs::Assets::LeavePortraitPicker(cui_ctx* ui)
 
 Dialogs::Assets::Image Dialogs::Assets::DecodePortrait(cui_ctx* ui, std::string_view bytes)
 {
-    if (bytes.empty() || !mir3::PortraitPicker::accepts_size(bytes.size())) return {};
+    if (bytes.empty() || bytes.size()>4096) return {};
     Image image;
     image.texture = cui_image_load_jpeg(ui,bytes.data(),static_cast<int>(bytes.size()),4096,&image.width,&image.height);
     if (image.texture) textures_.push_back(image.texture);
     return image;
+}
+
+void Dialogs::Assets::RefreshTargetPortrait(cui_ctx* ui, LoginClient& client, const SceneMapArt& scene,
+                                           cui_vec2 pointer, bool interactive)
+{
+    const auto now = GetTickCount64();
+    std::uint32_t hovered = 0;
+    if (interactive && scene.humans) {
+        const auto& humans = *scene.humans;
+        const auto hit = std::find_if(humans.rbegin(),humans.rend(),
+            [&](const SceneActorHit& actor) { return Contains(actor.bounds,pointer); });
+        if (hit!=humans.rend()) hovered = hit->actor;
+    }
+    if (hovered) {
+        if (targetActor_!=hovered) targetChangedAt_ = now;
+        targetActor_ = hovered;
+    } else if (now-targetChangedAt_>800) {
+        targetActor_ = 0;
+    }
+    auto target = client.scene.players.find(targetActor_);
+    if (!scene.humans || target==client.scene.players.end() || target->second.dead || target->second.npcType) {
+        targetActor_ = 0;
+        targetPortrait_ = {};
+        targetPortraitBytes_.clear();
+        Destroy(ui,targetCustomPortrait_);
+        return;
+    }
+    auto& actor = target->second;
+    if (hovered) client.RequestTargetPortrait(actor);
+    else cui_request_wakeup(ui,float(801-(now-targetChangedAt_))*0.001f);
+    const auto& appearance = actor.appearance;
+    const int frame = appearance.profession<=2 ? 650+2*appearance.profession+appearance.body : 0;
+    if (const auto it=gamePortraits_.find(frame);it!=gamePortraits_.end()) targetPortrait_ = it->second;
+    else targetPortrait_ = {};
+    const std::string_view jpeg = client.userPhotos ? std::string_view(actor.portraitJpeg) : std::string_view{};
+    if (targetPortraitBytes_!=jpeg) {
+        Destroy(ui,targetCustomPortrait_);
+        targetPortraitBytes_ = jpeg;
+        targetCustomPortrait_ = DecodePortrait(ui,jpeg);
+        if (!jpeg.empty() && !targetCustomPortrait_.texture) {
+            targetPortraitBytes_.clear();
+            actor.portraitJpeg.clear();
+            actor.resolvedPortraitVersion = 0;
+        }
+    }
 }
 
 void Dialogs::Assets::RefreshPortraitCache(cui_ctx* ui, const LoginClient& client)
@@ -7914,6 +7978,12 @@ void Dialogs::Assets::PaintGameHud(cui_ctx* ui, cui_rect rect) const
             const auto [x,y,w,h] = Layout::custom_portrait_rect(false);
             cui_draw_image(ui,portraitEquipped_.texture,base.Rect(x,y,w,h),{0,0,1,1},{},{255,255,255,255});
         } else if (const auto it=gamePortraits_.find(gameHud_.portrait_frame());it!=gamePortraits_.end()) image(it->second,p);
+        if (targetCustomPortrait_.texture) {
+            const auto [x,y,w,h] = Layout::custom_portrait_rect(true);
+            cui_draw_image(ui,targetCustomPortrait_.texture,base.Rect(x,y,w,h),{0,0,1,1},{},{255,255,255,255});
+        } else {
+            image(targetPortrait_,p);
+        }
     } else cui_draw_rect_premultiplied(ui,bounds(Layout::chat_backing),{30,30,30,150});
     sprite(1160,Layout::origin);
     const auto chat=Layout::chat_frame(expanded);
@@ -8008,10 +8078,11 @@ void Dialogs::Assets::DrawGameHud(cui_ctx* ui, LoginClient& client, bool pointer
         Contains({619.f,float(mir3::ChatScrollLayout::top(chat.expanded)),float(thumb.width),
             float(mir3::ChatScrollLayout::travel(chat.expanded)+thumb.height)},pointer) ||
         Contains({float(chatFrame[0]),float(chatFrame[1]),float(chatFrame[2]),float(chatFrame[3])},pointer);
+    const auto map = client.characterAppearance.available ? PrepareMapArt(ui,client) : SceneMapArt{};
+    const bool interactive=!pointerCovered && !modal && !overHud;
+    RefreshTargetPortrait(ui,client,map,pointer,interactive);
     if (client.characterAppearance.available) {
-        const auto map=PrepareMapArt(ui,client);
         cui_overlay_begin(ui,base.Rect(0,0,800,map.sprites ? 600 : 467));
-        const bool interactive=!pointerCovered && !modal && !overHud;
         cui_push_disabled(ui,!interactive);
         DrawLocalScene(ui,client,interactive,InventoryReady(),true,map);
         cui_pop_disabled(ui);
