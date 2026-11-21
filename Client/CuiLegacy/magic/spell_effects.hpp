@@ -72,9 +72,11 @@ struct SpellEffect {
     int frame=0, offset=0, lightStep=0, shrink=0, fade=0;
     std::int64_t soundVoice=0;
     std::uint32_t follow=0;
+    std::uint32_t poseActor=0;
     bool repeat=false, wave=false, baseWalkable=false, light=false, tail=false, finished=false;
     bool timedResidue=false;
     bool monsterEffect=false;
+    bool waitForTarget=false;
     std::optional<SpellFlight> flight;
     std::optional<StagedSpell> staged;
 
@@ -123,10 +125,12 @@ public:
 
     template<class Sound>
     void monsterAttack(const EffectCatalog& catalog,int id,SpellCell source,SpellCell target,std::uint32_t actor,
-                       int offset,unsigned delay,bool projectile,bool light,Sound sound)
+                       int offset,unsigned delay,bool projectile,bool light,Sound sound,bool waitForTarget=false,
+                       EffectCatalog::Section section=EffectCatalog::Section::magic)
     {
-        if (auto* effect=append(catalog,id,source,offset,delay,projectile,sound)) {
+        if (auto* effect=append(catalog,id,source,offset,delay,projectile,sound,section)) {
             effect->monsterEffect=true;
+            effect->waitForTarget=waitForTarget;
             effect->light=light && effect->resource.outer_radius>0;
             effect->repeat=projectile;
             if (projectile) effect->flight.emplace(effect->position,spell_pixel(target),actor,false);
@@ -134,9 +138,32 @@ public:
         }
     }
 
+    void monsterOverlay(const EffectCatalog& catalog,int id,SpellCell cell,int offset,
+                        std::uint32_t poseActor,std::uint32_t follow)
+    {
+        const auto* resource=find(catalog,EffectCatalog::Section::spell,id);
+        if (!resource || effects.size()>=512) return;
+        auto& e=effects.emplace_back();
+        e.resource=*resource;
+        e.cell=cell;
+        e.position=spell_pixel(cell);
+        e.frame=int(resource->first)+offset;
+        e.offset=offset;
+        e.poseActor=poseActor;
+        e.follow=follow;
+        e.monsterEffect=true;
+    }
+
+    template<class Sound,class Walkable>
+    void monsterWave(const EffectCatalog& catalog,int id,SpellCell source,SpellCell target,Sound sound,Walkable walkable)
+    {
+        wave(catalog,id,source,target,0,sound,walkable);
+    }
+
     void forgetActor(std::uint32_t id,std::optional<SpellPixel> position={},std::optional<SpellCell> lastCell={})
     {
         for (auto& effect:effects) {
+            if (effect.poseActor==id) effect.finished=true;
             if (effect.follow==id) {
                 if (effect.monsterEffect && lastCell) {
                     effect.cell=*lastCell;
@@ -190,8 +217,9 @@ public:
             if ((!e.wave && !e.staged && e.age>60000) || e.finished) { e.finished=true; continue; }
             if (e.follow) {
                 if (const auto pos=track(e.follow)) e.position=*pos;
-                else e.follow=0;
+                else if (!e.waitForTarget) e.follow=0;
             }
+            if (e.poseActor) continue;
             unsigned activeMs=ms;
             if (e.delay) {
                 if (ms<e.delay) { e.delay-=ms; continue; }
@@ -255,9 +283,10 @@ private:
     }
 
     template<class Sound>
-    SpellEffect* append(const EffectCatalog& catalog,int id,SpellCell cell,int offset,unsigned delay,bool flight,Sound sound) {
+    SpellEffect* append(const EffectCatalog& catalog,int id,SpellCell cell,int offset,unsigned delay,bool flight,Sound sound,
+                        EffectCatalog::Section section=EffectCatalog::Section::magic) {
         const bool particle=id==150 || id==int(MagicEffectId::lightning_trail);
-        const auto* resource=find(catalog,EffectCatalog::Section::magic,id,particle);
+        const auto* resource=find(catalog,section,id,particle);
         if (!resource || effects.size()>=512) return nullptr;
         auto& e=effects.emplace_back();
         e.resource=*resource; e.cell=cell; e.position=spell_pixel(cell);
@@ -356,7 +385,7 @@ private:
             const float dx=f.destination[0]-std::trunc(e.position[0]),dy=f.destination[1]-std::trunc(e.position[1]);
             const int scale=500/std::max(1,int(std::max(std::abs(dx),std::abs(dy))));
             f.velocity={dx*scale,dy*scale};
-        } else f.target=0;
+        } else if (!e.waitForTarget) f.target=0;
         SpellPixel distance{};
         for (int i=0;i<2;++i) {
             e.position[i]=float(double(f.velocity[i])*double(0.0011111111380159855f)*ms+e.position[i]);
@@ -391,12 +420,13 @@ private:
         if (!e.light) return;
         e.lightClock+=ms;
         const auto& r=e.resource;
-        if (e.tail && (e.wave || (!e.monsterEffect && SpellLight::fades(static_cast<SkillId>(r.id))))) {
+        const bool monsterFade=e.monsterEffect && (r.id==538 || r.id==539);
+        if (e.tail && (e.wave || monsterFade || (!e.monsterEffect && SpellLight::fades(static_cast<SkillId>(r.id))))) {
             e.lightStep=0;
             e.fade+=2;
             int brightest=0;
             for (const auto& rgb:{r.inner_color,r.outer_color})
-                for (const auto c:rgb) brightest=std::max(brightest,c<2 ? c+256 : int(c));
+                for (const auto c:rgb) brightest=std::max(brightest,!monsterFade && c<2 ? c+256 : int(c));
             if (brightest<=e.fade+2) e.finished=true;
         } else if (e.lightClock>200) {
             if (e.tail) {

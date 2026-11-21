@@ -100,7 +100,7 @@ inline constexpr WORD GameWalk = 11;
 inline constexpr WORD GameCrouch = 12, GameButcher = 637;
 inline constexpr WORD GameRun = 13;
 inline constexpr WORD GameMonsterAttack = 14, GameMonsterAttackSpecial = 1317;
-inline constexpr WORD GameMonsterRangedAttack = 22;
+inline constexpr WORD GameMonsterRangedAttack = 22, GameMonsterMagic = 23;
 inline constexpr WORD GameFireHit=8, GameMiningHit=15, GamePowerHit=18, GameLongHit=19,
     GameWideHit=24, GameWideHit2=25, GameRoundHit=1306, GameBackHit=1307,
     GameHumanAction18=1308, GameHumanAttack=1319;
@@ -264,6 +264,7 @@ struct LocalScene {
             int light=-1;
             mir3::SpellCell targetCell{};
             std::uint32_t targetActor=0;
+            unsigned magicBranch=0;
         };
         unsigned x = 0, y = 0, facing = 0;
         unsigned light = 0;
@@ -3259,7 +3260,8 @@ private:
             HandleMeleeMessage(opcode,actor,first,second,third);
         } else if (stage == Stage::GameSession && (opcode == GameActorStruck || opcode == GameActorStruckWithSource)) {
             HandleSceneHit(opcode,actor,first,second,third);
-        } else if (stage == Stage::GameSession && (opcode == GameMonsterAttackSpecial || opcode == GameMonsterRangedAttack)) {
+        } else if (stage == Stage::GameSession &&
+                   (opcode == GameMonsterAttackSpecial || opcode == GameMonsterRangedAttack || opcode == GameMonsterMagic)) {
             HandleMonsterCombat(opcode,actor,first,second,third);
         } else if (stage == Stage::GameSession && opcode == GameNpcDialogue) {
             if (actor && actor <= 0x7fffffffu && input_.size() <= DEFBLOCKSIZE + (8192 * 4 + 2) / 3) {
@@ -4271,9 +4273,92 @@ private:
         return true;
     }
 
+    void StartMonsterMagic(std::uint32_t actor,LocalScene::Player& monster,
+                           const LocalScene::Player::MonsterAction& move,std::uint64_t now,bool catchUp)
+    {
+        int effect=0, delay=0, action=0, overlay=0;
+        bool atTarget=false, projectile=false, eight=false, directional=false, groundWave=false;
+        switch (move.magicBranch) {
+        case 1: effect=515; action=2; directional=true; break;
+        case 2: effect=538; atTarget=true;
+            if (monster.npcShape==13) { delay=500; action=6; }
+            break;
+        case 3: effect=539; break;
+        case 4: effect=543; atTarget=true; break;
+        case 5: effect=23; atTarget=true; break;
+        case 6: effect=9; groundWave=true; break;
+        case 7: effect=576; delay=500; projectile=true; overlay=550; break;
+        case 8: effect=538; delay=500; atTarget=true; break;
+        case 9: effect=555; atTarget=true; break;
+        case 10: case 11: effect=590; delay=400; projectile=true; eight=true; action=5; break;
+        case 12: effect=581; projectile=true; action=5; break;
+        case 13: overlay=579; action=6; break;
+        case 14: effect=524; break;
+        case 15: effect=592; projectile=true; break;
+        case 16: effect=584; directional=true; break;
+        case 17: effect=576; delay=500; projectile=true; action=7; break;
+        case 18: effect=588; break;
+        case 19: overlay=587; action=5; break;
+        case 20: effect=597; delay=800; projectile=true; eight=true; break;
+        case 21: effect=603; delay=400; atTarget=true; directional=true; break;
+        case 22: effect=606; action=6; directional=true; break;
+        case 23: effect=2; delay=700; atTarget=true; break;
+        case 24: effect=29; atTarget=true; break;
+        case 25: effect=53; groundWave=true; break;
+        case 26: effect=120; delay=700; break;
+        default: return;
+        }
+        using Cell=mir3::SpellCell;
+        const auto target=move.targetCell;
+        if ((atTarget || projectile || groundWave) &&
+            (target[0]<0 || target[1]<0 || target[0]>65535 || target[1]>65535)) return;
+        if (move.magicBranch!=4 && move.magicBranch!=6) {
+            monster.x=move.x;
+            monster.y=move.y;
+        }
+        monster.facing=move.facing;
+        const Cell source{int(monster.x),int(monster.y)};
+        const bool startsAttack=action && !monster.dead;
+        if (startsAttack) {
+            monster.monsterCombatMotion=mir3::monster_attack_motion(monster.npcShape,action);
+            monster.monsterAttackAction=action;
+            monster.monsterCombatFrame=0;
+            monster.monsterCombatAt=now;
+            monster.monsterCatchUp=catchUp;
+        }
+        if (overlay) {
+            SceneEffects().monsterOverlay(effectCatalog_,overlay,source,10*move.facing,startsAttack ? actor : 0,
+                move.magicBranch==7 ? actor : 0);
+            PlaySceneSound(actor,10*(overlay+1000),source[0],source[1]);
+        }
+        if (!effect) return;
+        const auto sound=[&](int sample,Cell cell) -> std::int64_t {
+            if (effect<500) return PlaySpellSound(sample,cell);
+            PlaySceneSound(0,sample,cell[0],cell[1]);
+            return 0;
+        };
+        if (groundWave) {
+            SceneEffects().monsterWave(effectCatalog_,effect,source,target,sound,
+                [&](Cell cell) { return scene.terrain.BaseWalkable(cell[0],cell[1]); });
+            return;
+        }
+        const int offset=projectile ? 10*mir3::spell_direction(float((target[0]-source[0])*48),
+            float((target[1]-source[1])*32),eight) : directional ? 10*move.facing : 0;
+        const bool follows=projectile || effect==2 || effect==120 || effect==543 || effect==555;
+        // The installed MInfo.dat lists 603 in SPELL. Honor a MAGIC entry when available.
+        using Section=mir3::EffectCatalog::Section;
+        const auto section=effect==603 && !effectCatalog_.find(Section::magic,effect) ? Section::spell : Section::magic;
+        SceneEffects().monsterAttack(effectCatalog_,effect,atTarget ? target : source,target,
+            follows ? move.targetActor : 0,offset,delay,projectile,effect>=500,sound,true,section);
+    }
+
     void StartMonsterAction(std::uint32_t actor, LocalScene::Player& monster, const LocalScene::Player::MonsterAction& move,
                             std::uint64_t now, bool catchUp)
     {
+        if (move.opcode==GameMonsterMagic) {
+            StartMonsterMagic(actor,monster,move,now,catchUp);
+            return;
+        }
         const bool digUp=move.opcode==GameMonsterDigUp;
         const bool digDown=move.opcode==GameMonsterDigDown;
         const bool rise=move.opcode==GameMonsterRise;
@@ -4419,6 +4504,22 @@ private:
             move.current=first;
             move.maximum=second;
             move.damage=third;
+        } else if (opcode==GameMonsterMagic) {
+            if (input_.size()!=DEFBLOCKSIZE+22 || (third&255)>=8) return;
+            const auto body=ReadGameBody();
+            if (body.size()!=16) return;
+            const auto dword=[&](int offset) {
+                std::uint32_t value=0;
+                for (int byte=0;byte<4;++byte) value|=std::uint32_t(std::uint8_t(body[offset+byte]))<<(8*byte);
+                return value;
+            };
+            move.magicBranch=dword(12);
+            if (!move.magicBranch || move.magicBranch>26) return;
+            move.x=first;
+            move.y=second;
+            move.facing=third&255;
+            move.targetCell={static_cast<std::int32_t>(dword(0)),static_cast<std::int32_t>(dword(4))};
+            move.targetActor=dword(8);
         } else if (opcode==GameMonsterAttack || opcode==GameMonsterRangedAttack) {
             move.x=first;
             move.y=second;
@@ -4644,6 +4745,9 @@ private:
                 if (frame<motion.frames) continue;
                 monster.monsterCombatFrame=-1;
                 monster.monsterIdleAt=now;
+                if (scene.spellEffects)
+                    for (auto& effect:scene.spellEffects->effects)
+                        if (effect.poseActor==id) effect.finished=true;
             }
             if (monster.monsterActions.empty()) continue;
             const bool catchUp=monster.monsterActions.size()>=3;
@@ -4915,6 +5019,19 @@ private:
         if (scene.spellEffects && now>scene.spellEffectsTick) {
             const auto ms=(std::min)(now-scene.spellEffectsTick,std::uint64_t(250));
             const auto camera=LocalActorCamera(scene);
+            for (auto& effect:scene.spellEffects->effects) {
+                if (!effect.poseActor) continue;
+                const auto found=scene.players.find(effect.poseActor);
+                if (found==scene.players.end() || found->second.monsterCombatFrame<0 || !found->second.monsterAttackAction) {
+                    effect.finished=true;
+                    continue;
+                }
+                const auto& actor=found->second;
+                effect.frame=int(effect.resource.first)+effect.offset+actor.monsterCombatFrame;
+                if (effect.frame>=int(effect.resource.end)+effect.offset) effect.finished=true;
+                effect.cell={int(actor.x),int(actor.y)};
+                effect.position=mir3::spell_pixel(effect.cell);
+            }
             scene.spellEffects->advance(effectCatalog_,static_cast<unsigned>(ms),camera,
                 [&](auto actor) { return SpellTarget(actor); },
                 [&](int sample,mir3::SpellCell cell) -> std::int64_t {
