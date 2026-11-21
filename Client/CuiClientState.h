@@ -214,12 +214,14 @@ struct LocalScene {
         unsigned mount;
         std::uint32_t flags;
     };
-    struct ForcedStep {
+    struct LocalStep {
         static constexpr std::uint64_t FrameMs=96;
         int frame=-1,dx=0,dy=0;
         unsigned destinationX=0,destinationY=0;
         WORD opcode=0;
         std::uint64_t frameAt=0;
+        bool walking() const { return opcode==GameWalk || opcode==GameRun || opcode==GameActorReviveRefresh; }
+        bool predicted() const { return opcode==GameWalk || opcode==GameRun; }
     };
     using LocalAction = std::variant<HumanHit,LocalLifeAction>;
     using RemoteSpell = std::variant<RemoteCast,mir3::SpellReply,RemoteMelee,HumanHit>;
@@ -227,6 +229,11 @@ struct LocalScene {
     struct Movement {
         unsigned x = 0, y = 0, facing = 0;
         std::uint64_t deadline = 0;
+    };
+    struct WalkRequest {
+        unsigned x,y,facing,originX,originY;
+        std::uint32_t admitted;
+        std::uint64_t sendAt;
     };
 
     struct Player {
@@ -285,6 +292,10 @@ struct LocalScene {
     };
 
     Movement pending;
+    std::optional<WalkRequest> pendingWalk;
+    std::optional<Movement> movementOrigin;
+    std::uint64_t walkPointerAt=0;
+    bool runPointerCaptured=false;
     std::uint64_t lastMove = 0;
     std::uint64_t crouchedAt = 0, crouchReplyAt = 0, crouchHoldAt = 0;
     bool crouchPointerCaptured = false;
@@ -308,7 +319,7 @@ struct LocalScene {
     HumanHealth health;
     std::deque<LocalAction> localActions;
     bool dead=false,dying=false;
-    ForcedStep forcedStep;
+    LocalStep localStep;
     std::uint64_t lastSpecialHit=0;
     unsigned foldedHits=0;
     std::deque<mir3::SpellReply> spellMessages;
@@ -325,7 +336,7 @@ struct LocalScene {
     bool meleePointerCaptured = false;
     std::uint32_t actionFlags = 0;
     bool ActionInputBlocked() const {
-        return dead || forcedStep.frame>=0 || !localActions.empty() || (!casting.clock.finished() &&
+        return dead || pendingWalk || localStep.frame>=0 || !localActions.empty() || (!casting.clock.finished() &&
             (casting.clock.action()==15 || casting.clock.action()==32));
     }
     unsigned spellOriginalFacing = 0;
@@ -379,7 +390,7 @@ inline constexpr float SceneCellPitch = 24;
 inline std::array<int,2> LocalActorPixel(const LocalScene& scene)
 {
     std::array pixel{int(scene.x)*48,int(scene.y)*32};
-    const auto& step=scene.forcedStep;
+    const auto& step=scene.localStep;
     if (step.frame<0) return pixel;
     const unsigned direction=(scene.facing+(step.opcode==GameBackstep ? 4 : 0))%8;
     const bool committed=step.frame>=(direction==7 ? 4 : 1);
@@ -391,7 +402,7 @@ inline std::array<int,2> LocalActorPixel(const LocalScene& scene)
 
 inline std::array<int,2> LocalActorCamera(const LocalScene& scene)
 {
-    const auto& step=scene.forcedStep;
+    const auto& step=scene.localStep;
     if (step.frame<0) return {int(scene.x)*48-376,int(scene.y)*32-227};
     constexpr std::array x{8,16,24,32,40,48},y{5,11,16,21,27,32};
     return {(int(step.destinationX)-step.dx)*48-376+step.dx*x[step.frame],
@@ -1553,6 +1564,7 @@ public:
         if (const auto heading=std::find(SceneDirections.begin(),SceneDirections.end(),direction);heading!=SceneDirections.end())
             scene.facing=static_cast<unsigned>(heading-SceneDirections.begin());
         scene.crouchedAt=now;
+        scene.movementOrigin.reset();
         scene.crouchReplyAt=now+8000;
         Queue(ClientCrouch,0,"",scene.x|(std::uint32_t(scene.y)<<16),0,static_cast<WORD>(scene.facing));
         if (const auto found=scene.players.find(corpse);found!=scene.players.end() && scene.CanButcher(found->second))
@@ -1626,6 +1638,7 @@ public:
         }
         if (send) {
             if (predict) {
+                scene.movementOrigin.reset();
                 scene.spellOriginalFacing=scene.facing;
                 scene.spellReplyUntil=tick+8000;
                 if (route.action!=Action::none && route.action!=Action::rush) {
@@ -1687,7 +1700,7 @@ public:
         return true;
     }
 
-    void MoveInScene(int targetX, int targetY, bool run)
+    void MoveInScene(int targetX, int targetY, bool run, bool approachActor=false, bool firstRightPress=false)
     {
         using mir3_cui::GroundCell;
         const auto now = GetTickCount64();
@@ -1712,7 +1725,7 @@ public:
             Queue(ClientPickup,static_cast<WORD>(x),"",0,0,static_cast<WORD>(y));
             return;
         }
-        const int dx = (targetX > x) - (targetX < x), dy = (targetY > y) - (targetY < y);
+        const auto [dx,dy]=SceneDirections[SpellFacing(x,y,targetX,targetY)];
         const auto heading = [&](int stepX, int stepY) {
             const std::array<int, 2> step{stepX, stepY};
             return static_cast<unsigned>(std::find(SceneDirections.begin(), SceneDirections.end(), step) -
@@ -1723,36 +1736,32 @@ public:
             return;
         }
         if (scene.lastMove && now - scene.lastMove < 600) return;
-        const auto coordinates = [](int cellX, int cellY) {
-            return std::uint32_t(cellX) | (std::uint32_t(cellY) << 16);
-        };
         const auto walkable = [&](int cellX, int cellY) {
             const auto ground = scene.GroundAt(cellX, cellY);
             return (ground == GroundCell::Walkable || ground == GroundCell::DoorOpen) &&
                 !scene.Occupied(cellX, cellY);
         };
         int nextX = x + dx, nextY = y + dy;
-        if (scene.GroundAt(nextX, nextY) == GroundCell::DoorClosed) {
-            if (const auto door = scene.terrain.DoorAt(nextX, nextY)) {
-                Queue(ClientOpenDoor, static_cast<WORD>(nextX), "", door, 0, static_cast<WORD>(nextY));
-                scene.lastMove = now;
-            }
-            return;
-        }
+        if (RequestSceneDoor(nextX,nextY)) { scene.lastMove=now; return; }
         if (walkable(nextX, nextY)) {
-            if (run && walkable(nextX + dx, nextY + dy)) {
-                nextX += dx;
-                nextY += dy;
+            if (run && !firstRightPress && characterStatus.hp[0]>=10) {
+                RequestSceneDoor(nextX+dx,nextY+dy);
+                if (walkable(nextX+dx,nextY+dy) && (!mount.shape || walkable(nextX+2*dx,nextY+2*dy))) {
+                    const int more=mount.shape ? 2 : 1;
+                    nextX+=more*dx;
+                    nextY+=more*dy;
+                }
             }
         } else {
+            if (approachActor) return;
             nextX = x;
             nextY = y;
-            int nearest = 10000;
+            int nearest = 100;
             for (const auto& direction : SceneDirections) {
                 const int candidateX = x + direction[0], candidateY = y + direction[1];
                 if (!walkable(candidateX, candidateY)) continue;
                 const int distanceX = candidateX - targetX, distanceY = candidateY - targetY;
-                const int distance = distanceX * distanceX + distanceY * distanceY;
+                const int distance = int(std::hypot(distanceX,distanceY));
                 if (distance > nearest) continue;
                 nearest = distance;
                 nextX = candidateX;
@@ -1761,13 +1770,13 @@ public:
         }
         if (nextX == x && nextY == y) return;
         const unsigned facing = heading((nextX > x) - (nextX < x), (nextY > y) - (nextY < y));
-        const auto tick = static_cast<DWORD>(now);
-        const WORD opcode = std::abs(nextX - x) > 1 || std::abs(nextY - y) > 1 ? ClientRun : ClientWalk;
-        Queue(opcode, static_cast<WORD>(tick), "", coordinates(nextX, nextY), static_cast<WORD>(tick >> 16),
-            static_cast<WORD>(facing));
-        scene.pending = {static_cast<unsigned>(nextX), static_cast<unsigned>(nextY), facing, now + 8000};
-        scene.lastMove = now;
-        scene.actionClock.moved=tick;
+        const auto tick=static_cast<std::uint32_t>(now);
+        const auto& hand=characterStatus.hand;
+        const auto interval=mir3::MeleeCooldown::interval(characterStatus.level,scene.meleeCooldown.speed,hand[0],hand[1]);
+        scene.pendingWalk=LocalScene::WalkRequest{unsigned(nextX),unsigned(nextY),facing,scene.x,scene.y,tick,
+            now+scene.actionClock.shared_wait(tick,interval)};
+        scene.lastMove=now;
+        AdvanceWalk(now);
     }
 
     void RequestInventory()
@@ -2277,6 +2286,7 @@ public:
             AdvanceGroundItems(static_cast<std::uint32_t>(now));
             if (scene.spellReplyUntil && now>=scene.spellReplyUntil) scene.spellReplyUntil=0;
             AdvanceMelee(now);
+            AdvanceWalk(now);
             AdvanceHumanAction(scene.casting,0,scene.x,scene.y,characterAppearance,now);
             AdvanceLocalLife(now);
             AdvanceSpellEffects(now);
@@ -2948,8 +2958,10 @@ private:
             scene.spellReplyUntil=0;
             scene.crouchReplyAt=0;
             if (scene.pending.deadline && !scene.dead) {
-                scene.SetCell(scene.pending.x, scene.pending.y);
-                scene.facing = scene.pending.facing;
+                if (!scene.movementOrigin) {
+                    scene.SetCell(scene.pending.x,scene.pending.y);
+                    scene.facing=scene.pending.facing;
+                }
                 scene.pending = {};
             }
             return;
@@ -2961,6 +2973,15 @@ private:
                 audio.StopSceneEffect(0);
             }
             if (scene.crouchReplyAt) scene.crouchedAt=scene.crouchReplyAt=0;
+            if (scene.movementOrigin && !scene.dead && (!characterStatus.hp[1] || characterStatus.hp[0])) {
+                const auto origin=*scene.movementOrigin;
+                scene.SetCell(origin.x,origin.y);
+                scene.facing=origin.facing;
+                scene.localStep={};
+                scene.pendingWalk.reset();
+                scene.movementOrigin.reset();
+                audio.StopSceneEffect(0);
+            }
             scene.pending = {};
             return;
         }
@@ -3064,6 +3085,8 @@ private:
             if (input_.size() == DEFBLOCKSIZE) {
                 mount.apply_reply(actor);
                 scene.pending = {};
+                scene.pendingWalk.reset();
+                scene.movementOrigin.reset();
                 scene.lastMove = 0;
             }
         } else if (stage == Stage::GameSession && opcode>=GameTradeOpen && opcode<=GameTradeComplete) {
@@ -3719,6 +3742,10 @@ private:
         scene.mapId = std::move(body);
         CloseNpcDialogue();
         scene.pending = {};
+        scene.pendingWalk.reset();
+        scene.movementOrigin.reset();
+        scene.walkPointerAt=0;
+        scene.runPointerCaptured=false;
         scene.crouchedAt=scene.crouchReplyAt=scene.crouchHoldAt=0;
         scene.crouchPointerCaptured=false;
         scene.lastMove = 0;
@@ -3730,7 +3757,7 @@ private:
         if (!scene.dying) scene.casting={};
         scene.health={};
         scene.localActions.clear();
-        scene.forcedStep={};
+        scene.localStep={};
         scene.lastSpecialHit=0;
         scene.foldedHits=0;
         scene.spellMessages.clear();
@@ -3815,7 +3842,8 @@ private:
     void HandleLocalMovement(unsigned opcode, WORD x, WORD y, WORD direction)
     {
         const unsigned facing=direction&255;
-        if (facing>=8 || scene.forcedStep.frame>=0 || (scene.terrain.Ready() && !scene.terrain.Contains(x,y))) return;
+        if (facing>=8 || (scene.localStep.frame>=0 && !scene.localStep.predicted()) ||
+            (scene.terrain.Ready() && !scene.terrain.Contains(x,y))) return;
         const auto size = input_.size() - DEFBLOCKSIZE;
         if (opcode == GameBackstep && size != 29) return;
         if (opcode == GameTurn && (size < 29 || size > 1024)) return;
@@ -3827,6 +3855,15 @@ private:
             if (size > 29 && DecodeGameBytes(input_.substr(DEFBLOCKSIZE + 29)).empty()) return;
             if (!characterAppearance.Apply(PackedAppearance(feature))) return;
         }
+        if (scene.localStep.frame>=0 && scene.localStep.predicted() && opcode==scene.localStep.opcode &&
+            scene.localStep.destinationX==x && scene.localStep.destinationY==y && scene.facing==facing) {
+            scene.pending={};
+            scene.light=direction>>8;
+            return;
+        }
+        scene.localStep={};
+        scene.pendingWalk.reset();
+        scene.movementOrigin.reset();
         scene.SetCell(x, y);
         scene.facing = facing;
         if (opcode!=GameBackstep) scene.light=direction>>8;
@@ -3837,7 +3874,11 @@ private:
     void ResetLocalActorActions()
     {
         scene.pending={};
-        scene.forcedStep={};
+        scene.pendingWalk.reset();
+        scene.movementOrigin.reset();
+        scene.walkPointerAt=0;
+        scene.runPointerCaptured=false;
+        scene.localStep={};
         scene.pendingMelee.reset();
         scene.localActions.clear();
         scene.casting={};
@@ -3870,6 +3911,47 @@ private:
         scene.localActions.emplace_back(action);
     }
 
+    bool RequestSceneDoor(int x,int y)
+    {
+        if (scene.GroundAt(x,y)!=mir3_cui::GroundCell::DoorClosed) return false;
+        const auto door=scene.terrain.DoorAt(x,y);
+        if (!door) return false;
+        Queue(ClientOpenDoor,WORD(x),"",door,0,WORD(y));
+        return true;
+    }
+
+    void AdvanceWalk(std::uint64_t now)
+    {
+        if (!scene.pendingWalk || now<scene.pendingWalk->sendAt) return;
+        const auto request=*scene.pendingWalk;
+        scene.pendingWalk.reset();
+        if (scene.dead || showSignOut || (characterStatus.hp[1] && !characterStatus.hp[0]) ||
+            scene.x!=request.originX || scene.y!=request.originY || output_.size()>=8192) return;
+        const int dx=int(request.x)-int(scene.x),dy=int(request.y)-int(scene.y);
+        const int distance=std::max(std::abs(dx),std::abs(dy));
+        const bool running=distance>1;
+        if (!running) {
+            for (const auto [x,y]:SceneDirections)
+                if (RequestSceneDoor(int(request.x)+x,int(request.y)+y)) break;
+        } else {
+            const auto [stepX,stepY]=SceneDirections[request.facing];
+            const int firstX=int(scene.x)+stepX,firstY=int(scene.y)+stepY;
+            for (const auto [x,y]:SceneDirections)
+                for (int ray=1;ray<=distance;++ray)
+                    if (RequestSceneDoor(firstX+x*ray,firstY+y*ray)) break;
+        }
+        scene.movementOrigin=LocalScene::Movement{scene.x,scene.y,scene.facing,0};
+        scene.facing=request.facing;
+        scene.casting={};
+        scene.levelPoseAt=scene.crouchedAt=0;
+        scene.localStep={0,dx,dy,request.x,request.y,running ? GameRun : GameWalk,now+LocalScene::LocalStep::FrameMs};
+        scene.pending={request.x,request.y,request.facing,now+8000};
+        scene.actionClock.moved=static_cast<std::uint32_t>(now);
+        const auto tick=request.admitted;
+        Queue(running ? ClientRun : ClientWalk,WORD(tick),"",request.x|(std::uint32_t(request.y)<<16),
+            WORD(tick>>16),WORD(request.facing));
+    }
+
     void AdvanceLocalLife(std::uint64_t now)
     {
         if (scene.dying && scene.casting.clock.frame()>=9) {
@@ -3877,14 +3959,18 @@ private:
             scene.casting={};
         }
         if (scene.dead && !scene.dying) characterStatus.hp[0]=0;
-        auto& step=scene.forcedStep;
+        auto& step=scene.localStep;
         if (step.frame>=0) {
             if (now<step.frameAt) return;
-            step.frameAt=now+LocalScene::ForcedStep::FrameMs;
-            step.frame+=step.opcode==GameActorReviveRefresh ? 1 : 2;
-            if (step.opcode==GameActorReviveRefresh && (step.frame==1 || step.frame==4)) {
-                const char* sample=!mount.shape ? "1.wav" : step.frame==1 ? "33.wav" : "34.wav";
-                PlaySceneSample(0,sample,int(scene.x),int(scene.y));
+            step.frameAt=now+LocalScene::LocalStep::FrameMs;
+            step.frame+=step.walking() ? 1 : 2;
+            if (step.walking()) {
+                if (mount.shape && step.opcode==GameRun) {
+                    if (step.frame==3) PlaySceneSample(0,"35.wav",int(scene.x),int(scene.y));
+                } else if (step.frame==1 || step.frame==4) {
+                    const char* sample=!mount.shape ? "1.wav" : step.frame==1 ? "33.wav" : "34.wav";
+                    PlaySceneSample(0,sample,int(scene.x),int(scene.y));
+                }
             }
             if (step.opcode==GameBump && step.frame>=4) {
                 scene.SetCell(int(step.destinationX)-step.dx,int(step.destinationY)-step.dy);
@@ -3900,7 +3986,8 @@ private:
         }
         if (scene.pendingMelee || scene.localActions.empty() ||
             (!scene.casting.clock.finished() && scene.casting.clock.action()!=7)) return;
-        if (!scene.dead && scene.lastMove && now-scene.lastMove<6*LocalScene::ForcedStep::FrameMs) return;
+        if (scene.pending.deadline && !scene.movementOrigin && scene.lastMove &&
+            now-scene.lastMove<6*LocalScene::LocalStep::FrameMs) return;
         if (scene.pending.deadline) {
             if (!scene.lastMove) return;
             scene.SetCell(scene.pending.x,scene.pending.y);
@@ -3917,6 +4004,8 @@ private:
     {
         characterAppearance=action.appearance;
         scene.pending={};
+        scene.pendingWalk.reset();
+        scene.movementOrigin.reset();
         scene.spellReplyUntil=0;
         scene.casting={};
         scene.crouchedAt=scene.crouchReplyAt=scene.levelPoseAt=0;
@@ -3938,7 +4027,7 @@ private:
         const auto [dx,dy]=SceneDirections[(scene.facing+(action.opcode==GameBackstep ? 4 : 0))%8];
         scene.SetCell(int(action.x)-dx,int(action.y)-dy);
         if (!scene.dead)
-            scene.forcedStep={0,dx,dy,action.x,action.y,action.opcode,now+LocalScene::ForcedStep::FrameMs};
+            scene.localStep={0,dx,dy,action.x,action.y,action.opcode,now+LocalScene::LocalStep::FrameMs};
     }
 
     static void SetRemoteName(LocalScene::Player& player, std::string body, int palette=-1)
@@ -4625,6 +4714,7 @@ private:
         if (pending.opcode==Attack::hit)
             selected=scene.meleeSpells.select(weapon,int(pending.facing),characterStatus.mp[0],
                 scene.Occupied(x+2*dx,y+2*dy),characterAppearance.body);
+        scene.movementOrigin.reset();
         scene.spellOriginalFacing=scene.facing;
         scene.spellReplyUntil=now+8000;
         scene.facing=pending.facing;
@@ -4709,7 +4799,7 @@ private:
             scene.facing=4;
             scene.pending={};
             scene.crouchedAt=scene.crouchReplyAt=0;
-            if (!scene.dead && scene.forcedStep.frame<0) {
+            if (!scene.dead && scene.localStep.frame<0) {
                 scene.levelPoseAt=now;
                 scene.casting={};
             }

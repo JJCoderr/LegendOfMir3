@@ -5459,27 +5459,33 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
     cui_pop_disabled(ui);
     const bool cutRelease=scene.crouchPointerCaptured && cui_mouse_released(ui,CUI_MOUSE_LEFT);
     const bool swingRelease=scene.meleePointerCaptured && cui_mouse_released(ui,CUI_MOUSE_LEFT);
+    const bool walkRelease=scene.walkPointerAt && cui_mouse_released(ui,CUI_MOUSE_LEFT);
     if (!cui_mouse_down(ui,CUI_MOUSE_LEFT)) {
         scene.crouchHoldAt=0;
         scene.crouchPointerCaptured=false;
         scene.meleePointerCaptured=false;
+        scene.walkPointerAt=0;
     }
-    if (!interactive || delayed || !view.terrainReady || !canvas.hovered || cutRelease || swingRelease) return;
+    if (!cui_mouse_down(ui,CUI_MOUSE_RIGHT)) scene.runPointerCaptured=false;
+    if (!interactive || delayed || !view.terrainReady || !canvas.hovered || cutRelease || swingRelease || walkRelease) return;
     if (nativeInventory && (client.inventory.heldGold || client.HeldItem())) {
         if (cui_mouse_clicked(ui,CUI_MOUSE_LEFT)) client.BeginHeldDrop();
         return;
     }
     if (client.trade.returnSlot>=0) return;
     if (!legacyHud) cui_tooltip(ui, "Left-click to walk. Right-click to run or turn.");
-    const bool run = cui_mouse_clicked(ui, CUI_MOUSE_RIGHT);
+    const bool rightPress=cui_mouse_clicked(ui,CUI_MOUSE_RIGHT);
+    if (rightPress && art.sprites) scene.runPointerCaptured=true;
+    const bool run=rightPress || scene.runPointerCaptured;
     const auto mods=cui_key_mods(ui);
     const bool altCut=art.sprites && (mods&(CUI_MOD_ALT|CUI_MOD_SHIFT))==CUI_MOD_ALT;
     const bool cutPress=!run && altCut && cui_mouse_clicked(ui,CUI_MOUSE_LEFT);
     const bool cutRepeat=altCut && scene.crouchHoldAt && now-scene.crouchHoldAt>=300;
     const bool swingHeld=art.sprites && !run && !altCut && canvas.pressed &&
         (scene.meleePointerCaptured || cui_mouse_clicked(ui,CUI_MOUSE_LEFT));
+    const bool walkHeld=canvas.pressed && scene.walkPointerAt && now-scene.walkPointerAt>=300;
     if (cutPress) scene.crouchPointerCaptured=true;
-    if (!canvas.clicked && !run && !cutPress && !cutRepeat && !swingHeld) return;
+    if (!canvas.clicked && !run && !cutPress && !cutRepeat && !swingHeld && !walkHeld) return;
     if (art.sprites) {
         const float scale=canvas.rect.w/800;
         const float viewX=canvas.mouse.x/scale, viewY=canvas.mouse.y/scale;
@@ -5491,9 +5497,9 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
             });
             if (hit!=npcs.rend() && ((canvas.clicked || cutPress) ? client.ClickNpcActor(hit->actor) : swingHeld)) return;
         }
-        const int x=static_cast<int>(viewX+art.cameraX)/48;
-        const int y=static_cast<int>(viewY+art.cameraY)/32;
-        if (!run && (canvas.clicked || cutPress) && client.ClickNpc(x,y)) return;
+        int x=static_cast<int>(viewX+art.cameraX)/48;
+        int y=static_cast<int>(viewY+art.cameraY)/32;
+        if (!run && (canvas.clicked || cutPress || swingHeld) && client.ClickNpc(x,y)) return;
         if (!run && (cutPress || cutRepeat)) {
             if (cutPress) scene.crouchHoldAt=now;
             const auto hit=[&](const SceneActorHit& actor) {
@@ -5512,6 +5518,7 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
             client.CrouchInScene(x,y,humanCorpse ? humanCorpse : monsterCorpse);
             return;
         }
+        bool approachActor=false;
         if (!run && art.targets) {
             const auto& targets=*art.targets;
             const auto hit=std::find_if(targets.rbegin(),targets.rend(),[&](const SceneActorHit& target) {
@@ -5525,9 +5532,17 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
                 }
                 return;
             }
+            const auto weapon=client.characterAppearance.weapon;
+            if (hit!=targets.rend() && (weapon<34 || weapon>37)) {
+                const auto& target=scene.players.at(hit->actor);
+                x=int(target.x);
+                y=int(target.y);
+                approachActor=true;
+            }
         }
-        if (swingHeld) return;
-        client.MoveInScene(x,y,run);
+        if (swingHeld) scene.walkPointerAt=now;
+        if (scene.walkPointerAt || scene.runPointerCaptured) cui_request_wakeup(ui,0.05f);
+        client.MoveInScene(x,y,run,approachActor,rightPress);
         return;
     }
     const float pitch=SceneCellPitch*(legacyHud ? canvas.rect.w/800 : 1);
@@ -5536,7 +5551,7 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
     const int y = static_cast<int>(view.y) +
         static_cast<int>(std::floor((canvas.mouse.y - canvas.rect.h / 2 - 10) / pitch + 0.5f));
     if (!run && client.ClickNpc(x, y)) return;
-    client.MoveInScene(x, y, run);
+    client.MoveInScene(x,y,run,false,rightPress);
 }
 
 void DrawNpcDialogue(cui_ctx* ui, LoginClient& client)
@@ -6173,7 +6188,8 @@ cui_rect Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAp
     int motion=facing*10+pose;
     const auto library=prefix+"Hum";
     const WorldFrame* horse=nullptr;
-    if (mount>=1 && mount<=3 && (pose<4 || (pose>=2560 && pose<2563) || (pose>=2400 && pose<2406))) {
+    if (mount>=1 && mount<=3 && (pose<4 || (pose>=2560 && pose<2563) ||
+        (pose>=2400 && pose<2406) || (pose>=2480 && pose<2486))) {
         const int mountedMotion=pose<4 ? motion+2320 : motion;
         const auto& frame=GetWorldFrame(ui,"Horse",400*(mount-1)+mountedMotion-2320);
         if (frame.image.texture && GetWorldFrame(ui,library,int(actor.clothing)*3000+mountedMotion).image.texture) {
@@ -6435,14 +6451,17 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         const int crouch=CrouchPose(scene.crouchedAt,monsterNow);
         const int level=mir3::level_up_pose(scene.levelPoseAt,monsterNow);
         const int cast=scene.casting.pose();
-        const auto& step=scene.forcedStep;
+        const auto& step=scene.localStep;
         int pose=cast>=0 ? cast : level>=0 ? level : crouch>=0 ? crouch : idle;
         unsigned mount=cast>=0 && scene.casting.clock.action()==32 ? 0 : client.mount.shape;
         if (scene.dead) {
             pose=scene.dying ? cast : HumanCorpsePose;
             mount=0;
         } else if (step.frame>=0) {
-            if (step.opcode==GameActorReviveRefresh) pose=(mount ? 2400 : 1680)+step.frame;
+            if (step.walking()) {
+                const int base=step.opcode==GameRun ? (mount ? 2480 : 1760) : (mount ? 2400 : 1680);
+                pose=base+step.frame;
+            }
             else {
                 pose=step.opcode==GameBackstep ? 400 : 1840+step.frame;
                 mount=0;
