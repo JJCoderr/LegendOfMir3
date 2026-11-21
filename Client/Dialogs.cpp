@@ -157,11 +157,12 @@ public:
     void DrawGuildPanel(cui_ctx* ui, LoginClient& client);
     void LeaveGuild();
     void DrawQuestPanel(cui_ctx* ui, LoginClient& client);
+    bool HandleQuestInput(cui_ctx* ui, LoginClient& client, bool blocked, bool fallback = false);
     static void PostQuestNotices(LoginClient& client, const Assets* assets);
     bool QuestBlocksScene(cui_ctx* ui) const;
     void LeaveQuests() {
         questFocused_ = questDragging_ = questScrollDrag_ = false;
-        questPressed_ = -1;
+        questPressed_ = questHint_ = -1;
     }
     bool PartyBlocksScene(cui_ctx* ui) const
     {
@@ -493,6 +494,8 @@ private:
         int width = 0;
         cui_color color{};
     };
+    static std::vector<QuestLine> QuestLines(const mir3_cui::QuestPanel& quests);
+    void ToggleQuest(LoginClient& client);
     bool questReady_ = false, questFocused_ = false, questDragging_ = false, questScrollDrag_ = false;
     int questX_ = 0, questY_ = 0, questGrabX_ = 0, questGrabY_ = 0;
     int questFirst_ = 0, questLast_ = 0, questDescriptionFirst_ = 0;
@@ -737,12 +740,12 @@ private:
     cui_vec2 skillPointer_{-1,-1};
     int skillMenuTarget_ = 0, skillDescriptionId_ = 0;
     unsigned skillListRevision_ = 0;
-    enum class UtilityPanel { Skills, Status, Inventory, Options, Portrait, Mount, Trade };
-    static constexpr std::array<UtilityPanel,7> initialUtilityOrder_{
-        UtilityPanel::Skills,UtilityPanel::Status,UtilityPanel::Inventory,UtilityPanel::Options,UtilityPanel::Portrait,
+    enum class UtilityPanel { Quest, Skills, Status, Inventory, Options, Portrait, Mount, Trade };
+    static constexpr std::array<UtilityPanel,8> initialUtilityOrder_{
+        UtilityPanel::Quest,UtilityPanel::Skills,UtilityPanel::Status,UtilityPanel::Inventory,UtilityPanel::Options,UtilityPanel::Portrait,
         UtilityPanel::Mount,UtilityPanel::Trade
     };
-    std::array<UtilityPanel,7> utilityOrder_ = initialUtilityOrder_;
+    std::array<UtilityPanel,8> utilityOrder_ = initialUtilityOrder_;
     bool UtilityVisible(UtilityPanel panel, const LoginClient& client) const;
     void RaiseUtility(UtilityPanel panel);
     void PrepareInventoryPlacement(LoginClient& client);
@@ -1831,45 +1834,66 @@ bool Dialogs::Assets::QuestBlocksScene(cui_ctx* ui) const
     return base.scale > 0 && Contains({float(questX_),float(questY_),340,440}, base.ToLocal(cui_mouse_pos(ui)));
 }
 
-void Dialogs::Assets::DrawQuestPanel(cui_ctx* ui, LoginClient& client)
+std::vector<Dialogs::Assets::QuestLine> Dialogs::Assets::QuestLines(const mir3_cui::QuestPanel& quests)
 {
-    auto& quests = client.quests;
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
-    if (base.scale <= 0) return;
-    if (!portraitNotice_ && !client.showSignOut && !client.returnToCharactersAt &&
-        questFocused_ && cui_shortcut(ui, 0, CUI_KEY_D)) {
-        quests.open = false;
+    std::vector<QuestLine> lines;
+    for (const auto& entry : quests.entries) {
+        lines.push_back({&entry.record, entry.record.id, false});
+        if (entry.record.id == quests.expanded)
+            for (const auto& child : entry.children) lines.push_back({&child, entry.record.id, true});
+    }
+    return lines;
+}
+
+void Dialogs::Assets::ToggleQuest(LoginClient& client)
+{
+    if (client.quests.open) {
+        client.quests.open = false;
         LeaveQuests();
-        return;
+    } else {
+        client.OpenQuests();
+        if (QuestReady() && client.quests.open) RaiseUtility(UtilityPanel::Quest);
+    }
+}
+
+bool Dialogs::Assets::HandleQuestInput(cui_ctx* ui, LoginClient& client, bool blocked, bool fallback)
+{
+    const bool covered = QuestBlocksScene(ui);
+    if (fallback && !blocked && questFocused_ && cui_shortcut(ui,0,CUI_KEY_D)) {
+        ToggleQuest(client);
+        return covered;
     }
     questFocused_ = true;
-    const auto local = base.ToLocal(cui_mouse_pos(ui));
-    const auto previous = std::exchange(questPreviousPointer_, local);
-    const int mouseX = static_cast<int>(local.x), mouseY = static_cast<int>(local.y);
-    const auto hit = [&](float x, float y, float w, float h) {
-        return !pointerCoversPanel_ && Contains({x,y,w,h}, local);
-    };
-    const auto flatten = [&] {
-        std::vector<QuestLine> lines;
-        for (const auto& entry : quests.entries) {
-            lines.push_back({&entry.record, entry.record.id, false});
-            if (entry.record.id == quests.expanded)
-                for (const auto& child : entry.children) lines.push_back({&child, entry.record.id, true});
-        }
-        return lines;
-    };
-    auto lines = flatten();
-    questLast_ = (std::max)(0, static_cast<int>(lines.size()) - 1);
+    auto& quests = client.quests;
     if (std::exchange(quests.resetScroll, false)) {
         questFirst_ = 0;
         questScrollDrag_ = false;
     }
     if (std::exchange(quests.resetDescription, false)) questDescriptionFirst_ = 0;
+    if (blocked) {
+        questDragging_ = questScrollDrag_ = false;
+        questPressed_ = questHint_ = -1;
+        return false;
+    }
+    if (!covered) {
+        questHint_ = -1;
+        return false;
+    }
+    const auto view = cui_viewport_size(ui);
+    const HudPoint base({0,0,view.x,view.y});
+    if (base.scale <= 0) return false;
+    const auto local = base.ToLocal(cui_mouse_pos(ui));
+    const auto previous = std::exchange(questPreviousPointer_, local);
+    const int mouseX = static_cast<int>(local.x), mouseY = static_cast<int>(local.y);
+    const auto hit = [&](float x, float y, float w, float h) {
+        return Contains({x,y,w,h}, local);
+    };
+    const auto lines = QuestLines(quests);
+    questLast_ = (std::max)(0, static_cast<int>(lines.size()) - 1);
     questFirst_ = std::clamp(questFirst_, 0, questLast_);
     const auto scroll = [&](int step) { questFirst_ = std::clamp(questFirst_ + step, 0, questLast_); };
-    const int wheel = -static_cast<int>(std::lround(cui_mouse_scroll(ui).y));
-    if (wheel && hit(questX_, questY_, 340, 440)) {
+    if (hit(questX_, questY_, 340, 440)) {
+        const int wheel = -static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y));
         if (hit(questX_+80,questY_+310,170,70)) {
             const auto* detail = quests.Description();
             if (detail && !detail->empty())
@@ -1889,7 +1913,7 @@ void Dialogs::Assets::DrawQuestPanel(cui_ctx* ui, LoginClient& client)
     const int trackHeight = 182 + questThumb_.height;
     const int trackTop = questY_ + 160;
     if (questScrollDrag_) {
-        if (!pointerCoversPanel_ && local.y != previous.y)
+        if (local.y != previous.y)
             questFirst_ = questLast_ * std::clamp(mouseY - trackTop, 0, trackHeight) / trackHeight;
         if (up) questScrollDrag_ = false;
     } else if (down && hit(questX_ + 272, trackTop, questThumb_.width, trackHeight)) {
@@ -1909,7 +1933,7 @@ void Dialogs::Assets::DrawQuestPanel(cui_ctx* ui, LoginClient& client)
             questGrabX_ = mouseX - questX_;
             questGrabY_ = mouseY - questY_;
         }
-    } else if (questDragging_ && !pointerCoversPanel_) {
+    } else if (questDragging_) {
         questX_ = mouseX - questGrabX_;
         questY_ = mouseY - questGrabY_;
         if (questY_ + 440 > 570) questY_ = 565 - 440;
@@ -1921,22 +1945,28 @@ void Dialogs::Assets::DrawQuestPanel(cui_ctx* ui, LoginClient& client)
             if (client.audioOptions.effects && std::filesystem::exists(clickSound_))
                 client.audio.PlayEffect(clickSound_.c_str(), client.audioOptions);
             if (button == 1) {
-                quests.open = false;
-                LeaveQuests();
-                return;
+                ToggleQuest(client);
+                return covered;
             }
             if (quests.child < 0) {
                 if (auto* selected = quests.Find(quests.parent)) client.ExpandQuest(*selected, false);
-                lines = flatten();
-                questLast_ = (std::max)(0, static_cast<int>(lines.size()) - 1);
-                questFirst_ = std::clamp(questFirst_, 0, questLast_);
             }
         }
     }
     questHint_ = button >= 0 && button != questPressed_ && !questDragging_ && questHints_[button].texture ? button : -1;
     if (questHint_ >= 0)
         questHintDrawHeight_ = hudHint_.Advance(ui, questHintMessages_[questHint_], questHints_[questHint_].height);
-    RefreshQuestText(ui, quests, lines);
+    return covered;
+}
+
+void Dialogs::Assets::DrawQuestPanel(cui_ctx* ui, LoginClient& client)
+{
+    auto& quests = client.quests;
+    const auto lines = QuestLines(quests);
+    questLast_ = (std::max)(0, static_cast<int>(lines.size()) - 1);
+    questFirst_ = std::clamp(questFirst_,0,questLast_);
+    RefreshQuestText(ui,quests,lines);
+    const auto view = cui_viewport_size(ui);
     cui_overlay_begin(ui, {0,0,view.x,view.y});
     auto* self = this;
     cui_canvas_paint(ui, CUI_FILL, CUI_FILL, [](cui_ctx* ui, cui_rect rect, void* model) {
@@ -6601,6 +6631,7 @@ void Dialogs::Assets::PaintSkillShortcuts(cui_ctx* ui, cui_rect rect, const Logi
 bool Dialogs::Assets::UtilityVisible(UtilityPanel panel, const LoginClient& client) const
 {
     switch (panel) {
+    case UtilityPanel::Quest: return QuestReady() && client.quests.open;
     case UtilityPanel::Skills: return SkillsReady() && client.skills.visible;
     case UtilityPanel::Status: return StatusReady() && client.equipment.open;
     case UtilityPanel::Inventory: return InventoryReady() && client.inventory.open;
@@ -7611,6 +7642,7 @@ bool Dialogs::Assets::HandleUtilityPanels(cui_ctx* ui, LoginClient& client, bool
         RaiseUtility(UtilityPanel::Trade);
     if (std::exchange(utilityInventoryOpen_,client.inventory.open)!=client.inventory.open && client.inventory.open)
         RaiseUtility(UtilityPanel::Inventory);
+    if (QuestReady() && client.quests.open && !questFocused_) RaiseUtility(UtilityPanel::Quest);
     const auto order = utilityOrder_;
     const bool close = !modal && !client.shop.actor && !client.chat.composing &&
         cui_shortcut(ui,0,CUI_KEY_ESCAPE);
@@ -7621,6 +7653,7 @@ bool Dialogs::Assets::HandleUtilityPanels(cui_ctx* ui, LoginClient& client, bool
         const bool blocked = covered || foreground || modal;
         bool hit = false;
         switch (panel) {
+        case UtilityPanel::Quest: hit = HandleQuestInput(ui,client,blocked); break;
         case UtilityPanel::Skills: hit = HandleSkillInput(ui,client,blocked,!client.chat.composing); break;
         case UtilityPanel::Status: hit = HandleStatusInput(ui,client,blocked); break;
         case UtilityPanel::Inventory: hit = HandleInventoryUtility(ui,client,blocked || quickCovered); break;
@@ -7634,6 +7667,7 @@ bool Dialogs::Assets::HandleUtilityPanels(cui_ctx* ui, LoginClient& client, bool
         if (panel!=UtilityPanel::Inventory) coveredOutsideBag |= hit;
         if (!close || escape || (panel!=UtilityPanel::Inventory && (foreground || client.npcDialogue.actor))) continue;
         switch (panel) {
+        case UtilityPanel::Quest: ToggleQuest(client); break;
         case UtilityPanel::Skills: ToggleSkills(client); break;
         case UtilityPanel::Status: ToggleStatus(client); break;
         case UtilityPanel::Inventory:
@@ -7656,6 +7690,7 @@ void Dialogs::Assets::DrawUtilityPanels(cui_ctx* ui, LoginClient& client, bool i
     for (const auto panel : utilityOrder_) {
         if (!UtilityVisible(panel,client)) continue;
         switch (panel) {
+        case UtilityPanel::Quest: DrawQuestPanel(ui,client); break;
         case UtilityPanel::Skills: DrawSkillsPanel(ui,client); break;
         case UtilityPanel::Status: DrawStatusPanel(ui,client); break;
         case UtilityPanel::Inventory:
@@ -7815,10 +7850,7 @@ void Dialogs::Assets::GameHudInput(cui_ctx* ui, LoginClient& client, cui_vec2 po
                 case 5: client.party.open=!client.party.open; break;
                 case 6: client.RequestGuildPage(0); break;
                 case 7: ToggleSkills(client); break;
-                case 8:
-                    if (client.quests.open) client.quests.open=false;
-                    else client.OpenQuests();
-                    break;
+                case 8: ToggleQuest(client); break;
                 case 9: ToggleOptions(client); break;
                 case 11: ToggleMount(client); break;
                 case 12:
@@ -7890,7 +7922,7 @@ void Dialogs::Assets::GameHudInput(cui_ctx* ui, LoginClient& client, cui_vec2 po
         if (cui_shortcut(ui,0,CUI_KEY_Q)) {
             if (StatusReady() || !client.equipment.open) ToggleStatus(client);
         }
-        if (cui_shortcut(ui,0,CUI_KEY_D) && !client.quests.open) client.OpenQuests();
+        if (cui_shortcut(ui,0,CUI_KEY_D)) ToggleQuest(client);
         if (cui_shortcut(ui,0,CUI_KEY_Z)) client.ToggleItemShortcuts();
         if (cui_shortcut(ui,0,CUI_KEY_N)) ToggleOptions(client);
         if (cui_shortcut(ui,0,CUI_KEY_S)) ToggleMount(client);
@@ -8418,9 +8450,12 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
             } else if (!partyOpen && guildOpen && !guildActionOpen) {
                 if (nativeGuild) loginArt->DrawGuildPanel(ui,client);
                 else DrawGuild(ui,client);
-            } else if (!partyOpen && !guildOpen && client.quests.open) {
-                if (loginArt && loginArt->QuestReady()) loginArt->DrawQuestPanel(ui,client);
-                else DrawQuests(ui,client);
+            } else if (!partyOpen && !guildOpen && client.quests.open &&
+                       (!nativeHud || !loginArt->QuestReady())) {
+                if (loginArt && loginArt->QuestReady()) {
+                    loginArt->HandleQuestInput(ui,client,modal,true);
+                    if (client.quests.open) loginArt->DrawQuestPanel(ui,client);
+                } else DrawQuests(ui,client);
             }
         }
         if (!npcPrompt && !fallbackNpc && !settingsOpen && !partyOpen && !guildOpen && !client.quests.open && !panelEscape &&
