@@ -64,6 +64,8 @@ struct SpellFlight {
     }
 };
 
+enum class MonsterEffectPose { attack, struck, death, idle, walk, burrow, skeleton };
+
 struct SpellEffect {
     EffectResource resource;
     SpellCell cell{};
@@ -73,10 +75,12 @@ struct SpellEffect {
     std::int64_t soundVoice=0;
     std::uint32_t follow=0;
     std::uint32_t poseActor=0;
+    MonsterEffectPose monsterPose=MonsterEffectPose::attack;
     bool repeat=false, wave=false, baseWalkable=false, light=false, tail=false, finished=false;
     bool timedResidue=false;
     bool monsterEffect=false;
     bool waitForTarget=false;
+    bool monsterActionOverlay=false;
     std::optional<SpellFlight> flight;
     std::optional<StagedSpell> staged;
 
@@ -138,11 +142,12 @@ public:
         }
     }
 
-    void monsterOverlay(const EffectCatalog& catalog,int id,SpellCell cell,int offset,
-                        std::uint32_t poseActor,std::uint32_t follow)
+    bool monsterOverlay(const EffectCatalog& catalog,int id,SpellCell cell,int offset,
+                        std::uint32_t poseActor,std::uint32_t follow,MonsterEffectPose pose=MonsterEffectPose::attack,
+                        bool actionOverlay=false)
     {
         const auto* resource=find(catalog,EffectCatalog::Section::spell,id);
-        if (!resource || effects.size()>=512) return;
+        if (!resource || effects.size()>=512) return false;
         auto& e=effects.emplace_back();
         e.resource=*resource;
         e.cell=cell;
@@ -150,8 +155,11 @@ public:
         e.frame=int(resource->first)+offset;
         e.offset=offset;
         e.poseActor=poseActor;
+        e.monsterPose=pose;
+        e.monsterActionOverlay=actionOverlay;
         e.follow=follow;
         e.monsterEffect=true;
+        return true;
     }
 
     template<class Sound,class Walkable>

@@ -265,6 +265,7 @@ struct LocalScene {
             mir3::SpellCell targetCell{};
             std::uint32_t targetActor=0;
             unsigned magicBranch=0;
+            unsigned hitVariant=0;
         };
         unsigned x = 0, y = 0, facing = 0;
         unsigned light = 0;
@@ -4198,7 +4199,52 @@ private:
         scene.speech.erase(actor);
     }
 
-    static void BeginMonsterDeath(LocalScene::Player& monster, WORD opcode, std::uint64_t now, bool catchUp)
+    void PlayMonsterCombatEffect(std::uint32_t actor,const LocalScene::Player& monster,bool death)
+    {
+        using Pose=mir3::MonsterEffectPose;
+        struct Effect { unsigned shape; int id; bool directional=false; int delay=0; };
+        constexpr Effect attacks[]{
+            {5,502},{9,501},{19,511},{37,535,true},{43,521,true},{45,513},{47,536,true},{67,522},
+            {75,529,true},{85,516},{90,514},{94,524},{97,543},{132,551,true,600},{151,575,true}};
+        constexpr Effect deaths[]{
+            {4,531},{5,526},{6,526},{11,526},{19,526},{32,534},{33,534},{34,534},{35,534},{36,534},
+            {40,527},{48,528},{99,525},{101,541},{105,540},{120,533},{164,589},{182,605,true},
+            {185,605,true},{184,602,true,800},{186,610,false,800}};
+        constexpr Effect attackOverlays[]{
+            {98,530,true},{113,537,true},{120,532,true},{130,546,true},{131,548,true},
+            {139,554,true},{150,570,true},{152,572,true},{164,591,true},{186,608,true}};
+        constexpr Effect deathOverlays[]{
+            {130,547},{131,549},{138,553},{140,557,true},{142,556},{143,556},{144,556},{159,582},{160,583},{161,586}};
+        const auto scan=[&](std::span<const Effect> list) {
+            return std::ranges::find(list,monster.npcShape,&Effect::shape);
+        };
+        const auto list=death ? std::span<const Effect>(deaths) : std::span<const Effect>(attacks);
+        if (const auto effect=scan(list);effect!=list.end()) {
+            const bool light=effect->id!=529 && effect->id!=535 && effect->id!=536 && effect->id!=551 && effect->id!=575;
+            PlayMonsterSceneEffect(monster,effect->id,effect->directional ? 10*monster.facing : 0,effect->delay,light);
+        }
+        const auto overlays=death ? std::span<const Effect>(deathOverlays) : std::span<const Effect>(attackOverlays);
+        if (const auto effect=scan(overlays);effect!=overlays.end()) {
+            const mir3::SpellCell cell{int(monster.x),int(monster.y)};
+            SceneEffects().monsterOverlay(effectCatalog_,effect->id,cell,effect->directional ? 10*monster.facing : 0,
+                actor,0,death ? Pose::death : Pose::attack);
+            PlaySceneSound(actor,10*(effect->id+1000),monster.x,monster.y);
+        }
+    }
+
+    void PlayMonsterSceneEffect(const LocalScene::Player& monster,int id,int offset=0,unsigned delay=0,
+                                bool light=false,std::uint32_t target=0)
+    {
+        const mir3::SpellCell cell{int(monster.x),int(monster.y)};
+        SceneEffects().monsterAttack(effectCatalog_,id,cell,cell,target,offset,delay,false,light,
+            [&](int sample,mir3::SpellCell position) -> std::int64_t {
+                if (id<500) return PlaySpellSound(sample,position);
+                PlaySceneSound(0,sample,position[0],position[1]);
+                return 0;
+            });
+    }
+
+    void BeginMonsterDeath(std::uint32_t actor,LocalScene::Player& monster, WORD opcode, std::uint64_t now, bool catchUp)
     {
         const bool animate=opcode==GameActorDead && !monster.dead;
         monster.dead=true;
@@ -4208,6 +4254,8 @@ private:
         monster.monsterDeathAt=now;
         monster.monsterCatchUp=catchUp;
         monster.monsterVitals.percent=0;
+        if (opcode==GameActorDead) PlayMonsterCombatEffect(actor,monster,true);
+        if (scene.lockedSpellActor==actor) scene.lockedSpellActor=0;
     }
 
     bool StartMonsterRangedAttack(std::uint32_t actor,const LocalScene::Player& monster,
@@ -4405,11 +4453,18 @@ private:
                 monster.monsterActions.push_back(relayed);
             }
             if (monster.dead) {
-                if (move.damage || !monster.monsterSkeleton) BeginMonsterDeath(monster,GameActorDeath,now,false);
+                if (move.damage || !monster.monsterSkeleton) BeginMonsterDeath(actor,monster,GameActorDeath,now,false);
                 return;
             }
+            if (move.damage && move.hitVariant<=65535-400) {
+                const int effect=400+move.hitVariant;
+                const bool light=effect>=500 && effect!=520 && effect!=521 && effect!=529 && effect!=535 &&
+                    effect!=536 && effect!=544 && effect!=545 && effect!=551 && effect!=575 && effect!=578 &&
+                    effect!=593 && effect!=595;
+                PlayMonsterSceneEffect(monster,effect,0,0,light,actor);
+            }
             if (!move.current) {
-                BeginMonsterDeath(monster,GameActorDead,now,catchUp);
+                BeginMonsterDeath(actor,monster,GameActorDead,now,catchUp);
                 return;
             }
             if (!move.damage) return;
@@ -4418,6 +4473,11 @@ private:
             monster.monsterCombatFrame=0;
             monster.monsterCombatAt=now;
             monster.monsterCatchUp=catchUp;
+            if (monster.npcShape==161) {
+                SceneEffects().monsterOverlay(effectCatalog_,585,{int(monster.x),int(monster.y)},10*monster.facing,
+                    actor,0,mir3::MonsterEffectPose::struck);
+                PlaySceneSound(actor,15850,monster.x,monster.y);
+            }
             return;
         }
         if (move.opcode==GameMonsterAttack || move.opcode==GameMonsterAttackSpecial || move.opcode==GameMonsterRangedAttack) {
@@ -4439,6 +4499,8 @@ private:
             monster.monsterCombatFrame=0;
             monster.monsterCombatAt=now;
             monster.monsterCatchUp=catchUp;
+            if (!special && !ranged) PlayMonsterCombatEffect(actor,monster,false);
+            if (action==6 && monster.npcShape==10) PlayMonsterSceneEffect(monster,501,0,0,true);
             return;
         }
         if (monster.dead && (move.opcode==GameWalk || move.opcode==GameBackstep)) return;
@@ -4453,7 +4515,7 @@ private:
         monster.monsterSkipStep=false;
         monster.monsterCombatFrame=-1;
         if (move.opcode==GameActorDeath || move.opcode==GameActorDead || move.opcode==GameMonsterSkeleton) {
-            BeginMonsterDeath(monster,move.opcode,now,catchUp);
+            BeginMonsterDeath(actor,monster,move.opcode,now,catchUp);
         } else if (move.opcode==GameActorRevive || move.opcode==GameActorReviveRefresh) {
             monster.dead=false;
             monster.monsterDeathFrame=-1;
@@ -4463,7 +4525,7 @@ private:
                 monster.monsterAppearanceDuration=MonsterReviveDuration;
             }
         } else if (monster.dead && move.opcode==GameTurn) {
-            BeginMonsterDeath(monster,GameActorDeath,now,false);
+            BeginMonsterDeath(actor,monster,GameActorDeath,now,false);
         }
         if (move.opcode==GameWalk || monster.monsterBackstep) {
             monster.monsterWalkFrame=0;
@@ -4504,6 +4566,7 @@ private:
             move.current=first;
             move.maximum=second;
             move.damage=third;
+            move.hitVariant=std::uint8_t(feature[14]) | (unsigned(std::uint8_t(feature[15]))<<8);
         } else if (opcode==GameMonsterMagic) {
             if (input_.size()!=DEFBLOCKSIZE+22 || (third&255)>=8) return;
             const auto body=ReadGameBody();
@@ -4715,6 +4778,8 @@ private:
                 if (now-monster.monsterDeathAt<=static_cast<std::uint64_t>(interval)) continue;
                 monster.monsterDeathAt=now;
                 ++monster.monsterDeathFrame;
+                if (monster.monsterDeathFrame==2 || monster.monsterDeathFrame==3)
+                    PlaySceneSound(id,10*monster.npcShape+203+monster.monsterDeathFrame,monster.x,monster.y);
                 if (monster.MonsterDying()) continue;
             }
             if (monster.monsterWalkFrame>=0) {
@@ -4742,12 +4807,15 @@ private:
                     PlaySceneSound(id,10*monster.npcShape+201+frame,monster.x,monster.y);
                 else if (attack && attack!=2 && frame==1)
                     PlaySceneSound(id,10*monster.npcShape+202+attack,monster.x,monster.y);
+                else if (!attack && frame==1)
+                    PlaySceneSound(id,10*monster.npcShape+204,monster.x,monster.y);
                 if (frame<motion.frames) continue;
                 monster.monsterCombatFrame=-1;
                 monster.monsterIdleAt=now;
                 if (scene.spellEffects)
                     for (auto& effect:scene.spellEffects->effects)
-                        if (effect.poseActor==id) effect.finished=true;
+                        if (effect.poseActor==id && (effect.monsterPose==mir3::MonsterEffectPose::attack ||
+                            effect.monsterPose==mir3::MonsterEffectPose::struck)) effect.finished=true;
             }
             if (monster.monsterActions.empty()) continue;
             const bool catchUp=monster.monsterActions.size()>=3;
@@ -5014,23 +5082,85 @@ private:
             [&](mir3::SpellCell cell) { return scene.terrain.BaseWalkable(cell[0],cell[1]); });
     }
 
+    void SyncMonsterActionOverlays()
+    {
+        using Pose=mir3::MonsterEffectPose;
+        for (const auto& [id,actor]:scene.players) {
+            if (!actor.IsMonster() || (actor.npcShape!=141 && actor.npcShape!=184)) continue;
+            auto pose=Pose::idle;
+            int action=0;
+            if (actor.monsterSkeleton) { pose=Pose::skeleton; action=10; }
+            else if (actor.monsterDeathFrame>=0) { pose=Pose::death; action=4; }
+            else if (actor.monsterBurrowFrame>=0) { pose=Pose::burrow; action=8; }
+            else if (actor.monsterWalkFrame>=0) { pose=Pose::walk; action=1; }
+            else if (actor.monsterCombatFrame>=0) {
+                pose=actor.monsterAttackAction ? Pose::attack : Pose::struck;
+                action=actor.monsterAttackAction ? actor.monsterAttackAction : 3;
+            }
+            const int effect=(actor.npcShape==141 ? 559 : 598)+action;
+            const int offset=actor.facing*(action==4 ? 20 : 10);
+            if (scene.spellEffects) {
+                auto& effects=scene.spellEffects->effects;
+                const auto old=std::find_if(effects.begin(),effects.end(),[&](const auto& e) {
+                    return e.poseActor==id && e.monsterActionOverlay && !e.finished;
+                });
+                if (old!=effects.end() && !(actor.npcShape==184 && action==4)) {
+                    if (old->resource.id==effect && old->offset==offset) continue;
+                    old->finished=true;
+                }
+            }
+            if (actor.npcShape==184 && action==4) continue;
+            if (SceneEffects().monsterOverlay(effectCatalog_,effect,{int(actor.x),int(actor.y)},offset,id,0,pose,true))
+                PlaySceneSound(id,10*(effect+1000),actor.x,actor.y);
+        }
+    }
+
     void AdvanceSpellEffects(std::uint64_t now)
     {
+        SyncMonsterActionOverlays();
         if (scene.spellEffects && now>scene.spellEffectsTick) {
             const auto ms=(std::min)(now-scene.spellEffectsTick,std::uint64_t(250));
             const auto camera=LocalActorCamera(scene);
             for (auto& effect:scene.spellEffects->effects) {
                 if (!effect.poseActor) continue;
                 const auto found=scene.players.find(effect.poseActor);
-                if (found==scene.players.end() || found->second.monsterCombatFrame<0 || !found->second.monsterAttackAction) {
+                if (found==scene.players.end()) {
                     effect.finished=true;
                     continue;
                 }
                 const auto& actor=found->second;
-                effect.frame=int(effect.resource.first)+effect.offset+actor.monsterCombatFrame;
-                if (effect.frame>=int(effect.resource.end)+effect.offset) effect.finished=true;
+                using Pose=mir3::MonsterEffectPose;
+                int pose=-1;
+                switch (effect.monsterPose) {
+                case Pose::attack: if (actor.monsterAttackAction) pose=actor.monsterCombatFrame; break;
+                case Pose::struck: if (!actor.monsterAttackAction) pose=actor.monsterCombatFrame; break;
+                case Pose::death:
+                    if (!actor.monsterSkeleton && (actor.npcShape==141 || actor.MonsterDying())) pose=actor.monsterDeathFrame;
+                    break;
+                case Pose::idle: pose=actor.monsterIdleAt ? int((now-actor.monsterIdleAt)/300%4) : 0; break;
+                case Pose::walk:
+                    if (actor.monsterWalkFrame>=0) pose=actor.monsterBackstep ? 5-actor.monsterWalkFrame : actor.monsterWalkFrame;
+                    break;
+                case Pose::burrow:
+                    pose=actor.monsterBurrowFrame;
+                    if (pose>=0 && actor.monsterBurrowReverse)
+                        pose=mir3::monster_burrow_motion(actor.npcShape).frames-1-pose;
+                    break;
+                case Pose::skeleton: if (actor.monsterSkeleton) pose=0; break;
+                }
+                if (pose<0 || (effect.monsterActionOverlay && actor.npcShape!=141 &&
+                    (actor.npcShape!=184 || actor.monsterDeathFrame>=0 && !actor.monsterSkeleton))) {
+                    effect.finished=true;
+                    continue;
+                }
+                const int end=int(effect.resource.end)+effect.offset;
+                effect.frame=int(effect.resource.first)+effect.offset+pose;
+                if (effect.frame>=end) {
+                    if (effect.monsterActionOverlay) effect.frame=end-1;
+                    else effect.finished=true;
+                }
                 effect.cell={int(actor.x),int(actor.y)};
-                effect.position=mir3::spell_pixel(effect.cell);
+                effect.position=effect.monsterPose==Pose::walk ? ActorWorldPixel(actor) : mir3::spell_pixel(effect.cell);
             }
             scene.spellEffects->advance(effectCatalog_,static_cast<unsigned>(ms),camera,
                 [&](auto actor) { return SpellTarget(actor); },
