@@ -5,6 +5,7 @@
 #include "cui.h"
 #include "CuiAudio.h"
 #include "CuiChat.h"
+#include "CuiGuild.h"
 #include "CuiParty.h"
 #include "CuiServerOptions.h"
 #include "Common/EnDecode.h"
@@ -372,6 +373,7 @@ public:
     mir3_cui::ChatPanel chat;
     mir3_cui::ServerOptions serverOptions;
     mir3_cui::PartyPanel party;
+    mir3_cui::GuildPanel guild;
     mir3_cui::AudioOptions audioOptions;
     mir3_cui::AudioPlayer audio;
     std::wstring audioOptionsPath;
@@ -408,6 +410,7 @@ public:
         chat = {};
         serverOptions = {};
         party = {};
+        guild = {};
         audioOpen = false;
         characters.clear();
         characterIndex = -1;
@@ -564,6 +567,7 @@ public:
     void SendChat()
     {
         if (stage != Stage::GameSession || showSignOut || chat.receptionOpen || party.open || party.notice.id ||
+            guild.open || guild.requested || guild.notice || guild.action != mir3_cui::GuildAction::None ||
             serverOptions.open || !chat.draft[0]) return;
         const std::string draft = chat.draft;
         const bool command = draft.front() == '/' || draft.front() == '@' ||
@@ -581,6 +585,10 @@ public:
         }
         chat.error.clear();
         chat.draft[0] = '\0';
+        if (wire == "@\xcc\xed\xbc\xd3\xb3\xc9\xd4\xb1") {
+            BeginGuildAction(mir3_cui::GuildAction::Add);
+            return;
+        }
         if (draft.front() == '#') {
             if (chat.Remember(chat.phrases, draft.substr(1))) SaveChatHistory();
             return;
@@ -622,6 +630,92 @@ public:
         Queue(mir3_cui::PartyMode, enabled ? 1 : 0, "");
         party.allowed = enabled;
         party.error.clear();
+    }
+
+    void RequestGuildPage(int page)
+    {
+        if (stage != Stage::GameSession || !GuildCanQueue()) return;
+        guild.tab = page;
+        if (page == 0) {
+            Queue(mir3_cui::GuildHome, 0, "");
+            guild.requested = !guild.open;
+        } else if (page == 1) {
+            Queue(mir3_cui::GuildMembers, 0, "");
+        }
+    }
+
+    void BeginGuildAction(mir3_cui::GuildAction action)
+    {
+        if (!guild.overview.manager) {
+            guild.notice = 4000;
+            return;
+        }
+        guild.Begin(action);
+        if (!guild.Multiline()) return;
+        const auto& rows = action == mir3_cui::GuildAction::Notice ? guild.overview.editable : guild.roster.editable;
+        if (action == mir3_cui::GuildAction::Ranks && rows.empty()) {
+            guild.Begin(mir3_cui::GuildAction::None);
+            guild.error = "Load the member list before editing ranks.";
+            return;
+        }
+        std::string text;
+        bool first = true;
+        for (const auto& row : rows) {
+            const auto line = ConvertText(row, 936, CP_UTF8);
+            if (text.size() + line.size() + 1 >= sizeof guild.input) {
+                guild.error = "This text is too large to edit.";
+                return;
+            }
+            if (!first) text += '\n';
+            text += line;
+            first = false;
+        }
+        strcpy_s(guild.input, text.c_str());
+    }
+
+    void SubmitGuildAction()
+    {
+        using mir3_cui::GuildAction;
+        if (stage != Stage::GameSession || !guild.overview.manager || guild.action == GuildAction::None ||
+            !GuildCanQueue())
+            return;
+        const auto raw = ConvertText(guild.input, CP_UTF8, 936);
+        std::string body;
+        if (guild.Multiline()) {
+            bool emptyLine = true;
+            for (std::size_t i = 0; i < raw.size(); ++i) {
+                const char ch = raw[i];
+                if (ch == '\r' && i + 1 < raw.size() && raw[i + 1] == '\n') continue;
+                if (ch == '\r' || ch == '\n') {
+                    if (emptyLine) body += ' ';
+                    body += '\r';
+                    emptyLine = true;
+                } else {
+                    body += ch;
+                    emptyLine = false;
+                }
+            }
+            if (body.empty() || body.size() > 3999) {
+                guild.error = "Enter text that fits within 3999 GBK bytes.";
+                return;
+            }
+        } else {
+            body = raw;
+            const std::size_t limit = guild.action == GuildAction::BreakAlliance ? 63 : 31;
+            if (body.empty() || body.size() > limit || body.find_first_of("/\r\n") != std::string::npos) {
+                guild.error = "Enter a name of up to " + std::to_string(limit) + " GBK bytes without a slash.";
+                return;
+            }
+        }
+
+        if (guild.action == GuildAction::BreakAlliance) {
+            Queue(mir3_cui::Say, 0, "\xc6\xc6\xbb\xb5\xbd\xe1\xc3\xcb " + body);
+            Queue(mir3_cui::GuildHome, 0, "");
+        } else {
+            Queue(static_cast<WORD>(guild.action), 0, body);
+            if (guild.action == GuildAction::Remove) Queue(mir3_cui::GuildMembers, 0, "");
+        }
+        guild.Begin(GuildAction::None);
     }
 
     void SubmitPartyMember()
@@ -720,6 +814,16 @@ public:
     }
 
 private:
+    bool GuildCanQueue()
+    {
+        if (output_.size() < 8192) {
+            guild.error.clear();
+            return true;
+        }
+        guild.error = "The connection is busy. Try again.";
+        return false;
+    }
+
     bool SendOptionCommand(const char* command, std::string& error)
     {
         if (stage != Stage::GameSession || showSignOut) return false;
@@ -1043,6 +1147,8 @@ private:
                    opcode >= static_cast<unsigned>(mir3_cui::PartyReply::Created) &&
                    opcode <= static_cast<unsigned>(mir3_cui::PartyReply::Roster)) {
             HandlePartyReply(static_cast<mir3_cui::PartyReply>(opcode), actor);
+        } else if (stage == Stage::GameSession && opcode >= 753 && opcode <= 776) {
+            HandleGuildReply(opcode, actor);
         } else if (mir3_cui::ChatChannel(opcode) && stage == Stage::GameSession &&
                    input_.size() <= DEFBLOCKSIZE + 1024) {
             auto body = ReadGameBody();
@@ -1055,6 +1161,51 @@ private:
             if (chat.logging) {
                 std::ofstream log("Chat.txt", std::ios::binary | std::ios::app);
                 log << body << "\r\n";
+            }
+        }
+    }
+
+    void HandleGuildReply(unsigned opcode, std::uint32_t value)
+    {
+        const bool overview = opcode == 753 || opcode == 773 || opcode == 774;
+        const bool roster = opcode == 756 || opcode == 775 || opcode == 776;
+        if (overview || roster) {
+            const auto size = input_.size() - DEFBLOCKSIZE;
+            if (size > (8191 * 4 + 2) / 3) return;
+            auto body = ReadGameBody();
+            if (size && body.empty()) return;
+            const auto zero = body.find('\0');
+            if (zero != std::string::npos) body.resize(zero);
+            if (overview) {
+                const auto previous = guild.overview.name;
+                if (guild.overview.Apply(body, opcode == 753) && opcode == 753) {
+                    if (guild.overview.name != previous) {
+                        guild.roster = {};
+                        guild.history.clear();
+                        guild.Begin(mir3_cui::GuildAction::None);
+                    } else if (!guild.overview.manager) {
+                        guild.Begin(mir3_cui::GuildAction::None);
+                    }
+                    guild.open = true;
+                    guild.requested = false;
+                    guild.tab = 0;
+                }
+            } else {
+                guild.roster.Apply(body, guild.overview.manager);
+            }
+            return;
+        }
+        if (input_.size() != DEFBLOCKSIZE) return;
+        if (opcode == 754) guild.requested = false;
+        if ((opcode == 757 || opcode == 759) && GuildCanQueue()) Queue(mir3_cui::GuildMembers, 0, "");
+        const auto reason = static_cast<std::int64_t>(value) - (value >= 0x80000000u ? 0x100000000LL : 0);
+        const int notice = mir3_cui::GuildNoticeId(opcode, reason);
+        if (notice) {
+            guild.Begin(mir3_cui::GuildAction::None);
+            guild.notice = notice;
+            if (!guild.overview.name.empty()) {
+                if (guild.history.size() == 79) guild.history.erase(guild.history.begin());
+                guild.history.emplace_back(mir3_cui::GuildNoticeText(notice));
             }
         }
     }
@@ -1560,8 +1711,12 @@ void ChatShortcuts(cui_ctx* ui, mir3_cui::ChatPanel& chat, bool phrase)
 void DrawGameChat(cui_ctx* ui, LoginClient& client)
 {
     auto& chat = client.chat;
-    const bool hadOverlay = client.showSignOut || chat.receptionOpen || client.serverOptions.open ||
-        client.audioOpen || client.party.open || client.party.notice.id;
+    const auto hasOverlay = [&]() {
+        return client.showSignOut || chat.receptionOpen || client.serverOptions.open || client.audioOpen ||
+            client.party.open || client.party.notice.id || client.guild.open || client.guild.requested ||
+            client.guild.notice || client.guild.action != mir3_cui::GuildAction::None;
+    };
+    const bool hadOverlay = hasOverlay();
     cui_push_disabled(ui, hadOverlay);
     cui_box row = {};
     row.width = CUI_FILL;
@@ -1576,14 +1731,15 @@ void DrawGameChat(cui_ctx* ui, LoginClient& client)
     if (Button(ui, "Reception")) chat.receptionOpen = true;
     if (Button(ui, "Party") || (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_G)))
         client.party.open = true;
+    if (Button(ui, "Guild") || (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_F)))
+        client.RequestGuildPage(0);
     if (Button(ui, "Server options") ||
         (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_N)))
         client.serverOptions.open = true;
     if (Button(ui, "Audio")) client.audioOpen = true;
     if (Button(ui, "Sign out")) client.showSignOut = true;
     cui_box_end(ui);
-    const bool overlay = client.showSignOut || chat.receptionOpen || client.serverOptions.open ||
-        client.audioOpen || client.party.open || client.party.notice.id;
+    const bool overlay = hasOverlay();
 
     cui_scroll_opts list = {};
     list.id = "chat-history";
@@ -1745,6 +1901,119 @@ void DrawParty(cui_ctx* ui, LoginClient& client)
     cui_dialog_end(ui);
 }
 
+const char* GuildActionTitle(mir3_cui::GuildAction action)
+{
+    using mir3_cui::GuildAction;
+    switch (action) {
+    case GuildAction::Add: return "Add member";
+    case GuildAction::Remove: return "Remove member";
+    case GuildAction::Notice: return "Edit announcement";
+    case GuildAction::Ranks: return "Edit ranks";
+    case GuildAction::BreakAlliance: return "End alliance";
+    default: return "";
+    }
+}
+
+void DrawGuild(cui_ctx* ui, LoginClient& client)
+{
+    using mir3_cui::GuildAction;
+    auto& guild = client.guild;
+    cui_dialog_opts modal = {};
+    modal.width = 530;
+    bool open = true;
+
+    if (guild.notice) {
+        modal.persistent = true;
+        modal.no_close_button = true;
+        if (!cui_dialog_begin(ui, "Guild notice", &open, &modal)) return;
+        cui_text_ex(ui, mir3_cui::GuildNoticeText(guild.notice), nullptr);
+        cui_dialog_footer_begin(ui);
+        const bool dismiss = Button(ui, "OK", true) || cui_key_pressed(ui, CUI_KEY_ENTER) ||
+            cui_key_pressed(ui, CUI_KEY_SPACE);
+        cui_dialog_footer_end(ui);
+        cui_dialog_end(ui);
+        if (dismiss) guild.notice = 0;
+        return;
+    }
+
+    if (guild.action != GuildAction::None) {
+        modal.persistent = true;
+        modal.no_close_button = true;
+        if (!cui_dialog_begin(ui, GuildActionTitle(guild.action), &open, &modal)) return;
+        cui_push_id_int(ui, guild.editor);
+        int input = 0;
+        if (guild.Multiline()) {
+            cui_input_opts options = {};
+            options.label = guild.action == GuildAction::Notice ? "Announcement" : "Ranks";
+            options.height = 180;
+            options.width = CUI_FILL;
+            options.autofocus = true;
+            cui_textarea_ex(ui, "guild-editor", guild.input, sizeof guild.input, &options);
+        } else {
+            input = Input(ui, "Name", guild.input, sizeof guild.input, false, true);
+        }
+        cui_pop_id(ui);
+        if (!guild.error.empty()) cui_secondary(ui, guild.error.c_str());
+        cui_dialog_footer_begin(ui);
+        const bool cancel = Button(ui, "Cancel");
+        const bool confirm = Button(ui, "Confirm", true);
+        cui_dialog_footer_end(ui);
+        cui_dialog_end(ui);
+        if (cancel) guild.Begin(GuildAction::None);
+        else if (confirm || (input & CUI_SUBMITTED)) client.SubmitGuildAction();
+        return;
+    }
+
+    if (guild.requested && !guild.open) {
+        if (cui_dialog_begin(ui, "Guild", &guild.requested, &modal)) {
+            cui_secondary(ui, "Waiting for the guild overview...");
+            if (!guild.error.empty()) cui_secondary(ui, guild.error.c_str());
+            if (Button(ui, "Cancel")) guild.requested = false;
+            cui_dialog_end(ui);
+        }
+        return;
+    }
+
+    if (!cui_dialog_begin(ui, "Guild", &guild.open, &modal)) return;
+    const auto name = ConvertText(guild.overview.name, 936, CP_UTF8);
+    cui_heading(ui, name.c_str(), 2);
+    const char* const tabs[] = {"Overview", "Members", "History"};
+    cui_box row = {};
+    row.width = CUI_FILL;
+    row.gap = 8;
+    row.wrap = true;
+    cui_row_begin(ui, &row);
+    for (int tab = 0; tab < 3; ++tab) {
+        if (Button(ui, tabs[tab], guild.tab == tab)) client.RequestGuildPage(tab);
+    }
+    cui_box_end(ui);
+    const auto& rows = guild.tab == 0 ? guild.overview.rows : guild.tab == 1 ? guild.roster.rows : guild.history;
+    cui_scroll_opts list = {};
+    const char* const ids[] = {"guild-home", "guild-members", "guild-history"};
+    list.id = ids[guild.tab];
+    list.width = CUI_FILL;
+    list.height = CUI_PX(150);
+    list.gap = 4;
+    cui_scroll_begin(ui, &list);
+    if (rows.empty()) cui_secondary(ui, "No entries.");
+    for (const auto& row : rows) {
+        const auto text = guild.tab == 2 ? row : ConvertText(row, 936, CP_UTF8);
+        cui_text_ex(ui, text.c_str(), nullptr);
+    }
+    cui_scroll_end(ui);
+    if (!guild.error.empty()) cui_secondary(ui, guild.error.c_str());
+    cui_row_begin(ui, &row);
+    for (auto action : {GuildAction::Notice, GuildAction::Ranks, GuildAction::Add, GuildAction::Remove,
+                        GuildAction::BreakAlliance}) {
+        if (Button(ui, GuildActionTitle(action))) client.BeginGuildAction(action);
+    }
+    cui_box_end(ui);
+    cui_dialog_footer_begin(ui);
+    if (Button(ui, "Done", true) || cui_shortcut(ui, 0, CUI_KEY_F)) guild.open = false;
+    cui_dialog_footer_end(ui);
+    cui_dialog_end(ui);
+}
+
 void DrawServerOptions(cui_ctx* ui, LoginClient& client)
 {
     auto& options = client.serverOptions;
@@ -1861,6 +2130,9 @@ void Draw(cui_ctx* ui, LoginClient& client)
         else if (client.serverOptions.open) DrawServerOptions(ui, client);
         else if (client.audioOpen) DrawAudioSettings(ui, client);
         else if (client.party.open || client.party.notice.id) DrawParty(ui, client);
+        else if (client.guild.open || client.guild.requested || client.guild.notice ||
+                 client.guild.action != mir3_cui::GuildAction::None)
+            DrawGuild(ui, client);
         if (!client.showSignOut) return;
     } else {
         cui_heading(ui, "Mir3 Client", 1);
