@@ -2656,19 +2656,22 @@ private:
         } else if (mir3_cui::ChatChannel(opcode) && stage == Stage::GameSession &&
                    input_.size() <= DEFBLOCKSIZE + 1024) {
             auto body = ReadGameBody();
+            if (body.empty() && input_.size() != DEFBLOCKSIZE) return;
             const auto terminator = body.find('\0');
             if (terminator != std::string::npos) body.resize(terminator);
             if ((opcode == 40 || opcode == 1501) && body.size() > 259) return;
+            // Received chat has two independent append paths in the V1.45 client.
+            const int copies = (opcode != 104 ? 1 : 0) + (chat.logging && opcode != 100 ? 1 : 0);
+            if (copies) {
+                std::ofstream log("Chat.txt", std::ios::binary | std::ios::app);
+                for (int i = 0; i < copies && log; ++i) log << body << "\r\n";
+            }
             const auto text = ConvertText(body, 936, CP_UTF8);
             if (text.empty()) return;
             constexpr std::array<unsigned,8> palette{0,657930,0xffffff,255,65280,16750230,0x50ffff,33023};
             const auto color = [&](unsigned index) { return index < palette.size() ? palette[index] : 0u; };
             chat.Append(opcode, text, color(opcode == 104 ? 4 : first & 255u),
                 color(opcode == 104 ? 0 : second & 255u));
-            if (chat.logging) {
-                std::ofstream log("Chat.txt", std::ios::binary | std::ios::app);
-                log << body << "\r\n";
-            }
         }
     }
 
