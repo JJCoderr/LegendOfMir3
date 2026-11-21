@@ -16,6 +16,9 @@
 #include "CuiInventoryLayout.h"
 #include "CuiMapTerrain.h"
 #include "CuiLegacy/hud/ground_items.hpp"
+#include "CuiLegacy/hud/level_up_effect.hpp"
+#include "CuiLegacy/hud/sound_position.hpp"
+#include "CuiLegacy/resources/sound_list.hpp"
 #include "CuiLegacy/hud/minimap.hpp"
 #include "CuiLegacy/hud/damage_numbers.hpp"
 #include "CuiLegacy/hud/monster_motion.hpp"
@@ -184,6 +187,8 @@ struct LocalScene {
         };
         unsigned x = 0, y = 0, facing = 0;
         unsigned light = 0;
+        unsigned mount = 0;
+        std::uint64_t levelPoseAt = 0;
         bool dead = false;
         unsigned npcType = 0;
         mir3_cui::CharacterAppearance appearance;
@@ -237,6 +242,12 @@ struct LocalScene {
     mir3::SnowWeather weather;
     std::uint64_t weatherTick = 0;
     unsigned light = 0;
+    struct LevelPlayback {
+        mir3::LevelUpEffect effect;
+        std::uint64_t tick;
+    };
+    std::vector<LevelPlayback> levelEffects;
+    std::uint64_t levelPoseAt = 0;
     std::map<std::uint32_t, Player> players;
     mir3::GroundItems groundItems;
     std::map<std::uint32_t,mir3::SpeechBubble> speech;
@@ -726,6 +737,7 @@ private:
         characterStatus = {};
         characterAppearance = {};
         scene = {};
+        audio.ClearSceneEffects();
         ClearMinimap();
         CloseNpcDialogue();
         merchant = {};
@@ -1109,6 +1121,21 @@ public:
     {
         resourceRoot_ = root;
         inventoryDimensions_.SetResourceRoot(root);
+        const auto read=[](const std::filesystem::path& path) {
+            std::ifstream file(path,std::ios::binary|std::ios::ate);
+            const auto size=file.tellg();
+            if (size<=0 || size>16*1024*1024) return std::vector<std::uint8_t>{};
+            std::vector<std::uint8_t> bytes(static_cast<std::size_t>(size));
+            file.seekg(0);
+            if (!file.read(reinterpret_cast<char*>(bytes.data()),size)) bytes.clear();
+            return bytes;
+        };
+        effectCatalog_={};
+        effectCatalog_.load(read(root/"MInfo.dat"));
+        sceneMessages_={};
+        sceneMessages_.load(read(root/"CmList.dat"));
+        sceneSoundList_={};
+        sceneSoundList_.parse(read(root/"SoundList.wwl"));
     }
 
     void LoadMapOptions(const wchar_t* path)
@@ -1996,6 +2023,11 @@ public:
         if (stage==Stage::GameSession) {
             AdvanceMonsterActions(now);
             AdvanceGroundItems(static_cast<std::uint32_t>(now));
+            for (auto& playback:scene.levelEffects) {
+                playback.effect.advance(static_cast<std::uint32_t>(now-playback.tick));
+                playback.tick=now;
+            }
+            std::erase_if(scene.levelEffects,[](const auto& p) { return p.effect.phase==mir3::LevelUpEffect::Phase::finished; });
             std::erase_if(scene.speech,[&](const auto& entry) { return now>entry.second.expiresAt; });
             if (scene.ambient.fading) {
                 scene.ambient.advance(double(now-scene.ambientTick));
@@ -2210,6 +2242,9 @@ private:
     bool itemShortcutFilePresent_ = false;
     mir3_cui::InventoryDimensions inventoryDimensions_;
     std::filesystem::path resourceRoot_ = ".";
+    mir3::EffectCatalog effectCatalog_;
+    mir3::Messages sceneMessages_;
+    mir3::SoundList sceneSoundList_;
 
     std::string CharacterStoragePath(const std::string& directory, const char* extension = ".txt") const
     {
@@ -2810,9 +2845,11 @@ private:
             if (input_.size() == DEFBLOCKSIZE) {
                 if (opcode == GameClearActors) {
                     scene.players.clear();
+                    audio.ClearSceneEffects(true);
                     std::erase_if(scene.speech,[](const auto& entry) { return entry.first!=0; });
                 } else {
                     scene.players.erase(actor);
+                    audio.StopSceneEffect(actor);
                     scene.speech.erase(actor);
                 }
             }
@@ -3332,6 +3369,9 @@ private:
         scene.players.clear();
         scene.groundItems.items.clear();
         scene.speech.clear();
+        scene.levelEffects.clear();
+        scene.levelPoseAt=0;
+        audio.ClearSceneEffects();
         scene.pickupBagFull=false;
         scene.x = x;
         scene.y = y;
@@ -3735,7 +3775,12 @@ private:
                 next.portraitJpeg.clear();
                 next.portraitQueryAt = 0;
             }
-            if (size >= 29 && DecodeGameBytes(input_.substr(DEFBLOCKSIZE + 22, 7)).size() != 5) return;
+            const auto extra=size>=29 ? DecodeGameBytes(input_.substr(DEFBLOCKSIZE+22,7)) : std::string{};
+            if (size>=29 && extra.size()!=5) return;
+            if (opcode!=GameActorDeath && opcode!=GameActorDead) {
+                const auto shape=extra.empty() ? 0 : static_cast<unsigned char>(extra[0]);
+                next.mount=shape<4 ? shape : 0;
+            }
             if (size > 29) {
                 auto name = DecodeGameBytes(input_.substr(DEFBLOCKSIZE + 29));
                 if (name.empty()) return;
@@ -3752,6 +3797,43 @@ private:
         else if (opcode == GameActorRevive || opcode == GameActorReviveRefresh) next.dead = false;
         if (newPlayer) scene.players.emplace(actor, std::move(next));
         else found->second = std::move(next);
+    }
+
+    void HandleLevelUp(std::uint32_t recognition, WORD first, WORD branch)
+    {
+        if (input_.size()!=DEFBLOCKSIZE || branch>1) return;
+        const auto now=GetTickCount64();
+        unsigned x=scene.x, y=scene.y;
+        if (branch==0) {
+            characterStatus.level=first&255;
+            characterStatus.experience=recognition;
+            scene.facing=4;
+            scene.pending={};
+            scene.crouchedAt=scene.crouchReplyAt=0;
+            scene.levelPoseAt=now;
+            const auto text=ConvertText(sceneMessages_.get(1469),936,CP_UTF8);
+            chat.Append(100,text.empty() ? "Level up: "+std::to_string(characterStatus.level) : text,0xffffff,33023);
+        } else {
+            const auto found=scene.players.find(recognition);
+            if (found==scene.players.end() || found->second.IsNpc() || found->second.IsMonster()) return;
+            auto& player=found->second;
+            x=player.x; y=player.y;
+            player.facing=4;
+            player.crouchedAt=0;
+            player.levelPoseAt=now;
+        }
+        if (!scene.terrain.Ready()) return;
+        using Effect=mir3::LevelUpEffect;
+        const auto* resource=effectCatalog_.find(mir3::EffectCatalog::Section::magic,Effect::resource_id);
+        if (!resource || resource->library!=137 || resource->blend!=2 || resource->end<=resource->first ||
+            resource->end>INT_MAX || scene.levelEffects.size()>=256) return;
+        scene.levelEffects.push_back({Effect(*resource,int(x),int(y)),now});
+        const auto sound=sceneSoundList_.file(Effect::sound_id);
+        if (!sound.empty()) {
+            const auto mix=mir3::SoundPosition::from_view((int(x)-int(scene.x))*48+376,(int(y)-int(scene.y))*32+227);
+            const auto path=resourceRoot_/"Sound"/std::filesystem::u8path(sound).filename();
+            audio.PlaySceneEffect(branch==0 ? 0 : recognition,path.c_str(),mix.volume,mix.pan,audioOptions);
+        }
     }
 
     void HandleCharacterStatus(unsigned opcode, std::uint32_t actor, WORD first, WORD second, WORD third)
@@ -3796,11 +3878,7 @@ private:
             else chat.Append(100, "Experience +" + std::to_string(first));
             break;
         case GameLevelUp:
-            if (third == 0) {
-                stats.level = first & 0xff;
-                stats.experience = actor;
-                chat.Append(100, "Level up: " + std::to_string(stats.level));
-            }
+            HandleLevelUp(actor,first,third);
             break;
         }
     }

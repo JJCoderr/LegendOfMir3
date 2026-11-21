@@ -5,6 +5,8 @@
 
 #include <string>
 #include <vector>
+#include <cstdint>
+#include <map>
 
 namespace mir3_cui {
 
@@ -40,6 +42,9 @@ public:
     void SetMusic(const wchar_t* path, const AudioOptions& options);
     void PauseMusic(bool pause);
     void PlayEffect(const wchar_t* path, const AudioOptions& options);
+    bool PlaySceneEffect(std::uint32_t actor, const wchar_t* path, int volume, int pan, const AudioOptions& options);
+    void StopSceneEffect(std::uint32_t actor);
+    void ClearSceneEffects(bool keepLocal = false);
     void PlayMovieAudio(const std::vector<unsigned char>& samples, int channels, int rate, int bits,
                         const AudioOptions& options);
     void StopMovieAudio();
@@ -59,6 +64,11 @@ private:
     Track music_;
     Track effect_;
     Track movie_;
+    struct SceneTrack {
+        Track audio;
+        int volume = 0, pan = 0;
+    };
+    std::map<std::uint32_t, SceneTrack> scene_;
     bool musicPaused_ = false;
     std::wstring musicPath_;
     std::string error_;

@@ -78,6 +78,7 @@ AudioPlayer::~AudioPlayer()
     music_.Clear();
     effect_.Clear();
     movie_.Clear();
+    ClearSceneEffects();
     if (output_) output_->DestroyVoice();
     if (engine_) engine_->Release();
 }
@@ -203,6 +204,45 @@ void AudioPlayer::PlayEffect(const wchar_t* path, const AudioOptions& options)
     Start(effect_, false, options);
 }
 
+bool AudioPlayer::PlaySceneEffect(std::uint32_t actor, const wchar_t* path, int volume, int pan,
+                                  const AudioOptions& options)
+{
+    if (!options.effects || volume + options.effectsLevel * 40 <= -10000) return false;
+    for (auto it=scene_.begin();it!=scene_.end();) {
+        XAUDIO2_VOICE_STATE state{};
+        if (it->second.audio.voice) it->second.audio.voice->GetState(&state,XAUDIO2_VOICE_NOSAMPLESPLAYED);
+        if (state.BuffersQueued) ++it;
+        else {
+            it->second.audio.Clear();
+            it=scene_.erase(it);
+        }
+    }
+    auto& sound=scene_[actor];
+    sound.audio.Clear();
+    sound.volume=volume;
+    sound.pan=pan;
+    if (LoadWave(path,sound.audio) && Start(sound.audio,false,options)) return true;
+    scene_.erase(actor);
+    return false;
+}
+
+void AudioPlayer::StopSceneEffect(std::uint32_t actor)
+{
+    const auto found=scene_.find(actor);
+    if (found==scene_.end()) return;
+    found->second.audio.Clear();
+    scene_.erase(found);
+}
+
+void AudioPlayer::ClearSceneEffects(bool keepLocal)
+{
+    for (auto it=scene_.begin();it!=scene_.end();) {
+        if (keepLocal && it->first==0) { ++it; continue; }
+        it->second.audio.Clear();
+        it=scene_.erase(it);
+    }
+}
+
 void AudioPlayer::PauseMusic(bool pause)
 {
     if (musicPaused_ == pause) return;
@@ -242,6 +282,21 @@ void AudioPlayer::Apply(const AudioOptions& options)
         if (!track->voice) continue;
         track->voice->SetVolume(Volume(options.effects, options.effectsLevel));
         if (track->format.nChannels == 2) track->voice->SetOutputMatrix(output_, 2, 2, matrix);
+    }
+    for (auto& [actor,sound]:scene_) {
+        const auto& track=sound.audio;
+        if (!track.voice) continue;
+        const float attenuation=static_cast<float>(std::pow(10.0,sound.volume/2000.0));
+        track.voice->SetVolume(Volume(options.effects,options.effectsLevel)*attenuation);
+        const double pan=(options.reversePan ? -sound.pan : sound.pan)/2000.0;
+        const float left=static_cast<float>(pan>0 ? std::pow(10.0,-pan) : 1.0);
+        const float right=static_cast<float>(pan<0 ? std::pow(10.0,pan) : 1.0);
+        const float panMatrix[]{left,right};
+        if (track.format.nChannels==1) track.voice->SetOutputMatrix(output_,1,2,panMatrix);
+        else {
+            const float stereo[]{left,0,0,right};
+            track.voice->SetOutputMatrix(output_,2,2,stereo);
+        }
     }
 }
 

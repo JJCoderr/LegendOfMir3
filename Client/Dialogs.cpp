@@ -52,11 +52,11 @@ struct SceneCaption {
     cui_color color;
 };
 
-struct SceneWeatherSprite {
+struct SceneEffectQuad {
     cui_texture texture;
     std::array<cui_vec2,4> corners;
     cui_color tint;
-    bool fog;
+    bool upright;
     bool screen;
 };
 
@@ -77,7 +77,8 @@ struct SceneMapArt {
     int cameraX = 0, cameraY = 0;
     std::size_t overlayStart = 0;
     const mir3::SceneLightGrid* light = nullptr;
-    const std::vector<SceneWeatherSprite>* weather = nullptr;
+    const std::vector<SceneEffectQuad>* weather = nullptr;
+    const std::vector<SceneEffectQuad>* levelEffects = nullptr;
 };
 
 }
@@ -711,7 +712,7 @@ private:
     std::vector<GroundLabel> worldGroundLabels_;
     std::vector<SceneActorAnchor> worldAnchors_;
     std::vector<SceneCaption> worldNames_, worldSpeech_;
-    std::vector<SceneWeatherSprite> worldWeather_;
+    std::vector<SceneEffectQuad> worldWeather_, worldLevelEffects_;
     std::map<std::pair<std::string,int>,Image> worldText_;
     mir3::SceneLightGrid worldLight_{255};
     mir3_cui::MapTerrain::LightView mapLights_{};
@@ -728,13 +729,14 @@ private:
     const WorldFrame& GetProjectedWorldShadow(cui_ctx* ui, const std::string& library, int frame, bool flat);
     SceneMapArt PrepareMapArt(cui_ctx* ui, LoginClient& client, cui_vec2 pointer, bool interactive);
     void PrepareWorldText(cui_ctx* ui, const LoginClient& client, cui_vec2 pointer, bool interactive);
-    void PrepareSceneLight(LocalScene& scene, SceneMapArt& camera);
+    void PrepareSceneLight(LoginClient& client, SceneMapArt& camera);
     void PrepareWeather(cui_ctx* ui, const LoginClient& client, SceneMapArt& camera);
+    void PrepareLevelEffects(cui_ctx* ui, const LocalScene& scene, SceneMapArt& camera);
     void PrepareGroundItems(cui_ctx* ui, const LocalScene& scene, const SceneMapArt& camera,
                             int startX, int startY, cui_vec2 pointer, bool interactive, std::vector<SceneSprite>& overlays);
     const WorldFrame& GroundFrame(cui_ctx* ui, int looks, bool highlighted);
     cui_rect AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAppearance& actor, int facing, int x, int y,
-        const SceneMapArt& camera, int pose, bool shadowBlend);
+        const SceneMapArt& camera, int pose, bool shadowBlend, int mount = 0);
     void TrimWorldFrames(cui_ctx* ui);
     std::array<HudChatRow,14> gameChatRows_;
     std::array<BagText,4> gameHudText_;
@@ -5285,16 +5287,18 @@ void PaintLocalScene(cui_ctx* ui, cui_rect rect, void* user)
         };
         const auto& sprites=*model.art.sprites;
         for (std::size_t i=0;i<model.art.overlayStart;++i) drawSprite(sprites[i]);
-        if (model.art.weather) {
-            constexpr cui_vec2 fogUV[]{{0,0},{1,0},{1,1},{0,1}};
+        const auto effects=[&](const std::vector<SceneEffectQuad>* quads) {
+            if (!quads) return;
+            constexpr cui_vec2 uprightUV[]{{0,0},{1,0},{1,1},{0,1}};
             constexpr cui_vec2 particleUV[]{{1,1},{1,0},{0,0},{0,1}};
-            for (const auto& sprite:*model.art.weather) {
+            for (const auto& sprite:*quads) {
                 cui_vec2 positions[4];
                 for (int k=0;k<4;++k)
                     positions[k]={rect.x+sprite.corners[k].x*scale,rect.y+sprite.corners[k].y*scale};
-                cui_draw_effect_quad(ui,sprite.texture,positions,sprite.fog ? fogUV : particleUV,sprite.tint,sprite.screen);
+                cui_draw_effect_quad(ui,sprite.texture,positions,sprite.upright ? uprightUV : particleUV,sprite.tint,sprite.screen);
             }
-        }
+        };
+        effects(model.art.weather);
         if (const auto* grid=model.art.light) {
             const auto triangle=[&](const std::array<int,3>& vertices) {
                 cui_vec2 points[3];
@@ -5318,6 +5322,7 @@ void PaintLocalScene(cui_ctx* ui, cui_rect rect, void* user)
                 }
             }
         }
+        effects(model.art.levelEffects);
         const auto captions=[&](const std::vector<SceneCaption>* lines) {
             if (!lines) return;
             for (const auto& line:*lines) {
@@ -6123,14 +6128,28 @@ void Dialogs::Assets::TrimWorldFrames(cui_ctx* ui)
 }
 
 cui_rect Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAppearance& actor, int facing,
-    int x, int y, const SceneMapArt& camera, int pose, bool shadowBlend)
+    int x, int y, const SceneMapArt& camera, int pose, bool shadowBlend, int mount)
 {
     const std::string prefix=actor.body ? "WM-" : "M-";
-    const int motion=facing*10+pose;
+    int motion=facing*10+pose;
     const auto library=prefix+"Hum";
+    const WorldFrame* horse=nullptr;
+    if (mount>=1 && mount<=3 && pose<4) {
+        const auto& frame=GetWorldFrame(ui,"Horse",400*(mount-1)+motion);
+        if (frame.image.texture && GetWorldFrame(ui,library,int(actor.clothing)*3000+motion+2320).image.texture) {
+            horse=&frame;
+            motion+=2320;
+        }
+    }
     const int frame=static_cast<int>(actor.clothing)*3000+motion;
     const auto& body=GetWorldFrame(ui,library,frame);
     if (!body.image.texture) return {};
+    if (horse) {
+        const auto& horseShadow=GetWorldFrame(ui,"Horse",10000+motion-2320);
+        const auto& image=horseShadow.image;
+        if (image.texture) worldSprites_.push_back({image.texture,x*48-camera.cameraX+horseShadow.x,
+            y*32-camera.cameraY+horseShadow.y,image.width,image.height,y,static_cast<std::uint8_t>(shadowBlend ? 104 : 255)});
+    }
     const auto& shadow=GetProjectedWorldShadow(ui,library,frame,pose==HumanCorpsePose);
     if (shadow.image.texture) worldSprites_.push_back({shadow.image.texture,x*48-camera.cameraX+shadow.x,
         y*32-camera.cameraY+shadow.y,shadow.image.width,shadow.image.height,y,static_cast<std::uint8_t>(shadowBlend ? 104 : 255)});
@@ -6145,6 +6164,7 @@ cui_rect Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAp
                 static_cast<int>((actor.weapon-1)%10)*3000+motion));
     };
     const bool behind=motion<static_cast<int>(mapWeaponOrder_.size()) && mapWeaponOrder_[motion]!=0;
+    if (horse) add(*horse);
     if (behind) weapon();
     add(body);
     if (actor.hair)
@@ -6323,8 +6343,9 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
             animated|=!glyphs.empty();
         } else {
             const int crouch=CrouchPose(actor.crouchedAt,monsterNow);
-            const int pose=actor.dead ? HumanCorpsePose : crouch>=0 ? crouch : idle;
-            bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,pose,client.shadowBlend);
+            const int level=mir3::level_up_pose(actor.levelPoseAt,monsterNow);
+            const int pose=actor.dead ? HumanCorpsePose : level>=0 ? level : crouch>=0 ? crouch : idle;
+            bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,pose,client.shadowBlend,actor.mount);
             if (bounds.w>0) worldAnchors_.push_back({id,bounds,int(actor.x)*48-camera.cameraX,int(actor.y)*32-camera.cameraY,2});
             animated|=!actor.dead;
         }
@@ -6334,8 +6355,9 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
     }
     if (client.characterAppearance.available) {
         const int crouch=CrouchPose(scene.crouchedAt,monsterNow);
+        const int level=mir3::level_up_pose(scene.levelPoseAt,monsterNow);
         const auto localBounds=AddWorldActor(ui,client.characterAppearance,scene.facing,scene.x,scene.y,camera,
-            crouch>=0 ? crouch : idle,client.shadowBlend);
+            level>=0 ? level : crouch>=0 ? crouch : idle,client.shadowBlend,client.mount.shape);
         if (localBounds.w>0) worldAnchors_.push_back({0,localBounds,int(scene.x)*48-camera.cameraX,int(scene.y)*32-camera.cameraY,3});
         if (localBounds.w>0 && client.characterStatus.hp[1] && gamePortraits_.contains(2)) {
             const auto [hp,maxHp]=client.characterStatus.hp;
@@ -6361,7 +6383,8 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
     });
     if (animated) cui_request_wakeup(ui,0.05f);
     PrepareWeather(ui,client,camera);
-    PrepareSceneLight(scene,camera);
+    PrepareSceneLight(client,camera);
+    PrepareLevelEffects(ui,scene,camera);
     PrepareWorldText(ui,client,pointer,interactive);
     TrimWorldFrames(ui);
     return camera;
@@ -6383,7 +6406,7 @@ void Dialogs::Assets::PrepareWeather(cui_ctx* ui, const LoginClient& client, Sce
     const auto particle=[&](const mir3::SnowWeather::Particle& p,cui_texture texture,float halfWidth,float halfHeight,float angle,bool screen) {
         if (!texture || p.x+halfWidth+halfHeight<0 || p.x-halfWidth-halfHeight>800 ||
             p.y+halfWidth+halfHeight<0 || p.y-halfWidth-halfHeight>600) return;
-        SceneWeatherSprite sprite{texture,{{{-halfWidth,-halfHeight},{halfWidth,-halfHeight},
+        SceneEffectQuad sprite{texture,{{{-halfWidth,-halfHeight},{halfWidth,-halfHeight},
             {halfWidth,halfHeight},{-halfWidth,halfHeight}}},{p.rgb[0],p.rgb[1],p.rgb[2],255},false,screen};
         const float sn=std::sin(angle), cs=std::cos(angle);
         for (auto& point:sprite.corners) {
@@ -6406,8 +6429,27 @@ void Dialogs::Assets::PrepareWeather(cui_ctx* ui, const LoginClient& client, Sce
     cui_request_wakeup(ui,0.016f);
 }
 
-void Dialogs::Assets::PrepareSceneLight(LocalScene& scene, SceneMapArt& camera)
+void Dialogs::Assets::PrepareLevelEffects(cui_ctx* ui, const LocalScene& scene, SceneMapArt& camera)
 {
+    if (scene.levelEffects.empty()) return;
+    worldLevelEffects_.clear();
+    for (const auto& playback:scene.levelEffects) {
+        const auto& effect=playback.effect;
+        const auto& frame=GetWorldFrame(ui,"MagicEx",static_cast<int>(effect.frame));
+        const auto& image=frame.image;
+        if (!image.texture) continue;
+        const float x=float(effect.cell_x*48-camera.cameraX+frame.x), y=float(effect.cell_y*32-camera.cameraY+frame.y);
+        const auto& tint=effect.resource.tint;
+        worldLevelEffects_.push_back({image.texture,{{{x,y},{x+image.width,y},{x+image.width,y+image.height},{x,y+image.height}}},
+            {tint[0],tint[1],tint[2],255},true,true});
+    }
+    camera.levelEffects=&worldLevelEffects_;
+    cui_request_wakeup(ui,0.016f);
+}
+
+void Dialogs::Assets::PrepareSceneLight(LoginClient& client, SceneMapArt& camera)
+{
+    auto& scene=client.scene;
     if (scene.ambient.level()==255) return;
     using Terrain=mir3_cui::MapTerrain;
     const int left=camera.cameraX/48-20, top=camera.cameraY/32-20;
@@ -6428,6 +6470,8 @@ void Dialogs::Assets::PrepareSceneLight(LocalScene& scene, SceneMapArt& camera)
         if (packed) worldLight_.add({(x+left)*48-camera.cameraX,(y+top)*32-camera.cameraY,
             0,{},radii[packed>>14],colors[(packed>>4)&255]});
     }
+    if (client.magicLight) for (const auto& playback:scene.levelEffects)
+        worldLight_.add(playback.effect.light(camera.cameraX,camera.cameraY));
     worldLight_.add(mir3::SceneLight::actor(int(scene.x)*48-camera.cameraX,int(scene.y)*32-camera.cameraY,scene.light,true));
     for (int kind : {2,0,1}) for (const auto& anchor:worldAnchors_) {
         if (anchor.order!=kind) continue;
