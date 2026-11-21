@@ -7,13 +7,16 @@
 #include "Common/Protocol.h"
 
 #include <cerrno>
+#include <cstdio>
 #include <cstdlib>
+#include <fstream>
+#include <map>
 #include <string>
 #include <vector>
 
 namespace {
 
-enum class Stage { Login, Connecting, SigningIn, Servers, Selecting, Handoff, Complete };
+enum class Stage { Groups, Login, Connecting, SigningIn, Servers, Selecting, Handoff, Complete };
 
 struct Server {
     std::string name;
@@ -36,12 +39,13 @@ BillingNotice ReadBilling(const _TDEFAULTMESSAGE& header)
     return {};
 }
 
-unsigned Number(const std::string& text, unsigned maximum)
+unsigned Number(const std::string& text, unsigned maximum, unsigned invalid = 0)
 {
+    if (text.empty()) return invalid;
     unsigned value = 0;
     for (char digit : text) {
         if (digit < '0' || digit > '9' || value > (maximum - (digit - '0')) / 10)
-            return 0;
+            return invalid;
         value = value * 10 + digit - '0';
     }
     return value;
@@ -65,6 +69,144 @@ std::string ConvertText(const std::string& text, UINT source, UINT destination)
     WideCharToMultiByte(destination, flags, wide.data(), wideLength, &result[0], size, nullptr, usedDefault);
     return result;
 }
+
+std::string TrimIni(const std::string& value)
+{
+    const auto first = value.find_first_not_of(" \t\r");
+    if (first == std::string::npos) return {};
+    return value.substr(first, value.find_last_not_of(" \t\r") - first + 1);
+}
+
+std::string IniKey(std::string value)
+{
+    for (char& ch : value) {
+        if (ch >= 'A' && ch <= 'Z') ch += 'a' - 'A';
+    }
+    return value;
+}
+
+std::vector<std::string> CommaFields(const std::string& value)
+{
+    std::vector<std::string> fields;
+    size_t start = 0;
+    for (auto end = value.find(','); end != std::string::npos; end = value.find(',', start)) {
+        fields.push_back(value.substr(start, end - start));
+        start = end + 1;
+    }
+    fields.push_back(value.substr(start));
+    return fields;
+}
+
+struct GroupLogin {
+    std::string host;
+    unsigned port = 0;
+    std::string registration;
+    std::string recovery;
+    std::vector<Server> servers;
+};
+
+struct GroupLine {
+    std::string caption;
+    std::string loginSection;
+};
+
+struct ServerGroup {
+    std::string label;
+    std::string title;
+    std::vector<GroupLine> lines;
+};
+
+class ServerGroups {
+public:
+    std::vector<ServerGroup> groups;
+    int selected = -1;
+
+    bool Load(std::istream& file)
+    {
+        ServerGroups next;
+        std::string section, line;
+        while (std::getline(file, line)) {
+            line = TrimIni(line);
+            if (line.empty() || line.front() == ';') continue;
+            if (line.front() == '[' && line.back() == ']') {
+                section = IniKey(TrimIni(line.substr(1, line.size() - 2)));
+                continue;
+            }
+            const auto split = line.find('=');
+            if (split == std::string::npos) continue;
+            auto value = TrimIni(line.substr(split + 1));
+            if (value.size() >= 2 && value.front() == value.back() &&
+                (value.front() == '"' || value.front() == '\''))
+                value = value.substr(1, value.size() - 2);
+            next.ini_.emplace(section + '/' + IniKey(TrimIni(line.substr(0, split))), std::move(value));
+        }
+
+        const unsigned count = Number(next.Get("ServerGroup", "Count"), 40);
+        if (!count) return false;
+        for (unsigned i = 1; i <= count; ++i) {
+            const auto parts = CommaFields(next.Get("ServerGroup", "Server" + std::to_string(i)));
+            if (parts.size() != 4) return false;
+            const auto x = Number(TrimIni(parts[2]), 800, 801);
+            const auto y = Number(TrimIni(parts[3]), 600, 601);
+            if (x > 800 || y > 600) return false;
+
+            const auto groupSection = "ServerGroup" + std::to_string(i);
+            const unsigned rows = Number(next.Get(groupSection, "Count"), 40, 41);
+            if (rows > 40) return false;
+            ServerGroup group{ConvertText(parts[0], 936, CP_UTF8), ConvertText(parts[1], 936, CP_UTF8)};
+            for (unsigned j = 1; j <= rows; ++j) {
+                const auto row = CommaFields(next.Get(groupSection, "Server" + std::to_string(j)));
+                if (row.size() != 3 || row[0].size() > 31 || row[1].size() > 31 || row[2].size() > 31)
+                    return false;
+                if (row[0] != "empty") group.lines.push_back({ConvertText(row[0], 936, CP_UTF8), row[1]});
+            }
+            if (x || y) next.groups.push_back(std::move(group));
+        }
+        if (next.groups.empty()) return false;
+        *this = std::move(next);
+        return true;
+    }
+
+    bool Login(const GroupLine& line, GroupLogin& output) const
+    {
+        if (line.loginSection.empty() || IniKey(line.loginSection) == "empty") return false;
+        GroupLogin next;
+        next.host = Get(line.loginSection, "ServerAddr");
+        next.port = Number(Get(line.loginSection, "Param1"), 65535);
+        in_addr address = {};
+        if (!next.port || next.host.size() > 15 ||
+            InetPtonA(AF_INET, next.host.c_str(), &address) != 1)
+            return false;
+        next.registration = ConvertText(Get(line.loginSection, "Param2"), 936, CP_UTF8);
+        next.recovery = ConvertText(Get(line.loginSection, "Param3"), 936, CP_UTF8);
+        if (next.registration.size() >= 512 || next.recovery.size() >= 512) return false;
+
+        const auto list = Get(line.loginSection, "ServerList");
+        for (size_t open = list.find('('); open != std::string::npos;) {
+            const auto close = list.find(')', open + 1);
+            const auto slash = list.find('/', open + 1);
+            if (close == std::string::npos || slash >= close || slash + 1 == close ||
+                next.servers.size() == 256)
+                return false;
+            const auto name = list.substr(slash + 1, close - slash - 1);
+            auto caption = ConvertText(list.substr(open + 1, slash - open - 1), 936, CP_UTF8);
+            if (caption.empty()) caption = ConvertText(name, 936, CP_UTF8);
+            next.servers.push_back({name, caption});
+            open = list.find('(', close + 1);
+        }
+        output = std::move(next);
+        return true;
+    }
+
+private:
+    std::map<std::string, std::string> ini_;
+
+    std::string Get(const std::string& section, const std::string& key) const
+    {
+        const auto found = ini_.find(IniKey(section) + '/' + IniKey(key));
+        return found == ini_.end() ? std::string{} : found->second;
+    }
+};
 
 void ReadSettings(char* host, DWORD hostSize, char* port, DWORD portSize, bool& legacy,
     char* registration, DWORD registrationSize, char* recovery, DWORD recoverySize,
@@ -130,6 +272,7 @@ public:
     bool settingsOpen = false;
     unsigned noticeDismissals = 0;
     Stage stage = Stage::Login;
+    ServerGroups serverGroups;
     std::vector<Server> configuredServers;
     std::vector<Server> servers;
     BillingNotice billing;
@@ -154,6 +297,24 @@ public:
         status.clear();
         SecureZeroMemory(password, sizeof password);
         ++noticeDismissals;
+    }
+
+    bool OpenGroupLine(const GroupLine& line)
+    {
+        GroupLogin config;
+        if (!serverGroups.Login(line, config)) {
+            status = "This line has an invalid login configuration.";
+            return false;
+        }
+        Reset();
+        strcpy_s(host, config.host.c_str());
+        sprintf_s(port, "%u", config.port);
+        strcpy_s(registration, config.registration.c_str());
+        strcpy_s(recovery, config.recovery.c_str());
+        configuredServers = std::move(config.servers);
+        settingsOpen = false;
+        legacy = false;
+        return true;
     }
 
     bool Active() const { return socket_ != INVALID_SOCKET; }
@@ -459,10 +620,11 @@ int Input(cui_ctx* ui, const char* label, char* value, size_t capacity, bool pas
     return cui_input_ex(ui, label, value, capacity, &options);
 }
 
-bool Button(cui_ctx* ui, const char* label, bool primary = false)
+bool Button(cui_ctx* ui, const char* label, bool primary = false, bool fullWidth = false)
 {
     cui_button_opts options = {};
     options.variant = primary ? CUI_BUTTON_PRIMARY : CUI_BUTTON_SECONDARY;
+    if (fullWidth) options.width = CUI_FILL;
     return cui_button_ex(ui, label, &options);
 }
 
@@ -485,6 +647,80 @@ bool IsAccountUrl(const std::string& url)
     return url.compare(0, 8, "https://") == 0 || url.compare(0, 7, "http://") == 0;
 }
 
+void DrawServerGroups(cui_ctx* ui, LoginClient& client)
+{
+    auto& model = client.serverGroups;
+    cui_box toolbar = {};
+    toolbar.width = CUI_FILL;
+    toolbar.align = CUI_ALIGN_CENTER;
+    toolbar.justify = CUI_JUSTIFY_BETWEEN;
+    cui_row_begin(ui, &toolbar);
+    cui_heading(ui, "Server groups", 1);
+    if (Button(ui, "Exit")) cui_app_quit(nullptr);
+    cui_box_end(ui);
+
+    cui_box panes = {};
+    panes.width = CUI_FILL;
+    panes.height = CUI_FILL;
+    panes.gap = 18;
+    cui_row_begin(ui, &panes);
+
+    const ServerGroup* group = model.selected < 0 ? nullptr : &model.groups[model.selected];
+    cui_box lines = {};
+    lines.width = CUI_PCT(44);
+    lines.height = CUI_FILL;
+    lines.gap = 10;
+    cui_column_begin(ui, &lines);
+    const std::string title = group && !group->title.empty() ? group->title : "Server lines";
+    cui_heading(ui, title.c_str(), 2);
+    cui_scroll_opts list = {};
+    list.id = "group-lines";
+    list.width = CUI_FILL;
+    list.height = CUI_FILL;
+    list.gap = 6;
+    cui_scroll_begin(ui, &list);
+    if (!group) {
+        cui_secondary(ui, "Choose a server group.");
+    } else if (group->lines.empty()) {
+        cui_secondary(ui, "This group has no server lines.");
+    } else {
+        for (size_t i = 0; i < group->lines.size(); ++i) {
+            const auto& line = group->lines[i];
+            cui_push_id_int(ui, static_cast<int>(i));
+            cui_push_disabled(ui, line.loginSection.empty() || IniKey(line.loginSection) == "empty");
+            const auto label = line.caption + "###line";
+            if (Button(ui, label.c_str(), false, true) && client.OpenGroupLine(line))
+                cui_request_redraw(ui);
+            cui_pop_disabled(ui);
+            cui_pop_id(ui);
+        }
+    }
+    cui_scroll_end(ui);
+    if (!client.status.empty()) cui_secondary(ui, client.status.c_str());
+    cui_box_end(ui);
+
+    list.id = "groups";
+    cui_scroll_begin(ui, &list);
+    bool groupChanged = false;
+    for (size_t i = 0; i < model.groups.size(); ++i) {
+        cui_push_id_int(ui, static_cast<int>(i));
+        const auto& entry = model.groups[i];
+        const auto label = (entry.label.empty() ? entry.title : entry.label) + "###group";
+        if (Button(ui, label.c_str(), model.selected == static_cast<int>(i), true)) {
+            model.selected = static_cast<int>(i);
+            client.status.clear();
+            groupChanged = true;
+        }
+        cui_pop_id(ui);
+    }
+    cui_scroll_end(ui);
+    if (groupChanged) {
+        cui_scroll_to(ui, "group-lines", 0);
+        cui_request_redraw(ui);
+    }
+    cui_box_end(ui);
+}
+
 void DrawAccount(cui_ctx* ui, LoginClient& client)
 {
     cui_box row = {};
@@ -498,6 +734,11 @@ void DrawAccount(cui_ctx* ui, LoginClient& client)
     if (IsAccountUrl(client.recovery) && Button(ui, "Change password"))
         cui_app_open_url(client.recovery);
     if (Button(ui, "Gateway settings")) client.settingsOpen = true;
+    if (!client.serverGroups.groups.empty() && Button(ui, "Server groups")) {
+        client.Reset();
+        client.settingsOpen = false;
+        client.stage = Stage::Groups;
+    }
     cui_box_end(ui);
     cui_separator(ui);
 
@@ -516,7 +757,8 @@ void DrawAccount(cui_ctx* ui, LoginClient& client)
     cui_box_end(ui);
     const bool submit = Button(ui, "Sign in", true);
     cui_box_end(ui);
-    if (client.status.empty() && !client.settingsOpen && (submit || (result & CUI_SUBMITTED)))
+    if (client.stage == Stage::Login && client.status.empty() && !client.settingsOpen &&
+        (submit || (result & CUI_SUBMITTED)))
         client.SignIn();
 }
 
@@ -528,6 +770,11 @@ void Draw(cui_ctx* ui, LoginClient& client)
     page.pad = 28;
     page.gap = 16;
     cui_column_begin(ui, &page);
+    if (client.stage == Stage::Groups) {
+        DrawServerGroups(ui, client);
+        cui_box_end(ui);
+        return;
+    }
     cui_heading(ui, "Mir3 Client", 1);
     cui_spacer(ui);
     if (client.stage == Stage::Login) {
@@ -544,6 +791,8 @@ void Draw(cui_ctx* ui, LoginClient& client)
 
     bool open = true;
     switch (client.stage) {
+    case Stage::Groups:
+        break;
     case Stage::Login: {
         if (!client.status.empty()) {
             modal.description = client.status.c_str();
@@ -653,6 +902,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         ReadSettings(client.host, sizeof client.host, client.port, sizeof client.port, client.legacy,
             client.registration, sizeof client.registration, client.recovery, sizeof client.recovery,
             client.configuredServers);
+        std::ifstream groupsFile("SelLogin.ini", std::ios::binary);
+        if (client.serverGroups.Load(groupsFile)) client.stage = Stage::Groups;
         LoadChineseFont(cui_app_ui(app));
         while (cui_app_frame(app)) {
             auto* ui = cui_app_ui(app);
