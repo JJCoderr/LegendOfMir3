@@ -154,7 +154,8 @@ public:
     bool NpcBlocksScene(cui_ctx* ui, const LoginClient& client) const;
     void DrawNpcPanel(cui_ctx* ui, LoginClient& client, bool interactive, int wheel);
     bool GuildBlocksScene(cui_ctx* ui) const;
-    void DrawGuildPanel(cui_ctx* ui, LoginClient& client);
+    void DrawGuildPanel(cui_ctx* ui, LoginClient& client, bool drawPanel = true, bool drawDialog = true);
+    bool HandleGuildInput(cui_ctx* ui, LoginClient& client, bool blocked, bool fallback = false);
     void LeaveGuild();
     void DrawQuestPanel(cui_ctx* ui, LoginClient& client);
     bool HandleQuestInput(cui_ctx* ui, LoginClient& client, bool blocked, bool fallback = false);
@@ -175,7 +176,8 @@ public:
         const float y = (mouse.y - (viewport.y - 600 * scale) / 2) / scale;
         return x >= partyX_ && x < partyX_ + 258 && y >= partyY_ && y < partyY_ + 244;
     }
-    void DrawPartyPanel(cui_ctx* ui, LoginClient& client);
+    void DrawPartyPanel(cui_ctx* ui, LoginClient& client, bool drawPanel = true, bool drawDialog = true);
+    bool HandlePartyInput(cui_ctx* ui, LoginClient& client, bool blocked, bool fallback = false);
     void LeaveParty() {
         partyFocused_ = partyDragging_ = false;
         partyPressed_ = partyConfirmPressed_ = partyEditor_ = -1;
@@ -543,7 +545,7 @@ private:
     void RefreshGuildText(cui_ctx* ui, const mir3_cui::GuildPanel& guild);
     void GuildInput(cui_ctx* ui, LoginClient& client, cui_vec2 mouse, bool down, bool up);
     void GuildModalInput(cui_ctx* ui, LoginClient& client, cui_vec2 mouse, bool down, bool up);
-    void PaintGuild(cui_ctx* ui, cui_rect rect) const;
+    void PaintGuild(cui_ctx* ui, cui_rect rect, bool drawPanel, bool drawDialog) const;
     int GuildRowCount(const mir3_cui::GuildPanel& guild) const;
     bool GuildHit(cui_vec2 mouse, int id, int x, int y) const;
 
@@ -740,14 +742,16 @@ private:
     cui_vec2 skillPointer_{-1,-1};
     int skillMenuTarget_ = 0, skillDescriptionId_ = 0;
     unsigned skillListRevision_ = 0;
-    enum class UtilityPanel { Quest, Skills, Status, Inventory, Options, Portrait, Mount, Trade };
-    static constexpr std::array<UtilityPanel,8> initialUtilityOrder_{
-        UtilityPanel::Quest,UtilityPanel::Skills,UtilityPanel::Status,UtilityPanel::Inventory,UtilityPanel::Options,UtilityPanel::Portrait,
+    enum class UtilityPanel { Party, Guild, Quest, Skills, Status, Inventory, Options, Portrait, Mount, Trade };
+    static constexpr std::array<UtilityPanel,10> initialUtilityOrder_{
+        UtilityPanel::Party,UtilityPanel::Guild,UtilityPanel::Quest,UtilityPanel::Skills,UtilityPanel::Status,
+        UtilityPanel::Inventory,UtilityPanel::Options,UtilityPanel::Portrait,
         UtilityPanel::Mount,UtilityPanel::Trade
     };
-    std::array<UtilityPanel,8> utilityOrder_ = initialUtilityOrder_;
+    std::array<UtilityPanel,10> utilityOrder_ = initialUtilityOrder_;
     bool UtilityVisible(UtilityPanel panel, const LoginClient& client) const;
     void RaiseUtility(UtilityPanel panel);
+    void ToggleParty(LoginClient& client);
     void PrepareInventoryPlacement(LoginClient& client);
     bool HandleInventoryUtility(cui_ctx* ui, LoginClient& client, bool blocked);
     bool utilityInventoryOpen_ = false;
@@ -881,7 +885,7 @@ private:
     Image partyPlayer_, partyCaption_, partyErrorImage_;
 
     void OpenParty(cui_ctx* ui, mir3::WilArchive& archive);
-    void PaintParty(cui_ctx* ui, cui_rect rect) const;
+    void PaintParty(cui_ctx* ui, cui_rect rect, bool drawPanel, bool drawDialog) const;
     void RefreshPartyText(cui_ctx* ui, const LoginClient& client);
     static constexpr std::array<int, 5> partyButtonFrames_{1221,1362,1365,1368,1370};
     static constexpr std::array<std::array<int, 2>, 5> partyButtonOffsets_{{{217,200},{38,192},{98,192},{158,192},{23,47}}};
@@ -2117,20 +2121,10 @@ void Dialogs::Assets::GuildInput(cui_ctx* ui, LoginClient& client, cui_vec2 mous
 {
     auto& guild = client.guild;
     if (!guild.open) return;
-    if (!client.showSignOut && !client.returnToCharactersAt && guildFocused_ &&
-        !client.chat.composing && cui_shortcut(ui, 0, CUI_KEY_F)) client.RequestGuildPage(0);
-    guildFocused_ = true;
-    if (pointerCoversPanel_) {
-        if (up) {
-            guildPosition_.dragging = guildScroll_.captured = false;
-            guildLayout_.pressed = -1;
-        }
-        return;
-    }
     const int x = guildPosition_.x, y = guildPosition_.y;
     const bool inside = Contains(guildPosition_.Rect(), mouse);
     if (inside) {
-        const int wheel = -static_cast<int>(std::lround(cui_mouse_scroll(ui).y));
+        const int wheel = -static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y));
         guild.first = std::clamp(guild.first + wheel, 0, (std::max)(0, guildCount_ - 1));
     }
 
@@ -2223,39 +2217,57 @@ void Dialogs::Assets::GuildModalInput(cui_ctx* ui, LoginClient& client, cui_vec2
     cui_request_redraw(ui);
 }
 
-void Dialogs::Assets::DrawGuildPanel(cui_ctx* ui, LoginClient& client)
+bool Dialogs::Assets::HandleGuildInput(cui_ctx* ui, LoginClient& client, bool blocked, bool fallback)
+{
+    auto& guild = client.guild;
+    if (fallback && !blocked && guildFocused_ && !client.chat.composing && cui_shortcut(ui,0,CUI_KEY_F))
+        client.RequestGuildPage(0);
+    if (guildRevision_ != guild.overviewRevision) {
+        guildRevision_ = guild.overviewRevision;
+        guildScroll_.captured = false;
+    }
+    guildFocused_ = true;
+    guildHint_ = -1;
+    const bool covered = GuildBlocksScene(ui);
+    if (blocked) {
+        guildPosition_.dragging = guildScroll_.captured = false;
+        guildLayout_.pressed = -1;
+        return false;
+    }
+    const auto view = cui_viewport_size(ui);
+    const HudPoint base({0,0,view.x,view.y});
+    if (!covered || base.scale <= 0) return false;
+    guildCount_ = GuildRowCount(guild);
+    guild.first = std::clamp(guild.first,0,(std::max)(0,guildCount_-1));
+    const auto mouse = base.ToLocal(cui_mouse_pos(ui));
+    GuildInput(ui,client,mouse,cui_mouse_clicked(ui,CUI_MOUSE_LEFT),cui_mouse_released(ui,CUI_MOUSE_LEFT));
+    guildPointer_ = mouse;
+    return true;
+}
+
+void Dialogs::Assets::DrawGuildPanel(cui_ctx* ui, LoginClient& client, bool drawPanel, bool drawDialog)
 {
     auto& guild = client.guild;
     const auto view = cui_viewport_size(ui);
     const HudPoint base({0,0,view.x,view.y});
     if (base.scale <= 0) return;
-    if (guildRevision_ != guild.overviewRevision) {
-        guildRevision_ = guild.overviewRevision;
-        guildScroll_.captured = false;
-    }
-    guildCount_ = GuildRowCount(guild);
-    guild.first = std::clamp(guild.first, 0, (std::max)(0,guildCount_-1));
-    guildLayout_.tab = guild.tab;
     const auto mouse = base.ToLocal(cui_mouse_pos(ui));
     const bool down = cui_mouse_clicked(ui, CUI_MOUSE_LEFT), up = cui_mouse_released(ui, CUI_MOUSE_LEFT);
-    guildHint_ = -1;
-    const bool editorChanged = guildEditorId_ != guild.editor;
+    const bool editorChanged = drawDialog && guildEditorId_ != guild.editor;
     if (editorChanged) {
         guildEditorId_ = guild.editor;
         guildCancelSelected_ = guildTabDown_ = false;
         guildPressed_ = -1;
     }
     const bool blocked = portraitNotice_ || client.showSignOut || client.returnToCharactersAt;
-    if (!blocked && (guild.notice || guild.action != mir3_cui::GuildAction::None)) {
+    if (drawDialog && !blocked && (guild.notice || guild.action != mir3_cui::GuildAction::None)) {
         guildPosition_.dragging = guildScroll_.captured = false;
         guildLayout_.pressed = -1;
         GuildModalInput(ui, client, mouse, down, up);
-    } else if (!blocked) {
-        GuildInput(ui, client, mouse, down, up);
     }
-    guildPointer_ = mouse;
     guildLayout_.tab = guild.tab;
     guildCount_ = GuildRowCount(guild);
+    guild.first = std::clamp(guild.first,0,(std::max)(0,guildCount_-1));
     guildDrawPanel_ = guild.open;
     guildDrawAlert_ = guild.notice != 0;
     guildDrawEditor_ = !guildDrawAlert_ && guild.Multiline();
@@ -2266,11 +2278,12 @@ void Dialogs::Assets::DrawGuildPanel(cui_ctx* ui, LoginClient& client)
     }
     RefreshGuildText(ui, guild);
     cui_overlay_begin(ui, {0,0,view.x,view.y});
-    auto* self = this;
+    const struct { const Assets* assets; bool panel, dialog; } paint{this,drawPanel,drawDialog};
     cui_canvas_paint(ui, CUI_FILL, CUI_FILL, [](cui_ctx* ui, cui_rect rect, void* model) {
-        (*static_cast<Assets**>(model))->PaintGuild(ui, rect);
-    }, &self, sizeof self);
-    if (!blocked && (guildDrawEditor_ || guildDrawPrompt_)) {
+        const auto& data = *static_cast<decltype(paint)*>(model);
+        data.assets->PaintGuild(ui,rect,data.panel,data.dialog);
+    }, &paint, sizeof paint);
+    if (drawDialog && !blocked && (guildDrawEditor_ || guildDrawPrompt_)) {
         const auto field = guildDrawEditor_ ? base.Rect(guildEditorPosition_.x+46,guildEditorPosition_.y+54,468,170) :
             base.Rect(400-dialog_[0].width/2+24,246-dialog_[0].height/2+228,309,15);
         cui_overlay_begin(ui, field);
@@ -2362,7 +2375,7 @@ void Dialogs::Assets::RefreshGuildText(cui_ctx* ui, const mir3_cui::GuildPanel& 
     guildDrawAnnouncement_ = guild.action == Action::Notice;
 }
 
-void Dialogs::Assets::PaintGuild(cui_ctx* ui, cui_rect rect) const
+void Dialogs::Assets::PaintGuild(cui_ctx* ui, cui_rect rect, bool drawPanel, bool drawDialog) const
 {
     const HudPoint base(rect);
     const cui_color white{255,255,255,255}, heading{255,200,150,255}, notice{255,250,200,255};
@@ -2375,7 +2388,7 @@ void Dialogs::Assets::PaintGuild(cui_ctx* ui, cui_rect rect) const
         image(art,pos.x-(art.width-pos.width)/2,pos.y-(art.height-pos.height)/2,white);
     };
     cui_push_clip(ui,base.Rect(0,0,800,600));
-    if (guildDrawPanel_) {
+    if (drawPanel && guildDrawPanel_) {
         const int x = guildPosition_.x, y = guildPosition_.y;
         skin(1300,guildPosition_);
         image(guildName_,x+340,y+10,heading);
@@ -2397,7 +2410,7 @@ void Dialogs::Assets::PaintGuild(cui_ctx* ui, cui_rect rect) const
             HudHint::Paint(ui,base,guildHints_[guildHint_],guildHintHeight_,x+spec[1]+button.width,y+spec[2]+button.height);
         }
     }
-    if (guildDrawEditor_) {
+    if (drawDialog && guildDrawEditor_) {
         const int x = guildEditorPosition_.x, y = guildEditorPosition_.y;
         skin(1326,guildEditorPosition_);
         image(guildEditorLabels_[guildDrawAnnouncement_ ? 3 : 0],x+70,y+20,heading);
@@ -2411,7 +2424,7 @@ void Dialogs::Assets::PaintGuild(cui_ctx* ui, cui_rect rect) const
         sprite(1221+(guildPressed_==0),x+546,y+212);
         sprite(1327+(guildPressed_==1),x+461,y+12);
         image(guildError_,x+46,y+226,notice);
-    } else if (guildDrawAlert_ || guildDrawPrompt_) {
+    } else if (drawDialog && (guildDrawAlert_ || guildDrawPrompt_)) {
         const int x = 400-dialog_[0].width/2, y = 246-dialog_[0].height/2;
         image(dialog_[0],x,y,white);
         if (guildDrawAlert_) {
@@ -3773,7 +3786,69 @@ void Dialogs::Assets::RefreshPartyText(cui_ctx* ui, const LoginClient& client)
     }
 }
 
-void Dialogs::Assets::DrawPartyPanel(cui_ctx* ui, LoginClient& client)
+bool Dialogs::Assets::HandlePartyInput(cui_ctx* ui, LoginClient& client, bool blocked, bool fallback)
+{
+    using mir3_cui::PartyAction;
+    auto& party = client.party;
+    const bool covered = PartyBlocksScene(ui);
+    if (fallback && !blocked && partyFocused_ && cui_shortcut(ui,0,CUI_KEY_G)) {
+        party.open = false;
+        LeaveParty();
+        return covered;
+    }
+    partyFocused_ = true;
+    partyHint_ = -1;
+    if (blocked) {
+        partyPressed_ = -1;
+        partyDragging_ = false;
+        return false;
+    }
+    if (!covered) return false;
+    const auto viewport = cui_viewport_size(ui);
+    const auto local = HudPoint({0,0,viewport.x,viewport.y}).ToLocal(cui_mouse_pos(ui));
+    const float mx = local.x, my = local.y;
+    const auto hit = [&](float x, float y, float w, float h) { return Contains({x,y,w,h},local); };
+    const auto hits = [&](const Image& image, int x, int y) { return hit(x,y,image.width,image.height); };
+    const bool down = cui_mouse_clicked(ui,CUI_MOUSE_LEFT), up = cui_mouse_released(ui,CUI_MOUSE_LEFT);
+    partyConfirmPressed_ = -1;
+    int button = -1;
+    for (int i = 0; i < 5; ++i) {
+        const auto& [x, y] = partyButtonOffsets_[i];
+        if (hits(partyFrames_.at(partyButtonFrames_[i]), partyX_ + x, partyY_ + y)) button = i;
+    }
+    if (down && hit(partyX_, partyY_, 258, 244)) {
+        partyPressed_ = button;
+        partyDragging_ = button < 0;
+        if (partyDragging_) {
+            partyDragX_ = static_cast<int>(mx) - partyX_;
+            partyDragY_ = static_cast<int>(my) - partyY_;
+        }
+    } else if (partyDragging_) {
+        partyX_ = static_cast<int>(mx) - partyDragX_;
+        partyY_ = static_cast<int>(my) - partyDragY_;
+        if (partyY_ + 244 > 570) partyY_ = 565 - 244;
+    }
+    if (up) {
+        const int pressed = std::exchange(partyPressed_, -1);
+        partyDragging_ = false;
+        if (button >= 0 && button == pressed) {
+            if (client.audioOptions.effects && std::filesystem::exists(clickSound_))
+                client.audio.PlayEffect(clickSound_.c_str(), client.audioOptions);
+            if (button == 0) party.open = false;
+            else if (button == 4) client.SetPartyAllowed(!party.allowed);
+            else party.Begin(static_cast<PartyAction>(mir3_cui::PartyMode + button));
+        }
+    }
+    if (button >= 0 && button < 4 && button != partyPressed_ && !partyDragging_ &&
+        partyHints_[button].texture && party.action == PartyAction::None) {
+        partyHint_ = button;
+        constexpr int hints[] = {1052, 1600, 1601, 1602};
+        partyHintDrawHeight_ = hudHint_.Advance(ui, hints[button], partyHints_[button].height);
+    }
+    return covered;
+}
+
+void Dialogs::Assets::DrawPartyPanel(cui_ctx* ui, LoginClient& client, bool drawPanel, bool drawDialog)
 {
     using mir3_cui::PartyAction;
     auto& party = client.party;
@@ -3784,15 +3859,14 @@ void Dialogs::Assets::DrawPartyPanel(cui_ctx* ui, LoginClient& client)
     const auto mouse = cui_mouse_pos(ui);
     const float mx = (mouse.x - ox) / scale, my = (mouse.y - oy) / scale;
     const auto hit = [&](float x, float y, float width, float height) {
-        return !pointerCoversPanel_ && mx >= x && mx < x + width && my >= y && my < y + height;
+        return mx >= x && mx < x + width && my >= y && my < y + height;
     };
     const auto hits = [&](const Image& image, int x, int y) { return hit(x, y, image.width, image.height); };
     const bool down = cui_mouse_clicked(ui, CUI_MOUSE_LEFT), up = cui_mouse_released(ui, CUI_MOUSE_LEFT);
     const bool alert = party.notice.id != 0;
     const bool modal = alert || party.action != PartyAction::None;
-    partyHint_ = -1;
     const bool blocked = portraitNotice_ || client.showSignOut || client.returnToCharactersAt;
-    if (modal && !blocked) {
+    if (drawDialog && modal && !blocked) {
         partyPressed_ = -1;
         partyDragging_ = false;
         const int x = 400 - dialog_[0].width / 2, y = 246 - dialog_[0].height / 2;
@@ -3822,48 +3896,6 @@ void Dialogs::Assets::DrawPartyPanel(cui_ctx* ui, LoginClient& client)
             else client.SubmitPartyMember();
             cui_request_redraw(ui);
         }
-    } else if (party.open && !blocked) {
-        partyConfirmPressed_ = -1;
-        if (partyFocused_ && cui_shortcut(ui, 0, CUI_KEY_G)) {
-            party.open = false;
-            LeaveParty();
-            return;
-        }
-        partyFocused_ = true;
-        int button = -1;
-        for (int i = 0; i < 5; ++i) {
-            const auto& [x, y] = partyButtonOffsets_[i];
-            if (hits(partyFrames_.at(partyButtonFrames_[i]), partyX_ + x, partyY_ + y)) button = i;
-        }
-        if (down && hit(partyX_, partyY_, 258, 244)) {
-            partyPressed_ = button;
-            partyDragging_ = button < 0;
-            if (partyDragging_) {
-                partyDragX_ = static_cast<int>(mx) - partyX_;
-                partyDragY_ = static_cast<int>(my) - partyY_;
-            }
-        } else if (partyDragging_ && !pointerCoversPanel_) {
-            partyX_ = static_cast<int>(mx) - partyDragX_;
-            partyY_ = static_cast<int>(my) - partyDragY_;
-            if (partyY_ + 244 > 570) partyY_ = 565 - 244;
-        }
-        if (up) {
-            const int pressed = std::exchange(partyPressed_, -1);
-            partyDragging_ = false;
-            if (button >= 0 && button == pressed) {
-                if (client.audioOptions.effects && std::filesystem::exists(clickSound_))
-                    client.audio.PlayEffect(clickSound_.c_str(), client.audioOptions);
-                if (button == 0) party.open = false;
-                else if (button == 4) client.SetPartyAllowed(!party.allowed);
-                else party.Begin(static_cast<PartyAction>(mir3_cui::PartyMode + button));
-            }
-        }
-        if (button >= 0 && button < 4 && button != partyPressed_ && !partyDragging_ &&
-            partyHints_[button].texture && party.action == PartyAction::None) {
-            partyHint_ = button;
-            constexpr int hints[] = {1052, 1600, 1601, 1602};
-            partyHintDrawHeight_ = hudHint_.Advance(ui, hints[button], partyHints_[button].height);
-        }
     }
 
     partyDrawPanel_ = party.open;
@@ -3877,11 +3909,12 @@ void Dialogs::Assets::DrawPartyPanel(cui_ctx* ui, LoginClient& client)
     RefreshPartyText(ui, client);
 
     cui_overlay_begin(ui, {0, 0, viewport.x, viewport.y});
-    auto* self = this;
+    const struct { const Assets* assets; bool panel, dialog; } paint{this,drawPanel,drawDialog};
     cui_canvas_paint(ui, CUI_FILL, CUI_FILL, [](cui_ctx* ui, cui_rect rect, void* model) {
-        (*static_cast<Assets**>(model))->PaintParty(ui, rect);
-    }, &self, sizeof self);
-    if (!blocked && partyDrawModal_ && !partyDrawAlert_) {
+        const auto& data = *static_cast<decltype(paint)*>(model);
+        data.assets->PaintParty(ui,rect,data.panel,data.dialog);
+    }, &paint, sizeof paint);
+    if (drawDialog && !blocked && partyDrawModal_ && !partyDrawAlert_) {
         const int x = 400 - dialog_[0].width / 2 + 24, y = 246 - dialog_[0].height / 2 + 228;
         cui_overlay_begin(ui, {ox + x * scale, oy + y * scale, 309 * scale, 15 * scale});
         cui_push_id_int(ui, party.editor);
@@ -3907,7 +3940,7 @@ void Dialogs::Assets::DrawPartyPanel(cui_ctx* ui, LoginClient& client)
     cui_box_end(ui);
 }
 
-void Dialogs::Assets::PaintParty(cui_ctx* ui, cui_rect rect) const
+void Dialogs::Assets::PaintParty(cui_ctx* ui, cui_rect rect, bool drawPanel, bool drawDialog) const
 {
     const float scale = (std::min)(rect.w / 800, rect.h / 600);
     const float ox = rect.x + (rect.w - 800 * scale) / 2, oy = rect.y + (rect.h - 600 * scale) / 2;
@@ -3919,7 +3952,7 @@ void Dialogs::Assets::PaintParty(cui_ctx* ui, cui_rect rect) const
         if (frame.texture) cui_draw_image(ui, frame.texture, bounds(x,y,frame.width,frame.height), {0,0,1,1}, {}, color);
     };
     cui_push_clip(ui, bounds(0,0,800,600));
-    if (partyDrawPanel_) {
+    if (drawPanel && partyDrawPanel_) {
         const int x = partyX_, y = partyY_;
         const auto& skin = partyFrames_.at(1360);
         image(skin, x - (skin.width - 258) / 2, y - (skin.height - 244) / 2, white);
@@ -3940,7 +3973,7 @@ void Dialogs::Assets::PaintParty(cui_ctx* ui, cui_rect rect) const
             HudHint::Paint(ui, HudPoint(rect), hint, partyHintDrawHeight_, x + dx + button.width, y + dy + button.height);
         }
     }
-    if (partyDrawModal_) {
+    if (drawDialog && partyDrawModal_) {
         const int x = 400 - dialog_[0].width / 2, y = 246 - dialog_[0].height / 2;
         image(dialog_[0], x, y, white);
         if (partyDrawAlert_) {
@@ -6631,6 +6664,8 @@ void Dialogs::Assets::PaintSkillShortcuts(cui_ctx* ui, cui_rect rect, const Logi
 bool Dialogs::Assets::UtilityVisible(UtilityPanel panel, const LoginClient& client) const
 {
     switch (panel) {
+    case UtilityPanel::Party: return PartyReady() && client.party.open;
+    case UtilityPanel::Guild: return GuildReady() && client.guild.open;
     case UtilityPanel::Quest: return QuestReady() && client.quests.open;
     case UtilityPanel::Skills: return SkillsReady() && client.skills.visible;
     case UtilityPanel::Status: return StatusReady() && client.equipment.open;
@@ -7254,6 +7289,13 @@ void Dialogs::Assets::RaiseUtility(UtilityPanel panel)
     std::rotate(position,position+1,utilityOrder_.end());
 }
 
+void Dialogs::Assets::ToggleParty(LoginClient& client)
+{
+    client.party.open = !client.party.open;
+    if (client.party.open && PartyReady()) RaiseUtility(UtilityPanel::Party);
+    else LeaveParty();
+}
+
 void Dialogs::Assets::ToggleOptions(LoginClient& client)
 {
     client.serverOptions.open = !client.serverOptions.open;
@@ -7643,6 +7685,8 @@ bool Dialogs::Assets::HandleUtilityPanels(cui_ctx* ui, LoginClient& client, bool
     if (std::exchange(utilityInventoryOpen_,client.inventory.open)!=client.inventory.open && client.inventory.open)
         RaiseUtility(UtilityPanel::Inventory);
     if (QuestReady() && client.quests.open && !questFocused_) RaiseUtility(UtilityPanel::Quest);
+    if (PartyReady() && client.party.open && !partyFocused_) RaiseUtility(UtilityPanel::Party);
+    if (GuildReady() && client.guild.open && !guildFocused_) RaiseUtility(UtilityPanel::Guild);
     const auto order = utilityOrder_;
     const bool close = !modal && !client.shop.actor && !client.chat.composing &&
         cui_shortcut(ui,0,CUI_KEY_ESCAPE);
@@ -7653,6 +7697,8 @@ bool Dialogs::Assets::HandleUtilityPanels(cui_ctx* ui, LoginClient& client, bool
         const bool blocked = covered || foreground || modal;
         bool hit = false;
         switch (panel) {
+        case UtilityPanel::Party: hit = HandlePartyInput(ui,client,blocked); break;
+        case UtilityPanel::Guild: hit = HandleGuildInput(ui,client,blocked); break;
         case UtilityPanel::Quest: hit = HandleQuestInput(ui,client,blocked); break;
         case UtilityPanel::Skills: hit = HandleSkillInput(ui,client,blocked,!client.chat.composing); break;
         case UtilityPanel::Status: hit = HandleStatusInput(ui,client,blocked); break;
@@ -7667,6 +7713,11 @@ bool Dialogs::Assets::HandleUtilityPanels(cui_ctx* ui, LoginClient& client, bool
         if (panel!=UtilityPanel::Inventory) coveredOutsideBag |= hit;
         if (!close || escape || (panel!=UtilityPanel::Inventory && (foreground || client.npcDialogue.actor))) continue;
         switch (panel) {
+        case UtilityPanel::Party: ToggleParty(client); break;
+        case UtilityPanel::Guild:
+            client.guild.open = false;
+            LeaveGuild();
+            break;
         case UtilityPanel::Quest: ToggleQuest(client); break;
         case UtilityPanel::Skills: ToggleSkills(client); break;
         case UtilityPanel::Status: ToggleStatus(client); break;
@@ -7690,6 +7741,8 @@ void Dialogs::Assets::DrawUtilityPanels(cui_ctx* ui, LoginClient& client, bool i
     for (const auto panel : utilityOrder_) {
         if (!UtilityVisible(panel,client)) continue;
         switch (panel) {
+        case UtilityPanel::Party: DrawPartyPanel(ui,client,true,false); break;
+        case UtilityPanel::Guild: DrawGuildPanel(ui,client,true,false); break;
         case UtilityPanel::Quest: DrawQuestPanel(ui,client); break;
         case UtilityPanel::Skills: DrawSkillsPanel(ui,client); break;
         case UtilityPanel::Status: DrawStatusPanel(ui,client); break;
@@ -7847,7 +7900,7 @@ void Dialogs::Assets::GameHudInput(cui_ctx* ui, LoginClient& client, cui_vec2 po
                 case 1: client.ToggleMinimap(100); break;
                 case 2: client.skillShortcutsVisible=!client.skillShortcutsVisible; break;
                 case 3: case 4: OpenGameExit(client,action==3); break;
-                case 5: client.party.open=!client.party.open; break;
+                case 5: ToggleParty(client); break;
                 case 6: client.RequestGuildPage(0); break;
                 case 7: ToggleSkills(client); break;
                 case 8: ToggleQuest(client); break;
@@ -7917,8 +7970,8 @@ void Dialogs::Assets::GameHudInput(cui_ctx* ui, LoginClient& client, cui_vec2 po
         }
         if (cui_shortcut(ui,0,CUI_KEY_E)) ToggleSkills(client);
         if (cui_shortcut(ui,0,CUI_KEY_B)) client.skillShortcutsVisible=!client.skillShortcutsVisible;
-        if (cui_shortcut(ui,0,CUI_KEY_G) && !client.party.open) client.party.open=true;
-        if (cui_shortcut(ui,0,CUI_KEY_F) && !client.guild.open) client.RequestGuildPage(0);
+        if (cui_shortcut(ui,0,CUI_KEY_G)) ToggleParty(client);
+        if (cui_shortcut(ui,0,CUI_KEY_F)) client.RequestGuildPage(0);
         if (cui_shortcut(ui,0,CUI_KEY_Q)) {
             if (StatusReady() || !client.equipment.open) ToggleStatus(client);
         }
@@ -8444,14 +8497,19 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
             client.trade.prompt!=mir3_cui::TradePrompt::None;
         const bool regularPanels = !partyNotice && !guildNotice && !npcPrompt && !shopOpen && !fallbackNpc && !settingsOpen;
         if (regularPanels) {
-            if (partyOpen && !partyActionOpen) {
-                if (nativeParty) loginArt->DrawPartyPanel(ui,client);
+            if (partyOpen && !partyActionOpen && (!nativeHud || !nativeParty)) {
+                if (nativeParty) {
+                    loginArt->HandlePartyInput(ui,client,modal,true);
+                    if (client.party.open) loginArt->DrawPartyPanel(ui,client);
+                }
                 else DrawParty(ui,client);
-            } else if (!partyOpen && guildOpen && !guildActionOpen) {
-                if (nativeGuild) loginArt->DrawGuildPanel(ui,client);
+            } else if (guildOpen && !guildActionOpen && (!nativeHud || !nativeGuild)) {
+                if (nativeGuild) {
+                    loginArt->HandleGuildInput(ui,client,modal,true);
+                    loginArt->DrawGuildPanel(ui,client);
+                }
                 else DrawGuild(ui,client);
-            } else if (!partyOpen && !guildOpen && client.quests.open &&
-                       (!nativeHud || !loginArt->QuestReady())) {
+            } else if (client.quests.open && (!nativeHud || !loginArt->QuestReady())) {
                 if (loginArt && loginArt->QuestReady()) {
                     loginArt->HandleQuestInput(ui,client,modal,true);
                     if (client.quests.open) loginArt->DrawQuestPanel(ui,client);
@@ -8477,8 +8535,8 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
                 (shopOpen && shopBlocksScene && client.npcDialogue.prompt.command.empty());
             loginArt->DrawNpcPanel(ui,client,!overlay,npcWheel);
         }
-        if (partyNotice) loginArt->DrawPartyPanel(ui,client);
-        else if (guildNotice) loginArt->DrawGuildPanel(ui,client);
+        if (partyNotice) loginArt->DrawPartyPanel(ui,client,!nativeHud);
+        else if (guildNotice) loginArt->DrawGuildPanel(ui,client,!nativeHud);
         else if (npcPrompt) return;
         else if (shopOpen) {
             if (nativeShop) loginArt->DrawShopPanel(ui,client,shopWheel,!fading && !client.showSignOut && !inventoryModal && !minimapCovered);
@@ -8487,11 +8545,11 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
         else if (client.chat.receptionOpen) DrawChatReception(ui,client);
         else if (!nativeOptions && client.serverOptions.open) DrawServerOptions(ui,client);
         else if (client.audioOpen) DrawAudioSettings(ui,client);
-        else if (partyOpen && partyActionOpen) {
-            if (nativeParty) loginArt->DrawPartyPanel(ui,client);
+        else if (partyActionOpen) {
+            if (nativeParty) loginArt->DrawPartyPanel(ui,client,!nativeHud);
             else DrawParty(ui,client);
-        } else if (!partyOpen && guildOpen && guildActionOpen) {
-            if (nativeGuild) loginArt->DrawGuildPanel(ui,client);
+        } else if (guildActionOpen) {
+            if (nativeGuild) loginArt->DrawGuildPanel(ui,client,!nativeHud);
             else DrawGuild(ui,client);
         }
         if (nativeInventory && inventoryModal) loginArt->DrawInventoryPanel(ui,client,!bagOverlay,inventoryWasOpen);
