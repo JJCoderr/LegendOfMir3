@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include "cui.h"
+#include "CuiAudio.h"
 #include "CuiChat.h"
 #include "CuiServerOptions.h"
 #include "Common/EnDecode.h"
@@ -27,6 +28,9 @@ enum class Stage {
     GameSession, SigningOutGame, GameDisconnected
 };
 enum class CharacterDialog { None, Create, Delete };
+constexpr wchar_t LoginMusic[] = L"CuiAudio/Login.wav";
+constexpr wchar_t SessionMusic[] = L"CuiAudio/Session.wav";
+constexpr wchar_t ClickSound[] = L"CuiAudio/Click.wav";
 constexpr WORD GameLogon = 50;
 constexpr WORD GameLogout = 1009;
 constexpr WORD GameDecodeKey = 1330;
@@ -366,6 +370,12 @@ public:
     bool showSignOut = false;
     mir3_cui::ChatPanel chat;
     mir3_cui::ServerOptions serverOptions;
+    mir3_cui::AudioOptions audioOptions;
+    mir3_cui::AudioPlayer audio;
+    std::wstring audioOptionsPath;
+    std::string audioSaveError;
+    bool audioOpen = false;
+    bool audioDirty = false;
     std::string chatHistoryDirectory = "CuiChatHistory";
     std::vector<Character> characters;
     int characterIndex = -1;
@@ -395,6 +405,7 @@ public:
         showSignOut = false;
         chat = {};
         serverOptions = {};
+        audioOpen = false;
         characters.clear();
         characterIndex = -1;
         characterPage = 0;
@@ -598,6 +609,18 @@ public:
             serverOptions.attackModePending = true;
     }
 
+    bool SaveAudioSettings()
+    {
+        if (!audioDirty) return true;
+        if (!audioOptionsPath.empty() && audioOptions.Save(audioOptionsPath.c_str())) {
+            audioSaveError.clear();
+            audioDirty = false;
+            return true;
+        }
+        audioSaveError = "Could not save audio settings.";
+        return false;
+    }
+
     void Poll()
     {
         if (stage == Stage::Handoff && GetTickCount64() >= deadline_) OpenCharacters();
@@ -745,6 +768,8 @@ private:
         stage = Stage::GameDisconnected;
         status = message;
         showSignOut = false;
+        if (audioOpen) SaveAudioSettings();
+        audioOpen = false;
     }
 
     void AuthenticateGame()
@@ -1290,6 +1315,7 @@ void DrawAccount(cui_ctx* ui, LoginClient& client)
     if (IsAccountUrl(client.recovery) && Button(ui, "Change password"))
         cui_app_open_url(client.recovery);
     if (Button(ui, "Gateway settings")) client.settingsOpen = true;
+    if (Button(ui, "Audio")) client.audioOpen = true;
     if (!client.serverGroups.groups.empty() && Button(ui, "Server groups")) {
         client.Reset();
         client.settingsOpen = false;
@@ -1313,7 +1339,7 @@ void DrawAccount(cui_ctx* ui, LoginClient& client)
     cui_box_end(ui);
     const bool submit = Button(ui, "Sign in", true);
     cui_box_end(ui);
-    if (client.stage == Stage::Login && client.status.empty() && !client.settingsOpen &&
+    if (client.stage == Stage::Login && client.status.empty() && !client.settingsOpen && !client.audioOpen &&
         (submit || (result & CUI_SUBMITTED)))
         client.SignIn();
 }
@@ -1465,7 +1491,7 @@ void ChatShortcuts(cui_ctx* ui, mir3_cui::ChatPanel& chat, bool phrase)
 void DrawGameChat(cui_ctx* ui, LoginClient& client)
 {
     auto& chat = client.chat;
-    const bool hadOverlay = client.showSignOut || chat.receptionOpen || client.serverOptions.open;
+    const bool hadOverlay = client.showSignOut || chat.receptionOpen || client.serverOptions.open || client.audioOpen;
     cui_push_disabled(ui, hadOverlay);
     cui_box row = {};
     row.width = CUI_FILL;
@@ -1481,9 +1507,10 @@ void DrawGameChat(cui_ctx* ui, LoginClient& client)
     if (Button(ui, "Server options") ||
         (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_N)))
         client.serverOptions.open = true;
+    if (Button(ui, "Audio")) client.audioOpen = true;
     if (Button(ui, "Sign out")) client.showSignOut = true;
     cui_box_end(ui);
-    const bool overlay = client.showSignOut || chat.receptionOpen || client.serverOptions.open;
+    const bool overlay = client.showSignOut || chat.receptionOpen || client.serverOptions.open || client.audioOpen;
 
     cui_scroll_opts list = {};
     list.id = "chat-history";
@@ -1606,6 +1633,47 @@ void DrawServerOptions(cui_ctx* ui, LoginClient& client)
     cui_dialog_end(ui);
 }
 
+void DrawAudioSettings(cui_ctx* ui, LoginClient& client)
+{
+    cui_dialog_opts dialog = {};
+    dialog.persistent = true;
+    dialog.no_close_button = true;
+    if (!cui_dialog_begin(ui, "Audio settings", &client.audioOpen, &dialog)) return;
+
+    auto& settings = client.audioOptions;
+    bool changed = cui_checkbox_ex(ui, "Background music", &settings.music, nullptr);
+    cui_slider_opts slider = {};
+    slider.step = 1;
+    slider.show_value = true;
+    slider.format = "%.0f";
+    slider.width = CUI_FILL;
+    const auto drawLevel = [&](const char* label, int& level) {
+        float value = static_cast<float>(level);
+        if (cui_slider_ex(ui, label, &value, -100, 0, &slider)) {
+            level = static_cast<int>(value);
+            changed = true;
+        }
+    };
+    drawLevel("Music volume", settings.musicLevel);
+    if (cui_checkbox_ex(ui, "Sound effects", &settings.effects, nullptr)) changed = true;
+    drawLevel("Effects volume", settings.effectsLevel);
+    if (cui_checkbox_ex(ui, "Reverse stereo effects", &settings.reversePan, nullptr)) changed = true;
+    if (changed) {
+        client.audio.Apply(settings);
+        client.audioDirty = true;
+    }
+    cui_push_disabled(ui, !settings.effects);
+    if (Button(ui, "Play test sound")) client.audio.PlayEffect(ClickSound, settings);
+    cui_pop_disabled(ui);
+    if (!client.audio.Error().empty()) cui_secondary(ui, client.audio.Error().c_str());
+    if (!client.audioSaveError.empty()) cui_secondary(ui, client.audioSaveError.c_str());
+    cui_dialog_footer_begin(ui);
+    const bool done = Button(ui, "Done", true) || cui_key_pressed(ui, CUI_KEY_ESCAPE);
+    cui_dialog_footer_end(ui);
+    cui_dialog_end(ui);
+    if (done && client.SaveAudioSettings()) client.audioOpen = false;
+}
+
 void Draw(cui_ctx* ui, LoginClient& client)
 {
     cui_box page = {};
@@ -1634,12 +1702,13 @@ void Draw(cui_ctx* ui, LoginClient& client)
         cui_box_end(ui);
         if (client.chat.receptionOpen) DrawChatReception(ui, client);
         else if (client.serverOptions.open) DrawServerOptions(ui, client);
+        else if (client.audioOpen) DrawAudioSettings(ui, client);
         if (!client.showSignOut) return;
     } else {
         cui_heading(ui, "Mir3 Client", 1);
         cui_spacer(ui);
         if (client.stage == Stage::Login) {
-            cui_push_disabled(ui, !client.status.empty() || client.settingsOpen);
+            cui_push_disabled(ui, !client.status.empty() || client.settingsOpen || client.audioOpen);
             DrawAccount(ui, client);
             cui_pop_disabled(ui);
         }
@@ -1657,7 +1726,9 @@ void Draw(cui_ctx* ui, LoginClient& client)
     case Stage::Characters:
         break;
     case Stage::Login: {
-        if (!client.status.empty()) {
+        if (client.audioOpen) {
+            DrawAudioSettings(ui, client);
+        } else if (!client.status.empty()) {
             modal.description = client.status.c_str();
             if (cui_dialog_begin(ui, "Sign-in notice", &open, &modal)) {
                 cui_dialog_footer_begin(ui);
@@ -1775,6 +1846,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
     WSADATA winsock;
     if (WSAStartup(MAKEWORD(2, 2), &winsock) != 0) return 1;
+    const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
     cui_app_desc window = {};
     window.title = "Mir3 CUI Client";
@@ -1787,21 +1859,41 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     cui_app* app = cui_app_create(&window);
     if (app) {
         LoginClient client;
+        wchar_t audioOptionsPath[MAX_PATH];
+        const auto audioPathLength = GetFullPathNameW(L"CuiOptions.ini", MAX_PATH, audioOptionsPath, nullptr);
+        if (audioPathLength && audioPathLength < MAX_PATH) {
+            client.audioOptionsPath = audioOptionsPath;
+            client.audioOptions.Load(audioOptionsPath);
+        }
         ReadSettings(client.host, sizeof client.host, client.port, sizeof client.port, client.legacy,
             client.registration, sizeof client.registration, client.recovery, sizeof client.recovery,
             client.configuredServers);
         std::ifstream groupsFile("SelLogin.ini", std::ios::binary);
         if (client.serverGroups.Load(groupsFile)) client.stage = Stage::Groups;
+        auto previousStage = client.stage;
+        client.audio.SetMusic(LoginMusic, client.audioOptions);
         LoadChineseFont(cui_app_ui(app));
         while (cui_app_frame(app)) {
             auto* ui = cui_app_ui(app);
             client.Poll();
             Draw(ui, client);
+            if (client.stage != previousStage) {
+                client.audio.SetMusic(client.stage == Stage::GameSession ? SessionMusic : LoginMusic,
+                    client.audioOptions);
+                if ((client.stage == Stage::Servers || client.stage == Stage::Characters ||
+                     client.stage == Stage::GameSession) &&
+                    GetFileAttributesW(ClickSound) != INVALID_FILE_ATTRIBUTES &&
+                    client.audioOptions.effects)
+                    client.audio.PlayEffect(ClickSound, client.audioOptions);
+                previousStage = client.stage;
+            }
             if (client.Active() || client.stage == Stage::Handoff || client.stage == Stage::ConnectingGame)
                 cui_request_wakeup(ui, 0.03f);
         }
+        client.SaveAudioSettings();
         cui_app_destroy(app);
     }
+    if (SUCCEEDED(com)) CoUninitialize();
     WSACleanup();
     return app ? 0 : 1;
 }
