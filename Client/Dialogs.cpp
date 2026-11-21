@@ -6358,24 +6358,22 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
     };
     for (const auto& [id,actor]:scene.players) {
         if (!actor.IsNpc() || actor.dead || !visible(actor)) continue;
-        int count=4, interval=300;
-        if (actor.npcType==4 && actor.npcShape==10) { count=10; interval=150; }
-        if (actor.npcType==5) {
-            if (actor.npcShape>=100) continue;
-            if ((actor.npcShape>=51 && actor.npcShape<=55) || actor.npcShape==59 ||
-                actor.npcShape==64 || actor.npcShape==65) count=1;
-            else if (actor.npcShape==56 || actor.npcShape==57) { count=12; interval=80; }
-            else if (actor.npcShape==87) { count=10; interval=150; }
-        }
-        const auto& sprite=GetWorldFrame(ui,actor.npcType==4 ? "Flag" : "NPC",
-            static_cast<int>(100*actor.npcShape+tick/interval%count));
+        const auto& visual=actor.npcVisual;
+        const auto motion=visual.standing.count ? visual.standing : LocalScene::NpcVisual::Idle(actor.npcType,actor.npcShape);
+        if (!motion.count) continue;
+        const int frame=visual.standing.count ? visual.frame : int(tick/motion.interval%motion.count);
+        const auto age=visual.appearanceDuration ? monsterNow-visual.appearanceAt : 0;
+        const int weight=age<visual.appearanceDuration ? int(31*age/visual.appearanceDuration) : -1;
+        animated|=motion.count>1 || weight>=0;
+        const auto& sprite=GetWorldFrame(ui,actor.npcType==4 ? "Flag" : "NPC",motion.first+frame);
         if (!sprite.image.texture) continue;
         const int x=static_cast<int>(actor.x)*48-camera.cameraX+sprite.x;
         const int y=static_cast<int>(actor.y)*32-camera.cameraY+sprite.y;
-        worldSprites_.push_back({sprite.image.texture,x,y,sprite.image.width,sprite.image.height,static_cast<int>(actor.y)});
+        SceneSprite body{sprite.image.texture,x,y,sprite.image.width,sprite.image.height,static_cast<int>(actor.y)};
+        ApplyActorBlend(body,65535,weight,weight,false,false);
+        worldSprites_.push_back(body);
         worldNpcs_.push_back({{float(x),float(y),float(sprite.image.width),float(sprite.image.height)},id,actor.y});
         worldAnchors_.push_back({id,worldNpcs_.back().bounds,x-sprite.x,y-sprite.y,0});
-        animated|=count>1;
     }
     const int idle=static_cast<int>(tick/201%4);
     const auto humanDamage=[&](mir3::DamageNumbers& damage,int x,int y) {

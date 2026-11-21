@@ -187,6 +187,7 @@ inline constexpr std::uint64_t MonsterMovementTick = 96;
 inline constexpr std::uint64_t MonsterReviveDuration = 600;
 inline constexpr std::uint64_t MonsterArrivalDuration = 300;
 inline constexpr std::uint64_t HumanReviveDuration = 600;
+inline constexpr std::uint64_t NpcArrivalDuration = 300, NpcReviveDuration = 600;
 inline constexpr std::uint64_t CrouchFrameDuration = 400;
 inline constexpr int HumanCorpsePose = 1529;
 
@@ -197,6 +198,55 @@ inline int CrouchPose(std::uint64_t since, std::uint64_t now)
 }
 
 struct LocalScene {
+    struct NpcMotion { int first=0, count=0, interval=300; };
+    struct NpcVisual {
+        NpcMotion standing, idle;
+        int frame=0;
+        std::uint64_t frameAt=0, appearanceAt=0, appearanceDuration=0;
+
+        static NpcMotion Idle(unsigned type,unsigned shape,int direction=0) {
+            NpcMotion result{int(100*shape)+10*direction,4,300};
+            if (type==4) {
+                if (shape==10) { result.count=10; result.interval=150; }
+            } else if (shape>=100) result.count=0;
+            else if ((shape>=51 && shape<=55) || shape==59 || shape==64 || shape==65) result.count=1;
+            else if (shape==56 || shape==57) { result.count=12; result.interval=80; }
+            else if (shape==87) { result.count=10; result.interval=150; }
+            return result;
+        }
+
+        void Reset(unsigned type,unsigned shape,unsigned facing,bool refresh,std::uint64_t now) {
+            standing=Idle(type,shape);
+            idle={};
+            if (refresh && type==5 && shape!=87) {
+                const unsigned direction=shape==40 || standing.count!=4 ? 0 : facing%3;
+                standing=Idle(type,shape,direction);
+                const bool idleOnly=standing.count!=4 || shape==24 || shape==25 || shape==34 || shape==35 ||
+                    (shape>=43 && shape<=50) || shape==58 || shape==69 || shape==76 || shape==80 ||
+                    (shape>=82 && shape<=86);
+                if (!idleOnly) {
+                    idle=standing;
+                    const bool shared=shape==19 || shape==88 || shape==89;
+                    standing.first+=shared ? 0 : 30;
+                    standing.count=shared ? 4 : shape==27 ? 6 : shape==28 ? 9 : 10;
+                }
+            }
+            frame=0;
+            frameAt=now;
+        }
+
+        void Advance(std::uint64_t now) {
+            if (appearanceDuration && now-appearanceAt>=appearanceDuration) appearanceDuration=0;
+            if (standing.count<=1 || now-frameAt<=static_cast<std::uint64_t>(standing.interval)) return;
+            frameAt=now;
+            if (++frame<standing.count) return;
+            frame=0;
+            if (!idle.count) return;
+            standing=idle;
+            idle={};
+        }
+    };
+
     struct RemoteCast { int skill, x, y; };
     struct RemoteMelee { unsigned x,y,facing,element,opcode; bool harvest; };
     struct HumanHit {
@@ -282,6 +332,7 @@ struct LocalScene {
         bool dying = false;
         std::uint64_t revivedAt = 0;
         unsigned npcType = 0;
+        NpcVisual npcVisual;
         mir3_cui::CharacterAppearance appearance;
         std::string name;
         mir3::SceneName identity;
@@ -2335,6 +2386,8 @@ public:
         const auto now = GetTickCount64();
         if (stage==Stage::GameSession) {
             AdvanceMonsterActions(now);
+            for (auto& [id,actor]:scene.players)
+                if (actor.IsNpc()) actor.npcVisual.Advance(now);
             AdvanceGroundItems(static_cast<std::uint32_t>(now));
             if (scene.spellReplyUntil && now>=scene.spellReplyUntil) scene.spellReplyUntil=0;
             AdvanceMelee(now);
@@ -3242,7 +3295,15 @@ private:
         } else if (stage == Stage::GameSession && (opcode == GameMonsterStatus || opcode == GameHumanStatus801 ||
                    opcode == GameHumanStatus || opcode == GameHumanStatus808)) {
             const auto found=scene.players.find(actor);
-            if (input_.size()!=DEFBLOCKSIZE) return;
+            if (input_.size()!=DEFBLOCKSIZE) {
+                if (opcode!=GameMonsterStatus && input_.size()>=DEFBLOCKSIZE+22 &&
+                    input_.size()<=DEFBLOCKSIZE+344) {
+                    const auto feature=DecodeGameBytes(input_.substr(DEFBLOCKSIZE,22));
+                    if (feature.size()==16 && (feature[0]==4 || feature[0]==5))
+                        HandleRemoteNpc(opcode,actor,first,second,third,feature);
+                }
+                return;
+            }
             const auto flags=std::uint32_t(first)|(std::uint32_t(second)<<16);
             const LocalScene::HumanStatus status{flags,std::bit_cast<std::int16_t>(third)};
             if (actor==localActor_) {
@@ -4825,10 +4886,54 @@ private:
         }
     }
 
+    void HandleRemoteNpc(unsigned opcode,std::uint32_t actor,WORD x,WORD y,WORD direction,std::string_view feature)
+    {
+        if (!actor || actor>0x7fffffffu || actor==localActor_ ||
+            (scene.terrain.Ready() && !scene.terrain.Contains(x,y))) return;
+        const auto found=scene.players.find(actor);
+        const bool refresh=found!=scene.players.end();
+        const bool revive=opcode==GameActorRevive;
+        if (refresh) {
+            if (!found->second.IsNpc() || (opcode!=GameTurn && !revive)) return;
+        } else if (revive || opcode==GameActorReviveRefresh || opcode==GameActorDead || opcode==GameBump) return;
+
+        const unsigned type=std::uint8_t(feature[0]);
+        const unsigned shape=std::uint8_t(feature[type==4 ? 1 : 2]);
+        const unsigned facing=direction&255;
+        if (type==5 && (shape>=100 || (refresh && facing>=8))) return;
+
+        const auto now=GetTickCount64();
+        auto& npc=scene.players[actor];
+        npc.x=x;
+        npc.y=y;
+        npc.npcType=type;
+        npc.npcShape=shape;
+        npc.facing=refresh ? facing : 0;
+        npc.light=refresh ? direction>>8 : 0;
+        npc.npcVisual.Reset(type,shape,npc.facing,refresh,now);
+        if (!refresh || revive) {
+            npc.npcVisual.appearanceAt=now;
+            npc.npcVisual.appearanceDuration=revive ? NpcReviveDuration : NpcArrivalDuration;
+        }
+        if (input_.size()>DEFBLOCKSIZE+22) {
+            auto name=DecodeGameBytes(input_.substr(DEFBLOCKSIZE+22));
+            if (!name.empty() && name.size()<=64) SetRemoteName(npc,std::move(name));
+        }
+        if (scene.spellEffects) {
+            auto& effects=scene.spellEffects->effects;
+            std::erase_if(effects,[actor](const auto& effect) { return effect.poseActor==actor && effect.resource.id==607; });
+        }
+        if (refresh && type==5 && shape==87) {
+            SceneEffects().monsterOverlay(effectCatalog_,607,{int(x),int(y)},10*(facing%3),actor,0,
+                mir3::MonsterEffectPose::idle);
+            PlaySceneSound(actor,16070,x,y);
+        }
+    }
+
     void HandleRemotePlayer(unsigned opcode, std::uint32_t actor, WORD x, WORD y, WORD direction)
     {
         const unsigned facing=direction&255;
-        if (!actor || actor > 0x7fffffffu || (facing >= 8 && opcode!=GameMonsterDigDown) ||
+        if (!actor || actor > 0x7fffffffu ||
             (scene.terrain.Ready() && !scene.terrain.Contains(x, y))) return;
         const auto size = input_.size() - DEFBLOCKSIZE;
         if (size > 344) return;
@@ -4840,6 +4945,11 @@ private:
         }
         const auto feature = size >= 22 ? DecodeGameBytes(input_.substr(DEFBLOCKSIZE, 22)) : std::string();
         const unsigned type = feature.size() == 16 ? static_cast<unsigned char>(feature[0]) : 0;
+        if (type==4 || type==5) {
+            HandleRemoteNpc(opcode,actor,x,y,direction,feature);
+            return;
+        }
+        if (facing>=8) return;
         if (opcode==GameBump && (type>=3 || !scene.players.contains(actor) || scene.players.at(actor).npcType)) return;
         if (type == 3) {
             const auto existing=scene.players.find(actor);
@@ -4866,22 +4976,6 @@ private:
             return;
         }
         if (opcode==GameMonsterDigUp || opcode==GameMonsterRise || opcode==GameMonsterSkeleton) return;
-        if (type == 4 || type == 5) {
-            auto& npc = scene.players[actor];
-            if (!npc.IsNpc()) npc={};
-            npc.x = x;
-            npc.y = y;
-            npc.facing = facing;
-            npc.light = direction >> 8;
-            npc.npcType = type;
-            npc.npcShape = static_cast<unsigned char>(feature[type == 4 ? 1 : 2]);
-            npc.dead = opcode == GameActorDeath || opcode == GameActorDead;
-            if (size > 22) {
-                auto name = DecodeGameBytes(input_.substr(DEFBLOCKSIZE + 22));
-                if (!name.empty()) SetRemoteName(npc, std::move(name));
-            }
-            return;
-        }
         const bool named = opcode == GameTurn || opcode == GameActorRevive || opcode == GameActorReviveRefresh;
         if (named && (size < 29 || size > 344)) return;
         if (opcode == GameBackstep && size != 29) return;
@@ -5137,7 +5231,10 @@ private:
                 case Pose::death:
                     if (!actor.monsterSkeleton && (actor.npcShape==141 || actor.MonsterDying())) pose=actor.monsterDeathFrame;
                     break;
-                case Pose::idle: pose=actor.monsterIdleAt ? int((now-actor.monsterIdleAt)/300%4) : 0; break;
+                case Pose::idle:
+                    pose=actor.IsNpc() ? actor.npcVisual.frame :
+                        actor.monsterIdleAt ? int((now-actor.monsterIdleAt)/300%4) : 0;
+                    break;
                 case Pose::walk:
                     if (actor.monsterWalkFrame>=0) pose=actor.monsterBackstep ? 5-actor.monsterWalkFrame : actor.monsterWalkFrame;
                     break;
