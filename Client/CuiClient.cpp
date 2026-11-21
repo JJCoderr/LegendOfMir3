@@ -546,7 +546,7 @@ public:
 
     void SendChat()
     {
-        if (stage != Stage::GameSession || showSignOut || !chat.draft[0]) return;
+        if (stage != Stage::GameSession || showSignOut || chat.receptionOpen || !chat.draft[0]) return;
         const std::string draft = chat.draft;
         const bool command = draft.front() == '/' || draft.front() == '@' ||
             draft.front() == '#' || draft.front() == '!';
@@ -575,6 +575,18 @@ public:
         }
         if (draft == "@chatsave") chat.logging = !chat.logging;
         Queue(mir3_cui::Say, 0, wire);
+    }
+
+    void ToggleChatReception(mir3_cui::ReceptionChannel channel)
+    {
+        if (stage != Stage::GameSession || showSignOut) return;
+        if (output_.size() >= 8192) {
+            chat.reception.error = "The connection is busy. Try changing reception again.";
+            return;
+        }
+        Queue(mir3_cui::Say, 0, mir3_cui::ChatReception::ToggleCommand(channel));
+        chat.reception.Request(channel);
+        chat.reception.error.clear();
     }
 
     void Poll()
@@ -944,6 +956,8 @@ private:
         } else if (opcode == GameDecodeKey && stage == Stage::GameSession) {
             const auto body = ReadGameBody();
             if (body.size() == 60 && body.find('\0') == std::string::npos) ApplySceneKey(body);
+        } else if (opcode == mir3_cui::ClientOptions && stage == Stage::GameSession) {
+            if (input_.size() == DEFBLOCKSIZE) chat.reception.Apply(actor);
         } else if (mir3_cui::ChatChannel(opcode) && stage == Stage::GameSession &&
                    input_.size() <= DEFBLOCKSIZE + 1024) {
             auto body = ReadGameBody();
@@ -1426,7 +1440,7 @@ void ChatShortcuts(cui_ctx* ui, mir3_cui::ChatPanel& chat, bool phrase)
 void DrawGameChat(cui_ctx* ui, LoginClient& client)
 {
     auto& chat = client.chat;
-    cui_push_disabled(ui, client.showSignOut);
+    cui_push_disabled(ui, client.showSignOut || chat.receptionOpen);
     cui_box row = {};
     row.width = CUI_FILL;
     row.gap = 10;
@@ -1435,8 +1449,10 @@ void DrawGameChat(cui_ctx* ui, LoginClient& client)
     cui_heading(ui, "Chat", 1);
     cui_spacer(ui);
     if (Button(ui, chat.expanded ? "Compact" : "Expand")) chat.expanded = !chat.expanded;
+    if (Button(ui, "Reception")) chat.receptionOpen = true;
     if (Button(ui, "Sign out")) client.showSignOut = true;
     cui_box_end(ui);
+    const bool overlay = client.showSignOut || chat.receptionOpen;
 
     cui_scroll_opts list = {};
     list.id = "chat-history";
@@ -1456,7 +1472,7 @@ void DrawGameChat(cui_ctx* ui, LoginClient& client)
     cui_scroll_end(ui);
 
     const int mods = cui_key_mods(ui);
-    if (chat.composing && !client.showSignOut && (mods & (CUI_MOD_CTRL | CUI_MOD_ALT))) {
+    if (chat.composing && !overlay && (mods & (CUI_MOD_CTRL | CUI_MOD_ALT))) {
         cui_box shortcuts = {};
         shortcuts.width = CUI_FILL;
         shortcuts.gap = 6;
@@ -1467,7 +1483,7 @@ void DrawGameChat(cui_ctx* ui, LoginClient& client)
     }
 
     if (!chat.composing) {
-        if (Button(ui, "Write a message") || (!client.showSignOut &&
+        if (Button(ui, "Write a message") || (!overlay &&
             (cui_key_pressed(ui, CUI_KEY_ENTER) || cui_key_pressed(ui, CUI_KEY_SPACE)))) {
             chat.composing = true;
             ++chat.editor;
@@ -1485,14 +1501,33 @@ void DrawGameChat(cui_ctx* ui, LoginClient& client)
         cui_box_end(ui);
         const bool send = Button(ui, "Send", true);
         cui_box_end(ui);
-        if (!client.showSignOut && cui_key_pressed(ui, CUI_KEY_ESCAPE)) {
+        if (!overlay && cui_key_pressed(ui, CUI_KEY_ESCAPE)) {
             chat.composing = false;
-        } else if (!client.showSignOut && (send || (input & CUI_SUBMITTED))) {
+        } else if (!overlay && (send || (input & CUI_SUBMITTED))) {
             client.SendChat();
         }
     }
     if (!chat.error.empty()) cui_secondary(ui, chat.error.c_str());
     cui_pop_disabled(ui);
+}
+
+void DrawChatReception(cui_ctx* ui, LoginClient& client)
+{
+    auto& chat = client.chat;
+    if (!cui_dialog_begin(ui, "Chat reception", &chat.receptionOpen, nullptr)) return;
+    static const char* const labels[] = {"Block private messages", "Block guild chat", "Block all chat"};
+    for (std::size_t i = 0; i < chat.reception.displayed.size(); ++i) {
+        bool blocked = chat.reception.displayed[i];
+        if (cui_checkbox_ex(ui, labels[i], &blocked, nullptr))
+            client.ToggleChatReception(static_cast<mir3_cui::ReceptionChannel>(i));
+        if (chat.reception.displayed[i] != chat.reception.confirmed[i])
+            cui_muted(ui, "Waiting for server confirmation");
+    }
+    if (!chat.reception.error.empty()) cui_secondary(ui, chat.reception.error.c_str());
+    cui_dialog_footer_begin(ui);
+    if (Button(ui, "Done", true)) chat.receptionOpen = false;
+    cui_dialog_footer_end(ui);
+    cui_dialog_end(ui);
 }
 
 void Draw(cui_ctx* ui, LoginClient& client)
@@ -1521,6 +1556,7 @@ void Draw(cui_ctx* ui, LoginClient& client)
     if (client.stage == Stage::GameSession) {
         DrawGameChat(ui, client);
         cui_box_end(ui);
+        if (client.chat.receptionOpen) DrawChatReception(ui, client);
         if (!client.showSignOut) return;
     } else {
         cui_heading(ui, "Mir3 Client", 1);

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
+#include <cstdint>
 #include <deque>
 #include <string>
 #include <vector>
@@ -8,6 +10,45 @@
 namespace mir3_cui {
 
 constexpr unsigned Say = 3030;
+constexpr unsigned ClientOptions = 1401;
+
+enum class ReceptionChannel { Private, Guild, All };
+
+struct ChatReception {
+    std::array<bool, 3> confirmed = {};
+    std::array<bool, 3> displayed = {};
+    std::uint32_t previousFlags = 0;
+    std::string error;
+
+    static const char* ToggleCommand(ReceptionChannel channel)
+    {
+        // V1.45 reception buttons send GBK commands through CM_SAY.
+        switch (channel) {
+        case ReceptionChannel::Private: return "@\xbe\xdc\xbe\xf8\xc7\xc4\xc7\xc4\xbb\xb0";
+        case ReceptionChannel::Guild: return "@\xbe\xdc\xbe\xf8\xd0\xd0\xbb\xe1\xc1\xc4\xcc\xec";
+        case ReceptionChannel::All: return "@\xbe\xdc\xbe\xf8\xcb\xf9\xd3\xd0\xc8\xcb\xc1\xc4\xcc\xec ";
+        }
+        return "";
+    }
+
+    void Request(ReceptionChannel channel)
+    {
+        const auto index = static_cast<std::size_t>(channel);
+        displayed[index] = !confirmed[index];
+    }
+
+    void Apply(std::uint32_t flags)
+    {
+        const auto changed = previousFlags ^ flags;
+        previousFlags = flags;
+        constexpr std::uint32_t masks[] = {0x04000000u, 0x02000000u, 0x00800000u};
+        for (std::size_t i = 0; i < confirmed.size(); ++i) {
+            if (changed & masks[i]) displayed[i] = confirmed[i] = (flags & masks[i]) != 0;
+        }
+        // The all-chat confirmation also changes guild reception.
+        if (changed & masks[2]) displayed[1] = confirmed[1] = confirmed[2];
+    }
+};
 
 inline const char* ChatChannel(unsigned opcode)
 {
@@ -41,6 +82,8 @@ struct ChatPanel {
     bool expanded = false;
     bool scrollToEnd = false;
     bool logging = false;
+    bool receptionOpen = false;
+    ChatReception reception;
     std::string error;
 
     void Append(unsigned opcode, const std::string& text)
