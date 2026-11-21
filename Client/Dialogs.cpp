@@ -157,6 +157,7 @@ public:
     void DrawGuildPanel(cui_ctx* ui, LoginClient& client);
     void LeaveGuild();
     void DrawQuestPanel(cui_ctx* ui, LoginClient& client);
+    static void PostQuestNotices(LoginClient& client, const Assets* assets);
     bool QuestBlocksScene(cui_ctx* ui) const;
     void LeaveQuests() {
         questFocused_ = questDragging_ = questScrollDrag_ = false;
@@ -1942,6 +1943,16 @@ void Dialogs::Assets::DrawQuestPanel(cui_ctx* ui, LoginClient& client)
         (*static_cast<Assets**>(model))->PaintQuests(ui, rect);
     }, &self, sizeof self);
     cui_box_end(ui);
+}
+
+void Dialogs::Assets::PostQuestNotices(LoginClient& client, const Assets* assets)
+{
+    for (const int id : client.quests.notices) {
+        auto caption = assets ? assets->Message(id) : std::string{};
+        if (caption.empty()) caption = id == 1432 ? "New quest step." : "New quest.";
+        client.chat.Append(100,caption,0xffffff,0x0000ff);
+    }
+    client.quests.notices.clear();
 }
 
 void Dialogs::Assets::RefreshQuestText(cui_ctx* ui, mir3_cui::QuestPanel& quests, const std::vector<QuestLine>& lines)
@@ -8334,6 +8345,7 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
             loginArt->PostTradeFeedback(client);
         }
         else client.merchantResults.clear();
+        Dialogs::Assets::PostQuestNotices(client,loginArt);
         const bool merchantModal = client.merchant.notice || client.merchant.quantityOpen;
         const bool fading = client.returnToCharactersAt != 0;
         const bool portraitNotice = nativeHud && loginArt->PortraitNoticeOpen();

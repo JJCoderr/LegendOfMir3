@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cerrno>
 #include <cstdlib>
+#include <deque>
 #include <string>
 #include <utility>
 #include <vector>
@@ -98,6 +99,7 @@ struct QuestPanel {
     bool resetScroll = false;
     bool resetDescription = false;
     std::vector<QuestEntry> entries;
+    std::deque<int> notices;
     std::string error;
 
     QuestEntry* Find(int id)

@@ -1749,7 +1749,7 @@ public:
         const int id = entry.record.id;
         quests.expanded = toggle && quests.expanded == id ? -1 : id;
         if (quests.expanded < 0) return;
-        SelectQuest(id);
+        if (quests.parent != id || quests.child >= 0) SelectQuest(id);
         if (!entry.childrenLoaded && id <= 65535 && QuestCanQueue())
             Queue(mir3_cui::QuestChildrenQuery, 0, "", 0, static_cast<WORD>(id));
     }
@@ -3582,7 +3582,6 @@ private:
             const auto decoded = ConvertText(body, 936, CP_UTF8);
             if (decoded.empty() && !body.empty()) return;
             child->summary = decoded;
-            if (quests.parent == third && quests.child == first) quests.resetDescription = true;
             return;
         }
 
@@ -3596,6 +3595,12 @@ private:
             const auto summary = ConvertText(record.summary, 936, CP_UTF8);
             if (record.title.empty() || (summary.empty() && !record.summary.empty())) return;
             record.summary = summary;
+        }
+        const bool childAdded = reply == QuestReply::ChildAdded;
+        if (childAdded && records.empty()) return;
+        if (childAdded || reply == QuestReply::Added) {
+            if (quests.notices.size() == 79) quests.notices.pop_front();
+            quests.notices.push_back(childAdded ? 1432 : 1433);
         }
         if (!full && !quests.initialized) {
             RequestQuests();
