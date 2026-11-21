@@ -184,6 +184,7 @@ struct Gateway {
 
 inline constexpr std::uint64_t MonsterMovementTick = 96;
 inline constexpr std::uint64_t MonsterReviveDuration = 600;
+inline constexpr std::uint64_t HumanReviveDuration = 600;
 inline constexpr std::uint64_t CrouchFrameDuration = 400;
 inline constexpr int HumanCorpsePose = 1529;
 
@@ -268,6 +269,8 @@ struct LocalScene {
         std::uint32_t actionFlags = 0;
         std::uint64_t combatUntil = 0, combatIdleAt = 0;
         bool dead = false;
+        bool dying = false;
+        std::uint64_t revivedAt = 0;
         unsigned npcType = 0;
         mir3_cui::CharacterAppearance appearance;
         std::string name;
@@ -2319,7 +2322,17 @@ public:
             AdvanceSpellEffects(now);
             for (auto& [id,actor]:scene.players) {
                 const bool wasActing=!actor.casting.clock.finished();
+                const int previousFrame=actor.casting.clock.frame();
                 AdvanceHumanAction(actor.casting,id,actor.x,actor.y,actor.appearance,now);
+                if (actor.dying) {
+                    if (!previousFrame && actor.casting.clock.frame()==1)
+                        PlaySceneSound(id,144+actor.appearance.body,actor.x,actor.y);
+                    if (actor.casting.clock.frame()>=9) {
+                        actor.dying=false;
+                        actor.casting={};
+                    }
+                    continue;
+                }
                 if (wasActing && actor.casting.clock.finished()) actor.combatIdleAt=now;
                 if (actor.remoteStep.frame>=0 || !actor.casting.clock.finished() || actor.remoteActions.empty()) continue;
                 auto message=std::move(actor.remoteActions.front());
@@ -2334,7 +2347,7 @@ public:
                     continue;
                 }
                 if (const auto* motion=std::get_if<LocalScene::RemoteMovement>(&message)) {
-                    StartRemoteMovement(actor,*motion,catchUp);
+                    StartRemoteMovement(actor,id,*motion,catchUp);
                     continue;
                 }
                 if (actor.dead) continue;
@@ -3189,7 +3202,7 @@ private:
             const auto direction=third&0xffu;
             if (actor!=localActor_ && player!=scene.players.end() && !player->second.npcType && direction<8 &&
                 scene.terrain.Contains(first,second)) {
-                QueueRemotePosition(player->second,{WORD(opcode),first,second,WORD(direction)});
+                QueueRemotePosition(player->second,actor,{WORD(opcode),first,second,WORD(direction)});
             }
         } else if (stage == Stage::GameSession && opcode == GameTargetPortrait) {
             ApplyTargetPortrait(actor,first | (std::uint32_t(second)<<16));
@@ -4512,20 +4525,21 @@ private:
         }
         if (newPlayer) {
             LocalScene::Player player;
-            if (StartRemoteMovement(player,move,false)) scene.players.emplace(actor,std::move(player));
+            if (StartRemoteMovement(player,actor,move,false)) scene.players.emplace(actor,std::move(player));
             return;
         }
-        QueueRemotePosition(found->second,std::move(move));
+        QueueRemotePosition(found->second,actor,std::move(move));
     }
 
-    void QueueRemotePosition(LocalScene::Player& player,LocalScene::RemoteMovement move)
+    void QueueRemotePosition(LocalScene::Player& player,std::uint32_t actor,LocalScene::RemoteMovement move)
     {
         if (player.remoteStep.frame>=0 || !player.casting.clock.finished() || !player.remoteActions.empty())
             QueueHumanAction(player,std::move(move));
-        else StartRemoteMovement(player,move,false);
+        else StartRemoteMovement(player,actor,move,false);
     }
 
-    bool StartRemoteMovement(LocalScene::Player& player,const LocalScene::RemoteMovement& move,bool catchUp)
+    bool StartRemoteMovement(LocalScene::Player& player,std::uint32_t actor,
+                             const LocalScene::RemoteMovement& move,bool catchUp)
     {
         const auto opcode=move.opcode;
         const bool moving=opcode==GameWalk || opcode==GameRun || opcode==GameBackstep || opcode==GameBump;
@@ -4559,10 +4573,24 @@ private:
         }
         if (opcode!=GameBump && !death) player.light=move.direction>>8;
         if (death) {
+            player.dying=!player.dead && opcode==GameActorDead;
             player.dead=true;
+            player.revivedAt=0;
             player.casting={};
             player.combatUntil=player.combatIdleAt=0;
-        } else if (opcode==GameActorRevive || opcode==GameActorReviveRefresh) player.dead=false;
+            player.levelPoseAt=0;
+            if (scene.lockedSpellActor==actor) scene.lockedSpellActor=0;
+            if (player.dying) {
+                player.casting.clock.start(19,catchUp);
+                player.casting.flags=player.actionFlags;
+                player.casting.tick=GetTickCount64();
+            }
+        } else if (opcode==GameActorRevive || opcode==GameActorReviveRefresh) {
+            player.dead=player.dying=false;
+            player.revivedAt=GetTickCount64();
+            player.combatUntil=player.combatIdleAt=0;
+            player.levelPoseAt=0;
+        }
         if (moving) {
             player.levelPoseAt=0;
             player.remoteStep={0,distance*dx,distance*dy,move.x,move.y,opcode,catchUp};

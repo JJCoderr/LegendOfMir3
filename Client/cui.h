@@ -4462,7 +4462,8 @@ CUI_API void cui_draw_image(cui_ctx *ui, cui_texture tex, cui_rect r, cui_rect u
 CUI_API void cui_draw_image_additive(cui_ctx *ui, cui_texture tex, cui_rect r);
 /* Textured quad in perimeter order, with normalized UVs. */
 typedef enum cui_effect_blend {
-    CUI_EFFECT_PARTICLE, CUI_EFFECT_SCREEN, CUI_EFFECT_ADD, CUI_EFFECT_PREMULTIPLIED, CUI_EFFECT_SPARK
+    CUI_EFFECT_PARTICLE, CUI_EFFECT_SCREEN, CUI_EFFECT_ADD, CUI_EFFECT_PREMULTIPLIED, CUI_EFFECT_SPARK,
+    CUI_EFFECT_RGB565 /* tint.a supplies a source weight from 0 to 32 */
 } cui_effect_blend;
 CUI_API void cui_draw_effect_quad(cui_ctx *ui, cui_texture tex, const cui_vec2 points[4],
     const cui_vec2 uv[4], cui_color tint, cui_effect_blend blend);
@@ -4497,7 +4498,8 @@ CUI_API float cui_animate_spring(cui_ctx *ui, cui_id id, float target, float dur
 enum { CUI_SHADE_TEXT = 0, CUI_SHADE_RRECT = 1, CUI_SHADE_SHADOW = 2, CUI_SHADE_IMAGE = 3,
        CUI_SHADE_SOLID = 4, CUI_SHADE_SOLID_PREMULTIPLIED = 5, CUI_SHADE_IMAGE_ADDITIVE = 6,
        CUI_SHADE_IMAGE_PARTICLE = 7, CUI_SHADE_IMAGE_SCREEN = 8,
-       CUI_SHADE_EFFECT_ADD = 9, CUI_SHADE_EFFECT_PREMULTIPLIED = 10, CUI_SHADE_EFFECT_SPARK = 11 };
+       CUI_SHADE_EFFECT_ADD = 9, CUI_SHADE_EFFECT_PREMULTIPLIED = 10, CUI_SHADE_EFFECT_SPARK = 11,
+       CUI_SHADE_EFFECT_RGB565 = 12 };
 
 typedef struct cui_vertex {
     float x, y;            /* position in pixels */

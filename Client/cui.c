@@ -17602,14 +17602,15 @@ void cui_dockspace_end(cui_ctx *ui) {
  * and shadows are signed distance fields evaluated per pixel, so corners
  * stay smooth at any size and DPI. Paths use feathered geometry. */
 
-enum { CUI__BLEND_OVER, CUI__BLEND_MULTIPLY, CUI__BLEND_SCREEN };
+enum { CUI__BLEND_OVER, CUI__BLEND_MULTIPLY, CUI__BLEND_SCREEN, CUI__BLEND_RGB565 };
 
 static cui_draw_cmd *cui__cmd(cui_ctx *ui) {
     cui_draw_list *dl = &ui->dl;
     cui_rect clip = dl->clip_stack[dl->clip_depth - 1];
     if (dl->cmd_count > 0) {
         cui_draw_cmd *c = &dl->cmd[dl->cmd_count - 1];
-        if (c->texture == dl->cur_tex && c->blend == dl->blend && memcmp(&c->clip, &clip, sizeof clip) == 0) return c;
+        if (dl->blend != CUI__BLEND_RGB565 && c->texture == dl->cur_tex && c->blend == dl->blend &&
+            memcmp(&c->clip, &clip, sizeof clip) == 0) return c;
         if (c->index_count == 0) { c->texture = dl->cur_tex; c->blend = dl->blend; c->clip = clip; return c; }
     }
     CUI__GROW(ui, dl->cmd, dl->cmd_count, dl->cmd_cap, 1);
@@ -17955,15 +17956,18 @@ void cui_draw_multiply_triangle(cui_ctx *ui, const cui_vec2 points[3], const cui
 void cui_draw_effect_quad(cui_ctx *ui, cui_texture tex, const cui_vec2 points[4],
     const cui_vec2 uv[4], cui_color tint, cui_effect_blend blend) {
     cui_xform x = cui__xf(ui);
-    tint = cui__xa(tint, x.alpha);
-    if (!tex || x.alpha<=0 || (!tint.a && blend!=CUI_EFFECT_PREMULTIPLIED)) return;
+    const bool rgb565=blend==CUI_EFFECT_RGB565;
+    if (!rgb565) tint = cui__xa(tint, x.alpha);
+    if (!tex || x.alpha<=0 || (!tint.a && blend!=CUI_EFFECT_PREMULTIPLIED && !rgb565)) return;
     const int mode = blend==CUI_EFFECT_SCREEN ? CUI_SHADE_IMAGE_SCREEN :
         blend==CUI_EFFECT_ADD ? CUI_SHADE_EFFECT_ADD :
         blend==CUI_EFFECT_PREMULTIPLIED ? CUI_SHADE_EFFECT_PREMULTIPLIED :
-        blend==CUI_EFFECT_SPARK ? CUI_SHADE_EFFECT_SPARK : CUI_SHADE_IMAGE_PARTICLE;
+        blend==CUI_EFFECT_SPARK ? CUI_SHADE_EFFECT_SPARK :
+        rgb565 ? CUI_SHADE_EFFECT_RGB565 : CUI_SHADE_IMAGE_PARTICLE;
     float scale = ui->scale * x.scale;
     cui__set_texture(ui, tex);
-    ui->dl.blend = blend==CUI_EFFECT_SCREEN ? CUI__BLEND_SCREEN : CUI__BLEND_OVER;
+    ui->dl.blend = blend==CUI_EFFECT_SCREEN ? CUI__BLEND_SCREEN :
+        rgb565 ? CUI__BLEND_RGB565 : CUI__BLEND_OVER;
     uint32_t base;
     cui_vertex *v = cui__reserve(ui, 4, 6, &base);
     ui->dl.blend = CUI__BLEND_OVER;
@@ -17973,6 +17977,7 @@ void cui_draw_effect_quad(cui_ctx *ui, cui_texture tex, const cui_vec2 points[4]
         v[i].u = uv[i].x;
         v[i].v = uv[i].y;
         v[i].mode = (float)mode;
+        if (rgb565) v[i].border = tint.a<=32 ? tint.a : 32;
         v[i].color = tint;
     }
     uint32_t *ix = cui__idx(ui, 6);
@@ -69315,11 +69320,26 @@ static void cui__raster_tri(const cui__sw_job *job, const cui_vertex *a, const c
                 continue;
             }
             cui__px o;
-            if (mode >= CUI_SHADE_IMAGE_PARTICLE && mode <= CUI_SHADE_EFFECT_SPARK) {
+            if (mode >= CUI_SHADE_IMAGE_PARTICLE && mode <= CUI_SHADE_EFFECT_RGB565) {
                 if (!tex) continue;
                 float u = a->u * w0 + b->u * w1 + c->u * w2, v = a->v * w0 + b->v * w1 + c->v * w2;
                 cui__px t = cui__sample_rgba(tex, u, v);
                 if (t.a == 0) continue;
+                if (blend == CUI__BLEND_RGB565) {
+                    if (t.a*255.0f<0.5f) continue;
+                    uint8_t *dst = row + (size_t)x * 4;
+                    const int offsets[3] = {bgra ? 2 : 0, 1, bgra ? 0 : 2};
+                    const float colors[3] = {t.r,t.g,t.b};
+                    const unsigned weight=(unsigned)a->border;
+                    for (int i=0;i<3;++i) {
+                        const unsigned unit=i==1 ? 4 : 8;
+                        const unsigned source=(unsigned)(colors[i]*255.0f+0.5f)/unit;
+                        const unsigned background=dst[offsets[i]]/unit;
+                        dst[offsets[i]]=(uint8_t)((source*weight/32+background*(32-weight)/32)*unit);
+                    }
+                    dst[3]=255;
+                    continue;
+                }
                 if (blend == CUI__BLEND_SCREEN) {
                     uint8_t *dst = row + (size_t)x * 4;
                     int ri = bgra ? 2 : 0, bi = bgra ? 0 : 2;
@@ -69382,7 +69402,7 @@ static bool cui__raster_quad(const cui__sw_job *job, const cui_vertex *v0, const
     if (v0->x >= v1->x || v0->y >= v3->y) return false;
     if (memcmp(&v0->color, &v1->color, 4) != 0 || memcmp(&v2->color, &v3->color, 4) != 0) return false;
     int mode = (int)(v0->mode + 0.5f);
-    if (mode >= CUI_SHADE_IMAGE_PARTICLE && mode <= CUI_SHADE_EFFECT_SPARK) return false;
+    if (mode >= CUI_SHADE_IMAGE_PARTICLE && mode <= CUI_SHADE_EFFECT_RGB565) return false;
     float qx0 = v0->x, qy0 = v0->y, qx1 = v1->x, qy1 = v3->y;
     int x0 = CUI_MAX(cx0, (int)ceilf(qx0 - 0.5f)), x1 = CUI_MIN(cx1, (int)ceilf(qx1 - 0.5f));
     int y0 = CUI_MAX(cy0, (int)ceilf(qy0 - 0.5f)), y1 = CUI_MIN(cy1, (int)ceilf(qy1 - 0.5f));
@@ -71523,6 +71543,7 @@ typedef struct {
     void (CUI_GLAPI *TexSubImage2D)(GLenum_, GLint_, GLint_, GLint_, GLsizei_, GLsizei_, GLenum_, GLenum_, const void *);
     void (CUI_GLAPI *PixelStorei)(GLenum_, GLint_);
     void (CUI_GLAPI *ActiveTexture)(GLenum_);
+    void (CUI_GLAPI *CopyTexSubImage2D)(GLenum_, GLint_, GLint_, GLint_, GLint_, GLint_, GLsizei_, GLsizei_);
     void (CUI_GLAPI *DrawElements)(GLenum_, GLsizei_, GLenum_, const void *);
     const unsigned char *(CUI_GLAPI *GetString)(GLenum_);
     void (CUI_GLAPI *GenBuffers)(GLsizei_, GLuint_ *);
@@ -71558,7 +71579,9 @@ typedef struct {
 struct cui_gl_renderer {
     cui__gl_fns gl;
     GLuint_ program, vao, vbo, ebo;
-    GLint_ u_viewport, u_tex;
+    GLint_ u_viewport, u_tex, u_background;
+    GLuint_ background;
+    int background_w, background_h;
     bool es;
     bool software;   /* the driver draws on the CPU (llvmpipe, SwiftShader, ...) */
     struct { GLuint_ id; cui_texture_format fmt; int w, h; } *tex;
@@ -71597,6 +71620,7 @@ static const char *cui__fs_src =
     "in vec4 v_color;\n"
     "flat in vec4 v_bcolor;\n"
     "uniform sampler2D u_tex;\n"
+    "uniform sampler2D u_background;\n"
     "out vec4 frag;\n"
     "float sd_rrect(vec2 p, vec2 b, vec4 r) {\n"
     "  float rr = p.x < 0.0 ? (p.y < 0.0 ? r.x : r.w) : (p.y < 0.0 ? r.y : r.z);\n"
@@ -71615,6 +71639,18 @@ static const char *cui__fs_src =
     "  vec4 c = v_color;\n"
     "  if (mode == 4) { frag = vec4(c.rgb * c.a, c.a); return; }\n"
     "  if (mode == 5) { frag = c; return; }\n"
+    "  if (mode == 12) {\n"
+    "    vec4 t = texture(u_tex, v_uv);\n"
+    "    if (t.a * 255.0 < 0.5) discard;\n"
+    "    vec3 unit = vec3(8.0, 4.0, 8.0);\n"
+    "    vec3 source = floor(round(t.rgb * 255.0) / unit);\n"
+    "    vec3 rgb = texelFetch(u_background, ivec2(gl_FragCoord.xy), 0).rgb;\n"
+    "    vec3 background = floor(round(rgb * 255.0) / unit);\n"
+    "    float weight = v_params.x;\n"
+    "    vec3 mixed = floor(source * weight / 32.0) + floor(background * (32.0 - weight) / 32.0);\n"
+    "    frag = vec4(mixed * unit / 255.0, 1.0);\n"
+    "    return;\n"
+    "  }\n"
     "  if (mode >= 7 && mode <= 11) {\n"
     "    vec4 t = texture(u_tex, v_uv);\n"
     "    if (t.a == 0.0) discard;\n"
@@ -71673,6 +71709,7 @@ cui_gl_renderer *cui_gl_create(cui_gl_loader loader) {
     CUI__LOAD(Viewport); CUI__LOAD(Scissor); CUI__LOAD(ClearColor); CUI__LOAD(Clear);
     CUI__LOAD(GenTextures); CUI__LOAD(DeleteTextures); CUI__LOAD(BindTexture); CUI__LOAD(TexParameteri);
     CUI__LOAD(TexImage2D); CUI__LOAD(TexSubImage2D); CUI__LOAD(PixelStorei); CUI__LOAD(ActiveTexture);
+    CUI__LOAD(CopyTexSubImage2D);
     CUI__LOAD(DrawElements); CUI__LOAD(GetString); CUI__LOAD(GenBuffers); CUI__LOAD(DeleteBuffers);
     CUI__LOAD(BindBuffer); CUI__LOAD(BufferData); CUI__LOAD(GenVertexArrays); CUI__LOAD(DeleteVertexArrays);
     CUI__LOAD(BindVertexArray); CUI__LOAD(EnableVertexAttribArray); CUI__LOAD(VertexAttribPointer);
@@ -71724,6 +71761,7 @@ cui_gl_renderer *cui_gl_create(cui_gl_loader loader) {
     }
     r->u_viewport = r->gl.GetUniformLocation(r->program, "u_viewport");
     r->u_tex = r->gl.GetUniformLocation(r->program, "u_tex");
+    r->u_background = r->gl.GetUniformLocation(r->program, "u_background");
     r->gl.GenVertexArrays(1, &r->vao);
     r->gl.GenBuffers(1, &r->vbo);
     r->gl.GenBuffers(1, &r->ebo);
@@ -71748,6 +71786,7 @@ cui_gl_renderer *cui_gl_create(cui_gl_loader loader) {
 
 void cui_gl_destroy(cui_gl_renderer *r) {
     if (!r) return;
+    if (r->background) r->gl.DeleteTextures(1,&r->background);
     for (int i = 0; i < r->tex_count; i++) if (r->tex[i].id) r->gl.DeleteTextures(1, &r->tex[i].id);
     free(r->tex);
     r->gl.DeleteBuffers(1, &r->vbo);
@@ -71839,6 +71878,7 @@ void cui_gl_render(cui_gl_renderer *r, const cui_draw_data *dd, bool clear) {
     r->gl.UseProgram(r->program);
     r->gl.Uniform2f(r->u_viewport, (float)W, (float)H);
     r->gl.Uniform1i(r->u_tex, 0);
+    r->gl.Uniform1i(r->u_background, 1);
     r->gl.ActiveTexture(GL_TEXTURE0_);
     r->gl.BindVertexArray(r->vao);
     r->gl.BindBuffer(GL_ARRAY_BUFFER_, r->vbo);
@@ -71864,6 +71904,36 @@ void cui_gl_render(cui_gl_renderer *r, const cui_draw_data *dd, bool clear) {
         int slot = (int)t - 1;
         GLuint_ tid = (slot >= 0 && slot < r->tex_count) ? r->tex[slot].id : 0;
         if (tid != bound) { r->gl.BindTexture(GL_TEXTURE_2D_, tid); bound = tid; }
+        if (blend==CUI__BLEND_RGB565) {
+            const cui_vertex *first=&dd->vertices[dd->indices[c->index_offset]];
+            float left=first->x,right=first->x,top=first->y,bottom=first->y;
+            for (uint32_t k=1;k<c->index_count;++k) {
+                const cui_vertex *v=&dd->vertices[dd->indices[c->index_offset+k]];
+                left=CUI_MIN(left,v->x);
+                right=CUI_MAX(right,v->x);
+                top=CUI_MIN(top,v->y);
+                bottom=CUI_MAX(bottom,v->y);
+            }
+            const int copy_x=CUI_CLAMP(CUI_MAX(x0,(int)floorf(left)),0,W);
+            const int copy_right=CUI_CLAMP(CUI_MIN(x1,(int)ceilf(right)),0,W);
+            const int copy_top=CUI_CLAMP(CUI_MAX(y0,(int)floorf(top)),0,H);
+            const int copy_bottom=CUI_CLAMP(CUI_MIN(y1,(int)ceilf(bottom)),0,H);
+            if (copy_right<=copy_x || copy_bottom<=copy_top) continue;
+            const int copy_y=H-copy_bottom;
+            r->gl.ActiveTexture(GL_TEXTURE0_+1);
+            if (!r->background) r->gl.GenTextures(1,&r->background);
+            r->gl.BindTexture(GL_TEXTURE_2D_,r->background);
+            if (W!=r->background_w || H!=r->background_h) {
+                r->gl.TexImage2D(GL_TEXTURE_2D_,0,GL_RGBA8_,W,H,0,GL_RGBA_,GL_UNSIGNED_BYTE_,NULL);
+                r->gl.TexParameteri(GL_TEXTURE_2D_,GL_TEXTURE_MIN_FILTER_,GL_NEAREST_);
+                r->gl.TexParameteri(GL_TEXTURE_2D_,GL_TEXTURE_MAG_FILTER_,GL_NEAREST_);
+                r->background_w=W;
+                r->background_h=H;
+            }
+            r->gl.CopyTexSubImage2D(GL_TEXTURE_2D_,0,copy_x,copy_y,copy_x,copy_y,
+                copy_right-copy_x,copy_bottom-copy_top);
+            r->gl.ActiveTexture(GL_TEXTURE0_);
+        }
         r->gl.DrawElements(GL_TRIANGLES_, (GLsizei_)c->index_count, GL_UNSIGNED_INT_, (const void *)(uintptr_t)(c->index_offset * sizeof(uint32_t)));
     }
     if (blend != CUI__BLEND_OVER) r->gl.BlendFunc(GL_ONE_, GL_ONE_MINUS_SRC_ALPHA_);
