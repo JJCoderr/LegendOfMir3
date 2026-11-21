@@ -31,6 +31,7 @@ struct InventoryItem {
     unsigned stackMode = 0;
     int cell = -1;
     int width = 1, height = 1;
+    unsigned groundLooks = 0;
 
     bool Stacks() const { return stackMode >= 2; }
     bool IsGold() const { return key.name == "\xbd\xf0\xb1\xd2"; }

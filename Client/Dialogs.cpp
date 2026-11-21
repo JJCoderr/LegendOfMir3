@@ -40,11 +40,17 @@ struct SceneActorHit {
     bool monster = false;
 };
 
+struct GroundLabel {
+    cui_texture texture;
+    int x, y, width;
+};
+
 struct SceneMapArt {
     const std::vector<SceneSprite>* sprites = nullptr;
     const std::vector<SceneActorHit>* npcs = nullptr;
     const std::vector<SceneActorHit>* targets = nullptr;
     const std::vector<SceneActorHit>* corpses = nullptr;
+    const std::vector<GroundLabel>* groundLabels = nullptr;
     int cameraX = 0, cameraY = 0;
 };
 
@@ -676,13 +682,19 @@ private:
     std::map<WorldFrameKey,WorldFrame> worldFrames_;
     std::vector<SceneSprite> worldSprites_;
     std::vector<SceneActorHit> worldNpcs_, worldTargets_, worldCorpses_;
+    std::vector<GroundLabel> worldGroundLabels_;
+    struct GroundName { std::string name; Image image; };
+    std::array<GroundName,mir3::GroundItems::cell_capacity> groundNames_;
     mir3_cui::MapTerrain::GraphicsView mapGraphics_;
     std::uint64_t worldFrame_ = 0, mapGraphicsRevision_ = 0;
     std::uint64_t worldTextureBytes_ = 0;
     int mapGraphicsX_ = 0, mapGraphicsY_ = 0;
     const WorldFrame& GetWorldFrame(cui_ctx* ui, const std::string& library, int frame);
     const WorldFrame& GetProjectedWorldShadow(cui_ctx* ui, const std::string& library, int frame, bool flat);
-    SceneMapArt PrepareMapArt(cui_ctx* ui, LoginClient& client);
+    SceneMapArt PrepareMapArt(cui_ctx* ui, LoginClient& client, cui_vec2 pointer, bool interactive);
+    void PrepareGroundItems(cui_ctx* ui, const LocalScene& scene, const SceneMapArt& camera,
+                            int startX, int startY, cui_vec2 pointer, bool interactive, std::vector<SceneSprite>& overlays);
+    const WorldFrame& GroundFrame(cui_ctx* ui, int looks, bool highlighted);
     cui_rect AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAppearance& actor, int facing, int x, int y,
         const SceneMapArt& camera, int pose, bool shadowBlend);
     void TrimWorldFrames(cui_ctx* ui);
@@ -5233,6 +5245,14 @@ void PaintLocalScene(cui_ctx* ui, cui_rect rect, void* user)
             cui_draw_image(ui,sprite.texture,{rect.x+sprite.x*scale,rect.y+sprite.y*scale,
                 sprite.width*scale,sprite.height*scale},{0,0,sprite.sourceWidth,1},{},{255,255,255,sprite.opacity});
         }
+        if (model.art.groundLabels) for (const auto& label:*model.art.groundLabels) {
+            const auto at=[&](int dx,int dy) {
+                return cui_rect{rect.x+(label.x+dx)*scale,rect.y+(label.y+dy)*scale,label.width*scale,15*scale};
+            };
+            cui_draw_rect_premultiplied(ui,at(0,0),{80,60,40,150});
+            cui_draw_image(ui,label.texture,at(-1,2),{0,0,1,1},{},{0,0,0,255});
+            cui_draw_image(ui,label.texture,at(0,1),{0,0,1,1},{},{255,255,125,255});
+        }
         cui_pop_clip(ui);
         return;
     }
@@ -5900,6 +5920,79 @@ const Dialogs::Assets::WorldFrame& Dialogs::Assets::GetWorldFrame(cui_ctx* ui, c
     return result;
 }
 
+const Dialogs::Assets::WorldFrame& Dialogs::Assets::GroundFrame(cui_ctx* ui, int looks, bool highlighted)
+{
+    const auto& normal=GetWorldFrame(ui,"Ground",looks);
+    if (!highlighted || !normal.image.texture) return normal;
+    auto [entry,added]=worldFrames_.try_emplace({"Ground:highlight",looks});
+    auto& result=entry->second;
+    result.used=worldFrame_;
+    if (added) {
+        if (auto art=worldArchives_.at("Ground").frame(looks)) {
+            auto& pixels=art->pixels.rgba;
+            constexpr std::array steps{8,4,8};
+            for (std::size_t i=0;i<pixels.size();i+=4) {
+                if (!pixels[i+3]) continue;
+                for (int c=0;c<3;++c) {
+                    const int step=steps[c], highest=255/step, source=pixels[i+c]/step;
+                    pixels[i+c]=static_cast<std::uint8_t>(step*(std::min)(highest,source+3*source*source/(2*highest)));
+                }
+                pixels[i+3]=255;
+            }
+            result.image=Upload(ui,art->width,art->height,pixels,true);
+            if (result.image.texture) worldTextureBytes_+=std::uint64_t(art->width)*art->height*4;
+        }
+    }
+    return result.image.texture ? result : normal;
+}
+
+void Dialogs::Assets::PrepareGroundItems(cui_ctx* ui, const LocalScene& scene, const SceneMapArt& camera,
+                                        int startX, int startY, cui_vec2 pointer, bool interactive,
+                                        std::vector<SceneSprite>& overlays)
+{
+    using View=mir3_cui::MapTerrain::GraphicsView;
+    constexpr int columns=View::LastColumn-View::FirstColumn, rows=View::LastRow-View::FirstRow;
+    std::array<unsigned,columns*rows> counts{};
+    const int cellX=int(pointer.x+camera.cameraX)/48, cellY=int(pointer.y+camera.cameraY)/32;
+    const auto coin=messages_.get(1409);
+    bool showLabels=interactive;
+    for (const auto& item:scene.groundItems.items) {
+        const int x=item.x*48-camera.cameraX, y=item.y*32-camera.cameraY;
+        const bool hover=interactive && item.x==cellX && item.y==cellY;
+        if (hover && showLabels && worldGroundLabels_.size()<groundNames_.size()) {
+            const bool coinVariant=!coin.empty() && item.name.size()==coin.size()+1 && item.name.starts_with(coin) &&
+                item.name.back()>='0' && item.name.back()<='9';
+            auto& cached=groundNames_[worldGroundLabels_.size()];
+            if (cached.name!=item.name) {
+                cached.name=item.name;
+                Destroy(ui,cached.image);
+                const auto full=ConvertText(item.name,936,CP_UTF8);
+                const int width=mir3::raster_text(full,800,15,false,mir3::TextFont::normal).text_width;
+                if (width>0) cached.image=Raster(ui,coinVariant ? ConvertText(coin,936,CP_UTF8) : full,
+                    width,15,false,mir3::TextFont::normal);
+            }
+            const int line=static_cast<int>(worldGroundLabels_.size());
+            worldGroundLabels_.push_back({cached.image.texture,x+24-cached.image.width/2,y-4-16*line,cached.image.width});
+            showLabels=!coinVariant;
+        }
+        if (item.sparkle_frame>=0) {
+            const auto found=gamePortraits_.find(40+item.sparkle_frame);
+            if (found!=gamePortraits_.end() && found->second.texture) {
+                const auto& art=found->second;
+                overlays.push_back({art.texture,x+8,y,art.width,art.height,0});
+            }
+        }
+        const int column=item.x-startX-View::FirstColumn, row=item.y-startY-View::FirstRow;
+        if (column<0 || column>=columns || row<0 || row>=rows ||
+            counts[row*columns+column]++>=mir3::GroundItems::cell_capacity) continue;
+        const auto& art=GroundFrame(ui,item.looks,hover).image;
+        if (art.texture) {
+            const auto offset=mir3::GroundItems::image_offset(art.width,art.height);
+            worldSprites_.push_back({art.texture,x+offset[0],y+offset[1],art.width,art.height,item.y});
+        }
+    }
+}
+
 const Dialogs::Assets::WorldFrame& Dialogs::Assets::GetProjectedWorldShadow(cui_ctx* ui, const std::string& library,
                                                                            int frame, bool flat)
 {
@@ -5977,11 +6070,11 @@ cui_rect Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAp
         float(body.image.width),float(body.image.height)};
 }
 
-SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
+SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui_vec2 pointer, bool interactive)
 {
     auto& scene=client.scene;
     if (!scene.terrain.Ready()) return {};
-    SceneMapArt camera{&worldSprites_,&worldNpcs_,&worldTargets_,&worldCorpses_,
+    SceneMapArt camera{&worldSprites_,&worldNpcs_,&worldTargets_,&worldCorpses_,&worldGroundLabels_,
         static_cast<int>(scene.x)*48-376,static_cast<int>(scene.y)*32-227};
     const int startX=camera.cameraX/96*2, startY=camera.cameraY/64*2;
     const int originX=startX*48-camera.cameraX, originY=startY*32-camera.cameraY;
@@ -5998,6 +6091,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
     worldNpcs_.clear();
     worldTargets_.clear();
     worldCorpses_.clear();
+    worldGroundLabels_.clear();
     constexpr std::array<const char*,15> packages{"Tilesc","Tiles30c","Tiles5c","SmTilesc","Housesc","Cliffsc",
         "Dungeonsc","Innersc","Furnituresc","Wallsc","SmObjectsc","Animationsc","Object1c","Object2c","Custom"};
     constexpr std::array<const char*,5> regions{"","Wood/","Sand/","Snow/","Forest/"};
@@ -6035,6 +6129,8 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
         }
     }
     if (worldSprites_.empty()) return {};
+    std::vector<SceneSprite> overlays;
+    PrepareGroundItems(ui,scene,camera,startX,startY,pointer,interactive,overlays);
     const auto visible=[&](const LocalScene::Player& actor) {
         return static_cast<int>(actor.x)>=startX+View::FirstColumn && static_cast<int>(actor.x)<startX+View::LastColumn &&
             static_cast<int>(actor.y)>=startY+View::FirstRow && static_cast<int>(actor.y)<startY+View::LastRow;
@@ -6060,7 +6156,6 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
         animated|=count>1;
     }
     const int idle=static_cast<int>(tick/201%4);
-    std::vector<SceneSprite> healthSprites;
     for (auto& [id,actor]:scene.players) {
         if (actor.IsNpc() || !visible(actor)) continue;
         cui_rect bounds{};
@@ -6132,7 +6227,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
             const auto glyphs=actor.monsterDamage.draw(x-sprite.x,y-sprite.y,false);
             for (const auto& glyph:glyphs) {
                 const auto& image=gameHudFrames_.at(glyph.frame);
-                if (image.texture) healthSprites.push_back({image.texture,glyph.x,glyph.y,image.width,image.height,0});
+                if (image.texture) overlays.push_back({image.texture,glyph.x,glyph.y,image.width,image.height,0});
             }
             animated|=!glyphs.empty();
         } else {
@@ -6155,15 +6250,15 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
             const int x=int(scene.x)*48-camera.cameraX+7, y=int(scene.y)*32-camera.cameraY-56;
             const auto percent=(std::min)(100u,unsigned(hp)*100/unsigned(maxHp));
             const int width=(std::min)(fill.width,int(double(percent)*double(0.01f)*36.0));
-            if (border.texture) healthSprites.push_back({border.texture,x,y,border.width,border.height,0});
-            if (fill.texture && width>0) healthSprites.push_back({fill.texture,x,y,width,fill.height,0,255,float(width)/fill.width});
+            if (border.texture) overlays.push_back({border.texture,x,y,border.width,border.height,0});
+            if (fill.texture && width>0) overlays.push_back({fill.texture,x,y,width,fill.height,0,255,float(width)/fill.width});
         }
         animated=true;
     }
     std::stable_sort(worldSprites_.begin(),worldSprites_.end(),[](const SceneSprite& a,const SceneSprite& b) {
         return a.row<b.row;
     });
-    worldSprites_.insert(worldSprites_.end(),healthSprites.begin(),healthSprites.end());
+    worldSprites_.insert(worldSprites_.end(),overlays.begin(),overlays.end());
     std::stable_sort(worldNpcs_.begin(),worldNpcs_.end(),[](const SceneActorHit& a,const SceneActorHit& b) {
         return a.row<b.row;
     });
@@ -6194,6 +6289,8 @@ void Dialogs::Assets::OpenGameHud(cui_ctx* ui, mir3::WilArchive& archive, const 
     if (portraitsArchive.open(portraits)) {
         for (int id : {0,2,3,631,632,634,635,650,651,652,653,654,655,660,661})
             gamePortraits_[id]=UploadFrame(ui,portraitsArchive,id,true);
+        for (int i=0;i<mir3::GroundItems::sparkle_frames;++i)
+            gamePortraits_[40+i]=UploadFrame(ui,portraitsArchive,40+i,true);
         for (int id=600; id<=629; ++id) gamePortraits_[id]=UploadFrame(ui,portraitsArchive,id,true);
     }
     monsterPortraitArchive_.open(portraits.parent_path()/"MonImg");
@@ -8511,8 +8608,8 @@ void Dialogs::Assets::DrawGameHud(cui_ctx* ui, LoginClient& client, bool pointer
         Contains({619.f,float(mir3::ChatScrollLayout::top(chat.expanded)),float(thumb.width),
             float(mir3::ChatScrollLayout::travel(chat.expanded)+thumb.height)},pointer) ||
         Contains({float(chatFrame[0]),float(chatFrame[1]),float(chatFrame[2]),float(chatFrame[3])},pointer);
-    const auto map = client.characterAppearance.available ? PrepareMapArt(ui,client) : SceneMapArt{};
     const bool interactive=!pointerCovered && !modal && !overHud && !client.minimap.visible;
+    const auto map = client.characterAppearance.available ? PrepareMapArt(ui,client,pointer,interactive) : SceneMapArt{};
     RefreshTargetPortrait(ui,client,map,pointer,interactive);
     if (client.characterAppearance.available) {
         cui_overlay_begin(ui,base.Rect(0,0,800,map.sprites ? 600 : 467));
@@ -8521,6 +8618,7 @@ void Dialogs::Assets::DrawGameHud(cui_ctx* ui, LoginClient& client, bool pointer
         cui_pop_disabled(ui);
         cui_box_end(ui);
     }
+    if (std::exchange(client.scene.pickupBagFull,false)) client.chat.Append(100,Message(1417),11861940);
     RefreshGameHud(ui,client);
     cui_overlay_begin(ui,screen);
     auto* self=this;

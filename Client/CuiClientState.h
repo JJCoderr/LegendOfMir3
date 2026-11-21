@@ -15,6 +15,7 @@
 #include "CuiInventoryDimensions.h"
 #include "CuiInventoryLayout.h"
 #include "CuiMapTerrain.h"
+#include "CuiLegacy/hud/ground_items.hpp"
 #include "CuiLegacy/hud/minimap.hpp"
 #include "CuiLegacy/hud/damage_numbers.hpp"
 #include "CuiLegacy/hud/monster_motion.hpp"
@@ -130,6 +131,8 @@ inline constexpr WORD ClientStorageDeposit = 1031;
 inline constexpr WORD ClientStorageWithdraw = 1032;
 inline constexpr WORD GameDoorOpen = 612;
 inline constexpr WORD GameDoorClosed = 614;
+inline constexpr WORD GameGroundItemShow = 610, GameGroundItemHide = 611;
+inline constexpr WORD ClientPickup = 1000;
 inline constexpr WORD ClientOpenDoor = 1002;
 inline constexpr WORD ClientWalk = 3011;
 inline constexpr WORD ClientCrouch = 3012, ClientButcher = 1007;
@@ -221,6 +224,8 @@ struct LocalScene {
     mir3_cui::MapTerrain terrain;
     mir3_cui::MapTerrain::View ground{};
     std::map<std::uint32_t, Player> players;
+    mir3::GroundItems groundItems;
+    bool pickupBagFull = false;
 
     bool Occupied(int cellX, int cellY) const
     {
@@ -1397,7 +1402,20 @@ public:
             output_.size() >= 8192 || (characterStatus.hp[1] && !characterStatus.hp[0])) return;
         if (!scene.terrain.Contains(targetX,targetY)) return;
         const int x = static_cast<int>(scene.x), y = static_cast<int>(scene.y);
-        if (targetX == x && targetY == y) return;
+        if (targetX == x && targetY == y) {
+            if (run) return;
+            const auto& items=scene.groundItems.items;
+            const auto item=std::find_if(items.begin(),items.end(),[&](const auto& entry) { return entry.x==x && entry.y==y; });
+            if (item==items.end()) return;
+            if (inventory.items.size()>=mir3_cui::InventoryPanel::Capacity) {
+                const bool fits=item->stack_mode>=2 ? std::any_of(inventory.items.begin(),inventory.items.end(),[&](const auto& entry) {
+                    return entry.groundLooks==unsigned(item->looks);
+                }) : item->name.starts_with("\xbd\xf0\xb1\xd2");
+                if (!fits) { scene.pickupBagFull=true; return; }
+            }
+            Queue(ClientPickup,static_cast<WORD>(x),"",0,0,static_cast<WORD>(y));
+            return;
+        }
         const int dx = (targetX > x) - (targetX < x), dy = (targetY > y) - (targetY < y);
         const auto heading = [&](int stepX, int stepY) {
             const std::array<int, 2> step{stepX, stepY};
@@ -1958,7 +1976,10 @@ public:
     void Poll()
     {
         const auto now = GetTickCount64();
-        if (stage==Stage::GameSession) AdvanceMonsterActions(now);
+        if (stage==Stage::GameSession) {
+            AdvanceMonsterActions(now);
+            AdvanceGroundItems(static_cast<std::uint32_t>(now));
+        }
         if (returnToCharactersAt && now>=returnToCharactersAt && (!Active() || output_.empty() || now>=deadline_)) {
             Close();
             ClearGameState();
@@ -2668,6 +2689,10 @@ private:
         } else if (stage == Stage::GameSession && (opcode == GameDoorOpen || opcode == GameDoorClosed)) {
             if (input_.size() == DEFBLOCKSIZE && scene.terrain.UpdateDoor(first, second, opcode == GameDoorOpen))
                 scene.ground = scene.terrain.ReadView(scene.x, scene.y);
+        } else if (stage == Stage::GameSession && opcode == GameGroundItemShow) {
+            ApplyGroundItem(actor,first,second,third);
+        } else if (stage == Stage::GameSession && opcode == GameGroundItemHide) {
+            if (actor && actor<=0x7fffffffu && input_.size()==DEFBLOCKSIZE) scene.groundItems.hide(static_cast<int>(actor));
         } else if (stage == Stage::GameSession &&
                    (opcode == GameBackstep || opcode == GameTurn || opcode == GameWalk || opcode == GameRun)) {
             if (actor == localActor_) HandleLocalMovement(opcode, first, second, third & 0xff);
@@ -3241,6 +3266,8 @@ private:
         scene.crouchPointerCaptured=false;
         scene.lastMove = 0;
         scene.players.clear();
+        scene.groundItems.items.clear();
+        scene.pickupBagFull=false;
         scene.x = x;
         scene.y = y;
         scene.terrain.Open(scene.mapId,resourceRoot_/"Map");
@@ -3260,6 +3287,45 @@ private:
         if (stage!=Stage::GameSession || minimapDeadline || output_.size()>=8192) return;
         Queue(ClientMinimap,0,"");
         minimapDeadline=GetTickCount64()+8000;
+    }
+
+    void ApplyGroundItem(std::uint32_t actor, WORD x, WORD y, WORD looks)
+    {
+        if (!actor || actor>0x7fffffffu || !scene.terrain.Contains(x,y)) return;
+        auto name=ReadGameBody();
+        if (name.empty() && input_.size()!=DEFBLOCKSIZE) return;
+        if (const auto zero=name.find('\0');zero!=std::string::npos) name.resize(zero);
+        int mode=0;
+        if (const auto slash=name.find('/');slash!=std::string::npos) {
+            mode=static_cast<int>(std::strtol(name.c_str(),nullptr,10));
+            name.erase(0,slash+1);
+        }
+        auto& items=scene.groundItems.items;
+        const auto size=items.size();
+        if (scene.groundItems.show({static_cast<int>(actor),x,y,looks,std::move(name),mode}) && items.size()!=size) {
+            auto& item=items.back();
+            item.sparkle_started_tick=GetTickCount();
+            const int first=std::rand();
+            item.sparkle_delay_ms=mir3::GroundItems::sparkle_delay(first,std::rand());
+        }
+    }
+
+    void AdvanceGroundItems(std::uint32_t now)
+    {
+        auto& items=scene.groundItems.items;
+        std::erase_if(items,[&](const auto& item) {
+            const int dx=item.x-int(scene.x), dy=item.y-int(scene.y);
+            return dx<-24 || dx>=24 || dy<-24 || dy>=24;
+        });
+        for (auto& item:items) {
+            const auto elapsed=now-item.sparkle_started_tick;
+            if (elapsed<=unsigned(item.sparkle_delay_ms)) continue;
+            item.sparkle_frame=static_cast<int>((elapsed-item.sparkle_delay_ms-1)/101);
+            if (item.sparkle_frame>=mir3::GroundItems::sparkle_frames) {
+                item.sparkle_frame=-1;
+                item.sparkle_started_tick=now;
+            }
+        }
     }
 
     void ClearMinimap()
@@ -3821,6 +3887,7 @@ private:
         item.key = {word(62) | (std::uint32_t(word(64)) << 16), std::move(name)};
         item.label = label;
         item.icon = word(36);
+        item.groundLooks = word(48);
         const auto dimensions = inventoryDimensions_.Get(item.icon);
         item.width = dimensions[0];
         item.height = dimensions[1];
