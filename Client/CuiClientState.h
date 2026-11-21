@@ -75,6 +75,7 @@ inline constexpr WORD GameChangeMap = 634;
 inline constexpr WORD GameBackstep = 9;
 inline constexpr WORD GameTurn = 10;
 inline constexpr WORD GameWalk = 11;
+inline constexpr WORD GameCrouch = 12, GameButcher = 637;
 inline constexpr WORD GameRun = 13;
 inline constexpr WORD GameMonsterAttack = 14, GameMonsterAttackSpecial = 1317;
 inline constexpr WORD GameMonsterDigUp = 20, GameMonsterRise = 27;
@@ -131,6 +132,7 @@ inline constexpr WORD GameDoorOpen = 612;
 inline constexpr WORD GameDoorClosed = 614;
 inline constexpr WORD ClientOpenDoor = 1002;
 inline constexpr WORD ClientWalk = 3011;
+inline constexpr WORD ClientCrouch = 3012, ClientButcher = 1007;
 inline constexpr WORD ClientRun = 3013;
 inline constexpr WORD GameLogout = 1009;
 inline constexpr WORD GameDecodeKey = 1330;
@@ -149,6 +151,14 @@ struct Gateway {
 
 inline constexpr std::uint64_t MonsterMovementTick = 96;
 inline constexpr std::uint64_t MonsterReviveDuration = 600;
+inline constexpr std::uint64_t CrouchFrameDuration = 400;
+inline constexpr int HumanCorpsePose = 1529;
+
+inline int CrouchPose(std::uint64_t since, std::uint64_t now)
+{
+    if (!since || now-since>=2*CrouchFrameDuration) return -1;
+    return 640+static_cast<int>((now-since)/CrouchFrameDuration);
+}
 
 struct LocalScene {
     struct Movement {
@@ -183,6 +193,7 @@ struct LocalScene {
         int monsterDeathFrame = -1;
         bool monsterSkeleton = false;
         std::uint64_t monsterDeathAt = 0, monsterReviveAt = 0;
+        std::uint64_t crouchedAt = 0;
         std::uint32_t portraitVersion = 0;
         std::uint32_t resolvedPortraitVersion = 0;
         std::string portraitJpeg;
@@ -190,6 +201,10 @@ struct LocalScene {
 
         bool IsMonster() const { return npcType == 3; }
         bool IsNpc() const { return npcType == 4 || npcType == 5; }
+        bool CanBeButchered() const {
+            return dead && !IsNpc() && (!IsMonster() || (!monsterSkeleton &&
+                (npcShape==20 || npcShape==21 || npcShape==119)));
+        }
         bool MonsterDying() const {
             return monsterDeathFrame>=0 && !monsterSkeleton && monsterDeathFrame<mir3::monster_death_motion(npcShape).frames-1;
         }
@@ -198,6 +213,8 @@ struct LocalScene {
 
     Movement pending;
     std::uint64_t lastMove = 0;
+    std::uint64_t crouchedAt = 0, crouchReplyAt = 0, crouchHoldAt = 0;
+    bool crouchPointerCaptured = false;
     unsigned x = 0, y = 0, facing = 0;
     std::string mapId;
     std::string mapDescription;
@@ -211,6 +228,11 @@ struct LocalScene {
             const auto& player = entry.second;
             return !player.dead && static_cast<int>(player.x) == cellX && static_cast<int>(player.y) == cellY;
         });
+    }
+
+    bool CanButcher(const Player& target) const
+    {
+        return target.CanBeButchered() && std::abs(int(target.x)-int(x))<=1 && std::abs(int(target.y)-int(y))<=1;
     }
 
     mir3_cui::GroundCell GroundAt(int nextX, int nextY) const
@@ -1349,10 +1371,29 @@ public:
         return 90;
     }
 
+    void CrouchInScene(int targetX, int targetY, std::uint32_t corpse)
+    {
+        const auto now=GetTickCount64();
+        if (stage!=Stage::GameSession || showSignOut || !scene.terrain.Ready() || scene.pending.deadline ||
+            scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 || mount.shape || !characterStatus.hp[0] ||
+            output_.size()>8192-2*(DEFBLOCKSIZE+3)) return;
+        const int x=int(scene.x), y=int(scene.y), dx=targetX-x, dy=targetY-y;
+        const std::array direction{std::abs(dy)>2 && std::abs(dx)<=1 ? 0 : (dx>0)-(dx<0),
+                                   std::abs(dx)>2 && std::abs(dy)<=1 ? 0 : (dy>0)-(dy<0)};
+        if (const auto heading=std::find(SceneDirections.begin(),SceneDirections.end(),direction);heading!=SceneDirections.end())
+            scene.facing=static_cast<unsigned>(heading-SceneDirections.begin());
+        scene.crouchedAt=now;
+        scene.crouchReplyAt=now+8000;
+        Queue(ClientCrouch,0,"",scene.x|(std::uint32_t(scene.y)<<16),0,static_cast<WORD>(scene.facing));
+        if (const auto found=scene.players.find(corpse);found!=scene.players.end() && scene.CanButcher(found->second))
+            Queue(ClientButcher,static_cast<WORD>(scene.x),"",corpse,static_cast<WORD>(scene.facing),static_cast<WORD>(scene.y));
+    }
+
     void MoveInScene(int targetX, int targetY, bool run)
     {
         using mir3_cui::GroundCell;
         if (stage != Stage::GameSession || showSignOut || !scene.terrain.Ready() || scene.pending.deadline ||
+            scene.crouchReplyAt || CrouchPose(scene.crouchedAt,GetTickCount64())>=0 ||
             output_.size() >= 8192 || (characterStatus.hp[1] && !characterStatus.hp[0])) return;
         if (!scene.terrain.Contains(targetX,targetY)) return;
         const int x = static_cast<int>(scene.x), y = static_cast<int>(scene.y);
@@ -1942,6 +1983,7 @@ public:
             purchase = {};
         }
         if (scene.pending.deadline && GetTickCount64() >= scene.pending.deadline) scene.pending = {};
+        if (scene.crouchReplyAt && now>=scene.crouchReplyAt) scene.crouchReplyAt=0;
         if (equipment.request != mir3_cui::EquipmentRequest::None && GetTickCount64() >= equipment.deadline) {
             if (equipment.request == mir3_cui::EquipmentRequest::Remove &&
                 inventory.returningEquipment == equipment.pending.key) {
@@ -2534,6 +2576,7 @@ private:
     void HandleGameFrame()
     {
         if (input_.compare(0, 5, "+GOOD") == 0) {
+            scene.crouchReplyAt=0;
             if (scene.pending.deadline) {
                 scene.SetCell(scene.pending.x, scene.pending.y);
                 scene.facing = scene.pending.facing;
@@ -2542,6 +2585,7 @@ private:
             return;
         }
         if (input_.compare(0, 5, "+FAIL") == 0) {
+            if (scene.crouchReplyAt) scene.crouchedAt=scene.crouchReplyAt=0;
             scene.pending = {};
             return;
         }
@@ -2638,6 +2682,16 @@ private:
             if (player != scene.players.end() && input_.size() <= DEFBLOCKSIZE + 344) {
                 auto body = ReadGameBody();
                 if (!body.empty()) SetRemoteName(player->second, std::move(body));
+            }
+        } else if (stage == Stage::GameSession && (opcode == GameCrouch || opcode == GameButcher)) {
+            const auto player=scene.players.find(actor);
+            const auto direction=third&0xffu;
+            if (actor!=localActor_ && player!=scene.players.end() && !player->second.npcType && direction<8 &&
+                scene.terrain.Contains(first,second)) {
+                player->second.x=first;
+                player->second.y=second;
+                player->second.facing=direction;
+                if (!player->second.dead) player->second.crouchedAt=GetTickCount64();
             }
         } else if (stage == Stage::GameSession && opcode == GameTargetPortrait) {
             ApplyTargetPortrait(actor,first | (std::uint32_t(second)<<16));
@@ -3183,6 +3237,8 @@ private:
         CloseNpcDialogue();
         scene.mapDescription.clear();
         scene.pending = {};
+        scene.crouchedAt=scene.crouchReplyAt=scene.crouchHoldAt=0;
+        scene.crouchPointerCaptured=false;
         scene.lastMove = 0;
         scene.players.clear();
         scene.x = x;
@@ -3232,6 +3288,7 @@ private:
         scene.SetCell(x, y);
         scene.facing = facing;
         scene.pending = {};
+        if (opcode==GameWalk || opcode==GameRun || opcode==GameBackstep) scene.crouchedAt=scene.crouchReplyAt=0;
     }
 
     static void SetRemoteName(LocalScene::Player& player, std::string body)
@@ -3536,6 +3593,7 @@ private:
         next.x = x;
         next.y = y;
         next.facing = facing;
+        next.crouchedAt=0;
         if (opcode == GameActorDeath || opcode == GameActorDead) next.dead = true;
         else if (opcode == GameActorRevive || opcode == GameActorReviveRefresh) next.dead = false;
         if (newPlayer) scene.players.emplace(actor, std::move(next));
@@ -3555,7 +3613,10 @@ private:
             if (actor == 0 || actor == localActor_) {
                 stats.hp = {first, third};
                 stats.mp[0] = second;
-                if (third && !first) scene.pending = {};
+                if (third && !first) {
+                    scene.pending = {};
+                    scene.crouchedAt=scene.crouchReplyAt=0;
+                }
             } else if (const auto found=scene.players.find(actor);found!=scene.players.end() && found->second.IsMonster()) {
                 auto& monster=found->second;
                 monster.monsterDamage.enabled=damageNumbers;

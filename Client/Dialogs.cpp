@@ -30,6 +30,7 @@ struct SceneSprite {
     cui_texture texture = 0;
     int x = 0, y = 0, width = 0, height = 0, row = 0;
     std::uint8_t opacity = 255;
+    float sourceWidth = 1;
 };
 
 struct SceneActorHit {
@@ -43,6 +44,7 @@ struct SceneMapArt {
     const std::vector<SceneSprite>* sprites = nullptr;
     const std::vector<SceneActorHit>* npcs = nullptr;
     const std::vector<SceneActorHit>* targets = nullptr;
+    const std::vector<SceneActorHit>* corpses = nullptr;
     int cameraX = 0, cameraY = 0;
 };
 
@@ -673,16 +675,16 @@ private:
     std::map<std::string,mir3::WilArchive> worldArchives_;
     std::map<WorldFrameKey,WorldFrame> worldFrames_;
     std::vector<SceneSprite> worldSprites_;
-    std::vector<SceneActorHit> worldNpcs_, worldTargets_;
+    std::vector<SceneActorHit> worldNpcs_, worldTargets_, worldCorpses_;
     mir3_cui::MapTerrain::GraphicsView mapGraphics_;
     std::uint64_t worldFrame_ = 0, mapGraphicsRevision_ = 0;
     std::uint64_t worldTextureBytes_ = 0;
     int mapGraphicsX_ = 0, mapGraphicsY_ = 0;
     const WorldFrame& GetWorldFrame(cui_ctx* ui, const std::string& library, int frame);
-    const WorldFrame& GetProjectedMonsterShadow(cui_ctx* ui, const std::string& library, int frame, bool flat);
+    const WorldFrame& GetProjectedWorldShadow(cui_ctx* ui, const std::string& library, int frame, bool flat);
     SceneMapArt PrepareMapArt(cui_ctx* ui, LoginClient& client);
     cui_rect AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAppearance& actor, int facing, int x, int y,
-        const SceneMapArt& camera, int idle);
+        const SceneMapArt& camera, int pose, bool shadowBlend);
     void TrimWorldFrames(cui_ctx* ui);
     std::array<HudChatRow,14> gameChatRows_;
     std::array<BagText,4> gameHudText_;
@@ -5229,7 +5231,7 @@ void PaintLocalScene(cui_ctx* ui, cui_rect rect, void* user)
         const float scale=rect.w/800;
         for (const auto& sprite:*model.art.sprites) {
             cui_draw_image(ui,sprite.texture,{rect.x+sprite.x*scale,rect.y+sprite.y*scale,
-                sprite.width*scale,sprite.height*scale},{0,0,1,1},{},{255,255,255,sprite.opacity});
+                sprite.width*scale,sprite.height*scale},{0,0,sprite.sourceWidth,1},{},{255,255,255,sprite.opacity});
         }
         cui_pop_clip(ui);
         return;
@@ -5306,7 +5308,7 @@ void PaintLocalScene(cui_ctx* ui, cui_rect rect, void* user)
 void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nativeInventory, bool legacyHud,
                    SceneMapArt art)
 {
-    const auto& scene = client.scene;
+    auto& scene = client.scene;
     LocalSceneDrawing view{};
     view.portrait = {client.characterAppearance, !client.equipment.slots[4].key.name.empty()};
     view.x = scene.x;
@@ -5324,7 +5326,12 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
     const auto canvas = cui_canvas(ui, "local-scene", CUI_FILL,
         legacyHud ? CUI_FILL : CUI_PX(client.inventory.shortcutsVisible ? 70 : 96),
         PaintLocalScene, &view, sizeof view);
-    if (!interactive || !view.terrainReady || !canvas.hovered) return;
+    const bool cutRelease=scene.crouchPointerCaptured && cui_mouse_released(ui,CUI_MOUSE_LEFT);
+    if (!cui_mouse_down(ui,CUI_MOUSE_LEFT)) {
+        scene.crouchHoldAt=0;
+        scene.crouchPointerCaptured=false;
+    }
+    if (!interactive || !view.terrainReady || !canvas.hovered || cutRelease) return;
     if (nativeInventory && (client.inventory.heldGold || client.HeldItem())) {
         if (cui_mouse_clicked(ui,CUI_MOUSE_LEFT)) client.BeginHeldDrop();
         return;
@@ -5332,11 +5339,17 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
     if (client.trade.returnSlot>=0) return;
     if (!legacyHud) cui_tooltip(ui, "Left-click to walk. Right-click to run or turn.");
     const bool run = cui_mouse_clicked(ui, CUI_MOUSE_RIGHT);
-    if (!canvas.clicked && !run) return;
+    const auto mods=cui_key_mods(ui);
+    const bool altCut=art.sprites && (mods&(CUI_MOD_ALT|CUI_MOD_SHIFT))==CUI_MOD_ALT;
+    const bool cutPress=!run && altCut && cui_mouse_clicked(ui,CUI_MOUSE_LEFT);
+    const auto now=GetTickCount64();
+    const bool cutRepeat=altCut && scene.crouchHoldAt && now-scene.crouchHoldAt>=300;
+    if (cutPress) scene.crouchPointerCaptured=true;
+    if (!canvas.clicked && !run && !cutPress && !cutRepeat) return;
     if (art.sprites) {
         const float scale=canvas.rect.w/800;
         const float viewX=canvas.mouse.x/scale, viewY=canvas.mouse.y/scale;
-        if (!run) {
+        if (!run && (canvas.clicked || cutPress)) {
             const auto& npcs=*art.npcs;
             const auto hit=std::find_if(npcs.rbegin(),npcs.rend(),[&](const SceneActorHit& npc) {
                 const auto& r=npc.bounds;
@@ -5346,7 +5359,25 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
         }
         const int x=static_cast<int>(viewX+art.cameraX)/48;
         const int y=static_cast<int>(viewY+art.cameraY)/32;
-        if (!run && client.ClickNpc(x,y)) return;
+        if (!run && (canvas.clicked || cutPress) && client.ClickNpc(x,y)) return;
+        if (!run && (cutPress || cutRepeat)) {
+            if (cutPress) scene.crouchHoldAt=now;
+            const auto hit=[&](const SceneActorHit& actor) {
+                const auto& r=actor.bounds;
+                return viewX>=r.x && viewX<r.x+r.w && viewY>=r.y && viewY<r.y+r.h;
+            };
+            std::uint32_t monsterCorpse=0, humanCorpse=0;
+            if (art.corpses && art.targets && std::none_of(art.targets->begin(),art.targets->end(),hit)) {
+                for (const auto& candidate:*art.corpses) {
+                    const auto& actor=scene.players.at(candidate.actor);
+                    if (!hit(candidate) || !scene.CanButcher(actor)) continue;
+                    auto& selected=candidate.monster ? monsterCorpse : humanCorpse;
+                    selected=(std::max)(selected,candidate.actor);
+                }
+            }
+            client.CrouchInScene(x,y,humanCorpse ? humanCorpse : monsterCorpse);
+            return;
+        }
         client.MoveInScene(x,y,run);
         return;
     }
@@ -5869,8 +5900,8 @@ const Dialogs::Assets::WorldFrame& Dialogs::Assets::GetWorldFrame(cui_ctx* ui, c
     return result;
 }
 
-const Dialogs::Assets::WorldFrame& Dialogs::Assets::GetProjectedMonsterShadow(cui_ctx* ui, const std::string& library,
-                                                                             int frame, bool flat)
+const Dialogs::Assets::WorldFrame& Dialogs::Assets::GetProjectedWorldShadow(cui_ctx* ui, const std::string& library,
+                                                                           int frame, bool flat)
 {
     auto [entry,inserted]=worldFrames_.try_emplace({library+(flat ? ":flat-shadow" : ":shadow"),frame});
     auto& result=entry->second;
@@ -5914,12 +5945,17 @@ void Dialogs::Assets::TrimWorldFrames(cui_ctx* ui)
 }
 
 cui_rect Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAppearance& actor, int facing,
-    int x, int y, const SceneMapArt& camera, int idle)
+    int x, int y, const SceneMapArt& camera, int pose, bool shadowBlend)
 {
     const std::string prefix=actor.body ? "WM-" : "M-";
-    const int motion=facing*10+idle;
-    const auto& body=GetWorldFrame(ui,prefix+"Hum",static_cast<int>(actor.clothing)*3000+motion);
+    const int motion=facing*10+pose;
+    const auto library=prefix+"Hum";
+    const int frame=static_cast<int>(actor.clothing)*3000+motion;
+    const auto& body=GetWorldFrame(ui,library,frame);
     if (!body.image.texture) return {};
+    const auto& shadow=GetProjectedWorldShadow(ui,library,frame,pose==HumanCorpsePose);
+    if (shadow.image.texture) worldSprites_.push_back({shadow.image.texture,x*48-camera.cameraX+shadow.x,
+        y*32-camera.cameraY+shadow.y,shadow.image.width,shadow.image.height,y,static_cast<std::uint8_t>(shadowBlend ? 104 : 255)});
     const auto add=[&](const WorldFrame& layer) {
         const auto& art=layer.image;
         if (art.texture) worldSprites_.push_back({art.texture,x*48-camera.cameraX+layer.x,
@@ -5945,7 +5981,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
 {
     auto& scene=client.scene;
     if (!scene.terrain.Ready()) return {};
-    SceneMapArt camera{&worldSprites_,&worldNpcs_,&worldTargets_,
+    SceneMapArt camera{&worldSprites_,&worldNpcs_,&worldTargets_,&worldCorpses_,
         static_cast<int>(scene.x)*48-376,static_cast<int>(scene.y)*32-227};
     const int startX=camera.cameraX/96*2, startY=camera.cameraY/64*2;
     const int originX=startX*48-camera.cameraX, originY=startY*32-camera.cameraY;
@@ -5961,6 +5997,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
     worldSprites_.clear();
     worldNpcs_.clear();
     worldTargets_.clear();
+    worldCorpses_.clear();
     constexpr std::array<const char*,15> packages{"Tilesc","Tiles30c","Tiles5c","SmTilesc","Housesc","Cliffsc",
         "Dungeonsc","Innersc","Furnituresc","Wallsc","SmObjectsc","Animationsc","Object1c","Object2c","Custom"};
     constexpr std::array<const char*,5> regions{"","Wood/","Sand/","Snow/","Forest/"};
@@ -6023,9 +6060,9 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
         animated|=count>1;
     }
     const int idle=static_cast<int>(tick/201%4);
-    std::vector<SceneSprite> combatText;
+    std::vector<SceneSprite> healthSprites;
     for (auto& [id,actor]:scene.players) {
-        if (actor.IsNpc() || (actor.dead && !actor.IsMonster()) || !visible(actor)) continue;
+        if (actor.IsNpc() || !visible(actor)) continue;
         cui_rect bounds{};
         if (actor.IsMonster()) {
             const int shape=actor.npcShape;
@@ -6079,7 +6116,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
                 else if (shape>=2000 && library==135) shadow=&GetWorldFrame(ui,"DMonS-1",frame);
                 if (!shadow || !shadow->image.texture) {
                     const bool flat=corpse && shape!=127 && shape!=153 && !actor.MonsterDying();
-                    shadow=&GetProjectedMonsterShadow(ui,archive,frame,flat);
+                    shadow=&GetProjectedWorldShadow(ui,archive,frame,flat);
                 }
                 if (shadow->image.texture) {
                     const std::uint8_t shadowOpacity=client.shadowBlend || reviveAge<MonsterReviveDuration ? 104 : 255;
@@ -6095,20 +6132,38 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client)
             const auto glyphs=actor.monsterDamage.draw(x-sprite.x,y-sprite.y,false);
             for (const auto& glyph:glyphs) {
                 const auto& image=gameHudFrames_.at(glyph.frame);
-                if (image.texture) combatText.push_back({image.texture,glyph.x,glyph.y,image.width,image.height,0});
+                if (image.texture) healthSprites.push_back({image.texture,glyph.x,glyph.y,image.width,image.height,0});
             }
             animated|=!glyphs.empty();
-        } else bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,idle);
-        if (bounds.w>0 && !actor.dead) worldTargets_.push_back({bounds,id,actor.y,actor.IsMonster()});
+        } else {
+            const int crouch=CrouchPose(actor.crouchedAt,monsterNow);
+            const int pose=actor.dead ? HumanCorpsePose : crouch>=0 ? crouch : idle;
+            bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,pose,client.shadowBlend);
+            animated|=!actor.dead;
+        }
+        if (bounds.w<=0) continue;
+        if (!actor.dead) worldTargets_.push_back({bounds,id,actor.y,actor.IsMonster()});
+        else if (actor.CanBeButchered()) worldCorpses_.push_back({bounds,id,actor.y,actor.IsMonster()});
     }
     if (client.characterAppearance.available) {
-        AddWorldActor(ui,client.characterAppearance,scene.facing,scene.x,scene.y,camera,idle);
+        const int crouch=CrouchPose(scene.crouchedAt,monsterNow);
+        const auto localBounds=AddWorldActor(ui,client.characterAppearance,scene.facing,scene.x,scene.y,camera,
+            crouch>=0 ? crouch : idle,client.shadowBlend);
+        if (localBounds.w>0 && client.characterStatus.hp[1] && gamePortraits_.contains(2)) {
+            const auto [hp,maxHp]=client.characterStatus.hp;
+            const auto& border=gamePortraits_.at(2), &fill=gamePortraits_.at(3);
+            const int x=int(scene.x)*48-camera.cameraX+7, y=int(scene.y)*32-camera.cameraY-56;
+            const auto percent=(std::min)(100u,unsigned(hp)*100/unsigned(maxHp));
+            const int width=(std::min)(fill.width,int(double(percent)*double(0.01f)*36.0));
+            if (border.texture) healthSprites.push_back({border.texture,x,y,border.width,border.height,0});
+            if (fill.texture && width>0) healthSprites.push_back({fill.texture,x,y,width,fill.height,0,255,float(width)/fill.width});
+        }
         animated=true;
     }
     std::stable_sort(worldSprites_.begin(),worldSprites_.end(),[](const SceneSprite& a,const SceneSprite& b) {
         return a.row<b.row;
     });
-    worldSprites_.insert(worldSprites_.end(),combatText.begin(),combatText.end());
+    worldSprites_.insert(worldSprites_.end(),healthSprites.begin(),healthSprites.end());
     std::stable_sort(worldNpcs_.begin(),worldNpcs_.end(),[](const SceneActorHit& a,const SceneActorHit& b) {
         return a.row<b.row;
     });
@@ -6137,7 +6192,7 @@ void Dialogs::Assets::OpenGameHud(cui_ctx* ui, mir3::WilArchive& archive, const 
     for (int id=2600;id<=2644;++id) gameHudHints_[id]=MakeHudHint(ui,id);
     mir3::WilArchive portraitsArchive;
     if (portraitsArchive.open(portraits)) {
-        for (int id : {0,631,632,634,635,650,651,652,653,654,655,660,661})
+        for (int id : {0,2,3,631,632,634,635,650,651,652,653,654,655,660,661})
             gamePortraits_[id]=UploadFrame(ui,portraitsArchive,id,true);
         for (int id=600; id<=629; ++id) gamePortraits_[id]=UploadFrame(ui,portraitsArchive,id,true);
     }
