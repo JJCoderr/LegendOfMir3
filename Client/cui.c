@@ -523,6 +523,7 @@ struct cui_ctx {
     double hover_start;
     cui_id layer_stack[32]; int layer_depth;   /* current floating layer while building */
     cui_id current_layer;
+    cui_id front_panel;
     cui_cursor cursor;
 
     /* input */
@@ -7896,6 +7897,17 @@ bool cui_shortcut(cui_ctx *ui, int mods, cui_key key) {
 cui_vec2 cui_mouse_pos(cui_ctx *ui) { cui_vec2 v = { ui->mx, ui->my }; return v; }
 bool cui_mouse_down(cui_ctx *ui, cui_mouse_button b) { return (int)b >= 0 && (int)b < 3 && ui->mdown[b]; }
 bool cui_mouse_clicked(cui_ctx *ui, cui_mouse_button b) { return (int)b >= 0 && (int)b < 3 && ui->mpressed[b]; }
+bool cui_mouse_double_clicked(cui_ctx *ui) { return ui->mpressed[CUI_MOUSE_LEFT] && ui->click_count == 2; }
+void cui_consume_mouse_press(cui_ctx *ui, cui_mouse_button b) {
+    if ((int)b >= 0 && (int)b < 3) ui->mpressed[b] = false;
+}
+bool cui_mouse_released(cui_ctx *ui, cui_mouse_button b) { return (int)b >= 0 && (int)b < 3 && ui->mreleased[b]; }
+cui_vec2 cui_mouse_scroll(cui_ctx *ui) { return (cui_vec2){ ui->scroll_dx, ui->scroll_dy }; }
+cui_vec2 cui_take_mouse_scroll(cui_ctx *ui) {
+    cui_vec2 delta = cui_mouse_scroll(ui);
+    ui->scroll_dx = ui->scroll_dy = 0;
+    return delta;
+}
 bool cui_wants_keyboard(cui_ctx *ui) { return ui->edit != NULL; }
 bool cui_wants_mouse(cui_ctx *ui) { return ui->hot != 0 || ui->active != 0; }
 
@@ -17688,7 +17700,8 @@ static void cui__sdf_quad(cui_ctx *ui, float cx, float cy, float hw, float hh, f
     float s = x.scale;
     float ncx = cx * s + x.ox, ncy = cy * s + x.oy;
     float nhw = hw * s, nhh = hh * s, ne = expand * s;
-    if (mode == CUI_SHADE_RRECT || mode == CUI_SHADE_IMAGE) ne = CUI_MAX(ne, 1.0f);
+    bool image = mode == CUI_SHADE_IMAGE || mode == CUI_SHADE_IMAGE_ADDITIVE;
+    if (mode == CUI_SHADE_RRECT || image) ne = CUI_MAX(ne, 1.0f);
     float x0 = ncx - nhw - ne, y0 = ncy - nhh - ne, x1 = ncx + nhw + ne, y1 = ncy + nhh + ne;
     if (cui__clip_rejects(ui, x0, y0, x1, y1)) return;
     float a = x.alpha;
@@ -17713,7 +17726,7 @@ static void cui__sdf_quad(cui_ctx *ui, float cx, float cy, float hw, float hh, f
         v[i].u = uu[i]; v[i].v = vv[i];
     }
     /* the uvs above map to the expanded quad; correct them for images */
-    if (mode == CUI_SHADE_IMAGE && ne > 0) {
+    if (image && ne > 0) {
         float du = (u1 - u0) / (2 * nhw), dv = (v1 - v0) / (2 * nhh);
         for (int i = 0; i < 4; i++) {
             v[i].u = u0 + (v[i].lx + nhw) * du;
@@ -17732,6 +17745,17 @@ void cui_draw_rect(cui_ctx *ui, cui_rect r, cui_corners rad, cui_color fill) {
     float s = ui->scale;
     cui__sdf_quad(ui, (r.x + r.w * 0.5f) * s, (r.y + r.h * 0.5f) * s, r.w * 0.5f * s, r.h * 0.5f * s, 1,
                   cui__scale_corners(rad, s), 0, CUI_SHADE_RRECT, fill, fill, fill, fill, fill, 0, 0, 0, 0, 0);
+}
+
+void cui_draw_rect_premultiplied(cui_ctx *ui, cui_rect r, cui_color fill) {
+    if (fill.a == 0 || r.w <= 0 || r.h <= 0) return;
+    float s = ui->scale;
+    float opacity = cui__xf(ui).alpha;
+    fill.r = (uint8_t)(fill.r * opacity);
+    fill.g = (uint8_t)(fill.g * opacity);
+    fill.b = (uint8_t)(fill.b * opacity);
+    cui__sdf_quad(ui, (r.x + r.w * 0.5f) * s, (r.y + r.h * 0.5f) * s, r.w * 0.5f * s, r.h * 0.5f * s, 0,
+                  CUI_CORNERS(0), 0, CUI_SHADE_SOLID_PREMULTIPLIED, fill, fill, fill, fill, fill, 0, 0, 0, 0, 0);
 }
 
 void cui_draw_rect_border(cui_ctx *ui, cui_rect r, cui_corners rad, cui_color fill, cui_color border, float bw) {
@@ -17783,6 +17807,14 @@ void cui_draw_image(cui_ctx *ui, cui_texture tex, cui_rect r, cui_rect uv, cui_c
     cui__sdf_quad(ui, (r.x + r.w * 0.5f) * s, (r.y + r.h * 0.5f) * s, r.w * 0.5f * s, r.h * 0.5f * s, 0,
                   cui__scale_corners(rad, s), 0, CUI_SHADE_IMAGE, tint, tint, tint, tint, tint, tex,
                   uv.x, uv.y, uv.x + uv.w, uv.y + uv.h);
+}
+
+void cui_draw_image_additive(cui_ctx *ui, cui_texture tex, cui_rect r) {
+    if (!tex || r.w <= 0 || r.h <= 0) return;
+    float s = ui->scale;
+    cui_color white = cui__rgba(255, 255, 255, 255);
+    cui__sdf_quad(ui, (r.x + r.w * 0.5f) * s, (r.y + r.h * 0.5f) * s, r.w * 0.5f * s, r.h * 0.5f * s, 0,
+                  CUI_CORNERS(0), 0, CUI_SHADE_IMAGE_ADDITIVE, white, white, white, white, white, tex, 0, 0, 1, 1);
 }
 
 void cui__draw_glyph_quad(cui_ctx *ui, float x0, float y0, float x1, float y1,
@@ -40080,6 +40112,21 @@ unsigned char *cui__png_decode(const unsigned char *data, int len, int *w, int *
 }
 void cui__png_free(unsigned char *px) { stbi_image_free(px); }
 
+cui_texture cui_image_load_jpeg(cui_ctx *ui, const void *data, int len, int max_side, int *w, int *h) {
+    int width = 0, height = 0, components = 0;
+    const unsigned char *encoded = data;
+    if (!encoded || len < 2 || encoded[0] != 0xff || encoded[1] != 0xd8 ||
+        !stbi_info_from_memory(encoded, len, &width, &height, &components) ||
+        width <= 0 || height <= 0 || width > max_side || height > max_side) return 0;
+    unsigned char *pixels = stbi_load_from_memory(encoded, len, &width, &height, &components, 4);
+    if (!pixels) return 0;
+    const cui_texture texture = cui_image_create_nearest(ui, width, height, pixels);
+    stbi_image_free(pixels);
+    if (texture && w) *w = width;
+    if (texture && h) *h = height;
+    return texture;
+}
+
 cui_texture cui_image_load(cui_ctx *ui, const char *path, int *w, int *h) {
     int iw = 0, ih = 0, comp = 0;
     unsigned char *px = stbi_load(path, &iw, &ih, &comp, 4);
@@ -40093,6 +40140,10 @@ cui_texture cui_image_load(cui_ctx *ui, const char *path, int *w, int *h) {
 #else
 unsigned char *cui__png_decode(const unsigned char *data, int len, int *w, int *h) { (void)data; (void)len; (void)w; (void)h; return NULL; }
 void cui__png_free(unsigned char *px) { (void)px; }
+cui_texture cui_image_load_jpeg(cui_ctx *ui, const void *data, int len, int max_side, int *w, int *h) {
+    (void)ui; (void)data; (void)len; (void)max_side; (void)w; (void)h;
+    return 0;
+}
 cui_texture cui_image_load(cui_ctx *ui, const char *path, int *w, int *h) {
     (void)ui; (void)path; (void)w; (void)h;
     return 0;
@@ -41248,6 +41299,16 @@ cui_id cui_box_begin(cui_ctx *ui, const cui_box *b) {
     return id;
 }
 
+void cui_fixed_begin(cui_ctx *ui, cui_rect rect) {
+    cui__open(ui, cui__absolute(ui, 0, rect.x, rect.y, rect.w, rect.h));
+}
+
+void cui_overlay_begin(cui_ctx *ui, cui_rect rect) {
+    int i = cui__absolute(ui, 0, rect.x, rect.y, rect.w, rect.h);
+    ui->nodes[i].flags |= CUI_NF_ON_TOP;
+    cui__open(ui, i);
+}
+
 void cui_box_end(cui_ctx *ui) {
     int cur = cui__current(ui);
     if (cur >= 0 && (ui->nodes[cur].flags & (CUI_NF_SCROLL_X | CUI_NF_SCROLL_Y))) { cui__scroll_end_ex(ui); return; }
@@ -42107,7 +42168,11 @@ static void cui__paint_node(cui_ctx *ui, int i, cui_rect clip) {
         cui_push_clip(ui, r);
         child_clip = cui__rect_intersect(clip, cui__xform_rect(ui, r));
     }
-    for (int c = n->abs_first; c >= 0; c = ui->nodes[c].next) cui__paint_node(ui, c, child_clip);
+    bool any_overlay = false;
+    for (int c = n->abs_first; c >= 0; c = ui->nodes[c].next) {
+        if (ui->nodes[c].flags & CUI_NF_ON_TOP) { any_overlay = true; continue; }
+        cui__paint_node(ui, c, child_clip);
+    }
     bool any_top = false;
     for (int c = n->first; c >= 0; c = ui->nodes[c].next) {
         if (ui->nodes[c].flags & CUI_NF_ON_TOP) { any_top = true; continue; }
@@ -42115,6 +42180,9 @@ static void cui__paint_node(cui_ctx *ui, int i, cui_rect clip) {
     }
     if (any_top)
         for (int c = n->first; c >= 0; c = ui->nodes[c].next)
+            if (ui->nodes[c].flags & CUI_NF_ON_TOP) cui__paint_node(ui, c, child_clip);
+    if (any_overlay)
+        for (int c = n->abs_first; c >= 0; c = ui->nodes[c].next)
             if (ui->nodes[c].flags & CUI_NF_ON_TOP) cui__paint_node(ui, c, child_clip);
     if (clips) cui_pop_clip(ui);
     n = &ui->nodes[i];
@@ -47650,6 +47718,82 @@ void cui_dialog_footer_begin(cui_ctx *ui) {
 }
 
 void cui_dialog_footer_end(cui_ctx *ui) { cui__close(ui); }
+
+typedef struct {
+    float x, y, grab_x, grab_y;
+    bool positioned, dragging;
+} cui__panel_position;
+
+bool cui_panel_begin(cui_ctx *ui, const char *title, bool *open, cui_rect bounds) {
+    if (!open || !*open) return false;
+    cui_id id = cui_make_id(ui, title) ^ 0xD1A106u;
+    if (ui->mpressed[CUI_MOUSE_LEFT] && ui->hot_layer == id) ui->front_panel = id;
+    cui__panel_position *state = cui_state(ui, id ^ 0x3B7E5221u, sizeof *state);
+    int root = cui__float_begin(ui, id, ui->front_panel == id ? 501 : 500, 0, CUI__PLACE_POINT, 0);
+    cui_id drag_id = id ^ 0xC8714u;
+    cui_interact drag = cui__interact(ui, drag_id, CUI_IF_DRAG);
+    float width = CUI_MIN(bounds.w, ui->vw);
+    float max_x = CUI_MAX(0, ui->vw - width);
+    float max_y = CUI_MAX(0, ui->vh - 58);
+    float x = cui__clampf(state->positioned ? state->x : bounds.x, 0, max_x);
+    float y = cui__clampf(state->positioned ? state->y : bounds.y, 0, max_y);
+    if (drag.pressed && ui->mpressed[CUI_MOUSE_LEFT]) {
+        state->dragging = true;
+        state->grab_x = ui->mx - x;
+        state->grab_y = ui->my - y;
+    }
+    if (state->dragging && (drag.pressed || drag.released)) {
+        float moved_x = cui__clampf(ui->mx - state->grab_x, 0, max_x);
+        float moved_y = cui__clampf(ui->my - state->grab_y, 0, max_y);
+        if (moved_x != x || moved_y != y) state->positioned = true;
+        if (state->positioned) { state->x = x = moved_x; state->y = y = moved_y; }
+    }
+    if (!drag.pressed) state->dragging = false;
+    if (drag.hovered || state->dragging) cui__set_cursor(ui, CUI_CURSOR_MOVE);
+
+    cui_node *n = &ui->nodes[root];
+    n->flags |= CUI_NF_HIT_OPAQUE;
+    n->fx = x; n->fy = y;
+    n->w = CUI_PX(width); n->h = CUI_PX(CUI_MIN(bounds.h, ui->vh - y));
+    n->dir = CUI_COLUMN;
+    n->bg = CUI_C(ui, SURFACE_RAISED);
+    n->border = 1; n->border_color = CUI_C(ui, BORDER);
+    n->radius = CUI_CORNERS(ui->theme.radius_surface);
+    n->elevation = CUI_ELEVATION_FLOATING; n->elevation_alpha = 1;
+    n->pad[0] = n->pad[1] = n->pad[2] = n->pad[3] = 12;
+    n->gap = 8;
+
+    cui_push_id_int(ui, (int)id);
+    cui_box head;
+    memset(&head, 0, sizeof head);
+    head.width = CUI_FILL; head.align = CUI_ALIGN_CENTER;
+    cui_row_begin(ui, &head);
+    int handle = cui__node_new(ui, drag_id);
+    ui->nodes[handle].w = CUI_FILL;
+    ui->nodes[handle].h = CUI_PX(30);
+    ui->nodes[handle].justify = CUI_JUSTIFY_CENTER;
+    cui__mark_interactive(ui, handle, CUI_IF_DRAG);
+    cui__open(ui, handle);
+    cui__text_node(ui, title, cui__display_len(title), CUI_FONT_MEDIUM, cui__fs(ui, ui->theme.heading[3]), CUI_C(ui, FOREGROUND), false);
+    cui__close(ui);
+    cui_button_opts close;
+    memset(&close, 0, sizeof close);
+    close.size = CUI_SIZE_SM; close.tooltip = "Close";
+    if (cui_icon_button_ex(ui, CUI_ICON_X, &close)) *open = false;
+    cui_box_end(ui);
+
+    cui_scroll_opts body;
+    memset(&body, 0, sizeof body);
+    body.id = "###panel-body"; body.width = CUI_FILL; body.height = CUI_FILL; body.gap = 8;
+    cui_scroll_begin(ui, &body);
+    return true;
+}
+
+void cui_panel_end(cui_ctx *ui) {
+    cui_scroll_end(ui);
+    cui_pop_id(ui);
+    cui__float_end(ui);
+}
 
 bool cui_sheet_begin(cui_ctx *ui, const char *title, bool *open, const cui_sheet_opts *o) {
     cui_sheet_opts d;
@@ -59431,7 +59575,7 @@ struct cui_font_data {
     float upem;
     float ascent, descent, line_gap;   /* em units (fractions of the font size) */
     float cap_height;
-    bool is_icon;
+    bool is_icon, monochrome;
     int fallbacks[4];
     int fallback_count;
     int gi_ascii[128];
@@ -59461,10 +59605,17 @@ cui_font cui__resolve_font(cui_ctx *ui, cui_font f) {
 
 static void cui__font_prepare(cui_font_data *fd) {
     int asc, desc, gap;
+    float em = 1.0f / stbtt_ScaleForMappingEmToPixels(&fd->info, 1.0f);
     stbtt_GetFontVMetrics(&fd->info, &asc, &desc, &gap);
     int ta, td, tg;
-    if (stbtt_GetFontVMetricsOS2(&fd->info, &ta, &td, &tg)) { asc = ta; desc = td; gap = tg; }
-    float em = 1.0f / stbtt_ScaleForMappingEmToPixels(&fd->info, 1.0f);
+    if (stbtt_GetFontVMetricsOS2(&fd->info, &ta, &td, &tg) && ta > 0 && td <= 0 && ta - td <= 4 * em) {
+        asc = ta; desc = td; gap = tg;
+    }
+    if (asc <= 0 || desc > 0 || asc - desc > 4 * em) {
+        asc = (int)(0.8f * em);
+        desc = asc - (int)em;
+        gap = 0;
+    }
     fd->upem = em;
     fd->ascent = asc / em;
     fd->descent = desc / em;
@@ -59512,6 +59663,12 @@ cui_font cui_font_load_memory(cui_ctx *ui, const void *data, size_t size, bool c
     fd->owned = copy;
     cui__font_prepare(fd);
     return CUI__USER_FONT_BASE + ui->font_count++;
+}
+
+cui_font cui_font_load_mono_memory(cui_ctx *ui, const void *data, size_t size, bool copy) {
+    cui_font font = cui_font_load_memory(ui,data,size,copy);
+    if (font >= CUI__USER_FONT_BASE) ui->fonts[font-CUI__USER_FONT_BASE].monochrome = true;
+    return font;
 }
 
 cui_font cui_font_load_file(cui_ctx *ui, const char *path) {
@@ -59735,7 +59892,7 @@ static bool cui__iter_next(cui__glyph_iter *it) {
         adv = ta;
     }
     /* optical tracking: a touch looser when small, tighter as text grows */
-    if (!fd->is_icon) { adv += it->track; it->center_off += it->track * 0.5f; }
+    if (!fd->is_icon && !fd->monochrome) { adv += it->track; it->center_off += it->track * 0.5f; }
     it->cp = cp; it->gi = gi; it->gfont = gf; it->gsize = gs;
     it->gx = it->x;
     it->adv = adv;
@@ -60076,7 +60233,8 @@ static cui_glyph *cui__glyph_get(cui_ctx *ui, cui_font font, int gi, float px_si
         if (!fd->is_icon) {
             for (int y = 0; y < hgt; y++) {
                 uint8_t *row = dst + (size_t)y * (size_t)ui->atlas_w;
-                for (int x = 0; x < w; x++) row[x] = cui__gamma_lut[row[x]];
+                for (int x = 0; x < w; x++)
+                    row[x] = fd->monochrome ? (row[x]>=128 ? 255 : 0) : cui__gamma_lut[row[x]];
             }
         }
         if (!ui->atlas_dirty) { ui->dirty_x0 = ax; ui->dirty_y0 = ay; ui->dirty_x1 = ax + w; ui->dirty_y1 = ay + hgt; }
@@ -60392,6 +60550,7 @@ static void cui__draw_run(cui_ctx *ui, cui_font font, float size, float x, float
         if (subpx > 2) subpx = 2;
         float gy = by_px;
         cui_font_data *gfd = &ui->fonts[it.gfont];
+        if (gfd->monochrome) { fl = roundf(pen); subpx = 0; }
         if (gfd->is_icon && it.gfont != font) {
             /* inline icon: vertically center on cap height */
             float center = baseline - base->cap_height * size * 0.5f;
@@ -60482,6 +60641,8 @@ typedef struct {
     int len;
     int cursor, anchor;
     bool focused, password, multiline;
+    bool solid_caret;
+    char password_mask;
     float scroll_x, scroll_y;
     double caret_phase;
     cui_font font;
@@ -60493,8 +60654,13 @@ typedef struct {
     cui_text_layout_line *lines;
 } cui__edit_paint;
 
-static int cui__edit_mask(char *out, int cap, int len_cp) {
-    /* bullet per code point */
+static int cui__edit_mask(char *out, int cap, int len_cp, char glyph) {
+    if (glyph) {
+        int count = CUI_MIN(len_cp, cap - 1);
+        memset(out, glyph, (size_t)count);
+        out[count] = 0;
+        return count;
+    }
     int n = 0;
     for (int i = 0; i < len_cp && n + 3 < cap; i++) { memcpy(out + n, "\xE2\x80\xA2", 3); n += 3; }
     out[n] = 0;
@@ -60512,7 +60678,7 @@ static float cui__x_at(cui_ctx *ui, const cui__edit_paint *p, const char *line, 
     if (p->password) {
         char tmp[1024];
         int cps = cui__cp_count(line, off);
-        int n = cui__edit_mask(tmp, sizeof tmp, cps);
+        int n = cui__edit_mask(tmp, sizeof tmp, cps, p->password_mask);
         return cui__text_width(ui, p->font, p->size, tmp, n, false);
     }
     (void)line_len;
@@ -60551,7 +60717,7 @@ static void cui__paint_edit(cui_ctx *ui, cui_node *n, void *data) {
         char *mask = NULL;
         if (p->password) {
             mask = cui__frame_alloc(ui, (size_t)p->len * 3 + 4);
-            shown_len = cui__edit_mask(mask, p->len * 3 + 4, cui__cp_count(p->buf, p->len));
+            shown_len = cui__edit_mask(mask, p->len * 3 + 4, cui__cp_count(p->buf, p->len), p->password_mask);
             shown = mask;
         }
         if (p->focused && s1 > s0) {
@@ -60561,13 +60727,20 @@ static void cui__paint_edit(cui_ctx *ui, cui_node *n, void *data) {
         }
         cui__draw_text_line(ui, p->font, p->size, x, y, p->text, shown, shown_len, false);
         if (p->focused && s1 == s0) {
-            float blink = 0.5f + 0.5f * cosf((float)p->caret_phase * 2.0f * CUI_PI / 1.06f);
-            float a = blink > 0.35f ? 1.0f : 0.0f;
-            if (p->caret_phase < 0.5) a = 1;
             float cx = x + cui__x_at(ui, p, p->buf, p->len, p->cursor);
-            if (p->cursor == 0) cx -= 1.0f;   /* stand clear of the first glyph or the placeholder */
-            cui_rect cr = { roundf(cx * ui->scale) / ui->scale - 0.5f, r.y + (r.h - fh) * 0.5f, 1.5f, fh };
-            cui_draw_rect(ui, cr, CUI_CORNERS(0.75f), cui_alpha(p->caret, a));
+            if (p->solid_caret) {
+                const float width = 1.0f / ui->scale;
+                const float height = CUI_MIN(r.h,fh+width);
+                const cui_rect cr = {roundf(cx*ui->scale)*width,r.y+(r.h-height)*0.5f,width,height};
+                cui_draw_rect(ui,cr,CUI_CORNERS(0),p->caret);
+            } else {
+                float blink = 0.5f + 0.5f * cosf((float)p->caret_phase * 2.0f * CUI_PI / 1.06f);
+                float a = blink > 0.35f ? 1.0f : 0.0f;
+                if (p->caret_phase < 0.5) a = 1;
+                if (p->cursor == 0) cx -= 1.0f;   /* stand clear of the first glyph or the placeholder */
+                cui_rect cr = { roundf(cx * ui->scale) / ui->scale - 0.5f, r.y + (r.h - fh) * 0.5f, 1.5f, fh };
+                cui_draw_rect(ui, cr, CUI_CORNERS(0.75f), cui_alpha(p->caret, a));
+            }
         }
     } else {
         float y0 = r.y - p->scroll_y;
@@ -60738,6 +60911,8 @@ typedef struct {
     cui_edit_state *e;
     char *buf; size_t cap; int len;
     bool multiline, password, read_only;
+    int byte_limit;
+    int (*measure_bytes)(const char *, int);
     cui_rect area;                       /* the text area, last frame */
     cui_font font; float size, line_h;
     cui_text_layout_line *lines; int nlines;   /* wrapped lines, text areas only */
@@ -60757,6 +60932,20 @@ static void cui__edit_move(cui__edit_frame *c, int to) {
 static void cui__edit_replace_selection(cui__edit_frame *c, const char *text, int n, bool newlines) {
     cui_edit_state *e = c->e;
     int s0 = CUI_MIN(e->cursor, e->anchor), s1 = CUI_MAX(e->cursor, e->anchor);
+    if (n > 0 && c->byte_limit > 0 && c->measure_bytes) {
+        int remaining = c->byte_limit - c->measure_bytes(c->buf, s0)
+            - c->measure_bytes(c->buf + s1, c->len - s1);
+        int accepted = 0;
+        while (accepted < n) {
+            int next = cui__utf8_next(text, n, accepted);
+            int bytes = c->measure_bytes(text + accepted, next - accepted);
+            if (bytes > remaining) break;
+            remaining -= bytes;
+            accepted = next;
+        }
+        if (!accepted) return;
+        n = accepted;
+    }
     cui__delete_range(c->buf, &c->len, s0, s1);
     e->cursor = e->anchor = s0;
     int m = cui__insert(c->buf, &c->len, c->cap, e->cursor, text, n, newlines);
@@ -60972,7 +61161,7 @@ static void cui__edit_follow_caret(cui__edit_frame *c, const cui__edit_result *r
 
 static cui__edit_result cui__edit_logic(cui_ctx *ui, cui_id id, cui_edit_state *e, char *buf, size_t cap,
                                         bool multiline, bool password, bool read_only, cui_rect area,
-                                        cui_font font, float size, float line_h, cui_interact r) {
+                                        cui_font font, float size, float line_h, cui_interact r, const cui_input_opts *opts) {
     cui__edit_result res;
     memset(&res, 0, sizeof res);
     int len = (int)strlen(buf);
@@ -60995,6 +61184,9 @@ static cui__edit_result cui__edit_logic(cui_ctx *ui, cui_id id, cui_edit_state *
     c.multiline = multiline; c.password = password; c.read_only = read_only;
     c.area = area; c.font = font; c.size = size; c.line_h = line_h;
     c.measure.font = font; c.measure.size = size; c.measure.password = password;
+    c.measure.password_mask = opts->password_mask;
+    c.byte_limit = opts->byte_limit;
+    c.measure_bytes = opts->measure_bytes;
     if (multiline) c.nlines = cui__edit_lines(ui, font, size, buf, len, area.w, &c.lines);
 
     cui__edit_pointer(&c, r);
@@ -61015,7 +61207,7 @@ static cui__edit_result cui__edit_logic(cui_ctx *ui, cui_id id, cui_edit_state *
     cui__edit_clipboard(&c);
     if (!read_only) cui__edit_typing(&c, &res);
     if ((!multiline || c.prim) && cui_key_pressed(ui, CUI_KEY_ENTER)) res.submitted = true;
-    if (cui_key_pressed(ui, CUI_KEY_ESCAPE)) {
+    if (!opts->keep_escape && cui_key_pressed(ui, CUI_KEY_ESCAPE)) {
         if (e->cursor != e->anchor) e->anchor = e->cursor;
         else { ui->focus = 0; res.blurred = true; }
     }
@@ -61056,20 +61248,22 @@ int cui__text_field(cui_ctx *ui, cui_id id, char *buf, size_t cap, const cui_inp
         if (o->autofocus) ui->focus = id;
     }
     cui_id area_id = id ^ 0xED17u;
-    if (ui->tf_select_all == id && ui->focus == id) {
-        e->anchor = 0;
-        e->cursor = (int)strlen(buf);
-        e->scroll_x = 0;
-        ui->tf_select_all = 0;
-    }
     cui_push_disabled(ui, disabled);
     /* the text area itself takes focus; clicks on padding also land on the field */
     cui_interact rf = cui__interact(ui, id, CUI_IF_FOCUSABLE | CUI_IF_TEXT | CUI_IF_DRAG);
     cui_pop_disabled(ui);
+    if (ui->tf_select_all == id && ui->focus == id) {
+        e->anchor = 0;
+        e->cursor = (int)strlen(buf);
+        e->scroll_x = 0;
+        rf.active = false;
+        ui->tf_select_all = 0;
+    }
     if (rf.hovered) cui__set_cursor(ui, CUI_CURSOR_TEXT);
     bool was_focused = ui->focus == id;
     float size = cui__fs(ui, o->size == CUI_SIZE_SM ? ui->theme.text_sm : ui->theme.text_body);
-    cui_font font = CUI_FONT_BODY;
+    if (o->font_size > 0) size = o->font_size;
+    cui_font font = o->font;
     if (ui->tf_override) {   /* inline edit: type that matches the text it replaces */
         font = ui->tf_font;
         size = ui->tf_size;
@@ -61079,7 +61273,8 @@ int cui__text_field(cui_ctx *ui, cui_id id, char *buf, size_t cap, const cui_inp
     cui_rect area = cui__prev_rect(ui, area_id);
     bool password = o->password && !e->show_password;
     cui__edit_result er = cui__edit_logic(ui, id, e, buf, cap, multiline, password, o->read_only || disabled, area,
-                                          font, size, line_h, rf);
+                                          font, size, line_h, rf, o);
+    if (o->keep_tab && er.focused) ui->tab_owner = id;
     if (multiline && rf.hovered && ui->scroll_dy != 0 && area.h > 0) {
         /* wheel scrolls the text whether or not the field has focus */
         cui_text_layout_line *wl = NULL;
@@ -61099,7 +61294,7 @@ int cui__text_field(cui_ctx *ui, cui_id id, char *buf, size_t cap, const cui_inp
 
     int len = (int)strlen(buf);
     bool has_error = o->error && *o->error;
-    float h = multiline ? (o->height > 0 ? o->height : 96) : cui__control_height(ui, o->size);
+    float h = o->height > 0 ? o->height : multiline ? 96 : cui__control_height(ui, o->size);
 
     int outer = -1;
     if (style == CUI__FIELD_BOXED && (o->label || o->hint || o->error)) {
@@ -61119,7 +61314,7 @@ int cui__text_field(cui_ctx *ui, cui_id id, char *buf, size_t cap, const cui_inp
     bn->h = fill_h ? CUI_FILL : CUI_PX(h);
     if (fill_h) bn->min_h = 80;
     bn->w = outer >= 0 ? CUI_FILL : (o->width.kind ? o->width : CUI_FILL);
-    bn->min_w = 80;
+    if (style == CUI__FIELD_BOXED) bn->min_w = 80;
     if (style == CUI__FIELD_BOXED) {
         float rad = CUI_MIN(ui->theme.radius_control, h * 0.5f);
         bn->radius = CUI_CORNERS(rad);
@@ -61154,7 +61349,7 @@ int cui__text_field(cui_ctx *ui, cui_id id, char *buf, size_t cap, const cui_inp
         cui__icon_node(ui, icon, 16, CUI_C(ui, TEXT_MUTED));
         cui__close(ui);
     }
-    int ar = cui__leaf(ui, area_id, CUI_FILL, multiline ? CUI_FILL : CUI_PX(line_h));
+    int ar = cui__leaf(ui, area_id, CUI_FILL, multiline ? CUI_FILL : CUI_PX(CUI_MIN(line_h, h)));
     cui_node *an_ = &ui->nodes[ar];
     an_->self_align = multiline ? CUI_ALIGN_STRETCH : CUI_ALIGN_CENTER;
     cui__edit_paint *p = cui__frame_alloc(ui, sizeof *p);
@@ -61163,14 +61358,16 @@ int cui__text_field(cui_ctx *ui, cui_id id, char *buf, size_t cap, const cui_inp
     p->cursor = e->cursor; p->anchor = e->anchor;
     p->focused = ui->focus == id;
     p->password = password;
+    p->password_mask = o->password_mask;
     p->multiline = multiline;
     p->scroll_x = e->scroll_x; p->scroll_y = e->scroll_y;
     p->caret_phase = ui->time - ui->caret_time;
     p->font = font; p->size = size;
     p->placeholder = o->placeholder;
-    p->text = CUI_C(ui, FOREGROUND);
+    p->text = o->text_color.a ? o->text_color : CUI_C(ui, FOREGROUND);
+    p->solid_caret = o->solid_caret;
     p->placeholder_color = CUI_C(ui, TEXT_MUTED);
-    p->caret = cui__emphasis(ui);
+    p->caret = o->caret_color.a ? o->caret_color : cui__emphasis(ui);
     p->selection = ui->accent == CUI_ACCENT_NEUTRAL ? cui_alpha(cui_oklch(0.6f, 0.13f, 250, 1), 0.28f) : cui_alpha(CUI_C(ui, ACCENT), 0.26f);
     p->line_h = line_h;
     if (multiline) {
@@ -61179,7 +61376,7 @@ int cui__text_field(cui_ctx *ui, cui_id id, char *buf, size_t cap, const cui_inp
     }
     an_->paint = cui__paint_edit;
     an_->paint_data = p;
-    if (p->focused) cui__wakeup_after(ui, 0.53f);
+    if (p->focused && (!p->solid_caret || multiline)) cui__wakeup_after(ui, 0.53f);
 
     if (o->suffix) {
         int st_ = cui__text_node(ui, o->suffix, -1, CUI_FONT_BODY, size, CUI_C(ui, TEXT_MUTED), false);
@@ -61207,7 +61404,7 @@ int cui__text_field(cui_ctx *ui, cui_id id, char *buf, size_t cap, const cui_inp
         cb->ty = 0;
         ui->nodes[box].pad[1] = 8;
     }
-    if (o->password) {
+    if (o->password && style == CUI__FIELD_BOXED) {
         cui_button_opts bo;
         memset(&bo, 0, sizeof bo);
         bo.size = CUI_SIZE_SM;
@@ -61239,11 +61436,18 @@ int cui__text_field(cui_ctx *ui, cui_id id, char *buf, size_t cap, const cui_inp
 }
 
 int cui_input_ex(cui_ctx *ui, const char *id, char *buf, size_t cap, const cui_input_opts *o) {
-    return cui__text_field(ui, cui_make_id(ui, id), buf, cap, o, false, CUI__FIELD_BOXED, NULL);
+    return cui__text_field(ui, cui_make_id(ui, id), buf, cap, o, false,
+                          o && o->bare ? CUI__FIELD_BARE : CUI__FIELD_BOXED, NULL);
+}
+
+void cui_text_field_focus(cui_ctx *ui, const char *id, bool select_all) {
+    ui->focus = cui_make_id(ui, id);
+    if (select_all) ui->tf_select_all = ui->focus;
 }
 
 int cui_textarea_ex(cui_ctx *ui, const char *id, char *buf, size_t cap, const cui_input_opts *o) {
-    return cui__text_field(ui, cui_make_id(ui, id), buf, cap, o, true, CUI__FIELD_BOXED, NULL);
+    return cui__text_field(ui, cui_make_id(ui, id), buf, cap, o, true,
+                          o && o->bare ? CUI__FIELD_BARE : CUI__FIELD_BOXED, NULL);
 }
 
 int cui_search_ex(cui_ctx *ui, const char *id, char *buf, size_t cap, const cui_input_opts *o) {
@@ -68307,6 +68511,17 @@ cui_texture cui_image_create(cui_ctx *ui, int w, int h, const void *rgba) {
     return ui->renderer.texture_create(ui->renderer.user, w, h, CUI_TEXTURE_RGBA8, rgba);
 }
 
+cui_texture cui_image_create_nearest(cui_ctx *ui, int w, int h, const void *rgba) {
+    if (!ui->renderer.texture_create) return 0;
+    return ui->renderer.texture_create(ui->renderer.user, w, h, CUI_TEXTURE_RGBA8_NEAREST, rgba);
+}
+
+bool cui_image_update(cui_ctx *ui, cui_texture tex, int width, int height, const void *rgba) {
+    if (!tex || width <= 0 || height <= 0 || !rgba || !ui->renderer.texture_update) return false;
+    ui->renderer.texture_update(ui->renderer.user, tex, 0, 0, width, height, rgba, width * 4);
+    return true;
+}
+
 void cui_image_destroy(cui_ctx *ui, cui_texture tex) {
     if (tex && ui->renderer.texture_destroy) ui->renderer.texture_destroy(ui->renderer.user, tex);
 }
@@ -68341,16 +68556,9 @@ static void cui__paint_canvas(cui_ctx *ui, cui_node *n, void *data) {
     cui_pop_clip(ui);
 }
 
-cui_canvas_result cui_canvas(cui_ctx *ui, const char *id_str, cui_size w, cui_size h, cui_paint_fn paint, const void *user, size_t user_size) {
-    cui_canvas_result res;
-    memset(&res, 0, sizeof res);
-    cui_id id = cui_make_id(ui, id_str ? id_str : "canvas");
-    cui_interact r = cui__interact(ui, id, CUI_IF_DRAG);
-    res.rect = cui__prev_rect(ui, id);
-    res.hovered = r.hovered; res.pressed = r.pressed; res.clicked = r.clicked;
-    res.mouse.x = ui->mx - res.rect.x; res.mouse.y = ui->my - res.rect.y;
+static void cui__canvas_node(cui_ctx *ui, cui_id id, cui_size w, cui_size h, cui_paint_fn paint, const void *user, size_t user_size) {
     int i = cui__leaf(ui, id, w, h);
-    cui__mark_interactive(ui, i, 0);
+    if (id) cui__mark_interactive(ui, i, 0);
     if (paint) {
         cui__canvas_paint *p = cui__frame_alloc(ui, sizeof *p);
         p->fn = paint;
@@ -68359,8 +68567,22 @@ cui_canvas_result cui_canvas(cui_ctx *ui, const char *id_str, cui_size w, cui_si
         ui->nodes[i].paint = cui__paint_canvas;
         ui->nodes[i].paint_data = p;
     }
+}
+
+cui_canvas_result cui_canvas(cui_ctx *ui, const char *id_str, cui_size w, cui_size h, cui_paint_fn paint, const void *user, size_t user_size) {
+    cui_canvas_result res;
+    cui_id id = cui_make_id(ui, id_str ? id_str : "canvas");
+    cui_interact r = cui__interact(ui, id, CUI_IF_DRAG);
+    res.rect = cui__prev_rect(ui, id);
+    res.hovered = r.hovered; res.pressed = r.pressed; res.clicked = r.clicked;
+    res.mouse.x = ui->mx - res.rect.x; res.mouse.y = ui->my - res.rect.y;
+    cui__canvas_node(ui, id, w, h, paint, user, user_size);
     ui->last_id = id;
     return res;
+}
+
+void cui_canvas_paint(cui_ctx *ui, cui_size w, cui_size h, cui_paint_fn paint, const void *user, size_t user_size) {
+    cui__canvas_node(ui, 0, w, h, paint, user, user_size);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -68719,7 +68941,7 @@ static cui_texture cui__sw_tex_create(void *user, int w, int h, cui_texture_form
     cui__sw_tex *t = &r->tex[slot];
     cui__sw_note_change(r, (cui_texture)(slot + 1), 0, 0, w, h);
     t->w = w; t->h = h; t->fmt = fmt; t->used = true;
-    size_t bytes = (size_t)w * (size_t)h * (size_t)fmt;
+    size_t bytes = (size_t)w * (size_t)h * (fmt == CUI_TEXTURE_R8 ? 1 : 4);
     t->data = cui__sw_xrealloc(NULL, bytes);
     if (pixels) memcpy(t->data, pixels, bytes);
     else memset(t->data, 0, bytes);
@@ -68732,7 +68954,7 @@ static void cui__sw_tex_update(void *user, cui_texture tex, int x, int y, int w,
     if (slot < 0 || slot >= r->tex_count || !r->tex[slot].used) return;
     cui__sw_tex *t = &r->tex[slot];
     cui__sw_note_change(r, tex, x, y, x + w, y + h);
-    int bpp = (int)t->fmt;
+    int bpp = t->fmt == CUI_TEXTURE_R8 ? 1 : 4;
     const uint8_t *src = pixels;
     for (int row = 0; row < h; row++) {
         if (y + row < 0 || y + row >= t->h) continue;
@@ -68867,6 +69089,13 @@ static float cui__sample_r8(const cui__sw_tex *t, float u, float v) {
 }
 
 static cui__px cui__sample_rgba(const cui__sw_tex *t, float u, float v) {
+    if (t->fmt == CUI_TEXTURE_RGBA8_NEAREST) {
+        int x = CUI_CLAMP((int)floorf(u * t->w), 0, t->w - 1);
+        int y = CUI_CLAMP((int)floorf(v * t->h), 0, t->h - 1);
+        const uint8_t *p = t->data + ((size_t)y * (size_t)t->w + (size_t)x) * 4;
+        float a = p[3] / 255.0f;
+        return (cui__px){ p[0] / 255.0f * a, p[1] / 255.0f * a, p[2] / 255.0f * a, a };
+    }
     float x = u * (float)t->w - 0.5f, y = v * (float)t->h - 0.5f;
     int x0 = (int)floorf(x), y0 = (int)floorf(y);
     float fx = x - (float)x0, fy = y - (float)y0;
@@ -68911,7 +69140,7 @@ static inline uint8_t cui__blend_ch(float s, uint8_t d, float ia) {
 
 /* inlined: it runs once per drawn pixel that is not a plain fill */
 static CUI__HOT_INLINE void cui__blend(uint8_t *p, cui__px s, bool bgra) {
-    if (s.a <= 0.0005f) return;
+    if (s.a <= 0.0005f && (s.a > 0 || (s.r == 0 && s.g == 0 && s.b == 0))) return;
     if (s.a >= 0.9995f) {
         int ri = bgra ? 2 : 0, bi = bgra ? 0 : 2;
         p[ri] = (uint8_t)(cui__sat(s.r) * 255.0f + 0.5f); p[1] = (uint8_t)(cui__sat(s.g) * 255.0f + 0.5f);
@@ -69008,8 +69237,9 @@ static void cui__raster_tri(const cui__sw_job *job, const cui_vertex *a, const c
                 ca = (a->color.a * w0 + b->color.a * w1 + c->color.a * w2) / 255.0f;
             }
             cui__px o;
-            if (mode == CUI_SHADE_SOLID) {
-                o.r = cr * ca; o.g = cg * ca; o.b = cb * ca; o.a = ca;
+            if (mode == CUI_SHADE_SOLID || mode == CUI_SHADE_SOLID_PREMULTIPLIED) {
+                float k = mode == CUI_SHADE_SOLID_PREMULTIPLIED ? 1.0f : ca;
+                o.r = cr * k; o.g = cg * k; o.b = cb * k; o.a = ca;
             } else if (mode == CUI_SHADE_TEXT) {
                 float u = a->u * w0 + b->u * w1 + c->u * w2, v = a->v * w0 + b->v * w1 + c->v * w2;
                 float cov = tex && tex->fmt == CUI_TEXTURE_R8 ? cui__sample_r8(tex, u, v) : 1.0f;
@@ -69034,9 +69264,10 @@ static void cui__raster_tri(const cui__sw_job *job, const cui_vertex *a, const c
                     float cov = cui__sat(0.5f - d);
                     if (cov <= 0) continue;
                     float u = a->u * w0 + b->u * w1 + c->u * w2, v = a->v * w0 + b->v * w1 + c->v * w2;
-                    cui__px t = tex && tex->fmt == CUI_TEXTURE_RGBA8 ? cui__sample_rgba(tex, u, v) : (cui__px){ 1, 1, 1, 1 };
+                    cui__px t = tex && tex->fmt != CUI_TEXTURE_R8 ? cui__sample_rgba(tex, u, v) : (cui__px){ 1, 1, 1, 1 };
                     float k = ca * cov;
-                    o.r = t.r * cr * k; o.g = t.g * cg * k; o.b = t.b * cb * k; o.a = t.a * k;
+                    o.r = t.r * cr * k; o.g = t.g * cg * k; o.b = t.b * cb * k;
+                    o.a = mode == CUI_SHADE_IMAGE_ADDITIVE ? 0 : t.a * k;
                 }
             }
             cui__blend(row + (size_t)x * 4, o, bgra);
@@ -69068,6 +69299,7 @@ static bool cui__raster_quad(const cui__sw_job *job, const cui_vertex *v0, const
     float bcr = v0->border_color.r / 255.0f, bcg = v0->border_color.g / 255.0f, bcb = v0->border_color.b / 255.0f, bca = v0->border_color.a / 255.0f;
     float du = (v1->u - v0->u) / qw, dv = (v3->v - v0->v) / qh;
     bool text_exact = mode == CUI_SHADE_TEXT && tex && fabsf(du * (float)tex->w - 1.0f) < 0.001f && fabsf(dv * (float)tex->h - 1.0f) < 0.001f;
+    bool solid = mode == CUI_SHADE_SOLID || mode == CUI_SHADE_SOLID_PREMULTIPLIED;
     cui__blend_lut lut;
     lut.ok = false;
     for (int y = y0; y < y1; y++) {
@@ -69113,8 +69345,8 @@ static bool cui__raster_quad(const cui__sw_job *job, const cui_vertex *v0, const
          * and do it in one go: fill it when opaque, skip it when clear (a border-only box),
          * blend one color over it otherwise. The loop does the edges. */
         int sx0 = x1, sx1 = x1;
-        if (mode == CUI_SHADE_SOLID || mode == CUI_SHADE_RRECT || mode == CUI_SHADE_SHADOW) {
-            if (mode == CUI_SHADE_SOLID) { sx0 = x0; sx1 = x1; }
+        if (solid || mode == CUI_SHADE_RRECT || mode == CUI_SHADE_SHADOW) {
+            if (solid) { sx0 = x0; sx1 = x1; }
             else {
                 /* a rounded rectangle: inside its border; a shadow: four blur widths inside the
                  * shape, where erf is exactly -1 in float and the shadow is the plain color */
@@ -69133,7 +69365,10 @@ static bool cui__raster_quad(const cui__sw_job *job, const cui_vertex *v0, const
                 uint8_t *p = row + (size_t)sx0 * 4;
                 int n = sx1 - sx0;
                 if (ca >= 0.999f && mode != CUI_SHADE_SHADOW) for (int k = 0; k < n; k++) memcpy(p + (size_t)k * 4, opaque, 4);   /* any alignment */
-                else if (ca > 0.0005f) cui__blend_run(p, n, (cui__px){ cr * ca, cg * ca, cb * ca, ca }, bgra, &lut);
+                else if (ca > 0.0005f) {
+                    float k = mode == CUI_SHADE_SOLID_PREMULTIPLIED ? 1.0f : ca;
+                    cui__blend_run(p, n, (cui__px){ cr * k, cg * k, cb * k, ca }, bgra, &lut);
+                }
             }
         }
         for (int x = x0; x < x1; x++) {
@@ -69172,9 +69407,10 @@ static bool cui__raster_quad(const cui__sw_job *job, const cui_vertex *v0, const
                 float cov = cui__sat(0.5f - d);
                 if (cov <= 0) continue;
                 float u = v0->u + (px - qx0) * du, vv = v0->v + (py - qy0) * dv;
-                cui__px t = tex && tex->fmt == CUI_TEXTURE_RGBA8 ? cui__sample_rgba(tex, u, vv) : (cui__px){ 1, 1, 1, 1 };
+                cui__px t = tex && tex->fmt != CUI_TEXTURE_R8 ? cui__sample_rgba(tex, u, vv) : (cui__px){ 1, 1, 1, 1 };
                 float k = ca * cov;
-                o.r = t.r * cr * k; o.g = t.g * cg * k; o.b = t.b * cb * k; o.a = t.a * k;
+                o.r = t.r * cr * k; o.g = t.g * cg * k; o.b = t.b * cb * k;
+                o.a = mode == CUI_SHADE_IMAGE_ADDITIVE ? 0 : t.a * k;
             }
             cui__blend(row + (size_t)x * 4, o, bgra);
         }
@@ -71156,6 +71392,7 @@ typedef unsigned int GLbitfield_;
 #define GL_RED_ 0x1903
 #define GL_RGBA_ 0x1908
 #define GL_RGBA8_ 0x8058
+#define GL_NEAREST_ 0x2600
 #define GL_UNPACK_ALIGNMENT_ 0x0CF5
 #define GL_UNPACK_ROW_LENGTH_ 0x0CF2
 #define GL_ARRAY_BUFFER_ 0x8892
@@ -71276,6 +71513,7 @@ static const char *cui__fs_src =
     "  int mode = int(v_params.y + 0.5);\n"
     "  vec4 c = v_color;\n"
     "  if (mode == 4) { frag = vec4(c.rgb * c.a, c.a); return; }\n"
+    "  if (mode == 5) { frag = c; return; }\n"
     "  if (mode == 0) { float a = c.a * texture(u_tex, v_uv).r; frag = vec4(c.rgb * a, a); return; }\n"
     "  float d = sd_rrect(v_local, v_half, v_radii);\n"
     "  if (mode == 1) {\n"
@@ -71292,7 +71530,7 @@ static const char *cui__fs_src =
     "    float cov = clamp(0.5 - d, 0.0, 1.0);\n"
     "    vec4 t = texture(u_tex, v_uv);\n"
     "    float k = c.a * cov;\n"
-    "    frag = vec4(t.rgb * t.a * c.rgb * k, t.a * k);\n"
+    "    frag = vec4(t.rgb * t.a * c.rgb * k, mode == 6 ? 0.0 : t.a * k);\n"
     "  }\n"
     "}\n";
 
@@ -71425,8 +71663,9 @@ static cui_texture cui__gl_tex_create(void *user, int w, int h, cui_texture_form
     GLuint_ id = 0;
     r->gl.GenTextures(1, &id);
     r->gl.BindTexture(GL_TEXTURE_2D_, id);
-    r->gl.TexParameteri(GL_TEXTURE_2D_, GL_TEXTURE_MIN_FILTER_, GL_LINEAR_);
-    r->gl.TexParameteri(GL_TEXTURE_2D_, GL_TEXTURE_MAG_FILTER_, GL_LINEAR_);
+    GLint_ filter = fmt == CUI_TEXTURE_RGBA8_NEAREST ? GL_NEAREST_ : GL_LINEAR_;
+    r->gl.TexParameteri(GL_TEXTURE_2D_, GL_TEXTURE_MIN_FILTER_, filter);
+    r->gl.TexParameteri(GL_TEXTURE_2D_, GL_TEXTURE_MAG_FILTER_, filter);
     r->gl.TexParameteri(GL_TEXTURE_2D_, GL_TEXTURE_WRAP_S_, GL_CLAMP_TO_EDGE_);
     r->gl.TexParameteri(GL_TEXTURE_2D_, GL_TEXTURE_WRAP_T_, GL_CLAMP_TO_EDGE_);
     r->gl.PixelStorei(GL_UNPACK_ALIGNMENT_, 1);
@@ -71444,7 +71683,7 @@ static void cui__gl_tex_update(void *user, cui_texture tex, int x, int y, int w,
     cui_gl_renderer *r = user;
     int slot = (int)tex - 1;
     if (slot < 0 || slot >= r->tex_count || !r->tex[slot].id) return;
-    int bpp = (int)r->tex[slot].fmt;
+    int bpp = r->tex[slot].fmt == CUI_TEXTURE_R8 ? 1 : 4;
     r->gl.BindTexture(GL_TEXTURE_2D_, r->tex[slot].id);
     r->gl.PixelStorei(GL_UNPACK_ALIGNMENT_, 1);
     r->gl.PixelStorei(GL_UNPACK_ROW_LENGTH_, stride / bpp);

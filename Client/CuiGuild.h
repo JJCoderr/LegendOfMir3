@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -20,6 +21,7 @@ struct GuildOverview {
     bool manager = false;
     int section = 0;
     std::vector<std::string> rows;
+    std::map<std::size_t, int> headingIds;
     std::vector<std::string> editable;
 
     bool Apply(const std::string& body, bool initial)
@@ -52,9 +54,11 @@ private:
             cursor = end + 1;
             if (line.compare(0, 8, "<Notice>") == 0) {
                 section = 1;
+                headingIds.emplace(rows.size(), 4004);
                 rows.emplace_back("Announcement");
             } else if (line == "<KillGuilds>" || line == "<AllyGuilds>") {
                 section = line == "<KillGuilds>" ? 2 : 3;
+                headingIds.emplace(rows.size(), section == 2 ? 4005 : 4006);
                 rows.emplace_back(section == 2 ? "Rival guilds" : "Allied guilds");
             } else if (initial) {
                 if (line.size() > 4095) return false;
@@ -80,11 +84,13 @@ private:
 struct GuildRoster {
     std::vector<std::string> rows;
     std::vector<std::string> editable;
+    bool received = false;
 
     bool Apply(const std::string& body, bool manager)
     {
         if (body.size() > 8191) return false;
         GuildRoster next;
+        next.received = true;
         std::string line;
         long rank = 0;
         std::size_t cursor = 0;
@@ -151,7 +157,8 @@ struct GuildPanel {
     GuildAction action = GuildAction::None;
     GuildOverview overview;
     GuildRoster roster;
-    std::vector<std::string> history;
+    std::vector<int> history;
+    unsigned overviewRevision = 0;
     int notice = 0;
     int editor = 0;
     char input[16000] = {};

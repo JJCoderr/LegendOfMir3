@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CuiLegacy/hud/chat_history.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -67,6 +69,7 @@ struct ChatLine {
 
 struct ChatPanel {
     std::deque<ChatLine> lines;
+    mir3::ChatHistory nativeHistory;
     std::vector<std::string> contacts;
     std::vector<std::string> phrases;
     char draft[361] = {};
@@ -82,10 +85,11 @@ struct ChatPanel {
     ChatReception reception;
     std::string error;
 
-    void Append(unsigned opcode, const std::string& text)
+    void Append(unsigned opcode, const std::string& text, unsigned ink = 0xffffff, unsigned backing = 0)
     {
         if (lines.size() == 79) lines.pop_front();
         lines.push_back({opcode, text});
+        nativeHistory.post(text,ink,backing);
         scrollToEnd = true;
     }
 

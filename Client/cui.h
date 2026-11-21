@@ -334,7 +334,9 @@ typedef enum cui_accent {
     CUI_ACCENT_COUNT
 } cui_accent;
 
-typedef enum cui_texture_format { CUI_TEXTURE_R8 = 1, CUI_TEXTURE_RGBA8 = 4 } cui_texture_format;
+typedef enum cui_texture_format {
+    CUI_TEXTURE_R8 = 1, CUI_TEXTURE_RGBA8 = 4, CUI_TEXTURE_RGBA8_NEAREST
+} cui_texture_format;
 typedef uintptr_t cui_texture;
 
 /* How CUI talks to a renderer. The built-in renderers fill this in for you
@@ -478,6 +480,11 @@ CUI_API int cui_key_mods(cui_ctx *ui);
 CUI_API cui_vec2 cui_mouse_pos(cui_ctx *ui);
 CUI_API bool cui_mouse_down(cui_ctx *ui, cui_mouse_button b);
 CUI_API bool cui_mouse_clicked(cui_ctx *ui, cui_mouse_button b);
+CUI_API bool cui_mouse_double_clicked(cui_ctx *ui);
+CUI_API void cui_consume_mouse_press(cui_ctx *ui, cui_mouse_button b);
+CUI_API bool cui_mouse_released(cui_ctx *ui, cui_mouse_button b);
+CUI_API cui_vec2 cui_mouse_scroll(cui_ctx *ui);
+CUI_API cui_vec2 cui_take_mouse_scroll(cui_ctx *ui);
 /* True when a text field has keyboard focus (so the app should not treat
  * typing as shortcuts). */
 CUI_API bool cui_wants_keyboard(cui_ctx *ui);
@@ -562,6 +569,7 @@ enum {
 /* Load a TrueType/OpenType font. The data must stay alive if copy is false.
  * Returns a font id, or -1 on failure. */
 CUI_API cui_font cui_font_load_memory(cui_ctx *ui, const void *data, size_t size, bool copy);
+CUI_API cui_font cui_font_load_mono_memory(cui_ctx *ui, const void *data, size_t size, bool copy);
 CUI_API cui_font cui_font_load_file(cui_ctx *ui, const char *path);
 /* Replace one of the built-in roles (e.g. use your brand font as CUI_FONT_BODY). */
 CUI_API void cui_font_set_role(cui_ctx *ui, cui_font role, cui_font font);
@@ -623,6 +631,10 @@ typedef struct cui_box {
 } cui_box;
 
 CUI_API cui_id cui_box_begin(cui_ctx *ui, const cui_box *opts);
+/* Position a container relative to its parent without affecting sibling layout. */
+CUI_API void cui_fixed_begin(cui_ctx *ui, cui_rect rect);
+/* Position a container like cui_fixed_begin and paint it above the parent's flow children. */
+CUI_API void cui_overlay_begin(cui_ctx *ui, cui_rect rect);
 CUI_API void cui_box_end(cui_ctx *ui);
 CUI_API cui_id cui_row_begin(cui_ctx *ui, const cui_box *opts);
 CUI_API cui_id cui_column_begin(cui_ctx *ui, const cui_box *opts);
@@ -809,10 +821,22 @@ typedef struct cui_input_opts {
     float height;              /* textarea: height in points; negative fills the space */
     const char *prefix;        /* muted text before the value, e.g. "$" or "https://" */
     const char *suffix;        /* muted text after the value, e.g. "USD" or "kg" */
+    bool bare;                /* no frame or password reveal button */
+    bool keep_tab;            /* leave Tab to the enclosing dialog while focused */
+    bool keep_escape;         /* Escape leaves the editor focused */
+    char password_mask;       /* ASCII glyph, defaults to a bullet */
+    float font_size;           /* points, zero uses the theme */
+    cui_font font;             /* zero uses the body font */
+    int byte_limit;            /* optional limit in the encoding measured below */
+    int (*measure_bytes)(const char *utf8, int length);
+    cui_color text_color;      /* unset uses the theme foreground */
+    cui_color caret_color;     /* unset uses the theme emphasis */
+    bool solid_caret;          /* one-pixel steady caret in a single-line editor */
 } cui_input_opts;
 
 /* Single line text field. Returns CUI_CHANGED / CUI_SUBMITTED (Enter) flags. */
 CUI_API int cui_input_ex(cui_ctx *ui, const char *id, char *buf, size_t cap, const cui_input_opts *opts);
+CUI_API void cui_text_field_focus(cui_ctx *ui, const char *id, bool select_all);
 /* Multi-line text area with word wrap. */
 CUI_API int cui_textarea_ex(cui_ctx *ui, const char *id, char *buf, size_t cap, const cui_input_opts *opts);
 /* Search field with a search icon and a clear button. */
@@ -973,6 +997,11 @@ CUI_API void cui_dialog_end(cui_ctx *ui);
 /* A right-aligned row for dialog actions. */
 CUI_API void cui_dialog_footer_begin(cui_ctx *ui);
 CUI_API void cui_dialog_footer_end(cui_ctx *ui);
+
+/* Independent floating panel with a draggable title and scrolling content.
+ * Bounds supply its initial position and current preferred size. */
+CUI_API bool cui_panel_begin(cui_ctx *ui, const char *title, bool *open, cui_rect bounds);
+CUI_API void cui_panel_end(cui_ctx *ui);
 
 typedef enum cui_side { CUI_SIDE_RIGHT = 0, CUI_SIDE_LEFT, CUI_SIDE_BOTTOM, CUI_SIDE_TOP } cui_side;
 typedef struct cui_sheet_opts { int _; cui_side side; float size; const char *description; } cui_sheet_opts;
@@ -1166,7 +1195,12 @@ CUI_API void cui_gauge(cui_ctx *ui, const char *label, float value, float size);
 
 /* Images */
 CUI_API cui_texture cui_image_create(cui_ctx *ui, int w, int h, const void *rgba);
+CUI_API cui_texture cui_image_create_nearest(cui_ctx *ui, int w, int h, const void *rgba);
+CUI_API bool cui_image_update(cui_ctx *ui, cui_texture tex, int width, int height, const void *rgba);
 CUI_API cui_texture cui_image_load(cui_ctx *ui, const char *path, int *w, int *h);   /* PNG/JPEG via stb_image */
+/* Decode a JPEG buffer. The dimensions must fit max_side before decoding. */
+CUI_API cui_texture cui_image_load_jpeg(cui_ctx *ui, const void *data, int len, int max_side,
+                                       int *w, int *h);
 CUI_API void cui_image_destroy(cui_ctx *ui, cui_texture tex);
 typedef struct cui_image_opts {
     int _;
@@ -4407,6 +4441,8 @@ typedef struct cui_corners { float tl, tr, br, bl; } cui_corners;
 #define CUI_CORNERS(r) (CUI__LIT(cui_corners){ (r), (r), (r), (r) })
 
 CUI_API void cui_draw_rect(cui_ctx *ui, cui_rect r, cui_corners radius, cui_color fill);
+/* Draw a solid rectangle with RGB already supplied in premultiplied form. */
+CUI_API void cui_draw_rect_premultiplied(cui_ctx *ui, cui_rect r, cui_color fill);
 CUI_API void cui_draw_rect_border(cui_ctx *ui, cui_rect r, cui_corners radius, cui_color fill, cui_color border, float border_width);
 CUI_API void cui_draw_rect_gradient(cui_ctx *ui, cui_rect r, cui_corners radius, cui_color top, cui_color bottom);
 CUI_API void cui_draw_shadow(cui_ctx *ui, cui_rect r, cui_corners radius, float blur, float spread, cui_vec2 offset, cui_color color);
@@ -4418,6 +4454,7 @@ CUI_API void cui_draw_arc(cui_ctx *ui, cui_vec2 center, float radius, float a0, 
 CUI_API void cui_draw_text(cui_ctx *ui, cui_font font, float size, cui_vec2 pos, cui_color color, const char *text, int len);
 CUI_API void cui_draw_icon(cui_ctx *ui, const char *icon, cui_rect r, float size, cui_color color);
 CUI_API void cui_draw_image(cui_ctx *ui, cui_texture tex, cui_rect r, cui_rect uv, cui_corners radius, cui_color tint);
+CUI_API void cui_draw_image_additive(cui_ctx *ui, cui_texture tex, cui_rect r);
 CUI_API void cui_push_clip(cui_ctx *ui, cui_rect r);
 CUI_API void cui_pop_clip(cui_ctx *ui);
 
@@ -4426,6 +4463,7 @@ CUI_API void cui_pop_clip(cui_ctx *ui);
 typedef void (*cui_paint_fn)(cui_ctx *ui, cui_rect rect, void *user);
 typedef struct cui_canvas_result { cui_rect rect; bool hovered, pressed, clicked; cui_vec2 mouse; } cui_canvas_result;
 CUI_API cui_canvas_result cui_canvas(cui_ctx *ui, const char *id, cui_size width, cui_size height, cui_paint_fn paint, const void *user, size_t user_size);
+CUI_API void cui_canvas_paint(cui_ctx *ui, cui_size width, cui_size height, cui_paint_fn paint, const void *user, size_t user_size);
 
 /* Persistent per-id storage for your own components (zeroed on first use).
  * State not used for about 300 frames is freed (and zeroed again if it comes
@@ -4445,7 +4483,8 @@ CUI_API float cui_animate_spring(cui_ctx *ui, cui_id id, float target, float dur
 /* ------------------------------------------------------------------------ */
 
 /* Vertex shading modes. See docs/rendering.md for the reference shader. */
-enum { CUI_SHADE_TEXT = 0, CUI_SHADE_RRECT = 1, CUI_SHADE_SHADOW = 2, CUI_SHADE_IMAGE = 3, CUI_SHADE_SOLID = 4 };
+enum { CUI_SHADE_TEXT = 0, CUI_SHADE_RRECT = 1, CUI_SHADE_SHADOW = 2, CUI_SHADE_IMAGE = 3,
+       CUI_SHADE_SOLID = 4, CUI_SHADE_SOLID_PREMULTIPLIED = 5, CUI_SHADE_IMAGE_ADDITIVE = 6 };
 
 typedef struct cui_vertex {
     float x, y;            /* position in pixels */

@@ -47,7 +47,7 @@ struct PartyPanel {
     PartyAction action = PartyAction::None;
     PartyNotice notice;
     std::vector<std::string> members;
-    char name[125] = {};
+    char name[361] = {};
     int editor = 0;
     bool cancelSelected = false;
     bool tabDown = false;

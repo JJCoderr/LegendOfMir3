@@ -96,7 +96,16 @@ target_include_directories(Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/AVI
 )
 
-add_executable(Mir3CuiClient WIN32 CuiClient.cpp CuiAudio.cpp cui.c Common/EnDecode.cpp)
+add_executable(Mir3CuiClient WIN32 CuiClient.cpp Dialogs.cpp CuiAudio.cpp cui.c Common/EnDecode.cpp)
+target_sources(Mir3CuiClient PRIVATE
+    CuiLegacy/hud/chat_history.cpp
+    CuiLegacy/resources/legacy_movie.cpp
+    CuiLegacy/resources/wil_archive.cpp
+    CuiLegacy/resources/messages.cpp
+    CuiLegacy/text/native_text.cpp
+)
+target_compile_features(Mir3CuiClient PRIVATE cxx_std_20)
+target_include_directories(Mir3CuiClient PRIVATE CuiLegacy)
 set_target_properties(Mir3CuiClient PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED ON)
 set_property(SOURCE cui.c APPEND PROPERTY COMPILE_OPTIONS /utf-8)
-target_link_libraries(Mir3CuiClient PRIVATE ws2_32 opengl32 gdi32 user32 imm32 comdlg32 shell32 ole32 xaudio2)
+target_link_libraries(Mir3CuiClient PRIVATE ws2_32 opengl32 gdi32 user32 imm32 comdlg32 shell32 ole32 xaudio2 vfw32)

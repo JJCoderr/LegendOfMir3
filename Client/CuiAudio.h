@@ -15,6 +15,17 @@ struct AudioOptions {
     int musicLevel = 0;
     int effectsLevel = 0;
 
+    static constexpr int KnobFromLevel(int level) { return 9 * (level + 100) / 5; }
+    static constexpr int LevelFromKnob(int offset) { return (5 * offset - 900) / 9; }
+    static constexpr int KnobOffset(int x) { return x < 288 ? 0 : x > 468 ? 185 : x - 288; }
+    static constexpr int TrackStep(int offset, int x)
+    {
+        if (x <= 266 || x >= 487) return offset;
+        if (x > offset + 292 || x > 477) return offset + 9 > 180 ? 185 : offset + 9;
+        if (x < offset + 276 || x < 275) return offset < 9 ? 0 : offset - 9;
+        return offset;
+    }
+
     void Load(const wchar_t* path);
     bool Save(const wchar_t* path) const;
 };
@@ -27,7 +38,11 @@ public:
     ~AudioPlayer();
 
     void SetMusic(const wchar_t* path, const AudioOptions& options);
+    void PauseMusic(bool pause);
     void PlayEffect(const wchar_t* path, const AudioOptions& options);
+    void PlayMovieAudio(const std::vector<unsigned char>& samples, int channels, int rate, int bits,
+                        const AudioOptions& options);
+    void StopMovieAudio();
     void Apply(const AudioOptions& options);
     const std::string& Error() const { return error_; }
 
@@ -43,6 +58,8 @@ private:
     IXAudio2MasteringVoice* output_ = nullptr;
     Track music_;
     Track effect_;
+    Track movie_;
+    bool musicPaused_ = false;
     std::wstring musicPath_;
     std::string error_;
 

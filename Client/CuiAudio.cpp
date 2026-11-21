@@ -16,7 +16,7 @@ int NormalizeLevel(int value)
 float Volume(bool enabled, int level)
 {
     // Godot maps each level to 0.4 dB. XAudio2 expects linear amplitude.
-    return enabled ? static_cast<float>(std::pow(10.0, NormalizeLevel(level) / 50.0)) : 0.0f;
+    return enabled ? static_cast<float>(std::pow(10.0, (level >= -100 && level <= 2 ? level : 0) / 50.0)) : 0.0f;
 }
 
 std::uint32_t ReadU32(const unsigned char* bytes)
@@ -35,7 +35,8 @@ WORD ReadU16(const unsigned char* bytes)
 void AudioOptions::Load(const wchar_t* path)
 {
     const auto read = [&](const wchar_t* key, int fallback) {
-        return static_cast<int>(GetPrivateProfileIntW(L"Audio", key, fallback, path));
+        const auto legacy = static_cast<int>(GetPrivateProfileIntW(L"Audio", key, fallback, path));
+        return static_cast<int>(GetPrivateProfileIntW(L"Options", key, legacy, path));
     };
     music = read(L"BGM", 1) != 0;
     effects = read(L"EffectSound", 1) != 0;
@@ -47,18 +48,21 @@ void AudioOptions::Load(const wchar_t* path)
 bool AudioOptions::Save(const wchar_t* path) const
 {
     std::wstring section;
+    bool saved = true;
     const auto append = [&](const wchar_t* key, int value) {
+        const auto text = std::to_wstring(value);
+        saved = WritePrivateProfileStringW(L"Options", key, text.c_str(), path) != 0 && saved;
         section += key;
         section += '=';
-        section += std::to_wstring(value);
+        section += text;
         section += L'\0';
     };
     append(L"BGM", music);
     append(L"EffectSound", effects);
     append(L"ReversePan", reversePan);
-    append(L"BGMLevel", NormalizeLevel(musicLevel));
-    append(L"EffectSoundLevel", NormalizeLevel(effectsLevel));
-    return WritePrivateProfileSectionW(L"Audio", section.c_str(), path) != 0;
+    append(L"BGMLevel", musicLevel);
+    append(L"EffectSoundLevel", effectsLevel);
+    return WritePrivateProfileSectionW(L"Audio", section.c_str(), path) != 0 && saved;
 }
 
 void AudioPlayer::Track::Clear()
@@ -73,6 +77,7 @@ AudioPlayer::~AudioPlayer()
 {
     music_.Clear();
     effect_.Clear();
+    movie_.Clear();
     if (output_) output_->DestroyVoice();
     if (engine_) engine_->Release();
 }
@@ -160,7 +165,8 @@ bool AudioPlayer::Start(Track& track, bool loop, const AudioOptions& options)
     buffer.pAudioData = track.samples.data();
     buffer.LoopCount = loop ? XAUDIO2_LOOP_INFINITE : 0;
     Apply(options);
-    if (FAILED(track.voice->SubmitSourceBuffer(&buffer)) || FAILED(track.voice->Start())) {
+    if (FAILED(track.voice->SubmitSourceBuffer(&buffer)) ||
+        ((!loop || !musicPaused_) && FAILED(track.voice->Start()))) {
         error_ = "Could not play the audio track.";
         track.Clear();
         return false;
@@ -197,16 +203,45 @@ void AudioPlayer::PlayEffect(const wchar_t* path, const AudioOptions& options)
     Start(effect_, false, options);
 }
 
+void AudioPlayer::PauseMusic(bool pause)
+{
+    if (musicPaused_ == pause) return;
+    musicPaused_ = pause;
+    if (!music_.voice) return;
+    if (pause) music_.voice->Stop();
+    else music_.voice->Start();
+}
+
+void AudioPlayer::PlayMovieAudio(const std::vector<unsigned char>& samples, int channels, int rate, int bits,
+                                 const AudioOptions& options)
+{
+    StopMovieAudio();
+    if (!options.effects || samples.empty() || (channels != 1 && channels != 2) ||
+        (bits != 8 && bits != 16) || rate < XAUDIO2_MIN_SAMPLE_RATE || rate > XAUDIO2_MAX_SAMPLE_RATE)
+        return;
+    const auto align = static_cast<WORD>(channels * (bits / 8));
+    if (samples.size() % align || samples.size() > XAUDIO2_MAX_BUFFER_BYTES) return;
+    movie_.format = {WAVE_FORMAT_PCM, static_cast<WORD>(channels), static_cast<DWORD>(rate),
+                     static_cast<DWORD>(rate * align), align, static_cast<WORD>(bits), 0};
+    movie_.samples = samples;
+    Start(movie_, false, options);
+}
+
+void AudioPlayer::StopMovieAudio()
+{
+    movie_.Clear();
+}
+
 void AudioPlayer::Apply(const AudioOptions& options)
 {
     if (music_.voice) music_.voice->SetVolume(Volume(options.music, options.musicLevel));
-    if (!effect_.voice) return;
-    effect_.voice->SetVolume(Volume(options.effects, options.effectsLevel));
-    if (effect_.format.nChannels == 2) {
-        const float normal = options.reversePan ? 0.0f : 1.0f;
-        const float swapped = 1.0f - normal;
-        const float matrix[] = {normal, swapped, swapped, normal};
-        effect_.voice->SetOutputMatrix(output_, 2, 2, matrix);
+    const float normal = options.reversePan ? 0.0f : 1.0f;
+    const float swapped = options.reversePan ? 1.0f : 0.0f;
+    const float matrix[] = {normal, swapped, swapped, normal};
+    for (auto* track : {&effect_, &movie_}) {
+        if (!track->voice) continue;
+        track->voice->SetVolume(Volume(options.effects, options.effectsLevel));
+        if (track->format.nChannels == 2) track->voice->SetOutputMatrix(output_, 2, 2, matrix);
     }
 }
 
