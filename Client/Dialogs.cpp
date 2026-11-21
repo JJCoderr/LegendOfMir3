@@ -2217,19 +2217,19 @@ void Dialogs::Assets::GuildModalInput(cui_ctx* ui, LoginClient& client, cui_vec2
         }
         if (guildPressed_ >= 0 && hit != guildPressed_) guildPressed_ = -1;
         const bool tab = cui_key_down(ui, CUI_KEY_TAB);
-        if (!alert && (cui_key_pressed(ui,CUI_KEY_TAB) || (tab && !guildTabDown_)))
+        if (!alert && !guildTabDown_ && (tab || cui_key_pressed(ui,CUI_KEY_TAB)))
             guildCancelSelected_ = !guildCancelSelected_;
         guildTabDown_ = tab;
     }
     if (down) guildPressed_ = hit;
     const bool click = up && hit >= 0 && hit == guildPressed_;
     if (up) guildPressed_ = -1;
-    const bool key = !multiline && (cui_key_pressed(ui,CUI_KEY_ENTER) || (alert && cui_key_pressed(ui,CUI_KEY_SPACE)));
+    const bool key = alert && (cui_key_pressed(ui,CUI_KEY_ENTER) || cui_key_pressed(ui,CUI_KEY_SPACE));
     if (!click && !key) return;
     if (click && client.audioOptions.effects && std::filesystem::exists(clickSound_))
         client.audio.PlayEffect(clickSound_.c_str(), client.audioOptions);
     if (alert) guild.notice = 0;
-    else if (click ? hit == 1 : !guildCancelSelected_) client.SubmitGuildAction();
+    else if (hit == 1) client.SubmitGuildAction();
     else guild.Begin(mir3_cui::GuildAction::None);
     cui_request_redraw(ui);
 }
@@ -2305,19 +2305,20 @@ void Dialogs::Assets::DrawGuildPanel(cui_ctx* ui, LoginClient& client, bool draw
             base.Rect(400-dialog_[0].width/2+24,246-dialog_[0].height/2+228,309,15);
         cui_overlay_begin(ui, field);
         cui_push_id_int(ui, guild.editor);
-        if (editorChanged || guildEditorId_ != guild.editor ||
+        const bool enter = !guildDrawEditor_ && cui_key_pressed(ui,CUI_KEY_ENTER);
+        if (enter || editorChanged || guildEditorId_ != guild.editor ||
             (down && !Contains(field, cui_mouse_pos(ui)))) cui_text_field_focus(ui, "native-guild-text", false);
-        cui_input_opts options{};
-        options.bare = options.keep_escape = true;
+        auto options = ModalEditorOptions(field.h,base.scale);
         options.keep_tab = !guildDrawEditor_;
-        options.width = CUI_FILL;
-        options.height = field.h;
-        options.font_size = 12 * base.scale;
-        options.font = editorFont_;
         options.byte_limit = guildDrawEditor_ ? 3999 : 90;
         options.measure_bytes = AnsiBytes;
         if (guildDrawEditor_) cui_textarea_ex(ui, "native-guild-text", guild.input, sizeof guild.input, &options);
         else cui_input_ex(ui, "native-guild-text", guild.input, sizeof guild.input, &options);
+        if (enter) {
+            if (guildCancelSelected_) guild.Begin(mir3_cui::GuildAction::None);
+            else client.SubmitGuildAction();
+            cui_request_redraw(ui);
+        }
         cui_pop_id(ui);
         cui_box_end(ui);
     }
@@ -3914,11 +3915,11 @@ void Dialogs::Assets::DrawPartyPanel(cui_ctx* ui, LoginClient& client, bool draw
         if (partyConfirmPressed_ >= 0 && partyConfirmPressed_ != button) partyConfirmPressed_ = -1;
         if (down) partyConfirmPressed_ = button;
         const bool tab = cui_key_down(ui, CUI_KEY_TAB);
-        if (!alert && (cui_key_pressed(ui, CUI_KEY_TAB) || (tab && !party.tabDown)))
+        if (!alert && !party.tabDown && (tab || cui_key_pressed(ui,CUI_KEY_TAB)))
             party.cancelSelected = !party.cancelSelected;
         party.tabDown = tab;
-        const bool key = cui_key_pressed(ui, CUI_KEY_ENTER) ||
-            ((alert || !party.editorFocused) && cui_key_pressed(ui, CUI_KEY_SPACE));
+        const bool key = (alert && cui_key_pressed(ui,CUI_KEY_ENTER)) ||
+            ((alert || !party.editorFocused) && cui_key_pressed(ui,CUI_KEY_SPACE));
         const bool click = up && button >= 0 && button == partyConfirmPressed_;
         if (up) partyConfirmPressed_ = -1;
         if (click && client.audioOptions.effects && std::filesystem::exists(clickSound_))
@@ -3952,22 +3953,21 @@ void Dialogs::Assets::DrawPartyPanel(cui_ctx* ui, LoginClient& client, bool draw
         const int x = 400 - dialog_[0].width / 2 + 24, y = 246 - dialog_[0].height / 2 + 228;
         cui_overlay_begin(ui, {ox + x * scale, oy + y * scale, 309 * scale, 15 * scale});
         cui_push_id_int(ui, party.editor);
-        if (partyEditor_ != party.editor || down)
+        const bool enter = cui_key_pressed(ui,CUI_KEY_ENTER);
+        if (enter || partyEditor_ != party.editor || down)
             cui_text_field_focus(ui, "party-member", partyEditor_ != party.editor);
         partyEditor_ = party.editor;
-        cui_input_opts options{};
-        options.bare = true;
-        options.keep_tab = true;
-        options.keep_escape = true;
-        options.width = CUI_FILL;
-        options.height = 15 * scale;
-        options.font_size = 12 * scale;
-        options.font = editorFont_;
+        auto options = ModalEditorOptions(15*scale,scale);
         options.byte_limit = 90;
         options.measure_bytes = AnsiBytes;
         const int flags = cui_input_ex(ui, "party-member", party.name, sizeof party.name, &options);
         if (flags & CUI_FOCUSED) party.editorFocused = true;
         if (flags & CUI_BLURRED) party.editorFocused = false;
+        if (enter) {
+            if (party.cancelSelected) party.Begin(PartyAction::None);
+            else client.SubmitPartyMember();
+            cui_request_redraw(ui);
+        }
         cui_pop_id(ui);
         cui_box_end(ui);
     }
