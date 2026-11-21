@@ -321,13 +321,12 @@ public:
         if (up || !editable) pressedButton_ = -1;
         else if (down) pressedButton_ = button;
 
-        const int previousField = field_;
+        const bool enter = editable && cui_key_pressed(ui,CUI_KEY_ENTER);
+        const bool tab = editable && cui_key_pressed(ui,CUI_KEY_TAB);
+        const bool mouseSubmit = editable && up && button == 0;
         if (editable) {
             const int fieldHit = hit(128, 440, 99, 14) ? 0 : hit(326, 440, 99, 14) ? 1 : -1;
             if (down && fieldHit >= 0) { field_ = fieldHit; selectField_ = true; }
-            const bool enter = cui_key_pressed(ui, CUI_KEY_ENTER);
-            if (cui_key_pressed(ui, CUI_KEY_TAB) || enter) { field_ = 1 - field_; selectField_ = true; }
-            const bool mouseSubmit = up && button == 0;
             if (up && button >= 0) {
                 client.audio.PlayEffect(clickSound_.c_str(), client.audioOptions);
                 if (button > 0) {
@@ -339,37 +338,37 @@ public:
                     }
                 }
             }
-            if (mouseSubmit || (enter && field_ == 0 && client.account[0] && client.password[0]))
-                client.SignIn();
         }
 
         const bool showEditor = editable && client.stage == Stage::Login && client.status.empty();
-        const unsigned passwordLength = client.password[0] ? AnsiBytes(client.password, static_cast<int>(std::strlen(client.password)))
-                                                          : client.noticePasswordLength;
-        UpdateFieldText(ui, client.account, std::string(passwordLength, '*'));
         showAccount_ = !showEditor || field_ != 0;
         showPassword_ = !showEditor || field_ != 1;
         if (showEditor) {
             const char* id = field_ == 0 ? "login-account" : "login-password";
             const float left = field_ == 0 ? 128 : 326;
-            cui_fixed_begin(ui, {ox + left * scale, oy + 440 * scale, 99 * scale, 14 * scale});
-            if (selectField_ || down || previousField != field_) cui_text_field_focus(ui, id, selectField_);
+            cui_overlay_begin(ui, {ox + left * scale, oy + 440 * scale, 99 * scale, 14 * scale});
+            if (selectField_ || down || enter || tab || mouseSubmit) cui_text_field_focus(ui, id, selectField_);
             selectField_ = false;
-            cui_input_opts options{};
-            options.bare = true;
-            options.keep_tab = true;
+            auto options = ModalEditorOptions(14*scale,scale);
+            options.keep_escape = false;
             options.password = field_ == 1;
             options.password_mask = '*';
-            options.width = CUI_FILL;
-            options.height = 14 * scale;
-            options.font_size = 12 * scale;
-            options.font = editorFont_;
             options.byte_limit = 24;
             options.measure_bytes = AnsiBytes;
             char* value = options.password ? client.password : client.account;
             cui_input_ex(ui, id, value, sizeof client.account, &options);
             cui_box_end(ui);
         }
+        if (tab || enter) {
+            field_ = 1-field_;
+            selectField_ = true;
+            cui_request_redraw(ui);
+        }
+        if (mouseSubmit || (enter && field_==0 && client.account[0] && client.password[0]))
+            client.SignIn();
+        const unsigned passwordLength = client.password[0] ? AnsiBytes(client.password, static_cast<int>(std::strlen(client.password)))
+                                                          : client.noticePasswordLength;
+        UpdateFieldText(ui, client.account, std::string(passwordLength, '*'));
 
         noticeVisible_ = selectedCaption_.texture != 0;
         if (NoticeInput(ui, noticeVisible_ && !client.audioOpen && !client.settingsOpen, x, y))
@@ -952,6 +951,7 @@ private:
     void RefreshSelectionText(cui_ctx* ui, const LoginClient& client);
     const std::vector<std::uint8_t>& CreationBackdrop();
     void DrawSelectionEditor(cui_ctx* ui, LoginClient& client, float scale, float ox, float oy, bool focus);
+    void SubmitCharacterCreation(LoginClient& client);
     void SelectionInput(cui_ctx* ui, LoginClient& client);
     void AdvanceSelectionRole(LoginClient& client, mir3::SelectionRole& role, cui_rect& hit,
                               std::uint32_t ms, bool creating, bool selected);
@@ -1524,24 +1524,27 @@ void Dialogs::Assets::DrawSelectionEditor(cui_ctx* ui, LoginClient& client, floa
     const float y = creating ? 405 : 338;
     const float width = creating ? 75 : 309;
     const float height = creating ? 13 : 15;
-    cui_fixed_begin(ui, {ox + x * scale, oy + y * scale, width * scale, height * scale});
+    cui_overlay_begin(ui, {ox + x * scale, oy + y * scale, width * scale, height * scale});
     cui_push_id_int(ui, client.characterEditor);
     if (focus) cui_text_field_focus(ui, id, selectionEditor_ != client.characterEditor);
     selectionEditor_ = client.characterEditor;
-    cui_input_opts options{};
-    options.bare = true;
+    auto options = ModalEditorOptions(height*scale,scale);
     options.keep_tab = !creating;
-    options.keep_escape = true;
     options.read_only = client.characterRequest != 0;
-    options.width = CUI_FILL;
-    options.height = height * scale;
-    options.font_size = 12 * scale;
-    options.font = editorFont_;
     options.byte_limit = creating ? 13 : 90;
     options.measure_bytes = AnsiBytes;
     cui_input_ex(ui, id, client.characterInput, sizeof client.characterInput, &options);
     cui_pop_id(ui);
     cui_box_end(ui);
+}
+
+void Dialogs::Assets::SubmitCharacterCreation(LoginClient& client)
+{
+    if (!client.characterInput[0]) return;
+    const auto name = ConvertText(client.characterInput, CP_UTF8, 936);
+    const int error = name.empty() ? 225 : mir3::CreateCharacterPage::name_error(name);
+    if (error) client.ShowCharacterNotice(error, "The character name is invalid.");
+    else client.SubmitCharacterDialog();
 }
 
 void Dialogs::Assets::SelectionInput(cui_ctx* ui, LoginClient& client)
@@ -1582,11 +1585,9 @@ void Dialogs::Assets::SelectionInput(cui_ctx* ui, LoginClient& client)
             deletePress_ = hit;
             if (hit >= 0) client.deleteCancelSelected = hit == 1;
         }
-        const bool activate = cui_key_pressed(ui, CUI_KEY_ENTER) || cui_key_pressed(ui, CUI_KEY_SPACE);
         if (up) deletePress_ = -1;
-        if (activate || (up && hit >= 0)) {
-            const bool cancel = activate ? client.deleteCancelSelected : hit == 1;
-            if (cancel) client.CloseCharacterDialog();
+        if (up && hit >= 0) {
+            if (hit==1) client.CloseCharacterDialog();
             else client.SubmitCharacterDialog();
             cui_request_redraw(ui);
         }
@@ -1624,12 +1625,7 @@ void Dialogs::Assets::SelectionInput(cui_ctx* ui, LoginClient& client)
                 client.RefreshCharacterList();
             }
         }
-        if ((cui_key_pressed(ui, CUI_KEY_ENTER) || (up && hit == 3)) && client.characterInput[0]) {
-            const auto name = ConvertText(client.characterInput, CP_UTF8, 936);
-            const int error = name.empty() ? 225 : mir3::CreateCharacterPage::name_error(name);
-            if (error) client.ShowCharacterNotice(error, "The character name is invalid.");
-            else client.SubmitCharacterDialog();
-        }
+        if (up && hit==3) SubmitCharacterCreation(client);
         return;
     }
     if (down) {
@@ -1712,8 +1708,17 @@ void Dialogs::Assets::DrawSelection(cui_ctx* ui, LoginClient& client)
     if (selectionMode_ != CharacterDialog::None && client.characterDialog == selectionMode_ &&
         !selectionNotice_ && client.characterNotice.empty() && !selectionWaiting_ &&
         (!client.characterRequest || selectionMode_ == CharacterDialog::Create)) {
-        const bool focus = selectionEditor_ != client.characterEditor || cui_mouse_clicked(ui, CUI_MOUSE_LEFT);
+        const bool deleteSpace = selectionMode_==CharacterDialog::Delete && cui_key_pressed(ui,CUI_KEY_SPACE);
+        const bool submit = !client.characterRequest && (deleteSpace || cui_key_pressed(ui,CUI_KEY_ENTER));
+        if (deleteSpace) cui_input_consume_text_prefix(ui," ");
+        const bool focus = submit || selectionEditor_ != client.characterEditor || cui_mouse_clicked(ui,CUI_MOUSE_LEFT);
         DrawSelectionEditor(ui, client, scale, ox, oy, focus);
+        if (submit) {
+            if (selectionMode_==CharacterDialog::Create) SubmitCharacterCreation(client);
+            else if (client.deleteCancelSelected) client.CloseCharacterDialog();
+            else client.SubmitCharacterDialog();
+            cui_request_redraw(ui);
+        }
     }
     if (selectionWaiting_ || selectionMode_ == CharacterDialog::Create || !selectionCharacters_.empty())
         cui_request_wakeup(ui, 0.016f);
