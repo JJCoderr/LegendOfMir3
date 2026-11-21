@@ -4,6 +4,7 @@
 
 #include "cui.h"
 #include "CuiChat.h"
+#include "CuiServerOptions.h"
 #include "Common/EnDecode.h"
 #include "Common/Protocol.h"
 
@@ -364,6 +365,7 @@ public:
     std::string gameCharacter;
     bool showSignOut = false;
     mir3_cui::ChatPanel chat;
+    mir3_cui::ServerOptions serverOptions;
     std::string chatHistoryDirectory = "CuiChatHistory";
     std::vector<Character> characters;
     int characterIndex = -1;
@@ -392,6 +394,7 @@ public:
         gameCharacter.clear();
         showSignOut = false;
         chat = {};
+        serverOptions = {};
         characters.clear();
         characterIndex = -1;
         characterPage = 0;
@@ -546,7 +549,8 @@ public:
 
     void SendChat()
     {
-        if (stage != Stage::GameSession || showSignOut || chat.receptionOpen || !chat.draft[0]) return;
+        if (stage != Stage::GameSession || showSignOut || chat.receptionOpen ||
+            serverOptions.open || !chat.draft[0]) return;
         const std::string draft = chat.draft;
         const bool command = draft.front() == '/' || draft.front() == '@' ||
             draft.front() == '#' || draft.front() == '!';
@@ -579,14 +583,19 @@ public:
 
     void ToggleChatReception(mir3_cui::ReceptionChannel channel)
     {
-        if (stage != Stage::GameSession || showSignOut) return;
-        if (output_.size() >= 8192) {
-            chat.reception.error = "The connection is busy. Try changing reception again.";
-            return;
-        }
-        Queue(mir3_cui::Say, 0, mir3_cui::ChatReception::ToggleCommand(channel));
-        chat.reception.Request(channel);
-        chat.reception.error.clear();
+        if (SendOptionCommand(mir3_cui::ChatReception::ToggleCommand(channel), chat.reception.error))
+            chat.reception.Request(channel);
+    }
+
+    void ToggleServerOption(const mir3_cui::ServerOption& option)
+    {
+        if (SendOptionCommand(option.command, serverOptions.error)) serverOptions.Request(option);
+    }
+
+    void RequestAttackMode()
+    {
+        if (SendOptionCommand(mir3_cui::AttackModeCommand, serverOptions.error))
+            serverOptions.attackModePending = true;
     }
 
     void Poll()
@@ -657,6 +666,18 @@ public:
     }
 
 private:
+    bool SendOptionCommand(const char* command, std::string& error)
+    {
+        if (stage != Stage::GameSession || showSignOut) return false;
+        if (output_.size() >= 8192) {
+            error = "The connection is busy. Try changing the option again.";
+            return false;
+        }
+        Queue(mir3_cui::Say, 0, command);
+        error.clear();
+        return true;
+    }
+
     SOCKET socket_ = INVALID_SOCKET;
     unsigned sequence_ = 0;
     ULONGLONG deadline_ = 0;
@@ -957,7 +978,11 @@ private:
             const auto body = ReadGameBody();
             if (body.size() == 60 && body.find('\0') == std::string::npos) ApplySceneKey(body);
         } else if (opcode == mir3_cui::ClientOptions && stage == Stage::GameSession) {
-            if (input_.size() == DEFBLOCKSIZE) chat.reception.Apply(actor);
+            if (input_.size() == DEFBLOCKSIZE) {
+                const auto mode = static_cast<std::uint16_t>(header[1] | (header[6] << 8));
+                const auto changed = serverOptions.Apply(actor, mode);
+                chat.reception.Apply(actor, changed);
+            }
         } else if (mir3_cui::ChatChannel(opcode) && stage == Stage::GameSession &&
                    input_.size() <= DEFBLOCKSIZE + 1024) {
             auto body = ReadGameBody();
@@ -1440,19 +1465,25 @@ void ChatShortcuts(cui_ctx* ui, mir3_cui::ChatPanel& chat, bool phrase)
 void DrawGameChat(cui_ctx* ui, LoginClient& client)
 {
     auto& chat = client.chat;
-    cui_push_disabled(ui, client.showSignOut || chat.receptionOpen);
+    const bool hadOverlay = client.showSignOut || chat.receptionOpen || client.serverOptions.open;
+    cui_push_disabled(ui, hadOverlay);
     cui_box row = {};
     row.width = CUI_FILL;
     row.gap = 10;
     row.align = CUI_ALIGN_CENTER;
-    cui_row_begin(ui, &row);
+    cui_box toolbar = row;
+    toolbar.wrap = true;
+    cui_row_begin(ui, &toolbar);
     cui_heading(ui, "Chat", 1);
     cui_spacer(ui);
     if (Button(ui, chat.expanded ? "Compact" : "Expand")) chat.expanded = !chat.expanded;
     if (Button(ui, "Reception")) chat.receptionOpen = true;
+    if (Button(ui, "Server options") ||
+        (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_N)))
+        client.serverOptions.open = true;
     if (Button(ui, "Sign out")) client.showSignOut = true;
     cui_box_end(ui);
-    const bool overlay = client.showSignOut || chat.receptionOpen;
+    const bool overlay = client.showSignOut || chat.receptionOpen || client.serverOptions.open;
 
     cui_scroll_opts list = {};
     list.id = "chat-history";
@@ -1530,6 +1561,51 @@ void DrawChatReception(cui_ctx* ui, LoginClient& client)
     cui_dialog_end(ui);
 }
 
+void DrawServerOptions(cui_ctx* ui, LoginClient& client)
+{
+    auto& options = client.serverOptions;
+    cui_dialog_opts dialog = {};
+    dialog.width = 510;
+    if (!cui_dialog_begin(ui, "Server options", &options.open, &dialog)) return;
+
+    const auto drawOption = [&](const mir3_cui::ServerOption& option) {
+        bool checked = (options.displayed & option.mask) != 0;
+        if (cui_checkbox_ex(ui, option.label, &checked, nullptr))
+            client.ToggleServerOption(option);
+        if ((options.displayed ^ options.confirmed) & option.mask)
+            cui_tooltip(ui, "Waiting for server confirmation");
+    };
+    cui_box row = {};
+    row.width = CUI_FILL;
+    row.gap = 14;
+    cui_box column = {};
+    column.width = CUI_FILL;
+    column.gap = 10;
+    cui_row_begin(ui, &row);
+    cui_column_begin(ui, &column);
+    for (std::size_t i = 0; i < 4; ++i) drawOption(mir3_cui::ServerOptionList[i]);
+    cui_box_end(ui);
+    cui_column_begin(ui, &column);
+    for (std::size_t i = 4; i < mir3_cui::ServerOptionCount; ++i) drawOption(mir3_cui::ServerOptionList[i]);
+    cui_box_end(ui);
+    cui_box_end(ui);
+
+    static const char* const attackModes[] = {"All targets", "Peaceful", "Party", "Guild", "Good and evil"};
+    cui_separator(ui);
+    if (options.attackMode < sizeof attackModes / sizeof *attackModes)
+        cui_textf(ui, "Attack mode: %s", attackModes[options.attackMode]);
+    else
+        cui_textf(ui, "Attack mode: %u", static_cast<unsigned>(options.attackMode));
+    if (Button(ui, "Change attack mode")) client.RequestAttackMode();
+    if (options.attackModePending || options.displayed != options.confirmed)
+        cui_muted(ui, "Waiting for server confirmation");
+    if (!options.error.empty()) cui_secondary(ui, options.error.c_str());
+    cui_dialog_footer_begin(ui);
+    if (Button(ui, "Done", true)) options.open = false;
+    cui_dialog_footer_end(ui);
+    cui_dialog_end(ui);
+}
+
 void Draw(cui_ctx* ui, LoginClient& client)
 {
     cui_box page = {};
@@ -1557,6 +1633,7 @@ void Draw(cui_ctx* ui, LoginClient& client)
         DrawGameChat(ui, client);
         cui_box_end(ui);
         if (client.chat.receptionOpen) DrawChatReception(ui, client);
+        else if (client.serverOptions.open) DrawServerOptions(ui, client);
         if (!client.showSignOut) return;
     } else {
         cui_heading(ui, "Mir3 Client", 1);

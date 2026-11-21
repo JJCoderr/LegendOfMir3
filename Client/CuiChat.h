@@ -10,14 +10,12 @@
 namespace mir3_cui {
 
 constexpr unsigned Say = 3030;
-constexpr unsigned ClientOptions = 1401;
 
 enum class ReceptionChannel { Private, Guild, All };
 
 struct ChatReception {
     std::array<bool, 3> confirmed = {};
     std::array<bool, 3> displayed = {};
-    std::uint32_t previousFlags = 0;
     std::string error;
 
     static const char* ToggleCommand(ReceptionChannel channel)
@@ -37,10 +35,8 @@ struct ChatReception {
         displayed[index] = !confirmed[index];
     }
 
-    void Apply(std::uint32_t flags)
+    void Apply(std::uint32_t flags, std::uint32_t changed)
     {
-        const auto changed = previousFlags ^ flags;
-        previousFlags = flags;
         constexpr std::uint32_t masks[] = {0x04000000u, 0x02000000u, 0x00800000u};
         for (std::size_t i = 0; i < confirmed.size(); ++i) {
             if (changed & masks[i]) displayed[i] = confirmed[i] = (flags & masks[i]) != 0;
