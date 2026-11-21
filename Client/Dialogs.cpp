@@ -1,4 +1,5 @@
 #include "CuiClientState.h"
+#include "CuiLegacy/hud/actor_status.hpp"
 #include "Dialogs.h"
 
 #include "cui.h"
@@ -729,7 +730,8 @@ private:
     std::uint64_t worldFrame_ = 0, mapGraphicsRevision_ = 0;
     std::uint64_t worldTextureBytes_ = 0;
     int mapGraphicsX_ = 0, mapGraphicsY_ = 0;
-    const WorldFrame& GetWorldFrame(cui_ctx* ui, const std::string& library, int frame);
+    const WorldFrame& GetWorldFrame(cui_ctx* ui, const std::string& library, int frame,
+        std::uint16_t status=65535, bool highlighted=false);
     const WorldFrame& GetProjectedWorldShadow(cui_ctx* ui, const std::string& library, int frame, bool flat, bool weapon=false);
     SceneMapArt PrepareMapArt(cui_ctx* ui, LoginClient& client, cui_vec2 pointer, bool interactive);
     void PrepareWorldText(cui_ctx* ui, const LoginClient& client, cui_vec2 pointer, bool interactive);
@@ -743,7 +745,7 @@ private:
     const WorldFrame& GroundFrame(cui_ctx* ui, int looks, bool highlighted);
     cui_rect AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAppearance& actor, int facing, int x, int y,
         const SceneMapArt& camera, int pose, bool shadowBlend, int mount = 0, int appearanceWeight=-1,
-        bool locked=false, const cui_vec2* pointer=nullptr);
+        bool locked=false, const cui_vec2* pointer=nullptr, std::uint16_t status=65535);
     void TrimWorldFrames(cui_ctx* ui);
     std::array<HudChatRow,14> gameChatRows_;
     std::array<BagText,4> gameHudText_;
@@ -6048,15 +6050,19 @@ void DrawAudioSettings(cui_ctx* ui, LoginClient& client)
 
 } // namespace
 
-const Dialogs::Assets::WorldFrame& Dialogs::Assets::GetWorldFrame(cui_ctx* ui, const std::string& library, int frame)
+const Dialogs::Assets::WorldFrame& Dialogs::Assets::GetWorldFrame(cui_ctx* ui, const std::string& library, int frame,
+    std::uint16_t status,bool highlighted)
 {
-    auto [entry,inserted]=worldFrames_.try_emplace({library,frame});
+    const bool tinted=status!=65535 && status!=1;
+    const auto cache=tinted ? library+(highlighted ? ":highlight-status:" : ":status:")+std::to_string(status) : library;
+    auto [entry,inserted]=worldFrames_.try_emplace({cache,frame});
     auto& result=entry->second;
     result.used=worldFrame_;
     if (!inserted) return result;
     auto [archive,open]=worldArchives_.try_emplace(library);
     if (open) archive->second.open(mapData_/library);
-    if (const auto art=archive->second.frame(frame)) {
+    if (auto art=archive->second.frame(frame)) {
+        if (tinted) mir3::tint_status_pixels(art->pixels.rgba,art->pixels.regions,status,highlighted);
         result.image=Upload(ui,art->width,art->height,art->pixels.rgba);
         result.x=art->offset_x;
         result.y=art->offset_y;
@@ -6189,7 +6195,7 @@ void Dialogs::Assets::TrimWorldFrames(cui_ctx* ui)
 
 cui_rect Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAppearance& actor, int facing,
     int x, int y, const SceneMapArt& camera, int pose, bool shadowBlend, int mount,
-    int appearanceWeight, bool locked, const cui_vec2* pointer)
+    int appearanceWeight, bool locked, const cui_vec2* pointer, std::uint16_t status)
 {
     const std::string prefix=actor.body ? "WM-" : "M-";
     int motion=facing*10+pose;
@@ -6209,17 +6215,21 @@ cui_rect Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAp
     if (!body.image.texture) return {};
     const cui_rect bounds{float(x*48-camera.cameraX+body.x),float(y*32-camera.cameraY+body.y),
         float(body.image.width),float(body.image.height)};
-    if (appearanceWeight>=0 && (locked || (pointer && pointer->x>=bounds.x && pointer->y>=bounds.y &&
-        pointer->x<bounds.x+bounds.w && pointer->y<bounds.y+bounds.h))) {
+    const bool highlighted=locked || (pointer && pointer->x>=bounds.x && pointer->y>=bounds.y &&
+        pointer->x<bounds.x+bounds.w && pointer->y<bounds.y+bounds.h);
+    if (appearanceWeight>=0 && highlighted) {
         appearanceWeight+=5;
         if (appearanceWeight>31) appearanceWeight=0;
     }
-    const auto add=[&](const WorldFrame& layer,int weight,std::uint8_t opacity=255) {
+    const auto add=[&](const WorldFrame& layer,int weight,bool shadow=false) {
         const auto& art=layer.image;
         if (!art.texture) return;
-        SceneSprite sprite{art.texture,x*48-camera.cameraX+layer.x,y*32-camera.cameraY+layer.y,art.width,art.height,y,opacity};
-        if (appearanceWeight>=0) {
+        SceneSprite sprite{art.texture,x*48-camera.cameraX+layer.x,y*32-camera.cameraY+layer.y,art.width,art.height,y};
+        if (status==1 || (shadow && (appearanceWeight>=0 || shadowBlend))) {
             sprite.effect=CUI_EFFECT_RGB565;
+            sprite.tint.a=shadow ? 13 : 8;
+        } else if (appearanceWeight>=0) {
+            sprite.effect=status==65535 || shadow ? CUI_EFFECT_RGB565 : CUI_EFFECT_RGB565_AVERAGE;
             sprite.tint.a=std::uint8_t(weight);
         }
         worldSprites_.push_back(sprite);
@@ -6229,22 +6239,22 @@ cui_rect Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAp
     if (hasWeapon) {
         const auto weaponLibrary=prefix+"Weapon"+std::to_string((actor.weapon-1)/10+1);
         const int weaponFrame=static_cast<int>((actor.weapon-1)%10)*3000+motion;
-        weapon=&GetWorldFrame(ui,weaponLibrary,weaponFrame);
+        weapon=&GetWorldFrame(ui,weaponLibrary,weaponFrame,status,highlighted);
         if (weapon->image.texture && motion/80!=8 && pose!=HumanCorpsePose)
-            add(GetProjectedWorldShadow(ui,weaponLibrary,weaponFrame,false,true),13,shadowBlend ? 104 : 255);
+            add(GetProjectedWorldShadow(ui,weaponLibrary,weaponFrame,false,true),13,true);
     }
     if (horse) {
         const auto& horseShadow=GetWorldFrame(ui,"Horse",10000+motion-2320);
-        add(horseShadow,13,shadowBlend ? 104 : 255);
+        add(horseShadow,13,true);
     }
-    add(GetProjectedWorldShadow(ui,library,frame,pose==HumanCorpsePose),13,shadowBlend ? 104 : 255);
+    add(GetProjectedWorldShadow(ui,library,frame,pose==HumanCorpsePose),13,true);
     const bool behind=hasWeapon && mapWeaponOrder_[motion]!=0;
-    if (horse) add(*horse,appearanceWeight);
+    if (horse) add(GetWorldFrame(ui,"Horse",400*(mount-1)+motion-2320,status,highlighted),appearanceWeight);
     if (weapon && behind) add(*weapon,10);
-    add(body,appearanceWeight);
+    add(GetWorldFrame(ui,library,frame,status,highlighted),appearanceWeight);
     if (actor.hair)
         add(GetWorldFrame(ui,prefix+(actor.hair<=10 ? "Hair" : actor.hair<=20 ? "Helmet1" : "Helmet2"),
-            static_cast<int>((actor.hair-1)%10)*3000+motion),20);
+            static_cast<int>((actor.hair-1)%10)*3000+motion,status,highlighted),20);
     if (weapon && !behind) add(*weapon,22);
     return bounds;
 }
@@ -6471,7 +6481,8 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
             const auto firstLayer=worldSprites_.size();
             const int appearanceWeight=reviveAge<HumanReviveDuration ? int(31*reviveAge/HumanReviveDuration) : -1;
             bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,actorCamera,
-                pose,client.shadowBlend,mount,appearanceWeight,scene.lockedSpellActor==id,interactive ? &pointer : nullptr);
+                pose,client.shadowBlend,mount,appearanceWeight,scene.lockedSpellActor==id,interactive ? &pointer : nullptr,
+                mir3::actor_status_color(actor.actionFlags));
             for (std::size_t i=firstLayer;i<worldSprites_.size();++i) worldSprites_[i].row=int(actorRow);
             if (bounds.w>0) {
                 const int x=int(pixel[0])-camera.cameraX,y=int(pixel[1])-camera.cameraY;
@@ -6512,7 +6523,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         localCamera.cameraY+=int(scene.y)*32-playerPixel[1];
         const auto firstLayer=worldSprites_.size();
         const auto localBounds=AddWorldActor(ui,client.characterAppearance,scene.facing,scene.x,scene.y,localCamera,
-            pose,client.shadowBlend,mount);
+            pose,client.shadowBlend,mount,-1,false,nullptr,mir3::actor_status_color(scene.actionFlags));
         if (step.frame>=0) for (std::size_t i=firstLayer;i<worldSprites_.size();++i)
             worldSprites_[i].row=(playerPixel[1]+16)/32;
         if (localBounds.w>0) {

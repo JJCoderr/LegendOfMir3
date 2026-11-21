@@ -4463,7 +4463,8 @@ CUI_API void cui_draw_image_additive(cui_ctx *ui, cui_texture tex, cui_rect r);
 /* Textured quad in perimeter order, with normalized UVs. */
 typedef enum cui_effect_blend {
     CUI_EFFECT_PARTICLE, CUI_EFFECT_SCREEN, CUI_EFFECT_ADD, CUI_EFFECT_PREMULTIPLIED, CUI_EFFECT_SPARK,
-    CUI_EFFECT_RGB565 /* tint.a supplies a source weight from 0 to 32 */
+    CUI_EFFECT_RGB565, /* tint.a supplies a source weight from 0 to 32 */
+    CUI_EFFECT_RGB565_AVERAGE
 } cui_effect_blend;
 CUI_API void cui_draw_effect_quad(cui_ctx *ui, cui_texture tex, const cui_vec2 points[4],
     const cui_vec2 uv[4], cui_color tint, cui_effect_blend blend);

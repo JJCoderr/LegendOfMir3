@@ -209,6 +209,10 @@ struct LocalScene {
         std::uint64_t registeredUntil=0;
         std::optional<std::uint8_t> lastMonster;
     };
+    struct HumanStatus {
+        std::uint32_t flags;
+        std::int16_t speed;
+    };
     struct LocalLifeAction {
         WORD opcode,x,y,direction;
         mir3_cui::CharacterAppearance appearance;
@@ -237,8 +241,8 @@ struct LocalScene {
         WORD opcode=0;
         bool catchUp=false;
     };
-    using LocalAction = std::variant<HumanHit,LocalLifeAction>;
-    using RemoteAction = std::variant<RemoteCast,mir3::SpellReply,RemoteMelee,HumanHit,RemoteMovement>;
+    using LocalAction = std::variant<HumanHit,LocalLifeAction,HumanStatus>;
+    using RemoteAction = std::variant<RemoteCast,mir3::SpellReply,RemoteMelee,HumanHit,RemoteMovement,HumanStatus>;
     struct PendingMelee { unsigned x,y,facing; WORD opcode; std::uint64_t at; };
     struct Movement {
         unsigned x = 0, y = 0, facing = 0;
@@ -2350,6 +2354,10 @@ public:
                     StartRemoteMovement(actor,id,*motion,catchUp);
                     continue;
                 }
+                if (const auto* status=std::get_if<LocalScene::HumanStatus>(&message)) {
+                    actor.actionFlags=status->flags;
+                    continue;
+                }
                 if (actor.dead) continue;
                 if (const auto* melee=std::get_if<LocalScene::RemoteMelee>(&message)) {
                     StartRemoteMelee(actor,id,*melee,now,catchUp);
@@ -3213,14 +3221,18 @@ private:
             const auto found=scene.players.find(actor);
             if (input_.size()!=DEFBLOCKSIZE) return;
             const auto flags=std::uint32_t(first)|(std::uint32_t(second)<<16);
+            const LocalScene::HumanStatus status{flags,std::bit_cast<std::int16_t>(third)};
             if (actor==localActor_) {
-                scene.actionFlags=flags;
-                scene.meleeCooldown.speed=std::bit_cast<std::int16_t>(third);
+                if (opcode==GameMonsterStatus) ApplyLocalHumanStatus(status);
+                else if (scene.localActions.size()<64) scene.localActions.emplace_back(status);
             } else if (found!=scene.players.end()) {
                 if (found->second.IsMonster()) {
                     if (opcode==GameMonsterStatus) found->second.monsterStatus=flags;
                 }
-                else if (!found->second.IsNpc()) found->second.actionFlags=flags;
+                else if (!found->second.IsNpc()) {
+                    if (opcode==GameMonsterStatus) found->second.actionFlags=flags;
+                    else QueueHumanAction(found->second,status);
+                }
             }
         } else if (stage == Stage::GameSession && IsMeleeMessage(opcode)) {
             HandleMeleeMessage(opcode,actor,first,second,third);
@@ -4039,7 +4051,14 @@ private:
         auto record=std::move(scene.localActions.front());
         scene.localActions.pop_front();
         if (const auto* hit=std::get_if<LocalScene::HumanHit>(&record)) StartLocalHit(*hit,now);
+        else if (const auto* status=std::get_if<LocalScene::HumanStatus>(&record)) ApplyLocalHumanStatus(*status);
         else ApplyLocalLife(std::get<LocalScene::LocalLifeAction>(record),now);
+    }
+
+    void ApplyLocalHumanStatus(const LocalScene::HumanStatus& status)
+    {
+        scene.actionFlags=status.flags;
+        scene.meleeCooldown.speed=status.speed;
     }
 
     void ApplyLocalLife(const LocalScene::LocalLifeAction& action,std::uint64_t now)

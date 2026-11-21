@@ -17956,7 +17956,8 @@ void cui_draw_multiply_triangle(cui_ctx *ui, const cui_vec2 points[3], const cui
 void cui_draw_effect_quad(cui_ctx *ui, cui_texture tex, const cui_vec2 points[4],
     const cui_vec2 uv[4], cui_color tint, cui_effect_blend blend) {
     cui_xform x = cui__xf(ui);
-    const bool rgb565=blend==CUI_EFFECT_RGB565;
+    const bool average=blend==CUI_EFFECT_RGB565_AVERAGE;
+    const bool rgb565=blend==CUI_EFFECT_RGB565 || average;
     if (!rgb565) tint = cui__xa(tint, x.alpha);
     if (!tex || x.alpha<=0 || (!tint.a && blend!=CUI_EFFECT_PREMULTIPLIED && !rgb565)) return;
     const int mode = blend==CUI_EFFECT_SCREEN ? CUI_SHADE_IMAGE_SCREEN :
@@ -17977,7 +17978,7 @@ void cui_draw_effect_quad(cui_ctx *ui, cui_texture tex, const cui_vec2 points[4]
         v[i].u = uv[i].x;
         v[i].v = uv[i].y;
         v[i].mode = (float)mode;
-        if (rgb565) v[i].border = tint.a<=32 ? tint.a : 32;
+        if (rgb565) v[i].border = average ? 33 : CUI_MIN(tint.a,32);
         v[i].color = tint;
     }
     uint32_t *ix = cui__idx(ui, 6);
@@ -69335,7 +69336,9 @@ static void cui__raster_tri(const cui__sw_job *job, const cui_vertex *a, const c
                         const unsigned unit=i==1 ? 4 : 8;
                         const unsigned source=(unsigned)(colors[i]*255.0f+0.5f)/unit;
                         const unsigned background=dst[offsets[i]]/unit;
-                        dst[offsets[i]]=(uint8_t)((source*weight/32+background*(32-weight)/32)*unit);
+                        const unsigned mixed=weight==33 ? (source+background)/2 :
+                            source*weight/32+background*(32-weight)/32;
+                        dst[offsets[i]]=(uint8_t)(mixed*unit);
                     }
                     dst[3]=255;
                     continue;
@@ -71647,7 +71650,8 @@ static const char *cui__fs_src =
     "    vec3 rgb = texelFetch(u_background, ivec2(gl_FragCoord.xy), 0).rgb;\n"
     "    vec3 background = floor(round(rgb * 255.0) / unit);\n"
     "    float weight = v_params.x;\n"
-    "    vec3 mixed = floor(source * weight / 32.0) + floor(background * (32.0 - weight) / 32.0);\n"
+    "    vec3 mixed = weight == 33.0 ? floor((source + background) / 2.0) :\n"
+    "      floor(source * weight / 32.0) + floor(background * (32.0 - weight) / 32.0);\n"
     "    frag = vec4(mixed * unit / 255.0, 1.0);\n"
     "    return;\n"
     "  }\n"
