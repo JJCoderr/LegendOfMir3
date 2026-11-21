@@ -177,7 +177,7 @@ public:
     void DrawOptionsPanel(cui_ctx* ui, const LoginClient& client);
     void LeaveOptions(bool resetPlacement = false);
     bool HandleUtilityPanels(cui_ctx* ui, LoginClient& client, bool covered, bool foreground, bool modal,
-                             bool& escape);
+                             bool& escape, bool& pointerCaptured);
     void DrawUtilityPanels(cui_ctx* ui, LoginClient& client, bool inventoryModal);
     bool StatusReady() const { return statusSkin_.texture != 0; }
     void DrawTradePrompt(cui_ctx* ui, LoginClient& client);
@@ -2029,7 +2029,7 @@ bool Dialogs::Assets::HandleQuestInput(cui_ctx* ui, LoginClient& client, bool bl
     const int trackHeight = 182 + questThumb_.height;
     const int trackTop = questY_ + 160;
     if (questScrollDrag_) {
-        if (local.y != previous.y)
+        if (!up && local.y != previous.y)
             questFirst_ = questLast_ * std::clamp(mouseY - trackTop, 0, trackHeight) / trackHeight;
         if (up) questScrollDrag_ = false;
     } else if (down && hit(questX_ + 272, trackTop, questThumb_.width, trackHeight)) {
@@ -2049,7 +2049,7 @@ bool Dialogs::Assets::HandleQuestInput(cui_ctx* ui, LoginClient& client, bool bl
             questGrabX_ = mouseX - questX_;
             questGrabY_ = mouseY - questY_;
         }
-    } else if (questDragging_) {
+    } else if (questDragging_ && !up) {
         questX_ = mouseX - questGrabX_;
         questY_ = mouseY - questGrabY_;
         if (questY_ + 440 > 570) questY_ = 565 - 440;
@@ -2257,7 +2257,7 @@ void Dialogs::Assets::GuildInput(cui_ctx* ui, LoginClient& client, cui_vec2 mous
     if (down && inside) {
         guildLayout_.pressed = hit;
         if (hit < 0) guildPosition_.Grab(mouse);
-    } else if (guildPosition_.dragging && moved) {
+    } else if (guildPosition_.dragging && moved && !up) {
         guildPosition_.Drag(mouse);
     }
     if (up) {
@@ -2961,10 +2961,13 @@ void Dialogs::Assets::QuickInput(cui_ctx* ui, LoginClient& client, cui_vec2 poin
     const auto& close = quickFrames_[1];
     const bool onClose = within(264,32,close.width,close.height);
     if (quickDragging_) {
+        if (up) {
+            quickDragging_ = false;
+            return;
+        }
         quickX_ = static_cast<int>(pointer.x)-quickDragX_;
         quickY_ = static_cast<int>(pointer.y)-quickDragY_;
         if (quickY_+48 > 570) quickY_ = 565-48;
-        if (up) quickDragging_ = false;
         return;
     }
     int slot = -1;
@@ -3106,7 +3109,7 @@ void Dialogs::Assets::InventoryInput(cui_ctx* ui, LoginClient& client, cui_vec2 
     const int thumbTop = 70+static_cast<int>(254.0*(static_cast<float>(inventoryRow_)/91));
 
     if (inventoryDragging_) {
-        if (moved) {
+        if (moved && !up) {
             inventoryX_ = static_cast<int>(pointer.x)-inventoryDragX_;
             inventoryY_ = static_cast<int>(pointer.y)-inventoryDragY_;
             if (inventoryY_+inventoryHeight_ > 570) inventoryY_ = 565-inventoryHeight_;
@@ -3115,7 +3118,7 @@ void Dialogs::Assets::InventoryInput(cui_ctx* ui, LoginClient& client, cui_vec2 
         return;
     }
     if (inventoryScrollDrag_) {
-        if (moved) inventoryRow_ = static_cast<int>(std::clamp((pointer.y-y-70)/trackHeight,0.f,1.f)*92);
+        if (moved && !up) inventoryRow_ = static_cast<int>(std::clamp((pointer.y-y-70)/trackHeight,0.f,1.f)*92);
         if (up) inventoryScrollDrag_ = false;
         return;
     }
@@ -3955,7 +3958,7 @@ bool Dialogs::Assets::HandlePartyInput(cui_ctx* ui, LoginClient& client, bool bl
             partyDragX_ = static_cast<int>(mx) - partyX_;
             partyDragY_ = static_cast<int>(my) - partyY_;
         }
-    } else if (partyDragging_) {
+    } else if (partyDragging_ && !up) {
         partyX_ = static_cast<int>(mx) - partyDragX_;
         partyY_ = static_cast<int>(my) - partyDragY_;
         if (partyY_ + 244 > 570) partyY_ = 565 - 244;
@@ -8617,7 +8620,7 @@ bool Dialogs::Assets::HandleInventoryUtility(cui_ctx* ui, LoginClient& client, b
 }
 
 bool Dialogs::Assets::HandleUtilityPanels(cui_ctx* ui, LoginClient& client, bool covered, bool foreground, bool modal,
-                                         bool& escape)
+                                         bool& escape, bool& pointerCaptured)
 {
     RefreshPortraitCache(ui,client);
     PrepareInventoryPlacement(client);
@@ -8645,25 +8648,53 @@ bool Dialogs::Assets::HandleUtilityPanels(cui_ctx* ui, LoginClient& client, bool
     const auto order = utilityOrder_;
     const bool close = !modal && !client.shop.actor && !client.chat.composing &&
         cui_shortcut(ui,0,CUI_KEY_ESCAPE);
+    const auto handle=[&](UtilityPanel panel,bool blocked,bool keyboard) {
+        switch (panel) {
+        case UtilityPanel::Party: return HandlePartyInput(ui,client,blocked);
+        case UtilityPanel::Guild: return HandleGuildInput(ui,client,blocked);
+        case UtilityPanel::Quest: return HandleQuestInput(ui,client,blocked);
+        case UtilityPanel::Skills: return HandleSkillInput(ui,client,blocked,keyboard && !client.chat.composing);
+        case UtilityPanel::Status: return HandleStatusInput(ui,client,blocked);
+        case UtilityPanel::Inventory: return HandleInventoryUtility(ui,client,blocked);
+        case UtilityPanel::Options: return HandleOptionsInput(ui,client,blocked);
+        case UtilityPanel::Portrait: return HandlePortraitPicker(ui,client,blocked);
+        case UtilityPanel::Mount: return HandleMountInput(ui,client,blocked);
+        case UtilityPanel::Trade: return HandleTradeInput(ui,client,blocked);
+        case UtilityPanel::Quick: return HandleQuickInput(ui,client,blocked);
+        }
+        return false;
+    };
     bool coveredOutsideBag = covered;
+    std::optional<UtilityPanel> owner;
+    if (!modal && (cui_mouse_down(ui,CUI_MOUSE_LEFT) || cui_mouse_released(ui,CUI_MOUSE_LEFT))) {
+        const std::pair<UtilityPanel,bool> captures[]{
+            {UtilityPanel::Quick,quickDragging_ || quickClosePress_ || quickSkipRelease_},
+            {UtilityPanel::Trade,client.trade.dragging || client.trade.confirmPressed || client.trade.scroll.captured>=0},
+            {UtilityPanel::Quest,questDragging_ || questScrollDrag_ || questPressed_>=0},
+            {UtilityPanel::Mount,client.mount.dragging || client.mount.pressed>=0},
+            {UtilityPanel::Portrait,portraitPicker_.scrolling || portraitPressed_>=0},
+            {UtilityPanel::Options,optionsDragging_ || optionsAudioDrag_>=0},
+            {UtilityPanel::Guild,guildPosition_.dragging || guildScroll_.captured || guildLayout_.pressed>=0},
+            {UtilityPanel::Status,statusPanel_.dragging || statusClosePressed_},
+            {UtilityPanel::Inventory,inventoryDragging_ || inventoryScrollDrag_ || inventoryClosePress_ || inventoryServicePress_},
+            {UtilityPanel::Skills,client.skills.dragging || client.skills.scroll_captured || client.skills.pressed>=0},
+            {UtilityPanel::Party,partyDragging_ || partyPressed_>=0},
+        };
+        for (const auto& [panel,captured]:captures) {
+            if (!captured || !UtilityVisible(panel,client)) continue;
+            owner=panel;
+            pointerCaptured=true;
+            handle(panel,false,!covered && !foreground);
+            covered=true;
+            coveredOutsideBag|=panel!=UtilityPanel::Inventory;
+            break;
+        }
+    }
     for (auto it=order.rbegin();it!=order.rend();++it) {
         const auto panel = *it;
         if (!UtilityVisible(panel,client)) continue;
         const bool blocked = covered || foreground || modal;
-        bool hit = false;
-        switch (panel) {
-        case UtilityPanel::Party: hit = HandlePartyInput(ui,client,blocked); break;
-        case UtilityPanel::Guild: hit = HandleGuildInput(ui,client,blocked); break;
-        case UtilityPanel::Quest: hit = HandleQuestInput(ui,client,blocked); break;
-        case UtilityPanel::Skills: hit = HandleSkillInput(ui,client,blocked,!client.chat.composing); break;
-        case UtilityPanel::Status: hit = HandleStatusInput(ui,client,blocked); break;
-        case UtilityPanel::Inventory: hit = HandleInventoryUtility(ui,client,blocked); break;
-        case UtilityPanel::Options: hit = HandleOptionsInput(ui,client,blocked); break;
-        case UtilityPanel::Portrait: hit = HandlePortraitPicker(ui,client,blocked); break;
-        case UtilityPanel::Mount: hit = HandleMountInput(ui,client,blocked); break;
-        case UtilityPanel::Trade: hit = HandleTradeInput(ui,client,blocked); break;
-        case UtilityPanel::Quick: hit = HandleQuickInput(ui,client,blocked); break;
-        }
+        const bool hit = panel!=owner && handle(panel,blocked,true);
         if (hit && !blocked && cui_mouse_clicked(ui,CUI_MOUSE_LEFT)) RaiseUtility(panel);
         covered |= hit;
         if (panel!=UtilityPanel::Inventory) coveredOutsideBag |= hit;
@@ -9416,12 +9447,12 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
             (!client.shop.actor || (nativeShop && !shopBlocksScene))
             ? -static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y)) : 0;
         bool minimapCovered=false;
-        bool utilityCovered=false, panelEscape=false;
+        bool utilityCovered=false, panelEscape=false, panelPointerCaptured=false;
         if (nativeHud) {
             const bool foreground = (nativeNpc && npcBlocksScene) || (nativeShop && shopBlocksScene);
             loginArt->PrepareMinimap(ui,client);
             minimapCovered=loginArt->HandleMinimapInput(ui,client,modal || foreground);
-            utilityCovered=loginArt->HandleUtilityPanels(ui,client,minimapCovered,foreground,modal,panelEscape);
+            utilityCovered=loginArt->HandleUtilityPanels(ui,client,minimapCovered,foreground,modal,panelEscape,panelPointerCaptured);
         }
         const bool partyCovered=!loginArt || !loginArt->PartyReady() || loginArt->PartyBlocksScene(ui);
         const bool questCovered=!loginArt || !loginArt->QuestReady() || loginArt->QuestBlocksScene(ui);
@@ -9501,7 +9532,8 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
             if (loginArt->SkillsReady()) loginArt->DrawSkillShortcuts(ui,client);
         }
         if (nativeNpc) {
-            const bool overlay = partyNotice || guildNotice || fading || portraitNotice || client.showSignOut || inventoryModal || minimapCovered ||
+            const bool overlay = partyNotice || guildNotice || fading || portraitNotice || client.showSignOut || inventoryModal ||
+                minimapCovered || panelPointerCaptured ||
                 (shopOpen && shopBlocksScene && client.npcDialogue.prompt.command.empty());
             loginArt->DrawNpcPanel(ui,client,!overlay,npcWheel);
         }
@@ -9509,7 +9541,8 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
         else if (guildNotice) loginArt->DrawGuildPanel(ui,client,!nativeHud);
         else if (npcPrompt) return;
         else if (shopOpen) {
-            if (nativeShop) loginArt->DrawShopPanel(ui,client,shopWheel,!fading && !client.showSignOut && !inventoryModal && !minimapCovered);
+            if (nativeShop) loginArt->DrawShopPanel(ui,client,shopWheel,!fading && !client.showSignOut &&
+                !inventoryModal && !minimapCovered && !panelPointerCaptured);
             else if (!inventoryModal) DrawNpcShop(ui,client);
         } else if (fallbackNpc) DrawNpcDialogue(ui,client);
         else if (client.chat.receptionOpen) DrawChatReception(ui,client);
