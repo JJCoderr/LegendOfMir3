@@ -6,6 +6,7 @@
 #include "CuiAudio.h"
 #include "CuiChat.h"
 #include "CuiGuild.h"
+#include "CuiInventory.h"
 #include "CuiParty.h"
 #include "CuiQuests.h"
 #include "CuiServerOptions.h"
@@ -376,6 +377,7 @@ public:
     mir3_cui::PartyPanel party;
     mir3_cui::GuildPanel guild;
     mir3_cui::QuestPanel quests;
+    mir3_cui::InventoryPanel inventory;
     mir3_cui::AudioOptions audioOptions;
     mir3_cui::AudioPlayer audio;
     std::wstring audioOptionsPath;
@@ -414,6 +416,7 @@ public:
         party = {};
         guild = {};
         quests = {};
+        inventory = {};
         audioOpen = false;
         characters.clear();
         characterIndex = -1;
@@ -570,7 +573,8 @@ public:
     void SendChat()
     {
         if (stage != Stage::GameSession || showSignOut || chat.receptionOpen || party.open || party.notice.id ||
-            guild.open || guild.requested || guild.notice || guild.action != mir3_cui::GuildAction::None || quests.open ||
+            guild.open || guild.requested || guild.notice || guild.action != mir3_cui::GuildAction::None ||
+            quests.open || inventory.open || inventory.notice ||
             serverOptions.open || !chat.draft[0]) return;
         const std::string draft = chat.draft;
         const bool command = draft.front() == '/' || draft.front() == '@' ||
@@ -640,6 +644,85 @@ public:
         if (stage != Stage::GameSession) return;
         quests.open = true;
         if (!quests.initialized && quests.entries.empty()) RequestQuests();
+    }
+
+    void OpenInventory()
+    {
+        if (stage != Stage::GameSession) return;
+        inventory.open = true;
+        if (!inventory.initialized && !inventory.waiting) RequestInventory();
+    }
+
+    void RequestInventory()
+    {
+        if (!InventoryCanQueue()) return;
+        Queue(81, 0, "");
+        inventory.waiting = true;
+    }
+
+    void UseInventoryItem()
+    {
+        using mir3_cui::ItemRequest;
+        if (!InventoryCanQueue()) return;
+        const auto* item = inventory.Find(inventory.selection);
+        if (!item || item->IsGold()) return;
+        const DWORD tick = GetTickCount();
+        Queue(1006, static_cast<WORD>(tick), item->key.name, item->key.id, static_cast<WORD>(tick >> 16));
+        inventory.pending = *item;
+        inventory.request = ItemRequest::Use;
+        inventory.deadline = GetTickCount64() + 10000;
+    }
+
+    void BeginInventoryDrop(mir3_cui::DropDialog drop)
+    {
+        if (!InventoryCanQueue()) return;
+        inventory.drop = drop;
+        inventory.amount[0] = '\0';
+        ++inventory.editor;
+    }
+
+    void SubmitInventoryDrop()
+    {
+        using mir3_cui::DropDialog;
+        using mir3_cui::ItemRequest;
+        if (!InventoryCanQueue()) return;
+        if (inventory.drop == DropDialog::Gold) {
+            const auto amount = Number(inventory.amount, inventory.gold);
+            if (!amount || amount >= inventory.gold) {
+                inventory.status = "Enter a positive amount below your gold balance.";
+                return;
+            }
+            Queue(1016, 0, "", amount);
+            inventory.request = ItemRequest::DropGold;
+        } else if (inventory.drop == DropDialog::Item) {
+            const auto* item = inventory.Find(inventory.selection);
+            if (!item) {
+                inventory.status = "The item is no longer in the bag.";
+                inventory.drop = DropDialog::None;
+                return;
+            }
+            inventory.pending = *item;
+            if (item->Stacks() && item->count > 1) {
+                const std::string text = inventory.amount;
+                const auto asked = text.empty() || text == "*" ? item->count : Number(text, 65535);
+                const unsigned quantity = (std::min)(asked, 100u);
+                if (!quantity || quantity > item->count) {
+                    inventory.status = "Enter a quantity available in the stack.";
+                    return;
+                }
+                inventory.dropCount = quantity;
+                Queue(1101, 0, item->key.name, item->key.id, static_cast<WORD>(quantity));
+                inventory.request = ItemRequest::DropStack;
+            } else {
+                const DWORD tick = GetTickCount();
+                Queue(1001, static_cast<WORD>(tick), item->key.name, item->key.id, static_cast<WORD>(tick >> 16));
+                inventory.request = ItemRequest::Drop;
+            }
+        } else {
+            return;
+        }
+        inventory.drop = DropDialog::None;
+        inventory.deadline = GetTickCount64() + 10000;
     }
 
     void RequestQuests()
@@ -785,6 +868,11 @@ public:
 
     void Poll()
     {
+        if (inventory.request != mir3_cui::ItemRequest::None && GetTickCount64() >= inventory.deadline) {
+            inventory.request = mir3_cui::ItemRequest::None;
+            RequestInventory();
+            inventory.status = "The item request timed out. Refreshing the bag.";
+        }
         if (stage == Stage::Handoff && GetTickCount64() >= deadline_) OpenCharacters();
         if (stage == Stage::ConnectingGame && !Active()) OpenGameGateway();
         if (!Active()) return;
@@ -851,6 +939,21 @@ public:
     }
 
 private:
+    bool InventoryCanQueue()
+    {
+        if (stage != Stage::GameSession) return false;
+        if (inventory.request != mir3_cui::ItemRequest::None) {
+            inventory.status = "Waiting for the previous item request.";
+            return false;
+        }
+        if (output_.size() >= 8192) {
+            inventory.status = "The connection is busy. Try again.";
+            return false;
+        }
+        inventory.status.clear();
+        return true;
+    }
+
     bool QuestCanQueue()
     {
         if (stage != Stage::GameSession) return false;
@@ -1107,11 +1210,11 @@ private:
         deadline_ = GetTickCount64() + 10000;
     }
 
-    void Queue(WORD opcode, WORD parameter, const std::string& body, int recognition = 0, WORD series = 0)
+    void Queue(WORD opcode, WORD parameter, const std::string& body, std::uint32_t recognition = 0, WORD series = 0)
     {
         _TDEFAULTMESSAGE header;
         static_assert(sizeof(header) == 12, "Login header wire size");
-        fnMakeDefMessage(&header, opcode, recognition, parameter, 0, series);
+        fnMakeDefMessage(&header, opcode, static_cast<int>(recognition), parameter, 0, series);
         char encodedHeader[DEFBLOCKSIZE + 1];
         fnEncodeMessage(&header, encodedHeader, sizeof encodedHeader);
         QueueFrame(encodedHeader, body);
@@ -1163,8 +1266,8 @@ private:
     void HandleGameFrame()
     {
         if (input_.size() < DEFBLOCKSIZE) return;
-        for (char byte : input_) {
-            if (byte < 60 || byte > 123) return;
+        for (std::size_t i = 0; i < DEFBLOCKSIZE; ++i) {
+            if (input_[i] < 60 || input_[i] > 123) return;
         }
         std::array<unsigned char, 12> header = {};
         if (fnDecode6BitBuf(&input_[0], reinterpret_cast<char*>(header.data()), static_cast<int>(header.size())) != 12)
@@ -1174,7 +1277,8 @@ private:
         const std::uint32_t actor = (header[5] ^ sceneKey_[3]) | (std::uint32_t(header[7]) << 8) |
             (std::uint32_t(header[9]) << 16) | (std::uint32_t(header[11]) << 24);
         if (opcode == GameLogon && actor && actor <= 0x7fffffffu &&
-            stage == Stage::AuthenticatingGame && input_.size() == DEFBLOCKSIZE + 51) {
+            stage == Stage::AuthenticatingGame && input_.size() == DEFBLOCKSIZE + 51 &&
+            std::all_of(input_.begin() + DEFBLOCKSIZE, input_.end(), [](char byte) { return byte >= 60 && byte <= 123; })) {
             stage = Stage::GameSession;
             localActor_ = actor;
             LoadChatHistory();
@@ -1202,6 +1306,12 @@ private:
             const auto first = static_cast<WORD>(header[1] | (header[6] << 8));
             const auto third = static_cast<WORD>(header[3] | (header[10] << 8));
             HandleQuestReply(static_cast<mir3_cui::QuestReply>(opcode), first, third);
+        } else if (stage == Stage::GameSession &&
+                   ((opcode >= 200 && opcode <= 203) || opcode == 600 || opcode == 601 ||
+                    opcode == 635 || opcode == 636 || opcode == 653 || opcode == 1313)) {
+            const auto first = static_cast<WORD>(header[1] | (header[6] << 8));
+            const auto third = static_cast<WORD>(header[3] | (header[10] << 8));
+            HandleInventoryReply(opcode, actor, first, third);
         } else if (mir3_cui::ChatChannel(opcode) && stage == Stage::GameSession &&
                    input_.size() <= DEFBLOCKSIZE + 1024) {
             auto body = ReadGameBody();
@@ -1216,6 +1326,126 @@ private:
                 log << body << "\r\n";
             }
         }
+    }
+
+    void HandleInventoryReply(unsigned opcode, std::uint32_t actor, WORD first, WORD third)
+    {
+        using mir3_cui::ItemRequest;
+        if (opcode >= 200 && opcode <= 203) {
+            ApplyBagRecords(opcode, third);
+            return;
+        }
+        if (opcode == 601) {
+            auto name = ReadGameBody();
+            const auto zero = name.find('\0');
+            if (zero != std::string::npos) name.resize(zero);
+            if ((inventory.request == ItemRequest::Drop || inventory.request == ItemRequest::DropStack) &&
+                actor == inventory.pending.key.id && name == inventory.pending.key.name) {
+                inventory.request = ItemRequest::None;
+                inventory.status = "The server declined the item drop.";
+            }
+            return;
+        }
+        if (input_.size() != DEFBLOCKSIZE) return;
+        switch (opcode) {
+        case 600:
+            if ((inventory.request == ItemRequest::Drop || inventory.request == ItemRequest::DropStack) &&
+                (!actor || actor == inventory.pending.key.id)) {
+                if (inventory.request == ItemRequest::Drop || inventory.dropCount >= inventory.pending.count)
+                    inventory.Remove(inventory.pending.key);
+                inventory.request = ItemRequest::None;
+                inventory.status.clear();
+            }
+            break;
+        case 635:
+        case 636:
+            if (inventory.request != ItemRequest::Use) break;
+            inventory.request = ItemRequest::None;
+            if (opcode == 636) {
+                inventory.status = "The server declined to use " + inventory.pending.label + ".";
+                inventory.notice = inventory.pending.mode == 51;
+                break;
+            }
+            if (inventory.pending.stackMode == 3 && inventory.pending.count > 1 && first) {
+                if (auto* item = inventory.Find(inventory.pending.key)) item->count = first;
+            } else {
+                inventory.Remove(inventory.pending.key);
+            }
+            inventory.status = "Used " + inventory.pending.label + ".";
+            break;
+        case 653:
+            inventory.gold = actor;
+            if (inventory.request == ItemRequest::DropGold) {
+                inventory.request = ItemRequest::None;
+                inventory.status.clear();
+            }
+            break;
+        case 1313:
+            for (auto& item : inventory.items) {
+                if (item.key.id == actor) item.count = first;
+            }
+            if (!first) {
+                auto& items = inventory.items;
+                items.erase(std::remove_if(items.begin(), items.end(), [&](const auto& item) {
+                    return item.key.id == actor && item.Stacks();
+                }), items.end());
+                if (!inventory.Find(inventory.selection)) inventory.selection = {};
+            }
+            if (inventory.request == ItemRequest::DropStack && inventory.pending.key.id == actor) {
+                inventory.request = ItemRequest::None;
+                inventory.status.clear();
+            }
+            break;
+        }
+    }
+
+    void ApplyBagRecords(unsigned opcode, WORD count)
+    {
+        const bool full = opcode == 201;
+        if (!full) count = 1;
+        if (count > 46) return;
+        const std::size_t encodedRecordSize = 134;
+        const auto size = input_.size() - DEFBLOCKSIZE;
+        if (size != count * (encodedRecordSize + (full ? 1 : 0))) return;
+
+        std::vector<mir3_cui::InventoryItem> records;
+        std::size_t start = DEFBLOCKSIZE;
+        for (WORD i = 0; i < count; ++i) {
+            const auto record = DecodeGameBytes(input_.substr(start, encodedRecordSize));
+            if (record.size() != 100 || (full && input_[start + encodedRecordSize] != '/')) return;
+            const auto word = [&](std::size_t offset) {
+                return static_cast<unsigned char>(record[offset]) |
+                    (static_cast<unsigned>(static_cast<unsigned char>(record[offset + 1])) << 8);
+            };
+            auto name = record.substr(0, 30);
+            const auto end = name.find('\0');
+            if (end != std::string::npos) name.resize(end);
+            const auto label = ConvertText(name, 936, CP_UTF8);
+            if (label.empty()) return;
+            mir3_cui::InventoryItem item;
+            item.key = {word(62) | (std::uint32_t(word(64)) << 16), std::move(name)};
+            item.label = label;
+            item.count = word(71);
+            item.durability = word(66);
+            item.maxDurability = word(68);
+            item.mode = static_cast<unsigned char>(record[30]);
+            item.stackMode = static_cast<unsigned char>(record[61]);
+            records.push_back(std::move(item));
+            start += encodedRecordSize + (full ? 1 : 0);
+        }
+        if (full) {
+            inventory.items = std::move(records);
+            inventory.initialized = true;
+            inventory.waiting = false;
+            if (!inventory.Find(inventory.selection)) inventory.selection = {};
+            return;
+        }
+
+        auto& item = records.front();
+        auto* current = inventory.Find(item.key);
+        if (opcode == 202) inventory.Remove(item.key);
+        else if (current) *current = std::move(item);
+        else if (opcode == 200 && inventory.items.size() < 46) inventory.items.push_back(std::move(item));
     }
 
     void HandleQuestReply(mir3_cui::QuestReply reply, WORD first, WORD third)
@@ -1359,12 +1589,18 @@ private:
 
     std::string ReadGameBody()
     {
-        const size_t encodedSize = input_.size() - DEFBLOCKSIZE;
+        return DecodeGameBytes(input_.substr(DEFBLOCKSIZE));
+    }
+
+    static std::string DecodeGameBytes(std::string encoded)
+    {
+        const size_t encodedSize = encoded.size();
         if (!encodedSize || encodedSize % 4 == 1) return {};
+        for (char byte : encoded) if (byte < 60 || byte > 123) return {};
         const unsigned padding = static_cast<unsigned>((encodedSize * 6) % 8);
-        if ((input_.back() - 60) & ((1u << padding) - 1)) return {};
+        if ((encoded.back() - 60) & ((1u << padding) - 1)) return {};
         std::string body(encodedSize * 3 / 4, '\0');
-        body.resize(fnDecode6BitBuf(&input_[DEFBLOCKSIZE], &body[0], static_cast<int>(body.size())));
+        body.resize(fnDecode6BitBuf(&encoded[0], &body[0], static_cast<int>(body.size())));
         return body;
     }
 
@@ -1827,7 +2063,8 @@ void DrawGameChat(cui_ctx* ui, LoginClient& client)
     const auto hasOverlay = [&]() {
         return client.showSignOut || chat.receptionOpen || client.serverOptions.open || client.audioOpen ||
             client.party.open || client.party.notice.id || client.guild.open || client.guild.requested ||
-            client.guild.notice || client.guild.action != mir3_cui::GuildAction::None || client.quests.open;
+            client.guild.notice || client.guild.action != mir3_cui::GuildAction::None || client.quests.open ||
+            client.inventory.open || client.inventory.notice;
     };
     const bool hadOverlay = hasOverlay();
     cui_push_disabled(ui, hadOverlay);
@@ -1848,6 +2085,8 @@ void DrawGameChat(cui_ctx* ui, LoginClient& client)
         client.RequestGuildPage(0);
     if (Button(ui, "Quests") || (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_D)))
         client.OpenQuests();
+    if (Button(ui, "Inventory") || (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_W)))
+        client.OpenInventory();
     if (Button(ui, "Server options") ||
         (!chat.composing && !hadOverlay && cui_shortcut(ui, 0, CUI_KEY_N)))
         client.serverOptions.open = true;
@@ -2199,6 +2438,109 @@ void DrawQuests(cui_ctx* ui, LoginClient& client)
     cui_dialog_end(ui);
 }
 
+void DrawInventory(cui_ctx* ui, LoginClient& client)
+{
+    using mir3_cui::DropDialog;
+    using mir3_cui::ItemRequest;
+    auto& bag = client.inventory;
+    if (bag.notice) {
+        cui_dialog_opts alert = {};
+        alert.persistent = true;
+        alert.no_close_button = true;
+        if (cui_dialog_begin(ui, "Item notice", &bag.notice, &alert)) {
+            cui_text_ex(ui, bag.status.c_str(), nullptr);
+            cui_dialog_footer_begin(ui);
+            const bool dismiss = Button(ui, "OK", true) || cui_key_pressed(ui, CUI_KEY_ENTER) ||
+                cui_key_pressed(ui, CUI_KEY_SPACE);
+            cui_dialog_footer_end(ui);
+            cui_dialog_end(ui);
+            if (dismiss) {
+                bag.notice = false;
+                bag.status.clear();
+            }
+        }
+        return;
+    }
+    if (bag.drop != DropDialog::None) {
+        cui_dialog_opts confirm = {};
+        confirm.persistent = true;
+        confirm.no_close_button = true;
+        bool open = true;
+        const auto* item = bag.Find(bag.selection);
+        const bool gold = bag.drop == DropDialog::Gold;
+        if (!cui_dialog_begin(ui, gold ? "Drop gold" : "Drop item", &open, &confirm)) return;
+        if (gold) cui_textf(ui, "Gold balance: %u", bag.gold);
+        else if (item) cui_label(ui, item->label.c_str());
+
+        const bool amount = gold || (item && item->Stacks() && item->count > 1);
+        int input = 0;
+        if (amount) {
+            cui_push_id_int(ui, bag.editor);
+            input = Input(ui, "Amount", bag.amount, sizeof bag.amount, false, true);
+            cui_pop_id(ui);
+            if (!gold) cui_muted(ui, "Up to 100 items per drop.");
+        }
+        if (!bag.status.empty()) cui_secondary(ui, bag.status.c_str());
+        cui_dialog_footer_begin(ui);
+        const bool cancel = Button(ui, "Cancel") || cui_key_pressed(ui, CUI_KEY_ESCAPE);
+        const bool submit = Button(ui, "Confirm drop", true) || (input & CUI_SUBMITTED);
+        cui_dialog_footer_end(ui);
+        cui_dialog_end(ui);
+        if (cancel) bag.drop = DropDialog::None;
+        else if (submit) client.SubmitInventoryDrop();
+        return;
+    }
+
+    cui_dialog_opts dialog = {};
+    dialog.width = 500;
+    if (!cui_dialog_begin(ui, "Inventory", &bag.open, &dialog)) return;
+    cui_textf(ui, "Gold: %u", bag.gold);
+    cui_scroll_opts list = {};
+    list.id = "inventory-items";
+    list.width = CUI_FILL;
+    list.height = CUI_PX(168);
+    list.gap = 5;
+    cui_scroll_begin(ui, &list);
+    if (bag.items.empty()) cui_secondary(ui, bag.waiting ? "Waiting for the inventory..." : "No items.");
+    for (std::size_t i = 0; i < bag.items.size(); ++i) {
+        const auto& item = bag.items[i];
+        cui_push_id_int(ui, static_cast<int>(i));
+        auto label = item.label;
+        if (item.Stacks()) label += "  x" + std::to_string(item.count);
+        label += "###item";
+        if (Button(ui, label.c_str(), bag.selection == item.key, true)) bag.selection = item.key;
+        cui_pop_id(ui);
+    }
+    cui_scroll_end(ui);
+    const auto* selected = bag.Find(bag.selection);
+    if (selected && (selected->maxDurability || selected->durability)) {
+        if (selected->maxDurability)
+            cui_textf(ui, "Durability: %u / %u", selected->durability, selected->maxDurability);
+        else
+            cui_textf(ui, "Durability: %u", selected->durability);
+    }
+    if (bag.request != ItemRequest::None) cui_muted(ui, "Waiting for the server...");
+    if (!bag.status.empty()) cui_secondary(ui, bag.status.c_str());
+    cui_box actions = {};
+    actions.width = CUI_FILL;
+    actions.gap = 8;
+    actions.wrap = true;
+    cui_row_begin(ui, &actions);
+    cui_push_disabled(ui, bag.request != ItemRequest::None || !selected || selected->IsGold());
+    if (Button(ui, "Use", true)) client.UseInventoryItem();
+    if (Button(ui, "Drop item")) client.BeginInventoryDrop(DropDialog::Item);
+    cui_pop_disabled(ui);
+    cui_push_disabled(ui, bag.request != ItemRequest::None || bag.gold < 2);
+    if (Button(ui, "Drop gold")) client.BeginInventoryDrop(DropDialog::Gold);
+    cui_pop_disabled(ui);
+    cui_box_end(ui);
+    cui_dialog_footer_begin(ui);
+    if (Button(ui, "Refresh")) client.RequestInventory();
+    if (Button(ui, "Done", true) || cui_shortcut(ui, 0, CUI_KEY_W)) bag.open = false;
+    cui_dialog_footer_end(ui);
+    cui_dialog_end(ui);
+}
+
 void DrawServerOptions(cui_ctx* ui, LoginClient& client)
 {
     auto& options = client.serverOptions;
@@ -2319,6 +2661,7 @@ void Draw(cui_ctx* ui, LoginClient& client)
                  client.guild.action != mir3_cui::GuildAction::None)
             DrawGuild(ui, client);
         else if (client.quests.open) DrawQuests(ui, client);
+        else if (client.inventory.open || client.inventory.notice) DrawInventory(ui, client);
         if (!client.showSignOut) return;
     } else {
         cui_heading(ui, "Mir3 Client", 1);
