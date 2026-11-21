@@ -17953,13 +17953,16 @@ void cui_draw_multiply_triangle(cui_ctx *ui, const cui_vec2 points[3], const cui
 }
 
 void cui_draw_effect_quad(cui_ctx *ui, cui_texture tex, const cui_vec2 points[4],
-    const cui_vec2 uv[4], cui_color tint, bool screen) {
+    const cui_vec2 uv[4], cui_color tint, cui_effect_blend blend) {
     cui_xform x = cui__xf(ui);
     tint = cui__xa(tint, x.alpha);
-    if (!tex || !tint.a) return;
+    if (!tex || x.alpha<=0 || (!tint.a && blend!=CUI_EFFECT_PREMULTIPLIED)) return;
+    const int mode = blend==CUI_EFFECT_SCREEN ? CUI_SHADE_IMAGE_SCREEN :
+        blend==CUI_EFFECT_ADD ? CUI_SHADE_EFFECT_ADD :
+        blend==CUI_EFFECT_PREMULTIPLIED ? CUI_SHADE_EFFECT_PREMULTIPLIED : CUI_SHADE_IMAGE_PARTICLE;
     float scale = ui->scale * x.scale;
     cui__set_texture(ui, tex);
-    ui->dl.blend = screen ? CUI__BLEND_SCREEN : CUI__BLEND_OVER;
+    ui->dl.blend = blend==CUI_EFFECT_SCREEN ? CUI__BLEND_SCREEN : CUI__BLEND_OVER;
     uint32_t base;
     cui_vertex *v = cui__reserve(ui, 4, 6, &base);
     ui->dl.blend = CUI__BLEND_OVER;
@@ -17968,7 +17971,7 @@ void cui_draw_effect_quad(cui_ctx *ui, cui_texture tex, const cui_vec2 points[4]
         v[i].y = points[i].y * scale + x.oy;
         v[i].u = uv[i].x;
         v[i].v = uv[i].y;
-        v[i].mode = screen ? CUI_SHADE_IMAGE_SCREEN : CUI_SHADE_IMAGE_PARTICLE;
+        v[i].mode = (float)mode;
         v[i].color = tint;
     }
     uint32_t *ix = cui__idx(ui, 6);
@@ -69311,7 +69314,7 @@ static void cui__raster_tri(const cui__sw_job *job, const cui_vertex *a, const c
                 continue;
             }
             cui__px o;
-            if (mode == CUI_SHADE_IMAGE_PARTICLE || mode == CUI_SHADE_IMAGE_SCREEN) {
+            if (mode >= CUI_SHADE_IMAGE_PARTICLE && mode <= CUI_SHADE_EFFECT_PREMULTIPLIED) {
                 if (!tex) continue;
                 float u = a->u * w0 + b->u * w1 + c->u * w2, v = a->v * w0 + b->v * w1 + c->v * w2;
                 cui__px t = cui__sample_rgba(tex, u, v);
@@ -69326,7 +69329,10 @@ static void cui__raster_tri(const cui__sw_job *job, const cui_vertex *a, const c
                     continue;
                 }
                 const float coverage = t.a * ca;
-                o = (cui__px){t.r * cr * coverage, t.g * cg * coverage, t.b * cb * coverage, coverage / 255.0f};
+                const float source = mode==CUI_SHADE_IMAGE_PARTICLE ? coverage : 1.0f;
+                const float alpha = mode==CUI_SHADE_IMAGE_PARTICLE ? coverage/255.0f :
+                    mode==CUI_SHADE_EFFECT_PREMULTIPLIED ? coverage : 0;
+                o = (cui__px){t.r * cr * source,t.g * cg * source,t.b * cb * source,alpha};
             } else if (mode == CUI_SHADE_SOLID || mode == CUI_SHADE_SOLID_PREMULTIPLIED) {
                 float k = mode == CUI_SHADE_SOLID_PREMULTIPLIED ? 1.0f : ca;
                 o.r = cr * k; o.g = cg * k; o.b = cb * k; o.a = ca;
@@ -69375,7 +69381,7 @@ static bool cui__raster_quad(const cui__sw_job *job, const cui_vertex *v0, const
     if (v0->x >= v1->x || v0->y >= v3->y) return false;
     if (memcmp(&v0->color, &v1->color, 4) != 0 || memcmp(&v2->color, &v3->color, 4) != 0) return false;
     int mode = (int)(v0->mode + 0.5f);
-    if (mode == CUI_SHADE_IMAGE_PARTICLE || mode == CUI_SHADE_IMAGE_SCREEN) return false;
+    if (mode >= CUI_SHADE_IMAGE_PARTICLE && mode <= CUI_SHADE_EFFECT_PREMULTIPLIED) return false;
     float qx0 = v0->x, qy0 = v0->y, qx1 = v1->x, qy1 = v3->y;
     int x0 = CUI_MAX(cx0, (int)ceilf(qx0 - 0.5f)), x1 = CUI_MIN(cx1, (int)ceilf(qx1 - 0.5f));
     int y0 = CUI_MAX(cy0, (int)ceilf(qy0 - 0.5f)), y1 = CUI_MIN(cy1, (int)ceilf(qy1 - 0.5f));
@@ -71608,11 +71614,12 @@ static const char *cui__fs_src =
     "  vec4 c = v_color;\n"
     "  if (mode == 4) { frag = vec4(c.rgb * c.a, c.a); return; }\n"
     "  if (mode == 5) { frag = c; return; }\n"
-    "  if (mode == 7 || mode == 8) {\n"
+    "  if (mode >= 7 && mode <= 10) {\n"
     "    vec4 t = texture(u_tex, v_uv);\n"
     "    if (t.a == 0.0) discard;\n"
     "    float k = t.a * c.a;\n"
-    "    frag = mode == 8 ? vec4(t.rgb * c.rgb * c.a, 0.0) : vec4(t.rgb * c.rgb * k, k / 255.0);\n"
+    "    if (mode == 7) frag = vec4(t.rgb * c.rgb * k, k / 255.0);\n"
+    "    else frag = vec4(t.rgb * c.rgb * (mode == 8 ? c.a : 1.0), mode == 10 ? k : 0.0);\n"
     "    return;\n"
     "  }\n"
     "  if (mode == 0) { float a = c.a * texture(u_tex, v_uv).r; frag = vec4(c.rgb * a, a); return; }\n"

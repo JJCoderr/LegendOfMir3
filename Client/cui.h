@@ -4460,11 +4460,12 @@ CUI_API void cui_draw_text(cui_ctx *ui, cui_font font, float size, cui_vec2 pos,
 CUI_API void cui_draw_icon(cui_ctx *ui, const char *icon, cui_rect r, float size, cui_color color);
 CUI_API void cui_draw_image(cui_ctx *ui, cui_texture tex, cui_rect r, cui_rect uv, cui_corners radius, cui_color tint);
 CUI_API void cui_draw_image_additive(cui_ctx *ui, cui_texture tex, cui_rect r);
-/* Textured quad in perimeter order, with normalized UVs. Screen blend uses
- * src + dst * (1 - src) on visible texels. Particle blend uses texture alpha
- * for source coverage and 1/255 of that alpha for destination attenuation. */
+/* Textured quad in perimeter order, with normalized UVs. */
+typedef enum cui_effect_blend {
+    CUI_EFFECT_PARTICLE, CUI_EFFECT_SCREEN, CUI_EFFECT_ADD, CUI_EFFECT_PREMULTIPLIED
+} cui_effect_blend;
 CUI_API void cui_draw_effect_quad(cui_ctx *ui, cui_texture tex, const cui_vec2 points[4],
-    const cui_vec2 uv[4], cui_color tint, bool screen);
+    const cui_vec2 uv[4], cui_color tint, cui_effect_blend blend);
 CUI_API void cui_push_clip(cui_ctx *ui, cui_rect r);
 CUI_API void cui_pop_clip(cui_ctx *ui);
 
@@ -4495,7 +4496,8 @@ CUI_API float cui_animate_spring(cui_ctx *ui, cui_id id, float target, float dur
 /* Vertex shading modes. See docs/rendering.md for the reference shader. */
 enum { CUI_SHADE_TEXT = 0, CUI_SHADE_RRECT = 1, CUI_SHADE_SHADOW = 2, CUI_SHADE_IMAGE = 3,
        CUI_SHADE_SOLID = 4, CUI_SHADE_SOLID_PREMULTIPLIED = 5, CUI_SHADE_IMAGE_ADDITIVE = 6,
-       CUI_SHADE_IMAGE_PARTICLE = 7, CUI_SHADE_IMAGE_SCREEN = 8 };
+       CUI_SHADE_IMAGE_PARTICLE = 7, CUI_SHADE_IMAGE_SCREEN = 8,
+       CUI_SHADE_EFFECT_ADD = 9, CUI_SHADE_EFFECT_PREMULTIPLIED = 10 };
 
 typedef struct cui_vertex {
     float x, y;            /* position in pixels */

@@ -32,6 +32,8 @@ struct SceneSprite {
     int x = 0, y = 0, width = 0, height = 0, row = 0;
     std::uint8_t opacity = 255;
     float sourceWidth = 1;
+    std::optional<cui_effect_blend> effect;
+    cui_color tint{255,255,255,255};
 };
 
 struct SceneActorHit {
@@ -57,7 +59,7 @@ struct SceneEffectQuad {
     std::array<cui_vec2,4> corners;
     cui_color tint;
     bool upright;
-    bool screen;
+    cui_effect_blend blend;
 };
 
 struct SceneActorAnchor {
@@ -713,6 +715,7 @@ private:
     std::vector<SceneActorAnchor> worldAnchors_;
     std::vector<SceneCaption> worldNames_, worldSpeech_;
     std::vector<SceneEffectQuad> worldWeather_, worldLevelEffects_;
+    std::vector<mir3::SceneLight> worldSpellLights_;
     std::map<std::pair<std::string,int>,Image> worldText_;
     mir3::SceneLightGrid worldLight_{255};
     mir3_cui::MapTerrain::LightView mapLights_{};
@@ -732,6 +735,7 @@ private:
     void PrepareSceneLight(LoginClient& client, SceneMapArt& camera);
     void PrepareWeather(cui_ctx* ui, const LoginClient& client, SceneMapArt& camera);
     void PrepareLevelEffects(cui_ctx* ui, const LocalScene& scene, SceneMapArt& camera);
+    void PrepareCast(cui_ctx* ui, const mir3::CastVisual& cast, int x, int y, int row);
     void PrepareGroundItems(cui_ctx* ui, const LocalScene& scene, const SceneMapArt& camera,
                             int startX, int startY, cui_vec2 pointer, bool interactive, std::vector<SceneSprite>& overlays);
     const WorldFrame& GroundFrame(cui_ctx* ui, int looks, bool highlighted);
@@ -751,6 +755,7 @@ private:
     int gameRowsDrawn_ = 0, gameThumbY_ = 0, gameMeterTipKind_ = -1;
     bool gameHudReady_ = false, gameChatModeChanged_ = false;
     bool gameChatFocused_ = false, gameScrollCaptured_ = false;
+    std::array<bool,12> castKeysHeld_{};
     int gameChatEditor_ = -1, gameHintDrawn_ = -1, gameHintHeight_ = 0;
     int gameChannel_ = 0;
     std::array<bool,3> gameChatRejected_{};
@@ -889,6 +894,7 @@ private:
     std::uint32_t targetActor_ = 0;
     std::uint64_t targetChangedAt_ = 0;
     void RefreshTargetPortrait(cui_ctx* ui, LoginClient& client, const SceneMapArt& scene, cui_vec2 pointer, bool interactive);
+    static std::uint32_t SceneTargetAt(const SceneMapArt& scene, cui_vec2 pointer);
     void RefreshMonsterPortrait(cui_ctx* ui, const LocalScene::Player& actor);
     void PaintTargetDetails(cui_ctx* ui, const HudPoint& base, bool attributes) const;
     HudHint portraitHint_;
@@ -5282,6 +5288,14 @@ void PaintLocalScene(cui_ctx* ui, cui_rect rect, void* user)
         cui_push_clip(ui,rect);
         const float scale=rect.w/800;
         const auto drawSprite=[&](const SceneSprite& sprite) {
+            if (sprite.effect) {
+                const float x=rect.x+sprite.x*scale,y=rect.y+sprite.y*scale;
+                const float r=x+sprite.width*scale,b=y+sprite.height*scale;
+                const cui_vec2 quad[]{{x,y},{r,y},{r,b},{x,b}};
+                constexpr cui_vec2 uv[]{{0,0},{1,0},{1,1},{0,1}};
+                cui_draw_effect_quad(ui,sprite.texture,quad,uv,sprite.tint,*sprite.effect);
+                return;
+            }
             cui_draw_image(ui,sprite.texture,{rect.x+sprite.x*scale,rect.y+sprite.y*scale,
                 sprite.width*scale,sprite.height*scale},{0,0,sprite.sourceWidth,1},{},{255,255,255,sprite.opacity});
         };
@@ -5295,7 +5309,7 @@ void PaintLocalScene(cui_ctx* ui, cui_rect rect, void* user)
                 cui_vec2 positions[4];
                 for (int k=0;k<4;++k)
                     positions[k]={rect.x+sprite.corners[k].x*scale,rect.y+sprite.corners[k].y*scale};
-                cui_draw_effect_quad(ui,sprite.texture,positions,sprite.upright ? uprightUV : particleUV,sprite.tint,sprite.screen);
+                cui_draw_effect_quad(ui,sprite.texture,positions,sprite.upright ? uprightUV : particleUV,sprite.tint,sprite.blend);
             }
         };
         effects(model.art.weather);
@@ -6198,6 +6212,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
     worldCorpses_.clear();
     worldGroundLabels_.clear();
     worldAnchors_.clear();
+    worldSpellLights_.clear();
     worldNames_.clear();
     worldSpeech_.clear();
     constexpr std::array<const char*,15> packages{"Tilesc","Tiles30c","Tiles5c","SmTilesc","Housesc","Cliffsc",
@@ -6344,9 +6359,14 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         } else {
             const int crouch=CrouchPose(actor.crouchedAt,monsterNow);
             const int level=mir3::level_up_pose(actor.levelPoseAt,monsterNow);
-            const int pose=actor.dead ? HumanCorpsePose : level>=0 ? level : crouch>=0 ? crouch : idle;
+            const int cast=actor.casting.pose();
+            const int pose=actor.dead ? HumanCorpsePose : cast>=0 ? cast : level>=0 ? level : crouch>=0 ? crouch : idle;
             bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,pose,client.shadowBlend,actor.mount);
-            if (bounds.w>0) worldAnchors_.push_back({id,bounds,int(actor.x)*48-camera.cameraX,int(actor.y)*32-camera.cameraY,2});
+            if (bounds.w>0) {
+                const int x=int(actor.x)*48-camera.cameraX, y=int(actor.y)*32-camera.cameraY;
+                worldAnchors_.push_back({id,bounds,x,y,2});
+                if (!actor.dead) PrepareCast(ui,actor.casting,x,y,actor.y);
+            }
             animated|=!actor.dead;
         }
         if (bounds.w<=0) continue;
@@ -6356,9 +6376,14 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
     if (client.characterAppearance.available) {
         const int crouch=CrouchPose(scene.crouchedAt,monsterNow);
         const int level=mir3::level_up_pose(scene.levelPoseAt,monsterNow);
+        const int cast=scene.casting.pose();
         const auto localBounds=AddWorldActor(ui,client.characterAppearance,scene.facing,scene.x,scene.y,camera,
-            level>=0 ? level : crouch>=0 ? crouch : idle,client.shadowBlend,client.mount.shape);
-        if (localBounds.w>0) worldAnchors_.push_back({0,localBounds,int(scene.x)*48-camera.cameraX,int(scene.y)*32-camera.cameraY,3});
+            cast>=0 ? cast : level>=0 ? level : crouch>=0 ? crouch : idle,client.shadowBlend,client.mount.shape);
+        if (localBounds.w>0) {
+            const int x=int(scene.x)*48-camera.cameraX, y=int(scene.y)*32-camera.cameraY;
+            worldAnchors_.push_back({0,localBounds,x,y,3});
+            PrepareCast(ui,scene.casting,x,y,scene.y);
+        }
         if (localBounds.w>0 && client.characterStatus.hp[1] && gamePortraits_.contains(2)) {
             const auto [hp,maxHp]=client.characterStatus.hp;
             const auto& border=gamePortraits_.at(2), &fill=gamePortraits_.at(3);
@@ -6400,14 +6425,15 @@ void Dialogs::Assets::PrepareWeather(cui_ctx* ui, const LoginClient& client, Sce
     if (client.snowEnabled && weather.fog) {
         if (const auto texture=frame(550)) {
             const float x=-1600+weather.fog_x, y=-300-weather.fog_y;
-            worldWeather_.push_back({texture,{{{x,y},{x+4000,y},{x+4000,y+1200},{x,y+1200}}},{100,200,200,255},true,true});
+            worldWeather_.push_back({texture,{{{x,y},{x+4000,y},{x+4000,y+1200},{x,y+1200}}},{100,200,200,255},true,CUI_EFFECT_SCREEN});
         }
     }
     const auto particle=[&](const mir3::SnowWeather::Particle& p,cui_texture texture,float halfWidth,float halfHeight,float angle,bool screen) {
         if (!texture || p.x+halfWidth+halfHeight<0 || p.x-halfWidth-halfHeight>800 ||
             p.y+halfWidth+halfHeight<0 || p.y-halfWidth-halfHeight>600) return;
         SceneEffectQuad sprite{texture,{{{-halfWidth,-halfHeight},{halfWidth,-halfHeight},
-            {halfWidth,halfHeight},{-halfWidth,halfHeight}}},{p.rgb[0],p.rgb[1],p.rgb[2],255},false,screen};
+            {halfWidth,halfHeight},{-halfWidth,halfHeight}}},{p.rgb[0],p.rgb[1],p.rgb[2],255},false,
+            screen ? CUI_EFFECT_SCREEN : CUI_EFFECT_PARTICLE};
         const float sn=std::sin(angle), cs=std::cos(angle);
         for (auto& point:sprite.corners) {
             const auto [x,y]=point;
@@ -6441,9 +6467,46 @@ void Dialogs::Assets::PrepareLevelEffects(cui_ctx* ui, const LocalScene& scene, 
         const float x=float(effect.cell_x*48-camera.cameraX+frame.x), y=float(effect.cell_y*32-camera.cameraY+frame.y);
         const auto& tint=effect.resource.tint;
         worldLevelEffects_.push_back({image.texture,{{{x,y},{x+image.width,y},{x+image.width,y+image.height},{x,y+image.height}}},
-            {tint[0],tint[1],tint[2],255},true,true});
+            {tint[0],tint[1],tint[2],255},true,CUI_EFFECT_SCREEN});
     }
     camera.levelEffects=&worldLevelEffects_;
+    cui_request_wakeup(ui,0.016f);
+}
+
+void Dialogs::Assets::PrepareCast(cui_ctx* ui, const mir3::CastVisual& cast, int x, int y, int row)
+{
+    if (!cast.resource || cast.clock.finished()) return;
+    const auto& resource=*cast.resource;
+    const int relative=cast.clock.spell_frame();
+    const int limit=cast.clock.spell_frame_limit();
+    const int radius=relative<limit/2 ? relative+1 : limit-relative;
+    if (radius>0 && resource.outer_radius) {
+        const auto& inner=resource.inner_color;
+        const auto& outer=resource.outer_color;
+        worldSpellLights_.push_back({x+24,y+16,radius-1,{inner[0],inner[1],inner[2]},radius,{outer[0],outer[1],outer[2]}});
+    }
+    const char* archive=nullptr;
+    switch (resource.library) {
+    case 81: archive="Magic"; break;
+    case 91: archive="Mon-4"; break;
+    case 129: archive="MonMagic"; break;
+    case 137: archive="MagicEx"; break;
+    case 138: archive="MonMagicEx"; break;
+    case 140: archive="MonMagicEx2"; break;
+    case 143: archive="MonMagicEx3"; break;
+    case 148: archive="MonMagicEx4"; break;
+    case 149: archive="MagicEx2"; break;
+    default: return;
+    }
+    if (resource.blend>2 || resource.first>INT_MAX-100) return;
+    const int index=int(resource.first)+10*cast.direction+relative;
+    const auto& frame=GetWorldFrame(ui,archive,index);
+    if (!frame.image.texture) return;
+    const auto blend=resource.blend==0 ? CUI_EFFECT_PREMULTIPLIED :
+        resource.blend==1 ? CUI_EFFECT_ADD : CUI_EFFECT_SCREEN;
+    const auto& tint=cast.tint;
+    worldSprites_.push_back({frame.image.texture,x+frame.x,y+frame.y,frame.image.width,frame.image.height,row,255,1,
+        blend,{tint[0],tint[1],tint[2],resource.blend==0 ? resource.opacity : std::uint8_t(255)}});
     cui_request_wakeup(ui,0.016f);
 }
 
@@ -6470,8 +6533,10 @@ void Dialogs::Assets::PrepareSceneLight(LoginClient& client, SceneMapArt& camera
         if (packed) worldLight_.add({(x+left)*48-camera.cameraX,(y+top)*32-camera.cameraY,
             0,{},radii[packed>>14],colors[(packed>>4)&255]});
     }
-    if (client.magicLight) for (const auto& playback:scene.levelEffects)
-        worldLight_.add(playback.effect.light(camera.cameraX,camera.cameraY));
+    if (client.magicLight) {
+        for (const auto& light:worldSpellLights_) worldLight_.add(light);
+        for (const auto& playback:scene.levelEffects) worldLight_.add(playback.effect.light(camera.cameraX,camera.cameraY));
+    }
     worldLight_.add(mir3::SceneLight::actor(int(scene.x)*48-camera.cameraX,int(scene.y)*32-camera.cameraY,scene.light,true));
     for (int kind : {2,0,1}) for (const auto& anchor:worldAnchors_) {
         if (anchor.order!=kind) continue;
@@ -7318,17 +7383,19 @@ Dialogs::Assets::Image Dialogs::Assets::DecodePortrait(cui_ctx* ui, std::string_
     return image;
 }
 
+std::uint32_t Dialogs::Assets::SceneTargetAt(const SceneMapArt& scene,cui_vec2 pointer)
+{
+    if (!scene.targets) return 0;
+    const auto& targets=*scene.targets;
+    const auto hit=std::find_if(targets.rbegin(),targets.rend(),[&](const SceneActorHit& actor) { return Contains(actor.bounds,pointer); });
+    return hit!=targets.rend() ? hit->actor : 0;
+}
+
 void Dialogs::Assets::RefreshTargetPortrait(cui_ctx* ui, LoginClient& client, const SceneMapArt& scene,
                                            cui_vec2 pointer, bool interactive)
 {
     const auto now = GetTickCount64();
-    std::uint32_t hovered = 0;
-    if (interactive && scene.targets) {
-        const auto& targets = *scene.targets;
-        const auto hit = std::find_if(targets.rbegin(),targets.rend(),
-            [&](const SceneActorHit& actor) { return Contains(actor.bounds,pointer); });
-        if (hit!=targets.rend()) hovered = hit->actor;
-    }
+    const auto hovered=interactive ? SceneTargetAt(scene,pointer) : 0;
     const bool focusChanged=hovered && lastPortraitActor_!=hovered;
     if (hovered) {
         if (targetActor_!=hovered) targetChangedAt_ = now;
@@ -8872,6 +8939,14 @@ void Dialogs::Assets::DrawGameHud(cui_ctx* ui, LoginClient& client, bool pointer
         Contains({float(chatFrame[0]),float(chatFrame[1]),float(chatFrame[2]),float(chatFrame[3])},pointer);
     const bool interactive=!pointerCovered && !modal && !overHud && !client.minimap.visible;
     const auto map = client.characterAppearance.available ? PrepareMapArt(ui,client,pointer,interactive) : SceneMapArt{};
+    for (int i=0;i<12;++i) {
+        const auto key=static_cast<cui_key>(CUI_KEY_F1+i);
+        const bool repeat=std::exchange(castKeysHeld_[i],cui_key_down(ui,key));
+        if (!interactive || wasComposing || chat.composing || !map.sprites || pointer.x<0 || pointer.x>=800 || pointer.y<0 ||
+            !cui_shortcut(ui,0,key)) continue;
+        client.RequestSpell(i+1,int(pointer.x+map.cameraX)/48,int(pointer.y+map.cameraY)/32,SceneTargetAt(map,pointer),repeat);
+        break;
+    }
     RefreshTargetPortrait(ui,client,map,pointer,interactive);
     if (client.characterAppearance.available) {
         cui_overlay_begin(ui,base.Rect(0,0,800,map.sprites ? 600 : 467));

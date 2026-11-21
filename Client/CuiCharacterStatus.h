@@ -42,6 +42,7 @@ struct CharacterStatus {
     Range hp{}, mp{}, weight{}, wear{}, hand{};
     std::array<Range, 5> combat{};
     std::array<std::array<unsigned, 7>, 3> elements{};
+    std::array<std::uint16_t,7> attackElements{};
     unsigned accuracy = 0;
     unsigned agility = 0;
     std::uint16_t weaponTraining = 0;
@@ -65,6 +66,7 @@ struct CharacterStatus {
         wear = {byte(31), byte(32)};
         hand = {byte(33), byte(34)};
         for (int column = 0; column < 7; ++column) {
+            attackElements[column] = static_cast<std::uint16_t>(word(35 + 2 * column));
             elements[0][column] = byte(36 + 2 * column);
             elements[1][column] = byte(49 + column);
             elements[2][column] = byte(56 + column);
