@@ -20,6 +20,7 @@
 #include <iterator>
 #include <map>
 #include <string>
+#include <tuple>
 #include <utility>
 
 namespace mir3_client {
@@ -45,13 +46,28 @@ struct GroundLabel {
     int x, y, width;
 };
 
+struct SceneCaption {
+    cui_texture texture;
+    std::array<int,4> rect;
+    cui_color color;
+};
+
+struct SceneActorAnchor {
+    std::uint32_t actor;
+    cui_rect bounds;
+    int x, y, order;
+};
+
 struct SceneMapArt {
     const std::vector<SceneSprite>* sprites = nullptr;
     const std::vector<SceneActorHit>* npcs = nullptr;
     const std::vector<SceneActorHit>* targets = nullptr;
     const std::vector<SceneActorHit>* corpses = nullptr;
     const std::vector<GroundLabel>* groundLabels = nullptr;
+    const std::vector<SceneCaption>* names = nullptr;
+    const std::vector<SceneCaption>* speech = nullptr;
     int cameraX = 0, cameraY = 0;
+    std::size_t overlayStart = 0;
 };
 
 }
@@ -683,6 +699,9 @@ private:
     std::vector<SceneSprite> worldSprites_;
     std::vector<SceneActorHit> worldNpcs_, worldTargets_, worldCorpses_;
     std::vector<GroundLabel> worldGroundLabels_;
+    std::vector<SceneActorAnchor> worldAnchors_;
+    std::vector<SceneCaption> worldNames_, worldSpeech_;
+    std::map<std::pair<std::string,int>,Image> worldText_;
     struct GroundName { std::string name; Image image; };
     std::array<GroundName,mir3::GroundItems::cell_capacity> groundNames_;
     mir3_cui::MapTerrain::GraphicsView mapGraphics_;
@@ -692,6 +711,7 @@ private:
     const WorldFrame& GetWorldFrame(cui_ctx* ui, const std::string& library, int frame);
     const WorldFrame& GetProjectedWorldShadow(cui_ctx* ui, const std::string& library, int frame, bool flat);
     SceneMapArt PrepareMapArt(cui_ctx* ui, LoginClient& client, cui_vec2 pointer, bool interactive);
+    void PrepareWorldText(cui_ctx* ui, const LoginClient& client, cui_vec2 pointer, bool interactive);
     void PrepareGroundItems(cui_ctx* ui, const LocalScene& scene, const SceneMapArt& camera,
                             int startX, int startY, cui_vec2 pointer, bool interactive, std::vector<SceneSprite>& overlays);
     const WorldFrame& GroundFrame(cui_ctx* ui, int looks, bool highlighted);
@@ -5241,10 +5261,22 @@ void PaintLocalScene(cui_ctx* ui, cui_rect rect, void* user)
         cui_draw_rect(ui,rect,{}, {0,0,0,255});
         cui_push_clip(ui,rect);
         const float scale=rect.w/800;
-        for (const auto& sprite:*model.art.sprites) {
+        const auto drawSprite=[&](const SceneSprite& sprite) {
             cui_draw_image(ui,sprite.texture,{rect.x+sprite.x*scale,rect.y+sprite.y*scale,
                 sprite.width*scale,sprite.height*scale},{0,0,sprite.sourceWidth,1},{},{255,255,255,sprite.opacity});
-        }
+        };
+        const auto& sprites=*model.art.sprites;
+        for (std::size_t i=0;i<model.art.overlayStart;++i) drawSprite(sprites[i]);
+        const auto captions=[&](const std::vector<SceneCaption>* lines) {
+            if (!lines) return;
+            for (const auto& line:*lines) {
+                const auto [x,y,w,h]=line.rect;
+                const cui_rect at{rect.x+x*scale,rect.y+y*scale,w*scale,h*scale};
+                if (line.texture) cui_draw_image(ui,line.texture,at,{0,0,1,1},{},line.color);
+                else cui_draw_rect_premultiplied(ui,at,line.color);
+            }
+        };
+        captions(model.art.names);
         if (model.art.groundLabels) for (const auto& label:*model.art.groundLabels) {
             const auto at=[&](int dx,int dy) {
                 return cui_rect{rect.x+(label.x+dx)*scale,rect.y+(label.y+dy)*scale,label.width*scale,15*scale};
@@ -5253,6 +5285,8 @@ void PaintLocalScene(cui_ctx* ui, cui_rect rect, void* user)
             cui_draw_image(ui,label.texture,at(-1,2),{0,0,1,1},{},{0,0,0,255});
             cui_draw_image(ui,label.texture,at(0,1),{0,0,1,1},{},{255,255,125,255});
         }
+        captions(model.art.speech);
+        for (std::size_t i=model.art.overlayStart;i<sprites.size();++i) drawSprite(sprites[i]);
         cui_pop_clip(ui);
         return;
     }
@@ -6074,7 +6108,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
 {
     auto& scene=client.scene;
     if (!scene.terrain.Ready()) return {};
-    SceneMapArt camera{&worldSprites_,&worldNpcs_,&worldTargets_,&worldCorpses_,&worldGroundLabels_,
+    SceneMapArt camera{&worldSprites_,&worldNpcs_,&worldTargets_,&worldCorpses_,&worldGroundLabels_,&worldNames_,&worldSpeech_,
         static_cast<int>(scene.x)*48-376,static_cast<int>(scene.y)*32-227};
     const int startX=camera.cameraX/96*2, startY=camera.cameraY/64*2;
     const int originX=startX*48-camera.cameraX, originY=startY*32-camera.cameraY;
@@ -6092,6 +6126,9 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
     worldTargets_.clear();
     worldCorpses_.clear();
     worldGroundLabels_.clear();
+    worldAnchors_.clear();
+    worldNames_.clear();
+    worldSpeech_.clear();
     constexpr std::array<const char*,15> packages{"Tilesc","Tiles30c","Tiles5c","SmTilesc","Housesc","Cliffsc",
         "Dungeonsc","Innersc","Furnituresc","Wallsc","SmObjectsc","Animationsc","Object1c","Object2c","Custom"};
     constexpr std::array<const char*,5> regions{"","Wood/","Sand/","Snow/","Forest/"};
@@ -6153,6 +6190,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         const int y=static_cast<int>(actor.y)*32-camera.cameraY+sprite.y;
         worldSprites_.push_back({sprite.image.texture,x,y,sprite.image.width,sprite.image.height,static_cast<int>(actor.y)});
         worldNpcs_.push_back({{float(x),float(y),float(sprite.image.width),float(sprite.image.height)},id,actor.y});
+        worldAnchors_.push_back({id,worldNpcs_.back().bounds,x-sprite.x,y-sprite.y,0});
         animated|=count>1;
     }
     const int idle=static_cast<int>(tick/201%4);
@@ -6220,6 +6258,8 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
                 }
             }
             worldSprites_.push_back({sprite.image.texture,x,y,sprite.image.width,sprite.image.height,int(actor.y),opacity});
+            worldAnchors_.push_back({id,{float(x),float(y),float(sprite.image.width),float(sprite.image.height)},
+                x-sprite.x,y-sprite.y,1});
             const int width=(std::min)(58,sprite.image.width), height=(std::min)(40,sprite.image.height);
             bounds={float(x+(sprite.image.width-width)/2),float(y+(sprite.image.height-height)/2),float(width),float(height)};
             animated|=actor.MonsterAnimating() || (!corpse && !single) || reviveAge<MonsterReviveDuration;
@@ -6234,6 +6274,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
             const int crouch=CrouchPose(actor.crouchedAt,monsterNow);
             const int pose=actor.dead ? HumanCorpsePose : crouch>=0 ? crouch : idle;
             bounds=AddWorldActor(ui,actor.appearance,actor.facing,actor.x,actor.y,camera,pose,client.shadowBlend);
+            if (bounds.w>0) worldAnchors_.push_back({id,bounds,int(actor.x)*48-camera.cameraX,int(actor.y)*32-camera.cameraY,2});
             animated|=!actor.dead;
         }
         if (bounds.w<=0) continue;
@@ -6244,6 +6285,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         const int crouch=CrouchPose(scene.crouchedAt,monsterNow);
         const auto localBounds=AddWorldActor(ui,client.characterAppearance,scene.facing,scene.x,scene.y,camera,
             crouch>=0 ? crouch : idle,client.shadowBlend);
+        if (localBounds.w>0) worldAnchors_.push_back({0,localBounds,int(scene.x)*48-camera.cameraX,int(scene.y)*32-camera.cameraY,3});
         if (localBounds.w>0 && client.characterStatus.hp[1] && gamePortraits_.contains(2)) {
             const auto [hp,maxHp]=client.characterStatus.hp;
             const auto& border=gamePortraits_.at(2), &fill=gamePortraits_.at(3);
@@ -6258,6 +6300,7 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
     std::stable_sort(worldSprites_.begin(),worldSprites_.end(),[](const SceneSprite& a,const SceneSprite& b) {
         return a.row<b.row;
     });
+    camera.overlayStart=worldSprites_.size();
     worldSprites_.insert(worldSprites_.end(),overlays.begin(),overlays.end());
     std::stable_sort(worldNpcs_.begin(),worldNpcs_.end(),[](const SceneActorHit& a,const SceneActorHit& b) {
         return a.row<b.row;
@@ -6266,8 +6309,59 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         return a.row==b.row ? a.monster && !b.monster : a.row<b.row;
     });
     if (animated) cui_request_wakeup(ui,0.05f);
+    PrepareWorldText(ui,client,pointer,interactive);
     TrimWorldFrames(ui);
     return camera;
+}
+
+void Dialogs::Assets::PrepareWorldText(cui_ctx* ui, const LoginClient& client, cui_vec2 pointer, bool interactive)
+{
+    if (worldText_.size()>256) {
+        for (auto& [key,image]:worldText_) Destroy(ui,image);
+        worldText_.clear();
+    }
+    const auto raster=[&](const std::string& caption,int width) -> const Image& {
+        auto [entry,added]=worldText_.try_emplace({caption,width});
+        if (added) {
+            const bool name=width<0;
+            const int size=name ? mir3::SceneName::rect(0,0,
+                mir3::raster_text(caption,800,15,false,mir3::TextFont::normal).text_width,0)[2] : width;
+            if (size>0) entry->second=Raster(ui,caption,size,name ? 15 : 14,name,mir3::TextFont::normal);
+        }
+        return entry->second;
+    };
+    const SceneActorAnchor* hovered=nullptr;
+    for (const auto& anchor:worldAnchors_) {
+        if (interactive && Contains(anchor.bounds,pointer) && (!hovered ||
+            std::tie(anchor.y,anchor.order,anchor.actor)>std::tie(hovered->y,hovered->order,hovered->actor))) hovered=&anchor;
+        const auto found=client.scene.speech.find(anchor.actor);
+        if (found==client.scene.speech.end()) continue;
+        const auto& bubble=found->second;
+        worldSpeech_.push_back({0,bubble.background(anchor.x,anchor.y),{80,60,40,120}});
+        for (int row=0;row<int(bubble.lines.size());++row) {
+            const auto& line=bubble.lines[row];
+            const auto& image=raster(line.text,line.width);
+            if (!image.texture) continue;
+            const auto [x,y]=bubble.position(row,anchor.x,anchor.y);
+            worldSpeech_.push_back({image.texture,{x+1,y+1,line.width,14},{10,10,10,255}});
+            worldSpeech_.push_back({image.texture,{x,y,line.width,14},{255,255,255,255}});
+        }
+    }
+    if (!hovered) return;
+    const mir3::SceneName local{{ConvertText(client.gameCharacter,CP_UTF8,936),{},{}},0xffffff};
+    const auto& name=hovered->actor ? client.scene.players.at(hovered->actor).identity : local;
+    if (name.lines[0].empty()) return;
+    const cui_color ink{static_cast<std::uint8_t>(name.color),static_cast<std::uint8_t>(name.color>>8),
+        static_cast<std::uint8_t>(name.color>>16),255};
+    for (int line=0;line<int(name.lines.size());++line) {
+        if (name.lines[line].empty()) continue;
+        const auto& image=raster(ConvertText(name.lines[line],936,CP_UTF8),-1);
+        if (!image.texture) continue;
+        const auto rect=mir3::SceneName::rect(hovered->x,hovered->y,image.width,line);
+        for (const auto& [dx,dy]:std::array<std::array<int,2>,4>{{{-1,-1},{1,-1},{-1,1},{1,1}}})
+            worldNames_.push_back({image.texture,{rect[0]+dx,rect[1]+dy,rect[2],rect[3]},{10,10,10,255}});
+        worldNames_.push_back({image.texture,rect,ink});
+    }
 }
 
 void Dialogs::Assets::OpenGameHud(cui_ctx* ui, mir3::WilArchive& archive, const std::filesystem::path& portraits)

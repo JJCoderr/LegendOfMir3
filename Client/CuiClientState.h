@@ -20,6 +20,8 @@
 #include "CuiLegacy/hud/damage_numbers.hpp"
 #include "CuiLegacy/hud/monster_motion.hpp"
 #include "CuiLegacy/hud/mount_panel.hpp"
+#include "CuiLegacy/hud/scene_name.hpp"
+#include "CuiLegacy/hud/speech_bubble.hpp"
 #include "CuiLegacy/hud/skill_panel.hpp"
 #include "CuiLegacy/hud/target_portrait.hpp"
 #include "CuiNpcDialogue.h"
@@ -88,6 +90,7 @@ inline constexpr WORD GameMonsterStatus = 657;
 inline constexpr WORD GameActorStruck = 31;
 inline constexpr WORD GameActorDead = 34;
 inline constexpr WORD GameActorName = 42;
+inline constexpr WORD GameActorNameColor = 656;
 inline constexpr WORD GameTargetPortrait = 1403;
 inline constexpr WORD GameTargetAttributes = 1304, ClientTargetAttributes = 1047;
 inline constexpr WORD GameActorStruckWithSource = 1309;
@@ -180,6 +183,7 @@ struct LocalScene {
         unsigned npcType = 0;
         mir3_cui::CharacterAppearance appearance;
         std::string name;
+        mir3::SceneName identity;
         unsigned npcShape = 0;
         mir3::TargetPortraitVitals monsterVitals;
         mir3::DamageNumbers monsterDamage;
@@ -225,6 +229,7 @@ struct LocalScene {
     mir3_cui::MapTerrain::View ground{};
     std::map<std::uint32_t, Player> players;
     mir3::GroundItems groundItems;
+    std::map<std::uint32_t,mir3::SpeechBubble> speech;
     bool pickupBagFull = false;
 
     bool Occupied(int cellX, int cellY) const
@@ -1979,6 +1984,7 @@ public:
         if (stage==Stage::GameSession) {
             AdvanceMonsterActions(now);
             AdvanceGroundItems(static_cast<std::uint32_t>(now));
+            std::erase_if(scene.speech,[&](const auto& entry) { return now>entry.second.expiresAt; });
         }
         if (returnToCharactersAt && now>=returnToCharactersAt && (!Active() || output_.empty() || now>=deadline_)) {
             Close();
@@ -2702,11 +2708,16 @@ private:
                     opcode == GameActorRevive || opcode == GameActorReviveRefresh ||
                     opcode == GameMonsterDigUp || opcode == GameMonsterRise || opcode == GameMonsterSkeleton)) {
             if (actor != localActor_) HandleRemotePlayer(opcode, actor, first, second, third & 0xff);
-        } else if (stage == Stage::GameSession && opcode == GameActorName) {
+        } else if (stage == Stage::GameSession && (opcode == GameActorName || opcode == GameActorNameColor)) {
             const auto player = scene.players.find(actor);
             if (player != scene.players.end() && input_.size() <= DEFBLOCKSIZE + 344) {
-                auto body = ReadGameBody();
-                if (!body.empty()) SetRemoteName(player->second, std::move(body));
+                const bool noBody=input_.size()==DEFBLOCKSIZE;
+                if (opcode==GameActorNameColor && noBody) {
+                    player->second.identity.color=mir3::SceneName::colorref(first&255);
+                } else if (opcode==GameActorName || player->second.IsMonster()) {
+                    auto body=ReadGameBody();
+                    if (!body.empty() || noBody) SetRemoteName(player->second,std::move(body),first&255);
+                }
             }
         } else if (stage == Stage::GameSession && (opcode == GameCrouch || opcode == GameButcher)) {
             const auto player=scene.players.find(actor);
@@ -2759,8 +2770,13 @@ private:
                    (opcode == GameActorExit || opcode == GameActorDisappear || opcode == GameActorRemove ||
                     opcode == GameClearActors)) {
             if (input_.size() == DEFBLOCKSIZE) {
-                if (opcode == GameClearActors) scene.players.clear();
-                else scene.players.erase(actor);
+                if (opcode == GameClearActors) {
+                    scene.players.clear();
+                    std::erase_if(scene.speech,[](const auto& entry) { return entry.first!=0; });
+                } else {
+                    scene.players.erase(actor);
+                    scene.speech.erase(actor);
+                }
             }
         } else if ((stage == Stage::GameSession || stage == Stage::AuthenticatingGame) &&
                    (opcode == GameAbility || opcode == GameVitals || opcode == GameWeight ||
@@ -2794,13 +2810,23 @@ private:
             const auto terminator = body.find('\0');
             if (terminator != std::string::npos) body.resize(terminator);
             if ((opcode == 40 || opcode == 1501) && body.size() > 259) return;
+            const auto text = ConvertText(body,936,CP_UTF8);
+            if ((opcode==40 || opcode==1501) && scene.terrain.Ready() &&
+                (!actor || actor==localActor_ || scene.players.contains(actor)) && (body.empty() || !text.empty())) {
+                const auto speaker=actor==localActor_ ? 0u : actor;
+                if (text.empty()) scene.speech.erase(speaker);
+                else {
+                    auto lines=mir3::wrap_speech(text);
+                    if (!lines.empty())
+                        scene.speech.insert_or_assign(speaker,mir3::SpeechBubble{std::move(lines),GetTickCount64()+3000});
+                }
+            }
             // Received chat has two independent append paths in the V1.45 client.
             const int copies = (opcode != 104 ? 1 : 0) + (chat.logging && opcode != 100 ? 1 : 0);
             if (copies) {
                 std::ofstream log("Chat.txt", std::ios::binary | std::ios::app);
                 for (int i = 0; i < copies && log; ++i) log << body << "\r\n";
             }
-            const auto text = ConvertText(body, 936, CP_UTF8);
             if (text.empty()) return;
             constexpr std::array<unsigned,8> palette{0,657930,0xffffff,255,65280,16750230,0x50ffff,33023};
             const auto color = [&](unsigned index) { return index < palette.size() ? palette[index] : 0u; };
@@ -3267,6 +3293,7 @@ private:
         scene.lastMove = 0;
         scene.players.clear();
         scene.groundItems.items.clear();
+        scene.speech.clear();
         scene.pickupBagFull=false;
         scene.x = x;
         scene.y = y;
@@ -3357,15 +3384,25 @@ private:
         if (opcode==GameWalk || opcode==GameRun || opcode==GameBackstep) scene.crouchedAt=scene.crouchReplyAt=0;
     }
 
-    static void SetRemoteName(LocalScene::Player& player, std::string body)
+    static void SetRemoteName(LocalScene::Player& player, std::string body, int palette=-1)
     {
         const auto zero = body.find('\0');
         if (zero != std::string::npos) body.resize(zero);
-        const auto separator = body.find_first_of("\r/");
-        if (separator != std::string::npos) body.resize(separator);
-        if (body.size() > 63) return;
-        const auto name = ConvertText(body, 936, CP_UTF8);
-        if ((body.empty() || !name.empty()) && player.name!=name) {
+        auto identity=player.identity;
+        if (!identity.replace(body)) return;
+        if (palette<0) {
+            if (const auto slash=body.rfind('/');slash!=std::string::npos) {
+                const char* start=body.c_str()+slash+1;
+                char* end=nullptr;
+                const auto value=std::strtol(start,&end,10);
+                if (end!=start && !*end && value>=0 && value<=255) palette=static_cast<int>(value);
+            }
+        }
+        const auto name = ConvertText(identity.lines[0],936,CP_UTF8);
+        if (!identity.lines[0].empty() && name.empty()) return;
+        if (palette>=0) identity.color=mir3::SceneName::colorref(static_cast<std::uint8_t>(palette));
+        player.identity=std::move(identity);
+        if (player.name!=name) {
             player.name = name;
             player.portraitJpeg.clear();
             player.resolvedPortraitVersion = 0;
@@ -3603,7 +3640,7 @@ private:
             std::uint32_t status=0;
             for (unsigned i=0;i<4;++i) status|=std::uint32_t(static_cast<unsigned char>(feature[4+i]))<<(8*i);
             auto name=size>22 ? DecodeGameBytes(input_.substr(DEFBLOCKSIZE+22)) : std::string{};
-            if (size>22 && (name.empty() || name.size()>64)) return;
+            if (size>22 && name.empty()) return;
             auto& monster=scene.players[actor];
             if (!known) monster={};
             monster.npcType=type;
@@ -3624,7 +3661,7 @@ private:
             npc.dead = opcode == GameActorDeath || opcode == GameActorDead;
             if (size > 22) {
                 auto name = DecodeGameBytes(input_.substr(DEFBLOCKSIZE + 22));
-                if (!name.empty() && name.size() <= 64) SetRemoteName(npc, std::move(name));
+                if (!name.empty()) SetRemoteName(npc, std::move(name));
             }
             return;
         }
