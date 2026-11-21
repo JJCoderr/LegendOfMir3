@@ -7,6 +7,7 @@
 #include "Common/Protocol.h"
 
 #include <cerrno>
+#include <array>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -16,7 +17,24 @@
 
 namespace {
 
-enum class Stage { Groups, Login, Connecting, SigningIn, Servers, Selecting, Handoff, Complete };
+enum class Stage {
+    Groups, Login, Connecting, SigningIn, Servers, Selecting, Handoff,
+    ConnectingCharacters, Characters, Complete, GameEndpoint
+};
+enum class CharacterDialog { None, Create, Delete };
+
+struct Gateway {
+    std::string host;
+    unsigned port = 0;
+};
+
+struct Character {
+    std::string name;
+    std::string label;
+    unsigned profession = 0;
+    unsigned level = 0;
+    unsigned gender = 0;
+};
 
 struct Server {
     std::string name;
@@ -44,7 +62,8 @@ unsigned Number(const std::string& text, unsigned maximum, unsigned invalid = 0)
     if (text.empty()) return invalid;
     unsigned value = 0;
     for (char digit : text) {
-        if (digit < '0' || digit > '9' || value > (maximum - (digit - '0')) / 10)
+        if (digit < '0' || digit > '9' || value > maximum / 10 ||
+            (value == maximum / 10 && static_cast<unsigned>(digit - '0') > maximum % 10))
             return invalid;
         value = value * 10 + digit - '0';
     }
@@ -68,6 +87,61 @@ std::string ConvertText(const std::string& text, UINT source, UINT destination)
     std::string result(size, '\0');
     WideCharToMultiByte(destination, flags, wide.data(), wideLength, &result[0], size, nullptr, usedDefault);
     return result;
+}
+
+Gateway ReadGateway(const std::string& body, bool requireTerminator)
+{
+    const auto slash = body.find('/');
+    if (slash == std::string::npos || slash > 15) return {};
+    const auto end = body.find('/', slash + 1);
+    if (requireTerminator && end == std::string::npos) return {};
+    const auto port = body.substr(slash + 1, end == std::string::npos ? end : end - slash - 1);
+    Gateway gateway{body.substr(0, slash), Number(port, 65535)};
+    in_addr address = {};
+    if (!gateway.port || InetPtonA(AF_INET, gateway.host.c_str(), &address) != 1) return {};
+    return gateway;
+}
+
+bool ReadCharacters(int count, const std::string& body, std::vector<Character>& result)
+{
+    if (count < 0 || body.size() > 255) return false;
+    if (count > 4) count = 4;
+    std::vector<Character> next;
+    size_t start = 0;
+    for (int role = 0; role < count; ++role) {
+        if (start < body.size() && body[start] == '*') ++start;
+        std::array<std::string, 5> fields;
+        for (size_t i = 0; i < fields.size(); ++i) {
+            const auto end = body.find('/', start);
+            if (end == std::string::npos && (i != fields.size() - 1 || role + 1 < count)) return false;
+            fields[i] = body.substr(start, end - start);
+            start = end == std::string::npos ? body.size() : end + 1;
+        }
+        const auto profession = Number(fields[1], 2, 3);
+        const auto level = Number(fields[3], 255, 256);
+        const auto gender = Number(fields[4], 1, 2);
+        const auto label = ConvertText(fields[0], 936, CP_UTF8);
+        if (label.empty() || fields[0].size() > 24 || profession > 2 || level > 255 || gender > 1)
+            return false;
+        next.push_back({fields[0], label, profession, level, gender});
+    }
+    result = std::move(next);
+    return true;
+}
+
+bool ValidCharacterName(const std::string& name)
+{
+    if (name.empty() || name.size() > 13) return false;
+    for (size_t i = 0; i < name.size(); ++i) {
+        const auto ch = static_cast<unsigned char>(name[i]);
+        if (ch >= 0x80 && i + 1 < name.size()) {
+            ++i;
+        } else if (!(ch >= 'A' && ch <= 'Z') && !(ch >= 'a' && ch <= 'z') &&
+                   !(ch >= '0' && ch <= '9')) {
+            return false;
+        }
+    }
+    return true;
 }
 
 std::string TrimIni(const std::string& value)
@@ -277,6 +351,20 @@ public:
     std::vector<Server> servers;
     BillingNotice billing;
     int selectionSession = 0;
+    Gateway selectionGateway;
+    Gateway gameGateway;
+    std::vector<Character> characters;
+    int characterIndex = -1;
+    int characterPage = 0;
+    int profession = 0;
+    int gender = 0;
+    int characterEditor = 0;
+    bool deleteCancelSelected = false;
+    bool deleteTabDown = false;
+    char characterInput[361] = {};
+    CharacterDialog characterDialog = CharacterDialog::None;
+    std::string characterNotice;
+    WORD characterRequest = 0;
     std::string status;
 
     ~LoginClient() { Reset(); }
@@ -287,6 +375,15 @@ public:
         servers.clear();
         billing = {};
         selectionSession = 0;
+        selectionGateway = {};
+        gameGateway = {};
+        characters.clear();
+        characterIndex = -1;
+        characterPage = 0;
+        characterRequest = 0;
+        characterNotice.clear();
+        CloseCharacterDialog();
+        signedInAccount_.clear();
         stage = Stage::Login;
         status = message;
         SecureZeroMemory(password, sizeof password);
@@ -336,28 +433,21 @@ public:
             status = "Enter an account and password supported by the server. Omit slash characters.";
             return;
         }
-        if (legacy && user.size() + 1 + secret.size() >= 32) {
+        if ((!legacy && user.size() > 27) || (legacy && user.size() + 1 + secret.size() >= 32)) {
             SecureZeroMemory(&secret[0], secret.size());
-            status = "The legacy gateway accepts up to 31 bytes for account, slash, and password.";
+            status = legacy ? "The legacy gateway accepts up to 31 bytes for account, slash, and password."
+                            : "The character gateway accepts account names up to 27 bytes.";
             return;
         }
 
-        Close();
-        socket_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-        u_long nonBlocking = 1;
-        if (!Active() || ioctlsocket(socket_, FIONBIO, &nonBlocking) == SOCKET_ERROR) {
-            SecureZeroMemory(&secret[0], secret.size());
-            Reset("Could not open the login connection.");
-            return;
-        }
-
-        const int result = connect(socket_, reinterpret_cast<const sockaddr*>(&address), sizeof address);
-        if (result == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK) {
+        const int result = Connect(address);
+        if (result == SOCKET_ERROR) {
             SecureZeroMemory(&secret[0], secret.size());
             Reset("Could not connect to the login gateway.");
             return;
         }
 
+        signedInAccount_ = user;
         std::string credentials = user + '/';
         credentials += secret;
         Queue(CM_IDPASSWORD, 0, credentials);
@@ -374,15 +464,71 @@ public:
         Wait(Stage::Selecting, "Waiting for the selection endpoint...");
     }
 
-    void Poll()
+    void OpenCharacterDialog(CharacterDialog dialog)
     {
-        if (stage == Stage::Handoff && GetTickCount64() >= deadline_) stage = Stage::Complete;
-        if (!Active()) return;
-        if (stage != Stage::Servers && GetTickCount64() >= deadline_) {
-            Reset("The login gateway timed out.");
+        if (dialog == CharacterDialog::Delete && characterIndex < 0) {
+            characterNotice = "Select a character to delete.";
             return;
         }
-        if (stage == Stage::Connecting) {
+        characterDialog = dialog;
+        profession = 0;
+        gender = 0;
+        ++characterEditor;
+        deleteCancelSelected = false;
+        deleteTabDown = false;
+        SecureZeroMemory(characterInput, sizeof characterInput);
+    }
+
+    void CloseCharacterDialog()
+    {
+        characterDialog = CharacterDialog::None;
+        SecureZeroMemory(characterInput, sizeof characterInput);
+    }
+
+    void SubmitCharacterDialog()
+    {
+        if (stage != Stage::Characters || characterRequest || !characterNotice.empty()) return;
+        auto text = ConvertText(characterInput, CP_UTF8, 936);
+        if (characterDialog == CharacterDialog::Create) {
+            if (!ValidCharacterName(text)) {
+                characterNotice = "Use letters, digits, or Chinese characters, up to 13 bytes.";
+                return;
+            }
+            RequestCharacter(CM_NEWCHR, signedInAccount_ + '/' + text + "/1/" +
+                std::to_string(profession) + '/' + std::to_string(gender));
+        } else if (characterDialog == CharacterDialog::Delete && characterIndex >= 0) {
+            if ((characterInput[0] && text.empty()) || text.size() > 90 || text.find('/') != std::string::npos) {
+                characterNotice = "Enter confirmation text up to 90 bytes, without slashes.";
+                return;
+            }
+            RequestCharacter(CM_DELCHR, characters[characterIndex].name + '/' + text);
+            QueryCharacters();
+            CloseCharacterDialog();
+            if (!text.empty()) SecureZeroMemory(&text[0], text.size());
+        }
+    }
+
+    void StartCharacter()
+    {
+        if (stage != Stage::Characters || characterRequest || !characterNotice.empty()) return;
+        if (characterIndex < 0) {
+            characterNotice = "Select a character to continue.";
+            return;
+        }
+        RequestCharacter(CM_SELCHR, signedInAccount_ + '/' + characters[characterIndex].name);
+    }
+
+    void Poll()
+    {
+        if (stage == Stage::Handoff && GetTickCount64() >= deadline_) OpenCharacters();
+        if (!Active()) return;
+        const bool characterConnection = stage == Stage::Characters || stage == Stage::ConnectingCharacters;
+        if (stage != Stage::Servers && (stage != Stage::Characters || characterRequest) &&
+            GetTickCount64() >= deadline_) {
+            Reset(characterConnection ? "The character gateway timed out." : "The login gateway timed out.");
+            return;
+        }
+        if (stage == Stage::Connecting || stage == Stage::ConnectingCharacters) {
             fd_set writable, failed;
             FD_ZERO(&writable);
             FD_ZERO(&failed);
@@ -391,11 +537,17 @@ public:
             timeval timeout = {};
             if (select(0, nullptr, &writable, &failed, &timeout) == SOCKET_ERROR ||
                 FD_ISSET(socket_, &failed)) {
-                Reset("Could not connect to the login gateway.");
+                Reset(characterConnection ? "Could not connect to the character gateway."
+                                          : "Could not connect to the login gateway.");
                 return;
             }
             if (!FD_ISSET(socket_, &writable)) return;
-            Wait(Stage::SigningIn, "Waiting for sign-in...");
+            if (characterConnection) {
+                stage = Stage::Characters;
+                QueryCharacters();
+            } else {
+                Wait(Stage::SigningIn, "Waiting for sign-in...");
+            }
         }
 
         if (!output_.empty()) {
@@ -405,7 +557,8 @@ public:
                 sent_ += sent;
                 if (sent_ == output_.size()) ClearOutput();
             } else if (sent == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK) {
-                Reset("Could not send to the login gateway.");
+                Reset(characterConnection ? "Could not send to the character gateway."
+                                          : "Could not send to the login gateway.");
                 return;
             }
         }
@@ -413,7 +566,7 @@ public:
         char buffer[4096];
         const int count = recv(socket_, buffer, sizeof buffer, 0);
         if (count == 0 || (count == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)) {
-            Reset("The login gateway disconnected.");
+            Reset(characterConnection ? "The character gateway disconnected." : "The login gateway disconnected.");
             return;
         }
         for (int i = 0; i < count && Active(); ++i) Receive(buffer[i]);
@@ -427,6 +580,102 @@ private:
     std::string input_;
     std::string output_;
     size_t sent_ = 0;
+    std::string signedInAccount_;
+
+    int Connect(const sockaddr_in& address)
+    {
+        Close();
+        socket_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        u_long nonBlocking = 1;
+        if (!Active() || ioctlsocket(socket_, FIONBIO, &nonBlocking) == SOCKET_ERROR)
+            return SOCKET_ERROR;
+        const int result = connect(socket_, reinterpret_cast<const sockaddr*>(&address), sizeof address);
+        return result == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK ? 1 : result;
+    }
+
+    void RequestCharacter(WORD opcode, const std::string& body)
+    {
+        Queue(opcode, 0, body);
+        characterRequest = opcode;
+        deadline_ = GetTickCount64() + 10000;
+    }
+
+    void QueryCharacters()
+    {
+        RequestCharacter(CM_QUERYCHR, signedInAccount_ + '/' + std::to_string(selectionSession));
+    }
+
+    void OpenCharacters()
+    {
+        sockaddr_in address = {};
+        address.sin_family = AF_INET;
+        address.sin_port = htons(static_cast<u_short>(selectionGateway.port));
+        InetPtonA(AF_INET, selectionGateway.host.c_str(), &address.sin_addr);
+        const int result = Connect(address);
+        if (result == SOCKET_ERROR) {
+            Reset("Could not connect to the character gateway.");
+        } else if (result == 0) {
+            stage = Stage::Characters;
+            QueryCharacters();
+        } else {
+            Wait(Stage::ConnectingCharacters, "Connecting to the character gateway...");
+        }
+    }
+
+    void HandleCharacterFrame(const _TDEFAULTMESSAGE& header, const std::string& body)
+    {
+        switch (header.wIdent) {
+        case SM_QUERYCHR:
+            if (characterRequest != CM_QUERYCHR) break;
+            characterRequest = 0;
+            if (!ReadCharacters(header.nRecog, body, characters)) {
+                characterNotice = "The character gateway sent an invalid character list.";
+                break;
+            }
+            characterPage = 0;
+            characterIndex = characters.empty() ? -1 : 0;
+            if (characters.empty() && characterNotice.empty()) characterNotice = "This account has no characters.";
+            break;
+        case SM_QUERYCHR_FAIL:
+            if (characterRequest != CM_QUERYCHR) break;
+            characterRequest = 0;
+            characterNotice = "Could not load the character list.";
+            break;
+        case SM_NEWCHR_SUCCESS:
+            if (characterRequest != CM_NEWCHR) break;
+            CloseCharacterDialog();
+            QueryCharacters();
+            break;
+        case SM_NEWCHR_FAIL:
+            if (characterRequest != CM_NEWCHR) break;
+            characterRequest = 0;
+            characterNotice = header.nRecog == 2 ? "That character name already exists." :
+                header.nRecog == 3 ? "This account has no free character slot." : "Could not create the character.";
+            break;
+        case SM_DELCHR_FAIL:
+            characterNotice = "The character gateway declined to delete the character.";
+            break;
+        case SM_STARTPLAY:
+            if (characterRequest != CM_SELCHR) break;
+            characterRequest = 0;
+            gameGateway = ReadGateway(body, false);
+            if (!gameGateway.port) {
+                characterNotice = "The character gateway returned an invalid game address.";
+                break;
+            }
+            Close();
+            stage = Stage::GameEndpoint;
+            break;
+        case SM_STARTFAIL:
+            if (characterRequest != CM_SELCHR) break;
+            characterRequest = 0;
+            characterNotice = "The character could not enter the game.";
+            break;
+        case SM_OUTOFCONNECTION:
+            Reset("The character gateway ended the session.");
+            break;
+        }
+    }
 
     void ClearOutput()
     {
@@ -502,15 +751,16 @@ private:
             Reset("The login gateway sent an invalid reply.");
             return;
         }
-        if (header.wIdent == SM_CERTIFICATION_FAIL) {
+        const bool characterFrame = stage == Stage::Characters;
+        if (!characterFrame && header.wIdent == SM_CERTIFICATION_FAIL) {
             Reset("The login gateway rejected authentication.");
             return;
         }
-        if (header.wIdent == SM_ID_NOTFOUND) {
+        if (!characterFrame && header.wIdent == SM_ID_NOTFOUND) {
             Reset("The account was not found.");
             return;
         }
-        if (header.wIdent == SM_PASSWD_FAIL) {
+        if (!characterFrame && header.wIdent == SM_PASSWD_FAIL) {
             switch (header.nRecog) {
             case -7: break;
             case -6: Reset("The account was not found."); break;
@@ -521,11 +771,12 @@ private:
             }
             return;
         }
-        if (header.wIdent == SM_OUTOFCONNECTION) {
+        if (!characterFrame && header.wIdent == SM_OUTOFCONNECTION) {
             Reset("The login gateway ended the session.");
             return;
         }
-        if (header.wIdent != SM_PASSOK_SELECTSERVER && header.wIdent != SM_SELECTSERVER_OK) return;
+        if (!characterFrame && header.wIdent != SM_PASSOK_SELECTSERVER && header.wIdent != SM_SELECTSERVER_OK)
+            return;
 
         const size_t size = input_.size() - DEFBLOCKSIZE;
         std::string body(size, '\0');
@@ -537,7 +788,9 @@ private:
             Reset("The login gateway sent invalid selection data.");
             return;
         }
-        if (header.wIdent == SM_PASSOK_SELECTSERVER && stage == Stage::SigningIn) {
+        if (characterFrame) {
+            HandleCharacterFrame(header, body);
+        } else if (header.wIdent == SM_PASSOK_SELECTSERVER && stage == Stage::SigningIn) {
             if (!ReadServers(body)) {
                 Reset("The login gateway sent an invalid server list.");
                 return;
@@ -547,15 +800,12 @@ private:
             status = servers.empty() ? "The gateway returned no selectable servers." : "";
         } else if (header.wIdent == SM_SELECTSERVER_OK &&
             (stage == Stage::Selecting || stage == Stage::Servers)) {
-            const auto slash = body.find('/');
-            const auto end = slash == std::string::npos ? slash : body.find('/', slash + 1);
-            in_addr ip = {};
-            if (end == std::string::npos || InetPtonA(AF_INET, body.substr(0, slash).c_str(), &ip) != 1 ||
-                !Number(body.substr(slash + 1, end - slash - 1), 65535)) {
+            selectionGateway = ReadGateway(body, true);
+            if (!selectionGateway.port) {
                 Reset("The gateway returned an invalid selection endpoint.");
                 return;
             }
-            status = body.substr(0, slash) + ':' + body.substr(slash + 1, end - slash - 1);
+            status = selectionGateway.host + ':' + std::to_string(selectionGateway.port);
             selectionSession = header.nRecog;
             Close();
             stage = legacy ? Stage::Complete : Stage::Handoff;
@@ -762,6 +1012,124 @@ void DrawAccount(cui_ctx* ui, LoginClient& client)
         client.SignIn();
 }
 
+const char* const professions[] = {"Warrior", "Wizard", "Taoist"};
+const char* const genders[] = {"Male", "Female"};
+
+void DrawCharacters(cui_ctx* ui, LoginClient& client)
+{
+    cui_heading(ui, "Choose a character", 1);
+    const bool blocked = client.characterRequest || !client.characterNotice.empty() ||
+        client.characterDialog != CharacterDialog::None;
+    cui_push_disabled(ui, blocked);
+
+    cui_box row = {};
+    row.width = CUI_FILL;
+    row.gap = 12;
+    cui_row_begin(ui, &row);
+    const int first = client.characterPage * 2;
+    for (int i = first; i < first + 2 && i < static_cast<int>(client.characters.size()); ++i) {
+        const auto& role = client.characters[i];
+        cui_push_id_int(ui, i);
+        cui_card_opts card = {};
+        card.width = CUI_FILL;
+        card.pad = 16;
+        card.gap = 8;
+        card.selected = i == client.characterIndex;
+        cui_card_begin(ui, &card);
+        if (Button(ui, (role.label + "###role").c_str(), card.selected, true))
+            client.characterIndex = i;
+        cui_textf(ui, "%s / %s", professions[role.profession], genders[role.gender]);
+        cui_textf(ui, "Level %u", role.level);
+        cui_card_end(ui);
+        cui_pop_id(ui);
+    }
+    cui_box_end(ui);
+
+    if (client.characters.size() > 2) {
+        cui_row_begin(ui, &row);
+        if (Button(ui, "Previous page") && client.characterPage == 1) {
+            client.characterPage = 0;
+            client.characterIndex = 0;
+        }
+        cui_spacer(ui);
+        if (Button(ui, "Next page") && client.characterPage == 0) {
+            client.characterPage = 1;
+            client.characterIndex = 2;
+        }
+        cui_box_end(ui);
+    }
+    cui_spacer(ui);
+    cui_row_begin(ui, &row);
+    if (Button(ui, "Create")) client.OpenCharacterDialog(CharacterDialog::Create);
+    if (Button(ui, "Delete")) client.OpenCharacterDialog(CharacterDialog::Delete);
+    if (Button(ui, "Start", true)) client.StartCharacter();
+    if (Button(ui, "Back to sign-in")) client.Reset();
+    cui_box_end(ui);
+    cui_pop_disabled(ui);
+    if (client.characterRequest) cui_secondary(ui, "Waiting for the character gateway...");
+}
+
+void DrawCharacterDialog(cui_ctx* ui, LoginClient& client, cui_dialog_opts modal)
+{
+    bool open = true;
+    if (!client.characterNotice.empty()) {
+        modal.description = client.characterNotice.c_str();
+        if (cui_dialog_begin(ui, "Character notice", &open, &modal)) {
+            cui_dialog_footer_begin(ui);
+            const bool dismiss = Button(ui, "OK", true) || cui_key_pressed(ui, CUI_KEY_ENTER) ||
+                cui_key_pressed(ui, CUI_KEY_SPACE);
+            cui_dialog_footer_end(ui);
+            cui_dialog_end(ui);
+            if (dismiss) {
+                client.characterNotice.clear();
+                if (client.characterDialog == CharacterDialog::Create) {
+                    SecureZeroMemory(client.characterInput, sizeof client.characterInput);
+                    ++client.characterEditor;
+                }
+            }
+        }
+        return;
+    }
+    if (client.characterDialog == CharacterDialog::None) return;
+    const bool creating = client.characterDialog == CharacterDialog::Create;
+    const std::string prompt = creating ? "" : "Delete " + client.characters[client.characterIndex].label + "?";
+    modal.description = prompt.c_str();
+    if (!cui_dialog_begin(ui, creating ? "Create character" : "Delete character", &open, &modal)) return;
+    cui_push_disabled(ui, client.characterRequest != 0);
+    if (creating) {
+        cui_label(ui, "Profession");
+        cui_segmented_ex(ui, "profession", professions, 3, &client.profession, nullptr);
+        cui_label(ui, "Appearance");
+        cui_segmented_ex(ui, "appearance", genders, 2, &client.gender, nullptr);
+    }
+    cui_push_id_int(ui, client.characterEditor);
+    const int input = Input(ui, creating ? "Name" : "Confirmation text", client.characterInput,
+        sizeof client.characterInput, false, true);
+    cui_pop_id(ui);
+    if (!creating) {
+        const bool tabDown = cui_key_down(ui, CUI_KEY_TAB);
+        if (tabDown && !client.deleteTabDown) client.deleteCancelSelected = !client.deleteCancelSelected;
+        client.deleteTabDown = tabDown;
+    }
+    const bool keyActivate = (input & CUI_SUBMITTED) || cui_key_pressed(ui, CUI_KEY_ENTER) ||
+        (!creating && cui_key_pressed(ui, CUI_KEY_SPACE));
+    cui_dialog_footer_begin(ui);
+    const bool cancel = Button(ui, "Cancel", !creating && client.deleteCancelSelected);
+    const bool confirm = Button(ui, creating ? "Create" : "Delete", creating || !client.deleteCancelSelected);
+    cui_dialog_footer_end(ui);
+    cui_pop_disabled(ui);
+    cui_dialog_end(ui);
+    if (client.characterRequest) return;
+    if (!creating && keyActivate) {
+        if (client.deleteCancelSelected) client.CloseCharacterDialog();
+        else client.SubmitCharacterDialog();
+    } else if (cancel) {
+        client.CloseCharacterDialog();
+    } else if (confirm || keyActivate) {
+        client.SubmitCharacterDialog();
+    }
+}
+
 void Draw(cui_ctx* ui, LoginClient& client)
 {
     cui_box page = {};
@@ -773,6 +1141,16 @@ void Draw(cui_ctx* ui, LoginClient& client)
     if (client.stage == Stage::Groups) {
         DrawServerGroups(ui, client);
         cui_box_end(ui);
+        return;
+    }
+    if (client.stage == Stage::Characters) {
+        DrawCharacters(ui, client);
+        cui_box_end(ui);
+        cui_dialog_opts modal = {};
+        modal.width = 360;
+        modal.persistent = true;
+        modal.no_close_button = true;
+        if (client.stage == Stage::Characters) DrawCharacterDialog(ui, client, modal);
         return;
     }
     cui_heading(ui, "Mir3 Client", 1);
@@ -792,6 +1170,7 @@ void Draw(cui_ctx* ui, LoginClient& client)
     bool open = true;
     switch (client.stage) {
     case Stage::Groups:
+    case Stage::Characters:
         break;
     case Stage::Login: {
         if (!client.status.empty()) {
@@ -863,6 +1242,16 @@ void Draw(cui_ctx* ui, LoginClient& client)
     case Stage::Complete:
         if (cui_dialog_begin(ui, "Character gateway", &open, &modal)) {
             cui_code(ui, client.status.c_str());
+            cui_dialog_footer_begin(ui);
+            if (Button(ui, "Back to sign-in")) client.Reset();
+            cui_dialog_footer_end(ui);
+            cui_dialog_end(ui);
+        }
+        break;
+    case Stage::GameEndpoint:
+        if (cui_dialog_begin(ui, "Game gateway", &open, &modal)) {
+            const auto address = client.gameGateway.host + ':' + std::to_string(client.gameGateway.port);
+            cui_code(ui, address.c_str());
             cui_dialog_footer_begin(ui);
             if (Button(ui, "Back to sign-in")) client.Reset();
             cui_dialog_footer_end(ui);
