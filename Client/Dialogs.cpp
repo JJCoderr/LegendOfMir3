@@ -5450,15 +5450,19 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
     const auto& map = scene.mapDescription.empty() ? scene.mapId : scene.mapDescription;
     std::snprintf(view.location, sizeof view.location, "%s  (%u, %u)", map.empty() ? "Scene" : map.c_str(), view.x, view.y);
     std::snprintf(view.name, sizeof view.name, "%s", client.gameCharacter.c_str());
+    const auto now=GetTickCount64();
+    const bool delayed=scene.InputDelayed(now);
+    cui_push_disabled(ui,delayed);
     const auto canvas = cui_canvas(ui, "local-scene", CUI_FILL,
         legacyHud ? CUI_FILL : CUI_PX(client.inventory.shortcutsVisible ? 70 : 96),
         PaintLocalScene, &view, sizeof view);
+    cui_pop_disabled(ui);
     const bool cutRelease=scene.crouchPointerCaptured && cui_mouse_released(ui,CUI_MOUSE_LEFT);
     if (!cui_mouse_down(ui,CUI_MOUSE_LEFT)) {
         scene.crouchHoldAt=0;
         scene.crouchPointerCaptured=false;
     }
-    if (!interactive || !view.terrainReady || !canvas.hovered || cutRelease) return;
+    if (!interactive || delayed || !view.terrainReady || !canvas.hovered || cutRelease) return;
     if (nativeInventory && (client.inventory.heldGold || client.HeldItem())) {
         if (cui_mouse_clicked(ui,CUI_MOUSE_LEFT)) client.BeginHeldDrop();
         return;
@@ -5469,7 +5473,6 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
     const auto mods=cui_key_mods(ui);
     const bool altCut=art.sprites && (mods&(CUI_MOD_ALT|CUI_MOD_SHIFT))==CUI_MOD_ALT;
     const bool cutPress=!run && altCut && cui_mouse_clicked(ui,CUI_MOUSE_LEFT);
-    const auto now=GetTickCount64();
     const bool cutRepeat=altCut && scene.crouchHoldAt && now-scene.crouchHoldAt>=300;
     if (cutPress) scene.crouchPointerCaptured=true;
     if (!canvas.clicked && !run && !cutPress && !cutRepeat) return;

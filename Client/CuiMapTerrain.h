@@ -7,6 +7,7 @@
 #include <fstream>
 #include <map>
 #include <string>
+#include <utility>
 
 namespace mir3_cui {
 
@@ -51,6 +52,19 @@ public:
         width_ = width;
         height_ = height;
         start_ = start;
+        return true;
+    }
+
+    bool OpenAtSpawn(const std::string& id, const std::filesystem::path& directory, int x, int y, View& view)
+    {
+        MapTerrain next;
+        if (!next.Open(id,directory) || !next.Contains(x,y)) return false;
+        auto ground=next.ReadView(x,y);
+        const auto center=ground[ViewRows/2*ViewColumns+ViewColumns/2];
+        if (center!=GroundCell::Walkable && center!=GroundCell::DoorOpen) return false;
+        next.revision_=revision_+1;
+        *this=std::move(next);
+        view=ground;
         return true;
     }
 

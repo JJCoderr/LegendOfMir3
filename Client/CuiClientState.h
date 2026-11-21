@@ -149,6 +149,7 @@ inline constexpr WORD GameStorageBagFull = 707;
 inline constexpr WORD ClientStorageDeposit = 1031;
 inline constexpr WORD ClientStorageWithdraw = 1032;
 inline constexpr WORD GameDoorOpen = 612;
+inline constexpr WORD GameDoorLocked = 613;
 inline constexpr WORD GameDoorClosed = 614;
 inline constexpr WORD GameGroundItemShow = 610, GameGroundItemHide = 611;
 inline constexpr WORD ClientPickup = 1000;
@@ -275,6 +276,11 @@ struct LocalScene {
     mir3::GroundItems groundItems;
     std::map<std::uint32_t,mir3::SpeechBubble> speech;
     bool pickupBagFull = false;
+
+    bool InputDelayed(std::uint64_t now) const
+    {
+        return mapEnteredAt && now-mapEnteredAt<1500;
+    }
 
     bool Occupied(int cellX, int cellY) const
     {
@@ -1479,7 +1485,7 @@ public:
         const auto tick=GetTickCount64();
         if (stage!=Stage::GameSession || showSignOut || !scene.terrain.Ready() || mount.shape ||
             (characterStatus.hp[1] && !characterStatus.hp[0]) || scene.pending.deadline || minimap.visible ||
-            tick-scene.mapEnteredAt<=1500 || output_.size()>=8192 || slot<1 || slot>12) return;
+            scene.InputDelayed(tick) || output_.size()>=8192 || slot<1 || slot>12) return;
         auto& timing=scene.spellTiming;
         const auto now=static_cast<std::uint32_t>(tick);
         if (!timing.key_ready(now,slot,repeat)) return;
@@ -2913,6 +2919,11 @@ private:
                 if (opcode == GameRemoveSkill) skills.remove(static_cast<int>(actor));
                 else skills.update_progress(static_cast<int>(actor),second | (std::uint32_t(third)<<16),first & 0xff);
             }
+        } else if (stage == Stage::GameSession && opcode == GameDoorLocked) {
+            if (input_.size()==DEFBLOCKSIZE) {
+                const auto label=ConvertText(sceneMessages_.get(1472),936,CP_UTF8);
+                chat.Append(100,label.empty() ? "The door is locked." : label,11861940);
+            }
         } else if (stage == Stage::GameSession && (opcode == GameDoorOpen || opcode == GameDoorClosed)) {
             if (input_.size() == DEFBLOCKSIZE && scene.terrain.UpdateDoor(first, second, opcode == GameDoorOpen))
                 scene.ground = scene.terrain.ReadView(scene.x, scene.y);
@@ -3521,7 +3532,7 @@ private:
     {
         if (input_.size() > DEFBLOCKSIZE + 1024) return;
         auto body = ReadGameBody();
-        if (body.empty()) return;
+        if (body.empty() && input_.size()!=DEFBLOCKSIZE) return;
         const auto zero = body.find('\0');
         if (zero != std::string::npos) body.resize(zero);
         if (opcode == GameMapDescription) {
@@ -3532,9 +3543,9 @@ private:
             return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
                 c == '_' || c == '-';
         })) return;
+        if (!scene.terrain.OpenAtSpawn(body,resourceRoot_/"Map",x,y,scene.ground)) return;
         scene.mapId = std::move(body);
         CloseNpcDialogue();
-        scene.mapDescription.clear();
         scene.pending = {};
         scene.crouchedAt=scene.crouchReplyAt=scene.crouchHoldAt=0;
         scene.crouchPointerCaptured=false;
@@ -3554,14 +3565,9 @@ private:
         scene.pickupBagFull=false;
         scene.x = x;
         scene.y = y;
-        scene.terrain.Open(scene.mapId,resourceRoot_/"Map");
-        scene.ground = scene.terrain.ReadView(x, y);
-        if (scene.terrain.Ready()) {
-            scene.mapEnteredAt=GetTickCount64();
-            scene.ambient.enter(atmosphere);
-            scene.weather.select(atmosphere>>8,true);
-            scene.weatherTick=GetTickCount64();
-        }
+        scene.mapEnteredAt=scene.weatherTick=GetTickCount64();
+        scene.ambient.enter(atmosphere);
+        scene.weather.select(atmosphere>>8,true);
         const bool reopen=minimap.visible || minimap.pending;
         const bool large=minimap.large, translucent=minimap.translucent;
         ClearMinimap();
