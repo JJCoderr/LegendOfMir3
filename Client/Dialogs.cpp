@@ -870,6 +870,7 @@ private:
                     bool centered = false, mir3::TextFont font = mir3::TextFont::normal, bool inverted = false);
     void InventoryInput(cui_ctx* ui, LoginClient& client, cui_vec2 pointer);
     void InventoryModalInput(cui_ctx* ui, LoginClient& client, cui_vec2 pointer);
+    void FinishInventoryQuantity(LoginClient& client, bool confirm);
     void RefreshInventory(cui_ctx* ui, LoginClient& client, cui_vec2 pointer);
     void PaintInventory(cui_ctx* ui, cui_rect rect) const;
     std::array<Image,3> quickFrames_;
@@ -3067,13 +3068,11 @@ void Dialogs::Assets::InventoryInput(cui_ctx* ui, LoginClient& client, cui_vec2 
 void Dialogs::Assets::InventoryModalInput(cui_ctx* ui, LoginClient& client, cui_vec2 pointer)
 {
     auto& service = client.merchant;
-    auto& bag = client.inventory;
     const int x = 400-dialog_[0].width/2, y = 246-dialog_[0].height/2;
     const auto hit = [&](const Image& art,int dx) {
         return Contains({float(x+dx),float(y+188),float(art.width),float(art.height)},pointer);
     };
     const bool alert = service.notice != 0;
-    const bool dropping = !alert && bag.drop != mir3_cui::DropDialog::None;
     const int button = alert ? (hit(dialog_[1],137) ? 0 : -1)
         : hit(selectionButtons_.at(1241),41) ? 0 : hit(selectionButtons_.at(1245),234) ? 1 : -1;
     if (inventoryModalPress_ != button) inventoryModalPress_ = -1;
@@ -3086,17 +3085,18 @@ void Dialogs::Assets::InventoryModalInput(cui_ctx* ui, LoginClient& client, cui_
         return;
     }
     const bool tab = cui_key_down(ui,CUI_KEY_TAB);
-    if (cui_key_pressed(ui,CUI_KEY_TAB) || (tab && !inventoryTabDown_)) inventoryCancel_ = !inventoryCancel_;
+    if (!inventoryTabDown_ && (tab || cui_key_pressed(ui,CUI_KEY_TAB))) inventoryCancel_ = !inventoryCancel_;
     inventoryTabDown_ = tab;
-    const bool escape = cui_key_pressed(ui,CUI_KEY_ESCAPE);
-    if (escape || click || enter) {
-        const bool confirm = !escape && (click ? button == 0 : !inventoryCancel_);
-        if (dropping) {
-            if (confirm) client.SubmitInventoryDrop();
-            else bag.drop = mir3_cui::DropDialog::None;
-        } else if (confirm) client.SubmitMerchantQuantity();
-        else service.quantityOpen = false;
-    }
+    if (click) FinishInventoryQuantity(client,button == 0);
+}
+
+void Dialogs::Assets::FinishInventoryQuantity(LoginClient& client, bool confirm)
+{
+    if (client.inventory.drop != mir3_cui::DropDialog::None) {
+        if (confirm) client.SubmitInventoryDrop();
+        else client.inventory.drop = mir3_cui::DropDialog::None;
+    } else if (confirm) client.SubmitMerchantQuantity();
+    else client.merchant.quantityOpen = false;
 }
 
 void Dialogs::Assets::RefreshInventory(cui_ctx* ui, LoginClient& client, cui_vec2 pointer)
@@ -3217,18 +3217,18 @@ void Dialogs::Assets::DrawInventoryPanel(cui_ctx* ui, LoginClient& client, bool 
         const auto field = base.Rect(400-dialog_[0].width/2+24,246-dialog_[0].height/2+228,309,15);
         cui_overlay_begin(ui,field);
         cui_push_id_int(ui,editor);
-        if (inventoryEditor_ != editor ||
+        const bool enter = cui_key_pressed(ui,CUI_KEY_ENTER);
+        if (enter || inventoryEditor_ != editor ||
             (cui_mouse_clicked(ui,CUI_MOUSE_LEFT) && !Contains(field,cui_mouse_pos(ui))))
             cui_text_field_focus(ui,"inventory-quantity",false);
         inventoryEditor_ = editor;
-        cui_input_opts opts{};
-        opts.bare = opts.keep_tab = opts.keep_escape = true;
-        opts.width = CUI_FILL;
-        opts.height = field.h;
-        opts.font_size = 12*base.scale;
-        opts.font = editorFont_;
+        const auto opts = ModalEditorOptions(field.h,base.scale);
         cui_input_ex(ui,"inventory-quantity",dropping ? bag.amount : service.quantity,
             dropping ? sizeof bag.amount : sizeof service.quantity,&opts);
+        if (enter) {
+            FinishInventoryQuantity(client,!inventoryCancel_);
+            cui_request_redraw(ui);
+        }
         cui_pop_id(ui);
         cui_box_end(ui);
     }
@@ -7645,12 +7645,11 @@ void Dialogs::Assets::DrawTradePrompt(cui_ctx* ui, LoginClient& client)
     if (cui_mouse_clicked(ui,CUI_MOUSE_LEFT)) tradePromptPressed_ = button;
     const bool click = cui_mouse_released(ui,CUI_MOUSE_LEFT) && std::exchange(tradePromptPressed_,-1)>=0;
     const bool tab = cui_key_down(ui,CUI_KEY_TAB);
-    if (!alert && (cui_key_pressed(ui,CUI_KEY_TAB) || (tab && !tradePromptTab_))) tradePromptCancel_=!tradePromptCancel_;
+    if (!alert && !tradePromptTab_ && (tab || cui_key_pressed(ui,CUI_KEY_TAB))) tradePromptCancel_=!tradePromptCancel_;
     tradePromptTab_ = tab;
-    const bool enter = cui_key_pressed(ui,CUI_KEY_ENTER) || (alert && cui_key_pressed(ui,CUI_KEY_SPACE));
-    const bool escape = !alert && cui_key_pressed(ui,CUI_KEY_ESCAPE);
-    if (click || enter || escape) {
-        client.FinishTradePrompt(!escape && (click ? button==0 : !tradePromptCancel_));
+    const bool enter = cui_key_pressed(ui,CUI_KEY_ENTER);
+    if (click || (alert && (enter || cui_key_pressed(ui,CUI_KEY_SPACE)))) {
+        client.FinishTradePrompt(click && button==0);
         return;
     }
     const int message = alert ? 1434 : trade.prompt==TradePrompt::Gold ? 1304 : 1307;
@@ -7677,10 +7676,14 @@ void Dialogs::Assets::DrawTradePrompt(cui_ctx* ui, LoginClient& client)
         const auto field = base.Rect(x+24,y+228,309,15);
         cui_overlay_begin(ui,field);
         cui_push_id_int(ui,trade.editor);
-        if (reset || (cui_mouse_clicked(ui,CUI_MOUSE_LEFT) && !Contains(field,cui_mouse_pos(ui))))
+        if (enter || reset || (cui_mouse_clicked(ui,CUI_MOUSE_LEFT) && !Contains(field,cui_mouse_pos(ui))))
             cui_text_field_focus(ui,"trade-amount",false);
         const auto input = ModalEditorOptions(field.h,base.scale);
         cui_input_ex(ui,"trade-amount",trade.input,sizeof trade.input,&input);
+        if (enter) {
+            client.FinishTradePrompt(!tradePromptCancel_);
+            cui_request_redraw(ui);
+        }
         cui_pop_id(ui);
         cui_box_end(ui);
     }

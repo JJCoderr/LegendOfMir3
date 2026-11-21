@@ -312,6 +312,9 @@ cmake --build build-cui --target Mir3CuiClient --config Release
 - 双方实际视口验证菜单内 F2、设置遮挡及解除后的绑定。技能窗口 175680 个像素中 173433 个一致，菜单 19200 个像素中 16986 个一致，最大通道差为 1。对照在 `build-cui/skill-popup-binding-comparison.png`，图册增至 107 张。
 - NPC 回答和商店购买／取出数量框沿用共享的宋体编辑器样式，使用浅灰文字和常亮光标。密码保留星号及原 GBK 长度门限。Enter 在处理本帧输入后提交，Tab 一次只切换一个选项，Escape 保留数量弹窗及草稿。NPC 提示框每次打开将确认选项恢复到默认，避免沿用上次的取消状态。
 - Godot 与 CUI 实际 800×600 视口对照采用测试密码和数量。309×15 的输入区分别有 4620／4635 和 4615／4635 个像素一致，剩余差异位于字形。对照在 `build-cui/modal-editor-comparison.png`，图册增至 109 张。
+- 商人出售／存入、背包丢弃和交易数量提示沿用同一编辑器样式及输入顺序。Escape 保留数量草稿，Tab 切换到取消后按 Enter 关闭，鼠标确认和取消保持原按钮。两个 Win32 Release 目标构建及本地网关复测通过，覆盖出售十进制前缀、仓库存入取消、交易拆堆、交易金额和丢弃金币的当帧提交及报文。
+- 丢弃金币真实截图的提示区 32448 像素完全一致，输入区 4617／4635 个像素一致。Godot 截图是在地图中点击触发，CUI 对照使用同一弹窗状态和统一背景。对照见 `build-cui/drop-gold-amount-comparison.png`。
+- 实际运行中按 Escape 后的交易金额框有 96435／96480 个像素一致，45 个差异像素都在数字字形范围。对照见 `build-cui/trade-gold-retained-comparison.png`，图册增至 111 张。
 
 - 以 `br_godot_test_261115` 的 `45d45af` 构建并运行 Godot 实际视口。隔离副本位于 `build-cui/godot-reference`，使用 Godot 4.7.2、godot-cpp 的 `e83fd090` 和本地原客户端资源。在隔离副本中去除怪物模块对未声明 `action_at` 的赋值以解除编译错误，主分支未改该模块。
 - `login_smoke.gd -- --screenshots` 输出 `LOGIN_UI_OK` 及 9 张截图。首组验收用例为 640×480 密码错误框，与当前 CUI 的相同账号及错误状态对照，相差 304075／307200 像素。并排图和差异图保存在 `build-cui`。该组结果是重做前基线，仍需用运行时资源、字体和控件状态重新实现。
