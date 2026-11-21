@@ -6173,11 +6173,12 @@ cui_rect Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAp
     int motion=facing*10+pose;
     const auto library=prefix+"Hum";
     const WorldFrame* horse=nullptr;
-    if (mount>=1 && mount<=3 && pose<4) {
-        const auto& frame=GetWorldFrame(ui,"Horse",400*(mount-1)+motion);
-        if (frame.image.texture && GetWorldFrame(ui,library,int(actor.clothing)*3000+motion+2320).image.texture) {
+    if (mount>=1 && mount<=3 && (pose<4 || (pose>=2560 && pose<2563))) {
+        const int mountedMotion=pose<4 ? motion+2320 : motion;
+        const auto& frame=GetWorldFrame(ui,"Horse",400*(mount-1)+mountedMotion-2320);
+        if (frame.image.texture && GetWorldFrame(ui,library,int(actor.clothing)*3000+mountedMotion).image.texture) {
             horse=&frame;
-            motion+=2320;
+            motion=mountedMotion;
         }
     }
     const int frame=static_cast<int>(actor.clothing)*3000+motion;
@@ -6198,7 +6199,7 @@ cui_rect Dialogs::Assets::AddWorldActor(cui_ctx* ui, const mir3_cui::CharacterAp
             y*32-camera.cameraY+layer.y,art.width,art.height,y});
     };
     const auto weapon=[&] {
-        if (actor.weapon && actor.weapon!=37 && motion<static_cast<int>(mapWeaponOrder_.size()))
+        if (actor.weapon && actor.weapon!=37 && motion<2000 && motion<static_cast<int>(mapWeaponOrder_.size()))
             add(GetWorldFrame(ui,prefix+"Weapon"+std::to_string((actor.weapon-1)/10+1),
                 static_cast<int>((actor.weapon-1)%10)*3000+motion));
     };
@@ -6319,6 +6320,23 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         animated|=count>1;
     }
     const int idle=static_cast<int>(tick/201%4);
+    const auto humanDamage=[&](mir3::DamageNumbers& damage,int x,int y) {
+        damage.enabled=client.damageNumbers;
+        const auto glyphs=damage.draw(x,y,true);
+        for (const auto& glyph:glyphs) {
+            const auto& image=gameHudFrames_.at(glyph.frame);
+            if (image.texture) overlays.push_back({image.texture,glyph.x,glyph.y,image.width,image.height,0});
+        }
+        animated|=!glyphs.empty();
+    };
+    const auto humanBar=[&](unsigned hp,unsigned maximum,int x,int y) {
+        if (!maximum || !gamePortraits_.contains(2)) return;
+        const auto& border=gamePortraits_.at(2), &fill=gamePortraits_.at(3);
+        const auto percent=(std::min)(100u,hp*100/maximum);
+        const int width=(std::min)(fill.width,int(double(percent)*double(0.01f)*36.0));
+        if (border.texture) overlays.push_back({border.texture,x+7,y-56,border.width,border.height,0});
+        if (fill.texture && width>0) overlays.push_back({fill.texture,x+7,y-56,width,fill.height,0,255,float(width)/fill.width});
+    };
     for (auto& [id,actor]:scene.players) {
         if (actor.IsNpc() || !visible(actor)) continue;
         cui_rect bounds{};
@@ -6401,6 +6419,9 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
                 const int x=int(actor.x)*48-camera.cameraX, y=int(actor.y)*32-camera.cameraY;
                 worldAnchors_.push_back({id,bounds,x,y,2});
                 if (!actor.dead) PrepareCast(ui,actor.casting,x,y,actor.y);
+                humanDamage(actor.health.damage,x,y);
+                if (monsterNow<actor.health.registeredUntil)
+                    humanBar(actor.health.current,actor.health.maximum,x,y);
             }
             animated|=!actor.dead;
         }
@@ -6412,21 +6433,15 @@ SceneMapArt Dialogs::Assets::PrepareMapArt(cui_ctx* ui, LoginClient& client, cui
         const int crouch=CrouchPose(scene.crouchedAt,monsterNow);
         const int level=mir3::level_up_pose(scene.levelPoseAt,monsterNow);
         const int cast=scene.casting.pose();
+        const unsigned mount=cast>=0 && scene.casting.clock.action()==32 ? 0 : client.mount.shape;
         const auto localBounds=AddWorldActor(ui,client.characterAppearance,scene.facing,scene.x,scene.y,camera,
-            cast>=0 ? cast : level>=0 ? level : crouch>=0 ? crouch : idle,client.shadowBlend,client.mount.shape);
+            cast>=0 ? cast : level>=0 ? level : crouch>=0 ? crouch : idle,client.shadowBlend,mount);
         if (localBounds.w>0) {
             const int x=int(scene.x)*48-camera.cameraX, y=int(scene.y)*32-camera.cameraY;
             worldAnchors_.push_back({0,localBounds,x,y,3});
             PrepareCast(ui,scene.casting,x,y,scene.y);
-        }
-        if (localBounds.w>0 && client.characterStatus.hp[1] && gamePortraits_.contains(2)) {
-            const auto [hp,maxHp]=client.characterStatus.hp;
-            const auto& border=gamePortraits_.at(2), &fill=gamePortraits_.at(3);
-            const int x=int(scene.x)*48-camera.cameraX+7, y=int(scene.y)*32-camera.cameraY-56;
-            const auto percent=(std::min)(100u,unsigned(hp)*100/unsigned(maxHp));
-            const int width=(std::min)(fill.width,int(double(percent)*double(0.01f)*36.0));
-            if (border.texture) overlays.push_back({border.texture,x,y,border.width,border.height,0});
-            if (fill.texture && width>0) overlays.push_back({fill.texture,x,y,width,fill.height,0,255,float(width)/fill.width});
+            humanBar(client.characterStatus.hp[0],client.characterStatus.hp[1],x,y);
+            humanDamage(scene.health.damage,x,y);
         }
         animated=true;
     }

@@ -4,6 +4,21 @@
 namespace mir3 {
 struct HumanAction { std::uint16_t start, count, interval_ms; };
 struct HumanActions {
+    // 0x410B20: action 15 uses actor+400437 and clothing at +71.
+    static int hit_sound(int frame,std::uint8_t weapon,std::uint8_t clothing,std::uint8_t type) {
+        if (frame==2) return 138+int(type!=0);
+        if (frame!=1) return 0;
+        int sound=73;
+        switch (weapon) {
+        case 1: case 4: case 8: case 9: case 11: case 13: case 14: case 18:
+        case 20: case 21: case 22: case 23: case 25: case 26: case 27: case 28:
+        case 29: case 30: case 31: case 32: case 33: case 38: case 40: case 45: case 46:
+            sound=70; break;
+        case 5: case 10: case 12: case 15: sound=71; break;
+        case 2: case 3: case 6: case 7: case 16: case 17: case 19: case 24: sound=72; break;
+        }
+        return sound+(clothing==3 || clothing==6?10:0);
+    }
     static int weapon_attack(std::uint8_t weapon,bool ordinary=true) {
         int action=9;
         switch (weapon) {

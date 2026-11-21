@@ -171,6 +171,7 @@ inline constexpr WORD GameExperience = 44;
 inline constexpr WORD GameLevelUp = 45;
 inline constexpr WORD GameAbility = 52;
 inline constexpr WORD GameVitals = 53;
+inline constexpr WORD GameHealthRegistration = 1312;
 inline constexpr WORD GameWeight = 622;
 inline constexpr WORD GameSubAbility = 752;
 
@@ -193,7 +194,19 @@ inline int CrouchPose(std::uint64_t since, std::uint64_t now)
 struct LocalScene {
     struct RemoteCast { int skill, x, y; };
     struct RemoteMelee { unsigned x,y,facing,element,opcode; bool harvest; };
-    using RemoteSpell = std::variant<RemoteCast,mir3::SpellReply,RemoteMelee>;
+    struct HumanHit {
+        WORD opcode,current,maximum,damage;
+        mir3_cui::CharacterAppearance appearance;
+        std::uint32_t source=0;
+        unsigned variant=0;
+    };
+    struct HumanHealth {
+        WORD current=0,maximum=0;
+        mir3::DamageNumbers damage;
+        std::uint64_t registeredUntil=0;
+        std::optional<std::uint8_t> lastMonster;
+    };
+    using RemoteSpell = std::variant<RemoteCast,mir3::SpellReply,RemoteMelee,HumanHit>;
     struct PendingMelee { unsigned x,y,facing; WORD opcode; std::uint64_t at; };
     struct Movement {
         unsigned x = 0, y = 0, facing = 0;
@@ -212,6 +225,7 @@ struct LocalScene {
         unsigned mount = 0;
         std::uint64_t levelPoseAt = 0;
         mir3::CastVisual casting;
+        HumanHealth health;
         std::deque<RemoteSpell> queuedCasts;
         std::uint32_t actionFlags = 0;
         std::uint64_t combatUntil = 0, combatIdleAt = 0;
@@ -275,6 +289,10 @@ struct LocalScene {
     std::vector<LevelPlayback> levelEffects;
     std::uint64_t levelPoseAt = 0;
     mir3::CastVisual casting;
+    HumanHealth health;
+    std::deque<HumanHit> receivedHits;
+    std::uint64_t lastSpecialHit=0;
+    unsigned foldedHits=0;
     std::deque<mir3::SpellReply> spellMessages;
     std::unique_ptr<mir3::SpellEffects> spellEffects;
     std::uint64_t spellEffectsTick=0;
@@ -288,6 +306,10 @@ struct LocalScene {
     std::optional<PendingMelee> pendingMelee;
     bool meleePointerCaptured = false;
     std::uint32_t actionFlags = 0;
+    bool TakingHit() const {
+        return !receivedHits.empty() || (!casting.clock.finished() &&
+            (casting.clock.action()==15 || casting.clock.action()==32));
+    }
     unsigned spellOriginalFacing = 0;
     std::map<std::uint32_t, Player> players;
     mir3::GroundItems groundItems;
@@ -1483,7 +1505,7 @@ public:
     {
         const auto now=GetTickCount64();
         if (stage!=Stage::GameSession || showSignOut || !scene.terrain.Ready() || scene.pending.deadline || scene.pendingMelee ||
-            scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 || mount.shape || !characterStatus.hp[0] ||
+            scene.TakingHit() || scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 || mount.shape || !characterStatus.hp[0] ||
             output_.size()>8192-2*(DEFBLOCKSIZE+3)) return;
         const int x=int(scene.x), y=int(scene.y), dx=targetX-x, dy=targetY-y;
         const std::array direction{std::abs(dy)>2 && std::abs(dx)<=1 ? 0 : (dx>0)-(dx<0),
@@ -1502,7 +1524,7 @@ public:
         const auto tick=GetTickCount64();
         if (stage!=Stage::GameSession || showSignOut || !scene.terrain.Ready() || mount.shape ||
             (characterStatus.hp[1] && !characterStatus.hp[0]) || scene.pending.deadline || scene.pendingMelee || minimap.visible ||
-            scene.InputDelayed(tick) || output_.size()>=8192 || slot<1 || slot>12) return;
+            scene.TakingHit() || scene.InputDelayed(tick) || output_.size()>=8192 || slot<1 || slot>12) return;
         auto& timing=scene.spellTiming;
         const auto now=static_cast<std::uint32_t>(tick);
         if (!timing.key_ready(now,slot,repeat)) return;
@@ -1612,7 +1634,7 @@ public:
         const auto now=GetTickCount64();
         if (stage!=Stage::GameSession || showSignOut || scene.InputDelayed(now) || !scene.terrain.Ready() ||
             mount.shape || !characterStatus.hp[0] || scene.pending.deadline || scene.pendingMelee ||
-            scene.spellReplyUntil || scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 ||
+            scene.spellReplyUntil || scene.TakingHit() || scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 ||
             !scene.casting.clock.finished() || output_.size()>=8192) return true;
         const auto tick=static_cast<std::uint32_t>(now);
         const auto& hand=characterStatus.hand;
@@ -1630,7 +1652,7 @@ public:
         using mir3_cui::GroundCell;
         const auto now = GetTickCount64();
         if (stage != Stage::GameSession || showSignOut || !scene.terrain.Ready() || scene.pending.deadline || scene.spellReplyUntil ||
-            scene.pendingMelee || scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 || !scene.casting.clock.finished() ||
+            scene.pendingMelee || scene.TakingHit() || scene.crouchReplyAt || CrouchPose(scene.crouchedAt,now)>=0 || !scene.casting.clock.finished() ||
             (scene.spellTiming.cast_at && !scene.spellTiming.movement_ready(static_cast<std::uint32_t>(now))) ||
             output_.size() >= 8192 || (characterStatus.hp[1] && !characterStatus.hp[0])) return;
         if (!scene.terrain.Contains(targetX,targetY)) return;
@@ -2214,11 +2236,13 @@ public:
             AdvanceGroundItems(static_cast<std::uint32_t>(now));
             if (scene.spellReplyUntil && now>=scene.spellReplyUntil) scene.spellReplyUntil=0;
             AdvanceMelee(now);
-            AdvanceHumanAction(scene.casting,0,scene.x,scene.y,characterAppearance.weapon,now);
+            AdvanceHumanAction(scene.casting,0,scene.x,scene.y,characterAppearance,now);
+            if (!scene.pending.deadline && !scene.pendingMelee && scene.casting.clock.finished() && !scene.receivedHits.empty())
+                StartLocalHit(now);
             AdvanceSpellEffects(now);
             for (auto& [id,actor]:scene.players) {
                 const bool wasActing=!actor.casting.clock.finished();
-                AdvanceHumanAction(actor.casting,id,actor.x,actor.y,actor.appearance.weapon,now);
+                AdvanceHumanAction(actor.casting,id,actor.x,actor.y,actor.appearance,now);
                 if (wasActing && actor.casting.clock.finished()) actor.combatIdleAt=now;
                 if (!actor.casting.clock.finished() || actor.queuedCasts.empty()) continue;
                 auto message=std::move(actor.queuedCasts.front());
@@ -2226,6 +2250,10 @@ public:
                 actor.queuedCasts.pop_front();
                 if (const auto* reply=std::get_if<mir3::SpellReply>(&message)) {
                     PlaySpellEffects(*reply,actor.x,actor.y,actor.facing);
+                    continue;
+                }
+                if (const auto* hit=std::get_if<LocalScene::HumanHit>(&message)) {
+                    StartRemoteHit(actor,id,*hit,now,catchUp);
                     continue;
                 }
                 if (actor.dead) continue;
@@ -3016,7 +3044,7 @@ private:
                 char* end=nullptr;
                 const auto skill=std::strtol(text,&end,10);
                 if (end!=text && skill>0 && skill<=65535)
-                    found->second.queuedCasts.emplace_back(LocalScene::RemoteCast{int(skill),first,second});
+                    QueueHumanAction(found->second,LocalScene::RemoteCast{int(skill),first,second});
             }
         } else if (stage == Stage::GameSession && opcode == GameGroundItemHide) {
             if (actor && actor<=0x7fffffffu && input_.size()==DEFBLOCKSIZE) scene.groundItems.hide(static_cast<int>(actor));
@@ -3070,8 +3098,9 @@ private:
             }
         } else if (stage == Stage::GameSession && IsMeleeMessage(opcode)) {
             HandleMeleeMessage(opcode,actor,first,second,third);
-        } else if (stage == Stage::GameSession && (opcode == GameActorStruck || opcode == GameActorStruckWithSource ||
-                   opcode == GameMonsterAttackSpecial)) {
+        } else if (stage == Stage::GameSession && (opcode == GameActorStruck || opcode == GameActorStruckWithSource)) {
+            HandleSceneHit(opcode,actor,first,second,third);
+        } else if (stage == Stage::GameSession && opcode == GameMonsterAttackSpecial) {
             HandleMonsterCombat(opcode,actor,first,second,third);
         } else if (stage == Stage::GameSession && opcode == GameNpcDialogue) {
             if (actor && actor <= 0x7fffffffu && input_.size() <= DEFBLOCKSIZE + (8192 * 4 + 2) / 3) {
@@ -3105,13 +3134,13 @@ private:
             if (input_.size() == DEFBLOCKSIZE) {
                 if (opcode == GameClearActors) {
                     if (scene.spellEffects) for (const auto& [id,actor]:scene.players)
-                        scene.spellEffects->forgetActor(id);
+                        scene.spellEffects->forgetActor(id,ActorWorldPixel(actor));
                     scene.players.clear();
                     scene.lockedSpellActor=0;
                     audio.ClearSceneEffects(true);
                     std::erase_if(scene.speech,[](const auto& entry) { return entry.first!=0; });
                 } else {
-                    if (scene.spellEffects) scene.spellEffects->forgetActor(actor);
+                    if (scene.spellEffects) scene.spellEffects->forgetActor(actor,SpellTarget(actor));
                     scene.players.erase(actor);
                     if (scene.lockedSpellActor==actor) scene.lockedSpellActor=0;
                     audio.StopSceneEffect(actor);
@@ -3119,7 +3148,7 @@ private:
                 }
             }
         } else if ((stage == Stage::GameSession || stage == Stage::AuthenticatingGame) &&
-                   (opcode == GameAbility || opcode == GameVitals || opcode == GameWeight ||
+                   (opcode == GameAbility || opcode == GameVitals || opcode == GameHealthRegistration || opcode == GameWeight ||
                     opcode == GameSubAbility || opcode == GameExperience || opcode == GameLevelUp)) {
             HandleCharacterStatus(opcode, actor, first, second, third);
         } else if (opcode == mir3_cui::ClientOptions && stage == Stage::GameSession) {
@@ -3637,6 +3666,10 @@ private:
         scene.levelEffects.clear();
         scene.levelPoseAt=0;
         scene.casting={};
+        scene.health={};
+        scene.receivedHits.clear();
+        scene.lastSpecialHit=0;
+        scene.foldedHits=0;
         scene.spellMessages.clear();
         scene.spellEffects.reset();
         scene.spellSounds={};
@@ -3933,6 +3966,147 @@ private:
         QueueMonsterAction(found->second,move);
     }
 
+    void QueueHumanAction(LocalScene::Player& player,LocalScene::RemoteSpell action)
+    {
+        auto& queue=player.queuedCasts;
+        if (queue.size()>=2) std::erase_if(queue,[&](const LocalScene::RemoteSpell& record) {
+            const auto* hit=std::get_if<LocalScene::HumanHit>(&record);
+            if (!hit || hit->opcode!=GameActorStruck) return false;
+            player.health.current=hit->current;
+            player.health.maximum=hit->maximum;
+            return true;
+        });
+        if (queue.size()<64) queue.push_back(std::move(action));
+    }
+
+    void HandleSceneHit(unsigned opcode,std::uint32_t actor,WORD hp,WORD maximum,WORD damage)
+    {
+        const bool local=actor && actor==localActor_;
+        const auto found=scene.players.find(actor);
+        if (!local && (found==scene.players.end() || found->second.IsNpc())) return;
+        if (!local && found->second.IsMonster()) {
+            HandleMonsterCombat(opcode,actor,hp,maximum,damage);
+            return;
+        }
+        const bool full=input_.size()==DEFBLOCKSIZE+22;
+        if (!full && (local || opcode!=GameActorStruck || input_.size()!=DEFBLOCKSIZE)) return;
+        LocalScene::HumanHit hit{WORD(opcode),hp,maximum,damage};
+        if (full) {
+            const auto feature=ReadGameBody();
+            if (feature.size()!=16 || !hit.appearance.Apply(PackedAppearance(feature))) return;
+            for (unsigned i=0;i<4;++i) hit.source|=std::uint32_t(std::uint8_t(feature[8+i]))<<(8*i);
+            hit.variant=std::uint8_t(feature[14])|(unsigned(std::uint8_t(feature[15]))<<8);
+        }
+        if (!local) {
+            QueueHumanAction(found->second,hit);
+            return;
+        }
+        auto& queue=scene.receivedHits;
+        if (queue.size()>=64) return;
+        if (opcode==GameActorStruck) {
+            if (scene.lastSpecialHit && GetTickCount64()-scene.lastSpecialHit<500) {
+                characterStatus.hp={hp,maximum};
+                if (hp) return;
+            }
+            scene.foldedHits=0;
+            if (queue.size()>1) {
+                std::erase_if(queue,[&](const LocalScene::HumanHit& older) {
+                    if (older.opcode!=GameActorStruck) return false;
+                    characterStatus.hp={older.current,older.maximum};
+                    ++scene.foldedHits;
+                    return true;
+                });
+            }
+        }
+        queue.push_back(hit);
+    }
+
+    unsigned SourceWeapon(std::uint32_t source) const
+    {
+        if (source && source==localActor_) return characterAppearance.weapon;
+        if (const auto found=scene.players.find(source);found!=scene.players.end() && !found->second.npcType)
+            return found->second.appearance.weapon;
+        return 0;
+    }
+
+    void PlayHumanImpact(unsigned effect,std::uint32_t actor,unsigned x,unsigned y)
+    {
+        if (effect>65535 || !scene.terrain.Ready()) return;
+        SceneEffects().followingImpact(effectCatalog_,effect,{int(x),int(y)},actor,
+            [&](int sample,mir3::SpellCell cell) { return PlaySpellSound(sample,cell); });
+    }
+
+    void PlayHitSource(LocalScene::HumanHealth& health,std::uint32_t actor,std::uint32_t source,unsigned x,unsigned y)
+    {
+        if (source && source==localActor_) health.lastMonster.reset();
+        else if (const auto found=scene.players.find(source);found!=scene.players.end()) {
+            if (found->second.IsMonster()) health.lastMonster=std::uint8_t(found->second.npcShape);
+            else health.lastMonster.reset();
+        }
+        if (!health.lastMonster) return;
+        switch (*health.lastMonster) {
+        case 2: PlayHumanImpact(500,actor,x,y); break;
+        case 67: PlayHumanImpact(523,actor,x,y); break;
+        case 104: PlayHumanImpact(542,actor,x,y); break;
+        case 150: PlayHumanImpact(574,actor,x,y); break;
+        }
+    }
+
+    void StartLocalHit(std::uint64_t now)
+    {
+        auto hit=scene.receivedHits.front();
+        scene.receivedHits.pop_front();
+        characterStatus.hp={hit.current,hit.maximum};
+        characterAppearance=hit.appearance;
+        scene.health.damage.enabled=damageNumbers;
+        scene.health.damage.push(-int(hit.damage));
+        if (hit.damage) {
+            scene.crouchedAt=scene.crouchReplyAt=scene.levelPoseAt=0;
+            auto& cast=scene.casting;
+            cast={};
+            cast.tick=now;
+            cast.hitWeapon=SourceWeapon(hit.source);
+            cast.clock.start(mount.shape ? 32 : 15);
+            cast.clock.set_interval(std::max(80,200-3*int(std::uint8_t(characterStatus.level)))+
+                (hit.variant ? 15*scene.foldedHits : 0));
+            PlayHumanImpact(400+hit.variant,localActor_,scene.x,scene.y);
+        }
+        PlayHitSource(scene.health,localActor_,hit.source,scene.x,scene.y);
+        if (hit.variant) scene.lastSpecialHit=now;
+        if (hit.opcode==GameActorStruckWithSource && scene.receivedHits.size()<64) {
+            hit.opcode=GameActorStruck;
+            scene.receivedHits.push_back(hit);
+        }
+    }
+
+    void StartRemoteHit(LocalScene::Player& player,std::uint32_t actor,const LocalScene::HumanHit& hit,
+                        std::uint64_t now,bool catchUp)
+    {
+        auto& health=player.health;
+        health.current=hit.current;
+        health.maximum=hit.maximum;
+        if (!hit.appearance.available) return;
+        if (hit.opcode==GameActorStruckWithSource && player.queuedCasts.size()<64) {
+            auto relay=hit;
+            relay.opcode=GameActorStruck;
+            player.queuedCasts.emplace_back(relay);
+        }
+        PlayHitSource(health,actor,hit.source,player.x,player.y);
+        if (player.dead) return;
+        player.appearance=hit.appearance;
+        health.damage.enabled=damageNumbers;
+        health.damage.push(-int(hit.damage));
+        if (!hit.damage) return;
+        auto& cast=player.casting;
+        cast={};
+        cast.tick=now;
+        cast.hitWeapon=SourceWeapon(hit.source);
+        cast.flags=player.actionFlags;
+        cast.clock.start(player.mount ? 32 : 15,catchUp);
+        player.crouchedAt=player.levelPoseAt=0;
+        PlayHumanImpact(400+hit.variant,actor,player.x,player.y);
+    }
+
     void AdvanceMonsterActions(std::uint64_t now)
     {
         for (auto& [id,monster]:scene.players) {
@@ -4106,7 +4280,7 @@ private:
             if (scene.spellMessages.size()<64) scene.spellMessages.push_back(std::move(*reply));
         } else if (const auto it=scene.players.find(actor);it!=scene.players.end() &&
             !it->second.IsNpc() && !it->second.IsMonster() && it->second.queuedCasts.size()<64) {
-            it->second.queuedCasts.emplace_back(std::move(*reply));
+            QueueHumanAction(it->second,std::move(*reply));
         }
     }
 
@@ -4226,8 +4400,8 @@ private:
         if ((opcode==GameRoundHit || opcode==GameBackHit || opcode==GameHumanAction18) &&
             !scene.terrain.BaseWalkable(x,y)) return;
         auto& player=found->second;
-        if (player.queuedCasts.size()<64 && scene.terrain.Contains(x,y))
-            player.queuedCasts.emplace_back(LocalScene::RemoteMelee{x,y,facing,unsigned(direction>>8),opcode,harvest});
+        if (scene.terrain.Contains(x,y))
+            QueueHumanAction(player,LocalScene::RemoteMelee{x,y,facing,unsigned(direction>>8),opcode,harvest});
     }
 
     void StartRemoteMelee(LocalScene::Player& player,std::uint32_t actor,const LocalScene::RemoteMelee& next,
@@ -4307,17 +4481,21 @@ private:
         }
     }
 
-    void AdvanceHumanAction(mir3::CastVisual& cast,std::uint32_t actor,unsigned x,unsigned y,unsigned weapon,std::uint64_t now)
+    void AdvanceHumanAction(mir3::CastVisual& cast,std::uint32_t actor,unsigned x,unsigned y,
+                            const mir3_cui::CharacterAppearance& appearance,std::uint64_t now)
     {
         const int previous=cast.clock.frame();
         cast.advance(now);
         const int frame=cast.clock.frame();
-        if (!cast.weapon || previous==frame) return;
+        if (previous==frame) return;
         const int action=cast.clock.action();
+        if (action==15)
+            PlaySceneSound(actor,mir3::HumanActions::hit_sound(frame,cast.hitWeapon,appearance.clothing,appearance.body),x,y);
+        if (!cast.weapon) return;
         if (frame==1 && cast.meleeSound) PlaySpellSound(cast.meleeSound,{int(x),int(y)});
         else if (frame==1 && (action==16 || action==17)) PlaySceneSound(actor,action==16 ? 141 : 140,x,y);
         if (frame==2 && action>=9 && action<=14)
-            PlaySceneSound(actor,mir3::HumanActions::weapon_swing_sound(weapon),x,y);
+            PlaySceneSound(actor,mir3::HumanActions::weapon_swing_sound(appearance.weapon),x,y);
         if (frame==3 && cast.harvest)
             SceneEffects().harvest(effectCatalog_,{int(x),int(y)},[this](int sound,mir3::SpellCell cell) {
                 return PlaySpellSound(sound,cell);
@@ -4391,18 +4569,32 @@ private:
         switch (opcode) {
         case GameVitals:
             if (actor == 0 || actor == localActor_) {
+                scene.health.damage.enabled=damageNumbers;
+                scene.health.damage.changed(stats.hp[0],first);
                 stats.hp = {first, third};
                 stats.mp[0] = second;
                 if (third && !first) {
                     scene.pending = {};
                     scene.crouchedAt=scene.crouchReplyAt=0;
                 }
-            } else if (const auto found=scene.players.find(actor);found!=scene.players.end() && found->second.IsMonster()) {
-                auto& monster=found->second;
-                monster.monsterDamage.enabled=damageNumbers;
-                monster.monsterDamage.changed(monster.monsterVitals.current,first);
-                SetMonsterVitals(monster,first,third);
+            } else if (const auto found=scene.players.find(actor);found!=scene.players.end() && !found->second.IsNpc()) {
+                auto& player=found->second;
+                if (player.IsMonster()) {
+                    player.monsterDamage.enabled=damageNumbers;
+                    player.monsterDamage.changed(player.monsterVitals.current,first);
+                    SetMonsterVitals(player,first,third);
+                } else {
+                    auto& health=player.health;
+                    health.damage.enabled=damageNumbers;
+                    health.damage.changed(health.current,first);
+                    health.current=first;
+                    health.maximum=third;
+                }
             }
+            break;
+        case GameHealthRegistration:
+            if (const auto found=scene.players.find(actor);found!=scene.players.end() && !found->second.npcType)
+                found->second.health.registeredUntil=GetTickCount64()+5000;
             break;
         case GameWeight:
             stats.weight[0] = actor & 0xffff;

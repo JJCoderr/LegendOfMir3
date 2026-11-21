@@ -111,10 +111,18 @@ public:
         append(catalog,335,cell,0,0,false,sound);
     }
 
-    void forgetActor(std::uint32_t id)
+    template<class Sound>
+    void followingImpact(const EffectCatalog& catalog,int id,SpellCell cell,std::uint32_t actor,Sound sound) {
+        if (auto* effect=append(catalog,id,cell,0,0,false,sound)) effect->follow=actor;
+    }
+
+    void forgetActor(std::uint32_t id,std::optional<SpellPixel> position={})
     {
         for (auto& effect:effects) {
-            if (effect.follow==id) effect.follow=0;
+            if (effect.follow==id) {
+                if (position) effect.position=*position;
+                effect.follow=0;
+            }
             if (effect.flight && effect.flight->target==id) effect.flight->target=0;
         }
     }

@@ -15,6 +15,7 @@ struct CastVisual {
     bool weapon = false;
     bool harvest = false;
     int meleeSound = 0;
+    unsigned hitWeapon = 0;
     std::uint32_t flags = 0;
 
     void advance(std::uint64_t now) {
