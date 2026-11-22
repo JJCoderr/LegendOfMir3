@@ -2563,17 +2563,7 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 已排除：瓦片索引越界（0.map 全块与 14 个瓦片库帧数比对无越界）、瓦片尺寸超块（经 .wix 索引读真实帧宽，tilesc 96、cliffsc/dungeonsc 48）、滚动缓冲参数写错（_MT_RUN 分支已修，95f6c64）、光照网格默认参数（400/300 对应 800x600）。
 - 待查：PrintWindow 对 D3D 隔帧可能抓到不同表面，13132 有可能是截图伪影；若如此需要用 Present 钩子或 GetFrontBufferData 复核。另一条线是 SetMovedTileBuffer 各方向边缘补画 DrawBaseTile 的范围，若某列没补画就会保留上一屏内容。
 
-## 2026-11-22 地图边缘地面缓冲修复
+## 2026-11-22 撤销地图试修供复测
 
-- 参照 mir2x/client/src/processrun.cpp 的 drawTile：按当前视野取瓦片，包含跨越视野边缘的瓦片。当前客户端保留地面缓存，但跨格移动时清空并完整重建，删除四套 memmove/边缘补画分支，避免不可行走水面、岩石附近透明地面和地图外区域保留旧像素。
-- LoadNewMapBuffer 包含左、上边缘外一格的瓦片原点；DrawBaseTile 在 NewSetIndex 失败时跳过，避免空 WIX 帧复用前一张资源。
-- Release Client 构建通过；代码复审后净减少155行。尚未在用户原位置完成画面复测，不能据此认定静止闪烁已彻底消失；后续若仍出现需检查动画对象及最终呈现。
+- 用户反馈竖带未解决且画面变暗，按要求撤销 de4ce16 和 3799acb 两次地图修改，保留独立的 F12 地图缓冲导出提交 e14c79b。恢复原地面搬移、门索引与混合对象坐标，重新编译运行供用户对照。
 
-## 2026-11-22 Zircon 地图代码对照与确定性修正
-
-- 参照 G:/传奇3/Zircon/Client/Scenes/Views/MapControl.cs：LoadMap（677起）先 x 后 y 读格子；Floor.OnClearTexture（1690起）重建静态地板，偶数坐标画背景瓦片，静态单格对象归入地板；DrawObjects（478起）按行绘对象，先算最终动画帧再取尺寸，普通/混合对象共用 drawX/drawY。DXControl.cs:1163 清空目标；UserObject.cs:406/751/797 使地板缓存失效。不可行走 Flag 不参与这些绘制分支。
-- 当前对象也按 y+x*height 访问，但 GetDoor/IsDoorOpen/OpenDoor/CloseDoor/GetDoorImgIdx 的11处访问使用 width。已统一 height。例：宽6高4，(5,3) 正确索引23，原索引33超出24格；宽4高6则会错误读取另一格。
-- GameProc.cpp 三处混合对象 nStartY 对格子差值错误取负。ImageHandler.cpp:276 已将屏幕坐标转换为 D3D 坐标，调用者必须传与普通绘制同向的屏幕Y。已去掉三处负号。例如相对视野向下3格，原路径相对普通路径偏移 -192像素（两倍3*32），动画混合状态会把对象放错行。
-- 本次未扩大修改：当前按基础帧尺寸划分对象层（Zircon用最终帧尺寸）；大对象遍历范围与小对象不同；大对象1混合路径额外使用shPX/shPY；大对象2混合标志被注释；动画最终 NewSetIndex 返回值未检查。这些需要结合V1.45资源、层序及混合语义逐项验证，不能因不同于Zircon就照搬。
-- 上次缓存重建有消除残留的合理性，但不是已证实的闪烁根因。当前两项修正有直接索引/坐标证据，也未完成用户原位置的视觉验收。
-- 验证：Release Client 构建通过；复审改动仅为11处索引步长和3处Y符号，无新资源编号或渲染抽象。
