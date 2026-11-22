@@ -71,6 +71,62 @@ enum class Stage {
     ConnectingCharacters, Characters, Complete, ConnectingGame, AuthenticatingGame,
     GameSession, SigningOutGame, GameDisconnected
 };
+
+struct IndependentWindows {
+    std::array<cui_vec2,5> positions{{{516,0},{100,100},{60,20},{0,22},{0,0}}};
+    std::array<int,5> stacking{{0,1,2,3,4}};
+    std::array<bool,5> wasOpen{};
+    int dragging = -1;
+    cui_vec2 dragOffset{};
+    struct Profile {
+        bool open = false;
+        unsigned body = 0;
+        std::string name, guild;
+        std::array<mir3_cui::InventoryItem, 12> equipment;
+    } profile;
+    struct Orders {
+        bool enabled = false, open = false;
+        unsigned x = 0, y = 0, targetX = 0, targetY = 0, range = 0;
+        std::uint32_t object = 0;
+        mir3_cui::ItemKey ammunition;
+        char quantity[8]{};
+        std::uint64_t loadUntil = 0;
+    } orders;
+    struct Listing {
+        std::uint32_t id = 0, price = 0;
+        std::string seller, server, description;
+        mir3_cui::InventoryItem item;
+    };
+    struct Market {
+        bool open = false, registration = false;
+        unsigned page = 0, pages = 0;
+        std::uint32_t actor = 0, selected = 0;
+        std::uint64_t waitUntil = 0;
+        std::vector<Listing> listings;
+        mir3_cui::ItemKey item;
+        std::string status;
+        char filter[96]{}, price[16]{}, description[361]{};
+        unsigned confirmation = 0;
+        bool byName = true;
+    } market;
+    struct Letter {
+        std::uint32_t id = 0;
+        std::string name, date, subject;
+        bool read = false;
+    };
+    struct Mail {
+        bool unreadNotice = false, open = false, composing = false, reading = false;
+        unsigned folder = 0;
+        std::uint32_t selected = 0, readingId = 0;
+        std::array<std::vector<Letter>, 2> folders;
+        std::string sender, subject, text, status;
+        mir3_cui::InventoryItem gift;
+        std::uint32_t gold = 0;
+        char recipient[97]{}, draft[1504]{};
+    } mail;
+
+    bool Open() const { return profile.open || orders.open || market.open || market.registration || mail.open; }
+};
 enum class CharacterDialog { None, Create, Delete };
 inline constexpr wchar_t LoginMusic[] = L"CuiAudio/Login.wav";
 inline constexpr wchar_t SessionMusic[] = L"CuiAudio/Session.wav";
@@ -130,6 +186,7 @@ inline constexpr WORD GameShopGoods = 645;
 inline constexpr WORD GameShopBought = 650;
 inline constexpr WORD GameShopRejected = 651;
 inline constexpr WORD GameShopOffers = 652;
+inline constexpr WORD GameCraftGoods = 712, GameCraftOk = 713, GameCraftFailed = 714, ClientCraft = 1034;
 inline constexpr WORD ClientClickNpc = 1010;
 inline constexpr WORD ClientNpcSelect = 1011;
 inline constexpr WORD ClientBuy = 1014;
@@ -825,6 +882,7 @@ public:
     mir3::SkillPanel skills;
     mir3::MountPanel mount;
     mir3_cui::TradePanel trade;
+    IndependentWindows windows;
     std::uint64_t mountInputUntil = 0;
     bool skillShortcutsVisible = false;
     mir3::Minimap minimap;
@@ -963,6 +1021,7 @@ private:
         skills = {};
         mount = {};
         trade = {};
+        windows = {};
         mountInputUntil = 0;
         skillShortcutsVisible = false;
         inventory = {};
@@ -1545,10 +1604,163 @@ public:
         }
     }
 
+    bool WindowCanQueue() const { return stage == Stage::GameSession && output_.size() < 8192; }
+
+    void ToggleObjectOrders()
+    {
+        auto& orders = windows.orders;
+        if (!orders.enabled) return;
+        orders.open = !orders.open;
+        if (orders.open) {
+            if (!minimap.width) RequestMinimap();
+        } else orders.targetX = orders.targetY = 0;
+    }
+
+    void SendObjectOrder(unsigned opcode)
+    {
+        auto& orders = windows.orders;
+        if (!WindowCanQueue() || !orders.open || opcode < 1120 || opcode > 1122) return;
+        std::uint32_t cell = 0;
+        if (opcode == 1120) {
+            if (!orders.targetX || !orders.targetY || !scene.terrain.Contains(orders.targetX, orders.targetY)) return;
+            cell = orders.targetX | (orders.targetY << 16);
+        }
+        if (opcode == 1121) orders.targetX = orders.targetY = 0;
+        Queue(static_cast<WORD>(opcode), 0, "", cell);
+    }
+
+    void LoadObjectAmmunition()
+    {
+        auto& orders = windows.orders;
+        if (!WindowCanQueue() || !orders.open || GetTickCount64() < orders.loadUntil) return;
+        const auto* item = inventory.Find(orders.ammunition);
+        if (!item || (item->icon != 310 && item->icon != 311)) return;
+        const auto count = orders.quantity[0] ? Number(orders.quantity, item->count) : item->count;
+        if (!count || count > 65535) return;
+        Queue(1123, static_cast<WORD>(count), item->key.name, item->key.id);
+        orders.ammunition = {};
+        orders.quantity[0] = '\0';
+        orders.loadUntil = GetTickCount64() + 1000;
+    }
+
+    void MarketRequest(unsigned opcode)
+    {
+        auto& market = windows.market;
+        if (!WindowCanQueue() || !market.open || !market.actor || GetTickCount64() < market.waitUntil) return;
+        std::string body;
+        std::uint32_t id = 0;
+        if (opcode == 1136) {
+            const auto filter = ConvertText(market.filter, CP_UTF8, 936);
+            if (filter.find_first_of("\r\n") != filter.npos || (market.filter[0] && filter.empty())) return;
+            body = filter.empty() ? "*\r*\r0" : market.byName ? "*\r" + filter + "\r0" : filter + "\r*\r0";
+        } else if (opcode == 1133 || opcode == 1135) {
+            const auto listing = std::ranges::find(market.listings, market.selected, &IndependentWindows::Listing::id);
+            if (listing == market.listings.end()) return;
+            if (opcode == 1133 && listing->price > inventory.gold) {
+                market.status = "金币不足。";
+                return;
+            }
+            id = listing->id;
+            if (opcode == 1133) body = listing->item.key.name;
+        } else if (opcode != 1131 && opcode != 1132 && opcode != 1134) return;
+        Queue(static_cast<WORD>(opcode), static_cast<WORD>(id), body, market.actor, 0, static_cast<WORD>(id >> 16));
+        market.waitUntil = GetTickCount64() + 1000;
+        market.status.clear();
+    }
+
+    void BeginMarketRegistration()
+    {
+        auto& market = windows.market;
+        if (!market.open || !market.actor) return;
+        market.registration = true;
+        market.item = {};
+        market.price[0] = market.description[0] = '\0';
+        market.status.clear();
+        OpenInventory();
+    }
+
+    void RegisterMarketItem()
+    {
+        auto& market = windows.market;
+        if (!WindowCanQueue() || !market.registration || !market.actor || GetTickCount64() < market.waitUntil) return;
+        const auto* item = inventory.Find(market.item);
+        const auto price = Number(market.price, 0x7fffffffu);
+        auto description = ConvertText(market.description, CP_UTF8, 936);
+        if (!item || item->IsGold() || !price || description.size() > 120 || (market.description[0] && description.empty())) {
+            market.status = "请选择背包物品并填写有效价格和说明。";
+            return;
+        }
+        std::replace(description.begin(), description.end(), '\n', '\r');
+        const auto body = item->key.name + '\r' + std::to_string(std::bit_cast<std::int32_t>(item->key.id)) + '\r' +
+            std::to_string(price) + '\r' + description;
+        Queue(1130, static_cast<WORD>(item->Stacks() ? item->count : 0), body, market.actor);
+        market.waitUntil = GetTickCount64() + 1000;
+        market.registration = false;
+        market.item = {};
+    }
+
+    void MailRequest(unsigned opcode, unsigned folder, std::uint32_t id = 0)
+    {
+        auto& mail = windows.mail;
+        if (!WindowCanQueue() || !mail.open || folder > 1) return;
+        if (opcode == 1137) {
+            mail.folder = folder;
+            mail.selected = mail.readingId = 0;
+            mail.reading = mail.composing = false;
+        } else if (!id || (opcode != 1138 && opcode != 1139 && opcode != 1142)) return;
+        if (opcode == 1138) mail.readingId = id;
+        if (opcode == 1139) {
+            mail.reading = false;
+            mail.selected = mail.readingId = 0;
+        }
+        Queue(static_cast<WORD>(opcode), opcode == 1142 ? 0 : static_cast<WORD>(folder * 2), "", id);
+    }
+
+    void ToggleMailbox()
+    {
+        auto& mail = windows.mail;
+        if (!WindowCanQueue()) return;
+        mail.open = !mail.open;
+        if (mail.open) {
+            mail.unreadNotice = false;
+            MailRequest(1137, 0);
+        }
+    }
+
+    void SendLetter()
+    {
+        auto& mail = windows.mail;
+        if (!WindowCanQueue() || !mail.open || !mail.composing) return;
+        const auto name = ConvertText(mail.recipient, CP_UTF8, 936);
+        auto text = ConvertText(mail.draft, CP_UTF8, 936);
+        if (name.empty() || name.size() > 24 || name.find_first_of("\r\n") != name.npos || text.empty() || text.size() > 500) {
+            mail.status = "请输入收信人和信件正文。";
+            return;
+        }
+        text.erase(std::remove(text.begin(), text.end(), '\r'), text.end());
+        std::replace(text.begin(), text.end(), '\n', '\r');
+        auto subject = text.substr(0, std::min<std::size_t>(30, text.find('\r')));
+        while (!subject.empty() && ConvertText(subject, 936, CP_UTF8).empty()) subject.pop_back();
+        std::string body(596, '\0');
+        body.replace(0, name.size(), name);
+        body.replace(64, subject.size(), subject);
+        body.replace(95, text.size(), text);
+        Queue(1141, 0, body);
+        mail.composing = false;
+        mail.draft[0] = '\0';
+        mail.status.clear();
+    }
+
     void BuyShopItem()
     {
         if (stage != Stage::GameSession || !shop.actor || purchase.deadline || shop.detailDeadline ||
             output_.size() >= 8192) return;
+        if (shop.crafting && shop.bulk && shop.category >= 0 && shop.category < static_cast<int>(shop.goods.size())) {
+            Queue(ClientCraft, 0, shop.goods[shop.category].name, shop.actor);
+            purchase = {shop.actor, 0, shop.revision, GetTickCount64() + 8000, true};
+            shop.status.clear();
+            return;
+        }
         unsigned id = 0, count = 0, pendingOffer = 0;
         const std::string* name = nullptr;
         if (shop.bulk && shop.category >= 0) {
@@ -2481,7 +2693,8 @@ public:
             shop.status = "No response for this page.";
         }
         if (purchase.deadline && now >= purchase.deadline) {
-            if (shop.actor == purchase.actor) shop.status = "The purchase request timed out.";
+            if (shop.actor == purchase.actor && shop.revision == purchase.revision)
+                shop.status = purchase.crafting ? "The crafting request timed out." : "The purchase request timed out.";
             purchase = {};
         }
         if (scene.pending.deadline && GetTickCount64() >= scene.pending.deadline) scene.pending = {};
@@ -2859,6 +3072,7 @@ private:
         skills = {};
         mount = {};
         trade = {};
+        windows = {};
         mountInputUntil = 0;
         skillShortcutsVisible = false;
         ClearMinimap();
@@ -3341,7 +3555,14 @@ private:
             }
         } else if (stage == Stage::GameSession && opcode == GameNpcClose) {
             if (input_.size() == DEFBLOCKSIZE) CloseNpcDialogue();
-        } else if (stage == Stage::GameSession && (opcode == GameShopGoods || opcode == GameShopOffers ||
+        } else if (stage == Stage::GameSession && (opcode == GameCraftOk || opcode == GameCraftFailed)) {
+            if (input_.size() != DEFBLOCKSIZE || (opcode == GameCraftFailed && (actor < 1 || actor > 4))) return;
+            if (opcode == GameCraftOk) inventory.gold = actor;
+            if (purchase.crafting) purchase = {};
+            const int notice = opcode == GameCraftOk ? 1440 : 1440 + static_cast<int>(actor);
+            if (shop.actor && shop.crafting) shop.notice = notice;
+            else party.notice = {"Crafting", notice, opcode == GameCraftOk ? 0 : static_cast<int>(actor)};
+        } else if (stage == Stage::GameSession && (opcode == GameShopGoods || opcode == GameCraftGoods || opcode == GameShopOffers ||
                    opcode == GameShopBought || opcode == GameShopRejected)) {
             HandleShopReply(opcode, actor, first, second);
         } else if (stage == Stage::GameSession &&
@@ -3383,6 +3604,9 @@ private:
                    opcode >= static_cast<unsigned>(mir3_cui::PartyReply::Created) &&
                    opcode <= static_cast<unsigned>(mir3_cui::PartyReply::Roster)) {
             HandlePartyReply(static_cast<mir3_cui::PartyReply>(opcode), actor);
+        } else if (stage == Stage::GameSession && (opcode == 751 || opcode == 1350 || opcode == 1351 || opcode == 1353 ||
+                   (opcode >= 1355 && opcode <= 1358) || opcode == 1400)) {
+            HandleIndependentWindow(opcode, actor, first, second, third);
         } else if (stage == Stage::GameSession && opcode >= 753 && opcode <= 776) {
             HandleGuildReply(opcode, actor);
         } else if (stage == Stage::GameSession &&
@@ -3580,6 +3804,7 @@ private:
         if (opcode == GameShopBought || opcode == GameShopRejected) {
             if (input_.size() != DEFBLOCKSIZE || (opcode == GameShopRejected && (actor < 1 || actor > 3))) return;
             if (opcode == GameShopBought) inventory.gold = actor;
+            if (purchase.crafting) return;
             if (shop.storage) {
                 purchase = {};
                 return;
@@ -3604,16 +3829,19 @@ private:
             purchase = {};
             return;
         }
-        if (!actor || count > 255 || input_.size() > DEFBLOCKSIZE + (10240 * 4 + 2) / 3) return;
+        const bool crafting = opcode == GameCraftGoods;
+        if (!actor || (!crafting && count > 255) ||
+            input_.size() > DEFBLOCKSIZE + (10240 * 4 + 2) / 3) return;
         auto body = ReadGameBody();
         if (input_.size() > DEFBLOCKSIZE && body.empty()) return;
-        if (opcode == GameShopGoods) {
-            if (actor != npcDialogue.actor || body.size() > 10240) return;
+        if (opcode == GameShopGoods || crafting) {
+            if ((!crafting && actor != npcDialogue.actor) || body.size() > 10240) return;
             const auto zero = body.find('\0');
             if (zero != std::string::npos) body.resize(zero);
             std::vector<mir3_cui::NpcShop::Good> goods;
             std::size_t start = 0;
-            for (WORD index = 0; index < count; ++index) {
+            while (crafting ? start < body.size() : goods.size() < count) {
+                if (goods.size() >= 255) return;
                 std::array<std::string, 7> fields;
                 for (auto& field : fields) {
                     const auto end = body.find('/', start);
@@ -3638,6 +3866,7 @@ private:
             shop.actor = actor;
             shop.revision = ++shopRevision;
             shop.catalogueRevision = shop.revision;
+            shop.crafting = crafting;
             shop.goods = std::move(goods);
             shop.selected = shop.goods.empty() ? -1 : 0;
             return;
@@ -5727,13 +5956,17 @@ private:
 
     bool DecodeInventoryItem(const std::string& encoded, mir3_cui::InventoryItem& item, bool requireTerminator = false)
     {
-        const auto record = DecodeGameBytes(encoded);
+        return ReadInventoryRecord(DecodeGameBytes(encoded), item, requireTerminator);
+    }
+
+    bool ReadInventoryRecord(std::string_view record, mir3_cui::InventoryItem& item, bool requireTerminator = false)
+    {
         if (record.size() != 100) return false;
         const auto word = [&](std::size_t offset) {
             return static_cast<unsigned char>(record[offset]) |
                 (static_cast<unsigned>(static_cast<unsigned char>(record[offset + 1])) << 8);
         };
-        auto name = record.substr(0, 30);
+        std::string name(record.substr(0, 30));
         const auto end = name.find('\0');
         if (requireTerminator && end == std::string::npos) return false;
         if (end != std::string::npos) name.resize(end);
@@ -5891,6 +6124,151 @@ private:
                 entry->children.push_back(std::move(record));
                 entry->childrenLoaded = true;
             }
+        }
+    }
+
+    static std::uint32_t WindowField(std::string_view record, std::size_t offset, unsigned size)
+    {
+        std::uint32_t value = 0;
+        for (unsigned i = 0; i < size; ++i)
+            value |= std::uint32_t(static_cast<unsigned char>(record[offset + i])) << (8 * i);
+        return value;
+    }
+
+    static std::string WindowText(std::string_view record, std::size_t offset, std::size_t length)
+    {
+        const auto field = record.substr(offset, length);
+        return ConvertText(std::string(field.substr(0, field.find('\0'))), 936, CP_UTF8);
+    }
+
+    void HandleIndependentWindow(unsigned opcode, std::uint32_t actor, WORD first, WORD second, WORD third)
+    {
+        const std::string_view encoded(input_.data() + DEFBLOCKSIZE, input_.size() - DEFBLOCKSIZE);
+        auto& market = windows.market;
+        auto& orders = windows.orders;
+        auto& mail = windows.mail;
+        switch (opcode) {
+        case 751: {
+            const auto record = ReadGameBody();
+            if (record.size() != 1308) return;
+            IndependentWindows::Profile profile;
+            profile.name = WindowText(record, 4, 24);
+            if (profile.name.empty()) return;
+            profile.guild = WindowText(record, 35, 28);
+            profile.body = WindowField(record, 79, 1);
+            for (std::size_t i = 0; i < profile.equipment.size(); ++i) {
+                const std::string_view item(record.data() + 83 + i * 100, 100);
+                if (item.front() && !ReadInventoryRecord(item, profile.equipment[i], true)) return;
+            }
+            profile.open = true;
+            windows.profile = std::move(profile);
+            break;
+        }
+        case 1350: {
+            if (encoded.size() > 256) return;
+            const auto body = ReadGameBody();
+            if (!encoded.empty() && body.empty()) return;
+            const auto tab = body.find('\t');
+            orders.enabled = true;
+            orders.x = actor & 0xffff;
+            orders.y = actor >> 16;
+            orders.range = first;
+            orders.object = tab == body.npos ? 0 : Number(body.substr(tab + 1), 0xffffffffu);
+            orders.targetX = orders.targetY = 0;
+            break;
+        }
+        case 1351:
+            if (!encoded.empty() || !orders.enabled) return;
+            orders.x = actor & 0xffff;
+            orders.y = actor >> 16;
+            break;
+        case 1353:
+            if (encoded.empty()) orders = {};
+            break;
+        case 1355: {
+            if (third > 100 || (!actor && !market.actor) || (!third && !encoded.empty())) return;
+            std::vector<IndependentWindows::Listing> listings;
+            std::size_t cursor = 0;
+            for (unsigned i = 0; i < third; ++i) {
+                const auto slash = encoded.find('/', cursor);
+                if (slash == encoded.npos || slash - cursor != 416) return;
+                const auto record = DecodeGameBytes(std::string(encoded.substr(cursor, slash - cursor)));
+                if (record.size() != 312) return;
+                IndependentWindows::Listing listing;
+                listing.id = WindowField(record, 16, 4);
+                listing.price = WindowField(record, 72, 4);
+                listing.server = WindowText(record, 0, 16);
+                listing.seller = WindowText(record, 20, 24);
+                listing.description = WindowText(record, 191, 121);
+                std::replace(listing.description.begin(), listing.description.end(), '\r', '\n');
+                if (!listing.id || !ReadInventoryRecord(std::string_view(record).substr(91, 100), listing.item, true)) return;
+                listings.push_back(std::move(listing));
+                cursor = slash + 1;
+            }
+            if (cursor != encoded.size()) return;
+            if (actor && !market.open) market.actor = actor;
+            market.open = true;
+            market.page = first;
+            market.pages = second;
+            market.listings = std::move(listings);
+            market.selected = 0;
+            if (!market.registration) market.confirmation = 0;
+            market.waitUntil = 0;
+            break;
+        }
+        case 1356: {
+            if ((first != 0 && first != 2) || third > 512) return;
+            std::vector<IndependentWindows::Letter> letters;
+            std::size_t cursor = 0;
+            for (unsigned i = 0; i < third; ++i) {
+                const auto slash = encoded.find('/', cursor);
+                if (slash == encoded.npos || slash - cursor != 107) return;
+                const auto record = DecodeGameBytes(std::string(encoded.substr(cursor, slash - cursor)));
+                if (record.size() != 80) return;
+                IndependentWindows::Letter letter;
+                letter.id = WindowField(record, 0, 4);
+                letter.read = WindowField(record, 6, 2) != 0;
+                letter.name = WindowText(record, 8, 25);
+                letter.date = WindowText(record, 33, 31);
+                letter.subject = WindowText(record, 64, 16);
+                if (!letter.id) return;
+                letters.push_back(std::move(letter));
+                cursor = slash + 1;
+            }
+            if (cursor != encoded.size()) return;
+            mail.folders[first / 2] = std::move(letters);
+            if (mail.folder == first / 2 && !mail.reading &&
+                std::ranges::find(mail.folders[mail.folder], mail.selected, &IndependentWindows::Letter::id) ==
+                    mail.folders[mail.folder].end()) mail.selected = mail.readingId = 0;
+            break;
+        }
+        case 1357: {
+            if ((first != 0 && first != 2) || !mail.open || first != mail.folder * 2) return;
+            const auto record = ReadGameBody();
+            if (record.size() != 613) return;
+            const auto id = WindowField(record, 0, 4);
+            if (!id || id != mail.readingId) return;
+            mail.text = WindowText(record, 112, 501);
+            std::replace(mail.text.begin(), mail.text.end(), '\r', '\n');
+            if (const auto letter = std::ranges::find(mail.folders[mail.folder], id, &IndependentWindows::Letter::id);
+                letter != mail.folders[mail.folder].end()) {
+                mail.sender = letter->name;
+                mail.subject = letter->subject;
+                letter->read = true;
+            }
+            mail.gift = {};
+            const std::string_view item(record.data() + 12, 100);
+            if (item.front()) ReadInventoryRecord(item, mail.gift);
+            mail.gold = mail.gift.label.empty() ? WindowField(record, 8, 4) : 0;
+            mail.reading = true;
+            break;
+        }
+        case 1358:
+            if (encoded.empty()) mail.unreadNotice = true;
+            break;
+        case 1400:
+            if (encoded.empty() && market.open && actor) market.waitUntil = 0;
+            break;
         }
     }
 

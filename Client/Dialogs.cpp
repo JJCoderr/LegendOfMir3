@@ -28,6 +28,11 @@ namespace mir3_client {
 
 namespace {
 
+int AnsiBytes(const char* utf8, int length)
+{
+    return static_cast<int>(mir3::utf8_to_ansi({utf8, static_cast<std::size_t>(length)}).size());
+}
+
 struct SceneSprite {
     cui_texture texture = 0;
     int x = 0, y = 0, width = 0, height = 0, row = 0;
@@ -154,6 +159,12 @@ public:
         OpenMount(ui, gameInterface);
         OpenTrade(ui, gameInterface);
         OpenStatus(ui, gameInterface, data);
+        constexpr std::array independentFrames{1288,1590,1890,1910,1960};
+        for (std::size_t i = 0; i < independentFrames.size(); ++i)
+            independentSkins_[i] = UploadFrame(ui, gameInterface, independentFrames[i], true);
+        constexpr std::array mailModeFrames{2010,2030,2070};
+        for (std::size_t i = 0; i < mailModeFrames.size(); ++i)
+            mailModeSkins_[i] = UploadFrame(ui, gameInterface, mailModeFrames[i], true);
         OpenPortraitPicker(ui, gameInterface, root);
         return ready_;
     }
@@ -171,6 +182,11 @@ public:
     void PrepareMinimap(cui_ctx* ui, LoginClient& client);
     bool HandleMinimapInput(cui_ctx* ui, LoginClient& client, bool modal);
     void DrawMinimapPanel(cui_ctx* ui, const LoginClient& client);
+    void DrawObjectOrderMap(cui_ctx* ui, LoginClient& client, float height);
+    void DrawIndependentSkin(cui_ctx* ui, int panel, cui_rect bounds);
+    void DrawMailModeSkin(cui_ctx* ui, int mode, float height);
+    void DrawIndependentItem(cui_ctx* ui, unsigned icon, float height);
+    bool DrawInspectionEquipment(cui_ctx* ui, const IndependentWindows::Profile& profile, cui_rect bounds);
     void DrawTargetDetails(cui_ctx* ui, bool attributes);
     bool OptionsReady() const { return optionsFrames_[0].texture != 0; }
     bool HandleOptionsInput(cui_ctx* ui, LoginClient& client, bool blocked);
@@ -873,6 +889,8 @@ private:
     std::array<int,2> statusPreviewOrigin_{};
     int statusPreview_ = -1;
     Image statusSkin_, statusCloseHint_;
+    std::array<Image,5> independentSkins_;
+    std::array<Image,3> mailModeSkins_;
     std::array<Image,2> statusClose_{}, statusGlows_{}, statusGlowShadows_{};
     std::array<std::array<Image,7>,2> statusElements_{};
     std::array<StatusLabel,54> statusLabels_{};
@@ -1199,11 +1217,6 @@ private:
             if (marker != std::string::npos) caption.replace(marker, 2, std::to_string(notice.argument));
         }
         if (!caption.empty()) billingImage_ = Raster(ui, caption, 308, 95, true, mir3::TextFont::dialog);
-    }
-
-    static int AnsiBytes(const char* utf8, int length)
-    {
-        return static_cast<int>(mir3::utf8_to_ansi({utf8, static_cast<std::size_t>(length)}).size());
     }
 
     static cui_font LoadEditorFont(cui_ctx* ui, const std::string& face)
@@ -3465,6 +3478,10 @@ void Dialogs::Assets::ShopAction(LoginClient& client, ShopControl control)
         } else client.BuyShopItem();
         break;
     case ShopControl::Bulk:
+        if (shop.crafting) {
+            client.BuyShopItem();
+            break;
+        }
         if (shop.bulk && !client.purchase.deadline) {
             shopBulkPrompt_ = true;
             ++shopEditGeneration_;
@@ -4589,11 +4606,12 @@ void DrawLocalScene(cui_ctx* ui, LoginClient& client, bool interactive, bool nat
 
 void DrawGameChat(cui_ctx* ui, LoginClient& client, bool partyBlocksScene, bool questBlocksScene,
                   bool guildBlocksScene, bool npcBlocksScene, bool shopBlocksScene,
-                  bool nativeInventory, bool inventoryBlocksScene, bool nativeQuick, bool quickBlocksScene)
+                  bool nativeInventory, bool inventoryBlocksScene, bool nativeQuick, bool quickBlocksScene,
+                  bool independentCovered)
 {
     auto& chat = client.chat;
     const auto hasOverlay = [&](bool scene = false, bool ignoreBag = false) {
-        return client.showSignOut || chat.receptionOpen || client.serverOptions.open || client.audioOpen ||
+        return client.showSignOut || independentCovered || chat.receptionOpen || client.serverOptions.open || client.audioOpen ||
             (client.party.open && (!scene || partyBlocksScene)) || client.party.notice.id ||
             client.party.action != mir3_cui::PartyAction::None ||
             (client.guild.open && (!scene || guildBlocksScene)) || client.guild.requested ||
@@ -4765,8 +4783,10 @@ void DrawParty(cui_ctx* ui, LoginClient& client)
     bool open = true;
 
     if (party.notice.id) {
-        if (!cui_dialog_begin(ui, "Party notice", &open, &dialog)) return;
-        cui_textf(ui, "%s failed (server code %d).", party.notice.action, party.notice.reason);
+        const bool crafting = party.notice.id >= 1440 && party.notice.id <= 1444;
+        if (!cui_dialog_begin(ui, crafting ? "Crafting" : "Party notice", &open, &dialog)) return;
+        if (party.notice.id == 1440) cui_label(ui, "Crafting complete.");
+        else cui_textf(ui, "%s failed (server code %d).", party.notice.action, party.notice.reason);
         cui_dialog_footer_begin(ui);
         const bool dismiss = Button(ui, "OK", true) || cui_key_pressed(ui, CUI_KEY_ENTER) ||
             cui_key_pressed(ui, CUI_KEY_SPACE);
@@ -5597,8 +5617,15 @@ void DrawNpcDialogue(cui_ctx* ui, LoginClient& client)
     if (prompting) {
         cui_text_ex(ui, npc.prompt.label.c_str(), nullptr);
         cui_push_id_int(ui, npc.editor);
-        const int input = Input(ui, "Answer", npc.answer, sizeof npc.answer,
-            npc.prompt.command.compare(0, 3, "@@*") == 0, true);
+        cui_input_opts editor = {};
+        editor.label = "Answer";
+        editor.password = npc.prompt.command.starts_with("@@*");
+        editor.password_mask = '*';
+        editor.autofocus = true;
+        editor.width = CUI_FILL;
+        editor.byte_limit = client.NpcAnswerLimit();
+        editor.measure_bytes = AnsiBytes;
+        const int input = cui_input_ex(ui, "Answer", npc.answer, sizeof npc.answer, &editor);
         cui_pop_id(ui);
         if (npc.answerTooLong) cui_secondary(ui, "The answer is too long or contains unsupported characters.");
         cui_dialog_footer_begin(ui);
@@ -5708,7 +5735,17 @@ void DrawNpcShop(cui_ctx* ui, LoginClient& client)
     dialog.width = 600;
     dialog.persistent = true;
     dialog.no_close_button = true;
-    if (!cui_dialog_begin(ui, "Shop", &open, &dialog)) return;
+    if (!cui_dialog_begin(ui, shop.crafting ? "Crafting" : "Shop", &open, &dialog)) return;
+    if (shop.crafting && shop.notice >= 1440 && shop.notice <= 1444) {
+        if (shop.notice == 1440) cui_label(ui, "Crafting complete.");
+        else cui_textf(ui, "Crafting failed (server code %d).", shop.notice - 1440);
+        cui_dialog_footer_begin(ui);
+        if (Button(ui, "OK", true) || cui_key_pressed(ui, CUI_KEY_ENTER) || cui_key_pressed(ui, CUI_KEY_SPACE))
+            shop.notice = 0;
+        cui_dialog_footer_end(ui);
+        cui_dialog_end(ui);
+        return;
+    }
     cui_textf(ui, "Gold %u", client.inventory.gold);
     cui_box columns = {};
     columns.width = CUI_FILL;
@@ -5754,7 +5791,7 @@ void DrawNpcShop(cui_ctx* ui, LoginClient& client)
         cui_textf(ui, "Price %u", good.price);
         if (good.requirement) cui_textf(ui, "Requirement %u (%u)", good.requirement, good.requirementType);
     }
-    if (shop.bulk) {
+    if (shop.bulk && !shop.crafting) {
         Input(ui, "Quantity", shop.quantity, sizeof shop.quantity);
         const auto count = shop.Quantity();
         if (count) cui_textf(ui, "Total %llu", std::uint64_t(shop.goods[shop.category].price) * count);
@@ -5798,7 +5835,7 @@ void DrawNpcShop(cui_ctx* ui, LoginClient& client)
     const bool details = Button(ui, "Select");
     cui_pop_disabled(ui);
     cui_push_disabled(ui, busy || (!shop.bulk && shop.offer < 0));
-    const bool buy = Button(ui, "Buy", true);
+    const bool buy = Button(ui, shop.crafting && shop.bulk ? "Craft" : "Buy", true);
     cui_pop_disabled(ui);
     cui_dialog_footer_end(ui);
     cui_dialog_end(ui);
@@ -5807,6 +5844,398 @@ void DrawNpcShop(cui_ctx* ui, LoginClient& client)
     else if (details || clicked.first >= 0) client.RequestShopOffers(shop.selected, 0);
 }
 
+class IndependentDialogTheme {
+    cui_theme& theme_;
+    const cui_theme previous_;
+
+public:
+    explicit IndependentDialogTheme(cui_ctx* ui) : theme_(*cui_theme_get(ui)), previous_(theme_)
+    {
+        auto& c = theme_.colors;
+        c[CUI_TOKEN_SURFACE] = CUI_RGB(0x252316);
+        c[CUI_TOKEN_SURFACE_RAISED] = CUI_RGB(0x26241b);
+        c[CUI_TOKEN_SURFACE_MUTED] = CUI_RGB(0x353124);
+        c[CUI_TOKEN_FOREGROUND] = CUI_RGB(0xf3e6c7);
+        c[CUI_TOKEN_TEXT_SECONDARY] = CUI_RGB(0xd2c4a6);
+        c[CUI_TOKEN_TEXT_MUTED] = CUI_RGB(0xa7997c);
+        c[CUI_TOKEN_BORDER] = CUI_RGB(0x786544);
+        c[CUI_TOKEN_BORDER_SUBTLE] = CUI_RGB(0x5d4e36);
+        c[CUI_TOKEN_BORDER_STRONG] = CUI_RGB(0xb19a68);
+        c[CUI_TOKEN_ACCENT] = CUI_RGB(0xcab17b);
+        c[CUI_TOKEN_ACCENT_STRONG] = CUI_RGB(0xe0c899);
+        c[CUI_TOKEN_ACCENT_SUBTLE] = CUI_RGB(0x514533);
+        c[CUI_TOKEN_ACCENT_FOREGROUND] = CUI_RGB(0x201b11);
+        c[CUI_TOKEN_HOVER] = CUI_RGBA(0xefd5a222);
+        c[CUI_TOKEN_ACTIVE] = CUI_RGBA(0xefd5a244);
+        c[CUI_TOKEN_SCRIM] = CUI_RGBA(0x00000025);
+        theme_.radius_surface = theme_.radius_panel = theme_.radius_control = 2;
+        theme_.control_sm = 21;
+        theme_.control_md = 30;
+        theme_.heading[1] = 17;
+    }
+
+    ~IndependentDialogTheme() { theme_ = previous_; }
+};
+
+// GameInter 1910 has 286 visible rows inside its 310-pixel logical frame.
+constexpr std::array<cui_vec2,5> IndependentSizes{{{284,348},{194,285},{720,440},{408,286},{440,310}}};
+
+bool IndependentOpen(const IndependentWindows& windows, int panel)
+{
+    switch (panel) {
+    case 0: return windows.profile.open;
+    case 1: return windows.orders.open;
+    case 2: return windows.market.open && !windows.market.registration;
+    case 3: return windows.market.registration;
+    case 4: return windows.mail.open;
+    }
+    return false;
+}
+
+void CloseIndependentWindow(IndependentWindows& windows, int panel)
+{
+    switch (panel) {
+    case 0: windows.profile.open = false; break;
+    case 1:
+        windows.orders.open = false;
+        windows.orders.targetX = windows.orders.targetY = 0;
+        break;
+    case 2:
+        if (windows.market.confirmation && !windows.market.registration) windows.market.confirmation = 0;
+        else windows.market = {};
+        break;
+    case 3:
+        if (windows.market.confirmation) windows.market.confirmation = 0;
+        else {
+            windows.market.registration = false;
+            windows.market.item = {};
+        }
+        break;
+    case 4:
+        if (windows.mail.reading || windows.mail.composing) {
+            windows.mail.reading = windows.mail.composing = false;
+            windows.mail.readingId = 0;
+        } else windows.mail.open = false;
+        break;
+    }
+}
+
+struct IndependentViewport {
+    float scale, x, y;
+    explicit IndependentViewport(cui_ctx* ui)
+    {
+        const auto view = cui_viewport_size(ui);
+        scale = std::max(0.01f, std::min(view.x / 800, view.y / 600));
+        x = (view.x - 800 * scale) / 2;
+        y = (view.y - 600 * scale) / 2;
+    }
+    cui_rect Bounds(const IndependentWindows& windows, int panel) const
+    {
+        const auto p = windows.positions[panel], size = IndependentSizes[panel];
+        return {x + p.x*scale, y + p.y*scale, size.x*scale, size.y*scale};
+    }
+    bool Hit(const IndependentWindows& windows, int panel, cui_vec2 mouse) const
+    {
+        const auto r = Bounds(windows,panel);
+        return mouse.x >= r.x && mouse.x < r.x+r.w && mouse.y >= r.y && mouse.y < r.y+r.h;
+    }
+};
+
+bool PrepareIndependentWindows(cui_ctx* ui, IndependentWindows& windows, bool blocked, bool& escape)
+{
+    const IndependentViewport view(ui);
+    const auto raise = [&](int panel) {
+        const auto found = std::ranges::find(windows.stacking, panel);
+        std::rotate(found, found+1, windows.stacking.end());
+    };
+    for (int i = 0; i < static_cast<int>(windows.stacking.size()); ++i) {
+        const bool open = IndependentOpen(windows, i);
+        if (open && !windows.wasOpen[i]) raise(i);
+        windows.wasOpen[i] = open;
+    }
+    if (windows.dragging >= 0 && (!IndependentOpen(windows, windows.dragging) || blocked))
+        windows.dragging = -1;
+    const auto mouse = cui_mouse_pos(ui);
+    if (windows.dragging >= 0) {
+        const int panel = windows.dragging;
+        if (cui_mouse_down(ui, CUI_MOUSE_LEFT)) {
+            const auto size = IndependentSizes[panel];
+            windows.positions[panel] = {
+                std::clamp((mouse.x-view.x)/view.scale-windows.dragOffset.x, 0.0f, 800-size.x),
+                std::clamp((mouse.y-view.y)/view.scale-windows.dragOffset.y, 0.0f, 600-size.y)};
+        } else windows.dragging = -1;
+        return true;
+    }
+    int top = -1, hit = -1;
+    for (auto it = windows.stacking.rbegin(); it != windows.stacking.rend(); ++it) {
+        if (!IndependentOpen(windows, *it)) continue;
+        if (top < 0) top = *it;
+        if (hit < 0 && view.Hit(windows,*it,mouse)) hit = *it;
+    }
+    if (!blocked && top >= 0 && !cui_wants_keyboard(ui) && cui_key_pressed(ui, CUI_KEY_ESCAPE)) {
+        CloseIndependentWindow(windows, top);
+        escape = true;
+    }
+    if (!blocked && hit >= 0 && cui_mouse_clicked(ui, CUI_MOUSE_LEFT)) {
+        raise(hit);
+        const auto r = view.Bounds(windows, hit);
+        const float x = (mouse.x-r.x)/view.scale, y = (mouse.y-r.y)/view.scale;
+        if (y < 22 && (hit != 4 || x < 175)) {
+            windows.dragging = hit;
+            windows.dragOffset = {x,y};
+        }
+    }
+    return hit >= 0;
+}
+
+struct IndependentPanel {
+    cui_ctx* ui;
+    cui_rect bounds;
+    float scale;
+
+    template<typename Draw>
+    void At(float x, float y, float width, float height, Draw draw) const
+    {
+        // The skin is painted as a flow child. Controls must paint above it.
+        cui_overlay_begin(ui, {x*scale,y*scale,width*scale,height*scale});
+        draw();
+        cui_box_end(ui);
+    }
+
+    bool ButtonAt(float x, float y, float width, const char* name, bool active = false, bool enabled = true) const
+    {
+        bool pressed = false;
+        At(x,y,width,26,[&] {
+            cui_push_disabled(ui, !enabled);
+            pressed = Button(ui, name, active, true);
+            cui_pop_disabled(ui);
+        });
+        return pressed;
+    }
+
+    void TextAt(float x, float y, float width, const std::string& text) const
+    {
+        At(x,y,width,32,[&] { cui_label(ui,text.c_str()); });
+    }
+
+    void HighlightAt(float x, float y, float width, float height) const
+    {
+        At(x,y,width,height,[&] {
+            cui_canvas_paint(ui,CUI_FILL,CUI_PX(height*scale),[](cui_ctx* ui,cui_rect rect,void*) {
+                cui_draw_rect(ui,rect,{},CUI_RGBA(0x8e6a383d));
+            },nullptr,0);
+        });
+    }
+
+    void EditAt(float x, float y, float width, float height, const char* id,
+                char* value, std::size_t capacity, int limit, bool multiline = false) const
+    {
+        At(x,y,width,height,[&] {
+            cui_input_opts options = {};
+            options.width = CUI_FILL;
+            options.bare = true;
+            options.byte_limit = limit;
+            options.measure_bytes = AnsiBytes;
+            options.height = height*scale;
+            cui_push_id(ui,id);
+            if (multiline) cui_textarea_ex(ui,id,value,capacity,&options);
+            else cui_input_ex(ui,id,value,capacity,&options);
+            cui_pop_id(ui);
+        });
+    }
+
+    bool ReleasedIn(float x, float y, float width, float height) const
+    {
+        const auto p = cui_mouse_pos(ui);
+        return !cui_is_disabled(ui) && cui_mouse_released(ui,CUI_MOUSE_LEFT) &&
+            p.x >= bounds.x+x*scale && p.x < bounds.x+(x+width)*scale &&
+            p.y >= bounds.y+y*scale && p.y < bounds.y+(y+height)*scale;
+    }
+};
+
+template<typename DrawItem>
+void DrawMarketRegistration(const IndependentPanel& panel, LoginClient& client, DrawItem drawItem)
+{
+    auto& market = client.windows.market;
+    panel.TextAt(16,3,235,"[ 物品登记 ]");
+    if (panel.ReleasedIn(240,51,151,129)) {
+        if (const auto* item = client.HeldItem(); item && client.equipment.heldSlot < 0 && !item->IsGold()) {
+            market.item = item->key;
+            client.equipment.ReleaseHeld();
+        }
+    }
+    const auto* item = client.inventory.Find(market.item);
+    panel.TextAt(247,60,146,item ? item->label : "放入背包物品");
+    if (item) panel.At(245,88,146,93,[&] { drawItem(item->icon,93*panel.scale); });
+    panel.EditAt(12,71,218,112,"registration-description",market.description,sizeof market.description,120,true);
+    panel.EditAt(42,233,116,24,"registration-price",market.price,sizeof market.price,10);
+    if (!market.status.empty()) panel.TextAt(16,225,224,market.status);
+    else if (market.confirmation == 1130) panel.TextAt(16,225,224,"确认登记该物品？");
+    if (panel.ButtonAt(259,228,66,market.confirmation ? "确认" : "登记",true,item != nullptr)) {
+        if (market.confirmation) {
+            client.RegisterMarketItem();
+            market.confirmation = 0;
+        } else market.confirmation = 1130;
+    }
+    if (panel.ButtonAt(329,228,62,"取消") || panel.ButtonAt(368,253,33,"×"))
+        CloseIndependentWindow(client.windows,3);
+}
+
+template<typename DrawItem>
+void DrawMarket(const IndependentPanel& panel, LoginClient& client, DrawItem drawItem)
+{
+    auto& market = client.windows.market;
+    panel.TextAt(18,21,180,"[ 购买物品 ]");
+    panel.TextAt(206,21,176,std::to_string(market.page)+" / "+std::to_string(market.pages));
+    panel.TextAt(15,64,100,"服务器");
+    panel.TextAt(128,64,123,"物品名称");
+    panel.TextAt(265,64,90,"价格");
+    panel.TextAt(339,64,102,"出售人");
+    for (std::size_t i=0; i<std::min<std::size_t>(13,market.listings.size()); ++i) {
+        const auto& listing = market.listings[i];
+        const float y = 86+19*static_cast<float>(i);
+        if (panel.ReleasedIn(14,y,410,19) && market.selected != listing.id) {
+            market.selected = listing.id;
+            market.confirmation = 0;
+        }
+        if (market.selected == listing.id) panel.HighlightAt(14,y,410,19);
+        panel.TextAt(18,y,105,listing.server);
+        panel.TextAt(128,y,128,listing.item.label);
+        panel.TextAt(265,y,65,std::to_string(listing.price));
+        panel.TextAt(339,y,88,listing.seller);
+    }
+    const auto selected = std::ranges::find(market.listings,market.selected,&IndependentWindows::Listing::id);
+    if (selected != market.listings.end()) {
+        panel.TextAt(448,28,245,selected->item.label);
+        panel.At(450,55,240,128,[&] { drawItem(selected->item.icon,128*panel.scale); });
+        panel.At(452,199,244,123,[&] { cui_text_ex(panel.ui,selected->description.c_str(),nullptr); });
+    }
+    if (!market.status.empty()) panel.TextAt(448,319,244,market.status);
+    panel.EditAt(230,362,192,28,"market-filter",market.filter,sizeof market.filter,30);
+    if (panel.ButtonAt(426,355,72,"查物品",market.byName)) { market.byName = true; client.MarketRequest(1136); }
+    if (panel.ButtonAt(426,386,72,"查卖家",!market.byName)) { market.byName = false; client.MarketRequest(1136); }
+    if (panel.ButtonAt(23,361,47,"上页")) client.MarketRequest(1132);
+    if (panel.ButtonAt(73,361,47,"下页")) client.MarketRequest(1131);
+    if (panel.ButtonAt(123,361,61,"刷新")) client.MarketRequest(1134);
+    if (panel.ButtonAt(509,371,53,"登记")) client.BeginMarketRegistration();
+    const auto action = [&](unsigned opcode) {
+        if (market.confirmation == opcode) { client.MarketRequest(opcode); market.confirmation = 0; }
+        else market.confirmation = opcode;
+    };
+    const bool haveSelection = selected != market.listings.end();
+    if (panel.ButtonAt(565,371,72,market.confirmation == 1133 ? "确认购买" : "购买",true,haveSelection)) action(1133);
+    if (panel.ButtonAt(644,371,67,market.confirmation == 1135 ? "确认撤销" : "撤销",false,haveSelection)) action(1135);
+    if (panel.ButtonAt(678,402,34,"×")) CloseIndependentWindow(client.windows,2);
+}
+
+template<typename DrawItem>
+void DrawMailbox(const IndependentPanel& panel, LoginClient& client, DrawItem drawItem)
+{
+    auto& mail = client.windows.mail;
+    panel.TextAt(22,14,144,"信件");
+    if (panel.ButtonAt(178,13,53,"收件",!mail.folder && !mail.composing)) client.MailRequest(1137,0);
+    if (panel.ButtonAt(234,13,53,"发件",mail.folder && !mail.composing)) client.MailRequest(1137,1);
+    if (panel.ButtonAt(290,13,53,"写信",mail.composing)) {
+        mail.composing = true;
+        mail.recipient[0] = mail.draft[0] = '\0';
+        mail.status.clear();
+    }
+    if (panel.ButtonAt(347,13,71,"读取",mail.reading,!mail.reading && !mail.composing && mail.selected))
+        client.MailRequest(1138,mail.folder,mail.selected);
+    const auto& letters = mail.folders[mail.folder];
+    if (mail.composing) {
+        panel.TextAt(25,58,62,"收信人");
+        panel.EditAt(84,54,325,26,"mail-recipient",mail.recipient,sizeof mail.recipient,24);
+        panel.EditAt(24,88,388,142,"mail-draft",mail.draft,sizeof mail.draft,500,true);
+        if (panel.ButtonAt(283,252,54,"发送",true)) client.SendLetter();
+    } else if (mail.reading) {
+        panel.TextAt(25,51,377,mail.sender+"   "+mail.subject);
+        panel.At(25,81,379,135,[&] {
+            cui_scroll_opts body = {};
+            body.id = "mail-body";
+            body.width = CUI_FILL;
+            body.height = CUI_PX(135*panel.scale);
+            cui_scroll_begin(panel.ui,&body);
+            cui_text_ex(panel.ui,mail.text.c_str(),nullptr);
+            cui_scroll_end(panel.ui);
+        });
+        if (!mail.gift.label.empty()) {
+            panel.At(331,118,68,81,[&] { drawItem(mail.gift.icon,81*panel.scale); });
+            panel.TextAt(25,221,364,"礼物  "+mail.gift.label);
+        }
+        else if (mail.gold) panel.TextAt(25,221,364,"金币  "+std::to_string(mail.gold));
+        const auto current = std::ranges::find(letters, mail.selected, &IndependentWindows::Letter::id);
+        const auto adjacent = [&](int offset, float x, const char* title) {
+            const auto index = current - letters.begin() + offset;
+            const bool valid = current != letters.end() && index >= 0 && index < std::ssize(letters);
+            if (panel.ButtonAt(x,252,55,title,false,valid)) {
+                mail.selected = letters[index].id;
+                client.MailRequest(1138,mail.folder,mail.selected);
+            }
+        };
+        adjacent(-1,54,"上一封");
+        adjacent(1,114,"下一封");
+        if (!mail.folder && panel.ButtonAt(283,252,54,"答复")) {
+            strncpy_s(mail.recipient,mail.sender.c_str(),_TRUNCATE);
+            mail.draft[0] = '\0';
+            mail.composing = true;
+        }
+    } else {
+        panel.At(22,52,389,177,[&] {
+            cui_scroll_opts list = {};
+            list.id = "mail-letters";
+            list.width = CUI_FILL;
+            list.height = CUI_PX(177*panel.scale);
+            list.gap = 3;
+            cui_scroll_begin(panel.ui,&list);
+            for (const auto& letter : letters) {
+                cui_push_id_int(panel.ui,letter.id);
+                const auto label = (letter.read ? "" : "未读  ")+letter.name+"   "+letter.subject+"   "+letter.date;
+                cui_button_opts row = {};
+                row.size = CUI_SIZE_SM;
+                row.variant = CUI_BUTTON_GHOST;
+                row.selected = letter.id == mail.selected;
+                row.width = CUI_FILL;
+                if (cui_button_ex(panel.ui,label.c_str(),&row) && mail.selected != letter.id) {
+                    mail.selected = letter.id;
+                    mail.readingId = 0;
+                }
+                cui_pop_id(panel.ui);
+            }
+            cui_scroll_end(panel.ui);
+        });
+        if (panel.ButtonAt(253,252,54,"刷新")) client.MailRequest(1137,mail.folder);
+        if (mail.folder && panel.ButtonAt(192,252,54,"撤回",false,mail.selected != 0))
+            client.MailRequest(1142,mail.folder,mail.selected);
+    }
+    if (!mail.status.empty()) panel.TextAt(22,231,388,mail.status);
+    if (!mail.composing && panel.ButtonAt(329,252,55,"删除",false,mail.selected != 0))
+        client.MailRequest(1139,mail.folder,mail.selected);
+    if (panel.ButtonAt(400,270,33,"×")) CloseIndependentWindow(client.windows,4);
+}
+
+template<typename DrawMap>
+void DrawObjectOrders(const IndependentPanel& panel, LoginClient& client, DrawMap drawMap)
+{
+    auto& orders = client.windows.orders;
+    panel.TextAt(14,22,78,std::to_string(orders.x));
+    panel.TextAt(101,22,74,std::to_string(orders.y));
+    panel.At(6,65,180,165,drawMap);
+    const auto ammo = std::ranges::find_if(client.inventory.items,
+        [](const auto& item) { return item.icon == 310 || item.icon == 311; });
+    if (ammo != client.inventory.items.end()) {
+        if (panel.ButtonAt(12,40,53,"装填",orders.ammunition == ammo->key)) {
+            if (orders.ammunition == ammo->key) client.LoadObjectAmmunition();
+            else orders.ammunition = ammo->key;
+        }
+        if (orders.ammunition == ammo->key)
+            panel.EditAt(69,40,97,25,"ammo-quantity",orders.quantity,sizeof orders.quantity,5);
+    }
+    if (panel.ButtonAt(14,231,48,"攻击",true,orders.targetX && orders.targetY)) client.SendObjectOrder(1120);
+    if (panel.ButtonAt(67,231,48,"等待")) client.SendObjectOrder(1122);
+    if (panel.ButtonAt(117,231,48,"移动")) client.SendObjectOrder(1121);
+    if (panel.ButtonAt(153,255,34,"×")) CloseIndependentWindow(client.windows,1);
+}
 void DrawEquipment(cui_ctx* ui, LoginClient& client, cui_rect bounds)
 {
     auto& equipment = client.equipment;
@@ -7043,6 +7472,159 @@ void Dialogs::Assets::DrawMinimapPanel(cui_ctx* ui, const LoginClient& client)
         (*static_cast<Assets**>(data))->PaintMinimap(ui,r);
     },&self,sizeof self);
     cui_box_end(ui);
+}
+
+void Dialogs::Assets::DrawObjectOrderMap(cui_ctx* ui, LoginClient& client, float height)
+{
+    auto& orders = client.windows.orders;
+    const auto object = client.scene.players.find(orders.object);
+    const int x = object == client.scene.players.end() ? orders.x : object->second.x;
+    const int y = object == client.scene.players.end() ? orders.y : object->second.y;
+    const int width = std::min(minimapImage_.width, 180), mapHeight = std::min(minimapImage_.height, 165);
+    const int sx = std::clamp(static_cast<int>(mir3::Minimap::map_pixel_x(x)) - width / 2, 0, minimapImage_.width - width);
+    const int sy = std::clamp(y - mapHeight / 2, 0, minimapImage_.height - mapHeight);
+    struct MapPaint {
+        cui_texture image;
+        cui_rect uv;
+        cui_vec2 origin, target;
+        float radiusX, radiusY;
+    };
+    const float mw = static_cast<float>(std::max(1, minimapImage_.width));
+    const float mh = static_cast<float>(std::max(1, minimapImage_.height));
+    const auto marker = [&](int px, int py) -> cui_vec2 {
+        return {float(mir3::Minimap::map_pixel_x(px) - sx) / std::max(1, width), float(py - sy) / std::max(1, mapHeight)};
+    };
+    const bool ready = minimapImage_.texture && client.minimap.width == minimapImage_.width && width && mapHeight;
+    const auto target = orders.targetX && orders.targetY ? marker(orders.targetX, orders.targetY) : cui_vec2{-1,-1};
+    const MapPaint paint{ready ? minimapImage_.texture : 0, {sx/mw, sy/mh, width/mw, mapHeight/mh}, marker(x,y), target,
+        (orders.range == 1 ? 80.0f : 50.0f) / std::max(1, width),
+        (orders.range == 1 ? 50.0f : 29.0f) / std::max(1, mapHeight)};
+    cui_canvas_paint(ui, CUI_FILL, CUI_PX(height), [](cui_ctx* ui, cui_rect box, void* data) {
+        const auto& map = *static_cast<MapPaint*>(data);
+        cui_draw_rect(ui, box, {}, {24,25,22,255});
+        if (!map.image) return;
+        cui_draw_image(ui, map.image, box, map.uv, {}, {165,165,165,255});
+        const auto point = [&](cui_vec2 pos, cui_color color) {
+            if (pos.x >= 0 && pos.y >= 0 && pos.x < 1 && pos.y < 1)
+                cui_draw_rect(ui, {box.x+pos.x*box.w-2, box.y+pos.y*box.h-2, 5,5}, {}, color);
+        };
+        const float left = box.x+(map.origin.x-map.radiusX)*box.w, top = box.y+(map.origin.y-map.radiusY)*box.h;
+        const float w = 2*map.radiusX*box.w, h = 2*map.radiusY*box.h;
+        constexpr cui_color edge{172,155,114,255};
+        cui_push_clip(ui, box);
+        cui_draw_rect(ui, {left,top,w,1}, {}, edge);
+        cui_draw_rect(ui, {left,top+h,w,1}, {}, edge);
+        cui_draw_rect(ui, {left,top,1,h}, {}, edge);
+        cui_draw_rect(ui, {left+w,top,1,h}, {}, edge);
+        point(map.origin, {255,224,140,255});
+        point(map.target, {255,90,62,255});
+        cui_pop_clip(ui);
+    }, &paint, sizeof paint);
+    const auto rect = cui_last_rect(ui);
+    const auto pointer = cui_mouse_pos(ui);
+    if (!cui_is_disabled(ui) && ready && rect.w > 0 && rect.h > 0 && Contains(rect, pointer) && cui_mouse_clicked(ui, CUI_MOUSE_LEFT)) {
+        const float px = (pointer.x - rect.x) / rect.w, py = (pointer.y - rect.y) / rect.h;
+        const auto targetX = static_cast<int>((sx + px * width) * 2 / 3), targetY = static_cast<int>(sy + py * mapHeight);
+        const float dx = std::abs(px-paint.origin.x), dy = std::abs(py-paint.origin.y);
+        const float innerScaleX = orders.range == 1 ? 55.0f/80 : 28.0f/50;
+        const float innerScaleY = orders.range == 1 ? 34.0f/50 : 16.0f/29;
+        if (dx <= paint.radiusX && dy <= paint.radiusY &&
+            (dx > paint.radiusX*innerScaleX || dy > paint.radiusY*innerScaleY) && client.scene.terrain.Contains(targetX,targetY)) {
+            orders.targetX = targetX;
+            orders.targetY = targetY;
+        }
+    }
+}
+
+void Dialogs::Assets::DrawIndependentSkin(cui_ctx* ui, int panel, cui_rect bounds)
+{
+    const auto& skin = independentSkins_[panel];
+    const auto size = IndependentSizes[panel];
+    struct Frame { cui_texture texture; cui_rect uv; } frame{skin.texture,{}};
+    if (skin.texture) {
+        const float w = static_cast<float>(skin.width), h = static_cast<float>(skin.height);
+        frame.uv = {(w-size.x)/(2*w),(h-size.y)/(2*h),size.x/w,size.y/h};
+    }
+    cui_canvas_paint(ui,CUI_FILL,CUI_PX(bounds.h),[](cui_ctx* ui, cui_rect box, void* data) {
+        const auto& art = *static_cast<Frame*>(data);
+        cui_draw_rect(ui,box,{},CUI_RGB(0x252316));
+        if (art.texture) cui_draw_image(ui,art.texture,box,art.uv,{},CUI_RGB(0xffffff));
+    },&frame,sizeof frame);
+}
+
+void Dialogs::Assets::DrawMailModeSkin(cui_ctx* ui, int mode, float height)
+{
+    const auto& art = mailModeSkins_[mode];
+    if (!art.texture) return;
+    cui_canvas_paint(ui,CUI_FILL,CUI_PX(height),[](cui_ctx* ui,cui_rect box,void* data) {
+        const auto texture = *static_cast<cui_texture*>(data);
+        cui_draw_image(ui,texture,box,{0,0,1,1},{},CUI_RGB(0xffffff));
+    },&art.texture,sizeof art.texture);
+}
+
+void Dialogs::Assets::DrawIndependentItem(cui_ctx* ui, unsigned icon, float height)
+{
+    CacheItem(ui,icon);
+    const auto& item = itemFrames_.at(icon);
+    if (!item.texture) return;
+    cui_canvas_paint(ui,CUI_FILL,CUI_PX(height),[](cui_ctx* ui, cui_rect box, void* data) {
+        const auto& image = *static_cast<Image*>(data);
+        const float scale = std::min({1.0f,box.w/image.width,box.h/image.height});
+        const float w = image.width*scale, h = image.height*scale;
+        cui_draw_image(ui,image.texture,{box.x+(box.w-w)/2,box.y+(box.h-h)/2,w,h},{0,0,1,1},{},CUI_RGB(0xffffff));
+    },&item,sizeof item);
+}
+
+bool Dialogs::Assets::DrawInspectionEquipment(cui_ctx* ui, const IndependentWindows::Profile& profile, cui_rect bounds)
+{
+    if (!independentSkins_[0].texture) return false;
+    constexpr std::array<cui_rect,12> slots{{
+        {135,114,50,90}, {80,70,50,88}, {102,293,38,38}, {223,93,38,38},
+        {135,75,38,27}, {22,183,38,38}, {223,183,38,38}, {22,224,38,38},
+        {223,224,38,38}, {142,293,38,38}, {22,279,38,38}, {182,293,38,38}
+    }};
+    struct Paint {
+        WorldFrame body;
+        std::array<Image,12> icons;
+        std::array<cui_rect,12> rects;
+    } paint{statusBodies_[profile.body == 1], {}, slots};
+    for (std::size_t i=0; i<slots.size(); ++i) {
+        const auto& item = profile.equipment[i];
+        if (item.label.empty()) continue;
+        CacheItem(ui, item.icon);
+        paint.icons[i] = itemFrames_.at(item.icon);
+    }
+    cui_canvas_paint(ui, CUI_FILL, CUI_PX(bounds.h), [](cui_ctx* ui, cui_rect box, void* data) {
+        const auto& art = *static_cast<Paint*>(data);
+        const float scale = std::min(box.w/284, box.h/348);
+        const float x = box.x+(box.w-284*scale)/2, y = box.y+(box.h-348*scale)/2;
+        const auto image = [&](const Image& image, cui_rect rect) {
+            if (image.texture && rect.w > 0 && rect.h > 0)
+                cui_draw_image(ui, image.texture, {x+rect.x*scale,y+rect.y*scale,rect.w*scale,rect.h*scale},
+                    {0,0,1,1}, {}, {255,255,255,255});
+        };
+        image(art.body.image, {float(126+art.body.x),float(219+art.body.y),float(art.body.image.width),float(art.body.image.height)});
+        for (std::size_t i=0; i<art.icons.size(); ++i) {
+            const auto& icon = art.icons[i];
+            const auto& rect = art.rects[i];
+            const auto width = std::min(float(icon.width), rect.w), height = std::min(float(icon.height), rect.h);
+            image(icon, {rect.x+(rect.w-width)/2,rect.y+(rect.h-height)/2,width,height});
+        }
+    }, &paint, sizeof paint);
+    const auto rect = cui_last_rect(ui);
+    const float scale = std::min(rect.w/284, rect.h/348);
+    if (scale <= 0) return true;
+    const auto pointer = cui_mouse_pos(ui);
+    const cui_vec2 local{(pointer.x-rect.x-(rect.w-284*scale)/2)/scale, (pointer.y-rect.y-(rect.h-348*scale)/2)/scale};
+    for (std::size_t i=0; i<slots.size(); ++i) {
+        const auto& item = profile.equipment[i];
+        if (!item.label.empty() && Contains(slots[i],local)) {
+            const auto caption = item.label + "\n持久 " + std::to_string(item.durability) + " / " + std::to_string(item.maxDurability);
+            cui_tooltip(ui, caption.c_str());
+            break;
+        }
+    }
+    return true;
 }
 
 const Dialogs::Assets::Image& Dialogs::Assets::OptionFrame(int id) const
@@ -9514,19 +10096,25 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
             client.inventory.notice || client.inventory.bindingShortcut || merchantModal ||
             (client.shop.actor && (!nativeShop || loginArt->ShopHasModal(client))) ||
             client.inventory.drop!=mir3_cui::DropDialog::None || !client.npcDialogue.prompt.command.empty();
+        if (!modal && !client.chat.composing && !cui_wants_keyboard(ui)) {
+            if (cui_shortcut(ui,0,CUI_KEY_P)) client.ToggleObjectOrders();
+            if (cui_shortcut(ui,CUI_MOD_ALT,CUI_KEY_M)) client.ToggleMailbox();
+        }
+        bool independentEscape = false;
+        const bool independentCovered = PrepareIndependentWindows(ui,client.windows,modal,independentEscape);
         const bool overShop = nativeShop && loginArt->ShopBlocksScene(ui,client,true);
-        const int shopWheel = overShop && !modal
+        const int shopWheel = overShop && !modal && !independentCovered
             ? -static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y)) : 0;
-        const int npcWheel = nativeNpc && !modal && (!client.shop.actor || (nativeShop && !overShop)) &&
+        const int npcWheel = nativeNpc && !modal && !independentCovered && (!client.shop.actor || (nativeShop && !overShop)) &&
             loginArt->NpcBlocksScene(ui,client,true)
             ? -static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y)) : 0;
         bool minimapCovered=false;
         bool utilityCovered=false, panelEscape=false, panelPointerCaptured=false;
         if (nativeHud) {
-            const bool foreground = (nativeNpc && npcBlocksScene) || (nativeShop && shopBlocksScene);
+            const bool foreground = independentCovered || (nativeNpc && npcBlocksScene) || (nativeShop && shopBlocksScene);
             loginArt->PrepareMinimap(ui,client);
             minimapCovered=loginArt->HandleMinimapInput(ui,client,modal || foreground);
-            utilityCovered=loginArt->HandleUtilityPanels(ui,client,minimapCovered,foreground,modal,panelEscape,panelPointerCaptured);
+            utilityCovered=loginArt->HandleUtilityPanels(ui,client,minimapCovered,foreground,modal || independentEscape,panelEscape,panelPointerCaptured);
         }
         const bool partyCovered=!loginArt || !loginArt->PartyReady() || loginArt->PartyBlocksScene(ui);
         const bool questCovered=!loginArt || !loginArt->QuestReady() || loginArt->QuestBlocksScene(ui);
@@ -9536,15 +10124,15 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
             const bool covered=(client.party.open && partyCovered) || (client.quests.open && questCovered) ||
                 (client.guild.open && guildCovered) || (client.inventory.open && inventoryBlocksScene) ||
                 (client.npcDialogue.actor && npcBlocksScene) || (client.shop.actor && shopBlocksScene) ||
-                quickBlocksScene || utilityCovered;
-            loginArt->DrawGameHud(ui,client,covered,modal || (client.equipment.open && !loginArt->StatusReady()));
+                quickBlocksScene || utilityCovered || independentCovered;
+            loginArt->DrawGameHud(ui,client,covered,modal || independentEscape || (client.equipment.open && !loginArt->StatusReady()));
         } else {
             DrawGameChat(ui,client,partyCovered,questCovered,guildCovered,npcBlocksScene,shopBlocksScene,
-                nativeInventory,inventoryBlocksScene,nativeQuick,quickBlocksScene);
+                nativeInventory,inventoryBlocksScene,nativeQuick,quickBlocksScene,independentCovered || independentEscape);
             cui_box_end(ui);
         }
         const bool inventoryModal = merchantModal || (nativeInventory && client.inventory.drop != mir3_cui::DropDialog::None);
-        const bool bagOverlay = fading || portraitNotice || client.showSignOut || client.party.notice.id || client.guild.notice ||
+        const bool bagOverlay = fading || portraitNotice || client.showSignOut || independentCovered || independentEscape || client.party.notice.id || client.guild.notice ||
             client.trade.prompt!=mir3_cui::TradePrompt::None ||
             client.party.action != mir3_cui::PartyAction::None || client.guild.action != mir3_cui::GuildAction::None ||
             client.chat.receptionOpen || fallbackOptionsOpen || client.audioOpen || client.inventory.notice ||
@@ -9595,7 +10183,7 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
             (client.inventory.open || client.inventory.notice ||
                  client.inventory.drop != mir3_cui::DropDialog::None || client.merchant.notice || client.merchant.quantityOpen ||
                  client.equipment.open || inventoryWasOpen || equipmentWasOpen)) {
-            cui_push_disabled(ui,utilityCovered || fading || client.showSignOut);
+            cui_push_disabled(ui,utilityCovered || independentCovered || independentEscape || fading || client.showSignOut);
             DrawItemPanels(ui, client, inventoryWasOpen, equipmentWasOpen,nativeInventory,nativeHud && loginArt->StatusReady());
             cui_pop_disabled(ui);
         }
@@ -9607,7 +10195,7 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
         }
         if (nativeNpc) {
             const bool overlay = partyNotice || guildNotice || fading || portraitNotice || client.showSignOut || inventoryModal ||
-                minimapCovered || panelPointerCaptured ||
+                minimapCovered || panelPointerCaptured || independentCovered || independentEscape ||
                 (shopOpen && shopBlocksScene && client.npcDialogue.prompt.command.empty());
             loginArt->DrawNpcPanel(ui,client,!overlay,npcWheel);
         }
@@ -9616,7 +10204,7 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
         else if (npcPrompt) return;
         else if (shopOpen) {
             if (nativeShop) loginArt->DrawShopPanel(ui,client,shopWheel,!fading && !client.showSignOut &&
-                !inventoryModal && !minimapCovered && !panelPointerCaptured);
+                !inventoryModal && !minimapCovered && !panelPointerCaptured && !independentCovered && !independentEscape);
             else if (!inventoryModal) DrawNpcShop(ui,client);
         } else if (fallbackNpc) DrawNpcDialogue(ui,client);
         else if (client.chat.receptionOpen) DrawChatReception(ui,client);
@@ -9645,6 +10233,66 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
             return;
         }
         if (nativeHud && client.showSignOut && loginArt->DrawGameExit(ui,client)) return;
+        if (!fading && !client.showSignOut) {
+            auto& windows = client.windows;
+            if (!modal && windows.mail.unreadNotice && !windows.Open()) {
+                const auto view = cui_viewport_size(ui);
+                cui_overlay_begin(ui, {std::max(0.0f, view.x-95), std::max(0.0f, view.y-160), 84, 27});
+                if (Button(ui, "新信件")) client.ToggleMailbox();
+                cui_box_end(ui);
+            }
+            if (windows.Open()) {
+                const IndependentDialogTheme theme(ui);
+                const IndependentViewport view(ui);
+                const auto mouse = cui_mouse_pos(ui);
+                int hit = -1;
+                for (const int id : windows.stacking)
+                    if (IndependentOpen(windows,id) && view.Hit(windows,id,mouse)) hit = id;
+                const auto stacking = windows.stacking;
+                const auto drawItem = [&](unsigned icon,float height) {
+                    if (loginArt) loginArt->DrawIndependentItem(ui,icon,height);
+                };
+                for (const int id : stacking) {
+                    if (!IndependentOpen(windows,id)) continue;
+                    const auto bounds = view.Bounds(windows,id);
+                    const IndependentPanel panel{ui,bounds,view.scale};
+                    cui_overlay_begin(ui,bounds);
+                    cui_push_id_int(ui,id+700);
+                    cui_push_disabled(ui,modal || windows.dragging >= 0 || (hit >= 0 && hit != id));
+                    if (loginArt) loginArt->DrawIndependentSkin(ui,id,bounds);
+                    else {
+                        cui_box background = {};
+                        background.width = background.height = CUI_FILL;
+                        background.bg = CUI_COLOR_SURFACE_RAISED;
+                        cui_box_begin(ui,&background);
+                        cui_box_end(ui);
+                    }
+                    switch (id) {
+                    case 0:
+                        panel.At(0,0,284,348,[&] { if (loginArt) loginArt->DrawInspectionEquipment(ui,windows.profile,bounds); });
+                        panel.TextAt(81,17,128,windows.profile.name);
+                        panel.TextAt(163,62,112,windows.profile.guild);
+                        if (panel.ButtonAt(247,307,31,"×")) CloseIndependentWindow(windows,id);
+                        break;
+                    case 1:
+                        DrawObjectOrders(panel,client,[&] { if (loginArt) loginArt->DrawObjectOrderMap(ui,client,165*view.scale); });
+                        break;
+                    case 2: DrawMarket(panel,client,drawItem); break;
+                    case 3: DrawMarketRegistration(panel,client,drawItem); break;
+                    case 4:
+                        if (loginArt && (windows.mail.reading || windows.mail.composing || windows.mail.folder)) {
+                            const int mode = windows.mail.composing ? 1 : windows.mail.reading ? 0 : 2;
+                            panel.At(1,51,440,260,[&] { loginArt->DrawMailModeSkin(ui,mode,260*view.scale); });
+                        }
+                        DrawMailbox(panel,client,drawItem);
+                        break;
+                    }
+                    cui_pop_disabled(ui);
+                    cui_pop_id(ui);
+                    cui_box_end(ui);
+                }
+            }
+        }
         if (!client.showSignOut) return;
     } else if (!drawCredentials) {
         cui_heading(ui, "Mir3 Client", 1);

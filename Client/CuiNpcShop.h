@@ -21,6 +21,7 @@ struct NpcShop {
         std::uint32_t actor = 0, offer = 0;
         unsigned revision = 0;
         std::uint64_t deadline = 0;
+        bool crafting = false;
     };
 
     std::uint32_t actor = 0;
@@ -31,7 +32,7 @@ struct NpcShop {
     int selected = -1, category = -1, offer = -1;
     unsigned page = 0;
     bool detailed = false, bulk = false, offersVisible = false, sourceLayout = false;
-    bool storage = false, withdrawalPrompt = false;
+    bool storage = false, withdrawalPrompt = false, crafting = false;
     std::uint32_t withdrawing = 0;
     int notice = 0;
     std::uint64_t detailDeadline = 0;

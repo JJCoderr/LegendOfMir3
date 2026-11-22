@@ -386,6 +386,14 @@ cmake --build build-cui --target Mir3CuiClient --config Release
 - 两个 Win32 Release 目标与 CUI 本地网关全量回归通过。Godot 和 CUI 实拍包含设置遮挡时的拖动结果，以及释放并关闭设置后的任务窗位置。遮挡取样区各颜色通道差均不超过 1，释放取样区有 99.9824% 的像素各通道差不超过 2。对照见 `build-cui/utility-capture-comparison.png`，图册增至 235 张。
 - 局内滚轮独立命中最上层窗口，拖动和释放仍由先前捕获鼠标的窗口接收。商店、NPC 对话和独立小地图优先消费命中范围内的滚轮。浮动窗口按当前层级命中，未命中任何面板时才滚动聊天记录。
 - 两个 Win32 Release 目标和 CUI 本地网关回归通过。Godot 与 CUI 实际输入验证拖动下层任务窗期间滚轮只滚动上层技能树，释放后任务窗保持位置和列表起点。两组取样区有 99.9797% 与 99.9902% 的像素各颜色通道差不超过 2。对照见 `build-cui/utility-wheel-comparison.png`，图册增至 237 张。
+- 以宝藏版 Mir3.exe 的解包 IDA 分析库和当前 CUI 源码逐项核查局内窗口。原版 20 个有效编号有 15 个 CUI 对应界面，含合并和部分覆盖。7 人物资料、18 扩展地图与对象指令、19 寄售查询、20 寄售登记、21 信件与送礼缺独立实现。复查确认 `751` 载入人物和 12 个装备槽，行会名单由 `756/775/776` 更新。逐项行为和界面缺口见 [Mir3.exe 对话框与面板核查](Docs/2026-11-22_reverse-mir3-dialog-audit-report.md)。
+- NPC 制作沿用原物品详情布局。`712` 按斜杠分隔的七字段记录读配方，`1034` 携带 NPC ID 与配方名，`713` 更新金币并显示 `1440`，`714` 的四种结果显示 `1441–1444`。仓库密码的通用输入框和原素材输入框均按 CP936 字节限长。原版 `461730/461A90` 会将 NPC 肖像显示标志清零，保留样本的文字对话行为。
+- 两个 Win32 Release 目标编译通过。原生 CUI 网关回放通过制作及仓库密码专项，并完成现有全量用例。专项标记为 `NATIVE_NPC_CRAFT_CASES_OK` 和 `NATIVE_STORAGE_PASSWORD_CASES_OK`，日志见 `build-cui/npc-repair-native-test.log`。
+- CUI 新增 7 人物资料、18 地图指令、19 寄售查询、20 寄售登记、21 信件五个独立窗口。Godot 分支只有这五项的分析记录。沿用已有 CUI 背包、地图、贴图和输入控件，对照宝藏版 `Mir3.exe` 移植回包与请求。原版送礼标签及发送按钮未抵达发送逻辑，信件窗支持查看来信携带的物品和金币。
+- 地图 `1120` 坐标使用识别字段，`1123` 用物品 ID、装填数量和原名。寄售 `1133/1135` 的所选 ID 拆到参数与标记字段。信件 `1141` 发送 596 字节正文结构，`1357` 读取 613 字节且匹配当前请求。独立窗口专项日志见 `build-cui/independent-windows-native-test.log`，原版 `GameInter` 底图与 CUI 运行截图见 `build-cui/independent-comparison-*.png`。
+- 7、18、19、20、21 号窗口的界面改用原版独立浮窗尺寸、初始位置和 `GameInter` 底图，按 800×600 HUD 坐标缩放。标题拖动只捕获当前窗，窗口外仍可操作场景和背包，Escape 优先关闭最上方独立窗。寄售登记从共享背包接收手持物品，列表按原版 13 行及四列绘制。信件阅读、撰写和发件箱分别使用 `2010/2030/2070` 底图。更新后的截图对照和回放日志见 `build-cui/independent-layout-comparison-*.png`、`build-cui/independent-layout-native-test.log`。
+- 寄售登记 `GameInter 1910` 的可见区域为 408×286，原构造传入的 310 高度包含顶部和底部各 12 行透明像素。CUI 窗口和鼠标范围改用可见边界 `(0,22,408,286)`，各控件的屏幕坐标沿用原位置。前后对照见 `build-cui/independent-registration-height-comparison.png`。
+- 新增从启动到签退的 [CUI 对话框与面板场景清单](Docs/Cui-Dialog-Inventory.md) 和 [可运行的冒烟脚本](Client/Tests/Run-CuiDialogSmoke.ps1)。`Mir3CuiDialogSmoke` 复用生产 `Dialogs.cpp`、CUI 和网关编解码，在本机回环网关验证 18 组场景。两种运行模式均通过，带截图模式生成 64 张 CUI 画面。脚本支持空构建目录，按运行隔离日志、截图、配置和缓存。
 
 - 以 `br_godot_test_261115` 的 `45d45af` 构建并运行 Godot 实际视口。隔离副本位于 `build-cui/godot-reference`，使用 Godot 4.7.2、godot-cpp 的 `e83fd090` 和本地原客户端资源。在隔离副本中去除怪物模块对未声明 `action_at` 的赋值以解除编译错误，主分支未改该模块。
 - `login_smoke.gd -- --screenshots` 输出 `LOGIN_UI_OK` 及 9 张截图。首组验收用例为 640×480 密码错误框，与当前 CUI 的相同账号及错误状态对照，相差 304075／307200 像素。并排图和差异图保存在 `build-cui`。该组结果是重做前基线，仍需用运行时资源、字体和控件状态重新实现。
