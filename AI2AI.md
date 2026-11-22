@@ -2501,3 +2501,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 处理：CActor 增加 MonsterImageIndex，目标库未加载时按外形对 200 取模回退，再不行退回 Mon-1，保证怪物可见；资源补齐后回退不生效。
 - 未采用 Mud3/Envir/monster.dat 的外观号：该文件为加密或非明文结构（前 4 字节为记录数 440，其余大量 0x09 填充，XOR 0x29 解码不成立），暂不逆向。
 - Excel 场景：命名管道每次 Test.exe 连接释放后短时间内不可重连，因此一次场景要在同一次连接里跑完（当前场景脚本即如此）；完整 8 步场景（世界就绪、V 键开关小地图、点击地图、回车开聊天）一次通过。
+
+## 2026-11-22 WIL 帧数与图标索引核对
+
+- 新增 Server/Tools/audit_wil_references.py：解析 Data 下每个 WIL 的版本与帧数（新格式 5000，头偏移 22/24），并核对技能与物品图标索引。
+- 关键库帧数：Inventory 5224、MIcon 1922、Magic 3580、MonMagic 2270；WIL 版本全部为 5000，除 WM-Weapon5.wil 为 17（16916 帧）。
+- 图标来源核实：背包与装备图标用物品的 wLooks 直接作 Inventory.wil 帧号（InventoryWnd.cpp 589），技能图标为 2*id-2 或 999+id（SkillWnd/Interface），都在帧范围内（技能 145 个最大 290；物品 Shape 最大 1209）。
+- System.db 的 ItemInfo.Image（最大 6339）不是图标帧，导入物品表时不要使用；应使用 Shape/wLooks 映射到 Inventory.wil。
