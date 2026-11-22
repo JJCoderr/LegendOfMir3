@@ -2579,3 +2579,9 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 对照 Godot 分支 br_godot_test_261115 的 client/src/godot/hud_view.cpp::draw_scene_lighting，网格从画布原点直接绘制并在三角形内插值。Zircon 的 RenderingCore/Rendering/LightGenerator.cs 生成由中心向圆周衰减的贴图，MapControl.Light 将光源按场景屏幕坐标合成。
 - C++ 客户端按逻辑画布向上取整分配网格（17×19 格），用 D3DTLVERTEX 直接绘制屏幕坐标，避免旧版按地图缓存居中以及选角或预览投影影响夜间遮罩。采样由调用者限定网格范围，移除 SceneLight::sample 对旧 18×19 顶点边界的硬截断，保留原有距离衰减与昼夜参数。
 - Release 构建和夜景预览的 31 项检查通过，含右下角顶点有光与圆周外保持环境光。对比同场景图像，光晕回到角色处，投影导致的顶部亮带消失。
+
+## 2026-11-23 测试工作簿合并与用例编号
+
+- Test 根目录归档为 11 本子系统工作簿和 14 本独立游戏场景工作簿。子系统按用例表运行，初始化 SQL 与 NPC 资源内嵌，运行时在 out 临时展开；旧 CSV 和现有验证工具仍可使用。已移除分散的旧版 XLSX，并保留历史文档。
+- 每张用例表首列为编号，格式为工作表名.步骤号（如 ShopBuy.260）；name 使用中文描述，执行器校验编号并保持日志 ID 一致。
+- 验证：读取并核对 155 张用例表的 5907 步、初始化 SQL 与资源字节；商店购买场景和子系统入口各通过 44 步，原执行器 13 组回归通过。

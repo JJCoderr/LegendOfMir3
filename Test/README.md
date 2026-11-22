@@ -1,11 +1,15 @@
-# CSV 联调场景
+# Excel 测试脚本
 
-## Excel 真实商店示例与用例 ID
+## 工作簿和用例编号
 
-`Shop/ShopBuy.xlsx` 是可以执行的 Excel 输入：`scenario` 表保存操作和预期，`fixture` 表保存隔离库种子，同目录 `ShopBuy.files` 提供 NPC 商店脚本。场景 ID 使用文件名 `ShopBuy`，步骤 ID 使用 `step` 列，完整用例 ID 为 `ShopBuy.260`。请保持场景文件名稳定，并在不同场景之间使用唯一名称。
+`Test` 根目录中的 `系统-*.xlsx` 按子系统分组，每张用例工作表独立运行。`场景-*.xlsx` 每本对应一个游戏场景，可直接运行。首行第一列是 `编号`，格式为 `功能ID.步骤ID`，例如 `ShopBuy.260`。功能 ID 取工作表名，步骤 ID 取 `step`，`name` 填中文步骤名称。
+
+`fixture` 表按用例保存隔离库初始化 SQL，`files` 表按用例保存 NPC 等资源。运行器在 `out` 下临时展开所选用例。旧 CSV 仍供现有验证工具调用。
 
 ```powershell
-python Test/xlsx_scenario.py Test/Shop/ShopBuy.xlsx --port-offset 30000 --log out/excel-shop-real.log
+python Test/xlsx_scenario.py Test/系统-商店.xlsx --list
+python Test/xlsx_scenario.py Test/系统-商店.xlsx --case ShopBuy --port-offset 30000
+python Test/xlsx_scenario.py Test/场景-商店购买.xlsx --port-offset 30000
 ```
 
 默认使用 `build-cui/Release`，需要 Python 的 `openpyxl`。执行器启动真实客户端和 EIServer，操作走正式业务协议；数据库断言只读查询新建的隔离 SQLite 库。端口偏移可按本机占用情况调整，不连接已有角色存档。
