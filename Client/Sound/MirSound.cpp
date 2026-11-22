@@ -411,14 +411,15 @@ void CMirSound::PlayRoleVoice(bool creation, int profession, int gender)
 
 void CMirSound::PlayBkMusicFile(const char* baseName)
 {
-	// 背景音乐按地图名取同名文件：Sound\<地图>.wav 优先，其次 .mp3。
+	// baseName 可以是带扩展名的文件名，也可以是地图名；先按原样找，再补 .wav/.mp3。
 	if(!m_bBGMPlay || !baseName || !*baseName) return;
 
 	if(m_pMp3->IsPlaying()) m_pMp3->OnStop();
 	m_CommonWavBuffer.Stop();
 
 	CHAR szPath[MAX_PATH]={};
-	sprintf(szPath,"Sound\\%s.wav",baseName);
+	sprintf(szPath,"Sound\\%s",baseName);
+	if(GetFileAttributesA(szPath)==INVALID_FILE_ATTRIBUTES) sprintf(szPath,"Sound\\%s.wav",baseName);
 	if(GetFileAttributesA(szPath)==INVALID_FILE_ATTRIBUTES) sprintf(szPath,"Sound\\%s.mp3",baseName);
 	if(GetFileAttributesA(szPath)==INVALID_FILE_ATTRIBUTES) return;
 
@@ -431,6 +432,50 @@ void CMirSound::PlayBkMusicFile(const char* baseName)
 	}
 	if(SUCCEEDED(m_CommonWavBuffer.Load(m_pSound,szPath,1)))
 		m_CommonWavBuffer.PlayExtended(DSBPLAY_LOOPING,0,m_lWavMaxVol,0);
+}
+
+void CMirSound::PlayMapMusic(const char* mapName)
+{
+	// 背景音乐表沿用原版 BgmList.wwl：头 58 字节，每条 24 字节，
+	// 地图名在偏移 1（9 字节），文件名在偏移 10（14 字节）。
+	constexpr int HeaderBytes=58,RecordBytes=24,MapBytes=9,FileBytes=14;
+	static std::vector<unsigned char> table;
+	static bool loaded=false;
+	static bool available=false;
+
+	if(!m_bBGMPlay || !mapName || !*mapName) return;
+	if(!loaded) {
+		loaded=true;
+		FILE* file=fopen("BgmList.wwl","rb");
+		if(file) {
+			fseek(file,0,SEEK_END);
+			const long size=ftell(file);
+			fseek(file,0,SEEK_SET);
+			if(size>HeaderBytes) {
+				table.resize(size_t(size));
+				available=fread(table.data(),1,table.size(),file)==table.size();
+			}
+			fclose(file);
+		}
+	}
+	if(!available || table.size()<size_t(HeaderBytes)) return;
+
+	const unsigned long count=*reinterpret_cast<const unsigned long*>(&table[54]);
+	if(count>(table.size()-HeaderBytes)/RecordBytes) return;
+
+	const size_t mapLength=strlen(mapName);
+	for(unsigned long i=0;i<count;++i) {
+		const unsigned char* record=&table[HeaderBytes+i*RecordBytes];
+		const size_t length=strnlen(reinterpret_cast<const char*>(record+1),MapBytes);
+		if(length!=mapLength || memcmp(record+1,mapName,length)!=0) continue;
+		const size_t fileLength=strnlen(reinterpret_cast<const char*>(record+10),FileBytes);
+		if(!fileLength) return;
+		CHAR szFile[FileBytes+1]={};
+		memcpy(szFile,record+10,fileLength);
+		if(lstrcmpiA(szFile,"none")==0 || lstrcmpiA(szFile,"nobgm")==0) return;
+		PlayBkMusicFile(szFile);
+		return;
+	}
 }
 ///////////////////////////////////////////////////////////////////////
 //  Name		:	StopBkMusic
