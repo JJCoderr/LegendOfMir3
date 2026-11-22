@@ -322,9 +322,9 @@ BOOL CMagic::CreateMagic(BYTE bMagicNum, SHORT shFireTileX, SHORT shFireTileY,
 				else
 					nWaveNum = nMagicSndTbl[m_bMagicNum]*10 + 10000 + 1;
 			}
-/*			if ( nWaveNum > 10010 )
+			if ( nWaveNum > 10010 )
 				m_nDuplicateNum = g_xSound.PlayActorWav(m_shTileX, m_shTileY, g_xGameProc.m_xMyHero.m_wPosX, g_xGameProc.m_xMyHero.m_wPosY, nWaveNum, 100, bLoop);
-*/		}
+		}
 		dwLastTick = timeGetTime();
 
 		return TRUE;
@@ -799,9 +799,9 @@ BOOL CMagic::UpdateMagic(INT nLoopTime)
 				else
 					nWaveNum = nMagicSndTbl[m_bMagicNum]*10 + 10000 + 1;
 			}
-/*			if ( nWaveNum > 10000 )
+			if ( nWaveNum > 10000 )
 				g_xSound.PlayActorWav(m_shTileX, m_shTileY, g_xGameProc.m_xMyHero.m_wPosX, g_xGameProc.m_xMyHero.m_wPosY, nWaveNum);
-*/		}
+		}
 		dwLastTick = timeGetTime();
 	}
 
