@@ -3593,10 +3593,6 @@ VOID CExchangeWnd::Init()
 	m_xExchangeBtn.Init();
 }
 
-VOID CExchangeWnd::Destroy()
-{
-	CGameWnd::Destroy();
-}
 
 
 VOID CExchangeWnd::CreateExchangeWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
@@ -3667,10 +3663,6 @@ VOID CGuildMasterWnd::Init()
 	m_xGuildMasterBtn.Init();
 }
 
-VOID CGuildMasterWnd::Destroy()
-{
-	CGameWnd::Destroy();
-}
 
 VOID CGuildMasterWnd::CreateGuildMasterWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
 {
@@ -3735,15 +3727,7 @@ CGuildWnd::~CGuildWnd()
 	Destroy();
 }
 
-VOID CGuildWnd::Init()
-{
-	CGameWnd::Init();
-}
 
-VOID CGuildWnd::Destroy()
-{
-	CGameWnd::Destroy();
-}
 
 VOID CGuildWnd::CreateGuildWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
 {
@@ -3855,15 +3839,7 @@ VOID CGroupWnd::ShowGroupWnd()
 	}
 }
 
-VOID CGroupWnd::Init()
-{
-	CGameWnd::Init();
-}
 
-VOID CGroupWnd::Destroy()
-{
-	CGameWnd::Destroy();
-}
 
 BOOL CGroupWnd::OnLButtonUp(POINT ptMouse)
 {
@@ -3942,15 +3918,7 @@ VOID CGroupPopWnd::CreateGroupPopWnd(INT nID, CWHWilImageData* pxWndImage, INT n
 	CreateGameWnd(nID, pxWndImage, nFrameImgIdx, bCanMove, nStartX, nStartY, nWidth, nHeight);
 }
 
-VOID CGroupPopWnd::Init()
-{
-	CGameWnd::Init();
-}
 
-VOID CGroupPopWnd::Destroy()
-{
-	CGameWnd::Destroy();
-}
 
 
 VOID CGroupPopWnd::ShowGroupPopWnd()
@@ -4184,10 +4152,6 @@ VOID CQuestWnd::Init()
 	m_xQuestBtn.Init();
 }
 
-VOID CQuestWnd::Destroy()
-{
-	CGameWnd::Destroy();
-}
 
 VOID CQuestWnd::CreateQuestWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
 {
@@ -4259,10 +4223,6 @@ VOID COptionWnd::Init()
 	m_xOptionBtn.Init();
 }
 
-VOID COptionWnd::Destroy()
-{
-	CGameWnd::Destroy();
-}
 
 VOID COptionWnd::CreateOptionWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
 {
@@ -4334,10 +4294,6 @@ VOID CHorseWnd::Init()
 	m_xHorseBtn.Init();
 }
 
-VOID CHorseWnd::Destroy()
-{
-	CGameWnd::Destroy();
-}
 
 VOID CHorseWnd::CreateHorseWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
 {
@@ -7847,25 +7803,13 @@ HRESULT CLoginAvi::OnButtonDown(WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-HRESULT CLoginAvi::OnButtonDown(POINT ptMouse)
-{
-	return 0;
-}
 
 HRESULT CLoginAvi::OnButtonUp(WPARAM wParam, LPARAM lParam)
 {
 	return 0;
 }
 
-HRESULT CLoginAvi::OnButtonUp(POINT ptMouse)
-{
-	return 0;
-}
 
-LRESULT CLoginAvi::OnMouseMove(WPARAM wParam, LPARAM lParam)
-{
-	return 0;
-}
 
 VOID CLoginAvi::Render(INT	nLoopTime)
 {
@@ -8097,11 +8041,6 @@ HRESULT	CLogin::OnButtonUp(WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-HRESULT CLogin::OnButtonUp(POINT ptMouse)
-{
-
-	return 0;
-}
 
 LRESULT	CLogin::OnMouseMove(WPARAM wParam, LPARAM lParam)
 {
@@ -8280,30 +8219,6 @@ VOID CNewAccount::Create(CWHWilImageData* pxImage)
 		m_xInputImg[nLoop] = LoginImageInfo[nLoop];*/
 }
 
-HRESULT	CNewAccount::OnKeyDown(WPARAM wParam, LPARAM lParam)
-{
-/*	if (wParam == VK_RETURN || wParam == VK_TAB)
-	{	SetFocusBefore();
-		switch(m_nUserState)
-		{	case  LGM_INPUT_ID:
-			{	m_nUserState = LGM_INPUT_PASSWORD;
-				break;
-			}
-			case LGM_INPUT_PASSWORD:
-			{	if( ( lstrlen( m_xInputState[LGM_INPUT_ID-1].szData) >= LIMIT_USERID )
-								&& lstrlen( m_xInputState[LGM_INPUT_PASSWORD-1].szData ) )
-				{
-					g_xClientSocket.OnLogin(m_xInputState[LGM_INPUT_ID-1].szData,m_xInputState[LGM_INPUT_PASSWORD-1].szData);
-					return 0L;
-				}
-				m_nUserState = LGM_INPUT_ID;
-				break;
-			}
-		}
-		SetFocusAfter();
-	}*/
-	return 0;
-}
 
 HRESULT CNewAccount::OnButtonDown(WPARAM wParam, LPARAM lParam)
 {
@@ -8382,29 +8297,7 @@ HRESULT	CNewAccount::OnButtonUp(WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-HRESULT CNewAccount::OnButtonUp(POINT ptMouse)
-{
 
-	return 0;
-}
-
-LRESULT	CNewAccount::OnMouseMove(WPARAM wParam, LPARAM lParam)
-{
-/*	INT	i;
-
-	if(!m_fIsButtonDown)
-	{
-		for( i = BTN_NEW_ID ; i <= BTN_OK_ID ; i ++)
-		{
-			if (m_xButtons[i].CheckMouseOn(LOWORD(lParam), HIWORD(lParam)))
-				m_xButtons[i].m_nState = BUTTON_STATE_ON;
-			else
-				m_xButtons[i].m_nState = BUTTON_STATE_UP;
-		}
-	}
-*/
-	return 0;
-}
 
 VOID CNewAccount::Render(INT	nLoopTime)
 {
@@ -8563,10 +8456,6 @@ VOID CSelectSrv::Create(CWHWilImageData* pxImage,CPDLList<ServerList>* pxSList)
 	SetRect(&m_rcWnd,_LEFT_BORDER,_TOP_BORDER,_LEFT_BORDER+SERVER_BTN_WIDTH*(m_nSrvCount/COUNT_BUTTON_PER_COLUME+1),(m_nSrvCount/COUNT_BUTTON_PER_COLUME) > 0 ? _BOTTOM_BORDER : POS_TOP_SERVER_BTN_Y + (m_nSrvCount * COUNT_BUTTON_PER_COLUME) * (SERVER_BTN_HEIGHT+SERVER_BTN_GAP));
 }
 
-HRESULT	CSelectSrv::OnKeyDown(WPARAM wParam, LPARAM lParam)
-{
-	return 0;
-}
 
 HRESULT CSelectSrv::OnButtonDown(WPARAM wParam, LPARAM lParam)
 {
@@ -8615,10 +8504,6 @@ HRESULT	CSelectSrv::OnButtonUp(WPARAM wParam, LPARAM lParam)
 }
 
 
-HRESULT CSelectSrv::OnButtonUp(POINT ptMouse)
-{
-	return 0;
-}
 
 LRESULT	CSelectSrv::OnMouseMove(WPARAM wParam, LPARAM lParam)
 {
@@ -8784,10 +8669,6 @@ VOID CBackGround::Create(CWHWilImageData* pxImage)
 	m_xStartGameAvi.InitAvi(g_xSound.GetSoundObject()->GetDS());
 }
 
-HRESULT	CBackGround::OnKeyDown(WPARAM wParam, LPARAM lParam)
-{
-	return 0;
-}
 
 HRESULT CBackGround::OnButtonDown(WPARAM wParam, LPARAM lParam)
 {
@@ -8795,10 +8676,6 @@ HRESULT CBackGround::OnButtonDown(WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-HRESULT CBackGround::OnButtonDown(POINT ptMouse)
-{
-	return 0;
-}
 
 HRESULT	CBackGround::OnButtonUp(WPARAM wParam, LPARAM lParam)
 {
@@ -8806,16 +8683,7 @@ HRESULT	CBackGround::OnButtonUp(WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-HRESULT CBackGround::OnButtonUp(POINT ptMouse)
-{
 
-	return 0;
-}
-
-LRESULT	CBackGround::OnMouseMove(WPARAM wParam, LPARAM lParam)
-{
-	return 0;
-}
 
 VOID CBackGround::Render(INT	nLoopTime)
 {
@@ -8998,29 +8866,7 @@ HRESULT	CCreateChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-HRESULT CCreateChr::OnButtonUp(POINT ptMouse)
-{
 
-	return 0;
-}
-
-LRESULT	CCreateChr::OnMouseMove(WPARAM wParam, LPARAM lParam)
-{
-/*	INT	i;
-
-	if(!m_fIsButtonDown)
-	{
-		for( i = BTN_NEW_ID ; i <= BTN_OK_ID ; i ++)
-		{
-			if (m_xButtons[i].CheckMouseOn(LOWORD(lParam), HIWORD(lParam)))
-				m_xButtons[i].m_nState = BUTTON_STATE_ON;
-			else
-				m_xButtons[i].m_nState = BUTTON_STATE_UP;
-		}
-	}
-*/
-	return 0;
-}
 
 VOID CCreateChr::Render(INT	nLoopTime)
 {
@@ -9125,10 +8971,6 @@ VOID CSelectChr::OpenWnd(VOID)
 	m_nRenderState = 9;
 	m_nBlend = 100;
 }
-HRESULT	CSelectChr::OnKeyDown(WPARAM wParam, LPARAM lParam)
-{
-	return 0;
-}
 
 HRESULT CSelectChr::OnButtonDown(WPARAM wParam, LPARAM lParam)
 {
@@ -9232,11 +9074,6 @@ HRESULT	CSelectChr::OnButtonUp(WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-HRESULT CSelectChr::OnButtonUp(POINT ptMouse)
-{
-
-	return 0;
-}
 
 LRESULT	CSelectChr::OnMouseMove(WPARAM wParam, LPARAM lParam)
 {
@@ -10348,7 +10185,7 @@ std::vector<DescriptionRow> wrap_skill_description(const std::vector<std::string
 
 std::vector<std::string> wrap_system_notice(std::string_view utf8)
 {
-    if (utf8.empty()) return {};
+    if (utf8.empty() || utf8.size() > 4096) return {};
     auto ansi = utf8_to_ansi(utf8);
     if (const auto zero=ansi.find('\0'); zero!=ansi.npos) ansi.resize(zero);
     if (ansi.empty() || ansi.size()>1023) return {};
@@ -10373,7 +10210,7 @@ std::vector<std::string> wrap_system_notice(std::string_view utf8)
 // 0x4366D0 inserts into separately wrapped compact and expanded histories.
 void ChatHistory::post(std::string_view utf8, std::uint32_t foreground, std::uint32_t background)
 {
-    if (utf8.empty()) return;
+    if (utf8.empty() || utf8.size() > 4096) return;
     const int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.data(),
         static_cast<int>(utf8.size()), nullptr, 0);
     std::wstring wide(length, L'\0');
@@ -10420,7 +10257,7 @@ void ChatHistory::post(std::string_view utf8, std::uint32_t foreground, std::uin
 
 std::vector<SpeechLine> wrap_speech(std::string_view utf8)
 {
-    if (utf8.empty()) return {};
+    if (utf8.empty() || utf8.size() > 4096) return {};
     const int length=MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,utf8.data(),static_cast<int>(utf8.size()),nullptr,0);
     if (!length) return {};
     std::wstring wide(length,L'\0');

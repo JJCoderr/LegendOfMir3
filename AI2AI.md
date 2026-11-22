@@ -437,3 +437,4 @@ cmake --build build-cui --target Mir3CuiClient --config Release
 - 用户确认注册窗口以本地早期代码草稿的字段和坐标实现，背景继续使用现有 GameInter 对话框。移除 Inventory 208 帧自动覆盖分支，保持同一贴图背景。
 
 - 2026-11-22：按要求先提交现有工作区基线 f54278b。Dialogs 第一轮简化移除系统提示、聊天记录、头顶文字重复的 UTF-8 4096 字节前置限制，保留转换后原版长度约束；聊天字符串截断只查找一次 NUL。空资源模式用于冒烟测试，保留相关资源与空指针分支。Mir3CuiDialogSmoke Release 构建及 18/18 场景通过，日志见 build-cui/dialog-smoke/20261122-141502-624-15736/smoke.log。移除基线误纳入的 Python 缓存跟踪，保留本地文件。
+- 按功能等价且减少总代码量的要求，旧版窗口直接继承 28 个行为相同的基类方法，并用 using 保留输入重载。恢复 CUI 三处 4096 字节输入限制，维持基线对超长文本的处理。Dialogs.h/.cpp 合计净减 182 行。两个客户端 Win32 Release 构建通过，CUI 回放 18/18 通过。

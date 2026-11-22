@@ -515,7 +515,6 @@ private:
 protected:
 public:
 	virtual VOID Init();
-	virtual VOID Destroy();
 
 	CGameBtn		m_xExchangeBtn;
 
@@ -544,7 +543,6 @@ public:
 	~CGuildMasterWnd();
 
 	virtual VOID Init();
-	virtual VOID Destroy();
 
 	VOID	CreateGuildMasterWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
 	VOID	ShowGuildMasterWnd();
@@ -572,8 +570,6 @@ public:
 	CGuildWnd();
 	~CGuildWnd();
 
-	virtual VOID Init();
-	virtual VOID Destroy();
 
 	VOID	CreateGuildWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
 	VOID	ShowGuildWnd();
@@ -602,8 +598,6 @@ public:
 public:
 	CGroupWnd();
 	~CGroupWnd();
-	virtual VOID Init();
-	virtual VOID Destroy();
 
 	VOID	CreateGroupWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
 	VOID	ShowGroupWnd();
@@ -631,8 +625,6 @@ public:
 	VOID	CreateGroupPopWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
 	VOID	ShowGroupPopWnd();
 
-	virtual VOID Init();
-	virtual VOID Destroy();
 
 public:
 //  ÏûÏ¢º¯Êý.
@@ -701,7 +693,6 @@ public:
 	~CQuestWnd();
 
 	virtual VOID Init();
-	virtual VOID Destroy();
 
 	VOID	CreateQuestWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
 	VOID	ShowQuestWnd();
@@ -730,7 +721,6 @@ public:
 	~COptionWnd();
 
 	virtual VOID Init();
-	virtual VOID Destroy();
 
 	VOID	CreateOptionWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
 	VOID	ShowOptionWnd();
@@ -759,7 +749,6 @@ public:
 	~CHorseWnd();
 
 	virtual VOID Init();
-	virtual VOID Destroy();
 
 	VOID	CreateHorseWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
 	VOID	ShowHorseWnd();
@@ -1118,10 +1107,9 @@ public:
 	VOID				StopAllAvis(VOID);
 
 	virtual HRESULT		OnButtonDown(WPARAM wParam, LPARAM lParam);
-	virtual HRESULT		OnButtonDown(POINT ptMouse);
+	using CBMWnd::OnButtonDown;
 	virtual HRESULT		OnButtonUp(WPARAM wParam, LPARAM lParam);
-	virtual HRESULT		OnButtonUp(POINT ptMouse);
-	virtual LRESULT		OnMouseMove(WPARAM wParam, LPARAM lParam);
+	using CBMWnd::OnButtonUp;
 
 	virtual	VOID		Render(INT	nLoopTime);
 private:
@@ -1160,7 +1148,7 @@ public:
 	virtual HRESULT		OnButtonDown(WPARAM wParam, LPARAM lParam);
 	virtual HRESULT		OnButtonDown(POINT ptMouse);
 	virtual HRESULT		OnButtonUp(WPARAM wParam, LPARAM lParam);
-	virtual HRESULT		OnButtonUp(POINT ptMouse);
+	using CBMWnd::OnButtonUp;
 	virtual HRESULT		OnKeyDown(WPARAM wParam, LPARAM lParam);
 	virtual LRESULT		OnMouseMove(WPARAM wParam, LPARAM lParam);
 	virtual	VOID		Render(INT	nLoopTime);
@@ -1202,9 +1190,7 @@ public:
 	virtual HRESULT		OnButtonDown(WPARAM wParam, LPARAM lParam);
 	virtual HRESULT		OnButtonDown(POINT ptMouse);
 	virtual HRESULT		OnButtonUp(WPARAM wParam, LPARAM lParam);
-	virtual HRESULT		OnButtonUp(POINT ptMouse);
-	virtual HRESULT		OnKeyDown(WPARAM wParam, LPARAM lParam);
-	virtual LRESULT		OnMouseMove(WPARAM wParam, LPARAM lParam);
+	using CBMWnd::OnButtonUp;
 
 	virtual	VOID		Render(INT	nLoopTime);
 private:
@@ -1245,8 +1231,7 @@ public:
 	virtual HRESULT		OnButtonDown(WPARAM wParam, LPARAM lParam);
 	virtual HRESULT		OnButtonDown(POINT ptMouse);
 	virtual HRESULT		OnButtonUp(WPARAM wParam, LPARAM lParam);
-	virtual HRESULT		OnButtonUp(POINT ptMouse);
-	virtual HRESULT		OnKeyDown(WPARAM wParam, LPARAM lParam);
+	using CBMWnd::OnButtonUp;
 	virtual LRESULT		OnMouseMove(WPARAM wParam, LPARAM lParam);
 
 	virtual	VOID		Render(INT	nLoopTime);
@@ -1286,11 +1271,9 @@ public:
 	INT					GetRenderState(VOID);
 	VOID				AllStopAvi(VOID);
 	virtual HRESULT		OnButtonDown(WPARAM wParam, LPARAM lParam);
-	virtual HRESULT		OnButtonDown(POINT ptMouse);
+	using CBMWnd::OnButtonDown;
 	virtual HRESULT		OnButtonUp(WPARAM wParam, LPARAM lParam);
-	virtual HRESULT		OnButtonUp(POINT ptMouse);
-	virtual HRESULT		OnKeyDown(WPARAM wParam, LPARAM lParam);
-	virtual LRESULT		OnMouseMove(WPARAM wParam, LPARAM lParam);
+	using CBMWnd::OnButtonUp;
 
 	virtual	VOID			Render(INT	nLoopTime);
 private:
@@ -1326,9 +1309,8 @@ public:
 	virtual HRESULT		OnButtonDown(WPARAM wParam, LPARAM lParam);
 	virtual HRESULT		OnButtonDown(POINT ptMouse);
 	virtual HRESULT		OnButtonUp(WPARAM wParam, LPARAM lParam);
-	virtual HRESULT		OnButtonUp(POINT ptMouse);
+	using CBMWnd::OnButtonUp;
 	virtual HRESULT		OnKeyDown(WPARAM wParam, LPARAM lParam);
-	virtual LRESULT		OnMouseMove(WPARAM wParam, LPARAM lParam);
 
 	virtual	VOID		Render(INT	nLoopTime);
 private:
@@ -1365,8 +1347,7 @@ public:
 	virtual HRESULT		OnButtonDown(WPARAM wParam, LPARAM lParam);
 	virtual HRESULT		OnButtonDown(POINT ptMouse);
 	virtual HRESULT		OnButtonUp(WPARAM wParam, LPARAM lParam);
-	virtual HRESULT		OnButtonUp(POINT ptMouse);
-	virtual HRESULT		OnKeyDown(WPARAM wParam, LPARAM lParam);
+	using CBMWnd::OnButtonUp;
 	virtual LRESULT		OnMouseMove(WPARAM wParam, LPARAM lParam);
 	virtual VOID		OpenWnd(VOID);
 	virtual VOID		CloseWnd(VOID);
