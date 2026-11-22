@@ -203,9 +203,9 @@ public:
     void DrawQuickPanel(cui_ctx* ui, LoginClient& client, bool interactive);
     void PostMerchantResult(LoginClient& client) const;
     void LeaveInventory(bool resetView = false);
-    bool ShopBlocksScene(cui_ctx* ui, const LoginClient& client) const;
+    bool ShopBlocksScene(cui_ctx* ui, const LoginClient& client, bool hitOnly=false) const;
     void DrawShopPanel(cui_ctx* ui, LoginClient& client, int wheel, bool interactive);
-    bool NpcBlocksScene(cui_ctx* ui, const LoginClient& client) const;
+    bool NpcBlocksScene(cui_ctx* ui, const LoginClient& client, bool hitOnly=false) const;
     void DrawNpcPanel(cui_ctx* ui, LoginClient& client, bool interactive, int wheel);
     bool GuildBlocksScene(cui_ctx* ui) const;
     void DrawGuildPanel(cui_ctx* ui, LoginClient& client, bool drawPanel = true, bool drawDialog = true);
@@ -609,7 +609,7 @@ private:
     std::string guildNameText_, guildCaptionText_, guildErrorText_;
     void OpenGuild(cui_ctx* ui, mir3::WilArchive& archive);
     void RefreshGuildText(cui_ctx* ui, const mir3_cui::GuildPanel& guild);
-    void GuildInput(cui_ctx* ui, LoginClient& client, cui_vec2 mouse, bool down, bool up);
+    void GuildInput(cui_ctx* ui, LoginClient& client, cui_vec2 mouse, bool down, bool up, bool fallback);
     void GuildModalInput(cui_ctx* ui, LoginClient& client, cui_vec2 mouse, bool down, bool up);
     void PaintGuild(cui_ctx* ui, cui_rect rect, bool drawPanel, bool drawDialog) const;
     int GuildRowCount(const mir3_cui::GuildPanel& guild) const;
@@ -638,7 +638,7 @@ private:
     void OpenNpc(cui_ctx* ui, mir3::WilArchive& archive);
     void LayoutNpc(cui_ctx* ui, const mir3_cui::NpcDialogue& npc);
     void BuildNpcBackground(cui_ctx* ui);
-    void NpcInput(cui_ctx* ui, LoginClient& client, cui_vec2 point, bool down, bool up, int wheel);
+    void NpcInput(cui_ctx* ui, LoginClient& client, cui_vec2 point, bool down, bool up);
     void NpcPromptInput(cui_ctx* ui, LoginClient& client, cui_vec2 point, bool down, bool up);
     void PaintNpc(cui_ctx* ui, cui_rect rect) const;
     int NpcOptionAt(cui_vec2 point) const;
@@ -682,7 +682,7 @@ private:
                        : cui_rect{float(315+38*(row%4)),float(shopTop_+42+38*(row/4)),35,35};
     }
     void OpenShop(cui_ctx* ui, mir3::WilArchive& archive, const std::filesystem::path& items);
-    void ShopInput(cui_ctx* ui, LoginClient& client, cui_vec2 pointer, int wheel);
+    void ShopInput(cui_ctx* ui, LoginClient& client, cui_vec2 pointer);
     void ShopModalInput(cui_ctx* ui, LoginClient& client, cui_vec2 pointer);
     void FinishShopQuantity(LoginClient& client, bool confirm);
     void RefreshShop(cui_ctx* ui, const LoginClient& client);
@@ -842,6 +842,9 @@ private:
     };
     std::array<UtilityPanel,11> utilityOrder_ = initialUtilityOrder_;
     bool UtilityVisible(UtilityPanel panel, const LoginClient& client) const;
+    cui_rect UtilityBounds(UtilityPanel panel,const LoginClient& client) const;
+    void ScrollUtility(cui_ctx* ui,LoginClient& client,bool blocked);
+    void ScrollQuest(mir3_cui::QuestPanel& quests,cui_vec2 point,int wheel);
     void RaiseUtility(UtilityPanel panel);
     void ToggleParty(LoginClient& client);
     void ToggleQuick(LoginClient& client);
@@ -1972,6 +1975,18 @@ void Dialogs::Assets::ToggleQuest(LoginClient& client)
     }
 }
 
+void Dialogs::Assets::ScrollQuest(mir3_cui::QuestPanel& quests,cui_vec2 point,int wheel)
+{
+    if (!wheel) return;
+    if (Contains({float(questX_+80),float(questY_+310),170,70},point)) {
+        const auto* detail=quests.Description();
+        if (detail && !detail->empty())
+            questDescriptionFirst_=std::clamp(questDescriptionFirst_+wheel,0,3);
+    }
+    if (point.y<=questY_+310)
+        questFirst_=std::clamp(questFirst_+wheel,0,(std::max)(0,int(QuestLines(quests).size())-1));
+}
+
 bool Dialogs::Assets::HandleQuestInput(cui_ctx* ui, LoginClient& client, bool blocked, bool fallback)
 {
     const bool covered = QuestBlocksScene(ui);
@@ -2008,15 +2023,8 @@ bool Dialogs::Assets::HandleQuestInput(cui_ctx* ui, LoginClient& client, bool bl
     questLast_ = (std::max)(0, static_cast<int>(lines.size()) - 1);
     questFirst_ = std::clamp(questFirst_, 0, questLast_);
     const auto scroll = [&](int step) { questFirst_ = std::clamp(questFirst_ + step, 0, questLast_); };
-    if (hit(questX_, questY_, 340, 440)) {
-        const int wheel = -static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y));
-        if (hit(questX_+80,questY_+310,170,70)) {
-            const auto* detail = quests.Description();
-            if (detail && !detail->empty())
-                questDescriptionFirst_ = std::clamp(questDescriptionFirst_ + wheel, 0, 3);
-        }
-        if (local.y <= questY_ + 310) scroll(wheel);
-    }
+    if (fallback && hit(questX_,questY_,340,440))
+        ScrollQuest(quests,local,-static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y)));
 
     int button = -1;
     for (int i = 0; i < 2; ++i) {
@@ -2229,13 +2237,13 @@ bool Dialogs::Assets::GuildHit(cui_vec2 mouse, int id, int x, int y) const
     return Contains({float(x),float(y),float(art.width),float(art.height)}, mouse);
 }
 
-void Dialogs::Assets::GuildInput(cui_ctx* ui, LoginClient& client, cui_vec2 mouse, bool down, bool up)
+void Dialogs::Assets::GuildInput(cui_ctx* ui, LoginClient& client, cui_vec2 mouse, bool down, bool up, bool fallback)
 {
     auto& guild = client.guild;
     if (!guild.open) return;
     const int x = guildPosition_.x, y = guildPosition_.y;
     const bool inside = Contains(guildPosition_.Rect(), mouse);
-    if (inside) {
+    if (fallback && inside) {
         const int wheel = -static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y));
         guild.first = std::clamp(guild.first + wheel, 0, (std::max)(0, guildCount_ - 1));
     }
@@ -2352,7 +2360,7 @@ bool Dialogs::Assets::HandleGuildInput(cui_ctx* ui, LoginClient& client, bool bl
     guildCount_ = GuildRowCount(guild);
     guild.first = std::clamp(guild.first,0,(std::max)(0,guildCount_-1));
     const auto mouse = base.ToLocal(cui_mouse_pos(ui));
-    GuildInput(ui,client,mouse,cui_mouse_clicked(ui,CUI_MOUSE_LEFT),cui_mouse_released(ui,CUI_MOUSE_LEFT));
+    GuildInput(ui,client,mouse,cui_mouse_clicked(ui,CUI_MOUSE_LEFT),cui_mouse_released(ui,CUI_MOUSE_LEFT),fallback);
     guildPointer_ = mouse;
     return true;
 }
@@ -2681,23 +2689,19 @@ int Dialogs::Assets::NpcOptionAt(cui_vec2 point) const
     return -1;
 }
 
-bool Dialogs::Assets::NpcBlocksScene(cui_ctx* ui, const LoginClient& client) const
+bool Dialogs::Assets::NpcBlocksScene(cui_ctx* ui, const LoginClient& client, bool hitOnly) const
 {
-    if (!client.npcDialogue.prompt.command.empty() || npcClosePressed_ || npcArrowPressed_ || npcOptionPressed_ >= 0) return true;
+    if (!hitOnly && (!client.npcDialogue.prompt.command.empty() || npcClosePressed_ || npcArrowPressed_ || npcOptionPressed_>=0))
+        return true;
     const auto view = cui_viewport_size(ui);
     const HudPoint base({0,0,view.x,view.y});
     return base.scale > 0 && Contains({0,0,386,float(client.npcDialogue.resetScroll ? 464 : npcHeight_)},
                                      base.ToLocal(cui_mouse_pos(ui)));
 }
 
-void Dialogs::Assets::NpcInput(cui_ctx* ui, LoginClient& client, cui_vec2 point, bool down, bool up, int wheel)
+void Dialogs::Assets::NpcInput(cui_ctx* ui, LoginClient& client, cui_vec2 point, bool down, bool up)
 {
     const auto& npc = client.npcDialogue;
-    if (wheel && Contains({0,0,386,float(npcHeight_)},point)) {
-        npcFirst_ = std::clamp(npcFirst_ + wheel,0,npcScrollLimit_);
-        npcOptionPressed_ = -1;
-        npcArrowPressed_ = 0;
-    }
     const bool close = NpcHit(point,1221,346,npcHeight_-42);
     npcCloseHover_ = close && !npcClosePressed_ && npcCloseHint_.texture;
     if (npcCloseHover_) npcHintHeight_ = hudHint_.Advance(ui,1052,npcCloseHint_.height);
@@ -2760,13 +2764,18 @@ void Dialogs::Assets::DrawNpcPanel(cui_ctx* ui, LoginClient& client, bool intera
     const bool down = interactive && cui_mouse_clicked(ui,CUI_MOUSE_LEFT), up = interactive && cui_mouse_released(ui,CUI_MOUSE_LEFT);
     npcCloseHover_ = false;
     const bool hadPrompt = !npc.prompt.command.empty();
+    if (wheel && !hadPrompt && Contains({0,0,386,float(npcHeight_)},point)) {
+        npcFirst_=std::clamp(npcFirst_+wheel,0,npcScrollLimit_);
+        npcOptionPressed_=-1;
+        npcArrowPressed_=0;
+    }
     if (interactive && !hadPrompt) {
         if (!down && !up && (point.x != npcPointer_.x || point.y != npcPointer_.y)) {
             npcClosePressed_ = false;
             npcArrowPressed_ = 0;
             npcOptionPressed_ = -1;
         }
-        NpcInput(ui,client,point,down,up,wheel);
+        NpcInput(ui,client,point,down,up);
     } else if (!interactive) {
         npcClosePressed_ = false;
         npcArrowPressed_ = 0;
@@ -3400,11 +3409,11 @@ bool Dialogs::Assets::ShopHasModal(const LoginClient& client) const
         (shopActor_==client.shop.actor && shopCatalogue_==client.shop.catalogueRevision && shopBulkPrompt_);
 }
 
-bool Dialogs::Assets::ShopBlocksScene(cui_ctx* ui, const LoginClient& client) const
+bool Dialogs::Assets::ShopBlocksScene(cui_ctx* ui, const LoginClient& client, bool hitOnly) const
 {
-    if (ShopHasModal(client) ||
+    if (!hitOnly && (ShopHasModal(client) ||
         (shopActor_ == client.shop.actor && shopCatalogue_ == client.shop.catalogueRevision &&
-         (shopScrollDrag_ || shopPressed_ != ShopControl::None || shopPressedRow_ >= 0))) return true;
+         (shopScrollDrag_ || shopPressed_ != ShopControl::None || shopPressedRow_ >= 0)))) return true;
     const auto view = cui_viewport_size(ui);
     const HudPoint base({0,0,view.x,view.y});
     const cui_rect bounds = client.shop.storage ? cui_rect{-292,234,488,205}
@@ -3470,7 +3479,7 @@ void Dialogs::Assets::ShopAction(LoginClient& client, ShopControl control)
     }
 }
 
-void Dialogs::Assets::ShopInput(cui_ctx* ui, LoginClient& client, cui_vec2 pointer, int wheel)
+void Dialogs::Assets::ShopInput(cui_ctx* ui, LoginClient& client, cui_vec2 pointer)
 {
     auto& shop = client.shop;
     constexpr int top = shopTop_+32, travel = 85;
@@ -3480,12 +3489,6 @@ void Dialogs::Assets::ShopInput(cui_ctx* ui, LoginClient& client, cui_vec2 point
     const auto inside = [&](int x,int y,int w,int h) { return Contains({float(x),float(y),float(w),float(h)},pointer); };
     const bool down = cui_mouse_clicked(ui,CUI_MOUSE_LEFT), up = cui_mouse_released(ui,CUI_MOUSE_LEFT);
     const bool moved = pointer.x != shopPointer_.x || pointer.y != shopPointer_.y;
-    if (wheel) {
-        shopFirst_ = std::clamp(shopFirst_ + wheel,0,last);
-        shopFraction_ = last ? double(shopFirst_)/last : 0;
-        shopPressed_ = ShopControl::None;
-        shopPressedRow_ = shopLastRow_ = -1;
-    }
     if (last && down && inside(260,top,thumb.width,travel+thumb.height)) {
         shopScrollDrag_ = inside(260,thumbY,thumb.width,thumb.height);
         if (!shopScrollDrag_) {
@@ -3727,11 +3730,18 @@ void Dialogs::Assets::DrawShopPanel(cui_ctx* ui, LoginClient& client, int wheel,
     }
     if (!shop.bulk) shopBulkPrompt_ = false;
     shop.sourceLayout = true;
+    if (wheel && !ShopHasModal(client)) {
+        const int last=(std::max)(0,int(shop.goods.size())-1);
+        shopFirst_=std::clamp(shopFirst_+wheel,0,last);
+        shopFraction_=last ? double(shopFirst_)/last : 0;
+        shopPressed_=ShopControl::None;
+        shopPressedRow_=shopLastRow_=-1;
+    }
     if (interactive) {
         if (shop.notice || shopBulkPrompt_ || shop.withdrawalPrompt) ShopModalInput(ui,client,pointer);
         else if (cui_key_pressed(ui,CUI_KEY_ESCAPE))
             ShopAction(client,shop.offersVisible || shop.bulk ? ShopControl::OfferClose : ShopControl::Close);
-        else ShopInput(ui,client,pointer,wheel);
+        else ShopInput(ui,client,pointer);
     }
     shopPointer_ = pointer;
     if (!shop.actor) return;
@@ -6900,7 +6910,6 @@ bool Dialogs::Assets::HandleMinimapInput(cui_ctx* ui, LoginClient& client, bool 
     if (modal) return false;
     const bool ctrl=(cui_key_mods(ui)&CUI_MOD_CTRL)!=0;
     if (inside) {
-        cui_take_mouse_scroll(ui);
         const auto hit=[&](int index) {
             const auto [left,top]=map.button_position(index);
             return Contains({float(left),float(top),19,19},pointer);
@@ -7089,7 +7098,6 @@ bool Dialogs::Assets::HandleOptionsInput(cui_ctx* ui, LoginClient& client, bool 
         optionButtonStates_.fill(0);
         return false;
     }
-    if (inside) cui_take_mouse_scroll(ui);
     auto& audio = client.audioOptions;
     const auto level = [&](int i) -> int& { return i == 0 ? audio.musicLevel : audio.effectsLevel; };
     const auto hit = [&](int id, int left, int top) {
@@ -7290,8 +7298,6 @@ bool Dialogs::Assets::HandleSkillInput(cui_ctx* ui, LoginClient& client, bool bl
     if (blocked && !captured) return false;
     const bool onMenu = !blocked && Contains(skillMenu_,point);
     if (inside && !blocked) {
-        const int steps = static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y));
-        if (steps) skills.scroll = std::clamp(skills.scroll-30*steps,0,190);
         if (const auto* position = SkillAt(point,skills)) {
             if (keyboard)
                 for (int i=0;i<12;++i)
@@ -7303,7 +7309,6 @@ bool Dialogs::Assets::HandleSkillInput(cui_ctx* ui, LoginClient& client, bool bl
     if (onMenu) {
         if (up && skills.menu_target>0 && skills.find(skills.menu_target))
             client.BindSkill(skills.menu_target,int(point.y-skillMenu_.y)/40*4+int(point.x-skillMenu_.x)/40+1);
-        cui_take_mouse_scroll(ui);
         return true;
     }
     if (down && !blocked) {
@@ -7854,10 +7859,6 @@ bool Dialogs::Assets::HandlePortraitPicker(cui_ctx* ui, LoginClient& client, boo
     const auto [left,top,width,height] = Picker::initial;
     const bool inside = Contains({float(left),float(top),float(width),float(height)},point);
     if (!inside && !captured) return false;
-    if (inside) {
-        const int wheel = static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y));
-        for (int i=0;i<std::abs(wheel);++i) portraitPicker_.wheel(wheel);
-    }
     const auto tick = GetTickCount();
     const auto& thumb = portraitPickerFrames_.at(Picker::scroll[0]);
     const int kind = released ? 2 : pressed ? 0 : 1;
@@ -8092,7 +8093,6 @@ bool Dialogs::Assets::HandleStatusInput(cui_ctx* ui, LoginClient& client, bool b
     const bool close = inside && StatusContains({left,top,statusClose_[0].width,statusClose_[0].height},local);
     const int slot = inside ? StatusSlot(local) : -1;
     if (inside) {
-        cui_take_mouse_scroll(ui);
         if (!statusPanel_.dragging) statusPointer_ = local;
     }
     if (inside && cui_mouse_clicked(ui,CUI_MOUSE_LEFT)) {
@@ -8298,7 +8298,6 @@ bool Dialogs::Assets::HandleMountInput(cui_ctx* ui, LoginClient& client, bool bl
     if (blocked && !captured) return false;
     int hit = -1;
     if (inside && !blocked) {
-        cui_take_mouse_scroll(ui);
         for (std::size_t i=0;i<mir3::MountPanel::buttons.size();++i) {
             const auto [id,left,top,hint] = mir3::MountPanel::buttons[i];
             const auto& art = mountButtons_[i][0];
@@ -8422,7 +8421,6 @@ bool Dialogs::Assets::HandleTradeInput(cui_ctx* ui, LoginClient& client, bool bl
     const bool inside = Contains({float(x),float(y),float(w),float(h)},pointer);
     if (blocked && !captured) return false;
     const bool down = cui_mouse_clicked(ui,CUI_MOUSE_LEFT), up = cui_mouse_released(ui,CUI_MOUSE_LEFT);
-    if (inside && !blocked) cui_take_mouse_scroll(ui);
     const auto scroll = [&](int kind) {
         return tradeThumb_.texture && trade.scroll.pointer(kind,int(pointer.x)-x,int(pointer.y)-y,
             tradeThumb_.width,tradeThumb_.height);
@@ -8619,6 +8617,85 @@ bool Dialogs::Assets::HandleInventoryUtility(cui_ctx* ui, LoginClient& client, b
     return hit && !blocked;
 }
 
+cui_rect Dialogs::Assets::UtilityBounds(UtilityPanel panel,const LoginClient& client) const
+{
+    const auto rect=[](const auto& bounds) {
+        return cui_rect{float(bounds[0]),float(bounds[1]),float(bounds[2]),float(bounds[3])};
+    };
+    switch (panel) {
+    case UtilityPanel::Party: return {float(partyX_),float(partyY_),258,244};
+    case UtilityPanel::Guild: return guildPosition_.Rect();
+    case UtilityPanel::Quest: return {float(questX_),float(questY_),340,440};
+    case UtilityPanel::Skills: return rect(client.skills.rect);
+    case UtilityPanel::Status: return rect(statusPanel_.rect);
+    case UtilityPanel::Inventory: return {float(inventoryX_),float(inventoryY_),inventoryWidth_,inventoryHeight_};
+    case UtilityPanel::Options: return rect(optionsBounds_);
+    case UtilityPanel::Portrait: return rect(mir3::PortraitPicker::initial);
+    case UtilityPanel::Mount: return rect(client.mount.rect);
+    case UtilityPanel::Trade: return rect(client.trade.rect);
+    case UtilityPanel::Quick: return {float(quickX_),float(quickY_),280,48};
+    }
+    return {};
+}
+
+void Dialogs::Assets::ScrollUtility(cui_ctx* ui,LoginClient& client,bool blocked)
+{
+    const auto scroll=cui_mouse_scroll(ui);
+    if (blocked || (!scroll.x && !scroll.y)) return;
+    const auto view=cui_viewport_size(ui);
+    const HudPoint base({0,0,view.x,view.y});
+    if (base.scale<=0) return;
+    const auto point=base.ToLocal(cui_mouse_pos(ui));
+    if (client.minimap.visible) {
+        const auto [x,y,w,h]=client.minimap.bounds();
+        if (Contains({float(x),float(y),float(w),float(h)},point)) {
+            cui_take_mouse_scroll(ui);
+            return;
+        }
+    }
+    const int wheel=static_cast<int>(std::lround(scroll.y));
+    for (auto it=utilityOrder_.rbegin();it!=utilityOrder_.rend();++it) {
+        const auto panel=*it;
+        if (!UtilityVisible(panel,client)) continue;
+        if (!Contains(UtilityBounds(panel,client),point)) {
+            if (panel==UtilityPanel::Skills && client.skills.menu_target>=0 && Contains(skillMenu_,point)) {
+                cui_take_mouse_scroll(ui);
+                return;
+            }
+            continue;
+        }
+        cui_take_mouse_scroll(ui);
+        switch (panel) {
+        case UtilityPanel::Quest:
+            if (std::exchange(client.quests.resetScroll,false)) {
+                questFirst_=0;
+                questScrollDrag_=false;
+            }
+            if (std::exchange(client.quests.resetDescription,false)) questDescriptionFirst_=0;
+            ScrollQuest(client.quests,point,-wheel);
+            break;
+        case UtilityPanel::Guild:
+            client.guild.first=std::clamp(client.guild.first-wheel,0,(std::max)(0,GuildRowCount(client.guild)-1));
+            break;
+        case UtilityPanel::Skills:
+            client.skills.scroll=std::clamp(client.skills.scroll-30*wheel,0,190);
+            break;
+        case UtilityPanel::Portrait:
+            for (int i=0;i<std::abs(wheel);++i) portraitPicker_.wheel(wheel);
+            break;
+        default: break;
+        }
+        return;
+    }
+    const bool expanded=client.chat.expanded;
+    const auto [x,y,w,h]=mir3::HudLayout::chat_frame(expanded);
+    if (Contains({float(x),float(y),float(w),float(h)},point)) {
+        auto& history=client.chat.nativeHistory;
+        cui_take_mouse_scroll(ui);
+        if (wheel) history.scroll(expanded).wheel(wheel,int(history.lines(expanded).size()),expanded);
+    }
+}
+
 bool Dialogs::Assets::HandleUtilityPanels(cui_ctx* ui, LoginClient& client, bool covered, bool foreground, bool modal,
                                          bool& escape, bool& pointerCaptured)
 {
@@ -8645,6 +8722,7 @@ bool Dialogs::Assets::HandleUtilityPanels(cui_ctx* ui, LoginClient& client, bool
     if (QuestReady() && client.quests.open && !questFocused_) RaiseUtility(UtilityPanel::Quest);
     if (PartyReady() && client.party.open && !partyFocused_) RaiseUtility(UtilityPanel::Party);
     if (GuildReady() && client.guild.open && !guildFocused_) RaiseUtility(UtilityPanel::Guild);
+    ScrollUtility(ui,client,modal);
     const auto order = utilityOrder_;
     const bool close = !modal && !client.shop.actor && !client.chat.composing &&
         cui_shortcut(ui,0,CUI_KEY_ESCAPE);
@@ -8853,7 +8931,6 @@ void Dialogs::Assets::GameHudInput(cui_ctx* ui, LoginClient& client, cui_vec2 po
     auto& chat=client.chat;
     auto& history=chat.nativeHistory;
     const bool expanded=chat.expanded;
-    const auto chatFrame=Layout::chat_frame(expanded);
     const auto& thumb=gameHudFrames_.at(1207);
     auto& scroll=history.scroll(expanded);
     const int x=static_cast<int>(std::floor(pointer.x)), y=static_cast<int>(std::floor(pointer.y));
@@ -8870,10 +8947,6 @@ void Dialogs::Assets::GameHudInput(cui_ctx* ui, LoginClient& client, cui_vec2 po
     } else if (pointerCovered || modal) {
         controls.cancel();
     } else {
-        if (Contains({float(chatFrame[0]),float(chatFrame[1]),float(chatFrame[2]),float(chatFrame[3])},pointer)) {
-            const int wheel=static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y));
-            if (wheel) scroll.wheel(wheel,static_cast<int>(history.lines(expanded).size()),expanded);
-        }
         if (down && history.input(0,x,y,expanded,thumb.width,thumb.height,tick)) {
             controls.cancel();
             gameScrollCaptured_=true;
@@ -9441,10 +9514,11 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
             client.inventory.notice || client.inventory.bindingShortcut || merchantModal ||
             (client.shop.actor && (!nativeShop || loginArt->ShopHasModal(client))) ||
             client.inventory.drop!=mir3_cui::DropDialog::None || !client.npcDialogue.prompt.command.empty();
-        const int shopWheel = nativeShop && shopBlocksScene && !merchantModal
+        const bool overShop = nativeShop && loginArt->ShopBlocksScene(ui,client,true);
+        const int shopWheel = overShop && !modal
             ? -static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y)) : 0;
-        const int npcWheel = nativeNpc && npcBlocksScene && !merchantModal &&
-            (!client.shop.actor || (nativeShop && !shopBlocksScene))
+        const int npcWheel = nativeNpc && !modal && (!client.shop.actor || (nativeShop && !overShop)) &&
+            loginArt->NpcBlocksScene(ui,client,true)
             ? -static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y)) : 0;
         bool minimapCovered=false;
         bool utilityCovered=false, panelEscape=false, panelPointerCaptured=false;
