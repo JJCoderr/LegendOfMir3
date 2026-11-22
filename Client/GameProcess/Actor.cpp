@@ -1895,6 +1895,9 @@ BOOL CActor::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, 
 
 VOID CActor::DrawHPBar()
 {
+	// NPC 敲不死，不画血条。
+	if ( m_stFeature.bGender == _GENDER_NPC ) return;
+
 	// 血条常显：尚未收到血量时按满血绘制，收到受击数据后按实际比例。
 	const int nHealthPercent = m_wMAXHP ? int(m_bHPPercent) : 100;
 	RECT rcHP = {0, 0, (36*nHealthPercent/100), 4};
