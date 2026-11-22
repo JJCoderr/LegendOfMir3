@@ -2549,3 +2549,9 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 已修：FLD_RACE 硬编码 0，导致 410 只怪同一被动 AI；改用 max(0, AI)，现在 123 种取值。
 - 已修：ProcessMonster 的 AI 循环改成每轮 128 组、游标轮转，避免单轮遍历 2604 组导致怪物几秒才行动一次。
 - 仍存在：MonsterAggro 场景 4.8 秒内只出现 2 次 SM_HIT、0 次 SM_STRUCK。刷怪组只有 3 条时也一样，说明瓶颈不在遍历量。待查 Think 的 DupMode 分支、Operate 里 DelayProcessQ 积压，以及 _Attack 里 nPower 判定。
+
+## 2026-11-22 测试基建与真实数据
+
+- launch_csv.py 支持 --data-sql（导入 king_monster/king_items/king_magic）与 --data-then-fixture（先数据后 fixture）。
+- 现有场景 fixture 多假设最小种子库（UPDATE FLD_INDEX=33、TBL_STDITEM_ETC 的 0 号），套正式数据会命中不到行，所以只适合“只验证正式数据”的场景。
+- MonsterImageIndex 越界读修好后，正式数据下的客户端崩溃消失（此前后台任务报 RPC read/write failed）。
