@@ -93,7 +93,7 @@ def main():
     args.log_dir.mkdir(parents=True, exist_ok=True)
     with args.scenario.open('rb') as source:
         workbook = openpyxl.load_workbook(source, read_only=True, data_only=True)
-        rules = read_rule_cases(workbook) if 'Cases' in workbook.sheetnames else None
+        rules = read_rule_cases(workbook) if 'Rules' in workbook.sheetnames else None
         _, fixture = read_scenario(workbook, args.case, rules)
         root = prepare(repo, args.bin_dir.resolve(), repo/'out/debug', {'fixture': fixture}, args.port_offset)
         extract_assets(workbook, args.case, root)

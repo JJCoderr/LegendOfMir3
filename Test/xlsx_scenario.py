@@ -5,9 +5,10 @@
   省略 --pid             退回隔离环境模式，交给 launch_csv.py 建库起进程。
 
 xlsx 结构：
-  Rules 表或独立对话框表：编号 | name | target | action | params | expect
-  编号末四位是步骤号，前面的数字是功能编号。
-  Cases 表将功能编号映射到可独立执行的规则段。
+  Rules 表：编号 | CASE | name | target | action | params | expect
+  独立用例表省略 CASE 列。
+  编号按两位系统号、两位用例号、四位步骤号组成。
+  CASE 仅在每段的第一行填写用例名。
   fixture 表（可选，仅隔离环境模式）：case | sql
   files 表（可选）：case | path | encoding | text
 """
@@ -21,33 +22,57 @@ from pathlib import Path
 import openpyxl
 
 COLUMNS = ('step', 'name', 'target', 'action', 'params', 'expect')
-SUPPORT_SHEETS = {'fixture', 'files', 'Cases'}
+SUPPORT_SHEETS = {'fixture', 'files'}
 STEP_BASE = 10_000
+CASE_BASE = 100
+
+
+def case_system(case_id):
+    if type(case_id) is not int:
+        raise SystemExit(f'用例编号必须是四位整数：{case_id}')
+    system, case = divmod(case_id, CASE_BASE)
+    if not 10 <= system < CASE_BASE or not case:
+        raise SystemExit(f'无效的用例编号：{case_id}')
+    return system
 
 
 def decode_number(value):
     number = str(value)
     if not number.isascii() or not number.isdecimal():
         raise SystemExit(f'编号必须是纯数字：{number}')
-    function_id, step = divmod(int(number), STEP_BASE)
-    if not function_id or not step:
-        raise SystemExit(f'功能编号或步骤号无效：{number}')
-    return function_id, step
+    case_id, step = divmod(int(number), STEP_BASE)
+    case_system(case_id)
+    if not step:
+        raise SystemExit(f'步骤号不能为零：{number}')
+    return case_id, step
 
 
 def read_rule_cases(workbook):
-    index = dict(workbook['Cases'].iter_rows(min_row=2, values_only=True))
     rows = workbook['Rules'].values
     header = next(rows)
     identifier = header.index('编号')
-    cases = {name: [header] for name in index.values()}
+    case_column = header.index('CASE')
+    cases = {}
+    seen_ids = set()
+    active_id = active_name = system = None
     for row in rows:
         if all(cell is None for cell in row):
             continue
-        function_id, _ = decode_number(row[identifier])
-        if function_id not in index:
-            raise SystemExit(f'Cases 中缺少功能编号：{function_id}')
-        cases[index[function_id]].append(row)
+        case_id, _ = decode_number(row[identifier])
+        name = row[case_column]
+        if case_id != active_id:
+            if not name or name in cases or case_id in seen_ids:
+                raise SystemExit(f'用例 {case_id} 的首行缺少名称，或用例重复')
+            current_system = case_system(case_id)
+            if system is not None and system != current_system:
+                raise SystemExit('同一张 Rules 表必须使用相同的两位系统号')
+            system = current_system
+            active_id, active_name = case_id, name
+            seen_ids.add(case_id)
+            cases[name] = [header]
+        elif name is not None:
+            raise SystemExit(f'用例 {case_id} 仅在首行填写 CASE 名称')
+        cases[active_name].append(row)
     return cases
 
 
@@ -62,7 +87,7 @@ def read_scenario(workbook, case, rule_cases=None):
     position = {name: header.index(name) for name in COLUMNS if name in header}
     identifier = header.index('编号') if '编号' in header else None
     records = []
-    function_id = None
+    case_id = None
     for row in rows[1:]:
         if row is None or all(cell is None for cell in row):
             continue
@@ -70,9 +95,9 @@ def read_scenario(workbook, case, rule_cases=None):
                   for name, index in position.items() if index < len(row)}
         if encoded:
             prefix, step = decode_number(row[identifier])
-            if function_id is not None and prefix != function_id:
-                raise SystemExit(f'{case}: 同一规则段包含多个功能编号')
-            function_id = prefix
+            if case_id is not None and prefix != case_id:
+                raise SystemExit(f'{case}: 同一规则段包含多个用例编号')
+            case_id = prefix
             record['step'] = str(step)
         if not record.get('step', '').strip():
             continue
@@ -127,7 +152,7 @@ def materialize_case(workbook, case, directory, rule_cases=None, name=None):
 def export_case(workbook_path, case, directory):
     workbook = openpyxl.load_workbook(workbook_path, read_only=True, data_only=True)
     try:
-        rules = read_rule_cases(workbook) if 'Cases' in workbook.sheetnames else None
+        rules = read_rule_cases(workbook) if 'Rules' in workbook.sheetnames else None
         return materialize_case(workbook, case, directory, rules)
     finally:
         workbook.close()
@@ -191,7 +216,7 @@ def main():
 
     workbook = openpyxl.load_workbook(args.scenario, read_only=True, data_only=True)
     try:
-        rule_cases = read_rule_cases(workbook) if 'Cases' in workbook.sheetnames else None
+        rule_cases = read_rule_cases(workbook) if 'Rules' in workbook.sheetnames else None
         cases = list(rule_cases) if rule_cases is not None else [name for name in workbook.sheetnames if name not in SUPPORT_SHEETS]
         if args.list:
             print('\n'.join(cases))

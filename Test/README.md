@@ -2,9 +2,11 @@
 
 ## 工作簿和用例编号
 
-`Test` 根目录每个子系统只有一本工作簿，文件名沿用原目录名，如 `Shop.xlsx`。一个子系统的全部规则集中在 `Rules` 表，主流程排在前面。需要不同测试存档的规则仍各自初始化，`Cases` 表记录规则段名称与数字 ID。客户端 UI 集中在 `ClientUI.xlsx`，可按对话框分表。跨子系统的冒烟场景单独使用 `GameplaySmoke.xlsx`。
+`Test` 根目录每个子系统只有一本工作簿，文件名沿用原目录名，如 `Shop.xlsx`。一个子系统的全部规则集中在 `Rules` 表，主流程排在前面。需要不同测试存档的规则仍各自初始化。客户端 UI 集中在 `ClientUI.xlsx`，可按对话框分表。跨子系统的冒烟场景单独使用 `GameplaySmoke.xlsx`。
 
-步骤表只有 `编号 | name | target | action | params | expect` 六列。`编号` 是纯数字，前面的数字是功能 ID，末四位是步骤 ID。例如 `610260` 表示功能 61 的步骤 260。`name` 填中文步骤名称。运行器从编号推导临时 CSV 的 `step`，所以 `--from 260 --to 260` 以及现有日志 ID `ShopBuy.260` 的含义保持不变。
+`Rules` 列顺序为 `编号 | CASE | name | target | action | params | expect`。`CASE` 只在用例的首行填写名称，后续步骤留空。八位数字编号由两位系统号、两位用例号和四位步骤号组成。例如 `21010260` 是商店 `21` 的第 `01` 个用例 `ShopBuy` 的第 260 步。`name` 填中文步骤名称。独立用例表省略 `CASE` 列，使用工作表名作为用例名。`--from 260 --to 260` 和日志 ID `ShopBuy.260` 仍按原步骤号运行。
+
+系统号按工作簿固定分配：`10 Character`、`11 Chat`、`12 ClientUI`、`13 Combat`、`14 GameplaySmoke`、`15 Inventory`、`16 Login`、`17 Monsters`、`18 Npc`、`19 Rpc`、`20 Runner`、`21 Shop`、`22 Skills`。新增用例时使用本工作簿的空闲两位用例号，已有编号保持稳定。
 
 `fixture` 表按规则段保存隔离库初始化 SQL，`files` 表用 `case | path | encoding | text` 保存可直接编辑的 NPC 文本，执行时按原编码写入 CRLF 换行。运行器在 `out` 下临时展开所选规则段。需要终止服务并复用存档的二阶段回归仍由 `verify_equipment_recovery.py` 驱动。
 
