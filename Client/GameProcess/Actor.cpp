@@ -1903,7 +1903,7 @@ VOID CActor::DrawHPBar()
 	const int nHealthPercent = m_wMAXHP ? int(m_bHPPercent) : 100;
 	RECT rcHP = {0, 0, (36*nHealthPercent/100), 4};
 
-	auto& image = g_xGameProc.m_xImage.m_xImageList[_IMAGE_HPBAR];
+	auto& image = g_xGameProc.m_xImage.m_xImageList[_IMAGE_PROGUSE];
 	if ( !image.NewSetIndex(2) ) return;
 	g_xMainWnd.DrawWithImageForComp(
 					m_shScrnPosX+7,
@@ -4717,7 +4717,7 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 						{				
 							m_bIsMoved = FALSE;
 							m_bInputLock = FALSE;
-							m_pxMap->SetMovedTileBuffer(m_shShiftTileX, m_shShiftTileX);
+							m_pxMap->SetMovedTileBuffer(m_shShiftTileX, m_shShiftTileY);
 							m_bMoveSpeed	= 0;
 							m_shShiftPixelX	= 0;
 							m_shShiftPixelY	= 0;

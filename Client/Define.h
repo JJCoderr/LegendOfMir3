@@ -116,7 +116,6 @@
 #define _MAX_MONSTER_IMAGE			12
 
 #define _MAX_IMAGE					61
-#define _IMAGE_HPBAR					60	// 血条专用 ProgUse.wil 实例，避免与地面闪光、状态框共用索引
 
 #define _TEXTR_FILE_MAGIC			0
 #define _TEXTR_FILE_MONMAGIC		1
