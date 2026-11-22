@@ -12,6 +12,7 @@ import argparse
 import csv
 import subprocess
 import sys
+import time
 import tempfile
 from pathlib import Path
 
@@ -89,7 +90,13 @@ def main():
             if args.log is not None:
                 args.log.parent.mkdir(parents=True, exist_ok=True)
                 command.extend(['--log', str(args.log)])
-            return subprocess.call(command)
+            # 上一个客户端连接释放管道需要一点时间，首次失败时重试。
+            for attempt in range(3):
+                code = subprocess.call(command)
+                if code == 0 or attempt == 2:
+                    return code
+                time.sleep(1.5)
+            return code
         command = [sys.executable, str(Path(__file__).with_name('launch_csv.py')), str(generated),
                    '--bin-dir', str(args.bin_dir), '--clients', str(args.clients)]
         if args.first is not None:
