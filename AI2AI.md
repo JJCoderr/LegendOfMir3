@@ -2478,3 +2478,11 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 服务端按 Envir/MiniMap.txt（地图文件名 小图号）回复 SM_MINIMAP(710)，缺失回 711。该文件用 C 接口读取并缓存，ObjectPlayer.cpp 位于命名空间内，不能引入 STL 流头。
 - 验证：按 V 后日志出现 id=1033 与 id=710 param=1001，1001 为比奇县（0）的小图号。
 - 攻城地图（窗口 18）仍未打通：服务端没有任何 1312/1350/1351/1353 下发，客户端 CSiegeWnd::EntryBounds 在 controlled 为假时返回空矩形，HUD 入口不出现。
+
+## 2026-11-22 攻击除零崩溃与名字颜色
+
+- 症状：点怪攻击后所有客户端掉线。排查发现不是网络问题：Windows 应用程序错误显示 EIServer.exe 崩溃，异常码 0xc0000094（整数除零），偏移 0x29196。用 /MAP 重新链接后该偏移落在 CCharObject::_Attack。
+- 根因：命中判定 `rand() % pObject->m_btSpeedPoint`，真实怪物（来自 System.db）的速度点为 0，取模整除零。改为速度点大于 0 才判定，无敏捷目标按必中；顺带给 CItem::GetUpgrade 的取模参数加零保护。
+- 验证：攻击 ProbeDeath20 由 30 血降到 27，ProbeFast 与猪、鸡被击杀，角色获得经验并在聊天栏出现「得到经验值1。」，EIServer 进程存活且无新的应用程序错误。
+- NPC 与怪物名字发黑：服务端下发 _CHAT_COLOR3（聊天色索引 2），客户端 GetUserNameColor 只认 MIR3 名字色值域（255/251/249…），查不到回落 0。服务端改为 NPC 与普通怪物发 255（白）、神圣战甲发 249（红），客户端对未匹配索引按白色兜底。
+- 参考实现：GODOT 分支 client/src/hud/scene_name.hpp 的 colorref 明确以 47/69/125/147/154/168/180/221/229/249/251/252/254/255 为色值域，未匹配索引返回 0；本轮服务端按该值域下发，客户端兜底是为了兼容旧数据。
