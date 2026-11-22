@@ -411,31 +411,20 @@ void CMirSound::PlayRoleVoice(bool creation, int profession, int gender)
 
 void CMirSound::PlayBkMusicMp3(BOOL Looped,INT	nIndex)
 {
-	if(m_bBGMPlay)
-	{
-		CHAR		szMp3FileName[MAX_PATH];
-		ZeroMemory(szMp3FileName,MAX_PATH);
-		if(m_pMp3->IsPlaying())
-		{
-			// 播放中
-			m_pMp3->OnStop();
-		}
-//		FindBGMFileName(nIndex,szMp3FileName);
-		strcpy(szMp3FileName,"1.mp3");	// 临时
-		if(szMp3FileName[0]!=NULL)
-		{
-			m_pMp3->LoadMp3(szMp3FileName,g_xMainWnd.GetSafehWnd());
-			m_pMp3->OnPlay(-5000,Looped);			
-			BGMFadeIn();
-		}
-		else
-		{
-			
-		}
-	}
+	// nIndex 来自地图配置（MapMusic.ini），0 表示该地图没有背景音乐。
+	if(!m_bBGMPlay) return;
+
+	if(m_pMp3->IsPlaying()) m_pMp3->OnStop();
+	if(nIndex <= 0) return;
+
+	CHAR szMp3FileName[MAX_PATH]={};
+	sprintf(szMp3FileName,"Sound\\B%d.mp3",nIndex);
+	if(GetFileAttributesA(szMp3FileName)==INVALID_FILE_ATTRIBUTES) return;
+
+	m_pMp3->LoadMp3(szMp3FileName,g_xMainWnd.GetSafehWnd());
+	m_pMp3->OnPlay(-5000,Looped);
+	BGMFadeIn();
 }
-
-
 ///////////////////////////////////////////////////////////////////////
 //  Name		:	StopBkMusic
 //  Destination :	Stop play BackGround Sound

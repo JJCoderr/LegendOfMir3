@@ -513,7 +513,9 @@ VOID CActor::PlayActSound()
 	// 表外外观没有专用音效，避免按外观编号越界读取。
 	constexpr INT ActorSoundGroups = sizeof(nActorSndTbl)/sizeof(nActorSndTbl[0]);
 	const INT nShape = m_stFeature.bDress;
-	const INT nSoundGroup = ( nShape >= 0 && nShape < ActorSoundGroups ) ? nActorSndTbl[nShape] : -1;
+	// MIR3 直接用外观编号作为音效组（GODOT 分支同样是 10*外观+偏移），表只用于旧版对照。
+	(void)nActorSndTbl;
+	const INT nSoundGroup = ( nShape >= 0 && nShape < 100 ) ? nShape : ( nShape % 100 );
 	const auto GroupSample = [nSoundGroup](INT nOffset) { return nSoundGroup < 0 ? -1 : 200 + nSoundGroup*10 + nOffset; };
 
 	if ( m_dwCurrFrame == m_dwFstFrame+1 && m_bCurrMtn == _MT_MON_APPEAR )			// 出现。
