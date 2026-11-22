@@ -50,6 +50,11 @@ def main():
         shutil.copy2(REPO / 'Server/GameData/MapMusic.ini', music)
         print('  复制 MapMusic.ini')
 
+    bgm = runtime / 'BgmList.wwl'
+    if not bgm.exists() and (args.assets / 'BgmList.wwl').exists():
+        shutil.copy2(args.assets / 'BgmList.wwl', bgm)
+        print('  复制 BgmList.wwl（地图背景音乐表）')
+
     for name, sub in (('Data', 'Data'), ('Map', 'Map'), ('Sound', 'Sound')):
         if ensure_directory_link(runtime / name, args.assets / sub):
             print(f'  建立 {name} 链接')
