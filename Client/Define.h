@@ -240,6 +240,8 @@
 #define _STATE_GRAY					0
 #define _STATE_ABLEND				1
 #define _STATE_SHIELDUSE			2
+// 08000000 为慢速动作状态位：怪物动作帧间隔翻倍。
+#define _STATE_SLOWACTION			0x08000000
 #define _STATE_NOTUSED				0XFFFF
 
 #define _RUN_MINHEALTH				10

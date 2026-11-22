@@ -2446,3 +2446,13 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - RPC 状态增加本地/远端人物 horse、hair_color、dress_color。Character/CharacterAppearance.csv + fixture 覆盖首次姓名、中文姓名查询、移动保持、保存重进与完整 16 位默认颜色。
 - Client/EIServer Release 构建成功；外观身份 47、全链路双向分片 47、三客户端战斗隔离回归 66，共 160 项通过。日志 out/csv-validation/character-appearance-fixed.log、character-appearance-fragments/test.log、character-appearance-combat-regression.log；失败复现 character-appearance-before.log。
 - 本轮只对齐扩展段，既有基础外观/登录包尚未全面迁移至 Godot 所示 V1.45 完整结构；染色视觉效果、非默认染色及骑乘场景尚未验证。总体适配继续。
+
+## 2026-11-22 怪物动作时长与朝向分档
+
+- 参照 Godot 分支 client/src/world/Monster.cpp 的 monster_idle_motion / monster_attack_motion / monster_struck_motion / monster_death_motion / monster_burrow_motion，新增 Client/GameProcess/MonsterMotion.h：按外观编号给出空闲、普攻1、普攻2、魔攻1、魔攻2、受击、死亡、出现/消失的起始帧、帧数与帧间隔。CSprite::SetMonFrameInfo 由常量化 switch 改为整表写入。
+- 补齐的档位包括 33/46/82 普攻 90ms、90 号 160ms、95/120 十帧 90ms、141 死亡起始 720 二十帧、530-533/538 空闲单帧 200ms、145-147 空闲四帧 150ms；旧实现除 94/30/104 外几乎全是常数。
+- 同文件补 MonsterResourceDirection（原版 406750）：每次起动作按起始帧重判朝向。CActor::Create 与 CActor::SetMotionFrame 原为硬编码 switch，且 Create 读取尚未赋值的 m_stFeature；现统一判定，补 67 攻击段=1、127/153/179/187/188/189/534-537→0、530-533/538 仅死亡段→0。
+- 慢速状态位 0x08000000 提升为 Define.h 的 _STATE_SLOWACTION，并接入 CActor::UpdateMotionState：怪物待机、受击、攻击、死亡帧间隔翻倍。慢速行走隔帧推进未实现。
+- Client/Tools/test_monster_motions.cpp 与 MonsterMotionCheck 目标覆盖 60 项分档及方向断言；Release 构建通过，MONSTER_MOTIONS_OK failures=0。
+- 端到端回归 Test/Monsters/MonstersSpawn.csv 29 项通过（进图、怪物生成、治疗与 wire 断言），日志 out/monster-motions-check.log。
+- 本批只对齐客户端表现；2000 段染色怪物、远程弹道方向表与怪物攻死亡特效分派仍未接入，原服逐项对照继续。

@@ -15,6 +15,7 @@
 #include "EffectRenderer.h"
 #include "SpellReply.h"
 #include "Common/Mir3HumanAppearance.h"
+#include "MonsterMotion.h"
 #include "Common/LegacyPanel.h"
 
 
@@ -268,21 +269,9 @@ BOOL CActor::Create(CImageHandler* pxImgHandler, FEATURE* pstFeature, BYTE bMtn,
 					return FALSE;
 				else
 				{
-					switch ( m_stFeature.bDress )
-					{
-					case 31:	// 食人草.
-					case 67:	// 烛龙神.
-					case 73:	// 飞膜元虫.
-					case 104:	// 赤月魔.
-						bDir = 0;
-					case 106:	// 暴眼蜘蛛.
-						bDir = 1;
-						break;
-					default:
-						break;
-					}
-
 					g_xSpriteInfo.SetMonFrameInfo(pstFeature->bDress);
+					// 原版 406750 按动作起始帧重判朝向，见 MonsterMotion.h。
+					bDir = (BYTE)mir3::MonsterResourceDirection(pstFeature->bDress, g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm, bDir);
 					m_bActorImgIdx = _IMAGE_MONSTER1 + (pstFeature->bDress / 10);
 					m_dwFstFrame = g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm + (pstFeature->bDress%10)*_MAX_MON_FRAME + bDir*10;
 					m_dwEndFrame = m_dwFstFrame + g_xSpriteInfo.m_stMonSpr[bMtn].wFrmCnt;
@@ -465,24 +454,9 @@ BOOL CActor::SetMotionFrame(BYTE bMtn, BYTE bDir)
 		break;
 	case _GENDER_MON:
 		{
-			if ( m_stFeature.bDress == 31 && bMtn == _MT_MON_STAND )
-				bDir = 0;
-
-		switch ( m_stFeature.bDress )
-		{
-		case 31:	// 食人草.
-		case 67:	// 烛龙神.
-		case 73:	// 飞膜元虫.
-		case 104:	// 赤月魔.
-			bDir = 0;
-		case 106:	// 暴眼蜘蛛.
-			bDir = 1;
-			break;
-		default:
-			break;
-		}
-
 			g_xSpriteInfo.SetMonFrameInfo(m_stFeature.bDress);
+			// 原版 406750 按动作起始帧重判朝向，见 MonsterMotion.h。
+			bDir = (BYTE)mir3::MonsterResourceDirection(m_stFeature.bDress, g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm, bDir);
 			m_dwFstFrame = g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm + (m_stFeature.bDress%10)*_MAX_MON_FRAME + bDir*10;
 			m_dwEndFrame = m_dwFstFrame + g_xSpriteInfo.m_stMonSpr[bMtn].wFrmCnt;
 			m_wDelay = g_xSpriteInfo.m_stMonSpr[bMtn].wDelay;
@@ -1611,7 +1585,11 @@ VOID CActor::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 	{
 		m_wCurrDelay	   += nLoopTime;
 
-		if ( m_wCurrDelay > m_wDelay )
+		// 慢速状态让怪物动作帧间隔翻倍，对照 Godot 分支 SceneChicken::slowed。
+		const BOOL bSlowMonster = ( m_stFeature.bGender == _GENDER_MON ) && ( m_nState & _STATE_SLOWACTION );
+		const WORD wMotionDelay = bSlowMonster ? WORD(m_wDelay * 2) : m_wDelay;
+
+		if ( m_wCurrDelay > wMotionDelay )
 		{
 			m_wCurrDelay = 0;
 
@@ -3057,8 +3035,7 @@ bool CHero::AdvanceSpellAnimation(DWORD elapsed)
 {
     if(m_bCurrMtn!=_MT_SPELL1 && m_bCurrMtn!=_MT_SPELL2) return false;
     m_wCurrDelay=0;m_spellFrameElapsed+=elapsed;
-    constexpr DWORD SlowActionStatus=0x08000000u;
-    const DWORD interval=DWORD(m_wDelay)*((DWORD(m_nState)&SlowActionStatus)?2:1);
+    const DWORD interval=DWORD(m_wDelay)*((DWORD(m_nState)&_STATE_SLOWACTION)?2:1);
     if(m_dwCurrFrame<m_dwEndFrame && LONG(m_spellFrameElapsed)>LONG(interval)) {
         m_spellFrameElapsed=0;++m_dwCurrFrame;++m_dwCurrEffectFrame;++m_bEffectFrame;
         if(this!=&g_xGameProc.m_xMyHero && m_bMsgHurryCheck) {

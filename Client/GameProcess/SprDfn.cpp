@@ -12,6 +12,7 @@
 
 
 #include "StdAfx.h"
+#include "MonsterMotion.h"
 
 
 /******************************************************************************************************************
@@ -320,147 +321,11 @@ VOID CSprite::SetInfo()
 
 VOID CSprite::SetMonFrameInfo(WORD wMonNum)
 {
-/*	//~~~ Monster 精灵设置. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	SetSprDfn(&m_stMonSpr[0],    0,  4, 300);			// 空闲动作.
-	SetSprDfn(&m_stMonSpr[1],   80,  6, 130);			// 行走动作.
-	SetSprDfn(&m_stMonSpr[2],  160,  6, 120);			// 普通攻击动作1.
-	SetSprDfn(&m_stMonSpr[3],  240,  2, 300);			// 受击动作.
-	SetSprDfn(&m_stMonSpr[4],  320, 10, 150);			// 死亡动作.
-	SetSprDfn(&m_stMonSpr[5],  400,  6, 150);			// 普通攻击动作2.
-	SetSprDfn(&m_stMonSpr[6],  480, 10, 150);			// 魔法攻击动作1.
-	SetSprDfn(&m_stMonSpr[7],  560, 10, 150);			// 魔法攻击动作2.
-	SetSprDfn(&m_stMonSpr[8],  640,  6, 150);			// 出现,消失.
-	SetSprDfn(&m_stMonSpr[9],  720,  6, 150);			// 特殊动作1.
-*/
-	// 0. Monster Mtn -> 空闲动作.
-	switch ( wMonNum )
-	{
-	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:
-		SetSprDfn(&m_stMonSpr[0],    0,  4, 300);		
-	default:
-		SetSprDfn(&m_stMonSpr[0],    0,  4, 300);		
-		break;
-	}
+	// 按外观编号一次取整表，逐槽写入，见 MonsterMotion.h（对照 Godot 分支 world/Monster.cpp）。
+	const auto motions = mir3::MonsterMotionTable((int)wMonNum);
 
-	// 1. Monster Mtn -> 行走动作.
-	SetSprDfn(&m_stMonSpr[1],    80,  6, 90);
-
-	// 2. Monster Mtn -> 普通攻击动作1.
-	switch ( wMonNum )
-	{
-	case  0: case  1: case  2: case 12: case 99:	
-		SetSprDfn(&m_stMonSpr[2],  160,  6, 120);	// 低波, 夜行鬼, 凯帕洛普, 犬, 巴奥达尔德.
-		break;
-	case 14: case 16: case 92:
-		SetSprDfn(&m_stMonSpr[2],  160,  6, 140);	// 兵用蚂蚁、德南蚂蚁、达贡。
-		break;
-	case  3: case  5: case  6: case  7: case  8: case  9: case 15: case 19: case 93: case 96: case 97: case 98:
-		SetSprDfn(&m_stMonSpr[2],  160,  6, 150);	// 沙怪, 巴库加尔纳, 巴扎乌尔, 治愈蚁, 甲胄蚁, 伦, 努玛王, 雷迪加尔纳, 德纳加达科, 波鲁蚁, 风伯, 努玛王1.
-		break;
-	case  4: case 10: case 11: case 13: case 17: case 18: case 94:
-		SetSprDfn(&m_stMonSpr[2],  160,  6, 170);	// 石匠人, 摩狄真, 摩狄真1, 努玛法老, 努玛飞将, 努玛, 沙鱼。
-		break;
-	default:
-		SetSprDfn(&m_stMonSpr[2],  160,  6, 130);	
-		break;
-	}
-
-	// 3. Monster Mtn -> 受击动作.
-	switch ( wMonNum )
-	{
-	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:
-		SetSprDfn(&m_stMonSpr[3],  240,  2, 300);	
-		break;
-	case  116:										// 马.
-	case  117:										
-	case  118:										
-		SetSprDfn(&m_stMonSpr[3],  240, 3, 160);		
-
-	default:
-		SetSprDfn(&m_stMonSpr[3],  240,  2, 300);	
-		break;
-	}
-
-	// 4. Monster Mtn -> 死亡动作.
-	switch ( wMonNum )
-	{
-	case  94:										// 沙鱼
-		SetSprDfn(&m_stMonSpr[4],  320, 10, 160);		
-		break;
-	case  30:										// 蒙科.
-		SetSprDfn(&m_stMonSpr[4],  320, 4, 160);		
-		break;
-	case  104:										// 赤月魔.
-		SetSprDfn(&m_stMonSpr[4],  320, 20, 160);		
-		break;
-	default:
-		SetSprDfn(&m_stMonSpr[4],  320, 10, 165);
-		break;
-	}
-
-	// 5. Monster Mtn -> 普通攻击动作2.
-	switch ( wMonNum )
-	{
-	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:
-		SetSprDfn(&m_stMonSpr[5],  400,  6, 150);
-		break;
-	default:
-		SetSprDfn(&m_stMonSpr[5],  400,  6, 150);		
-		break;
-	}
-
-	// 6. Monster Mtn -> 魔法攻击动作1。
-	switch ( wMonNum )
-	{
-	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:
-		SetSprDfn(&m_stMonSpr[6],  480, 10, 150);		
-		break;
-	default:
-		SetSprDfn(&m_stMonSpr[6],  480, 10, 150);		
-		break;
-	}
-
-	// 7. Monster Mtn -> 魔法攻击动作2。
-	switch ( wMonNum )
-	{
-	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:
-		SetSprDfn(&m_stMonSpr[7],  560, 10, 150);		
-		break;
-	default:
-		SetSprDfn(&m_stMonSpr[7],  560, 10, 150);		
-		break;
-	}
-
-	// 8. Monster Mtn -> 消失、出现动作.
-	switch ( wMonNum )
-	{
-	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:
-		SetSprDfn(&m_stMonSpr[8],  640,  10, 150);		
-		break;
-	case 83:	// 住魔神将.
-		SetSprDfn(&m_stMonSpr[8],  640,  6, 150);		
-		break;
-	case 84:	// 走马护法。
-		SetSprDfn(&m_stMonSpr[8],  640,  6, 150);		
-		break;
-	case 85:	// 走马王。
-		SetSprDfn(&m_stMonSpr[8],  640,  20, 150);		
-		break;
-	default:
-		SetSprDfn(&m_stMonSpr[8],  640,  10, 150);		
-		break;
-	}
-
-	// 9. Monster Mtn -> 特殊动作1.
-	switch ( wMonNum )
-	{
-	case  0: case  1: case  2: case  3: case  4: case  5: case  6: case  7: case  8: case  9:
-		SetSprDfn(&m_stMonSpr[9],  720,  6, 150);		
-		break;
-	default:
-		SetSprDfn(&m_stMonSpr[9],  720,  6, 150);		
-		break;
-	}
+	for ( int index = 0; index < _MAX_MON_MTN; ++index )
+		SetSprDfn(&m_stMonSpr[index], motions[index].first, motions[index].frames, motions[index].delay);
 }
 
 

@@ -115,3 +115,5 @@ target_include_directories(Client PRIVATE
 
 add_executable(InputCoordinatesCheck EXCLUDE_FROM_ALL Tools/test_input_coordinates.cpp)
 target_link_libraries(InputCoordinatesCheck PRIVATE user32)
+
+add_executable(MonsterMotionCheck EXCLUDE_FROM_ALL Tools/test_monster_motions.cpp)
