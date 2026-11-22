@@ -26,6 +26,14 @@ DATA_SCRIPTS = ('king_monster.sql', 'king_items.sql', 'king_magic.sql')
 def kill_previous():
     subprocess.run(['taskkill', '/F', '/IM', 'Mir2Ex.exe'], capture_output=True)
     subprocess.run(['taskkill', '/F', '/IM', 'EIServer.exe'], capture_output=True)
+    # 等文件句柄真正释放，否则复制 exe 会报 WinError 32。
+    for _ in range(20):
+        alive = [name for name in ('Mir2Ex.exe', 'EIServer.exe')
+                 if subprocess.run(['tasklist', '/FI', f'IMAGENAME eq {name}'],
+                                   capture_output=True, text=True).stdout.find(name) >= 0]
+        if not alive:
+            break
+        time.sleep(0.5)
     print('已关闭上一套进程')
 
 
