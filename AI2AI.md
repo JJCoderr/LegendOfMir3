@@ -398,6 +398,7 @@ cmake --build build-cui --target Mir3CuiClient --config Release
 - [CuiDialogScenarios.csv](Client/Tests/CuiDialogScenarios.csv) 可按场景选择和排序，每组使用独立的本地网关与状态目录。每个步骤可覆盖默认动作或附加截图后的鼠标、键盘、文本与滚轮操作。运行入口及格式见 [对话框与面板场景清单](Docs/Cui-Dialog-Inventory.md)。
 - 依据 `47A670/46E6E0/454410/456960/457F50`，给五个独立窗补齐原版按钮、点击范围、邮件七行列表和寄售双检索框。音频沿用 Godot 系统选项的原版图集，登录状态和物品提示接入原版确认框，新信件入口复用收件图标。
 - Win32 Release 的 `Mir3CuiClient`、`Client` 和回放程序构建通过。全量 18 组通过，输出 68 张截图。另验邮件滚动后读取、以 Alt+M 覆盖默认动作、乱序选跑四组、旧格式输入和无效计划返回非零。前后对照为 `build-cui/dialog-controls-comparison.png`。
+- 文字布局按 Mir3.exe 的 `4546F0`、`456960`、`4586F0` 和 `46E6E0` 绘制矩形核对。寄售登记标题由原逻辑矩形 `(46,30,80,15)` 换算到去掉顶部透明区后的 `(46,18,80,15)`。独立窗文字按各自栏位裁剪，角色创建提示使用实际系统字体度量确定边框。选角、人物资料与地图、寄售、邮件四组无截图回放通过。
 
 - 以 `br_godot_test_261115` 的 `45d45af` 构建并运行 Godot 实际视口。隔离副本位于 `build-cui/godot-reference`，使用 Godot 4.7.2、godot-cpp 的 `e83fd090` 和本地原客户端资源。在隔离副本中去除怪物模块对未声明 `action_at` 的赋值以解除编译错误，主分支未改该模块。
 - `login_smoke.gd -- --screenshots` 输出 `LOGIN_UI_OK` 及 9 张截图。首组验收用例为 640×480 密码错误框，与当前 CUI 的相同账号及错误状态对照，相差 304075／307200 像素。并排图和差异图保存在 `build-cui`。该组结果是重做前基线，仍需用运行时资源、字体和控件状态重新实现。

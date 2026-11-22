@@ -1444,8 +1444,8 @@ void Dialogs::Assets::OpenSelection(cui_ctx* ui, mir3::WilArchive& gameInterface
     }
     for (int i = 0; i < 5; ++i) {
         const auto text = Message(201 + i);
-        const auto width = 6 * static_cast<int>(mir3::utf8_to_ansi(text).size());
-        creationHints_[i] = Raster(ui, text, width + 4, 16, false, mir3::TextFont::normal);
+        const auto extent = mir3::raster_text(text,640,32,false,mir3::TextFont::normal);
+        creationHints_[i] = Raster(ui,text,extent.text_width+2,extent.text_height,false,mir3::TextFont::normal);
     }
 }
 
@@ -1877,11 +1877,15 @@ void Dialogs::Assets::PaintSelection(cui_ctx* ui, cui_rect rect) const
             const auto& origin = creationOrigins_[i];
             if (!SelectionButtonHit(creationFrames_[i][0], origin.x, origin.y)) continue;
             const auto& hint = creationHints_[i];
-            const int x = static_cast<int>(hints[i].x), y = static_cast<int>(hints[i].y);
-            box(x,y,hint.width-4,15,{125,125,75,50},{180,180,120,255});
+            const int width=hint.width+5, height=hint.height+5;
+            const int x=std::min(static_cast<int>(hints[i].x),640-width);
+            const int y=std::min(static_cast<int>(hints[i].y),480-height);
+            box(x,y,width,height,{125,125,75,50},{180,180,120,255});
+            cui_push_clip(ui,bounds(x+1,y+1,width-2,height-2));
             for (const auto& offset : std::array<cui_vec2,4>{{{1,2},{3,2},{2,1},{2,3}}})
                 image(hint, x + offset.x, y + offset.y, {25,25,25,255});
             image(hint, x + 2, y + 2, {255,255,180,255});
+            cui_pop_clip(ui);
             break;
         }
     } else {
@@ -6065,16 +6069,24 @@ struct IndependentPanel {
         return hover && pressedButton==id && cui_mouse_released(ui,CUI_MOUSE_LEFT);
     }
 
-    void TextAt(float x, float y, float width, const std::string& text) const
+    void TextAt(float x, float y, float width, float height, const std::string& text, bool centered = false) const
     {
-        At(x,y,width,32,[&] {
+        At(x,y,width,height,[&] {
+            cui_box field{};
+            field.width=field.height=CUI_FILL;
+            field.clip=true;
+            field.justify=CUI_JUSTIFY_CENTER;
+            cui_box_begin(ui,&field);
             cui_text_opts options{};
             options.font=assets ? assets->IndependentEditor(0,scale).font : CUI_FONT_BODY;
             options.size=12*scale;
             options.color=CUI_RGB(0xfafafa);
             options.nowrap=true;
+            options.align=centered ? CUI_TEXT_CENTER : CUI_TEXT_LEFT;
+            options.line_height=1;
             options.width=CUI_FILL;
             cui_text_ex(ui,text.c_str(),&options);
+            cui_box_end(ui);
         });
     }
 
@@ -6121,7 +6133,7 @@ template<typename DrawItem>
 void DrawMarketRegistration(const auto& panel, LoginClient& client, DrawItem drawItem)
 {
     auto& market = client.windows.market;
-    panel.TextAt(16,3,235,"[ 物品登记 ]");
+    panel.TextAt(46,18,80,15,"[ 物品登记 ]",true);
     if (panel.ReleasedIn(240,51,151,129)) {
         if (const auto* item = client.HeldItem(); item && client.equipment.heldSlot < 0 && !item->IsGold()) {
             market.item = item->key;
@@ -6129,12 +6141,12 @@ void DrawMarketRegistration(const auto& panel, LoginClient& client, DrawItem dra
         }
     }
     const auto* item = client.inventory.Find(market.item);
-    panel.TextAt(247,60,146,item ? item->label : "放入背包物品");
+    panel.TextAt(247,58,148,15,item ? item->label : "放入背包物品",true);
     if (item) panel.At(245,88,146,93,[&] { drawItem(item->icon,93*panel.scale); });
     panel.EditAt(12,71,218,112,"registration-description",market.description,sizeof market.description,120,true);
     panel.EditAt(42,233,116,24,"registration-price",market.price,sizeof market.price,10);
-    if (!market.status.empty()) panel.TextAt(16,225,224,market.status);
-    else if (market.confirmation == 1130) panel.TextAt(16,225,224,"确认登记该物品？");
+    if (!market.status.empty()) panel.TextAt(16,208,224,17,market.status);
+    else if (market.confirmation == 1130) panel.TextAt(16,208,224,17,"确认登记该物品？");
     if (panel.ButtonAt(249,230,1904,market.confirmation ? "确认登记" : "登记",market.confirmation!=0,item != nullptr)) {
         if (market.confirmation) {
             client.RegisterMarketItem();
@@ -6149,12 +6161,12 @@ template<typename DrawItem>
 void DrawMarket(const auto& panel, LoginClient& client, DrawItem drawItem)
 {
     auto& market = client.windows.market;
-    panel.TextAt(10,17,180,"[ 购买物品 ]");
-    panel.TextAt(206,21,176,std::to_string(market.page)+" / "+std::to_string(market.pages));
-    panel.TextAt(16,56,100,"服务器");
-    panel.TextAt(121,56,123,"物品名称");
-    panel.TextAt(261,56,67,"价格");
-    panel.TextAt(331,56,102,"出售人");
+    panel.TextAt(10,17,105,14,"[ 购买物品 ]",true);
+    panel.TextAt(65,18,94,15,std::to_string(market.page)+" / "+std::to_string(market.pages),true);
+    panel.TextAt(16,56,102,15,"服务器",true);
+    panel.TextAt(121,56,136,15,"物品名称",true);
+    panel.TextAt(261,56,67,15,"价格",true);
+    panel.TextAt(331,56,137,15,"出售人",true);
     for (std::size_t i=0; i<std::min<std::size_t>(13,market.listings.size()); ++i) {
         const auto& listing = market.listings[i];
         const float y = 84+19*static_cast<float>(i);
@@ -6163,14 +6175,14 @@ void DrawMarket(const auto& panel, LoginClient& client, DrawItem drawItem)
             market.confirmation = 0;
         }
         if (market.selected == listing.id) panel.HighlightAt(14,y,454,18);
-        panel.TextAt(18,y,105,listing.server);
-        panel.TextAt(128,y,128,listing.item.label);
-        panel.TextAt(265,y,65,std::to_string(listing.price));
-        panel.TextAt(339,y,88,listing.seller);
+        panel.TextAt(16,y+2,102,15,listing.server,true);
+        panel.TextAt(121,y+2,136,15,listing.item.label,true);
+        panel.TextAt(261,y+2,67,15,std::to_string(listing.price),true);
+        panel.TextAt(331,y+2,137,15,listing.seller,true);
     }
     const auto selected = std::ranges::find(market.listings,market.selected,&IndependentWindows::Listing::id);
     if (selected != market.listings.end()) {
-        panel.TextAt(485,25,213,selected->item.label);
+        panel.TextAt(485,25,213,14,selected->item.label);
         panel.At(482,55,213,128,[&] { drawItem(selected->item.icon,128*panel.scale); });
         panel.At(482,199,213,123,[&] {
             cui_text_opts options{};
@@ -6179,7 +6191,7 @@ void DrawMarket(const auto& panel, LoginClient& client, DrawItem drawItem)
             cui_text_ex(panel.ui,selected->description.c_str(),&options);
         });
     }
-    if (!market.status.empty()) panel.TextAt(448,319,244,market.status);
+    if (!market.status.empty()) panel.TextAt(482,319,213,17,market.status);
     panel.EditAt(268,363,137,17,"market-filter",market.filter,sizeof market.filter,30);
     panel.EditAt(268,393,137,17,"market-seller",market.sellerFilter,sizeof market.sellerFilter,30);
     if (panel.ButtonAt(413,361,1900,"查物品")) { market.byName = true; client.MarketRequest(1136); }
@@ -6202,7 +6214,7 @@ template<typename DrawItem>
 void DrawMailbox(const auto& panel, LoginClient& client, DrawItem drawItem)
 {
     auto& mail = client.windows.mail;
-    panel.TextAt(22,14,144,"信件");
+    panel.TextAt(34,15,142,20,"信件",true);
     if (panel.ButtonAt(183,14,1988,"收件",!mail.folder && !mail.composing && !mail.reading)) client.MailRequest(1137,0);
     if (panel.ButtonAt(363,14,1980,"发件",mail.folder && !mail.composing && !mail.reading)) client.MailRequest(1137,1);
     if (panel.ButtonAt(273,14,1984,"写信",mail.composing)) {
@@ -6215,13 +6227,13 @@ void DrawMailbox(const auto& panel, LoginClient& client, DrawItem drawItem)
         client.MailRequest(1138,mail.folder,mail.selected);
     const auto& letters = mail.folders[mail.folder];
     if (mail.composing) {
-        panel.TextAt(25,61,62,"收信人");
+        panel.TextAt(21,61,47,16,"收信人");
         panel.EditAt(68,62,148,15,"mail-recipient",mail.recipient,sizeof mail.recipient,24);
         panel.EditAt(21,84,373,141,"mail-draft",mail.draft,sizeof mail.draft,500,true);
         if (panel.ButtonAt(286,256,2034,"发送")) client.SendLetter();
         if (panel.ButtonAt(326,256,2032,"取消撰写")) mail.composing=false;
     } else if (mail.reading) {
-        panel.TextAt(25,51,377,mail.sender+"   "+mail.subject);
+        panel.TextAt(68,60,327,17,mail.sender+"   "+mail.subject);
         panel.At(25,81,379,135,[&] {
             cui_scroll_opts body = {};
             body.id = "mail-body";
@@ -6233,9 +6245,9 @@ void DrawMailbox(const auto& panel, LoginClient& client, DrawItem drawItem)
         });
         if (!mail.gift.label.empty()) {
             panel.At(331,118,68,81,[&] { drawItem(mail.gift.icon,81*panel.scale); });
-            panel.TextAt(25,221,364,"礼物  "+mail.gift.label);
+            panel.TextAt(25,225,364,15,"礼物  "+mail.gift.label);
         }
-        else if (mail.gold) panel.TextAt(25,221,364,"金币  "+std::to_string(mail.gold));
+        else if (mail.gold) panel.TextAt(25,225,364,15,"金币  "+std::to_string(mail.gold));
         const auto current = std::ranges::find(letters, mail.selected, &IndependentWindows::Letter::id);
         const auto adjacent = [&](int offset, float x, int frame, const char* title) {
             const auto index = current - letters.begin() + offset;
@@ -6276,15 +6288,15 @@ void DrawMailbox(const auto& panel, LoginClient& client, DrawItem drawItem)
                 if (panel.assets) panel.SpriteAt(22,row+6,1974);
                 else panel.HighlightAt(21,row,382,21);
             }
-            panel.TextAt(43,row+4,92,letter.name);
-            panel.TextAt(141,row+4,223,letter.date.empty() ? letter.subject : letter.date);
+            panel.TextAt(43,row+6,94,15,letter.name);
+            panel.TextAt(141,row+6,221,15,letter.date.empty() ? letter.subject : letter.date);
             panel.SpriteAt(374,row+3,letter.read ? 1971 : 1970);
         }
         if (panel.ButtonAt(mail.folder ? 246 : 286,256,1964,"刷新")) client.MailRequest(1137,mail.folder);
         if (mail.folder && panel.ButtonAt(286,256,2032,"撤回",false,mail.selected != 0))
             client.MailRequest(1142,mail.folder,mail.selected);
     }
-    if (!mail.status.empty()) panel.TextAt(22,231,388,mail.status);
+    if (!mail.status.empty()) panel.TextAt(22,232,388,16,mail.status);
     if (!mail.composing && panel.ButtonAt(326,256,1962,"删除",false,mail.selected != 0))
         client.MailRequest(1139,mail.folder,mail.selected);
     if (panel.ButtonAt(400,267,1221,"关闭")) CloseIndependentWindow(client.windows,4);
@@ -6294,8 +6306,8 @@ template<typename DrawMap>
 void DrawObjectOrders(const auto& panel, LoginClient& client, DrawMap drawMap)
 {
     auto& orders = client.windows.orders;
-    panel.TextAt(14,22,78,std::to_string(orders.x));
-    panel.TextAt(101,22,74,std::to_string(orders.y));
+    panel.TextAt(14,22,76,15,std::to_string(orders.x),true);
+    panel.TextAt(100,22,80,15,std::to_string(orders.y),true);
     panel.At(6,65,180,165,drawMap);
     const auto ammo = std::ranges::find_if(client.inventory.items,
         [](const auto& item) { return item.icon == 310 || item.icon == 311; });
@@ -10403,8 +10415,8 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
                     switch (id) {
                     case 0:
                         panel.At(0,0,284,348,[&] { if (loginArt) loginArt->DrawInspectionEquipment(ui,windows.profile,bounds); });
-                        panel.TextAt(81,17,128,windows.profile.name);
-                        panel.TextAt(163,62,112,windows.profile.guild);
+                        panel.TextAt(81,17,128,15,windows.profile.name);
+                        panel.TextAt(163,62,112,15,windows.profile.guild);
                         if (panel.ButtonAt(248,313,1221,"关闭")) CloseIndependentWindow(windows,id);
                         break;
                     case 1:
