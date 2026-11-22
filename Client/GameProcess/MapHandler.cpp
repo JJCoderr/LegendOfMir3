@@ -89,38 +89,15 @@ VOID CMapHandler::DestroyMapHandler()
 
 VOID CMapHandler::LoadNewMapBuffer()
 {
-	INT nFileIdx, nImgIdx;
-	INT nXCnt, nYCnt;
-
-	ZeroMemory(m_wSavedMapBuffer, sizeof(WORD)*_VIEW_CELL_X_COUNT*_CELL_WIDTH*_VIEW_CELL_Y_COUNT*_CELL_HEIGHT);
-
-	for ( nXCnt = m_shStartViewTileX; nXCnt < m_shStartViewTileX+_VIEW_CELL_X_COUNT; nXCnt++ )
-		for ( nYCnt = m_shStartViewTileY; nYCnt < m_shStartViewTileY+_VIEW_CELL_Y_COUNT; nYCnt++ )
-	{
-		if ( nXCnt >= m_stMapFileHeader.shWidth || nYCnt >= m_stMapFileHeader.shHeight || nXCnt < 0 || nYCnt < 0 )
-			continue; 
-
-		if( !( nXCnt % 2 ) && !( nYCnt % 2 ) && nYCnt < m_shStartViewTileY+_VIEW_CELL_Y_COUNT )
- 		{
- 			nFileIdx= m_pstTileInfo[(nYCnt/2) + (nXCnt/2)*m_stMapFileHeader.shHeight/2].bFileIdx;
-			nImgIdx = m_pstTileInfo[(nYCnt/2) + (nXCnt/2)*m_stMapFileHeader.shHeight/2].wTileIdx;
-
- 			if( nFileIdx != 255 && nImgIdx != 65535 )
-			{
-				m_pxTileImg[nFileIdx]->NewSetIndex(nImgIdx);
-				g_xMainWnd.DrawWithImageForCompMemToMem(
-								(nXCnt-m_shStartViewTileX)*_CELL_WIDTH ,
-								(nYCnt-m_shStartViewTileY)*_CELL_HEIGHT,
-								m_pxTileImg[nFileIdx]->m_lpstNewCurrWilImageInfo->shWidth,
-								m_pxTileImg[nFileIdx]->m_lpstNewCurrWilImageInfo->shHeight,
-								(WORD*)m_pxTileImg[nFileIdx]->m_pbCurrImage,
-								_VIEW_CELL_X_COUNT*_CELL_WIDTH, _VIEW_CELL_Y_COUNT*_CELL_HEIGHT, m_wSavedMapBuffer);
-				
-			}
-		}
-	}
+    // Base tiles cover two cells; include tiles crossing the top/left edge.
+    const int tileCellSpan = 2;
+    ZeroMemory(m_wSavedMapBuffer, sizeof(m_wSavedMapBuffer));
+    const int firstX = max(0, m_shStartViewTileX - tileCellSpan + 1);
+    const int firstY = max(0, m_shStartViewTileY - tileCellSpan + 1);
+    for (int x = firstX; x < m_shStartViewTileX + _VIEW_CELL_X_COUNT; ++x)
+        for (int y = firstY; y < m_shStartViewTileY + _VIEW_CELL_Y_COUNT; ++y)
+            DrawBaseTile(x, y);
 }
-
 
 
 BOOL CMapHandler::LoadMapData(CHAR* szMapFile)
@@ -349,7 +326,8 @@ VOID CMapHandler::DrawBaseTile(INT nX, INT nY)
 
 		if( nFileIdx != 255 && nImgIdx != 65535 )
 		{
-			m_pxTileImg[nFileIdx]->NewSetIndex(nImgIdx);
+			if (!m_pxTileImg[nFileIdx]->NewSetIndex(nImgIdx))
+                return;
 			g_xMainWnd.DrawWithImageForCompMemToMem(
 							(nX-m_shStartViewTileX)*_CELL_WIDTH ,
 							(nY-m_shStartViewTileY)*_CELL_HEIGHT,
@@ -529,144 +507,11 @@ INT CMapHandler::GetDoorImgIdx(INT nX, INT nY)
 
 VOID CMapHandler::SetMovedTileBuffer(SHORT shMovedTileX, SHORT shMovedTileY)
 {
-	m_shStartViewTileX += shMovedTileX;
-	m_shStartViewTileY += shMovedTileY;
-	m_shViewOffsetX = 0;
-	m_shViewOffsetY = 0;
-
-	INT nX, nY;
-
-	// 适当移动当前图块缓冲区中的内存，并绘制新增的图像.
-	// 不以单元格为单位, 而以图块为单位更新.
-
-	// 当前为 Y 图块,或者向下移动时.
-	if ( shMovedTileY >= 0 )
-	{
-		if ( shMovedTileX >= 0 )
-		{
-			// 向右走时.
-			for ( INT nYCnt = 0; nYCnt < _VIEW_CELL_Y_COUNT*_CELL_HEIGHT-_CELL_HEIGHT*shMovedTileY; nYCnt++ )
-			{
-				memmove(&m_wSavedMapBuffer[(nYCnt*_VIEW_CELL_X_COUNT*_CELL_WIDTH)], 
-						&m_wSavedMapBuffer[((nYCnt+_CELL_HEIGHT*shMovedTileY)*_VIEW_CELL_X_COUNT*_CELL_WIDTH)+_CELL_WIDTH*shMovedTileX], 
-						sizeof(WORD)*_CELL_WIDTH*(_VIEW_CELL_X_COUNT-shMovedTileX));
-			}
-
-			// 在图像上必须更新右侧和下方的图块.
-			// 基本图块由 2 格构成(右侧和下方只留 1 格的余量),因此每次多读取 1 格来进行更新.
-			// 形式如下。'1' 是通过 memmove 移动的数据, 'o' 是新要更新的图块图像数据, '0' 是还需读取的数据。
-			// 11111111111111...0o
-			// 11111111111111...0o
-			// 11111111111111...0o
-			// .................0o
-			// .................0o
-			// 00000000000000...0o
-			// oooooooooooooo...oo
-			
-			// 更新基本图块.
-			for ( nX = m_shStartViewTileX+_VIEW_CELL_X_COUNT-shMovedTileX-1; nX < m_shStartViewTileX+_VIEW_CELL_X_COUNT; nX++ )
-				for ( nY = m_shStartViewTileY; nY < m_shStartViewTileY+_VIEW_CELL_Y_COUNT; nY++ )		
-				{
-					DrawBaseTile(nX, nY);
-				}
-			for ( nX = m_shStartViewTileX; nX < m_shStartViewTileX+_VIEW_CELL_X_COUNT; nX++ )		
-				for ( nY = m_shStartViewTileY+_VIEW_CELL_Y_COUNT-shMovedTileY-1; nY < m_shStartViewTileY+_VIEW_CELL_Y_COUNT; nY++ )
-				{
-					DrawBaseTile(nX, nY);
-				}
-		}
-		else
-		{
-			// 向左移动时.
-			// 更新左侧和下方的图块。
-			// o11111111111111...1
-			// o11111111111111...1
-			// o11111111111111...1
-			// o1................1
-			// o1................1
-			// o00000000000000...0
-			// ooooooooooooooo...o
-
-			// 更新基本图块.
-			// 左侧有 2 图块的余量, 因此每次只读 1 格; 下方只有 1 图块的余量, 所以下方要多读 1 格.
-			for ( INT nYCnt = 0; nYCnt < _VIEW_CELL_Y_COUNT*_CELL_HEIGHT-_CELL_HEIGHT*shMovedTileY; nYCnt++ )
-			{
-				memmove(&m_wSavedMapBuffer[(nYCnt*_VIEW_CELL_X_COUNT*_CELL_WIDTH)+_CELL_WIDTH*(-shMovedTileX)], 
-						&m_wSavedMapBuffer[((nYCnt+_CELL_HEIGHT*shMovedTileY)*_VIEW_CELL_X_COUNT*_CELL_WIDTH)], sizeof(WORD)*_CELL_WIDTH*(_VIEW_CELL_X_COUNT-(-shMovedTileX)));
-			}
-
-			for ( nX = m_shStartViewTileX; nX < m_shStartViewTileX+(-shMovedTileX); nX++ )
-				for ( nY = m_shStartViewTileY; nY < m_shStartViewTileY+_VIEW_CELL_Y_COUNT; nY++ )		
-				{
-					DrawBaseTile(nX, nY);
-				}
-			for ( nX = m_shStartViewTileX; nX < m_shStartViewTileX+_VIEW_CELL_X_COUNT; nX++ )		
-				for ( nY = m_shStartViewTileY+_VIEW_CELL_Y_COUNT-shMovedTileY-1; nY < m_shStartViewTileY+_VIEW_CELL_Y_COUNT; nY++ )
-				{
-					DrawBaseTile(nX, nY);
-				}
-		}
-	}
-	// 向上移动时.
-	else
-	{
-		if ( shMovedTileX >= 0 )
-		{
-			// 向右走时.
-
-			// ooooooooooooo...0o
-			// 1111111111111...0o
-			// ................0o
-			// ................0o
-			// 1111111111111...0o
-			// 1111111111111...0o
-			// 1111111111111...0o
-
-			for ( INT nYCnt = (_VIEW_CELL_Y_COUNT*_CELL_HEIGHT)+(_CELL_HEIGHT*shMovedTileY)-1; nYCnt >= 0 ; nYCnt-- )
-			{
-				memmove(&m_wSavedMapBuffer[((nYCnt+_CELL_HEIGHT*(-shMovedTileY))*_VIEW_CELL_X_COUNT*_CELL_WIDTH)], 
-						&m_wSavedMapBuffer[(nYCnt*_VIEW_CELL_X_COUNT*_CELL_WIDTH)+_CELL_WIDTH*shMovedTileX], sizeof(WORD)*_CELL_WIDTH*(_VIEW_CELL_X_COUNT-shMovedTileX));
-			}
-
-			for ( nX = m_shStartViewTileX+_VIEW_CELL_X_COUNT-shMovedTileX-1; nX < m_shStartViewTileX+_VIEW_CELL_X_COUNT; nX++ )
-				for ( nY = m_shStartViewTileY; nY < m_shStartViewTileY+_VIEW_CELL_Y_COUNT; nY++ )		
-				{
-					DrawBaseTile(nX, nY);
-				}
-			for ( nX = m_shStartViewTileX; nX < m_shStartViewTileX+_VIEW_CELL_X_COUNT; nX++ )		
-				for ( nY = m_shStartViewTileY; nY < m_shStartViewTileY+(-shMovedTileY); nY++ )
-				{
-					DrawBaseTile(nX, nY);
-				}
-		}
-		else
-		{
-			for ( INT nYCnt = (_VIEW_CELL_Y_COUNT*_CELL_HEIGHT)+(_CELL_HEIGHT*shMovedTileY)-1; nYCnt >= 0 ; nYCnt-- )
-			{
-				// 向左移动时.
-				memmove(&m_wSavedMapBuffer[((nYCnt+_CELL_HEIGHT*(-shMovedTileY))*_VIEW_CELL_X_COUNT*_CELL_WIDTH)+_CELL_WIDTH*(-shMovedTileX)], 
- 						&m_wSavedMapBuffer[(nYCnt*_VIEW_CELL_X_COUNT*_CELL_WIDTH)], sizeof(WORD)*_CELL_WIDTH*(_VIEW_CELL_X_COUNT-(-shMovedTileX)));
-			}
-
-			// oooooooooooooo...o
-			// o1111111111111...1
-			// o1...............1
-			// o1...............1
-			// o1111111111111...1
-			// o1111111111111...1
-			// o1111111111111...1
-			for ( nX = m_shStartViewTileX; nX < m_shStartViewTileX+(-shMovedTileX); nX++ )
-				for ( nY = m_shStartViewTileY; nY < m_shStartViewTileY+_VIEW_CELL_Y_COUNT; nY++ )		
-				{
-					DrawBaseTile(nX, nY);
-				}
-			for ( nX = m_shStartViewTileX; nX < m_shStartViewTileX+_VIEW_CELL_X_COUNT; nX++ )		
-				for ( nY = m_shStartViewTileY; nY < m_shStartViewTileY+(-shMovedTileY); nY++ )
-				{
-					DrawBaseTile(nX, nY);
-				}
-		}
-	}
+    m_shStartViewTileX += shMovedTileX;
+    m_shStartViewTileY += shMovedTileY;
+    m_shViewOffsetX = 0;
+    m_shViewOffsetY = 0;
+    LoadNewMapBuffer();
 }
 
 

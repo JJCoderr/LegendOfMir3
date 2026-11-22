@@ -2562,3 +2562,9 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 客观测：用 PrintWindow 连续抓 6 帧做像素对比（out/capture-flicker.py），变化集中在窗口 x≈290~335（约 45px，即一格），但整体采样点变化在 13132（88%）与约 1050（7%）之间交替 —— 一半的帧几乎整屏在变。
 - 已排除：瓦片索引越界（0.map 全块与 14 个瓦片库帧数比对无越界）、瓦片尺寸超块（经 .wix 索引读真实帧宽，tilesc 96、cliffsc/dungeonsc 48）、滚动缓冲参数写错（_MT_RUN 分支已修，95f6c64）、光照网格默认参数（400/300 对应 800x600）。
 - 待查：PrintWindow 对 D3D 隔帧可能抓到不同表面，13132 有可能是截图伪影；若如此需要用 Present 钩子或 GetFrontBufferData 复核。另一条线是 SetMovedTileBuffer 各方向边缘补画 DrawBaseTile 的范围，若某列没补画就会保留上一屏内容。
+
+## 2026-11-22 地图边缘地面缓冲修复
+
+- 参照 mir2x/client/src/processrun.cpp 的 drawTile：按当前视野取瓦片，包含跨越视野边缘的瓦片。当前客户端保留地面缓存，但跨格移动时清空并完整重建，删除四套 memmove/边缘补画分支，避免不可行走水面、岩石附近透明地面和地图外区域保留旧像素。
+- LoadNewMapBuffer 包含左、上边缘外一格的瓦片原点；DrawBaseTile 在 NewSetIndex 失败时跳过，避免空 WIX 帧复用前一张资源。
+- Release Client 构建通过；代码复审后净减少155行。尚未在用户原位置完成画面复测，不能据此认定静止闪烁已彻底消失；后续若仍出现需检查动画对象及最终呈现。
