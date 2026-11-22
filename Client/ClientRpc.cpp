@@ -385,7 +385,22 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
             if(window.m_pstMyMagic[i].stStdMagic.wMagicID==id) {
                 window.BindMagic(id,key?CSkillWnd::LegacyKey(key):0);accepted=true;break;
             }
-    } else if (method == "session.return" && g_bProcState == _GAME_PROC) {
+    } else if ((method == "input.click" || method == "input.move") && g_bProcState == _GAME_PROC) {
+        // 与真实鼠标走同一条入口，按窗口坐标注入。
+        const POINT point{Integer(params,"x"),Integer(params,"y")};
+        g_xGameProc.OnMouseMove(0,MAKELPARAM(point.x,point.y));
+        if (method == "input.click") {
+            g_xGameProc.OnLButtonDown(MK_LBUTTON,MAKELPARAM(point.x,point.y));
+            g_xGameProc.OnLButtonUp(0,MAKELPARAM(point.x,point.y));
+        }
+        accepted=true;
+    } else if (method == "input.key" && g_bProcState == _GAME_PROC) {
+        // key 用虚拟键码；release 默认按下后立刻抬起。
+        const int key=Integer(params,"key");
+        g_xGameProc.OnKeyDown(WPARAM(key),0);
+        const auto release=params.get("release");
+        if (!release.is<bool>() || release.get<bool>()) g_xGameProc.OnKeyUp(WPARAM(key),0);
+        accepted=true;    } else if (method == "session.return" && g_bProcState == _GAME_PROC) {
         accepted=g_xGameProc.ConfirmExit(ExitFlow::CharacterDialog,GetTickCount());
     } else if (g_bProcState == _GAME_PROC && (method=="item.equip" || method=="item.unequip" ||
         method=="item.use" || method=="item.drop" || method=="item.pickup")) accepted=ItemAction(method,params);
