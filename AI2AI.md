@@ -2493,3 +2493,11 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 背景音乐：PlayBkMusicMp3 里硬编码 "1.mp3"（资源里只有 1.wav），切换地图的调用也在 OnSvrMsgNewMap 被注释。改为按地图索引播放 Sound\B<索引>.mp3，索引从 MapMusic.ini 读取；MapMusic.ini 由 Server/Tools/export_map_music.py 从 System.db 的 MapInfo.Music 生成（289 张地图）。
 - 待办：Music 值域（0/3/4/10/13/15…49）与现有 BGM 文件名（B000、B2、B100、B122、B200、B300、B400、BDxx）对不上，185 个有音乐的地图目前全部命中不到文件，需要正确的 music→文件映射；原版 map 文件头只有 szDesc/wAttr/宽高/事件/雾色，没有音乐字段。
 - 客户端 RPC 新增 input.click / input.move / input.key，Test/xlsx_scenario.py --pid 可直接对运行中客户端注入点击与按键，Excel 场景不再需要 fixture 与重建数据库。
+
+## 2026-11-22 资源基线与怪物外观回退
+
+- 资源基线：客户端只使用宝藏传奇3/Data，共 99 个 WIL；怪物库只有 Mon-1..20 与 Mon-54（21 个），与 ImageHandler 的 _IMAGE_MONSTER1=34（Mon-1.wil）按外观/10 对应。
+- 覆盖核对：Server/Tools/audit_monster_appearance.py 按 Data 目录比对 System.db 的 MonsterInfo.Image，410 只怪里 124 只需要 Mon-21..33，这些库当前不存在。
+- 处理：CActor 增加 MonsterImageIndex，目标库未加载时按外形对 200 取模回退，再不行退回 Mon-1，保证怪物可见；资源补齐后回退不生效。
+- 未采用 Mud3/Envir/monster.dat 的外观号：该文件为加密或非明文结构（前 4 字节为记录数 440，其余大量 0x09 填充，XOR 0x29 解码不成立），暂不逆向。
+- Excel 场景：命名管道每次 Test.exe 连接释放后短时间内不可重连，因此一次场景要在同一次连接里跑完（当前场景脚本即如此）；完整 8 步场景（世界就绪、V 键开关小地图、点击地图、回车开聊天）一次通过。
