@@ -2519,3 +2519,11 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 默认偏移20000的26000端口被另一个运行中EIServer占用；改用30000，未停止用户已有进程。诊断用临时服务端日志代码已撤回。
 - Test Release 构建通过；verify_runner.py 13组通过并校验复合ID。多行SQL字面值用例在Windows CRLF检出时与预期LF不符，验证程序写入LF临时副本后执行，不改变解析器语义。
 - 数据证据边界：Client state.get 是真实服务端回包解析后的状态，protocol.get 是收发计数，Database query 只读查询服务端实际SQLite；服务端 state.get 仍只有服务/网络状态，未增加角色内存查询。没有验证商店完整定价规则或所有交易分支。
+
+## 2026-11-22 GSQL 绿色版取 V1.45 数据的尝试记录
+
+- 位置：Mud3/_GSQL_uninstalled_20261121-085840（GSql.exe 管理器 + Binn/sqlservr.exe + Data 下的 game1/kingforeiserverbasedata 等 MDF）。
+- 该 SQL 用「虚拟注册表 / 虚拟文件 / 虚拟 API」环境运行，Config.ini 里 Port=1433、IsServices=0；按用户提示把 GSql.exe 与 Binn\sqlservr.exe 都设置了 XP SP3 兼容模式（HKCU 的 AppCompatFlags\Layers）。
+- 现象：管理器能启动（日志出现「TryCon 启动成功」），但 sqlservr 进程长时间占用 CPU 且不监听 1433，随后管理器自己的 ADO 连接也失败（Data Source=(local)、127.0.0.1 均报「SQL Server 不存在或拒绝访问」），外部 ADO/TCP 同样连不上。
+- 该 sqlservr 进程随后陷入僵死：Stop-Process 与 taskkill /F 都返回「没有正在运行的实例」，但仍出现在进程列表里并锁着 Data 目录，需要重启机器才能彻底清理。
+- 结论：GSQL 这条线要跑通，需要一次干净的机器重启后立刻启动管理器并马上查询；在此之前不要反复启动，避免僵死进程堆积。
