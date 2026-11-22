@@ -2542,3 +2542,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 已跑通的检查数：背包 Inventory 71、商店购买 ShopBuy 44、商店出售 ShopSell 52、近战 CombatMelee 27、NPC 对话 NpcDialog 33、技能施法 SkillCast 13。
 - 技能施法要先等 cast_ready=true，刚进图立刻施放会被客户端拒绝。
 - 自动登录会改变场景首步状态（直接进入 server_list），因此测试模板 out/debug/Mir3.ini 不带 [AutoLogin]，只有手动游玩用的运行目录才配置。
+
+## 2026-11-22 怪物攻击频率排查进度
+
+- 已修：Struck 里误把 m_dwHitTime 往未来推（原版是记录 StruckTime），改为刷新 m_dwTargetFocusTime。
+- 已修：FLD_RACE 硬编码 0，导致 410 只怪同一被动 AI；改用 max(0, AI)，现在 123 种取值。
+- 已修：ProcessMonster 的 AI 循环改成每轮 128 组、游标轮转，避免单轮遍历 2604 组导致怪物几秒才行动一次。
+- 仍存在：MonsterAggro 场景 4.8 秒内只出现 2 次 SM_HIT、0 次 SM_STRUCK。刷怪组只有 3 条时也一样，说明瓶颈不在遍历量。待查 Think 的 DupMode 分支、Operate 里 DelayProcessQ 积压，以及 _Attack 里 nPower 判定。
