@@ -22,10 +22,11 @@
 // 保证怪物可见；资源补齐后回退分支不再生效。
 static int MonsterImageIndex(CImageHandler* images,int shape)
 {
+	// V1.45 外观可以到 2090，直接算库号会超出 _MAX_IMAGE 造成越界读，先夹到合法范围。
 	const int wanted=_IMAGE_MONSTER1+shape/10;
-	if(images->m_xImageList[wanted].m_pbCurrImage) return wanted;
+	if(wanted<_MAX_IMAGE && images->m_xImageList[wanted].m_pbCurrImage) return wanted;
 	const int fallback=_IMAGE_MONSTER1+(shape%200)/10;
-	if(images->m_xImageList[fallback].m_pbCurrImage) return fallback;
+	if(fallback<_MAX_IMAGE && images->m_xImageList[fallback].m_pbCurrImage) return fallback;
 	return _IMAGE_MONSTER1;
 }
 
