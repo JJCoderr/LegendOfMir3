@@ -3559,146 +3559,22 @@ VOID CStatusWnd::OnScrollUp()
 	}
 }
 
-// ExchangeWnd
-/******************************************************************************************************************
-
-	模块名:
-
-	作者:
-	编写日期:
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
 
 
 
 
-
-
-CExchangeWnd::CExchangeWnd()
+void CButtonPanel::Create(INT id, CWHWilImageData* image, INT background, INT frame,
+                          INT x, INT y, INT moveX, INT moveY)
 {
-	Init();
+	CreateGameWnd(id, image, background, TRUE, 0, 0, 0, 0);
+	button.CreateGameBtn(image, frame, frame + 1, x, y);
+	moveOffset = {moveX, moveY};
 }
 
-CExchangeWnd::~CExchangeWnd()
+void CButtonPanel::OnMouseMove(POINT mouse)
 {
-	Destroy();
-}
-
-VOID CExchangeWnd::Init()
-{
-	CGameWnd::Init();
-
-	m_xExchangeBtn.Init();
-}
-
-
-
-VOID CExchangeWnd::CreateExchangeWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
-{
-	CreateGameWnd(nID, pxWndImage, nFrameImgIdx, bCanMove, nStartX, nStartY, nWidth, nHeight);
-	m_xExchangeBtn.CreateGameBtn(pxWndImage, 280, 281, nStartX+255, nStartY+291);
-}
-
-VOID CExchangeWnd::ShowExchangeWnd()
-{
-	ShowGameWnd();
-	m_xExchangeBtn.ShowGameBtn();
-}
-
-VOID CExchangeWnd::OnMouseMove(POINT ptMouse)
-{
-	m_xExchangeBtn.ChangeRect(m_rcWnd.left+567, m_rcWnd.top+413);
-	m_xExchangeBtn.OnMouseMove(ptMouse);
-}
-
-BOOL CExchangeWnd::OnLButtonUp(POINT ptMouse)
-{
-	if ( m_xExchangeBtn.OnLButtonUp(ptMouse) )		return TRUE;
-	return FALSE;
-}
-
-BOOL CExchangeWnd::OnLButtonDown(POINT ptMouse)
-{
-	if ( m_xExchangeBtn.OnLButtonDown(ptMouse) )		return TRUE;
-	return FALSE;
-}
-
-VOID CExchangeWnd::SetStatusBtnInit()
-{
-	m_xExchangeBtn.SetBtnState(_BTN_STATE_NORMAL);
-}
-
-// GuildMasterWnd
-/******************************************************************************************************************
-
-	模块名:
-
-	作者:
-	编写日期:
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
-
-
-
-
-
-CGuildMasterWnd::CGuildMasterWnd()
-{
-	Init();
-}
-
-CGuildMasterWnd::~CGuildMasterWnd()
-{
-	Destroy();
-}
-
-VOID CGuildMasterWnd::Init()
-{
-	CGameWnd::Init();
-
-	m_xGuildMasterBtn.Init();
-}
-
-
-VOID CGuildMasterWnd::CreateGuildMasterWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
-{
-	CreateGameWnd(nID, pxWndImage, nFrameImgIdx, bCanMove, nStartX, nStartY, nWidth, nHeight);
-	m_xGuildMasterBtn.CreateGameBtn(pxWndImage, 630, 631, nStartX+567, nStartY+413);
-}
-
-VOID CGuildMasterWnd::ShowGuildMasterWnd()
-{
-	ShowGameWnd();
-	m_xGuildMasterBtn.ShowGameBtn();
-}
-
-BOOL CGuildMasterWnd::OnLButtonUp(POINT ptMouse)
-{
-	if ( m_xGuildMasterBtn.OnLButtonUp(ptMouse) )		return TRUE;
-
-	return FALSE;
-}
-
-BOOL CGuildMasterWnd::OnLButtonDown(POINT ptMouse)
-{
-	if ( m_xGuildMasterBtn.OnLButtonDown(ptMouse) )		return TRUE;
-
-	return FALSE;
-}
-
-VOID CGuildMasterWnd::OnMouseMove(POINT ptMouse)
-{
-	m_xGuildMasterBtn.ChangeRect(m_rcWnd.left+567, m_rcWnd.top+413);
-	m_xGuildMasterBtn.OnMouseMove(ptMouse);
-}
-
-VOID CGuildMasterWnd::SetStatusBtnInit()
-{
-	m_xGuildMasterBtn.SetBtnState(_BTN_STATE_NORMAL);
+	button.ChangeRect(m_rcWnd.left + moveOffset.x, m_rcWnd.top + moveOffset.y);
+	button.OnMouseMove(mouse);
 }
 
 // GuildWnd
@@ -4119,218 +3995,11 @@ VOID CChatPopWnd::SetStatusBtnInit()
 	m_xChatPopBtn.SetBtnState(_BTN_STATE_NORMAL);
 }
 
-// QuestWnd
-/******************************************************************************************************************
 
-	模块名:
 
-	作者:
-	编写日期:
 
-	[日期][修改人] : 修改内容
 
-*******************************************************************************************************************/
 
-
-
-
-
-CQuestWnd::CQuestWnd()
-{
-	Init();
-}
-
-CQuestWnd::~CQuestWnd()
-{
-	Destroy();
-}
-
-VOID CQuestWnd::Init()
-{
-	CGameWnd::Init();
-
-	m_xQuestBtn.Init();
-}
-
-
-VOID CQuestWnd::CreateQuestWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
-{
-	CreateGameWnd(nID, pxWndImage, nFrameImgIdx, bCanMove, nStartX, nStartY, nWidth, nHeight);
-	m_xQuestBtn.CreateGameBtn(pxWndImage, 630, 631, nStartX+567, nStartY+413);
-}
-
-VOID CQuestWnd::ShowQuestWnd()
-{
-	ShowGameWnd();
-	m_xQuestBtn.ShowGameBtn();
-}
-
-BOOL CQuestWnd::OnLButtonUp(POINT ptMouse)
-{
-	if ( m_xQuestBtn.OnLButtonUp(ptMouse) )		return TRUE;
-
-	return FALSE;
-}
-
-BOOL CQuestWnd::OnLButtonDown(POINT ptMouse)
-{
-	if ( m_xQuestBtn.OnLButtonDown(ptMouse) )		return TRUE;
-
-	return FALSE;
-}
-
-VOID CQuestWnd::OnMouseMove(POINT ptMouse)
-{
-	m_xQuestBtn.ChangeRect(m_rcWnd.left+567, m_rcWnd.top+413);
-	m_xQuestBtn.OnMouseMove(ptMouse);
-}
-
-VOID CQuestWnd::SetStatusBtnInit()
-{
-	m_xQuestBtn.SetBtnState(_BTN_STATE_NORMAL);
-}
-
-// OptionWnd
-/******************************************************************************************************************
-
-	模块名:
-
-	作者:
-	编写日期:
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
-
-
-
-
-
-COptionWnd::COptionWnd()
-{
-	Init();
-}
-
-COptionWnd::~COptionWnd()
-{
-	Destroy();
-}
-
-VOID COptionWnd::Init()
-{
-	CGameWnd::Init();
-
-	m_xOptionBtn.Init();
-}
-
-
-VOID COptionWnd::CreateOptionWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
-{
-	CreateGameWnd(nID, pxWndImage, nFrameImgIdx, bCanMove, nStartX, nStartY, nWidth, nHeight);
-	m_xOptionBtn.CreateGameBtn(pxWndImage, 764, 765, nStartX+220, nStartY+11);
-}
-
-VOID COptionWnd::ShowOptionWnd()
-{
-	ShowGameWnd();
-	m_xOptionBtn.ShowGameBtn();
-}
-
-BOOL COptionWnd::OnLButtonUp(POINT ptMouse)
-{
-	if ( m_xOptionBtn.OnLButtonUp(ptMouse) )		return TRUE;
-
-	return FALSE;
-}
-
-BOOL COptionWnd::OnLButtonDown(POINT ptMouse)
-{
-	if ( m_xOptionBtn.OnLButtonDown(ptMouse) )		return TRUE;
-
-	return FALSE;
-}
-
-VOID COptionWnd::OnMouseMove(POINT ptMouse)
-{
-	m_xOptionBtn.ChangeRect(m_rcWnd.left+220, m_rcWnd.top+11);
-	m_xOptionBtn.OnMouseMove(ptMouse);
-}
-
-VOID COptionWnd::SetStatusBtnInit()
-{
-	m_xOptionBtn.SetBtnState(_BTN_STATE_NORMAL);
-}
-
-// HorseWnd
-/******************************************************************************************************************
-
-	模块名:
-
-	作者:
-	编写日期:
-
-	[日期][修改人] : 修改内容
-
-*******************************************************************************************************************/
-
-
-
-
-
-CHorseWnd::CHorseWnd()
-{
-	Init();
-}
-
-CHorseWnd::~CHorseWnd()
-{
-	Destroy();
-}
-
-VOID CHorseWnd::Init()
-{
-	CGameWnd::Init();
-
-	m_xHorseBtn.Init();
-}
-
-
-VOID CHorseWnd::CreateHorseWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove)
-{
-	CreateGameWnd(nID, pxWndImage, nFrameImgIdx, bCanMove, nStartX, nStartY, nWidth, nHeight);
-	m_xHorseBtn.CreateGameBtn(pxWndImage, 630, 631, nStartX+567, nStartY+413);
-}
-
-VOID CHorseWnd::ShowHorseWnd()
-{
-	ShowGameWnd();
-	m_xHorseBtn.ShowGameBtn();
-}
-
-BOOL CHorseWnd::OnLButtonUp(POINT ptMouse)
-{
-	if ( m_xHorseBtn.OnLButtonUp(ptMouse) )		return TRUE;
-
-	return FALSE;
-}
-
-BOOL CHorseWnd::OnLButtonDown(POINT ptMouse)
-{
-	if ( m_xHorseBtn.OnLButtonDown(ptMouse) )		return TRUE;
-
-	return FALSE;
-}
-
-VOID CHorseWnd::OnMouseMove(POINT ptMouse)
-{
-	m_xHorseBtn.ChangeRect(m_rcWnd.left+567, m_rcWnd.top+413);
-	m_xHorseBtn.OnMouseMove(ptMouse);
-}
-
-VOID CHorseWnd::SetStatusBtnInit()
-{
-	m_xHorseBtn.SetBtnState(_BTN_STATE_NORMAL);
-}
 
 // NPCWnd
 /******************************************************************************************************************
@@ -5937,16 +5606,16 @@ VOID CInterface::CreateInterface(CImageHandler* pxImgHandler)
 	m_xInventoryWnd.CreateInventoryWnd(_WND_ID_INVENTORY, m_pxInterImg, _WNDIMGIDX_INVENTORY, 0, 0, 0, 0, TRUE);
 	m_xStatusWnd.CreateStatusWnd(_WND_ID_STATUS, m_pxInterImg, _WNDIMGIDX_ITEMSET, 510, 0, 0, 0, TRUE);
 	m_xStoreWnd.CreateStoreWnd(_WND_ID_STORE, m_pxInterImg, _WNDIMGIDX_STORE, 0, 0, 0, 0, TRUE);
-	m_xExchangeWnd.CreateExchangeWnd(_WND_ID_EXCHANGE, m_pxInterImg, _WNDIMGIDX_EXCHANGE, 0, 0, 0, 0, TRUE);
-	m_xGuildMasterWnd.CreateGuildMasterWnd(_WND_ID_GUILDMASTER, m_pxInterImg, _WNDIMGIDX_GUILDMASTER, 0, 0, 0, 0, TRUE);
+	m_xExchangeWnd.Create(_WND_ID_EXCHANGE, m_pxInterImg, _WNDIMGIDX_EXCHANGE, 280, 255, 291, 567, 413);
+	m_xGuildMasterWnd.Create(_WND_ID_GUILDMASTER, m_pxInterImg, _WNDIMGIDX_GUILDMASTER, 630, 567, 413, 567, 413);
 	m_xGuildWnd.CreateGuildWnd(_WND_ID_GUILD, &m_xInterImgEx, _WNDIMGIDX_GUILD, 0, 0, 540, 442, TRUE);
 	m_xGroupWnd.CreateGroupWnd(_WND_ID_GROUP, m_pxInterImg, _WNDIMGIDX_GROUP, 0, 0, 0, 0, TRUE);
 	m_xGroupPopWnd.CreateGroupPopWnd(_WND_ID_GROUPPOP, &m_xInterImgEx, _WNDIMGIDX_GROUPPOP, 0, 0, 260, 114, TRUE);
 	m_xChatPopWnd.CreateChatPopWnd(_WND_ID_CHATPOP, m_pxInterImg, _WNDIMGIDX_CHATPOP, 0, 0, 0, 0, TRUE);
 
-	m_xOptionWnd.CreateOptionWnd(_WND_ID_OPTION, m_pxInterImg, _WNDIMGIDX_OPTION, 0, 0, 0, 0, TRUE);
-	m_xQuestWnd.CreateQuestWnd(_WND_ID_QUEST, m_pxInterImg, _WNDIMGIDX_QUEST, 0, 0, 0, 0, TRUE);
-	m_xHorseWnd.CreateHorseWnd(_WND_ID_HORSE, m_pxInterImg, _WNDIMGIDX_HORSE, 0, 0, 0, 0, TRUE);
+	m_xOptionWnd.Create(_WND_ID_OPTION, m_pxInterImg, _WNDIMGIDX_OPTION, 764, 220, 11, 220, 11);
+	m_xQuestWnd.Create(_WND_ID_QUEST, m_pxInterImg, _WNDIMGIDX_QUEST, 630, 567, 413, 567, 413);
+	m_xHorseWnd.Create(_WND_ID_HORSE, m_pxInterImg, _WNDIMGIDX_HORSE, 630, 567, 413, 567, 413);
 
 
 	m_xNPCWnd.CreateNPCChatWnd(_WND_ID_NPCCHAT, m_pxInterImg, _WNDIMGIDX_NPCCHAT, 0, 0, 0, 0, TRUE);				// 勇气
@@ -6076,10 +5745,10 @@ VOID CInterface::ShowWndList()
 				m_xStoreWnd.ShowStoreWnd();
 				break;
 			case _WND_ID_EXCHANGE:
-				m_xExchangeWnd.ShowExchangeWnd();
+				m_xExchangeWnd.ShowPanel();
 				break;
 			case _WND_ID_GUILDMASTER:
-				m_xGuildMasterWnd.ShowGuildMasterWnd();
+				m_xGuildMasterWnd.ShowPanel();
 				break;
 			case _WND_ID_GUILD:
 				m_xGuildWnd.ShowGuildWnd();
@@ -6098,13 +5767,13 @@ VOID CInterface::ShowWndList()
 				break;
 
 			case _WND_ID_QUEST:
-				m_xQuestWnd.ShowQuestWnd();
+				m_xQuestWnd.ShowPanel();
 				break;
 			case _WND_ID_OPTION:
-				m_xOptionWnd.ShowOptionWnd();
+				m_xOptionWnd.ShowPanel();
 				break;
 			case _WND_ID_HORSE:
-				m_xHorseWnd.ShowHorseWnd();
+				m_xHorseWnd.ShowPanel();
 				break;
 			}
 
@@ -6505,70 +6174,37 @@ VOID CInterface::ShowMagicKey()
 	[日期][修改者] : 修改内容
 
 *******************************************************************************************************************/
+CGameWnd* CInterface::FindWindowById(INT id)
+{
+	switch (id)
+	{
+	case _WND_ID_INVENTORY: return &m_xInventoryWnd;
+	case _WND_ID_STATUS: return &m_xStatusWnd;
+	case _WND_ID_STORE: return &m_xStoreWnd;
+	case _WND_ID_EXCHANGE: return &m_xExchangeWnd;
+	case _WND_ID_GUILDMASTER: return &m_xGuildMasterWnd;
+	case _WND_ID_GUILD: return &m_xGuildWnd;
+	case _WND_ID_GROUP: return &m_xGroupWnd;
+	case _WND_ID_GROUPPOP: return &m_xGroupPopWnd;
+	case _WND_ID_CHATPOP: return &m_xChatPopWnd;
+	case _WND_ID_NPCCHAT: return &m_xNPCWnd;
+	case _WND_ID_QUEST: return &m_xQuestWnd;
+	case _WND_ID_OPTION: return &m_xOptionWnd;
+	case _WND_ID_HORSE: return &m_xHorseWnd;
+	default: return NULL;
+	}
+}
+
 INT	CInterface::GetWindowInMousePos(POINT ptMouse)
 {
-	if ( m_xWndOrderList.GetCounter() != 0 )
+	if (!m_xWndOrderList.GetCounter()) return -1;
+	m_xWndOrderList.MoveCurrentToTail();
+	for (INT i = 0; i < m_xWndOrderList.GetCounter(); ++i)
 	{
-		RECT rcWnd;
-		INT* pnCurrID;
-		m_xWndOrderList.MoveCurrentToTail();
-
-		for ( INT nCnt = m_xWndOrderList.GetCounter()-1; nCnt >= 0 ; nCnt-- )
-		{
-			pnCurrID = m_xWndOrderList.GetCurrentData();
-
-			switch ( *pnCurrID )
-			{
-			case _WND_ID_INVENTORY:
-				rcWnd = m_xInventoryWnd.GetGameWndRect();
-				break;
-			case _WND_ID_STATUS:
-				rcWnd = m_xStatusWnd.GetGameWndRect();
-				break;
-			case _WND_ID_STORE:
-				rcWnd = m_xStoreWnd.GetGameWndRect();
-				break;
-			case _WND_ID_EXCHANGE:
-				rcWnd = m_xExchangeWnd.GetGameWndRect();
-				break;
-			case _WND_ID_GUILDMASTER:
-				rcWnd = m_xGuildMasterWnd.GetGameWndRect();
-				break;
-			case _WND_ID_GUILD:
-				rcWnd = m_xGuildWnd.GetGameWndRect();
-				break;
-			case _WND_ID_GROUP:
-				rcWnd = m_xGroupWnd.GetGameWndRect();
-				break;
-			case _WND_ID_GROUPPOP:
-				rcWnd = m_xGroupPopWnd.GetGameWndRect();
-				break;
-			case _WND_ID_CHATPOP:
-				rcWnd = m_xChatPopWnd.GetGameWndRect();
-				break;
-			case _WND_ID_NPCCHAT:	// 勇气
-				rcWnd = m_xNPCWnd.GetGameWndRect();
-				break;
-
-			case _WND_ID_QUEST:
-				rcWnd = m_xQuestWnd.GetGameWndRect();
-				break;
-			case _WND_ID_OPTION:
-				rcWnd = m_xOptionWnd.GetGameWndRect();
-				break;
-			case _WND_ID_HORSE:
-				rcWnd = m_xHorseWnd.GetGameWndRect();
-				break;
-
-			}
-
-			if ( PtInRect(&rcWnd, ptMouse) )
-			{
-				return *pnCurrID;
-			}
-
-			m_xWndOrderList.MovePreviousNode();
-		}
+		INT id = *m_xWndOrderList.GetCurrentData();
+		CGameWnd* wnd = FindWindowById(id);
+		if (wnd && PtInRect(&wnd->m_rcWnd, ptMouse)) return id;
+		m_xWndOrderList.MovePreviousNode();
 	}
 	return -1;
 }
@@ -6648,237 +6284,30 @@ VOID CInterface::DeleteWindowToList(INT nID)
 *******************************************************************************************************************/
 BOOL CInterface::WindowActivate(INT nID)
 {
-	// 为了让新窗口获得焦点，将所有窗口的焦点设为 FALSE。
-	BOOL bRet = FALSE;
-
 	AllWindowsFocusOff();
-
-	switch ( nID )
+	CGameWnd* wnd = FindWindowById(nID);
+	if (!wnd) return FALSE;
+	BOOL opening = !wnd->GetGameWndActive();
+	if (nID == _WND_ID_CHATPOP)
 	{
-	case _WND_ID_INVENTORY:
+		if (opening)
 		{
-			if ( m_xInventoryWnd.GetGameWndActive() )
-			{
-				DeleteWindowToList(_WND_ID_INVENTORY);
-				m_xInventoryWnd.SetGameWndActive(FALSE);
-				bRet = FALSE;
-			}
-			else
-			{
-				AddWindowToList(_WND_ID_INVENTORY);
-				m_xInventoryWnd.SetGameWndActive(TRUE);
-				bRet = TRUE;
-			}
-		}
-		break;
-	case _WND_ID_STATUS:
-		{
-			if ( m_xStatusWnd.GetGameWndActive() )
-			{
-				DeleteWindowToList(_WND_ID_STATUS);
-				m_xStatusWnd.SetGameWndActive(FALSE);
-				bRet = FALSE;
-			}
-			else
-			{
-				AddWindowToList(_WND_ID_STATUS);
-				m_xStatusWnd.SetGameWndActive(TRUE);
-				bRet = TRUE;
-			}
-		}
-		break;
-	case _WND_ID_STORE:
-		{
-			if ( m_xStoreWnd.GetGameWndActive() )
-			{
-				DeleteWindowToList(_WND_ID_STORE);
-				m_xStoreWnd.SetGameWndActive(FALSE);
-				bRet = FALSE;
-			}
-			else
-			{
-				AddWindowToList(_WND_ID_STORE);
-				m_xStoreWnd.SetGameWndActive(TRUE);
-				bRet = TRUE;
-			}
-		}
-		break;
-	case _WND_ID_EXCHANGE:
-		{
-			if ( m_xExchangeWnd.GetGameWndActive() )
-			{
-				DeleteWindowToList(_WND_ID_EXCHANGE);
-				m_xExchangeWnd.SetGameWndActive(FALSE);
-				bRet = FALSE;
-			}
-			else
-			{
-				AddWindowToList(_WND_ID_EXCHANGE);
-				m_xExchangeWnd.SetGameWndActive(TRUE);
-				bRet = TRUE;
-			}
-		}
-		break;
-	case _WND_ID_QUEST:
-		{
-			if ( m_xQuestWnd.GetGameWndActive() )
-			{
-				DeleteWindowToList(_WND_ID_QUEST);
-				m_xQuestWnd.SetGameWndActive(FALSE);
-				bRet = FALSE;
-			}
-			else
-			{
-				AddWindowToList(_WND_ID_QUEST);
-				m_xQuestWnd.SetGameWndActive(TRUE);
-				bRet = TRUE;
-			}
-		}
-		break;
-	case _WND_ID_OPTION:
-		{
-			if ( m_xOptionWnd.GetGameWndActive() )
-			{
-				DeleteWindowToList(_WND_ID_OPTION);
-				m_xOptionWnd.SetGameWndActive(FALSE);
-				bRet = FALSE;
-			}
-			else
-			{
-				AddWindowToList(_WND_ID_OPTION);
-				m_xOptionWnd.SetGameWndActive(TRUE);
-				bRet = TRUE;
-			}
-		}
-		break;
-	case _WND_ID_HORSE:
-		{
-			if ( m_xHorseWnd.GetGameWndActive() )
-			{
-				DeleteWindowToList(_WND_ID_HORSE);
-				m_xHorseWnd.SetGameWndActive(FALSE);
-				bRet = FALSE;
-			}
-			else
-			{
-				AddWindowToList(_WND_ID_HORSE);
-				m_xHorseWnd.SetGameWndActive(TRUE);
-				bRet = TRUE;
-			}
-		}
-		break;
-
-	case _WND_ID_GUILDMASTER:
-		{
-			if ( m_xGuildMasterWnd.GetGameWndActive() )
-			{
-				DeleteWindowToList(_WND_ID_GUILDMASTER);
-				m_xGuildMasterWnd.SetGameWndActive(FALSE);
-				bRet = FALSE;
-			}
-			else
-			{
-				AddWindowToList(_WND_ID_GUILDMASTER);
-				m_xGuildMasterWnd.SetGameWndActive(TRUE);
-				bRet = TRUE;
-			}
-		}
-		break;
-	case _WND_ID_GUILD:
-		{
-			if ( m_xGuildWnd.GetGameWndActive() )
-			{
-				DeleteWindowToList(_WND_ID_GUILD);
-				m_xGuildWnd.SetGameWndActive(FALSE);
-				bRet = FALSE;
-			}
-			else
-			{
-				AddWindowToList(_WND_ID_GUILD);
-				m_xGuildWnd.SetGameWndActive(TRUE);
-				bRet = TRUE;
-			}
-		}
-		break;
-	case _WND_ID_GROUP:
-		{
-			if ( m_xGroupWnd.GetGameWndActive() )
-			{
-				DeleteWindowToList(_WND_ID_GROUP);
-				m_xGroupWnd.SetGameWndActive(FALSE);
-				bRet = FALSE;
-			}
-			else
-			{
-				AddWindowToList(_WND_ID_GROUP);
-				m_xGroupWnd.SetGameWndActive(TRUE);
-				bRet = TRUE;
-			}
-		}
-		break;
-	case _WND_ID_GROUPPOP:
-		{
-			if ( m_xGroupPopWnd.GetGameWndActive() )
-			{
-				DeleteWindowToList(_WND_ID_GROUPPOP);
-				m_xGroupPopWnd.SetGameWndActive(FALSE);
-				bRet = FALSE;
-			}
-			else
-			{
-				AddWindowToList(_WND_ID_GROUPPOP);
-				m_xGroupPopWnd.SetGameWndActive(TRUE);
-				bRet = TRUE;
-			}
-		}
-		break;
-	case _WND_ID_CHATPOP:
-		{
-			if ( m_xChatPopWnd.GetGameWndActive() )
-			{
-				MoveWindow(g_xChatEditBox.GetSafehWnd(), g_xMainWnd.m_rcWindow.left+_INPUT_EDITWND_XPOS,
-						   g_xMainWnd.m_rcWindow.top+_INPUT_EDITWND_YPOS, _INPUT_EDITWND_WIDTH, _INPUT_EDITWND_HEIGHT, TRUE);
-
-				DeleteWindowToList(_WND_ID_CHATPOP);
-				m_xChatPopWnd.SetGameWndActive(FALSE);
-				bRet = FALSE;
-			}
-			else
-			{
-				MoveWindow(g_xChatEditBox.GetSafehWnd(), g_xMainWnd.m_rcWindow.left + m_xChatPopWnd.m_rcWnd.left + m_xChatPopWnd.m_rcEditBoxFrame.left,
+			MoveWindow(g_xChatEditBox.GetSafehWnd(), g_xMainWnd.m_rcWindow.left + m_xChatPopWnd.m_rcWnd.left + m_xChatPopWnd.m_rcEditBoxFrame.left,
 						   g_xMainWnd.m_rcWindow.top + m_xChatPopWnd.m_rcWnd.top + m_xChatPopWnd.m_rcEditBoxFrame.top,
 						   m_xChatPopWnd.m_rcEditBoxFrame.right - m_xChatPopWnd.m_rcEditBoxFrame.left,
 						   m_xChatPopWnd.m_rcEditBoxFrame.bottom - m_xChatPopWnd.m_rcEditBoxFrame.top, TRUE);
-
-				SetFocus(g_xChatEditBox.GetSafehWnd());
-				AddWindowToList(_WND_ID_CHATPOP);
-				m_xChatPopWnd.SetGameWndActive(TRUE);
-				bRet = TRUE;
-			}
+			SetFocus(g_xChatEditBox.GetSafehWnd());
 		}
-		break;
-	case _WND_ID_NPCCHAT:		// 勇气
+		else
 		{
-			if ( m_xNPCWnd.GetGameWndActive() )
-			{
-				DeleteWindowToList(_WND_ID_NPCCHAT);
-//				m_xNPCWnd.CloseWnd();
-				m_xNPCWnd.SetGameWndActive(FALSE);
-				bRet = FALSE;
-			}
-			else
-			{
-				// 临时
-				AddWindowToList(_WND_ID_NPCCHAT);
-//				m_xNPCWnd.SetNPCStr("仰望天空 直至无一丝羞愧 在掠过叶间的风中 我也曾感到痛苦 <星星/@STAR> 以歌唱的心 去<爱/@LOVE>一切正在死去的事物 然后还要走完被赐予的那条路. 今夜星星依旧被风掠过. 东海之水与白头山枯竭殆尽 愿上天保佑 我国万岁 无穷花三千里 华丽江山 大韩之人 以大韩永世长存. 西门 你可知道 刮紫菜包饭侧边的声音 西门 你可知道 刮开的侧边崩裂的声音 那无比美妙的声音 你当真不知道吗\n <创建行会试试看?/@@buildguildnow>  \n <退出/@end>",0);
-				m_xNPCWnd.SetGameWndActive(TRUE);
-				bRet = TRUE;
-			}
+			MoveWindow(g_xChatEditBox.GetSafehWnd(), g_xMainWnd.m_rcWindow.left+_INPUT_EDITWND_XPOS,
+						   g_xMainWnd.m_rcWindow.top+_INPUT_EDITWND_YPOS, _INPUT_EDITWND_WIDTH, _INPUT_EDITWND_HEIGHT, TRUE);
 		}
-		break;
 	}
-
-	return bRet;
+	if (opening) AddWindowToList(nID);
+	else DeleteWindowToList(nID);
+	wnd->SetGameWndActive(opening);
+	return opening;
 }
 
 
@@ -6898,60 +6327,12 @@ BOOL CInterface::WindowActivate(INT nID)
 *******************************************************************************************************************/
 VOID CInterface::MoveTopWindow(POINT ptMouse)
 {
-	if ( m_xWndOrderList.GetCounter() != 0 )
-	{
-		INT* pnCurrID;
-		m_xWndOrderList.MoveCurrentToTail();
-		pnCurrID = m_xWndOrderList.GetCurrentData();
-		if ( m_bMoveFocusedWnd )
-		{
-			switch ( *pnCurrID )
-			{
-			case _WND_ID_INVENTORY:
-				m_xInventoryWnd.MoveGameWnd(ptMouse);
-				break;
-			case _WND_ID_STATUS:
-				m_xStatusWnd.MoveGameWnd(ptMouse);
-				break;
-			case _WND_ID_STORE:
-				m_xStoreWnd.MoveGameWnd(ptMouse);
-				break;
-			case _WND_ID_EXCHANGE:
-				m_xExchangeWnd.MoveGameWnd(ptMouse);
-				break;
-			case _WND_ID_GUILDMASTER:
-				m_xGuildMasterWnd.MoveGameWnd(ptMouse);
-				break;
-			case _WND_ID_GUILD:
-				m_xGuildWnd.MoveGameWnd(ptMouse);
-				break;
-			case _WND_ID_GROUP:
-				m_xGroupWnd.MoveGameWnd(ptMouse);
-				break;
-			case _WND_ID_GROUPPOP:
-				m_xGroupPopWnd.MoveGameWnd(ptMouse);
-				break;
-			case _WND_ID_CHATPOP:
-				m_xChatPopWnd.MoveGameWnd(ptMouse);
-				ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
-				break;
-			case _WND_ID_NPCCHAT:		// 勇气
-				m_xNPCWnd.MoveGameWnd(ptMouse);
-				break;
-
-			case _WND_ID_QUEST:
-				m_xQuestWnd.MoveGameWnd(ptMouse);
-				break;
-			case _WND_ID_OPTION:
-				m_xOptionWnd.MoveGameWnd(ptMouse);
-				break;
-			case _WND_ID_HORSE:
-				m_xHorseWnd.MoveGameWnd(ptMouse);
-				break;
-
-			}
-		}
-	}
+	if (!m_xWndOrderList.GetCounter()) return;
+	m_xWndOrderList.MoveCurrentToTail();
+	if (!m_bMoveFocusedWnd) return;
+	INT id = *m_xWndOrderList.GetCurrentData();
+	if (CGameWnd* wnd = FindWindowById(id)) wnd->MoveGameWnd(ptMouse);
+	if (id == _WND_ID_CHATPOP) ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
 }
 
 
@@ -6972,133 +6353,28 @@ VOID CInterface::MoveTopWindow(POINT ptMouse)
 *******************************************************************************************************************/
 VOID CInterface::WindowFocusChangedAndSetReadyMove(INT nID, POINT ptMouse)
 {
-	if ( m_xWndOrderList.GetCounter() != 0 )
+	if (!m_xWndOrderList.GetCounter()) return;
+	AllWindowsFocusOff();
+	DeleteWindowToList(nID);
+	AddWindowToList(nID);
+	m_bMoveFocusedWnd = TRUE;
+	if (CGameWnd* wnd = FindWindowById(nID))
 	{
-		AllWindowsFocusOff();
-
-		DeleteWindowToList(nID);
-		AddWindowToList(nID);
-		// 如果处于鼠标点击状态,则处于可以移动的准备状态.
-		m_bMoveFocusedWnd = TRUE;
-
-		switch ( nID )
-		{
-		case _WND_ID_INVENTORY:
-			m_xInventoryWnd.SetGameWndFocused(TRUE);
-			m_xInventoryWnd.SetReadyMove(ptMouse);
-			break;
-		case _WND_ID_STATUS:
-			m_xStatusWnd.SetGameWndFocused(TRUE);
-			m_xStatusWnd.SetReadyMove(ptMouse);
-			break;
-		case _WND_ID_STORE:
-			m_xStoreWnd.SetGameWndFocused(TRUE);
-			m_xStoreWnd.SetReadyMove(ptMouse);
-			break;
-		case _WND_ID_EXCHANGE:
-			m_xExchangeWnd.SetGameWndFocused(TRUE);
-			m_xExchangeWnd.SetReadyMove(ptMouse);
-			break;
-		case _WND_ID_GUILDMASTER:
-			m_xGuildMasterWnd.SetGameWndFocused(TRUE);
-			m_xGuildMasterWnd.SetReadyMove(ptMouse);
-			break;
-		case _WND_ID_GUILD:
-			m_xGuildWnd.SetGameWndFocused(TRUE);
-			m_xGuildWnd.SetReadyMove(ptMouse);
-			break;
-		case _WND_ID_GROUP:
-			m_xGroupWnd.SetGameWndFocused(TRUE);
-			m_xGroupWnd.SetReadyMove(ptMouse);
-			break;
-		case _WND_ID_GROUPPOP:
-			m_xGroupPopWnd.SetGameWndFocused(TRUE);
-			m_xGroupPopWnd.SetReadyMove(ptMouse);
-			break;
-		case _WND_ID_CHATPOP:
-			m_xChatPopWnd.SetGameWndFocused(TRUE);
-			m_xChatPopWnd.SetReadyMove(ptMouse);
-			break;
-		case _WND_ID_NPCCHAT:		// 勇气
-			m_xNPCWnd.SetGameWndFocused(TRUE);
-			m_xNPCWnd.SetReadyMove(ptMouse);
-			break;
-
-		case _WND_ID_QUEST:
-			m_xQuestWnd.SetGameWndFocused(TRUE);
-			m_xQuestWnd.SetReadyMove(ptMouse);
-			break;
-		case _WND_ID_OPTION:
-			m_xOptionWnd.SetGameWndFocused(TRUE);
-			m_xOptionWnd.SetReadyMove(ptMouse);
-			break;
-		case _WND_ID_HORSE:
-			m_xHorseWnd.SetGameWndFocused(TRUE);
-			m_xHorseWnd.SetReadyMove(ptMouse);
-			break;
-
-		}
+		wnd->SetGameWndFocused(TRUE);
+		wnd->SetReadyMove(ptMouse);
 	}
 }
 
 
 VOID CInterface::AllWindowsFocusOff()
 {
-	if ( m_xWndOrderList.GetCounter() != 0 )
+	if (!m_xWndOrderList.GetCounter()) return;
+	m_xWndOrderList.MoveCurrentToTop();
+	for (INT i = 0; i < m_xWndOrderList.GetCounter(); ++i)
 	{
-		m_xWndOrderList.MoveCurrentToTop();
-
-		INT* pnCurrID;
-		for ( INT nCnt = 0; nCnt < m_xWndOrderList.GetCounter(); nCnt++ )
-		{
-			pnCurrID = m_xWndOrderList.GetCurrentData();
-
-			switch ( *pnCurrID )
-			{
-			case _WND_ID_INVENTORY:
-				m_xInventoryWnd.SetGameWndFocused(FALSE);
-				break;
-			case _WND_ID_STATUS:
-				m_xStatusWnd.SetGameWndFocused(FALSE);
-				break;
-			case _WND_ID_STORE:
-				m_xStoreWnd.SetGameWndFocused(FALSE);
-				break;
-			case _WND_ID_EXCHANGE:
-				m_xExchangeWnd.SetGameWndFocused(FALSE);
-				break;
-			case _WND_ID_GUILDMASTER:
-				m_xGuildMasterWnd.SetGameWndFocused(FALSE);
-				break;
-			case _WND_ID_GUILD:
-				m_xGuildWnd.SetGameWndFocused(FALSE);
-				break;
-			case _WND_ID_GROUP:
-				m_xGroupWnd.SetGameWndFocused(FALSE);
-				break;
-			case _WND_ID_GROUPPOP:
-				m_xGroupPopWnd.SetGameWndFocused(FALSE);
-				break;
-			case _WND_ID_CHATPOP:
-				m_xChatPopWnd.SetGameWndFocused(FALSE);
-				break;
-			case _WND_ID_NPCCHAT:		// 勇气
-				m_xNPCWnd.SetGameWndFocused(FALSE);
-				break;
-
-			case _WND_ID_QUEST:
-				m_xQuestWnd.SetGameWndFocused(FALSE);
-				break;
-			case _WND_ID_OPTION:
-				m_xOptionWnd.SetGameWndFocused(FALSE);
-				break;
-			case _WND_ID_HORSE:
-				m_xHorseWnd.SetGameWndFocused(FALSE);
-				break;
-
-			}
-			m_xWndOrderList.MoveNextNode();
-		}
+		if (CGameWnd* wnd = FindWindowById(*m_xWndOrderList.GetCurrentData()))
+			wnd->SetGameWndFocused(FALSE);
+		m_xWndOrderList.MoveNextNode();
 	}
 }
 
@@ -10366,6 +9642,12 @@ struct SceneMapArt {
 
 }
 
+static cui_rect ViewportRect(cui_ctx* ui)
+{
+    const auto size = cui_viewport_size(ui);
+    return {0, 0, size.x, size.y};
+}
+
 struct Dialogs::Assets {
 public:
     bool Open(cui_ctx* ui, const std::filesystem::path& root)
@@ -10778,6 +10060,19 @@ public:
     }
 
 private:
+    template<auto Paint>
+    void DrawClientOverlay(cui_ctx* ui, const LoginClient& client)
+    {
+        struct Panel { Assets* assets; const LoginClient* client; };
+        const Panel panel{this, &client};
+        cui_overlay_begin(ui, ViewportRect(ui));
+        cui_canvas_paint(ui, CUI_FILL, CUI_FILL, [](cui_ctx* ui, cui_rect rect, void* data) {
+            const auto& panel = *static_cast<const Panel*>(data);
+            (panel.assets->*Paint)(ui, rect, *panel.client);
+        }, &panel, sizeof panel);
+        cui_box_end(ui);
+    }
+
     struct Image { cui_texture texture = 0; int width = 0, height = 0; };
     struct AnnouncementImage { Image image; int width, height; };
     struct ServerRow { std::string label; unsigned load; Image image; };
@@ -12360,8 +11655,7 @@ void Dialogs::Assets::OpenQuests(cui_ctx* ui, mir3::WilArchive& archive)
 bool Dialogs::Assets::QuestBlocksScene(cui_ctx* ui) const
 {
     if (questDragging_ || questScrollDrag_ || questPressed_ >= 0) return true;
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     return base.scale > 0 && Contains({float(questX_),float(questY_),340,440}, base.ToLocal(cui_mouse_pos(ui)));
 }
 
@@ -12422,8 +11716,7 @@ bool Dialogs::Assets::HandleQuestInput(cui_ctx* ui, LoginClient& client, bool bl
         questHint_ = -1;
         return false;
     }
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     if (base.scale <= 0) return false;
     const auto local = base.ToLocal(cui_mouse_pos(ui));
     const auto previous = std::exchange(questPreviousPointer_, local);
@@ -12502,8 +11795,7 @@ void Dialogs::Assets::DrawQuestPanel(cui_ctx* ui, LoginClient& client)
     questLast_ = (std::max)(0, static_cast<int>(lines.size()) - 1);
     questFirst_ = std::clamp(questFirst_,0,questLast_);
     RefreshQuestText(ui,quests,lines);
-    const auto view = cui_viewport_size(ui);
-    cui_overlay_begin(ui, {0,0,view.x,view.y});
+    cui_overlay_begin(ui, ViewportRect(ui));
     auto* self = this;
     cui_canvas_paint(ui, CUI_FILL, CUI_FILL, [](cui_ctx* ui, cui_rect rect, void* model) {
         (*static_cast<Assets**>(model))->PaintQuests(ui, rect);
@@ -12631,8 +11923,7 @@ void Dialogs::Assets::LeaveGuild()
 bool Dialogs::Assets::GuildBlocksScene(cui_ctx* ui) const
 {
     if (guildPosition_.dragging || guildScroll_.captured || guildLayout_.pressed >= 0) return true;
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     return base.scale > 0 && Contains(guildPosition_.Rect(), base.ToLocal(cui_mouse_pos(ui)));
 }
 
@@ -12766,8 +12057,7 @@ bool Dialogs::Assets::HandleGuildInput(cui_ctx* ui, LoginClient& client, bool bl
         guildLayout_.pressed = -1;
         return false;
     }
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     if (!covered || base.scale <= 0) return false;
     guildCount_ = GuildRowCount(guild);
     guild.first = std::clamp(guild.first,0,(std::max)(0,guildCount_-1));
@@ -13105,8 +12395,7 @@ bool Dialogs::Assets::NpcBlocksScene(cui_ctx* ui, const LoginClient& client, boo
 {
     if (!hitOnly && (!client.npcDialogue.prompt.command.empty() || npcClosePressed_ || npcArrowPressed_ || npcOptionPressed_>=0))
         return true;
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     return base.scale > 0 && Contains({0,0,386,float(client.npcDialogue.resetScroll ? 464 : npcHeight_)},
                                      base.ToLocal(cui_mouse_pos(ui)));
 }
@@ -13368,8 +12657,7 @@ bool Dialogs::Assets::QuickBlocksScene(cui_ctx* ui, const LoginClient& client) c
 {
     if (!client.inventory.shortcutsVisible) return false;
     if (quickDragging_ || quickClosePress_ || quickSkipRelease_) return true;
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     return base.scale > 0 && Contains({float(quickX_),float(quickY_),280,48},base.ToLocal(cui_mouse_pos(ui)));
 }
 
@@ -13435,8 +12723,7 @@ bool Dialogs::Assets::HandleQuickInput(cui_ctx* ui, LoginClient& client, bool bl
         return false;
     }
     if (!QuickBlocksScene(ui,client)) return false;
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     if (base.scale <= 0) return false;
     QuickInput(ui,client,base.ToLocal(cui_mouse_pos(ui)));
     return true;
@@ -13506,8 +12793,7 @@ bool Dialogs::Assets::InventoryBlocksScene(cui_ctx* ui, const LoginClient& clien
     if (client.merchant.notice || client.merchant.quantityOpen) return true;
     if (!client.inventory.open) return false;
     if (inventoryDragging_ || inventoryScrollDrag_ || inventoryClosePress_ || inventoryServicePress_) return true;
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     const bool opening = client.merchant.actor && inventoryServiceRevision_ != client.merchant.revision;
     return base.scale > 0 && Contains({opening ? 519.f : float(inventoryX_),opening ? 0.f : float(inventoryY_),
         inventoryWidth_,inventoryHeight_},base.ToLocal(cui_mouse_pos(ui)));
@@ -13834,8 +13120,7 @@ bool Dialogs::Assets::ShopBlocksScene(cui_ctx* ui, const LoginClient& client, bo
     if (!hitOnly && (ShopHasModal(client) ||
         (shopActor_ == client.shop.actor && shopCatalogue_ == client.shop.catalogueRevision &&
          (shopScrollDrag_ || shopPressed_ != ShopControl::None || shopPressedRow_ >= 0)))) return true;
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     const cui_rect bounds = client.shop.storage ? cui_rect{-292,234,488,205}
         : cui_rect{0,float(shopTop_),float(ShopWidth(client.shop)),224};
     return base.scale > 0 && Contains(bounds,base.ToLocal(cui_mouse_pos(ui)));
@@ -17747,8 +17032,7 @@ bool Dialogs::Assets::HandleMinimapInput(cui_ctx* ui, LoginClient& client, bool 
 {
     minimapHint_=-1;
     auto& map=client.minimap;
-    const auto value=cui_viewport_size(ui);
-    const HudPoint base({0,0,value.x,value.y});
+    const HudPoint base(ViewportRect(ui));
     if (base.scale<=0 || !map.visible) return false;
     const auto pointer=base.ToLocal(cui_mouse_pos(ui));
     const auto [x,y,w,h]=map.bounds();
@@ -17886,8 +17170,7 @@ void Dialogs::Assets::DrawMinimapPanel(cui_ctx* ui, const LoginClient& client)
 {
     if (!client.minimap.visible || !minimapImage_.texture) return;
     showMinimapActors_=client.minimapShowActors;
-    const auto view=cui_viewport_size(ui);
-    cui_overlay_begin(ui,{0,0,view.x,view.y});
+    cui_overlay_begin(ui,ViewportRect(ui));
     auto* self=this;
     cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect r,void* data) {
         (*static_cast<Assets**>(data))->PaintMinimap(ui,r);
@@ -18115,8 +17398,7 @@ bool Dialogs::Assets::HandleOptionsInput(cui_ctx* ui, LoginClient& client, bool 
         return true;
     }
     using Audio = mir3_cui::AudioOptions;
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     if (base.scale <= 0) return false;
     const auto point = base.ToLocal(cui_mouse_pos(ui));
     const auto previous = std::exchange(optionsPointer_, point);
@@ -18270,14 +17552,7 @@ void Dialogs::Assets::DrawOptionsPanel(cui_ctx* ui, const LoginClient& client)
 {
     if (!client.serverOptions.open && !client.audioOpen) return;
     SetBagText(ui,optionsAttackMode_,Message(2116+client.serverOptions.attackMode),156,21,true);
-    const auto view = cui_viewport_size(ui);
-    cui_overlay_begin(ui,{0,0,view.x,view.y});
-    const struct { Assets* assets; const LoginClient* client; } data{this,&client};
-    cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect rect,void* value) {
-        const auto& draw = *static_cast<decltype(data)*>(value);
-        draw.assets->PaintGameOptions(ui,rect,*draw.client);
-    },&data,sizeof data);
-    cui_box_end(ui);
+    DrawClientOverlay<&Assets::PaintGameOptions>(ui, client);
 }
 
 void Dialogs::Assets::OpenSkills(cui_ctx* ui, mir3::WilArchive& archive, const std::filesystem::path& root)
@@ -18323,8 +17598,7 @@ bool Dialogs::Assets::HandleSkillInput(cui_ctx* ui, LoginClient& client, bool bl
     if (skills.menu_target<0) skillMenu_ = {};
     skillDescriptionId_ = 0;
     if (!skills.visible) return false;
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     if (base.scale <= 0) return false;
     const auto point = base.ToLocal(cui_mouse_pos(ui));
     const auto prior = std::exchange(skillPointer_,point);
@@ -18438,14 +17712,7 @@ void Dialogs::Assets::DrawSkillsPanel(cui_ctx* ui, const LoginClient& client)
         const std::string progress = skill ? skill->level>=3 ? "Level : Max" : skill->progress_text() : "";
         SetBagText(ui,skillDescriptionProgress_,progress,skill && skill->level>=3 ? 80 : 50,15,true);
     }
-    const auto view = cui_viewport_size(ui);
-    cui_overlay_begin(ui,{0,0,view.x,view.y});
-    const struct { Assets* assets; const LoginClient* client; } data{this,&client};
-    cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect rect,void* value) {
-        const auto& draw = *static_cast<decltype(data)*>(value);
-        draw.assets->PaintSkills(ui,rect,*draw.client);
-    },&data,sizeof data);
-    cui_box_end(ui);
+    DrawClientOverlay<&Assets::PaintSkills>(ui, client);
 }
 
 void Dialogs::Assets::PaintSkills(cui_ctx* ui, cui_rect rect, const LoginClient& client) const
@@ -18538,14 +17805,7 @@ void Dialogs::Assets::DrawSkillShortcuts(cui_ctx* ui, const LoginClient& client)
     if (!client.skillShortcutsVisible) return;
     for (int id : client.skills.bindings)
         if (id && !skillIcons_.contains(999+id)) skillIcons_.emplace(999+id,UploadFrame(ui,skillIconArchive_,999+id,true));
-    const auto view = cui_viewport_size(ui);
-    cui_overlay_begin(ui,{0,0,view.x,view.y});
-    const struct { Assets* assets; const LoginClient* client; } data{this,&client};
-    cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect rect,void* value) {
-        const auto& draw = *static_cast<decltype(data)*>(value);
-        draw.assets->PaintSkillShortcuts(ui,rect,*draw.client);
-    },&data,sizeof data);
-    cui_box_end(ui);
+    DrawClientOverlay<&Assets::PaintSkillShortcuts>(ui, client);
 }
 
 void Dialogs::Assets::PaintSkillShortcuts(cui_ctx* ui, cui_rect rect, const LoginClient& client) const
@@ -18726,8 +17986,7 @@ void Dialogs::Assets::RefreshMonsterPortrait(cui_ctx* ui, const LocalScene::Play
 void Dialogs::Assets::DrawTargetDetails(cui_ctx* ui, bool attributes)
 {
     if (gameHud_.layout.expanded || !targetActor_ || (attributes ? !targetInformation_ : !targetMonster_)) return;
-    const auto size=cui_viewport_size(ui);
-    cui_overlay_begin(ui,{0,0,size.x,size.y});
+    cui_overlay_begin(ui,ViewportRect(ui));
     const struct { const Assets* assets; bool attributes; } draw{this,attributes};
     cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect rect,void* value) {
         const auto& data=*static_cast<decltype(draw)*>(value);
@@ -18880,8 +18139,7 @@ bool Dialogs::Assets::HandlePortraitEntry(cui_ctx* ui, LoginClient& client, cui_
 bool Dialogs::Assets::HandlePortraitPicker(cui_ctx* ui, LoginClient& client, bool blocked)
 {
     using Picker = mir3::PortraitPicker;
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     if (base.scale<=0) return false;
     const auto point = base.ToLocal(cui_mouse_pos(ui));
     const int x = static_cast<int>(std::floor(point.x)), y = static_cast<int>(std::floor(point.y));
@@ -18938,8 +18196,7 @@ void Dialogs::Assets::DrawPortraitPicker(cui_ctx* ui)
         const auto index = static_cast<std::size_t>(portraitPicker_.first+i);
         SetBagText(ui,portraitFileLabels_[i],index<portraitPicker_.names.size() ? portraitPicker_.names[index] : "",w,h);
     }
-    const auto view = cui_viewport_size(ui);
-    cui_overlay_begin(ui,{0,0,view.x,view.y});
+    cui_overlay_begin(ui,ViewportRect(ui));
     const auto* self = this;
     cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect r,void* user) {
         (*static_cast<const Assets**>(user))->PaintPortraitPicker(ui,r);
@@ -19118,8 +18375,7 @@ bool Dialogs::Assets::HandleStatusInput(cui_ctx* ui, LoginClient& client, bool b
 {
     statusPointer_ = {-1,-1};
     statusHintHeight_ = 0;
-    const auto view = cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     if (base.scale<=0) return false;
     const auto point = base.ToLocal(cui_mouse_pos(ui));
     const auto [x,y,w,h] = statusPanel_.rect;
@@ -19234,8 +18490,7 @@ void Dialogs::Assets::DrawStatusPanel(cui_ctx* ui, LoginClient& client)
     for (int row=0;row<9;++row)
         if (StatusContains({210,84+24*row,78,18},statusPointer_)) statusTip_ = &statusStatTips_[row];
 
-    const auto view = cui_viewport_size(ui);
-    cui_overlay_begin(ui,{0,0,view.x,view.y});
+    cui_overlay_begin(ui,ViewportRect(ui));
     Assets* assets = this;
     cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect rect,void* data) {
         (*static_cast<Assets**>(data))->PaintStatus(ui,rect);
@@ -19389,14 +18644,7 @@ void Dialogs::Assets::PaintMount(cui_ctx* ui, cui_rect rect, const LoginClient& 
 
 void Dialogs::Assets::DrawMountPanel(cui_ctx* ui, const LoginClient& client)
 {
-    const auto view = cui_viewport_size(ui);
-    cui_overlay_begin(ui,{0,0,view.x,view.y});
-    const struct { Assets* assets; const LoginClient* client; } data{this,&client};
-    cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect rect,void* value) {
-        const auto& draw = *static_cast<decltype(data)*>(value);
-        draw.assets->PaintMount(ui,rect,*draw.client);
-    },&data,sizeof data);
-    cui_box_end(ui);
+    DrawClientOverlay<&Assets::PaintMount>(ui, client);
 }
 
 void Dialogs::Assets::OpenTrade(cui_ctx* ui, mir3::WilArchive& archive)
@@ -19447,8 +18695,7 @@ bool Dialogs::Assets::HandleTradeInput(cui_ctx* ui, LoginClient& client, bool bl
 {
     auto& trade = client.trade;
     tradeHintHeight_ = 0;
-    const auto size = cui_viewport_size(ui);
-    const HudPoint base({0,0,size.x,size.y});
+    const HudPoint base(ViewportRect(ui));
     if (base.scale<=0) return false;
     const auto pointer = base.ToLocal(cui_mouse_pos(ui));
     const auto previous = std::exchange(tradePointer_,pointer);
@@ -19538,14 +18785,7 @@ void Dialogs::Assets::DrawTradePanel(cui_ctx* ui, const LoginClient& client)
         for (int i=int(amount.size())-3;i>0;i-=3) amount.insert(i,1,',');
         SetBagText(ui,tradeAmounts_[side],std::move(amount),side==0 ? 113 : 85,25,true);
     }
-    const auto size = cui_viewport_size(ui);
-    cui_overlay_begin(ui,{0,0,size.x,size.y});
-    const struct { Assets* assets; const LoginClient* client; } data{this,&client};
-    cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect r,void* user) {
-        const auto& draw = *static_cast<decltype(data)*>(user);
-        draw.assets->PaintTrade(ui,r,*draw.client);
-    },&data,sizeof data);
-    cui_box_end(ui);
+    DrawClientOverlay<&Assets::PaintTrade>(ui, client);
 }
 
 void Dialogs::Assets::DrawPanelHeld(cui_ctx* ui, LoginClient& client)
@@ -19558,8 +18798,7 @@ void Dialogs::Assets::DrawPanelHeld(cui_ctx* ui, LoginClient& client)
     CacheItem(ui,icon);
     const auto& art = itemFrames_.at(icon);
     if (!art.texture) return;
-    const auto size = cui_viewport_size(ui);
-    const HudPoint base({0,0,size.x,size.y});
+    const HudPoint base(ViewportRect(ui));
     const auto mouse = base.ToLocal(cui_mouse_pos(ui));
     if (!Contains({0,0,800,600},mouse)) return;
     const auto where = base.Rect(std::floor(mouse.x-art.width*.5f),std::floor(mouse.y-art.height*.5f),art.width,art.height);
@@ -19647,8 +18886,7 @@ bool Dialogs::Assets::HandleInventoryUtility(cui_ctx* ui, LoginClient& client, b
     if (blocked && cui_mouse_released(ui,CUI_MOUSE_LEFT))
         inventoryDragging_ = inventoryScrollDrag_ = inventoryClosePress_ = inventoryServicePress_ = false;
     if (!blocked && hit) {
-        const auto view = cui_viewport_size(ui);
-        const HudPoint base({0,0,view.x,view.y});
+        const HudPoint base(ViewportRect(ui));
         if (base.scale>0) InventoryInput(ui,client,base.ToLocal(cui_mouse_pos(ui)));
     }
     return hit && !blocked;
@@ -19679,8 +18917,7 @@ void Dialogs::Assets::ScrollUtility(cui_ctx* ui,LoginClient& client,bool blocked
 {
     const auto scroll=cui_mouse_scroll(ui);
     if (blocked || (!scroll.x && !scroll.y)) return;
-    const auto view=cui_viewport_size(ui);
-    const HudPoint base({0,0,view.x,view.y});
+    const HudPoint base(ViewportRect(ui));
     if (base.scale<=0) return;
     const auto point=base.ToLocal(cui_mouse_pos(ui));
     if (client.minimap.visible) {
@@ -19951,8 +19188,7 @@ void Dialogs::Assets::DrawGameExitFade(cui_ctx* ui, const LoginClient& client)
     const auto start = client.returnToCharactersAt-LoginClient::GameExitFadeMs-1;
     const auto elapsed = now>start ? (std::min)(now-start,LoginClient::GameExitFadeMs) : 0;
     const auto opacity = static_cast<std::uint8_t>(std::lround(elapsed*double(0.1f)));
-    const auto size = cui_viewport_size(ui);
-    cui_overlay_begin(ui,{0,0,size.x,size.y});
+    cui_overlay_begin(ui,ViewportRect(ui));
     cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect rect,void* value) {
         const HudPoint base(rect);
         const auto opacity = *static_cast<const std::uint8_t*>(value);
@@ -20271,8 +19507,7 @@ void Dialogs::Assets::PaintGameHud(cui_ctx* ui, cui_rect rect) const
 
 void Dialogs::Assets::DrawGameHud(cui_ctx* ui, LoginClient& client, bool pointerCovered, bool modal)
 {
-    const auto view=cui_viewport_size(ui);
-    const cui_rect screen{0,0,view.x,view.y};
+    const auto screen = ViewportRect(ui);
     const HudPoint base(screen);
     if (base.scale<=0) return;
     const auto pointer=base.ToLocal(cui_mouse_pos(ui));
@@ -20404,8 +19639,7 @@ void Dialogs::Assets::PrepareChatShortcuts(cui_ctx* ui, mir3_cui::ChatPanel& cha
 void Dialogs::Assets::DrawChatShortcutOverlay(cui_ctx* ui, const mir3_cui::ChatPanel& chat)
 {
     if (!chatShortcutVisible_[0] && !chatShortcutVisible_[1]) return;
-    const auto view = cui_viewport_size(ui);
-    cui_overlay_begin(ui,{0,0,view.x,view.y});
+    cui_overlay_begin(ui,ViewportRect(ui));
     const struct { const Assets* assets; std::array<int,2> count, selected; bool expanded; } data{
         this,{int(chat.contacts.size()),int(chat.phrases.size())},{chat.contactIndex,chat.phraseIndex},chat.expanded};
     cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* ui,cui_rect rect,void* value) {

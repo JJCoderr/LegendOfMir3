@@ -508,55 +508,23 @@ public:
 	VOID	OnScrollUp();
 };
 
-// ExchangeWnd
-class CExchangeWnd : public CGameWnd
+
+
+class CButtonPanel : public CGameWnd
 {
-private:
-protected:
+	CGameBtn button;
+	POINT moveOffset;
 public:
-	virtual VOID Init();
-
-	CGameBtn		m_xExchangeBtn;
-
-
-	CExchangeWnd();
-	~CExchangeWnd();
-	VOID	CreateExchangeWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
-	VOID	ShowExchangeWnd();
-	VOID	SetStatusBtnInit();
-public:
-//  消息函数.
-	BOOL	OnLButtonDown(POINT ptMouse);
-	BOOL	OnLButtonUp(POINT ptMouse);
-	VOID	OnMouseMove(POINT ptMouse);
-};
-
-// GuildMasterWnd
-class CGuildMasterWnd : public CGameWnd
-{
-private:
-protected:
-	CGameBtn				m_xGuildMasterBtn;
-
-public:
-	CGuildMasterWnd();
-	~CGuildMasterWnd();
-
-	virtual VOID Init();
-
-	VOID	CreateGuildMasterWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
-	VOID	ShowGuildMasterWnd();
-
-	VOID	SetStatusBtnInit();
-
-public:
-//  消息函数.
-	BOOL	OnLButtonDown(POINT ptMouse);
-	BOOL	OnLButtonUp(POINT ptMouse);
-	VOID	OnMouseMove(POINT ptMouse);
-
-	VOID	OnScrollDown();
-	VOID	OnScrollUp();
+	CButtonPanel() { Init(); }
+	~CButtonPanel() { Destroy(); }
+	void Init() override { CGameWnd::Init(); button.Init(); }
+	void Create(INT id, CWHWilImageData* image, INT background, INT frame,
+	            INT x, INT y, INT moveX, INT moveY);
+	void ShowPanel() { ShowGameWnd(); button.ShowGameBtn(); }
+	void SetStatusBtnInit() { button.SetBtnState(_BTN_STATE_NORMAL); }
+	BOOL OnLButtonDown(POINT mouse) { return button.OnLButtonDown(mouse) != FALSE; }
+	BOOL OnLButtonUp(POINT mouse) { return button.OnLButtonUp(mouse) != FALSE; }
+	void OnMouseMove(POINT mouse);
 };
 
 // GuildWnd
@@ -681,89 +649,8 @@ public:
 	VOID	OnScrollUp();
 };
 
-// QuestWnd
-class CQuestWnd : public CGameWnd
-{
-private:
-protected:
-	CGameBtn				m_xQuestBtn;
 
-public:
-	CQuestWnd();
-	~CQuestWnd();
 
-	virtual VOID Init();
-
-	VOID	CreateQuestWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
-	VOID	ShowQuestWnd();
-
-	VOID	SetStatusBtnInit();
-
-public:
-//  消息函数.
-	BOOL	OnLButtonDown(POINT ptMouse);
-	BOOL	OnLButtonUp(POINT ptMouse);
-	VOID	OnMouseMove(POINT ptMouse);
-
-	VOID	OnScrollDown();
-	VOID	OnScrollUp();
-};
-
-// OptionWnd
-class COptionWnd : public CGameWnd
-{
-private:
-protected:
-	CGameBtn				m_xOptionBtn;
-
-public:
-	COptionWnd();
-	~COptionWnd();
-
-	virtual VOID Init();
-
-	VOID	CreateOptionWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
-	VOID	ShowOptionWnd();
-
-	VOID	SetStatusBtnInit();
-
-public:
-//  消息函数.
-	BOOL	OnLButtonDown(POINT ptMouse);
-	BOOL	OnLButtonUp(POINT ptMouse);
-	VOID	OnMouseMove(POINT ptMouse);
-
-	VOID	OnScrollDown();
-	VOID	OnScrollUp();
-};
-
-// HorseWnd
-class CHorseWnd : public CGameWnd
-{
-private:
-protected:
-	CGameBtn				m_xHorseBtn;
-
-public:
-	CHorseWnd();
-	~CHorseWnd();
-
-	virtual VOID Init();
-
-	VOID	CreateHorseWnd(INT nID, CWHWilImageData* pxWndImage, INT nFrameImgIdx, INT nStartX, INT nStartY, INT nWidth, INT nHeight, BOOL bCanMove);
-	VOID	ShowHorseWnd();
-
-	VOID	SetStatusBtnInit();
-
-public:
-//  消息函数.
-	BOOL	OnLButtonDown(POINT ptMouse);
-	BOOL	OnLButtonUp(POINT ptMouse);
-	VOID	OnMouseMove(POINT ptMouse);
-
-	VOID	OnScrollDown();
-	VOID	OnScrollUp();
-};
 
 // NPCWnd
 /*using namespace std;
@@ -923,6 +810,7 @@ private:
 // Interface
 class CInterface
 {
+	CGameWnd* FindWindowById(INT id);
 public:
 	 CInterface();
 	~CInterface();
@@ -968,16 +856,16 @@ public:
 	CInventoryWnd		m_xInventoryWnd;				//背包窗口.
 	CStatusWnd			m_xStatusWnd;					//角色信息查看窗口(3个)。
 	CStoreWnd			m_xStoreWnd;					//商店窗口.
-	CExchangeWnd		m_xExchangeWnd;					//交易窗口.
-	CGuildMasterWnd		m_xGuildMasterWnd;				//门主窗口.
+	CButtonPanel m_xExchangeWnd;					//交易窗口.
+	CButtonPanel m_xGuildMasterWnd;				//门主窗口.
 	CGuildWnd			m_xGuildWnd;					//文元窗口.
 	CGroupWnd			m_xGroupWnd;					//组窗口。
 	CGroupPopWnd		m_xGroupPopWnd;					//组输入窗口.
 	CChatPopWnd			m_xChatPopWnd;					//组输入窗口.
 	CNPCWnd				m_xNPCWnd;						//NPC 对话窗口。
-	CQuestWnd			m_xQuestWnd;					//任务窗口.
-	COptionWnd			m_xOptionWnd;					//选项窗口.
-	CHorseWnd			m_xHorseWnd;					//聊天框.
+	CButtonPanel m_xQuestWnd;					//任务窗口.
+	CButtonPanel m_xOptionWnd;					//选项窗口.
+	CButtonPanel m_xHorseWnd;					//聊天框.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 public:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
