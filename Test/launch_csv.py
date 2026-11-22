@@ -32,6 +32,20 @@ def apply_data_sql(database, scripts):
     print('导入数据脚本:', ', '.join(script.name for script in scripts), flush=True)
 
 
+def apply_fixture(database, statements):
+    """在数据脚本之后重新应用场景 fixture（含 DELETE 的数据脚本会冲掉它）。"""
+    import sqlite3
+    connection = sqlite3.connect(database)
+    try:
+        connection.execute('BEGIN')
+        for statement in statements:
+            connection.execute(statement['sql'], statement.get('params', []))
+        connection.commit()
+    finally:
+        connection.close()
+    print('重新应用 fixture:', len(statements), '条', flush=True)
+
+
 def main():
     repo = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
@@ -45,6 +59,8 @@ def main():
     parser.add_argument('--resume-runtime', type=Path, help='Reuse an isolated runtime without reapplying fixtures')
     parser.add_argument('--clients', type=int, choices=(1,2,3), default=1)
     parser.add_argument('--timeout-ms', type=int, help='RPC/state wait timeout per step; forwarded to Test.exe')
+    parser.add_argument('--data-then-fixture', action='store_true',
+        help='先导入数据脚本，再应用场景 fixture（数据脚本带 DELETE 时用）')
     parser.add_argument('--data-sql', type=Path, action='append',
         help='准备阶段额外导入的数据脚本（可重复），用于让隔离环境带上正式数据')
     args = parser.parse_args()
@@ -59,11 +75,14 @@ def main():
         if fixture.exists():
             with fixture.open(encoding='utf-8-sig', newline='') as source:
                 statements = list(csv.DictReader(source))
-        root = prepare(repo, binaries, args.config_dir.resolve(), {'fixture':statements}, args.port_offset)
+        initial = [] if args.data_then_fixture else statements
+        root = prepare(repo, binaries, args.config_dir.resolve(), {'fixture':initial}, args.port_offset)
         assets = args.scenario.with_suffix('.files')
         if assets.is_dir(): shutil.copytree(assets, root, dirs_exist_ok=True)
         if args.data_sql:
             apply_data_sql(root/'mir3.sqlite3', args.data_sql)
+        if args.data_then_fixture and statements:
+            apply_fixture(root/'mir3.sqlite3', statements)
     log_path = args.log.resolve() if args.log else root/'test.log'
     print('Runtime:', root, flush=True)
     processes = []
