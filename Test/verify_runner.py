@@ -4,10 +4,11 @@ import sqlite3
 import subprocess
 import tempfile
 from pathlib import Path
+from xlsx_scenario import export_case
 
 repo = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--exe',type=Path,default=repo/'build-eiserver/Release/Test.exe')
+parser.add_argument('--exe',type=Path,default=repo/'build-cui/Release/Test.exe')
 args = parser.parse_args()
 (repo/'out').mkdir(exist_ok=True)
 root = Path(tempfile.mkdtemp(prefix='csv-runner-',dir=repo/'out'))
@@ -28,9 +29,7 @@ checks = [
 ]
 for name,scenario,options,code,required,forbidden in checks:
     log = root/(name+'.log')
-    # 多行字符串用例预期 LF；避免 Windows Git 检出转换成 CRLF 改变 SQL 字面值。
-    fixture = root/scenario
-    fixture.write_text((repo/'Test/Runner'/scenario).read_text(encoding='utf-8-sig'), encoding='utf-8', newline='\n')
+    fixture, _, _ = export_case(repo/'Test/Runner.xlsx', Path(scenario).stem, root)
     result = subprocess.run([str(args.exe),str(fixture),'--database',str(root/'test.sqlite3'),
         '--log',str(log),*options],stdout=subprocess.DEVNULL)
     text = log.read_text(encoding='utf-8')

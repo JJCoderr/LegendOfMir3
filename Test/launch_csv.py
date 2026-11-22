@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 from rpc_fixture import prepare
 from protocol_catalog import definitions, coverage
+from xlsx_scenario import export_case
 
 
 def apply_data_sql(database, scripts):
@@ -50,7 +51,7 @@ def main():
     repo = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('scenario', type=Path)
-    parser.add_argument('--bin-dir', type=Path, default=repo/'build-eiserver/Release')
+    parser.add_argument('--bin-dir', type=Path, default=repo/'build-cui/Release')
     parser.add_argument('--config-dir', type=Path, default=repo/'out/debug')
     parser.add_argument('--port-offset', type=int, default=20000)
     parser.add_argument('--from', dest='first', type=int, default=1)
@@ -101,7 +102,8 @@ def main():
                     time.sleep(.05)
                 return process.pid
             server = start('Server', binaries/'EIServer.exe')
-            subprocess.run([str(binaries/'Test.exe'), str(repo/'Test/Rpc/RpcServer.csv'),
+            preflight, _, _ = export_case(repo/'Test/Rpc.xlsx', 'RpcServer', root)
+            subprocess.run([str(binaries/'Test.exe'), str(preflight),
                 '--server-pid', str(server), '--log', str(root/'server-preflight.log')], check=True)
             client = start('Client', root/'Mir2Ex.exe')
             command = [str(binaries/'Test.exe'), str(args.scenario.resolve()), '--client-pid', str(client),

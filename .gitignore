@@ -30,3 +30,6 @@ CMakeUserPresets.json
 
 # Python test runner cache
 __pycache__/
+
+# Temporary lock copies created by spreadsheet editors
+/Test/~$*.xlsx

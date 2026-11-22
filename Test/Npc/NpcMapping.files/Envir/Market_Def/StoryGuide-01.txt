@@ -1,4 +1,0 @@
-[@main]
-#SAY
-Mapped script\
-<Exit/@exit>

@@ -12,12 +12,14 @@ def main():
     repo=Path(__file__).resolve().parents[1]
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--log-dir',type=Path,default=repo/'out/skill-training')
+    parser.add_argument('--port-offset', type=int, default=20000)
     args=parser.parse_args();logs=args.log_dir.resolve();logs.mkdir(parents=True,exist_ok=True)
     (logs/'comparison.log').write_text('',encoding='utf-8')
     for suffix in ('','High','Progress','Cap'):
         name='SkillsTraining'+suffix
         log=logs/(name+'.log')
-        result=subprocess.run([sys.executable,str(repo/'Test/launch_csv.py'),str(repo/'Test/Skills'/(name+'.csv')),
+        result=subprocess.run([sys.executable,str(repo/'Test/xlsx_scenario.py'),str(repo/'Test/Skills.xlsx'),'--case',name,
+            '--port-offset',str(args.port_offset),
             '--timeout-ms','15000','--log',str(log)],cwd=repo,capture_output=True,text=True,encoding='utf-8',
             env=dict(os.environ,PYTHONIOENCODING='utf-8'))
         (logs/(name+'.launcher.log')).write_text(result.stdout+result.stderr,encoding='utf-8')

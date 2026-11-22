@@ -1,4 +1,0 @@
-[@main]
-#SAY
-Legacy script\
-<Exit/@exit>

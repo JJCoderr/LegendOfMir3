@@ -9,12 +9,10 @@ xlsx 结构：
   编号末四位是步骤号，前面的数字是功能编号。
   Cases 表将功能编号映射到可独立执行的规则段。
   fixture 表（可选，仅隔离环境模式）：case | sql
-  files 表（可选）：case | path | base64
+  files 表（可选）：case | path | encoding | text
 """
 import argparse
-import base64
 import csv
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -94,7 +92,7 @@ def read_scenario(workbook, case, rule_cases=None):
 def extract_assets(workbook, case, directory):
     if 'files' not in workbook.sheetnames:
         return
-    for name, relative, encoded in workbook['files'].iter_rows(min_row=2, values_only=True):
+    for name, relative, encoding, text in workbook['files'].iter_rows(min_row=2, values_only=True):
         if name != case:
             continue
         relative = Path(relative)
@@ -102,8 +100,7 @@ def extract_assets(workbook, case, directory):
             raise SystemExit(f'无效的资源路径：{relative}')
         target = directory / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        with target.open('ab') as stream:
-            stream.write(base64.b64decode(encoded or '', validate=True))
+        target.write_bytes((text or '').replace('\n', '\r\n').encode(encoding))
 
 
 def write_scenario(records, fixtures, directory, name):
@@ -120,9 +117,23 @@ def write_scenario(records, fixtures, directory, name):
     return scenario
 
 
-def run_case(args, workbook, case, rule_cases):
+def materialize_case(workbook, case, directory, rule_cases=None, name=None):
     records, fixtures = read_scenario(workbook, case, rule_cases)
-    print(f'{case}: {len(records)} steps', flush=True)
+    scenario = write_scenario(records, fixtures, directory, name or case)
+    extract_assets(workbook, case, scenario.with_suffix('.files'))
+    return scenario, records, fixtures
+
+
+def export_case(workbook_path, case, directory):
+    workbook = openpyxl.load_workbook(workbook_path, read_only=True, data_only=True)
+    try:
+        rules = read_rule_cases(workbook) if 'Cases' in workbook.sheetnames else None
+        return materialize_case(workbook, case, directory, rules)
+    finally:
+        workbook.close()
+
+
+def run_case(args, workbook, case, rule_cases):
     repo = Path(__file__).resolve().parents[1]
     output = repo / 'out'
     output.mkdir(exist_ok=True)
@@ -131,12 +142,8 @@ def run_case(args, workbook, case, rule_cases):
     log.parent.mkdir(parents=True, exist_ok=True)
     # wire.expect 从场景文件向上查找仓库内的协议头文件。
     with tempfile.TemporaryDirectory(prefix='xlsx-scenario-', dir=output) as directory:
-        generated = write_scenario(records, fixtures, Path(directory), name)
-        assets = args.scenario.with_suffix('.files')
-        if 'files' in workbook.sheetnames:
-            extract_assets(workbook, case, generated.with_suffix('.files'))
-        elif assets.is_dir():
-            shutil.copytree(assets, generated.with_suffix('.files'))
+        generated, records, fixtures = materialize_case(workbook, case, Path(directory), rule_cases, name)
+        print(f'{case}: {len(records)} steps', flush=True)
         if args.pid:
             if fixtures:
                 raise SystemExit('直接注入模式不使用 fixture，请把数据准备放在游戏里')
@@ -148,6 +155,11 @@ def run_case(args, workbook, case, rule_cases):
                        '--port-offset', str(args.port_offset)]
             for script in (args.data_sql or ()):
                 command.extend(['--data-sql', str(script)])
+            if args.data_then_fixture:
+                command.append('--data-then-fixture')
+            for flag, value in (('--resume-runtime', args.resume_runtime), ('--config-dir', args.config_dir)):
+                if value is not None:
+                    command.extend([flag, str(value)])
         if args.first is not None:
             command.extend(['--from', str(args.first)])
         if args.last is not None:
@@ -166,6 +178,9 @@ def main():
     parser.add_argument('--pid', type=int, help='运行中的客户端进程号，直接注入操作')
     parser.add_argument('--bin-dir', type=Path, default=Path('build-cui/Release'))
     parser.add_argument('--data-sql', type=Path, action='append', help='隔离环境额外导入的数据脚本（可重复）')
+    parser.add_argument('--data-then-fixture', action='store_true', help='先导入数据脚本，再应用 fixture')
+    parser.add_argument('--config-dir', type=Path, help='隔离运行环境的配置模板')
+    parser.add_argument('--resume-runtime', type=Path, help='复用前一阶段的隔离运行环境')
     parser.add_argument('--clients', type=int, choices=(1, 2, 3))
     parser.add_argument('--port-offset', type=int, default=20000, help='隔离环境端口偏移')
     parser.add_argument('--from', dest='first', type=int)

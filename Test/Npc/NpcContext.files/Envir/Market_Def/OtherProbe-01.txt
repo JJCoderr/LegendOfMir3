@@ -1,7 +1,0 @@
-[@main]
-#SAY
-Other merchant\
-<Continue/@next>
-[@next]
-#SAY
-Other page

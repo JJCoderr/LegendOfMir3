@@ -1,4 +1,0 @@
-[@loop]
-{
-#CALL [\Library\cycle.txt] @loop
-}

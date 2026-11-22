@@ -1,10 +1,8 @@
-"""Run a real CSV scenario through deliberately fragmented gateway traffic."""
+"""Run a workbook scenario through deliberately fragmented gateway traffic."""
 import argparse
 import configparser
-import csv
 import os
 import select
-import shutil
 import socket
 import subprocess
 import sys
@@ -12,6 +10,8 @@ import threading
 import time
 from pathlib import Path
 from rpc_fixture import prepare
+from xlsx_scenario import extract_assets, read_rule_cases, read_scenario
+import openpyxl
 
 
 class FragmentProxy:
@@ -78,7 +78,10 @@ class FragmentProxy:
 def main():
     repo = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--scenario', type=Path, default=repo/'Test/Login/Login.csv')
+    parser.add_argument('--scenario', type=Path, default=repo/'Test/Login.xlsx')
+    parser.add_argument('--case', default='Login')
+    parser.add_argument('--bin-dir', type=Path, default=repo/'build-cui/Release')
+    parser.add_argument('--port-offset', type=int, default=20000)
     parser.add_argument('--game', action='store_true', help='Also proxy the client game connection (requires --edge client)')
     parser.add_argument('--edge', choices=('gateway', 'client'), default='gateway')
     parser.add_argument('--direction', choices=('requests', 'replies', 'both'), default='replies')
@@ -88,11 +91,13 @@ def main():
     args = parser.parse_args()
     if args.game and args.edge != 'client': parser.error('--game requires --edge client')
     args.log_dir.mkdir(parents=True, exist_ok=True)
-    with args.scenario.with_suffix('.fixture.csv').open(encoding='utf-8-sig', newline='') as source:
-        fixture = list(csv.DictReader(source))
-    root = prepare(repo, repo/'build-eiserver/Release', repo/'out/debug', {'fixture': fixture}, 20000)
-    assets = args.scenario.with_suffix('.files')
-    if assets.is_dir(): shutil.copytree(assets, root, dirs_exist_ok=True)
+    with args.scenario.open('rb') as source:
+        workbook = openpyxl.load_workbook(source, read_only=True, data_only=True)
+        rules = read_rule_cases(workbook) if 'Cases' in workbook.sheetnames else None
+        _, fixture = read_scenario(workbook, args.case, rules)
+        root = prepare(repo, args.bin_dir.resolve(), repo/'out/debug', {'fixture': fixture}, args.port_offset)
+        extract_assets(workbook, args.case, root)
+        workbook.close()
     config = configparser.ConfigParser(interpolation=None)
     config.optionxform = str
     config.read(root/'EIServer.ini', encoding='utf-8')
@@ -114,7 +119,8 @@ def main():
         with (root/'EIServer.ini').open('w', encoding='utf-8') as target:
             config.write(target, space_around_delimiters=False)
         with (args.log_dir/'launcher.log').open('w', encoding='utf-8') as output:
-            result = subprocess.run([sys.executable, str(repo/'Test/launch_csv.py'), str(args.scenario.resolve()),
+            result = subprocess.run([sys.executable, str(repo/'Test/xlsx_scenario.py'), str(args.scenario.resolve()),
+                '--case', args.case, '--bin-dir', str(args.bin_dir.resolve()),
                 '--resume-runtime', str(root), '--clients', str(args.clients), '--timeout-ms', str(args.timeout_ms),
                 '--log', str((args.log_dir/'test.log').resolve())], stdout=output, stderr=subprocess.STDOUT,
                 env=dict(os.environ, PYTHONIOENCODING='utf-8'))

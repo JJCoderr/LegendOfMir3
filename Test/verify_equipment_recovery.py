@@ -10,12 +10,14 @@ def main():
     repo = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--log-dir', type=Path, default=repo/'out/equipment-recovery')
+    parser.add_argument('--port-offset', type=int, default=20000)
     args = parser.parse_args()
     logs = args.log_dir.resolve()
     logs.mkdir(parents=True, exist_ok=True)
 
     def run(name, scenario, *options):
-        command = [sys.executable, str(repo/'Test/launch_csv.py'), str(repo/'Test/Shop'/scenario),
+        command = [sys.executable, str(repo/'Test/xlsx_scenario.py'), str(repo/'Test/Shop.xlsx'), '--case', scenario,
+                   '--port-offset', str(args.port_offset),
                    '--timeout-ms', '15000', '--log', str(logs/(name+'.log')), *options]
         result = subprocess.run(command, cwd=repo, capture_output=True, text=True,
                                 encoding='utf-8', env=dict(os.environ, PYTHONIOENCODING='utf-8'))
@@ -30,10 +32,10 @@ def main():
 
     # launch_csv terminates its own server before its clients in finally. These cutoffs occur
     # before session.return, so neither phase relies on the character-save request.
-    cases = [(name, 'ShopEquipment.csv', last, 'ShopEquipmentRecovery'+name+'.csv')
+    cases = [(name, 'ShopEquipment', last, 'ShopEquipmentRecovery'+name)
              for name, last in [('Sold', '282'), ('Rebuy', '385'), ('New', '462')]]
-    cases += [('MixedBuy', 'ShopMixedTrade.csv', None, 'ShopMixedRecovery.csv'),
-              ('MixedSale', 'ShopMixedSale.csv', None, 'ShopMixedSaleRecovery.csv')]
+    cases += [('MixedBuy', 'ShopMixedTrade', None, 'ShopMixedRecovery'),
+              ('MixedSale', 'ShopMixedSale', None, 'ShopMixedSaleRecovery')]
     for name, scenario, last, recovery in cases:
         runtime = run(name+'-before', scenario, *(['--to', last] if last else []))
         run(name+'-after', recovery, '--resume-runtime', runtime)

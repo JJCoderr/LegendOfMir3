@@ -1,3 +1,0 @@
-[@main]
-#SAY
-Wrong display-name script
