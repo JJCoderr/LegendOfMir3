@@ -111,6 +111,8 @@ void CPlayerObject::Constructor()
     m_npcScriptFiles.clear();
     m_npcOptions.clear();
 
+	m_pGroupOwner = NULL;
+
 	m_fIsCapture			= FALSE;
 }
 

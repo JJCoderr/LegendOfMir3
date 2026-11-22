@@ -25,6 +25,10 @@ public:
 
 	CWHList<CCharObject*>	m_xSlaveObjList;
 
+	CPlayerObject*			m_pGroupOwner;					// 队长（自己建队时指向自己）
+	CWHList<CPlayerObject*>	m_xGroupMembers;				// 队伍成员，由队长维护
+
+
 public:
 	void		Constructor();
 	bool		IsEmpty();
@@ -33,6 +37,7 @@ public:
 	CPlayerObject(CUserInfo* pUserInfo);
 
 	void		Initialize();
+	void		SendGroupMembers();
 
 	virtual void		Operate();
 	BOOL		DoRideHorse(int nDir, int fRideFlag);

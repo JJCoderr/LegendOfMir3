@@ -127,6 +127,16 @@
 #define SM_SPELL2               117
 
 #define SM_SYSMESSAGE           100
+#define CM_GROUPMODE			1019
+#define CM_CREATEGROUP			1020
+#define CM_ADDGROUPMEMBER		1021
+#define CM_DELGROUPMEMBER		1022
+
+#define SM_CREATEGROUP_OK		660
+#define SM_CREATEGROUP_FAIL		661
+#define SM_GROUPCANCEL			666
+#define SM_GROUPMEMBERS			667
+
 #define SM_GROUPMESSAGE         101
 #define SM_CRY                  102
 #define SM_WHISPER              103
