@@ -8,9 +8,9 @@
 
 系统号按工作簿固定分配：`10 Character`、`11 Chat`、`12 ClientUI`、`13 Combat`、`14 GameplaySmoke`、`15 Inventory`、`16 Login`、`17 Monsters`、`18 Npc`、`19 Rpc`、`20 Runner`、`21 Shop`、`22 Skills`。新增用例时使用本工作簿的空闲两位用例号，已有编号保持稳定。
 
-引用现有用例时，在执行行的 `name` 开头填写 `[@工作簿名/测试ID]`，后面可加说明，其余操作字段留空。例如 `[@Login/1603] 登录并选择角色` 会执行 `Login.xlsx` 中标题编号为 `160300` 的用例。引用可以跨工作簿或嵌套，测试 ID 使用标题编号的前四位。
+引用现有用例时，在执行行的 `name` 开头填写 `[@工作簿名/测试ID]`，后面可加说明，其余操作字段留空。例如 `[@Login/1604] 账号密码登录` 会执行 `Login.xlsx` 中标题编号为 `160400` 的用例，用正确账号密码登录并进入选角。第二、第三客户端使用 `[@Login/1605]`、`[@Login/1606]`。各业务用例接着选择自己的角色。登录失败和拒绝分支集中在登录专项用例。引用可以跨工作簿或嵌套，测试 ID 使用标题编号的前四位。
 
-执行区间按调用用例的步骤号选中整条引用，日志保留调用步骤号、引用 ID 和被引用步骤号，例如 `ShopBuy.1.1603.5`。隔离环境使用调用用例的 fixture 和文件资源。
+执行区间按调用用例的步骤号选中整条引用，日志保留调用步骤号、引用 ID 和被引用步骤号，例如 `ShopBuy.1.1604.5`。隔离环境使用调用用例的 fixture 和文件资源。
 
 `fixture` 表按规则段保存隔离库初始化 SQL，`files` 表用 `case | path | encoding | text` 保存可直接编辑的 NPC 文本，执行时按原编码写入 CRLF 换行。运行器在 `out` 下临时展开所选规则段。需要终止服务并复用存档的二阶段回归仍由 `verify_equipment_recovery.py` 驱动。
 
@@ -29,6 +29,10 @@ python Test/xlsx_scenario.py Test/ClientUI.xlsx --pid 1234
 Test.exe 是独立控制台程序，读取 CSV，逐行向 Client 或 Server 转发 JSON-RPC，检查响应并记录日志。Client/Server 不读取场景文件。CSV 的一行可以操作客户端，下一行立即查询服务端。
 
 ## 构建和运行
+
+双击 `Test/run_tests.bat` 可运行执行器回归、三个客户端的直接登录用例、登录专项及各业务子系统的冒烟用例。BAT 按清单顺序逐个运行，失败即停止。Excel 用例与启动器日志写入 `out/excel-tests`。端口被占用时可用环境变量 `MIR3_TEST_PORT_OFFSET` 指定偏移。
+
+也可以通过 BAT 运行指定用例，例如 `Test\run_tests.bat Test\Shop.xlsx --case ShopBuy`。参数沿用 Excel 执行器。
 
 在仓库根目录运行：
 
