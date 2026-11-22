@@ -435,3 +435,5 @@ cmake --build build-cui --target Mir3CuiClient --config Release
 - 复核宝藏版 Mir3.exe 的 IDA 登录库：0x404D80 对注册按钮只读取 Initial/Param2（默认 http://account.wemade.com/main01.html）并调用外部地址打开包装，随即执行退出/清理；改密按钮同理读取 Param3。两个默认网址字符串仅在该函数各有一个代码引用。0x403F30 只是切换登录输入框显示，0x48A5D0/0x48A730 的 Param2/3 引用为配置读写。未发现客户端内的注册账号窗口。旧泄露代码中的 Inventory 208 注册界面是另一套未接通草稿，不属于这份 Mir3.exe 的可到达注册流程。
 
 - 用户确认注册窗口以本地早期代码草稿的字段和坐标实现，背景继续使用现有 GameInter 对话框。移除 Inventory 208 帧自动覆盖分支，保持同一贴图背景。
+
+- 2026-11-22：按要求先提交现有工作区基线 f54278b。Dialogs 第一轮简化移除系统提示、聊天记录、头顶文字重复的 UTF-8 4096 字节前置限制，保留转换后原版长度约束；聊天字符串截断只查找一次 NUL。空资源模式用于冒烟测试，保留相关资源与空指针分支。Mir3CuiDialogSmoke Release 构建及 18/18 场景通过，日志见 build-cui/dialog-smoke/20261122-141502-624-15736/smoke.log。移除基线误纳入的 Python 缓存跟踪，保留本地文件。

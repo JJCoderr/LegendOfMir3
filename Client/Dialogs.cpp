@@ -10348,7 +10348,7 @@ std::vector<DescriptionRow> wrap_skill_description(const std::vector<std::string
 
 std::vector<std::string> wrap_system_notice(std::string_view utf8)
 {
-    if (utf8.empty() || utf8.size()>4096) return {};
+    if (utf8.empty()) return {};
     auto ansi = utf8_to_ansi(utf8);
     if (const auto zero=ansi.find('\0'); zero!=ansi.npos) ansi.resize(zero);
     if (ansi.empty() || ansi.size()>1023) return {};
@@ -10373,14 +10373,14 @@ std::vector<std::string> wrap_system_notice(std::string_view utf8)
 // 0x4366D0 inserts into separately wrapped compact and expanded histories.
 void ChatHistory::post(std::string_view utf8, std::uint32_t foreground, std::uint32_t background)
 {
-    if (utf8.empty() || utf8.size() > 4096) return;
+    if (utf8.empty()) return;
     const int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.data(),
         static_cast<int>(utf8.size()), nullptr, 0);
     std::wstring wide(length, L'\0');
     if (length) MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.data(),
         static_cast<int>(utf8.size()), wide.data(), length);
     auto ansi = encode(wide.data(), length, CP_ACP);
-    ansi.resize(ansi.find('\0') == std::string::npos ? ansi.size() : ansi.find('\0'));
+    if (const auto zero = ansi.find('\0'); zero != ansi.npos) ansi.resize(zero);
     if (ansi.empty() || ansi.size() > 200) return; // 0x4366D0: strlen, not UTF-8 length.
     Surface surface;
     if (!surface.dc) return;
@@ -10420,7 +10420,7 @@ void ChatHistory::post(std::string_view utf8, std::uint32_t foreground, std::uin
 
 std::vector<SpeechLine> wrap_speech(std::string_view utf8)
 {
-    if (utf8.empty() || utf8.size()>4096) return {};
+    if (utf8.empty()) return {};
     const int length=MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,utf8.data(),static_cast<int>(utf8.size()),nullptr,0);
     if (!length) return {};
     std::wstring wide(length,L'\0');
