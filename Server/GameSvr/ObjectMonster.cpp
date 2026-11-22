@@ -1237,31 +1237,31 @@ void CMonsterObject::Run()
 			return;
 		}
 
+		// 攻击按 m_dwNextHitTime 自行节流，不能被行走间隔（MoveDelay）卡住，
+		// 否则行走越慢的怪物出手间隔越长。
+		if (!m_fRunAwayMode && !m_fNoAttackMode && m_pTargetObject)
+		{
+			if (AttackTarget())
+			{
+				InheritedRun();
+				return;
+			}
+		}
+
 		if (GetTickCount() - m_dwWalkTime > m_dwNextWalkTime)
 		{
 			m_dwWalkTime = GetTickCount();
 
 			if (!m_fRunAwayMode)
 			{
-				if (!m_fNoAttackMode)
+				if (!m_fNoAttackMode && !m_pTargetObject)
 				{
-					if (m_pTargetObject)
+					m_nTargetX = -1;
+					
+					if (m_fHasMission)
 					{
-						if (AttackTarget())
-						{
-							InheritedRun();
-							return;
-						}
-					}
-					else
-					{
-						m_nTargetX = -1;
-						
-						if (m_fHasMission)
-						{
-							m_nTargetX = m_nMissionX;
-							m_nTargetY = m_nMissionY;
-						}
+						m_nTargetX = m_nMissionX;
+						m_nTargetY = m_nMissionY;
 					}
 				}
 
