@@ -215,16 +215,18 @@ unsigned Number(const std::wstring& text) {
     return unsigned(number);
 }
 int wmain(int argc,wchar_t** argv) {
-    std::ofstream log;unsigned passed=0,step=0;std::string label;
+    std::ofstream log;unsigned passed=0,step=0;std::string label,scenarioId;
     const auto started=GetTickCount64();
     auto output=[&](const std::string& message) {
         SYSTEMTIME time;GetLocalTime(&time);char stamp[48];
         snprintf(stamp,sizeof(stamp),"%04d-%02d-%02d %02d:%02d:%02d.%03d ",time.wYear,time.wMonth,time.wDay,time.wHour,time.wMinute,time.wSecond,time.wMilliseconds);
-        std::cout<<stamp<<message<<std::endl;if(log) log<<stamp<<message<<std::endl;
+        const auto identity=std::string("[id=")+scenarioId+(step?"."+std::to_string(step):"")+"] ";
+        std::cout<<stamp<<identity<<message<<std::endl;if(log) log<<stamp<<identity<<message<<std::endl;
     };
     try {
         if(argc<2) throw std::runtime_error("Usage: Test.exe scenario.csv --client-pid N --server-pid N [--client2-pid N --client3-pid N --from N --to N --log file --database file --timeout-ms N]");
         fs::path csv=argv[1],logPath=L"test.log",database;
+        scenarioId=csv.stem().u8string();
         std::map<std::string,DWORD> pids;unsigned from=1,to=UINT_MAX,timeout=65000;
         for(int i=2;i<argc;i+=2) {
             if(i+1>=argc) throw std::runtime_error("Missing argument value");
@@ -263,7 +265,7 @@ int wmain(int argc,wchar_t** argv) {
             if(step<from || step>to) continue;
             label=row[1];const auto& target=row[2];const auto& action=row[3];
             const auto expected=Fields(row[5]);Json response;
-            output("STEP "+std::to_string(step)+" "+label+" "+target+" "+action);
+            output("STEP "+std::to_string(step)+" "+label+" "+target+" "+action+" expect="+row[5]);
             if(target=="Runner") {
                 const auto fields=Fields(row[4]);
                 const auto duration=fields.count("milliseconds")?fields.at("milliseconds"):Json();
@@ -320,10 +322,12 @@ int wmain(int argc,wchar_t** argv) {
                 throw std::runtime_error("Unexpected RPC error: "+response.get("error").serialize());
             output("PASS "+std::to_string(step)+" response="+response.serialize());++passed;
         }
+        step=0;
         output("RESULT passed checks="+std::to_string(passed)+" elapsed_ms="+std::to_string(GetTickCount64()-started));
         return 0;
     } catch(const std::exception& error) {
         output("FAIL step="+std::to_string(step)+" "+label+" "+error.what());
+        step=0;
         output("RESULT failed checks="+std::to_string(passed)+" elapsed_ms="+std::to_string(GetTickCount64()-started));
         return 1;
     }

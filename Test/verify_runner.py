@@ -28,11 +28,23 @@ checks = [
 ]
 for name,scenario,options,code,required,forbidden in checks:
     log = root/(name+'.log')
-    result = subprocess.run([str(args.exe),str(repo/'Test/Runner'/scenario),'--database',str(root/'test.sqlite3'),
+    # 多行字符串用例预期 LF；避免 Windows Git 检出转换成 CRLF 改变 SQL 字面值。
+    fixture = root/scenario
+    fixture.write_text((repo/'Test/Runner'/scenario).read_text(encoding='utf-8-sig'), encoding='utf-8', newline='\n')
+    result = subprocess.run([str(args.exe),str(fixture),'--database',str(root/'test.sqlite3'),
         '--log',str(log),*options],stdout=subprocess.DEVNULL)
     text = log.read_text(encoding='utf-8')
     assert result.returncode==code, (name,result.returncode,text)
     assert all(value in text for value in required), (name,text)
     assert not any(value in text for value in forbidden), (name,text)
+    for line in text.splitlines():
+        for marker in (' STEP ', ' PASS '):
+            if marker in line:
+                step = line.split(marker, 1)[1].split()[0]
+                assert f'[id={Path(scenario).stem}.{step}]' in line, line
+        if ' FAIL step=' in line:
+            step = line.split(' FAIL step=', 1)[1].split()[0]
+            if step != '0':
+                assert f'[id={Path(scenario).stem}.{step}]' in line, line
     print('PASS',name)
 print('Logs:',root)

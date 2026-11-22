@@ -2508,3 +2508,14 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 关键库帧数：Inventory 5224、MIcon 1922、Magic 3580、MonMagic 2270；WIL 版本全部为 5000，除 WM-Weapon5.wil 为 17（16916 帧）。
 - 图标来源核实：背包与装备图标用物品的 wLooks 直接作 Inventory.wil 帧号（InventoryWnd.cpp 589），技能图标为 2*id-2 或 999+id（SkillWnd/Interface），都在帧范围内（技能 145 个最大 290；物品 Shape 最大 1209）。
 - System.db 的 ItemInfo.Image（最大 6339）不是图标帧，导入物品表时不要使用；应使用 Shape/wLooks 映射到 Inventory.wil。
+
+
+## 2026-11-22 Excel 真实商店场景与复合用例 ID
+
+- 新增 Test/Shop/ShopBuy.xlsx，scenario/fixture 来自已有真实 ShopBuy 场景，配套沿用同目录 ShopBuy.files。Excel 只做输入，结果只写日志。
+- Test.exe 统一日志标记 [id=场景文件名.步骤ID]，例如 ShopBuy.260；STEP 带预期，PASS/WAIT 带响应，FAIL 带差异，汇总仅标场景ID。文件名作为稳定场景ID，step 是稳定步骤ID。
+- xlsx_scenario.py 在仓库 out 内生成临时 CSV，使 wire.expect 能找到协议头；复制同名 .files，默认输出 out/<场景名>.log；支持 --port-offset，并移除直接模式整段自动重试以免重复业务操作。
+- 实测命令：python Test/xlsx_scenario.py Test/Shop/ShopBuy.xlsx --port-offset 30000 --log out/excel-shop-real.log。真实客户端/EIServer 的 44 步全部通过：25金币购买2瓶后剩3，余额不足拒绝且状态保留，协议计数，SQLite余额3/物品2，重登恢复。最终 runtime out/rpc-b1nlhfx_。
+- 默认偏移20000的26000端口被另一个运行中EIServer占用；改用30000，未停止用户已有进程。诊断用临时服务端日志代码已撤回。
+- Test Release 构建通过；verify_runner.py 13组通过并校验复合ID。多行SQL字面值用例在Windows CRLF检出时与预期LF不符，验证程序写入LF临时副本后执行，不改变解析器语义。
+- 数据证据边界：Client state.get 是真实服务端回包解析后的状态，protocol.get 是收发计数，Database query 只读查询服务端实际SQLite；服务端 state.get 仍只有服务/网络状态，未增加角色内存查询。没有验证商店完整定价规则或所有交易分支。

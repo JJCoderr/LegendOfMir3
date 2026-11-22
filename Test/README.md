@@ -1,5 +1,19 @@
 # CSV 联调场景
 
+## Excel 真实商店示例与用例 ID
+
+`Shop/ShopBuy.xlsx` 是可以执行的 Excel 输入：`scenario` 表保存操作和预期，`fixture` 表保存隔离库种子，同目录 `ShopBuy.files` 提供 NPC 商店脚本。场景 ID 使用文件名 `ShopBuy`，步骤 ID 使用 `step` 列，完整用例 ID 为 `ShopBuy.260`。请保持场景文件名稳定，并在不同场景之间使用唯一名称。
+
+```powershell
+python Test/xlsx_scenario.py Test/Shop/ShopBuy.xlsx --port-offset 30000 --log out/excel-shop-real.log
+```
+
+默认使用 `build-cui/Release`，需要 Python 的 `openpyxl`。执行器启动真实客户端和 EIServer，操作走正式业务协议；数据库断言只读查询新建的隔离 SQLite 库。端口偏移可按本机占用情况调整，不连接已有角色存档。
+
+结果只写日志，不回写 Excel。每条 STEP、WAIT、PASS、FAIL 都带 `[id=场景ID.步骤ID]`；STEP 记录预期，PASS/WAIT 记录实际响应，FAIL 记录差异，场景汇总只带场景 ID。首个失败即停止，后续步骤未执行；不会自动重试整段业务操作。
+
+本例 44 步包括登录、商店列表、购买两瓶（25 金币减至 3）、金币不足拒绝、成功/失败协议计数、保存后的数据库余额和物品数、重新进图恢复。`submitted` 只证明提交，后续状态及数据库检查才确认业务结果。服务端就绪预检日志位于本次 `out/rpc-*/server-preflight.log`，启动日志为 `runtime.log`。
+
 Test.exe 是独立控制台程序，读取 CSV，逐行向 Client 或 Server 转发 JSON-RPC，检查响应并记录日志。Client/Server 不读取场景文件。CSV 的一行可以操作客户端，下一行立即查询服务端。
 
 ## 构建和运行

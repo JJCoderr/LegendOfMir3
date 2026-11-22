@@ -10,9 +10,9 @@ xlsx 结构：
 """
 import argparse
 import csv
+import shutil
 import subprocess
 import sys
-import time
 import tempfile
 from pathlib import Path
 
@@ -44,6 +44,7 @@ def read_scenario(path):
         for row in list(workbook['fixture'].iter_rows(values_only=True))[1:]:
             if row and row[0] is not None and str(row[0]).strip():
                 fixtures.append({'sql': str(row[0])})
+    workbook.close()
     return records, fixtures
 
 
@@ -67,6 +68,7 @@ def main():
     parser.add_argument('--pid', type=int, help='运行中的客户端进程号，直接注入操作')
     parser.add_argument('--bin-dir', type=Path, default=Path('build-cui/Release'))
     parser.add_argument('--clients', type=int, default=1, choices=(1, 2, 3))
+    parser.add_argument('--port-offset', type=int, default=20000, help='隔离环境端口偏移')
     parser.add_argument('--from', dest='first', type=int)
     parser.add_argument('--to', dest='last', type=int)
     parser.add_argument('--timeout-ms', type=int)
@@ -75,8 +77,18 @@ def main():
 
     records, fixtures = read_scenario(args.scenario)
     print(f'scenario: {len(records)} steps', flush=True)
-    with tempfile.TemporaryDirectory(prefix='xlsx-scenario-') as directory:
+    repo = Path(__file__).resolve().parents[1]
+    output = repo / 'out'
+    output.mkdir(exist_ok=True)
+    args.log = args.log or output / f'{args.scenario.stem}.log'
+    args.log.parent.mkdir(parents=True, exist_ok=True)
+    args.log.write_text('', encoding='utf-8')
+    # wire.expect 从场景文件向上查找仓库内的协议头文件。
+    with tempfile.TemporaryDirectory(prefix='xlsx-scenario-', dir=output) as directory:
         generated = write_scenario(records, fixtures, Path(directory), args.scenario.stem)
+        assets = args.scenario.with_suffix('.files')
+        if assets.is_dir():
+            shutil.copytree(assets, generated.with_suffix('.files'))
         if args.pid:
             if fixtures:
                 raise SystemExit('直接注入模式不使用 fixture，请把数据准备放在游戏里')
@@ -90,15 +102,11 @@ def main():
             if args.log is not None:
                 args.log.parent.mkdir(parents=True, exist_ok=True)
                 command.extend(['--log', str(args.log)])
-            # 上一个客户端连接释放管道需要一点时间，首次失败时重试。
-            for attempt in range(3):
-                code = subprocess.call(command)
-                if code == 0 or attempt == 2:
-                    return code
-                time.sleep(1.5)
-            return code
+            # 业务步骤不可自动整段重试，否则可能重复购买或删除角色。
+            return subprocess.call(command)
         command = [sys.executable, str(Path(__file__).with_name('launch_csv.py')), str(generated),
-                   '--bin-dir', str(args.bin_dir), '--clients', str(args.clients)]
+                   '--bin-dir', str(args.bin_dir), '--clients', str(args.clients),
+                   '--port-offset', str(args.port_offset)]
         if args.first is not None:
             command.extend(['--from', str(args.first)])
         if args.last is not None:
