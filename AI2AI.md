@@ -2456,3 +2456,18 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - Client/Tools/test_monster_motions.cpp 与 MonsterMotionCheck 目标覆盖 60 项分档及方向断言；Release 构建通过，MONSTER_MOTIONS_OK failures=0。
 - 端到端回归 Test/Monsters/MonstersSpawn.csv 29 项通过（进图、怪物生成、治疗与 wire 断言），日志 out/monster-motions-check.log。
 - 本批只对齐客户端表现；2000 段染色怪物、远程弹道方向表与怪物攻死亡特效分派仍未接入，原服逐项对照继续。
+
+## 2026-11-22 动作音效恢复与行会回包
+
+- CActor::PlayActSound 与 CHero::PlayActSound 的 PlayActorWav 调用被注释，脚步同样，怪物攻击/受击/死亡与人物受击/死亡全部无声；恢复三处播放。SoundList.wwl 内 204/205/70-73/138/139/144/145 均存在，缺的是调用而非资源。
+- nActorSndTbl[100] 直接用外观编号做下标，141/145/530 等外观越界；改为先取组号，表外外观按无专用音效处理。
+- 服务端缺 CM_GUILDHOME 分支，客户端行会按钮请求无人应答；补 Protocol.h 常量与 ObjectPlayer 回包，当前无行会数据时回 SM_OPENGUILDDLG_FAIL，客户端提示 1473。
+
+## 2026-11-22 v1.45 服务端配置接入
+
+- 数据源分工：地图/出生/刷怪/NPC 取 Mud3/Envir 的「传奇3单机版v1.45」文本配置；怪物属性取 System.db 导出的 MonsterInfo 与 MonsterInfoStat（按 Library/Library/Stat.cs 的枚举展开）。
+- Server/Tools/import_mud3_envir.py 生成 TBL_MAPINFO 365、TBL_STARTPOINT 12、TBL_MONGEN 2604、TBL_MERCHANT 321；地图与出生点按文件名去重。Server/Tools/import_system_db.py 生成 TBL_MONSTER 410（血量兜底 1）。
+- 刷怪名与 System.db 怪物名清洗尾部数字后匹配 250/299，49 个未匹配（清单 out/gen-missing.txt）。
+- NPC 脚本按服务端读取路径整理到 Server/GameData/Envir，运行期复制到工作目录；地图改用 Mud3/Map 的 v1.45 版本，365 张全部存在。
+- 联调：服务端读入 417 怪物、2604 刷怪、321 商人、365 地图；比奇县出生点 458,398 视野内出现 4 个商人 NPC 与 2 只怪物。
+- 已知限制：ProcessMonster 每 200ms 处理一条且服务端按 FLD_MAPNAME 排序，'0' 图先刷，全量一轮约 9 分钟；怪物 FLD_RACE 统一 0，种族 AI 未映射；物品与技能（stditem.dat、magic.dat 为二进制）尚未转换，仍用最小库种子；地图属性位未填且服务端当前未使用。
