@@ -3725,7 +3725,7 @@ VOID CGameProcess::OnSvrMsgNewMap(_TDEFAULTMESSAGE	*ptdm, char *pszMapName)
     m_weather.select(HIBYTE(ptdm->wSeries),true);
 
 	// 地图背景音乐：MapMusic.ini 里按地图文件名配置索引，缺省 0 表示无音乐。
-	g_xSound.PlayBkMusicMp3(TRUE, GetPrivateProfileIntA("MapMusic", szMapName, 0, "./MapMusic.ini"));
+	g_xSound.PlayBkMusicFile(szMapName);
 	m_bRender = TRUE;
 }
 

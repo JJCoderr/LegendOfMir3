@@ -48,6 +48,7 @@ public:
 	void		StopSound(int nNum,int BufIdx);
 
 	void		PlayAmbianceWav(int WavNum);
+	void		PlayBkMusicFile(const char* baseName);	// 按地图名播放同名背景音乐（wav 或 mp3）
 	void		StopBkMusicMp3(void);
 	void		PlayBkMusicMp3(BOOL Looped,INT nIndex);
 	void		PlayMagicEffect(POINT Target,POINT Chr,int Wavnum);

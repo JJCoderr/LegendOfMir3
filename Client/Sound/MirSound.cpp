@@ -409,21 +409,28 @@ void CMirSound::PlayRoleVoice(bool creation, int profession, int gender)
         PlayLobbyEffect(voices[creation][profession + 3 * gender]);
 }
 
-void CMirSound::PlayBkMusicMp3(BOOL Looped,INT	nIndex)
+void CMirSound::PlayBkMusicFile(const char* baseName)
 {
-	// nIndex 来自地图配置（MapMusic.ini），0 表示该地图没有背景音乐。
-	if(!m_bBGMPlay) return;
+	// 背景音乐按地图名取同名文件：Sound\<地图>.wav 优先，其次 .mp3。
+	if(!m_bBGMPlay || !baseName || !*baseName) return;
 
 	if(m_pMp3->IsPlaying()) m_pMp3->OnStop();
-	if(nIndex <= 0) return;
+	m_CommonWavBuffer.Stop();
 
-	CHAR szMp3FileName[MAX_PATH]={};
-	sprintf(szMp3FileName,"Sound\\B%d.mp3",nIndex);
-	if(GetFileAttributesA(szMp3FileName)==INVALID_FILE_ATTRIBUTES) return;
+	CHAR szPath[MAX_PATH]={};
+	sprintf(szPath,"Sound\\%s.wav",baseName);
+	if(GetFileAttributesA(szPath)==INVALID_FILE_ATTRIBUTES) sprintf(szPath,"Sound\\%s.mp3",baseName);
+	if(GetFileAttributesA(szPath)==INVALID_FILE_ATTRIBUTES) return;
 
-	m_pMp3->LoadMp3(szMp3FileName,g_xMainWnd.GetSafehWnd());
-	m_pMp3->OnPlay(-5000,Looped);
-	BGMFadeIn();
+	const char* extension=strrchr(szPath,'.');
+	if(extension && (lstrcmpiA(extension,".mp3")==0)) {
+		m_pMp3->LoadMp3(szPath,g_xMainWnd.GetSafehWnd());
+		m_pMp3->OnPlay(-5000,TRUE);
+		BGMFadeIn();
+		return;
+	}
+	if(SUCCEEDED(m_CommonWavBuffer.Load(m_pSound,szPath,1)))
+		m_CommonWavBuffer.PlayExtended(DSBPLAY_LOOPING,0,m_lWavMaxVol,0);
 }
 ///////////////////////////////////////////////////////////////////////
 //  Name		:	StopBkMusic
