@@ -21,12 +21,12 @@ VOID CLightFog::Init(DWORD dwLightColor)
 	{
 		for ( INT nCntX = 0; nCntX < (NUM_CNTX_LIGHTTILE+1); nCntX++ )
 		{
-			m_avLight[nCntY][nCntX] = D3DLVERTEX(D3DVECTOR((FLOAT)(nCntX*TILE_WIDTH), (FLOAT)(-nCntY*TILE_HEIGHT), 0),
+			m_avLight[nCntY][nCntX] = D3DTLVERTEX(D3DVECTOR((FLOAT)(nCntX*TILE_WIDTH), (FLOAT)(nCntY*TILE_HEIGHT), 0), 1.0f,
 								  			     m_dwLightColor, RGB(0, 0, 0),  0, 0); 
 		}
 	}
 
-	memcpy(m_avSaveLight, m_avLight, sizeof(D3DLVERTEX)*(NUM_CNTY_LIGHTTILE+1)*(NUM_CNTX_LIGHTTILE+1));
+	memcpy(m_avSaveLight, m_avLight, sizeof(D3DTLVERTEX)*(NUM_CNTY_LIGHTTILE+1)*(NUM_CNTX_LIGHTTILE+1));
 
     ClearSavedLightColor();
 }
@@ -44,14 +44,14 @@ VOID CLightFog::ChangeLightColor(DWORD dwColor)
 			}
 		}
 		m_dwLightColor = dwColor;
-		memcpy(m_avSaveLight, m_avLight, sizeof(D3DLVERTEX)*(NUM_CNTY_LIGHTTILE+1)*(NUM_CNTX_LIGHTTILE+1));
+		memcpy(m_avSaveLight, m_avLight, sizeof(D3DTLVERTEX)*(NUM_CNTY_LIGHTTILE+1)*(NUM_CNTX_LIGHTTILE+1));
 	}
 }
 
 
 VOID CLightFog::ClearSavedLightColor()
 {
-	memcpy(m_avLight, m_avSaveLight, sizeof(D3DLVERTEX)*(NUM_CNTY_LIGHTTILE+1)*(NUM_CNTX_LIGHTTILE+1));
+	memcpy(m_avLight, m_avSaveLight, sizeof(D3DTLVERTEX)*(NUM_CNTY_LIGHTTILE+1)*(NUM_CNTX_LIGHTTILE+1));
     for(int row=0;row<NUM_CNTY_LIGHTTILE;++row) for(int column=0;column<NUM_CNTX_LIGHTTILE;++column) {
         const WORD a=WORD(column+(NUM_CNTX_LIGHTTILE+1)*row),b=a+1,d=a+NUM_CNTX_LIGHTTILE+1,c=d+1;
         const WORD triangles[]={a,b,d,b,c,d};
@@ -346,29 +346,20 @@ BOOL CLightFog::SetLightRadiusWithElipse(INT XLightPos, INT YLightPos, INT nXRad
 
 
 
-VOID CLightFog::ShowLightFog(WORD wHalfScrnWidth, WORD wHalfScrnHeight)
+VOID CLightFog::ShowLightFog()
 {
 	if ( g_xMainWnd.Get3DDevice() )
 	{
 		if( SUCCEEDED(g_xMainWnd.Get3DDevice()->BeginScene()) )
 		{
-			D3DVECTOR vTrans;
-			D3DMATRIX matTrans;
-			D3DMATRIX matWorldOriginal;
-
-			g_xMainWnd.Get3DDevice()->GetTransform(D3DTRANSFORMSTATE_WORLD, &matWorldOriginal);
-
 			g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
 			g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_SRCBLEND,  D3DBLEND_ZERO);
 			g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_SRCCOLOR);
 			
-			vTrans.x = -wHalfScrnWidth; vTrans.y = wHalfScrnHeight; vTrans.z = 0;
-			D3DUtil_SetTranslateMatrix(matTrans, vTrans);
-			g_xMainWnd.Get3DDevice()->SetTransform(D3DTRANSFORMSTATE_WORLD, &matTrans);
 			g_xMainWnd.Get3DDevice()->SetTexture(0, NULL);
 			g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_LIGHTING, FALSE);
 			g_xMainWnd.Get3DDevice()->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,
-														  D3DFVF_LVERTEX,
+														  D3DFVF_TLVERTEX,
 														  m_avLight, NUM_LIGHTTILE_VERTICES, 
 														  m_pwLightIndices, NUM_LIGHTTILE_INDICES, NULL );
 			g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_LIGHTING, TRUE);
@@ -376,8 +367,6 @@ VOID CLightFog::ShowLightFog(WORD wHalfScrnWidth, WORD wHalfScrnHeight)
 			g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_SRCBLEND,  D3DBLEND_ONE);
 			g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_ZERO);
 			g_xMainWnd.Get3DDevice()->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
-
-			g_xMainWnd.Get3DDevice()->SetTransform(D3DTRANSFORMSTATE_WORLD, &matWorldOriginal);
 
 			g_xMainWnd.Get3DDevice()->EndScene();
 		}

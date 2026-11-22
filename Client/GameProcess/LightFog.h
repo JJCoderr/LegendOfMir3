@@ -20,8 +20,8 @@ public:
 	CLightFog();
 	~CLightFog();
 protected:
-	D3DLVERTEX			m_avLight[(NUM_CNTY_LIGHTTILE+1)][(NUM_CNTX_LIGHTTILE+1)];
-	D3DLVERTEX			m_avSaveLight[(NUM_CNTY_LIGHTTILE+1)][(NUM_CNTX_LIGHTTILE+1)];
+	D3DTLVERTEX			m_avLight[(NUM_CNTY_LIGHTTILE+1)][(NUM_CNTX_LIGHTTILE+1)];
+	D3DTLVERTEX			m_avSaveLight[(NUM_CNTY_LIGHTTILE+1)][(NUM_CNTX_LIGHTTILE+1)];
 	WORD				m_pwLightIndices[NUM_LIGHTTILE_INDICES];
 	DWORD				m_dwLightColor;	
 
@@ -31,7 +31,7 @@ public:
         return m_pwLightIndices[(column+row*NUM_CNTX_LIGHTTILE)*6+2]==column+(NUM_CNTX_LIGHTTILE+1)*row+NUM_CNTX_LIGHTTILE+2;
     }
 	VOID	Init(DWORD dwLightColor);
-	VOID	ShowLightFog(WORD wScrnWidth = NUM_CNTX_LIGHTTILE*TILE_WIDTH/2, WORD wScrnHeight = NUM_CNTY_LIGHTTILE*TILE_HEIGHT/2);
+	VOID	ShowLightFog();
 	// 将新变更的颜色保存到 m_avSaveLight 中.
 	VOID	ChangeLightColor(DWORD dwColor);
 	VOID	ClearSavedLightColor();

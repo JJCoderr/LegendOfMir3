@@ -31,6 +31,13 @@ inline void Checks(CGameProcess& game) {
     }
     check("native_grid_colors",colors);check("native_grid_triangles",diagonals);
     fog.ClearSavedLightColor();check("frame_reset",fog.ColorAt(8,6)==0x0f0f0f && !fog.DiagonalAt(8,6));
+    const int edgeX = NUM_CNTX_LIGHTTILE * TILE_WIDTH + TILE_START_XPOS;
+    const int edgeY = NUM_CNTY_LIGHTTILE * TILE_HEIGHT + TILE_START_YPOS;
+    fog.SetLightRadiusWithRing(edgeX,edgeY,0,0,0,0,4,100,100,100);
+    check("bottom_right_light",fog.ColorAt(NUM_CNTX_LIGHTTILE,NUM_CNTY_LIGHTTILE)==RGB(115,115,115));
+    check("light_falls_off_radially",
+        fog.ColorAt(NUM_CNTX_LIGHTTILE-1,NUM_CNTY_LIGHTTILE-1)>RGB(15,15,15) &&
+        fog.ColorAt(NUM_CNTX_LIGHTTILE-2,NUM_CNTY_LIGHTTILE-3)==RGB(15,15,15));
     mir3::SnowWeather weather;check("random_sequence",weather.random()==41);weather.select(1);weather.advance(33,true);
     check("snow_spawn",weather.active==1 && weather.fog && weather.fog_frame==1);
     weather.advance(33,false);check("snow_disabled",weather.active==1 && weather.fog_frame==1);

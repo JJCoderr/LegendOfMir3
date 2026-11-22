@@ -546,8 +546,8 @@
 /******************************************************************************************************************
 	#1. Light fog
 *******************************************************************************************************************/
-#define NUM_CNTX_LIGHTTILE			24
-#define NUM_CNTY_LIGHTTILE			24
+#define NUM_CNTX_LIGHTTILE			((_CLIP_WIDTH + TILE_WIDTH - 1) / TILE_WIDTH)
+#define NUM_CNTY_LIGHTTILE			((_CLIP_HEIGHT + TILE_HEIGHT - 1) / TILE_HEIGHT)
 #define TILE_START_XPOS				-8
 #define TILE_START_YPOS				-29
 

@@ -32,8 +32,7 @@ struct SceneLight {
     Rgb sample(int column,int row) const {
         const int source_column=(x+8)/48;
         const int source_row=(y+29)/32;
-        if (column<0 || column>=18 || row<0 || row>=19 ||
-            std::abs(column-source_column)>outer_radius_cells ||
+        if (std::abs(column-source_column)>outer_radius_cells ||
             std::abs(row-source_row)>outer_radius_cells || outer_radius_cells<=0) return {};
         const double distance=std::hypot(double(x+8-48*column),double(y+29-32*row));
         if (distance<inner_radius) return falloff(inner,inner_radius,distance);
