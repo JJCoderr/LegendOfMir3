@@ -154,9 +154,9 @@ namespace
 {
     constexpr int WindowAspectWidth = 4;
     constexpr int WindowAspectHeight = 3;
-    constexpr int MinimumWindowScale = _SCREEN_WIDTH / WindowAspectWidth;
-    static_assert(_SCREEN_WIDTH == MinimumWindowScale * WindowAspectWidth &&
-                  _SCREEN_HEIGHT == MinimumWindowScale * WindowAspectHeight);
+    constexpr int MinimumClientWidth = 1024;
+    constexpr int MinimumWindowScale = MinimumClientWidth / WindowAspectWidth;
+    constexpr int MinimumClientHeight = MinimumWindowScale * WindowAspectHeight;
 
     RECT WindowFrame(HWND window)
     {
@@ -190,8 +190,8 @@ LRESULT CWHDXGraphicWindow::MainWndProcDXG(HWND hWnd, UINT uMsg, WPARAM wParam, 
             {
                 const RECT frame = WindowFrame(hWnd);
                 auto& limits = *reinterpret_cast<MINMAXINFO*>(lParam);
-                limits.ptMinTrackSize.x = _SCREEN_WIDTH + frame.right - frame.left;
-                limits.ptMinTrackSize.y = _SCREEN_HEIGHT + frame.bottom - frame.top;
+                limits.ptMinTrackSize.x = MinimumClientWidth + frame.right - frame.left;
+                limits.ptMinTrackSize.y = MinimumClientHeight + frame.bottom - frame.top;
                 return 0;
             }
             break;
@@ -568,11 +568,11 @@ HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
 		
 		// 设置客户端区域大小的部分与窗口的创建有关.
 		// 获取屏幕分辨率即客户端矩形区域的大小。
-		// Keep the legacy canvas in logical pixels; scale the window for the desktop DPI.
+		// Use the same DPI-scaled window baseline for every scene.
 		HDC windowDC = GetDC(m_hWnd);
 		const int dpi = GetDeviceCaps(windowDC, LOGPIXELSX);
 		ReleaseDC(m_hWnd, windowDC);
-		const int defaultScale = MulDiv(m_stDisplayInfo.wWidth / WindowAspectWidth, dpi, USER_DEFAULT_SCREEN_DPI);
+		const int defaultScale = MulDiv(MinimumWindowScale, dpi, USER_DEFAULT_SCREEN_DPI);
 		const int defaultWidth = defaultScale * WindowAspectWidth;
 		const int defaultHeight = defaultScale * WindowAspectHeight;
 		// Explicit Display overrides remain physical pixel sizes.
