@@ -51,3 +51,18 @@ SetWindowPos(hwnd, 0, 0, 0, rect.right-rect.left, rect.bottom-rect.top, 0x16);
 系统DPI通过窗口DC的`LOGPIXELSX`读取；不硬编码150%或960×720/1200×900。
 当前清单是system DPI aware，因此使用系统DPI；这不是跨显示器逐屏DPI自适应。
 显式INI WindowWidth/WindowHeight仍为用户指定的物理尺寸。
+
+## 2026-11-23 样本复核
+
+重新计算 `Mud3/Mir3.exe` 的 SHA256，与本页记录一致。PE 导入表中，USER32 提供
+`CreateWindowExA`、`GetWindowLongA`、`AdjustWindowRectEx`、`SetWindowPos`，
+DDRAW 提供 `DirectDrawCreate`。对样本本体反汇编时，窗口创建函数
+`0x49359E` 的两条分支分别在 `0x493605` 和 `0x493615` 附近把
+640×480 与 800×600 加上系统边框度量。登录入口 `0x48AB27` 和游戏返回选角
+`0x421ED1` 前传入 640×480，进游戏的 `0x421A5D` 前传入 800×600。
+
+## 新版窗口缩放
+
+窗口模式的客户区按 4:3 缩放，最小为 800×600 物理像素。默认客户区按场景画布与系统 DPI
+计算，再应用这个下限。INI 中的 `Display/WindowWidth`、`Display/WindowHeight` 仍以物理像素
+为单位，窗口取能容纳所填宽高的最小 4:3 尺寸。手动调整的尺寸在本次运行的场景切换中保留。

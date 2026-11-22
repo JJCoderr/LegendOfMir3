@@ -25,6 +25,12 @@ WM_SYSKEYDOWN = 0x0104
 WM_MOUSEMOVE = 0x0200
 WM_LBUTTONDOWN = 0x0201
 WM_LBUTTONUP = 0x0202
+WM_SIZING = 0x0214
+WM_ENTERSIZEMOVE = 0x0231
+WM_EXITSIZEMOVE = 0x0232
+WMSZ_BOTTOMRIGHT = 8
+SWP_NOZORDER = 0x0004
+SWP_NOACTIVATE = 0x0010
 EM_GETPASSWORDCHAR = 0x00D2
 VK_RETURN = 13
 VK_LBUTTON = 1
@@ -93,6 +99,7 @@ for name in ('EIServer.ini', 'Mir3.ini'):
         for key, port in (('Param1', 7000), ('SelectGatePort', 7100), ('GameGatePort', 7200)):
             config['Initial'][key] = str(ports[port])
         config['Initial']['ServerAddr'] = '127.0.0.1'
+        config.remove_section('Display')
     with (root/name).open('w', encoding='utf-8') as output:
         config.write(output, space_around_delimiters=False)
 for name in ('Data','Map','Sound'):
@@ -141,8 +148,9 @@ def windows(pid):
         return True
     u.EnumWindows(visit,0)
     return result
-def click(h,x,y):
-    x=round(x*u.GetDpiForSystem()/96);y=round(y*u.GetDpiForSystem()/96)
+def click(h,x,y,canvas_width=800):
+    scale = size(h)[0] / canvas_width
+    x=round(x*scale);y=round(y*scale)
     pos=(y<<16)|x
     for msg,wp in ((WM_MOUSEMOVE,0),(WM_LBUTTONDOWN,MK_LBUTTON),(WM_LBUTTONUP,0)):u.PostMessageW(h,msg,wp,pos)
 def equipment_roundtrip(h, state_path):
@@ -249,6 +257,29 @@ def hold_mouse(h, x, y, seconds=1.8):
 
 def size(h):
     r=w.RECT();u.GetClientRect(h,c.byref(r));return r.right,r.bottom
+
+def default_window_size(canvas_width):
+    dpi = u.GetDpiForSystem()
+    width = max(800, ((canvas_width // 4 * dpi + 48) // 96) * 4)
+    return width, width * 3 // 4
+
+def resize_window(h):
+    width, height = size(h)
+    outer = w.RECT()
+    assert u.GetWindowRect(h, c.byref(outer))
+    target_width = max(1000, width + 40)
+    target_height = target_width * 3 // 4
+    # Perturb the proposed width so the client must restore the aspect ratio.
+    outer.right += target_width - width + 1
+    outer.bottom += target_height - height
+    u.SendMessageW(h, WM_ENTERSIZEMOVE, 0, 0)
+    assert u.SendMessageW(h, WM_SIZING, WMSZ_BOTTOMRIGHT, c.byref(outer))
+    assert u.SetWindowPos(h, 0, outer.left, outer.top, outer.right - outer.left,
+                          outer.bottom - outer.top, SWP_NOZORDER | SWP_NOACTIVATE)
+    u.SendMessageW(h, WM_EXITSIZEMOVE, 0, 0)
+    assert size(h) == (target_width, target_height)
+    return target_width, target_height
+
 with (root/'server.log').open('wb') as log:
     try:
         s,ss=launch('EIServer',stdout=log,stderr=log,creationflags=subprocess.CREATE_NO_WINDOW)
@@ -261,30 +292,31 @@ with (root/'server.log').open('wb') as log:
             ws=windows(p.pid)
             print(ws,flush=True)
             edit=ws.pop('Edit');h=ws['WH GEngine']
-            assert size(h)==tuple(round(v*u.GetDpiForSystem()/96) for v in (640,480)),size(h)
+            assert size(h)==default_window_size(640),size(h)
+            resized = resize_window(h) if iteration == 0 else None
             for _ in range(100):
                 if u.IsWindowVisible(edit):break
                 time.sleep(.1)
             assert u.IsWindowVisible(edit),'login editor not shown'
             for x,word in ((150,'mirtest'),(350,'test123')):
-                click(h,x,446);time.sleep(.25)
+                click(h,x,446,canvas_width=640);time.sleep(.25)
                 assert u.SendMessageW(edit,WM_SETTEXT,0,c.c_wchar_p(word))
                 print('editor length/mask',u.SendMessageW(edit,WM_GETTEXTLENGTH,0,0),u.SendMessageW(edit,EM_GETPASSWORDCHAR,0,0),flush=True)
-            click(h,466,442)
+            click(h,466,442,canvas_width=640)
             login=wait(cs,lambda d:d.get('stage')=='server_list' or d.get('notice'))
             print('authenticated',login,flush=True)
             assert login.get('stage')=='server_list',login
             if login.get('notice'):
                 u.PostMessageW(h,WM_KEYDOWN,VK_RETURN,0);u.PostMessageW(h,WM_KEYUP,VK_RETURN,0)
                 wait(cs,lambda d:not d.get('notice'))
-            click(h,60,80)
+            click(h,60,80,canvas_width=640)
             print('character',wait(cs,lambda d:d.get('scene')=='character_select'),size(h),flush=True)
-            assert size(h)==tuple(round(v*u.GetDpiForSystem()/96) for v in (640,480)),size(h)
+            assert size(h)==(resized or default_window_size(640)),size(h)
             time.sleep(3)
-            click(h,275,61)
+            click(h,275,61,canvas_width=640)
             world=wait(cs,lambda d:d.get('map') and d.get('remote_port')==ports[7200],20)
             print('world',world,size(h),flush=True)
-            assert size(h)==tuple(round(v*u.GetDpiForSystem()/96) for v in (800,600)),size(h)
+            assert size(h)==(resized or default_window_size(800)),size(h)
             if iteration==0:
                 # Acknowledge the arrival notice before using the map.
                 u.PostMessageW(h,WM_KEYDOWN,VK_RETURN,0);u.PostMessageW(h,WM_KEYUP,VK_RETURN,0)
@@ -320,13 +352,13 @@ with (root/'server.log').open('wb') as log:
                 u.PostMessageW(h,WM_KEYDOWN,VK_RETURN,0);u.PostMessageW(h,WM_KEYUP,VK_RETURN,0)
                 returned=wait(cs,lambda d:d.get('scene')=='character_select' and d.get('connected') and d.get('remote_port')==ports[7100],20)
                 print('returned',returned,flush=True)
-                assert size(h)==tuple(round(v*u.GetDpiForSystem()/96) for v in (640,480)),size(h)
+                assert size(h)==resized,size(h)
                 wait(cs,lambda d:not d.get('waiting') and not d.get('notice'))
                 with sqlite3.connect(root/'mir3.sqlite3') as db:
                     persisted=db.execute("SELECT FLD_CX,FLD_CY FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01'").fetchone()
                 print('saved before reentry',persisted,flush=True)
                 assert persisted==(moved['x'],moved['y']),(persisted,moved)
-                click(h,275,61)
+                click(h,275,61,canvas_width=640)
                 restored=wait(cs,lambda d:d.get('scene')=='world' and d.get('map') and d.get('remote_port')==ports[7200],20)
                 print('restored',restored,flush=True)
                 if args.equipment:

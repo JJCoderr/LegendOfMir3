@@ -118,7 +118,7 @@ BOOL CWHDXGraphicWindow::Create(HINSTANCE hInst, LPTSTR lpCaption, CHAR *pszMenu
 	{
 		dwStyle  = GetWindowStyle(m_hWnd);
 		dwStyle &= ~WS_POPUP;
-		dwStyle |= WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU;
+		dwStyle |= WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU | WS_THICKFRAME;
 		SetWindowLong(m_hWnd, GWL_STYLE, dwStyle);
 	}
 	else
@@ -150,6 +150,22 @@ BOOL CWHDXGraphicWindow::Create(HINSTANCE hInst, LPTSTR lpCaption, CHAR *pszMenu
 }
 
 
+namespace
+{
+    constexpr int WindowAspectWidth = 4;
+    constexpr int WindowAspectHeight = 3;
+    constexpr int MinimumWindowScale = _SCREEN_WIDTH / WindowAspectWidth;
+    static_assert(_SCREEN_WIDTH == MinimumWindowScale * WindowAspectWidth &&
+                  _SCREEN_HEIGHT == MinimumWindowScale * WindowAspectHeight);
+
+    RECT WindowFrame(HWND window)
+    {
+        RECT frame = {};
+        AdjustWindowRectEx(&frame, GetWindowStyle(window), GetMenu(window) != NULL, GetWindowExStyle(window));
+        return frame;
+    }
+}
+
 LRESULT CWHDXGraphicWindow::MainWndProcDXG(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
 	switch (uMsg)
@@ -169,8 +185,46 @@ LRESULT CWHDXGraphicWindow::MainWndProcDXG(HWND hWnd, UINT uMsg, WPARAM wParam, 
         case WM_SETCURSOR:
 			return OnSetCursor();   
 
- //      case WM_GETMINMAXINFO:			
-//			return OnGetMinMaxInfo(wParam, lParam);
+        case WM_GETMINMAXINFO:
+            if (GetWindowStyle(hWnd) & WS_THICKFRAME)
+            {
+                const RECT frame = WindowFrame(hWnd);
+                auto& limits = *reinterpret_cast<MINMAXINFO*>(lParam);
+                limits.ptMinTrackSize.x = _SCREEN_WIDTH + frame.right - frame.left;
+                limits.ptMinTrackSize.y = _SCREEN_HEIGHT + frame.bottom - frame.top;
+                return 0;
+            }
+            break;
+
+        case WM_ENTERSIZEMOVE:
+            m_resizeStartWidth = m_rcWindow.right - m_rcWindow.left;
+            break;
+
+        case WM_SIZING:
+            ConstrainWindowSize(hWnd, wParam, *reinterpret_cast<RECT*>(lParam));
+            return TRUE;
+
+        case WM_EXITSIZEMOVE:
+            if (m_resizeStartWidth != m_rcWindow.right - m_rcWindow.left)
+                m_userWindowScale = (m_rcWindow.right - m_rcWindow.left) / WindowAspectWidth;
+            m_resizeStartWidth = 0;
+            break;
+
+        case WM_ERASEBKGND:
+            if (m_resizeStartWidth)
+                return TRUE;
+            break;
+
+        case WM_PAINT:
+            if (m_resizeStartWidth)
+            {
+                PAINTSTRUCT paint;
+                BeginPaint(hWnd, &paint);
+                Present();
+                EndPaint(hWnd, &paint);
+                return 0;
+            }
+            break;
 
 		default:
 			break;
@@ -180,31 +234,39 @@ LRESULT CWHDXGraphicWindow::MainWndProcDXG(HWND hWnd, UINT uMsg, WPARAM wParam, 
 }
 
 
-LRESULT CWHDXGraphicWindow::OnGetMinMaxInfo(WPARAM wParam, LPARAM lParam)
+void CWHDXGraphicWindow::ConstrainWindowSize(HWND window, WPARAM edge, RECT& bounds)
 {
-	if ( m_hWnd )
-	{
-		MINMAXINFO* pMinMax = (MINMAXINFO*) lParam;
+    const RECT frame = WindowFrame(window);
+    const int frameWidth = frame.right - frame.left;
+    const int frameHeight = frame.bottom - frame.top;
+    const int width = bounds.right - bounds.left - frameWidth;
+    const int height = bounds.bottom - bounds.top - frameHeight;
 
-		DWORD dwFrameWidth    = GetSystemMetrics( SM_CXSIZEFRAME );
-		DWORD dwFrameHeight   = GetSystemMetrics( SM_CYSIZEFRAME );
-		DWORD dwMenuHeight;
-		if( GetMenu( m_hWnd ) )
-			dwMenuHeight    = GetSystemMetrics( SM_CYMENU );
-		else
-			dwMenuHeight    = 0;					
+    int scale;
+    if (edge == WMSZ_LEFT || edge == WMSZ_RIGHT)
+        scale = MulDiv(width, 1, WindowAspectWidth);
+    else if (edge == WMSZ_TOP || edge == WMSZ_BOTTOM)
+        scale = MulDiv(height, 1, WindowAspectHeight);
+    else
+    {
+        // For corners, use both mouse axes by projecting onto the aspect ratio.
+        constexpr int aspectLengthSquared = WindowAspectWidth * WindowAspectWidth +
+                                            WindowAspectHeight * WindowAspectHeight;
+        scale = MulDiv(width * WindowAspectWidth + height * WindowAspectHeight, 1, aspectLengthSquared);
+    }
+    scale = max(scale, MinimumWindowScale);
+    const int outerWidth = scale * WindowAspectWidth + frameWidth;
+    const int outerHeight = scale * WindowAspectHeight + frameHeight;
 
-		DWORD dwCaptionHeight = GetSystemMetrics( SM_CYCAPTION );
+    if (edge == WMSZ_LEFT || edge == WMSZ_TOPLEFT || edge == WMSZ_BOTTOMLEFT)
+        bounds.left = bounds.right - outerWidth;
+    else
+        bounds.right = bounds.left + outerWidth;
 
-		pMinMax->ptMinTrackSize.x = m_stDisplayInfo.wWidth  + dwFrameWidth * 2;
-		pMinMax->ptMinTrackSize.y = m_stDisplayInfo.wHeight + dwFrameHeight * 2 + 
-									dwMenuHeight + dwCaptionHeight;
-
-		pMinMax->ptMaxTrackSize.x = pMinMax->ptMinTrackSize.x;
-		pMinMax->ptMaxTrackSize.y = pMinMax->ptMinTrackSize.y;
-	}
-
-    return 0L;
+    if (edge == WMSZ_TOP || edge == WMSZ_TOPLEFT || edge == WMSZ_TOPRIGHT)
+        bounds.top = bounds.bottom - outerHeight;
+    else
+        bounds.bottom = bounds.top + outerHeight;
 }
 
 
@@ -468,7 +530,7 @@ HRESULT CWHDXGraphicWindow::ResetDXG(WORD wWidth, WORD wHeight, WORD wBPP, BYTE 
 	{
 		dwStyle  = GetWindowStyle(m_hWnd);
 		dwStyle &= ~WS_POPUP;
-		dwStyle |= WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU;
+		dwStyle |= WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU | WS_THICKFRAME;
 		SetWindowLong(m_hWnd, GWL_STYLE, dwStyle);
 	}
 	else
@@ -503,8 +565,6 @@ HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
 	{
 		RECT				rcWork;
 		RECT				rcTemp;
-
-	    GetWindowRect(m_hWnd, &rcTemp);
 		
 		// 设置客户端区域大小的部分与窗口的创建有关.
 		// 获取屏幕分辨率即客户端矩形区域的大小。
@@ -512,15 +572,22 @@ HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
 		HDC windowDC = GetDC(m_hWnd);
 		const int dpi = GetDeviceCaps(windowDC, LOGPIXELSX);
 		ReleaseDC(m_hWnd, windowDC);
-		const int defaultWidth = MulDiv(m_stDisplayInfo.wWidth, dpi, USER_DEFAULT_SCREEN_DPI);
-		const int defaultHeight = MulDiv(m_stDisplayInfo.wHeight, dpi, USER_DEFAULT_SCREEN_DPI);
+		const int defaultScale = MulDiv(m_stDisplayInfo.wWidth / WindowAspectWidth, dpi, USER_DEFAULT_SCREEN_DPI);
+		const int defaultWidth = defaultScale * WindowAspectWidth;
+		const int defaultHeight = defaultScale * WindowAspectHeight;
 		// Explicit Display overrides remain physical pixel sizes.
 		const int windowWidth = GetPrivateProfileInt("Display", "WindowWidth", defaultWidth, ".\\Mir3.ini");
 		const int windowHeight = GetPrivateProfileInt("Display", "WindowHeight", defaultHeight, ".\\Mir3.ini");
-		SetRect(&rcTemp, 0, 0, windowWidth, windowHeight);
+        const int requestedScale = max(
+            windowWidth / WindowAspectWidth + (windowWidth % WindowAspectWidth > 0),
+            windowHeight / WindowAspectHeight + (windowHeight % WindowAspectHeight > 0));
+        const int scale = max(MinimumWindowScale, m_userWindowScale ? m_userWindowScale : requestedScale);
+        SetRect(&rcTemp, 0, 0, scale * WindowAspectWidth, scale * WindowAspectHeight);
 
 		// 从客户端矩形区域大小转换为整个窗口区域的大小.
-		AdjustWindowRectEx(&rcTemp, GetWindowStyle(m_hWnd), GetMenu(m_hWnd) != NULL, GetWindowExStyle(m_hWnd));
+        const RECT frame = WindowFrame(m_hWnd);
+        rcTemp.right += frame.right - frame.left;
+        rcTemp.bottom += frame.bottom - frame.top;
 
 		// 用窗口的整个区域大小设置窗口。但起始坐标被忽略。
 		SetWindowPos(m_hWnd, NULL, 0, 0, rcTemp.right-rcTemp.left, rcTemp.bottom-rcTemp.top,

@@ -227,7 +227,10 @@ public:
 	virtual LRESULT OnSize(WPARAM wParam, LPARAM lParam);
 	virtual LRESULT OnMove(WPARAM wParam, LPARAM lParam);
 	virtual LRESULT OnSysKeyDown(WPARAM wParam, LPARAM lParam);
-	virtual LRESULT OnGetMinMaxInfo(WPARAM wParam, LPARAM lParam);
+private:
+    void ConstrainWindowSize(HWND window, WPARAM edge, RECT& bounds);
+    int m_resizeStartWidth = 0;
+    int m_userWindowScale = 0;
 
 
 protected:
