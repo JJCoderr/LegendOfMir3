@@ -119,6 +119,7 @@ public:
 	WORD				m_wHP;
 	WORD				m_wMP;
 	BOOL				m_bOpenHealth;
+	DWORD				m_dwHealthShowTime;	// 最近一次收到血量的时间，5 秒内显示血条。
 
 	BYTE				m_bLightSize;					// Actor 周围的光源大小。
 

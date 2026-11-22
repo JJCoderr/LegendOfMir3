@@ -45,6 +45,7 @@ VOID CActor::InitActor()
 	m_bOldDir			= 0;
 
 	m_bOpenHealth		= FALSE;
+	m_dwHealthShowTime	= 0;
 	m_bWarMode			= FALSE;
 	m_bCurrMtn			= _MT_MON_STAND;
 	m_bCurrDir			= _DIRECTION_LIST_1;
@@ -1103,12 +1104,12 @@ VOID CActor::OnStruck(LPPACKETMSG lpPacketMsg)
 	MESSAGEBODYWL stMsgBodyWl;
 	FEATURE		  stFeature;
 
-	FLOAT wHPRate = (FLOAT)((FLOAT)lpPacketMsg->stDefMsg.wParam/(FLOAT)lpPacketMsg->stDefMsg.wTag);
 	WORD  wDamage = lpPacketMsg->stDefMsg.wSeries;
     if(!m_bIsDead) AddDamage(-int(wDamage));
 	m_wHP		  = lpPacketMsg->stDefMsg.wParam;
 	m_wMAXHP	  = lpPacketMsg->stDefMsg.wTag;
-	m_bHPPercent  = wHPRate*100;
+	m_bHPPercent  = m_wMAXHP ? (BYTE)(100u*m_wHP/m_wMAXHP) : 0;
+	m_dwHealthShowTime = GetTickCount();
 
 	fnDecode6BitBuf(lpPacketMsg->szEncodeData, (char*)&stMsgBodyWl, sizeof(MESSAGEBODYWL));
 
@@ -1883,10 +1884,13 @@ BOOL CActor::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, 
 
 VOID CActor::DrawHPBar()
 {
-	if ( m_bOpenHealth )
+	// 参考 GODOT 分支 SceneHealth：血量到达后 5 秒内显示，人物状态位也可常驻。
+	constexpr DWORD HealthBarHoldTime = 5000;
+	const bool bRecentHP = m_dwHealthShowTime && DWORD(GetTickCount()-m_dwHealthShowTime) < HealthBarHoldTime;
+
+	if ( m_bOpenHealth || bRecentHP )
 	{
-		FLOAT fHPPercent = (FLOAT)((FLOAT)m_bHPPercent/100);
-		RECT rcHP = {0, 0, (36*fHPPercent), 4};
+		RECT rcHP = {0, 0, (36*m_bHPPercent/100), 4};
  		g_xGameProc.m_xImage.m_xImageList[_IMAGE_PROGUSE].NewSetIndex(2);
  		g_xMainWnd.DrawWithImageForComp(
 						m_shScrnPosX+7,
