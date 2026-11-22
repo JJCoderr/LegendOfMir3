@@ -55,6 +55,8 @@ CMonsterObject::CMonsterObject()
 {
 	m_dwRunNextTick		= 250;
 	m_dwSearchTick		= 3000 + rand() % 2000;
+	m_dwRunTime			= 0;
+	m_dwSearchTime		= 0;
 
 	m_nDirection		= 4;
 
@@ -619,6 +621,7 @@ void CMonsterObject::SearchViewRange()
 		}
 	}
 
+
 	// Search VisibleObjectList
 	for (int i = 0; i < m_nViewRange; i++)
 	{
@@ -654,6 +657,7 @@ void CMonsterObject::SearchViewRange()
 			}
 		} // if (pMapCellInfo)
 	}
+
 
 	if (m_xVisibleObjectList.GetCount())
 	{
@@ -1004,6 +1008,7 @@ void CMonsterObject::MonsterNormalAttack()
 			pListNode = m_xVisibleObjectList.GetNext(pListNode);
 		}
 	}
+
 }
 
 BOOL CMonsterObject::TargetInAttackRange()
@@ -1101,6 +1106,8 @@ BOOL CMonsterObject::TargetInSpitRange(int& nTargetDir)
 
 BOOL CMonsterObject::Attack()
 {
+	// 临时诊断：确认攻击是否真的被调用。
+
 	m_nDirection = (int)m_btTargetDir;
 
 	_Attack(CM_HIT, m_pTargetObject);
