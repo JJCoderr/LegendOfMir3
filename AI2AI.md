@@ -2527,3 +2527,11 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 现象：管理器能启动（日志出现「TryCon 启动成功」），但 sqlservr 进程长时间占用 CPU 且不监听 1433，随后管理器自己的 ADO 连接也失败（Data Source=(local)、127.0.0.1 均报「SQL Server 不存在或拒绝访问」），外部 ADO/TCP 同样连不上。
 - 该 sqlservr 进程随后陷入僵死：Stop-Process 与 taskkill /F 都返回「没有正在运行的实例」，但仍出现在进程列表里并锁着 Data 目录，需要重启机器才能彻底清理。
 - 结论：GSQL 这条线要跑通，需要一次干净的机器重启后立刻启动管理器并马上查询；在此之前不要反复启动，避免僵死进程堆积。
+
+## 2026-11-22 Win7 虚拟机与数据取数环境
+
+- 虚拟机：VMware Workstation，配置 G:\Virtual Machines\Windows7\Windows7.vmx，当前运行中（guestOS windows7-64），网卡 ethernet0 为 hostonly。
+- 网络：宿主 VMnet1 = 192.168.2.1/24；guest 实测 192.168.2.128（MAC 00-0C-29-07-C2-69）。端口状态：445/135 开放，22（SSH）与 3389 未开放。
+- 共享目录：vmx 里配置了 vmdiag（hostPath D:\vmdiag）与 Mud3Config（hostPath %LOCALAPPDATA%\VMware\Mud3Config），两处宿主路径原先都不存在；已创建 D:\vmdiag，guest 重挂载工具后可用 \\vmware-host\Shared Folders\vmdiag 访问。
+- Win7 无法安装微软官方 Win32-OpenSSH（要求 Win10/Server 2019 以上），需用支持 Win7 的实现（Bitvise SSH Server、freeSSHd 等），安装后开放 22 端口。
+- 数据来源计划：从 guest 的 D 盘取 V1.45 数据库解析结果，或在 guest 内跑通 GSQL 后导出 TBL_MONSTER/TBL_STDITEM/TBL_MAGIC。宿主侧 GSQL 已僵死（sqlservr 无法结束），必须重启宿主才能再试。
