@@ -749,6 +749,16 @@ VOID CCharacterProcess::RenderScene(INT nLoopTime)
 				}
 			}
 			m_xSelectChr.Render(m_returnWaiting?0:nLoopTime);
+			// 自动登录：Mir3.ini 里配置了 Character 就直接进入该角色。
+			{
+				static char autoCharacter[64]={};
+				static bool autoRead=false;
+				if(!autoRead) {
+					autoRead=true;
+					GetPrivateProfileStringA("AutoLogin","Character","",autoCharacter,sizeof(autoCharacter),"./Mir3.ini");
+				}
+				if(autoCharacter[0] && EnterCharacter(autoCharacter)) autoCharacter[0]=0;
+			}
 			break;
 		}
 		case PRG_SEL_TO_CREA:

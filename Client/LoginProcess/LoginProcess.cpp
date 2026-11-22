@@ -98,6 +98,19 @@ void CLoginProcess::Load(bool connect, const LoginConfiguration* configuration)
 	m_xSelectSrv.Create(&m_Image,&m_SList);
 	m_xAvi.SetRenderAviState(CLoginAvi::StaticBackground); // Static login background when movies are absent.
 	m_xLogin.OpenWnd();
+	// 自动登录配置：Mir3.ini 的 [AutoLogin] 段。
+	{
+		char value[128]={};
+		GetPrivateProfileStringA("AutoLogin","Account","",value,sizeof(value),"./Mir3.ini");
+		m_autoAccount=value;
+		GetPrivateProfileStringA("AutoLogin","Password","",value,sizeof(value),"./Mir3.ini");
+		m_autoPassword=value;
+		GetPrivateProfileStringA("AutoLogin","Server","",value,sizeof(value),"./Mir3.ini");
+		m_autoServer=value;
+		GetPrivateProfileStringA("AutoLogin","Character","",value,sizeof(value),"./Mir3.ini");
+		m_autoCharacter=value;
+		m_autoLoginPending=!m_autoAccount.empty() && !m_autoPassword.empty();
+	}
 	if(connect) {
         g_xClientSocket.ConnectToServer(g_xMainWnd.GetSafehWnd(), m_szServerIP, m_nServerPort);
         m_xAvi.SetRenderAviState(CLoginAvi::OpeningMovie);m_xLogin.SetEditorVisible(false);
@@ -707,6 +720,9 @@ VOID CLoginProcess::RenderScene(INT nLoopTime)
 			{
 				m_announcement.Advance(nLoopTime);m_announcement.Draw();
                 m_xLogin.Render(nLoopTime);
+				// 配了 AutoLogin 就自动提交，失败（例如公告未关）时下一帧再试。
+				if(m_autoLoginPending && SubmitCredentials(m_autoAccount,m_autoPassword))
+					m_autoLoginPending=false;
 				break;
 			}
 			// Render 
@@ -723,6 +739,8 @@ VOID CLoginProcess::RenderScene(INT nLoopTime)
 				ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
 				m_Image.NewSetIndex(IMG_IDX_LOGIN_BACK);					// 临时
 				m_xSelectSrv.Render(nLoopTime);
+				// 自动登录时顺带选中配置的服务器。
+				if(!m_autoServer.empty() && SelectServer(m_autoServer)) m_autoServer.clear();
 				break;
 			}
 			// Render For New Account

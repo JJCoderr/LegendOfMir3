@@ -53,7 +53,9 @@ public:
 	virtual VOID		OnConnectToServer();
 	virtual char*		OnMessageReceive(CHAR* pszMessage);
 
-    bool SubmitCredentials(const std::string& account, const std::string& password);
+    // 自动登录：Mir3.ini 的 [AutoLogin] 段提供账号与密码（可选 Server/Character）。
+    bool m_autoLoginPending=false;
+    std::string m_autoAccount,m_autoPassword,m_autoServer,m_autoCharacter;    bool SubmitCredentials(const std::string& account, const std::string& password);
     bool SelectServer(const std::string& name);
     void DismissNotice();
     const char* DebugStage();
