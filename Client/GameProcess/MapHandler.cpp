@@ -433,9 +433,9 @@ INT	CMapHandler::GetDoor(INT nX, INT nY)
 {
 	INT nResult = 0;
 
- 	if ( (m_pstCellInfo[nY + nX*m_stMapFileHeader.shWidth].bDoorIdx & 0X80) > 0 )
+ 	if ( (m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].bDoorIdx & 0X80) > 0 )
 	{
-		nResult = m_pstCellInfo[nY + nX*m_stMapFileHeader.shWidth].bDoorIdx & 0X7F;
+		nResult = m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].bDoorIdx & 0X7F;
 	}
 
 	return nResult;
@@ -444,9 +444,9 @@ INT	CMapHandler::GetDoor(INT nX, INT nY)
 
 BOOL CMapHandler::IsDoorOpen(INT nX, INT nY)
 {
-	if ( (m_pstCellInfo[nY + nX*m_stMapFileHeader.shWidth].bDoorIdx & 0X80) > 0 )
+	if ( (m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].bDoorIdx & 0X80) > 0 )
 	{
-		if ( (m_pstCellInfo[nY + nX*m_stMapFileHeader.shWidth].bDoorOffset & 0X80) == 0 )
+		if ( (m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].bDoorOffset & 0X80) == 0 )
 		{
 			return FALSE;
 		}
@@ -463,9 +463,9 @@ VOID CMapHandler::OpenDoor(INT nX, INT nY, INT nIdx)
 		{
 			if ( nCntX >= 0 && nCntY >= 0 && nCntX < m_stMapFileHeader.shWidth && nCntY < m_stMapFileHeader.shHeight )
 			{
-				if ( (m_pstCellInfo[nCntY + nCntX*m_stMapFileHeader.shWidth].bDoorIdx & 0X7F) == nIdx )
+				if ( (m_pstCellInfo[nCntY + nCntX*m_stMapFileHeader.shHeight].bDoorIdx & 0X7F) == nIdx )
 				{
-					m_pstCellInfo[nCntY + nCntX*m_stMapFileHeader.shWidth].bDoorOffset |= 0X80;
+					m_pstCellInfo[nCntY + nCntX*m_stMapFileHeader.shHeight].bDoorOffset |= 0X80;
 				}
 			}
 		}
@@ -481,9 +481,9 @@ VOID CMapHandler::CloseDoor(INT nX, INT nY, INT nIdx)
 		{
 			if ( nCntX >= 0 && nCntY >= 0 && nCntX < m_stMapFileHeader.shWidth && nCntY < m_stMapFileHeader.shHeight )
 			{
-				if ( (m_pstCellInfo[nCntY + nCntX*m_stMapFileHeader.shWidth].bDoorIdx & 0X7F) == nIdx )
+				if ( (m_pstCellInfo[nCntY + nCntX*m_stMapFileHeader.shHeight].bDoorIdx & 0X7F) == nIdx )
 				{
-					m_pstCellInfo[nCntY + nCntX*m_stMapFileHeader.shWidth].bDoorOffset &= 0X7F;
+					m_pstCellInfo[nCntY + nCntX*m_stMapFileHeader.shHeight].bDoorOffset &= 0X7F;
 				}
 			}
 		}
@@ -494,10 +494,10 @@ VOID CMapHandler::CloseDoor(INT nX, INT nY, INT nIdx)
 INT CMapHandler::GetDoorImgIdx(INT nX, INT nY)
 {
 	INT nDoorIdx = 0;
- 	if ( (m_pstCellInfo[nY + nX*m_stMapFileHeader.shWidth].bDoorOffset & 0X80) > 0 )
+ 	if ( (m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].bDoorOffset & 0X80) > 0 )
 	{
-	 	if ( (m_pstCellInfo[nY + nX*m_stMapFileHeader.shWidth].bDoorIdx & 0X7F) > 0 )
-			nDoorIdx += m_pstCellInfo[nY + nX*m_stMapFileHeader.shWidth].bDoorOffset & 0X7F;
+	 	if ( (m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].bDoorIdx & 0X7F) > 0 )
+			nDoorIdx += m_pstCellInfo[nY + nX*m_stMapFileHeader.shHeight].bDoorOffset & 0X7F;
 	}
 
 	return nDoorIdx;
