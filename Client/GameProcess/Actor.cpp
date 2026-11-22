@@ -20,6 +20,18 @@
 
 // 当前客户端资源（宝藏传奇3/Data）只有 Mon-1..20 与 Mon-54，缺库时按外观对 200 取模回退，
 // 保证怪物可见；资源补齐后回退分支不再生效。
+// 鼠标轮询走的是屏幕坐标，窗口外的点击不应该驱动游戏操作。
+static bool CursorInsideClient()
+{
+	POINT pt;
+	GetCursorPos(&pt);
+	ScreenToClient(g_xMainWnd.GetSafehWnd(), &pt);
+
+	RECT rc;
+	GetClientRect(g_xMainWnd.GetSafehWnd(), &rc);
+	return PtInRect(&rc, pt) != FALSE;
+}
+
 static int MonsterImageIndex(CImageHandler* images,int shape)
 {
 	// V1.45 外观可以到 2090，直接算库号会超出 _MAX_IMAGE 造成越界读，先夹到合法范围。
@@ -4434,11 +4446,11 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 				    g_xMainWnd.m_stDisplayInfo.wWidth, g_xMainWnd.m_stDisplayInfo.wHeight);
 				m_bCanRun = FALSE;
 
-				if ( HIBYTE(GetKeyState(VK_RBUTTON)) || ( HIBYTE(GetKeyState(VK_LBUTTON)) && HIBYTE(GetKeyState(VK_CONTROL))) )
+				if ( CursorInsideClient() && ( HIBYTE(GetKeyState(VK_RBUTTON)) || ( HIBYTE(GetKeyState(VK_LBUTTON)) && HIBYTE(GetKeyState(VK_CONTROL))) ) )
 				{
 					OnRButtonDown(ptMouse);
 				}
-				else if ( HIBYTE(GetKeyState(VK_LBUTTON)) )
+				else if ( CursorInsideClient() && HIBYTE(GetKeyState(VK_LBUTTON)) )
 				{
 					OnLButtonDown(ptMouse);
 
@@ -4534,11 +4546,11 @@ VOID CMyHero::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 				    g_xMainWnd.m_stDisplayInfo.wWidth, g_xMainWnd.m_stDisplayInfo.wHeight);
 				m_bCanRun = FALSE;
 
-				if ( HIBYTE(GetKeyState(VK_RBUTTON)) || ( HIBYTE(GetKeyState(VK_LBUTTON)) && HIBYTE(GetKeyState(VK_CONTROL))) )
+				if ( CursorInsideClient() && ( HIBYTE(GetKeyState(VK_RBUTTON)) || ( HIBYTE(GetKeyState(VK_LBUTTON)) && HIBYTE(GetKeyState(VK_CONTROL))) ) )
 				{
 					OnRButtonDown(ptMouse);
 				}
-				else if ( HIBYTE(GetKeyState(VK_LBUTTON)) )
+				else if ( CursorInsideClient() && HIBYTE(GetKeyState(VK_LBUTTON)) )
 				{
 					OnLButtonDown(ptMouse);
 /*					LPARAM lParam = MAKELPARAM((WORD)ptMouse.x, (WORD)ptMouse.y);
@@ -4698,12 +4710,12 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 							ScreenToClient(g_xMainWnd.GetSafehWnd(), &ptMouse);
 							ptMouse = mir3::ClientToCanvas(g_xMainWnd.GetSafehWnd(), ptMouse,
 							    g_xMainWnd.m_stDisplayInfo.wWidth, g_xMainWnd.m_stDisplayInfo.wHeight);
-							if ( HIBYTE(GetKeyState(VK_RBUTTON)) || ( HIBYTE(GetKeyState(VK_LBUTTON)) && HIBYTE(GetKeyState(VK_CONTROL))) )
+							if ( CursorInsideClient() && ( HIBYTE(GetKeyState(VK_RBUTTON)) || ( HIBYTE(GetKeyState(VK_LBUTTON)) && HIBYTE(GetKeyState(VK_CONTROL))) ) )
 							{
 								m_bCanRun = TRUE;
 								OnRButtonDown(ptMouse);
 							}
-							else if ( HIBYTE(GetKeyState(VK_LBUTTON)) )
+							else if ( CursorInsideClient() && HIBYTE(GetKeyState(VK_LBUTTON)) )
 							{
 								OnLButtonDown(ptMouse);
 							}
@@ -4742,12 +4754,12 @@ BOOL CMyHero::UpdateMove(BOOL bIsMoveTime)
 							ptMouse = mir3::ClientToCanvas(g_xMainWnd.GetSafehWnd(), ptMouse,
 							    g_xMainWnd.m_stDisplayInfo.wWidth, g_xMainWnd.m_stDisplayInfo.wHeight);
 
-							if ( HIBYTE(GetKeyState(VK_RBUTTON)) || ( HIBYTE(GetKeyState(VK_LBUTTON)) && HIBYTE(GetKeyState(VK_CONTROL))) )
+							if ( CursorInsideClient() && ( HIBYTE(GetKeyState(VK_RBUTTON)) || ( HIBYTE(GetKeyState(VK_LBUTTON)) && HIBYTE(GetKeyState(VK_CONTROL))) ) )
 							{
 								m_bCanRun = TRUE;
 								OnRButtonDown(ptMouse);
 							}
-							else if ( HIBYTE(GetKeyState(VK_LBUTTON)) )
+							else if ( CursorInsideClient() && HIBYTE(GetKeyState(VK_LBUTTON)) )
 							{
 								OnLButtonDown(ptMouse);
 							}
