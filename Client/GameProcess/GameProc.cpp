@@ -1093,7 +1093,7 @@ BOOL CGameProcess::RenderShine(INT nLoopTime)
 			D3DMATERIAL7 mtrl;
 
 			CWHWilImageData* pxShineImg = &m_xImage.m_xImageList[_IMAGE_PROGUSE];
-			if ( pxShineImg->NewSetIndex(m_bCurrShineFrame+40) )
+			if ( pxShineImg->NewSetIndex(GroundItemDisplay::SparkleFirst+m_bCurrShineFrame) )
 			{
 				if ( m_stMapItemList.GetCounter() != 0 )
 				{

@@ -4,7 +4,7 @@
 #include <string>
 namespace GroundItemDisplay {
 constexpr int CellCapacity=100,NameLimit=39,NearbyRadius=24;
-constexpr int SparkleFirst=40,SparkleFrames=10,SparkleInterval=100,CoinNameMessage=1409;
+constexpr int SparkleFirst=41,SparkleFrames=9,SparkleInterval=100,CoinNameMessage=1409;
 struct Sparkle {
     std::uint32_t started=0,elapsed=0;
     int delay=3000,frame=-1;
