@@ -1940,8 +1940,48 @@ LRESULT CGameProcess::OnKeyUp(WPARAM wParam, LPARAM lParam)
 }
 
 
+// 诊断：把地图缓冲原样写成 BMP，用来区分"地图数据错"还是"贴图过程错"。
+static void DumpMapBuffer(const WORD* pBuffer, int nWidth, int nHeight)
+{
+	FILE* pFile = fopen("mapbuffer.bmp", "wb");
+
+	if (pFile == NULL) return;
+
+	const int nImageSize = nWidth * nHeight * 3;
+	const int nFileSize = 54 + nImageSize;
+	BYTE header[54] = { 'B', 'M' };
+
+	memcpy(&header[2], &nFileSize, 4);
+	const int nOffset = 54; memcpy(&header[10], &nOffset, 4);
+	const int nHeaderSize = 40; memcpy(&header[14], &nHeaderSize, 4);
+	memcpy(&header[18], &nWidth, 4);
+	memcpy(&header[22], &nHeight, 4);
+	const WORD nPlanes = 1; memcpy(&header[26], &nPlanes, 2);
+	const WORD nBits = 24; memcpy(&header[28], &nBits, 2);
+	memcpy(&header[34], &nImageSize, 4);
+	fwrite(header, 1, sizeof(header), pFile);
+
+	for (int y = nHeight - 1; y >= 0; y--)
+	{
+		for (int x = 0; x < nWidth; x++)
+		{
+			const WORD color = pBuffer[y * nWidth + x];
+			const BYTE rgb[3] = { BYTE((color & 0x1F) << 3), BYTE(((color >> 5) & 0x3F) << 2),
+				BYTE(((color >> 11) & 0x1F) << 3) };
+			fwrite(rgb, 1, 3, pFile);
+		}
+	}
+
+	fclose(pFile);
+}
+
 LRESULT CGameProcess::OnKeyDown(WPARAM wParam, LPARAM lParam)
 {
+	if (wParam == VK_F12 && m_xMap.m_wSavedMapBuffer)
+	{
+		DumpMapBuffer(m_xMap.m_wSavedMapBuffer, _VIEW_CELL_X_COUNT*_CELL_WIDTH, _VIEW_CELL_Y_COUNT*_CELL_HEIGHT);
+	}
+
     if(m_xNotice.IsActive()) {
         if(m_xNotice.OnKeyDown(wParam)) m_xNotice.HideMessageBox();
         return 0L;
