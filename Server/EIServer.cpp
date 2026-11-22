@@ -84,18 +84,20 @@ int Run()
             mir3::ConsoleLog(L"EIServer", message);
             return 1;
         }
-        swprintf_s(message,
-            L"MSG hwnd=%p message=0x%04X wParam=0x%llX lParam=0x%llX time=%lu pt=(%ld,%ld)",
-            static_cast<void*>(msg.hwnd), msg.message,
-            static_cast<unsigned long long>(msg.wParam),
-            static_cast<unsigned long long>(static_cast<ULONG_PTR>(msg.lParam)),
-            msg.time, msg.pt.x, msg.pt.y);
-        mir3::ConsoleLog(L"EIServer", message);
         if (result == 0) {
             swprintf_s(message, L"WM_QUIT received: exitCode=%llu",
                 static_cast<unsigned long long>(msg.wParam));
             mir3::ConsoleLog(L"EIServer", message);
             return static_cast<int>(msg.wParam);
+        }
+        if (msg.hwnd && IsWindow(msg.hwnd)) {
+            swprintf_s(message,
+                L"MSG hwnd=%p message=0x%04X wParam=0x%llX lParam=0x%llX time=%lu pt=(%ld,%ld)",
+                static_cast<void*>(msg.hwnd), msg.message,
+                static_cast<unsigned long long>(msg.wParam),
+                static_cast<unsigned long long>(static_cast<ULONG_PTR>(msg.lParam)),
+                msg.time, msg.pt.x, msg.pt.y);
+            mir3::ConsoleLog(L"EIServer", message);
         }
         rpc.Poll([&](const std::string& method, const std::string&) {
             if (method != "state.get" && method != "state.wait_ready") throw mir3::JsonRpc::Error{-32601, "Method not found"};
