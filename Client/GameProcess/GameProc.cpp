@@ -853,7 +853,7 @@ VOID CGameProcess::RenderScene(INT nLoopTime)
 			m_xMap.m_rcView.top+_VIEW_CELL_Y_START-m_xMap.m_shViewOffsetY,
 			m_xMap.m_rcView.right-m_xMap.m_rcView.left,
 			m_xMap.m_rcView.bottom-m_xMap.m_rcView.top,
-			m_xMap.m_wSavedMapBuffer, _CLIP_WIDTH, _CLIP_HEIGHT);
+			m_xMap.m_wSavedMapBuffer, _CLIP_WIDTH, _CLIP_HEIGHT, _VIEW_CELL_X_COUNT*_CELL_WIDTH);
 
 		m_pxMouseTargetActor = NULL;
         m_stMapItemList.MoveCurrentToTop();

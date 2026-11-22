@@ -1287,7 +1287,7 @@ BOOL CWHDXGraphicWindow::DrawWithImage(INT nX, INT nY, INT nXSize, INT nYSize, W
 }
 
 
-BOOL CWHDXGraphicWindow::DrawWithImagePerLineClipRgn(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc, WORD wClipWidth, WORD wClipHeight)
+BOOL CWHDXGraphicWindow::DrawWithImagePerLineClipRgn(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc, WORD wClipWidth, WORD wClipHeight, WORD wSrcWidth)
 {
 	RECT			rc;
 	DDSURFACEDESC2	ddsd;
@@ -1335,7 +1335,7 @@ BOOL CWHDXGraphicWindow::DrawWithImagePerLineClipRgn(INT nX, INT nY, INT nXSize,
 
 			for ( INT y=rc.top ; y < rc.bottom ; y++ )
 			{
-				memcpy(&pwdDst[((y+nY) * (ddsd.lPitch >> 1)) + (nX + rc.left)], &pwSrc[y * nXSize + rc.left], (rc.right-rc.left)*2);
+				memcpy(&pwdDst[((y+nY) * (ddsd.lPitch >> 1)) + (nX + rc.left)], &pwSrc[y * wSrcWidth + rc.left], (rc.right-rc.left)*2);
 			}
 
 			m_pddsBackBuffer->Unlock(NULL);

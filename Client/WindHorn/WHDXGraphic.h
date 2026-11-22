@@ -152,7 +152,7 @@ public:
 	// 2. WORD 型数据绘制函数.(按像素单位检查颜色键, 绘制到背景表面上.)
 	BOOL					DrawWithImage(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc);
 	// 3. WORD 型数据绘制函数。(按行不考虑颜色键，只在后台表面的裁剪内部区域绘制。)
-	BOOL					DrawWithImagePerLineClipRgn(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc, WORD wClipWidth, WORD wClipHeight);
+	BOOL					DrawWithImagePerLineClipRgn(INT nX, INT nY, INT nXSize, INT nYSize, WORD* pwSrc, WORD wClipWidth, WORD wClipHeight, WORD wSrcWidth);
 	// 4. Surface 型数据绘制函数。(考虑源的颜色键并绘制到后台表面。)
 	BOOL					DrawWithSurface(INT nX, INT nY, INT nXSize, INT nYSize, LPDIRECTDRAWSURFACE7 pddsSrc);
 
