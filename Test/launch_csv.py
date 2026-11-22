@@ -11,6 +11,27 @@ from rpc_fixture import prepare
 from protocol_catalog import definitions, coverage
 
 
+def apply_data_sql(database, scripts):
+    """把正式数据脚本（怪物/物品/技能等）导入隔离库，缺表或语法错误直接报错。"""
+    import sqlite3
+    connection = sqlite3.connect(database)
+    try:
+        connection.execute('BEGIN')
+        for script in scripts:
+            for number, line in enumerate(script.read_text(encoding='utf-8').splitlines(), 1):
+                statement = line.strip()
+                if not statement or statement.startswith('--'):
+                    continue
+                try:
+                    connection.execute(statement)
+                except sqlite3.Error as error:
+                    raise SystemExit(f'{script.name}:{number}: {error}')
+        connection.commit()
+    finally:
+        connection.close()
+    print('导入数据脚本:', ', '.join(script.name for script in scripts), flush=True)
+
+
 def main():
     repo = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
@@ -24,6 +45,8 @@ def main():
     parser.add_argument('--resume-runtime', type=Path, help='Reuse an isolated runtime without reapplying fixtures')
     parser.add_argument('--clients', type=int, choices=(1,2,3), default=1)
     parser.add_argument('--timeout-ms', type=int, help='RPC/state wait timeout per step; forwarded to Test.exe')
+    parser.add_argument('--data-sql', type=Path, action='append',
+        help='准备阶段额外导入的数据脚本（可重复），用于让隔离环境带上正式数据')
     args = parser.parse_args()
     binaries = args.bin_dir.resolve()
     if not (binaries/'Test.exe').is_file():
@@ -39,6 +62,8 @@ def main():
         root = prepare(repo, binaries, args.config_dir.resolve(), {'fixture':statements}, args.port_offset)
         assets = args.scenario.with_suffix('.files')
         if assets.is_dir(): shutil.copytree(assets, root, dirs_exist_ok=True)
+        if args.data_sql:
+            apply_data_sql(root/'mir3.sqlite3', args.data_sql)
     log_path = args.log.resolve() if args.log else root/'test.log'
     print('Runtime:', root, flush=True)
     processes = []

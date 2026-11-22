@@ -67,6 +67,8 @@ def main():
     parser.add_argument('scenario', type=Path)
     parser.add_argument('--pid', type=int, help='运行中的客户端进程号，直接注入操作')
     parser.add_argument('--bin-dir', type=Path, default=Path('build-cui/Release'))
+    parser.add_argument('--data-sql', type=Path, action='append',
+        help='隔离环境额外导入的数据脚本（可重复），例如 King 系列的怪物/物品/技能')
     parser.add_argument('--clients', type=int, default=1, choices=(1, 2, 3))
     parser.add_argument('--port-offset', type=int, default=20000, help='隔离环境端口偏移')
     parser.add_argument('--from', dest='first', type=int)
@@ -107,6 +109,8 @@ def main():
         command = [sys.executable, str(Path(__file__).with_name('launch_csv.py')), str(generated),
                    '--bin-dir', str(args.bin_dir), '--clients', str(args.clients),
                    '--port-offset', str(args.port_offset)]
+        for script in (args.data_sql or ()):
+            command.extend(['--data-sql', str(script)])
         if args.first is not None:
             command.extend(['--from', str(args.first)])
         if args.last is not None:
