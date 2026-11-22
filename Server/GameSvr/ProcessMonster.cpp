@@ -163,8 +163,15 @@ UINT WINAPI ProcessMonster(LPVOID lpParameter)
 		}
 
 		// Execute Monster A.I
-		for (int i = 0; i < g_nNumOfMonGenInfo + 1; i++)
+		// 刷怪组有上千条，整轮遍历会让单次循环远超 250ms 的行动间隔，
+		// 多数怪物几秒才轮到一次。改成每轮只处理固定数量的组，用游标轮转。
+		static int nAiCursor = 0;
+		constexpr int AiGroupsPerPass = 128;
+		const int nAiGroups = (g_nNumOfMonGenInfo > 0) ? (g_nNumOfMonGenInfo + 1) : 1;
+		for (int nAiStep = 0; nAiStep < AiGroupsPerPass && nAiStep < nAiGroups; nAiStep++)
 		{
+			const int i = nAiCursor % nAiGroups;
+			++nAiCursor;
 			CMonsterGenInfo* pMonGenInfo = &g_pMonGenInfo[i];
 
 			if (pMonGenInfo)
