@@ -2555,3 +2555,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - launch_csv.py 支持 --data-sql（导入 king_monster/king_items/king_magic）与 --data-then-fixture（先数据后 fixture）。
 - 现有场景 fixture 多假设最小种子库（UPDATE FLD_INDEX=33、TBL_STDITEM_ETC 的 0 号），套正式数据会命中不到行，所以只适合“只验证正式数据”的场景。
 - MonsterImageIndex 越界读修好后，正式数据下的客户端崩溃消失（此前后台任务报 RPC read/write failed）。
+
+## 2026-11-22 地图竖带闪烁排查
+
+- 现象：屏幕上固定位置一条约一格宽的竖带，内容是岩石/水面；人物走动时明显，静止也交替闪。
+- 客观测：用 PrintWindow 连续抓 6 帧做像素对比（out/capture-flicker.py），变化集中在窗口 x≈290~335（约 45px，即一格），但整体采样点变化在 13132（88%）与约 1050（7%）之间交替 —— 一半的帧几乎整屏在变。
+- 已排除：瓦片索引越界（0.map 全块与 14 个瓦片库帧数比对无越界）、瓦片尺寸超块（经 .wix 索引读真实帧宽，tilesc 96、cliffsc/dungeonsc 48）、滚动缓冲参数写错（_MT_RUN 分支已修，95f6c64）、光照网格默认参数（400/300 对应 800x600）。
+- 待查：PrintWindow 对 D3D 隔帧可能抓到不同表面，13132 有可能是截图伪影；若如此需要用 Present 钩子或 GetFrontBufferData 复核。另一条线是 SetMovedTileBuffer 各方向边缘补画 DrawBaseTile 的范围，若某列没补画就会保留上一屏内容。
