@@ -2,14 +2,16 @@
 
 ## 工作簿和用例编号
 
-`Test` 根目录中的 `系统-*.xlsx` 按子系统分组，每张用例工作表独立运行。`场景-*.xlsx` 每本对应一个游戏场景，可直接运行。首行第一列是 `编号`，格式为 `功能ID.步骤ID`，例如 `ShopBuy.260`。功能 ID 取工作表名，步骤 ID 取 `step`，`name` 填中文步骤名称。
+`Test` 根目录每个子系统只有一本工作簿，文件名沿用原目录名，如 `Shop.xlsx`。一个子系统的全部规则集中在 `Rules` 表，主流程排在前面。需要不同测试存档的规则仍各自初始化，`Cases` 表记录规则段名称与数字 ID。客户端 UI 集中在 `ClientUI.xlsx`，可按对话框分表。跨子系统的冒烟场景单独使用 `GameplaySmoke.xlsx`。
 
-`fixture` 表按用例保存隔离库初始化 SQL，`files` 表按用例保存 NPC 等资源。运行器在 `out` 下临时展开所选用例。旧 CSV 仍供现有验证工具调用。
+步骤表只有 `编号 | name | target | action | params | expect` 六列。`编号` 是纯数字，前面的数字是功能 ID，末四位是步骤 ID。例如 `610260` 表示功能 61 的步骤 260。`name` 填中文步骤名称。运行器从编号推导旧 CSV 的 `step`，所以 `--from 260 --to 260` 以及现有日志 ID `ShopBuy.260` 的含义保持不变。
+
+`fixture` 表按规则段保存隔离库初始化 SQL，`files` 表保存 NPC 等资源。运行器在 `out` 下临时展开所选规则段。需要终止服务并复用存档的二阶段回归仍由 `verify_equipment_recovery.py` 驱动。
 
 ```powershell
-python Test/xlsx_scenario.py Test/系统-商店.xlsx --list
-python Test/xlsx_scenario.py Test/系统-商店.xlsx --case ShopBuy --port-offset 30000
-python Test/xlsx_scenario.py Test/场景-商店购买.xlsx --port-offset 30000
+python Test/xlsx_scenario.py Test/Shop.xlsx --list
+python Test/xlsx_scenario.py Test/Shop.xlsx --case ShopBuy --port-offset 30000
+python Test/xlsx_scenario.py Test/ClientUI.xlsx --pid 1234
 ```
 
 默认使用 `build-cui/Release`，需要 Python 的 `openpyxl`。执行器启动真实客户端和 EIServer，操作走正式业务协议；数据库断言只读查询新建的隔离 SQLite 库。端口偏移可按本机占用情况调整，不连接已有角色存档。
