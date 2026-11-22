@@ -8,6 +8,10 @@
 
 #define DEFSPEED					14
 
+// MIR3 角色名色值域，与客户端 GetUserNameColor 一致。
+#define _USER_NAMECLR_WHITE		255
+#define _USER_NAMECLR_RED		249
+
 #define _CHAT_COLOR1				0			//RGB(  0,   0,   0); // 透明色.
 #define _CHAT_COLOR2				1			//RGB( 10,  10,  10); // 黑色.
 #define _CHAT_COLOR3				2			//RGB(255, 255, 255); // 白色.

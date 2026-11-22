@@ -853,12 +853,12 @@ end;
 
 WORD CMonsterObject::GetThisCharColor()
 {
+	// MIR3 名字色值域：神圣战甲为红，其余为白，与客户端 GetUserNameColor 对应。
 	if (m_fBoHolySeize)
-		return _CHAT_COLOR4;
+		return _USER_NAMECLR_RED;
 
-	return _CHAT_COLOR3;
+	return _USER_NAMECLR_WHITE;
 }
-
 void CMonsterObject::Operate()
 {
 	int nCount = m_DelayProcessQ.GetCount();

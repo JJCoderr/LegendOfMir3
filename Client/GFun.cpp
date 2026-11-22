@@ -23,7 +23,7 @@ DWORD GetChatColor(BYTE bIdx)
 
 DWORD GetUserNameColor(BYTE bIdx)
 {
-	DWORD dwClr = 0;
+	DWORD dwClr = RGB(255, 255, 255);	// 未匹配的索引按白色处理，避免名字变黑
 
 	switch ( bIdx )
 	{

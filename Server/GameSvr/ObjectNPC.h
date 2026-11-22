@@ -55,6 +55,6 @@ public:
     void Details(CPlayerObject* player, const char* name, DWORD offset);
     void Buy(CPlayerObject* player, const char* name, int quantity, DWORD instance);
 
-	virtual WORD	GetThisCharColor() { return _CHAT_COLOR3; }
+	virtual WORD	GetThisCharColor() { return _USER_NAMECLR_WHITE; }
 	virtual void	GetCharName(char *pszCharName) { strcpy(pszCharName, m_szName); }
 };
