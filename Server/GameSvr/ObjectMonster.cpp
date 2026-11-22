@@ -830,8 +830,10 @@ void CMonsterObject::Struck(CCharObject* pHitter)
 			SelectTarget(pHitter);
 	}
 
+	// 原版这里是 StruckTime := GetTickCount（记录受击时间），移植时误写成把攻击计时器
+	// m_dwHitTime 往未来推，导致怪物每被打一下就推迟一次出手，连续被打时几乎不再攻击。
 	if (m_Ability.Level < 50)
-		m_dwHitTime = m_dwHitTime + (150 - _MIN(130, m_Ability.Level * 4));
+		m_dwTargetFocusTime = GetTickCount();
 
 /*procedure TAnimal.Struck (hiter: TCreature);
 begin
