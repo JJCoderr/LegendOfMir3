@@ -2480,6 +2480,52 @@ void CPlayerObject::Operate()
 
 						break;
 					}
+					case CM_CREATEGROUP:
+					{
+						BOOL fCreated = FALSE;
+					
+						if (m_pGroupOwner == NULL)
+						{
+							m_pGroupOwner = this;
+							m_xGroupMembers.AddNewNode(this);
+					
+							if (lpProcessMsg->pszData && *lpProcessMsg->pszData)
+							{
+								CPlayerObject* pTarget = FindPlayerByName(lpProcessMsg->pszData);
+					
+								if (pTarget && pTarget != this && pTarget->m_pGroupOwner == NULL)
+								{
+									pTarget->m_pGroupOwner = this;
+									m_xGroupMembers.AddNewNode(pTarget);
+								}
+							}
+					
+							SendGroupMembers();
+					
+							_TDEFAULTMESSAGE message = {};
+							fnMakeDefMessage(&message, SM_CREATEGROUP_OK, 0, 0, 0, 0);
+							SendSocket(&message, NULL);
+					
+							fCreated = TRUE;
+						}
+						else
+						{
+							_TDEFAULTMESSAGE message = {};
+							fnMakeDefMessage(&message, SM_CREATEGROUP_FAIL, -1, 0, 0, 0);
+							SendSocket(&message, NULL);
+						}
+					
+						if (fCreated)
+							memmove(szEncodeMsg, _MSG_GOOD, sizeof(_MSG_GOOD));
+						else
+							memmove(szEncodeMsg, _MSG_FAIL, sizeof(_MSG_FAIL));
+					
+						ValToAnsiStr(GetTickCount(), &szEncodeMsg[sizeof(_MSG_GOOD) - 1]);
+						SendSocket(NULL, szEncodeMsg);
+					
+						break;
+					}
+					
 					case CM_SAY:
 					{
 						if (lpProcessMsg->pszData)
@@ -3389,3 +3435,33 @@ void CPlayerObject::Operate()
 	}
 }
 
+
+void CPlayerObject::SendGroupMembers()
+{
+	if (m_pGroupOwner == NULL) return;
+
+	char text[512] = {};
+	int length = 0;
+
+	for (PLISTNODE node = m_xGroupMembers.GetHead(); node; node = m_xGroupMembers.GetNext(node))
+	{
+		CPlayerObject* pMember = m_xGroupMembers.GetData(node);
+
+		if (pMember) length += sprintf(&text[length], "%s/", pMember->m_szName);
+	}
+
+	if (length > 0) text[length - 1] = '\0';
+
+	char encoded[1024] = {};
+	fnEncode6BitBufA((unsigned char*)text, encoded, (int)strlen(text), sizeof(encoded));
+
+	_TDEFAULTMESSAGE message = {};
+	fnMakeDefMessage(&message, SM_GROUPMEMBERS, 0, 0, 0, 0);
+
+	for (PLISTNODE node = m_xGroupMembers.GetHead(); node; node = m_xGroupMembers.GetNext(node))
+	{
+		CPlayerObject* pMember = m_xGroupMembers.GetData(node);
+
+		if (pMember) pMember->SendSocket(&message, encoded);
+	}
+}
