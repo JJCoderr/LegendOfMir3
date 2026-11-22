@@ -2108,7 +2108,8 @@ BOOL CCharObject::_Attack(WORD wHitMode, CCharObject* pObject)
 	{
 		if (IsProperTarget(pObject))
 		{
-			if (pObject->m_btHitPoint > 0)
+			// 速度点为 0 时取模会整除零；无敏捷的目标按必中处理。
+			if (pObject->m_btHitPoint > 0 && pObject->m_btSpeedPoint > 0)
 			{
 				if (m_btHitPoint < rand() % pObject->m_btSpeedPoint)
 					nPower = 0;

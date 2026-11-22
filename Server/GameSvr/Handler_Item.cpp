@@ -4,6 +4,8 @@ int CItem::GetUpgrade(int nCount, int nRandom)
 {
 	int nResult = 0;
 
+	if (nRandom <= 0) return 0;	// 取模参数为 0 会整除零
+
 	for (int i = 0; i < nCount; i++)
 	{
 		if ((rand() % nRandom) == 0)
