@@ -2549,6 +2549,13 @@ void CPlayerObject::Operate()
                         }
                         break;
                     }
+                    case CM_GUILDHOME:
+                    {
+                        // 行会数据尚未接入：按原版回打开失败，客户端提示未加入行会。
+                        fnMakeDefMessage(&DefMsg, SM_OPENGUILDDLG_FAIL, (int)lpProcessMsg->pCharObject, 0, 0, 0);
+                        SendSocket(&DefMsg, NULL);
+                        break;
+                    }
                     case CM_USERBUYITEM:
                     case CM_USERGETDETAILITEM:
                     case CM_CLICKNPC:

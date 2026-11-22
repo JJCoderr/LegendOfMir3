@@ -64,6 +64,7 @@
 #define CM_CLICKNPC             1010
 #define CM_MERCHANTDLGSELECT    1011
 #define CM_QUERYUSERNAME        80
+#define CM_GUILDHOME            1036
 #define CM_QUERYBAGITEMS        81
 
 #define CM_DROPITEM             1000
@@ -129,6 +130,8 @@
 #define SM_CRY                  102
 #define SM_WHISPER              103
 #define SM_GUILDMESSAGE         104
+#define SM_OPENGUILDDLG         753
+#define SM_OPENGUILDDLG_FAIL    754
 
 #define SM_ADDITEM				200
 #define SM_BAGITEMS				201

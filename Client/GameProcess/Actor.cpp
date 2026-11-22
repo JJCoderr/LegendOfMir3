@@ -509,9 +509,15 @@ VOID CActor::PlayActSound()
 		171,  33,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,	// 90 - 99
 	};
 
+	// 表外外观没有专用音效，避免按外观编号越界读取。
+	constexpr INT ActorSoundGroups = sizeof(nActorSndTbl)/sizeof(nActorSndTbl[0]);
+	const INT nShape = m_stFeature.bDress;
+	const INT nSoundGroup = ( nShape >= 0 && nShape < ActorSoundGroups ) ? nActorSndTbl[nShape] : -1;
+	const auto GroupSample = [nSoundGroup](INT nOffset) { return nSoundGroup < 0 ? -1 : 200 + nSoundGroup*10 + nOffset; };
+
 	if ( m_dwCurrFrame == m_dwFstFrame+1 && m_bCurrMtn == _MT_MON_APPEAR )			// 出现。
 	{
-		nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10;
+		nWaveNum = GroupSample(0);
 	}
 	else if ( (m_dwCurrFrame == m_dwFstFrame+1) && (m_bCurrMtn == _MT_MON_STAND || _MT_MON_WALK) )		// 静止不动.
 	{
@@ -520,7 +526,7 @@ VOID CActor::PlayActSound()
 		if ( m_bFstSoundPlayed && !m_bIsDead )
 		{
 			if ( !(nRand%25) )
-				nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10 + 1;
+				nWaveNum = GroupSample(1);
 			else
 				nWaveNum = -1;
 		}
@@ -528,7 +534,7 @@ VOID CActor::PlayActSound()
 		{
 			if ( !(nRand%3) && !m_bIsDead )
 			{
-				nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10 + 1;
+				nWaveNum = GroupSample(1);
 				m_bFstSoundPlayed = TRUE;
 			}
 			else
@@ -537,11 +543,11 @@ VOID CActor::PlayActSound()
 	}
 	else if ( m_dwCurrFrame == m_dwFstFrame+1 && m_bCurrMtn == _MT_MON_ATTACK_A )	// 普通攻击1.
 	{
-		nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10 + 2;
+		nWaveNum = GroupSample(2);
 	}
 	else if ( m_dwCurrFrame == m_dwFstFrame+2 && m_bCurrMtn == _MT_MON_ATTACK_A )	// 普通攻击1.
 	{
-		nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10 + 3;
+		nWaveNum = GroupSample(3);
 	}
 	else if ( m_dwCurrFrame == m_dwFstFrame+1 && m_bCurrMtn == _MT_MON_HITTED )
 	{
@@ -570,20 +576,20 @@ VOID CActor::PlayActSound()
 	}
 	else if ( m_dwCurrFrame == m_dwFstFrame+2 && m_bCurrMtn == _MT_MON_HITTED )		// 受击.
 	{
-		nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10 + 4;
+		nWaveNum = GroupSample(4);
 	}
 	else if ( m_dwCurrFrame == m_dwFstFrame+2 && m_bCurrMtn == _MT_MON_DIE )		// 死亡1.
 	{
-		nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10 + 5;
+		nWaveNum = GroupSample(5);
 	}
 	else if ( m_dwCurrFrame == m_dwFstFrame+3 && m_bCurrMtn == _MT_MON_DIE )		// 死亡2.
 	{
-		nWaveNum = 200 + nActorSndTbl[m_stFeature.bDress]*10 + 6;
+		nWaveNum = GroupSample(6);
 	}
 
-/*	if ( nWaveNum != -1 )
+	if ( nWaveNum != -1 )
 		g_xSound.PlayActorWav(m_wPosX, m_wPosY, g_xGameProc.m_xMyHero.m_wPosX, g_xGameProc.m_xMyHero.m_wPosY, nWaveNum);
-*/
+
 }
 
 
@@ -2398,20 +2404,20 @@ VOID CHero::PlayActSound()
 			nWaveNum = -1;
 	}
 
-/*	if ( nWaveNum != -1 )
+	if ( nWaveNum != -1 )
 		g_xSound.PlayActorWav(m_wPosX, m_wPosY, g_xGameProc.m_xMyHero.m_wPosX, g_xGameProc.m_xMyHero.m_wPosY, nWaveNum);
-*/}
+}
 
 
 VOID CHero::PlayMoveSound()
 {
 	if ( m_bCurrMtn == _MT_WALK || m_bCurrMtn == _MT_RUN || m_bCurrMtn == _MT_HORSEWALK || m_bCurrMtn == _MT_HORSERUN || m_bCurrMtn == _MT_MOODEPO || m_bCurrMtn == _MT_PUSHBACK )
 	{
-/*		if ( m_dwCurrFrame == m_dwEndFrame-5 || m_bBackStepFrame == m_dwEndFrame-5 )
+		if ( m_dwCurrFrame == m_dwEndFrame-5 || m_bBackStepFrame == m_dwEndFrame-5 )
 			g_xSound.PlayActorWav(m_wPosX, m_wPosY, g_xGameProc.m_xMyHero.m_wPosX, g_xGameProc.m_xMyHero.m_wPosY, 1,100);
 		if ( m_dwCurrFrame == m_dwEndFrame-2 || m_bBackStepFrame == m_bBackStepFrameCnt-2 )
 			g_xSound.PlayActorWav(m_wPosX, m_wPosY, g_xGameProc.m_xMyHero.m_wPosX, g_xGameProc.m_xMyHero.m_wPosY, 1,100);
-*/	}
+	}
 }
 
 
