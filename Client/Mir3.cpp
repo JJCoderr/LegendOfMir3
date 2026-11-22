@@ -1,4 +1,5 @@
 #include "Dialogs.h"
+#include "LoginClient.h"
 
 using namespace mir3_client;
 

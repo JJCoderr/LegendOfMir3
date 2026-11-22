@@ -74,7 +74,7 @@
 #include "LoginProcess/Common/typedef.h"
 #include "LoginProcess/Common/define.h"
 #include "CharSelectProcess/Common/define.h"
-#include "Dialogs.h"
+#include "LegacyDialogs.h"
 #include "GameProcess/Actor.h"
 #include "GameProcess/Magic.h"
 #include "GameProcess/GameProc.h"

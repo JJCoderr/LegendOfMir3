@@ -1,4 +1,4 @@
-#include "Dialogs.h"
+#include "ClientState.h"
 
 #include <cmath>
 #include <cstdint>

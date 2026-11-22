@@ -1,4 +1,5 @@
 #include "Dialogs.h"
+#include "LoginClient.h"
 #include "CuiTestPlan.h"
 
 #include <iostream>
