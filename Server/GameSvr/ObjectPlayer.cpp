@@ -10,6 +10,33 @@ std::string ItemSqlText(const char* text) {
     for (;*text;++text) { result+=*text; if (*text=='\'') result+='\''; }
     return result+"'";
 }
+// Envir/MiniMap.txt 给出地图文件名到小图号的映射，首次请求时加载。
+struct MinimapEntry { char map[16]; int number; };
+const MinimapEntry* MinimapTable(int& nCount)
+{
+    static MinimapEntry entries[512];
+    static int nLoaded=0;
+    static bool bReady=false;
+    if (!bReady) {
+        bReady=true;
+        FILE* file=fopen("Envir/MiniMap.txt","r");
+        if (file) {
+            char line[128];
+            while (nLoaded<512 && fgets(line,sizeof(line),file)) {
+                if (line[0]==';') continue;
+                char map[16]={}; int number=0;
+                if (sscanf(line,"%15s %d",map,&number)==2) {
+                    strncpy(entries[nLoaded].map,map,sizeof(entries[nLoaded].map)-1);
+                    entries[nLoaded].number=number;
+                    ++nLoaded;
+                }
+            }
+            fclose(file);
+        }
+    }
+    nCount=nLoaded;
+    return entries;
+}
 bool BuildSpecialItem(CUserInfo& owner, const _TUSERITEMRCD& item, Mir3Item::Record& record)
 {
     if (item.nStdIndex >= g_nStdItemSpecial) return false;
@@ -2549,7 +2576,21 @@ void CPlayerObject::Operate()
                         }
                         break;
                     }
-                    case CM_GUILDHOME:
+                    case CM_MINIMAP:
+                    {
+                        int nMinimaps=0;
+                        const MinimapEntry* entries=MinimapTable(nMinimaps);
+                        const char* mapName=m_pMap?m_pMap->m_szMapName:"";
+                        int number=0;
+                        for (int i=0;i<nMinimaps;++i)
+                            if (strcmp(entries[i].map,mapName)==0) { number=entries[i].number; break; }
+                        if (number)
+                            fnMakeDefMessage(&DefMsg, SM_MINIMAP, (int)lpProcessMsg->pCharObject, (WORD)number, 0, 0);
+                        else
+                            fnMakeDefMessage(&DefMsg, SM_MINIMAP_UNAVAILABLE, (int)lpProcessMsg->pCharObject, 0, 0, 0);
+                        SendSocket(&DefMsg, NULL);
+                        break;
+                    }                    case CM_GUILDHOME:
                     {
                         // 行会数据尚未接入：按原版回打开失败，客户端提示未加入行会。
                         fnMakeDefMessage(&DefMsg, SM_OPENGUILDDLG_FAIL, (int)lpProcessMsg->pCharObject, 0, 0, 0);
