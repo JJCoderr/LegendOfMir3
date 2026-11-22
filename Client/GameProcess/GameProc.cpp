@@ -1159,6 +1159,7 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 	BOOL bBlend	  = FALSE;
 	BOOL bDrawShadow = TRUE;
 
+	// Map animation frames are relative to the base image, independent of door offsets.
 	m_xMap.SetAniTileFrame(nLoopTime);
 
 // 绘制 48*32 图块型对象。
@@ -1197,8 +1198,6 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 							{
 								bBlend = FALSE;
 								
-								nImgIdx += m_xMap.GetDoorImgIdx(nXCnt, nYCnt);
-
 								// 如果是动画对象.
 								if ( m_xMap.m_pstCellInfo[nArrayNum].bObj1Ani != 255 )
 								{
@@ -1259,8 +1258,6 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 							{
 								bBlend = FALSE;
 								
-								nImgIdx += m_xMap.GetDoorImgIdx(nXCnt, nYCnt);
-
 								// 如果是动画对象.
 								if ( m_xMap.m_pstCellInfo[nArrayNum].bObj2Ani != 255 )
 								{
@@ -1342,8 +1339,6 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 							{
 								bBlend = FALSE;
 								
-								nImgIdx += m_xMap.GetDoorImgIdx(nXCnt, nYCnt);
-
 								// 如果是动画对象.
 								if ( m_xMap.m_pstCellInfo[nArrayNum].bObj1Ani != 255 )
 								{
@@ -1406,8 +1401,6 @@ VOID CGameProcess::RenderObject(INT nLoopTime)
 							{
 								bBlend = FALSE;
 								
-								nImgIdx += m_xMap.GetDoorImgIdx(nXCnt, nYCnt);
-
 								// 如果是动画对象.
 								if ( m_xMap.m_pstCellInfo[nArrayNum].bObj2Ani != 255 )
 								{
