@@ -56,7 +56,6 @@ VOID CActor::InitActor()
 	m_bOldDir			= 0;
 
 	m_bOpenHealth		= FALSE;
-	m_dwHealthShowTime	= 0;
 	m_bWarMode			= FALSE;
 	m_bCurrMtn			= _MT_MON_STAND;
 	m_bCurrDir			= _DIRECTION_LIST_1;
@@ -1122,7 +1121,6 @@ VOID CActor::OnStruck(LPPACKETMSG lpPacketMsg)
 	m_wHP		  = lpPacketMsg->stDefMsg.wParam;
 	m_wMAXHP	  = lpPacketMsg->stDefMsg.wTag;
 	m_bHPPercent  = m_wMAXHP ? (BYTE)(100u*m_wHP/m_wMAXHP) : 0;
-	m_dwHealthShowTime = GetTickCount();
 
 	fnDecode6BitBuf(lpPacketMsg->szEncodeData, (char*)&stMsgBodyWl, sizeof(MESSAGEBODYWL));
 
@@ -1897,30 +1895,25 @@ BOOL CActor::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, 
 
 VOID CActor::DrawHPBar()
 {
-	// 参考 GODOT 分支 SceneHealth：血量到达后 5 秒内显示，人物状态位也可常驻。
-	constexpr DWORD HealthBarHoldTime = 5000;
-	const bool bRecentHP = m_dwHealthShowTime && DWORD(GetTickCount()-m_dwHealthShowTime) < HealthBarHoldTime;
+	// 血条常显：尚未收到血量时按满血绘制，收到受击数据后按实际比例。
+	const int nHealthPercent = m_wMAXHP ? int(m_bHPPercent) : 100;
+	RECT rcHP = {0, 0, (36*nHealthPercent/100), 4};
 
-	if ( m_bOpenHealth || bRecentHP )
-	{
-		RECT rcHP = {0, 0, (36*m_bHPPercent/100), 4};
- 		g_xGameProc.m_xImage.m_xImageList[_IMAGE_PROGUSE].NewSetIndex(2);
- 		g_xMainWnd.DrawWithImageForComp(
-						m_shScrnPosX+7,
-						m_shScrnPosY-53,
-						g_xGameProc.m_xImage.m_xImageList[_IMAGE_PROGUSE].m_lpstNewCurrWilImageInfo->shWidth,					
-						g_xGameProc.m_xImage.m_xImageList[_IMAGE_PROGUSE].m_lpstNewCurrWilImageInfo->shHeight,
-						(WORD*)g_xGameProc.m_xImage.m_xImageList[_IMAGE_PROGUSE].m_pbCurrImage);
-		g_xGameProc.m_xImage.m_xImageList[_IMAGE_PROGUSE].NewSetIndex(3);
- 		g_xMainWnd.DrawWithImageForComp(
-						m_shScrnPosX+7,
-						m_shScrnPosY-53,
-						rcHP,
-						(WORD*)g_xGameProc.m_xImage.m_xImageList[_IMAGE_PROGUSE].m_pbCurrImage);
-	}
+	auto& image = g_xGameProc.m_xImage.m_xImageList[_IMAGE_PROGUSE];
+	if ( !image.NewSetIndex(2) ) return;
+	g_xMainWnd.DrawWithImageForComp(
+					m_shScrnPosX+7,
+					m_shScrnPosY-53,
+					image.m_lpstNewCurrWilImageInfo->shWidth,
+					image.m_lpstNewCurrWilImageInfo->shHeight,
+					(WORD*)image.m_pbCurrImage);
+	if ( !image.NewSetIndex(3) ) return;
+	g_xMainWnd.DrawWithImageForComp(
+					m_shScrnPosX+7,
+					m_shScrnPosY-53,
+					rcHP,
+					(WORD*)image.m_pbCurrImage);
 }
-
-
 
 VOID CActor::DrawName()
 {
