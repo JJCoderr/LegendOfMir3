@@ -127,7 +127,7 @@ VOID CImageHandler::LoadAllImage(BOOL bIsMemMapped, BOOL bComp)
 		".\\Data\\MonMagic.wil",							//59
 
 		//~~~ 接口EX 图像. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		nullptr, // Reserved legacy interface slot; native windows use their own image.							//60
+		".\\Data\\ProgUse.wil",							//60  血条（独立实例）
 	};
 
 	InitAllImage();

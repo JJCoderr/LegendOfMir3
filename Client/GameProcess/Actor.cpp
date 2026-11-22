@@ -1902,7 +1902,7 @@ VOID CActor::DrawHPBar()
 	const int nHealthPercent = m_wMAXHP ? int(m_bHPPercent) : 100;
 	RECT rcHP = {0, 0, (36*nHealthPercent/100), 4};
 
-	auto& image = g_xGameProc.m_xImage.m_xImageList[_IMAGE_PROGUSE];
+	auto& image = g_xGameProc.m_xImage.m_xImageList[_IMAGE_HPBAR];
 	if ( !image.NewSetIndex(2) ) return;
 	g_xMainWnd.DrawWithImageForComp(
 					m_shScrnPosX+7,
