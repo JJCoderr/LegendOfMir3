@@ -116,17 +116,19 @@ NativeText raster_text(std::string_view utf8, int width, int height, bool center
     if (!surface.dc) return result;
     result.dpi = GetDeviceCaps(surface.dc, LOGPIXELSY);
     result.code_page = GetACP();
-    // Preserve bytes passed to CreateFontA, including the special level face.
-    const char normal_face[] = {char(0xcb), char(0xce), char(0xcc), char(0xe5), 0};
-    const char level_face[] = {char(0xb1), char(0xbc), char(0xb8), char(0xb2), 0};
-    const std::string caption_face(localized_face);
+    constexpr wchar_t normal_face[] = L"\u5b8b\u4f53";
+    constexpr wchar_t level_face[] = L"\u5954\u8986";
+    wchar_t caption_face[LF_FACESIZE]{};
+    if (!localized_face.empty())
+        MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, localized_face.data(),
+            static_cast<int>(localized_face.size()), caption_face, LF_FACESIZE - 1);
     const bool use_caption_face = font == TextFont::gold || font == TextFont::localized_normal || font == TextFont::selection;
-    if (font == TextFont::gold && caption_face.empty()) return result;
+    if (font == TextFont::gold && !caption_face[0]) return result;
     const int points = points_override>0 && points_override<=72 ? points_override : (font == TextFont::gold || font == TextFont::skill_title) ? 10 : ((font == TextFont::level || font == TextFont::skill_level) ? 8 : 9);
-    surface.font = CreateFontA(-MulDiv(points, result.dpi, 72), 0, 0, 0,
+    surface.font = CreateFontW(-MulDiv(points, result.dpi, 72), 0, 0, 0,
         weight_override==400 || weight_override==700 ? weight_override :
         (font == TextFont::normal || font == TextFont::dialog || font == TextFont::skill_level || font == TextFont::npc_link || font == TextFont::localized_normal) ? 400 : 700, 0, font == TextFont::npc_link, 0, DEFAULT_CHARSET, 0, 0, 0, 0,
-        use_caption_face ? caption_face.c_str() :
+        use_caption_face ? caption_face :
         (font == TextFont::level || font == TextFont::skill_level || font == TextFont::skill_title || font == TextFont::character_name ? level_face : normal_face));
     if (!surface.font) return result;
     surface.old_font = SelectObject(surface.dc, surface.font);
@@ -153,21 +155,20 @@ NativeText raster_text(std::string_view utf8, int width, int height, bool center
     std::wstring wide(length, L'\0');
     if (length) MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8.data(),
         static_cast<int>(utf8.size()), wide.data(), length);
-    auto ansi = encode(wide.data(), length, CP_ACP);
     SIZE extent{};
-    GetTextExtentPoint32A(surface.dc, ansi.data(), static_cast<int>(ansi.size()), &extent);
+    GetTextExtentPoint32W(surface.dc, wide.data(), length, &extent);
     result.text_width = extent.cx;
     result.text_height = extent.cy;
     RECT rect{0, 0, width, height};
     if (inverted_vertical) { rect.top=height;rect.bottom=0; }
     if (font==TextFont::dialog && extent.cx>=width) {
         RECT measured=rect;
-        const int block=DrawTextA(surface.dc,ansi.data(),int(ansi.size()),&measured,1040);
+        const int block=DrawTextW(surface.dc,wide.data(),length,&measured,1040);
         rect.top=height/2-block/2;rect.bottom=rect.top+block;
-        DrawTextA(surface.dc,ansi.data(),int(ansi.size()),&rect,16);
+        DrawTextW(surface.dc,wide.data(),length,&rect,16);
     }
-    else if (centered) DrawTextA(surface.dc, ansi.data(), static_cast<int>(ansi.size()), &rect, 37);
-    else TextOutA(surface.dc, 0, 0, ansi.data(), static_cast<int>(ansi.size()));
+    else if (centered) DrawTextW(surface.dc, wide.data(), length, &rect, 37);
+    else TextOutW(surface.dc, 0, 0, wide.data(), length);
     GdiFlush();
     result.rgba.resize(static_cast<std::size_t>(width) * height * 4);
     const auto* source = static_cast<const std::uint8_t*>(bits);

@@ -9,8 +9,6 @@
 
 
 // Positio of Edit box
-#define POS_NAME_X						300
-#define POS_NAME_Y						460
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -666,100 +664,6 @@ void CCharacterProcess::OnSocketMessageRecieve(char* pszMsg)
 	return 0L; */
 }
 		/**/
-VOID CCharacterProcess::RenderScene(INT nLoopTime)
-{
-	m_xBGround.Render(nLoopTime);
-	switch(m_Progress)
-	{
-		case PRG_CHAR_SELE:
-		{
-			ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
-			switch(m_xSelectChr.m_nRenderState)
-			{
-				case 11:	// Zoom in
-				{
-					m_xBGround.SetRenderState(_RENDER_AVI_IN);
-					m_Progress = PRG_SEL_TO_CREA;
-					m_xSelectChr.CloseWnd();
-					break;
-				}
-				case 12:	// Zoom Out
-				{
-					m_xBGround.SetRenderState(_RENDER_AVI_START);	
-					m_Progress = PRG_SEL_TO_GAME;
-					m_xSelectChr.CloseWnd();
-					break;
-				}
-				case 19:	// Select;
-				{
-					m_xSelectChr.m_nRenderState = 0;
-				}
-			}
-			m_xSelectChr.Render(nLoopTime);
-			break;
-		}
-		case PRG_SEL_TO_CREA:
-			ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
-			if(m_xBGround.GetRenderState()==_RENDER_STILL_2)
-				m_Progress = PRG_CREATE_CHAR;
-			break;
-		case PRG_CREATE_CHAR:
-			ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_SHOW);
-			RenderCharCreate(nLoopTime);
-			break;
-		case PRG_CREA_TO_SEL:
-			ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
-			if(m_xBGround.GetRenderState() == _RENDER_STILL_1)
-			{	m_Progress = PRG_CHAR_SELE;
-				m_xSelectChr.OpenWnd();
-			}
-			break;
-		case PRG_SEL_TO_GAME:
-			ShowWindow(g_xChatEditBox.GetSafehWnd(), SW_HIDE);
-			if(m_xBGround.GetRenderState()==_RENDER_STARTGAME)
-			{	m_Progress	= PRG_PLAY_GAME;				// Play Game
-				SetNextProc();
-			}
-			break;
-	}
-	m_xMsgBox.RenderMessageBox(0);
-}
-
-VOID CCharacterProcess::ShowStatus(INT nStartX, INT nStartY)
-{
-/*	TCHAR			szBuff[MAX_PATH];
-	sprintf(szBuff, "Character Procedure");*/
-
-	CWHDefProcess::ShowStatus(nStartX, nStartY+20);
-}
-
-
-VOID	CCharacterProcess::RenderCharCreate(INT nLoopTime)
-{
-	POINT nPos[] = { {120, 88}, {120, 85}, {150, 108}};
-//	int i ;
-
-	MoveWindow(g_xChatEditBox.GetSafehWnd(), 
-					   g_xMainWnd.m_rcWindow.left+POS_NAME_X,
-					   g_xMainWnd.m_rcWindow.top+POS_NAME_Y, 75, 15, TRUE);
-
-/*	for (i = ID_CREATE_CHR_OK_BTN ; i <= ID_CREATE_CHR_TAO_BTN; i++)
-	{
-		m_Image.NewSetIndex(m_pBtn[i].m_nButtonID + m_pBtn[i].m_nState -1);
-		g_xMainWnd.DrawWithImageForComp(m_pBtn[i].m_Rect.left, m_pBtn[i].m_Rect.top,
-									m_Image.m_lpstNewCurrWilImageInfo->shWidth,
-									m_Image.m_lpstNewCurrWilImageInfo->shHeight					
-									, (WORD*)(m_Image.m_pbCurrImage));
-	}
-*/
-	// ÁÙÊ±~!
-	m_Image.NewSetIndex(IMG_IDX_WAR_MALE_CREATE + m_SelectSex + m_SelectJob * 2);
-
-	g_xMainWnd.DrawWithImageForComp(nPos[m_SelectJob].x,nPos[m_SelectJob].y
-			,m_Image.m_lpstNewCurrWilImageInfo->shWidth,m_Image.m_lpstNewCurrWilImageInfo->shHeight
-			,(WORD*)(m_Image.m_pbCurrImage));
-}
-
 VOID CCharacterProcess::SetErrorMessage(INT nMsg,CHAR* szMgs)
 {
 	HINSTANCE hLib;

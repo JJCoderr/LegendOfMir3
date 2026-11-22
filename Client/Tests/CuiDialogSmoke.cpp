@@ -1,4 +1,3 @@
-#include "CuiClientState.h"
 #include "Dialogs.h"
 #include "CuiTestPlan.h"
 
@@ -516,10 +515,12 @@ void StartSession(LoginClient& client, Screen& screen, GatewayFixture& character
             "active line opens configured login gateway");
         screen.Snapshot(client,"02-startup");
         screen.Snapshot(client,"03-account");
-        client.settingsOpen = true;
-        screen.Snapshot(client,"04-gateway-settings",false);
-        client.settingsOpen = false;
         client.status="This line has an invalid login configuration.";
+        client.settingsOpen = true;
+        screen.Snapshot(client,"04-gateway-settings");
+        screen.Actions(client,"dismiss-login-connection-notice");
+        Check(!client.status.empty(),"gateway settings defer the pending sign-in notice");
+        client.settingsOpen = false;
         screen.Snapshot(client,"04b-login-connection-notice");
         screen.Actions(client,"dismiss-login-connection-notice");
         Check(client.status.empty(),"textured login notice dismisses uncatalogued status");

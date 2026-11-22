@@ -5,6 +5,7 @@ project(LegendOfMir3_Client VERSION 0.1 LANGUAGES C CXX)
 add_subdirectory(WindHorn)
 
 set(MIR3_CLIENT_SOURCES
+    Dialogs.cpp
     Common/Button.cpp
     Common/ChatEditBox.cpp
     Common/ClientSocket.cpp
@@ -13,52 +14,25 @@ set(MIR3_CLIENT_SOURCES
     Common/EnDecode.cpp
     Common/ImageHandler.cpp
     Common/MirButton.cpp
-    Common/MirMsgBox.cpp
-    Common/MirMsgBox3D.cpp
-    Common/MsgBox.cpp
-    Common/NoticeBox.cpp
     Common/NPCTxtAnalysis.cpp
     Common/Queue.cpp
 
     LoginProcess/LoginProcess.cpp
     LoginProcess/Patch.cpp
-    LoginProcess/Common/BMWnd.cpp
-    LoginProcess/Intro/LoginAvi.cpp
-    LoginProcess/Login/Login.cpp
-    "LoginProcess/New Account/NewAccount.cpp"
-    "LoginProcess/Select Srv/SelectSrv.cpp"
     # LoginProcess/Change Pwd/ChgPwd.cpp
 
     CharSelectProcess/CharacterProcess.cpp
-    CharSelectProcess/BackGround/BackGround.cpp
-    CharSelectProcess/CreateChr/CreateChr.cpp
-    CharSelectProcess/SelectChr/SelectChr.cpp
 
     GameProcess/Actor.cpp
-    GameProcess/ChatPopWnd.cpp
     GameProcess/ClientSysMsg.cpp
-    GameProcess/ExchangeWnd.cpp
     GameProcess/GameBtn.cpp
     GameProcess/GameProc.cpp
-    GameProcess/GameWnd.cpp
-    GameProcess/GroupPopWnd.cpp
-    GameProcess/GroupWnd.cpp
-    GameProcess/GuildMasterWnd.cpp
-    GameProcess/GuildWnd.cpp
-    GameProcess/HorseWnd.cpp
-    GameProcess/Interface.cpp
-    GameProcess/InventoryWnd.cpp
     GameProcess/Item.cpp
     GameProcess/LightFog.cpp
     GameProcess/Magic.cpp
     GameProcess/MapHandler.cpp
-    GameProcess/NPCWnd.cpp
-    GameProcess/OptionWnd.cpp
     GameProcess/Particle.cpp
-    GameProcess/QuestWnd.cpp
     GameProcess/SprDfn.cpp
-    GameProcess/StatusWnd.cpp
-    GameProcess/StoreWnd.cpp
     GameProcess/WeatherEffect.cpp
     # GameProcess/PlayerChar.cpp
     # GameProcess/SpriteInfo.cpp
@@ -78,6 +52,7 @@ set(MIR3_CLIENT_SOURCES
 )
 
 add_executable(Client WIN32 ${MIR3_CLIENT_SOURCES})
+target_compile_definitions(Client PRIVATE MIR3_LEGACY_CLIENT)
 
 # 现代外观：清单已在 Resource.rc 里以 1 RT_MANIFEST "../app.manifest" 嵌入，
 # 这里关闭链接器自动生成的清单，避免同一个 exe 里出现两份 RT_MANIFEST 资源。
@@ -101,16 +76,18 @@ set(MIR3_CUI_UI_SOURCES
     CuiAudio.cpp
     cui.c
     Common/EnDecode.cpp
-    CuiLegacy/hud/chat_history.cpp
     CuiLegacy/resources/legacy_movie.cpp
     CuiLegacy/resources/wil_archive.cpp
     CuiLegacy/resources/messages.cpp
     CuiLegacy/text/native_text.cpp
 )
-add_executable(Mir3CuiClient WIN32 CuiClient.cpp ${MIR3_CUI_UI_SOURCES})
+add_executable(Mir3CuiClient WIN32 Mir3.cpp ${MIR3_CUI_UI_SOURCES})
 add_executable(Mir3CuiDialogSmoke EXCLUDE_FROM_ALL Tests/CuiDialogSmoke.cpp ${MIR3_CUI_UI_SOURCES})
 set_property(SOURCE cui.c APPEND PROPERTY COMPILE_OPTIONS /utf-8)
-set_property(SOURCE CuiClient.cpp Dialogs.cpp Tests/CuiDialogSmoke.cpp APPEND PROPERTY COMPILE_OPTIONS /utf-8 /wd4828)
+set_property(SOURCE Mir3.cpp CuiAudio.cpp Tests/CuiDialogSmoke.cpp APPEND PROPERTY COMPILE_OPTIONS /utf-8 /wd4828)
+set_property(SOURCE Dialogs.cpp APPEND PROPERTY COMPILE_OPTIONS
+    /wd4828 "$<$<NOT:$<BOOL:$<TARGET_PROPERTY:MIR3_LEGACY_DIALOGS>>>:/utf-8>")
+set_property(TARGET Client PROPERTY MIR3_LEGACY_DIALOGS TRUE)
 foreach(cui_target Mir3CuiClient Mir3CuiDialogSmoke)
     target_compile_features(${cui_target} PRIVATE cxx_std_20)
     target_include_directories(${cui_target} PRIVATE CuiLegacy)

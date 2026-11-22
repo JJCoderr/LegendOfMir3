@@ -1,4 +1,4 @@
-#include "CuiAudio.h"
+#include "Dialogs.h"
 
 #include <cmath>
 #include <cstdint>

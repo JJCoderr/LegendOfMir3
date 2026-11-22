@@ -1,0 +1,68 @@
+﻿step,name,target,action,params,expect
+10,credentials ready,Client,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+20,wrong password,Client,session.login,account=mirtest;password=wrong,result.status=submitted
+30,login rejected,Client,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+40,dismiss rejection,Client,notice.dismiss,,result.status=submitted
+50,login,Client,session.login,account=mirtest;password=test123,result.status=submitted
+60,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+70,authenticated,Client,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+80,dismiss billing,Client,notice.dismiss,,result.status=submitted
+90,unknown server rejected,Client,session.select_server,name=MissingServer,error.code=-32002
+100,select server,Client,session.select_server,name=Mir3Local,result.status=submitted
+110,roster ready,Client,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+120,unknown character rejected,Client,session.enter,name=MissingRole,error.code=-32002
+130,enter character,Client,session.enter,name=MirProbe01,result.status=submitted
+140,world ready,Client,state.wait,,"result.scene=world;result.map=""01"""
+150,dismiss arrival,Client,notice.dismiss,,result.status=submitted
+160,chat ready,Client,state.wait,,result.scene=world;result.input_delayed=false;result.notice=false
+170,credentials ready,Client2,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+180,wrong password,Client2,session.login,account=mirtest2;password=wrong,result.status=submitted
+190,login rejected,Client2,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+200,dismiss rejection,Client2,notice.dismiss,,result.status=submitted
+210,login,Client2,session.login,account=mirtest2;password=test123,result.status=submitted
+220,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+230,authenticated,Client2,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+240,dismiss billing,Client2,notice.dismiss,,result.status=submitted
+250,unknown server rejected,Client2,session.select_server,name=MissingServer,error.code=-32002
+260,select server,Client2,session.select_server,name=Mir3Local,result.status=submitted
+270,roster ready,Client2,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+280,unknown character rejected,Client2,session.enter,name=MissingRole,error.code=-32002
+290,enter character,Client2,session.enter,name=MirProbe02,result.status=submitted
+300,world ready,Client2,state.wait,,"result.scene=world;result.map=""01"""
+310,dismiss arrival,Client2,notice.dismiss,,result.status=submitted
+320,chat ready,Client2,state.wait,,result.scene=world;result.input_delayed=false;result.notice=false
+330,credentials ready,Client3,state.wait,,result.scene=login;result.stage=credentials;result.connected=true
+340,wrong password,Client3,session.login,account=mirtest3;password=wrong,result.status=submitted
+350,login rejected,Client3,state.wait,,result.scene=login;result.stage=credentials;result.notice=true
+360,dismiss rejection,Client3,notice.dismiss,,result.status=submitted
+370,login,Client3,session.login,account=mirtest3;password=test123,result.status=submitted
+380,server state after login,Server,state.get,,result.ready=true;result.services_ready=6
+390,authenticated,Client3,state.wait,,result.scene=login;result.stage=server_list;result.notice=true
+400,dismiss billing,Client3,notice.dismiss,,result.status=submitted
+410,unknown server rejected,Client3,session.select_server,name=MissingServer,error.code=-32002
+420,select server,Client3,session.select_server,name=Mir3Local,result.status=submitted
+430,roster ready,Client3,state.wait,,result.scene=character_select;result.waiting=false;result.notice=false
+440,unknown character rejected,Client3,session.enter,name=MissingRole,error.code=-32002
+450,enter character,Client3,session.enter,name=MirProbe03,result.status=submitted
+460,world ready,Client3,state.wait,,"result.scene=world;result.map=""01"""
+470,dismiss arrival,Client3,notice.dismiss,,result.status=submitted
+480,chat ready,Client3,state.wait,,result.scene=world;result.input_delayed=false;result.notice=false
+490,warrior sees other professions,Client,state.wait,,result.actor_count=2;result.profession=0;result.hair=1;result.actors.0.profession=1;result.actors.0.hair=2;result.actors.1.profession=2;result.actors.1.hair=3
+500,wizard sees other professions,Client2,state.wait,,result.actor_count=2;result.profession=1;result.hair=2;result.actors.0.profession=0;result.actors.0.hair=1;result.actors.1.profession=2;result.actors.1.hair=3
+510,taoist sees other professions,Client3,state.wait,,result.actor_count=2;result.profession=2;result.hair=3;result.actors.0.profession=0;result.actors.0.hair=1;result.actors.1.profession=1;result.actors.1.hair=2
+511,taoist armor ready,Client3,state.wait,,result.bag.0.id=1
+512,equip taoist armor,Client3,item.equip,id=1;slot=0,result.status=submitted
+513,equipment feature preserves profession,Client3,state.wait,,result.dress=1;result.profession=2;result.hair=3;result.equipment_pending=0
+514,remote equipment feature preserves profession,Client,state.wait,,result.actors.1.profession=2;result.actors.1.hair=3
+520,move taoist,Client3,world.walk,x=460;y=263,result.status=submitted
+530,taoist movement complete,Client3,state.wait,,result.x=460;result.y=263;result.profession=2;result.hair=3;result.attack_ready=true
+540,warrior observes moving taoist,Client,state.wait,,result.actors.1.x=460;result.actors.1.y=263;result.actors.1.profession=2;result.actors.1.hair=3
+550,wizard observes moving taoist,Client2,state.wait,,result.actors.1.x=460;result.actors.1.y=263;result.actors.1.profession=2;result.actors.1.hair=3
+551,unequip taoist armor,Client3,item.unequip,slot=0,result.status=submitted
+552,unequip preserves profession,Client3,state.wait,,result.dress=0;result.profession=2;result.hair=3;result.equipment_pending=0
+560,save wizard,Client2,session.return,,result.status=submitted
+570,wizard saved,Client2,state.wait,,result.scene=character_select;result.waiting=false
+580,profession and hair persisted,Database,query,"SELECT FLD_JOB,FLD_HAIR FROM TBL_CHARACTER ORDER BY FLD_CHARNAME","rows=[[""0"",1],[""1"",2],[""2"",3]]"
+590,reenter wizard,Client2,session.enter,name=MirProbe02,result.status=submitted
+600,wizard restored,Client2,state.wait,,result.scene=world;result.profession=1;result.hair=2;result.actor_count=2
+610,server remains available,Server,state.get,,result.ready=true;result.services_ready=6

@@ -4803,6 +4803,7 @@ typedef struct cui_app_desc {
     const char *title;          /* default "CUI" */
     int width, height;          /* logical size, default 1080 x 720 */
     int min_width, min_height;  /* default 360 x 280 */
+    int design_width, design_height; /* Win32: scale logical UI uniformly to fit the client area. */
     bool fixed_size;            /* not resizable */
     bool continuous;            /* render every frame even when idle (games, video) */
     bool no_vsync;              /* OpenGL: do not wait for the display; frames are capped at 120 Hz or the refresh rate */
@@ -4827,6 +4828,7 @@ CUI_API void cui_app_destroy(cui_app *app);
 /* Presents the previous frame, waits for input or animation, then begins a
  * new frame. Returns false once the window was closed or cui_app_quit was
  * called. */
+CUI_API void cui_app_set_frame_callback(cui_app *app, void (*frame)(cui_ctx*, void*), void *user);
 CUI_API bool cui_app_frame(cui_app *app);
 CUI_API cui_ctx *cui_app_ui(cui_app *app);
 

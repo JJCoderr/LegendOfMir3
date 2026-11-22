@@ -402,3 +402,36 @@ cmake --build build-cui --target Mir3CuiClient --config Release
 
 - 以 `br_godot_test_261115` 的 `45d45af` 构建并运行 Godot 实际视口。隔离副本位于 `build-cui/godot-reference`，使用 Godot 4.7.2、godot-cpp 的 `e83fd090` 和本地原客户端资源。在隔离副本中去除怪物模块对未声明 `action_at` 的赋值以解除编译错误，主分支未改该模块。
 - `login_smoke.gd -- --screenshots` 输出 `LOGIN_UI_OK` 及 9 张截图。首组验收用例为 640×480 密码错误框，与当前 CUI 的相同账号及错误状态对照，相差 304075／307200 像素。并排图和差异图保存在 `build-cui`。该组结果是重做前基线，仍需用运行时资源、字体和控件状态重新实现。
+
+### 登录提示和字体排查
+
+- 在 IDA 重开宝藏版分析库，确认 `0x402520` 引用 `Notice.ntc` 并调用字体创建包装 `0x48BB04`，`0x402C50` 引用 `Data/Interface1c.wil`，`0x480570` 引用 `CMList.Dat`。该解包分析库未登记 PE 导入模块，`CreateFontA` 名称位于 `0x96C6B1`，字体包装内为间接调用。概览和反编译结果保存在 `build-cui/login-ida-*.json`。
+- `CMList.Dat` 和 `Notice.ntc` 按 CP936 解码，GDI 位图文字使用 Unicode 字体名称、度量和绘制，消除文字经过 Windows 当前 ANSI 代码页时的字符丢失。共享文字贴图和登录公告使用最近邻采样，避免缩放时把字形边缘与相邻像素混合。
+- 登录设置打开时暂存待确认的登录提示，关闭设置后恢复显示。素材登录页上的连接设置、旧协议取得角色网关地址的提示，以及缺资源时的备用界面仍使用项目的通用 CUI。登录音频仅在选项素材缺失时走通用 CUI。
+- 两个 Win32 Release 客户端构建通过，带截图的本地网关回放通过全部 18 组。四种登录状态的 640×480 截图汇总见 `build-cui/login-dialog-verification.png`。本轮截图使用 1× 缩放，其他 DPI 尚未实拍。
+
+### 对话框与面板源码归并
+
+- `Mir2Ex` 和 `Mir3CuiClient` 共用 `Client/Dialogs.h` 与 `Client/Dialogs.cpp`。旧客户端由 `MIR3_LEGACY_CLIENT` 编译分支选取实现，覆盖消息框、登录与选角界面及局内面板。CUI 的面板状态、布局、绘制和输入处理也集中在这两个文件。协议、物品数据和网关流程由现有模块处理。
+- 两个 Win32 Release 客户端均编译通过。CUI 本地网关回放通过全部 18 组，迁移前后 67 张截图中有 66 张逐像素一致。连接设置截图的差异限于测试网关的临时端口文字。旧客户端未做运行时画面对照。
+- 将 `Client` 下剩余 13 个 `Cui*.h` 合并到 `Dialogs.h` 的 CUI 编译分支，涵盖物品、装备、聊天、行会、队伍、任务、人物、存档、地图、选项、音频和网关会话。两个 Win32 Release 客户端及回放程序编译通过，本地网关 18 组回放通过。
+
+### 单进程 EIServer 登录联调
+
+- 运行目录为 `build-cui/live-login`。服务端使用 `br_develop` 的 `c6a77cd` 隔离构建，在构建副本中补入当前工作区的 HumanFeature.h 并消除 GetFeatureToLong 重复定义。EIServer.ini、SQLite 测试库和 01.map 就绪，同一 EIServer 进程监听 5000、5100、5500、6000、7000、7100、7200。
+- CUI 使用运行目录的 Mir2Ei.ini 连接 127.0.0.1:7000。旧版登录和选服回包携带字符串结束符，选服返回 IP，凭证位于 wParam，选角网关默认 7100。角色列表按每条 23 字节的二进制记录读取。
+- 真实服务端错误密码返回 503，测试账户 mirtest 登录返回 529，选择 Mir3Local 返回 530，携凭证查询角色返回 520。使用当前 CUI 的 ReadSettings、SignIn、Select 和 Poll 复验通过，测试账户角色数为 0。验证范围至角色列表。
+- 客户端入口迁到 Client/Mir3.cpp，移除无背景的通用账号表单。缺少登录素材时提示资源目录并退出。运行目录补齐 CmList.dat、notice.ntc 和 Weapon.ord，实拍确认原版背景，生产登录代码复验 Mir3Local 选服与角色列表通过。
+
+- 账号创建和改密按钮在本地 EIServer 登录模式打开中文对话框，分别使用 2002 和 2003。隔离服务端源码 Server/LoginSvr/GateInfo.cpp 修正注册字段解析、结果包结尾、重复账号结果以及两表写入事务。已用独立测试账号验证注册、重复注册失败、错误原密码失败、正确改密、新密码登录及选服。
+- Win32 客户端以 640×480 为登录设计尺寸，窗口绘制与鼠标坐标使用相同等比缩放，拖动窗口时重绘，切换页面保留用户窗口大小。1085 附近宽度放大后点创建账号，缩小后点修改密码，两次都实拍核对，截图在 build-cui/live-login/create-account.png 和 change-password.png。
+- 按用户要求移除新加的通用账号表单。Godot 的注册和改密按钮实际只发网址信号，本地表单复用其 GameInter 1240 弹窗及 1241/1242、1245/1246 按钮素材，使用裸编辑器和原版字体，保留 2002/2003 通信。放大后打开注册、缩小后打开改密均实拍，注册/重复注册/错误原密码/改密/新密码登录回归通过。
+- 复核 Mir3.exe 解包 IDA 库 0x404D80，创建账号读取 Mir3.ini Initial/Param2，修改密码读取 Param3，分别调用同一外部地址打开包装并退出登录程序。Godot hud_view.cpp:5838 调 finish_login_exit，正常运行 shell_open 后 quit，offline_preview 仅发 login_url_requested 信号。两者均没有本地账号表单，当前新增的贴图表单属于本地 EIServer 适配，不能称为原版或 Godot 原有窗口。原版反编译保存 build-cui/account-buttons-ida.json。
+- 本地早期客户端账号流程核查：旧 CLogin::OnButtonUp 的创建账号与修改密码分支仅隐藏账号密码输入，未打开表单。RenderNewAccount 整体注释，引用原旧素材帧 208、位置(80,61)，定义含账号/密码/确认/姓名/证件/生日/地址/电话/邮箱/两组密保；RenderPassword 仅隐藏编辑器。ClientSocket 保留注册2002透传正文及改密2003的账号TAB旧密码TAB新密码，回包504–507仍有处理。Change Pwd/ChgPwd.cpp 是重复 CLogin 草稿，未纳入构建。
+
+- 旧账号表单恢复为 17 栏，按 LoginProcess/Common/define.h 的(80,61)窗口原点及各 POS_NEW 坐标布局。发送 2002 时省略确认密码、合并两栏邮编，以 0x01 串联 15 字段，不再填充占位资料。使用服务端缓冲区限制校验 CP936 字节长度。
+- 当前宝藏资源 Inventory 208/209 无可解码图像，代码优先加载旧帧，缺失时使用 GameInter 1240 分段贴图及 1241/1245 按钮承接。修改密码沿用 2003 的三段 TAB 协议，以原版素材补齐四栏表单，旧源码没有对应完整布局。
+- 真实 EIServer 复验注册资料落库、重复注册、原密码错误、改密、新密码登录和角色列表通过。放大与缩小后的两个窗口均实拍；当前资源下截图体现替代素材，不能作为 208 帧原貌。
+- 复核宝藏版 Mir3.exe 的 IDA 登录库：0x404D80 对注册按钮只读取 Initial/Param2（默认 http://account.wemade.com/main01.html）并调用外部地址打开包装，随即执行退出/清理；改密按钮同理读取 Param3。两个默认网址字符串仅在该函数各有一个代码引用。0x403F30 只是切换登录输入框显示，0x48A5D0/0x48A730 的 Param2/3 引用为配置读写。未发现客户端内的注册账号窗口。旧泄露代码中的 Inventory 208 注册界面是另一套未接通草稿，不属于这份 Mir3.exe 的可到达注册流程。
+
+- 用户确认注册窗口以本地早期代码草稿的字段和坐标实现，背景继续使用现有 GameInter 对话框。移除 Inventory 208 帧自动覆盖分支，保持同一贴图背景。

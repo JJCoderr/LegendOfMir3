@@ -72307,6 +72307,11 @@ void cui__app_live_frame(cui_app *app) {
     app->in_live_resize = false;
 }
 
+void cui_app_set_frame_callback(cui_app *app, void (*frame)(cui_ctx*, void*), void *user) {
+    app->frame_cb = frame;
+    app->frame_user = user;
+}
+
 int cui_app_run(const cui_app_desc *desc, void (*frame)(cui_ctx *ui, void *user), void *user) {
     cui_app *app = cui_app_create(desc);
     if (!app) return 1;
@@ -73137,6 +73142,13 @@ typedef struct {
     HANDLE timer;          /* timed waits: high resolution where Windows has it (10 1803 and later) */
 } cui__win32;
 
+static float cui__win32_content_scale(cui_app *app, cui__win32 *w) {
+    if (app->desc.design_width > 0 && app->desc.design_height > 0 && w->width > 0 && w->height > 0)
+        return fminf((float)w->width / app->desc.design_width, (float)w->height / app->desc.design_height);
+    return w->scale;
+}
+
+
 static HMODULE cui__opengl32;
 static PFN_GetDpiForWindow cui__GetDpiForWindow;
 static PFN_AdjustWindowRectExForDpi cui__AdjustWindowRectExForDpi;
@@ -73311,7 +73323,7 @@ static LRESULT CALLBACK cui__win32_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
     }
     cui__win32 *w = cui__w(app);
     cui_ctx *ui = app->ui;
-    float s = w ? w->scale : 1.0f;
+    float s = w ? cui__win32_content_scale(app,w) : 1.0f;
     switch (msg) {
     case WM_CLOSE:
         app->running = false;
@@ -73578,10 +73590,10 @@ void cui__plat_present(cui_app *app, const void *bgra, int width, int height, in
 
 void cui__plat_metrics(cui_app *app, float *wpt, float *hpt, float *scale, int *fb_w, int *fb_h) {
     cui__win32 *w = cui__w(app);
-    *scale = w->scale;
+    *scale = cui__win32_content_scale(app,w);
     *fb_w = w->width; *fb_h = w->height;
-    *wpt = (float)w->width / w->scale;
-    *hpt = (float)w->height / w->scale;
+    *wpt = (float)w->width / *scale;
+    *hpt = (float)w->height / *scale;
 }
 
 void cui__plat_set_title(cui_app *app, const char *title) {
