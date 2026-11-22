@@ -25,3 +25,7 @@
 11. [] 完成客户端剩余的各种系统。
 12. [] 逐个系统接入服务器端。 先通过JSONRPC的方式来连通各种场景的协议，待所有协议都完善后，再启动UI调试。
 13. [] 服务器端不合理的地方可以参考MUD3里面的Eiserver.exe。
+14. [ ] 服务端组队：补协议（CM_CREATEGROUP 1020 / CM_ADDGROUPMEMBER 1021 / CM_DELGROUPMEMBER 1022 / SM_CREATEGROUP_OK 660 / SM_CREATEGROUP_FAIL 661 / SM_GROUPCANCEL 666 / SM_GROUPMEMBERS 667）、队伍结构、6 位编码成员列表下发、断线清理。
+15. [ ] 服务端交易：客户端 ExchangeWnd 与 trade.* RPC 已就绪，服务端缺 TradeWire 协议与物品交换校验。
+16. [ ] 服务端按名字取在线玩家的接口：组队邀请、交易、定向私聊都要它，目前 GameSvr 里没有。
+
