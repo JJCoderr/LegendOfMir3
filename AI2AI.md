@@ -2471,3 +2471,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - NPC 脚本按服务端读取路径整理到 Server/GameData/Envir，运行期复制到工作目录；地图改用 Mud3/Map 的 v1.45 版本，365 张全部存在。
 - 联调：服务端读入 417 怪物、2604 刷怪、321 商人、365 地图；比奇县出生点 458,398 视野内出现 4 个商人 NPC 与 2 只怪物。
 - 已知限制：ProcessMonster 每 200ms 处理一条且服务端按 FLD_MAPNAME 排序，'0' 图先刷，全量一轮约 9 分钟；怪物 FLD_RACE 统一 0，种族 AI 未映射；物品与技能（stditem.dat、magic.dat 为二进制）尚未转换，仍用最小库种子；地图属性位未填且服务端当前未使用。
+
+## 2026-11-22 小地图回包
+
+- 客户端 CMinimap::Request 已实现并会发 CM_MINIMAP(1033)，服务端没有该分支，小地图始终空白。
+- 服务端按 Envir/MiniMap.txt（地图文件名 小图号）回复 SM_MINIMAP(710)，缺失回 711。该文件用 C 接口读取并缓存，ObjectPlayer.cpp 位于命名空间内，不能引入 STL 流头。
+- 验证：按 V 后日志出现 id=1033 与 id=710 param=1001，1001 为比奇县（0）的小图号。
+- 攻城地图（窗口 18）仍未打通：服务端没有任何 1312/1350/1351/1353 下发，客户端 CSiegeWnd::EntryBounds 在 controlled 为假时返回空矩形，HUD 入口不出现。
