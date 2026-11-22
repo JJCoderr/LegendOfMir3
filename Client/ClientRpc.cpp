@@ -385,7 +385,20 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
             if(window.m_pstMyMagic[i].stStdMagic.wMagicID==id) {
                 window.BindMagic(id,key?CSkillWnd::LegacyKey(key):0);accepted=true;break;
             }
-    } else if ((method == "input.click" || method == "input.move") && g_bProcState == _GAME_PROC) {
+    } else if (method == "trade.request" && g_bProcState == _GAME_PROC) {
+        // 与点交易按钮一致：对方必须站在玩家正前方一格。
+        accepted=g_xGameProc.m_xInterface.m_xExchangeWnd.RequestTrade();
+    } else if (method == "trade.cancel" && g_bProcState == _GAME_PROC) {
+        accepted=g_xGameProc.m_xInterface.m_xExchangeWnd.Cancel();
+    } else if ((method == "group.create" || method == "group.add" || method == "group.remove") && g_bProcState == _GAME_PROC) {
+        const auto name=Text(params,"name");
+        if (method == "group.create") g_xClientSocket.SendCreateGroup(const_cast<char*>(name.c_str()));
+        else if (method == "group.add") g_xClientSocket.SendAddGroupMember(const_cast<char*>(name.c_str()));
+        else g_xClientSocket.SendDelGroupMember(const_cast<char*>(name.c_str()));
+        accepted=true;
+    } else if (method == "group.mode" && g_bProcState == _GAME_PROC) {
+        g_xClientSocket.SendGroupMode(Integer(params,"flag")!=0);
+        accepted=true;    } else if ((method == "input.click" || method == "input.move") && g_bProcState == _GAME_PROC) {
         // 与真实鼠标走同一条入口，按窗口坐标注入。
         const POINT point{Integer(params,"x"),Integer(params,"y")};
         g_xGameProc.OnMouseMove(0,MAKELPARAM(point.x,point.y));
