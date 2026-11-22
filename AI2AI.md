@@ -2486,3 +2486,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 验证：攻击 ProbeDeath20 由 30 血降到 27，ProbeFast 与猪、鸡被击杀，角色获得经验并在聊天栏出现「得到经验值1。」，EIServer 进程存活且无新的应用程序错误。
 - NPC 与怪物名字发黑：服务端下发 _CHAT_COLOR3（聊天色索引 2），客户端 GetUserNameColor 只认 MIR3 名字色值域（255/251/249…），查不到回落 0。服务端改为 NPC 与普通怪物发 255（白）、神圣战甲发 249（红），客户端对未匹配索引按白色兜底。
 - 参考实现：GODOT 分支 client/src/hud/scene_name.hpp 的 colorref 明确以 47/69/125/147/154/168/180/221/229/249/251/252/254/255 为色值域，未匹配索引返回 0；本轮服务端按该值域下发，客户端兜底是为了兼容旧数据。
+
+## 2026-11-22 怪物音效与地图背景音乐
+
+- 怪物动作音效：PlayActSound 原用 MIR2 的 nActorSndTbl 映射外观到音效组，真实怪物外观（2、3、9 等）落在表外取到 -1，全部静音。MIR3 直接用外观编号作组号（GODOT 分支为 10*外观+偏移），改为 shape 直连、100 以上对 100 取模。
+- 背景音乐：PlayBkMusicMp3 里硬编码 "1.mp3"（资源里只有 1.wav），切换地图的调用也在 OnSvrMsgNewMap 被注释。改为按地图索引播放 Sound\B<索引>.mp3，索引从 MapMusic.ini 读取；MapMusic.ini 由 Server/Tools/export_map_music.py 从 System.db 的 MapInfo.Music 生成（289 张地图）。
+- 待办：Music 值域（0/3/4/10/13/15…49）与现有 BGM 文件名（B000、B2、B100、B122、B200、B300、B400、BDxx）对不上，185 个有音乐的地图目前全部命中不到文件，需要正确的 music→文件映射；原版 map 文件头只有 szDesc/wAttr/宽高/事件/雾色，没有音乐字段。
+- 客户端 RPC 新增 input.click / input.move / input.key，Test/xlsx_scenario.py --pid 可直接对运行中客户端注入点击与按键，Excel 场景不再需要 fixture 与重建数据库。
