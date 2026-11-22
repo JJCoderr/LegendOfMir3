@@ -8,14 +8,17 @@ xlsx 结构：
   用例表：编号 | name | target | action | params | expect
   编号由两位系统号、两位用例号和两位步骤号组成。
   00 行的 name 为用例名，执行步骤从 01 连续编号到 99。
+  name 以 [@工作簿名/测试ID] 开头时，执行所引用用例的步骤。
   fixture 表（可选，仅隔离环境模式）：case | sql
   files 表（可选）：case | path | encoding | text
 """
 import argparse
 import csv
+import re
 import subprocess
 import sys
 import tempfile
+from functools import cache
 from pathlib import Path
 
 import openpyxl
@@ -24,6 +27,7 @@ COLUMNS = ('step', 'name', 'target', 'action', 'params', 'expect')
 SUPPORT_SHEETS = {'fixture', 'files'}
 STEP_BASE = 100
 CASE_BASE = 100
+REFERENCE = re.compile(r'^\[@([^/\\:\[\]]+)/([0-9]{4})\]')
 
 
 def case_system(case_id):
@@ -142,8 +146,58 @@ def write_scenario(records, fixtures, directory, name):
     return scenario
 
 
-def materialize_case(workbook, case, directory, rule_cases=None, name=None):
+def resolve_references(records, workbook_path, workbook, rule_cases):
+    def find_records(book, rules, path, case_id):
+        candidates = rules.items() if rules is not None else (
+            (sheet.title, list(sheet.values)) for sheet in book if sheet.title not in SUPPORT_SHEETS)
+        for name, rows in candidates:
+            header = rows[0]
+            if 'step' in header or '编号' not in header:
+                continue
+            column = header.index('编号')
+            title = next((row for row in rows[1:] if any(cell is not None for cell in row)), None)
+            if title is not None and decode_number(title[column]) == (case_id, 0):
+                return read_scenario(book, name, rules)[0]
+        raise SystemExit(f'找不到引用的用例：{path.stem}/{case_id}')
+
+    @cache
+    def load_reference(path, case_id):
+        if path == workbook_path:
+            return find_records(workbook, rule_cases, path, case_id)
+        if not path.is_file():
+            raise SystemExit(f'找不到引用的工作簿：{path.name}')
+        book = openpyxl.load_workbook(path, read_only=True, data_only=True)
+        try:
+            rules = read_rule_cases(book) if 'Rules' in book.sheetnames else None
+            return find_records(book, rules, path, case_id)
+        finally:
+            book.close()
+
+    def expand(rows, source, prefix='', chain=()):
+        for row in rows:
+            marker = REFERENCE.match(row['name'])
+            if not marker:
+                if row['name'].startswith('[@'):
+                    raise SystemExit(f'引用格式应为 [@工作簿名/测试ID]：{row["name"]}')
+                yield {**row, 'step': prefix + row['step']}
+                continue
+            filename, case_id = marker[1] + '.xlsx', int(marker[2])
+            path = source.with_name(filename)
+            if not path.is_file():
+                path = Path(__file__).with_name(filename)
+            key = path, case_id
+            if key in chain:
+                cycle = ' -> '.join(f'{book.stem}/{number}' for book, number in (*chain, key))
+                raise SystemExit(f'用例循环引用：{cycle}')
+            fragment = load_reference(path, case_id)
+            yield from expand(fragment, path, f'{prefix}{row["step"]}.{case_id}.', (*chain, key))
+
+    return list(expand(records, workbook_path))
+
+
+def materialize_case(workbook, case, directory, workbook_path, rule_cases=None, name=None):
     records, fixtures = read_scenario(workbook, case, rule_cases)
+    records = resolve_references(records, workbook_path.resolve(), workbook, rule_cases)
     scenario = write_scenario(records, fixtures, directory, name or case)
     extract_assets(workbook, case, scenario.with_suffix('.files'))
     return scenario, records, fixtures
@@ -153,7 +207,7 @@ def export_case(workbook_path, case, directory):
     workbook = openpyxl.load_workbook(workbook_path, read_only=True, data_only=True)
     try:
         rules = read_rule_cases(workbook) if 'Rules' in workbook.sheetnames else None
-        return materialize_case(workbook, case, directory, rules)
+        return materialize_case(workbook, case, directory, workbook_path, rules)
     finally:
         workbook.close()
 
@@ -167,7 +221,7 @@ def run_case(args, workbook, case, rule_cases):
     log.parent.mkdir(parents=True, exist_ok=True)
     # wire.expect 从场景文件向上查找仓库内的协议头文件。
     with tempfile.TemporaryDirectory(prefix='xlsx-scenario-', dir=output) as directory:
-        generated, records, fixtures = materialize_case(workbook, case, Path(directory), rule_cases, name)
+        generated, records, fixtures = materialize_case(workbook, case, Path(directory), args.scenario, rule_cases, name)
         print(f'{case}: {len(records)} steps', flush=True)
         if args.pid:
             if fixtures:

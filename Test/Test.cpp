@@ -215,12 +215,12 @@ unsigned Number(const std::wstring& text) {
     return unsigned(number);
 }
 int wmain(int argc,wchar_t** argv) {
-    std::ofstream log;unsigned passed=0,step=0;std::string label,scenarioId;
+    std::ofstream log;unsigned passed=0;std::string step,label,scenarioId;
     const auto started=GetTickCount64();
     auto output=[&](const std::string& message) {
         SYSTEMTIME time;GetLocalTime(&time);char stamp[48];
         snprintf(stamp,sizeof(stamp),"%04d-%02d-%02d %02d:%02d:%02d.%03d ",time.wYear,time.wMonth,time.wDay,time.wHour,time.wMinute,time.wSecond,time.wMilliseconds);
-        const auto identity=std::string("[id=")+scenarioId+(step?"."+std::to_string(step):"")+"] ";
+        const auto identity=std::string("[id=")+scenarioId+(step.empty()?"":"."+step)+"] ";
         std::cout<<stamp<<identity<<message<<std::endl;if(log) log<<stamp<<identity<<message<<std::endl;
     };
     try {
@@ -249,23 +249,31 @@ int wmain(int argc,wchar_t** argv) {
         auto rows=ReadCsv(csv);
         const std::vector<std::string> header={"step","name","target","action","params","expect"};
         if(rows.empty() || rows[0]!=header) throw std::runtime_error("Expected CSV header: step,name,target,action,params,expect");
-        unsigned previous=0;size_t selected=0;
+        std::vector<unsigned> previous;
+        std::vector<std::pair<size_t,unsigned>> selected;
         for(size_t i=1;i<rows.size();++i) {
             const auto& row=rows[i];
             if(row.size()!=header.size()) throw std::runtime_error("Wrong CSV field count at record "+std::to_string(i+1));
-            const unsigned id=Number(std::wstring(row[0].begin(),row[0].end()));
-            if(!id || id<=previous) throw std::runtime_error("Step IDs must be positive and strictly increasing");
-            previous=id;if(id>=from && id<=to) ++selected;
+            std::wistringstream parts(std::wstring(row[0].begin(),row[0].end()));
+            std::vector<unsigned> id;
+            for(std::wstring part;std::getline(parts,part,L'.');) {
+                const auto number=Number(part);
+                if(!number) throw std::runtime_error("Step IDs must be positive");
+                id.push_back(number);
+            }
+            if(id<=previous || row[0].back()=='.') throw std::runtime_error("Step IDs must be positive and strictly increasing");
+            if(id.front()>=from && id.front()<=to) selected.emplace_back(i,id.back());
+            previous=std::move(id);
         }
-        if(!selected) throw std::runtime_error("No steps in selected range");
+        if(selected.empty()) throw std::runtime_error("No steps in selected range");
         output("START "+csv.u8string()+" from="+std::to_string(from)+" to="+std::to_string(to));
         std::map<std::string,std::unique_ptr<Pipe>> pipes;
-        for(size_t i=1;i<rows.size();++i) {
-            const auto& row=rows[i];step=unsigned(std::stoul(row[0]));
-            if(step<from || step>to) continue;
+        for(const auto& [i,rpcStep]:selected) {
+            const auto& row=rows[i];step=row[0];
+            const auto requestId=int64_t(rpcStep);
             label=row[1];const auto& target=row[2];const auto& action=row[3];
             const auto expected=Fields(row[5]);Json response;
-            output("STEP "+std::to_string(step)+" "+label+" "+target+" "+action+" expect="+row[5]);
+            output("STEP "+step+" "+label+" "+target+" "+action+" expect="+row[5]);
             if(target=="Runner") {
                 const auto fields=Fields(row[4]);
                 const auto duration=fields.count("milliseconds")?fields.at("milliseconds"):Json();
@@ -287,7 +295,7 @@ int wmain(int argc,wchar_t** argv) {
                 auto& pipe=*pipes[target];
                 const auto fields=Fields(action=="raw"?"":row[4]);
                 const auto request=action=="raw"?row[4]:Json(Object{
-                    {"jsonrpc",Json(std::string("2.0"))},{"id",Json(int64_t(step))},
+                    {"jsonrpc",Json(std::string("2.0"))},{"id",Json(requestId)},
                     {"method",Json(action=="state.wait"?std::string("state.get"):action=="wire.expect"?std::string("protocol.get"):action)},
                     {"params",Json(action=="wire.expect"?Object{}:fields)}}).serialize();
                 const auto deadline=GetTickCount64()+timeout;
@@ -296,11 +304,11 @@ int wmain(int argc,wchar_t** argv) {
                     const auto now=GetTickCount64();
                     if(now>=deadline) throw std::runtime_error("State wait timeout: "+Difference(response,expected));
                     response=pipe.Exchange(request,DWORD(deadline-now));
-                    if(action!="raw" && (!response.is<Object>() || !Equal(response.get("id"),Json(int64_t(step))) || response.get("jsonrpc")!=Json(std::string("2.0"))))
+                    if(action!="raw" && (!response.is<Object>() || !Equal(response.get("id"),Json(requestId)) || response.get("jsonrpc")!=Json(std::string("2.0"))))
                         throw std::runtime_error("RPC response ID/version mismatch");
                     if(action!="state.wait" || Difference(response,expected).empty()) break;
                     const auto current=response.serialize();
-                    if(current!=previousWaitingState) {output("WAIT "+std::to_string(step)+" response="+current);previousWaitingState=current;}
+                    if(current!=previousWaitingState) {output("WAIT "+step+" response="+current);previousWaitingState=current;}
                     if(response.contains("error")) throw std::runtime_error("RPC error: "+response.get("error").serialize());
                     Sleep(20);
                 } while(true);
@@ -320,14 +328,14 @@ int wmain(int argc,wchar_t** argv) {
             if(!difference.empty()) throw std::runtime_error(difference);
             if(response.is<Object>() && response.contains("error") && !expected.count("error.code"))
                 throw std::runtime_error("Unexpected RPC error: "+response.get("error").serialize());
-            output("PASS "+std::to_string(step)+" response="+response.serialize());++passed;
+            output("PASS "+step+" response="+response.serialize());++passed;
         }
-        step=0;
+        step.clear();
         output("RESULT passed checks="+std::to_string(passed)+" elapsed_ms="+std::to_string(GetTickCount64()-started));
         return 0;
     } catch(const std::exception& error) {
-        output("FAIL step="+std::to_string(step)+" "+label+" "+error.what());
-        step=0;
+        output("FAIL step="+(step.empty()?"0":step)+" "+label+" "+error.what());
+        step.clear();
         output("RESULT failed checks="+std::to_string(passed)+" elapsed_ms="+std::to_string(GetTickCount64()-started));
         return 1;
     }

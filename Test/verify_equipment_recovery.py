@@ -33,7 +33,7 @@ def main():
     # launch_csv terminates its own server before its clients in finally. These cutoffs occur
     # before session.return, so neither phase relies on the character-save request.
     cases = [(name, 'ShopEquipment', last, 'ShopEquipmentRecovery'+name)
-             for name, last in [('Sold', '29'), ('Rebuy', '44'), ('New', '53')]]
+             for name, last in [('Sold', '17'), ('Rebuy', '32'), ('New', '41')]]
     cases += [('MixedBuy', 'ShopMixedTrade', None, 'ShopMixedRecovery'),
               ('MixedSale', 'ShopMixedSale', None, 'ShopMixedSaleRecovery')]
     for name, scenario, last, recovery in cases:
