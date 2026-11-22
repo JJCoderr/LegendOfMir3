@@ -12,7 +12,25 @@
 & ./Client/Tests/Run-CuiDialogSmoke.ps1 -ResourceRoot 'G:/传奇3/宝藏传奇3' -Screenshots
 ```
 
-脚本构建 Win32 Release 的 `Mir3CuiDialogSmoke`，使用回环地址上的临时端口启动测试网关。每组输出 `[RUN]` 和 `[PASS]`，失败时输出 `[FAIL]` 并返回非零退出码。全部通过时输出 `CUI_DIALOG_SMOKE_OK`。日志写入 `build-cui/dialog-smoke/<运行目录>/smoke.log`，可选的截图写入同目录的 `screenshots/`。不带 `-Screenshots` 时只运行断言。测试程序在该运行目录中创建自己的本地配置与缓存。
+脚本构建 Win32 Release 的 `Mir3CuiDialogSmoke`，使用回环地址上的临时端口启动测试网关。每组输出 `[RUN]` 和 `[PASS]`，失败时输出 `[FAIL]` 并返回非零退出码。全部通过时输出 `CUI_DIALOG_SMOKE_OK`。日志写入 `build-cui/dialog-smoke/<运行目录>/smoke.log`，可选的截图写入同目录的 `screenshots/`。测试程序在该运行目录中创建自己的本地配置与缓存。
+
+## 自动回放与 CSV 动作
+
+```powershell
+& ./Client/Tests/Run-CuiDialogSmoke.ps1 -ResourceRoot 'G:/传奇3/宝藏传奇3' -Preview -Screenshots
+```
+
+`-Preview` 打开可见窗口，自动播放场景并把 CSV 输入投递给 CUI。标题显示当前场景或动作，点击位置用黄圈标示。按空格、回车或点击预览画面可以快进，按 Esc 或关闭窗口会结束预览并继续剩余断言。屏幕截图保存场景画面。
+
+默认加载 [CuiDialogActions.csv](../Client/Tests/CuiDialogActions.csv)。用 `-ActionsCsv` 可以指定修改后的文件。文件使用 UTF-8，表头为 `step,action,value`。
+
+| 动作 | 示例 | 执行方式 |
+| --- | --- | --- |
+| `click` | `online-line,click,60 101` | 移动到画布坐标并按下、释放左键 |
+| `key` | `show-skills,key,E` | 按下和释放键盘键，支持 A–Z、Enter、Escape、Tab、Space、Backspace、Ctrl+A、Alt+M |
+| `text` | `write-letter,text,Reply` | 向已获焦的 CUI 输入框提交文本，含逗号或双引号的值按 CSV 规则加引号 |
+
+同一 `step` 的多行必须相邻，并按行执行。现有动作组按回放顺序排列。也可以在任意截图检查点插入同名动作组，例如 `50-skill-tree,click,430 45` 会在技能树截图之后执行。网关回包、场景准备和断言由 C++ 测试程序定义。修改会改变预期报文的输入时，需要同时更新对应断言。缺失、乱序或剩余的动作会使测试失败。
 
 [PowerShell 入口](../Client/Tests/Run-CuiDialogSmoke.ps1) · [场景与断言](../Client/Tests/CuiDialogSmoke.cpp)
 

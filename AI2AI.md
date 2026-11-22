@@ -394,6 +394,7 @@ cmake --build build-cui --target Mir3CuiClient --config Release
 - 7、18、19、20、21 号窗口的界面改用原版独立浮窗尺寸、初始位置和 `GameInter` 底图，按 800×600 HUD 坐标缩放。标题拖动只捕获当前窗，窗口外仍可操作场景和背包，Escape 优先关闭最上方独立窗。寄售登记从共享背包接收手持物品，列表按原版 13 行及四列绘制。信件阅读、撰写和发件箱分别使用 `2010/2030/2070` 底图。更新后的截图对照和回放日志见 `build-cui/independent-layout-comparison-*.png`、`build-cui/independent-layout-native-test.log`。
 - 寄售登记 `GameInter 1910` 的可见区域为 408×286，原构造传入的 310 高度包含顶部和底部各 12 行透明像素。CUI 窗口和鼠标范围改用可见边界 `(0,22,408,286)`，各控件的屏幕坐标沿用原位置。前后对照见 `build-cui/independent-registration-height-comparison.png`。
 - 新增从启动到签退的 [CUI 对话框与面板场景清单](Docs/Cui-Dialog-Inventory.md) 和 [可运行的冒烟脚本](Client/Tests/Run-CuiDialogSmoke.ps1)。`Mir3CuiDialogSmoke` 复用生产 `Dialogs.cpp`、CUI 和网关编解码，在本机回环网关验证 18 组场景。两种运行模式均通过，带截图模式生成 64 张 CUI 画面。脚本支持空构建目录，按运行隔离日志、截图、配置和缓存。
+- 冒烟脚本支持 `-Preview` 自动回放和 `-ActionsCsv` 自定义输入。默认的 [CuiDialogActions.csv](Client/Tests/CuiDialogActions.csv) 描述模拟点击、按键和文本输入。可在任意截图检查点加动作。预览通过同一 CUI 软件渲染器显示每幕和点击位置，协议回包与断言仍由本地网关回放负责。
 
 - 以 `br_godot_test_261115` 的 `45d45af` 构建并运行 Godot 实际视口。隔离副本位于 `build-cui/godot-reference`，使用 Godot 4.7.2、godot-cpp 的 `e83fd090` 和本地原客户端资源。在隔离副本中去除怪物模块对未声明 `action_at` 的赋值以解除编译错误，主分支未改该模块。
 - `login_smoke.gd -- --screenshots` 输出 `LOGIN_UI_OK` 及 9 张截图。首组验收用例为 640×480 密码错误框，与当前 CUI 的相同账号及错误状态对照，相差 304075／307200 像素。并排图和差异图保存在 `build-cui`。该组结果是重做前基线，仍需用运行时资源、字体和控件状态重新实现。

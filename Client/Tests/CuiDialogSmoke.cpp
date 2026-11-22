@@ -176,15 +176,118 @@ public:
     }
 };
 
+class Preview {
+    HWND window_ = nullptr;
+    BITMAPINFO bitmap_{};
+    const unsigned char* pixels_ = nullptr;
+    POINT pointer_{-1,-1};
+    bool advance_ = false;
+
+    static LRESULT CALLBACK Handle(HWND window, UINT message, WPARAM key, LPARAM data)
+    {
+        if (message==WM_NCCREATE) {
+            const auto* create = reinterpret_cast<const CREATESTRUCTW*>(data);
+            SetWindowLongPtrW(window,GWLP_USERDATA,reinterpret_cast<LONG_PTR>(create->lpCreateParams));
+        }
+        auto* preview = reinterpret_cast<Preview*>(GetWindowLongPtrW(window,GWLP_USERDATA));
+        if (!preview) return DefWindowProcW(window,message,key,data);
+        switch (message) {
+        case WM_PAINT: {
+            PAINTSTRUCT paint{};
+            const HDC dc = BeginPaint(window,&paint);
+            const auto& info = preview->bitmap_.bmiHeader;
+            if (preview->pixels_)
+                SetDIBitsToDevice(dc,0,0,info.biWidth,-info.biHeight,0,0,0,-info.biHeight,
+                    preview->pixels_,&preview->bitmap_,DIB_RGB_COLORS);
+            const auto [x,y]=preview->pointer_;
+            if (x>=0) {
+                const auto pen=CreatePen(PS_SOLID,2,RGB(255,196,0));
+                const auto oldPen=SelectObject(dc,pen);
+                const auto oldBrush=SelectObject(dc,GetStockObject(HOLLOW_BRUSH));
+                Ellipse(dc,x-8,y-8,x+9,y+9);
+                SelectObject(dc,oldBrush);
+                SelectObject(dc,oldPen);
+                DeleteObject(pen);
+            }
+            EndPaint(window,&paint);
+            return 0;
+        }
+        case WM_KEYDOWN:
+            if (key==VK_ESCAPE) DestroyWindow(window);
+            if ((key==VK_SPACE || key==VK_RETURN) && !(data & (1L<<30))) preview->advance_=true;
+            return 0;
+        case WM_LBUTTONUP:
+        case WM_TIMER:
+            preview->advance_=true;
+            return 0;
+        case WM_DESTROY:
+            preview->window_=nullptr;
+            return 0;
+        }
+        return DefWindowProcW(window,message,key,data);
+    }
+
+public:
+    explicit Preview(bool enabled)
+    {
+        if (!enabled) return;
+        WNDCLASSW windowClass{};
+        windowClass.lpfnWndProc=Handle;
+        windowClass.hInstance=GetModuleHandleW(nullptr);
+        windowClass.hCursor=LoadCursor(nullptr,IDC_ARROW);
+        windowClass.lpszClassName=L"Mir3CuiDialogSmokePreview";
+        Check(RegisterClassW(&windowClass)!=0,"register preview window");
+        window_=CreateWindowW(windowClass.lpszClassName,L"CUI dialog replay",WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+            CW_USEDEFAULT,CW_USEDEFAULT,800,600,nullptr,nullptr,windowClass.hInstance,this);
+        Check(window_!=nullptr,"create preview window");
+    }
+
+    ~Preview() { if (window_) DestroyWindow(window_); }
+    explicit operator bool() const { return window_!=nullptr; }
+
+    void Show(std::string_view name, const std::vector<unsigned char>& pixels, int width, int height,
+              UINT duration, POINT pointer={-1,-1})
+    {
+        pixels_=pixels.data();
+        pointer_=pointer;
+        bitmap_.bmiHeader={sizeof(BITMAPINFOHEADER),width,-height,1,32,BI_RGB};
+        RECT bounds{0,0,width,height};
+        AdjustWindowRect(&bounds,static_cast<DWORD>(GetWindowLongW(window_,GWL_STYLE)),FALSE);
+        SetWindowPos(window_,nullptr,0,0,bounds.right-bounds.left,bounds.bottom-bounds.top,SWP_NOMOVE | SWP_NOZORDER);
+        const auto title = L"CUI 对话框自动回放 | " + std::wstring(name.begin(),name.end()) +
+            L" | Esc 结束预览";
+        SetWindowTextW(window_,title.c_str());
+        ShowWindow(window_,SW_SHOW);
+        InvalidateRect(window_,nullptr,FALSE);
+        UpdateWindow(window_);
+        advance_=false;
+        Check(SetTimer(window_,1,duration,nullptr)!=0,"start preview timer");
+        MSG message{};
+        while (window_ && !advance_) {
+            const BOOL received = GetMessageW(&message,nullptr,0,0);
+            Check(received>0,"read preview window message");
+            TranslateMessage(&message);
+            DispatchMessageW(&message);
+        }
+        if (window_) KillTimer(window_,1);
+        pixels_=nullptr;
+    }
+};
+
 class Screen {
     cui_ctx* ui_ = nullptr;
     cui_sw_renderer* renderer_ = nullptr;
     Dialogs art_;
     fs::path screenshots_;
+    Preview preview_;
     int width_ = 800, height_ = 600;
+    struct Action { std::string step, kind, value; };
+    std::vector<Action> actions_;
+    std::size_t nextAction_ = 0;
 
 public:
-    Screen(const fs::path& resources, fs::path screenshots) : screenshots_(std::move(screenshots))
+    Screen(const fs::path& resources, const fs::path& actions, fs::path screenshots, bool preview)
+        : screenshots_(std::move(screenshots)), preview_(preview)
     {
         ui_ = cui_create(nullptr);
         renderer_ = cui_sw_create();
@@ -195,8 +298,37 @@ public:
         cui_set_accent(ui_,CUI_ACCENT_AMBER);
         cui_set_viewport(ui_,800,600,1);
         Check(art_.Open(ui_,resources),"open original CUI resources");
+        std::ifstream csv(actions);
+        std::string row;
+        Check(bool(std::getline(csv,row)) && (row=="step,action,value" || row=="\xef\xbb\xbfstep,action,value"),
+            "expected CSV header: step,action,value");
+        while (std::getline(csv,row)) {
+            if (row.empty()) continue;
+            const auto first=row.find(',');
+            const auto second=first==std::string::npos ? first : row.find(',',first+1);
+            if (second==std::string::npos)
+                throw std::runtime_error("expected step,action,value: "+row);
+            auto value=row.substr(second+1);
+            if (value.starts_with('"')) {
+                Check(value.size()>=2 && value.back()=='"',"unterminated CSV value");
+                std::string unquoted;
+                for (std::size_t i=1;i+1<value.size();++i) {
+                    if (value[i]=='"') {
+                        ++i;
+                        Check(i+1<value.size() && value[i]=='"',"expected escaped CSV quote");
+                    }
+                    unquoted+=value[i];
+                }
+                value=std::move(unquoted);
+            } else Check(value.find(',')==std::string::npos && value.find('"')==std::string::npos,
+                         "quote CSV values containing a comma or quote");
+            actions_.push_back({row.substr(0,first),row.substr(first+1,second-first-1),std::move(value)});
+        }
+        Check(csv.eof(),"read CSV actions");
         if (!screenshots_.empty()) {
             fs::create_directories(screenshots_);
+        }
+        if (!screenshots_.empty() || preview_) {
             const auto font = fs::path(_wgetenv(L"WINDIR") ? _wgetenv(L"WINDIR") : L"C:/Windows") / "Fonts/msyh.ttc";
             if (fs::exists(font)) {
                 const auto face = cui_font_load_file(ui_,font.string().c_str());
@@ -227,23 +359,56 @@ public:
         DrawDialogs(ui_,client,native ? &art_ : nullptr);
         cui_end_frame(ui_);
     }
-    void Key(LoginClient& client, cui_key key, bool native = true)
+    void Actions(LoginClient& client, std::string_view step, bool native = true)
     {
-        Draw(client,native);
-        cui_input_key(ui_,key,true,0);
-        Draw(client,native);
-        cui_input_key(ui_,key,false,0);
-        Draw(client,native);
+        if (nextAction_==actions_.size() || actions_[nextAction_].step!=step)
+            throw std::runtime_error("missing or out-of-order CSV step: "+std::string(step));
+        const auto show = [&](std::string label, POINT pointer={-1,-1}, UINT duration=250) {
+            if (preview_) preview_.Show(label,Pixels(),width_,height_,duration,pointer);
+        };
+        do {
+            const auto& action=actions_[nextAction_++];
+            Draw(client,native);
+            if (action.kind=="click") {
+                POINT position{};
+                std::istringstream coordinates(action.value);
+                std::string extra;
+                Check(bool(coordinates>>position.x>>position.y) && !(coordinates>>extra) &&
+                    position.x>=0 && position.x<width_ && position.y>=0 && position.y<height_,
+                    "CSV click must be inside the current viewport");
+                cui_input_mouse_move(ui_,static_cast<float>(position.x),static_cast<float>(position.y));
+                Draw(client,native);
+                cui_input_mouse_button(ui_,CUI_MOUSE_LEFT,true);
+                Draw(client,native);
+                show(action.step+" | Click "+action.value,position);
+                cui_input_mouse_button(ui_,CUI_MOUSE_LEFT,false);
+                Draw(client,native);
+            } else if (action.kind=="key") {
+                cui_key key=CUI_KEY_NONE;
+                unsigned modifiers=0;
+                if (action.value.size()==1 && action.value[0]>='A' && action.value[0]<='Z')
+                    key=static_cast<cui_key>(CUI_KEY_A+action.value[0]-'A');
+                else if (action.value=="Enter") key=CUI_KEY_ENTER;
+                else if (action.value=="Escape") key=CUI_KEY_ESCAPE;
+                else if (action.value=="Tab") key=CUI_KEY_TAB;
+                else if (action.value=="Space") key=CUI_KEY_SPACE;
+                else if (action.value=="Backspace") key=CUI_KEY_BACKSPACE;
+                else if (action.value=="Ctrl+A") { key=CUI_KEY_A; modifiers=CUI_MOD_CTRL; }
+                else if (action.value=="Alt+M") { key=CUI_KEY_M; modifiers=CUI_MOD_ALT; }
+                Check(key!=CUI_KEY_NONE,"unknown CSV key");
+                cui_input_key(ui_,key,true,modifiers);
+                Draw(client,native);
+                cui_input_key(ui_,key,false,0);
+                Draw(client,native);
+                show(action.step+" | Key "+action.value);
+            } else if (action.kind=="text") {
+                cui_input_text(ui_,action.value.c_str());
+                Draw(client,native);
+                show(action.step+" | Text");
+            } else throw std::runtime_error("unknown CSV action: "+action.kind);
+        } while (nextAction_<actions_.size() && actions_[nextAction_].step==step);
     }
-    void Click(LoginClient& client, float x, float y)
-    {
-        cui_input_mouse_move(ui_,x,y);
-        Draw(client);
-        cui_input_mouse_button(ui_,CUI_MOUSE_LEFT,true);
-        Draw(client);
-        cui_input_mouse_button(ui_,CUI_MOUSE_LEFT,false);
-        Draw(client);
-    }
+    void CheckActionsConsumed() const { Check(nextAction_==actions_.size(),"unused CSV actions"); }
     std::vector<unsigned char> Pixels() const
     {
         std::vector<unsigned char> pixels(static_cast<std::size_t>(width_)*height_*4);
@@ -252,10 +417,23 @@ public:
     }
     void Snapshot(LoginClient& client, const char* name, bool native = true)
     {
+        Capture(client,name,native);
+        if (nextAction_<actions_.size() && actions_[nextAction_].step==name)
+            Actions(client,name,native);
+    }
+
+private:
+    void Capture(LoginClient& client, const char* name, bool native)
+    {
         Draw(client,native);
-        if (screenshots_.empty()) return;
+        if (screenshots_.empty() && !preview_) return;
         for (int i=0;i<9;++i) Draw(client,native);
         const auto pixels=Pixels();
+        if (preview_) {
+            std::cout << "[VIEW] " << name << std::endl;
+            preview_.Show(name,pixels,width_,height_,1200);
+        }
+        if (screenshots_.empty()) return;
         BITMAPFILEHEADER header{};
         BITMAPINFOHEADER info{};
         header.bfType=0x4d42;
@@ -289,11 +467,11 @@ void StartSession(LoginClient& client, Screen& screen, GatewayFixture& character
         Check(client.serverGroups.Load(config) && client.serverGroups.groups[0].lines.size()==2,"load group and two lines");
         client.stage = Stage::Groups;
         screen.Snapshot(client,"01-groups");
-        screen.Click(client,110,210);
+        screen.Actions(client,"select-group");
         Check(client.serverGroups.selected==0,"select group from its map button");
-        screen.Click(client,60,77);
+        screen.Actions(client,"disabled-line");
         Check(client.stage==Stage::Groups,"disabled line leaves group open");
-        screen.Click(client,60,101);
+        screen.Actions(client,"online-line");
         Check(client.stage==Stage::Login && std::string(client.port)==std::to_string(loginPort),
             "active line opens configured login gateway");
         screen.Snapshot(client,"02-startup");
@@ -306,27 +484,27 @@ void StartSession(LoginClient& client, Screen& screen, GatewayFixture& character
     Case("login / password error, retry and billing notice", [&] {
         strcpy_s(client.host,"127.0.0.1");
         std::snprintf(client.port,sizeof client.port,"%u",loginPort);
-        strcpy_s(client.account,"fixture");
+        screen.Actions(client,"enter-account");
+        Check(std::string_view(client.account)=="fixture","account typed into login form");
         client.configuredServers={{"Local","Local"}};
-        const auto signIn = [&] {
-            strcpy_s(client.password,"test");
-            client.SignIn();
+        const auto signIn = [&](const char* step) {
+            screen.Actions(client,step);
             login.Accept(client);
             login.Expect(client,Packet(2001,0,0,0,0,"fixture/test"));
             Check(!client.password[0],"password cleared after queue");
         };
-        signIn();
+        signIn("login-first");
         login.Send(Packet(SM_PASSWD_FAIL,static_cast<unsigned>(-1)));
         const auto deadline = GetTickCount64()+5000;
         while (client.stage!=Stage::Login && GetTickCount64()<deadline) { client.Poll(); Sleep(1); }
         Check(client.stage==Stage::Login && client.loginNoticeId==113,"password rejection returns to login");
         screen.Snapshot(client,"05-password-rejected",false);
         client.DismissNotice();
-        signIn();
+        signIn("login-retry");
         login.Reply(client,Packet(529,0,0,3,0,"Local(2);"));
         Check(client.stage==Stage::Servers && client.billing.message==103,"billing notice blocks server selection");
         screen.Snapshot(client,"06-billing",false);
-        screen.Key(client,CUI_KEY_ENTER,false);
+        screen.Actions(client,"dismiss-billing",false);
         Check(!client.billing.message && !client.servers.empty(),"dismiss billing notice");
         screen.Snapshot(client,"07-server-list");
         client.Select(client.servers[0]);
@@ -342,14 +520,15 @@ void StartSession(LoginClient& client, Screen& screen, GatewayFixture& character
         screen.Snapshot(client,"08-empty-characters",false);
         client.characterNotice.clear();
         client.OpenCharacterDialog(CharacterDialog::Create);
-        strcpy_s(client.characterInput,"bad/name");
-        client.SubmitCharacterDialog();
+        screen.Actions(client,"invalid-character",false);
         Check(!client.characterRequest && client.characterNoticeId==225,"invalid name stays in creation");
         screen.Snapshot(client,"09-create-validation",false);
         client.characterNotice.clear();
+        client.OpenCharacterDialog(CharacterDialog::Create);
         client.profession=2;
         client.gender=1;
-        strcpy_s(client.characterInput,"Hero");
+        screen.Actions(client,"type-character-name",false);
+        Check(std::string_view(client.characterInput)=="Hero","replacement character name typed");
         screen.Snapshot(client,"10-create",false);
         client.SubmitCharacterDialog();
         characters.Expect(client,Packet(101,0,0,0,0,"fixture/Hero/1/2/1"));
@@ -418,13 +597,13 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
                           std::string_view text={}) { game.Game(client,opcode,actor,first,0,0,text); };
 
     Case("HUD / chat, reception and target map controls", [&] {
-        screen.Key(client,CUI_KEY_ESCAPE);
+        screen.Actions(client,"leave-chat");
         Check(!client.chat.composing,"leave initial chat editing mode");
         const auto expanded = client.chat.expanded;
-        screen.Key(client,CUI_KEY_R);
+        screen.Actions(client,"expand-chat");
         Check(client.chat.expanded!=expanded,"toggle chat height");
         screen.Snapshot(client,"14-chat-expanded");
-        screen.Key(client,CUI_KEY_R);
+        screen.Actions(client,"collapse-chat");
         client.chat.receptionOpen=true;
         screen.Snapshot(client,"15-reception");
         client.chat.receptionOpen=false;
@@ -433,16 +612,16 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         game.Game(client,710,0,1001);
         screen.Snapshot(client,"16-minimap");
         Check(client.minimap.visible,"minimap reply draws the requested map");
-        screen.Key(client,CUI_KEY_T);
+        screen.Actions(client,"resize-minimap");
         Check(client.minimap.large,"resize minimap");
-        screen.Key(client,CUI_KEY_Y);
+        screen.Actions(client,"minimap-opacity");
         Check(client.minimap.translucent,"toggle minimap opacity");
         screen.Snapshot(client,"17-minimap-large");
         client.minimap.visible=false;
     });
 
     Case("0-1, 8, 16 / bag, equipment, discard and quick slots", [&] {
-        client.OpenInventory();
+        screen.Actions(client,"open-bag");
         game.Expect(client,Packet(81));
         game.Game(client,201,0,0,0,1,Encode(item)+"/",true);
         open(653,100);
@@ -459,10 +638,10 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         screen.Snapshot(client,"20-drop-gold");
         client.inventory.drop=mir3_cui::DropDialog::None;
         client.CloseInventory();
-        client.ToggleItemShortcuts();
+        screen.Actions(client,"open-item-shortcuts");
         screen.Snapshot(client,"21-item-shortcuts");
         Check(client.inventory.shortcutsVisible && client.inventory.shortcuts.size()==6,"six item shortcut slots");
-        client.ToggleItemShortcuts();
+        screen.Actions(client,"close-item-shortcuts");
     });
 
     Case("9 / NPC links, mask, cancellation and server close", [&] {
@@ -550,7 +729,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
     });
 
     Case("6 / party roster, member editor and rejection", [&] {
-        client.party.open=true;
+        screen.Actions(client,"open-party");
         open(667,0,0,"Leader/Bob/");
         Check(client.party.members.size()==2,"party roster");
         screen.Snapshot(client,"38-party");
@@ -564,7 +743,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
     });
 
     Case("4, 15 / guild pages, permissions and announcement editor", [&] {
-        client.RequestGuildPage(0);
+        screen.Actions(client,"open-guild");
         game.Expect(client,Packet(1036));
         open(753,0,0,"Fixture\r\r0\r<Notice>\rWelcome\rHel");
         Check(client.guild.open && !client.guild.overview.manager,"guild overview for non-manager");
@@ -587,7 +766,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
     });
 
     Case("11 / quests empty and populated states", [&] {
-        client.OpenQuests();
+        screen.Actions(client,"open-quests");
         game.Expect(client,Packet(1046));
         Check(client.quests.waiting,"quest list waits for gateway");
         screen.Snapshot(client,"45-quests-waiting");
@@ -603,36 +782,35 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
 
     Case("12-14, 22 / settings, audio, riding, skills and portrait picker", [&] {
         open(1401,0x4a800000,4);
-        client.serverOptions.open=true;
+        screen.Actions(client,"open-settings");
         Check(client.serverOptions.confirmed==0x4a800000 && client.serverOptions.attackMode==4,"server settings applied");
         screen.Snapshot(client,"47-system-settings");
         client.serverOptions.open=false;
         client.audioOpen=true;
         screen.Snapshot(client,"48-audio");
         client.audioOpen=false;
-        screen.Key(client,CUI_KEY_S);
+        screen.Actions(client,"show-mount");
         Check(client.mount.visible,"mount shortcut opens panel");
         screen.Snapshot(client,"49-mount");
         open(1300,1);
         Check(client.mount.shape==1,"mount status reply");
         client.mount.visible=false;
-        screen.Key(client,CUI_KEY_E);
+        screen.Actions(client,"show-skills");
         Check(client.skills.visible && client.skills.learned.size()==8,"skill tree opens with eight tabs");
         screen.Snapshot(client,"50-skill-tree");
         client.skills.visible=false;
-        screen.Key(client,CUI_KEY_B);
+        screen.Actions(client,"show-skill-shortcuts");
         Check(client.skillShortcutsVisible,"separate skill shortcut bar");
         screen.Snapshot(client,"51-skill-shortcuts");
         client.skillShortcutsVisible=false;
-        const auto button = mir3::HudLayout::portrait_entry_position;
         screen.Draw(client);
         const auto before=screen.Pixels();
-        screen.Click(client,button[0]+5,button[1]+5);
+        screen.Actions(client,"open-portrait");
         screen.Snapshot(client,"52-photo-picker");
         const auto after=screen.Pixels();
         const auto sample=(85*800+425)*4;
         Check(!std::equal(before.begin()+sample,before.begin()+sample+3,after.begin()+sample),"portrait picker paints its preview area");
-        screen.Key(client,CUI_KEY_ESCAPE);
+        screen.Actions(client,"close-portrait");
     });
 
     Case("7, 18 / profile and server-enabled order map", [&] {
@@ -642,10 +820,10 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         open(751,201,0,profile);
         Check(client.windows.profile.open && client.windows.profile.equipment[0].key.id==1234,"profile is a separate window");
         screen.Snapshot(client,"53-profile");
-        screen.Key(client,CUI_KEY_ESCAPE);
+        screen.Actions(client,"close-profile");
         Check(!client.windows.profile.open,"close only the profile");
         open(1350,28|(45u<<16),1,"0\t201");
-        screen.Key(client,CUI_KEY_P);
+        screen.Actions(client,"open-orders");
         Check(client.windows.orders.open,"order map requires server permission");
         screen.Snapshot(client,"54-orders");
         open(1353);
@@ -662,21 +840,20 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         record.replace(191,5,"Notes");
         game.Game(client,1355,201,1,1,1,Encode(record)+"/",true);
         Check(client.windows.market.open && client.windows.market.listings.size()==1,"consignment list decoded");
-        screen.Click(client,160,117);
+        screen.Actions(client,"select-listing");
         Check(client.windows.market.selected==22,"click listing selects it");
         screen.Snapshot(client,"55-market");
-        strcpy_s(client.windows.market.filter,"Sword");
-        client.MarketRequest(1136);
+        screen.Actions(client,"search-listings");
         game.Expect(client,Packet(1136,201,0,0,0,"*\rSword\r0"));
         open(1400,1);
         client.BeginMarketRegistration();
         client.equipment.held={1234,"Sword"};
-        screen.Click(client,305,144);
+        screen.Actions(client,"drop-consignment-item");
         Check(client.windows.market.item.id==1234 && !client.HeldItem(),"drop shared bag item into slot");
         Check(client.windows.positions[3].y==22,"registration begins at visible skin edge");
-        strcpy_s(client.windows.market.price,"30");
+        screen.Actions(client,"type-consignment-price");
         screen.Snapshot(client,"56-registration");
-        client.RegisterMarketItem();
+        screen.Actions(client,"confirm-consignment");
         game.Expect(client,Packet(1130,201,0,0,0,"Sword\r1234\r30\r"));
         Check(client.inventory.Find({1234,"Sword"})!=nullptr,"registration waits for bag delta");
         client.windows.market={};
@@ -686,7 +863,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
     Case("21 / inbox, mail detail with gold, compose and outbox", [&] {
         open(1358);
         Check(client.windows.mail.unreadNotice,"new message flag");
-        client.ToggleMailbox();
+        screen.Actions(client,"open-mailbox");
         game.Expect(client,Packet(1137));
         std::string letter(80,'\0');
         Field(letter,0,42);
@@ -704,11 +881,9 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         open(1357,0,0,body);
         Check(client.windows.mail.reading && client.windows.mail.gold==12,"read message and gold");
         screen.Snapshot(client,"58-letter");
-        client.windows.mail.composing=true;
-        strcpy_s(client.windows.mail.recipient,"Sender");
-        strcpy_s(client.windows.mail.draft,"Reply");
+        screen.Actions(client,"write-letter");
         screen.Snapshot(client,"59-compose");
-        client.SendLetter();
+        screen.Actions(client,"send-letter");
         std::string outgoing(596,'\0');
         outgoing.replace(0,6,"Sender");
         outgoing.replace(64,5,"Reply");
@@ -743,12 +918,17 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
 
 int wmain(int argc,wchar_t** argv)
 {
-    if (argc<3 || argc>4) {
-        std::cerr << "Usage: Mir3CuiDialogSmoke RESOURCE_ROOT RUN_DIRECTORY [--screenshots]\n";
+    if (argc<4) {
+        std::cerr << "Usage: Mir3CuiDialogSmoke RESOURCE_ROOT RUN_DIRECTORY ACTIONS_CSV [--screenshots] [--preview]\n";
         return 2;
     }
-    const bool screenshots = argc==4 && std::wstring_view(argv[3])==L"--screenshots";
-    if (argc==4 && !screenshots) return 2;
+    bool screenshots=false, preview=false;
+    for (int i=4;i<argc;++i) {
+        const std::wstring_view option(argv[i]);
+        if (option==L"--screenshots") screenshots=true;
+        else if (option==L"--preview") preview=true;
+        else return 2;
+    }
     WSADATA winsock{};
     if (WSAStartup(MAKEWORD(2,2),&winsock)!=0) return 1;
     const auto com = CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);
@@ -757,16 +937,18 @@ int wmain(int argc,wchar_t** argv)
         Check(SUCCEEDED(com),"initialize COM");
         const auto resources=fs::absolute(argv[1]);
         const auto run=fs::absolute(argv[2]);
+        const auto actions=fs::absolute(argv[3]);
         fs::create_directories(run);
         fs::current_path(run);
         LoginClient client;
         client.SetResourceRoot(resources);
         client.audioOptions.music=client.audioOptions.effects=false;
         client.audioOptionsPath=(run/"smoke-options.ini").wstring();
-        Screen screen(resources,screenshots ? run/"screenshots" : fs::path{});
+        Screen screen(resources,actions,screenshots ? run/"screenshots" : fs::path{},preview);
         GatewayFixture characters,game;
         StartSession(client,screen,characters,game);
         InspectGameDialogs(client,screen,characters,game);
+        screen.CheckActionsConsumed();
         std::cout << "CUI_DIALOG_SMOKE_OK\n";
     } catch (const std::exception& error) {
         std::cerr << "[FAIL] " << error.what() << '\n';

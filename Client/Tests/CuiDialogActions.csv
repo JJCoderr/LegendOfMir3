@@ -1,0 +1,51 @@
+step,action,value
+select-group,click,110 210
+disabled-line,click,60 77
+online-line,click,60 101
+enter-account,click,150 447
+enter-account,text,fixture
+login-first,click,350 447
+login-first,text,test
+login-first,click,468 445
+login-retry,click,350 447
+login-retry,text,test
+login-retry,click,468 445
+dismiss-billing,key,Enter
+invalid-character,text,bad/name
+invalid-character,key,Enter
+type-character-name,text,Hero
+leave-chat,key,Escape
+expand-chat,key,R
+collapse-chat,key,R
+resize-minimap,key,T
+minimap-opacity,key,Y
+open-bag,key,W
+open-item-shortcuts,key,Z
+close-item-shortcuts,key,Z
+open-party,key,G
+open-guild,key,F
+open-quests,key,D
+open-settings,key,N
+show-mount,key,S
+show-skills,key,E
+show-skill-shortcuts,key,B
+open-portrait,click,540 572
+close-portrait,key,Escape
+close-profile,key,Escape
+open-orders,key,P
+select-listing,click,160 117
+search-listings,click,312 392
+search-listings,text,Sword
+search-listings,click,515 384
+drop-consignment-item,click,305 144
+type-consignment-price,click,65 266
+type-consignment-price,text,30
+confirm-consignment,click,290 260
+confirm-consignment,click,290 260
+open-mailbox,key,Alt+M
+write-letter,click,310 23
+write-letter,click,112 64
+write-letter,text,Sender
+write-letter,click,60 100
+write-letter,text,Reply
+send-letter,click,305 262
