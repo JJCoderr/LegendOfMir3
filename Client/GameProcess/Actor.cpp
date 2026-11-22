@@ -18,6 +18,17 @@
 #include "MonsterMotion.h"
 #include "Common/LegacyPanel.h"
 
+// 当前客户端资源（宝藏传奇3/Data）只有 Mon-1..20 与 Mon-54，缺库时按外观对 200 取模回退，
+// 保证怪物可见；资源补齐后回退分支不再生效。
+static int MonsterImageIndex(CImageHandler* images,int shape)
+{
+	const int wanted=_IMAGE_MONSTER1+shape/10;
+	if(images->m_xImageList[wanted].m_pbCurrImage) return wanted;
+	const int fallback=_IMAGE_MONSTER1+(shape%200)/10;
+	if(images->m_xImageList[fallback].m_pbCurrImage) return fallback;
+	return _IMAGE_MONSTER1;
+}
+
 
 
 /******************************************************************************************************************
@@ -273,7 +284,7 @@ BOOL CActor::Create(CImageHandler* pxImgHandler, FEATURE* pstFeature, BYTE bMtn,
 					g_xSpriteInfo.SetMonFrameInfo(pstFeature->bDress);
 					// 原版 406750 按动作起始帧重判朝向，见 MonsterMotion.h。
 					bDir = (BYTE)mir3::MonsterResourceDirection(pstFeature->bDress, g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm, bDir);
-					m_bActorImgIdx = _IMAGE_MONSTER1 + (pstFeature->bDress / 10);
+					m_bActorImgIdx = MonsterImageIndex(pxImgHandler, pstFeature->bDress);
 					m_dwFstFrame = g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm + (pstFeature->bDress%10)*_MAX_MON_FRAME + bDir*10;
 					m_dwEndFrame = m_dwFstFrame + g_xSpriteInfo.m_stMonSpr[bMtn].wFrmCnt;
 					m_wDelay = g_xSpriteInfo.m_stMonSpr[bMtn].wDelay;
@@ -409,7 +420,7 @@ BOOL CActor::ChangeFeature(FEATURE stFeature)
 				else
 				{
 					g_xSpriteInfo.SetMonFrameInfo(stFeature.bDress);
-					m_bActorImgIdx = _IMAGE_MONSTER1 + (stFeature.bDress/10);
+					m_bActorImgIdx = MonsterImageIndex(pxImgHandler, stFeature.bDress);
 					m_dwFstFrame = g_xSpriteInfo.m_stMonSpr[m_bCurrMtn].wFstFrm + (stFeature.bDress%10)*_MAX_MON_FRAME + m_bCurrDir*10;
 					m_dwEndFrame = m_dwFstFrame + g_xSpriteInfo.m_stMonSpr[m_bCurrMtn].wFrmCnt;
 					m_wDelay = g_xSpriteInfo.m_stMonSpr[m_bCurrMtn].wDelay;
