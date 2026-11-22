@@ -68,7 +68,7 @@ def build(xlsx):
             "INSERT INTO TBL_MONSTER (FLD_INDEX,FLD_NAME,FLD_RACE,FLD_RACEIMG,FLD_APPR,FLD_LEVEL,"
             "FLD_UNDEAD,FLD_EXP,FLD_HP,FLD_MP,FLD_AC,FLD_MAXAC,FLD_MAC,FLD_MAXMAC,FLD_DC,FLD_MAXDC,"
             "FLD_SPEED,FLD_HIT,FLD_WALKSPEED,FLD_ATTACKSPEED,FLD_VIEWRANGE,FLD_RACEINDEX,FLD_ESCAPE) VALUES "
-            f"({index},{q(as_text(m['MonsterName']))},0,{as_int(m['Image'])},{as_int(m['Image'])},"
+            f"({index},{q(as_text(m['MonsterName']))},{max(0, as_int(m['AI']))},{as_int(m['Image'])},{as_int(m['Image'])},"
             f"{as_int(m['Level'])},{truth(m['Undead'])},{as_int(m['Experience'])},"
             f"{max(1, own.get(STAT['Health'], 0))},{own.get(STAT['Mana'], 0)},"
             f"{own.get(STAT['MinAC'], 0)},{own.get(STAT['MaxAC'], 0)},"
