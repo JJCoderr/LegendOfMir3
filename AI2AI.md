@@ -2535,3 +2535,10 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 - 共享目录：vmx 里配置了 vmdiag（hostPath D:\vmdiag）与 Mud3Config（hostPath %LOCALAPPDATA%\VMware\Mud3Config），两处宿主路径原先都不存在；已创建 D:\vmdiag，guest 重挂载工具后可用 \\vmware-host\Shared Folders\vmdiag 访问。
 - Win7 无法安装微软官方 Win32-OpenSSH（要求 Win10/Server 2019 以上），需用支持 Win7 的实现（Bitvise SSH Server、freeSSHd 等），安装后开放 22 端口。
 - 数据来源计划：从 guest 的 D 盘取 V1.45 数据库解析结果，或在 guest 内跑通 GSQL 后导出 TBL_MONSTER/TBL_STDITEM/TBL_MAGIC。宿主侧 GSQL 已僵死（sqlservr 无法结束），必须重启宿主才能再试。
+
+## 2026-11-22 子系统 Excel 场景验收
+
+- 场景载体已统一到 Excel：Test/Scenarios 下有 InputSmoke、GameplaySmoke、SkillCast、NpcDialog、Inventory、ShopBuy、ShopSell、CombatMelee，全部由 Test/xlsx_scenario.py 驱动；CSV 与 xlsx 结果一致，可用 Test/csv_to_xlsx.py 互转。
+- 已跑通的检查数：背包 Inventory 71、商店购买 ShopBuy 44、商店出售 ShopSell 52、近战 CombatMelee 27、NPC 对话 NpcDialog 33、技能施法 SkillCast 13。
+- 技能施法要先等 cast_ready=true，刚进图立刻施放会被客户端拒绝。
+- 自动登录会改变场景首步状态（直接进入 server_list），因此测试模板 out/debug/Mir3.ini 不带 [AutoLogin]，只有手动游玩用的运行目录才配置。
