@@ -3354,3 +3354,20 @@ begin
       SendDefMessage (SM_GHOST, integer(target), x, y, 0, '');
 end; */
 }
+
+
+// 组队邀请、交易、定向私聊都需要把名字换成在线玩家对象。
+CPlayerObject* FindPlayerByName(const char* name)
+{
+	if (name == NULL || *name == '\0') return NULL;
+
+	for (int i = 0; i < g_xUserInfoArr.m_nSize; i++)
+	{
+		CUserInfo* pUserInfo = &g_xUserInfoArr[i];
+
+		if (pUserInfo->m_bEmpty || pUserInfo->m_pxPlayerObject == NULL) continue;
+		if (!lstrcmpiA(pUserInfo->m_szCharName, name)) return pUserInfo->m_pxPlayerObject;
+	}
+
+	return NULL;
+}

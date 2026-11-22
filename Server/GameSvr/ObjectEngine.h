@@ -53,6 +53,10 @@
 
 class CCharObject;
 class CMirMap;
+
+class CPlayerObject;
+
+CPlayerObject* FindPlayerByName(const char* name);
 class CUserInfo;
 
 typedef struct tag_TPROCESSMSG
