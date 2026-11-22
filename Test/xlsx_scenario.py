@@ -5,10 +5,9 @@
   省略 --pid             退回隔离环境模式，交给 launch_csv.py 建库起进程。
 
 xlsx 结构：
-  Rules 表：编号 | CASE | name | target | action | params | expect
-  独立用例表省略 CASE 列。
-  编号按两位系统号、两位用例号、四位步骤号组成。
-  CASE 仅在每段的第一行填写用例名。
+  用例表：编号 | name | target | action | params | expect
+  编号由两位系统号、两位用例号和两位步骤号组成。
+  00 行的 name 为用例名，执行步骤从 01 连续编号到 99。
   fixture 表（可选，仅隔离环境模式）：case | sql
   files 表（可选）：case | path | encoding | text
 """
@@ -23,7 +22,7 @@ import openpyxl
 
 COLUMNS = ('step', 'name', 'target', 'action', 'params', 'expect')
 SUPPORT_SHEETS = {'fixture', 'files'}
-STEP_BASE = 10_000
+STEP_BASE = 100
 CASE_BASE = 100
 
 
@@ -42,8 +41,6 @@ def decode_number(value):
         raise SystemExit(f'编号必须是纯数字：{number}')
     case_id, step = divmod(int(number), STEP_BASE)
     case_system(case_id)
-    if not step:
-        raise SystemExit(f'步骤号不能为零：{number}')
     return case_id, step
 
 
@@ -51,18 +48,18 @@ def read_rule_cases(workbook):
     rows = workbook['Rules'].values
     header = next(rows)
     identifier = header.index('编号')
-    case_column = header.index('CASE')
+    name_column = header.index('name')
     cases = {}
     seen_ids = set()
     active_id = active_name = system = None
     for row in rows:
         if all(cell is None for cell in row):
             continue
-        case_id, _ = decode_number(row[identifier])
-        name = row[case_column]
+        case_id, step = decode_number(row[identifier])
         if case_id != active_id:
-            if not name or name in cases or case_id in seen_ids:
-                raise SystemExit(f'用例 {case_id} 的首行缺少名称，或用例重复')
+            name = row[name_column]
+            if step != 0 or not name or name in cases or case_id in seen_ids:
+                raise SystemExit(f'用例 {case_id} 缺少 00 标题行，或用例重复')
             current_system = case_system(case_id)
             if system is not None and system != current_system:
                 raise SystemExit('同一张 Rules 表必须使用相同的两位系统号')
@@ -70,8 +67,6 @@ def read_rule_cases(workbook):
             active_id, active_name = case_id, name
             seen_ids.add(case_id)
             cases[name] = [header]
-        elif name is not None:
-            raise SystemExit(f'用例 {case_id} 仅在首行填写 CASE 名称')
         cases[active_name].append(row)
     return cases
 
@@ -88,16 +83,21 @@ def read_scenario(workbook, case, rule_cases=None):
     identifier = header.index('编号') if '编号' in header else None
     records = []
     case_id = None
-    for row in rows[1:]:
-        if row is None or all(cell is None for cell in row):
-            continue
+    data_rows = (row for row in rows[1:] if any(cell is not None for cell in row))
+    for expected_step, row in enumerate(data_rows):
         record = {name: ('' if row[index] is None else str(row[index]))
                   for name, index in position.items() if index < len(row)}
         if encoded:
             prefix, step = decode_number(row[identifier])
-            if case_id is not None and prefix != case_id:
+            if step != expected_step:
+                raise SystemExit(f'{case}: 预期步骤号 {expected_step:02d}，实际为 {step:02d}')
+            if step == 0:
+                if record['name'] != case or any(record[name] for name in COLUMNS[2:]):
+                    raise SystemExit(f'{case}: 00 行只填写用例名称')
+                case_id = prefix
+                continue
+            if prefix != case_id:
                 raise SystemExit(f'{case}: 同一规则段包含多个用例编号')
-            case_id = prefix
             record['step'] = str(step)
         if not record.get('step', '').strip():
             continue

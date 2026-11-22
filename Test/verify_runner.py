@@ -15,17 +15,17 @@ root = Path(tempfile.mkdtemp(prefix='csv-runner-',dir=repo/'out'))
 with sqlite3.connect(root/'test.sqlite3') as db:
     db.execute('CREATE TABLE fixture(value)')
 checks = [
-    ('wait','wait.csv',['--from','10','--to','10'],0,['PASS 10'],[]),
+    ('wait','wait.csv',['--from','1','--to','1'],0,['PASS 1'],[]),
     *[(f'wait-invalid-{step}','wait.csv',['--from',str(step),'--to',str(step)],1,
-       ['Runner wait requires milliseconds'],['PASS']) for step in (20,30,40,50)],
-    ('all','csv.csv',[],0,['PASS 10','PASS 20','PASS 30'],[]),
-    ('range','csv.csv',['--from','20','--to','20'],0,['PASS 20'],['STEP 10','STEP 30']),
-    ('start','csv.csv',['--from','20'],0,['PASS 20','PASS 30'],['STEP 10']),
-    ('end','csv.csv',['--to','20'],0,['PASS 10','PASS 20'],['STEP 30']),
-    ('empty','csv.csv',['--from','21','--to','29'],1,['No steps'],['STEP']),
-    ('reversed','csv.csv',['--from','30','--to','10'],1,['Invalid execution range'],['STEP']),
+       ['Runner wait requires milliseconds'],['PASS']) for step in (2,3,4,5)],
+    ('all','csv.csv',[],0,['PASS 1','PASS 2','PASS 3'],[]),
+    ('range','csv.csv',['--from','2','--to','2'],0,['PASS 2'],['STEP 1','STEP 3']),
+    ('start','csv.csv',['--from','2'],0,['PASS 2','PASS 3'],['STEP 1']),
+    ('end','csv.csv',['--to','2'],0,['PASS 1','PASS 2'],['STEP 3']),
+    ('empty','csv.csv',['--from','4','--to','5'],1,['No steps'],['STEP']),
+    ('reversed','csv.csv',['--from','3','--to','1'],1,['Invalid execution range'],['STEP']),
     ('precision','wrong_integer.csv',[],1,['expected [[9007199254740992]], actual [[9007199254740993]]'],['PASS']),
-    ('stop','stop_on_failure.csv',[],1,['FAIL step=10'],['STEP 20']),
+    ('stop','stop_on_failure.csv',[],1,['FAIL step=1'],['STEP 2']),
 ]
 for name,scenario,options,code,required,forbidden in checks:
     log = root/(name+'.log')

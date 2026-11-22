@@ -4,7 +4,7 @@
 
 `Test` 根目录每个子系统只有一本工作簿，文件名沿用原目录名，如 `Shop.xlsx`。一个子系统的全部规则集中在 `Rules` 表，主流程排在前面。需要不同测试存档的规则仍各自初始化。客户端 UI 集中在 `ClientUI.xlsx`，可按对话框分表。跨子系统的冒烟场景单独使用 `GameplaySmoke.xlsx`。
 
-`Rules` 列顺序为 `编号 | CASE | name | target | action | params | expect`。`CASE` 只在用例的首行填写名称，后续步骤留空。八位数字编号由两位系统号、两位用例号和四位步骤号组成。例如 `21010260` 是商店 `21` 的第 `01` 个用例 `ShopBuy` 的第 260 步。`name` 填中文步骤名称。独立用例表省略 `CASE` 列，使用工作表名作为用例名。`--from 260 --to 260` 和日志 ID `ShopBuy.260` 仍按原步骤号运行。
+`Rules` 和独立用例表都使用 `编号 | name | target | action | params | expect`。六位编号由两位系统号、两位用例号和两位步骤号组成。例如 `210100` 是商店用例 `ShopBuy` 的标题行，`name` 填用例名称，其余字段留空。独立用例表的标题名称与工作表同名。操作行从 `210101` 连续编号，每个用例最多 100 行，含 `00` 标题行和最多 99 个执行步骤。用 `--from 1 --to 1` 运行第一个操作，日志 ID 为 `ShopBuy.1`。
 
 系统号按工作簿固定分配：`10 Character`、`11 Chat`、`12 ClientUI`、`13 Combat`、`14 GameplaySmoke`、`15 Inventory`、`16 Login`、`17 Monsters`、`18 Npc`、`19 Rpc`、`20 Runner`、`21 Shop`、`22 Skills`。新增用例时使用本工作簿的空闲两位用例号，已有编号保持稳定。
 
