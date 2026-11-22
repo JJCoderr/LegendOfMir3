@@ -2,6 +2,7 @@ step,action,value
 select-group,click,110 210
 disabled-line,click,60 77
 online-line,click,60 101
+dismiss-login-connection-notice,key,Enter
 enter-account,click,150 447
 enter-account,text,fixture
 login-first,click,350 447
@@ -16,16 +17,20 @@ invalid-character,key,Enter
 type-character-name,text,Hero
 leave-chat,key,Escape
 expand-chat,key,R
+toggle-private-reception,click,355 566
 collapse-chat,key,R
 resize-minimap,key,T
 minimap-opacity,key,Y
 open-bag,key,W
 open-item-shortcuts,key,Z
 close-item-shortcuts,key,Z
+dismiss-item-notice,key,Enter
 open-party,key,G
 open-guild,key,F
 open-quests,key,D
 open-settings,key,N
+toggle-stereo,click,582 245
+close-audio,key,Escape
 show-mount,key,S
 show-skills,key,E
 show-skill-shortcuts,key,B
@@ -34,16 +39,21 @@ close-portrait,key,Escape
 close-profile,key,Escape
 open-orders,key,P
 select-listing,click,160 117
-search-listings,click,312 392
+search-listings,click,350 392
 search-listings,text,Sword
-search-listings,click,515 384
+search-listings,click,490 389
 drop-consignment-item,click,305 144
 type-consignment-price,click,65 266
 type-consignment-price,text,30
-confirm-consignment,click,290 260
-confirm-consignment,click,290 260
-open-mailbox,key,Alt+M
-write-letter,click,310 23
+confirm-consignment,click,266 263
+confirm-consignment,click,266 263
+open-mailbox,click,724 454
+scroll-inbox,move,151 120
+scroll-inbox,wheel,-2
+read-inbox-letter,wheel,2
+read-inbox-letter,click,105 67
+read-inbox-letter,click,246 24
+write-letter,click,292 25
 write-letter,click,112 64
 write-letter,text,Sender
 write-letter,click,60 100

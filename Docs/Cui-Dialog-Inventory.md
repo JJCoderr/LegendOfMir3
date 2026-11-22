@@ -22,17 +22,46 @@
 
 `-Preview` 打开可见窗口，自动播放场景并把 CSV 输入投递给 CUI。标题显示当前场景或动作，点击位置用黄圈标示。按空格、回车或点击预览画面可以快进，按 Esc 或关闭窗口会结束预览并继续剩余断言。屏幕截图保存场景画面。
 
-默认加载 [CuiDialogActions.csv](../Client/Tests/CuiDialogActions.csv)。用 `-ActionsCsv` 可以指定修改后的文件。文件使用 UTF-8，表头为 `step,action,value`。
+默认加载 [CuiDialogScenarios.csv](../Client/Tests/CuiDialogScenarios.csv)，按表中顺序运行全部对话框测试组。每个测试组使用独立的客户端状态和本地网关。只想验两个窗口组时，可以传入一份 UTF-8 CSV。
+
+```csv
+scenario,step,action,value
+mail,,run,
+mail,open-mailbox,key,Alt+M
+consignment,,run,
+```
+
+```powershell
+& ./Client/Tests/Run-CuiDialogSmoke.ps1 -ResourceRoot 'G:/传奇3/宝藏传奇3' -ScenarioCsv './my-scenarios.csv' -Preview -Screenshots
+```
+
+`run` 选择一个场景组。后续同组的行可以覆盖指定步骤，例如把上例中的邮件入口由点击新信件图标改成 Alt+M。未覆盖的步骤从 [默认动作](../Client/Tests/CuiDialogActions.csv) 获取。场景 ID 和全量顺序见默认计划。旧版 `step,action,value` 文件与 `-ActionsCsv` 参数仍可用，按完整会话回放。
 
 | 动作 | 示例 | 执行方式 |
 | --- | --- | --- |
-| `click` | `online-line,click,60 101` | 移动到画布坐标并按下、释放左键 |
-| `key` | `show-skills,key,E` | 按下和释放键盘键，支持 A–Z、Enter、Escape、Tab、Space、Backspace、Ctrl+A、Alt+M |
-| `text` | `write-letter,text,Reply` | 向已获焦的 CUI 输入框提交文本，含逗号或双引号的值按 CSV 规则加引号 |
+| `click` | `startup,online-line,click,60 101` | 移动到画布坐标并按下、释放左键 |
+| `press`、`move`、`release` | `mail,57-inbox,move,100 110` | 操作鼠标位置和左键。三种动作可组合成拖动 |
+| `wheel` | `mail,57-inbox,wheel,-2` | 在当前鼠标位置向下滚动两行。正数向上 |
+| `key` | `options-skills,show-skills,key,E` | 按下和释放键盘键，支持 A–Z、Enter、Escape、Tab、Space、Backspace、Ctrl+A、Alt+M |
+| `text` | `mail,write-letter,text,Reply` | 向已获焦的 CUI 输入框提交文本，含逗号或双引号的值按 CSV 规则加引号 |
 
-同一 `step` 的多行必须相邻，并按行执行。现有动作组按回放顺序排列。也可以在任意截图检查点插入同名动作组，例如 `50-skill-tree,click,430 45` 会在技能树截图之后执行。网关回包、场景准备和断言由 C++ 测试程序定义。修改会改变预期报文的输入时，需要同时更新对应断言。缺失、乱序或剩余的动作会使测试失败。
+同一场景和同一步骤的多行必须相邻。覆盖行按实际回放顺序排列。同一个步骤的多行动作整体替换默认值。也可以在任意截图检查点插入同名动作组，例如 `options-skills,50-skill-tree,move,430 45` 会在技能树截图之后执行。登录和选角按 640×480 模拟，区组选线和局内按 800×600 模拟。
+
+新游戏流程在 C++ 注册场景并定义本地网关回包和断言，再在 CSV 选择场景或调整输入。修改会改变预期报文的输入时，需要同时更新对应断言。日志逐组报告结果，动作格式、未知场景或剩余步骤出错时返回非零退出码。
 
 [PowerShell 入口](../Client/Tests/Run-CuiDialogSmoke.ps1) · [场景与断言](../Client/Tests/CuiDialogSmoke.cpp)
+
+## 贴图修正
+
+| 界面 | 本次修复 | 参考 |
+| --- | --- | --- |
+| 人物资料、地图指令 | 关闭钮、三种地图指令改用原版图集，坐标取原绘制路径 | `47A670`、`46E6E0` |
+| 寄售查询、寄售登记 | 上下页、刷新、检索、登记、买入、撤销和关闭按钮改用原版贴图。两个检索框各自保留输入，登记沿用 408×286 可见边界 | `454410`、`4546F0`、`456960` |
+| 邮件 | 模式页签、删除、刷新、翻信、回复、发送、取消等用原版图集。收发列表按原版七行和滚动滑块绘制，新信件入口复用收件图标 | `457F50`、`458640`、`459B80` |
+| 登录和物品提示 | 有素材时用原版提示框显示登录状态和物品使用结果。空缺的消息文案仍可由客户端提供 | `GameInter` 1240、1243、1244 |
+| 音频和聊天接收 | 独立音频入口复用系统设置的贴图和音频操作。聊天接收测试通过原版 HUD 按钮触发 | Godot `hud_view.cpp` 的选项及 HUD 输入 |
+
+网关调试设置、缺资源回退及部分连接中界面仍有通用 CUI 路径。贴图回放使用本地网关，实服表现以联测为准。
 
 ## 启动、登录和进入游戏
 

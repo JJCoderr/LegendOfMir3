@@ -1,5 +1,6 @@
 #include "CuiClientState.h"
 #include "Dialogs.h"
+#include "CuiTestPlan.h"
 
 #include <iostream>
 #include <sstream>
@@ -279,15 +280,18 @@ class Screen {
     cui_sw_renderer* renderer_ = nullptr;
     Dialogs art_;
     fs::path screenshots_;
-    Preview preview_;
+    Preview& preview_;
     int width_ = 800, height_ = 600;
-    struct Action { std::string step, kind, value; };
-    std::vector<Action> actions_;
+    const std::vector<mir3_test::Action>& defaults_;
+    const std::vector<mir3_test::Action>& actions_;
+    bool reporting_=true;
     std::size_t nextAction_ = 0;
 
 public:
-    Screen(const fs::path& resources, const fs::path& actions, fs::path screenshots, bool preview)
-        : screenshots_(std::move(screenshots)), preview_(preview)
+    Screen(const fs::path& resources, const std::vector<mir3_test::Action>& defaults,
+           const mir3_test::Scenario& scenario, fs::path screenshots, Preview& preview)
+        : screenshots_(std::move(screenshots)), preview_(preview), defaults_(defaults),
+          actions_(scenario.actions)
     {
         ui_ = cui_create(nullptr);
         renderer_ = cui_sw_create();
@@ -298,33 +302,6 @@ public:
         cui_set_accent(ui_,CUI_ACCENT_AMBER);
         cui_set_viewport(ui_,800,600,1);
         Check(art_.Open(ui_,resources),"open original CUI resources");
-        std::ifstream csv(actions);
-        std::string row;
-        Check(bool(std::getline(csv,row)) && (row=="step,action,value" || row=="\xef\xbb\xbfstep,action,value"),
-            "expected CSV header: step,action,value");
-        while (std::getline(csv,row)) {
-            if (row.empty()) continue;
-            const auto first=row.find(',');
-            const auto second=first==std::string::npos ? first : row.find(',',first+1);
-            if (second==std::string::npos)
-                throw std::runtime_error("expected step,action,value: "+row);
-            auto value=row.substr(second+1);
-            if (value.starts_with('"')) {
-                Check(value.size()>=2 && value.back()=='"',"unterminated CSV value");
-                std::string unquoted;
-                for (std::size_t i=1;i+1<value.size();++i) {
-                    if (value[i]=='"') {
-                        ++i;
-                        Check(i+1<value.size() && value[i]=='"',"expected escaped CSV quote");
-                    }
-                    unquoted+=value[i];
-                }
-                value=std::move(unquoted);
-            } else Check(value.find(',')==std::string::npos && value.find('"')==std::string::npos,
-                         "quote CSV values containing a comma or quote");
-            actions_.push_back({row.substr(0,first),row.substr(first+1,second-first-1),std::move(value)});
-        }
-        Check(csv.eof(),"read CSV actions");
         if (!screenshots_.empty()) {
             fs::create_directories(screenshots_);
         }
@@ -339,6 +316,7 @@ public:
             }
         }
     }
+    void Report(bool reporting) { reporting_=reporting; }
     ~Screen()
     {
         art_.Close(ui_);
@@ -361,28 +339,48 @@ public:
     }
     void Actions(LoginClient& client, std::string_view step, bool native = true)
     {
-        if (nextAction_==actions_.size() || actions_[nextAction_].step!=step)
+        const bool custom=reporting_ && nextAction_<actions_.size() && actions_[nextAction_].step==step;
+        const auto& source=custom ? actions_ : defaults_;
+        std::size_t next=custom ? nextAction_ :
+            static_cast<std::size_t>(std::ranges::find(source,step,&mir3_test::Action::step)-source.begin());
+        if (next==source.size())
             throw std::runtime_error("missing or out-of-order CSV step: "+std::string(step));
         const auto show = [&](std::string label, POINT pointer={-1,-1}, UINT duration=250) {
-            if (preview_) preview_.Show(label,Pixels(),width_,height_,duration,pointer);
+            if (reporting_ && preview_) preview_.Show(label,Pixels(),width_,height_,duration,pointer);
         };
         do {
-            const auto& action=actions_[nextAction_++];
+            const auto& action=source[next++];
             Draw(client,native);
-            if (action.kind=="click") {
+            if (action.kind=="click" || action.kind=="move" || action.kind=="press" || action.kind=="release") {
                 POINT position{};
                 std::istringstream coordinates(action.value);
                 std::string extra;
                 Check(bool(coordinates>>position.x>>position.y) && !(coordinates>>extra) &&
                     position.x>=0 && position.x<width_ && position.y>=0 && position.y<height_,
-                    "CSV click must be inside the current viewport");
+                    "CSV pointer position must be inside the current viewport");
                 cui_input_mouse_move(ui_,static_cast<float>(position.x),static_cast<float>(position.y));
                 Draw(client,native);
-                cui_input_mouse_button(ui_,CUI_MOUSE_LEFT,true);
+                if (action.kind=="click" || action.kind=="press") {
+                    cui_input_mouse_button(ui_,CUI_MOUSE_LEFT,true);
+                    Draw(client,native);
+                }
+                if (action.kind=="release") {
+                    cui_input_mouse_button(ui_,CUI_MOUSE_LEFT,false);
+                    Draw(client,native);
+                }
+                show(action.step+" | "+action.kind+" "+action.value,position);
+                if (action.kind=="click") {
+                    cui_input_mouse_button(ui_,CUI_MOUSE_LEFT,false);
+                    Draw(client,native);
+                }
+            } else if (action.kind=="wheel") {
+                float delta=0;
+                std::string extra;
+                std::istringstream value(action.value);
+                Check(bool(value>>delta) && !(value>>extra) && std::isfinite(delta),"invalid CSV wheel delta");
+                cui_input_scroll(ui_,0,delta);
                 Draw(client,native);
-                show(action.step+" | Click "+action.value,position);
-                cui_input_mouse_button(ui_,CUI_MOUSE_LEFT,false);
-                Draw(client,native);
+                show(action.step+" | wheel "+action.value);
             } else if (action.kind=="key") {
                 cui_key key=CUI_KEY_NONE;
                 unsigned modifiers=0;
@@ -406,9 +404,13 @@ public:
                 Draw(client,native);
                 show(action.step+" | Text");
             } else throw std::runtime_error("unknown CSV action: "+action.kind);
-        } while (nextAction_<actions_.size() && actions_[nextAction_].step==step);
+        } while (next<source.size() && source[next].step==step);
+        if (custom) nextAction_=next;
     }
-    void CheckActionsConsumed() const { Check(nextAction_==actions_.size(),"unused CSV actions"); }
+    void CheckActionsConsumed() const
+    {
+        if (nextAction_!=actions_.size()) throw std::runtime_error("unused or out-of-order CSV step: "+actions_[nextAction_].step);
+    }
     std::vector<unsigned char> Pixels() const
     {
         std::vector<unsigned char> pixels(static_cast<std::size_t>(width_)*height_*4);
@@ -417,6 +419,7 @@ public:
     }
     void Snapshot(LoginClient& client, const char* name, bool native = true)
     {
+        if (!reporting_) return;
         Capture(client,name,native);
         if (nextAction_<actions_.size() && actions_[nextAction_].step==name)
             Actions(client,name,native);
@@ -452,14 +455,51 @@ private:
     }
 };
 
-void StartSession(LoginClient& client, Screen& screen, GatewayFixture& characters, GatewayFixture& game)
+class ScenarioRun {
+    std::string_view selected_;
+    Screen& screen_;
+    bool ran_=false;
+
+public:
+    ScenarioRun(std::string_view selected, Screen& screen) : selected_(selected), screen_(screen) {}
+
+    template<typename Action>
+    bool Startup(const char* id, const char* name, Action action)
+    {
+        if (selected_.empty() || selected_==id) Run(id,name,action);
+        else {
+            screen_.Report(false);
+            action();
+            screen_.Report(true);
+        }
+        return ran_ && !selected_.empty();
+    }
+
+    template<typename Action>
+    void Run(const char* id, const char* name, Action action)
+    {
+        if (!selected_.empty() && selected_!=id) return;
+        ran_=true;
+        const auto label=std::string(id)+" / "+name;
+        Case(label.c_str(),[&] {
+            action();
+            if (Named()) screen_.CheckActionsConsumed();
+        });
+    }
+
+    bool Ran() const { return ran_; }
+    bool Named() const { return !selected_.empty(); }
+};
+
+void StartSession(LoginClient& client, Screen& screen, GatewayFixture& characters, GatewayFixture& game,
+                  ScenarioRun& scenario)
 {
     GatewayFixture login;
     const auto loginPort = login.Listen();
     characters.Listen();
     game.Listen();
 
-    Case("startup / server groups and settings", [&] {
+    if (scenario.Startup("startup","server groups and settings", [&] {
         std::istringstream config(
             "[SERVERGROUP]\nCount=1\nServer1=Local,Local lines,100,200\n"
             "[ServerGroup1]\nCount=2\nServer1=Offline,empty,empty\nServer2=Online,LOOPBACK,unused\n"
@@ -475,13 +515,17 @@ void StartSession(LoginClient& client, Screen& screen, GatewayFixture& character
         Check(client.stage==Stage::Login && std::string(client.port)==std::to_string(loginPort),
             "active line opens configured login gateway");
         screen.Snapshot(client,"02-startup");
-        screen.Snapshot(client,"03-account",false);
+        screen.Snapshot(client,"03-account");
         client.settingsOpen = true;
         screen.Snapshot(client,"04-gateway-settings",false);
         client.settingsOpen = false;
-    });
+        client.status="This line has an invalid login configuration.";
+        screen.Snapshot(client,"04b-login-connection-notice");
+        screen.Actions(client,"dismiss-login-connection-notice");
+        Check(client.status.empty(),"textured login notice dismisses uncatalogued status");
+    })) return;
 
-    Case("login / password error, retry and billing notice", [&] {
+    if (scenario.Startup("login","password error, retry and billing notice", [&] {
         strcpy_s(client.host,"127.0.0.1");
         std::snprintf(client.port,sizeof client.port,"%u",loginPort);
         screen.Actions(client,"enter-account");
@@ -498,38 +542,38 @@ void StartSession(LoginClient& client, Screen& screen, GatewayFixture& character
         const auto deadline = GetTickCount64()+5000;
         while (client.stage!=Stage::Login && GetTickCount64()<deadline) { client.Poll(); Sleep(1); }
         Check(client.stage==Stage::Login && client.loginNoticeId==113,"password rejection returns to login");
-        screen.Snapshot(client,"05-password-rejected",false);
+        screen.Snapshot(client,"05-password-rejected");
         client.DismissNotice();
         signIn("login-retry");
         login.Reply(client,Packet(529,0,0,3,0,"Local(2);"));
         Check(client.stage==Stage::Servers && client.billing.message==103,"billing notice blocks server selection");
-        screen.Snapshot(client,"06-billing",false);
-        screen.Actions(client,"dismiss-billing",false);
+        screen.Snapshot(client,"06-billing");
+        screen.Actions(client,"dismiss-billing");
         Check(!client.billing.message && !client.servers.empty(),"dismiss billing notice");
         screen.Snapshot(client,"07-server-list");
         client.Select(client.servers[0]);
         login.Expect(client,Packet(104,0,0,0,0,"Local"));
-    });
+    })) return;
 
-    Case("character gateway / empty list, create, duplicate, deletion prompt", [&] {
+    if (scenario.Startup("characters","character gateway / empty list, create, duplicate, deletion prompt", [&] {
         login.Send(Packet(530,static_cast<unsigned>(-123),0,0,0,characters.Address()+'/'));
         characters.Accept(client);
         characters.Expect(client,Packet(100,0,0,0,0,"fixture/-123"));
         characters.Reply(client,Packet(520));
         Check(client.characters.empty() && client.characterNoticeId==219,"empty character list notice");
-        screen.Snapshot(client,"08-empty-characters",false);
+        screen.Snapshot(client,"08-empty-characters");
         client.characterNotice.clear();
         client.OpenCharacterDialog(CharacterDialog::Create);
         screen.Actions(client,"invalid-character",false);
         Check(!client.characterRequest && client.characterNoticeId==225,"invalid name stays in creation");
-        screen.Snapshot(client,"09-create-validation",false);
+        screen.Snapshot(client,"09-create-validation");
         client.characterNotice.clear();
         client.OpenCharacterDialog(CharacterDialog::Create);
         client.profession=2;
         client.gender=1;
         screen.Actions(client,"type-character-name",false);
         Check(std::string_view(client.characterInput)=="Hero","replacement character name typed");
-        screen.Snapshot(client,"10-create",false);
+        screen.Snapshot(client,"10-create");
         client.SubmitCharacterDialog();
         characters.Expect(client,Packet(101,0,0,0,0,"fixture/Hero/1/2/1"));
         characters.Reply(client,Packet(522,2));
@@ -541,9 +585,9 @@ void StartSession(LoginClient& client, Screen& screen, GatewayFixture& character
         characters.Expect(client,Packet(100,0,0,0,0,"fixture/-123"));
         characters.Reply(client,Packet(520,2,0,0,0,"Hero/2/x/10/1/*Second/1/x/7/0"));
         Check(client.characters.size()==2 && client.characterIndex==0,"created role arrives in refreshed list");
-        screen.Snapshot(client,"11-character-list",false);
+        screen.Snapshot(client,"11-character-list");
         client.OpenCharacterDialog(CharacterDialog::Delete);
-        screen.Snapshot(client,"12-delete-confirmation",false);
+        screen.Snapshot(client,"12-delete-confirmation");
         client.CloseCharacterDialog();
         Check(!client.characterRequest,"cancel delete does not queue a request");
         client.characterIndex=1;
@@ -554,9 +598,9 @@ void StartSession(LoginClient& client, Screen& screen, GatewayFixture& character
         characters.Expect(client,Packet(100,0,0,0,0,"fixture/-123"));
         characters.Reply(client,Packet(523)+Packet(520,1,0,0,0,"Hero/2/x/10/1"));
         Check(client.characters.size()==1 && client.characters[0].name=="Hero","delete returns to refreshed list");
-    });
+    })) return;
 
-    Case("game gateway / failed start, retry and enter HUD", [&] {
+    if (scenario.Startup("game-entry","game gateway / failed start, retry and enter HUD", [&] {
         client.StartCharacter();
         characters.Expect(client,Packet(103,0,0,0,0,"fixture/Hero"));
         characters.Reply(client,Packet(526));
@@ -575,7 +619,7 @@ void StartSession(LoginClient& client, Screen& screen, GatewayFixture& character
         Check(client.stage==Stage::GameSession && client.gameCharacter=="Hero","valid logon enters CUI HUD");
         game.Game(client,GameChangeMap,100,436,439,0,"0");
         screen.Snapshot(client,"13-hud");
-    });
+    })) return;
 }
 std::string SampleItem()
 {
@@ -590,23 +634,34 @@ std::string SampleItem()
     return item;
 }
 
-void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& characters, GatewayFixture& game)
+void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& characters, GatewayFixture& game,
+                        ScenarioRun& scenario)
 {
     const auto item = SampleItem();
     const auto open = [&](unsigned opcode,std::uint32_t actor=0,WORD first=0,
                           std::string_view text={}) { game.Game(client,opcode,actor,first,0,0,text); };
+    const auto prepareBag = [&] {
+        if (client.inventory.initialized) return;
+        client.OpenInventory();
+        game.Expect(client,Packet(81));
+        game.Game(client,201,0,0,0,1,Encode(item)+"/",true);
+        client.CloseInventory();
+    };
 
-    Case("HUD / chat, reception and target map controls", [&] {
+    scenario.Run("hud","HUD / chat, reception and target map controls", [&] {
         screen.Actions(client,"leave-chat");
         Check(!client.chat.composing,"leave initial chat editing mode");
         const auto expanded = client.chat.expanded;
         screen.Actions(client,"expand-chat");
         Check(client.chat.expanded!=expanded,"toggle chat height");
         screen.Snapshot(client,"14-chat-expanded");
-        screen.Actions(client,"collapse-chat");
-        client.chat.receptionOpen=true;
+        screen.Actions(client,"toggle-private-reception");
+        game.Expect(client,Packet(mir3_cui::Say,0,0,0,0,
+            mir3_cui::ChatReception::ToggleCommand(mir3_cui::ReceptionChannel::Private)));
+        game.Game(client,mir3_cui::ClientOptions,0x04000000);
+        Check(client.chat.reception.confirmed[0],"textured HUD reception button applies server options");
         screen.Snapshot(client,"15-reception");
-        client.chat.receptionOpen=false;
+        screen.Actions(client,"collapse-chat");
         client.ToggleMinimap(0);
         game.Expect(client,Packet(1033));
         game.Game(client,710,0,1001);
@@ -620,7 +675,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         client.minimap.visible=false;
     });
 
-    Case("0-1, 8, 16 / bag, equipment, discard and quick slots", [&] {
+    scenario.Run("inventory","0-1, 8, 16 / bag, equipment, discard and quick slots", [&] {
         screen.Actions(client,"open-bag");
         game.Expect(client,Packet(81));
         game.Game(client,201,0,0,0,1,Encode(item)+"/",true);
@@ -642,9 +697,14 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         screen.Snapshot(client,"21-item-shortcuts");
         Check(client.inventory.shortcutsVisible && client.inventory.shortcuts.size()==6,"six item shortcut slots");
         screen.Actions(client,"close-item-shortcuts");
+        client.inventory.notice=true;
+        client.inventory.status="The server declined to use the item.";
+        screen.Snapshot(client,"21b-item-notice");
+        screen.Actions(client,"dismiss-item-notice");
+        Check(!client.inventory.notice && client.inventory.status.empty(),"textured item notice dismisses with Enter");
     });
 
-    Case("9 / NPC links, mask, cancellation and server close", [&] {
+    scenario.Run("npc","9 / NPC links, mask, cancellation and server close", [&] {
         open(GameNpcDialogue,201,0,"0/Welcome\\<Password/@@*3_enter_stgpasswd>{NOTCLOSE/1}");
         Check(client.npcDialogue.actor==201 && !client.npcDialogue.canClose,"server opens locked dialogue");
         screen.Snapshot(client,"22-npc");
@@ -660,7 +720,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         Check(!client.npcDialogue.actor,"server closes the locked page");
     });
 
-    Case("2 / shop catalogue, individual detail, bulk and purchase error", [&] {
+    scenario.Run("shop","2 / shop catalogue, individual detail, bulk and purchase error", [&] {
         open(GameNpcDialogue,201,0,"0/Shop");
         open(GameShopGoods,201,2,"Potion/1/25/1/301/0/0/Bundle/2/8/65539/302/0/0/");
         Check(client.shop.goods.size()==2,"two catalogue rows");
@@ -679,7 +739,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         open(GameNpcClose,201);
     });
 
-    Case("2 / crafting and merchant service variants", [&] {
+    scenario.Run("merchant-services","2 / crafting and merchant service variants", [&] {
         open(GameCraftGoods,201,0,"Recipe/2/50/0/301/0/0/");
         client.RequestShopOffers(0,0);
         screen.Snapshot(client,"28-craft");
@@ -711,7 +771,9 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         client.merchant={};
     });
 
-    Case("3 / trade rejection, paired bag, gold and cancellation", [&] {
+    scenario.Run("trade","3 / trade rejection, paired bag, gold and cancellation", [&] {
+        prepareBag();
+        open(653,100);
         open(GameTradeFailed);
         Check(client.trade.prompt==mir3_cui::TradePrompt::Failed,"failed trade prompt");
         screen.Snapshot(client,"35-trade-failed");
@@ -728,7 +790,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         client.CloseInventory();
     });
 
-    Case("6 / party roster, member editor and rejection", [&] {
+    scenario.Run("party","6 / party roster, member editor and rejection", [&] {
         screen.Actions(client,"open-party");
         open(667,0,0,"Leader/Bob/");
         Check(client.party.members.size()==2,"party roster");
@@ -742,7 +804,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         client.party={};
     });
 
-    Case("4, 15 / guild pages, permissions and announcement editor", [&] {
+    scenario.Run("guild","4, 15 / guild pages, permissions and announcement editor", [&] {
         screen.Actions(client,"open-guild");
         game.Expect(client,Packet(1036));
         open(753,0,0,"Fixture\r\r0\r<Notice>\rWelcome\rHel");
@@ -765,7 +827,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         client.guild={};
     });
 
-    Case("11 / quests empty and populated states", [&] {
+    scenario.Run("quests","11 / quests empty and populated states", [&] {
         screen.Actions(client,"open-quests");
         game.Expect(client,Packet(1046));
         Check(client.quests.waiting,"quest list waits for gateway");
@@ -780,7 +842,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         client.quests.open=false;
     });
 
-    Case("12-14, 22 / settings, audio, riding, skills and portrait picker", [&] {
+    scenario.Run("options-skills","12-14, 22 / settings, audio, riding, skills and portrait picker", [&] {
         open(1401,0x4a800000,4);
         screen.Actions(client,"open-settings");
         Check(client.serverOptions.confirmed==0x4a800000 && client.serverOptions.attackMode==4,"server settings applied");
@@ -788,7 +850,11 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         client.serverOptions.open=false;
         client.audioOpen=true;
         screen.Snapshot(client,"48-audio");
-        client.audioOpen=false;
+        const bool reverse=client.audioOptions.reversePan;
+        screen.Actions(client,"toggle-stereo");
+        Check(client.audioOptions.reversePan!=reverse,"textured audio control changes stereo");
+        screen.Actions(client,"close-audio");
+        Check(!client.audioOpen,"textured audio panel closes");
         screen.Actions(client,"show-mount");
         Check(client.mount.visible,"mount shortcut opens panel");
         screen.Snapshot(client,"49-mount");
@@ -813,7 +879,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         screen.Actions(client,"close-portrait");
     });
 
-    Case("7, 18 / profile and server-enabled order map", [&] {
+    scenario.Run("profile-orders","7, 18 / profile and server-enabled order map", [&] {
         std::string profile(1308,'\0');
         profile.replace(4,8,"Traveler");
         profile.replace(83,100,item);
@@ -823,14 +889,20 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         screen.Actions(client,"close-profile");
         Check(!client.windows.profile.open,"close only the profile");
         open(1350,28|(45u<<16),1,"0\t201");
+        const bool needsMap=!client.minimap.width;
         screen.Actions(client,"open-orders");
         Check(client.windows.orders.open,"order map requires server permission");
+        if (needsMap) {
+            game.Expect(client,Packet(1033));
+            game.Game(client,710,0,1001);
+        }
         screen.Snapshot(client,"54-orders");
         open(1353);
         Check(!client.windows.orders.open,"server revokes order map");
     });
 
-    Case("19-20 / consignment list, search, and registration slot", [&] {
+    scenario.Run("consignment","19-20 / consignment list, search, and registration slot", [&] {
+        prepareBag();
         std::string record(312,'\0');
         record.replace(0,5,"Local");
         Field(record,16,22);
@@ -860,19 +932,33 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         client.CloseInventory();
     });
 
-    Case("21 / inbox, mail detail with gold, compose and outbox", [&] {
+    scenario.Run("mail","21 / inbox, mail detail with gold, compose and outbox", [&] {
         open(1358);
         Check(client.windows.mail.unreadNotice,"new message flag");
+        screen.Snapshot(client,"56b-new-mail");
         screen.Actions(client,"open-mailbox");
         game.Expect(client,Packet(1137));
         std::string letter(80,'\0');
         Field(letter,0,42);
         letter.replace(8,6,"Sender");
         letter.replace(64,7,"Subject");
-        game.Game(client,1356,0,0,0,1,Encode(letter)+"/",true);
-        Check(client.windows.mail.folders[0].size()==1,"inbox list");
+        std::string inbox=Encode(letter)+"/";
+        for (unsigned i=1;i<9;++i) {
+            auto next=letter;
+            Field(next,0,42+i);
+            Field(next,6,1,2);
+            next.replace(8,6,"Copy "+std::to_string(i));
+            inbox+=Encode(next)+"/";
+        }
+        game.Game(client,1356,0,0,0,9,inbox,true);
+        Check(client.windows.mail.folders[0].size()==9,"inbox list");
         screen.Snapshot(client,"57-inbox");
-        client.MailRequest(1138,0,42);
+        screen.Actions(client,"scroll-inbox");
+        Check(client.windows.mail.firstVisible[0]==2,"mail list scrolls beyond the first seven rows");
+        screen.Snapshot(client,"57b-inbox-scrolled");
+        screen.Actions(client,"read-inbox-letter");
+        Check(client.windows.mail.firstVisible[0]==0 && client.windows.mail.selected==42,
+            "first message selected after scrolling back");
         game.Expect(client,Packet(1138,42));
         std::string body(613,'\0');
         Field(body,0,42);
@@ -897,7 +983,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         client.windows.mail={};
     });
 
-    Case("exit / confirmation, cancel and sign-out request", [&] {
+    scenario.Run("sign-out","exit / confirmation, cancel and sign-out request", [&] {
         client.showSignOut=true;
         screen.Snapshot(client,"61-exit-confirmation");
         client.showSignOut=false;
@@ -911,7 +997,7 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
         characters.Expect(client,Packet(100,0,0,0,0,"fixture/-123"));
         characters.Reply(client,Packet(520,1,0,0,0,"Hero/2/x/10/1"));
         Check(client.stage==Stage::Characters && client.characters.size()==1,"character list returns after fade");
-        screen.Snapshot(client,"63-returned-characters",false);
+        screen.Snapshot(client,"63-returned-characters");
     });
 }
 } // namespace
@@ -919,14 +1005,17 @@ void InspectGameDialogs(LoginClient& client, Screen& screen, GatewayFixture& cha
 int wmain(int argc,wchar_t** argv)
 {
     if (argc<4) {
-        std::cerr << "Usage: Mir3CuiDialogSmoke RESOURCE_ROOT RUN_DIRECTORY ACTIONS_CSV [--screenshots] [--preview]\n";
+        std::cerr << "Usage: Mir3CuiDialogSmoke RESOURCE_ROOT RUN_DIRECTORY PLAN_CSV"
+                     " [--defaults ACTIONS_CSV] [--screenshots] [--preview]\n";
         return 2;
     }
     bool screenshots=false, preview=false;
+    fs::path defaultsPath;
     for (int i=4;i<argc;++i) {
         const std::wstring_view option(argv[i]);
         if (option==L"--screenshots") screenshots=true;
         else if (option==L"--preview") preview=true;
+        else if (option==L"--defaults" && i+1<argc) defaultsPath=fs::absolute(argv[++i]);
         else return 2;
     }
     WSADATA winsock{};
@@ -937,19 +1026,43 @@ int wmain(int argc,wchar_t** argv)
         Check(SUCCEEDED(com),"initialize COM");
         const auto resources=fs::absolute(argv[1]);
         const auto run=fs::absolute(argv[2]);
-        const auto actions=fs::absolute(argv[3]);
-        fs::create_directories(run);
-        fs::current_path(run);
-        LoginClient client;
-        client.SetResourceRoot(resources);
-        client.audioOptions.music=client.audioOptions.effects=false;
-        client.audioOptionsPath=(run/"smoke-options.ini").wstring();
-        Screen screen(resources,actions,screenshots ? run/"screenshots" : fs::path{},preview);
-        GatewayFixture characters,game;
-        StartSession(client,screen,characters,game);
-        InspectGameDialogs(client,screen,characters,game);
-        screen.CheckActionsConsumed();
-        std::cout << "CUI_DIALOG_SMOKE_OK\n";
+        const auto plan=mir3_test::ReadPlan(fs::absolute(argv[3]));
+        std::vector<mir3_test::Action> defaults;
+        if (!plan.front().id.empty()) Check(!defaultsPath.empty(),"named scenarios require --defaults ACTIONS_CSV");
+        if (!defaultsPath.empty()) {
+            auto actionPlan=mir3_test::ReadPlan(defaultsPath);
+            Check(actionPlan.front().id.empty(),"expected step,action,value for default actions");
+            defaults=std::move(actionPlan.front().actions);
+        }
+        Preview window(preview);
+        unsigned passed=0;
+        for (const auto& selection : plan) {
+            try {
+                const auto state=selection.id.empty() ? run : run/"state"/selection.id;
+                fs::create_directories(state);
+                fs::current_path(state);
+                LoginClient client;
+                client.SetResourceRoot(resources);
+                client.audioOptions.music=client.audioOptions.effects=false;
+                client.audioOptionsPath=(state/"smoke-options.ini").wstring();
+                Screen screen(resources,defaults,selection,screenshots ? run/"screenshots" : fs::path{},window);
+                GatewayFixture characters,game;
+                ScenarioRun scenario(selection.id,screen);
+                StartSession(client,screen,characters,game,scenario);
+                if (!scenario.Named() || !scenario.Ran()) {
+                    if (scenario.Named() && selection.id!="hud") client.chat.composing=false;
+                    InspectGameDialogs(client,screen,characters,game,scenario);
+                }
+                if (!scenario.Ran()) throw std::runtime_error("unknown scenario: "+selection.id);
+                if (!scenario.Named()) screen.CheckActionsConsumed();
+                ++passed;
+            } catch (const std::exception& error) {
+                std::cerr << "[FAIL] " << (selection.id.empty() ? "" : selection.id+": ") << error.what() << '\n';
+                result=1;
+            }
+        }
+        if (!plan.front().id.empty()) std::cout << "[SUMMARY] " << passed << '/' << plan.size() << " scenarios passed\n";
+        if (!result) std::cout << "CUI_DIALOG_SMOKE_OK\n";
     } catch (const std::exception& error) {
         std::cerr << "[FAIL] " << error.what() << '\n';
         result=1;

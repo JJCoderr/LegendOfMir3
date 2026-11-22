@@ -162,6 +162,9 @@ public:
         constexpr std::array independentFrames{1288,1590,1890,1910,1960};
         for (std::size_t i = 0; i < independentFrames.size(); ++i)
             independentSkins_[i] = UploadFrame(ui, gameInterface, independentFrames[i], true);
+        for (const int frame : {1221,1222,1592,1594,1596,1894,1896,1898,1900,1904,1906,1908,
+                                1962,1964,1966,1970,1971,1974,1980,1982,1984,1986,1988,2012,2014,2016,2032,2034})
+            independentButtons_.emplace(frame, UploadFrame(ui,gameInterface,frame,true));
         constexpr std::array mailModeFrames{2010,2030,2070};
         for (std::size_t i = 0; i < mailModeFrames.size(); ++i)
             mailModeSkins_[i] = UploadFrame(ui, gameInterface, mailModeFrames[i], true);
@@ -184,12 +187,15 @@ public:
     void DrawMinimapPanel(cui_ctx* ui, const LoginClient& client);
     void DrawObjectOrderMap(cui_ctx* ui, LoginClient& client, float height);
     void DrawIndependentSkin(cui_ctx* ui, int panel, cui_rect bounds);
+    cui_vec2 IndependentButtonSize(int frame) const;
+    void DrawIndependentButton(cui_ctx* ui, int frame, float height, int state) const;
+    cui_input_opts IndependentEditor(float height, float scale) const { return ModalEditorOptions(height,scale); }
     void DrawMailModeSkin(cui_ctx* ui, int mode, float height);
     void DrawIndependentItem(cui_ctx* ui, unsigned icon, float height);
     bool DrawInspectionEquipment(cui_ctx* ui, const IndependentWindows::Profile& profile, cui_rect bounds);
     void DrawTargetDetails(cui_ctx* ui, bool attributes);
     bool OptionsReady() const { return optionsFrames_[0].texture != 0; }
-    bool HandleOptionsInput(cui_ctx* ui, LoginClient& client, bool blocked);
+    bool HandleOptionsInput(cui_ctx* ui, LoginClient& client, bool blocked, bool audioOnly = false);
     void DrawOptionsPanel(cui_ctx* ui, const LoginClient& client);
     void LeaveOptions(bool resetPlacement = false);
     bool HandleUtilityPanels(cui_ctx* ui, LoginClient& client, bool covered, bool foreground, bool modal,
@@ -362,7 +368,14 @@ public:
 
         const bool editable = client.stage == Stage::Login && client.status.empty() &&
                               !client.settingsOpen && !client.audioOpen;
-        selectedCaption_ = HasNotice(client.loginNoticeId) ? captions_.at(client.loginNoticeId) : Image{};
+        selectedCaption_ = {};
+        if (client.stage==Stage::Login && !client.status.empty()) {
+            if (HasNotice(client.loginNoticeId)) selectedCaption_=captions_.at(client.loginNoticeId);
+            else {
+                SetBagText(ui,loginStatusCaption_,client.status,308,95,true,mir3::TextFont::dialog);
+                selectedCaption_=loginStatusCaption_.image;
+            }
+        }
         if (noticeDismissals_ != client.noticeDismissals) {
             noticeDismissals_ = client.noticeDismissals;
             field_ = 1;
@@ -710,6 +723,7 @@ private:
     bool ShopHit(cui_vec2 pointer, int id, int x, int y) const;
 
     struct BagText { std::string value; Image image; };
+    BagText loginStatusCaption_;
     struct BagSprite {
         Image icon, count;
         int x, y, labelX, labelY;
@@ -890,6 +904,7 @@ private:
     int statusPreview_ = -1;
     Image statusSkin_, statusCloseHint_;
     std::array<Image,5> independentSkins_;
+    std::map<int,Image> independentButtons_;
     std::array<Image,3> mailModeSkins_;
     std::array<Image,2> statusClose_{}, statusGlows_{}, statusGlowShadows_{};
     std::array<std::array<Image,7>,2> statusElements_{};
@@ -3189,11 +3204,12 @@ void Dialogs::Assets::InventoryInput(cui_ctx* ui, LoginClient& client, cui_vec2 
 void Dialogs::Assets::InventoryModalInput(cui_ctx* ui, LoginClient& client, cui_vec2 pointer)
 {
     auto& service = client.merchant;
+    auto& bag = client.inventory;
     const int x = 400-dialog_[0].width/2, y = 246-dialog_[0].height/2;
     const auto hit = [&](const Image& art,int dx) {
         return Contains({float(x+dx),float(y+188),float(art.width),float(art.height)},pointer);
     };
-    const bool alert = service.notice != 0;
+    const bool alert = service.notice || bag.notice;
     const int button = alert ? (hit(dialog_[1],137) ? 0 : -1)
         : hit(selectionButtons_.at(1241),41) ? 0 : hit(selectionButtons_.at(1245),234) ? 1 : -1;
     if (inventoryModalPress_ != button) inventoryModalPress_ = -1;
@@ -3202,7 +3218,13 @@ void Dialogs::Assets::InventoryModalInput(cui_ctx* ui, LoginClient& client, cui_
         std::exchange(inventoryModalPress_,-1) >= 0;
     const bool enter = cui_key_pressed(ui,CUI_KEY_ENTER);
     if (alert) {
-        if (click || enter || cui_key_pressed(ui,CUI_KEY_SPACE)) service.notice = 0;
+        if (click || enter || cui_key_pressed(ui,CUI_KEY_SPACE)) {
+            if (service.notice) service.notice = 0;
+            else {
+                bag.notice = false;
+                bag.status.clear();
+            }
+        }
         return;
     }
     const bool tab = cui_key_down(ui,CUI_KEY_TAB);
@@ -3226,12 +3248,13 @@ void Dialogs::Assets::RefreshInventory(cui_ctx* ui, LoginClient& client, cui_vec
     const auto& service = client.merchant;
     inventoryShow_ = bag.open;
     inventoryButton_ = InventoryButton(service);
-    inventoryAlert_ = service.notice != 0;
+    inventoryAlert_ = service.notice || bag.notice;
     const bool dropping = bag.drop != mir3_cui::DropDialog::None;
     inventoryQuantity_ = service.quantityOpen || dropping;
     const int quantityMessage = dropping ? (bag.drop == mir3_cui::DropDialog::Gold ? 1415 : 1416)
         : service.kind == mir3_cui::MerchantService::Kind::Deposit ? 1706 : 1705;
-    SetBagText(ui,inventoryCaption_,inventoryAlert_ ? Message(service.notice) : inventoryQuantity_ ? Message(quantityMessage) : "",
+    SetBagText(ui,inventoryCaption_,service.notice ? Message(service.notice) :
+        bag.notice ? bag.status : inventoryQuantity_ ? Message(quantityMessage) : "",
         inventoryAlert_ ? 308 : 278,inventoryAlert_ ? 95 : 75,true,mir3::TextFont::dialog);
     inventoryHeld_ = {};
     inventoryFootprint_ = {};
@@ -3314,7 +3337,7 @@ void Dialogs::Assets::DrawInventoryPanel(cui_ctx* ui, LoginClient& client, bool 
     if (interactive) {
         const bool escape = !client.shop.actor && !client.guild.open && !client.quests.open &&
             !client.party.open && !client.equipment.open && cui_key_pressed(ui,CUI_KEY_ESCAPE);
-        if (service.notice || editor >= 0) InventoryModalInput(ui,client,pointer);
+        if (service.notice || bag.notice || editor >= 0) InventoryModalInput(ui,client,pointer);
         else if (bag.open && shortcut && cui_shortcut(ui,0,CUI_KEY_W)) client.CloseInventory();
         else if (bag.open && shortcut && escape) {
             if (bag.shortcutsVisible) {
@@ -3336,7 +3359,7 @@ void Dialogs::Assets::DrawInventoryPanel(cui_ctx* ui, LoginClient& client, bool 
     cui_canvas_paint(ui,CUI_FILL,CUI_FILL,[](cui_ctx* context,cui_rect rect,void* user) {
         (*static_cast<Assets**>(user))->PaintInventory(context,rect);
     },&self,sizeof self);
-    if (editor >= 0 && !service.notice && interactive) {
+    if (editor >= 0 && !inventoryAlert_ && interactive) {
         const auto field = base.Rect(400-dialog_[0].width/2+24,246-dialog_[0].height/2+228,309,15);
         cui_overlay_begin(ui,field);
         cui_push_id_int(ui,editor);
@@ -5944,6 +5967,7 @@ struct IndependentViewport {
 bool PrepareIndependentWindows(cui_ctx* ui, IndependentWindows& windows, bool blocked, bool& escape)
 {
     const IndependentViewport view(ui);
+    if (blocked || cui_mouse_clicked(ui,CUI_MOUSE_LEFT)) windows.pressedButtons.fill(0);
     const auto raise = [&](int panel) {
         const auto found = std::ranges::find(windows.stacking, panel);
         std::rotate(found, found+1, windows.stacking.end());
@@ -5988,10 +6012,13 @@ bool PrepareIndependentWindows(cui_ctx* ui, IndependentWindows& windows, bool bl
     return hit >= 0;
 }
 
+template<typename Assets>
 struct IndependentPanel {
     cui_ctx* ui;
     cui_rect bounds;
     float scale;
+    Assets* assets;
+    cui_id& pressedButton;
 
     template<typename Draw>
     void At(float x, float y, float width, float height, Draw draw) const
@@ -6002,20 +6029,53 @@ struct IndependentPanel {
         cui_box_end(ui);
     }
 
-    bool ButtonAt(float x, float y, float width, const char* name, bool active = false, bool enabled = true) const
+    void SpriteAt(float x, float y, int frame) const
     {
-        bool pressed = false;
-        At(x,y,width,26,[&] {
-            cui_push_disabled(ui, !enabled);
-            pressed = Button(ui, name, active, true);
-            cui_pop_disabled(ui);
+        if (!assets) return;
+        const auto size=assets->IndependentButtonSize(frame);
+        if (size.x>0) At(x,y,size.x,size.y,[&] {
+            assets->DrawIndependentButton(ui,frame,size.y*scale,0);
         });
-        return pressed;
+    }
+
+    bool ButtonAt(float x, float y, int frame, const char* name, bool active = false, bool enabled = true) const
+    {
+        const auto size = assets ? assets->IndependentButtonSize(frame) : cui_vec2{};
+        if (size.x <= 0) {
+            bool clicked = false;
+            At(x,y,48,26,[&] {
+                cui_push_disabled(ui,!enabled);
+                clicked=Button(ui,name,active,true);
+                cui_pop_disabled(ui);
+            });
+            return clicked;
+        }
+        const auto id=cui_make_id(ui,name);
+        const bool inside=ContainsPoint(x,y,size.x,size.y);
+        const bool hover=inside && !cui_is_disabled(ui) && enabled;
+        if (hover && cui_mouse_clicked(ui,CUI_MOUSE_LEFT)) {
+            pressedButton=id;
+        }
+        const bool held=hover && pressedButton==id && cui_mouse_down(ui,CUI_MOUSE_LEFT);
+        At(x,y,size.x,size.y,[&] {
+            assets->DrawIndependentButton(ui,frame==1221 && held ? 1222 : frame,size.y*scale,
+                !enabled ? -1 : held && frame!=1221 ? -2 : hover || active ? 1 : 0);
+            if (hover) cui_tooltip(ui,name);
+        });
+        return hover && pressedButton==id && cui_mouse_released(ui,CUI_MOUSE_LEFT);
     }
 
     void TextAt(float x, float y, float width, const std::string& text) const
     {
-        At(x,y,width,32,[&] { cui_label(ui,text.c_str()); });
+        At(x,y,width,32,[&] {
+            cui_text_opts options{};
+            options.font=assets ? assets->IndependentEditor(0,scale).font : CUI_FONT_BODY;
+            options.size=12*scale;
+            options.color=CUI_RGB(0xfafafa);
+            options.nowrap=true;
+            options.width=CUI_FILL;
+            cui_text_ex(ui,text.c_str(),&options);
+        });
     }
 
     void HighlightAt(float x, float y, float width, float height) const
@@ -6031,7 +6091,7 @@ struct IndependentPanel {
                 char* value, std::size_t capacity, int limit, bool multiline = false) const
     {
         At(x,y,width,height,[&] {
-            cui_input_opts options = {};
+            auto options = assets ? assets->IndependentEditor(height*scale,scale) : cui_input_opts{};
             options.width = CUI_FILL;
             options.bare = true;
             options.byte_limit = limit;
@@ -6044,17 +6104,21 @@ struct IndependentPanel {
         });
     }
 
-    bool ReleasedIn(float x, float y, float width, float height) const
+    bool ContainsPoint(float x, float y, float width, float height) const
     {
         const auto p = cui_mouse_pos(ui);
-        return !cui_is_disabled(ui) && cui_mouse_released(ui,CUI_MOUSE_LEFT) &&
-            p.x >= bounds.x+x*scale && p.x < bounds.x+(x+width)*scale &&
+        return p.x >= bounds.x+x*scale && p.x < bounds.x+(x+width)*scale &&
             p.y >= bounds.y+y*scale && p.y < bounds.y+(y+height)*scale;
+    }
+
+    bool ReleasedIn(float x, float y, float width, float height) const
+    {
+        return !cui_is_disabled(ui) && cui_mouse_released(ui,CUI_MOUSE_LEFT) && ContainsPoint(x,y,width,height);
     }
 };
 
 template<typename DrawItem>
-void DrawMarketRegistration(const IndependentPanel& panel, LoginClient& client, DrawItem drawItem)
+void DrawMarketRegistration(const auto& panel, LoginClient& client, DrawItem drawItem)
 {
     auto& market = client.windows.market;
     panel.TextAt(16,3,235,"[ 物品登记 ]");
@@ -6071,34 +6135,34 @@ void DrawMarketRegistration(const IndependentPanel& panel, LoginClient& client, 
     panel.EditAt(42,233,116,24,"registration-price",market.price,sizeof market.price,10);
     if (!market.status.empty()) panel.TextAt(16,225,224,market.status);
     else if (market.confirmation == 1130) panel.TextAt(16,225,224,"确认登记该物品？");
-    if (panel.ButtonAt(259,228,66,market.confirmation ? "确认" : "登记",true,item != nullptr)) {
+    if (panel.ButtonAt(249,230,1904,market.confirmation ? "确认登记" : "登记",market.confirmation!=0,item != nullptr)) {
         if (market.confirmation) {
             client.RegisterMarketItem();
             market.confirmation = 0;
         } else market.confirmation = 1130;
     }
-    if (panel.ButtonAt(329,228,62,"取消") || panel.ButtonAt(368,253,33,"×"))
+    if (panel.ButtonAt(319,230,1908,"取消") || panel.ButtonAt(369,242,1221,"关闭"))
         CloseIndependentWindow(client.windows,3);
 }
 
 template<typename DrawItem>
-void DrawMarket(const IndependentPanel& panel, LoginClient& client, DrawItem drawItem)
+void DrawMarket(const auto& panel, LoginClient& client, DrawItem drawItem)
 {
     auto& market = client.windows.market;
-    panel.TextAt(18,21,180,"[ 购买物品 ]");
+    panel.TextAt(10,17,180,"[ 购买物品 ]");
     panel.TextAt(206,21,176,std::to_string(market.page)+" / "+std::to_string(market.pages));
-    panel.TextAt(15,64,100,"服务器");
-    panel.TextAt(128,64,123,"物品名称");
-    panel.TextAt(265,64,90,"价格");
-    panel.TextAt(339,64,102,"出售人");
+    panel.TextAt(16,56,100,"服务器");
+    panel.TextAt(121,56,123,"物品名称");
+    panel.TextAt(261,56,67,"价格");
+    panel.TextAt(331,56,102,"出售人");
     for (std::size_t i=0; i<std::min<std::size_t>(13,market.listings.size()); ++i) {
         const auto& listing = market.listings[i];
-        const float y = 86+19*static_cast<float>(i);
-        if (panel.ReleasedIn(14,y,410,19) && market.selected != listing.id) {
+        const float y = 84+19*static_cast<float>(i);
+        if (panel.ReleasedIn(14,y,454,18) && market.selected != listing.id) {
             market.selected = listing.id;
             market.confirmation = 0;
         }
-        if (market.selected == listing.id) panel.HighlightAt(14,y,410,19);
+        if (market.selected == listing.id) panel.HighlightAt(14,y,454,18);
         panel.TextAt(18,y,105,listing.server);
         panel.TextAt(128,y,128,listing.item.label);
         panel.TextAt(265,y,65,std::to_string(listing.price));
@@ -6106,48 +6170,56 @@ void DrawMarket(const IndependentPanel& panel, LoginClient& client, DrawItem dra
     }
     const auto selected = std::ranges::find(market.listings,market.selected,&IndependentWindows::Listing::id);
     if (selected != market.listings.end()) {
-        panel.TextAt(448,28,245,selected->item.label);
-        panel.At(450,55,240,128,[&] { drawItem(selected->item.icon,128*panel.scale); });
-        panel.At(452,199,244,123,[&] { cui_text_ex(panel.ui,selected->description.c_str(),nullptr); });
+        panel.TextAt(485,25,213,selected->item.label);
+        panel.At(482,55,213,128,[&] { drawItem(selected->item.icon,128*panel.scale); });
+        panel.At(482,199,213,123,[&] {
+            cui_text_opts options{};
+            options.size=12*panel.scale;
+            options.font=panel.assets ? panel.assets->IndependentEditor(0,panel.scale).font : CUI_FONT_BODY;
+            cui_text_ex(panel.ui,selected->description.c_str(),&options);
+        });
     }
     if (!market.status.empty()) panel.TextAt(448,319,244,market.status);
-    panel.EditAt(230,362,192,28,"market-filter",market.filter,sizeof market.filter,30);
-    if (panel.ButtonAt(426,355,72,"查物品",market.byName)) { market.byName = true; client.MarketRequest(1136); }
-    if (panel.ButtonAt(426,386,72,"查卖家",!market.byName)) { market.byName = false; client.MarketRequest(1136); }
-    if (panel.ButtonAt(23,361,47,"上页")) client.MarketRequest(1132);
-    if (panel.ButtonAt(73,361,47,"下页")) client.MarketRequest(1131);
-    if (panel.ButtonAt(123,361,61,"刷新")) client.MarketRequest(1134);
-    if (panel.ButtonAt(509,371,53,"登记")) client.BeginMarketRegistration();
+    panel.EditAt(268,363,137,17,"market-filter",market.filter,sizeof market.filter,30);
+    panel.EditAt(268,393,137,17,"market-seller",market.sellerFilter,sizeof market.sellerFilter,30);
+    if (panel.ButtonAt(413,361,1900,"查物品")) { market.byName = true; client.MarketRequest(1136); }
+    if (panel.ButtonAt(413,391,1900,"查卖家")) { market.byName = false; client.MarketRequest(1136); }
+    if (panel.ButtonAt(23,361,1894,"上页")) client.MarketRequest(1132);
+    if (panel.ButtonAt(73,361,1896,"下页")) client.MarketRequest(1131);
+    if (panel.ButtonAt(123,362,1898,"刷新")) client.MarketRequest(1134);
+    if (panel.ButtonAt(514,371,1904,"登记")) client.BeginMarketRegistration();
     const auto action = [&](unsigned opcode) {
         if (market.confirmation == opcode) { client.MarketRequest(opcode); market.confirmation = 0; }
         else market.confirmation = opcode;
     };
     const bool haveSelection = selected != market.listings.end();
-    if (panel.ButtonAt(565,371,72,market.confirmation == 1133 ? "确认购买" : "购买",true,haveSelection)) action(1133);
-    if (panel.ButtonAt(644,371,67,market.confirmation == 1135 ? "确认撤销" : "撤销",false,haveSelection)) action(1135);
-    if (panel.ButtonAt(678,402,34,"×")) CloseIndependentWindow(client.windows,2);
+    if (panel.ButtonAt(564,371,1906,market.confirmation == 1133 ? "确认购买" : "购买",market.confirmation==1133,haveSelection)) action(1133);
+    if (panel.ButtonAt(644,371,1908,market.confirmation == 1135 ? "确认撤销" : "撤销",market.confirmation==1135,haveSelection)) action(1135);
+    if (panel.ButtonAt(680,396,1221,"关闭")) CloseIndependentWindow(client.windows,2);
 }
 
 template<typename DrawItem>
-void DrawMailbox(const IndependentPanel& panel, LoginClient& client, DrawItem drawItem)
+void DrawMailbox(const auto& panel, LoginClient& client, DrawItem drawItem)
 {
     auto& mail = client.windows.mail;
     panel.TextAt(22,14,144,"信件");
-    if (panel.ButtonAt(178,13,53,"收件",!mail.folder && !mail.composing)) client.MailRequest(1137,0);
-    if (panel.ButtonAt(234,13,53,"发件",mail.folder && !mail.composing)) client.MailRequest(1137,1);
-    if (panel.ButtonAt(290,13,53,"写信",mail.composing)) {
+    if (panel.ButtonAt(183,14,1988,"收件",!mail.folder && !mail.composing && !mail.reading)) client.MailRequest(1137,0);
+    if (panel.ButtonAt(363,14,1980,"发件",mail.folder && !mail.composing && !mail.reading)) client.MailRequest(1137,1);
+    if (panel.ButtonAt(273,14,1984,"写信",mail.composing)) {
         mail.composing = true;
         mail.recipient[0] = mail.draft[0] = '\0';
         mail.status.clear();
     }
-    if (panel.ButtonAt(347,13,71,"读取",mail.reading,!mail.reading && !mail.composing && mail.selected))
+    if (panel.assets) panel.ButtonAt(318,14,1982,"送礼",false,false);
+    if (panel.ButtonAt(228,14,1986,"读取",mail.reading,!mail.reading && !mail.composing && mail.selected))
         client.MailRequest(1138,mail.folder,mail.selected);
     const auto& letters = mail.folders[mail.folder];
     if (mail.composing) {
-        panel.TextAt(25,58,62,"收信人");
-        panel.EditAt(84,54,325,26,"mail-recipient",mail.recipient,sizeof mail.recipient,24);
-        panel.EditAt(24,88,388,142,"mail-draft",mail.draft,sizeof mail.draft,500,true);
-        if (panel.ButtonAt(283,252,54,"发送",true)) client.SendLetter();
+        panel.TextAt(25,61,62,"收信人");
+        panel.EditAt(68,62,148,15,"mail-recipient",mail.recipient,sizeof mail.recipient,24);
+        panel.EditAt(21,84,373,141,"mail-draft",mail.draft,sizeof mail.draft,500,true);
+        if (panel.ButtonAt(286,256,2034,"发送")) client.SendLetter();
+        if (panel.ButtonAt(326,256,2032,"取消撰写")) mail.composing=false;
     } else if (mail.reading) {
         panel.TextAt(25,51,377,mail.sender+"   "+mail.subject);
         panel.At(25,81,379,135,[&] {
@@ -6165,57 +6237,61 @@ void DrawMailbox(const IndependentPanel& panel, LoginClient& client, DrawItem dr
         }
         else if (mail.gold) panel.TextAt(25,221,364,"金币  "+std::to_string(mail.gold));
         const auto current = std::ranges::find(letters, mail.selected, &IndependentWindows::Letter::id);
-        const auto adjacent = [&](int offset, float x, const char* title) {
+        const auto adjacent = [&](int offset, float x, int frame, const char* title) {
             const auto index = current - letters.begin() + offset;
             const bool valid = current != letters.end() && index >= 0 && index < std::ssize(letters);
-            if (panel.ButtonAt(x,252,55,title,false,valid)) {
+            if (panel.ButtonAt(x,257,frame,title,false,valid)) {
                 mail.selected = letters[index].id;
                 client.MailRequest(1138,mail.folder,mail.selected);
             }
         };
-        adjacent(-1,54,"上一封");
-        adjacent(1,114,"下一封");
-        if (!mail.folder && panel.ButtonAt(283,252,54,"答复")) {
+        adjacent(-1,54,2014,"上一封");
+        adjacent(1,114,2012,"下一封");
+        if (!mail.folder && panel.ButtonAt(286,256,2016,"答复")) {
             strncpy_s(mail.recipient,mail.sender.c_str(),_TRUNCATE);
             mail.draft[0] = '\0';
             mail.composing = true;
         }
     } else {
-        panel.At(22,52,389,177,[&] {
-            cui_scroll_opts list = {};
-            list.id = "mail-letters";
-            list.width = CUI_FILL;
-            list.height = CUI_PX(177*panel.scale);
-            list.gap = 3;
-            cui_scroll_begin(panel.ui,&list);
-            for (const auto& letter : letters) {
-                cui_push_id_int(panel.ui,letter.id);
-                const auto label = (letter.read ? "" : "未读  ")+letter.name+"   "+letter.subject+"   "+letter.date;
-                cui_button_opts row = {};
-                row.size = CUI_SIZE_SM;
-                row.variant = CUI_BUTTON_GHOST;
-                row.selected = letter.id == mail.selected;
-                row.width = CUI_FILL;
-                if (cui_button_ex(panel.ui,label.c_str(),&row) && mail.selected != letter.id) {
-                    mail.selected = letter.id;
-                    mail.readingId = 0;
-                }
-                cui_pop_id(panel.ui);
+        constexpr int visible=7;
+        const int maxFirst=std::max(0,static_cast<int>(letters.size())-visible);
+        auto& first=mail.firstVisible[mail.folder];
+        const auto point=cui_mouse_pos(panel.ui);
+        const float y=(point.y-panel.bounds.y)/panel.scale;
+        if (!cui_is_disabled(panel.ui) && panel.ContainsPoint(21,51,411,179))
+            first-=static_cast<int>(std::lround(cui_take_mouse_scroll(panel.ui).y));
+        if (maxFirst && panel.ReleasedIn(405,51,28,177))
+            first=static_cast<int>(std::lround((y-64)/149*maxFirst));
+        first=std::clamp(first,0,maxFirst);
+        const float knob=52+(maxFirst ? 149.0f*first/maxFirst : 0.0f);
+        panel.SpriteAt(410,knob,1966);
+        for (int i=first; i<std::min(first+visible,static_cast<int>(letters.size())); ++i) {
+            const auto& letter=letters[i];
+            const float row=59+24.0f*(i-first);
+            if (panel.ReleasedIn(21,row,382,21) && mail.selected!=letter.id) {
+                mail.selected=letter.id;
+                mail.readingId=0;
             }
-            cui_scroll_end(panel.ui);
-        });
-        if (panel.ButtonAt(253,252,54,"刷新")) client.MailRequest(1137,mail.folder);
-        if (mail.folder && panel.ButtonAt(192,252,54,"撤回",false,mail.selected != 0))
+            if (letter.id==mail.selected) {
+                if (panel.assets) panel.SpriteAt(22,row+6,1974);
+                else panel.HighlightAt(21,row,382,21);
+            }
+            panel.TextAt(43,row+4,92,letter.name);
+            panel.TextAt(141,row+4,223,letter.date.empty() ? letter.subject : letter.date);
+            panel.SpriteAt(374,row+3,letter.read ? 1971 : 1970);
+        }
+        if (panel.ButtonAt(mail.folder ? 246 : 286,256,1964,"刷新")) client.MailRequest(1137,mail.folder);
+        if (mail.folder && panel.ButtonAt(286,256,2032,"撤回",false,mail.selected != 0))
             client.MailRequest(1142,mail.folder,mail.selected);
     }
     if (!mail.status.empty()) panel.TextAt(22,231,388,mail.status);
-    if (!mail.composing && panel.ButtonAt(329,252,55,"删除",false,mail.selected != 0))
+    if (!mail.composing && panel.ButtonAt(326,256,1962,"删除",false,mail.selected != 0))
         client.MailRequest(1139,mail.folder,mail.selected);
-    if (panel.ButtonAt(400,270,33,"×")) CloseIndependentWindow(client.windows,4);
+    if (panel.ButtonAt(400,267,1221,"关闭")) CloseIndependentWindow(client.windows,4);
 }
 
 template<typename DrawMap>
-void DrawObjectOrders(const IndependentPanel& panel, LoginClient& client, DrawMap drawMap)
+void DrawObjectOrders(const auto& panel, LoginClient& client, DrawMap drawMap)
 {
     auto& orders = client.windows.orders;
     panel.TextAt(14,22,78,std::to_string(orders.x));
@@ -6224,17 +6300,17 @@ void DrawObjectOrders(const IndependentPanel& panel, LoginClient& client, DrawMa
     const auto ammo = std::ranges::find_if(client.inventory.items,
         [](const auto& item) { return item.icon == 310 || item.icon == 311; });
     if (ammo != client.inventory.items.end()) {
-        if (panel.ButtonAt(12,40,53,"装填",orders.ammunition == ammo->key)) {
+        if (panel.ButtonAt(12,40,1592,"装填",orders.ammunition == ammo->key)) {
             if (orders.ammunition == ammo->key) client.LoadObjectAmmunition();
             else orders.ammunition = ammo->key;
         }
         if (orders.ammunition == ammo->key)
             panel.EditAt(69,40,97,25,"ammo-quantity",orders.quantity,sizeof orders.quantity,5);
     }
-    if (panel.ButtonAt(14,231,48,"攻击",true,orders.targetX && orders.targetY)) client.SendObjectOrder(1120);
-    if (panel.ButtonAt(67,231,48,"等待")) client.SendObjectOrder(1122);
-    if (panel.ButtonAt(117,231,48,"移动")) client.SendObjectOrder(1121);
-    if (panel.ButtonAt(153,255,34,"×")) CloseIndependentWindow(client.windows,1);
+    if (panel.ButtonAt(17,231,1592,"攻击",false,orders.targetX && orders.targetY)) client.SendObjectOrder(1120);
+    if (panel.ButtonAt(67,231,1594,"等待")) client.SendObjectOrder(1122);
+    if (panel.ButtonAt(117,231,1596,"移动")) client.SendObjectOrder(1121);
+    if (panel.ButtonAt(153,241,1221,"关闭")) CloseIndependentWindow(client.windows,1);
 }
 void DrawEquipment(cui_ctx* ui, LoginClient& client, cui_rect bounds)
 {
@@ -6408,7 +6484,7 @@ void DrawItemPanels(cui_ctx* ui, LoginClient& client, bool inventoryWasOpen, boo
     }
 
     if (equipment.open && !nativeStatus) DrawEquipment(ui, client, equipmentBounds);
-    if (!nativeInventory ? bag.open || bagDialog : bag.notice || bag.bindingShortcut)
+    if (!nativeInventory ? bag.open || bagDialog : bag.bindingShortcut)
         DrawInventory(ui, client, bagBounds);
     if (!nativeInventory && hadPanels && !bag.open && !equipment.open &&
         equipment.request == mir3_cui::EquipmentRequest::None)
@@ -7552,6 +7628,27 @@ void Dialogs::Assets::DrawIndependentSkin(cui_ctx* ui, int panel, cui_rect bound
     },&frame,sizeof frame);
 }
 
+cui_vec2 Dialogs::Assets::IndependentButtonSize(int frame) const
+{
+    const auto image=independentButtons_.find(frame);
+    if (image==independentButtons_.end() || !image->second.texture) return {};
+    return {float(image->second.width),float(image->second.height)};
+}
+
+void Dialogs::Assets::DrawIndependentButton(cui_ctx* ui, int frame, float height, int state) const
+{
+    const auto found=independentButtons_.find(frame);
+    if (found==independentButtons_.end() || !found->second.texture) return;
+    const struct { cui_texture texture; int state; } draw{found->second.texture,state};
+    cui_canvas_paint(ui,CUI_FILL,CUI_PX(height),[](cui_ctx* ui,cui_rect box,void* value) {
+        const auto& art=*static_cast<decltype(draw)*>(value);
+        const uint8_t shade=art.state==-1 ? 125 : art.state==-2 ? 185 : 255;
+        cui_draw_image(ui,art.texture,box,{0,0,1,1},{},{shade,shade,shade,255});
+        if (art.state==1)
+            cui_draw_image(ui,art.texture,box,{0,0,1,1},{},{255,240,180,80});
+    },&draw,sizeof draw);
+}
+
 void Dialogs::Assets::DrawMailModeSkin(cui_ctx* ui, int mode, float height)
 {
     const auto& art = mailModeSkins_[mode];
@@ -7658,9 +7755,20 @@ void Dialogs::Assets::LeaveOptions(bool resetPlacement)
     optionsPointer_ = {-1,-1};
 }
 
-bool Dialogs::Assets::HandleOptionsInput(cui_ctx* ui, LoginClient& client, bool blocked)
+bool Dialogs::Assets::HandleOptionsInput(cui_ctx* ui, LoginClient& client, bool blocked, bool audioOnly)
 {
-    if (!client.serverOptions.open) return false;
+    if (!(audioOnly ? client.audioOpen : client.serverOptions.open)) return false;
+    const auto close = [&] {
+        if (audioOnly) {
+            if (!client.SaveAudioSettings()) return;
+            client.audioOpen=false;
+        } else client.serverOptions.open=false;
+        LeaveOptions();
+    };
+    if (audioOnly && !blocked && cui_key_pressed(ui,CUI_KEY_ESCAPE)) {
+        close();
+        return true;
+    }
     using Audio = mir3_cui::AudioOptions;
     const auto view = cui_viewport_size(ui);
     const HudPoint base({0,0,view.x,view.y});
@@ -7693,15 +7801,17 @@ bool Dialogs::Assets::HandleOptionsInput(cui_ctx* ui, LoginClient& client, bool 
         if (hit(1291,276+Audio::KnobFromLevel(level(i)),118+60*i)) button = 5+i;
     }
     if (hit(1292,430,205)) button = 3;
-    for (std::size_t i = 0; i < localOptionButtons_.size(); ++i) {
-        const auto [left,top] = localOptionPositions_[i];
-        if (hit(1292,left,top)) button = localOptionButtons_[i];
+    if (!audioOnly) {
+        for (std::size_t i = 0; i < localOptionButtons_.size(); ++i) {
+            const auto [left,top] = localOptionPositions_[i];
+            if (hit(1292,left,top)) button = localOptionButtons_[i];
+        }
+        for (std::size_t i = 0; i < serverOptionButtons_.size(); ++i) {
+            const auto [left,top] = serverOptionPositions_[i];
+            if (hit(1292,left,top)) button = serverOptionButtons_[i];
+        }
+        if (hit(1296,430,265)) button = 19;
     }
-    for (std::size_t i = 0; i < serverOptionButtons_.size(); ++i) {
-        const auto [left,top] = serverOptionPositions_[i];
-        if (hit(1292,left,top)) button = serverOptionButtons_[i];
-    }
-    if (hit(1296,430,265)) button = 19;
     if (moved && !captured)
         for (int i = 0; i < static_cast<int>(optionButtonStates_.size()); ++i)
             if (optionButtonStates_[i] != 2) optionButtonStates_[i] = i == button ? 1 : 0;
@@ -7745,7 +7855,7 @@ bool Dialogs::Assets::HandleOptionsInput(cui_ctx* ui, LoginClient& client, bool 
             optionsGrab_ = {static_cast<int>(local.x),static_cast<int>(local.y)};
         }
         if (up) {
-            if (button == 0) { client.serverOptions.open = false; LeaveOptions(); }
+            if (button == 0) close();
             if (button >= 1 && button <= 3) {
                 bool& value = button == 1 ? audio.music : button == 2 ? audio.effects : audio.reversePan;
                 value = !value;
@@ -7813,7 +7923,7 @@ void Dialogs::Assets::PaintGameOptions(cui_ctx* ui, cui_rect rect, const LoginCl
 
 void Dialogs::Assets::DrawOptionsPanel(cui_ctx* ui, const LoginClient& client)
 {
-    if (!client.serverOptions.open) return;
+    if (!client.serverOptions.open && !client.audioOpen) return;
     SetBagText(ui,optionsAttackMode_,Message(2116+client.serverOptions.attackMode),156,21,true);
     const auto view = cui_viewport_size(ui);
     cui_overlay_begin(ui,{0,0,view.x,view.y});
@@ -9995,10 +10105,10 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
     if (loginArt && !(gameVisible && client.quests.open)) loginArt->LeaveQuests();
     if (loginArt && !(gameVisible && (client.guild.open || client.guild.requested ||
                      client.guild.notice || client.guild.action != mir3_cui::GuildAction::None))) loginArt->LeaveGuild();
-    if (loginArt && !(gameVisible && client.serverOptions.open))
+    if (loginArt && !client.audioOpen && !(gameVisible && client.serverOptions.open))
         loginArt->LeaveOptions(!gameVisible);
     if (loginArt && (!gameVisible ||
-        (!client.inventory.open && !client.merchant.notice && !client.merchant.quantityOpen &&
+        (!client.inventory.open && !client.inventory.notice && !client.merchant.notice && !client.merchant.quantityOpen &&
          client.inventory.drop == mir3_cui::DropDialog::None)))
         loginArt->LeaveInventory(!gameVisible);
     if (loginArt && loginArt->Ready() && loginArt->DrawTransition(ui, client)) return;
@@ -10027,8 +10137,7 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
     const bool drawServers = loginArt && loginArt->Ready() &&
         (client.stage == Stage::Servers || client.stage == Stage::Selecting || client.stage == Stage::Handoff);
     if (drawCredentials || drawServers) {
-        const bool needsFallbackModal = drawCredentials && (client.audioOpen || client.settingsOpen ||
-            (client.stage == Stage::Login && !client.status.empty() && !loginArt->HasNotice(client.loginNoticeId)));
+        const bool needsFallbackModal = drawCredentials && (client.audioOpen || client.settingsOpen);
         cui_box canvas{};
         canvas.width = CUI_FILL;
         canvas.height = CUI_FILL;
@@ -10101,7 +10210,15 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
             if (cui_shortcut(ui,CUI_MOD_ALT,CUI_KEY_M)) client.ToggleMailbox();
         }
         bool independentEscape = false;
-        const bool independentCovered = PrepareIndependentWindows(ui,client.windows,modal,independentEscape);
+        const IndependentViewport independentView(ui);
+        const auto mailSize = loginArt ? loginArt->IndependentButtonSize(1988) : cui_vec2{};
+        const cui_rect mailIndicator{independentView.x+705*independentView.scale,independentView.y+440*independentView.scale,
+            mailSize.x*independentView.scale,mailSize.y*independentView.scale};
+        const bool hasMailIndicator = !modal && client.windows.mail.unreadNotice && !client.windows.Open();
+        const auto pointer = cui_mouse_pos(ui);
+        const bool overMailIndicator = hasMailIndicator && pointer.x>=mailIndicator.x && pointer.x<mailIndicator.x+mailIndicator.w &&
+            pointer.y>=mailIndicator.y && pointer.y<mailIndicator.y+mailIndicator.h;
+        const bool independentCovered = PrepareIndependentWindows(ui,client.windows,modal,independentEscape) || overMailIndicator;
         const bool overShop = nativeShop && loginArt->ShopBlocksScene(ui,client,true);
         const int shopWheel = overShop && !modal && !independentCovered
             ? -static_cast<int>(std::lround(cui_take_mouse_scroll(ui).y)) : 0;
@@ -10131,11 +10248,12 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
                 nativeInventory,inventoryBlocksScene,nativeQuick,quickBlocksScene,independentCovered || independentEscape);
             cui_box_end(ui);
         }
-        const bool inventoryModal = merchantModal || (nativeInventory && client.inventory.drop != mir3_cui::DropDialog::None);
+        const bool inventoryModal = merchantModal || (nativeInventory &&
+            (client.inventory.notice || client.inventory.drop != mir3_cui::DropDialog::None));
         const bool bagOverlay = fading || portraitNotice || client.showSignOut || independentCovered || independentEscape || client.party.notice.id || client.guild.notice ||
             client.trade.prompt!=mir3_cui::TradePrompt::None ||
             client.party.action != mir3_cui::PartyAction::None || client.guild.action != mir3_cui::GuildAction::None ||
-            client.chat.receptionOpen || fallbackOptionsOpen || client.audioOpen || client.inventory.notice ||
+            client.chat.receptionOpen || fallbackOptionsOpen || client.audioOpen || (!nativeInventory && client.inventory.notice) ||
             client.inventory.bindingShortcut || (!inventoryModal && !client.npcDialogue.prompt.command.empty());
         const bool shopCoversPointer = client.shop.actor && shopBlocksScene;
         if (nativeInventory && !inventoryModal && (!nativeHud || !client.inventory.open))
@@ -10209,7 +10327,12 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
         } else if (fallbackNpc) DrawNpcDialogue(ui,client);
         else if (client.chat.receptionOpen) DrawChatReception(ui,client);
         else if (!nativeOptions && client.serverOptions.open) DrawServerOptions(ui,client);
-        else if (client.audioOpen) DrawAudioSettings(ui,client);
+        else if (client.audioOpen) {
+            if (nativeOptions) {
+                loginArt->HandleOptionsInput(ui,client,fading || portraitNotice || client.showSignOut,true);
+                loginArt->DrawOptionsPanel(ui,client);
+            } else DrawAudioSettings(ui,client);
+        }
         else if (partyActionOpen) {
             if (nativeParty) loginArt->DrawPartyPanel(ui,client,!nativeHud);
             else DrawParty(ui,client);
@@ -10235,11 +10358,21 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
         if (nativeHud && client.showSignOut && loginArt->DrawGameExit(ui,client)) return;
         if (!fading && !client.showSignOut) {
             auto& windows = client.windows;
-            if (!modal && windows.mail.unreadNotice && !windows.Open()) {
-                const auto view = cui_viewport_size(ui);
-                cui_overlay_begin(ui, {std::max(0.0f, view.x-95), std::max(0.0f, view.y-160), 84, 27});
-                if (Button(ui, "新信件")) client.ToggleMailbox();
-                cui_box_end(ui);
+            if (hasMailIndicator) {
+                if (mailSize.x>0) {
+                    const IndependentPanel<Dialogs::Assets> indicator{
+                        ui,mailIndicator,independentView.scale,loginArt,windows.pressedButtons[4]};
+                    cui_overlay_begin(ui,mailIndicator);
+                    cui_push_id(ui,"mail-indicator");
+                    if (indicator.ButtonAt(0,0,1988,"新信件",true)) client.ToggleMailbox();
+                    cui_pop_id(ui);
+                    cui_box_end(ui);
+                } else {
+                    const auto view = cui_viewport_size(ui);
+                    cui_overlay_begin(ui, {std::max(0.0f, view.x-95), std::max(0.0f, view.y-160), 84, 27});
+                    if (Button(ui, "新信件")) client.ToggleMailbox();
+                    cui_box_end(ui);
+                }
             }
             if (windows.Open()) {
                 const IndependentDialogTheme theme(ui);
@@ -10255,7 +10388,7 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
                 for (const int id : stacking) {
                     if (!IndependentOpen(windows,id)) continue;
                     const auto bounds = view.Bounds(windows,id);
-                    const IndependentPanel panel{ui,bounds,view.scale};
+                    const IndependentPanel<Dialogs::Assets> panel{ui,bounds,view.scale,loginArt,windows.pressedButtons[id]};
                     cui_overlay_begin(ui,bounds);
                     cui_push_id_int(ui,id+700);
                     cui_push_disabled(ui,modal || windows.dragging >= 0 || (hit >= 0 && hit != id));
@@ -10272,7 +10405,7 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
                         panel.At(0,0,284,348,[&] { if (loginArt) loginArt->DrawInspectionEquipment(ui,windows.profile,bounds); });
                         panel.TextAt(81,17,128,windows.profile.name);
                         panel.TextAt(163,62,112,windows.profile.guild);
-                        if (panel.ButtonAt(247,307,31,"×")) CloseIndependentWindow(windows,id);
+                        if (panel.ButtonAt(248,313,1221,"关闭")) CloseIndependentWindow(windows,id);
                         break;
                     case 1:
                         DrawObjectOrders(panel,client,[&] { if (loginArt) loginArt->DrawObjectOrderMap(ui,client,165*view.scale); });
@@ -10317,7 +10450,10 @@ void DrawDialogs(cui_ctx* ui, LoginClient& client, Dialogs* dialogs)
         break;
     case Stage::Login: {
         if (client.audioOpen) {
-            DrawAudioSettings(ui, client);
+            if (loginArt && loginArt->OptionsReady()) {
+                loginArt->HandleOptionsInput(ui,client,false,true);
+                loginArt->DrawOptionsPanel(ui,client);
+            } else DrawAudioSettings(ui,client);
         } else if (!client.status.empty()) {
             modal.description = client.status.c_str();
             if (cui_dialog_begin(ui, "Sign-in notice", &open, &modal)) {

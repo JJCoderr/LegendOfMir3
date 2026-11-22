@@ -76,6 +76,7 @@ struct IndependentWindows {
     std::array<cui_vec2,5> positions{{{516,0},{100,100},{60,20},{0,22},{0,0}}};
     std::array<int,5> stacking{{0,1,2,3,4}};
     std::array<bool,5> wasOpen{};
+    std::array<cui_id,5> pressedButtons{};
     int dragging = -1;
     cui_vec2 dragOffset{};
     struct Profile {
@@ -105,7 +106,7 @@ struct IndependentWindows {
         std::vector<Listing> listings;
         mir3_cui::ItemKey item;
         std::string status;
-        char filter[96]{}, price[16]{}, description[361]{};
+        char filter[96]{}, sellerFilter[96]{}, price[16]{}, description[361]{};
         unsigned confirmation = 0;
         bool byName = true;
     } market;
@@ -119,6 +120,7 @@ struct IndependentWindows {
         unsigned folder = 0;
         std::uint32_t selected = 0, readingId = 0;
         std::array<std::vector<Letter>, 2> folders;
+        std::array<int,2> firstVisible{};
         std::string sender, subject, text, status;
         mir3_cui::InventoryItem gift;
         std::uint32_t gold = 0;
@@ -1650,8 +1652,9 @@ public:
         std::string body;
         std::uint32_t id = 0;
         if (opcode == 1136) {
-            const auto filter = ConvertText(market.filter, CP_UTF8, 936);
-            if (filter.find_first_of("\r\n") != filter.npos || (market.filter[0] && filter.empty())) return;
+            const char* input = market.byName ? market.filter : market.sellerFilter;
+            const auto filter = ConvertText(input, CP_UTF8, 936);
+            if (filter.find_first_of("\r\n") != filter.npos || (*input && filter.empty())) return;
             body = filter.empty() ? "*\r*\r0" : market.byName ? "*\r" + filter + "\r0" : filter + "\r*\r0";
         } else if (opcode == 1133 || opcode == 1135) {
             const auto listing = std::ranges::find(market.listings, market.selected, &IndependentWindows::Listing::id);

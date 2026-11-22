@@ -4,7 +4,8 @@ param(
     [string]$BuildDirectory,
     [switch]$Screenshots,
     [switch]$Preview,
-    [string]$ActionsCsv = (Join-Path $PSScriptRoot 'CuiDialogActions.csv')
+    [Alias('ActionsCsv')]
+    [string]$ScenarioCsv = (Join-Path $PSScriptRoot 'CuiDialogScenarios.csv')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,7 +19,7 @@ foreach ($asset in @('Data/GameInter.wil', 'Data/Interface1c.wil', 'CmList.dat')
 }
 if (!$BuildDirectory) { $BuildDirectory = Join-Path $repo 'build-cui' }
 $BuildDirectory = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($BuildDirectory)
-$ActionsCsv = (Resolve-Path -LiteralPath $ActionsCsv).Path
+$ScenarioCsv = (Resolve-Path -LiteralPath $ScenarioCsv).Path
 if (!(Test-Path -LiteralPath (Join-Path $BuildDirectory 'CMakeCache.txt'))) {
     & cmake -S $repo -B $BuildDirectory -A Win32
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -32,7 +33,7 @@ if (!(Test-Path -LiteralPath $exe -PathType Leaf)) {
 }
 $run = Join-Path $BuildDirectory ('dialog-smoke/' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + $PID)
 New-Item -ItemType Directory -Path $run -Force | Out-Null
-$smokeArgs = @($ResourceRoot,$run,$ActionsCsv)
+$smokeArgs = @($ResourceRoot,$run,$ScenarioCsv,'--defaults',(Join-Path $PSScriptRoot 'CuiDialogActions.csv'))
 if ($Screenshots) { $smokeArgs += '--screenshots' }
 if ($Preview) { $smokeArgs += '--preview' }
 Write-Host "回放输出 $run"
