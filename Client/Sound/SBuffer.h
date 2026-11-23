@@ -19,7 +19,7 @@ public:
 	INT		m_ID;					// Buffer ID;
 	INT	   nBufferIdx;
 
-	CSBuffer();
+	explicit CSBuffer(bool background=false);
 	virtual ~CSBuffer();
 
 	HRESULT Load(CSound* pDS, const char *Filename, int Num=1);
@@ -44,6 +44,7 @@ public:
 	DWORD	Playing(VOID);
     HRESULT GetVolume(LONG& volume) const;
     HRESULT GetPan(LONG& pan) const;
+    HRESULT GetFlags(DWORD& flags) const;
 
 	HRESULT	SetCone( float x, float y, float z, DWORD InsideAngle, DWORD OutsideAngle, long OutsideVolume );
 	HRESULT Set3dProperties( DWORD Mode, float MinDistance, float MaxDistance, float VelX, float VelY, float VelZ );
@@ -62,6 +63,7 @@ public:
 	VOID Release(VOID);
 
 private:
+	const bool m_background;
 	int m_nBuffers;					// The number of sound buffers created
 	int m_Current;					// The currently selected buffer
 	const char* m_Filename;			// The name of the WAVE file

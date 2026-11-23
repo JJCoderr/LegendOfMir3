@@ -8,7 +8,7 @@
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CSBuffer::CSBuffer()
+CSBuffer::CSBuffer(bool background) : m_background(background)
 {
 	m_pDS = NULL;
 	m_lpDSB = NULL;
@@ -263,6 +263,7 @@ HRESULT CSBuffer::CreateSoundBuffer(DWORD dwBufSize, PCMWAVEFORMAT *pcmwf, int N
 	else if( m_3d )  dsbdesc.dwFlags=DSBCAPS_CTRL3D|DSBCAPS_GETCURRENTPOSITION2|DSBCAPS_MUTE3DATMAXDISTANCE|DSBCAPS_CTRLFREQUENCY|DSBCAPS_CTRLVOLUME;
 	else dsbdesc.dwFlags=DSBCAPS_CTRLPAN | DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLFREQUENCY|DSBCAPS_GETCURRENTPOSITION2|DSBCAPS_STATIC;
 	
+	if (m_background) dsbdesc.dwFlags |= DSBCAPS_GLOBALFOCUS;
 	rval=m_pDS->GetDS()->CreateSoundBuffer(&dsbdesc, &m_lpDSB[0], NULL);
 	if( FAILED(rval) ) return rval;
 	
@@ -726,6 +727,15 @@ HRESULT CSBuffer::GetVolume(LONG& volume) const
 {
     if(!m_lpDSB || !m_lpDSB[0]) return DSERR_UNINITIALIZED;
     return m_lpDSB[0]->GetVolume(&volume);
+}
+
+HRESULT CSBuffer::GetFlags(DWORD& flags) const
+{
+    if(!m_lpDSB || !m_lpDSB[0]) return DSERR_UNINITIALIZED;
+    DSBCAPS caps={};caps.dwSize=sizeof(caps);
+    const auto result=m_lpDSB[0]->GetCaps(&caps);
+    if(SUCCEEDED(result)) flags=caps.dwFlags;
+    return result;
 }
 
 HRESULT CSBuffer::GetPan(LONG& pan) const

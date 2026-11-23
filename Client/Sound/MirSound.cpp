@@ -1273,7 +1273,7 @@ std::int64_t CMirSound::PlaySpellWav(int sample,int viewX,int viewY)
     if(!selected->play) return selected->key;
     auto& voice=m_spellVoices[std::size_t(mir3::SpellSoundVoices::key(0,0)-selected->key)];
     if(!voice.buffer) {
-        voice.buffer=std::make_unique<CSBuffer>();
+        voice.buffer=std::make_unique<CSBuffer>(m_backgroundSpellAudio);
         const HRESULT loaded=voice.buffer->Load(m_pSound,file,1);
         voice.buffer->m_ID=sample;
         if(FAILED(loaded)) {voice.buffer.reset();return 0;}
@@ -1310,12 +1310,16 @@ void CMirSound::ClearSpellVoices()
     m_spellVoiceCache={};
 }
 
-HRESULT CMirSound::InspectSpellAudio(std::int64_t key,DWORD& playing,LONG& volume,LONG& pan)
+HRESULT CMirSound::InspectSpellAudio(std::int64_t key,DWORD& playing,LONG& volume,LONG& pan,DWORD* flags)
 {
     const auto index=mir3::SpellSoundVoices::key(0,0)-key;
     if(index<0 || index>=std::int64_t(m_spellVoices.size())) return E_INVALIDARG;
     const auto& voice=m_spellVoices[std::size_t(index)];
     if(!voice.buffer) return DSERR_UNINITIALIZED;
+    if (flags) {
+        const auto result=voice.buffer->GetFlags(*flags);
+        if (FAILED(result)) return result;
+    }
     playing=voice.buffer->Playing();
     const HRESULT result=voice.buffer->GetVolume(volume);
     return FAILED(result)?result:voice.buffer->GetPan(pan);

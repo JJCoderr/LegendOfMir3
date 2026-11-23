@@ -48,11 +48,14 @@ inline void Checks(CGameProcess& game) {
     check("ignored_reply",game.m_nativeSpells.empty() && hero.m_shCurrMagicID==1);
     packet.stDefMsg.wSeries=22;hero.OnMagicFire(&packet);
     check("state_reply",game.m_nativeSpells.empty() && hero.m_shCurrMagicID==22);
+    g_xSound.EnableBackgroundSpellAudio();
     packet.stDefMsg.wSeries=1;hero.OnMagicFire(&packet);
     check("fireball_created",game.m_nativeSpells.size()==1 && game.m_nativeSpells[0].playback.flying);
-    DWORD flightPlaying=0;LONG flightVolume=0,flightPan=0;
-    check("fireball_flight_audio",!game.m_nativeSpells.empty() &&
-        SUCCEEDED(g_xSound.InspectSpellAudio(game.m_nativeSpells.front().soundVoice,flightPlaying,flightVolume,flightPan)) && flightPlaying==1);
+    DWORD flightPlaying=0,flightFlags=0;LONG flightVolume=0,flightPan=0;
+    const bool fireballAudio=!game.m_nativeSpells.empty() && SUCCEEDED(g_xSound.InspectSpellAudio(
+        game.m_nativeSpells.front().soundVoice,flightPlaying,flightVolume,flightPan,&flightFlags));
+    check("fireball_flight_audio",fireballAudio && flightPlaying==1);
+    check("test_audio_background",fireballAudio && (flightFlags&DSBCAPS_GLOBALFOCUS)!=0);
     const auto oldCount=game.m_nativeSpells.size();game.AdvanceNativeSpells(100,game.m_nativeSpells.empty()?game.m_nextNativeSpell:game.m_nativeSpells.front().serial);
     check("new_frame_boundary",oldCount==1 && game.m_nativeSpells.size()==oldCount && game.m_nativeSpells[0].playback.age==0);
     game.ClearNativeSpells();packet.stDefMsg.wSeries=150;hero.OnMagicFire(&packet);

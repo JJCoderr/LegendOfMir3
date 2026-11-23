@@ -32,7 +32,8 @@ public:
     void PositionSpellWav(std::int64_t key,int sample,int viewX,int viewY);
     void RefreshSpellVoices();
     void ClearSpellVoices();
-    HRESULT InspectSpellAudio(std::int64_t key,DWORD& playing,LONG& volume,LONG& pan);
+    void EnableBackgroundSpellAudio() {m_backgroundSpellAudio=true;}
+    HRESULT InspectSpellAudio(std::int64_t key,DWORD& playing,LONG& volume,LONG& pan,DWORD* flags=nullptr);
     bool PlayLobbyEffect(const char* file);
     bool WavEnabled() const {return m_bPlay!=FALSE;}
     HRESULT InspectInterfaceAudio(bool opening,DWORD& playing,LONG& volume);
@@ -100,6 +101,7 @@ private:
         std::unique_ptr<CSBuffer> buffer;
         mir3::SoundPosition position={0,0};
     };
+    bool m_backgroundSpellAudio=false;
     mir3::SpellSoundVoices m_spellVoiceCache;
     std::array<SpellVoice,mir3::SpellSoundVoices::samples*mir3::SpellSoundVoices::voices> m_spellVoices;
     void ApplySpellVoice(SpellVoice& voice);

@@ -4592,6 +4592,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     mir3::DebugState debugState(L"Mir2Ex");
     mir3::JsonRpc rpc(lpCmdLine, L"Client");
+    if (rpc.Enabled()) g_xSound.EnableBackgroundSpellAudio();
     while (TRUE)
     {
         debugState.Poll(mir3::ClientState);
