@@ -3998,7 +3998,7 @@ bool CGameProcess::StartNativeSpell(CActor& source,WORD skill,POINT target,DWORD
                 {float(source.m_wPosX*_CELL_WIDTH),float(source.m_wPosY*_CELL_HEIGHT)},
                 {float(target.x*_CELL_WIDTH),float(target.y*_CELL_HEIGHT)},direction,false,i*SecondOrbitDelay);
             effect.playback.particle_only=true;
-            effect.soundSample=20000+int(skill)*100+1;	// Óë SoundList.wwl µÄ 202xx-206xx ¶Î¶ÔÆë
+            effect.soundSample=10001+int(skill)*10;
             effect.soundVoice=PlaySpellSound(effect.soundSample,{source.m_wPosX,source.m_wPosY});
             m_nativeSpells.push_back(effect);
         }
@@ -4028,7 +4028,7 @@ bool CGameProcess::StartNativeSpell(CActor& source,WORD skill,POINT target,DWORD
         effect.playback.position={effect.anchor[0]+effect.staged->offset[0],effect.anchor[1]+effect.staged->offset[1]};
     }
     const POINT soundCell=rules.at_target && !rules.use_source_as_target?target:POINT{source.m_wPosX,source.m_wPosY};
-    effect.soundSample=20000+int(skill)*100+(effect.playback.flying?1:2);
+    effect.soundSample=int(skill)*10+(effect.playback.flying?10001:10002);
     effect.soundVoice=PlaySpellSound(effect.soundSample,soundCell);
     m_nativeSpells.push_back(effect);
     return true;
