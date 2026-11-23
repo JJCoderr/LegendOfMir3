@@ -20,7 +20,7 @@ def prepare(repo, binaries, resources, suite, offset):
     (repo/'out').mkdir(exist_ok=True)
     root = Path(tempfile.mkdtemp(prefix='rpc-',dir=repo/'out'))
     shutil.copy2(binaries/'Mir2Ex.exe',root/'Mir2Ex.exe')
-    for name in ('SoundList.wwl', 'CmList.dat'):
+    for name in ('SoundList.wwl', 'CmList.dat', 'MInfo.dat'):
         source = resources/name
         if not source.is_file(): source = (resources/'Data').resolve().parent/name
         if source.is_file(): os.link(source, root/name)
