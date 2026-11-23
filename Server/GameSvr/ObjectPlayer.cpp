@@ -2041,7 +2041,7 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 				{
 					lptItem->nDura--;
 
-					AddProcess(this, RM_DURACHANGE, U_ARMRINGL, lptItem->nDura, lptItem->nDuraMax, 0);
+					AddProcess(this, RM_DURACHANGE, Mir3Magic::LeftTalismanSlot, lptItem->nDura, lptItem->nDuraMax, 0);
 
 					switch (lptMagicRcd->btMagicID)
 					{
@@ -2124,7 +2124,7 @@ BOOL CPlayerObject::DoSpell(_LPTHUMANMAGICRCD	lptMagicRcd, int TargetX, int Targ
 				{
 					lptItem->nDura -= 5;
 
-					AddProcess(this, RM_DURACHANGE, U_ARMRINGL, lptItem->nDura, lptItem->nDuraMax, 0);
+					AddProcess(this, RM_DURACHANGE, Mir3Magic::LeftTalismanSlot, lptItem->nDura, lptItem->nDuraMax, 0);
 
 					if (GetAvailablePosition(m_pMap, TargetX, TargetY, 3))
 					{
@@ -2211,7 +2211,7 @@ void CPlayerObject::TrainSkill(_LPTHUMANMAGICRCD lptMagicRcd, int nTrain)
 
 BOOL CPlayerObject::MakeSlave(int nMonRace, int nX, int nY, int nLevel, int nMax, DWORD dwRoyaltySec)
 {
-	CMonRaceInfo* pMonRaceInfo = &g_pMonRaceInfo[nMonRace];
+	CMonRaceInfo* pMonRaceInfo = GetMonRaceInfo(nMonRace);
 
 	if (pMonRaceInfo)
 	{

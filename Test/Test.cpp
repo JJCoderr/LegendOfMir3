@@ -1,6 +1,7 @@
 #include <windows.h>
 #include "../Server/Def/picojson.h"
 #include "../Server/Def/sqlite/sqlite3.h"
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -266,6 +267,10 @@ int wmain(int argc,wchar_t** argv) {
             previous=std::move(id);
         }
         if(selected.empty()) throw std::runtime_error("No steps in selected range");
+        const std::regex captionPattern(R"(^\[[0-9]+\] \[#[0-9]+\] )");
+        const bool captionsOnly=std::any_of(rows.begin()+1,rows.end(),[&](const auto& row) {
+            return std::regex_search(row[1],captionPattern);
+        });
         output("START "+csv.u8string()+" from="+std::to_string(from)+" to="+std::to_string(to));
         std::map<std::string,std::unique_ptr<Pipe>> pipes;
         const auto pipeFor=[&](const std::string& target)->Pipe& {
@@ -283,10 +288,12 @@ int wmain(int argc,wchar_t** argv) {
             const auto expected=Fields(row[5]);Json response;
             output("STEP "+step+" "+label+" "+target+" "+action+" expect="+row[5]);
             const auto displayTarget=target=="Client2" || target=="Client3"?target:"Client";
-            if(pids[displayTarget]) {
+            const bool caption=std::regex_search(label,captionPattern);
+            if(pids[displayTarget] && (!captionsOnly || caption)) {
+                const auto text=caption?label:"["+scenarioId+"."+step+"] "+label;
                 const auto update=Json(Object{{"jsonrpc",Json(std::string("2.0"))},{"id",Json(int64_t(0))},
                     {"method",Json(std::string("test.step"))},
-                    {"params",Json(Object{{"text",Json("["+scenarioId+"."+step+"] "+label)}})}}).serialize();
+                    {"params",Json(Object{{"text",Json(text)}})}}).serialize();
                 pipeFor(displayTarget).Exchange(update,timeout);
             }
             if(target=="Runner") {

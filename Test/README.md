@@ -24,6 +24,8 @@ python Test/xlsx_scenario.py Test/ClientUI.xlsx --pid 1234
 
 结果只写日志，不回写 Excel。每条 STEP、WAIT、PASS、FAIL 都带 `[id=场景ID.步骤ID]`；STEP 记录预期，PASS/WAIT 记录实际响应，FAIL 记录差异，场景汇总只带场景 ID。首个失败即停止，后续步骤未执行；不会自动重试整段业务操作。
 
+连接测试执行器的客户端在画面左上角显示当前步骤。常规场景显示 `[场景ID.步骤ID] 步骤说明`。当场景的 `name` 栏含有 `[测试ID] [#魔法ID] 魔法名称` 标签时，画面只显示这些标签，其他步骤继续写日志。
+
 本例 44 步包括登录、商店列表、购买两瓶（25 金币减至 3）、金币不足拒绝、成功/失败协议计数、保存后的数据库余额和物品数、重新进图恢复。`submitted` 只证明提交，后续状态及数据库检查才确认业务结果。服务端就绪预检日志位于本次 `out/rpc-*/server-preflight.log`，启动日志为 `runtime.log`。
 
 Test.exe 是独立控制台程序，读取 CSV，逐行向 Client 或 Server 转发 JSON-RPC，检查响应并记录日志。Client/Server 不读取场景文件。CSV 的一行可以操作客户端，下一行立即查询服务端。
@@ -132,9 +134,9 @@ step,name,target,action,params,expect
 
 `Skills` 验证已学技能列表、名称/等级/修炼值、F12绑定与占用替换、非法绑定拒绝、退出保存及重新登录恢复。当前不包含施法效果、技能学习、升级或删除。
 
-`SkillCast` 是一条连续施法用例。一次认证和一次进图后，先用 F1 火球术击杀怪物，再用 F2 治愈术恢复生命。日志断言两次扣蓝、两次施法回包，以及认证和选角请求各一次。
+`SkillCast`（编号 `2201`）在一次认证和进图后，用客户端施法 RPC 逐项试放技能数据里的 84 条记录，并记录请求与回包。可以用 `Test\run_tests.bat Test\Skills.xlsx --case SkillCast` 单独运行。
 
-`SkillsAllCast` 逐项试放技能数据里的 84 条记录。它在一次认证、一次进图后连续运行同表四段规则，逐项记录施法请求与回包。被动技能及缺少施放条件的技能也列在日志中。可以用 `Test\run_tests.bat Test\Skills.xlsx --case SkillsAllCast` 单独运行。
+`SkillCastSmoke` 在同一会话用 F1 火球术击杀怪物，再用 F2 治愈术恢复生命。日志断言两次扣蓝、两次施法回包，以及认证和选角请求各一次。
 
 `SkillsCasting` 经真实客户端与服务器验证火球术快捷键施法、两次扣蓝及回包、未绑定快捷键与蓝量不足拒绝。当前只覆盖地图坐标目标，不包含实体目标伤害、其他技能效果。`skill.cast` 参数为 `key`（1–12）、`x`、`y`（地图格坐标），复用客户端快捷键业务；`state.get` 的 `spell_reply_id` 记录已解析的施法回包技能，`cast_ready` 表示动作时序允许尝试施法，具体技能还需满足已绑定、蓝量等条件。等待断言失败期间，执行器仅在响应状态变化时输出 WAIT，便于定位回包和状态更新。
 

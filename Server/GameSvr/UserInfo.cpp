@@ -633,7 +633,7 @@ _LPTHUMANMAGICRCD CUserInfo::GetMagicRcdByID(int nID)
 
 _LPTGENERALITEMRCD CUserInfo::CanUseBujuk()
 {
-	_LPTGENERALITEMRCD lptItem = GetUseGenItem(m_THumanRcd.szTakeItem[U_ARMRINGL]);
+	_LPTGENERALITEMRCD lptItem = GetUseGenItem(m_THumanRcd.szTakeItem[Mir3Magic::LeftTalismanSlot]);
 
 	if (lptItem)
 	{

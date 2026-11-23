@@ -1,6 +1,7 @@
 #pragma once
 // MIR3 1.45 client record. The database/server skill record keeps its own layout.
 namespace Mir3Magic {
+constexpr int LeftTalismanSlot = 6; // FLD_ARMRINGL_ID in the persisted equipment array.
 #pragma pack(push,1)
 struct Standard {
     WORD id;
