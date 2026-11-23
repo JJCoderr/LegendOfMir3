@@ -137,7 +137,7 @@ public:
 	void							RemoveGenItem(_LPTGENERALITEMRCD lptGenItemRcd);
 
 	int								EncodeMyMagicToServer(char *pszEncodeMsg, int nBuffSize, int& nPos);
-	int								EncodeMyMagic(char *pszEncodeMsg, int nBuffSize, int& nPos);
+
 	int								EncodeGenItem(char *pszEncodeMsg, int nBuffSize, int& nPos);
 
 	int								GetWeaponFeature();

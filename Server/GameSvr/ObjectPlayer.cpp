@@ -1111,18 +1111,39 @@ void CPlayerObject::ServerGetMagicKeyChange(int nMagicID, int nUseKey)
 
 void CPlayerObject::SendMyMagics()
 {
-	char				szEncodeMsg[4096];
-	int					nPos = 0;
+    constexpr size_t FullListBufferSize = 4096;
+    constexpr size_t EncodedRecordSize = (sizeof(Mir3Magic::Record) * 8 + 5) / 6;
+    std::string fullList;
+    WORD count = 0;
+    bool sentFullList = false;
+    const auto sendFullList = [&] {
+        _TDEFAULTMESSAGE message;
+        fnMakeDefMessage(&message, SM_SENDMYMAGIC, 0, 0, 0, count);
+        SendSocket(&message, const_cast<char*>(fullList.c_str()));
+    };
 
-	_TDEFAULTMESSAGE	DefMsg;
+    for (PLISTNODE node = m_pUserInfo->m_lpTMagicRcd.GetHead(); node; node = m_pUserInfo->m_lpTMagicRcd.GetNext(node)) {
+        const auto* skill = m_pUserInfo->m_lpTMagicRcd.GetData(node);
+        Mir3Magic::Record record{};
+        if (!skill || !ClientMagicRecord(*skill, record)) continue;
 
-	int nCnt = m_pUserInfo->EncodeMyMagic(szEncodeMsg, sizeof(szEncodeMsg), nPos);
-
-	szEncodeMsg[nPos] = '\0';
-
-	fnMakeDefMessage(&DefMsg, SM_SENDMYMAGIC, 0, 0, 0, nCnt);
-
-	SendSocket(&DefMsg, szEncodeMsg);
+        char encoded[EncodedRecordSize + 1]{};
+        fnEncode6BitBufA(reinterpret_cast<unsigned char*>(&record), encoded, sizeof(record), sizeof(encoded));
+        if (!sentFullList && fullList.size() + sizeof(encoded) < FullListBufferSize) {
+            fullList += encoded;
+            fullList += '/';
+            ++count;
+        } else {
+            if (!sentFullList) {
+                sendFullList();
+                sentFullList = true;
+            }
+            _TDEFAULTMESSAGE message;
+            fnMakeDefMessage(&message, SM_ADDMAGIC, 0, 0, 0, 1);
+            SendSocket(&message, encoded);
+        }
+    }
+    if (!sentFullList) sendFullList();
 }
 
 void CPlayerObject::SendBagItems()

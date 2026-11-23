@@ -59,14 +59,14 @@ void ProcReceiveBuffer(char *pszPacket, int nRecv)
 {
 	int				nLen = nRecv;
 	int				nNext = 0;
-	char			szBuff[DATA_BUFSIZE];
+	char			szBuff[sizeof(g_szRemainBuff)];
 	char			*pszData = &szBuff[0];
 	_LPTMSGHEADER	lpMsgHeader;
 
 	if (g_nRemainBuffLen > 0)
 		memmove(szBuff, g_szRemainBuff, g_nRemainBuffLen);
 
-	memmove(&szBuff[g_nRemainBuffLen], pszPacket, nLen + 1);
+	memmove(&szBuff[g_nRemainBuffLen], pszPacket, nLen);
 
 	nLen += g_nRemainBuffLen;
 

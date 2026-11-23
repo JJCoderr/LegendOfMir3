@@ -305,40 +305,6 @@ int CUserInfo::EncodeMyMagicToServer(char *pszEncodeMsg, int nBuffSize, int& nPo
 	return nCnt;
 }
 
-int CUserInfo::EncodeMyMagic(char *pszEncodeMsg, int nBuffSize, int& nPos)
-{
-	int	nCnt = 0;
-
-	if (m_lpTMagicRcd.GetCount())
-	{
-		_LPTHUMANMAGICRCD	lptUserMagicRcd;
-		Mir3Magic::Record tClientMagicRcd{};
-
-		PLISTNODE pListNode = m_lpTMagicRcd.GetHead();
-
-		while (pListNode)
-		{
-			lptUserMagicRcd = m_lpTMagicRcd.GetData(pListNode);
-
-			if (lptUserMagicRcd)
-			{
-                if(!ClientMagicRecord(*lptUserMagicRcd,tClientMagicRcd)) {pListNode=m_lpTMagicRcd.GetNext(pListNode);continue;}
-
-				nPos +=	fnEncode6BitBufA((unsigned char *)&tClientMagicRcd, pszEncodeMsg + nPos, sizeof(tClientMagicRcd), nBuffSize - nPos);
-
-				*(pszEncodeMsg + nPos) = '/';
-
-				nPos++;
-				nCnt++;
-			}
-
-			pListNode = m_lpTMagicRcd.GetNext(pListNode);
-		}
-	}
-
-	return nCnt;
-}
-
 void CUserInfo::RemoveGenItem(_LPTGENERALITEMRCD lptItemRcd)
 {
 	if (m_lpTGenItemRcd.GetCount())
