@@ -4649,6 +4649,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 				m_xWave.UpdateAirWave();
 				m_xWave.RenderAirWave();
 */
+				mir3::DrawClientTestStep();
 				if ( FAILED(g_xMainWnd.Present()) )
 				{
 					g_xMainWnd.RestoreSurfaces();

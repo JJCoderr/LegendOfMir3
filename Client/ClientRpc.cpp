@@ -16,6 +16,7 @@ uint64_t eventSequence = 0;
 bool enabled = false;
 std::map<std::pair<std::string,int>,uint64_t> packetCounts;
 std::string lastState;
+std::wstring testStep;
 std::deque<Json> events;
 void Record(const std::string& kind, const Json& data) {
     events.emplace_back(Object{{"seq",Json(int64_t(++eventSequence))},{"kind",Json(kind)},{"data",data}});
@@ -215,7 +216,56 @@ void ClientRpcPacket(const char* direction,int opcode,int bytes) {
     ++packetCounts[{direction,opcode}];
     Record(std::string("packet.")+direction,Json(Object{{"opcode",Json(double(opcode))},{"bytes",Json(double(bytes))}}));
 }
+void DrawClientTestStep() {
+    if (testStep.empty()) return;
+    auto* buffer=g_xMainWnd.GetBackBuffer();
+    constexpr int Margin=8, Padding=8, TextHeight=16;
+    DDSURFACEDESC2 surface={};surface.dwSize=sizeof(surface);
+    if (FAILED(buffer->GetSurfaceDesc(&surface))) return;
+    RECT area={Margin,Margin,LONG(surface.dwWidth)-Margin,Margin+TextHeight+Padding*2};
+    if (area.right<=area.left+Padding*2 || area.bottom>LONG(surface.dwHeight)) return;
+
+    static const HFONT font=CreateFontW(-TextHeight,0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,
+        DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,DEFAULT_QUALITY,DEFAULT_PITCH,L"Microsoft YaHei UI");
+    HDC dc;
+    if (FAILED(buffer->GetDC(&dc))) return;
+    const auto oldFont=SelectObject(dc,font);
+    SIZE text={};
+    GetTextExtentPoint32W(dc,testStep.c_str(),int(testStep.size()),&text);
+    SelectObject(dc,oldFont);
+    buffer->ReleaseDC(dc);
+    area.right=(std::min)(area.right,area.left+text.cx+Padding*2);
+
+    if (FAILED(buffer->Lock(&area,&surface,DDLOCK_WAIT,nullptr))) return;
+    constexpr WORD HalfRgb565Mask=0x7BEF;
+    for (LONG y=0;y<area.bottom-area.top;++y) {
+        auto* pixels=reinterpret_cast<WORD*>(static_cast<BYTE*>(surface.lpSurface)+y*surface.lPitch);
+        for (LONG x=0;x<area.right-area.left;++x) pixels[x]=WORD((pixels[x]>>1)&HalfRgb565Mask);
+    }
+    buffer->Unlock(&area);
+
+    if (FAILED(buffer->GetDC(&dc))) return;
+    const auto previousFont=SelectObject(dc,font);
+    const auto oldMode=SetBkMode(dc,TRANSPARENT);
+    const auto oldColor=SetTextColor(dc,RGB(255,255,255));
+    InflateRect(&area,-Padding,0);
+    DrawTextW(dc,testStep.c_str(),int(testStep.size()),&area,DT_SINGLELINE|DT_VCENTER|DT_END_ELLIPSIS|DT_NOPREFIX);
+    SetTextColor(dc,oldColor);
+    SetBkMode(dc,oldMode);
+    SelectObject(dc,previousFont);
+    buffer->ReleaseDC(dc);
+}
 std::string ClientRpc(const std::string& method, const std::string& arguments) {
+    if (method=="test.step") {
+        const auto params=Parse(arguments);
+        if (!params.get("text").is<std::string>()) throw JsonRpc::Error{-32602,"Missing step text"};
+        const auto text=params.get("text").get<std::string>();
+        const auto length=MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,text.data(),int(text.size()),nullptr,0);
+        if (!length && !text.empty()) throw JsonRpc::Error{-32602,"Invalid step text"};
+        testStep.resize(length);
+        if (length) MultiByteToWideChar(CP_UTF8,0,text.data(),int(text.size()),&testStep[0],length);
+        return R"({"status":"displayed"})";
+    }
     ClientRpcTick();
     if (method == "state.get") return lastState;
     if (method == "protocol.get") {

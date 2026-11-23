@@ -268,12 +268,27 @@ int wmain(int argc,wchar_t** argv) {
         if(selected.empty()) throw std::runtime_error("No steps in selected range");
         output("START "+csv.u8string()+" from="+std::to_string(from)+" to="+std::to_string(to));
         std::map<std::string,std::unique_ptr<Pipe>> pipes;
+        const auto pipeFor=[&](const std::string& target)->Pipe& {
+            auto& pipe=pipes[target];
+            if(!pipe) {
+                if(!pids[target]) throw std::runtime_error("Missing PID for "+target);
+                pipe=std::make_unique<Pipe>(target=="Server"?"Server":"Client",pids[target]);
+            }
+            return *pipe;
+        };
         for(const auto& [i,rpcStep]:selected) {
             const auto& row=rows[i];step=row[0];
             const auto requestId=int64_t(rpcStep);
             label=row[1];const auto& target=row[2];const auto& action=row[3];
             const auto expected=Fields(row[5]);Json response;
             output("STEP "+step+" "+label+" "+target+" "+action+" expect="+row[5]);
+            const auto displayTarget=target=="Client2" || target=="Client3"?target:"Client";
+            if(pids[displayTarget]) {
+                const auto update=Json(Object{{"jsonrpc",Json(std::string("2.0"))},{"id",Json(int64_t(0))},
+                    {"method",Json(std::string("test.step"))},
+                    {"params",Json(Object{{"text",Json("["+scenarioId+"."+step+"] "+label)}})}}).serialize();
+                pipeFor(displayTarget).Exchange(update,timeout);
+            }
             if(target=="Runner") {
                 const auto fields=Fields(row[4]);
                 const auto duration=fields.count("milliseconds")?fields.at("milliseconds"):Json();
@@ -288,11 +303,7 @@ int wmain(int argc,wchar_t** argv) {
                 response=Query(database,row[4]);
             } else {
                 if(target!="Client" && target!="Client2" && target!="Client3" && target!="Server") throw std::runtime_error("Target must be Client, Client2, Client3, Server, Database or Runner");
-                if(!pipes.count(target)) {
-                    if(!pids[target]) throw std::runtime_error("Missing PID for "+target);
-                    pipes[target]=std::make_unique<Pipe>(target=="Server"?"Server":"Client",pids[target]);
-                }
-                auto& pipe=*pipes[target];
+                auto& pipe=pipeFor(target);
                 const auto fields=Fields(action=="raw"?"":row[4]);
                 const auto request=action=="raw"?row[4]:Json(Object{
                     {"jsonrpc",Json(std::string("2.0"))},{"id",Json(requestId)},
