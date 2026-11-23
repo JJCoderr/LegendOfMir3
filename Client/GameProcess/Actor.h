@@ -43,6 +43,8 @@ typedef struct tagFEATURE
 	BYTE	bDress; 
 	BYTE	bHair;
 }FEATURE, *LPFEATURE;
+
+inline WORD MonsterShape(const FEATURE& feature) { return MAKEWORD(feature.bDress, feature.bHair); }
 #pragma pack(8)
 
 
@@ -224,6 +226,8 @@ public:
 // Rendering.
 	virtual BOOL DrawActor(CMapHandler* pxMap, BOOL bFocused = FALSE, BOOL bShadowAblended = FALSE, 
 		                   BOOL bUseScrnPos = TRUE, BOOL bDrawShadow = TRUE);
+    void SetHealth(WORD hp, WORD maxHp);
+    bool ShowsHealthBar() const;
 	virtual VOID DrawHPBar();
 	virtual VOID DrawName();
 

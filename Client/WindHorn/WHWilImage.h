@@ -105,6 +105,7 @@ public:
 	~CWHWilImageData();
 
 	BOOL NewLoad(CHAR* szWilFile, BOOL bIsMemMapped = TRUE, BOOL bComp = TRUE);
+	bool HasFrame(DWORD index) const;
 	BOOL NewSetIndex(DWORD dwIndex);				// 使用外部传入的索引，Setting 指向当前图像信息的地址.
 
 

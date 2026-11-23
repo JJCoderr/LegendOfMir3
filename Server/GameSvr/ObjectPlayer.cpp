@@ -3181,7 +3181,9 @@ void CPlayerObject::Operate()
 					}
 					case RM_HEALTHSPELLCHANGED:
 					{
-						fnMakeDefMessage(&DefMsg, SM_HEALTHSPELLCHANGED, (int)lpProcessMsg->pCharObject, m_WAbility.HP, m_WAbility.MP, m_WAbility.MaxHP);
+						const auto* source = lpProcessMsg->pCharObject;
+                        const auto& ability = source->m_WAbility;
+                        fnMakeDefMessage(&DefMsg, SM_HEALTHSPELLCHANGED, (int)source, ability.HP, ability.MP, ability.MaxHP);
 						SendSocket(&DefMsg, NULL);
 
 						break;

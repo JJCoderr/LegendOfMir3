@@ -87,6 +87,9 @@ public:
 	LPDIRECTDRAWSURFACE7 m_lpddsMagicTextr[60];
 
 public:
+    DWORD m_targetIdentity = 0;
+    std::uint64_t m_targetInstance = 0;
+
 	CMagic();
 	~CMagic();
 

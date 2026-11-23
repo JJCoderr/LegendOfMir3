@@ -115,7 +115,10 @@
 
 #define _MAX_MONSTER_IMAGE			12
 
-#define _MAX_IMAGE					61
+#define _IMAGE_MONSTER13            61
+#define _IMAGE_MONSTER20            68
+#define _IMAGE_MONSTER54            69
+#define _MAX_IMAGE                  70
 
 #define _TEXTR_FILE_MAGIC			0
 #define _TEXTR_FILE_MONMAGIC		1

@@ -1854,14 +1854,21 @@ void CCharObject::DamageHealth(int nDamage)
 	}
 }
 
+static int RollDefence(const CCharObject& target, bool magic)
+{
+    const WORD packed = magic ? target.m_WAbility.MAC : target.m_WAbility.AC;
+    int minimum = LOBYTE(packed), maximum = HIBYTE(packed);
+    if (const auto* monster = dynamic_cast<const CMonsterObject*>(&target)) {
+        const auto& race = g_pMonRaceInfo[monster->m_nRace];
+        minimum = magic ? race.magicArmorMin : race.armorMin;
+        maximum = magic ? race.magicArmorMax : race.armorMax;
+    }
+    return maximum > minimum ? minimum + rand() % (maximum - minimum + 1) : minimum;
+}
+
 int CCharObject::GetMagStruckDamage(int nDamage)
 {
-	int nArmor = 0;
-
-	if ((HIBYTE(m_WAbility.MAC) - LOBYTE(m_WAbility.MAC) + 1) > 0)
-		nArmor = LOBYTE(m_WAbility.MAC) + (rand() % (HIBYTE(m_WAbility.MAC) - LOBYTE(m_WAbility.MAC) + 1));
-	else
-		nArmor = LOBYTE(m_WAbility.MAC);
+    const int nArmor = RollDefence(*this, true);
 
 	nDamage	= _MAX(0, nDamage - nArmor);
 
@@ -1963,13 +1970,7 @@ void CCharObject::StruckDamage(int nDamage)
 
 int CCharObject::GetHitStruckDamage(int nDamage)
 {
-	int nArmor;
-	int nRnd = ((HIBYTE(m_WAbility.AC) - LOBYTE(m_WAbility.AC)) + 1);
-
-	if (nRnd > 0)
-		nArmor = LOBYTE(m_WAbility.AC) + (rand() % nRnd);
-	else
-		nArmor = LOBYTE(m_WAbility.AC);
+    const int nArmor = RollDefence(*this, false);
 
 	nDamage = _MAX(0, nDamage - nArmor);
 

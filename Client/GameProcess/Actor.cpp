@@ -32,16 +32,39 @@ static bool CursorInsideClient()
 	return PtInRect(&rc, pt) != FALSE;
 }
 
-static int MonsterImageIndex(CImageHandler* images,int shape)
+static int MonsterImageIndex(CImageHandler* images, int shape)
 {
-	// V1.45 外观可以到 2090，直接算库号会超出 _MAX_IMAGE 造成越界读，先夹到合法范围。
-	const int wanted=_IMAGE_MONSTER1+shape/10;
-	if(wanted<_MAX_IMAGE && images->m_xImageList[wanted].m_pbCurrImage) return wanted;
-	const int fallback=_IMAGE_MONSTER1+(shape%200)/10;
-	if(fallback<_MAX_IMAGE && images->m_xImageList[fallback].m_pbCurrImage) return fallback;
-	return _IMAGE_MONSTER1;
+    const int library = shape / 10 + 1;
+    int index = _IMAGE_MONSTER1;
+    if (library <= _MAX_MONSTER_IMAGE) index += library - 1;
+    else if (library <= 20) index = _IMAGE_MONSTER13 + library - 13;
+    else if (library == 54) index = _IMAGE_MONSTER54;
+    return images->m_xImageList[index].m_stNewWixImgaeInfo.pnPosition ? index : _IMAGE_MONSTER1;
 }
 
+static DWORD MonsterDrawFrame(const CActor& actor, CWHWilImageData& image, DWORD frame)
+{
+    if (image.HasFrame(frame)) return frame;
+    for (DWORD candidate = actor.m_dwEndFrame; candidate > actor.m_dwFstFrame; --candidate)
+        if (image.HasFrame(candidate - 1)) return candidate - 1;
+
+    const int shape = MonsterShape(actor.m_stFeature);
+    const DWORD block = (shape % 10) * _MAX_MON_FRAME;
+    const auto motions = mir3::MonsterMotionTable(shape);
+    const auto find = [&](const mir3::MonsterMotion& motion) {
+        for (int direction = 0; direction < 8; ++direction) {
+            const DWORD first = block + motion.first + direction * 10;
+            for (DWORD i = motion.frames; i > 0; --i)
+                if (image.HasFrame(first + i - 1)) return first + i - 1;
+        }
+        return frame;
+    };
+    if (actor.m_bCurrMtn < motions.size()) {
+        const DWORD alternate = find(motions[actor.m_bCurrMtn]);
+        if (image.HasFrame(alternate)) return alternate;
+    }
+    return find(motions[_MT_MON_STAND]);
+}
 
 
 /******************************************************************************************************************
@@ -293,11 +316,11 @@ BOOL CActor::Create(CImageHandler* pxImgHandler, FEATURE* pstFeature, BYTE bMtn,
 					return FALSE;
 				else
 				{
-					g_xSpriteInfo.SetMonFrameInfo(pstFeature->bDress);
+					g_xSpriteInfo.SetMonFrameInfo(MonsterShape(*pstFeature));
 					// 原版 406750 按动作起始帧重判朝向，见 MonsterMotion.h。
-					bDir = (BYTE)mir3::MonsterResourceDirection(pstFeature->bDress, g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm, bDir);
-					m_bActorImgIdx = MonsterImageIndex(pxImgHandler, pstFeature->bDress);
-					m_dwFstFrame = g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm + (pstFeature->bDress%10)*_MAX_MON_FRAME + bDir*10;
+					bDir = (BYTE)mir3::MonsterResourceDirection(MonsterShape(*pstFeature), g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm, bDir);
+					m_bActorImgIdx = MonsterImageIndex(pxImgHandler, MonsterShape(*pstFeature));
+					m_dwFstFrame = g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm + (MonsterShape(*pstFeature)%10)*_MAX_MON_FRAME + bDir*10;
 					m_dwEndFrame = m_dwFstFrame + g_xSpriteInfo.m_stMonSpr[bMtn].wFrmCnt;
 					m_wDelay = g_xSpriteInfo.m_stMonSpr[bMtn].wDelay;
 				}
@@ -431,9 +454,9 @@ BOOL CActor::ChangeFeature(FEATURE stFeature)
 					return FALSE;
 				else
 				{
-					g_xSpriteInfo.SetMonFrameInfo(stFeature.bDress);
-					m_bActorImgIdx = MonsterImageIndex(pxImgHandler, stFeature.bDress);
-					m_dwFstFrame = g_xSpriteInfo.m_stMonSpr[m_bCurrMtn].wFstFrm + (stFeature.bDress%10)*_MAX_MON_FRAME + m_bCurrDir*10;
+					g_xSpriteInfo.SetMonFrameInfo(MonsterShape(stFeature));
+					m_bActorImgIdx = MonsterImageIndex(pxImgHandler, MonsterShape(stFeature));
+					m_dwFstFrame = g_xSpriteInfo.m_stMonSpr[m_bCurrMtn].wFstFrm + (MonsterShape(stFeature)%10)*_MAX_MON_FRAME + m_bCurrDir*10;
 					m_dwEndFrame = m_dwFstFrame + g_xSpriteInfo.m_stMonSpr[m_bCurrMtn].wFrmCnt;
 					m_wDelay = g_xSpriteInfo.m_stMonSpr[m_bCurrMtn].wDelay;
 				}
@@ -478,10 +501,10 @@ BOOL CActor::SetMotionFrame(BYTE bMtn, BYTE bDir)
 		break;
 	case _GENDER_MON:
 		{
-			g_xSpriteInfo.SetMonFrameInfo(m_stFeature.bDress);
+			g_xSpriteInfo.SetMonFrameInfo(MonsterShape(m_stFeature));
 			// 原版 406750 按动作起始帧重判朝向，见 MonsterMotion.h。
-			bDir = (BYTE)mir3::MonsterResourceDirection(m_stFeature.bDress, g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm, bDir);
-			m_dwFstFrame = g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm + (m_stFeature.bDress%10)*_MAX_MON_FRAME + bDir*10;
+			bDir = (BYTE)mir3::MonsterResourceDirection(MonsterShape(m_stFeature), g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm, bDir);
+			m_dwFstFrame = g_xSpriteInfo.m_stMonSpr[bMtn].wFstFrm + (MonsterShape(m_stFeature)%10)*_MAX_MON_FRAME + bDir*10;
 			m_dwEndFrame = m_dwFstFrame + g_xSpriteInfo.m_stMonSpr[bMtn].wFrmCnt;
 			m_wDelay = g_xSpriteInfo.m_stMonSpr[bMtn].wDelay;
 		}
@@ -535,7 +558,7 @@ VOID CActor::PlayActSound()
 
 	// 表外外观没有专用音效，避免按外观编号越界读取。
 	constexpr INT ActorSoundGroups = sizeof(nActorSndTbl)/sizeof(nActorSndTbl[0]);
-	const INT nShape = m_stFeature.bDress;
+	const INT nShape = MonsterShape(m_stFeature);
 	// MIR3 直接用外观编号作为音效组（GODOT 分支同样是 10*外观+偏移），表只用于旧版对照。
 	(void)nActorSndTbl;
 	const INT nSoundGroup = ( nShape >= 0 && nShape < 100 ) ? nShape : ( nShape % 100 );
@@ -926,11 +949,8 @@ VOID CActor::OnFeatureChanged(LPPACKETMSG lpPacketMsg)
 VOID CActor::OnHealthSpellChanged(LPPACKETMSG lpPacketMsg)
 {
     HealthDamage(m_wHP,lpPacketMsg->stDefMsg.wParam);
-	m_wHP	 = lpPacketMsg->stDefMsg.wParam;
+    SetHealth(lpPacketMsg->stDefMsg.wParam, lpPacketMsg->stDefMsg.wSeries);
 	m_wMP	 = lpPacketMsg->stDefMsg.wTag;
-	m_wMAXHP = lpPacketMsg->stDefMsg.wSeries;
-	FLOAT wHPRate = (FLOAT)((FLOAT)m_wHP/(FLOAT)m_wMAXHP);
-	m_bHPPercent  = wHPRate*100;
 }
 
 VOID CActor::OnWalk(LPPACKETMSG lpPacketMsg)
@@ -955,7 +975,7 @@ VOID CActor::OnTurn(LPPACKETMSG lpPacketMsg)
 	m_bLightSize = HIBYTE(lpPacketMsg->stDefMsg.wSeries);
 
 	// 食人草.
-	if ( m_stFeature.bDress == 31 )
+	if ( MonsterShape(m_stFeature) == 31 )
 		bDir = 0;
 
 	OnCharDescPacket(lpPacketMsg);
@@ -964,7 +984,7 @@ VOID CActor::OnTurn(LPPACKETMSG lpPacketMsg)
 
 	if( m_nState & 0X1 )		// 石化状态.
 	{
-		switch ( m_stFeature.bDress )
+		switch ( MonsterShape(m_stFeature) )
 		{
 		case 83: //走马神掌.
 		case 84: //走马护法.
@@ -987,7 +1007,7 @@ VOID CActor::OnDigup(LPPACKETMSG lpPacketMsg)
 	OnCharDescPacket(lpPacketMsg);
 	m_bReverse = FALSE;
 
-	switch ( m_stFeature.bDress )
+	switch ( MonsterShape(m_stFeature) )
 	{
 	case 3: 
 		m_bReverse = TRUE;
@@ -1029,7 +1049,7 @@ VOID CActor::OnDigDown(LPPACKETMSG lpPacketMsg)
 	bDir		 = m_bCurrDir;
 	m_bReverse	 = TRUE;
 
-	switch ( m_stFeature.bDress )
+	switch ( MonsterShape(m_stFeature) )
 	{
 	case 3: 
 		m_bReverse = FALSE;
@@ -1066,7 +1086,7 @@ VOID CActor::OnDeath(LPPACKETMSG lpPacketMsg)
 		if ( m_stFeature.bGender == _GENDER_MON )
 		{
 			CMagic* pxMagic;
-			switch ( m_stFeature.bDress )
+			switch ( MonsterShape(m_stFeature) )
 			{
 			case 4:		// 石匠.
 				pxMagic = new CMagic;
@@ -1131,9 +1151,7 @@ VOID CActor::OnStruck(LPPACKETMSG lpPacketMsg)
 
 	WORD  wDamage = lpPacketMsg->stDefMsg.wSeries;
     if(!m_bIsDead) AddDamage(-int(wDamage));
-	m_wHP		  = lpPacketMsg->stDefMsg.wParam;
-	m_wMAXHP	  = lpPacketMsg->stDefMsg.wTag;
-	m_bHPPercent  = m_wMAXHP ? (BYTE)(100u*m_wHP/m_wMAXHP) : 0;
+    SetHealth(lpPacketMsg->stDefMsg.wParam, lpPacketMsg->stDefMsg.wTag);
 
 	fnDecode6BitBuf(lpPacketMsg->szEncodeData, (char*)&stMsgBodyWl, sizeof(MESSAGEBODYWL));
 
@@ -1146,7 +1164,7 @@ VOID CActor::OnStruck(LPPACKETMSG lpPacketMsg)
 	if ( m_stHitter.bGender == _GENDER_MON )
 	{
 		CMagic* pxMagic;
-		switch ( m_stHitter.bDress )
+		switch ( MonsterShape(m_stHitter) )
 		{
 		case 2:		// 凯法洛普.
 			pxMagic = new CMagic;
@@ -1187,9 +1205,9 @@ VOID CActor::OnLighting(LPPACKETMSG lpPacketMsg)
 	fnDecode6BitBuf(lpPacketMsg->szEncodeData, (char*)&stMsgBodyWl, sizeof(MESSAGEBODYWL));
 	wTargetX = stMsgBodyWl.lParam1;
 	wTargetY = stMsgBodyWl.lParam2;
-	nTargetID = MAKELONG(stMsgBodyWl.nTag1, stMsgBodyWl.nTag2);
+	nTargetID = stMsgBodyWl.nTag1;
 
-	switch ( m_stFeature.bDress )
+	switch ( MonsterShape(m_stFeature) )
 	{
 	case 48:		// 僵尸. 8方向.
 		pxMagic = new CMagic;
@@ -1217,7 +1235,7 @@ VOID CActor::OnFlyAxe(LPPACKETMSG lpPacketMsg)
 	wTargetY = stMsgBodyW.wParam2;
 	nTargetID = MAKELONG(stMsgBodyW.wTag1, stMsgBodyW.wTag2);
 
-	switch ( m_stFeature.bDress )
+	switch ( MonsterShape(m_stFeature) )
 	{
 	case 33:				// 双斧骷髅.
 		pxMagic = new CMagic;
@@ -1253,7 +1271,7 @@ VOID CActor::OnHit(LPPACKETMSG lpPacketMsg)
 	if ( m_stFeature.bGender == _GENDER_MON )
 	{
 		CMagic* pxMagic;
-		switch ( m_stFeature.bDress )
+		switch ( MonsterShape(m_stFeature) )
 		{
 		case 9:		// 罗恩.
 			pxMagic = new CMagic;
@@ -1661,7 +1679,7 @@ VOID CActor::UpdateMotionState(INT nLoopTime, BOOL bIsMoveTime)
 
 			if( m_nState & 0X1 )		// 石化状态.
 			{
-				switch ( m_stFeature.bDress )
+				switch ( MonsterShape(m_stFeature) )
 				{
 				case 83: //走马神掌.
 				case 84: //走马护法.
@@ -1777,6 +1795,8 @@ BOOL CActor::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, 
 			else							dwCurrFrm = m_dwEndFrame - (m_dwCurrFrame - m_dwFstFrame) -1;
 		}
 
+        if (m_stFeature.bGender == _GENDER_MON)
+            dwCurrFrm = MonsterDrawFrame(*this, *m_pxActorImage, dwCurrFrm);
 		if ( m_pxActorImage->NewSetIndex(dwCurrFrm) )
 		{
 			shPX = m_pxActorImage->m_lpstNewCurrWilImageInfo->shPX;
@@ -1820,7 +1840,7 @@ BOOL CActor::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, 
 			WORD wState   = GetCharState();
 
 			// 应用怪物影子文件。
-			if ( bDrawShadow )
+			if (bDrawShadow && m_bActorImgIdx < _IMAGE_MONSTER1 + _MAX_MONSTER_IMAGE)
 			{
 				CWHWilImageData* pxSahdowImage;
 				pxSahdowImage = &g_xGameProc.m_xImage.m_xImageList[m_bActorImgIdx+_MAX_MONSTER_IMAGE];
@@ -1906,24 +1926,41 @@ BOOL CActor::DrawActor(CMapHandler* pxMap, BOOL bFocused, BOOL bShadowAblended, 
 
 
 
+void CActor::SetHealth(WORD hp, WORD maxHp)
+{
+    m_wMAXHP = maxHp;
+    m_wHP = maxHp ? min(hp, maxHp) : hp;
+    m_bHPPercent = maxHp ? BYTE(100u * m_wHP / maxHp) : 0;
+}
+
+bool CActor::ShowsHealthBar() const
+{
+    if (m_stFeature.bGender == _GENDER_NPC) return false;
+    if (m_stFeature.bGender != _GENDER_MON) return true;
+    return !m_bIsDead && m_bCurrMtn != _MT_MON_DIE && (!m_wMAXHP || m_wHP > 0);
+}
+
 VOID CActor::DrawHPBar()
 {
 	// NPC 敲不死，不画血条。
-	if ( m_stFeature.bGender == _GENDER_NPC ) return;
+    if (!ShowsHealthBar()) return;
 
 	// 血条常显：尚未收到血量时按满血绘制，收到受击数据后按实际比例。
-	const int nHealthPercent = m_wMAXHP ? int(m_bHPPercent) : 100;
-	RECT rcHP = {0, 0, (36*nHealthPercent/100), 4};
+    constexpr DWORD HealthBackgroundFrame = 2;
+    constexpr DWORD HealthFillFrame = 3;
 
 	auto& image = g_xGameProc.m_xImage.m_xImageList[_IMAGE_PROGUSE];
-	if ( !image.NewSetIndex(2) ) return;
+	if ( !image.NewSetIndex(HealthBackgroundFrame) ) return;
 	g_xMainWnd.DrawWithImageForComp(
 					m_shScrnPosX+7,
 					m_shScrnPosY-53,
 					image.m_lpstNewCurrWilImageInfo->shWidth,
 					image.m_lpstNewCurrWilImageInfo->shHeight,
 					(WORD*)image.m_pbCurrImage);
-	if ( !image.NewSetIndex(3) ) return;
+	if ( !image.NewSetIndex(HealthFillFrame) ) return;
+    const int width = image.m_lpstNewCurrWilImageInfo->shWidth;
+    const int filled = m_bIsDead ? 0 : m_wMAXHP ? (width * m_wHP + m_wMAXHP - 1) / m_wMAXHP : width;
+    const RECT rcHP = {0, 0, filled, image.m_lpstNewCurrWilImageInfo->shHeight};
 	g_xMainWnd.DrawWithImageForComp(
 					m_shScrnPosX+7,
 					m_shScrnPosY-53,

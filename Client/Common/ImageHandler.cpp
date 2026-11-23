@@ -128,12 +128,21 @@ VOID CImageHandler::LoadAllImage(BOOL bIsMemMapped, BOOL bComp)
 
 		//~~~ ½Ó¿ÚEX Í¼Ïñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		nullptr, // Reserved legacy interface slot; native windows use their own image.							//60
+        ".\\Data\\Mon-13.wil",
+        ".\\Data\\Mon-14.wil",
+        ".\\Data\\Mon-15.wil",
+        ".\\Data\\Mon-16.wil",
+        ".\\Data\\Mon-17.wil",
+        ".\\Data\\Mon-18.wil",
+        ".\\Data\\Mon-19.wil",
+        ".\\Data\\Mon-20.wil",
+        ".\\Data\\Mon-54.wil",
 	};
 
 	InitAllImage();
 
 	for ( INT nCnt = 0; nCnt < _MAX_IMAGE; nCnt++ )
-        if (szFileList[nCnt])
+        if (szFileList[nCnt] && (nCnt < _IMAGE_MONSTER13 || GetFileAttributesA(szFileList[nCnt]) != INVALID_FILE_ATTRIBUTES))
 		    m_xImageList[nCnt].NewLoad(szFileList[nCnt], bIsMemMapped, bComp);
 }
 

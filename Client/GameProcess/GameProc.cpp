@@ -3362,11 +3362,8 @@ void CGameProcess::OnSocketMessageRecieve(char *pszMsg)
 					if (pxActor)
 					{
                         pxActor->HealthDamage(pxActor->m_wHP,tdm.wParam);
-						pxActor->m_wHP			= tdm.wParam;
-						pxActor->m_wMP			= tdm.wTag;
-						pxActor->m_wMAXHP		= tdm.wSeries;
-						FLOAT wHPRate			= (FLOAT)((FLOAT)pxActor->m_wHP/(FLOAT)pxActor->m_wMAXHP);
-						pxActor->m_bHPPercent	= wHPRate * 100;
+                        pxActor->SetHealth(tdm.wParam, tdm.wSeries);
+                        pxActor->m_wMP = tdm.wTag;
 					}
 				}
 

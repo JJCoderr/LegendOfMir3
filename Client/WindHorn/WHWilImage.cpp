@@ -154,13 +154,19 @@ VOID CWHWilImageData::SetIndex(INT nIndex)
 }
 
 
+bool CWHWilImageData::HasFrame(DWORD index) const
+{
+    return m_pbStartData && m_stNewWixImgaeInfo.pnPosition &&
+        index < DWORD(m_stNewWixImgaeInfo.nIndexCount) && m_stNewWixImgaeInfo.pnPosition[index] > 0;
+}
+
 BOOL CWHWilImageData::NewSetIndex(DWORD dwIndex)
 {
 //	if ( m_nCurrImageIdx == nIndex || !m_stNewWixImgaeInfo.pnPosition[nIndex] )	return;				// 如果新 Setting 的 Index 没有变化.
 
 	m_nCurrImageIdx = dwIndex;
 
-	if ( m_stNewWixImgaeInfo.pnPosition && dwIndex < (DWORD)m_stNewWixImgaeInfo.nIndexCount && m_stNewWixImgaeInfo.pnPosition[dwIndex] != 0 )
+	if ( HasFrame(dwIndex) )
 	{
 		BYTE* pbTmpData = (BYTE*)(m_pbStartData + m_stNewWixImgaeInfo.pnPosition[dwIndex]);
 

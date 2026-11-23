@@ -65,6 +65,8 @@ BOOL CMagic::CreateMagic(BYTE bMagicNum, SHORT shFireTileX, SHORT shFireTileY,
 		m_pxMap		= &g_xGameProc.m_xMap;
 
 		m_pxTarget	= NULL;
+        m_targetIdentity = 0;
+        m_targetInstance = 0;
 		if ( nTarget )
 		{
 			if ( nTarget == g_xGameProc.m_xMyHero.m_dwIdentity )
@@ -327,6 +329,10 @@ BOOL CMagic::CreateMagic(BYTE bMagicNum, SHORT shFireTileX, SHORT shFireTileY,
 		}
 		dwLastTick = timeGetTime();
 
+        if (m_pxTarget) {
+            m_targetIdentity = m_pxTarget->m_dwIdentity;
+            m_targetInstance = m_pxTarget->m_instanceSerial;
+        }
 		return TRUE;
 	}
 	return FALSE;
@@ -550,6 +556,12 @@ VOID CMagic::DestoryMagic()
 
 BOOL CMagic::UpdateMagic(INT nLoopTime)
 {
+    if (m_targetIdentity) {
+        auto& game = g_xGameProc;
+        auto* target = m_targetIdentity == game.m_xMyHero.m_dwIdentity
+            ? &game.m_xMyHero : game.FindActor(int(m_targetIdentity));
+        m_pxTarget = target && target->m_instanceSerial == m_targetInstance ? target : nullptr;
+    }
 	m_wCurrDelay += nLoopTime;
 	m_wMagicLife += nLoopTime;
 

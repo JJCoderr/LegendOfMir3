@@ -6,7 +6,10 @@ CMonsterObject* AddCreature(CMirMap* pMap, int nX, int nY, int nMonRace, BOOL fS
 {
 	CMonsterObject* pMonsterObject = NULL;
 
-	switch(g_pMonRaceInfo[nMonRace].wRaceIndex)
+    const auto& race = g_pMonRaceInfo[nMonRace];
+    if (race.wRaceIndex == LightningZombieRace && race.nAppear == LightningZombieShape)
+        pMonsterObject = new CLightingZombiObject;
+    else switch (race.wRaceIndex)
 	{
 		case _ANIMAL_DEER:
 			pMonsterObject = (CMonsterObject*)new CAnimalObject; break;
@@ -16,11 +19,13 @@ CMonsterObject* AddCreature(CMirMap* pMap, int nX, int nY, int nMonRace, BOOL fS
 			pMonsterObject = (CMonsterObject*)new CSandMobObject; break;
 		case _MONSTER_RON:			// 罗恩
 			pMonsterObject = (CMonsterObject*)new CRonObject; break;
+		case ZumaStatueRace:
 		case _MONSTER_SCULTURE1:	// 走马神掌、走马护法
 		case _MONSTER_SCULTURE2:
 			pMonsterObject = (CMonsterObject*)new CScultureObject; break;
 		case _MONSTER_BEEQUEEN:		// 飞膜圆虫
 			pMonsterObject = (CMonsterObject*)new CBeeQueen; break;
+		case ZumaLordRace:
 		case _MONSTER_SCULTUREKING: // 走马王
 			pMonsterObject = (CMonsterObject*)new CScultureKingObject; break;
 		case _MONSTER_DUALAXE:		// 双斧骷髅

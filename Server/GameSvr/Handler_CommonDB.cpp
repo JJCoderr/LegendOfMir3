@@ -322,8 +322,10 @@ void InitMonRaceInfo()
 				g_pMonRaceInfo[i].HP			= atoi( pRec->Get( "FLD_HP" ) );
 				g_pMonRaceInfo[i].MP			= atoi( pRec->Get( "FLD_MP" ) );
 
-				g_pMonRaceInfo[i].AC			= atoi( pRec->Get( "FLD_AC" ) );
-				g_pMonRaceInfo[i].MAC			= atoi( pRec->Get( "FLD_MAC" ) );
+                g_pMonRaceInfo[i].armorMin = atoi(pRec->Get("FLD_AC"));
+                g_pMonRaceInfo[i].armorMax = atoi(pRec->Get("FLD_MAXAC"));
+                g_pMonRaceInfo[i].magicArmorMin = atoi(pRec->Get("FLD_MAC"));
+                g_pMonRaceInfo[i].magicArmorMax = atoi(pRec->Get("FLD_MAXMAC"));
 				g_pMonRaceInfo[i].DC			=  MAKEWORD((BYTE)atoi( pRec->Get( "FLD_DC" ) ), (BYTE)atoi( pRec->Get( "FLD_MAXDC" ) ));
 
 				g_pMonRaceInfo[i].dwAttackSpeed = atoi( pRec->Get( "FLD_ATTACKSPEED" ) );

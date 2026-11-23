@@ -675,7 +675,7 @@ BOOL CMirMap::GetDropPosition(int nOrgX, int nOrgY, int nRange, int &nX, int &nY
 		nX = nOrgX + g_SearchTable[i].x;
 		nY = nOrgY + g_SearchTable[i].y;
 
-		if (GetItem(nX, nY) == NULL)
+		if (CanMove(nX, nY, TRUE) && GetItem(nX, nY) == NULL)
 			return TRUE;
 	}
 	

@@ -27,8 +27,8 @@ public:
 	WORD		HP;
 	WORD		MP;
 
-	WORD		AC;
-	WORD		MAC;
+    int armorMin, armorMax;
+    int magicArmorMin, magicArmorMax;
 	WORD		DC;
 	WORD		MC;
 

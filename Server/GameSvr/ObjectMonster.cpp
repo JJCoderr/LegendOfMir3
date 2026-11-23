@@ -458,8 +458,6 @@ void CMonsterObject::Initialize()
 	m_Ability.MaxHP		= g_pMonRaceInfo[m_nRace].HP;
 	m_Ability.MP		= g_pMonRaceInfo[m_nRace].MP;
 	m_Ability.MaxMP		= g_pMonRaceInfo[m_nRace].MP;
-	m_Ability.AC		= g_pMonRaceInfo[m_nRace].AC;
-	m_Ability.MAC		= g_pMonRaceInfo[m_nRace].MAC;
 	m_Ability.DC		= g_pMonRaceInfo[m_nRace].DC;
 	m_Ability.MC		= 0;
 	m_Ability.SC		= 0;
@@ -484,8 +482,8 @@ void CMonsterObject::Initialize()
 	m_nViewRange		= (4 * g_pMonRaceInfo[m_nRace].ViewRange) * (g_pMonRaceInfo[m_nRace].ViewRange + 1); 
 
 	m_tFeature.btGender	= 3;
-	m_tFeature.btWear	= g_pMonRaceInfo[m_nRace].nAppear;
-	m_tFeature.btHair	= 0;
+	m_tFeature.btWear	= LOBYTE(g_pMonRaceInfo[m_nRace].nAppear);
+	m_tFeature.btHair	= HIBYTE(g_pMonRaceInfo[m_nRace].nAppear);
 	m_tFeature.btWeapon	= 0;
 }
 
@@ -1466,28 +1464,13 @@ void CScultureObject::MeltStoneAll()
 	if (ObjectList.GetCount())
 	{
 		PLISTNODE		pListNode = ObjectList.GetHead();
-		CMonsterObject*	pTargetObject;
 
 		while (pListNode)
 		{
-			if (pTargetObject = (CMonsterObject*)ObjectList.GetData(pListNode))
-			{
-				if (pTargetObject->m_fStoneMode)
-				{
-					if (pTargetObject->m_wObjectType & _OBJECT_MONSTER)
-					{
-						switch (pTargetObject->m_nRace)
-						{
-							case 145:
-							case 148:
-								((CScultureObject*)pTargetObject)->MeltStone();
-								break;
-						}
-					}
-				}
-			}
-		
-			pListNode = ObjectList.RemoveNode(pListNode);
+            auto* statue = dynamic_cast<CScultureObject*>(ObjectList.GetData(pListNode));
+            if (statue && statue->m_fStoneMode)
+                statue->MeltStone();
+            pListNode = ObjectList.RemoveNode(pListNode);
 		}
 	}
 }
@@ -1541,28 +1524,20 @@ CScultureKingObject::CScultureKingObject()
 
 void CScultureKingObject::CallSlave()
 {
-	static const int MaxSlaveList = 4;
-	static int SlaveList[MaxSlaveList] = { 143/*魔弓士*/, 145/*走马神掌*/, 148/* 走马护法 */, 126/*刺蛾*/ };
+    enum ZumaMinion { Statue = 326, Guardian = 330, Archer = 342, Moth = 353 };
+    constexpr int Minions[] = {Statue, Guardian, Archer, Moth};
+    constexpr int MinimumSummons = 6;
+    constexpr int SummonLimit = 30;
+    const int count = MinimumSummons + rand() % MinimumSummons;
 
-	int				nCount = 6 + (rand() % 6);
-	int				nMonRace;
-	int				nX, nY;
-	CMonsterObject* pMonObject;
-
-	for (int i = 0; i < nCount; i++)
-	{
-		if (m_SlaveObjectList.GetCount() < 30)
-		{
-			nMonRace = SlaveList[rand() % MaxSlaveList];	
-
-			GetFrontPosition(nX, nY);
-
-			pMonObject = (CMonsterObject*)AddCreatureSysop(nX, nY, &g_pMonRaceInfo[nMonRace], FALSE);
-
-			if (pMonObject)
-				m_SlaveObjectList.AddNewNode(pMonObject);
-		}
-	}
+    for (int i = 0; i < count && m_SlaveObjectList.GetCount() < SummonLimit; ++i) {
+        auto* race = GetMonRaceInfo(Minions[rand() % _countof(Minions)]);
+        if (!race) continue;
+        int x, y;
+        GetFrontPosition(x, y);
+        auto* minion = static_cast<CMonsterObject*>(AddCreatureSysop(x, y, race, TRUE));
+        if (minion) m_SlaveObjectList.AddNewNode(minion);
+    }
 }
 
 void CScultureKingObject::MeltStone()
@@ -1600,7 +1575,7 @@ void CScultureKingObject::Run()
 					MonsterNormalAttack();
 				}
 			
-				if (((m_WAbility.HP / m_WAbility.MaxHP * 5) < m_nDangerLevel) && (m_nDangerLevel > 0))
+				if (((m_WAbility.HP * 5 / m_WAbility.MaxHP) < m_nDangerLevel) && (m_nDangerLevel > 0))
 				{
 					m_nDangerLevel--;
 					CallSlave();
@@ -1858,7 +1833,7 @@ void CLightingZombiObject::LightingAttack(int nDir)
 	if (GetNextPosition(nDir, 1, nSX, nSY))
 	{
 		GetNextPosition(nDir, 1, nTX, nTY);
-		nPwr = LOBYTE(m_WAbility.DC) + rand() % HIBYTE(m_WAbility.DC) - LOBYTE(m_WAbility.DC) + 1;
+		nPwr = GetAttackPower(LOBYTE(m_WAbility.DC), HIBYTE(m_WAbility.DC) - LOBYTE(m_WAbility.DC));
 		MagPassThroughMagic(nSX, nSY, nTX, nTY, nDir, nPwr, TRUE);
 
 		BreakHolySeize();

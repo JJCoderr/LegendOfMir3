@@ -22,6 +22,11 @@
 #define _MONSTER_ELFMONSTER		161		// 神兽
 #define _MONSTER_ELFWARRIOR		162		// 神兽变身之后
 
+constexpr WORD LightningZombieRace = 94;
+constexpr int LightningZombieShape = 48;
+constexpr WORD ZumaStatueRace = 101;
+constexpr WORD ZumaLordRace = 102;
+
 #define LA_UNDEAD				1
 
 class CHolySeizeInfo
