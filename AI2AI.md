@@ -2642,5 +2642,5 @@ Client/EIServer构建通过。MonstersGold.csv40步通过（out/csv-validation/m
 
 - `SkillCast` 一次认证和进图后，连续施放 F1 火球术与 F2 治愈术。真实联调 19 步通过，确认怪物死亡、人物 HP 从 12 恢复至 16、MP 从 18 降至 6，认证与选角请求各 1 次、施法请求和回包各 2 次。其余 16 个技能用例的动作和数据不变。
 - 隔离运行目录补齐客户端已有的 `MInfo.dat`。缺少此文件时，原生预览有 7 项实例创建和分派检查失败，载入原资源后 76 项全部通过。地图、地表、双轨和分阶段截图位于 `out/skills-module-20261123/previews`。
-- 全技能候选表 `out/skills-all-casts/Skills.xlsx` 的 `SkillsAllCast` 用一次认证和进图，顺序试放技能数据中的 84 条记录。修复完整技能列表发送后的最终联调 350 步通过，收到 69 条普通施法回包，其中 67 条与当前试放技能 ID 一致。逐项结果见同目录 `cast-results.csv`。Excel 正打开正式工作簿，候选表尚未写回 `Test/Skills.xlsx`。
+- `Test/Skills.xlsx` 的 `SkillsAllCast` 用一次认证和进图，顺序试放技能数据中的 84 条记录。修复完整技能列表发送后的最终联调 350 步通过，收到 69 条普通施法回包，其中 67 条与当前试放技能 ID 一致。逐项结果见 `out/skills-all-casts/cast-results.csv`。BAT 的技能入口使用此用例。
 - 火球飞行恢复使用现有音效表中的 `10011`。从施法回包到 DirectSound 播放的检查通过，同版原生检查共 77 项通过。

@@ -26,7 +26,7 @@ for %%P in (
     Monsters/MonsterAggro
     Npc/NpcDialog
     Shop/ShopBuy
-    Skills/SkillCast
+    Skills/SkillsAllCast
 ) do (
     for /f "tokens=1,2 delims=/" %%A in ("%%P") do (
         echo Running %%A/%%B
