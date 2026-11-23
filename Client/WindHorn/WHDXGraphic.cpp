@@ -120,6 +120,7 @@ BOOL CWHDXGraphicWindow::Create(HINSTANCE hInst, LPTSTR lpCaption, CHAR *pszMenu
 		dwStyle &= ~WS_POPUP;
 		dwStyle |= WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU | WS_THICKFRAME;
 		SetWindowLong(m_hWnd, GWL_STYLE, dwStyle);
+        PlaceWindowedClient();
 	}
 	else
 	{
@@ -166,6 +167,46 @@ namespace
     }
 }
 
+void CWHDXGraphicWindow::PlaceWindowedClient()
+{
+    if (!IsRectEmpty(&m_windowedBounds))
+    {
+        SetWindowPos(m_hWnd, HWND_NOTOPMOST, m_windowedBounds.left, m_windowedBounds.top,
+                     m_windowedBounds.right - m_windowedBounds.left,
+                     m_windowedBounds.bottom - m_windowedBounds.top,
+                     SWP_NOACTIVATE | SWP_FRAMECHANGED);
+        return;
+    }
+
+    MONITORINFO monitor = {};
+    monitor.cbSize = sizeof(monitor);
+    GetMonitorInfo(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &monitor);
+    const RECT& work = monitor.rcWork;
+    const RECT frame = WindowFrame(m_hWnd);
+    const int frameWidth = frame.right - frame.left;
+    const int frameHeight = frame.bottom - frame.top;
+    const int workWidth = work.right - work.left;
+    const int workHeight = work.bottom - work.top;
+
+    HDC windowDC = GetDC(m_hWnd);
+    const int dpi = GetDeviceCaps(windowDC, LOGPIXELSX);
+    ReleaseDC(m_hWnd, windowDC);
+    const int defaultScale = MulDiv(MinimumWindowScale, dpi, USER_DEFAULT_SCREEN_DPI);
+    const int windowWidth = GetPrivateProfileInt("Display", "WindowWidth", defaultScale * WindowAspectWidth, ".\\Mir3.ini");
+    const int windowHeight = GetPrivateProfileInt("Display", "WindowHeight", defaultScale * WindowAspectHeight, ".\\Mir3.ini");
+    const int requestedScale = max(
+        windowWidth / WindowAspectWidth + (windowWidth % WindowAspectWidth > 0),
+        windowHeight / WindowAspectHeight + (windowHeight % WindowAspectHeight > 0));
+    const int fittingScale = min((workWidth - frameWidth) / WindowAspectWidth,
+                                 (workHeight - frameHeight) / WindowAspectHeight);
+    const int scale = max(MinimumWindowScale, min(requestedScale, fittingScale));
+    const int outerWidth = scale * WindowAspectWidth + frameWidth;
+    const int outerHeight = scale * WindowAspectHeight + frameHeight;
+    const int x = work.left + max(0, (workWidth - outerWidth) / 2);
+    const int y = work.top + max(0, (workHeight - outerHeight) / 2);
+    SetWindowPos(m_hWnd, HWND_NOTOPMOST, x, y, outerWidth, outerHeight, SWP_NOACTIVATE | SWP_FRAMECHANGED);
+}
+
 LRESULT CWHDXGraphicWindow::MainWndProcDXG(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
 	switch (uMsg)
@@ -197,7 +238,7 @@ LRESULT CWHDXGraphicWindow::MainWndProcDXG(HWND hWnd, UINT uMsg, WPARAM wParam, 
             break;
 
         case WM_ENTERSIZEMOVE:
-            m_resizeStartWidth = m_rcWindow.right - m_rcWindow.left;
+            m_inSizeMove = true;
             break;
 
         case WM_SIZING:
@@ -205,18 +246,16 @@ LRESULT CWHDXGraphicWindow::MainWndProcDXG(HWND hWnd, UINT uMsg, WPARAM wParam, 
             return TRUE;
 
         case WM_EXITSIZEMOVE:
-            if (m_resizeStartWidth != m_rcWindow.right - m_rcWindow.left)
-                m_userWindowScale = (m_rcWindow.right - m_rcWindow.left) / WindowAspectWidth;
-            m_resizeStartWidth = 0;
+            m_inSizeMove = false;
             break;
 
         case WM_ERASEBKGND:
-            if (m_resizeStartWidth)
+            if (m_inSizeMove)
                 return TRUE;
             break;
 
         case WM_PAINT:
-            if (m_resizeStartWidth)
+            if (m_inSizeMove)
             {
                 PAINTSTRUCT paint;
                 BeginPaint(hWnd, &paint);
@@ -514,6 +553,11 @@ HRESULT CWHDXGraphicWindow::ResetDXG(WORD wWidth, WORD wHeight, WORD wBPP, BYTE 
 		 m_stDisplayInfo.wWidth == wWidth && m_stDisplayInfo.wHeight == wHeight && m_stDisplayInfo.wBPP == wBPP )
 		return E_FAIL;													    
 
+    const bool wasWindowed = (m_bScreenModeFlag & _DXG_SCREENMODE_WINDOW) != 0;
+    const bool willBeWindowed = (bScreenModeFlag & _DXG_SCREENMODE_WINDOW) != 0;
+    if (wasWindowed && !willBeWindowed)
+        GetWindowRect(m_hWnd, &m_windowedBounds);
+
     if ( FAILED(DestroyDXGObjects()) )
 	{
 		MessageBox(m_hWnd, TEXT("[CWHDXGraphicWindow::ResetDXG]") TEXT("DirectGraphic reset failed."), "MirDXG", MB_ICONERROR | MB_OK);
@@ -526,20 +570,18 @@ HRESULT CWHDXGraphicWindow::ResetDXG(WORD wWidth, WORD wHeight, WORD wBPP, BYTE 
 	m_bScreenModeFlag		= bScreenModeFlag;
 	m_bDeviceModeFlag		= bDeviceModeFlag;
 
-	if ( m_bScreenModeFlag & _DXG_SCREENMODE_WINDOW )
-	{
-		dwStyle  = GetWindowStyle(m_hWnd);
-		dwStyle &= ~WS_POPUP;
-		dwStyle |= WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU | WS_THICKFRAME;
-		SetWindowLong(m_hWnd, GWL_STYLE, dwStyle);
-	}
-	else
-	{
-		dwStyle  = GetWindowStyle(m_hWnd);
-		dwStyle &= ~dwStyle;
-		dwStyle |= WS_POPUP;
-		SetWindowLong(m_hWnd, GWL_STYLE, dwStyle);
-	}
+    if (!wasWindowed && willBeWindowed)
+    {
+        dwStyle = GetWindowStyle(m_hWnd);
+        dwStyle &= ~WS_POPUP;
+        dwStyle |= WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU | WS_THICKFRAME;
+        SetWindowLong(m_hWnd, GWL_STYLE, dwStyle);
+        PlaceWindowedClient();
+    }
+    else if (wasWindowed && !willBeWindowed)
+    {
+        SetWindowLong(m_hWnd, GWL_STYLE, WS_POPUP);
+    }
 
 	if ( hr = FAILED(CreateDXG()) )
 	{
@@ -563,53 +605,6 @@ HRESULT CWHDXGraphicWindow::CreatePrimarySurface()
 	
 	if ( m_bScreenModeFlag & _DXG_SCREENMODE_WINDOW )
 	{
-		RECT				rcWork;
-		RECT				rcTemp;
-		
-		// 设置客户端区域大小的部分与窗口的创建有关.
-		// 获取屏幕分辨率即客户端矩形区域的大小。
-		// Use the same DPI-scaled window baseline for every scene.
-		HDC windowDC = GetDC(m_hWnd);
-		const int dpi = GetDeviceCaps(windowDC, LOGPIXELSX);
-		ReleaseDC(m_hWnd, windowDC);
-		const int defaultScale = MulDiv(MinimumWindowScale, dpi, USER_DEFAULT_SCREEN_DPI);
-		const int defaultWidth = defaultScale * WindowAspectWidth;
-		const int defaultHeight = defaultScale * WindowAspectHeight;
-		// Explicit Display overrides remain physical pixel sizes.
-		const int windowWidth = GetPrivateProfileInt("Display", "WindowWidth", defaultWidth, ".\\Mir3.ini");
-		const int windowHeight = GetPrivateProfileInt("Display", "WindowHeight", defaultHeight, ".\\Mir3.ini");
-        const int requestedScale = max(
-            windowWidth / WindowAspectWidth + (windowWidth % WindowAspectWidth > 0),
-            windowHeight / WindowAspectHeight + (windowHeight % WindowAspectHeight > 0));
-        const int scale = max(MinimumWindowScale, m_userWindowScale ? m_userWindowScale : requestedScale);
-        SetRect(&rcTemp, 0, 0, scale * WindowAspectWidth, scale * WindowAspectHeight);
-
-		// 从客户端矩形区域大小转换为整个窗口区域的大小.
-        const RECT frame = WindowFrame(m_hWnd);
-        rcTemp.right += frame.right - frame.left;
-        rcTemp.bottom += frame.bottom - frame.top;
-
-		// 用窗口的整个区域大小设置窗口。但起始坐标被忽略。
-		SetWindowPos(m_hWnd, NULL, 0, 0, rcTemp.right-rcTemp.left, rcTemp.bottom-rcTemp.top,
-					 SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-
-		// 是为了设置 HWND_NOTOPMOST。
-		SetWindowPos(m_hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
-
-		// 获取桌面区域的大小..
-		MONITORINFO monitor = {};
-		monitor.cbSize = sizeof(monitor);
-		GetMonitorInfo(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &monitor);
-		rcWork = monitor.rcWork;
-		GetWindowRect(m_hWnd, &rcTemp);
-		const LONG windowWidthPixels = rcTemp.right - rcTemp.left;
-		const LONG windowHeightPixels = rcTemp.bottom - rcTemp.top;
-		rcTemp.left = rcWork.left + max(0L, (rcWork.right - rcWork.left - windowWidthPixels) / 2);
-		rcTemp.top = rcWork.top + max(0L, (rcWork.bottom - rcWork.top - windowHeightPixels) / 2);
-
-		// 设置窗口的起始坐标.
-		SetWindowPos(m_hWnd, NULL, rcTemp.left, rcTemp.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-    
 		ddsd.dwFlags        = DDSD_CAPS;
 		ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;
 

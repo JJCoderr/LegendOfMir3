@@ -31,8 +31,11 @@ WM_EXITSIZEMOVE = 0x0232
 WMSZ_BOTTOMRIGHT = 8
 SWP_NOZORDER = 0x0004
 SWP_NOACTIVATE = 0x0010
+SWP_NOSIZE = 0x0001
+MONITOR_DEFAULTTONEAREST = 2
 MINIMUM_CLIENT_WIDTH = 1024
 MINIMUM_CLIENT_HEIGHT = 768
+OVERSIZED_CLIENT_WIDTH = 8192
 EM_GETPASSWORDCHAR = 0x00D2
 VK_RETURN = 13
 VK_LBUTTON = 1
@@ -260,15 +263,32 @@ def hold_mouse(h, x, y, seconds=1.8):
 def size(h):
     r=w.RECT();u.GetClientRect(h,c.byref(r));return r.right,r.bottom
 
-def default_window_size():
-    dpi = u.GetDpiForSystem()
-    width = max(MINIMUM_CLIENT_WIDTH, ((MINIMUM_CLIENT_WIDTH // 4 * dpi + 48) // 96) * 4)
+def window_rect(h):
+    rect = w.RECT()
+    assert u.GetWindowRect(h, c.byref(rect))
+    return rect
+
+def expected_window_size(h, requested_width):
+    class MonitorInfo(c.Structure):
+        _fields_ = [('size', w.DWORD), ('display', w.RECT), ('work', w.RECT), ('flags', w.DWORD)]
+
+    u.MonitorFromWindow.restype = w.HANDLE
+    u.GetMonitorInfoW.argtypes = [w.HANDLE, c.POINTER(MonitorInfo)]
+    monitor = MonitorInfo(size=c.sizeof(MonitorInfo))
+    assert u.GetMonitorInfoW(u.MonitorFromWindow(h, MONITOR_DEFAULTTONEAREST), c.byref(monitor))
+    outer = window_rect(h)
+    client_width, client_height = size(h)
+    max_width = monitor.work.right - monitor.work.left - (outer.right - outer.left - client_width)
+    max_height = monitor.work.bottom - monitor.work.top - (outer.bottom - outer.top - client_height)
+    if requested_width is None:
+        dpi = u.GetDpiForSystem()
+        requested_width = ((MINIMUM_CLIENT_WIDTH // 4 * dpi + 48) // 96) * 4
+    width = max(MINIMUM_CLIENT_WIDTH, min(requested_width // 4, max_width // 4, max_height // 3) * 4)
     return width, width * 3 // 4
 
 def resize_window(h, target_width):
     width, height = size(h)
-    outer = w.RECT()
-    assert u.GetWindowRect(h, c.byref(outer))
+    outer = window_rect(h)
     target_height = target_width * 3 // 4
     # Perturb the proposed width so the client must restore the aspect ratio.
     outer.right += target_width - width + 1
@@ -285,6 +305,11 @@ with (root/'server.log').open('wb') as log:
         s,ss=launch('EIServer',stdout=log,stderr=log,creationflags=subprocess.CREATE_NO_WINDOW)
         print('server',wait(ss,lambda d:d.get('ready')),flush=True)
         for iteration in range(2):
+            requested_width = None
+            if iteration == 1:
+                requested_width = OVERSIZED_CLIENT_WIDTH
+                with (root/'Mir3.ini').open('a', encoding='utf-8') as ini:
+                    ini.write(f'\n[Display]\nWindowWidth={requested_width}\n')
             p,cs=launch('Mir2Ex')
             login=wait(cs,lambda d:d.get('connected'))
             assert login.get('remote_port')==ports[7000],login
@@ -292,13 +317,17 @@ with (root/'server.log').open('wb') as log:
             ws=windows(p.pid)
             print(ws,flush=True)
             edit=ws.pop('Edit');h=ws['WH GEngine']
-            expected_size = default_window_size()
+            expected_size = expected_window_size(h, requested_width)
             assert size(h) == expected_size, size(h)
             if iteration == 0:
                 assert resize_window(h, MINIMUM_CLIENT_WIDTH // 2) == (MINIMUM_CLIENT_WIDTH, MINIMUM_CLIENT_HEIGHT)
                 larger_width = expected_size[0] + 40
                 expected_size = (larger_width, larger_width * 3 // 4)
                 assert resize_window(h, larger_width) == expected_size
+                outer = window_rect(h)
+                assert u.SetWindowPos(h, 0, outer.left + 24, outer.top + 24, 0, 0,
+                                      SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)
+            expected_outer = window_rect(h)
             for _ in range(100):
                 if u.IsWindowVisible(edit):break
                 time.sleep(.1)
@@ -317,11 +346,13 @@ with (root/'server.log').open('wb') as log:
             click(h,60,80,canvas_width=640)
             print('character',wait(cs,lambda d:d.get('scene')=='character_select'),size(h),flush=True)
             assert size(h) == expected_size, size(h)
+            assert bytes(window_rect(h)) == bytes(expected_outer)
             time.sleep(3)
             click(h,275,61,canvas_width=640)
             world=wait(cs,lambda d:d.get('map') and d.get('remote_port')==ports[7200],20)
             print('world',world,size(h),flush=True)
             assert size(h) == expected_size, size(h)
+            assert bytes(window_rect(h)) == bytes(expected_outer)
             if iteration==0:
                 # Acknowledge the arrival notice before using the map.
                 u.PostMessageW(h,WM_KEYDOWN,VK_RETURN,0);u.PostMessageW(h,WM_KEYUP,VK_RETURN,0)
@@ -358,6 +389,7 @@ with (root/'server.log').open('wb') as log:
                 returned=wait(cs,lambda d:d.get('scene')=='character_select' and d.get('connected') and d.get('remote_port')==ports[7100],20)
                 print('returned',returned,flush=True)
                 assert size(h) == expected_size, size(h)
+                assert bytes(window_rect(h)) == bytes(expected_outer)
                 wait(cs,lambda d:not d.get('waiting') and not d.get('notice'))
                 with sqlite3.connect(root/'mir3.sqlite3') as db:
                     persisted=db.execute("SELECT FLD_CX,FLD_CY FROM TBL_CHARACTER WHERE FLD_CHARNAME='MirProbe01'").fetchone()
