@@ -90,9 +90,13 @@ def main():
     started = time.monotonic()
     result = {'status':'running', 'log':str(log_path)}
     try:
+        with args.scenario.open(encoding='utf-8-sig', newline='') as source:
+            showcase = any(row['target'] == 'Server' and row['action'] == 'test.monsters'
+                           for row in csv.DictReader(source))
         with (root/'runtime.log').open('wb') as output:
             def start(role, binary):
-                process = subprocess.Popen([str(binary), '--debug-pipe'], cwd=root, stdout=output, stderr=output,
+                flags = ['--monster-showcase'] if role == 'Server' and showcase else []
+                process = subprocess.Popen([str(binary), '--debug-pipe', *flags], cwd=root, stdout=output, stderr=output,
                     creationflags=subprocess.CREATE_NO_WINDOW if role=='Server' else 0)
                 processes.append(process)
                 deadline = time.monotonic()+20

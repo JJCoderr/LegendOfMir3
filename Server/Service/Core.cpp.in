@@ -1,5 +1,6 @@
 // Isolate legacy service globals; compile only the explicit service source list.
 #include "CoreHeaders.h"
+@source_headers@
 namespace ei { namespace @role@ {
 static const wchar_t* ServiceName=L"@role@";
 void ReportServiceState(BOOL);

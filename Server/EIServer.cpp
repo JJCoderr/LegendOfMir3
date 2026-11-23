@@ -2,6 +2,7 @@
 #include "Def/JsonRpc.h"
 #include "EIServer.h"
 #include "Def/DebugService.h"
+#include <sstream>
 
 namespace ei {
 static const ServiceCore services[] = {
@@ -75,6 +76,10 @@ int Run()
     bool starting=false;
     mir3::DebugState debugState(L"EIServer");
     mir3::JsonRpc rpc(GetCommandLineA(), L"Server");
+    std::istringstream arguments(GetCommandLineA());
+    bool showcase = false;
+    for (std::string argument; arguments >> argument;)
+        if (argument == "--monster-showcase") showcase = true;
     for (;;) {
         const BOOL result = GetMessage(&msg,nullptr,0,0);
         wchar_t message[256];
@@ -99,7 +104,9 @@ int Run()
                 msg.time, msg.pt.x, msg.pt.y);
             mir3::ConsoleLog(L"EIServer", message);
         }
-        rpc.Poll([&](const std::string& method, const std::string&) {
+        rpc.Poll([&](const std::string& method, const std::string& params) {
+            if (showcase && method == "test.monsters" && current == _countof(services))
+                return GameSvr::MonsterShowcase(params);
             if (method != "state.get" && method != "state.wait_ready") throw mir3::JsonRpc::Error{-32601, "Method not found"};
             if (method == "state.wait_ready" && current < _countof(services)) throw mir3::JsonRpc::Pending{StartupTimeoutMs};
             return std::string("{\"schema\":1,\"ready\":") + mir3::BoolJson(current==_countof(services))

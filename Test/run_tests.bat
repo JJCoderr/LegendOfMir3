@@ -23,7 +23,7 @@ for %%P in (
     Combat/CombatMelee
     GameplaySmoke/GameplaySmoke
     Inventory/Inventory
-    Monsters/MonsterAggro
+    Monsters/MonstersAll
     Npc/NpcDialog
     Shop/ShopBuy
     Skills/SkillCast

@@ -23,6 +23,21 @@ foreach(role IN LISTS roles)
         math(EXPR source_index "${source_index} + 1")
         set(wrapper "${CMAKE_CURRENT_BINARY_DIR}/${role}_${source_index}.cpp")
         file(RELATIVE_PATH relative_source "${CMAKE_CURRENT_SOURCE_DIR}" "${source}")
+        set(source_headers "")
+        if(relative_source STREQUAL "../GameSvr/ProcessMonster.cpp")
+            set(source_headers [=[
+#include <future>
+#pragma push_macro("min")
+#pragma push_macro("max")
+#undef min
+#undef max
+#define PICOJSON_USE_INT64
+#include "../Def/picojson.h"
+#include "../Def/JsonRpc.h"
+#pragma pop_macro("max")
+#pragma pop_macro("min")
+]=])
+        endif()
         configure_file(Core.cpp.in "${wrapper}" @ONLY)
         list(APPEND core_sources "${wrapper}")
     endforeach()

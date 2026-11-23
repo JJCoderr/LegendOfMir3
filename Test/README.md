@@ -106,7 +106,7 @@ step,name,target,action,params,expect
 | 角色 | `Character`、`CharacterDelete` | 创建角色、删除角色及持久化 |
 | 物品 | `Inventory`、`InventoryDuplicates`、`InventoryFull`、`InventoryFullUnequip`、`InventorySaveFailure` | 背包、穿脱、使用、丢弃、拾取、保存与重进 |
 | 技能 | `Skills`、`SkillsCasting`、`SkillsHealing` | 技能列表、快捷键、保存恢复、施法回包、扣蓝与受伤治疗 |
-| 怪物 | `MonstersSpawn`、`MonstersRespawn`、`MonstersCorpse`、`MonstersLoot`、`MonstersLootCount`、`MonstersGold`、`MonstersGoldCap`、`MonstersEquipment`、`MonstersEquipmentCount`、`MonstersEquipmentFailure` | 刷新、实体名称、普通物品与装备掉落拾取、金币更新与满额保留、装备入库失败保留 |
+| 怪物 | `MonstersAll`、`MonstersShowcaseSmoke`、`MonstersBossShowcase` | 三只一组展示完整目录，或装备满级角色后逐个展示 BOSS |
 | 战斗 | `CombatMagic`、`CombatExperience` | 实体施法、伤害、死亡、无效目标拒绝、经验升级与战斗退出冷却 |
 | 聊天 | `ChatLocal`、`ChatShout`、`ChatShoutLevel`、`ChatShoutRange`、`ChatShoutRangeY`、`ChatWhisper`、`ChatWhisperReject`、`ChatWhisperIsolation` | 普通聊天、中文编码、喊话等级及冷却拒绝 |
 | NPC | `NpcSpawn`、`NpcDialog`、`NpcLevel*`、`NpcImports`、`NpcContext` | 商人生成、NPC 类型、名称同步、基础对话及选项跳转 |
@@ -141,6 +141,18 @@ step,name,target,action,params,expect
 `SkillsCasting` 经真实客户端与服务器验证火球术快捷键施法、两次扣蓝及回包、未绑定快捷键与蓝量不足拒绝。当前只覆盖地图坐标目标，不包含实体目标伤害、其他技能效果。`skill.cast` 参数为 `key`（1–12）、`x`、`y`（地图格坐标），复用客户端快捷键业务；`state.get` 的 `spell_reply_id` 记录已解析的施法回包技能，`cast_ready` 表示动作时序允许尝试施法，具体技能还需满足已绑定、蓝量等条件。等待断言失败期间，执行器仅在响应状态变化时输出 WAIT，便于定位回包和状态更新。
 
 `SkillsHealing` 配置真实怪物攻击，将角色 HP 从 16 降到 12，再通过客户端治疗术恢复到 16、MP 从 18 降到 12；断言受击、施法和血蓝回包及服务器存活。fixture 中怪物攻击间隔为 60 秒，行动间隔为 500 毫秒，避免治疗期间连续伤害。服务端恢复数据库怪物刷新；缺少或不完整的 `Map/searchTable.tbl` 使用按距离排列的默认 15 圈搜索偏移。暂未覆盖怪物死亡后刷新、掉落、所有怪物类型与技能目标伤害。
+
+`MonstersAll`（编号 `1714`）从 `king_monster.sql` 读取怪物目录并随机排序，每组三只，每个数据库条目出场一次。50 级法师只登录和进图一次。每组显示普攻和通用施法，玩家用火球击伤第一只怪物以展示中间血量，再逐组检查死亡、血条隐藏和落地药水。
+
+```powershell
+Test\run_tests.bat Test\Monsters.xlsx --case MonstersAll
+Test\run_tests.bat Test\Monsters.xlsx --case MonstersShowcaseSmoke
+Test\run_tests.bat Test\Monsters.xlsx --case MonstersBossShowcase
+```
+
+`MonstersShowcaseSmoke` 随机抽六个条目跑两组。工作簿最后的 `MonstersBossShowcase`（1719）先走实际装备协议穿戴八件测试装备，再依次刷新九个目录中的 BOSS，保留各自当前实现的 AI。隔离服保护展示角色不死亡，并调整测试装备的要求、负重和防御。每个 BOSS 结束后执行服务端死亡、掉落和场地清理。
+
+`MonstersZumaBoss`、`MonstersZumaSummon` 和 `MonstersLightningZombie` 分别验证真实石化解除、祖玛攻击专属特效、受伤召唤、雷电僵尸技能、死亡绘制及掉落。原有专项继续验证自动刷新时序、持久化及掉落边界。
 
 `MonstersSpawn` 使用数据库怪物编号 3、1007 和一个不存在的编号 1，验证只生成目标怪物，并查询名称、执行受伤治疗链路。`TBL_MONGEN.FLD_MONINDEX` 引用 `TBL_MONSTER.FLD_INDEX`，不依赖查询结果行号。客户端 `state.get` 增加 `actors`（id/name/x/y/dead）和 `actor_count`；`actor.query_name(index)` 使用当前 actors 数组的零基下标，走与鼠标悬停相同的名称查询协议。实体增减可能改变数组下标，调用前应读取当前状态。
 

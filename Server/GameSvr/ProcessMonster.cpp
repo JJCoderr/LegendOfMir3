@@ -122,6 +122,10 @@ DWORD GetZenTime(DWORD dwZenTime)
 	return dwZenTime;
 }
 
+#ifdef MIR3_EISERVER
+#include "MonsterShowcase.inl"
+#endif
+
 UINT WINAPI ProcessMonster(LPVOID lpParameter)
 {
 	int		nCurrMonGen		= 0;
@@ -135,6 +139,10 @@ UINT WINAPI ProcessMonster(LPVOID lpParameter)
 		{
 			return 0L;
 		}
+
+#ifdef MIR3_EISERVER
+        PollMonsterShowcase();
+#endif
 
 		// Generate configured monsters.
 		if (g_nNumOfMonGenInfo > 0 && GetTickCount() - dwLastGenTick > GenerationIntervalMs)

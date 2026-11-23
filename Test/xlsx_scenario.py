@@ -198,6 +198,14 @@ def resolve_references(records, workbook_path, workbook, rule_cases):
 def materialize_case(workbook, case, directory, workbook_path, rule_cases=None, name=None):
     records, fixtures = read_scenario(workbook, case, rule_cases)
     records = resolve_references(records, workbook_path.resolve(), workbook, rule_cases)
+    for index, record in enumerate(records):
+        if record['action'] == 'test.monster_catalog':
+            from monster_showcase import expand_catalog
+            generated, catalog_fixture = expand_catalog(Path(__file__).resolve().parents[1], record['step'],
+                                                        smoke=record['params'] == 'smoke=true')
+            records[index:index + 1] = generated
+            fixtures = catalog_fixture + fixtures
+            break
     scenario = write_scenario(records, fixtures, directory, name or case)
     extract_assets(workbook, case, scenario.with_suffix('.files'))
     return scenario, records, fixtures

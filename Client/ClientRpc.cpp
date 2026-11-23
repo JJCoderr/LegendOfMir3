@@ -143,6 +143,15 @@ std::string ClientState() {
                 {"npc",Json(actor->m_stFeature.bGender==_GENDER_NPC)},
                 {"dead",Json(bool(actor->m_bIsDead))},{"hp",Json(int64_t(actor->m_wHP))},
                 {"max_hp",Json(int64_t(actor->m_wMAXHP))}});
+            if (actor->m_stFeature.bGender == _GENDER_MON) {
+                auto& entry = actors.back().get<Object>();
+                entry["shape"] = Json(int64_t(MonsterShape(actor->m_stFeature)));
+                entry["motion"] = Json(int64_t(actor->m_bCurrMtn));
+                entry["hp_percent"] = Json(int64_t(actor->m_bHPPercent));
+                entry["injured"] = Json(actor->m_wHP > 0 && actor->m_wHP < actor->m_wMAXHP);
+                entry["health_bar_visible"] = Json(actor->ShowsHealthBar());
+                entry["drawn"] = Json(actor->m_drawnThisFrame);
+            }
             if(actor->m_stFeature.bGender==_GENDER_MAN || actor->m_stFeature.bGender==_GENDER_WOMAN) {
                 const auto& extension=static_cast<const CHero*>(actor)->m_stFeatureEx;
                 auto& entry=actors.back().get<Object>();
@@ -152,6 +161,7 @@ std::string ClientState() {
             }
         }
         state += ",\"actors\":"+Json(actors).serialize()+",\"actor_count\":"+std::to_string(actors.size());
+        state += ",\"monster_effects\":" + std::to_string(game.m_xMagicList.GetCounter());
         state += std::string(",\"return_ready\":")+mir3::BoolJson(!game.m_exitTransition.active &&
             game.m_exitGuard.Allowed(GetTickCount(),hero.m_bCurrMtn));
         state += mir3::ItemDebugState(game);
@@ -276,6 +286,29 @@ std::string ClientRpc(const std::string& method, const std::string& arguments) {
     }
     const auto params=Parse(arguments);
     if (!params.is<Object>()) throw JsonRpc::Error{-32602,"Expected named parameters"};
+    if (method == "test.monster_magic" && g_bProcState == _GAME_PROC) {
+        auto& game = g_xGameProc;
+        auto& actors = game.m_xActorList;
+        const auto& hero = game.m_xMyHero;
+        int effects = 0;
+        Array appearances;
+        actors.MoveCurrentToTop();
+        for (int i = 0; i < actors.GetCounter(); ++i) {
+            auto* actor = actors.GetCurrentData();
+            actors.MoveNextNode();
+            if (actor->m_stFeature.bGender != _GENDER_MON || actor->m_bIsDead) continue;
+            const bool drawn = actor->m_drawnThisFrame;
+            actor->SetMotionFrame(_MT_MON_SPELL_A, actor->m_bCurrDir);
+            if (game.StartNativeSpell(*actor, WORD(mir3::SkillId::fireball),
+                {hero.m_wPosX, hero.m_wPosY}, hero.m_dwIdentity)) ++effects;
+            appearances.emplace_back(Object{
+                {"id", Json(int64_t(actor->m_dwIdentity))},
+                {"shape", Json(int64_t(MonsterShape(actor->m_stFeature)))},
+                {"drawn", Json(drawn)}
+            });
+        }
+        return Json(Object{{"effects", Json(int64_t(effects))}, {"actors", Json(appearances)}}).serialize();
+    }
     if (method == "events.wait") {
         if (!params.get("after").is<int64_t>() || params.get("after").get<int64_t>() < 0)
             throw JsonRpc::Error{-32602,"after must be a nonnegative integer"};
